@@ -1,7 +1,15 @@
+# editor cruft
+**/.vscode/
+
+# python cruft
+.pyc
 .venv/*
 **/.ipynb_checkpoints/*
-**/.vscode/
-**/__pycache__
-**/.DS_Store
-# Might want to remove this later. Pipfile.lock should be identical on all systems (ideally)
 Pipfile.lock
+
+# build cruft
+_build
+
+# MacOS cruft
+.DS_Store
+

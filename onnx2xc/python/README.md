@@ -26,6 +26,7 @@ This will generate two source files, mnist.h & mnist.c
 * Implement the actual Operators (float32 & int8), stub them out in lib_ai or lib_dsp if necessary.
 * Check the the generated code can compile and run using `xsim`.
 * Class for an intermediate graph data structure?  This would make it a bit easier to support additional formats.  Each format would be parsed into the intermediate graph struct.  Ed has code to parse TensorFlow in lib_keyword, Ross has code to parse MXNet in lib_ai.
+* Add option for benchmarking instrumentation
 * Use `#define` for tensor shape dimensions?
 * Wrap lines?
 * Ouput build files?  Probably not but should think about.

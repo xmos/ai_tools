@@ -11,6 +11,9 @@ jupyter = "*"
 tensorflow-gpu = {version = "==2.0.0-beta1",sys_platform = "== 'linux'"}
 tensorflow = {version = "==2.0.0-beta1",sys_platform = "!= 'linux'"}
 matplotlib = "*"
+pytest = "*"
+bitstring = "*"
+ai-tools = {path = "./python",editable = true}
 
 [requires]
 python_version = "3.6"

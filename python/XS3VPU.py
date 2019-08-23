@@ -65,6 +65,17 @@ class XS3VPU():
         )
         self._vec_quadmask = np.array([self._quadmask]*self._ve, dtype=self._quad)
 
+    @property
+    def ve(self):
+        return int(self._ve)
+
+    @property
+    def acc_period(self):
+        if self._bpe == 8:
+            return int(self._ve) // 2
+        else:
+            return int(self._ve)
+
     def _VLD_check(self, v):
         "Checks if a given vector can be loaded into a register"
         assert v.shape == (self._ve,)
@@ -200,6 +211,7 @@ class XS3VPU():
 
     def VLMACC(self, v):
         if self._bpe == 8:
+            # TODO: change the subset here to lower half
             prod = self._quad(self._vC[::2]) * self._quad(self._VLD_check(v)[::2])
             self._split_to_vD_vR(prod + self._combine_vD_vR())
         elif self._bpe == 16:
@@ -213,13 +225,13 @@ class XS3VPU():
         if self._bpe == 8:
             vD_vR = self._combine_vD_vR()
             prod = self._quad(self._vC) * self._quad(self._VLD_check(v))
-            vD_vR = np.hstack([vD_vR[-1] + np.sum(prod), vD_vR[:-1]])
+            vD_vR = np.hstack([vD_vR[1:], vD_vR[0] + np.sum(prod)])
             self._split_to_vD_vR(vD_vR)
         elif self._bpe == 16:
             vD_vR = self._combine_vD_vR()
             prod = self._quad(self._vC) * self._quad(self._VLD_check(v))
-            tmp = self._dsat(self._quad(vD_vR[-1]) + np.sum(prod))
-            vD_vR = np.hstack([tmp, vD_vR[:-1]])
+            tmp = self._dsat(self._quad(vD_vR[0]) + np.sum(prod))
+            vD_vR = np.hstack([vD_vR[1:], tmp])
             self._split_to_vD_vR(vD_vR)
         else:
             raise NotImplementedError()

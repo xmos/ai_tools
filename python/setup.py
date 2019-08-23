@@ -3,6 +3,7 @@ import setuptools
 
 setuptools.setup(
     name='ai_tools',
+    packages=setuptools.find_packages(),
     install_requires=[
         'numpy',
     ],

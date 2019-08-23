@@ -102,7 +102,7 @@ class Test_XS3VPU_VLMACCR_8bit():
         for j in range(vpu._ve+7):
             vexp[j % (vpu._ve//2)] += vpu._quad(vpu._ve*a*b)
             vpu.VLMACCR(vpu._single(b) * np.ones(vpu._ve, dtype=vpu._single))
-            assert np.all(vpu._combine_vD_vR() == vexp)
+            assert np.all(vpu._combine_vD_vR() == np.flip(vexp))
 
     def test_VLMACCR_8bit_low_bias(self, vpu, bpe):
         vD_vR = np.linspace(1, vpu._ve//2, vpu._ve//2, dtype=vpu._quad)
@@ -112,7 +112,7 @@ class Test_XS3VPU_VLMACCR_8bit():
 
         vexp = np.copy(vD_vR)
         for j in range(vpu._ve+5):
-            vexp = np.hstack([vexp[-1] + vpu._quad(vpu._ve*a*b), vexp[:-1]])
+            vexp = np.hstack([vexp[1:], vexp[0] + vpu._quad(vpu._ve*a*b)])
             vpu.VLMACCR(vpu._single(b) * np.ones(vpu._ve, dtype=vpu._single))
             assert np.all(vpu._combine_vD_vR() == vexp)
 
@@ -124,7 +124,7 @@ class Test_XS3VPU_VLMACCR_8bit():
 
         vexp = np.copy(vD_vR)
         for j in range(vpu._ve+12):
-            vexp = np.hstack([vexp[-1] + vpu._quad(vpu._ve*a*b), vexp[:-1]])
+            vexp = np.hstack([vexp[1:], vexp[0] + vpu._quad(vpu._ve*a*b)])
             vpu.VLMACCR(vpu._single(b) * np.ones(vpu._ve, dtype=vpu._single))
             assert np.all(vpu._combine_vD_vR() == vexp)
 
@@ -140,7 +140,7 @@ class Test_XS3VPU_VLMACCR_16bit():
         for j in range(vpu._ve+25):
             vexp[j % vpu._ve] += vpu._quad(vpu._ve*a*b)
             vpu.VLMACCR(vpu._single(b) * np.ones(vpu._ve, dtype=vpu._single))
-            assert np.all(vpu._combine_vD_vR() == vexp)
+            assert np.all(vpu._combine_vD_vR() == np.flip(vexp))
 
     def test_VLMACCR_16bit_low_bias(self, vpu, bpe):
         vD_vR = np.linspace(1+700, vpu._ve+700, vpu._ve, dtype=vpu._double)
@@ -150,7 +150,7 @@ class Test_XS3VPU_VLMACCR_16bit():
 
         vexp = np.copy(vD_vR)
         for j in range(vpu._ve+79):
-            vexp = np.hstack([vexp[-1] + vpu._quad(vpu._ve*a*b), vexp[:-1]])
+            vexp = np.hstack([vexp[1:], vexp[0] + vpu._quad(vpu._ve*a*b)])
             vpu.VLMACCR(vpu._single(b) * np.ones(vpu._ve, dtype=vpu._single))
             assert np.all(vpu._combine_vD_vR() == vexp)
 
@@ -162,7 +162,7 @@ class Test_XS3VPU_VLMACCR_16bit():
 
         vexp = np.copy(vD_vR)
         for j in range(vpu._ve+5):
-            vexp = np.hstack([vexp[-1] + vpu._quad(vpu._ve*a*b), vexp[:-1]])
+            vexp = np.hstack([vexp[1:], vexp[0] + vpu._quad(vpu._ve*a*b)])
             vpu.VLMACCR(vpu._single(b) * np.ones(vpu._ve, dtype=vpu._single))
             assert np.all(vpu._combine_vD_vR() == vexp)
 
@@ -174,7 +174,7 @@ class Test_XS3VPU_VLMACCR_16bit():
 
         vexp = np.copy(vD_vR)
         for j in range(vpu._ve+5):
-            vexp = np.hstack([vexp[-1] + vpu._quad(vpu._ve*a*b), vexp[:-1]])
+            vexp = np.hstack([vexp[1:], vexp[0] + vpu._quad(vpu._ve*a*b)])
             vpu.VLMACCR(vpu._single(b) * np.ones(vpu._ve, dtype=vpu._single))
             assert np.all(vpu._combine_vD_vR() == vexp)
 

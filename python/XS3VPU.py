@@ -225,13 +225,13 @@ class XS3VPU():
         if self._bpe == 8:
             vD_vR = self._combine_vD_vR()
             prod = self._quad(self._vC) * self._quad(self._VLD_check(v))
-            vD_vR = np.hstack([vD_vR[1:], vD_vR[0] + np.sum(prod)])
+            vD_vR = np.hstack([vD_vR[-1] + np.sum(prod), vD_vR[:-1]])
             self._split_to_vD_vR(vD_vR)
         elif self._bpe == 16:
             vD_vR = self._combine_vD_vR()
             prod = self._quad(self._vC) * self._quad(self._VLD_check(v))
-            tmp = self._dsat(self._quad(vD_vR[0]) + np.sum(prod))
-            vD_vR = np.hstack([vD_vR[1:], tmp])
+            tmp = self._dsat(self._quad(vD_vR[-1]) + np.sum(prod))
+            vD_vR = np.hstack([tmp, vD_vR[:-1]])
             self._split_to_vD_vR(vD_vR)
         else:
             raise NotImplementedError()

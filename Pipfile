@@ -14,6 +14,7 @@ matplotlib = "*"
 pytest = "*"
 bitstring = "*"
 ai-tools = {path = "./python",editable = true}
+flatbuffers = "*"
 
 [requires]
 python_version = "3.6"

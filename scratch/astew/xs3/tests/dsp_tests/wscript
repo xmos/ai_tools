@@ -1,0 +1,268 @@
+# Copyright (c) 2019, XMOS Ltd, All rights reserved
+from __future__ import print_function
+import glob
+import os.path
+import subprocess
+import sys
+from waflib import Options
+from waflib.Build import BuildContext, CleanContext
+import re
+
+def options(ctx):
+    ctx.add_option('--filter', action='store', default=None)
+    ctx.add_option('--single-issue', action='store_true')
+    ctx.add_option('--dual-issue', action='store_true')
+
+def get_ruby():
+    """
+    Check ruby is avaliable and return the command to invoke it.
+    """
+    interpreter_name = 'ruby'
+    try:
+        dev_null = open(os.devnull, 'w')
+        # Call the version command to check the interpreter can be run
+        if sys.platform.startswith('win32'):	# known python issue 19575 for windows https://bugs.python.org/issue19575
+            subprocess.check_call([interpreter_name, '--version'],
+                                  stdout=dev_null,
+                                  close_fds=False)
+        else:
+            subprocess.check_call([interpreter_name, '--version'],
+                                  stdout=dev_null,
+                                  close_fds=True)
+    except OSError as e:
+        print("Failed to run Ruby interpreter: {}".format(e), file=sys.stderr)
+        exit(1)  # TODO: Check this is the correct way to kill xwaf on error
+
+    return interpreter_name
+
+
+def get_unity_runner_generator(project_root_path):
+    """
+    Check the Unity generate_test_runner script is avaliable, and return the
+    path to it.
+    """
+    unity_runner_generator = os.path.join(
+        project_root_path, 'Unity', 'auto', 'generate_test_runner.rb')
+    if not os.path.exists(unity_runner_generator):
+        print("Unity repo not found in workspace", file=sys.stderr)
+        exit(1)  # TODO: Check this is the correct way to kill xwaf on error
+    return unity_runner_generator
+
+
+def get_test_name(test_path):
+    """
+    Return the test name by removing the extension from the filename.
+    """
+    return os.path.splitext(os.path.basename(test_path))[0]
+
+
+def get_file_type(filename):
+    """
+    Return the extension from the filename.
+    """
+    return filename.rsplit('.')[-1:][0]
+
+
+def generate_unity_runner(project_root_path, unity_test_path, unity_runner_dir,
+                          unity_runner_suffix):
+    """
+    Invoke the Unity runner generation script for the given test file, and
+    return the path to the generated file. The output directory will be created
+    if it does not already exist.
+    """
+    if not os.path.exists(unity_runner_dir):
+        os.mkdir(unity_runner_dir)
+    unity_runner_path = os.path.join(
+        unity_runner_dir, get_test_name(unity_test_path) + unity_runner_suffix
+        + '.' + 'c')
+    try:
+        subprocess.check_call([get_ruby(),
+                               get_unity_runner_generator(project_root_path),
+                               unity_test_path,
+                               unity_runner_path])
+    except OSError as e:
+        print("Ruby generator failed for {}\n\t{}".format(unity_test_path, e),
+              file=sys.stderr)
+        exit(1)  # TODO: Check this is the correct way to kill xwaf on error
+
+
+def set_common_build_config(waf_conf, project_root_path, unity_test_path,
+                            unity_runner_build_flags):
+    """
+    Set the common xwaf config variables.
+    """
+    waf_conf.load('xwaf.compiler_xcc')
+    waf_conf.env.XCC_FLAGS = unity_runner_build_flags
+    waf_conf.env.PROJECT_ROOT = project_root_path
+    # TODO: can the xwaf boilerplate help here?
+
+
+def add_single_issue_unity_runner_build_config(waf_conf, project_root_path,
+                                               unity_test_path,
+                                               unity_runner_build_flags):
+    """
+    Add a single issue config to xwaf to build each Unity test runner into an
+    xCORE executable.
+    """
+    waf_conf.setenv(get_test_name(unity_test_path) + '_single_issue')
+    set_common_build_config(waf_conf, project_root_path, unity_test_path,
+                            unity_runner_build_flags + '-mno-dual-issue')
+
+
+def add_dual_issue_unity_runner_build_config(waf_conf, project_root_path,
+                                             unity_test_path,
+                                             unity_runner_build_flags):
+    """
+    Add a dual issue config to xwaf to build each Unity test runner into an
+    xCORE executable.
+    """
+    waf_conf.setenv(get_test_name(unity_test_path) + '_dual_issue')
+    set_common_build_config(waf_conf, project_root_path, unity_test_path,
+                            unity_runner_build_flags + '-mdual-issue')
+
+
+def prepare_unity_test_for_build(waf_conf, project_root_path, unity_test_path,
+                                 unity_runner_dir, unity_runner_suffix):
+    generate_unity_runner(project_root_path, unity_test_path,
+                          unity_runner_dir, unity_runner_suffix)
+    runner_build_flags = ''  # Could extract flags from the test name
+    add_single_issue_unity_runner_build_config(waf_conf, project_root_path,
+                                               unity_test_path,
+                                               runner_build_flags)
+    add_dual_issue_unity_runner_build_config(waf_conf, project_root_path,
+                                             unity_test_path,
+                                             runner_build_flags)
+
+
+def find_unity_test_paths(unity_test_dir, unity_test_prefix):
+    """
+    Return a list of all file paths with the unity_test_prefix found in the
+    unity_test_dir.
+    """
+    return glob.glob(os.path.join(unity_test_dir, unity_test_prefix+'*'))
+
+
+def find_unity_tests(unity_test_dir, unity_test_prefix):
+    """
+    Return a dictionary of all {test names, test language} pairs with the
+    unity_test_prefix found in the unity_test_dir.
+    """
+    unity_test_paths = find_unity_test_paths(unity_test_dir, unity_test_prefix)
+    return {get_test_name(path): get_file_type(path)
+            for path in unity_test_paths}
+
+
+def generate_all_unity_runners(waf_conf, project_root_path,
+                               unity_test_dir, unity_test_prefix,
+                               unity_runner_dir, unity_runner_suffix):
+    """
+    Generate a runner and a build config for each test file in the
+    unity_test_dir.
+    """
+    # FIXME: pass unity_tests in?
+    unity_test_paths = find_unity_test_paths(unity_test_dir, unity_test_prefix)
+    for unity_test_path in unity_test_paths:
+        prepare_unity_test_for_build(waf_conf, project_root_path,
+                                     unity_test_path,
+                                     unity_runner_dir, unity_runner_suffix)
+
+
+# TODO: can the xwaf boilerplate help here?
+def create_waf_contexts(configs):
+    for test_name, test_language in configs.items():
+        # Single issue test configurations
+        for ctx in (BuildContext, CleanContext):
+            raw_context = ctx.__name__.replace('Context', '').lower()
+
+            class si_tmp(ctx):
+                cmd = raw_context + '_' + test_name + '_single_issue'
+                variant = test_name + '_single_issue'
+                source = test_name
+                language = test_language
+
+        # Dual issue test configurations
+        for ctx in (BuildContext, CleanContext):
+            raw_context = ctx.__name__.replace('Context', '').lower()
+
+            class di_tmp(ctx):
+                cmd = raw_context + '_' + test_name + '_dual_issue'
+                variant = test_name + '_dual_issue'
+                source = test_name
+                language = test_language
+
+
+UNITY_TEST_DIR = 'src'
+UNITY_TEST_PREFIX = 'test_'
+UNITY_RUNNER_DIR = 'runners'
+UNITY_RUNNER_SUFFIX = '_Runner'
+UNITY_TESTS = find_unity_tests(UNITY_TEST_DIR, UNITY_TEST_PREFIX)
+
+create_waf_contexts(UNITY_TESTS)
+
+
+def configure(conf):
+    # TODO: move the call to generate_all_unity_runners() to build()
+    project_root = os.path.join('..', '..', '..')
+    generate_all_unity_runners(conf, project_root,
+                               UNITY_TEST_DIR, UNITY_TEST_PREFIX,
+                               UNITY_RUNNER_DIR, UNITY_RUNNER_SUFFIX)
+
+
+def build(bld):
+
+    filt = bld.options.filter
+    si = bld.options.single_issue or not bld.options.dual_issue
+    di = bld.options.dual_issue or not bld.options.single_issue
+
+    if not bld.variant:
+        print('Adding test runners to build queue')
+        if filt is not None: 
+            print('Filtering on regex: {0}'.format(filt))
+            pat = re.compile(filt)
+
+        for name in UNITY_TESTS:
+            if filt is not None and not pat.findall(name):
+                continue
+            if si: Options.commands.insert(0, 'build_' + name + '_single_issue')
+            if di: Options.commands.insert(0, 'build_' + name + '_dual_issue')
+        print('Build queue {}'.format(Options.commands))
+    else:
+        print('Building runner {}'.format(bld.variant))
+
+
+        bld.env.TARGET_ARCH = 'XU316-1024-QF60-C20'
+        bld.env.XSCOPE = bld.path.find_resource('config.xscope')
+
+        # The issue mode for each build is set during the configure step,
+        # as the string bld.env.XCC_FLAGS. We append this to the list last to
+        # ensure it takes precedence over other flags set here.
+        bld.env.XCC_FLAGS = ['-Os', '-g', '-Wall', '-DUNITY_SUPPORT_64', '-Wno-unused-variable',
+                             '-DUNITY_INCLUDE_DOUBLE', bld.env.XCC_FLAGS]
+
+        depends_on = ['lib_xs3', 'Unity', 'dsp_xs3']
+        include = ['.']
+        source = [
+            os.path.join(UNITY_TEST_DIR,
+                         '{}.{}'.format(bld.source, bld.language)),
+            os.path.join(UNITY_RUNNER_DIR,
+                         '{}{}.{}'.format(bld.source, UNITY_RUNNER_SUFFIX,
+                                          'c'))]
+        source.extend(bld.path.ant_glob(['src/**/tst_common.xc']))
+        bld.program(include=include, source=source, depends_on=depends_on)
+
+
+def test(bld):
+    # Call pytest to run Unity tests inside axe or xsim
+    try:
+        if sys.platform.startswith('win32'):
+            test_output = subprocess.check_output('python -m pytest',stderr=subprocess.STDOUT)
+        else:
+            test_output = subprocess.check_output(['pytest'])
+    except subprocess.CalledProcessError as e:
+        # pytest exits non-zero if an assertion fails
+        test_output = e.output
+    # print(str(test_output))
+    print(test_output.decode("utf-8"))
+
+
+# TODO: ensure clean deletes the runners dir/

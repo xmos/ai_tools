@@ -1,5 +1,5 @@
 <span style="color:red; font-size:16pt">
-This is a prototype tool currently meant only for learning about and evaluating ONNX. It is not production quality and may never be.  Proceed with caution!!!
+This is a prototype tool currently meant only for learning about and evaluating ONNX. It is not production quality and almost certainly never will.  Proceed with caution!!!
 </span>
 
 Instructions for using onnx2xc.py

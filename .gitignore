@@ -2,7 +2,7 @@
 **/.vscode/
 
 # python cruft
-.pyc
+**/.pyc
 .venv/*
 **/.ipynb_checkpoints/*
 Pipfile.lock

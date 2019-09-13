@@ -3,6 +3,7 @@
 
 # python cruft
 **/.pyc
+**/__pycache__/*
 .venv/*
 **/.ipynb_checkpoints/*
 Pipfile.lock

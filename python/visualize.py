@@ -28,6 +28,9 @@ import json
 import os
 import sys
 import shutil
+import argparse
+import webbrowser
+import tempfile
 
 # A CSS description for making the visualizer
 _CSS = """
@@ -453,24 +456,33 @@ def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin):
 
 
 def main(argv):
-  try:
-    tflite_input = argv[1]
-    html_output = argv[2]
-  except IndexError:
-    print("Usage: %s <input tflite> <output html>" % (argv[0]))
+  parser = argparse.ArgumentParser()
+  parser.add_argument('tflite_input', help='input .tflite file')
+  parser.add_argument('--html_output', required=False, default=None,
+                      help='output .html file')
+  args = parser.parse_args()
+  tflite_input, html_output = args.tflite_input, args.html_output
+
+  # Schema to use for flatbuffers
+  _SCHEMA = os.path.normpath(os.path.join(
+      os.path.dirname(os.path.realpath(__file__)), 'schema.fbs'
+  ))
+  _BINARY = shutil.which("flatc")
+
+  if not os.path.exists(_SCHEMA):
+    raise RuntimeError("Sorry, schema file cannot be found at %r" % _SCHEMA)
+  if not os.path.exists(_BINARY):
+    raise RuntimeError("Sorry, flatc is not available at %r" % _BINARY)
+
+  if html_output:
+    CreateHtmlFile(tflite_input, html_output,
+                   schema=_SCHEMA, flatc_bin=_BINARY)
+    webbrowser.open_new_tab("file://" + os.path.realpath(html_output))
   else:
-    # Schema to use for flatbuffers
-    _SCHEMA = os.path.normpath(os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), 'schema.fbs'
-    ))
-    _BINARY = shutil.which("flatc")
-
-    if not os.path.exists(_SCHEMA):
-      raise RuntimeError("Sorry, schema file cannot be found at %r" % _SCHEMA)
-    if not os.path.exists(_BINARY):
-      raise RuntimeError("Sorry, flatc is not available at %r" % _BINARY)
-
-    CreateHtmlFile(tflite_input, html_output, schema=_SCHEMA, flatc_bin=_BINARY)
+    with tempfile.NamedTemporaryFile(delete=False) as f:
+      CreateHtmlFile(tflite_input, f.name,
+                     schema=_SCHEMA, flatc_bin=_BINARY)
+      webbrowser.open_new_tab("file://" + os.path.realpath(f.name))
 
 
 if __name__ == "__main__":

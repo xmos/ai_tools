@@ -1,4 +1,7 @@
-onnx                         https://github.com/onnx/onnx.git                         master
+#onnx                         https://github.com/onnx/onnx.git                         master
+AnyOption                    https://github.com/hackorama/AnyOption                   master
+#tensorflow                   TODO: replace with our private url
+flatbuffers                  https://github.com/google/flatbuffers                    1.11.0
 lib_dsp                      git@github.com:xmos/lib_dsp                              develop
 lib_ai                       git@github.com:xmos/lib_ai                               develop
 lib_logging                  git@github.com:xmos/lib_logging                          faad03ab3e508cb449fc0da64b0bc0af64911547

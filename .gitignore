@@ -14,3 +14,7 @@ _build
 # MacOS cruft
 .DS_Store
 
+#xwaf cruft
+**/.lock*
+**/build/
+**/bin/

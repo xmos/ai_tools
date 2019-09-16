@@ -457,11 +457,14 @@ def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin):
 
 def main(argv):
   parser = argparse.ArgumentParser()
-  parser.add_argument('tflite_input', help='input .tflite file')
+  parser.add_argument('tflite_input', help='Input .tflite file.')
   parser.add_argument('--html_output', required=False, default=None,
-                      help='output .html file')
+                      help='Output .html file. If not specified, a temporary file is created.')
+  parser.add_argument('--no_browser',  action='store_true', default=False,
+                      help='Do not open browser after the .html is created.')
   args = parser.parse_args()
   tflite_input, html_output = args.tflite_input, args.html_output
+  no_browser = args.no_browser
 
   # Schema to use for flatbuffers
   _SCHEMA = os.path.normpath(os.path.join(
@@ -475,14 +478,19 @@ def main(argv):
     raise RuntimeError("Sorry, flatc is not available at %r" % _BINARY)
 
   if html_output:
-    CreateHtmlFile(tflite_input, html_output,
-                   schema=_SCHEMA, flatc_bin=_BINARY)
-    webbrowser.open_new_tab("file://" + os.path.realpath(html_output))
+    html_path = html_output
   else:
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-      CreateHtmlFile(tflite_input, f.name,
-                     schema=_SCHEMA, flatc_bin=_BINARY)
-      webbrowser.open_new_tab("file://" + os.path.realpath(f.name))
+    html_file = tempfile.NamedTemporaryFile(delete=False)
+    html_path = html_file.name
+
+  CreateHtmlFile(tflite_input, html_path,
+                 schema=_SCHEMA, flatc_bin=_BINARY)
+
+  if not no_browser:
+    webbrowser.open_new_tab("file://" + os.path.realpath(html_path))
+
+  if not html_output:
+    html_file.close()
 
 
 if __name__ == "__main__":

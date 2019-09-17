@@ -19,13 +19,52 @@
 #define WORD_ALIGNED
 #endif
 
-unsigned seed = 345623;
+// static unsigned seed = 345623;
+
+#define DEBUG_ON    (0 || TEST_DEBUG_ON)
+#define N           (32)
+#define M           (16)
+void test_nn_mat_vec_mul_s8_case1()
+{
+    int8_t WORD_ALIGNED c_y[M];
+    int8_t WORD_ALIGNED asm_y[M];
+
+    int8_t WORD_ALIGNED x[N] = {0};
+    int8_t WORD_ALIGNED W[M*N] = {0};
+    int16_t shr[M] = {0};
+
+    unsigned N_bands = M / VPU_INT8_ACC_PERIOD;
+    unsigned N_chunks = N / VPU_INT8_EPV;
+
+    for(int i = 0; i < N; i++) x[i] = 100;
+
+    int8_t exp_res8[M] = {0};
+
+    memset(asm_y, 0xCC, sizeof(asm_y));
+    memset(c_y, 0xCC, sizeof(c_y));
+
+    nn_mat_vec_mul_s8_c(W, x, N_bands, N_chunks, shr, c_y);
+#if defined(__XS3A__) && USE_ASM_nn_mat_vec_mul_s8
+    nn_mat_vec_mul_s8_asm(W, x, N_bands, N_chunks, shr, asm_y);
+#endif
+
+    for(int i = 0; i < M; i++){
+        char str_buff[100];
+        sprintf(str_buff, "(output index %u)", i);
+ 
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(exp_res8[i], c_y[i], str_buff);
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(exp_res8[i], asm_y[i], str_buff);
+    }
+}
+#undef M
+#undef N
+#undef DEBUG_ON
 
 
 #define DEBUG_ON    (0 || TEST_DEBUG_ON)
 #define N           (96)
 #define M           (32)
-static void _test_nn_mat_vec_mul_s8_case1()
+void test_nn_mat_vec_mul_s8_case2()
 {
     int8_t WORD_ALIGNED c_y[M];
     int8_t WORD_ALIGNED asm_y[M];
@@ -46,7 +85,9 @@ static void _test_nn_mat_vec_mul_s8_case1()
     memset(c_y, 0xCC, sizeof(c_y));
 
     nn_mat_vec_mul_s8_c(W, x, N_bands, N_chunks, shr, c_y);
+#if defined(__XS3A__) && USE_ASM_nn_mat_vec_mul_s8
     nn_mat_vec_mul_s8_asm(W, x, N_bands, N_chunks, shr, asm_y);
+#endif
 
     for(int i = 0; i < M; i++){
         char str_buff[100];
@@ -64,6 +105,7 @@ static void _test_nn_mat_vec_mul_s8_case1()
 
 void test_nn_mat_vec_mul_s8()
 {
-    _test_nn_mat_vec_mul_s8_case1();
+    test_nn_mat_vec_mul_s8_case1();
+    test_nn_mat_vec_mul_s8_case2();
 }
 

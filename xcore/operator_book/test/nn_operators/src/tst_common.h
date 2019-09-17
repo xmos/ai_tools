@@ -14,5 +14,8 @@ int64_t  pseudo_rand_int64(unsigned *r);
 uint64_t pseudo_rand_uint64(unsigned *r);
 
 
+void pseudo_rand_bytes(unsigned *r, char* buffer, unsigned size);
+
+
 
 #endif //TST_COMMON_H_

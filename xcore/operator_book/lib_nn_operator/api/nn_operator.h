@@ -16,16 +16,6 @@ extern "C" {
 #endif
 
 
-static inline void nn_mat_vec_mul_s8(
-    const int8_t* W,
-    const int8_t* x,
-    const unsigned N_bands,
-    const unsigned N_chunks,
-    const int16_t* shr,
-    int8_t* y);
-
-
-
 
 #ifdef __XC__
 } // extern "C"

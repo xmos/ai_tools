@@ -4,6 +4,7 @@
 #include <xs1.h>
 #include <xclib.h>
 #include <stdio.h>
+#include <assert.h>
 
 #define CRC_POLY (0xEB31D82E)
 
@@ -42,4 +43,30 @@ uint64_t pseudo_rand_uint64(unsigned *r){
     crc32(*r, -1, CRC_POLY);
     int64_t b = (int64_t)*r;
     return (uint64_t)(a + (b<<32));
+}
+
+void pseudo_rand_bytes(unsigned *r, char* buffer, unsigned size){
+
+    assert((((unsigned)buffer) & 0x3) == 0);
+
+    unsigned b = 0;
+
+    while(size >= sizeof(unsigned)){
+        crc32(*r, -1, CRC_POLY);
+
+        char* rch = (char*) r;
+
+        for(int i = 0; i < sizeof(unsigned); i++)
+            buffer[b++] = rch[i];
+
+        size -= sizeof(unsigned);
+    }
+    
+    crc32(*r, -1, CRC_POLY);
+    unsigned tmp = *r;
+    while(size){
+        buffer[b++] = (char) (tmp & 0xFF);
+        tmp >>= 8;
+        size--;
+    }
 }

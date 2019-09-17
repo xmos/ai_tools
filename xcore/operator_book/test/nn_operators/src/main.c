@@ -44,17 +44,17 @@ int main(void)
   printf("\n\n");
 
   
-  UnityBegin("src\\test_fc_deepin_shallowout_lin.xc");
-  RUN_TEST(test_fc_deepin_shallowout_lin_case1);
-  ret_val = UnityEnd();
-  printf("\n\n");
-
-  
   UnityBegin("src\\test_maxpool2d_deep.xc");
   RUN_TEST(test_maxpool2d_deep_case1);
   RUN_TEST(test_maxpool2d_deep_case2);
   RUN_TEST(test_maxpool2d_deep_case3);
   RUN_TEST(test_maxpool2d_deep_case4);
+  ret_val = UnityEnd();
+  printf("\n\n");
+
+  
+  UnityBegin("src\\test_fc_deepin_shallowout_lin.xc");
+  RUN_TEST(test_fc_deepin_shallowout_lin_case1);
   ret_val = UnityEnd();
   printf("\n\n");
 

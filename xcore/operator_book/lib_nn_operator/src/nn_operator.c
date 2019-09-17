@@ -179,7 +179,7 @@ void maxpool2d_deep_c(
 
 void fc_deepin_shallowout_lin_c(
     const int8_t* W, 
-    const uint16_t* B,
+    const int32_t* B,
     const int8_t* X, 
     int16_t* Y,
     const int32_t C_out, 
@@ -187,4 +187,12 @@ void fc_deepin_shallowout_lin_c(
     const uint16_t* shifts, 
     const int16_t* scales)
 {
+    assert(C_in % 32 == 0);
+    assert(C_out <= 16);
+
+    //Compute outputs one at a time
+    for(unsigned k = 0; k < C_out; k++){
+
+
+    }
 }

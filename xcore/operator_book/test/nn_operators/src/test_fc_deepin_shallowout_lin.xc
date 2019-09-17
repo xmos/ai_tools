@@ -29,7 +29,7 @@ void test_fc_deepin_shallowout_lin_case1()
 {
 
     int8_t   WORD_ALIGNED  W[C_out][C_in]                = {{ 0 }};
-    uint16_t WORD_ALIGNED  B[16][2]                      = {{ 0 }};
+    int32_t  WORD_ALIGNED  B[C_out]                      = { 0 };
     int8_t   WORD_ALIGNED  X[C_in];
     int8_t   WORD_ALIGNED  Y_c[C_out];
     uint16_t WORD_ALIGNED  shifts[C_out]                 = { 0 };

@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     opt->addUsage("");
 
     opt->setFlag("help", 'h'); 
-    // opt->setFlag("xcore", 'x'); 
+    // opt->setFlag("xcore", 'x');
 
     opt->processCommandArgs(argc, argv);
 

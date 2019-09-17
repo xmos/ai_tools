@@ -9,6 +9,7 @@
 #include <assert.h>
 
 
+
 static inline int8_t vlsat_single(int32_t acc, int16_t shr){
     if(shr > 0){
         int32_t tmp = (acc >> shr) << shr;
@@ -187,12 +188,43 @@ void fc_deepin_shallowout_lin_c(
     const uint16_t* shifts, 
     const int16_t* scales)
 {
-    assert(C_in % 32 == 0);
+    assert(C_in % VPU_INT8_EPV == 0);
     assert(C_out <= 16);
+
+    const row_vlmaccrs = C_in / VPU_INT8_EPV;
 
     //Compute outputs one at a time
     for(unsigned k = 0; k < C_out; k++){
 
+        //Compute pre-activation value
+        int32_t acc32 = B[k];
 
+        const int8_t* W_row = &W[k * C_in];
+
+        for(unsigned v = 0; v < row_vlmaccrs; v++){
+
+            int32_t vacc = 0;
+
+            const int8_t* W_v = &W[v*VPU_INT8_EPV];
+            const int8_t* X_v = &X[v*VPU_INT8_EPV];
+
+            for(unsigned i = 0; i < VPU_INT8_EPV; i++)
+                vacc += W_v[i] * X_v[i];
+
+            int64_t acc64 = acc32 + vacc;
+
+            if(acc64 > VPU_INT32_MAX)
+                acc64 = VPU_INT32_MAX;
+            if(acc64 < VPU_INT32_MIN)
+                acc64 = VPU_INT32_MIN;
+
+            acc32 = acc64;
+        }
+
+        //Compute shifts
+
+
+
+        //Compute scales
     }
 }

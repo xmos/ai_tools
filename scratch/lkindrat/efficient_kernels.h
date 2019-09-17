@@ -136,10 +136,9 @@ void maxpool2d_deep(
  *  Number of inputs must be divisible by 32. Number of outputs must be less
  *  than 16. No activation is applied (i.e. linear).
  *
- *  \param  W       Weight tensor of shape (C_out, C_in) using a non-standard
- *                  layout such that:
- *                  W[i, j]  =  K[C_in * (C_out - 1 - i)  +  j]
- *                  There may or may not be zero padding in the 2nd dimension.
+ *  \param  W       Weight tensor of shape (C_out, C_in) using standard layout
+ *                  such that:
+ *                      W[i, j]  =  K[C_in * i  +  j]
  *  \param  B       Bias tensor of shape (C_out) using a standard layout.
  *  \param  X       Input tensor of shape (C_in) using standard layout.
  *  \param  Y       Output tensor of shape (C_out) using standard layout.

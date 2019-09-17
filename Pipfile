@@ -16,6 +16,7 @@ pytest = "*"
 bitstring = "*"
 ai-tools = {path = "./python",editable = true}
 flatbuffers = "*"
+scipy = "*"
 
 [requires]
 python_version = "3.6"

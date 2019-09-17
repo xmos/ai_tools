@@ -207,7 +207,11 @@ class OpCodeMapper(object):
   def __init__(self, data):
     self.code_to_name = {}
     for idx, d in enumerate(data["operator_codes"]):
-      self.code_to_name[idx] = d["builtin_code"]
+      builtin_code = d["builtin_code"]
+      if builtin_code == "CUSTOM":  # custom op
+        self.code_to_name[idx] = d["custom_code"]
+      else:  # proper builtin op
+        self.code_to_name[idx] = d["builtin_code"]
 
   def __call__(self, x):
     if x not in self.code_to_name:
@@ -474,7 +478,9 @@ def main(argv):
 
   if not os.path.exists(_SCHEMA):
     raise RuntimeError("Sorry, schema file cannot be found at %r" % _SCHEMA)
-  if not os.path.exists(_BINARY):
+  if _BINARY is None:
+    raise RuntimeError("Sorry, cannot find flatc")
+  elif not os.path.exists(_BINARY):
     raise RuntimeError("Sorry, flatc is not available at %r" % _BINARY)
 
   if html_output:

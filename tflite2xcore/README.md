@@ -7,13 +7,6 @@ Install CMake version 3.11.1 or newer (https://cmake.org/download/).
 Modify your path to include the CMake binaries.  Run the CMake application and
 click Tools...How to Install For Command Line Use.
 
-Install Bazel version 0.26.1 (https://bazel.build/)
-
-Build tensorflow
-
-    > ./configure
-    > bazel build --config=v2 //tensorflow/tools/pip_package:build_pip_package
-
 Make a directory for the build
 
     > mkdir build

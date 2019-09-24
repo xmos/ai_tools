@@ -7,42 +7,19 @@ import os
 import shutil
 import argparse
 import tempfile
+import struct
 
 import numpy as np
 
 from copy import deepcopy
-from tflite2xcore_utils import DEFAULT_FLATC, DEFAULT_SCHEMA
-from tflite2xcore_utils import load_tflite_as_json, save_json_as_tflite
+from tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA
+from tflite_utils import load_tflite_as_json, save_json_as_tflite
+from tflite2xcore_utils import get_opcode_index, get_custom_opcode_index
+from tflite2xcore_utils import find_referencing_ops
+from tflite2xcore_utils import generate_unique_tensor_name
 
 
-def get_opcode_index(model, opcode_str):
-    for j, opcode in enumerate(model['operator_codes']):
-        if opcode['builtin_code'] == opcode_str:
-            return j
-    return None
-
-
-def get_custom_opcode_index(model, opcode_str):
-    for j, opcode in enumerate(model['operator_codes']):
-        if 'custom_code' in opcode:
-            if opcode['custom_code'] == opcode_str:
-                return j
-    return None
-
-
-def find_referencing_ops(tensor_ind, operators, *,
-                         as_inputs=True, as_outputs=True):
-    ref_op_inds = set()
-
-    for j, op in enumerate(operators):    
-        if ((as_inputs and tensor_ind in op['inputs'])
-            or (as_outputs and tensor_ind in op['outputs'])):
-            ref_op_inds.add(j)
-
-    return ref_op_inds
-            
-
-def get_replacements(model, mode=None):
+def get_input_output_replacements(model, mode=None):
     modes = ['inputs', 'outputs']
     if mode not in modes:
         raise ValueError('mode must be one of {}'.format(modes))
@@ -95,7 +72,7 @@ def get_replacements(model, mode=None):
 def replace_float_inputs_outputs(model):
     subgraph = model['subgraphs'][0]
     for mode in ['inputs', 'outputs']:
-        replacements, ops_to_remove = get_replacements(model, mode=mode)
+        replacements, ops_to_remove = get_input_output_replacements(model, mode=mode)
         subgraph[mode] = [replacements[k] if k in replacements else ind
                           for k, ind in enumerate(subgraph[mode])]
         subgraph['operators'] = [op for j, op in enumerate(subgraph['operators'])
@@ -120,11 +97,12 @@ def replace_ops_with_XC(model):
             weight_tensor_ind = op['inputs'][1]  # the second tensor in the weight tensor
             buffer_ind = tensors[weight_tensor_ind]['buffer']
             tensor_shape = tensors[weight_tensor_ind]['shape']
+            op['builtin_options']['fused_activation_function'] ==  'NONE'
             if tensor_shape[0] < 16 and tensor_shape[1] % 32 == 0:
                 # shallow input, deep output fully connected layer
                 custom_opcode = 'XC_fc_deepin_shallowout_lin'
                 new_opcodes.add(custom_opcode)
-                op_replacement[j] = custom_opcode                
+                op_replacement[j] = custom_opcode
                     
             else:
                 print("WARNING: no replace rule for op FULLY_CONNECTED with shape {}".format(
@@ -140,15 +118,70 @@ def replace_ops_with_XC(model):
     # add new opcodes
     while new_opcodes:
         model['operator_codes'].append(
-            {'builtin_code': 32,  # 32 is code for CUSTOM, TODO: get this from original enum
+            {'builtin_code': 'CUSTOM',
              'custom_code': new_opcodes.pop(),
              'version': 1}
         )
 
     # replace operators
     for k, opcode_str in op_replacement.items():
+        # TODO: refactor this
         custom_opcode_ind = get_custom_opcode_index(model, opcode_str)
         subgraph['operators'][k]['opcode_index'] = custom_opcode_ind
+        subgraph['operators'][k]['builtin_options_type'] = 'NONE'
+        del subgraph['operators'][k]['builtin_options']
+
+        def get_input_tensor(subgraph, op_ind, input_ind):
+            t_ind = subgraph['operators'][op_ind]['inputs'][input_ind]
+            return subgraph['tensors'][t_ind]
+
+        def get_buffer_data_of_tensor(model, tensor):
+            buffer_ind = tensor['buffer']
+            return model['buffers'][buffer_ind]['data']
+
+        # retrieve weights
+        weight_tensor = get_input_tensor(subgraph, op_ind=k, input_ind=1)
+        buffer_data = get_buffer_data_of_tensor(model, weight_tensor)
+        weights = np.int32(np.int8(buffer_data)).reshape(weight_tensor['shape'])
+
+        # retrieve biases
+        bias_tensor = get_input_tensor(subgraph, op_ind=k, input_ind=2)
+        buffer_data = get_buffer_data_of_tensor(model, bias_tensor)
+        bias = np.int32([i[0] for i in struct.iter_unpack('i', bytearray(buffer_data))])
+
+        # retrieve input zero point
+        input_tensor = get_input_tensor(subgraph, op_ind=k, input_ind=0)
+        input_zero_point = input_tensor['quantization']['zero_point'][0]
+        input_zero_point_vec = np.int32(input_zero_point * np.ones(weights.shape[1:]))
+
+        # retreive output quantization
+        t_ind = subgraph['operators'][k]['outputs'][0]
+        output_tensor = subgraph['tensors'][t_ind]
+        output_scale = output_tensor['quantization']['scale'][0]
+        output_zero_point = output_tensor['quantization']['zero_point'][0]
+
+        # calculate real multiplier
+        bias_scale = np.array(bias_tensor['quantization']['scale'][0])  # TODO: this might be channelwise
+        multiplier = bias_scale / output_scale
+
+        # calculate and save a single bias vector
+        new_bias = bias - np.matmul(weights, input_zero_point_vec) \
+            + np.int32(output_zero_point / multiplier)
+        buffer_ind = bias_tensor['buffer']
+        model['buffers'][buffer_ind]['data'] = list(new_bias.tostring())
+        bias_tensor['name'] = generate_unique_tensor_name(subgraph,
+            base_name=opcode_str, suffix='/biases')
+
+        # quantize multiplier to get right shift/scale
+        # NOTE: VLMUL expects one factor in Q2.14
+        rshift = -np.ceil(np.log2(multiplier))
+        scale = np.round(2**14 * (multiplier * 2**rshift))
+        if scale == 2**14:
+            rshift -= 1
+            scale /= 2
+        rshift -= 7 # this is because we are using 15 bits instead of 8
+        rshift = np.repeat(np.int16(rshift), 16)
+        scale = np.repeat(np.int16(scale), 16)
 
 
 def main(tflite_input, tflite_output, *,

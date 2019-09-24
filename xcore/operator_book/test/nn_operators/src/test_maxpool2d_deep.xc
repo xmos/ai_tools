@@ -19,6 +19,13 @@
 #define WORD_ALIGNED
 #endif
 
+#if (defined(__XS3A__) && USE_ASM_maxpool2d_deep)
+ #define HAS_ASM (1)
+#else
+ #define HAS_ASM (0)
+#endif
+
+
 static unsigned seed = 4321234;
 
 
@@ -38,7 +45,7 @@ void test_maxpool2d_deep_case1()
     memset(Y_c, 0xCC, sizeof(Y_c));
 
     maxpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
-#if defined(__XS3A__) && USE_ASM_maxpool2d_deep
+#if HAS_ASM
     int8_t WORD_ALIGNED  Y_asm[height/2][width/2][C_out];
     maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
 #endif
@@ -49,6 +56,9 @@ void test_maxpool2d_deep_case1()
                 char str_buff[100];
                 sprintf(str_buff, "(h,w,c) = (%u,%u,%u)", h,w,c);
                 TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
+#if HAS_ASM
+                TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
+#endif
             }
         }
     }
@@ -77,7 +87,7 @@ void test_maxpool2d_deep_case2()
     _close(input_file);
 
     maxpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
-#if defined(__XS3A__) && USE_ASM_maxpool2d_deep
+#if HAS_ASM
     int8_t WORD_ALIGNED Y_asm[height/2][width/2][C_out];
     maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
 #endif
@@ -88,6 +98,9 @@ void test_maxpool2d_deep_case2()
                 char str_buff[100];
                 sprintf(str_buff, "(h,w,c) = (%u,%u,%u)", h,w,c);
                 TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
+#if HAS_ASM
+                TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
+#endif
             }
         }
     }
@@ -118,7 +131,7 @@ void test_maxpool2d_deep_case3()
     _close(input_file);
 
     maxpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
-#if defined(__XS3A__) && USE_ASM_maxpool2d_deep
+#if HAS_ASM
     int8_t WORD_ALIGNED Y_asm[height/2][width/2][C_out];
     maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
 #endif
@@ -129,6 +142,9 @@ void test_maxpool2d_deep_case3()
                 char str_buff[100];
                 sprintf(str_buff, "(h,w,c) = (%u,%u,%u)", h,w,c);
                 TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
+#if HAS_ASM
+                TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
+#endif
             }
         }
     }
@@ -164,7 +180,7 @@ void test_maxpool2d_deep_case4()
 
         //Process it
         maxpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
-    #if defined(__XS3A__) && USE_ASM_maxpool2d_deep
+    #if HAS_ASM
         int8_t WORD_ALIGNED Y_asm[height/2][width/2][C_out];
         maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
     #endif
@@ -203,6 +219,9 @@ void test_maxpool2d_deep_case4()
 #endif
 
             TEST_ASSERT_EQUAL(in_max, out_val);
+#if HAS_ASM
+            TEST_ASSERT_EQUAL(in_max, out_val);
+#endif
 
         }
 

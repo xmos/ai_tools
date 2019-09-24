@@ -20,6 +20,12 @@
 #define WORD_ALIGNED
 #endif
 
+#if (defined(__XS3A__) && USE_ASM_fc_deepin_shallowout_lin)
+ #define HAS_ASM (1)
+#else
+ #define HAS_ASM (0)
+#endif
+
 // static unsigned seed = 4434;
 
 
@@ -41,7 +47,7 @@ void test_fc_deepin_shallowout_lin_case1()
 
     fc_deepin_shallowout_lin_c((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_c, 
                                C_out, C_in, shifts, scales);
-#if defined(__XS3A__) && USE_ASM_fc_deepin_shallowout_lin
+#if HAS_ASM
     int8_t   WORD_ALIGNED  Y_asm[C_out];
     fc_deepin_shallowout_lin_asm((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_asm, 
                                C_out, C_in, shifts, scales);
@@ -51,6 +57,9 @@ void test_fc_deepin_shallowout_lin_case1()
         char str_buff[100];
         sprintf(str_buff, "(c) = (%u)", c);
         TEST_ASSERT_EQUAL_MESSAGE(Y_expected[c], Y_c[c], str_buff);
+#if HAS_ASM
+        TEST_ASSERT_EQUAL_MESSAGE(Y_expected[c], Y_asm[c], str_buff);
+#endif
     }
 }
 #undef C_in
@@ -98,7 +107,7 @@ void test_fc_deepin_shallowout_lin_case2()
 
         fc_deepin_shallowout_lin((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_c, 
                                 C_out, C_in, shifts, scales);
-#if defined(__XS3A__) && USE_ASM_fc_deepin_shallowout_lin
+#if HAS_ASM
         int8_t   WORD_ALIGNED  Y_asm[C_out];
         fc_deepin_shallowout_lin_asm((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_asm, 
                                C_out, C_in, shifts, scales);
@@ -108,6 +117,10 @@ void test_fc_deepin_shallowout_lin_case2()
             char str_buff[100];
             sprintf(str_buff, "(v, c) = (%u, %u)", v, c);
             TEST_ASSERT_EQUAL_MESSAGE(Y_expected[c], Y_c[c], str_buff);
+#if HAS_ASM
+            TEST_ASSERT_EQUAL_MESSAGE(Y_expected[c], Y_asm[c], str_buff);
+#endif
+
         }
     }
 
@@ -160,7 +173,7 @@ void test_fc_deepin_shallowout_lin_case3()
 
         fc_deepin_shallowout_lin((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_c, 
                                 C_out, C_in, shifts, scales);
-#if defined(__XS3A__) && USE_ASM_fc_deepin_shallowout_lin
+#if HAS_ASM
         int8_t   WORD_ALIGNED  Y_asm[C_out];
         fc_deepin_shallowout_lin_asm((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_asm, 
                                C_out, C_in, shifts, scales);
@@ -170,6 +183,9 @@ void test_fc_deepin_shallowout_lin_case3()
             char str_buff[100];
             sprintf(str_buff, "(v, c) = (%u, %u)", v, c);
             TEST_ASSERT_EQUAL_MESSAGE(Y_expected[c], Y_c[c], str_buff);
+#if HAS_ASM
+            TEST_ASSERT_EQUAL_MESSAGE(Y_expected[c], Y_asm[c], str_buff);
+#endif
         }
     }
 

@@ -20,6 +20,12 @@
 #define WORD_ALIGNED
 #endif
 
+#if (defined(__XS3A__) && USE_ASM_conv2d_deepin_deepout_relu)
+ #define HAS_ASM (1)
+#else
+ #define HAS_ASM (0)
+#endif
+
 // static unsigned seed = 44334;
 
 
@@ -46,7 +52,7 @@ void test_conv2d_deepin_deepout_relu_case1()
 
     conv2d_deepin_deepout_relu_c((int8_t*) K, (data16_t*) B, (int8_t*) X, (int8_t*) Y_c, 
                                 height, width, K_h, K_w, C_out, C_in, shifts, scales);
-#if defined(__XS3A__) && USE_ASM_conv2d_deepin_deepout_relu
+#if HAS_ASM
     int8_t   WORD_ALIGNED  Y_asm[height][width][C_out];
     memset(Y_asm, 0xCC, sizeof(Y_asm));
     conv2d_deepin_deepout_relu_asm((int8_t*) K, (data16_t*) B, (int8_t*) X, (int8_t*) Y_asm, 
@@ -59,7 +65,7 @@ void test_conv2d_deepin_deepout_relu_case1()
                 char str_buff[100];
                 sprintf(str_buff, "(h,w,c) = (%u,%u,%u)", h,w,c);
                 TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
-#if defined(__XS3A__) && USE_ASM_conv2d_deepin_deepout_relu
+#if HAS_ASM
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
             }
@@ -143,7 +149,7 @@ void test_conv2d_deepin_deepout_relu_case2()
 
         conv2d_deepin_deepout_relu_c((int8_t*) K, (data16_t*) B, (int8_t*) X, (int8_t*) Y_c, 
                                     height, width, K_h, K_w, C_out, C_in, shifts, scales);
-#if defined(__XS3A__) && USE_ASM_conv2d_deepin_deepout_relu
+#if HAS_ASM
         int8_t   WORD_ALIGNED  Y_asm[height][width][C_out];
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         conv2d_deepin_deepout_relu_asm((int8_t*) K, (data16_t*) B, (int8_t*) X, (int8_t*) Y_asm, 
@@ -157,7 +163,7 @@ void test_conv2d_deepin_deepout_relu_case2()
                     char str_buff[100];
                     sprintf(str_buff, "(v,h,w,c) = (%u,%u,%u,%u)", v,h,w,c);
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
-#if defined(__XS3A__) && USE_ASM_conv2d_deepin_deepout_relu
+#if HAS_ASM
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
                 }
@@ -247,7 +253,7 @@ void test_conv2d_deepin_deepout_relu_case3()
 
         conv2d_deepin_deepout_relu_c((int8_t*) K, (data16_t*) B, (int8_t*) X, (int8_t*) Y_c, 
                                     height, width, K_h, K_w, C_out, C_in, shifts, scales);
-#if defined(__XS3A__) && USE_ASM_conv2d_deepin_deepout_relu
+#if HAS_ASM
         int8_t   WORD_ALIGNED  Y_asm[height][width][C_out];
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         conv2d_deepin_deepout_relu_asm((int8_t*) K, (data16_t*) B, (int8_t*) X, (int8_t*) Y_asm, 
@@ -261,7 +267,7 @@ void test_conv2d_deepin_deepout_relu_case3()
                     char str_buff[100];
                     sprintf(str_buff, "(v,h,w,c) = (%u,%u,%u,%u)", v,h,w,c);
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
-#if defined(__XS3A__) && USE_ASM_conv2d_deepin_deepout_relu
+#if HAS_ASM
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
                 }
@@ -351,7 +357,7 @@ void test_conv2d_deepin_deepout_relu_case4()
 
         conv2d_deepin_deepout_relu_c((int8_t*) K, (data16_t*) B, (int8_t*) X, (int8_t*) Y_c, 
                                     height, width, K_h, K_w, C_out, C_in, shifts, scales);
-#if defined(__XS3A__) && USE_ASM_conv2d_deepin_deepout_relu
+#if HAS_ASM
         int8_t   WORD_ALIGNED  Y_asm[height][width][C_out];
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         conv2d_deepin_deepout_relu_asm((int8_t*) K, (data16_t*) B, (int8_t*) X, (int8_t*) Y_asm, 
@@ -365,7 +371,7 @@ void test_conv2d_deepin_deepout_relu_case4()
                     char str_buff[100];
                     sprintf(str_buff, "(v,h,w,c) = (%u,%u,%u,%u)", v,h,w,c);
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
-#if defined(__XS3A__) && USE_ASM_conv2d_deepin_deepout_relu
+#if HAS_ASM
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
                 }

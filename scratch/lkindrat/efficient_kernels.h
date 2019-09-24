@@ -158,6 +158,6 @@ void fc_deepin_shallowout_lin(
     int16_t* Y,
     const int32_t C_out,
     const int32_t C_in,
-    const uint16_t* shifts,
+    const int16_t* shifts,
     const int16_t* scales);
 

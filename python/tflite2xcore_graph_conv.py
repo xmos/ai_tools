@@ -4,20 +4,15 @@
 
 import json
 import os
-import shutil
 import argparse
-import tempfile
-import struct
 
-import numpy as np
-
-from copy import deepcopy
 from tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA
 from tflite_utils import load_tflite_as_json, save_json_as_tflite
-from tflite2xcore_utils import get_opcode_index, get_custom_opcode_index
+from tflite2xcore_utils import get_opcode_index
 from tflite2xcore_utils import find_referencing_ops
-from tflite2xcore_utils import generate_unique_tensor_name
 from tflite2xcore_utils import clean_unused_buffers, clean_unused_opcodes, clean_unused_tensors
+from tflite2xcore_graph_replacers import replace_with_XC_fc_deepin_shallowout_lin
+from tflite2xcore_graph_replacers import XCOps
 
 
 def get_input_output_replacements(model, mode=None):
@@ -87,26 +82,85 @@ def get_ops_replacements(model, subgraph_ind):
     new_opcodes = set()
     op_replacement = {}
 
+    # TODO: refactor the logic here into mapper(s)?
     for j, op in enumerate(subgraph['operators']):
         opcode_index = op['opcode_index']
+
         if opcode_index == get_opcode_index(model, 'FULLY_CONNECTED'):
             weight_tensor_ind = op['inputs'][1]  # the second tensor in the weight tensor
-            buffer_ind = tensors[weight_tensor_ind]['buffer']
             tensor_shape = tensors[weight_tensor_ind]['shape']
-            op['builtin_options']['fused_activation_function'] ==  'NONE'
+
             if tensor_shape[0] < 16 and tensor_shape[1] % 32 == 0:
                 # shallow input, deep output fully connected layer
-                custom_opcode = 'XC_fc_deepin_shallowout_lin'
+                custom_opcode = XCOps.FC_DEEPIN_SHALLOWOUT_LIN
                 new_opcodes.add(custom_opcode)
                 op_replacement[j] = custom_opcode
-                    
             else:
-                print("WARNING: no replace rule for op FULLY_CONNECTED with shape {}".format(
-                        tensor_shape))
+                raise NotImplementedError(
+                    f"No replace rule for FULLY_CONNECTED with shape {tensor_shape}")
+
         elif opcode_index == get_opcode_index(model, 'CONV_2D'):
-            print('replace rule for CONV_2D not yet implemented')
+            weight_tensor_ind = op['inputs'][1]  # the second tensor in the weight tensor
+            tensor_shape = tensors[weight_tensor_ind]['shape']
+            options = op['builtin_options']
+            strides = (options['stride_h'], options['stride_w'])
+            dilation = (options['dilation_h_factor'], options['dilation_w_factor'])
+
+            if dilation != (1, 1):
+                raise NotImplementedError(
+                    f"No replace rule for CONV_2D with dilation {dilation}")
+            elif strides != (1, 1):
+                raise NotImplementedError(
+                    f"No replace rule for CONV_2D with strides {strides}")
+            elif options['padding'] != 'SAME':
+                raise NotImplementedError(
+                    f"No replace rule for CONV_2D with padding {options['padding']}")
+            elif tensor_shape[1] % 2 == 0 or tensor_shape[2] % 2 == 0:
+                raise NotImplementedError(
+                    f"No replace rule for CONV_2D with (even) kernel shape {tensor_shape[1:3]}")
+            elif tensor_shape[0] % 16 == 0 and tensor_shape[3] % 32 == 0:
+                # TODO:
+                print(f"WARNING: replace rule for '{XCOps.CONV2D_DEEPIN_DEEPOUT_RELU}' not yet implemented")
+            elif tensor_shape[0] % 16 == 0 and tensor_shape[3] <= 4:
+                if tensor_shape[2] > 8:
+                    raise NotImplementedError(
+                        "No replace rule for CONV_2D with deep output, "
+                        f"shallow input {tensor_shape[3]} (<= 4), "
+                        f"and kernel width {tensor_shape[2]} (> 8)")
+
+                # TODO:
+                print(f"WARNING: replace rule for '{XCOps.CONV2D_SHALLOWIN_DEEPOUT_RELU}' not yet implemented")
+            else:
+                print("WARNING: replace rule for op CONV_2D with shape {}".format(
+                        tensor_shape))
+
         elif opcode_index == get_opcode_index(model, 'MAX_POOL_2D'):
-            print('replace rule for MAX_POOL_2D not yet implemented')
+            options = op['builtin_options']
+            strides = (options['stride_h'], options['stride_w'])
+            pool_size = (options['filter_height'], options['filter_width'])
+
+            # TODO: maybe add sanity check for input/output tensor quantization matching?
+            if options['padding'] != 'VALID':
+                raise NotImplementedError(
+                    f"No replace rule for MAX_POOL_2D with padding {options['padding']}")
+            elif strides != (2, 2):
+                raise NotImplementedError(
+                    f"No replace rule for MAX_POOL_2D with strides {strides}")
+            elif pool_size != (2, 2):
+                raise NotImplementedError(
+                    f"No replace rule for MAX_POOL_2D with pool size {pool_size}")
+            elif options['fused_activation_function'] != 'NONE':
+                raise NotImplementedError(
+                    f"No replace rule for MAX_POOL_2D with fused activation {options['fused_activation_function']}")
+            else:
+                input_shape = tensors[op['inputs'][0]]['shape']
+                if input_shape[3] % 32 == 0:
+                    # TODO:
+                    print(f"WARNING: replace rule for '{XCOps.MAXPOOL2D_DEEP}' not yet implemented")
+                else:
+                    raise NotImplementedError(
+                        f"No replace rule for MAX_POOL_2D with {input_shape[3]} input channels")
+
         else:
             print("WARNING: no replace rule for op {}".format(
                 model['operator_codes'][opcode_index]['builtin_code']))
@@ -131,65 +185,9 @@ def replace_ops_with_XC(model):
         )
 
     # replace operators
-    subgraph = model['subgraphs'][0]
-    for k, opcode_str in op_replacement.items():
-        # TODO: refactor this
-        custom_opcode_ind = get_custom_opcode_index(model, opcode_str)
-        subgraph['operators'][k]['opcode_index'] = custom_opcode_ind
-        subgraph['operators'][k]['builtin_options_type'] = 'NONE'
-        del subgraph['operators'][k]['builtin_options']
-
-        def get_input_tensor(subgraph, op_ind, input_ind):
-            t_ind = subgraph['operators'][op_ind]['inputs'][input_ind]
-            return subgraph['tensors'][t_ind]
-
-        def get_buffer_data_of_tensor(model, tensor):
-            buffer_ind = tensor['buffer']
-            return model['buffers'][buffer_ind]['data']
-
-        # retrieve weights
-        weight_tensor = get_input_tensor(subgraph, op_ind=k, input_ind=1)
-        buffer_data = get_buffer_data_of_tensor(model, weight_tensor)
-        weights = np.int32(np.int8(buffer_data)).reshape(weight_tensor['shape'])
-
-        # retrieve biases
-        bias_tensor = get_input_tensor(subgraph, op_ind=k, input_ind=2)
-        buffer_data = get_buffer_data_of_tensor(model, bias_tensor)
-        bias = np.int32([i[0] for i in struct.iter_unpack('i', bytearray(buffer_data))])
-
-        # retrieve input zero point
-        input_tensor = get_input_tensor(subgraph, op_ind=k, input_ind=0)
-        input_zero_point = input_tensor['quantization']['zero_point'][0]
-        input_zero_point_vec = np.int32(input_zero_point * np.ones(weights.shape[1:]))
-
-        # retreive output quantization
-        t_ind = subgraph['operators'][k]['outputs'][0]
-        output_tensor = subgraph['tensors'][t_ind]
-        output_scale = output_tensor['quantization']['scale'][0]
-        output_zero_point = output_tensor['quantization']['zero_point'][0]
-
-        # calculate real multiplier
-        bias_scale = np.array(bias_tensor['quantization']['scale'][0])  # TODO: this might be channelwise
-        multiplier = bias_scale / output_scale
-
-        # calculate and save a single bias vector
-        new_bias = bias - np.matmul(weights, input_zero_point_vec) \
-            + np.int32(output_zero_point / multiplier)
-        buffer_ind = bias_tensor['buffer']
-        model['buffers'][buffer_ind]['data'] = list(new_bias.tostring())
-        bias_tensor['name'] = generate_unique_tensor_name(subgraph,
-            base_name=opcode_str, suffix='/biases')
-
-        # quantize multiplier to get right shift/scale
-        # NOTE: VLMUL expects one factor in Q2.14
-        rshift = -np.ceil(np.log2(multiplier))
-        scale = np.round(2**14 * (multiplier * 2**rshift))
-        if scale == 2**14:
-            rshift -= 1
-            scale /= 2
-        rshift -= 7 # this is because we are using 15 bits instead of 8
-        rshift = np.repeat(np.int16(rshift), 16)
-        scale = np.repeat(np.int16(scale), 16)
+    for op_ind, opcode_str in op_replacement.items():
+        if opcode_str == XCOps.FC_DEEPIN_SHALLOWOUT_LIN:
+            replace_with_XC_fc_deepin_shallowout_lin(model, subgraph_ind=0, op_ind=op_ind)
 
 
 def main(tflite_input, tflite_output, *,

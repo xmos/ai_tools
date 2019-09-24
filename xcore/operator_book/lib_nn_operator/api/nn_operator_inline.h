@@ -39,7 +39,7 @@ static inline void nn_mat_vec_mul_s8(
 
 static inline void conv2d_deepin_deepout_relu(
     const int8_t* K, 
-    const uint16_t* B,
+    const data16_t* B,
     const int8_t* X, 
     int8_t* Y,
     const int32_t height, 
@@ -48,7 +48,7 @@ static inline void conv2d_deepin_deepout_relu(
     const int32_t K_w,
     const int32_t C_out, 
     const int32_t C_in,
-    const uint16_t* shifts, 
+    const int16_t* shifts, 
     const int16_t* scales)
 {
 #if defined(__XS3A__) && (USE_ASM_conv2d_deepin_deepout_relu)
@@ -66,7 +66,7 @@ static inline void conv2d_deepin_deepout_relu(
 
 static inline void conv2d_shallowin_deepout_relu(
     const int8_t* K, 
-    const uint16_t* B,
+    const data16_t* B,
     const int8_t* X, 
     int8_t* Y,
     const int32_t height, 
@@ -74,7 +74,7 @@ static inline void conv2d_shallowin_deepout_relu(
     const int32_t K_h, 
     const int32_t K_w,
     const int32_t C_out,
-    const uint16_t* shifts, 
+    const int16_t* shifts, 
     const int16_t* scales)
 {
 #if defined(__XS3A__) && (USE_ASM_conv2d_shallowin_deepout_relu)

@@ -29,15 +29,19 @@ static unsigned seed = 4321234;
 #define width       (8)
 void test_maxpool2d_deep_case1()
 {
-    int8_t   WORD_ALIGNED  X[height][width][C_in];
-    int8_t   WORD_ALIGNED  Y_c[height/2][width/2][C_out];
+    int8_t WORD_ALIGNED  X[height][width][C_in];
+    int8_t WORD_ALIGNED  Y_c[height/2][width/2][C_out];
 
     int8_t WORD_ALIGNED Y_expected[height/2][width/2][C_out] = {{{ 0 }}};
 
     memset(X, 0x00, sizeof(X));
     memset(Y_c, 0xCC, sizeof(Y_c));
 
-    maxpool2d_deep((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
+    maxpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
+#if defined(__XS3A__) && USE_ASM_maxpool2d_deep
+    int8_t WORD_ALIGNED  Y_asm[height/2][width/2][C_out];
+    maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
+#endif
 
     for(unsigned h = 0; h < height/2; h++){
         for(unsigned w = 0; w < width/2; w++){
@@ -72,7 +76,11 @@ void test_maxpool2d_deep_case2()
     _read(input_file, (char*) Y_expected, sizeof(Y_expected));
     _close(input_file);
 
-    maxpool2d_deep((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
+    maxpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
+#if defined(__XS3A__) && USE_ASM_maxpool2d_deep
+    int8_t WORD_ALIGNED Y_asm[height/2][width/2][C_out];
+    maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
+#endif
 
     for(unsigned h = 0; h < height/2; h++){
         for(unsigned w = 0; w < width/2; w++){
@@ -111,7 +119,8 @@ void test_maxpool2d_deep_case3()
 
     maxpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
 #if defined(__XS3A__) && USE_ASM_maxpool2d_deep
-    maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
+    int8_t WORD_ALIGNED Y_asm[height/2][width/2][C_out];
+    maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
 #endif
 
     for(unsigned h = 0; h < height/2; h++){
@@ -156,7 +165,8 @@ void test_maxpool2d_deep_case4()
         //Process it
         maxpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
     #if defined(__XS3A__) && USE_ASM_maxpool2d_deep
-        maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
+        int8_t WORD_ALIGNED Y_asm[height/2][width/2][C_out];
+        maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
     #endif
 
         //Spot-check the result

@@ -24,7 +24,7 @@ void nn_mat_vec_mul_s8_c(
 
 void conv2d_deepin_deepout_relu_c(
     const int8_t* K, 
-    const uint16_t* B,
+    const data16_t* B,
     const int8_t* X, 
     int8_t* Y,
     const int32_t height, 
@@ -33,14 +33,14 @@ void conv2d_deepin_deepout_relu_c(
     const int32_t K_w,
     const int32_t C_out, 
     const int32_t C_in,
-    const uint16_t* shifts, 
+    const int16_t* shifts, 
     const int16_t* scales);
 
 
 
 void conv2d_shallowin_deepout_relu_c(
     const int8_t* K, 
-    const uint16_t* B,
+    const data16_t* B,
     const int8_t* X, 
     int8_t* Y,
     const int32_t height, 
@@ -48,7 +48,7 @@ void conv2d_shallowin_deepout_relu_c(
     const int32_t K_h, 
     const int32_t K_w,
     const int32_t C_out,
-    const uint16_t* shifts, 
+    const int16_t* shifts, 
     const int16_t* scales);
 
 

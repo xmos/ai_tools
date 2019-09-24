@@ -31,11 +31,10 @@ def find_used_opcode_inds(model):
                for op in subgraph['operators'])
 
 
-def find_used_tensor_inds(model):
+def find_used_tensor_inds(subgraph):
     used_tensor_inds = set()
-    for subgraph in model['subgraphs']:
-        for op in subgraph['operators']:
-            used_tensor_inds.update(op['inputs'] + op['outputs'])
+    for op in subgraph['operators']:
+        used_tensor_inds.update(op['inputs'] + op['outputs'])
     return used_tensor_inds
 
 
@@ -69,7 +68,7 @@ def clean_unused_tensors(model):
         new_tensors = []
 
         # find used tensors and build new tensor list
-        used_tensor_inds = find_used_tensor_inds(model)
+        used_tensor_inds = find_used_tensor_inds(subgraph)
         while used_tensor_inds:
             tensor_ind = used_tensor_inds.pop()
             tensor_ind_map[tensor_ind] = len(new_tensors)

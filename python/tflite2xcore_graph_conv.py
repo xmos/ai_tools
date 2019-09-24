@@ -80,13 +80,8 @@ def replace_float_inputs_outputs(model):
                                  if j not in ops_to_remove]
 
 
-def replace_ops_with_XC(model):
-    if len(model['subgraphs']) > 1:
-        raise ValueError(
-            "Number of subgraphs is {}, "
-            "cannot be greater than 1.".format(len(model['subgraphs'])))
-
-    subgraph = model['subgraphs'][0]
+def get_ops_replacements(model, subgraph_ind):
+    subgraph = model['subgraphs'][subgraph_ind]
     tensors = subgraph['tensors']
 
     new_opcodes = set()
@@ -116,6 +111,17 @@ def replace_ops_with_XC(model):
             print("WARNING: no replace rule for op {}".format(
                 model['operator_codes'][opcode_index]['builtin_code']))
 
+    return op_replacement, new_opcodes
+
+
+def replace_ops_with_XC(model):
+    if len(model['subgraphs']) > 1:
+        raise ValueError(
+            "Number of subgraphs is {}, "
+            "cannot be greater than 1.".format(len(model['subgraphs'])))
+
+    op_replacement, new_opcodes = get_ops_replacements(model, subgraph_ind=0)
+
     # add new opcodes
     while new_opcodes:
         model['operator_codes'].append(
@@ -125,6 +131,7 @@ def replace_ops_with_XC(model):
         )
 
     # replace operators
+    subgraph = model['subgraphs'][0]
     for k, opcode_str in op_replacement.items():
         # TODO: refactor this
         custom_opcode_ind = get_custom_opcode_index(model, opcode_str)

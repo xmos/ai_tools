@@ -16,8 +16,8 @@
  *                    K_h * K_w * C_in * ((i//16 + 1)*16 - i%16 - 1)
  *                    +  K_w * C_in * j  +  C_in * k  +  l
  *                  ]
- *  \param  B       Bias tensor of shape (C_out, 2) using a standard layout
- *                  such that B[i, c]  =  2 * i  +  c. The value B[0, c]
+ *  \param  B       Bias tensor of shape (2, C_out) using a standard layout
+ *                  such that B[i, c]  =  C_out * i  +  c. The value B[0, c]
  *                  encodes the lower 16 bits, while B[1, c] encodes the higher
  *                  16 bits of the 32-bit bias value for output channel c.
  *  \param  X       Input tensor of shape (height, width, C_in) using standard
@@ -40,9 +40,9 @@
  *                  intermediate conversion. Optional. Can be assumed to be
  *                  between 0x4000 and 0x7FFF.
  */
-static inline void conv2d_deepin_deepout_relu(
+void conv2d_deepin_deepout_relu(
     const int8_t* K, 
-    const uint16_t* B,
+    const data16_t* B,
     const int8_t* X, 
     int8_t* Y,
     const int32_t height, 
@@ -51,7 +51,7 @@ static inline void conv2d_deepin_deepout_relu(
     const int32_t K_w,
     const int32_t C_out, 
     const int32_t C_in,
-    const uint16_t* shifts, 
+    const int16_t* shifts, 
     const int16_t* scales);
 
 /**  2D convolution for "shallow" input and "deep" output tensors.
@@ -70,8 +70,8 @@ static inline void conv2d_deepin_deepout_relu(
  *                  The weights are zero padded in the 3rd dimension, i.e.
  *                  K[i, j, k, l] is zero for K_w <= k < 8. There may or may
  *                  not be zero padding in the 4th dimension.
- *  \param  B       Bias tensor of shape (C_out, 2) using a standard layout
- *                  such that B[i, c]  =  2 * i  +  c. The value B[0, c]
+ *  \param  B       Bias tensor of shape (2, C_out) using a standard layout
+ *                  such that B[i, c]  =  C_out * i  +  c. The value B[0, c]
  *                  encodes the lower 16 bits, while B[1, c] encodes the higher
  *                  16 bits of the 32-bit bias value for output channel c.
  *  \param  X       Input tensor of shape (height, width, C_in) using standard
@@ -95,7 +95,7 @@ static inline void conv2d_deepin_deepout_relu(
  */
 void conv2d_shallowin_deepout_relu(
     const int8_t* K, 
-    const uint16_t* B,
+    const data16_t* B,
     const int8_t* X, 
     int8_t* Y,
     const int32_t height, 
@@ -103,7 +103,7 @@ void conv2d_shallowin_deepout_relu(
     const int32_t K_h, 
     const int32_t K_w,
     const int32_t C_out,
-    const uint16_t* shifts, 
+    const int16_t* shifts, 
     const int16_t* scales);
 
 
@@ -128,8 +128,6 @@ void maxpool2d_deep(
     const int32_t height, 
     const int32_t width,
     const int32_t C_in);
-
-
 
 /**  Fully connected layer for "deep" input and "shallow" output tensors.
  *

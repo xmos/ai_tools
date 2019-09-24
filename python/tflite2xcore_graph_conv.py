@@ -17,6 +17,7 @@ from tflite_utils import load_tflite_as_json, save_json_as_tflite
 from tflite2xcore_utils import get_opcode_index, get_custom_opcode_index
 from tflite2xcore_utils import find_referencing_ops
 from tflite2xcore_utils import generate_unique_tensor_name
+from tflite2xcore_utils import clean_unused_buffers, clean_unused_opcodes, clean_unused_tensors
 
 
 def get_input_output_replacements(model, mode=None):
@@ -203,9 +204,9 @@ def main(tflite_input, tflite_output, *,
     # run graph manipulations
     replace_float_inputs_outputs(model)
     replace_ops_with_XC(model)
-    # TODO: clean unused opcodes
-    # TODO: clean unused tensors
-    # TODO: clean unused buffers    
+    clean_unused_opcodes(model)
+    clean_unused_tensors(model)
+    clean_unused_buffers(model)
 
     save_json_as_tflite(model, tflite_output,
                         flatc_bin=flatc_bin, schema=schema)

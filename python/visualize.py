@@ -156,14 +156,14 @@ _D3_HTML_TEMPLATE = """
           .attr("r", "5px")
           .attr("width", function(d) { return d.node_width; })
           .attr("height", node_height)
-          .attr("rx", function(d) { return d.group == 1 ? 1 : 10; })
+          .attr("rx", function(d) { return d.edge_radius; })
           .attr("stroke", "#000000")
-          .attr("fill", function(d) { return d.group == 1 ? "#dddddd" : "#000000"; })
+          .attr("fill", function(d) { return d.fill_color; })
       node.append("text")
           .text(function(d) { return d.name; })
           .attr("x", 5)
           .attr("y", 20)
-          .attr("fill", function(d) { return d.group == 1 ? "#000000" : "#eeeeee"; })
+          .attr("fill", function(d) { return d.text_color; })
       // Setup force parameters and update position callback
 
 
@@ -263,6 +263,7 @@ def GenerateGraph(subgraph_idx, g, opcode_mapper):
 
   edges, nodes = [], []
   tensor_names, op_names = [], []
+  tensor_colors, op_colors = [], []
   first, second = {}, {}
   pixel_mult = 200  # TODO(aselle): multiplier for initial placement
   width_mult = 170  # TODO(aselle): multiplier for initial placement
@@ -271,10 +272,26 @@ def GenerateGraph(subgraph_idx, g, opcode_mapper):
     t_name = "(%d) %r %s" % (tensor_index, tensor["name"],
                         (repr(tensor["shape"]) if "shape" in tensor else "[]"))
     tensor_names.append((t_name, int(len(t_name) * 12/16*10 + 5)))
+    tensor_colors.append("#fffacd")  # default tensor color, should be only parameters
 
   for op in g["operators"]:
     o_name = opcode_mapper(op["opcode_index"])
     op_names.append((o_name, int(len(o_name) * 12/16*10 + 5)))
+    if o_name.startswith('XC_'):
+      op_colors.append("#00a000")
+    else:
+      op_colors.append("#000000")
+
+    # coloring intermediate tensors
+    for tensor_index in op['outputs']:
+      tensor_colors[tensor_index] = "#dddddd"
+
+  #coloring input/output tensors
+  for tensor_index in range(len(g['tensors'])):
+    if tensor_index in g['inputs']:
+      tensor_colors[tensor_index] = "#ccccff"
+    elif tensor_index in g['outputs']:
+      tensor_colors[tensor_index] = "#ffcccc"
 
   for op_index, op in enumerate(g["operators"]):
 
@@ -303,7 +320,9 @@ def GenerateGraph(subgraph_idx, g, opcode_mapper):
     nodes.append({
         "id": OpName(op_index),
         "name": op_names[op_index][0],
-        "group": 2,
+        "text_color": "#eeeeee",
+        "fill_color": op_colors[op_index],
+        "edge_radius": 10,
         "x": pixel_mult,
         "y": (op_index + 1) * pixel_mult,
         "node_width": op_names[op_index][1]
@@ -318,7 +337,9 @@ def GenerateGraph(subgraph_idx, g, opcode_mapper):
     nodes.append({
         "id": TensorName(tensor_index),
         "name": tensor_names[tensor_index][0],
-        "group": 1,
+        "text_color": "#000000",
+        "fill_color": tensor_colors[tensor_index],
+        "edge_radius": 1,
         "x": initial_y[1],
         "y": initial_y[0],
         "node_width": tensor_names[tensor_index][1]

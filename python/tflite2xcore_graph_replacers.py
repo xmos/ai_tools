@@ -44,10 +44,12 @@ def replace_with_XC_fc_deepin_shallowout_lin(model, subgraph_ind, op_ind):
         buffer_ind = tensor['buffer']
         return model['buffers'][buffer_ind]['data']
 
-    # retrieve weights
+    # retrieve weights, and rename weight tensor
     weight_tensor = get_input_tensor(subgraph, op_ind, input_ind=1)
     buffer_data = get_buffer_data_of_tensor(model, weight_tensor)
     weights = np.int32(np.int8(buffer_data)).reshape(weight_tensor['shape'])
+    weight_tensor['name'] = generate_unique_tensor_name(subgraph,
+        base_name=opcode_str, suffix='/weights')
 
     # retrieve biases
     bias_tensor = get_input_tensor(subgraph, op_ind, input_ind=2)

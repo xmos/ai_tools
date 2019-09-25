@@ -8,6 +8,26 @@
 #include <stdio.h>
 #include <assert.h>
 
+static inline int8_t sat_s8(const int32_t acc32)
+{
+    if(acc32 >= VPU_INT8_MAX)
+        return VPU_INT8_MAX;
+    if(acc32 <= VPU_INT8_MIN)
+        return VPU_INT8_MIN;
+    
+    return (int8_t) acc32;
+}
+
+static inline int16_t sat_s16(const int32_t acc32)
+{
+    if(acc32 >= VPU_INT16_MAX)
+        return VPU_INT16_MAX;
+    if(acc32 <= VPU_INT16_MIN)
+        return VPU_INT16_MIN;
+    
+    return (int16_t) acc32;
+}
+
 static inline int32_t sat_s32(const int64_t acc64)
 {
     if(acc64 >= VPU_INT32_MAX)
@@ -24,68 +44,19 @@ static inline int32_t sat_s32(const int64_t acc64)
 //     *acc32 = sat_s32(acc64);
 // }
 
-
-static inline int8_t vlsat_single_s8(int32_t acc, int16_t shr){
-    if(shr > 0){
-        int32_t tmp = (acc >> shr) << shr;
-        int32_t diff = acc - tmp;
-        uint32_t threshold = 1<<(shr-1);
-        
-        acc >>= shr;
-
-        if (diff == threshold){
-            // Round to nearest even.
-            if(acc & 0x01)
-                acc++;
-        } else if(diff > threshold){
-            //Round up (more positive, less negative)
-            acc += 1;
-        } else {
-            //Round down (do nothing)
-        }
-    } else {
-        acc >>= shr;
-    }
-    if(acc > VPU_INT8_MAX)
-        acc = VPU_INT8_MAX;
-    if(acc < VPU_INT8_MIN)
-        acc = VPU_INT8_MIN;
-
-    return (int8_t) acc;
+static inline int8_t vlsat_single_s8(int32_t acc, int16_t shr)
+{
+    if(shr > 0) acc += 1<<(shr-1);
+    return sat_s8(acc >> shr);
 }
 
-static inline int16_t vlsat_single_s16(int32_t acc, int16_t shr){
-    if(shr > 0){
-        int32_t tmp = (acc >> shr) << shr;
-        int32_t diff = acc - tmp;
-        uint32_t threshold = 1<<(shr-1);
-        
-        acc >>= shr;
-
-        if (diff == threshold){
-            // Round to nearest even.
-            if(acc & 0x01)
-                acc++;
-        } else if(diff > threshold){
-            //Round up (more positive, less negative)
-            acc += 1;
-        } else {
-            //Round down (do nothing)
-        }
-    } else {
-        acc >>= shr;
-    }
-    if(acc > VPU_INT16_MAX)
-        acc = VPU_INT16_MAX;
-    if(acc < VPU_INT16_MIN)
-        acc = VPU_INT16_MIN;
-
-    return (int16_t) acc;
+static inline int16_t vlsat_single_s16(int32_t acc, int16_t shr)
+{
+    if(shr > 0) acc += 1<<(shr-1);
+    return sat_s16(acc >> shr);
 }
-
 
 static inline int16_t vlmul_single_s16(int16_t vR, int16_t mem){
-
     int32_t p = vR * mem;
     p = vlsat_single_s16(p, 14);
     return (int16_t)p;
@@ -167,6 +138,9 @@ void conv2d_deepin_deepout_relu_c(
     const int16_t* shifts, 
     const int16_t* scales)
 {
+
+    assert( vlmul_single_s16(8318, 16384) == 8318  );
+
     const int P_h = K_h / 2;
     const int P_w = K_w / 2;
 
@@ -209,15 +183,33 @@ void conv2d_deepin_deepout_relu_c(
                         }
                     }
 
-                    // printf("@@ (%d,%d)\t%ld\n", row, col, acc32);
+                    // if( actual_chout == 2 && row == 1 && col == 0)
+                    //     printf("2!!  %ld\n", acc32);
 
-                    int16_t res = vlsat_single_s16(acc32, shr);
-                    if(res < 0) res = 0;
-                    res = res - ((1<<14)-1);
-                    res = vlmul_single_s16(res, scale);
+                    int16_t res16 = vlsat_single_s16(acc32, shr);
+                    
+                    // if( actual_chout == 2 && row == 1 && col == 0)
+                    //     printf("3!!  %d\n", res16);
 
-                    Y[(row*width+col)*C_out + actual_chout] = vdepth8_single_s16(res);
-                    // return;
+                    if(res16 < 0) res16 = 0;
+                    
+                    // if( actual_chout == 2 && row == 1 && col == 0)
+                    //     printf("4!!  %d\n", res16);
+
+                    res16 = res16 - ((1<<14)-1);
+                    
+                    // if( actual_chout == 2 && row == 1 && col == 0)
+                    //     printf("5!!  %d\n", res16);
+
+                    res16 = vlmul_single_s16(res16, scale);
+                    
+                    // if( actual_chout == 2 && row == 1 && col == 0)
+                    //     printf("6!!  %d\n", res16);
+                    
+                    // if( actual_chout == 2 && row == 1 && col == 0)
+                    //     printf("7!!  %d\n", vdepth8_single_s16(res16));
+
+                    Y[(row*width+col)*C_out + actual_chout] = vdepth8_single_s16(res16);
                 }
             }
         }

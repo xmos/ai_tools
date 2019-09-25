@@ -1,2 +1,2 @@
 #undef Y_CHECK
-#define Y_CHECK  -127,-63,-51,-127
+#define Y_CHECK  -100,5,-83,-127

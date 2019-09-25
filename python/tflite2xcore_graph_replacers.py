@@ -15,6 +15,17 @@ class XCOps():
     CONV2D_DEEPIN_DEEPOUT_RELU = 'XC_conv2d_deepin_deepout_relu'
 
 
+def replace_with_XC_maxpool2d_deep(model, subgraph_ind, op_ind):
+    subgraph = model['subgraphs'][subgraph_ind]
+    opcode_str = XCOps.MAXPOOL2D_DEEP
+
+    custom_opcode_ind = get_custom_opcode_index(model, opcode_str)
+    op = subgraph['operators'][op_ind]
+    op['opcode_index'] = custom_opcode_ind
+    op['builtin_options_type'] = 'NONE'
+    del op['builtin_options']
+
+
 def replace_with_XC_fc_deepin_shallowout_lin(model, subgraph_ind, op_ind):
     subgraph = model['subgraphs'][subgraph_ind]
     opcode_str = XCOps.FC_DEEPIN_SHALLOWOUT_LIN

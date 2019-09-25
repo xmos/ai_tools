@@ -11,7 +11,7 @@ from tflite_utils import load_tflite_as_json, save_json_as_tflite
 from tflite2xcore_utils import get_opcode_index
 from tflite2xcore_utils import find_referencing_ops
 from tflite2xcore_utils import clean_unused_buffers, clean_unused_opcodes, clean_unused_tensors
-from tflite2xcore_graph_replacers import replace_with_XC_fc_deepin_shallowout_lin
+from tflite2xcore_graph_replacers import replace_with_XC_fc_deepin_shallowout_lin, replace_with_XC_maxpool2d_deep
 from tflite2xcore_graph_replacers import XCOps
 
 
@@ -138,9 +138,13 @@ def get_ops_replacements(model, subgraph_ind):
             options = op['builtin_options']
             strides = (options['stride_h'], options['stride_w'])
             pool_size = (options['filter_height'], options['filter_width'])
+            input_tensor = tensors[op['inputs'][0]]
+            output_tensor = tensors[op['outputs'][0]]
 
             # TODO: maybe add sanity check for input/output tensor quantization matching?
-            if options['padding'] != 'VALID':
+            if output_tensor['quantization'] != input_tensor['quantization']:
+                raise ValueError("Input and output tensor quantization does not match for MAX_POOL_2D.")
+            elif options['padding'] != 'VALID':
                 raise NotImplementedError(
                     f"No replace rule for MAX_POOL_2D with padding {options['padding']}")
             elif strides != (2, 2):
@@ -153,10 +157,12 @@ def get_ops_replacements(model, subgraph_ind):
                 raise NotImplementedError(
                     f"No replace rule for MAX_POOL_2D with fused activation {options['fused_activation_function']}")
             else:
-                input_shape = tensors[op['inputs'][0]]['shape']
+                input_shape = input_tensor['shape']
                 if input_shape[3] % 32 == 0:
-                    # TODO:
-                    print(f"WARNING: replace rule for '{XCOps.MAXPOOL2D_DEEP}' not yet implemented")
+                    # deep maxpool2d layer
+                    custom_opcode = XCOps.MAXPOOL2D_DEEP
+                    new_opcodes.add(custom_opcode)
+                    op_replacement[j] = custom_opcode
                 else:
                     raise NotImplementedError(
                         f"No replace rule for MAX_POOL_2D with {input_shape[3]} input channels")
@@ -188,6 +194,8 @@ def replace_ops_with_XC(model):
     for op_ind, opcode_str in op_replacement.items():
         if opcode_str == XCOps.FC_DEEPIN_SHALLOWOUT_LIN:
             replace_with_XC_fc_deepin_shallowout_lin(model, subgraph_ind=0, op_ind=op_ind)
+        elif opcode_str == XCOps.MAXPOOL2D_DEEP:
+            replace_with_XC_maxpool2d_deep(model, subgraph_ind=0, op_ind=op_ind)
 
 
 def main(tflite_input, tflite_output, *,

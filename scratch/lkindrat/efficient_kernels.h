@@ -106,7 +106,6 @@ void conv2d_shallowin_deepout_relu(
     const int16_t* shifts,
     const int16_t* scales);
 
-
 /**  2D maxpool for "deep" input and output tensors.
  *
  *  Pool size is 2x2, stride is 2 in both dimensions. Number of input channels
@@ -129,10 +128,11 @@ void maxpool2d_deep(
     const int32_t width,
     const int32_t C_in);
 
-/**  Fully connected layer for "deep" input and "shallow" output tensors.
+/**  Fully connected layer for "deep" input and "shallow" output tensors as the
+ *   final (learned) layer of a network.
  *
  *  Number of inputs must be divisible by 32. Number of outputs must be less
- *  than 16. No activation is applied (i.e. linear).
+ *  than 16. No explicit activation is applied.
  *
  *  \param  W       Weight tensor of shape (C_out, C_in) using standard layout
  *                  such that:
@@ -151,7 +151,7 @@ void maxpool2d_deep(
  *                  and 0x7FFF. For c >= C_out, the value scales[y] is
  *                  undefined.
  */
-void fc_deepin_shallowout_lin(
+void fc_deepin_shallowout_final(
     const int8_t* W,
     const int32_t* B,
     const int8_t* X,
@@ -161,3 +161,12 @@ void fc_deepin_shallowout_lin(
     const int16_t* shifts,
     const int16_t* scales);
 
+/**  Argmax to serve as the final layer of a classifier network.
+ *
+ *  \param  A       Tensor of shape (N) using a standard layout.
+ *  \param  C       Output tensor of shape (1).
+ *  \param  N       Number of elements in the input tensor A.
+ */
+void argmax_16(const int16_t* A,
+               int32_t* C,
+               const int32_t N);

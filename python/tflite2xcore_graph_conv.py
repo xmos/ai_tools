@@ -11,11 +11,11 @@ from tflite_utils import load_tflite_as_json, save_json_as_tflite
 from tflite2xcore_utils import get_opcode_index
 from tflite2xcore_utils import find_referencing_ops
 from tflite2xcore_utils import clean_unused_buffers, clean_unused_opcodes, clean_unused_tensors
-from tflite2xcore_graph_replacers import replace_with_XC_fc_deepin_shallowout_lin, replace_with_XC_maxpool2d_deep
-from tflite2xcore_graph_replacers import XCOps
+from tflite2xcore_graph_replacers import replace_with_XC_fc_deepin_shallowout_final, replace_with_XC_maxpool2d_deep
+from tflite2xcore_graph_replacers import generate_unique_tensor_name, XCOps
 
 
-def get_input_output_replacements(model, mode=None):
+def get_float_input_output_replacements(model, subgraph_ind, * ,mode=None):
     modes = ['inputs', 'outputs']
     if mode not in modes:
         raise ValueError('mode must be one of {}'.format(modes))
@@ -24,7 +24,7 @@ def get_input_output_replacements(model, mode=None):
     ops_to_remove = set()
 
     opcodes = model['operator_codes']
-    subgraph = model['subgraphs'][0]
+    subgraph = model['subgraphs'][subgraph_ind]
     tensors, operators = subgraph['tensors'], subgraph['operators']
 
     for k, tensor_ind in enumerate(subgraph[mode]):
@@ -65,14 +65,73 @@ def get_input_output_replacements(model, mode=None):
     return replacements, ops_to_remove
 
 
-def replace_float_inputs_outputs(model):
-    subgraph = model['subgraphs'][0]
-    for mode in ['inputs', 'outputs']:
-        replacements, ops_to_remove = get_input_output_replacements(model, mode=mode)
-        subgraph[mode] = [replacements[k] if k in replacements else ind
-                          for k, ind in enumerate(subgraph[mode])]
+def remove_float_inputs_outputs(model):
+    for subgraph_ind, subgraph in enumerate(model['subgraphs']):
+        for mode in ['inputs', 'outputs']:
+            replacements, ops_to_remove = get_float_input_output_replacements(
+                model, subgraph_ind, mode=mode)
+            subgraph[mode] = [replacements[k] if k in replacements else ind
+                            for k, ind in enumerate(subgraph[mode])]
+            subgraph['operators'] = [op for j, op in enumerate(subgraph['operators'])
+                                    if j not in ops_to_remove]
+
+
+def remove_output_softmax(model):
+    softmax_ind = get_opcode_index(model, 'SOFTMAX')
+    for subgraph in model['subgraphs']:
+        replacements = {}
+        ops_to_remove = set()
+
+        for op_ind, op in enumerate(subgraph['operators']):
+            if op['opcode_index'] == softmax_ind:
+                output_tensor_ind = op['outputs'][0]
+                if output_tensor_ind in subgraph['outputs']:
+                    ops_to_remove.add(op_ind)
+                    replacements[output_tensor_ind] = op['inputs'][0]
+
+        subgraph['outputs'] = [replacements[k] if k in replacements else ind
+                               for k, ind in enumerate(subgraph['outputs'])]
         subgraph['operators'] = [op for j, op in enumerate(subgraph['operators'])
                                  if j not in ops_to_remove]
+
+
+def add_output_argmax(model):
+    opcode_str = XCOps.ARGMAX_16
+
+    # add new opcode
+    opcode_ind = len(model['operator_codes'])
+    model['operator_codes'].append({
+        'builtin_code': 'CUSTOM',
+        'custom_code': opcode_str,
+        'version': 1
+    })
+
+    for subgraph_ind, subgraph in enumerate(model['subgraphs']):
+        outputs = subgraph['outputs']
+        if len(outputs) > 1:
+            raise ValueError("Output argmax cannot be added to subgraphs with "
+                             f"more than one output (found {len(outputs)})")
+
+        # add new output tensor and buffer
+        new_outputs = [len(subgraph['tensors'])]
+        subgraph['tensors'].append({
+            'shape': [1, 1],
+            'type': 'INT32',
+            'buffer': len(model['buffers']),
+            'name': generate_unique_tensor_name(subgraph, base_name=opcode_str, suffix='/output'),
+            'is_variable': False
+        })
+        model['buffers'].append({})
+        subgraph['outputs'] = new_outputs
+        
+        # add argmax op to subgraph
+        subgraph['operators'].append({
+            'opcode_index': opcode_ind,
+            'inputs': [outputs[0]],
+            'outputs': new_outputs,
+            'builtin_options_type': 'NONE',
+            'custom_options_format': 'FLEXBUFFERS'
+        })
 
 
 def get_ops_replacements(model, subgraph_ind):
@@ -92,9 +151,13 @@ def get_ops_replacements(model, subgraph_ind):
 
             if tensor_shape[0] < 16 and tensor_shape[1] % 32 == 0:
                 # shallow input, deep output fully connected layer
-                custom_opcode = XCOps.FC_DEEPIN_SHALLOWOUT_LIN
-                new_opcodes.add(custom_opcode)
-                op_replacement[j] = custom_opcode
+                if op['outputs'][0] in subgraph['outputs']:
+                    custom_opcode = XCOps.FC_DEEPIN_SHALLOWOUT_FINAL
+                    new_opcodes.add(custom_opcode)
+                    op_replacement[j] = custom_opcode
+                else:
+                    raise NotImplementedError(
+                        f"No replace rule for FULLY_CONNECTED with shape {tensor_shape} as non-final layer")
             else:
                 raise NotImplementedError(
                     f"No replace rule for FULLY_CONNECTED with shape {tensor_shape}")
@@ -192,13 +255,14 @@ def replace_ops_with_XC(model):
 
     # replace operators
     for op_ind, opcode_str in op_replacement.items():
-        if opcode_str == XCOps.FC_DEEPIN_SHALLOWOUT_LIN:
-            replace_with_XC_fc_deepin_shallowout_lin(model, subgraph_ind=0, op_ind=op_ind)
+        if opcode_str == XCOps.FC_DEEPIN_SHALLOWOUT_FINAL:
+            replace_with_XC_fc_deepin_shallowout_final(model, subgraph_ind=0, op_ind=op_ind)
         elif opcode_str == XCOps.MAXPOOL2D_DEEP:
             replace_with_XC_maxpool2d_deep(model, subgraph_ind=0, op_ind=op_ind)
 
 
 def main(tflite_input, tflite_output, *,
+         is_classifier=False,
          flatc_bin=DEFAULT_FLATC, schema=DEFAULT_SCHEMA):
 
     if not os.path.exists(schema):
@@ -215,8 +279,15 @@ def main(tflite_input, tflite_output, *,
                                 flatc_bin=flatc_bin, schema=schema)
 
     # run graph manipulations
-    replace_float_inputs_outputs(model)
+    remove_float_inputs_outputs(model)
+    if is_classifier:
+        remove_output_softmax(model)
+
     replace_ops_with_XC(model)
+
+    if is_classifier:
+        add_output_argmax(model)
+
     clean_unused_opcodes(model)
     clean_unused_tensors(model)
     clean_unused_buffers(model)
@@ -233,11 +304,16 @@ if __name__ == "__main__":
                         help='Path to flatc executable.')
     parser.add_argument('--schema', required=False, default=None,
                         help='Path to .fbs schema file.')
+    parser.add_argument('--classifier',  action='store_true', default=False,
+                        help="Apply optimizations for classifier networks "
+                             "(e.g. softmax removal and output argmax).")
     args = parser.parse_args()
 
     tflite_input = os.path.realpath(args.tflite_input)
     tflite_output = os.path.realpath(args.tflite_output)
     flatc_bin = args.flatc if args.flatc else DEFAULT_FLATC
     schema = args.schema if args.schema else DEFAULT_SCHEMA
+    is_classifier = args.classifier
 
-    main(tflite_input, tflite_output, flatc_bin=flatc_bin, schema=schema)
+    main(tflite_input, tflite_output, is_classifier=is_classifier,
+         flatc_bin=flatc_bin, schema=schema)

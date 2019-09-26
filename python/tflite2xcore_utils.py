@@ -79,6 +79,8 @@ def clean_unused_tensors(model):
         for op in subgraph['operators']:
             op['inputs'] = [tensor_ind_map[i] for i in op['inputs']]
             op['outputs'] = [tensor_ind_map[i] for i in op['outputs']]
+        subgraph['inputs'] = [tensor_ind_map[i] for i in subgraph['inputs']]
+        subgraph['outputs'] = [tensor_ind_map[i] for i in subgraph['outputs']]
 
 
 def clean_unused_buffers(model):

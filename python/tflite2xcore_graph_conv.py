@@ -8,11 +8,14 @@ import argparse
 
 from tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA
 from tflite_utils import load_tflite_as_json, save_json_as_tflite
-from tflite2xcore_utils import get_opcode_index
-from tflite2xcore_utils import find_referencing_ops
+from tflite2xcore_utils import get_opcode_index, find_referencing_ops
+from tflite2xcore_utils import XCOps
 from tflite2xcore_utils import clean_unused_buffers, clean_unused_opcodes, clean_unused_tensors
-from tflite2xcore_graph_replacers import replace_with_XC_fc_deepin_shallowout_final, replace_with_XC_maxpool2d_deep
-from tflite2xcore_graph_replacers import generate_unique_tensor_name, XCOps
+from tflite2xcore_utils import generate_unique_tensor_name
+
+from tflite2xcore_graph_replacers import replace_with_XC_fc_deepin_shallowout_final
+from tflite2xcore_graph_replacers import replace_with_XC_maxpool2d_deep
+from tflite2xcore_graph_replacers import replace_with_XC_conv2d_deepin_deepout_relu
 
 
 def get_float_input_output_replacements(model, subgraph_ind, * ,mode=None):
@@ -182,8 +185,10 @@ def get_ops_replacements(model, subgraph_ind):
                 raise NotImplementedError(
                     f"No replace rule for CONV_2D with (even) kernel shape {tensor_shape[1:3]}")
             elif tensor_shape[0] % 16 == 0 and tensor_shape[3] % 32 == 0:
-                # TODO:
-                print(f"WARNING: replace rule for '{XCOps.CONV2D_DEEPIN_DEEPOUT_RELU}' not yet implemented")
+                # deep input, deep output 2D convolution layer
+                custom_opcode = XCOps.CONV2D_DEEPIN_DEEPOUT_RELU
+                new_opcodes.add(custom_opcode)
+                op_replacement[j] = custom_opcode
             elif tensor_shape[0] % 16 == 0 and tensor_shape[3] <= 4:
                 if tensor_shape[2] > 8:
                     raise NotImplementedError(
@@ -204,7 +209,6 @@ def get_ops_replacements(model, subgraph_ind):
             input_tensor = tensors[op['inputs'][0]]
             output_tensor = tensors[op['outputs'][0]]
 
-            # TODO: maybe add sanity check for input/output tensor quantization matching?
             if output_tensor['quantization'] != input_tensor['quantization']:
                 raise ValueError("Input and output tensor quantization does not match for MAX_POOL_2D.")
             elif options['padding'] != 'VALID':
@@ -259,6 +263,8 @@ def replace_ops_with_XC(model):
             replace_with_XC_fc_deepin_shallowout_final(model, subgraph_ind=0, op_ind=op_ind)
         elif opcode_str == XCOps.MAXPOOL2D_DEEP:
             replace_with_XC_maxpool2d_deep(model, subgraph_ind=0, op_ind=op_ind)
+        elif opcode_str == XCOps.CONV2D_DEEPIN_DEEPOUT_RELU:
+            replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind=0, op_ind=op_ind)
 
 
 def main(tflite_input, tflite_output, *,

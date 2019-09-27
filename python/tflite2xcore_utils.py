@@ -1,5 +1,38 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
+import numpy as np
+import struct
+
+
+class XCOps():
+    FC_DEEPIN_SHALLOWOUT_FINAL = 'XC_fc_deepin_shallowout_final'
+    MAXPOOL2D_DEEP = 'XC_maxpool2d_deep'
+    CONV2D_SHALLOWIN_DEEPOUT_RELU = 'XC_conv2d_shallowin_deepout_relu'
+    CONV2D_DEEPIN_DEEPOUT_RELU = 'XC_conv2d_deepin_deepout_relu'
+    ARGMAX_16 = 'XC_argmax_16'
+
+
+def get_input_tensor(subgraph, op_ind, input_ind):
+    t_ind = subgraph['operators'][op_ind]['inputs'][input_ind]
+    return subgraph['tensors'][t_ind]
+
+
+def get_buffer_data_of_tensor(model, tensor):
+        buffer_ind = tensor['buffer']
+        return model['buffers'][buffer_ind]['data']
+
+
+def tensor_to_np(model, tensor):
+    buffer_data = get_buffer_data_of_tensor(model, tensor)
+    if tensor['type'] == 'INT8':
+        arr = np.int32(np.int8(buffer_data))
+    elif tensor['type'] == 'INT32':
+        arr = np.int32([i[0] for i in struct.iter_unpack('i', bytearray(buffer_data))])
+    else:
+        raise NotImplementedError()
+    return arr.reshape(tensor['shape'])
+
+
 def get_opcode_index(model, opcode_str):
     for j, opcode in enumerate(model['operator_codes']):
         if opcode['builtin_code'] == opcode_str:

@@ -16,6 +16,7 @@ from tflite2xcore_utils import generate_unique_tensor_name
 from tflite2xcore_graph_replacers import replace_with_XC_fc_deepin_shallowout_final
 from tflite2xcore_graph_replacers import replace_with_XC_maxpool2d_deep
 from tflite2xcore_graph_replacers import replace_with_XC_conv2d_deepin_deepout_relu
+from tflite2xcore_graph_replacers import replace_with_XC_conv2d_shallowin_deepout_relu
 
 
 def get_float_input_output_replacements(model, subgraph_ind, * ,mode=None):
@@ -196,8 +197,9 @@ def get_ops_replacements(model, subgraph_ind):
                         f"shallow input {tensor_shape[3]} (<= 4), "
                         f"and kernel width {tensor_shape[2]} (> 8)")
 
-                # TODO:
-                print(f"WARNING: replace rule for '{XCOps.CONV2D_SHALLOWIN_DEEPOUT_RELU}' not yet implemented")
+                custom_opcode = XCOps.CONV2D_SHALLOWIN_DEEPOUT_RELU
+                new_opcodes.add(custom_opcode)
+                op_replacement[j] = custom_opcode
             else:
                 print("WARNING: replace rule for op CONV_2D with shape {}".format(
                         tensor_shape))
@@ -265,6 +267,8 @@ def replace_ops_with_XC(model):
             replace_with_XC_maxpool2d_deep(model, subgraph_ind=0, op_ind=op_ind)
         elif opcode_str == XCOps.CONV2D_DEEPIN_DEEPOUT_RELU:
             replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind=0, op_ind=op_ind)
+        elif opcode_str == XCOps.CONV2D_SHALLOWIN_DEEPOUT_RELU:
+            replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind=0, op_ind=op_ind)
 
 
 def main(tflite_input, tflite_output, *,
@@ -297,6 +301,8 @@ def main(tflite_input, tflite_output, *,
     clean_unused_opcodes(model)
     clean_unused_tensors(model)
     clean_unused_buffers(model)
+
+    model['description'] = 'TOCO + XMOS converted.'
 
     save_json_as_tflite(model, tflite_output,
                         flatc_bin=flatc_bin, schema=schema)

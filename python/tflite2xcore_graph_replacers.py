@@ -8,7 +8,6 @@ from tflite2xcore_utils import generate_unique_tensor_name, XCOps
 from tflite2xcore_utils import get_custom_opcode_index, tensor_to_np
 from tflite2xcore_utils import get_input_tensor, get_buffer_data_of_tensor
 
-
 def replace_basic_op(model, subgraph_ind, op_ind, opcode_str):
     subgraph = model['subgraphs'][subgraph_ind]
     custom_opcode_ind = get_custom_opcode_index(model, opcode_str)
@@ -59,30 +58,22 @@ def add_XC_shift_scale(model, subgraph_ind, multiplier, op, opcode_str, bias_siz
     # quantize multiplier and get right shift/scale
     rshift, scale = calculate_shift_scale(multiplier, bias_size)
 
+    if rshift.shape != scale.shape:
+        raise ValueError(f"Shift and scale shapes don't match: {rshift.shape} != {scale.shape}")
+
     # add tensor and buffer for rshift
     op['inputs'].append(len(subgraph['tensors']))
     subgraph['tensors'].append({
-        'shape': list(rshift.shape),
+        'shape': [2] + list(rshift.shape),
         'type': 'INT16',
         'buffer': len(model['buffers']),
-        'name': generate_unique_tensor_name(subgraph, base_name=opcode_str, suffix='/rshift'),
+        'name': generate_unique_tensor_name(
+            subgraph, base_name=opcode_str, suffix='/shift_scale'),
         'is_variable': False
     })
     model['buffers'].append({
-        'data': list(b''.join([struct.pack('h', a) for a in rshift]))  # pylint: disable=not-an-iterable
-    })
-
-    # add tensor and buffer for scale
-    op['inputs'].append(len(subgraph['tensors']))
-    subgraph['tensors'].append({
-        'shape': list(scale.shape),
-        'type': 'INT16',
-        'buffer': len(model['buffers']),
-        'name': generate_unique_tensor_name(subgraph, base_name=opcode_str, suffix='/scale'),
-        'is_variable': False
-    })
-    model['buffers'].append({
-        'data': list(b''.join([struct.pack('h', a) for a in scale]))  # pylint: disable=not-an-iterable
+        'data': list(b''.join([struct.pack('h', a) for a in rshift])  # pylint: disable=not-an-iterable
+            + b''.join([struct.pack('h', a) for a in scale]))  # pylint: disable=not-an-iterable
     })
 
 
@@ -208,7 +199,25 @@ def replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind, op_ind):
     add_XC_shift_scale(model, subgraph_ind, multiplier, op, opcode_str, bias.size)
 
 
-def replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind, op_ind):
+def rearrange_depthwise_weights(model, subgraph_ind, op_ind):
+    subgraph = model['subgraphs'][subgraph_ind]
+    op = subgraph['operators'][op_ind]
+    weight_tensor = subgraph['tensors'][op['inputs'][1]]
+    weight_shape = weight_tensor['shape']
+
+    buffer = model['buffers'][weight_tensor['buffer']]
+    weights = np.uint8(buffer['data']).reshape(weight_shape)
+    weights = np.transpose(weights, axes=(3, 1, 2, 0))
+    buffer['data'] = weights.flatten().tolist()
+
+    weight_tensor['shape'] = list(weights.shape)
+
+
+def replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind, op_ind,
+                                                  *, from_depthwise=False):
+    if from_depthwise:
+        rearrange_depthwise_weights(model, subgraph_ind, op_ind)
+
     opcode_str = XCOps.CONV2D_SHALLOWIN_DEEPOUT_RELU
     replace_basic_op(model, subgraph_ind, op_ind, opcode_str)
 

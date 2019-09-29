@@ -110,7 +110,7 @@ def add_output_argmax(model):
         'version': 1
     })
 
-    for subgraph_ind, subgraph in enumerate(model['subgraphs']):
+    for subgraph in model['subgraphs']:
         outputs = subgraph['outputs']
         if len(outputs) > 1:
             raise ValueError("Output argmax cannot be added to subgraphs with "
@@ -143,7 +143,7 @@ def get_ops_replacements(model, subgraph_ind):
     tensors = subgraph['tensors']
 
     new_opcodes = set()
-    op_replacement = {}
+    op_replacement = []
 
     # TODO: refactor the logic here into mapper(s)?
     for j, op in enumerate(subgraph['operators']):
@@ -158,7 +158,11 @@ def get_ops_replacements(model, subgraph_ind):
                 if op['outputs'][0] in subgraph['outputs']:
                     custom_opcode = XCOps.FC_DEEPIN_SHALLOWOUT_FINAL
                     new_opcodes.add(custom_opcode)
-                    op_replacement[j] = custom_opcode
+                    op_replacement.append({
+                        "op_ind": j,
+                        "old_opcode": 'FULLY_CONNECTED',
+                        "new_opcode": custom_opcode
+                    })
                 else:
                     raise NotImplementedError(
                         f"No replace rule for FULLY_CONNECTED with shape {tensor_shape} as non-final layer")
@@ -189,7 +193,11 @@ def get_ops_replacements(model, subgraph_ind):
                 # deep input, deep output 2D convolution layer
                 custom_opcode = XCOps.CONV2D_DEEPIN_DEEPOUT_RELU
                 new_opcodes.add(custom_opcode)
-                op_replacement[j] = custom_opcode
+                op_replacement.append({
+                        "op_ind": j,
+                        "old_opcode": 'CONV_2D',
+                        "new_opcode": custom_opcode
+                })
             elif tensor_shape[0] % 16 == 0 and tensor_shape[3] <= 4:
                 if tensor_shape[2] > 8:
                     raise NotImplementedError(
@@ -199,10 +207,53 @@ def get_ops_replacements(model, subgraph_ind):
 
                 custom_opcode = XCOps.CONV2D_SHALLOWIN_DEEPOUT_RELU
                 new_opcodes.add(custom_opcode)
-                op_replacement[j] = custom_opcode
+                op_replacement.append({
+                        "op_ind": j,
+                        "old_opcode": 'CONV_2D',
+                        "new_opcode": custom_opcode
+                })
             else:
-                print("WARNING: replace rule for op CONV_2D with shape {}".format(
-                        tensor_shape))
+                raise NotImplementedError(
+                    f"No replace rule for CONV_2D with shape {tensor_shape}")
+
+        elif opcode_index == get_opcode_index(model, 'DEPTHWISE_CONV_2D'):
+            weight_tensor_ind = op['inputs'][1]  # the second tensor in the weight tensor
+            tensor_shape = tensors[weight_tensor_ind]['shape']
+            options = op['builtin_options']
+            strides = (options['stride_h'], options['stride_w'])
+            dilation = (options['dilation_h_factor'], options['dilation_w_factor'])
+
+            if dilation != (1, 1):
+                raise NotImplementedError(
+                    f"No replace rule for DEPTHWISE_CONV_2D with dilation {dilation}")
+            elif strides != (1, 1):
+                raise NotImplementedError(
+                    f"No replace rule for DEPTHWISE_CONV_2D with strides {strides}")
+            elif options['padding'] != 'SAME':
+                raise NotImplementedError(
+                    f"No replace rule for DEPTHWISE_CONV_2D with padding {options['padding']}")
+            elif tensor_shape[1] % 2 == 0 or tensor_shape[2] % 2 == 0:
+                raise NotImplementedError(
+                    f"No replace rule for DEPTHWISE_CONV_2D with (even) kernel shape {tensor_shape[1:3]}")
+            elif tensor_shape[0] > 1:
+                raise NotImplementedError(
+                    f"No replace rule for DEPTHWISE_CONV_2D for input channels {tensor_shape[0]} > 1")
+            elif tensor_shape[3] % 16 == 0:
+                if tensor_shape[2] > 8:
+                    raise NotImplementedError(
+                        "No replace rule for DEPTHWISE_CONV_2D with deep output, "
+                        f"single input channel, and kernel width {tensor_shape[2]} (> 8)")
+                
+                custom_opcode = XCOps.CONV2D_SHALLOWIN_DEEPOUT_RELU
+                new_opcodes.add(custom_opcode)
+                op_replacement.append({
+                        "op_ind": j,
+                        "old_opcode": 'DEPTHWISE_CONV_2D',
+                        "new_opcode": custom_opcode
+                })
+            else:
+                raise NotImplementedError(
+                    f"No replace rule for DEPTHWISE_CONV_2D with shape {tensor_shape}")
 
         elif opcode_index == get_opcode_index(model, 'MAX_POOL_2D'):
             options = op['builtin_options']
@@ -231,7 +282,11 @@ def get_ops_replacements(model, subgraph_ind):
                     # deep maxpool2d layer
                     custom_opcode = XCOps.MAXPOOL2D_DEEP
                     new_opcodes.add(custom_opcode)
-                    op_replacement[j] = custom_opcode
+                    op_replacement.append({
+                        "op_ind": j,
+                        "old_opcode": 'MAX_POOL_2D',
+                        "new_opcode": custom_opcode
+                    })
                 else:
                     raise NotImplementedError(
                         f"No replace rule for MAX_POOL_2D with {input_shape[3]} input channels")
@@ -260,15 +315,20 @@ def replace_ops_with_XC(model):
         )
 
     # replace operators
-    for op_ind, opcode_str in op_replacement.items():
-        if opcode_str == XCOps.FC_DEEPIN_SHALLOWOUT_FINAL:
-            replace_with_XC_fc_deepin_shallowout_final(model, subgraph_ind=0, op_ind=op_ind)
-        elif opcode_str == XCOps.MAXPOOL2D_DEEP:
-            replace_with_XC_maxpool2d_deep(model, subgraph_ind=0, op_ind=op_ind)
-        elif opcode_str == XCOps.CONV2D_DEEPIN_DEEPOUT_RELU:
-            replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind=0, op_ind=op_ind)
-        elif opcode_str == XCOps.CONV2D_SHALLOWIN_DEEPOUT_RELU:
-            replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind=0, op_ind=op_ind)
+    for replacement in op_replacement:
+        if replacement['new_opcode'] == XCOps.FC_DEEPIN_SHALLOWOUT_FINAL:
+            replace_with_XC_fc_deepin_shallowout_final(
+                model, subgraph_ind=0, op_ind=replacement['op_ind'])
+        elif replacement['new_opcode'] == XCOps.MAXPOOL2D_DEEP:
+            replace_with_XC_maxpool2d_deep(
+                model, subgraph_ind=0, op_ind=replacement['op_ind'])
+        elif replacement['new_opcode'] == XCOps.CONV2D_DEEPIN_DEEPOUT_RELU:
+            replace_with_XC_conv2d_deepin_deepout_relu(
+                model, subgraph_ind=0, op_ind=replacement['op_ind'])
+        elif replacement['new_opcode'] == XCOps.CONV2D_SHALLOWIN_DEEPOUT_RELU:
+            replace_with_XC_conv2d_shallowin_deepout_relu(
+                model, subgraph_ind=0, op_ind=replacement['op_ind'],
+                from_depthwise=(replacement['old_opcode'] == 'DEPTHWISE_CONV_2D'))
 
 
 def main(tflite_input, tflite_output, *,

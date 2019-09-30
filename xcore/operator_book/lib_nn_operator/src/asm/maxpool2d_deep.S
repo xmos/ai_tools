@@ -61,7 +61,7 @@ FUNCTION_NAME:
     {   sub r9, r9, r8                          ;   stw r7, sp[STACK_X_BCK_TRK]         }
     {   shr C_in, C_in, 5                       ;   stw r9, sp[STACK_Y_BCK_TRK]         }
     {   ldaw TMP_BUFF, sp[STACK_TMP]            ;   ldw ROW_BYTES, sp[STACK_ROW_BYTES]  }
-    {   add X2, X, ROW_BYTES                    ;   NOOOOP                              }
+    {   add X2, X, ROW_BYTES                    ;   sub Y, Y, PXL_JMP                   }
 
 .L_chan_start:
     {   NOOOOP                                  ;   ldw ROW, sp[STACK_HEIGHT]           }
@@ -70,9 +70,8 @@ FUNCTION_NAME:
     {   mov r11, X                              ;   ldw COL, sp[STACK_WIDTH]            }
 
 .L_pix_start:
-    {   add X, X, PXL_JMP                       ;   vldr r11[0]                         } //vR = A
-    {   NOOOOP                                  ;   vstr Y[0]                           } //Y = A
-
+    {   add Y, Y, PXL_JMP                       ;   vldr r11[0]                         } //vR = A
+    {   add X, X, PXL_JMP                       ;   vstr Y[0]                           } //Y = A
     {   NOOOOP                                  ;   vlsub X[0]                          } //vR = B - A
     {   NOOOOP                                  ;   vdepth1                             } //vR = [bitmask of A>B]
     {   mov r11, X                              ;   vstr TMP_BUFF[0]                    } //TMP = [bitmask of A>B]
@@ -97,7 +96,6 @@ FUNCTION_NAME:
     {   sub COL, COL, 2                         ;   ldw r9, TMP_BUFF[0]                 }
     {   not r9, r9                              ;   vldr r11[0]                         } 
     vstrpv Y[0], r9                                                                       //Y = MAX(A,B,C,D)
-    {   add Y, Y, PXL_JMP                       ;   NOOOOP                              }
 .L_pix_end:
     {   mov r11, X                              ;   bt COL, .L_pix_start                }
 .L_row_end:

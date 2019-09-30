@@ -40,8 +40,6 @@ void fc_deepin_shallowout_lin_asm(
 
 
 
-    //NOOOOOTE:  CONFIRM WHETHER THE HIGH/LOW PARTS OF THE BIAS ARE BEING LOADED CORRECTLY!
-
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std	r4, r5, sp[0]

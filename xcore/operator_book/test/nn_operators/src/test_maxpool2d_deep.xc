@@ -25,6 +25,8 @@
  #define HAS_ASM (0)
 #endif
 
+#define TEST_C (1)
+
 
 static unsigned seed = 4321234;
 
@@ -44,9 +46,12 @@ void test_maxpool2d_deep_case1()
     memset(X, 0x00, sizeof(X));
     memset(Y_c, 0xCC, sizeof(Y_c));
 
+#if TEST_C
     maxpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
+#endif
 #if HAS_ASM
     int8_t WORD_ALIGNED  Y_asm[height/2][width/2][C_out];
+    memset(Y_asm, 0xCC, sizeof(Y_asm));
     maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
 #endif
 
@@ -55,7 +60,9 @@ void test_maxpool2d_deep_case1()
             for(unsigned c = 0; c < C_out; c++){
                 char str_buff[100];
                 sprintf(str_buff, "(h,w,c) = (%u,%u,%u)", h,w,c);
+#if TEST_C
                 TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
+#endif
 #if HAS_ASM
                 TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
@@ -86,7 +93,9 @@ void test_maxpool2d_deep_case2()
     _read(input_file, (char*) Y_expected, sizeof(Y_expected));
     _close(input_file);
 
+#if TEST_C
     maxpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
+#endif
 #if HAS_ASM
     int8_t WORD_ALIGNED Y_asm[height/2][width/2][C_out];
     maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
@@ -97,7 +106,9 @@ void test_maxpool2d_deep_case2()
             for(unsigned c = 0; c < C_out; c++){
                 char str_buff[100];
                 sprintf(str_buff, "(h,w,c) = (%u,%u,%u)", h,w,c);
+#if TEST_C
                 TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
+#endif
 #if HAS_ASM
                 TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
@@ -130,7 +141,10 @@ void test_maxpool2d_deep_case3()
     _read(input_file, (char*) Y_expected, sizeof(Y_expected));
     _close(input_file);
 
+#if TEST_C
     maxpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
+#endif
+
 #if HAS_ASM
     int8_t WORD_ALIGNED Y_asm[height/2][width/2][C_out];
     maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
@@ -141,7 +155,9 @@ void test_maxpool2d_deep_case3()
             for(unsigned c = 0; c < C_out; c++){
                 char str_buff[100];
                 sprintf(str_buff, "(h,w,c) = (%u,%u,%u)", h,w,c);
+#if TEST_C
                 TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
+#endif
 #if HAS_ASM
                 TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
@@ -179,11 +195,13 @@ void test_maxpool2d_deep_case4()
         pseudo_rand_bytes(&seed, (char*)X, sizeof(X));
 
         //Process it
+#if TEST_C
         maxpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
-    #if HAS_ASM
+#endif
+#if HAS_ASM
         int8_t WORD_ALIGNED Y_asm[height/2][width/2][C_out];
         maxpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
-    #endif
+#endif
 
         //Spot-check the result
         for(unsigned check = 0; check < CHECKS; check++){
@@ -197,7 +215,7 @@ void test_maxpool2d_deep_case4()
             unsigned col = pseudo_rand_uint16(&seed) & 0b00000011;
             unsigned ch  = pseudo_rand_uint16(&seed) & 0b00011111;
 
-            int8_t out_val = Y_c[row][col][ch];
+            int8_t out_val     = Y_c[row][col][ch];
 
             unsigned in_row = 2*row;
             unsigned in_col = 2*col;
@@ -218,9 +236,12 @@ void test_maxpool2d_deep_case4()
             printf("  %d,  %d\n", X[in_row+1][in_col][ch], X[in_row+1][in_col+1][ch]);
 #endif
 
+#if TEST_C
             TEST_ASSERT_EQUAL(in_max, out_val);
+#endif
 #if HAS_ASM
-            TEST_ASSERT_EQUAL(in_max, out_val);
+            int8_t out_val_asm = Y_asm[row][col][ch];
+            TEST_ASSERT_EQUAL(in_max, out_val_asm);
 #endif
 
         }

@@ -10,6 +10,7 @@ Pipfile.lock
 
 # build cruft
 _build
+**/.build/
 
 # MacOS cruft
 .DS_Store

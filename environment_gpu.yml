@@ -70,7 +70,7 @@ dependencies:
   - numpy=1.17.2
   - onnx=1.6.0
   - openblas=0.3.7
-  - openssl=1.1.1c
+  - openssl=1.1.1d
   - packaging=19.2
   - pandoc=2.2.3.2
   - pandocfilters=1.4.2
@@ -111,6 +111,8 @@ dependencies:
   - tornado=6.0.3
   - traitlets=4.3.2
   - typed-ast=1.4.0
+  - typing-extensions=3.7.4
+  - typing_extensions=3.7.4
   - wcwidth=0.1.7
   - webencodings=0.5.1
   - wheel=0.33.6

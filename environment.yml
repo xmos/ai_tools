@@ -115,6 +115,7 @@ dependencies:
   - typing_extensions=3.7.4
   - wcwidth=0.1.7
   - webencodings=0.5.1
+  - wheel=0.33.6
   - widgetsnbextension=3.5.1
   - wrapt=1.11.2
   - xorg-libxau=1.0.9
@@ -140,5 +141,4 @@ dependencies:
     - tensorflow-estimator==2.0.0
     - termcolor==1.1.0
     - werkzeug==0.16.0
-    - wheel==0.33.6
 

@@ -24,17 +24,18 @@ conda env create -p ./ai_tools_venv -f environment.yml
 ```
 If installing on a machine with CUDA GPUs, follow the instructions at https://www.tensorflow.org/install/gpu. Then you can install the conda environment via:
 ```
-conda env create -p ./ai_tools_venv -f environment_gpu.yml
+conda env create -p ./ai_tools_gpu_venv -f environment_gpu.yml
 ```
 
-Activate the environment by passing in the path:
+Activate the environment by specifying the path, then install the ai-tools python package:
 ```
 conda activate ai_tools_venv/
+pip install -e ./python/
 ```
 
 If you made changes to the conda environment, export it (while activated) using:
 ```
-conda env export --no-build | grep -Ev "^name:|^prefix:|libgcc-ng|libgfortran-ng|libstdcxx-ng" > environment.yml
+conda env export --no-build | grep -Ev "^name:|^prefix:|libgcc-ng|libgfortran-ng|libstdcxx-ng|ai-tools" > environment.yml
 ```
 Use `pip-autoremove` to uninstall unwanted `pip` packages. This will clean up dependecies.
 

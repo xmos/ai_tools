@@ -27,7 +27,7 @@ conda activate ai_tools_venv/
 ```
 If you have made changes to the conda environment, export it (while activated) using:
 ```
-conda env export | grep -v "^prefix: " | grep -v "^name: " > environment.yml
+conda env export --no-build | grep -v "^prefix: " | grep -v "^name: " > environment.yml
 ```
 To remove the environment, deactivate and run:
 ```

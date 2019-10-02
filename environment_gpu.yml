@@ -12,7 +12,7 @@ dependencies:
   - bitstring=3.1.5
   - blas=1.0
   - bleach=3.1.0
-  - ca-certificates=2019.9.11
+  - ca-certificates=2019.8.28
   - certifi=2019.9.11
   - cycler=0.10.0
   - dbus=1.13.6
@@ -111,10 +111,9 @@ dependencies:
   - tornado=6.0.3
   - traitlets=4.3.2
   - typed-ast=1.4.0
-  - typing-extensions=3.7.4
-  - typing_extensions=3.7.4
   - wcwidth=0.1.7
   - webencodings=0.5.1
+  - wheel=0.33.6
   - widgetsnbextension=3.5.1
   - wrapt=1.11.2
   - xorg-libxau=1.0.9
@@ -136,9 +135,8 @@ dependencies:
     - opt-einsum==3.1.0
     - pip-autoremove==0.9.1
     - tensorboard==2.0.0
-    - tensorflow==2.0.0
     - tensorflow-estimator==2.0.0
+    - tensorflow-gpu==2.0.0
     - termcolor==1.1.0
     - werkzeug==0.16.0
-    - wheel==0.33.6
 

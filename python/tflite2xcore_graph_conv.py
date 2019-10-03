@@ -7,6 +7,7 @@ import os
 import argparse
 
 from tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA
+from tflite_utils import check_schema_path, check_flatc_path
 from tflite_utils import load_tflite_as_json, save_json_as_tflite
 from tflite2xcore_utils import get_opcode_index, find_referencing_ops
 from tflite2xcore_utils import XCOps
@@ -335,15 +336,8 @@ def main(tflite_input, tflite_output, *,
          is_classifier=False, remove_softmax=False,
          flatc_bin=DEFAULT_FLATC, schema=DEFAULT_SCHEMA):
 
-    if not os.path.exists(schema):
-        raise FileNotFoundError(
-            "Sorry, schema file cannot be found at {}".format(schema))
-
-    if flatc_bin is None:
-        raise RuntimeError("Sorry, cannot find flatc")
-    elif not os.path.exists(flatc_bin):
-        raise RuntimeError(
-            "Sorry, flatc is not available at {}".format(flatc_bin))
+    check_schema_path(schema)
+    check_flatc_path(flatc_bin)
 
     model = load_tflite_as_json(tflite_input,
                                 flatc_bin=flatc_bin, schema=schema)

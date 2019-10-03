@@ -44,6 +44,10 @@ To remove the environment, deactivate and run:
 conda remove -p ai_tools_venv/ --all
 ```
 
+If you are using VS Code, consider applying this fix:
+https://github.com/microsoft/vscode-python/issues/3834#issuecomment-538016367
+
+
 Install pipenv environment (deprecated)
 -------
 The repo includes a Pipfile in case you run into difficulties with conda.

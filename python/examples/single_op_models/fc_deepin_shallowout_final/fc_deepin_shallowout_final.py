@@ -3,24 +3,25 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 # always load examples_common first to avoid debug info dump from tf initialization
-from examples.examples_common import set_all_seeds, make_aux_dirs
-from examples.examples_common import quantize_data, one_hot_encode
+import examples.examples_common as utils
 
 import os
 import argparse
 import logging
 import pathlib
-import tflite2xcore_graph_conv
 
 import tensorflow as tf
 import numpy as np
+import tflite2xcore_graph_conv as graph_conv
 
 from tensorflow import keras
+from copy import deepcopy
 from tflite_utils import load_tflite_as_json
+from tflite2xcore_utils import clean_unused_buffers, clean_unused_opcodes, clean_unused_tensors
 
 
 DIRNAME = pathlib.Path(__file__).parent
-MODELS_DIR, DATA_DIR = make_aux_dirs(DIRNAME)
+MODELS_DIR, DATA_DIR = utils.make_aux_dirs(DIRNAME)
 
 
 def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
@@ -69,83 +70,121 @@ def build_model(input_dim, out_dim=2):
     ])
 
 
-def main(input_dim=32, classes=2):
+def add_example_data(model, data, classes):
+    # get input quantization
+    subgraph = model['subgraphs'][0]
+    input_tensor = subgraph['tensors'][subgraph['inputs'][0]]
+    quantization = input_tensor['quantization']
+
+    # prepare example test data
+    subset_inds = np.searchsorted(data['y_test'].flatten(), np.arange(classes))
+    x_test = utils.quantize_data(data['x_test'][subset_inds],
+        quantization['scale'], quantization['zero_point'])  # pylint: disable=unsubscriptable-object
+    y_test = utils.one_hot_encode(data['y_test'][subset_inds], classes)  # pylint: disable=unsubscriptable-object
+
+    # add test data to xcore_model
+    subgraph['tensors'].append({
+        'shape': list(x_test.shape),
+        'type': 'INT8',
+        'buffer': len(model['buffers']),
+        'name': 'x_test',
+        'is_variable': False,
+        'quantization': quantization
+    })
+    model['buffers'].append({'data': list(x_test.flatten().tostring())})
+
+    subgraph['tensors'].append({
+        'shape': list(y_test.shape),
+        'type': 'INT8',
+        'buffer': len(model['buffers']),
+        'name': 'y_test',
+        'is_variable': False,
+        'quantization': quantization
+    })
+    model['buffers'].append({'data': list(y_test.flatten().tostring())})
+
+
+def main(input_dim=32, classes=2, *, train_new_model=True):
     assert input_dim % 32 == 0
     assert 1 < classes < 16
 
-    keras.backend.clear_session()
-    set_all_seeds()
+    data_path = DATA_DIR / 'dataset_float.npz'
+    keras_model_path = MODELS_DIR / "model.h5"
 
-    model = build_model(input_dim, out_dim=classes)
-    model.compile(optimizer='adam',
-                  loss='sparse_categorical_crossentropy',
-                  metrics=['accuracy'])
-    model.summary()
+    if train_new_model:
+        keras.backend.clear_session()
+        utils.set_all_seeds()
 
-    # generate data
-    data = generate_fake_lin_sep_dataset(classes, input_dim,
-                                         train_samples_per_class=51200//classes,
-                                         test_samples_per_class=10240//classes)
+        model = build_model(input_dim, out_dim=classes)
+        model.compile(optimizer='adam',
+                    loss='sparse_categorical_crossentropy',
+                    metrics=['accuracy'])
+        model.summary()
 
-    # run the training
-    model.fit(data['x_train'], data['y_train'],
-              epochs=5*(classes-1), batch_size=128,
-              validation_data=(data['x_test'], data['y_test']))
+        # generate data
+        data = generate_fake_lin_sep_dataset(classes, input_dim,
+                                            train_samples_per_class=51200//classes,
+                                            test_samples_per_class=10240//classes)
 
-    # save model and data
-    np.savez(DATA_DIR / 'dataset_float', **data)
-    model.save(os.path.join(MODELS_DIR / "model.h5"))
+        # run the training
+        model.fit(data['x_train'], data['y_train'],
+                epochs=5*(classes-1), batch_size=128,
+                validation_data=(data['x_test'], data['y_test']))
 
-    # convert to TFLite float
+        # save model and data
+        np.savez(data_path, **data)
+        model.save(keras_model_path)
+
+    else:
+        logging.info(f"Loading data from {data_path}")
+        data = dict(np.load(data_path))
+        logging.info(f"Loading keras from {keras_model_path}")
+        model = keras.models.load_model(keras_model_path)
+        assert model.output_shape[1]==classes
+
+    # convert to TFLite float, save and visualize
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    model_float_lite = converter.convert()
-
-    model_float_file = MODELS_DIR / "model_float.tflite"
-    size_float = model_float_file.write_bytes(model_float_lite)
-    logging.info('Float model size: {:.0f} KB'.format(size_float/1024))
+    utils.save_from_tflite_converter(converter, MODELS_DIR, "model_float")
 
     # convert to TFLite quantized
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     x_train_ds = tf.data.Dataset.from_tensor_slices(data['x_train']).batch(1)
     def representative_data_gen():
-        for input_value in x_train_ds.take(100):
+        for input_value in x_train_ds.take(data['x_train'].shape[0]):  # pylint: disable=unsubscriptable-object
             yield [input_value]
     converter.representative_dataset = representative_data_gen
-    model_quant_lite = converter.convert()
-
-    model_quant_file = MODELS_DIR / "model_quant.tflite"
-    size_quant = model_quant_file.write_bytes(model_quant_lite)
-    logging.info('Quantized model size: {:.0f} KB'.format(size_quant/1024))
+    model_quant_file = utils.save_from_tflite_converter(converter, MODELS_DIR, "model_quant")
 
     # convert quantized model to xCORE optimized
-    model_xcore_file = MODELS_DIR / "model_quant_xcore.tflite"
-    tflite2xcore_graph_conv.main(model_quant_file, model_xcore_file,
-         remove_softmax=True)
+    model_quant = load_tflite_as_json(model_quant_file)
+    graph_conv.remove_float_inputs_outputs(model_quant)
+    graph_conv.remove_output_softmax(model_quant)
 
-    # get input quantization
-    model_xcore = load_tflite_as_json(model_xcore_file)
-    subgraph = model_xcore['subgraphs'][0]
-    input_tensor = subgraph['tensors'][subgraph['inputs'][0]]
-    scale = input_tensor['quantization']['scale']
-    zero_point = input_tensor['quantization']['zero_point']
+    for base_file_name in ['model_xcore', 'model_stripped']:
+        model_json = deepcopy(model_quant)
+        if base_file_name is 'model_xcore':
+            graph_conv.replace_ops_with_XC(model_json)
 
-    # quantize data
-    data['x_train'] = quantize_data(data['x_train'], scale, zero_point)
-    data['x_test'] = quantize_data(data['x_test'], scale, zero_point)
+        clean_unused_opcodes(model_json)
+        clean_unused_tensors(model_json)
+        clean_unused_buffers(model_json)
 
-    # one-hot encode labels
-    data['y_train'] = one_hot_encode(data['y_train'], classes)
-    data['y_test'] = one_hot_encode(data['y_test'], classes)
+        add_example_data(model_json, data, classes)
 
-    # save quantized data
-    np.savez(DATA_DIR / 'dataset_quant', **data)
+        utils.save_from_json(model_json, MODELS_DIR, base_file_name)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--use_gpu',  action='store_true', default=False,
                         help='Use GPU for training. Might result in non-reproducible results')
+    parser.add_argument('--classes', type=int, default=4,
+                        help='Number of classes, must be between 2 and 15.')
+    parser.add_argument('--inputs', type=int, default=32,
+                        help='Input dimension, must be multiple of 32.')
+    parser.add_argument('--train_model',  action='store_true', default=False,
+                        help='Train new model instead of loading pretrained tf.keras model.')
     parser.add_argument('-v', '--verbose',  action='store_true', default=False,
                         help='Verbose mode.')
     args = parser.parse_args()
@@ -159,20 +198,6 @@ if __name__ == "__main__":
 
     logging.info(f"Eager execution enabled: {tf.executing_eagerly()}")
 
-    # can throw annoying error if CUDA cannot be initialized
-    if not verbose:
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+    utils.set_gpu_usage(args.use_gpu, verbose)
 
-    if gpus:
-        if args.use_gpu:
-            tf.config.experimental.set_memory_growth(gpus[0], enable=True)
-        else:
-            if verbose:
-                logging.info("GPUs disabled.")
-            tf.config.experimental.set_visible_devices([], 'GPU')
-    elif args.use_gpu:
-        logging.warning('No available GPUs found, defaulting to CPU.')
-
-    main(classes=10)
+    main(input_dim=args.inputs, classes=args.classes, train_new_model=args.train_model)

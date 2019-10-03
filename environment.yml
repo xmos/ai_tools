@@ -12,7 +12,7 @@ dependencies:
   - bitstring=3.1.5
   - blas=1.0
   - bleach=3.1.0
-  - ca-certificates=2019.9.11
+  - ca-certificates=2019.8.28
   - certifi=2019.9.11
   - cycler=0.10.0
   - dbus=1.13.6
@@ -70,7 +70,7 @@ dependencies:
   - numpy=1.17.2
   - onnx=1.6.0
   - openblas=0.3.7
-  - openssl=1.1.1c
+  - openssl=1.1.1d
   - packaging=19.2
   - pandoc=2.2.3.2
   - pandocfilters=1.4.2
@@ -111,8 +111,6 @@ dependencies:
   - tornado=6.0.3
   - traitlets=4.3.2
   - typed-ast=1.4.0
-  - typing-extensions=3.7.4
-  - typing_extensions=3.7.4
   - wcwidth=0.1.7
   - webencodings=0.5.1
   - wheel=0.33.6
@@ -140,5 +138,6 @@ dependencies:
     - tensorflow==2.0.0
     - tensorflow-estimator==2.0.0
     - termcolor==1.1.0
+    - typing-extensions==3.7.4
     - werkzeug==0.16.0
 

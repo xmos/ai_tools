@@ -4,6 +4,20 @@ import os
 from tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA
 from tflite_utils import load_tflite_as_json
 
+TFLITE_TYPE_TO_C_TYPE = {
+    'FLOAT32': 'float32_t',
+    'FLOAT16': 'float16_t',
+    'INT32': 'int32_t',
+    'UINT8': 'uint8_t',
+    'INT64': 'int64_t',
+    'INT16': 'int16_t',
+    'UINT16': 'uint16_t',
+    'INT8': 'int8_t',
+    # 'STRING': 'TODO',
+    # 'BOOL': 'TODO',
+    # 'COMPLEX64': 'TODO'
+}
+
 class Operator():
     @classmethod
     def from_dict(cls, operator_dict):
@@ -50,10 +64,28 @@ class Tensor():
         return f'name={self.name}, type={self.type}, shape={self.shape}, buffer={self.buffer}'
 
     def GetName(self):
-        return self.type
+        return self.name
+
+    def GetSanitizedName(self):
+        '''Return a name that is safe to use in source code'''
+        return self.name.replace('/', '_')
+
+    def GetName(self):
+        '''Return a name that is safe to use in source code'''
+        return self.name.replace('/', '_')
+
+    def GetNameSegments(self):
+        return self.name.split('/')
+
+    def GetBaseName(self):
+        return self.GetNameSegments()[-1]
 
     def GetType(self):
         return self.type
+
+    def GetStandardType(self):
+        '''Return type (from cstdint.h)'''
+        return TFLITE_TYPE_TO_C_TYPE[self.type]
 
     def GetShape(self):
         return self.shape
@@ -94,7 +126,7 @@ class Subgraph():
             subgraph.outputs.append(subgraph.tensors[output_index])
 
         # load intermediates
-        #   intermediates are any tensors that are not an input or output
+        #   intermediates are any tensors that are not an input or an output
         subgraph.intermediates = []
         for tensor_index, tensor in enumerate(subgraph.tensors):
             if tensor_index not in input_output_indices:
@@ -105,6 +137,10 @@ class Subgraph():
     def GetTensors(self):
         """Return all Tensors."""
         return self.tensors
+
+    def GetTensor(self, index):
+        """Return one Tensors."""
+        return self.tensors[index]
 
     def GetOperators(self):
         """Return all Operators."""
@@ -117,6 +153,10 @@ class Subgraph():
     def GetOutputs(self):
         """Return the output Tensors."""
         return self.outputs
+
+    def GetInitializers(self):
+        """Return the initialized Tensors."""
+        return self.initializers
 
     def GetIntermediates(self):
         """Return the intermediate Tensors."""
@@ -170,8 +210,14 @@ class XCOREModel():
     def GetSubgraph(self, index=0):
         return self.subgraphs[index]
 
+    def GetBuffers(self):
+        return self.buffers
+
     def GetBuffer(self, index):
-        return self.buffers[index]['data']
+        if 'data' in self.buffers[index]:
+            return self.buffers[index]['data']
+
+        return None
     
     def GetOperator(self, index):
         if self.operator_codes[index]['builtin_code'] == 'CUSTOM':

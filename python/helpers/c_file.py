@@ -2,7 +2,7 @@
 import os
 
 class CFile():
-    def __init__(self, name, includes=None, variables=None, functions=None):
+    def __init__(self, name, includes=None, initializers=None, functions=None):
 
         basename, extension = os.path.splitext(name)
 
@@ -10,24 +10,24 @@ class CFile():
         self.header_filename = f'{basename}.h'
 
         self.includes = includes or []
-        self.variables = variables or []
+        self.initializers = initializers or []
         self.functions = functions or []
         
         self._build_macro_lookup()
 
     def _build_macro_lookup(self):
         self._macro_lookup = {}
-        for variable in self.variables:
-            name = variable['name']
-            macro = variable['name'].upper()  #TODO: is this safe, might need to check that result
+        for initializer in self.initializers:
+            name = initializer['name']
+            macro = name.upper()  #TODO: is this safe, might need to check that result
                                               #      is a valid macro
             self._macro_lookup[name] = macro
 
     def add_include(self, include):
         self.includes.append(include)
 
-    def add_variable(self, variable):
-        self.variables.append(variable)
+    def add_initializer(self, initializer):
+        self.initializers.append(initializer)
         self._build_macro_lookup()
 
     def add_function(self, funct):
@@ -36,10 +36,10 @@ class CFile():
     def render_header(self):
         lines = []
 
-        for variable in self.variables:
-            if len(variable['values']):
-                macro = self._macro_lookup[variable['name']]
-                values = ' '.join([str(v) for v in variable['values']])
+        for initializer in self.initializers:
+            if len(initializer['values']):
+                macro = self._macro_lookup[initializer['name']]
+                values = ' '.join([str(v) for v in initializer['values']])
                 #TODO: wrap these lines???
                 lines.append(f'#define {macro} {values}')
         lines.append('')
@@ -59,17 +59,17 @@ class CFile():
         lines.append(f'#include "{self.header_filename}"')
         lines.append('')
 
-        # variables
-        for variable in self.variables:
-            name = variable['name']
-            ctype = variable['type']
-            dims = ' * '.join([str(v) for v in variable['dims']])
-            if variable['const']:
+        # initializers
+        for initializer in self.initializers:
+            name = initializer['name']
+            ctype = initializer['type']
+            dims = ' * '.join([str(v) for v in initializer['dims']])
+            if initializer['const']:
                 const_keyword = 'const'
             else:
                 const_keyword = 'const'
 
-            if len(variable['values']):
+            if len(initializer['values']):
                 macro = self._macro_lookup[name]
                 rhs = f' = {macro}'
             else:

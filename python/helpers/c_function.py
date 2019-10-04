@@ -21,12 +21,7 @@ class CFunction():
         for i in self.inputs:
             name = i['name']
             ctype = i['type']
-            byref = ''
-            if i['scalar']:
-                byref = ''
-            else:
-                byref = '*'
-            signature_inputs.append(f'{ctype} {byref}{name}')
+            signature_inputs.append(f'const {ctype} *{name}')
         signature_inputs = ', '.join(signature_inputs)
 
         # outputs

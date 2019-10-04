@@ -44,13 +44,31 @@ To remove the environment, deactivate and run:
 conda remove -p ai_tools_venv/ --all
 ```
 
-If you are using VS Code, consider applying this fix:
-https://github.com/microsoft/vscode-python/issues/3834#issuecomment-538016367
-
-
 Install pipenv environment (deprecated)
--------
+---------------------------------------
 The repo includes a Pipfile in case you run into difficulties with conda.
 
 There have been issues with installing newer linux packages (tensorflow in particular):
 https://github.com/pypa/pipenv/issues/3921
+
+VSCode users
+---------------------------------------
+
+If you are using VS Code and conda, consider applying this fix:
+https://github.com/microsoft/vscode-python/issues/3834#issuecomment-538016367
+
+To suppress the annoying warning `"Unable to watch for file changes in this large workspace..."` add the following line to your `.vscode/settings.json`:
+```
+    "files.watcherExclude": {
+      "**/.git/**": true,
+      "**/.ipynb_checkpoints/**": true,
+      "**/__pycache__/**": true,
+      "**/ai_tools_venv/**": true,
+      "**/ai_tools_gpu_venv/**": true,
+      "**/.venv/**": true,
+      "**/.build/**": true,
+      "**/.lock*": true,
+      "**/build/**": true,
+      "**/bin/**": true,
+    },
+```

@@ -1,8 +1,9 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import os
+import struct
 
 class CFile():
-    def __init__(self, name, includes=None, initializers=None, functions=None):
+    def __init__(self, name, includes=None, initializers=None, functions=None, model=None):
 
         basename, extension = os.path.splitext(name)
 
@@ -12,16 +13,30 @@ class CFile():
         self.includes = includes or []
         self.initializers = initializers or []
         self.functions = functions or []
+        self.model = model
         
         self._build_macro_lookup()
 
     def _build_macro_lookup(self):
         self._macro_lookup = {}
         for initializer in self.initializers:
-            name = initializer['name']
-            macro = name.upper()  #TODO: is this safe, might need to check that result
+            name = initializer.GetSanitizedName()
+            identifier = name.upper()  #TODO: is this safe, might need to check that result
                                               #      is a valid macro
-            self._macro_lookup[name] = macro
+            replacement_list = None
+            if self.model:
+                buffer = self.model.GetBuffer(initializer.GetBuffer())
+                stdtype = initializer.GetStandardType()
+                if stdtype == 'int8_t':
+                    values = buffer
+                elif stdtype == 'int16_t':
+                    values = [i[0] for i in struct.iter_unpack('h', bytearray(buffer))]
+                elif stdtype == 'int32_t':
+                    values = [i[0] for i in struct.iter_unpack('i', bytearray(buffer))]
+
+                replacement_list = ', '.join([str(v) for v in values])
+
+            self._macro_lookup[name] = {'identifier': identifier, 'replacement-list': replacement_list}
 
     def add_include(self, include):
         self.includes.append(include)
@@ -37,12 +52,13 @@ class CFile():
         lines = []
 
         for initializer in self.initializers:
-            if len(initializer['values']):
-                macro = self._macro_lookup[initializer['name']]
-                values = ', '.join([str(v) for v in initializer['values']])
-                #TODO: wrap these lines???
-                lines.append(f'#define {macro} {values}')
-        lines.append('')
+            name = initializer.GetSanitizedName()
+            macro = self._macro_lookup[name]
+            if macro['replacement-list']:
+                identifier = macro['identifier']
+                replacement_list = macro['replacement-list']
+                lines.append(f'#define {identifier} {replacement_list}')
+            lines.append('')
 
         for function in self.functions:
             lines.append(function.render_declaration())
@@ -68,16 +84,18 @@ class CFile():
 
         # initializers
         for initializer in self.initializers:
-            name = initializer['name']
-            ctype = initializer['type']
-            dims = ' * '.join([str(v) for v in initializer['dims']])
+            name = initializer.GetSanitizedName()
+            stdtype = initializer.GetStandardType()
+            shape = initializer.GetShape()
+            dims = ' * '.join([str(v) for v in shape])
 
-            if len(initializer['values']):
-                macro = self._macro_lookup[name]
-                rhs = f' = {{{macro}}}'
+            macro = self._macro_lookup[name]
+            if macro['replacement-list']:
+                identifier = macro['identifier']
+                rhs = f' = {{{identifier}}}'
             else:
                 rhs = ''
-            lines.append(f'const {ctype} WORD_ALIGNED {name}[{dims}]{rhs};')
+            lines.append(f'const {stdtype} WORD_ALIGNED {name}[{dims}]{rhs};')
         lines.append('')
 
         # functions

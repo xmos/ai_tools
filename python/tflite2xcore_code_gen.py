@@ -4,7 +4,6 @@
 import sys
 import os
 import re
-import struct
 import argparse
 
 import xcore_model
@@ -18,40 +17,6 @@ def indices2tensors(subgraph, tensors_indices):
         tensors.append(subgraph.GetTensor(tensor_index))
 
     return tensors
-
-def tensors2arguments(tensors):
-    arguments = []
-
-    for tensor in tensors:
-        argument = {
-            'name': tensor.GetSanitizedName(),
-            'type': tensor.GetStandardType(),
-        }
-        arguments.append(argument)
-
-    return arguments
-
-def tensors2variables(tensors, model=None):
-    variables = []
-    for tensor in tensors:
-        variable = {
-            'name':  tensor.GetSanitizedName(),
-            'type': tensor.GetStandardType(),
-            'dims': tensor.GetShape(),
-        }
-        if model:
-            buffer = model.GetBuffer(tensor.GetBuffer())
-            stdtype = variable['type']
-            if stdtype == 'int16_t':
-                variable['values'] = [i[0] for i in struct.iter_unpack('h', bytearray(buffer))]
-            elif stdtype == 'int32_t':
-                variable['values'] = [i[0] for i in struct.iter_unpack('i', bytearray(buffer))]
-            else:
-                variable['values'] = buffer
-
-        variables.append(variable)
-
-    return variables
 
 def generate_code(args):
     verbose = args.verbose
@@ -77,7 +42,7 @@ def generate_code(args):
             print(input_)
 
     initializers = [] # initializers are Tensors that are initialized with data
-    variables = [] # variables are Tensors that are intermediates but not initializers
+    variables = [] # variables are Tensors that are intermediates AND not initializers
 
     for intermediate in subgraph.GetIntermediates():
         buffer = model.GetBuffer(intermediate.GetBuffer())
@@ -132,8 +97,7 @@ def generate_code(args):
     fun_name = subgraph.GetName() or file_basename
     fun_name = re.sub('[^0-9a-zA-Z]+', '_', fun_name)
 
-    fun = c_function.CFunction(fun_name,  tensors2arguments(inputs),
-        tensors2arguments(outputs), tensors2variables(variables))
+    fun = c_function.CFunction(fun_name,  inputs, outputs, variables)
     for op in ops:
         fun.add_operator(op)
 
@@ -142,14 +106,14 @@ def generate_code(args):
         'nn_operator.h'
     ]
 
-    fd = c_file.CFile(args.name or fun_name, initializers=tensors2variables(initializers, model), includes=includes)
+    fd = c_file.CFile(args.name or fun_name, initializers=initializers,
+        includes=includes, model=model)
     fd.add_function(fun)
     
     if args.name:
         fd.save()
     else:
         print(fd.render_source())
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

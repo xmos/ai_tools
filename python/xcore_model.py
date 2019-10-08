@@ -15,7 +15,7 @@ TFLITE_TYPE_TO_C_TYPE = {
     'INT8': 'int8_t',
     # 'STRING': 'TODO',
     # 'BOOL': 'TODO',
-    # 'COMPLEX64': 'TODO'
+    # 'COMPLEX64': 'TODO?'
 }
 
 class Operator():
@@ -205,8 +205,6 @@ class XCOREModel():
 
         # load operator codes
         self.operator_codes = model['operator_codes']
-        # for operator_codes in self.model['operator_codes']:
-        #     self.operator_codes.append(Subgraph.from_dict(subgraph))
 
         # load subgraphs
         self.subgraphs = []

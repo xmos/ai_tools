@@ -18,17 +18,17 @@ class CFunction():
         
         # inputs
         signature_inputs = []
-        for i in self.inputs:
-            name = i['name']
-            ctype = i['type']
+        for tensor in self.inputs:
+            name = tensor.GetSanitizedName()
+            ctype = tensor.GetStandardType()
             signature_inputs.append(f'const {ctype} *{name}')
         signature_inputs = ', '.join(signature_inputs)
 
         # outputs
         signature_outputs = []
-        for i in self.outputs:
-            name = i['name']
-            ctype = i['type']
+        for tensor in self.outputs:
+            name = tensor.GetSanitizedName()
+            ctype = tensor.GetStandardType()
             signature_outputs.append(f'{ctype} *{name}')
         signature_outputs = ', '.join(signature_outputs)
 
@@ -49,10 +49,11 @@ class CFunction():
 
         # variables
         for variable in self.variables:
-            name = variable['name']
-            ctype = variable['type']
-            dims = ' * '.join([str(v) for v in variable['dims']])
-            lines.append(f'{INDENT}{ctype} WORD_ALIGNED {name}[{dims}];')
+            name = variable.GetSanitizedName()
+            stdtype = variable.GetStandardType()
+            shape = variable.GetShape()
+            dims = ' * '.join([str(v) for v in shape])
+            lines.append(f'{INDENT}{stdtype} WORD_ALIGNED {name}[{dims}];')
         lines.append('')
 
         for operator in self.operators:

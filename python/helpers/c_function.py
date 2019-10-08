@@ -52,7 +52,7 @@ class CFunction():
             name = variable['name']
             ctype = variable['type']
             dims = ' * '.join([str(v) for v in variable['dims']])
-            lines.append(f'{INDENT}{ctype} {name}[{dims}];')
+            lines.append(f'{INDENT}{ctype} WORD_ALIGNED {name}[{dims}];')
         lines.append('')
 
         for operator in self.operators:

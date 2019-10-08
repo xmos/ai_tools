@@ -39,7 +39,7 @@ class CFile():
         for initializer in self.initializers:
             if len(initializer['values']):
                 macro = self._macro_lookup[initializer['name']]
-                values = ' '.join([str(v) for v in initializer['values']])
+                values = ', '.join([str(v) for v in initializer['values']])
                 #TODO: wrap these lines???
                 lines.append(f'#define {macro} {values}')
         lines.append('')
@@ -55,8 +55,15 @@ class CFile():
         lines = []
 
         for include in self.includes:
-            lines.append(f'#include "{include}""')
+            lines.append(f'#include "{include}"')
         lines.append(f'#include "{self.header_filename}"')
+        lines.append('')
+
+        lines.append(f'#ifdef __XC__')
+        lines.append(f'#define WORD_ALIGNED [[aligned(4)]]')
+        lines.append(f'#else')
+        lines.append(f'#define WORD_ALIGNED')
+        lines.append(f'#endif')
         lines.append('')
 
         # initializers
@@ -64,17 +71,13 @@ class CFile():
             name = initializer['name']
             ctype = initializer['type']
             dims = ' * '.join([str(v) for v in initializer['dims']])
-            if initializer['const']:
-                const_keyword = 'const'
-            else:
-                const_keyword = 'const'
 
             if len(initializer['values']):
                 macro = self._macro_lookup[name]
-                rhs = f' = {macro}'
+                rhs = f' = {{{macro}}}'
             else:
                 rhs = ''
-            lines.append(f'{const_keyword} {ctype} {name}[{dims}]{rhs};')
+            lines.append(f'const {ctype} WORD_ALIGNED {name}[{dims}]{rhs};')
         lines.append('')
 
         # functions

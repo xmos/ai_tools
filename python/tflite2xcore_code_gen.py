@@ -3,6 +3,8 @@
 
 import sys
 import os
+import re
+import struct
 import argparse
 
 import xcore_model
@@ -38,7 +40,15 @@ def tensors2variables(tensors, model=None):
             'dims': tensor.GetShape(),
         }
         if model:
-            variable['values'] = model.GetBuffer(tensor.GetBuffer())
+            buffer = model.GetBuffer(tensor.GetBuffer())
+            stdtype = variable['type']
+            if stdtype == 'int16_t':
+                variable['values'] = [i[0] for i in struct.iter_unpack('h', bytearray(buffer))]
+            elif stdtype == 'int32_t':
+                variable['values'] = [i[0] for i in struct.iter_unpack('i', bytearray(buffer))]
+            else:
+                variable['values'] = buffer
+
         variables.append(variable)
 
     return variables
@@ -118,7 +128,9 @@ def generate_code(args):
         sys.exit()
 
     # create function
-    fun_name, _ = os.path.splitext(os.path.basename(args.tflite_input))
+    file_basename, _ = os.path.splitext(os.path.basename(args.tflite_input))
+    fun_name = subgraph.GetName() or file_basename
+    fun_name = re.sub('[^0-9a-zA-Z]+', '_', fun_name)
 
     fun = c_function.CFunction(fun_name,  tensors2arguments(inputs),
         tensors2arguments(outputs), tensors2variables(variables))

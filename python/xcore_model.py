@@ -102,6 +102,11 @@ class Subgraph():
         '''Construct a Subgraph object from a TensorFlow Lite flatbuffer subgraph dictionary'''
         subgraph = cls()
 
+        if 'name' in subgraph_dict:
+            subgraph.name = subgraph_dict['name']
+        else:
+            subgraph.name = None
+
         # load tensors
         subgraph.tensors = []
         for tensor_dict in subgraph_dict['tensors']:
@@ -133,6 +138,10 @@ class Subgraph():
                 subgraph.intermediates.append(tensor)
 
         return subgraph
+
+    def GetName(self):
+        """Return all Name."""
+        return self.name
 
     def GetTensors(self):
         """Return all Tensors."""

@@ -1,6 +1,6 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
-def make_conv2d_argument_string(inputs, outputs):
+def make_conv2d_argument_string(inputs, outputs, use_cin):
     # inputs
     for index, tensor in enumerate(inputs):
         cname = tensor.GetSanitizedName()
@@ -9,6 +9,7 @@ def make_conv2d_argument_string(inputs, outputs):
             X = cname
             height = shape[1]
             width = shape[2]
+            C_in = shape[3]
         elif index == 1:
             K = cname
             K_h = shape[1]
@@ -25,7 +26,10 @@ def make_conv2d_argument_string(inputs, outputs):
     Y = tensor.GetSanitizedName()
     C_out = shape[-1]
 
-    return f'{K}, {B}, {X}, {Y}, {height}, {width}, {K_h}, {K_w}, {C_out}, {shifts}, {scales}'
+    if use_cin:
+        return f'{K}, (data16_t *){B}, {X}, {Y}, {height}, {width}, {K_h}, {K_w}, {C_out}, {C_in}, &{shifts}, &{scales}'
+    else:
+        return f'{K}, (data16_t *){B}, {X}, {Y}, {height}, {width}, {K_h}, {K_w}, {C_out}, &{shifts}, &{scales}'
 
 class Conv2DShallowInDeepOut():
     def __init__(self, inputs, outputs):
@@ -33,7 +37,7 @@ class Conv2DShallowInDeepOut():
         self.outputs = outputs
 
     def render(self):
-        argument_str = make_conv2d_argument_string(self.inputs, self.outputs)
+        argument_str = make_conv2d_argument_string(self.inputs, self.outputs, use_cin=False)
 
         return f'conv2d_shallowin_deepout_relu({argument_str});'
 
@@ -43,6 +47,6 @@ class Conv2DDeepInDeepOut():
         self.outputs = outputs
 
     def render(self):
-        argument_str = make_conv2d_argument_string(self.inputs, self.outputs)
+        argument_str = make_conv2d_argument_string(self.inputs, self.outputs, use_cin=True)
 
         return f'conv2d_deepin_deepout_relu({argument_str});'

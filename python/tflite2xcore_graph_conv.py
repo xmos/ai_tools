@@ -7,6 +7,7 @@ import os
 import argparse
 
 from tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA
+from tflite_utils import check_schema_path, check_flatc_path
 from tflite_utils import load_tflite_as_json, save_json_as_tflite
 from tflite2xcore_utils import get_opcode_index, find_referencing_ops
 from tflite2xcore_utils import XCOps
@@ -332,25 +333,18 @@ def replace_ops_with_XC(model):
 
 
 def main(tflite_input, tflite_output, *,
-         is_classifier=False,
+         is_classifier=False, remove_softmax=False,
          flatc_bin=DEFAULT_FLATC, schema=DEFAULT_SCHEMA):
 
-    if not os.path.exists(schema):
-        raise FileNotFoundError(
-            "Sorry, schema file cannot be found at {}".format(schema))
-
-    if flatc_bin is None:
-        raise RuntimeError("Sorry, cannot find flatc")
-    elif not os.path.exists(flatc_bin):
-        raise RuntimeError(
-            "Sorry, flatc is not available at {}".format(flatc_bin))
+    check_schema_path(schema)
+    check_flatc_path(flatc_bin)
 
     model = load_tflite_as_json(tflite_input,
                                 flatc_bin=flatc_bin, schema=schema)
 
     # run graph manipulations
     remove_float_inputs_outputs(model)
-    if is_classifier:
+    if remove_softmax or is_classifier:
         remove_output_softmax(model)
 
     replace_ops_with_XC(model)
@@ -379,6 +373,8 @@ if __name__ == "__main__":
     parser.add_argument('--classifier',  action='store_true', default=False,
                         help="Apply optimizations for classifier networks "
                              "(e.g. softmax removal and output argmax).")
+    parser.add_argument('--remove_softmax',  action='store_true', default=False,
+                        help="Remove output softmax operation.")
     args = parser.parse_args()
 
     tflite_input = os.path.realpath(args.tflite_input)
@@ -386,6 +382,8 @@ if __name__ == "__main__":
     flatc_bin = args.flatc if args.flatc else DEFAULT_FLATC
     schema = args.schema if args.schema else DEFAULT_SCHEMA
     is_classifier = args.classifier
+    remove_softmax = args.remove_softmax
 
-    main(tflite_input, tflite_output, is_classifier=is_classifier,
+    main(tflite_input, tflite_output,
+         is_classifier=is_classifier, remove_softmax=remove_softmax,
          flatc_bin=flatc_bin, schema=schema)

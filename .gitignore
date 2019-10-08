@@ -7,6 +7,8 @@
 .venv/*
 **/.ipynb_checkpoints/*
 Pipfile.lock
+ai_tools_venv/*
+ai_tools_gpu_venv/*
 
 # build cruft
 _build

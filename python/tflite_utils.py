@@ -12,6 +12,20 @@ DEFAULT_SCHEMA = os.path.normpath(os.path.join(
 DEFAULT_FLATC = shutil.which("flatc")
 
 
+def check_schema_path(schema):
+    if not os.path.exists(schema):
+        raise FileNotFoundError(
+            "Sorry, schema file cannot be found at {}".format(schema))
+
+
+def check_flatc_path(flatc):
+    if flatc is None:
+        raise RuntimeError("Sorry, cannot find flatc")
+    elif not os.path.exists(flatc):
+        raise RuntimeError(
+            "Sorry, flatc is not available at {}".format(flatc))
+
+
 def load_tflite_as_json(tflite_input, *,
                         flatc_bin=DEFAULT_FLATC, schema=DEFAULT_SCHEMA):
     with tempfile.TemporaryDirectory() as tmp_dir:

@@ -92,7 +92,8 @@ def use_module(bld):
     for ASD in ['XCC_FLAGS', 'XCC_XC_FLAGS']:
         MASD = 'MODULE_'+ASD
         # bld.env[MASD] = list(set(bld.env[ASD] + (module_build_info[MASD] if MASD in module_build_info else [])))
-        bld.env[MASD] = list(set((module_build_info[MASD] if MASD in module_build_info else [])))
+        tmp = list(set((module_build_info[MASD] if MASD in module_build_info else [])))
+        bld.env[MASD] = tmp
 
     bld.module(
         source=sources,

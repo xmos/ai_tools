@@ -1,0 +1,281 @@
+
+<html>
+<head>
+<style>
+body {font-family: sans-serif; background-color: #fa0;}
+table {background-color: #eca;}
+th {background-color: black; color: white;}
+h1 {
+  background-color: ffaa00;
+  padding:5px;
+  color: black;
+}
+
+svg {
+  margin: 10px;
+  border: 2px;
+  border-style: solid;
+  border-color: black;
+  background: white;
+}
+
+div {
+  border-radius: 5px;
+  background-color: #fec;
+  padding:5px;
+  margin:5px;
+}
+
+.tooltip {color: blue;}
+.tooltip .tooltipcontent  {
+    visibility: hidden;
+    color: black;
+    background-color: yellow;
+    padding: 5px;
+    border-radius: 4px;
+    position: absolute;
+    z-index: 1;
+}
+.tooltip:hover .tooltipcontent {
+    visibility: visible;
+}
+
+.edges line {
+  stroke: #333;
+}
+
+text {
+  font-weight: bold;
+}
+
+.nodes text {
+  color: black;
+  pointer-events: none;
+  font-family: monospace;
+  font-size: 12px;
+}
+</style>
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+
+</head>
+<body>
+<h1>TensorFlow Lite Model</h2><table>
+<tr><th>filename</th><td>models/model_xcore.tflite</td></tr>
+<tr><th>version</th><td>3</td></tr>
+<tr><th>description</th><td>TOCO Converted.</td></tr>
+</table>
+<div class='subgraph'><h2>Subgraph 0</h2>
+<h3>Inputs/Outputs</h3>
+<table><tr>
+<tr>
+<th>inputs</th><th>outputs</th></tr>
+<tr>
+<td><span class='tooltip'><span class='tooltipcontent'>0 flatten_input_int8 INT8 [1, 32, 1, 1]<br></span>[0]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>1 XC_fc_deepin_shallowout_final/output INT16 [1, 4]<br></span>[1]</span></td>
+</tr>
+</table>
+<h3>Tensors</h3>
+<table><tr>
+<tr>
+<th>index</th><th>name</th><th>type</th><th>shape</th><th>buffer</th><th>quantization</th></tr>
+<tr>
+<td>0</td><td>flatten_input_int8</td>
+<td>INT8</td>
+<td>[1, 32, 1, 1]</td>
+<td>3</td>
+<td>{'min': [-4.295065], 'max': [4.433117], 'scale': [0.034228], 'zero_point': [-3], 'details_type': 0, 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>1</td><td>XC_fc_deepin_shallowout_final/output</td>
+<td>INT16</td>
+<td>[1, 4]</td>
+<td>1</td>
+<td>{'scale': [0.002237], 'zero_point': [1664], 'details_type': 'CustomQuantization', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>2</td><td>XC_fc_deepin_shallowout_final/weights</td>
+<td>INT8</td>
+<td>[4, 32]</td>
+<td>2</td>
+<td>{'scale': [0.007991], 'zero_point': [0], 'details_type': 0, 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>3</td><td>XC_fc_deepin_shallowout_final/biases</td>
+<td>INT32</td>
+<td>[4]</td>
+<td>0</td>
+<td>{'scale': [0.000274], 'zero_point': [0], 'details_type': 'CustomQuantization', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>4</td><td>XC_fc_deepin_shallowout_final/shift_scale</td>
+<td>INT16</td>
+<td>[2, 4]</td>
+<td>4</td>
+<td>None</td>
+</tr>
+<tr>
+<td>5</td><td>x_test</td>
+<td>INT8</td>
+<td>[4, 32, 1, 1]</td>
+<td>5</td>
+<td>{'min': [-4.295065], 'max': [4.433117], 'scale': [0.034228], 'zero_point': [-3], 'details_type': 0, 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>6</td><td>y_test</td>
+<td>INT8</td>
+<td>[4, 4]</td>
+<td>6</td>
+<td>{'min': [-4.295065], 'max': [4.433117], 'scale': [0.034228], 'zero_point': [-3], 'details_type': 0, 'quantized_dimension': 0}</td>
+</tr>
+</table>
+<h3>Ops</h3>
+<table><tr>
+<tr>
+<th>index</th><th>inputs</th><th>outputs</th><th>builtin_options</th><th>opcode_index</th></tr>
+<tr>
+<td>0</td><td><span class='tooltip'><span class='tooltipcontent'>0 flatten_input_int8 INT8 [1, 32, 1, 1]<br>2 XC_fc_deepin_shallowout_final/weights INT8 [4, 32]<br>3 XC_fc_deepin_shallowout_final/biases INT32 [4]<br>4 XC_fc_deepin_shallowout_final/shift_scale INT16 [2, 4]<br></span>[0, 2, 3, 4]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>1 XC_fc_deepin_shallowout_final/output INT16 [1, 4]<br></span>[1]</span></td>
+<td>None</td>
+<td>XC_fc_deepin_shallowout_final (0)</td>
+</tr>
+</table>
+<svg id='subgraph0' width='1600' height='900'></svg>
+
+  <script>
+    // Build graph data
+    var graph = {"nodes": [{"id": "o0", "name": "XC_fc_deepin_shallowout_final (0)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 252}, {"id": "t0", "name": "(0) 'flatten_input_int8' [1, 32, 1, 1]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 290}, {"id": "t1", "name": "(1) 'XC_fc_deepin_shallowout_final/output' [1, 4]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 372}, {"id": "t2", "name": "(2) 'XC_fc_deepin_shallowout_final/weights' [4, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 470, "y": 100.0, "node_width": 387}, {"id": "t3", "name": "(3) 'XC_fc_deepin_shallowout_final/biases' [4]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 867, "y": 100.0, "node_width": 350}, {"id": "t4", "name": "(4) 'XC_fc_deepin_shallowout_final/shift_scale' [2, 4]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1227, "y": 100.0, "node_width": 410}, {"id": "t5", "name": "(5) 'x_test' [4, 32, 1, 1]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 0, "y": 0, "node_width": 200}, {"id": "t6", "name": "(6) 'y_test' [4, 4]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 0, "y": 0, "node_width": 147}], "edges": [{"source": "t0", "target": "o0"}, {"source": "t2", "target": "o0"}, {"source": "t3", "target": "o0"}, {"source": "t4", "target": "o0"}, {"target": "t1", "source": "o0"}]};
+
+    var svg = d3.select("#subgraph0")
+    var width = svg.attr("width");
+    var height = svg.attr("height");
+    // Make the graph scrollable.
+    svg = svg.call(d3.zoom().on("zoom", function() {
+      svg.attr("transform", d3.event.transform);
+    })).append("g");
+
+
+    var color = d3.scaleOrdinal(d3.schemeDark2);
+
+    var simulation = d3.forceSimulation()
+        .force("link", d3.forceLink().id(function(d) {return d.id;}))
+        .force("charge", d3.forceManyBody())
+        .force("center", d3.forceCenter(0.5 * width, 0.5 * height));
+
+
+    function buildGraph() {
+      var edge = svg.append("g").attr("class", "edges").selectAll("line")
+        .data(graph.edges).enter().append("path").attr("stroke","black").attr("fill","none")
+
+      // Make the node group
+      var node = svg.selectAll(".nodes")
+        .data(graph.nodes)
+        .enter().append("g")
+        .attr("x", function(d){return d.x})
+        .attr("y", function(d){return d.y})
+        .attr("node_width", function(d){return d.node_width})
+        .attr("transform", function(d) {
+          return "translate( " + d.x + ", " + d.y + ")"
+        })
+        .attr("class", "nodes")
+          .call(d3.drag()
+              .on("start", function(d) {
+                if(!d3.event.active) simulation.alphaTarget(1.0).restart();
+                d.fx = d.x;d.fy = d.y;
+              })
+              .on("drag", function(d) {
+                d.fx = d3.event.x; d.fy = d3.event.y;
+              })
+              .on("end", function(d) {
+                if (!d3.event.active) simulation.alphaTarget(0);
+                d.fx = d.fy = null;
+              }));
+      // Within the group, draw a box for the node position and text
+      // on the side.
+
+      var node_width = 150;
+      var node_height = 30;
+
+      node.append("rect")
+          .attr("r", "5px")
+          .attr("width", function(d) { return d.node_width; })
+          .attr("height", node_height)
+          .attr("rx", function(d) { return d.edge_radius; })
+          .attr("stroke", "#000000")
+          .attr("fill", function(d) { return d.fill_color; })
+      node.append("text")
+          .text(function(d) { return d.name; })
+          .attr("x", 5)
+          .attr("y", 20)
+          .attr("fill", function(d) { return d.text_color; })
+      // Setup force parameters and update position callback
+
+
+      var node = svg.selectAll(".nodes")
+        .data(graph.nodes);
+
+      // Bind the links
+      var name_to_g = {}
+      node.each(function(data, index, nodes) {
+        console.log(data.id)
+        name_to_g[data.id] = this;
+      });
+
+      function proc(w, t) {
+        return parseInt(w.getAttribute(t));
+      }
+      edge.attr("d", function(d) {
+        function lerp(t, a, b) {
+          return (1.0-t) * a + t * b;
+        }
+        var x1 = proc(name_to_g[d.source],"x") + proc(name_to_g[d.source],"node_width") / 2;
+        var y1 = proc(name_to_g[d.source],"y") + node_height;
+        var x2 = proc(name_to_g[d.target],"x") + proc(name_to_g[d.target],"node_width") / 2;
+        var y2 = proc(name_to_g[d.target],"y");
+        var s = "M " + x1 + " " + y1
+            + " C " + x1 + " " + lerp(.5, y1, y2)
+            + " " + x2 + " " + lerp(.5, y1, y2)
+            + " " + x2  + " " + y2
+      return s;
+    });
+
+  }
+  buildGraph()
+</script>
+</div><h2>Buffers</h2>
+<table><tr>
+<tr>
+<th>index</th><th>data</th></tr>
+<tr>
+<td>0</td><td>16 bytes</td>
+</tr>
+<tr>
+<td>1</td><td>--</td>
+</tr>
+<tr>
+<td>2</td><td>128 bytes</td>
+</tr>
+<tr>
+<td>3</td><td>--</td>
+</tr>
+<tr>
+<td>4</td><td>16 bytes</td>
+</tr>
+<tr>
+<td>5</td><td>128 bytes</td>
+</tr>
+<tr>
+<td>6</td><td>16 bytes</td>
+</tr>
+</table>
+<h2>Operator Codes</h2>
+<table><tr>
+<tr>
+<th>index</th><th>builtin_code</th><th>custom_code</th><th>version</th></tr>
+<tr>
+<td>0</td><td>CUSTOM</td>
+<td>XC_fc_deepin_shallowout_final</td>
+<td>1</td>
+</tr>
+</table>
+</body></html>

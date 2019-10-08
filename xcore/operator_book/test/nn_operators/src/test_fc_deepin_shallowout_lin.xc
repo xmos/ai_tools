@@ -37,19 +37,20 @@ void test_fc_deepin_shallowout_lin_case1()
     int8_t   WORD_ALIGNED  W[C_out][C_in]                = {{ 0 }};
     int32_t  WORD_ALIGNED  B[C_out]                      = { 0 };
     int8_t   WORD_ALIGNED  X[C_in];
-    int8_t   WORD_ALIGNED  Y_c[C_out];
     uint16_t WORD_ALIGNED  shifts[C_out]                 = { 0 };
     int16_t  WORD_ALIGNED  scales[C_out]                 = { 0 };
+    int16_t  WORD_ALIGNED Y_expected[C_out] = { 0 };
 
-    int8_t WORD_ALIGNED Y_expected[C_out] = { 0 };
+    int16_t   WORD_ALIGNED  Y_c[C_out];
 
     memset(Y_c, 0xCC, sizeof(Y_c));
 
-    fc_deepin_shallowout_lin_c((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_c, 
+    fc_deepin_shallowout_lin_c((int8_t*) W, B, X, Y_c, 
                                C_out, C_in, shifts, scales);
 #if HAS_ASM
-    int8_t   WORD_ALIGNED  Y_asm[C_out];
-    fc_deepin_shallowout_lin_asm((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_asm, 
+    int16_t   WORD_ALIGNED  Y_asm[C_out];
+    memset(Y_asm, 0xCC, sizeof(Y_asm));
+    fc_deepin_shallowout_lin_asm((int8_t*) W, B, X, Y_asm, 
                                C_out, C_in, shifts, scales);
 #endif
 
@@ -67,6 +68,8 @@ void test_fc_deepin_shallowout_lin_case1()
 #undef DEBUG_ON
 
 
+
+
 #define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define C_out           (4)
 #define C_in            (VPU_INT8_EPV)
@@ -80,7 +83,7 @@ void test_fc_deepin_shallowout_lin_case2()
     int32_t  WORD_ALIGNED  B[C_out]                      = { 0 };
     uint16_t WORD_ALIGNED  shifts[C_out]                 = { 0 };
     int16_t  WORD_ALIGNED  scales[C_out]                 = { 0 };
-    int16_t  WORD_ALIGNED  Y_expected[C_out]              = { 0 };
+    int16_t  WORD_ALIGNED  Y_expected[C_out]             = { 0 };
 
     int16_t  WORD_ALIGNED  Y_c[C_out];
 
@@ -108,7 +111,8 @@ void test_fc_deepin_shallowout_lin_case2()
         fc_deepin_shallowout_lin((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_c, 
                                 C_out, C_in, shifts, scales);
 #if HAS_ASM
-        int8_t   WORD_ALIGNED  Y_asm[C_out];
+        int16_t WORD_ALIGNED Y_asm[C_out];
+        memset(Y_asm, 0xCC, sizeof(Y_asm));
         fc_deepin_shallowout_lin_asm((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_asm, 
                                C_out, C_in, shifts, scales);
 #endif
@@ -168,13 +172,13 @@ void test_fc_deepin_shallowout_lin_case3()
         _read(input_file, (char*) Y_expected, sizeof(Y_expected));
         _close(input_file);
 
-        // printf("%d\t%d\n", Y_check[v], Y_expected[0]);
         assert(Y_check[v] == Y_expected[0]);
 
         fc_deepin_shallowout_lin((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_c, 
                                 C_out, C_in, shifts, scales);
 #if HAS_ASM
-        int8_t   WORD_ALIGNED  Y_asm[C_out];
+        int16_t WORD_ALIGNED Y_asm[C_out];
+        memset(Y_asm, 0xCC, sizeof(Y_asm));
         fc_deepin_shallowout_lin_asm((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_asm, 
                                C_out, C_in, shifts, scales);
 #endif

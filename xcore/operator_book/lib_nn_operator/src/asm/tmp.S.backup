@@ -1,0 +1,181 @@
+
+
+#if defined(__XS3A__)
+
+
+
+
+/*
+    - Assume x is word-aligned.
+    - Assume length > 0
+    - should work even if INT16_MIN is present in x[]
+    - Might not work if length is greater than 2^19 because of the way indices are being tracked in the VPU
+
+    void unsigned argmax_s16(
+        const int16_t* x,
+        const unsigned length);
+*/
+
+#define FUNCTION_NAME argmax_s16
+
+#define NOOOOP  nop
+
+#define NSTACKWORDS  48
+    
+.text
+.issue_mode  dual
+.globl FUNCTION_NAME
+.align 4
+.type FUNCTION_NAME,@function
+.cc_top FUNCTION_NAME.function,FUNCTION_NAME
+
+#define x               r0
+#define length          r1  // number of elements
+#define vlength         r1  // length >> 4 -- number of vector groups
+
+#define STACK_LEFTOVER      7
+#define STACK_MAX           8
+#define STACK_ARGMAX        16
+#define STACK_INDICES       24
+#define STACK_ONES          32
+#define STACK_SCRATCH       40
+
+FUNCTION_NAME:
+    {   NOOOOP                                  ;   dualentsp NSTACKWORDS               }
+    std r4, r5, sp[0]
+    std r6, r7, sp[1]
+    std r8, r9, sp[2]
+    {   NOOOOP                                  ;   stw r10, sp[6]                      }
+    
+    {   shr r2, length, 4                       ;   NOOOOP                              }
+    {   NOOOOP                                  ;   bf r2, .L_no_vpu                    }
+    
+.L_use_vpu:
+//////Gonna use VPU. Setup some things
+    {   ldc r2, 32                              ;   NOOOOP                              }
+    {   shl r11, r2, 3                          ;   NOOOOP                              }
+    {   mkmsk r11, 4                            ;   vsetc r11                           }
+//Initialize our index stuff
+    {   ldaw r2, sp[STACK_INDICES]              ;   vclrdr                              }
+    {   ldc r2, 14                              ;   vstr r2[0]                          }  
+    {   ldaw r3, sp[STACK_ONES]                 ;   vsign                               }  //WARNING: Still unclear whether VSIGN sets the values to (+/-) 2^14 or (+/-) 1, so 
+    {   NOOOOP                                  ;   vstr                                }  //   <--- this instruction (and the next one) may be unnecessary
+    {   ldaw r2, sp[STACK_ONES]                 ;   vlashr r3[0], r2                    }  // Should turn 2^14 into 1
+    {   NOOOOP                                  ;   vstr r2[0]                          }
+//Adjust some of our loop management stuff
+    {   and r2, length, r11                     ;   NOOOOP                              }
+    {   shr vlength, length, 4                  ;   stw r2, sp[STACK_LEFTOVER]          }
+    {   NOOOOP                                  ;   NOOOOP                              }
+
+//Initialize CUR_MAX and CUR_ARGMAX
+    {   ldaw r3, sp[STACK_ARGMAX]               ;   vclrdr                              } 
+    {   mov r11, x                              ;   vstr r3[0]                          } //the ARGMAX vector will just store the batch index of the argmax. The element index gives the rest
+    {   ldaw r3, sp[STACK_MAX]                  ;   vldr r11[0]                         }
+    {   sub vlength, vlength, 1                 ;   vstr r3[0]                          }
+
+
+
+#define ONES        r10
+#define INDICES     r5
+#define ARGMAX      r6
+#define WRITE_MASK  r7
+.L_vpu_loop_enter:
+    {   ldc WRITE_MASK, 0                       ;   bf vlength, .L_vpu_loop_bot         }
+    {   ldc r4, 32                              ;   ldaw INDICES, sp[STACK_INDICES]     }
+    {   ldaw r6, sp[STACK_ARGMAX]               ;   ldaw ONES, sp[STACK_ONES]           }
+.L_vpu_loop_top:
+    {   NOOOOP                                  ;   vldd INDICES[0]                     }   // vR = [indices of previous batch]
+    {   sub vlength, vlength, 1                 ;   vladdd ONES[0]                      }   // vR[] = vR[] + 1   indices of new batch
+    {   mov r11, x                              ;   vstd INDICES[0]                     }   // write indices back to stack
+
+    {   ldaw r11, sp[STACK_MAX]                 ;   vldr r11[0]                         }   // vR = CUR_X
+    {   NOOOOP                                  ;   vlsub x[0]                          }   // vR = CUR_MAX - CUR_X
+    {   ldaw r3, sp[STACK_SCRATCH]              ;   vdepth1                             }   // create mask which will be used to overwrite CUR_MAX and ARGMAX on the stack
+    {   mov r11, x                              ;   vstr r3[0]                          }   // store and..
+    {   ldaw r3, sp[STACK_MAX]                  ;   ldw r2, r3                          }   // .. retrieve the mask into r2
+    {   mov r8, r2                              ;   vldr r11[0]                         }   // vR = CUR_X
+    {   mov r11, INDICES                        ;   zip r8, r2, 0                       }   // zip turns 16 bit mask into 32 bit mask
+    vstrpv r3, r2                                                                           // overwrite CUR_MAX with CUR_X, using the mask
+    {   ldc r3, 32                              ;   vldr r11[0]                         }   // vR = [indices of the current batch]
+    vstrpv ARGMAX[0], r2                                                                    // overwrite CUR_ARGMAX with current batch indices using mask
+    {   add x, x, r3                            ;   bt vlength, .L_vpu_loop_top         }
+
+.L_vpu_loop_bot:
+    {   NOOOOP                                  ;   NOOOOP                              }
+    {   ldw r2, sp[STACK_LEFTOVER]              ;   NOOOOP                              }
+    {   mkmsk WRITE_MASK, 32                    ;   bf r2, .L_leftovers_end             }
+#undef ONES
+#undef INDICES
+#undef ARGMAX
+
+.L_leftovers_start:
+    {   NOOOOP                                  ;   NOOOOP                              }
+    {   NOOOOP                                  ;   NOOOOP                              }
+    {   NOOOOP                                  ;   NOOOOP                              }
+
+
+
+
+.L_leftovers_end:
+
+
+
+
+
+
+
+
+//At this point, x is pointing at the last of the (less than 16) elements, and is word-aligned.
+//leftover holds the number of elements left to process. We'll process them in reverse order
+
+.L_no_vpu:
+.L_do_leftovers_short:
+// Reason for this is if there wasn't enough for the VPU to do some of it, cur_max and cur_argmax are uninitialized
+    {   sub leftover, leftover, 1               ;   NOOOOP                              }
+    {   mov cur_argmax, leftover                ;   ld16s cur_max, x[cur_argmax]        }
+// Now leftover *still* points to the number of remaining elements, but cur_argmax and cur_max are initialized,
+//  so remaining behavior doesn't depend on whether the VPU did anthing here.
+
+.L_do_leftovers:
+    {   sub leftover, leftover, 1               ;   bf leftover, .Lfunc_end             }
+    {   NOOOOP                                  ;   NOOOOP                              }
+    {   NOOOOP                                  ;   NOOOOP                              }
+
+
+#define test_val        r5
+.L_leftover_loop_top:
+    {   NOOOOP                                  ;   ld16s test_val, x[leftover]         }
+    {   lss r6, test_val, cur_max               ;   NOOOOP                              }
+    {   NOOOOP                                  ;   bt r6, .L_leftover_loop_iter        } //value being checked was less
+
+    {   add cur_argmax, cur_argmax, lo_offset   ;   mov cur_max, test_val               } //value being checked was greater or equal
+    
+.L_leftover_loop_iter:
+    {   sub leftover, leftover, 1               ;   bt leftover, .L_leftover_loop_top   }
+#undef test_val
+    
+.Lfunc_end:
+    // set return value in r0
+    {   mov r0, cur_argmax                      ;   ldw r10, sp[6]                      }
+    ldd r8, r9, sp[2]
+    ldd r6, r7, sp[1]
+    ldd r4, r5, sp[0]
+    retsp NSTACKWORDS
+
+    .cc_bottom FUNCTION_NAME.function
+    .set FUNCTION_NAME.nstackwords,NSTACKWORDS
+    .globl FUNCTION_NAME.nstackwords
+    .set FUNCTION_NAME.maxcores,1
+    .globl FUNCTION_NAME.maxcores
+    .set FUNCTION_NAME.maxtimers,0
+    .globl FUNCTION_NAME.maxtimers
+    .set FUNCTION_NAME.maxchanends,0
+    .globl FUNCTION_NAME.maxchanends
+.Ltmp0:
+    .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
+    .issue_mode  single
+
+#endif
+
+
+

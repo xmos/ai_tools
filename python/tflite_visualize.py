@@ -32,6 +32,9 @@ import argparse
 import webbrowser
 import tempfile
 
+from tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA
+from tflite_utils import check_schema_path, check_flatc_path
+
 # A CSS description for making the visualizer
 _CSS = """
 <html>
@@ -387,7 +390,7 @@ def GenerateTableHtml(items, keys_to_print, display_index=True):
   return html
 
 
-def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin):
+def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin, verbose=False):
   """Given a tflite model in `tflite_input` file, produce html description."""
 
   # Convert the model into a JSON flatbuffer using flatc (build if doesn't
@@ -401,14 +404,17 @@ def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin):
         flatc_bin + " -t "
         "--strict-json --defaults-json -o /tmp {schema} -- {input}".format(
             input=tflite_input, schema=schema))
-    print(cmd)
-    os.system(cmd)
+    if verbose:
+      print(cmd)
+    os.system(cmd)  # TODO: use subprocess.call
     real_output = ("/tmp/" + os.path.splitext(
         os.path.split(tflite_input)[-1])[0] + ".json")
 
-    data = json.load(open(real_output))
+    with open(real_output, 'r') as f:
+      data = json.load(f)
   elif tflite_input.endswith(".json"):
-    data = json.load(open(tflite_input))
+    with open(tflite_input, 'r') as f:
+      data = json.load(f)
   else:
     raise RuntimeError("Input file was not .tflite or .json")
   html = ""
@@ -477,41 +483,21 @@ def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin):
 
   html += "</body></html>\n"
 
-  open(html_output, "w").write(html)
+  with open(html_output, "w") as f:
+    f.write(html)
 
 
-def main(argv):
-  parser = argparse.ArgumentParser()
-  parser.add_argument('tflite_input', help='Input .tflite file.')
-  parser.add_argument('--html_output', required=False, default=None,
-                      help='Output .html file. If not specified, a temporary file is created.')
-  parser.add_argument('--no_browser',  action='store_true', default=False,
-                      help='Do not open browser after the .html is created.')
-  args = parser.parse_args()
-  tflite_input, html_output = args.tflite_input, args.html_output
-  no_browser = args.no_browser
-
-  # Schema to use for flatbuffers
-  _SCHEMA = os.path.normpath(os.path.join(
-      os.path.dirname(os.path.realpath(__file__)), 'schema.fbs'
-  ))
-  _BINARY = shutil.which("flatc")
-
-  if not os.path.exists(_SCHEMA):
-    raise RuntimeError("Sorry, schema file cannot be found at %r" % _SCHEMA)
-  if _BINARY is None:
-    raise RuntimeError("Sorry, cannot find flatc")
-  elif not os.path.exists(_BINARY):
-    raise RuntimeError("Sorry, flatc is not available at %r" % _BINARY)
-
+def main(tflite_input, html_output, *,
+         no_browser=True, verbose=False,
+         schema=DEFAULT_SCHEMA, flatc_bin=DEFAULT_FLATC):
   if html_output:
     html_path = html_output
   else:
     html_file = tempfile.NamedTemporaryFile(delete=False)
     html_path = html_file.name
 
-  CreateHtmlFile(tflite_input, html_path,
-                 schema=_SCHEMA, flatc_bin=_BINARY)
+  CreateHtmlFile(str(tflite_input), str(html_path),
+                 schema=schema, flatc_bin=flatc_bin)
 
   if not no_browser:
     webbrowser.open_new_tab("file://" + os.path.realpath(html_path))
@@ -521,4 +507,17 @@ def main(argv):
 
 
 if __name__ == "__main__":
-  main(sys.argv)
+  parser = argparse.ArgumentParser()
+  parser.add_argument('tflite_input', help='Input .tflite file.')
+  parser.add_argument('--html_output', required=False, default=None,
+                      help='Output .html file. If not specified, a temporary file is created.')
+  parser.add_argument('--no_browser',  action='store_true', default=False,
+                      help='Do not open browser after the .html is created.')
+  parser.add_argument('-v', '--verbose',  action='store_true', default=False,
+                      help='Verbose mode.')
+  args = parser.parse_args()
+  tflite_input, html_output = args.tflite_input, args.html_output
+
+  # Schema to use for flatbuffers
+  
+  main(tflite_input, html_output, no_browser=args.no_browser, verbose=args.verbose)

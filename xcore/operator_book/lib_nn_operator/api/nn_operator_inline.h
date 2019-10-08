@@ -51,7 +51,7 @@ static inline void conv2d_deepin_deepout_relu(
     const int16_t* shifts, 
     const int16_t* scales)
 {
-#if defined(__XS3A__) && (USE_ASM_conv2d_deepin_deepout_relu)
+#if defined(__XS3A__) && (USE_ASM_conv2d_deepin_deepout_relu) && 0
 
     conv2d_deepin_deepout_relu_asm(K, B, X, Y, height, width, K_h, K_w, C_out, C_in, shifts, scales);
 

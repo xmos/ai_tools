@@ -58,8 +58,6 @@ static inline void nn_mat_vec_mul_s8(
 
 
 
-
-
 /**  2D convolution for "deep" input and output tensors.
  *
  *  Stride is 1 in both dimensions. Number of input and output channels must be
@@ -69,11 +67,24 @@ static inline void nn_mat_vec_mul_s8(
  *
  *  \param  K       Kernel weight tensor of shape (C_out, K_h, K_w, C_in) using
  *                  a non-standard layout such that:
- *                  K[i, j, k, l]  =  K[
- *                    K_h * K_w * C_in * ((i//16 + 1)*16 - i%16 - 1)
- *                    +  K_w * C_in * j  +  C_in * k  +  l
- *                  ]
- *  \param  B       Bias tensor of shape (2, C_out) using a standard layout
+ * 
+ *                  K[i, j, k, l] = K[  C_in * 16 * K_h * K_w * ( i // 16)
+ *                                    + C_in * 16 * K_w * j
+ *                                    + C_in * 16 * k
+ *                                    + 32 * 16 * (l // 32)
+ *                                    + 32 * (15-(i % 16))
+ *                                    + (l % 32) ]
+ * 
+ *                  This layout can be understood to order coefficients with the following precedence:
+ *                      - C_out 'group' (output channels are split into groups of 16; output group is given by (output_channel // 16))
+ *                      - kernel row
+ *                      - kernel col
+ *                      - C_in 'group' (input channels are split into groups of 32; input group is given by (input_channel // 32))
+ *                          Each C_in group collects 32*16 coefficients -- 32 coefficients for each of 16 output channels
+ *                      - reversed output channel (i.e. coefficients for output channel 15 are at lower offsets than output channel 14)
+ *                      - input channel
+ * 
+ *  \param  B       Bias tensor of shape (2, C_out) using a non-standard layout
  *                  such that B[i, c]  =  C_out * i  +  c. The value B[0, c]
  *                  encodes the lower 16 bits, while B[1, c] encodes the higher
  *                  16 bits of the 32-bit bias value for output channel c.
@@ -127,7 +138,7 @@ static inline void conv2d_deepin_deepout_relu(
  *                  The weights are zero padded in the 3rd dimension, i.e.
  *                  K[i, j, k, l] is zero for K_w <= k < 8. There may or may
  *                  not be zero padding in the 4th dimension.
- *  \param  B       Bias tensor of shape (2, C_out) using a standard layout
+ *  \param  B       Bias tensor of shape (2, C_out) using a non-standard layout
  *                  such that B[i, c]  =  C_out * i  +  c. The value B[0, c]
  *                  encodes the lower 16 bits, while B[1, c] encodes the higher
  *                  16 bits of the 32-bit bias value for output channel c.

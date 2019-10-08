@@ -11,25 +11,25 @@ void maxpool2d_deep_asm(
     const int32_t C_in);
 */
 
-#define FUNCTION_NAME	maxpool2d_deep_asm
+#define FUNCTION_NAME maxpool2d_deep_asm
 
 #define NSTACKWORDS  20
     
 .text
 .issue_mode  dual
-.globl	FUNCTION_NAME
-.align	4
-.type	FUNCTION_NAME,@function
+.globl FUNCTION_NAME
+.align 4
+.type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
 #define NOOOOP          nop
     
-#define X				r0
-#define Y				r1
+#define X    r0
+#define Y    r1
 #define height          r2
-#define	ROW 		    height
+#define ROW       height
 #define width           r3
-#define	COL 		    width
+#define COL       width
 #define C_in            r4      //After loading C_in, this holds C_in/32
 #define PXL_JMP         r5      //Bytes between each pixel (C_in)
 #define TMP_BUFF        r6      //Temporary storage space on the stack
@@ -47,10 +47,10 @@ void maxpool2d_deep_asm(
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
-    std	r4, r5, sp[0]
-    std	r6, r7, sp[1]
-    std	r8, r9, sp[2]
-    {   ldc r8, 32                              ;   stw	r10, sp[6]                      }
+    std r4, r5, sp[0]
+    std r6, r7, sp[1]
+    std r8, r9, sp[2]
+    {   ldc r8, 32                              ;   stw r10, sp[6]                      }
     {   shl r11, r8, 4                          ;   ldw C_in, sp[STACK_CHANS]           }
     {   mov PXL_JMP, C_in                       ;   vsetc r11                           }
     mul r7, width, C_in
@@ -117,16 +117,16 @@ FUNCTION_NAME:
     retsp NSTACKWORDS
 
     .cc_bottom FUNCTION_NAME.function
-    .set	FUNCTION_NAME.nstackwords,NSTACKWORDS
-    .globl	FUNCTION_NAME.nstackwords
-    .set	FUNCTION_NAME.maxcores,1
-    .globl	FUNCTION_NAME.maxcores
-    .set	FUNCTION_NAME.maxtimers,0
-    .globl	FUNCTION_NAME.maxtimers
-    .set	FUNCTION_NAME.maxchanends,0
-    .globl	FUNCTION_NAME.maxchanends
+    .set FUNCTION_NAME.nstackwords,NSTACKWORDS
+    .globl FUNCTION_NAME.nstackwords
+    .set FUNCTION_NAME.maxcores,1
+    .globl FUNCTION_NAME.maxcores
+    .set FUNCTION_NAME.maxtimers,0
+    .globl FUNCTION_NAME.maxtimers
+    .set FUNCTION_NAME.maxchanends,0
+    .globl FUNCTION_NAME.maxchanends
 .Ltmp0:
-    .size	FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
+    .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
     .issue_mode  single
 
 #endif

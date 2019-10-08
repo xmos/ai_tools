@@ -14,25 +14,25 @@ void fc_deepin_shallowout_lin_asm(
     const int16_t* scales);
 */
 
-#define FUNCTION_NAME	fc_deepin_shallowout_lin_asm
+#define FUNCTION_NAME fc_deepin_shallowout_lin_asm
 
 #define NSTACKWORDS  16
     
 .text
 .issue_mode  dual
-.globl	FUNCTION_NAME
-.align	4
-.type	FUNCTION_NAME,@function
+.globl FUNCTION_NAME
+.align 4
+.type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
 #define NOOOOP          nop
     
-#define W				r0
-#define B				r1
+#define W    r0
+#define B    r1
 #define X               r2
-#define	Y   		    r3
+#define Y         r3
 #define C_out           r4
-#define C_in		    r5
+#define C_in      r5
 #define shifts          r6
 #define scales          r7
 
@@ -42,10 +42,10 @@ void fc_deepin_shallowout_lin_asm(
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
-    std	r4, r5, sp[0]
-    std	r6, r7, sp[1]
-    std	r8, r9, sp[2]
-    {   ldc r8, 32                              ;   stw	r10, sp[6]                      }
+    std r4, r5, sp[0]
+    std r6, r7, sp[1]
+    std r8, r9, sp[2]
+    {   ldc r8, 32                              ;   stw r10, sp[6]                      }
     {   NOOOOP                                  ;   ldw C_in, sp[NSTACKWORDS+2]         }
     {   shr C_in, C_in, 5                       ;   ldw C_out, sp[NSTACKWORDS+1]        }
     {   NOOOOP                                  ;   ldw shifts, sp[NSTACKWORDS+3]       }
@@ -117,16 +117,16 @@ FUNCTION_NAME:
     retsp NSTACKWORDS
 
     .cc_bottom FUNCTION_NAME.function
-    .set	FUNCTION_NAME.nstackwords,NSTACKWORDS
-    .globl	FUNCTION_NAME.nstackwords
-    .set	FUNCTION_NAME.maxcores,1
-    .globl	FUNCTION_NAME.maxcores
-    .set	FUNCTION_NAME.maxtimers,0
-    .globl	FUNCTION_NAME.maxtimers
-    .set	FUNCTION_NAME.maxchanends,0
-    .globl	FUNCTION_NAME.maxchanends
+    .set FUNCTION_NAME.nstackwords,NSTACKWORDS
+    .globl FUNCTION_NAME.nstackwords
+    .set FUNCTION_NAME.maxcores,1
+    .globl FUNCTION_NAME.maxcores
+    .set FUNCTION_NAME.maxtimers,0
+    .globl FUNCTION_NAME.maxtimers
+    .set FUNCTION_NAME.maxchanends,0
+    .globl FUNCTION_NAME.maxchanends
 .Ltmp0:
-    .size	FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
+    .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
     .issue_mode  single
 
 #endif

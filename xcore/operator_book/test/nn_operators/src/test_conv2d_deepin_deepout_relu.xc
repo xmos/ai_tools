@@ -9,6 +9,7 @@
 #include "tst_common.h"
 
 #include "nn_operator.h"
+#include "nn_types.h"
 #include "xs3_vpu.h"
 
 // #include "dsp_xs3_vector.h"
@@ -26,7 +27,172 @@
  #define HAS_ASM (0)
 #endif
 
+
+#define ADD_VAL (-((1<<14)-1))
+
 // static unsigned seed = 44334;
+unsafe{
+void conv2d_deepin_deepout_relu_asm(
+    const int8_t* K, 
+    const data16_t* B,
+    const int8_t* X, 
+    int8_t* Y,
+    const int32_t height, 
+    const int32_t width,
+    const int32_t K_h, 
+    const int32_t K_w,
+    const int32_t C_out, 
+    const int32_t C_in,
+    const int16_t* shifts, 
+    const int16_t* scales)
+{
+    const int16_t add_vector[16] = {ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,ADD_VAL,};
+    const data16_t* B_lo = B;
+    const data16_t* B_hi = &B[C_out];
+
+    const int K_h_half = K_h >> 1;
+    const int K_w_half = K_w >> 1;
+
+    // const unsigned kernel_chunk_size = 16 * C_in * K_w * K_h;
+
+    int8_t* unsafe y = (int8_t* unsafe) Y;
+    // printf("0x%08x\n", K);
+    // printf("0x%08x\n", &K[15*C_in*K_h*K_w]);
+
+    // for(int i = 0; i < 16; i++){
+    //     printf("K start for channel %d: 0x%08x\n", 15-i, &K[i*C_in*K_h*K_w + C_in*K_w*1 + C_in*1]);
+    // }
+
+#if 0
+    printf("Running\n");
+
+    int pxl_r = 0;
+    int pxl_c = 0;
+
+    printf("X = np.array([\n");
+    for(int tmp_r = -K_h_half; tmp_r <= K_h_half; tmp_r++){
+        printf("[");
+        for(int tmp_c = -K_w_half; tmp_c <= K_w_half; tmp_c++){
+            printf("[");
+            for(int c_in = 0; c_in < C_in; c_in++){
+                int yy = pxl_r + tmp_r;
+                int xx = pxl_c + tmp_c;
+                int offset = yy*(width*C_in) + xx*C_in + c_in;
+                
+                if(xx < 0 || yy < 0)  printf("0,");
+                else                  printf("%d,", X[offset]);
+            }
+            printf("],\n");
+        }
+        printf("],");
+    } 
+    printf("],dtype=np.int8)\n\n");
+
+    
+
+    printf("K = np.array([\n");
+    for(int tmp_r = 0; tmp_r < K_h; tmp_r++){
+        printf("[");
+        for(int tmp_c = 0; tmp_c < K_w; tmp_c++){
+            printf("[");
+            for(int c_in = 0; c_in < C_in; c_in++){
+
+                int offset = (15*K_h*K_w*C_in) + tmp_r*(K_w*C_in) + tmp_c*C_in + c_in;
+                printf("%d,", K[offset]);
+                // printf("0x%08x\n", &K[offset]);
+
+            }
+            printf("],\n");
+        }
+        printf("],");
+    } 
+    printf("],dtype=np.int8)\n\n");
+
+
+    printf("B[0] = %ld\n", (((int32_t)B_hi[0]) << 16) | ((uint32_t)B_lo[0]));
+
+    printf("shifts[0] = %d\n", shifts[0]);
+    printf("scales[0] = %d\n", scales[0]);
+#endif
+
+    for(int row = 0; row < height; row++){
+        for(int col = 0; col < width; col++){
+
+            int patch_start_row = row - K_h_half;
+            int patch_end_row   = row + K_h_half;
+            int patch_start_col = col - K_w_half;
+            int patch_end_col   = col + K_w_half;
+
+            unsigned pad_l = 0;
+            unsigned pad_t = 0;
+            unsigned pad_r = 0;
+            unsigned pad_b = 0;
+
+            if(patch_start_row < 0){
+                pad_t = -patch_start_row;
+                patch_start_row = 0;
+            }
+            if(patch_start_col < 0){
+                pad_l = -patch_start_col;
+                patch_start_col = 0;
+            }
+            if(patch_end_row >= height){
+                pad_b = patch_end_row - (height-1);
+                patch_end_row = height-1;
+            }
+            if(patch_end_col >= width){
+                pad_r = patch_end_col - (width-1);
+                patch_end_col = width-1;
+            }
+
+            const int8_t* patch_x = X + C_in * (patch_start_row * width + patch_start_col);
+
+            const unsigned K_offset = C_in * (pad_t * K_w + pad_l);
+            const int8_t* patch_k = K + K_offset;
+            
+            const unsigned patch_cols = patch_end_col - patch_start_col + 1;
+            const unsigned patch_rows = patch_end_row - patch_start_row + 1;
+
+            const unsigned patch_row_incr = C_in * (width - patch_cols);
+            const unsigned kernel_row_incr = C_in * (K_w - patch_cols);
+
+            const unsigned patch_row_maccs = (C_in >> 5) * patch_cols;
+
+            //Needs to be the number of bytes to get to the start of the next kernel chunk plus the offset from the start
+            //  of a kernel chunk to the start of that patch_k
+            const unsigned kernel_advance = C_in * (pad_b * K_w + pad_r);
+
+            // printf("height\t\t= %u\n", height);
+            // printf("width\t\t= %u\n", width);
+            // printf("K_h\t\t= %u\n", K_h);
+            // printf("K_w\t\t= %u\n", K_w);
+            // printf("row\t\t= %u\n", row);
+            // printf("col\t\t= %u\n", col);
+            // printf("y\t\t= 0x%08X\t(0x%08X)\n", y, Y);
+            // printf("patch_k\t\t= 0x%08X\t(0x%08X)\n", patch_k, K);
+            // printf("B_lo\t\t= 0x%08X\t(0x%08X)\n", B_lo, B);
+            // printf("B_hi\t\t= 0x%08X\t(0x%08X)\n", B_hi, B);
+            // printf("patch_row_incr\t= %u\n", patch_row_incr);
+            // printf("kernel_row_incr\t= %u\n", kernel_row_incr);
+            // printf("patch_x\t\t= 0x%08X\t(0x%08X)\n", patch_x, X);
+            // printf("patch_rows\t= %u\n", patch_rows);
+            // printf("patch_row_maccs\t= %u\n", patch_row_maccs);
+            // printf("(C_out>>4)\t= %u\n", (C_out>>4));
+            // printf("kernel_advance\t= %u\n", kernel_advance);            
+            // printf("shifts\t\t= 0x%08X\n", shifts);
+            // printf("scales\t\t= 0x%08X\n", scales);
+
+            // printf("\n\n");
+
+
+            y = (int8_t*unsafe) conv2d_deepin_deepout_relu_asm_patch((int8_t*)y, patch_k, B_lo, B_hi, patch_row_incr, kernel_row_incr, patch_x, 
+                                patch_rows, patch_row_maccs, (C_out>>4), kernel_advance, shifts, scales, add_vector);
+
+            // return;
+        }
+    }
+}
+}
 
 
 #define DEBUG_ON    (0 || TEST_DEBUG_ON)
@@ -71,7 +237,6 @@ void test_conv2d_deepin_deepout_relu_case1()
             }
         }
     }
-
 }
 #undef width
 #undef height

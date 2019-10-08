@@ -57,13 +57,13 @@ static inline int16_t vlsat_single_s16(int32_t acc, int16_t shr)
 }
 
 static inline int16_t vlmul_single_s16(int16_t vR, int16_t mem){
-    int32_t p = vR * mem;
+    int32_t p = ((int32_t)vR) * mem;
     p = vlsat_single_s16(p, 14);
     return (int16_t)p;
 }
 
 static inline int8_t vdepth8_single_s16(int16_t vR){
-    return vlsat_single_s8(vR, 7);
+    return vlsat_single_s8(vR, 8);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -120,11 +120,106 @@ void nn_mat_vec_mul_s8_c(
 
 
 
+
+
+void conv2d_deepin_deepout_relu_c(
+    const int8_t* K, 
+    const data16_t* B,
+    const int8_t* X, 
+    int8_t* Y,
+    const int32_t height, 
+    const int32_t width,
+    const int32_t K_h, 
+    const int32_t K_w,
+    const int32_t C_out, 
+    const int32_t C_in,
+    const int16_t* shifts, 
+    const int16_t* scales)
+{
+    const int P_h = K_h / 2;
+    const int P_w = K_w / 2;
+
+    const data16_t* B_hi = &B[C_out];
+    const data16_t* B_lo = &B[0];
+
+
+    for(int chout = 0; chout < C_out; chout++){
+
+        const int cog = chout / VPU_INT8_ACC_PERIOD;
+        const int cog_offset = chout % 16;
+        
+        const int32_t bias = (((int32_t)B_hi[chout])<<16) | B_lo[chout];
+        const int16_t shr = shifts[chout];
+        const int16_t scale = scales[chout];
+
+        for(int row = 0; row < height; row++){
+            for(int col = 0; col < width; col++){
+                
+                int32_t acc32 = bias;
+
+                for(int kr = -P_h; kr <= P_h; kr++){
+                    for(int kc = -P_w; kc <= P_w; kc++){
+
+                        //check if we're in padding:
+                        if(row+kr < 0 || row+kr >= height)
+                            continue;
+                        if(col+kc < 0 || col+kc >= width)
+                            continue;
+
+                        const int kkrr = kr + P_h;
+                        const int kkcc = kc + P_w;
+
+                        int64_t acc64 = acc32;
+
+                        //iterate through input channels
+                        for(int chin = 0; chin < C_in; chin++){
+
+                            const int cig = chin / VPU_INT8_EPV;
+                            const int cig_offset = chin % VPU_INT8_EPV;
+
+                            int k_offset = C_in * VPU_INT8_ACC_PERIOD * K_h * K_w * cog
+                                         + C_in * VPU_INT8_ACC_PERIOD * K_w * kkrr
+                                         + C_in * VPU_INT8_ACC_PERIOD * kkcc
+                                         + VPU_INT8_EPV * VPU_INT8_ACC_PERIOD * cig
+                                         + VPU_INT8_EPV * (15 - cog_offset)
+                                         + cig_offset;
+
+                            int x_offset = C_in * width * (row+kr)
+                                         + C_in * (col+kc)
+                                         + chin;
+
+                            const int16_t kernel_val = K[k_offset];
+                            const int16_t input_val = X[x_offset];
+
+                            acc64 += kernel_val * input_val;
+
+                        }
+                        
+                        acc32 = sat_s32(acc64);
+                    }
+                }
+
+                int16_t res16 = vlsat_single_s16(acc32, shr);
+
+                if(res16 < 0) res16 = 0;
+
+                res16 = res16 - ((1<<14)-1);
+
+                res16 = vlmul_single_s16(res16, scale);
+
+                Y[(row*width+col)*C_out + chout] = vdepth8_single_s16(res16);
+            }
+        }
+    }
+}
+
+
+
 #define KERNEL_GROUP(C_OUT_G_DEX)       K[(C_OUT_G_DEX) * K_h * K_w * C_in * (VPU_INT8_ACC_PERIOD)]
 #define KERNEL(C_OUT_DEX)               (kernel_group[(15-(C_OUT_DEX)) * K_h * K_w * C_in ])
 #define KERNEL_VAL(ROW, COL, CH_IN)     (kernel[(ROW)*K_w*C_in + (COL)*C_in + CH_IN])
 #define X_VAL(ROW, COL, CH_IN)          (X[(ROW)*width*C_in + (COL)*C_in + CH_IN])
-void conv2d_deepin_deepout_relu_c(
+void conv2d_deepin_deepout_relu_c_old(
     const int8_t* K, 
     const data16_t* B,
     const int8_t* X, 
@@ -181,6 +276,11 @@ void conv2d_deepin_deepout_relu_c(
                                 acc32 = sat_s32(acc64);
                             }
                         }
+                    }
+
+                    if(K_h == 3 && K_w == 3 && row == 0 && col == 0 && actual_chout == 0){
+                        printf("acc32 = %ld\n", acc32);
+                        return;
                     }
 
                     // if( actual_chout == 2 && row == 1 && col == 0)

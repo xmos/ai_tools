@@ -4,6 +4,7 @@
 #define NN_OPERATOR_ASM_H_
 
 #include <stdint.h>
+#include "nn_types.h"
 
 #ifdef __XC__
 extern "C" {
@@ -22,6 +23,41 @@ void nn_mat_vec_mul_s8_asm(
     const unsigned N_chunks,
     const int16_t* shr,
     int8_t* y);
+
+
+    
+#ifndef USE_ASM_conv2d_deepin_deepout_relu
+#define USE_ASM_conv2d_deepin_deepout_relu   (1)
+#endif
+// void conv2d_deepin_deepout_relu_asm(
+//     const int8_t* K, 
+//     const data16_t* B,
+//     const int8_t* X, 
+//     int8_t* Y,
+//     const int32_t height, 
+//     const int32_t width,
+//     const int32_t K_h, 
+//     const int32_t K_w,
+//     const int32_t C_out, 
+//     const int32_t C_in,
+//     const int16_t* shifts, 
+//     const int16_t* scales);
+
+int8_t* conv2d_deepin_deepout_relu_asm_patch(
+    const int8_t* y,
+    const int8_t* patch_k,
+    const data16_t* biases_lo,
+    const data16_t* biases_hi,
+    const unsigned patch_row_incr,
+    const unsigned kernel_row_incr,
+    const int8_t* patch_x, 
+    const unsigned rows,
+    const unsigned row_maccs,          
+    const unsigned chan_outs,          
+    const unsigned kernel_advance,
+    const int16_t* shifts,
+    const int16_t* scales,
+    const int16_t* add_vector);
 
 
 #ifndef USE_ASM_fc_deepin_shallowout_lin

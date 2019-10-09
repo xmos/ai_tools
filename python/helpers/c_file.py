@@ -1,6 +1,7 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import os
 import struct
+import re
 
 class CFile():
     def __init__(self, name, includes=None, initializers=None, functions=None, model=None):
@@ -51,6 +52,11 @@ class CFile():
     def render_header(self):
         lines = []
 
+        include_guard = re.sub('[^0-9a-zA-Z]+', '_', self.header_filename).upper()
+        lines.append(f'#ifndef {include_guard}')
+        lines.append(f'#define {include_guard}')
+        lines.append('')
+
         for initializer in self.initializers:
             name = initializer.GetSanitizedName()
             macro = self._macro_lookup[name]
@@ -68,7 +74,9 @@ class CFile():
             lines.append(function.render_declaration())
         lines.append('')
 
-        lines.append('')
+        #endif /* GRANDPARENT_H */
+        lines.append(f'#endif /* {include_guard} */')
+
         return '\n'.join(lines)
 
     def render_source(self):

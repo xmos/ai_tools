@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "argmax_16.h"
 #include "cifar-10.h"
 
 int main(void)

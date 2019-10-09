@@ -26,28 +26,3 @@ Run the application
 Or, for help on options
 
     > ./tflite2xcore --help
-
-## Using JSON Models
-
-You can experiment with tflite model flatbuffer files using the JSON format.
-The flatbuffer schema compiler (`flatc`) can be used to convert the binary format to 
-JSON text.
-
-To begin, build flatbuffers
-
-    > mkdir build
-    > cd build/
-    > ccmake ../
-    > cmake ../
-    > make
-    > sudo make install
-
-To convert a tflite model flatbuffer file to JSON
-
-    > flatc --json path/to/tensorflow/tensorflow/lite/schema/schema.fbs -- path/to/your/model.tflite
-
-To convert a JSON text file to tflite model flatbuffer file
-
-    > flatc --binary path/to/tensorflow/tensorflow/lite/schema/schema.fbs path/to/your/model.json
-
-See https://google.github.io/flatbuffers/flatbuffers_guide_using_schema_compiler.html for more information on `flatc`.

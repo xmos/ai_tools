@@ -45,7 +45,6 @@ To remove the environment, deactivate and run:
 conda remove -p ai_tools_venv/ --all
 ```
 
-
 Install pipenv environment (deprecated)
 ---------------------------------------
 The repo includes a Pipfile in case you run into difficulties with conda.

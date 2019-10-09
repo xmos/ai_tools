@@ -72,6 +72,16 @@ def xsim_bench(args):
                     if line.startswith('Flat profile:'):
                         break
 
+                # determine duration units
+                fields = xgprof_lines[i_line+4].split()
+                if fields[4] == 'mm/call':
+                    units = 'Microseconds'
+                elif fields[4] == 'ms/call':
+                    units = 'Milliseconds'
+                else:
+                    print(f'Unsupports units {fields[4]}', file=sys.stderr)
+                    sys.exit()
+
                 template = '{:40}{:10}{:10}{:10}'
                 print_header = True
                 for xgprof_line in xgprof_lines[i_line+5:]:
@@ -80,7 +90,10 @@ def xsim_bench(args):
                         if len(fields) >= 7:
                             name = fields[6].strip()
                             if is_operator(name):
-                                duration = fields[2]
+                                if units == 'Microseconds':
+                                    duration = float(fields[4]) / 1000.0
+                                else: # must be Milliseconds
+                                    duration = float(fields[4])
                                 if print_header:
                                     print(template.format('Operator', 'Tile', 'Core', 'Milliseconds'))
                                     print_header = False

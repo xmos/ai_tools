@@ -6,8 +6,14 @@ from itertools import product, starmap
 
 import xwaf.utils.configs as xutils
 
+XN_FILE_MAP = {
+    '500MHz': 'XU316-1024-QF60-C20-500MHz.xn',
+    '700MHz': 'XU316-1024-QF60-C20-700MHz.xn',
+    '800MHz': 'XU316-1024-QF60-C20-800MHz.xn'
+}
+
 def options(ctx):
-    ctx.add_option('--config', action='store', default='RELEASE')
+    ctx.add_option('--config', action='store', default='800MHz')
     ctx.add_option('--target', action='store', default=None)
 
 def list_configs(ctx):
@@ -22,7 +28,8 @@ def build(bld):
         return
 
     bld.env.PROJECT_ROOT = '../../..'
-    bld.env.TARGET_ARCH = 'XU316-1024-QF60-C20-800MHz.xn'
+    # bld.env.TARGET_ARCH = 'XU316-1024-QF60-C20-800MHz.xn'
+    bld.env.TARGET_ARCH = XN_FILE_MAP[bld.variant]
     bld.env.XCC_XC_FLAGS = bld.env.XCC_FLAGS
 
     params = {}
@@ -40,17 +47,22 @@ def build(bld):
 
 SHARED_FLAGS = ['-Os', '-g', '-Wall', '-report']
 
+# def D(symbol, value=None, as_string=False):
+#     if value is not None:
+#         if as_string:
+#             value = "\""+value+"\""
+#         return "-D{0}={1}".format(symbol,value)    
+#     return "-D{0}".format(symbol)
 
-def D(symbol, value=None, as_string=False):
-    if value is not None:
-        if as_string:
-            value = "\""+value+"\""
-        return "-D{0}={1}".format(symbol,value)    
-    return "-D{0}".format(symbol)
+# CONFIGS = {
+#     'DEBUG': [D("TEST_DEBUG_ON",1)],
+#     'RELEASE': [D("TEST_DEBUG_ON",0)],
+# }
 
 CONFIGS = {
-    'DEBUG': [D("TEST_DEBUG_ON",1)],
-    'RELEASE': [D("TEST_DEBUG_ON",0)],
+    '500MHz': ['-DTEST_DEBUG_ON=0'],
+    '700MHz': ['-DTEST_DEBUG_ON=0'],
+    '800MHz': ['-DTEST_DEBUG_ON=0']
 }
 
 xutils.register_configs(CONFIGS)

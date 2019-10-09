@@ -22,5 +22,8 @@
 
 #define XC_FC_DEEPIN_SHALLOWOUT_FINAL_SHIFT_SCALE 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 28817, 28817, 28817, 28817, 28817, 28817, 28817, 28817, 28817, 28817
 
-void xcore_model_quant(const int8_t *XC_conv2d_shallowin_deepout_relu_input, int32_t *XC_argmax_16_output);
+typedef int8_t xc_conv2d_shallowin_deepout_relu_input_t[1 * 32 * 32 * 4];
+typedef int32_t xc_argmax_16_output_t[1 * 1];
+
+void xcore_model_quant(const xc_conv2d_shallowin_deepout_relu_input_t *XC_conv2d_shallowin_deepout_relu_input, xc_argmax_16_output_t *XC_argmax_16_output);
 

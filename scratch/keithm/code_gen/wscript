@@ -22,7 +22,7 @@ def build(bld):
         return
 
     bld.env.PROJECT_ROOT = '../../..'
-    bld.env.TARGET_ARCH = 'XU316-1024-QF60-C20'
+    bld.env.TARGET_ARCH = 'XU316-1024-QF60-C20-800MHz.xn'
     bld.env.XCC_XC_FLAGS = bld.env.XCC_FLAGS
 
     params = {}

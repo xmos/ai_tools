@@ -8,7 +8,7 @@
 
 # Visualizing a Model
 
-    > ./visualize.py --html_output your_model.html --no_browser path/to/your_model.tflite
+    > ./tfite_visualize.py --html_output your_model.html --no_browser path/to/your_model.tflite
 
 # Adding a New Operator
 

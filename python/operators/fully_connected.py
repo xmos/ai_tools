@@ -7,22 +7,23 @@ def make_fc_argument_string(inputs, outputs):
         shape = tensor.GetShape()
         if index == 0:
             X = cname
-            C_in = shape[-1]
         elif index == 1:
             W = cname
+            C_out = shape[0]
+            C_in = shape[1]
         elif index == 2:
             B = cname
         elif index == 3:
+            scales_offset = C_out
             shifts = f'{cname}[0]'
-            scales = f'{cname}[1]'
+            scales = f'{cname}[{scales_offset}]'
 
     # output
     tensor = outputs[0]
     shape = tensor.GetShape()
     Y = tensor.GetSanitizedName()
-    C_out = shape[-1]
 
-    return f'{W}, {B}, {X}, {Y}, {C_out}, {C_in}, (uint16_t*) &{shifts}, &{scales}'
+    return f'{W}, {B}, {X}, {Y}, {C_out}, {C_in}, (uint16_t*) &{shifts}, (int16_t*) &{scales}'
 
 class FullyConnectedDeepInShallowOutFinal:
     def __init__(self, inputs, outputs):

@@ -61,6 +61,10 @@ class CFile():
             lines.append('')
 
         for function in self.functions:
+            lines.append(function.render_typedefs())
+        lines.append('')
+
+        for function in self.functions:
             lines.append(function.render_declaration())
         lines.append('')
 

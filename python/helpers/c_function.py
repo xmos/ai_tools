@@ -10,26 +10,69 @@ class CFunction():
         self.variables = variables or []
         self.operators = operators or []
 
+        self._built_typedefs()
+
+    def _built_typedefs(self):
+        self.input_typedefs = []
+        self.output_typedefs = []
+
+        # inputs
+        for tensor in self.inputs:
+            name = tensor.GetSanitizedName()
+            lower_name = name.lower()
+            typedef = {
+                'stdtype': tensor.GetStandardType(),
+                'type_identifier': f'{lower_name}_t',
+                'variable_identifier': name,
+                'dimensions': ' * '.join([str(v) for v in tensor.GetShape()])
+
+            }
+            self.input_typedefs.append(typedef)
+
+        # outputs
+        for tensor in self.outputs:
+            name = tensor.GetSanitizedName()
+            lower_name = name.lower()
+            typedef = {
+                'stdtype': tensor.GetStandardType(),
+                'type_identifier': f'{lower_name}_t',
+                'variable_identifier': name,
+                'dimensions': ' * '.join([str(v) for v in tensor.GetShape()])
+
+            }
+            self.output_typedefs.append(typedef)
+
     def add_operator(self, operator):
         self.operators.append(operator)
+
+    def render_typedefs(self):
+        lines = []
+        for typedef in self.input_typedefs+self.output_typedefs:
+            stdtype = typedef['stdtype']
+            type_identifier = typedef['type_identifier']
+            dimensions = typedef['dimensions']
+            line = f'typedef {stdtype} {type_identifier}[{dimensions}];'
+            lines.append(line)
+
+        return '\n'.join(lines)
 
     def render_signature(self):
         return_type = 'void'  # assume void for now
         
         # inputs
         signature_inputs = []
-        for tensor in self.inputs:
-            name = tensor.GetSanitizedName()
-            ctype = tensor.GetStandardType()
-            signature_inputs.append(f'const {ctype} *{name}')
+        for typedef in self.input_typedefs:
+            type_identifier = typedef['type_identifier']
+            variable_identifier = typedef['variable_identifier']
+            signature_inputs.append(f'const {type_identifier} *{variable_identifier}')
         signature_inputs = ', '.join(signature_inputs)
 
         # outputs
         signature_outputs = []
-        for tensor in self.outputs:
-            name = tensor.GetSanitizedName()
-            ctype = tensor.GetStandardType()
-            signature_outputs.append(f'{ctype} *{name}')
+        for typedef in self.output_typedefs:
+            type_identifier = typedef['type_identifier']
+            variable_identifier = typedef['variable_identifier']
+            signature_outputs.append(f'{type_identifier} *{variable_identifier}')
         signature_outputs = ', '.join(signature_outputs)
 
         #TODO: line wrap

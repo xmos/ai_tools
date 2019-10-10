@@ -43,9 +43,21 @@ enum {
 };
 
 enum {
+    VPU_INT8_EPV_LOG2    = 5,
+    VPU_INT16_EPV_LOG2   = 4,
+    VPU_INT32_EPV_LOG2   = 3,
+};
+
+enum {
     VPU_INT8_ACC_PERIOD  = 16,
     VPU_INT16_ACC_PERIOD = 16,
     VPU_INT32_ACC_PERIOD =  8,
+};
+
+enum {
+    VPU_INT8_ACC_PERIOD_LOG2  = 4,
+    VPU_INT16_ACC_PERIOD_LOG2 = 4,
+    VPU_INT32_ACC_PERIOD_LOG2 = 3,
 };
 
 

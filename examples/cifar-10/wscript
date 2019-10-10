@@ -6,9 +6,11 @@ from itertools import product, starmap
 
 import xwaf.utils.configs as xutils
 
+
+CMD_LINE_BUFFER_BYTES = 256
+
 XN_FILE_MAP = {
-    '500MHz': 'XU316-1024-QF60-C20-500MHz.xn',
-    '700MHz': 'XU316-1024-QF60-C20-700MHz.xn',
+    '700MHz': 'XU316-1024-QF60-C20-750MHz.xn',
     '800MHz': 'XU316-1024-QF60-C20-800MHz.xn'
 }
 
@@ -28,7 +30,6 @@ def build(bld):
         return
 
     bld.env.PROJECT_ROOT = '../../..'
-    # bld.env.TARGET_ARCH = 'XU316-1024-QF60-C20-800MHz.xn'
     bld.env.TARGET_ARCH = XN_FILE_MAP[bld.variant]
     bld.env.XCC_XC_FLAGS = bld.env.XCC_FLAGS
 
@@ -45,23 +46,15 @@ def build(bld):
 
     bld.program(**params)
 
-SHARED_FLAGS = ['-Os', '-g', '-Wall', '-report']
-
-# def D(symbol, value=None, as_string=False):
-#     if value is not None:
-#         if as_string:
-#             value = "\""+value+"\""
-#         return "-D{0}={1}".format(symbol,value)    
-#     return "-D{0}".format(symbol)
-
-# CONFIGS = {
-#     'DEBUG': [D("TEST_DEBUG_ON",1)],
-#     'RELEASE': [D("TEST_DEBUG_ON",0)],
-# }
+SHARED_FLAGS = ['-Os',
+                '-g',
+                '-Wall',
+                '-report',
+                '-fcmdline-buffer-bytes={}'.format(CMD_LINE_BUFFER_BYTES)
+                ]
 
 CONFIGS = {
-    '500MHz': ['-DTEST_DEBUG_ON=0'],
-    '700MHz': ['-DTEST_DEBUG_ON=0'],
+    '750MHz': ['-DTEST_DEBUG_ON=0'],
     '800MHz': ['-DTEST_DEBUG_ON=0']
 }
 

@@ -35,10 +35,7 @@ def iter_config(config_filename):
                 yield tile, str(core)
 
 def xsim_bench(args):
-    # xe_file = os.path.abspath(args.xe)
-    # output_dir = os.path.abspath(args.output)
-
-    xe_file = args.xe
+    xe_file = os.path.abspath(args.xe)
     output_dir = os.path.abspath(args.output)
 
     if not os.path.exists(output_dir):

@@ -9,7 +9,6 @@ import os
 import argparse
 import logging
 import pathlib
-import tempfile
 
 import tensorflow as tf
 import numpy as np
@@ -22,6 +21,9 @@ from tflite_utils import load_tflite_as_json
 
 DIRNAME = pathlib.Path(__file__).parent
 MODELS_DIR, DATA_DIR = utils.make_aux_dirs(DIRNAME)
+
+DEFAULT_CLASSES = 4
+DEFAULT_INPUTS = 32
 
 
 def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
@@ -70,106 +72,7 @@ def build_model(input_dim, out_dim=2):
     ])
 
 
-def apply_interpreter_to_examples(interpreter, examples):
-    interpreter_input_ind = interpreter.get_input_details()[0]["index"]
-    interpreter_output_ind = interpreter.get_output_details()[0]["index"]
-    interpreter.allocate_tensors()
-
-    outputs = []
-    for x in examples:
-        interpreter.set_tensor(interpreter_input_ind, tf.expand_dims(x, 0))
-        interpreter.invoke()
-        y = interpreter.get_tensor(interpreter_output_ind)
-        outputs.append(y)
-
-    return outputs
-
-
-def save_test_data(data, base_file_name):
-    # save test data in numpy format
-    test_data_dir = DATA_DIR / base_file_name
-    test_data_dir.mkdir(exist_ok=True, parents=True)
-    np.savez(test_data_dir / f"{base_file_name}.npz", **data)
-
-    # save individual binary files for easier low level access
-    for key, test_set in data.items():
-        for j, arr in enumerate(test_set):
-            with open(test_data_dir / f"test_{j}.{key[0]}", 'wb') as f:
-                f.write(arr.flatten().tostring())
-
-    logging.info(f"test examples for {base_file_name} saved to {test_data_dir}")
-
-
-def save_test_data_for_converter(converter, x_test_float, *, base_file_name):
-    # create interpreter
-    interpreter = tf.lite.Interpreter(model_content=converter.convert())
-
-    # extract reference labels for the test examples
-    logging.info(f"Extracting examples for {base_file_name}...")
-    y_test = apply_interpreter_to_examples(interpreter, x_test_float)
-    data = {'x_test': x_test_float, 'y_test': np.vstack(y_test)}
-
-    # save data
-    save_test_data(data, base_file_name)
-
-
-def save_test_data_for_stripped_model(model_stripped, x_test_float, *,
-                                       base_file_name='model_stripped'):
-    model_stripped = deepcopy(model_stripped)
-
-    # extract quantization info of input/output
-    subgraph = model_stripped['subgraphs'][0]
-    input_tensor = subgraph['tensors'][subgraph['inputs'][0]]
-    output_tensor = subgraph['tensors'][subgraph['outputs'][0]]
-    input_quant = input_tensor['quantization']
-    output_quant = output_tensor['quantization']
-
-    # add float interface
-    graph_conv.add_float_inputs_outputs(model_stripped)
-
-    # the TFLite interpreter needs a temporary file
-    # the lifetime of this file needs to be at least the lifetime of the interpreter
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        model_tmp_file = utils.save_from_json(
-            model_stripped, pathlib.Path(tmp_dir), 'model_tmp', visualize=False)
-
-        # create interpreter
-        interpreter = tf.lite.Interpreter(model_path=str(model_tmp_file))
-
-        # quantize test examples
-        x_test = utils.quantize(
-            x_test_float, input_quant['scale'][0], input_quant['zero_point'][0])
-
-        # extract and quantize reference labels for the test examples
-        logging.info(f"Extracting examples for {base_file_name}...")
-        y_test = apply_interpreter_to_examples(interpreter, x_test_float)
-        y_test = map(
-            lambda y: utils.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
-            y_test
-        )
-        data = {'x_test': x_test, 'y_test': np.vstack(list(y_test))}
-
-    # save data
-    save_test_data(data, base_file_name)
-
-
-def save_test_data_for_xcore_model(model_xcore, x_test_float, *,
-                                   base_file_name='model_xcore'):
-
-    # extract quantization info of input/output
-    subgraph = model_xcore['subgraphs'][0]
-    input_tensor = subgraph['tensors'][subgraph['inputs'][0]]
-    input_quant = input_tensor['quantization']
-
-    # quantize test examples
-    x_test = utils.quantize(
-        x_test_float, input_quant['scale'][0], input_quant['zero_point'][0])
-    
-    # save data
-    save_test_data({'x_test': x_test}, base_file_name)
-
-
-def main(input_dim=32, classes=2, *, train_new_model=True):
+def main(input_dim=DEFAULT_INPUTS, classes=DEFAULT_CLASSES, *, train_new_model=True):
     assert input_dim % 32 == 0
     assert 1 < classes < 16
 
@@ -221,20 +124,15 @@ def main(input_dim=32, classes=2, *, train_new_model=True):
     # convert to TFLite float, save model and visualization, save test data
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     utils.save_from_tflite_converter(converter, MODELS_DIR, "model_float")
-
-    save_test_data_for_converter(converter, x_test_float, base_file_name="model_float")
+    utils.save_test_data_for_converter(
+        converter, x_test_float, data_dir=DATA_DIR, base_file_name="model_float")
 
     # convert to TFLite quantized, save model and visualization, save test data
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    #converter.target_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-    x_train_ds = tf.data.Dataset.from_tensor_slices(data['x_train']).batch(1)
-    def representative_data_gen():
-        for input_value in x_train_ds.take(data['x_train'].shape[0]):  # pylint: disable=unsubscriptable-object
-            yield [input_value]
-    converter.representative_dataset = representative_data_gen
+    utils.quantize_converter(converter, data['x_train'])
     model_quant_file = utils.save_from_tflite_converter(converter, MODELS_DIR, "model_quant")
-    save_test_data_for_converter(converter, x_test_float, base_file_name="model_quant")
+    utils.save_test_data_for_converter(
+        converter, x_test_float, data_dir=DATA_DIR, base_file_name="model_quant")
 
     # load quantized model in json, serving as basis for conversions
     # strip quantized model of float interface and softmax
@@ -242,21 +140,23 @@ def main(input_dim=32, classes=2, *, train_new_model=True):
     model_stripped = utils.strip_model_quant(model_quant)
     model_stripped['description'] = "TOCO Converted and stripped."
     utils.save_from_json(model_stripped, MODELS_DIR, 'model_stripped')
-    save_test_data_for_stripped_model(model_stripped, x_test_float)
+    utils.save_test_data_for_stripped_model(
+        model_stripped, x_test_float, data_dir=DATA_DIR)
 
     # save xcore converted model
     model_xcore = deepcopy(model_quant)
     graph_conv.convert_model(model_xcore, remove_softmax=True)
     model_xcore_file = utils.save_from_json(model_xcore, MODELS_DIR, 'model_xcore')
-    save_test_data_for_xcore_model(model_xcore, x_test_float)
+    utils.save_test_data_for_xcore_model(
+        model_xcore, x_test_float, data_dir=DATA_DIR)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--use_gpu',  action='store_true', default=False,
                         help='Use GPU for training. Might result in non-reproducible results')
-    parser.add_argument('--classes', type=int, default=4,
+    parser.add_argument('--classes', type=int, default=DEFAULT_CLASSES,
                         help='Number of classes, must be between 2 and 15.')
-    parser.add_argument('--inputs', type=int, default=32,
+    parser.add_argument('--inputs', type=int, default=DEFAULT_INPUTS,
                         help='Input dimension, must be multiple of 32.')
     parser.add_argument('--train_model',  action='store_true', default=False,
                         help='Train new model instead of loading pretrained tf.keras model.')

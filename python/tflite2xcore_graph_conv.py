@@ -2,8 +2,9 @@
 #
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-import json
 import os
+import json
+import logging
 import argparse
 
 from tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA
@@ -20,7 +21,7 @@ from tflite2xcore_graph_replacers import replace_with_XC_conv2d_deepin_deepout_r
 from tflite2xcore_graph_replacers import replace_with_XC_conv2d_shallowin_deepout_relu
 
 
-def get_float_input_output_replacements(model, subgraph_ind, *, mode=None):
+def get_float_input_output_removals(model, subgraph_ind, *, mode=None):
     modes = ['inputs', 'outputs']
     if mode not in modes:
         raise ValueError('mode must be one of {}'.format(modes))
@@ -35,37 +36,37 @@ def get_float_input_output_replacements(model, subgraph_ind, *, mode=None):
     for k, tensor_ind in enumerate(subgraph[mode]):
         tensor = tensors[tensor_ind]
         if tensor['type'] == 'FLOAT32':
-            # references as outputs are ignored when replacing inputs
+            # references as outputs are ignored when removing inputs
             ref_op_inds = find_referencing_ops(tensor_ind, operators,
                                                as_outputs=(mode!='inputs'))
 
             if len(ref_op_inds) == 0:
-                print(f"WARNING (while replacing float {mode}): "
-                      f"ignoring float tensor {tensor_ind} "
-                      "(not referenced by any operator).")
+                logging.warning(f"while removing float {mode}: "
+                                f"ignoring float tensor {tensor_ind} "
+                                "(not referenced by any operator).")
             elif len(ref_op_inds) > 1:
-                print(f"WARNING (while replacing float {mode}): "
-                      f"ignoring float tensor {tensor_ind} "
-                      "(more than one referencing op).")
+                logging.warning(f"while removing float {mode}: "
+                                f"ignoring float tensor {tensor_ind} "
+                                "(more than one referencing op).")
             else:
                 op_ind = ref_op_inds.pop()
                 op = operators[op_ind]
                 opcode = opcodes[op['opcode_index']]['builtin_code']
                 if mode == 'inputs' and opcode != 'QUANTIZE':
-                    print(f"WARNING (while replacing float {mode}): "
-                          f"ignoring float tensor {tensor_ind} "
-                          f"(consumer is of type '{opcode}' != 'QUANTIZE').")
+                    logging.warning(f"while removing float {mode}: "
+                                    f"ignoring float tensor {tensor_ind} "
+                                    f"(consumer is of type '{opcode}' != 'QUANTIZE').")
                 if mode == 'outputs' and opcode != 'DEQUANTIZE':
-                    print(f"WARNING (while replacing float {mode}): "
-                          f"ignoring float tensor {tensor_ind} "
-                          f"(source is of type '{opcode}' != 'DEQUANTIZE').")
+                    logging.warning(f"while removing float {mode}: "
+                                    f"ignoring float tensor {tensor_ind} "
+                                    f"(source is of type '{opcode}' != 'DEQUANTIZE').")
                 else:
                     ops_to_remove.add(op_ind)
                     replacements[k] = op['outputs' if mode == 'inputs' else 'inputs'][0]
         elif tensor['type'] != 'INT8':
-            print(f"WARNING (while replacing float {mode}): "
-                  f"ignoring tensor {tensor_ind} "
-                  f"(has unsupported type '{tensor['type']}')")
+            logging.warning(f"while removing float {mode}: "
+                            f"ignoring tensor {tensor_ind} "
+                            f"(has unsupported type '{tensor['type']}')")
 
     return replacements, ops_to_remove
 
@@ -73,7 +74,7 @@ def get_float_input_output_replacements(model, subgraph_ind, *, mode=None):
 def remove_float_inputs_outputs(model):
     for subgraph_ind, subgraph in enumerate(model['subgraphs']):
         for mode in ['inputs', 'outputs']:
-            replacements, ops_to_remove = get_float_input_output_replacements(
+            replacements, ops_to_remove = get_float_input_output_removals(
                 model, subgraph_ind, mode=mode)
             subgraph[mode] = [replacements[k] if k in replacements else ind
                             for k, ind in enumerate(subgraph[mode])]
@@ -81,25 +82,27 @@ def remove_float_inputs_outputs(model):
                                     if j not in ops_to_remove]
 
 
-def add_float_inputs_outputs(model):
+def add_float_inputs_outputs(model, *, inputs=True, outputs=True):
     # add opcode indices if not already there
-    quantize_opcode_ind = get_opcode_index(model, 'QUANTIZE')
-    if quantize_opcode_ind is None:
-        quantize_opcode_ind = len(model['operator_codes'])
-        model['operator_codes'].append({
-            'builtin_code': 'QUANTIZE',
-            'version': 1
-        })
-    dequantize_opcode_ind = get_opcode_index(model, 'DEQUANTIZE')
-    if dequantize_opcode_ind is None:
-        dequantize_opcode_ind = len(model['operator_codes'])
-        model['operator_codes'].append({
-            'builtin_code': 'DEQUANTIZE',
-            'version': 2
-        })
-    opcode_inds = {'inputs': quantize_opcode_ind, 'outputs': dequantize_opcode_ind}
+    opcode_inds = {}
+    if inputs:
+        opcode_inds['inputs'] = get_opcode_index(model, 'QUANTIZE')
+        if opcode_inds['inputs'] is None:
+            opcode_inds['inputs'] = len(model['operator_codes'])
+            model['operator_codes'].append({
+                'builtin_code': 'QUANTIZE',
+                'version': 1
+            })
+    if outputs:
+        opcode_inds['outputs'] = get_opcode_index(model, 'DEQUANTIZE')
+        if opcode_inds['outputs'] is None:
+            opcode_inds['outputs'] = len(model['operator_codes'])
+            model['operator_codes'].append({
+                'builtin_code': 'DEQUANTIZE',
+                'version': 2
+            })
 
-    # TODO: this is a hack
+    # NOTE: it seems that the input and output need to be in buffer 0 to avoid weird seg faults
     new_buffer_ind = 0
     model['buffers'].insert(new_buffer_ind, {})
     model['metadata'][0]['buffer'] = model['metadata'][0]['buffer'] + 1
@@ -108,7 +111,7 @@ def add_float_inputs_outputs(model):
         for tensor in subgraph['tensors']:
             tensor['buffer'] = tensor['buffer'] + 1
 
-        for mode in ['inputs', 'outputs']:
+        for mode, opcode_ind in opcode_inds.items():
             for k, tensor_ind in enumerate(subgraph[mode]):
                 tensor = subgraph['tensors'][tensor_ind]
                 new_tensor_ind = len(subgraph['tensors'])
@@ -118,7 +121,7 @@ def add_float_inputs_outputs(model):
                         # not necessary to insert, could use append, but visualizer prefers this, so why not
                         0 if mode=='inputs' else len(subgraph['operators']),
                         {
-                            'opcode_index': opcode_inds[mode],
+                            'opcode_index': opcode_ind,
                             mode: [new_tensor_ind],
                             'outputs' if mode=='inputs' else 'inputs': [tensor_ind],
                             'builtin_options_type': 'NONE',
@@ -138,9 +141,11 @@ def add_float_inputs_outputs(model):
                     # update input/output list
                     subgraph[mode][k] = new_tensor_ind
                 else:
-                    print(f"WARNING (while adding float {mode}): "
+                    logging.warning(
+                        f"while adding float {mode}: "
                         f"ignoring tensor {tensor_ind} of type {tensor['type']} "
-                        f"(supported types are ['INT8', 'INT16', 'INT32']).")
+                        f"(supported types are ['INT8', 'INT16', 'INT32'])."
+                    )
 
 
 def remove_output_softmax(model):
@@ -355,8 +360,8 @@ def get_ops_replacements(model, subgraph_ind):
                         f"No replace rule for MAX_POOL_2D with {input_shape[3]} input channels")
 
         else:
-            print("WARNING: no replace rule for op {}".format(
-                model['operator_codes'][opcode_index]['builtin_code']))
+            logging.warning(
+                f"no replace rule for op {model['operator_codes'][opcode_index]['builtin_code']}")
 
     return op_replacement, new_opcodes
 
@@ -422,9 +427,7 @@ def main(tflite_input, tflite_output, *,
                                 flatc_bin=flatc_bin, schema=schema)
 
     # run graph manipulations
-    print(model.keys())
     convert_model(model, is_classifier=is_classifier, remove_softmax=remove_softmax)
-    print(model.keys())
 
     save_json_as_tflite(model, tflite_output,
                         flatc_bin=flatc_bin, schema=schema)

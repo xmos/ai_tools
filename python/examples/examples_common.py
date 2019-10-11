@@ -3,6 +3,8 @@
 import os
 import random
 import logging
+import pathlib
+import tempfile
 
 import numpy as np
 
@@ -48,9 +50,9 @@ def load_scaled_cifar10():
     return (x_train, y_train), (x_test, y_test)
 
 
-def quantize(arr, scale, zero_point):
+def quantize(arr, scale, zero_point, dtype=np.int8):
     t = np.round(arr / scale + zero_point)
-    return np.int8(np.round(np.clip(t, -128, 127)))
+    return dtype(np.round(np.clip(t, np.iinfo(dtype).min, np.iinfo(dtype).max)))
 
 
 def dequantize(arr, scale, zero_point):
@@ -116,3 +118,123 @@ def strip_model_quant(model_quant):
     tflite2xcore_utils.clean_unused_tensors(model_stripped)
     tflite2xcore_utils.clean_unused_buffers(model_stripped)
     return model_stripped
+
+
+def quantize_converter(converter, representative_data):
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
+    converter.target_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+    x_train_ds = tf.data.Dataset.from_tensor_slices(representative_data).batch(1)
+    def representative_data_gen():
+        for input_value in x_train_ds.take(representative_data.shape[0]):  # pylint: disable=unsubscriptable-object
+            yield [input_value]
+    converter.representative_dataset = representative_data_gen
+
+
+def apply_interpreter_to_examples(interpreter, examples):
+    interpreter_input_ind = interpreter.get_input_details()[0]["index"]
+    interpreter_output_ind = interpreter.get_output_details()[0]["index"]
+    interpreter.allocate_tensors()
+
+    outputs = []
+    for x in examples:
+        interpreter.set_tensor(interpreter_input_ind, tf.expand_dims(x, 0))
+        interpreter.invoke()
+        y = interpreter.get_tensor(interpreter_output_ind)
+        outputs.append(y)
+
+    return outputs
+
+
+def save_test_data(data, data_dir, base_file_name):
+    # save test data in numpy format
+    test_data_dir = data_dir / base_file_name
+    test_data_dir.mkdir(exist_ok=True, parents=True)
+    np.savez(test_data_dir / f"{base_file_name}.npz", **data)
+
+    # save individual binary files for easier low level access
+    for key, test_set in data.items():
+        for j, arr in enumerate(test_set):
+            with open(test_data_dir / f"test_{j}.{key[0]}", 'wb') as f:
+                f.write(arr.flatten().tostring())
+
+    logging.info(f"test examples for {base_file_name} saved to {test_data_dir}")
+
+
+def save_test_data_for_converter(converter, x_test_float, *,
+                                 data_dir, base_file_name):
+    # create interpreter
+    interpreter = tf.lite.Interpreter(model_content=converter.convert())
+
+    # extract reference labels for the test examples
+    logging.info(f"Extracting examples for {base_file_name}...")
+    y_test = apply_interpreter_to_examples(interpreter, x_test_float)
+    data = {'x_test': x_test_float, 'y_test': np.vstack(y_test)}
+
+    # save data
+    save_test_data(data, data_dir, base_file_name)
+
+
+def save_test_data_for_stripped_model(model_stripped, x_test_float, *,
+                                      data_dir, base_file_name='model_stripped',
+                                      add_float_outputs=True):
+    model_stripped = deepcopy(model_stripped)
+
+    # extract quantization info of input/output
+    subgraph = model_stripped['subgraphs'][0]
+    input_tensor = subgraph['tensors'][subgraph['inputs'][0]]
+    input_quant = input_tensor['quantization']
+    if add_float_outputs:
+        output_tensor = subgraph['tensors'][subgraph['outputs'][0]]
+        output_quant = output_tensor['quantization']
+
+    # quantize test examples
+    x_test = quantize(x_test_float, input_quant['scale'][0], input_quant['zero_point'][0])
+
+    # add float interface
+    graph_conv.add_float_inputs_outputs(model_stripped, outputs=add_float_outputs)
+
+    # the TFLite interpreter needs a temporary file
+    # the lifetime of this file needs to be at least the lifetime of the interpreter
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        model_tmp_file = save_from_json(
+            model_stripped, pathlib.Path(tmp_dir), 'model_tmp', visualize=False)
+
+        # create interpreter
+        interpreter = tf.lite.Interpreter(model_path=str(model_tmp_file))
+
+        # extract and quantize reference labels for the test examples
+        logging.info(f"Extracting examples for {base_file_name}...")
+        y_test = apply_interpreter_to_examples(interpreter, x_test_float)
+        if add_float_outputs:
+            y_test = map(
+                lambda y: quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
+                y_test
+            )
+        data = {'x_test': x_test, 'y_test': np.vstack(list(y_test))}
+
+    # save data
+    save_test_data(data, data_dir, base_file_name)
+
+
+def save_test_data_for_xcore_model(model_xcore, x_test_float, *,
+                                   data_dir, base_file_name='model_xcore'):
+
+    # extract quantization info of input/output
+    subgraph = model_xcore['subgraphs'][0]
+    input_tensor = subgraph['tensors'][subgraph['inputs'][0]]
+    input_quant = input_tensor['quantization']
+
+    if input_tensor['type'] == 'INT16':
+        dtype = np.int16
+    elif input_tensor['type'] == 'INT8':
+        dtype = np.int8
+    else:
+        raise NotImplementedError(f"input tensor type {input_tensor['type']} "
+                                  "not supported in save_test_data_for_xcore_model")
+
+    # quantize test examples
+    x_test = quantize(x_test_float,
+        input_quant['scale'][0], input_quant['zero_point'][0], dtype)
+    
+    # save data
+    save_test_data({'x_test': x_test}, data_dir, base_file_name)

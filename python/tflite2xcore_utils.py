@@ -48,6 +48,15 @@ def get_custom_opcode_index(model, opcode_str):
     return None
 
 
+def is_opcode_in_model(model, opcode_str):
+    for c in model['operator_codes']:
+        if c['builtin_code'] == opcode_str:
+            return True
+        elif c['builtin_code'] == 'CUSTOM' and c['custom_code'] == opcode_str:
+            return True
+    return False
+
+
 def find_referencing_ops(tensor_ind, operators, *,
                          as_inputs=True, as_outputs=True):
     ref_op_inds = set()
@@ -72,9 +81,11 @@ def find_used_tensor_inds(subgraph):
 
 
 def find_used_buffer_inds(model):
-    return set(tensor['buffer']
-               for subgraph in model['subgraphs']
-               for tensor in subgraph['tensors'])
+    tensor_buffers = set(tensor['buffer']
+                         for subgraph in model['subgraphs']
+                         for tensor in subgraph['tensors'])
+    metadata_buffers = set(m['buffer'] for m in model['metadata'])
+    return tensor_buffers | metadata_buffers
 
 
 def clean_unused_opcodes(model):
@@ -127,8 +138,10 @@ def clean_unused_buffers(model):
         buffer_ind_map[buffer_ind] = len(new_buffers)
         new_buffers.append(model['buffers'][buffer_ind])
 
-    # replace upcode list and update references
+    # replace opcode list and update references
     model['buffers'] = new_buffers
+    for metadata in model['metadata']:
+        metadata['buffer'] = buffer_ind_map[metadata['buffer']]
     for subgraph in model['subgraphs']:
         for tensor in subgraph['tensors']:
             tensor['buffer'] = buffer_ind_map[tensor['buffer']]

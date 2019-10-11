@@ -9,6 +9,7 @@ import os
 import argparse
 import logging
 import pathlib
+import tempfile
 
 import tensorflow as tf
 import numpy as np
@@ -17,7 +18,6 @@ import tflite2xcore_graph_conv as graph_conv
 from tensorflow import keras
 from copy import deepcopy
 from tflite_utils import load_tflite_as_json
-from tflite2xcore_utils import clean_unused_buffers, clean_unused_opcodes, clean_unused_tensors
 
 
 DIRNAME = pathlib.Path(__file__).parent
@@ -25,8 +25,8 @@ MODELS_DIR, DATA_DIR = utils.make_aux_dirs(DIRNAME)
 
 
 def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
-                                   train_samples_per_class=5120,
-                                   test_samples_per_class=1024):
+                                  train_samples_per_class=5120,
+                                  test_samples_per_class=1024):
     z = np.linspace(0, 2*np.pi, dim)
 
     # generate data and class labels
@@ -70,51 +70,101 @@ def build_model(input_dim, out_dim=2):
     ])
 
 
-def add_example_data(model, data, classes):
-    # get input quantization
-    subgraph = model['subgraphs'][0]
+def apply_interpreter_to_examples(interpreter, examples):
+    interpreter_input_ind = interpreter.get_input_details()[0]["index"]
+    interpreter_output_ind = interpreter.get_output_details()[0]["index"]
+    interpreter.allocate_tensors()
+
+    outputs = []
+    for x in examples:
+        interpreter.set_tensor(interpreter_input_ind, tf.expand_dims(x, 0))
+        interpreter.invoke()
+        y = interpreter.get_tensor(interpreter_output_ind)
+        outputs.append(y)
+
+    return outputs
+
+
+def save_test_data(data, base_file_name):
+    # save test data in numpy format
+    test_data_dir = DATA_DIR / base_file_name
+    test_data_dir.mkdir(exist_ok=True, parents=True)
+    np.savez(test_data_dir / f"{base_file_name}.npz", **data)
+
+    # save individual binary files for easier low level access
+    for key, test_set in data.items():
+        for j, arr in enumerate(test_set):
+            with open(test_data_dir / f"test_{j}.{key[0]}", 'wb') as f:
+                f.write(arr.flatten().tostring())
+
+    logging.info(f"test examples for {base_file_name} saved to {test_data_dir}")
+
+
+def save_test_data_from_converter(converter, x_test_float, *, base_file_name):
+    # create interpreter
+    interpreter = tf.lite.Interpreter(model_content=converter.convert())
+
+    # extract reference labels for the test examples
+    logging.info(f"Extracting examples for {base_file_name}...")
+    y_test = apply_interpreter_to_examples(interpreter, x_test_float)
+    data = {'x_test': x_test_float, 'y_test': np.vstack(y_test)}
+
+    # save data
+    save_test_data(data, base_file_name)
+
+
+def save_test_data_from_stripped_model(model_stripped, x_test_float, *,
+                                       base_file_name='model_stripped'):
+    model_stripped = deepcopy(model_stripped)
+
+    # extract quantization info of input/output
+    subgraph = model_stripped['subgraphs'][0]
     input_tensor = subgraph['tensors'][subgraph['inputs'][0]]
-    quantization = input_tensor['quantization']
+    output_tensor = subgraph['tensors'][subgraph['outputs'][0]]
+    input_quant = input_tensor['quantization']
+    output_quant = output_tensor['quantization']
 
-    # prepare example test data
-    subset_inds = np.searchsorted(data['y_test'].flatten(), np.arange(classes))
-    x_test = utils.quantize_data(data['x_test'][subset_inds],
-        quantization['scale'], quantization['zero_point'])  # pylint: disable=unsubscriptable-object
-    y_test = utils.one_hot_encode(data['y_test'][subset_inds], classes)  # pylint: disable=unsubscriptable-object
+    # add float interface
+    graph_conv.add_float_inputs_outputs(model_stripped)
 
-    # add test data to xcore_model
-    subgraph['tensors'].append({
-        'shape': list(x_test.shape),
-        'type': 'INT8',
-        'buffer': len(model['buffers']),
-        'name': 'x_test',
-        'is_variable': False,
-        'quantization': quantization
-    })
-    model['buffers'].append({'data': list(x_test.flatten().tostring())})
+    # the TFLite interpreter needs a temporary file
+    # the lifetime of this file needs to be at least the lifetime of the interpreter
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        model_tmp_file = utils.save_from_json(
+            model_stripped, pathlib.Path(tmp_dir), 'model_tmp', visualize=False)
 
-    subgraph['tensors'].append({
-        'shape': list(y_test.shape),
-        'type': 'INT8',
-        'buffer': len(model['buffers']),
-        'name': 'y_test',
-        'is_variable': False,
-        'quantization': quantization
-    })
-    model['buffers'].append({'data': list(y_test.flatten().tostring())})
+        # create interpreter
+        interpreter = tf.lite.Interpreter(model_path=str(model_tmp_file))
+
+        # quantize test examples
+        x_test = utils.quantize(
+            x_test_float, input_quant['scale'][0], input_quant['zero_point'][0])
+
+        # extract and quantize reference labels for the test examples
+        logging.info(f"Extracting examples for {base_file_name}...")
+        y_test = apply_interpreter_to_examples(interpreter, x_test_float)
+        y_test = map(
+            lambda y: utils.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
+            y_test
+        )
+        data = {'x_test': x_test, 'y_test': np.vstack(list(y_test))}
+
+    # save data
+    save_test_data(data, base_file_name)
 
 
 def main(input_dim=32, classes=2, *, train_new_model=True):
     assert input_dim % 32 == 0
     assert 1 < classes < 16
 
-    data_path = DATA_DIR / 'dataset_float.npz'
+    data_path = DATA_DIR / 'training_dataset.npz'
     keras_model_path = MODELS_DIR / "model.h5"
 
     if train_new_model:
         keras.backend.clear_session()
         utils.set_all_seeds()
 
+        # create model
         model = build_model(input_dim, out_dim=classes)
         model.compile(optimizer='adam',
                     loss='sparse_categorical_crossentropy',
@@ -142,11 +192,17 @@ def main(input_dim=32, classes=2, *, train_new_model=True):
         model = keras.models.load_model(keras_model_path)
         assert model.output_shape[1]==classes
 
-    # convert to TFLite float, save and visualize
+    # choose test data examples
+    subset_inds = np.searchsorted(data['y_test'].flatten(), np.arange(classes))
+    x_test_float = data['x_test'][subset_inds]
+
+    # convert to TFLite float, save model and visualization, save test data
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     utils.save_from_tflite_converter(converter, MODELS_DIR, "model_float")
 
-    # convert to TFLite quantized
+    save_test_data_from_converter(converter, x_test_float, base_file_name="model_float")
+
+    # convert to TFLite quantized, save model and visualization, save test data
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     x_train_ds = tf.data.Dataset.from_tensor_slices(data['x_train']).batch(1)
@@ -155,24 +211,14 @@ def main(input_dim=32, classes=2, *, train_new_model=True):
             yield [input_value]
     converter.representative_dataset = representative_data_gen
     model_quant_file = utils.save_from_tflite_converter(converter, MODELS_DIR, "model_quant")
+    save_test_data_from_converter(converter, x_test_float, base_file_name="model_quant")
 
-    # convert quantized model to xCORE optimized
+    # load quantized model in json, serving as basis for conversions
+    # strip quantized model of float interface and softmax
     model_quant = load_tflite_as_json(model_quant_file)
-    graph_conv.remove_float_inputs_outputs(model_quant)
-    graph_conv.remove_output_softmax(model_quant)
-
-    for base_file_name in ['model_xcore', 'model_stripped']:
-        model_json = deepcopy(model_quant)
-        if base_file_name is 'model_xcore':
-            graph_conv.replace_ops_with_XC(model_json)
-
-        clean_unused_opcodes(model_json)
-        clean_unused_tensors(model_json)
-        clean_unused_buffers(model_json)
-
-        add_example_data(model_json, data, classes)
-
-        utils.save_from_json(model_json, MODELS_DIR, base_file_name)
+    model_stripped = utils.strip_model_quant(model_quant)
+    utils.save_from_json(model_stripped, MODELS_DIR, 'model_stripped')
+    save_test_data_from_stripped_model(model_stripped, x_test_float)
 
 
 if __name__ == "__main__":

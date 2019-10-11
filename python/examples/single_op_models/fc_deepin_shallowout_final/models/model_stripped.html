@@ -84,42 +84,28 @@ text {
 <td>INT8</td>
 <td>[1, 32, 1, 1]</td>
 <td>3</td>
-<td>{'min': [-4.295065], 'max': [4.433117], 'scale': [0.034228], 'zero_point': [-3], 'details_type': 0, 'quantized_dimension': 0}</td>
+<td>{'min': [-4.295065], 'max': [4.433117], 'scale': [0.03422816], 'zero_point': [-3], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
 <td>1</td><td>sequential/dense/BiasAdd</td>
 <td>INT8</td>
 <td>[1, 4]</td>
 <td>1</td>
-<td>{'min': [-40.241913], 'max': [32.779655], 'scale': [0.286359], 'zero_point': [13], 'details_type': 0, 'quantized_dimension': 0}</td>
+<td>{'min': [-40.24191], 'max': [32.77966], 'scale': [0.2863591], 'zero_point': [13], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
 <td>2</td><td>sequential/dense/MatMul/ReadVariableOp/transpose</td>
 <td>INT8</td>
 <td>[4, 32]</td>
 <td>2</td>
-<td>{'scale': [0.007991], 'zero_point': [0], 'details_type': 0, 'quantized_dimension': 0}</td>
+<td>{'scale': [0.007991377], 'zero_point': [0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
 <td>3</td><td>sequential/dense/MatMul_bias</td>
 <td>INT32</td>
 <td>[4]</td>
 <td>0</td>
-<td>{'scale': [0.000274], 'zero_point': [0], 'details_type': 0, 'quantized_dimension': 0}</td>
-</tr>
-<tr>
-<td>4</td><td>x_test</td>
-<td>INT8</td>
-<td>[4, 32, 1, 1]</td>
-<td>4</td>
-<td>{'min': [-4.295065], 'max': [4.433117], 'scale': [0.034228], 'zero_point': [-3], 'details_type': 0, 'quantized_dimension': 0}</td>
-</tr>
-<tr>
-<td>5</td><td>y_test</td>
-<td>INT8</td>
-<td>[4, 4]</td>
-<td>5</td>
-<td>{'min': [-4.295065], 'max': [4.433117], 'scale': [0.034228], 'zero_point': [-3], 'details_type': 0, 'quantized_dimension': 0}</td>
+<td>{'scale': [0.0002735302], 'zero_point': [0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 </table>
 <h3>Ops</h3>
@@ -137,7 +123,7 @@ text {
 
   <script>
     // Build graph data
-    var graph = {"nodes": [{"id": "o0", "name": "FULLY_CONNECTED (0)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 147}, {"id": "t0", "name": "(0) 'flatten_input_int8' [1, 32, 1, 1]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 290}, {"id": "t1", "name": "(1) 'sequential/dense/BiasAdd' [1, 4]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 282}, {"id": "t2", "name": "(2) 'sequential/dense/MatMul/ReadVariableOp/transpose' [4, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 470, "y": 100.0, "node_width": 470}, {"id": "t3", "name": "(3) 'sequential/dense/MatMul_bias' [4]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 950, "y": 100.0, "node_width": 290}, {"id": "t4", "name": "(4) 'x_test' [4, 32, 1, 1]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 0, "y": 0, "node_width": 200}, {"id": "t5", "name": "(5) 'y_test' [4, 4]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 0, "y": 0, "node_width": 147}], "edges": [{"source": "t0", "target": "o0"}, {"source": "t2", "target": "o0"}, {"source": "t3", "target": "o0"}, {"target": "t1", "source": "o0"}]};
+    var graph = {"nodes": [{"id": "o0", "name": "FULLY_CONNECTED (0)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 147}, {"id": "t0", "name": "(0) 'flatten_input_int8' [1, 32, 1, 1]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 290}, {"id": "t1", "name": "(1) 'sequential/dense/BiasAdd' [1, 4]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 282}, {"id": "t2", "name": "(2) 'sequential/dense/MatMul/ReadVariableOp/transpose' [4, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 470, "y": 100.0, "node_width": 470}, {"id": "t3", "name": "(3) 'sequential/dense/MatMul_bias' [4]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 950, "y": 100.0, "node_width": 290}], "edges": [{"source": "t0", "target": "o0"}, {"source": "t2", "target": "o0"}, {"source": "t3", "target": "o0"}, {"target": "t1", "source": "o0"}]};
 
     var svg = d3.select("#subgraph0")
     var width = svg.attr("width");
@@ -252,10 +238,7 @@ text {
 <td>3</td><td>--</td>
 </tr>
 <tr>
-<td>4</td><td>128 bytes</td>
-</tr>
-<tr>
-<td>5</td><td>16 bytes</td>
+<td>4</td><td>5 bytes</td>
 </tr>
 </table>
 <h2>Operator Codes</h2>

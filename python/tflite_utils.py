@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 import shutil
 import tempfile
 import json
@@ -43,7 +44,7 @@ def load_tflite_as_json(tflite_input, *,
             "-o {tmp_dir} {schema} -- {input}").format(
             flatc_bin=flatc_bin, input=tflite_input,
             schema=schema, tmp_dir=tmp_dir)
-        print(cmd)
+        logging.info(f"Executing: {cmd}")
         os.system(cmd)
 
         # open json file
@@ -69,7 +70,7 @@ def save_json_as_tflite(model, tflite_output, *,
             "-o {tmp_dir} {schema} {json_output}").format(
             flatc_bin=flatc_bin, json_output=json_output,
             schema=schema, tmp_dir=tmp_dir)
-        print(cmd)
+        logging.info(f"Executing: {cmd}")
         os.system(cmd)
 
         # move to specified location

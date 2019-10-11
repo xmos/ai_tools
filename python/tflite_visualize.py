@@ -28,6 +28,7 @@ import json
 import os
 import sys
 import shutil
+import logging
 import argparse
 import webbrowser
 import tempfile
@@ -390,7 +391,7 @@ def GenerateTableHtml(items, keys_to_print, display_index=True):
   return html
 
 
-def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin, verbose=False):
+def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin):
   """Given a tflite model in `tflite_input` file, produce html description."""
 
   # Convert the model into a JSON flatbuffer using flatc (build if doesn't
@@ -404,8 +405,7 @@ def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin, verbose=Fals
         flatc_bin + " -t "
         "--strict-json --defaults-json -o /tmp {schema} -- {input}".format(
             input=tflite_input, schema=schema))
-    if verbose:
-      print(cmd)
+    logging.info(f"Executing {cmd}")
     os.system(cmd)  # TODO: use subprocess.call
     real_output = ("/tmp/" + os.path.splitext(
         os.path.split(tflite_input)[-1])[0] + ".json")
@@ -488,8 +488,7 @@ def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin, verbose=Fals
 
 
 def main(tflite_input, html_output, *,
-         no_browser=True, verbose=False,
-         schema=DEFAULT_SCHEMA, flatc_bin=DEFAULT_FLATC):
+         no_browser=True, schema=DEFAULT_SCHEMA, flatc_bin=DEFAULT_FLATC):
   if html_output:
     html_path = html_output
   else:
@@ -518,6 +517,7 @@ if __name__ == "__main__":
   args = parser.parse_args()
   tflite_input, html_output = args.tflite_input, args.html_output
 
-  # Schema to use for flatbuffers
+  if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
   
-  main(tflite_input, html_output, no_browser=args.no_browser, verbose=args.verbose)
+  main(tflite_input, html_output, no_browser=args.no_browser)

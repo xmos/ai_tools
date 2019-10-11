@@ -20,7 +20,7 @@ from tflite2xcore_graph_replacers import replace_with_XC_conv2d_deepin_deepout_r
 from tflite2xcore_graph_replacers import replace_with_XC_conv2d_shallowin_deepout_relu
 
 
-def get_float_input_output_replacements(model, subgraph_ind, * ,mode=None):
+def get_float_input_output_replacements(model, subgraph_ind, *, mode=None):
     modes = ['inputs', 'outputs']
     if mode not in modes:
         raise ValueError('mode must be one of {}'.format(modes))
@@ -79,6 +79,68 @@ def remove_float_inputs_outputs(model):
                             for k, ind in enumerate(subgraph[mode])]
             subgraph['operators'] = [op for j, op in enumerate(subgraph['operators'])
                                     if j not in ops_to_remove]
+
+
+def add_float_inputs_outputs(model):
+    # add opcode indices if not already there
+    quantize_opcode_ind = get_opcode_index(model, 'QUANTIZE')
+    if quantize_opcode_ind is None:
+        quantize_opcode_ind = len(model['operator_codes'])
+        model['operator_codes'].append({
+            'builtin_code': 'QUANTIZE',
+            'version': 1
+        })
+    dequantize_opcode_ind = get_opcode_index(model, 'DEQUANTIZE')
+    if dequantize_opcode_ind is None:
+        dequantize_opcode_ind = len(model['operator_codes'])
+        model['operator_codes'].append({
+            'builtin_code': 'DEQUANTIZE',
+            'version': 2
+        })
+    opcode_inds = {'inputs': quantize_opcode_ind, 'outputs': dequantize_opcode_ind}
+
+    # TODO: this is a hack
+    new_buffer_ind = 0
+    model['buffers'].insert(new_buffer_ind, {})
+    model['metadata'][0]['buffer'] = model['metadata'][0]['buffer'] + 1
+
+    for subgraph in model['subgraphs']:
+        for tensor in subgraph['tensors']:
+            tensor['buffer'] = tensor['buffer'] + 1
+
+        for mode in ['inputs', 'outputs']:
+            for k, tensor_ind in enumerate(subgraph[mode]):
+                tensor = subgraph['tensors'][tensor_ind]
+                new_tensor_ind = len(subgraph['tensors'])
+                if tensor['type'] in ['INT8', 'INT16', 'INT32']:
+                    # add new op, new input/output tensor and buffer
+                    subgraph['operators'].insert(
+                        # not necessary to insert, could use append, but visualizer prefers this, so why not
+                        0 if mode=='inputs' else len(subgraph['operators']),
+                        {
+                            'opcode_index': opcode_inds[mode],
+                            mode: [new_tensor_ind],
+                            'outputs' if mode=='inputs' else 'inputs': [tensor_ind],
+                            'builtin_options_type': 'NONE',
+                            'custom_options_format': 'FLEXBUFFERS'
+                        }
+                    )
+                    subgraph['tensors'].append({
+                        'shape': tensor['shape'],
+                        'type': 'FLOAT32',
+                        'buffer': new_buffer_ind,
+                        'name': generate_unique_tensor_name(subgraph,
+                            base_name=mode[:], suffix=''),
+                        'is_variable': False
+                    })
+                    #model['buffers'].append({})
+
+                    # update input/output list
+                    subgraph[mode][k] = new_tensor_ind
+                else:
+                    print(f"WARNING (while adding float {mode}): "
+                        f"ignoring tensor {tensor_ind} of type {tensor['type']} "
+                        f"(supported types are ['INT8', 'INT16', 'INT32']).")
 
 
 def remove_output_softmax(model):

@@ -84,35 +84,35 @@ text {
 <td>INT8</td>
 <td>[1, 4]</td>
 <td>2</td>
-<td>{'scale': [0.003906], 'zero_point': [-128], 'details_type': 0, 'quantized_dimension': 0}</td>
+<td>{'scale': [0.00390625], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
 <td>1</td><td>flatten_input_int8</td>
 <td>INT8</td>
 <td>[1, 32, 1, 1]</td>
 <td>5</td>
-<td>{'min': [-4.295065], 'max': [4.433117], 'scale': [0.034228], 'zero_point': [-3], 'details_type': 0, 'quantized_dimension': 0}</td>
+<td>{'min': [-4.295065], 'max': [4.433117], 'scale': [0.03422816], 'zero_point': [-3], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
 <td>2</td><td>sequential/dense/BiasAdd</td>
 <td>INT8</td>
 <td>[1, 4]</td>
 <td>3</td>
-<td>{'min': [-40.241913], 'max': [32.779655], 'scale': [0.286359], 'zero_point': [13], 'details_type': 0, 'quantized_dimension': 0}</td>
+<td>{'min': [-40.24191], 'max': [32.77966], 'scale': [0.2863591], 'zero_point': [13], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
 <td>3</td><td>sequential/dense/MatMul/ReadVariableOp/transpose</td>
 <td>INT8</td>
 <td>[4, 32]</td>
 <td>4</td>
-<td>{'scale': [0.007991], 'zero_point': [0], 'details_type': 0, 'quantized_dimension': 0}</td>
+<td>{'scale': [0.007991377], 'zero_point': [0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
 <td>4</td><td>sequential/dense/MatMul_bias</td>
 <td>INT32</td>
 <td>[4]</td>
 <td>1</td>
-<td>{'scale': [0.000274], 'zero_point': [0], 'details_type': 0, 'quantized_dimension': 0}</td>
+<td>{'scale': [0.0002735302], 'zero_point': [0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
 <td>5</td><td>flatten_input</td>

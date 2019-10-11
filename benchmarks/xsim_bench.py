@@ -35,7 +35,10 @@ def iter_config(config_filename):
                 yield tile, str(core)
 
 def xsim_bench(args):
-    xe_file = os.path.abspath(args.xe)
+    # xe_file = os.path.abspath(args.xe)
+    # output_dir = os.path.abspath(args.output)
+
+    xe_file = args.xe
     output_dir = os.path.abspath(args.output)
 
     if not os.path.exists(output_dir):
@@ -45,7 +48,10 @@ def xsim_bench(args):
 
     with open(log_filename, 'w') as log:
         # run xsim
-        cmd = 'xsim --gprof {}'.format(xe_file)
+        if args.args:
+            cmd = 'xsim --gprof --args {} {}'.format(xe_file, args.args)
+        else:
+            cmd = 'xsim --gprof {}'.format(xe_file)
         print('running: {}'.format(cmd), file=log)
         xsim_output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, cwd=output_dir)
         print(xsim_output.decode('utf-8'), file=log)
@@ -74,13 +80,12 @@ def xsim_bench(args):
 
                 # determine duration units
                 fields = xgprof_lines[i_line+4].split()
-                if fields[4] == 'mm/call':
+                if fields[4] == 'mm/call' or fields[4] == 'um/call':
                     units = 'Microseconds'
                 elif fields[4] == 'ms/call':
                     units = 'Milliseconds'
                 else:
-                    print(f'Unsupports units {fields[4]}', file=sys.stderr)
-                    sys.exit()
+                    print(f'Unsupported units {fields[4]}', file=sys.stderr)
 
                 template = '{:40}{:10}{:10}{:10}'
                 print_header = True
@@ -102,6 +107,7 @@ def xsim_bench(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-x', '--xe', required=True, help='Input .xe file')
+    parser.add_argument('-a', '--args', help='Argument to pass to .xe file')
     parser.add_argument('-o', '--output', default=os.getcwd(), help='Output directory')
     parser.add_argument('--verbose', action='store_true', help='Verbose mode')
     args = parser.parse_args()

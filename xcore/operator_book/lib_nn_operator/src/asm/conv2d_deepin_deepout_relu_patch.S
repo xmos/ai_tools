@@ -23,7 +23,7 @@ int8_t* conv2d_deepin_deepout_relu_asm_patch(
 
 #define FUNCTION_NAME conv2d_deepin_deepout_relu_asm_patch
 
-#define NSTACKWORDS  (18 + 8)
+#define NSTACKWORDS  (26)
     
 .text
 .issue_mode  dual
@@ -51,8 +51,6 @@ int8_t* conv2d_deepin_deepout_relu_asm_patch(
 #define STACK_ADD_VEC           (NSTACKWORDS+10)
 
 #define STACK_TMP_VEC           (NSTACKWORDS-8)
-// #define STACK_SUB_VEC           (NSTACKWORDS-16)
-// #define STACK_SUB_VEC_DBL       (STACK_SUB_VEC/2)
 #define STACK_MODE8             (7)
 #define STACK_MODE16            (8)            
 
@@ -106,6 +104,7 @@ FUNCTION_NAME:
     {   NOOOOP                                  ;   ldw macc_iter, sp[STACK_ROW_MACCS]  }
 
 .L_patch_row_loop:
+    {   ldc tmp1, 32                            ;   NOOOOP                              }
     {   add patch_x, patch_x, tmp1              ;   vldc patch_x[0]                     }
     {   add patch_k, patch_k, tmp1              ;   vlmaccr patch_k[0]                  }
     {   add patch_k, patch_k, tmp1              ;   vlmaccr patch_k[0]                  }

@@ -119,9 +119,6 @@ void nn_mat_vec_mul_s8_c(
 }
 
 
-
-
-
 void conv2d_deepin_deepout_relu_c(
     const int8_t* K, 
     const data16_t* B,
@@ -146,7 +143,7 @@ void conv2d_deepin_deepout_relu_c(
     for(int chout = 0; chout < C_out; chout++){
 
         const int cog = chout / VPU_INT8_ACC_PERIOD;
-        const int cog_offset = chout % 16;
+        const int cog_offset = chout % VPU_INT8_ACC_PERIOD;
         
         const int32_t bias = (((int32_t)B_hi[chout])<<16) | B_lo[chout];
         const int16_t shr = shifts[chout];
@@ -169,7 +166,7 @@ void conv2d_deepin_deepout_relu_c(
                         const int kkrr = kr + P_h;
                         const int kkcc = kc + P_w;
 
-                        int64_t acc64 = acc32;
+                        // int64_t acc64 = acc32;
 
                         //iterate through input channels
                         for(int chin = 0; chin < C_in; chin++){
@@ -191,11 +188,11 @@ void conv2d_deepin_deepout_relu_c(
                             const int16_t kernel_val = K[k_offset];
                             const int16_t input_val = X[x_offset];
 
-                            acc64 += kernel_val * input_val;
+                            acc32 += kernel_val * input_val;
 
                         }
                         
-                        acc32 = sat_s32(acc64);
+                        // acc32 = sat_s32(acc64);
                     }
                 }
 
@@ -214,112 +211,6 @@ void conv2d_deepin_deepout_relu_c(
 }
 
 
-
-#define KERNEL_GROUP(C_OUT_G_DEX)       K[(C_OUT_G_DEX) * K_h * K_w * C_in * (VPU_INT8_ACC_PERIOD)]
-#define KERNEL(C_OUT_DEX)               (kernel_group[(15-(C_OUT_DEX)) * K_h * K_w * C_in ])
-#define KERNEL_VAL(ROW, COL, CH_IN)     (kernel[(ROW)*K_w*C_in + (COL)*C_in + CH_IN])
-#define X_VAL(ROW, COL, CH_IN)          (X[(ROW)*width*C_in + (COL)*C_in + CH_IN])
-void conv2d_deepin_deepout_relu_c_old(
-    const int8_t* K, 
-    const data16_t* B,
-    const int8_t* X, 
-    int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t K_h, 
-    const int32_t K_w,
-    const int32_t C_out, 
-    const int32_t C_in,
-    const int16_t* shifts, 
-    const int16_t* scales)
-{
-
-    assert( vlmul_single_s16(8318, 16384) == 8318  );
-
-    const int P_h = K_h / 2;
-    const int P_w = K_w / 2;
-
-    const data16_t* B_hi = &B[C_out];
-    const data16_t* B_lo = &B[0];
-
-    for(int ch_out_grp = 0; ch_out_grp < (C_out/(VPU_INT8_ACC_PERIOD)); ch_out_grp++){
-
-        const int8_t* kernel_group = &KERNEL_GROUP(ch_out_grp);
-
-        for(int ch_out = 0; ch_out < VPU_INT8_ACC_PERIOD; ch_out++){
-
-            const unsigned actual_chout = ch_out_grp * VPU_INT8_ACC_PERIOD + ch_out;
-
-            const int8_t* kernel = &KERNEL(ch_out);
-            const int32_t bias = (B_hi[actual_chout] << 16) | B_lo[actual_chout];
-            const int16_t shr = shifts[actual_chout];
-            const int16_t scale = scales[actual_chout];
-
-            for(int row = 0; row < height; row++){
-                for(int col = 0; col < width; col++){
-                    int32_t acc32 = bias;
-
-                    for(int kr = -P_h; kr <= P_h; kr++){
-                        for(int kc = -P_w; kc <= P_w; kc++){
-
-                            if(row+kr < 0 || row+kr >= height)
-                                continue;
-                            if(col+kc < 0 || col+kc >= width)
-                                continue;
-                            
-                            for(unsigned ch_in_grp = 0; ch_in_grp < (C_in/VPU_INT8_EPV); ch_in_grp++){
-                                int64_t acc64 = acc32;
-                                for(unsigned ch_in = 0; ch_in < VPU_INT8_EPV; ch_in++){
-                                    acc64 += KERNEL_VAL(kr+P_h, kc+P_w, (ch_in_grp*VPU_INT8_EPV)+ch_in) * X_VAL(row+kr,col+kc,(ch_in_grp*VPU_INT8_EPV)+ch_in);
-                                }
-
-                                acc32 = sat_s32(acc64);
-                            }
-                        }
-                    }
-
-                    if(K_h == 3 && K_w == 3 && row == 0 && col == 0 && actual_chout == 0){
-                        printf("acc32 = %ld\n", acc32);
-                        return;
-                    }
-
-                    // if( actual_chout == 2 && row == 1 && col == 0)
-                    //     printf("2!!  %ld\n", acc32);
-
-                    int16_t res16 = vlsat_single_s16(acc32, shr);
-                    
-                    // if( actual_chout == 2 && row == 1 && col == 0)
-                    //     printf("3!!  %d\n", res16);
-
-                    if(res16 < 0) res16 = 0;
-                    
-                    // if( actual_chout == 2 && row == 1 && col == 0)
-                    //     printf("4!!  %d\n", res16);
-
-                    res16 = res16 - ((1<<14)-1);
-                    
-                    // if( actual_chout == 2 && row == 1 && col == 0)
-                    //     printf("5!!  %d\n", res16);
-
-                    res16 = vlmul_single_s16(res16, scale);
-                    
-                    // if( actual_chout == 2 && row == 1 && col == 0)
-                    //     printf("6!!  %d\n", res16);
-                    
-                    // if( actual_chout == 2 && row == 1 && col == 0)
-                    //     printf("7!!  %d\n", vdepth8_single_s16(res16));
-
-                    Y[(row*width+col)*C_out + actual_chout] = vdepth8_single_s16(res16);
-                }
-            }
-        }
-    }
-
-}
-#undef X_VAL
-#undef KERNEL_VAL
-#undef KERNEL
-#undef KERNEL_GROUP
 
 
 

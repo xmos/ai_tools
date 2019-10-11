@@ -68,11 +68,7 @@ def xsim_bench(args):
         config = load_config(os.path.join(output_dir, 'config.xml'))
 
         # process xsim trace output
-        current_operator = None
-        current_tiles = set([])
-        current_cores = set([])
-        entry_cycle_clock = 0
-        exit_cycle_clock = 0
+        tracked_operators = {}
 
         with open(os.path.join(output_dir, XSIM_TRACE_FILENAME)) as fp:
             line = fp.readline()
@@ -80,39 +76,48 @@ def xsim_bench(args):
                 index_plus = line.find('+', XSIM_TRACE_START_COLUMN)
                 trace_function = line[XSIM_TRACE_START_COLUMN:index_plus].strip()
                 if trace_function in KNOWN_OPERATOR_FUNCTIONS:
-                    tile = line[5]
-                    core = line[8]
                     index_colon = line.find(':', index_plus)
                     index_whitespace = line.find(' ', index_colon+2)
-                    instruction = line[index_colon+2:index_whitespace].strip()
 
-                    if not current_operator:
+                    instruction = line[index_colon+2:index_whitespace].strip()
+                    tile = line[:7]
+                    core = line[8]
+
+                    tracking_key = (tile, core, trace_function)
+
+                    if tracking_key not in tracked_operators:
                         # operator function entry
                         index_amp = line.find('@', index_whitespace)
                         entry_cycle_clock = int(line[index_amp+1:].strip())
-                        current_operator = trace_function
-                        current_tiles.add(tile)
-                        current_cores.add(core)
+                        tracked_operator ={
+                            'identifier': trace_function,
+                            'entry_cycle_clock': entry_cycle_clock,
+                            'tiles': {
+                                tile: set([core])
+                            }
+                        }
+                        tracked_operators[tracking_key] = tracked_operator
                     elif instruction == 'retsp':
                         # operator function exit
+                        tracked_operator = tracked_operators[tracking_key]
+                        identifier = tracked_operator['identifier']
+                        entry_cycle_clock = tracked_operator['entry_cycle_clock']
+
                         index_amp = line.find('@', index_whitespace)
                         exit_cycle_clock = int(line[index_amp+1:].strip())
                         duration = int((exit_cycle_clock - entry_cycle_clock) / config['clock_rate'])
-                        current_tiles.add(tile)
-                        current_cores.add(core)
 
                         # print report
-                        # tiles = ','.join([t for t in current_tiles])
-                        # cores = ','.join([c for c in current_cores])
-                        # print(f'{current_operator}: {duration} us    (tiles={tiles}   cores={cores}')
-                        print(f'{current_operator}: {duration} us')
-                        # reset currents
-                        current_operator = None
-                        current_tiles = set([])
-                        current_cores = set([])
+                        print(f'{identifier}: {duration} us')
+                        for tile_id, cores_used in tracked_operator['tiles'].items():
+                            cores_used_str = ','.join(cores_used)
+                            print(f'   {tile_id}  cores: {cores_used_str}')
+
+                        # remove tracked operator
+                        del tracked_operators[tracking_key]
                     else:
-                        current_tiles.add(tile)
-                        current_cores.add(core)
+                        tracked_operator = tracked_operators[tracking_key]
+                        tracked_operator['tiles'][tile].add(core)
 
                 line = fp.readline()
 

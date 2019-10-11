@@ -1,0 +1,480 @@
+
+<html>
+<head>
+<style>
+body {font-family: sans-serif; background-color: #fa0;}
+table {background-color: #eca;}
+th {background-color: black; color: white;}
+h1 {
+  background-color: ffaa00;
+  padding:5px;
+  color: black;
+}
+
+svg {
+  margin: 10px;
+  border: 2px;
+  border-style: solid;
+  border-color: black;
+  background: white;
+}
+
+div {
+  border-radius: 5px;
+  background-color: #fec;
+  padding:5px;
+  margin:5px;
+}
+
+.tooltip {color: blue;}
+.tooltip .tooltipcontent  {
+    visibility: hidden;
+    color: black;
+    background-color: yellow;
+    padding: 5px;
+    border-radius: 4px;
+    position: absolute;
+    z-index: 1;
+}
+.tooltip:hover .tooltipcontent {
+    visibility: visible;
+}
+
+.edges line {
+  stroke: #333;
+}
+
+text {
+  font-weight: bold;
+}
+
+.nodes text {
+  color: black;
+  pointer-events: none;
+  font-family: monospace;
+  font-size: 12px;
+}
+</style>
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+
+</head>
+<body>
+<h1>TensorFlow Lite Model</h2><table>
+<tr><th>filename</th><td>model_quant.tflite</td></tr>
+<tr><th>version</th><td>3</td></tr>
+<tr><th>description</th><td>TOCO Converted.</td></tr>
+</table>
+<div class='subgraph'><h2>Subgraph 0</h2>
+<h3>Inputs/Outputs</h3>
+<table><tr>
+<tr>
+<th>inputs</th><th>outputs</th></tr>
+<tr>
+<td><span class='tooltip'><span class='tooltipcontent'>17 conv2d_input FLOAT32 [1, 32, 32, 3]<br></span>[17]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>18 Identity FLOAT32 [1, 10]<br></span>[18]</span></td>
+</tr>
+</table>
+<h3>Tensors</h3>
+<table><tr>
+<tr>
+<th>index</th><th>name</th><th>type</th><th>shape</th><th>buffer</th><th>quantization</th></tr>
+<tr>
+<td>0</td><td>Identity_int8</td>
+<td>INT8</td>
+<td>[1, 10]</td>
+<td>7</td>
+<td>{'scale': [0.00390625], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>1</td><td>conv2d_input_int8</td>
+<td>INT8</td>
+<td>[1, 32, 32, 3]</td>
+<td>14</td>
+<td>{'min': [-0.5], 'max': [0.5], 'scale': [0.003921569], 'zero_point': [-1], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>2</td><td>sequential/conv2d/Conv2D/ReadVariableOp</td>
+<td>INT8</td>
+<td>[32, 5, 5, 3]</td>
+<td>6</td>
+<td>{'scale': [0.00804238, 0.01213143, 0.03909057, 0.005813917, 0.01625948, 0.0277195, 0.01345738, 0.009822296, 0.01341265, 0.01489694, 0.002447561, 0.003671351, 0.01749113, 0.003932317, 0.005197688, 0.0223203, 0.005235678, 0.01552986, 0.01146263, 0.01778538, 0.02286992, 0.006800642, 0.02039293, 0.01310106, 0.005440129, 0.01333204, 0.003436802, 0.007370634, 0.008227344, 0.005397793, 0.01291285, 0.01071226], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>3</td><td>sequential/conv2d/Conv2D_bias</td>
+<td>INT32</td>
+<td>[32]</td>
+<td>5</td>
+<td>{'scale': [3.153875e-05, 4.757422e-05, 0.0001532964, 2.279968e-05, 6.376267e-05, 0.0001087039, 5.277403e-05, 3.851881e-05, 5.259864e-05, 5.841938e-05, 9.598279e-06, 1.439746e-05, 6.859267e-05, 1.542085e-05, 2.038309e-05, 8.753061e-05, 2.053207e-05, 6.09014e-05, 4.49515e-05, 6.97466e-05, 8.968598e-05, 2.666919e-05, 7.997229e-05, 5.137671e-05, 2.133384e-05, 5.22825e-05, 1.347766e-05, 2.890445e-05, 3.22641e-05, 2.116782e-05, 5.063861e-05, 4.200885e-05], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>4</td><td>sequential/conv2d_1/Conv2D/ReadVariableOp</td>
+<td>INT8</td>
+<td>[32, 5, 5, 32]</td>
+<td>13</td>
+<td>{'scale': [0.0008103329, 0.001273073, 0.0006718997, 0.0007314882, 0.001298166, 0.001043721, 0.0009294855, 0.001173675, 0.0008128852, 0.0005679884, 0.0007851877, 0.0006604045, 0.0007000002, 0.0005826872, 0.000781699, 0.0008293554, 0.0006842211, 0.0009356643, 0.001193532, 0.0007987646, 0.0008267241, 0.0006232773, 0.0006429104, 0.0007209035, 0.0005998465, 0.0007848257, 0.0006670771, 0.001290928, 0.0007878951, 0.001272639, 0.0006653062, 0.0009692119], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>5</td><td>sequential/conv2d_1/Conv2D_bias</td>
+<td>INT32</td>
+<td>[32]</td>
+<td>9</td>
+<td>{'scale': [4.729184e-05, 7.429782e-05, 3.921274e-05, 4.269039e-05, 7.57623e-05, 6.091259e-05, 5.424571e-05, 6.849683e-05, 4.74408e-05, 3.314838e-05, 4.582434e-05, 3.854187e-05, 4.085272e-05, 3.400621e-05, 4.562074e-05, 4.840201e-05, 3.993183e-05, 5.460631e-05, 6.965574e-05, 4.661671e-05, 4.824845e-05, 3.637509e-05, 3.752089e-05, 4.207265e-05, 3.500765e-05, 4.580322e-05, 3.893129e-05, 7.533988e-05, 4.598235e-05, 7.427247e-05, 3.882794e-05, 5.656418e-05], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>6</td><td>sequential/conv2d_2/Conv2D/ReadVariableOp</td>
+<td>INT8</td>
+<td>[64, 5, 5, 32]</td>
+<td>4</td>
+<td>{'scale': [0.001070388, 0.001595691, 0.001321743, 0.001628459, 0.001684905, 0.001420108, 0.001369532, 0.001332447, 0.001383554, 0.001620586, 0.001437138, 0.001525606, 0.001675862, 0.002395684, 0.001079842, 0.001573009, 0.001535259, 0.001796414, 0.001661062, 0.001258766, 0.001524811, 0.001217187, 0.001295688, 0.001234075, 0.001544348, 0.001345451, 0.001638053, 0.001132372, 0.001621672, 0.001077089, 0.001663421, 0.001455161, 0.001670612, 0.001054884, 0.001471914, 0.001106169, 0.001472126, 0.001448002, 0.001688744, 0.001373852, 0.001365164, 0.001310005, 0.001393074, 0.001494853, 0.001433245, 0.001114768, 0.001821725, 0.001210228, 0.001724174, 0.00135086, 0.001751887, 0.001335653, 0.00135918, 0.001349293, 0.001555903, 0.001312206, 0.00122353, 0.001486364, 0.001715568, 0.001548935, 0.001295165, 0.001252821, 0.001385579, 0.001240506], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>7</td><td>sequential/conv2d_2/Conv2D_bias</td>
+<td>INT32</td>
+<td>[64]</td>
+<td>3</td>
+<td>{'scale': [3.300743e-05, 4.920613e-05, 4.075843e-05, 5.021658e-05, 5.195722e-05, 4.379169e-05, 4.223208e-05, 4.108851e-05, 4.266447e-05, 4.997381e-05, 4.431685e-05, 4.704493e-05, 5.167834e-05, 7.387541e-05, 3.329897e-05, 4.85067e-05, 4.73426e-05, 5.539579e-05, 5.122195e-05, 3.881642e-05, 4.702041e-05, 3.753424e-05, 3.995499e-05, 3.805503e-05, 4.762287e-05, 4.148951e-05, 5.051243e-05, 3.491882e-05, 5.000731e-05, 3.321406e-05, 5.129471e-05, 4.487263e-05, 5.151646e-05, 3.252932e-05, 4.538924e-05, 3.411079e-05, 4.539578e-05, 4.465185e-05, 5.207559e-05, 4.236532e-05, 4.209738e-05, 4.039645e-05, 4.295805e-05, 4.60966e-05, 4.419681e-05, 3.437597e-05, 5.61763e-05, 3.731966e-05, 5.316815e-05, 4.16563e-05, 5.402272e-05, 4.118736e-05, 4.191287e-05, 4.160799e-05, 4.797919e-05, 4.046434e-05, 3.772983e-05, 4.583482e-05, 5.290276e-05, 4.776431e-05, 3.993883e-05, 3.863308e-05, 4.272694e-05, 3.825332e-05], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>8</td><td>sequential/dense/BiasAdd</td>
+<td>INT8</td>
+<td>[1, 10]</td>
+<td>8</td>
+<td>{'min': [-16.36567], 'max': [29.76174], 'scale': [0.1808918], 'zero_point': [-38], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>9</td><td>sequential/dense/MatMul/ReadVariableOp/transpose</td>
+<td>INT8</td>
+<td>[10, 1024]</td>
+<td>2</td>
+<td>{'scale': [0.00419837], 'zero_point': [0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>10</td><td>sequential/dense/MatMul_bias</td>
+<td>INT32</td>
+<td>[10]</td>
+<td>1</td>
+<td>{'scale': [0.0001117113], 'zero_point': [0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>11</td><td>sequential/max_pooling2d/MaxPool</td>
+<td>INT8</td>
+<td>[1, 16, 16, 32]</td>
+<td>17</td>
+<td>{'min': [0.0], 'max': [14.88206], 'scale': [0.05836101], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>12</td><td>sequential/max_pooling2d_1/MaxPool</td>
+<td>INT8</td>
+<td>[1, 8, 8, 32]</td>
+<td>12</td>
+<td>{'min': [0.0], 'max': [7.863403], 'scale': [0.03083688], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>13</td><td>sequential/max_pooling2d_2/MaxPool</td>
+<td>INT8</td>
+<td>[1, 4, 4, 64]</td>
+<td>10</td>
+<td>{'min': [0.0], 'max': [6.785107], 'scale': [0.02660826], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>14</td><td>sequential/re_lu/Relu</td>
+<td>INT8</td>
+<td>[1, 32, 32, 32]</td>
+<td>15</td>
+<td>{'min': [0.0], 'max': [14.88206], 'scale': [0.05836101], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>15</td><td>sequential/re_lu_1/Relu</td>
+<td>INT8</td>
+<td>[1, 16, 16, 32]</td>
+<td>16</td>
+<td>{'min': [0.0], 'max': [7.863403], 'scale': [0.03083688], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>16</td><td>sequential/re_lu_2/Relu</td>
+<td>INT8</td>
+<td>[1, 8, 8, 64]</td>
+<td>11</td>
+<td>{'min': [0.0], 'max': [6.785107], 'scale': [0.02660826], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>17</td><td>conv2d_input</td>
+<td>FLOAT32</td>
+<td>[1, 32, 32, 3]</td>
+<td>0</td>
+<td>None</td>
+</tr>
+<tr>
+<td>18</td><td>Identity</td>
+<td>FLOAT32</td>
+<td>[1, 10]</td>
+<td>0</td>
+<td>None</td>
+</tr>
+</table>
+<h3>Ops</h3>
+<table><tr>
+<tr>
+<th>index</th><th>inputs</th><th>outputs</th><th>builtin_options</th><th>opcode_index</th></tr>
+<tr>
+<td>0</td><td><span class='tooltip'><span class='tooltipcontent'>17 conv2d_input FLOAT32 [1, 32, 32, 3]<br></span>[17]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>1 conv2d_input_int8 INT8 [1, 32, 32, 3]<br></span>[1]</span></td>
+<td>None</td>
+<td>QUANTIZE (4)</td>
+</tr>
+<tr>
+<td>1</td><td><span class='tooltip'><span class='tooltipcontent'>1 conv2d_input_int8 INT8 [1, 32, 32, 3]<br>2 sequential/conv2d/Conv2D/ReadVariableOp INT8 [32, 5, 5, 3]<br>3 sequential/conv2d/Conv2D_bias INT32 [32]<br></span>[1, 2, 3]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>14 sequential/re_lu/Relu INT8 [1, 32, 32, 32]<br></span>[14]</span></td>
+<td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'RELU', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
+<td>CONV_2D (0)</td>
+</tr>
+<tr>
+<td>2</td><td><span class='tooltip'><span class='tooltipcontent'>14 sequential/re_lu/Relu INT8 [1, 32, 32, 32]<br></span>[14]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>11 sequential/max_pooling2d/MaxPool INT8 [1, 16, 16, 32]<br></span>[11]</span></td>
+<td>{'padding': 'VALID', 'stride_w': 2, 'stride_h': 2, 'filter_width': 2, 'filter_height': 2, 'fused_activation_function': 'NONE'}</td>
+<td>MAX_POOL_2D (2)</td>
+</tr>
+<tr>
+<td>3</td><td><span class='tooltip'><span class='tooltipcontent'>11 sequential/max_pooling2d/MaxPool INT8 [1, 16, 16, 32]<br>4 sequential/conv2d_1/Conv2D/ReadVariableOp INT8 [32, 5, 5, 32]<br>5 sequential/conv2d_1/Conv2D_bias INT32 [32]<br></span>[11, 4, 5]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>15 sequential/re_lu_1/Relu INT8 [1, 16, 16, 32]<br></span>[15]</span></td>
+<td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'RELU', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
+<td>CONV_2D (0)</td>
+</tr>
+<tr>
+<td>4</td><td><span class='tooltip'><span class='tooltipcontent'>15 sequential/re_lu_1/Relu INT8 [1, 16, 16, 32]<br></span>[15]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>12 sequential/max_pooling2d_1/MaxPool INT8 [1, 8, 8, 32]<br></span>[12]</span></td>
+<td>{'padding': 'VALID', 'stride_w': 2, 'stride_h': 2, 'filter_width': 2, 'filter_height': 2, 'fused_activation_function': 'NONE'}</td>
+<td>MAX_POOL_2D (2)</td>
+</tr>
+<tr>
+<td>5</td><td><span class='tooltip'><span class='tooltipcontent'>12 sequential/max_pooling2d_1/MaxPool INT8 [1, 8, 8, 32]<br>6 sequential/conv2d_2/Conv2D/ReadVariableOp INT8 [64, 5, 5, 32]<br>7 sequential/conv2d_2/Conv2D_bias INT32 [64]<br></span>[12, 6, 7]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>16 sequential/re_lu_2/Relu INT8 [1, 8, 8, 64]<br></span>[16]</span></td>
+<td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'RELU', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
+<td>CONV_2D (0)</td>
+</tr>
+<tr>
+<td>6</td><td><span class='tooltip'><span class='tooltipcontent'>16 sequential/re_lu_2/Relu INT8 [1, 8, 8, 64]<br></span>[16]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>13 sequential/max_pooling2d_2/MaxPool INT8 [1, 4, 4, 64]<br></span>[13]</span></td>
+<td>{'padding': 'VALID', 'stride_w': 2, 'stride_h': 2, 'filter_width': 2, 'filter_height': 2, 'fused_activation_function': 'NONE'}</td>
+<td>MAX_POOL_2D (2)</td>
+</tr>
+<tr>
+<td>7</td><td><span class='tooltip'><span class='tooltipcontent'>13 sequential/max_pooling2d_2/MaxPool INT8 [1, 4, 4, 64]<br>9 sequential/dense/MatMul/ReadVariableOp/transpose INT8 [10, 1024]<br>10 sequential/dense/MatMul_bias INT32 [10]<br></span>[13, 9, 10]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>8 sequential/dense/BiasAdd INT8 [1, 10]<br></span>[8]</span></td>
+<td>{'fused_activation_function': 'NONE', 'weights_format': 'DEFAULT', 'keep_num_dims': False}</td>
+<td>FULLY_CONNECTED (1)</td>
+</tr>
+<tr>
+<td>8</td><td><span class='tooltip'><span class='tooltipcontent'>8 sequential/dense/BiasAdd INT8 [1, 10]<br></span>[8]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>0 Identity_int8 INT8 [1, 10]<br></span>[0]</span></td>
+<td>{'beta': 1.0}</td>
+<td>SOFTMAX (3)</td>
+</tr>
+<tr>
+<td>9</td><td><span class='tooltip'><span class='tooltipcontent'>0 Identity_int8 INT8 [1, 10]<br></span>[0]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>18 Identity FLOAT32 [1, 10]<br></span>[18]</span></td>
+<td>None</td>
+<td>DEQUANTIZE (5)</td>
+</tr>
+</table>
+<svg id='subgraph0' width='1600' height='900'></svg>
+
+  <script>
+    // Build graph data
+    var graph = {"nodes": [{"id": "o0", "name": "QUANTIZE (4)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 95}, {"id": "o1", "name": "CONV_2D (0)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 400, "node_width": 87}, {"id": "o2", "name": "MAX_POOL_2D (2)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 600, "node_width": 117}, {"id": "o3", "name": "CONV_2D (0)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 800, "node_width": 87}, {"id": "o4", "name": "MAX_POOL_2D (2)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 1000, "node_width": 117}, {"id": "o5", "name": "CONV_2D (0)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 1200, "node_width": 87}, {"id": "o6", "name": "MAX_POOL_2D (2)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 1400, "node_width": 117}, {"id": "o7", "name": "FULLY_CONNECTED (1)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 1600, "node_width": 147}, {"id": "o8", "name": "SOFTMAX (3)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 1800, "node_width": 87}, {"id": "o9", "name": "DEQUANTIZE (5)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 2000, "node_width": 110}, {"id": "t0", "name": "(0) 'Identity_int8' [1, 10]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 1900.0, "node_width": 207}, {"id": "t1", "name": "(1) 'conv2d_input_int8' [1, 32, 32, 3]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 290}, {"id": "t2", "name": "(2) 'sequential/conv2d/Conv2D/ReadVariableOp' [32, 5, 5, 3]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 470, "y": 300.0, "node_width": 447}, {"id": "t3", "name": "(3) 'sequential/conv2d/Conv2D_bias' [32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 927, "y": 300.0, "node_width": 305}, {"id": "t4", "name": "(4) 'sequential/conv2d_1/Conv2D/ReadVariableOp' [32, 5, 5, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 597, "y": 700.0, "node_width": 470}, {"id": "t5", "name": "(5) 'sequential/conv2d_1/Conv2D_bias' [32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1077, "y": 700.0, "node_width": 320}, {"id": "t6", "name": "(6) 'sequential/conv2d_2/Conv2D/ReadVariableOp' [64, 5, 5, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 597, "y": 1100.0, "node_width": 470}, {"id": "t7", "name": "(7) 'sequential/conv2d_2/Conv2D_bias' [64]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1077, "y": 1100.0, "node_width": 320}, {"id": "t8", "name": "(8) 'sequential/dense/BiasAdd' [1, 10]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 1700.0, "node_width": 290}, {"id": "t9", "name": "(9) 'sequential/dense/MatMul/ReadVariableOp/transpose' [10, 1024]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 597, "y": 1500.0, "node_width": 492}, {"id": "t10", "name": "(10) 'sequential/dense/MatMul_bias' [10]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1099, "y": 1500.0, "node_width": 305}, {"id": "t11", "name": "(11) 'sequential/max_pooling2d/MaxPool' [1, 16, 16, 32]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 700.0, "node_width": 417}, {"id": "t12", "name": "(12) 'sequential/max_pooling2d_1/MaxPool' [1, 8, 8, 32]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 1100.0, "node_width": 417}, {"id": "t13", "name": "(13) 'sequential/max_pooling2d_2/MaxPool' [1, 4, 4, 64]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 1500.0, "node_width": 417}, {"id": "t14", "name": "(14) 'sequential/re_lu/Relu' [1, 32, 32, 32]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 500.0, "node_width": 335}, {"id": "t15", "name": "(15) 'sequential/re_lu_1/Relu' [1, 16, 16, 32]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 900.0, "node_width": 350}, {"id": "t16", "name": "(16) 'sequential/re_lu_2/Relu' [1, 8, 8, 64]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 1300.0, "node_width": 335}, {"id": "t17", "name": "(17) 'conv2d_input' [1, 32, 32, 3]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 260}, {"id": "t18", "name": "(18) 'Identity' [1, 10]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 2100.0, "node_width": 177}], "edges": [{"source": "t17", "target": "o0"}, {"target": "t1", "source": "o0"}, {"source": "t1", "target": "o1"}, {"source": "t2", "target": "o1"}, {"source": "t3", "target": "o1"}, {"target": "t14", "source": "o1"}, {"source": "t14", "target": "o2"}, {"target": "t11", "source": "o2"}, {"source": "t11", "target": "o3"}, {"source": "t4", "target": "o3"}, {"source": "t5", "target": "o3"}, {"target": "t15", "source": "o3"}, {"source": "t15", "target": "o4"}, {"target": "t12", "source": "o4"}, {"source": "t12", "target": "o5"}, {"source": "t6", "target": "o5"}, {"source": "t7", "target": "o5"}, {"target": "t16", "source": "o5"}, {"source": "t16", "target": "o6"}, {"target": "t13", "source": "o6"}, {"source": "t13", "target": "o7"}, {"source": "t9", "target": "o7"}, {"source": "t10", "target": "o7"}, {"target": "t8", "source": "o7"}, {"source": "t8", "target": "o8"}, {"target": "t0", "source": "o8"}, {"source": "t0", "target": "o9"}, {"target": "t18", "source": "o9"}]};
+
+    var svg = d3.select("#subgraph0")
+    var width = svg.attr("width");
+    var height = svg.attr("height");
+    // Make the graph scrollable.
+    svg = svg.call(d3.zoom().on("zoom", function() {
+      svg.attr("transform", d3.event.transform);
+    })).append("g");
+
+
+    var color = d3.scaleOrdinal(d3.schemeDark2);
+
+    var simulation = d3.forceSimulation()
+        .force("link", d3.forceLink().id(function(d) {return d.id;}))
+        .force("charge", d3.forceManyBody())
+        .force("center", d3.forceCenter(0.5 * width, 0.5 * height));
+
+
+    function buildGraph() {
+      var edge = svg.append("g").attr("class", "edges").selectAll("line")
+        .data(graph.edges).enter().append("path").attr("stroke","black").attr("fill","none")
+
+      // Make the node group
+      var node = svg.selectAll(".nodes")
+        .data(graph.nodes)
+        .enter().append("g")
+        .attr("x", function(d){return d.x})
+        .attr("y", function(d){return d.y})
+        .attr("node_width", function(d){return d.node_width})
+        .attr("transform", function(d) {
+          return "translate( " + d.x + ", " + d.y + ")"
+        })
+        .attr("class", "nodes")
+          .call(d3.drag()
+              .on("start", function(d) {
+                if(!d3.event.active) simulation.alphaTarget(1.0).restart();
+                d.fx = d.x;d.fy = d.y;
+              })
+              .on("drag", function(d) {
+                d.fx = d3.event.x; d.fy = d3.event.y;
+              })
+              .on("end", function(d) {
+                if (!d3.event.active) simulation.alphaTarget(0);
+                d.fx = d.fy = null;
+              }));
+      // Within the group, draw a box for the node position and text
+      // on the side.
+
+      var node_width = 150;
+      var node_height = 30;
+
+      node.append("rect")
+          .attr("r", "5px")
+          .attr("width", function(d) { return d.node_width; })
+          .attr("height", node_height)
+          .attr("rx", function(d) { return d.edge_radius; })
+          .attr("stroke", "#000000")
+          .attr("fill", function(d) { return d.fill_color; })
+      node.append("text")
+          .text(function(d) { return d.name; })
+          .attr("x", 5)
+          .attr("y", 20)
+          .attr("fill", function(d) { return d.text_color; })
+      // Setup force parameters and update position callback
+
+
+      var node = svg.selectAll(".nodes")
+        .data(graph.nodes);
+
+      // Bind the links
+      var name_to_g = {}
+      node.each(function(data, index, nodes) {
+        console.log(data.id)
+        name_to_g[data.id] = this;
+      });
+
+      function proc(w, t) {
+        return parseInt(w.getAttribute(t));
+      }
+      edge.attr("d", function(d) {
+        function lerp(t, a, b) {
+          return (1.0-t) * a + t * b;
+        }
+        var x1 = proc(name_to_g[d.source],"x") + proc(name_to_g[d.source],"node_width") / 2;
+        var y1 = proc(name_to_g[d.source],"y") + node_height;
+        var x2 = proc(name_to_g[d.target],"x") + proc(name_to_g[d.target],"node_width") / 2;
+        var y2 = proc(name_to_g[d.target],"y");
+        var s = "M " + x1 + " " + y1
+            + " C " + x1 + " " + lerp(.5, y1, y2)
+            + " " + x2 + " " + lerp(.5, y1, y2)
+            + " " + x2  + " " + y2
+      return s;
+    });
+
+  }
+  buildGraph()
+</script>
+</div><h2>Buffers</h2>
+<table><tr>
+<tr>
+<th>index</th><th>data</th></tr>
+<tr>
+<td>0</td><td>--</td>
+</tr>
+<tr>
+<td>1</td><td>40 bytes</td>
+</tr>
+<tr>
+<td>2</td><td>10240 bytes</td>
+</tr>
+<tr>
+<td>3</td><td>256 bytes</td>
+</tr>
+<tr>
+<td>4</td><td>51200 bytes</td>
+</tr>
+<tr>
+<td>5</td><td>128 bytes</td>
+</tr>
+<tr>
+<td>6</td><td>2400 bytes</td>
+</tr>
+<tr>
+<td>7</td><td>--</td>
+</tr>
+<tr>
+<td>8</td><td>--</td>
+</tr>
+<tr>
+<td>9</td><td>128 bytes</td>
+</tr>
+<tr>
+<td>10</td><td>--</td>
+</tr>
+<tr>
+<td>11</td><td>--</td>
+</tr>
+<tr>
+<td>12</td><td>--</td>
+</tr>
+<tr>
+<td>13</td><td>25600 bytes</td>
+</tr>
+<tr>
+<td>14</td><td>--</td>
+</tr>
+<tr>
+<td>15</td><td>--</td>
+</tr>
+<tr>
+<td>16</td><td>--</td>
+</tr>
+<tr>
+<td>17</td><td>--</td>
+</tr>
+<tr>
+<td>18</td><td>5 bytes</td>
+</tr>
+</table>
+<h2>Operator Codes</h2>
+<table><tr>
+<tr>
+<th>index</th><th>builtin_code</th><th>custom_code</th><th>version</th></tr>
+<tr>
+<td>0</td><td>CONV_2D</td>
+<td>None</td>
+<td>3</td>
+</tr>
+<tr>
+<td>1</td><td>FULLY_CONNECTED</td>
+<td>None</td>
+<td>4</td>
+</tr>
+<tr>
+<td>2</td><td>MAX_POOL_2D</td>
+<td>None</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td><td>SOFTMAX</td>
+<td>None</td>
+<td>2</td>
+</tr>
+<tr>
+<td>4</td><td>QUANTIZE</td>
+<td>None</td>
+<td>1</td>
+</tr>
+<tr>
+<td>5</td><td>DEQUANTIZE</td>
+<td>None</td>
+<td>2</td>
+</tr>
+</table>
+</body></html>

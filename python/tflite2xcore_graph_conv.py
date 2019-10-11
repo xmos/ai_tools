@@ -422,7 +422,9 @@ def main(tflite_input, tflite_output, *,
                                 flatc_bin=flatc_bin, schema=schema)
 
     # run graph manipulations
+    print(model.keys())
     convert_model(model, is_classifier=is_classifier, remove_softmax=remove_softmax)
+    print(model.keys())
 
     save_json_as_tflite(model, tflite_output,
                         flatc_bin=flatc_bin, schema=schema)

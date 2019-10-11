@@ -10,12 +10,24 @@
  *  should be used on all edges, with size K_h//2 above and below, and K_w//2
  *  on the left and right.
  *
- *  \param  K       Kernel weight tensor of shape (C_out, K_h, K_w, C_in) using
- *                  a non-standard layout such that:
- *                  K[i, j, k, l]  =  K[
- *                    K_h * K_w * C_in * ((i//16 + 1)*16 - i%16 - 1)
- *                    +  K_w * C_in * j  +  C_in * k  +  l
- *                  ]
+ *  \param  K       Kernel weight tensor of shape
+ *                  (C_out//16, K_h, K_w, C_in//32, 16, 32).
+ *                  Given semantically layed out kernel tensor with shape
+ *                  (C_out, K_h, K_w, C_in), the coefficient corresponding to
+ *                  output channel o, row r, column w and input channel i is
+ *                  found at the offset (from the beginning of the array) k,
+ *                  given by the following:
+ *                      q = o // 16   -- (C_out 'group')
+ *                      a = o % 16
+ *                      w = i // 32   -- (C_in 'group')
+ *                      s = i % 32
+ *                      k_1 = C_in * 16 * K_h * K_w * q     --   (C_out group offset)
+ *                      k_2 = C_in * 16 * K_w * r           --   (row offset within C_out group)
+ *                      k_3 = C_in * 16 * c                 --   (column offset within row)
+ *                      k_4 = 32 * 16 * w                   --   (C_in group offset within pixel)
+ *                      k_5 = 32 * (15-a)                   --   (C_out chunk offset within C_in group)
+ *                      k_6 = s                             --   (C_in offset within C_out chunk)
+ *                      k = k_1 + k_2 + k_3 + k_4 + k_5 + k_6
  *  \param  B       Bias tensor of shape (2, C_out) using a standard layout
  *                  such that B[i, c]  =  B[C_out * i  +  c]. The value B[0, c]
  *                  encodes the lower 16 bits, while B[1, c] encodes the higher

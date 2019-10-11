@@ -180,19 +180,28 @@ def replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind, op_ind):
     bias_tensor['quantization']['details_type'] = 'CustomQuantization'
 
     # rearrange weight tensor
-    acc_period = 16
-    weight_inds = np.hstack([np.array(range(j+acc_period-1, j-1, -1))
-                             for j in range(0, weights.shape[0], acc_period)])
-    weights = np.int8(weights[weight_inds, :, :, :])
+    acc_period, ve = 16, 32
+    new_shape = (weights.shape[0]//acc_period, acc_period,
+                 weights.shape[1], weights.shape[2],
+                 weights.shape[3]//ve, ve)
+    weights = weights.reshape(new_shape)
+    weights = np.transpose(np.flip(weights, axis=1), axes=(0, 2, 3, 4, 1, 5))
+    new_shape = weights.shape
+    weights = np.int8(weights.flatten())
 
-    # save weight tensor
+    # save weight tensor and update shape
     buffer_ind = weight_tensor['buffer']
     model['buffers'][buffer_ind]['data'] = list(weights.tostring())
+    weight_tensor['shape'] = list(new_shape)
 
     # rearrange weight quantization parameters
+    def reshape_kernel_quantization(arr):
+        arr = np.array(arr)
+        arr = arr.reshape((arr.shape[0]//acc_period, acc_period))
+        return np.flip(arr, axis=1).flatten().tolist()
     weight_quantization = weight_tensor['quantization']
-    weight_quantization['scale'] = [weight_quantization['scale'][j] for j in weight_inds]
-    weight_quantization['zero_point'] = [weight_quantization['zero_point'][j] for j in weight_inds]
+    weight_quantization['scale'] = reshape_kernel_quantization(weight_quantization['scale'])
+    weight_quantization['zero_point'] = reshape_kernel_quantization(weight_quantization['zero_point'])
 
     # rename weight tensor
     weight_tensor['name'] = generate_unique_tensor_name(subgraph,

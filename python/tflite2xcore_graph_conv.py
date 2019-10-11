@@ -394,17 +394,7 @@ def replace_ops_with_XC(model):
                 from_depthwise=(replacement['old_opcode'] == 'DEPTHWISE_CONV_2D'))
 
 
-def main(tflite_input, tflite_output, *,
-         is_classifier=False, remove_softmax=False,
-         flatc_bin=DEFAULT_FLATC, schema=DEFAULT_SCHEMA):
-
-    check_schema_path(schema)
-    check_flatc_path(flatc_bin)
-
-    model = load_tflite_as_json(tflite_input,
-                                flatc_bin=flatc_bin, schema=schema)
-
-    # run graph manipulations
+def convert_model(model, *, is_classifier=False, remove_softmax=False):
     remove_float_inputs_outputs(model)
     if remove_softmax or is_classifier:
         remove_output_softmax(model)
@@ -419,6 +409,20 @@ def main(tflite_input, tflite_output, *,
     clean_unused_buffers(model)
 
     model['description'] = 'TOCO + XMOS converted.'
+
+
+def main(tflite_input, tflite_output, *,
+         is_classifier=False, remove_softmax=False,
+         flatc_bin=DEFAULT_FLATC, schema=DEFAULT_SCHEMA):
+
+    check_schema_path(schema)
+    check_flatc_path(flatc_bin)
+
+    model = load_tflite_as_json(tflite_input,
+                                flatc_bin=flatc_bin, schema=schema)
+
+    # run graph manipulations
+    convert_model(model, is_classifier=is_classifier, remove_softmax=remove_softmax)
 
     save_json_as_tflite(model, tflite_output,
                         flatc_bin=flatc_bin, schema=schema)

@@ -44,7 +44,9 @@ def calculate_shift_scale(multiplier, bias_size):
         if scale[j] == 2**15:
             rshift[j] -= 1
             scale[j] /= 2
-        rshift[j] -= 7 # this is because we are using 15 bits instead of 8
+        # we are using 16 bits instead of 8 so we need to adjust the shift
+        # NOTE: VDEPTH8 shifts down by 8 bits, not 7 as stated on some pages of the ISA
+        rshift[j] -= 8
 
     if len(scale) == 1:
         rshift = np.repeat(rshift, bias_size)

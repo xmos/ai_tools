@@ -68,12 +68,12 @@ def main(inputs=DEFAULT_INPUTS):
     model_stripped['description'] = "TOCO Converted and stripped."
     model_stripped_file = utils.save_from_json(model_stripped, MODELS_DIR, 'model_stripped')
     utils.save_test_data_for_stripped_model(
-        model_stripped, x_test_float, data_dir=DATA_DIR, add_float_outputs=False)    
+        model_stripped, x_test_float, data_dir=DATA_DIR, add_float_outputs=False)
 
     # load stripped model in json, converting manually
     model_xcore = load_tflite_as_json(model_stripped_file)
     subgraph = model_xcore['subgraphs'][0]
-    
+
     # update operator details
     operator = subgraph['operators'][0]
     operator['builtin_options']
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--inputs', type=int, default=DEFAULT_INPUTS,
                         help='Input dimension')
-    parser.add_argument('-v', '--verbose',  action='store_true', default=False,
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help='Verbose mode.')
     args = parser.parse_args()
 

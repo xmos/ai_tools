@@ -18,8 +18,8 @@ def get_input_tensor(subgraph, op_ind, input_ind):
 
 
 def get_buffer_data_of_tensor(model, tensor):
-        buffer_ind = tensor['buffer']
-        return model['buffers'][buffer_ind]['data']
+    buffer_ind = tensor['buffer']
+    return model['buffers'][buffer_ind]['data']
 
 
 def tensor_to_np(model, tensor):
@@ -98,7 +98,7 @@ def clean_unused_opcodes(model):
         opcode_ind = used_opcode_inds.pop()
         opcode_ind_map[opcode_ind] = len(new_opcodes)
         new_opcodes.append(model['operator_codes'][opcode_ind])
-        
+
     # replace opcode list and update references
     model['operator_codes'] = new_opcodes
     for subgraph in model['subgraphs']:

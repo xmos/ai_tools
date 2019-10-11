@@ -13,7 +13,7 @@ from copy import deepcopy
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import warnings
 warnings.filterwarnings(action='ignore')
-import tensorflow as tf
+import tensorflow as tf  # nopep8
 warnings.filterwarnings(action='default')
 
 import tflite_visualize
@@ -124,8 +124,9 @@ def quantize_converter(converter, representative_data):
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     converter.target_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
     x_train_ds = tf.data.Dataset.from_tensor_slices(representative_data).batch(1)
+
     def representative_data_gen():
-        for input_value in x_train_ds.take(representative_data.shape[0]):  # pylint: disable=unsubscriptable-object
+        for input_value in x_train_ds.take(representative_data.shape[0]):
             yield [input_value]
     converter.representative_dataset = representative_data_gen
 
@@ -234,7 +235,7 @@ def save_test_data_for_xcore_model(model_xcore, x_test_float, *,
 
     # quantize test examples
     x_test = quantize(x_test_float,
-        input_quant['scale'][0], input_quant['zero_point'][0], dtype)
-    
+                      input_quant['scale'][0], input_quant['zero_point'][0], dtype)
+
     # save data
     save_test_data({'x_test': x_test}, data_dir, base_file_name)

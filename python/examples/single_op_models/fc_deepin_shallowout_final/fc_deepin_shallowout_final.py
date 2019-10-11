@@ -60,9 +60,9 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
         return np.reshape(arr, arr.shape + (1, 1))
     x_train = expand_array(x_train)
     x_test = expand_array(x_test)
-    
+
     return {'x_train': np.float32(x_train), 'y_train': np.float32(y_train),
-            'x_test': np.float32(x_test), 'y_test' : np.float32(y_test)}
+            'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
 
 
 def build_model(input_dim, out_dim=2):
@@ -86,19 +86,19 @@ def main(input_dim=DEFAULT_INPUTS, classes=DEFAULT_CLASSES, *, train_new_model=T
         # create model
         model = build_model(input_dim, out_dim=classes)
         model.compile(optimizer='adam',
-                    loss='sparse_categorical_crossentropy',
-                    metrics=['accuracy'])
+                      loss='sparse_categorical_crossentropy',
+                      metrics=['accuracy'])
         model.summary()
 
         # generate data
         data = generate_fake_lin_sep_dataset(classes, input_dim,
-                                            train_samples_per_class=51200//classes,
-                                            test_samples_per_class=10240//classes)
+                                             train_samples_per_class=51200//classes,
+                                             test_samples_per_class=10240//classes)
 
         # run the training
         model.fit(data['x_train'], data['y_train'],
-                epochs=5*(classes-1), batch_size=128,
-                validation_data=(data['x_test'], data['y_test']))
+                  epochs=5*(classes-1), batch_size=128,
+                  validation_data=(data['x_test'], data['y_test']))
 
         # save model and data
         np.savez(data_path, **data)
@@ -146,21 +146,22 @@ def main(input_dim=DEFAULT_INPUTS, classes=DEFAULT_CLASSES, *, train_new_model=T
     # save xcore converted model
     model_xcore = deepcopy(model_quant)
     graph_conv.convert_model(model_xcore, remove_softmax=True)
-    model_xcore_file = utils.save_from_json(model_xcore, MODELS_DIR, 'model_xcore')
+    utils.save_from_json(model_xcore, MODELS_DIR, 'model_xcore')
     utils.save_test_data_for_xcore_model(
         model_xcore, x_test_float, data_dir=DATA_DIR)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--use_gpu',  action='store_true', default=False,
+    parser.add_argument('--use_gpu', action='store_true', default=False,
                         help='Use GPU for training. Might result in non-reproducible results')
     parser.add_argument('--classes', type=int, default=DEFAULT_CLASSES,
                         help='Number of classes, must be between 2 and 15.')
     parser.add_argument('--inputs', type=int, default=DEFAULT_INPUTS,
                         help='Input dimension, must be multiple of 32.')
-    parser.add_argument('--train_model',  action='store_true', default=False,
+    parser.add_argument('--train_model', action='store_true', default=False,
                         help='Train new model instead of loading pretrained tf.keras model.')
-    parser.add_argument('-v', '--verbose',  action='store_true', default=False,
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help='Verbose mode.')
     args = parser.parse_args()
 

@@ -38,7 +38,7 @@ def get_float_input_output_removals(model, subgraph_ind, *, mode=None):
         if tensor['type'] == 'FLOAT32':
             # references as outputs are ignored when removing inputs
             ref_op_inds = find_referencing_ops(tensor_ind, operators,
-                                               as_outputs=(mode!='inputs'))
+                                               as_outputs=(mode != 'inputs'))
 
             if len(ref_op_inds) == 0:
                 logging.warning(f"while removing float {mode}: "
@@ -77,9 +77,9 @@ def remove_float_inputs_outputs(model):
             replacements, ops_to_remove = get_float_input_output_removals(
                 model, subgraph_ind, mode=mode)
             subgraph[mode] = [replacements[k] if k in replacements else ind
-                            for k, ind in enumerate(subgraph[mode])]
+                              for k, ind in enumerate(subgraph[mode])]
             subgraph['operators'] = [op for j, op in enumerate(subgraph['operators'])
-                                    if j not in ops_to_remove]
+                                     if j not in ops_to_remove]
 
 
 def add_float_inputs_outputs(model, *, inputs=True, outputs=True):
@@ -119,11 +119,11 @@ def add_float_inputs_outputs(model, *, inputs=True, outputs=True):
                     # add new op, new input/output tensor and buffer
                     subgraph['operators'].insert(
                         # not necessary to insert, could use append, but visualizer prefers this, so why not
-                        0 if mode=='inputs' else len(subgraph['operators']),
+                        0 if mode == 'inputs' else len(subgraph['operators']),
                         {
                             'opcode_index': opcode_ind,
                             mode: [new_tensor_ind],
-                            'outputs' if mode=='inputs' else 'inputs': [tensor_ind],
+                            'outputs' if mode == 'inputs' else 'inputs': [tensor_ind],
                             'builtin_options_type': 'NONE',
                             'custom_options_format': 'FLEXBUFFERS'
                         }
@@ -132,11 +132,10 @@ def add_float_inputs_outputs(model, *, inputs=True, outputs=True):
                         'shape': tensor['shape'],
                         'type': 'FLOAT32',
                         'buffer': new_buffer_ind,
-                        'name': generate_unique_tensor_name(subgraph,
-                            base_name=mode[:], suffix=''),
+                        'name': generate_unique_tensor_name(
+                            subgraph, base_name=mode[:], suffix=''),
                         'is_variable': False
                     })
-                    #model['buffers'].append({})
 
                     # update input/output list
                     subgraph[mode][k] = new_tensor_ind
@@ -195,7 +194,7 @@ def add_output_argmax(model):
         })
         model['buffers'].append({})
         subgraph['outputs'] = new_outputs
-        
+
         # add argmax op to subgraph
         subgraph['operators'].append({
             'opcode_index': opcode_ind,
@@ -262,9 +261,9 @@ def get_ops_replacements(model, subgraph_ind):
                 custom_opcode = XCOps.CONV2D_DEEPIN_DEEPOUT_RELU
                 new_opcodes.add(custom_opcode)
                 op_replacement.append({
-                        "op_ind": j,
-                        "old_opcode": 'CONV_2D',
-                        "new_opcode": custom_opcode
+                    "op_ind": j,
+                    "old_opcode": 'CONV_2D',
+                    "new_opcode": custom_opcode
                 })
             elif tensor_shape[0] % 16 == 0 and tensor_shape[3] <= 4:
                 if tensor_shape[2] > 8:
@@ -276,9 +275,9 @@ def get_ops_replacements(model, subgraph_ind):
                 custom_opcode = XCOps.CONV2D_SHALLOWIN_DEEPOUT_RELU
                 new_opcodes.add(custom_opcode)
                 op_replacement.append({
-                        "op_ind": j,
-                        "old_opcode": 'CONV_2D',
-                        "new_opcode": custom_opcode
+                    "op_ind": j,
+                    "old_opcode": 'CONV_2D',
+                    "new_opcode": custom_opcode
                 })
             else:
                 raise NotImplementedError(
@@ -311,13 +310,13 @@ def get_ops_replacements(model, subgraph_ind):
                     raise NotImplementedError(
                         "No replace rule for DEPTHWISE_CONV_2D with deep output, "
                         f"single input channel, and kernel width {tensor_shape[2]} (> 8)")
-                
+
                 custom_opcode = XCOps.CONV2D_SHALLOWIN_DEEPOUT_RELU
                 new_opcodes.add(custom_opcode)
                 op_replacement.append({
-                        "op_ind": j,
-                        "old_opcode": 'DEPTHWISE_CONV_2D',
-                        "new_opcode": custom_opcode
+                    "op_ind": j,
+                    "old_opcode": 'DEPTHWISE_CONV_2D',
+                    "new_opcode": custom_opcode
                 })
             else:
                 raise NotImplementedError(
@@ -441,10 +440,10 @@ if __name__ == "__main__":
                         help='Path to flatc executable.')
     parser.add_argument('--schema', required=False, default=None,
                         help='Path to .fbs schema file.')
-    parser.add_argument('--classifier',  action='store_true', default=False,
+    parser.add_argument('--classifier', action='store_true', default=False,
                         help="Apply optimizations for classifier networks "
                              "(e.g. softmax removal and output argmax).")
-    parser.add_argument('--remove_softmax',  action='store_true', default=False,
+    parser.add_argument('--remove_softmax', action='store_true', default=False,
                         help="Remove output softmax operation.")
     args = parser.parse_args()
 

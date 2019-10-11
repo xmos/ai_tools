@@ -8,6 +8,7 @@ from tflite2xcore_utils import generate_unique_tensor_name, XCOps
 from tflite2xcore_utils import get_custom_opcode_index, tensor_to_np
 from tflite2xcore_utils import get_input_tensor, get_buffer_data_of_tensor
 
+
 def replace_basic_op(model, subgraph_ind, op_ind, opcode_str):
     subgraph = model['subgraphs'][subgraph_ind]
     custom_opcode_ind = get_custom_opcode_index(model, opcode_str)
@@ -74,8 +75,8 @@ def add_XC_shift_scale(model, subgraph_ind, multiplier, op, opcode_str, bias_siz
         'is_variable': False
     })
     model['buffers'].append({
-        'data': list(b''.join([struct.pack('h', a) for a in rshift])  # pylint: disable=not-an-iterable
-            + b''.join([struct.pack('h', a) for a in scale]))  # pylint: disable=not-an-iterable
+        'data': list(b''.join([struct.pack('h', a) for a in rshift]) +  # pylint: disable=not-an-iterable
+                     b''.join([struct.pack('h', a) for a in scale]))  # pylint: disable=not-an-iterable
     })
 
 
@@ -111,20 +112,20 @@ def replace_with_XC_fc_deepin_shallowout_final(model, subgraph_ind, op_ind):
     model['buffers'][buffer_ind]['data'] = list(bias.tostring())
 
     # rename bias tensor and change quantization mode to alert users to unusual layout
-    bias_tensor['name'] = generate_unique_tensor_name(subgraph,
-        base_name=opcode_str, suffix='/biases')
+    bias_tensor['name'] = generate_unique_tensor_name(
+        subgraph, base_name=opcode_str, suffix='/biases')
     bias_tensor['quantization']['details_type'] = 'CustomQuantization'
 
     # rename weight tensor
     # NOTE: no weight layout rearrangement is done for this op
-    weight_tensor['name'] = generate_unique_tensor_name(subgraph,
-        base_name=opcode_str, suffix='/weights')
+    weight_tensor['name'] = generate_unique_tensor_name(
+        subgraph, base_name=opcode_str, suffix='/weights')
 
     # rename output tensor, change type and quantization
     # NOTE: this is because the op is at the end of a network, and should be followed by argmax/softmax
     output_tensor['type'] = 'INT16'
-    output_tensor['name'] = generate_unique_tensor_name(subgraph,
-        base_name=opcode_str, suffix='/output')
+    output_tensor['name'] = generate_unique_tensor_name(
+        subgraph, base_name=opcode_str, suffix='/output')
     output_tensor['quantization'] = {
         'scale': [output_tensor['quantization']['scale'][0] / 2**7],
         'zero_point': [int(output_tensor['quantization']['zero_point'][0] * 2**7)],
@@ -133,7 +134,6 @@ def replace_with_XC_fc_deepin_shallowout_final(model, subgraph_ind, op_ind):
     }
 
     add_XC_shift_scale(model, subgraph_ind, multiplier, op, opcode_str, bias.size)
-    
 
 
 def replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind, op_ind):
@@ -166,7 +166,7 @@ def replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind, op_ind):
     bias = calculate_unified_bias(weights, bias,
                                   input_zero_point, output_zero_point, multiplier)
     new_bias = np.uint8(list(bias.tostring())).reshape((-1, 4))
-    new_bias = np.vstack([new_bias[:,:2], new_bias[:,2:]]).flatten()
+    new_bias = np.vstack([new_bias[:, :2], new_bias[:, 2:]]).flatten()
 
     # save bias vector data, change type and shape
     buffer_ind = bias_tensor['buffer']
@@ -175,15 +175,15 @@ def replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind, op_ind):
     model['buffers'][buffer_ind]['data'] = list(new_bias.tostring())
 
     # rename bias tensor and change quantization mode to alert users to unusual layout
-    bias_tensor['name'] = generate_unique_tensor_name(subgraph,
-        base_name=opcode_str, suffix='/biases')
+    bias_tensor['name'] = generate_unique_tensor_name(
+        subgraph, base_name=opcode_str, suffix='/biases')
     bias_tensor['quantization']['details_type'] = 'CustomQuantization'
 
     # rearrange weight tensor
     acc_period, ve = 16, 32
-    new_shape = (weights.shape[0]//acc_period, acc_period,
+    new_shape = (weights.shape[0] // acc_period, acc_period,
                  weights.shape[1], weights.shape[2],
-                 weights.shape[3]//ve, ve)
+                 weights.shape[3] // ve, ve)
     weights = weights.reshape(new_shape)
     weights = np.transpose(np.flip(weights, axis=1), axes=(0, 2, 3, 4, 1, 5))
     new_shape = weights.shape
@@ -197,15 +197,15 @@ def replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind, op_ind):
     # rearrange weight quantization parameters
     def reshape_kernel_quantization(arr):
         arr = np.array(arr)
-        arr = arr.reshape((arr.shape[0]//acc_period, acc_period))
+        arr = arr.reshape((arr.shape[0] // acc_period, acc_period))
         return np.flip(arr, axis=1).flatten().tolist()
     weight_quantization = weight_tensor['quantization']
     weight_quantization['scale'] = reshape_kernel_quantization(weight_quantization['scale'])
     weight_quantization['zero_point'] = reshape_kernel_quantization(weight_quantization['zero_point'])
 
     # rename weight tensor
-    weight_tensor['name'] = generate_unique_tensor_name(subgraph,
-        base_name=opcode_str, suffix='/weights')
+    weight_tensor['name'] = generate_unique_tensor_name(
+        subgraph, base_name=opcode_str, suffix='/weights')
 
     add_XC_shift_scale(model, subgraph_ind, multiplier, op, opcode_str, bias.size)
 
@@ -258,7 +258,7 @@ def replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind, op_ind,
     bias = calculate_unified_bias(weights, bias,
                                   input_zero_point, output_zero_point, multiplier)
     new_bias = np.uint8(list(bias.tostring())).reshape((-1, 4))
-    new_bias = np.vstack([new_bias[:,:2], new_bias[:,2:]]).flatten()
+    new_bias = np.vstack([new_bias[:, :2], new_bias[:, 2:]]).flatten()
 
     # save bias vector data, change type and shape
     buffer_ind = bias_tensor['buffer']
@@ -267,8 +267,8 @@ def replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind, op_ind,
     model['buffers'][buffer_ind]['data'] = list(new_bias.tostring())
 
     # rename bias tensor and change quantization mode to alert users to unusual layout
-    bias_tensor['name'] = generate_unique_tensor_name(subgraph,
-        base_name=opcode_str, suffix='/biases')
+    bias_tensor['name'] = generate_unique_tensor_name(
+        subgraph, base_name=opcode_str, suffix='/biases')
     bias_tensor['quantization']['details_type'] = 'CustomQuantization'
 
     # rearrange and zero pad weight tensor
@@ -276,8 +276,10 @@ def replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind, op_ind,
     weight_inds = np.hstack([np.array(range(j+acc_period-1, j-1, -1))
                              for j in range(0, weights.shape[0], acc_period)])
     weights = np.int8(weights[weight_inds, :, :, :])
-    weights = np.pad(weights,
-        pad_width=[(0, 0), (0, 0), (0, 8-weights.shape[2]), (0, 4-weights.shape[3])])
+    weights = np.pad(weights, pad_width=[(0, 0),
+                                         (0, 0),
+                                         (0, 8-weights.shape[2]),
+                                         (0, 4-weights.shape[3])])
 
     # save weight tensor
     buffer_ind = weight_tensor['buffer']
@@ -293,11 +295,11 @@ def replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind, op_ind,
     input_tensor['shape'][3] = 4
 
     # rename input tensor
-    input_tensor['name'] = generate_unique_tensor_name(subgraph,
-        base_name=opcode_str, suffix='/input')
+    input_tensor['name'] = generate_unique_tensor_name(
+        subgraph, base_name=opcode_str, suffix='/input')
 
     # rename weight tensor
-    weight_tensor['name'] = generate_unique_tensor_name(subgraph,
-        base_name=opcode_str, suffix='/weights')
+    weight_tensor['name'] = generate_unique_tensor_name(
+        subgraph, base_name=opcode_str, suffix='/weights')
 
     add_XC_shift_scale(model, subgraph_ind, multiplier, op, opcode_str, bias.size)

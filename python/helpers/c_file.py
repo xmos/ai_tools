@@ -18,6 +18,12 @@ class CFile():
         
         self._build_macro_lookup()
 
+    def get_filenames(self):
+        return [
+            self.header_filename,
+            self.source_filename
+        ]
+
     def _build_macro_lookup(self):
         self._macro_lookup = {}
         for initializer in self.initializers:

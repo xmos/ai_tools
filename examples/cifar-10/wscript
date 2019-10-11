@@ -6,11 +6,11 @@ from itertools import product, starmap
 
 import xwaf.utils.configs as xutils
 
-
 CMD_LINE_BUFFER_BYTES = 256
 
 XN_FILE_MAP = {
-    '700MHz': 'XU316-1024-QF60-C20-750MHz.xn',
+    '600MHz': 'XU316-1024-QF60-C20-600MHz.xn',
+    '750MHz': 'XU316-1024-QF60-C20-750MHz.xn',
     '800MHz': 'XU316-1024-QF60-C20-800MHz.xn'
 }
 
@@ -54,6 +54,7 @@ SHARED_FLAGS = ['-Os',
                 ]
 
 CONFIGS = {
+    '600MHz': ['-DTEST_DEBUG_ON=0'],
     '750MHz': ['-DTEST_DEBUG_ON=0'],
     '800MHz': ['-DTEST_DEBUG_ON=0']
 }

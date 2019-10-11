@@ -18,6 +18,20 @@ TFLITE_TYPE_TO_C_TYPE = {
     # 'COMPLEX64': 'TODO?'
 }
 
+TFLITE_TYPE_TO_BYTES = {
+    'FLOAT32': 4,
+    'FLOAT16': 2,
+    'INT32': 4,
+    'UINT8': 1,
+    'INT64': 8,
+    'INT16': 2,
+    'UINT16': 2,
+    'INT8': 1,
+    # 'STRING': 'TODO',
+    # 'BOOL': 'TODO',
+    # 'COMPLEX64': 'TODO?'
+}
+
 class Operator():
     @classmethod
     def from_dict(cls, operator_dict):
@@ -89,6 +103,12 @@ class Tensor():
 
     def GetShape(self):
         return self.shape
+
+    def GetSize(self):
+        size = TFLITE_TYPE_TO_BYTES[self.type]
+        for s in self.shape:
+            size *= s
+        return size
 
     def GetBuffer(self):
         return self.buffer

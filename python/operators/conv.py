@@ -20,7 +20,7 @@ def make_conv2d_argument_string(inputs, outputs, use_cin):
         elif index == 3:
             scales_offset = C_out
             shifts = f'{cname}[0]'
-            scales = f'{cname}[scales_offset]'
+            scales = f'{cname}[{scales_offset}]'
 
     # output
     tensor = outputs[0]
@@ -50,4 +50,4 @@ class Conv2DDeepInDeepOut():
     def render(self):
         argument_str = make_conv2d_argument_string(self.inputs, self.outputs, use_cin=True)
 
-        return f'//conv2d_deepin_deepout_relu({argument_str});'
+        return f'conv2d_deepin_deepout_relu({argument_str});'

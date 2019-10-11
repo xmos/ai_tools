@@ -8,7 +8,7 @@
 
 #define TEST_INPUT_SIZE = 32 * 32 * 4
 
-static void load_test_input(const char *filename, xc_conv2d_shallowin_deepout_relu_input_t *input)
+static int load_test_input(const char *filename, xc_conv2d_shallowin_deepout_relu_input_t *input)
 {
     FILE *fd = fopen(filename, "rb");
     fseek(fd, 0, SEEK_END);
@@ -17,12 +17,14 @@ static void load_test_input(const char *filename, xc_conv2d_shallowin_deepout_re
 
     if (fsize != esize) {
         printf("Incorrect input file size. Expected %d bytes.\n", esize);
-        exit(1);
+        return 0;
     }
 
     fseek(fd, 0, SEEK_SET);
     fread(input, 1, fsize, fd);
     fclose(fd);
+
+    return 1;
 }
 
 int main(int argc, char *argv[])
@@ -34,7 +36,8 @@ int main(int argc, char *argv[])
     if (argc > 1)
     {
         printf("starting: input filename=%s\n", argv[1]);
-        load_test_input(argv[1], &input);
+        if (!load_test_input(argv[1], &input))
+            return -1;
     } else {
         printf("starting: no input file\n");
     }

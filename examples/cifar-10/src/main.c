@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
         printf("starting: no input file\n");
     }
 
-    xcore_model_quant(&input, &output);
+    cifar_10(&input, &output);
     switch (output[0])
     {
         case 0:

@@ -5,7 +5,6 @@
 # always load examples_common first to avoid debug info dump from tf initialization
 import examples.examples_common as utils
 
-import os
 import argparse
 import logging
 import pathlib

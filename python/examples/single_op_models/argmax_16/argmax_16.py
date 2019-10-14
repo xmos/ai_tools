@@ -12,12 +12,9 @@ import pathlib
 
 import tensorflow as tf
 import numpy as np
-import tflite2xcore_graph_conv as graph_conv
 
-from tensorflow import keras
-from copy import deepcopy
 from tflite_utils import load_tflite_as_json
-from tflite2xcore_utils import clean_unused_buffers, clean_unused_opcodes, clean_unused_tensors
+from tflite2xcore_utils import clean_unused_buffers, clean_unused_tensors
 from tflite2xcore_utils import XCOps
 
 

@@ -127,8 +127,8 @@ def replace_with_XC_fc_deepin_shallowout_final(model, subgraph_ind, op_ind):
     output_tensor['name'] = generate_unique_tensor_name(
         subgraph, base_name=opcode_str, suffix='/output')
     output_tensor['quantization'] = {
-        'scale': [output_tensor['quantization']['scale'][0] / 2**7],
-        'zero_point': [int(output_tensor['quantization']['zero_point'][0] * 2**7)],
+        'scale': [output_tensor['quantization']['scale'][0] / 2**8],
+        'zero_point': [int(output_tensor['quantization']['zero_point'][0] * 2**8)],
         'details_type': "CustomQuantization",
         'quantized_dimension': 0
     }

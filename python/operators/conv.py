@@ -28,7 +28,7 @@ def make_conv2d_argument_string(inputs, outputs, use_cin):
     Y = tensor.GetSanitizedName()
 
     if use_cin:
-        return f'{K}, (data16_t *){B}, {X}, {Y}, {height}, {width}, {K_h}, {K_w}, {C_out}, {C_in}, (int16_t*) &{shifts}, (int16_t*) &{scales}'
+        return f'{K}, (data16_t *){B}, (int8_t *){X}, {Y}, {height}, {width}, {K_h}, {K_w}, {C_out}, {C_in}, (int16_t*) &{shifts}, (int16_t*) &{scales}'
     else:
         return f'{K}, (data16_t *){B}, {X}, {Y}, {height}, {width}, {K_h}, {K_w}, {C_out}, (int16_t*) &{shifts}, (int16_t*) &{scales}'
 
@@ -40,7 +40,7 @@ class Conv2DShallowInDeepOut():
     def render(self):
         argument_str = make_conv2d_argument_string(self.inputs, self.outputs, use_cin=False)
 
-        return f'//conv2d_shallowin_deepout_relu({argument_str});'
+        return f'conv2d_shallowin_deepout_relu({argument_str});'
 
 class Conv2DDeepInDeepOut():
     def __init__(self, inputs, outputs):

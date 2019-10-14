@@ -96,8 +96,8 @@ def generate_code(args):
         sys.exit()
 
     # create function
-    file_basename, _ = os.path.splitext(os.path.basename(args.tflite_input))
-    fun_name = subgraph.GetName() or file_basename
+    #file_basename, _ = os.path.splitext(os.path.basename(args.tflite_input))
+    fun_name = subgraph.GetName() or args.name
     fun_name = re.sub('[^0-9a-zA-Z]+', '_', fun_name)
 
     fun = c_function.CFunction(fun_name,  inputs, outputs, variables)

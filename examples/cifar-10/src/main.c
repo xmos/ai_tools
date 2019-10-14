@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "argmax_16.h"
-#include "cifar-10.h"
+#include "cifar_10.h"
 
 #define TEST_INPUT_SIZE = 32 * 32 * 4
 
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
             snprintf(classification, 6, "truck"); 
             break;
         default:
-            snprintf(classification, 8, "unknown"); 
+            break;
     }
     printf("finished: classification=%s\n", classification);
  

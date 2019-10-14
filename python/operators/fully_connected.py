@@ -23,7 +23,7 @@ def make_fc_argument_string(inputs, outputs):
     shape = tensor.GetShape()
     Y = tensor.GetSanitizedName()
 
-    return f'{W}, {B}, {X}, {Y}, {C_out}, {C_in}, (uint16_t*) &{shifts}, (int16_t*) &{scales}'
+    return f'{W}, {B}, (int8_t *){X}, (int16_t *){Y}, {C_out}, {C_in}, (uint16_t*) &{shifts}, (int16_t*) &{scales}'
 
 class FullyConnectedDeepInShallowOutFinal:
     def __init__(self, inputs, outputs):

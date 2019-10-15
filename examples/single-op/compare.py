@@ -23,6 +23,12 @@ def compare(args):
     for e, c in zip(dequantized_expected, dequantized_computed):
         print(e, c)
 
+    # computed = np.transpose(computed.reshape((5,5,16)), axes=(2,0,1))
+    # computed = computed.reshape((1,5,16))
+    # print(computed)
+    # print('------------------------------------------')
+    # expected = expected.reshape((1,5,16))
+    # print(expected)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

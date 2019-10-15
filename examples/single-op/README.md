@@ -8,5 +8,9 @@
 
 To run in the simulator
 
-    > xsim --args bin/800MHz/single-op_800MHz.xe path/toinput path/to/output
+    > xsim --args bin/800MHz/single-op_800MHz.xe mode path/toinput path/to/output
 
+Supported modes are:
+
+    conv2d_deepin_deepout
+    fc_deepin_shallowout

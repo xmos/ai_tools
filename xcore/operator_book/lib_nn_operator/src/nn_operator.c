@@ -216,10 +216,6 @@ void conv2d_deepin_deepout_relu_c(
 
 #define C_in                            (4)
 #define K_W_DIM                         (8)
-#define KERNEL_GROUP(C_OUT_G_DEX)       K[(C_OUT_G_DEX) * K_h * K_W_DIM * C_in * (VPU_INT8_ACC_PERIOD)]
-#define KERNEL(C_OUT_DEX)               (kernel_group[(15-(C_OUT_DEX)) * K_h * K_W_DIM * C_in ])
-#define KERNEL_VAL(ROW, COL, CH_IN)     (kernel[(ROW)*K_W_DIM*C_in + (COL)*C_in + CH_IN])
-#define X_VAL(ROW, COL, CH_IN)          (X[(ROW)*width*C_in + (COL)*C_in + CH_IN])
 void conv2d_shallowin_deepout_relu_c(
     const int8_t* K, 
     const data16_t* B,
@@ -239,74 +235,79 @@ void conv2d_shallowin_deepout_relu_c(
     const data16_t* B_hi = &B[C_out];
     const data16_t* B_lo = &B[0];
 
+    const int K_row_bytes = K_W_DIM * C_in * VPU_INT8_ACC_PERIOD;
+    const int K_cout_group_bytes = K_row_bytes * K_h;
+
+    const int X_pxl_bytes = C_in;
+    const int X_row_bytes = width * X_pxl_bytes;
+
     for(int ch_out_grp = 0; ch_out_grp < (C_out/(VPU_INT8_ACC_PERIOD)); ch_out_grp++){
 
-        const int8_t* kernel_group = &KERNEL_GROUP(ch_out_grp);
+        const int k_group_offset = ch_out_grp * K_cout_group_bytes;
 
         for(int ch_out = 0; ch_out < VPU_INT8_ACC_PERIOD; ch_out++){
 
             const unsigned actual_chout = ch_out_grp * VPU_INT8_ACC_PERIOD + ch_out;
 
-            const int8_t* kernel = &KERNEL(ch_out);
             const int32_t bias = (B_hi[actual_chout] << 16) | B_lo[actual_chout];
             const int16_t shr = shifts[actual_chout];
             const int16_t scale = scales[actual_chout];
 
             for(int row = 0; row < height; row++){
+
                 for(int col = 0; col < width; col++){
+
                     int32_t acc32 = bias;
 
                     for(int kr = -P_h; kr <= P_h; kr++){
-
-                        //shallowin-deepout processes an entire row of a patch as a single instruction
+                        
+                        if(row+kr < 0 || row+kr >= height)
+                            continue;
 
                         int64_t acc64 = acc32;
 
+                        const int k_row_offset = k_group_offset + (kr + P_h) * K_row_bytes;
+                        const int x_row_offset = (row + kr) * X_row_bytes;
+
                         for(int kc = -P_w; kc <= P_w; kc++){
 
-                            if(row+kr < 0 || row+kr >= height)
-                                continue;
                             if(col+kc < 0 || col+kc >= width)
                                 continue;
+
+                            const int k_cout_offset = k_row_offset + ((VPU_INT8_ACC_PERIOD-1)-ch_out) * K_W_DIM * C_in;
+                            const int k_col_offset = k_cout_offset + (kc + P_w) * C_in;
+                            const int x_col_offset = x_row_offset + (col + kc) * X_pxl_bytes;
                             
                             for(unsigned ch_in = 0; ch_in < C_in; ch_in++){
-                                acc64 += KERNEL_VAL(kr+P_h, kc+P_w, ch_in) * X_VAL(row+kr,col+kc,ch_in);
+
+                                const int k_elm_offset = k_col_offset + ch_in;
+                                const int x_elm_offset = x_col_offset + ch_in;
+
+                                const int8_t K_elm = K[k_elm_offset];
+                                const int8_t X_elm = X[x_elm_offset];
+
+                                // printf("K[%d, %d, %d, %d] -> K[%d]: %d\n", actual_chout, (kr+P_h), (kc+P_w), ch_in, k_elm_offset, K_elm);
+                                
+                                acc64 += ((int32_t)K_elm) * X_elm;
                             }
                         }
                         
                         acc32 = sat_s32(acc64);
                     }
             
-                    // printf("2!!  %ld\n", acc32);
-
                     int16_t res16 = vlsat_single_s16(acc32, shr);
-
-                    // printf("3!!  %d\n", res16);
-
                     if(res16 < 0) res16 = 0;
-                    // printf("4!!  %d\n", res16);
                     res16 = res16 - ((1<<14)-1);
-
-                    // printf("5!!  %d\n", res16);
-
                     res16 = vlmul_single_s16(res16, scale);
-
-                    // printf("6!!  %d\n", res16);
-
                     int8_t res8 = vdepth8_single_s16(res16);
-                    
-                    // printf("7!!  %d\n\n", res8);
-
                     Y[(row*width+col)*C_out + actual_chout] = res8;
+
                     // return;
                 }
             }
         }
     }
 }
-#undef X_VAL
-#undef KERNEL_VAL
-#undef KERNEL
 #undef K_W_DIM
 #undef C_in
 

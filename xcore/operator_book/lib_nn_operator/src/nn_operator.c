@@ -197,11 +197,6 @@ void conv2d_deepin_deepout_relu_c(
                 }
 
                 int16_t res16 = vlsat_single_s16(acc32, shr);
-
-                if(res16 < 0) res16 = 0;
-
-                res16 = res16 - ((1<<14)-1);
-
                 res16 = vlmul_single_s16(res16, scale);
 
                 Y[(row*width+col)*C_out + chout] = vdepth8_single_s16(res16);
@@ -296,8 +291,6 @@ void conv2d_shallowin_deepout_relu_c(
                     }
             
                     int16_t res16 = vlsat_single_s16(acc32, shr);
-                    if(res16 < 0) res16 = 0;
-                    res16 = res16 - ((1<<14)-1);
                     res16 = vlmul_single_s16(res16, scale);
                     int8_t res8 = vdepth8_single_s16(res16);
                     Y[(row*width+col)*C_out + actual_chout] = res8;
@@ -412,5 +405,22 @@ void fc_deepin_shallowout_lin_c(
         res = vlmul_single_s16(res, scales[k]);
 
         Y[k] = res;
+    }
+}
+
+
+void argmax_16_c(
+    const int16_t* A,
+    int32_t* C,
+    const int32_t N)
+{
+    if( N <= 0) return;
+
+    *C = 0;
+
+    for(int32_t i = 1; i < N; i++){
+        if( A[i] > A[*C] ){
+            *C = i;
+        }
     }
 }

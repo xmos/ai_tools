@@ -241,6 +241,17 @@ static inline void fc_deepin_shallowout_lin(
     const int16_t* scales);
 
 
+/**  Argmax to serve as the final layer of a classifier network.
+ *
+ *  \param  A       Tensor of shape (N) using a standard layout.
+ *  \param  C       Output tensor of shape (1).
+ *  \param  N       Number of elements in the input tensor A.
+ */
+static inline void argmax_16(
+    const int16_t* A,
+    int32_t* C,
+    const int32_t N);
+
 
 
 #ifdef __XC__

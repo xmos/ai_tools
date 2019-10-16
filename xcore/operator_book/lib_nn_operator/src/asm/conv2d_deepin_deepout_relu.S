@@ -36,11 +36,6 @@ void conv2d_deepin_deepout_relu_asm(
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
 
-#define ADD_VAL (-((1<<14)-1))
-
-.L_patch_add_vec:
-.short ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL
-
 #define NOOOOP          nop
     
 #define arg_K               r0
@@ -93,9 +88,7 @@ void conv2d_deepin_deepout_relu_asm(
 #define PATCH_SHIFTS                (8)
 #define PATCH_SCALES                (9)
 
-#define PATCH_ADD_VEC               (10)
-
-#define SAVED_REGS_DBL              (6)
+#define SAVED_REGS_DBL              (5)
 
 #define VPU_INT8_ACC_PERIOD_LOG2    (4)
 
@@ -150,8 +143,6 @@ FUNCTION_NAME:
     {   NOOOOP                                  ;   stw r10, sp[PATCH_SCALES]           }
     {   NOOOOP                                  ;   ldw r10, sp[STACK_C_OUT]            }
     {   NOOOOP                                  ;   stw r10, sp[PATCH_CHAN_OUTS]        }
-    ldap r11, .L_patch_add_vec
-    {   NOOOOP                                  ;   stw r11, sp[PATCH_ADD_VEC]          } 
 
 
 .L_cdd_row_loop_top:

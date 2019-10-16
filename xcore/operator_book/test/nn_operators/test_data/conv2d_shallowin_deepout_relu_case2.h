@@ -1,2 +1,4 @@
+#undef TEST_VECTOR_COUNT
+#define TEST_VECTOR_COUNT    (10)
 #undef Y_CHECK
-#define Y_CHECK  -58,-61,-37,-64,-47,-56,-56,-8,-64,-64
+#define Y_CHECK  16,9,-17,7,39,-16,-16,48,34,15

@@ -75,6 +75,12 @@ void fc_deepin_shallowout_lin_c(
     const int16_t* scales);
 
 
+
+void argmax_16_c(
+    const int16_t* A,
+    int32_t* C,
+    const int32_t N);
+
 #ifdef __XC__
 }   //extern "C"
 #endif

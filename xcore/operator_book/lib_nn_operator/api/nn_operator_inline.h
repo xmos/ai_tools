@@ -136,6 +136,24 @@ static inline void fc_deepin_shallowout_lin(
 
 
 
+
+static inline void argmax_16(
+    const int16_t* A,
+    int32_t* C,
+    const int32_t N)
+{
+#if defined(__XS3A__) && (USE_ASM_argmax_16)
+
+    argmax_16_asm(A, C, N);
+
+#else
+
+    argmax_16_c(A, C, N);
+
+#endif
+}
+
+
 #ifdef __XC__
 }   //extern "C"
 #endif

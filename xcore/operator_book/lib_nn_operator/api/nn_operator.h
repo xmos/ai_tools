@@ -131,10 +131,19 @@ static inline void conv2d_deepin_deepout_relu(
  *
  *  \param  K       Kernel weight tensor of shape (C_out, K_h, 8, 4) using
  *                  a non-standard layout such that:
- *                  K[i, j, k, l]  =  K[
- *                    K_h * 8 * 4 * ((i//16 + 1)*16 - i%16 - 1)
- *                    +  8 * 4 * j  +  4 * k  +  l
+ * 
+ *                  K[i, j, k, l] =  L[
+ *                        (i // 16)   * (K_h * 16 * 8 * 4)
+ *                      + (j)         * (16 * 8 * 4)
+ *                      + (15-(i%16)) * (8 * 4)
+ *                      + (k)         * (4)
+ *                      + (l)
  *                  ]
+ *                      where i is the output channel,
+ *                            j is the kernel row,
+ *                            k is the kernel column, and
+ *                            l is the input channel
+ * 
  *                  The weights are zero padded in the 3rd dimension, i.e.
  *                  K[i, j, k, l] is zero for K_w <= k < 8. There may or may
  *                  not be zero padding in the 4th dimension.

@@ -25,6 +25,7 @@ void nn_mat_vec_mul_s8_asm(
     int8_t* y);
 
 
+
     
 #ifndef USE_ASM_conv2d_deepin_deepout_relu
 #define USE_ASM_conv2d_deepin_deepout_relu   (1)
@@ -58,6 +59,37 @@ int8_t* conv2d_deepin_deepout_relu_asm_patch(
     const int16_t* shifts,
     const int16_t* scales,
     const int16_t* add_vector);
+
+#ifndef USE_ASM_conv2d_shallowin_deepout_relu
+#define USE_ASM_conv2d_shallowin_deepout_relu   (1)
+#endif
+void conv2d_shallowin_deepout_relu_asm(
+    const int8_t* K, 
+    const data16_t* B,
+    const int8_t* X, 
+    int8_t* Y,
+    const int32_t height, 
+    const int32_t width,
+    const int32_t K_h, 
+    const int32_t K_w,
+    const int32_t C_out,
+    const int16_t* shifts, 
+    const int16_t* scales);
+    
+
+int8_t* conv2d_shallowin_deepout_relu_asm_patch(
+    int8_t* y,
+    const int8_t* K,
+    const unsigned c_out_groups,
+    const uint32_t pad_mask,
+    const int8_t* X,
+    const unsigned rows,
+    const data16_t* bias_lo,
+    const data16_t* bias_hi,
+    const int16_t* shifts,
+    const int16_t* scales,
+    const unsigned X_row_incr,
+    const unsigned kernel_advance);
 
 
 #ifndef USE_ASM_fc_deepin_shallowout_lin

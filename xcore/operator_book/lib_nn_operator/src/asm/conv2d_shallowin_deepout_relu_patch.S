@@ -66,10 +66,6 @@ int8_t* conv2d_shallowin_deepout_relu_asm_patch(
 .L_zero_vec:
 .int 0,0,0,0,0,0,0,0
 
-#define ADD_VAL (-((1<<14)-1))
-.L_add_vec:
-.short ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL
-
 .L_mode16:
 .int 0x0100
 .L_mode8:
@@ -94,8 +90,8 @@ FUNCTION_NAME:
 // decrement remaining channels, finish if 0
     {   sub cout, cout, 1                       ;   bf cout, .Lfunc_end                 }
 // set VPU mode, reset row_incr
-    {   ldap r11, .L_mode8                      ;   ldc tmp1, 32                        }
-    {   NOOOOP                                  ;   ldw r11, r11[0]                     }
+    {   ldap r11, .L_mode8                      ;   NOOOOP                              }
+    {   ldc tmp1, 32                            ;   ldw r11, r11[0]                     }
     {   mov r11, bias_lo                        ;   vsetc r11                           }
 // load biases
     {   add bias_lo, bias_lo, tmp1              ;   vldr r11[0]                         }
@@ -145,15 +141,11 @@ FUNCTION_NAME:
 .L_patch_sum_end:
 // set VPU mode to 16-bit
     {   ldap r11, .L_mode16                     ;   ldw tmp1, sp[STACK_KERNEL_ADVANCE]  }
-    {   NOOOOP                                  ;   ldw r11, r11[0]                     }
-    {   add k, k, tmp1                          ;   NOOOOP                              }
+    {   add k, k, tmp1                          ;   ldw r11, r11[0]                     }
     {   ldc tmp1, 32                            ;   vsetc r11                           }
 // saturate to 16 bits
     {   add shifts, shifts, tmp1                ;   vlsat shifts[0]                     }
-// apply relu
-    {   ldap r11, .L_add_vec                    ;   vpos                                }
-// add -((2^14)-1)
-    {   ldc r11, 16                             ;   vladd r11[0]                        }
+    {   ldc r11, 16                             ;   NOOOOP                              }
 // apply scales
     {   add scales, scales, tmp1                ;   vlmul scales[0]                     }
     {   mkmsk tmp1, 16                          ;   vdepth8                             }

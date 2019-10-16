@@ -140,7 +140,6 @@ void test_conv2d_deepin_deepout_relu_case1()
 #define K_w             (1)
 #define height          (4)
 #define width           (4)
-#define TEST_VECTORS    (10)
 #define VECTOR_FMT      ("test_data/conv2d_deepin_deepout_relu_case2.%u.dat")
 #include "../test_data/conv2d_deepin_deepout_relu_case2.h"
 void test_conv2d_deepin_deepout_relu_case2()
@@ -157,7 +156,7 @@ void test_conv2d_deepin_deepout_relu_case2()
 
     PRINTF("test_conv2d_deepin_deepout_relu_case2()...\n");
 
-    for(int v = 0; v < TEST_VECTORS; v++){
+    for(int v = 0; v < TEST_VECTOR_COUNT; v++){
         PRINTF("\ttest vector %d...\n", v);
     
         int8_t   WORD_ALIGNED  Y_c[height][width][C_out];
@@ -258,7 +257,6 @@ void test_conv2d_deepin_deepout_relu_case2()
 #define K_w             (3)
 #define height          (4)
 #define width           (4)
-#define TEST_VECTORS    (10)
 #define VECTOR_FMT      ("test_data/conv2d_deepin_deepout_relu_case3.%u.dat")
 #include "../test_data/conv2d_deepin_deepout_relu_case3.h"
 void test_conv2d_deepin_deepout_relu_case3()
@@ -275,7 +273,7 @@ void test_conv2d_deepin_deepout_relu_case3()
 
     PRINTF("test_conv2d_deepin_deepout_relu_case3()...\n");
 
-    for(int v = 0; v < TEST_VECTORS; v++){
+    for(int v = 0; v < TEST_VECTOR_COUNT; v++){
         PRINTF("\ttest vector %d...\n", v);
     
         int8_t   WORD_ALIGNED  Y_c[height][width][C_out];
@@ -376,7 +374,6 @@ void test_conv2d_deepin_deepout_relu_case3()
 #define K_w             (3)
 #define height          (8)
 #define width           (8)
-#define TEST_VECTORS    (4)
 #define VECTOR_FMT      ("test_data/conv2d_deepin_deepout_relu_case4.%u.dat")
 #include "../test_data/conv2d_deepin_deepout_relu_case4.h"
 void test_conv2d_deepin_deepout_relu_case4()
@@ -393,7 +390,7 @@ void test_conv2d_deepin_deepout_relu_case4()
 
     PRINTF("test_conv2d_deepin_deepout_relu_case4()...\n");
 
-    for(int v = 0; v < TEST_VECTORS; v++){
+    for(int v = 0; v < TEST_VECTOR_COUNT; v++){
         PRINTF("\ttest vector %d...\n", v);
     
         int8_t   WORD_ALIGNED  Y_c[height][width][C_out];

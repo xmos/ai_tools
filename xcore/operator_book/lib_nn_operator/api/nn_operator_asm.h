@@ -57,8 +57,7 @@ int8_t* conv2d_deepin_deepout_relu_asm_patch(
     const unsigned chan_outs,          
     const unsigned kernel_advance,
     const int16_t* shifts,
-    const int16_t* scales,
-    const int16_t* add_vector);
+    const int16_t* scales);
 
 #ifndef USE_ASM_conv2d_shallowin_deepout_relu
 #define USE_ASM_conv2d_shallowin_deepout_relu   (1)

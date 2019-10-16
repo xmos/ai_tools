@@ -39,11 +39,6 @@ void conv2d_shallowin_deepout_relu_asm(
 #define VPU_INT8_ACC_PERIOD_LOG2    (4)
 #define K_W_DIM                     (8)
 
-#define ADD_VAL     (-((1<<14)-1))
-
-.L_patch_add_vec:
-.short ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL, ADD_VAL
-
 #define NOOOOP          nop
     
 #define arg_K               r0

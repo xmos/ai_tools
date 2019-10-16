@@ -17,8 +17,7 @@ int8_t* conv2d_deepin_deepout_relu_asm_patch(
     const unsigned chan_outs,          
     const unsigned kernel_advance,
     const int16_t* shifts,
-    const int16_t* scales,
-    const int16_t* sub_vector);
+    const int16_t* scales);
 */
 
 #define FUNCTION_NAME conv2d_deepin_deepout_relu_asm_patch
@@ -48,7 +47,6 @@ int8_t* conv2d_deepin_deepout_relu_asm_patch(
 #define STACK_KERNEL_ADVANCE    (NSTACKWORDS+7)
 #define STACK_SHIFTS            (NSTACKWORDS+8)
 #define STACK_SCALES            (NSTACKWORDS+9)
-#define STACK_ADD_VEC           (NSTACKWORDS+10)
 
 #define STACK_TMP_VEC           (NSTACKWORDS-8)
 #define STACK_MODE8             (7)
@@ -66,6 +64,10 @@ int8_t* conv2d_deepin_deepout_relu_asm_patch(
 #define chan_outs           r9
 #define tmp1                r10
 
+.L_mode16:
+.int 0x0100
+.L_mode8:
+.int 0x0200
 
 
 FUNCTION_NAME:
@@ -88,8 +90,8 @@ FUNCTION_NAME:
 // decrement remaining channels, finish if 0
     {   sub chan_outs, chan_outs, 1             ;   bf chan_outs, .Lfunc_end            }
 // set VPU mode, reset row_incr
-    {   NOOOOP                                  ;   ldw row_iter, sp[STACK_ROWS]        }
-    {   ldc tmp1, 32                            ;   ldw r11, sp[STACK_MODE8]            }
+    {   ldap r11, .L_mode8                      ;   ldw row_iter, sp[STACK_ROWS]        }
+    {   ldc tmp1, 32                            ;   ldw r11, r11[0]                     }
     {   mov r11, bias_lo                        ;   vsetc r11                           }
 // load biases
     {   add bias_lo, bias_lo, tmp1              ;   vldr r11[0]                         }
@@ -132,15 +134,12 @@ FUNCTION_NAME:
 
 .L_patch_sum_end:
 // set VPU mode to 16-bit and saturate
-    {   NOOOOP                                  ;   ldw r11, sp[STACK_MODE16]           }
+    {   ldap r11, .L_mode16                     ;   NOOOOP                              }
+    {   NOOOOP                                  ;   ldw r11, r11[0]                     }
     {   ldc tmp1, 32                            ;   vsetc r11                           }
 // saturate to 16 bits
     {   add shifts, shifts, tmp1                ;   vlsat shifts[0]                     }
-// apply relu
-    {   ldaw tmp1, sp[STACK_ADD_VEC]            ;   vpos                                }
-// add -((2^14)-1)
-    {   NOOOOP                                  ;   ldw tmp1, tmp1[0]                   }
-    {   ldc tmp1, 32                            ;   vladd tmp1[0]                       }
+    {   ldc tmp1, 32                            ;   NOOOOP                              }
     {   ldc r11, 16                             ;   NOOOOP                              }
 // apply scales
     {   add scales, scales, tmp1                ;   vlmul scales[0]                     }

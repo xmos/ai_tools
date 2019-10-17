@@ -83,22 +83,6 @@ def add_XC_shift_scale(model, subgraph_ind, multiplier, op, opcode_str, bias_siz
     })
 
 
-def add_unpadded_shape(model, subgraph_ind, op, opcode_str, unpadded_shape):
-    subgraph = model['subgraphs'][subgraph_ind]
-    op['inputs'].append(len(subgraph['tensors']))
-    subgraph['tensors'].append({
-        'shape': [len(unpadded_shape)],
-        'type': 'INT32',
-        'buffer': len(model['buffers']),
-        'name': generate_unique_tensor_name(
-            subgraph, base_name=opcode_str, suffix='/unpadded_shape'),
-        'is_variable': False
-    })
-    model['buffers'].append({
-        'data': list(np.array(unpadded_shape, dtype=np.int32).tostring())
-    })
-
-
 def replace_with_XC_fc_deepin_shallowout_final(model, subgraph_ind, op_ind):
     opcode_str = XCOps.FC_DEEPIN_SHALLOWOUT_FINAL
     replace_basic_op(model, subgraph_ind, op_ind, opcode_str)
@@ -153,6 +137,17 @@ def replace_with_XC_fc_deepin_shallowout_final(model, subgraph_ind, op_ind):
     }
 
     add_XC_shift_scale(model, subgraph_ind, multiplier, op, opcode_str, bias.size)
+
+
+def rearrange_weight_quantization(weight_tensor, acc_period):
+    def reshape_kernel_quantization(arr):
+        arr = np.array(arr)
+        arr = arr.reshape((arr.shape[0] // acc_period, acc_period))
+        return np.flip(arr, axis=1).flatten().tolist()
+
+    weight_quantization = weight_tensor['quantization']
+    weight_quantization['scale'] = reshape_kernel_quantization(weight_quantization['scale'])
+    weight_quantization['zero_point'] = reshape_kernel_quantization(weight_quantization['zero_point'])
 
 
 def replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind, op_ind):
@@ -214,13 +209,7 @@ def replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind, op_ind):
     weight_tensor['shape'] = list(new_shape)
 
     # rearrange weight quantization parameters
-    def reshape_kernel_quantization(arr):
-        arr = np.array(arr)
-        arr = arr.reshape((arr.shape[0] // acc_period, acc_period))
-        return np.flip(arr, axis=1).flatten().tolist()
-    weight_quantization = weight_tensor['quantization']
-    weight_quantization['scale'] = reshape_kernel_quantization(weight_quantization['scale'])
-    weight_quantization['zero_point'] = reshape_kernel_quantization(weight_quantization['zero_point'])
+    rearrange_weight_quantization(weight_tensor, acc_period)
 
     # rename weight tensor
     weight_tensor['name'] = generate_unique_tensor_name(
@@ -241,6 +230,22 @@ def rearrange_depthwise_weights(model, subgraph_ind, op_ind):
     buffer['data'] = weights.flatten().tolist()
 
     weight_tensor['shape'] = list(weights.shape)
+
+
+def add_unpadded_shape(model, subgraph_ind, op, opcode_str, unpadded_shape):
+    subgraph = model['subgraphs'][subgraph_ind]
+    op['inputs'].append(len(subgraph['tensors']))
+    subgraph['tensors'].append({
+        'shape': [len(unpadded_shape)],
+        'type': 'INT32',
+        'buffer': len(model['buffers']),
+        'name': generate_unique_tensor_name(
+            subgraph, base_name=opcode_str, suffix='/unpadded_shape'),
+        'is_variable': False
+    })
+    model['buffers'].append({
+        'data': list(np.array(unpadded_shape, dtype=np.int32).tostring())
+    })
 
 
 def replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind, op_ind,
@@ -291,23 +296,21 @@ def replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind, op_ind,
     bias_tensor['quantization']['details_type'] = 'CustomQuantization'
 
     # rearrange and zero pad weight tensor
-    acc_period = 16
-    weight_inds = np.hstack([np.array(range(j+acc_period-1, j-1, -1))
-                             for j in range(0, weights.shape[0], acc_period)])
-    weights = np.int8(weights[weight_inds, :, :, :])
     weights = np.pad(weights, pad_width=[(0, 0),
                                          (0, 0),
                                          (0, 8-weights.shape[2]),
                                          (0, 4-weights.shape[3])])
+    acc_period = 16
+    new_shape = (weights.shape[0] // acc_period, acc_period, weights.shape[1], 8, 4)
+    weights = np.int8(weights.reshape(new_shape))
+    weights = np.transpose(np.flip(weights, axis=1), axes=(0, 2, 1, 3, 4))
 
     # save weight tensor
     buffer_ind = weight_tensor['buffer']
     model['buffers'][buffer_ind]['data'] = list(weights.tostring())
 
     # rearrange weight quantization parameters
-    weight_quantization = weight_tensor['quantization']
-    weight_quantization['scale'] = [weight_quantization['scale'][j] for j in weight_inds]
-    weight_quantization['zero_point'] = [weight_quantization['zero_point'][j] for j in weight_inds]
+    rearrange_weight_quantization(weight_tensor, acc_period)
 
     # rename input tensor
     input_tensor['name'] = generate_unique_tensor_name(

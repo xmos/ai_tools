@@ -1,8 +1,11 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import struct
+import flatbuffers
 
 import numpy as np
+
+from copy import deepcopy
 
 from tflite2xcore_utils import generate_unique_tensor_name, XCOps
 from tflite2xcore_utils import get_custom_opcode_index, tensor_to_np
@@ -77,6 +80,22 @@ def add_XC_shift_scale(model, subgraph_ind, multiplier, op, opcode_str, bias_siz
     model['buffers'].append({
         'data': list(b''.join([struct.pack('h', a) for a in rshift]) +  # pylint: disable=not-an-iterable
                      b''.join([struct.pack('h', a) for a in scale]))  # pylint: disable=not-an-iterable
+    })
+
+
+def add_unpadded_shape(model, subgraph_ind, op, opcode_str, unpadded_shape):
+    subgraph = model['subgraphs'][subgraph_ind]
+    op['inputs'].append(len(subgraph['tensors']))
+    subgraph['tensors'].append({
+        'shape': [len(unpadded_shape)],
+        'type': 'INT32',
+        'buffer': len(model['buffers']),
+        'name': generate_unique_tensor_name(
+            subgraph, base_name=opcode_str, suffix='/unpadded_shape'),
+        'is_variable': False
+    })
+    model['buffers'].append({
+        'data': list(np.array(unpadded_shape, dtype=np.int32).tostring())
     })
 
 
@@ -290,10 +309,6 @@ def replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind, op_ind,
     weight_quantization['scale'] = [weight_quantization['scale'][j] for j in weight_inds]
     weight_quantization['zero_point'] = [weight_quantization['zero_point'][j] for j in weight_inds]
 
-    # update zero padded shapes, adjust input tensor name to reflect change
-    weight_tensor['shape'] = list(weights.shape)
-    input_tensor['shape'][3] = 4
-
     # rename input tensor
     input_tensor['name'] = generate_unique_tensor_name(
         subgraph, base_name=opcode_str, suffix='/input')
@@ -303,3 +318,11 @@ def replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind, op_ind,
         subgraph, base_name=opcode_str, suffix='/weights')
 
     add_XC_shift_scale(model, subgraph_ind, multiplier, op, opcode_str, bias.size)
+
+    # save tensor containing original shape
+    # TODO: it would be better to store this as a custom option of the op
+    add_unpadded_shape(model, subgraph_ind, op, opcode_str, weight_tensor['shape'])
+
+    # update zero padded shapes
+    weight_tensor['shape'] = list(weights.shape)
+    input_tensor['shape'][3] = 4

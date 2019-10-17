@@ -148,6 +148,7 @@ def clean_unused_buffers(model):
 
 
 def generate_unique_tensor_name(subgraph, base_name, suffix):
+    # TODO: this is not the right way to do this (but it works for now)
     tensor_names = [t['name'] for t in subgraph['tensors']]
 
     j = 1

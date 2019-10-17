@@ -132,30 +132,34 @@ text {
 <h3>Ops</h3>
 <table><tr>
 <tr>
-<th>index</th><th>inputs</th><th>outputs</th><th>builtin_options</th><th>opcode_index</th></tr>
+<th>index</th><th>inputs</th><th>outputs</th><th>opcode_index</th><th>builtin_options</th><th>custom_options</th></tr>
 <tr>
 <td>0</td><td><span class='tooltip'><span class='tooltipcontent'>5 flatten_input FLOAT32 [1, 32, 1, 1]<br></span>[5]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>1 flatten_input_int8 INT8 [1, 32, 1, 1]<br></span>[1]</span></td>
-<td>None</td>
 <td>QUANTIZE (2)</td>
+<td>None</td>
+<td>None</td>
 </tr>
 <tr>
 <td>1</td><td><span class='tooltip'><span class='tooltipcontent'>1 flatten_input_int8 INT8 [1, 32, 1, 1]<br>3 sequential/dense/MatMul/ReadVariableOp/transpose INT8 [4, 32]<br>4 sequential/dense/MatMul_bias INT32 [4]<br></span>[1, 3, 4]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>2 sequential/dense/BiasAdd INT8 [1, 4]<br></span>[2]</span></td>
-<td>{'fused_activation_function': 'NONE', 'weights_format': 'DEFAULT', 'keep_num_dims': False}</td>
 <td>FULLY_CONNECTED (0)</td>
+<td>{'fused_activation_function': 'NONE', 'weights_format': 'DEFAULT', 'keep_num_dims': False}</td>
+<td>None</td>
 </tr>
 <tr>
 <td>2</td><td><span class='tooltip'><span class='tooltipcontent'>2 sequential/dense/BiasAdd INT8 [1, 4]<br></span>[2]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>0 Identity_int8 INT8 [1, 4]<br></span>[0]</span></td>
-<td>{'beta': 1.0}</td>
 <td>SOFTMAX (1)</td>
+<td>{'beta': 1.0}</td>
+<td>None</td>
 </tr>
 <tr>
 <td>3</td><td><span class='tooltip'><span class='tooltipcontent'>0 Identity_int8 INT8 [1, 4]<br></span>[0]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>6 Identity FLOAT32 [1, 4]<br></span>[6]</span></td>
-<td>None</td>
 <td>DEQUANTIZE (3)</td>
+<td>None</td>
+<td>None</td>
 </tr>
 </table>
 <svg id='subgraph0' width='1600' height='900'></svg>

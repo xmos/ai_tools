@@ -442,9 +442,11 @@ def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin):
     html += "<div class='subgraph'>"
     tensor_mapper = TensorMapper(g)
     opcode_mapper = OpCodeMapper(data)
-    op_keys_to_display = [("inputs", tensor_mapper), ("outputs", tensor_mapper),
-                          ("builtin_options", None), ("opcode_index",
-                                                      opcode_mapper)]
+    op_keys_to_display = [("inputs", tensor_mapper),
+                          ("outputs", tensor_mapper),
+                          ("opcode_index", opcode_mapper),
+                          ("builtin_options", None),
+                          ("custom_options", None)]
     tensor_keys_to_display = [("name", None), ("type", None), ("shape", None),
                               ("buffer", None), ("quantization", None)]
 

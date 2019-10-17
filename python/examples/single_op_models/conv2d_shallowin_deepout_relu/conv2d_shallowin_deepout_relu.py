@@ -24,7 +24,7 @@ from tflite2xcore_utils import XCOps
 DIRNAME = pathlib.Path(__file__).parent
 MODELS_DIR, DATA_DIR = utils.make_aux_dirs(DIRNAME)
 
-DEFAULT_INPUTS = 32
+DEFAULT_INPUTS = 3
 DEFAULT_OUTPUTS = 16
 DEFAULT_K_W = 5
 DEFAULT_K_H = DEFAULT_K_W
@@ -47,11 +47,12 @@ def main(inputs=DEFAULT_INPUTS,
          K_w=DEFAULT_K_W,
          height=DEFAULT_HEIGHT,
          width=DEFAULT_WIDTH):
-    assert inputs % 32 == 0, "Number of input channels must be multiple of 32"
-    assert outputs % 16 == 0, "Number of output channels must be multiple of 16"
-
     keras.backend.clear_session()
     utils.set_all_seeds()
+
+    assert inputs <= 4, "Number of input channels must be at most 4"
+    assert K_w <= 8, "Kernel width must be at most 8"
+    assert outputs % 16 == 0, "Number of output channels must be multiple of 16"
 
     # create model
     model = build_model(
@@ -90,7 +91,7 @@ def main(inputs=DEFAULT_INPUTS,
     # save xcore converted model
     model_xcore = deepcopy(model_quant)
     graph_conv.convert_model(model_xcore, remove_softmax=True)
-    utils.save_from_json(model_xcore, MODELS_DIR, 'model_xcore')
+    model_xcore_file = utils.save_from_json(model_xcore, MODELS_DIR, 'model_xcore')
     utils.save_test_data_for_xcore_model(
         model_xcore, x_test_float, data_dir=DATA_DIR)
 

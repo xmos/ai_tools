@@ -61,9 +61,9 @@ text {
 </head>
 <body>
 <h1>TensorFlow Lite Model</h2><table>
-<tr><th>filename</th><td>models/model_stripped.tflite</td></tr>
+<tr><th>filename</th><td>models/model_xcore.tflite</td></tr>
 <tr><th>version</th><td>3</td></tr>
-<tr><th>description</th><td>TOCO Converted and stripped.</td></tr>
+<tr><th>description</th><td>TOCO + XMOS converted.</td></tr>
 </table>
 <div class='subgraph'><h2>Subgraph 0</h2>
 <h3>Inputs/Outputs</h3>
@@ -71,8 +71,8 @@ text {
 <tr>
 <th>inputs</th><th>outputs</th></tr>
 <tr>
-<td><span class='tooltip'><span class='tooltipcontent'>2 x_int8 INT8 [1, 10]<br></span>[2]</span></td>
-<td><span class='tooltip'><span class='tooltipcontent'>1 Identity INT32 [1]<br></span>[1]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>1 XC_conv2d_shallowin_deepout_relu/input INT8 [1, 5, 5, 4]<br></span>[1]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>0 Identity_int8 INT8 [1, 5, 5, 16]<br></span>[0]</span></td>
 </tr>
 </table>
 <h3>Tensors</h3>
@@ -80,25 +80,46 @@ text {
 <tr>
 <th>index</th><th>name</th><th>type</th><th>shape</th><th>buffer</th><th>quantization</th></tr>
 <tr>
-<td>0</td><td>ArgMax/dimension</td>
-<td>INT32</td>
-<td>None</td>
-<td>2</td>
-<td>{'details_type': 'NONE', 'quantized_dimension': 0}</td>
-</tr>
-<tr>
-<td>1</td><td>Identity</td>
-<td>INT32</td>
-<td>[1]</td>
-<td>0</td>
-<td>{'details_type': 'NONE', 'quantized_dimension': 0}</td>
-</tr>
-<tr>
-<td>2</td><td>x_int8</td>
+<td>0</td><td>Identity_int8</td>
 <td>INT8</td>
-<td>[1, 10]</td>
+<td>[1, 5, 5, 16]</td>
+<td>3</td>
+<td>{'min': [-0.769663], 'max': [0.9339233], 'scale': [0.006680731], 'zero_point': [-13], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>1</td><td>XC_conv2d_shallowin_deepout_relu/input</td>
+<td>INT8</td>
+<td>[1, 5, 5, 4]</td>
+<td>2</td>
+<td>{'min': [0.0], 'max': [0.9989184], 'scale': [0.003917327], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>2</td><td>XC_conv2d_shallowin_deepout_relu/weights</td>
+<td>INT8</td>
+<td>[1, 5, 16, 8, 4]</td>
 <td>1</td>
-<td>{'min': [0.0], 'max': [1.866309], 'scale': [0.007318859], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+<td>{'scale': [0.0008771755, 0.0008844492, 0.0008783011, 0.000880799, 0.0008786127, 0.0008793337, 0.0008790771, 0.0008721456, 0.0008795753, 0.0008706303, 0.0008654804, 0.0008784199, 0.0008844258, 0.0008555881, 0.000872259, 0.0008836325], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>3</td><td>XC_conv2d_shallowin_deepout_relu/biases</td>
+<td>INT16</td>
+<td>[2, 16]</td>
+<td>0</td>
+<td>{'scale': [3.461477e-06, 3.416924e-06, 3.351618e-06, 3.464585e-06, 3.441058e-06, 3.39037e-06, 3.410544e-06, 3.445584e-06, 3.41648e-06, 3.443633e-06, 3.444638e-06, 3.441813e-06, 3.450378e-06, 3.440593e-06, 3.464677e-06, 3.436184e-06], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'CustomQuantization', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>4</td><td>XC_conv2d_shallowin_deepout_relu/shift_scale</td>
+<td>INT16</td>
+<td>[2, 16]</td>
+<td>5</td>
+<td>None</td>
+</tr>
+<tr>
+<td>5</td><td>XC_conv2d_shallowin_deepout_relu/unpadded_shape</td>
+<td>INT32</td>
+<td>[4]</td>
+<td>6</td>
+<td>None</td>
 </tr>
 </table>
 <h3>Ops</h3>
@@ -106,10 +127,10 @@ text {
 <tr>
 <th>index</th><th>inputs</th><th>outputs</th><th>opcode_index</th><th>builtin_options</th><th>custom_options</th></tr>
 <tr>
-<td>0</td><td><span class='tooltip'><span class='tooltipcontent'>2 x_int8 INT8 [1, 10]<br>0 ArgMax/dimension INT32 []<br></span>[2, 0]</span></td>
-<td><span class='tooltip'><span class='tooltipcontent'>1 Identity INT32 [1]<br></span>[1]</span></td>
-<td>ARG_MAX (0)</td>
-<td>{'output_type': 'INT32'}</td>
+<td>0</td><td><span class='tooltip'><span class='tooltipcontent'>1 XC_conv2d_shallowin_deepout_relu/input INT8 [1, 5, 5, 4]<br>2 XC_conv2d_shallowin_deepout_relu/weights INT8 [1, 5, 16, 8, 4]<br>3 XC_conv2d_shallowin_deepout_relu/biases INT16 [2, 16]<br>4 XC_conv2d_shallowin_deepout_relu/shift_scale INT16 [2, 16]<br>5 XC_conv2d_shallowin_deepout_relu/unpadded_shape INT32 [4]<br></span>[1, 2, 3, 4, 5]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>0 Identity_int8 INT8 [1, 5, 5, 16]<br></span>[0]</span></td>
+<td>XC_conv2d_shallowin_deepout_relu (0)</td>
+<td>None</td>
 <td>None</td>
 </tr>
 </table>
@@ -117,7 +138,7 @@ text {
 
   <script>
     // Build graph data
-    var graph = {"nodes": [{"id": "o0", "name": "ARG_MAX (0)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 87}, {"id": "t0", "name": "(0) 'ArgMax/dimension' []", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 335, "y": 100.0, "node_width": 192}, {"id": "t1", "name": "(1) 'Identity' [1]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 140}, {"id": "t2", "name": "(2) 'x_int8' [1, 10]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 155}], "edges": [{"source": "t2", "target": "o0"}, {"source": "t0", "target": "o0"}, {"target": "t1", "source": "o0"}]};
+    var graph = {"nodes": [{"id": "o0", "name": "XC_conv2d_shallowin_deepout_relu (0)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 275}, {"id": "t0", "name": "(0) 'Identity_int8' [1, 5, 5, 16]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 252}, {"id": "t1", "name": "(1) 'XC_conv2d_shallowin_deepout_relu/input' [1, 5, 5, 4]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 432}, {"id": "t2", "name": "(2) 'XC_conv2d_shallowin_deepout_relu/weights' [1, 5, 16, 8, 4]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 612, "y": 100.0, "node_width": 477}, {"id": "t3", "name": "(3) 'XC_conv2d_shallowin_deepout_relu/biases' [2, 16]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1099, "y": 100.0, "node_width": 402}, {"id": "t4", "name": "(4) 'XC_conv2d_shallowin_deepout_relu/shift_scale' [2, 16]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1511, "y": 100.0, "node_width": 440}, {"id": "t5", "name": "(5) 'XC_conv2d_shallowin_deepout_relu/unpadded_shape' [4]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1961, "y": 100.0, "node_width": 432}], "edges": [{"source": "t1", "target": "o0"}, {"source": "t2", "target": "o0"}, {"source": "t3", "target": "o0"}, {"source": "t4", "target": "o0"}, {"source": "t5", "target": "o0"}, {"target": "t0", "source": "o0"}]};
 
     var svg = d3.select("#subgraph0")
     var width = svg.attr("width");
@@ -220,16 +241,25 @@ text {
 <tr>
 <th>index</th><th>data</th></tr>
 <tr>
-<td>0</td><td>--</td>
+<td>0</td><td>64 bytes</td>
 </tr>
 <tr>
-<td>1</td><td>--</td>
+<td>1</td><td>2560 bytes</td>
 </tr>
 <tr>
-<td>2</td><td>4 bytes</td>
+<td>2</td><td>--</td>
 </tr>
 <tr>
-<td>3</td><td>5 bytes</td>
+<td>3</td><td>--</td>
+</tr>
+<tr>
+<td>4</td><td>5 bytes</td>
+</tr>
+<tr>
+<td>5</td><td>64 bytes</td>
+</tr>
+<tr>
+<td>6</td><td>16 bytes</td>
 </tr>
 </table>
 <h2>Operator Codes</h2>
@@ -237,9 +267,9 @@ text {
 <tr>
 <th>index</th><th>builtin_code</th><th>custom_code</th><th>version</th></tr>
 <tr>
-<td>0</td><td>ARG_MAX</td>
-<td>None</td>
-<td>2</td>
+<td>0</td><td>CUSTOM</td>
+<td>XC_conv2d_shallowin_deepout_relu</td>
+<td>1</td>
 </tr>
 </table>
 </body></html>

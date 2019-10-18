@@ -1,5 +1,4 @@
 #include "nn_operator.h"
-#include "argmax_16.h"
 #include "cifar_10.h"
 
 #ifdef __XC__
@@ -31,7 +30,7 @@ void cifar_10(const xc_conv2d_shallowin_deepout_relu_input_t *XC_conv2d_shallowi
      int8_t WORD_ALIGNED sequential_re_lu_1_Relu[1 * 16 * 16 * 32];
      int8_t WORD_ALIGNED sequential_re_lu_2_Relu[1 * 8 * 8 * 64];
 
-     //conv2d_shallowin_deepout_relu(XC_conv2d_shallowin_deepout_relu_weights, (data16_t *)XC_conv2d_shallowin_deepout_relu_biases, (int8_t*)XC_conv2d_shallowin_deepout_relu_input, sequential_re_lu_Relu, 32, 32, 5, 8, 32, (int16_t*) &XC_conv2d_shallowin_deepout_relu_shift_scale[0], (int16_t*) &XC_conv2d_shallowin_deepout_relu_shift_scale[32]);
+     conv2d_shallowin_deepout_relu(XC_conv2d_shallowin_deepout_relu_weights, (data16_t *)XC_conv2d_shallowin_deepout_relu_biases, (int8_t*)XC_conv2d_shallowin_deepout_relu_input, sequential_re_lu_Relu, 32, 32, 5, 8, 32, (int16_t*) &XC_conv2d_shallowin_deepout_relu_shift_scale[0], (int16_t*) &XC_conv2d_shallowin_deepout_relu_shift_scale[32]);
      maxpool2d_deep(sequential_re_lu_Relu, sequential_max_pooling2d_MaxPool, 32, 32, 32);
      conv2d_deepin_deepout_relu(XC_conv2d_deepin_deepout_relu_weights, (data16_t *)XC_conv2d_deepin_deepout_relu_biases, (int8_t *)sequential_max_pooling2d_MaxPool, sequential_re_lu_1_Relu, 16, 16, 5, 5, 32, 32, (int16_t*) &XC_conv2d_deepin_deepout_relu_shift_scale[0], (int16_t*) &XC_conv2d_deepin_deepout_relu_shift_scale[32]);
      maxpool2d_deep(sequential_re_lu_1_Relu, sequential_max_pooling2d_1_MaxPool, 16, 16, 32);

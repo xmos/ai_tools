@@ -1,6 +1,5 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 from numpy import prod
-prod(list)
 
 def make_argmax_argument_string(inputs, outputs):
     # inputs

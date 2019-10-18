@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "argmax_16.h"
 #include "cifar_10.h"
 
 #define TEST_INPUT_SIZE = 32 * 32 * 4

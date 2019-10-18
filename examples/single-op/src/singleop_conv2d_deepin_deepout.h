@@ -7,9 +7,9 @@
 
 #define XC_CONV2D_DEEPIN_DEEPOUT_RELU_SHIFT_SCALE 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 18628, 18640, 18624, 18643, 18606, 18648, 18628, 18547, 18637, 18604, 18586, 18633, 18630, 18648, 18645, 18654
 
-typedef int8_t conv2d_input_int8_t[1 * 5 * 5 * 32];
-typedef int8_t identity_int8_t[1 * 5 * 5 * 16];
+typedef int8_t conv2d_deepin_deepout_input_t[1 * 5 * 5 * 32];
+typedef int8_t conv2d_deepin_deepout_identity_t[1 * 5 * 5 * 16];
 
-void conv2d_deepin_deepout(const conv2d_input_int8_t *conv2d_input_int8, identity_int8_t *Identity_int8);
+void singleop_conv2d_deepin_deepout(const conv2d_deepin_deepout_input_t *conv2d_input_int8, conv2d_deepin_deepout_identity_t *Identity_int8);
 
 #endif /* CONV2D_DEEPIN_DEEPOUT_H */

@@ -10,6 +10,6 @@
 typedef int8_t flatten_input_int8_t[1 * 32 * 1 * 1];
 typedef int16_t xc_fc_deepin_shallowout_final_output_t[1 * 4];
 
-void fc_deepin_shallowout_final(const flatten_input_int8_t *flatten_input_int8, xc_fc_deepin_shallowout_final_output_t *XC_fc_deepin_shallowout_final_output);
+void singleop_fc_deepin_shallowout_final(const flatten_input_int8_t *flatten_input_int8, xc_fc_deepin_shallowout_final_output_t *XC_fc_deepin_shallowout_final_output);
 
 #endif /* FC_DEEPIN_SHALLOWOUT_FINAL_H */

@@ -13,4 +13,6 @@ To run in the simulator
 Supported modes are:
 
     conv2d_deepin_deepout
+    conv2d_shallowin_deepout
     fc_deepin_shallowout
+    argmax

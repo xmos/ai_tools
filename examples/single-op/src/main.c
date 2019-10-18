@@ -4,8 +4,10 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "fc_deepin_shallowout_final.h"
-#include "conv2d_deepin_deepout.h"
+#include "singleop_conv2d_shallowin_deepout.h"
+#include "singleop_conv2d_deepin_deepout.h"
+#include "singleop_fc_deepin_shallowout_final.h"
+#include "singleop_argmax_16.h"
 
 static int load_test_input(const char *filename, int8_t *input, size_t esize)
 {
@@ -34,6 +36,28 @@ static int save_test_input(const char *filename, const int8_t *output, size_t os
     return 1;
 }
 
+int test_argmax(char* input_filename, char* output_filename)
+{
+    argmax_16_x_int16_t input = { 0 };
+    argmax_16_identity_t output = { 0 };
+
+    printf("test_argmax: input filename=%s\n", input_filename);
+    if (!load_test_input(input_filename, (int8_t *) &input, sizeof(input)))
+        return -1;
+
+    singleop_argmax_16(&input, &output);
+
+    printf("outputs:\n");
+    size_t output_len = sizeof(output) / sizeof(output[0]);
+    for (int i=0; i<output_len; i++)
+    {
+        printf("%04X   %ld\n", output[i], output[i]);
+    }
+
+    save_test_input(output_filename, (int8_t *)&output, sizeof(output));
+
+    return 0;
+}
 
 int test_fc_deepin_shallowout(char* input_filename, char* output_filename)
 {
@@ -44,7 +68,7 @@ int test_fc_deepin_shallowout(char* input_filename, char* output_filename)
     if (!load_test_input(input_filename, (int8_t *) &input, sizeof(input)))
         return -1;
 
-    fc_deepin_shallowout_final(&input, &output);
+    singleop_fc_deepin_shallowout_final(&input, &output);
 
     printf("outputs:\n");
     size_t output_len = sizeof(output) / sizeof(output[0]);
@@ -60,14 +84,37 @@ int test_fc_deepin_shallowout(char* input_filename, char* output_filename)
 
 int test_conv2d_deepin_deepout(char* input_filename, char* output_filename)
 {
-    conv2d_input_int8_t input = { 0 };
-    identity_int8_t output = { 0 };
+    conv2d_deepin_deepout_input_t input = { 0 };
+    conv2d_deepin_deepout_identity_t output = { 0 };
 
     printf("test_conv2d_deepin_deepout: input filename=%s\n", input_filename);
     if (!load_test_input(input_filename, (int8_t *) &input, sizeof(input)))
         return -1;
 
-    conv2d_deepin_deepout(&input, &output);
+    singleop_conv2d_deepin_deepout(&input, &output);
+
+    printf("outputs:\n");
+    size_t output_len = sizeof(output) / sizeof(output[0]);
+    for (int i=0; i<output_len; i++)
+    {
+        printf("%04X   %d\n", output[i], output[i]);
+    }
+
+    save_test_input(output_filename, (int8_t *)&output, sizeof(output));
+
+    return 0;
+}
+
+int test_conv2d_shallowin_deepout(char* input_filename, char* output_filename)
+{
+    conv2d_shallowin_deepout_input_t input = { 0 };
+    conv2d_shallowin_deepout_identity_t output = { 0 };
+
+    printf("test_conv2d_shallowin_deepout: input filename=%s\n", input_filename);
+    if (!load_test_input(input_filename, (int8_t *) &input, sizeof(input)))
+        return -1;
+
+    singleop_conv2d_shallowin_deepout(&input, &output);
 
     printf("outputs:\n");
     size_t output_len = sizeof(output) / sizeof(output[0]);
@@ -97,6 +144,14 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[1], "conv2d_deepin_deepout") == 0)
     {
         ret = test_conv2d_deepin_deepout(argv[2], argv[3]);
+    }
+    else if (strcmp(argv[1], "conv2d_shallowin_deepout") == 0)
+    {
+        ret = test_conv2d_shallowin_deepout(argv[2], argv[3]);
+    }
+    else if (strcmp(argv[1], "argmax") == 0)
+    {
+        ret = test_argmax(argv[2], argv[3]);
     }
     else
     {

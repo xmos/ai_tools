@@ -51,7 +51,7 @@ int test_argmax(char* input_filename, char* output_filename)
     size_t output_len = sizeof(output) / sizeof(output[0]);
     for (int i=0; i<output_len; i++)
     {
-        printf("%04X   %ld\n", output[i], output[i]);
+        printf("%04X   %ld\n", (unsigned int) output[i], (long) output[i]);
     }
 
     save_test_input(output_filename, (int8_t *)&output, sizeof(output));

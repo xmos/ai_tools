@@ -15,5 +15,5 @@ const int32_t WORD_ALIGNED XC_conv2d_shallowin_deepout_relu_unpadded_shape[4] = 
 void singleop_conv2d_shallowin_deepout(const conv2d_shallowin_deepout_input_t *XC_conv2d_shallowin_deepout_relu_input, conv2d_shallowin_deepout_identity_t *Identity_int8)
 {
 
-     conv2d_shallowin_deepout_relu(XC_conv2d_shallowin_deepout_relu_weights, (data16_t *)XC_conv2d_shallowin_deepout_relu_biases, (int8_t*)XC_conv2d_shallowin_deepout_relu_input, Identity_int8, 5, 5, 5, 16, 1, (int16_t*) &XC_conv2d_shallowin_deepout_relu_shift_scale[0], (int16_t*) &XC_conv2d_shallowin_deepout_relu_shift_scale[1]);
+     conv2d_shallowin_deepout_relu(XC_conv2d_shallowin_deepout_relu_weights, (data16_t *)XC_conv2d_shallowin_deepout_relu_biases, (int8_t*)XC_conv2d_shallowin_deepout_relu_input, Identity_int8, 5, 5, 5, 5, 16, (int16_t*) &XC_conv2d_shallowin_deepout_relu_shift_scale[0], (int16_t*) &XC_conv2d_shallowin_deepout_relu_shift_scale[16]);
 }

@@ -1,5 +1,6 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import os
+import struct
 
 from tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA
 from tflite_utils import load_tflite_as_json
@@ -240,9 +241,15 @@ class XCOREModel():
     def GetBuffers(self):
         return self.buffers
 
-    def GetBuffer(self, index):
+    def GetBuffer(self, index, stdtype = 'int8_t'):
         if 'data' in self.buffers[index]:
-            return self.buffers[index]['data']
+            bits = self.buffers[index]['data']
+            if stdtype == 'int8_t':
+                return bits
+            elif stdtype == 'int16_t':
+                return [i[0] for i in struct.iter_unpack('h', bytearray(bits))]
+            elif stdtype == 'int32_t':
+                return [i[0] for i in struct.iter_unpack('i', bytearray(bits))]
 
         return None
     

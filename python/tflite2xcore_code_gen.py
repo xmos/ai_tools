@@ -84,7 +84,7 @@ def generate_code(args):
             name = model.GetOperator(node.GetOpcodeIndex())
             input_tensors = indices2tensors(subgraph, node.GetInputs())
             output_tensors = indices2tensors(subgraph, node.GetOutputs())
-            op = operators.create(name, input_tensors, output_tensors)
+            op = operators.create(name, input_tensors, output_tensors, model)
             ops.append(op)
         except operators.UnsupportedOperator as err:
             errs.append(err)

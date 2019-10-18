@@ -13,9 +13,9 @@ class UnimplementedOperator(Exception):
     def __init__(self, name):
         super().__init__(f'Operator {name} not implemented.')
 
-def create(name, inputs=None, outputs=None):
+def create(name, inputs=None, outputs=None, model=None):
     if name == 'XC_conv2d_shallowin_deepout_relu':
-        return conv.Conv2DShallowInDeepOut(inputs, outputs)
+        return conv.Conv2DShallowInDeepOut(inputs, outputs, model)
     elif name == 'XC_conv2d_deepin_deepout_relu':
         return conv.Conv2DDeepInDeepOut(inputs, outputs)
     elif name == 'XC_fc_deepin_shallowout_final':

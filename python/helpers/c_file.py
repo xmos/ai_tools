@@ -32,16 +32,10 @@ class CFile():
                                               #      is a valid macro
             replacement_list = None
             if self.model:
-                buffer = self.model.GetBuffer(initializer.GetBuffer())
                 stdtype = initializer.GetStandardType()
-                if stdtype == 'int8_t':
-                    values = buffer
-                elif stdtype == 'int16_t':
-                    values = [i[0] for i in struct.iter_unpack('h', bytearray(buffer))]
-                elif stdtype == 'int32_t':
-                    values = [i[0] for i in struct.iter_unpack('i', bytearray(buffer))]
+                buffer = self.model.GetBuffer(initializer.GetBuffer(), stdtype)
 
-                replacement_list = ', '.join([str(v) for v in values])
+                replacement_list = ', '.join([str(v) for v in buffer])
 
             self._macro_lookup[name] = {'identifier': identifier, 'replacement-list': replacement_list}
 

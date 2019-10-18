@@ -125,24 +125,27 @@ text {
 <h3>Ops</h3>
 <table><tr>
 <tr>
-<th>index</th><th>inputs</th><th>outputs</th><th>builtin_options</th><th>opcode_index</th></tr>
+<th>index</th><th>inputs</th><th>outputs</th><th>opcode_index</th><th>builtin_options</th><th>custom_options</th></tr>
 <tr>
 <td>0</td><td><span class='tooltip'><span class='tooltipcontent'>4 conv2d_input FLOAT32 [1, 5, 5, 32]<br></span>[4]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>1 conv2d_input_int8 INT8 [1, 5, 5, 32]<br></span>[1]</span></td>
-<td>None</td>
 <td>QUANTIZE (1)</td>
+<td>None</td>
+<td>None</td>
 </tr>
 <tr>
 <td>1</td><td><span class='tooltip'><span class='tooltipcontent'>1 conv2d_input_int8 INT8 [1, 5, 5, 32]<br>2 sequential/conv2d/Conv2D/ReadVariableOp INT8 [16, 5, 5, 32]<br>3 sequential/conv2d/Conv2D_bias INT32 [16]<br></span>[1, 2, 3]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>0 Identity_int8 INT8 [1, 5, 5, 16]<br></span>[0]</span></td>
-<td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'NONE', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
 <td>CONV_2D (0)</td>
+<td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'NONE', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
+<td>None</td>
 </tr>
 <tr>
 <td>2</td><td><span class='tooltip'><span class='tooltipcontent'>0 Identity_int8 INT8 [1, 5, 5, 16]<br></span>[0]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>5 Identity FLOAT32 [1, 5, 5, 16]<br></span>[5]</span></td>
-<td>None</td>
 <td>DEQUANTIZE (2)</td>
+<td>None</td>
+<td>None</td>
 </tr>
 </table>
 <svg id='subgraph0' width='1600' height='900'></svg>

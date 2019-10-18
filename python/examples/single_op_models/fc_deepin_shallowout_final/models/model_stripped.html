@@ -111,12 +111,13 @@ text {
 <h3>Ops</h3>
 <table><tr>
 <tr>
-<th>index</th><th>inputs</th><th>outputs</th><th>builtin_options</th><th>opcode_index</th></tr>
+<th>index</th><th>inputs</th><th>outputs</th><th>opcode_index</th><th>builtin_options</th><th>custom_options</th></tr>
 <tr>
 <td>0</td><td><span class='tooltip'><span class='tooltipcontent'>0 flatten_input_int8 INT8 [1, 32, 1, 1]<br>2 sequential/dense/MatMul/ReadVariableOp/transpose INT8 [4, 32]<br>3 sequential/dense/MatMul_bias INT32 [4]<br></span>[0, 2, 3]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>1 sequential/dense/BiasAdd INT8 [1, 4]<br></span>[1]</span></td>
-<td>{'fused_activation_function': 'NONE', 'weights_format': 'DEFAULT', 'keep_num_dims': False}</td>
 <td>FULLY_CONNECTED (0)</td>
+<td>{'fused_activation_function': 'NONE', 'weights_format': 'DEFAULT', 'keep_num_dims': False}</td>
+<td>None</td>
 </tr>
 </table>
 <svg id='subgraph0' width='1600' height='900'></svg>

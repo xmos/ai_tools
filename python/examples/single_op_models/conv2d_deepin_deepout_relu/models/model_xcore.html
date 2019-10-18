@@ -118,12 +118,13 @@ text {
 <h3>Ops</h3>
 <table><tr>
 <tr>
-<th>index</th><th>inputs</th><th>outputs</th><th>builtin_options</th><th>opcode_index</th></tr>
+<th>index</th><th>inputs</th><th>outputs</th><th>opcode_index</th><th>builtin_options</th><th>custom_options</th></tr>
 <tr>
 <td>0</td><td><span class='tooltip'><span class='tooltipcontent'>1 conv2d_input_int8 INT8 [1, 5, 5, 32]<br>2 XC_conv2d_deepin_deepout_relu/weights INT8 [1, 5, 5, 1, 16, 32]<br>3 XC_conv2d_deepin_deepout_relu/biases INT16 [2, 16]<br>4 XC_conv2d_deepin_deepout_relu/shift_scale INT16 [2, 16]<br></span>[1, 2, 3, 4]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>0 Identity_int8 INT8 [1, 5, 5, 16]<br></span>[0]</span></td>
-<td>None</td>
 <td>XC_conv2d_deepin_deepout_relu (0)</td>
+<td>None</td>
+<td>None</td>
 </tr>
 </table>
 <svg id='subgraph0' width='1600' height='900'></svg>

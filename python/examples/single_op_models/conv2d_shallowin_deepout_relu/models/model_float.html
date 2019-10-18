@@ -61,9 +61,9 @@ text {
 </head>
 <body>
 <h1>TensorFlow Lite Model</h2><table>
-<tr><th>filename</th><td>models/model_stripped.tflite</td></tr>
+<tr><th>filename</th><td>models/model_float.tflite</td></tr>
 <tr><th>version</th><td>3</td></tr>
-<tr><th>description</th><td>TOCO Converted and stripped.</td></tr>
+<tr><th>description</th><td>TOCO Converted.</td></tr>
 </table>
 <div class='subgraph'><h2>Subgraph 0</h2>
 <h3>Inputs/Outputs</h3>
@@ -71,8 +71,8 @@ text {
 <tr>
 <th>inputs</th><th>outputs</th></tr>
 <tr>
-<td><span class='tooltip'><span class='tooltipcontent'>2 x_int8 INT8 [1, 10]<br></span>[2]</span></td>
-<td><span class='tooltip'><span class='tooltipcontent'>1 Identity INT32 [1]<br></span>[1]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>1 conv2d_input FLOAT32 [1, 5, 5, 3]<br></span>[1]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>0 Identity FLOAT32 [1, 5, 5, 16]<br></span>[0]</span></td>
 </tr>
 </table>
 <h3>Tensors</h3>
@@ -80,25 +80,32 @@ text {
 <tr>
 <th>index</th><th>name</th><th>type</th><th>shape</th><th>buffer</th><th>quantization</th></tr>
 <tr>
-<td>0</td><td>ArgMax/dimension</td>
-<td>INT32</td>
-<td>None</td>
+<td>0</td><td>Identity</td>
+<td>FLOAT32</td>
+<td>[1, 5, 5, 16]</td>
+<td>4</td>
+<td>{'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>1</td><td>conv2d_input</td>
+<td>FLOAT32</td>
+<td>[1, 5, 5, 3]</td>
+<td>3</td>
+<td>{'min': [0.0], 'max': [255.0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr>
+<tr>
+<td>2</td><td>sequential/conv2d/Conv2D/ReadVariableOp</td>
+<td>FLOAT32</td>
+<td>[16, 5, 5, 3]</td>
 <td>2</td>
 <td>{'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
-<td>1</td><td>Identity</td>
-<td>INT32</td>
-<td>[1]</td>
-<td>0</td>
-<td>{'details_type': 'NONE', 'quantized_dimension': 0}</td>
-</tr>
-<tr>
-<td>2</td><td>x_int8</td>
-<td>INT8</td>
-<td>[1, 10]</td>
+<td>3</td><td>sequential/conv2d/Conv2D_bias</td>
+<td>FLOAT32</td>
+<td>[16]</td>
 <td>1</td>
-<td>{'min': [0.0], 'max': [1.866309], 'scale': [0.007318859], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+<td>{'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 </table>
 <h3>Ops</h3>
@@ -106,10 +113,10 @@ text {
 <tr>
 <th>index</th><th>inputs</th><th>outputs</th><th>opcode_index</th><th>builtin_options</th><th>custom_options</th></tr>
 <tr>
-<td>0</td><td><span class='tooltip'><span class='tooltipcontent'>2 x_int8 INT8 [1, 10]<br>0 ArgMax/dimension INT32 []<br></span>[2, 0]</span></td>
-<td><span class='tooltip'><span class='tooltipcontent'>1 Identity INT32 [1]<br></span>[1]</span></td>
-<td>ARG_MAX (0)</td>
-<td>{'output_type': 'INT32'}</td>
+<td>0</td><td><span class='tooltip'><span class='tooltipcontent'>1 conv2d_input FLOAT32 [1, 5, 5, 3]<br>2 sequential/conv2d/Conv2D/ReadVariableOp FLOAT32 [16, 5, 5, 3]<br>3 sequential/conv2d/Conv2D_bias FLOAT32 [16]<br></span>[1, 2, 3]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>0 Identity FLOAT32 [1, 5, 5, 16]<br></span>[0]</span></td>
+<td>CONV_2D (0)</td>
+<td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'NONE', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
 <td>None</td>
 </tr>
 </table>
@@ -117,7 +124,7 @@ text {
 
   <script>
     // Build graph data
-    var graph = {"nodes": [{"id": "o0", "name": "ARG_MAX (0)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 87}, {"id": "t0", "name": "(0) 'ArgMax/dimension' []", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 335, "y": 100.0, "node_width": 192}, {"id": "t1", "name": "(1) 'Identity' [1]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 140}, {"id": "t2", "name": "(2) 'x_int8' [1, 10]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 155}], "edges": [{"source": "t2", "target": "o0"}, {"source": "t0", "target": "o0"}, {"target": "t1", "source": "o0"}]};
+    var graph = {"nodes": [{"id": "o0", "name": "CONV_2D (0)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 87}, {"id": "t0", "name": "(0) 'Identity' [1, 5, 5, 16]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 215}, {"id": "t1", "name": "(1) 'conv2d_input' [1, 5, 5, 3]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 237}, {"id": "t2", "name": "(2) 'sequential/conv2d/Conv2D/ReadVariableOp' [16, 5, 5, 3]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 417, "y": 100.0, "node_width": 447}, {"id": "t3", "name": "(3) 'sequential/conv2d/Conv2D_bias' [16]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 874, "y": 100.0, "node_width": 305}], "edges": [{"source": "t1", "target": "o0"}, {"source": "t2", "target": "o0"}, {"source": "t3", "target": "o0"}, {"target": "t0", "source": "o0"}]};
 
     var svg = d3.select("#subgraph0")
     var width = svg.attr("width");
@@ -223,13 +230,19 @@ text {
 <td>0</td><td>--</td>
 </tr>
 <tr>
-<td>1</td><td>--</td>
+<td>1</td><td>64 bytes</td>
 </tr>
 <tr>
-<td>2</td><td>4 bytes</td>
+<td>2</td><td>4800 bytes</td>
 </tr>
 <tr>
-<td>3</td><td>5 bytes</td>
+<td>3</td><td>--</td>
+</tr>
+<tr>
+<td>4</td><td>--</td>
+</tr>
+<tr>
+<td>5</td><td>5 bytes</td>
 </tr>
 </table>
 <h2>Operator Codes</h2>
@@ -237,9 +250,9 @@ text {
 <tr>
 <th>index</th><th>builtin_code</th><th>custom_code</th><th>version</th></tr>
 <tr>
-<td>0</td><td>ARG_MAX</td>
+<td>0</td><td>CONV_2D</td>
 <td>None</td>
-<td>2</td>
+<td>1</td>
 </tr>
 </table>
 </body></html>

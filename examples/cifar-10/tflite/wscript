@@ -9,10 +9,17 @@ import xwaf.utils.configs as xutils
 CMD_LINE_BUFFER_BYTES = 256
 
 XN_FILE_MAP = {
-    '600MHz': 'XU316-1024-QF60-C20-600MHz.xn',
-    '750MHz': 'XU316-1024-QF60-C20-750MHz.xn',
-    '800MHz': 'XU316-1024-QF60-C20-800MHz.xn'
+    '600MHz': '../config/XU316-1024-QF60-C20-600MHz.xn',
+    '750MHz': '../config/XU316-1024-QF60-C20-750MHz.xn',
+    '800MHz': '../config/XU316-1024-QF60-C20-800MHz.xn'
 }
+
+
+def get_bazel_output_base(tensorflow_directory):
+    cmd = 'bazel info output_base'
+    cmd_output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, cwd=tensorflow_directory)
+    cmd_lines = cmd_output.split('\n')
+    return cmd_lines[-2]
 
 def options(ctx):
     ctx.add_option('--config', action='store', default='800MHz')
@@ -29,6 +36,7 @@ def build(bld):
     if not xutils.check_build_config(bld, CONFIGS):
         return
 
+
     bld.env.PROJECT_ROOT = '../../..'
     bld.env.TARGET_ARCH = XN_FILE_MAP[bld.variant]
     bld.env.XCC_XC_FLAGS = bld.env.XCC_FLAGS
@@ -36,22 +44,47 @@ def build(bld):
     params = {}
     params['depends_on'] = ['lib_nn_operator']
     params['source'] = []
+    params['source'].extend(bld.path.ant_glob('src/**/*.cc' ))
     params['source'].extend(bld.path.ant_glob('src/**/*.xc'))
-    params['source'].extend(bld.path.ant_glob('src/**/*.c' ))
     params['source'].extend(bld.path.ant_glob('src/**/*.S' ))
     params['includes'] = ['src/']
-    
+
     ht = bld.options.target is not None
     if ht: params['target'] = 'bin/' + bld.options.target
 
     bld.program(**params)
 
+
+# BEGIN: TensorFlow stuff
+tensorflow_directory = os.path.abspath('../../../../tensorflow')
+bazel_output_base = get_bazel_output_base(tensorflow_directory)
+
+tensorflow_includes = tensorflow_directory
+flatbuffers_includes = os.path.join(bazel_output_base, 'external/flatbuffers/include')
+
+tensorflow_libs = os.path.join(tensorflow_directory, 'tensorflow/lite/experimental/micro/tools/make/gen/xcore_xcore/lib')
+
+TENSORFLOW_FLAGS = [
+    '-DTF_LITE_STATIC_MEMORY',
+    '-DTF_LITE_DISABLE_X86_NEON',
+    '-mcmodel=large',
+    '-DXCORE',
+    '-Wno-unknown-attributes',
+    '-Wno-xcore-fptrgroup',
+    '-I'+flatbuffers_includes,
+    '-I'+tensorflow_includes,
+    '-L'+tensorflow_libs,
+    '-ltensorflow-microlite'
+]
+# END: TensorFlow stuff
+
 SHARED_FLAGS = ['-Os',
                 '-g',
                 '-Wall',
                 '-report',
+                '-std=c++11',
                 '-fcmdline-buffer-bytes={}'.format(CMD_LINE_BUFFER_BYTES)
-                ]
+                ] + TENSORFLOW_FLAGS
 
 CONFIGS = {
     '600MHz': ['-DTEST_DEBUG_ON=0'],

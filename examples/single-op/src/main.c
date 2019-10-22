@@ -27,7 +27,7 @@ static int load_test_input(const char *filename, int8_t *input, size_t esize)
     return 1;
 }
 
-static int save_test_input(const char *filename, const int8_t *output, size_t osize)
+static int save_test_output(const char *filename, const int8_t *output, size_t osize)
 {
     FILE *fd = fopen(filename, "wb");
     fwrite(output , sizeof(int8_t), osize, fd);
@@ -54,7 +54,7 @@ int test_argmax(char* input_filename, char* output_filename)
         printf("%04X   %ld\n", (unsigned int) output[i], (long) output[i]);
     }
 
-    save_test_input(output_filename, (int8_t *)&output, sizeof(output));
+    save_test_output(output_filename, (int8_t *)&output, sizeof(output));
 
     return 0;
 }
@@ -77,7 +77,7 @@ int test_fc_deepin_shallowout(char* input_filename, char* output_filename)
         printf("%04X   %d\n", output[i], output[i]);
     }
 
-    save_test_input(output_filename, (int8_t *)&output, sizeof(output));
+    save_test_output(output_filename, (int8_t *)&output, sizeof(output));
 
     return 0;
 }
@@ -100,7 +100,7 @@ int test_conv2d_deepin_deepout(char* input_filename, char* output_filename)
         printf("%04X   %d\n", output[i], output[i]);
     }
 
-    save_test_input(output_filename, (int8_t *)&output, sizeof(output));
+    save_test_output(output_filename, (int8_t *)&output, sizeof(output));
 
     return 0;
 }
@@ -123,7 +123,7 @@ int test_conv2d_shallowin_deepout(char* input_filename, char* output_filename)
         printf("%04X   %d\n", output[i], output[i]);
     }
 
-    save_test_input(output_filename, (int8_t *)&output, sizeof(output));
+    save_test_output(output_filename, (int8_t *)&output, sizeof(output));
 
     return 0;
 }

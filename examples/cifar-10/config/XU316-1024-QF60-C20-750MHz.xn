@@ -12,7 +12,7 @@
    <Packages>
      <Package id="0" Type="XS3-UnA-1024-QF60">
        <Nodes>
-         <Node Id="0" InPackageId="0" Type="XS3-L16A-1024" SystemFrequency="700MHz">
+         <Node Id="0" InPackageId="0" Type="XS3-L16A-1024" SystemFrequency="750MHz">
            <Tile Number="0" Reference="tile[0]"/>
            <Tile Number="1" Reference="tile[1]"/>
          </Node>

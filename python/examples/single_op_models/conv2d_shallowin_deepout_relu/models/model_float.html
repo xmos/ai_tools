@@ -96,7 +96,7 @@ text {
 <tr>
 <td>2</td><td>sequential/conv2d/Conv2D/ReadVariableOp</td>
 <td>FLOAT32</td>
-<td>[16, 5, 5, 3]</td>
+<td>[16, 3, 3, 3]</td>
 <td>2</td>
 <td>{'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
@@ -113,7 +113,7 @@ text {
 <tr>
 <th>index</th><th>inputs</th><th>outputs</th><th>opcode_index</th><th>builtin_options</th><th>custom_options</th></tr>
 <tr>
-<td>0</td><td><span class='tooltip'><span class='tooltipcontent'>1 conv2d_input FLOAT32 [1, 5, 5, 3]<br>2 sequential/conv2d/Conv2D/ReadVariableOp FLOAT32 [16, 5, 5, 3]<br>3 sequential/conv2d/Conv2D_bias FLOAT32 [16]<br></span>[1, 2, 3]</span></td>
+<td>0</td><td><span class='tooltip'><span class='tooltipcontent'>1 conv2d_input FLOAT32 [1, 5, 5, 3]<br>2 sequential/conv2d/Conv2D/ReadVariableOp FLOAT32 [16, 3, 3, 3]<br>3 sequential/conv2d/Conv2D_bias FLOAT32 [16]<br></span>[1, 2, 3]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>0 Identity FLOAT32 [1, 5, 5, 16]<br></span>[0]</span></td>
 <td>CONV_2D (0)</td>
 <td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'NONE', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
@@ -124,7 +124,7 @@ text {
 
   <script>
     // Build graph data
-    var graph = {"nodes": [{"id": "o0", "name": "CONV_2D (0)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 87}, {"id": "t0", "name": "(0) 'Identity' [1, 5, 5, 16]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 215}, {"id": "t1", "name": "(1) 'conv2d_input' [1, 5, 5, 3]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 237}, {"id": "t2", "name": "(2) 'sequential/conv2d/Conv2D/ReadVariableOp' [16, 5, 5, 3]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 417, "y": 100.0, "node_width": 447}, {"id": "t3", "name": "(3) 'sequential/conv2d/Conv2D_bias' [16]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 874, "y": 100.0, "node_width": 305}], "edges": [{"source": "t1", "target": "o0"}, {"source": "t2", "target": "o0"}, {"source": "t3", "target": "o0"}, {"target": "t0", "source": "o0"}]};
+    var graph = {"nodes": [{"id": "o0", "name": "CONV_2D (0)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 87}, {"id": "t0", "name": "(0) 'Identity' [1, 5, 5, 16]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 215}, {"id": "t1", "name": "(1) 'conv2d_input' [1, 5, 5, 3]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 237}, {"id": "t2", "name": "(2) 'sequential/conv2d/Conv2D/ReadVariableOp' [16, 3, 3, 3]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 417, "y": 100.0, "node_width": 447}, {"id": "t3", "name": "(3) 'sequential/conv2d/Conv2D_bias' [16]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 874, "y": 100.0, "node_width": 305}], "edges": [{"source": "t1", "target": "o0"}, {"source": "t2", "target": "o0"}, {"source": "t3", "target": "o0"}, {"target": "t0", "source": "o0"}]};
 
     var svg = d3.select("#subgraph0")
     var width = svg.attr("width");
@@ -233,7 +233,7 @@ text {
 <td>1</td><td>64 bytes</td>
 </tr>
 <tr>
-<td>2</td><td>4800 bytes</td>
+<td>2</td><td>1728 bytes</td>
 </tr>
 <tr>
 <td>3</td><td>--</td>

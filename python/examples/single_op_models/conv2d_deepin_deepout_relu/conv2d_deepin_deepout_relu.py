@@ -26,10 +26,10 @@ MODELS_DIR, DATA_DIR = utils.make_aux_dirs(DIRNAME)
 
 DEFAULT_INPUTS = 32
 DEFAULT_OUTPUTS = 16
-DEFAULT_K_W = 5
-DEFAULT_K_H = DEFAULT_K_W
-DEFAULT_WIDTH = DEFAULT_K_W
-DEFAULT_HEIGHT = DEFAULT_K_H
+DEFAULT_K_H = 3
+DEFAULT_K_W = DEFAULT_K_H
+DEFAULT_HEIGHT = 5
+DEFAULT_WIDTH = DEFAULT_HEIGHT
 
 
 def build_model(inputs, outputs, K_h, K_w, height, width):
@@ -63,7 +63,9 @@ def main(inputs=DEFAULT_INPUTS,
 
     # create dataset for quantization and examples
     quant_data = np.float32(np.random.uniform(0, 1, size=(10, height, width, inputs)))
-    x_test_float = quant_data[:3, :, :, :]  # pylint: disable=unsubscriptable-object
+    x_test_float = np.concatenate([np.zeros((1, height, width, inputs), dtype=np.float32),
+                                   quant_data[:3, :, :, :]],  # pylint: disable=unsubscriptable-object
+                                  axis=0)
 
     # convert to TFLite float, save model and visualization, save test data
     converter = tf.lite.TFLiteConverter.from_keras_model(model)

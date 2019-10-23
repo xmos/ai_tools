@@ -4,14 +4,13 @@
 #include <stdio.h>
 #include <stdint.h>
 
-//#include "tensorflow/lite/experimental/micro/kernels/all_ops_resolver.h"
+#include "tensorflow/lite/experimental/micro/kernels/all_ops_resolver.h"
 #include "tensorflow/lite/experimental/micro/micro_error_reporter.h"
 #include "tensorflow/lite/experimental/micro/micro_interpreter.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/version.h"
 
 #include "fc_deepin_shallowout_final_model.h"
-#include "xcore_ops_resolver.h"
 
 #define TEST_INPUT_SIZE = 32 * 32 * 4
 
@@ -69,7 +68,7 @@ static void setup() {
     }
 
     // This pulls in all the operation implementations we need.
-    static tflite::ops::micro::XCOREOpsResolver resolver;
+    static tflite::ops::micro::AllOpsResolver resolver;
 
     // Build an interpreter to run the model with.
     static tflite::MicroInterpreter static_interpreter(

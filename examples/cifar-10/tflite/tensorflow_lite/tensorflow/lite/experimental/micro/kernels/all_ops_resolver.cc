@@ -1,7 +1,7 @@
-#include "xcore_ops_resolver.h"
+#include "all_ops_resolver.h"
 
 // XMOS custom operators
-#include "fc_deepin_shallowout_final.h"
+#include "xcore/fc_deepin_shallowout_final.h"
 
 namespace tflite {
 namespace ops {
@@ -46,7 +46,7 @@ TfLiteRegistration* Register_ARG_MAX();
 // TfLiteRegistration* Register_NEG();
 // TfLiteRegistration* Register_ADD();
 
-XCOREOpsResolver::XCOREOpsResolver() {
+AllOpsResolver::AllOpsResolver() {
 //   AddBuiltin(BuiltinOperator_DEPTHWISE_CONV_2D, Register_DEPTHWISE_CONV_2D());
 //   AddBuiltin(BuiltinOperator_FULLY_CONNECTED, Register_FULLY_CONNECTED(),
 //              /* min_version */ 1,

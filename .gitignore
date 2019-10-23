@@ -13,6 +13,7 @@ ai_tools_gpu_venv/*
 # build cruft
 _build
 **/.build/
+*.o
 
 # MacOS cruft
 .DS_Store

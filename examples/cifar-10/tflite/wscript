@@ -21,7 +21,6 @@ SHARED_FLAGS = [
     '-Wall',
     '-report',
     '-Wcpp,-std=c++11',
-    #'-std=c++11',
     '-DTF_LITE_STATIC_MEMORY',
     '-DTF_LITE_DISABLE_X86_NEON',
     # '-mcmodel=large',
@@ -46,19 +45,9 @@ def build(bld):
     if not xutils.check_build_config(bld, CONFIGS):
         return
 
-
-    # bld.env.PROJECT_ROOT = '../../..'
-    # print(bld.env)
-    # exit()
     bld.env.PROJECT_ROOT = '.'
     bld.env.TARGET_ARCH = XN_FILE_MAP[bld.variant]
     bld.env.XCC_XC_FLAGS = bld.env.XCC_FLAGS
-    # bld.env.XCC_CXX_FLAGS = bld.env.XCC_FLAGS + ['-std=c++11']
-    # bld.env.XCC_CC_FLAGS = bld.env.XCC_FLAGS + ['-std=c11']
-
-    # CXXFLAGS = $(PLATFORM_ARGS) -std=c++11    '-std=c++11',
-
-    #   CCFLAGS = $(PLATFORM_ARGS) -std=c11
 
     params = {}
 

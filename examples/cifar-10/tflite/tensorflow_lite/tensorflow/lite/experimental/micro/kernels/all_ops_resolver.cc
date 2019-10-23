@@ -1,6 +1,10 @@
 #include "all_ops_resolver.h"
 
 // XMOS custom operators
+#include "xcore/maxpool.h"
+#include "xcore/argmax.h"
+#include "xcore/conv2d_deepin_deepout.h"
+#include "xcore/conv2d_shallowin_deepout.h"
 #include "xcore/fc_deepin_shallowout_final.h"
 
 namespace tflite {
@@ -25,7 +29,7 @@ namespace micro {
 // TfLiteRegistration* Register_FLOOR();
 // TfLiteRegistration* Register_MAXIMUM();
 // TfLiteRegistration* Register_MINIMUM();
-TfLiteRegistration* Register_ARG_MAX();
+// TfLiteRegistration* Register_ARG_MAX();
 // TfLiteRegistration* Register_ARG_MIN();
 // TfLiteRegistration* Register_LOGICAL_OR();
 // TfLiteRegistration* Register_LOGICAL_AND();
@@ -52,7 +56,7 @@ AllOpsResolver::AllOpsResolver() {
 //              /* min_version */ 1,
 //              /* max_version */ 4);
 //   AddBuiltin(BuiltinOperator_MAX_POOL_2D, Register_MAX_POOL_2D());
-//   AddBuiltin(BuiltinOperator_SOFTMAX, Register_SOFTMAX());
+  //  AddBuiltin(BuiltinOperator_SOFTMAX, Register_SOFTMAX());
 //   AddBuiltin(BuiltinOperator_SVDF, Register_SVDF());
 //   AddBuiltin(BuiltinOperator_CONV_2D, Register_CONV_2D());
 //   AddBuiltin(BuiltinOperator_AVERAGE_POOL_2D, Register_AVERAGE_POOL_2D());
@@ -67,7 +71,7 @@ AllOpsResolver::AllOpsResolver() {
 //   AddBuiltin(BuiltinOperator_FLOOR, Register_FLOOR());
 //   AddBuiltin(BuiltinOperator_MAXIMUM, Register_MAXIMUM());
 //   AddBuiltin(BuiltinOperator_MINIMUM, Register_MINIMUM());
-  AddBuiltin(BuiltinOperator_ARG_MAX, Register_ARG_MAX());
+//   AddBuiltin(BuiltinOperator_ARG_MAX, Register_ARG_MAX());
 //   AddBuiltin(BuiltinOperator_ARG_MIN, Register_ARG_MIN());
 //   AddBuiltin(BuiltinOperator_LOGICAL_OR, Register_LOGICAL_OR());
 //   AddBuiltin(BuiltinOperator_LOGICAL_AND, Register_LOGICAL_AND());
@@ -89,8 +93,11 @@ AllOpsResolver::AllOpsResolver() {
 //   AddBuiltin(BuiltinOperator_UNPACK, Register_UNPACK());
 //   AddBuiltin(BuiltinOperator_NEG, Register_NEG());
 //   AddBuiltin(BuiltinOperator_ADD, Register_ADD());
-    AddCustom("XC_fc_deepin_shallowout_final", Register_FullyConnectedDeepinShallowoutFinal());
-
+    AddCustom("XC_argmax_16", Register_ArgMax16());
+    AddCustom("XC_maxpool2d_deep", Register_MaxPool2DDeep());
+    AddCustom("XC_fc_deepin_shallowout_final", Register_FCDeepinShallowoutFinal());
+    AddCustom("XC_conv2d_shallowin_deepout_relu", Register_Conv2DShallowinDeepoutFinal());
+    AddCustom("XC_conv2d_deepin_deepout_relu", Register_Conv2DDeepinDeepoutFinal());
 }
 
 }  // namespace micro

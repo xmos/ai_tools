@@ -18,8 +18,7 @@ KNOWN_OPERATOR_FUNCTIONS = [
     'conv2d_shallowin_deepout_relu_asm',
     'conv2d_shallowin_deepout_relu_c',
     'maxpool2d_deep_asm',
-    'maxpool2d_deep_c',
-    'tflite::reference_ops::FullyConnected'
+    'maxpool2d_deep_c'
 ]
 
 def load_config(config_filename):
@@ -43,6 +42,7 @@ def load_config(config_filename):
 def xsim_bench(args):
     xe_file = os.path.abspath(args.xe)
     output_dir = os.path.abspath(args.output)
+    trace_functions = KNOWN_OPERATOR_FUNCTIONS + args.functions
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -75,7 +75,7 @@ def xsim_bench(args):
             while line:
                 index_plus = line.find('+', XSIM_TRACE_START_COLUMN)
                 trace_function = line[XSIM_TRACE_START_COLUMN:index_plus].strip()
-                if trace_function in KNOWN_OPERATOR_FUNCTIONS:
+                if trace_function in trace_functions:
                     index_colon = line.find(':', index_plus)
                     index_whitespace = line.find(' ', index_colon+2)
 
@@ -126,6 +126,7 @@ if __name__ == "__main__":
     parser.add_argument('-x', '--xe', required=True, help='Input .xe file')
     parser.add_argument('-a', '--args', help='Argument to pass to .xe file')
     parser.add_argument('-o', '--output', default=os.getcwd(), help='Output directory')
+    parser.add_argument('-f', '--function', dest='functions', action='append', default=[], help='Additional function to time')
     parser.add_argument('--verbose', action='store_true', help='Verbose mode')
     args = parser.parse_args()
 

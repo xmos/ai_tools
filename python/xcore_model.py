@@ -169,8 +169,17 @@ class Subgraph():
         return self.tensors
 
     def GetTensor(self, index):
-        """Return one Tensors."""
+        """Return one Tensor."""
         return self.tensors[index]
+
+    def GetTensors(self, indices):
+        """Return a list of Tensor wit the given indices."""
+        tensors = []
+
+        for index in indices:
+            tensors.append(self.tensors[index])
+
+        return tensors
 
     def GetOperators(self):
         """Return all Operators."""

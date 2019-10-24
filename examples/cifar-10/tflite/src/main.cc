@@ -7,7 +7,7 @@
 #include "tensorflow/lite/experimental/micro/kernels/all_ops_resolver.h"
 #include "tensorflow/lite/experimental/micro/micro_error_reporter.h"
 #include "tensorflow/lite/experimental/micro/micro_interpreter.h"
-#include "tensorflow/lite/schema/schema_generated.h"
+//#include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/version.h"
 
 #include "cifar10_model.h"
@@ -19,7 +19,7 @@ const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
-constexpr int kTensorArenaSize = 100000;  //TODO: How can this be determined?
+constexpr int kTensorArenaSize = 50000;  //TODO: How can this be determined?
 uint8_t tensor_arena[kTensorArenaSize];
 
 static int load_test_input(const char *filename, char *input, size_t esize)

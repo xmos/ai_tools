@@ -10,14 +10,6 @@ import xcore_model
 import operators
 from helpers import c_file, c_function
 
-def indices2tensors(subgraph, tensors_indices):
-    tensors = []
-
-    for tensor_index in tensors_indices:
-        tensors.append(subgraph.GetTensor(tensor_index))
-
-    return tensors
-
 def generate_code(args):
     verbose = args.verbose
 
@@ -82,8 +74,8 @@ def generate_code(args):
     for node in nodes:
         try:
             name = model.GetOperator(node.GetOpcodeIndex())
-            input_tensors = indices2tensors(subgraph, node.GetInputs())
-            output_tensors = indices2tensors(subgraph, node.GetOutputs())
+            input_tensors = subgraph.GetTensors(node.GetInputs())
+            output_tensors = subgraph.GetTensors(node.GetOutputs())
             op = operators.create(name, input_tensors, output_tensors, model)
             ops.append(op)
         except operators.UnsupportedOperator as err:

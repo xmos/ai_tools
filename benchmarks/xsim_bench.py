@@ -52,9 +52,9 @@ def xsim_bench(args):
     with open(log_filename, 'w') as log:
         # run xsim
         if args.args:
-            cmd = 'xsim -t --args {} {} > {}'.format(xe_file, args.args, XSIM_TRACE_FILENAME)
+            cmd = 'xsim --trace --enable-fnop-tracing --args {} {} > {}'.format(xe_file, args.args, XSIM_TRACE_FILENAME)
         else:
-            cmd = 'xsim -t {} > {}'.format(xe_file, XSIM_TRACE_FILENAME)
+            cmd = 'xsim --trace --enable-fnop-tracing {} > {}'.format(xe_file, XSIM_TRACE_FILENAME)
         print('running: {}'.format(cmd), file=log)
         xsim_output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, cwd=output_dir)
         print(xsim_output.decode('utf-8'), file=log)
@@ -73,15 +73,16 @@ def xsim_bench(args):
         with open(os.path.join(output_dir, XSIM_TRACE_FILENAME)) as fp:
             line = fp.readline()
             while line:
+                tile = line[:7]
+                core = line[8]
                 index_plus = line.find('+', XSIM_TRACE_START_COLUMN)
                 trace_function = line[XSIM_TRACE_START_COLUMN:index_plus].strip()
+
                 if trace_function in trace_functions:
                     index_colon = line.find(':', index_plus)
                     index_whitespace = line.find(' ', index_colon+2)
 
                     instruction = line[index_colon+2:index_whitespace].strip()
-                    tile = line[:7]
-                    core = line[8]
 
                     tracking_key = (tile, core, trace_function)
 
@@ -92,6 +93,7 @@ def xsim_bench(args):
                         tracked_operator ={
                             'identifier': trace_function,
                             'entry_cycle_clock': entry_cycle_clock,
+                            'instructions': 0,
                             'tiles': {
                                 tile: set([core])
                             }
@@ -100,6 +102,8 @@ def xsim_bench(args):
                     elif instruction == 'retsp':
                         # operator function exit
                         tracked_operator = tracked_operators[tracking_key]
+                        tracked_operator['instructions'] += 1
+
                         identifier = tracked_operator['identifier']
                         entry_cycle_clock = tracked_operator['entry_cycle_clock']
 
@@ -111,13 +115,15 @@ def xsim_bench(args):
                         print(f'{identifier}: {duration} us')
                         for tile_id, cores_used in tracked_operator['tiles'].items():
                             cores_used_str = ','.join(cores_used)
-                            print(f'   {tile_id}  cores: {cores_used_str}')
+                            num_insts = tracked_operator['instructions']
+                            print(f'   {tile_id}  cores: [{cores_used_str}]  instructions: {num_insts}')
 
                         # remove tracked operator
                         del tracked_operators[tracking_key]
                     else:
                         tracked_operator = tracked_operators[tracking_key]
                         tracked_operator['tiles'][tile].add(core)
+                        tracked_operator['instructions'] += 1
 
                 line = fp.readline()
 

@@ -14,8 +14,7 @@ namespace ops {
 namespace micro {
 
 TfLiteStatus Conv2DShallowinDeepoutPrepare(TfLiteContext* context, TfLiteNode* node) {
-    // TF_LITE_ENSURE_EQ(context, NumInputs(node), 5);
-    TF_LITE_ENSURE_EQ(context, NumInputs(node), 4);
+    TF_LITE_ENSURE_EQ(context, NumInputs(node), 5);
     TF_LITE_ENSURE_EQ(context, NumOutputs(node), 1);
 
     return kTfLiteOk;

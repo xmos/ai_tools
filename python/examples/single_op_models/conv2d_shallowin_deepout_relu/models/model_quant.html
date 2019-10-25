@@ -84,7 +84,7 @@ text {
 <td>INT8</td>
 <td>[1, 5, 5, 16]</td>
 <td>4</td>
-<td>{'min': [-0.769663], 'max': [0.9339233], 'scale': [0.006680731], 'zero_point': [-13], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+<td>{'min': [-0.737834], 'max': [0.7663607], 'scale': [0.005898803], 'zero_point': [-3], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
 <td>1</td><td>conv2d_input_int8</td>
@@ -96,16 +96,16 @@ text {
 <tr>
 <td>2</td><td>sequential/conv2d/Conv2D/ReadVariableOp</td>
 <td>INT8</td>
-<td>[16, 5, 5, 3]</td>
+<td>[16, 3, 3, 3]</td>
 <td>2</td>
-<td>{'scale': [0.0008836325, 0.000872259, 0.0008555881, 0.0008844258, 0.0008784199, 0.0008654804, 0.0008706303, 0.0008795753, 0.0008721456, 0.0008790771, 0.0008793337, 0.0008786127, 0.000880799, 0.0008783011, 0.0008844492, 0.0008771755], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+<td>{'scale': [0.001472721, 0.001407866, 0.00142598, 0.001384166, 0.001281134, 0.001442467, 0.001353607, 0.001465959, 0.0013398, 0.001465129, 0.001465556, 0.001439794, 0.001467998, 0.001458828, 0.001457012, 0.001461959], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
 <td>3</td><td>sequential/conv2d/Conv2D_bias</td>
 <td>INT32</td>
 <td>[16]</td>
 <td>1</td>
-<td>{'scale': [3.461477e-06, 3.416924e-06, 3.351618e-06, 3.464585e-06, 3.441058e-06, 3.39037e-06, 3.410544e-06, 3.445584e-06, 3.41648e-06, 3.443633e-06, 3.444638e-06, 3.441813e-06, 3.450378e-06, 3.440593e-06, 3.464677e-06, 3.436184e-06], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+<td>{'scale': [5.769129e-06, 5.515073e-06, 5.586031e-06, 5.422232e-06, 5.018623e-06, 5.650616e-06, 5.302522e-06, 5.74264e-06, 5.248436e-06, 5.739388e-06, 5.741063e-06, 5.640145e-06, 5.75063e-06, 5.714708e-06, 5.707594e-06, 5.726972e-06], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
 <td>4</td><td>conv2d_input</td>
@@ -134,7 +134,7 @@ text {
 <td>None</td>
 </tr>
 <tr>
-<td>1</td><td><span class='tooltip'><span class='tooltipcontent'>1 conv2d_input_int8 INT8 [1, 5, 5, 3]<br>2 sequential/conv2d/Conv2D/ReadVariableOp INT8 [16, 5, 5, 3]<br>3 sequential/conv2d/Conv2D_bias INT32 [16]<br></span>[1, 2, 3]</span></td>
+<td>1</td><td><span class='tooltip'><span class='tooltipcontent'>1 conv2d_input_int8 INT8 [1, 5, 5, 3]<br>2 sequential/conv2d/Conv2D/ReadVariableOp INT8 [16, 3, 3, 3]<br>3 sequential/conv2d/Conv2D_bias INT32 [16]<br></span>[1, 2, 3]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>0 Identity_int8 INT8 [1, 5, 5, 16]<br></span>[0]</span></td>
 <td>CONV_2D (0)</td>
 <td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'NONE', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
@@ -152,7 +152,7 @@ text {
 
   <script>
     // Build graph data
-    var graph = {"nodes": [{"id": "o0", "name": "QUANTIZE (1)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 95}, {"id": "o1", "name": "CONV_2D (0)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 400, "node_width": 87}, {"id": "o2", "name": "DEQUANTIZE (2)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 600, "node_width": 110}, {"id": "t0", "name": "(0) 'Identity_int8' [1, 5, 5, 16]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 500.0, "node_width": 252}, {"id": "t1", "name": "(1) 'conv2d_input_int8' [1, 5, 5, 3]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 275}, {"id": "t2", "name": "(2) 'sequential/conv2d/Conv2D/ReadVariableOp' [16, 5, 5, 3]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 455, "y": 300.0, "node_width": 447}, {"id": "t3", "name": "(3) 'sequential/conv2d/Conv2D_bias' [16]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 912, "y": 300.0, "node_width": 305}, {"id": "t4", "name": "(4) 'conv2d_input' [1, 5, 5, 3]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 237}, {"id": "t5", "name": "(5) 'Identity' [1, 5, 5, 16]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 700.0, "node_width": 215}], "edges": [{"source": "t4", "target": "o0"}, {"target": "t1", "source": "o0"}, {"source": "t1", "target": "o1"}, {"source": "t2", "target": "o1"}, {"source": "t3", "target": "o1"}, {"target": "t0", "source": "o1"}, {"source": "t0", "target": "o2"}, {"target": "t5", "source": "o2"}]};
+    var graph = {"nodes": [{"id": "o0", "name": "QUANTIZE (1)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 95}, {"id": "o1", "name": "CONV_2D (0)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 400, "node_width": 87}, {"id": "o2", "name": "DEQUANTIZE (2)", "text_color": "#eeeeee", "fill_color": "#000000", "edge_radius": 10, "x": 200, "y": 600, "node_width": 110}, {"id": "t0", "name": "(0) 'Identity_int8' [1, 5, 5, 16]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 500.0, "node_width": 252}, {"id": "t1", "name": "(1) 'conv2d_input_int8' [1, 5, 5, 3]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 275}, {"id": "t2", "name": "(2) 'sequential/conv2d/Conv2D/ReadVariableOp' [16, 3, 3, 3]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 455, "y": 300.0, "node_width": 447}, {"id": "t3", "name": "(3) 'sequential/conv2d/Conv2D_bias' [16]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 912, "y": 300.0, "node_width": 305}, {"id": "t4", "name": "(4) 'conv2d_input' [1, 5, 5, 3]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 237}, {"id": "t5", "name": "(5) 'Identity' [1, 5, 5, 16]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 700.0, "node_width": 215}], "edges": [{"source": "t4", "target": "o0"}, {"target": "t1", "source": "o0"}, {"source": "t1", "target": "o1"}, {"source": "t2", "target": "o1"}, {"source": "t3", "target": "o1"}, {"target": "t0", "source": "o1"}, {"source": "t0", "target": "o2"}, {"target": "t5", "source": "o2"}]};
 
     var svg = d3.select("#subgraph0")
     var width = svg.attr("width");
@@ -261,7 +261,7 @@ text {
 <td>1</td><td>64 bytes</td>
 </tr>
 <tr>
-<td>2</td><td>1200 bytes</td>
+<td>2</td><td>432 bytes</td>
 </tr>
 <tr>
 <td>3</td><td>--</td>

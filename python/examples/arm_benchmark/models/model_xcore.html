@@ -61,7 +61,7 @@ text {
 </head>
 <body>
 <h1>TensorFlow Lite Model</h2><table>
-<tr><th>filename</th><td>models/model_xcore.tflite</td></tr>
+<tr><th>filename</th><td>model_xcore.tflite</td></tr>
 <tr><th>version</th><td>3</td></tr>
 <tr><th>description</th><td>TOCO + XMOS converted.</td></tr>
 </table>
@@ -72,7 +72,7 @@ text {
 <th>inputs</th><th>outputs</th></tr>
 <tr>
 <td><span class='tooltip'><span class='tooltipcontent'>0 XC_conv2d_shallowin_deepout_relu/input INT8 [1, 32, 32, 4]<br></span>[0]</span></td>
-<td><span class='tooltip'><span class='tooltipcontent'>20 XC_argmax_16/output INT32 [1, 1]<br></span>[20]</span></td>
+<td><span class='tooltip'><span class='tooltipcontent'>21 XC_argmax_16/output INT32 [1, 1]<br></span>[21]</span></td>
 </tr>
 </table>
 <h3>Tensors</h3>
@@ -89,14 +89,14 @@ text {
 <tr>
 <td>1</td><td>XC_conv2d_shallowin_deepout_relu/weights</td>
 <td>INT8</td>
-<td>[32, 5, 8, 4]</td>
+<td>[2, 5, 16, 8, 4]</td>
 <td>5</td>
 <td>{'scale': [0.007322574, 0.003603106, 0.03351439, 0.01687657, 0.01910751, 0.0210215, 0.02210804, 0.002236823, 0.02168585, 0.01141972, 0.007479341, 0.007715709, 0.007488069, 0.01411381, 0.004562116, 0.02614255, 0.005177919, 0.0050603, 0.007287538, 0.02519669, 0.002117885, 0.01978992, 0.01534561, 0.003970403, 0.01053769, 0.005805769, 0.0454074, 0.004617836, 0.0133601, 0.009034597, 0.004826852, 0.006068414], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
-<td>2</td><td>XC_conv2d_shallowin_deepout_relu/biases</td>
+<td>2</td><td>XC_conv2d_shallowin_deepout_relu/biases_padded</td>
 <td>INT16</td>
-<td>[2, 32]</td>
+<td>[5, 5, 2, 32]</td>
 <td>4</td>
 <td>{'scale': [0.0001025198, 1.789065e-05, 5.534829e-05, 2.936498e-05, 3.025768e-05, 2.933075e-05, 4.478323e-05, 8.504255e-05, 8.771854e-06, 8.669818e-05, 8.243725e-05, 7.493141e-05, 6.618263e-05, 0.000131429, 1.412983e-05, 2.871598e-05, 2.37977e-05, 1.892883e-05, 3.54298e-05, 5.239254e-05, 1.810916e-05, 0.0001780683, 2.276772e-05, 4.132427e-05, 1.557021e-05, 6.017886e-05, 7.760752e-05, 8.305433e-06, 9.881057e-05, 2.857858e-05, 1.984431e-05, 2.030557e-05], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'CustomQuantization', 'quantized_dimension': 0}</td>
 </tr>
@@ -108,9 +108,9 @@ text {
 <td>{'scale': [0.001013188, 0.0005799714, 0.0007429, 0.0006177876, 0.0006866336, 0.001979343, 0.00108793, 0.001008952, 0.0007810023, 0.0007846612, 0.0007367746, 0.001144543, 0.001290737, 0.001028015, 0.0008919808, 0.0005962804, 0.0006556096, 0.0008901077, 0.0008141669, 0.001244266, 0.0003990708, 0.0007418878, 0.0006202365, 0.001117248, 0.001167881, 0.0007643665, 0.0008159128, 0.0007005636, 0.001033809, 0.0008029542, 0.0008104621, 0.0006285154], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
-<td>4</td><td>XC_conv2d_deepin_deepout_relu/biases</td>
+<td>4</td><td>XC_conv2d_deepin_deepout_relu/biases_padded</td>
 <td>INT16</td>
-<td>[2, 32]</td>
+<td>[5, 5, 2, 32]</td>
 <td>7</td>
 <td>{'scale': [4.022887e-05, 6.01787e-05, 6.935646e-05, 8.708133e-05, 7.721816e-05, 4.970751e-05, 5.293824e-05, 5.269139e-05, 6.807033e-05, 7.339866e-05, 0.0001335391, 4.632467e-05, 4.167989e-05, 5.012076e-05, 3.912856e-05, 6.835609e-05, 4.240365e-05, 5.467893e-05, 5.41724e-05, 6.974736e-05, 4.726448e-05, 5.504667e-05, 5.156903e-05, 7.879271e-05, 7.537666e-05, 4.18451e-05, 5.005247e-05, 2.692385e-05, 8.394612e-05, 5.492888e-05, 6.005233e-05, 4.423159e-05], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'CustomQuantization', 'quantized_dimension': 0}</td>
 </tr>
@@ -122,9 +122,9 @@ text {
 <td>{'scale': [0.001383591, 0.0008231859, 0.001021118, 0.001188491, 0.001080659, 0.001151549, 0.001041377, 0.0008218146, 0.001090895, 0.00108009, 0.001149486, 0.0009241241, 0.001175157, 0.001106762, 0.0007484057, 0.001253024, 0.001070812, 0.001051083, 0.001285541, 0.0009477146, 0.001137244, 0.0009005615, 0.001004607, 0.001093107, 0.001117646, 0.0009016382, 0.001031771, 0.0009025662, 0.0009338402, 0.0009304046, 0.00106297, 0.001098138, 0.001130842, 0.001059514, 0.0008833868, 0.0009612401, 0.0008052873, 0.0009920626, 0.001088627, 0.0009653626, 0.0009305041, 0.001129605, 0.0009827217, 0.00094563, 0.001068582, 0.000885402, 0.0009419289, 0.001129729, 0.001056366, 0.000991532, 0.001100706, 0.00113, 0.0009851428, 0.0008045914, 0.0008764456, 0.0008907842, 0.000958141, 0.001167158, 0.0009002207, 0.0008257501, 0.001041547, 0.0008375662, 0.001131229, 0.0009979624], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
-<td>6</td><td>XC_conv2d_deepin_deepout_relu_1/biases</td>
+<td>6</td><td>XC_conv2d_deepin_deepout_relu_1/biases_padded</td>
 <td>INT16</td>
-<td>[2, 64]</td>
+<td>[5, 5, 2, 64]</td>
 <td>2</td>
 <td>{'scale': [4.39674e-05, 2.626083e-05, 3.883521e-05, 4.123512e-05, 3.242662e-05, 4.033434e-05, 3.78993e-05, 3.827846e-05, 2.883668e-05, 3.654092e-05, 4.040673e-05, 3.791928e-05, 4.170301e-05, 3.583002e-05, 2.888479e-05, 4.854887e-05, 3.85326e-05, 3.729859e-05, 3.264699e-05, 3.276754e-05, 3.167017e-05, 3.620384e-05, 3.163761e-05, 3.921711e-05, 3.835607e-05, 3.525067e-05, 3.159983e-05, 3.99048e-05, 3.325438e-05, 4.51084e-05, 3.688146e-05, 3.757374e-05, 3.964109e-05, 3.305137e-05, 3.10679e-05, 3.749549e-05, 3.318124e-05, 3.448275e-05, 3.963674e-05, 3.265049e-05, 3.387364e-05, 3.819887e-05, 3.481051e-05, 2.825675e-05, 3.372898e-05, 3.099718e-05, 3.717732e-05, 3.968016e-05, 3.501753e-05, 3.969372e-05, 2.938938e-05, 3.654688e-05, 2.897477e-05, 3.158787e-05, 4.095445e-05, 3.362024e-05, 3.125675e-05, 3.075362e-05, 2.823233e-05, 3.45677e-05, 3.965061e-05, 3.862271e-05, 3.479189e-05, 3.706686e-05], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'CustomQuantization', 'quantized_dimension': 0}</td>
 </tr>
@@ -133,7 +133,7 @@ text {
 <td>INT16</td>
 <td>[1, 10]</td>
 <td>6</td>
-<td>{'scale': [0.001543808], 'zero_point': [-1792], 'details_type': 'CustomQuantization', 'quantized_dimension': 0}</td>
+<td>{'scale': [0.0007719039], 'zero_point': [-3584], 'details_type': 'CustomQuantization', 'quantized_dimension': 0}</td>
 </tr>
 <tr>
 <td>8</td><td>XC_fc_deepin_shallowout_final/weights</td>
@@ -199,92 +199,107 @@ text {
 <td>None</td>
 </tr>
 <tr>
-<td>17</td><td>XC_conv2d_deepin_deepout_relu/shift_scale</td>
-<td>INT16</td>
-<td>[2, 32]</td>
+<td>17</td><td>XC_conv2d_shallowin_deepout_relu/unpadded_shape</td>
+<td>INT32</td>
+<td>[4]</td>
 <td>18</td>
 <td>None</td>
 </tr>
 <tr>
-<td>18</td><td>XC_conv2d_deepin_deepout_relu_1/shift_scale</td>
+<td>18</td><td>XC_conv2d_deepin_deepout_relu/shift_scale</td>
 <td>INT16</td>
-<td>[2, 64]</td>
+<td>[2, 32]</td>
 <td>19</td>
 <td>None</td>
 </tr>
 <tr>
-<td>19</td><td>XC_fc_deepin_shallowout_final/shift_scale</td>
+<td>19</td><td>XC_conv2d_deepin_deepout_relu_1/shift_scale</td>
 <td>INT16</td>
-<td>[2, 10]</td>
+<td>[2, 64]</td>
 <td>20</td>
 <td>None</td>
 </tr>
 <tr>
-<td>20</td><td>XC_argmax_16/output</td>
+<td>20</td><td>XC_fc_deepin_shallowout_final/shift_scale</td>
+<td>INT16</td>
+<td>[2, 10]</td>
+<td>21</td>
+<td>None</td>
+</tr>
+<tr>
+<td>21</td><td>XC_argmax_16/output</td>
 <td>INT32</td>
 <td>[1, 1]</td>
-<td>21</td>
+<td>22</td>
 <td>None</td>
 </tr>
 </table>
 <h3>Ops</h3>
 <table><tr>
 <tr>
-<th>index</th><th>inputs</th><th>outputs</th><th>builtin_options</th><th>opcode_index</th></tr>
+<th>index</th><th>inputs</th><th>outputs</th><th>opcode_index</th><th>builtin_options</th><th>custom_options</th></tr>
 <tr>
-<td>0</td><td><span class='tooltip'><span class='tooltipcontent'>0 XC_conv2d_shallowin_deepout_relu/input INT8 [1, 32, 32, 4]<br>1 XC_conv2d_shallowin_deepout_relu/weights INT8 [32, 5, 8, 4]<br>2 XC_conv2d_shallowin_deepout_relu/biases INT16 [2, 32]<br>16 XC_conv2d_shallowin_deepout_relu/shift_scale INT16 [2, 32]<br></span>[0, 1, 2, 16]</span></td>
+<td>0</td><td><span class='tooltip'><span class='tooltipcontent'>0 XC_conv2d_shallowin_deepout_relu/input INT8 [1, 32, 32, 4]<br>1 XC_conv2d_shallowin_deepout_relu/weights INT8 [2, 5, 16, 8, 4]<br>2 XC_conv2d_shallowin_deepout_relu/biases_padded INT16 [5, 5, 2, 32]<br>16 XC_conv2d_shallowin_deepout_relu/shift_scale INT16 [2, 32]<br>17 XC_conv2d_shallowin_deepout_relu/unpadded_shape INT32 [4]<br></span>[0, 1, 2, 16, 17]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>13 sequential/re_lu/Relu INT8 [1, 32, 32, 32]<br></span>[13]</span></td>
-<td>None</td>
 <td>XC_conv2d_shallowin_deepout_relu (2)</td>
+<td>None</td>
+<td>None</td>
 </tr>
 <tr>
 <td>1</td><td><span class='tooltip'><span class='tooltipcontent'>13 sequential/re_lu/Relu INT8 [1, 32, 32, 32]<br></span>[13]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>10 sequential/max_pooling2d/MaxPool INT8 [1, 16, 16, 32]<br></span>[10]</span></td>
+<td>XC_maxpool2d_deep (0)</td>
 <td>None</td>
-<td>XC_maxpool2d_deep (3)</td>
+<td>None</td>
 </tr>
 <tr>
-<td>2</td><td><span class='tooltip'><span class='tooltipcontent'>10 sequential/max_pooling2d/MaxPool INT8 [1, 16, 16, 32]<br>3 XC_conv2d_deepin_deepout_relu/weights INT8 [2, 5, 5, 1, 16, 32]<br>4 XC_conv2d_deepin_deepout_relu/biases INT16 [2, 32]<br>17 XC_conv2d_deepin_deepout_relu/shift_scale INT16 [2, 32]<br></span>[10, 3, 4, 17]</span></td>
+<td>2</td><td><span class='tooltip'><span class='tooltipcontent'>10 sequential/max_pooling2d/MaxPool INT8 [1, 16, 16, 32]<br>3 XC_conv2d_deepin_deepout_relu/weights INT8 [2, 5, 5, 1, 16, 32]<br>4 XC_conv2d_deepin_deepout_relu/biases_padded INT16 [5, 5, 2, 32]<br>18 XC_conv2d_deepin_deepout_relu/shift_scale INT16 [2, 32]<br></span>[10, 3, 4, 18]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>14 sequential/re_lu_1/Relu INT8 [1, 16, 16, 32]<br></span>[14]</span></td>
-<td>None</td>
 <td>XC_conv2d_deepin_deepout_relu (1)</td>
+<td>None</td>
+<td>None</td>
 </tr>
 <tr>
 <td>3</td><td><span class='tooltip'><span class='tooltipcontent'>14 sequential/re_lu_1/Relu INT8 [1, 16, 16, 32]<br></span>[14]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>11 sequential/max_pooling2d_1/MaxPool INT8 [1, 8, 8, 32]<br></span>[11]</span></td>
+<td>XC_maxpool2d_deep (0)</td>
 <td>None</td>
-<td>XC_maxpool2d_deep (3)</td>
+<td>None</td>
 </tr>
 <tr>
-<td>4</td><td><span class='tooltip'><span class='tooltipcontent'>11 sequential/max_pooling2d_1/MaxPool INT8 [1, 8, 8, 32]<br>5 XC_conv2d_deepin_deepout_relu_1/weights INT8 [4, 5, 5, 1, 16, 32]<br>6 XC_conv2d_deepin_deepout_relu_1/biases INT16 [2, 64]<br>18 XC_conv2d_deepin_deepout_relu_1/shift_scale INT16 [2, 64]<br></span>[11, 5, 6, 18]</span></td>
+<td>4</td><td><span class='tooltip'><span class='tooltipcontent'>11 sequential/max_pooling2d_1/MaxPool INT8 [1, 8, 8, 32]<br>5 XC_conv2d_deepin_deepout_relu_1/weights INT8 [4, 5, 5, 1, 16, 32]<br>6 XC_conv2d_deepin_deepout_relu_1/biases_padded INT16 [5, 5, 2, 64]<br>19 XC_conv2d_deepin_deepout_relu_1/shift_scale INT16 [2, 64]<br></span>[11, 5, 6, 19]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>15 sequential/re_lu_2/Relu INT8 [1, 8, 8, 64]<br></span>[15]</span></td>
-<td>None</td>
 <td>XC_conv2d_deepin_deepout_relu (1)</td>
+<td>None</td>
+<td>None</td>
 </tr>
 <tr>
 <td>5</td><td><span class='tooltip'><span class='tooltipcontent'>15 sequential/re_lu_2/Relu INT8 [1, 8, 8, 64]<br></span>[15]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>12 sequential/max_pooling2d_2/MaxPool INT8 [1, 4, 4, 64]<br></span>[12]</span></td>
+<td>XC_maxpool2d_deep (0)</td>
 <td>None</td>
-<td>XC_maxpool2d_deep (3)</td>
+<td>None</td>
 </tr>
 <tr>
-<td>6</td><td><span class='tooltip'><span class='tooltipcontent'>12 sequential/max_pooling2d_2/MaxPool INT8 [1, 4, 4, 64]<br>8 XC_fc_deepin_shallowout_final/weights INT8 [10, 1024]<br>9 XC_fc_deepin_shallowout_final/biases INT32 [10]<br>19 XC_fc_deepin_shallowout_final/shift_scale INT16 [2, 10]<br></span>[12, 8, 9, 19]</span></td>
+<td>6</td><td><span class='tooltip'><span class='tooltipcontent'>12 sequential/max_pooling2d_2/MaxPool INT8 [1, 4, 4, 64]<br>8 XC_fc_deepin_shallowout_final/weights INT8 [10, 1024]<br>9 XC_fc_deepin_shallowout_final/biases INT32 [10]<br>20 XC_fc_deepin_shallowout_final/shift_scale INT16 [2, 10]<br></span>[12, 8, 9, 20]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>7 XC_fc_deepin_shallowout_final/output INT16 [1, 10]<br></span>[7]</span></td>
+<td>XC_fc_deepin_shallowout_final (3)</td>
 <td>None</td>
-<td>XC_fc_deepin_shallowout_final (0)</td>
+<td>None</td>
 </tr>
 <tr>
 <td>7</td><td><span class='tooltip'><span class='tooltipcontent'>7 XC_fc_deepin_shallowout_final/output INT16 [1, 10]<br></span>[7]</span></td>
-<td><span class='tooltip'><span class='tooltipcontent'>20 XC_argmax_16/output INT32 [1, 1]<br></span>[20]</span></td>
-<td>None</td>
+<td><span class='tooltip'><span class='tooltipcontent'>21 XC_argmax_16/output INT32 [1, 1]<br></span>[21]</span></td>
 <td>XC_argmax_16 (4)</td>
+<td>None</td>
+<td>None</td>
 </tr>
 </table>
 <svg id='subgraph0' width='1600' height='900'></svg>
 
   <script>
     // Build graph data
-    var graph = {"nodes": [{"id": "o0", "name": "XC_conv2d_shallowin_deepout_relu (2)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 275}, {"id": "o1", "name": "XC_maxpool2d_deep (3)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 400, "node_width": 162}, {"id": "o2", "name": "XC_conv2d_deepin_deepout_relu (1)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 600, "node_width": 252}, {"id": "o3", "name": "XC_maxpool2d_deep (3)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 800, "node_width": 162}, {"id": "o4", "name": "XC_conv2d_deepin_deepout_relu (1)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 1000, "node_width": 252}, {"id": "o5", "name": "XC_maxpool2d_deep (3)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 1200, "node_width": 162}, {"id": "o6", "name": "XC_fc_deepin_shallowout_final (0)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 1400, "node_width": 252}, {"id": "o7", "name": "XC_argmax_16 (4)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 1600, "node_width": 125}, {"id": "t0", "name": "(0) 'XC_conv2d_shallowin_deepout_relu/input' [1, 32, 32, 4]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 447}, {"id": "t1", "name": "(1) 'XC_conv2d_shallowin_deepout_relu/weights' [32, 5, 8, 4]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 627, "y": 100.0, "node_width": 455}, {"id": "t2", "name": "(2) 'XC_conv2d_shallowin_deepout_relu/biases' [2, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1092, "y": 100.0, "node_width": 402}, {"id": "t3", "name": "(3) 'XC_conv2d_deepin_deepout_relu/weights' [2, 5, 5, 1, 16, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 597, "y": 500.0, "node_width": 485}, {"id": "t4", "name": "(4) 'XC_conv2d_deepin_deepout_relu/biases' [2, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1092, "y": 500.0, "node_width": 380}, {"id": "t5", "name": "(5) 'XC_conv2d_deepin_deepout_relu_1/weights' [4, 5, 5, 1, 16, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 597, "y": 900.0, "node_width": 500}, {"id": "t6", "name": "(6) 'XC_conv2d_deepin_deepout_relu_1/biases' [2, 64]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1107, "y": 900.0, "node_width": 395}, {"id": "t7", "name": "(7) 'XC_fc_deepin_shallowout_final/output' [1, 10]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 1500.0, "node_width": 380}, {"id": "t8", "name": "(8) 'XC_fc_deepin_shallowout_final/weights' [10, 1024]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 597, "y": 1300.0, "node_width": 410}, {"id": "t9", "name": "(9) 'XC_fc_deepin_shallowout_final/biases' [10]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1017, "y": 1300.0, "node_width": 357}, {"id": "t10", "name": "(10) 'sequential/max_pooling2d/MaxPool' [1, 16, 16, 32]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 500.0, "node_width": 417}, {"id": "t11", "name": "(11) 'sequential/max_pooling2d_1/MaxPool' [1, 8, 8, 32]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 900.0, "node_width": 417}, {"id": "t12", "name": "(12) 'sequential/max_pooling2d_2/MaxPool' [1, 4, 4, 64]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 1300.0, "node_width": 417}, {"id": "t13", "name": "(13) 'sequential/re_lu/Relu' [1, 32, 32, 32]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 335}, {"id": "t14", "name": "(14) 'sequential/re_lu_1/Relu' [1, 16, 16, 32]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 700.0, "node_width": 350}, {"id": "t15", "name": "(15) 'sequential/re_lu_2/Relu' [1, 8, 8, 64]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 1100.0, "node_width": 335}, {"id": "t16", "name": "(16) 'XC_conv2d_shallowin_deepout_relu/shift_scale' [2, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1504, "y": 100.0, "node_width": 447}, {"id": "t17", "name": "(17) 'XC_conv2d_deepin_deepout_relu/shift_scale' [2, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1482, "y": 500.0, "node_width": 425}, {"id": "t18", "name": "(18) 'XC_conv2d_deepin_deepout_relu_1/shift_scale' [2, 64]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1512, "y": 900.0, "node_width": 440}, {"id": "t19", "name": "(19) 'XC_fc_deepin_shallowout_final/shift_scale' [2, 10]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1384, "y": 1300.0, "node_width": 425}, {"id": "t20", "name": "(20) 'XC_argmax_16/output' [1, 1]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 1700.0, "node_width": 252}], "edges": [{"source": "t0", "target": "o0"}, {"source": "t1", "target": "o0"}, {"source": "t2", "target": "o0"}, {"source": "t16", "target": "o0"}, {"target": "t13", "source": "o0"}, {"source": "t13", "target": "o1"}, {"target": "t10", "source": "o1"}, {"source": "t10", "target": "o2"}, {"source": "t3", "target": "o2"}, {"source": "t4", "target": "o2"}, {"source": "t17", "target": "o2"}, {"target": "t14", "source": "o2"}, {"source": "t14", "target": "o3"}, {"target": "t11", "source": "o3"}, {"source": "t11", "target": "o4"}, {"source": "t5", "target": "o4"}, {"source": "t6", "target": "o4"}, {"source": "t18", "target": "o4"}, {"target": "t15", "source": "o4"}, {"source": "t15", "target": "o5"}, {"target": "t12", "source": "o5"}, {"source": "t12", "target": "o6"}, {"source": "t8", "target": "o6"}, {"source": "t9", "target": "o6"}, {"source": "t19", "target": "o6"}, {"target": "t7", "source": "o6"}, {"source": "t7", "target": "o7"}, {"target": "t20", "source": "o7"}]};
+    var graph = {"nodes": [{"id": "o0", "name": "XC_conv2d_shallowin_deepout_relu (2)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 200, "node_width": 275}, {"id": "o1", "name": "XC_maxpool2d_deep (0)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 400, "node_width": 162}, {"id": "o2", "name": "XC_conv2d_deepin_deepout_relu (1)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 600, "node_width": 252}, {"id": "o3", "name": "XC_maxpool2d_deep (0)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 800, "node_width": 162}, {"id": "o4", "name": "XC_conv2d_deepin_deepout_relu (1)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 1000, "node_width": 252}, {"id": "o5", "name": "XC_maxpool2d_deep (0)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 1200, "node_width": 162}, {"id": "o6", "name": "XC_fc_deepin_shallowout_final (3)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 1400, "node_width": 252}, {"id": "o7", "name": "XC_argmax_16 (4)", "text_color": "#eeeeee", "fill_color": "#00a000", "edge_radius": 10, "x": 200, "y": 1600, "node_width": 125}, {"id": "t0", "name": "(0) 'XC_conv2d_shallowin_deepout_relu/input' [1, 32, 32, 4]", "text_color": "#000000", "fill_color": "#ccccff", "edge_radius": 1, "x": 170, "y": 100.0, "node_width": 447}, {"id": "t1", "name": "(1) 'XC_conv2d_shallowin_deepout_relu/weights' [2, 5, 16, 8, 4]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 627, "y": 100.0, "node_width": 477}, {"id": "t2", "name": "(2) 'XC_conv2d_shallowin_deepout_relu/biases_padded' [5, 5, 2, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1114, "y": 100.0, "node_width": 500}, {"id": "t3", "name": "(3) 'XC_conv2d_deepin_deepout_relu/weights' [2, 5, 5, 1, 16, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 597, "y": 500.0, "node_width": 485}, {"id": "t4", "name": "(4) 'XC_conv2d_deepin_deepout_relu/biases_padded' [5, 5, 2, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1092, "y": 500.0, "node_width": 477}, {"id": "t5", "name": "(5) 'XC_conv2d_deepin_deepout_relu_1/weights' [4, 5, 5, 1, 16, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 597, "y": 900.0, "node_width": 500}, {"id": "t6", "name": "(6) 'XC_conv2d_deepin_deepout_relu_1/biases_padded' [5, 5, 2, 64]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1107, "y": 900.0, "node_width": 492}, {"id": "t7", "name": "(7) 'XC_fc_deepin_shallowout_final/output' [1, 10]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 1500.0, "node_width": 380}, {"id": "t8", "name": "(8) 'XC_fc_deepin_shallowout_final/weights' [10, 1024]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 597, "y": 1300.0, "node_width": 410}, {"id": "t9", "name": "(9) 'XC_fc_deepin_shallowout_final/biases' [10]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1017, "y": 1300.0, "node_width": 357}, {"id": "t10", "name": "(10) 'sequential/max_pooling2d/MaxPool' [1, 16, 16, 32]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 500.0, "node_width": 417}, {"id": "t11", "name": "(11) 'sequential/max_pooling2d_1/MaxPool' [1, 8, 8, 32]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 900.0, "node_width": 417}, {"id": "t12", "name": "(12) 'sequential/max_pooling2d_2/MaxPool' [1, 4, 4, 64]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 1300.0, "node_width": 417}, {"id": "t13", "name": "(13) 'sequential/re_lu/Relu' [1, 32, 32, 32]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 300.0, "node_width": 335}, {"id": "t14", "name": "(14) 'sequential/re_lu_1/Relu' [1, 16, 16, 32]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 700.0, "node_width": 350}, {"id": "t15", "name": "(15) 'sequential/re_lu_2/Relu' [1, 8, 8, 64]", "text_color": "#000000", "fill_color": "#dddddd", "edge_radius": 1, "x": 170, "y": 1100.0, "node_width": 335}, {"id": "t16", "name": "(16) 'XC_conv2d_shallowin_deepout_relu/shift_scale' [2, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1624, "y": 100.0, "node_width": 447}, {"id": "t17", "name": "(17) 'XC_conv2d_shallowin_deepout_relu/unpadded_shape' [4]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 2081, "y": 100.0, "node_width": 440}, {"id": "t18", "name": "(18) 'XC_conv2d_deepin_deepout_relu/shift_scale' [2, 32]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1579, "y": 500.0, "node_width": 425}, {"id": "t19", "name": "(19) 'XC_conv2d_deepin_deepout_relu_1/shift_scale' [2, 64]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1609, "y": 900.0, "node_width": 440}, {"id": "t20", "name": "(20) 'XC_fc_deepin_shallowout_final/shift_scale' [2, 10]", "text_color": "#000000", "fill_color": "#fffacd", "edge_radius": 1, "x": 1384, "y": 1300.0, "node_width": 425}, {"id": "t21", "name": "(21) 'XC_argmax_16/output' [1, 1]", "text_color": "#000000", "fill_color": "#ffcccc", "edge_radius": 1, "x": 170, "y": 1700.0, "node_width": 252}], "edges": [{"source": "t0", "target": "o0"}, {"source": "t1", "target": "o0"}, {"source": "t2", "target": "o0"}, {"source": "t16", "target": "o0"}, {"source": "t17", "target": "o0"}, {"target": "t13", "source": "o0"}, {"source": "t13", "target": "o1"}, {"target": "t10", "source": "o1"}, {"source": "t10", "target": "o2"}, {"source": "t3", "target": "o2"}, {"source": "t4", "target": "o2"}, {"source": "t18", "target": "o2"}, {"target": "t14", "source": "o2"}, {"source": "t14", "target": "o3"}, {"target": "t11", "source": "o3"}, {"source": "t11", "target": "o4"}, {"source": "t5", "target": "o4"}, {"source": "t6", "target": "o4"}, {"source": "t19", "target": "o4"}, {"target": "t15", "source": "o4"}, {"source": "t15", "target": "o5"}, {"target": "t12", "source": "o5"}, {"source": "t12", "target": "o6"}, {"source": "t8", "target": "o6"}, {"source": "t9", "target": "o6"}, {"source": "t20", "target": "o6"}, {"target": "t7", "source": "o6"}, {"source": "t7", "target": "o7"}, {"target": "t21", "source": "o7"}]};
 
     var svg = d3.select("#subgraph0")
     var width = svg.attr("width");
@@ -393,13 +408,13 @@ text {
 <td>1</td><td>10240 bytes</td>
 </tr>
 <tr>
-<td>2</td><td>256 bytes</td>
+<td>2</td><td>6400 bytes</td>
 </tr>
 <tr>
 <td>3</td><td>51200 bytes</td>
 </tr>
 <tr>
-<td>4</td><td>128 bytes</td>
+<td>4</td><td>3200 bytes</td>
 </tr>
 <tr>
 <td>5</td><td>5120 bytes</td>
@@ -408,7 +423,7 @@ text {
 <td>6</td><td>--</td>
 </tr>
 <tr>
-<td>7</td><td>128 bytes</td>
+<td>7</td><td>3200 bytes</td>
 </tr>
 <tr>
 <td>8</td><td>--</td>
@@ -441,16 +456,19 @@ text {
 <td>17</td><td>128 bytes</td>
 </tr>
 <tr>
-<td>18</td><td>128 bytes</td>
+<td>18</td><td>16 bytes</td>
 </tr>
 <tr>
-<td>19</td><td>256 bytes</td>
+<td>19</td><td>128 bytes</td>
 </tr>
 <tr>
-<td>20</td><td>40 bytes</td>
+<td>20</td><td>256 bytes</td>
 </tr>
 <tr>
-<td>21</td><td>--</td>
+<td>21</td><td>40 bytes</td>
+</tr>
+<tr>
+<td>22</td><td>--</td>
 </tr>
 </table>
 <h2>Operator Codes</h2>
@@ -459,7 +477,7 @@ text {
 <th>index</th><th>builtin_code</th><th>custom_code</th><th>version</th></tr>
 <tr>
 <td>0</td><td>CUSTOM</td>
-<td>XC_fc_deepin_shallowout_final</td>
+<td>XC_maxpool2d_deep</td>
 <td>1</td>
 </tr>
 <tr>
@@ -474,7 +492,7 @@ text {
 </tr>
 <tr>
 <td>3</td><td>CUSTOM</td>
-<td>XC_maxpool2d_deep</td>
+<td>XC_fc_deepin_shallowout_final</td>
 <td>1</td>
 </tr>
 <tr>

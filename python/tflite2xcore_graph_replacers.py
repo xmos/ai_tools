@@ -4,6 +4,7 @@ import struct
 import flatbuffers
 
 import numpy as np
+import tensorflow as tf
 
 from copy import deepcopy
 
@@ -150,6 +151,51 @@ def rearrange_weight_quantization(weight_tensor, acc_period):
     weight_quantization['zero_point'] = reshape_kernel_quantization(weight_quantization['zero_point'])
 
 
+def calculate_pad_biases(weights, unified_bias, input_zero_point):
+    _, K_h, K_w, C_in = weights.shape
+    assert K_h % 2 == 1
+    assert K_w % 2 == 1
+    pad_b = pad_t = K_h//2
+    pad_l = pad_r = K_w//2
+
+    K = tf.convert_to_tensor(weights, dtype=tf.float32)
+    K = tf.transpose(K, perm=(1, 2, 3, 0))
+
+    pad_template = tf.zeros(shape=(1, K_h, K_w, C_in), dtype=tf.float32)
+    pad_template = tf.pad(pad_template,
+                          paddings=[(0, 0), (pad_b, pad_t), (pad_l, pad_r), (0, 0)],
+                          constant_values=input_zero_point)
+    pad_biases = tf.nn.conv2d(input=pad_template,
+                              filters=K,
+                              strides=1,
+                              padding='VALID')
+
+    return tf.dtypes.cast(pad_biases + unified_bias.reshape((1, 1, -1)), dtype=tf.int32).numpy()
+
+
+def replace_convolution_bias_tensor(model, subgraph, bias_tensor, opcode_str,
+                                    weights, bias,
+                                    input_zero_point, output_zero_point,
+                                    multiplier):
+    # calculate a unified bias vector and rearrange
+    bias = calculate_unified_bias(weights, bias,
+                                  input_zero_point, output_zero_point, multiplier)
+    new_bias = calculate_pad_biases(weights, bias, input_zero_point)
+    new_bias = np.uint8(list(new_bias.flatten().tostring())).reshape(list(new_bias.shape[1:])+[-1])
+    new_bias = np.stack([new_bias[:, :, :, :2], new_bias[:, :, :, 2:]], axis=2)
+
+    # save bias vector data, change type and shape
+    buffer_ind = bias_tensor['buffer']
+    bias_tensor['type'] = 'INT16'
+    bias_tensor['shape'] = list(new_bias.shape[:-1])
+    model['buffers'][buffer_ind]['data'] = list(new_bias.flatten().tostring())
+
+    # rename bias tensor and change quantization mode to alert users to unusual layout
+    bias_tensor['name'] = generate_unique_tensor_name(
+        subgraph, base_name=opcode_str, suffix='/biases_padded')
+    bias_tensor['quantization']['details_type'] = 'CustomQuantization'
+
+
 def replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind, op_ind):
     opcode_str = XCOps.CONV2D_DEEPIN_DEEPOUT_RELU
     replace_basic_op(model, subgraph_ind, op_ind, opcode_str)
@@ -176,22 +222,10 @@ def replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind, op_ind):
     # calculate real multiplier
     multiplier = calculate_real_multiplier(output_tensor, bias_tensor)
 
-    # calculate a unified bias vector and rearrange
-    bias = calculate_unified_bias(weights, bias,
-                                  input_zero_point, output_zero_point, multiplier)
-    new_bias = np.uint8(list(bias.tostring())).reshape((-1, 4))
-    new_bias = np.vstack([new_bias[:, :2], new_bias[:, 2:]]).flatten()
-
-    # save bias vector data, change type and shape
-    buffer_ind = bias_tensor['buffer']
-    bias_tensor['type'] = 'INT16'
-    bias_tensor['shape'] = [2] + bias_tensor['shape']
-    model['buffers'][buffer_ind]['data'] = list(new_bias.tostring())
-
-    # rename bias tensor and change quantization mode to alert users to unusual layout
-    bias_tensor['name'] = generate_unique_tensor_name(
-        subgraph, base_name=opcode_str, suffix='/biases')
-    bias_tensor['quantization']['details_type'] = 'CustomQuantization'
+    replace_convolution_bias_tensor(model, subgraph, bias_tensor, opcode_str,
+                                    weights, bias,
+                                    input_zero_point, output_zero_point,
+                                    multiplier)
 
     # rearrange weight tensor
     acc_period, ve = 16, 32
@@ -278,22 +312,10 @@ def replace_with_XC_conv2d_shallowin_deepout_relu(model, subgraph_ind, op_ind,
     # calculate real multiplier
     multiplier = calculate_real_multiplier(output_tensor, bias_tensor)
 
-    # calculate a unified bias vector and rearrange
-    bias = calculate_unified_bias(weights, bias,
-                                  input_zero_point, output_zero_point, multiplier)
-    new_bias = np.uint8(list(bias.tostring())).reshape((-1, 4))
-    new_bias = np.vstack([new_bias[:, :2], new_bias[:, 2:]]).flatten()
-
-    # save bias vector data, change type and shape
-    buffer_ind = bias_tensor['buffer']
-    bias_tensor['type'] = 'INT16'
-    bias_tensor['shape'] = [2] + bias_tensor['shape']
-    model['buffers'][buffer_ind]['data'] = list(new_bias.tostring())
-
-    # rename bias tensor and change quantization mode to alert users to unusual layout
-    bias_tensor['name'] = generate_unique_tensor_name(
-        subgraph, base_name=opcode_str, suffix='/biases')
-    bias_tensor['quantization']['details_type'] = 'CustomQuantization'
+    replace_convolution_bias_tensor(model, subgraph, bias_tensor, opcode_str,
+                                    weights, bias,
+                                    input_zero_point, output_zero_point,
+                                    multiplier)
 
     # rearrange and zero pad weight tensor
     weights = np.pad(weights, pad_width=[(0, 0),

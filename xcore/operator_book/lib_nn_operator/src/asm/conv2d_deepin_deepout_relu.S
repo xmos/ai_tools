@@ -24,7 +24,7 @@ void conv2d_deepin_deepout_relu_asm(
 
 #define FUNCTION_NAME conv2d_deepin_deepout_relu_asm
 
-#define NSTACKWORDS  38
+#define NSTACKWORDS  40
 
     
 .text
@@ -71,6 +71,7 @@ void conv2d_deepin_deepout_relu_asm(
 #define STACK_ROW_PAD_T     (NSTACKWORDS-16)
 #define STACK_ROW_PAD_B     (NSTACKWORDS-17)
 #define STACK_ROW_START     (NSTACKWORDS-18)
+#define STACK_BIAS_OFFSET   (NSTACKWORDS-19)
 
 
 #define STACK_DONT_USE              (0)
@@ -192,6 +193,20 @@ FUNCTION_NAME:
 
 //We now have the start/end row/col and all the pads
 
+//compute bias offset  
+// &B[2 * C_out * (K_w * (K_h//2 + pad_b-pad_t) + (K_w//2 + pad_r-pad_l))]  
+    {   sub r0, r9, r10                         ;   ldw r4, sp[STACK_K_H_HALF]          }
+    {   add r0, r0, r4                          ;   ldw r4, sp[STACK_K_W]               }
+    mul r0, r0, r4
+    {   sub r1, r5, r6                          ;   ldw r4, sp[STACK_K_W_HALF]          }
+    {   add r1, r1, r4                          ;   ldw r4, sp[STACK_C_OUT]             }
+    {   add r0, r0, r1                          ;   shl r4, r4, 6                       } //shl 6 because B is int16_t*, not int8_t*
+    mul r0, r0, r4
+    {   NOOOOP                                  ;   stw r0, sp[STACK_BIAS_OFFSET]       }
+    // {   NOOOOP                                  ;   NOOOOP                              }
+    // {   NOOOOP                                  ;   NOOOOP                              }
+    // {   NOOOOP                                  ;   NOOOOP                              }
+
 // const int8_t* patch_x = X + (patch_start_row * X_row_bytes + patch_start_col * X_pxl_bytes);
     
 #define patch_x         r11
@@ -221,7 +236,7 @@ FUNCTION_NAME:
     {   sub r7, r7, patch_cols                  ;   ldw r4, sp[STACK_K_W]               }
     {   sub r4, r4, patch_cols                  ;   ldw r8, sp[STACK_X_PXL_BYTES]       }
     mul r7, r7, r8
-    {   NOOOOP                                  ;   stw r7, sp[PATCH_PATCH_ROW_INCR]    } //////////THIS LINE
+    {   NOOOOP                                  ;   stw r7, sp[PATCH_PATCH_ROW_INCR]    } 
     {   NOOOOP                                  ;   ldw r8, sp[STACK_K_PXL_BYTES]       }
     mul r4, r4, r8
     {   NOOOOP                                  ;   stw r4, sp[PATCH_KERNEL_ROW_INCR]   }
@@ -259,6 +274,10 @@ FUNCTION_NAME:
     {   NOOOOP                                  ;   ldw r0, sp[STACK_Y]                 }
     {   NOOOOP                                  ;   ldw r2, sp[STACK_BIASES_LO]         }
     {   NOOOOP                                  ;   ldw r3, sp[STACK_BIASES_HI]         }
+    
+    {   NOOOOP                                  ;   ldw r11, sp[STACK_BIAS_OFFSET]      }
+    {   add r2, r2, r11                         ;   NOOOOP                              }
+    {   add r3, r3, r11                         ;   NOOOOP                              }
 
 //And call conv2d_deepin_deepout_relu_asm_patch()
 

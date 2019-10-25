@@ -5,6 +5,9 @@
 
 #include <stdint.h>
 
+#define TEST_C_GLOBAL (1)
+#define DO_PRINT_EXTRA_GLOBAL (1)
+
 
 int16_t  pseudo_rand_int16(unsigned *r);
 uint16_t pseudo_rand_uint16(unsigned *r);

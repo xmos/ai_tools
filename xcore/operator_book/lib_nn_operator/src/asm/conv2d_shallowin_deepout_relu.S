@@ -62,8 +62,8 @@ void conv2d_shallowin_deepout_relu_asm(
 
 #define STACK_K             (NSTACKWORDS-1 )
 #define STACK_X             (NSTACKWORDS-2 )
-#define STACK_BIASES_LO     (NSTACKWORDS-3 )
-#define STACK_BIASES_HI     (NSTACKWORDS-4 )
+#define STACK_BIAS_LO       (NSTACKWORDS-3 )
+#define STACK_BIAS_HI       (NSTACKWORDS-4 )
 #define STACK_K_H_HALF      (NSTACKWORDS-5 )
 #define STACK_K_W_HALF      (NSTACKWORDS-6 )
 #define STACK_X_ROW_BYTES   (NSTACKWORDS-7 )
@@ -79,6 +79,7 @@ void conv2d_shallowin_deepout_relu_asm(
 #define STACK_K_START       (NSTACKWORDS-17)
 #define STACK_INIT_PADR     (NSTACKWORDS-18)
 #define STACK_START_ROW     (NSTACKWORDS-19)
+#define STACK_BIAS_OFFSET   (NSTACKWORDS-20)
 
 
 #define PATCH_X_INITIAL         (1) //0
@@ -106,10 +107,10 @@ FUNCTION_NAME:
     {   NOOOOP                                  ;   stw arg_K, sp[STACK_K]              }
     {   NOOOOP                                  ;   stw arg_X, sp[STACK_X]              }
     {   NOOOOP                                  ;   stw arg_Y, sp[STACK_Y]              }
-    {   NOOOOP                                  ;   stw arg_B, sp[PATCH_BIAS_LO]        }
+    {   NOOOOP                                  ;   stw arg_B, sp[STACK_BIAS_LO]        }
     {   NOOOOP                                  ;   ldw r10, sp[STACK_C_OUT]            }
     lda16 arg_B, arg_B[r10]
-    {   NOOOOP                                  ;   stw arg_B, sp[PATCH_BIAS_HI]        }
+    {   NOOOOP                                  ;   stw arg_B, sp[STACK_BIAS_HI]        }
     {   ldc r6, K_W_DIM                         ;   ldw r0, sp[STACK_K_H]               }
     {   shr r4, r0, 1                           ;   ldw r1, sp[STACK_K_W]               }
     {   shr r5, r1, 1                           ;   stw r4, sp[STACK_K_H_HALF]          }
@@ -169,6 +170,14 @@ FUNCTION_NAME:
     mul r2, r0, r_pad_t
     {   add r2, r6, r2                          ;   stw r11, sp[STACK_START_ROW]        }
     {   NOOOOP                                  ;   stw r2, sp[STACK_K_START]           }  //TODO: can probably just go on the stack.... wait.. why did I say that. It is going on the stack.. maybe I meant into a register? It ultimately needs to find its way into r1
+
+// Calculate row contribution to bias offset
+// B_offset_row = K_w * (K_h//2 + pad_b-pad_t) )
+    {   sub r2, r_pad_b, r_pad_t                ;   ldw r1, sp[STACK_K_H_HALF]          }
+    {   add r2, r2, r1                          ;   ldw r1, sp[STACK_K_W]               }
+    mul r2, r2, r1
+    {   NOOOOP                                  ;   stw r2, sp[STACK_BIAS_OFFSET]       }
+
 #undef r_start_row      //r11
 #undef r_end_row        //r8
 #undef r_pad_t          //r10
@@ -196,6 +205,23 @@ FUNCTION_NAME:
 #define r_pad_mask      r4
     {   ldc r3, 4                               ;   ldc r4, 32                          }
     // {   shl r5, r_pad_r, 2                      ;   shl r_pad_l, r_pad_l, r3            }
+
+
+//Set the pointers to the bias subtensor before we lose r_pad_r and r_pad_l
+//  &B[2 * C_out * (sp[STACK_BIAS_OFFSET]    + (K_w//2 + pad_r-pad_l))]
+    {   sub r0, r_pad_r, r_pad_l                ;   ldw r2, sp[STACK_K_W]               }
+    {   sub r2, r2, 8                           ;   NOOOOP                              }
+    {   add r0, r0, r2                          ;   ldw r2, sp[STACK_K_W_HALF]          }
+    {   add r0, r0, r2                          ;   ldw r2, sp[STACK_BIAS_OFFSET]       }
+    {   add r0, r0, r2                          ;   ldw r2, sp[STACK_C_OUT]             }
+    {   shl r2, r2, (VPU_INT8_ACC_PERIOD_LOG2+2);   ldw r1, sp[STACK_BIAS_LO]           }
+    mul r0, r0, r2
+    {   add r2, r0, r1                          ;   ldw r1, sp[STACK_BIAS_HI]           }
+    {   add r1, r0, r1                          ;   stw r2, sp[PATCH_BIAS_LO]           }
+    {   NOOOOP                                  ;   stw r1, sp[PATCH_BIAS_HI]           }
+    // {   NOOOOP                                  ;   NOOOOP                              }
+    // {   NOOOOP                                  ;   NOOOOP                              }
+
     mul r5, r_pad_r, r3
     mul r_pad_l, r_pad_l, r3
     {   sub r4, r4, r5                          ;   mkmsk r6, r_pad_l                   }
@@ -207,16 +233,6 @@ FUNCTION_NAME:
     {   add r8, r8, r0                          ;   ldw r1, sp[STACK_X]                 }
     {   add r1, r1, r8                          ;   ldw r2, sp[STACK_START_ROW]         }
     {   NOOOOP                                  ;   stw r1, sp[PATCH_X_INITIAL]         }
-    
-// #define patch_x         r11
-//     {   NOOOOP                                  ;   ldw r4, sp[STACK_X_ROW_BYTES]       }
-//     mul patch_x, r2, r4
-//     {   NOOOOP                                  ;   ldw r4, sp[STACK_X]                 }
-//     {   add patch_x, patch_x, r4                ;   ldc r4, 4                           }
-//     mul r3, r4, r_start_col
-//     {   add patch_x, patch_x, r3                ;   NOOOOP                              }
-//     {   NOOOOP                                  ;   stw patch_x, sp[PATCH_X_INITIAL]    }
-// #undef patch_x
 
 //Now set r0-r3 with Y, K, cout_groups and pad_mask
     {   NOOOOP                                  ;   ldw patch_arg_y, sp[STACK_Y]        }

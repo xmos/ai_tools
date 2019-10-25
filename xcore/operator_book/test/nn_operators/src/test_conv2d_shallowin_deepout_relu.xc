@@ -26,13 +26,32 @@
  #define HAS_ASM (0)
 #endif
 
-#define TEST_C (1)
+#define TEST_ASM ((HAS_ASM) && 1)
+#define TEST_C ((TEST_C_GLOBAL) && 1)
 
-#define DO_PRINT_EXTRA (1)
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
 
 #define PRINTF(...)     do{if (DO_PRINT_EXTRA) {printf(__VA_ARGS__);}} while(0)
 
 // static unsigned seed = 4412311;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 unsafe {
@@ -97,7 +116,7 @@ void conv2d_shallowin_deepout_relu_asm2(
         for(int col = 0; col < width; col++){
 
             unsigned pad_l = 0;
-            unsigned pad_r = K_w_dim - K_w;
+            unsigned pad_r = 0;
 
             int patch_start_col = col - K_w_half;
             int patch_end_col = col + K_w_half;
@@ -107,8 +126,12 @@ void conv2d_shallowin_deepout_relu_asm2(
             }
 
             if((width-1) < patch_end_col){
-                pad_r = pad_r + (patch_end_col - (width-1));
+                pad_r = (patch_end_col - (width-1));
             }
+            
+            unsigned B_offset = 2 * C_out * (K_w * (K_h_half + pad_r - pad_l) + (K_w_half + pad_b - pad_t));
+
+            pad_r += (K_w_dim - K_w);
 
             uint32_t padding_mask = (pad_r == 0)? 0xFFFFFFFF : ((((uint32_t)1)<<(32-(X_pxl_bytes*pad_r)))-1);
             padding_mask = padding_mask ^ ((1<<(X_pxl_bytes*pad_l))-1);
@@ -152,8 +175,8 @@ void conv2d_shallowin_deepout_relu_asm2(
                 printf("patch_start_col: %d\n", patch_start_col);
                 printf("patch_end_col:   %d\n", patch_end_col);
                 
-                printf("B_lo:\t\t0x%x\n", B_lo);
-                printf("B_hi:\t\t0x%x\n", B_hi);
+                printf("B_lo:\t\t0x%x\n", &B_lo[B_offset]);
+                printf("B_hi:\t\t0x%x\n", &B_hi[B_offset]);
                 printf("shifts:\t\t0x%x\n", shifts);
                 printf("scales:\t\t0x%x\n", scales);
             }
@@ -184,6 +207,23 @@ void conv2d_shallowin_deepout_relu_asm2(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #define DEBUG_ON    (0 || TEST_DEBUG_ON)
 #define C_out       (VPU_INT8_ACC_PERIOD)
 #define C_in        (4)
@@ -196,7 +236,7 @@ void test_conv2d_shallowin_deepout_relu_case1()
     PRINTF("test_conv2d_shallowin_deepout_relu_case1()...\n");
 
     int8_t   WORD_ALIGNED  K[C_out][K_h][8][C_in]           = {{{{ 0 }}}};
-    data16_t WORD_ALIGNED  B[2][C_out]                      = {{ 0 }};
+    data16_t WORD_ALIGNED  B[K_h][K_w][2][C_out]            = {{{{ 0 }}}};
     int8_t   WORD_ALIGNED  X[height][width][C_in];
     int16_t  WORD_ALIGNED  shifts[C_out]                    = { 0 };
     int16_t  WORD_ALIGNED  scales[C_out]                    = { 0 };
@@ -209,7 +249,7 @@ void test_conv2d_shallowin_deepout_relu_case1()
     conv2d_shallowin_deepout_relu_c((int8_t*) K, (data16_t*)B, (int8_t*) X, (int8_t*) Y_c, 
                                     height, width, K_h, K_w, C_out, shifts, scales);
 #endif
-#if HAS_ASM
+#if TEST_ASM
     PRINTF("\t\tASM...\n");
     int8_t   WORD_ALIGNED  Y_asm[height][width][C_out];
     memset(Y_asm, 0xCC, sizeof(Y_asm));
@@ -228,14 +268,14 @@ void test_conv2d_shallowin_deepout_relu_case1()
 #if TEST_C
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_c[h][w][c]);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_asm[h][w][c]);
 #endif
                     if(do_sprintf)  sprintf(str_buff, "(h,w,c) = (%u,%u,%u)", h,w,c);
 #if TEST_C
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
             }
@@ -250,6 +290,28 @@ void test_conv2d_shallowin_deepout_relu_case1()
 #undef C_in
 #undef C_out
 #undef DEBUG_ON
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -269,7 +331,7 @@ void test_conv2d_shallowin_deepout_relu_case2()
     PRINTF("test_conv2d_shallowin_deepout_relu_case2()...\n");
 
     int8_t   WORD_ALIGNED  K[C_out][K_h][8][C_in];
-    data16_t WORD_ALIGNED  B[2][C_out];
+    data16_t WORD_ALIGNED  B[K_h][K_w][2][C_out];
     int8_t   WORD_ALIGNED  X[height][width][C_in];
     int16_t  WORD_ALIGNED  shifts[C_out];
     int16_t  WORD_ALIGNED  scales[C_out];
@@ -302,7 +364,7 @@ void test_conv2d_shallowin_deepout_relu_case2()
         conv2d_shallowin_deepout_relu_c((int8_t*) K, (data16_t*)B, (int8_t*) X, (int8_t*) Y_c, 
                                     height, width, K_h, K_w, C_out, shifts, scales);
 #endif
-#if HAS_ASM
+#if TEST_ASM
         PRINTF("\t\tASM...\n");
         int8_t   WORD_ALIGNED  Y_asm[height][width][C_out];
         memset(Y_asm, 0xCC, sizeof(Y_asm));
@@ -321,14 +383,14 @@ void test_conv2d_shallowin_deepout_relu_case2()
 #if TEST_C
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_c[h][w][c]);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_asm[h][w][c]);
 #endif
                     if(do_sprintf)  sprintf(str_buff, "(h,w,c) = (%u,%u,%u)", h,w,c);
 #if TEST_C
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
                 }
@@ -346,6 +408,28 @@ void test_conv2d_shallowin_deepout_relu_case2()
 #undef C_in
 #undef C_out
 #undef DEBUG_ON
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -364,7 +448,7 @@ void test_conv2d_shallowin_deepout_relu_case3()
     PRINTF("test_conv2d_shallowin_deepout_relu_case3()...\n");
 
     int8_t   WORD_ALIGNED  K[C_out][K_h][8][C_in];
-    data16_t WORD_ALIGNED  B[2][C_out];
+    data16_t WORD_ALIGNED  B[K_h][K_w][2][C_out];
     int8_t   WORD_ALIGNED  X[height][width][C_in];
     int16_t  WORD_ALIGNED  shifts[C_out];
     int16_t  WORD_ALIGNED  scales[C_out];
@@ -397,7 +481,7 @@ void test_conv2d_shallowin_deepout_relu_case3()
         conv2d_shallowin_deepout_relu_c((int8_t*) K, (data16_t*)B, (int8_t*) X, (int8_t*) Y_c, 
                                     height, width, K_h, K_w, C_out, shifts, scales);
 #endif
-#if HAS_ASM
+#if TEST_ASM
         PRINTF("\t\tASM...\n");
         int8_t   WORD_ALIGNED  Y_asm[height][width][C_out];
         memset(Y_asm, 0xCC, sizeof(Y_asm));
@@ -416,14 +500,14 @@ void test_conv2d_shallowin_deepout_relu_case3()
 #if TEST_C
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_c[h][w][c]);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_asm[h][w][c]);
 #endif
                     if(do_sprintf)  sprintf(str_buff, "(h,w,c) = (%u,%u,%u)", h,w,c);
 #if TEST_C
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
                 }
@@ -441,6 +525,30 @@ void test_conv2d_shallowin_deepout_relu_case3()
 #undef C_in
 #undef C_out
 #undef DEBUG_ON
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -461,7 +569,7 @@ void test_conv2d_shallowin_deepout_relu_case4()
     PRINTF("test_conv2d_shallowin_deepout_relu_case4()...\n");
 
     int8_t   WORD_ALIGNED  K[C_out][K_h][8][C_in];
-    data16_t WORD_ALIGNED  B[2][C_out];
+    data16_t WORD_ALIGNED  B[K_h][K_w][2][C_out];
     int8_t   WORD_ALIGNED  X[height][width][C_in];
     int16_t  WORD_ALIGNED  shifts[C_out];
     int16_t  WORD_ALIGNED  scales[C_out];
@@ -495,7 +603,7 @@ void test_conv2d_shallowin_deepout_relu_case4()
         conv2d_shallowin_deepout_relu_c((int8_t*) K, (data16_t*)B, (int8_t*) X, (int8_t*) Y_c, 
                                     height, width, K_h, K_w, C_out, shifts, scales);
 #endif
-#if HAS_ASM
+#if TEST_ASM
         PRINTF("\t\tASM...\n");
         int8_t   WORD_ALIGNED  Y_asm[height][width][C_out];
         memset(Y_asm, 0xCC, sizeof(Y_asm));
@@ -514,14 +622,14 @@ void test_conv2d_shallowin_deepout_relu_case4()
 #if TEST_C
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_c[h][w][c]);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_asm[h][w][c]);
 #endif
                     if(do_sprintf)  sprintf(str_buff, "(h,w,c) = (%u,%u,%u)", h,w,c);
 #if TEST_C
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
                 }

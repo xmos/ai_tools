@@ -46,8 +46,9 @@ static inline int32_t sat_s32(const int64_t acc64)
 
 static inline int8_t vlsat_single_s8(int32_t acc, int16_t shr)
 {
-    if(shr > 0) acc += 1<<(shr-1);
-    return sat_s8(acc >> shr);
+    int64_t acc64 = acc;
+    if(shr > 0) acc64 += 1<<(shr-1);
+    return sat_s8(acc64 >> shr);
 }
 
 static inline int16_t vlsat_single_s16(int32_t acc, int16_t shr)
@@ -135,23 +136,36 @@ void conv2d_deepin_deepout_relu_c(
 {
     const int P_h = K_h / 2;
     const int P_w = K_w / 2;
-
-    const data16_t* B_hi = &B[C_out];
-    const data16_t* B_lo = &B[0];
-
+    const int Q_h = P_h - height + 1;
+    const int Q_w = P_w - width  + 1;
 
     for(int chout = 0; chout < C_out; chout++){
 
         const int cog = chout / VPU_INT8_ACC_PERIOD;
         const int cog_offset = chout % VPU_INT8_ACC_PERIOD;
         
-        const int32_t bias = (((int32_t)B_hi[chout])<<16) | B_lo[chout];
         const int16_t shr = shifts[chout];
         const int16_t scale = scales[chout];
 
         for(int row = 0; row < height; row++){
+
+            const int pad_top = ((P_h-row) > 0)?  (P_h-row) : 0;
+            const int pad_bot = ((Q_h+row) > 0)?  (Q_h+row) : 0;
+
             for(int col = 0; col < width; col++){
-                
+
+                const int pad_lef = ((P_w-col) > 0)?  (P_w-col) : 0;
+                const int pad_rig = ((Q_w+col) > 0)?  (Q_w+col) : 0;
+
+                const int B_offset   = 2 * C_out * (K_w * (P_h + pad_bot - pad_top) + (P_w + pad_rig - pad_lef));
+                // printf("(%d, %d) -> (%d, %d, %d, %d)\n", row, col, pad_top, pad_bot, pad_lef, pad_rig);
+                // printf("(%d, %d) -> %d\n", row, col, B_offset/(2*C_out));
+
+                const data16_t* B_lo = &B[B_offset + 0];
+                const data16_t* B_hi = &B[B_offset + C_out];
+                const int32_t bias   = (((int32_t)B_hi[chout])<<16) | B_lo[chout];
+                // printf("(%d, %d) -> %ld\n", row, col, bias);
+
                 int32_t acc32 = bias;
 
                 for(int kr = -P_h; kr <= P_h; kr++){
@@ -196,10 +210,18 @@ void conv2d_deepin_deepout_relu_c(
                     }
                 }
 
-                int16_t res16 = vlsat_single_s16(acc32, shr);
-                res16 = vlmul_single_s16(res16, scale);
+                // printf("acc32 = %ld\n", acc32);
 
-                Y[(row*width+col)*C_out + chout] = vdepth8_single_s16(res16);
+                int16_t res16 = vlsat_single_s16(acc32, shr);
+                
+                // printf("res16 = %d\t(%d)\n", res16, shr);
+                res16 = vlmul_single_s16(res16, scale);
+                
+                // printf("res16 = %d\t(%d)\n", res16, scale);
+                const int8_t res8 = vdepth8_single_s16(res16);
+                
+                // printf("res8 = %d\n", res8);
+                Y[(row*width+col)*C_out + chout] = res8;
             }
         }
     }
@@ -226,9 +248,8 @@ void conv2d_shallowin_deepout_relu_c(
 {
     const int P_h = K_h / 2;
     const int P_w = K_w / 2;
-
-    const data16_t* B_hi = &B[C_out];
-    const data16_t* B_lo = &B[0];
+    const int Q_h = P_h - height + 1;
+    const int Q_w = P_w - width  + 1;
 
     const int K_row_bytes = K_W_DIM * C_in * VPU_INT8_ACC_PERIOD;
     const int K_cout_group_bytes = K_row_bytes * K_h;
@@ -244,13 +265,27 @@ void conv2d_shallowin_deepout_relu_c(
 
             const unsigned actual_chout = ch_out_grp * VPU_INT8_ACC_PERIOD + ch_out;
 
-            const int32_t bias = (B_hi[actual_chout] << 16) | B_lo[actual_chout];
             const int16_t shr = shifts[actual_chout];
             const int16_t scale = scales[actual_chout];
 
             for(int row = 0; row < height; row++){
 
+                const int pad_top = ((P_h-row) > 0)?  (P_h-row) : 0;
+                const int pad_bot = ((Q_h+row) > 0)?  (Q_h+row) : 0;
+
                 for(int col = 0; col < width; col++){
+
+                    const int pad_lef = ((P_w-col) > 0)?  (P_w-col) : 0;
+                    const int pad_rig = ((Q_w+col) > 0)?  (Q_w+col) : 0;
+
+                    const int B_offset   = 2 * C_out * (K_w * (P_h + pad_bot - pad_top) + (P_w + pad_rig - pad_lef));
+                    // printf("(%d, %d) -> (%d, %d, %d, %d)\n", row, col, pad_top, pad_bot, pad_lef, pad_rig);
+                    // printf("(%d, %d) -> %d\n", row, col, B_offset/(2*C_out));
+
+                    const data16_t* B_lo = &B[B_offset + 0];
+                    const data16_t* B_hi = &B[B_offset + C_out];
+                    const int32_t bias   = (((int32_t)B_hi[actual_chout])<<16) | B_lo[actual_chout];
+                    // printf("(%d, %d) -> %ld\n", row, col, bias);
 
                     int32_t acc32 = bias;
 

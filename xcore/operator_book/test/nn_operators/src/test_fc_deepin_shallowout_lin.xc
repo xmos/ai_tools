@@ -28,6 +28,26 @@
 
 // static unsigned seed = 4434;
 
+#define TEST_ASM ((HAS_ASM) && 1)
+#define TEST_C ((TEST_C_GLOBAL) && 1)
+
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
+
+#define PRINTF(...)     do{if (DO_PRINT_EXTRA) {printf(__VA_ARGS__);}} while(0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #define DEBUG_ON    (0 || TEST_DEBUG_ON)
 #define C_out       (VPU_INT8_ACC_PERIOD-1)
@@ -41,24 +61,31 @@ void test_fc_deepin_shallowout_lin_case1()
     int16_t  WORD_ALIGNED  scales[C_out]                 = { 0 };
     int16_t  WORD_ALIGNED Y_expected[C_out] = { 0 };
 
-    int16_t   WORD_ALIGNED  Y_c[C_out];
+    PRINTF("test_fc_deepin_shallowout_lin_case1()...\n");
 
+#if TEST_C
+    PRINTF("\tC...\n");
+    int16_t  WORD_ALIGNED  Y_c[C_out];
     memset(Y_c, 0xCC, sizeof(Y_c));
-
     fc_deepin_shallowout_lin_c((int8_t*) W, B, X, Y_c, 
                                C_out, C_in, shifts, scales);
-#if HAS_ASM
+#endif
+#if TEST_ASM
+    PRINTF("\tASM...\n");
     int16_t   WORD_ALIGNED  Y_asm[C_out];
     memset(Y_asm, 0xCC, sizeof(Y_asm));
     fc_deepin_shallowout_lin_asm((int8_t*) W, B, X, Y_asm, 
                                C_out, C_in, shifts, scales);
 #endif
 
+    PRINTF("\tChecking...\n");
     for(unsigned c = 0; c < C_out; c++){
         char str_buff[100];
         sprintf(str_buff, "(c) = (%u)", c);
+#if TEST_C
         TEST_ASSERT_EQUAL_MESSAGE(Y_expected[c], Y_c[c], str_buff);
-#if HAS_ASM
+#endif
+#if TEST_ASM
         TEST_ASSERT_EQUAL_MESSAGE(Y_expected[c], Y_asm[c], str_buff);
 #endif
     }
@@ -66,6 +93,28 @@ void test_fc_deepin_shallowout_lin_case1()
 #undef C_in
 #undef C_out
 #undef DEBUG_ON
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -85,12 +134,12 @@ void test_fc_deepin_shallowout_lin_case2()
     int16_t  WORD_ALIGNED  scales[C_out]                 = { 0 };
     int16_t  WORD_ALIGNED  Y_expected[C_out]             = { 0 };
 
-    int16_t  WORD_ALIGNED  Y_c[C_out];
-
     int16_t Y_check[] = { Y_CHECK };
 
+    PRINTF("test_fc_deepin_shallowout_lin_case2()...\n");
+
     for(int v = 0; v < TEST_VECTORS; v++){
-        memset(Y_c, 0xCC, sizeof(Y_c));
+        PRINTF("\ttest vector %d...\n", v);
 
         char filename[100];
         sprintf(filename, VECTOR_FMT, v);
@@ -108,20 +157,29 @@ void test_fc_deepin_shallowout_lin_case2()
         // printf("%d\t%d\n", Y_check[v], Y_expected[0]);
         assert(Y_check[v] == Y_expected[0]);
 
+#if TEST_C
+        PRINTF("\t\tC...\n");
+        int16_t  WORD_ALIGNED  Y_c[C_out];
+        memset(Y_c, 0xCC, sizeof(Y_c));
         fc_deepin_shallowout_lin((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_c, 
                                 C_out, C_in, shifts, scales);
-#if HAS_ASM
+#endif
+#if TEST_ASM
+        PRINTF("\t\tASM...\n");
         int16_t WORD_ALIGNED Y_asm[C_out];
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         fc_deepin_shallowout_lin_asm((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_asm, 
                                C_out, C_in, shifts, scales);
 #endif
 
+        PRINTF("\t\tChecking...\n");
         for(unsigned c = 0; c < C_out; c++){
             char str_buff[100];
             sprintf(str_buff, "(v, c) = (%u, %u)", v, c);
+#if TEST_C
             TEST_ASSERT_EQUAL_MESSAGE(Y_expected[c], Y_c[c], str_buff);
-#if HAS_ASM
+#endif
+#if TEST_ASM
             TEST_ASSERT_EQUAL_MESSAGE(Y_expected[c], Y_asm[c], str_buff);
 #endif
 
@@ -135,6 +193,20 @@ void test_fc_deepin_shallowout_lin_case2()
 #undef C_in
 #undef C_out
 #undef DEBUG_ON
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #define DEBUG_ON        (0 || TEST_DEBUG_ON)
@@ -152,12 +224,12 @@ void test_fc_deepin_shallowout_lin_case3()
     int16_t  WORD_ALIGNED  scales[C_out]                 = { 0 };
     int16_t  WORD_ALIGNED  Y_expected[C_out]              = { 0 };
 
-    int16_t  WORD_ALIGNED  Y_c[C_out];
-
     int16_t Y_check[] = { Y_CHECK };
 
+    PRINTF("test_fc_deepin_shallowout_lin_case3()...\n");
+
     for(int v = 0; v < TEST_VECTORS; v++){
-        memset(Y_c, 0xCC, sizeof(Y_c));
+        PRINTF("\ttest vector %d...\n", v);
 
         char filename[100];
         sprintf(filename, VECTOR_FMT, v);
@@ -174,20 +246,29 @@ void test_fc_deepin_shallowout_lin_case3()
 
         assert(Y_check[v] == Y_expected[0]);
 
+#if TEST_C
+        PRINTF("\t\tC...\n");
+        int16_t  WORD_ALIGNED  Y_c[C_out];
+        memset(Y_c, 0xCC, sizeof(Y_c));
         fc_deepin_shallowout_lin((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_c, 
                                 C_out, C_in, shifts, scales);
-#if HAS_ASM
+#endif
+#if TEST_ASM
+        PRINTF("\t\tASM...\n");
         int16_t WORD_ALIGNED Y_asm[C_out];
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         fc_deepin_shallowout_lin_asm((int8_t*) W, (int32_t*) B, (int8_t*) X, (int16_t*) Y_asm, 
                                C_out, C_in, shifts, scales);
 #endif
 
+        PRINTF("\t\tChecking...\n");
         for(unsigned c = 0; c < C_out; c++){
             char str_buff[100];
             sprintf(str_buff, "(v, c) = (%u, %u)", v, c);
+#if TEST_C
             TEST_ASSERT_EQUAL_MESSAGE(Y_expected[c], Y_c[c], str_buff);
-#if HAS_ASM
+#endif
+#if TEST_ASM
             TEST_ASSERT_EQUAL_MESSAGE(Y_expected[c], Y_asm[c], str_buff);
 #endif
         }
@@ -200,6 +281,12 @@ void test_fc_deepin_shallowout_lin_case3()
 #undef C_in
 #undef C_out
 #undef DEBUG_ON
+
+
+
+
+
+
 
 
 void test_fc_deepin_shallowout_lin()

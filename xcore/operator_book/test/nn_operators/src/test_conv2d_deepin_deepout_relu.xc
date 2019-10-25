@@ -27,9 +27,10 @@
  #define HAS_ASM (0)
 #endif
 
-#define TEST_C (1)
+#define TEST_ASM ((HAS_ASM) && 1)
+#define TEST_C ((TEST_C_GLOBAL) && 1)
 
-#define DO_PRINT_EXTRA (1)
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
 
 #define PRINTF(...)     do{if (DO_PRINT_EXTRA) {printf(__VA_ARGS__);}} while(0)
 
@@ -56,23 +57,23 @@ void test_conv2d_deepin_deepout_relu_case1()
 {
 
     int8_t   WORD_ALIGNED  K[C_out][K_h][K_w][C_in]      = {{{{ 0 }}}};
-    data16_t  WORD_ALIGNED  B[2][C_out]                  = {{ 0 }};
+    data16_t WORD_ALIGNED  B[K_h][K_w][2][C_out]         = {{{{ 0 }}}};
     int8_t   WORD_ALIGNED  X[height][width][C_in];
     int16_t  WORD_ALIGNED  shifts[C_out]                 = { 0 };
     int16_t  WORD_ALIGNED  scales[C_out]                 = { 0 };
 
     int8_t WORD_ALIGNED Y_expected[height][width][C_out] = {{{ 0 }}};
-    int8_t   WORD_ALIGNED  Y_c[height][width][C_out];
 
     PRINTF("test_conv2d_deepin_deepout_relu_case1()...\n");
 
 #if TEST_C
+    int8_t   WORD_ALIGNED  Y_c[height][width][C_out];
     PRINTF("\tC...\n");
     memset(Y_c, 0xCC, sizeof(Y_c));
     conv2d_deepin_deepout_relu_c((int8_t*) K, (data16_t*) B, (int8_t*) X, (int8_t*) Y_c, 
                                 height, width, K_h, K_w, C_out, C_in, shifts, scales);
 #endif
-#if HAS_ASM
+#if TEST_ASM
     PRINTF("\tASM...\n");
     int8_t   WORD_ALIGNED  Y_asm[height][width][C_out];
     memset(Y_asm, 0xCC, sizeof(Y_asm));
@@ -91,14 +92,14 @@ void test_conv2d_deepin_deepout_relu_case1()
 #if TEST_C
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_c[h][w][c]);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_asm[h][w][c]);
 #endif
                     if(do_sprintf)  sprintf(str_buff, "(h,w,c) = (%u,%u,%u)", h,w,c);
 #if TEST_C
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
             }
@@ -146,7 +147,7 @@ void test_conv2d_deepin_deepout_relu_case2()
 {
 
     int8_t   WORD_ALIGNED  K[C_out][K_h][K_w][C_in];
-    data16_t WORD_ALIGNED  B[2][C_out];
+    data16_t WORD_ALIGNED  B[K_h][K_w][2][C_out];
     int8_t   WORD_ALIGNED  X[height][width][C_in];
     int16_t  WORD_ALIGNED  shifts[C_out];
     int16_t  WORD_ALIGNED  scales[C_out];
@@ -182,7 +183,7 @@ void test_conv2d_deepin_deepout_relu_case2()
         conv2d_deepin_deepout_relu_c((int8_t*) K, (data16_t*) B, (int8_t*) X, (int8_t*) Y_c, 
                                     height, width, K_h, K_w, C_out, C_in, shifts, scales);
 #endif
-#if HAS_ASM
+#if TEST_ASM
         PRINTF("\t\tASM...\n");
         int8_t   WORD_ALIGNED  Y_asm[height][width][C_out];
         memset(Y_asm, 0xCC, sizeof(Y_asm));
@@ -201,14 +202,14 @@ void test_conv2d_deepin_deepout_relu_case2()
 #if TEST_C
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_c[h][w][c]);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_asm[h][w][c]);
 #endif
                     if(do_sprintf)  sprintf(str_buff, "(v,h,w,c) = (%u,%u,%u,%u)", v,h,w,c);
 #if TEST_C
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
                 }
@@ -263,7 +264,7 @@ void test_conv2d_deepin_deepout_relu_case3()
 {
 
     int8_t   WORD_ALIGNED  K[C_out][K_h][K_w][C_in];
-    data16_t WORD_ALIGNED  B[2][C_out];
+    data16_t WORD_ALIGNED  B[K_h][K_w][2][C_out];
     int8_t   WORD_ALIGNED  X[height][width][C_in];
     int16_t  WORD_ALIGNED  shifts[C_out];
     int16_t  WORD_ALIGNED  scales[C_out];
@@ -299,7 +300,7 @@ void test_conv2d_deepin_deepout_relu_case3()
         conv2d_deepin_deepout_relu_c((int8_t*) K, (data16_t*) B, (int8_t*) X, (int8_t*) Y_c, 
                                     height, width, K_h, K_w, C_out, C_in, shifts, scales);
 #endif
-#if HAS_ASM
+#if TEST_ASM
         PRINTF("\t\tASM...\n");
         int8_t   WORD_ALIGNED  Y_asm[height][width][C_out];
         memset(Y_asm, 0xCC, sizeof(Y_asm));
@@ -318,14 +319,14 @@ void test_conv2d_deepin_deepout_relu_case3()
 #if TEST_C
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_c[h][w][c]);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_asm[h][w][c]);
 #endif
                     if(do_sprintf)  sprintf(str_buff, "(v,h,w,c) = (%u,%u,%u,%u)", v,h,w,c);
 #if TEST_C
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
                 }
@@ -380,7 +381,7 @@ void test_conv2d_deepin_deepout_relu_case4()
 {
 
     int8_t   WORD_ALIGNED  K[C_out][K_h][K_w][C_in];
-    data16_t WORD_ALIGNED  B[2][C_out];
+    data16_t WORD_ALIGNED  B[K_h][K_w][2][C_out];
     int8_t   WORD_ALIGNED  X[height][width][C_in];
     int16_t  WORD_ALIGNED  shifts[C_out];
     int16_t  WORD_ALIGNED  scales[C_out];
@@ -419,7 +420,7 @@ void test_conv2d_deepin_deepout_relu_case4()
         conv2d_deepin_deepout_relu_c((int8_t*) K, (data16_t*) B, (int8_t*) X, (int8_t*) Y_c, 
                                     height, width, K_h, K_w, C_out, C_in, shifts, scales);
 #endif
-#if HAS_ASM
+#if TEST_ASM
         PRINTF("\t\tASM...\n");
         int8_t   WORD_ALIGNED  Y_asm[height][width][C_out];
         memset(Y_asm, 0xCC, sizeof(Y_asm));
@@ -438,14 +439,14 @@ void test_conv2d_deepin_deepout_relu_case4()
 #if TEST_C
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_c[h][w][c]);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     do_sprintf = do_sprintf || (Y_expected[h][w][c] != Y_asm[h][w][c]);
 #endif
                     if(do_sprintf)  sprintf(str_buff, "(v,h,w,c) = (%u,%u,%u,%u)", v,h,w,c);
 #if TEST_C
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_c[h][w][c], str_buff);
 #endif
-#if HAS_ASM
+#if TEST_ASM
                     TEST_ASSERT_EQUAL_MESSAGE(Y_expected[h][w][c], Y_asm[h][w][c], str_buff);
 #endif
                 }

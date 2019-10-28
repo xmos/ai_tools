@@ -14,7 +14,7 @@ const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
-constexpr int kTensorArenaSize = 400000;  // Hopefully this is big enough for all tests
+constexpr int kTensorArenaSize = 100000;  // Hopefully this is big enough for all tests
 uint8_t tensor_arena[kTensorArenaSize];
 
 static int load_model(const char *filename, char **buffer, size_t *size)
@@ -113,7 +113,6 @@ int main(int argc, char *argv[])
     // load model
     char *model_buffer = nullptr;
     size_t model_size;
-    printf("111\n");
     if (!load_model(model_filename, &model_buffer, &model_size))
     {
         printf("error loading model filename=%s\n", model_filename);
@@ -122,7 +121,6 @@ int main(int argc, char *argv[])
 
     // setup runtime
     setup_tflite(model_buffer);
-    printf("222\n");
 
     // Load input tensor
     if (!load_input(input_filename, input->data.raw, input->bytes))

@@ -62,6 +62,8 @@ int8_t* conv2d_shallowin_deepout_relu_asm_patch(
 #define tmp1                r10
 
 
+.align 8
+
 //Some constants
 .L_zero_vec:
 .int 0,0,0,0,0,0,0,0

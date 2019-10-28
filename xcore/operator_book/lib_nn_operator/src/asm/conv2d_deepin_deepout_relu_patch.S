@@ -64,11 +64,12 @@ int8_t* conv2d_deepin_deepout_relu_asm_patch(
 #define chan_outs           r9
 #define tmp1                r10
 
+.align 8
+
 .L_mode16:
 .int 0x0100
 .L_mode8:
 .int 0x0200
-
 
 FUNCTION_NAME:
     {   NOOOOP                                  ;   dualentsp NSTACKWORDS               }

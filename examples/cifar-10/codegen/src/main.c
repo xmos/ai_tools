@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "cifar_10.h"
+#include "cifar10.h"
 
 #define TEST_INPUT_SIZE = 32 * 32 * 4
 
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
         printf("starting: no input file\n");
     }
 
-    cifar_10(&input, &output);
+    cifar10(&input, &output);
     switch (output[0])
     {
         case 0:

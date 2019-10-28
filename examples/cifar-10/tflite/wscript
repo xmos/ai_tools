@@ -23,6 +23,7 @@ SHARED_FLAGS = [
     '-Wcpp,-std=c++11',
     '-DTF_LITE_STATIC_MEMORY',
     '-DTF_LITE_DISABLE_X86_NEON',
+    '-DNDEBUG',
     '-mcmodel=large',
     # '-DXCORE',
     '-Wno-unknown-attributes',

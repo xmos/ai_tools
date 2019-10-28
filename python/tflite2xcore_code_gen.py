@@ -16,6 +16,7 @@ def generate_code(args):
     model = xcore_model.XCOREModel()
     model.Import(args.tflite_input, args.flatc, args.schema)
     subgraph = model.GetSubgraph() # only one supported for now
+    intermediates_memory = 0
     total_memory = 0
 
     nodes = subgraph.GetOperators()
@@ -44,6 +45,7 @@ def generate_code(args):
             initializers.append(intermediate)
         else:
             variables.append(intermediate)
+            intermediates_memory += intermediate.GetSize()
         total_memory += intermediate.GetSize()
 
     if verbose:
@@ -114,6 +116,10 @@ def generate_code(args):
     print('Created files:')
     for fn in fd.get_filenames():
         print(f'   {fn}')
+
+    intermediates_memory /= 1000.0
+    print(f'Total memory used for intermediate tensors: {intermediates_memory} kB')
+
     total_memory /= 1000.0
     print(f'Total memory used for model: {total_memory} kB')
 

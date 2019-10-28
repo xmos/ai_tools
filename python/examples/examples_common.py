@@ -1,7 +1,6 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import os
-import random
 import logging
 import pathlib
 import tempfile
@@ -10,25 +9,12 @@ import numpy as np
 
 from copy import deepcopy
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
-import warnings
-warnings.filterwarnings(action='ignore')
-import tensorflow as tf  # nopep8
-warnings.filterwarnings(action='default')
-
 import tflite_visualize
-from tflite_utils import save_json_as_tflite
+import tflite_utils
 import tflite2xcore_utils
 import tflite2xcore_graph_conv as graph_conv
 
-
-DEFAULT_SEED = 123
-
-
-def set_all_seeds(seed=DEFAULT_SEED):
-    tf.random.set_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
+import tensorflow as tf
 
 
 def make_aux_dirs(dirname):
@@ -63,25 +49,6 @@ def one_hot_encode(arr, classes):
     return tf.keras.utils.to_categorical(arr, classes, dtype=np.int8)
 
 
-def set_gpu_usage(use_gpu, verbose):
-    # can throw annoying error if CUDA cannot be initialized
-    default_log_level = os.environ['TF_CPP_MIN_LOG_LEVEL']
-    if not verbose:
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = default_log_level
-
-    if gpus:
-        if use_gpu:
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, enable=True)
-        else:
-            logging.info("GPUs disabled.")
-            tf.config.experimental.set_visible_devices([], 'GPU')
-    elif use_gpu:
-        logging.warning('No available GPUs found, defaulting to CPU.')
-
-
 def save_from_tflite_converter(converter, models_dir, base_file_name, *,
                                visualize=True):
     model = converter.convert()
@@ -101,7 +68,7 @@ def save_from_json(model, models_dir, base_file_name, *,
                    visualize=True):
     model_file = models_dir / f"{base_file_name}.tflite"
     model_html = models_dir / f"{base_file_name}.html"
-    save_json_as_tflite(model, model_file)
+    tflite_utils.save_json_as_tflite(model, model_file)
 
     if visualize:
         tflite_visualize.main(model_file, model_html)

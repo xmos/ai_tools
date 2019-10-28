@@ -3,12 +3,13 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 # always load examples_common first to avoid debug info dump from tf initialization
-import examples.examples_common as utils
+import examples.examples_common as common
 
 import os
 import argparse
 import logging
 import pathlib
+import tflite_utils
 
 import tensorflow as tf
 import numpy as np
@@ -16,13 +17,12 @@ import tflite2xcore_graph_conv as graph_conv
 
 from copy import deepcopy
 from tensorflow import keras
-from tflite_utils import load_tflite_as_json
 from tflite2xcore_utils import clean_unused_buffers, clean_unused_tensors
 from tflite2xcore_utils import XCOps
 
 
 DIRNAME = pathlib.Path(__file__).parent
-MODELS_DIR, DATA_DIR = utils.make_aux_dirs(DIRNAME)
+MODELS_DIR, DATA_DIR = common.make_aux_dirs(DIRNAME)
 
 DEFAULT_INPUTS = 3
 DEFAULT_OUTPUTS = 16
@@ -48,7 +48,7 @@ def main(inputs=DEFAULT_INPUTS,
          height=DEFAULT_HEIGHT,
          width=DEFAULT_WIDTH):
     keras.backend.clear_session()
-    utils.set_all_seeds()
+    tflite_utils.set_all_seeds()
 
     assert inputs <= 4, "Number of input channels must be at most 4"
     assert K_w <= 8, "Kernel width must be at most 8"
@@ -70,31 +70,31 @@ def main(inputs=DEFAULT_INPUTS,
 
     # convert to TFLite float, save model and visualization, save test data
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    utils.save_from_tflite_converter(converter, MODELS_DIR, "model_float")
-    utils.save_test_data_for_converter(
+    common.save_from_tflite_converter(converter, MODELS_DIR, "model_float")
+    common.save_test_data_for_converter(
         converter, x_test_float, data_dir=DATA_DIR, base_file_name="model_float")
 
     # convert to TFLite quantized, save model and visualization, save test data
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    utils.quantize_converter(converter, quant_data)
-    model_quant_file = utils.save_from_tflite_converter(converter, MODELS_DIR, "model_quant")
-    utils.save_test_data_for_converter(
+    common.quantize_converter(converter, quant_data)
+    model_quant_file = common.save_from_tflite_converter(converter, MODELS_DIR, "model_quant")
+    common.save_test_data_for_converter(
         converter, x_test_float, data_dir=DATA_DIR, base_file_name="model_quant")
 
     # load quantized model in json, serving as basis for conversions
     # strip quantized model of float interface and softmax
-    model_quant = load_tflite_as_json(model_quant_file)
-    model_stripped = utils.strip_model_quant(model_quant)
+    model_quant = tflite_utils.load_tflite_as_json(model_quant_file)
+    model_stripped = common.strip_model_quant(model_quant)
     model_stripped['description'] = "TOCO Converted and stripped."
-    utils.save_from_json(model_stripped, MODELS_DIR, 'model_stripped')
-    utils.save_test_data_for_stripped_model(
+    common.save_from_json(model_stripped, MODELS_DIR, 'model_stripped')
+    common.save_test_data_for_stripped_model(
         model_stripped, x_test_float, data_dir=DATA_DIR)
 
     # save xcore converted model
     model_xcore = deepcopy(model_quant)
     graph_conv.convert_model(model_xcore, remove_softmax=True)
-    model_xcore_file = utils.save_from_json(model_xcore, MODELS_DIR, 'model_xcore')
-    utils.save_test_data_for_xcore_model(
+    model_xcore_file = common.save_from_json(model_xcore, MODELS_DIR, 'model_xcore')
+    common.save_test_data_for_xcore_model(
         model_xcore, x_test_float, data_dir=DATA_DIR, pad_input_channel_dim=True)
 
 
@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
     logging.info(f"Eager execution enabled: {tf.executing_eagerly()}")
 
-    utils.set_gpu_usage(args.use_gpu, verbose)
+    tflite_utils.set_gpu_usage(args.use_gpu, verbose)
 
     main(inputs=args.inputs, outputs=args.outputs,
          K_h=args.K_h, K_w=args.K_w,

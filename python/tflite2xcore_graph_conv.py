@@ -7,7 +7,7 @@ import json
 import logging
 import argparse
 
-from tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA
+from tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA, set_gpu_usage
 from tflite_utils import check_schema_path, check_flatc_path
 from tflite_utils import load_tflite_as_json, save_json_as_tflite
 from tflite2xcore_utils import get_opcode_index, find_referencing_ops
@@ -445,7 +445,18 @@ if __name__ == "__main__":
                              "(e.g. softmax removal and output argmax).")
     parser.add_argument('--remove_softmax', action='store_true', default=False,
                         help="Remove output softmax operation.")
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help='Verbose mode.')
     args = parser.parse_args()
+
+    verbose = args.verbose
+
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.getLogger('tensorflow').setLevel(logging.ERROR)
+
+    set_gpu_usage(False, verbose)
 
     tflite_input = os.path.realpath(args.tflite_input)
     tflite_output = os.path.realpath(args.tflite_output)

@@ -204,7 +204,7 @@ def main(*, train_new_model=False, evaluate_models=False):
 
     # save xcore converted model
     model_xcore = deepcopy(model_quant)
-    graph_conv.convert_model(model_xcore, remove_softmax=True)
+    graph_conv.convert_model(model_xcore, is_classifier=True)
     common.save_from_json(model_xcore, MODELS_DIR, 'model_xcore')
     common.save_test_data_for_xcore_model(
         model_xcore, x_test_float, data_dir=DATA_DIR)

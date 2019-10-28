@@ -95,7 +95,7 @@ def main(inputs=DEFAULT_INPUTS,
     graph_conv.convert_model(model_xcore, remove_softmax=True)
     model_xcore_file = utils.save_from_json(model_xcore, MODELS_DIR, 'model_xcore')
     utils.save_test_data_for_xcore_model(
-        model_xcore, x_test_float, data_dir=DATA_DIR)
+        model_xcore, x_test_float, data_dir=DATA_DIR, pad_input_channel_dim=True)
 
 
 if __name__ == "__main__":

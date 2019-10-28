@@ -113,6 +113,7 @@ int main(int argc, char *argv[])
     // load model
     char *model_buffer = nullptr;
     size_t model_size;
+    printf("111\n");
     if (!load_model(model_filename, &model_buffer, &model_size))
     {
         printf("error loading model filename=%s\n", model_filename);
@@ -121,6 +122,7 @@ int main(int argc, char *argv[])
 
     // setup runtime
     setup_tflite(model_buffer);
+    printf("222\n");
 
     // Load input tensor
     if (!load_input(input_filename, input->data.raw, input->bytes))

@@ -218,7 +218,8 @@ def save_test_data_for_stripped_model(model_stripped, x_test_float, *,
 
 
 def save_test_data_for_xcore_model(model_xcore, x_test_float, *,
-                                   data_dir, base_file_name='model_xcore'):
+                                   data_dir, base_file_name='model_xcore',
+                                   pad_input_channel_dim=False):
 
     # extract quantization info of input/output
     subgraph = model_xcore['subgraphs'][0]
@@ -233,7 +234,12 @@ def save_test_data_for_xcore_model(model_xcore, x_test_float, *,
         raise NotImplementedError(f"input tensor type {input_tensor['type']} "
                                   "not supported in save_test_data_for_xcore_model")
 
-    # quantize test examples
+    # zero pad and quantize test examples
+    if pad_input_channel_dim:
+        old_shape = x_test_float.shape
+        pad_shape = list(old_shape[:-1]) + [input_tensor['shape'][-1] - old_shape[-1]]
+        pads = np.zeros(pad_shape, dtype=x_test_float.dtype)
+        x_test_float = np.concatenate([x_test_float, pads], axis=3)
     x_test = quantize(x_test_float,
                       input_quant['scale'][0], input_quant['zero_point'][0], dtype)
 

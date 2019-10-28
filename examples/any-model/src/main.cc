@@ -4,7 +4,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "tensorflow/lite/experimental/micro/kernels/all_ops_resolver.h"
+//#include "tensorflow/lite/experimental/micro/kernels/all_ops_resolver.h"
+#include "tensorflow/lite/experimental/micro/kernels/xcore/xcore_ops_resolver.h"
 #include "tensorflow/lite/experimental/micro/micro_error_reporter.h"
 #include "tensorflow/lite/experimental/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
@@ -78,7 +79,8 @@ static void setup_tflite(const char *model_buffer) {
     }
 
     // This pulls in all the operation implementations we need.
-    static tflite::ops::micro::AllOpsResolver resolver;
+    //static tflite::ops::micro::AllOpsResolver resolver;
+    static tflite::ops::micro::XcoreOpsResolver resolver;
 
     // Build an interpreter to run the model with.
     static tflite::MicroInterpreter static_interpreter(

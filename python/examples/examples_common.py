@@ -51,12 +51,13 @@ def one_hot_encode(arr, classes):
 
 def save_from_tflite_converter(converter, models_dir, base_file_name, *,
                                visualize=True):
+    logging.info(f"Converting {base_file_name}...")
     model = converter.convert()
 
     model_file = models_dir / f"{base_file_name}.tflite"
     model_html = models_dir / f"{base_file_name}.html"
     size = model_file.write_bytes(model)
-    logging.info(f"{base_file_name} size: {size/1024:.0f} KB".format())
+    logging.info(f"{base_file_name} size: {size/1024:.0f} KB")
     if visualize:
         tflite_visualize.main(model_file, model_html)
         logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
@@ -98,13 +99,15 @@ def quantize_converter(converter, representative_data):
     converter.representative_dataset = representative_data_gen
 
 
-def apply_interpreter_to_examples(interpreter, examples):
+def apply_interpreter_to_examples(interpreter, examples, *, show_progress_step=None):
     interpreter_input_ind = interpreter.get_input_details()[0]["index"]
     interpreter_output_ind = interpreter.get_output_details()[0]["index"]
     interpreter.allocate_tensors()
 
     outputs = []
-    for x in examples:
+    for j, x in enumerate(examples):
+        if show_progress_step and (j+1) % show_progress_step == 0:
+            logging.info(f"Evaluated examples {j+1:6d}/{examples.shape[0]}")
         interpreter.set_tensor(interpreter_input_ind, tf.expand_dims(x, 0))
         interpreter.invoke()
         y = interpreter.get_tensor(interpreter_output_ind)

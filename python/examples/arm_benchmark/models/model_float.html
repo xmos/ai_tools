@@ -61,7 +61,7 @@ text {
 </head>
 <body>
 <h1>TensorFlow Lite Model</h2><table>
-<tr><th>filename</th><td>model_float.tflite</td></tr>
+<tr><th>filename</th><td>models/model_float.tflite</td></tr>
 <tr><th>version</th><td>3</td></tr>
 <tr><th>description</th><td>TOCO Converted.</td></tr>
 </table>
@@ -202,54 +202,62 @@ text {
 <h3>Ops</h3>
 <table><tr>
 <tr>
-<th>index</th><th>inputs</th><th>outputs</th><th>builtin_options</th><th>opcode_index</th></tr>
+<th>index</th><th>inputs</th><th>outputs</th><th>opcode_index</th><th>builtin_options</th><th>custom_options</th></tr>
 <tr>
 <td>0</td><td><span class='tooltip'><span class='tooltipcontent'>1 conv2d_input FLOAT32 [1, 32, 32, 3]<br>2 sequential/conv2d/Conv2D/ReadVariableOp FLOAT32 [32, 5, 5, 3]<br>3 sequential/conv2d/Conv2D_bias FLOAT32 [32]<br></span>[1, 2, 3]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>14 sequential/re_lu/Relu FLOAT32 [1, 32, 32, 32]<br></span>[14]</span></td>
-<td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'RELU', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
 <td>CONV_2D (0)</td>
+<td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'RELU', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
+<td>None</td>
 </tr>
 <tr>
 <td>1</td><td><span class='tooltip'><span class='tooltipcontent'>14 sequential/re_lu/Relu FLOAT32 [1, 32, 32, 32]<br></span>[14]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>11 sequential/max_pooling2d/MaxPool FLOAT32 [1, 16, 16, 32]<br></span>[11]</span></td>
-<td>{'padding': 'VALID', 'stride_w': 2, 'stride_h': 2, 'filter_width': 2, 'filter_height': 2, 'fused_activation_function': 'NONE'}</td>
 <td>MAX_POOL_2D (2)</td>
+<td>{'padding': 'VALID', 'stride_w': 2, 'stride_h': 2, 'filter_width': 2, 'filter_height': 2, 'fused_activation_function': 'NONE'}</td>
+<td>None</td>
 </tr>
 <tr>
 <td>2</td><td><span class='tooltip'><span class='tooltipcontent'>11 sequential/max_pooling2d/MaxPool FLOAT32 [1, 16, 16, 32]<br>4 sequential/conv2d_1/Conv2D/ReadVariableOp FLOAT32 [32, 5, 5, 32]<br>5 sequential/conv2d_1/Conv2D_bias FLOAT32 [32]<br></span>[11, 4, 5]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>15 sequential/re_lu_1/Relu FLOAT32 [1, 16, 16, 32]<br></span>[15]</span></td>
-<td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'RELU', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
 <td>CONV_2D (0)</td>
+<td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'RELU', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
+<td>None</td>
 </tr>
 <tr>
 <td>3</td><td><span class='tooltip'><span class='tooltipcontent'>15 sequential/re_lu_1/Relu FLOAT32 [1, 16, 16, 32]<br></span>[15]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>12 sequential/max_pooling2d_1/MaxPool FLOAT32 [1, 8, 8, 32]<br></span>[12]</span></td>
-<td>{'padding': 'VALID', 'stride_w': 2, 'stride_h': 2, 'filter_width': 2, 'filter_height': 2, 'fused_activation_function': 'NONE'}</td>
 <td>MAX_POOL_2D (2)</td>
+<td>{'padding': 'VALID', 'stride_w': 2, 'stride_h': 2, 'filter_width': 2, 'filter_height': 2, 'fused_activation_function': 'NONE'}</td>
+<td>None</td>
 </tr>
 <tr>
 <td>4</td><td><span class='tooltip'><span class='tooltipcontent'>12 sequential/max_pooling2d_1/MaxPool FLOAT32 [1, 8, 8, 32]<br>6 sequential/conv2d_2/Conv2D/ReadVariableOp FLOAT32 [64, 5, 5, 32]<br>7 sequential/conv2d_2/Conv2D_bias FLOAT32 [64]<br></span>[12, 6, 7]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>16 sequential/re_lu_2/Relu FLOAT32 [1, 8, 8, 64]<br></span>[16]</span></td>
-<td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'RELU', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
 <td>CONV_2D (0)</td>
+<td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'RELU', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
+<td>None</td>
 </tr>
 <tr>
 <td>5</td><td><span class='tooltip'><span class='tooltipcontent'>16 sequential/re_lu_2/Relu FLOAT32 [1, 8, 8, 64]<br></span>[16]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>13 sequential/max_pooling2d_2/MaxPool FLOAT32 [1, 4, 4, 64]<br></span>[13]</span></td>
-<td>{'padding': 'VALID', 'stride_w': 2, 'stride_h': 2, 'filter_width': 2, 'filter_height': 2, 'fused_activation_function': 'NONE'}</td>
 <td>MAX_POOL_2D (2)</td>
+<td>{'padding': 'VALID', 'stride_w': 2, 'stride_h': 2, 'filter_width': 2, 'filter_height': 2, 'fused_activation_function': 'NONE'}</td>
+<td>None</td>
 </tr>
 <tr>
 <td>6</td><td><span class='tooltip'><span class='tooltipcontent'>13 sequential/max_pooling2d_2/MaxPool FLOAT32 [1, 4, 4, 64]<br>9 sequential/dense/MatMul/ReadVariableOp/transpose FLOAT32 [10, 1024]<br>10 sequential/dense/MatMul_bias FLOAT32 [10]<br></span>[13, 9, 10]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>8 sequential/dense/BiasAdd FLOAT32 [1, 10]<br></span>[8]</span></td>
-<td>{'fused_activation_function': 'NONE', 'weights_format': 'DEFAULT', 'keep_num_dims': False}</td>
 <td>FULLY_CONNECTED (1)</td>
+<td>{'fused_activation_function': 'NONE', 'weights_format': 'DEFAULT', 'keep_num_dims': False}</td>
+<td>None</td>
 </tr>
 <tr>
 <td>7</td><td><span class='tooltip'><span class='tooltipcontent'>8 sequential/dense/BiasAdd FLOAT32 [1, 10]<br></span>[8]</span></td>
 <td><span class='tooltip'><span class='tooltipcontent'>0 Identity FLOAT32 [1, 10]<br></span>[0]</span></td>
-<td>{'beta': 1.0}</td>
 <td>SOFTMAX (3)</td>
+<td>{'beta': 1.0}</td>
+<td>None</td>
 </tr>
 </table>
 <svg id='subgraph0' width='1600' height='900'></svg>

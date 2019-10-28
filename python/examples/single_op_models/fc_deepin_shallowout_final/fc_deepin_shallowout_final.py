@@ -71,7 +71,7 @@ def build_model(input_dim, out_dim=2):
     ])
 
 
-def main(input_dim=DEFAULT_INPUTS, classes=DEFAULT_CLASSES, *, train_new_model=True):
+def main(input_dim=DEFAULT_INPUTS, classes=DEFAULT_CLASSES, *, train_new_model=False):
     assert input_dim % 32 == 0
     assert 1 < classes < 16
 

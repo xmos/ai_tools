@@ -47,6 +47,7 @@ for i, truth_label in enumerate(y_test):
         fd.write(flattened_img.tobytes())
 
     cmd = 'xsim --args ../codegen/bin/800MHz/codegen_800MHz.xe test.bin'
+    #cmd = 'xsim --args ../tflite/bin/800MHz/tflite_800MHz.xe test.bin'
     xsim_output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
     lines = xsim_output.decode('utf-8').split()
     fields = lines[-1].split('=')

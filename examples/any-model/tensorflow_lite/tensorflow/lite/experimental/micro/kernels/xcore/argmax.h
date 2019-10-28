@@ -23,7 +23,7 @@ TfLiteStatus ArgMax16Prepare(TfLiteContext* context, TfLiteNode* node) {
 TfLiteStatus ArgMax16Eval(TfLiteContext* context, TfLiteNode* node) {
     const TfLiteTensor* input = GetInput(context, node, 0);
 
-    int32_t N = input->bytes / sizeof(input->type);
+    int32_t N = input->bytes / sizeof(int16_t);
 
     TfLiteTensor* output = GetOutput(context, node, 0);
 
@@ -33,7 +33,7 @@ TfLiteStatus ArgMax16Eval(TfLiteContext* context, TfLiteNode* node) {
         N
     );
 
-  return kTfLiteOk;
+    return kTfLiteOk;
 }
 
 TfLiteRegistration* Register_ArgMax16() {

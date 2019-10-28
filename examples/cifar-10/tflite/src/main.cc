@@ -4,10 +4,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "tensorflow/lite/experimental/micro/kernels/all_ops_resolver.h"
+#include "tensorflow/lite/experimental/micro/kernels/xcore/xcore_ops_resolver.h"
 #include "tensorflow/lite/experimental/micro/micro_error_reporter.h"
 #include "tensorflow/lite/experimental/micro/micro_interpreter.h"
-//#include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/version.h"
 
 #include "cifar10_model.h"
@@ -40,15 +39,6 @@ static int load_test_input(const char *filename, char *input, size_t esize)
     return 1;
 }
 
-// static int save_test_output(const char *filename, const char *output, size_t osize)
-// {
-//     FILE *fd = fopen(filename, "wb");
-//     fwrite(output , sizeof(int8_t), osize, fd);
-//     fclose(fd);
-
-//     return 1;
-// }
-
 static void setup() {
     // Set up logging.
     static tflite::MicroErrorReporter micro_error_reporter;
@@ -66,7 +56,7 @@ static void setup() {
     }
 
     // This pulls in all the operation implementations we need.
-    static tflite::ops::micro::AllOpsResolver resolver;
+    static tflite::ops::micro::XcoreOpsResolver resolver;
 
     // Build an interpreter to run the model with.
     static tflite::MicroInterpreter static_interpreter(
@@ -106,14 +96,6 @@ int main(int argc, char *argv[])
         error_reporter->Report("Invoke failed on input filename=%s\n", argv[1]);
         return -1;
     }
-
-    // size_t output_size = output->bytes;
-    // for (int i=0; i<output_size/2; i++)
-    // {
-    //     printf("%04X\n", output->data.i16[i]);
-    // }
-
-    // save_test_output("fc_test_0.out", output->data.raw, output_size);
 
     char classification[12] = { 0 };
     

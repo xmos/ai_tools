@@ -31,10 +31,10 @@ for i_label in range(n_lables):
 for i_label, i_test in enumerate(test_indices):
     orig_img = x_test[i_test]
     # output orig
-    print(orig_img.dtype)
-    fn = '{}.orig'.format(labels[i_label])
-    with open(fn, 'wb') as fd:
-        fd.write(orig_img.flatten().tobytes())
+    # print(orig_img.dtype)
+    # fn = '{}.orig'.format(labels[i_label])
+    # with open(fn, 'wb') as fd:
+    #     fd.write(orig_img.flatten().tobytes())
     # make signed int8
     signed_img = np.ndarray.astype(orig_img, 'int8')
     # pad

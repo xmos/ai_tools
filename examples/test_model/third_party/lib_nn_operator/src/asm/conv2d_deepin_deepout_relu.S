@@ -93,6 +93,8 @@ void conv2d_deepin_deepout_relu_asm(
 
 #define VPU_INT8_ACC_PERIOD_LOG2    (4)
 
+.align 8
+
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
 // we need all the registers

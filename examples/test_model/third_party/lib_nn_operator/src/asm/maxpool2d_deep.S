@@ -44,6 +44,8 @@ void maxpool2d_deep_asm(
 #define STACK_ROW_BYTES     11
 #define STACK_TMP           12
 
+.align 8
+
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS

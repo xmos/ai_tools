@@ -37,7 +37,7 @@ T = 0
 for i, truth_label in enumerate(y_test):
     orig_img = x_test[i]
     # make signed int8
-    signed_img = np.ndarray.astype(orig_img, 'int8')
+    signed_img = np.ndarray.astype(orig_img, 'int8') - 127
     # pad
     padded_img = np.pad(signed_img, pad_width=((0, 0), (0, 0), (0, 1)), mode='constant', constant_values=0)
     # flatten

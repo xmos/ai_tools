@@ -30,13 +30,8 @@ for i_label in range(n_lables):
 # make test tensors and output
 for i_label, i_test in enumerate(test_indices):
     orig_img = x_test[i_test]
-    # output orig
-    # print(orig_img.dtype)
-    # fn = '{}.orig'.format(labels[i_label])
-    # with open(fn, 'wb') as fd:
-    #     fd.write(orig_img.flatten().tobytes())
     # make signed int8
-    signed_img = np.ndarray.astype(orig_img, 'int8')
+    signed_img = np.ndarray.astype(orig_img, 'int8') - 127
     # pad
     padded_img = np.pad(signed_img, pad_width=((0, 0), (0, 0), (0, 1)), mode='constant', constant_values=0)
     # flatten

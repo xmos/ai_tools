@@ -406,7 +406,7 @@ def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin):
         "--strict-json --defaults-json -o /tmp {schema} -- {input}".format(
             input=tflite_input, schema=schema))
     logging.info(f"Executing {cmd}")
-    os.system(cmd)  # TODO: use subprocess.call
+    os.system(cmd)  # TODO: use subprocess.call and temporary directory instead of /tmp
     real_output = ("/tmp/" + os.path.splitext(
         os.path.split(tflite_input)[-1])[0] + ".json")
 

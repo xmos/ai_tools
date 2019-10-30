@@ -70,16 +70,16 @@ def main(inputs=DEFAULT_INPUTS,
 
     # convert to TFLite float, save model and visualization, save test data
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    common.save_from_tflite_converter(converter, MODELS_DIR, "model_float")
-    common.save_test_data_for_converter(
-        converter, x_test_float, data_dir=DATA_DIR, base_file_name="model_float")
+    model_float_file = common.save_from_tflite_converter(converter, MODELS_DIR, "model_float")
+    common.save_test_data_for_regular_model(
+        model_float_file, x_test_float, data_dir=DATA_DIR, base_file_name="model_float")
 
     # convert to TFLite quantized, save model and visualization, save test data
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     common.quantize_converter(converter, quant_data)
     model_quant_file = common.save_from_tflite_converter(converter, MODELS_DIR, "model_quant")
-    common.save_test_data_for_converter(
-        converter, x_test_float, data_dir=DATA_DIR, base_file_name="model_quant")
+    common.save_test_data_for_regular_model(
+        model_quant_file, x_test_float, data_dir=DATA_DIR, base_file_name="model_quant")
 
     # load quantized model in json, serving as basis for conversions
     # strip quantized model of float interface and softmax

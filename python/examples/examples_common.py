@@ -52,11 +52,10 @@ def one_hot_encode(arr, classes):
 def save_from_tflite_converter(converter, models_dir, base_file_name, *,
                                visualize=True):
     logging.info(f"Converting {base_file_name}...")
-    model = converter.convert()
 
     model_file = models_dir / f"{base_file_name}.tflite"
     model_html = models_dir / f"{base_file_name}.html"
-    size = model_file.write_bytes(model)
+    size = model_file.write_bytes(converter.convert())
     logging.info(f"{base_file_name} size: {size/1024:.0f} KB")
     if visualize:
         tflite_visualize.main(model_file, model_html)
@@ -99,7 +98,7 @@ def quantize_converter(converter, representative_data):
     converter.representative_dataset = representative_data_gen
 
 
-def apply_interpreter_to_examples(interpreter, examples, *, show_progress_step=None):
+def apply_interpreter_to_examples(interpreter, examples, *, show_progress_step=None, show_pid=False):
     interpreter_input_ind = interpreter.get_input_details()[0]["index"]
     interpreter_output_ind = interpreter.get_output_details()[0]["index"]
     interpreter.allocate_tensors()
@@ -107,7 +106,10 @@ def apply_interpreter_to_examples(interpreter, examples, *, show_progress_step=N
     outputs = []
     for j, x in enumerate(examples):
         if show_progress_step and (j+1) % show_progress_step == 0:
-            logging.info(f"Evaluated examples {j+1:6d}/{examples.shape[0]}")
+            if show_pid:
+                logging.info(f"(PID {os.getpid()}) Evaluated examples {j+1:6d}/{examples.shape[0]}")
+            else:
+                logging.info(f"Evaluated examples {j+1:6d}/{examples.shape[0]}")
         interpreter.set_tensor(interpreter_input_ind, tf.expand_dims(x, 0))
         interpreter.invoke()
         y = interpreter.get_tensor(interpreter_output_ind)
@@ -131,10 +133,10 @@ def save_test_data(data, data_dir, base_file_name):
     logging.info(f"test examples for {base_file_name} saved to {test_data_dir}")
 
 
-def save_test_data_for_converter(converter, x_test_float, *,
-                                 data_dir, base_file_name):
+def save_test_data_for_regular_model(model_path, x_test_float, *,
+                                     data_dir, base_file_name):
     # create interpreter
-    interpreter = tf.lite.Interpreter(model_content=converter.convert())
+    interpreter = tf.lite.Interpreter(model_path=str(model_path))
 
     # extract reference labels for the test examples
     logging.info(f"Extracting examples for {base_file_name}...")

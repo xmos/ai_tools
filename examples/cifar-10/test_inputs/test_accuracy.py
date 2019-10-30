@@ -26,9 +26,10 @@ XE_FILE = None
 
 def run_testcase(testcase):
     global XE_FILE
-    
+
+    tmp_img = np.ndarray.astype(testcase, 'int16')
     # make signed int8
-    signed_img = np.ndarray.astype(testcase, 'int8') - 127
+    signed_img = np.ndarray.astype((tmp_img-128), 'int8')
     # pad
     padded_img = np.pad(signed_img, pad_width=((0, 0), (0, 0), (0, 1)), mode='constant', constant_values=0)
     # flatten

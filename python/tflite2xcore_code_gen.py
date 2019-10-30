@@ -94,7 +94,7 @@ def generate_code(args):
     fun_name = subgraph.GetName() or args.name
     fun_name = re.sub('[^0-9a-zA-Z]+', '_', fun_name)
 
-    fun = c_function.CFunction(fun_name,  inputs, outputs, variables)
+    fun = c_function.CFunction(fun_name,  inputs, outputs)
     for op in ops:
         fun.add_operator(op)
 
@@ -104,7 +104,7 @@ def generate_code(args):
     ]
 
     fd = c_file.CFile(args.name or fun_name, initializers=initializers,
-        includes=includes, model=model)
+        variables=variables, includes=includes, model=model)
     fd.add_function(fun)
     
     if args.name:

@@ -29,9 +29,9 @@ for i_label in range(n_lables):
 
 # make test tensors and output
 for i_label, i_test in enumerate(test_indices):
-    orig_img = x_test[i_test]
+    orig_img = np.ndarray.astype(x_test[i_test], 'int16')
     # make signed int8
-    signed_img = np.ndarray.astype(orig_img, 'int8') - 127
+    signed_img = np.ndarray.astype((orig_img-128), 'int8')
     # pad
     padded_img = np.pad(signed_img, pad_width=((0, 0), (0, 0), (0, 1)), mode='constant', constant_values=0)
     # flatten

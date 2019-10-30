@@ -95,6 +95,8 @@ void conv2d_shallowin_deepout_relu_asm(
 #define SAVED_REGS_DBL              (5)
 
 
+.align 8
+
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
 // we need all the registers

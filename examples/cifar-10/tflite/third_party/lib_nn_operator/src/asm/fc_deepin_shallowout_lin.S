@@ -39,6 +39,8 @@ void fc_deepin_shallowout_lin_asm(
 #define _32             r8
 
 
+.align 8
+
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS

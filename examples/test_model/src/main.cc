@@ -4,24 +4,38 @@
 #include <stdio.h>
 #include <stdint.h>
 
+//#include "tensorflow/lite/experimental/micro/kernels/all_ops_resolver.h"
 #include "tensorflow/lite/experimental/micro/kernels/xcore/xcore_ops_resolver.h"
 #include "tensorflow/lite/experimental/micro/micro_error_reporter.h"
 #include "tensorflow/lite/experimental/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
-
-#include "cifar10_model.h"
-
-#define TEST_INPUT_SIZE = 32 * 32 * 4
 
 tflite::ErrorReporter* error_reporter = nullptr;
 const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
-constexpr int kTensorArenaSize = 49000;  //TODO: How can this be determined?
+constexpr int kTensorArenaSize = 100000;  // Hopefully this is big enough for all tests
 uint8_t tensor_arena[kTensorArenaSize];
 
-static int load_test_input(const char *filename, char *input, size_t esize)
+static int load_model(const char *filename, char **buffer, size_t *size)
+{
+    FILE *fd = fopen(filename, "rb");
+    fseek(fd, 0, SEEK_END);
+    size_t fsize = ftell(fd);
+
+    *buffer = (char *)malloc(fsize);
+
+    fseek(fd, 0, SEEK_SET);
+    fread(*buffer, 1, fsize, fd);
+    fclose(fd);
+
+    *size = fsize;
+
+    return 1;
+}
+
+static int load_input(const char *filename, char *input, size_t esize)
 {
     FILE *fd = fopen(filename, "rb");
     fseek(fd, 0, SEEK_END);
@@ -39,14 +53,23 @@ static int load_test_input(const char *filename, char *input, size_t esize)
     return 1;
 }
 
-static void setup() {
+static int save_output(const char *filename, const char *output, size_t osize)
+{
+    FILE *fd = fopen(filename, "wb");
+    fwrite(output , sizeof(int8_t), osize, fd);
+    fclose(fd);
+
+    return 1;
+}
+
+static void setup_tflite(const char *model_buffer) {
     // Set up logging.
     static tflite::MicroErrorReporter micro_error_reporter;
     error_reporter = &micro_error_reporter;
 
     // Map the model into a usable data structure. This doesn't involve any
     // copying or parsing, it's a very lightweight operation.
-    model = tflite::GetModel(cifar10_tflite);
+    model = tflite::GetModel(model_buffer);
     if (model->version() != TFLITE_SCHEMA_VERSION) {
         error_reporter->Report(
             "Model provided is schema version %d not equal "
@@ -56,6 +79,7 @@ static void setup() {
     }
 
     // This pulls in all the operation implementations we need.
+    //static tflite::ops::micro::AllOpsResolver resolver;
     static tflite::ops::micro::XcoreOpsResolver resolver;
 
     // Build an interpreter to run the model with.
@@ -77,64 +101,48 @@ static void setup() {
 
 int main(int argc, char *argv[])
 {
-    setup();
 
-    if (argc > 1)
+    if (argc < 4)
     {
-        printf("starting: input filename=%s\n", argv[1]);
-        // Load input tensor
-        if (!load_test_input(argv[1], input->data.raw, input->bytes))
-            return -1;
-    } else {
-        printf("starting: no input file\n");
-        memset(input->data.raw, 0, input->bytes);
+        printf("Three arguments expected: mode.tflite input-file output-file\n");
+        return -1;
+    }
+
+    char *model_filename = argv[1];
+    char *input_filename = argv[2];
+    char *output_filename = argv[3];
+
+    // load model
+    char *model_buffer = nullptr;
+    size_t model_size;
+    if (!load_model(model_filename, &model_buffer, &model_size))
+    {
+        printf("error loading model filename=%s\n", model_filename);
+        return -1;
+    }
+
+    // setup runtime
+    setup_tflite(model_buffer);
+
+    // Load input tensor
+    if (!load_input(input_filename, input->data.raw, input->bytes))
+    {
+        printf("error loading input filename=%s\n", input_filename);
+        return -1;
     }
 
     // Run inference, and report any error
     TfLiteStatus invoke_status = interpreter->Invoke();
     if (invoke_status != kTfLiteOk) {
-        error_reporter->Report("Invoke failed on input filename=%s\n", argv[1]);
+        error_reporter->Report("Invoke failed\n");
         return -1;
     }
 
-    char classification[12] = { 0 };
-    
-    switch (output->data.i32[0])
+    // save output
+    if (!save_output(output_filename, output->data.raw, output->bytes))
     {
-        case 0:
-            snprintf(classification, 9, "airplane"); 
-            break;
-        case 1: 
-            snprintf(classification, 11, "automobile"); 
-            break;
-        case 2:
-            snprintf(classification, 5, "bird"); 
-            break;
-        case 3:
-            snprintf(classification, 4, "cat"); 
-            break;
-        case 4:
-            snprintf(classification, 5, "deer"); 
-            break;
-        case 5:
-            snprintf(classification, 4, "dog"); 
-            break;
-        case 6:
-            snprintf(classification, 5, "frog"); 
-            break;
-        case 7:
-            snprintf(classification, 6, "horse"); 
-            break;
-        case 8:
-            snprintf(classification, 5, "ship"); 
-            break;
-        case 9:
-            snprintf(classification, 6, "truck"); 
-            break;
-        default:
-            break;
+        printf("error saving output filename=%s\n", output_filename);
+        return -1;
     }
-    printf("finished: classification=%s\n", classification);
- 
     return 0;
 }

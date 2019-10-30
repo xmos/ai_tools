@@ -33,7 +33,7 @@ TfLiteStatus ArgMax16Eval(TfLiteContext* context, TfLiteNode* node) {
         N
     );
 
-  return kTfLiteOk;
+    return kTfLiteOk;
 }
 
 TfLiteRegistration* Register_ArgMax16() {

@@ -1,8 +1,11 @@
 /* Copyright 2018 The TensorFlow Authors. All Rights Reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,34 +36,6 @@ limitations under the License.
 
 #include "tensorflow/lite/experimental/micro/debug_log.h"
 
-#include <syscall.h>
-#include <string.h>
+#include <cstdio>
 
-#ifndef DEBUG_PRINTF_BUFSIZE
-#define DEBUG_PRINTF_BUFSIZE 80
-#endif
-
-extern "C"{
-void DebugLog(const char* s) 
-{ 
-  char buf[DEBUG_PRINTF_BUFSIZE];
-  char *end = &buf[DEBUG_PRINTF_BUFSIZE - 1];
-  char *p = buf;
-
-    int len = strlen(s);
-    if (len > (end - buf)) {
-            // flush
-      _write(FD_STDOUT, buf, p - buf);
-      p = buf;
-    }
-    if (len > (end - buf)){
-      len = end - buf;
-    }
-    memcpy(p, s, len);
-    p += len;
-
-  _write(FD_STDOUT, buf, p - buf);
-
-}
-
-}
+extern "C" void DebugLog(const char* s) { fprintf(stderr, "%s", s); }

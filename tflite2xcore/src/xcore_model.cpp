@@ -50,15 +50,3 @@ bool XCOREModel::Export(const std::string& model_filename)
 
     return true;
 }
-
-bool XCOREModel::Transform(const std::string& description)
-{
-    modelT->description = description;
-
-    return true;
-}
-
-void XCOREModel::TransformTensors()
-{
-    //TODO: implement me
-}

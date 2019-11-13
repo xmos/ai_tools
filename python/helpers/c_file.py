@@ -4,7 +4,7 @@ import struct
 import re
 
 class CFile():
-    def __init__(self, name, includes=None, initializers=None, functions=None, model=None):
+    def __init__(self, name, includes=None, initializers=None, variables=None, functions=None, model=None):
 
         basename, extension = os.path.splitext(name)
 
@@ -13,6 +13,7 @@ class CFile():
 
         self.includes = includes or []
         self.initializers = initializers or []
+        self.variables = variables or []
         self.functions = functions or []
         self.model = model
         
@@ -108,6 +109,15 @@ class CFile():
             else:
                 rhs = ''
             lines.append(f'const {stdtype} WORD_ALIGNED {name}[{dims}]{rhs};')
+        lines.append('')
+
+        # variables
+        for variable in self.variables:
+            name = variable.GetSanitizedName()
+            stdtype = variable.GetStandardType()
+            shape = variable.GetShape()
+            dims = ' * '.join([str(v) for v in shape])
+            lines.append(f'{stdtype} WORD_ALIGNED {name}[{dims}];')
         lines.append('')
 
         # functions

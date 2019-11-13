@@ -14,7 +14,7 @@ Make a directory for the build
 
 Run cmake
 
-    > cmake ../src/
+    > cmake ../
     > sudo make install
 
 ## Running

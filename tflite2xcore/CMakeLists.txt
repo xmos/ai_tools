@@ -1,24 +1,58 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.14)
 
-# Get the tensorflow build base directory
-EXECUTE_PROCESS(COMMAND bazel info output_base WORKING_DIRECTORY  "${PROJECT_SOURCE_DIR}/../../tensorflow" OUTPUT_VARIABLE BAZEL_OUTPUT_BASE)
-STRING(STRIP "${BAZEL_OUTPUT_BASE}" BAZEL_OUTPUT_BASE)
-MESSAGE("bazel info output_base: ${BAZEL_OUTPUT_BASE}")
+PROJECT(tflite2xcore VERSION 1.0.1)
 
-SET (TENSORFLOW_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../tensorflow" CACHE PATH "Location of Tensorflow source files." )
-SET (TENSORFLOW_GENFILES_DIR "${PROJECT_SOURCE_DIR}/../../tensorflow/bazel-genfiles" CACHE PATH "Location of Tensorflow generated files." )
-SET (FLATBUFFERS_SOURCE_DIR "${BAZEL_OUTPUT_BASE}/flatbuffers/include" CACHE PATH "Location of flatbuffers files." )
-SET (ANYOPTION_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../AnyOption" CACHE PATH "Location of AnyOption files." )
+SET(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-ADD_EXECUTABLE (tflite2xcore "")
+SET(TENSORFLOW_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../tensorflow")
+SET(FLATBUFFERS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../flatbuffers/include")
+SET(ANYOPTION_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../AnyOption")
 
-FILE(GLOB_RECURSE tflite2xcore_SOURCES
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
+#MESSAGE(${FLATBUFFERS_SOURCE_DIR})
+
+#**********************
+# Build shared library
+#**********************
+
+ADD_LIBRARY(libtflite2xcore SHARED)
+SET_TARGET_PROPERTIES(libtflite2xcore PROPERTIES VERSION ${PROJECT_VERSION})
+SET_TARGET_PROPERTIES(libtflite2xcore PROPERTIES PREFIX "")
+
+SET(libtflite2xcore_SOURCES
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/xcore_model.cpp"
+)
+
+SET (libtflite2xcore_INCLUDES_PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+TARGET_SOURCES(libtflite2xcore
+  PRIVATE ${libtflite2xcore_SOURCES}
+)
+
+TARGET_INCLUDE_DIRECTORIES(libtflite2xcore
+  PRIVATE ${TENSORFLOW_SOURCE_DIR}
+  PRIVATE ${FLATBUFFERS_SOURCE_DIR}
+  PRIVATE ${libtflite2xcore_INCLUDES_PRIVATE}
+)
+
+INSTALL(TARGETS libtflite2xcore DESTINATION lib)
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/xcore_model.h DESTINATION include)
+
+#**********************
+# Build executable
+#**********************
+
+ADD_EXECUTABLE(tflite2xcore)
+
+SET(tflite2xcore_SOURCES
+  ${libtflite2xcore_SOURCES}
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
 )
 
 SET (tflite2xcore_INCLUDES_PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${libtflite2xcore_INCLUDES_PRIVATE}
 )
 
 TARGET_SOURCES(tflite2xcore
@@ -27,11 +61,11 @@ TARGET_SOURCES(tflite2xcore
 )
 
 TARGET_INCLUDE_DIRECTORIES(tflite2xcore
-  PRIVATE ${TENSORFLOW_GENFILES_DIR}
   PRIVATE ${TENSORFLOW_SOURCE_DIR}
   PRIVATE ${FLATBUFFERS_SOURCE_DIR}
   PRIVATE ${ANYOPTION_SOURCE_DIR}
   PRIVATE ${tflite2xcore_INCLUDES_PRIVATE}
 )
 
-INSTALL (TARGETS tflite2xcore DESTINATION bin)
+
+INSTALL(TARGETS tflite2xcore DESTINATION bin)

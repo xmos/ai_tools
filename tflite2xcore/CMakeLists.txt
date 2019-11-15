@@ -15,24 +15,29 @@ SET(ANYOPTION_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../AnyOption")
 # Build shared library
 #**********************
 
+#FIND_PACKAGE(PythonLibs REQUIRED)
+
 ADD_LIBRARY(libtflite2xcore SHARED)
 SET_TARGET_PROPERTIES(libtflite2xcore PROPERTIES VERSION ${PROJECT_VERSION})
 SET_TARGET_PROPERTIES(libtflite2xcore PROPERTIES PREFIX "")
 
-SET(libtflite2xcore_SOURCES
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/xcore_model.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/xcore_model.h"
-)
+#SET(libtflite2xcore_SOURCES
+#  "${CMAKE_CURRENT_SOURCE_DIR}/src/xcore_model.cpp"
+#  "${CMAKE_CURRENT_SOURCE_DIR}/src/xcore_model.h"
+#)
 
 TARGET_SOURCES(libtflite2xcore
-  PRIVATE ${libtflite2xcore_SOURCES}
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/c_api.cpp"
+#  PRIVATE ${libtflite2xcore_SOURCES}
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/flexbuffer_builder.cpp"
 )
 
 TARGET_INCLUDE_DIRECTORIES(libtflite2xcore
+#  PRIVATE ${PYTHON_INCLUDE_DIRS}
   PRIVATE ${TENSORFLOW_SOURCE_DIR}
   PRIVATE ${FLATBUFFERS_SOURCE_DIR}
 )
+
+#TARGET_LINK_LIBRARIES(libtflite2xcore ${PYTHON_LIBRARIES})
 
 INSTALL(TARGETS libtflite2xcore DESTINATION lib)
 #INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/xcore_model.h DESTINATION include)
@@ -41,22 +46,22 @@ INSTALL(TARGETS libtflite2xcore DESTINATION lib)
 # Build executable
 #**********************
 
-ADD_EXECUTABLE(tflite2xcore)
+#ADD_EXECUTABLE(tflite2xcore)
 
-SET(tflite2xcore_SOURCES
-  ${libtflite2xcore_SOURCES}
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
-)
+#SET(tflite2xcore_SOURCES
+#  ${libtflite2xcore_SOURCES}
+#  "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
+#)
 
-TARGET_SOURCES(tflite2xcore
-  PRIVATE "${ANYOPTION_SOURCE_DIR}/anyoption.cpp"
-  PRIVATE ${tflite2xcore_SOURCES}
-)
+#TARGET_SOURCES(tflite2xcore
+#  PRIVATE "${ANYOPTION_SOURCE_DIR}/anyoption.cpp"
+#  PRIVATE ${tflite2xcore_SOURCES}
+#)
 
-TARGET_INCLUDE_DIRECTORIES(tflite2xcore
-  PRIVATE ${TENSORFLOW_SOURCE_DIR}
-  PRIVATE ${FLATBUFFERS_SOURCE_DIR}
-  PRIVATE ${ANYOPTION_SOURCE_DIR}
-)
+#TARGET_INCLUDE_DIRECTORIES(tflite2xcore
+#  PRIVATE ${TENSORFLOW_SOURCE_DIR}
+#  PRIVATE ${FLATBUFFERS_SOURCE_DIR}
+#  PRIVATE ${ANYOPTION_SOURCE_DIR}
+#)
 
-INSTALL(TARGETS tflite2xcore DESTINATION bin)
+#INSTALL(TARGETS tflite2xcore DESTINATION bin)

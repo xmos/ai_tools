@@ -161,7 +161,7 @@ class Subgraph():
         return subgraph
 
     def GetName(self):
-        """Return all Name."""
+        """Return name."""
         return self.name
 
     def GetTensors(self):
@@ -173,7 +173,7 @@ class Subgraph():
         return self.tensors[index]
 
     def GetTensors(self, indices):
-        """Return a list of Tensor wit the given indices."""
+        """Return a list of Tensors with the given indices."""
         tensors = []
 
         for index in indices:

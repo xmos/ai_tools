@@ -35,34 +35,36 @@ TFLITE_TYPE_TO_BYTES = {
 
 class Operator():
     @classmethod
-    def from_dict(cls, operator_dict):
+    def from_dict(cls, subgraph, operator_dict):
         '''Construct a Operator object from a TensorFlow Lite flatbuffer operator dictionary'''
         operator = cls()
 
+        operator.subgraph = subgraph # parent
+
         operator.inputs = operator_dict['inputs']
         operator.outputs = operator_dict['outputs']
-        #operator.builtin_options = tensor_dict['builtin_options']
+        if 'builtin_options' in operator_dict:
+            operator.builtin_options = operator_dict['builtin_options']
+        else:
+            operator.builtin_options = None
+        if 'custom_options' in operator_dict:
+            operator.custom_options = operator_dict['custom_options']
+        else:
+            operator.custom_options = None
         operator.opcode_index = operator_dict['opcode_index']
 
         return operator
 
     def __str__(self):
-        return f'inputs={self.inputs}, outputs={self.outputs}, opcode_index={self.opcode_index}'
-
-    def GetInputs(self):
-        return self.inputs
-
-    def GetOutputs(self):
-        return self.outputs
-
-    def GetOpcodeIndex(self):
-        return self.opcode_index
+        return f'inputs={self._inputs}, outputs={self._outputs}, opcode_index={self.opcode_index}'
 
 class Tensor():
     @classmethod
-    def from_dict(cls, tensor_dict):
+    def from_dict(cls, subgraph, tensor_dict):
         '''Construct a Tensor object from a TensorFlow Lite flatbuffer tensor dictionary'''
         tensor = cls()
+
+        tensor.subgraph = subgraph # parent
 
         tensor.name = tensor_dict['name']
         tensor.type = tensor_dict['type']
@@ -78,50 +80,38 @@ class Tensor():
     def __str__(self):
         return f'name={self.name}, type={self.type}, shape={self.shape}, buffer={self.buffer}'
 
-    def GetName(self):
-        return self.name
-
-    def GetSanitizedName(self):
+    @property
+    def sanitized_name(self):
         '''Return a name that is safe to use in source code'''
         return self.name.replace('/', '_')
 
-    def GetName(self):
-        '''Return a name that is safe to use in source code'''
-        return self.name.replace('/', '_')
-
-    def GetNameSegments(self):
+    @property
+    def name_segments(self):
         return self.name.split('/')
 
-    def GetBaseName(self):
+    @property
+    def base_name(self):
         return self.GetNameSegments()[-1]
 
-    def GetType(self):
-        return self.type
-
-    def GetStandardType(self):
+    @property
+    def standard_type(self):
         '''Return type (from cstdint.h)'''
         return TFLITE_TYPE_TO_C_TYPE[self.type]
 
-    def GetShape(self):
-        return self.shape
-
-    def GetSize(self):
+    @property
+    def size(self):
         size = TFLITE_TYPE_TO_BYTES[self.type]
         for s in self.shape:
             size *= s
         return size
 
-    def GetBuffer(self):
-        return self.buffer
-
-    def GetQuantization(self):
-        return self.quantization
-
 class Subgraph():
     @classmethod
-    def from_dict(cls, subgraph_dict):
+    def from_dict(cls, model, subgraph_dict):
         '''Construct a Subgraph object from a TensorFlow Lite flatbuffer subgraph dictionary'''
         subgraph = cls()
+
+        subgraph.model = model # parent
 
         if 'name' in subgraph_dict:
             subgraph.name = subgraph_dict['name']
@@ -131,48 +121,47 @@ class Subgraph():
         # load tensors
         subgraph.tensors = []
         for tensor_dict in subgraph_dict['tensors']:
-            subgraph.tensors.append(Tensor.from_dict(tensor_dict))
+            subgraph.tensors.append(Tensor.from_dict(subgraph, tensor_dict))
 
         # load operators
         subgraph.operators = []
         for operator_dict in subgraph_dict['operators']:
-            subgraph.operators.append(Operator.from_dict(operator_dict))
+            subgraph.operators.append(Operator.from_dict(subgraph, operator_dict))
 
-        input_output_indices = set([]) # lookup for input and output tensor indices
         # load inputs
         subgraph.inputs = []
         for input_index in subgraph_dict['inputs']:
-            input_output_indices.add(input_index)
             subgraph.inputs.append(subgraph.tensors[input_index])
 
         # load outputs
         subgraph.outputs = []
         for output_index in subgraph_dict['outputs']:
-            input_output_indices.add(output_index)
             subgraph.outputs.append(subgraph.tensors[output_index])
-
-        # load intermediates
-        #   intermediates are any tensors that are not an input or an output
-        subgraph.intermediates = []
-        for tensor_index, tensor in enumerate(subgraph.tensors):
-            if tensor_index not in input_output_indices:
-                subgraph.intermediates.append(tensor)
 
         return subgraph
 
-    def GetName(self):
-        """Return name."""
-        return self.name
+    @property
+    def intermediates(self):
+        #   intermediates are any tensors that are not an input or an output
+        
+        input_output_tensors = set([]) # lookup for input and output tensor indices
+        for input_ in self.inputs:
+            input_output_tensors.add(input_.name)
+        for output in self.outputs:
+            input_output_tensors.add(output.name)
 
-    def GetTensors(self):
-        """Return all Tensors."""
-        return self.tensors
+        intermediates = []
+        for tensor, tensor in enumerate(self.tensors):
+            if tensor.name not in input_output_tensors:
+                intermediates.append(tensor)
 
-    def GetTensor(self, index):
+        return intermediates
+
+    def get_tensor(self, index):
         """Return one Tensor."""
         return self.tensors[index]
 
-    def GetTensors(self, indices):
+    def get_tensors(self, indices):
         """Return a list of Tensors with the given indices."""
         tensors = []
 
@@ -180,26 +169,6 @@ class Subgraph():
             tensors.append(self.tensors[index])
 
         return tensors
-
-    def GetOperators(self):
-        """Return all Operators."""
-        return self.operators
-
-    def GetInputs(self):
-        """Return the input Tensors."""
-        return self.inputs
-
-    def GetOutputs(self):
-        """Return the output Tensors."""
-        return self.outputs
-
-    def GetInitializers(self):
-        """Return the initialized Tensors."""
-        return self.initializers
-
-    def GetIntermediates(self):
-        """Return the intermediate Tensors."""
-        return self.intermediates
 
 class XCOREModel():
     def __init__(self):
@@ -239,18 +208,15 @@ class XCOREModel():
         # load subgraphs
         self.subgraphs = []
         for subgraph in model['subgraphs']:
-            self.subgraphs.append(Subgraph.from_dict(subgraph))
+            self.subgraphs.append(Subgraph.from_dict(self, subgraph))
 
     def Export(self, model_filename):
         raise NotImplementedError #TODO: Implement me!!!
 
-    def GetSubgraph(self, index=0):
+    def get_subgraph(self, index=0):
         return self.subgraphs[index]
 
-    def GetBuffers(self):
-        return self.buffers
-
-    def GetBuffer(self, index, stdtype = 'int8_t'):
+    def get_buffer(self, index, stdtype = 'int8_t'):
         if 'data' in self.buffers[index]:
             bits = self.buffers[index]['data']
             if stdtype == 'int8_t':
@@ -262,7 +228,7 @@ class XCOREModel():
 
         return None
     
-    def GetOperator(self, index):
+    def get_operator(self, index):
         if self.operator_codes[index]['builtin_code'] == 'CUSTOM':
             return self.operator_codes[index]['custom_code']
         else:

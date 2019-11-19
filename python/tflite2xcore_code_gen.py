@@ -14,8 +14,8 @@ def generate_code(args):
     verbose = args.verbose
 
     model = xcore_model.XCOREModel()
-    model.Import(args.tflite_input, args.flatc, args.schema)
-    subgraph = model.get_subgraph() # only one supported for now
+    model.load(args.tflite_input, args.flatc, args.schema)
+    subgraph = model.subgraphs[0] # only one supported for now
     intermediates_memory = 0
     total_memory = 0
 
@@ -25,7 +25,7 @@ def generate_code(args):
         print('* Operators *')
         print('*************')
         for node in nodes:
-            print(model.get_operator(node.opcode_index))
+            print(model.get_operator_code(node.opcode_index))
 
     inputs = subgraph.inputs
     if verbose:
@@ -75,7 +75,7 @@ def generate_code(args):
     errs = []
     for node in nodes:
         try:
-            name = model.get_operator(node.opcode_index)
+            name = model.get_operator_code(node.opcode_index)
             input_tensors = subgraph.get_tensors(node.inputs)
             output_tensors = subgraph.get_tensors(node.outputs)
             op = operators.create(name, input_tensors, output_tensors, model)

@@ -7,28 +7,20 @@ import argparse
 
 import xcore_model
 
-def test_xcore_model(args):
-    verbose = args.verbose
-
-    model = xcore_model.XCOREModel()
-    model.Import(args.tflite_input, args.flatc, args.schema)
-    subgraph = model.get_subgraph() # only one supported for now
-
+def print_subgraph(model, subgraph):
     nodes = subgraph.operators
-    if verbose:
-        print('*************')
-        print('* Operators *')
-        print('*************')
-        for node in nodes:
-            print(model.get_operator(node.opcode_index))
+    print('*************')
+    print('* Operators *')
+    print('*************')
+    for node in nodes:
+        print(model.get_operator_code(node.opcode_index))
 
     inputs = subgraph.inputs
-    if verbose:
-        print('**********')
-        print('* Inputs *')
-        print('**********')
-        for input_ in inputs:
-            print(input_)
+    print('**********')
+    print('* Inputs *')
+    print('**********')
+    for input_ in inputs:
+        print(input_)
 
     initializers = [] # initializers are Tensors that are initialized with data
     variables = [] # variables are Tensors that are intermediates AND not initializers
@@ -40,27 +32,75 @@ def test_xcore_model(args):
         else:
             variables.append(intermediate)
 
-    if verbose:
-        print('****************')
-        print('* Initializers *')
-        print('****************')
-        for initializer in initializers:
-            print(initializer)
+    print('****************')
+    print('* Initializers *')
+    print('****************')
+    for initializer in initializers:
+        print(initializer)
 
-    if verbose:
-        print('*************')
-        print('* Variables *')
-        print('*************')
-        for variable in variables:
-            print(variable)
+    print('*************')
+    print('* Variables *')
+    print('*************')
+    for variable in variables:
+        print(variable)
 
     outputs = subgraph.outputs
-    if verbose:
-        print('***********')
-        print('* Outputs *')
-        print('***********')
-        for output in outputs:
-            print(output)
+    print('***********')
+    print('* Outputs *')
+    print('***********')
+    for output in outputs:
+        print(output)
+
+def test_xcore_model(args):
+    model = xcore_model.XCOREModel()
+    model.load(args.tflite_input, args.flatc, args.schema)
+    subgraph = model.subgraphs[0]  # only one supported for now
+
+    print('')
+    print('')
+    print('----------------------------------')
+    print('- Original model                 -')
+    print('----------------------------------')
+    print('')
+    print('')
+    print_subgraph(model, subgraph)
+
+    # Now do some editing
+    print('')
+    print('')
+    print('---------------------------------')
+    print('- Trim first and last operators -')
+    print('---------------------------------')
+    print('')
+    print('')
+    first_operator = subgraph.operators[0]
+    first_operator.trim()  # remove on the operator object
+    last_operator = subgraph.operators[-1]
+    subgraph.trim_operator(last_operator) # or, remove on the subgraph opject
+    print_subgraph(model, subgraph)
+    print('')
+    print('')
+    print('---------------------------------')
+    print('- Substitute an operator        -')
+    print('---------------------------------')
+    print('')
+    print('')
+    new_operator_code = model.create_operator_code(custom_code='XC_CONV2D')
+    
+    new_operator = subgraph.create_operator(new_operator_code)
+    subgraph.substitute_operator(new_operator_code)
+
+    new_buffer = model.create_buffer([1] * 1 * 5 * 5 * 3)
+    new_tensor = subgraph.create_tensor(
+        'test/new_tensor',
+        'INT8',
+        [1, 5, 5, 3],
+        new_buffer
+    )
+    print_subgraph(model, subgraph)
+    print()
+    print(new_operator_code)
+    print(new_tensor)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -69,7 +109,6 @@ if __name__ == "__main__":
                         help='Path to flatc executable.')
     parser.add_argument('--schema', required=False, default=None,
                         help='Path to .fbs schema file.')
-    parser.add_argument('--verbose', action='store_true', help='Verbose mode')
     args = parser.parse_args()
 
     test_xcore_model(args)

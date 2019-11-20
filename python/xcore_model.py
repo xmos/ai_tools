@@ -34,60 +34,113 @@ TFLITE_TYPE_TO_BYTES = {
 }
 
 class Buffer():
+    def __init__(self, model, data=None):
+        self.model = model # parent
+        self.data = data or []
+
     @classmethod
     def from_dict(cls, model, buffer_dict):
-        buffer = cls()
+        if 'data' in buffer_dict:
+            data = buffer_dict['data']
+        else:
+            data = []
 
-        buffer.model = model # parent
+        buffer = cls(model, data)
 
         return buffer
 
+    def __str__(self):
+        if self.data:
+            len_ = len(self.data)
+            return f'{len_}'
+        else:
+            return f'[]'
+
+    def unpack(self, stdtype='int8_t'):
+        if stdtype == 'int8_t':
+            return self.data
+        elif stdtype == 'int16_t':
+            return [i[0] for i in struct.iter_unpack('h', bytearray(self.data))]
+        elif stdtype == 'int32_t':
+            return [i[0] for i in struct.iter_unpack('i', bytearray(self.data))]
+
 class Operator():
+    def __init__(self, model, subgraph, operator_code, inputs=None, 
+                 outputs=None, builtin_options=None, custom_options=None):
+        self.model = model # grandparent
+        self.subgraph = subgraph # parent
+        self.operator_code = operator_code
+        self.inputs = inputs or []
+        self.outputs = outputs or []
+        self.builtin_options = builtin_options
+        self.custom_options = custom_options
+
     @classmethod
-    def from_dict(cls, model, subgraph, operator_dict):
+    def from_dict(cls, model, subgraph, operator_codes, operator_dict):
         '''Construct a Operator object from a TensorFlow Lite flatbuffer operator dictionary'''
-        operator = cls()
+        inputs = []
+        for input_index in operator_dict['inputs']:
+            input_tensor = subgraph.tensors[input_index]
+            inputs.append(input_tensor)
 
-        operator.model = model # grandparent
-        operator.subgraph = subgraph # parent
+        outputs = []
+        for output_index in operator_dict['outputs']:
+            output_tensor = subgraph.tensors[output_index]
+            outputs.append(output_tensor)
 
-        operator.inputs = operator_dict['inputs']
-        operator.outputs = operator_dict['outputs']
         if 'builtin_options' in operator_dict:
-            operator.builtin_options = operator_dict['builtin_options']
+            builtin_options = operator_dict['builtin_options']
         else:
-            operator.builtin_options = None
+            builtin_options = None
         if 'custom_options' in operator_dict:
-            operator.custom_options = operator_dict['custom_options']
+            custom_options = operator_dict['custom_options']
         else:
-            operator.custom_options = None
-        #operator.opcode_index = operator_dict['opcode_index']
+            custom_options = None
+
+        operator_code = operator_codes[operator_dict['opcode_index']]
+
+        operator = cls(model, subgraph, operator_code, inputs, outputs, builtin_options, custom_options)
 
         return operator
 
-    # def trim(self, cleanup_tensors=True):
-    #     self.subgraph.trim_operator(self, cleanup_tensors)
-
     def __str__(self):
-        return f'inputs={self.inputs}, outputs={self.outputs}, opcode_index={self.opcode_index}'
+        INDENT='  '
+
+        lines = []
+        lines.append(f'operator_code= {self.operator_code}')
+        lines.append(INDENT+'inputs')
+        lines.extend([INDENT+INDENT+str(input_) for input_ in self.inputs])
+        lines.append(INDENT+'outputs')
+        lines.extend([INDENT+INDENT+str(output) for output in self.outputs])
+        return '\n'.join(lines)
 
 class Tensor():
+    def __init__(self, model, subgraph, name, type_, shape, buffer=None, quantization=None):
+        self.model = model # grandparent
+        self.subgraph = subgraph # parent
+        self.name = name
+        self.type = type_
+        self.shape = shape
+        if buffer:
+            self.buffer = buffer
+        else:
+            self.buffer = Buffer(self.model)
+            self.model.buffers.append(self.buffer)
+        self.quantization = quantization
+
     @classmethod
     def from_dict(cls, model, subgraph, tensor_dict):
         '''Construct a Tensor object from a TensorFlow Lite flatbuffer tensor dictionary'''
-        tensor = cls()
-
-        tensor.model = model # grandparent
-        tensor.subgraph = subgraph # parent
-
-        tensor.name = tensor_dict['name']
-        tensor.type = tensor_dict['type']
-        tensor.shape = tensor_dict['shape']
-        tensor.buffer = tensor_dict['buffer']
+        name = tensor_dict['name']
+        type_ = tensor_dict['type']
+        shape = tensor_dict['shape']
+        buffer = model.buffers[tensor_dict['buffer']]
         if 'quantization' in tensor_dict:
-            tensor.quantization = tensor_dict['quantization']
+            quantization = tensor_dict['quantization']
         else:
-            tensor.quantization = None
+            quantization = None
+
+        tensor = cls(model, subgraph, name, type_, shape, buffer, quantization)
 
         return tensor
 
@@ -105,7 +158,7 @@ class Tensor():
 
     @property
     def base_name(self):
-        return self.GetNameSegments()[-1]
+        return self.name_segments()[-1]
 
     @property
     def standard_type(self):
@@ -119,12 +172,9 @@ class Tensor():
             size *= s
         return size
 
-    # def remove(self, cleanup_buffer=True):
-    #     self.subgraph.remove_tensor(self, cleanup_buffer)
-
 class Subgraph():
     @classmethod
-    def from_dict(cls, model, subgraph_dict):
+    def from_dict(cls, model, operator_codes, subgraph_dict):
         '''Construct a Subgraph object from a TensorFlow Lite flatbuffer subgraph dictionary'''
         subgraph = cls()
 
@@ -143,7 +193,7 @@ class Subgraph():
         # load operators
         subgraph.operators = []
         for operator_dict in subgraph_dict['operators']:
-            subgraph.operators.append(Operator.from_dict(model, subgraph, operator_dict))
+            subgraph.operators.append(Operator.from_dict(model, subgraph, operator_codes, operator_dict))
 
         # load inputs
         subgraph.inputs = []
@@ -160,7 +210,6 @@ class Subgraph():
     @property
     def intermediates(self):
         #   intermediates are any tensors that are not an input or an output
-        
         input_output_tensors = set([]) # lookup for input and output tensor indices
         for input_ in self.inputs:
             input_output_tensors.add(input_.name)
@@ -174,116 +223,29 @@ class Subgraph():
 
         return intermediates
 
-    def get_tensors(self, indices):
-        """Return a list of Tensors with the given indices."""
-        tensors = []
+    def create_tensor(self, name, type_, shape, buffer=None, quantization=None):
+        for existing_tensor in self.tensors:
+            if name == existing_tensor.name:
+                raise Exception(f'Tensor name {name} already in use')
 
-        for index in indices:
-            tensors.append(self.tensors[index])
+        tensor = Tensor(self.model, self, name, type_, shape, buffer, quantization)
+        self.tensors.append(tensor)
 
-        return tensors
+        return tensor
 
-    # def create_tensor(self, name, type_, shape, buffer=None, quantization=None):
-    #     for existing_tensor in self.tensors:
-    #         if name == existing_tensor.name:
-    #             raise Exception(f'Tensor name {name} already in use')
+    def create_operator(self, operator_code, inputs=None, outputs=None, builtin_options=None, custom_options=None):
+        operator = Operator(self.model, self, operator_code, inputs, outputs, builtin_options, custom_options)
+        self.operators.append(operator)
 
-    #     tensor = Tensor()
-    #     tensor.subgraph = self
-    #     tensor.name = name
-    #     tensor.type = type_
-    #     tensor.shape = shape
-    #     tensor.buffer = buffer
-    #     tensor.quantization = quantization
-
-    #     return tensor
-
-    # def remove_tensor(self, tensor, cleanup_buffer=True):
-    #     # cleanup buffer
-    #     if cleanup_buffer:
-    #         self.model.cleanup_buffer(tensor.buffer)
-        
-    #     # fixup operator inputs and outputs
-    #     tensor_index = self.tensors.index(tensor)
-    #     for operator in self.operators:
-    #         for list_index, input_index in enumerate(operator.inputs):
-    #             if input_index == tensor_index:
-    #                 operator.inputs.remove(input_index)
-    #             elif input_index > tensor_index:
-    #                 operator.inputs[list_index] -= 1
-    #         for list_index, output_index in enumerate(operator.outputs):
-    #             if input_index == tensor_index:
-    #                 operator.outputs.remove(output_index)
-    #             elif output_index > tensor_index:
-    #                 operator.outputs[list_index] -= 1
-
-    #     # fixup subgraph inputs and outputs
-    #     if tensor in self.inputs:
-    #         self.inputs.remove(tensor)
-    #         # find new input
-    #         first_operator = self.operators[0]
-    #         new_input_tensor = self.tensors[first_operator.inputs[0]]
-    #         self.inputs.append(new_input_tensor)
-    #     elif tensor in self.outputs:
-    #         self.outputs.remove(tensor)
-    #         # find new output
-    #         last_operator = self.operators[-1]
-    #         new_output_tensor = self.tensors[last_operator.outputs[0]]
-    #         self.outputs.append(new_output_tensor)
-
-    #     # remove the tensor
-    #     self.tensors.remove(tensor)
-
-    # def create_operator(self, operator_index, inputs=None, outputs=None):
-    #     for existing_operator in self.operators:
-    #         if operator_index == existing_operator.opcode_index:
-    #             return existing_operator
-
-    #     operator_code = self.model.get_operator_code(operator_index)
-        
-    #     operator = Operator()
-    #     operator.subgraph = self
-    #     operator.inputs = inputs or []
-    #     operator.outputs = outputs or []
-    #     if 'builtin_options' in operator_code:
-    #         operator.builtin_options = operator_code['builtin_options']
-    #     else:
-    #         operator.builtin_options = None
-    #     if 'custom_options' in operator_code:
-    #         operator.custom_options = operator_code['custom_options']
-    #     else:
-    #         operator.custom_options = None
-    #     operator.opcode_index = operator_index
-
-    #     return operator
-
-    # def trim_operator(self, operator, cleanup_tensors=True):
-    #     operator_index = self.operators.index(operator)
-    #     first_operator = operator_index == 0
-    #     last_operator = operator_index == len(self.operators) - 1
-    #     if not first_operator and not last_operator:
-    #         raise Exception('Only first or last operator can be trimmed')
-    #     # remove the operator
-    #     #   NOTE: do this first, tensor cleanup depends on it!
-    #     self.operators.remove(operator)
-
-    #     # cleanup input and output tensors
-    #     if cleanup_tensors:
-    #         if first_operator:
-    #             for tensor_index in operator.inputs:
-    #                 self.remove_tensor(self.tensors[tensor_index], True)
-    #         if last_operator:
-    #             for tensor_index in operator.outputs:
-    #                 self.remove_tensor(self.tensors[tensor_index], True)
-
-    #     # cleanup opcode
-    #     self.model.cleanup_operator_code(operator.opcode_index)
+        return operator
 
 class XCOREModel():
-    def __init__(self):
-        self.buffers = None
-        self.operator_codes = None
-        self.subgraphs = None
+    def __init__(self, version=None, description=None, subgraphs=None, buffers=None, metadata=None):
+        self.version = version
+        self.description = description
+        self.buffers = buffers or []
+        self.subgraphs = subgraphs or []
+        self.metadata = metadata
 
     def load(self, model_filename, flatc_bin=None, schema=None):
         #TODO: replace with idea from https://github.com/google/flatbuffers/issues/4403
@@ -304,107 +266,82 @@ class XCOREModel():
         model = load_tflite_as_json(model_filename,
                                     flatc_bin=flatc_bin, schema=schema)
 
+        self.version = model['version']
+        self.description = model['description']
+
         # load buffers
         self.buffers = []
         for buffer in model['buffers']:
-            if 'data' in buffer:
-                self.buffers.append(buffer)
-            else:
-                self.buffers.append([])  # must append an empty so the indices match the buffer indiex in the tensors
-
-        # load operator codes
-        self.operator_codes = model['operator_codes']
+            self.buffers.append(Buffer.from_dict(self, buffer))
 
         # load subgraphs
         self.subgraphs = []
         for subgraph in model['subgraphs']:
-            self.subgraphs.append(Subgraph.from_dict(self, subgraph))
+            self.subgraphs.append(Subgraph.from_dict(self, model['operator_codes'], subgraph))
+
+        self.metadata = model['metadata']
 
     def save(self, model_filename):
         raise NotImplementedError #TODO: Implement me!!!
 
-    def get_buffer(self, index, stdtype = 'int8_t'):
-        if 'data' in self.buffers[index]:
-            bits = self.buffers[index]['data']
-            if stdtype == 'int8_t':
-                return bits
-            elif stdtype == 'int16_t':
-                return [i[0] for i in struct.iter_unpack('h', bytearray(bits))]
-            elif stdtype == 'int32_t':
-                return [i[0] for i in struct.iter_unpack('i', bytearray(bits))]
+    def create_buffer(self, data=None):
+        buffer = Buffer(self, data)
+        self.buffers.append(buffer)
+        return buffer
 
-        return None
-    
-    # def create_buffer(self, data=None):
-    #     if data:
-    #         self.buffers.append({'data': data})
-    #     else:
-    #         self.buffers.append([])
+    @property
+    def operator_codes(self):
+        operator_codes = {}
 
-    #     return len(self.buffers) - 1
+        for subgraph in self.subgraphs:
+            for operator in subgraph.operators:
+                print(operator)
+                operator_codes[str(operator.operator_code)] = operator.operator_code
 
-    # def cleanup_buffer(self, index):
-    #     # Removes a buffer if only 1 reference to it exists
-        
-    #     # compute reference count
-    #     reference_count = 0
-    #     for subgraph in self.subgraphs:
-    #         for tensor in subgraph.tensors:
-    #             if tensor.buffer == index:
-    #                 reference_count += 1
+        return operator_codes.values()
 
-    #     if reference_count <=1:
-    #         del self.buffers[index]
+    def pprint(self):
+        print('---------')
+        print('- Model -')
+        print('---------')
+        print(f'description={self.description}')
+        print(f'version={self.version}')
+        print(f'metadata={self.metadata}')
+        print('******************')
+        print('* Operator Codes *')
+        print('******************')
+        for operator_code in self.operator_codes:
+            print(operator_code)
+        print('***********')
+        print('* Buffers *')
+        print('***********')
+        for buffer in self.buffers:
+            print(buffer)
+        for subgraph in self.subgraphs:
+            print('============')
+            print('= Subgraph =')
+            print('============')
+            print('*************')
+            print('* Operators *')
+            print('*************')
+            for operator in subgraph.operators:
+                print(operator)
 
-    #         # fixup tensors
-    #         for subgraph in self.subgraphs:
-    #             for tensor in subgraph.tensors:
-    #                 if tensor.buffer > index:
-    #                     tensor.buffer -= 1
+            print('**********')
+            print('* Inputs *')
+            print('**********')
+            for input_ in subgraph.inputs:
+                print(input_)
 
-    def get_operator_code(self, index):
-        if self.operator_codes[index]['builtin_code'] == 'CUSTOM':
-            return self.operator_codes[index]['custom_code']
-        else:
-            return self.operator_codes[index]['builtin_code']
+            print('*****************')
+            print('* Intermediates *')
+            print('*****************')
+            for intermediate in subgraph.intermediates:
+                print(intermediate)
 
-    # def create_operator_code(self, builtin_code=None, custom_code=None, version=1):
-    #     assert(builtin_code or custom_code)
-
-    #     # first search for custom_code
-    #     for index, operator_code in enumerate(self.operator_codes):
-    #         if builtin_code and 'builtin_code' in operator_code:
-    #             if operator_code['builtin_code'] == builtin_code:
-    #                 return index
-    #         elif custom_code and 'custom_code' in operator_code:
-    #             if operator_code['custom_code'] == custom_code:
-    #                 return index
-
-    #     # now create
-    #     if builtin_code:
-    #         operator_code = {'builtin_code': builtin_code, 'custom_code': None, 'version': version}
-    #     elif custom_code:
-    #         operator_code = {'builtin_code': 'CUSTOM', 'custom_code': custom_code, 'version': version}
-
-    #     self.operator_codes.append(operator_code)
-    #     return len(self.operator_codes) - 1
-
-    # def cleanup_operator_code(self, index):
-    #     # Removes an operator if only 1 reference to it exists
-
-    #     # compute reference count
-    #     reference_count = 0
-    #     for subgraph in self.subgraphs:
-    #         for operator in subgraph.operators:
-    #             if operator.opcode_index == index:
-    #                 reference_count += 1
-
-    #     if reference_count <=1:
-    #         del self.operator_codes[index]
-
-    #         # fixup operators
-    #         for subgraph in self.subgraphs:
-    #             for operator in subgraph.operators:
-    #                 if operator.opcode_index > index:
-    #                     operator.opcode_index -= 1
+            print('***********')
+            print('* Outputs *')
+            print('***********')
+            for output in subgraph.outputs:
+                print(output)
 

@@ -34,9 +34,9 @@ class CFile():
             replacement_list = None
             if self.model:
                 stdtype = initializer.standard_type
-                buffer = self.model.get_buffer(initializer.buffer, stdtype)
+                data = initializer.buffer.unpack(stdtype)
 
-                replacement_list = ', '.join([str(v) for v in buffer])
+                replacement_list = ', '.join([str(v) for v in data])
 
             self._macro_lookup[name] = {'identifier': identifier, 'replacement-list': replacement_list}
 

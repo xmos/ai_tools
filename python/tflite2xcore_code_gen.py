@@ -19,66 +19,31 @@ def generate_code(args):
     intermediates_memory = 0
     total_memory = 0
 
-    nodes = subgraph.operators
     if verbose:
-        print('*************')
-        print('* Operators *')
-        print('*************')
-        for node in nodes:
-            print(model.get_operator_code(node.opcode_index))
+        model.pprint()
 
-    inputs = subgraph.inputs
-    if verbose:
-        print('**********')
-        print('* Inputs *')
-        print('**********')
-        for input_ in inputs:
-            print(input_)
-            total_memory += input_.size
+    for input_ in subgraph.inputs:
+        total_memory += input_.size
 
     initializers = [] # initializers are Tensors that are initialized with data
     variables = [] # variables are Tensors that are intermediates AND not initializers
 
     for intermediate in subgraph.intermediates:
-        buffer = model.get_buffer(intermediate.buffer)
-        if buffer:
+        data = intermediate.buffer.data
+        if data:
             initializers.append(intermediate)
         else:
             variables.append(intermediate)
             intermediates_memory += intermediate.size
         total_memory += intermediate.size
 
-    if verbose:
-        print('****************')
-        print('* Initializers *')
-        print('****************')
-        for initializer in initializers:
-            print(initializer)
-
-    if verbose:
-        print('*************')
-        print('* Variables *')
-        print('*************')
-        for variable in variables:
-            print(variable)
-
-    outputs = subgraph.outputs
-    if verbose:
-        print('***********')
-        print('* Outputs *')
-        print('***********')
-        for output in outputs:
-            print(output)
-
     # process the operators
     ops = []
     errs = []
-    for node in nodes:
+    for operator in subgraph.operators:
         try:
-            name = model.get_operator_code(node.opcode_index)
-            input_tensors = subgraph.get_tensors(node.inputs)
-            output_tensors = subgraph.get_tensors(node.outputs)
-            op = operators.create(name, input_tensors, output_tensors, model)
+            name = operator.operator_code['custom_code']
+            op = operators.create(name, operator.inputs, operator.outputs, model)
             ops.append(op)
         except operators.UnsupportedOperator as err:
             errs.append(err)
@@ -94,7 +59,7 @@ def generate_code(args):
     fun_name = subgraph.name or args.name
     fun_name = re.sub('[^0-9a-zA-Z]+', '_', fun_name)
 
-    fun = c_function.CFunction(fun_name,  inputs, outputs)
+    fun = c_function.CFunction(fun_name, subgraph.inputs, subgraph.outputs)
     for op in ops:
         fun.add_operator(op)
 

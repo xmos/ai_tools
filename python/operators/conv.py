@@ -18,10 +18,10 @@ def make_conv2d_shallowin_deepout_argument_string(inputs, outputs, model):
         elif index == 3:
             shifts_scales_tensor_name = cname
         elif index == 4:
-            buffer = model.get_buffer(tensor.buffer, 'int32_t')
-            C_out = buffer[0]
-            K_h = buffer[1]
-            K_w = buffer[2]
+            data = tensor.buffer.unpack('int32_t')
+            C_out = data[0]
+            K_h = data[1]
+            K_w = data[2]
 
     scales_offset = C_out
     shifts = f'{shifts_scales_tensor_name}[0]'

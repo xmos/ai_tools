@@ -64,6 +64,7 @@ extern bool did_test_fail;
 extern tflite::ErrorReporter* reporter;
 }  // namespace micro_test
 
+
 #define TF_LITE_MICRO_TESTS_BEGIN              \
   namespace micro_test {                       \
   int tests_passed;                            \
@@ -73,6 +74,7 @@ extern tflite::ErrorReporter* reporter;
   tflite::ErrorReporter* reporter;             \
   }                                            \
                                                \
+  _Pragma("stackfunction 15000")               \
   int main(int argc, char** argv) {            \
     micro_test::tests_passed = 0;              \
     micro_test::tests_failed = 0;              \
@@ -170,6 +172,24 @@ extern tflite::ErrorReporter* reporter;
                                    __LINE__);                                 \
       micro_test::did_test_fail = true;                                       \
     }                                                                         \
+  } while (false)
+
+#define TF_LITE_MICRO_EXPECT_TRUE(x)                                   \
+  do {                                                                 \
+    if (!x) {                                                          \
+      micro_test::reporter->Report(#x " was not true failed at %s:%d", \
+                                   __FILE__, __LINE__);                \
+      micro_test::did_test_fail = true;                                \
+    }                                                                  \
+  } while (false)
+
+#define TF_LITE_MICRO_EXPECT_FALSE(x)                                   \
+  do {                                                                  \
+    if (x) {                                                            \
+      micro_test::reporter->Report(#x " was not false failed at %s:%d", \
+                                   __FILE__, __LINE__);                 \
+      micro_test::did_test_fail = true;                                 \
+    }                                                                   \
   } while (false)
 
 #endif  // TENSORFLOW_LITE_EXPERIMENTAL_MICRO_TESTING_MICRO_TEST_H_

@@ -89,9 +89,10 @@ class FlexbufferBuilder(object):
 # Example usage
 #*********************
 bits = {
-    'foo': 12345,
-    'bar': [1, 2, 3, 4, 5],
-    'fizz': 'buzz'
+    'mo': 123,
+    'larry': [1, 2, 3, 4, 5],
+    'curly': 456,
+    'shemp': 'rules!'
 }
 
 print('***************')

@@ -18,26 +18,26 @@ class CFunction():
 
         # inputs
         for tensor in self.inputs:
-            name = tensor.GetSanitizedName()
+            name = tensor.sanitized_name
             lower_name = name.lower()
             typedef = {
-                'stdtype': tensor.GetStandardType(),
+                'stdtype': tensor.standard_type,
                 'type_identifier': f'{lower_name}_t',
                 'variable_identifier': name,
-                'dimensions': ' * '.join([str(v) for v in tensor.GetShape()])
+                'dimensions': ' * '.join([str(v) for v in tensor.shape])
 
             }
             self.input_typedefs.append(typedef)
 
         # outputs
         for tensor in self.outputs:
-            name = tensor.GetSanitizedName()
+            name = tensor.sanitized_name
             lower_name = name.lower()
             typedef = {
-                'stdtype': tensor.GetStandardType(),
+                'stdtype': tensor.standard_type,
                 'type_identifier': f'{lower_name}_t',
                 'variable_identifier': name,
-                'dimensions': ' * '.join([str(v) for v in tensor.GetShape()])
+                'dimensions': ' * '.join([str(v) for v in tensor.shape])
 
             }
             self.output_typedefs.append(typedef)
@@ -92,9 +92,9 @@ class CFunction():
 
         # variables
         for variable in self.variables:
-            name = variable.GetSanitizedName()
-            stdtype = variable.GetStandardType()
-            shape = variable.GetShape()
+            name = variable.Sanitized_name
+            stdtype = variable.standard_type
+            shape = variable.shape
             dims = ' * '.join([str(v) for v in shape])
             lines.append(f'{INDENT}{stdtype} WORD_ALIGNED {name}[{dims}];')
         lines.append('')

@@ -28,15 +28,15 @@ class CFile():
     def _build_macro_lookup(self):
         self._macro_lookup = {}
         for initializer in self.initializers:
-            name = initializer.GetSanitizedName()
+            name = initializer.sanitized_name
             identifier = name.upper()  #TODO: is this safe, might need to check that result
                                               #      is a valid macro
             replacement_list = None
             if self.model:
-                stdtype = initializer.GetStandardType()
-                buffer = self.model.GetBuffer(initializer.GetBuffer(), stdtype)
+                stdtype = initializer.standard_type
+                data = initializer.buffer.unpack(stdtype)
 
-                replacement_list = ', '.join([str(v) for v in buffer])
+                replacement_list = ', '.join([str(v) for v in data])
 
             self._macro_lookup[name] = {'identifier': identifier, 'replacement-list': replacement_list}
 
@@ -59,7 +59,7 @@ class CFile():
         lines.append('')
 
         for initializer in self.initializers:
-            name = initializer.GetSanitizedName()
+            name = initializer.sanitized_name
             macro = self._macro_lookup[name]
             if macro['replacement-list']:
                 identifier = macro['identifier']
@@ -97,9 +97,9 @@ class CFile():
 
         # initializers
         for initializer in self.initializers:
-            name = initializer.GetSanitizedName()
-            stdtype = initializer.GetStandardType()
-            shape = initializer.GetShape()
+            name = initializer.sanitized_name
+            stdtype = initializer.standard_type
+            shape = initializer.shape
             dims = ' * '.join([str(v) for v in shape])
 
             macro = self._macro_lookup[name]
@@ -113,9 +113,9 @@ class CFile():
 
         # variables
         for variable in self.variables:
-            name = variable.GetSanitizedName()
-            stdtype = variable.GetStandardType()
-            shape = variable.GetShape()
+            name = variable.sanitized_name
+            stdtype = variable.standard_type
+            shape = variable.shape
             dims = ' * '.join([str(v) for v in shape])
             lines.append(f'{stdtype} WORD_ALIGNED {name}[{dims}];')
         lines.append('')

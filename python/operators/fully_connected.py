@@ -3,8 +3,8 @@
 def make_fc_argument_string(inputs, outputs):
     # inputs
     for index, tensor in enumerate(inputs):
-        cname = tensor.GetSanitizedName()
-        shape = tensor.GetShape()
+        cname = tensor.sanitized_name
+        shape = tensor.shape
         if index == 0:
             X = cname
         elif index == 1:
@@ -20,8 +20,8 @@ def make_fc_argument_string(inputs, outputs):
 
     # output
     tensor = outputs[0]
-    shape = tensor.GetShape()
-    Y = tensor.GetSanitizedName()
+    shape = tensor.shape
+    Y = tensor.sanitized_name
 
     return f'{W}, {B}, (int8_t *){X}, (int16_t *){Y}, {C_out}, {C_in}, (uint16_t*) &{shifts}, (int16_t*) &{scales}'
 

@@ -3,8 +3,8 @@
 def make_maxpool_argument_string(inputs, outputs):
     # inputs
     tensor = inputs[0]
-    cname = tensor.GetSanitizedName()
-    shape = tensor.GetShape()
+    cname = tensor.sanitized_name
+    shape = tensor.shape
     X = cname
     height = shape[1]
     width = shape[2]
@@ -12,7 +12,7 @@ def make_maxpool_argument_string(inputs, outputs):
 
     # output
     tensor = outputs[0]
-    Y = tensor.GetSanitizedName()
+    Y = tensor.sanitized_name
 
     return f'{X}, {Y}, {height}, {width}, {C_in}'
 

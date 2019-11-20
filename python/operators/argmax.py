@@ -4,12 +4,12 @@ from numpy import prod
 def make_argmax_argument_string(inputs, outputs):
     # inputs
     tensor = inputs[0]
-    N = prod(tensor.GetShape())
-    A = tensor.GetSanitizedName()
+    N = prod(tensor.shape)
+    A = tensor.sanitized_name
 
     # output
     tensor = outputs[0]
-    C = tensor.GetSanitizedName()
+    C = tensor.sanitized_name
 
     return f'{A}, (int32_t *) {C}, {N}'
 

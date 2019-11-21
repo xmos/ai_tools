@@ -1,0 +1,1 @@
+from tflite2xcore.io.flatbuffers_json import read_flatbuffers_json

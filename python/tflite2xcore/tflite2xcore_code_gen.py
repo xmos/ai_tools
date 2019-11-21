@@ -6,15 +6,15 @@ import os
 import re
 import argparse
 
-import xcore_model
+import tflite2xcore
 import operators
 from helpers import c_file, c_function
 
 def generate_code(args):
     verbose = args.verbose
 
-    model = xcore_model.XCOREModel()
-    model.load(args.tflite_input, args.flatc, args.schema)
+    model = tflite2xcore.read_flatbuffers_json(args.tflite_input, args.flatc, args.schema)
+
     subgraph = model.subgraphs[0] # only one supported for now
     intermediates_memory = 0
     total_memory = 0
@@ -42,7 +42,7 @@ def generate_code(args):
     errs = []
     for operator in subgraph.operators:
         try:
-            name = operator.operator_code['custom_code']
+            name = operator.operator_code
             op = operators.create(name, operator.inputs, operator.outputs, model)
             ops.append(op)
         except operators.UnsupportedOperator as err:

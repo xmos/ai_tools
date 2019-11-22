@@ -168,5 +168,8 @@ class OperatorCode():
                 and obj.opcode == self.opcode
                 and obj.version == self.version)
 
+    def __hash__(self):
+        return hash(str(self))
+
     def __str__(self):
-        return f'builtin_opcode={self.builtin_opcode} custom_opcode={self.custom_opcode} version={self.version}'
+        return f"{self.opcode.name} (version {self.version})"

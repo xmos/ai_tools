@@ -80,10 +80,7 @@ class Operator():
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
         self.subgraph = subgraph  # parent
-
-        assert isinstance(operator_code, OperatorCodes.OperatorCode)
         self.operator_code = operator_code
-
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.builtin_options = builtin_options
@@ -197,6 +194,7 @@ class Subgraph():
 
     def create_operator(self, operator_code, *,
                         inputs=None, outputs=None, builtin_options=None, custom_options=None):
+        assert isinstance(operator_code, OperatorCodes.OperatorCode)
         operator = Operator(self, operator_code, inputs, outputs, builtin_options, custom_options)
         self.operators.append(operator)
         return operator

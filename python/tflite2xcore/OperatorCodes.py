@@ -143,32 +143,32 @@ class XCOREOpCodes(ValidOpCodes):
 
 
 class OperatorCode():
-    def __init__(self, opcode, *, custom_opcode=None, version=None):
+    def __init__(self, opcode, *, custom_code=None, version=None):
         assert isinstance(opcode, ValidOpCodes), "Invalid opcode!"
         self.version = version or 1
         if isinstance(opcode, XCOREOpCodes):
-            self.builtin_opcode = BuiltinOpCodes.CUSTOM
-            self.custom_opcode = opcode
+            self.builtin_code = BuiltinOpCodes.CUSTOM
+            self.custom_code = opcode
         else:
-            self.builtin_opcode = opcode
-            if self.builtin_opcode == BuiltinOpCodes.CUSTOM:
-                assert isinstance(custom_opcode, XCOREOpCodes), \
-                    "Must provide custom_opcode if builtin_opcode is 'CUSTOM'!"
-                self.custom_opcode = custom_opcode
+            self.builtin_code = opcode
+            if self.builtin_code == BuiltinOpCodes.CUSTOM:
+                assert isinstance(custom_code, XCOREOpCodes), \
+                    "Must provide custom_code if builtin_code is 'CUSTOM'!"
+                self.custom_code = custom_code
             else:
-                self.custom_opcode = None
+                self.custom_code = None
 
     @property
-    def opcode(self):
-        return self.custom_opcode if self.builtin_opcode == BuiltinOpCodes.CUSTOM else self.builtin_opcode
+    def code(self):
+        return self.custom_code if self.builtin_code == BuiltinOpCodes.CUSTOM else self.builtin_code
 
     def __eq__(self, obj):
         return (isinstance(obj, OperatorCode)
-                and obj.opcode == self.opcode
+                and obj.code == self.code
                 and obj.version == self.version)
 
     def __hash__(self):
         return hash(str(self))
 
     def __str__(self):
-        return f"{self.opcode.name} (version {self.version})"
+        return f"{self.code.name} (version {self.version})"

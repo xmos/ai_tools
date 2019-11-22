@@ -5,6 +5,7 @@ import json
 import tempfile
 
 from .. import xcore_model
+from .. import OperatorCodes
 
 def __norm_and_join(*args):
     return os.path.normpath(os.path.join(*args))
@@ -69,7 +70,7 @@ def create_buffer_from_dict(model, buffer_dict):
     buffer = model.create_buffer(data)
     return buffer
 
-def create_operator_from_dict(subgraph, tensors, operator_codes, operator_dict):
+def create_operator_from_dict(subgraph, tensors, operator_codes_dicts, operator_dict):
     inputs = []
     for input_index in operator_dict['inputs']:
         inputs.append(tensors[input_index])
@@ -78,11 +79,14 @@ def create_operator_from_dict(subgraph, tensors, operator_codes, operator_dict):
     for output_index in operator_dict['outputs']:
         outputs.append(tensors[output_index])
 
-    operator_code = operator_codes[operator_dict['opcode_index']]
-    if operator_code['builtin_code'] == 'CUSTOM':
-        operator_code = operator_code['custom_code']
+    operator_code_dict = operator_codes_dicts[operator_dict['opcode_index']]
+
+    if operator_code_dict['builtin_code'] == 'CUSTOM':
+        builtin_opcode = OperatorCodes.BuiltinOpCodes.CUSTOM
+        custom_opcode = OperatorCodes.XCOREOpCodes(operator_code_dict['custom_code'])
     else:
-        operator_code = operator_code['builtin_code']
+        builtin_opcode = OperatorCodes.BuiltinOpCodes[operator_code_dict['builtin_code']]
+        custom_opcode = None
 
     if 'builtin_options' in operator_dict:
         builtin_options = operator_dict['builtin_options']
@@ -93,6 +97,12 @@ def create_operator_from_dict(subgraph, tensors, operator_codes, operator_dict):
         custom_options = operator_dict['custom_options']
     else:
         custom_options = None
+
+    operator_code = OperatorCodes.OperatorCode(
+        builtin_opcode,
+        custom_opcode=custom_opcode,
+        version=operator_code_dict['version']
+    )
 
     operator = subgraph.create_operator(operator_code, inputs=inputs, outputs=outputs,
         builtin_options=builtin_options, custom_options=custom_options)

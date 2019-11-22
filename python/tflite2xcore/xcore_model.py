@@ -1,6 +1,7 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import struct
 
+import OperatorCodes
 
 TFLITE_TYPE_TO_C_TYPE = {
     'FLOAT32': 'float32_t',
@@ -63,7 +64,10 @@ class Operator():
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
         self.subgraph = subgraph  # parent
-        self.operator_code = operator_code  # TODO: check if opcode is legal
+
+        assert isinstance(operator_code, OperatorCodes.OperatorCode)
+        self.operator_code = operator_code
+
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.builtin_options = builtin_options
@@ -83,7 +87,6 @@ class Operator():
         lines.append(f'{INDENT}outputs')
         lines.extend([f'{INDENT * 2}{output}' for output in self.outputs])
         return '\n'.join(lines)
-
 
 class Tensor():
     def __init__(self, subgraph, name, type_, shape, buffer=None, quantization=None):
@@ -181,7 +184,6 @@ class Subgraph():
         operator = Operator(self, operator_code, inputs, outputs, builtin_options, custom_options)
         self.operators.append(operator)
         return operator
-
 
 class XCOREModel():
     def __init__(self, version=None, description=None, subgraphs=None, buffers=None, metadata=None):

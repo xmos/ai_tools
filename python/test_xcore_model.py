@@ -5,11 +5,10 @@ import sys
 import os
 import argparse
 
-import xcore_model
+import tflite2xcore
 
 def test_xcore_model(args):
-    model = xcore_model.XCOREModel()
-    model.load(args.tflite_input, args.flatc, args.schema)
+    model = tflite2xcore.read_flatbuffers_json(args.tflite_input, args.flatc, args.schema)
     subgraph = model.subgraphs[0]  # only one supported for now
 
     print('')
@@ -43,24 +42,21 @@ def test_xcore_model(args):
     print('')
     buffer1 = model.create_buffer([1]*123)
     model.buffers.append(buffer1)
-    tensor1 = xcore_model.Tensor(
-        model,
-        subgraph,
+    tensor1 = subgraph.create_tensor(
         'test/new_tensor1',
         'INT8',
         [1, 1, 1, 123],
-        buffer1
+        buffer = buffer1
     )
-    subgraph.tensors.append(tensor1)
 
     buffer2 = model.create_buffer()
     tensor2 = subgraph.create_tensor(
         'test/new_tensor2',
         'INT8',
         [1, 5, 5, 3],
-        buffer2
+        buffer = buffer2
     )
-    operator1_code = {'builtin_code': 'CUSTOM', 'custom_code': 'FIZZBUZZ_OPERATOR', 'version': 1}
+    operator1_code = 'FIZZBUZZ_OPERATOR'
     operator1 = subgraph.create_operator(operator1_code)
     operator1.inputs.append(tensor1)
     operator1.inputs.append(subgraph.outputs[0])

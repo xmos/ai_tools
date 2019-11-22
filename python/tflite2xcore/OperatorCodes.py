@@ -166,3 +166,9 @@ class OperatorCode():
         return (isinstance(obj, OperatorCode)
                 and obj.opcode == self.opcode
                 and obj.version == self.version)
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __str__(self):
+        return f"{self.opcode.name} (version {self.version})"

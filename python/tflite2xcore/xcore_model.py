@@ -1,6 +1,7 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import struct
 
+import OperatorCodes
 
 TFLITE_TYPE_TO_C_TYPE = {
     'FLOAT32': 'float32_t',
@@ -63,7 +64,10 @@ class Operator():
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
         self.subgraph = subgraph  # parent
-        self.operator_code = operator_code  # TODO: check if opcode is legal
+
+        assert isinstance(operator_code, OperatorCodes.OperatorCode)
+        self.operator_code = operator_code
+
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.builtin_options = builtin_options

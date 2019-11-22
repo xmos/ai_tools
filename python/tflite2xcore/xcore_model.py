@@ -1,36 +1,52 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import struct
+import enum
 
-import OperatorCodes
+from . import OperatorCodes
 
-TFLITE_TYPE_TO_C_TYPE = {
-    'FLOAT32': 'float32_t',
-    'FLOAT16': 'float16_t',
-    'INT32': 'int32_t',
-    'UINT8': 'uint8_t',
-    'INT64': 'int64_t',
-    'INT16': 'int16_t',
-    'UINT16': 'uint16_t',
-    'INT8': 'int8_t',
-    # 'STRING': 'TODO',
-    # 'BOOL': 'TODO',
-    # 'COMPLEX64': 'TODO?'
-}
+class TensorType(enum.Enum):
+    FLOAT32 = 0
+    FLOAT16 = 1
+    INT32 = 2
+    UINT8 = 3
+    INT64 = 4
+    STRING = 5
+    BOOL = 6
+    INT16 = 7
+    COMPLEX64 = 8
+    INT8 = 9
 
-TFLITE_TYPE_TO_BYTES = {
-    'FLOAT32': 4,
-    'FLOAT16': 2,
-    'INT32': 4,
-    'UINT8': 1,
-    'INT64': 8,
-    'INT16': 2,
-    'UINT16': 2,
-    'INT8': 1,
-    # 'STRING': 'TODO',
-    # 'BOOL': 'TODO',
-    # 'COMPLEX64': 'TODO?'
-}
+    @staticmethod
+    def to_stdint_type(tensor_type):
+        LUT = {
+            TensorType.FLOAT32: 'float32_t',
+            TensorType.FLOAT16: 'float16_t',
+            TensorType.INT32: 'int32_t',
+            TensorType.UINT8: 'uint8_t',
+            TensorType.INT64: 'int64_t',
+            TensorType.STRING: '',
+            TensorType.BOOL: '',
+            TensorType.INT16: 'int16_t',
+            TensorType.COMPLEX64: '',
+            TensorType.INT8: 'int8_t'
+        }
+        return LUT[tensor_type]
 
+    @staticmethod
+    def to_bytes(tensor_type):
+        LUT = {
+            TensorType.FLOAT32: 4,
+            TensorType.FLOAT16: 2,
+            TensorType.INT32: 2,
+            TensorType.UINT8: 1,
+            TensorType.INT64: 8,
+            TensorType.STRING: -1,
+            TensorType.BOOL: 1,
+            TensorType.INT16: 2,
+            TensorType.COMPLEX64: -1,
+            TensorType.INT8: 1
+        }
+        return LUT[tensor_type]
 
 class Buffer():
     def __init__(self, model, data=None):
@@ -129,11 +145,11 @@ class Tensor():
     @property
     def standard_type(self):
         '''Return type (from cstdint.h)'''
-        return TFLITE_TYPE_TO_C_TYPE[self.type]
+        return TensorType.to_stdint_type(self.type)
 
     @property
     def size(self):
-        size = TFLITE_TYPE_TO_BYTES[self.type]
+        size = TensorType.to_bytes(self.type)
         for s in self.shape:
             size *= s
         return size
@@ -205,13 +221,14 @@ class XCOREModel():
 
     @property
     def operator_codes(self):
-        operator_codes = set()
+        operator_codes = {}
 
         for subgraph in self.subgraphs:
             for operator in subgraph.operators:
-                operator_codes.add(operator.operator_code)
+                print(operator.operator_code)
+                operator_codes[str(operator.operator_code)] = operator.operator_code
 
-        return operator_codes
+        return operator_codes.keys()
 
     def pprint(self):
         print('---------')

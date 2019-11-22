@@ -4,4 +4,3 @@ from tflite2xcore.io.api import (
     read_flatbuffers_json,
     read_flatbuffer
 )
-

@@ -16,7 +16,7 @@ class PassPriority(enum.IntEnum):
     LOW = enum.auto()
 
 
-class OptimizationPass(ABC):
+class TransformationPass(ABC):
     def __init__(self, priority):
         assert isinstance(priority, PassPriority)
         self.priority = priority
@@ -52,61 +52,19 @@ class PassManager():
         self._queue = []
         if model:
             self.register_model(model)
-        for opt_pass in passes:
-            self.register_pass(opt_pass)
+        for trf_pass in passes:
+            self.register_pass(trf_pass)
 
     def register_model(self, model):
         # TODO: assert that argument is valid model object
         self._model = model
 
-    def register_pass(self, opt_pass):
-        assert isinstance(opt_pass, OptimizationPass)
-        heapq.heappush(self._queue, (opt_pass.priority, opt_pass))
+    def register_pass(self, trf_pass):
+        assert isinstance(trf_pass, TransformationPass)
+        heapq.heappush(self._queue, (trf_pass.priority, trf_pass))
 
     def run_passes(self):
         while self._queue:
-            _, opt_pass = heapq.heappop(self._queue)
+            _, trf_pass = heapq.heappop(self._queue)
             # TODO: log a debug message here
-            opt_pass.run(self._model)
-
-
-# TODO: move this to separate file, add tests
-class RemoveQuantizerFloatInput(OptimizationPass):
-    def __init__(self, priority=PassPriority.HIGH):
-        super().__init__(priority)
-
-    def match(self, op):
-        # TODO: check that this is compliant with model data structure
-        if op.opcode == "QUANTIZE":
-            input_tensor, output_tensor = op.inputs[0], op.outputs[0]
-            if input_tensor in op.subgraph.inputs:
-                return output_tensor.type == 'INT8' and input_tensor.type == 'FLOAT32'
-
-        return False
-
-    def mutate(self, op):
-        subgraph = op.subgraph
-        subgraph.inputs.remove(op.inputs[0])
-        subgraph.inputs.append(op.outputs[0])
-        subgraph.operators.remove(op)
-
-
-# TODO: move this to separate file, add tests
-class RemoveDequantizerFloatOutput(OptimizationPass):
-    def __init__(self, priority=PassPriority.HIGH):
-        super().__init__(priority)
-
-    def match(self, op):
-        # TODO: check that this is compliant with model data structure
-        if op.opcode == "DEQUANTIZE":
-            input_tensor, output_tensor = op.inputs[0], op.outputs[0]
-            if output_tensor in op.subgraph.outputs:
-                return output_tensor.type == 'FLOAT32' and input_tensor.type == 'INT8'
-
-        return False
-
-    def mutate(self, op):
-        subgraph = op.subgraph
-        subgraph.outputs.remove(op.outputs[0])
-        subgraph.outputs.append(op.inputs[0])
-        subgraph.operators.remove(op)
+            trf_pass.run(self._model)

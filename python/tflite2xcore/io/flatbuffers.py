@@ -1,10 +1,73 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import os
 import sys
+import re
+import importlib
 
-from .schema_generated import Model
+from .schema_generated import Model, BuiltinOptions
 from .. import xcore_model
 from .. import OperatorCodes
+
+# load the builtin_options class types
+BUILTINOPTIONS_TYPE_NAMES = [a for a in dir(BuiltinOptions.BuiltinOptions()) if not a.startswith('__')]
+BUILTINOPTIONS_TYPES = [None] * len(BUILTINOPTIONS_TYPE_NAMES)
+for n in BUILTINOPTIONS_TYPE_NAMES:
+    BUILTINOPTIONS_TYPES[getattr(BuiltinOptions.BuiltinOptions(), n)]  = n
+
+def quantization2dict(quantization):
+    if quantization:
+        quantization_dict = {}
+
+        def add_array_to_dict(key, data):
+            # if data is an int then it means the key is missing
+            if not isinstance(data, int):
+                quantization_dict[key] = data.tolist()
+
+        add_array_to_dict('min', quantization.MinAsNumpy())
+        add_array_to_dict('max', quantization.MaxAsNumpy())
+        add_array_to_dict('scale', quantization.ScaleAsNumpy())
+        add_array_to_dict('zero_point', quantization.ZeroPointAsNumpy())
+        quantization_dict['details_type'] = quantization.DetailsType()
+        quantization_dict['quantized_dimension'] = quantization.QuantizedDimension()
+
+        return quantization_dict
+    else:
+        return None
+
+def builtinoptions2dict(table, type_):
+    def camel2snake(name):
+        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+    if table:
+        # lookup the builtin options class type
+        class_type = BUILTINOPTIONS_TYPES[type_]
+        # import the class
+        bio_class = getattr(importlib.import_module(f'.schema_generated.{class_type}', package=__package__), class_type)
+        # instantiate the class
+        bio_inst = bio_class()
+        bio_inst.Init(table.Bytes, table.Pos)
+        skipped_attrs = set([
+            'Init',
+            '_tab',
+             f'GetRootAs{class_type}',
+            f'{class_type}BufferHasIdentifier'
+        ]) # all builtin option classes have these attrs so skip them
+
+        builtinoptions_dict = {}
+        for a in [a for a in dir(bio_inst) if not a.startswith('__') and a not in skipped_attrs]:
+            builtinoptions_dict[camel2snake(a)] = getattr(bio_inst, a)()
+
+        return builtinoptions_dict
+    else:
+        return None
+
+def customoptions2dict(data, format):
+    #TODO: convert to dict, for not just return the array
+    if not isinstance(data, int):
+        return data.tolist()
+
+    return None
 
 def read_flatbuffer(model_filename):
     if not os.path.exists(model_filename):
@@ -43,7 +106,7 @@ def read_flatbuffer(model_filename):
         if fb_buffer.DataLength() == 0:
             xc_model.create_buffer()
         else:
-            xc_model.create_buffer(list(fb_buffer.DataAsNumpy()))
+            xc_model.create_buffer(fb_buffer.DataAsNumpy().tolist())
 
     # load subgraphs
     for i_subgraph in range(fb_model.SubgraphsLength()):
@@ -61,12 +124,14 @@ def read_flatbuffer(model_filename):
         # load tensors
         for i_tensor in range(fb_subgraph.TensorsLength()):
             fb_tensor = fb_subgraph.Tensors(i_tensor)
+
+            # create the tensor
             xc_subgraph.create_tensor(
                 fb_tensor.Name().decode('utf-8'),
                 xcore_model.TensorType(fb_tensor.Type()),
-                list(fb_tensor.ShapeAsNumpy()),
+                fb_tensor.ShapeAsNumpy().tolist(),
                 buffer = xc_model.buffers[fb_tensor.Buffer()],
-                quantization=None, #TODO: quantization
+                quantization=quantization2dict(fb_tensor.Quantization()),
                 isinput = i_tensor in fb_subgraph_inputs,
                 isoutput = i_tensor in fb_subgraph_outputs,
             )
@@ -98,12 +163,15 @@ def read_flatbuffer(model_filename):
                 i_tensor = fb_operator.Outputs(i_input)
                 xc_operator_outputs.append(xc_subgraph.tensors[i_tensor])
 
+            xc_builtin_options = builtinoptions2dict(fb_operator.BuiltinOptions(), fb_operator.BuiltinOptionsType())
+            xc_custom_options = customoptions2dict(fb_operator.CustomOptionsAsNumpy(), fb_operator.CustomOptionsFormat())
+
             xc_subgraph.create_operator(
                 xc_operator_code,
                 inputs = xc_operator_inputs,
                 outputs = xc_operator_outputs,
-                builtin_options=None, #TODO: load builtin_options
-                custom_options=None #TODO: load custom_options
+                builtin_options = xc_builtin_options,
+                custom_options = xc_custom_options
             )
 
     return xc_model

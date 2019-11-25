@@ -8,8 +8,8 @@ import argparse
 import tflite2xcore
 
 def test_xcore_model(args):
-    model = tflite2xcore.read_flatbuffers_json(args.tflite_input)
-    #model = tflite2xcore.read_flatbuffer(args.tflite_input)
+    #model = tflite2xcore.read_flatbuffers_json(args.tflite_input)
+    model = tflite2xcore.read_flatbuffer(args.tflite_input)
     subgraph = model.subgraphs[0]  # only one supported for now
 
     print('')

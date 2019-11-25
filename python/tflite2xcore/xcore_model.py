@@ -24,10 +24,10 @@ class TensorType(enum.Enum):
             TensorType.INT32: 'int32_t',
             TensorType.UINT8: 'uint8_t',
             TensorType.INT64: 'int64_t',
-            TensorType.STRING: '',
-            TensorType.BOOL: '',
+            TensorType.STRING: None,
+            TensorType.BOOL: 'uint8_t',
             TensorType.INT16: 'int16_t',
-            TensorType.COMPLEX64: '',
+            TensorType.COMPLEX64: None,
             TensorType.INT8: 'int8_t'
         }
         return LUT[tensor_type]
@@ -40,10 +40,10 @@ class TensorType(enum.Enum):
             TensorType.INT32: 2,
             TensorType.UINT8: 1,
             TensorType.INT64: 8,
-            TensorType.STRING: -1,
+            TensorType.STRING: None,
             TensorType.BOOL: 1,
             TensorType.INT16: 2,
-            TensorType.COMPLEX64: -1,
+            TensorType.COMPLEX64: None,
             TensorType.INT8: 1
         }
         return LUT[tensor_type]
@@ -99,6 +99,10 @@ class Operator():
         lines.extend([f'{INDENT * 2}{input_}' for input_ in self.inputs])
         lines.append(f'{INDENT}outputs')
         lines.extend([f'{INDENT * 2}{output}' for output in self.outputs])
+        lines.append(f'{INDENT}builtin_options')
+        lines.append(f'{INDENT * 2}{self.builtin_options}')
+        lines.append(f'{INDENT}custom_options')
+        lines.append(f'{INDENT * 2}{self.custom_options}')
         return '\n'.join(lines)
 
 class Tensor():

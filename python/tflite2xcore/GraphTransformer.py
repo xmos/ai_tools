@@ -2,8 +2,10 @@
 
 import enum
 import heapq
+import logging
 
 from abc import ABC, abstractmethod
+from xcore_model import XCOREModel
 
 
 class PassPriority(enum.IntEnum):
@@ -22,28 +24,33 @@ class TransformationPass(ABC):
         self.priority = priority
 
     @abstractmethod
-    def match(self, op):
+    def match(self, obj):
         pass
 
     @abstractmethod
-    def mutate(self, op):
+    def mutate(self, obj):
         pass
 
+    @abstractmethod
+    def target_iterable(self, subgraph):
+        pass
+
+    def log_match(self, op):
+        logging.debug(f"{type(self).__name__} matched operator {op.operator_code}")
+
     def run_subgraph(self, subgraph):
-        # TODO: assert that argument is valid subgraph object
         keep_running = True
         while keep_running:
-            for op in subgraph.operators:
-                if self.match(op):
-                    # TODO: log a debug message here
-                    self.mutate(op)
+            for obj in self.target_iterable(subgraph):
+                if self.match(obj):
+                    self.mutate(obj)
                     break
             else:
                 keep_running = False
 
     def run(self, model):
-        # TODO: assert that argument is valid model object
-        for subgraph in model.subgraphs:
+        for j, subgraph in enumerate(model.subgraphs):
+            logging.debug(f"{type(self).__name__} running on subgraph {j}")
             self.run_subgraph(subgraph)
 
 
@@ -56,7 +63,7 @@ class PassManager():
             self.register_pass(trf_pass)
 
     def register_model(self, model):
-        # TODO: assert that argument is valid model object
+        assert isinstance(model, XCOREModel)
         self._model = model
 
     def register_pass(self, trf_pass):
@@ -66,5 +73,5 @@ class PassManager():
     def run_passes(self):
         while self._queue:
             _, trf_pass = heapq.heappop(self._queue)
-            # TODO: log a debug message here
+            logging.debug(f"running {trf_pass}...")
             trf_pass.run(self._model)

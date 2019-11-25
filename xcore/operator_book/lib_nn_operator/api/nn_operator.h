@@ -207,6 +207,29 @@ static inline void maxpool2d_deep(
     const int32_t C_in);
 
 
+/**  2D maxpool for "deep" input and output tensors.
+ *
+ *  Pool size is 2x2, stride is 2 in both dimensions. Number of input channels
+ *  must be divisible by 32.
+ *
+ *  \param  X       Input tensor of shape (height, width, C_in) using standard
+ *                  layout with the last index changing fastest:
+ *                  X[h, w, c]  =  X[width * C_in * h  +  C_in * w  +  c]
+ *  \param  Y       Output tensor of shape (height//2, width//2, C_in) using
+ *                  standard layout with the last index changing fastest:
+ *                  Y[h, w, c]  =  Y[(width//2) * C_in * h  +  C_in * w  +  c]
+ *  \param  height  Input tensor/image height, must be even.
+ *  \param  width   Input tensor/image width, must be even.
+ *  \param  C_in    Number of input channels, must be divisible by 32.
+ */
+static inline void averagepool2d_deep(
+    const int8_t* X, 
+    int8_t* Y,
+    const int32_t height, 
+    const int32_t width,
+    const int32_t C_in);
+
+
 
 /**  Fully connected layer for "deep" input and "shallow" output tensors.
  *

@@ -116,6 +116,18 @@ void maxpool2d_deep_asm(
     const int32_t C_in);
 
 
+
+#ifndef USE_ASM_averagepool2d_deep
+#define USE_ASM_averagepool2d_deep    (1)
+#endif
+void averagepool2d_deep_asm(
+    const int8_t* X, 
+    int8_t* Y,
+    const int32_t height, 
+    const int32_t width,
+    const int32_t C_in);
+
+
 #endif //__XS3A__
 
 #ifdef __XC__

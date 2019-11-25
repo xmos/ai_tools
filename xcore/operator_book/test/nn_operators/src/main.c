@@ -28,6 +28,9 @@ void test_maxpool2d_deep_case2();
 void test_maxpool2d_deep_case3();
 void test_maxpool2d_deep_case4();
 
+void test_averagepool2d_deep_case1();
+void test_averagepool2d_deep_case2();
+
 
 int main(void)
 {
@@ -64,6 +67,13 @@ int main(void)
   RUN_TEST(test_maxpool2d_deep_case2);
   RUN_TEST(test_maxpool2d_deep_case3);
   RUN_TEST(test_maxpool2d_deep_case4);
+  ret_val = UnityEnd();
+  printf("\n\n");
+
+  
+  UnityBegin("src\\test_averagepool2d_deep.xc");
+  RUN_TEST(test_averagepool2d_deep_case1);
+  RUN_TEST(test_averagepool2d_deep_case2);
   ret_val = UnityEnd();
   printf("\n\n");
 

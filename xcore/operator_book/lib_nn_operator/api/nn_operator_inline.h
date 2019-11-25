@@ -110,6 +110,26 @@ static inline void maxpool2d_deep(
 
 
 
+static inline void averagepool2d_deep(
+    const int8_t* X, 
+    int8_t* Y,
+    const int32_t height, 
+    const int32_t width,
+    const int32_t C_in)
+{
+#if defined(__XS3A__) && (USE_ASM_averagepool2d_deep)
+
+    averagepool2d_deep_asm(X, Y, height, width, C_in);
+
+#else
+
+    averagepool2d_deep_c(X, Y, height, width, C_in);
+
+#endif
+}
+
+
+
 
 
 static inline void fc_deepin_shallowout_lin(

@@ -64,6 +64,16 @@ void maxpool2d_deep_c(
 
 
 
+void averagepool2d_deep_c(
+    const int8_t* X, 
+    int8_t* Y,
+    const int32_t height, 
+    const int32_t width,
+    const int32_t C_in);
+
+
+
+
 void fc_deepin_shallowout_lin_c(
     const int8_t* W, 
     const int32_t* B,

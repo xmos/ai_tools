@@ -85,6 +85,7 @@ class Operator():
         lines.extend([f'{INDENT * 2}{output}' for output in self.outputs])
         return '\n'.join(lines)
 
+
 class Tensor():
     def __init__(self, subgraph, name, type_, shape, buffer=None, quantization=None):
         # Generally, do not use this constructor to instantiate Tensor!
@@ -182,6 +183,13 @@ class Subgraph():
         operator = Operator(self, operator_code, inputs, outputs, builtin_options, custom_options)
         self.operators.append(operator)
         return operator
+
+    def get_tensor(self, name):
+        for t in self.tensors:
+            if t.name == name:
+                return t
+        raise ValueError(f"Tensor with name {name} not found!")
+
 
 class XCOREModel():
     def __init__(self, version=None, description=None, subgraphs=None, buffers=None, metadata=None):

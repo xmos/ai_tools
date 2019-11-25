@@ -3,7 +3,7 @@
 import pytest
 
 from xcore_model import XCOREModel
-from OperatorCodes import OperatorCode, BuiltinOpCodes
+from operator_codes import OperatorCode, BuiltinOpCodes
 from transformation_passes import RemoveQuantizerFloatInputPass
 
 

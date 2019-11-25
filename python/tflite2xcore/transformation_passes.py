@@ -1,8 +1,8 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-from GraphTransformer import PassPriority
-from GraphTransformer import OperatorMatchingPass, InputTensorMatchingPass, OutputTensorMatchingPass
-from OperatorCodes import BuiltinOpCodes, OperatorCode
+from graph_transformer import PassPriority
+from graph_transformer import OperatorMatchingPass, InputTensorMatchingPass, OutputTensorMatchingPass
+from operator_codes import BuiltinOpCodes, OperatorCode
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
@@ -74,7 +74,7 @@ class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
         super().__init__(priority)
 
     def match(self, input_tensor):
-        if input_tensor.type in 'INT8':
+        if input_tensor.type == 'INT8':
             return True
 
         return False

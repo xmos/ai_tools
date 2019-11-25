@@ -1,7 +1,7 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import struct
 
-import OperatorCodes
+from operator_codes import OperatorCode
 
 TFLITE_TYPE_TO_C_TYPE = {
     'FLOAT32': 'float32_t',
@@ -179,7 +179,7 @@ class Subgraph():
 
     def create_operator(self, operator_code, *,
                         inputs=None, outputs=None, builtin_options=None, custom_options=None):
-        assert isinstance(operator_code, OperatorCodes.OperatorCode)
+        assert isinstance(operator_code, OperatorCode)
         operator = Operator(self, operator_code, inputs, outputs, builtin_options, custom_options)
         self.operators.append(operator)
         return operator

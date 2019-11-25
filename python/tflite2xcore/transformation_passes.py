@@ -1,15 +1,13 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-from GraphTransformer import TransformationPass, PassPriority
+from GraphTransformer import PassPriority
+from GraphTransformer import OperatorMatchingPass, InputTensorMatchingPass, OutputTensorMatchingPass
 from OperatorCodes import BuiltinOpCodes, OperatorCode
 
 
-class RemoveQuantizerFloatInputPass(TransformationPass):
+class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.HIGH):
         super().__init__(priority)
-
-    def target_iterable(self, subgraph):
-        return subgraph.operators
 
     def match(self, op):
         if op.operator_code.code == BuiltinOpCodes.QUANTIZE:
@@ -17,7 +15,6 @@ class RemoveQuantizerFloatInputPass(TransformationPass):
             if (input_tensor in op.subgraph.inputs
                     and output_tensor not in op.subgraph.outputs):
                 if output_tensor.type == 'INT8' and input_tensor.type == 'FLOAT32':
-                    self.log_match(op)
                     return True
 
         return False
@@ -30,12 +27,9 @@ class RemoveQuantizerFloatInputPass(TransformationPass):
         subgraph.operators.remove(op)
 
 
-class RemoveDequantizerFloatOutputPass(TransformationPass):
+class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.HIGH):
         super().__init__(priority)
-
-    def target_iterable(self, subgraph):
-        return subgraph.operators
 
     def match(self, op):
         if op.operator_code.code == BuiltinOpCodes.DEQUANTIZE:
@@ -43,7 +37,6 @@ class RemoveDequantizerFloatOutputPass(TransformationPass):
             if (output_tensor in op.subgraph.outputs
                     and input_tensor not in op.subgraph.inputs):
                 if output_tensor.type == 'FLOAT32' and input_tensor.type == 'INT8':
-                    self.log_match(op)
                     return True
 
         return False
@@ -56,12 +49,9 @@ class RemoveDequantizerFloatOutputPass(TransformationPass):
         subgraph.operators.remove(op)
 
 
-class AddQuantizerFloatInputPass(TransformationPass):
+class AddQuantizerFloatInputPass(InputTensorMatchingPass):
     def __init__(self, priority=PassPriority.LOW):
         super().__init__(priority)
-
-    def target_iterable(self, subgraph):
-        return subgraph.inputs
 
     def match(self, input_tensor):
         if input_tensor.type == 'INT8':
@@ -79,12 +69,9 @@ class AddQuantizerFloatInputPass(TransformationPass):
             OperatorCode(BuiltinOpCodes.QUANTIZE), inputs=[fin], outputs=[qin])
 
 
-class AddDequantizerFloatOutputPass(TransformationPass):
+class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
     def __init__(self, priority=PassPriority.LOW):
         super().__init__(priority)
-
-    def target_iterable(self, subgraph):
-        return subgraph.outputs
 
     def match(self, input_tensor):
         if input_tensor.type in 'INT8':
@@ -100,3 +87,40 @@ class AddDequantizerFloatOutputPass(TransformationPass):
         subgraph.outputs.append(fout)
         subgraph.create_operator(
             OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qout], outputs=[fout])
+
+
+# TODO: implement tests
+class RemoveOutputSoftmaxPass(OperatorMatchingPass):
+    def __init__(self, priority=PassPriority.MEDIUM):
+        super().__init__(priority)
+
+    def match(self, op):
+        if op.operator_code.code == BuiltinOpCodes.SOFTMAX:
+            if op.outputs[0] in op.subgraph.outputs:
+                return True
+
+        return False
+
+    def mutate(self, op):
+        pass
+        # TODO: finish implementing me
+
+
+# TODO: implement tests
+class AddOutputArgmaxPass(OutputTensorMatchingPass):
+    def __init__(self, priority=PassPriority.LOW):
+        super().__init__(priority)
+
+    def run_subgraph(self, subgraph):
+        if len(subgraph.outputs) == 1:
+            tensor = subgraph.outputs[0]
+            if self.match(tensor):
+                self.log_match(tensor)
+                self.mutate(tensor)
+
+    def match(self, tensor):
+        return True  # TODO: consider some restriction on type/shape
+
+    def mutate(self, tensor):
+        pass
+        # TODO: finish implementing me

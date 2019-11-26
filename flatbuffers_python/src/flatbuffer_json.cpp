@@ -54,8 +54,6 @@ extern "C"
 
         strncpy(buf, json.c_str(), json.length());
 
-        std::cout << buf << std::endl;
-
         return json.length();
     }
 

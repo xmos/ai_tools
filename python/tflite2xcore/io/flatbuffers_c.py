@@ -12,7 +12,7 @@ elif sys.platform == "darwin":
 else:
     lib = ctypes.cdll.LoadLibrary('../flatbuffers_python/build/tflite2xcore.dll')
 
-class FlatbufferParser(object):
+class FlatbufferIO(object):
     def __init__(self, data=None):
         lib.read_flatbuffer.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
         lib.read_flatbuffer.restype = ctypes.c_size_t
@@ -23,8 +23,7 @@ class FlatbufferParser(object):
         return buf[0:actual_size]
 
     def write_flatbuffer(self, schema, buffer, fbs):
-        actual_size = lib.read_flatbuffer(schema.encode('ascii'), fbs.encode('ascii'), fbs.encode('ascii'))
-        return buf[0:actual_size]
+        pass
 
 class FlexbufferBuilder(object):
     def __init__(self, data=None):
@@ -99,24 +98,26 @@ class FlexbufferBuilder(object):
         actual_size = lib.builder_get_buffer(self.obj, buf)
         return buf[0:actual_size]
 
-#*********************
-# Example usage
-#*********************
-bits = {
-    'mo': 123,
-    'larry': [1, 2, 3, 4, 5],
-    'curly': 456,
-    'shemp': 'rules!'
-}
 
-print('***************')
-print('* Data ')
-print('***************')
-print(bits)
+if __name__ == "__main__":
+    #*********************
+    # Example usage
+    #*********************
+    bits = {
+        'mo': 123,
+        'larry': [1, 2, 3, 4, 5],
+        'curly': 456,
+        'shemp': 'rules!'
+    }
 
-print('***************')
-print('*  Flexbuffer')
-print('***************')
-fbb = FlexbufferBuilder(bits)
-buf = fbb.get_buffer()
-print(buf)
+    print('***************')
+    print('* Data ')
+    print('***************')
+    print(bits)
+
+    print('***************')
+    print('*  Flexbuffer')
+    print('***************')
+    fbb = FlexbufferBuilder(bits)
+    buf = fbb.get_buffer()
+    print(buf)

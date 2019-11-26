@@ -6,60 +6,11 @@ import tempfile
 import ctypes
 
 from .. import xcore_model
-from .. import OperatorCodes
+from .. import operator_codes
 
 from . import flatbuffers_c
 
-# def __norm_and_join(*args):
-#     return os.path.normpath(os.path.join(*args))
-
-# __io_dir = __norm_and_join(
-#     os.path.dirname(os.path.realpath(__file__)), '')
-
-# DEFAULT_SCHEMA = __norm_and_join(__flatbuffer_xmos_dir, 'schema.fbs')
-
-# DEFAULT_SCHEMA = os.path.normpath(os.path.join(*args)) os.path.realpath(__file__, 'schema.fbs')
-
-
 DEFAULT_SCHEMA = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'schema.fbs')
-# def load_tflite_as_json(tflite_input, *,
-#                         flatc_bin=DEFAULT_FLATC, schema=DEFAULT_SCHEMA):
-#     with tempfile.TemporaryDirectory() as tmp_dir:
-#         # convert model to json
-#         cmd = (f"{flatc_bin} -t --strict-json --defaults-json "
-#                f"-o {tmp_dir} {schema} -- {tflite_input}")
-#         os.system(cmd)
-
-#         # open json file
-#         json_input = os.path.join(
-#             tmp_dir,
-#             os.path.splitext(os.path.basename(tflite_input))[0] + ".json")
-#         with open(json_input, 'r') as f:
-#             model = json.load(f)
-
-#     return model
-
-# def save_json_as_tflite(model, tflite_output, *,
-#                         flatc_bin=DEFAULT_FLATC, schema=DEFAULT_SCHEMA):
-#     with tempfile.TemporaryDirectory() as tmp_dir:
-#         # write new json file
-#         json_output = os.path.join(
-#             tmp_dir,
-#             os.path.splitext(os.path.basename(tflite_output))[0] + ".tmp.json")
-#         with open(json_output, 'w') as f:
-#             json.dump(model, f, indent=2)
-
-#         # convert to tflite
-#         cmd = (f"{flatc_bin} -b --strict-json --defaults-json "
-#                f"-o {tmp_dir} {schema} {json_output}")
-#         logging.info(f"Executing: {cmd}")
-#         os.system(cmd)
-
-#         # move to specified location
-#         tmp_tflite_output = os.path.join(
-#             tmp_dir,
-#             os.path.splitext(os.path.basename(tflite_output))[0] + ".tmp.tflite")
-#         shutil.move(tmp_tflite_output, tflite_output)
 
 def create_buffer_from_dict(model, buffer_dict):
     if 'data' in buffer_dict:
@@ -82,10 +33,10 @@ def create_operator_from_dict(subgraph, tensors, operator_codes_dicts, operator_
     operator_code_dict = operator_codes_dicts[operator_dict['opcode_index']]
 
     if operator_code_dict['builtin_code'] == 'CUSTOM':
-        builtin_opcode = OperatorCodes.BuiltinOpCodes.CUSTOM
-        custom_opcode = OperatorCodes.XCOREOpCodes(operator_code_dict['custom_code'])
+        builtin_opcode = operator_codes.BuiltinOpCodes.CUSTOM
+        custom_opcode = operator_codes.XCOREOpCodes(operator_code_dict['custom_code'])
     else:
-        builtin_opcode = OperatorCodes.BuiltinOpCodes[operator_code_dict['builtin_code']]
+        builtin_opcode = operator_codes.BuiltinOpCodes[operator_code_dict['builtin_code']]
         custom_opcode = None
 
     if 'builtin_options' in operator_dict:
@@ -98,9 +49,9 @@ def create_operator_from_dict(subgraph, tensors, operator_codes_dicts, operator_
     else:
         custom_options = None
 
-    operator_code = OperatorCodes.OperatorCode(
+    operator_code = operator_codes.OperatorCode(
         builtin_opcode,
-        custom_opcode=custom_opcode,
+        custom_code=custom_opcode,
         version=operator_code_dict['version']
     )
 
@@ -148,10 +99,10 @@ def create_subgraph_from_dict(model, buffers, operator_codes, subgraph_dict):
     return subgraph
 
 
-def read_flatbuffers_json(model_filename, schema=None):
+def read_flatbuffer(model_filename, schema=None):
     schema = schema or DEFAULT_SCHEMA
 
-    parser = flatbuffers_c.FlatbufferParser()
+    parser = flatbuffers_c.FlatbufferIO()
 
     model_dict = json.loads(parser.read_flatbuffer(schema, model_filename))
 
@@ -173,39 +124,5 @@ def read_flatbuffers_json(model_filename, schema=None):
 
     return model
 
-# def old_read_flatbuffers_json(model_filename, flatc_bin=None, schema=None):
-#     #TODO: replace with idea from https://github.com/google/flatbuffers/issues/4403
-#     flatc_bin = flatc_bin or DEFAULT_FLATC
-#     schema = schema or DEFAULT_SCHEMA
-    
-#     # loads by first converting to json (yuck!)
-#     if not os.path.exists(schema):
-#         raise FileNotFoundError(
-#             'Schema file cannot be found at {schema}')
-
-#     if flatc_bin is None:
-#         raise RuntimeError('Cannot find flatc')
-#     elif not os.path.exists(flatc_bin):
-#         raise RuntimeError(
-#             f'Flatc is not available at {flatc_bin}')
-
-#     model_dict = load_tflite_as_json(model_filename,
-#                                 flatc_bin=flatc_bin, schema=schema)
-
-#     model = xcore_model.XCOREModel(
-#         version = model_dict['version'],
-#         description = model_dict['description'],
-#         metadata = model_dict['metadata']
-#     )
-
-#     # create buffers
-#     buffers = []
-#     for buffer_dict in model_dict['buffers']:
-#         buffer = create_buffer_from_dict(model, buffer_dict)
-#         buffers.append(buffer)
-
-#     # load subgraphs
-#     for subgraph_dict in model_dict['subgraphs']:
-#         create_subgraph_from_dict(model, buffers, model_dict['operator_codes'], subgraph_dict)
-
-#     return model
+def write_flatbuffer(model_filename, schema=None):
+    pass

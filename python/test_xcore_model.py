@@ -8,8 +8,7 @@ import argparse
 import tflite2xcore
 
 def test_xcore_model(args):
-    model = tflite2xcore.read_flatbuffers_json(os.path.realpath(args.tflite_input))
-    #model = tflite2xcore.read_flatbuffer(args.tflite_input)
+    model = tflite2xcore.read_flatbuffer(os.path.realpath(args.tflite_input))
     subgraph = model.subgraphs[0]  # only one supported for now
 
     print('')
@@ -57,8 +56,8 @@ def test_xcore_model(args):
         [1, 5, 5, 3],
         buffer = buffer2
     )
-    operator1_code = tflite2xcore.OperatorCodes.OperatorCode(
-        tflite2xcore.OperatorCodes.XCOREOpCodes.XC_argmax_16
+    operator1_code = tflite2xcore.operator_codes.OperatorCode(
+        tflite2xcore.operator_codes.XCOREOpCodes.XC_argmax_16
     )
     operator1 = subgraph.create_operator(operator1_code)
     operator1.inputs.append(tensor1)

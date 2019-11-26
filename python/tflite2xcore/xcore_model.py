@@ -2,7 +2,7 @@
 import struct
 import enum
 
-from . import OperatorCodes
+from . import operator_codes
 
 class TensorType(enum.Enum):
     FLOAT32 = 0
@@ -105,6 +105,7 @@ class Operator():
         lines.append(f'{INDENT * 2}{self.custom_options}')
         return '\n'.join(lines)
 
+
 class Tensor():
     def __init__(self, subgraph, name, type_, shape, buffer=None, quantization=None):
         # Generally, do not use this constructor to instantiate Tensor!
@@ -198,10 +199,17 @@ class Subgraph():
 
     def create_operator(self, operator_code, *,
                         inputs=None, outputs=None, builtin_options=None, custom_options=None):
-        assert isinstance(operator_code, OperatorCodes.OperatorCode)
+        assert isinstance(operator_code, operator_codes.OperatorCode)
         operator = Operator(self, operator_code, inputs, outputs, builtin_options, custom_options)
         self.operators.append(operator)
         return operator
+
+    def get_tensor(self, name):
+        for t in self.tensors:
+            if t.name == name:
+                return t
+        raise ValueError(f"Tensor with name {name} not found!")
+
 
 class XCOREModel():
     def __init__(self, version=None, description=None, subgraphs=None, buffers=None, metadata=None):

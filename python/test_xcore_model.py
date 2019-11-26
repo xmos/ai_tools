@@ -8,8 +8,8 @@ import argparse
 import tflite2xcore
 
 def test_xcore_model(args):
-    #model = tflite2xcore.read_flatbuffers_json(args.tflite_input)
-    model = tflite2xcore.read_flatbuffer(args.tflite_input)
+    model = tflite2xcore.read_flatbuffers_json(os.path.realpath(args.tflite_input))
+    #model = tflite2xcore.read_flatbuffer(args.tflite_input)
     subgraph = model.subgraphs[0]  # only one supported for now
 
     print('')
@@ -69,9 +69,12 @@ def test_xcore_model(args):
     subgraph.outputs[0] = tensor2
     model.pprint()
 
+    tflite2xcore.write_flatbuffer(model, args.tflite_output)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('tflite_input', help='Input .tflite file.')
+    parser.add_argument('tflite_output', help='Output .tflite file.')
     parser.add_argument('--flatc', required=False, default=None,
                         help='Path to flatc executable.')
     parser.add_argument('--schema', required=False, default=None,

@@ -1,2 +1,2 @@
-from tflite2xcore.io.flatbuffers_json import read_flatbuffers_json
-from tflite2xcore.io.flatbuffers import read_flatbuffer
+from tflite2xcore.io.flatbuffers_json import read_flatbuffer
+from tflite2xcore.io.flatbuffers_json import write_flatbuffer

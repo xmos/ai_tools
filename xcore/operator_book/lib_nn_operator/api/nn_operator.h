@@ -60,6 +60,11 @@ static inline void nn_mat_vec_mul_s8(
 
 /**  2D convolution for "deep" input and output tensors.
  *
+ *  This kernel is optimized for input/output tensors with many channels. Input
+ *  tensors must have a multiple of 32 channels, output tensors must have multiple
+ *  of 16 channels. To accomplish this, the input tensor or Kernel tensor may be
+ *  padded with zeros along the corresponding dimension.
+ * 
  *  Stride is 1 in both dimensions. Number of input and output channels must be
  *  divisible by 32 and 16 respectively. Activation is ReLU. Zero padding
  *  should be used on all edges, with size K_h//2 above and below, and K_w//2
@@ -233,8 +238,7 @@ static inline void avgpool2d_deep(
 
 /**  Fully connected layer for "deep" input and "shallow" output tensors.
  *
- *  Number of inputs must be divisible by 32. Number of outputs must be less
- *  than 16. No activation is applied (i.e. linear).
+ *  Number of inputs must be divisible by 32. No activation is applied (i.e. linear).
  *
  *  \param  W       Weight tensor of shape (C_out, C_in) using standard layout
  *                  such that:
@@ -242,7 +246,7 @@ static inline void avgpool2d_deep(
  *  \param  B       Bias tensor of shape (C_out) using a standard layout.
  *  \param  X       Input tensor of shape (C_in) using standard layout.
  *  \param  Y       Output tensor of shape (C_out) using standard layout.
- *  \param  C_out   Number of output channels, must be less than 16.
+ *  \param  C_out   Number of output channels
  *  \param  C_in    Number of input channels, must be divisible by 32.
  *  \param  shifts  Shift tensor of shape (C_out) using standard layout.
  *                  Defines the shift used in the 32 to 16 bit conversion via
@@ -267,8 +271,7 @@ static inline void fc_deepin_shallowout_16(
 
 /**  Fully connected layer for "deep" input and "shallow" output tensors.
  *
- *  Number of inputs must be divisible by 32. Number of outputs must be less
- *  than 16. No activation is applied (i.e. linear).
+ *  Number of inputs must be divisible by 32. No activation is applied (i.e. linear).
  *
  *  \param  W       Weight tensor of shape (C_out, C_in) using standard layout
  *                  such that:
@@ -276,7 +279,7 @@ static inline void fc_deepin_shallowout_16(
  *  \param  B       Bias tensor of shape (C_out) using a standard layout.
  *  \param  X       Input tensor of shape (C_in) using standard layout.
  *  \param  Y       Output tensor of shape (C_out) using standard layout.
- *  \param  C_out   Number of output channels, must be less than 16.
+ *  \param  C_out   Number of output channels.
  *  \param  C_in    Number of input channels, must be divisible by 32.
  *  \param  shifts  Shift tensor of shape (C_out) using standard layout.
  *                  Defines the shift used in the 32 to 8 bit conversion via

@@ -89,8 +89,7 @@ class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
             OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qout], outputs=[fout])
 
 
-# TODO: implement tests
-class RemoveOutputSoftmaxPass(OperatorMatchingPass):
+class RemoveSoftmaxOutputPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
 
@@ -102,12 +101,15 @@ class RemoveOutputSoftmaxPass(OperatorMatchingPass):
         return False
 
     def mutate(self, op):
-        pass
-        # TODO: finish implementing me
+        subgraph = op.subgraph
+        subgraph.outputs.remove(op.outputs[0])
+        subgraph.outputs.append(op.inputs[0])
+        subgraph.tensors.remove(op.outputs[0])
+        subgraph.operators.remove(op)
 
 
 # TODO: implement tests
-class AddOutputArgmaxPass(OutputTensorMatchingPass):
+class AddArgmaxOutputPass(OutputTensorMatchingPass):
     def __init__(self, priority=PassPriority.LOW):
         super().__init__(priority)
 

@@ -222,7 +222,7 @@ static inline void maxpool2d_deep(
  *  \param  width   Input tensor/image width, must be even.
  *  \param  C_in    Number of input channels, must be divisible by 32.
  */
-static inline void averagepool2d_deep(
+static inline void avgpool2d_deep(
     const int8_t* X, 
     int8_t* Y,
     const int32_t height, 
@@ -253,11 +253,45 @@ static inline void averagepool2d_deep(
  *                  and 0x7FFF. For c >= C_out, the value scales[y] is
  *                  undefined.
  */
-static inline void fc_deepin_shallowout_lin(
+static inline void fc_deepin_shallowout_16(
     const int8_t* W, 
     const int32_t* B,
     const int8_t* X, 
     int16_t* Y,
+    const int32_t C_out, 
+    const int32_t C_in,
+    const uint16_t* shifts, 
+    const int16_t* scales);
+
+
+
+/**  Fully connected layer for "deep" input and "shallow" output tensors.
+ *
+ *  Number of inputs must be divisible by 32. Number of outputs must be less
+ *  than 16. No activation is applied (i.e. linear).
+ *
+ *  \param  W       Weight tensor of shape (C_out, C_in) using standard layout
+ *                  such that:
+ *                      W[i, j]  =  K[C_in * i  +  j]
+ *  \param  B       Bias tensor of shape (C_out) using a standard layout.
+ *  \param  X       Input tensor of shape (C_in) using standard layout.
+ *  \param  Y       Output tensor of shape (C_out) using standard layout.
+ *  \param  C_out   Number of output channels, must be less than 16.
+ *  \param  C_in    Number of input channels, must be divisible by 32.
+ *  \param  shifts  Shift tensor of shape (C_out) using standard layout.
+ *                  Defines the shift used in the 32 to 8 bit conversion via
+ *                  VLSAT. For c >= C_out, the value shifts[y] is undefined.
+ *  \param  scales  Scale tensor of shape (C_out) using standard layout.
+ *                  Defines the scale applied after the 32 to 8 bit
+ *                  conversion. Optional. Can be assumed to be between 0x4000
+ *                  and 0x7FFF. For c >= C_out, the value scales[y] is
+ *                  undefined.
+ */
+static inline void fc_deepin_shallowout_8(
+    const int8_t* W, 
+    const int32_t* B,
+    const int8_t* X, 
+    int8_t* Y,
     const int32_t C_out, 
     const int32_t C_in,
     const uint16_t* shifts, 

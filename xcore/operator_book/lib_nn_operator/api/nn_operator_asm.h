@@ -91,14 +91,28 @@ int8_t* conv2d_shallowin_deepout_relu_asm_patch(
     const unsigned kernel_advance);
 
 
-#ifndef USE_ASM_fc_deepin_shallowout_lin
-#define USE_ASM_fc_deepin_shallowout_lin    (1)
+#ifndef USE_ASM_fc_deepin_shallowout_16
+#define USE_ASM_fc_deepin_shallowout_16    (1)
 #endif
-void fc_deepin_shallowout_lin_asm(
+void fc_deepin_shallowout_16_asm(
     const int8_t* W, 
     const int32_t* B,
     const int8_t* X, 
     int16_t* Y,
+    const int32_t C_out, 
+    const int32_t C_in,
+    const uint16_t* shifts, 
+    const int16_t* scales);
+
+
+#ifndef USE_ASM_fc_deepin_shallowout_8
+#define USE_ASM_fc_deepin_shallowout_8    (1)
+#endif
+void fc_deepin_shallowout_8_asm(
+    const int8_t* W, 
+    const int32_t* B,
+    const int8_t* X, 
+    int8_t* Y,
     const int32_t C_out, 
     const int32_t C_in,
     const uint16_t* shifts, 
@@ -117,10 +131,10 @@ void maxpool2d_deep_asm(
 
 
 
-#ifndef USE_ASM_averagepool2d_deep
-#define USE_ASM_averagepool2d_deep    (1)
+#ifndef USE_ASM_avgpool2d_deep
+#define USE_ASM_avgpool2d_deep    (1)
 #endif
-void averagepool2d_deep_asm(
+void avgpool2d_deep_asm(
     const int8_t* X, 
     int8_t* Y,
     const int32_t height, 

@@ -3,7 +3,7 @@
 
 
 /*  
-void averagepool2d_deep_asm(
+void avgpool2d_deep_asm(
     const int8_t* X, 
     int8_t* Y,
     const int32_t height, 
@@ -11,7 +11,7 @@ void averagepool2d_deep_asm(
     const int32_t C_in);
 */
 
-#define FUNCTION_NAME averagepool2d_deep_asm
+#define FUNCTION_NAME avgpool2d_deep_asm
 
 #define NSTACKWORDS  20
     

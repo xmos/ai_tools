@@ -19,17 +19,22 @@ void test_conv2d_shallowin_deepout_relu_case2();
 void test_conv2d_shallowin_deepout_relu_case3();
 void test_conv2d_shallowin_deepout_relu_case4();
 
-void test_fc_deepin_shallowout_lin_case1();
-void test_fc_deepin_shallowout_lin_case2();
-void test_fc_deepin_shallowout_lin_case3();
+void test_fc_deepin_shallowout_16_case1();
+void test_fc_deepin_shallowout_16_case2();
+void test_fc_deepin_shallowout_16_case3();
+
+void test_fc_deepin_shallowout_8_case1();
+void test_fc_deepin_shallowout_8_case1_5();
+void test_fc_deepin_shallowout_8_case2();
+void test_fc_deepin_shallowout_8_case3();
 
 void test_maxpool2d_deep_case1();
 void test_maxpool2d_deep_case2();
 void test_maxpool2d_deep_case3();
 void test_maxpool2d_deep_case4();
 
-void test_averagepool2d_deep_case1();
-void test_averagepool2d_deep_case2();
+void test_avgpool2d_deep_case1();
+void test_avgpool2d_deep_case2();
 
 
 int main(void)
@@ -71,17 +76,26 @@ int main(void)
   printf("\n\n");
 
   
-  UnityBegin("src\\test_averagepool2d_deep.xc");
-  RUN_TEST(test_averagepool2d_deep_case1);
-  RUN_TEST(test_averagepool2d_deep_case2);
+  UnityBegin("src\\test_avgpool2d_deep.xc");
+  RUN_TEST(test_avgpool2d_deep_case1);
+  RUN_TEST(test_avgpool2d_deep_case2);
   ret_val = UnityEnd();
   printf("\n\n");
 
   
-  UnityBegin("src\\test_fc_deepin_shallowout_lin.xc");
-  RUN_TEST(test_fc_deepin_shallowout_lin_case1);
-  RUN_TEST(test_fc_deepin_shallowout_lin_case2);
-  RUN_TEST(test_fc_deepin_shallowout_lin_case3);
+  UnityBegin("src\\test_fc_deepin_shallowout_16.xc");
+  RUN_TEST(test_fc_deepin_shallowout_16_case1);
+  RUN_TEST(test_fc_deepin_shallowout_16_case2);
+  RUN_TEST(test_fc_deepin_shallowout_16_case3);
+  ret_val = UnityEnd();
+  printf("\n\n");
+
+  
+  UnityBegin("src\\test_fc_deepin_shallowout_8.xc");
+  RUN_TEST(test_fc_deepin_shallowout_8_case1);
+  RUN_TEST(test_fc_deepin_shallowout_8_case1_5);
+  RUN_TEST(test_fc_deepin_shallowout_8_case2);
+  RUN_TEST(test_fc_deepin_shallowout_8_case3);
   ret_val = UnityEnd();
   printf("\n\n");
 

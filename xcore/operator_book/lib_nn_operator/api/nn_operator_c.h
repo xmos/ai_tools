@@ -64,7 +64,7 @@ void maxpool2d_deep_c(
 
 
 
-void averagepool2d_deep_c(
+void avgpool2d_deep_c(
     const int8_t* X, 
     int8_t* Y,
     const int32_t height, 
@@ -74,11 +74,24 @@ void averagepool2d_deep_c(
 
 
 
-void fc_deepin_shallowout_lin_c(
+void fc_deepin_shallowout_16_c(
     const int8_t* W, 
     const int32_t* B,
     const int8_t* X, 
     int16_t* Y,
+    const int32_t C_out, 
+    const int32_t C_in,
+    const uint16_t* shifts, 
+    const int16_t* scales);
+
+
+
+
+void fc_deepin_shallowout_8_c(
+    const int8_t* W, 
+    const int32_t* B,
+    const int8_t* X, 
+    int8_t* Y,
     const int32_t C_out, 
     const int32_t C_in,
     const uint16_t* shifts, 

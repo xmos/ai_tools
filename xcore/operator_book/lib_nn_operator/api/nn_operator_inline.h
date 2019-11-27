@@ -110,20 +110,20 @@ static inline void maxpool2d_deep(
 
 
 
-static inline void averagepool2d_deep(
+static inline void avgpool2d_deep(
     const int8_t* X, 
     int8_t* Y,
     const int32_t height, 
     const int32_t width,
     const int32_t C_in)
 {
-#if defined(__XS3A__) && (USE_ASM_averagepool2d_deep)
+#if defined(__XS3A__) && (USE_ASM_avgpool2d_deep)
 
-    averagepool2d_deep_asm(X, Y, height, width, C_in);
+    avgpool2d_deep_asm(X, Y, height, width, C_in);
 
 #else
 
-    averagepool2d_deep_c(X, Y, height, width, C_in);
+    avgpool2d_deep_c(X, Y, height, width, C_in);
 
 #endif
 }
@@ -132,7 +132,7 @@ static inline void averagepool2d_deep(
 
 
 
-static inline void fc_deepin_shallowout_lin(
+static inline void fc_deepin_shallowout_16(
     const int8_t* W, 
     const int32_t* B,
     const int8_t* X, 
@@ -142,13 +142,39 @@ static inline void fc_deepin_shallowout_lin(
     const uint16_t* shifts, 
     const int16_t* scales)
 {
-#if defined(__XS3A__) && (USE_ASM_fc_deepin_shallowout_lin)
+#if defined(__XS3A__) && (USE_ASM_fc_deepin_shallowout_16)
 
-    fc_deepin_shallowout_lin_asm(W, B, X, Y, C_out, C_in, shifts, scales);
+    fc_deepin_shallowout_16_asm(W, B, X, Y, C_out, C_in, shifts, scales);
 
 #else
 
-    fc_deepin_shallowout_lin_c(W, B, X, Y, C_out, C_in, shifts, scales);
+    fc_deepin_shallowout_16_c(W, B, X, Y, C_out, C_in, shifts, scales);
+
+#endif
+}
+
+
+
+
+
+
+static inline void fc_deepin_shallowout_8(
+    const int8_t* W, 
+    const int32_t* B,
+    const int8_t* X, 
+    int8_t* Y,
+    const int32_t C_out, 
+    const int32_t C_in,
+    const uint16_t* shifts, 
+    const int16_t* scales)
+{
+#if defined(__XS3A__) && (USE_ASM_fc_deepin_shallowout_8)
+
+    fc_deepin_shallowout_8_asm(W, B, X, Y, C_out, C_in, shifts, scales);
+
+#else
+
+    fc_deepin_shallowout_8_c(W, B, X, Y, C_out, C_in, shifts, scales);
 
 #endif
 }

@@ -74,10 +74,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('tflite_input', help='Input .tflite file.')
     parser.add_argument('tflite_output', help='Output .tflite file.')
-    parser.add_argument('--flatc', required=False, default=None,
-                        help='Path to flatc executable.')
-    parser.add_argument('--schema', required=False, default=None,
-                        help='Path to .fbs schema file.')
     args = parser.parse_args()
 
     test_xcore_model(args)

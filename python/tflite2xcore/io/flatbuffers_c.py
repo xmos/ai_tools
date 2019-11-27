@@ -17,17 +17,21 @@ class FlatbufferIO(object):
         lib.read_flatbuffer.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
         lib.read_flatbuffer.restype = ctypes.c_size_t
 
+        lib.write_flatbuffer.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+        lib.write_flatbuffer.restype = ctypes.c_size_t
+
     def read_flatbuffer(self, schema, fbs, size=100000000):
-        buf = ctypes.create_string_buffer(size)
-        actual_size = lib.read_flatbuffer(schema.encode('ascii'), fbs.encode('ascii'), buf)
-        return buf[0:actual_size]
+        buffer = ctypes.create_string_buffer(size)
+        actual_size = lib.read_flatbuffer(schema.encode('ascii'), fbs.encode('ascii'), buffer)
+
+        return buffer[0:actual_size]
 
     def write_flatbuffer(self, schema, buffer, fbs):
-        pass
+        actual_size = lib.write_flatbuffer(schema.encode('ascii'), buffer, fbs.encode('ascii'))
+        return actual_size
 
 class FlexbufferBuilder(object):
     def __init__(self, data=None):
-        #lib.new_builder.argtypes = []
         lib.new_builder.restype = ctypes.c_void_p
 
         lib.builder_clear.argtypes = [ctypes.c_void_p]

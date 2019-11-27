@@ -124,5 +124,8 @@ def read_flatbuffer(model_filename, schema=None):
 
     return model
 
-def write_flatbuffer(model_filename, schema=None):
+def write_flatbuffer(model, filename, schema=None):
+    #TODO: make dicts out of model 
+
+    #TODO: save json
     pass

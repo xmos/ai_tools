@@ -75,8 +75,8 @@ class Buffer():
 
 
 class Operator():
-    def __init__(self, subgraph, operator_code,
-                 inputs=None, outputs=None, builtin_options=None, custom_options=None):
+    def __init__(self, subgraph, operator_code, 
+                 inputs=None, outputs=None, builtin_options=None, builtin_options_type=None, custom_options=None):
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
         self.subgraph = subgraph  # parent
@@ -84,6 +84,9 @@ class Operator():
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.builtin_options = builtin_options
+        self.builtin_options_type = builtin_options_type
+        if builtin_options:
+            assert builtin_options_type
         self.custom_options = custom_options
 
     @property
@@ -198,9 +201,10 @@ class Subgraph():
         return tensor
 
     def create_operator(self, operator_code, *,
-                        inputs=None, outputs=None, builtin_options=None, custom_options=None):
+                        inputs=None, outputs=None,
+                        builtin_options=None, builtin_options_type=None, custom_options=None):
         assert isinstance(operator_code, operator_codes.OperatorCode)
-        operator = Operator(self, operator_code, inputs, outputs, builtin_options, custom_options)
+        operator = Operator(self, operator_code, inputs, outputs, builtin_options, builtin_options_type, custom_options)
         self.operators.append(operator)
         return operator
 
@@ -231,14 +235,20 @@ class XCOREModel():
 
     @property
     def operator_codes(self):
-        operator_codes = {}
+        # sort the operators codes from most frequent to least frequent
+        #   why? because the flatbuffer is a tiny bit smaller if we do
+        all_operator_codes = []
 
         for subgraph in self.subgraphs:
             for operator in subgraph.operators:
-                print(operator.operator_code)
-                operator_codes[str(operator.operator_code)] = operator.operator_code
+                all_operator_codes.append(operator.operator_code)
+        sorted_operator_codes = sorted(all_operator_codes, key=all_operator_codes.count, reverse=True)
 
-        return operator_codes.keys()
+        operator_codes = {}
+        for operator_code in sorted_operator_codes:
+            operator_codes[str(operator_code)] = operator_code
+
+        return list(operator_codes.values())
 
     def pprint(self):
         print('---------')

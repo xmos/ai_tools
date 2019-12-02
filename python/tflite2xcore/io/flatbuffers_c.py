@@ -101,27 +101,3 @@ class FlexbufferBuilder(object):
         buf = ctypes.create_string_buffer(size)
         actual_size = lib.builder_get_buffer(self.obj, buf)
         return buf[0:actual_size]
-
-
-if __name__ == "__main__":
-    #*********************
-    # Example usage
-    #*********************
-    bits = {
-        'mo': 123,
-        'larry': [1, 2, 3, 4, 5],
-        'curly': 456,
-        'shemp': 'rules!'
-    }
-
-    print('***************')
-    print('* Data ')
-    print('***************')
-    print(bits)
-
-    print('***************')
-    print('*  Flexbuffer')
-    print('***************')
-    fbb = FlexbufferBuilder(bits)
-    buf = fbb.get_buffer()
-    print(buf)

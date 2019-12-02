@@ -94,9 +94,9 @@ def create_dict_from_operator(operator):
     else:
         operator_dict['builtin_options_type'] = 'NONE'
 
-    #TODO: use flexbuffer builder
-    # if operator.custom_options:
-    #     operator_dict['custom_options'] = operator.custom_options
+    if operator.custom_options:
+        fbb = FlexbufferBuilder(operator.custom_options)
+        operator_dict['custom_options'] = fbb.get_buffer()
 
     return operator_dict
 

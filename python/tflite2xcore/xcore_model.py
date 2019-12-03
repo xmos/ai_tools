@@ -1,5 +1,6 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import struct
+import numpy
 
 from operator_codes import OperatorCode
 
@@ -135,6 +136,18 @@ class Tensor():
         for s in self.shape:
             size *= s
         return size
+
+    """@property
+    def numpy(self):
+        numpy.array()
+        if  == 'INT8':
+            arr = numpy.int32(self.buffer.unpack(TFLITE_TYPE_TO_C_TYPE[self.type]))
+        elif self.type == 'INT32':
+            
+            arr = numpy.int32(self.buffer.unpack('int32_t'))
+        else:
+            raise NotImplementedError()
+        return arr.reshape(tensor['shape'])"""
 
 
 class Subgraph():

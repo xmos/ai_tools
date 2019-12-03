@@ -114,3 +114,18 @@ class AddArgmaxOutputPass(OutputTensorMatchingPass):
         subgraph.outputs.append(tout)
         subgraph.create_operator(
             OperatorCode(XCOREOpCodes.XC_argmax_16), inputs=[tensor], outputs=[tout])
+
+
+class ReplaceDeepinShallowoutFullyConnectedOutput(OperatorMatchingPass):
+    def __init__(self, priority=PassPriority.MEDIUM):
+        super().__init__(priority)
+
+    def match(self, op):
+        if op.operator_code.code == BuiltinOpCodes.FULLY_CONNECTED:
+            weight_tensor = op.outputs[1]
+            return weight_tensor.shape[0] < 16 and weight_tensor.shape[1] % 32 == 0
+
+        return False
+
+    def mutate(self, op):
+        pass  # TODO: finish this

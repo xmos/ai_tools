@@ -13,9 +13,11 @@ class PassPriority(enum.IntEnum):
         return last_values[-1] + 1 if last_values else 0
 
     # TODO: change these to meaningful names
-    HIGH = enum.auto()
+    HIGHEST = enum.auto()
+    HIGH = HIGHEST
     MEDIUM = enum.auto()
     LOW = enum.auto()
+    LOWEST = LOW
 
 
 class TransformationPass(ABC):

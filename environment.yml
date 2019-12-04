@@ -1,8 +1,8 @@
 channels:
   - mvdbeek
+  - anaconda
   - bioconda
   - conda-forge
-  - anaconda
   - defaults
 dependencies:
   - _libgcc_mutex=0.1
@@ -65,6 +65,8 @@ dependencies:
   - libuuid=1.0.3
   - libxcb=1.13
   - libxml2=2.9.9
+  - lz4=2.2.1
+  - lz4-c=1.8.3
   - markupsafe=1.1.1
   - matplotlib=3.1.1
   - mccabe=0.6.1
@@ -78,7 +80,7 @@ dependencies:
   - numpy=1.17.2
   - onnx=1.6.0
   - openblas=0.3.7
-  - openssl=1.1.1
+  - openssl=1.1.1d
   - packaging=19.2
   - pandoc=2.2.3.2
   - pandocfilters=1.4.2
@@ -138,15 +140,18 @@ dependencies:
   - pip:
     - absl-py==0.8.0
     - astor==0.8.0
+    - decopatch==1.4.7
     - gast==0.2.2
     - google-pasta==0.1.7
     - grpcio==1.24.0
     - h5py==2.10.0
     - keras-applications==1.0.8
     - keras-preprocessing==1.1.0
+    - makefun==1.7.0
     - markdown==3.1.1
     - opt-einsum==3.1.0
     - pip-autoremove==0.9.1
+    - pytest-cases==1.11.8
     - tensorboard==2.0.0
     - tensorflow==2.0.0
     - tensorflow-estimator==2.0.0

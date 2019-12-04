@@ -67,6 +67,5 @@ def test_match(model, trf_pass):
     trf_pass.match(model.subgraphs[0].operators[-1])
 
 
-
 if __name__ == "__main__":
     pytest.main()

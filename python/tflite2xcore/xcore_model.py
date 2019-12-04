@@ -1,6 +1,5 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import struct
-
 import enum
 
 from . import operator_codes
@@ -118,8 +117,7 @@ class Tensor():
         # Use Subgraph.create_tensor instead.
         self.subgraph = subgraph  # parent
         self.name = name
-        #TODO: uncomment the following line
-        # assert isinstance(type_, TensorType)
+        assert isinstance(type_, TensorType)
         self.type = type_
         self.shape = shape
 

@@ -2,9 +2,9 @@
 
 import pytest
 
-from xcore_model import XCOREModel
-from operator_codes import OperatorCode, BuiltinOpCodes
-from transformation_passes import RemoveDequantizerFloatOutputPass
+from tflite2xcore.xcore_model import XCOREModel, TensorType
+from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.transformation_passes import RemoveDequantizerFloatOutputPass
 
 
 @pytest.fixture()
@@ -12,12 +12,12 @@ def simple_model():
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
-    qin = subgraph.create_tensor('quantized_input', 'INT8', [1, 5, 5, 3], isinput=True)
-    qout = subgraph.create_tensor('quantized_output', 'INT8', qin.shape)
+    qin = subgraph.create_tensor('quantized_input', TensorType.INT8, [1, 5, 5, 3], isinput=True)
+    qout = subgraph.create_tensor('quantized_output', TensorType.INT8, qin.shape)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.ABS),
                              inputs=[qin], outputs=[qout])
 
-    fout = subgraph.create_tensor('output', 'FLOAT32', qout.shape, isoutput=True)
+    fout = subgraph.create_tensor('output', TensorType.FLOAT32, qout.shape, isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.DEQUANTIZE),
                              inputs=[qout], outputs=[fout])
 
@@ -30,17 +30,17 @@ def dual_output_model():
     subgraph = model.create_subgraph()
 
     # TODO: add operator options to specify split axis and number
-    qin = subgraph.create_tensor('quantized_input', 'INT8', [1, 5, 5, 4], isinput=True)
-    qout1 = subgraph.create_tensor('quantized_output_1', 'INT8', [1, 5, 5, 2])
-    qout2 = subgraph.create_tensor('quantized_output_2', 'INT8', [1, 5, 5, 2])
+    qin = subgraph.create_tensor('quantized_input', TensorType.INT8, [1, 5, 5, 4], isinput=True)
+    qout1 = subgraph.create_tensor('quantized_output_1', TensorType.INT8, [1, 5, 5, 2])
+    qout2 = subgraph.create_tensor('quantized_output_2', TensorType.INT8, [1, 5, 5, 2])
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.SPLIT),
                              inputs=[qin], outputs=[qout1, qout2])
 
-    fout1 = subgraph.create_tensor('output_1', 'FLOAT32', qout1.shape, isoutput=True)
+    fout1 = subgraph.create_tensor('output_1', TensorType.FLOAT32, qout1.shape, isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.DEQUANTIZE),
                              inputs=[qout1], outputs=[fout1])
 
-    fout2 = subgraph.create_tensor('output_2', 'FLOAT32', qout1.shape, isoutput=True)
+    fout2 = subgraph.create_tensor('output_2', TensorType.FLOAT32, qout1.shape, isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.DEQUANTIZE),
                              inputs=[qout2], outputs=[fout2])
 
@@ -52,13 +52,13 @@ def non_matching_model():
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
-    qin1 = subgraph.create_tensor('quantized_input_1', 'INT8', [1, 5, 5, 3], isinput=True)
-    fout1 = subgraph.create_tensor('output_1', 'FLOAT32', qin1.shape, isoutput=True)
+    qin1 = subgraph.create_tensor('quantized_input_1', TensorType.INT8, [1, 5, 5, 3], isinput=True)
+    fout1 = subgraph.create_tensor('output_1', TensorType.FLOAT32, qin1.shape, isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.DEQUANTIZE),
                              inputs=[qin1], outputs=[fout1])
 
-    qin2 = subgraph.create_tensor('quantized_input_2', 'INT8', [1, 3, 3, 8], isinput=True)
-    fout2 = subgraph.create_tensor('output_2', 'FLOAT32', qin2.shape, isoutput=True)
+    qin2 = subgraph.create_tensor('quantized_input_2', TensorType.INT8, [1, 3, 3, 8], isinput=True)
+    fout2 = subgraph.create_tensor('output_2', TensorType.FLOAT32, qin2.shape, isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.DEQUANTIZE),
                              inputs=[qin2], outputs=[fout2])
 

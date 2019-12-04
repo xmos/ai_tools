@@ -2,9 +2,9 @@
 
 import pytest
 
-from xcore_model import XCOREModel
-from operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
-from transformation_passes import AddArgmaxOutputPass
+from tflite2xcore.xcore_model import XCOREModel, TensorType
+from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.transformation_passes import AddArgmaxOutputPass
 
 
 @pytest.fixture()
@@ -12,7 +12,7 @@ def simple_model():
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
-    tin = subgraph.create_tensor('input', type_='INT16', shape=[1, 10], isinput=True)
+    tin = subgraph.create_tensor('input', type_=TensorType.INT16, shape=[1, 10], isinput=True)
     tout = subgraph.create_tensor('output', tin.type, tin.shape, isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.ABS),
                              inputs=[tin], outputs=[tout])
@@ -26,9 +26,9 @@ def dual_output_model():
     subgraph = model.create_subgraph()
 
     # TODO: add operator options to specify split axis and number
-    qin = subgraph.create_tensor('quantized_input', 'INT16', [1, 20], isinput=True)
-    qout1 = subgraph.create_tensor('quantized_output_1', 'INT16', [1, 10], isoutput=True)
-    qout2 = subgraph.create_tensor('quantized_output_2', 'INT16', [1, 10], isoutput=True)
+    qin = subgraph.create_tensor('quantized_input', TensorType.INT16, [1, 20], isinput=True)
+    qout1 = subgraph.create_tensor('quantized_output_1', TensorType.INT16, [1, 10], isoutput=True)
+    qout2 = subgraph.create_tensor('quantized_output_2', TensorType.INT16, [1, 10], isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.SPLIT),
                              inputs=[qin], outputs=[qout1, qout2])
 
@@ -79,10 +79,10 @@ def test_run_dual_output(dual_output_model, trf_pass):
         assert not trf_pass.match(op)
 
 
-@pytest.fixture(params=[('FLOAT32', [1, 10]),
-                        ('INT8', [1, 10]),
-                        ('INT16', [1, 3, 3, 8]),
-                        ('INT16', [1, 5, 5, 3])])
+@pytest.fixture(params=[(TensorType.FLOAT32, [1, 10]),
+                        (TensorType.INT8, [1, 10]),
+                        (TensorType.INT16, [1, 3, 3, 8]),
+                        (TensorType.INT16, [1, 5, 5, 3])])
 def non_matching_model(request):
     t_type, t_shape = request.param
     model = XCOREModel()

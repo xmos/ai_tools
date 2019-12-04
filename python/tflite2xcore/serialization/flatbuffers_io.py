@@ -7,8 +7,8 @@ import ctypes
 
 from .flatbuffers_c import FlexbufferBuilder, FlexbufferParser, FlatbufferIO
 
-from xcore_model import XCOREModel, TensorType
-from operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
+from ..xcore_model import XCOREModel, TensorType
+from ..operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
 
 DEFAULT_SCHEMA = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'schema.fbs')
 
@@ -27,7 +27,7 @@ def create_dict_from_buffer(buffer):
     else:
         return {}
 
-def create_operator_from_dict(subgraph, tensors, operator_codes_dicts, operator_dict):
+def create_operator_from_dict(subgraph, tensors, operator_code, operator_dict):
     inputs = []
     for input_index in operator_dict['inputs']:
         inputs.append(tensors[input_index])
@@ -35,15 +35,6 @@ def create_operator_from_dict(subgraph, tensors, operator_codes_dicts, operator_
     outputs = []
     for output_index in operator_dict['outputs']:
         outputs.append(tensors[output_index])
-
-    operator_code_dict = operator_codes_dicts[operator_dict['opcode_index']]
-
-    if operator_code_dict['builtin_code'] == 'CUSTOM':
-        builtin_opcode = BuiltinOpCodes.CUSTOM
-        custom_opcode = XCOREOpCodes(operator_code_dict['custom_code'])
-    else:
-        builtin_opcode = BuiltinOpCodes[operator_code_dict['builtin_code']]
-        custom_opcode = None
 
     if 'builtin_options' in operator_dict:
         builtin_options = operator_dict['builtin_options']
@@ -57,12 +48,6 @@ def create_operator_from_dict(subgraph, tensors, operator_codes_dicts, operator_
         custom_options = json.loads(parser.parse(bytes(operator_dict['custom_options'])))
     else:
         custom_options = None
-
-    operator_code = OperatorCode(
-        builtin_opcode,
-        custom_code=custom_opcode,
-        version=operator_code_dict['version']
-    )
 
     operator = subgraph.create_operator(operator_code, inputs=inputs, outputs=outputs,
         builtin_options=builtin_options, builtin_options_type=builtin_options_type, 
@@ -100,6 +85,22 @@ def create_dict_from_operator(operator):
         operator_dict['custom_options'] = fbb.get_bytes()
 
     return operator_dict
+
+def create_operator_code_from_dict(operator_code_dict):
+    if operator_code_dict['builtin_code'] == 'CUSTOM':
+        builtin_opcode = BuiltinOpCodes.CUSTOM
+        custom_opcode = XCOREOpCodes(operator_code_dict['custom_code'])
+    else:
+        builtin_opcode = BuiltinOpCodes[operator_code_dict['builtin_code']]
+        custom_opcode = None
+
+    operator_code = OperatorCode(
+        builtin_opcode,
+        custom_code=custom_opcode,
+        version=operator_code_dict['version']
+    )
+
+    return operator_code
 
 def create_dict_from_operator_code(operator_code):
     operator_code_dict = {
@@ -143,7 +144,7 @@ def create_dict_from_tensor(tensor):
 
     return tensor_dict
 
-def create_subgraph_from_dict(model, buffers, operator_codes, subgraph_dict):
+def create_subgraph_from_dict(model, buffers, operator_codes_dict, subgraph_dict):
     subgraph = model.create_subgraph()
 
     if 'name' in subgraph_dict:
@@ -159,9 +160,16 @@ def create_subgraph_from_dict(model, buffers, operator_codes, subgraph_dict):
         tensor = create_tensor_from_dict(subgraph, buffers, tensor_dict, is_input, is_output)
         tensors.append(tensor)
 
+    # create operator codes lookup
+    operator_codes_lut = []
+    for operator_code_dict in operator_codes_dict:
+        operator_code = create_operator_code_from_dict(operator_code_dict)
+        operator_codes_lut.append(operator_code)
+
     # load operators
     for operator_dict in subgraph_dict['operators']:
-        create_operator_from_dict(subgraph, tensors, operator_codes, operator_dict)
+        operator_code = operator_codes_lut[operator_dict['opcode_index']]
+        create_operator_from_dict(subgraph, tensors, operator_code, operator_dict)
 
     return subgraph
 

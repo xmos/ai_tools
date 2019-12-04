@@ -1,9 +1,9 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import struct
-
 import enum
+import collections
 
-import operator_codes
+from .operator_codes import OperatorCode
 
 class TensorType(enum.Enum):
     FLOAT32 = 0
@@ -81,6 +81,8 @@ class Operator():
                  inputs=None, outputs=None, builtin_options=None, builtin_options_type=None, custom_options=None):
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
+        assert isinstance(operator_code, OperatorCode)
+
         self.subgraph = subgraph  # parent
         self.operator_code = operator_code
         self.inputs = inputs or []
@@ -221,7 +223,6 @@ class Subgraph():
     def create_operator(self, operator_code, *,
                         inputs=None, outputs=None,
                         builtin_options=None, builtin_options_type=None, custom_options=None):
-        assert isinstance(operator_code, operator_codes.OperatorCode)
         operator = Operator(self, operator_code, inputs, outputs, builtin_options, builtin_options_type, custom_options)
         self.operators.append(operator)
         return operator
@@ -255,18 +256,17 @@ class XCOREModel():
     def operator_codes(self):
         # sort the operators codes from most frequent to least frequent
         #   why? because the flatbuffer is a tiny bit smaller if we do
-        all_operator_codes = []
+        counter = collections.Counter()
 
         for subgraph in self.subgraphs:
             for operator in subgraph.operators:
-                all_operator_codes.append(operator.operator_code)
-        sorted_operator_codes = sorted(all_operator_codes, key=all_operator_codes.count, reverse=True)
+                counter[operator.operator_code] += 1
 
-        operator_codes = {}
-        for operator_code in sorted_operator_codes:
-            operator_codes[str(operator_code)] = operator_code
+        sorted_operator_codes = []
+        for operator_code, count in counter.most_common():
+            sorted_operator_codes.append(operator_code)
 
-        return list(operator_codes.values())
+        return sorted_operator_codes
 
     def pprint(self):
         print('---------')

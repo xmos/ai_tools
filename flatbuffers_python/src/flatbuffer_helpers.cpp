@@ -55,7 +55,8 @@ extern "C"
     size_t write_flatbuffer(const char *schema, const char *json, const char *fb)
     {
         std::string schema_contents;
-        flatbuffers::Parser parser;
+        flatbuffers::IDLOptions opts;
+        flatbuffers::Parser parser(opts);
         bool ok;
 
         ok = flatbuffers::LoadFile(schema, false, &schema_contents);

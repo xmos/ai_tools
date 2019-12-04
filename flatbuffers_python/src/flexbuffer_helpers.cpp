@@ -83,4 +83,16 @@ extern "C"
         return bytes.size();
     }
 
+    size_t parse_flexbuffer(const uint8_t *fb, size_t size, char *buf)
+    {
+        std::vector<uint8_t> bytes(fb, fb+size);
+        std::string json;
+
+        flexbuffers::GetRoot(bytes).ToString(true, true, json);
+        strncpy(buf, json.c_str(), json.length());
+
+        return json.length();
+    }
+
+
 } //extern "C"

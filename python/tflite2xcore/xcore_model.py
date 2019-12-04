@@ -2,7 +2,7 @@
 import struct
 import enum
 
-from . import operator_codes
+import operator_codes
 
 class TensorType(enum.Enum):
     FLOAT32 = 0
@@ -161,10 +161,11 @@ class Tensor():
 
 
 class Subgraph():
-    def __init__(self, model, inputs=None, outputs=None, operators=None, tensors=None):
+    def __init__(self, model, name=None, inputs=None, outputs=None, operators=None, tensors=None):
         # Generally, do not use this constructor to instantiate Subgraph!
         # Use XCOREModel.create_subgraph instead.
         self.model = model  # parent
+        self.name = name
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.operators = operators or []
@@ -192,6 +193,9 @@ class Subgraph():
             if name in [existing_tensor.name, existing_tensor.sanitized_name]:
                 raise Exception(f'Tensor name {name} already in use')
 
+        if isinstance(type_, str):
+            type_ = TensorType[type_]
+
         tensor = Tensor(self, name, type_, shape, buffer, quantization)
         self.tensors.append(tensor)
         if isinput:
@@ -217,11 +221,11 @@ class Subgraph():
 
 class XCOREModel():
     def __init__(self, version=None, description=None, subgraphs=None, buffers=None, metadata=None):
-        self.version = version
-        self.description = description
+        self.version = version or 3
+        self.description = description or ''
         self.buffers = buffers or []
         self.subgraphs = subgraphs or []
-        self.metadata = metadata
+        self.metadata = metadata or []
 
     def create_buffer(self, data=None):
         buffer = Buffer(self, data)

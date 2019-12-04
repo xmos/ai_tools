@@ -3,16 +3,20 @@
 
 import sys
 import os
+import struct
+from pathlib import Path
 import ctypes
 
 if sys.platform.startswith("linux"):
-    lib = ctypes.cdll.LoadLibrary('../flatbuffers_python/build/libtflite2xcore.so')
+    shared_lib = os.path.join(Path(__file__).parent.absolute(), 'linux/libtflite2xcore.1.0.1.so')
 elif sys.platform == "darwin":
-    lib = ctypes.cdll.LoadLibrary('../flatbuffers_python/build/libtflite2xcore.dylib')
+    shared_lib = os.path.join(Path(__file__).parent.absolute(), 'macos/libtflite2xcore.1.0.1.dylib')
 else:
-    lib = ctypes.cdll.LoadLibrary('../flatbuffers_python/build/tflite2xcore.dll')
+    shared_lib = os.path.join(Path(__file__).parent.absolute(), 'macos/libtflite2xcore.1.0.1.dll')
 
-class FlatbufferIO(object):
+lib = ctypes.cdll.LoadLibrary(shared_lib)
+
+class FlatbufferIO:
     def __init__(self, data=None):
         lib.read_flatbuffer.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
         lib.read_flatbuffer.restype = ctypes.c_size_t
@@ -30,7 +34,7 @@ class FlatbufferIO(object):
         actual_size = lib.write_flatbuffer(schema.encode('ascii'), buffer, fbs.encode('ascii'))
         return actual_size
 
-class FlexbufferBuilder(object):
+class FlexbufferBuilder:
     def __init__(self, data=None):
         lib.new_builder.restype = ctypes.c_void_p
 
@@ -92,12 +96,25 @@ class FlexbufferBuilder(object):
             else:
                 raise Exception(f'Type {value_type} not supported')
 
-
         size = lib.builder_end_map(self.obj, msize)
 
         lib.builder_finish(self.obj)
     
-    def get_buffer(self, size=1024):
+    def get_bytes(self, size=1024):
         buf = ctypes.create_string_buffer(size)
         actual_size = lib.builder_get_buffer(self.obj, buf)
-        return buf[0:actual_size]
+        return [ubyte[0] for ubyte in struct.iter_unpack('B', buf[0:actual_size])]
+
+class FlexbufferParser:
+    def __init__(self):
+        lib.parse_flexbuffer.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
+        lib.parse_flexbuffer.restype = ctypes.c_size_t
+
+
+    def parse(self, buffer, size=100000):
+        char_array = ctypes.c_char * len(buffer)
+        json_buffer = ctypes.create_string_buffer(size)
+
+        actual_size = lib.parse_flexbuffer(char_array.from_buffer_copy(buffer), len(buffer), json_buffer, size)
+    
+        return json_buffer[0:actual_size]

@@ -5,10 +5,10 @@ import json
 import tempfile
 import ctypes
 
-from .. import xcore_model
-from .. import operator_codes
+from .flatbuffers_c import FlexbufferBuilder, FlexbufferParser, FlatbufferIO
 
-from . import flatbuffers_c
+from xcore_model import XCOREModel, TensorType
+from operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
 
 DEFAULT_SCHEMA = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'schema.fbs')
 
@@ -39,10 +39,10 @@ def create_operator_from_dict(subgraph, tensors, operator_codes_dicts, operator_
     operator_code_dict = operator_codes_dicts[operator_dict['opcode_index']]
 
     if operator_code_dict['builtin_code'] == 'CUSTOM':
-        builtin_opcode = operator_codes.BuiltinOpCodes.CUSTOM
-        custom_opcode = operator_codes.XCOREOpCodes(operator_code_dict['custom_code'])
+        builtin_opcode = BuiltinOpCodes.CUSTOM
+        custom_opcode = XCOREOpCodes(operator_code_dict['custom_code'])
     else:
-        builtin_opcode = operator_codes.BuiltinOpCodes[operator_code_dict['builtin_code']]
+        builtin_opcode = BuiltinOpCodes[operator_code_dict['builtin_code']]
         custom_opcode = None
 
     if 'builtin_options' in operator_dict:
@@ -53,11 +53,13 @@ def create_operator_from_dict(subgraph, tensors, operator_codes_dicts, operator_
         builtin_options_type = None
 
     if 'custom_options' in operator_dict:
-        custom_options = operator_dict['custom_options']
+        # custom_options = bytes(operator_dict['custom_options'])
+        parser = FlexbufferParser()
+        custom_options = json.loads(parser.parse(bytes(operator_dict['custom_options'])))
     else:
         custom_options = None
 
-    operator_code = operator_codes.OperatorCode(
+    operator_code = OperatorCode(
         builtin_opcode,
         custom_code=custom_opcode,
         version=operator_code_dict['version']
@@ -96,7 +98,7 @@ def create_dict_from_operator(operator):
 
     if operator.custom_options:
         fbb = FlexbufferBuilder(operator.custom_options)
-        operator_dict['custom_options'] = fbb.get_buffer()
+        operator_dict['custom_options'] = fbb.get_bytes()
 
     return operator_dict
 
@@ -113,7 +115,7 @@ def create_dict_from_operator_code(operator_code):
 
 def create_tensor_from_dict(subgraph, buffers, tensor_dict, is_input=False, is_output=False):
     name = tensor_dict['name']
-    type_ = tensor_dict['type']
+    type_ = TensorType[tensor_dict['type']]
     shape = tensor_dict['shape']
     buffer = buffers[tensor_dict['buffer']]
     if 'quantization' in tensor_dict:
@@ -132,7 +134,7 @@ def create_dict_from_tensor(tensor):
 
     tensor_dict = {
         'name': tensor.name,
-        'type': tensor.type,
+        'type': tensor.type.name,
         'shape': tensor.shape,
         'buffer': buffers.index(tensor.buffer)
     }
@@ -199,11 +201,11 @@ def create_dict_from_subgraph(subgraph):
 def read_flatbuffer(model_filename, schema=None):
     schema = schema or DEFAULT_SCHEMA
 
-    parser = flatbuffers_c.FlatbufferIO()
+    parser = FlatbufferIO()
 
     model_dict = json.loads(parser.read_flatbuffer(schema, model_filename))
 
-    model = xcore_model.XCOREModel(
+    model = XCOREModel(
         version = model_dict['version'],
         description = model_dict['description'],
         metadata = model_dict['metadata']
@@ -248,6 +250,8 @@ def write_flatbuffer(model, filename, schema=None):
         operator_code_dict = create_dict_from_operator_code(operator_code)
         model_dict['operator_codes'].append(operator_code_dict)
 
-    buffer = bytes(json.dumps(model_dict).encode('utf-8'))
-    builder = flatbuffers_c.FlatbufferIO()
-    builder.write_flatbuffer(schema, buffer, filename)
+    buffer = bytes(json.dumps(model_dict).encode('ascii'))
+    builder = FlatbufferIO()
+    bytes_written = builder.write_flatbuffer(schema, buffer, filename)
+
+    return bytes_written

@@ -22,8 +22,8 @@ TARGET_SOURCES(libtflite2xcore
   PRIVATE "${FLATBUFFERS_SOURCE_DIR}/idl_parser.cpp"
   PRIVATE "${FLATBUFFERS_SOURCE_DIR}/idl_gen_text.cpp"
   PRIVATE "${FLATBUFFERS_SOURCE_DIR}/util.cpp"
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/flexbuffer_builder.cpp"
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/flatbuffer_json.cpp"
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/flexbuffer_helpers.cpp"
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/flatbuffer_helpers.cpp"
 )
 
 TARGET_INCLUDE_DIRECTORIES(libtflite2xcore

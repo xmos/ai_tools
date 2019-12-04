@@ -5,13 +5,13 @@ import tempfile
 import pytest
 from pathlib import Path
 
-from serialization.api import (
+from tflite2xcore import (
     read_flatbuffer,
     write_flatbuffer
 )
 
-from xcore_model import XCOREModel, TensorType
-from operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
+from tflite2xcore.xcore_model import XCOREModel, TensorType
+from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
 
 BUILTIN_OPERATORS_TEST_FILE = os.path.join(Path(__file__).parent.absolute(), 'data/builtin_operators.tflite')
 

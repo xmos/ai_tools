@@ -7,7 +7,7 @@ from pathlib import Path
 import ctypes
 
 if sys.platform.startswith("linux"):
-    shared_lib = os.path.join(Path(__file__).parent.absolute(), 'linux/libtflite2xcore.1.0.1.so')
+    shared_lib = os.path.join(Path(__file__).parent.absolute(), 'linux/libtflite2xcore.so.1.0.1')
 elif sys.platform == "darwin":
     shared_lib = os.path.join(Path(__file__).parent.absolute(), 'macos/libtflite2xcore.1.0.1.dylib')
 else:

@@ -1,5 +1,8 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
+import numpy as np
+
+from abc import abstractmethod
 from .graph_transformer import PassPriority
 from .graph_transformer import OperatorMatchingPass, InputTensorMatchingPass, OutputTensorMatchingPass
 from .operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
@@ -119,7 +122,42 @@ class AddArgmaxOutputPass(OutputTensorMatchingPass):
             OperatorCode(XCOREOpCodes.XC_argmax_16), inputs=[tensor], outputs=[tout])
 
 
-class ReplaceDeepinShallowoutFullyConnectedOutput(OperatorMatchingPass):
+class WeightBiasMutatingPass(OperatorMatchingPass):
+    def __init__(self, priority):
+        super().__init__(priority)
+
+    @abstractmethod
+    def _mutate_weights(self, op):
+        pass
+
+    @abstractmethod
+    def _mutate_biases(self, op):
+        pass
+
+    @staticmethod
+    def __get_output(op):
+        return op.outputs[0]
+
+    @staticmethod
+    def __get_input(op):
+        return op.inputs[0]
+
+    @staticmethod
+    def __get_weight(op):
+        return op.inputs[1]
+
+    @staticmethod
+    def __get_bias(op):
+        return op.inputs[2]
+
+    @staticmethod
+    def calculate_multiplier(op):
+        output_scale = __class__.__get_output(op).quantization['scale'][0]
+        bias_scale = np.array(__class__.__get_bias(op).quantization['scale'])
+        return bias_scale / output_scale
+
+
+class ReplaceDeepinShallowoutFullyConnectedOutputPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
 

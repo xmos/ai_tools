@@ -7,7 +7,7 @@ import numpy
 
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
-from tflite2xcore.transformation_passes import ReplaceDeepinShallowoutFullyConnectedOutput
+from tflite2xcore.transformation_passes import ReplaceDeepinShallowoutFullyConnectedOutputPass
 
 
 @pytest_fixture_plus(params=[(1, 4, 4, 8), (1, 32, 1, 1)])
@@ -55,7 +55,7 @@ def mlp(request):
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceDeepinShallowoutFullyConnectedOutput()
+    return ReplaceDeepinShallowoutFullyConnectedOutputPass()
 
 
 def test_nonmatch_mlp(mlp, trf_pass):

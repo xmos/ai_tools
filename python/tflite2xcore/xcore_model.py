@@ -189,6 +189,9 @@ class Subgraph():
 
     def create_tensor(self, name, type_, shape, *,
                       buffer=None, quantization=None, isinput=False, isoutput=False):
+        #TODO: uncomment the following line
+        # assert isinstance(type_, TensorType)
+
         for existing_tensor in self.tensors:
             if name in [existing_tensor.name, existing_tensor.sanitized_name]:
                 raise Exception(f'Tensor name {name} already in use')

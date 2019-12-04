@@ -2,7 +2,7 @@
 
 from graph_transformer import PassPriority
 from graph_transformer import OperatorMatchingPass, InputTensorMatchingPass, OutputTensorMatchingPass
-from operator_codes import BuiltinOpCodes, OperatorCode
+from operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
@@ -14,8 +14,7 @@ class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
             if (input_tensor in op.subgraph.inputs
                     and output_tensor not in op.subgraph.outputs):
-                if output_tensor.type == 'INT8' and input_tensor.type == 'FLOAT32':
-                    return True
+                return output_tensor.type == 'INT8' and input_tensor.type == 'FLOAT32'
 
         return False
 
@@ -36,8 +35,7 @@ class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
             if (output_tensor in op.subgraph.outputs
                     and input_tensor not in op.subgraph.inputs):
-                if output_tensor.type == 'FLOAT32' and input_tensor.type == 'INT8':
-                    return True
+                return output_tensor.type == 'FLOAT32' and input_tensor.type == 'INT8'
 
         return False
 
@@ -54,10 +52,7 @@ class AddQuantizerFloatInputPass(InputTensorMatchingPass):
         super().__init__(priority)
 
     def match(self, input_tensor):
-        if input_tensor.type == 'INT8':
-            return True
-
-        return False
+        return (input_tensor.type == 'INT8')
 
     def mutate(self, qin):
         subgraph = qin.subgraph
@@ -74,10 +69,7 @@ class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
         super().__init__(priority)
 
     def match(self, input_tensor):
-        if input_tensor.type == 'INT8':
-            return True
-
-        return False
+        return input_tensor.type == 'INT8'
 
     def mutate(self, qout):
         subgraph = qout.subgraph
@@ -89,38 +81,52 @@ class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
             OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qout], outputs=[fout])
 
 
-# TODO: implement tests
-class RemoveOutputSoftmaxPass(OperatorMatchingPass):
+class RemoveSoftmaxOutputPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
 
     def match(self, op):
-        if op.operator_code.code == BuiltinOpCodes.SOFTMAX:
-            if op.outputs[0] in op.subgraph.outputs:
-                return True
+        return (op.operator_code.code == BuiltinOpCodes.SOFTMAX
+                and op.outputs[0] in op.subgraph.outputs)
+
+    def mutate(self, op):
+        subgraph = op.subgraph
+        subgraph.outputs.remove(op.outputs[0])
+        subgraph.outputs.append(op.inputs[0])
+        subgraph.tensors.remove(op.outputs[0])
+        subgraph.operators.remove(op)
+
+
+class AddArgmaxOutputPass(OutputTensorMatchingPass):
+    def __init__(self, priority=PassPriority.LOW):
+        super().__init__(priority)
+
+    def match(self, tensor):
+        return (len(tensor.subgraph.outputs) == 1
+                and tensor.subgraph.outputs[0].type == 'INT16'
+                and len(tensor.shape) == 2)
+
+    def mutate(self, tensor):
+        subgraph = tensor.subgraph
+        tout = subgraph.create_tensor(
+            tensor.name + '_argmax', tensor.type, tensor.shape, isoutput=True)
+        subgraph.outputs.remove(tensor)
+        subgraph.outputs.append(tout)
+        subgraph.create_operator(
+            OperatorCode(XCOREOpCodes.XC_argmax_16), inputs=[tensor], outputs=[tout])
+
+
+class ReplaceDeepinShallowoutFullyConnectedOutput(OperatorMatchingPass):
+    def __init__(self, priority=PassPriority.MEDIUM):
+        super().__init__(priority)
+
+    def match(self, op):
+        if op.operator_code.code == BuiltinOpCodes.FULLY_CONNECTED:
+            weight_tensor = op.inputs[1]
+            return weight_tensor.shape[0] < 16 and weight_tensor.shape[1] % 32 == 0
 
         return False
 
     def mutate(self, op):
         pass
-        # TODO: finish implementing me
-
-
-# TODO: implement tests
-class AddOutputArgmaxPass(OutputTensorMatchingPass):
-    def __init__(self, priority=PassPriority.LOW):
-        super().__init__(priority)
-
-    def run_subgraph(self, subgraph):
-        if len(subgraph.outputs) == 1:
-            tensor = subgraph.outputs[0]
-            if self.match(tensor):
-                self.log_match(tensor)
-                self.mutate(tensor)
-
-    def match(self, tensor):
-        return True  # TODO: consider some restriction on type/shape
-
-    def mutate(self, tensor):
-        pass
-        # TODO: finish implementing me
+        # TODO: implement me

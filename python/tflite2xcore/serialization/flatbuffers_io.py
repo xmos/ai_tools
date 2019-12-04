@@ -53,7 +53,6 @@ def create_operator_from_dict(subgraph, tensors, operator_codes_dicts, operator_
         builtin_options_type = None
 
     if 'custom_options' in operator_dict:
-        # custom_options = bytes(operator_dict['custom_options'])
         parser = FlexbufferParser()
         custom_options = json.loads(parser.parse(bytes(operator_dict['custom_options'])))
     else:

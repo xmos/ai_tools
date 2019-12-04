@@ -193,9 +193,6 @@ class Subgraph():
             if name in [existing_tensor.name, existing_tensor.sanitized_name]:
                 raise Exception(f'Tensor name {name} already in use')
 
-        if isinstance(type_, str):
-            type_ = TensorType[type_]
-
         tensor = Tensor(self, name, type_, shape, buffer, quantization)
         self.tensors.append(tensor)
         if isinput:

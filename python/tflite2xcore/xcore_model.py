@@ -3,7 +3,10 @@ import struct
 import enum
 import collections
 
+import numpy as np
+
 from .operator_codes import OperatorCode
+
 
 class TensorType(enum.Enum):
     FLOAT32 = 0
@@ -49,6 +52,22 @@ class TensorType(enum.Enum):
         }
         return LUT[tensor_type]
 
+    @staticmethod
+    def to_numpy_type(tensor_type):
+        LUT = {
+            TensorType.FLOAT32: np.float64,
+            TensorType.FLOAT16: np.float64,
+            TensorType.INT32: np.int64,
+            TensorType.UINT8: np.int64,
+            TensorType.INT64: np.int64,
+            # TensorType.STRING: None,  # intentionally not supported
+            TensorType.BOOL: np.int64,
+            TensorType.INT16: np.int64,
+            # TensorType.COMPLEX64: None,  # intentionally not supported
+            TensorType.INT8: np.int64,
+        }
+        return LUT[tensor_type]
+
 
 class Buffer():
     def __init__(self, model, data=None):
@@ -66,14 +85,11 @@ class Buffer():
             return f'[]'
 
     def unpack(self, stdtype='uint8_t'):
-        if stdtype == 'uint8_t':
-            return [i[0] for i in struct.iter_unpack('B', bytearray(self.data))]
-        elif stdtype == 'int8_t':
-            return [i[0] for i in struct.iter_unpack('b', bytearray(self.data))]
-        elif stdtype == 'int16_t':
-            return [i[0] for i in struct.iter_unpack('h', bytearray(self.data))]
-        elif stdtype == 'int32_t':
-            return [i[0] for i in struct.iter_unpack('i', bytearray(self.data))]
+        LUT = {'uint8_t': 'B',
+               'int8_t': 'b',
+               'int16_t': 'h',
+               'int32_t': 'i'}
+        return [i[0] for i in struct.iter_unpack(LUT[stdtype], bytearray(self.data))]
 
 
 class Operator():
@@ -119,8 +135,7 @@ class Tensor():
         # Use Subgraph.create_tensor instead.
         self.subgraph = subgraph  # parent
         self.name = name
-        #TODO: uncomment the following line
-        # assert isinstance(type_, TensorType)
+        assert isinstance(type_, TensorType)
         self.type = type_
         self.shape = shape
 
@@ -165,17 +180,11 @@ class Tensor():
             size *= s
         return size
 
-    """@property
+    @property
     def numpy(self):
-        numpy.array()
-        if  == 'INT8':
-            arr = numpy.int32(self.buffer.unpack(TFLITE_TYPE_TO_C_TYPE[self.type]))
-        elif self.type == 'INT32':
-            
-            arr = numpy.int32(self.buffer.unpack('int32_t'))
-        else:
-            raise NotImplementedError()
-        return arr.reshape(tensor['shape'])"""
+        arr = np.array(self.buffer.unpack(TensorType.to_stdint_type(self.type)),
+                       dtype=TensorType.to_numpy_type(self.type))
+        return arr.reshape(self.shape)
 
 
 class Subgraph():

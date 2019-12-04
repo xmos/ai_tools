@@ -2,12 +2,12 @@
 
 import pytest
 
-from xcore_model import XCOREModel
-from operator_codes import OperatorCode, BuiltinOpCodes
-from transformation_passes import RemoveSoftmaxOutputPass
+from tflite2xcore.xcore_model import XCOREModel, TensorType
+from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.transformation_passes import RemoveSoftmaxOutputPass
 
 
-@pytest.fixture(params=['FLOAT32', 'INT8'])
+@pytest.fixture(params=[TensorType.FLOAT32, TensorType.INT8])
 def simple_model(request):
     model = XCOREModel()
     subgraph = model.create_subgraph()
@@ -24,13 +24,13 @@ def simple_model(request):
     return model
 
 
-@pytest.fixture(params=['FLOAT32', 'INT8'])
+@pytest.fixture(params=[TensorType.FLOAT32, TensorType.INT8])
 def dual_output_model():
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
     # TODO: add operator options to specify split axis and number
-    tin = subgraph.create_tensor('input', 'INT8', [1, 5, 5, 4], isinput=True)
+    tin = subgraph.create_tensor('input', TensorType.INT8, [1, 5, 5, 4], isinput=True)
     pre_out1 = subgraph.create_tensor('pre_output_1', tin.type, [1, 5, 5, 2])
     pre_out2 = subgraph.create_tensor('pre_output_2', tin.type, [1, 5, 5, 2])
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.SPLIT),
@@ -52,13 +52,13 @@ def non_matching_model():
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
-    fin1 = subgraph.create_tensor('input_1', 'FLOAT32', [1, 5, 5, 3], isinput=True)
-    qout1 = subgraph.create_tensor('quantized_output_1', 'INT8', fin1.shape, isoutput=True)
+    fin1 = subgraph.create_tensor('input_1', TensorType.FLOAT32, [1, 5, 5, 3], isinput=True)
+    qout1 = subgraph.create_tensor('quantized_output_1', TensorType.INT8, fin1.shape, isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.QUANTIZE),
                              inputs=[fin1], outputs=[qout1])
 
-    qin2 = subgraph.create_tensor('quantized_input_2', 'INT8', [1, 3, 3, 8], isinput=True)
-    fout2 = subgraph.create_tensor('output_2', 'FLOAT32', qin2.shape, isoutput=True)
+    qin2 = subgraph.create_tensor('quantized_input_2', TensorType.INT8, [1, 3, 3, 8], isinput=True)
+    fout2 = subgraph.create_tensor('output_2', TensorType.FLOAT32, qin2.shape, isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.DEQUANTIZE),
                              inputs=[qin2], outputs=[fout2])
 

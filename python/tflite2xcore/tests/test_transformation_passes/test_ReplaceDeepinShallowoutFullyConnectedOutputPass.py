@@ -5,9 +5,9 @@ from pytest_cases import pytest_fixture_plus, pytest_parametrize_plus, fixture_r
 
 import numpy
 
-from xcore_model import XCOREModel
-from operator_codes import OperatorCode, BuiltinOpCodes
-from transformation_passes import ReplaceDeepinShallowoutFullyConnectedOutput
+from tflite2xcore.xcore_model import XCOREModel, TensorType
+from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.transformation_passes import ReplaceDeepinShallowoutFullyConnectedOutputPass
 
 
 @pytest_fixture_plus(params=[(1, 4, 4, 8), (1, 32, 1, 1)])
@@ -17,10 +17,10 @@ def perceptron(request):
 
     input_shape = list(request.param)
     weight_shape = [10, numpy.prod(input_shape[1:])]
-    tin = subgraph.create_tensor('input', 'INT8', shape=input_shape, isinput=True)
-    w = subgraph.create_tensor('weights', 'INT8', shape=weight_shape,
+    tin = subgraph.create_tensor('input', TensorType.INT8, shape=input_shape, isinput=True)
+    w = subgraph.create_tensor('weights', TensorType.INT8, shape=weight_shape,
                                quantization={'scale': [0.35], 'zero_point': [0]})
-    b = subgraph.create_tensor('biases', 'INT32', shape=weight_shape[:1])
+    b = subgraph.create_tensor('biases', TensorType.INT32, shape=weight_shape[:1])
     tout = subgraph.create_tensor('output', tin.type, shape=[1, weight_shape[0]], isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.FULLY_CONNECTED),
                              inputs=[tin, w, b], outputs=[tout])
@@ -35,18 +35,18 @@ def mlp(request):
 
     input_nodes, hidden_nodes, output_nodes = request.param
 
-    tin = subgraph.create_tensor('input', 'INT8', shape=[1, input_nodes], isinput=True)
-    w1 = subgraph.create_tensor('weights_1', 'INT8', shape=[hidden_nodes, input_nodes],
+    tin = subgraph.create_tensor('input', TensorType.INT8, shape=[1, input_nodes], isinput=True)
+    w1 = subgraph.create_tensor('weights_1', TensorType.INT8, shape=[hidden_nodes, input_nodes],
                                 quantization={'scale': [0.35], 'zero_point': [0]})
-    b1 = subgraph.create_tensor('biases_1', 'INT32', shape=[hidden_nodes])
-    tmid = subgraph.create_tensor('intermediate', 'INT8', shape=[1, hidden_nodes])
+    b1 = subgraph.create_tensor('biases_1', TensorType.INT32, shape=[hidden_nodes])
+    tmid = subgraph.create_tensor('intermediate', TensorType.INT8, shape=[1, hidden_nodes])
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.FULLY_CONNECTED),
                              inputs=[tin, w1, b1], outputs=[tmid])
 
-    w2 = subgraph.create_tensor('weights_2', 'INT8', shape=[output_nodes, hidden_nodes],
+    w2 = subgraph.create_tensor('weights_2', TensorType.INT8, shape=[output_nodes, hidden_nodes],
                                 quantization={'scale': [0.22], 'zero_point': [0]})
-    b2 = subgraph.create_tensor('biases_2', 'INT32', shape=[output_nodes])
-    tout = subgraph.create_tensor('output', 'INT8', shape=[1, output_nodes])
+    b2 = subgraph.create_tensor('biases_2', TensorType.INT32, shape=[output_nodes])
+    tout = subgraph.create_tensor('output', TensorType.INT8, shape=[1, output_nodes])
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.FULLY_CONNECTED),
                              inputs=[tmid, w2, b2], outputs=[tout])
 
@@ -55,7 +55,7 @@ def mlp(request):
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceDeepinShallowoutFullyConnectedOutput()
+    return ReplaceDeepinShallowoutFullyConnectedOutputPass()
 
 
 def test_nonmatch_mlp(mlp, trf_pass):
@@ -65,7 +65,6 @@ def test_nonmatch_mlp(mlp, trf_pass):
 @pytest_parametrize_plus('model', [fixture_ref(perceptron), fixture_ref(mlp)])
 def test_match(model, trf_pass):
     trf_pass.match(model.subgraphs[0].operators[-1])
-
 
 
 if __name__ == "__main__":

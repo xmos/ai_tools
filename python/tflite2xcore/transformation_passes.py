@@ -1,8 +1,12 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-from graph_transformer import PassPriority
-from graph_transformer import OperatorMatchingPass, InputTensorMatchingPass, OutputTensorMatchingPass
-from operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
+import numpy as np
+
+from abc import abstractmethod
+from .graph_transformer import PassPriority
+from .graph_transformer import OperatorMatchingPass, InputTensorMatchingPass, OutputTensorMatchingPass
+from .operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
+from .xcore_model import TensorType
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
@@ -14,7 +18,8 @@ class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
             if (input_tensor in op.subgraph.inputs
                     and output_tensor not in op.subgraph.outputs):
-                return output_tensor.type == 'INT8' and input_tensor.type == 'FLOAT32'
+                return (output_tensor.type == TensorType.INT8
+                        and input_tensor.type == TensorType.FLOAT32)
 
         return False
 
@@ -35,7 +40,8 @@ class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
             if (output_tensor in op.subgraph.outputs
                     and input_tensor not in op.subgraph.inputs):
-                return output_tensor.type == 'FLOAT32' and input_tensor.type == 'INT8'
+                return (output_tensor.type == TensorType.FLOAT32
+                        and input_tensor.type == TensorType.INT8)
 
         return False
 
@@ -52,12 +58,12 @@ class AddQuantizerFloatInputPass(InputTensorMatchingPass):
         super().__init__(priority)
 
     def match(self, input_tensor):
-        return (input_tensor.type == 'INT8')
+        return (input_tensor.type == TensorType.INT8)
 
     def mutate(self, qin):
         subgraph = qin.subgraph
         fin = subgraph.create_tensor(
-            qin.name + '_float', 'FLOAT32', qin.shape, isinput=True)
+            qin.name + '_float', TensorType.FLOAT32, qin.shape, isinput=True)
         subgraph.inputs.remove(qin)
         subgraph.inputs.append(fin)
         subgraph.create_operator(
@@ -69,12 +75,12 @@ class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
         super().__init__(priority)
 
     def match(self, input_tensor):
-        return input_tensor.type == 'INT8'
+        return input_tensor.type == TensorType.INT8
 
     def mutate(self, qout):
         subgraph = qout.subgraph
         fout = subgraph.create_tensor(
-            qout.name + '_float', 'FLOAT32', qout.shape, isoutput=True)
+            qout.name + '_float', TensorType.FLOAT32, qout.shape, isoutput=True)
         subgraph.outputs.remove(qout)
         subgraph.outputs.append(fout)
         subgraph.create_operator(
@@ -103,7 +109,7 @@ class AddArgmaxOutputPass(OutputTensorMatchingPass):
 
     def match(self, tensor):
         return (len(tensor.subgraph.outputs) == 1
-                and tensor.subgraph.outputs[0].type == 'INT16'
+                and tensor.subgraph.outputs[0].type == TensorType.INT16
                 and len(tensor.shape) == 2)
 
     def mutate(self, tensor):
@@ -116,7 +122,42 @@ class AddArgmaxOutputPass(OutputTensorMatchingPass):
             OperatorCode(XCOREOpCodes.XC_argmax_16), inputs=[tensor], outputs=[tout])
 
 
-class ReplaceDeepinShallowoutFullyConnectedOutput(OperatorMatchingPass):
+class WeightBiasMutatingPass(OperatorMatchingPass):
+    def __init__(self, priority):
+        super().__init__(priority)
+
+    @abstractmethod
+    def _mutate_weights(self, op):
+        pass
+
+    @abstractmethod
+    def _mutate_biases(self, op):
+        pass
+
+    @staticmethod
+    def __get_output(op):
+        return op.outputs[0]
+
+    @staticmethod
+    def __get_input(op):
+        return op.inputs[0]
+
+    @staticmethod
+    def __get_weight(op):
+        return op.inputs[1]
+
+    @staticmethod
+    def __get_bias(op):
+        return op.inputs[2]
+
+    @staticmethod
+    def calculate_multiplier(op):
+        output_scale = __class__.__get_output(op).quantization['scale'][0]
+        bias_scale = np.array(__class__.__get_bias(op).quantization['scale'])
+        return bias_scale / output_scale
+
+
+class ReplaceDeepinShallowoutFullyConnectedOutputPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
 

@@ -5,7 +5,7 @@ import heapq
 import logging
 
 from abc import ABC, abstractmethod
-from xcore_model import XCOREModel
+from .xcore_model import XCOREModel
 
 
 class PassPriority(enum.IntEnum):

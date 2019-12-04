@@ -122,10 +122,11 @@ class ReplaceDeepinShallowoutFullyConnectedOutput(OperatorMatchingPass):
 
     def match(self, op):
         if op.operator_code.code == BuiltinOpCodes.FULLY_CONNECTED:
-            weight_tensor = op.outputs[1]
+            weight_tensor = op.inputs[1]
             return weight_tensor.shape[0] < 16 and weight_tensor.shape[1] % 32 == 0
 
         return False
 
     def mutate(self, op):
-        pass  # TODO: finish this
+        pass
+        # TODO: implement me

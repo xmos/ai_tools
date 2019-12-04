@@ -1,8 +1,8 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-from graph_transformer import PassPriority
-from graph_transformer import OperatorMatchingPass, InputTensorMatchingPass, OutputTensorMatchingPass
-from operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
+from .graph_transformer import PassPriority
+from .graph_transformer import OperatorMatchingPass, InputTensorMatchingPass, OutputTensorMatchingPass
+from .operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):

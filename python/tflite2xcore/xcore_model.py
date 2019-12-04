@@ -3,7 +3,8 @@ import struct
 
 import enum
 
-import operator_codes
+from . import operator_codes
+
 
 class TensorType(enum.Enum):
     FLOAT32 = 0

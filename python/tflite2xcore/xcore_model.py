@@ -75,12 +75,20 @@ class Buffer():
         # Use XCOREModel.create_buffer instead.
 
         self.model = model  # parent
+        self.data = data
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data):
         if data is None:
-            self.data = []
+            self._data = []
         elif isinstance(data, list):
-            self.data = data
+            self._data = data
         elif isinstance(data, np.ndarray):
-            self.data = list(data.flatten().tostring())
+            self._data = list(data.flatten().tostring())
         else:
             raise TypeError(f"data must be list or numpy array")
 
@@ -245,6 +253,10 @@ class Subgraph():
                             builtin_options, builtin_options_type, custom_options)
         self.operators.append(operator)
         return operator
+
+    def remove_operator(self, op):
+        self.operators.remove(op)
+        op.inputs, op.outputs, op.subgraph = [], [], None
 
     def get_tensor(self, name):
         for t in self.tensors:

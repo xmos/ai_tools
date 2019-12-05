@@ -75,7 +75,14 @@ class Buffer():
         # Use XCOREModel.create_buffer instead.
 
         self.model = model  # parent
-        self.data = data or []
+        if data is None:
+            self.data = []
+        elif isinstance(data, list):
+            self.data = data
+        elif isinstance(data, np.ndarray):
+            self.data = list(data.flatten().tostring())
+        else:
+            raise TypeError(f"data must be list or numpy array")
 
     def __str__(self):
         if self.data:
@@ -93,7 +100,7 @@ class Buffer():
 
 
 class Operator():
-    def __init__(self, subgraph, operator_code, 
+    def __init__(self, subgraph, operator_code,
                  inputs=None, outputs=None, builtin_options=None, builtin_options_type=None, custom_options=None):
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
@@ -271,9 +278,7 @@ class XCOREModel():
             for operator in subgraph.operators:
                 counter[operator.operator_code] += 1
 
-        sorted_operator_codes = []
-        for operator_code, count in counter.most_common():
-            sorted_operator_codes.append(operator_code)
+        sorted_operator_codes = [op_code for op_code, _ in counter.most_common()]
 
         return sorted_operator_codes
 

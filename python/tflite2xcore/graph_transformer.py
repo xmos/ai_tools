@@ -3,6 +3,7 @@
 import enum
 import heapq
 import logging
+import itertools
 
 from abc import ABC, abstractmethod
 from .xcore_model import XCOREModel
@@ -104,6 +105,7 @@ class OutputTensorMatchingPass(TransformationPass):
 class PassManager():
     def __init__(self, model=None, passes=[]):
         self._queue = []
+        self._counter = itertools.count()
         if model:
             self.register_model(model)
         for trf_pass in passes:
@@ -115,10 +117,14 @@ class PassManager():
 
     def register_pass(self, trf_pass):
         assert isinstance(trf_pass, TransformationPass)
-        heapq.heappush(self._queue, (trf_pass.priority, trf_pass))
+        heapq.heappush(self._queue,
+                       (trf_pass.priority, next(self._counter), trf_pass))
+
+    def pop_pass(self):
+        return heapq.heappop(self._queue)[-1]
 
     def run_passes(self):
         while self._queue:
-            _, trf_pass = heapq.heappop(self._queue)
+            trf_pass = self.pop_pass()
             logging.debug(f"running {trf_pass}...")
             trf_pass.run(self._model)

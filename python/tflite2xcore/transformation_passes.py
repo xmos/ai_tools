@@ -17,10 +17,10 @@ class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
     def match(self, op):
         if op.operator_code.code == BuiltinOpCodes.QUANTIZE:
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
-            if (input_tensor in op.subgraph.inputs
-                    and output_tensor not in op.subgraph.outputs):
-                return (output_tensor.type == TensorType.INT8
-                        and input_tensor.type == TensorType.FLOAT32)
+            return (input_tensor in op.subgraph.inputs
+                    and output_tensor not in op.subgraph.outputs
+                    and output_tensor.type == TensorType.INT8
+                    and input_tensor.type == TensorType.FLOAT32)
 
         return False
 
@@ -39,10 +39,10 @@ class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
     def match(self, op):
         if op.operator_code.code == BuiltinOpCodes.DEQUANTIZE:
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
-            if (output_tensor in op.subgraph.outputs
-                    and input_tensor not in op.subgraph.inputs):
-                return (output_tensor.type == TensorType.FLOAT32
-                        and input_tensor.type == TensorType.INT8)
+            return (output_tensor in op.subgraph.outputs
+                    and input_tensor not in op.subgraph.inputs
+                    and output_tensor.type == TensorType.FLOAT32
+                    and input_tensor.type == TensorType.INT8)
 
         return False
 
@@ -148,7 +148,7 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
 
     @property
     def _biases(self):
-        return self._op.inputs[1]
+        return self._op.inputs[2]
 
     @property
     def _multiplier(self):
@@ -199,12 +199,13 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
 
         # add tensor and buffer for rshift/scale
         shift_scale_arr = np.hstack([rshift, scale]).reshape((2, -1))
-        op.subgraph.create_tensor(
+        shift_scale_tensor = op.subgraph.create_tensor(
             f"{op.name}/shift_scale",
             TensorType.INT16,
             shift_scale_arr.shape,
             buffer=op.model.create_buffer(shift_scale_arr)
         )
+        op.inputs.append(shift_scale_tensor)
 
 
 class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceQuantizedOperatorPass):
@@ -213,18 +214,20 @@ class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceQuantizedOperatorPa
 
     def match(self, op):
         if op.operator_code.code == BuiltinOpCodes.FULLY_CONNECTED:
-            weight_tensor = op.inputs[1]
-            return weight_tensor.shape[0] < 16 and weight_tensor.shape[1] % 32 == 0
+            weight_tensor, output_tensor = op.inputs[1], op.outputs[0]
+            return (output_tensor in op.subgraph.outputs
+                    and weight_tensor.shape[0] < 16
+                    and weight_tensor.shape[1] % 32 == 0)
 
         return False
 
     def mutate_output(self, op):
         with self.using(op):
-            self._output['type'] = TensorType.INT16
-            self._output['name'] = f"{op.name}/output"
+            self._output.type = TensorType.INT16
+            self._output.name = f"{op.name}/output"
             self._output.quantization = {
                 'scale': [self._output.quantization['scale'][0] / 2**8],
-                'zero_point': [int(self._output.quantizations['zero_point'][0] * 2**8)],
+                'zero_point': [int(self._output.quantization['zero_point'][0] * 2**8)],
                 'details_type': "CustomQuantization",
                 'quantized_dimension': 0
             }

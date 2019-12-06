@@ -26,10 +26,9 @@ class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
 
     def mutate(self, op):
         subgraph = op.subgraph
-        subgraph.inputs.remove(op.inputs[0])
         subgraph.inputs.append(op.outputs[0])
-        subgraph.tensors.remove(op.inputs[0])
-        subgraph.operators.remove(op)
+        subgraph.remove_tensor(op.inputs[0])
+        subgraph.remove_operator(op)
 
 
 class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
@@ -48,10 +47,9 @@ class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
 
     def mutate(self, op):
         subgraph = op.subgraph
-        subgraph.outputs.remove(op.outputs[0])
         subgraph.outputs.append(op.inputs[0])
-        subgraph.tensors.remove(op.outputs[0])
-        subgraph.operators.remove(op)
+        subgraph.remove_tensor(op.outputs[0])
+        subgraph.remove_operator(op)
 
 
 class AddQuantizerFloatInputPass(InputTensorMatchingPass):
@@ -98,10 +96,9 @@ class RemoveSoftmaxOutputPass(OperatorMatchingPass):
 
     def mutate(self, op):
         subgraph = op.subgraph
-        subgraph.outputs.remove(op.outputs[0])
         subgraph.outputs.append(op.inputs[0])
-        subgraph.tensors.remove(op.outputs[0])
-        subgraph.operators.remove(op)
+        subgraph.remove_tensor(op.outputs[0])
+        subgraph.remove_operator(op)
 
 
 class AddArgmaxOutputPass(OutputTensorMatchingPass):

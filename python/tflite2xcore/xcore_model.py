@@ -237,6 +237,17 @@ class Subgraph():
             self.outputs.append(tensor)
         return tensor
 
+    def remove_tensor(self, tensor):
+        assert tensor in self.tensors
+        self.tensors.remove(tensor)
+        if tensor in self.inputs:
+            self.inputs.remove(tensor)
+        if tensor in self.outputs:
+            self.outputs.remove(tensor)
+
+        tensor.model.buffers.remove(tensor.buffer)
+        tensor.subgraph = tensor.buffer = None
+
     def generate_unique_op_name(self, operator_code):
         existing_names = [op.name for op in self.operators]
         j = 0
@@ -255,6 +266,7 @@ class Subgraph():
         return operator
 
     def remove_operator(self, op):
+        assert op in self.operators
         self.operators.remove(op)
         op.inputs, op.outputs, op.subgraph = [], [], None
 

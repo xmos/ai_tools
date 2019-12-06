@@ -245,7 +245,6 @@ class Subgraph():
         if tensor in self.outputs:
             self.outputs.remove(tensor)
 
-        tensor.model.buffers.remove(tensor.buffer)
         tensor.subgraph = tensor.buffer = None
 
     def generate_unique_op_name(self, operator_code):

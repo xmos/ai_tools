@@ -5,13 +5,18 @@ import numpy as np
 from abc import abstractmethod
 from contextlib import contextmanager
 from .graph_transformer import PassPriority
-from .graph_transformer import OperatorMatchingPass, InputTensorMatchingPass, OutputTensorMatchingPass
+from .graph_transformer import (
+    ModelTransformationPass,
+    OperatorMatchingPass,
+    InputTensorMatchingPass,
+    OutputTensorMatchingPass
+)
 from .operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from .xcore_model import TensorType
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.HIGH):
+    def __init__(self, priority=PassPriority.PREP):
         super().__init__(priority)
 
     def match(self, op):
@@ -32,7 +37,7 @@ class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
 
 
 class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.HIGH):
+    def __init__(self, priority=PassPriority.PREP):
         super().__init__(priority)
 
     def match(self, op):
@@ -53,7 +58,7 @@ class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
 
 
 class AddQuantizerFloatInputPass(InputTensorMatchingPass):
-    def __init__(self, priority=PassPriority.LOW):
+    def __init__(self, priority=PassPriority.CLEANUP):
         super().__init__(priority)
 
     def match(self, input_tensor):
@@ -62,7 +67,7 @@ class AddQuantizerFloatInputPass(InputTensorMatchingPass):
     def mutate(self, qin):
         subgraph = qin.subgraph
         fin = subgraph.create_tensor(
-            qin.name + '_float', TensorType.FLOAT32, qin.shape, isinput=True)
+            f"{qin.name}_float", TensorType.FLOAT32, qin.shape, isinput=True)
         subgraph.inputs.remove(qin)
         subgraph.inputs.append(fin)
         subgraph.create_operator(
@@ -70,7 +75,7 @@ class AddQuantizerFloatInputPass(InputTensorMatchingPass):
 
 
 class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
-    def __init__(self, priority=PassPriority.LOW):
+    def __init__(self, priority=PassPriority.CLEANUP):
         super().__init__(priority)
 
     def match(self, input_tensor):
@@ -79,7 +84,7 @@ class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
     def mutate(self, qout):
         subgraph = qout.subgraph
         fout = subgraph.create_tensor(
-            qout.name + '_float', TensorType.FLOAT32, qout.shape, isoutput=True)
+            f"{qout.name}_float", TensorType.FLOAT32, qout.shape, isoutput=True)
         subgraph.outputs.remove(qout)
         subgraph.outputs.append(fout)
         subgraph.create_operator(
@@ -87,7 +92,7 @@ class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
 
 
 class RemoveSoftmaxOutputPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.MEDIUM):
+    def __init__(self, priority=PassPriority.HIGH):
         super().__init__(priority)
 
     def match(self, op):
@@ -113,13 +118,14 @@ class AddArgmaxOutputPass(OutputTensorMatchingPass):
     def mutate(self, tensor):
         subgraph = tensor.subgraph
         tout = subgraph.create_tensor(
-            tensor.name + '_argmax', tensor.type, tensor.shape, isoutput=True)
+            f"{tensor.name}_argmax", tensor.type, tensor.shape, isoutput=True)
         subgraph.outputs.remove(tensor)
         subgraph.outputs.append(tout)
         subgraph.create_operator(
             OperatorCode(XCOREOpCodes.XC_argmax_16), inputs=[tensor], outputs=[tout])
 
 
+# TODO: write (at least regression) tests for this class
 class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
     def __init__(self, priority):
         super().__init__(priority)
@@ -205,6 +211,7 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
         op.inputs.append(shift_scale_tensor)
 
 
+# TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceQuantizedOperatorPass):
     def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
@@ -244,17 +251,28 @@ class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceQuantizedOperatorPa
             self._biases.quantization['details_type'] = 'CustomQuantization'
 
     def replace_op(self, op):
-        op.subgraph.create_operator(
+        new_op = op.subgraph.create_operator(
             OperatorCode(XCOREOpCodes.XC_fc_deepin_shallowout_final),
             inputs=op.inputs,
             outputs=op.outputs
         )
         op.subgraph.remove_operator(op)
+        return new_op
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
+        op = self.replace_op(op)
         self.add_shift_scale(op)
         self.mutate_biases(op)
         self.mutate_weights(op)
         self.mutate_output(op)
-        self.replace_op(op)
+
+
+class RemoveUnusedBuffersPass(ModelTransformationPass):
+    def __init__(self, priority=PassPriority.CLEANUP):
+        super().__init__(priority)
+
+    def run(self, model):
+        model.buffers = list(set(
+            tensor.buffer for subgraph in model.subgraphs for tensor in subgraph.tensors
+        ))

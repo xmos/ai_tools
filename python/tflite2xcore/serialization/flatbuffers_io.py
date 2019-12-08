@@ -4,8 +4,8 @@ import json
 
 from .flatbuffers_c import FlexbufferBuilder, FlexbufferParser, FlatbufferIO
 
-from ..xcore_model import XCOREModel, TensorType
-from ..operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
+from tflite2xcore.xcore_model import XCOREModel, TensorType
+from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
 
 DEFAULT_SCHEMA = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),

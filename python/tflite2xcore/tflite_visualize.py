@@ -20,10 +20,6 @@ Example usage:
 python visualize.py foo.tflite foo.html
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import json
 import os
 import sys
@@ -33,13 +29,11 @@ import argparse
 import webbrowser
 import tempfile
 
-from tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA
-from tflite_utils import check_schema_path, check_flatc_path
+from serialization.flatbuffers_io import create_dict_from_model
+from tflite2xcore import read_flatbuffer
 
 # A CSS description for making the visualizer
-_CSS = """
-<html>
-<head>
+_CSS = """<head>
 <style>
 body {font-family: sans-serif; background-color: #fa0;}
 table {background-color: #eca;}
@@ -94,113 +88,107 @@ text {
   font-size: 12px;
 }
 </style>
-
 <script src="https://d3js.org/d3.v4.min.js"></script>
-
 </head>
-<body>
 """
+# TODO: reference d3.js script locally
 
-_D3_HTML_TEMPLATE = """
-  <script>
-    // Build graph data
-    var graph = %s;
+_D3_HTML_TEMPLATE = """<script>
+// Build graph data
+var graph = %s;
 
-    var svg = d3.select("#subgraph%d")
-    var width = svg.attr("width");
-    var height = svg.attr("height");
-    // Make the graph scrollable.
-    svg = svg.call(d3.zoom().on("zoom", function() {
-      svg.attr("transform", d3.event.transform);
-    })).append("g");
+var svg = d3.select("#subgraph%d")
+var width = svg.attr("width");
+var height = svg.attr("height");
+// Make the graph scrollable.
+svg = svg.call(d3.zoom().on("zoom", function() {
+  svg.attr("transform", d3.event.transform);
+})).append("g");
 
+var color = d3.scaleOrdinal(d3.schemeDark2);
 
-    var color = d3.scaleOrdinal(d3.schemeDark2);
+var simulation = d3.forceSimulation()
+    .force("link", d3.forceLink().id(function(d) {return d.id;}))
+    .force("charge", d3.forceManyBody())
+    .force("center", d3.forceCenter(0.5 * width, 0.5 * height));
 
-    var simulation = d3.forceSimulation()
-        .force("link", d3.forceLink().id(function(d) {return d.id;}))
-        .force("charge", d3.forceManyBody())
-        .force("center", d3.forceCenter(0.5 * width, 0.5 * height));
+function buildGraph() {
+  var edge = svg.append("g").attr("class", "edges").selectAll("line")
+    .data(graph.edges).enter().append("path").attr("stroke","black").attr("fill","none")
 
+  // Make the node group
+  var node = svg.selectAll(".nodes")
+    .data(graph.nodes)
+    .enter().append("g")
+    .attr("x", function(d){return d.x})
+    .attr("y", function(d){return d.y})
+    .attr("node_width", function(d){return d.node_width})
+    .attr("transform", function(d) {
+      return "translate( " + d.x + ", " + d.y + ")"
+    })
+    .attr("class", "nodes")
+      .call(d3.drag()
+          .on("start", function(d) {
+            if(!d3.event.active) simulation.alphaTarget(1.0).restart();
+            d.fx = d.x;d.fy = d.y;
+          })
+          .on("drag", function(d) {
+            d.fx = d3.event.x; d.fy = d3.event.y;
+          })
+          .on("end", function(d) {
+            if (!d3.event.active) simulation.alphaTarget(0);
+            d.fx = d.fy = null;
+          }));
+  // Within the group, draw a box for the node position and text
+  // on the side.
 
-    function buildGraph() {
-      var edge = svg.append("g").attr("class", "edges").selectAll("line")
-        .data(graph.edges).enter().append("path").attr("stroke","black").attr("fill","none")
+  var node_width = 150;
+  var node_height = 30;
 
-      // Make the node group
-      var node = svg.selectAll(".nodes")
-        .data(graph.nodes)
-        .enter().append("g")
-        .attr("x", function(d){return d.x})
-        .attr("y", function(d){return d.y})
-        .attr("node_width", function(d){return d.node_width})
-        .attr("transform", function(d) {
-          return "translate( " + d.x + ", " + d.y + ")"
-        })
-        .attr("class", "nodes")
-          .call(d3.drag()
-              .on("start", function(d) {
-                if(!d3.event.active) simulation.alphaTarget(1.0).restart();
-                d.fx = d.x;d.fy = d.y;
-              })
-              .on("drag", function(d) {
-                d.fx = d3.event.x; d.fy = d3.event.y;
-              })
-              .on("end", function(d) {
-                if (!d3.event.active) simulation.alphaTarget(0);
-                d.fx = d.fy = null;
-              }));
-      // Within the group, draw a box for the node position and text
-      // on the side.
+  node.append("rect")
+      .attr("r", "5px")
+      .attr("width", function(d) { return d.node_width; })
+      .attr("height", node_height)
+      .attr("rx", function(d) { return d.edge_radius; })
+      .attr("stroke", "#000000")
+      .attr("fill", function(d) { return d.fill_color; })
+  node.append("text")
+      .text(function(d) { return d.name; })
+      .attr("x", 5)
+      .attr("y", 20)
+      .attr("fill", function(d) { return d.text_color; })
+  // Setup force parameters and update position callback
 
-      var node_width = 150;
-      var node_height = 30;
+  var node = svg.selectAll(".nodes")
+    .data(graph.nodes);
 
-      node.append("rect")
-          .attr("r", "5px")
-          .attr("width", function(d) { return d.node_width; })
-          .attr("height", node_height)
-          .attr("rx", function(d) { return d.edge_radius; })
-          .attr("stroke", "#000000")
-          .attr("fill", function(d) { return d.fill_color; })
-      node.append("text")
-          .text(function(d) { return d.name; })
-          .attr("x", 5)
-          .attr("y", 20)
-          .attr("fill", function(d) { return d.text_color; })
-      // Setup force parameters and update position callback
+  // Bind the links
+  var name_to_g = {}
+  node.each(function(data, index, nodes) {
+    console.log(data.id)
+    name_to_g[data.id] = this;
+  });
 
-
-      var node = svg.selectAll(".nodes")
-        .data(graph.nodes);
-
-      // Bind the links
-      var name_to_g = {}
-      node.each(function(data, index, nodes) {
-        console.log(data.id)
-        name_to_g[data.id] = this;
-      });
-
-      function proc(w, t) {
-        return parseInt(w.getAttribute(t));
-      }
-      edge.attr("d", function(d) {
-        function lerp(t, a, b) {
-          return (1.0-t) * a + t * b;
-        }
-        var x1 = proc(name_to_g[d.source],"x") + proc(name_to_g[d.source],"node_width") / 2;
-        var y1 = proc(name_to_g[d.source],"y") + node_height;
-        var x2 = proc(name_to_g[d.target],"x") + proc(name_to_g[d.target],"node_width") / 2;
-        var y2 = proc(name_to_g[d.target],"y");
-        var s = "M " + x1 + " " + y1
-            + " C " + x1 + " " + lerp(.5, y1, y2)
-            + " " + x2 + " " + lerp(.5, y1, y2)
-            + " " + x2  + " " + y2
-      return s;
-    });
-
+  function proc(w, t) {
+    return parseInt(w.getAttribute(t));
   }
-  buildGraph()
+  edge.attr("d", function(d) {
+    function lerp(t, a, b) {
+      return (1.0-t) * a + t * b;
+    }
+    var x1 = proc(name_to_g[d.source],"x") + proc(name_to_g[d.source],"node_width") / 2;
+    var y1 = proc(name_to_g[d.source],"y") + node_height;
+    var x2 = proc(name_to_g[d.target],"x") + proc(name_to_g[d.target],"node_width") / 2;
+    var y2 = proc(name_to_g[d.target],"y");
+    var s = "M " + x1 + " " + y1
+        + " C " + x1 + " " + lerp(.5, y1, y2)
+        + " " + x2 + " " + lerp(.5, y1, y2)
+        + " " + x2  + " " + y2
+    return s;
+  });
+}
+
+buildGraph()
 </script>
 """
 
@@ -349,7 +337,7 @@ def GenerateGraph(subgraph_idx, g, opcode_mapper):
         "node_width": tensor_names[tensor_index][1]
     })
 
-  graph_str = json.dumps({"nodes": nodes, "edges": edges})
+  graph_str = json.dumps({"nodes": nodes, "edges": edges}, indent=2)
   html = _D3_HTML_TEMPLATE % (graph_str, subgraph_idx)
   return html
 
@@ -367,69 +355,62 @@ def GenerateTableHtml(items, keys_to_print, display_index=True):
   Returns:
     An html table.
   """
+  indent = " " * 2
+
   html = ""
   # Print the list of  items
-  html += "<table><tr>\n"
+  html += "<table>"
   html += "<tr>\n"
   if display_index:
-    html += "<th>index</th>"
+    html += f"{indent}<th>index</th>\n"
   for h, mapper in keys_to_print:
-    html += "<th>%s</th>" % h
-  html += "</tr>\n"
+    html += f"{indent}<th>{h}</th>\n"
+  html += "</tr>"
+
+  # print rows
   for idx, tensor in enumerate(items):
     html += "<tr>\n"
     if display_index:
-      html += "<td>%d</td>" % idx
+      html += f"{indent}<td>{idx}</td>\n"
     # print tensor.keys()
     for h, mapper in keys_to_print:
       val = tensor[h] if h in tensor else None
       val = val if mapper is None else mapper(val)
-      html += "<td>%s</td>\n" % val
+      html += f"{indent}<td>{val}</td>\n"
 
-    html += "</tr>\n"
-  html += "</table>\n"
+    html += "</tr>"
+  html += "</table>\n\n"
   return html
 
 
-def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin):
+def CreateHtmlFile(tflite_input, html_output):
   """Given a tflite model in `tflite_input` file, produce html description."""
 
-  # Convert the model into a JSON flatbuffer using flatc (build if doesn't
-  # exist.
   if not os.path.exists(tflite_input):
     raise RuntimeError("Invalid filename %r" % tflite_input)
-  if tflite_input.endswith(".tflite") or tflite_input.endswith(".bin"):
 
-    # Run convert
-    cmd = (
-        flatc_bin + " -t "
-        "--strict-json --defaults-json -o /tmp {schema} -- {input}".format(
-            input=tflite_input, schema=schema))
-    logging.info(f"Executing {cmd}")
-    os.system(cmd)  # TODO: use subprocess.call and temporary directory instead of /tmp
-    real_output = ("/tmp/" + os.path.splitext(
-        os.path.split(tflite_input)[-1])[0] + ".json")
+  model = read_flatbuffer(tflite_input)
+  data = create_dict_from_model(model)
 
-    with open(real_output, 'r') as f:
-      data = json.load(f)
-  elif tflite_input.endswith(".json"):
-    with open(tflite_input, 'r') as f:
-      data = json.load(f)
-  else:
-    raise RuntimeError("Input file was not .tflite or .json")
-  html = ""
+  indent = " " * 2
+
+  html = "<html>\n"
   html += _CSS
-  html += "<h1>TensorFlow Lite Model</h2>"
+  html += "\n<body>\n"
+  html += "<h1>TensorFlow Lite Model</h1>\n"
 
   data["filename"] = tflite_input  # Avoid special case
   toplevel_stuff = [("filename", None), ("version", None), ("description",
                                                             None)]
 
-  html += "<table>\n"
+  html += "<table>"
   for key, mapping in toplevel_stuff:
     if not mapping:
       mapping = lambda x: x
-    html += "<tr><th>%s</th><td>%s</td></tr>\n" % (key, mapping(data.get(key)))
+    html += "<tr>\n"
+    html += f"{indent}<th>{key}</th>\n"
+    html += f"{indent}<td>{mapping(data.get(key))}</td>\n"
+    html += "</tr>"
   html += "</table>\n"
 
   # Spec on what keys to display
@@ -439,7 +420,7 @@ def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin):
 
   for subgraph_idx, g in enumerate(data["subgraphs"]):
     # Subgraph local specs on what to display
-    html += "<div class='subgraph'>"
+    html += "\n<div class='subgraph'>"
     tensor_mapper = TensorMapper(g)
     opcode_mapper = OpCodeMapper(data)
     op_keys_to_display = [("inputs", tensor_mapper),
@@ -473,7 +454,7 @@ def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin):
     html += "<svg id='subgraph%d' width='1600' height='900'></svg>\n" % (
         subgraph_idx,)
     html += GenerateGraph(subgraph_idx, g, opcode_mapper)
-    html += "</div>"
+    html += "</div>\n\n"
 
   # Buffers have no data, but maybe in the future they will
   html += "<h2>Buffers</h2>\n"
@@ -483,22 +464,20 @@ def CreateHtmlFile(tflite_input, html_output, *, schema, flatc_bin):
   html += "<h2>Operator Codes</h2>\n"
   html += GenerateTableHtml(data["operator_codes"], operator_keys_to_display)
 
-  html += "</body></html>\n"
+  html += "</body>\n</html>\n"
 
   with open(html_output, "w") as f:
     f.write(html)
 
 
-def main(tflite_input, html_output, *,
-         no_browser=True, schema=DEFAULT_SCHEMA, flatc_bin=DEFAULT_FLATC):
+def main(tflite_input, html_output, *, no_browser=True):
   if html_output:
     html_path = html_output
   else:
     html_file = tempfile.NamedTemporaryFile(delete=False)
     html_path = html_file.name
 
-  CreateHtmlFile(str(tflite_input), str(html_path),
-                 schema=schema, flatc_bin=flatc_bin)
+  CreateHtmlFile(str(tflite_input), str(html_path))
 
   if not no_browser:
     webbrowser.open_new_tab("file://" + os.path.realpath(html_path))
@@ -510,7 +489,7 @@ def main(tflite_input, html_output, *,
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument('tflite_input', help='Input .tflite file.')
-  parser.add_argument('--html_output', required=False, default=None,
+  parser.add_argument('-o', '--html_output', required=False, default=None,
                       help='Output .html file. If not specified, a temporary file is created.')
   parser.add_argument('--no_browser',  action='store_true', default=False,
                       help='Do not open browser after the .html is created.')

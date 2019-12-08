@@ -15,6 +15,8 @@ import tensorflow as tf  # nopep8
 warnings.filterwarnings(action='default')
 
 
+
+
 def __norm_and_join(*args):
     return os.path.normpath(os.path.join(*args))
 
@@ -23,7 +25,9 @@ __flatbuffer_xmos_dir = __norm_and_join(
     os.path.dirname(os.path.realpath(__file__)),
     '..', '..', 'third_party', 'flatbuffers')
 
-DEFAULT_SCHEMA = __norm_and_join(__flatbuffer_xmos_dir, 'schema.fbs')
+from serialization.flatbuffers_io import DEFAULT_SCHEMA
+
+#DEFAULT_SCHEMA = __norm_and_join(__flatbuffer_xmos_dir, 'schema.fbs')
 
 """if sys.platform.startswith("linux"):
     DEFAULT_FLATC = __norm_and_join(__flatbuffer_xmos_dir, 'flatc_linux')

@@ -11,7 +11,7 @@ if sys.platform.startswith("linux"):
 elif sys.platform == "darwin":
     shared_lib = os.path.join(Path(__file__).parent.absolute(), 'macos/libtflite2xcore.1.0.1.dylib')
 else:
-    shared_lib = os.path.join(Path(__file__).parent.absolute(), 'macos/libtflite2xcore.1.0.1.dll')
+    shared_lib = os.path.join(Path(__file__).parent.absolute(), 'windows/libtflite2xcore.dll')
 
 lib = ctypes.cdll.LoadLibrary(shared_lib)
 

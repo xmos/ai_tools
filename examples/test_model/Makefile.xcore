@@ -9,9 +9,6 @@ TARGET = XU316-1024-QF60-C20.xn
 # the project name
 APP_NAME = test_model
 
-ALL_CONFIGS = xs3
-CONFIG = xs3
-
 # The flags passed to xcc when building the application
 # You can also set the following to override flags for a particular language:
 #
@@ -34,6 +31,9 @@ XCC_FLAGS += -fcmdline-buffer-bytes=256
 
 # The USED_MODULES variable lists other module used by the application. 
 #USED_MODULES = 
+
+# Need to exclude the default debug_log, it is overridden by an xcore implementation
+EXCLUDE_FILES = tensorflow_lite/tensorflow/lite/micro/debug_log.cc
 
 #=============================================================================
 # The following part of the Makefile includes the common build infrastructure

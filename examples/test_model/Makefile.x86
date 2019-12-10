@@ -20,18 +20,16 @@ INCLUDES := \
    -Isrc
 
 SOURCES := \
-   $(wildcard tensorflow_lite/tensorflow/lite/experimental/micro/*.cc) \
-   $(wildcard tensorflow_lite/tensorflow/lite/experimental/micro/memory_planner/*.cc) \
-   $(wildcard tensorflow_lite/tensorflow/lite/experimental/micro/kernels/xcore/*.cc) \
-   tensorflow_lite/tensorflow/lite/c/c_api_internal.c \
-   tensorflow_lite/tensorflow/lite/core/api/error_reporter.cc \
-   tensorflow_lite/tensorflow/lite/core/api/flatbuffer_conversions.cc \
-   tensorflow_lite/tensorflow/lite/core/api/op_resolver.cc \
-   tensorflow_lite/tensorflow/lite/core/api/tensor_utils.cc \
-   tensorflow_lite/tensorflow/lite/kernels/internal/quantization_util.cc \
-   tensorflow_lite/tensorflow/lite/kernels/kernel_util.cc \
+   $(wildcard tensorflow_lite/tensorflow/lite/micro/*.cc) \
+   $(wildcard tensorflow_lite/tensorflow/lite/micro/memory_planner/*.cc) \
+   $(wildcard tensorflow_lite/tensorflow/lite/core/api/*.cc) \
+   $(wildcard tensorflow_lite/tensorflow/lite/c/*.c) \
+   $(wildcard tensorflow_lite/tensorflow/lite/micro/kernels/xcore/*.cc) \
    $(wildcard third_party/lib_nn_operator/src/*.c) \
    $(wildcard src/*.cc)
+
+#   tensorflow_lite/tensorflow/lite/kernels/internal/quantization_util.cc \
+#   tensorflow_lite/tensorflow/lite/kernels/kernel_util.cc \
 
 OBJECTS := $(SOURCES:%.cc=$(OBJ_DIR)/%.o)
 OBJECTS += $(SOURCES:%.c=$(OBJ_DIR)/%.o)

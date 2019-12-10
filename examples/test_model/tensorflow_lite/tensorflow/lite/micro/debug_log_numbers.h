@@ -1,4 +1,4 @@
-/* Copyright 2019 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2018 The TensorFlow Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -12,17 +12,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
+#ifndef TENSORFLOW_LITE_MICRO_DEBUG_LOG_NUMBERS_H_
+#define TENSORFLOW_LITE_MICRO_DEBUG_LOG_NUMBERS_H_
 
-#ifndef TENSORFLOW_LITE_CORE_API_TENSOR_UTILS_H_
-#define TENSORFLOW_LITE_CORE_API_TENSOR_UTILS_H_
+#include <cstdint>
 
-#include "tensorflow/lite/c/common.h"
+// Output numbers to the debug logging stream.
+extern "C" {
+void DebugLogInt32(int32_t i);
+void DebugLogUInt32(uint32_t i);
+void DebugLogHex(uint32_t i);
+void DebugLogFloat(float i);
+}
 
-namespace tflite {
-
-// Resets a variable tensor to the default value.
-TfLiteStatus ResetVariableTensor(TfLiteTensor* tensor);
-
-}  // namespace tflite
-
-#endif  // TENSORFLOW_LITE_CORE_API_TENSOR_UTILS_H_
+#endif  // TENSORFLOW_LITE_MICRO_DEBUG_LOG_NUMBERS_H_

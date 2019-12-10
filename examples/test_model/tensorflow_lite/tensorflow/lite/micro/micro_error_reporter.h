@@ -1,4 +1,4 @@
-/* Copyright 2019 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2018 The TensorFlow Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -12,17 +12,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
+#ifndef TENSORFLOW_LITE_MICRO_MICRO_ERROR_REPORTER_H_
+#define TENSORFLOW_LITE_MICRO_MICRO_ERROR_REPORTER_H_
 
-#ifndef TENSORFLOW_LITE_CORE_API_TENSOR_UTILS_H_
-#define TENSORFLOW_LITE_CORE_API_TENSOR_UTILS_H_
-
-#include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/core/api/error_reporter.h"
+#include "tensorflow/lite/micro/compatibility.h"
+#include "tensorflow/lite/micro/debug_log.h"
+#include "tensorflow/lite/micro/debug_log_numbers.h"
 
 namespace tflite {
 
-// Resets a variable tensor to the default value.
-TfLiteStatus ResetVariableTensor(TfLiteTensor* tensor);
+class MicroErrorReporter : public ErrorReporter {
+ public:
+  ~MicroErrorReporter() {}
+  int Report(const char* format, va_list args) override;
+
+ private:
+  TF_LITE_REMOVE_VIRTUAL_DELETE
+};
 
 }  // namespace tflite
 
-#endif  // TENSORFLOW_LITE_CORE_API_TENSOR_UTILS_H_
+#endif  // TENSORFLOW_LITE_MICRO_MICRO_ERROR_REPORTER_H_

@@ -243,6 +243,19 @@ class Subgraph():
         raise ValueError(f"Tensor with name {name} not found!")
 
 
+class Metadata():
+    def __init__(self, model, name, buffer=None):
+        # Generally, do not use this constructor to instantiate Metadata!
+        # Use XCOREModel.create_metadata instead.
+        self.model = model  # parent
+        self.name = name
+        assert isinstance(buffer, Buffer)
+        self.buffer = buffer
+
+    def __str__(self):
+        return f'name={self.name}, buffer={self.buffer}'
+
+
 class XCOREModel():
     def __init__(self, version=None, description=None, subgraphs=None, buffers=None, metadata=None):
         self.version = version or 3
@@ -256,8 +269,13 @@ class XCOREModel():
         self.buffers.append(buffer)
         return buffer
 
-    def create_subgraph(self):
-        subgraph = Subgraph(self)
+    def create_metadata(self, name, buffer=None):
+        metadata = Metadata(self, name, buffer)
+        self.metadata.append(metadata)
+        return metadata
+
+    def create_subgraph(self, name=None):
+        subgraph = Subgraph(self, name)
         self.subgraphs.append(subgraph)
         return subgraph
 
@@ -283,7 +301,11 @@ class XCOREModel():
         print('---------')
         print(f'description={self.description}')
         print(f'version={self.version}')
-        print(f'metadata={self.metadata}')
+        print('******************')
+        print('* Metadata *')
+        print('******************')
+        for metadata in self.metadata:
+            print(metadata)
         print('******************')
         print('* Operator Codes *')
         print('******************')

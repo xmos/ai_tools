@@ -13,12 +13,16 @@ from tflite2xcore import (
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
 
-BUILTIN_OPERATORS_TEST_FILE = os.path.join(Path(__file__).parent.absolute(), 'data/builtin_operators.tflite')
+BUILTIN_OPERATORS_TEST_FILE = os.path.join(
+    Path(__file__).parent.absolute(),
+    'data/builtin_operators.tflite'
+)
+
 
 def test_read_flatbuffer():
     model = read_flatbuffer(BUILTIN_OPERATORS_TEST_FILE)
     model.pprint()
-        
+
     assert model.version == 3
     assert len(model.metadata) == 1
     assert len(model.operator_codes) == 6
@@ -46,11 +50,12 @@ def test_read_flatbuffer():
     operator = subgraph.operators[1]
     assert operator.operator_code.builtin_code == BuiltinOpCodes.CONV_2D
     assert operator.operator_code.version == 3
-    assert operator.operator_code.custom_code == None
+    assert operator.operator_code.custom_code is None
     assert operator.builtin_options['fused_activation_function'] == 'RELU'
     assert len(operator.inputs) == 3
     assert len(operator.outputs) == 1
     assert operator.outputs[0].name == 'sequential/re_lu/Relu'
+
 
 def test_write_flatbuffer():
     model = read_flatbuffer(BUILTIN_OPERATORS_TEST_FILE)
@@ -61,14 +66,17 @@ def test_write_flatbuffer():
 
     assert bytes_written == bytes_expected
 
+
 def test_custom_options():
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
     input_tensor = subgraph.create_tensor('input_tensor', TensorType.INT8, [1, 5, 5, 4], isinput=True)
     output_tensor = subgraph.create_tensor('output_tensor', TensorType.INT8, [1, 5, 5, 2], isoutput=True)
-    expected_operator = subgraph.create_operator(OperatorCode(XCOREOpCodes.XC_argmax_16),
-                             inputs=[input_tensor], outputs=[output_tensor])
+    expected_operator = subgraph.create_operator(
+        OperatorCode(XCOREOpCodes.XC_argmax_16),
+        inputs=[input_tensor], outputs=[output_tensor]
+    )
 
     expected_operator.custom_options = {'Mo': 1, 'Larry': [3, 2, 1], 'Curly': 'No thanks, I prefer Shemp'}
 
@@ -82,6 +90,7 @@ def test_custom_options():
 
     loaded_operator = model.subgraphs[0].operators[0]
     assert loaded_operator.custom_options == expected_operator.custom_options
+
 
 if __name__ == "__main__":
     pytest.main()

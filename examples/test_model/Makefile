@@ -11,6 +11,8 @@ ifeq ($(TARGET), x86)
 
 	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm
 
+	OBJ_DIR := .build/x86
+
 	APP = test_model
 else # must be xcore
 	PLATFORM_FLAGS := -target=XU316-1024-QF60-C20
@@ -36,6 +38,8 @@ else # must be xcore
 
 	LDFLAGS := $(PLATFORM_FLAGS)
 
+	OBJ_DIR := .build/xcore
+
 	APP = test_model.xe
 endif
 
@@ -45,61 +49,73 @@ endif
 FLATBUFFERS_DIR := ../../../flatbuffers
 GEMMLOWP_DIR := ../../../gemmlowp
 TENSORFLOW_DIR := ../../../tensorflow
-LIB_NN_DIR := ../../xcore/operator_book/lib_nn_operator
+LIB_NN_DIR := ../../xcore/operator_book
 
 INCLUDES := \
 	-I$(FLATBUFFERS_DIR)/include \
 	-I$(GEMMLOWP_DIR) \
 	-I$(TENSORFLOW_DIR) \
-	-I$(LIB_NN_DIR)/api \
+	-I$(LIB_NN_DIR)/lib_nn_operator/api \
 	-Isrc
 
+# source file paths
+VPATH := \
+	$(TENSORFLOW_DIR) \
+	$(LIB_NN_DIR) \
+	src
+
 SOURCES := \
-	$(TENSORFLOW_DIR)/tensorflow/lite/c/common.c \
-	$(TENSORFLOW_DIR)/tensorflow/lite/core/api/error_reporter.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/core/api/flatbuffer_conversions.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/core/api/op_resolver.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/core/api/tensor_utils.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/micro/debug_log_numbers.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/micro/memory_helpers.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/micro/micro_allocator.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/micro/micro_error_reporter.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/micro/micro_interpreter.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/micro/micro_mutable_op_resolver.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/micro/micro_utils.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/micro/simple_memory_allocator.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/micro/memory_planner/linear_memory_planner.cc \
-	$(TENSORFLOW_DIR)/tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
-	$(wildcard $(LIB_NN_DIR)/src/*.c) \
-	$(wildcard src/*.cc)
+	tensorflow/lite/c/common.c \
+	tensorflow/lite/core/api/error_reporter.cc \
+	tensorflow/lite/core/api/flatbuffer_conversions.cc \
+	tensorflow/lite/core/api/op_resolver.cc \
+	tensorflow/lite/core/api/tensor_utils.cc \
+	tensorflow/lite/micro/debug_log_numbers.cc \
+	tensorflow/lite/micro/memory_helpers.cc \
+	tensorflow/lite/micro/micro_allocator.cc \
+	tensorflow/lite/micro/micro_error_reporter.cc \
+	tensorflow/lite/micro/micro_interpreter.cc \
+	tensorflow/lite/micro/micro_mutable_op_resolver.cc \
+	tensorflow/lite/micro/micro_utils.cc \
+	tensorflow/lite/micro/simple_memory_allocator.cc \
+	tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc \
+	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
+	lib_nn_operator/src/nn_operator.c \
+	main.cc
 
 ifeq ($(TARGET), x86)
 	SOURCES += \
-		$(TENSORFLOW_DIR)/tensorflow/lite/micro/debug_log.cc 
+		tensorflow/lite/micro/debug_log.cc 
 else # must be xcore
 	SOURCES += \
-		$(wildcard $(LIB_NN_DIR)/src/asm/*.S) \
-		$(TENSORFLOW_DIR)/tensorflow/lite/micro/xcore/debug_log.cc 
+		lib_nn_operator/src/asm/conv2d_deepin_deepout_relu_patch.S \
+		lib_nn_operator/src/asm/conv2d_deepin_deepout_relu.S \
+		lib_nn_operator/src/asm/conv2d_shallowin_deepout_relu_patch.S \
+		lib_nn_operator/src/asm/conv2d_shallowin_deepout_relu.S \
+		lib_nn_operator/src/asm/fc_deepin_shallowout_lin.S \
+		lib_nn_operator/src/asm/maxpool2d_deep.S \
+		tensorflow/lite/micro/xcore/debug_log.cc 
 endif
 
-OBJECTS := $(SOURCES:%.S=%.o)
-OBJECTS += $(SOURCES:%.c=%.o)
-OBJECTS += $(SOURCES:%.cc=%.o)
-
 OBJECT_FILES := $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES))))
+OBJECT_FILES := $(addprefix $(OBJ_DIR)/,$(OBJECT_FILES))
+OBJECTS := $(SOURCES) $(OBJECT_FILES)
 
 .PHONY: all clean $(APP)
 
 all: $(BIN_DIR)/$(APP)
 
-%.o: %.S
+$(OBJ_DIR)/%.o: %.S
+	@mkdir -p $(dir $@)
 	$(AS) $(ASFLAGS) -o $@ -c $<
 
-%.o: %.c
+$(OBJ_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
 	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ -c $<
 
-%.o: %.cc
+$(OBJ_DIR)/%.o: %.cc
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ -c $<
 
 $(BIN_DIR)/$(APP): $(OBJECTS)

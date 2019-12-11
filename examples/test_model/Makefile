@@ -3,7 +3,6 @@ BIN_DIR := bin
 
 ifeq ($(TARGET), x86)
 	CC := gcc
-	CC_PREFIX :=
 	CCFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -O3 
 
 	CXX := g++
@@ -14,20 +13,28 @@ ifeq ($(TARGET), x86)
 
 	APP = test_model
 else # must be xcore
-  	CC := xcc
-  	CXX := xcc
-	CXXFLAGS := -Wall -Os -g -report
-	CXXFLAGS += -Wcpp,-std=c++11
-	CXXFLAGS += -DTF_LITE_STATIC_MEMORY
-	CXXFLAGS += -DTF_LITE_DISABLE_X86_NEON
-	CXXFLAGS += -DNDEBUG
-	CXXFLAGS += -mcmodel=large
-	#CXXFLAGS += -DXCORE
-	CXXFLAGS += -Wno-unknown-attributes
-	CXXFLAGS += -Wno-xcore-fptrgroup
-	CXXFLAGS += -Wno-xcore-fptrgroup
-	CXXFLAGS += XU316-1024-QF60-C20.xn
-	CXXFLAGS += -fcmdline-buffer-bytes=256
+	PLATFORM_FLAGS := -target=XU316-1024-QF60-C20
+	PLATFORM_FLAGS += -mcmodel=large
+	PLATFORM_FLAGS += -Os
+	PLATFORM_FLAGS += -DXCORE
+	PLATFORM_FLAGS += -Wno-xcore-fptrgroup
+	PLATFORM_FLAGS += -Wno-unknown-pragmas
+	PLATFORM_FLAGS += -Wno-unknown-attributes
+	PLATFORM_FLAGS += -report
+	PLATFORM_FLAGS += -fcmdline-buffer-bytes=256
+
+	AS := xcc
+	ASFLAGS := $(PLATFORM_FLAGS)
+
+	CC := xcc
+	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DNDEBUG
+	CCFLAGS += $(PLATFORM_FLAGS)
+
+	CXX := xcc
+	CXXFLAGS := -std=c++11 -g -DTF_LITE_STATIC_MEMORY -DNDEBUG
+	CXXFLAGS += $(PLATFORM_FLAGS)
+
+	LDFLAGS := $(PLATFORM_FLAGS)
 
 	APP = test_model.xe
 endif
@@ -72,17 +79,22 @@ ifeq ($(TARGET), x86)
 		$(TENSORFLOW_DIR)/tensorflow/lite/micro/debug_log.cc 
 else # must be xcore
 	SOURCES += \
+		$(wildcard $(LIB_NN_DIR)/src/asm/*.S) \
 		$(TENSORFLOW_DIR)/tensorflow/lite/micro/xcore/debug_log.cc 
 endif
 
-OBJECTS := $(SOURCES:%.c=%.o)
+OBJECTS := $(SOURCES:%.S=%.o)
+OBJECTS += $(SOURCES:%.c=%.o)
 OBJECTS += $(SOURCES:%.cc=%.o)
 
-OBJECT_FILES := $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(SOURCES)))
+OBJECT_FILES := $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES))))
 
 .PHONY: all clean $(APP)
 
 all: $(BIN_DIR)/$(APP)
+
+%.o: %.S
+	$(AS) $(ASFLAGS) -o $@ -c $<
 
 %.o: %.c
 	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ -c $<

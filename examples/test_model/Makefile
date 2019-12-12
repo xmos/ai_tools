@@ -2,6 +2,8 @@ TARGET := xcore
 BIN_DIR := bin
 
 ifeq ($(TARGET), x86)
+	BUILD_TARGET := x86
+
 	CC := gcc
 	CCFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -O3 
 
@@ -15,6 +17,8 @@ ifeq ($(TARGET), x86)
 
 	APP = test_model
 else # must be xcore
+	BUILD_TARGET := xcore.ai
+	
 	PLATFORM_FLAGS := -target=XU316-1024-QF60-C20
 	PLATFORM_FLAGS += -mcmodel=large
 	PLATFORM_FLAGS += -Os
@@ -42,6 +46,8 @@ else # must be xcore
 
 	APP = test_model.xe
 endif
+
+$(info Building for $(BUILD_TARGET))
 
 #********************
 # Dependencies

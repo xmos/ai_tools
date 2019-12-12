@@ -4,6 +4,7 @@
 #define NN_OPERATOR_H_
 
 #include "nn_types.h"
+#include "nn_op_structs.h"
 #include "nn_operator_asm.h"
 #include "nn_operator_c.h"
 #include "nn_operator_inline.h"
@@ -55,6 +56,70 @@ static inline void nn_mat_vec_mul_s8(
     const unsigned N_chunks,
     const int16_t* shr,
     int8_t* y);
+
+/**  2D convolution for "deep" input and output tensors.
+ *
+ *  This kernel is optimized for input/output tensors with many channels. Input
+ *  tensors must have a multiple of 32 channels, output tensors must have multiple
+ *  of 16 channels. To accomplish this, the input tensor or Kernel tensor may be
+ *  padded with zeros along the corresponding dimension.
+ * 
+ *  Stride is 1 in both dimensions. Number of input and output channels must be
+ *  divisible by 32 and 16 respectively. Activation is ReLU. Zero padding
+ *  should be used on all edges, with size K_h//2 above and below, and K_w//2
+ *  on the left and right.
+ *
+ *  \param  K       Kernel weight tensor of shape (C_out, K_h, K_w, C_in) using
+ *                  a non-standard layout such that:
+ * 
+ *                  K[i, j, k, l] = K[  C_in * 16 * K_h * K_w * ( i // 16)
+ *                                    + C_in * 16 * K_w * j
+ *                                    + C_in * 16 * k
+ *                                    + 32 * 16 * (l // 32)
+ *                                    + 32 * (15-(i % 16))
+ *                                    + (l % 32) ]
+ * 
+ *                  This layout can be understood to order coefficients with the following precedence:
+ *                      - C_out 'group' (output channels are split into groups of 16; output group is given by (output_channel // 16))
+ *                      - kernel row
+ *                      - kernel col
+ *                      - C_in 'group' (input channels are split into groups of 32; input group is given by (input_channel // 32))
+ *                          Each C_in group collects 32*16 coefficients -- 32 coefficients for each of 16 output channels
+ *                      - reversed output channel (i.e. coefficients for output channel 15 are at lower offsets than output channel 14)
+ *                      - input channel
+ * 
+ *  \param  B       Bias tensor of shape (2, C_out) using a non-standard layout
+ *                  such that B[i, c]  =  C_out * i  +  c. The value B[0, c]
+ *                  encodes the lower 16 bits, while B[1, c] encodes the higher
+ *                  16 bits of the 32-bit bias value for output channel c.
+ *  \param  X       Input tensor of shape (height, width, C_in) using standard
+ *                  layout with the last index changing fastest:
+ *                  X[h, w, c]  =  X[width * C_in * h  +  C_in * w  +  c]
+ *  \param  Y       Output tensor of shape (height, width, C_out)
+ *                  using standard layout with the last index changing fastest:
+ *                  Y[h, w, c]  =  Y[width * C_out * h  +  C_out * w  +  c]
+ *  \param  height  Input tensor/image height.
+ *  \param  width   Input tensor/image width.
+ *  \param  K_h     Kernel height, must be odd.
+ *  \param  K_w     Kernel width, must be odd.
+ *  \param  C_out   Number of output channels, must be divisible by 16.
+ *  \param  C_in    Number of input channels, must be divisible by 32.
+ *  \param  shifts  Shift tensor of shape (C_out) using standard layout.
+ *                  Defines the shift used in the 32 to 16 bit intermediate
+ *                  conversion via VLSAT.
+ *  \param  scales  Scale tensor of shape (C_out) using standard layout.
+ *                  Defines the scale applied after the 32 to 16 bit
+ *                  intermediate conversion. Optional. Can be assumed to be
+ *                  between 0x4000 and 0x7FFF.
+ */
+void conv2d_deepin_deepout_relu_c2(
+    const int8_t* K, 
+    const data16_t* B,
+    const int8_t* X, 
+    int8_t* Y,
+    const int16_t* shifts, 
+    const int16_t* scales,
+    const nn_conv2d_dido_params_t* params);
 
 
 
@@ -174,6 +239,7 @@ static inline void conv2d_deepin_deepout_relu(
  *                  Defines the scale applied after the 32 to 16 bit
  *                  intermediate conversion. Optional. Can be assumed to be
  *                  between 0x4000 and 0x7FFF.
+ *  \param  pad_mode    Padding mode
  */
 static inline void conv2d_shallowin_deepout_relu(
     const int8_t* K, 
@@ -313,6 +379,53 @@ static inline void argmax_16(
     const int32_t N);
 
 
+void conv2d_deepin_deepout_relu_init(
+    nn_conv2d_dido_params_t* params,
+    const uint32_t X_height,
+    const uint32_t X_width,
+    const uint32_t K_h,
+    const uint32_t K_w,
+    const uint32_t C_in,
+    const uint32_t C_out,
+    const padding_mode_t pad_mode,
+    const int8_t zero_point,
+    const uint32_t region_top,
+    const uint32_t region_left,
+    const uint32_t region_rows,
+    const uint32_t region_cols);
+
+
+void conv2d_deepin_deepout_relu_block(
+    int8_t* Y,
+    const nn_conv2d_dido_params_t* params,
+    const nn_conv2d_dido_block_params_t* block,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* B,
+    const int16_t* shifts,
+    const int16_t* scales);
+    
+void conv2d_deepin_deepout_relu_block_asm(
+    int8_t* Y,
+    const nn_conv2d_dido_params_t* params,
+    const nn_conv2d_dido_block_params_t* block,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* B,
+    const int16_t* shifts,
+    const int16_t* scales);
+
+
+data16_t* conv2d_dido_boggle_B(
+    int32_t* B,
+    const unsigned C_out);
+
+void conv2d_dido_boggle_K(
+    int8_t* K,
+    const unsigned K_h,
+    const unsigned K_w,
+    const unsigned C_in,
+    const unsigned C_out);
 
 #ifdef __XC__
 } // extern "C"

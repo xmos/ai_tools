@@ -1,96 +1,98 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import os
+import sys
+import glob
+import subprocess
 import tempfile
 import pytest
-from pathlib import Path
 
-from tflite2xcore import (
-    read_flatbuffer,
-    write_flatbuffer
-)
+import helpers
 
-from tflite2xcore.xcore_model import XCOREModel, TensorType
-from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
+sys.path.append('/home/kmoulton/repos/hotdog/ai_tools/python/')
+from tflite2xcore import read_flatbuffer
 
-BUILTIN_OPERATORS_TEST_FILE = os.path.join(
-    Path(__file__).parent.absolute(),
-    'data/builtin_operators.tflite'
-)
+@pytest.fixture()
+def test_dataset(request):
+    def load_test_dataset(directory):
+        flatbuffer_xcore = os.path.join(directory, 'models/model_xcore.tflite')
+        input_files = glob.glob(os.path.join(directory, 'test_data/model_xcore/*.x'))
+        model = read_flatbuffer(flatbuffer_xcore)
+        input_quantization = model.subgraphs[0].outputs[0].quantization
 
+        flatbuffer_stripped = os.path.join(directory, 'models/model_stripped.tflite')
+        output_files = glob.glob(os.path.join(directory, 'test_data/model_stripped/*.y'))
+        model = read_flatbuffer(flatbuffer_stripped)
+        output_quantization = model.subgraphs[0].outputs[0].quantization
 
-def test_read_flatbuffer():
-    model = read_flatbuffer(BUILTIN_OPERATORS_TEST_FILE)
-    model.pprint()
+        test_cases = []
+        for input_file, output_file in zip(sorted(input_files), sorted(output_files)):
+            test_cases.append(
+                {
+                    'input': {
+                        'filename': input_file,
+                        'quantization': input_quantization
+                    },
+                    'expected_output': {
+                        'filename': output_file,
+                        'quantization': output_quantization
+                    }
+                }
+            )
 
-    assert model.version == 3
-    assert len(model.metadata) == 1
-    assert len(model.operator_codes) == 6
+        return {
+            'flatbuffer': flatbuffer_xcore,
+            'test_cases': test_cases
+        }
 
-    assert len(model.buffers) == 19
-    assert len(model.buffers[0].data) == 0
-    assert len(model.buffers[4].data) == 51200
-
-    assert len(model.subgraphs) == 1
-    subgraph = model.subgraphs[0]
-    assert len(subgraph.operators) == 10
-    assert len(subgraph.tensors) == 19
-    assert len(subgraph.inputs) == 1
-    assert len(subgraph.outputs) == 1
-    assert len(subgraph.intermediates) == len(subgraph.tensors) - len(subgraph.inputs) - len(subgraph.outputs)
-
-    tensor = subgraph.tensors[2]
-    assert tensor.name == 'sequential/conv2d/Conv2D/ReadVariableOp'
-    assert tensor.sanitized_name == 'sequential_conv2d_Conv2D_ReadVariableOp'
-    assert tensor.type == TensorType.INT8
-    assert tensor.standard_type == 'int8_t'
-    assert tensor.shape == [32, 5, 5, 3]
-    assert len(tensor.buffer.data) == 2400
-
-    operator = subgraph.operators[1]
-    assert operator.operator_code.builtin_code == BuiltinOpCodes.CONV_2D
-    assert operator.operator_code.version == 3
-    assert operator.operator_code.custom_code is None
-    assert operator.builtin_options['fused_activation_function'] == 'RELU'
-    assert len(operator.inputs) == 3
-    assert len(operator.outputs) == 1
-    assert operator.outputs[0].name == 'sequential/re_lu/Relu'
+    return load_test_dataset
 
 
-def test_write_flatbuffer():
-    model = read_flatbuffer(BUILTIN_OPERATORS_TEST_FILE)
+def run_dataset(test_model_app, dataset):
+    flatbuffer = dataset['flatbuffer']
+    print('flatbuffer:', flatbuffer)
+    for test_case in dataset['test_cases']:
+        print('test_case:', test_case)
+        input_file = test_case['input']['filename']
+        predicted_quantization = test_case['input']['quantization']
+        expected_output_file = test_case['expected_output']['filename']
+        expected_quantization = test_case['expected_output']['quantization']
+        predicted_output_file = os.path.join(tempfile.mkdtemp(), 'predicted_output.bin')
+        if test_model_app.endswith('.xe'):
+            cmd = f'xsim --args {test_model_app} {flatbuffer} {input_file} {predicted_output_file}'
+        else:
+            cmd = f'{test_model_app} {flatbuffer} {input_file} {predicted_output_file}'
+        print('command:', cmd)
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+        yield helpers.compare_tensor_files(expected_output_file, expected_quantization,
+            predicted_output_file, predicted_quantization)
 
-    tmp_file = os.path.join(tempfile.mkdtemp(), 'test_write_flatbuffer.tflite')
-    bytes_expected = os.path.getsize(BUILTIN_OPERATORS_TEST_FILE)
-    bytes_written = write_flatbuffer(model, tmp_file)
 
-    assert bytes_written == bytes_expected
+def test_argmax(test_model_app, test_dataset):
+    dataset = test_dataset(directory='data/single_op_models/argmax_16')
+    assert(all(run_dataset(test_model_app, dataset)))
 
 
-def test_custom_options():
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
+def test_conv2d_scheme1(test_model_app, test_dataset):
+    dataset = test_dataset(directory='data/single_op_models/conv2d_shallowin_deepout_relu')
+    assert(all(run_dataset(test_model_app, dataset)))
 
-    input_tensor = subgraph.create_tensor('input_tensor', TensorType.INT8, [1, 5, 5, 4], isinput=True)
-    output_tensor = subgraph.create_tensor('output_tensor', TensorType.INT8, [1, 5, 5, 2], isoutput=True)
-    expected_operator = subgraph.create_operator(
-        OperatorCode(XCOREOpCodes.XC_argmax_16),
-        inputs=[input_tensor], outputs=[output_tensor]
-    )
 
-    expected_operator.custom_options = {'Mo': 1, 'Larry': [3, 2, 1], 'Curly': 'No thanks, I prefer Shemp'}
+def test_conv2d_scheme2(test_model_app, test_dataset):
+    dataset = test_dataset(directory='data/single_op_models/conv2d_deepin_deepout_relu')
+    assert(all(run_dataset(test_model_app, dataset)))
 
-    tmp_file = os.path.join(tempfile.mkdtemp(), 'test_custom_options.tflite')
-    bytes_written = write_flatbuffer(model, tmp_file)
 
-    assert bytes_written > 0
+def test_fully_connected_scheme1(test_model_app, test_dataset):
+    dataset = test_dataset(directory='data/single_op_models/fc_deepin_shallowout_final')
+    assert(all(run_dataset(test_model_app, dataset)))
 
-    model = read_flatbuffer(tmp_file)
-    model.pprint()
 
-    loaded_operator = model.subgraphs[0].operators[0]
-    assert loaded_operator.custom_options == expected_operator.custom_options
+def test_maxpool(test_model_app, test_dataset):
+    dataset = test_dataset(directory='data/single_op_models/maxpool2d_deep')
+    assert(all(run_dataset(test_model_app, dataset)))
 
 
 if __name__ == "__main__":
     pytest.main()
+

@@ -9,7 +9,7 @@ import pytest
 
 import helpers
 
-sys.path.append('/home/kmoulton/repos/hotdog/ai_tools/python/')
+sys.path.append('../python/')
 from tflite2xcore import read_flatbuffer
 
 @pytest.fixture()

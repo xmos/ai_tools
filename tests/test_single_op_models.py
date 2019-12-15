@@ -87,11 +87,13 @@ def test_argmax(test_model_app, argmax_test_case):
 
 
 def test_conv2d_scheme1(test_model_app, conv2d_scheme1_test_case):
-    assert(run_test_case(test_model_app, conv2d_scheme1_test_case, abs_tol=0.006))
+    # assert(run_test_case(test_model_app, conv2d_scheme1_test_case, abs_tol=0.006))
+    assert(run_test_case(test_model_app, conv2d_scheme1_test_case))
 
 
 def test_conv2d_scheme2(test_model_app, conv2d_scheme2_test_case):
-    assert(run_test_case(test_model_app, conv2d_scheme2_test_case, abs_tol=0.006))
+    # assert(run_test_case(test_model_app, conv2d_scheme2_test_case, abs_tol=0.006))
+    assert(run_test_case(test_model_app, conv2d_scheme2_test_case))
 
 
 def test_fully_connected_scheme1(test_model_app, fully_connected_scheme1_test_case):

@@ -60,7 +60,7 @@ def pytest_generate_tests(metafunc):
             metafunc.parametrize(fixture, tests)
 
 
-def run_test_case(test_model_app, test_case, abs_tol=0.001):
+def run_test_case(test_model_app, test_case, abs_tol=0.0):
     flatbuffer = test_case['flatbuffer']
     input_file = test_case['input']['filename']
     predicted_quantization = test_case['input']['quantization']
@@ -89,12 +89,10 @@ def test_argmax(test_model_app, argmax_test_case):
 
 
 def test_conv2d_scheme1(test_model_app, conv2d_scheme1_test_case):
-    # assert(run_test_case(test_model_app, conv2d_scheme1_test_case, abs_tol=0.006))
     assert(run_test_case(test_model_app, conv2d_scheme1_test_case))
 
 
 def test_conv2d_scheme2(test_model_app, conv2d_scheme2_test_case):
-    # assert(run_test_case(test_model_app, conv2d_scheme2_test_case, abs_tol=0.006))
     assert(run_test_case(test_model_app, conv2d_scheme2_test_case))
 
 

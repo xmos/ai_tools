@@ -26,13 +26,13 @@ def compare_tensor_files(expected_file, expected_quantization, predicted_file,
 
     retval = True # until proven otherwise
 
-    for i, ev, pv in enumerate(zip(dequantized_expected_values, dequantized_predicted_values)):
+    for i, (ev, pv) in enumerate(zip(dequantized_expected_values, dequantized_predicted_values)):
         abs_diff = abs(ev-pv)
         if abs_diff > abs_tol:
             print(f'Difference {abs_diff} > {abs_tol}')
-            print(f'   Index={i}')
-            print(f'   Expected value={ev}')
-            print(f'   Predicted value={pv}')
+            print(f'   Index: {i}')
+            print(f'   Expected: quantized value={ev}, dequantized value={expected_values[i]}')
+            print(f'   Predicted: quantized value={pv}, dequantized value={predicted_values[i]}')
             retval = False
 
     return retval

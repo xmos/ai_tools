@@ -1,20 +1,20 @@
 * Model development
 The content of this section consists in a notebook for the proposed models, according to the task [[https://tasks.office.com/xmos1.onmicrosoft.com/en-gb/Home/Planner#/plantaskboard?groupId=564390b7-e9f5-4fa1-94c0-d40a4fbb0631&planId=EKo2RaRFBkKKUVFyeLhBHpYAFjQS&taskId=RsXAdIARFE6v3ixm8HrZqZYAAg0J]["Implement models for additional benchmarks and alpha/beta release examples"]].
 
-The notebooks are separated depending if we want to use GPU or not (model_dev_gpu.ipynb and model_dev_vanilla.ipynb). 
-Along with the notebooks, a python module is provided to abstract the reader from the code behind the development, and instead focus on the results of the training.
+The notebooks are separated depending if we want to use GPU or not (~model_dev_gpu.ipynb~ and ~model_dev_vanilla.ipynb~). 
+Along with the notebooks, a python module is provided to abstract the reader from the code behind the development, and instead focus on the results of the training (~model_tools.py~).
 
-Since we are using the other hotdog modules, those files are also here.
+Since we are using the other hotdog modules, those files *may be also here*.
 
 * Interface testing
-The content of this section consists in:
+This work is referenced in the task [[https://tasks.office.com/xmos1.onmicrosoft.com/en-GB/Home/Planner#/plantaskboard?groupId=564390b7-e9f5-4fa1-94c0-d40a4fbb0631&planId=EKo2RaRFBkKKUVFyeLhBHpYAFjQS&taskId=ttzgSUFABkmK1Awj1-Ht7pYAFk2p]["Single operator networks enhancements"]]. The content of this section consists in:
 
-- A notebook containing a proposed interface for testing the models and perform the conversions: interface_testing.ipynb
-- A module with the content of that notebook: model_interface.py
-- A demo file that uses that interface: fc_deepin_shallowout_demo.py
+- A notebook containing a proposed interface for testing the models and perform the conversions: ~interface_testing.ipynb~
+- A module with the content of that notebook: ~model_interface.py~
+- A demo file that uses that interface: ~fc_deepin_shallowout_demo.py~
 
 Polymorphy is considered following the next schema:
-    - Model: General parent class for a model
+    - *Model*: General parent class for a model
         - KerasModel: if the model is developed using Keras API.
         - SavedModel: if the model is developed using TensorFlow API.
         - FunctionModel: if the model is a TensorFlow function.
@@ -22,26 +22,26 @@ Polymorphy is considered following the next schema:
 All the classes contain the same structure which was thought to accelerate the prototyping and testing for the models:
 
 - Fields:
-    - name: Name of the model
-    - path: Path object with the root directory to store the results
-    - input_dim: input dimension of the model, int
-    - output_dim: output dimension of the model, int
+    - *name*: Name of the model
+    - *path*: Path object with the root directory to store the results
+    - *input_dim*: input dimension of the model, int
+    - *output_dim*: output dimension of the model, int
     
 - Properties:
-    - models: dictionary containing the following structure:s
+    - *models*: dictionary containing the following structure:s
         - 'name' : the name of the model
         - 'data_dir': root directory for the data
         - 'models_dir': root directory for the models
-    - data: dictionary used for storing the data
+    - *data*: dictionary used for storing the data
     
-- Functions:
+- Functions(bolded what really needs to be implemented in each case):
     - __init__(): default provided
-    + build(): default provided
-    + prep_data() : to implement by the user
-    + train(): default provided
+    + *build()*: default provided
+    + *prep_data()* : to implement by the user
+    + *train()*: default provided
     - save_model_to_file(): implemented
     - load(): default provided
-    + gen_test_data(): to implement by the user
+    + *gen_test_data()*: to implement by the user
     - to_tf_float(): implemented
     - to_tf_quant(): implemented
     - to_tf_stripped(): implemented

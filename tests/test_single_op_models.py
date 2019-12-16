@@ -36,8 +36,9 @@ def load_tests(name):
     model = read_flatbuffer(flatbuffer_stripped)
     output_quantization = model.subgraphs[0].outputs[0].quantization
 
+    test_cases = []
     for input_file, output_file in zip(sorted(input_files), sorted(output_files)):
-        test_case = {
+        test_cases.append({
             'flatbuffer': flatbuffer_xcore,
             'input': {
                 'filename': input_file,
@@ -47,8 +48,9 @@ def load_tests(name):
                 'filename': output_file,
                 'quantization': output_quantization
             }
-        }
-        yield test_case
+        })
+
+    return test_cases
 
 
 def pytest_generate_tests(metafunc):

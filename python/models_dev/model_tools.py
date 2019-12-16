@@ -10,7 +10,7 @@ import scipy.ndimage
 from scipy.ndimage.interpolation import map_coordinates
 from scipy.ndimage.filters import gaussian_filter
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 __author__ = 'Luis Mata'
 '''
 Tools for model development
@@ -47,6 +47,18 @@ def flatten(ds):
     Flatten function for a numpy array. It must have 3 dimensions, and the output will have 2.
     '''
     return ds.reshape(ds.shape[0], ds.shape[1]*ds.shape[2])
+
+def save_data_to_file(path, x, y, xt=0, yt=0):
+    '''
+    Will save a numpy dictionary in the path provided.
+    '''
+    data = {}
+    data['x_train']= x
+    data['y_train']= y
+    if len(xt) != 0 and len(yt) != 0:
+        data['x_test'] = xt
+        data['y_test'] = yt
+    np.savez(path, **data)
 
 def get_mnist(rows=28, cols=28, nb_classes=10, categorical=False, padding=2, val_split=True, flatten = False, debug=True, y_float = False):
     '''

@@ -1,5 +1,4 @@
-tensorflow                   https://github.com/xmos/tensorflow                       master
+tensorflow                   https://github.com/xmos/tensorflow                       develop
 flatbuffers                  https://github.com/google/flatbuffers                    1.11.0
-#lib_logging                  git@github.com:xmos/lib_logging                          faad03ab3e508cb449fc0da64b0bc0af64911547
-#lib_xassert                  git@github.com:xmos/lib_xassert                          8b1d0a7a2afd26d15be6371314ebce5e1af0f03c
+gemmlowp                     https://github.com/google/gemmlowp.git                   master
 Unity                        git@github.com:astewart-xmos/Unity.git                   master

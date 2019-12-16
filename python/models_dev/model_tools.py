@@ -10,7 +10,7 @@ import scipy.ndimage
 from scipy.ndimage.interpolation import map_coordinates
 from scipy.ndimage.filters import gaussian_filter
 
-__version__ = '1.1.1'
+__version__ = '1.1.3'
 __author__ = 'Luis Mata'
 '''
 Tools for model development
@@ -42,7 +42,7 @@ def unfold_gen(size, generator):
     for i, el in enumerate(generator): arr[i] = el
     return arr
 
-def flatten(ds):
+def _flatten(ds):
     '''
     Flatten function for a numpy array. It must have 3 dimensions, and the output will have 2.
     '''
@@ -60,12 +60,9 @@ def save_data_to_file(path, x, y, xt=0, yt=0):
         data['y_test'] = yt
     np.savez(path, **data)
 
-def get_mnist(rows=28, cols=28, nb_classes=10, categorical=False, padding=2, val_split=True, flatten = False, debug=True, y_float = False):
+def get_mnist(padding=2, categorical=False, val_split=True, flatten = False, debug=True, y_float = False):
     '''
     Get the keras MNIST dataset in the specified format.
-    \t- rows: height of the image
-    \t- cols: columns of the image
-    \t- nb_clases: number of clases in the output
     \t- categorical: if categorical labels or not
     \t- padding: if padding of the images or not
     \t- val_split: if divide into validation as well or not
@@ -73,6 +70,9 @@ def get_mnist(rows=28, cols=28, nb_classes=10, categorical=False, padding=2, val
     \t- debug: if we want printed shapes and extra information or not
     \t- y_float: if we want the labels to be float numbers
     '''
+    rows=28
+    cols=28
+    nb_classes=10
     from tensorflow.keras.datasets import mnist
     from tensorflow.keras.utils import to_categorical
     from sklearn.model_selection import train_test_split
@@ -99,9 +99,10 @@ def get_mnist(rows=28, cols=28, nb_classes=10, categorical=False, padding=2, val
         x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.2, random_state=0)
     
     if flatten:
-        x_train = flatten(x_train)
-        x_test = flatten(x_test)
-        x_val = flatten(x_val)
+        x_train = _flatten(x_train)
+        x_test = _flatten(x_test)
+        if val_split:
+            x_val = _flatten(x_val)
     if debug:
         print('x_train shape: ', x_train.shape)
         print('y_train shape: ', y_train.shape)
@@ -122,7 +123,7 @@ def ecc(nsizex=29, nsizey=29, ch = 1):
     '''
     Crop the dataset images using resize from skimage, consider instead use keras layer Cropping2D.
     '''
-    x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(categorical=True, padding=0)
+    x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(padding=0, categorical=True)
     from skimage.transform import resize
     o_train = resize(x_train, (x_train.shape[0], nsizex, nsizey, ch))
     o_test = resize(x_test, (x_test.shape[0], nsizex, nsizey, ch))

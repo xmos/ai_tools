@@ -15,11 +15,11 @@ ifeq ($(TARGET), x86)
 
 	OBJ_DIR := .build/x86
 
-	APP = test_model
+	APP = cifar-10
 else # must be xcore
 	BUILD_TARGET := xcore.ai
-	
-	PLATFORM_FLAGS := -target=XU316-1024-QF60-C20
+
+	PLATFORM_FLAGS := ../config/XU316-1024-QF60-C20-800MHz.xn
 	PLATFORM_FLAGS += -mcmodel=large
 	PLATFORM_FLAGS += -Os
 	PLATFORM_FLAGS += -DXCORE
@@ -27,7 +27,7 @@ else # must be xcore
 	PLATFORM_FLAGS += -Wno-unknown-pragmas
 	PLATFORM_FLAGS += -Wno-unknown-attributes
 	PLATFORM_FLAGS += -report
-	PLATFORM_FLAGS += -fcmdline-buffer-bytes=1024
+	PLATFORM_FLAGS += -fcmdline-buffer-bytes=256
 
 	AS := xcc
 	ASFLAGS := $(PLATFORM_FLAGS)
@@ -44,7 +44,7 @@ else # must be xcore
 
 	OBJ_DIR := .build/xcore
 
-	APP = test_model.xe
+	APP = cifar-10.xe
 endif
 
 $(info Building for $(BUILD_TARGET))
@@ -52,56 +52,30 @@ $(info Building for $(BUILD_TARGET))
 #********************
 # Dependencies
 #********************
-FLATBUFFERS_DIR := ../../../flatbuffers
-GEMMLOWP_DIR := ../../../gemmlowp
-TENSORFLOW_DIR := ../../../tensorflow
-LIB_NN_DIR := ../../xcore/operator_book
+LIB_NN_DIR := ../../../xcore/operator_book
 
 INCLUDES := \
-	-I$(FLATBUFFERS_DIR)/include \
-	-I$(GEMMLOWP_DIR) \
-	-I$(TENSORFLOW_DIR) \
 	-I$(LIB_NN_DIR)/lib_nn_operator/api \
 	-Isrc
 
 # source file paths
 VPATH := \
-	$(TENSORFLOW_DIR) \
 	$(LIB_NN_DIR) \
 	src
 
 SOURCES := \
-	tensorflow/lite/c/common.c \
-	tensorflow/lite/core/api/error_reporter.cc \
-	tensorflow/lite/core/api/flatbuffer_conversions.cc \
-	tensorflow/lite/core/api/op_resolver.cc \
-	tensorflow/lite/core/api/tensor_utils.cc \
-	tensorflow/lite/micro/debug_log_numbers.cc \
-	tensorflow/lite/micro/memory_helpers.cc \
-	tensorflow/lite/micro/micro_allocator.cc \
-	tensorflow/lite/micro/micro_error_reporter.cc \
-	tensorflow/lite/micro/micro_interpreter.cc \
-	tensorflow/lite/micro/micro_mutable_op_resolver.cc \
-	tensorflow/lite/micro/micro_utils.cc \
-	tensorflow/lite/micro/simple_memory_allocator.cc \
-	tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc \
-	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
 	lib_nn_operator/src/nn_operator.c \
-	main.cc
+	cifar10.c \
+	main.c
 
-ifeq ($(TARGET), x86)
-	SOURCES += \
-		tensorflow/lite/micro/debug_log.cc 
-else # must be xcore
+ifeq ($(TARGET), xcore)
 	SOURCES += \
 		lib_nn_operator/src/asm/conv2d_deepin_deepout_relu_patch.S \
 		lib_nn_operator/src/asm/conv2d_deepin_deepout_relu.S \
 		lib_nn_operator/src/asm/conv2d_shallowin_deepout_relu_patch.S \
 		lib_nn_operator/src/asm/conv2d_shallowin_deepout_relu.S \
 		lib_nn_operator/src/asm/fc_deepin_shallowout_lin.S \
-		lib_nn_operator/src/asm/maxpool2d_deep.S \
-		tensorflow/lite/micro/xcore/debug_log.cc 
+		lib_nn_operator/src/asm/maxpool2d_deep.S
 endif
 
 OBJECT_FILES := $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES))))

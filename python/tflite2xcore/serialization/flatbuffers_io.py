@@ -89,7 +89,7 @@ def create_tensor_from_dict(subgraph, buffers, tensor_dict, is_input=False, is_o
     return subgraph.create_tensor(
         name=tensor_dict['name'],
         type_=TensorType[tensor_dict['type']],
-        shape=tensor_dict['shape'],
+        shape=tensor_dict.get('shape', []),
         buffer=buffers[tensor_dict['buffer']],
         quantization=(tensor_dict['quantization'] if 'quantization' in tensor_dict else None),
         isinput=is_input,
@@ -164,13 +164,7 @@ def create_dict_from_metadata(metadata):
             'buffer': metadata.model.buffers.index(metadata.buffer)}
 
 
-def read_flatbuffer(model_filename, schema=None):
-    schema = schema or DEFAULT_SCHEMA
-
-    parser = FlatbufferIO()
-
-    model_dict = json.loads(parser.read_flatbuffer(schema, model_filename))
-
+def create_model_from_dict(model_dict):
     model = XCOREModel(
         version=model_dict['version'],
         description=model_dict['description']
@@ -191,10 +185,8 @@ def read_flatbuffer(model_filename, schema=None):
     return model
 
 
-def write_flatbuffer(model, filename, schema=None):
-    schema = schema or DEFAULT_SCHEMA
-
-    model_dict = {
+def create_dict_from_model(model):
+    return {
         'version': model.version,
         'description': model.description,
         'metadata': [create_dict_from_metadata(mdata) for mdata in model.metadata],
@@ -202,6 +194,22 @@ def write_flatbuffer(model, filename, schema=None):
         'subgraphs': [create_dict_from_subgraph(subgraph) for subgraph in model.subgraphs],
         'operator_codes': [create_dict_from_operator_code(operator_code) for operator_code in model.operator_codes]
     }
+
+
+def read_flatbuffer(model_filename, schema=None):
+    schema = schema or DEFAULT_SCHEMA
+
+    parser = FlatbufferIO()
+
+    model_dict = json.loads(parser.read_flatbuffer(schema, model_filename))
+
+    return create_model_from_dict(model_dict)
+
+
+def write_flatbuffer(model, filename, schema=None):
+    schema = schema or DEFAULT_SCHEMA
+
+    model_dict = create_dict_from_model(model)
 
     buffer = bytes(json.dumps(model_dict).encode('ascii'))
     builder = FlatbufferIO()

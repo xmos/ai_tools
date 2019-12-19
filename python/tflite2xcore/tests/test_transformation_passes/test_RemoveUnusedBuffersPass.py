@@ -34,6 +34,7 @@ def test_run_identity(model, trf_pass):
 @pytest_parametrize_plus('model', MODELS)
 def test_run_mutating(model, trf_pass):
     model.create_buffer()
+    model.create_metadata("dummy")
     num_buffers = len(model.buffers)
     trf_pass.run(model)
     assert num_buffers == len(model.buffers) + 1
@@ -45,12 +46,10 @@ def test_run_non_mutating(model, trf_pass):
         'dangling_tensor', TensorType.INT16, [1, 32, 1, 1],
         buffer=model.create_buffer()
     )
+    model.create_metadata("dummy")
     num_buffers = len(model.buffers)
     trf_pass.run(model)
     assert num_buffers == len(model.buffers)
-
-
-# TODO: add test to check for metadata buffers
 
 
 if __name__ == "__main__":

@@ -157,7 +157,7 @@ class Tensor():
         self.shape = list(shape)
 
         if buffer:
-            isinstance(buffer, Buffer)
+            assert isinstance(buffer, Buffer)
             assert buffer in self.model.buffers
             self.buffer = buffer
         else:
@@ -282,8 +282,12 @@ class Metadata():
         # Use XCOREModel.create_metadata instead.
         self.model = model  # parent
         self.name = name
-        assert isinstance(buffer, Buffer)
-        self.buffer = buffer
+        if buffer:
+            assert isinstance(buffer, Buffer)
+            assert buffer in self.model.buffers
+            self.buffer = buffer
+        else:
+            self.buffer = self.model.create_buffer()
 
     def __str__(self):
         return f'name={self.name}, buffer={self.buffer}'

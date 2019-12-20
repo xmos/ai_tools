@@ -127,7 +127,7 @@ class AddArgmaxOutputPass(OutputTensorMatchingPass):
 
 # TODO: write (at least regression) tests for this class
 class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
-    def __init__(self, priority):
+    def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
         self._op = None
 
@@ -213,15 +213,13 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
 
 # TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceQuantizedOperatorPass):
-    def __init__(self, priority=PassPriority.MEDIUM):
-        super().__init__(priority)
-
     def match(self, op):
         if op.operator_code.code == BuiltinOpCodes.FULLY_CONNECTED:
-            weight_tensor, output_tensor = op.inputs[1], op.outputs[0]
-            return (output_tensor in op.subgraph.outputs
-                    and weight_tensor.shape[0] < 16
-                    and weight_tensor.shape[1] % 32 == 0)
+            with self.using(op):
+                # TODO: add checks for int8 quantization
+                return (self._output in op.subgraph.outputs
+                        and self._weights.shape[0] < 16
+                        and self._weights.shape[1] % 32 == 0)
 
         return False
 
@@ -266,6 +264,43 @@ class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceQuantizedOperatorPa
         self.mutate_biases(op)
         self.mutate_weights(op)
         self.mutate_output(op)
+
+
+# TODO: write (at least regression) tests for this class
+class ReplaceQuantizedConv2DPass(ReplaceQuantizedOperatorPass):
+    @property
+    def _strides(self):
+        options = self._op.builtin_options
+        return options['stride_h'], options['stride_w']
+
+    @property
+    def _dilation(self):
+        options = self._op.builtin_options
+        return options['dilation_h_factor'], options['dilation_w_factor']
+
+    @property
+    def _padding(self):
+        return self._op.builtin_options['padding']
+
+
+# TODO: write (at least regression) tests for the mutator functions
+class ReplaceDeepinDeepoutConv2DPass(ReplaceQuantizedConv2DPass):
+    def match(self, op):
+        if op.operator_code.code == BuiltinOpCodes.CONV_2D:
+            with self.using(op):
+                # TODO: add checks for int8 quantization
+                return (self._dilation == (1, 1)
+                        and self._strides == (1, 1)
+                        and self._padding == 'SAME'
+                        and self._weights.shape[1] % 2 == 1  # kernel height is odd
+                        and self._weights.shape[2] % 2 == 1  # kernel width is odd
+                        and self._weights.shape[0] % 16 == 0  # deepout
+                        and self._weights.shape[3] % 32 == 0)  # deepin
+
+        return False
+
+    def mutate(self, op):
+        pass
 
 
 class RemoveUnusedBuffersPass(ModelTransformationPass):

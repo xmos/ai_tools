@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include "nn_types.h"
 
+#include "nn_op_structs.h"
+
 #ifdef __XC__
 extern "C" {
 #endif
@@ -13,83 +15,32 @@ extern "C" {
 #ifdef __XS3A__
 
 
-#ifndef USE_ASM_nn_mat_vec_mul_s8
-#define USE_ASM_nn_mat_vec_mul_s8   (1)
+#ifndef USE_ASM_conv2d_deepin_deepout_block
+#define USE_ASM_conv2d_deepin_deepout_block     (1)
 #endif
-void nn_mat_vec_mul_s8_asm(
-    const int8_t* W,
-    const int8_t* x,
-    const unsigned N_bands,
-    const unsigned N_chunks,
-    const int16_t* shr,
-    int8_t* y);
-
-
-
-    
-#ifndef USE_ASM_conv2d_deepin_deepout_relu
-#define USE_ASM_conv2d_deepin_deepout_relu   (1)
-#endif
-void conv2d_deepin_deepout_relu_asm(
-    const int8_t* K, 
-    const data16_t* B,
-    const int8_t* X, 
+void conv2d_deepin_deepout_block_asm(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t K_h, 
-    const int32_t K_w,
-    const int32_t C_out, 
-    const int32_t C_in,
-    const int16_t* shifts, 
-    const int16_t* scales);
-
-int8_t* conv2d_deepin_deepout_relu_asm_patch(
-    const int8_t* y,
-    const int8_t* patch_k,
-    const data16_t* biases_lo,
-    const data16_t* biases_hi,
-    const unsigned patch_row_incr,
-    const unsigned kernel_row_incr,
-    const int8_t* patch_x, 
-    const unsigned rows,
-    const unsigned row_maccs,          
-    const unsigned chan_outs,          
-    const unsigned kernel_advance,
-    const int16_t* shifts,
-    const int16_t* scales);
-
-#ifndef USE_ASM_conv2d_shallowin_deepout_relu
-#define USE_ASM_conv2d_shallowin_deepout_relu   (1)
-#endif
-void conv2d_shallowin_deepout_relu_asm(
-    const int8_t* K, 
-    const data16_t* B,
-    const int8_t* X, 
-    int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t K_h, 
-    const int32_t K_w,
-    const int32_t C_out,
-    const int16_t* shifts, 
-    const int16_t* scales);
-    
-
-int8_t* conv2d_shallowin_deepout_relu_asm_patch(
-    int8_t* y,
-    const int8_t* K,
-    const unsigned c_out_groups,
-    const uint32_t pad_mask,
+    const nn_conv2d_dido_params_t* params,
+    const nn_conv2d_dido_block_params_t* block,
     const int8_t* X,
-    const unsigned rows,
-    const data16_t* bias_lo,
-    const data16_t* bias_hi,
+    const int8_t* K,
+    const data16_t* B,
     const int16_t* shifts,
-    const int16_t* scales,
-    const unsigned X_row_incr,
-    const unsigned kernel_advance);
+    const int16_t* scales);
 
+ 
+#ifndef USE_ASM_conv2d_shallowin_deepout_block
+#define USE_ASM_conv2d_shallowin_deepout_block     (1)
+#endif
+void conv2d_shallowin_deepout_block_asm(
+    int8_t* Y,
+    const nn_conv2d_sido_params_t* params,
+    const nn_conv2d_sido_block_params_t* block,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* B,
+    const int16_t* shifts,
+    const int16_t* scales);   
 
 #ifndef USE_ASM_fc_deepin_shallowout_16
 #define USE_ASM_fc_deepin_shallowout_16    (1)

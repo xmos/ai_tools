@@ -20,11 +20,11 @@
 
 /**
     Takes bias tensor B in standard form (just a vector of 32-bit ints) and rearranges it (in place)
-    for use with conv2d_deepin_deepout_relu().
+    for use with conv2d_deepin_deepout().
 
     Returns B, cast to a data16_t pointer.
 */
-data16_t* conv2d_dido_boggle_B(
+data16_t* conv2d_boggle_B(
     int32_t* B,
     const unsigned C_out)
 {
@@ -61,7 +61,7 @@ data16_t* conv2d_dido_boggle_B(
 
 /**
     Transform the kernel tensor K from the standard layout to the boggled layout
-    required for conv2d_deepin_deepout_relu().
+    required for conv2d_deepin_deepout().
 
     Standard layout has shape  (C_out, K_h, K_w, C_in)
 
@@ -82,11 +82,8 @@ void conv2d_dido_boggle_K(
     const unsigned C_out)
 {
 
-    //This can be done without malloc(), but it's way more complicated.
-
-
-    const unsigned C_in_groups = C_in >> VPU_INT8_EPV_LOG2;
     const unsigned C_out_groups = C_out >> VPU_INT8_ACC_PERIOD_LOG2;
+    const unsigned C_in_groups = C_in >> VPU_INT8_EPV_LOG2;
 
     typedef struct {
         int8_t ch[VPU_INT8_EPV];
@@ -133,79 +130,61 @@ void conv2d_dido_boggle_K(
     if(K_tmp){
         free(K_tmp);
     }
+}
 
 
+void conv2d_sido_boggle_K(
+    int8_t* K,
+    const unsigned K_h,
+    const unsigned K_w,
+    const unsigned C_in,
+    const unsigned C_out)
+{
+    //Hate to have to malloc for this, but... it is what it is.
 
-    // ///////TODO: Would like to do it without malloc(), but it isn't immediately obvious how
+    assert(C_in % 4 == 0);
+    assert(C_in * K_w == VPU_INT8_EPV);
 
+    const unsigned C_out_groups = C_out >> VPU_INT8_ACC_PERIOD_LOG2;
 
-    // //First, go ahead and apply the reversal, which happens within each C_out_group
-    // if(1) {
+    const unsigned C_out_group_size_elms = K_h * VPU_INT8_ACC_PERIOD * VPU_INT8_EPV;
 
-    //     //The size of a single output channel slice in blocks
-    //     const unsigned c_out_slice_blks = K_h * K_w * C_in >> VPU_INT8_EPV_LOG2;
-        
-    //     //The size of an output channel group slice in blocks
-    //     const unsigned c_out_group_slice_blks = c_out_slice_blks * VPU_INT8_ACC_PERIOD;
+    int8_t* K_buff = malloc( C_out_group_size_elms * sizeof(int8_t) );
 
-    //     for(int cog = 0; cog < C_out_groups; cog++){
+    assert(K_buff);
 
-    //         block_t* K_cog = &K_blocks[cog * c_out_group_slice_blks];
+    for(int cog = 0; cog < C_out_groups; cog++){
 
-    //         //The reversal is just a series of swaps, from the outside in
-    //         for(int co_lo = 0; co_lo < (VPU_INT8_ACC_PERIOD / 2); co_lo++){
+        memcpy(K_buff, &K[cog * C_out_group_size_elms], C_out_group_size_elms * sizeof(int8_t));
 
+        for(int cout = 0; cout < VPU_INT8_ACC_PERIOD; cout++){
+            
+            const unsigned rcout = (VPU_INT8_ACC_PERIOD - 1) - cout;
 
-    //             //The two indices (chan % 16)  to be swapped are co_lo and co_hi
-    //             int co_hi = (VPU_INT8_ACC_PERIOD - 1) - co_lo;
+            for(int kr = 0; kr < K_h; kr++){
+                for(int kc = 0; kc < K_w; kc++){
 
-    //             block_t* K_lo = &K_cog[co_lo * c_out_slice_blks];
-    //             block_t* K_hi = &K_cog[co_hi * c_out_slice_blks];
+                    unsigned in_b = (cog * VPU_INT8_ACC_PERIOD + cout) * (K_h * K_w * C_in)
+                                + kr * (K_w * C_in)
+                                + kc * (C_in);
+                    unsigned out_b = cog * (K_h * VPU_INT8_ACC_PERIOD * VPU_INT8_EPV) 
+                                + kr * (VPU_INT8_ACC_PERIOD * VPU_INT8_EPV) 
+                                + rcout * (VPU_INT8_EPV) 
+                                + kc * (C_in);
 
-    //             unsigned swaps_remaining = c_out_slice_blks;
-    //             while(swaps_remaining--){
-    //                 block_t swap_buff = *K_hi;
-    //                 *K_hi = *K_lo;
-    //                 *K_lo = swap_buff;
-    //                 K_lo = &K_lo[1];
-    //                 K_hi = &K_hi[1];
-    //             }
-    //         }
-    //     }
-    // }
+                    for(int cin = 0; cin < C_in; cin++){
 
-    // //Now, K has the shape of  (C_out_groups, 16, K_h, K_w, C_in_groups, 32), and we need to
-    // //  transpose the axes so that its shape is  (C_out_groups, K_h, K_w, C_in_groups, 16, 32)
+                        unsigned in_index = in_b + cin;
+                        unsigned out_index = out_b + cin;
 
-    // for(int cog = 0; cog < C_out_groups; cog++){
+                        K[out_index] = K_buff[in_index];
+                    }
+                }
+            }
+        }
+    }
 
-    //     block_t* K_cog_dst = &Kb[cog * K_h * K_w * C_in_groups * VPU_INT8_ACC_PERIOD];
-    //     block_t* K_cog_src = K_cog_dst;
-
-    //     for(int kr = 0; kr < K_h; kr++){
-    //         for(int kc = 0; kc < K_w; kc++){
-    //             for(int cig = 0; cig < C_in_groups; cig++){
-    //                 for(int co = 0; co < VPU_INT8_ACC_PERIOD){
-
-    //                     unsigned src_elm = co * (K_h*K_w*C_in_groups) + kr * (K_w*C_in_groups) + kc * (C_in_groups) + cig;
-    //                     block_t* src = &K_cog_src[ src_elm ];
-
-    //                     while(src < K_cog_dst){
-    //                         //The target element has already been swapped to the source location
-    //                         //  if we can find where it was moved to, we can just follow where it went
-    //                         //  until we hit a memory location after K_cog_dst. The problem is that this
-    //                         //  involves a lot of division and potentially many iterations of the while loop.
-    //                         //   Is there an efficient way to do this?
-    //                     }
-
-    //                     K_cog_dst = &K_cog_dst[1];
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    // }
-
+    if(K_buff) free(K_buff);
 
 }
 
@@ -259,7 +238,7 @@ static inline unsigned conv2d_block_output_bounds(
     return (*Y_b > *Y_t && *Y_r > *Y_l);
 }
 
-void conv2d_deepin_deepout_relu_init(
+void conv2d_deepin_deepout_init(
     nn_conv2d_dido_params_t* params,
     const uint32_t X_height,
     const uint32_t X_width,
@@ -441,7 +420,7 @@ void conv2d_deepin_deepout_relu_init(
 
 }
 
-void conv2d_deepin_deepout_relu_block(
+void conv2d_deepin_deepout_block_c(
     int8_t* Y,
     const nn_conv2d_dido_params_t* params,
     const nn_conv2d_dido_block_params_t* block,
@@ -538,244 +517,319 @@ void conv2d_deepin_deepout_relu_block(
 }
 
 
-void conv2d_deepin_deepout_relu_c2(
-    const int8_t* K, 
-    const data16_t* B,
-    const int8_t* X, 
-    int8_t* Y,
-    const int16_t* shifts, 
-    const int16_t* scales,
-    const nn_conv2d_dido_params_t* params)
+void conv2d_shallowin_deepout_init(
+    nn_conv2d_sido_params_t* params,
+    const uint32_t X_height,
+    const uint32_t X_width,
+    const uint32_t K_h,
+    const uint32_t K_w,
+    const uint32_t C_in,
+    const uint32_t C_out,
+    const padding_mode_t pad_mode,
+    const int8_t zero_point,
+    const uint32_t region_top,
+    const uint32_t region_left,
+    const uint32_t region_rows,
+    const uint32_t region_cols)
 {
-    for(int block = 0; block < params->block_count; block++){
-        conv2d_deepin_deepout_relu_block(
-            Y, 
-            params,
-            &params->blocks[block],
-            X, K, B, shifts, scales);
+    const int P_h = K_h >> 1;
+    const int P_w = K_w >> 1;
 
+    uint32_t Y_height, Y_width;
+
+    if(pad_mode == PADDING_VALID){
+        Y_height = X_height - 2*P_h;
+        Y_width  = X_width  - 2*P_w;
+    } else {
+        Y_height = X_height;
+        Y_width  = X_width;
     }
-}
 
+    //Check parameters
+    unsigned check_errors = 1;
+    if(check_errors){
 
+        unsigned error = 0;
+        if(region_rows > Y_height)
+            error = 1;
+        if(region_cols > Y_width)
+            error = 1;
+        if(region_top >= Y_height)
+            error = 1;
+        if(region_top + region_rows > Y_height)
+            error = 1;
+        if(region_left >= Y_width)
+            error = 1;
+        if(region_left + region_cols > Y_width)
+            error = 1;
 
+        if(error){
+            printf("Region parameters invalid.\n");
+            __builtin_trap();
+        }
+    }
+    
+    params->chans_in = C_in;
+    params->chans_out = C_out;
+    params->C_in_groups = C_in >> VPU_INT8_EPV_LOG2;
+    params->C_out_groups = C_out >> VPU_INT8_ACC_PERIOD_LOG2;
+    params->zero_point = zero_point * C_in;
 
-void conv2d_deepin_deepout_relu_c(
-    const int8_t* K, 
-    const data16_t* B,
-    const int8_t* X, 
-    int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t K_h, 
-    const int32_t K_w,
-    const int32_t C_out, 
-    const int32_t C_in,
-    const int16_t* shifts, 
-    const int16_t* scales)
-{
-    const int P_h = K_h / 2;
-    const int P_w = K_w / 2;
-    const int Q_h = P_h - height + 1;
-    const int Q_w = P_w - width  + 1;
+    if(pad_mode == PADDING_VALID){
 
-    for(int chout = 0; chout < C_out; chout++){
+        nn_conv2d_sido_block_params_t* blocks = malloc(sizeof(nn_conv2d_sido_block_params_t));
 
-        const int cog = chout / VPU_INT8_ACC_PERIOD;
-        const int cog_offset = chout % VPU_INT8_ACC_PERIOD;
+        if(!blocks){
+            printf("Failed to allocation blocks.\n");
+            __builtin_trap();
+        }
+
+        params->block_count = 1;
+        params->blocks = blocks;
+
+        nn_conv2d_sido_block_params_t* block = &blocks[0];
+
+        uint32_t Y_start_top = region_top;
+        uint32_t Y_start_left = region_left;
+
+        uint32_t X_start_top = Y_start_top;
+        uint32_t X_start_left = Y_start_left;
+
         
-        const int16_t shr = shifts[chout];
-        const int16_t scale = scales[chout];
+        block->init.start_offset.X = C_in * (X_start_top * X_width + X_start_left);
+        block->init.start_offset.Y = C_out * (Y_start_top * Y_width + Y_start_left);
+        block->init.start_offset.K = 0;
+        block->init.padding_cells = 0;
 
-        for(int row = 0; row < height; row++){
+        // block->patch.maccs_per_row = K_w * params->C_in_groups;
+        block->patch.pad_mask = 0xFFFFFFFF;
+        block->patch.rows = K_h;
+        block->patch.row_incr.X = C_in * X_width;
 
-            const int pad_top = ((P_h-row) > 0)?  (P_h-row) : 0;
-            const int pad_bot = ((Q_h+row) > 0)?  (Q_h+row) : 0;
+        //This needs to be enough to pull K to the beginning of the current row, then down a row
+        block->patch.row_incr.K = 0;
 
-            for(int col = 0; col < width; col++){
+        //This needs to be enough to push K to the end of the current channel group, plus the start offset
+        block->cout_group_incr.K = 0;
+        block->output.rows = region_rows;
+        block->output.cols = region_cols;
+        block->output.row_incr.X = C_in * (X_width - block->output.cols);
+        block->output.row_incr.Y = C_out * (Y_width - block->output.cols);
+    } else {
 
-                const int pad_lef = ((P_w-col) > 0)?  (P_w-col) : 0;
-                const int pad_rig = ((Q_w+col) > 0)?  (Q_w+col) : 0;
+        unsigned block_count = 0;
 
-                const int B_offset   = 2 * C_out * (K_w * (P_h + pad_bot - pad_top) + (P_w + pad_rig - pad_lef));
-                // printf("(%d, %d) -> (%d, %d, %d, %d)\n", row, col, pad_top, pad_bot, pad_lef, pad_rig);
-                // printf("(%d, %d) -> %d\n", row, col, B_offset/(2*C_out));
+        //First, determine which blocks have any work to be done
+        for(int kr = 0; kr < K_h; kr++){
+            for(int kc = 0; kc < K_w; kc++){
+                uint32_t aa, bb, cc, dd;
+                if(conv2d_block_output_bounds(&aa, &bb, &cc, &dd,
+                                              kr, kc, Y_height, Y_width, K_h, K_w,
+                                              region_top, region_left, region_rows, region_cols))
+                    block_count++;
+            }
+        }
 
-                const data16_t* B_lo = &B[B_offset + 0];
-                const data16_t* B_hi = &B[B_offset + C_out];
-                const int32_t bias   = (((int32_t)B_hi[chout])<<16) | B_lo[chout];
-                // printf("(%d, %d) -> %ld\n", row, col, bias);
+        //Now, allocate the memory
+        nn_conv2d_sido_block_params_t* blocks = malloc(block_count * sizeof(nn_conv2d_sido_block_params_t));
 
-                int32_t acc32 = bias;
+        if(!blocks){
+            printf("Failed to allocation blocks.\n");
+            __builtin_trap();
+        }
 
-                for(int kr = -P_h; kr <= P_h; kr++){
-                    for(int kc = -P_w; kc <= P_w; kc++){
+        params->block_count = block_count;
+        params->blocks = blocks;
 
-                        //check if we're in padding:
-                        if(row+kr < 0 || row+kr >= height)
-                            continue;
-                        if(col+kc < 0 || col+kc >= width)
-                            continue;
+        //Finally, actually initialize the block parameters
 
-                        const int kkrr = kr + P_h;
-                        const int kkcc = kc + P_w;
+        unsigned block_dex = 0;
+        for(int kr = 0; kr < K_h; kr++){
+            for(int kc = 0; kc < K_w; kc++){
 
-                        // int64_t acc64 = acc32;
+                nn_conv2d_sido_block_params_t* block = &blocks[block_dex];
 
-                        //iterate through input channels
-                        for(int chin = 0; chin < C_in; chin++){
+                uint32_t Y_top, Y_left, Y_bottom, Y_right;
 
-                            const int cig = chin / VPU_INT8_EPV;
-                            const int cig_offset = chin % VPU_INT8_EPV;
-
-                            int k_offset = C_in * VPU_INT8_ACC_PERIOD * K_h * K_w * cog
-                                         + C_in * VPU_INT8_ACC_PERIOD * K_w * kkrr
-                                         + C_in * VPU_INT8_ACC_PERIOD * kkcc
-                                         + VPU_INT8_EPV * VPU_INT8_ACC_PERIOD * cig
-                                         + VPU_INT8_EPV * (15 - cog_offset)
-                                         + cig_offset;
-
-                            int x_offset = C_in * width * (row+kr)
-                                         + C_in * (col+kc)
-                                         + chin;
-
-                            const int16_t kernel_val = K[k_offset];
-                            const int16_t input_val = X[x_offset];
-
-                            acc32 += kernel_val * input_val;
-
-                        }
-                        
-                        // acc32 = sat_s32(acc64);
-                    }
-                }
-
-                // printf("acc32 = %ld\n", acc32);
-
-                int16_t res16 = vlsat_single_s16(acc32, shr);
+                if(!conv2d_block_output_bounds(&Y_top, &Y_left, &Y_bottom, &Y_right,
+                                               kr, kc, Y_height, Y_width, K_h, K_w,
+                                               region_top, region_left, region_rows, region_cols))
+                    continue;
                 
-                // printf("res16 = %d\t(%d)\n", res16, shr);
-                res16 = vlmul_single_s16(res16, scale);
+                block_dex++;
+
+                unsigned pad_t = (kr  > P_h)?  0 : P_h - kr;
+                unsigned pad_b = (kr <= P_h)?  0 : P_h - (K_h-1-kr);
+                unsigned pad_l = (kc  > P_w)?  0 : P_w - kc; 
+                unsigned pad_r = (kc <= P_w)?  0 : P_w - (K_w-1-kc);
                 
-                // printf("res16 = %d\t(%d)\n", res16, scale);
-                const int8_t res8 = vdepth8_single_s16(res16);
+                unsigned out_rows = Y_bottom - Y_top;
+                unsigned out_cols = Y_right  - Y_left;
+
+                // printf("\t (t, l)\t(rows x cols) = (%u, %u)\t(%ux%u)\n", Y_top, Y_left, out_rows, out_cols);
+
+                unsigned X_top    = (Y_top  <= P_h)? 0 : Y_top  - P_h;
+                unsigned X_left   = (Y_left <= P_w)? 0 : Y_left - P_w;
                 
-                // printf("res8 = %d\n", res8);
-                Y[(row*width+col)*C_out + chout] = res8;
+                unsigned patch_rows = K_h - pad_t - pad_b;
+                // unsigned patch_cols = K_w - pad_l - pad_r;
+
+
+                block->init.start_offset.X = C_in * (X_left + X_top * X_width);
+                block->init.start_offset.Y = C_out * (Y_left + Y_top * Y_width);
+                //Always start Kernel from left edge of a row. The padmask will take care of it.
+                block->init.start_offset.K = VPU_INT8_ACC_PERIOD * VPU_INT8_EPV * pad_t;
+                block->init.padding_cells = (pad_t + pad_b) * K_w + (pad_l + pad_r) * patch_rows;
+
+                uint32_t padding_mask = (pad_r == 0)? 0xFFFFFFFF : ((((uint32_t)1)<<(32-(C_in*pad_r)))-1);
+                padding_mask = padding_mask ^ ((1<<(C_in*pad_l))-1);
+                block->patch.pad_mask = padding_mask;
+                block->patch.rows = patch_rows;
+                //One row is a single VLMACCR group
+                block->patch.row_incr.X = C_in * X_width;
+
+                //This needs to be enough to pull K to the beginning of the current row, then down a row
+                block->patch.row_incr.K = 0;
+
+                //This needs to be enough to push K to the end of the current channel group, plus the start offset
+                block->cout_group_incr.K = (pad_r + 8 * pad_b) * (C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K;
+                block->output.rows = out_rows;
+                block->output.cols = out_cols;
+                block->output.row_incr.X = C_in * (X_width - block->output.cols);
+                block->output.row_incr.Y = C_out * (Y_width - block->output.cols);
             }
         }
     }
+
 }
 
-
-
-
-
-#define C_in                            (4)
-#define K_W_DIM                         (8)
-void conv2d_shallowin_deepout_relu_c(
-    const int8_t* K, 
-    const data16_t* B,
-    const int8_t* X, 
+void conv2d_shallowin_deepout_block_c(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t K_h, 
-    const int32_t K_w,
-    const int32_t C_out,
-    const int16_t* shifts, 
+    const nn_conv2d_sido_params_t* params,
+    const nn_conv2d_sido_block_params_t* block,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* B,
+    const int16_t* shifts,
     const int16_t* scales)
 {
-    const int P_h = K_h / 2;
-    const int P_w = K_w / 2;
-    const int Q_h = P_h - height + 1;
-    const int Q_w = P_w - width  + 1;
 
-    const int K_row_bytes = K_W_DIM * C_in * VPU_INT8_ACC_PERIOD;
-    const int K_cout_group_bytes = K_row_bytes * K_h;
+    X = &X[block->init.start_offset.X];
+    Y = &Y[block->init.start_offset.Y];
+    K = &K[block->init.start_offset.K];
 
-    const int X_pxl_bytes = C_in;
-    const int X_row_bytes = width * X_pxl_bytes;
+    int32_t bias_adjustment = params->zero_point * block->init.padding_cells;
 
-    for(int ch_out_grp = 0; ch_out_grp < (C_out/(VPU_INT8_ACC_PERIOD)); ch_out_grp++){
+    
+    //Iterate once per row of the output region
+    for(unsigned output_rows = block->output.rows; output_rows > 0; output_rows--){
 
-        const int k_group_offset = ch_out_grp * K_cout_group_bytes;
+        //Iterate once per col of the output region
+        for(unsigned output_cols = block->output.cols; output_cols > 0; output_cols--){
 
-        for(int ch_out = 0; ch_out < VPU_INT8_ACC_PERIOD; ch_out++){
+            const int8_t* L = K;
+            const data16_t* D = B;
+            const int16_t* hifts = shifts;
+            const int16_t* cales = scales;
+            
+            for(unsigned cout_groups = params->C_out_groups; cout_groups > 0; cout_groups--){
 
-            const unsigned actual_chout = ch_out_grp * VPU_INT8_ACC_PERIOD + ch_out;
+                //V is the X-pointer for the patch. This points it at the top-left cell of the patch.
+                const int8_t* V = X;
+                
+                //Because this mirrors the assembly, we need to keep accumulators for each
+                // of the channels in an output channel
+                int32_t patch_acc[VPU_INT8_ACC_PERIOD] = {0};
 
-            const int16_t shr = shifts[actual_chout];
-            const int16_t scale = scales[actual_chout];
+                for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++){
+                    int32_t bias = D[k];
+                    bias = (bias << 16) | D[k + VPU_INT8_ACC_PERIOD];
+                    patch_acc[k] = bias + bias_adjustment;
+                }
+                
+                D = &D[2*VPU_INT8_ACC_PERIOD];
 
-            for(int row = 0; row < height; row++){
+                for(unsigned rows_in_patch = block->patch.rows; rows_in_patch > 0; rows_in_patch--){
 
-                const int pad_top = ((P_h-row) > 0)?  (P_h-row) : 0;
-                const int pad_bot = ((Q_h+row) > 0)?  (Q_h+row) : 0;
+                    if( block->patch.pad_mask == 0xFFFFFFFF ){
 
-                for(int col = 0; col < width; col++){
-
-                    const int pad_lef = ((P_w-col) > 0)?  (P_w-col) : 0;
-                    const int pad_rig = ((Q_w+col) > 0)?  (Q_w+col) : 0;
-
-                    const int B_offset   = 2 * C_out * (K_w * (P_h + pad_bot - pad_top) + (P_w + pad_rig - pad_lef));
-                    // printf("(%d, %d) -> (%d, %d, %d, %d)\n", row, col, pad_top, pad_bot, pad_lef, pad_rig);
-                    // printf("(%d, %d) -> %d\n", row, col, B_offset/(2*C_out));
-
-                    const data16_t* B_lo = &B[B_offset + 0];
-                    const data16_t* B_hi = &B[B_offset + C_out];
-                    const int32_t bias   = (((int32_t)B_hi[actual_chout])<<16) | B_lo[actual_chout];
-                    // printf("(%d, %d) -> %ld\n", row, col, bias);
-
-                    int32_t acc32 = bias;
-
-                    for(int kr = -P_h; kr <= P_h; kr++){
-                        
-                        if(row+kr < 0 || row+kr >= height)
-                            continue;
-
-                        int64_t acc64 = acc32;
-
-                        const int k_row_offset = k_group_offset + (kr + P_h) * K_row_bytes;
-                        const int x_row_offset = (row + kr) * X_row_bytes;
-
-                        for(int kc = -P_w; kc <= P_w; kc++){
-
-                            if(col+kc < 0 || col+kc >= width)
-                                continue;
-
-                            const int k_cout_offset = k_row_offset + ((VPU_INT8_ACC_PERIOD-1)-ch_out) * K_W_DIM * C_in;
-                            const int k_col_offset = k_cout_offset + (kc + P_w) * C_in;
-                            const int x_col_offset = x_row_offset + (col + kc) * X_pxl_bytes;
+                        //This loop represents one "VLMACCR group"
+                        for(int k = VPU_INT8_ACC_PERIOD - 1; k >= 0; k--){
                             
-                            for(unsigned ch_in = 0; ch_in < C_in; ch_in++){
-
-                                const int k_elm_offset = k_col_offset + ch_in;
-                                const int x_elm_offset = x_col_offset + ch_in;
-
-                                const int8_t K_elm = K[k_elm_offset];
-                                const int8_t X_elm = X[x_elm_offset];
-
-                                // printf("K[%d, %d, %d, %d] -> K[%d]: %d\n", actual_chout, (kr+P_h), (kc+P_w), ch_in, k_elm_offset, K_elm);
-                                
-                                acc64 += ((int32_t)K_elm) * X_elm;
+                            //This loop is a single VLMACCR
+                            for(int i = 0; i < VPU_INT8_EPV; i++){
+                                // printf("%d ", L[i]);
+                                patch_acc[k] += ((int32_t)L[i]) * V[i];
                             }
+
+                            //Move to the next output channel's coefficients for the same patch row
+                            L = &L[VPU_INT8_EPV];
                         }
                         
-                        acc32 = sat_s32(acc64);
-                    }
-            
-                    int16_t res16 = vlsat_single_s16(acc32, shr);
-                    res16 = vlmul_single_s16(res16, scale);
-                    int8_t res8 = vdepth8_single_s16(res16);
-                    Y[(row*width+col)*C_out + actual_chout] = res8;
+                        //Move to the start of the next patch row
+                        V = &V[block->patch.row_incr.X];
+                        L = &L[block->patch.row_incr.K];
 
-                    // return;
+                    } else {
+                        int8_t padded_vals[VPU_INT8_EPV];
+
+                        for(int i = 0; i < VPU_INT8_EPV; i++){
+                            unsigned tmp = ((block->patch.pad_mask >> i) & 0x1);
+                            padded_vals[i] = tmp? V[i] : 0;
+                        }   
+
+                        //This loop represents one "VLMACCR group"
+                        for(int k = VPU_INT8_ACC_PERIOD - 1; k >= 0; k--){
+                            
+                            //This loop is a single VLMACCR
+                            for(int i = 0; i < VPU_INT8_EPV; i++){
+                                patch_acc[k] += ((int32_t)L[i]) * padded_vals[i];
+                            }
+
+                            //Move to the next output channel's coefficients for the same patch row
+                            L = &L[VPU_INT8_EPV];
+                        }
+                        
+                        //Move to the start of the next patch row
+                        V = &V[block->patch.row_incr.X];
+                        L = &L[block->patch.row_incr.K];
+
+                    }
                 }
+
+                //Do the shifting and scaling
+                for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++){
+
+                    // printf("Bleh %ld: 0x%04X\n", k, patch_acc[k]);
+
+                    int16_t res16 = vlsat_single_s16(patch_acc[k], hifts[k]);
+
+                    res16 = vlmul_single_s16(res16, cales[k]);
+
+                    int8_t res8 = vdepth8_single_s16(res16);
+
+                    Y[k] = res8;
+                }
+                hifts = &hifts[VPU_INT8_ACC_PERIOD];
+                cales = &cales[VPU_INT8_ACC_PERIOD];
+
+                //Move Y pointer to the next set of output channels (or the next output pixel)
+                Y = &Y[VPU_INT8_ACC_PERIOD];
+
+                //Move K pointer to the start of the next output channel group
+                L = &L[block->cout_group_incr.K];
             }
+
+            //Move X pointer one pixel to the right
+            X = &X[params->chans_in];
+
         }
+
+        //Move X and Y pointers to the start of the following row
+        X = &X[block->output.row_incr.X];
+        Y = &Y[block->output.row_incr.Y];
+
     }
 }
-#undef K_W_DIM
-#undef C_in
+
 

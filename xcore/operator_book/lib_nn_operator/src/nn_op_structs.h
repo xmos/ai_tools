@@ -77,6 +77,75 @@ typedef struct {
 
 } nn_conv2d_dido_params_t;
 
+
+/**
+* 
+*/
+typedef struct {
+
+    struct {
+
+        struct {
+            int32_t X;
+            int32_t Y;
+            int32_t K;
+        } start_offset;
+
+        uint32_t padding_cells;
+
+    } init;
+
+    struct {
+        int32_t K;
+    } cout_group_incr;
+
+    struct {
+        unsigned rows;
+        unsigned cols;
+
+
+        //Bytes the pointer needs to be incremented by to move to handle moving to a new
+        //  output image row
+        struct {
+            int32_t X;
+            int32_t Y;
+        } row_incr;
+    } output;
+
+
+
+    struct {
+        uint32_t pad_mask;
+
+        unsigned rows;
+
+        struct {
+            int32_t X;
+            int32_t K;
+        } row_incr;
+
+
+    } patch;
+
+} nn_conv2d_sido_block_params_t;
+
+/**
+*
+*/
+typedef struct {
+
+    unsigned block_count;
+
+    unsigned chans_in;
+    unsigned chans_out;
+    unsigned C_in_groups;
+    unsigned C_out_groups;
+    int32_t zero_point;
+
+    nn_conv2d_sido_block_params_t* blocks;
+
+} nn_conv2d_sido_params_t;
+
 #ifdef __XC__
 }   //extern "C"
 #endif

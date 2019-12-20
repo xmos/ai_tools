@@ -5,52 +5,35 @@
 
 #include <stdint.h>
 
+#include "nn_op_structs.h"
+
 #ifdef __XC__
 extern "C" {
 #endif
 
 
 
-void nn_mat_vec_mul_s8_c(
-    const int8_t* W,
-    const int8_t* x,
-    const unsigned N_bands,
-    const unsigned N_chunks,
-    const int16_t* shr,
-    int8_t* y);
 
-
-
-
-void conv2d_deepin_deepout_relu_c(
-    const int8_t* K, 
-    const data16_t* B,
-    const int8_t* X, 
+void conv2d_deepin_deepout_block_c(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t K_h, 
-    const int32_t K_w,
-    const int32_t C_out, 
-    const int32_t C_in,
-    const int16_t* shifts, 
+    const nn_conv2d_dido_params_t* params,
+    const nn_conv2d_dido_block_params_t* block,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* B,
+    const int16_t* shifts,
     const int16_t* scales);
 
 
-
-void conv2d_shallowin_deepout_relu_c(
-    const int8_t* K, 
-    const data16_t* B,
-    const int8_t* X, 
+void conv2d_shallowin_deepout_block_c(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t K_h, 
-    const int32_t K_w,
-    const int32_t C_out,
-    const int16_t* shifts, 
+    const nn_conv2d_sido_params_t* params,
+    const nn_conv2d_sido_block_params_t* block,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* B,
+    const int16_t* shifts,
     const int16_t* scales);
-
 
 
 

@@ -3,7 +3,7 @@
 
 
 /*  
-void conv2d_deepin_deepout_relu_block_asm(
+void conv2d_deepin_deepout_block_asm(
     int8_t* Y,
     const nn_conv2d_dido_params_t* params,
     const nn_conv2d_dido_block_params_t* block,
@@ -15,9 +15,9 @@ void conv2d_deepin_deepout_relu_block_asm(
 */
 
 
-#define FUNCTION_NAME conv2d_deepin_deepout_relu_block_asm
+#define FUNCTION_NAME conv2d_deepin_deepout_block_asm
 
-#define NSTACKVECTORS   (1)
+#define NSTACKVECTORS   (2)
 #define NSTACKWORDS     (NSTACKVECTORS*8 + 30)
     
 .text
@@ -66,10 +66,9 @@ void conv2d_deepin_deepout_relu_block_asm(
 #define STACK_OUT_COLS_LEFT     (23)
 #define STACK_COUT_GRPS_LEFT    (24)
 
-//Because this is done with a VLMACC in 8-bit mode, only half a vector is
-//  required for each
-#define STACK_PADC_VEC          (NSTACKWORDS-4)
-#define STACK_ZEROP_VEC         (NSTACKWORDS-8)
+
+#define STACK_PADC_VEC          (NSTACKWORDS-8)
+#define STACK_ZEROP_VEC         (NSTACKWORDS-16)
 
 .align 4
 
@@ -104,15 +103,23 @@ FUNCTION_NAME:
     {   ldaw r11, sp[STACK_ZEROP_VEC]                   ;                                                   }
     {                                                   ;   ldw r4, params[5]                               }
     {   mov r5, r4                                      ;                                                   }
+    {   zip r5, r4, 4                                   ;                                                   }
+    {   mov r5, r4                                      ;                                                   }
     std r4, r5, r11[0]
     std r4, r5, r11[1]
+    std r4, r5, r11[2]
+    std r4, r5, r11[3]
 
     //block->padc
     {   ldaw r11, sp[STACK_PADC_VEC]                    ;                                                   }
     {                                                   ;   ldw r4, block[3]                                }
     {   mov r5, r4                                      ;                                                   }
+    {   zip r5, r4, 4                                   ;                                                   }
+    {   mov r5, r4                                      ;                                                   }
     std r4, r5, r11[0]
     std r4, r5, r11[1]
+    std r4, r5, r11[2]
+    std r4, r5, r11[3]
 
 // Other stuff that should be on the stack
 //  TODO: some of this could be expedited with ldd and std if the params are arranged nicely on the stack
@@ -180,18 +187,23 @@ FUNCTION_NAME:
             //Reset X to start of patch
             {   ldc r10, 32                                     ;   ldw X, sp[STACK_X_START]                        }
 
-            //initialize biases and set mode to 8-bit
+            //Set VPU mode to 16-bit
+            {   shl r11, r10, 3                                 ;                                                   }
+            {                                                   ;   vsetc r11                                       }
+
+            //initialize biases
             {                                                   ;   ldw r3, sp[STACK_B_NEXT]                        }
             {   add r11, r3, r10                                ;   vldd r3[0]                                      }
             {   add r3, r11, r10                                ;   vldr r11[0]                                     }
-            {   shl r11, r10, 4                                 ;   stw r3, sp[STACK_B_NEXT]                        }
-            {                                                   ;   vsetc r11                                       }
+            {                                                   ;   stw r3, sp[STACK_B_NEXT]                        }
 
             //VLMACC the padding count and zero-point vectors into the accumulators
-            {                                                   ;   ldaw r11, sp[STACK_PADC_VEC]                    }
-            {                                                   ;   vldc r11[0]                                     }
-            {                                                   ;   ldaw r11, sp[STACK_ZEROP_VEC]                   }
-            {                                                   ;   vlmacc r11[0]                                   }
+            {   ldaw r11, sp[STACK_PADC_VEC]                    ;                                                   }
+            {   ldaw r11, sp[STACK_ZEROP_VEC]                   ;   vldc r11[0]                                     }
+            {   shl r11, r10, 4                                 ;   vlmacc r11[0]                                   }
+
+            //Set VPU mode to 8-bit
+            {                                                   ;   vsetc r11                                       }
 
             //Keep patch_rows in a register until we're done with the patch
             #define patch_rows  r3

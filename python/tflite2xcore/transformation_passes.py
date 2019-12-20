@@ -210,6 +210,12 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
         )
         op.inputs.append(shift_scale_tensor)
 
+    def _match_types(self):
+        return (self._weights.type == TensorType.INT8
+                and self._input.type == TensorType.INT8
+                and self._output.type == TensorType.INT8
+                and self._biases.type == TensorType.INT32)
+
 
 # TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceQuantizedOperatorPass):
@@ -218,6 +224,7 @@ class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceQuantizedOperatorPa
             with self.using(op):
                 # TODO: add checks for int8 quantization
                 return (self._output in op.subgraph.outputs
+                        and self._match_types()
                         and self._weights.shape[0] < 16
                         and self._weights.shape[1] % 32 == 0)
 
@@ -282,13 +289,17 @@ class ReplaceQuantizedConv2DPass(ReplaceQuantizedOperatorPass):
     def _padding(self):
         return self._op.builtin_options['padding']
 
+    def match(self, op):
+        if op.operator_code.code == BuiltinOpCodes.CONV_2D:
+            with self.using(op):
+                return self._match_types()
+
 
 # TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinDeepoutConv2DPass(ReplaceQuantizedConv2DPass):
     def match(self, op):
-        if op.operator_code.code == BuiltinOpCodes.CONV_2D:
+        if super().match(op):
             with self.using(op):
-                # TODO: add checks for int8 quantization
                 return (self._dilation == (1, 1)
                         and self._strides == (1, 1)
                         and self._padding == 'SAME'

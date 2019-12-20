@@ -28,21 +28,43 @@ def matching_perceptron(request):
 
 
 @pytest_fixture_plus(params=[(16, 32), (15, 33)])
-def non_matching_perceptron(request):
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
+def non_matching_shape_perceptron(matching_perceptron, request):
+    subgraph = matching_perceptron.subgraphs[0]
 
     weight_shape = list(request.param)
-    input_shape = (1, weight_shape[1], 1, 1)
-    tin = subgraph.create_tensor('input', TensorType.INT8, shape=input_shape, isinput=True)
-    w = subgraph.create_tensor('weights', TensorType.INT8, shape=weight_shape,
-                               quantization={'scale': [0.17], 'zero_point': [0]})
-    b = subgraph.create_tensor('biases', TensorType.INT32, shape=weight_shape[:1])
-    tout = subgraph.create_tensor('output', tin.type, shape=[1, weight_shape[0]], isoutput=True)
-    subgraph.create_operator(OperatorCode(BuiltinOpCodes.FULLY_CONNECTED),
-                             inputs=[tin, w, b], outputs=[tout])
+    input_shape = [1, weight_shape[1], 1, 1]
+    subgraph.get_tensor('input').shape = input_shape
+    subgraph.get_tensor('weights').shape = weight_shape
+    subgraph.get_tensor('biases').shape = weight_shape[:1]
+    subgraph.get_tensor('output').shape = input_shape[:-1] + weight_shape[:1]
 
-    return model
+    return matching_perceptron
+
+
+    subgraph = matching_perceptron.subgraphs[0]
+
+    weight_shape = list(request.param)
+    input_shape = [1, weight_shape[1], 1, 1]
+    subgraph.get_tensor('input').shape = input_shape
+    subgraph.get_tensor('weights').shape = weight_shape
+    subgraph.get_tensor('biases').shape = weight_shape[:1]
+    subgraph.get_tensor('output').shape = input_shape[:-1] + weight_shape[:1]
+
+    return matching_perceptron
+
+
+@pytest_fixture_plus(params=[
+    ('input', TensorType.INT16),
+    ('input', TensorType.INT32),
+    ('weights', TensorType.INT16),
+    ('weights', TensorType.INT32),
+    ('biases', TensorType.INT8),
+    ('biases', TensorType.INT16),
+])
+def non_matching_type_perceptron(matching_perceptron, request):
+    subgraph = matching_perceptron.subgraphs[0]
+    subgraph.get_tensor(request.param[0]).type = request.param[1]
+    return matching_perceptron
 
 
 def mlp_builder(input_nodes, hidden_nodes, output_nodes):
@@ -82,7 +104,11 @@ def trf_pass():
     return ReplaceDeepinShallowoutFullyConnectedOutputPass()
 
 
-@pytest_parametrize_plus('model', [fixture_ref(non_matching_perceptron), fixture_ref(mlp)])
+@pytest_parametrize_plus('model', [
+    fixture_ref(non_matching_shape_perceptron),
+    fixture_ref(non_matching_type_perceptron),
+    fixture_ref(mlp)
+])
 def test_nonmatch(model, trf_pass):
     assert not trf_pass.match(model.subgraphs[0].operators[0])
 

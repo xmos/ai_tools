@@ -1,6 +1,7 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import numpy as np
+import tensorflow as tf
 
 from abc import abstractmethod
 from contextlib import contextmanager
@@ -126,7 +127,7 @@ class AddArgmaxOutputPass(OutputTensorMatchingPass):
 
 
 # TODO: write (at least regression) tests for this class
-class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
+class ReplaceQuantizedWeightBiasOperatorPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
         self._op = None
@@ -153,6 +154,27 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
     def _biases(self):
         return self._op.inputs[2]
 
+    def match(self, op):
+        with self.using(op):
+            return (self._weights.type == TensorType.INT8
+                    and self._input.type == TensorType.INT8
+                    and self._output.type == TensorType.INT8
+                    and self._biases.type == TensorType.INT32)
+
+    @property
+    @abstractmethod
+    def new_opcode(self):
+        return None
+
+    def mutate(self, op):
+        new_op = op.subgraph.create_operator(
+            self.new_opcode, inputs=op.inputs, outputs=op.outputs)
+        op.subgraph.remove_operator(op)
+        return new_op
+
+
+# TODO: write (at least regression) tests for this class
+class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedWeightBiasOperatorPass):
     @property
     def _multiplier(self):
         output_scale = self._output.quantization['scale'][0]
@@ -210,25 +232,43 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
         )
         op.inputs.append(shift_scale_tensor)
 
-    def _match_types(self):
-        return (self._weights.type == TensorType.INT8
-                and self._input.type == TensorType.INT8
-                and self._output.type == TensorType.INT8
-                and self._biases.type == TensorType.INT32)
+    @abstractmethod
+    def mutate_biases(self, op):
+        pass
+
+    @abstractmethod
+    def mutate_weights(self, op):
+        pass
+
+    @abstractmethod
+    def mutate_output(self, op):
+        pass
+
+    def mutate(self, op):
+        # NOTE: the order of these mutations is strict
+        op = super().mutate(op)
+        self.add_shift_scale(op)
+        self.mutate_biases(op)
+        self.mutate_weights(op)
+        self.mutate_output(op)
 
 
 # TODO: write (at least regression) tests for the mutator functions
-class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceQuantizedOperatorPass):
+class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceXCOREWeightBiasOperatorPass):
     def match(self, op):
         if op.operator_code.code == BuiltinOpCodes.FULLY_CONNECTED:
             with self.using(op):
                 # TODO: add checks for int8 quantization
                 return (self._output in op.subgraph.outputs
-                        and self._match_types()
+                        and super().match(op)
                         and self._weights.shape[0] < 16
                         and self._weights.shape[1] % 32 == 0)
 
         return False
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_fc_deepin_shallowout_final)
 
     def mutate_output(self, op):
         with self.using(op):
@@ -255,26 +295,9 @@ class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceQuantizedOperatorPa
             self._biases.name = f"{op.name}/biases"
             self._biases.quantization['details_type'] = 'CustomQuantization'
 
-    def replace_op(self, op):
-        new_op = op.subgraph.create_operator(
-            OperatorCode(XCOREOpCodes.XC_fc_deepin_shallowout_final),
-            inputs=op.inputs,
-            outputs=op.outputs
-        )
-        op.subgraph.remove_operator(op)
-        return new_op
-
-    def mutate(self, op):
-        # NOTE: the order of these mutations is strict
-        op = self.replace_op(op)
-        self.add_shift_scale(op)
-        self.mutate_biases(op)
-        self.mutate_weights(op)
-        self.mutate_output(op)
-
 
 # TODO: write (at least regression) tests for this class
-class ReplaceQuantizedConv2DPass(ReplaceQuantizedOperatorPass):
+class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options
@@ -291,12 +314,75 @@ class ReplaceQuantizedConv2DPass(ReplaceQuantizedOperatorPass):
 
     def match(self, op):
         if op.operator_code.code == BuiltinOpCodes.CONV_2D:
-            with self.using(op):
-                return self._match_types()
+            return super().match(op)
+
+    # TODO: it would be better to do this without tensorflow
+    @property
+    def _pad_bias(self):
+        _, K_h, K_w, C_in = self._weights.shape
+        pad_b = pad_t = K_h//2
+        pad_l = pad_r = K_w//2
+
+        # create a template with the desired padding of zero_point values
+        input_zero_point = int(self._input.quantization['zero_point'][0])
+        pad_template = tf.pad(
+            tf.zeros(shape=(1, K_h, K_w, C_in), dtype=tf.float32),
+            paddings=[(0, 0), (pad_b, pad_t), (pad_l, pad_r), (0, 0)],
+            constant_values=input_zero_point
+        )
+
+        # run a convolution with VALID padding
+        # this results in a tensor identical in size to the kernel
+        # NOTE: each element in this output captures the effect of the zero point
+        #       shift of the input tensor that is not accounted for when applying
+        #       zero padding in the kernel implementation
+        filters = tf.transpose(
+            tf.convert_to_tensor(self._weights.numpy, dtype=tf.float32),
+            perm=(1, 2, 3, 0)
+        )
+        pad_effects = tf.nn.conv2d(
+            input=pad_template, filters=filters, strides=1, padding='VALID')
+        pad_bias = tf.dtypes.cast(
+            pad_effects + self._unified_bias.reshape((1, 1, -1)),  # pylint: disable=too-many-function-args
+            dtype=tf.int32
+        )
+
+        return pad_bias.numpy()
+
+    def mutate_biases(self, op):
+        with self.using(op):
+            # calculate, reshape, and save a unified bias tensor with pad effects
+            pad_bias = self._pad_bias
+            tmp_shape = list(pad_bias.shape[1:])+[-1]
+            byte_list = list(pad_bias.flatten().tostring())
+            new_bias = np.uint8(byte_list).reshape(tmp_shape)
+            new_bias = np.stack(  # splitting lower and upper 16 bits of each 32 bit value
+                [new_bias[:, :, :, :2], new_bias[:, :, :, 2:]],
+                axis=2
+            )
+            self._biases.buffer.data = new_bias
+
+            # change bias tensor metadata and change quantization mode to alert users to unusual layout
+            self._biases.type = TensorType.INT16
+            self._biases.shape = list(new_bias.shape[:-1])
+            self._biases.name = f"{op.name}/biases_padded"
+            self._biases.quantization['details_type'] = 'CustomQuantization'
+
+    @abstractmethod
+    def mutate_weights(self, op):
+        def reorder_quant_params(arr, acc_period=16):
+            arr = np.array(arr)
+            arr = arr.reshape((arr.shape[0] // acc_period, acc_period))
+            return np.flip(arr, axis=1).flatten().tolist()
+
+        with self.using(op):
+            weight_quantization = self._weights.quantization
+            for key in ['scale', 'zero_point']:
+                weight_quantization[key] = reorder_quant_params(weight_quantization[key])
 
 
 # TODO: write (at least regression) tests for the mutator functions
-class ReplaceDeepinDeepoutConv2DPass(ReplaceQuantizedConv2DPass):
+class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
@@ -310,7 +396,32 @@ class ReplaceDeepinDeepoutConv2DPass(ReplaceQuantizedConv2DPass):
 
         return False
 
-    def mutate(self, op):
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_conv2d_deepin_deepout_relu)
+
+    def mutate_weights(self, op):
+        super().mutate_weights(op)
+        acc_period, ve = 16, 32  # parameters of the XS vector unit
+
+        # rearrange weight tensor
+        with self.using(op):
+            weights = self._weights.numpy
+            new_shape = (weights.shape[0] // acc_period, acc_period,
+                         weights.shape[1], weights.shape[2],
+                         weights.shape[3] // ve, ve)
+            weights = weights.reshape(new_shape)
+            weights = np.transpose(
+                np.flip(weights, axis=1),
+                axes=(0, 2, 3, 4, 1, 5)
+            )
+
+            # save weight tensor and update shape
+            self._weights.buffer.data = np.int8(weights)
+            self._weights.shape = list(weights.shape)
+
+    def mutate_output(self, op):
+        # this pass should not modify the output
         pass
 
 

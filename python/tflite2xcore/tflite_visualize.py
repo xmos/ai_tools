@@ -82,7 +82,7 @@ text {
   font-size: 12px;
 }
 </style>
-<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://d3js.org/d3.v5.min.js"></script>
 </head>
 """
 # TODO: reference d3.js script locally
@@ -358,131 +358,134 @@ def GenerateGraph(subgraph_idx, g, opcode_mapper):
 
 
 def GenerateTableHtml(items, keys_to_print, display_index=True):
-  """Given a list of object values and keys to print, make an HTML table.
+    """Given a list of object values and keys to print, make an HTML table.
 
-  Args:
-    items: Items to print an array of dicts.
-    keys_to_print: (key, display_fn). `key` is a key in the object. i.e.
-      items[0][key] should exist. display_fn is the mapping function on display.
-      i.e. the displayed html cell will have the string returned by
-      `mapping_fn(items[0][key])`.
-    display_index: add a column which is the index of each row in `items`.
-  Returns:
-    An html table.
-  """
-  indent = " " * 2
+    Args:
+        items: Items to print an array of dicts.
+        keys_to_print: (key, display_fn). `key` is a key in the object. i.e.
+        items[0][key] should exist. display_fn is the mapping function on display.
+        i.e. the displayed html cell will have the string returned by
+        `mapping_fn(items[0][key])`.
+        display_index: add a column which is the index of each row in `items`.
+    Returns:
+        An html table.
+    """
+    indent = " " * 2
 
-  html = ""
-  # Print the list of  items
-  html += "<table>"
-  html += "<tr>\n"
-  if display_index:
-    html += f"{indent}<th>index</th>\n"
-  for h, mapper in keys_to_print:
-    html += f"{indent}<th>{h}</th>\n"
-  html += "</tr>"
-
-  # print rows
-  for idx, tensor in enumerate(items):
+    # Print the list of  items
+    html = "<table>"
     html += "<tr>\n"
     if display_index:
-      html += f"{indent}<td>{idx}</td>\n"
-    # print tensor.keys()
+        html += f"{indent}<th>index</th>\n"
     for h, mapper in keys_to_print:
-      val = tensor[h] if h in tensor else None
-      val = val if mapper is None else mapper(val)
-      html += f"{indent}<td>{val}</td>\n"
-
+        html += f"{indent}<th>{h}</th>\n"
     html += "</tr>"
-  html += "</table>\n\n"
-  return html
+
+    # print rows
+    for idx, tensor in enumerate(items):
+        html += "<tr>\n"
+        if display_index:
+            html += f"{indent}<td>{idx}</td>\n"
+        # print tensor.keys()
+        for h, mapper in keys_to_print:
+            val = tensor[h] if h in tensor else None
+            val = val if mapper is None else mapper(val)
+            html += f"{indent}<td>{val}</td>\n"
+
+        html += "</tr>"
+    html += "</table>\n\n"
+    return html
 
 
 def CreateHtmlFile(tflite_input, html_output):
-  """Given a tflite model in `tflite_input` file, produce html description."""
+    """Given a tflite model in `tflite_input` file, produce html description."""
 
-  if not os.path.exists(tflite_input):
-    raise RuntimeError("Invalid filename %r" % tflite_input)
+    if not os.path.exists(tflite_input):
+        raise RuntimeError(f"Invalid filename {tflite_input}")
 
-  model = read_flatbuffer(tflite_input)
-  data = create_dict_from_model(model)
+    model = read_flatbuffer(tflite_input)
+    data = create_dict_from_model(model)
 
-  indent = " " * 2
+    indent = " " * 2
 
-  html = "<html>\n"
-  html += _CSS
-  html += "\n<body>\n"
-  html += "<h1>TensorFlow Lite Model</h1>\n"
+    html = "<html>\n"
+    html += _CSS
+    html += "\n<body>\n"
+    html += "<h1>TensorFlow Lite Model</h1>\n"
 
-  data["filename"] = tflite_input  # Avoid special case
-  toplevel_stuff = [("filename", None), ("version", None), ("description",
-                                                            None)]
+    data["filename"] = tflite_input  # Avoid special case
+    toplevel_stuff = [("filename", None),
+                      ("version", None),
+                      ("description", None)]
 
-  html += "<table>"
-  for key, mapping in toplevel_stuff:
-    if not mapping:
-      mapping = lambda x: x
-    html += "<tr>\n"
-    html += f"{indent}<th>{key}</th>\n"
-    html += f"{indent}<td>{mapping(data.get(key))}</td>\n"
-    html += "</tr>"
-  html += "</table>\n"
+    html += "<table>"
+    for key, mapping in toplevel_stuff:
+        html += "<tr>\n"
+        html += f"{indent}<th>{key}</th>\n"
+        key = key if mapping is None else mapping(data.get(key))
+        html += f"{indent}<td>{key}</td>\n"
+        html += "</tr>"
+    html += "</table>\n"
 
-  # Spec on what keys to display
-  buffer_keys_to_display = [("data", DataSizeMapper())]
-  operator_keys_to_display = [("builtin_code", None), ("custom_code", None),
-                              ("version", None)]
+    # Spec on what keys to display
+    buffer_keys_to_display = [("data", DataSizeMapper())]
+    operator_keys_to_display = [("builtin_code", None),
+                                ("custom_code", None),
+                                ("version", None)]
 
-  for subgraph_idx, g in enumerate(data["subgraphs"]):
-    # Subgraph local specs on what to display
-    html += "\n<div class='subgraph'>"
-    tensor_mapper = TensorTooltipMapper(g)
-    opcode_mapper = OpCodeMapper(data)
-    op_keys_to_display = [("inputs", tensor_mapper),
-                          ("outputs", tensor_mapper),
-                          ("opcode_index", opcode_mapper),
-                          ("builtin_options", None),
-                          ("custom_options", None)]
-    tensor_keys_to_display = [("name", None), ("type", None), ("shape", None),
-                              ("buffer", None), ("quantization", None)]
+    for subgraph_idx, g in enumerate(data["subgraphs"]):
+        # Subgraph local specs on what to display
+        html += "\n<div class='subgraph'>"
+        tensor_mapper = TensorTooltipMapper(g)
+        opcode_mapper = OpCodeMapper(data)
+        op_keys_to_display = [("inputs", tensor_mapper),
+                              ("outputs", tensor_mapper),
+                              ("opcode_index", opcode_mapper),
+                              ("builtin_options", None),
+                              ("custom_options", None)]
+        tensor_keys_to_display = [("name", None),
+                                  ("type", None),
+                                  ("shape", None),
+                                  ("buffer", None),
+                                  ("quantization", None)]
 
-    html += "<h2>Subgraph %d</h2>\n" % subgraph_idx
+        html += "<h2>Subgraph %d</h2>\n" % subgraph_idx
 
-    # Inputs and outputs.
-    html += "<h3>Inputs/Outputs</h3>\n"
-    html += GenerateTableHtml(
-        [{
-            "inputs": g["inputs"],
-            "outputs": g["outputs"]
-        }], [("inputs", tensor_mapper), ("outputs", tensor_mapper)],
-        display_index=False)
+        # Inputs and outputs.
+        html += "<h3>Inputs/Outputs</h3>\n"
+        html += GenerateTableHtml(
+            [{
+                "inputs": g["inputs"],
+                "outputs": g["outputs"]
+            }], [("inputs", tensor_mapper), ("outputs", tensor_mapper)],
+            display_index=False)
 
-    # Print the tensors.
-    html += "<h3>Tensors</h3>\n"
-    html += GenerateTableHtml(g["tensors"], tensor_keys_to_display)
+        # Print the tensors.
+        html += "<h3>Tensors</h3>\n"
+        html += GenerateTableHtml(g["tensors"], tensor_keys_to_display)
 
-    # Print the ops.
-    html += "<h3>Ops</h3>\n"
-    html += GenerateTableHtml(g["operators"], op_keys_to_display)
+        # Print the ops.
+        html += "<h3>Ops</h3>\n"
+        html += GenerateTableHtml(g["operators"], op_keys_to_display)
 
-    # Visual graph.
-    html += "<svg id='subgraph%d' width='1600' height='900'></svg>\n" % (
-        subgraph_idx,)
-    html += GenerateGraph(subgraph_idx, g, opcode_mapper)
-    html += "</div>\n\n"
+        # Visual graph.
+        html += "<svg id='subgraph%d' width='1600' height='900'></svg>\n" % (
+            subgraph_idx,)
+        html += GenerateGraph(subgraph_idx, g, opcode_mapper)
+        html += "</div>\n\n"
 
-  # Buffers have no data, but maybe in the future they will
-  html += "<h2>Buffers</h2>\n"
-  html += GenerateTableHtml(data["buffers"], buffer_keys_to_display)
+    # Buffers have no data, but maybe in the future they will
+    html += "<h2>Buffers</h2>\n"
+    html += GenerateTableHtml(data["buffers"], buffer_keys_to_display)
 
-  # Operator codes
-  html += "<h2>Operator Codes</h2>\n"
-  html += GenerateTableHtml(data["operator_codes"], operator_keys_to_display)
+    # Operator codes
+    html += "<h2>Operator Codes</h2>\n"
+    html += GenerateTableHtml(data["operator_codes"], operator_keys_to_display)
 
-  html += "</body>\n</html>\n"
+    html += "</body>\n</html>\n"
 
-  with open(html_output, "w") as f:
-    f.write(html)
+    with open(html_output, "w") as f:
+        f.write(html)
 
 
 def main(tflite_input, html_output, *, no_browser=True):
@@ -508,7 +511,7 @@ if __name__ == "__main__":
                         help='Output .html file. If not specified, a temporary file is created.')
     parser.add_argument('--no_browser', action='store_true', default=False,
                         help='Do not open browser after the .html is created.')
-    parser.add_argument('-v', '--verbose',  action='store_true', default=False,
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help='Verbose mode.')
     args = parser.parse_args()
     tflite_input, html_output = args.tflite_input, args.html_output

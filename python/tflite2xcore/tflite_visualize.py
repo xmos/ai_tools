@@ -13,12 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""This tool creates an html visualization of a TensorFlow Lite graph.
-
-Example usage:
-
-python visualize.py foo.tflite foo.html
-"""
 
 import json
 import os
@@ -29,7 +23,7 @@ import argparse
 import webbrowser
 import tempfile
 
-from serialization.flatbuffers_io import create_dict_from_model
+from tflite2xcore.serialization.flatbuffers_io import create_dict_from_model
 from tflite2xcore import read_flatbuffer
 
 # A CSS description for making the visualizer
@@ -194,54 +188,44 @@ buildGraph()
 
 
 class OpCodeMapper(object):
-  """Maps an opcode index to an op name."""
+    """Maps an opcode index to an op name."""
 
-  def __init__(self, data):
-    self.code_to_name = {}
-    for idx, d in enumerate(data["operator_codes"]):
-      builtin_code = d["builtin_code"]
-      if builtin_code == "CUSTOM":  # custom op
-        self.code_to_name[idx] = d["custom_code"]
-      else:  # proper builtin op
-        self.code_to_name[idx] = d["builtin_code"]
+    def __init__(self, data):
+        self.code_to_name = {}
+        for idx, d in enumerate(data["operator_codes"]):
+            if d["builtin_code"] == "CUSTOM":
+                self.code_to_name[idx] = d["custom_code"]
+            else:
+                self.code_to_name[idx] = d["builtin_code"]
 
-  def __call__(self, x):
-    if x not in self.code_to_name:
-      s = "<UNKNOWN>"
-    else:
-      s = self.code_to_name[x]
-    return "%s (%d)" % (s, x)
+    def __call__(self, x):
+        s = self.code_to_name[x] if x in self.code_to_name else "<UNKNOWN>"
+        return f"{s} ({x})"
 
 
 class DataSizeMapper(object):
-  """For buffers, report the number of bytes."""
+    """For buffers, report the number of bytes."""
 
-  def __call__(self, x):
-    if x is not None:
-      return "%d bytes" % len(x)
-    else:
-      return "--"
+    def __call__(self, x):
+        return "--" if x is None else f"{len(x):d} bytes"
 
 
 class TensorMapper(object):
-  """Maps a list of tensor indices to a tooltip hoverable indicator of more."""
+    """Maps a list of tensor indices to a tooltip hoverable indicator of more."""
 
-  def __init__(self, subgraph_data):
-    self.data = subgraph_data
+    def __init__(self, subgraph_data):
+        self.data = subgraph_data
 
-  def __call__(self, x):
-    html = ""
-    html += "<span class='tooltip'><span class='tooltipcontent'>"
-    for i in x:
-      tensor = self.data["tensors"][i]
-      html += str(i) + " "
-      html += tensor["name"] + " "
-      html += str(tensor["type"]) + " "
-      html += (repr(tensor["shape"]) if "shape" in tensor else "[]") + "<br>"
-    html += "</span>"
-    html += repr(x)
-    html += "</span>"
-    return html
+    def __call__(self, x):
+        html = "<span class='tooltip'><span class='tooltipcontent'>"
+        for i in x:
+            tensor = self.data["tensors"][i]
+            html += str(i) + " "
+            html += tensor["name"] + " "
+            html += str(tensor["type"]) + " "
+            html += (repr(tensor["shape"]) if "shape" in tensor else "[]") + "<br>"
+        html += f"</span>{repr(x)}</span>"
+        return html
 
 
 def GenerateGraph(subgraph_idx, g, opcode_mapper):

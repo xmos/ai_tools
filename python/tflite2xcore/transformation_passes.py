@@ -273,6 +273,7 @@ class RemoveUnusedBuffersPass(ModelTransformationPass):
         super().__init__(priority)
 
     def run(self, model):
-        model.buffers = list(set(
-            tensor.buffer for subgraph in model.subgraphs for tensor in subgraph.tensors
-        ))
+        model.buffers = list(
+            set(t.buffer for subgraph in model.subgraphs for t in subgraph.tensors)
+            | set(m.buffer for m in model.metadata)
+        )

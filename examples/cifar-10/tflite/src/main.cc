@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "tensorflow/lite/experimental/micro/kernels/xcore/xcore_ops_resolver.h"
-#include "tensorflow/lite/experimental/micro/micro_error_reporter.h"
-#include "tensorflow/lite/experimental/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
+#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
 
 #include "cifar10_model.h"

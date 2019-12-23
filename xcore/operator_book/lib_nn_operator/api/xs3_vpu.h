@@ -3,9 +3,6 @@
 #ifndef XS3_VPU_H_
 #define XS3_VPU_H_
 
-#ifdef __XS3A__
-
-
 #define XS3_VPU_VREG_WIDTH_BITS     (256)
 #define XS3_VPU_VREG_WIDTH_BYTES    (XS3_VPU_VREG_WIDTH_BITS  >> 3)
 #define XS3_VPU_VREG_WIDTH_WORDS    (XS3_VPU_VREG_WIDTH_BYTES >> 2)
@@ -59,9 +56,5 @@ enum {
     VPU_INT16_ACC_PERIOD_LOG2 = 4,
     VPU_INT32_ACC_PERIOD_LOG2 = 3,
 };
-
-
-
-#endif //__XS3A__
 
 #endif //XS3_VPU_H_

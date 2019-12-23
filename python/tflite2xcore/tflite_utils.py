@@ -25,8 +25,6 @@ __flatbuffer_xmos_dir = __norm_and_join(
     os.path.dirname(os.path.realpath(__file__)),
     '..', '..', 'third_party', 'flatbuffers')
 
-from serialization.flatbuffers_io import DEFAULT_SCHEMA
-
 #DEFAULT_SCHEMA = __norm_and_join(__flatbuffer_xmos_dir, 'schema.fbs')
 
 """if sys.platform.startswith("linux"):

@@ -89,7 +89,7 @@ def create_tensor_from_dict(subgraph, buffers, tensor_dict, is_input=False, is_o
     return subgraph.create_tensor(
         name=tensor_dict['name'],
         type_=TensorType[tensor_dict['type']],
-        shape=tensor_dict['shape'],
+        shape=tensor_dict.get('shape', []),
         buffer=buffers[tensor_dict['buffer']],
         quantization=(tensor_dict['quantization'] if 'quantization' in tensor_dict else None),
         isinput=is_input,

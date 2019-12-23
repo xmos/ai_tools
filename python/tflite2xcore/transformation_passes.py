@@ -191,7 +191,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedWeightBiasOperatorPass)
         zero_point_bias = np.sum(weights * input_zero_point,
                                  axis=tuple(j for j in range(1, len(weights.shape))))
         return np.int32(biases - zero_point_bias
-                        + np.int(np.round(output_zero_point / self._multiplier)))
+                        + np.int32(np.round(output_zero_point / self._multiplier)))
 
     @property
     def _shift_scale(self):

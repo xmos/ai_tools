@@ -26,6 +26,7 @@ def main(tflite_input_path, tflite_output_path, *,
     if is_classifier or remove_softmax:
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
+    pass_mgr.register_pass(passes.ReplaceDeepinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceDeepinShallowoutFullyConnectedOutputPass())
     pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 

@@ -142,15 +142,24 @@ function buildGraph() {
   node.append("rect")
       .attr("r", "5px")
       .attr("width", function(d) { return d.node_width; })
-      .attr("height", node_height)
+      .attr("height", function(d) { return d.node_height; })
       .attr("rx", function(d) { return d.edge_radius; })
       .attr("stroke", "#000000")
       .attr("fill", function(d) { return d.fill_color; })
-  node.append("text")
-      .text(function(d) { return d.name; })
+  let text = node.append("text")
+      .text("")
       .attr("x", 5)
-      .attr("y", 20)
-      .attr("fill", function(d) { return d.text_color; })
+      .attr("y", 1)
+      .attr("fill", function(d) { return d.text_color; });
+  text.selectAll("text")
+      .data(d => d.name.split("\\n"))
+      .enter()
+      .append("tspan")
+      .attr("class", "text")
+      .text(d => d)
+      .attr("x", 5)
+      .attr("dy", 15);
+
   // Setup force parameters and update position callback
 
   var node = svg.selectAll(".nodes")
@@ -187,143 +196,165 @@ buildGraph()
 """
 
 
-class OpCodeMapper(object):
-    """Maps an opcode index to an op name."""
+class OpCodeMapper():
+    """Maps an opcode index to a text representation."""
 
     def __init__(self, data):
-        self.code_to_name = {}
-        for idx, d in enumerate(data["operator_codes"]):
-            if d["builtin_code"] == "CUSTOM":
-                self.code_to_name[idx] = d["custom_code"]
-            else:
-                self.code_to_name[idx] = d["builtin_code"]
+        self.idx_to_name = [
+            d["custom_code"] if d["builtin_code"] == "CUSTOM" else d["builtin_code"]
+            for d in data["operator_codes"]
+        ]
 
     def __call__(self, x):
-        s = self.code_to_name[x] if x in self.code_to_name else "<UNKNOWN>"
-        return f"{s} ({x})"
+        s = self.idx_to_name[x] if x < len(self.idx_to_name) else "UNKNOWN"
+        return f"({x}) {s}"
 
 
-class DataSizeMapper(object):
+class DataSizeMapper():
     """For buffers, report the number of bytes."""
 
     def __call__(self, x):
         return "--" if x is None else f"{len(x):d} bytes"
 
 
-class TensorMapper(object):
+class TensorMapper():
+    """Maps a tensor index to a text representation."""
+
+    def __init__(self, subgraph, node_text=False):
+        self.tensors = subgraph["tensors"]
+        self.node_text = node_text
+
+    def __call__(self, idx):
+        tensor = self.tensors[idx]
+        if self.node_text:
+            return (f"{tensor['name']}"
+                    + "\n"
+                    + f"({idx:d}) <{tensor['type']}> {tensor['shape']}")
+        else:
+            return f"({idx:d}) {tensor['name']} &lt{tensor['type']}&gt {tensor['shape']} <br>"
+
+
+class TensorTooltipMapper():
     """Maps a list of tensor indices to a tooltip hoverable indicator of more."""
 
-    def __init__(self, subgraph_data):
-        self.data = subgraph_data
+    def __init__(self, subgraph):
+        self.tensor_mapper = TensorMapper(subgraph)
 
-    def __call__(self, x):
+    def __call__(self, idx_list):
         html = "<span class='tooltip'><span class='tooltipcontent'>"
-        for i in x:
-            tensor = self.data["tensors"][i]
-            html += str(i) + " "
-            html += tensor["name"] + " "
-            html += str(tensor["type"]) + " "
-            html += (repr(tensor["shape"]) if "shape" in tensor else "[]") + "<br>"
-        html += f"</span>{repr(x)}</span>"
+        for idx in idx_list:
+            html += self.tensor_mapper(idx)
+        html += f"</span>{idx_list}</span>"
         return html
 
 
 def GenerateGraph(subgraph_idx, g, opcode_mapper):
-  """Produces the HTML required to have a d3 visualization of the dag."""
+    """Produces the HTML required to have a d3 visualization of the dag."""
 
-  def TensorName(idx):
-    return "t%d" % idx
+    def TensorID(idx):
+        return f"t{idx:d}"
 
-  def OpName(idx):
-    return "o%d" % idx
+    def OperatorID(idx):
+        return f"o{idx:d}"
 
-  edges, nodes = [], []
-  tensor_names, op_names = [], []
-  tensor_colors, op_colors = [], []
-  first, second = {}, {}
-  pixel_mult = 200  # TODO(aselle): multiplier for initial placement
-  width_mult = 170  # TODO(aselle): multiplier for initial placement
+    def NodeWidth(node_text):
+        return int(max(len(line) * 12/16*10 + 5 for line in node_text.split("\n")))
 
-  for tensor_index, tensor in enumerate(g["tensors"]):
-    t_name = "(%d) %r %s" % (tensor_index, tensor["name"],
-                        (repr(tensor["shape"]) if "shape" in tensor else "[]"))
-    tensor_names.append((t_name, int(len(t_name) * 12/16*10 + 5)))
-    tensor_colors.append("#fffacd")  # default tensor color, should be only parameters
+    def NodeHeight(node_text):
+        return node_text.count("\n") * 15 + 25
 
-  for op in g["operators"]:
-    o_name = opcode_mapper(op["opcode_index"])
-    op_names.append((o_name, int(len(o_name) * 12/16*10 + 5)))
-    if o_name.startswith('XC_'):
-      op_colors.append("#00a000")
-    else:
-      op_colors.append("#000000")
+    edges, nodes = [], []
+    tensor_nodes_info, op_nodes_info = [], []
+    first, second = {}, {}
+    pixel_mult = 200  # TODO(aselle): multiplier for initial placement
+    width_mult = 170  # TODO(aselle): multiplier for initial placement
 
-    # coloring intermediate tensors
-    for tensor_index in op['outputs']:
-      tensor_colors[tensor_index] = "#dddddd"
+    tensor_mapper = TensorMapper(g, node_text=True)
 
-  #coloring input/output tensors
-  for tensor_index in range(len(g['tensors'])):
-    if tensor_index in g['inputs']:
-      tensor_colors[tensor_index] = "#ccccff"
-    elif tensor_index in g['outputs']:
-      tensor_colors[tensor_index] = "#ffcccc"
+    for tensor_index, tensor in enumerate(g["tensors"]):
+        t_node_text = f"({tensor_index:d}) {tensor['name']} {tensor['shape']}"
+        t_node_text = tensor_mapper(tensor_index)
+        tensor_nodes_info.append({
+            'text': t_node_text,
+            'width': NodeWidth(t_node_text),
+            'height': NodeHeight(t_node_text),
+            'color': "#fffacd"  # default tensor color, should be only for parameters
+        })
 
-  for op_index, op in enumerate(g["operators"]):
+    for op in g["operators"]:
+        o_node_text = opcode_mapper(op["opcode_index"])
+        op_nodes_info.append({
+            'text': o_node_text,
+            'width': NodeWidth(o_node_text),
+            'height': NodeHeight(o_node_text),
+            'color': "#00a000" if ' XC_' in o_node_text else "#000000"
+        })
 
-    x = width_mult
-    for tensor_input_position, tensor_index in enumerate(op["inputs"]):
-      if tensor_index not in first:
-        first[tensor_index] = (
-            (op_index - 0.5 + 1) * pixel_mult, x)
-      x += tensor_names[tensor_index][1] + 10  # offset
-      edges.append({
-          "source": TensorName(tensor_index),
-          "target": OpName(op_index), 
-      })
+        # coloring intermediate tensors
+        for tensor_index in op['outputs']:
+            tensor_nodes_info[tensor_index]['color'] = "#dddddd"
 
-    x = width_mult
-    for tensor_output_position, tensor_index in enumerate(op["outputs"]):
-      if tensor_index not in second:
-        second[tensor_index] = (
-            (op_index + 0.5 + 1) * pixel_mult, x)
-      x += tensor_names[tensor_index][1] + 10  # offset
-      edges.append({
-          "target": TensorName(tensor_index),
-          "source": OpName(op_index)
-      })
+    # coloring input/output tensors
+    for tensor_index in range(len(g['tensors'])):
+        if tensor_index in g['inputs']:
+            tensor_nodes_info[tensor_index]['color'] = "#ccccff"
+        elif tensor_index in g['outputs']:
+            tensor_nodes_info[tensor_index]['color'] = "#ffcccc"
 
-    nodes.append({
-        "id": OpName(op_index),
-        "name": op_names[op_index][0],
-        "text_color": "#eeeeee",
-        "fill_color": op_colors[op_index],
-        "edge_radius": 10,
-        "x": pixel_mult,
-        "y": (op_index + 1) * pixel_mult,
-        "node_width": op_names[op_index][1]
-    })
+    for op_index, op in enumerate(g["operators"]):
+        x = width_mult
+        for tensor_index in op["inputs"]:
+            if tensor_index not in first:
+                first[tensor_index] = ((op_index - 0.5 + 1) * pixel_mult, x)
+            x += tensor_nodes_info[tensor_index]['width'] + 10  # offset
+            edges.append({
+                "source": TensorID(tensor_index),
+                "target": OperatorID(op_index),
+            })
 
-  for tensor_index, tensor in enumerate(g["tensors"]):
-    initial_y = (
-        first[tensor_index] if tensor_index in first
-        else second[tensor_index] if tensor_index in second
-        else (0, 0))
+        x = width_mult
+        for tensor_index in op["outputs"]:
+            if tensor_index not in second:
+                second[tensor_index] = ((op_index + 0.5 + 1) * pixel_mult, x)
+            x += tensor_nodes_info[tensor_index]['width'] + 10  # offset
+            edges.append({
+                "target": TensorID(tensor_index),
+                "source": OperatorID(op_index)
+            })
 
-    nodes.append({
-        "id": TensorName(tensor_index),
-        "name": tensor_names[tensor_index][0],
-        "text_color": "#000000",
-        "fill_color": tensor_colors[tensor_index],
-        "edge_radius": 1,
-        "x": initial_y[1],
-        "y": initial_y[0],
-        "node_width": tensor_names[tensor_index][1]
-    })
+        nodes.append({
+            "id": OperatorID(op_index),
+            "name": op_nodes_info[op_index]['text'],
+            "text_color": "#eeeeee",
+            "fill_color": op_nodes_info[op_index]['color'],
+            "edge_radius": 10,
+            "x": pixel_mult,
+            "y": (op_index + 1) * pixel_mult,
+            "node_width": op_nodes_info[op_index]['width'],
+            "node_height": op_nodes_info[op_index]['height']
+        })
 
-  graph_str = json.dumps({"nodes": nodes, "edges": edges}, indent=2)
-  html = _D3_HTML_TEMPLATE % (graph_str, subgraph_idx)
-  return html
+    for tensor_index, tensor in enumerate(g["tensors"]):
+        initial_y = (
+            first[tensor_index] if tensor_index in first
+            else second[tensor_index] if tensor_index in second
+            else (0, 0))
+
+        nodes.append({
+            "id": TensorID(tensor_index),
+            "name": tensor_nodes_info[tensor_index]['text'],
+            "text_color": "#000000",
+            "fill_color": tensor_nodes_info[tensor_index]['color'],
+            "edge_radius": 1,
+            "x": initial_y[1],
+            "y": initial_y[0],
+            "node_width": tensor_nodes_info[tensor_index]['width'],
+            "node_height": tensor_nodes_info[tensor_index]['height']
+        })
+
+    graph_str = json.dumps({"nodes": nodes, "edges": edges}, indent=2)
+    html = _D3_HTML_TEMPLATE % (graph_str, subgraph_idx)
+    return html
 
 
 def GenerateTableHtml(items, keys_to_print, display_index=True):
@@ -405,7 +436,7 @@ def CreateHtmlFile(tflite_input, html_output):
   for subgraph_idx, g in enumerate(data["subgraphs"]):
     # Subgraph local specs on what to display
     html += "\n<div class='subgraph'>"
-    tensor_mapper = TensorMapper(g)
+    tensor_mapper = TensorTooltipMapper(g)
     opcode_mapper = OpCodeMapper(data)
     op_keys_to_display = [("inputs", tensor_mapper),
                           ("outputs", tensor_mapper),
@@ -455,34 +486,34 @@ def CreateHtmlFile(tflite_input, html_output):
 
 
 def main(tflite_input, html_output, *, no_browser=True):
-  if html_output:
-    html_path = html_output
-  else:
-    html_file = tempfile.NamedTemporaryFile(delete=False)
-    html_path = html_file.name
+    if html_output:  # TODO: do this with a context manager
+        html_path = html_output
+    else:
+        html_file = tempfile.NamedTemporaryFile(delete=False)
+        html_path = html_file.name
 
-  CreateHtmlFile(str(tflite_input), str(html_path))
+    CreateHtmlFile(str(tflite_input), str(html_path))
 
-  if not no_browser:
-    webbrowser.open_new_tab("file://" + os.path.realpath(html_path))
+    if not no_browser:
+        webbrowser.open_new_tab("file://" + os.path.realpath(html_path))
 
-  if not html_output:
-    html_file.close()
+    if not html_output:
+        html_file.close()
 
 
 if __name__ == "__main__":
-  parser = argparse.ArgumentParser()
-  parser.add_argument('tflite_input', help='Input .tflite file.')
-  parser.add_argument('-o', '--html_output', required=False, default=None,
-                      help='Output .html file. If not specified, a temporary file is created.')
-  parser.add_argument('--no_browser',  action='store_true', default=False,
-                      help='Do not open browser after the .html is created.')
-  parser.add_argument('-v', '--verbose',  action='store_true', default=False,
-                      help='Verbose mode.')
-  args = parser.parse_args()
-  tflite_input, html_output = args.tflite_input, args.html_output
+    parser = argparse.ArgumentParser()
+    parser.add_argument('tflite_input', help='Input .tflite file.')
+    parser.add_argument('-o', '--html_output', required=False, default=None,
+                        help='Output .html file. If not specified, a temporary file is created.')
+    parser.add_argument('--no_browser', action='store_true', default=False,
+                        help='Do not open browser after the .html is created.')
+    parser.add_argument('-v', '--verbose',  action='store_true', default=False,
+                        help='Verbose mode.')
+    args = parser.parse_args()
+    tflite_input, html_output = args.tflite_input, args.html_output
 
-  if args.verbose:
+    if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
-  
-  main(tflite_input, html_output, no_browser=args.no_browser)
+
+    main(tflite_input, html_output, no_browser=args.no_browser)

@@ -41,18 +41,6 @@ def non_matching_shape_perceptron(matching_perceptron, request):
     return matching_perceptron
 
 
-    subgraph = matching_perceptron.subgraphs[0]
-
-    weight_shape = list(request.param)
-    input_shape = [1, weight_shape[1], 1, 1]
-    subgraph.get_tensor('input').shape = input_shape
-    subgraph.get_tensor('weights').shape = weight_shape
-    subgraph.get_tensor('biases').shape = weight_shape[:1]
-    subgraph.get_tensor('output').shape = input_shape[:-1] + weight_shape[:1]
-
-    return matching_perceptron
-
-
 @pytest_fixture_plus(params=[
     ('input', TensorType.INT16),
     ('input', TensorType.INT32),

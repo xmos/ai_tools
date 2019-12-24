@@ -245,17 +245,13 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedWeightBiasOperatorPass)
     def mutate_weights(self, op):
         pass
 
-    @abstractmethod
-    def mutate_output(self, op):
-        pass
-
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
         op = super().mutate(op)
         self.add_shift_scale(op)
         self.mutate_biases(op)
         self.mutate_weights(op)
-        self.mutate_output(op)
+        return op
 
 
 # TODO: write (at least regression) tests for the mutator functions
@@ -277,6 +273,8 @@ class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceXCOREWeightBiasOper
         return OperatorCode(XCOREOpCodes.XC_fc_deepin_shallowout_final)
 
     def mutate_output(self, op):
+        # NOTE: when trying to generalize this pass to non-output operators,
+        #       keep in mind that this mutation is what can affect other operators
         with self.using(op):
             self._output.type = TensorType.INT16
             self._output.name = f"{op.name}/output"
@@ -300,6 +298,11 @@ class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceXCOREWeightBiasOper
             # rename bias tensor and change quantization mode to alert users to unusual layout
             self._biases.name = f"{op.name}/biases"
             self._biases.quantization['details_type'] = 'CustomQuantization'
+
+    def mutate(self, op):
+        # NOTE: the order of these mutations is strict
+        op = super().mutate(op)
+        self.mutate_output(op)
 
 
 # TODO: write (at least regression) tests for this class
@@ -394,10 +397,6 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
             for key in ['scale', 'zero_point']:
                 weight_quantization[key] = reorder_quant_params(weight_quantization[key])
 
-    def mutate_output(self, op):
-        # this pass should not modify the output
-        pass
-
 
 # TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
@@ -436,8 +435,55 @@ class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
             self._weights.shape = list(weights.shape)
 
 
+# TODO: write tests (of subclasses?) to test input operator matching
+class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return self._input in op.subgraph.inputs
+
+        return False
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_conv2d_shallowin_deepout_relu)
+
+    def mutate_input(self, op):
+        # NOTE: when trying to generalize this pass to non-input operators,
+        #       keep in mind that this mutation is what can affect other operators
+        with self.using(op):
+            self._input.name = f"{op.name}/input"
+            self._input.shape[3] = 4  # new, zero-padded shape
+
+    def mutate_weights(self, op):
+        # rearrange and zero pad weight tensor
+        with self.using(op):
+            weights = self._weights.numpy
+            weights = np.pad(
+                weights,
+                pad_width=[(0, 0),
+                           (0, 0),
+                           (0, 8 - weights.shape[2]),
+                           (0, 4 - weights.shape[3])]
+            )
+            acc_period = 16
+            new_shape = (weights.shape[0] // acc_period, acc_period, weights.shape[1], 8, 4)
+            weights = np.int8(weights.reshape(new_shape))
+            weights = np.transpose(np.flip(weights, axis=1), axes=(0, 2, 1, 3, 4))
+
+            self._weights.shape = weights.shapes
+            self._weights.buffer.data = weights
+
+    def mutate(self, op):
+        # NOTE: the order of these mutations is strict
+        op = super().mutate(op)
+        self.mutate_input(op)
+        # TODO: add unpadded shape as custom option of operator
+        return op
+
+
 # TODO: write (at least regression) tests for the mutator functions
-class ReplaceShallowinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
+class ReplaceShallowinDeepoutConv2DPass(ReplaceDeepoutConv2DInputPass):
     def _match_opcode(self, op):
         return op.operator_code.code == BuiltinOpCodes.CONV_2D
 
@@ -449,15 +495,8 @@ class ReplaceShallowinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
 
         return False
 
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_conv2d_shallowin_deepout_relu)
 
-    def mutate_weights(self, op):
-        raise NotImplementedError()
-
-
-class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DPass):
+class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
     def _match_opcode(self, op):
         return op.operator_code.code == BuiltinOpCodes.DEPTHWISE_CONV_2D
 
@@ -469,12 +508,21 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DPass):
 
         return False
 
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_conv2d_shallowin_deepout_relu)
-
-    def mutate_weights(self, op):
-        raise NotImplementedError()
+    def mutate(self, op):
+        # NOTE: the order of these mutations is strict
+        with self.using(op):
+            # NOTE: weight tensor channel ordering is:
+            # kOHWI, // TFLite conv weights
+            # kHWIO, // TensorFlow conv weights
+            # k1HWO, // TFLite DepthwiseConv weights
+            # kHWIM, // TensorFlow DepthwiseConv weights
+            # Therefore, this permutation results in kOHW1 which is the same as
+            #    TFLite conv weight order for a single input channel
+            # NOTE: this happens before the standard weight mutation on purpose
+            new_weights = np.transpose(self._weights.numpy, axes=(3, 1, 2, 0))
+            self._weights.shape = new_weights.shape
+            self._weights.buffer.data = new_weights
+        return super().mutate(op)
 
 
 class RemoveUnusedBuffersPass(ModelTransformationPass):

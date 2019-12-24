@@ -154,20 +154,22 @@ class ReplaceQuantizedWeightBiasOperatorPass(OperatorMatchingPass):
     def _biases(self):
         return self._op.inputs[2]
 
+    @abstractmethod
+    def _match_opcode(self, op):
+        raise NotImplementedError()
+
     def match(self, op):
-        with self.using(op):
-            try:
+        if self._match_opcode(op):
+            with self.using(op):
                 return (self._weights.type == TensorType.INT8
                         and self._input.type == TensorType.INT8
                         and self._output.type == TensorType.INT8
                         and self._biases.type == TensorType.INT32)
-            except IndexError:  # thrown if the op doesn't have the right tensors
-                return False
 
     @property
     @abstractmethod
     def new_opcode(self):
-        return None
+        raise NotImplementedError()
 
     def mutate(self, op):
         new_op = op.subgraph.create_operator(
@@ -258,12 +260,13 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedWeightBiasOperatorPass)
 
 # TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceXCOREWeightBiasOperatorPass):
+    def _match_opcode(self, op):
+        return op.operator_code.code == BuiltinOpCodes.FULLY_CONNECTED
+
     def match(self, op):
-        if op.operator_code.code == BuiltinOpCodes.FULLY_CONNECTED:
+        if super().match(op):
             with self.using(op):
-                # TODO: add checks for int8 quantization
                 return (self._output in op.subgraph.outputs
-                        and super().match(op)
                         and self._weights.shape[0] < 16
                         and self._weights.shape[1] % 32 == 0)
 
@@ -391,14 +394,20 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
             for key in ['scale', 'zero_point']:
                 weight_quantization[key] = reorder_quant_params(weight_quantization[key])
 
+    def mutate_output(self, op):
+        # this pass should not modify the output
+        pass
+
 
 # TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
+    def _match_opcode(self, op):
+        return op.operator_code.code == BuiltinOpCodes.CONV_2D
+
     def match(self, op):
-        if op.operator_code.code == BuiltinOpCodes.CONV_2D:
+        if super().match(op):
             with self.using(op):
-                return (super().match(op)
-                        and self._weights.shape[3] % 32 == 0)  # deepin
+                return self._weights.shape[3] % 32 == 0  # deepin
 
         return False
 
@@ -426,40 +435,43 @@ class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
             self._weights.buffer.data = np.int8(weights)
             self._weights.shape = list(weights.shape)
 
-    def mutate_output(self, op):
-        # this pass should not modify the output
-        pass
-
 
 # TODO: write (at least regression) tests for the mutator functions
 class ReplaceShallowinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
-    def _match_conv2d(self, op):
-        if op.operator_code.code == BuiltinOpCodes.CONV_2D:
-            with self.using(op):
-                return (super().match(op)
-                        and self._weights.shape[3] <= 4  # shallowin
-                        and self._weights.shape[2] <= 8)  # max kernel width
-
-        return False
-
-    def _match_depthwise(self, op):
-        if op.operator_code.code == BuiltinOpCodes.DEPTHWISE_CONV_2D:
-            with self.using(op):
-                return (super().match(op)
-                        and self._weights.shape[3] == 1  # depthwise only matched with single input channel
-                        and self._weights.shape[2] <= 8)  # max kernel width
-
-        return False
+    def _match_opcode(self, op):
+        return op.operator_code.code == BuiltinOpCodes.CONV_2D
 
     def match(self, op):
-        return self._match_conv2d(op) or self._match_depthwise(op)
+        if super().match(op):
+            with self.using(op):
+                return (self._weights.shape[3] <= 4  # shallowin
+                        and self._weights.shape[2] <= 8)  # max kernel width
+
+        return False
 
     @property
     def new_opcode(self):
         return OperatorCode(XCOREOpCodes.XC_conv2d_shallowin_deepout_relu)
 
-    def mutate_output(self, op):
+    def mutate_weights(self, op):
         raise NotImplementedError()
+
+
+class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DPass):
+    def _match_opcode(self, op):
+        return op.operator_code.code == BuiltinOpCodes.DEPTHWISE_CONV_2D
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (self._weights.shape[3] == 1  # depthwise only matched with single input channel
+                        and self._weights.shape[2] <= 8)  # max kernel width
+
+        return False
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_conv2d_shallowin_deepout_relu)
 
     def mutate_weights(self, op):
         raise NotImplementedError()

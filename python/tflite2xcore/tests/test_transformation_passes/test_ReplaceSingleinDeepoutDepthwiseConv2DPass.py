@@ -5,7 +5,7 @@ import pytest
 from pytest_cases import pytest_fixture_plus, pytest_parametrize_plus, fixture_ref
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
-from tflite2xcore.transformation_passes import ReplaceShallowinDeepoutConv2DPass
+from tflite2xcore.transformation_passes import ReplaceSingleinDeepoutDepthwiseConv2DPass
 from .test_ReplaceDeepinShallowoutFullyConnectedOutputPass import (
     matching_perceptron,
     non_matching_shape_perceptron,
@@ -15,7 +15,7 @@ from .test_ReplaceDeepinShallowoutFullyConnectedOutputPass import (
 
 
 @pytest_fixture_plus(params=[
-    (16, 1, 1, 1), (16, 3, 3, 2), (32, 5, 5, 3), (32, 3, 7, 4)
+    (16, 1, 1, 1), (32, 5, 5, 1), (16, 3, 7, 1), (32, 5, 3, 1)
 ])
 def matching(request):
     model = XCOREModel()
@@ -29,7 +29,7 @@ def matching(request):
     tout = subgraph.create_tensor(
         'output', tin.type, shape=input_shape[:-1] + weight_shape[:1], isoutput=True)
 
-    op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.CONV_2D),
+    op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.DEPTHWISE_CONV_2D),
                                   inputs=[tin, w, b], outputs=[tout])
     op.builtin_options = {'padding': 'SAME',
                           'stride_w': 1, 'stride_h': 1,
@@ -52,7 +52,7 @@ def non_matching_options(matching, request):
 
 
 @pytest_fixture_plus(params=[
-    (8, 1, 1, 4), (16, 3, 3, 32), (32, 5, 6, 1), (16, 4, 7, 3), (16, 3, 9, 3)
+    (8, 1, 1, 1), (16, 3, 3, 4), (32, 5, 6, 1), (16, 4, 7, 3), (16, 3, 9, 1)
 ])
 def non_matching_shape(matching, request):
     subgraph = matching.subgraphs[0]
@@ -83,7 +83,7 @@ def non_matching_type(matching, request):
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceShallowinDeepoutConv2DPass()
+    return ReplaceSingleinDeepoutDepthwiseConv2DPass()
 
 
 @pytest_parametrize_plus('model', [

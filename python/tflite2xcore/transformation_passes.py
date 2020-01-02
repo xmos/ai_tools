@@ -471,14 +471,16 @@ class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
             weights = np.int8(weights.reshape(new_shape))
             weights = np.transpose(np.flip(weights, axis=1), axes=(0, 2, 1, 3, 4))
 
-            self._weights.shape = weights.shapes
+            self._weights.shape = weights.shape
             self._weights.buffer.data = weights
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
+        with self.using(op):
+            unpadded_shape = self._weights.shape
         op = super().mutate(op)
         self.mutate_input(op)
-        # TODO: add unpadded shape as custom option of operator
+        op.custom_options = {"unpadded_shape": unpadded_shape}
         return op
 
 

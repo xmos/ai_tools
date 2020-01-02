@@ -27,6 +27,8 @@ def main(tflite_input_path, tflite_output_path, *,
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
     pass_mgr.register_pass(passes.ReplaceDeepinDeepoutConv2DPass())
+    pass_mgr.register_pass(passes.ReplaceShallowinDeepoutConv2DPass())
+    pass_mgr.register_pass(passes.ReplaceSingleinDeepoutDepthwiseConv2DPass())
     pass_mgr.register_pass(passes.ReplaceDeepinShallowoutFullyConnectedOutputPass())
     pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 

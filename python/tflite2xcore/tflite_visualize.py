@@ -23,7 +23,7 @@ import argparse
 import webbrowser
 import tempfile
 
-from tflite2xcore.serialization.flatbuffers_io import create_dict_from_model
+from tflite2xcore.serialization.flatbuffers_io import create_dict_from_model, FlexbufferParser
 from tflite2xcore import read_flatbuffer
 
 # A CSS description for making the visualizer
@@ -248,6 +248,13 @@ class TensorTooltipMapper():
         return html
 
 
+class CustomOptionsMapper():
+    """Maps a list of bytes representing a flexbuffer to a dictionary."""
+
+    def __call__(self, x):
+        return json.loads(FlexbufferParser().parse(bytes(x)))
+
+
 def GenerateGraph(subgraph_idx, g, opcode_mapper):
     """Produces the HTML required to have a d3 visualization of the dag."""
 
@@ -438,11 +445,12 @@ def CreateHtmlFile(tflite_input, html_output):
         html += "\n<div class='subgraph'>"
         tensor_mapper = TensorTooltipMapper(g)
         opcode_mapper = OpCodeMapper(data)
+        custom_options_mapper = CustomOptionsMapper()
         op_keys_to_display = [("inputs", tensor_mapper),
                               ("outputs", tensor_mapper),
                               ("opcode_index", opcode_mapper),
                               ("builtin_options", None),
-                              ("custom_options", None)]
+                              ("custom_options", custom_options_mapper)]
         tensor_keys_to_display = [("name", None),
                                   ("type", None),
                                   ("shape", None),

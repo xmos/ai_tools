@@ -75,7 +75,22 @@ class Buffer():
         # Use XCOREModel.create_buffer instead.
 
         self.model = model  # parent
-        self.data = data or []
+        self.data = data
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data):
+        if data is None:
+            self._data = []
+        elif isinstance(data, list):
+            self._data = data
+        elif isinstance(data, np.ndarray):
+            self._data = list(data.flatten().tostring())
+        else:
+            raise TypeError(f"data must be list or numpy array")
 
     def __str__(self):
         if self.data:
@@ -93,14 +108,16 @@ class Buffer():
 
 
 class Operator():
-    def __init__(self, subgraph, operator_code, 
-                 inputs=None, outputs=None, builtin_options=None, builtin_options_type=None, custom_options=None):
+    def __init__(self, subgraph, operator_code,
+                 name=None, inputs=None, outputs=None,
+                 builtin_options=None, builtin_options_type=None, custom_options=None):
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
         assert isinstance(operator_code, OperatorCode)
 
         self.subgraph = subgraph  # parent
         self.operator_code = operator_code
+        self.name = name
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.builtin_options = builtin_options
@@ -137,10 +154,10 @@ class Tensor():
         self.name = name
         assert isinstance(type_, TensorType)
         self.type = type_
-        self.shape = shape
+        self.shape = list(shape)
 
         if buffer:
-            isinstance(buffer, Buffer)
+            assert isinstance(buffer, Buffer)
             assert buffer in self.model.buffers
             self.buffer = buffer
         else:
@@ -182,8 +199,10 @@ class Tensor():
 
     @property
     def numpy(self):
-        arr = np.array(self.buffer.unpack(TensorType.to_stdint_type(self.type)),
-                       dtype=TensorType.to_numpy_type(self.type))
+        arr = np.array(
+            self.buffer.unpack(TensorType.to_stdint_type(self.type)),
+            dtype=TensorType.to_numpy_type(self.type)
+        )
         return arr.reshape(self.shape)
 
 
@@ -201,18 +220,7 @@ class Subgraph():
     @property
     def intermediates(self):
         # intermediates are any tensors that are not an input or an output
-        input_output_tensors = set([])  # lookup for input and output tensor indices
-        for input_ in self.inputs:
-            input_output_tensors.add(input_.name)
-        for output in self.outputs:
-            input_output_tensors.add(output.name)
-
-        intermediates = []
-        for tensor, tensor in enumerate(self.tensors):
-            if tensor.name not in input_output_tensors:
-                intermediates.append(tensor)
-
-        return intermediates
+        return [t for t in self.tensors if t not in (self.inputs + self.outputs)]
 
     def create_tensor(self, name, type_, shape, *,
                       buffer=None, quantization=None, isinput=False, isoutput=False):
@@ -229,12 +237,37 @@ class Subgraph():
             self.outputs.append(tensor)
         return tensor
 
+    def remove_tensor(self, tensor):
+        assert tensor in self.tensors
+        self.tensors.remove(tensor)
+        if tensor in self.inputs:
+            self.inputs.remove(tensor)
+        if tensor in self.outputs:
+            self.outputs.remove(tensor)
+
+        tensor.subgraph = tensor.buffer = None
+
+    def generate_unique_op_name(self, operator_code):
+        existing_names = [op.name for op in self.operators]
+        j = 0
+        while True:
+            j, new_name = j+1, f"{operator_code.name}_{j}"
+            if new_name not in existing_names:
+                return new_name
+
     def create_operator(self, operator_code, *,
                         inputs=None, outputs=None,
                         builtin_options=None, builtin_options_type=None, custom_options=None):
-        operator = Operator(self, operator_code, inputs, outputs, builtin_options, builtin_options_type, custom_options)
+        name = self.generate_unique_op_name(operator_code)
+        operator = Operator(self, operator_code, name, inputs, outputs,
+                            builtin_options, builtin_options_type, custom_options)
         self.operators.append(operator)
         return operator
+
+    def remove_operator(self, op):
+        assert op in self.operators
+        self.operators.remove(op)
+        op.inputs, op.outputs, op.subgraph = [], [], None
 
     def get_tensor(self, name):
         for t in self.tensors:
@@ -249,8 +282,12 @@ class Metadata():
         # Use XCOREModel.create_metadata instead.
         self.model = model  # parent
         self.name = name
-        assert isinstance(buffer, Buffer)
-        self.buffer = buffer
+        if buffer:
+            assert isinstance(buffer, Buffer)
+            assert buffer in self.model.buffers
+            self.buffer = buffer
+        else:
+            self.buffer = self.model.create_buffer()
 
     def __str__(self):
         return f'name={self.name}, buffer={self.buffer}'
@@ -289,9 +326,7 @@ class XCOREModel():
             for operator in subgraph.operators:
                 counter[operator.operator_code] += 1
 
-        sorted_operator_codes = []
-        for operator_code, count in counter.most_common():
-            sorted_operator_codes.append(operator_code)
+        sorted_operator_codes = [op_code for op_code, _ in counter.most_common()]
 
         return sorted_operator_codes
 

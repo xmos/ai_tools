@@ -15,6 +15,8 @@ import tensorflow as tf  # nopep8
 warnings.filterwarnings(action='default')
 
 
+
+
 def __norm_and_join(*args):
     return os.path.normpath(os.path.join(*args))
 

@@ -8,13 +8,13 @@ from tflite2xcore.xcore_model import TensorType
 
 from .test_ReplaceDeepinShallowoutFullyConnectedOutputPass import (
     matching_perceptron,
-    non_matching_perceptron,
+    non_matching_shape_perceptron,
     mlp,
     non_matching_mlp
 )
 
 MODELS = [fixture_ref(matching_perceptron),
-          fixture_ref(non_matching_perceptron),
+          fixture_ref(non_matching_shape_perceptron),
           fixture_ref(mlp),
           fixture_ref(non_matching_mlp)]
 

@@ -294,7 +294,7 @@ void conv2d_deepin_deepout_init(
     params->chans_out = C_out;
     params->C_in_groups = C_in >> VPU_INT8_EPV_LOG2;
     params->C_out_groups = C_out >> VPU_INT8_ACC_PERIOD_LOG2;
-    params->zero_point = zero_point;
+    params->zero_point = zero_point * C_in;
 
     if(pad_mode == PADDING_VALID){
 
@@ -799,8 +799,6 @@ void conv2d_shallowin_deepout_block_c(
 
                 //Do the shifting and scaling
                 for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++){
-
-                    // printf("Bleh %ld: 0x%04X\n", k, patch_acc[k]);
 
                     int16_t res16 = vlsat_single_s16(patch_acc[k], hifts[k]);
 

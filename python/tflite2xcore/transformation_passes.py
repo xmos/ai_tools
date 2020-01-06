@@ -127,7 +127,7 @@ class AddArgmaxOutputPass(OutputTensorMatchingPass):
 
 
 # TODO: write (at least regression) tests for this class
-class ReplaceQuantizedWeightBiasOperatorPass(OperatorMatchingPass):
+class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
         self._op = None
@@ -146,25 +146,9 @@ class ReplaceQuantizedWeightBiasOperatorPass(OperatorMatchingPass):
     def _input(self):
         return self._op.inputs[0]
 
-    @property
-    def _weights(self):
-        return self._op.inputs[1]
-
-    @property
-    def _biases(self):
-        return self._op.inputs[2]
-
     @abstractmethod
     def _match_opcode(self, op):
         raise NotImplementedError()
-
-    def match(self, op):
-        if self._match_opcode(op):
-            with self.using(op):
-                return (self._weights.type == TensorType.INT8
-                        and self._input.type == TensorType.INT8
-                        and self._output.type == TensorType.INT8
-                        and self._biases.type == TensorType.INT32)
 
     @property
     @abstractmethod
@@ -177,9 +161,29 @@ class ReplaceQuantizedWeightBiasOperatorPass(OperatorMatchingPass):
         op.subgraph.remove_operator(op)
         return new_op
 
+    def match(self, op):
+        if self._match_opcode(op):
+            with self.using(op):
+                return (self._input.type == TensorType.INT8
+                        and self._output.type == TensorType.INT8)
+
 
 # TODO: write (at least regression) tests for this class
-class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedWeightBiasOperatorPass):
+class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
+    @property
+    def _weights(self):
+        return self._op.inputs[1]
+
+    @property
+    def _biases(self):
+        return self._op.inputs[2]
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (self._weights.type == TensorType.INT8
+                        and self._biases.type == TensorType.INT32)
+
     @property
     def _multiplier(self):
         output_scale = self._output.quantization['scale'][0]
@@ -525,6 +529,47 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
             self._weights.shape = new_weights.shape
             self._weights.buffer.data = new_weights
         return super().mutate(op)
+
+
+class ReplaceDeepMaxpool2DPass(ReplaceQuantizedOperatorPass):
+    @property
+    def _strides(self):
+        options = self._op.builtin_options
+        return options['stride_h'], options['stride_w']
+
+    @property
+    def _pool_size(self):
+        options = self._op.builtin_options
+        return options['filter_height'], options['filter_width']
+
+    @property
+    def _padding(self):
+        return self._op.builtin_options['padding']
+
+    @property
+    def _fused_activation(self):
+        return self._op.builtin_options['fused_activation_function']
+
+    def _match_opcode(self, op):
+        return op.operator_code.code == BuiltinOpCodes.MAX_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_maxpool2d_deep)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (self._input.quantization == self._output.quantization
+                        and self._padding == 'VALID'
+                        and self._strides == (2, 2)
+                        and self._pool_size == (2, 2)
+                        and self._fused_activation == 'NONE'
+                        and self._input.shape[1] % 2 == 0
+                        and self._input.shape[2] % 2 == 0
+                        and self._input.shape[3] % 32 == 0)
+
+        return False
 
 
 class RemoveUnusedBuffersPass(ModelTransformationPass):

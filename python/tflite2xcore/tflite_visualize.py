@@ -251,8 +251,8 @@ class TensorTooltipMapper():
 class CustomOptionsMapper():
     """Maps a list of bytes representing a flexbuffer to a dictionary."""
 
-    def __call__(self, x):
-        return json.loads(FlexbufferParser().parse(bytes(x)))
+    def __call__(self, custom_options):
+        return json.loads(FlexbufferParser().parse(bytes(x))) if custom_options else None
 
 
 def GenerateGraph(subgraph_idx, g, opcode_mapper):

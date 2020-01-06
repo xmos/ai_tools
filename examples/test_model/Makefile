@@ -52,13 +52,13 @@ $(info Building for $(BUILD_TARGET))
 #********************
 # Dependencies
 #********************
-FLATBUFFERS_DIR := ../../../flatbuffers
+FLATBUFFERS_DIR := ../../..
 GEMMLOWP_DIR := ../../../gemmlowp
 TENSORFLOW_DIR := ../../../tensorflow
 LIB_NN_DIR := ../../xcore/operator_book
 
 INCLUDES := \
-	-I$(FLATBUFFERS_DIR)/include \
+	-I$(FLATBUFFERS_DIR)/flatbuffers/include \
 	-I$(GEMMLOWP_DIR) \
 	-I$(TENSORFLOW_DIR) \
 	-I$(LIB_NN_DIR)/lib_nn_operator/api \
@@ -66,6 +66,7 @@ INCLUDES := \
 
 # source file paths
 VPATH := \
+	$(FLATBUFFERS_DIR) \
 	$(TENSORFLOW_DIR) \
 	$(LIB_NN_DIR) \
 	src
@@ -92,6 +93,7 @@ SOURCES := \
 
 ifeq ($(TARGET), x86)
 	SOURCES += \
+		flatbuffers/src/util.cpp \
 		tensorflow/lite/micro/debug_log.cc 
 else # must be xcore
 	SOURCES += \
@@ -104,7 +106,7 @@ else # must be xcore
 		tensorflow/lite/micro/xcore/debug_log.cc 
 endif
 
-OBJECT_FILES := $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES))))
+OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))))
 OBJECT_FILES := $(addprefix $(OBJ_DIR)/,$(OBJECT_FILES))
 OBJECTS := $(SOURCES) $(OBJECT_FILES)
 
@@ -121,6 +123,10 @@ $(OBJ_DIR)/%.o: %.c
 	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ -c $<
 
 $(OBJ_DIR)/%.o: %.cc
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ -c $<
+
+$(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ -c $<
 

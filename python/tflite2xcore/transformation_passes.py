@@ -353,7 +353,6 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
             # change bias tensor metadata and change quantization mode to alert users to unusual layout
             self._biases.type = TensorType.INT16
             self._biases.shape = list(new_bias.shape[:-1])
-            print(self._biases.shape)
             self._biases.name = f"{op.name}/biases"
             self._biases.quantization['details_type'] = 'CustomQuantization'
 

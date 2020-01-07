@@ -19,7 +19,7 @@
 #define WORD_ALIGNED
 #endif
 
-#if (defined(__XS3A__) && USE_ASM_averagepool2d_deep)
+#if (defined(__XS3A__) && USE_ASM_avgpool2d_deep)
  #define HAS_ASM (1)
 #else
  #define HAS_ASM (0)
@@ -55,13 +55,13 @@ static unsigned seed = 4321234;
 #define C_out       (C_in)
 #define height      (8)
 #define width       (8)
-void test_averagepool2d_deep_case1()
+void test_avgpool2d_deep_case1()
 {
     int8_t WORD_ALIGNED  X[height][width][C_in];
 
     int8_t WORD_ALIGNED Y_expected[height/2][width/2][C_out] = {{{ 0 }}};
 
-    PRINTF("test_averagepool2d_deep_case1()...\n");
+    PRINTF("test_avgpool2d_deep_case1()...\n");
 
     memset(X, 0x00, sizeof(X));
 
@@ -69,13 +69,13 @@ void test_averagepool2d_deep_case1()
     PRINTF("\tC...\n");
     int8_t WORD_ALIGNED  Y_c[height/2][width/2][C_out];
     memset(Y_c, 0xCC, sizeof(Y_c));
-    averagepool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
+    avgpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
 #endif
 #if TEST_ASM
     PRINTF("\tASM...\n");
     int8_t WORD_ALIGNED  Y_asm[height/2][width/2][C_out];
     memset(Y_asm, 0xCC, sizeof(Y_asm));
-    averagepool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
+    avgpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
 #endif
 
     PRINTF("\tChecking...\n");
@@ -123,11 +123,11 @@ void test_averagepool2d_deep_case1()
 #define width       (8)
 #define REPS        (50)
 #define CHECKS      (500)
-void test_averagepool2d_deep_case2()
+void test_avgpool2d_deep_case2()
 {
     int8_t WORD_ALIGNED X[height][width][C_in];
 
-    PRINTF("test_averagepool2d_deep_case2()...\n");
+    PRINTF("test_avgpool2d_deep_case2()...\n");
 
     for(int rep = 0; rep < REPS; rep++){
 
@@ -140,12 +140,12 @@ void test_averagepool2d_deep_case2()
 #if TEST_C
         PRINTF("\t\tC...\n");
         int8_t WORD_ALIGNED Y_c[height/2][width/2][C_out];
-        averagepool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
+        avgpool2d_deep_c((int8_t*) X, (int8_t*) Y_c, height, width, C_in);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         int8_t WORD_ALIGNED Y_asm[height/2][width/2][C_out];\
-        averagepool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
+        avgpool2d_deep_asm((int8_t*) X, (int8_t*) Y_asm, height, width, C_in);
 #endif
 
         PRINTF("\t\tChecking...\n");
@@ -228,8 +228,8 @@ void test_averagepool2d_deep_case2()
 
 
 
-void test_averagepool2d_deep()
+void test_avgpool2d_deep()
 {
-    test_averagepool2d_deep_case1();
-    test_averagepool2d_deep_case2();
+    test_avgpool2d_deep_case1();
+    test_avgpool2d_deep_case2();
 }

@@ -4,6 +4,7 @@
 #define NN_OPERATOR_H_
 
 #include "nn_types.h"
+#include "nn_op_structs.h"
 #include "nn_operator_asm.h"
 #include "nn_operator_c.h"
 #include "nn_operator_inline.h"
@@ -18,169 +19,25 @@ extern "C" {
 
 
 
-/**
- * Performs a matrix-vector multiplication (each signed 8-bit) for a 32-bit result.
- * 
- *      y = W*x
- * 
- * Idiosyncrasies:
- *      - Expects an unusual memory layout for the matrix W.  
- *          The matrix is first broken up into non-overlapping 'bands', where each band is 16 consecutive rows.
- *          Each band is broken up into non-overlapping 'chunks', where each chunk is 32 consecutive columns. 
- *          So each chunk is a 16x32 submatrix of the original matrix, and the matrix is a tiling of these chunks.
- *          The layout is strictly ordered such that:
- *              - Earlier (i.e. lower row indices) bands appear before later bands.
- *              - Within a band, earlier (i.e. lower column indices) chunks appear before later chunks.
- *              - Within a chunk, *later* (by index) rows appear *earlier*
- *              - Within a chunk-row, individual coefficients are stored in increasing index order.
- *              - No padding is used to separate any of these elements.
- *      - Internally a 32-bit accumulator is used, and a per-element right-shift (the shr parameter) is applied before 
- *        saturating the result to 8 bits.
- * 
- * Limitations:
- *      Can only be used for matrices with a multiple of 16 rows and
- *      a multiple of 32 columns.
- * 
- * \param   W           Coefficient matrix, using the memory layout specified above.
- * \param   x           Input vector, ordered normally
- * \param   N_bands     Number of bands in the matrix W. i.e. number of rows in W divided by 16
- * \param   N_chunks    Number of chunks in a band. i.e. number of columns in W divided by 32
- * \param   shr         Vector specifying (for each element) the number of bits to right-shift the 32-bit accumulator before saturating to 8 bits.
- * \param   y           Output vector, ordered normally
- */
-static inline void nn_mat_vec_mul_s8(
-    const int8_t* W,
-    const int8_t* x,
-    const unsigned N_bands,
-    const unsigned N_chunks,
-    const int16_t* shr,
-    int8_t* y);
-
-
-
-/**  2D convolution for "deep" input and output tensors.
- *
- *  Stride is 1 in both dimensions. Number of input and output channels must be
- *  divisible by 32 and 16 respectively. Activation is ReLU. Zero padding
- *  should be used on all edges, with size K_h//2 above and below, and K_w//2
- *  on the left and right.
- *
- *  \param  K       Kernel weight tensor of shape (C_out, K_h, K_w, C_in) using
- *                  a non-standard layout such that:
- * 
- *                  K[i, j, k, l] = K[  C_in * 16 * K_h * K_w * ( i // 16)
- *                                    + C_in * 16 * K_w * j
- *                                    + C_in * 16 * k
- *                                    + 32 * 16 * (l // 32)
- *                                    + 32 * (15-(i % 16))
- *                                    + (l % 32) ]
- * 
- *                  This layout can be understood to order coefficients with the following precedence:
- *                      - C_out 'group' (output channels are split into groups of 16; output group is given by (output_channel // 16))
- *                      - kernel row
- *                      - kernel col
- *                      - C_in 'group' (input channels are split into groups of 32; input group is given by (input_channel // 32))
- *                          Each C_in group collects 32*16 coefficients -- 32 coefficients for each of 16 output channels
- *                      - reversed output channel (i.e. coefficients for output channel 15 are at lower offsets than output channel 14)
- *                      - input channel
- * 
- *  \param  B       Bias tensor of shape (2, C_out) using a non-standard layout
- *                  such that B[i, c]  =  C_out * i  +  c. The value B[0, c]
- *                  encodes the lower 16 bits, while B[1, c] encodes the higher
- *                  16 bits of the 32-bit bias value for output channel c.
- *  \param  X       Input tensor of shape (height, width, C_in) using standard
- *                  layout with the last index changing fastest:
- *                  X[h, w, c]  =  X[width * C_in * h  +  C_in * w  +  c]
- *  \param  Y       Output tensor of shape (height, width, C_out)
- *                  using standard layout with the last index changing fastest:
- *                  Y[h, w, c]  =  Y[width * C_out * h  +  C_out * w  +  c]
- *  \param  height  Input tensor/image height.
- *  \param  width   Input tensor/image width.
- *  \param  K_h     Kernel height, must be odd.
- *  \param  K_w     Kernel width, must be odd.
- *  \param  C_out   Number of output channels, must be divisible by 16.
- *  \param  C_in    Number of input channels, must be divisible by 32.
- *  \param  shifts  Shift tensor of shape (C_out) using standard layout.
- *                  Defines the shift used in the 32 to 16 bit intermediate
- *                  conversion via VLSAT.
- *  \param  scales  Scale tensor of shape (C_out) using standard layout.
- *                  Defines the scale applied after the 32 to 16 bit
- *                  intermediate conversion. Optional. Can be assumed to be
- *                  between 0x4000 and 0x7FFF.
- */
-static inline void conv2d_deepin_deepout_relu(
-    const int8_t* K, 
-    const data16_t* B,
-    const int8_t* X, 
+static inline void conv2d_deepin_deepout_block(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t K_h, 
-    const int32_t K_w,
-    const int32_t C_out, 
-    const int32_t C_in,
-    const int16_t* shifts, 
+    const nn_conv2d_dido_params_t* params,
+    const nn_conv2d_dido_block_params_t* block,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* B,
+    const int16_t* shifts,
     const int16_t* scales);
 
-/**  2D convolution for "shallow" input and "deep" output tensors.
- *
- *  Stride is 1 in both dimensions. Number of output channels must be divisible
- *  by 16. Number of input channels is 4. Activation is ReLU. Zero padding
- *  should be used on all edges, with size K_h//2 above and below, and K_w//2
- *  on the left and right.
- *
- *  \param  K       Kernel weight tensor of shape (C_out, K_h, 8, 4) using
- *                  a non-standard layout such that:
- * 
- *                  K[i, j, k, l] =  L[
- *                        (i // 16)   * (K_h * 16 * 8 * 4)
- *                      + (j)         * (16 * 8 * 4)
- *                      + (15-(i%16)) * (8 * 4)
- *                      + (k)         * (4)
- *                      + (l)
- *                  ]
- *                      where i is the output channel,
- *                            j is the kernel row,
- *                            k is the kernel column, and
- *                            l is the input channel
- * 
- *                  The weights are zero padded in the 3rd dimension, i.e.
- *                  K[i, j, k, l] is zero for K_w <= k < 8. There may or may
- *                  not be zero padding in the 4th dimension.
- *  \param  B       Bias tensor of shape (2, C_out) using a non-standard layout
- *                  such that B[i, c]  =  C_out * i  +  c. The value B[0, c]
- *                  encodes the lower 16 bits, while B[1, c] encodes the higher
- *                  16 bits of the 32-bit bias value for output channel c.
- *  \param  X       Input tensor of shape (height, width, C_in) using standard
- *                  layout with the last index changing fastest:
- *                  X[h, w, c]  =  X[width * 4 * h  +  4 * w  +  c]
- *  \param  Y       Output tensor of shape (height, width, C_out)
- *                  using standard layout with the last index changing fastest:
- *                  Y[h, w, c]  =  Y[width * C_out * h  +  C_out * w  +  c]
- *  \param  height  Input tensor/image height.
- *  \param  width   Input tensor/image width.
- *  \param  K_h     Kernel height, must be odd.
- *  \param  K_w     Kernel width, must be odd and less than 8.
- *  \param  C_out   Number of output channels, must be divisible by 16.
- *  \param  shifts  Shift tensor of shape (C_out) using standard layout.
- *                  Defines the shift used in the 32 to 16 bit intermediate
- *                  conversion via VLSAT.
- *  \param  scales  Scale tensor of shape (C_out) using standard layout.
- *                  Defines the scale applied after the 32 to 16 bit
- *                  intermediate conversion. Optional. Can be assumed to be
- *                  between 0x4000 and 0x7FFF.
- */
-static inline void conv2d_shallowin_deepout_relu(
-    const int8_t* K, 
-    const data16_t* B,
-    const int8_t* X, 
+
+static inline void conv2d_shallowin_deepout_block(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t K_h, 
-    const int32_t K_w,
-    const int32_t C_out,
-    const int16_t* shifts, 
+    const nn_conv2d_sido_params_t* params,
+    const nn_conv2d_sido_block_params_t* block,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* B,
+    const int16_t* shifts,
     const int16_t* scales);
 
 
@@ -222,7 +79,7 @@ static inline void maxpool2d_deep(
  *  \param  width   Input tensor/image width, must be even.
  *  \param  C_in    Number of input channels, must be divisible by 32.
  */
-static inline void averagepool2d_deep(
+static inline void avgpool2d_deep(
     const int8_t* X, 
     int8_t* Y,
     const int32_t height, 
@@ -233,8 +90,7 @@ static inline void averagepool2d_deep(
 
 /**  Fully connected layer for "deep" input and "shallow" output tensors.
  *
- *  Number of inputs must be divisible by 32. Number of outputs must be less
- *  than 16. No activation is applied (i.e. linear).
+ *  Number of inputs must be divisible by 32. No activation is applied (i.e. linear).
  *
  *  \param  W       Weight tensor of shape (C_out, C_in) using standard layout
  *                  such that:
@@ -242,7 +98,7 @@ static inline void averagepool2d_deep(
  *  \param  B       Bias tensor of shape (C_out) using a standard layout.
  *  \param  X       Input tensor of shape (C_in) using standard layout.
  *  \param  Y       Output tensor of shape (C_out) using standard layout.
- *  \param  C_out   Number of output channels, must be less than 16.
+ *  \param  C_out   Number of output channels
  *  \param  C_in    Number of input channels, must be divisible by 32.
  *  \param  shifts  Shift tensor of shape (C_out) using standard layout.
  *                  Defines the shift used in the 32 to 16 bit conversion via
@@ -253,11 +109,44 @@ static inline void averagepool2d_deep(
  *                  and 0x7FFF. For c >= C_out, the value scales[y] is
  *                  undefined.
  */
-static inline void fc_deepin_shallowout_lin(
+static inline void fc_deepin_shallowout_16(
     const int8_t* W, 
     const int32_t* B,
     const int8_t* X, 
     int16_t* Y,
+    const int32_t C_out, 
+    const int32_t C_in,
+    const uint16_t* shifts, 
+    const int16_t* scales);
+
+
+
+/**  Fully connected layer for "deep" input and "shallow" output tensors.
+ *
+ *  Number of inputs must be divisible by 32. No activation is applied (i.e. linear).
+ *
+ *  \param  W       Weight tensor of shape (C_out, C_in) using standard layout
+ *                  such that:
+ *                      W[i, j]  =  K[C_in * i  +  j]
+ *  \param  B       Bias tensor of shape (C_out) using a standard layout.
+ *  \param  X       Input tensor of shape (C_in) using standard layout.
+ *  \param  Y       Output tensor of shape (C_out) using standard layout.
+ *  \param  C_out   Number of output channels.
+ *  \param  C_in    Number of input channels, must be divisible by 32.
+ *  \param  shifts  Shift tensor of shape (C_out) using standard layout.
+ *                  Defines the shift used in the 32 to 8 bit conversion via
+ *                  VLSAT. For c >= C_out, the value shifts[y] is undefined.
+ *  \param  scales  Scale tensor of shape (C_out) using standard layout.
+ *                  Defines the scale applied after the 32 to 8 bit
+ *                  conversion. Optional. Can be assumed to be between 0x4000
+ *                  and 0x7FFF. For c >= C_out, the value scales[y] is
+ *                  undefined.
+ */
+static inline void fc_deepin_shallowout_8(
+    const int8_t* W, 
+    const int32_t* B,
+    const int8_t* X, 
+    int8_t* Y,
     const int32_t C_out, 
     const int32_t C_in,
     const uint16_t* shifts, 
@@ -276,6 +165,75 @@ static inline void argmax_16(
     const int32_t N);
 
 
+void conv2d_deepin_deepout_init(
+    nn_conv2d_dido_params_t* params,
+    const uint32_t X_height,
+    const uint32_t X_width,
+    const uint32_t K_h,
+    const uint32_t K_w,
+    const uint32_t C_in,
+    const uint32_t C_out,
+    const padding_mode_t pad_mode,
+    const int8_t zero_point,
+    const uint32_t region_top,
+    const uint32_t region_left,
+    const uint32_t region_rows,
+    const uint32_t region_cols);
+
+
+void conv2d_shallowin_deepout_init(
+    nn_conv2d_sido_params_t* params,
+    const uint32_t X_height,
+    const uint32_t X_width,
+    const uint32_t K_h,
+    const uint32_t K_w,
+    const uint32_t C_in,
+    const uint32_t C_out,
+    const padding_mode_t pad_mode,
+    const int8_t zero_point,
+    const uint32_t region_top,
+    const uint32_t region_left,
+    const uint32_t region_rows,
+    const uint32_t region_cols);
+
+
+data16_t* conv2d_boggle_B(
+    int32_t* B,
+    const unsigned C_out);
+
+void conv2d_dido_boggle_K(
+    int8_t* K,
+    const unsigned K_h,
+    const unsigned K_w,
+    const unsigned C_in,
+    const unsigned C_out);
+
+void conv2d_sido_boggle_K(
+    int8_t* K,
+    const unsigned K_h,
+    const unsigned K_w,
+    const unsigned C_in,
+    const unsigned C_out);
+
+    
+
+#if defined(__XS3A__)
+
+/**
+ * Copy size bytes from src to dst.
+ *   
+ * dst and src both must be word-aligned.
+ *  
+ * \param dst
+ * \param src
+ * \param size
+*/
+void vpu_memcpy(
+    void* dst,
+    void* src,
+    unsigned size);
+
+#endif
 
 #ifdef __XC__
 } // extern "C"

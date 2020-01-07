@@ -253,6 +253,11 @@ def replace_with_XC_conv2d_deepin_deepout_relu(model, subgraph_ind, op_ind):
 
 
 def rearrange_depthwise_weights(model, subgraph_ind, op_ind):
+    # NOTE: weight tensor channel ordering is:
+    # kOHWI, // TFLite conv weights
+    # kHWIO, // TensorFlow conv weights
+    # k1HWO, // TFLite DepthwiseConv weights
+    # kHWIM, // TensorFlow DepthwiseConv weights
     subgraph = model['subgraphs'][subgraph_ind]
     op = subgraph['operators'][op_ind]
     weight_tensor = subgraph['tensors'][op['inputs'][1]]
@@ -260,7 +265,7 @@ def rearrange_depthwise_weights(model, subgraph_ind, op_ind):
 
     buffer = model['buffers'][weight_tensor['buffer']]
     weights = np.uint8(buffer['data']).reshape(weight_shape)
-    weights = np.transpose(weights, axes=(3, 1, 2, 0))
+    weights = np.transpose(weights, axes=(3, 1, 2, 0))  # see above why this is necessary
     buffer['data'] = weights.flatten().tolist()
 
     weight_tensor['shape'] = list(weights.shape)

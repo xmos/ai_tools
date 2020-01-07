@@ -2,9 +2,9 @@
 
 import pytest
 
-from xcore_model import XCOREModel
-from operator_codes import OperatorCode, BuiltinOpCodes
-from transformation_passes import AddDequantizerFloatOutputPass
+from tflite2xcore.xcore_model import XCOREModel, TensorType
+from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.transformation_passes import AddDequantizerFloatOutputPass
 
 from .test_AddQuantizerFloatInputPass import simple_model, non_matching_model
 
@@ -15,9 +15,9 @@ def dual_output_model():
     subgraph = model.create_subgraph()
 
     # TODO: add operator options to specify split axis and number
-    qin = subgraph.create_tensor('quantized_input', 'INT8', [1, 5, 5, 4], isinput=True)
-    qout1 = subgraph.create_tensor('quantized_output_1', 'INT8', [1, 5, 5, 2], isoutput=True)
-    qout2 = subgraph.create_tensor('quantized_output_2', 'INT8', [1, 5, 5, 2], isoutput=True)
+    qin = subgraph.create_tensor('quantized_input', TensorType.INT8, [1, 5, 5, 4], isinput=True)
+    qout1 = subgraph.create_tensor('quantized_output_1', TensorType.INT8, [1, 5, 5, 2], isoutput=True)
+    qout2 = subgraph.create_tensor('quantized_output_2', TensorType.INT8, [1, 5, 5, 2], isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.SPLIT),
                              inputs=[qin], outputs=[qout1, qout2])
 

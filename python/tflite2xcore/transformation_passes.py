@@ -246,9 +246,11 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def mutate_biases(self, op):
         pass
 
-    @abstractmethod
     def mutate_weights(self, op):
-        pass
+        with self.using(op):
+            # rename weight tensor
+            # NOTE: no weight layout rearrangement is done for this op
+            self._weights.name = f"{op.name}/weights"
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
@@ -367,6 +369,7 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
             arr = arr.reshape((arr.shape[0] // acc_period, acc_period))
             return np.flip(arr, axis=1).flatten().tolist()
 
+        super().mutate_weights(op)
         with self.using(op):
             weight_quantization = self._weights.quantization
             for key in ['scale', 'zero_point']:

@@ -52,13 +52,13 @@ $(info Building for $(BUILD_TARGET))
 #********************
 # Dependencies
 #********************
-FLATBUFFERS_DIR := ../../../flatbuffers
+FLATBUFFERS_DIR := ../../..
 GEMMLOWP_DIR := ../../../gemmlowp
 TENSORFLOW_DIR := ../../../tensorflow
 LIB_NN_DIR := ../../xcore/operator_book
 
 INCLUDES := \
-	-I$(FLATBUFFERS_DIR)/include \
+	-I$(FLATBUFFERS_DIR)/flatbuffers/include \
 	-I$(GEMMLOWP_DIR) \
 	-I$(TENSORFLOW_DIR) \
 	-I$(LIB_NN_DIR)/lib_nn_operator/api \
@@ -66,6 +66,7 @@ INCLUDES := \
 
 # source file paths
 VPATH := \
+	$(FLATBUFFERS_DIR) \
 	$(TENSORFLOW_DIR) \
 	$(LIB_NN_DIR) \
 	src
@@ -76,6 +77,8 @@ SOURCES := \
 	tensorflow/lite/core/api/flatbuffer_conversions.cc \
 	tensorflow/lite/core/api/op_resolver.cc \
 	tensorflow/lite/core/api/tensor_utils.cc \
+	tensorflow/lite/kernels/kernel_util.cc \
+	tensorflow/lite/kernels/internal/quantization_util.cc \
 	tensorflow/lite/micro/debug_log_numbers.cc \
 	tensorflow/lite/micro/memory_helpers.cc \
 	tensorflow/lite/micro/micro_allocator.cc \
@@ -86,25 +89,58 @@ SOURCES := \
 	tensorflow/lite/micro/simple_memory_allocator.cc \
 	tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc \
 	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc \
+	tensorflow/lite/micro/kernels/activations.cc \
+	tensorflow/lite/micro/kernels/add.cc \
+	tensorflow/lite/micro/kernels/all_ops_resolver.cc \
+	tensorflow/lite/micro/kernels/arg_min_max.cc \
+	tensorflow/lite/micro/kernels/ceil.cc \
+	tensorflow/lite/micro/kernels/comparisons.cc \
+	tensorflow/lite/micro/kernels/concatenation.cc \
+	tensorflow/lite/micro/kernels/conv.cc \
+	tensorflow/lite/micro/kernels/depthwise_conv.cc \
+	tensorflow/lite/micro/kernels/dequantize.cc \
+	tensorflow/lite/micro/kernels/elementwise.cc \
+	tensorflow/lite/micro/kernels/floor.cc \
+	tensorflow/lite/micro/kernels/fully_connected.cc \
+	tensorflow/lite/micro/kernels/logical.cc \
+	tensorflow/lite/micro/kernels/logistic.cc \
+	tensorflow/lite/micro/kernels/maximum_minimum.cc \
+	tensorflow/lite/micro/kernels/mul.cc \
+	tensorflow/lite/micro/kernels/neg.cc \
+	tensorflow/lite/micro/kernels/pack.cc \
+	tensorflow/lite/micro/kernels/pad.cc \
+	tensorflow/lite/micro/kernels/pooling.cc \
+	tensorflow/lite/micro/kernels/prelu.cc \
+	tensorflow/lite/micro/kernels/quantize.cc \
+	tensorflow/lite/micro/kernels/reshape.cc \
+	tensorflow/lite/micro/kernels/round.cc \
+	tensorflow/lite/micro/kernels/softmax.cc \
+	tensorflow/lite/micro/kernels/split.cc \
+	tensorflow/lite/micro/kernels/strided_slice.cc \
+	tensorflow/lite/micro/kernels/svdf.cc \
+	tensorflow/lite/micro/kernels/unpack.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
 	lib_nn_operator/src/nn_operator.c \
+	lib_nn_operator/src/nn_operator_conv.c \
 	main.cc
 
 ifeq ($(TARGET), x86)
 	SOURCES += \
+		flatbuffers/src/util.cpp \
 		tensorflow/lite/micro/debug_log.cc 
 else # must be xcore
 	SOURCES += \
-		lib_nn_operator/src/asm/conv2d_deepin_deepout_relu_patch.S \
-		lib_nn_operator/src/asm/conv2d_deepin_deepout_relu.S \
-		lib_nn_operator/src/asm/conv2d_shallowin_deepout_relu_patch.S \
-		lib_nn_operator/src/asm/conv2d_shallowin_deepout_relu.S \
-		lib_nn_operator/src/asm/fc_deepin_shallowout_lin.S \
+		lib_nn_operator/src/asm/avgpool2d_deep.S \
+		lib_nn_operator/src/asm/conv2d_deepin_deepout_block.S \
+		lib_nn_operator/src/asm/conv2d_shallowin_deepout_block.S \
+		lib_nn_operator/src/asm/fc_deepin_shallowout_16.S \
+		lib_nn_operator/src/asm/fc_deepin_shallowout_8.S \
 		lib_nn_operator/src/asm/maxpool2d_deep.S \
+		lib_nn_operator/src/asm/vpu_memcpy.S \
 		tensorflow/lite/micro/xcore/debug_log.cc 
 endif
 
-OBJECT_FILES := $(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES))))
+OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))))
 OBJECT_FILES := $(addprefix $(OBJ_DIR)/,$(OBJECT_FILES))
 OBJECTS := $(SOURCES) $(OBJECT_FILES)
 
@@ -121,6 +157,10 @@ $(OBJ_DIR)/%.o: %.c
 	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ -c $<
 
 $(OBJ_DIR)/%.o: %.cc
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ -c $<
+
+$(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ -c $<
 

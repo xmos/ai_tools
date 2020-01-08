@@ -1,7 +1,6 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import logging
-
 import numpy as np
 
 from abc import abstractmethod

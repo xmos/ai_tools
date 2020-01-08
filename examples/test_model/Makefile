@@ -122,6 +122,7 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/unpack.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
 	lib_nn_operator/src/nn_operator.c \
+	lib_nn_operator/src/nn_operator_conv.c \
 	main.cc
 
 ifeq ($(TARGET), x86)
@@ -130,12 +131,13 @@ ifeq ($(TARGET), x86)
 		tensorflow/lite/micro/debug_log.cc 
 else # must be xcore
 	SOURCES += \
-		lib_nn_operator/src/asm/conv2d_deepin_deepout_relu_patch.S \
-		lib_nn_operator/src/asm/conv2d_deepin_deepout_relu.S \
-		lib_nn_operator/src/asm/conv2d_shallowin_deepout_relu_patch.S \
-		lib_nn_operator/src/asm/conv2d_shallowin_deepout_relu.S \
-		lib_nn_operator/src/asm/fc_deepin_shallowout_lin.S \
+		lib_nn_operator/src/asm/avgpool2d_deep.S \
+		lib_nn_operator/src/asm/conv2d_deepin_deepout_block.S \
+		lib_nn_operator/src/asm/conv2d_shallowin_deepout_block.S \
+		lib_nn_operator/src/asm/fc_deepin_shallowout_16.S \
+		lib_nn_operator/src/asm/fc_deepin_shallowout_8.S \
 		lib_nn_operator/src/asm/maxpool2d_deep.S \
+		lib_nn_operator/src/asm/vpu_memcpy.S \
 		tensorflow/lite/micro/xcore/debug_log.cc 
 endif
 

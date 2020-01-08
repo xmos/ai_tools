@@ -126,6 +126,12 @@ class Operator():
             assert builtin_options_type
         self.custom_options = custom_options
 
+    def add_custom_options(self, **kwargs):
+        if kwargs:
+            if self.custom_options is None:
+                self.custom_options = {}
+            self.custom_options.update(kwargs)
+
     @property
     def model(self):
         return self.subgraph.model

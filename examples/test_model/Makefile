@@ -64,7 +64,6 @@ INCLUDES := \
 	-I$(LIB_NN_DIR)/lib_nn_operator/api \
 	-Isrc
 
-
 # source file paths
 VPATH := \
 	$(FLATBUFFERS_DIR) \

@@ -1,5 +1,6 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
+import logging
 import numpy as np
 
 from abc import abstractmethod
@@ -244,17 +245,19 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def mutate_biases(self, op):
         pass
 
-    @abstractmethod
     def mutate_weights(self, op):
-        pass
+        with self.using(op):
+            # rename weight tensor
+            # NOTE: no weight layout rearrangement is done for this op
+            self._weights.name = f"{op.name}/weights"
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
-        op = super().mutate(op)
-        self.add_shift_scale(op)
-        self.mutate_biases(op)
-        self.mutate_weights(op)
-        return op
+        new_op = super().mutate(op)
+        self.add_shift_scale(new_op)
+        self.mutate_biases(new_op)
+        self.mutate_weights(new_op)
+        return new_op
 
 
 # TODO: write (at least regression) tests for the mutator functions
@@ -304,8 +307,9 @@ class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceXCOREWeightBiasOper
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
-        op = super().mutate(op)
-        self.mutate_output(op)
+        new_op = super().mutate(op)
+        self.mutate_output(new_op)
+        return new_op
 
 
 # TODO: write (at least regression) tests for this class
@@ -327,12 +331,13 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return (self._dilation == (1, 1)
-                        and self._strides == (1, 1)
-                        and self._padding == 'SAME'
-                        and self._weights.shape[1] % 2 == 1  # kernel height is odd
-                        and self._weights.shape[2] % 2 == 1  # kernel width is odd
-                        and self._weights.shape[0] % 16 == 0)  # deepout
+                if self._dilation != (1, 1):
+                    logging.warning(f"Found non-supported dilation: {self._dilation}")
+                else:
+                    return (self._strides == (1, 1)
+                            and self._weights.shape[1] % 2 == 1  # kernel height is odd
+                            and self._weights.shape[2] % 2 == 1  # kernel width is odd
+                            and self._weights.shape[0] % 16 == 0)  # deepout
 
         return False
 
@@ -363,10 +368,19 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
             arr = arr.reshape((arr.shape[0] // acc_period, acc_period))
             return np.flip(arr, axis=1).flatten().tolist()
 
+        super().mutate_weights(op)
         with self.using(op):
             weight_quantization = self._weights.quantization
             for key in ['scale', 'zero_point']:
                 weight_quantization[key] = reorder_quant_params(weight_quantization[key])
+
+    def mutate(self, op):
+        new_op = super().mutate(op)
+        with self.using(op):
+            new_op.add_custom_options(
+                padding=self._padding, stride_h=self._strides[0], stride_w=self._strides[1]
+            )
+        return new_op
 
 
 # TODO: write (at least regression) tests for the mutator functions
@@ -449,10 +463,10 @@ class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
         # NOTE: the order of these mutations is strict
         with self.using(op):
             unpadded_shape = self._weights.shape
-        op = super().mutate(op)
-        self.mutate_input(op)
-        op.custom_options = {"unpadded_shape": unpadded_shape}
-        return op
+        new_op = super().mutate(op)
+        self.mutate_input(new_op)
+        new_op.add_custom_options(unpadded_shape=unpadded_shape)
+        return new_op
 
 
 # TODO: write (at least regression) tests for the mutator functions

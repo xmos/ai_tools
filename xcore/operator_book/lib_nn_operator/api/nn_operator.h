@@ -217,46 +217,6 @@ static inline void conv2d_deepin_deepout(
 
 
 
-
-
-
-/** Execute one block of an 8-bit 2D convolution on a region of an image.
- *
- * This function is used by `conv2d_deepin_deepout()` to compute one block
- * of the output pixels
- * 
- * \param Y         Pointer to beginning of output data tensor. Updated by function.
- * \param params    Pointer to `nn_conv2d_dido_params_t` initialized with `conv2d_deepin_deepout_init()`
- * \param block     Pointer to `nn_conv2d_dido_block_params_t` initialized with `conv2d_deepin_deepout_init()`
- * \param X         Pointer to beginning of input data tensor
- * \param K         Pointer to beginning of kernel tensor
- * \param B         Pointer to beginning of bias tensor
- * \param shifts    Pointer to beginning of shifts tensor
- * \param scales    Pointer to beginning of scales tensor
- */
-static inline void conv2d_deepin_deepout_block(
-    int8_t* Y,
-    const nn_conv2d_dido_params_t* params,
-    const nn_conv2d_dido_block_params_t* block,
-    const int8_t* X,
-    const int8_t* K,
-    const data16_t* B,
-    const int16_t* shifts,
-    const int16_t* scales);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /** Execute an 8-bit 2D convolution on a region of an image.
  *
  * This function performs a 2D convolution of an input image with the specified 
@@ -322,7 +282,6 @@ static inline void conv2d_deepin_deepout_block(
 static inline void conv2d_shallowin_deepout(
     int8_t* Y,
     const nn_conv2d_sido_params_t* params,
-    const nn_conv2d_sido_block_params_t* block,
     const int8_t* X,
     const int8_t* K,
     const data16_t* B,
@@ -330,29 +289,14 @@ static inline void conv2d_shallowin_deepout(
     const int16_t* scales);
 
     
-/** Execute one block of an 8-bit 2D convolution on a region of an image.
- *
- * This function is used by `conv2d_shallowin_deepout()` to compute one block
- * of the output pixels
- * 
- * \param Y         Pointer to beginning of output data tensor. Updated by function.
- * \param params    Pointer to `nn_conv2d_sido_params_t` initialized with `conv2d_shallowin_deepout_init()`
- * \param block     Pointer to `nn_conv2d_sido_block_params_t` initialized with `conv2d_shallowin_deepout_init()`
- * \param X         Pointer to beginning of input data tensor
- * \param K         Pointer to beginning of kernel tensor
- * \param B         Pointer to beginning of bias tensor
- * \param shifts    Pointer to beginning of shifts tensor
- * \param scales    Pointer to beginning of scales tensor
- */
-static inline void conv2d_shallowin_deepout_block(
-    int8_t* Y,
-    const nn_conv2d_sido_params_t* params,
-    const nn_conv2d_sido_block_params_t* block,
-    const int8_t* X,
-    const int8_t* K,
-    const data16_t* B,
-    const int16_t* shifts,
-    const int16_t* scales);
+
+
+
+
+
+
+
+
 
 
 /**  2D maxpool for "deep" input and output tensors.

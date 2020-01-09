@@ -20,5 +20,5 @@ _build
 
 #xwaf cruft
 **/.lock*
-**/build/
+**/build*/
 **/bin/

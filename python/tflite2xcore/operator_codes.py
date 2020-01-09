@@ -146,6 +146,7 @@ class OperatorCode():
     def __init__(self, opcode, *, custom_code=None, version=None):
         assert isinstance(opcode, ValidOpCodes), "Invalid opcode!"
         self.version = version or 1
+
         if isinstance(opcode, XCOREOpCodes):
             self.builtin_code = BuiltinOpCodes.CUSTOM
             self.custom_code = opcode
@@ -162,6 +163,10 @@ class OperatorCode():
     def code(self):
         return self.custom_code if self.builtin_code == BuiltinOpCodes.CUSTOM else self.builtin_code
 
+    @property
+    def name(self):
+        return self.code.name
+
     def __eq__(self, obj):
         return (isinstance(obj, OperatorCode)
                 and obj.code == self.code
@@ -171,4 +176,4 @@ class OperatorCode():
         return hash(str(self))
 
     def __str__(self):
-        return f"{self.code.name} (version {self.version})"
+        return f"{self.name} (version {self.version})"

@@ -1,35 +1,72 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import struct
+import enum
+import collections
 
-from operator_codes import OperatorCode
+import numpy as np
 
-TFLITE_TYPE_TO_C_TYPE = {
-    'FLOAT32': 'float32_t',
-    'FLOAT16': 'float16_t',
-    'INT32': 'int32_t',
-    'UINT8': 'uint8_t',
-    'INT64': 'int64_t',
-    'INT16': 'int16_t',
-    'UINT16': 'uint16_t',
-    'INT8': 'int8_t',
-    # 'STRING': 'TODO',
-    # 'BOOL': 'TODO',
-    # 'COMPLEX64': 'TODO?'
-}
+from .operator_codes import OperatorCode
 
-TFLITE_TYPE_TO_BYTES = {
-    'FLOAT32': 4,
-    'FLOAT16': 2,
-    'INT32': 4,
-    'UINT8': 1,
-    'INT64': 8,
-    'INT16': 2,
-    'UINT16': 2,
-    'INT8': 1,
-    # 'STRING': 'TODO',
-    # 'BOOL': 'TODO',
-    # 'COMPLEX64': 'TODO?'
-}
+
+class TensorType(enum.Enum):
+    FLOAT32 = 0
+    FLOAT16 = 1
+    INT32 = 2
+    UINT8 = 3
+    INT64 = 4
+    STRING = 5
+    BOOL = 6
+    INT16 = 7
+    COMPLEX64 = 8
+    INT8 = 9
+
+    @staticmethod
+    def to_stdint_type(tensor_type):
+        LUT = {
+            TensorType.FLOAT32: 'float32_t',
+            TensorType.FLOAT16: 'float16_t',
+            TensorType.INT32: 'int32_t',
+            TensorType.UINT8: 'uint8_t',
+            TensorType.INT64: 'int64_t',
+            TensorType.STRING: None,
+            TensorType.BOOL: 'uint8_t',
+            TensorType.INT16: 'int16_t',
+            TensorType.COMPLEX64: None,
+            TensorType.INT8: 'int8_t'
+        }
+        return LUT[tensor_type]
+
+    @staticmethod
+    def to_bytes(tensor_type):
+        LUT = {
+            TensorType.FLOAT32: 4,
+            TensorType.FLOAT16: 2,
+            TensorType.INT32: 2,
+            TensorType.UINT8: 1,
+            TensorType.INT64: 8,
+            TensorType.STRING: None,
+            TensorType.BOOL: 1,
+            TensorType.INT16: 2,
+            TensorType.COMPLEX64: None,
+            TensorType.INT8: 1
+        }
+        return LUT[tensor_type]
+
+    @staticmethod
+    def to_numpy_type(tensor_type):
+        LUT = {
+            TensorType.FLOAT32: np.float64,
+            TensorType.FLOAT16: np.float64,
+            TensorType.INT32: np.int64,
+            TensorType.UINT8: np.int64,
+            TensorType.INT64: np.int64,
+            # TensorType.STRING: None,  # intentionally not supported
+            TensorType.BOOL: np.int64,
+            TensorType.INT16: np.int64,
+            # TensorType.COMPLEX64: None,  # intentionally not supported
+            TensorType.INT8: np.int64,
+        }
+        return LUT[tensor_type]
 
 
 class Buffer():
@@ -38,7 +75,22 @@ class Buffer():
         # Use XCOREModel.create_buffer instead.
 
         self.model = model  # parent
-        self.data = data or []
+        self.data = data
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data):
+        if data is None:
+            self._data = []
+        elif isinstance(data, list):
+            self._data = data
+        elif isinstance(data, np.ndarray):
+            self._data = list(data.flatten().tostring())
+        else:
+            raise TypeError(f"data must be list or numpy array")
 
     def __str__(self):
         if self.data:
@@ -48,27 +100,37 @@ class Buffer():
             return f'[]'
 
     def unpack(self, stdtype='uint8_t'):
-        if stdtype == 'uint8_t':
-            return [i[0] for i in struct.iter_unpack('B', bytearray(self.data))]
-        elif stdtype == 'int8_t':
-            return [i[0] for i in struct.iter_unpack('b', bytearray(self.data))]
-        elif stdtype == 'int16_t':
-            return [i[0] for i in struct.iter_unpack('h', bytearray(self.data))]
-        elif stdtype == 'int32_t':
-            return [i[0] for i in struct.iter_unpack('i', bytearray(self.data))]
+        LUT = {'uint8_t': 'B',
+               'int8_t': 'b',
+               'int16_t': 'h',
+               'int32_t': 'i'}
+        return [i[0] for i in struct.iter_unpack(LUT[stdtype], bytearray(self.data))]
 
 
 class Operator():
     def __init__(self, subgraph, operator_code,
-                 inputs=None, outputs=None, builtin_options=None, custom_options=None):
+                 name=None, inputs=None, outputs=None,
+                 builtin_options=None, builtin_options_type=None, custom_options=None):
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
+        assert isinstance(operator_code, OperatorCode)
+
         self.subgraph = subgraph  # parent
         self.operator_code = operator_code
+        self.name = name
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.builtin_options = builtin_options
+        self.builtin_options_type = builtin_options_type
+        if builtin_options:
+            assert builtin_options_type
         self.custom_options = custom_options
+
+    def add_custom_options(self, **kwargs):
+        if kwargs:
+            if self.custom_options is None:
+                self.custom_options = {}
+            self.custom_options.update(kwargs)
 
     @property
     def model(self):
@@ -83,6 +145,10 @@ class Operator():
         lines.extend([f'{INDENT * 2}{input_}' for input_ in self.inputs])
         lines.append(f'{INDENT}outputs')
         lines.extend([f'{INDENT * 2}{output}' for output in self.outputs])
+        lines.append(f'{INDENT}builtin_options')
+        lines.append(f'{INDENT * 2}{self.builtin_options}')
+        lines.append(f'{INDENT}custom_options')
+        lines.append(f'{INDENT * 2}{self.custom_options}')
         return '\n'.join(lines)
 
 
@@ -92,11 +158,12 @@ class Tensor():
         # Use Subgraph.create_tensor instead.
         self.subgraph = subgraph  # parent
         self.name = name
+        assert isinstance(type_, TensorType)
         self.type = type_
-        self.shape = shape
+        self.shape = list(shape)
 
         if buffer:
-            isinstance(buffer, Buffer)
+            assert isinstance(buffer, Buffer)
             assert buffer in self.model.buffers
             self.buffer = buffer
         else:
@@ -127,21 +194,30 @@ class Tensor():
     @property
     def standard_type(self):
         '''Return type (from cstdint.h)'''
-        return TFLITE_TYPE_TO_C_TYPE[self.type]
+        return TensorType.to_stdint_type(self.type)
 
     @property
     def size(self):
-        size = TFLITE_TYPE_TO_BYTES[self.type]
+        size = TensorType.to_bytes(self.type)
         for s in self.shape:
             size *= s
         return size
 
+    @property
+    def numpy(self):
+        arr = np.array(
+            self.buffer.unpack(TensorType.to_stdint_type(self.type)),
+            dtype=TensorType.to_numpy_type(self.type)
+        )
+        return arr.reshape(self.shape)
+
 
 class Subgraph():
-    def __init__(self, model, inputs=None, outputs=None, operators=None, tensors=None):
+    def __init__(self, model, name=None, inputs=None, outputs=None, operators=None, tensors=None):
         # Generally, do not use this constructor to instantiate Subgraph!
         # Use XCOREModel.create_subgraph instead.
         self.model = model  # parent
+        self.name = name
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.operators = operators or []
@@ -150,21 +226,11 @@ class Subgraph():
     @property
     def intermediates(self):
         # intermediates are any tensors that are not an input or an output
-        input_output_tensors = set([])  # lookup for input and output tensor indices
-        for input_ in self.inputs:
-            input_output_tensors.add(input_.name)
-        for output in self.outputs:
-            input_output_tensors.add(output.name)
-
-        intermediates = []
-        for tensor, tensor in enumerate(self.tensors):
-            if tensor.name not in input_output_tensors:
-                intermediates.append(tensor)
-
-        return intermediates
+        return [t for t in self.tensors if t not in (self.inputs + self.outputs)]
 
     def create_tensor(self, name, type_, shape, *,
                       buffer=None, quantization=None, isinput=False, isoutput=False):
+
         for existing_tensor in self.tensors:
             if name in [existing_tensor.name, existing_tensor.sanitized_name]:
                 raise Exception(f'Tensor name {name} already in use')
@@ -177,12 +243,37 @@ class Subgraph():
             self.outputs.append(tensor)
         return tensor
 
+    def remove_tensor(self, tensor):
+        assert tensor in self.tensors
+        self.tensors.remove(tensor)
+        if tensor in self.inputs:
+            self.inputs.remove(tensor)
+        if tensor in self.outputs:
+            self.outputs.remove(tensor)
+
+        tensor.subgraph = tensor.buffer = None
+
+    def generate_unique_op_name(self, operator_code):
+        existing_names = [op.name for op in self.operators]
+        j = 0
+        while True:
+            j, new_name = j+1, f"{operator_code.name}_{j}"
+            if new_name not in existing_names:
+                return new_name
+
     def create_operator(self, operator_code, *,
-                        inputs=None, outputs=None, builtin_options=None, custom_options=None):
-        assert isinstance(operator_code, OperatorCode)
-        operator = Operator(self, operator_code, inputs, outputs, builtin_options, custom_options)
+                        inputs=None, outputs=None,
+                        builtin_options=None, builtin_options_type=None, custom_options=None):
+        name = self.generate_unique_op_name(operator_code)
+        operator = Operator(self, operator_code, name, inputs, outputs,
+                            builtin_options, builtin_options_type, custom_options)
         self.operators.append(operator)
         return operator
+
+    def remove_operator(self, op):
+        assert op in self.operators
+        self.operators.remove(op)
+        op.inputs, op.outputs, op.subgraph = [], [], None
 
     def get_tensor(self, name):
         for t in self.tensors:
@@ -191,33 +282,59 @@ class Subgraph():
         raise ValueError(f"Tensor with name {name} not found!")
 
 
+class Metadata():
+    def __init__(self, model, name, buffer=None):
+        # Generally, do not use this constructor to instantiate Metadata!
+        # Use XCOREModel.create_metadata instead.
+        self.model = model  # parent
+        self.name = name
+        if buffer:
+            assert isinstance(buffer, Buffer)
+            assert buffer in self.model.buffers
+            self.buffer = buffer
+        else:
+            self.buffer = self.model.create_buffer()
+
+    def __str__(self):
+        return f'name={self.name}, buffer={self.buffer}'
+
+
 class XCOREModel():
     def __init__(self, version=None, description=None, subgraphs=None, buffers=None, metadata=None):
-        self.version = version
-        self.description = description
+        self.version = version or 3
+        self.description = description or ''
         self.buffers = buffers or []
         self.subgraphs = subgraphs or []
-        self.metadata = metadata
+        self.metadata = metadata or []
 
     def create_buffer(self, data=None):
         buffer = Buffer(self, data)
         self.buffers.append(buffer)
         return buffer
 
-    def create_subgraph(self):
-        subgraph = Subgraph(self)
+    def create_metadata(self, name, buffer=None):
+        metadata = Metadata(self, name, buffer)
+        self.metadata.append(metadata)
+        return metadata
+
+    def create_subgraph(self, name=None):
+        subgraph = Subgraph(self, name)
         self.subgraphs.append(subgraph)
         return subgraph
 
     @property
     def operator_codes(self):
-        operator_codes = set()
+        # sort the operators codes from most frequent to least frequent
+        #   why? because the flatbuffer is a tiny bit smaller if we do
+        counter = collections.Counter()
 
         for subgraph in self.subgraphs:
             for operator in subgraph.operators:
-                operator_codes.add(operator.operator_code)
+                counter[operator.operator_code] += 1
 
-        return operator_codes
+        sorted_operator_codes = [op_code for op_code, _ in counter.most_common()]
+
+        return sorted_operator_codes
 
     def pprint(self):
         print('---------')
@@ -225,7 +342,11 @@ class XCOREModel():
         print('---------')
         print(f'description={self.description}')
         print(f'version={self.version}')
-        print(f'metadata={self.metadata}')
+        print('******************')
+        print('* Metadata *')
+        print('******************')
+        for metadata in self.metadata:
+            print(metadata)
         print('******************')
         print('* Operator Codes *')
         print('******************')

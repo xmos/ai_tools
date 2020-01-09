@@ -13,7 +13,7 @@ from helpers import c_file, c_function
 def generate_code(args):
     verbose = args.verbose
 
-    model = tflite2xcore.read_flatbuffers_json(args.tflite_input, args.flatc, args.schema)
+    model = tflite2xcore.read_flatbuffer(args.tflite_input)
 
     subgraph = model.subgraphs[0] # only one supported for now
     intermediates_memory = 0
@@ -42,7 +42,7 @@ def generate_code(args):
     errs = []
     for operator in subgraph.operators:
         try:
-            name = operator.operator_code
+            name = operator.operator_code.custom_opcode.name
             op = operators.create(name, operator.inputs, operator.outputs, model)
             ops.append(op)
         except operators.UnsupportedOperator as err:
@@ -55,9 +55,7 @@ def generate_code(args):
         sys.exit()
 
     # create function
-    #file_basename, _ = os.path.splitext(os.path.basename(args.tflite_input))
-    fun_name = subgraph.name or args.name
-    fun_name = re.sub('[^0-9a-zA-Z]+', '_', fun_name)
+    fun_name = re.sub('[^0-9a-zA-Z]+', '_', args.name)
 
     fun = c_function.CFunction(fun_name, subgraph.inputs, subgraph.outputs)
     for op in ops:
@@ -92,10 +90,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('tflite_input', help='Input .tflite file.')
     parser.add_argument('-n', '--name', help='Output source files name')
-    parser.add_argument('--flatc', required=False, default=None,
-                        help='Path to flatc executable.')
-    parser.add_argument('--schema', required=False, default=None,
-                        help='Path to .fbs schema file.')
     parser.add_argument('--verbose', action='store_true', help='Verbose mode')
     args = parser.parse_args()
 

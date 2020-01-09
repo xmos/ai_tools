@@ -3,9 +3,10 @@
 import enum
 import heapq
 import logging
+import itertools
 
 from abc import ABC, abstractmethod
-from xcore_model import XCOREModel
+from .xcore_model import XCOREModel
 
 
 class PassPriority(enum.IntEnum):
@@ -13,15 +14,31 @@ class PassPriority(enum.IntEnum):
         return last_values[-1] + 1 if last_values else 0
 
     # TODO: change these to meaningful names
+    HIGHEST = enum.auto()
+    PREP = HIGHEST
     HIGH = enum.auto()
     MEDIUM = enum.auto()
     LOW = enum.auto()
+    CLEANUP = enum.auto()
+    LOWEST = CLEANUP
 
 
-class TransformationPass(ABC):
+class ModelTransformationPass(ABC):
     def __init__(self, priority):
         assert isinstance(priority, PassPriority)
         self.priority = priority
+
+    @abstractmethod
+    def run(self, model):
+        pass
+
+    def __str__(self):
+        return self.__class__.__name__
+
+
+class SubgraphTransformationPass(ModelTransformationPass):
+    def __init__(self, priority):
+        super().__init__(priority)
 
     @abstractmethod
     def match(self, obj):
@@ -55,7 +72,7 @@ class TransformationPass(ABC):
             self.run_subgraph(subgraph)
 
 
-class OperatorMatchingPass(TransformationPass):
+class OperatorMatchingPass(SubgraphTransformationPass):
     def __init__(self, priority):
         super().__init__(priority)
 
@@ -66,7 +83,7 @@ class OperatorMatchingPass(TransformationPass):
         super().log_match(f"operator {op.operator_code}")
 
 
-class TensorMatchingPass(TransformationPass):
+class TensorMatchingPass(SubgraphTransformationPass):
     def __init__(self, priority):
         super().__init__(priority)
 
@@ -77,7 +94,7 @@ class TensorMatchingPass(TransformationPass):
         super().log_match(f"tensor {tensor.name}")
 
 
-class InputTensorMatchingPass(TransformationPass):
+class InputTensorMatchingPass(SubgraphTransformationPass):
     def __init__(self, priority):
         super().__init__(priority)
 
@@ -88,7 +105,7 @@ class InputTensorMatchingPass(TransformationPass):
         super().log_match(f"input tensor {tensor.name}")
 
 
-class OutputTensorMatchingPass(TransformationPass):
+class OutputTensorMatchingPass(SubgraphTransformationPass):
     def __init__(self, priority):
         super().__init__(priority)
 
@@ -102,6 +119,7 @@ class OutputTensorMatchingPass(TransformationPass):
 class PassManager():
     def __init__(self, model=None, passes=[]):
         self._queue = []
+        self._counter = itertools.count()
         if model:
             self.register_model(model)
         for trf_pass in passes:
@@ -112,11 +130,15 @@ class PassManager():
         self._model = model
 
     def register_pass(self, trf_pass):
-        assert isinstance(trf_pass, TransformationPass)
-        heapq.heappush(self._queue, (trf_pass.priority, trf_pass))
+        assert isinstance(trf_pass, ModelTransformationPass)
+        heapq.heappush(self._queue,
+                       (trf_pass.priority, next(self._counter), trf_pass))
+
+    def pop_pass(self):
+        return heapq.heappop(self._queue)[-1]
 
     def run_passes(self):
         while self._queue:
-            _, trf_pass = heapq.heappop(self._queue)
+            trf_pass = self.pop_pass()
             logging.debug(f"running {trf_pass}...")
             trf_pass.run(self._model)

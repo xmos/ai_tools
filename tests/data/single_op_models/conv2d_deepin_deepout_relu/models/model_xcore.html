@@ -1,0 +1,383 @@
+<html>
+<head>
+<style>
+body {font-family: sans-serif; background-color: #fa0;}
+table {background-color: #eca;}
+th {background-color: black; color: white;}
+h1 {
+  background-color: ffaa00;
+  padding:5px;
+  color: black;
+}
+
+svg {
+  margin: 10px;
+  border: 2px;
+  border-style: solid;
+  border-color: black;
+  background: white;
+}
+
+div {
+  border-radius: 5px;
+  background-color: #fec;
+  padding:5px;
+  margin:5px;
+}
+
+.tooltip {color: blue;}
+.tooltip .tooltipcontent  {
+    visibility: hidden;
+    color: black;
+    background-color: yellow;
+    padding: 5px;
+    border-radius: 4px;
+    position: absolute;
+    z-index: 1;
+}
+.tooltip:hover .tooltipcontent {
+    visibility: visible;
+}
+
+.edges line {
+  stroke: #333;
+}
+
+text {
+  font-weight: bold;
+}
+
+.nodes text {
+  color: black;
+  pointer-events: none;
+  font-family: monospace;
+  font-size: 12px;
+}
+</style>
+<script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+
+<body>
+<h1>TensorFlow Lite Model</h1>
+<table><tr>
+  <th>filename</th>
+  <td>filename</td>
+</tr><tr>
+  <th>version</th>
+  <td>version</td>
+</tr><tr>
+  <th>description</th>
+  <td>description</td>
+</tr></table>
+
+<div class='subgraph'><h2>Subgraph 0</h2>
+<h3>Inputs/Outputs</h3>
+<table><tr>
+  <th>inputs</th>
+  <th>outputs</th>
+</tr><tr>
+  <td><span class='tooltip'><span class='tooltipcontent'>(1) conv2d_input_int8 &ltINT8&gt [1, 5, 5, 32] <br></span>[1]</span></td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(0) Identity_int8 &ltINT8&gt [1, 5, 5, 16] <br></span>[0]</span></td>
+</tr></table>
+
+<h3>Tensors</h3>
+<table><tr>
+  <th>index</th>
+  <th>name</th>
+  <th>type</th>
+  <th>shape</th>
+  <th>buffer</th>
+  <th>quantization</th>
+</tr><tr>
+  <td>0</td>
+  <td>Identity_int8</td>
+  <td>INT8</td>
+  <td>[1, 5, 5, 16]</td>
+  <td>2</td>
+  <td>{'min': [-1.674882], 'max': [1.505935], 'scale': [0.01247379], 'zero_point': [6], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr><tr>
+  <td>1</td>
+  <td>conv2d_input_int8</td>
+  <td>INT8</td>
+  <td>[1, 5, 5, 32]</td>
+  <td>1</td>
+  <td>{'min': [0.0], 'max': [0.9998901], 'scale': [0.003921138], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr><tr>
+  <td>2</td>
+  <td>XC_conv2d_deepin_deepout_relu_0/weights</td>
+  <td>INT8</td>
+  <td>[1, 3, 3, 1, 16, 32]</td>
+  <td>0</td>
+  <td>{'scale': [0.0009279358, 0.0009275008, 0.0009261986, 0.0009252696, 0.0009263488, 0.0009245731, 0.0009254757, 0.0009271183, 0.0009226527, 0.0009263016, 0.0009205595, 0.0009253238, 0.0009273983, 0.0009257068, 0.0009266103, 0.0009265665], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr><tr>
+  <td>3</td>
+  <td>XC_conv2d_deepin_deepout_relu_0/biases</td>
+  <td>INT16</td>
+  <td>[1, 2, 16]</td>
+  <td>5</td>
+  <td>{'scale': [3.633195e-06, 3.633367e-06, 3.629824e-06, 3.636457e-06, 3.628322e-06, 3.609641e-06, 3.632156e-06, 3.617848e-06, 3.635359e-06, 3.628918e-06, 3.625378e-06, 3.632341e-06, 3.62811e-06, 3.631752e-06, 3.636858e-06, 3.638564e-06], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'CustomQuantization', 'quantized_dimension': 0}</td>
+</tr><tr>
+  <td>4</td>
+  <td>XC_conv2d_deepin_deepout_relu_0/shift_scale</td>
+  <td>INT16</td>
+  <td>[2, 16]</td>
+  <td>4</td>
+  <td>None</td>
+</tr></table>
+
+<h3>Ops</h3>
+<table><tr>
+  <th>index</th>
+  <th>inputs</th>
+  <th>outputs</th>
+  <th>opcode_index</th>
+  <th>builtin_options</th>
+  <th>custom_options</th>
+</tr><tr>
+  <td>0</td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(1) conv2d_input_int8 &ltINT8&gt [1, 5, 5, 32] <br>(2) XC_conv2d_deepin_deepout_relu_0/weights &ltINT8&gt [1, 3, 3, 1, 16, 32] <br>(3) XC_conv2d_deepin_deepout_relu_0/biases &ltINT16&gt [1, 2, 16] <br>(4) XC_conv2d_deepin_deepout_relu_0/shift_scale &ltINT16&gt [2, 16] <br></span>[1, 2, 3, 4]</span></td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(0) Identity_int8 &ltINT8&gt [1, 5, 5, 16] <br></span>[0]</span></td>
+  <td>(0) XC_conv2d_deepin_deepout_relu</td>
+  <td>None</td>
+  <td>{'padding': 'SAME', 'stride_h': 1, 'stride_w': 1}</td>
+</tr></table>
+
+<svg id='subgraph0' width='1600' height='900'></svg>
+<script>
+function buildGraph() {
+  // Build graph data
+  var graph = {
+  "nodes": [
+    {
+      "id": "o0",
+      "name": "(0) XC_conv2d_deepin_deepout_relu",
+      "text_color": "#eeeeee",
+      "fill_color": "#00a000",
+      "edge_radius": 10,
+      "x": 200,
+      "y": 200,
+      "node_width": 252,
+      "node_height": 25
+    },
+    {
+      "id": "t0",
+      "name": "Identity_int8\n(0) <INT8> [1, 5, 5, 16]",
+      "text_color": "#000000",
+      "fill_color": "#ffcccc",
+      "edge_radius": 1,
+      "x": 170,
+      "y": 300.0,
+      "node_width": 185,
+      "node_height": 40
+    },
+    {
+      "id": "t1",
+      "name": "conv2d_input_int8\n(1) <INT8> [1, 5, 5, 32]",
+      "text_color": "#000000",
+      "fill_color": "#ccccff",
+      "edge_radius": 1,
+      "x": 170,
+      "y": 100.0,
+      "node_width": 185,
+      "node_height": 40
+    },
+    {
+      "id": "t2",
+      "name": "XC_conv2d_deepin_deepout_relu_0/weights\n(2) <INT8> [1, 3, 3, 1, 16, 32]",
+      "text_color": "#000000",
+      "fill_color": "#fffacd",
+      "edge_radius": 1,
+      "x": 365,
+      "y": 100.0,
+      "node_width": 297,
+      "node_height": 40
+    },
+    {
+      "id": "t3",
+      "name": "XC_conv2d_deepin_deepout_relu_0/biases\n(3) <INT16> [1, 2, 16]",
+      "text_color": "#000000",
+      "fill_color": "#fffacd",
+      "edge_radius": 1,
+      "x": 672,
+      "y": 100.0,
+      "node_width": 290,
+      "node_height": 40
+    },
+    {
+      "id": "t4",
+      "name": "XC_conv2d_deepin_deepout_relu_0/shift_scale\n(4) <INT16> [2, 16]",
+      "text_color": "#000000",
+      "fill_color": "#fffacd",
+      "edge_radius": 1,
+      "x": 972,
+      "y": 100.0,
+      "node_width": 327,
+      "node_height": 40
+    }
+  ],
+  "edges": [
+    {
+      "source": "t1",
+      "target": "o0"
+    },
+    {
+      "source": "t2",
+      "target": "o0"
+    },
+    {
+      "source": "t3",
+      "target": "o0"
+    },
+    {
+      "source": "t4",
+      "target": "o0"
+    },
+    {
+      "target": "t0",
+      "source": "o0"
+    }
+  ]
+};
+
+  var svg = d3.select("#subgraph0")
+  var width = svg.attr("width");
+  var height = svg.attr("height");
+  // Make the graph scrollable.
+  svg = svg.call(d3.zoom().on("zoom", function() {
+    svg.attr("transform", d3.event.transform);
+  })).append("g");
+
+  var color = d3.scaleOrdinal(d3.schemeDark2);
+
+  var simulation = d3.forceSimulation()
+      .force("link", d3.forceLink().id(function(d) {return d.id;}))
+      .force("charge", d3.forceManyBody())
+      .force("center", d3.forceCenter(0.5 * width, 0.5 * height));
+
+  var edge = svg.append("g").attr("class", "edges").selectAll("line")
+    .data(graph.edges).enter().append("path").attr("stroke","black").attr("fill","none")
+
+  // Make the node group
+  var node = svg.selectAll(".nodes")
+    .data(graph.nodes)
+    .enter().append("g")
+    .attr("x", function(d){return d.x})
+    .attr("y", function(d){return d.y})
+    .attr("node_width", function(d){return d.node_width})
+    .attr("transform", function(d) {
+      return "translate( " + d.x + ", " + d.y + ")"
+    })
+    .attr("class", "nodes")
+      .call(d3.drag()
+          .on("start", function(d) {
+            if(!d3.event.active) simulation.alphaTarget(1.0).restart();
+            d.fx = d.x;d.fy = d.y;
+          })
+          .on("drag", function(d) {
+            d.fx = d3.event.x; d.fy = d3.event.y;
+          })
+          .on("end", function(d) {
+            if (!d3.event.active) simulation.alphaTarget(0);
+            d.fx = d.fy = null;
+          }));
+  // Within the group, draw a box for the node position and text
+  // on the side.
+
+  var node_width = 150;
+  var node_height = 30;
+
+  node.append("rect")
+      .attr("r", "5px")
+      .attr("width", function(d) { return d.node_width; })
+      .attr("height", function(d) { return d.node_height; })
+      .attr("rx", function(d) { return d.edge_radius; })
+      .attr("stroke", "#000000")
+      .attr("fill", function(d) { return d.fill_color; })
+  let text = node.append("text")
+      .text("")
+      .attr("x", 5)
+      .attr("y", 1)
+      .attr("fill", function(d) { return d.text_color; });
+  text.selectAll("text")
+      .data(d => d.name.split("\n"))
+      .enter()
+      .append("tspan")
+      .attr("class", "text")
+      .text(d => d)
+      .attr("x", 5)
+      .attr("dy", 15);
+
+  // Setup force parameters and update position callback
+
+  var node = svg.selectAll(".nodes")
+    .data(graph.nodes);
+
+  // Bind the links
+  var name_to_g = {}
+  node.each(function(data, index, nodes) {
+    console.log(data.id)
+    name_to_g[data.id] = this;
+  });
+
+  function proc(w, t) {
+    return parseInt(w.getAttribute(t));
+  }
+  edge.attr("d", function(d) {
+    function lerp(t, a, b) {
+      return (1.0-t) * a + t * b;
+    }
+    var x1 = proc(name_to_g[d.source],"x") + proc(name_to_g[d.source],"node_width") / 2;
+    var y1 = proc(name_to_g[d.source],"y") + node_height;
+    var x2 = proc(name_to_g[d.target],"x") + proc(name_to_g[d.target],"node_width") / 2;
+    var y2 = proc(name_to_g[d.target],"y");
+    var s = "M " + x1 + " " + y1
+        + " C " + x1 + " " + lerp(.5, y1, y2)
+        + " " + x2 + " " + lerp(.5, y1, y2)
+        + " " + x2  + " " + y2
+    return s;
+  });
+}
+
+buildGraph()
+</script>
+</div>
+
+<h2>Buffers</h2>
+<table><tr>
+  <th>index</th>
+  <th>data</th>
+</tr><tr>
+  <td>0</td>
+  <td>4608 bytes</td>
+</tr><tr>
+  <td>1</td>
+  <td>--</td>
+</tr><tr>
+  <td>2</td>
+  <td>--</td>
+</tr><tr>
+  <td>3</td>
+  <td>5 bytes</td>
+</tr><tr>
+  <td>4</td>
+  <td>64 bytes</td>
+</tr><tr>
+  <td>5</td>
+  <td>64 bytes</td>
+</tr></table>
+
+<h2>Operator Codes</h2>
+<table><tr>
+  <th>index</th>
+  <th>builtin_code</th>
+  <th>custom_code</th>
+  <th>version</th>
+</tr><tr>
+  <td>0</td>
+  <td>CUSTOM</td>
+  <td>XC_conv2d_deepin_deepout_relu</td>
+  <td>1</td>
+</tr></table>
+
+</body>
+</html>

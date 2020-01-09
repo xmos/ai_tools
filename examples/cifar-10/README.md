@@ -1,11 +1,63 @@
-# CIFAR-10 Example application
+# CIFAR-10 Example applications
 
-## Building
+## Generating Test Input Images
 
-    > xwaf configure clean build
+    > cd test_inputs
+    > ./make_test_tensors.py
 
-## Running
+## TensorFLow Lite for Microcontrollers
 
-To run in the simulator
+### xCORE
 
-    > xsim --args bin/800MHz/cifar-10_800MHz.xe test_inputs/dog.bin 
+Building for xCORE
+
+    > cd tflite
+    > make TARGET=xcore
+
+Note, `xcore` is the default target.
+
+Running with the xCORE simulator
+
+    > xsim --args bin/cifar-10.xe ../test_inputs/dog.bin
+
+### x86
+
+Building for x86
+
+    > cd tflite
+    > make TARGET=x86
+
+Running
+
+    > ./bin/test_model ../test_inputs/ship.bin
+
+## Code Generation
+
+### xCORE
+
+Building for xCORE
+
+    > cd xcore
+    > make TARGET=xcore
+
+Note, `xcore` is the default target.
+
+Running with the xCORE simulator
+
+    > xsim --args bin/cifar-10.xe ../test_inputs/dog.bin
+
+### x86
+
+Building for x86
+
+    > cd xcore
+    > make TARGET=x86
+
+Running
+
+    > ./bin/test_model ../test_inputs/ship.bin
+
+## Computing Accuracy on xCORE
+
+    > cd test_inputs
+    > ./test_accuracy.py --xe path/to/some.xe

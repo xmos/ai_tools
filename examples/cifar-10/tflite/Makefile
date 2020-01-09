@@ -1,40 +1,138 @@
-# The TARGET variable determines what target system the application is 
-# compiled for. It either refers to an XN file in the source directories
-# or a valid argument for the --target option when compiling.
+TARGET := xcore
+BIN_DIR := bin
 
-TARGET = XU316-1024-QF60-C20-800MHz.xn
+ifeq ($(TARGET), x86)
+	BUILD_TARGET := x86
 
-# The APP_NAME variable determines the name of the final .xe file. It should
-# not include the .xe postfix. If left blank the name will default to 
-# the project name
-APP_NAME =
+	CC := gcc
+	CCFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -O3 
 
-# The flags passed to xcc when building the application
-# You can also set the following to override flags for a particular language:
-#
-#    XCC_XC_FLAGS, XCC_C_FLAGS, XCC_ASM_FLAGS, XCC_CPP_FLAGS
-#
-# If the variable XCC_MAP_FLAGS is set it overrides the flags passed to 
-# xcc for the final link (mapping) stage.
+	CXX := g++
+	CXXFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -O3
+	CXXFLAGS += -std=c++11 
 
-XCC_FLAGS = -Wall -Os -g -report
-XCC_FLAGS += -Wcpp,-std=c++11
-XCC_FLAGS += -DTF_LITE_STATIC_MEMORY
-XCC_FLAGS += -DTF_LITE_DISABLE_X86_NEON
-XCC_FLAGS += -DNDEBUG
-XCC_FLAGS += -mcmodel=large
-#XCC_FLAGS += -DXCORE
-XCC_FLAGS += -Wno-unknown-attributes
-XCC_FLAGS += -Wno-xcore-fptrgroup
-XCC_FLAGS += -Wno-xcore-fptrgroup
-XCC_FLAGS += -fcmdline-buffer-bytes=256
+	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm
 
-# The USED_MODULES variable lists other module used by the application. 
-#USED_MODULES = lib_xyz
+	OBJ_DIR := .build/x86
 
-#=============================================================================
-# The following part of the Makefile includes the common build infrastructure
-# for compiling XMOS applications. You should not need to edit below here.
+	APP = cifar-10
+else # must be xcore
+	BUILD_TARGET := xcore.ai
 
-XMOS_MAKE_PATH ?= ../..
-include $(XMOS_MAKE_PATH)/xcommon/module_xcommon/build/Makefile.common
+	PLATFORM_FLAGS := ../config/XU316-1024-QF60-C20-800MHz.xn
+	PLATFORM_FLAGS += -mcmodel=large
+	PLATFORM_FLAGS += -Os
+	PLATFORM_FLAGS += -DXCORE
+	PLATFORM_FLAGS += -Wno-xcore-fptrgroup
+	PLATFORM_FLAGS += -Wno-unknown-pragmas
+	PLATFORM_FLAGS += -Wno-unknown-attributes
+	PLATFORM_FLAGS += -report
+	PLATFORM_FLAGS += -fcmdline-buffer-bytes=256
+
+	AS := xcc
+	ASFLAGS := $(PLATFORM_FLAGS)
+
+	CC := xcc
+	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DNDEBUG
+	CCFLAGS += $(PLATFORM_FLAGS)
+
+	CXX := xcc
+	CXXFLAGS := -std=c++11 -g -DTF_LITE_STATIC_MEMORY -DNDEBUG
+	CXXFLAGS += $(PLATFORM_FLAGS)
+
+	LDFLAGS := $(PLATFORM_FLAGS)
+
+	OBJ_DIR := .build/xcore
+
+	APP = cifar-10.xe
+endif
+
+$(info Building for $(BUILD_TARGET))
+
+#********************
+# Dependencies
+#********************
+FLATBUFFERS_DIR := ../../../..
+GEMMLOWP_DIR := ../../../../gemmlowp
+TENSORFLOW_DIR := ../../../../tensorflow
+LIB_NN_DIR := ../../../xcore/operator_book
+
+INCLUDES := \
+	-I$(FLATBUFFERS_DIR)/flatbuffers/include \
+	-I$(GEMMLOWP_DIR) \
+	-I$(TENSORFLOW_DIR) \
+	-I$(LIB_NN_DIR)/lib_nn_operator/api \
+	-Isrc
+
+# source file paths
+VPATH := \
+	$(FLATBUFFERS_DIR) \
+	$(TENSORFLOW_DIR) \
+	$(LIB_NN_DIR) \
+	src
+
+SOURCES := \
+	tensorflow/lite/c/common.c \
+	tensorflow/lite/core/api/error_reporter.cc \
+	tensorflow/lite/core/api/flatbuffer_conversions.cc \
+	tensorflow/lite/core/api/op_resolver.cc \
+	tensorflow/lite/core/api/tensor_utils.cc \
+	tensorflow/lite/micro/debug_log_numbers.cc \
+	tensorflow/lite/micro/memory_helpers.cc \
+	tensorflow/lite/micro/micro_allocator.cc \
+	tensorflow/lite/micro/micro_error_reporter.cc \
+	tensorflow/lite/micro/micro_interpreter.cc \
+	tensorflow/lite/micro/micro_mutable_op_resolver.cc \
+	tensorflow/lite/micro/micro_utils.cc \
+	tensorflow/lite/micro/simple_memory_allocator.cc \
+	tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc \
+	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
+	lib_nn_operator/src/nn_operator.c \
+	main.cc
+
+ifeq ($(TARGET), x86)
+	SOURCES += \
+		flatbuffers/src/util.cpp \
+		tensorflow/lite/micro/debug_log.cc 
+else # must be xcore
+	SOURCES += \
+		lib_nn_operator/src/asm/conv2d_deepin_deepout_relu_patch.S \
+		lib_nn_operator/src/asm/conv2d_deepin_deepout_relu.S \
+		lib_nn_operator/src/asm/conv2d_shallowin_deepout_relu_patch.S \
+		lib_nn_operator/src/asm/conv2d_shallowin_deepout_relu.S \
+		lib_nn_operator/src/asm/fc_deepin_shallowout_lin.S \
+		lib_nn_operator/src/asm/maxpool2d_deep.S \
+		tensorflow/lite/micro/xcore/debug_log.cc 
+endif
+
+OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))))
+OBJECT_FILES := $(addprefix $(OBJ_DIR)/,$(OBJECT_FILES))
+OBJECTS := $(SOURCES) $(OBJECT_FILES)
+
+.PHONY: all clean $(APP)
+
+all: $(BIN_DIR)/$(APP)
+
+$(OBJ_DIR)/%.o: %.S
+	@mkdir -p $(dir $@)
+	$(AS) $(ASFLAGS) -o $@ -c $<
+
+$(OBJ_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ -c $<
+
+$(OBJ_DIR)/%.o: %.cc
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ -c $<
+
+$(OBJ_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ -c $<
+
+$(BIN_DIR)/$(APP): $(OBJECTS)
+	@mkdir -p $(dir $@)
+	$(CXX) $(LDFLAGS) $(OBJECT_FILES) -o $(BIN_DIR)/$(APP)
+
+clean:
+	-@rm -rvf $(OBJECT_FILES) $(BIN_DIR)/$(APP)

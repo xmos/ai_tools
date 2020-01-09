@@ -14,6 +14,8 @@ extern "C" {
 #endif
 
 
+
+
 static inline void conv2d_deepin_deepout_block(
     int8_t* Y,
     const nn_conv2d_dido_params_t* params,

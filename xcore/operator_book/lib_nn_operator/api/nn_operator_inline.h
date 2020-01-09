@@ -3,6 +3,7 @@
 #ifndef NN_OPERATOR_INLINE_H_
 #define NN_OPERATOR_INLINE_H_
 
+#include "nn_op_structs.h"
 #include "nn_operator_c.h"
 #include "nn_operator_asm.h"
 
@@ -36,6 +37,24 @@ static inline void conv2d_deepin_deepout_block(
 #endif
 }
 
+static inline void conv2d_deepin_deepout(
+    int8_t* Y,
+    const nn_conv2d_dido_params_t* params,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* B,
+    const int16_t* shifts,
+    const int16_t* scales)
+{
+    const unsigned block_count = params->block_count;
+    for(int i = 0; i < block_count; i++){
+        conv2d_deepin_deepout_block(
+            Y, params, &params->blocks[i],
+            X, K, B, shifts, scales
+        );
+    }
+}
+
 
 static inline void conv2d_shallowin_deepout_block(
     int8_t* Y,
@@ -56,6 +75,25 @@ static inline void conv2d_shallowin_deepout_block(
     conv2d_shallowin_deepout_block_c(Y, params, block, X, K, B, shifts, scales);
 
 #endif
+}
+
+
+static inline void conv2d_shallowin_deepout(
+    int8_t* Y,
+    const nn_conv2d_sido_params_t* params,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* B,
+    const int16_t* shifts,
+    const int16_t* scales)
+{
+    const unsigned block_count = params->block_count;
+    for(int i = 0; i < block_count; i++){
+        conv2d_shallowin_deepout_block(
+            Y, params, &params->blocks[i],
+            X, K, B, shifts, scales
+        );
+    }
 }
 
 

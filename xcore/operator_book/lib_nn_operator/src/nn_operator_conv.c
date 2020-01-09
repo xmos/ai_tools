@@ -420,6 +420,14 @@ void conv2d_deepin_deepout_init(
 
 }
 
+void conv2d_deepin_deepout_deinit(
+    nn_conv2d_dido_params_t* params)
+{
+    if(params->blocks){
+        free(params->blocks);
+    }
+}
+
 void conv2d_deepin_deepout_block_c(
     int8_t* Y,
     const nn_conv2d_dido_params_t* params,
@@ -701,6 +709,14 @@ void conv2d_shallowin_deepout_init(
         }
     }
 
+}
+
+void conv2d_shallowin_deepout_deinit(
+    nn_conv2d_sido_params_t* params)
+{
+    if(params->blocks){
+        free(params->blocks);
+    }
 }
 
 void conv2d_shallowin_deepout_block_c(

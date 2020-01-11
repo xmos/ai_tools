@@ -151,7 +151,7 @@ lower (respectively) 16 bits of the 32-bit bias for output channel `(16*i + j)`.
  * The `nn_conv2d_dido_params_t*` input parameter must have been initialized with 
  * a call to `conv2d_deepin_deepout_init()`.
  *
- * The dimensions and types of the `Y`, `X`, `K`, `B`, `shifts` and `scales` must be consistent
+ * The dimensions and types of the `Y`, `X`, `K`, `shifts` and `scales` must be consistent
  * with those provided to `conv2d_deepin_deepout_init()`.
  * 
  * The height and width of `Y` depends on the `padding_mode` parameter supplied to `conv2d_deepin_deepout_init()`.
@@ -178,9 +178,6 @@ lower (respectively) 16 bits of the 32-bit bias for output channel `(16*i + j)`.
     \endcode
  *  Note that the fifth dimension of `K` is reversed.
  *
- * The shape of `B` is (C_out // 16, 2, 16), and is layed out in Bias Tensor Layout (Form 1) 
- * as described above.
- *
  * The shape of `shifts` is (C_out), with data layed out in standard form.
  * 
  * The shape of `scales` is (C_out), with data layed out in standard form.
@@ -193,7 +190,6 @@ lower (respectively) 16 bits of the 32-bit bias for output channel `(16*i + j)`.
  * \param params    Pointer to `nn_conv2d_dido_params_t` initialized with `conv2d_deepin_deepout_init()`
  * \param X         Pointer to beginning of input data tensor
  * \param K         Pointer to beginning of kernel tensor
- * \param B         Pointer to beginning of bias tensor
  * \param shifts    Pointer to beginning of shifts tensor
  * \param scales    Pointer to beginning of scales tensor
  */
@@ -202,7 +198,6 @@ static inline void conv2d_deepin_deepout(
     const nn_conv2d_dido_params_t* params,
     const int8_t* X,
     const int8_t* K,
-    const data16_t* B,
     const int16_t* shifts,
     const int16_t* scales);
 
@@ -284,7 +279,6 @@ static inline void conv2d_shallowin_deepout(
     const nn_conv2d_sido_params_t* params,
     const int8_t* X,
     const int8_t* K,
-    const data16_t* B,
     const int16_t* shifts,
     const int16_t* scales);
 
@@ -477,18 +471,10 @@ static inline void argmax_16(
  */
 void conv2d_deepin_deepout_init(
     nn_conv2d_dido_params_t* params,
-    const uint32_t X_height,
-    const uint32_t X_width,
-    const uint32_t K_h,
-    const uint32_t K_w,
-    const uint32_t C_in,
-    const uint32_t C_out,
-    const padding_mode_t pad_mode,
-    const int8_t zero_point,
-    const uint32_t region_top,
-    const uint32_t region_left,
-    const uint32_t region_rows,
-    const uint32_t region_cols);
+    const nn_conv2d_init_params_t* init_params,
+    const nn_conv2d_region_params_t* region_params,
+    const int8_t* K,
+    const data16_t* B);
 
 /**
  * De-initialize a `nn_conv2d_dido_params_t` struct which
@@ -529,18 +515,10 @@ void conv2d_deepin_deepout_deinit(
  */
 void conv2d_shallowin_deepout_init(
     nn_conv2d_sido_params_t* params,
-    const uint32_t X_height,
-    const uint32_t X_width,
-    const uint32_t K_h,
-    const uint32_t K_w,
-    const uint32_t C_in,
-    const uint32_t C_out,
-    const padding_mode_t pad_mode,
-    const int8_t zero_point,
-    const uint32_t region_top,
-    const uint32_t region_left,
-    const uint32_t region_rows,
-    const uint32_t region_cols);
+    const nn_conv2d_init_params_t* init_params,
+    const nn_conv2d_region_params_t* region_params,
+    const int8_t* K,
+    const data16_t* B);
 
 
 /**

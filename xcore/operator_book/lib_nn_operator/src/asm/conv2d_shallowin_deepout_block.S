@@ -9,7 +9,6 @@ void conv2d_shallowin_deepout_block_asm(
     const nn_conv2d_sido_block_params_t* block,
     const int8_t* X,
     const int8_t* K,
-    const data16_t* B,
     const int16_t* shifts,
     const int16_t* scales);
 */
@@ -17,7 +16,7 @@ void conv2d_shallowin_deepout_block_asm(
 
 #define FUNCTION_NAME conv2d_shallowin_deepout_block_asm
 
-#define NSTACKVECTORS   (4)
+#define NSTACKVECTORS   (2)
 #define NSTACKWORDS     (NSTACKVECTORS*8 + 30)
     
 .text
@@ -35,9 +34,8 @@ void conv2d_shallowin_deepout_block_asm(
 #define arg_X                   r3
 
 #define STACK_K_START           (NSTACKWORDS+1)
-#define STACK_B_START           (NSTACKWORDS+2)
-#define STACK_SHIFTS_START      (NSTACKWORDS+3)
-#define STACK_SCALES_START      (NSTACKWORDS+4)
+#define STACK_SHIFTS_START      (NSTACKWORDS+2)
+#define STACK_SCALES_START      (NSTACKWORDS+3)
 
 #define STACK_R4_R5_DBL         (1)
 #define STACK_R6_R7_DBL         (2)
@@ -66,10 +64,12 @@ void conv2d_shallowin_deepout_block_asm(
 #define STACK_OUT_COLS_LEFT     (23)
 #define STACK_COUT_GRPS_LEFT    (24)
 
-#define STACK_PADC_VEC          (NSTACKWORDS-8)
-#define STACK_ZEROP_VEC         (NSTACKWORDS-16)
-#define STACK_TMP_VEC1          (NSTACKWORDS-24)
-#define STACK_TMP_VEC2          (NSTACKWORDS-32)
+#define STACK_B_START           (25)
+
+// #define STACK_PADC_VEC          (NSTACKWORDS-8)
+// #define STACK_ZEROP_VEC         (NSTACKWORDS-16)
+#define STACK_TMP_VEC1          (NSTACKWORDS-8)
+#define STACK_TMP_VEC2          (NSTACKWORDS-16)
 
 .align 4
 
@@ -102,30 +102,10 @@ FUNCTION_NAME:
     {   add r10, r10, r11                               ;                                                   }
     {                                                   ;   stw r10, sp[STACK_K_START]                      }
 
-
-// Set up our padding count and zero-point vectors
-
-    //params->zero_point
-    {   ldaw r11, sp[STACK_ZEROP_VEC]                   ;                                                   }
-    {                                                   ;   ldw r4, params[5]                               }
-    {   mov r5, r4                                      ;                                                   }
-    {   zip r5, r4, 4                                   ;                                                   }
-    {   mov r5, r4                                      ;                                                   }
-    std r4, r5, r11[0]
-    std r4, r5, r11[1]
-    std r4, r5, r11[2]
-    std r4, r5, r11[3]
-
-    //block->padc
-    {   ldaw r11, sp[STACK_PADC_VEC]                    ;                                                   }
+    //Load our adjusted bias vector (which is where padding_count used to be!)
+    //  and store it on the stack
     {                                                   ;   ldw r4, block[3]                                }
-    {   mov r5, r4                                      ;                                                   }
-    {   zip r5, r4, 4                                   ;                                                   }
-    {   mov r5, r4                                      ;                                                   }
-    std r4, r5, r11[0]
-    std r4, r5, r11[1]
-    std r4, r5, r11[2]
-    std r4, r5, r11[3]
+    {                                                   ;   stw r4, sp[STACK_B_START]                       }
 
 // Other stuff that should be on the stack
 //  TODO: some of this could be expedited with ldd and std if the params are arranged nicely on the stack
@@ -202,8 +182,8 @@ FUNCTION_NAME:
             //Reset X to start of patch
             {   ldc r10, 32                                     ;   ldw X, sp[STACK_X_START]                        }
 
-            //Set VPU mode to 16-bit
-            {   shl r11, r10, 3                                 ;                                                   }
+            //Set VPU mode to 8-bit
+            {   shl r11, r10, 4                                 ;                                                   }
             {                                                   ;   vsetc r11                                       }
 
             //initialize biases
@@ -211,14 +191,6 @@ FUNCTION_NAME:
             {   add r11, r3, r10                                ;   vldd r3[0]                                      }
             {   add r3, r11, r10                                ;   vldr r11[0]                                     }
             {                                                   ;   stw r3, sp[STACK_B_NEXT]                        }
-
-            //VLMACC the padding count and zero-point vectors into the accumulators
-            {   ldaw r11, sp[STACK_PADC_VEC]                    ;                                                   }
-            {   ldaw r11, sp[STACK_ZEROP_VEC]                   ;   vldc r11[0]                                     }
-            {   shl r11, r10, 4                                 ;   vlmacc r11[0]                                   }
-
-            //Set VPU mode to 8-bit
-            {                                                   ;   vsetc r11                                       }
 
             //Keep patch_rows in a register until we're done with the patch
             #define patch_rows  r3

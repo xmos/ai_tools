@@ -25,7 +25,7 @@ typedef struct {
             int32_t K;
         } start_offset;
 
-        uint32_t padding_cells;
+        data16_t* biases;
 
     } init;
 
@@ -77,7 +77,6 @@ typedef struct {
 
 } nn_conv2d_dido_params_t;
 
-
 /**
 * 
 */
@@ -91,7 +90,7 @@ typedef struct {
             int32_t K;
         } start_offset;
 
-        uint32_t padding_cells;
+        data16_t* biases;
 
     } init;
 
@@ -145,6 +144,30 @@ typedef struct {
     nn_conv2d_sido_block_params_t* blocks;
 
 } nn_conv2d_sido_params_t;
+
+
+
+typedef struct {
+    uint32_t X_height;
+    uint32_t X_width;
+    uint32_t K_h;
+    uint32_t K_w;
+    uint32_t C_in;
+    uint32_t C_out;
+    padding_mode_t pad_mode;
+    int8_t zero_point;
+} nn_conv2d_init_params_t;
+
+
+
+typedef struct {
+    uint32_t top;
+    uint32_t left;
+    uint32_t rows;
+    uint32_t cols;
+} nn_conv2d_region_params_t;
+
+
 
 #ifdef __XC__
 }   //extern "C"

@@ -90,11 +90,11 @@ void test_conv2d_shallowin_deepout_case1()
 
     nn_conv2d_sido_params_t params;
 
-    padding_mode_t pad_mode = PAD_MODE_VALID? PADDING_VALID : PADDING_SAME;
-
-    conv2d_shallowin_deepout_init(
-        &params, X_height, X_width, K_h, K_w, C_in, C_out, 
-        pad_mode, 0, region_top, region_left, region_rows, region_cols);
+    {
+        const nn_conv2d_init_params_t init_params = { X_height, X_width, K_h, K_w, C_in, C_out, (PAD_MODE_VALID? PADDING_VALID : PADDING_SAME), 0 };
+        const nn_conv2d_region_params_t region_params = { region_top, region_left, region_rows, region_cols };
+        conv2d_shallowin_deepout_init(&params, &init_params, &region_params, (int8_t*) K, (data16_t*) B_boggled);
+    }
 
     TEST_ASSERT_EQUAL(1, params.block_count);
 
@@ -104,14 +104,14 @@ void test_conv2d_shallowin_deepout_case1()
         conv2d_shallowin_deepout_block_c((int8_t*)Y_c,  
                                              &params, 
                                              (nn_conv2d_sido_block_params_t*) &params.blocks[block], 
-                                             (int8_t*)X, (int8_t*)K, B_boggled, shifts, scales);
+                                             (int8_t*)X, (int8_t*)K, shifts, scales);
 #endif
 
 #if TEST_ASM
         conv2d_shallowin_deepout_block_asm((int8_t*)Y_asm,  
                                              &params, 
                                              (nn_conv2d_sido_block_params_t*) &params.blocks[block], 
-                                             (int8_t*)X, (int8_t*)K, B_boggled, shifts, scales);
+                                             (int8_t*)X, (int8_t*)K, shifts, scales);
 #endif
 
 
@@ -210,11 +210,11 @@ void test_conv2d_shallowin_deepout_case2()
 
     nn_conv2d_sido_params_t params;
 
-    padding_mode_t pad_mode = PAD_MODE_VALID? PADDING_VALID : PADDING_SAME;
-
-    conv2d_shallowin_deepout_init(
-        &params, X_height, X_width, K_h, K_w, C_in, C_out, 
-        pad_mode, 0, region_top, region_left, region_rows, region_cols);
+    {
+        const nn_conv2d_init_params_t init_params = { X_height, X_width, K_h, K_w, C_in, C_out, (PAD_MODE_VALID? PADDING_VALID : PADDING_SAME), 0 };
+        const nn_conv2d_region_params_t region_params = { region_top, region_left, region_rows, region_cols };
+        conv2d_shallowin_deepout_init(&params, &init_params, &region_params, (int8_t*) K, (data16_t*) B_boggled);
+    }
 
     TEST_ASSERT_EQUAL(1, params.block_count);
 
@@ -224,14 +224,14 @@ void test_conv2d_shallowin_deepout_case2()
         conv2d_shallowin_deepout_block_c((int8_t*)Y_c,  
                                              &params, 
                                              (nn_conv2d_sido_block_params_t*) &params.blocks[block], 
-                                             (int8_t*)X, (int8_t*)K, B_boggled, shifts, scales);
+                                             (int8_t*)X, (int8_t*)K, shifts, scales);
 #endif
 
 #if TEST_ASM
         conv2d_shallowin_deepout_block_asm((int8_t*)Y_asm,  
                                              &params, 
                                              (nn_conv2d_sido_block_params_t*) &params.blocks[block], 
-                                             (int8_t*)X, (int8_t*)K, B_boggled, shifts, scales);
+                                             (int8_t*)X, (int8_t*)K, shifts, scales);
 #endif
     }
 
@@ -328,11 +328,11 @@ void test_conv2d_shallowin_deepout_case3()
 
     nn_conv2d_sido_params_t params;
 
-    padding_mode_t pad_mode = PAD_MODE_VALID? PADDING_VALID : PADDING_SAME;
-
-    conv2d_shallowin_deepout_init(
-        &params, X_height, X_width, K_h, K_w, C_in, C_out, 
-        pad_mode, 0, region_top, region_left, region_rows, region_cols);
+    {
+        const nn_conv2d_init_params_t init_params = { X_height, X_width, K_h, K_w, C_in, C_out, (PAD_MODE_VALID? PADDING_VALID : PADDING_SAME), 0 };
+        const nn_conv2d_region_params_t region_params = { region_top, region_left, region_rows, region_cols };
+        conv2d_shallowin_deepout_init(&params, &init_params, &region_params, (int8_t*) K, (data16_t*) B_boggled);
+    }
 
     TEST_ASSERT_EQUAL(1, params.block_count);
 
@@ -342,14 +342,14 @@ void test_conv2d_shallowin_deepout_case3()
         conv2d_shallowin_deepout_block_c((int8_t*)Y_c,  
                                              &params, 
                                              (nn_conv2d_sido_block_params_t*) &params.blocks[block], 
-                                             (int8_t*)X, (int8_t*)K, B_boggled, shifts, scales);
+                                             (int8_t*)X, (int8_t*)K, shifts, scales);
 #endif
 
 #if TEST_ASM
         conv2d_shallowin_deepout_block_asm((int8_t*)Y_asm,  
                                              &params, 
                                              (nn_conv2d_sido_block_params_t*) &params.blocks[block], 
-                                             (int8_t*)X, (int8_t*)K, B_boggled, shifts, scales);
+                                             (int8_t*)X, (int8_t*)K, shifts, scales);
 #endif
     }
 
@@ -464,11 +464,11 @@ void test_conv2d_shallowin_deepout_case4()
 
     nn_conv2d_sido_params_t params;
 
-    padding_mode_t pad_mode = PAD_MODE_VALID? PADDING_VALID : PADDING_SAME;
-
-    conv2d_shallowin_deepout_init(
-        &params, X_height, X_width, K_h, K_w, C_in, C_out, 
-        pad_mode, 0, region_top, region_left, region_rows, region_cols);
+    {
+        const nn_conv2d_init_params_t init_params = { X_height, X_width, K_h, K_w, C_in, C_out, (PAD_MODE_VALID? PADDING_VALID : PADDING_SAME), 0 };
+        const nn_conv2d_region_params_t region_params = { region_top, region_left, region_rows, region_cols };
+        conv2d_shallowin_deepout_init(&params, &init_params, &region_params, (int8_t*) K, (data16_t*) B_boggled);
+    }
 
     TEST_ASSERT_EQUAL(1, params.block_count);
 
@@ -478,14 +478,14 @@ void test_conv2d_shallowin_deepout_case4()
         conv2d_shallowin_deepout_block_c((int8_t*)Y_c,  
                                              &params, 
                                              (nn_conv2d_sido_block_params_t*) &params.blocks[block], 
-                                             (int8_t*)X, (int8_t*)K, B_boggled, shifts, scales);
+                                             (int8_t*)X, (int8_t*)K, shifts, scales);
 #endif
 
 #if TEST_ASM
         conv2d_shallowin_deepout_block_asm((int8_t*)Y_asm,  
                                              &params, 
                                              (nn_conv2d_sido_block_params_t*) &params.blocks[block], 
-                                             (int8_t*)X, (int8_t*)K, B_boggled, shifts, scales);
+                                             (int8_t*)X, (int8_t*)K, shifts, scales);
 #endif
     }
 
@@ -600,11 +600,11 @@ void test_conv2d_shallowin_deepout_case5()
 
     nn_conv2d_sido_params_t params;
 
-    padding_mode_t pad_mode = PAD_MODE_VALID? PADDING_VALID : PADDING_SAME;
-
-    conv2d_shallowin_deepout_init(
-        &params, X_height, X_width, K_h, K_w, C_in, C_out, 
-        pad_mode, 64, region_top, region_left, region_rows, region_cols);
+    {
+        const nn_conv2d_init_params_t init_params = { X_height, X_width, K_h, K_w, C_in, C_out, (PAD_MODE_VALID? PADDING_VALID : PADDING_SAME), 64 };
+        const nn_conv2d_region_params_t region_params = { region_top, region_left, region_rows, region_cols };
+        conv2d_shallowin_deepout_init(&params, &init_params, &region_params, (int8_t*) K, (data16_t*) B_boggled);
+    }
 
     //final 32-bit accumulator should be   (co<<8) + (2**6 * C_in * padding_cells)
     //                                     co * 2**8  + 2**8 * padding_cells
@@ -620,14 +620,14 @@ void test_conv2d_shallowin_deepout_case5()
         conv2d_shallowin_deepout_block_c((int8_t*)Y_c,  
                                              &params, 
                                              (nn_conv2d_sido_block_params_t*) &params.blocks[block], 
-                                             (int8_t*)X, (int8_t*)K, B_boggled, shifts, scales);
+                                             (int8_t*)X, (int8_t*)K, shifts, scales);
 #endif
 
 #if TEST_ASM
         conv2d_shallowin_deepout_block_asm((int8_t*)Y_asm,  
                                              &params, 
                                              (nn_conv2d_sido_block_params_t*) &params.blocks[block], 
-                                             (int8_t*)X, (int8_t*)K, B_boggled, shifts, scales);
+                                             (int8_t*)X, (int8_t*)K, shifts, scales);
 #endif
     }
 

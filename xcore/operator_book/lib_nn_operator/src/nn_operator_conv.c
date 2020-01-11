@@ -13,6 +13,126 @@
 #include <assert.h>
 
 
+
+#ifndef TRUE
+#define TRUE (1)
+#endif
+#ifndef FALSE
+#define FALSE (0)
+#endif
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+static inline unsigned img_pxl_offset(
+    const unsigned img_width,
+    const unsigned channels,
+    const unsigned pixel_row,
+    const unsigned pixel_col)
+{
+    const unsigned bytes_per_row = channels * img_width;
+    return bytes_per_row * pixel_row + channels * pixel_col;
+}
+
+
+
+
+
+
+
+
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////////////////////////////////
+// /*
+//     Get the offset of a coefficient in the BOGGLED deepin-deepout kernel tensor.
+// */
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// static inline unsigned dido_coef_offset(
+//     const nn_conv2d_init_params_t* init,
+//     const unsigned cout,
+//     const unsigned kernel_row,
+//     const unsigned kernel_col,
+//     const unsigned cin)
+// {
+//     //boggled dido kernel tensor has shape:   (C_out/16,  K_h,  K_w,  C_in/32,  16,  32)
+
+//     const unsigned C_in_groups = init->C_in >> VPU_INT8_EPV_LOG2;
+
+//     const unsigned cog = cout >> VPU_INT8_ACC_PERIOD_LOG2;
+//     const unsigned cof = (VPU_INT8_ACC_PERIOD - 1) - (cout % VPU_INT8_ACC_PERIOD);
+
+//     const unsigned cig = cin >> VPU_INT8_EPV_LOG2;
+//     const unsigned cif = cin % VPU_INT8_EPV;
+
+//     return  cog * (init->K_h * init->K_w * init->C_in * VPU_INT8_ACC_PERIOD)
+//           + kernel_row * (init->K_w * init->C_in * VPU_INT8_ACC_PERIOD)
+//           + kernel_col * (init->C_in * VPU_INT8_ACC_PERIOD)
+//           + cig * (VPU_INT8_ACC_PERIOD * VPU_INT8_EPV)
+//           + cof * (VPU_INT8_EPV)
+//           + cif;
+// }
+
+
+
+
+
+
+
+
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////////////////////////////////
+// /*
+//     Get the offset of a coefficient in the BOGGLED shallowin-deepout kernel tensor.
+// */
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// static inline unsigned sido_coef_offset(
+//     const nn_conv2d_init_params_t* init,
+//     const unsigned cout,
+//     const unsigned kernel_row,
+//     const unsigned kernel_col,
+//     const unsigned cin)
+// {
+//     //boggled sido kernel tensor has shape:   (C_out/16,  K_h,  16,  32/C_in,  C_in)
+
+//     const unsigned cog = cout >> VPU_INT8_ACC_PERIOD_LOG2;
+//     const unsigned cof = (VPU_INT8_ACC_PERIOD - 1) - (cout % VPU_INT8_ACC_PERIOD);
+
+//     return  cog * (init->K_h * VPU_INT8_ACC_PERIOD * VPU_INT8_EPV)
+//           + kernel_row * (VPU_INT8_ACC_PERIOD * VPU_INT8_EPV)
+//           + cof * (VPU_INT8_EPV)
+//           + kernel_col * (C_in)
+//           + cin;
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -85,42 +205,47 @@ void conv2d_dido_boggle_K(
     const unsigned C_out_groups = C_out >> VPU_INT8_ACC_PERIOD_LOG2;
     const unsigned C_in_groups = C_in >> VPU_INT8_EPV_LOG2;
 
-    typedef struct {
-        int8_t ch[VPU_INT8_EPV];
-    } block_t;
-
     //No point in malloc()ing more than one output channel group's worth
     const size_t cout_group_bytes = K_h * K_w * C_in * VPU_INT8_ACC_PERIOD * sizeof(int8_t);
 
-
-    block_t* Kb = (block_t*) K;
-    block_t* K_tmp = malloc(cout_group_bytes);
+    int8_t* K_tmp = malloc(cout_group_bytes);
 
     if(!K_tmp){
-        //Trap?
         printf("malloc() failed.!\n");
+        __builtin_trap();
     }
 
 
+    //The output channel groups don't move, so we can just iterate over those, shuffling their innards.
     for(int cog = 0; cog < C_out_groups; cog++){
 
-        unsigned orig_offset = cog * (K_h * K_w * VPU_INT8_ACC_PERIOD * C_in_groups);
+        unsigned orig_offset = cog * (K_h * K_w * VPU_INT8_ACC_PERIOD * C_in);
+        memcpy(K_tmp, &K[orig_offset], cout_group_bytes);
 
-        block_t* K_cog_src = (block_t*) &K[orig_offset];
-        block_t* K_cog_dst = (block_t*) &Kb[cog * K_h * K_w * VPU_INT8_ACC_PERIOD * C_in_groups];
+        int8_t* K_cog_dst = &K[orig_offset];
 
-        //The output channel groups don't move, so we can just iterate over those, shuffling their innards.
-        
-        memcpy(K_tmp, K_cog_src, cout_group_bytes);
 
-        for(int kr = 0; kr < K_h; kr++){
-            for(int kc = 0; kc < K_w; kc++){
-                for(int cig = 0; cig < C_in_groups; cig++){
-                    for(int co = 0; co < VPU_INT8_ACC_PERIOD; co++){
+        for(int co = 0; co < VPU_INT8_ACC_PERIOD; co++){
+            
+            unsigned dco = (VPU_INT8_ACC_PERIOD - 1) - co;
+            
+            for(int kr = 0; kr < K_h; kr++){
+                for(int kc = 0; kc < K_w; kc++){
+                    for(int cig = 0; cig < C_in_groups; cig++){
 
-                        block_t* K_src = &K_tmp[ co*K_h*K_w*C_in_groups  +  kr*K_w*C_in_groups  +  kc*C_in_groups  +  cig ];
-                        block_t* K_dst = &K_cog_dst[ (kr*K_w*C_in_groups + kc*C_in_groups + cig) * VPU_INT8_ACC_PERIOD  +  co ];
-                        *K_dst = *K_src;
+                        
+                        unsigned src = co  *   K_h * K_w * C_in_groups * VPU_INT8_EPV
+                                        + kr  *         K_w * C_in_groups * VPU_INT8_EPV
+                                        + kc  *               C_in_groups * VPU_INT8_EPV
+                                        + cig *                             VPU_INT8_EPV;
+                        
+                        unsigned dst = kr  *   K_w * C_in_groups * VPU_INT8_ACC_PERIOD * VPU_INT8_EPV
+                                        + kc  *         C_in_groups * VPU_INT8_ACC_PERIOD * VPU_INT8_EPV
+                                        + cig *                       VPU_INT8_ACC_PERIOD * VPU_INT8_EPV
+                                        + dco *                                             VPU_INT8_EPV;
+
+                        memcpy(&K_cog_dst[dst], &K_tmp[src], sizeof(int8_t) * VPU_INT8_EPV);
+                        
                     }
                 }
             }
@@ -133,6 +258,62 @@ void conv2d_dido_boggle_K(
 }
 
 
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+static int32_t conv2d_dido_coef_sum(
+    const int8_t* K,
+    const nn_conv2d_init_params_t* init,
+    const unsigned chan_out,
+    const unsigned row,
+    const unsigned col)
+{
+    int32_t acc = 0;
+
+    unsigned cog = chan_out / VPU_INT8_ACC_PERIOD;
+    unsigned cout = (VPU_INT8_ACC_PERIOD - 1) - (chan_out % VPU_INT8_ACC_PERIOD);
+    
+    unsigned C_in_groups = init->C_in / VPU_INT8_EPV;
+
+    unsigned t3a = cog  * (init->K_h * init->K_w * init->C_in * VPU_INT8_ACC_PERIOD) 
+                 + row  * (init->K_w * init->C_in * VPU_INT8_ACC_PERIOD)
+                 + col  * (init->C_in * VPU_INT8_ACC_PERIOD)
+                 + cout * (VPU_INT8_EPV);
+
+    for(int cig = 0; cig < C_in_groups; cig++){
+        for(int cin = 0; cin < VPU_INT8_EPV; cin++){
+            acc += K[ t3a + cig  * (VPU_INT8_ACC_PERIOD * VPU_INT8_EPV) + cin];
+        }
+    }
+
+    return acc;
+}
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 void conv2d_sido_boggle_K(
     int8_t* K,
     const unsigned K_h,
@@ -188,6 +369,137 @@ void conv2d_sido_boggle_K(
 
 }
 
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+static int32_t conv2d_sido_coef_sum(
+    const int8_t* K,
+    const nn_conv2d_init_params_t* init,
+    const unsigned chan_out,
+    const unsigned row,
+    const unsigned col)
+{
+    // The shape of K is:   int8_t K[C_out/16][K_h][16][32/C_in][C_in]  
+    //      ->  (Channel out group, kernel row, out channel offset (reversed), kernel col (padded out), channel in)
+
+    const unsigned cog = chan_out / VPU_INT8_ACC_PERIOD;
+    const unsigned cout = (VPU_INT8_ACC_PERIOD - 1) - (chan_out % VPU_INT8_ACC_PERIOD);
+
+    const unsigned t3a = cog  * (init->K_h * VPU_INT8_ACC_PERIOD * VPU_INT8_EPV)
+                       + row  * ( VPU_INT8_ACC_PERIOD * VPU_INT8_EPV)
+                       + cout * (VPU_INT8_EPV)
+                       + col  * (init->C_in);
+
+    const int8_t* K_tmp = &K[t3a];
+    
+    int32_t acc = 0;
+
+    for(int cin = 0; cin < init->C_in; cin++){
+        acc += K_tmp[cin];
+    }
+
+    return acc;
+}
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+static data16_t* conv2d_adjusted_biases(
+    const nn_conv2d_init_params_t* init,
+    const unsigned pad_t,
+    const unsigned pad_l,
+    const unsigned pad_b,
+    const unsigned pad_r,
+    const int8_t* K,
+    const data16_t* B,
+    const unsigned is_deepin)
+{
+    const unsigned C_out_groups = init->C_out >> VPU_INT8_ACC_PERIOD_LOG2;
+
+    //allocate space for the block's bias tensor
+    data16_t* biases = malloc(2 * sizeof(data16_t) * init->C_out);
+
+    if(!biases){
+        printf("Failed to allocate biases for block.\n");
+        __builtin_trap();
+    }
+
+    for(unsigned cog = 0; cog < C_out_groups; cog++){
+
+        const data16_t* B_cog_hi = &B[cog * 2 * VPU_INT8_ACC_PERIOD];
+        const data16_t* B_cog_lo = &B[((cog * 2) + 1) * VPU_INT8_ACC_PERIOD];
+
+        data16_t* B_out_hi = &biases[cog * 2 * VPU_INT8_ACC_PERIOD];
+        data16_t* B_out_lo = &biases[((cog * 2) + 1) * VPU_INT8_ACC_PERIOD];
+
+        for(unsigned ofst = 0; ofst < VPU_INT8_ACC_PERIOD; ofst++){
+            unsigned cout = VPU_INT8_ACC_PERIOD * cog + ofst;
+
+            //initialize bias to the actual bias
+            int32_t bias = (B_cog_hi[ofst] << 16) | B_cog_lo[ofst];
+
+            //iterate over kernel cells and determine whether each is in padding.
+            for(unsigned gr = 0; gr < init->K_h; gr++){
+                for(unsigned gc = 0; gc < init->K_w; gc++){
+                    //Is this kernel cell in the padding?
+                    if(!   ((gr < pad_t)
+                        || (gc < pad_l)
+                        || (gr >= (init->K_h - pad_b) )
+                        || (gc >= (init->K_w - pad_r) )))
+                        continue;
+
+                    //It is in the padding
+                    if(is_deepin)
+                        bias += init->zero_point * conv2d_dido_coef_sum( K, init, cout, gr, gc );
+                    else
+                        bias += init->zero_point * conv2d_sido_coef_sum( K, init, cout, gr, gc );
+                }
+            }
+
+            B_out_hi[ofst] = bias >> 16;
+            B_out_lo[ofst] = bias & 0xFFFF;
+        }
+    }
+
+    return biases;
+}
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 static inline unsigned conv2d_block_output_bounds(
     uint32_t* Y_t,
     uint32_t* Y_l,
@@ -197,244 +509,693 @@ static inline unsigned conv2d_block_output_bounds(
     const unsigned kc,
     const uint32_t Y_height,
     const uint32_t Y_width,
-    const uint32_t K_h,
-    const uint32_t K_w,
-    const uint32_t region_t,
-    const uint32_t region_l,
-    const uint32_t region_rows,
-    const uint32_t region_cols)
+    const nn_conv2d_init_params_t* init,
+    const nn_conv2d_region_params_t* region)
 {
-    const int P_h = K_h >> 1;
-    const int P_w = K_w >> 1;
+    const int P_h = init->K_h >> 1;
+    const int P_w = init->K_w >> 1;
 
-    unsigned region_b = region_t + region_rows;
-    unsigned region_r = region_l + region_cols;
+    unsigned reg_bot = region->top + region->rows;
+    unsigned reg_rig = region->left + region->cols;
     
-    *Y_t  = (kr <= P_h)? kr : Y_height - K_h + kr;
-    *Y_l  = (kc <= P_w)? kc : Y_width  - K_w + kc;
+    *Y_t  = (kr <= P_h)? kr : Y_height - init->K_h + kr;
+    *Y_l  = (kc <= P_w)? kc : Y_width  - init->K_w + kc;
     *Y_b  = *Y_t + (  (kr == P_h)? Y_height - 2 * P_h : 1  );
     *Y_r  = *Y_l + (  (kc == P_w)? Y_width  - 2 * P_w : 1  );
 
-    if(*Y_t < region_t)
-        *Y_t = region_t;
-    else if(*Y_t > region_b)
-        *Y_t = region_b;
+    if(*Y_t < region->top)
+        *Y_t = region->top;
+    else if(*Y_t > reg_bot)
+        *Y_t = reg_bot;
 
-    if(*Y_b < region_t)
-        *Y_b = region_t;
-    else if(*Y_b > region_b)
-        *Y_b = region_b; 
+    if(*Y_b < region->top)
+        *Y_b = region->top;
+    else if(*Y_b > reg_bot)
+        *Y_b = reg_bot; 
 
-    if(*Y_l < region_l)
-        *Y_l = region_l;
-    else if(*Y_l > region_r)
-        *Y_l = region_r;
+    if(*Y_l < region->left)
+        *Y_l = region->left;
+    else if(*Y_l > reg_rig)
+        *Y_l = reg_rig;
     
-    if(*Y_r < region_l)
-        *Y_r = region_l;
-    else if(*Y_r > region_r)
-        *Y_r = region_r;
+    if(*Y_r < region->left)
+        *Y_r = region->left;
+    else if(*Y_r > reg_rig)
+        *Y_r = reg_rig;
 
     return (*Y_b > *Y_t && *Y_r > *Y_l);
 }
 
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+static void conv2d_check_params_for_errors(
+    const uint32_t Y_height,
+    const uint32_t Y_width,
+    const nn_conv2d_init_params_t* init,
+    const nn_conv2d_region_params_t* region)
+{
+    unsigned error = 0;
+
+    if(init->C_out % VPU_INT8_ACC_PERIOD != 0){
+        printf("C_out must be a multiple of VPU_INT8_ACC_PERIOD (%u).\n", VPU_INT8_ACC_PERIOD);
+        __builtin_trap();
+    }
+
+    if(region->rows > Y_height)
+        error = 1;
+    
+    if(region->cols > Y_width)
+        error = 1;
+    
+    if(region->top >= Y_height)
+        error = 1;
+    
+    if(region->top + region->rows > Y_height)
+        error = 1;
+    
+    if(region->left >= Y_width)
+        error = 1;
+    
+    if(region->left + region->cols > Y_width)
+        error = 1;
+
+    if(error){
+        printf("Region parameters invalid.\n");
+        __builtin_trap();
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+static void conv2d_deepin_deepout_init_valid(
+    nn_conv2d_dido_params_t* params,
+    const nn_conv2d_init_params_t* init,
+    const nn_conv2d_region_params_t* region,
+    const int8_t* K,
+    const data16_t* B)
+{
+    const int P_h = init->K_h >> 1;
+    const int P_w = init->K_w >> 1;
+
+    const uint32_t Y_height = init->X_height - 2 * P_h;
+    const uint32_t Y_width = init->X_width - 2 * P_w;
+
+    const nn_conv2d_region_params_t def_region = {0, 0, Y_height, Y_width};
+
+    if(region == NULL)
+        region = &def_region;
+
+    conv2d_check_params_for_errors(Y_height, Y_width, init, region);
+
+    params->chans_in = init->C_in;
+    params->chans_out = init->C_out;
+    params->C_in_groups = init->C_in >> VPU_INT8_EPV_LOG2;
+    params->C_out_groups = init->C_out >> VPU_INT8_ACC_PERIOD_LOG2;
+    params->zero_point = init->zero_point;
+
+    nn_conv2d_dido_block_params_t* blocks = malloc(sizeof(nn_conv2d_dido_block_params_t));
+
+    if(!blocks){
+        printf("Failed to allocate block.\n");
+        __builtin_trap();
+    }
+
+    params->block_count = 1;
+    params->blocks = blocks;
+
+
+    nn_conv2d_dido_block_params_t* block = &blocks[0];
+
+    uint32_t Y_start_top = region->top;
+    uint32_t Y_start_left = region->left;
+
+    uint32_t X_start_top = Y_start_top;
+    uint32_t X_start_left = Y_start_left;
+
+    
+    block->init.start_offset.X = img_pxl_offset(init->X_width, init->C_in, X_start_top, X_start_left);
+    block->init.start_offset.Y = img_pxl_offset(Y_width, init->C_out, Y_start_top, Y_start_left);
+    block->init.start_offset.K = 0;
+    // block->init.padding_cells = 0;
+
+    block->init.biases = conv2d_adjusted_biases(init, 0, 0, 0, 0, K, B, TRUE);
+
+    block->patch.maccs_per_row = init->K_w * params->C_in_groups;
+    block->patch.rows = init->K_h;
+    block->patch.row_incr.X = init->C_in * (init->X_width - init->K_w);
+
+    //This needs to be enough to pull K to the beginning of the current row, then down a row
+    block->patch.row_incr.K = 0;
+
+    //This needs to be enough to push K to the end of the current channel group, plus the start offset
+    block->cout_group_incr.K = 0;
+    block->output.rows = region->rows;
+    block->output.cols = region->cols;
+    block->output.row_incr.X = init->C_in * (init->X_width - block->output.cols);
+    block->output.row_incr.Y = init->C_out * (Y_width - block->output.cols);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+static void conv2d_deepin_deepout_init_same(
+    nn_conv2d_dido_params_t* params,
+    const nn_conv2d_init_params_t* init,
+    const nn_conv2d_region_params_t* region,
+    const int8_t* K,
+    const data16_t* B)
+{
+    const int P_h = init->K_h >> 1;
+    const int P_w = init->K_w >> 1;
+
+    const uint32_t Y_height = init->X_height;
+    const uint32_t Y_width = init->X_width;
+
+    const nn_conv2d_region_params_t def_region = {0, 0, Y_height, Y_width};
+
+    if(region == NULL)
+        region = &def_region;
+
+    conv2d_check_params_for_errors(Y_height, Y_width, init, region);
+
+    params->chans_in = init->C_in;
+    params->chans_out = init->C_out;
+    params->C_in_groups = init->C_in >> VPU_INT8_EPV_LOG2;
+    params->C_out_groups = init->C_out >> VPU_INT8_ACC_PERIOD_LOG2;
+    params->zero_point = init->zero_point;
+
+    unsigned block_count = 0;
+
+    //First, determine which blocks have any work to be done
+    for(int kr = 0; kr < init->K_h; kr++){
+        for(int kc = 0; kc < init->K_w; kc++){
+            uint32_t aa, bb, cc, dd;
+            if(conv2d_block_output_bounds(&aa, &bb, &cc, &dd,
+                                            kr, kc, Y_height, Y_width, init, region))
+                block_count++;
+        }
+    }
+
+    //Now, allocate the memory
+    nn_conv2d_dido_block_params_t* blocks = malloc(block_count * sizeof(nn_conv2d_dido_block_params_t));
+
+    if(!blocks){
+        printf("Failed to allocate blocks.\n");
+        __builtin_trap();
+    }
+
+    params->block_count = block_count;
+    params->blocks = blocks;
+
+    //Finally, actually initialize the block parameters
+
+    unsigned block_dex = 0;
+    for(int kr = 0; kr < init->K_h; kr++){
+        for(int kc = 0; kc < init->K_w; kc++){
+
+            nn_conv2d_dido_block_params_t* block = &blocks[block_dex];
+
+            uint32_t Y_top, Y_left, Y_bottom, Y_right;
+
+            if(!conv2d_block_output_bounds(&Y_top, &Y_left, &Y_bottom, &Y_right,
+                                            kr, kc, Y_height, Y_width, init, region))
+                continue;
+            
+            block_dex++;
+
+            unsigned pad_t = (kr  > P_h)?  0 : P_h - kr;
+            unsigned pad_b = (kr <= P_h)?  0 : P_h - (init->K_h-1-kr);
+            unsigned pad_l = (kc  > P_w)?  0 : P_w - kc; 
+            unsigned pad_r = (kc <= P_w)?  0 : P_w - (init->K_w-1-kc);
+            
+            unsigned out_rows = Y_bottom - Y_top;
+            unsigned out_cols = Y_right  - Y_left;
+
+            // printf("\t (t, l)\t(rows x cols) = (%u, %u)\t(%ux%u)\n", Y_top, Y_left, out_rows, out_cols);
+
+            unsigned X_top    = (Y_top  <= P_h)? 0 : Y_top  - P_h;
+            unsigned X_left   = (Y_left <= P_w)? 0 : Y_left - P_w;
+            
+            unsigned patch_rows = init->K_h - pad_t - pad_b;
+            unsigned patch_cols = init->K_w - pad_l - pad_r;
+
+
+            block->init.start_offset.X = img_pxl_offset(init->X_width, init->C_in, X_top, X_left);
+            block->init.start_offset.Y = img_pxl_offset(Y_width, init->C_out, Y_top, Y_left);
+
+            block->init.start_offset.K = VPU_INT8_ACC_PERIOD * init->C_in * (pad_l + pad_t * init->K_w); 
+
+            // block->init.padding_cells = (pad_t + pad_b) * K_w + (pad_l + pad_r) * patch_rows;
+
+            block->patch.maccs_per_row = patch_cols * params->C_in_groups;
+            block->patch.rows = patch_rows;
+            block->patch.row_incr.X = init->C_in * (init->X_width - patch_cols);
+
+            //This needs to be enough to pull K to the beginning of the current row, then down a row
+            block->patch.row_incr.K = (init->K_w - patch_cols) * (init->C_in * VPU_INT8_ACC_PERIOD);
+
+            //This needs to be enough to push K to the end of the current channel group, plus the start offset
+            block->cout_group_incr.K = (pad_r + init->K_w * pad_b) * (init->C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K;
+            block->output.rows = out_rows;
+            block->output.cols = out_cols;
+            block->output.row_incr.X = init->C_in * (init->X_width - block->output.cols);
+            block->output.row_incr.Y = init->C_out * (Y_width - block->output.cols);
+
+            block->init.biases = conv2d_adjusted_biases(init, pad_t, pad_l, pad_b, pad_r, K, B, TRUE);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 void conv2d_deepin_deepout_init(
     nn_conv2d_dido_params_t* params,
-    const uint32_t X_height,
-    const uint32_t X_width,
-    const uint32_t K_h,
-    const uint32_t K_w,
-    const uint32_t C_in,
-    const uint32_t C_out,
-    const padding_mode_t pad_mode,
-    const int8_t zero_point,
-    const uint32_t region_top,
-    const uint32_t region_left,
-    const uint32_t region_rows,
-    const uint32_t region_cols)
+    const nn_conv2d_init_params_t* init_params,
+    const nn_conv2d_region_params_t* region_params,
+    const int8_t* K,
+    const data16_t* B)
 {
-    const int P_h = K_h >> 1;
-    const int P_w = K_w >> 1;
-
-    uint32_t Y_height, Y_width;
-
-    if(pad_mode == PADDING_VALID){
-        Y_height = X_height - 2*P_h;
-        Y_width  = X_width  - 2*P_w;
-    } else {
-        Y_height = X_height;
-        Y_width  = X_width;
-    }
-
-    //Check parameters
-    unsigned check_errors = 1;
-    if(check_errors){
-
-        unsigned error = 0;
-        if(region_rows > Y_height)
-            error = 1;
-        if(region_cols > Y_width)
-            error = 1;
-        if(region_top >= Y_height)
-            error = 1;
-        if(region_top + region_rows > Y_height)
-            error = 1;
-        if(region_left >= Y_width)
-            error = 1;
-        if(region_left + region_cols > Y_width)
-            error = 1;
-
-        if(error){
-            printf("Region parameters invalid.\n");
-            __builtin_trap();
-        }
-    }
     
-    params->chans_in = C_in;
-    params->chans_out = C_out;
-    params->C_in_groups = C_in >> VPU_INT8_EPV_LOG2;
-    params->C_out_groups = C_out >> VPU_INT8_ACC_PERIOD_LOG2;
-    params->zero_point = zero_point * C_in;
-
-    if(pad_mode == PADDING_VALID){
-
-        nn_conv2d_dido_block_params_t* blocks = malloc(sizeof(nn_conv2d_dido_block_params_t));
-
-        if(!blocks){
-            printf("Failed to allocation blocks.\n");
-            __builtin_trap();
-        }
-
-        params->block_count = 1;
-        params->blocks = blocks;
+    //Check parameters
+    if(init_params->C_in % VPU_INT8_EPV != 0){
+        printf("C_in must be a multiple of VPU_INT8_EPV (%u).\n", VPU_INT8_EPV);
+        __builtin_trap();
+    }
 
 
-        nn_conv2d_dido_block_params_t* block = &blocks[0];
-
-        uint32_t Y_start_top = region_top;
-        uint32_t Y_start_left = region_left;
-
-        uint32_t X_start_top = Y_start_top;
-        uint32_t X_start_left = Y_start_left;
-
-        
-        block->init.start_offset.X = C_in * (X_start_top * X_width + X_start_left);
-        block->init.start_offset.Y = C_out * (Y_start_top * Y_width + Y_start_left);
-        block->init.start_offset.K = 0;
-        block->init.padding_cells = 0;
-
-        block->patch.maccs_per_row = K_w * params->C_in_groups;
-        block->patch.rows = K_h;
-        block->patch.row_incr.X = C_in * (X_width - K_w);
-
-        //This needs to be enough to pull K to the beginning of the current row, then down a row
-        block->patch.row_incr.K = 0;
-
-        //This needs to be enough to push K to the end of the current channel group, plus the start offset
-        block->cout_group_incr.K = 0;
-        block->output.rows = region_rows;
-        block->output.cols = region_cols;
-        block->output.row_incr.X = C_in * (X_width - block->output.cols);
-        block->output.row_incr.Y = C_out * (Y_width - block->output.cols);
+    if(init_params->pad_mode == PADDING_VALID){
+        conv2d_deepin_deepout_init_valid(params, init_params, region_params, K, B);
     } else {
-
-        unsigned block_count = 0;
-
-        //First, determine which blocks have any work to be done
-        for(int kr = 0; kr < K_h; kr++){
-            for(int kc = 0; kc < K_w; kc++){
-                uint32_t aa, bb, cc, dd;
-                if(conv2d_block_output_bounds(&aa, &bb, &cc, &dd,
-                                              kr, kc, Y_height, Y_width, K_h, K_w,
-                                              region_top, region_left, region_rows, region_cols))
-                    block_count++;
-            }
-        }
-
-        //Now, allocate the memory
-        nn_conv2d_dido_block_params_t* blocks = malloc(block_count * sizeof(nn_conv2d_dido_block_params_t));
-
-        if(!blocks){
-            printf("Failed to allocation blocks.\n");
-            __builtin_trap();
-        }
-
-        params->block_count = block_count;
-        params->blocks = blocks;
-
-        //Finally, actually initialize the block parameters
-
-        unsigned block_dex = 0;
-        for(int kr = 0; kr < K_h; kr++){
-            for(int kc = 0; kc < K_w; kc++){
-
-                nn_conv2d_dido_block_params_t* block = &blocks[block_dex];
-
-                uint32_t Y_top, Y_left, Y_bottom, Y_right;
-
-                if(!conv2d_block_output_bounds(&Y_top, &Y_left, &Y_bottom, &Y_right,
-                                               kr, kc, Y_height, Y_width, K_h, K_w,
-                                               region_top, region_left, region_rows, region_cols))
-                    continue;
-                
-                block_dex++;
-
-                unsigned pad_t = (kr  > P_h)?  0 : P_h - kr;
-                unsigned pad_b = (kr <= P_h)?  0 : P_h - (K_h-1-kr);
-                unsigned pad_l = (kc  > P_w)?  0 : P_w - kc; 
-                unsigned pad_r = (kc <= P_w)?  0 : P_w - (K_w-1-kc);
-                
-                unsigned out_rows = Y_bottom - Y_top;
-                unsigned out_cols = Y_right  - Y_left;
-
-                // printf("\t (t, l)\t(rows x cols) = (%u, %u)\t(%ux%u)\n", Y_top, Y_left, out_rows, out_cols);
-
-                unsigned X_top    = (Y_top  <= P_h)? 0 : Y_top  - P_h;
-                unsigned X_left   = (Y_left <= P_w)? 0 : Y_left - P_w;
-                
-                unsigned patch_rows = K_h - pad_t - pad_b;
-                unsigned patch_cols = K_w - pad_l - pad_r;
-
-
-                block->init.start_offset.X = C_in * (X_left + X_top * X_width);
-                block->init.start_offset.Y = C_out * (Y_left + Y_top * Y_width);
-                block->init.start_offset.K = VPU_INT8_ACC_PERIOD * VPU_INT8_EPV * (pad_l + pad_t * K_w); 
-                block->init.padding_cells = (pad_t + pad_b) * K_w + (pad_l + pad_r) * patch_rows;
-
-                block->patch.maccs_per_row = patch_cols * params->C_in_groups;
-                block->patch.rows = patch_rows;
-                block->patch.row_incr.X = C_in * (X_width - patch_cols);
-
-                //This needs to be enough to pull K to the beginning of the current row, then down a row
-                block->patch.row_incr.K = (K_w - patch_cols) * (C_in * VPU_INT8_ACC_PERIOD);
-
-                //This needs to be enough to push K to the end of the current channel group, plus the start offset
-                block->cout_group_incr.K = (pad_r + K_w * pad_b) * (C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K;
-                block->output.rows = out_rows;
-                block->output.cols = out_cols;
-                block->output.row_incr.X = C_in * (X_width - block->output.cols);
-                block->output.row_incr.Y = C_out * (Y_width - block->output.cols);
-            }
-        }
+        conv2d_deepin_deepout_init_same(params, init_params, region_params, K, B);
     }
 
 }
 
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 void conv2d_deepin_deepout_deinit(
     nn_conv2d_dido_params_t* params)
 {
     if(params->blocks){
+
+        for(unsigned i = 0; i < params->block_count; i++){
+            if(params->blocks[i].init.biases){
+                free(params->blocks[i].init.biases);
+            }
+        }
+
         free(params->blocks);
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void conv2d_shallowin_deepout_init_valid(
+    nn_conv2d_sido_params_t* params,
+    const nn_conv2d_init_params_t* init,
+    const nn_conv2d_region_params_t* region,
+    const int8_t* K,
+    const data16_t* B)
+{
+    const int P_h = init->K_h >> 1;
+    const int P_w = init->K_w >> 1;
+
+    const uint32_t Y_height = init->X_height - 2 * P_h;
+    const uint32_t Y_width = init->X_width - 2 * P_w;
+
+    const nn_conv2d_region_params_t def_region = {0, 0, Y_height, Y_width};
+
+    if(region == NULL)
+        region = &def_region;
+
+    conv2d_check_params_for_errors(Y_height, Y_width, init, region);
+
+    
+    params->chans_in = init->C_in;
+    params->chans_out = init->C_out;
+    params->C_in_groups = init->C_in >> VPU_INT8_EPV_LOG2;
+    params->C_out_groups = init->C_out >> VPU_INT8_ACC_PERIOD_LOG2;
+    params->zero_point = init->zero_point;
+
+    nn_conv2d_sido_block_params_t* blocks = malloc(sizeof(nn_conv2d_sido_block_params_t));
+
+    if(!blocks){
+        printf("Failed to allocation blocks.\n");
+        __builtin_trap();
+    }
+
+    params->block_count = 1;
+    params->blocks = blocks;
+
+    nn_conv2d_sido_block_params_t* block = &blocks[0];
+
+    uint32_t Y_start_top = region->top;
+    uint32_t Y_start_left = region->left;
+
+    uint32_t X_start_top = Y_start_top;
+    uint32_t X_start_left = Y_start_left;
+
+    
+    block->init.start_offset.X = img_pxl_offset(init->X_width, init->C_in, X_start_top, X_start_left);
+    block->init.start_offset.Y = img_pxl_offset(Y_width, init->C_out, Y_start_top, Y_start_left);
+    block->init.start_offset.K = 0;
+
+    block->init.biases = conv2d_adjusted_biases(init, 0, 0, 0, 0, K, B, FALSE);
+
+    // block->patch.maccs_per_row = K_w * params->C_in_groups;
+    block->patch.pad_mask = 0xFFFFFFFF;
+    block->patch.rows = init->K_h;
+    block->patch.row_incr.X = init->C_in * init->X_width;
+
+    //This needs to be enough to pull K to the beginning of the current row, then down a row
+    block->patch.row_incr.K = 0;
+
+    //This needs to be enough to push K to the end of the current channel group, plus the start offset
+    block->cout_group_incr.K = 0;
+    block->output.rows = region->rows;
+    block->output.cols = region->cols;
+    block->output.row_incr.X = init->C_in * (init->X_width - block->output.cols);
+    block->output.row_incr.Y = init->C_out * (Y_width - block->output.cols);
+}
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void conv2d_shallowin_deepout_init_same(
+    nn_conv2d_sido_params_t* params,
+    const nn_conv2d_init_params_t* init,
+    const nn_conv2d_region_params_t* region,
+    const int8_t* K,
+    const data16_t* B)
+{
+    
+    const int P_h = init->K_h >> 1;
+    const int P_w = init->K_w >> 1;
+
+    const uint32_t Y_height = init->X_height;
+    const uint32_t Y_width = init->X_width;
+
+    const nn_conv2d_region_params_t def_region = {0, 0, Y_height, Y_width};
+
+    if(region == NULL)
+        region = &def_region;
+
+    conv2d_check_params_for_errors(Y_height, Y_width, init, region);
+    
+    params->chans_in = init->C_in;
+    params->chans_out = init->C_out;
+    params->C_in_groups = init->C_in >> VPU_INT8_EPV_LOG2;
+    params->C_out_groups = init->C_out >> VPU_INT8_ACC_PERIOD_LOG2;
+    params->zero_point = init->zero_point;
+
+
+    unsigned block_count = 0;
+
+    //First, determine which blocks have any work to be done
+    for(int kr = 0; kr < init->K_h; kr++){
+        for(int kc = 0; kc < init->K_w; kc++){
+            uint32_t aa, bb, cc, dd;
+            if(conv2d_block_output_bounds(&aa, &bb, &cc, &dd,
+                                            kr, kc, Y_height, Y_width, init, region))
+                block_count++;
+        }
+    }
+
+    //Now, allocate the memory
+    nn_conv2d_sido_block_params_t* blocks = malloc(block_count * sizeof(nn_conv2d_sido_block_params_t));
+
+    if(!blocks){
+        printf("Failed to allocation blocks.\n");
+        __builtin_trap();
+    }
+
+    params->block_count = block_count;
+    params->blocks = blocks;
+
+    //Finally, actually initialize the block parameters
+
+    unsigned block_dex = 0;
+    for(int kr = 0; kr < init->K_h; kr++){
+        for(int kc = 0; kc < init->K_w; kc++){
+
+            nn_conv2d_sido_block_params_t* block = &blocks[block_dex];
+
+            uint32_t Y_top, Y_left, Y_bottom, Y_right;
+
+            if(!conv2d_block_output_bounds(&Y_top, &Y_left, &Y_bottom, &Y_right,
+                                            kr, kc, Y_height, Y_width, init, region))
+                continue;
+            
+            block_dex++;
+
+            unsigned pad_t = (kr  > P_h)?  0 : P_h - kr;
+            unsigned pad_b = (kr <= P_h)?  0 : P_h - (init->K_h-1-kr);
+            unsigned pad_l = (kc  > P_w)?  0 : P_w - kc; 
+            unsigned pad_r = (kc <= P_w)?  0 : P_w - (init->K_w-1-kc);
+            
+            unsigned out_rows = Y_bottom - Y_top;
+            unsigned out_cols = Y_right  - Y_left;
+
+            // printf("\t (t, l)\t(rows x cols) = (%u, %u)\t(%ux%u)\n", Y_top, Y_left, out_rows, out_cols);
+
+            unsigned X_top    = (Y_top  <= P_h)? 0 : Y_top  - P_h;
+            unsigned X_left   = (Y_left <= P_w)? 0 : Y_left - P_w;
+            
+            unsigned patch_rows = init->K_h - pad_t - pad_b;
+            // unsigned patch_cols = K_w - pad_l - pad_r;
+
+
+            block->init.start_offset.X = img_pxl_offset(init->X_width, init->C_in, X_top, X_left);
+            block->init.start_offset.Y = img_pxl_offset(Y_width, init->C_out, Y_top, Y_left);
+            //Always start Kernel from left edge of a row. The padmask will take care of it.
+            block->init.start_offset.K = VPU_INT8_ACC_PERIOD * VPU_INT8_EPV * pad_t;
+            // block->init.padding_cells = (pad_t + pad_b) * init->K_w + (pad_l + pad_r) * patch_rows;
+
+            uint32_t padding_mask = (pad_r == 0)? 0xFFFFFFFF : ((((uint32_t)1)<<(32-(init->C_in*pad_r)))-1);
+            padding_mask = padding_mask ^ ((1<<(init->C_in*pad_l))-1);
+            block->patch.pad_mask = padding_mask;
+            block->patch.rows = patch_rows;
+            //One row is a single VLMACCR group
+            block->patch.row_incr.X = init->C_in * init->X_width;
+
+            //This needs to be enough to pull K to the beginning of the current row, then down a row
+            block->patch.row_incr.K = 0;
+
+            //This needs to be enough to push K to the end of the current channel group, plus the start offset
+            block->cout_group_incr.K = (pad_r + 8 * pad_b) * (init->C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K;
+            block->output.rows = out_rows;
+            block->output.cols = out_cols;
+            block->output.row_incr.X = init->C_in * (init->X_width - block->output.cols);
+            block->output.row_incr.Y = init->C_out * (Y_width - block->output.cols);
+
+            block->init.biases = conv2d_adjusted_biases(init, pad_t, pad_l, pad_b, pad_r, K, B, FALSE);
+        }
+    }
+
+}
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void conv2d_shallowin_deepout_init(
+    nn_conv2d_sido_params_t* params,
+    const nn_conv2d_init_params_t* init_params,
+    const nn_conv2d_region_params_t* region_params,
+    const int8_t* K,
+    const data16_t* B)
+{
+    //Check parameters
+    if(init_params->C_in % sizeof(int) != 0){
+        printf("C_in must be a multiple of 4 bytes.\n");
+        __builtin_trap();
+    }
+
+    if(init_params->C_in * init_params->K_w > VPU_INT8_EPV){
+        printf("C_in * K_w cannot exceed VPU_INT8_EPV (%u).\n", VPU_INT8_EPV);
+        __builtin_trap();
+    }
+
+    if(init_params->pad_mode == PADDING_VALID){
+        conv2d_shallowin_deepout_init_valid(params, init_params, region_params, K, B);
+    } else {
+        conv2d_shallowin_deepout_init_same(params, init_params, region_params, K, B);
+    }
+}
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void conv2d_shallowin_deepout_deinit(
+    nn_conv2d_sido_params_t* params)
+{
+    if(params->blocks){
+
+        for(unsigned i = 0; i < params->block_count; i++){
+            if(params->blocks[i].init.biases){
+                free(params->blocks[i].init.biases);
+            }
+        }
+
+        free(params->blocks);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 void conv2d_deepin_deepout_block_c(
     int8_t* Y,
     const nn_conv2d_dido_params_t* params,
     const nn_conv2d_dido_block_params_t* block,
     const int8_t* X,
     const int8_t* K,
-    const data16_t* B,
     const int16_t* shifts,
     const int16_t* scales)
 {
@@ -443,8 +1204,7 @@ void conv2d_deepin_deepout_block_c(
     Y = &Y[block->init.start_offset.Y];
     K = &K[block->init.start_offset.K];
 
-    int32_t bias_adjustment = params->zero_point * block->init.padding_cells;
-
+    const data16_t* B = block->init.biases;
     
     //Iterate once per row of the output region
     for(unsigned output_rows = block->output.rows; output_rows > 0; output_rows--){
@@ -469,7 +1229,7 @@ void conv2d_deepin_deepout_block_c(
                 for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++){
                     int32_t bias = D[k];
                     bias = (bias << 16) | D[k + VPU_INT8_ACC_PERIOD];
-                    patch_acc[k] = bias + bias_adjustment;
+                    patch_acc[k] = bias;
                 }
                 
                 D = &D[2*VPU_INT8_ACC_PERIOD];
@@ -525,207 +1285,25 @@ void conv2d_deepin_deepout_block_c(
 }
 
 
-void conv2d_shallowin_deepout_init(
-    nn_conv2d_sido_params_t* params,
-    const uint32_t X_height,
-    const uint32_t X_width,
-    const uint32_t K_h,
-    const uint32_t K_w,
-    const uint32_t C_in,
-    const uint32_t C_out,
-    const padding_mode_t pad_mode,
-    const int8_t zero_point,
-    const uint32_t region_top,
-    const uint32_t region_left,
-    const uint32_t region_rows,
-    const uint32_t region_cols)
-{
-    const int P_h = K_h >> 1;
-    const int P_w = K_w >> 1;
 
-    uint32_t Y_height, Y_width;
 
-    if(pad_mode == PADDING_VALID){
-        Y_height = X_height - 2*P_h;
-        Y_width  = X_width  - 2*P_w;
-    } else {
-        Y_height = X_height;
-        Y_width  = X_width;
-    }
 
-    //Check parameters
-    unsigned check_errors = 1;
-    if(check_errors){
 
-        unsigned error = 0;
-        if(region_rows > Y_height)
-            error = 1;
-        if(region_cols > Y_width)
-            error = 1;
-        if(region_top >= Y_height)
-            error = 1;
-        if(region_top + region_rows > Y_height)
-            error = 1;
-        if(region_left >= Y_width)
-            error = 1;
-        if(region_left + region_cols > Y_width)
-            error = 1;
 
-        if(error){
-            printf("Region parameters invalid.\n");
-            __builtin_trap();
-        }
-    }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
     
-    params->chans_in = C_in;
-    params->chans_out = C_out;
-    params->C_in_groups = C_in >> VPU_INT8_EPV_LOG2;
-    params->C_out_groups = C_out >> VPU_INT8_ACC_PERIOD_LOG2;
-    params->zero_point = zero_point * C_in;
-
-    if(pad_mode == PADDING_VALID){
-
-        nn_conv2d_sido_block_params_t* blocks = malloc(sizeof(nn_conv2d_sido_block_params_t));
-
-        if(!blocks){
-            printf("Failed to allocation blocks.\n");
-            __builtin_trap();
-        }
-
-        params->block_count = 1;
-        params->blocks = blocks;
-
-        nn_conv2d_sido_block_params_t* block = &blocks[0];
-
-        uint32_t Y_start_top = region_top;
-        uint32_t Y_start_left = region_left;
-
-        uint32_t X_start_top = Y_start_top;
-        uint32_t X_start_left = Y_start_left;
-
-        
-        block->init.start_offset.X = C_in * (X_start_top * X_width + X_start_left);
-        block->init.start_offset.Y = C_out * (Y_start_top * Y_width + Y_start_left);
-        block->init.start_offset.K = 0;
-        block->init.padding_cells = 0;
-
-        // block->patch.maccs_per_row = K_w * params->C_in_groups;
-        block->patch.pad_mask = 0xFFFFFFFF;
-        block->patch.rows = K_h;
-        block->patch.row_incr.X = C_in * X_width;
-
-        //This needs to be enough to pull K to the beginning of the current row, then down a row
-        block->patch.row_incr.K = 0;
-
-        //This needs to be enough to push K to the end of the current channel group, plus the start offset
-        block->cout_group_incr.K = 0;
-        block->output.rows = region_rows;
-        block->output.cols = region_cols;
-        block->output.row_incr.X = C_in * (X_width - block->output.cols);
-        block->output.row_incr.Y = C_out * (Y_width - block->output.cols);
-    } else {
-
-        unsigned block_count = 0;
-
-        //First, determine which blocks have any work to be done
-        for(int kr = 0; kr < K_h; kr++){
-            for(int kc = 0; kc < K_w; kc++){
-                uint32_t aa, bb, cc, dd;
-                if(conv2d_block_output_bounds(&aa, &bb, &cc, &dd,
-                                              kr, kc, Y_height, Y_width, K_h, K_w,
-                                              region_top, region_left, region_rows, region_cols))
-                    block_count++;
-            }
-        }
-
-        //Now, allocate the memory
-        nn_conv2d_sido_block_params_t* blocks = malloc(block_count * sizeof(nn_conv2d_sido_block_params_t));
-
-        if(!blocks){
-            printf("Failed to allocation blocks.\n");
-            __builtin_trap();
-        }
-
-        params->block_count = block_count;
-        params->blocks = blocks;
-
-        //Finally, actually initialize the block parameters
-
-        unsigned block_dex = 0;
-        for(int kr = 0; kr < K_h; kr++){
-            for(int kc = 0; kc < K_w; kc++){
-
-                nn_conv2d_sido_block_params_t* block = &blocks[block_dex];
-
-                uint32_t Y_top, Y_left, Y_bottom, Y_right;
-
-                if(!conv2d_block_output_bounds(&Y_top, &Y_left, &Y_bottom, &Y_right,
-                                               kr, kc, Y_height, Y_width, K_h, K_w,
-                                               region_top, region_left, region_rows, region_cols))
-                    continue;
-                
-                block_dex++;
-
-                unsigned pad_t = (kr  > P_h)?  0 : P_h - kr;
-                unsigned pad_b = (kr <= P_h)?  0 : P_h - (K_h-1-kr);
-                unsigned pad_l = (kc  > P_w)?  0 : P_w - kc; 
-                unsigned pad_r = (kc <= P_w)?  0 : P_w - (K_w-1-kc);
-                
-                unsigned out_rows = Y_bottom - Y_top;
-                unsigned out_cols = Y_right  - Y_left;
-
-                // printf("\t (t, l)\t(rows x cols) = (%u, %u)\t(%ux%u)\n", Y_top, Y_left, out_rows, out_cols);
-
-                unsigned X_top    = (Y_top  <= P_h)? 0 : Y_top  - P_h;
-                unsigned X_left   = (Y_left <= P_w)? 0 : Y_left - P_w;
-                
-                unsigned patch_rows = K_h - pad_t - pad_b;
-                // unsigned patch_cols = K_w - pad_l - pad_r;
-
-
-                block->init.start_offset.X = C_in * (X_left + X_top * X_width);
-                block->init.start_offset.Y = C_out * (Y_left + Y_top * Y_width);
-                //Always start Kernel from left edge of a row. The padmask will take care of it.
-                block->init.start_offset.K = VPU_INT8_ACC_PERIOD * VPU_INT8_EPV * pad_t;
-                block->init.padding_cells = (pad_t + pad_b) * K_w + (pad_l + pad_r) * patch_rows;
-
-                uint32_t padding_mask = (pad_r == 0)? 0xFFFFFFFF : ((((uint32_t)1)<<(32-(C_in*pad_r)))-1);
-                padding_mask = padding_mask ^ ((1<<(C_in*pad_l))-1);
-                block->patch.pad_mask = padding_mask;
-                block->patch.rows = patch_rows;
-                //One row is a single VLMACCR group
-                block->patch.row_incr.X = C_in * X_width;
-
-                //This needs to be enough to pull K to the beginning of the current row, then down a row
-                block->patch.row_incr.K = 0;
-
-                //This needs to be enough to push K to the end of the current channel group, plus the start offset
-                block->cout_group_incr.K = (pad_r + 8 * pad_b) * (C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K;
-                block->output.rows = out_rows;
-                block->output.cols = out_cols;
-                block->output.row_incr.X = C_in * (X_width - block->output.cols);
-                block->output.row_incr.Y = C_out * (Y_width - block->output.cols);
-            }
-        }
-    }
-
-}
-
-void conv2d_shallowin_deepout_deinit(
-    nn_conv2d_sido_params_t* params)
-{
-    if(params->blocks){
-        free(params->blocks);
-    }
-}
-
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 void conv2d_shallowin_deepout_block_c(
     int8_t* Y,
     const nn_conv2d_sido_params_t* params,
     const nn_conv2d_sido_block_params_t* block,
     const int8_t* X,
     const int8_t* K,
-    const data16_t* B,
     const int16_t* shifts,
     const int16_t* scales)
 {
@@ -734,8 +1312,7 @@ void conv2d_shallowin_deepout_block_c(
     Y = &Y[block->init.start_offset.Y];
     K = &K[block->init.start_offset.K];
 
-    int32_t bias_adjustment = params->zero_point * block->init.padding_cells;
-
+    const data16_t* B = block->init.biases;
     
     //Iterate once per row of the output region
     for(unsigned output_rows = block->output.rows; output_rows > 0; output_rows--){
@@ -760,7 +1337,7 @@ void conv2d_shallowin_deepout_block_c(
                 for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++){
                     int32_t bias = D[k];
                     bias = (bias << 16) | D[k + VPU_INT8_ACC_PERIOD];
-                    patch_acc[k] = bias + bias_adjustment;
+                    patch_acc[k] = bias;
                 }
                 
                 D = &D[2*VPU_INT8_ACC_PERIOD];

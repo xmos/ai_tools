@@ -29,10 +29,10 @@ All the classes contain the same structure which was thought to accelerate the p
     
 - Properties:
     - *models*: dictionary containing the following structure:s
-        - 'name' : the name of the model
         - 'data_dir': root directory for the data
         - 'models_dir': root directory for the models
     - *data*: dictionary used for storing the data
+    - *name* : property with the name of the model
     
 - Functions(bolded what really needs to be implemented in each case):
     - __init__(): default provided

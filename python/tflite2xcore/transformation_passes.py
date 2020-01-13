@@ -260,36 +260,16 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         return new_op
 
 
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceXCOREWeightBiasOperatorPass):
+class ReplaceDeepinAnyoutFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     def _match_opcode(self, op):
         return op.operator_code.code == BuiltinOpCodes.FULLY_CONNECTED
 
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return (self._output in op.subgraph.outputs
-                        and self._weights.shape[0] < 16
-                        and self._weights.shape[1] % 32 == 0)
+                return self._weights.shape[1] % 32 == 0
 
         return False
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_fc_deepin_shallowout_final)
-
-    def mutate_output(self, op):
-        # NOTE: when trying to generalize this pass to non-output operators,
-        #       keep in mind that this mutation is what can affect other operators
-        with self.using(op):
-            self._output.type = TensorType.INT16
-            self._output.name = f"{op.name}/output"
-            self._output.quantization = {
-                'scale': [self._output.quantization['scale'][0] / 2**8],
-                'zero_point': [int(self._output.quantization['zero_point'][0] * 2**8)],
-                'details_type': "CustomQuantization",
-                'quantized_dimension': 0
-            }
 
     def mutate_weights(self, op):
         with self.using(op):
@@ -305,11 +285,52 @@ class ReplaceDeepinShallowoutFullyConnectedOutputPass(ReplaceXCOREWeightBiasOper
             self._biases.name = f"{op.name}/biases"
             self._biases.quantization['details_type'] = 'CustomQuantization'
 
+
+# TODO: write (at least regression) tests for the mutator functions
+class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnectedPass):
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return self._output in op.subgraph.outputs
+
+        return False
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout_final)
+
+    def mutate_output(self, op):
+        # NOTE: when trying to generalize this pass to non-output operators,
+        #       keep in mind that this mutation is what can affect other operators
+        with self.using(op):
+            self._output.type = TensorType.INT16
+            self._output.name = f"{op.name}/output"
+            self._output.quantization = {
+                'scale': [self._output.quantization['scale'][0] / 2**8],
+                'zero_point': [int(self._output.quantization['zero_point'][0] * 2**8)],
+                'details_type': "CustomQuantization",
+                'quantized_dimension': 0
+            }
+
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
         new_op = super().mutate(op)
         self.mutate_output(new_op)
         return new_op
+
+
+# TODO: write (at least regression) tests for the mutator functions
+class ReplaceDeepinAnyoutFullyConnectedIntermediatePass(ReplaceDeepinAnyoutFullyConnectedPass):
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return self._output not in op.subgraph.outputs
+
+        return False
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout_intermediate)
 
 
 # TODO: write (at least regression) tests for this class

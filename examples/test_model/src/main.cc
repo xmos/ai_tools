@@ -80,7 +80,7 @@ static void setup_tflite(const char *model_buffer) {
 
     // This pulls in all the operation implementations we need.
     //static tflite::ops::micro::AllOpsResolver resolver;
-    static tflite::ops::micro::XcoreOpsResolver resolver;
+    static tflite::ops::micro::xcore::XcoreOpsResolver resolver;
 
     // Build an interpreter to run the model with.
     static tflite::MicroInterpreter static_interpreter(

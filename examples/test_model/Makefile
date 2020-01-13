@@ -120,6 +120,10 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/svdf.cc \
 	tensorflow/lite/micro/kernels/unpack.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_conv.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_arg_min_max.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_pooling.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_fully_connected.cc \
 	lib_nn_operator/src/nn_operator.c \
 	lib_nn_operator/src/nn_operator_conv.c \
 	main.cc

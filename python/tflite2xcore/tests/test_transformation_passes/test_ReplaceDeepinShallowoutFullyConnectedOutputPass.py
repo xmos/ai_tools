@@ -1,17 +1,16 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-import pytest
-from pytest_cases import pytest_fixture_plus, pytest_parametrize_plus, fixture_ref
-
 import numpy
+import pytest
 
+from pytest_cases import pytest_fixture_plus, pytest_parametrize_plus, fixture_ref
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
 from tflite2xcore.transformation_passes import ReplaceDeepinShallowoutFullyConnectedOutputPass
 
 
 @pytest_fixture_plus(params=[(1, 4, 4, 8), (1, 32, 1, 1)])
-def perceptron(request):
+def matching_perceptron(request):
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
@@ -28,12 +27,37 @@ def perceptron(request):
     return model
 
 
-@pytest_fixture_plus(params=[(64, 32, 10), (64, 64, 15), (64, 32, 2), (64, 64, 1)])
-def mlp(request):
+@pytest_fixture_plus(params=[(16, 32), (15, 33)])
+def non_matching_shape_perceptron(matching_perceptron, request):
+    subgraph = matching_perceptron.subgraphs[0]
+
+    weight_shape = list(request.param)
+    input_shape = [1, weight_shape[1], 1, 1]
+    subgraph.get_tensor('input').shape = input_shape
+    subgraph.get_tensor('weights').shape = weight_shape
+    subgraph.get_tensor('biases').shape = weight_shape[:1]
+    subgraph.get_tensor('output').shape = input_shape[:-1] + weight_shape[:1]
+
+    return matching_perceptron
+
+
+@pytest_fixture_plus(params=[
+    ('input', TensorType.INT16),
+    ('input', TensorType.INT32),
+    ('weights', TensorType.INT16),
+    ('weights', TensorType.INT32),
+    ('biases', TensorType.INT8),
+    ('biases', TensorType.INT16),
+])
+def non_matching_type_perceptron(matching_perceptron, request):
+    subgraph = matching_perceptron.subgraphs[0]
+    subgraph.get_tensor(request.param[0]).type = request.param[1]
+    return matching_perceptron
+
+
+def mlp_builder(input_nodes, hidden_nodes, output_nodes):
     model = XCOREModel()
     subgraph = model.create_subgraph()
-
-    input_nodes, hidden_nodes, output_nodes = request.param
 
     tin = subgraph.create_tensor('input', TensorType.INT8, shape=[1, input_nodes], isinput=True)
     w1 = subgraph.create_tensor('weights_1', TensorType.INT8, shape=[hidden_nodes, input_nodes],
@@ -46,11 +70,21 @@ def mlp(request):
     w2 = subgraph.create_tensor('weights_2', TensorType.INT8, shape=[output_nodes, hidden_nodes],
                                 quantization={'scale': [0.22], 'zero_point': [0]})
     b2 = subgraph.create_tensor('biases_2', TensorType.INT32, shape=[output_nodes])
-    tout = subgraph.create_tensor('output', TensorType.INT8, shape=[1, output_nodes])
+    tout = subgraph.create_tensor('output', TensorType.INT8, shape=[1, output_nodes], isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.FULLY_CONNECTED),
                              inputs=[tmid, w2, b2], outputs=[tout])
 
     return model
+
+
+@pytest_fixture_plus(params=[(64, 32, 10), (64, 64, 15), (64, 32, 2), (64, 64, 1)])
+def mlp(request):
+    return mlp_builder(*request.param)
+
+
+@pytest_fixture_plus(params=[(32, 15, 10), (64, 16, 15)])
+def non_matching_mlp(request):
+    return mlp_builder(*request.param)
 
 
 @pytest.fixture()
@@ -58,13 +92,23 @@ def trf_pass():
     return ReplaceDeepinShallowoutFullyConnectedOutputPass()
 
 
-def test_nonmatch_mlp(mlp, trf_pass):
-    assert not trf_pass.match(mlp.subgraphs[0].operators[0])
+@pytest_parametrize_plus('model', [
+    fixture_ref(non_matching_shape_perceptron),
+    fixture_ref(non_matching_type_perceptron),
+    fixture_ref(mlp)
+])
+def test_nonmatch(model, trf_pass):
+    assert not trf_pass.match(model.subgraphs[0].operators[0])
 
 
-@pytest_parametrize_plus('model', [fixture_ref(perceptron), fixture_ref(mlp)])
+def test_nonmatching_mlp(non_matching_mlp, trf_pass):
+    for op in non_matching_mlp.subgraphs[0].operators:
+        assert not trf_pass.match(op)
+
+
+@pytest_parametrize_plus('model', [fixture_ref(matching_perceptron), fixture_ref(mlp)])
 def test_match(model, trf_pass):
-    trf_pass.match(model.subgraphs[0].operators[-1])
+    assert trf_pass.match(model.subgraphs[0].operators[-1])
 
 
 if __name__ == "__main__":

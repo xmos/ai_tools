@@ -6,7 +6,7 @@ from pytest_cases import pytest_fixture_plus, pytest_parametrize_plus, fixture_r
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
 from tflite2xcore.transformation_passes import ReplaceDeepMaxpool2DPass
-from .test_ReplaceDeepinShallowoutFullyConnectedOutputPass import (
+from .test_ReplaceDeepinAnyoutFullyConnectedOutputPass import (
     matching_perceptron,
     non_matching_shape_perceptron,
     mlp,

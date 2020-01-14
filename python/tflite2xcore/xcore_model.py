@@ -100,10 +100,9 @@ class Buffer():
 
     def __str__(self):
         if self.data:
-            len_ = len(self.data)
-            return f'{len_}'
+            return f'Buffer[{len(self.data)}]'
         else:
-            return f'[]'
+            return 'Buffer[]'
 
     def unpack(self, stdtype='uint8_t'):
         LUT = {'uint8_t': 'B',
@@ -168,12 +167,12 @@ class Tensor():
         self.type = type_
         self.shape = list(shape)
 
-        if buffer:
+        if buffer is None:
+            self.buffer = self.model.create_buffer()
+        else:
             assert isinstance(buffer, Buffer)
             assert buffer in self.model.buffers
             self.buffer = buffer
-        else:
-            self.buffer = self.model.create_buffer()
 
         self.quantization = quantization
 

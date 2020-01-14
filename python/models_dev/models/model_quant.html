@@ -76,8 +76,8 @@ text {
   <th>inputs</th>
   <th>outputs</th>
 </tr><tr>
-  <td><span class='tooltip'><span class='tooltipcontent'>(5) input_input &ltFLOAT32&gt [1, 32, 1, 1] <br></span>[5]</span></td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(6) Identity &ltFLOAT32&gt [1, 4] <br></span>[6]</span></td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(4) conv2d_input &ltFLOAT32&gt [1, 3, 3, 32] <br></span>[4]</span></td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(5) Identity &ltFLOAT32&gt [1, 3, 3, 16] <br></span>[5]</span></td>
 </tr></table>
 
 <h3>Tensors</h3>
@@ -92,49 +92,42 @@ text {
   <td>0</td>
   <td>Identity_int8</td>
   <td>INT8</td>
-  <td>[1, 4]</td>
-  <td>5</td>
-  <td>{'scale': [0.00390625], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+  <td>[1, 3, 3, 16]</td>
+  <td>3</td>
+  <td>{'min': [-1.4446], 'max': [1.250364], 'scale': [0.01056849], 'zero_point': [9], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr><tr>
   <td>1</td>
-  <td>fc_deepin_shallowout_final/ouptut/BiasAdd</td>
+  <td>conv2d_deepin_deepout_relu/conv2d/Conv2D/ReadVariableOp</td>
   <td>INT8</td>
-  <td>[1, 4]</td>
-  <td>4</td>
-  <td>{'min': [-40.24191], 'max': [32.77966], 'scale': [0.2863591], 'zero_point': [13], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+  <td>[16, 3, 3, 32]</td>
+  <td>2</td>
+  <td>{'scale': [0.0009265665, 0.0009266103, 0.0009257068, 0.0009273983, 0.0009253238, 0.0009205595, 0.0009263016, 0.0009226527, 0.0009271183, 0.0009254757, 0.0009245731, 0.0009263488, 0.0009252696, 0.0009261986, 0.0009275008, 0.0009279358], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr><tr>
   <td>2</td>
-  <td>fc_deepin_shallowout_final/ouptut/MatMul/ReadVariableOp/transpose</td>
-  <td>INT8</td>
-  <td>[4, 32]</td>
-  <td>3</td>
-  <td>{'scale': [0.007991377], 'zero_point': [0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
-</tr><tr>
-  <td>3</td>
-  <td>fc_deepin_shallowout_final/ouptut/MatMul_bias</td>
+  <td>conv2d_deepin_deepout_relu/conv2d/Conv2D_bias</td>
   <td>INT32</td>
-  <td>[4]</td>
+  <td>[16]</td>
   <td>1</td>
-  <td>{'scale': [0.0002735302], 'zero_point': [0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+  <td>{'scale': [3.632302e-06, 3.632473e-06, 3.628931e-06, 3.635563e-06, 3.62743e-06, 3.608753e-06, 3.631263e-06, 3.616959e-06, 3.634465e-06, 3.628026e-06, 3.624487e-06, 3.631448e-06, 3.627218e-06, 3.630859e-06, 3.635964e-06, 3.637669e-06], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+</tr><tr>
+  <td>3</td>
+  <td>conv2d_input_int8</td>
+  <td>INT8</td>
+  <td>[1, 3, 3, 32]</td>
+  <td>4</td>
+  <td>{'min': [0.0], 'max': [0.9996443], 'scale': [0.003920174], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr><tr>
   <td>4</td>
-  <td>input_input_int8</td>
-  <td>INT8</td>
-  <td>[1, 32, 1, 1]</td>
-  <td>2</td>
-  <td>{'min': [-4.295065], 'max': [4.433117], 'scale': [0.03422816], 'zero_point': [-3], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
-</tr><tr>
-  <td>5</td>
-  <td>input_input</td>
+  <td>conv2d_input</td>
   <td>FLOAT32</td>
-  <td>[1, 32, 1, 1]</td>
+  <td>[1, 3, 3, 32]</td>
   <td>0</td>
   <td>None</td>
 </tr><tr>
-  <td>6</td>
+  <td>5</td>
   <td>Identity</td>
   <td>FLOAT32</td>
-  <td>[1, 4]</td>
+  <td>[1, 3, 3, 16]</td>
   <td>0</td>
   <td>None</td>
 </tr></table>
@@ -149,30 +142,23 @@ text {
   <th>custom_options</th>
 </tr><tr>
   <td>0</td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(5) input_input &ltFLOAT32&gt [1, 32, 1, 1] <br></span>[5]</span></td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(4) input_input_int8 &ltINT8&gt [1, 32, 1, 1] <br></span>[4]</span></td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(4) conv2d_input &ltFLOAT32&gt [1, 3, 3, 32] <br></span>[4]</span></td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(3) conv2d_input_int8 &ltINT8&gt [1, 3, 3, 32] <br></span>[3]</span></td>
   <td>(0) QUANTIZE</td>
   <td>None</td>
   <td>None</td>
 </tr><tr>
   <td>1</td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(4) input_input_int8 &ltINT8&gt [1, 32, 1, 1] <br>(2) fc_deepin_shallowout_final/ouptut/MatMul/ReadVariableOp/transpose &ltINT8&gt [4, 32] <br>(3) fc_deepin_shallowout_final/ouptut/MatMul_bias &ltINT32&gt [4] <br></span>[4, 2, 3]</span></td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(1) fc_deepin_shallowout_final/ouptut/BiasAdd &ltINT8&gt [1, 4] <br></span>[1]</span></td>
-  <td>(1) FULLY_CONNECTED</td>
-  <td>{'fused_activation_function': 'NONE', 'weights_format': 'DEFAULT', 'keep_num_dims': False}</td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(3) conv2d_input_int8 &ltINT8&gt [1, 3, 3, 32] <br>(1) conv2d_deepin_deepout_relu/conv2d/Conv2D/ReadVariableOp &ltINT8&gt [16, 3, 3, 32] <br>(2) conv2d_deepin_deepout_relu/conv2d/Conv2D_bias &ltINT32&gt [16] <br></span>[3, 1, 2]</span></td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(0) Identity_int8 &ltINT8&gt [1, 3, 3, 16] <br></span>[0]</span></td>
+  <td>(1) CONV_2D</td>
+  <td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'NONE', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
   <td>None</td>
 </tr><tr>
   <td>2</td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(1) fc_deepin_shallowout_final/ouptut/BiasAdd &ltINT8&gt [1, 4] <br></span>[1]</span></td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(0) Identity_int8 &ltINT8&gt [1, 4] <br></span>[0]</span></td>
-  <td>(2) SOFTMAX</td>
-  <td>{'beta': 1.0}</td>
-  <td>None</td>
-</tr><tr>
-  <td>3</td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(0) Identity_int8 &ltINT8&gt [1, 4] <br></span>[0]</span></td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(6) Identity &ltFLOAT32&gt [1, 4] <br></span>[6]</span></td>
-  <td>(3) DEQUANTIZE</td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(0) Identity_int8 &ltINT8&gt [1, 3, 3, 16] <br></span>[0]</span></td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(5) Identity &ltFLOAT32&gt [1, 3, 3, 16] <br></span>[5]</span></td>
+  <td>(2) DEQUANTIZE</td>
   <td>None</td>
   <td>None</td>
 </tr></table>
@@ -196,84 +182,62 @@ function buildGraph() {
     },
     {
       "id": "o1",
-      "name": "(1) FULLY_CONNECTED",
+      "name": "(1) CONV_2D",
       "text_color": "#eeeeee",
       "fill_color": "#000000",
       "edge_radius": 10,
       "x": 200,
       "y": 400,
-      "node_width": 147,
+      "node_width": 87,
       "node_height": 25
     },
     {
       "id": "o2",
-      "name": "(2) SOFTMAX",
+      "name": "(2) DEQUANTIZE",
       "text_color": "#eeeeee",
       "fill_color": "#000000",
       "edge_radius": 10,
       "x": 200,
       "y": 600,
-      "node_width": 87,
-      "node_height": 25
-    },
-    {
-      "id": "o3",
-      "name": "(3) DEQUANTIZE",
-      "text_color": "#eeeeee",
-      "fill_color": "#000000",
-      "edge_radius": 10,
-      "x": 200,
-      "y": 800,
       "node_width": 110,
       "node_height": 25
     },
     {
       "id": "t0",
-      "name": "Identity_int8\n(0) <INT8> [1, 4]",
-      "text_color": "#000000",
-      "fill_color": "#dddddd",
-      "edge_radius": 1,
-      "x": 170,
-      "y": 700.0,
-      "node_width": 132,
-      "node_height": 40
-    },
-    {
-      "id": "t1",
-      "name": "fc_deepin_shallowout_final/ouptut/BiasAdd\n(1) <INT8> [1, 4]",
+      "name": "Identity_int8\n(0) <INT8> [1, 3, 3, 16]",
       "text_color": "#000000",
       "fill_color": "#dddddd",
       "edge_radius": 1,
       "x": 170,
       "y": 500.0,
-      "node_width": 312,
+      "node_width": 185,
       "node_height": 40
     },
     {
-      "id": "t2",
-      "name": "fc_deepin_shallowout_final/ouptut/MatMul/ReadVariableOp/transpose\n(2) <INT8> [4, 32]",
+      "id": "t1",
+      "name": "conv2d_deepin_deepout_relu/conv2d/Conv2D/ReadVariableOp\n(1) <INT8> [16, 3, 3, 32]",
       "text_color": "#000000",
       "fill_color": "#fffacd",
       "edge_radius": 1,
       "x": 365,
       "y": 300.0,
-      "node_width": 492,
+      "node_width": 417,
       "node_height": 40
     },
     {
-      "id": "t3",
-      "name": "fc_deepin_shallowout_final/ouptut/MatMul_bias\n(3) <INT32> [4]",
+      "id": "t2",
+      "name": "conv2d_deepin_deepout_relu/conv2d/Conv2D_bias\n(2) <INT32> [16]",
       "text_color": "#000000",
       "fill_color": "#fffacd",
       "edge_radius": 1,
-      "x": 867,
+      "x": 792,
       "y": 300.0,
       "node_width": 342,
       "node_height": 40
     },
     {
-      "id": "t4",
-      "name": "input_input_int8\n(4) <INT8> [1, 32, 1, 1]",
+      "id": "t3",
+      "name": "conv2d_input_int8\n(3) <INT8> [1, 3, 3, 32]",
       "text_color": "#000000",
       "fill_color": "#dddddd",
       "edge_radius": 1,
@@ -283,8 +247,8 @@ function buildGraph() {
       "node_height": 40
     },
     {
-      "id": "t5",
-      "name": "input_input\n(5) <FLOAT32> [1, 32, 1, 1]",
+      "id": "t4",
+      "name": "conv2d_input\n(4) <FLOAT32> [1, 3, 3, 32]",
       "text_color": "#000000",
       "fill_color": "#ccccff",
       "edge_radius": 1,
@@ -294,28 +258,32 @@ function buildGraph() {
       "node_height": 40
     },
     {
-      "id": "t6",
-      "name": "Identity\n(6) <FLOAT32> [1, 4]",
+      "id": "t5",
+      "name": "Identity\n(5) <FLOAT32> [1, 3, 3, 16]",
       "text_color": "#000000",
       "fill_color": "#ffcccc",
       "edge_radius": 1,
       "x": 170,
-      "y": 900.0,
-      "node_width": 155,
+      "y": 700.0,
+      "node_width": 207,
       "node_height": 40
     }
   ],
   "edges": [
     {
-      "source": "t5",
+      "source": "t4",
       "target": "o0"
     },
     {
-      "target": "t4",
+      "target": "t3",
       "source": "o0"
     },
     {
-      "source": "t4",
+      "source": "t3",
+      "target": "o1"
+    },
+    {
+      "source": "t1",
       "target": "o1"
     },
     {
@@ -323,28 +291,16 @@ function buildGraph() {
       "target": "o1"
     },
     {
-      "source": "t3",
-      "target": "o1"
-    },
-    {
-      "target": "t1",
+      "target": "t0",
       "source": "o1"
     },
     {
-      "source": "t1",
+      "source": "t0",
       "target": "o2"
     },
     {
-      "target": "t0",
+      "target": "t5",
       "source": "o2"
-    },
-    {
-      "source": "t0",
-      "target": "o3"
-    },
-    {
-      "target": "t6",
-      "source": "o3"
     }
   ]
 };
@@ -461,21 +417,18 @@ buildGraph()
   <td>--</td>
 </tr><tr>
   <td>1</td>
-  <td>16 bytes</td>
+  <td>64 bytes</td>
 </tr><tr>
   <td>2</td>
-  <td>--</td>
+  <td>4608 bytes</td>
 </tr><tr>
   <td>3</td>
-  <td>128 bytes</td>
+  <td>--</td>
 </tr><tr>
   <td>4</td>
   <td>--</td>
 </tr><tr>
   <td>5</td>
-  <td>--</td>
-</tr><tr>
-  <td>6</td>
   <td>5 bytes</td>
 </tr></table>
 
@@ -492,16 +445,11 @@ buildGraph()
   <td>1</td>
 </tr><tr>
   <td>1</td>
-  <td>FULLY_CONNECTED</td>
+  <td>CONV_2D</td>
   <td>None</td>
-  <td>4</td>
-</tr><tr>
-  <td>2</td>
-  <td>SOFTMAX</td>
-  <td>None</td>
-  <td>2</td>
-</tr><tr>
   <td>3</td>
+</tr><tr>
+  <td>2</td>
   <td>DEQUANTIZE</td>
   <td>None</td>
   <td>2</td>

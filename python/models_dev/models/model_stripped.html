@@ -76,8 +76,8 @@ text {
   <th>inputs</th>
   <th>outputs</th>
 </tr><tr>
-  <td><span class='tooltip'><span class='tooltipcontent'>(3) input_input_int8 &ltINT8&gt [1, 32, 1, 1] <br></span>[3]</span></td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(0) fc_deepin_shallowout_final/ouptut/BiasAdd &ltINT8&gt [1, 4] <br></span>[0]</span></td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(3) conv2d_input_int8 &ltINT8&gt [1, 3, 3, 32] <br></span>[3]</span></td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(0) Identity_int8 &ltINT8&gt [1, 3, 3, 16] <br></span>[0]</span></td>
 </tr></table>
 
 <h3>Tensors</h3>
@@ -90,32 +90,32 @@ text {
   <th>quantization</th>
 </tr><tr>
   <td>0</td>
-  <td>fc_deepin_shallowout_final/ouptut/BiasAdd</td>
+  <td>Identity_int8</td>
   <td>INT8</td>
-  <td>[1, 4]</td>
-  <td>3</td>
-  <td>{'min': [-40.24191], 'max': [32.77966], 'scale': [0.286359], 'zero_point': [13], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+  <td>[1, 3, 3, 16]</td>
+  <td>2</td>
+  <td>{'min': [-1.4446], 'max': [1.250364], 'scale': [0.010568], 'zero_point': [9], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr><tr>
   <td>1</td>
-  <td>fc_deepin_shallowout_final/ouptut/MatMul/ReadVariableOp/transpose</td>
+  <td>conv2d_deepin_deepout_relu/conv2d/Conv2D/ReadVariableOp</td>
   <td>INT8</td>
-  <td>[4, 32]</td>
-  <td>2</td>
-  <td>{'scale': [0.007991], 'zero_point': [0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+  <td>[16, 3, 3, 32]</td>
+  <td>1</td>
+  <td>{'scale': [0.000927, 0.000927, 0.000926, 0.000927, 0.000925, 0.000921, 0.000926, 0.000923, 0.000927, 0.000925, 0.000925, 0.000926, 0.000925, 0.000926, 0.000928, 0.000928], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr><tr>
   <td>2</td>
-  <td>fc_deepin_shallowout_final/ouptut/MatMul_bias</td>
+  <td>conv2d_deepin_deepout_relu/conv2d/Conv2D_bias</td>
   <td>INT32</td>
-  <td>[4]</td>
+  <td>[16]</td>
   <td>0</td>
-  <td>{'scale': [0.000274], 'zero_point': [0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+  <td>{'scale': [4e-06, 4e-06, 4e-06, 4e-06, 4e-06, 4e-06, 4e-06, 4e-06, 4e-06, 4e-06, 4e-06, 4e-06, 4e-06, 4e-06, 4e-06, 4e-06], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr><tr>
   <td>3</td>
-  <td>input_input_int8</td>
+  <td>conv2d_input_int8</td>
   <td>INT8</td>
-  <td>[1, 32, 1, 1]</td>
-  <td>1</td>
-  <td>{'min': [-4.295065], 'max': [4.433117], 'scale': [0.034228], 'zero_point': [-3], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
+  <td>[1, 3, 3, 32]</td>
+  <td>3</td>
+  <td>{'min': [0.0], 'max': [0.999644], 'scale': [0.00392], 'zero_point': [-128], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr></table>
 
 <h3>Ops</h3>
@@ -128,10 +128,10 @@ text {
   <th>custom_options</th>
 </tr><tr>
   <td>0</td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(3) input_input_int8 &ltINT8&gt [1, 32, 1, 1] <br>(1) fc_deepin_shallowout_final/ouptut/MatMul/ReadVariableOp/transpose &ltINT8&gt [4, 32] <br>(2) fc_deepin_shallowout_final/ouptut/MatMul_bias &ltINT32&gt [4] <br></span>[3, 1, 2]</span></td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(0) fc_deepin_shallowout_final/ouptut/BiasAdd &ltINT8&gt [1, 4] <br></span>[0]</span></td>
-  <td>(0) FULLY_CONNECTED</td>
-  <td>{'fused_activation_function': 'NONE', 'weights_format': 'DEFAULT', 'keep_num_dims': False}</td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(3) conv2d_input_int8 &ltINT8&gt [1, 3, 3, 32] <br>(1) conv2d_deepin_deepout_relu/conv2d/Conv2D/ReadVariableOp &ltINT8&gt [16, 3, 3, 32] <br>(2) conv2d_deepin_deepout_relu/conv2d/Conv2D_bias &ltINT32&gt [16] <br></span>[3, 1, 2]</span></td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(0) Identity_int8 &ltINT8&gt [1, 3, 3, 16] <br></span>[0]</span></td>
+  <td>(0) CONV_2D</td>
+  <td>{'padding': 'SAME', 'stride_w': 1, 'stride_h': 1, 'fused_activation_function': 'NONE', 'dilation_w_factor': 1, 'dilation_h_factor': 1}</td>
   <td>None</td>
 </tr></table>
 
@@ -143,51 +143,51 @@ function buildGraph() {
   "nodes": [
     {
       "id": "o0",
-      "name": "(0) FULLY_CONNECTED",
+      "name": "(0) CONV_2D",
       "text_color": "#eeeeee",
       "fill_color": "#000000",
       "edge_radius": 10,
       "x": 200,
       "y": 200,
-      "node_width": 147,
+      "node_width": 87,
       "node_height": 25
     },
     {
       "id": "t0",
-      "name": "fc_deepin_shallowout_final/ouptut/BiasAdd\n(0) <INT8> [1, 4]",
+      "name": "Identity_int8\n(0) <INT8> [1, 3, 3, 16]",
       "text_color": "#000000",
       "fill_color": "#ffcccc",
       "edge_radius": 1,
       "x": 170,
       "y": 300.0,
-      "node_width": 312,
+      "node_width": 185,
       "node_height": 40
     },
     {
       "id": "t1",
-      "name": "fc_deepin_shallowout_final/ouptut/MatMul/ReadVariableOp/transpose\n(1) <INT8> [4, 32]",
+      "name": "conv2d_deepin_deepout_relu/conv2d/Conv2D/ReadVariableOp\n(1) <INT8> [16, 3, 3, 32]",
       "text_color": "#000000",
       "fill_color": "#fffacd",
       "edge_radius": 1,
       "x": 365,
       "y": 100.0,
-      "node_width": 492,
+      "node_width": 417,
       "node_height": 40
     },
     {
       "id": "t2",
-      "name": "fc_deepin_shallowout_final/ouptut/MatMul_bias\n(2) <INT32> [4]",
+      "name": "conv2d_deepin_deepout_relu/conv2d/Conv2D_bias\n(2) <INT32> [16]",
       "text_color": "#000000",
       "fill_color": "#fffacd",
       "edge_radius": 1,
-      "x": 867,
+      "x": 792,
       "y": 100.0,
       "node_width": 342,
       "node_height": 40
     },
     {
       "id": "t3",
-      "name": "input_input_int8\n(3) <INT8> [1, 32, 1, 1]",
+      "name": "conv2d_input_int8\n(3) <INT8> [1, 3, 3, 32]",
       "text_color": "#000000",
       "fill_color": "#ccccff",
       "edge_radius": 1,
@@ -326,13 +326,13 @@ buildGraph()
   <th>data</th>
 </tr><tr>
   <td>0</td>
-  <td>16 bytes</td>
+  <td>64 bytes</td>
 </tr><tr>
   <td>1</td>
-  <td>--</td>
+  <td>4608 bytes</td>
 </tr><tr>
   <td>2</td>
-  <td>128 bytes</td>
+  <td>--</td>
 </tr><tr>
   <td>3</td>
   <td>--</td>
@@ -349,9 +349,9 @@ buildGraph()
   <th>version</th>
 </tr><tr>
   <td>0</td>
-  <td>FULLY_CONNECTED</td>
+  <td>CONV_2D</td>
   <td>None</td>
-  <td>4</td>
+  <td>3</td>
 </tr></table>
 
 </body>

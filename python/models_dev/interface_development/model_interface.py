@@ -337,7 +337,7 @@ class KerasModel(Model):
             self.models['models_dir'],
             "model_quant", visualize=False)
         # xcore conversion happens here
-        xcore_conv.main(str(model_quant_file), output_path)
+        xcore_conv.main(str(model_quant_file), output_path, is_classifier=True)  # TODO: change this later
         self.models['model_xcore'] = read_flatbuffer(output_path)
         # Viz
         import tflite_visualize

@@ -1,6 +1,7 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import os
+import sys
 import logging
 import pathlib
 import tempfile
@@ -8,6 +9,10 @@ import tempfile
 import numpy as np
 
 from copy import deepcopy
+
+# TODO: make sure we don't need this hack
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 
 import tflite_visualize
 import tflite_utils

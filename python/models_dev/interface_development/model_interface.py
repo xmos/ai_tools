@@ -336,6 +336,7 @@ class KerasModel(Model):
             self.models['model_quant'],
             self.models['models_dir'],
             "model_quant", visualize=False)
+        # xcore conversion happens here
         xcore_conv.main(str(model_quant_file), output_path)
         self.models['model_xcore'] = read_flatbuffer(output_path)
         # Viz

@@ -1,14 +1,14 @@
-import os
+import shutil
 from pathlib import Path
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
 from termcolor import colored
-import model_interface_2 as mi2
+import model_interface as mi
 import tflite_utils
 
 
-class FcDeepinShallowoutFinal(mi2.KerasModel):
+class FcDeepinShallowoutFinal(mi.KerasModel):
 
     def generate_fake_lin_sep_dataset(self, classes=2, dim=32, *,
                                       train_samples_per_class=5120,
@@ -100,8 +100,11 @@ def printc(*s, c='green', back='on_grey'):
         print(colored(s[0], c, back), str(s[1:])[1:-2])
 
 
+shutil.rmtree('./debug')
+modelpath = Path('./debug/models')
+datapath = Path('./debug/test_data')
 test_model = FcDeepinShallowoutFinal(
-    'fc_deepin_shallowout_final', Path('.'), 32, 2)
+    'fc_deepin_shallowout_final', Path('./debug'), 32, 2)
 printc('Model dictionary:\n', test_model.models)
 printc('Model name property:\n', test_model.name)
 printc('Data keys before build:\n', test_model.data.keys())
@@ -110,12 +113,13 @@ test_model.prep_data()
 printc('Data keys after build:\n', test_model.data.keys())
 printc('Training:')
 test_model.train()
+test_model.save_core_model()
 test_model.gen_test_data()
 printc('Data keys after test data generation:\n', test_model.data.keys())
 printc('Content in models directory:')
-os.listdir('models')
+print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
 printc('Content in data directory:')
-os.listdir('test_data')
+print([str(x.name) for x in datapath.iterdir() if x.is_file()])
 printc('Model keys:\n', test_model.models.keys())
 
 printc('Conversions', c='blue')
@@ -123,19 +127,19 @@ printc('To float', c='blue')
 test_model.to_tf_float()
 printc('Model keys:\n', test_model.models.keys())
 printc('Models directory before conversion:')
-os.listdir('models')
+print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
 printc('Models directory after conversion:')
 test_model.convert_and_save_model('model_float')
-os.listdir('models')
+print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
 
 printc('To quant', c='blue')
 test_model.to_tf_quant()
 printc('Model keys:\n', test_model.models.keys())
 printc('Models directory before conversion:')
-os.listdir('models')
+print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
 test_model.convert_and_save_model('model_quant')
 printc('Models directory after conversion:')
-os.listdir('models')
+print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
 
 printc('To stripped', c='blue')
 printc('Currently broken')
@@ -153,10 +157,10 @@ printc('To xcore', c='blue')
 test_model.to_tf_xcore()
 printc('Model keys:\n', test_model.models.keys())
 printc('Models directory before conversion:')
-os.listdir('models')
+print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
 test_model.convert_and_save_model('model_xcore')
 printc('Models directory after conversion:')
-os.listdir('models')
+print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
 
 printc('Final status', c='blue')
 printc('Data keys:\n', test_model.data.keys())

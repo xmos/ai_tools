@@ -25,7 +25,8 @@ class Model(ABC):
         \t- path: (Path) working directory to store everything
         '''
         self.models = {}  # paths included data_dir : Path ; models_dir : Path
-        self.data = {}
+        self.data = {}  # For storing data
+        self.converters = {}  # For storing the converters float and quant
         self.test_data = np.empty([output_dim, input_dim, 1, 1])
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -52,14 +53,6 @@ class Model(ABC):
         return self.__name
 
     @abstractmethod
-    def save_model_to_file():
-        '''
-        Function to store training and original model files in the
-        corresponding format.
-        '''
-        pass
-
-    @abstractmethod
     def build(self):
         # kb arguments for the compiler?
         # instantiate model object
@@ -72,7 +65,16 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def load(self, load_path):  # restore Models state with submodels?
+    def save_core_model():
+        '''
+        Function to store training and original model files in the
+        corresponding format.
+        '''
+        pass
+
+    @abstractmethod
+    def load_core_model(self, load_path):
+        # restore Models state with submode
         '''
         If we don't want to build our model from scratch and
         we have it stored somewhere, we can load it with this function.
@@ -109,14 +111,14 @@ class Model(ABC):
         '''
         pass
 
-    # REDO from here down bc of polimorphy ~~
-
     @abstractmethod
     def to_tf_float(self):  # polymorphism affects here
         '''
         Create converter from original model
         to TensorFlow Lite Float.
-        Converter stored with the key 'model_float'.
+        Converter stored with the key 'model_float' in
+        self.converters. Also the path of the model is saved
+        using this function.
         '''
         assert self.name in self.models
 
@@ -124,32 +126,38 @@ class Model(ABC):
     def to_tf_quant(self):
         '''
         Create converter from original model
-        to TensorFlow Lite with quantization.
-        Converter stored with the key 'model_quant'.
+        to TensorFlow Lite Float.
+        Converter stored with the key 'model_quant' in
+        self.converters. Also the path of the model is saved
+        using this function.
         '''
         assert self.name in self.models
 
     @abstractmethod
     def to_tf_stripped(self):
         '''
-        Conversion from quantized model
-        to TensorFlow Lite with quantization
-        and stripped of float in/out tensors.
-        Stored with the key 'model_stripped'.
+        Create converter from original model
+        to TensorFlow Lite Float.
+        Converter stored with the key 'model_stripped' in
+        self.converters. Also the path of the model is saved
+        using this function.
         '''
         assert 'model_quant' in self.models
 
     @abstractmethod
     def to_tf_xcore(self):
         '''
-        Conversion from the quantized model
-        to TensorFlow Lite with optimizations
-        for the xcore ai.
-        Stored with the key 'model_xcore'.
+        Create converter from original model
+        to TensorFlow Lite Float.
+        Converter stored with the key 'model_xcore' in
+        self.converters. Also the path of the model is saved
+        using this function.
         '''
         assert 'model_quant' in self.models
 
-    def populate_converters(self):
+    def populate_converters(self):  # Actually, data it's being saved here too
+        # Naming
+        # TODO
         '''
         Create all the converters in a row in the logical order.
         The only thing needed is the presence
@@ -161,37 +169,6 @@ class Model(ABC):
         self.to_tf_quant()
         # self.to_tf_stripped()
         self.to_tf_xcore()
-
-    def convert_from_tflite(self, test_data, name):
-        model_file = common.save_from_tflite_converter(
-            self.models[name],
-            self.models['models_dir'],
-            name)
-        common.save_test_data_for_regular_model(
-            model_file,
-            test_data,
-            data_dir=self.models['data_dir'],
-            base_file_name=name)
-
-    def convert_from_json_stripped(self, test_data, name):
-        common.save_from_json(
-            self.models[name],
-            self.models['models_dir'],
-            name)
-        common.save_test_data_for_stripped_model(
-            self.models[name],
-            test_data,
-            data_dir=self.models['data_dir'])
-
-    def convert_from_json_xcore(self, test_data, name):
-        common.save_from_json(
-            self.models[name],
-            self.models['models_dir'],
-            name)
-        common.save_test_data_for_xcore_model(
-            self.models[name],
-            test_data,
-            data_dir=self.models['data_dir'])
 
     def convert_and_save_model(self, name):
         test_data = self.data['export_data']
@@ -272,8 +249,6 @@ class KerasModel(Model):
             epochs=EPOCHS,
             batch_size=BS,
             validation_data=(self.data['x_test'], self.data['y_test']))
-        # save model and data
-        self.save_model_to_file()
 
     @abstractmethod
     def gen_test_data(self):
@@ -282,17 +257,17 @@ class KerasModel(Model):
         '''
         pass
 
-    def save_model_to_file(self):
-        print(self.data.keys())
+    def save_core_model(self):
+        print('Saving the following data keys:', self.data.keys())
         np.savez(self.models['data_dir'] / 'data', **self.data)
         self.models[self.name].save(str(self.models['models_dir']/'model.h5'))
 
-    def load(self):
-        train_path = self.models['data_dir']/'training_data.npz'
+    def load_core_model(self):
+        data_path = self.models['data_dir']/'data.npz'
         model_path = self.models['models_dir']/'model.h5'
         try:
-            logging.info(f"Loading data from {train_path}")
-            self.data = dict(np.load(train_path))
+            logging.info(f"Loading data from {data_path}")
+            self.data = dict(np.load(data_path))
             logging.info(f"Loading keras model from {model_path}")
             self.models[self.name] = tf.keras.models.load_model(model_path)
         except FileNotFoundError as e:

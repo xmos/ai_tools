@@ -4,12 +4,10 @@ import logging
 import tflite_utils
 import tensorflow as tf
 import numpy as np
-from copy import deepcopy
 from abc import ABC, abstractmethod
-import tflite2xcore_graph_conv as graph_conv
 import tflite2xcore_conv as xcore_conv
-from tflite2xcore import read_flatbuffer, write_flatbuffer
-__version__ = '1.1.0'
+from tflite2xcore import read_flatbuffer
+__version__ = '1.2.0'
 __author__ = 'Luis Mata'
 
 
@@ -32,6 +30,8 @@ class Model(ABC):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.__name = name
+        if not os.path.exists(path):
+            path.mkdir()
         self.models['data_dir'] = path / 'test_data'
         if not os.path.exists(self.models['data_dir']):
             self.models['data_dir'].mkdir()
@@ -159,8 +159,72 @@ class Model(ABC):
         assert self.name in self.models
         self.to_tf_float()
         self.to_tf_quant()
-        self.to_tf_stripped()
+        # self.to_tf_stripped()
         self.to_tf_xcore()
+
+    def convert_from_tflite(self, test_data, name):
+        model_file = common.save_from_tflite_converter(
+            self.models[name],
+            self.models['models_dir'],
+            name)
+        common.save_test_data_for_regular_model(
+            model_file,
+            test_data,
+            data_dir=self.models['data_dir'],
+            base_file_name=name)
+
+    def convert_from_json_stripped(self, test_data, name):
+        common.save_from_json(
+            self.models[name],
+            self.models['models_dir'],
+            name)
+        common.save_test_data_for_stripped_model(
+            self.models[name],
+            test_data,
+            data_dir=self.models['data_dir'])
+
+    def convert_from_json_xcore(self, test_data, name):
+        common.save_from_json(
+            self.models[name],
+            self.models['models_dir'],
+            name)
+        common.save_test_data_for_xcore_model(
+            self.models[name],
+            test_data,
+            data_dir=self.models['data_dir'])
+
+    def convert_and_save_model(self, name):
+        test_data = self.data['export_data']
+        # float or quant models are converted and saved in the same way
+        if name == 'model_float' or name == 'model_quant':
+            model_file = common.save_from_tflite_converter(
+                self.models[name],
+                self.models['models_dir'],
+                name)
+            common.save_test_data_for_regular_model(
+                model_file,
+                test_data,
+                data_dir=self.models['data_dir'],
+                base_file_name=name)
+        else:
+            # only stripped models are saved from json
+            # and the test_data has a special format for each
+            if name == 'model_stripped':
+                common.save_from_json(
+                    self.models[name],
+                    self.models['models_dir'],
+                    name)
+                common.save_test_data_for_stripped_model(
+                    self.models[name],
+                    test_data,
+                    data_dir=self.models['data_dir'])
+            else:
+                '''
+                common.save_test_data_for_xcore_model(
+                    self.models[name],
+                    test_data,
+                    data_dir=self.models['data_dir'])
+                    '''
 
     @abstractmethod
     def convert_and_save(self):
@@ -173,44 +237,19 @@ class Model(ABC):
         \t- tflite stripped
         \t- tflite xcore
         '''
-        test_data = self.data['export_data']
+        # test_data = self.data['export_data']
         # float
-        model_float_file = common.save_from_tflite_converter(
-            self.models['model_float'],
-            self.models['models_dir'],
-            "model_float")
-        common.save_test_data_for_regular_model(
-            model_float_file,
-            test_data,
-            data_dir=self.models['data_dir'],
-            base_file_name="model_float")
+        # self.convert_from_tflite(test_data, 'model_float')
+        self.convert_and_save_model('model_float')
         # quant
-        model_quant_file = common.save_from_tflite_converter(
-            self.models['model_quant'],
-            self.models['models_dir'],
-            "model_quant")
-        common.save_test_data_for_regular_model(
-            model_quant_file,
-            test_data,
-            data_dir=self.models['data_dir'],
-            base_file_name="model_quant")
+        # self.convert_from_tflite(test_data, 'model_quant')
+        self.convert_and_save_model('model_quant')
         # stripped
-        common.save_from_json(self.models['model_stripped'],
-                              self.models['models_dir'],
-                              'model_stripped')
-        common.save_test_data_for_stripped_model(
-            self.models['model_stripped'],
-            test_data,
-            data_dir=self.models['data_dir'])
-
+        # self.converter_from_json_stripped(test_data, 'model_stripped')
+        # self.convert_and_save_model('model_stripped')  # as it breaks for now
         # xcore
-        common.save_from_json(self.models['model_xcore'],
-                              self.models['models_dir'],
-                              'model_xcore')
-        common.save_test_data_for_xcore_model(
-            self.models['model_xcore'],
-            test_data,
-            data_dir=self.models['data_dir'])
+        # self.conver_from_json_xcore(test_data, 'model_xcore')
+        self.convert_and_save_model('model_xcore')
 
 
 # Polymorphism: Keras
@@ -244,7 +283,8 @@ class KerasModel(Model):
         pass
 
     def save_model_to_file(self):
-        np.savez(self.models['data_dir'] / 'training_data', **self.data)
+        print(self.data.keys())
+        np.savez(self.models['data_dir'] / 'data', **self.data)
         self.models[self.name].save(str(self.models['models_dir']/'model.h5'))
 
     def load(self):
@@ -290,9 +330,18 @@ class KerasModel(Model):
 
     def to_tf_xcore(self):  # not really affected by poly
         assert 'model_quant' in self.models
-        self.models['model_xcore'] = deepcopy(self.models['model_quant'])
-        graph_conv.convert_model(self.models['model_xcore'],
-                                 remove_softmax=True)
+        output_path = str(self.models['models_dir']/'model_xcore.tflite')
+        html_path = output_path[:-6]+'html'
+        model_quant_file = common.save_from_tflite_converter(
+            self.models['model_quant'],
+            self.models['models_dir'],
+            "model_quant", visualize=False)
+        # xcore conversion happens here
+        xcore_conv.main(str(model_quant_file), output_path, is_classifier=True)  # TODO: change this later
+        self.models['model_xcore'] = read_flatbuffer(output_path)
+        # Viz
+        import tflite_visualize
+        tflite_visualize.main(output_path, html_path)
 
     def convert_and_save(self):
         super().convert_and_save()

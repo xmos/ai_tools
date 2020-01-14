@@ -1,19 +1,32 @@
-* Model development
-The content of this section consists in a notebook for the proposed models, according to the task [[https://tasks.office.com/xmos1.onmicrosoft.com/en-gb/Home/Planner#/plantaskboard?groupId=564390b7-e9f5-4fa1-94c0-d40a4fbb0631&planId=EKo2RaRFBkKKUVFyeLhBHpYAFjQS&taskId=RsXAdIARFE6v3ixm8HrZqZYAAg0J]["Implement models for additional benchmarks and alpha/beta release examples"]].
+* model_development
+The content of this directory include a notebook for the proposed models, according to the task [[https://tasks.office.com/xmos1.onmicrosoft.com/en-gb/Home/Planner#/plantaskboard?groupId=564390b7-e9f5-4fa1-94c0-d40a4fbb0631&planId=EKo2RaRFBkKKUVFyeLhBHpYAFjQS&taskId=RsXAdIARFE6v3ixm8HrZqZYAAg0J]["Implement models for additional benchmarks and alpha/beta release examples"]] both gpu and vanilla versions.
 
 The notebooks are separated depending if we want to use GPU or not (~model_dev_gpu.ipynb~ and ~model_dev_vanilla.ipynb~). 
-Along with the notebooks, a python module is provided to abstract the reader from the code behind the development, and instead focus on the results of the training (~model_tools.py~).
+Along with the notebooks, a python module is provided to abstract the reader from the code behind the development, and instead focus on the results of the training (~model_tools.py~). A test for the module is also present (~test_model_tools.py~) which tests the ~get_mnist~ function in it.
 
-Since we are using the other hotdog modules, those files *may be also here*.
+* interface_development
 
-* Interface testing
-This work is referenced in the task [[https://tasks.office.com/xmos1.onmicrosoft.com/en-GB/Home/Planner#/plantaskboard?groupId=564390b7-e9f5-4fa1-94c0-d40a4fbb0631&planId=EKo2RaRFBkKKUVFyeLhBHpYAFjQS&taskId=ttzgSUFABkmK1Awj1-Ht7pYAFk2p]["Single operator networks enhancements"]]. The content of this section consists in:
+# NEED TO UPDATE THIS
 
-- A notebook containing a proposed interface for testing the models and perform the conversions: ~interface_testing.ipynb~
-- A module with the content of that notebook: ~model_interface.py~
-- A demo file that uses that interface: ~fc_deepin_shallowout_demo.py~
+This work is referenced in the task [[https://tasks.office.com/xmos1.onmicrosoft.com/en-GB/Home/Planner#/plantaskboard?groupId=564390b7-e9f5-4fa1-94c0-d40a4fbb0631&planId=EKo2RaRFBkKKUVFyeLhBHpYAFjQS&taskId=ttzgSUFABkmK1Awj1-Ht7pYAFk2p]["Single operator networks enhancements"]]. The content of this directory consists in:
 
-Polymorphy is considered following the next schema:
+- A module with the interface itself: ~model_interface.py~
+- The last version of the same module: ~model_interface.old~
+- A debug script for the data structures in the keras interface: ~debug_model_interface_keras.py~
+- Demos for different single operator:
+    - conv2d_deepin_deepout_relu
+    - fc_deepin_shallowout_final
+- Different notebooks containing the proposed interface for developing: 
+    - ~interface_testing_development.ipynb~
+    - ~interface_conv2d_deepout_relu_testing.ipynb~
+    - ~interface_conv2d_shallowin_deepout_relu_testing.ipynb~
+- Notebook for testing the interface modules:
+    - ~test_function_interface.ipynb~
+    - ~test_keras_interface.ipynb~
+
+Note: Since we are using the other hotdog modules, other files *may be also here*. Basically all the files starting with tflite*.
+
+_Polymorphy_ is considered following the next schema:
     - *Model*: General parent class for a model
         - KerasModel: if the model is developed using Keras API.
         - SavedModel: if the model is developed using TensorFlow API.
@@ -28,12 +41,14 @@ All the classes contain the same structure which was thought to accelerate the p
     - *output_dim*: output dimension of the model, int
     
 - Properties:
+    - *name* : property with the name of the model
     - *models*: dictionary containing the following structure:s
         - 'data_dir': root directory for the data
         - 'models_dir': root directory for the models
     - *data*: dictionary used for storing the data
-    - *name* : property with the name of the model
-    
+        - *export_data*: for the export of the test data (should be created in gen_test_data())
+        - *quant*: for the export of the quantized data (should be created in gen_test_data())
+
 - Functions(bolded what really needs to be implemented in each case):
     - __init__(): default provided
     + *build()*: default provided
@@ -47,4 +62,6 @@ All the classes contain the same structure which was thought to accelerate the p
     - to_tf_stripped(): implemented
     - to_tf_xcore(): implemented
     - populate_converters(): implemented
+    - convert_and_save_model(): implemented
     - convert_and_save(): implemented
+    

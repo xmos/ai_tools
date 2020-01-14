@@ -70,7 +70,6 @@ class AddQuantizerFloatInputPass(InputTensorMatchingPass):
         fin = subgraph.create_tensor(
             f"{qin.name}_float", TensorType.FLOAT32, qin.shape, isinput=True)
         subgraph.inputs.remove(qin)
-        subgraph.inputs.append(fin)
         subgraph.create_operator(
             OperatorCode(BuiltinOpCodes.QUANTIZE), inputs=[fin], outputs=[qin])
 
@@ -87,7 +86,6 @@ class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
         fout = subgraph.create_tensor(
             f"{qout.name}_float", TensorType.FLOAT32, qout.shape, isoutput=True)
         subgraph.outputs.remove(qout)
-        subgraph.outputs.append(fout)
         subgraph.create_operator(
             OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qout], outputs=[fout])
 

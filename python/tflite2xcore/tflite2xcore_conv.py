@@ -12,6 +12,49 @@ from tflite2xcore import read_flatbuffer, write_flatbuffer
 from tflite2xcore import transformation_passes as passes
 
 
+def strip_model(model, *, remove_softmax=True):
+    pass_mgr = PassManager(
+        model,
+        passes=[
+            passes.RemoveQuantizerFloatInputPass(),
+            passes.RemoveDequantizerFloatOutputPass(),
+            passes.RemoveUnusedBuffersPass()
+        ]
+    )
+
+    if remove_softmax:
+        pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
+
+    pass_mgr.run_passes()
+    model.description = 'TOCO converted + XMOS stripped.'
+
+
+def add_float_input_output(model):
+    pass_mgr = PassManager(
+        model,
+        passes=[
+            passes.AddQuantizerFloatInputPass(),
+            passes.AddDequantizerFloatOutputPass()
+        ]
+    )
+
+    pass_mgr.run_passes()
+    model.description = 'TOCO converted + XMOS stripped + float interface'
+
+    # fix input/output buffers so built-in interpreter could run it
+    assert len(model.subgraphs) == 1
+    subgraph = model.subgraphs[0]
+    assert len(subgraph.inputs) == 1
+    assert len(subgraph.outputs) == 1
+    input_tensor = subgraph.inputs[0]
+    output_tensor = subgraph.outputs[0]
+
+    model.buffers.remove(input_tensor.buffer)
+    model.buffers.remove(output_tensor.buffer)
+    input_tensor.buffer = output_tensor.buffer
+    model.buffers.insert(0, input_tensor.buffer)
+
+
 def main(tflite_input_path, tflite_output_path, *,
          is_classifier=False, remove_softmax=False):
     model = read_flatbuffer(tflite_input_path)

@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 import tflite2xcore_conv as xcore_conv
 import tflite_visualize
 from tflite2xcore import read_flatbuffer, write_flatbuffer
-__version__ = '1.2.0'
+__version__ = '1.3.0'
 __author__ = 'Luis Mata'
 
 
@@ -20,22 +20,29 @@ class Model(ABC):
     def __init__(self, name, path, input_dim, output_dim):
         '''
         Initialization function of the class Model. Parameters needed are:
-        \t- name: (string) name of the model, models directory name
-        \t- data_dir: (path) where the data directory is located
-        \t- models_dir: (path) where the models directory is located
-        \t- input_dim: (int) input dimension, must be multiple of 32
-        \t- output_dim: (int) the number of classes to train
-        \t- path: (Path) working directory to store everything
+        \t- name     (string): Name of the model and model directory name
+        \t- path       (Path): Working directory where everything is stored
+        \t- input_dim   (int): input dimension, must be multiple of 32
+        \t- output_dim  (int): the number of classes to train
+        Other properties derived:
+        \t- core_model(Model): The main model from which others derive
+        \t- models     (dict): To store model, and dir paths
+        \t\t- keys: 'model_float', 'model_quant', 'data_dir', 'models_dir'
+        \t- data       (dict): To store all kinds of data
+        \t\t- keys: 'quant', 'export', are necessary
+        \t- converters (dict): To store all converter objects
         '''
-        self.core_model = None
-        self.models = {}  # paths included data_dir : Path ; models_dir : Path
-        self.data = {}  # For storing data
-        self.converters = {}  # For storing the converters float and quant
-        self.test_data = np.empty([output_dim, input_dim, 1, 1])
+        self.__name = name
         self.input_dim = input_dim
         self.output_dim = output_dim
-        self.__name = name
-        if not os.path.exists(path):
+
+        self.core_model = None
+        self.models = {}
+        self.data = {}
+        self.converters = {}
+        self.test_data = np.empty([output_dim, input_dim, 1, 1])
+
+        if not os.path.exists(path):  # Path generation
             path.mkdir()
         self.models['data_dir'] = path / 'test_data'
         if not os.path.exists(self.models['data_dir']):
@@ -58,9 +65,6 @@ class Model(ABC):
 
     @abstractmethod
     def build(self):
-        # kb arguments for the compiler?
-        # instantiate model object
-        # polimorphism argmax
         '''
         Here should be the model definition to be built,
         compiled and summarized. The model should be stored in self.core_model.
@@ -106,7 +110,7 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def gen_test_data(self):  # naming
+    def gen_test_data(self):
         '''
         Select the test data examples for storing
         along with the converted models.
@@ -207,12 +211,35 @@ class Model(ABC):
         common.save_test_data(data, self.models['data_dir'], base_file_name)
 
     def save_tf_xcore_data(self):
-        # TODO: implement me!
-        pass
+        model = read_flatbuffer(str(self.models['model_xcore']))
+        output_quant = model.subgraphs[0].outputs[0].quantization
+        input_quant = model.subgraphs[0].inputs[0].quantization
+        
+        input_tensor_type = model.subgraphs[0].inputs[0].type
+
+        if str(input_tensor_type) == 'TensorType.INT16':
+            dtype = np.int16
+        elif str(input_tensor_type) == 'TensorType.INT8':
+            dtype = np.int8
+        else:
+            raise NotImplementedError(f"input tensor type {input_tensor.type} "
+                                      "not supported in save_tf_xcore_data")
+        # TODO: and this?
+        # pad: from common.save_test_data_for_xcore_model
+        '''
+        if pad_input_channel_dim:
+            old_shape = x_test_float.shape
+            pad_shape = list(old_shape[:-1]) + [input_tensor['shape'][-1] - old_shape[-1]]
+            pads = np.zeros(pad_shape, dtype=x_test_float.dtype)
+            x_test_float = np.concatenate([x_test_float, pads], axis=3)
+        '''
+        # quantize
+        x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0], dtype)
+        # save data
+        base_file_name = 'model_xcore'
+        common.save_test_data({'x_test': x_test}, self.models['data_dir'], base_file_name)
 
     def populate_converters(self):  # Actually, data it's being saved here too
-        # Naming
-        # TODO
         '''
         Create all the converters in a row in the logical order.
         The only thing needed is the presence

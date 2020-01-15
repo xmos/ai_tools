@@ -7,7 +7,7 @@ from tensorflow.keras import layers
 import numpy as np
 import model_interface as mi
 import tflite_utils
-
+import examples_common
 DEFAULT_CLASSES = 4
 DEFAULT_INPUTS = 32
 

@@ -1,9 +1,14 @@
+import os
 import shutil
-from pathlib import Path
+import pathlib
+import argparse
+import logging
+import random
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
 from termcolor import colored
+
 import model_interface as mi
 import tflite_utils
 
@@ -58,19 +63,17 @@ class FcDeepinShallowoutFinal(mi.KerasModel):
         tf.keras.backend.clear_session()
         tflite_utils.set_all_seeds()
         # Building
-        model = tf.keras.Sequential(name=self.name)
-        model.add(layers.Flatten(input_shape=(input_dim, 1, 1),
+        self.core_model = tf.keras.Sequential(name=self.name)
+        self.core_model.add(layers.Flatten(input_shape=(input_dim, 1, 1),
                                  name='input'))
-        model.add(layers.Dense(output_dim, activation='softmax',
+        self.core_model.add(layers.Dense(output_dim, activation='softmax',
                                name='ouptut'))
         # Compilation
-        model.compile(optimizer='adam',
+        self.core_model.compile(optimizer='adam',
                       loss='sparse_categorical_crossentropy',
                       metrics=['accuracy'])
-        # Add to dict
-        self.models[self.name] = model
         # Show summary
-        model.summary()
+        self.core_model.summary()
 
     def prep_data(self):
         self.data = self.generate_fake_lin_sep_dataset(
@@ -99,69 +102,103 @@ def printc(*s, c='green', back='on_grey'):
     else:
         print(colored(s[0], c, back), str(s[1:])[1:-2])
 
+def debug_dir(path, name, before):
+    if before:
+        printc(name + ' directory before generation:')
+    else:
+        printc(name + ' directory after generation:')
+    print([str(x.name) for x in path.iterdir() if x.is_file() or x.is_dir()])
 
-shutil.rmtree('./debug')
-modelpath = Path('./debug/models')
-datapath = Path('./debug/test_data')
-test_model = FcDeepinShallowoutFinal(
-    'fc_deepin_shallowout_final', Path('./debug'), 32, 2)
-printc('Model dictionary:\n', test_model.models)
-printc('Model name property:\n', test_model.name)
-printc('Data keys before build:\n', test_model.data.keys())
-test_model.build(32)
-test_model.prep_data()
-printc('Data keys after build:\n', test_model.data.keys())
-printc('Training:')
-test_model.train()
-test_model.save_core_model()
-test_model.gen_test_data()
-printc('Data keys after test data generation:\n', test_model.data.keys())
-printc('Content in models directory:')
-print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
-printc('Content in data directory:')
-print([str(x.name) for x in datapath.iterdir() if x.is_file()])
-printc('Model keys:\n', test_model.models.keys())
+def debug_keys_header(title, test_model):
+    printc(title, c='blue')
+    debug_keys('Model keys:\n', test_model.models)
+    debug_keys('Data keys:\n', test_model.data)
+    debug_keys('Converter keys:\n', test_model.converters)
 
-printc('Conversions', c='blue')
-printc('To float', c='blue')
-test_model.to_tf_float()
-printc('Model keys:\n', test_model.models.keys())
-printc('Models directory before conversion:')
-print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
-printc('Models directory after conversion:')
-test_model.convert_and_save_model('model_float')
-print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
+def debug_keys(string, dic):
+    printc(string, dic.keys())
 
-printc('To quant', c='blue')
-test_model.to_tf_quant()
-printc('Model keys:\n', test_model.models.keys())
-printc('Models directory before conversion:')
-print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
-test_model.convert_and_save_model('model_quant')
-printc('Models directory after conversion:')
-print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
+def debug_conv(to_type, test_model, datapath, modelpath):
+    debug_keys_header('Conversion to ' + to_type +' start', test_model)
+    debug_dir(modelpath, 'Models', True)
+    printc('Converting model...', c='yellow')
+    choose_conv_or_save(to_type, test_model, False)
+    debug_dir(modelpath, 'Models', False)
+    debug_dir(datapath, 'Data', True)
+    printc('Saving data...', c='yellow')
+    choose_conv_or_save(to_type, test_model, True)
+    debug_dir(datapath, 'Data', False)
+    
+def choose_conv_or_save(conv, test_model, save):
+    if not save:
+        return{
+            'float': lambda m: m.to_tf_float(),
+            'quant': lambda m: m.to_tf_quant(),
+            'stripped': lambda m: m.to_tf_stripped(),
+            'xcore': lambda m: m.to_tf_xcore()
+        }[conv](test_model)
+    else:
+        return{
+            'float': lambda m : m.save_tf_float_data(),
+            'quant': lambda m : m.save_tf_quant_data(),
+            'stripped': lambda m : m.save_tf_stripped_data(),
+            'xcore': lambda m : m.save_tf_xcore_data()
+        }[conv](test_model)
+    
+def main():
+    # Random seed
+    random.seed(42)
+    # Remove everthing
+    if os.path.exists('./debug'):
+        shutil.rmtree('./debug')
+    modelpath = pathlib.Path('./debug/models')
+    datapath = pathlib.Path('./debug/test_data')
+    # Instantiation
+    test_model = FcDeepinShallowoutFinal(
+        'fc_deepin_shallowout_final', pathlib.Path('./debug'), 32, 2)
+    printc('Model name property:\n', test_model.name)
+    # Build
+    debug_keys_header('Keys before build()', test_model)
+    debug_dir(modelpath, 'Models', True)
+    debug_dir(datapath, 'Data', True)
+    test_model.build(32)
+    # Train data preparation
+    test_model.prep_data()
+    debug_keys_header('Keys after build() and prep_data()', test_model)
+    debug_dir(modelpath, 'Models', False)
+    debug_dir(datapath, 'Data', False)
+    # Training
+    printc('Training:', c='blue')
+    test_model.train()
+    # Save model
+    printc('Saving model', c='blue')
+    test_model.save_core_model()
+    debug_dir(modelpath, 'Models', False)
+    debug_dir(datapath, 'Data', False)
+    # Export data generation
+    printc('Generating export data', c='blue')
+    test_model.gen_test_data()
+    debug_keys('Data keys after export data generation:\n', test_model.data)
+    # Conversions
+    debug_conv('float', test_model, datapath, modelpath)
+    debug_conv('quant', test_model, datapath, modelpath)
+    debug_conv('stripped', test_model, datapath, modelpath)
+    debug_conv('xcore', test_model, datapath, modelpath)
+    # Final status
+    debug_keys_header('Final status', test_model)
+    
 
-printc('To stripped', c='blue')
-printc('Currently broken')
-'''
-test_model.to_tf_stripped()
-print('Model keys:\n', test_model.models.keys())
-printc('Models directory before conversion:')
-os.listdir('models')
-test_model.convert_and_save_model('model_stripped')
-printc('Models directory after conversion:')
-os.listdir('models')
-'''
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help='Verbose mode.')
+    args = parser.parse_args()
 
-printc('To xcore', c='blue')
-test_model.to_tf_xcore()
-printc('Model keys:\n', test_model.models.keys())
-printc('Models directory before conversion:')
-print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
-test_model.convert_and_save_model('model_xcore')
-printc('Models directory after conversion:')
-print([str(x.name) for x in modelpath.iterdir() if x.is_file()])
+    verbose = args.verbose
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.getLogger('tensorflow').setLevel(logging.ERROR)
+        logging.info(f"Eager execution enabled: {tf.executing_eagerly()}")
 
-printc('Final status', c='blue')
-printc('Data keys:\n', test_model.data.keys())
-printc('Model keys:\n', test_model.models.keys())
+    main()

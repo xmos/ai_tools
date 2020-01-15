@@ -93,14 +93,14 @@ text {
   <td>XC_fc_deepin_shallowout_final_0/output</td>
   <td>INT16</td>
   <td>[1, 4]</td>
-  <td>4</td>
+  <td>5</td>
   <td>{'scale': [0.00111859], 'zero_point': [3328], 'details_type': 'CustomQuantization', 'quantized_dimension': 0}</td>
 </tr><tr>
   <td>1</td>
   <td>XC_fc_deepin_shallowout_final_0/weights</td>
   <td>INT8</td>
   <td>[4, 32]</td>
-  <td>3</td>
+  <td>4</td>
   <td>{'scale': [0.007991377], 'zero_point': [0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr><tr>
   <td>2</td>
@@ -114,14 +114,14 @@ text {
   <td>input_input_int8</td>
   <td>INT8</td>
   <td>[1, 32, 1, 1]</td>
-  <td>1</td>
+  <td>3</td>
   <td>{'min': [-4.295065], 'max': [4.433117], 'scale': [0.03422816], 'zero_point': [-3], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr><tr>
   <td>4</td>
   <td>XC_fc_deepin_shallowout_final_0/shift_scale</td>
   <td>INT16</td>
   <td>[2, 4]</td>
-  <td>5</td>
+  <td>2</td>
   <td>None</td>
 </tr></table>
 
@@ -351,19 +351,19 @@ buildGraph()
   <td>16 bytes</td>
 </tr><tr>
   <td>1</td>
-  <td>--</td>
-</tr><tr>
-  <td>2</td>
   <td>5 bytes</td>
 </tr><tr>
-  <td>3</td>
-  <td>128 bytes</td>
+  <td>2</td>
+  <td>16 bytes</td>
 </tr><tr>
-  <td>4</td>
+  <td>3</td>
   <td>--</td>
 </tr><tr>
+  <td>4</td>
+  <td>128 bytes</td>
+</tr><tr>
   <td>5</td>
-  <td>16 bytes</td>
+  <td>--</td>
 </tr></table>
 
 <h2>Operator Codes</h2>

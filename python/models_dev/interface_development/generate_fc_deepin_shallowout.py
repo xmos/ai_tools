@@ -98,7 +98,7 @@ def main(input_dim=DEFAULT_INPUTS, classes=DEFAULT_CLASSES, *,
          train_new_model=False):
     # Instantiate model
     test_model = FcDeepinShallowoutFinal(
-        'fc_deepin_shallowout_final', Path('./fc_deepin_shallowout_final'),
+        'fc_deepin_shallowout_final', Path('./debug/fc_deepin_shallowout_final'),
         input_dim, classes)
     if train_new_model:
         # Build model and compile

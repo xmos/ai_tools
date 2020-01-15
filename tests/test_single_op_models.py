@@ -118,4 +118,3 @@ def test_maxpool(test_model_app, maxpool_test_case):
 
 if __name__ == "__main__":
     pytest.main()
-

@@ -5,15 +5,15 @@ import numpy as np
 
 from abc import abstractmethod
 from contextlib import contextmanager
-from .graph_transformer import PassPriority
-from .graph_transformer import (
+from tflite2xcore.graph_transformer import PassPriority
+from tflite2xcore.graph_transformer import (
     ModelTransformationPass,
     OperatorMatchingPass,
     InputTensorMatchingPass,
     OutputTensorMatchingPass
 )
-from .operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
-from .xcore_model import TensorType
+from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
+from tflite2xcore.xcore_model import TensorType
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):

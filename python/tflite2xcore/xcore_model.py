@@ -5,10 +5,10 @@ import collections
 
 import numpy as np
 
-from .operator_codes import OperatorCode
+from tflite2xcore.operator_codes import OperatorCode
 
 
-class TensorType(enum.Enum):
+class TensorType(enum.IntEnum):
     FLOAT32 = 0
     FLOAT16 = 1
     INT32 = 2

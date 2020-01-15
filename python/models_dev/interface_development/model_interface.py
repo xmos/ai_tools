@@ -211,7 +211,6 @@ class Model(ABC):
         output_quant = model.subgraphs[0].outputs[0].quantization
         input_quant = model.subgraphs[0].inputs[0].quantization
         xcore_conv.add_float_input_output(model)
-        print(output_quant)
         x_test = common.quantize(
             self.data['export_data'],
             input_quant['scale'][0],

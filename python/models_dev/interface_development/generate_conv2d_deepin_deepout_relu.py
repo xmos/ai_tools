@@ -74,7 +74,7 @@ def main(input_dim=DEFAULT_INPUTS,
     # Instantiate model
     test_model = Conv2dDeepinDeepoutRelu(
         'conv2d_deepin_deepout_relu',
-        Path('./conv2d_deepin_deepout_relu/'),
+        Path('./debug/conv2d_deepin_deepout_relu/'),
         input_dim, output_dim)
     # Build model and compile
     test_model.build(K_h, K_w, height, width)

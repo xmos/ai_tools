@@ -1,3 +1,4 @@
+# Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import examples_common as common
 import os
 import logging
@@ -17,7 +18,7 @@ __author__ = 'Luis Mata'
 # Abstract parent class
 class Model(ABC):
 
-    def __init__(self, name, path, input_dim, output_dim):
+    def __init__(self, name, path, input_dim, output_dim=1):
         '''
         Initialization function of the class Model. Parameters needed are:
         \t- name     (string): Name of the model and model directory name
@@ -149,6 +150,17 @@ class Model(ABC):
         using this function.
         '''
         assert 'model_quant' in self.models
+        model = read_flatbuffer(str(self.models['model_quant']))
+        xcore_conv.strip_model(model)
+        self.models['model_stripped'] = self.models['models_dir'] / "model_stripped.tflite"
+        write_flatbuffer(model, str(self.models['model_stripped']))
+
+        # TODO: refactor this
+        base_file_name = 'model_stripped'
+        if True:  # visualize:
+            model_html = self.models['models_dir'] / f"{base_file_name}.html"
+            tflite_visualize.main(self.models[base_file_name], model_html)
+            logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
 
     @abstractmethod
     def to_tf_xcore(self):
@@ -160,6 +172,17 @@ class Model(ABC):
         using this function.
         '''
         assert 'model_quant' in self.models
+        self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
+        xcore_conv.main(str(self.models['model_quant']),
+                        str(self.models['model_xcore']),
+                        is_classifier=True)  # TODO: change this later
+
+        # TODO: refactor this
+        base_file_name = 'model_xcore'
+        if True:  # visualize:
+            model_html = self.models['models_dir'] / f"{base_file_name}.html"
+            tflite_visualize.main(self.models[base_file_name], model_html)
+            logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
 
     def _save_data_for_canonical_model(self, model_key):
         # create interpreter
@@ -190,7 +213,10 @@ class Model(ABC):
 
         xcore_conv.add_float_input_output(model)
 
-        x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0])
+        x_test = common.quantize(
+            self.data['export_data'],
+            input_quant['scale'][0],
+            input_quant['zero_point'][0])
 
         base_file_name = 'model_stripped'
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -201,20 +227,22 @@ class Model(ABC):
 
             # extract and quantize reference labels for the test examples
             logging.info(f"Extracting examples for {base_file_name}...")
-            y_test = common.apply_interpreter_to_examples(interpreter, self.data['export_data'])
+            y_test = common.apply_interpreter_to_examples(
+                interpreter, self.data['export_data'])
             y_test = map(
-                lambda y: common.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
-                y_test
-            )
+                lambda y: common.quantize(
+                    y,
+                    output_quant['scale'][0],
+                    output_quant['zero_point'][0]),
+                y_test)
             data = {'x_test': x_test, 'y_test': np.vstack(list(y_test))}
 
         common.save_test_data(data, self.models['data_dir'], base_file_name)
 
     def save_tf_xcore_data(self):
         model = read_flatbuffer(str(self.models['model_xcore']))
-        output_quant = model.subgraphs[0].outputs[0].quantization
         input_quant = model.subgraphs[0].inputs[0].quantization
-        
+
         input_tensor_type = model.subgraphs[0].inputs[0].type
 
         if str(input_tensor_type) == 'TensorType.INT16':
@@ -222,7 +250,7 @@ class Model(ABC):
         elif str(input_tensor_type) == 'TensorType.INT8':
             dtype = np.int8
         else:
-            raise NotImplementedError(f"input tensor type {input_tensor.type} "
+            raise NotImplementedError(f"input tensor type {input_tensor_type} "
                                       "not supported in save_tf_xcore_data")
         # TODO: and this?
         # pad: from common.save_test_data_for_xcore_model
@@ -234,10 +262,15 @@ class Model(ABC):
             x_test_float = np.concatenate([x_test_float, pads], axis=3)
         '''
         # quantize
-        x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0], dtype)
+        x_test = common.quantize(
+            self.data['export_data'],
+            input_quant['scale'][0],
+            input_quant['zero_point'][0],
+            dtype)
         # save data
         base_file_name = 'model_xcore'
-        common.save_test_data({'x_test': x_test}, self.models['data_dir'], base_file_name)
+        common.save_test_data(
+            {'x_test': x_test}, self.models['data_dir'], base_file_name)
 
     def populate_converters(self):  # Actually, data it's being saved here too
         '''
@@ -331,31 +364,9 @@ class KerasModel(Model):
 
     def to_tf_stripped(self):
         super().to_tf_stripped()
-        model = read_flatbuffer(str(self.models['model_quant']))
-        xcore_conv.strip_model(model)
-        self.models['model_stripped'] = self.models['models_dir'] / "model_stripped.tflite"
-        write_flatbuffer(model, str(self.models['model_stripped']))
-
-        # TODO: refactor this
-        base_file_name = 'model_stripped'
-        if True:  # visualize:
-            model_html = self.models['models_dir'] / f"{base_file_name}.html"
-            tflite_visualize.main(self.models[base_file_name], model_html)
-            logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
 
     def to_tf_xcore(self):
         super().to_tf_xcore()
-        self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
-        xcore_conv.main(str(self.models['model_quant']),
-                        str(self.models['model_xcore']),
-                        is_classifier=True)  # TODO: change this later
-
-        # TODO: refactor this
-        base_file_name = 'model_xcore'
-        if True:  # visualize:
-            model_html = self.models['models_dir'] / f"{base_file_name}.html"
-            tflite_visualize.main(self.models[base_file_name], model_html)
-            logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
 
 
 # Polymorphism: FunctionModel

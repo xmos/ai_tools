@@ -65,13 +65,13 @@ class FcDeepinShallowoutFinal(mi.KerasModel):
         # Building
         self.core_model = tf.keras.Sequential(name=self.name)
         self.core_model.add(layers.Flatten(input_shape=(input_dim, 1, 1),
-                                 name='input'))
+                                           name='input'))
         self.core_model.add(layers.Dense(output_dim, activation='softmax',
-                               name='ouptut'))
+                                         name='ouptut'))
         # Compilation
         self.core_model.compile(optimizer='adam',
-                      loss='sparse_categorical_crossentropy',
-                      metrics=['accuracy'])
+                                loss='sparse_categorical_crossentropy',
+                                metrics=['accuracy'])
         # Show summary
         self.core_model.summary()
 
@@ -102,6 +102,7 @@ def printc(*s, c='green', back='on_grey'):
     else:
         print(colored(s[0], c, back), str(s[1:])[1:-2])
 
+
 def debug_dir(path, name, before):
     if before:
         printc(name + ' directory before generation:')
@@ -109,17 +110,20 @@ def debug_dir(path, name, before):
         printc(name + ' directory after generation:')
     print([str(x.name) for x in path.iterdir() if x.is_file() or x.is_dir()])
 
+
 def debug_keys_header(title, test_model):
     printc(title, c='blue')
     debug_keys('Model keys:\n', test_model.models)
     debug_keys('Data keys:\n', test_model.data)
     debug_keys('Converter keys:\n', test_model.converters)
 
+
 def debug_keys(string, dic):
     printc(string, dic.keys())
 
+
 def debug_conv(to_type, test_model, datapath, modelpath):
-    debug_keys_header('Conversion to ' + to_type +' start', test_model)
+    debug_keys_header('Conversion to ' + to_type + ' start', test_model)
     debug_dir(modelpath, 'Models', True)
     printc('Converting model...', c='yellow')
     choose_conv_or_save(to_type, test_model, False)
@@ -128,7 +132,8 @@ def debug_conv(to_type, test_model, datapath, modelpath):
     printc('Saving data...', c='yellow')
     choose_conv_or_save(to_type, test_model, True)
     debug_dir(datapath, 'Data', False)
-    
+
+
 def choose_conv_or_save(conv, test_model, save):
     if not save:
         return{
@@ -139,12 +144,13 @@ def choose_conv_or_save(conv, test_model, save):
         }[conv](test_model)
     else:
         return{
-            'float': lambda m : m.save_tf_float_data(),
-            'quant': lambda m : m.save_tf_quant_data(),
-            'stripped': lambda m : m.save_tf_stripped_data(),
-            'xcore': lambda m : m.save_tf_xcore_data()
+            'float': lambda m: m.save_tf_float_data(),
+            'quant': lambda m: m.save_tf_quant_data(),
+            'stripped': lambda m: m.save_tf_stripped_data(),
+            'xcore': lambda m: m.save_tf_xcore_data()
         }[conv](test_model)
-    
+
+
 def main():
     # Random seed
     random.seed(42)
@@ -186,7 +192,7 @@ def main():
     debug_conv('xcore', test_model, datapath, modelpath)
     # Final status
     debug_keys_header('Final status', test_model)
-    
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

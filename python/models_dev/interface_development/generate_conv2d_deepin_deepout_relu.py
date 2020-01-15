@@ -36,23 +36,20 @@ class Conv2dDeepinDeepoutRelu(mi.KerasModel):
         tf.keras.backend.clear_session()
         tflite_utils.set_all_seeds()
         # Building
-        model = tf.keras.Sequential(name=self.name)
-        model.add(layers.Conv2D(
+        self.core_model = tf.keras.Sequential(name=self.name)
+        self.core_model.add(layers.Conv2D(
             filters=output_dim,
             kernel_size=(K_h, K_w),
             padding='same',
             input_shape=(height, width, input_dim)))
         # Compilation
-        model.compile(optimizer='adam',
-                      loss='sparse_categorical_crossentropy',
-                      metrics=['accuracy'])
-        # Add to dict
-        self.models[self.name] = model
+        self.core_model.compile(optimizer='adam',
+                                loss='sparse_categorical_crossentropy',
+                                metrics=['accuracy'])
         # Show summary
-        model.summary()
-        return model
+        self.core_model.summary()
 
-    def train():  # Not training this model
+    def train(self):  # Not training this model
         pass
 
     # For training
@@ -86,8 +83,6 @@ def main(input_dim=DEFAULT_INPUTS,
     test_model.save_core_model()
     # Populate converters
     test_model.populate_converters()
-    # Convert and save
-    test_model.convert_and_save()
 
 
 if __name__ == "__main__":

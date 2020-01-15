@@ -1,12 +1,15 @@
 import examples_common as common
 import os
 import logging
+import pathlib
+import tempfile
 import tflite_utils
 import tensorflow as tf
 import numpy as np
 from abc import ABC, abstractmethod
 import tflite2xcore_conv as xcore_conv
-from tflite2xcore import read_flatbuffer
+import tflite_visualize
+from tflite2xcore import read_flatbuffer, write_flatbuffer
 __version__ = '1.2.0'
 __author__ = 'Luis Mata'
 
@@ -24,6 +27,7 @@ class Model(ABC):
         \t- output_dim: (int) the number of classes to train
         \t- path: (Path) working directory to store everything
         '''
+        self.core_model = None
         self.models = {}  # paths included data_dir : Path ; models_dir : Path
         self.data = {}  # For storing data
         self.converters = {}  # For storing the converters float and quant
@@ -59,13 +63,12 @@ class Model(ABC):
         # polimorphism argmax
         '''
         Here should be the model definition to be built,
-        compiled and summarized.The model should be stored
-        in the dictionary with its name: self.models[self.name]=model
+        compiled and summarized. The model should be stored in self.core_model.
         '''
         pass
 
     @abstractmethod
-    def save_core_model():
+    def save_core_model(self):
         '''
         Function to store training and original model files in the
         corresponding format.
@@ -114,24 +117,23 @@ class Model(ABC):
     @abstractmethod
     def to_tf_float(self):  # polymorphism affects here
         '''
-        Create converter from original model
-        to TensorFlow Lite Float.
-        Converter stored with the key 'model_float' in
-        self.converters. Also the path of the model is saved
-        using this function.
+        Create converter from original model to TensorFlow Lite Float.
+        Converter stored with the key 'model_float' in self.converters.
+        Model is saved to disk and the path of the model is
+        stored in self.models with the key 'model_float'.
         '''
-        assert self.name in self.models
+        assert self.core_model, "core model does not exist"
 
     @abstractmethod
     def to_tf_quant(self):
         '''
-        Create converter from original model
-        to TensorFlow Lite Float.
-        Converter stored with the key 'model_quant' in
-        self.converters. Also the path of the model is saved
-        using this function.
+        Create converter from original model to TensorFlow Lite Float.
+        Converter stored with the key 'model_quant' in self.converters.
+        Model is saved to disk and the path of the model is
+        stored in self.models with the key 'model_quant'.
         '''
-        assert self.name in self.models
+        assert self.core_model, "core model has not been initialized"
+        assert 'quant' in self.data, "representative dataset has not been prepared"
 
     @abstractmethod
     def to_tf_stripped(self):
@@ -155,6 +157,59 @@ class Model(ABC):
         '''
         assert 'model_quant' in self.models
 
+    def _save_data_for_canonical_model(self, model_key):
+        # create interpreter
+        interpreter = tf.lite.Interpreter(model_path=str(self.models[model_key]))
+
+        # extract reference labels for the test examples
+        logging.info(f"Extracting examples for {model_key}...")
+        x_test = self.data['export_data']
+        data = {'x_test': x_test,
+                'y_test': common.apply_interpreter_to_examples(interpreter, x_test)}
+
+        # save data
+        common.save_test_data(data, self.models['data_dir'], model_key)
+
+    def save_tf_float_data(self):
+        assert 'model_float' in self.models
+        self._save_data_for_canonical_model('model_float')
+
+    def save_tf_quant_data(self):
+        assert 'model_quant' in self.models
+        self._save_data_for_canonical_model('model_quant')
+
+    def save_tf_stripped_data(self):
+
+        model = read_flatbuffer(str(self.models['model_stripped']))
+        output_quant = model.subgraphs[0].outputs[0].quantization
+        input_quant = model.subgraphs[0].inputs[0].quantization
+
+        xcore_conv.add_float_input_output(model)
+
+        x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0])
+
+        base_file_name = 'model_stripped'
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # create interpreter
+            model_tmp_file = os.path.join(tmp_dir, 'model_tmp.tflite')
+            write_flatbuffer(model, model_tmp_file)
+            interpreter = tf.lite.Interpreter(model_path=model_tmp_file)
+
+            # extract and quantize reference labels for the test examples
+            logging.info(f"Extracting examples for {base_file_name}...")
+            y_test = common.apply_interpreter_to_examples(interpreter, self.data['export_data'])
+            y_test = map(
+                lambda y: common.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
+                y_test
+            )
+            data = {'x_test': x_test, 'y_test': np.vstack(list(y_test))}
+
+        common.save_test_data(data, self.models['data_dir'], base_file_name)
+
+    def save_tf_xcore_data(self):
+        # TODO: implement me!
+        pass
+
     def populate_converters(self):  # Actually, data it's being saved here too
         # Naming
         # TODO
@@ -162,71 +217,19 @@ class Model(ABC):
         Create all the converters in a row in the logical order.
         The only thing needed is the presence
         of the original model in the models dictionary:
-        self.models[self.name] must exist.
+        self.core_model must exist.
         '''
-        assert self.name in self.models
         self.to_tf_float()
+        self.save_tf_float_data()
+
         self.to_tf_quant()
-        # self.to_tf_stripped()
+        self.save_tf_quant_data()
+
+        self.to_tf_stripped()
+        self.save_tf_stripped_data()
+
         self.to_tf_xcore()
-
-    def convert_and_save_model(self, name):
-        test_data = self.data['export_data']
-        # float or quant models are converted and saved in the same way
-        if name == 'model_float' or name == 'model_quant':
-            model_file = common.save_from_tflite_converter(
-                self.models[name],
-                self.models['models_dir'],
-                name)
-            common.save_test_data_for_regular_model(
-                model_file,
-                test_data,
-                data_dir=self.models['data_dir'],
-                base_file_name=name)
-        else:
-            # only stripped models are saved from json
-            # and the test_data has a special format for each
-            if name == 'model_stripped':
-                common.save_from_json(
-                    self.models[name],
-                    self.models['models_dir'],
-                    name)
-                common.save_test_data_for_stripped_model(
-                    self.models[name],
-                    test_data,
-                    data_dir=self.models['data_dir'])
-            else:
-                '''
-                common.save_test_data_for_xcore_model(
-                    self.models[name],
-                    test_data,
-                    data_dir=self.models['data_dir'])
-                    '''
-
-    @abstractmethod
-    def convert_and_save(self):
-        '''
-        Will save all the models in the self.models dictionary along with the
-        test data provided as parameter.
-        The models to be saved are:
-        \t- tflite float
-        \t- tflite quant
-        \t- tflite stripped
-        \t- tflite xcore
-        '''
-        # test_data = self.data['export_data']
-        # float
-        # self.convert_from_tflite(test_data, 'model_float')
-        self.convert_and_save_model('model_float')
-        # quant
-        # self.convert_from_tflite(test_data, 'model_quant')
-        self.convert_and_save_model('model_quant')
-        # stripped
-        # self.converter_from_json_stripped(test_data, 'model_stripped')
-        # self.convert_and_save_model('model_stripped')  # as it breaks for now
-        # xcore
-        # self.conver_from_json_xcore(test_data, 'model_xcore')
-        self.convert_and_save_model('model_xcore')
+        self.save_tf_xcore_data()
 
 
 # Polymorphism: Keras
@@ -243,7 +246,7 @@ class KerasModel(Model):
     @abstractmethod
     def train(self, BS, EPOCHS):
         assert self.data
-        self.models[self.name].fit(
+        self.core_model.fit(
             self.data['x_train'],
             self.data['y_train'],
             epochs=EPOCHS,
@@ -260,7 +263,7 @@ class KerasModel(Model):
     def save_core_model(self):
         print('Saving the following data keys:', self.data.keys())
         np.savez(self.models['data_dir'] / 'data', **self.data)
-        self.models[self.name].save(str(self.models['models_dir']/'model.h5'))
+        self.core_model.save(str(self.models['models_dir']/'model.h5'))
 
     def load_core_model(self):
         data_path = self.models['data_dir']/'data.npz'
@@ -269,57 +272,63 @@ class KerasModel(Model):
             logging.info(f"Loading data from {data_path}")
             self.data = dict(np.load(data_path))
             logging.info(f"Loading keras model from {model_path}")
-            self.models[self.name] = tf.keras.models.load_model(model_path)
+            self.core_model = tf.keras.models.load_model(model_path)
         except FileNotFoundError as e:
             logging.error(f"{e} (Hint: use the --train_model flag)")
             return
-        out_shape = self.models[self.name].output_shape[1]
+        out_shape = self.core_model.output_shape[1]
         if out_shape != self.output_dim:
             raise ValueError(f"number of specified classes ({self.output_dim})"
                              f"does not match model output shape ({out_shape})"
                              )
 
-    def to_tf_float(self):  # affected by poly
-        assert self.name in self.models
-        self.models['model_float'] = tf.lite.TFLiteConverter.from_keras_model(
-            self.models[self.name])
+    def to_tf_float(self):
+        super().to_tf_float()
+        self.converters['model_float'] = tf.lite.TFLiteConverter.from_keras_model(
+            self.core_model)
+        self.models['model_float'] = common.save_from_tflite_converter(
+            self.converters['model_float'],
+            self.models['models_dir'],
+            'model_float')
 
-    def to_tf_quant(self):  # affected by poly
-        assert self.name in self.models
-        assert 'quant' in self.data
-        self.models['model_quant'] = tf.lite.TFLiteConverter.from_keras_model(
-            self.models[self.name])
+    def to_tf_quant(self):
+        super().to_tf_quant()
+        self.converters['model_quant'] = tf.lite.TFLiteConverter.from_keras_model(
+            self.core_model)
         common.quantize_converter(
-            self.models['model_quant'], self.data['quant'])
-
-    def to_tf_stripped(self):  # not really affected by poly
-        assert 'model_quant' in self.models
-        desc = "TOCO Converted and stripped."
-        model_quant_file = common.save_from_tflite_converter(
-            self.models['model_quant'],
+            self.converters['model_quant'], self.data['quant'])
+        self.models['model_quant'] = common.save_from_tflite_converter(
+            self.converters['model_quant'],
             self.models['models_dir'],
-            "model_quant")
-        model_quant = tflite_utils.load_tflite_as_json(model_quant_file)
-        self.models['model_stripped'] = common.strip_model_quant(model_quant)
-        self.models['model_stripped']['description'] = desc
+            'model_quant')
 
-    def to_tf_xcore(self):  # not really affected by poly
-        assert 'model_quant' in self.models
-        output_path = str(self.models['models_dir']/'model_xcore.tflite')
-        html_path = output_path[:-6]+'html'
-        model_quant_file = common.save_from_tflite_converter(
-            self.models['model_quant'],
-            self.models['models_dir'],
-            "model_quant", visualize=False)
-        # xcore conversion happens here
-        xcore_conv.main(str(model_quant_file), output_path, is_classifier=True)  # TODO: change this later
-        self.models['model_xcore'] = read_flatbuffer(output_path)
-        # Viz
-        import tflite_visualize
-        tflite_visualize.main(output_path, html_path)
+    def to_tf_stripped(self):
+        super().to_tf_stripped()
+        model = read_flatbuffer(str(self.models['model_quant']))
+        xcore_conv.strip_model(model)
+        self.models['model_stripped'] = self.models['models_dir'] / "model_stripped.tflite"
+        write_flatbuffer(model, str(self.models['model_stripped']))
 
-    def convert_and_save(self):
-        super().convert_and_save()
+        # TODO: refactor this
+        base_file_name = 'model_stripped'
+        if True:  # visualize:
+            model_html = self.models['models_dir'] / f"{base_file_name}.html"
+            tflite_visualize.main(self.models[base_file_name], model_html)
+            logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
+
+    def to_tf_xcore(self):
+        super().to_tf_xcore()
+        self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
+        xcore_conv.main(str(self.models['model_quant']),
+                        str(self.models['model_xcore']),
+                        is_classifier=True)  # TODO: change this later
+
+        # TODO: refactor this
+        base_file_name = 'model_xcore'
+        if True:  # visualize:
+            model_html = self.models['models_dir'] / f"{base_file_name}.html"
+            tflite_visualize.main(self.models[base_file_name], model_html)
+            logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
 
 
 # Polymorphism: FunctionModel

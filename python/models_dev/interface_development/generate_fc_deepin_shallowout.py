@@ -63,18 +63,16 @@ class FcDeepinShallowoutFinal(mi.KerasModel):
         tf.keras.backend.clear_session()
         tflite_utils.set_all_seeds()
         # Building
-        model = tf.keras.Sequential(name=self.name)
-        model.add(layers.Flatten(input_shape=(input_dim, 1, 1), name='input'))
-        model.add(layers.Dense(output_dim,
-                               activation='softmax', name='ouptut'))
+        self.core_model = tf.keras.Sequential(name=self.name)
+        self.core_model.add(layers.Flatten(input_shape=(input_dim, 1, 1), name='input'))
+        self.core_model.add(layers.Dense(output_dim,
+                                         activation='softmax', name='ouptut'))
         # Compilation
-        model.compile(optimizer='adam',
-                      loss='sparse_categorical_crossentropy',
-                      metrics=['accuracy'])
-        # Add to dict
-        self.models[self.name] = model
+        self.core_model.compile(optimizer='adam',
+                                loss='sparse_categorical_crossentropy',
+                                metrics=['accuracy'])
         # Show summary
-        model.summary()
+        self.core_model.summary()
 
     # For training
     def prep_data(self):
@@ -117,11 +115,6 @@ def main(input_dim=DEFAULT_INPUTS, classes=DEFAULT_CLASSES, *,
     test_model.gen_test_data()
     # Populate converters
     test_model.populate_converters()
-    # test_model.to_tf_float()
-    # test_model.to_tf_quant()
-    # test_model.to_tf_stripped()
-    # Convert and save, will break in stripped
-    test_model.convert_and_save()
 
 
 if __name__ == "__main__":

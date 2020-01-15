@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 import tflite2xcore_conv as xcore_conv
 import tflite_visualize
 from tflite2xcore import read_flatbuffer, write_flatbuffer
+from xcore_model import TensorType
 __version__ = '1.3.0'
 __author__ = 'Luis Mata'
 
@@ -183,14 +184,12 @@ class Model(ABC):
         self._save_data_for_canonical_model('model_quant')
 
     def save_tf_stripped_data(self):
+        assert 'model_stripped' in self.models
 
         model = read_flatbuffer(str(self.models['model_stripped']))
         output_quant = model.subgraphs[0].outputs[0].quantization
         input_quant = model.subgraphs[0].inputs[0].quantization
-
         xcore_conv.add_float_input_output(model)
-
-        x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0])
 
         base_file_name = 'model_stripped'
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -206,40 +205,36 @@ class Model(ABC):
                 lambda y: common.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
                 y_test
             )
-            data = {'x_test': x_test, 'y_test': np.vstack(list(y_test))}
+            data = {'x_test': common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0]),
+                    'y_test': np.vstack(list(y_test))}
 
         common.save_test_data(data, self.models['data_dir'], base_file_name)
 
     def save_tf_xcore_data(self):
-        model = read_flatbuffer(str(self.models['model_xcore']))
-        output_quant = model.subgraphs[0].outputs[0].quantization
-        input_quant = model.subgraphs[0].inputs[0].quantization
-        
-        input_tensor_type = model.subgraphs[0].inputs[0].type
+        assert 'model_xcore' in self.models
 
-        if str(input_tensor_type) == 'TensorType.INT16':
-            dtype = np.int16
-        elif str(input_tensor_type) == 'TensorType.INT8':
-            dtype = np.int8
-        else:
+        model = read_flatbuffer(str(self.models['model_xcore']))
+        input_tensor = model.subgraphs[0].inputs[0]
+        input_quant = input_tensor.quantization
+
+        if input_tensor.type != TensorType.INT8:
             raise NotImplementedError(f"input tensor type {input_tensor.type} "
                                       "not supported in save_tf_xcore_data")
-        # TODO: and this?
-        # pad: from common.save_test_data_for_xcore_model
-        '''
-        if pad_input_channel_dim:
-            old_shape = x_test_float.shape
-            pad_shape = list(old_shape[:-1]) + [input_tensor['shape'][-1] - old_shape[-1]]
-            pads = np.zeros(pad_shape, dtype=x_test_float.dtype)
-            x_test_float = np.concatenate([x_test_float, pads], axis=3)
-        '''
-        # quantize
-        x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0], dtype)
+
+        # quantize test data
+        x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0])
+
+        # we pad tensor dimensions other than the first (i.e. batch)
+        assert len(input_tensor.shape) == len(x_test.shape)
+        pad_width = [(0, input_tensor.shape[j] - x_test.shape[j] if j > 0 else 0)
+                     for j in range(len(x_test.shape))]
+        x_test = np.pad(x_test, pad_width)
+
         # save data
-        base_file_name = 'model_xcore'
-        common.save_test_data({'x_test': x_test}, self.models['data_dir'], base_file_name)
+        common.save_test_data({'x_test': x_test}, self.models['data_dir'], 'model_xcore')
 
     def populate_converters(self):  # Actually, data it's being saved here too
+        # TODO: find a better name for this
         '''
         Create all the converters in a row in the logical order.
         The only thing needed is the presence

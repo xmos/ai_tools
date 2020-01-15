@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 import tflite2xcore_conv as xcore_conv
 import tflite_visualize
 from tflite2xcore import read_flatbuffer, write_flatbuffer
-__version__ = '1.4.0'
+__version__ = '1.4.1'
 __author__ = 'Luis Mata'
 
 
@@ -398,24 +398,28 @@ class FunctionModel(Model):
     def save_core_model(self):
         print('Saving the following data keys:', self.data.keys())
         np.savez(self.models['data_dir'] / 'data', **self.data)
-        tf.saved_model.save(self.core_model, str(self.models['models_dir']/'model'))
+        tf.saved_model.save(
+            self.core_model, str(self.models['models_dir']/'model'))
 
     def load_core_model(self):
         data_path = self.models['data_dir']/'data.npz'
-        model_path = self.models['models_dir']/'model.h5'
+        model_path = self.models['models_dir']/'model'
         try:
             logging.info(f"Loading data from {data_path}")
             self.data = dict(np.load(data_path))
             logging.info(f"Loading keras model from {model_path}")
-            self.core_model = tf.keras.models.load_model(model_path)
+            self.core_model = tf.saved_model.load(str(model_path))
+            # tf.keras.models.load_model(model_path)
         except FileNotFoundError as e:
             logging.error(f"{e} (Hint: use the --train_model flag)")
             return
+        ''' What about this?
         out_shape = self.core_model.output_shape[1]
         if out_shape != self.output_dim:
             raise ValueError(f"number of specified classes ({self.output_dim})"
                              f"does not match model output shape ({out_shape})"
                              )
+        '''
 
     # Conversions
     def to_tf_float(self):

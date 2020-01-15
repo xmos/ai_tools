@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 import tflite2xcore_conv as xcore_conv
 import tflite_visualize
 from tflite2xcore import read_flatbuffer, write_flatbuffer
-__version__ = '1.3.0'
+__version__ = '1.4.0'
 __author__ = 'Luis Mata'
 
 
@@ -205,14 +205,13 @@ class Model(ABC):
         assert 'model_quant' in self.models
         self._save_data_for_canonical_model('model_quant')
 
-    def save_tf_stripped_data(self):
+    def save_tf_stripped_data(self, add_float_outputs=True):
 
         model = read_flatbuffer(str(self.models['model_stripped']))
         output_quant = model.subgraphs[0].outputs[0].quantization
         input_quant = model.subgraphs[0].inputs[0].quantization
-
         xcore_conv.add_float_input_output(model)
-
+        print(output_quant)
         x_test = common.quantize(
             self.data['export_data'],
             input_quant['scale'][0],
@@ -229,12 +228,13 @@ class Model(ABC):
             logging.info(f"Extracting examples for {base_file_name}...")
             y_test = common.apply_interpreter_to_examples(
                 interpreter, self.data['export_data'])
-            y_test = map(
-                lambda y: common.quantize(
-                    y,
-                    output_quant['scale'][0],
-                    output_quant['zero_point'][0]),
-                y_test)
+            if add_float_outputs:
+                y_test = map(
+                    lambda y: common.quantize(
+                        y,
+                        output_quant['scale'][0],
+                        output_quant['zero_point'][0]),
+                    y_test)
             data = {'x_test': x_test, 'y_test': np.vstack(list(y_test))}
 
         common.save_test_data(data, self.models['data_dir'], base_file_name)
@@ -373,11 +373,7 @@ class KerasModel(Model):
 class FunctionModel(Model):
 
     @abstractmethod
-    def build(self):
-        pass
-
-    @abstractmethod
-    def load(self, load_path):
+    def build(self):  # Implementation dependant
         pass
 
     @abstractmethod
@@ -385,12 +381,68 @@ class FunctionModel(Model):
         pass
 
     @abstractmethod
-    def train(self):
-        pass
+    def train(self, BS, EPOCHS):  # Nice default
+        assert self.data
+        self.core_model.fit(
+            self.data['x_train'],
+            self.data['y_train'],
+            epochs=EPOCHS,
+            batch_size=BS,
+            validation_data=(self.data['x_test'], self.data['y_test']))
 
     @abstractmethod
     def gen_test_data(self):
         pass
+
+    # Import and export core model
+    def save_core_model(self):
+        print('Saving the following data keys:', self.data.keys())
+        np.savez(self.models['data_dir'] / 'data', **self.data)
+        tf.saved_model.save(self.core_model, str(self.models['models_dir']/'model'))
+
+    def load_core_model(self):
+        data_path = self.models['data_dir']/'data.npz'
+        model_path = self.models['models_dir']/'model.h5'
+        try:
+            logging.info(f"Loading data from {data_path}")
+            self.data = dict(np.load(data_path))
+            logging.info(f"Loading keras model from {model_path}")
+            self.core_model = tf.keras.models.load_model(model_path)
+        except FileNotFoundError as e:
+            logging.error(f"{e} (Hint: use the --train_model flag)")
+            return
+        out_shape = self.core_model.output_shape[1]
+        if out_shape != self.output_dim:
+            raise ValueError(f"number of specified classes ({self.output_dim})"
+                             f"does not match model output shape ({out_shape})"
+                             )
+
+    # Conversions
+    def to_tf_float(self):
+        super().to_tf_float()
+        self.converters['model_float'] = tf.lite.TFLiteConverter.from_concrete_functions(
+            self.function_model)
+        self.models['model_float'] = common.save_from_tflite_converter(
+            self.converters['model_float'],
+            self.models['models_dir'],
+            'model_float')
+
+    def to_tf_quant(self):
+        super().to_tf_quant()
+        self.converters['model_quant'] = tf.lite.TFLiteConverter.from_concrete_functions(
+            self.function_model)
+        common.quantize_converter(
+            self.converters['model_quant'], self.data['quant'])
+        self.models['model_quant'] = common.save_from_tflite_converter(
+            self.converters['model_quant'],
+            self.models['models_dir'],
+            'model_quant')
+
+    def to_tf_stripped(self):  # must change this to non abstract in parent class if this design is final
+        super().to_tf_stripped()
+
+    def to_tf_xcore(self):
+        super().to_tf_xcore()
 
 
 # Polymorphism: Saved Model

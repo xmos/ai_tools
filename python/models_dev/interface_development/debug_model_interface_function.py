@@ -6,94 +6,41 @@ import logging
 import random
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import layers
 from termcolor import colored
 
 import model_interface as mi
 import tflite_utils
 
 
-class FcDeepinShallowoutFinal(mi.KerasModel):
+class ArgMax16(mi.FunctionModel):
+    def build(self):
+        class ArgMaxModel(tf.Module):
 
-    def generate_fake_lin_sep_dataset(self, classes=2, dim=32, *,
-                                      train_samples_per_class=5120,
-                                      test_samples_per_class=1024):
-        z = np.linspace(0, 2*np.pi, dim)
+            def __init__(self):
+                pass
 
-        # generate data and class labels
-        x_train, x_test, y_train, y_test = [], [], [], []
-        for j in range(classes):
-            mean = np.sin(z) + 10*j/classes
-            cov = 10 * np.diag(.5*np.cos(j * z) + 2) / (classes-1)
-            x_train.append(
-                np.random.multivariate_normal(
-                    mean, cov, size=train_samples_per_class))
-            x_test.append(
-                np.random.multivariate_normal(
-                    mean, cov, size=test_samples_per_class))
-            y_train.append(j * np.ones((train_samples_per_class, 1)))
-            y_test.append(j * np.ones((test_samples_per_class, 1)))
+            @tf.function
+            def func(self, x):
+                return tf.math.argmax(x, axis=1, output_type=tf.int32)
+        model = ArgMaxModel()
+        input_dims = self.input_dim
+        self.core_model = model
+        self.function_model = [model.func.get_concrete_function(
+            tf.TensorSpec([1, input_dims], tf.float32))]
 
-        # stack arrays
-        x_train = np.vstack(x_train)
-        y_train = np.vstack(y_train)
-        x_test = np.vstack(x_test)
-        y_test = np.vstack(y_test)
+    def prep_data(self):  # Not training this model
+        pass
 
-        # normalize
-        mean = np.mean(x_train, axis=0)
-        std = np.std(x_train, axis=0)
-        x_train = (x_train - mean) / std
-        x_test = (x_test - mean) / std
-
-        # expand dimensions for TFLite compatibility
-        def expand_array(arr):
-            return np.reshape(arr, arr.shape + (1, 1))
-        x_train = expand_array(x_train)
-        x_test = expand_array(x_test)
-
-        return {'x_train': np.float32(x_train), 'y_train': np.float32(y_train),
-                'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
-
-    # add keyboard optimizer, loss and metrics???
-    def build(self, input_dim, out_dim=2):
-        input_dim = self.input_dim
-        output_dim = self.output_dim
-        # Env
-        tf.keras.backend.clear_session()
-        tflite_utils.set_all_seeds()
-        # Building
-        self.core_model = tf.keras.Sequential(name=self.name)
-        self.core_model.add(layers.Flatten(input_shape=(input_dim, 1, 1),
-                                           name='input'))
-        self.core_model.add(layers.Dense(output_dim, activation='softmax',
-                                         name='ouptut'))
-        # Compilation
-        self.core_model.compile(optimizer='adam',
-                                loss='sparse_categorical_crossentropy',
-                                metrics=['accuracy'])
-        # Show summary
-        self.core_model.summary()
-
-    def prep_data(self):
-        self.data = self.generate_fake_lin_sep_dataset(
-            self.output_dim,
-            self.input_dim,
-            train_samples_per_class=51200//self.output_dim,
-            test_samples_per_class=10240//self.output_dim)
+    def train(self):  # Not training this model
+        pass
 
     def gen_test_data(self):
-        if not self.data:
-            self.prep_data()
-        subset_inds = np.searchsorted(self.data['y_test'].flatten(),
-                                      np.arange(self.output_dim))
-        self.data['export_data'] = self.data['x_test'][subset_inds]
-        self.data['quant'] = self.data['x_train']
-
-    def train(self):
-        self.BS = 128
-        self.EPOCHS = 5*(self.output_dim-1)
-        super().train(self.BS, self.EPOCHS)
+        tflite_utils.set_all_seeds()
+        x_test_float = np.float32(
+            np.random.uniform(0, 1, size=(self.input_dim, self.input_dim)))
+        x_test_float += np.eye(self.input_dim)
+        self.data['export_data'] = x_test_float
+        self.data['quant'] = x_test_float
 
 
 def printc(*s, c='green', back='on_grey'):
@@ -152,22 +99,24 @@ def choose_conv_or_save(conv, test_model, save):
 
 
 def main():
+    DEFAULT_INPUTS = 10
     # Random seed
     random.seed(42)
     # Remove everthing
-    if os.path.exists('./debug/keras_test'):
-        shutil.rmtree('./debug/keras_test')
-    modelpath = pathlib.Path('./debug/keras_test/models')
-    datapath = pathlib.Path('./debug/keras_test/test_data')
+    if os.path.exists('./debug/function_test'):
+        shutil.rmtree('./debug/function_test')
+    modelpath = pathlib.Path('./debug/function_test/models')
+    datapath = pathlib.Path('./debug/function_test/test_data')
     # Instantiation
-    test_model = FcDeepinShallowoutFinal(
-        'fc_deepin_shallowout_final', pathlib.Path('./debug/keras_test'), 32, 2)
+    test_model = ArgMax16(
+        'arg_max_16', pathlib.Path('./debug/ArgMax16'), DEFAULT_INPUTS)
     printc('Model name property:\n', test_model.name)
     # Build
     debug_keys_header('Keys before build()', test_model)
     debug_dir(modelpath, 'Models', True)
     debug_dir(datapath, 'Data', True)
     test_model.build(32)
+    '''
     # Train data preparation
     test_model.prep_data()
     debug_keys_header('Keys after build() and prep_data()', test_model)
@@ -176,6 +125,7 @@ def main():
     # Training
     printc('Training:', c='blue')
     test_model.train()
+    '''
     # Save model
     printc('Saving model', c='blue')
     test_model.save_core_model()

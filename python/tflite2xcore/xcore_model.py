@@ -5,7 +5,7 @@ import collections
 
 import numpy as np
 
-from .operator_codes import OperatorCode
+from tflite2xcore.operator_codes import OperatorCode
 
 
 class TensorType(enum.Enum):

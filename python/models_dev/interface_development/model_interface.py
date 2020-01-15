@@ -11,7 +11,8 @@ from abc import ABC, abstractmethod
 import tflite2xcore_conv as xcore_conv
 import tflite_visualize
 from tflite2xcore import read_flatbuffer, write_flatbuffer
-__version__ = '1.4.2'
+from xcore_model import TensorType
+__version__ = '1.4.3'
 __author__ = 'Luis Mata'
 
 
@@ -23,8 +24,8 @@ class Model(ABC):
         Initialization function of the class Model. Parameters needed are:
         \t- name     (string): Name of the model and model directory name
         \t- path       (Path): Working directory where everything is stored
-        \t- input_dim   (int): input dimension, must be multiple of 32
-        \t- output_dim  (int): the number of classes to train
+        \t- input_dim   (int): input dimension, must be multiple of 32  # TODO: this assumes that input_dim is scalar
+        \t- output_dim  (int): the number of classes to train  # TODO: this assumes that input_dim is scalar
         Other properties derived:
         \t- core_model(Model): The main model from which others derive
         \t- models     (dict): To store model, and dir paths
@@ -43,14 +44,16 @@ class Model(ABC):
         self.converters = {}
         self.test_data = np.empty([output_dim, input_dim, 1, 1])
 
-        if not os.path.exists(path):  # Path generation
-            path.mkdir()
-        self.models['data_dir'] = path / 'test_data'
-        if not os.path.exists(self.models['data_dir']):
-            self.models['data_dir'].mkdir()
-        self.models['models_dir'] = path / 'models'
-        if not os.path.exists(self.models['models_dir']):
-            self.models['models_dir'].mkdir()
+        if type(path) is pathlib.PosixPath:
+            self._path = path
+        elif type(path) is str:
+            self._path = pathlib.Path(path)
+
+        self._path.mkdir(parents=True, exist_ok=True)  # Path generation
+        self.models['data_dir'] = self._path / 'test_data'
+        self.models['data_dir'].mkdir(exist_ok=True)
+        self.models['models_dir'] = self._path / 'models'
+        self.models['models_dir'].mkdir(exist_ok=True)
 
     @property
     def name(self):
@@ -140,7 +143,6 @@ class Model(ABC):
         assert self.core_model, "core model has not been initialized"
         assert 'quant' in self.data, "representative dataset has not been prepared"
 
-    @abstractmethod
     def to_tf_stripped(self):
         '''
         Create converter from original model
@@ -162,7 +164,6 @@ class Model(ABC):
             tflite_visualize.main(self.models[base_file_name], model_html)
             logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
 
-    @abstractmethod
     def to_tf_xcore(self):
         '''
         Create converter from original model
@@ -222,13 +223,13 @@ class Model(ABC):
 
             # extract and quantize reference labels for the test examples
             logging.info(f"Extracting examples for {base_file_name}...")
-            x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0]),
+            x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0])
             y_test = common.apply_interpreter_to_examples(interpreter, self.data['export_data'])
             y_test = map(
                 lambda y: common.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
                 y_test
             )
-            data = {'x_test': x_test
+            data = {'x_test': x_test,
                     'y_test': np.vstack(list(y_test))}
 
         common.save_test_data(data, self.models['data_dir'], base_file_name)
@@ -406,6 +407,11 @@ class FunctionModel(Model):
                              )
         '''
 
+    @property
+    @abstractmethod
+    def function_model(self):
+        pass
+
     # Conversions
     def to_tf_float(self):
         super().to_tf_float()
@@ -426,12 +432,6 @@ class FunctionModel(Model):
             self.converters['model_quant'],
             self.models['models_dir'],
             'model_quant')
-
-    def to_tf_stripped(self):  # must change this to non abstract in parent class if this design is final
-        super().to_tf_stripped()
-
-    def to_tf_xcore(self):
-        super().to_tf_xcore()
 
 
 # Polymorphism: Saved Model

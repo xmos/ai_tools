@@ -22,11 +22,12 @@ class ArgMax16(mi.FunctionModel):
             @tf.function
             def func(self, x):
                 return tf.math.argmax(x, axis=1, output_type=tf.int32)
-        model = ArgMaxModel()
-        input_dims = self.input_dim
-        self.core_model = model
-        self.function_model = [model.func.get_concrete_function(
-            tf.TensorSpec([1, input_dims], tf.float32))]
+        self.core_model = ArgMaxModel()
+
+    @property
+    def function_model(self):
+        return [self.core_model.func.get_concrete_function(
+                tf.TensorSpec([1, self.input_dim], tf.float32))]
 
     def prep_data(self):  # Not training this model
         pass

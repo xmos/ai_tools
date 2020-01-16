@@ -24,8 +24,8 @@ class Model(ABC):
         Initialization function of the class Model. Parameters needed are:
         \t- name     (string): Name of the model and model directory name
         \t- path       (Path): Working directory where everything is stored
-        \t- input_dim   (int): input dimension, must be multiple of 32  # TODO: this assumes that input_dim is scalar
-        \t- output_dim  (int): the number of classes to train  # TODO: this assumes that input_dim is scalar
+        \t- input_dim   (int): input dimension, must be multiple of 32  # TODO: this assumes that input_dim is scalar, also implementation specific
+        \t- output_dim  (int): the number of classes to train  # TODO: this assumes that input_dim is scalar, also implementation specific
         Other properties derived:
         \t- core_model(Model): The main model from which others derive
         \t- models     (dict): To store model, and dir paths

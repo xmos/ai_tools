@@ -60,7 +60,7 @@ def pytest_generate_tests(metafunc):
             metafunc.parametrize(fixture, tests)
 
 
-def run_test_case(test_model_app, test_case, abs_tol=0.0):
+def run_test_case(test_model_app, test_case, abs_tol=1):
     flatbuffer = test_case['flatbuffer']
     input_file = test_case['input']['filename']
     predicted_quantization = test_case['input']['quantization']

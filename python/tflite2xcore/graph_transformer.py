@@ -6,7 +6,7 @@ import logging
 import itertools
 
 from abc import ABC, abstractmethod
-from .xcore_model import XCOREModel
+from tflite2xcore.xcore_model import XCOREModel
 
 
 class PassPriority(enum.IntEnum):

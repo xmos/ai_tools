@@ -12,27 +12,28 @@ def compare_tensor_files(expected_file, expected_quantization, predicted_file,
     predicted_values = np.fromfile(predicted_file, dtype='int8')
     predicted_zero_point = predicted_quantization.get('zero_point', 0.0)
     predicted_scale = predicted_quantization.get('scale', 1.0)
+    predicted_rshift = 0
 
     len_ratio = len(predicted_values) / len(expected_values)
     if len_ratio == 2:
         # 2 times as many predicted values as expected, reload them as int16
         predicted_values = np.fromfile(predicted_file, dtype='int16')
+        predicted_rshift = 8
     elif len_ratio == 4:
         # 4 times as many predicted values as expected, reload them as int32
         predicted_values = np.fromfile(predicted_file, dtype='int32')
-
-    dequantized_expected_values = (expected_values - expected_zero_point) * expected_scale
-    dequantized_predicted_values = (predicted_values - predicted_zero_point) * predicted_scale
+        predicted_rshift = 24
 
     retval = True # until proven otherwise
 
-    for i, (ev, pv) in enumerate(zip(dequantized_expected_values, dequantized_predicted_values)):
-        abs_diff = abs(ev-pv)
+    for i, (ev, pv) in enumerate(zip(expected_values, predicted_values)):
+        tv = pv >> predicted_rshift
+        abs_diff = abs(ev-tv)
         if abs_diff > abs_tol:
             print(f'Difference {abs_diff} > {abs_tol}')
             print(f'   Index: {i}')
-            print(f'   Expected: quantized value={ev}, dequantized value={expected_values[i]}')
-            print(f'   Predicted: quantized value={pv}, dequantized value={predicted_values[i]}')
+            print(f'   Expected: quantized value={ev}')
+            print(f'   Predicted: truncated value={tv}, quantized value={pv}')
             retval = False
 
     return retval

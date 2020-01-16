@@ -10,14 +10,8 @@ void test_vpu_memcpy_case0();
 void test_vpu_memcpy_case1();
 
 void test_conv2d_deepin_deepout_1x1();
-
-void test_conv2d_deepin_deepout_case0();
-void test_conv2d_deepin_deepout_case1();
-void test_conv2d_deepin_deepout_case2();
-void test_conv2d_deepin_deepout_case3();
-void test_conv2d_deepin_deepout_case4();
-void test_conv2d_deepin_deepout_case5();
-void test_conv2d_deepin_deepout_case6();
+void test_conv2d_deepin_deepout_1x1_chans();
+void test_conv2d_deepin_deepout_1x1_xsize();
 
 void test_conv2d_shallowin_deepout_case1();
 void test_conv2d_shallowin_deepout_case2();
@@ -57,17 +51,8 @@ int main(void)
 
   UnityBegin("src\\test_conv2d_deepin_deepout_1x1.xc");
   RUN_TEST(test_conv2d_deepin_deepout_1x1);
-  ret_val = UnityEnd();
-  printf("\n\n");
-
-
-  UnityBegin("src\\test_conv2d_deepin_deepout.xc");
-  RUN_TEST(test_conv2d_deepin_deepout_case1);
-  RUN_TEST(test_conv2d_deepin_deepout_case2);
-  RUN_TEST(test_conv2d_deepin_deepout_case3);
-  RUN_TEST(test_conv2d_deepin_deepout_case4);
-  RUN_TEST(test_conv2d_deepin_deepout_case5);
-  RUN_TEST(test_conv2d_deepin_deepout_case6);
+  RUN_TEST(test_conv2d_deepin_deepout_1x1_chans);
+  RUN_TEST(test_conv2d_deepin_deepout_1x1_xsize);
   ret_val = UnityEnd();
   printf("\n\n");
 

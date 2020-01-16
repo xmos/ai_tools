@@ -3,13 +3,14 @@ import argparse
 import logging
 from pathlib import Path
 import tensorflow as tf
-from tensorflow.keras import layers
 import numpy as np
 import model_interface as mi
 import tflite_utils
 import examples_common
-DEFAULT_CLASSES = 4
-DEFAULT_INPUTS = 32
+
+DEFAULT_OUTPUT_DIM = 4
+DEFAULT_INPUT_DIM = 32
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_shallowout_final').resolve()
 
 
 # Prepare data function
@@ -57,16 +58,17 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
 # Class for the model
 class FcDeepinShallowoutFinal(mi.KerasModel):
     def build(self):  # add keyboard optimizer, loss and metrics???
-        input_dim = self.input_dim
-        output_dim = self.output_dim
-        # Env
+        # Env, TODO: consider refactoring this to KerasModel
         tf.keras.backend.clear_session()
         tflite_utils.set_all_seeds()
         # Building
-        self.core_model = tf.keras.Sequential(name=self.name)
-        self.core_model.add(layers.Flatten(input_shape=(input_dim, 1, 1), name='input'))
-        self.core_model.add(layers.Dense(output_dim,
-                                         activation='softmax', name='ouptut'))
+        self.core_model = tf.keras.Sequential(
+            name=self.name,
+            layers=[
+                tf.keras.layers.Flatten(input_shape=(self.input_dim, 1, 1)),
+                tf.keras.layers.Dense(self.output_dim, activation='softmax')
+            ]
+        )
         # Compilation
         self.core_model.compile(optimizer='adam',
                                 loss='sparse_categorical_crossentropy',
@@ -94,12 +96,13 @@ class FcDeepinShallowoutFinal(mi.KerasModel):
         super().train(128, 5*(self.output_dim-1))  # BS and EPOCHS
 
 
-def main(input_dim=DEFAULT_INPUTS, classes=DEFAULT_CLASSES, *,
+def main(path=DEFAULT_PATH, *,
+         input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
          train_new_model=False):
     # Instantiate model
     test_model = FcDeepinShallowoutFinal(
-        'fc_deepin_shallowout_final', Path('./debug/fc_deepin_shallowout_final'),
-        input_dim, classes)
+        'fc_deepin_shallowout_final', Path(path),
+        input_dim, output_dim)
     if train_new_model:
         # Build model and compile
         test_model.build()
@@ -118,15 +121,19 @@ def main(input_dim=DEFAULT_INPUTS, classes=DEFAULT_CLASSES, *,
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        'path', nargs='?', default=DEFAULT_PATH,
+        help='Path to a directory where models and data will be saved in subdirectories.')
     parser.add_argument(
         '--use_gpu', action='store_true', default=False,
-        help='Use GPU for training. Might result in non-reproducible results')
+        help='Use GPU for training. Might result in non-reproducible results.')
     parser.add_argument(
-        '--classes', type=int, default=DEFAULT_CLASSES,
-        help='Number of classes, must be between 2 and 15.')
+        '-out', '--output_dim', type=int, default=DEFAULT_OUTPUT_DIM,
+        help='Number of output dimensions, must be at least 2.')
     parser.add_argument(
-        '--inputs', type=int, default=DEFAULT_INPUTS,
+        '-in', '--input_dim', type=int, default=DEFAULT_INPUT_DIM,
         help='Input dimension, must be multiple of 32.')
     parser.add_argument(
         '--train_model', action='store_true', default=False,
@@ -135,6 +142,8 @@ if __name__ == "__main__":
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
     args = parser.parse_args()
+
+    # TODO: consider refactoring this to utils
     verbose = args.verbose
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
@@ -142,5 +151,7 @@ if __name__ == "__main__":
         logging.getLogger('tensorflow').setLevel(logging.ERROR)
     logging.info(f"Eager execution enabled: {tf.executing_eagerly()}")
     tflite_utils.set_gpu_usage(args.use_gpu, verbose)
-    main(input_dim=args.inputs, classes=args.classes,
+
+    main(path=args.path,
+         input_dim=args.input_dim, output_dim=args.output_dim,
          train_new_model=args.train_model)

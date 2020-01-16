@@ -6,6 +6,7 @@
 **/__pycache__/*
 .venv/*
 **/.ipynb_checkpoints/*
+**/*.egg-info/*
 Pipfile.lock
 ai_tools_venv/*
 ai_tools_gpu_venv/*

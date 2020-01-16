@@ -80,7 +80,11 @@ dependencies:
   - numpy=1.17.2
   - onnx=1.6.0
   - openblas=0.3.7
+<<<<<<< HEAD
+  - openssl=1.1.1
+=======
   - openssl=1.1.1d
+>>>>>>> develop
   - packaging=19.2
   - pandoc=2.2.3.2
   - pandocfilters=1.4.2

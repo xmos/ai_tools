@@ -111,9 +111,9 @@ text {
   <td>{'scale': [0.001472721, 0.001407866, 0.00142598, 0.001384166, 0.001281134, 0.001442467, 0.001353607, 0.001465959, 0.0013398, 0.001465129, 0.001465556, 0.001439794, 0.001467998, 0.001458828, 0.001457012, 0.001461959], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'NONE', 'quantized_dimension': 0}</td>
 </tr><tr>
   <td>3</td>
-  <td>XC_conv2d_shallowin_deepout_relu_0/biases_padded</td>
+  <td>XC_conv2d_shallowin_deepout_relu_0/biases</td>
   <td>INT16</td>
-  <td>[3, 3, 2, 16]</td>
+  <td>[1, 2, 16]</td>
   <td>1</td>
   <td>{'scale': [5.769129e-06, 5.515073e-06, 5.586031e-06, 5.422232e-06, 5.018623e-06, 5.650616e-06, 5.302522e-06, 5.74264e-06, 5.248436e-06, 5.739388e-06, 5.741063e-06, 5.640145e-06, 5.75063e-06, 5.714708e-06, 5.707594e-06, 5.726972e-06], 'zero_point': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'details_type': 'CustomQuantization', 'quantized_dimension': 0}</td>
 </tr><tr>
@@ -135,11 +135,11 @@ text {
   <th>custom_options</th>
 </tr><tr>
   <td>0</td>
-  <td><span class='tooltip'><span class='tooltipcontent'>(1) XC_conv2d_shallowin_deepout_relu_0/input &ltINT8&gt [1, 5, 5, 4] <br>(2) sequential/conv2d/Conv2D/ReadVariableOp &ltINT8&gt [1, 3, 16, 8, 4] <br>(3) XC_conv2d_shallowin_deepout_relu_0/biases_padded &ltINT16&gt [3, 3, 2, 16] <br>(4) XC_conv2d_shallowin_deepout_relu_0/shift_scale &ltINT16&gt [2, 16] <br></span>[1, 2, 3, 4]</span></td>
+  <td><span class='tooltip'><span class='tooltipcontent'>(1) XC_conv2d_shallowin_deepout_relu_0/input &ltINT8&gt [1, 5, 5, 4] <br>(2) sequential/conv2d/Conv2D/ReadVariableOp &ltINT8&gt [1, 3, 16, 8, 4] <br>(3) XC_conv2d_shallowin_deepout_relu_0/biases &ltINT16&gt [1, 2, 16] <br>(4) XC_conv2d_shallowin_deepout_relu_0/shift_scale &ltINT16&gt [2, 16] <br></span>[1, 2, 3, 4]</span></td>
   <td><span class='tooltip'><span class='tooltipcontent'>(0) Identity_int8 &ltINT8&gt [1, 5, 5, 16] <br></span>[0]</span></td>
   <td>(0) XC_conv2d_shallowin_deepout_relu</td>
   <td>None</td>
-  <td>{'unpadded_shape': [16, 3, 3, 3]}</td>
+  <td>{'padding': 'SAME', 'stride_h': 1, 'stride_w': 1, 'unpadded_shape': [16, 3, 3, 3]}</td>
 </tr></table>
 
 <svg id='subgraph0' width='1600' height='900'></svg>
@@ -194,13 +194,13 @@ function buildGraph() {
     },
     {
       "id": "t3",
-      "name": "XC_conv2d_shallowin_deepout_relu_0/biases_padded\n(3) <INT16> [3, 3, 2, 16]",
+      "name": "XC_conv2d_shallowin_deepout_relu_0/biases\n(3) <INT16> [1, 2, 16]",
       "text_color": "#000000",
       "fill_color": "#fffacd",
       "edge_radius": 1,
       "x": 792,
       "y": 100.0,
-      "node_width": 365,
+      "node_width": 312,
       "node_height": 40
     },
     {
@@ -209,7 +209,7 @@ function buildGraph() {
       "text_color": "#000000",
       "fill_color": "#fffacd",
       "edge_radius": 1,
-      "x": 1167,
+      "x": 1114,
       "y": 100.0,
       "node_width": 350,
       "node_height": 40
@@ -351,7 +351,7 @@ buildGraph()
   <td>5 bytes</td>
 </tr><tr>
   <td>1</td>
-  <td>576 bytes</td>
+  <td>64 bytes</td>
 </tr><tr>
   <td>2</td>
   <td>1536 bytes</td>

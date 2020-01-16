@@ -6,7 +6,7 @@ import pytest
 from pytest_cases import pytest_fixture_plus, pytest_parametrize_plus, fixture_ref
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
-from tflite2xcore.transformation_passes import ReplaceDeepinShallowoutFullyConnectedOutputPass
+from tflite2xcore.transformation_passes import ReplaceDeepinAnyoutFullyConnectedOutputPass
 
 
 @pytest_fixture_plus(params=[(1, 4, 4, 8), (1, 32, 1, 1)])
@@ -27,7 +27,7 @@ def matching_perceptron(request):
     return model
 
 
-@pytest_fixture_plus(params=[(16, 32), (15, 33)])
+@pytest_fixture_plus(params=[(16, 31), (15, 33)])
 def non_matching_shape_perceptron(matching_perceptron, request):
     subgraph = matching_perceptron.subgraphs[0]
 
@@ -89,7 +89,7 @@ def non_matching_mlp(request):
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceDeepinShallowoutFullyConnectedOutputPass()
+    return ReplaceDeepinAnyoutFullyConnectedOutputPass()
 
 
 @pytest_parametrize_plus('model', [

@@ -92,12 +92,17 @@ class Buffer():
         else:
             raise TypeError(f"data must be list or numpy array")
 
+    def __len__(self):
+        if self.data:
+            return len(self.data)
+        else:
+            return 0
+
     def __str__(self):
         if self.data:
-            len_ = len(self.data)
-            return f'{len_}'
+            return f'Buffer[{len(self.data)}]'
         else:
-            return f'[]'
+            return 'Buffer[]'
 
     def unpack(self, stdtype='uint8_t'):
         LUT = {'uint8_t': 'B',
@@ -125,6 +130,12 @@ class Operator():
         if builtin_options:
             assert builtin_options_type
         self.custom_options = custom_options
+
+    def add_custom_options(self, **kwargs):
+        if kwargs:
+            if self.custom_options is None:
+                self.custom_options = {}
+            self.custom_options.update(kwargs)
 
     @property
     def model(self):
@@ -156,12 +167,12 @@ class Tensor():
         self.type = type_
         self.shape = list(shape)
 
-        if buffer:
+        if buffer is None:
+            self.buffer = self.model.create_buffer()
+        else:
             assert isinstance(buffer, Buffer)
             assert buffer in self.model.buffers
             self.buffer = buffer
-        else:
-            self.buffer = self.model.create_buffer()
 
         self.quantization = quantization
 
@@ -330,7 +341,7 @@ class XCOREModel():
 
         return sorted_operator_codes
 
-    def pprint(self):
+    def pprint(self, tensor_values=False):
         print('---------')
         print('- Model -')
         print('---------')
@@ -366,15 +377,21 @@ class XCOREModel():
             print('**********')
             for input_ in subgraph.inputs:
                 print(input_)
+                if tensor_values and len(input_.buffer):
+                    print(f'   values={input_.numpy}')
 
             print('*****************')
             print('* Intermediates *')
             print('*****************')
             for intermediate in subgraph.intermediates:
                 print(intermediate)
+                if tensor_values and len(intermediate.buffer):
+                    print(f'   values={intermediate.numpy}')
 
             print('***********')
             print('* Outputs *')
             print('***********')
             for output in subgraph.outputs:
                 print(output)
+                if tensor_values and len(output.buffer):
+                    print(f'   values={output.numpy}')

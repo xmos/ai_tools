@@ -5,7 +5,7 @@ import pytest
 from pytest_cases import pytest_fixture_plus, pytest_parametrize_plus, fixture_ref
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
-from tflite2xcore.transformation_passes import ReplaceDeepMaxpool2DPass
+from tflite2xcore.transformation_passes import ReplaceDeepMaxPool2DPass
 from .test_ReplaceDeepinAnyoutFullyConnectedOutputPass import (
     matching_perceptron,
     non_matching_shape_perceptron,
@@ -64,7 +64,7 @@ def non_matching_options(matching, request):
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceDeepMaxpool2DPass()
+    return ReplaceDeepMaxPool2DPass()
 
 
 @pytest_parametrize_plus('model', [

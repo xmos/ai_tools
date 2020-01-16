@@ -531,7 +531,7 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
         return super().mutate(op)
 
 
-class ReplaceDeepMaxpool2DPass(ReplaceQuantizedOperatorPass):
+class ReplaceDeepPooling2DPass(ReplaceQuantizedOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options
@@ -550,13 +550,6 @@ class ReplaceDeepMaxpool2DPass(ReplaceQuantizedOperatorPass):
     def _fused_activation(self):
         return self._op.builtin_options['fused_activation_function']
 
-    def _match_opcode(self, op):
-        return op.operator_code.code == BuiltinOpCodes.MAX_POOL_2D
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_maxpool2d_deep)
-
     def match(self, op):
         if super().match(op):
             with self.using(op):
@@ -570,6 +563,24 @@ class ReplaceDeepMaxpool2DPass(ReplaceQuantizedOperatorPass):
                         and self._input.shape[3] % 32 == 0)
 
         return False
+
+
+class ReplaceDeepMaxPool2DPass(ReplaceDeepPooling2DPass):
+    def _match_opcode(self, op):
+        return op.operator_code.code == BuiltinOpCodes.MAX_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_maxpool2d_deep)
+
+
+class ReplaceDeepAveragePool2DPass(ReplaceDeepPooling2DPass):
+    def _match_opcode(self, op):
+        return op.operator_code.code == BuiltinOpCodes.AVERAGE_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d_deep)
 
 
 class RemoveUnusedBuffersPass(ModelTransformationPass):

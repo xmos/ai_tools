@@ -799,14 +799,35 @@ static void conv2d_deepin_deepout_init_same(
             //This needs to be enough to pull K to the beginning of the current row, then down a row
             block->patch.row_incr.K = (init->K_w - patch_cols) * (init->C_in * VPU_INT8_ACC_PERIOD);
 
-            //This needs to be enough to push K to the end of the current channel group, plus the start offset
-            block->cout_group_incr.K = (pad_r + init->K_w * pad_b) * (init->C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K;
+            //This needs to be enough to push K to the end of the current channel group, plus the start offset, minus the row increment.
+            block->cout_group_incr.K = (pad_r + init->K_w * pad_b) * (init->C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K - block->patch.row_incr.K;
             block->output.rows = out_rows;
             block->output.cols = out_cols;
             block->output.row_incr.X = init->C_in * (init->X_width - block->output.cols);
             block->output.row_incr.Y = init->C_out * (Y_width - block->output.cols);
 
             block->init.biases = conv2d_adjusted_biases(init, pad_t, pad_l, pad_b, pad_r, K, B, TRUE);
+
+
+            // printf("pad_t = %u\n", pad_t);
+            // printf("pad_l = %u\n", pad_l);
+            // printf("pad_b = %u\n", pad_b);
+            // printf("pad_r = %u\n", pad_r);
+            // printf("out_rows = %u\n", out_rows);
+            // printf("out_cols = %u\n", out_cols);
+            // printf("block->init.start_offset.X = %ld\n", block->init.start_offset.X);
+            // printf("block->init.start_offset.Y = %ld\n", block->init.start_offset.Y);
+            // printf("block->init.start_offset.K = %ld\n", block->init.start_offset.K);
+            // printf("block->patch.maccs_per_row = %u\n", block->patch.maccs_per_row);
+            // printf("block->patch.rows = %u\n", block->patch.rows);
+            // printf("block->patch.row_incr.X = %ld\n", block->patch.row_incr.X);
+            // printf("block->patch.row_incr.K = %ld\n", block->patch.row_incr.K);
+            // printf("block->cout_group_incr.K = %ld\n", block->cout_group_incr.K);
+            // printf("block->output.rows = %u\n", block->output.rows);
+            // printf("block->output.cols = %u\n", block->output.cols);
+            // printf("block->output.row_incr.X = %ld\n", block->output.row_incr.X);
+            // printf("block->output.row_incr.Y = %ld\n", block->output.row_incr.Y);
+            // printf("\n\n\n");
         }
     }
 }
@@ -1123,13 +1144,38 @@ static void conv2d_shallowin_deepout_init_same(
             block->patch.row_incr.K = 0;
 
             //This needs to be enough to push K to the end of the current channel group, plus the start offset
-            block->cout_group_incr.K = (pad_r + 8 * pad_b) * (init->C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K;
+            block->cout_group_incr.K = (8 * pad_b) * (init->C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K;
             block->output.rows = out_rows;
             block->output.cols = out_cols;
             block->output.row_incr.X = init->C_in * (init->X_width - block->output.cols);
             block->output.row_incr.Y = init->C_out * (Y_width - block->output.cols);
 
             block->init.biases = conv2d_adjusted_biases(init, pad_t, pad_l, pad_b, pad_r, K, B, FALSE);
+
+
+            // printf("block_dex = %u\n", block_dex-1);
+            // printf("pad_t = %u\n", pad_t);
+            // printf("pad_l = %u\n", pad_l);
+            // printf("pad_b = %u\n", pad_b);
+            // printf("pad_r = %u\n", pad_r);
+            // printf("out_rows = %u\n", out_rows);
+            // printf("out_cols = %u\n", out_cols);
+            // printf("X_top = %d\n", X_top);
+            // printf("X_left = %d\n", X_left);
+            // printf("block->init.start_offset.X = %ld\n", block->init.start_offset.X);
+            // printf("block->init.start_offset.Y = %ld\n", block->init.start_offset.Y);
+            // printf("block->init.start_offset.K = %ld\n", block->init.start_offset.K);
+            // printf("block->patch.pad_mask = 0x%08X\n", (unsigned) block->patch.pad_mask);
+            // printf("block->patch.rows = %u\n", block->patch.rows);
+            // printf("block->patch.row_incr.X = %ld\n", block->patch.row_incr.X);
+            // printf("block->patch.row_incr.K = %ld\n", block->patch.row_incr.K);
+            // printf("block->cout_group_incr.K = %ld\n", block->cout_group_incr.K);
+            // printf("block->output.rows = %u\n", block->output.rows);
+            // printf("block->output.cols = %u\n", block->output.cols);
+            // printf("block->output.row_incr.X = %ld\n", block->output.row_incr.X);
+            // printf("block->output.row_incr.Y = %ld\n", block->output.row_incr.Y);
+            // printf("\n\n\n");
+            
         }
     }
 

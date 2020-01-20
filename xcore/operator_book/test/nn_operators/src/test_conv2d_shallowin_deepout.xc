@@ -1266,4 +1266,208 @@ void test_conv2d_shallowin_deepout_3x3()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+/*
+
+Test cases for limiting convolutions to specific regions of the output image
+
+
+
+*/
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+#define DEBUG_ON        (0 || TEST_DEBUG_ON)
+#define C_out           ( 3 * VPU_INT8_ACC_PERIOD )
+#define C_in            ( 4 )
+#define K_h             (5)
+#define K_w             (5)
+#define X_height        (8)
+#define X_width         (8)
+void test_conv2d_shallowin_deepout_regions()
+{
+    const unsigned Y_height = X_height;
+    const unsigned Y_width = X_width;
+
+    int8_t  WORD_ALIGNED    K[C_out][K_h][VPU_INT8_EPV/C_in][C_in]        = {{{{ 0 }}}};
+    int8_t  WORD_ALIGNED    X[X_height][X_width][C_in]      = {{{ 0 }}};
+    int32_t WORD_ALIGNED    B[C_out]                        = { 0 };
+    int16_t WORD_ALIGNED    shifts[C_out]                   = { 0 };
+    int16_t WORD_ALIGNED    scales[C_out]                   = { 0 };
+
+#if TEST_C
+    int8_t  WORD_ALIGNED    Y_c[X_height][X_width][C_out]   = {{{ 0 }}};
+#endif
+#if TEST_ASM
+    int8_t  WORD_ALIGNED    Y_asm[X_height][X_width][C_out] = {{{ 0 }}};
+#endif
+
+    nn_conv2d_sido_params_t params;
+
+    typedef struct {
+        unsigned top;
+        unsigned left;
+        unsigned rows;
+        unsigned cols;
+    } case1x1_params_t;
+
+    case1x1_params_t casses[] = {
+
+            //top       //left      //rows      //cols
+        {   0,          0,          8,          8           },
+        {   0,          0,          1,          1           },
+        {   0,          0,          1,          2           },
+        {   0,          0,          2,          1           },
+        {   0,          0,          2,          2           },
+        {   0,          0,          3,          3           },
+        {   0,          0,          3,          5           },
+        {   0,          0,          5,          3           },
+        {   0,          0,          8,          2           },
+        {   0,          0,          2,          8           },
+
+        {   1,          1,          1,          1           },
+        {   3,          2,          1,          2           },
+        {   5,          5,          2,          1           },
+        {   0,          6,          2,          2           },
+        {   5,          5,          3,          3           },
+        {   1,          2,          3,          5           },
+            
+            
+    };
+
+    // PRINTF("&K = 0x%08X\n", K);
+
+    const unsigned START_ON_CASE = 0;
+    const unsigned STOP_ON_CASE = (unsigned) -1;
+
+    const unsigned casse_count = sizeof(casses) / sizeof(case1x1_params_t);
+
+    PRINTF("test_conv2d_shallowin_deepout_regions()...\n");
+
+    for(int v = START_ON_CASE; v < casse_count && v < STOP_ON_CASE; v++){
+        
+        case1x1_params_t* casse = &casses[v];
+        PRINTF("\tVector %u (%u, %u, %u, %u)...\n", v, casse->top, casse->left, casse->rows, casse->cols);
+                
+        nn_conv2d_init_params_t init_params = { X_height, X_width, K_h, K_w, C_in, C_out, PADDING_SAME, 0x00 };
+
+
+        //Set input image
+        // memset(X, 0x00, sizeof(X));
+
+        //Set biases, shifts and scales
+        for(int cout = 0; cout < C_out; cout++){
+            B[cout]      = 0x0100;
+            shifts[cout] = 0;
+            scales[cout] = 0x4000;
+        }
+
+        //Set kernel
+        // memset(K, 0x00, sizeof(K));
+
+        nn_conv2d_region_params_t reg = {casse->top, casse->left, casse->rows, casse->cols};
+        
+        //No need to boggle K, all values are zero.
+        // conv2d_sido_boggle_K((int8_t*) K, K_h, K_w, C_in, C_out);
+        conv2d_boggle_B(B, C_out);
+        conv2d_shallowin_deepout_init(&params, &init_params, &reg, (int8_t*) K, (data16_t* unsafe) B);
+
+        //Perform the actual convolution(s)   (run both C and ASM before checking either)
+#if TEST_C
+        // PRINTF("\t\tC...\n");
+        memset(Y_c, 0xCC, sizeof(Y_c));
+        for(int block = 0; block < params.block_count; block++){
+            // PRINTF("\t\t\tblock %d...\n", block);
+            const nn_conv2d_sido_block_params_t* unsafe blk = &params.blocks[block];
+            conv2d_shallowin_deepout_block_c( (int8_t*) Y_c, &params, blk, (int8_t*)X, (int8_t*)K, shifts, scales);
+        }
+#endif
+
+#if TEST_ASM
+        // PRINTF("\t\tASM...\n");
+        memset(Y_asm, 0xCC, sizeof(Y_asm));
+        for(int block = 0; block < params.block_count; block++){
+            // PRINTF("\t\t\tblock %d...\n", block);
+            const nn_conv2d_sido_block_params_t* unsafe blk = &params.blocks[block];
+            conv2d_shallowin_deepout_block_asm( (int8_t*) Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, shifts, scales);
+        }
+#endif
+
+
+        char str_buff[2000];
+
+        //Check that all outputs are what they should be
+        for(int co = 0; co < C_out; co++){
+            for(int row = 0; row < Y_height; row++){
+                for(int col = 0; col < Y_width; col++){
+                    
+                    unsigned in_region =  (row >= casse->top)
+                                       && (col >= casse->left)
+                                       && (row  < casse->top + casse->rows)
+                                       && (col  < casse->left + casse->cols);
+
+                    int8_t exp_out = in_region? 0x01 : 0xCC;
+
+#if TEST_C 
+                    int8_t c_val = Y_c[row][col][co];
+#endif
+#if TEST_ASM
+                    int8_t asm_val = Y_asm[row][col][co];
+#endif
+
+#if (TEST_C && TEST_ASM)
+                    //First thing to check is whether they match one another (if both are being tested)
+                    //  Also report the actual values, so we know which (if either) is correct
+                    if(c_val != asm_val){
+                        sprintf(str_buff, 
+                            "     C and ASM implementations gave different results for Y[%u][%u][%u] on vector %u. C: %d      ASM: %d    Expected: %d", 
+                            row, col, co, v, c_val, asm_val, exp_out);
+                    }
+                    TEST_ASSERT_EQUAL_MESSAGE(c_val, asm_val, str_buff);
+#endif
+
+#if TEST_C
+                    if(c_val != exp_out){   //just so we don't have to do the sprintf() unless it's wrong. Speeds things up immensely
+                        sprintf(str_buff, "      C failed.  Y_c[%u][%u][%u] = %d. Expected %d.", row, col, co, c_val, exp_out);
+                    }
+                    TEST_ASSERT_EQUAL_MESSAGE(exp_out, c_val, str_buff);
+#endif
+#if TEST_ASM
+                    if(asm_val != exp_out){   //just so we don't have to do the sprintf() unless it's wrong. Speeds things up immensely
+                        sprintf(str_buff, "       ASM failed.  Y_asm[%u][%u][%u] = %d. Expected %d.", row, col, co, asm_val, exp_out);
+                    }
+                    TEST_ASSERT_EQUAL_MESSAGE(exp_out, asm_val, str_buff);
+#endif
+                }
+            }
+        }
+
+        conv2d_shallowin_deepout_deinit(&params);
+    }
+}
+#undef REGION
+#undef X_width
+#undef X_height
+#undef K_w
+#undef K_h
+#undef C_in
+#undef C_out
+#undef DEBUG_ON
+
+
+
 }

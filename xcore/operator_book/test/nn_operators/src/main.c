@@ -13,11 +13,13 @@ void test_conv2d_deepin_deepout_1x1();
 void test_conv2d_deepin_deepout_1x1_chans();
 void test_conv2d_deepin_deepout_1x1_xsize();
 void test_conv2d_deepin_deepout_3x3();
+void test_conv2d_deepin_deepout_regions();
 
 void test_conv2d_shallowin_deepout_1x1();
 void test_conv2d_shallowin_deepout_1x1_chans();
 void test_conv2d_shallowin_deepout_1x1_xsize();
 void test_conv2d_shallowin_deepout_3x3();
+void test_conv2d_shallowin_deepout_regions();
 
 void test_fc_deepin_shallowout_16_case1();
 void test_fc_deepin_shallowout_16_case2();
@@ -53,6 +55,7 @@ int main(void)
   RUN_TEST(test_conv2d_deepin_deepout_1x1_chans);
   RUN_TEST(test_conv2d_deepin_deepout_1x1_xsize);
   RUN_TEST(test_conv2d_deepin_deepout_3x3);
+  RUN_TEST(test_conv2d_deepin_deepout_regions);
   ret_val = UnityEnd();
   printf("\n\n");
 
@@ -62,6 +65,7 @@ int main(void)
   RUN_TEST(test_conv2d_shallowin_deepout_1x1_chans);
   RUN_TEST(test_conv2d_shallowin_deepout_1x1_xsize);
   RUN_TEST(test_conv2d_shallowin_deepout_3x3);
+  RUN_TEST(test_conv2d_shallowin_deepout_regions);
   ret_val = UnityEnd();
   printf("\n\n");
 

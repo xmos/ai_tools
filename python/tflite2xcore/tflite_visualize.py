@@ -23,6 +23,9 @@ import argparse
 import webbrowser
 import tempfile
 
+# TODO: make sure we don't need this hack
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from tflite2xcore.serialization.flatbuffers_io import create_dict_from_model, FlexbufferParser
 from tflite2xcore import read_flatbuffer
 

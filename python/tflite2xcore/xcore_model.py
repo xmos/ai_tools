@@ -181,7 +181,7 @@ class Tensor():
         return self.subgraph.model
 
     def __str__(self):
-        return f'name={self.name}, type={self.type}, shape={self.shape}, buffer={self.buffer}'
+        return f'name={self.name}, type={self.type.name}, shape={self.shape}, buffer={self.buffer}'
 
     @property
     def sanitized_name(self):

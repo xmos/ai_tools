@@ -105,7 +105,7 @@ class RemoveSoftmaxOutputPass(OperatorMatchingPass):
         subgraph.remove_operator(op)
 
 
-class AddArgmaxOutputPass(OutputTensorMatchingPass):
+class AddArgMax16OutputPass(OutputTensorMatchingPass):
     def __init__(self, priority=PassPriority.LOW):
         super().__init__(priority)
 
@@ -117,11 +117,16 @@ class AddArgmaxOutputPass(OutputTensorMatchingPass):
     def mutate(self, tensor):
         subgraph = tensor.subgraph
         tout = subgraph.create_tensor(
-            f"{tensor.name}_argmax", tensor.type, tensor.shape, isoutput=True)
+            f"{tensor.name}_argmax", TensorType.INT32, tensor.shape[:1], isoutput=True)
         subgraph.outputs.remove(tensor)
-        subgraph.outputs.append(tout)
-        subgraph.create_operator(
-            OperatorCode(XCOREOpCodes.XC_argmax_16), inputs=[tensor], outputs=[tout])
+        op = subgraph.create_operator(
+            OperatorCode(BuiltinOpCodes.ARG_MAX), inputs=[tensor], outputs=[tout])
+
+        # add tensor with axis info
+        dim_tensor = subgraph.create_tensor(
+            f"{op.name}/axis", TensorType.INT32, shape=[])
+        op.inputs.append(dim_tensor)
+        dim_tensor.buffer.data = np.int32([1])
 
 
 # TODO: write (at least regression) tests for this class
@@ -144,9 +149,18 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
     def _input(self):
         return self._op.inputs[0]
 
+    @property
     @abstractmethod
-    def _match_opcode(self, op):
+    def matching_opcode(self):
         raise NotImplementedError()
+
+    @property
+    def _matching_input_type(self):
+        return TensorType.INT8
+
+    @property
+    def _matching_output_type(self):
+        return TensorType.INT8
 
     @property
     @abstractmethod
@@ -160,10 +174,47 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
         return new_op
 
     def match(self, op):
-        if self._match_opcode(op):
+        if op.operator_code.code == self.matching_opcode:
             with self.using(op):
-                return (self._input.type == TensorType.INT8
-                        and self._output.type == TensorType.INT8)
+                return (self._input.type == self._matching_input_type
+                        and self._output.type == self._matching_output_type)
+
+
+class ReplaceArgMax16Pass(ReplaceQuantizedOperatorPass):
+    def __init__(self, priority=PassPriority.LOW):
+        super().__init__(priority)
+
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.ARG_MAX
+
+    @property
+    def _matching_input_type(self):
+        return TensorType.INT16
+
+    @property
+    def _matching_output_type(self):
+        return TensorType.INT32
+
+    @property
+    def _axis(self):
+        return self._op.inputs[1].numpy
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_argmax_16)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (len(self._input.shape) == 2  # only 2D tensors are matched
+                        and self._axis == 1)
+
+    def mutate(self, op):
+        new_op = super().mutate(op)
+        new_op.subgraph.remove_tensor(new_op.inputs[1])
+        new_op.inputs = new_op.inputs[:1]
+        return new_op
 
 
 # TODO: write (at least regression) tests for this class
@@ -259,8 +310,9 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
 
 class ReplaceDeepinAnyoutFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
-    def _match_opcode(self, op):
-        return op.operator_code.code == BuiltinOpCodes.FULLY_CONNECTED
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.FULLY_CONNECTED
 
     def match(self, op):
         if super().match(op):
@@ -406,8 +458,9 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
 
 # TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
-    def _match_opcode(self, op):
-        return op.operator_code.code == BuiltinOpCodes.CONV_2D
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.CONV_2D
 
     def match(self, op):
         if super().match(op):
@@ -492,8 +545,9 @@ class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
 
 # TODO: write (at least regression) tests for the mutator functions
 class ReplaceShallowinDeepoutConv2DPass(ReplaceDeepoutConv2DInputPass):
-    def _match_opcode(self, op):
-        return op.operator_code.code == BuiltinOpCodes.CONV_2D
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.CONV_2D
 
     def match(self, op):
         if super().match(op):
@@ -505,8 +559,9 @@ class ReplaceShallowinDeepoutConv2DPass(ReplaceDeepoutConv2DInputPass):
 
 
 class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
-    def _match_opcode(self, op):
-        return op.operator_code.code == BuiltinOpCodes.DEPTHWISE_CONV_2D
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.DEPTHWISE_CONV_2D
 
     def match(self, op):
         if super().match(op):
@@ -568,8 +623,9 @@ class ReplaceDeepPooling2DPass(ReplaceQuantizedOperatorPass):
 
 
 class ReplaceDeepMaxPool2DPass(ReplaceDeepPooling2DPass):
-    def _match_opcode(self, op):
-        return op.operator_code.code == BuiltinOpCodes.MAX_POOL_2D
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.MAX_POOL_2D
 
     @property
     def new_opcode(self):
@@ -577,8 +633,9 @@ class ReplaceDeepMaxPool2DPass(ReplaceDeepPooling2DPass):
 
 
 class ReplaceDeepAveragePool2DPass(ReplaceDeepPooling2DPass):
-    def _match_opcode(self, op):
-        return op.operator_code.code == BuiltinOpCodes.AVERAGE_POOL_2D
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.AVERAGE_POOL_2D
 
     @property
     def new_opcode(self):

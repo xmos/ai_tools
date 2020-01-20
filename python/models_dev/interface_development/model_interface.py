@@ -173,16 +173,15 @@ class Model(ABC):
         xcore_conv.main(str(self.models['model_quant']),
                         str(self.models['model_xcore']),
                         is_classifier=True)  # TODO: change this later
-        
+
         if True:  # visualize:
             self._save_visualization('model_xcore')
-        
+
     def _save_visualization(self, base_file_name):
         assert str(base_file_name) in self.models, 'Model need to exist to prepare visualization.'
         model_html = self.models['models_dir'] / f"{base_file_name}.html"
         tflite_visualize.main(self.models[base_file_name], model_html)
         logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
-        
 
     def _save_data_for_canonical_model(self, model_key):
         # create interpreter
@@ -205,7 +204,7 @@ class Model(ABC):
         assert 'model_quant' in self.models
         self._save_data_for_canonical_model('model_quant')
 
-    def save_tf_stripped_data(self, add_float_outputs = True):
+    def save_tf_stripped_data(self, add_float_outputs=True):
         '''
          common.save_test_data_for_stripped_model(
         model_stripped, x_test_float, data_dir=DATA_DIR, add_float_outputs=False)
@@ -262,7 +261,7 @@ class Model(ABC):
         # save data
         common.save_test_data({'x_test': x_test}, self.models['data_dir'], 'model_xcore')
 
-    def populate_converters(self):  # Actually, data it's being saved here too
+    def populate_converters(self, add_float_outputs=True):  # Actually, data it's being saved here too
         # TODO: find a better name for this
         '''
         Create all the converters in a row in the logical order.
@@ -277,7 +276,7 @@ class Model(ABC):
         self.save_tf_quant_data()
 
         self.to_tf_stripped()
-        self.save_tf_stripped_data()
+        self.save_tf_stripped_data(add_float_outputs)
 
         self.to_tf_xcore()
         self.save_tf_xcore_data()
@@ -312,7 +311,7 @@ class KerasModel(Model):
         pass
 
     def save_core_model(self):
-        if not (len(self.data.keys())==0):
+        if not (len(self.data.keys()) == 0):
             print('Saving the following data keys:', self.data.keys())
             np.savez(self.models['data_dir'] / 'data', **self.data)
         self.core_model.save(str(self.models['models_dir']/'model.h5'))
@@ -354,20 +353,13 @@ class KerasModel(Model):
             self.models['models_dir'],
             'model_quant')
 
-    def to_tf_stripped(self):
-        super().to_tf_stripped()
 
-    def to_tf_xcore(self):
-        super().to_tf_xcore()
-
-
-# Polymorphism: FunctionModel
 class FunctionModel(Model):
-    
+
     def __init__(self, name, path, input_dim, output_dim=1):
         super().__init__(name, path, input_dim, output_dim)
         self.loaded = False
-    
+
     @abstractmethod
     def build(self):  # Implementation dependant
         pass
@@ -392,12 +384,12 @@ class FunctionModel(Model):
 
     # Import and export core model
     def save_core_model(self):
-        if not (len(self.data.keys())==0):
+        if not (len(self.data.keys()) == 0):
             print('Saving the following data keys:', self.data.keys())
             np.savez(self.models['data_dir'] / 'data', **self.data)
         tf.saved_model.save(
             self.core_model, str(self.models['models_dir']/'model'))
-        
+
     # TODO: debug/find a way to do this consistently
     def load_core_model(self):
         data_path = self.models['data_dir']/'data.npz'
@@ -410,7 +402,7 @@ class FunctionModel(Model):
             # tf.keras.models.load_model(model_path)
             # Flag for using a saved model instead of a function model
             self.loaded = True
-            
+
         except FileNotFoundError as e:
             logging.error(f"{e} (Hint: use the --train_model flag)")
             return
@@ -460,28 +452,7 @@ class FunctionModel(Model):
             self.models['models_dir'],
             'model_quant')
 
-    def populate_converters(self, add_float_outputs=True):  # Actually, data it's being saved here too
-        # TODO: find a better name for this
-        '''
-        Create all the converters in a row in the logical order.
-        The only thing needed is the presence
-        of the original model in the models dictionary:
-        self.core_model must exist.
-        '''
-        self.to_tf_float()
-        self.save_tf_float_data()
 
-        self.to_tf_quant()
-        self.save_tf_quant_data()
-
-        self.to_tf_stripped()
-        self.save_tf_stripped_data(add_float_outputs)
-
-        self.to_tf_xcore()
-        self.save_tf_xcore_data()
-
-
-# Polymorphism: Saved Model
 class SavedModel(Model):
 
     @abstractmethod

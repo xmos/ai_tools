@@ -312,8 +312,9 @@ class KerasModel(Model):
         pass
 
     def save_core_model(self):
-        print('Saving the following data keys:', self.data.keys())
-        np.savez(self.models['data_dir'] / 'data', **self.data)
+        if not (len(self.data.keys())==0):
+            print('Saving the following data keys:', self.data.keys())
+            np.savez(self.models['data_dir'] / 'data', **self.data)
         self.core_model.save(str(self.models['models_dir']/'model.h5'))
 
     def load_core_model(self):
@@ -362,7 +363,11 @@ class KerasModel(Model):
 
 # Polymorphism: FunctionModel
 class FunctionModel(Model):
-
+    
+    def __init__(self, name, path, input_dim, output_dim=1):
+        super().__init__(name, path, input_dim, output_dim)
+        self.loaded = False
+    
     @abstractmethod
     def build(self):  # Implementation dependant
         pass
@@ -387,11 +392,13 @@ class FunctionModel(Model):
 
     # Import and export core model
     def save_core_model(self):
-        print('Saving the following data keys:', self.data.keys())
-        np.savez(self.models['data_dir'] / 'data', **self.data)
+        if not (len(self.data.keys())==0):
+            print('Saving the following data keys:', self.data.keys())
+            np.savez(self.models['data_dir'] / 'data', **self.data)
         tf.saved_model.save(
             self.core_model, str(self.models['models_dir']/'model'))
-
+        
+    # TODO: debug/find a way to do this consistently
     def load_core_model(self):
         data_path = self.models['data_dir']/'data.npz'
         model_path = self.models['models_dir']/'model'
@@ -401,6 +408,9 @@ class FunctionModel(Model):
             logging.info(f"Loading keras model from {model_path}")
             self.core_model = tf.saved_model.load(str(model_path))
             # tf.keras.models.load_model(model_path)
+            # Flag for using a saved model instead of a function model
+            self.loaded = True
+            
         except FileNotFoundError as e:
             logging.error(f"{e} (Hint: use the --train_model flag)")
             return
@@ -420,6 +430,12 @@ class FunctionModel(Model):
     # Conversions
     def to_tf_float(self):
         super().to_tf_float()
+        '''
+        if self.loaded:
+            self.converters['model_float'] = tf.lite.TFLiteConverter.from_keras_model(
+                self.core_model)
+        else:
+        '''
         self.converters['model_float'] = tf.lite.TFLiteConverter.from_concrete_functions(
             self.function_model)
         self.models['model_float'] = common.save_from_tflite_converter(
@@ -429,6 +445,12 @@ class FunctionModel(Model):
 
     def to_tf_quant(self):
         super().to_tf_quant()
+        '''
+        if self.loaded:
+            self.converters['model_quant'] = tf.lite.TFLiteConverter.from_keras_model(
+                self.core_model)
+        else:
+        '''
         self.converters['model_quant'] = tf.lite.TFLiteConverter.from_concrete_functions(
             self.function_model)
         common.quantize_converter(
@@ -437,6 +459,26 @@ class FunctionModel(Model):
             self.converters['model_quant'],
             self.models['models_dir'],
             'model_quant')
+
+    def populate_converters(self, add_float_outputs=True):  # Actually, data it's being saved here too
+        # TODO: find a better name for this
+        '''
+        Create all the converters in a row in the logical order.
+        The only thing needed is the presence
+        of the original model in the models dictionary:
+        self.core_model must exist.
+        '''
+        self.to_tf_float()
+        self.save_tf_float_data()
+
+        self.to_tf_quant()
+        self.save_tf_quant_data()
+
+        self.to_tf_stripped()
+        self.save_tf_stripped_data(add_float_outputs)
+
+        self.to_tf_xcore()
+        self.save_tf_xcore_data()
 
 
 # Polymorphism: Saved Model

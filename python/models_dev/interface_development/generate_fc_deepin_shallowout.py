@@ -6,7 +6,6 @@ import tensorflow as tf
 import numpy as np
 import model_interface as mi
 import tflite_utils
-import examples_common
 
 DEFAULT_OUTPUT_DIM = 4
 DEFAULT_INPUT_DIM = 32

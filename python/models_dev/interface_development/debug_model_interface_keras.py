@@ -1,3 +1,4 @@
+# Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import os
 import shutil
 import pathlib
@@ -12,7 +13,7 @@ from termcolor import colored
 import model_interface as mi
 import tflite_utils
 
-# Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
+
 class FcDeepinShallowoutFinal(mi.KerasModel):
 
     def generate_fake_lin_sep_dataset(self, classes=2, dim=32, *,
@@ -96,6 +97,7 @@ class FcDeepinShallowoutFinal(mi.KerasModel):
         super().train(self.BS, self.EPOCHS)
 
 
+# Color utils and refactor tests
 def printc(*s, c='green', back='on_grey'):
     if len(s) == 1:
         print(colored(str(s)[2:-3], c, back))

@@ -1,0 +1,18 @@
+* List of developed test for single_op_models
+
+One script per model with the *done* status (files starting with ~generate_*~).
+
+| Model name | Class | Status | Comments |
+|------------+-------+--------+----------|
+| fc_deepin_shallowout | KerasModel | *done* | - |
+| conv2d_deepin_deepout | KerasModel | *done* | - |
+| argmax_16 | FunctionModel | *done* | Problems loading model |
+| avg_pool_deep | KerasModel | pending | - |
+| conv2d_shallowin_deepout | KerasModel | pending | - |
+
+
+* Other relevant contents of this directory:
+
+- ~model_interface.py~: main Model API
+- ~debug_model_*~: Test/ debug script for the different superclases in model_interface.py
+- ~examples_common.py~: Helper module

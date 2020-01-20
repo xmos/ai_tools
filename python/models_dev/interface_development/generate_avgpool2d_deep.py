@@ -110,7 +110,7 @@ if __name__ == "__main__":
         help='Pool size')
     parser.add_argument(
         '-pd', '--padding', type=str, default=DEFAULT_PADDING,
-        help='Padding')
+        help='Padding mode')
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')

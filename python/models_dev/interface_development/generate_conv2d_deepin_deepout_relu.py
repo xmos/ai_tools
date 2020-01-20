@@ -13,6 +13,7 @@ DEFAULT_HEIGHT = 5
 DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
+DEFAULT_PADDING = 'same'
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deepin_deepout_relu').resolve()
 
 
@@ -29,7 +30,7 @@ def generate_data(height, width, inputs):
 
 # Class for the model
 class Conv2dDeepinDeepoutRelu(mi.KerasModel):
-    def build(self, K_h, K_w, height, width, input_channels, output_channels):
+    def build(self, K_h, K_w, height, width, input_channels, output_channels, padding):
         assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
         assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
         super().build()
@@ -40,7 +41,7 @@ class Conv2dDeepinDeepoutRelu(mi.KerasModel):
             layers=[
                 tf.keras.layers.Conv2D(filters=output_channels,
                                        kernel_size=(K_h, K_w),
-                                       padding='same',
+                                       padding=padding,
                                        input_shape=(height, width, input_channels))
             ]
         )
@@ -67,11 +68,12 @@ class Conv2dDeepinDeepoutRelu(mi.KerasModel):
 def main(path=DEFAULT_PATH, *,
          input_channels=DEFAULT_INPUTS, output_channels=DEFAULT_OUTPUTS,
          height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
-         K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH):
+         K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
+         padding=DEFAULT_PADDING):
     # Instantiate model
     test_model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', Path(path))
     # Build model and compile
-    test_model.build(K_h, K_w, height, width, input_channels, output_channels)
+    test_model.build(K_h, K_w, height, width, input_channels, output_channels, padding)
     # Generate test data
     test_model.gen_test_data(height, width)
     # Save model
@@ -108,6 +110,9 @@ if __name__ == "__main__":
         '-kw', '--kernel_width', type=int, default=DEFAULT_KERNEL_WIDTH,
         help='Width of kernel')
     parser.add_argument(
+        '-pd', '--padding', type=str, default=DEFAULT_PADDING,
+        help='Padding mode')
+    parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
     args = parser.parse_args()
@@ -124,4 +129,5 @@ if __name__ == "__main__":
     main(path=args.path,
          input_channels=args.inputs, output_channels=args.outputs,
          K_h=args.kernel_height, K_w=args.kernel_width,
-         height=args.height, width=args.width)
+         height=args.height, width=args.width,
+         padding=args.padding)

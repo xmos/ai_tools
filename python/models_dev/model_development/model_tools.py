@@ -283,9 +283,8 @@ def expand_dataset(images, labels, distortions, sigma=4.0, alpha=60.0,
     new_labels_batch = np.array(
         [label for label in labels for _ in range(distortions)])
     # Don't forget to return the original images and labels (hence concatenate)
-    x_data, y_data = np.concatenate([np.reshape(images, (-1, sizex, sizey)),
-                                     new_images_batch]),
-    np.concatenate([labels, new_labels_batch])
+    x_data =  np.concatenate([np.reshape(images, (-1, sizex, sizey)), new_images_batch])
+    y_data = np.concatenate([labels, new_labels_batch])
     return x_data.reshape(x_data.shape[0], sizex, sizey, 1), y_data
 
 

@@ -304,6 +304,8 @@ class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnec
             self._output.type = TensorType.INT16
             self._output.name = f"{op.name}/output"
             self._output.quantization = {
+                'min': self._output.quantization['min'],
+                'max': self._output.quantization['max'],
                 'scale': [self._output.quantization['scale'][0] / 2**8],
                 'zero_point': [int(self._output.quantization['zero_point'][0] * 2**8)],
                 'details_type': "CustomQuantization",

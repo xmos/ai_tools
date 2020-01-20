@@ -1,3 +1,4 @@
+# Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import os
 import shutil
 import pathlib
@@ -94,7 +95,7 @@ def choose_conv_or_save(conv, test_model, save):
         return{
             'float': lambda m: m.save_tf_float_data(),
             'quant': lambda m: m.save_tf_quant_data(),
-            'stripped': lambda m: m.save_tf_stripped_data(),
+            'stripped': lambda m: m.save_tf_stripped_data(add_float_outputs=False),
             'xcore': lambda m: m.save_tf_xcore_data()
         }[conv](test_model)
 
@@ -110,13 +111,13 @@ def main():
     datapath = pathlib.Path('./debug/function_test/test_data')
     # Instantiation
     test_model = ArgMax16(
-        'arg_max_16', pathlib.Path('./debug/ArgMax16'), DEFAULT_INPUTS)
+        'arg_max_16', pathlib.Path('./debug/function_test'), DEFAULT_INPUTS)
     printc('Model name property:\n', test_model.name)
     # Build
     debug_keys_header('Keys before build()', test_model)
     debug_dir(modelpath, 'Models', True)
     debug_dir(datapath, 'Data', True)
-    test_model.build(32)
+    test_model.build()
     '''
     # Train data preparation
     test_model.prep_data()

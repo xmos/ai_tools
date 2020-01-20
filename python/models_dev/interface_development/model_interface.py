@@ -12,7 +12,7 @@ import tflite2xcore_conv as xcore_conv
 import tflite_visualize
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 from xcore_model import TensorType
-__version__ = '1.4.3'
+__version__ = '1.4.4'
 __author__ = 'Luis Mata'
 
 
@@ -157,12 +157,8 @@ class Model(ABC):
         self.models['model_stripped'] = self.models['models_dir'] / "model_stripped.tflite"
         write_flatbuffer(model, str(self.models['model_stripped']))
 
-        # TODO: refactor this
-        base_file_name = 'model_stripped'
         if True:  # visualize:
-            model_html = self.models['models_dir'] / f"{base_file_name}.html"
-            tflite_visualize.main(self.models[base_file_name], model_html)
-            logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
+            self._save_visualization('model_stripped')
 
     def to_tf_xcore(self):
         '''
@@ -177,13 +173,16 @@ class Model(ABC):
         xcore_conv.main(str(self.models['model_quant']),
                         str(self.models['model_xcore']),
                         is_classifier=True)  # TODO: change this later
-
-        # TODO: refactor this
-        base_file_name = 'model_xcore'
+        
         if True:  # visualize:
-            model_html = self.models['models_dir'] / f"{base_file_name}.html"
-            tflite_visualize.main(self.models[base_file_name], model_html)
-            logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
+            self._save_visualization('model_xcore')
+        
+    def _save_visualization(self, base_file_name):
+        assert str(base_file_name) in self.models, 'Model need to exist to prepare visualization.'
+        model_html = self.models['models_dir'] / f"{base_file_name}.html"
+        tflite_visualize.main(self.models[base_file_name], model_html)
+        logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
+        
 
     def _save_data_for_canonical_model(self, model_key):
         # create interpreter
@@ -206,7 +205,11 @@ class Model(ABC):
         assert 'model_quant' in self.models
         self._save_data_for_canonical_model('model_quant')
 
-    def save_tf_stripped_data(self):
+    def save_tf_stripped_data(self, add_float_outputs = True):
+        '''
+         common.save_test_data_for_stripped_model(
+        model_stripped, x_test_float, data_dir=DATA_DIR, add_float_outputs=False)
+        '''
         assert 'model_stripped' in self.models
 
         model = read_flatbuffer(str(self.models['model_stripped']))
@@ -225,10 +228,12 @@ class Model(ABC):
             logging.info(f"Extracting examples for {base_file_name}...")
             x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0])
             y_test = common.apply_interpreter_to_examples(interpreter, self.data['export_data'])
-            y_test = map(
-                lambda y: common.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
-                y_test
-            )
+            # The next line breaks in FunctionModels without ouput dimension
+            if add_float_outputs:
+                y_test = map(
+                    lambda y: common.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
+                    y_test
+                )
             data = {'x_test': x_test,
                     'y_test': np.vstack(list(y_test))}
 

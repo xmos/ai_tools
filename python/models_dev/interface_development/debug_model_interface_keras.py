@@ -12,7 +12,7 @@ from termcolor import colored
 import model_interface as mi
 import tflite_utils
 
-
+# Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 class FcDeepinShallowoutFinal(mi.KerasModel):
 
     def generate_fake_lin_sep_dataset(self, classes=2, dim=32, *,

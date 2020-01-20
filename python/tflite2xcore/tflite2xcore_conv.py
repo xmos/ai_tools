@@ -75,8 +75,8 @@ def main(tflite_input_path, tflite_output_path, *,
 
     if is_classifier:
         pass_mgr.register_pass(passes.AddArgMax16OutputPass())
-        pass_mgr.register_pass(passes.ReplaceArgMax16Pass())
 
+    pass_mgr.register_pass(passes.ReplaceArgMax16Pass())
     pass_mgr.register_pass(passes.ReplaceDeepinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceShallowinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceSingleinDeepoutDepthwiseConv2DPass())

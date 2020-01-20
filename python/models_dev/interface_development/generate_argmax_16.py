@@ -84,9 +84,6 @@ class ArgMax16(mi.FunctionModel):
 
         self._save_visualization('model_stripped')
 
-    def to_tf_xcore(self):
-        raise NotImplementedError()  # TODO: finish this
-
     def save_tf_stripped_data(self):
         assert 'model_quant' in self.models
         assert 'model_stripped' in self.models
@@ -117,20 +114,6 @@ class ArgMax16(mi.FunctionModel):
 
         # save data
         common.save_test_data({'x_test': x_test}, self.models['data_dir'], 'model_xcore')
-
-    def populate_converters(self):
-        self.to_tf_float()
-        self.save_tf_float_data()
-
-        self.to_tf_quant()
-        self.save_tf_quant_data()
-
-        self.to_tf_stripped()
-        self.save_tf_stripped_data()
-
-        # TODO: finish these
-        # self.to_tf_xcore()
-        # self.save_tf_xcore_data()
 
 
 def main(path=DEFAULT_PATH, inputs=DEFAULT_INPUTS):

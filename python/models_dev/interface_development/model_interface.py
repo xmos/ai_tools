@@ -168,11 +168,10 @@ class Model(ABC):
         self.converters. Also the path of the model is saved
         using this function.
         '''
-        assert 'model_quant' in self.models
+        assert 'model_stripped' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
-        xcore_conv.main(str(self.models['model_quant']),
-                        str(self.models['model_xcore']),
-                        is_classifier=True)  # TODO: change this later
+        xcore_conv.main(str(self.models['model_stripped']),
+                        str(self.models['model_xcore']))
 
         if True:  # visualize:
             self._save_visualization('model_xcore')
@@ -204,7 +203,7 @@ class Model(ABC):
         assert 'model_quant' in self.models
         self._save_data_for_canonical_model('model_quant')
 
-    def save_tf_stripped_data(self, add_float_outputs=True):
+    def save_tf_stripped_data(self):
         '''
          common.save_test_data_for_stripped_model(
         model_stripped, x_test_float, data_dir=DATA_DIR, add_float_outputs=False)
@@ -228,11 +227,10 @@ class Model(ABC):
             x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0])
             y_test = common.apply_interpreter_to_examples(interpreter, self.data['export_data'])
             # The next line breaks in FunctionModels without ouput dimension
-            if add_float_outputs:
-                y_test = map(
-                    lambda y: common.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
-                    y_test
-                )
+            y_test = map(
+                lambda y: common.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
+                y_test
+            )
             data = {'x_test': x_test,
                     'y_test': np.vstack(list(y_test))}
 
@@ -261,7 +259,7 @@ class Model(ABC):
         # save data
         common.save_test_data({'x_test': x_test}, self.models['data_dir'], 'model_xcore')
 
-    def populate_converters(self, add_float_outputs=True):  # Actually, data it's being saved here too
+    def populate_converters(self):  # Actually, data it's being saved here too
         # TODO: find a better name for this
         '''
         Create all the converters in a row in the logical order.
@@ -276,7 +274,7 @@ class Model(ABC):
         self.save_tf_quant_data()
 
         self.to_tf_stripped()
-        self.save_tf_stripped_data(add_float_outputs)
+        self.save_tf_stripped_data()
 
         self.to_tf_xcore()
         self.save_tf_xcore_data()

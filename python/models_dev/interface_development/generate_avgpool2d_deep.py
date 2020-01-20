@@ -29,10 +29,15 @@ def generate_data(height, width, inputs):
 
 class AvgPool2d(mi.KerasModel):
 
-    def build(self, height, width, pool, stride, pad):
-        # Env, TODO: consider refactoring this to KerasModel
-        tf.keras.backend.clear_session()
-        tflite_utils.set_all_seeds()
+    def build(self, height, width, input_channels, pool, stride, pad):
+        assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
+        assert height % 2 == 0, "height must be even"
+        assert width % 2 == 0, "width must be even"
+        assert pool == 2, "pool size must be 2"
+        assert stride == 2, "stride must be 2"
+        assert pad.lower() == 'valid', "padding mode must be valid"
+        super().build()
+
         # Building
         self.core_model = tf.keras.Sequential(
             name=self.name,
@@ -41,7 +46,7 @@ class AvgPool2d(mi.KerasModel):
                     pool_size=pool,
                     strides=stride,
                     padding=pad,
-                    input_shape=(height, width, self.input_dim))
+                    input_shape=(height, width, input_channels))
             ]
         )
         # Compilation
@@ -56,8 +61,7 @@ class AvgPool2d(mi.KerasModel):
 
     # For training
     def prep_data(self, height, width):
-        self.data['export_data'], self.data['quant'] = generate_data(
-            height, width, self.input_dim)
+        self.data['export_data'], self.data['quant'] = generate_data(*self.input_shape)
 
     # For exports
     def gen_test_data(self, height, width):
@@ -66,16 +70,15 @@ class AvgPool2d(mi.KerasModel):
 
 
 def main(path=DEFAULT_PATH, *,
-         input_dim=DEFAULT_INPUTS,
+         input_channels=DEFAULT_INPUTS,
          height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
          pool_size=DEFAULT_POOL_SIZE,
          padding=DEFAULT_PADDING,
          strides=DEFAULT_STRIDES):
     # nstantiate model
-    test_model = AvgPool2d(
-        'avgpool2d_deep', path, input_dim)
+    test_model = AvgPool2d('avgpool2d_deep', Path(path))
     # Build model and compile
-    test_model.build(height, width, pool_size, strides, padding)
+    test_model.build(height, width, input_channels, pool_size, strides, padding)
     # Generate test data
     test_model.gen_test_data(height, width)
     # Save model
@@ -123,7 +126,7 @@ if __name__ == "__main__":
     # tflite_utils.set_gpu_usage(args.use_gpu, verbose)
 
     main(path=args.path,
-         input_dim=args.inputs,
+         input_channels=args.inputs,
          height=args.height, width=args.width,
          pool_size=args.pool_size, padding=args.padding,
          strides=args.strides

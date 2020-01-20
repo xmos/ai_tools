@@ -41,7 +41,7 @@ class ArgMax8To16ConversionPass(graph_transformer.OperatorMatchingPass):
 
 
 class ArgMax16(mi.FunctionModel):
-    def build(self):
+    def build(self, input_dim):
         class ArgMaxModel(tf.Module):
 
             def __init__(self):
@@ -51,6 +51,7 @@ class ArgMax16(mi.FunctionModel):
             def func(self, x):
                 return tf.math.argmax(x, axis=1, output_type=tf.int32)
         self.core_model = ArgMaxModel()
+        self.input_dim = input_dim
 
     @property
     def function_model(self):
@@ -116,13 +117,12 @@ class ArgMax16(mi.FunctionModel):
         common.save_test_data({'x_test': x_test}, self.models['data_dir'], 'model_xcore')
 
 
-def main(path=DEFAULT_PATH, inputs=DEFAULT_INPUTS):
+def main(path=DEFAULT_PATH, input_dim=DEFAULT_INPUTS):
     # Instantiate model
-    test_model = ArgMax16(
-        'arg_max_16', path, inputs)
+    test_model = ArgMax16('arg_max_16', Path(path))
 
     # Build model
-    test_model.build()
+    test_model.build(input_dim)
 
     # Save model
     test_model.save_core_model()
@@ -157,4 +157,4 @@ if __name__ == "__main__":
         logging.getLogger('tensorflow').setLevel(logging.ERROR)
     logging.info(f"Eager execution enabled: {tf.executing_eagerly()}")
 
-    main(inputs=args.inputs)
+    main(path=args.path, input_dim=args.inputs)

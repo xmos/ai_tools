@@ -8,16 +8,15 @@ import model_interface as mi
 import tflite_utils
 
 DEFAULT_INPUTS = 32
-DEFAULT_OUTPUTS = 16
-DEFAULT_HEIGHT = 5
+DEFAULT_HEIGHT = 4
 DEFAULT_WIDTH = DEFAULT_HEIGHT
-DEFAULT_KERNEL_HEIGHT = 3
-DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
-DEFAULT_PADDING = 'same'
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deepin_deepout_relu').resolve()
+
+DEFAULT_POOL_SIZE = 2
+DEFAULT_PADDING = 'valid'
+DEFAULT_STRIDES = 2
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'avgpool_2d_deep').resolve()
 
 
-# Prepare data function
 def generate_data(height, width, inputs):
     quant_data = np.float32(
         np.random.uniform(0, 1, size=(10, height, width, inputs)))
@@ -28,21 +27,26 @@ def generate_data(height, width, inputs):
     return x_test_float, quant_data
 
 
-# Class for the model
-class Conv2dDeepinDeepoutRelu(mi.KerasModel):
-    def build(self, K_h, K_w, height, width, input_channels, output_channels, padding):
+class AvgPool2d(mi.KerasModel):
+
+    def build(self, height, width, input_channels, pool, stride, pad):
         assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
-        assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
+        assert height % 2 == 0, "height must be even"
+        assert width % 2 == 0, "width must be even"
+        assert pool == 2, "pool size must be 2"
+        assert stride == 2, "stride must be 2"
+        assert pad.lower() == 'valid', "padding mode must be valid"
         super().build()
 
         # Building
         self.core_model = tf.keras.Sequential(
             name=self.name,
             layers=[
-                tf.keras.layers.Conv2D(filters=output_channels,
-                                       kernel_size=(K_h, K_w),
-                                       padding=padding,
-                                       input_shape=(height, width, input_channels))
+                tf.keras.layers.AveragePooling2D(
+                    pool_size=pool,
+                    strides=stride,
+                    padding=pad,
+                    input_shape=(height, width, input_channels))
             ]
         )
         # Compilation
@@ -66,14 +70,15 @@ class Conv2dDeepinDeepoutRelu(mi.KerasModel):
 
 
 def main(path=DEFAULT_PATH, *,
-         input_channels=DEFAULT_INPUTS, output_channels=DEFAULT_OUTPUTS,
+         input_channels=DEFAULT_INPUTS,
          height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
-         K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
-         padding=DEFAULT_PADDING):
-    # Instantiate model
-    test_model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', Path(path))
+         pool_size=DEFAULT_POOL_SIZE,
+         padding=DEFAULT_PADDING,
+         strides=DEFAULT_STRIDES):
+    # nstantiate model
+    test_model = AvgPool2d('avgpool2d_deep', Path(path))
     # Build model and compile
-    test_model.build(K_h, K_w, height, width, input_channels, output_channels, padding)
+    test_model.build(height, width, input_channels, pool_size, strides, padding)
     # Generate test data
     test_model.gen_test_data(height, width)
     # Save model
@@ -89,14 +94,8 @@ if __name__ == "__main__":
         'path', nargs='?', default=DEFAULT_PATH,
         help='Path to a directory where models and data will be saved in subdirectories.')
     parser.add_argument(
-        '--use_gpu', action='store_true', default=False,
-        help='Use GPU for training. Might result in non-reproducible results')
-    parser.add_argument(
         '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
         help='Number of input channels')
-    parser.add_argument(
-        '-out', '--outputs', type=int, default=DEFAULT_OUTPUTS,
-        help='Number of output channels')
     parser.add_argument(
         '-hi', '--height', type=int, default=DEFAULT_HEIGHT,
         help='Height of input image')
@@ -104,11 +103,11 @@ if __name__ == "__main__":
         '-wi', '--width', type=int, default=DEFAULT_WIDTH,
         help='Width of input image')
     parser.add_argument(
-        '-kh', '--kernel_height', type=int, default=DEFAULT_KERNEL_HEIGHT,
-        help='Height of kernel')
+        '-st', '--strides', type=int, default=DEFAULT_STRIDES,
+        help='Stride')
     parser.add_argument(
-        '-kw', '--kernel_width', type=int, default=DEFAULT_KERNEL_WIDTH,
-        help='Width of kernel')
+        '-po', '--pool_size', type=int, default=DEFAULT_POOL_SIZE,
+        help='Pool size')
     parser.add_argument(
         '-pd', '--padding', type=str, default=DEFAULT_PADDING,
         help='Padding mode')
@@ -124,10 +123,11 @@ if __name__ == "__main__":
     else:
         logging.getLogger('tensorflow').setLevel(logging.ERROR)
     logging.info(f"Eager execution enabled: {tf.executing_eagerly()}")
-    tflite_utils.set_gpu_usage(args.use_gpu, verbose)
+    # tflite_utils.set_gpu_usage(args.use_gpu, verbose)
 
     main(path=args.path,
-         input_channels=args.inputs, output_channels=args.outputs,
-         K_h=args.kernel_height, K_w=args.kernel_width,
+         input_channels=args.inputs,
          height=args.height, width=args.width,
-         padding=args.padding)
+         pool_size=args.pool_size, padding=args.padding,
+         strides=args.strides
+         )

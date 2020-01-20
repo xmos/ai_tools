@@ -56,16 +56,15 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
 
 # Class for the model
 class FcDeepinShallowoutFinal(mi.KerasModel):
-    def build(self):  # add keyboard optimizer, loss and metrics???
-        # Env, TODO: consider refactoring this to KerasModel
-        tf.keras.backend.clear_session()
-        tflite_utils.set_all_seeds()
+    def build(self, input_dim, output_dim):  # add keyboard optimizer, loss and metrics???
+        super().build()
+
         # Building
         self.core_model = tf.keras.Sequential(
             name=self.name,
             layers=[
-                tf.keras.layers.Flatten(input_shape=(self.input_dim, 1, 1)),
-                tf.keras.layers.Dense(self.output_dim, activation='softmax')
+                tf.keras.layers.Flatten(input_shape=(input_dim, 1, 1)),
+                tf.keras.layers.Dense(output_dim, activation='softmax')
             ]
         )
         # Compilation
@@ -74,6 +73,14 @@ class FcDeepinShallowoutFinal(mi.KerasModel):
                                 metrics=['accuracy'])
         # Show summary
         self.core_model.summary()
+
+    @property
+    def input_dim(self):
+        return self.input_shape[0]
+
+    @property
+    def output_dim(self):
+        return self.output_shape[0]
 
     # For training
     def prep_data(self):
@@ -99,12 +106,10 @@ def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
          train_new_model=False):
     # Instantiate model
-    test_model = FcDeepinShallowoutFinal(
-        'fc_deepin_shallowout_final', Path(path),
-        input_dim, output_dim)
+    test_model = FcDeepinShallowoutFinal('fc_deepin_shallowout_final', Path(path))
     if train_new_model:
         # Build model and compile
-        test_model.build()
+        test_model.build(input_dim, output_dim)
         # Prepare training data
         test_model.prep_data()
         # Train model
@@ -113,6 +118,11 @@ def main(path=DEFAULT_PATH, *,
     else:
         # Recover previous state from file system
         test_model.load_core_model()
+        if output_dim != test_model.output_dim:
+            raise ValueError(
+                f"specified output_dim ({output_dim}) "
+                f"does not match loaded model's output_dim ({test_model.output_dim})"
+            )
     # Generate test data
     test_model.gen_test_data()
     # Populate converters

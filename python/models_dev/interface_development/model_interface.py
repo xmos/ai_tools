@@ -12,20 +12,18 @@ import tflite2xcore_conv as xcore_conv
 import tflite_visualize
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 from xcore_model import TensorType
-__version__ = '1.4.4'
+__version__ = '1.5.0'
 __author__ = 'Luis Mata'
 
 
 # Abstract parent class
 class Model(ABC):
 
-    def __init__(self, name, path, input_dim, output_dim=1):
+    def __init__(self, name, path):
         '''
         Initialization function of the class Model. Parameters needed are:
         \t- name     (string): Name of the model and model directory name
         \t- path       (Path): Working directory where everything is stored
-        \t- input_dim   (int): input dimension, must be multiple of 32  # TODO: this assumes that input_dim is scalar, also implementation specific
-        \t- output_dim  (int): the number of classes to train  # TODO: this assumes that input_dim is scalar, also implementation specific
         Other properties derived:
         \t- core_model(Model): The main model from which others derive
         \t- models     (dict): To store model, and dir paths
@@ -35,14 +33,10 @@ class Model(ABC):
         \t- converters (dict): To store all converter objects
         '''
         self.__name = name
-        self.input_dim = input_dim
-        self.output_dim = output_dim
-
         self.core_model = None
         self.models = {}
         self.data = {}
         self.converters = {}
-        self.test_data = np.empty([output_dim, input_dim, 1, 1])
 
         if type(path) is pathlib.PosixPath:
             self._path = path
@@ -280,12 +274,20 @@ class Model(ABC):
         self.save_tf_xcore_data()
 
 
-# Polymorphism: Keras
 class KerasModel(Model):
 
     @abstractmethod
     def build(self):
-        pass
+        tf.keras.backend.clear_session()
+        tflite_utils.set_all_seeds()
+
+    @property
+    def input_shape(self):
+        return self.core_model.input_shape[1:]
+
+    @property
+    def output_shape(self):
+        return self.core_model.output_shape[1:]
 
     @abstractmethod
     def prep_data(self):
@@ -323,13 +325,8 @@ class KerasModel(Model):
             logging.info(f"Loading keras model from {model_path}")
             self.core_model = tf.keras.models.load_model(model_path)
         except FileNotFoundError as e:
-            logging.error(f"{e} (Hint: use the --train_model flag)")
-            return
-        out_shape = self.core_model.output_shape[1]
-        if out_shape != self.output_dim:
-            raise ValueError(f"number of specified classes ({self.output_dim})"
-                             f"does not match model output shape ({out_shape})"
-                             )
+            raise FileNotFoundError(
+                f"Model file not found (Hint: use the --train_model flag)") from e
 
     def to_tf_float(self):
         super().to_tf_float()
@@ -354,8 +351,8 @@ class KerasModel(Model):
 
 class FunctionModel(Model):
 
-    def __init__(self, name, path, input_dim, output_dim=1):
-        super().__init__(name, path, input_dim, output_dim)
+    def __init__(self, name, path):
+        super().__init__(name, path)
         self.loaded = False
 
     @abstractmethod
@@ -400,17 +397,9 @@ class FunctionModel(Model):
             # tf.keras.models.load_model(model_path)
             # Flag for using a saved model instead of a function model
             self.loaded = True
-
         except FileNotFoundError as e:
-            logging.error(f"{e} (Hint: use the --train_model flag)")
-            return
-        ''' What about this?
-        out_shape = self.core_model.output_shape[1]
-        if out_shape != self.output_dim:
-            raise ValueError(f"number of specified classes ({self.output_dim})"
-                             f"does not match model output shape ({out_shape})"
-                             )
-        '''
+            raise FileNotFoundError(
+                f"Model file not found (Hint: use the --train_model flag)") from e
 
     @property
     @abstractmethod

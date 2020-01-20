@@ -3,7 +3,7 @@
 
 
 /*  
-void fc_deepin_shallowout_lin_asm(
+void fc_deepin_shallowout_16_asm(
     const int8_t* W, 
     const int32_t* B,
     const int8_t* X, 
@@ -14,7 +14,7 @@ void fc_deepin_shallowout_lin_asm(
     const int16_t* scales);
 */
 
-#define FUNCTION_NAME fc_deepin_shallowout_lin_asm
+#define FUNCTION_NAME fc_deepin_shallowout_16_asm
 
 #define NSTACKWORDS  16
     
@@ -27,17 +27,18 @@ void fc_deepin_shallowout_lin_asm(
 
 #define NOOOOP          nop
     
-#define W    r0
-#define B    r1
+#define W               r0
+#define B               r1
 #define X               r2
-#define Y         r3
+#define Y               r3
 #define C_out           r4
-#define C_in      r5
+#define C_in            r5
 #define shifts          r6
 #define scales          r7
 
 #define _32             r8
 
+#define STACK_TMP_VEC   8
 
 .align 8
 
@@ -52,18 +53,17 @@ FUNCTION_NAME:
     {   shr C_in, C_in, 5                       ;   ldw C_out, sp[NSTACKWORDS+1]        }
     {   NOOOOP                                  ;   ldw shifts, sp[NSTACKWORDS+3]       }
     {   NOOOOP                                  ;   ldw scales, sp[NSTACKWORDS+4]       }
-    {   ldaw r11, sp[8]                         ;   NOOOOP                              }
+    {   ldaw r11, sp[STACK_TMP_VEC]             ;   NOOOOP                              }
     {   NOOOOP                                  ;   vclrdr                              }
     {   NOOOOP                                  ;   vstr r11[0]                         }
     {   NOOOOP                                  ;   bf C_out, .Lfunc_end                }
     {   NOOOOP                                  ;   NOOOOP                              }
 
 
-
 .L_row_top_aligned:
     {   shl r11, _32, 4                         ;   NOOOOP                              }
     {   ldc r9, 1                               ;   vsetc r11                           }
-    {   ldaw r11, sp[8]                         ;   ld16s r10, B[r9]                    }
+    {   ldaw r11, sp[STACK_TMP_VEC]             ;   ld16s r10, B[r9]                    }
     {   ldc r9, 0                               ;   NOOOOP                              }
     st16 r10, r11[r9]
     {   NOOOOP                                  ;   vldd r11[0]                         }
@@ -88,7 +88,7 @@ FUNCTION_NAME:
 .L_row_top_unaligned:
     {   shl r11, _32, 4                         ;   NOOOOP                              }
     {   ldc r9, 1                               ;   vsetc r11                           }
-    {   ldaw r11, sp[8]                         ;   ld16s r10, B[r9]                    }
+    {   ldaw r11, sp[STACK_TMP_VEC]             ;   ld16s r10, B[r9]                    }
     {   ldc r9, 0                               ;   NOOOOP                              }
     st16 r10, r11[r9]
     {   NOOOOP                                  ;   vldd r11[0]                         }

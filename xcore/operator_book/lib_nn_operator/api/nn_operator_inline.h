@@ -3,6 +3,7 @@
 #ifndef NN_OPERATOR_INLINE_H_
 #define NN_OPERATOR_INLINE_H_
 
+#include "nn_op_structs.h"
 #include "nn_operator_c.h"
 #include "nn_operator_asm.h"
 
@@ -14,78 +15,81 @@ extern "C" {
 
 
 
-static inline void nn_mat_vec_mul_s8(
-    const int8_t* W,
-    const int8_t* x,
-    const unsigned N_bands,
-    const unsigned N_chunks,
-    const int16_t* shr,
-    int8_t* y)
-{
-#if defined(__XS3A__) && (USE_ASM_nn_mat_vec_mul_s8)
 
-    nn_mat_vec_mul_s8_asm(W, x, N_bands, N_chunks, shr, y);
+static inline void conv2d_deepin_deepout_block(
+    int8_t* Y,
+    const nn_conv2d_dido_params_t* params,
+    const nn_conv2d_dido_block_params_t* block,
+    const int8_t* X,
+    const int8_t* K,
+    const int16_t* shifts,
+    const int16_t* scales)
+{
+#if defined(__XS3A__) && (USE_ASM_conv2d_deepin_deepout_block)
+
+    conv2d_deepin_deepout_block_asm(Y, params, block, X, K, shifts, scales);
 
 #else
 
-    nn_mat_vec_mul_s8_c(W, x, N_bands, N_chunks, shr, y);
+    conv2d_deepin_deepout_block_c(Y, params, block, X, K, shifts, scales);
+
+#endif
+}
+
+static inline void conv2d_deepin_deepout(
+    int8_t* Y,
+    const nn_conv2d_dido_params_t* params,
+    const int8_t* X,
+    const int8_t* K,
+    const int16_t* shifts,
+    const int16_t* scales)
+{
+    const unsigned block_count = params->block_count;
+    for(int i = 0; i < block_count; i++){
+        conv2d_deepin_deepout_block(
+            Y, params, &params->blocks[i],
+            X, K, shifts, scales
+        );
+    }
+}
+
+
+static inline void conv2d_shallowin_deepout_block(
+    int8_t* Y,
+    const nn_conv2d_sido_params_t* params,
+    const nn_conv2d_sido_block_params_t* block,
+    const int8_t* X,
+    const int8_t* K,
+    const int16_t* shifts,
+    const int16_t* scales)
+{
+#if defined(__XS3A__) && (USE_ASM_conv2d_shallowin_deepout_block)
+
+    conv2d_shallowin_deepout_block_asm(Y, params, block, X, K, shifts, scales);
+
+#else
+
+    conv2d_shallowin_deepout_block_c(Y, params, block, X, K, shifts, scales);
 
 #endif
 }
 
 
-
-
-
-static inline void conv2d_deepin_deepout_relu(
-    const int8_t* K, 
-    const data16_t* B,
-    const int8_t* X, 
+static inline void conv2d_shallowin_deepout(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t K_h, 
-    const int32_t K_w,
-    const int32_t C_out, 
-    const int32_t C_in,
-    const int16_t* shifts, 
+    const nn_conv2d_sido_params_t* params,
+    const int8_t* X,
+    const int8_t* K,
+    const int16_t* shifts,
     const int16_t* scales)
 {
-#if defined(__XS3A__) && (USE_ASM_conv2d_deepin_deepout_relu)
-
-    conv2d_deepin_deepout_relu_asm(K, B, X, Y, height, width, K_h, K_w, C_out, C_in, shifts, scales);
-
-#else
-
-    conv2d_deepin_deepout_relu_c(K, B, X, Y, height, width, K_h, K_w, C_out, C_in, shifts, scales);
-
-#endif
-}
-
-
-
-static inline void conv2d_shallowin_deepout_relu(
-    const int8_t* K, 
-    const data16_t* B,
-    const int8_t* X, 
-    int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t K_h, 
-    const int32_t K_w,
-    const int32_t C_out,
-    const int16_t* shifts, 
-    const int16_t* scales)
-{
-#if defined(__XS3A__) && (USE_ASM_conv2d_shallowin_deepout_relu)
-
-    conv2d_shallowin_deepout_relu_asm(K, B, X, Y, height, width, K_h, K_w, C_out, shifts, scales);
-
-#else
-
-    conv2d_shallowin_deepout_relu_c(K, B, X, Y, height, width, K_h, K_w, C_out, shifts, scales);
-
-#endif
+    const unsigned block_count = params->block_count;
+    for(int i = 0; i < block_count; i++){
+        conv2d_shallowin_deepout_block(
+            Y, params, &params->blocks[i],
+            X, K, shifts, scales
+        );
+    }
 }
 
 
@@ -110,9 +114,29 @@ static inline void maxpool2d_deep(
 
 
 
+static inline void avgpool2d_deep(
+    const int8_t* X, 
+    int8_t* Y,
+    const int32_t height, 
+    const int32_t width,
+    const int32_t C_in)
+{
+#if defined(__XS3A__) && (USE_ASM_avgpool2d_deep)
+
+    avgpool2d_deep_asm(X, Y, height, width, C_in);
+
+#else
+
+    avgpool2d_deep_c(X, Y, height, width, C_in);
+
+#endif
+}
 
 
-static inline void fc_deepin_shallowout_lin(
+
+
+
+static inline void fc_deepin_shallowout_16(
     const int8_t* W, 
     const int32_t* B,
     const int8_t* X, 
@@ -122,13 +146,39 @@ static inline void fc_deepin_shallowout_lin(
     const uint16_t* shifts, 
     const int16_t* scales)
 {
-#if defined(__XS3A__) && (USE_ASM_fc_deepin_shallowout_lin)
+#if defined(__XS3A__) && (USE_ASM_fc_deepin_shallowout_16)
 
-    fc_deepin_shallowout_lin_asm(W, B, X, Y, C_out, C_in, shifts, scales);
+    fc_deepin_shallowout_16_asm(W, B, X, Y, C_out, C_in, shifts, scales);
 
 #else
 
-    fc_deepin_shallowout_lin_c(W, B, X, Y, C_out, C_in, shifts, scales);
+    fc_deepin_shallowout_16_c(W, B, X, Y, C_out, C_in, shifts, scales);
+
+#endif
+}
+
+
+
+
+
+
+static inline void fc_deepin_shallowout_8(
+    const int8_t* W, 
+    const int32_t* B,
+    const int8_t* X, 
+    int8_t* Y,
+    const int32_t C_out, 
+    const int32_t C_in,
+    const uint16_t* shifts, 
+    const int16_t* scales)
+{
+#if defined(__XS3A__) && (USE_ASM_fc_deepin_shallowout_8)
+
+    fc_deepin_shallowout_8_asm(W, B, X, Y, C_out, C_in, shifts, scales);
+
+#else
+
+    fc_deepin_shallowout_8_c(W, B, X, Y, C_out, C_in, shifts, scales);
 
 #endif
 }

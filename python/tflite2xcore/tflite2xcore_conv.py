@@ -3,8 +3,12 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import os
+import sys
 import logging
 import argparse
+
+# TODO: make sure we don't need this hack
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from tflite2xcore.graph_transformer import PassManager, PassPriority
 from tflite2xcore.tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA, set_gpu_usage
@@ -53,7 +57,6 @@ def add_float_input_output(model):
     model.buffers.remove(output_tensor.buffer)
     input_tensor.buffer = output_tensor.buffer
     model.buffers.insert(0, input_tensor.buffer)
-    
 
 
 def main(tflite_input_path, tflite_output_path, *,
@@ -70,11 +73,17 @@ def main(tflite_input_path, tflite_output_path, *,
     if is_classifier or remove_softmax:
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
+    if is_classifier:
+        pass_mgr.register_pass(passes.AddArgMax16OutputPass())
+        pass_mgr.register_pass(passes.ReplaceArgMax16Pass())
+
     pass_mgr.register_pass(passes.ReplaceDeepinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceShallowinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceSingleinDeepoutDepthwiseConv2DPass())
-    pass_mgr.register_pass(passes.ReplaceDeepMaxpool2DPass())
-    pass_mgr.register_pass(passes.ReplaceDeepinShallowoutFullyConnectedOutputPass())
+    pass_mgr.register_pass(passes.ReplaceDeepMaxPool2DPass())
+    pass_mgr.register_pass(passes.ReplaceDeepAveragePool2DPass())
+    pass_mgr.register_pass(passes.ReplaceDeepinAnyoutFullyConnectedIntermediatePass())
+    pass_mgr.register_pass(passes.ReplaceDeepinAnyoutFullyConnectedOutputPass())
     pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 
     pass_mgr.run_passes()

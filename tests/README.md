@@ -12,7 +12,10 @@ To run all tests
 
     > pytest
 
+To run a single test
+
+    > pytest -k name_of_test
+
 To run the tests on the host PC
 
     > pytest --test-model=../examples/test_model/bin/test_model
-

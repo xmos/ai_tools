@@ -47,7 +47,7 @@ class ArgMax16(mi.FunctionModel):
 def main(path=DEFAULT_PATH, inputs=DEFAULT_INPUTS):
     # Instantiate model
     test_model = ArgMax16(
-        'arg_max_16', path, DEFAULT_INPUTS)
+        'arg_max_16', path, inputs)
 
     # Build model
     test_model.build()

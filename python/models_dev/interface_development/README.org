@@ -7,7 +7,7 @@ One script per model with the *done* status (files starting with ~generate_*~).
 | fc_deepin_shallowout | KerasModel | *done* | - |
 | conv2d_deepin_deepout | KerasModel | *done* | - |
 | argmax_16 | FunctionModel | *done* | Problems loading model |
-| avg_pool_deep | KerasModel | pending | - |
+| avg_pool_deep | KerasModel | *done* | Note the output min/max is different from the input min/max for op AVERAGE_POOL_2D at index 0 in subgraph 0. This is legal but should happens rarely. |
 | conv2d_shallowin_deepout | KerasModel | pending | - |
 
 

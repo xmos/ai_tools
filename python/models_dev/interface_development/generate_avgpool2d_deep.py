@@ -16,6 +16,7 @@ DEFAULT_PADDING = 'valid'
 DEFAULT_STRIDES = 2
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'avgpool_2d_deep').resolve()
 
+
 def generate_data(height, width, inputs):
     quant_data = np.float32(
         np.random.uniform(0, 1, size=(10, height, width, inputs)))
@@ -25,8 +26,9 @@ def generate_data(height, width, inputs):
         axis=0)
     return x_test_float, quant_data
 
+
 class AvgPool2d(mi.KerasModel):
-    
+
     def build(self, height, width, pool, stride, pad):
         # Env, TODO: consider refactoring this to KerasModel
         tf.keras.backend.clear_session()
@@ -48,28 +50,27 @@ class AvgPool2d(mi.KerasModel):
                                 metrics=['accuracy'])
         # Show summary
         self.core_model.summary()
-    
+
     def train(self):  # Not training this model
         pass
-    
+
     # For training
     def prep_data(self, height, width):
         self.data['export_data'], self.data['quant'] = generate_data(
             height, width, self.input_dim)
-        
+
     # For exports
     def gen_test_data(self, height, width):
         if not self.data:
             self.prep_data(height, width)
 
 
-
 def main(path=DEFAULT_PATH, *,
-        input_dim = DEFAULT_INPUTS,
-        height = DEFAULT_HEIGHT, width = DEFAULT_WIDTH,
-        pool_size = DEFAULT_POOL_SIZE,
-        padding = DEFAULT_PADDING,
-        strides = DEFAULT_STRIDES):
+         input_dim=DEFAULT_INPUTS,
+         height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
+         pool_size=DEFAULT_POOL_SIZE,
+         padding=DEFAULT_PADDING,
+         strides=DEFAULT_STRIDES):
     # nstantiate model
     test_model = AvgPool2d(
         'avgpool2d_deep', path, input_dim)
@@ -81,7 +82,8 @@ def main(path=DEFAULT_PATH, *,
     test_model.save_core_model()
     # Populate converters
     test_model.populate_converters()
-    
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -99,13 +101,13 @@ if __name__ == "__main__":
         help='Width of input image')
     parser.add_argument(
         '-st', '--strides', type=int, default=DEFAULT_STRIDES,
-        help='Height of kernel')
+        help='Stride')
     parser.add_argument(
         '-po', '--pool_size', type=int, default=DEFAULT_POOL_SIZE,
-        help='Height of kernel')
+        help='Pool size')
     parser.add_argument(
         '-pd', '--padding', type=str, default=DEFAULT_PADDING,
-        help='Width of kernel')
+        help='Padding')
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
@@ -124,5 +126,5 @@ if __name__ == "__main__":
          input_dim=args.inputs,
          height=args.height, width=args.width,
          pool_size=args.pool_size, padding=args.padding,
-         strides = args.strides
+         strides=args.strides
          )

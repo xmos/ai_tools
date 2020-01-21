@@ -17,7 +17,7 @@ DEFAULT_PADDING = 'same'
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deepin_deepout_relu').resolve()
 
 
-# Prepare data function
+# TODO: factor this out since multiple generate_* scripts use it
 def generate_data(height, width, inputs):
     quant_data = np.float32(
         np.random.uniform(0, 1, size=(100, height, width, inputs)))
@@ -29,7 +29,6 @@ def generate_data(height, width, inputs):
     return x_test_float, quant_data
 
 
-# Class for the model
 class Conv2dDeepinDeepoutRelu(mi.KerasModel):
     def build(self, K_h, K_w, height, width, input_channels, output_channels, padding):
         assert input_channels % 32 == 0, "# of input channels must be multiple of 32"

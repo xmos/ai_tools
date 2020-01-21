@@ -16,10 +16,10 @@ DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_POOL_SIZE = 2
 DEFAULT_PADDING = 'valid'
 DEFAULT_STRIDES = 2
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'avgpool_2d_deep').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'maxpool_2d_deep').resolve()
 
 
-class AvgPool2d(mi.KerasModel):
+class MaxPool2d(mi.KerasModel):
 
     def build(self, height, width, input_channels, pool, stride, pad):
         assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
@@ -34,7 +34,7 @@ class AvgPool2d(mi.KerasModel):
         self.core_model = tf.keras.Sequential(
             name=self.name,
             layers=[
-                tf.keras.layers.AveragePooling2D(
+                tf.keras.layers.MaxPool2D(
                     pool_size=pool,
                     strides=stride,
                     padding=pad,
@@ -68,7 +68,7 @@ def main(path=DEFAULT_PATH, *,
          padding=DEFAULT_PADDING,
          strides=DEFAULT_STRIDES):
     # nstantiate model
-    test_model = AvgPool2d('avgpool2d_deep', Path(path))
+    test_model = MaxPool2d('maxpool2d_deep', Path(path))
     # Build model and compile
     test_model.build(height, width, input_channels, pool_size, strides, padding)
     # Generate test data

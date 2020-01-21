@@ -15,14 +15,15 @@ Tools for model development
 
 
 def shuffle(arr1, arr2):
-    assert len(arr1)==len(arr2), 'Arrays must be same length'
+    assert len(arr1) == len(arr2), 'Arrays must be same length'
     ind_list = [i for i in range(len(arr1))]
     random.shuffle(ind_list)
-    train_new  = arr1[ind_list, :,:,:]
-    target_new = arr2[ind_list,]
+    train_new = arr1[ind_list, :, :, :]
+    target_new = arr2[ind_list, ]
     assert train_new.shape == arr1.shape
     assert target_new.shape == arr2.shape
-    return train_new,target_new
+    return train_new, target_new
+
 
 def unfold_gen(size, generator):
     '''
@@ -137,6 +138,22 @@ def ecc(nsizex=29, nsizey=29, ch=1):
     o_test = resize(x_test, (x_test.shape[0], nsizex, nsizey, ch))
     o_val = resize(x_val, (x_val.shape[0], nsizex, nsizey, ch))
     return o_train, o_test, o_val, y_train, y_test, y_val
+
+
+# Prepare data function for LeNets
+def prepare_lenet(aug=False):
+    x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(
+        padding=2, categorical=True, flatten=False, y_float=False)
+    if aug:
+        x_train, y_train = expand_dataset(
+            x_train, y_train, 2, sigma=4.0, alpha=16.0)
+    x_train, y_train = shuffle(x_train, y_train)
+    return {'x_train': np.float32(x_train[:3008]),
+            'x_test': np.float32(x_test[:500]),
+            'x_val': np.float32(x_val[:100]),
+            'y_train': np.float32(y_train[:3008]),
+            'y_test': np.float32(y_test[:500]),
+            'y_val': np.float32(y_val[:100])}
 
 
 # Viz

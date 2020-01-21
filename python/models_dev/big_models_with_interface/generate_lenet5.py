@@ -3,8 +3,6 @@ import argparse
 import logging
 from pathlib import Path
 import tensorflow as tf
-import numpy as np
-
 import os
 import sys
 # TODO: make sure we don't need this hack
@@ -18,17 +16,8 @@ import model_tools as mt
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'lenet5').resolve()
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
+DEFAULT_AUG = False
 
-
-# Prepare data function
-def prepare_lenet():
-    x_train, x_test, x_val, y_train, y_test, y_val = mt.get_mnist(
-        padding=2, categorical=True, flatten=False, y_float=False)
-    x_train, y_train = mt.expand_dataset(
-        x_train, y_train, 2, sigma=4.0, alpha=16.0)
-    x_train, y_train = mt.shuffle(x_train, y_train)
-    return {'x_train': np.float32(x_train[:3008]), 'x_test': np.float32(x_test[:500]), 'x_val': np.float32(x_val[:100]),
-            'y_train': np.float32(y_train[:3008]), 'y_test': np.float32(y_test[:500]), 'y_val': np.float32(y_val[:100])}
 
 # Broken bc of hyperparameters?
 '''
@@ -36,6 +25,8 @@ generate_lenet5_tuned works and the only difference is:
 - # filters in conv2d
 - activation functions: relu instead of tanh
 '''
+
+
 class LeNet5(mi.KerasModel):
 
     def build(self):
@@ -82,18 +73,18 @@ class LeNet5(mi.KerasModel):
         # 10 epochs with categorical data
         # Compilation
         self.core_model.compile(loss=tf.keras.losses.CategoricalCrossentropy(),
-                      optimizer=opt, metrics=['accuracy'])
+                                optimizer=opt, metrics=['accuracy'])
         # Show summary
         self.core_model.summary()
 
     # For training
-    def prep_data(self):
-        self.data = prepare_lenet()
+    def prep_data(self, aug=False):
+        self.data = mt.prepare_lenet(aug)
 
     # For exports
-    def gen_test_data(self):
+    def gen_test_data(self, aug=False):
         if not self.data:
-            self.prep_data()
+            self.prep_data(aug)
         self.data['export_data'] = self.data['x_test'][:10]
         self.data['quant'] = self.data['x_train'][:10]
 
@@ -105,20 +96,22 @@ class LeNet5(mi.KerasModel):
             horizontal_flip=True, fill_mode="nearest")
         # Train the network
         history_lenet = self.core_model.fit_generator(
-            aug.flow(self.data['x_train'], self.data['y_train'], batch_size=BS),
+            aug.flow(
+                self.data['x_train'], self.data['y_train'], batch_size=BS),
             validation_data=(self.data['x_test'], self.data['y_test']),
             steps_per_epoch=len(self.data['x_train']) // BS,
             epochs=EPOCHS)
 
 
 def main(path=DEFAULT_PATH, train_new_model=False,
-         BS=DEFAULT_BS, EPOCHS=DEFAULT_EPOCHS):
+         BS=DEFAULT_BS, EPOCHS=DEFAULT_EPOCHS,
+         AUG=DEFAULT_AUG):
     lenet = LeNet5('lenet5', path)
     if train_new_model:
         # Build model and compile
         lenet.build()
         # Prepare training data
-        lenet.prep_data()
+        lenet.prep_data(AUG)
         # Train model
         lenet.train(BS, EPOCHS)
         lenet.save_core_model()
@@ -126,7 +119,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
         # Recover previous state from file system
         lenet.load_core_model()
     # Generate test data
-    lenet.gen_test_data()
+    lenet.gen_test_data(AUG)
     # Populate converters
     lenet.populate_converters()
 
@@ -150,6 +143,9 @@ if __name__ == "__main__":
         '--epochs', type=int, default=DEFAULT_EPOCHS,
         help='Number of epochs.')
     parser.add_argument(
+        '-aug', '--augment_dataset', action='store_true', default=False,
+        help='Create a dataset with elastic transformations.')
+    parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
     args = parser.parse_args()
@@ -165,4 +161,5 @@ if __name__ == "__main__":
     main(path=args.path,
          train_new_model=args.train_model,
          BS=args.batch,
-         EPOCHS=args.epochs)
+         EPOCHS=args.epochs,
+         AUG=args.augment_dataset)

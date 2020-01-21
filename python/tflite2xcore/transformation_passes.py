@@ -70,8 +70,11 @@ class AddQuantizerFloatInputPass(InputTensorMatchingPass):
         fin = subgraph.create_tensor(
             f"{qin.name}_float", TensorType.FLOAT32, qin.shape, isinput=True)
         subgraph.inputs.remove(qin)
-        subgraph.create_operator(
+        op = subgraph.create_operator(
             OperatorCode(BuiltinOpCodes.QUANTIZE), inputs=[fin], outputs=[qin])
+        # python interpreter prefers ops ordered this way
+        subgraph.operators.remove(op)
+        subgraph.operators.insert(0, op)
 
 
 class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
@@ -423,7 +426,7 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
             byte_list = list(bias.flatten().tostring())
             new_bias = np.uint8(byte_list).reshape(tmp_shape)
             new_bias = np.stack(  # splitting lower and upper 16 bits of each 32 bit value
-                [new_bias[:, :, :2], new_bias[:, :, 2:]],
+                [new_bias[:, :, 2:], new_bias[:, :, :2]],
                 axis=1
             )
             self._biases.buffer.data = new_bias

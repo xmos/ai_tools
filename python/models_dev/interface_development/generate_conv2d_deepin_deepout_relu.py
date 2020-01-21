@@ -34,6 +34,8 @@ class Conv2dDeepinDeepoutRelu(mi.KerasModel):
     def build(self, K_h, K_w, height, width, input_channels, output_channels, padding):
         assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
         assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
+        assert K_h % 2 == 1, "kernel height must be odd"
+        assert K_w % 2 == 1, "kernel width must be odd"
         super().build()
 
         # Building

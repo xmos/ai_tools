@@ -25,18 +25,28 @@ class Conv2dShallowinDeepoutRelu(mi.KerasModel):
         assert input_channels <= 4, "Number of input channels must be at most 4"
         assert K_w <= 8, "Kernel width must be at most 8"
         assert output_channels % 16 == 0, "Number of output channels must be multiple of 16"
+        assert K_h % 2 == 1, "kernel height must be odd"
+        assert K_w % 2 == 1, "kernel width must be odd"
         super().build()
 
         # Building
-        self.core_model = tf.keras.Sequential(
-            name=self.name,
-            layers=[
-                tf.keras.layers.Conv2D(filters=output_channels,
-                                       kernel_size=(K_h, K_w),
-                                       padding=padding,
-                                       input_shape=(height, width, input_channels))
-            ]
-        )
+        try:
+            self.core_model = tf.keras.Sequential(
+                name=self.name,
+                layers=[
+                    tf.keras.layers.Conv2D(filters=output_channels,
+                                           kernel_size=(K_h, K_w),
+                                           padding=padding,
+                                           input_shape=(height, width, input_channels))
+                ]
+            )
+        except ValueError as e:
+            if e.args[0].startswith("Negative dimension size caused by"):
+                raise ValueError(
+                    "Negative dimension size (Hint: if using 'valid' padding "
+                    "verify that the kernel is at least the size of input image)"
+                ) from e
+
         # Compilation
         self.core_model.compile(optimizer='adam',
                                 loss='sparse_categorical_crossentropy',

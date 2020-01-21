@@ -379,24 +379,27 @@ class FunctionModel(Model):
 
     # Import and export core model
     def save_core_model(self):
+        model_path = str(self.models['models_dir']/'model')
         if not (len(self.data.keys()) == 0):
             print('Saving the following data keys:', self.data.keys())
             np.savez(self.models['data_dir'] / 'data', **self.data)
         tf.saved_model.save(
-            self.core_model, str(self.models['models_dir']/'model'))
+            self.core_model, model_path,
+            signatures=self.core_model.func.get_concrete_function(
+            tf.TensorSpec(
+                shape=[None, self.input_dim, self.input_dim], # is this correct?
+                dtype=tf.int32, name="inp")), # dtypes shouldn't be generalized
+        )
 
-    # TODO: debug/find a way to do this consistently
+
     def load_core_model(self):
         data_path = self.models['data_dir']/'data.npz'
-        model_path = self.models['models_dir']/'model'
+        model_path = str(self.models['models_dir']/'model')
         try:
             logging.info(f"Loading data from {data_path}")
             self.data = dict(np.load(data_path))
             logging.info(f"Loading keras model from {model_path}")
-            self.core_model = tf.saved_model.load(str(model_path))
-            # tf.keras.models.load_model(model_path)
-            # Flag for using a saved model instead of a function model
-            self.loaded = True
+            self.core_model = tf.saved_model.load(model_path)
         except FileNotFoundError as e:
             raise FileNotFoundError(
                 f"Model file not found (Hint: use the --train_model flag)") from e

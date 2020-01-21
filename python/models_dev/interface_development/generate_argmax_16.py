@@ -42,9 +42,13 @@ class ArgMax8To16ConversionPass(graph_transformer.OperatorMatchingPass):
 
 class ArgMax16(mi.FunctionModel):
     def build(self, input_dim):
-        class ArgMaxModel(tf.Module):
+        class ArgMaxModel(tf.keras.Model):
 
             def __init__(self):
+                super(ArgMaxModel, self).__init__()
+                self._name = 'argmaxmodel'
+                self._trainable = False
+                self._expects_training_arg = False
                 pass
 
             @tf.function
@@ -123,13 +127,13 @@ def main(path=DEFAULT_PATH, input_dim=DEFAULT_INPUTS):
 
     # Build model
     test_model.build(input_dim)
-
-    # Save model
-    test_model.save_core_model()
-    # test_model.save_core_model() - breaks on conversions
-
+    
     # Export data generation
     test_model.gen_test_data()
+    
+    # Save model
+    #test_model.save_core_model()
+    test_model.load_core_model() #- breaks on conversions
 
     # Populate converters and data
     test_model.populate_converters()

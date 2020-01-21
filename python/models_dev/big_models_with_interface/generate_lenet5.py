@@ -4,6 +4,13 @@ import logging
 from pathlib import Path
 import tensorflow as tf
 import numpy as np
+
+import os
+import sys
+# TODO: make sure we don't need this hack
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'interface_development')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'model_development')))
+
 import model_interface as mi
 import tflite_utils
 import model_tools as mt
@@ -31,7 +38,7 @@ generate_lenet5_tuned works and the only difference is:
 - activation functions: relu instead of tanh
 '''
 class LeNet5(mi.KerasModel):
-    
+
     def build(self):
         # Env, TODO: consider refactoring this to KerasModel
         tf.keras.backend.clear_session()
@@ -79,7 +86,7 @@ class LeNet5(mi.KerasModel):
                       optimizer=opt, metrics=['accuracy'])
         # Show summary
         self.core_model.summary()
-        
+
     # For training
     def prep_data(self):
         self.data = prepare_lenet()
@@ -90,11 +97,10 @@ class LeNet5(mi.KerasModel):
             self.prep_data()
         subset_inds = np.searchsorted(
             self.data['y_test'].flatten(), np.arange(self.output_dim))
-        
+
         self.data['export_data'] = self.data['x_test'][:10]
         self.data['quant'] = self.data['x_train'][:10]
 
-    #Training
     def train(self, BS, EPOCHS):
         # Image generator
         aug = tf.keras.preprocessing.image.ImageDataGenerator(
@@ -111,7 +117,7 @@ class LeNet5(mi.KerasModel):
 
 def main(path=DEFAULT_PATH, train_new_model=False,
          BS=DEFAULT_BS, EPOCHS=DEFAULT_EPOCHS):
-    lenet = LeNet5('lenet5', path, 32, 10)
+    lenet = LeNet5('lenet5', path)
     if train_new_model:
         # Build model and compile
         lenet.build()
@@ -129,7 +135,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
     lenet.populate_converters(add_float_outputs=False)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
@@ -142,7 +148,7 @@ if __name__=="__main__":
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')
     parser.add_argument(
-        '--bs', type=int, default=DEFAULT_BS,
+        '--batch', type=int, default=DEFAULT_BS,
         help='Batch size.')
     parser.add_argument(
         '--epochs', type=int, default=DEFAULT_EPOCHS,
@@ -151,7 +157,7 @@ if __name__=="__main__":
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
     args = parser.parse_args()
-    
+
     verbose = args.verbose
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
@@ -162,5 +168,5 @@ if __name__=="__main__":
 
     main(path=args.path,
          train_new_model=args.train_model,
-        BS=args.bs,
-        EPOCHS=args.epochs)
+         BS=args.batch,
+         EPOCHS=args.epochs)

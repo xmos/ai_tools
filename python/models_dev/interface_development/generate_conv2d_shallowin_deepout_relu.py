@@ -7,7 +7,7 @@ import numpy as np
 import model_interface as mi
 import tflite_utils
 
-from generate_conv2d_deepin_deepout_relu import generate_data
+from generate_conv2d_deepin_deepout_relu import generate_data  # TODO: factor out
 
 DEFAULT_INPUTS = 3
 DEFAULT_OUTPUTS = 16
@@ -19,7 +19,6 @@ DEFAULT_PADDING = 'same'
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_shallowin_deepout_relu').resolve()
 
 
-# Class for the model
 class Conv2dShallowinDeepoutRelu(mi.KerasModel):
     def build(self, K_h, K_w, height, width, input_channels, output_channels, padding):
         assert input_channels <= 4, "Number of input channels must be at most 4"

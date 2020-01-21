@@ -7,7 +7,7 @@ import numpy as np
 import model_interface as mi
 import tflite_utils
 
-DEFAULT_OUTPUT_DIM = 4
+DEFAULT_OUTPUT_DIM = 10
 DEFAULT_INPUT_DIM = 32
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_shallowout_final').resolve()
 

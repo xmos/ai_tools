@@ -20,10 +20,11 @@ DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deepin_deepout_re
 # Prepare data function
 def generate_data(height, width, inputs):
     quant_data = np.float32(
-        np.random.uniform(0, 1, size=(10, height, width, inputs)))
+        np.random.uniform(0, 1, size=(100, height, width, inputs)))
     x_test_float = np.concatenate(
         [np.zeros((1, height, width, inputs), dtype=np.float32),
-         quant_data[:3, :, :, :]],  # pylint: disable=unsubscriptable-object
+         np.ones((1, height, width, inputs), dtype=np.float32),
+         quant_data[:8, :, :, :]],  # pylint: disable=unsubscriptable-object
         axis=0)
     return x_test_float, quant_data
 

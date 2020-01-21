@@ -30,9 +30,7 @@ generate_lenet5_tuned works and the only difference is:
 class LeNet5(mi.KerasModel):
 
     def build(self):
-        # Env, TODO: consider refactoring this to KerasModel
-        tf.keras.backend.clear_session()
-        tflite_utils.set_all_seeds()
+        super().build()
         # Building
         self.core_model = tf.keras.Sequential(
             name=self.name,

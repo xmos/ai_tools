@@ -12,7 +12,7 @@ import tflite2xcore_conv as xcore_conv
 import tflite_visualize
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 from xcore_model import TensorType
-__version__ = '1.5.0'
+__version__ = '1.5.1'
 __author__ = 'Luis Mata'
 
 
@@ -220,7 +220,7 @@ class Model(ABC):
             logging.info(f"Extracting examples for {base_file_name}...")
             x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0])
             y_test = common.apply_interpreter_to_examples(interpreter, self.data['export_data'])
-            # The next line breaks in FunctionModels without ouput dimension
+            # The next line breaks in FunctionModels & Keras without ouput dimension
             y_test = map(
                 lambda y: common.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
                 y_test
@@ -379,44 +379,36 @@ class FunctionModel(Model):
 
     # Import and export core model
     def save_core_model(self):
+        model_path = str(self.models['models_dir']/'model')
         if not (len(self.data.keys()) == 0):
             print('Saving the following data keys:', self.data.keys())
             np.savez(self.models['data_dir'] / 'data', **self.data)
         tf.saved_model.save(
-            self.core_model, str(self.models['models_dir']/'model'))
+            self.core_model, model_path, signatures=self.concrete_function
+        )
 
-    # TODO: debug/find a way to do this consistently
     def load_core_model(self):
         data_path = self.models['data_dir']/'data.npz'
-        model_path = self.models['models_dir']/'model'
+        model_path = str(self.models['models_dir']/'model')
         try:
             logging.info(f"Loading data from {data_path}")
             self.data = dict(np.load(data_path))
             logging.info(f"Loading keras model from {model_path}")
-            self.core_model = tf.saved_model.load(str(model_path))
-            # tf.keras.models.load_model(model_path)
-            # Flag for using a saved model instead of a function model
-            self.loaded = True
+            self.core_model = tf.saved_model.load(model_path)
         except FileNotFoundError as e:
             raise FileNotFoundError(
                 f"Model file not found (Hint: use the --train_model flag)") from e
 
     @property
     @abstractmethod
-    def function_model(self):
+    def concrete_function(self):
         pass
 
     # Conversions
     def to_tf_float(self):
         super().to_tf_float()
-        '''
-        if self.loaded:
-            self.converters['model_float'] = tf.lite.TFLiteConverter.from_keras_model(
-                self.core_model)
-        else:
-        '''
         self.converters['model_float'] = tf.lite.TFLiteConverter.from_concrete_functions(
-            self.function_model)
+            [self.concrete_function])
         self.models['model_float'] = common.save_from_tflite_converter(
             self.converters['model_float'],
             self.models['models_dir'],
@@ -424,14 +416,8 @@ class FunctionModel(Model):
 
     def to_tf_quant(self):
         super().to_tf_quant()
-        '''
-        if self.loaded:
-            self.converters['model_quant'] = tf.lite.TFLiteConverter.from_keras_model(
-                self.core_model)
-        else:
-        '''
         self.converters['model_quant'] = tf.lite.TFLiteConverter.from_concrete_functions(
-            self.function_model)
+            [self.concrete_function])
         common.quantize_converter(
             self.converters['model_quant'], self.data['quant'])
         self.models['model_quant'] = common.save_from_tflite_converter(

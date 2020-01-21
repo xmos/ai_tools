@@ -5,12 +5,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.ndimage.interpolation import map_coordinates
 from scipy.ndimage.filters import gaussian_filter
+from tqdm import tqdm
 
-__version__ = '1.1.4'
+__version__ = '1.1.5'
 __author__ = 'Luis Mata'
 '''
 Tools for model development
 '''
+
+
+def shuffle(arr1, arr2):
+    assert len(arr1) == len(arr2), 'Arrays must be same length'
+    ind_list = [i for i in range(len(arr1))]
+    random.shuffle(ind_list)
+    train_new = arr1[ind_list, :, :, :]
+    target_new = arr2[ind_list, ]
+    assert train_new.shape == arr1.shape
+    assert target_new.shape == arr2.shape
+    return train_new, target_new
 
 
 def unfold_gen(size, generator):
@@ -62,7 +74,6 @@ def get_mnist(padding=2, categorical=False, val_split=True, flatten=False,
     nb_classes = 10
     from tensorflow.keras.datasets import mnist
     from tensorflow.keras.utils import to_categorical
-    from sklearn.model_selection import train_test_split
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train = x_train.reshape(
@@ -89,8 +100,9 @@ def get_mnist(padding=2, categorical=False, val_split=True, flatten=False,
         y_test = y_test.reshape(y_test.shape[0], 1, 1, 10)
 
     if val_split:
-        x_train, x_val, y_train, y_val = train_test_split(
-            x_train, y_train, test_size=0.2, random_state=0)
+        index = int(0.8 * len(x_train))
+        x_train, x_val = x_train[:index], x_train[index:]
+        y_train, y_val = y_train[:index], y_train[index:]
 
     if flatten:
         x_train = _flatten(x_train)
@@ -126,6 +138,56 @@ def ecc(nsizex=29, nsizey=29, ch=1):
     o_test = resize(x_test, (x_test.shape[0], nsizex, nsizey, ch))
     o_val = resize(x_val, (x_val.shape[0], nsizex, nsizey, ch))
     return o_train, o_test, o_val, y_train, y_test, y_val
+
+
+# Prepare data function for LeNets
+def prepare_lenet(aug=False):
+    x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(
+        padding=2, categorical=True, flatten=False, y_float=False)
+    if aug:
+        x_train, y_train = expand_dataset(
+            x_train, y_train, 2, sigma=4.0, alpha=16.0)
+    x_train, y_train = shuffle(x_train, y_train)
+    return {'x_train': np.float32(x_train[:3008]),
+            'x_test': np.float32(x_test[:500]),
+            'x_val': np.float32(x_val[:100]),
+            'y_train': np.float32(y_train[:3008]),
+            'y_test': np.float32(y_test[:500]),
+            'y_val': np.float32(y_val[:100])}
+
+
+# Prepare data function for MLPs
+def prepare_MLP(aug=False):
+    x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(
+        padding=2, categorical=False, flatten=False, y_float=True)
+    if aug:
+        x_train, y_train = expand_dataset(
+            x_train, y_train, 2, sigma=4.0, alpha=16.0)
+    x_train, y_train = shuffle(x_train, y_train)
+    return {'x_train': np.float32(x_train[:3008]),
+            'x_test': np.float32(x_test[:500]),
+            'x_val': np.float32(x_val[:100]),
+            'y_train': np.float32(y_train[:3008]),
+            'y_test': np.float32(y_test[:500]),
+            'y_val': np.float32(y_val[:100])}
+
+
+# Prepare data function for Simrad
+def prepare_simrad(aug=False):
+    x_train_crop, x_test, x_val, y_train, y_test, y_val = ecc()
+    if(aug):
+        x_train_crop, y_train_crop = expand_dataset(
+            x_train_crop, y_train, 2, sigma=4.0, alpha=16.0,
+            sizex=29, sizey=29)
+    x_train, y_train = shuffle(x_train_crop, y_train_crop)
+    y_train = y_train.reshape(y_train_crop.shape[0], 10)
+    y_test = y_test.reshape(y_test.shape[0], 10)
+    return {'x_train': np.float32(x_train[:3008]),
+            'x_test': np.float32(x_test[:500]),
+            'x_val': np.float32(x_val[:100]),
+            'y_train': np.float32(y_train[:3008]),
+            'y_test': np.float32(y_test[:500]),
+            'y_val': np.float32(y_val[:100])}
 
 
 # Viz
@@ -279,9 +341,9 @@ def expand_dataset(images, labels, distortions, sigma=4.0, alpha=60.0,
     '''
     new_images_batch = np.array(
         [elastic_transform(np.reshape(image, (sizex, sizey)), alpha, sigma)
-         for image in images for _ in range(distortions)])
+         for image in tqdm(images) for _ in range(distortions)])
     new_labels_batch = np.array(
-        [label for label in labels for _ in range(distortions)])
+        [label for label in tqdm(labels) for _ in range(distortions)])
     # Don't forget to return the original images and labels (hence concatenate)
     x_data =  np.concatenate([np.reshape(images, (-1, sizex, sizey)), new_images_batch])
     y_data = np.concatenate([labels, new_labels_batch])

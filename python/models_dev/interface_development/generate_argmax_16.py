@@ -58,9 +58,10 @@ class ArgMax16(mi.FunctionModel):
         self.input_dim = input_dim
 
     @property
-    def function_model(self):
-        return [self.core_model.func.get_concrete_function(
-                tf.TensorSpec([1, self.input_dim], tf.float32))]
+    def concrete_function(self):
+        return self.core_model.func.get_concrete_function(
+            tf.TensorSpec([1, self.input_dim], tf.float32)
+        )
 
     def prep_data(self):  # Not training this model
         pass
@@ -127,13 +128,12 @@ def main(path=DEFAULT_PATH, input_dim=DEFAULT_INPUTS):
 
     # Build model
     test_model.build(input_dim)
-    
+
     # Export data generation
     test_model.gen_test_data()
-    
+
     # Save model
-    #test_model.save_core_model()
-    test_model.load_core_model() #- breaks on conversions
+    test_model.save_core_model()
 
     # Populate converters and data
     test_model.populate_converters()

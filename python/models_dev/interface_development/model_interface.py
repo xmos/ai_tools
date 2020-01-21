@@ -384,11 +384,7 @@ class FunctionModel(Model):
             print('Saving the following data keys:', self.data.keys())
             np.savez(self.models['data_dir'] / 'data', **self.data)
         tf.saved_model.save(
-            self.core_model, model_path,
-            signatures=self.core_model.func.get_concrete_function(
-                tf.TensorSpec(
-                    shape=[None, self.input_dim, self.input_dim],  # is this correct?
-                    dtype=tf.int32, name="inp")),  # dtypes shouldn't be generalized
+            self.core_model, model_path, signatures=self.concrete_function
         )
 
     def load_core_model(self):
@@ -405,14 +401,14 @@ class FunctionModel(Model):
 
     @property
     @abstractmethod
-    def function_model(self):
+    def concrete_function(self):
         pass
 
     # Conversions
     def to_tf_float(self):
         super().to_tf_float()
         self.converters['model_float'] = tf.lite.TFLiteConverter.from_concrete_functions(
-            self.function_model)
+            [self.concrete_function])
         self.models['model_float'] = common.save_from_tflite_converter(
             self.converters['model_float'],
             self.models['models_dir'],
@@ -421,7 +417,7 @@ class FunctionModel(Model):
     def to_tf_quant(self):
         super().to_tf_quant()
         self.converters['model_quant'] = tf.lite.TFLiteConverter.from_concrete_functions(
-            self.function_model)
+            [self.concrete_function])
         common.quantize_converter(
             self.converters['model_quant'], self.data['quant'])
         self.models['model_quant'] = common.save_from_tflite_converter(

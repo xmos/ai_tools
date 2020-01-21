@@ -4,10 +4,13 @@ import logging
 from pathlib import Path
 import tensorflow as tf
 import numpy as np
+import sys
+
+sys.path.append('../interface_development/')
+sys.path.append('../model_development/')
 import model_interface as mi
 import tflite_utils
 import model_tools as mt
-from sklearn.utils import shuffle
 
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'lenet5').resolve()
 DEFAULT_EPOCHS = 10
@@ -20,7 +23,7 @@ def prepare_lenet():
         padding=2, categorical=True, flatten=False, y_float=False)
     x_train, y_train = mt.expand_dataset(
         x_train, y_train, 2, sigma=4.0, alpha=16.0)
-    x_train, y_train = shuffle(x_train, y_train)
+    x_train, y_train = mt.shuffle(x_train, y_train)
     return {'x_train': np.float32(x_train[:3008]), 'x_test': np.float32(x_test[:500]), 'x_val': np.float32(x_val[:100]),
             'y_train': np.float32(y_train[:3008]), 'y_test': np.float32(y_test[:500]), 'y_val': np.float32(y_val[:100])}
 
@@ -88,8 +91,6 @@ class LeNet5(mi.KerasModel):
     def gen_test_data(self):
         if not self.data:
             self.prep_data()
-        subset_inds = np.searchsorted(
-            self.data['y_test'].flatten(), np.arange(self.output_dim))
         
         self.data['export_data'] = self.data['x_test'][:10]
         self.data['quant'] = self.data['x_train'][:10]
@@ -111,7 +112,7 @@ class LeNet5(mi.KerasModel):
 
 def main(path=DEFAULT_PATH, train_new_model=False,
          BS=DEFAULT_BS, EPOCHS=DEFAULT_EPOCHS):
-    lenet = LeNet5('lenet5', path, 32, 10)
+    lenet = LeNet5('lenet5', path)
     if train_new_model:
         # Build model and compile
         lenet.build()
@@ -126,7 +127,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
     # Generate test data
     lenet.gen_test_data()
     # Populate converters
-    lenet.populate_converters(add_float_outputs=False)
+    lenet.populate_converters()
 
 
 if __name__=="__main__":

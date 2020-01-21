@@ -222,3 +222,53 @@ def save_test_data_for_xcore_model(model_xcore, x_test_float, *,
 
     # save data
     save_test_data({'x_test': x_test}, data_dir, base_file_name)
+
+
+# debug functions
+def choose_conv_or_save(conv, test_model, save):
+    if not save:
+        return{
+            'float': lambda m: m.to_tf_float(),
+            'quant': lambda m: m.to_tf_quant(),
+            'stripped': lambda m: m.to_tf_stripped(),
+            'xcore': lambda m: m.to_tf_xcore()
+        }[conv](test_model)
+    else:
+        return{
+            'float': lambda m: m.save_tf_float_data(),
+            'quant': lambda m: m.save_tf_quant_data(),
+            'stripped': lambda m: m.save_tf_stripped_data(),
+            'xcore': lambda m: m.save_tf_xcore_data()
+        }[conv](test_model)
+
+
+def debug_dir(path, name, before):
+    if before:
+        logging.debug(name + ' directory before generation:')
+    else:
+        logging.debug(name + ' directory after generation:')
+    logging.debug([str(x.name) for x in path.iterdir() if x.is_file() or x.is_dir()])
+
+
+def debug_keys_header(title, test_model):
+    logging.debug(title)
+    debug_keys('Model keys:', test_model.models)
+    debug_keys('Data keys:', test_model.data)
+    debug_keys('Converter keys:', test_model.converters)
+
+
+def debug_keys(string, dic):
+    logging.debug(string)
+    logging.debug(str(dic.keys()))
+
+
+def debug_conv(to_type, test_model, datapath, modelpath):
+    debug_keys_header('Conversion to ' + to_type + ' start', test_model)
+    debug_dir(modelpath, 'Models', True)
+    logging.debug('Converting model...')
+    choose_conv_or_save(to_type, test_model, False)
+    debug_dir(modelpath, 'Models', False)
+    debug_dir(datapath, 'Data', True)
+    logging.debug('Saving data...')
+    choose_conv_or_save(to_type, test_model, True)
+    debug_dir(datapath, 'Data', False)

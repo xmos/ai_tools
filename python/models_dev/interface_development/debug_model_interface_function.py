@@ -1,4 +1,5 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
+# DEPRECATED ##
 import os
 import shutil
 import pathlib
@@ -95,12 +96,14 @@ def choose_conv_or_save(conv, test_model, save):
         return{
             'float': lambda m: m.save_tf_float_data(),
             'quant': lambda m: m.save_tf_quant_data(),
-            'stripped': lambda m: m.save_tf_stripped_data(add_float_outputs=False),
+            'stripped': lambda m: m.save_tf_stripped_data(
+                add_float_outputs=False),
             'xcore': lambda m: m.save_tf_xcore_data()
         }[conv](test_model)
 
 
 def main():
+
     DEFAULT_INPUTS = 10
     # Random seed
     random.seed(42)
@@ -153,6 +156,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     verbose = args.verbose
+    extra_verbose = args.extra_verbose
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
     else:

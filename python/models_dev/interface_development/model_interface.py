@@ -12,7 +12,7 @@ import tflite2xcore_conv as xcore_conv
 import tflite_visualize
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 from xcore_model import TensorType
-__version__ = '1.5.0'
+__version__ = '1.5.1'
 __author__ = 'Luis Mata'
 
 
@@ -220,7 +220,7 @@ class Model(ABC):
             logging.info(f"Extracting examples for {base_file_name}...")
             x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0])
             y_test = common.apply_interpreter_to_examples(interpreter, self.data['export_data'])
-            # The next line breaks in FunctionModels without ouput dimension
+            # The next line breaks in FunctionModels & Keras without ouput dimension
             y_test = map(
                 lambda y: common.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0]),
                 y_test
@@ -386,11 +386,10 @@ class FunctionModel(Model):
         tf.saved_model.save(
             self.core_model, model_path,
             signatures=self.core_model.func.get_concrete_function(
-            tf.TensorSpec(
-                shape=[None, self.input_dim, self.input_dim], # is this correct?
-                dtype=tf.int32, name="inp")), # dtypes shouldn't be generalized
+                tf.TensorSpec(
+                    shape=[None, self.input_dim, self.input_dim],  # is this correct?
+                    dtype=tf.int32, name="inp")),  # dtypes shouldn't be generalized
         )
-
 
     def load_core_model(self):
         data_path = self.models['data_dir']/'data.npz'
@@ -412,12 +411,6 @@ class FunctionModel(Model):
     # Conversions
     def to_tf_float(self):
         super().to_tf_float()
-        '''
-        if self.loaded:
-            self.converters['model_float'] = tf.lite.TFLiteConverter.from_keras_model(
-                self.core_model)
-        else:
-        '''
         self.converters['model_float'] = tf.lite.TFLiteConverter.from_concrete_functions(
             self.function_model)
         self.models['model_float'] = common.save_from_tflite_converter(
@@ -427,12 +420,6 @@ class FunctionModel(Model):
 
     def to_tf_quant(self):
         super().to_tf_quant()
-        '''
-        if self.loaded:
-            self.converters['model_quant'] = tf.lite.TFLiteConverter.from_keras_model(
-                self.core_model)
-        else:
-        '''
         self.converters['model_quant'] = tf.lite.TFLiteConverter.from_concrete_functions(
             self.function_model)
         common.quantize_converter(

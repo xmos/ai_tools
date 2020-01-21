@@ -24,17 +24,18 @@ class MLP1(mi.KerasModel):
         super().build()
         # Building
         self.core_model = tf.keras.Sequential(
-        name=self.name,
-        layers=[
-            tf.keras.layers.Flatten(input_shape=(32, 32, 1), name='input'),
-            tf.keras.layers.Dense(420, activation='tanh', name='dense_1'),
-            tf.keras.layers.Dense(300, activation='tanh', name='dense_2'),
-            tf.keras.layers.Dense(10, activation='softmax', name='output')
-        ])
+            name=self.name,
+            layers=[
+                tf.keras.layers.Flatten(input_shape=(32, 32, 1), name='input'),
+                tf.keras.layers.Dense(420, activation='tanh', name='dense_1'),
+                tf.keras.layers.Dense(300, activation='tanh', name='dense_2'),
+                tf.keras.layers.Dense(10, activation='softmax', name='output')
+            ])
         # Compilation
-        self.core_model.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-                      optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
-                      metrics=['accuracy'])
+        self.core_model.compile(
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+            optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
+            metrics=['accuracy'])
         # Show summary
         self.core_model.summary()
 
@@ -48,19 +49,20 @@ class MLP1(mi.KerasModel):
             self.prep_data(aug)
         self.data['export_data'] = self.data['x_test'][:10]
         self.data['quant'] = self.data['x_train'][:10]
-    
+
     def train(self, BS, EPOCHS):
         # Multi Layer Perceptron 1
         history_mlp1 = self.core_model.fit(
             self.data['x_train'], self.data['y_train'],
             batch_size=BS, epochs=EPOCHS,
             validation_data=(self.data['x_test'], self.data['y_test']))
-        
+
+
 def main(path=DEFAULT_PATH, train_new_model=False,
          BS=DEFAULT_BS, EPOCHS=DEFAULT_EPOCHS,
          AUG=DEFAULT_AUG):
-    
-    mlp1 = MLP1('mlp1',path)
+
+    mlp1 = MLP1('mlp1', path)
 
     if train_new_model:
         # Build model and compile

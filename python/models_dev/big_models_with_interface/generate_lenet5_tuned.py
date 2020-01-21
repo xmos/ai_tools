@@ -22,9 +22,7 @@ DEFAULT_AUG = False
 class LeNet5(mi.KerasModel):
 
     def build(self):
-        # Env, TODO: consider refactoring this to KerasModel
-        tf.keras.backend.clear_session()
-        tflite_utils.set_all_seeds()
+        super().build()
         # Building
         self.core_model = tf.keras.Sequential(
             name=self.name,
@@ -65,22 +63,22 @@ class LeNet5(mi.KerasModel):
         # 10 epochs with categorical data
         # Compilation
         self.core_model.compile(loss=tf.keras.losses.CategoricalCrossentropy(),
-                      optimizer=opt, metrics=['accuracy'])
+                                optimizer=opt, metrics=['accuracy'])
         # Show summary
         self.core_model.summary()
-        
+
     # For training
-    def prep_data(self,aug=False):
+    def prep_data(self, aug=False):
         self.data = mt.prepare_lenet(aug)
 
     # For exports
-    def gen_test_data(self,aug=False):
+    def gen_test_data(self, aug=False):
         if not self.data:
             self.prep_data(aug)
         self.data['export_data'] = self.data['x_test'][:10]
         self.data['quant'] = self.data['x_train'][:10]
 
-    #Training
+    # Training
     def train(self, BS, EPOCHS):
         # Image generator
         aug = tf.keras.preprocessing.image.ImageDataGenerator(
@@ -89,7 +87,8 @@ class LeNet5(mi.KerasModel):
             horizontal_flip=True, fill_mode="nearest")
         # Train the network
         history_lenet = self.core_model.fit_generator(
-            aug.flow(self.data['x_train'], self.data['y_train'], batch_size=BS),
+            aug.flow(
+                self.data['x_train'], self.data['y_train'], batch_size=BS),
             validation_data=(self.data['x_test'], self.data['y_test']),
             steps_per_epoch=len(self.data['x_train']) // BS,
             epochs=EPOCHS)
@@ -97,7 +96,7 @@ class LeNet5(mi.KerasModel):
 
 def main(path=DEFAULT_PATH, train_new_model=False,
          BS=DEFAULT_BS, EPOCHS=DEFAULT_EPOCHS,
-        AUG=DEFAULT_AUG):
+         AUG=DEFAULT_AUG):
     lenet = LeNet5('lenet5_tuned', path)
     if train_new_model:
         # Build model and compile
@@ -116,7 +115,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
     lenet.populate_converters()
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
@@ -129,7 +128,7 @@ if __name__=="__main__":
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')
     parser.add_argument(
-        '-aug','--augment_dataset', action='store_true', default=False,
+        '-aug', '--augment_dataset', action='store_true', default=False,
         help='Create a dataset with elastic transformations.')
     parser.add_argument(
         '--batch', type=int, default=DEFAULT_BS,
@@ -141,7 +140,7 @@ if __name__=="__main__":
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
     args = parser.parse_args()
-    
+
     verbose = args.verbose
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
@@ -152,6 +151,5 @@ if __name__=="__main__":
 
     main(path=args.path,
          train_new_model=args.train_model,
-        BS=args.batch,
-        EPOCHS=args.epochs,
-        AUG = args.augment_dataset)
+         BS=args.batch, EPOCHS=args.epochs,
+         AUG=args.augment_dataset)

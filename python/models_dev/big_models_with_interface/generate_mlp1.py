@@ -33,7 +33,7 @@ class MLP1(mi.KerasModel):
             ])
         # Compilation
         self.core_model.compile(
-            loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+            loss='sparse_categorical_crossentropy',
             optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
             metrics=['accuracy'])
         # Show summary
@@ -41,7 +41,7 @@ class MLP1(mi.KerasModel):
 
     # For training
     def prep_data(self, aug=False):
-        self.data = mt.prepare_MLP(aug)
+        self.data = mt.prepare_MNIST(aug)
 
     # For exports
     def gen_test_data(self, aug=False):

@@ -36,48 +36,38 @@ class LeNet5(mi.KerasModel):
             name=self.name,
             layers=[
                 tf.keras.Input(shape=(32, 32, 1), name='input'),
-                tf.keras.layers.Conv2D(filters=6,
-                                       kernel_size=(5, 5),
-                                       strides=1,
-                                       activation='tanh',
-                                       name='conv_1'),
-                tf.keras.layers.AvgPool2D(pool_size=(2, 2),
-                                          strides=2,
-                                          name='avg_pool_1'),
+
+                tf.keras.layers.Conv2D(6, kernel_size=5, name='conv_1'),
                 tf.keras.layers.BatchNormalization(),
-                tf.keras.layers.Conv2D(filters=16,
-                                       kernel_size=(5, 5),
-                                       strides=1,
-                                       activation='tanh',
-                                       name='conv_2'),
-                tf.keras.layers.AvgPool2D(pool_size=(2, 2),
-                                          strides=2,
-                                          name='avg_pool_2'),
+                tf.keras.layers.Activation('tanh'),
+
+                tf.keras.layers.AvgPool2D(pool_size=2, strides=2, name='avg_pool_1'),
+
+                tf.keras.layers.Conv2D(16, kernel_size=5, name='conv_2'),
                 tf.keras.layers.BatchNormalization(),
-                tf.keras.layers.Conv2D(filters=120,
-                                       kernel_size=(5, 5),
-                                       strides=1,
-                                       activation='tanh',
-                                       name='conv_3'),
-                tf.keras.layers.Dense(units=84,
-                                      activation='tanh',
-                                      name='fc_1'),
-                tf.keras.layers.Dense(units=10,
-                                      activation='softmax',
-                                      name='output')
+                tf.keras.layers.Activation('tanh'),
+
+                tf.keras.layers.AvgPool2D(pool_size=2, strides=2, name='avg_pool_2'),
+
+                tf.keras.layers.Conv2D(120, kernel_size=5, name='conv_3'),
+                tf.keras.layers.Activation('tanh'),
+
+                tf.keras.layers.Flatten(),
+                tf.keras.layers.Dense(84, activation='tanh', name='fc_1'),
+                tf.keras.layers.Dense(10, activation='softmax', name='output')
             ]
         )
         opt = tf.keras.optimizers.SGD(lr=0.01, momentum=0.9, decay=1e-2 / 10)
         # 10 epochs with categorical data
         # Compilation
-        self.core_model.compile(loss=tf.keras.losses.CategoricalCrossentropy(),
+        self.core_model.compile(loss='sparse_categorical_crossentropy',
                                 optimizer=opt, metrics=['accuracy'])
         # Show summary
         self.core_model.summary()
 
     # For training
     def prep_data(self, aug=False):
-        self.data = mt.prepare_lenet(aug)
+        self.data = mt.prepare_MNIST(aug)
 
     # For exports
     def gen_test_data(self, aug=False):

@@ -27,17 +27,17 @@ class Simrad(mi.KerasModel):
             name=self.name,
             layers=[
                 tf.keras.Input(shape=(29, 29, 1), name='input'),
-                tf.keras.layers.Conv2D(5, (5, 5), strides=2,
+                tf.keras.layers.Conv2D(5, kernel_size=5, strides=2,
                                        activation='relu', name='conv_1'),
-                tf.keras.layers.Conv2D(50, (5, 5), strides=2,
+                tf.keras.layers.Conv2D(50, kernel_size=5, strides=2,
                                        activation='relu', name='conv_2'),
-                tf.keras.layers.Flatten(name='flaten'),
+                tf.keras.layers.Flatten(name='flatten'),
                 tf.keras.layers.Dense(100, activation='relu', name='fc_1'),
                 tf.keras.layers.Dense(10, activation='softmax', name='output')
             ])
         # Compilation
         self.core_model.compile(
-            loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+            loss='sparse_categorical_crossentropy',
             optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
             metrics=['accuracy'])
         # Show summary

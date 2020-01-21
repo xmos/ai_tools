@@ -27,13 +27,13 @@ class MLP2(mi.KerasModel):
             name=self.name,
             layers=[
                 tf.keras.layers.Flatten(input_shape=(32, 32, 1), name='input'),
-                tf.keras.layers.Dense(416, activation='tanh', name='dense_1'),
-                tf.keras.layers.Dense(288, activation='tanh', name='dense_2'),
+                tf.keras.layers.Dense(416, activation='relu', name='dense_1'),
+                tf.keras.layers.Dense(288, activation='relu', name='dense_2'),
                 tf.keras.layers.Dense(10, activation='softmax', name='output')
             ])
         # Compilation
         self.core_model.compile(
-            loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+            loss='sparse_categorical_crossentropy',
             optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
             metrics=['accuracy'])
         # Show summary
@@ -41,7 +41,7 @@ class MLP2(mi.KerasModel):
 
     # For training
     def prep_data(self, aug=False):
-        self.data = mt.prepare_MLP(aug)
+        self.data = mt.prepare_MNIST(aug)
 
     # For exports
     def gen_test_data(self, aug=False):

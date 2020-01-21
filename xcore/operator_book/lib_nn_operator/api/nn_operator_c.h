@@ -85,6 +85,11 @@ void argmax_16_c(
     int32_t* C,
     const int32_t N);
 
+void requantize_16_to_8_c(
+    int8_t* y,
+    const int16_t* x,
+    const unsigned n);
+
 #ifdef __XC__
 }   //extern "C"
 #endif

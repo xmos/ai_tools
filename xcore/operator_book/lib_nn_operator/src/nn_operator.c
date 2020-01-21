@@ -313,3 +313,14 @@ void argmax_16_c(
         }
     }
 }
+
+
+void requantize_16_to_8_c(
+    int8_t* y,
+    const int16_t* x,
+    const unsigned n)
+{
+    for(int i = 0; i < n; i++){
+        y[i] = vdepth8_single_s16(x[i]);
+    }
+}

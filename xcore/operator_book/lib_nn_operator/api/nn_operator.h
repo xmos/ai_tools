@@ -448,6 +448,30 @@ static inline void argmax_16(
     int32_t* C,
     const int32_t N);
 
+
+/** Reduce the bit depth of a 16-bit vector to 8 bits
+ * 
+ * Each output ``y[i]`` is computed as:
+ *
+ *  ``y[i] = (int8_t) round( x[i] / 256.0 )``
+ *
+ *  If ``y`` and ``x`` point to the same address, the operator
+ *  will work in-place on the input vector.
+ *
+ *  Both ``y`` and ``x`` must be word-aligned.
+ *
+ * \param y     Output tensor
+ * \param x     Input tensor
+ * \param n     Length of input and output tensors (in elements)
+ */
+static inline void requantize_16_to_8(
+    int8_t* y,
+    const int16_t* x,
+    const unsigned n);
+
+
+
+
 /** Prepare to execute a 2D deepin-deepout convolution.
  *
  * This function initializes a `nn_conv2d_dido_params_t` struct with

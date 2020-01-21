@@ -169,6 +169,7 @@ FUNCTION_NAME:
         {   mkmsk r3, 32                                    ;   ldw pad_mask, sp[STACK_PATCH_PAD_MASK]          }
         //If the pad_mask is 0xFFFFFFFF, we'll set it to 0, an invalid value.
         //  then we can 'bf' in the inner loop rather than testing equality with something
+        //  TODO: This could be done before these loops
         {   eq r3, r3, pad_mask                             ;                                                   }
         {                                                   ;   bf r3, .L_cout_grp_loop                         }
         {   ldc pad_mask, 0                                 ;                                                   }
@@ -221,6 +222,7 @@ FUNCTION_NAME:
                     vstrpv r11[0], pad_mask
                     {   ldaw r11, sp[STACK_TMP_VEC1]            ;   vldc r11[0]                                 }
                     {                                           ;   vldr r11[0]                                 }
+                    {                                           ;   bu .L_do_maccs                              }
                 .L_no_padding:
                     {                                           ;   vldc X[0]                                   }
                 .L_do_maccs:

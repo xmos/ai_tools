@@ -343,15 +343,16 @@ void conv2d_sido_boggle_K(
             const unsigned rcout = (VPU_INT8_ACC_PERIOD - 1) - cout;
 
             for(int kr = 0; kr < K_h; kr++){
-                for(int kc = 0; kc < K_w; kc++){
+                for(int kc = 0; kc < VPU_INT8_EPV/C_in; kc++){
 
-                    unsigned in_b = (cog * VPU_INT8_ACC_PERIOD + cout) * (K_h * K_w * C_in)
-                                + kr * (K_w * C_in)
-                                + kc * (C_in);
-                    unsigned out_b = cog * (K_h * VPU_INT8_ACC_PERIOD * VPU_INT8_EPV) 
-                                + kr * (VPU_INT8_ACC_PERIOD * VPU_INT8_EPV) 
-                                + rcout * (VPU_INT8_EPV) 
-                                + kc * (C_in);
+                    unsigned in_b = cout * K_h * VPU_INT8_EPV
+                                  + kr * VPU_INT8_EPV
+                                  + kc * C_in;
+                    
+                    unsigned out_b = cog * K_h * VPU_INT8_ACC_PERIOD * VPU_INT8_EPV
+                                   + kr * VPU_INT8_ACC_PERIOD * VPU_INT8_EPV
+                                   + rcout * VPU_INT8_EPV
+                                   + kc * C_in;
 
                     for(int cin = 0; cin < C_in; cin++){
 
@@ -798,14 +799,35 @@ static void conv2d_deepin_deepout_init_same(
             //This needs to be enough to pull K to the beginning of the current row, then down a row
             block->patch.row_incr.K = (init->K_w - patch_cols) * (init->C_in * VPU_INT8_ACC_PERIOD);
 
-            //This needs to be enough to push K to the end of the current channel group, plus the start offset
-            block->cout_group_incr.K = (pad_r + init->K_w * pad_b) * (init->C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K;
+            //This needs to be enough to push K to the end of the current channel group, plus the start offset, minus the row increment.
+            block->cout_group_incr.K = (pad_r + init->K_w * pad_b) * (init->C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K - block->patch.row_incr.K;
             block->output.rows = out_rows;
             block->output.cols = out_cols;
             block->output.row_incr.X = init->C_in * (init->X_width - block->output.cols);
             block->output.row_incr.Y = init->C_out * (Y_width - block->output.cols);
 
             block->init.biases = conv2d_adjusted_biases(init, pad_t, pad_l, pad_b, pad_r, K, B, TRUE);
+
+
+            // printf("pad_t = %u\n", pad_t);
+            // printf("pad_l = %u\n", pad_l);
+            // printf("pad_b = %u\n", pad_b);
+            // printf("pad_r = %u\n", pad_r);
+            // printf("out_rows = %u\n", out_rows);
+            // printf("out_cols = %u\n", out_cols);
+            // printf("block->init.start_offset.X = %ld\n", block->init.start_offset.X);
+            // printf("block->init.start_offset.Y = %ld\n", block->init.start_offset.Y);
+            // printf("block->init.start_offset.K = %ld\n", block->init.start_offset.K);
+            // printf("block->patch.maccs_per_row = %u\n", block->patch.maccs_per_row);
+            // printf("block->patch.rows = %u\n", block->patch.rows);
+            // printf("block->patch.row_incr.X = %ld\n", block->patch.row_incr.X);
+            // printf("block->patch.row_incr.K = %ld\n", block->patch.row_incr.K);
+            // printf("block->cout_group_incr.K = %ld\n", block->cout_group_incr.K);
+            // printf("block->output.rows = %u\n", block->output.rows);
+            // printf("block->output.cols = %u\n", block->output.cols);
+            // printf("block->output.row_incr.X = %ld\n", block->output.row_incr.X);
+            // printf("block->output.row_incr.Y = %ld\n", block->output.row_incr.Y);
+            // printf("\n\n\n");
         }
     }
 }
@@ -1067,7 +1089,8 @@ static void conv2d_shallowin_deepout_init_same(
             // printf("\t (t, l)\t(rows x cols) = (%u, %u)\t(%ux%u)\n", Y_top, Y_left, out_rows, out_cols);
 
             unsigned X_top    = (Y_top  <= P_h)? 0 : Y_top  - P_h;
-            unsigned X_left   = (Y_left <= P_w)? 0 : Y_left - P_w;
+            // unsigned X_left   = (Y_left <= P_w)? 0 : Y_left - P_w;
+            unsigned X_left   = Y_left - P_w;
             
             unsigned patch_rows = init->K_h - pad_t - pad_b;
             // unsigned patch_cols = K_w - pad_l - pad_r;
@@ -1079,8 +1102,39 @@ static void conv2d_shallowin_deepout_init_same(
             block->init.start_offset.K = VPU_INT8_ACC_PERIOD * VPU_INT8_EPV * pad_t;
             // block->init.padding_cells = (pad_t + pad_b) * init->K_w + (pad_l + pad_r) * patch_rows;
 
-            uint32_t padding_mask = (pad_r == 0)? 0xFFFFFFFF : ((((uint32_t)1)<<(32-(init->C_in*pad_r)))-1);
-            padding_mask = padding_mask ^ ((1<<(init->C_in*pad_l))-1);
+            uint32_t padding_mask = 0;
+            // uint32_t padding_mask = (pad_r == 0)? 0xFFFFFFFF : ((((uint32_t)1)<<(32-(init->C_in*pad_r)))-1);
+            // padding_mask = padding_mask ^ ((1<<(init->C_in*pad_l))-1);
+
+            // if(pad_r == 0 && pad_l == 0)
+            //     padding_mask = 0xFFFFFFFF;
+            // else {
+
+            //     padding_mask = 0;
+
+            for(int i = VPU_INT8_EPV/init->C_in - 1; i >= 0; i--){
+
+                //Determine whether this kernel cell is in padding
+                unsigned in_img = 1;
+
+                if(i >= init->K_w)
+                    //Beyond K_w, the coefficients are supposed to be zero,
+                    //  so we'll say it's not in padding, which allows us
+                    //  to speed up processing in the interior region
+                    in_img = 1;
+                else if(i < pad_l) {
+                    in_img = 0;
+                } else if(init->K_w-i-1 < pad_r) {
+                    in_img = 0;
+                }
+
+                for(int k = 0; k < init->C_in; k++){
+                    padding_mask = padding_mask << 1;
+                    padding_mask |= (in_img!=0);
+                }
+            }
+            // }
+
             block->patch.pad_mask = padding_mask;
             block->patch.rows = patch_rows;
             //One row is a single VLMACCR group
@@ -1090,13 +1144,38 @@ static void conv2d_shallowin_deepout_init_same(
             block->patch.row_incr.K = 0;
 
             //This needs to be enough to push K to the end of the current channel group, plus the start offset
-            block->cout_group_incr.K = (pad_r + 8 * pad_b) * (init->C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K;
+            block->cout_group_incr.K = (8 * pad_b) * (init->C_in * VPU_INT8_ACC_PERIOD) + block->init.start_offset.K;
             block->output.rows = out_rows;
             block->output.cols = out_cols;
             block->output.row_incr.X = init->C_in * (init->X_width - block->output.cols);
             block->output.row_incr.Y = init->C_out * (Y_width - block->output.cols);
 
             block->init.biases = conv2d_adjusted_biases(init, pad_t, pad_l, pad_b, pad_r, K, B, FALSE);
+
+
+            // printf("block_dex = %u\n", block_dex-1);
+            // printf("pad_t = %u\n", pad_t);
+            // printf("pad_l = %u\n", pad_l);
+            // printf("pad_b = %u\n", pad_b);
+            // printf("pad_r = %u\n", pad_r);
+            // printf("out_rows = %u\n", out_rows);
+            // printf("out_cols = %u\n", out_cols);
+            // printf("X_top = %d\n", X_top);
+            // printf("X_left = %d\n", X_left);
+            // printf("block->init.start_offset.X = %ld\n", block->init.start_offset.X);
+            // printf("block->init.start_offset.Y = %ld\n", block->init.start_offset.Y);
+            // printf("block->init.start_offset.K = %ld\n", block->init.start_offset.K);
+            // printf("block->patch.pad_mask = 0x%08X\n", (unsigned) block->patch.pad_mask);
+            // printf("block->patch.rows = %u\n", block->patch.rows);
+            // printf("block->patch.row_incr.X = %ld\n", block->patch.row_incr.X);
+            // printf("block->patch.row_incr.K = %ld\n", block->patch.row_incr.K);
+            // printf("block->cout_group_incr.K = %ld\n", block->cout_group_incr.K);
+            // printf("block->output.rows = %u\n", block->output.rows);
+            // printf("block->output.cols = %u\n", block->output.cols);
+            // printf("block->output.row_incr.X = %ld\n", block->output.row_incr.X);
+            // printf("block->output.row_incr.Y = %ld\n", block->output.row_incr.Y);
+            // printf("\n\n\n");
+            
         }
     }
 
@@ -1307,7 +1386,6 @@ void conv2d_shallowin_deepout_block_c(
     const int16_t* shifts,
     const int16_t* scales)
 {
-
     X = &X[block->init.start_offset.X];
     Y = &Y[block->init.start_offset.Y];
     K = &K[block->init.start_offset.K];
@@ -1326,6 +1404,7 @@ void conv2d_shallowin_deepout_block_c(
             const int16_t* cales = scales;
             
             for(unsigned cout_groups = params->C_out_groups; cout_groups > 0; cout_groups--){
+                // const unsigned coutgroup = params->C_out_groups - cout_groups;
 
                 //V is the X-pointer for the patch. This points it at the top-left cell of the patch.
                 const int8_t* V = X;
@@ -1343,7 +1422,7 @@ void conv2d_shallowin_deepout_block_c(
                 D = &D[2*VPU_INT8_ACC_PERIOD];
 
                 for(unsigned rows_in_patch = block->patch.rows; rows_in_patch > 0; rows_in_patch--){
-
+                    
                     if( block->patch.pad_mask == 0xFFFFFFFF ){
 
                         //This loop represents one "VLMACCR group"

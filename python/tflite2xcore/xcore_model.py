@@ -280,6 +280,21 @@ class Subgraph():
         self.operators.remove(op)
         op.inputs, op.outputs, op.subgraph = [], [], None
 
+    def replace_operator(self, op, new_op):
+        # find location of op to replace
+        try:
+            old_idx = self.operators.index(op)
+        except ValueError as e:
+            raise ValueError("Cannot find operator to replace in the subgraph") from e
+
+        # remove new_op from list if already in the subgraph
+        if new_op in self.operators:
+            self.operators.remove(new_op)
+
+        # (re)insert new op in place of old op, then remove old op
+        self.operators.insert(old_idx, new_op)
+        self.remove_operator(op)
+
     def get_tensor(self, name):
         for t in self.tensors:
             if t.name == name:

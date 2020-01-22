@@ -15,13 +15,13 @@ import model_interface as mi
 import tflite_utils
 import model_tools as mt
 
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'simrad_tuned_b').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'simrad_tuned_a').resolve()
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
 DEFAULT_AUG = False
 
 
-class SimradTunedB(Simrad):
+class SimradTunedA(Simrad):
     def build(self):
         self._prep_backend()
         # Building
@@ -34,7 +34,7 @@ class SimradTunedB(Simrad):
                 tf.keras.layers.Conv2D(64, kernel_size=5, strides=2,
                                        activation='relu', name='conv_2'),
                 tf.keras.layers.Flatten(name='flatten'),
-                tf.keras.layers.Dense(128, activation='relu', name='fc_1'),
+                tf.keras.layers.Dense(96, activation='relu', name='fc_1'),
                 tf.keras.layers.Dense(10, activation='softmax', name='output')
             ])
         # Compilation
@@ -50,7 +50,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
          batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
          use_aug=DEFAULT_AUG):
 
-    simrad = SimradTunedB('simrad_tuned_b', path)
+    simrad = SimradTunedA('simrad_tuned_a', path)
 
     if train_new_model:
         # Build model and compile

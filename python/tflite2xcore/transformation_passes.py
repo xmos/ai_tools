@@ -173,7 +173,7 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
     def mutate(self, op):
         new_op = op.subgraph.create_operator(
             self.new_opcode, inputs=op.inputs, outputs=op.outputs)
-        op.subgraph.remove_operator(op)
+        new_op.subgraph.replace_operator(op, new_op)
         return new_op
 
     def match(self, op):

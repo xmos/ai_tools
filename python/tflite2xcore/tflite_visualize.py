@@ -203,14 +203,14 @@ class OpCodeMapper():
     """Maps an opcode index to a text representation."""
 
     def __init__(self, data):
-        self.idx_to_name = [
+        self.opcode_idx_to_name = [
             d["custom_code"] if d["builtin_code"] == "CUSTOM" else d["builtin_code"]
             for d in data["operator_codes"]
         ]
 
-    def __call__(self, x):
-        s = self.idx_to_name[x] if x < len(self.idx_to_name) else "UNKNOWN"
-        return f"({x}) {s}"
+    def __call__(self, opcode_idx, op_idx=None):
+        s = self.opcode_idx_to_name[opcode_idx] if opcode_idx < len(self.opcode_idx_to_name) else "UNKNOWN"
+        return f"{s} [{opcode_idx}]" if op_idx is None else f"({op_idx}) {s}"
 
 
 class DataSizeMapper():
@@ -291,13 +291,13 @@ def GenerateGraph(subgraph_idx, g, opcode_mapper):
             'color': "#fffacd"  # default tensor color, should be only for parameters
         })
 
-    for op in g["operators"]:
-        o_node_text = opcode_mapper(op["opcode_index"])
+    for op_idx, op in enumerate(g["operators"]):
+        o_node_text = opcode_mapper(op["opcode_index"], op_idx)
         op_nodes_info.append({
             'text': o_node_text,
             'width': NodeWidth(o_node_text),
             'height': NodeHeight(o_node_text),
-            'color': "#00a000" if ' XC_' in o_node_text else "#000000"
+            'color': "#00a000" if 'XC_' in o_node_text else "#000000"  # TODO: do this for all custom ops, not by text
         })
 
         # coloring intermediate tensors

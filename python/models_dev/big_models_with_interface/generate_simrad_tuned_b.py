@@ -13,13 +13,13 @@ import model_interface as mi
 import tflite_utils
 import model_tools as mt
 
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'simrad').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'simrad_tuned_b').resolve()
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
 DEFAULT_AUG = False
 
 
-class Simrad(mi.KerasModel):
+class SimradTunedB(mi.KerasModel):
     def build(self):
         super().build()
         # Building
@@ -27,12 +27,12 @@ class Simrad(mi.KerasModel):
             name=self.name,
             layers=[
                 tf.keras.Input(shape=(29, 29, 1), name='input'),
-                tf.keras.layers.Conv2D(5, kernel_size=5, strides=2,
+                tf.keras.layers.Conv2D(8, kernel_size=5, strides=2,
                                        activation='relu', name='conv_1'),
-                tf.keras.layers.Conv2D(50, kernel_size=5, strides=2,
+                tf.keras.layers.Conv2D(64, kernel_size=5, strides=2,
                                        activation='relu', name='conv_2'),
                 tf.keras.layers.Flatten(name='flatten'),
-                tf.keras.layers.Dense(100, activation='relu', name='fc_1'),
+                tf.keras.layers.Dense(128, activation='relu', name='fc_1'),
                 tf.keras.layers.Dense(10, activation='softmax', name='output')
             ])
         # Compilation
@@ -54,7 +54,7 @@ class Simrad(mi.KerasModel):
         self.data['export_data'] = self.data['x_test'][:10]
         self.data['quant'] = self.data['x_train'][:10]
 
-    def train(self, bs, epochs, save_history=False):
+    def train(self, bs, epochs):
         aug = tf.keras.preprocessing.image.ImageDataGenerator(
             rotation_range=20, zoom_range=0.15,
             width_shift_range=0.2, height_shift_range=0.2, shear_range=0.15,
@@ -65,17 +65,13 @@ class Simrad(mi.KerasModel):
             validation_data=(self.data['x_val'], self.data['y_val']),
             steps_per_epoch=len(self.data['x_train']) // bs,
             epochs=epochs)
-        if save_history:
-            mt.plot_history(
-                history_simrad, title='Simrad metrics', save=True,
-                path=str(self.models['models_dir']/self.name))
 
 
 def main(path=DEFAULT_PATH, train_new_model=False,
          bs=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
          aug=DEFAULT_AUG):
 
-    simrad = Simrad('simrad', path)
+    simrad = SimradTunedB('simrad_tuned_b', path)
 
     if train_new_model:
         # Build model and compile
@@ -83,7 +79,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
         # Prepare training data
         simrad.prep_data(aug)
         # Train model
-        simrad.train(bs, epochs, True)
+        simrad.train(bs, epochs)
         simrad.save_core_model()
     else:
         # Recover previous state from file system

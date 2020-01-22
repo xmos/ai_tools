@@ -258,12 +258,13 @@ def multi_plot(imgs, rows, cols, title='', zoom=2):
     plt.show()
 
 
-def plot_history(h, title='metrics', zoom=1):
+def plot_history(h, title='metrics', zoom=1, save=False, path='.'):
     # list all data in history
     history = h
     plt.style.use('dark_background')
     fig = plt.figure(figsize=(16*zoom, 8*zoom))
     plt.title(title)
+    plt.axis('off')
     # summarize history for accuracy
     fig.add_subplot(1, 2, 1)
     plt.plot(history.history['accuracy'])
@@ -281,7 +282,10 @@ def plot_history(h, title='metrics', zoom=1):
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
-    plt.show()
+    if save:
+        fig.savefig(path+'_history.png')
+    else:
+        plt.show()
 
 
 # Augmentation

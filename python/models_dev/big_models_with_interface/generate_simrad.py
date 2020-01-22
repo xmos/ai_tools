@@ -45,7 +45,7 @@ class Simrad(mi.KerasModel):
 
     # For training
     def prep_data(self, aug=False):
-        self.data = mt.prepare_simrad(aug)
+        self.data = mt.prepare_MNIST(aug, simrad=True)
 
     # For exports
     def gen_test_data(self, aug=False):
@@ -54,22 +54,22 @@ class Simrad(mi.KerasModel):
         self.data['export_data'] = self.data['x_test'][:10]
         self.data['quant'] = self.data['x_train'][:10]
 
-    def train(self, BS, EPOCHS):
+    def train(self, bs, epochs):
         aug = tf.keras.preprocessing.image.ImageDataGenerator(
             rotation_range=20, zoom_range=0.15,
             width_shift_range=0.2, height_shift_range=0.2, shear_range=0.15,
             horizontal_flip=True, fill_mode="nearest")
         history_simrad = self.core_model.fit_generator(
             aug.flow(
-                self.data['x_train'], self.data['y_train'], batch_size=BS),
+                self.data['x_train'], self.data['y_train'], batch_size=bs),
             validation_data=(self.data['x_val'], self.data['y_val']),
-            steps_per_epoch=len(self.data['x_train']) // BS,
-            epochs=EPOCHS)
+            steps_per_epoch=len(self.data['x_train']) // bs,
+            epochs=epochs)
 
 
 def main(path=DEFAULT_PATH, train_new_model=False,
-         BS=DEFAULT_BS, EPOCHS=DEFAULT_EPOCHS,
-         AUG=DEFAULT_AUG):
+         bs=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
+         aug=DEFAULT_AUG):
 
     simrad = Simrad('simrad', path)
 
@@ -77,15 +77,15 @@ def main(path=DEFAULT_PATH, train_new_model=False,
         # Build model and compile
         simrad.build()
         # Prepare training data
-        simrad.prep_data(AUG)
+        simrad.prep_data(aug)
         # Train model
-        simrad.train(BS, EPOCHS)
+        simrad.train(bs, epochs)
         simrad.save_core_model()
     else:
         # Recover previous state from file system
         simrad.load_core_model()
     # Generate test data
-    simrad.gen_test_data(AUG)
+    simrad.gen_test_data(aug)
     # Populate converters
     simrad.populate_converters()
 
@@ -126,6 +126,6 @@ if __name__ == "__main__":
 
     main(path=args.path,
          train_new_model=args.train_model,
-         BS=args.batch,
-         EPOCHS=args.epochs,
-         AUG=args.augment_dataset)
+         bs=args.batch,
+         epochs=args.epochs,
+         aug=args.augment_dataset)

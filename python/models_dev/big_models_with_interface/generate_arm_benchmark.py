@@ -32,6 +32,10 @@ def get_normalized_data():
 
 
 class ArmBenchmark(mi.KerasModel):
+    def __init__(self, *args, is_classifier=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._is_classifier = is_classifier
+
     def build(self):
         self._prep_backend()
         # Building
@@ -64,6 +68,9 @@ class ArmBenchmark(mi.KerasModel):
                                 optimizer='adam', metrics=['accuracy'])
         # Show summary
         self.core_model.summary()
+
+    def to_tf_xcore(self):
+        super().to_tf_xcore(is_classifier=self._is_classifier)
 
     # For training
     def prep_data(self):
@@ -124,9 +131,10 @@ class ArmBenchmark(mi.KerasModel):
 
 
 def main(path=DEFAULT_PATH, train_new_model=False,
-         batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS):
+         batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
+         is_classifier=False):
 
-    arm_benchmark = ArmBenchmark('arm_benchmark', path)
+    arm_benchmark = ArmBenchmark('arm_benchmark', path, is_classifier=is_classifier)
 
     if train_new_model:
         # Build model and compile
@@ -158,6 +166,9 @@ if __name__ == "__main__":
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')
     parser.add_argument(
+        '--classifier', action='store_true', default=False,
+        help='Apply classifier optimizations during xcore conversion.')
+    parser.add_argument(
         '-bs', '--batch', type=int, default=DEFAULT_BS,
         help='Batch size.')
     parser.add_argument(
@@ -179,4 +190,5 @@ if __name__ == "__main__":
     main(path=args.path,
          train_new_model=args.train_model,
          batch_size=args.batch,
-         epochs=args.epochs)
+         epochs=args.epochs,
+         is_classifier=args.classifier)

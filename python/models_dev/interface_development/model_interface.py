@@ -137,7 +137,7 @@ class Model(ABC):
         assert self.core_model, "core model has not been initialized"
         assert 'quant' in self.data, "representative dataset has not been prepared"
 
-    def to_tf_stripped(self):
+    def to_tf_stripped(self, **converter_args):
         '''
         Create converter from original model
         to TensorFlow Lite Float.
@@ -147,14 +147,14 @@ class Model(ABC):
         '''
         assert 'model_quant' in self.models
         model = read_flatbuffer(str(self.models['model_quant']))
-        xcore_conv.strip_model(model)
+        xcore_conv.strip_model(model, **converter_args)
         self.models['model_stripped'] = self.models['models_dir'] / "model_stripped.tflite"
         write_flatbuffer(model, str(self.models['model_stripped']))
 
         if True:  # visualize:
             self._save_visualization('model_stripped')
 
-    def to_tf_xcore(self):
+    def to_tf_xcore(self, **converter_args):
         '''
         Create converter from original model
         to TensorFlow Lite Float.
@@ -165,7 +165,8 @@ class Model(ABC):
         assert 'model_stripped' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
         xcore_conv.main(str(self.models['model_stripped']),
-                        str(self.models['model_xcore']))
+                        str(self.models['model_xcore']),
+                        **converter_args)
 
         if True:  # visualize:
             self._save_visualization('model_xcore')

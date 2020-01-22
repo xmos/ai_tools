@@ -96,8 +96,8 @@ def get_mnist(padding=2, categorical=False, val_split=True, flatten=False,
     if categorical:
         y_train = to_categorical(y_train, nb_classes)
         y_test = to_categorical(y_test, nb_classes)
-        y_train = y_train.reshape(y_train.shape[0], 1, 1, 10)
-        y_test = y_test.reshape(y_test.shape[0], 1, 1, 10)
+        y_train = y_train.reshape(y_train.shape[0], 10)
+        y_test = y_test.reshape(y_test.shape[0], 10)
 
     if val_split:
         index = int(0.8 * len(x_train))
@@ -126,62 +126,42 @@ def get_mnist(padding=2, categorical=False, val_split=True, flatten=False,
     return x_train, x_test, y_train, y_test
 
 
+# TODO: this takes a while, add progress bar
 def ecc(nsizex=29, nsizey=29, ch=1):
     '''
     Crop the dataset images using resize from skimage,
     consider instead use keras layer Cropping2D.
     '''
     x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(
-        padding=0, categorical=True)
+        padding=0, categorical=False)
     from skimage.transform import resize
-    o_train = resize(x_train, (x_train.shape[0], nsizex, nsizey, ch))
-    o_test = resize(x_test, (x_test.shape[0], nsizex, nsizey, ch))
-    o_val = resize(x_val, (x_val.shape[0], nsizex, nsizey, ch))
+    with tqdm(total=30) as pbar:
+        o_train = resize(x_train, (x_train.shape[0], nsizex, nsizey, ch))
+        pbar.update(10)
+        o_test = resize(x_test, (x_test.shape[0], nsizex, nsizey, ch))
+        pbar.update(10)
+        o_val = resize(x_val, (x_val.shape[0], nsizex, nsizey, ch))
+        pbar.update(10)
     return o_train, o_test, o_val, y_train, y_test, y_val
 
 
-# Prepare data function for LeNets
-def prepare_lenet(aug=False):
-    x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(
-        padding=2, categorical=True, flatten=False, y_float=False)
-    if aug:
-        x_train, y_train = expand_dataset(
-            x_train, y_train, 2, sigma=4.0, alpha=16.0)
+# Prepare data function for MNIST dataset
+def prepare_MNIST(use_aug=False, simrad=False):
+    if simrad:
+        x_train, x_test, x_val, y_train, y_test, y_val = ecc()
+    else:
+        x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(
+            padding=2, categorical=False, flatten=False, y_float=True)
+    if use_aug:
+        if simrad:
+            x_train, y_train = expand_dataset(
+                x_train, y_train, 2, sigma=4.0, alpha=16.0,
+                sizex=29, sizey=29)
+        else:
+            x_train, y_train = expand_dataset(
+                x_train, y_train, 2, sigma=4.0, alpha=16.0)
     x_train, y_train = shuffle(x_train, y_train)
-    return {'x_train': np.float32(x_train[:3008]),
-            'x_test': np.float32(x_test[:500]),
-            'x_val': np.float32(x_val[:100]),
-            'y_train': np.float32(y_train[:3008]),
-            'y_test': np.float32(y_test[:500]),
-            'y_val': np.float32(y_val[:100])}
 
-
-# Prepare data function for MLPs
-def prepare_MLP(aug=False):
-    x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(
-        padding=2, categorical=False, flatten=False, y_float=True)
-    if aug:
-        x_train, y_train = expand_dataset(
-            x_train, y_train, 2, sigma=4.0, alpha=16.0)
-    x_train, y_train = shuffle(x_train, y_train)
-    return {'x_train': np.float32(x_train[:3008]),
-            'x_test': np.float32(x_test[:500]),
-            'x_val': np.float32(x_val[:100]),
-            'y_train': np.float32(y_train[:3008]),
-            'y_test': np.float32(y_test[:500]),
-            'y_val': np.float32(y_val[:100])}
-
-
-# Prepare data function for Simrad
-def prepare_simrad(aug=False):
-    x_train_crop, x_test, x_val, y_train, y_test, y_val = ecc()
-    if(aug):
-        x_train_crop, y_train_crop = expand_dataset(
-            x_train_crop, y_train, 2, sigma=4.0, alpha=16.0,
-            sizex=29, sizey=29)
-    x_train, y_train = shuffle(x_train_crop, y_train_crop)
-    y_train = y_train.reshape(y_train_crop.shape[0], 10)
-    y_test = y_test.reshape(y_test.shape[0], 10)
     return {'x_train': np.float32(x_train[:3008]),
             'x_test': np.float32(x_test[:500]),
             'x_val': np.float32(x_val[:100]),
@@ -278,12 +258,12 @@ def multi_plot(imgs, rows, cols, title='', zoom=2):
     plt.show()
 
 
-def plot_history(h, title='metrics', zoom=1):
+def plot_history(history, title='metrics', zoom=1, save=False, path='.'):
     # list all data in history
-    history = h
     plt.style.use('dark_background')
     fig = plt.figure(figsize=(16*zoom, 8*zoom))
     plt.title(title)
+    plt.axis('off')
     # summarize history for accuracy
     fig.add_subplot(1, 2, 1)
     plt.plot(history.history['accuracy'])
@@ -301,7 +281,10 @@ def plot_history(h, title='metrics', zoom=1):
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
-    plt.show()
+    if save:
+        fig.savefig(path+'_history.png')  # TODO: use pathlib
+    else:  # TODO: we probably won't need this option
+        plt.show()
 
 
 # Augmentation

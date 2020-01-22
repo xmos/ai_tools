@@ -9,6 +9,8 @@ import tflite_utils
 
 DEFAULT_OUTPUT_DIM = 10
 DEFAULT_INPUT_DIM = 32
+DEFAULT_EPOCHS = 10
+DEFAULT_BS = 64
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_shallowout_final').resolve()
 
 
@@ -99,7 +101,7 @@ class FcDeepinShallowoutFinal(mi.KerasModel):
         self.data['quant'] = self.data['x_train']
 
     def train(self):
-        super().train(128, 5*(self.output_dim-1))  # BS and EPOCHS
+        super().train(batch_size=128, epochs=5*(self.output_dim-1))  # BS and EPOCHS
 
 
 def main(path=DEFAULT_PATH, *,

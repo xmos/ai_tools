@@ -23,10 +23,10 @@ def load_tests(name):
         directories = glob.glob('data/single_op_models/fc_deepin_anyout_final/*')
     # elif name.startswith('fc_deepin_anyout_intermediate'):
     #     directory = 'data/single_op_models/{TBD}'
-    # elif name.startswith('maxpool'):
-    #     directory = 'data/single_op_models/maxpool2d_deep'
+    elif name.startswith('maxpool'):
+        directories = glob.glob('data/single_op_models/maxpool2d_deep/*')
     elif name.startswith('avgpool'):
-        directory = 'data/single_op_models/avgpool2d_deep'
+        directories = glob.glob('data/single_op_models/avgpool2d_deep/*')
 
     test_cases = []
 
@@ -108,8 +108,8 @@ def test_fc_deepin_anyout_final(test_model_app, fc_deepin_anyout_final_test_case
 #     assert(run_test_case(test_model_app, fc_deepin_anyout_intermediate_test_case))
 
 
-# def test_maxpool(test_model_app, maxpool_test_case):
-#     assert(run_test_case(test_model_app, maxpool_test_case))
+def test_maxpool(test_model_app, maxpool_test_case):
+    assert(run_test_case(test_model_app, maxpool_test_case))
 
 
 def test_avgpool(test_model_app, avgpool_test_case):

@@ -84,7 +84,22 @@ test_cases = [
 operator = 'avgpool2d_deep'
 generator = os.path.join(GENERATOR_DIR, 'generate_avgpool2d_deep.py')
 test_cases = [
-    {'in': 32, 'hi': 1, 'wi': 1, 'st':2, 'po': 2, 'pd': 'SAME' },
+    {'in': 32, 'hi': 2, 'wi': 2, 'st':2, 'po': 2, 'pd': 'VALID' },
+    {'in': 32, 'hi': 4, 'wi': 4, 'st':2, 'po': 2, 'pd': 'VALID' },
+    {'in': 32, 'hi': 16, 'wi': 16, 'st':2, 'po': 2, 'pd': 'VALID' }
 ]
 
-generate_test_cases(operator, generator, test_cases)
+#generate_test_cases(operator, generator, test_cases)
+
+#***********************************
+# MaxPool
+#***********************************
+operator = 'maxpool2d_deep'
+generator = os.path.join(GENERATOR_DIR, 'generate_maxpool2d_deep.py')
+test_cases = [
+    {'in': 32, 'hi': 2, 'wi': 2, 'st':2, 'po': 2, 'pd': 'VALID' },
+    {'in': 32, 'hi': 4, 'wi': 4, 'st':2, 'po': 2, 'pd': 'VALID' },
+    {'in': 32, 'hi': 16, 'wi': 16, 'st':2, 'po': 2, 'pd': 'VALID' }
+]
+
+#generate_test_cases(operator, generator, test_cases)

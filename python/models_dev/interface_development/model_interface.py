@@ -12,7 +12,7 @@ import tflite2xcore_conv as xcore_conv
 import tflite_visualize
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 from xcore_model import TensorType
-__version__ = '1.5.1'
+__version__ = '1.6.0'
 __author__ = 'Luis Mata'
 
 
@@ -278,6 +278,9 @@ class KerasModel(Model):
 
     @abstractmethod
     def build(self):
+        self._prep_backend()
+
+    def _prep_backend(self):
         tf.keras.backend.clear_session()
         tflite_utils.set_all_seeds()
 
@@ -289,19 +292,12 @@ class KerasModel(Model):
     def output_shape(self):
         return self.core_model.output_shape[1:]
 
-    @abstractmethod
-    def prep_data(self):
-        pass
-
-    @abstractmethod
-    def train(self, BS, EPOCHS):
+    def train(self, **kwargs):
         assert self.data
         self.core_model.fit(
-            self.data['x_train'],
-            self.data['y_train'],
-            epochs=EPOCHS,
-            batch_size=BS,
-            validation_data=(self.data['x_test'], self.data['y_test']))
+            self.data['x_train'], self.data['y_train'],
+            validation_data=(self.data['x_test'], self.data['y_test']),
+            **kwargs)
 
     @abstractmethod
     def gen_test_data(self):
@@ -358,20 +354,6 @@ class FunctionModel(Model):
     @abstractmethod
     def build(self):  # Implementation dependant
         pass
-
-    @abstractmethod
-    def prep_data(self):
-        pass
-
-    @abstractmethod
-    def train(self, BS, EPOCHS):  # Nice default
-        assert self.data
-        self.core_model.fit(
-            self.data['x_train'],
-            self.data['y_train'],
-            epochs=EPOCHS,
-            batch_size=BS,
-            validation_data=(self.data['x_test'], self.data['y_test']))
 
     @abstractmethod
     def gen_test_data(self):

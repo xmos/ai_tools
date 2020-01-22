@@ -9,6 +9,8 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'interface_development')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'model_development')))
 
+from generate_mlp1 import MLP1
+
 import model_interface as mi
 import tflite_utils
 import model_tools as mt
@@ -19,9 +21,9 @@ DEFAULT_BS = 64
 DEFAULT_AUG = False
 
 
-class MLP2(mi.KerasModel):
+class MLP2(MLP1):
     def build(self):
-        super().build()
+        self._prep_backend()
         # Building
         self.core_model = tf.keras.Sequential(
             name=self.name,
@@ -39,28 +41,10 @@ class MLP2(mi.KerasModel):
         # Show summary
         self.core_model.summary()
 
-    # For training
-    def prep_data(self, aug=False):
-        self.data = mt.prepare_MNIST(aug)
-
-    # For exports
-    def gen_test_data(self, aug=False):
-        if not self.data:
-            self.prep_data(aug)
-        self.data['export_data'] = self.data['x_test'][:10]
-        self.data['quant'] = self.data['x_train'][:10]
-
-    def train(self, BS, EPOCHS):
-        # Multi Layer Perceptron 1
-        history_mlp2 = self.core_model.fit(
-            self.data['x_train'], self.data['y_train'],
-            batch_size=BS, epochs=EPOCHS,
-            validation_data=(self.data['x_test'], self.data['y_test']))
-
 
 def main(path=DEFAULT_PATH, train_new_model=False,
-         BS=DEFAULT_BS, EPOCHS=DEFAULT_EPOCHS,
-         AUG=DEFAULT_AUG):
+         batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
+         use_aug=DEFAULT_AUG):
 
     mlp2 = MLP2('mlp2', path)
 
@@ -68,15 +52,15 @@ def main(path=DEFAULT_PATH, train_new_model=False,
         # Build model and compile
         mlp2.build()
         # Prepare training data
-        mlp2.prep_data(AUG)
+        mlp2.prep_data(use_aug)
         # Train model
-        mlp2.train(BS, EPOCHS)
+        mlp2.train(batch_size=batch_size, epochs=epochs)
         mlp2.save_core_model()
     else:
         # Recover previous state from file system
         mlp2.load_core_model()
     # Generate test data
-    mlp2.gen_test_data(AUG)
+    mlp2.gen_test_data(use_aug)
     # Populate converters
     mlp2.populate_converters()
 
@@ -117,6 +101,6 @@ if __name__ == "__main__":
 
     main(path=args.path,
          train_new_model=args.train_model,
-         BS=args.batch,
-         EPOCHS=args.epochs,
-         AUG=args.augment_dataset)
+         batch_size=args.batch,
+         epochs=args.epochs,
+         use_aug=args.augment_dataset)

@@ -146,13 +146,13 @@ def ecc(nsizex=29, nsizey=29, ch=1):
 
 
 # Prepare data function for MNIST dataset
-def prepare_MNIST(aug=False, simrad=False):
+def prepare_MNIST(use_aug=False, simrad=False):
     if simrad:
         x_train, x_test, x_val, y_train, y_test, y_val = ecc()
     else:
         x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(
             padding=2, categorical=False, flatten=False, y_float=True)
-    if aug:
+    if use_aug:
         if simrad:
             x_train, y_train = expand_dataset(
                 x_train, y_train, 2, sigma=4.0, alpha=16.0,
@@ -258,9 +258,8 @@ def multi_plot(imgs, rows, cols, title='', zoom=2):
     plt.show()
 
 
-def plot_history(h, title='metrics', zoom=1, save=False, path='.'):
+def plot_history(history, title='metrics', zoom=1, save=False, path='.'):
     # list all data in history
-    history = h
     plt.style.use('dark_background')
     fig = plt.figure(figsize=(16*zoom, 8*zoom))
     plt.title(title)
@@ -283,8 +282,8 @@ def plot_history(h, title='metrics', zoom=1, save=False, path='.'):
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
     if save:
-        fig.savefig(path+'_history.png')
-    else:
+        fig.savefig(path+'_history.png')  # TODO: use pathlib
+    else:  # TODO: we probably won't need this option
         plt.show()
 
 

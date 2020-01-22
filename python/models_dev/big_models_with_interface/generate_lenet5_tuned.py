@@ -70,7 +70,7 @@ class LeNet5(mi.KerasModel):
         self.data['quant'] = self.data['x_train'][:10]
 
     # Training
-    def train(self, BS, EPOCHS):
+    def train(self, bs, epochs):
         # Image generator
         aug = tf.keras.preprocessing.image.ImageDataGenerator(
             rotation_range=20, zoom_range=0.15,
@@ -79,29 +79,29 @@ class LeNet5(mi.KerasModel):
         # Train the network
         history_lenet = self.core_model.fit_generator(
             aug.flow(
-                self.data['x_train'], self.data['y_train'], batch_size=BS),
+                self.data['x_train'], self.data['y_train'], batch_size=bs),
             validation_data=(self.data['x_test'], self.data['y_test']),
-            steps_per_epoch=len(self.data['x_train']) // BS,
-            epochs=EPOCHS)
+            steps_per_epoch=len(self.data['x_train']) // bs,
+            epochs=epochs)
 
 
 def main(path=DEFAULT_PATH, train_new_model=False,
-         BS=DEFAULT_BS, EPOCHS=DEFAULT_EPOCHS,
+         bs=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
          AUG=DEFAULT_AUG):
     lenet = LeNet5('lenet5_tuned', path)
     if train_new_model:
         # Build model and compile
         lenet.build()
         # Prepare training data
-        lenet.prep_data(AUG)
+        lenet.prep_data(aug)
         # Train model
-        lenet.train(BS, EPOCHS)
+        lenet.train(bs, epochs)
         lenet.save_core_model()
     else:
         # Recover previous state from file system
         lenet.load_core_model()
     # Generate test data
-    lenet.gen_test_data(AUG)
+    lenet.gen_test_data(aug)
     # Populate converters
     lenet.populate_converters()
 
@@ -142,5 +142,5 @@ if __name__ == "__main__":
 
     main(path=args.path,
          train_new_model=args.train_model,
-         BS=args.batch, EPOCHS=args.epochs,
-         AUG=args.augment_dataset)
+         bs=args.batch, epochs=args.epochs,
+         aug=args.augment_dataset)

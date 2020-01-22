@@ -18,7 +18,7 @@ const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
-constexpr int kTensorArenaSize = 49000;  //TODO: How can this be determined?
+constexpr int kTensorArenaSize = 60000;  //TODO: How can this be determined?
 uint8_t tensor_arena[kTensorArenaSize];
 
 static int load_test_input(const char *filename, char *input, size_t esize)
@@ -46,7 +46,7 @@ static void setup() {
 
     // Map the model into a usable data structure. This doesn't involve any
     // copying or parsing, it's a very lightweight operation.
-    model = tflite::GetModel(cifar10_tflite);
+    model = tflite::GetModel(_________models_arm_benchmark_models_model_xcore_tflite);
     if (model->version() != TFLITE_SCHEMA_VERSION) {
         error_reporter->Report(
             "Model provided is schema version %d not equal "
@@ -56,7 +56,7 @@ static void setup() {
     }
 
     // This pulls in all the operation implementations we need.
-    static tflite::ops::micro::XcoreOpsResolver resolver;
+    static tflite::ops::micro::xcore::XcoreOpsResolver resolver;
 
     // Build an interpreter to run the model with.
     static tflite::MicroInterpreter static_interpreter(

@@ -7,6 +7,10 @@
 
 ## TensorFLow Lite for Microcontrollers
 
+The following unix command will generate a C source file that contains the TensorFlow Lite model as a char array
+
+    > xxd -i ../../../models/arm_benchmark/models/model_xcore.tflite > rc/cifar10_model.h
+
 ### xCORE
 
 Building for xCORE

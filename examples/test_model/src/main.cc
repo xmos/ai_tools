@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-//#include "tensorflow/lite/experimental/micro/kernels/all_ops_resolver.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"

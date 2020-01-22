@@ -1,5 +1,6 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import random
+import logging
 from tensorflow import keras
 import matplotlib.pyplot as plt
 import numpy as np
@@ -109,18 +110,9 @@ def get_mnist(padding=2, categorical=False, val_split=True, flatten=False,
         x_test = _flatten(x_test)
         if val_split:
             x_val = _flatten(x_val)
-    if debug:
-        print('x_train shape: ', x_train.shape)
-        print('y_train shape: ', y_train.shape)
-        print('x_train type: ', type(x_train))
-        print(x_train.shape[0], 'train samples')
-        print(x_test.shape[0], 'test samples')
-        if val_split:
-            print(x_val.shape[0], 'validation samples')
-
-        if not categorical:
-            train_labels_count = np.unique(y_train, return_counts=True)
-            print({'count': train_labels_count[1]})
+    if not categorical:
+        train_labels_count = np.unique(y_train, return_counts=True)
+        logging.debug(f"labels counts: train_labels_count[1]")
     if val_split:
         return x_train, x_test, x_val, y_train, y_test, y_val
     return x_train, x_test, y_train, y_test
@@ -216,11 +208,11 @@ def random_stack(ds, labels, depth, categorical=False, dim=32, ch=1):
     \t- dim: dimension of the side of the image
     \t- ch: number of channels
     '''
-    stack = []
-    for i in range(depth):
-        stack.append(random_pick(ds, labels, categorical, dim, ch))
-    print(np.row_stack(stack).shape)
-    return np.row_stack(stack)
+    stack = np.row_stack([
+        random_pick(ds, labels, categorical, dim, ch) for _ in range(depth)
+    ])
+    logging.debug(f"random stack shape: {stack.shape}")
+    return stack
 
 
 def plot(img, title='', zoom=3, dim=32, ch=1):

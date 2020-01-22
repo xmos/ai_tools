@@ -9,19 +9,19 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'interface_development')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'model_development')))
 
-from generate_mlp1 import MLP1
+from generate_mlp import MLP
 
 import model_interface as mi
 import tflite_utils
 import model_tools as mt
 
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'mlp2').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'mlp_tuned').resolve()
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
 DEFAULT_AUG = False
 
 
-class MLP2(MLP1):
+class MLPTuned(MLP):
     def build(self):
         self._prep_backend()
         # Building
@@ -46,23 +46,23 @@ def main(path=DEFAULT_PATH, train_new_model=False,
          batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
          use_aug=DEFAULT_AUG):
 
-    mlp2 = MLP2('mlp2', path)
+    mlp_tuned = MLPTuned('mlp_tuned', path)
 
     if train_new_model:
         # Build model and compile
-        mlp2.build()
+        mlp_tuned.build()
         # Prepare training data
-        mlp2.prep_data(use_aug)
+        mlp_tuned.prep_data(use_aug)
         # Train model
-        mlp2.train(batch_size=batch_size, epochs=epochs)
-        mlp2.save_core_model()
+        mlp_tuned.train(batch_size=batch_size, epochs=epochs)
+        mlp_tuned.save_core_model()
     else:
         # Recover previous state from file system
-        mlp2.load_core_model()
+        mlp_tuned.load_core_model()
     # Generate test data
-    mlp2.gen_test_data(use_aug)
+    mlp_tuned.gen_test_data(use_aug)
     # Populate converters
-    mlp2.populate_converters()
+    mlp_tuned.populate_converters()
 
 
 if __name__ == "__main__":
@@ -78,10 +78,10 @@ if __name__ == "__main__":
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')
     parser.add_argument(
-        '--batch', type=int, default=DEFAULT_BS,
+        '-bs', '--batch', type=int, default=DEFAULT_BS,
         help='Batch size.')
     parser.add_argument(
-        '--epochs', type=int, default=DEFAULT_EPOCHS,
+        '-ep', '--epochs', type=int, default=DEFAULT_EPOCHS,
         help='Number of epochs.')
     parser.add_argument(
         '-aug', '--augment_dataset', action='store_true', default=False,

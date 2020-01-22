@@ -68,6 +68,8 @@ class LeNet5(mi.KerasModel):
     # For training
     def prep_data(self, use_aug=False):
         self.data = mt.prepare_MNIST(use_aug)
+        for k, v in self.data.items():
+            logging.debug(f"Prepped data[{k}] with shape: {v.shape}")
 
     # For exports
     def gen_test_data(self, use_aug=False):
@@ -125,10 +127,10 @@ if __name__ == "__main__":
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')
     parser.add_argument(
-        '--batch', type=int, default=DEFAULT_BS,
+        '-bs', '--batch', type=int, default=DEFAULT_BS,
         help='Batch size.')
     parser.add_argument(
-        '--epochs', type=int, default=DEFAULT_EPOCHS,
+        '-ep', '--epochs', type=int, default=DEFAULT_EPOCHS,
         help='Number of epochs.')
     parser.add_argument(
         '-aug', '--augment_dataset', action='store_true', default=False,

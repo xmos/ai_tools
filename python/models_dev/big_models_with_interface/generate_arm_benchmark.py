@@ -15,8 +15,8 @@ import tflite_utils
 import model_tools as mt
 
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'arm_benchmark').resolve()
-DEFAULT_EPOCHS = 1  # 30
-DEFAULT_BS = 128  # 32
+DEFAULT_EPOCHS = 30
+DEFAULT_BS = 32
 
 
 # TODO refactor and rename appropriately
@@ -68,6 +68,8 @@ class ArmBenchmark(mi.KerasModel):
     # For training
     def prep_data(self):
         self.data = get_normalized_data()
+        for k, v in self.data.items():
+            logging.debug(f"Prepped data[{k}] with shape: {v.shape}")
 
     # For exports
     def gen_test_data(self):
@@ -156,10 +158,10 @@ if __name__ == "__main__":
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')
     parser.add_argument(
-        '--batch', type=int, default=DEFAULT_BS,
+        '-bs', '--batch', type=int, default=DEFAULT_BS,
         help='Batch size.')
     parser.add_argument(
-        '--epochs', type=int, default=DEFAULT_EPOCHS,
+        '-ep', '--epochs', type=int, default=DEFAULT_EPOCHS,
         help='Number of epochs.')
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,

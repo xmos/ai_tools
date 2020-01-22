@@ -13,13 +13,13 @@ import model_interface as mi
 import tflite_utils
 import model_tools as mt
 
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'mlp1').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'mlp').resolve()
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
 DEFAULT_AUG = False
 
 
-class MLP1(mi.KerasModel):
+class MLP(mi.KerasModel):
     def build(self):
         self._prep_backend()
         # Building
@@ -42,6 +42,8 @@ class MLP1(mi.KerasModel):
     # For training
     def prep_data(self, use_aug=False):
         self.data = mt.prepare_MNIST(use_aug)
+        for k, v in self.data.items():
+            logging.debug(f"Prepped data[{k}] with shape: {v.shape}")
 
     # For exports
     def gen_test_data(self, use_aug=False):
@@ -55,7 +57,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
          batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
          use_aug=DEFAULT_AUG):
 
-    mlp1 = MLP1('mlp1', path)
+    mlp1 = MLP('mlp', path)
 
     if train_new_model:
         # Build model and compile
@@ -87,10 +89,10 @@ if __name__ == "__main__":
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')
     parser.add_argument(
-        '--batch', type=int, default=DEFAULT_BS,
+        '-bs', '--batch', type=int, default=DEFAULT_BS,
         help='Batch size.')
     parser.add_argument(
-        '--epochs', type=int, default=DEFAULT_EPOCHS,
+        '-ep', '--epochs', type=int, default=DEFAULT_EPOCHS,
         help='Number of epochs.')
     parser.add_argument(
         '-aug', '--augment_dataset', action='store_true', default=False,

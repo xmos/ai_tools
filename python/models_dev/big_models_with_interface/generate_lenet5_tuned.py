@@ -12,6 +12,8 @@ import model_interface as mi
 import tflite_utils
 import model_tools as mt
 
+from generate_lenet5 import LeNet5
+
 
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'lenet5_tuned').resolve()
 DEFAULT_EPOCHS = 10
@@ -19,7 +21,7 @@ DEFAULT_BS = 64
 DEFAULT_AUG = False
 
 
-class LeNet5(mi.KerasModel):
+class LeNet5Tuned(LeNet5):
 
     def build(self):
         super().build()
@@ -57,53 +59,26 @@ class LeNet5(mi.KerasModel):
         # Show summary
         self.core_model.summary()
 
-    # For training
-    def prep_data(self, use_aug=False):
-        self.data = mt.prepare_MNIST(use_aug)
-        [print(k, v.shape) for k, v in self.data.items()]
-
-    # For exports
-    def gen_test_data(self, use_aug=False):
-        if not self.data:
-            self.prep_data(use_aug)
-        self.data['export_data'] = self.data['x_test'][:10]
-        self.data['quant'] = self.data['x_train'][:10]
-
-    # Training
-    def train(self, *, batch_size, **kwargs):
-        # Image generator, # TODO: make this be optional with use_aug arg
-        aug = tf.keras.preprocessing.image.ImageDataGenerator(
-            rotation_range=20, zoom_range=0.15,
-            width_shift_range=0.2, height_shift_range=0.2, shear_range=0.15,
-            horizontal_flip=True, fill_mode="nearest")
-        # Train the network
-        history = self.core_model.fit_generator(
-            aug.flow(
-                self.data['x_train'], self.data['y_train'], batch_size=batch_size),
-            validation_data=(self.data['x_test'], self.data['y_test']),
-            steps_per_epoch=len(self.data['x_train']) // batch_size,
-            **kwargs)
-
 
 def main(path=DEFAULT_PATH, train_new_model=False,
          batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
          use_aug=DEFAULT_AUG):
-    lenet = LeNet5('lenet5_tuned', path)
+    lenet5_tuned = LeNet5Tuned('lenet5_tuned', path)
     if train_new_model:
         # Build model and compile
-        lenet.build()
+        lenet5_tuned.build()
         # Prepare training data
-        lenet.prep_data(use_aug)
+        lenet5_tuned.prep_data(use_aug)
         # Train model
-        lenet.train(batch_size=batch_size, epochs=epochs)
-        lenet.save_core_model()
+        lenet5_tuned.train(batch_size=batch_size, epochs=epochs)
+        lenet5_tuned.save_core_model()
     else:
         # Recover previous state from file system
-        lenet.load_core_model()
+        lenet5_tuned.load_core_model()
     # Generate test data
-    lenet.gen_test_data(use_aug)
+    lenet5_tuned.gen_test_data(use_aug)
     # Populate converters
-    lenet.populate_converters()
+    lenet5_tuned.populate_converters()
 
 
 if __name__ == "__main__":
@@ -122,10 +97,10 @@ if __name__ == "__main__":
         '-aug', '--augment_dataset', action='store_true', default=False,
         help='Create a dataset with elastic transformations.')
     parser.add_argument(
-        '--batch', type=int, default=DEFAULT_BS,
+        '-bs', '--batch', type=int, default=DEFAULT_BS,
         help='Batch size.')
     parser.add_argument(
-        '--epochs', type=int, default=DEFAULT_EPOCHS,
+        '-ep', '--epochs', type=int, default=DEFAULT_EPOCHS,
         help='Number of epochs.')
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,

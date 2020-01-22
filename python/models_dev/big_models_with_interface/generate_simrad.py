@@ -46,6 +46,8 @@ class Simrad(mi.KerasModel):
     # For training
     def prep_data(self, use_aug=False):
         self.data = mt.prepare_MNIST(use_aug, simrad=True)
+        for k, v in self.data.items():
+            logging.debug(f"Prepped data[{k}] with shape: {v.shape}")
 
     # For exports
     def gen_test_data(self, use_aug=False):
@@ -67,9 +69,13 @@ class Simrad(mi.KerasModel):
             steps_per_epoch=len(self.data['x_train']) // batch_size,
             **kwargs)
         if save_history:  # TODO: generalize this idea to KerasModel
+            logger = logging.getLogger()
+            old_log_level = logger.level  # deal with matplotlib spam
+            logger.setLevel(logging.INFO)
             mt.plot_history(
                 history, title='Simrad metrics', save=True,
                 path=str(self.models['models_dir']/self.name))
+            logger.setLevel(old_log_level)
 
 
 def main(path=DEFAULT_PATH, train_new_model=False,
@@ -108,10 +114,10 @@ if __name__ == "__main__":
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')
     parser.add_argument(
-        '--batch', type=int, default=DEFAULT_BS,
+        '-bs', '--batch', type=int, default=DEFAULT_BS,
         help='Batch size.')
     parser.add_argument(
-        '--epochs', type=int, default=DEFAULT_EPOCHS,
+        '-ep', '--epochs', type=int, default=DEFAULT_EPOCHS,
         help='Number of epochs.')
     parser.add_argument(
         '-aug', '--augment_dataset', action='store_true', default=False,

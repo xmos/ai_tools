@@ -15,13 +15,13 @@ import model_interface as mi
 import tflite_utils
 import model_tools as mt
 
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'simrad_tuned_a').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'simrad_tuned').resolve()
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
 DEFAULT_AUG = False
 
 
-class SimradTunedA(Simrad):
+class SimradTuned(Simrad):
     def build(self):
         self._prep_backend()
         # Building
@@ -50,7 +50,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
          batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
          use_aug=DEFAULT_AUG):
 
-    simrad = SimradTunedA('simrad_tuned_a', path)
+    simrad = SimradTuned('simrad_tuned', path)
 
     if train_new_model:
         # Build model and compile
@@ -82,10 +82,10 @@ if __name__ == "__main__":
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')
     parser.add_argument(
-        '--batch', type=int, default=DEFAULT_BS,
+        '-bs', '--batch', type=int, default=DEFAULT_BS,
         help='Batch size.')
     parser.add_argument(
-        '--epochs', type=int, default=DEFAULT_EPOCHS,
+        '-ep', '--epochs', type=int, default=DEFAULT_EPOCHS,
         help='Number of epochs.')
     parser.add_argument(
         '-aug', '--augment_dataset', action='store_true', default=False,

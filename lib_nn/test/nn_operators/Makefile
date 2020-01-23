@@ -6,10 +6,10 @@ TARGET = XU316-1024-QF60-C20
 # The APP_NAME variable determines the name of the final .xe file. It should
 # not include the .xe postfix. If left blank the name will default to
 # the project name
-APP_NAME = nn_operator_test
+APP_NAME = nn_operators_test
 
 # The USED_MODULES variable lists other modules used by the application.
-USED_MODULES = lib_nn_operator lib_dsp Unity(>=2.4.3)
+USED_MODULES = lib_nn Unity(>=2.4.3)
 
 # The flags passed to xcc when building the application
 # You can also set the following to override flags for a particular language:

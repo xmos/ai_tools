@@ -39,7 +39,7 @@ def build(bld):
     bld.program(**params)
 
 
-SHARED_FLAGS = ['-Os', '-g', '-Wall', '-report']
+SHARED_FLAGS = ['-Os', '-g', '-Wall', '-report', '-Wno-unused-variable']
 
 
 def D(symbol, value=None, as_string=False):

@@ -89,6 +89,15 @@ void avgpool2d_deep_asm(
     const int32_t C_in);
 
 
+#ifndef USE_ASM_requantize_16_to_8
+#define USE_ASM_requantize_16_to_8    (1)
+#endif
+void requantize_16_to_8_asm(
+    int8_t* y,
+    const int16_t* x,
+    const unsigned n);
+
+
 #endif //__XS3A__
 
 #ifdef __XC__

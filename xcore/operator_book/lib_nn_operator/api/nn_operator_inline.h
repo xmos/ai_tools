@@ -200,6 +200,23 @@ static inline void argmax_16(
 }
 
 
+static inline void requantize_16_to_8(
+    int8_t* y,
+    const int16_t* x,
+    const unsigned n)
+{
+#if defined(__XS3A__) && (USE_ASM_requantize_16_to_8)
+
+    requantize_16_to_8_asm(y, x, n);
+
+#else
+
+    requantize_16_to_8_c(y, x, n);
+
+#endif
+}
+
+
 #ifdef __XC__
 }   //extern "C"
 #endif

@@ -38,6 +38,8 @@ void test_maxpool2d_deep_case4();
 void test_avgpool2d_deep_case1();
 void test_avgpool2d_deep_case2();
 
+void test_requantize_16_to_8_case0();
+void test_requantize_16_to_8_case1();
 
 int main(void)
 {
@@ -99,6 +101,13 @@ int main(void)
   RUN_TEST(test_fc_deepin_shallowout_8_case1_5);
   RUN_TEST(test_fc_deepin_shallowout_8_case2);
   RUN_TEST(test_fc_deepin_shallowout_8_case3);
+  ret_val = UnityEnd();
+  printf("\n\n");
+
+  
+  UnityBegin("src\\test_requantize_16_to_8.xc");
+  RUN_TEST(test_requantize_16_to_8_case0);
+  RUN_TEST(test_requantize_16_to_8_case1);
   ret_val = UnityEnd();
   printf("\n\n");
 

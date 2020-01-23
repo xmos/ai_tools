@@ -74,8 +74,7 @@ void test_conv2d_deepin_deepout_1x1()
     int8_t  WORD_ALIGNED    K[C_out][K_h][K_w][C_in]        = {{{{ 0 }}}};
     int8_t  WORD_ALIGNED    X[X_height][X_width][C_in]      = {{{ 0 }}};
     int32_t WORD_ALIGNED    B[C_out]                        = { 0 };
-    int16_t WORD_ALIGNED    shifts[C_out]                   = { 0 };
-    int16_t WORD_ALIGNED    scales[C_out]                   = { 0 };
+    int16_t WORD_ALIGNED    scales[2][C_out]           = {{ 0 }};
 
 #if TEST_C
     int8_t  WORD_ALIGNED    Y_c[X_height][X_width][C_out]     = {{{ 0 }}};
@@ -192,8 +191,8 @@ void test_conv2d_deepin_deepout_1x1()
                 if( casse->bias.exp != 0)
                     B[cout] += (1 << (cout + casse->bias.exp));
 
-                shifts[cout] = casse->shift.scale * cout + casse->shift.offset;
-                scales[cout] = casse->scale.scale * cout + casse->scale.offset;
+                scales[0][cout] = casse->shift.scale * cout + casse->shift.offset;
+                scales[1][cout] = casse->scale.scale * cout + casse->scale.offset;
             }
 
             //Set kernel
@@ -227,11 +226,8 @@ void test_conv2d_deepin_deepout_1x1()
             }
             
             conv2d_dido_boggle_K((int8_t*) K, K_h, K_w, C_in, C_out);
-
-
             conv2d_boggle_B(B, C_out);
-
-            
+            conv2d_boggle_shift_scale((int16_t*) scales, C_out, NULL);
             conv2d_deepin_deepout_init(&params, &init_params, &region_params, (int8_t*) K, (data16_t* unsafe) B);
 
 
@@ -243,7 +239,7 @@ void test_conv2d_deepin_deepout_1x1()
             memset(Y_c, 0xCC, sizeof(Y_c));
             for(int block = 0; block < params.block_count; block++){
                 const nn_conv2d_dido_block_params_t* unsafe blk = &params.blocks[block];
-                conv2d_deepin_deepout_block_c(  (int8_t*)Y_c,     &params, blk, (int8_t*)X, (int8_t*)K, shifts, scales);
+                conv2d_deepin_deepout_block_c(  (int8_t*)Y_c,     &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
     #endif
 
@@ -251,7 +247,7 @@ void test_conv2d_deepin_deepout_1x1()
             memset(Y_asm, 0xCC, sizeof(Y_asm));
             for(int block = 0; block < params.block_count; block++){
                 const nn_conv2d_dido_block_params_t* unsafe blk = &params.blocks[block];
-                conv2d_deepin_deepout_block_asm((int8_t*)Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, shifts, scales);
+                conv2d_deepin_deepout_block_asm((int8_t*)Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
     #endif
 
@@ -366,8 +362,7 @@ void test_conv2d_deepin_deepout_1x1_chans()
     int8_t  WORD_ALIGNED    K[C_out][K_h][K_w][C_in]        = {{{{ 0 }}}};
     int8_t  WORD_ALIGNED    X[X_height][X_width][C_in]      = {{{ 0 }}};
     int32_t WORD_ALIGNED    B[C_out]                        = { 0 };
-    int16_t WORD_ALIGNED    shifts[C_out]                   = { 0 };
-    int16_t WORD_ALIGNED    scales[C_out]                   = { 0 };
+    int16_t WORD_ALIGNED    scales[2][C_out]           = {{ 0 }};
 
 #if TEST_C
     int8_t  WORD_ALIGNED    Y_c[X_height][X_width][C_out]     = {{{ 0 }}};
@@ -445,7 +440,7 @@ void test_conv2d_deepin_deepout_1x1_chans()
         // {   { 0x00,  0x01},     { 0x00000000,  0x00000000,  0},    { 0x00,  0x00},     { 0x00, 0x00},     { 0x0000,  0x4000},    { 0x00,   0x00,   0}  },   //
     };
 
-    const unsigned START_ON_CASE = 0;
+    const unsigned START_ON_CASE = 3;
     const unsigned STOP_ON_CASE = (unsigned) -1;
 
     const unsigned casse_count = sizeof(casses) / sizeof(case1x1_params_t);
@@ -470,8 +465,8 @@ void test_conv2d_deepin_deepout_1x1_chans()
                 if( casse->bias.exp != 0)
                     B[cout] += (1 << (cout/4 + casse->bias.exp));
 
-                shifts[cout] = casse->shift.scale * cout/4 + casse->shift.offset;
-                scales[cout] = casse->scale.scale * cout + casse->scale.offset;
+                scales[0][cout] = casse->shift.scale * cout/4 + casse->shift.offset;
+                scales[1][cout] = casse->scale.scale * cout + casse->scale.offset;
             }
 
             //Set kernel
@@ -505,11 +500,8 @@ void test_conv2d_deepin_deepout_1x1_chans()
             }
             
             conv2d_dido_boggle_K((int8_t*) K, K_h, K_w, C_in, C_out);
-
-
             conv2d_boggle_B(B, C_out);
-
-
+            conv2d_boggle_shift_scale((int16_t*) scales, C_out, NULL);
             conv2d_deepin_deepout_init(&params, &init_params, &region_params, (int8_t*) K, (data16_t* unsafe) B);
 
 
@@ -521,7 +513,7 @@ void test_conv2d_deepin_deepout_1x1_chans()
             memset(Y_c, 0xCC, sizeof(Y_c));
             for(int block = 0; block < params.block_count; block++){
                 const nn_conv2d_dido_block_params_t* unsafe blk = &params.blocks[block];
-                conv2d_deepin_deepout_block_c(  (int8_t*)Y_c,     &params, blk, (int8_t*)X, (int8_t*)K, shifts, scales);
+                conv2d_deepin_deepout_block_c(  (int8_t*)Y_c,     &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
     #endif
 
@@ -529,7 +521,7 @@ void test_conv2d_deepin_deepout_1x1_chans()
             memset(Y_asm, 0xCC, sizeof(Y_asm));
             for(int block = 0; block < params.block_count; block++){
                 const nn_conv2d_dido_block_params_t* unsafe blk = &params.blocks[block];
-                conv2d_deepin_deepout_block_asm((int8_t*)Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, shifts, scales);
+                conv2d_deepin_deepout_block_asm((int8_t*)Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
     #endif
 
@@ -638,8 +630,7 @@ void test_conv2d_deepin_deepout_1x1_xsize()
     int8_t  WORD_ALIGNED    K[C_out][K_h][K_w][C_in]            = {{{{ 0 }}}};
     int8_t  WORD_ALIGNED    X[X_height_max][X_width_max][C_in]  = {{{ 0 }}};
     int32_t WORD_ALIGNED    B[C_out]                            = { 0 };
-    int16_t WORD_ALIGNED    shifts[C_out]                       = { 0 };
-    int16_t WORD_ALIGNED    scales[C_out]                       = { 0 };
+    int16_t WORD_ALIGNED    scales[2][C_out]           = {{ 0 }};
 
 #if TEST_C
     int8_t  WORD_ALIGNED    Y_c[X_height_max][X_width_max][C_out]     = {{{ 0 }}};
@@ -794,8 +785,8 @@ void test_conv2d_deepin_deepout_1x1_xsize()
                 
                 B[cout]      = casse->bias.scale * cout + casse->bias.offset;
 
-                shifts[cout] = casse->shift.scale * cout + casse->shift.offset;
-                scales[cout] = casse->scale.scale * cout + casse->scale.offset;
+                scales[0][cout] = casse->shift.scale * cout + casse->shift.offset;
+                scales[1][cout] = casse->scale.scale * cout + casse->scale.offset;
             }
 
             //Set kernel
@@ -817,11 +808,8 @@ void test_conv2d_deepin_deepout_1x1_xsize()
             }
             
             conv2d_dido_boggle_K((int8_t*) K, K_h, K_w, C_in, C_out);
-
-
             conv2d_boggle_B(B, C_out);
-
-            
+            conv2d_boggle_shift_scale((int16_t*) scales, C_out, NULL);
             conv2d_deepin_deepout_init(&params, &init_params, NULL, (int8_t*) K, (data16_t* unsafe) B);
 
 
@@ -833,7 +821,7 @@ void test_conv2d_deepin_deepout_1x1_xsize()
             memset(Y_c, OxXX, sizeof(Y_c));
             for(int block = 0; block < params.block_count; block++){
                 const nn_conv2d_dido_block_params_t* unsafe blk = &params.blocks[block];
-                conv2d_deepin_deepout_block_c(  (int8_t*)Y_c,     &params, blk, (int8_t*)X, (int8_t*)K, shifts, scales);
+                conv2d_deepin_deepout_block_c(  (int8_t*)Y_c,     &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
 #endif
 
@@ -841,7 +829,7 @@ void test_conv2d_deepin_deepout_1x1_xsize()
             memset(Y_asm, OxXX, sizeof(Y_asm));
             for(int block = 0; block < params.block_count; block++){
                 const nn_conv2d_dido_block_params_t* unsafe blk = &params.blocks[block];
-                conv2d_deepin_deepout_block_asm((int8_t*)Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, shifts, scales);
+                conv2d_deepin_deepout_block_asm((int8_t*)Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
 #endif
 
@@ -959,8 +947,7 @@ void test_conv2d_deepin_deepout_3x3()
     int8_t  WORD_ALIGNED    K[C_out][K_h][K_w][C_in]        = {{{{ 0 }}}};
     int8_t  WORD_ALIGNED    X[X_height][X_width][C_in]      = {{{ 0 }}};
     int32_t WORD_ALIGNED    B[C_out]                        = { 0 };
-    int16_t WORD_ALIGNED    shifts[C_out]                   = { 0 };
-    int16_t WORD_ALIGNED    scales[C_out]                   = { 0 };
+    int16_t WORD_ALIGNED    scales[2][C_out]           = {{ 0 }};
 
 #if TEST_C
     int8_t  WORD_ALIGNED    Y_c[X_height][X_width][C_out]   = {{{ 0 }}};
@@ -1120,8 +1107,8 @@ void test_conv2d_deepin_deepout_3x3()
             //Set biases, shifts and scales
             for(int cout = 0; cout < C_out; cout++){
                 B[cout]      = casse->bias;
-                shifts[cout] = casse->shift;
-                scales[cout] = 0x4000;
+                scales[0][cout] = casse->shift;
+                scales[1][cout] = 0x4000;
             }
 
 #if DEBUG_ON
@@ -1157,11 +1144,8 @@ void test_conv2d_deepin_deepout_3x3()
 #endif
             
             conv2d_dido_boggle_K((int8_t*) K, K_h, K_w, C_in, C_out);
-
-
             conv2d_boggle_B(B, C_out);
-
-            
+            conv2d_boggle_shift_scale((int16_t*) scales, C_out, NULL);
             conv2d_deepin_deepout_init(&params, &init_params, NULL, (int8_t*) K, (data16_t* unsafe) B);
 
 
@@ -1174,7 +1158,7 @@ void test_conv2d_deepin_deepout_3x3()
             for(int block = 0; block < params.block_count; block++){
                 const nn_conv2d_dido_block_params_t* unsafe blk = &params.blocks[block];
                 int8_t* Y_targ = (init_params.pad_mode == PADDING_SAME)? (int8_t*)Y_c : (int8_t*) &Y_c[X_height>>1][X_width>>1];
-                conv2d_deepin_deepout_block_c(  Y_targ,     &params, blk, (int8_t*)X, (int8_t*)K, shifts, scales);
+                conv2d_deepin_deepout_block_c(  Y_targ,     &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
 #endif
 
@@ -1183,7 +1167,7 @@ void test_conv2d_deepin_deepout_3x3()
             for(int block = 0; block < params.block_count; block++){
                 const nn_conv2d_dido_block_params_t* unsafe blk = &params.blocks[block];
                 int8_t* Y_targ = (init_params.pad_mode == PADDING_SAME)? (int8_t*)Y_asm : (int8_t*) &Y_asm[X_height>>1][X_width>>1];
-                conv2d_deepin_deepout_block_asm(Y_targ, &params, blk, (int8_t*)X, (int8_t*)K, shifts, scales);
+                conv2d_deepin_deepout_block_asm(Y_targ, &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
 #endif
 
@@ -1325,8 +1309,7 @@ void test_conv2d_deepin_deepout_regions()
     int8_t  WORD_ALIGNED    K[C_out][K_h][K_w][C_in]        = {{{{ 0 }}}};
     int8_t  WORD_ALIGNED    X[X_height][X_width][C_in]      = {{{ 0 }}};
     int32_t WORD_ALIGNED    B[C_out]                        = { 0 };
-    int16_t WORD_ALIGNED    shifts[C_out]                   = { 0 };
-    int16_t WORD_ALIGNED    scales[C_out]                   = { 0 };
+    int16_t WORD_ALIGNED    scales[2][C_out]           = {{ 0 }};
 
 #if TEST_C
     int8_t  WORD_ALIGNED    Y_c[X_height][X_width][C_out]   = {{{ 0 }}};
@@ -1389,8 +1372,8 @@ void test_conv2d_deepin_deepout_regions()
         //Set biases, shifts and scales
         for(int cout = 0; cout < C_out; cout++){
             B[cout]      = 0x0100;
-            shifts[cout] = 0;
-            scales[cout] = 0x4000;
+            scales[0][cout] = 0;
+            scales[1][cout] = 0x4000;
         }
 
         //Set kernel
@@ -1401,6 +1384,7 @@ void test_conv2d_deepin_deepout_regions()
         //No need to boggle K, all values are identical.
         // conv2d_dido_boggle_K((int8_t*) K, K_h, K_w, C_in, C_out);
         conv2d_boggle_B(B, C_out);
+        conv2d_boggle_shift_scale((int16_t*) scales, C_out, NULL);
         conv2d_deepin_deepout_init(&params, &init_params, &reg, (int8_t*) K, (data16_t* unsafe) B);
 
         //Perform the actual convolution(s)   (run both C and ASM before checking either)
@@ -1410,7 +1394,7 @@ void test_conv2d_deepin_deepout_regions()
         for(int block = 0; block < params.block_count; block++){
             // PRINTF("\t\t\tblock %d...\n", block);
             const nn_conv2d_dido_block_params_t* unsafe blk = &params.blocks[block];
-            conv2d_deepin_deepout_block_c( (int8_t*) Y_c, &params, blk, (int8_t*)X, (int8_t*)K, shifts, scales);
+            conv2d_deepin_deepout_block_c( (int8_t*) Y_c, &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
         }
 #endif
 
@@ -1420,7 +1404,7 @@ void test_conv2d_deepin_deepout_regions()
         for(int block = 0; block < params.block_count; block++){
             // PRINTF("\t\t\tblock %d...\n", block);
             const nn_conv2d_dido_block_params_t* unsafe blk = &params.blocks[block];
-            conv2d_deepin_deepout_block_asm( (int8_t*) Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, shifts, scales);
+            conv2d_deepin_deepout_block_asm( (int8_t*) Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
         }
 #endif
 

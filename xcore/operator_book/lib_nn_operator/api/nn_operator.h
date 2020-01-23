@@ -178,9 +178,7 @@ lower (respectively) 16 bits of the 32-bit bias for output channel `(16*i + j)`.
     \endcode
  *  Note that the fifth dimension of `K` is reversed.
  *
- * The shape of `shifts` is (C_out), with data layed out in standard form.
- * 
- * The shape of `scales` is (C_out), with data layed out in standard form.
+ * The shape of the `scales` tensor is (C_out // 16, 2, 16). The first index is the channel group, second indicates shift (0) or scale (1), and the third is the channel offset within the channel group.
  * 
  * where `X_height`, `X_width`, `C_in`, `C_out`, `K_h` and `K_w` are from the parameters supplied to
  * `conv2d_deepin_deepout_init()`.
@@ -190,7 +188,6 @@ lower (respectively) 16 bits of the 32-bit bias for output channel `(16*i + j)`.
  * \param params    Pointer to `nn_conv2d_dido_params_t` initialized with `conv2d_deepin_deepout_init()`
  * \param X         Pointer to beginning of input data tensor
  * \param K         Pointer to beginning of kernel tensor
- * \param shifts    Pointer to beginning of shifts tensor
  * \param scales    Pointer to beginning of scales tensor
  */
 static inline void conv2d_deepin_deepout(
@@ -198,7 +195,6 @@ static inline void conv2d_deepin_deepout(
     const nn_conv2d_dido_params_t* params,
     const int8_t* X,
     const int8_t* K,
-    const int16_t* shifts,
     const int16_t* scales);
 
 
@@ -258,9 +254,7 @@ static inline void conv2d_deepin_deepout(
  * The shape of `B` is (C_out // 16, 2, 16), and is layed out in Bias Tensor Layout (Form 1) 
  * as described above.
  *
- * The shape of `shifts` is (C_out), with data layed out in standard form.
- * 
- * The shape of `scales` is (C_out), with data layed out in standard form.
+ * The shape of the `scales` tensor is (C_out // 16, 2, 16). The first index is the channel group, second indicates shift (0) or scale (1), and the third is the channel offset within the channel group.
  * 
  * where `X_height`, `X_width`, `C_in`, `C_out`, `K_h` and `K_w` are from the parameters supplied to
  * `conv2d_shallowin_deepout_init()`.
@@ -271,7 +265,6 @@ static inline void conv2d_deepin_deepout(
  * \param X         Pointer to beginning of input data tensor
  * \param K         Pointer to beginning of kernel tensor
  * \param B         Pointer to beginning of bias tensor
- * \param shifts    Pointer to beginning of shifts tensor
  * \param scales    Pointer to beginning of scales tensor
  */
 static inline void conv2d_shallowin_deepout(
@@ -279,7 +272,6 @@ static inline void conv2d_shallowin_deepout(
     const nn_conv2d_sido_params_t* params,
     const int8_t* X,
     const int8_t* K,
-    const int16_t* shifts,
     const int16_t* scales);
 
     
@@ -568,6 +560,25 @@ void conv2d_dido_boggle_K(
     const unsigned K_w,
     const unsigned C_in,
     const unsigned C_out);
+    
+
+/**
+ * Re-layout the shift-scale tensor to the format expected by the convolution kernels.
+ * 
+ * The input tensor should contain all of the shifts followed by all of the scales, in
+ * channel order. 
+ *
+ * A scratch buffer parameter may optionally be supplied (same size as `shiftscales`).
+ * If `scratch` is `NULL`, a buffer will be `malloc`ed (and `free`ed).
+ *
+ * \param shiftscales   The shift/scale tensor. Updated in-place
+ * \param C_out         The number of output channels
+ * \param scratch       Optional scratch buffer.
+ */
+void conv2d_boggle_shift_scale(
+    int16_t* shiftscales,
+    const unsigned C_out,
+    int16_t* scratch);
 
 
 /**

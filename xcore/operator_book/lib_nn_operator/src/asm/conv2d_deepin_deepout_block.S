@@ -9,7 +9,6 @@ void conv2d_deepin_deepout_block_asm(
     const nn_conv2d_dido_block_params_t* block,
     const int8_t* X,
     const int8_t* K,
-    const int16_t* shifts,
     const int16_t* scales);
 */
 
@@ -34,8 +33,7 @@ void conv2d_deepin_deepout_block_asm(
 #define arg_X                   r3
 
 #define STACK_K_START           (NSTACKWORDS+1)
-#define STACK_SHIFTS_START      (NSTACKWORDS+2)
-#define STACK_SCALES_START      (NSTACKWORDS+3)
+#define STACK_SCALES_START      (NSTACKWORDS+2)
 
 #define STACK_R4_R5_DBL         (1)
 #define STACK_R6_R7_DBL         (2)
@@ -45,8 +43,7 @@ void conv2d_deepin_deepout_block_asm(
 #define STACK_X_START           (8)
 
 #define STACK_B_NEXT            (9)
-#define STACK_SHIFTS_NEXT       (10)
-#define STACK_SCALES_NEXT       (11)
+#define STACK_SCALES_NEXT       (10)
 
 #define STACK_OUT_COLS          (12)
 #define STACK_COUT_GRPS         (13)
@@ -151,13 +148,11 @@ FUNCTION_NAME:
         {                                                   ;   ldw r11, sp[STACK_COUT_GRPS]                    }
         {                                                   ;   stw r11, sp[STACK_COUT_GRPS_LEFT]               }
 
-        //Reset biases, shifts and scales
+        //Reset biases and scales
         {                                                   ;   ldw r2, sp[STACK_B_START]                       }
-        {                                                   ;   ldw r3, sp[STACK_SHIFTS_START]                  }
         {                                                   ;   ldw r4, sp[STACK_SCALES_START]                  }
         
         {                                                   ;   stw r2, sp[STACK_B_NEXT]                        }
-        {                                                   ;   stw r3, sp[STACK_SHIFTS_NEXT]                   }
         {                                                   ;   stw r4, sp[STACK_SCALES_NEXT]                   }
 
         .L_cout_grp_loop:
@@ -234,13 +229,11 @@ FUNCTION_NAME:
             #undef patch_x_row_incr
 
             //Set accumulator mode to 16-bit and saturate accumulators to 16 bits
-            {   shl r11, r10, 3                                 ;   ldw r9, sp[STACK_SHIFTS_NEXT]                   }
-            {                                                   ;   vsetc r11                                       }
-            {   add r9, r9, r10                                 ;   vlsat r9[0]                                     }
-            {                                                   ;   stw r9, sp[STACK_SHIFTS_NEXT]                   }
+            {   shl r11, r10, 3                                 ;   ldw r8, sp[STACK_SCALES_NEXT]                   }
+            {   mkmsk r9, 16                                    ;   vsetc r11                                       }
+            {   add r8, r8, r10                                 ;   vlsat r8[0]                                     }
 
             //Apply scales
-            {   mkmsk r9, 16                                    ;   ldw r8, sp[STACK_SCALES_NEXT]                   }
             {   add r8, r8, r10                                 ;   vlmul r8[0]                                     }
             {   ldc r10, 16                                     ;   stw r8, sp[STACK_SCALES_NEXT]                   }
 

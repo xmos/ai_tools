@@ -20,7 +20,6 @@ void conv2d_deepin_deepout_block_c(
     const nn_conv2d_dido_block_params_t* block,
     const int8_t* X,
     const int8_t* K,
-    const int16_t* shifts,
     const int16_t* scales);
 
 
@@ -30,7 +29,6 @@ void conv2d_shallowin_deepout_block_c(
     const nn_conv2d_sido_block_params_t* block,
     const int8_t* X,
     const int8_t* K,
-    const int16_t* shifts,
     const int16_t* scales);
 
 

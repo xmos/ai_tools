@@ -178,6 +178,56 @@ data16_t* conv2d_boggle_B(
     return (data16_t*) B;
 }
 
+/**
+ * Re-layout the shift-scale tensor to the format expected by the convolution kernels.
+ * 
+ * The input tensor should contain all of the shifts followed by all of the scales, in
+ * channel order. 
+ *
+ * A scratch buffer parameter may optionally be supplied (same size as `shiftscales`).
+ * If `scratch` is `NULL`, a buffer will be `malloc`ed (and `free`ed).
+ *
+ * \param shiftscales   The shift/scale tensor. Updated in-place
+ * \param C_out         The number of output channels
+ * \param scratch       Optional scratch buffer.
+ */
+void conv2d_boggle_shift_scale(
+    int16_t* shiftscales,
+    const unsigned C_out,
+    int16_t* scratch)
+{
+    assert((C_out & ((1 << VPU_INT8_ACC_PERIOD_LOG2)-1)) == 0);
+
+    const unsigned C_out_groups = C_out >> VPU_INT8_ACC_PERIOD_LOG2;
+
+    unsigned malloced = 0;
+    if(scratch == NULL){
+        scratch = malloc(2 * C_out * sizeof(int16_t));
+
+        if(scratch == NULL){
+            printf("Failed to allocate scratch buffer.\n");
+            __builtin_trap();
+        }
+
+        malloced = 1;
+    }
+    
+    memcpy(scratch, shiftscales, 2*C_out*sizeof(int16_t));
+
+    for(int cog = 0; cog < C_out_groups; cog++){
+        const unsigned out_shifts = cog * 2*VPU_INT8_ACC_PERIOD;
+        const unsigned out_scales = out_shifts + VPU_INT8_ACC_PERIOD;
+        const unsigned in_shifts = cog * VPU_INT8_ACC_PERIOD;
+        const unsigned in_scales = in_shifts + C_out;
+
+        memcpy(&shiftscales[out_shifts],&scratch[in_shifts], VPU_INT8_ACC_PERIOD * sizeof(int16_t));
+        memcpy(&shiftscales[out_scales],&scratch[in_scales], VPU_INT8_ACC_PERIOD * sizeof(int16_t)); 
+    }
+
+    if(malloced)
+        free(scratch);
+}
+
 
 /**
     Transform the kernel tensor K from the standard layout to the boggled layout
@@ -1275,7 +1325,6 @@ void conv2d_deepin_deepout_block_c(
     const nn_conv2d_dido_block_params_t* block,
     const int8_t* X,
     const int8_t* K,
-    const int16_t* shifts,
     const int16_t* scales)
 {
 
@@ -1293,7 +1342,6 @@ void conv2d_deepin_deepout_block_c(
 
             const int8_t* L = K;
             const data16_t* D = B;
-            const int16_t* hifts = shifts;
             const int16_t* cales = scales;
             
             for(unsigned cout_groups = params->C_out_groups; cout_groups > 0; cout_groups--){
@@ -1337,16 +1385,15 @@ void conv2d_deepin_deepout_block_c(
                 //Do the shifting and scaling
                 for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++){
 
-                    int16_t res16 = vlsat_single_s16(patch_acc[k], hifts[k]);
+                    int16_t res16 = vlsat_single_s16(patch_acc[k], cales[k]);
 
-                    res16 = vlmul_single_s16(res16, cales[k]);
+                    res16 = vlmul_single_s16(res16, cales[k+VPU_INT8_ACC_PERIOD]);
 
                     int8_t res8 = vdepth8_single_s16(res16);
 
                     Y[k] = res8;
                 }
-                hifts = &hifts[VPU_INT8_ACC_PERIOD];
-                cales = &cales[VPU_INT8_ACC_PERIOD];
+                cales = &cales[2*VPU_INT8_ACC_PERIOD];
 
 
                 Y = &Y[VPU_INT8_ACC_PERIOD];
@@ -1383,7 +1430,6 @@ void conv2d_shallowin_deepout_block_c(
     const nn_conv2d_sido_block_params_t* block,
     const int8_t* X,
     const int8_t* K,
-    const int16_t* shifts,
     const int16_t* scales)
 {
     X = &X[block->init.start_offset.X];
@@ -1400,7 +1446,6 @@ void conv2d_shallowin_deepout_block_c(
 
             const int8_t* L = K;
             const data16_t* D = B;
-            const int16_t* hifts = shifts;
             const int16_t* cales = scales;
             
             for(unsigned cout_groups = params->C_out_groups; cout_groups > 0; cout_groups--){
@@ -1472,16 +1517,15 @@ void conv2d_shallowin_deepout_block_c(
                 //Do the shifting and scaling
                 for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++){
 
-                    int16_t res16 = vlsat_single_s16(patch_acc[k], hifts[k]);
+                    int16_t res16 = vlsat_single_s16(patch_acc[k], cales[k]);
 
-                    res16 = vlmul_single_s16(res16, cales[k]);
+                    res16 = vlmul_single_s16(res16, cales[k+VPU_INT8_ACC_PERIOD]);
 
                     int8_t res8 = vdepth8_single_s16(res16);
 
                     Y[k] = res8;
                 }
-                hifts = &hifts[VPU_INT8_ACC_PERIOD];
-                cales = &cales[VPU_INT8_ACC_PERIOD];
+                cales = &cales[2*VPU_INT8_ACC_PERIOD];
 
                 //Move Y pointer to the next set of output channels (or the next output pixel)
                 Y = &Y[VPU_INT8_ACC_PERIOD];

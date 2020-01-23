@@ -1,5 +1,6 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import examples_common as common
+import sys
 import os
 import logging
 import pathlib
@@ -12,6 +13,8 @@ import tflite2xcore_conv as xcore_conv
 import tflite_visualize
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 from xcore_model import TensorType
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'model_development')))
+import model_tools as mt
 __version__ = '1.6.0'
 __author__ = 'Luis Mata'
 
@@ -137,7 +140,7 @@ class Model(ABC):
         assert self.core_model, "core model has not been initialized"
         assert 'quant' in self.data, "representative dataset has not been prepared"
 
-    def to_tf_stripped(self):
+    def to_tf_stripped(self, **converter_args):
         '''
         Create converter from original model
         to TensorFlow Lite Float.
@@ -147,14 +150,14 @@ class Model(ABC):
         '''
         assert 'model_quant' in self.models
         model = read_flatbuffer(str(self.models['model_quant']))
-        xcore_conv.strip_model(model)
+        xcore_conv.strip_model(model, **converter_args)
         self.models['model_stripped'] = self.models['models_dir'] / "model_stripped.tflite"
         write_flatbuffer(model, str(self.models['model_stripped']))
 
         if True:  # visualize:
             self._save_visualization('model_stripped')
 
-    def to_tf_xcore(self):
+    def to_tf_xcore(self, **converter_args):
         '''
         Create converter from original model
         to TensorFlow Lite Float.
@@ -165,7 +168,8 @@ class Model(ABC):
         assert 'model_stripped' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
         xcore_conv.main(str(self.models['model_stripped']),
-                        str(self.models['model_xcore']))
+                        str(self.models['model_xcore']),
+                        **converter_args)
 
         if True:  # visualize:
             self._save_visualization('model_xcore')
@@ -292,12 +296,23 @@ class KerasModel(Model):
     def output_shape(self):
         return self.core_model.output_shape[1:]
 
-    def train(self, **kwargs):
+    def train(self, save_history=False, **kwargs):
         assert self.data
-        self.core_model.fit(
+        self.history = self.core_model.fit(
             self.data['x_train'], self.data['y_train'],
             validation_data=(self.data['x_test'], self.data['y_test']),
             **kwargs)
+        if save_history:
+            self.save_training_history()
+
+    def save_training_history(self): # TODO: generalize this idea to KerasModel
+        logger = logging.getLogger()
+        old_log_level = logger.level  # deal with matplotlib spam
+        logger.setLevel(logging.INFO)
+        mt.plot_history(
+            self.history, title=self.name+' metrics',
+            path=self.models['models_dir']/(self.name+'_history.png'))
+        logger.setLevel(old_log_level)
 
     @abstractmethod
     def gen_test_data(self):

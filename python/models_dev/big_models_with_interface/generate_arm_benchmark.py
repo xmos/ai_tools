@@ -15,8 +15,8 @@ import tflite_utils
 import model_tools as mt
 
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'arm_benchmark').resolve()
-DEFAULT_EPOCHS = 1  # 30
-DEFAULT_BS = 128  # 32
+DEFAULT_EPOCHS = 30
+DEFAULT_BS = 32
 
 
 # TODO refactor and rename appropriately
@@ -32,6 +32,10 @@ def get_normalized_data():
 
 
 class ArmBenchmark(mi.KerasModel):
+    def __init__(self, *args, is_classifier=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._is_classifier = is_classifier
+
     def build(self):
         self._prep_backend()
         # Building
@@ -65,9 +69,14 @@ class ArmBenchmark(mi.KerasModel):
         # Show summary
         self.core_model.summary()
 
+    def to_tf_xcore(self):
+        super().to_tf_xcore(is_classifier=self._is_classifier)
+
     # For training
     def prep_data(self):
         self.data = get_normalized_data()
+        for k, v in self.data.items():
+            logging.debug(f"Prepped data[{k}] with shape: {v.shape}")
 
     # For exports
     def gen_test_data(self):
@@ -80,7 +89,7 @@ class ArmBenchmark(mi.KerasModel):
         self.data['export_data'] = self.data['x_test'][subset_inds.flatten()]  # pylint: disable=unsubscriptable-object
         self.data['quant'] = self.data['x_train']
 
-    def train(self, *, batch_size, **kwargs):
+    def train(self, *, batch_size, save_history=False, **kwargs):
         # Image generator, # TODO: make this be optional with use_aug arg
         aug = tf.keras.preprocessing.image.ImageDataGenerator(
             featurewise_center=False,  # set input mean to 0 over the dataset
@@ -113,18 +122,21 @@ class ArmBenchmark(mi.KerasModel):
         aug.fit(self.data['x_train'])
 
         # Train the network
-        history = self.core_model.fit_generator(
+        self.history = self.core_model.fit_generator(
             aug.flow(
                 self.data['x_train'], self.data['y_train'], batch_size=batch_size),
             validation_data=(self.data['x_test'], self.data['y_test']),
             steps_per_epoch=len(self.data['x_train']) // batch_size,
             **kwargs)
+        if save_history:
+            self.save_training_history()
 
 
 def main(path=DEFAULT_PATH, train_new_model=False,
-         batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS):
+         batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
+         is_classifier=False):
 
-    arm_benchmark = ArmBenchmark('arm_benchmark', path)
+    arm_benchmark = ArmBenchmark('arm_benchmark', path, is_classifier=is_classifier)
 
     if train_new_model:
         # Build model and compile
@@ -132,7 +144,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
         # Prepare training data
         arm_benchmark.prep_data()
         # Train model
-        arm_benchmark.train(batch_size=batch_size, epochs=epochs)
+        arm_benchmark.train(batch_size=batch_size, epochs=epochs, save_history=True)
         arm_benchmark.save_core_model()
     else:
         # Recover previous state from file system
@@ -156,10 +168,13 @@ if __name__ == "__main__":
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')
     parser.add_argument(
-        '--batch', type=int, default=DEFAULT_BS,
+        '--classifier', action='store_true', default=False,
+        help='Apply classifier optimizations during xcore conversion.')
+    parser.add_argument(
+        '-bs', '--batch', type=int, default=DEFAULT_BS,
         help='Batch size.')
     parser.add_argument(
-        '--epochs', type=int, default=DEFAULT_EPOCHS,
+        '-ep', '--epochs', type=int, default=DEFAULT_EPOCHS,
         help='Number of epochs.')
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
@@ -177,4 +192,5 @@ if __name__ == "__main__":
     main(path=args.path,
          train_new_model=args.train_model,
          batch_size=args.batch,
-         epochs=args.epochs)
+         epochs=args.epochs,
+         is_classifier=args.classifier)

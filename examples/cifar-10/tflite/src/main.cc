@@ -13,6 +13,7 @@
 
 #define TEST_INPUT_SIZE = 32 * 32 * 4
 
+
 tflite::ErrorReporter* error_reporter = nullptr;
 const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
@@ -46,7 +47,7 @@ static void setup() {
 
     // Map the model into a usable data structure. This doesn't involve any
     // copying or parsing, it's a very lightweight operation.
-    model = tflite::GetModel(_________models_arm_benchmark_models_model_xcore_tflite);
+    model = tflite::GetModel(model_xcore_classifier_tflite);
     if (model->version() != TFLITE_SCHEMA_VERSION) {
         error_reporter->Report(
             "Model provided is schema version %d not equal "

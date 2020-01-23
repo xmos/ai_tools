@@ -9,7 +9,8 @@
 
 The following unix command will generate a C source file that contains the TensorFlow Lite model as a char array
 
-    > xxd -i ../../../models/arm_benchmark/models/model_xcore.tflite > rc/cifar10_model.h
+    > cd tflite
+    > xxd -i model_xcore_classifier.tflite > src/cifar10_model.h
 
 ### xCORE
 
@@ -39,9 +40,11 @@ Running
 
 ### xCORE
 
+**This is currently broken**
+
 Building for xCORE
 
-    > cd xcore
+    > cd codegen
     > make TARGET=xcore
 
 Note, `xcore` is the default target.
@@ -54,7 +57,7 @@ Running with the xCORE simulator
 
 Building for x86
 
-    > cd xcore
+    > cd codegen
     > make TARGET=x86
 
 Running

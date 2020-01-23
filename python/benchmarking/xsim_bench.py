@@ -11,14 +11,20 @@ XSIM_TRACE_FILENAME = 'xsim_trace.out'
 XSIM_TRACE_START_COLUMN = 32
 
 KNOWN_OPERATOR_FUNCTIONS = [
-    'fc_deepin_shallowout_lin_asm',
-    'fc_deepin_shallowout_lin_c',
-    'conv2d_deepin_deepout_relu_asm',
-    'conv2d_deepin_deepout_relu_c',
-    'conv2d_shallowin_deepout_relu_asm',
-    'conv2d_shallowin_deepout_relu_c',
+    'fc_deepin_shallowout_16_asm',
+    'fc_deepin_shallowout_16_c',
+    'conv2d_deepin_deepout_init',
+    'conv2d_deepin_deepout_block_asm',
+    'conv2d_deepin_deepout_block_c',
+    'conv2d_shallowin_deepout_init',
+    'conv2d_shallowin_deepout_block_asm',
+    'conv2d_shallowin_deepout_block_c',
     'maxpool2d_deep_asm',
-    'maxpool2d_deep_c'
+    'maxpool2d_deep_c',
+    'avgpool2d_deep_asm',
+    'avgpool2d_deep_c',
+    'argmax_16_asm',
+    'argmax_16_c'
 ]
 
 def load_config(config_filename):

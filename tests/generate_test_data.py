@@ -8,7 +8,7 @@ import shutil
 import subprocess
 
 import directories
-from operator_codes import XCOREOpCodes
+from tflite2xcore import operator_codes
 
 def make_folder_and_arguments(**kwargs):
     folder_fields = []
@@ -44,7 +44,7 @@ if os.path.exists(directories.DATA_DIR):
 #***********************************
 # Conv2D deepin/deepout
 #***********************************
-operator = XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name
+operator = operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name
 generator = os.path.join(directories.GENERATOR_DIR, 'generate_conv2d_deepin_deepout_relu.py')
 test_cases = [
     {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'SAME' },
@@ -62,7 +62,7 @@ generate_test_cases(operator, generator, test_cases)
 #***********************************
 # Conv2D shallowin/deepout
 #***********************************
-operator = XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name
+operator = operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name
 generator = os.path.join(directories.GENERATOR_DIR, 'generate_conv2d_shallowin_deepout_relu.py')
 test_cases = [
     {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'SAME' },
@@ -79,7 +79,7 @@ generate_test_cases(operator, generator, test_cases)
 #***********************************
 # Fully-connected final
 #***********************************
-operator = XCOREOpCodes.XC_fc_deepin_anyout_final.name
+operator = operator_codes.XCOREOpCodes.XC_fc_deepin_anyout_final.name
 generator = os.path.join(directories.GENERATOR_DIR, 'generate_fc_deepin_shallowout.py')
 test_cases = [
     {'in': 32 }
@@ -90,7 +90,7 @@ generate_test_cases(operator, generator, test_cases, train_model=True)
 #***********************************
 # ArgMax
 #***********************************
-operator = XCOREOpCodes.XC_argmax_16.name
+operator = operator_codes.XCOREOpCodes.XC_argmax_16.name
 generator = os.path.join(directories.GENERATOR_DIR, 'generate_argmax_16.py')
 test_cases = [
     {'in': 1 },
@@ -103,7 +103,7 @@ generate_test_cases(operator, generator, test_cases)
 #***********************************
 # AvgPool
 #***********************************
-operator = XCOREOpCodes.XC_avgpool2d_deep.name
+operator = operator_codes.XCOREOpCodes.XC_avgpool2d_deep.name
 generator = os.path.join(directories.GENERATOR_DIR, 'generate_avgpool2d_deep.py')
 test_cases = [
     {'in': 32, 'hi': 2, 'wi': 2, 'st':2, 'po': 2, 'pd': 'VALID' },
@@ -116,7 +116,7 @@ generate_test_cases(operator, generator, test_cases)
 #***********************************
 # MaxPool
 #***********************************
-operator = XCOREOpCodes.XC_maxpool2d_deep.name
+operator = operator_codes.XCOREOpCodes.XC_maxpool2d_deep.name
 generator = os.path.join(directories.GENERATOR_DIR, 'generate_maxpool2d_deep.py')
 test_cases = [
     {'in': 32, 'hi': 2, 'wi': 2, 'st':2, 'po': 2, 'pd': 'VALID' },

@@ -45,14 +45,6 @@ To remove the environment, deactivate and run:
 conda remove -p ai_tools_venv/ --all
 ```
 
-Install pipenv environment (deprecated)
----------------------------------------
-The repo includes a Pipfile in case you run into difficulties with conda.
-
-There have been issues with installing newer linux packages (tensorflow in particular):
-https://github.com/pypa/pipenv/issues/3921
-
-
 VSCode users
 ------------
 If you are using VS Code and conda, consider applying this fix:

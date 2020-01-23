@@ -1,19 +1,66 @@
-# Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
+# Copyright (c) 2018-2020, XMOS Ltd, All rights reserved
+
+from tflite2xcore.utils import (
+    set_all_seeds, set_gpu_usage, set_verbosity, LoggingContext
+)
+
+import os
 import random
 import logging
 from pathlib import Path
-from tensorflow import keras
 import matplotlib.pyplot as plt
 import numpy as np
+import tensorflow as tf
 from scipy.ndimage.interpolation import map_coordinates
 from scipy.ndimage.filters import gaussian_filter
 from tqdm import tqdm
 
-__version__ = '1.1.5'
-__author__ = 'Luis Mata'
-'''
-Tools for model development
-'''
+
+def quantize(arr, scale, zero_point, dtype=np.int8):
+    t = np.round(arr / scale + zero_point)
+    return dtype(np.round(np.clip(t, np.iinfo(dtype).min, np.iinfo(dtype).max)))
+
+
+def quantize_converter(converter, representative_data):
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
+    converter.target_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+    x_train_ds = tf.data.Dataset.from_tensor_slices(representative_data).batch(1)
+
+    def representative_data_gen():
+        for input_value in x_train_ds.take(representative_data.shape[0]):
+            yield [input_value]
+    converter.representative_dataset = representative_data_gen
+
+
+def apply_interpreter_to_examples(interpreter, examples, *, show_progress_step=None, show_pid=False):
+    interpreter_input_ind = interpreter.get_input_details()[0]["index"]
+    interpreter_output_ind = interpreter.get_output_details()[0]["index"]
+    interpreter.allocate_tensors()
+
+    outputs = []
+    for j, x in enumerate(examples):
+        if show_progress_step and (j+1) % show_progress_step == 0:
+            if show_pid:
+                logging.info(f"(PID {os.getpid()}) Evaluated examples {j+1:6d}/{examples.shape[0]}")
+            else:
+                logging.info(f"Evaluated examples {j+1:6d}/{examples.shape[0]}")
+        interpreter.set_tensor(interpreter_input_ind, tf.expand_dims(x, 0))
+        interpreter.invoke()
+        y = interpreter.get_tensor(interpreter_output_ind)
+        outputs.append(y)
+
+    return outputs
+
+
+def generate_dummy_data(height, width, channels, *, batch=100):
+    data = np.float32(
+        np.random.uniform(0, 1, size=(batch, height, width, channels)))
+    subset = np.concatenate(
+        [np.zeros((1, height, width, channels), dtype=np.float32),
+         np.ones((1, height, width, channels), dtype=np.float32),
+         data[:8, :, :, :]],  # pylint: disable=unsubscriptable-object
+        axis=0)
+    return subset, data
 
 
 def shuffle(arr1, arr2):
@@ -113,7 +160,7 @@ def get_mnist(padding=2, categorical=False, val_split=True, flatten=False,
             x_val = _flatten(x_val)
     if not categorical:
         train_labels_count = np.unique(y_train, return_counts=True)
-        logging.debug(f"labels counts: train_labels_count[1]")
+        logging.debug(f"labels counts: {train_labels_count[1]}")
     if val_split:
         return x_train, x_test, x_val, y_train, y_test, y_val
     return x_train, x_test, y_train, y_test
@@ -321,7 +368,7 @@ def expand_dataset(images, labels, distortions, sigma=4.0, alpha=60.0,
     new_labels_batch = np.array(
         [label for label in tqdm(labels) for _ in range(distortions)])
     # Don't forget to return the original images and labels (hence concatenate)
-    x_data =  np.concatenate([np.reshape(images, (-1, sizex, sizey)), new_images_batch])
+    x_data = np.concatenate([np.reshape(images, (-1, sizex, sizey)), new_images_batch])
     y_data = np.concatenate([labels, new_labels_batch])
     return x_data.reshape(x_data.shape[0], sizex, sizey, 1), y_data
 
@@ -329,7 +376,7 @@ def expand_dataset(images, labels, distortions, sigma=4.0, alpha=60.0,
 # Model definition
 def get_model(t, l1=False):
     from tensorflow.keras import layers
-    model = keras.Sequential(name=t)
+    model = tf.keras.Sequential(name=t)
     if t == 'MLP1':
         model.add(layers.Flatten(input_shape=(32, 32, 1), name='input'))
         model.add(layers.Dense(420, activation='tanh', name='dense_1'))
@@ -339,7 +386,7 @@ def get_model(t, l1=False):
         model.add(layers.Dense(416, activation='relu', name='dense_1'))
         model.add(layers.Dense(288, activation='relu', name='dense_2'))
     elif t == 'lenet5':
-        model.add(keras.Input(shape=(32, 32, 1), name='input'))
+        model.add(tf.keras.Input(shape=(32, 32, 1), name='input'))
         model.add(layers.Conv2D(6, (5, 5), strides=1,
                                 activation='tanh', name='conv_1'))
         model.add(layers.AvgPool2D((2, 2), strides=2, name='avg_pool_1'))
@@ -352,7 +399,7 @@ def get_model(t, l1=False):
                                 activation='tanh', name='conv_3'))
         model.add(layers.Dense(84, activation='tanh', name='fc_1'))
     elif t == 'lenet5_tuned':
-        model.add(keras.Input(shape=(32, 32, 1), name='input'))
+        model.add(tf.keras.Input(shape=(32, 32, 1), name='input'))
         model.add(layers.Conv2D(8, (5, 5), strides=1,
                                 activation='relu', name='conv_1'))
         model.add(layers.AvgPool2D((2, 2), strides=2, name='avg_pool_1'))
@@ -365,7 +412,7 @@ def get_model(t, l1=False):
                                 activation='relu', name='conv_3'))
         model.add(layers.Dense(96, activation='relu', name='fc_1'))
     elif t == 'simrad':
-        model.add(keras.Input(shape=(29, 29, 1), name='input'))
+        model.add(tf.keras.Input(shape=(29, 29, 1), name='input'))
         model.add(layers.Conv2D(5, (5, 5), strides=2,
                                 activation='relu', name='conv_1'))
         model.add(layers.Conv2D(50, (5, 5), strides=2,
@@ -373,7 +420,7 @@ def get_model(t, l1=False):
         model.add(layers.Flatten(name='flaten'))
         model.add(layers.Dense(100, activation='relu', name='fc_1'))
     elif t == 'simrad_tuned_a':
-        model.add(keras.Input(shape=(29, 29, 1), name='input'))
+        model.add(tf.keras.Input(shape=(29, 29, 1), name='input'))
         model.add(layers.Conv2D(8, (5, 5), strides=2,
                                 activation='relu', name='conv_1'))
         model.add(layers.Conv2D(64, (5, 5), strides=2,
@@ -381,7 +428,7 @@ def get_model(t, l1=False):
         model.add(layers.Flatten(name='flaten'))
         model.add(layers.Dense(98, activation='relu', name='fc_1'))
     elif t == 'simrad_tuned_b':
-        model.add(keras.Input(shape=(29, 29, 1), name='input'))
+        model.add(tf.keras.Input(shape=(29, 29, 1), name='input'))
         model.add(layers.Conv2D(8, (5, 5), strides=2,
                                 activation='relu', name='conv_1'))
         model.add(layers.Conv2D(64, (5, 5), strides=2,
@@ -392,14 +439,13 @@ def get_model(t, l1=False):
         # TODO
         return
     else:
-        print('Select a valid option:\n\'MLP1\'\n\'MLP2\'\n\'lenet5\'\n' +
-              '\'lenet5_tuned\'\n')
+        print("Select a valid option:\n'MLP1'\n'MLP2'\n'lenet5'\n 'lenet5_tuned'\n")
         return
     if not l1:
         model.add(layers.Dense(10, activation='softmax', name='output'))
     else:
         model.add(layers.Dense(10, activation='softmax',
-                               kernel_regularizer=keras.regularizers.l1(1e-5),
+                               kernel_regularizer=tf.keras.regularizers.l1(1e-5),
                                name='output'))
     return model
 
@@ -407,13 +453,11 @@ def get_model(t, l1=False):
 def build_model(t):
     model = get_model(t)
     if t != 'MLP1' and t != 'MLP2':
-        opt = keras.optimizers.SGD(lr=0.01, momentum=0.9, decay=1e-2 / 10)
-        # 10 epochs with categorical data
-        model.compile(loss=keras.losses.CategoricalCrossentropy(),
+        opt = tf.keras.optimizers.SGD(lr=0.01, momentum=0.9, decay=1e-2 / 10)
+        model.compile(loss=tf.keras.losses.CategoricalCrossentropy(),
                       optimizer=opt, metrics=['accuracy'])
     else:
-        model.compile(loss=keras.losses.SparseCategoricalCrossentropy(),
-                      optimizer=keras.optimizers.RMSprop(learning_rate=1e-3),
+        model.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+                      optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
                       metrics=['accuracy'])
-        # keras.metrics.SparseCategoricalAccuracy()
     return model

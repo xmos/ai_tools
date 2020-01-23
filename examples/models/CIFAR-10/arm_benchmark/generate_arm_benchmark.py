@@ -1,18 +1,13 @@
+#!/usr/bin/env python
+#
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import argparse
 import logging
 from pathlib import Path
-import tensorflow as tf
 import numpy as np
-import os
-import sys
-# TODO: make sure we don't need this hack
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'interface_development')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'model_development')))
-
-import model_interface as mi
-import tflite_utils
-import model_tools as mt
+from tflite2xcore.model_generation import utils
+from tflite2xcore.model_generation.interface import KerasModel
+import tensorflow as tf
 
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'arm_benchmark').resolve()
 DEFAULT_EPOCHS = 30
@@ -31,7 +26,7 @@ def get_normalized_data():
             'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
 
 
-class ArmBenchmark(mi.KerasModel):
+class ArmBenchmark(KerasModel):
     def __init__(self, *args, is_classifier=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._is_classifier = is_classifier
@@ -181,13 +176,8 @@ if __name__ == "__main__":
         help='Verbose mode.')
     args = parser.parse_args()
 
-    verbose = args.verbose
-    if verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.getLogger('tensorflow').setLevel(logging.ERROR)
-    logging.info(f"Eager execution enabled: {tf.executing_eagerly()}")
-    tflite_utils.set_gpu_usage(args.use_gpu, verbose)
+    utils.set_verbosity(args.verbose)
+    utils.set_gpu_usage(args.use_gpu, args.verbose)
 
     main(path=args.path,
          train_new_model=args.train_model,

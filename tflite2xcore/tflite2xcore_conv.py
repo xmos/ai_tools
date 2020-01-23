@@ -7,13 +7,10 @@ import sys
 import logging
 import argparse
 
-# TODO: make sure we don't need this hack
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from tflite2xcore.graph_transformer import PassManager, PassPriority
-from tflite2xcore.tflite_utils import DEFAULT_FLATC, DEFAULT_SCHEMA, set_gpu_usage
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 from tflite2xcore import transformation_passes as passes
+from tflite2xcore.model_generation import utils
 
 
 def strip_model(model, *, remove_softmax=True):
@@ -113,7 +110,7 @@ if __name__ == "__main__":
     else:
         logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
-    set_gpu_usage(False, verbose)
+    utils.set_gpu_usage(False, verbose)
 
     tflite_input_path = os.path.realpath(args.tflite_input)
     tflite_output_path = os.path.realpath(args.tflite_output)

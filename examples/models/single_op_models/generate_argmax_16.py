@@ -1,17 +1,17 @@
+#!/usr/bin/env python
+#
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import examples_common as common
 import argparse
 import logging
 from pathlib import Path
-import tensorflow as tf
 import numpy as np
-import model_interface as mi
-import tflite_utils
-import graph_transformer
 import tflite2xcore_conv as xcore_conv
-from tflite2xcore import read_flatbuffer, write_flatbuffer
-from operator_codes import BuiltinOpCodes
-from xcore_model import TensorType
+from tflite2xcore import read_flatbuffer, write_flatbuffer, graph_transformer
+from tflite2xcore.operator_codes import BuiltinOpCodes
+from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.model_generation import utils
+from tflite2xcore.model_generation.interface import FunctionModel
+import tensorflow as tf
 
 DEFAULT_INPUTS = 10
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'arg_max_16').resolve()
@@ -22,7 +22,7 @@ class ArgMax8To16ConversionPass(graph_transformer.OperatorMatchingPass):
         super().__init__(priority=graph_transformer.PassPriority.MEDIUM)
 
     def match(self, op):
-        if op.operator_code.code.value == BuiltinOpCodes.ARG_MAX.value:  # TODO: fix this
+        if op.operator_code.code is BuiltinOpCodes.ARG_MAX:
             return op.inputs[0].type == TensorType.INT8
         return False
 
@@ -40,7 +40,7 @@ class ArgMax8To16ConversionPass(graph_transformer.OperatorMatchingPass):
         }
 
 
-class ArgMax16(mi.FunctionModel):
+class ArgMax16(FunctionModel):
     def build(self, input_dim):
         class ArgMaxModel(tf.keras.Model):
 
@@ -70,7 +70,7 @@ class ArgMax16(mi.FunctionModel):
         pass
 
     def gen_test_data(self):
-        tflite_utils.set_all_seeds()
+        utils.set_all_seeds()
         x_test_float = np.float32(
             np.random.uniform(0, 1, size=(self.input_dim, self.input_dim)))
         x_test_float += np.eye(self.input_dim)
@@ -101,13 +101,13 @@ class ArgMax16(mi.FunctionModel):
         # load quant model for inference, b/c the interpreter cannot handle int16 tensors
         interpreter = tf.lite.Interpreter(model_path=str(self.models['model_quant']))
 
-        base_file_name = 'model_stripped'
-        logging.info(f"Extracting examples for {base_file_name}...")
-        x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0], dtype=np.int16)
-        y_test = common.apply_interpreter_to_examples(interpreter, self.data['export_data'])
+        logging.info(f"Extracting examples for model_stripped...")
+        x_test = utils.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0], dtype=np.int16)
+        y_test = utils.apply_interpreter_to_examples(interpreter, self.data['export_data'])
         data = {'x_test': x_test,
                 'y_test': np.vstack(list(y_test))}
-        common.save_test_data(data, self.models['data_dir'], base_file_name)
+
+        self._save_data_dict(data, base_file_name='model_stripped')
 
     def save_tf_xcore_data(self):
         assert 'model_xcore' in self.models
@@ -116,10 +116,10 @@ class ArgMax16(mi.FunctionModel):
         input_quant = model.subgraphs[0].inputs[0].quantization
 
         # quantize test data
-        x_test = common.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'], dtype=np.int16)
+        x_test = utils.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'], dtype=np.int16)
 
         # save data
-        common.save_test_data({'x_test': x_test}, self.models['data_dir'], 'model_xcore')
+        self._save_data_dict({'x_test': x_test}, base_file_name='model_xcore')
 
 
 def main(path=DEFAULT_PATH, input_dim=DEFAULT_INPUTS):
@@ -153,12 +153,7 @@ if __name__ == "__main__":
         help='Verbose mode.')
     args = parser.parse_args()
 
-    # TODO: consider refactoring this to utils
-    verbose = args.verbose
-    if verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.getLogger('tensorflow').setLevel(logging.ERROR)
-    logging.info(f"Eager execution enabled: {tf.executing_eagerly()}")
+    utils.set_verbosity(args.verbose)
+    utils.set_gpu_usage(False, args.verbose)
 
     main(path=args.path, input_dim=args.inputs)

@@ -1,11 +1,12 @@
+#!/usr/bin/env python
+#
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import argparse
-import logging
 from pathlib import Path
-import tensorflow as tf
 import numpy as np
-import model_interface as mi
-import tflite_utils
+from tflite2xcore.model_generation import utils
+from tflite2xcore.model_generation.interface import KerasModel
+import tensorflow as tf
 
 DEFAULT_OUTPUT_DIM = 10
 DEFAULT_INPUT_DIM = 32
@@ -57,7 +58,7 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
 
 
 # Class for the model
-class FcDeepinShallowoutFinal(mi.KerasModel):
+class FcDeepinShallowoutFinal(KerasModel):
     def build(self, input_dim, output_dim):  # add keyboard optimizer, loss and metrics???
         super().build()
 
@@ -154,14 +155,8 @@ if __name__ == "__main__":
         help='Verbose mode.')
     args = parser.parse_args()
 
-    # TODO: consider refactoring this to utils
-    verbose = args.verbose
-    if verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.getLogger('tensorflow').setLevel(logging.ERROR)
-    logging.info(f"Eager execution enabled: {tf.executing_eagerly()}")
-    tflite_utils.set_gpu_usage(args.use_gpu, verbose)
+    utils.set_verbosity(args.verbose)
+    utils.set_gpu_usage(args.use_gpu, args.verbose)
 
     main(path=args.path,
          input_dim=args.input_dim, output_dim=args.output_dim,

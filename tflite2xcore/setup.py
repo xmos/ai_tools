@@ -9,6 +9,7 @@ elif sys.platform == "darwin":
 else:
     LIB_TFLITE2XCORE = 'serialization/windows/libtflite2xcore.dll'
 
+# TODO: fix this
 setuptools.setup(
     name='tflite2xcore',
     packages=setuptools.find_packages(),

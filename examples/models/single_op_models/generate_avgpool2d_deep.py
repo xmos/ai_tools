@@ -1,13 +1,11 @@
+#!/usr/bin/env python
+#
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import argparse
-import logging
 from pathlib import Path
+from tflite2xcore.model_generation import utils
+from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
-import numpy as np
-import model_interface as mi
-import tflite_utils
-
-from generate_conv2d_deepin_deepout_relu import generate_data  # TODO: factor out
 
 DEFAULT_INPUTS = 32
 DEFAULT_HEIGHT = 4
@@ -16,10 +14,10 @@ DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_POOL_SIZE = 2
 DEFAULT_PADDING = 'valid'
 DEFAULT_STRIDES = 2
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'maxpool_2d_deep').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'avgpool_2d_deep').resolve()
 
 
-class MaxPool2d(mi.KerasModel):
+class AvgPool2d(KerasModel):
 
     def build(self, height, width, input_channels, pool, stride, pad):
         assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
@@ -34,7 +32,7 @@ class MaxPool2d(mi.KerasModel):
         self.core_model = tf.keras.Sequential(
             name=self.name,
             layers=[
-                tf.keras.layers.MaxPool2D(
+                tf.keras.layers.AveragePooling2D(
                     pool_size=pool,
                     strides=stride,
                     padding=pad,
@@ -53,7 +51,7 @@ class MaxPool2d(mi.KerasModel):
 
     # For training
     def prep_data(self, height, width):
-        self.data['export_data'], self.data['quant'] = generate_data(*self.input_shape)
+        self.data['export_data'], self.data['quant'] = utils.generate_dummy_data(*self.input_shape)
 
     # For exports
     def gen_test_data(self, height, width):
@@ -68,7 +66,7 @@ def main(path=DEFAULT_PATH, *,
          padding=DEFAULT_PADDING,
          strides=DEFAULT_STRIDES):
     # nstantiate model
-    test_model = MaxPool2d('maxpool2d_deep', Path(path))
+    test_model = AvgPool2d('avgpool2d_deep', Path(path))
     # Build model and compile
     test_model.build(height, width, input_channels, pool_size, strides, padding)
     # Generate test data
@@ -108,13 +106,8 @@ if __name__ == "__main__":
         help='Verbose mode.')
     args = parser.parse_args()
 
-    # TODO: consider refactoring this to utils
-    verbose = args.verbose
-    if verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.getLogger('tensorflow').setLevel(logging.ERROR)
-    logging.info(f"Eager execution enabled: {tf.executing_eagerly()}")
+    utils.set_verbosity(args.verbose)
+    utils.set_gpu_usage(False, args.verbose)
 
     main(path=args.path,
          input_channels=args.inputs,

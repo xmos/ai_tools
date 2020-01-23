@@ -1,51 +1,40 @@
+#!/usr/bin/env python
+#
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import argparse
-import logging
 from pathlib import Path
+from tflite2xcore.model_generation import utils
+from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
-import numpy as np
-import model_interface as mi
-import tflite_utils
 
-from generate_conv2d_deepin_deepout_relu import generate_data  # TODO: factor out
-
-DEFAULT_INPUTS = 3
+DEFAULT_INPUTS = 32
 DEFAULT_OUTPUTS = 16
 DEFAULT_HEIGHT = 5
 DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = 'same'
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_shallowin_deepout_relu').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deepin_deepout_relu').resolve()
 
 
-class Conv2dShallowinDeepoutRelu(mi.KerasModel):
+class Conv2dDeepinDeepoutRelu(KerasModel):
     def build(self, K_h, K_w, height, width, input_channels, output_channels, padding):
-        assert input_channels <= 4, "Number of input channels must be at most 4"
-        assert K_w <= 8, "Kernel width must be at most 8"
-        assert output_channels % 16 == 0, "Number of output channels must be multiple of 16"
+        assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
+        assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
         assert K_h % 2 == 1, "kernel height must be odd"
         assert K_w % 2 == 1, "kernel width must be odd"
         super().build()
 
         # Building
-        try:
-            self.core_model = tf.keras.Sequential(
-                name=self.name,
-                layers=[
-                    tf.keras.layers.Conv2D(filters=output_channels,
-                                           kernel_size=(K_h, K_w),
-                                           padding=padding,
-                                           input_shape=(height, width, input_channels))
-                ]
-            )
-        except ValueError as e:
-            if e.args[0].startswith("Negative dimension size caused by"):
-                raise ValueError(
-                    "Negative dimension size (Hint: if using 'valid' padding "
-                    "verify that the kernel is at least the size of input image)"
-                ) from e
-
+        self.core_model = tf.keras.Sequential(
+            name=self.name,
+            layers=[
+                tf.keras.layers.Conv2D(filters=output_channels,
+                                       kernel_size=(K_h, K_w),
+                                       padding=padding,
+                                       input_shape=(height, width, input_channels))
+            ]
+        )
         # Compilation
         self.core_model.compile(optimizer='adam',
                                 loss='sparse_categorical_crossentropy',
@@ -58,7 +47,7 @@ class Conv2dShallowinDeepoutRelu(mi.KerasModel):
 
     # For training
     def prep_data(self, height, width):
-        self.data['export_data'], self.data['quant'] = generate_data(*self.input_shape)
+        self.data['export_data'], self.data['quant'] = utils.generate_dummy_data(*self.input_shape)
 
     # For exports
     def gen_test_data(self, height, width):
@@ -72,7 +61,7 @@ def main(path=DEFAULT_PATH, *,
          K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
          padding=DEFAULT_PADDING):
     # Instantiate model
-    test_model = Conv2dShallowinDeepoutRelu('conv2d_shallowin_deepout_relu', Path(path))
+    test_model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', Path(path))
     # Build model and compile
     test_model.build(K_h, K_w, height, width, input_channels, output_channels, padding)
     # Generate test data
@@ -89,9 +78,6 @@ if __name__ == "__main__":
     parser.add_argument(
         'path', nargs='?', default=DEFAULT_PATH,
         help='Path to a directory where models and data will be saved in subdirectories.')
-    parser.add_argument(
-        '--use_gpu', action='store_true', default=False,
-        help='Use GPU for training. Might result in non-reproducible results')
     parser.add_argument(
         '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
         help='Number of input channels')
@@ -118,14 +104,8 @@ if __name__ == "__main__":
         help='Verbose mode.')
     args = parser.parse_args()
 
-    # TODO: consider refactoring this to utils
-    verbose = args.verbose
-    if verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.getLogger('tensorflow').setLevel(logging.ERROR)
-    logging.info(f"Eager execution enabled: {tf.executing_eagerly()}")
-    tflite_utils.set_gpu_usage(args.use_gpu, verbose)
+    utils.set_verbosity(args.verbose)
+    utils.set_gpu_usage(False, args.verbose)
 
     main(path=args.path,
          input_channels=args.inputs, output_channels=args.outputs,

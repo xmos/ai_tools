@@ -9,47 +9,55 @@ import tempfile
 import pytest
 
 import helpers
-
-sys.path.append('../python/')
+import directories
+from operator_codes import XCOREOpCodes
 from tflite2xcore import read_flatbuffer
-
 
 def load_tests(name):
     if name.startswith('argmax'):
-        directory = 'data/single_op_models/argmax_16'
-    elif name.startswith('conv2d_scheme1'):
-        directory = 'data/single_op_models/conv2d_shallowin_deepout_relu'
-    elif name.startswith('conv2d_scheme2'):
-        directory = 'data/single_op_models/conv2d_deepin_deepout_relu'
-    elif name.startswith('fully_connected_scheme1'):
-        directory = 'data/single_op_models/fc_deepin_shallowout_final'
+        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+            XCOREOpCodes.XC_argmax_16.name, '*')
+    elif name.startswith('conv_shallowin_deepout'):
+        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+            XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name, '*')
+    elif name.startswith('conv_deepin_deepout'):
+        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+            XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name, '*')
+    elif name.startswith('fc_deepin_anyout_final'):
+        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+            XCOREOpCodes.XC_fc_deepin_anyout_final.name, '*')
     elif name.startswith('maxpool'):
-        directory = 'data/single_op_models/maxpool2d_deep'
-
-    flatbuffer_xcore = os.path.join(directory, 'models/model_xcore.tflite')
-    input_files = glob.glob(os.path.join(directory, 'test_data/model_xcore/*.x'))
-    model = read_flatbuffer(flatbuffer_xcore)
-    input_quantization = model.subgraphs[0].outputs[0].quantization
-
-    flatbuffer_stripped = os.path.join(directory, 'models/model_stripped.tflite')
-    output_files = glob.glob(os.path.join(directory, 'test_data/model_stripped/*.y'))
-    model = read_flatbuffer(flatbuffer_stripped)
-    output_quantization = model.subgraphs[0].outputs[0].quantization
+        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+            XCOREOpCodes.XC_maxpool2d_deep.name, '*')
+    elif name.startswith('avgpool'):
+        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+            XCOREOpCodes.XC_avgpool2d_deep.name, '*')
 
     test_cases = []
-    for input_file, output_file in zip(sorted(input_files), sorted(output_files)):
-        test_cases.append({
-            'flatbuffer': flatbuffer_xcore,
-            'input': {
-                'filename': input_file,
-                'quantization': input_quantization
-            },
-            'expected_output': {
-                'filename': output_file,
-                'quantization': output_quantization
-            }
-        })
 
+    for directory in glob.glob(pattern):
+        flatbuffer_xcore = os.path.join(directory, 'models/model_xcore.tflite')
+        input_files = glob.glob(os.path.join(directory, 'test_data/model_xcore/*.x'))
+        model = read_flatbuffer(flatbuffer_xcore)
+        input_quantization = model.subgraphs[0].outputs[0].quantization
+
+        flatbuffer_stripped = os.path.join(directory, 'models/model_stripped.tflite')
+        output_files = glob.glob(os.path.join(directory, 'test_data/model_stripped/*.y'))
+        model = read_flatbuffer(flatbuffer_stripped)
+        output_quantization = model.subgraphs[0].outputs[0].quantization
+
+        for input_file, output_file in zip(sorted(input_files), sorted(output_files)):
+            test_cases.append({
+                'flatbuffer': flatbuffer_xcore,
+                'input': {
+                    'filename': input_file,
+                    'quantization': input_quantization
+                },
+                'expected_output': {
+                    'filename': output_file,
+                    'quantization': output_quantization
+                }
+            })
     return test_cases
 
 
@@ -88,22 +96,25 @@ def test_argmax(test_model_app, argmax_test_case):
     assert(run_test_case(test_model_app, argmax_test_case))
 
 
-def test_conv2d_scheme1(test_model_app, conv2d_scheme1_test_case):
-    assert(run_test_case(test_model_app, conv2d_scheme1_test_case))
+def test_conv_shallowin_deepout(test_model_app, conv_shallowin_deepout_test_case):
+    assert(run_test_case(test_model_app, conv_shallowin_deepout_test_case))
 
 
-def test_conv2d_scheme2(test_model_app, conv2d_scheme2_test_case):
-    assert(run_test_case(test_model_app, conv2d_scheme2_test_case))
+def test_conv_deepin_deepout(test_model_app, conv_deepin_deepout_test_case):
+    assert(run_test_case(test_model_app, conv_deepin_deepout_test_case))
 
 
-def test_fully_connected_scheme1(test_model_app, fully_connected_scheme1_test_case):
-    assert(run_test_case(test_model_app, fully_connected_scheme1_test_case))
+def test_fc_deepin_anyout_final(test_model_app, fc_deepin_anyout_final_test_case):
+    assert(run_test_case(test_model_app, fc_deepin_anyout_final_test_case))
 
 
 def test_maxpool(test_model_app, maxpool_test_case):
     assert(run_test_case(test_model_app, maxpool_test_case))
 
 
+def test_avgpool(test_model_app, avgpool_test_case):
+    assert(run_test_case(test_model_app, avgpool_test_case))
+
+
 if __name__ == "__main__":
     pytest.main()
-

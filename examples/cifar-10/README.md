@@ -7,6 +7,11 @@
 
 ## TensorFLow Lite for Microcontrollers
 
+The following unix command will generate a C source file that contains the TensorFlow Lite model as a char array
+
+    > cd tflite
+    > xxd -i model_xcore_classifier.tflite > src/cifar10_model.h
+
 ### xCORE
 
 Building for xCORE
@@ -35,9 +40,11 @@ Running
 
 ### xCORE
 
+**This is currently broken**
+
 Building for xCORE
 
-    > cd xcore
+    > cd codegen
     > make TARGET=xcore
 
 Note, `xcore` is the default target.
@@ -50,7 +57,7 @@ Running with the xCORE simulator
 
 Building for x86
 
-    > cd xcore
+    > cd codegen
     > make TARGET=x86
 
 Running

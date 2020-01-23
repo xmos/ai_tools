@@ -43,6 +43,8 @@ def test_mutate(simple_model, trf_pass):
 
     assert len(subgraph.operators) == 2
     assert len(subgraph.tensors) == 3
+    assert len(subgraph.inputs) == 1
+    assert len(subgraph.outputs) == 1
     assert qin in subgraph.inputs and qin not in subgraph.outputs
     assert qout not in (subgraph.inputs + subgraph.outputs)
     assert fout in subgraph.outputs and fout not in subgraph.inputs
@@ -58,6 +60,8 @@ def test_run(simple_model, trf_pass):
 
     assert len(subgraph.operators) == 2
     assert len(subgraph.tensors) == 3
+    assert len(subgraph.inputs) == 1
+    assert len(subgraph.outputs) == 1
     assert qin in subgraph.inputs and qin not in subgraph.outputs
     assert qout not in (subgraph.inputs + subgraph.outputs)
     assert fout in subgraph.outputs and fout not in subgraph.inputs
@@ -75,6 +79,8 @@ def test_run_dual_output(dual_output_model, trf_pass):
 
     assert len(subgraph.operators) == 3
     assert len(subgraph.tensors) == 5
+    assert len(subgraph.inputs) == 1
+    assert len(subgraph.outputs) == 2
     assert qin in subgraph.inputs and qin not in subgraph.outputs
     assert qout_1 not in (subgraph.inputs + subgraph.outputs)
     assert qout_2 not in (subgraph.inputs + subgraph.outputs)

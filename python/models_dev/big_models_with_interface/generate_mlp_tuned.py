@@ -54,7 +54,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
         # Prepare training data
         mlp_tuned.prep_data(use_aug)
         # Train model
-        mlp_tuned.train(batch_size=batch_size, epochs=epochs)
+        mlp_tuned.train(batch_size=batch_size, epochs=epochs, save_history=True)
         mlp_tuned.save_core_model()
     else:
         # Recover previous state from file system

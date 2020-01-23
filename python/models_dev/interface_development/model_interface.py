@@ -1,5 +1,6 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import examples_common as common
+import sys
 import os
 import logging
 import pathlib
@@ -12,6 +13,8 @@ import tflite2xcore_conv as xcore_conv
 import tflite_visualize
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 from xcore_model import TensorType
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'model_development')))
+import model_tools as mt
 __version__ = '1.6.0'
 __author__ = 'Luis Mata'
 
@@ -293,12 +296,23 @@ class KerasModel(Model):
     def output_shape(self):
         return self.core_model.output_shape[1:]
 
-    def train(self, **kwargs):
+    def train(self, save_history=False, **kwargs):
         assert self.data
-        self.core_model.fit(
+        self.history = self.core_model.fit(
             self.data['x_train'], self.data['y_train'],
             validation_data=(self.data['x_test'], self.data['y_test']),
             **kwargs)
+        if save_history:
+            self.save_training_history()
+
+    def save_training_history(self): # TODO: generalize this idea to KerasModel
+        logger = logging.getLogger()
+        old_log_level = logger.level  # deal with matplotlib spam
+        logger.setLevel(logging.INFO)
+        mt.plot_history(
+            self.history, title=self.name+' metrics',
+            path=self.models['models_dir']/(self.name+'_history.png'))
+        logger.setLevel(old_log_level)
 
     @abstractmethod
     def gen_test_data(self):

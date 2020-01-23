@@ -78,19 +78,21 @@ class LeNet5(mi.KerasModel):
         self.data['export_data'] = self.data['x_test'][:10]
         self.data['quant'] = self.data['x_train'][:10]
 
-    def train(self, *, batch_size, **kwargs):
+    def train(self, *, batch_size, save_history=False, **kwargs):
         # Image generator, # TODO: make this be optional with use_aug arg
         aug = tf.keras.preprocessing.image.ImageDataGenerator(
             rotation_range=20, zoom_range=0.15,
             width_shift_range=0.2, height_shift_range=0.2, shear_range=0.15,
             horizontal_flip=True, fill_mode="nearest")
         # Train the network
-        history = self.core_model.fit_generator(
+        self.history = self.core_model.fit_generator(
             aug.flow(
                 self.data['x_train'], self.data['y_train'], batch_size=batch_size),
             validation_data=(self.data['x_test'], self.data['y_test']),
             steps_per_epoch=len(self.data['x_train']) // batch_size,
             **kwargs)
+        if save_history:
+            self.save_training_history()
 
 
 def main(path=DEFAULT_PATH, train_new_model=False,
@@ -103,7 +105,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
         # Prepare training data
         lenet.prep_data(use_aug)
         # Train model
-        lenet.train(batch_size=batch_size, epochs=epochs)
+        lenet.train(batch_size=batch_size, epochs=epochs, save_history=True)
         lenet.save_core_model()
     else:
         # Recover previous state from file system

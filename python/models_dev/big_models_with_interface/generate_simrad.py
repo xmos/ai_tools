@@ -62,20 +62,14 @@ class Simrad(mi.KerasModel):
             rotation_range=20, zoom_range=0.15,
             width_shift_range=0.2, height_shift_range=0.2, shear_range=0.15,
             horizontal_flip=True, fill_mode="nearest")
-        history = self.core_model.fit_generator(
+        self.history = self.core_model.fit_generator(
             aug.flow(
                 self.data['x_train'], self.data['y_train'], batch_size=batch_size),
             validation_data=(self.data['x_val'], self.data['y_val']),
             steps_per_epoch=len(self.data['x_train']) // batch_size,
             **kwargs)
-        if save_history:  # TODO: generalize this idea to KerasModel
-            logger = logging.getLogger()
-            old_log_level = logger.level  # deal with matplotlib spam
-            logger.setLevel(logging.INFO)
-            mt.plot_history(
-                history, title='Simrad metrics', save=True,
-                path=str(self.models['models_dir']/self.name))
-            logger.setLevel(old_log_level)
+        if save_history:
+            self.save_training_history()
 
 
 def main(path=DEFAULT_PATH, train_new_model=False,

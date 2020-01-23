@@ -1,6 +1,7 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import random
 import logging
+from pathlib import Path
 from tensorflow import keras
 import matplotlib.pyplot as plt
 import numpy as np
@@ -250,12 +251,13 @@ def multi_plot(imgs, rows, cols, title='', zoom=2):
     plt.show()
 
 
-def plot_history(history, title='metrics', zoom=1, save=False, path='.'):
+def plot_history(history, title='metrics', zoom=1, save=False, path=Path('./history.png')):
     # list all data in history
     plt.style.use('dark_background')
     fig = plt.figure(figsize=(16*zoom, 8*zoom))
     plt.title(title)
     plt.axis('off')
+
     # summarize history for accuracy
     fig.add_subplot(1, 2, 1)
     plt.plot(history.history['accuracy'])
@@ -273,10 +275,9 @@ def plot_history(history, title='metrics', zoom=1, save=False, path='.'):
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
-    if save:
-        fig.savefig(path+'_history.png')  # TODO: use pathlib
-    else:  # TODO: we probably won't need this option
-        plt.show()
+
+    # Save the png
+    fig.savefig(path)  # TODO: use pathlib
 
 
 # Augmentation

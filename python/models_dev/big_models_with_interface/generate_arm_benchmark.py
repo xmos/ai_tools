@@ -89,7 +89,7 @@ class ArmBenchmark(mi.KerasModel):
         self.data['export_data'] = self.data['x_test'][subset_inds.flatten()]  # pylint: disable=unsubscriptable-object
         self.data['quant'] = self.data['x_train']
 
-    def train(self, *, batch_size, **kwargs):
+    def train(self, *, batch_size, save_history=False, **kwargs):
         # Image generator, # TODO: make this be optional with use_aug arg
         aug = tf.keras.preprocessing.image.ImageDataGenerator(
             featurewise_center=False,  # set input mean to 0 over the dataset
@@ -122,12 +122,14 @@ class ArmBenchmark(mi.KerasModel):
         aug.fit(self.data['x_train'])
 
         # Train the network
-        history = self.core_model.fit_generator(
+        self.history = self.core_model.fit_generator(
             aug.flow(
                 self.data['x_train'], self.data['y_train'], batch_size=batch_size),
             validation_data=(self.data['x_test'], self.data['y_test']),
             steps_per_epoch=len(self.data['x_train']) // batch_size,
             **kwargs)
+        if save_history:
+            self.save_training_history()
 
 
 def main(path=DEFAULT_PATH, train_new_model=False,
@@ -142,7 +144,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
         # Prepare training data
         arm_benchmark.prep_data()
         # Train model
-        arm_benchmark.train(batch_size=batch_size, epochs=epochs)
+        arm_benchmark.train(batch_size=batch_size, epochs=epochs, save_history=True)
         arm_benchmark.save_core_model()
     else:
         # Recover previous state from file system

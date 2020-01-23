@@ -24,7 +24,7 @@ DEFAULT_AUG = False
 class LeNet5Tuned(LeNet5):
 
     def build(self):
-        super().build()
+        super(mi.KerasModel, self).build()
         # Building
         self.core_model = tf.keras.Sequential(
             name=self.name,
@@ -70,7 +70,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
         # Prepare training data
         lenet5_tuned.prep_data(use_aug)
         # Train model
-        lenet5_tuned.train(batch_size=batch_size, epochs=epochs)
+        lenet5_tuned.train(batch_size=batch_size, epochs=epochs, save_history=True)
         lenet5_tuned.save_core_model()
     else:
         # Recover previous state from file system

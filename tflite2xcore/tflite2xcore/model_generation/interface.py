@@ -146,7 +146,7 @@ class Model(ABC):
         model = read_flatbuffer(str(self.models['model_quant']))
         xcore_conv.strip_model(model, **converter_args)
         self.models['model_stripped'] = self.models['models_dir'] / "model_stripped.tflite"
-        write_flatbuffer(model, str(self.models['model_stripped']))            
+        write_flatbuffer(model, str(self.models['model_stripped']))
 
     def to_tf_xcore(self, **converter_args):
         '''
@@ -304,7 +304,7 @@ class KerasModel(Model):
     def output_shape(self):
         return self.core_model.output_shape[1:]
 
-    def train(self, save_history=False, **kwargs):
+    def train(self, save_history=True, **kwargs):
         assert self.data
         self.history = self.core_model.fit(
             self.data['x_train'], self.data['y_train'],
@@ -317,14 +317,7 @@ class KerasModel(Model):
         with utils.LoggingContext(logging.getLogger(), logging.INFO):
             utils.plot_history(
                 self.history, title=self.name+' metrics',
-                path=self.models['models_dir']/(self.name+'_history.png'))
-
-    @abstractmethod
-    def gen_test_data(self):
-        '''
-        self.data['export_data'] =
-        '''
-        pass
+                path=self.models['models_dir']/('training_history.png'))
 
     def save_core_model(self):
         if not (len(self.data.keys()) == 0):
@@ -359,6 +352,15 @@ class KerasModel(Model):
         self._save_from_tflite_converter('model_quant')
 
 
+class KerasClassifier(KerasModel):
+    def __init__(self, *args, opt_classifier=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._opt_classifier = opt_classifier
+
+    def to_tf_xcore(self):
+        super().to_tf_xcore(is_classifier=self._opt_classifier)
+
+
 class FunctionModel(Model):
 
     def __init__(self, name, path):
@@ -367,10 +369,6 @@ class FunctionModel(Model):
 
     @abstractmethod
     def build(self):  # Implementation dependant
-        pass
-
-    @abstractmethod
-    def gen_test_data(self):
         pass
 
     # Import and export core model
@@ -414,26 +412,3 @@ class FunctionModel(Model):
         utils.quantize_converter(
             self.converters['model_quant'], self.data['quant'])
         self._save_from_tflite_converter('model_quant')
-
-
-class SavedModel(Model):
-
-    @abstractmethod
-    def build(self):
-        pass
-
-    @abstractmethod
-    def load(self, load_path):
-        pass
-
-    @abstractmethod
-    def prep_data(self):
-        pass
-
-    @abstractmethod
-    def train(self):
-        pass
-
-    @abstractmethod
-    def gen_test_data(self):
-        pass

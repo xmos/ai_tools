@@ -101,7 +101,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
          batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
          use_aug=DEFAULT_AUG, use_tuned=DEFAULT_TUNED):
 
-    simard = SimardTuned('simard_tuned', path) if use_tuned else Simard('simard', path)
+    simard = SimardTuned('simard_tuned', path.with_name('simard_tuned').resolve()) if use_tuned else Simard('simard', path)
 
     if train_new_model:
         # Build model and compile

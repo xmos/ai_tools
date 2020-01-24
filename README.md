@@ -30,7 +30,7 @@ conda env create -p ./ai_tools_gpu_venv -f environment_gpu.yml
 Activate the environment by specifying the path, then install the ai-tools python package:
 ```
 conda activate ai_tools_venv/
-pip install -e ./python/tflite2xcore/
+pip install -e tflite2xcore/
 ```
 
 If you made changes to the conda environment, export it (while activated) using:
@@ -44,14 +44,6 @@ To remove the environment, deactivate and run:
 ```
 conda remove -p ai_tools_venv/ --all
 ```
-
-Install pipenv environment (deprecated)
----------------------------------------
-The repo includes a Pipfile in case you run into difficulties with conda.
-
-There have been issues with installing newer linux packages (tensorflow in particular):
-https://github.com/pypa/pipenv/issues/3921
-
 
 VSCode users
 ------------

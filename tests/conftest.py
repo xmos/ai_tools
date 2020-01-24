@@ -6,7 +6,7 @@ def pytest_addoption(parser):
     parser.addoption(
         '--test-model',
         action='store',
-        default='../examples/test_model/bin/test_model.xe',
+        default='../examples/apps/test_model/bin/test_model.xe',
         help="Path to test_model or test_model.xe"
     )
 

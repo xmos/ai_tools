@@ -10,28 +10,28 @@ import pytest
 
 import helpers
 import directories
-from operator_codes import XCOREOpCodes
 from tflite2xcore import read_flatbuffer
+from tflite2xcore import operator_codes
 
 def load_tests(name):
     if name.startswith('argmax'):
         pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
-            XCOREOpCodes.XC_argmax_16.name, '*')
+            operator_codes.XCOREOpCodes.XC_argmax_16.name, '*')
     elif name.startswith('conv_shallowin_deepout'):
         pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
-            XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name, '*')
+            operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name, '*')
     elif name.startswith('conv_deepin_deepout'):
         pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
-            XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name, '*')
+            operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name, '*')
     elif name.startswith('fc_deepin_anyout_final'):
         pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
-            XCOREOpCodes.XC_fc_deepin_anyout_final.name, '*')
+            operator_codes.XCOREOpCodes.XC_fc_deepin_anyout_final.name, '*')
     elif name.startswith('maxpool'):
         pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
-            XCOREOpCodes.XC_maxpool2d_deep.name, '*')
+            operator_codes.XCOREOpCodes.XC_maxpool2d_deep.name, '*')
     elif name.startswith('avgpool'):
         pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
-            XCOREOpCodes.XC_avgpool2d_deep.name, '*')
+            operator_codes.XCOREOpCodes.XC_avgpool2d_deep.name, '*')
 
     test_cases = []
 

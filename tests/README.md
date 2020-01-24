@@ -5,7 +5,7 @@ and generate the test data.
 
 To build the `test_model` example application, follow the instructions located in:
 
-    examples\test_model
+    examples/apps/test_model
 
 To generate the integration test data run
 
@@ -26,4 +26,4 @@ To run a single test
 
 To run the tests on the host PC
 
-    > pytest --test-model=../examples/test_model/bin/test_model
+    > pytest --test-model=../examples/apps/test_model/bin/test_model

@@ -9,19 +9,19 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'interface_development')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'model_development')))
 
-from generate_simrad import Simrad
+from generate_simard import Simard
 
 import model_interface as mi
 import tflite_utils
 import model_tools as mt
 
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'simrad_tuned').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'simard_tuned').resolve()
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
 DEFAULT_AUG = False
 
 
-class SimradTuned(Simrad):
+class SimardTuned(Simard):
     def build(self):
         self._prep_backend()
         # Building
@@ -50,23 +50,23 @@ def main(path=DEFAULT_PATH, train_new_model=False,
          batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
          use_aug=DEFAULT_AUG):
 
-    simrad = SimradTuned('simrad_tuned', path)
+    simard = SimardTuned('simard_tuned', path)
 
     if train_new_model:
         # Build model and compile
-        simrad.build()
+        simard.build()
         # Prepare training data
-        simrad.prep_data(use_aug)
+        simard.prep_data(use_aug)
         # Train model
-        simrad.train(batch_size=batch_size, epochs=epochs, save_history=True)
-        simrad.save_core_model()
+        simard.train(batch_size=batch_size, epochs=epochs, save_history=True)
+        simard.save_core_model()
     else:
         # Recover previous state from file system
-        simrad.load_core_model()
+        simard.load_core_model()
     # Generate test data
-    simrad.gen_test_data(use_aug)
+    simard.gen_test_data(use_aug)
     # Populate converters
-    simrad.populate_converters()
+    simard.populate_converters()
 
 
 if __name__ == "__main__":

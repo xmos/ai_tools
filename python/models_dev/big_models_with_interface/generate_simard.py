@@ -13,13 +13,13 @@ import model_interface as mi
 import tflite_utils
 import model_tools as mt
 
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'simrad').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'simard').resolve()
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
 DEFAULT_AUG = False
 
 
-class Simrad(mi.KerasModel):
+class Simard(mi.KerasModel):
     def build(self):
         self._prep_backend()
         # Building
@@ -45,7 +45,7 @@ class Simrad(mi.KerasModel):
 
     # For training
     def prep_data(self, use_aug=False):
-        self.data = mt.prepare_MNIST(use_aug, simrad=True)
+        self.data = mt.prepare_MNIST(use_aug, simard=True)
         for k, v in self.data.items():
             logging.debug(f"Prepped data[{k}] with shape: {v.shape}")
 
@@ -76,23 +76,23 @@ def main(path=DEFAULT_PATH, train_new_model=False,
          batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
          use_aug=DEFAULT_AUG):
 
-    simrad = Simrad('simrad', path)
+    simard = Simard('simard', path)
 
     if train_new_model:
         # Build model and compile
-        simrad.build()
+        simard.build()
         # Prepare training data
-        simrad.prep_data(use_aug)
+        simard.prep_data(use_aug)
         # Train model
-        simrad.train(batch_size=batch_size, epochs=epochs, save_history=True)
-        simrad.save_core_model()
+        simard.train(batch_size=batch_size, epochs=epochs, save_history=True)
+        simard.save_core_model()
     else:
         # Recover previous state from file system
-        simrad.load_core_model()
+        simard.load_core_model()
     # Generate test data
-    simrad.gen_test_data(use_aug)
+    simard.gen_test_data(use_aug)
     # Populate converters
-    simrad.populate_converters()
+    simard.populate_converters()
 
 
 if __name__ == "__main__":

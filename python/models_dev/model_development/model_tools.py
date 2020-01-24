@@ -139,14 +139,14 @@ def ecc(nsizex=29, nsizey=29, ch=1):
 
 
 # Prepare data function for MNIST dataset
-def prepare_MNIST(use_aug=False, simrad=False):
-    if simrad:
+def prepare_MNIST(use_aug=False, simard=False):
+    if simard:
         x_train, x_test, x_val, y_train, y_test, y_val = ecc()
     else:
         x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(
             padding=2, categorical=False, flatten=False, y_float=True)
     if use_aug:
-        if simrad:
+        if simard:
             x_train, y_train = expand_dataset(
                 x_train, y_train, 2, sigma=4.0, alpha=16.0,
                 sizex=29, sizey=29)
@@ -364,7 +364,7 @@ def get_model(t, l1=False):
         model.add(layers.Conv2D(128, (5, 5), strides=1,
                                 activation='relu', name='conv_3'))
         model.add(layers.Dense(96, activation='relu', name='fc_1'))
-    elif t == 'simrad':
+    elif t == 'simard':
         model.add(keras.Input(shape=(29, 29, 1), name='input'))
         model.add(layers.Conv2D(5, (5, 5), strides=2,
                                 activation='relu', name='conv_1'))
@@ -372,7 +372,7 @@ def get_model(t, l1=False):
                                 activation='relu', name='conv_2'))
         model.add(layers.Flatten(name='flaten'))
         model.add(layers.Dense(100, activation='relu', name='fc_1'))
-    elif t == 'simrad_tuned_a':
+    elif t == 'simard_tuned_a':
         model.add(keras.Input(shape=(29, 29, 1), name='input'))
         model.add(layers.Conv2D(8, (5, 5), strides=2,
                                 activation='relu', name='conv_1'))
@@ -380,7 +380,7 @@ def get_model(t, l1=False):
                                 activation='relu', name='conv_2'))
         model.add(layers.Flatten(name='flaten'))
         model.add(layers.Dense(98, activation='relu', name='fc_1'))
-    elif t == 'simrad_tuned_b':
+    elif t == 'simard_tuned_b':
         model.add(keras.Input(shape=(29, 29, 1), name='input'))
         model.add(layers.Conv2D(8, (5, 5), strides=2,
                                 activation='relu', name='conv_1'))

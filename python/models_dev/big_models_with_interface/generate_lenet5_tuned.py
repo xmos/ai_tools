@@ -24,7 +24,7 @@ DEFAULT_AUG = False
 class LeNet5Tuned(LeNet5):
 
     def build(self):
-        super(mi.KerasModel, self).build()
+        self._prep_backend()
         # Building
         self.core_model = tf.keras.Sequential(
             name=self.name,

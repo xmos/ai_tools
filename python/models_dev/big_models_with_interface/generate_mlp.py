@@ -17,6 +17,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'mlp').resolve()
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
 DEFAULT_AUG = False
+DEFAULT_TUNED = False
 
 
 class MLP(mi.KerasModel):
@@ -53,27 +54,48 @@ class MLP(mi.KerasModel):
         self.data['quant'] = self.data['x_train'][:10]
 
 
+class MLPTuned(MLP):
+    def build(self):
+        self._prep_backend()
+        # Building
+        self.core_model = tf.keras.Sequential(
+            name=self.name,
+            layers=[
+                tf.keras.layers.Flatten(input_shape=(32, 32, 1), name='input'),
+                tf.keras.layers.Dense(416, activation='relu', name='dense_1'),
+                tf.keras.layers.Dense(288, activation='relu', name='dense_2'),
+                tf.keras.layers.Dense(10, activation='softmax', name='output')
+            ])
+        # Compilation
+        self.core_model.compile(
+            loss='sparse_categorical_crossentropy',
+            optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
+            metrics=['accuracy'])
+        # Show summary
+        self.core_model.summary()
+
+
 def main(path=DEFAULT_PATH, train_new_model=False,
          batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
-         use_aug=DEFAULT_AUG):
+         use_aug=DEFAULT_AUG, use_tuned=DEFAULT_TUNED):
 
-    mlp1 = MLP('mlp', path)
+    mlp = MLPTuned('mlp_tuned', path) if use_tuned else MLP('mlp', path)
 
     if train_new_model:
         # Build model and compile
-        mlp1.build()
+        mlp.build()
         # Prepare training data
-        mlp1.prep_data(use_aug)
+        mlp.prep_data(use_aug)
         # Train model
-        mlp1.train(batch_size=batch_size, epochs=epochs, save_history=True)
-        mlp1.save_core_model()
+        mlp.train(batch_size=batch_size, epochs=epochs)
+        mlp.save_core_model()
     else:
         # Recover previous state from file system
-        mlp1.load_core_model()
+        mlp.load_core_model()
     # Generate test data
-    mlp1.gen_test_data(use_aug)
+    mlp.gen_test_data(use_aug)
     # Populate converters
-    mlp1.populate_converters()
+    mlp.populate_converters()
 
 
 if __name__ == "__main__":
@@ -98,6 +120,9 @@ if __name__ == "__main__":
         '-aug', '--augment_dataset', action='store_true', default=False,
         help='Create a dataset with elastic transformations.')
     parser.add_argument(
+        '-tun', '--use_tuned', action='store_true', default=False,
+        help='Use a variation of the model tuned for xcore-ai.')
+    parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
     args = parser.parse_args()
@@ -114,4 +139,5 @@ if __name__ == "__main__":
          train_new_model=args.train_model,
          batch_size=args.batch,
          epochs=args.epochs,
-         use_aug=args.augment_dataset)
+         use_aug=args.augment_dataset,
+         use_tuned=args.use_tuned)

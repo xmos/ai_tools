@@ -17,7 +17,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'simard').resolve()
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
 DEFAULT_AUG = False
-
+DEFAULT_TUNED = False
 
 class Simard(mi.KerasModel):
     def build(self):
@@ -56,7 +56,7 @@ class Simard(mi.KerasModel):
         self.data['export_data'] = self.data['x_test'][:10]
         self.data['quant'] = self.data['x_train'][:10]
 
-    def train(self, *, batch_size, save_history=False, **kwargs):
+    def train(self, *, batch_size, save_history=True, **kwargs):
         # Image generator, # TODO: make this be optional with use_aug arg
         aug = tf.keras.preprocessing.image.ImageDataGenerator(
             rotation_range=20, zoom_range=0.15,
@@ -72,11 +72,36 @@ class Simard(mi.KerasModel):
             self.save_training_history()
 
 
+class SimardTuned(Simard):
+    def build(self):
+        self._prep_backend()
+        # Building
+        self.core_model = tf.keras.Sequential(
+            name=self.name,
+            layers=[
+                tf.keras.Input(shape=(29, 29, 1), name='input'),
+                tf.keras.layers.Conv2D(8, kernel_size=5, strides=2,
+                                       activation='relu', name='conv_1'),
+                tf.keras.layers.Conv2D(64, kernel_size=5, strides=2,
+                                       activation='relu', name='conv_2'),
+                tf.keras.layers.Flatten(name='flatten'),
+                tf.keras.layers.Dense(96, activation='relu', name='fc_1'),
+                tf.keras.layers.Dense(10, activation='softmax', name='output')
+            ])
+        # Compilation
+        self.core_model.compile(
+            loss='sparse_categorical_crossentropy',
+            optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
+            metrics=['accuracy'])
+        # Show summary
+        self.core_model.summary()
+
+
 def main(path=DEFAULT_PATH, train_new_model=False,
          batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
-         use_aug=DEFAULT_AUG):
+         use_aug=DEFAULT_AUG, use_tuned=DEFAULT_TUNED):
 
-    simard = Simard('simard', path)
+    simard = SimardTuned('simard_tuned', path) if use_tuned else Simard('simard', path)
 
     if train_new_model:
         # Build model and compile
@@ -84,7 +109,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
         # Prepare training data
         simard.prep_data(use_aug)
         # Train model
-        simard.train(batch_size=batch_size, epochs=epochs, save_history=True)
+        simard.train(batch_size=batch_size, epochs=epochs)
         simard.save_core_model()
     else:
         # Recover previous state from file system
@@ -117,6 +142,9 @@ if __name__ == "__main__":
         '-aug', '--augment_dataset', action='store_true', default=False,
         help='Create a dataset with elastic transformations.')
     parser.add_argument(
+        '-tun', '--use_tuned', action='store_true', default=False,
+        help='Use a variation of the model tuned for xcore-ai.')
+    parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
     args = parser.parse_args()
@@ -133,4 +161,5 @@ if __name__ == "__main__":
          train_new_model=args.train_model,
          batch_size=args.batch,
          epochs=args.epochs,
-         use_aug=args.augment_dataset)
+         use_aug=args.augment_dataset,
+         use_tuned=args.use_tuned)

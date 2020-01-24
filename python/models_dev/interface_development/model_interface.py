@@ -296,7 +296,7 @@ class KerasModel(Model):
     def output_shape(self):
         return self.core_model.output_shape[1:]
 
-    def train(self, save_history=False, **kwargs):
+    def train(self, save_history=True, **kwargs):
         assert self.data
         self.history = self.core_model.fit(
             self.data['x_train'], self.data['y_train'],

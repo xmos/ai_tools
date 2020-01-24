@@ -2,6 +2,7 @@
 import random
 import logging
 from pathlib import Path
+from contextlib import contextmanager
 from tensorflow import keras
 import matplotlib.pyplot as plt
 import numpy as np
@@ -161,6 +162,14 @@ def prepare_MNIST(use_aug=False, simard=False):
             'y_train': np.float32(y_train[:3008]),
             'y_test': np.float32(y_test[:500]),
             'y_val': np.float32(y_val[:100])}
+
+# Debug
+@contextmanager
+def mute_logger(logger):
+    old_log_level = logger.level
+    logger.setLevel(logging.INFO)
+    yield
+    logger.setLevel(old_log_level)
 
 
 # Viz

@@ -306,13 +306,21 @@ class KerasModel(Model):
             self.save_training_history()
 
     def save_training_history(self): # TODO: generalize this idea to KerasModel
+        with mt.mute_logger(logging.getLogger()) as logger:
+            mt.plot_history(
+                self.history, title=self.name+' metrics',
+                path=self.models['models_dir']/(self.name+'_history.png'))
+        '''
         logger = logging.getLogger()
         old_log_level = logger.level  # deal with matplotlib spam
         logger.setLevel(logging.INFO)
+        
         mt.plot_history(
             self.history, title=self.name+' metrics',
             path=self.models['models_dir']/(self.name+'_history.png'))
+        
         logger.setLevel(old_log_level)
+        '''
 
     @abstractmethod
     def gen_test_data(self):

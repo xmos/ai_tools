@@ -274,17 +274,19 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         if len(scale) == 1:
             rshift = np.repeat(rshift, bias_size)
             scale = np.repeat(scale, bias_size)
-        return np.int16(rshift), np.int16(scale)
-
-    def add_shift_scale(self, op):
-        # calculate right shift/scale
-        with self.using(op):
-            rshift, scale = self._shift_scale
+        rshift, scale = np.int16(rshift), np.int16(scale)
         if rshift.shape != scale.shape:
             raise ValueError(f"Shift and scale shapes don't match: {rshift.shape} != {scale.shape}")
+        return rshift, scale
 
-        # add tensor and buffer for rshift/scale
-        shift_scale_arr = np.hstack([rshift, scale]).reshape((2, -1))
+    @property
+    @abstractmethod
+    def _shift_scale_arr(self):
+        pass
+
+    def add_shift_scale(self, op):
+        with self.using(op):
+            shift_scale_arr = self._shift_scale_arr
         shift_scale_tensor = op.subgraph.create_tensor(
             f"{op.name}/shift_scale",
             TensorType.INT16,
@@ -337,6 +339,14 @@ class ReplaceDeepinAnyoutFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
             # rename bias tensor and change quantization mode to alert users to unusual layout
             self._biases.name = f"{op.name}/biases"
             self._biases.quantization['details_type'] = 'CustomQuantization'
+
+    @property
+    def _shift_scale_arr(self):
+        # calculate right shift/scale
+        rshift, scale = self._shift_scale
+
+        # reshape into appropriate array
+        return np.hstack([rshift, scale]).reshape((2, -1))
 
 
 # TODO: write (at least regression) tests for the mutator functions
@@ -449,6 +459,16 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
             weight_quantization = self._weights.quantization
             for key in ['scale', 'zero_point']:
                 weight_quantization[key] = reorder_quant_params(weight_quantization[key])
+
+    @property
+    def _shift_scale_arr(self):
+        # calculate right shift/scale
+        rshift, scale = self._shift_scale
+
+        # reshape into appropriate array
+        new_shape = (-1, 16)
+        rshift, scale = rshift.reshape(new_shape), scale.reshape(new_shape)
+        return np.stack([rshift, scale], axis=1)
 
     def mutate(self, op):
         new_op = super().mutate(op)

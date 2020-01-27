@@ -394,6 +394,18 @@ static inline void fc_deepin_shallowout_16(
     const int16_t* scales);
 
 
+/**
+ * 
+ */
+static inline void fully_connected_16(
+    int16_t* Y,
+    const int8_t* W, 
+    const int8_t* X, 
+    const data16_t* BSS,
+    const unsigned C_in, 
+    const unsigned C_out);
+
+
 
 // /**  Fully connected layer for "deep" input and "shallow" output tensors.
 //  *
@@ -627,14 +639,6 @@ void conv2d_sido_boggle_K(
 
 void fc_boggle_BSS(
     data16_t* BSS,
-    const unsigned C_out);
-
-void fc_deepin_shallowout_16_v2_asm(
-    int16_t* Y,
-    const int8_t* W, 
-    const int8_t* X, 
-    const data16_t* BSS,
-    const unsigned C_in, 
     const unsigned C_out);
 
     

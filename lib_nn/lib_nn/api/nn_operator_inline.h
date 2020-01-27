@@ -154,7 +154,24 @@ static inline void fc_deepin_shallowout_16(
 }
 
 
+static inline void fully_connected_16(
+    int16_t* Y,
+    const int8_t* W, 
+    const int8_t* X, 
+    const data16_t* BSS,
+    const unsigned C_in, 
+    const unsigned C_out)
+{
+#if defined(__XS3A__) && (USE_ASM_fully_connected_16)
 
+    fully_connected_16_asm(Y, W, X, BSS, C_in, C_out);
+
+#else
+
+    fully_connected_16_c(Y, W, X, BSS, C_in, C_out);
+
+#endif
+}
 
 
 

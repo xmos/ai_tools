@@ -30,7 +30,7 @@
 
 // #define TEST_ASM ((HAS_ASM) && 1)
 #define TEST_ASM (1)
-#define TEST_C ((TEST_C_GLOBAL) && 0)
+#define TEST_C ((TEST_C_GLOBAL) && 1)
 
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
 
@@ -51,7 +51,7 @@
 #define C_out           (VPU_INT8_ACC_PERIOD)
 #define C_in            (VPU_INT8_EPV)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
-void test_fc_deepin_shallowout_16_v2_case0()
+void test_fully_connected_16_case0()
 {
     int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
     int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
@@ -79,7 +79,7 @@ void test_fc_deepin_shallowout_16_v2_case0()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fc_deepin_shallowout_16_v2_case0()...\n");
+    PRINTF("test_fully_connected_16_case0()...\n");
 
     typedef struct {
         int8_t x;
@@ -138,14 +138,14 @@ void test_fc_deepin_shallowout_16_v2_case0()
 
 #if TEST_C
         PRINTF("\t\tC...\n");
-        memset(Y_C, 0xCC, sizeof(Y_c));
-        fc_deepin_shallowout_16_v2_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X),
+        memset(Y_c, 0xCC, sizeof(Y_c));
+        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
                                      (data16_t*) &BSS, C_in, C_out);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fc_deepin_shallowout_16_v2_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
+        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
                                       (data16_t*) &BSS, C_in, C_out);
 #endif
 
@@ -199,7 +199,7 @@ void test_fc_deepin_shallowout_16_v2_case0()
 #define C_out           (VPU_INT8_ACC_PERIOD)
 #define C_in            (4 * VPU_INT8_EPV)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
-void test_fc_deepin_shallowout_16_v2_case1()
+void test_fully_connected_16_case1()
 {
     int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
     int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
@@ -227,7 +227,7 @@ void test_fc_deepin_shallowout_16_v2_case1()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fc_deepin_shallowout_16_v2_case1()...\n");
+    PRINTF("test_fully_connected_16_case1()...\n");
 
     typedef struct {
         int8_t x;
@@ -286,14 +286,14 @@ void test_fc_deepin_shallowout_16_v2_case1()
 
 #if TEST_C
         PRINTF("\t\tC...\n");
-        memset(Y_C, 0xCC, sizeof(Y_c));
-        fc_deepin_shallowout_16_v2_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X),
+        memset(Y_c, 0xCC, sizeof(Y_c));
+        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
                                      (data16_t*) &BSS, C_in, C_out);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fc_deepin_shallowout_16_v2_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
+        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
                                       (data16_t*) &BSS, C_in, C_out);
 #endif
 
@@ -347,7 +347,7 @@ void test_fc_deepin_shallowout_16_v2_case1()
 #define C_out           (3 * VPU_INT8_ACC_PERIOD)
 #define C_in            (VPU_INT8_EPV)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
-void test_fc_deepin_shallowout_16_v2_case2()
+void test_fully_connected_16_case2()
 {
     int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
     int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
@@ -375,7 +375,7 @@ void test_fc_deepin_shallowout_16_v2_case2()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fc_deepin_shallowout_16_v2_case2()...\n");
+    PRINTF("test_fully_connected_16_case2()...\n");
 
     typedef struct {
         int8_t x;
@@ -434,14 +434,14 @@ void test_fc_deepin_shallowout_16_v2_case2()
 
 #if TEST_C
         PRINTF("\t\tC...\n");
-        memset(Y_C, 0xCC, sizeof(Y_c));
-        fc_deepin_shallowout_16_v2_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X),
+        memset(Y_c, 0xCC, sizeof(Y_c));
+        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
                                      (data16_t*) &BSS, C_in, C_out);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fc_deepin_shallowout_16_v2_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
+        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
                                       (data16_t*) &BSS, C_in, C_out);
 #endif
 
@@ -495,7 +495,7 @@ void test_fc_deepin_shallowout_16_v2_case2()
 #define C_out           (3 * VPU_INT8_ACC_PERIOD)
 #define C_in            (4 * VPU_INT8_EPV)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
-void test_fc_deepin_shallowout_16_v2_case3()
+void test_fully_connected_16_case3()
 {
     int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
     int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
@@ -523,7 +523,7 @@ void test_fc_deepin_shallowout_16_v2_case3()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fc_deepin_shallowout_16_v2_case3()...\n");
+    PRINTF("test_fully_connected_16_case3()...\n");
 
     typedef struct {
         int8_t x;
@@ -582,14 +582,14 @@ void test_fc_deepin_shallowout_16_v2_case3()
 
 #if TEST_C
         PRINTF("\t\tC...\n");
-        memset(Y_C, 0xCC, sizeof(Y_c));
-        fc_deepin_shallowout_16_v2_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X),
+        memset(Y_c, 0xCC, sizeof(Y_c));
+        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
                                      (data16_t*) &BSS, C_in, C_out);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fc_deepin_shallowout_16_v2_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
+        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
                                       (data16_t*) &BSS, C_in, C_out);
 #endif
 
@@ -643,7 +643,7 @@ void test_fc_deepin_shallowout_16_v2_case3()
 #define C_out           (VPU_INT8_ACC_PERIOD)
 #define C_in            (12)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
-void test_fc_deepin_shallowout_16_v2_case4()
+void test_fully_connected_16_case4()
 {
     int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
     int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
@@ -671,7 +671,7 @@ void test_fc_deepin_shallowout_16_v2_case4()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fc_deepin_shallowout_16_v2_case4()...\n");
+    PRINTF("test_fully_connected_16_case4()...\n");
 
     typedef struct {
         int8_t x;
@@ -726,14 +726,14 @@ void test_fc_deepin_shallowout_16_v2_case4()
 
 #if TEST_C
         PRINTF("\t\tC...\n");
-        memset(Y_C, 0xCC, sizeof(Y_c));
-        fc_deepin_shallowout_16_v2_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X),
+        memset(Y_c, 0xCC, sizeof(Y_c));
+        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
                                      (data16_t*) &BSS, C_in, C_out);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fc_deepin_shallowout_16_v2_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
+        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
                                       (data16_t*) &BSS, C_in, C_out);
 #endif
 
@@ -787,7 +787,7 @@ void test_fc_deepin_shallowout_16_v2_case4()
 #define C_out           (VPU_INT8_ACC_PERIOD)
 #define C_in            (2 * VPU_INT8_EPV + 4)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
-void test_fc_deepin_shallowout_16_v2_case5()
+void test_fully_connected_16_case5()
 {
     int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
     int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
@@ -815,7 +815,7 @@ void test_fc_deepin_shallowout_16_v2_case5()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fc_deepin_shallowout_16_v2_case5()...\n");
+    PRINTF("test_fully_connected_16_case5()...\n");
 
     typedef struct {
         int8_t x;
@@ -876,14 +876,14 @@ void test_fc_deepin_shallowout_16_v2_case5()
 
 #if TEST_C
         PRINTF("\t\tC...\n");
-        memset(Y_C, 0xCC, sizeof(Y_c));
-        fc_deepin_shallowout_16_v2_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X),
+        memset(Y_c, 0xCC, sizeof(Y_c));
+        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
                                      (data16_t*) &BSS, C_in, C_out);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fc_deepin_shallowout_16_v2_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
+        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
                                       (data16_t*) &BSS, C_in, C_out);
 #endif
 
@@ -937,7 +937,7 @@ void test_fc_deepin_shallowout_16_v2_case5()
 #define C_out           (12)
 #define C_in            (2 * VPU_INT8_EPV)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
-void test_fc_deepin_shallowout_16_v2_case6()
+void test_fully_connected_16_case6()
 {
     int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
     int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
@@ -965,7 +965,7 @@ void test_fc_deepin_shallowout_16_v2_case6()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fc_deepin_shallowout_16_v2_case6()...\n");
+    PRINTF("test_fully_connected_16_case6()...\n");
 
     typedef struct {
         int8_t x;
@@ -1032,14 +1032,14 @@ void test_fc_deepin_shallowout_16_v2_case6()
 
 #if TEST_C
             PRINTF("\t\t\tC...\n");
-            memset(Y_C, 0xCC, sizeof(Y_c));
-            fc_deepin_shallowout_16_v2_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X),
+            memset(Y_c, 0xCC, sizeof(Y_c));
+            fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
                                         (data16_t*) &BSS, C_in, C_out_tmp);
 #endif
 #if TEST_ASM
             PRINTF("\t\t\tASM...\n");
             memset(Y_asm, 0xCC, sizeof(Y_asm));
-            fc_deepin_shallowout_16_v2_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
+            fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
                                         (data16_t*) &BSS, C_in, C_out_tmp);
 #endif
 
@@ -1097,7 +1097,7 @@ void test_fc_deepin_shallowout_16_v2_case6()
 #define C_out           (3 * VPU_INT8_ACC_PERIOD + 6)
 #define C_in            (2 * VPU_INT8_EPV)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
-void test_fc_deepin_shallowout_16_v2_case7()
+void test_fully_connected_16_case7()
 {
     int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
     int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
@@ -1125,7 +1125,7 @@ void test_fc_deepin_shallowout_16_v2_case7()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fc_deepin_shallowout_16_v2_case7()...\n");
+    PRINTF("test_fully_connected_16_case7()...\n");
 
     typedef struct {
         int8_t x;
@@ -1192,14 +1192,14 @@ void test_fc_deepin_shallowout_16_v2_case7()
 
 #if TEST_C
             PRINTF("\t\t\tC...\n");
-            memset(Y_C, 0xCC, sizeof(Y_c));
-            fc_deepin_shallowout_16_v2_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X),
+            memset(Y_c, 0xCC, sizeof(Y_c));
+            fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
                                         (data16_t*) &BSS, C_in, C_out_tmp);
 #endif
 #if TEST_ASM
             PRINTF("\t\t\tASM...\n");
             memset(Y_asm, 0xCC, sizeof(Y_asm));
-            fc_deepin_shallowout_16_v2_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
+            fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
                                         (data16_t*) &BSS, C_in, C_out_tmp);
 #endif
 
@@ -1264,7 +1264,7 @@ void test_fc_deepin_shallowout_16_v2_case7()
 #define C_out           (12)
 #define C_in            (24)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
-void test_fc_deepin_shallowout_16_v2_case8()
+void test_fully_connected_16_case8()
 {
     int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
     int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
@@ -1292,7 +1292,7 @@ void test_fc_deepin_shallowout_16_v2_case8()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fc_deepin_shallowout_16_v2_case8()...\n");
+    PRINTF("test_fully_connected_16_case8()...\n");
 
     typedef struct {
         int8_t x;
@@ -1360,14 +1360,14 @@ void test_fc_deepin_shallowout_16_v2_case8()
 
 #if TEST_C
             PRINTF("\t\t\tC...\n");
-            memset(Y_C, 0xCC, sizeof(Y_c));
-            fc_deepin_shallowout_16_v2_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X),
+            memset(Y_c, 0xCC, sizeof(Y_c));
+            fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
                                         (data16_t*) &BSS, C_in, C_out_tmp);
 #endif
 #if TEST_ASM
             PRINTF("\t\t\tASM...\n");
             memset(Y_asm, 0xCC, sizeof(Y_asm));
-            fc_deepin_shallowout_16_v2_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
+            fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
                                         (data16_t*) &BSS, C_in, C_out_tmp);
 #endif
 
@@ -1432,7 +1432,7 @@ void test_fc_deepin_shallowout_16_v2_case8()
 #define C_out           (2 * VPU_INT8_ACC_PERIOD + 12)
 #define C_in            (3 * VPU_INT8_EPV + 24)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
-void test_fc_deepin_shallowout_16_v2_case9()
+void test_fully_connected_16_case9()
 {
     int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
     int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
@@ -1460,7 +1460,7 @@ void test_fc_deepin_shallowout_16_v2_case9()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fc_deepin_shallowout_16_v2_case9()...\n");
+    PRINTF("test_fully_connected_16_case9()...\n");
 
     typedef struct {
         int8_t x;
@@ -1519,14 +1519,14 @@ void test_fc_deepin_shallowout_16_v2_case9()
 
 #if TEST_C
         PRINTF("\t\t\tC...\n");
-        memset(Y_C, 0xCC, sizeof(Y_c));
-        fc_deepin_shallowout_16_v2_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X),
+        memset(Y_c, 0xCC, sizeof(Y_c));
+        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
                                     (data16_t*) &BSS, C_in, C_out);
 #endif
 #if TEST_ASM
         PRINTF("\t\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fc_deepin_shallowout_16_v2_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
+        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
                                     (data16_t*) &BSS, C_in, C_out);
 #endif
 
@@ -1587,7 +1587,7 @@ void test_fc_deepin_shallowout_16_v2_case9()
 #define C_out           (2 * VPU_INT8_ACC_PERIOD + 12)
 #define C_in            (3 * VPU_INT8_EPV + 24)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
-void test_fc_deepin_shallowout_16_v2_case10()
+void test_fully_connected_16_case10()
 {
     int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
     int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
@@ -1615,7 +1615,7 @@ void test_fc_deepin_shallowout_16_v2_case10()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fc_deepin_shallowout_16_v2_case10()...\n");
+    PRINTF("test_fully_connected_16_case10()...\n");
 
     for(int k = 0; k < C_in; k++){
         X[k] = 1;
@@ -1637,14 +1637,14 @@ void test_fc_deepin_shallowout_16_v2_case10()
 
 #if TEST_C
     PRINTF("\t\t\tC...\n");
-    memset(Y_C, 0xCC, sizeof(Y_c));
-    fc_deepin_shallowout_16_v2_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X),
+    memset(Y_c, 0xCC, sizeof(Y_c));
+    fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
                                 (data16_t*) &BSS, C_in, C_out);
 #endif
 #if TEST_ASM
     PRINTF("\t\t\tASM...\n");
     memset(Y_asm, 0xCC, sizeof(Y_asm));
-    fc_deepin_shallowout_16_v2_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
+    fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
                                 (data16_t*) &BSS, C_in, C_out);
 #endif
 
@@ -1715,7 +1715,7 @@ void test_fc_deepin_shallowout_16_v2_case10()
 #define C_out           (2 * VPU_INT8_ACC_PERIOD + 12)
 #define C_in            (3 * VPU_INT8_EPV + 24)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
-void test_fc_deepin_shallowout_16_v2_case11()
+void test_fully_connected_16_case11()
 {
     int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
     int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
@@ -1743,7 +1743,7 @@ void test_fc_deepin_shallowout_16_v2_case11()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fc_deepin_shallowout_16_v2_case11()...\n");
+    PRINTF("test_fully_connected_16_case11()...\n");
 
     for(int k = 0; k < C_in; k++){
         X[k] = k-64 ;
@@ -1765,14 +1765,14 @@ void test_fc_deepin_shallowout_16_v2_case11()
 
 #if TEST_C
     PRINTF("\t\t\tC...\n");
-    memset(Y_C, 0xCC, sizeof(Y_c));
-    fc_deepin_shallowout_16_v2_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X),
+    memset(Y_c, 0xCC, sizeof(Y_c));
+    fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
                                 (data16_t*) &BSS, C_in, C_out);
 #endif
 #if TEST_ASM
     PRINTF("\t\t\tASM...\n");
     memset(Y_asm, 0xCC, sizeof(Y_asm));
-    fc_deepin_shallowout_16_v2_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
+    fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
                                 (data16_t*) &BSS, C_in, C_out);
 #endif
 

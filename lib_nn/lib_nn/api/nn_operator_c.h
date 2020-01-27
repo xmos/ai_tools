@@ -63,7 +63,13 @@ void fc_deepin_shallowout_16_c(
     const uint16_t* shifts, 
     const int16_t* scales);
 
-
+void fully_connected_16_c(
+    int16_t* Y,
+    const int8_t* W, 
+    const int8_t* X, 
+    const data16_t* BSS,
+    const unsigned C_in, 
+    const unsigned C_out);
 
 
 void fc_deepin_shallowout_8_c(

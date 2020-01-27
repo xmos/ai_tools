@@ -3,7 +3,7 @@
 
 
 /*  
-void fc_deepin_shallowout_16_v2_asm(
+void fully_connected_16_asm(
     int16_t* Y,
     const int8_t* W, 
     const int8_t* X, 
@@ -12,7 +12,7 @@ void fc_deepin_shallowout_16_v2_asm(
     const unsigned C_out);
 */
 
-#define FUNCTION_NAME fc_deepin_shallowout_16_v2_asm
+#define FUNCTION_NAME fully_connected_16_asm
 
 #define NSTACKWORDS  30
     

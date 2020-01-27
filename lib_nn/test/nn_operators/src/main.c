@@ -21,6 +21,19 @@ void test_conv2d_shallowin_deepout_1x1_xsize();
 void test_conv2d_shallowin_deepout_3x3();
 void test_conv2d_shallowin_deepout_regions();
 
+void test_fc_deepin_shallowout_16_v2_case0();
+void test_fc_deepin_shallowout_16_v2_case1();
+void test_fc_deepin_shallowout_16_v2_case2();
+void test_fc_deepin_shallowout_16_v2_case3();
+void test_fc_deepin_shallowout_16_v2_case4();
+void test_fc_deepin_shallowout_16_v2_case5();
+void test_fc_deepin_shallowout_16_v2_case6();
+void test_fc_deepin_shallowout_16_v2_case7();
+void test_fc_deepin_shallowout_16_v2_case8();
+void test_fc_deepin_shallowout_16_v2_case9();
+void test_fc_deepin_shallowout_16_v2_case10();
+void test_fc_deepin_shallowout_16_v2_case11();
+
 void test_fc_deepin_shallowout_16_case1();
 void test_fc_deepin_shallowout_16_case2();
 void test_fc_deepin_shallowout_16_case3();
@@ -57,7 +70,7 @@ int main(void)
   RUN_TEST(test_conv2d_deepin_deepout_1x1_chans);
   RUN_TEST(test_conv2d_deepin_deepout_1x1_xsize);
   RUN_TEST(test_conv2d_deepin_deepout_3x3);
-  RUN_TEST(test_conv2d_deepin_deepout_regions);
+  RUN_TEST(test_conv2d_deepindeepout_regions);
   ret_val = UnityEnd();
   printf("\n\n");
 
@@ -86,12 +99,28 @@ int main(void)
   RUN_TEST(test_avgpool2d_deep_case2);
   ret_val = UnityEnd();
   printf("\n\n");
-
   
   UnityBegin("src\\test_fc_deepin_shallowout_16.xc");
   RUN_TEST(test_fc_deepin_shallowout_16_case1);
   RUN_TEST(test_fc_deepin_shallowout_16_case2);
   RUN_TEST(test_fc_deepin_shallowout_16_case3);
+  ret_val = UnityEnd();
+  printf("\n\n");
+
+  
+  UnityBegin("src\\test_fc_deepin_shallowout_16_v2.xc");
+  RUN_TEST(test_fc_deepin_shallowout_16_v2_case0);
+  RUN_TEST(test_fc_deepin_shallowout_16_v2_case1);
+  RUN_TEST(test_fc_deepin_shallowout_16_v2_case2);
+  RUN_TEST(test_fc_deepin_shallowout_16_v2_case3);
+  RUN_TEST(test_fc_deepin_shallowout_16_v2_case4);
+  RUN_TEST(test_fc_deepin_shallowout_16_v2_case5);
+  RUN_TEST(test_fc_deepin_shallowout_16_v2_case6);
+  RUN_TEST(test_fc_deepin_shallowout_16_v2_case7);
+  RUN_TEST(test_fc_deepin_shallowout_16_v2_case8);
+  RUN_TEST(test_fc_deepin_shallowout_16_v2_case9);
+  RUN_TEST(test_fc_deepin_shallowout_16_v2_case10);
+  RUN_TEST(test_fc_deepin_shallowout_16_v2_case11);
   ret_val = UnityEnd();
   printf("\n\n");
 

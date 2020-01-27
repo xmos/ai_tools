@@ -624,6 +624,19 @@ void conv2d_sido_boggle_K(
     const unsigned C_in,
     const unsigned C_out);
 
+
+void fc_boggle_BSS(
+    data16_t* BSS,
+    const unsigned C_out);
+
+void fc_deepin_shallowout_16_v2_asm(
+    int16_t* Y,
+    const int8_t* W, 
+    const int8_t* X, 
+    const data16_t* BSS,
+    const unsigned C_in, 
+    const unsigned C_out);
+
     
 
 #if defined(__XS3A__)

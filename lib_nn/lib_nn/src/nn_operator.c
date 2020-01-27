@@ -5,10 +5,70 @@
 
 #include "xs3_vpu.h"
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void fc_boggle_BSS(
+    data16_t* BSS,
+    const unsigned C_out)
+{
+    const unsigned ceil_C_out = (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2);
+
+    data16_t* buff = (data16_t*) malloc(ceil_C_out * 4 * sizeof(data16_t));
+
+    int32_t* B = (int32_t*) &buff[0];
+    int16_t* sh = (int16_t*) &buff[2 * ceil_C_out];
+    int16_t* sc = (int16_t*) &buff[3 * ceil_C_out];
+
+    if(buff == NULL){
+        printf("Failed to allocate buffer.\n");
+        __builtin_trap();
+    }
+
+    memcpy(buff, BSS, ceil_C_out * 4 * sizeof(data16_t));
+
+    const unsigned C_out_groups = ceil_C_out >> VPU_INT8_ACC_PERIOD_LOG2;
+
+    for(int cog = 0; cog < C_out_groups; cog++){
+
+        const unsigned cog_offset = VPU_INT8_ACC_PERIOD * 4 * cog;
+
+        for(int coff = 0; coff < VPU_INT8_ACC_PERIOD; coff++){
+
+            const unsigned cout = cog * VPU_INT8_ACC_PERIOD + coff;
+
+            int32_t bias = B[cout];
+            data16_t shift = sh[cout];
+            data16_t scale = sc[cout];
+
+            data16_t b_lo = bias & 0xFFFF;
+            data16_t b_hi = (bias & 0xFFFF0000) >> 16;
+
+            BSS[cog_offset + 0 * VPU_INT8_ACC_PERIOD + coff] = b_hi;
+            BSS[cog_offset + 1 * VPU_INT8_ACC_PERIOD + coff] = b_lo;
+            BSS[cog_offset + 2 * VPU_INT8_ACC_PERIOD + coff] = shift;
+            BSS[cog_offset + 3 * VPU_INT8_ACC_PERIOD + coff] = scale;
+            
+        }
+    }
+
+
+    if(buff != NULL){
+        free(buff);
+    }
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////

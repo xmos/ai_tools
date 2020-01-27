@@ -9,7 +9,7 @@
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
 
-#include "cifar10_model.h"
+#include "xcore_model.h"
 
 #define TEST_INPUT_SIZE = 32 * 32 * 4
 
@@ -47,7 +47,7 @@ static void setup() {
 
     // Map the model into a usable data structure. This doesn't involve any
     // copying or parsing, it's a very lightweight operation.
-    model = tflite::GetModel(model_xcore_classifier_tflite);
+    model = tflite::GetModel(xcore_model);
     if (model->version() != TFLITE_SCHEMA_VERSION) {
         error_reporter->Report(
             "Model provided is schema version %d not equal "

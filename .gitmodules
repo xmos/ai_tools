@@ -1,0 +1,3 @@
+[submodule "xcore/operator_book/Unity"]
+	path = lib_nn/Unity
+	url = git@github.com:xmos/Unity

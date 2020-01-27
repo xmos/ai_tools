@@ -1,0 +1,103 @@
+# Copyright (c) 2019, XMOS Ltd, All rights reserved
+import os.path
+
+
+def create_list_from_make_flag(bld, list_of_flags):
+    for i, flag in enumerate(list_of_flags):
+        if flag.startswith('$('):
+            for f in bld.env[flag.strip('$()')]:
+                list_of_flags.insert(i, f)
+                i += 1
+            list_of_flags.remove(flag)
+    return list_of_flags
+
+
+def create_list_of_strings(whitespace_seperated_list):
+    list_of_strings = whitespace_seperated_list.split(' ')
+    for item in list_of_strings:
+        item = "'{}'".format(item)
+    return list_of_strings
+
+
+def read_module_build_info(bld):
+    with open(os.path.join(bld.path.abspath(), 'module_build_info')) as file:
+        module_build_info = {}
+        for line in file.readlines():
+            line = line.strip()
+            if line and not line.startswith('#'):
+                key, value = line.split('=', 1)
+                module_build_info[key.strip(' +')] = value.strip()
+
+        try:
+            module_build_info['OPTIONAL_HEADERS'] = (
+                create_list_of_strings(module_build_info['OPTIONAL_HEADERS']))
+        except KeyError:
+            pass
+
+        try:
+            module_build_info['DEPENDENT_MODULES'] = (
+                create_list_of_strings(module_build_info['DEPENDENT_MODULES']))
+        except KeyError:
+            pass
+
+        try:
+            module_build_info['MODULE_XCC_FLAGS'] = (
+                create_list_from_make_flag(bld,
+                    create_list_of_strings(module_build_info['MODULE_XCC_FLAGS'])))
+        except KeyError:
+            pass
+
+        try:
+            module_build_info['MODULE_XCC_XC_FLAGS'] = (
+                create_list_from_make_flag(bld,
+                    create_list_of_strings(module_build_info['MODULE_XCC_XC_FLAGS'])))
+        except KeyError:
+            pass
+
+        try:
+            module_build_info['MODULE_XCC_C_FLAGS'] = (
+                create_list_from_make_flag(bld,
+                    create_list_of_strings(module_build_info['MODULE_XCC_C_FLAGS'])))
+        except KeyError:
+            pass
+
+        try:
+            module_build_info['MODULE_XCC_CPP_FLAGS'] = (
+                create_list_from_make_flag(bld,
+                    create_list_of_strings(module_build_info['MODULE_XCC_CPP_FLAGS'])))
+        except KeyError:
+            pass
+
+        try:
+            module_build_info['MODULE_XCC_ASM_FLAGS'] = (
+                create_list_from_make_flag(bld,
+                    create_list_of_strings(module_build_info['MODULE_XCC_ASM_FLAGS'])))
+        except KeyError:
+            pass
+
+        try:
+            module_build_info['INCLUDE_DIRS'] = (
+                create_list_of_strings(module_build_info['INCLUDE_DIRS']))
+        except KeyError:
+            pass
+
+        return module_build_info
+
+
+def use_module(bld):
+    
+    module_build_info = read_module_build_info(bld)
+    sources = bld.path.ant_glob(['src/**/*.xc', 'src/**/*.c', 'src/**/*.S'])
+
+    for ASD in ['XCC_FLAGS', 'XCC_XC_FLAGS']:
+        MASD = 'MODULE_'+ASD
+        # bld.env[MASD] = list(set(bld.env[ASD] + (module_build_info[MASD] if MASD in module_build_info else [])))
+        tmp = list(set((module_build_info[MASD] if MASD in module_build_info else [])))
+        bld.env[MASD] = tmp
+
+    bld.module(
+        source=sources,
+        includes=module_build_info['INCLUDE_DIRS'],
+        # optional_headers=module_build_info['OPTIONAL_HEADERS'],
+        # depends_on=module_build_info['DEPENDENT_MODULES'],
+        version=module_build_info['VERSION'])

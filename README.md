@@ -45,6 +45,7 @@ To remove the environment, deactivate and run:
 conda remove -p ai_tools_venv/ --all
 ```
 
+
 VSCode users
 ------------
 If you are using VS Code and conda, consider applying this fix:

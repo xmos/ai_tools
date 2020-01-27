@@ -20,23 +20,48 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fc_boggle_BSS(
-    data16_t* BSS,
+    data16_t* bss_out,
+    int32_t* bias,
+    int16_t* shift,
+    int16_t* scale,
+    data16_t* scratch,
     const unsigned C_out)
 {
     const unsigned ceil_C_out = (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2);
 
-    data16_t* buff = (data16_t*) malloc(ceil_C_out * 4 * sizeof(data16_t));
+    data16_t* buff = NULL;
 
-    int32_t* B = (int32_t*) &buff[0];
-    int16_t* sh = (int16_t*) &buff[2 * ceil_C_out];
-    int16_t* sc = (int16_t*) &buff[3 * ceil_C_out];
+    if(((void*)bias) == ((void*)bss_out)){
+        //bss_out is being updated in-place. We will need to use a scratch buffer
 
-    if(buff == NULL){
-        printf("Failed to allocate buffer.\n");
-        __builtin_trap();
+        if(scratch != NULL){
+            //scratch buffer was provided by user
+            buff = scratch;
+        } else {
+            //need to malloc a scratch buffer.
+            buff = (data16_t*) malloc(C_out * 4 *  sizeof(data16_t));
+
+            if(buff == NULL){
+                printf("Failed to allocate scratch buffer.");
+                __builtin_trap();
+            }
+        }
+
+    } else {
+        //bss_out is not being updated in-place, just copy from the inputs to
+        //  bss_out.
     }
 
-    memcpy(buff, BSS, ceil_C_out * 4 * sizeof(data16_t));
+
+    if(buff != NULL){
+        memcpy(&buff[0], bias, C_out * sizeof(int32_t));
+        memcpy(&buff[2*C_out], shift, C_out*sizeof(data16_t));
+        memcpy(&buff[3*C_out], scale, C_out*sizeof(data16_t));
+
+        bias = (int32_t*) &buff[0];
+        shift = (int16_t*) &buff[2*C_out];
+        scale = (int16_t*) &buff[3*C_out];
+    }
 
     const unsigned C_out_groups = ceil_C_out >> VPU_INT8_ACC_PERIOD_LOG2;
 
@@ -48,23 +73,23 @@ void fc_boggle_BSS(
 
             const unsigned cout = cog * VPU_INT8_ACC_PERIOD + coff;
 
-            int32_t bias = B[cout];
-            data16_t shift = sh[cout];
-            data16_t scale = sc[cout];
+            int32_t b      = bias[cout];
+            data16_t shr   = shift[cout];
+            data16_t scl   = scale[cout];
 
-            data16_t b_lo = bias & 0xFFFF;
-            data16_t b_hi = (bias & 0xFFFF0000) >> 16;
+            data16_t b_lo = b & 0xFFFF;
+            data16_t b_hi = (b & 0xFFFF0000) >> 16;
 
-            BSS[cog_offset + 0 * VPU_INT8_ACC_PERIOD + coff] = b_hi;
-            BSS[cog_offset + 1 * VPU_INT8_ACC_PERIOD + coff] = b_lo;
-            BSS[cog_offset + 2 * VPU_INT8_ACC_PERIOD + coff] = shift;
-            BSS[cog_offset + 3 * VPU_INT8_ACC_PERIOD + coff] = scale;
+            bss_out[cog_offset + 0 * VPU_INT8_ACC_PERIOD + coff] = b_hi;
+            bss_out[cog_offset + 1 * VPU_INT8_ACC_PERIOD + coff] = b_lo;
+            bss_out[cog_offset + 2 * VPU_INT8_ACC_PERIOD + coff] = shr;
+            bss_out[cog_offset + 3 * VPU_INT8_ACC_PERIOD + coff] = scl;
             
         }
     }
 
 
-    if(buff != NULL){
+    if(buff != NULL && scratch == NULL){
         free(buff);
     }
 }

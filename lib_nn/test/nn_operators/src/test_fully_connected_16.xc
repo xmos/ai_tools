@@ -133,8 +133,11 @@ void test_fully_connected_16_case0()
             BSS.scale[k] = casse->scale;
         }
 
-        
-        fc_boggle_BSS((data16_t*) &BSS, C_out);
+        fc_boggle_BSS(  (data16_t*) &BSS, 
+                        (int32_t*) &BSS.B, 
+                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.scale, 
+                        NULL, C_out  );
 
 #if TEST_C
         PRINTF("\t\tC...\n");
@@ -282,7 +285,11 @@ void test_fully_connected_16_case1()
         }
 
         
-        fc_boggle_BSS((data16_t*) &BSS, C_out);
+        fc_boggle_BSS(  (data16_t*) &BSS, 
+                        (int32_t*) &BSS.B, 
+                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.scale, 
+                        NULL, C_out  );
 
 #if TEST_C
         PRINTF("\t\tC...\n");
@@ -429,8 +436,12 @@ void test_fully_connected_16_case2()
             BSS.scale[k] = casse->scale;
         }
 
-        
-        fc_boggle_BSS((data16_t*) &BSS, C_out);
+
+        fc_boggle_BSS(  (data16_t*) &BSS, 
+                        (int32_t*) &BSS.B, 
+                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.scale, 
+                        NULL, C_out  );
 
 #if TEST_C
         PRINTF("\t\tC...\n");
@@ -577,8 +588,12 @@ void test_fully_connected_16_case3()
             BSS.scale[k] = casse->scale;
         }
 
-        
-        fc_boggle_BSS((data16_t*) &BSS, C_out);
+
+        fc_boggle_BSS(  (data16_t*) &BSS, 
+                        (int32_t*) &BSS.B, 
+                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.scale, 
+                        NULL, C_out  );
 
 #if TEST_C
         PRINTF("\t\tC...\n");
@@ -721,8 +736,12 @@ void test_fully_connected_16_case4()
             BSS.scale[k] = casse->scale;
         }
 
-        
-        fc_boggle_BSS((data16_t*) &BSS, C_out);
+
+        fc_boggle_BSS(  (data16_t*) &BSS, 
+                        (int32_t*) &BSS.B, 
+                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.scale, 
+                        NULL, C_out  );
 
 #if TEST_C
         PRINTF("\t\tC...\n");
@@ -871,8 +890,12 @@ void test_fully_connected_16_case5()
             BSS.scale[k] = casse->scale;
         }
 
-        
-        fc_boggle_BSS((data16_t*) &BSS, C_out);
+
+        fc_boggle_BSS(  (data16_t*) &BSS, 
+                        (int32_t*) &BSS.B, 
+                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.scale, 
+                        NULL, C_out  );
 
 #if TEST_C
         PRINTF("\t\tC...\n");
@@ -1027,8 +1050,12 @@ void test_fully_connected_16_case6()
                 BSS.scale[k] = casse->scale;
             }
 
-            
-            fc_boggle_BSS((data16_t*) &BSS, C_out_tmp);
+
+        fc_boggle_BSS(  (data16_t*) &BSS, 
+                        (int32_t*) &BSS.B, 
+                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.scale, 
+                        NULL, C_out  );
 
 #if TEST_C
             PRINTF("\t\t\tC...\n");
@@ -1187,8 +1214,12 @@ void test_fully_connected_16_case7()
                 BSS.scale[k] = casse->scale;
             }
 
-            
-            fc_boggle_BSS((data16_t*) &BSS, C_out_tmp);
+
+            fc_boggle_BSS(  (data16_t*) &BSS, 
+                            (int32_t*) &BSS.B, 
+                            (int16_t*) &BSS.shift, 
+                            (int16_t*) &BSS.scale, 
+                            NULL, C_out  );
 
 #if TEST_C
             PRINTF("\t\t\tC...\n");
@@ -1355,8 +1386,12 @@ void test_fully_connected_16_case8()
                 BSS.scale[k] = casse->scale;
             }
 
-            
-            fc_boggle_BSS((data16_t*) &BSS, C_out_tmp);
+
+            fc_boggle_BSS(  (data16_t*) &BSS, 
+                            (int32_t*) &BSS.B, 
+                            (int16_t*) &BSS.shift, 
+                            (int16_t*) &BSS.scale, 
+                            NULL, C_out  );
 
 #if TEST_C
             PRINTF("\t\t\tC...\n");
@@ -1514,8 +1549,12 @@ void test_fully_connected_16_case9()
             BSS.shift[k] = casse->shift;
             BSS.scale[k] = casse->scale;
         }
-        
-        fc_boggle_BSS((data16_t*) &BSS, C_out);
+
+        fc_boggle_BSS(  (data16_t*) &BSS, 
+                        (int32_t*) &BSS.B, 
+                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.scale, 
+                        NULL, C_out  );
 
 #if TEST_C
         PRINTF("\t\t\tC...\n");
@@ -1633,7 +1672,12 @@ void test_fully_connected_16_case10()
         BSS.scale[k] = -0x2000;
     }
     
-    fc_boggle_BSS((data16_t*) &BSS, C_out);
+
+    fc_boggle_BSS(  (data16_t*) &BSS, 
+                    (int32_t*) &BSS.B, 
+                    (int16_t*) &BSS.shift, 
+                    (int16_t*) &BSS.scale, 
+                    NULL, C_out  );
 
 #if TEST_C
     PRINTF("\t\t\tC...\n");
@@ -1761,7 +1805,12 @@ void test_fully_connected_16_case11()
         BSS.scale[k] = -0x2000;
     }
     
-    fc_boggle_BSS((data16_t*) &BSS, C_out);
+
+    fc_boggle_BSS(  (data16_t*) &BSS, 
+                    (int32_t*) &BSS.B, 
+                    (int16_t*) &BSS.shift, 
+                    (int16_t*) &BSS.scale, 
+                    NULL, C_out  );
 
 #if TEST_C
     PRINTF("\t\t\tC...\n");

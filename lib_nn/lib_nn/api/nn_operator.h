@@ -5,6 +5,7 @@
 
 #include "nn_types.h"
 #include "nn_op_structs.h"
+#include "nn_op_utils.h"
 #include "nn_operator_asm.h"
 #include "nn_operator_c.h"
 #include "nn_operator_inline.h"
@@ -82,9 +83,6 @@ as:
 */
 
 
-
-
-
 /**
 Bias Tensor Layout (Form 1)
 
@@ -131,11 +129,108 @@ lower (respectively) 16 bits of the 32-bit bias for output channel `(16*i + j)`.
 
 
 
+/**             Notes on Inner Products and Saturation
+
+ Many functions in this API compute inner products between vectors with many elements. These
+ inner products are computed as long sequences of multiply-accumulates on the VPU. Unlike on
+ the scalar unit, on the VPU multiplications, additions and subtractions *are not associative*. 
+
+ The lack of associativity is due to the saturation logic used on the VPU. Where the scalar
+ unit will roll-over in the case of integer overflows, the XS3 VPU will clamp results
+ to the bounds appropriate to the element bit-depth, which, for N-bit (signed) integers,
+ is the symmetric range  [-(2^(N-1))+1, (2^(N-1))-1]. Macros are provided for convenience.
+
+    Saturation Bounds:
+
+        Bit depth   Min             Min Macro           Max             Max Macro
+        =========   ===             =========           ===             =========
+        8-bit:      -127            VPU_INT8_MIN        127             VPU_INT8_MAX
+        16-bit:     -65535          VPU_INT16_MIN       65535           VPU_INT16_MAX
+        32-bit:     -2147483647     VPU_INT32_MIN       2147483647      VPU_INT32_MAX
+
+
+When computing inner products, saturation occurs based on the *accumulator* bit depth, rather than
+the multiplicand (vector element) bit depth.
+
+        Element         Accumulator
+        =======         ===========
+        8-bit           32-bit
+        16-bit          32-bit
+        32-bit          40-bit
+
+Most inner products computed in this API use 8-bit input vectors. The product of two 8-bit signed
+integers can be no larger in magnitude than 2^14  (from -(2^7)*-(2^7) ). The largest 32-bit accumulator
+value is approximately 2^31, which is (2^14 * 2^17). Thus, an 8-bit inner product cannot 
+saturate its 32-bit accumulator unless the vectors are about 128,000 elements long.
+
+However, when inner products are computed, the accumulator is (usually) seeded with an arbitrary
+user-supplied 32-bit bias. This bias makes it possible for saturation to occur on inner products
+with operand vectors of any length.
+
+Further, saturation can occur at any point during the accumulation, and subsequent steps may
+move the accumulator away from the saturation point, and so it may not always be obvious whether
+saturation has occurred somewhere inside the inner product, skewing the final result.
+
+Finally, *the functions in this API neither specify nor guarantee the order in which elements
+are accumulated when computing inner products*.
+
+Therefore, where saturation in unacceptable, it is incumbent upon the *user* of this library to 
+ensure that saturation is not possible given the inputs (matrix/kernel coefficients and input
+vectors) and other parameters (e.g. input channel count).
+ */
 
 
 
+/**         Notes on Output Shift and Scale
+
+Many functions in this API include a shift and scale on each output prior to writing the result
+to memory. For the sake of brevity, the details of these operations are contained here, rather than 
+repeating them in each function's description.
+
+In general, the situation looks like this:
+
+        y[i] <- ((acc32[i] >> shr[i]) * scale[i])             (16-bit outputs)
+
+            or
+        
+        y[i] <- ((acc32[i] >> shr[i]) * scale[i]) >> 8        (8-bit outputs)
+
+      where
+        i is the index of the output
+        y[i] is the either 8- or 16-bit output
+        acc32[i] is the 32-bit accumulator value associated with output i
+            (acc32[i] is an intermediate value, which may be the result of convolution or an inner product, etc)
+        shr[i] is the shift value associated with output i
+        scale[i] is the scale value associated with output i
+
+Shift:
+    The shift operation performs several actions atomically:
+        - First a "virtual" arithmetic right shift of `shr` bits occurs on the 32-bit accumulator `acc32`.
+        - Second, the result of the shift is rounded (as though the shift is a rounding real division by `2^-shr`)
+        with ties rounding towards positive infinity.
+        - Third, saturation logic is applied to the result of the rounding, clamping the result to [-65535, 65535]. Note
+        that this saturation is symmetric.
+        - Finally, the bit-depth of the result is reduced to 16 bits.
+    While `shr` is a signed 16-bit value, *negative values will be treated as zero*.
+    As a final ideosyncrasy, the shifting of negative accumulator values will *never result in zeros*. Where
+    the result of shifting a negative value would normally underflow to 0, it will instead result as -1.
 
 
+Scale:
+    The scaling is a signed 16-bit fixed-point multiplication with rounding and saturation. `scale` is 
+    treated as a signed Q1.14 fixed-point value in the range `[-2.0, 2.0)` (note that `scale` *cannot*
+    represent 2.0). This effectively means that the 16-bit result of the shift operation is multiplied
+    by `scale` using integer multiplication, and the 32-bit result is right-shifted 14 bits.
+    As with the shift operation above, rounding is applied during the right-shift, and the saturation
+    logic is applied to the result.
+
+Final shift:
+    In functions that output 8-bit results, a final shift of 8 bits is applied after scaling to
+    reduce the bit-depth from 16 bits to 8 bits. In this case, rounding occurs, as with the other
+    two operations, but no saturation is possible.
+    In functions that output 16-bit results, no final shift occurs here.
+
+ */
 
 
 
@@ -394,7 +489,57 @@ static inline void fc_deepin_shallowout_16(
     const int16_t* scales);
 
 
-/**
+
+
+/** Generalized fully-connected layer with 16-bit outputs.
+ * 
+ * The logical operation performed is the following:
+ * 
+ *      Y[i] = (dot(W[i][], X[] + bias[i]) >> shift[i]) * scale[i]
+ * 
+ *   where
+ *      W[i][] represents the `i`th row of the weight matrix
+ *      dot(A,B) is the 32-bit inner product of 8-bit vectors A and B
+ *      bias, shift and scale are encoded in `BSS`
+ * 
+ * `C_in` is the number of elements in `X` as well as the number of columns in `W`. 
+ * `C_in` must be a multiple of `4`.
+ * 
+ * There are no restrictions on the value of `C_out`.
+ * 
+ * `Y` is the 16-bit output vector and has a shape of `(C_out)`. `Y` must begin at a word-
+ * aligned address.
+ * 
+ * `W` is the 8-bit weight matrix with a shape of `(C_out, C_in)`. `W` must begin at a word-
+ * aligned address.
+ * 
+ * `X` is the 8-bit input vector with a shape of `(C_in)`. `X` must begin at a word-aligned address.
+ * 
+ * `BSS` is the bias-shift-scale tensor with a shape of `(ceil(C_out/16), 4, 16)`. This tensor
+ * encodes the bias, shift and scale for each output channel into a single linear block of memory,
+ * allowing a more efficient implementation of this operator. The function `fc_boggle_BSS()` is
+ * provided to simplify the layout of this tensor. Use of `fc_boggle_BSS` is not required, but
+ * refer to its documentation if you wish to layout this tensor manually (to reduce initialization
+ * time). 
+ * 
+ * Notes:
+ * 
+ * This function computes inner products of arbitrary length and is thus susceptible to accumulator
+ * saturation. See the Notes on Inner Products and Saturation section above for more information.
+ * 
+ * See the section Notes on Output Shift and Scale for more details about how the final shift
+ * and scale are applied to get the final result.
+ * 
+ * This implementation will be most efficient when `C_in` is a multiple of `32`, and `C_out` is
+ * a multiple of `16`.
+ * 
+ * The requirement that `C_in` be a multiple of 4 is imposed by the word-alignment constraint of the VPU.
+ * To use this function with input vectors whose length is not a multiple of `4`, just pad the 
+ * matrix `W` on right with zeros until its width is a multiple of `4`, and use new width 
+ * as `C_in`. So long as `W` is padded with zeros, `X` does not need to be padded out. 
+ * Alternatively, if setting many elements of `W` to zero is an insufferable cost, `X` can padded 
+ * out with zeros so that its size is a multiple of 4 elements, in which case it does not matter
+ * what `W` is padded with, *though it must still be padded*.
  * 
  */
 static inline void fully_connected_16(
@@ -474,172 +619,6 @@ static inline void requantize_16_to_8(
     const unsigned n);
 
 
-
-
-/** Prepare to execute a 2D deepin-deepout convolution.
- *
- * This function initializes a `nn_conv2d_dido_params_t` struct with
- * the values necessary to perform the specified convolution.
- * 
- * Once initialized, the contents of the `params` struct will not
- * change, so it need only be initialized once for many (identical)
- * convolutions.
- *
- * The convolution itself may require several partial convolutions corresponding
- * to different (non-overlapping) regions of the output image. Each of these 
- * partial convolutions is described by a `nn_conv2d_dido_block_params_t` struct.
- * As the number of these blocks is not known a priori, their memory is
- * allocated from the heap. The `nn_conv2d_dido_params_t.blocks` field of `params` 
- * will point to the (contiguous) array of `nn_conv2d_dido_block_params_t` blocks.
- *
- * The `nn_conv2d_dido_params_t` struct is intended to be opaque, however, because
- * memory is allocated from the heap, if the same params struct is to be 
- * initialized again, or if it is to go out of scope, it should be properly
- * de-initialized using `conv2d_deepin_deepout_deinit()`.
- */
-void conv2d_deepin_deepout_init(
-    nn_conv2d_dido_params_t* params,
-    const nn_conv2d_init_params_t* init_params,
-    const nn_conv2d_region_params_t* region_params,
-    const int8_t* K,
-    const data16_t* B);
-
-/**
- * De-initialize a `nn_conv2d_dido_params_t` struct which
- * has been previously initialized.
- *
- * Because `conv2d_deepin_deepout_init()` uses `malloc()`, these
- * structs should be de-initialized if they are going to be 
- * initialized again or before they are allowed to go out of scope.
- * 
- * This function will free the memory allocated by 
- * `conv2d_deepin_deepout_init()`.
- */
-void conv2d_deepin_deepout_deinit(
-    nn_conv2d_dido_params_t* params);
-
-
-
-/** Prepare to execute a 2D deepin-deepout convolution.
- *
- * This function initializes a `nn_conv2d_dido_params_t` struct with
- * the values necessary to perform the specified convolution.
- * 
- * Once initialized, the contents of the `params` struct will not
- * change, so it need only be initialized once for many (identical)
- * convolutions.
- *
- * The convolution itself may require several partial convolutions corresponding
- * to different (non-overlapping) regions of the output image. Each of these 
- * partial convolutions is described by a `nn_conv2d_dido_block_params_t` struct.
- * As the number of these blocks is not known a priori, their memory is
- * allocated from the heap. The `nn_conv2d_dido_params_t.blocks` field of `params` 
- * will point to the (contiguous) array of `nn_conv2d_dido_block_params_t` blocks.
- *
- * The `nn_conv2d_dido_params_t` struct is intended to be opaque, however, because
- * memory is allocated from the heap, if the same params struct is to be 
- * initialized again, or if it is to go out of scope, it should be properly
- * de-initialized using `conv2d_deepin_deepout_deinit()`.
- */
-void conv2d_shallowin_deepout_init(
-    nn_conv2d_sido_params_t* params,
-    const nn_conv2d_init_params_t* init_params,
-    const nn_conv2d_region_params_t* region_params,
-    const int8_t* K,
-    const data16_t* B);
-
-
-/**
- * De-initialize a `nn_conv2d_sido_params_t` struct which
- * has been previously initialized.
- *
- * Because `conv2d_shallowin_deepout_init()` uses `malloc()`, these
- * structs should be de-initialized if they are going to be 
- * initialized again or before they are allowed to go out of scope.
- * 
- * This function will free the memory allocated by 
- * `conv2d_shallowin_deepout_init()`.
- */
-void conv2d_shallowin_deepout_deinit(
-    nn_conv2d_sido_params_t* params);
-
-
-/**
- *  Rearranges the data in `B` from the standard tensor layout
- * into Bias tensor layout form 1, as required by the 
- * `conv2d_deepin_deepout()` and `conv2d_shallowin_deepout()`
- * functions.
- * 
- * \param B         Bias tensor in standard tensor layout
- * \param C_out     Length of the bias tensor
- * \returns         `B` recast as a `data16_t` pointer.
- */
-data16_t* conv2d_boggle_B(
-    int32_t* B,
-    const unsigned C_out);
-
-/**
- * Rearranges the data in kernel tensor `K`, provided in standard tensor
- * layout ( with shape (C_out, K_h, K_w, C_in) corresponding to the
- * output channel, kernel row, kernel column and input channel
- * respectively) into the layout required by `conv2d_deepin_deepout()`.
- * 
- * \param K         Kernel tensor
- * \param K_h       Kernel height
- * \param K_w       Kernel width
- * \param C_in      Input channel count
- * \param C_out     Output Channel count
- */
-void conv2d_dido_boggle_K(
-    int8_t* K,
-    const unsigned K_h,
-    const unsigned K_w,
-    const unsigned C_in,
-    const unsigned C_out);
-    
-
-/**
- * Re-layout the shift-scale tensor to the format expected by the convolution kernels.
- * 
- * The input tensor should contain all of the shifts followed by all of the scales, in
- * channel order. 
- *
- * A scratch buffer parameter may optionally be supplied (same size as `shiftscales`).
- * If `scratch` is `NULL`, a buffer will be `malloc`ed (and `free`ed).
- *
- * \param shiftscales   The shift/scale tensor. Updated in-place
- * \param C_out         The number of output channels
- * \param scratch       Optional scratch buffer.
- */
-void conv2d_boggle_shift_scale(
-    int16_t* shiftscales,
-    const unsigned C_out,
-    int16_t* scratch);
-
-
-/**
- * Rearranges the data in kernel tensor `K`, provided in ..nearly... standard tensor
- * layout ( with shape (C_out, K_h, 32/C_in, C_in) corresponding to the
- * output channel, kernel row, kernel column and input channel
- * respectively) into the layout required by `conv2d_deepin_deepout()`.
- * 
- * \param K         Kernel tensor
- * \param K_h       Kernel height
- * \param K_w       Kernel width
- * \param C_in      Input channel count
- * \param C_out     Output Channel count
- */
-void conv2d_sido_boggle_K(
-    int8_t* K,
-    const unsigned K_h,
-    const unsigned K_w,
-    const unsigned C_in,
-    const unsigned C_out);
-
-
-void fc_boggle_BSS(
-    data16_t* BSS,
-    const unsigned C_out);
 
     
 

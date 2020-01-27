@@ -5,6 +5,7 @@
 
 
 #include "nn_operator.h"
+#include "xs3_vpu.h"
 
 #ifdef __XC__
 extern "C" {

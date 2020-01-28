@@ -77,10 +77,10 @@ test_cases = [
 generate_test_cases(operator, generator, test_cases)
 
 #***********************************
-# Fully-connected final
+# Fully-connected
 #***********************************
-operator = operator_codes.XCOREOpCodes.XC_fc_deepin_anyout_final.name
-generator = os.path.join(directories.GENERATOR_DIR, 'generate_fc_deepin_shallowout.py')
+operator = operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name
+generator = os.path.join(directories.GENERATOR_DIR, 'generate_fc_deepin_anyout.py')
 test_cases = [
     {'in': 32 }
 ]

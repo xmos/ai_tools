@@ -12,7 +12,7 @@ DEFAULT_OUTPUT_DIM = 10
 DEFAULT_INPUT_DIM = 32
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_shallowout_final').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_anyout').resolve()
 
 
 # Prepare data function
@@ -109,7 +109,7 @@ def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
          train_new_model=False):
     # Instantiate model
-    test_model = FcDeepinShallowoutFinal('fc_deepin_shallowout_final', Path(path))
+    test_model = FcDeepinShallowoutFinal('fc_deepin_anyout', Path(path))
     if train_new_model:
         # Build model and compile
         test_model.build(input_dim, output_dim)

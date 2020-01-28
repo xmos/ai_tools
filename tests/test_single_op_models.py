@@ -23,9 +23,9 @@ def load_tests(name):
     elif name.startswith('conv_deepin_deepout'):
         pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name, '*')
-    elif name.startswith('fc_deepin_anyout_final'):
+    elif name.startswith('fc_deepin_anyout'):
         pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_fc_deepin_anyout_final.name, '*')
+            operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name, '*')
     elif name.startswith('maxpool'):
         pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_maxpool2d_deep.name, '*')
@@ -104,8 +104,8 @@ def test_conv_deepin_deepout(test_model_app, conv_deepin_deepout_test_case):
     assert(run_test_case(test_model_app, conv_deepin_deepout_test_case))
 
 
-def test_fc_deepin_anyout_final(test_model_app, fc_deepin_anyout_final_test_case):
-    assert(run_test_case(test_model_app, fc_deepin_anyout_final_test_case))
+def test_fc_deepin_anyout(test_model_app, fc_deepin_anyout_test_case):
+    assert(run_test_case(test_model_app, fc_deepin_anyout_test_case))
 
 
 def test_maxpool(test_model_app, maxpool_test_case):

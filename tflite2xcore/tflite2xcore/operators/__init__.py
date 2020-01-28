@@ -18,7 +18,7 @@ def create(name, inputs=None, outputs=None, model=None):
         return conv.Conv2DShallowInDeepOut(inputs, outputs, model)
     elif name == 'XC_conv2d_deepin_deepout_relu':
         return conv.Conv2DDeepInDeepOut(inputs, outputs)
-    elif name == 'XC_fc_deepin_shallowout_final':
+    elif name == 'XC_fc_deepin_anyout':
         return fully_connected.FullyConnectedDeepInShallowOutFinal(inputs, outputs)
     elif name == 'XC_maxpool2d_deep':
         return maxpool.MaxPool2DDeep(inputs, outputs)

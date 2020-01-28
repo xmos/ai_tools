@@ -78,7 +78,16 @@ def test_custom_options():
         inputs=[input_tensor], outputs=[output_tensor]
     )
 
-    expected_operator.custom_options = {'Mo': 1, 'Larry': [3, 2, 1], 'Curly': 'No thanks, I prefer Shemp'}
+    expected_operator.custom_options = {
+        'int': 1,
+        'vector_of_ints': [3, 2, 1],
+        'string': 'test string',
+        'vector_of_maps ': [
+            {'map1': [1, 2, 3]},
+            {'map2': [1, 2, 3]},
+            {'map3': [1, 2, 3]}
+        ]
+    }
 
     tmp_file = os.path.join(tempfile.mkdtemp(), 'test_custom_options.tflite')
     bytes_written = write_flatbuffer(model, tmp_file)

@@ -75,27 +75,36 @@ class FlexbufferBuilder:
         if data:
             self.set_data(data)
 
-    def set_data(self, data):
-        lib.builder_clear(self.obj)
-
-        msize = lib.builder_start_map(self.obj)
+    def __add_map(self, obj, data):
+        msize = lib.builder_start_map(obj)
 
         for key, value in data.items():
             key_ascii = key.encode('ascii')
             value_type = type(value)
             if value_type == int:
-                lib.builder_int(self.obj, key_ascii, value)
+                lib.builder_int(obj, key_ascii, value)
             elif value_type == str:
-                lib.builder_string(self.obj, key_ascii, value.encode('ascii'))
+                lib.builder_string(obj, key_ascii, value.encode('ascii'))
             elif value_type == list:
-                vsize = lib.builder_start_vector(self.obj, key_ascii)
+                vsize = lib.builder_start_vector(obj, key_ascii)
                 for list_item in value:
-                    lib.builder_vector_int(self.obj, list_item)
+                    list_item_type = type(list_item)
+                    if list_item_type == int:
+                        lib.builder_vector_int(obj, list_item)
+                    elif list_item_type == dict:
+                        self.__add_map(obj, list_item)
+                    else:
+                        raise Exception(f'Type {value_type} not supported')
                 vsize = lib.builder_end_vector(self.obj, vsize, False, False)
             else:
                 raise Exception(f'Type {value_type} not supported')
 
         size = lib.builder_end_map(self.obj, msize)
+
+    def set_data(self, data):
+        lib.builder_clear(self.obj)
+
+        self.__add_map(self.obj, data)
 
         lib.builder_finish(self.obj)
     

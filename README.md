@@ -45,6 +45,12 @@ To remove the environment, deactivate and run:
 conda remove -p ai_tools_venv/ --all
 ```
 
+Submodules
+----------
+Some dependent libraries are included as git submodules. These can be obtained by cloning this repository with the following command:
+
+> git clone --recurse-submodules git@github.com:xmos/ai_tools.git
+
 VSCode users
 ------------
 If you are using VS Code and conda, consider applying this fix:

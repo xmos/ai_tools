@@ -284,7 +284,7 @@ class Subgraph():
         """NOTE: this does not rewire inputs/outputs"""
         # find location of reference op
         try:
-            ref_idx = self.operators.index(op)
+            ref_idx = self.operators.index(ref_op)
         except ValueError as e:
             raise ValueError("Cannot find reference operator in the subgraph") from e
 
@@ -300,7 +300,7 @@ class Subgraph():
         # insert new op
         try:
             self.insert_operator(op, new_op)
-        except ValueError as e:
+        except ValueError:
             raise ValueError("Cannot find operator to replace in the subgraph")
         # remove old op
         self.remove_operator(op)

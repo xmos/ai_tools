@@ -402,7 +402,7 @@ class ReplaceDeepinAnyoutFullyConnectedIntermediatePass(ReplaceDeepinAnyoutFully
             self._output.name = f"{op.name}/output_requant"
         # create intermediate tensor
         with self.using(op):
-            new_out = op.subgraph.create_tensor(
+            intermediate = op.subgraph.create_tensor(
                 f"{op.name}/intermediate", self._output.type, self._output.shape,
                 quantization=self._output.quantization
             )
@@ -416,7 +416,7 @@ class ReplaceDeepinAnyoutFullyConnectedIntermediatePass(ReplaceDeepinAnyoutFully
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
         new_op = super().mutate(op)
-        requantize_op = self.add_requantize(new_op)
+        self.add_requantize(new_op)
         self.mutate_output(new_op)
         return new_op
 
@@ -490,7 +490,8 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
 
         # reshape into appropriate array
         new_shape = (-1, 16)
-        rshift, scale = rshift.reshape(new_shape), scale.reshape(new_shape)
+        rshift = rshift.reshape(new_shape)  # pylint: disable=too-many-function-args
+        scale = scale.reshape(new_shape)  # pylint: disable=too-many-function-args
         return np.stack([rshift, scale], axis=1)
 
     def mutate(self, op):

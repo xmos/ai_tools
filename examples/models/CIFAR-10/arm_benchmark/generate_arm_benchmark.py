@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
 import argparse
 import logging
 from pathlib import Path
 import numpy as np
 from tflite2xcore.model_generation import utils
-from tflite2xcore.model_generation.interface import KerasModel
+from tflite2xcore.model_generation.interface import KerasClassifier
 import tensorflow as tf
 
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'arm_benchmark').resolve()
@@ -26,10 +26,7 @@ def get_normalized_data():
             'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
 
 
-class ArmBenchmark(KerasModel):
-    def __init__(self, *args, is_classifier=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._is_classifier = is_classifier
+class ArmBenchmark(KerasClassifier):
 
     def build(self):
         self._prep_backend()
@@ -64,9 +61,6 @@ class ArmBenchmark(KerasModel):
         # Show summary
         self.core_model.summary()
 
-    def to_tf_xcore(self):
-        super().to_tf_xcore(is_classifier=self._is_classifier)
-
     # For training
     def prep_data(self):
         self.data = get_normalized_data()
@@ -84,7 +78,7 @@ class ArmBenchmark(KerasModel):
         self.data['export_data'] = self.data['x_test'][subset_inds.flatten()]  # pylint: disable=unsubscriptable-object
         self.data['quant'] = self.data['x_train']
 
-    def train(self, *, batch_size, save_history=False, **kwargs):
+    def train(self, *, batch_size, save_history=True, **kwargs):
         # Image generator, # TODO: make this be optional with use_aug arg
         aug = tf.keras.preprocessing.image.ImageDataGenerator(
             featurewise_center=False,  # set input mean to 0 over the dataset
@@ -129,9 +123,9 @@ class ArmBenchmark(KerasModel):
 
 def main(path=DEFAULT_PATH, train_new_model=False,
          batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
-         is_classifier=False):
+         opt_classifier=False):
 
-    arm_benchmark = ArmBenchmark('arm_benchmark', path, is_classifier=is_classifier)
+    arm_benchmark = ArmBenchmark('arm_benchmark', path, opt_classifier=opt_classifier)
 
     if train_new_model:
         # Build model and compile
@@ -139,7 +133,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
         # Prepare training data
         arm_benchmark.prep_data()
         # Train model
-        arm_benchmark.train(batch_size=batch_size, epochs=epochs, save_history=True)
+        arm_benchmark.train(batch_size=batch_size, epochs=epochs)
         arm_benchmark.save_core_model()
     else:
         # Recover previous state from file system
@@ -183,4 +177,4 @@ if __name__ == "__main__":
          train_new_model=args.train_model,
          batch_size=args.batch,
          epochs=args.epochs,
-         is_classifier=args.classifier)
+         opt_classifier=args.classifier)

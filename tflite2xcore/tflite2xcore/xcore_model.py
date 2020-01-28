@@ -280,19 +280,29 @@ class Subgraph():
         self.operators.remove(op)
         op.inputs, op.outputs, op.subgraph = [], [], None
 
-    def replace_operator(self, op, new_op):
-        # find location of op to replace
+    def insert_operator(self, ref_op, new_op, after=False):
+        """NOTE: this does not rewire inputs/outputs"""
+        # find location of reference op
         try:
-            old_idx = self.operators.index(op)
+            ref_idx = self.operators.index(op)
         except ValueError as e:
-            raise ValueError("Cannot find operator to replace in the subgraph") from e
+            raise ValueError("Cannot find reference operator in the subgraph") from e
 
         # remove new_op from list if already in the subgraph
         if new_op in self.operators:
             self.operators.remove(new_op)
 
-        # (re)insert new op in place of old op, then remove old op
-        self.operators.insert(old_idx, new_op)
+        # (re)insert new op after reference op
+        self.operators.insert(ref_idx + (1 if after else 0), new_op)
+
+    def replace_operator(self, op, new_op):
+        """NOTE: this does not rewire inputs/outputs"""
+        # insert new op
+        try:
+            self.insert_operator(op, new_op)
+        except ValueError as e:
+            raise ValueError("Cannot find operator to replace in the subgraph")
+        # remove old op
         self.remove_operator(op)
 
     def get_tensor(self, name):

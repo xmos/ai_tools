@@ -40,8 +40,8 @@ class FlexbufferBuilder:
         lib.builder_clear.argtypes = [ctypes.c_void_p]
         lib.builder_clear.restype = ctypes.c_void_p
 
-        lib.builder_start_map.argtypes = [ctypes.c_void_p]
-        lib.builder_string.restype = ctypes.c_size_t
+        lib.builder_start_map.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        lib.builder_start_map.restype = ctypes.c_size_t
 
         lib.builder_end_map.argtypes = [ctypes.c_void_p, ctypes.c_size_t]
         lib.builder_string.restype = ctypes.c_size_t
@@ -75,8 +75,24 @@ class FlexbufferBuilder:
         if data:
             self.set_data(data)
 
-    def __add_map(self, obj, data):
-        msize = lib.builder_start_map(obj)
+    def __add_vector(self, obj, data, key=None):
+        size = lib.builder_start_vector(obj, key)
+        for list_item in data:
+            list_item_type = type(list_item)
+            if list_item_type == int:
+                lib.builder_vector_int(obj, list_item)
+            elif list_item_type == dict:
+                self.__add_map(obj, list_item)
+            elif list_item_type == list:
+                self.__add_vector(obj, list_item)
+            else:
+                raise Exception(f'Type {list_item_type} not supported')
+        size = lib.builder_end_vector(self.obj, size, False, False)
+
+        return size
+
+    def __add_map(self, obj, data, key=None):
+        msize = lib.builder_start_map(obj, key)
 
         for key, value in data.items():
             key_ascii = key.encode('ascii')
@@ -85,21 +101,15 @@ class FlexbufferBuilder:
                 lib.builder_int(obj, key_ascii, value)
             elif value_type == str:
                 lib.builder_string(obj, key_ascii, value.encode('ascii'))
+            elif value_type == dict:
+                self.__add_map(obj, value, key_ascii)
             elif value_type == list:
-                vsize = lib.builder_start_vector(obj, key_ascii)
-                for list_item in value:
-                    list_item_type = type(list_item)
-                    if list_item_type == int:
-                        lib.builder_vector_int(obj, list_item)
-                    elif list_item_type == dict:
-                        self.__add_map(obj, list_item)
-                    else:
-                        raise Exception(f'Type {value_type} not supported')
-                vsize = lib.builder_end_vector(self.obj, vsize, False, False)
+                self.__add_vector(obj, value, key_ascii)
             else:
                 raise Exception(f'Type {value_type} not supported')
 
-        size = lib.builder_end_map(self.obj, msize)
+        size = lib.builder_end_map(obj, msize)
+        return size
 
     def set_data(self, data):
         lib.builder_clear(self.obj)

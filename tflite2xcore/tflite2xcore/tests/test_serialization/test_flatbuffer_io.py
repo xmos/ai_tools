@@ -82,6 +82,8 @@ def test_custom_options():
         'int': 1,
         'vector_of_ints': [3, 2, 1],
         'string': 'test string',
+        'map': {'one': 1, 'two': 2},
+        'vector_of_vectors': [[3, 2, 1], [1, 2, 3], [3, 2, 1]],
         'vector_of_maps ': [
             {'map1': [1, 2, 3]},
             {'map2': [1, 2, 3]},

@@ -7,7 +7,7 @@ import tempfile
 import tensorflow as tf
 import numpy as np
 from abc import ABC, abstractmethod
-import tflite2xcore_conv as xcore_conv
+import tflite2xcore.converter as xcore_conv
 from tflite2xcore.model_generation import utils
 from tflite2xcore import read_flatbuffer, write_flatbuffer, tflite_visualize
 from tflite2xcore.xcore_model import TensorType
@@ -158,7 +158,7 @@ class Model(ABC):
         '''
         assert 'model_stripped' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
-        xcore_conv.main(str(self.models['model_stripped']),
+        xcore_conv.convert(str(self.models['model_stripped']),
                         str(self.models['model_xcore']),
                         **converter_args)
 

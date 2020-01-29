@@ -5,7 +5,7 @@ import argparse
 import logging
 from pathlib import Path
 import numpy as np
-import tflite2xcore_conv as xcore_conv
+import tflite2xcore.converter as xcore_conv
 from tflite2xcore import read_flatbuffer, write_flatbuffer, graph_transformer
 from tflite2xcore.operator_codes import BuiltinOpCodes
 from tflite2xcore.xcore_model import TensorType

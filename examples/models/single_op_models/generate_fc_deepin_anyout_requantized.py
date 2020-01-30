@@ -4,7 +4,7 @@
 import argparse
 from pathlib import Path
 from tflite2xcore.model_generation import utils
-import tflite2xcore_conv as xcore_conv
+import tflite2xcore.converter as xcore_conv
 
 from generate_fc_deepin_anyout import (
     DEFAULT_OUTPUT_DIM, DEFAULT_INPUT_DIM, DEFAULT_EPOCHS, DEFAULT_BS
@@ -19,8 +19,8 @@ class FcDeepinAnyoutRequantized(FcDeepinAnyout):
         # TODO: consider changin behavior in interface.py to convert quant instead of stripped
         assert 'model_quant' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
-        xcore_conv.main(str(self.models['model_quant']),
-                        str(self.models['model_xcore']))
+        xcore_conv.convert(str(self.models['model_quant']),
+                           str(self.models['model_xcore']))
         # TODO: remove softmax from the result
 
 

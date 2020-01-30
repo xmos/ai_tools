@@ -81,7 +81,7 @@ def initializers_logic(args):
 	if args.bias_unif_init == None:
 		bias_init = tf.constant_initializer(args.bias_const_init)
 	else:
-		if len(args.bias_unif_init) > 2 or len(args.bias_unif_init) < 2:
+		if len(args.bias_unif_init) != 2:
 			raise argparse.ArgumentTypeError('The bias_unif_init argument must consist of 2 numbers indicating a range.')
 		if args.bias_unif_init[0] < args.bias_unif_init[1]: 
 			min_value, max_value = args.bias_unif_init
@@ -89,7 +89,7 @@ def initializers_logic(args):
 			min_value, max_value = args.bias_unif_init[::-1]
 		bias_init = tf.random_uniform_initializer(min_value, max_value)
 	if args.weight_const_init == None:
-		if len(args.weight_unif_init) > 2 or len(args.weight_unif_init) < 2:
+		if len(args.weight_unif_init) != 2:
 			raise argparse.ArgumentTypeError('The weight_unif_init argument must be 2 numbers indicating a range.')
 		if args.weight_unif_init[0] < args.weight_unif_init[1]:
 			min_value, max_value = args.weight_unif_init

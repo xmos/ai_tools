@@ -153,14 +153,8 @@ if __name__ == "__main__":
 
 	utils.set_verbosity(args.verbose)
 	utils.set_gpu_usage(False, args.verbose)
-
-
 	weight_init, bias_init = initializers_logic(args)
-	# bias_init = tf.constant_initializer(args.bias_const_init) if args.bias_unif_init == None else tf.random_uniform_initializer(*args.bias_unif_init)
-	# weight_init = tf.random_uniform_initializer(*args.weight_unif_init) if args.weight_const_init == None else tf.constant_initializer(args.weight_const_init)
-	print(bias_init.get_config())
-	print(weight_init.get_config())
-	main(path=args.path,
+    main(path=args.path,
 		 input_channels=args.inputs, output_channels=args.outputs,
 		 K_h=args.kernel_height, K_w=args.kernel_width,
 		 height=args.height, width=args.width,

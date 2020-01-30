@@ -8,25 +8,21 @@ from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
 from tflite2xcore.transformation_passes import ReplaceDeepinAnyoutFullyConnectedOutputPass
 
-from .fully_connected_composite_test import build_fc as build_model
+from .model_builders import (
+    build_fc, build_intermediate_fc, build_mlp, build_logistic
+)
+
+from .test_ReplaceDeepinAnyoutFullyConnectedIntermediatePass import (
+    MATCHING_INPUT_SIZE,
+    NON_MATCHING_INPUT_SIZE,
+    outputs, input_size,
+    fc_model, logistic
+)
+MATCHING_HIDDEN_NODES = [numpy.prod(t) for t in MATCHING_INPUT_SIZE]
 
 from .test_ReplaceDeepinDeepoutConv2DPass import (
     NON_MATCHING_TENSORS
 )
-
-
-# test case parameter definitions, TODO: refactor what's common here
-MATCHING_OUTPUTS = [1, 2, 10, 15, 16, 17, 100]
-MATCHING_INPUT_SIZE = [
-    (1, 1, 32), (2, 2, 8), (4, 4, 2), (32,),
-    (1, 2, 32), (4, 2, 8), (8, 8, 1), (64,)
-]
-
-
-NON_MATCHING_INPUT_SIZE = [
-    (1, 1, 31), (2, 2, 7), (3, 4, 3), (33,),
-    (2, 2, 15), (3, 3, 7), (9, 4, 6), (63,)
-]
 
 
 @pytest.fixture()
@@ -34,36 +30,44 @@ def trf_pass():
     return ReplaceDeepinAnyoutFullyConnectedOutputPass()
 
 
-@pytest.fixture(params=MATCHING_OUTPUTS)
-def outputs(request):
-    return request.param
-
-
-@pytest.fixture(params=MATCHING_INPUT_SIZE)
-def input_size(request):
+@pytest.fixture(params=MATCHING_HIDDEN_NODES)
+def hidden_nodes(request):
     return request.param
 
 
 @pytest.fixture()
-def model(outputs, input_size):
-    return build_model(outputs=outputs, input_size=input_size)
+def mlp(outputs, hidden_nodes, input_size):
+    return build_mlp(outputs=outputs, hidden_nodes=hidden_nodes, input_size=input_size)
 
 
-def test_matching_params(trf_pass, model):
-    assert trf_pass.match(model.subgraphs[0].operators[-1])
+def test_matching_params(trf_pass, fc_model):
+    assert trf_pass.match(fc_model.subgraphs[0].operators[-1])
 
 
 @pytest.mark.parametrize('input_size', NON_MATCHING_INPUT_SIZE)
-def test_non_matching_input_size(trf_pass, outputs, input_size):
-    model = build_model(outputs=outputs, input_size=input_size)
+def test_non_matching_fc_input_size(trf_pass, outputs, input_size):
+    model = build_fc(outputs=outputs, input_size=input_size)
     assert not trf_pass.match(model.subgraphs[0].operators[-1])
 
 
 @pytest.mark.parametrize(*NON_MATCHING_TENSORS)
-def test_non_matching_types(trf_pass, model, tensor_name, new_type):
-    subgraph = model.subgraphs[0]
+def test_non_matching_types(trf_pass, fc_model, tensor_name, new_type):
+    subgraph = fc_model.subgraphs[0]
     subgraph.get_tensor(tensor_name).type = new_type
-    assert not trf_pass.match(model.subgraphs[0].operators[-1])
+    assert not trf_pass.match(fc_model.subgraphs[0].operators[-1])
+
+
+def test_logistic(logistic, trf_pass):
+    assert not trf_pass.match(logistic.subgraphs[0].operators[0])
+    assert not trf_pass.match(logistic.subgraphs[0].operators[-1])
+
+
+def test_mlp_input_non_match(trf_pass, mlp):
+    assert not trf_pass.match(mlp.subgraphs[0].operators[0])
+
+
+def test_mlp_output_match(trf_pass, mlp):
+    assert trf_pass.match(mlp.subgraphs[0].operators[-1])
 
 
 if __name__ == "__main__":

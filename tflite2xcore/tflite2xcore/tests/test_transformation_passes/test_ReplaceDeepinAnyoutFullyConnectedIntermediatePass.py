@@ -8,36 +8,28 @@ from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
 from tflite2xcore.transformation_passes import ReplaceDeepinAnyoutFullyConnectedIntermediatePass
 
-from .fully_connected_composite_test import (
-    build_fc, build_intermediate_fc, build_mlp
+from .model_builders import (
+    build_fc, build_mlp, build_logistic
 )
 
-from .test_ReplaceDeepinAnyoutFullyConnectedOutputPass import (
-    MATCHING_INPUT_SIZE,
-    MATCHING_OUTPUTS,
-    NON_MATCHING_INPUT_SIZE
-)
 
+MATCHING_INPUT_SIZE = [
+    (1, 1, 32), (2, 2, 8), (4, 4, 2), (32,),
+    (1, 2, 32), (4, 2, 8), (8, 8, 1), (64,)
+]
+MATCHING_OUTPUTS = [1, 2, 10, 15, 16, 17, 100]
 MATCHING_HIDDEN_NODES = MATCHING_OUTPUTS + [numpy.prod(t) for t in MATCHING_INPUT_SIZE]
 
+NON_MATCHING_INPUT_SIZE = [
+    (1, 1, 31), (2, 2, 7), (3, 4, 3), (33,),
+    (2, 2, 15), (3, 3, 7), (9, 4, 6), (63,)
+]
 NON_MATCHING_TENSORS = ('tensor_name', 'new_type'), [
     ('input', TensorType.INT16), ('input', TensorType.INT32),
     ('weights_1', TensorType.INT16), ('weights_1', TensorType.INT32),
     ('biases_1', TensorType.INT8), ('biases_1', TensorType.INT16),
     ('intermediate', TensorType.INT16), ('intermediate', TensorType.INT32)
 ]
-
-
-def build_logistic(*, outputs, input_size):
-    model = build_intermediate_fc(outputs=hidden_nodes, input_size=input_size)
-    subgraph = model.subgraphs[0]
-    tmid = subgraph.get_tensor('intermediate')
-
-    tout = subgraph.create_tensor('output', tmid.type, shape=tmid.shape, isoutput=True)
-    subgraph.create_operator(OperatorCode(BuiltinOpCodes.SOFTMAX),
-                             inputs=[tmid], outputs=[tout])
-
-    return model
 
 
 @pytest.fixture()

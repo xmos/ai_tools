@@ -8,12 +8,11 @@ from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
 from tflite2xcore.transformation_passes import ReplaceShallowinDeepoutConv2DPass
 
+from model_builders import build_conv2d as build_model
 
-# test case parameter definitions, TODO: refactor what's common here
+
 from .test_ReplaceDeepinDeepoutConv2DPass import (
-    MATCHING_OUTPUT_CHANNELS,
-    MATCHING_KERNEL_HEIGHT,
-    MATCHING_PADDING,
+    output_channels, kernel_height, padding,
 
     NON_MATCHING_STRIDE_W,
     NON_MATCHING_STRIDE_H,
@@ -29,28 +28,12 @@ MATCHING_INPUT_HEIGHT = [9, 12, 20]
 MATCHING_INPUT_WIDTH = [7, 13, 17]
 
 NON_MATCHING_KERNEL_WIDTH = [2, 4, 6, 9]
-NON_MATCHING_INPUT_CHANNELS = [5, 8, 16, 32, 64]
-
-
-# conv2d model builder, TODO: refactor what's common here
-from .test_ReplaceDeepinDeepoutConv2DPass import (
-    build_model,
-)
+NON_MATCHING_INPUT_CHANNELS = [5, 8, 16, 32]
 
 
 @pytest.fixture()
 def trf_pass():
     return ReplaceShallowinDeepoutConv2DPass()
-
-
-@pytest.fixture(params=MATCHING_OUTPUT_CHANNELS)
-def output_channels(request):
-    return request.param
-
-
-@pytest.fixture(params=MATCHING_KERNEL_HEIGHT)
-def kernel_height(request):
-    return request.param
 
 
 @pytest.fixture(params=MATCHING_KERNEL_WIDTH)
@@ -81,11 +64,6 @@ def input_width(request):
 @pytest.fixture()
 def input_size(input_height, input_width):
     return [input_height, input_width]
-
-
-@pytest.fixture(params=MATCHING_PADDING)
-def padding(request):
-    return request.param
 
 
 @pytest.fixture()

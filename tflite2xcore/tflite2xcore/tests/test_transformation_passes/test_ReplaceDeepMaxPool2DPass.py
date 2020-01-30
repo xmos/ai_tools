@@ -4,7 +4,7 @@ import pytest
 
 from tflite2xcore.transformation_passes import ReplaceDeepMaxPool2DPass
 
-from model_builders import build_maxpool
+from .model_builders import build_maxpool
 
 
 MATCHING_INPUT_HEIGHT = [2, 4, 8, 12, 16, 24]

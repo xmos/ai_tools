@@ -5,7 +5,7 @@ import pytest
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.transformation_passes import ReplaceDeepinDeepoutConv2DPass
 
-from model_builders import build_conv2d as build_model
+from .model_builders import build_conv2d as build_model
 
 
 MATCHING_OUTPUT_CHANNELS = [16, 32]

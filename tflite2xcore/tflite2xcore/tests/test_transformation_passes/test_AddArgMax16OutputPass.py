@@ -6,7 +6,7 @@ from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.operator_codes import BuiltinOpCodes
 from tflite2xcore.transformation_passes import AddArgMax16OutputPass
 
-from model_builders import build_abs
+from .model_builders import build_abs
 
 MATCHING_INPUT_DIM = [2, 5, 10, 100]
 

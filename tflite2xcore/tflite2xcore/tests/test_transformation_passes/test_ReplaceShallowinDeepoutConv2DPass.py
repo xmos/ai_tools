@@ -4,7 +4,7 @@ import pytest
 
 from tflite2xcore.transformation_passes import ReplaceShallowinDeepoutConv2DPass
 
-from model_builders import build_conv2d as build_model
+from .model_builders import build_conv2d as build_model
 
 
 from .test_ReplaceDeepinDeepoutConv2DPass import (

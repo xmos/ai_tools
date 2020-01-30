@@ -4,7 +4,7 @@ import pytest
 
 from tflite2xcore.transformation_passes import ReplaceDeepAveragePool2DPass
 
-from model_builders import build_avgpool
+from .model_builders import build_avgpool
 
 
 from .test_ReplaceDeepMaxPool2DPass import (

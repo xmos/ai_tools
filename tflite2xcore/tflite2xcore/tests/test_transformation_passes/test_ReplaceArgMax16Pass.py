@@ -7,7 +7,7 @@ from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.operator_codes import XCOREOpCodes
 from tflite2xcore.transformation_passes import ReplaceArgMax16Pass
 
-from model_builders import build_argmax
+from .model_builders import build_argmax
 
 
 from .test_AddArgMax16OutputPass import (

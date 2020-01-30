@@ -29,6 +29,7 @@ NON_MATCHING_TENSORS = ('tensor_name', 'new_type'), [
     ('input', TensorType.INT16), ('input', TensorType.INT32),
     ('weights', TensorType.INT16), ('weights', TensorType.INT32),
     ('biases', TensorType.INT8), ('biases', TensorType.INT16),
+    ('output', TensorType.INT16), ('output', TensorType.INT32)
 ]
 
 

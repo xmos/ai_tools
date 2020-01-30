@@ -6,6 +6,7 @@ from pytest_cases import pytest_parametrize_plus, fixture_ref
 from tflite2xcore.transformation_passes import RemoveUnusedBuffersPass
 from tflite2xcore.xcore_model import TensorType
 
+# TODO: fix this when refactoring model builder functions
 from .test_ReplaceDeepinAnyoutFullyConnectedOutputPass import (
     matching_perceptron,
     non_matching_shape_perceptron,

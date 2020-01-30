@@ -101,7 +101,13 @@ class FcDeepinAnyout(KerasModel):
         self.data['quant'] = self.data['x_train']
 
     def train(self):
-        super().train(batch_size=128, epochs=5*(self.output_dim-1))  # BS and EPOCHS
+        super().train(batch_size=128, epochs=5*(self.output_dim-1))
+
+    def to_tf_stripped(self):
+        super().to_tf_stripped(remove_softmax=True)
+
+    def to_tf_xcore(self):
+        super().to_tf_xcore(remove_softmax=True)
 
 
 def main(path=DEFAULT_PATH, *,

@@ -5,7 +5,7 @@ from tflite2xcore import read_flatbuffer, write_flatbuffer
 from tflite2xcore import transformation_passes as passes
 
 
-def strip_model(model, *, remove_softmax=True):
+def strip_model(model, *, remove_softmax=False):
     pass_mgr = PassManager(
         model,
         passes=[

@@ -129,9 +129,9 @@ class Model(ABC):
         write_flatbuffer(model, str(self.models['model_stripped']))
 
     def to_tf_xcore(self, **converter_args):
-        assert 'model_stripped' in self.models
+        assert 'model_quant' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
-        xcore_conv.convert(str(self.models['model_stripped']),
+        xcore_conv.convert(str(self.models['model_quant']),
                            str(self.models['model_xcore']),
                            **converter_args)
 

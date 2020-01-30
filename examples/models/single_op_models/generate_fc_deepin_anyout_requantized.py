@@ -5,6 +5,7 @@ import argparse
 from pathlib import Path
 from tflite2xcore.model_generation import utils
 import tflite2xcore.converter as xcore_conv
+from tflite2xcore import read_flatbuffer, write_flatbuffer
 
 from generate_fc_deepin_anyout import (
     DEFAULT_OUTPUT_DIM, DEFAULT_INPUT_DIM, DEFAULT_EPOCHS, DEFAULT_BS
@@ -15,13 +16,18 @@ from generate_fc_deepin_anyout import FcDeepinAnyout
 
 
 class FcDeepinAnyoutRequantized(FcDeepinAnyout):
-    def to_tf_xcore(self, **converter_args):
-        # TODO: consider changin behavior in interface.py to convert quant instead of stripped
+    def to_tf_xcore(self):
         assert 'model_quant' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
-        xcore_conv.convert(str(self.models['model_quant']),
-                           str(self.models['model_xcore']))
-        # TODO: remove softmax from the result
+        model = read_flatbuffer(str(self.models['model_quant']))
+
+        # NOTE: since the output softmax is not removed during the first
+        # conversion, ReplaceDeepinAnyoutFullyConnectedIntermediatePass will
+        # match and insert the requantization. Then, the softmax can be removed.
+        xcore_conv.optimize_for_xcore(model, is_classifier=False, remove_softmax=False)
+        xcore_conv.strip_model(model, remove_softmax=True)
+
+        model = write_flatbuffer(model, self.models['model_xcore'])
 
 
 def main(path=DEFAULT_PATH, *,

@@ -48,9 +48,7 @@ def add_float_input_output(model):
     model.buffers.insert(0, input_tensor.buffer)
 
 
-def convert(tflite_input_path, tflite_output_path, *,
-         is_classifier=False, remove_softmax=False):
-    model = read_flatbuffer(tflite_input_path)
+def optimize_for_xcore(model, *, is_classifier, remove_softmax):
     pass_mgr = PassManager(
         model,
         passes=[
@@ -79,5 +77,9 @@ def convert(tflite_input_path, tflite_output_path, *,
 
     model.description = 'TOCO + XMOS converted.'
 
-    write_flatbuffer(model, tflite_output_path)
 
+def convert(tflite_input_path, tflite_output_path, *,
+            is_classifier=False, remove_softmax=False):
+    model = read_flatbuffer(tflite_input_path)
+    optimize_for_xcore(model, is_classifier=is_classifier, remove_softmax=remove_softmax)
+    write_flatbuffer(model, tflite_output_path)

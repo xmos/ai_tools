@@ -159,8 +159,8 @@ class Model(ABC):
         assert 'model_stripped' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
         xcore_conv.convert(str(self.models['model_stripped']),
-                        str(self.models['model_xcore']),
-                        **converter_args)
+                           str(self.models['model_xcore']),
+                           **converter_args)
 
     def _save_visualization(self, base_file_name):
         assert str(base_file_name) in self.models, 'Model need to exist to prepare visualization.'

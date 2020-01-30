@@ -7,6 +7,41 @@ from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
 
 
+def build_abs(*, input_shape, tensor_type):
+    model = XCOREModel()
+    subgraph = model.create_subgraph()
+
+    input_shape = [1] + list(input_shape)
+    tin = subgraph.create_tensor(
+        'input', type_=tensor_type, shape=input_shape, isinput=True)
+    tout = subgraph.create_tensor(
+        'output', tin.type, tin.shape, isoutput=True)
+    subgraph.create_operator(OperatorCode(BuiltinOpCodes.ABS),
+                             inputs=[tin], outputs=[tout])
+
+    return model
+
+
+def build_argmax(*, input_shape, input_type):
+    model = XCOREModel()
+    subgraph = model.create_subgraph()
+
+    input_shape = [1] + list(input_shape)
+    tin = subgraph.create_tensor(
+        'input', type_=input_type, shape=input_shape, isinput=True)
+    tout = subgraph.create_tensor(
+        'output', TensorType.INT32, tin.shape, isoutput=True)
+    op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.ARG_MAX),
+                                  inputs=[tin], outputs=[tout])
+
+    dim_tensor = subgraph.create_tensor(
+        f"{op.name}/axis", TensorType.INT32, shape=[])
+    op.inputs.append(dim_tensor)
+    dim_tensor.buffer.data = numpy.int32([1])
+
+    return model
+
+
 def build_pool(*, input_shape, builtin_opcode):
     model = XCOREModel()
     subgraph = model.create_subgraph()

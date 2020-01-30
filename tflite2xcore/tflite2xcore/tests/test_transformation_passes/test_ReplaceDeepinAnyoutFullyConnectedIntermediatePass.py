@@ -3,9 +3,7 @@
 import numpy
 import pytest
 
-from pytest_cases import pytest_fixture_plus, pytest_parametrize_plus, fixture_ref
-from tflite2xcore.xcore_model import XCOREModel, TensorType
-from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.transformation_passes import ReplaceDeepinAnyoutFullyConnectedIntermediatePass
 
 from .model_builders import (

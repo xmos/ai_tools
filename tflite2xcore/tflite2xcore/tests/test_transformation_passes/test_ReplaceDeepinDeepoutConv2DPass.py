@@ -1,10 +1,8 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import pytest
-import itertools
 
-from tflite2xcore.xcore_model import XCOREModel, TensorType
-from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.transformation_passes import ReplaceDeepinDeepoutConv2DPass
 
 from model_builders import build_conv2d as build_model

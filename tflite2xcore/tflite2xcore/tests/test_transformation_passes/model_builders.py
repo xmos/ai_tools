@@ -7,6 +7,37 @@ from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
 
 
+def build_pool(*, input_shape, builtin_opcode):
+    model = XCOREModel()
+    subgraph = model.create_subgraph()
+
+    input_shape = [1] + list(input_shape)
+    output_shape = [input_shape[0], input_shape[1] / 2, input_shape[1] / 2, input_shape[3]]
+    tin = subgraph.create_tensor('input', TensorType.INT8, shape=input_shape, isinput=True)
+    tout = subgraph.create_tensor('output', tin.type, shape=output_shape, isoutput=True)
+
+    op = subgraph.create_operator(
+        OperatorCode(builtin_opcode), inputs=[tin], outputs=[tout])
+    op.builtin_options = {'padding': 'VALID',
+                          'stride_w': 2, 'stride_h': 2,
+                          'filter_height': 2, 'filter_width': 2,
+                          'fused_activation_function': 'NONE'}
+
+    return model
+
+
+def build_maxpool(*, input_shape):
+    return build_pool(
+        input_shape=input_shape,
+        builtin_opcode=BuiltinOpCodes.MAX_POOL_2D)
+
+
+def build_avgpool(*, input_shape):
+    return build_pool(
+        input_shape=input_shape,
+        builtin_opcode=BuiltinOpCodes.AVERAGE_POOL_2D)
+
+
 def build_fc(*, outputs, input_size):
     model = XCOREModel()
     subgraph = model.create_subgraph()

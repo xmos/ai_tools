@@ -57,4 +57,3 @@ sequential_conv.build()
 sequential_conv.summary()
 z = sequential_conv(y)
 print(z)
-

@@ -77,28 +77,21 @@ def main(path=DEFAULT_PATH, *,
     test_model.populate_converters()
 
 def initializers_logic(args):
-	# Choosing the right value fo the initializer
-	if args.bias_unif_init == None:
-		bias_init = tf.constant_initializer(args.bias_const_init)
-	else:
-		if len(args.bias_unif_init) != 2:
-			raise argparse.ArgumentTypeError('The bias_unif_init argument must consist of 2 numbers indicating a range.')
-		if args.bias_unif_init[0] < args.bias_unif_init[1]: 
-			min_value, max_value = args.bias_unif_init
-		else:
-			min_value, max_value = args.bias_unif_init[::-1]
-		bias_init = tf.random_uniform_initializer(min_value, max_value)
-	if args.weight_const_init == None:
-		if len(args.weight_unif_init) != 2:
-			raise argparse.ArgumentTypeError('The weight_unif_init argument must be 2 numbers indicating a range.')
-		if args.weight_unif_init[0] < args.weight_unif_init[1]:
-			min_value, max_value = args.weight_unif_init
-		else:
-			min_value, max_value = args.weight_unif_init[::-1]
-		weight_init = tf.random_uniform_initializer(min_value, max_value)
-	else:
-		weight_init = tf.constant_initializer(args.weight_const_init)
-	return weight_init, bias_init
+    # Choosing the right value fo the initializer
+    if args.bias_unif_init == None:
+        bias_init = tf.constant_initializer(args.bias_const_init)
+    else:
+        if len(args.bias_unif_init) != 2:
+            raise argparse.ArgumentTypeError('The bias_unif_init argument must consist of 2 numbers indicating a range.')
+        bias_init = tf.random_uniform_initializer(min(args.bias_unif_init), max(args.bias_unif_init))
+
+    if args.weight_const_init == None:
+        if len(args.weight_unif_init) != 2:
+            raise argparse.ArgumentTypeError('The weight_unif_init argument must be 2 numbers indicating a range.')
+        weight_init = tf.random_uniform_initializer(min(args.weight_unif_init), max(args.weight_unif_init))
+    else:
+        weight_init = tf.constant_initializer(args.weight_const_init)
+    return weight_init, bias_init
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

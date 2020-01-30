@@ -369,7 +369,7 @@ class ReplaceDeepinAnyoutFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     @abstractmethod
     def mutate(self, op):
         # NOTE: Overload this in subclasses, and call mutate_output appropriately
-        new_op = super().mutate(op)
+        return super().mutate(op)
 
 
 class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnectedPass):

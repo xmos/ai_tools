@@ -57,9 +57,8 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
             'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
 
 
-# Class for the model
-class FcDeepinShallowoutFinal(KerasModel):
-    def build(self, input_dim, output_dim):  # add keyboard optimizer, loss and metrics???
+class FcDeepinAnyout(KerasModel):
+    def build(self, input_dim, output_dim):
         super().build()
 
         # Building
@@ -109,7 +108,7 @@ def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
          train_new_model=False):
     # Instantiate model
-    test_model = FcDeepinShallowoutFinal('fc_deepin_anyout', Path(path))
+    test_model = FcDeepinAnyout('fc_deepin_anyout', Path(path))
     if train_new_model:
         # Build model and compile
         test_model.build(input_dim, output_dim)

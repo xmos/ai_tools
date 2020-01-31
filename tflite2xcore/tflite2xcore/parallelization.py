@@ -124,7 +124,7 @@ class UnidirectionalSplitPlanner(ParallelizationPlanner):
     def create_n_thread_candidates(self, num_threads):
         self.add_layout_candidate(
             num_threads, self.unidir_width_layout(num_threads))
-        if num_threads > 1:
+        if num_threads > 1 and self.width != self.height:
             self.add_layout_candidate(
                 num_threads, self.unidir_height_layout(num_threads))
 
@@ -143,6 +143,11 @@ class DIDOConv2DPlanner(UnidirectionalSplitPlanner):
 
     def create_n_thread_candidates(self, num_threads):
         super().create_n_thread_candidates(num_threads)
+        if num_threads == 3:
+            # TODO: implement me
+            # idea: one wide block with three edges and two corner blocks
+            # do this with both horizontal and vertical orientation
+            pass
         if num_threads == 4:
             # split into approximate quarters
             bh, bw = self.height // 2, self.width // 2  # block heights and widths
@@ -152,4 +157,11 @@ class DIDOConv2DPlanner(UnidirectionalSplitPlanner):
                       (bh, 0,  bh + rh, bw),
                       (bh, bw, bh + rh, bw + rw)]
             self.add_layout_candidate(num_threads, layout)
+        if num_threads == 5:
+            # TODO: implement me
+            # idea: two blocks on opposite ends, each with two corners and three edges
+            #       then two blocks between these, each with one edge
+            #       and one block without any edges
+            # do this with both horizontal and vertical orientation
+            pass
     

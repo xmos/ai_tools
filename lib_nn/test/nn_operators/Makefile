@@ -16,7 +16,7 @@ USED_MODULES = lib_nn Unity(>=2.4.3)
 # XCC_XC_FLAGS, XCC_C_FLAGS, XCC_ASM_FLAGS, XCC_CPP_FLAGS
 # If the variable XCC_MAP_FLAGS is set it overrides the flags passed to
 # xcc for the final link (mapping) stage.
-XCC_FLAGS = -Os -g -report -DDEBUG_PRINT_ENABLE=1
+XCC_FLAGS = -Os -g -report -DDEBUG_PRINT_ENABLE=1 -I../../../lib_nn/src
 
 # The XCORE_ARM_PROJECT variable, if set to 1, configures this
 # project to create both xCORE and ARM binaries.

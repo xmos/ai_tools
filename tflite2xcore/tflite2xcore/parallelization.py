@@ -47,7 +47,6 @@ class ParallelizationPlanner(ABC):
 
     @abstractmethod
     def create_n_thread_candidates(self, num_threads):
-        self._candidate_plans
         pass
 
     @abstractmethod
@@ -71,28 +70,28 @@ class ParallelizationPlanner(ABC):
         if not self._candidate_plans:
             self.create_candidate_plans()
 
-        forced_candidates = [plan for plan in self._candidate_plans
-                             if plan.num_threads == self.num_threads]
-        best_forced_plan = min(forced_candidates, key=lambda plan: plan.cost)
         best_plan = min(self._candidate_plans, key=lambda plan: plan.cost)
+        if best_plan.num_threads == self.num_threads:
+            logging.debug(f"{type(self).__name__} found best {repr(best_plan)}")
+            return best_plan
+        else:
+            forced_candidates = [plan for plan in self._candidate_plans
+                                 if plan.num_threads == self.num_threads]
+            best_forced_plan = min(forced_candidates, key=lambda plan: plan.cost)
 
         if self.forced:
-            if best_forced_plan.cost > best_plan.cost:
-                logging.warning(
-                    f"{type(self).__name__} is forcing suboptimal plan "
-                    f"(num_threads={best_forced_plan.num_threads}, cost={best_forced_plan.cost}), "
-                    "when better alternative exists "
-                    f"(num_threads={best_plan.num_threads}, cost={best_plan.cost})."
-                )
+            logging.warning(
+                f"{type(self).__name__} is "
+                f"forcing suboptimal plan {repr(best_forced_plan)} "
+                f"when better alternative {repr(best_plan)} exists."
+            )
             return best_forced_plan
         else:
-            if best_forced_plan.cost > best_plan.cost:
-                logging.warning(
-                    f"{type(self).__name__} is replacing suboptimal plan "
-                    f"(num_threads={best_forced_plan.num_threads}, cost={best_forced_plan.cost}), "
-                    "with better alternative "
-                    f"(num_threads={best_plan.num_threads}, cost={best_plan.cost})."
-                )
+            logging.warning(
+                f"{type(self).__name__} is "
+                f"replacing suboptimal plan {repr(best_forced_plan)} "
+                f"with better alternative {repr(best_plan)}."
+            )
             return best_plan
 
 

@@ -674,3 +674,22 @@ class RemoveUnusedBuffersPass(ModelTransformationPass):
             set(t.buffer for subgraph in model.subgraphs for t in subgraph.tensors)
             | set(m.buffer for m in model.metadata)
         )
+
+
+class ParallelizeDIDOPass(OperatorMatchingPass):
+    def __init__(self, priority=PassPriority.PAR, *, num_threads=None):
+        super().__init__(priority)
+        self.num_threads = num_threads or 1
+        assert isinstance(self.num_threads, int)
+        assert self.num_threads > 0
+
+        if self.num_threads == 1:
+            self.run = lambda *args, **kwargs: None
+            logging.debug(f"Skipping {type(self).__name__} with num_threads={self.num_threads}")
+
+
+    def match(self, op):
+        return op.operator_code.code == XCOREOpCodes.XC_conv2d_deepin_deepout_relu
+
+    def mutate(self, op):
+        pass  # TODO:

@@ -186,12 +186,12 @@ def ecc(nsizex=29, nsizey=29, ch=1):
 
 
 # Prepare data function for MNIST dataset
-def prepare_MNIST(use_aug=False, simard=False):
+def prepare_MNIST(use_aug=False, simard=False, padding=2):
     if simard:
         x_train, x_test, x_val, y_train, y_test, y_val = ecc()
     else:
         x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(
-            padding=2, categorical=False, flatten=False, y_float=True)
+            padding=padding, categorical=False, flatten=False, y_float=True)
     if use_aug:
         if simard:
             x_train, y_train = expand_dataset(

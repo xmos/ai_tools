@@ -8,15 +8,6 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 
-def unidir_split_helper(dim, adjustment, num_threads):
-    base, rem = dim // num_threads, dim % num_threads
-    block_lengths = base + np.array(adjustment(rem))
-    block_starts = [0]
-    for j in range(num_threads - 1):
-        block_starts.append(block_starts[j] + block_lengths[j])
-    return block_starts, block_lengths
-
-
 class ParPlan():
     def __init__(self, num_threads, layout, cost):
         self.num_threads = num_threads
@@ -41,7 +32,10 @@ class ParallelizationPlanner(ABC):
     def __init__(self, *, num_threads, forced=False):
         assert isinstance(num_threads, int)
         assert 0 < num_threads <= self.MAX_THREADS
+        if num_threads == 1:
+            logging.warning(f"{type(self).__name__} initialized with 1 thread.")
         self.num_threads = num_threads
+
         self.forced = forced
         self._candidate_plans = []  # should be a list of ParPlans
 
@@ -87,7 +81,7 @@ class ParallelizationPlanner(ABC):
             )
             return best_forced_plan
         else:
-            logging.warning(
+            logging.info(
                 f"{type(self).__name__} is "
                 f"replacing suboptimal plan {repr(best_forced_plan)} "
                 f"with better alternative {repr(best_plan)}."
@@ -98,29 +92,41 @@ class ParallelizationPlanner(ABC):
 class UnidirectionalSplitPlanner(ParallelizationPlanner):
     def __init__(self, height, width, **kwargs):
         super().__init__(**kwargs)
+        assert isinstance(height, int)
+        assert isinstance(width, int)
+        assert height * width > 0
         self.height, self.width = height, width
 
-    def unidir_width_layout(self, adjustment, num_threads):
-        starts, widths = unidir_split_helper(self.width, adjustment, num_threads)
+    _adjustments = {
+        1: lambda rem: [0],
+        2: lambda rem: [int(rem >= 1), 0],
+        3: lambda rem: [int(rem >= 1), 0, int(rem >= 2)],
+        4: lambda rem: [int(rem >= 1), int(rem == 3), 0, int(rem >= 2)],
+        5: lambda rem: [int(rem >= 1), int(rem >= 3), 0, int(rem >= 4), int(rem >= 2)]
+    }
+
+    def unidir_split_helper(self, dim, num_threads):
+        base, rem = dim // num_threads, dim % num_threads
+        block_lengths = base + np.array(self._adjustments[num_threads](rem))
+        block_starts = [0]
+        for j in range(num_threads - 1):
+            block_starts.append(block_starts[j] + block_lengths[j])
+        return block_starts, block_lengths
+
+    def unidir_width_layout(self, num_threads):
+        starts, widths = self.unidir_split_helper(self.width, num_threads)
         return [(0, starts[j], self.height, widths[j]) for j in range(num_threads)]
 
-    def unidir_height_layout(self, adjustment, num_threads):
-        starts, heights = unidir_split_helper(self.height, adjustment, num_threads)
+    def unidir_height_layout(self, num_threads):
+        starts, heights = self.unidir_split_helper(self.height, num_threads)
         return [(starts[j], 0, heights[j], self.width) for j in range(num_threads)]
 
     def create_n_thread_candidates(self, num_threads):
-        if num_threads == 4:
-            unidir_adjustment = lambda rem: [
-                int(rem >= 1), int(rem == 3), 0, int(rem >= 2)]
-        if num_threads == 5:
-            unidir_adjustment = lambda rem: [
-                int(rem >= 1), int(rem >= 3), 0, int(rem >= 4), int(rem >= 2)]
-
-        if 6 > num_threads > 3: # TODO: remove this constraint
+        self.add_layout_candidate(
+            num_threads, self.unidir_width_layout(num_threads))
+        if num_threads > 1:
             self.add_layout_candidate(
-                num_threads, self.unidir_width_layout(unidir_adjustment, num_threads))
-            self.add_layout_candidate(
-                num_threads, self.unidir_height_layout(unidir_adjustment, num_threads))
+                num_threads, self.unidir_height_layout(num_threads))
 
 
 class DIDOConv2DPlanner(UnidirectionalSplitPlanner):

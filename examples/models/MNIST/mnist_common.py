@@ -11,8 +11,8 @@ class MNISTModel(KerasClassifier):
         super().__init__(*args, **kwargs)
         self._use_aug = use_aug
 
-    def prep_data(self, *, simard_resize=False):
-        self.data = utils.prepare_MNIST(self._use_aug, simard=simard_resize)
+    def prep_data(self, *, simard_resize=False, padding=2):
+        self.data = utils.prepare_MNIST(self._use_aug, simard=simard_resize, padding=padding)
         for k, v in self.data.items():
             logging.debug(f"Prepped data[{k}] with shape: {v.shape}")
 

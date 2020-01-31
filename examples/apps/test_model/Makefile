@@ -124,6 +124,7 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/xcore/xcore_arg_min_max.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_pooling.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_fully_connected.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_type_conversions.cc \
 	lib_nn/src/nn_operator.c \
 	lib_nn/src/nn_operator_conv.c \
 	main.cc
@@ -141,6 +142,7 @@ else # must be xcore
 		lib_nn/src/asm/fc_deepin_shallowout_8.S \
 		lib_nn/src/asm/maxpool2d_deep.S \
 		lib_nn/src/asm/vpu_memcpy.S \
+		lib_nn/src/asm/requantize_16_to_8.S \
 		tensorflow/lite/micro/xcore/debug_log.cc 
 endif
 

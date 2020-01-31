@@ -27,7 +27,7 @@ def generate_test_cases(operator, generator, test_cases, *, train_model=False):
 
     for test_case in test_cases:
         folder, arguments = make_folder_and_arguments(**test_case)
-        output_dir = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR, operator, folder)
+        output_dir = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, operator, folder)
         cmd = f'python {generator} {train_model_flag} {arguments} {output_dir}'
         print(f'generating test case {output_dir}')
         try:
@@ -62,7 +62,7 @@ generate_test_cases(operator, generator, test_cases)
 #***********************************
 # Conv2D shallowin/deepout
 #***********************************
-operator = operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name
+operator = f'{operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name}-fused'
 generator = os.path.join(directories.GENERATOR_DIR, 'generate_conv2d_shallowin_deepout_relu.py')
 test_cases = [
     {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'SAME' },
@@ -77,10 +77,21 @@ test_cases = [
 generate_test_cases(operator, generator, test_cases)
 
 #***********************************
-# Fully-connected
+# Fully-connected deepin anyout
 #***********************************
 operator = operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name
 generator = os.path.join(directories.GENERATOR_DIR, 'generate_fc_deepin_anyout.py')
+test_cases = [
+    {'in': 32 }
+]
+
+generate_test_cases(operator, generator, test_cases, train_model=True)
+
+#***********************************
+# Fully-connected deepin anyout requantized
+#***********************************
+operator = operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name
+generator = os.path.join(directories.GENERATOR_DIR, 'generate_fc_deepin_anyout_requantized.py')
 test_cases = [
     {'in': 32 }
 ]

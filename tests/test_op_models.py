@@ -15,23 +15,29 @@ from tflite2xcore import operator_codes
 
 def load_tests(name):
     if name.startswith('argmax'):
-        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_argmax_16.name, '*')
     elif name.startswith('conv_shallowin_deepout'):
-        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name, '*')
     elif name.startswith('conv_deepin_deepout'):
-        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name, '*')
     elif name.startswith('fc_deepin_anyout'):
-        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name, '*')
     elif name.startswith('maxpool'):
-        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_maxpool2d_deep.name, '*')
     elif name.startswith('avgpool'):
-        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_avgpool2d_deep.name, '*')
+    elif name.startswith('requantize_18_8'):
+        name = f'{operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name}-fused'
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
+            name, '*')
+    else:
+        raise Exception(f'Unsupported op model: {name}')
 
     test_cases = []
 
@@ -115,6 +121,8 @@ def test_maxpool(test_model_app, maxpool_test_case):
 def test_avgpool(test_model_app, avgpool_test_case):
     assert(run_test_case(test_model_app, avgpool_test_case))
 
+def test_avgpool(test_model_app, requantize_18_8_test_case):
+    assert(run_test_case(test_model_app, requantize_18_8_test_case))
 
 if __name__ == "__main__":
     pytest.main()

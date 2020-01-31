@@ -5,6 +5,6 @@ import os
 
 DATA_DIR = 'data'
 
-SINGLE_OP_MODELS_DATA_DIR = os.path.join(DATA_DIR, 'single_op_models')
+OP_TEST_MODELS_DATA_DIR = os.path.join(DATA_DIR, 'op_test_models')
 
-GENERATOR_DIR = '../examples/models/single_op_models'
+GENERATOR_DIR = '../examples/models/op_test_models'

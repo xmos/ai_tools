@@ -48,7 +48,7 @@ def build_DIDO(*, weight_shape, input_size, padding):
 
 @pytest.fixture()
 def trf_pass(num_threads):
-    return ParallelizeDIDOPass()
+    return ParallelizeDIDOPass(num_threads=num_threads)
 
 
 @pytest.fixture()
@@ -60,12 +60,21 @@ def model(weight_shape, input_size, padding):
 def test_matching(trf_pass, model, num_threads):
     assert trf_pass.match(model.subgraphs[0].operators[-1])
 
+
 @pytest.mark.parametrize('num_threads', [1])
 def test_single_thread_identity(trf_pass, model, num_threads):
     op = model.subgraphs[0].operators[0]
     custom_options = deepcopy(op.custom_options)
     trf_pass.run(model)
     assert op.custom_options == custom_options
+
+
+@pytest.mark.parametrize('num_threads', [2, 3, 4, 5])
+def test_mutation(trf_pass, model, num_threads):
+    op = model.subgraphs[0].operators[0]
+    assert 'par_plan' not in op.custom_options
+    trf_pass.run(model)
+    assert 'par_plan' in op.custom_options
 
 
 if __name__ == "__main__":

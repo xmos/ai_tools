@@ -3,8 +3,6 @@
 import logging
 import numbers
 
-import numpy as np
-
 from abc import ABC, abstractmethod
 
 
@@ -107,7 +105,7 @@ class UnidirectionalSplitPlanner(ParallelizationPlanner):
 
     def unidir_split_helper(self, dim, num_threads):
         base, rem = dim // num_threads, dim % num_threads
-        block_lengths = base + np.array(self._adjustments[num_threads](rem))
+        block_lengths = [base + a for a in self._adjustments[num_threads](rem)]
         block_starts = [0]
         for j in range(num_threads - 1):
             block_starts.append(block_starts[j] + block_lengths[j])

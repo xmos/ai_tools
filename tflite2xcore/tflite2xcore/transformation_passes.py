@@ -682,15 +682,17 @@ class RemoveUnusedBuffersPass(ModelTransformationPass):
 class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
     def __init__(self, priority=PassPriority.PAR, *, num_threads=None, forced=False):
         super().__init__(priority)
-
         self.num_threads = num_threads or 1
         assert isinstance(self.num_threads, int)
         assert self.num_threads > 0
-        if self.num_threads == 1:
-            self.run = lambda *args, **kwargs: None
-            logging.debug(f"Skipping {type(self).__name__} with num_threads={self.num_threads}")
-
         self.forced = forced
+
+    def run(self, *args, **kwargs):
+        if self.num_threads == 1:
+            logging.debug(f"Skipping {type(self).__name__} with num_threads={self.num_threads}")
+            return None
+        else:
+            return super().run(*args, **kwargs)
 
     @property
     def matching_opcode(self):

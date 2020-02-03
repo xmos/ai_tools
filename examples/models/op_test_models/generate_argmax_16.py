@@ -90,6 +90,13 @@ class ArgMax16(FunctionModel):
 
         self._save_visualization('model_stripped')
 
+    def to_tf_xcore(self):
+        # super.().to_tf_xcore() converts model_quant
+        # to avoid code duplication, here we convert model_stripped instead
+        self.models['model_quant'], tmp = self.models['model_stripped'], self.models['model_quant']
+        super().to_tf_xcore()
+        self.models['model_quant'] = tmp
+
     def save_tf_stripped_data(self):
         assert 'model_quant' in self.models
         assert 'model_stripped' in self.models

@@ -4,7 +4,7 @@ import pytest
 
 from tflite2xcore.operator_codes import XCOREOpCodes
 from tflite2xcore.transformation_passes import AddArgMax16OutputPass, ReplaceArgMax16Pass
-from .test_AddArgMax16OutputPass import input_dim, model
+from .test_AddArgMax16OutputPass import input_shape, model
 
 
 def test_mutate(model):

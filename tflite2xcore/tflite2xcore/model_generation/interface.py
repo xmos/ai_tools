@@ -97,7 +97,6 @@ class Model(ABC):
     @abstractmethod
     def train(self):
         '''
-        GPU and CPU usage should be differentiated.
         Fit with hyperparams and if we want to save
         original model and training data,
         that should be done here.
@@ -115,33 +114,14 @@ class Model(ABC):
 
     @abstractmethod
     def to_tf_float(self):  # polymorphism affects here
-        '''
-        Create converter from original model to TensorFlow Lite Float.
-        Converter stored with the key 'model_float' in self.converters.
-        Model is saved to disk and the path of the model is
-        stored in self.models with the key 'model_float'.
-        '''
         assert self.core_model, "core model does not exist"
 
     @abstractmethod
     def to_tf_quant(self):
-        '''
-        Create converter from original model to TensorFlow Lite Float.
-        Converter stored with the key 'model_quant' in self.converters.
-        Model is saved to disk and the path of the model is
-        stored in self.models with the key 'model_quant'.
-        '''
         assert self.core_model, "core model has not been initialized"
         assert 'quant' in self.data, "representative dataset has not been prepared"
 
     def to_tf_stripped(self, **converter_args):
-        '''
-        Create converter from original model
-        to TensorFlow Lite Float.
-        Converter stored with the key 'model_stripped' in
-        self.converters. Also the path of the model is saved
-        using this function.
-        '''
         assert 'model_quant' in self.models
         model = read_flatbuffer(str(self.models['model_quant']))
         xcore_conv.strip_model(model, **converter_args)
@@ -149,16 +129,9 @@ class Model(ABC):
         write_flatbuffer(model, str(self.models['model_stripped']))
 
     def to_tf_xcore(self, **converter_args):
-        '''
-        Create converter from original model
-        to TensorFlow Lite Float.
-        Converter stored with the key 'model_xcore' in
-        self.converters. Also the path of the model is saved
-        using this function.
-        '''
-        assert 'model_stripped' in self.models
+        assert 'model_quant' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
-        xcore_conv.convert(str(self.models['model_stripped']),
+        xcore_conv.convert(str(self.models['model_quant']),
                            str(self.models['model_xcore']),
                            **converter_args)
 

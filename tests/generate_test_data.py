@@ -62,7 +62,7 @@ generate_test_cases(operator, generator, test_cases)
 #***********************************
 # Conv2D shallowin/deepout
 #***********************************
-operator = f'{operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name}-fused'
+operator = operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name
 generator = os.path.join(directories.GENERATOR_DIR, 'generate_conv2d_shallowin_deepout_relu.py')
 test_cases = [
     {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'SAME' },

@@ -17,10 +17,10 @@ def load_tests(name):
     if name.startswith('argmax'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_argmax_16.name, '*')
-    elif name.startswith('conv_shallowin_deepout'):
+    elif name.startswith('conv2d_shallowin_deepout'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name, '*')
-    elif name.startswith('conv_deepin_deepout'):
+    elif name.startswith('conv2d_deepin_deepout'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name, '*')
     elif name.startswith('fc_deepin_anyout'):
@@ -33,7 +33,7 @@ def load_tests(name):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_avgpool2d_deep.name, '*')
     elif name.startswith('requantize_18_8'):
-        name = f'{operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name}-fused'
+        name = f'{operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name}'
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             name, '*')
     else:
@@ -94,20 +94,25 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
     print('* Results *')
     print('***********')
     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-    return helpers.compare_tensor_files(expected_output_file, expected_quantization,
+    result = helpers.compare_tensor_files(expected_output_file, expected_quantization,
         predicted_output_file, predicted_quantization, abs_tol)
 
+    if result:
+        # remove the tmp files if the test passed
+        os.remove(predicted_output_file)
+
+    return result
 
 def test_argmax(test_model_app, argmax_test_case):
     assert(run_test_case(test_model_app, argmax_test_case))
 
 
-def test_conv_shallowin_deepout(test_model_app, conv_shallowin_deepout_test_case):
-    assert(run_test_case(test_model_app, conv_shallowin_deepout_test_case))
+def test_conv2d_shallowin_deepout(test_model_app, conv2d_shallowin_deepout_test_case):
+    assert(run_test_case(test_model_app, conv2d_shallowin_deepout_test_case))
 
 
-def test_conv_deepin_deepout(test_model_app, conv_deepin_deepout_test_case):
-    assert(run_test_case(test_model_app, conv_deepin_deepout_test_case))
+def test_conv2d_deepin_deepout(test_model_app, conv2d_deepin_deepout_test_case):
+    assert(run_test_case(test_model_app, conv2d_deepin_deepout_test_case))
 
 
 def test_fc_deepin_anyout(test_model_app, fc_deepin_anyout_test_case):

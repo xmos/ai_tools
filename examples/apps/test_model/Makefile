@@ -84,7 +84,6 @@ SOURCES := \
 	tensorflow/lite/micro/micro_allocator.cc \
 	tensorflow/lite/micro/micro_error_reporter.cc \
 	tensorflow/lite/micro/micro_interpreter.cc \
-	tensorflow/lite/micro/micro_mutable_op_resolver.cc \
 	tensorflow/lite/micro/micro_utils.cc \
 	tensorflow/lite/micro/simple_memory_allocator.cc \
 	tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc \
@@ -120,7 +119,7 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/svdf.cc \
 	tensorflow/lite/micro/kernels/unpack.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_conv.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_conv2d.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_arg_min_max.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_pooling.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_fully_connected.cc \

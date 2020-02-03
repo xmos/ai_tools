@@ -87,7 +87,7 @@ def check_unif_init_params(param_const, param_unif):
 
 def initializer_args_handler(args):
     # Choosing the right value fo the initializer
-    # No initializer specified for bias
+    # bias
     if args.bias_unif_init is None:
         bias_init = tf.constant_initializer(
             DEFAULT_CONST if args.bias_const_init is None else args.bias_const_init
@@ -95,7 +95,7 @@ def initializer_args_handler(args):
     else:
         check_unif_init_params(args.bias_const_init, args.bias_unif_init)
         bias_init = tf.random_uniform_initializer(*args.bias_unif_init)
-    # No initializer specified for weights
+    # weights
     if args.weight_unif_init is not None:
         check_unif_init_params(args.weight_const_init, args.weight_unif_init)
         weight_init = tf.random_uniform_initializer(*args.weight_unif_init)

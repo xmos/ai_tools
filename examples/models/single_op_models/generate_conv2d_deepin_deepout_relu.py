@@ -3,6 +3,7 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import argparse
 from pathlib import Path
+import logging
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
@@ -14,13 +15,13 @@ DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = 'same'
-DEFAULT_CONST = tf.constant_initializer(0)
-DEFAULT_UNIFORM = tf.random_uniform_initializer(-1, 1)
+DEFAULT_CONST = 0
+DEFAULT_UNIFORM = [-1, 1]
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deepin_deepout_relu').resolve()
 
 
 class Conv2dDeepinDeepoutRelu(KerasModel):
-    def build(self, K_h, K_w, height, width, input_channels, output_channels, **kwargs):#padding, bias_init, weight_init):
+    def build(self, K_h, K_w, height, width, input_channels, output_channels, *, padding, bias_init, weight_init):
         assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
         assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
         assert K_h % 2 == 1, "kernel height must be odd"
@@ -32,7 +33,7 @@ class Conv2dDeepinDeepoutRelu(KerasModel):
             layers=[
                 tf.keras.layers.Conv2D(filters=output_channels,
                                        kernel_size=(K_h, K_w),
-                                       padding=kwargs['padding'],
+                                       padding=padding,
                                        input_shape=(height, width, input_channels),
                                        bias_initializer=bias_init,
                                        kernel_initializer=weight_init)
@@ -75,36 +76,34 @@ def main(path=DEFAULT_PATH, *,
     # Populate converters
     test_model.populate_converters()
 
+def check_unif_init_params(param_const, param_unif):
+    # Exception handling
+    if len(param_unif) != 2:
+        raise argparse.ArgumentTypeError('The unif_init argument must consist of 2 numbers indicating a range.')
+    if param_unif[0] > param_unif[1]:
+        raise argparse.ArgumentTypeError('The unif_init argument requires the first value to be lesser than the second.')
+    if param_const is not None:
+        raise argparse.ArgumentTypeError('Only one initializer should be specified.')
+
 def initializer_args_handler(args):
     # Choosing the right value fo the initializer
     # No initializer specified for bias
-    if args.bias_unif_init == None and args.bias_const_init == None:
-        bias_init = DEFAULT_CONST
-    # Constant initializer for bias
-    elif args.bias_unif_init == None:
-        bias_init = tf.constant_initializer(args.bias_const_init)
-    # Uniform initializer for bias
+    if args.bias_unif_init is None:
+        bias_init = tf.constant_initializer(
+            DEFAULT_CONST if args.bias_const_init is None else args.bias_const_init
+        )
     else:
-        # Exception handling
-        if len(args.bias_unif_init) != 2:
-            raise argparse.ArgumentTypeError('The bias_unif_init argument must consist of 2 numbers indicating a range.')
-        if args.bias_const_init is not None:
-            raise argparse.ArgumentTypeError('Only one initializer for bias should be specified.')
-        bias_init = tf.random_uniform_initializer(min(args.bias_unif_init), max(args.bias_unif_init))
-
+        check_unif_init_params(args.bias_const_init, args.bias_unif_init)
+        bias_init = tf.random_uniform_initializer(*args.bias_unif_init)
     # No initializer specified for weights
-    if args.weight_unif_init == None and args.weight_const_init == None:
-        weight_init = DEFAULT_UNIFORM
-    # Uniform initializer specified for weights
-    elif args.weight_const_init == None:
-        if len(args.weight_unif_init) != 2:
-            raise argparse.ArgumentTypeError('The weight_unif_init argument must be 2 numbers indicating a range.')
-        weight_init = tf.random_uniform_initializer(min(args.weight_unif_init), max(args.weight_unif_init))
-    # Constant initializer specified for weights
+    if args.weight_unif_init is not None:
+        check_unif_init_params(args.weight_const_init, args.weight_unif_init)
+        weight_init = tf.random_uniform_initializer(*args.weight_unif_init)
     else:
-        if args.weight_unif_init is not None:
-            raise argparse.ArgumentTypeError('Only one initializer for weights should be specified.')
-        weight_init = tf.constant_initializer(args.weight_const_init)
+        weight_init = tf.random_uniform_initializer(
+            *DEFAULT_UNIFORM) if args.weight_const_init is None else tf.constant_initializer(args.weight_const_init)
+    logging.debug(f'Weight initializer configuration: {weight_init.get_config()}')
+    logging.debug(f'Bias initializer configuration: {bias_init.get_config()}')
     return weight_init, bias_init
 
 if __name__ == "__main__":

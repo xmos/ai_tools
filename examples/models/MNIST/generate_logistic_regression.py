@@ -39,30 +39,6 @@ class LogisticRegression(MNISTModel):
     def prep_data(self):
         super().prep_data(padding=0)
 
-class LogisticRegressionTuned(LogisticRegression):
-
-    def build(self):
-        self._prep_backend()
-        # Building
-        self.core_model = tf.keras.Sequential(
-            name=self.name,
-            layers=[
-                tf.keras.layers.Input(shape=(28, 28, 1), name='input'),
-                tf.keras.layers.Flatten(),
-                tf.keras.layers.Dense(32, activation='softmax',
-                                      kernel_regularizer=tf.keras.regularizers.l1(1e-5))
-            ]
-        )
-        # Compilation
-        self.core_model.compile(
-            loss='sparse_categorical_crossentropy',
-            optimizer='adam',
-            metrics=['accuracy']
-        )
-        # Show summary
-        self.core_model.summary()
-
-
 def main(path=None, train_new_model=False,
          batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
          use_aug=False, xcore_tuned=False, opt_classifier=False):

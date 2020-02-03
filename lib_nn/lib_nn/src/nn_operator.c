@@ -216,24 +216,24 @@ void maxpool2d_deep_c(
 #define IN_INDEX(ROW, COL, CHAN, WIDTH, CHANS_IN)   ((ROW)*((WIDTH)*(CHANS_IN)) + (COL)*(CHANS_IN) + (CHAN))
 #define OUT_INDEX(ROW, COL, CHAN, WIDTH, CHANS_IN)   ((ROW)*(((WIDTH)/2)*(CHANS_IN)) + (COL)*(CHANS_IN) + (CHAN))
 
-void avgpool2d_deep_c(
-    const int8_t* X, 
+void avgpool2d_2x2_c(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t C_in)
+    const int8_t* X, 
+    const uint32_t x_height, 
+    const uint32_t x_width,
+    const uint32_t x_chans)
 {
-    //int8_t X[height][width][C_in]
-    //int8_t Y[height/2][width/2][C_in]
+    //int8_t X[x_height][x_width][C_in]
+    //int8_t Y[height/2][x_width/2][C_in]
 
-    assert((height & 1) == 0);
-    assert((width  & 1) == 0);
+    assert((x_height & 1) == 0);
+    assert((x_width  & 1) == 0);
 
-    for(unsigned row = 0; row < height; row += KERNEL_STRIDE){
-        for(unsigned col = 0; col < width; col += KERNEL_STRIDE){
-            for(unsigned ch = 0; ch < C_in; ch++){
+    for(unsigned row = 0; row < x_height; row += KERNEL_STRIDE){
+        for(unsigned col = 0; col < x_width; col += KERNEL_STRIDE){
+            for(unsigned ch = 0; ch < x_chans; ch++){
 
-                unsigned out_dex = OUT_INDEX(row/2, col/2, ch, width, C_in);
+                unsigned out_dex = OUT_INDEX(row/2, col/2, ch, x_width, x_chans);
 
                 int32_t acc = 0;
 
@@ -241,7 +241,7 @@ void avgpool2d_deep_c(
 
                 for(unsigned krow = 0; krow < KERNEL_SIZE; krow++){
                     for(unsigned kcol = 0; kcol < KERNEL_SIZE; kcol++){
-                        unsigned in_dex = IN_INDEX(row+krow, col+kcol, ch, width, C_in);
+                        unsigned in_dex = IN_INDEX(row+krow, col+kcol, ch, x_width, x_chans);
 
                         int8_t in_val = X[in_dex];
 
@@ -267,6 +267,228 @@ void avgpool2d_deep_c(
 #undef IN_INDEX
 #undef KERNEL_STRIDE
 #undef KERNEL_SIZE
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void avgpool2d_global_c(
+    int8_t* Y,
+    const int8_t* X, 
+    const uint32_t x_height, 
+    const uint32_t x_width,
+    const uint32_t x_chans,
+    const uint32_t shift,
+    const uint32_t scale)
+{
+    const unsigned pix = x_height * x_width;
+
+    const uint32_t sh = shift & 0xFFFF;
+    const uint32_t sc = scale & 0xFF;
+    
+    for(unsigned ch = 0; ch < x_chans; ch++){
+
+        int32_t acc = 0;
+
+        for(unsigned p = 0; p < pix; p++){
+            int32_t x = X[p*x_chans + ch];
+            acc += x * sc;
+        }
+
+        Y[ch] = vlsat_single_s8(acc, sh);
+    }
+}
+
+void avgpool2d_global_init(
+    uint32_t* shift,
+    uint32_t* scale,
+    const uint32_t x_height,
+    const uint32_t x_width)
+{    
+    //Figure out the scale and shift
+    const unsigned pix = x_height * x_width;
+    //Find c = ceil(log2(pix)), which can be achieve via clz()
+    const int c = ceil_log2(pix);
+
+    if(c == -1) __builtin_trap(); //pix == 0
+
+    if(pix == (1<<c)){
+        //window pixel count is already a power of 2   (2^c)
+        *scale = 1;
+        *shift = c;
+        // printf("scale: %d\nshift: %d\ncl2: %d\npix: %u\n", scale, shift, ceil_log2(pix), pix);
+        // printf("win_h: %u\nwin_w:%u\n", win->window.height, win->window.width);
+    } else {
+        const unsigned q = 31 - c - 6;
+        // 2^31 / pix
+        const unsigned g = 0x80000000 / pix;
+        const unsigned h = (g + (1 << (q-1))) >> q; //Rounding down-shift
+
+        // printf("! pix: %u\n", pix);
+        // printf("! c: %d\n", c);
+        // printf("! q: %u\n", q);
+        // printf("! g: 0x%08X\n", g);
+        // printf("! h: 0x%02X\n", h);
+        assert(h > (1<<6));
+        assert(h < (1<<7));
+
+        *scale = (int8_t)h;
+        *shift = c+6;
+    }
+
+    (*scale) *= 0x01010101;
+    (*shift) *= 0x00010001;
+}   
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void avgpool2d_c(
+    int8_t* Y,
+    const int8_t* X, 
+    const nn_avgpool_params_t* params)
+{
+    X = &X[params->start_incr_x];
+    Y = &Y[params->start_incr_y];
+
+    // int8_t* Y_start = Y;
+
+    const int8_t shift = params->shift & 0xFF;
+    const int8_t scale = params->scale & 0xFF;
+
+    for(unsigned out_row = 0; out_row < params->out_rows; out_row++){
+        // printf("out_row = %u\n", out_row);
+        for(unsigned out_col = 0; out_col < params->out_cols; out_col++){
+            // printf("\tout_col = %u\n", out_col);
+            for(int chans = params->out_chans; chans > 0; chans -= 16){
+                // printf("\t\tchan = %d\n", (int) params->Y_chans - chans);
+                
+                unsigned iter_chans = (chans >= VPU_INT8_ACC_PERIOD)? VPU_INT8_ACC_PERIOD : chans;
+                int32_t acc32[VPU_INT8_ACC_PERIOD] = {0};
+
+                for(unsigned w_rows = 0; w_rows < params->W_h; w_rows++){
+                    for(unsigned w_cols = 0; w_cols < params->W_w; w_cols++){
+
+                        for(unsigned k = 0; k < iter_chans; k++){
+                            acc32[k] += (((int32_t)X[k]) * scale);
+                        }
+
+                        X = &X[params->win_col_incr_x];
+                    }
+
+                    X = &X[params->win_row_incr_x];
+                }
+
+                for(unsigned k = 0; k < iter_chans; k++){
+                    Y[k] = vlsat_single_s8(acc32[k], shift);
+                }
+
+                X = &X[params->chan_incr_x];
+
+                Y = &Y[iter_chans];
+            }
+
+            X = &X[params->hstride_incr_x];
+        }
+
+        X = &X[params->vstride_incr_x];
+        Y = &Y[params->vstride_incr_y];
+    }
+
+    // int wrote_bytes = (int32_t) (&Y[0] - &Y_start[0]);
+    // printf("Wrote %d bytes to Y\n", wrote_bytes);
+}
+
+
+void avgpool2d_init(
+    nn_avgpool_params_t* pool,
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const nn_window_map_t* win)
+{
+
+    pool->out_rows = win->window.vcount;
+    pool->out_cols = win->window.hcount;;
+    pool->out_chans = y->channels;
+    pool->W_h = win->window.height;
+    pool->W_w = win->window.width;
+    
+    pool->start_incr_x = IMG_ADDRESS_VECT(x, win->start.X.rows, win->start.X.cols, win->start.X.channels);
+    assert(pool->start_incr_x >= 0);
+    assert(pool->start_incr_x < (x->height*x->width*x->channels));
+
+    pool->start_incr_y = IMG_ADDRESS_VECT(y, win->start.Y.rows, win->start.Y.cols, win->start.Y.channels);
+    assert(pool->start_incr_y >= 0);
+    assert(pool->start_incr_y < (y->height*y->width*y->channels));
+
+    const unsigned chan_groups = OUT_CHANNEL_GROUPS(pool->out_chans);
+
+    //TODO: given the unrolled loop in the assembly, it might make more sense to decide
+    //      whether the window should be evaluated on the transpose of the region.
+    //      i.e. if window->window.height = 16 (unrolled loop size) and window->window->width = 4,
+    //           then the win_col_incr_x should probably be set to traverse within a column of the
+    //          window inside the innermost loop. This is possible because the offsets are arbitrary
+#define IAV IMG_ADDRESS_VECT    
+    pool->win_col_incr_x = IAV(x, 0, 1, 0);
+    pool->win_row_incr_x = IAV(x, 1, 0, 0)                   - pool->W_w * IAV(x, 0, 1, 0);
+    pool->chan_incr_x    = IAV(x, 0, 0, VPU_INT8_ACC_PERIOD) - pool->W_h * IAV(x, 1, 0, 0);
+    pool->hstride_incr_x = IAV(x, 0, win->window.hstride, 0) - chan_groups * IAV(x, 0, 0, VPU_INT8_ACC_PERIOD); 
+    pool->vstride_incr_x = IAV(x, win->window.vstride, 0, 0) - win->window.hcount * IAV(x, 0, win->window.hstride, 0);
+
+    pool->vstride_incr_y = IAV(y, 1, 0, 0) - win->window.hcount * IAV(y, 0, 1, 0);
+#undef IAV
+
+    //Figure out the scale and shift
+
+    const unsigned pix = win->window.height * win->window.width;
+    //Find c = ceil(log2(pix)), which can be achieve via clz()
+    const int c = ceil_log2(pix);
+
+    if(c == -1) __builtin_trap(); //pix == 0
+
+    int8_t scale;
+    int16_t shift;
+    if(pix == (1<<c)){
+        //window pixel count is already a power of 2   (2^c)
+        scale = 1;
+        shift = c;
+        // printf("scale: %d\nshift: %d\ncl2: %d\npix: %u\n", scale, shift, ceil_log2(pix), pix);
+        // printf("win_h: %u\nwin_w:%u\n", win->window.height, win->window.width);
+    } else {
+        const unsigned q = 31 - c - 6;
+        // 2^31 / pix
+        const unsigned g = 0x80000000 / pix;
+        const unsigned h = (g + (1 << (q-1))) >> q; //Rounding down-shift
+
+        // printf("! pix: %u\n", pix);
+        // printf("! c: %d\n", c);
+        // printf("! q: %u\n", q);
+        // printf("! g: 0x%08X\n", g);
+        // printf("! h: 0x%02X\n", h);
+        assert(h > (1<<6));
+        assert(h < (1<<7));
+
+        scale = (int8_t)h;
+        shift = c+6;
+    }
+
+    pool->shift = 0x00010001 * shift;
+    pool->scale = 0x01010101 * scale;
+
+    pool->special_case = 0;
+
+}
 
 
 

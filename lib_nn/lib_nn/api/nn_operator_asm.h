@@ -89,15 +89,37 @@ void maxpool2d_deep_asm(
 
 
 
-#ifndef USE_ASM_avgpool2d_deep
-#define USE_ASM_avgpool2d_deep    (1)
+#ifndef USE_ASM_avgpool2d_2x2
+#define USE_ASM_avgpool2d_2x2    (1)
 #endif
-void avgpool2d_deep_asm(
-    const int8_t* X, 
+void avgpool2d_2x2_asm(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t C_in);
+    const int8_t* X, 
+    const uint32_t x_height, 
+    const uint32_t x_width,
+    const uint32_t x_chans);
+
+
+#ifndef USE_ASM_avgpool2d
+#define USE_ASM_avgpool2d      (1)
+#endif
+void avgpool2d_asm(
+    int8_t* Y,
+    const int8_t* X, 
+    const nn_avgpool_params_t* params);
+
+
+#ifndef USE_ASM_avgpool2d_global
+#define USE_ASM_avgpool2d_global    (1)
+#endif
+void avgpool2d_global_asm(
+    int8_t* Y,
+    const int8_t* X, 
+    const uint32_t x_height, 
+    const uint32_t x_width,
+    const uint32_t x_chans,
+    const uint32_t shift,
+    const uint32_t scale);
 
 
 #ifndef USE_ASM_requantize_16_to_8

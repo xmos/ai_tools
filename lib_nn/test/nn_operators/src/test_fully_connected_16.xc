@@ -119,6 +119,8 @@ void test_fully_connected_16_case0()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
+    print_warns(start_case, TEST_C, TEST_ASM);
+    
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
 
@@ -269,6 +271,8 @@ void test_fully_connected_16_case1()
 
     const unsigned start_case = 0;
     const unsigned last_case = -1;
+
+    print_warns(start_case, TEST_C, TEST_ASM);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -422,6 +426,8 @@ void test_fully_connected_16_case2()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
+    print_warns(start_case, TEST_C, TEST_ASM);
+
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
 
@@ -574,6 +580,8 @@ void test_fully_connected_16_case3()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
+    print_warns(start_case, TEST_C, TEST_ASM);
+
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
 
@@ -721,6 +729,8 @@ void test_fully_connected_16_case4()
 
     const unsigned start_case = 0;
     const unsigned last_case = -1;
+
+    print_warns(start_case, TEST_C, TEST_ASM);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -876,6 +886,8 @@ void test_fully_connected_16_case5()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
+    print_warns(start_case, TEST_C, TEST_ASM);
+
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
 
@@ -1027,6 +1039,8 @@ void test_fully_connected_16_case6()
 
     const unsigned start_case = 0;
     const unsigned last_case = -1;
+
+    print_warns(start_case, TEST_C, TEST_ASM);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -1191,6 +1205,8 @@ void test_fully_connected_16_case7()
 
     const unsigned start_case = 0;
     const unsigned last_case = -1;
+
+    print_warns(start_case, TEST_C, TEST_ASM);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -1364,6 +1380,8 @@ void test_fully_connected_16_case8()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
+    print_warns(start_case, TEST_C, TEST_ASM);
+
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
 
@@ -1536,6 +1554,8 @@ void test_fully_connected_16_case9()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
+    print_warns(start_case, TEST_C, TEST_ASM);
+
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
 
@@ -1655,6 +1675,8 @@ void test_fully_connected_16_case10()
 #endif
 
     PRINTF("test_fully_connected_16_case10()...\n");
+
+    print_warns(-1, TEST_C, TEST_ASM);
 
     for(int k = 0; k < C_in; k++){
         X[k] = 1;
@@ -1788,6 +1810,8 @@ void test_fully_connected_16_case11()
 #endif
 
     PRINTF("test_fully_connected_16_case11()...\n");
+    
+    print_warns(-1, TEST_C, TEST_ASM);
 
     for(int k = 0; k < C_in; k++){
         X[k] = k-64 ;

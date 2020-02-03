@@ -110,24 +110,59 @@ static inline void maxpool2d_deep(
 
 
 
-static inline void avgpool2d_deep(
-    const int8_t* X, 
+static inline void avgpool2d_2x2(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t C_in)
+    const int8_t* X, 
+    const uint32_t x_height, 
+    const uint32_t x_width,
+    const uint32_t x_chans)
 {
-#if defined(__XS3A__) && (USE_ASM_avgpool2d_deep)
+#if defined(__XS3A__) && (USE_ASM_avgpool2d_2x2)
 
-    avgpool2d_deep_asm(X, Y, height, width, C_in);
+    avgpool2d_2x2_asm(Y, X, x_height, x_width, x_chans);
 
 #else
 
-    avgpool2d_deep_c(X, Y, height, width, C_in);
+    avgpool2d_2x2_c(Y, X, x_height, x_width, x_chans);
 
 #endif
 }
 
+static inline void avgpool2d(
+    int8_t* Y,
+    const int8_t* X, 
+    const nn_avgpool_params_t* params)
+{
+#if defined(__XS3A__) && (USE_ASM_avgpool2d)
+
+    avgpool2d_asm(Y, X, params);
+
+#else
+
+    avgpool2d_c(Y, X, params);
+
+#endif
+}
+
+static inline void avgpool2d_global(
+    int8_t* Y,
+    const int8_t* X, 
+    const uint32_t x_height, 
+    const uint32_t x_width,
+    const uint32_t x_chans,
+    const uint32_t shift,
+    const uint32_t scale)
+{
+#if defined(__XS3A__) && (USE_ASM_avgpool2d)
+
+    avgpool2d_global_asm(Y, X, x_height, x_width, x_chans, shift, scale);
+
+#else
+
+    avgpool2d_global_c(Y, X, x_height, x_width, x_chans, shift, scale);
+
+#endif
+}
 
 
 

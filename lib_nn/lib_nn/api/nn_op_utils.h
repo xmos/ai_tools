@@ -17,6 +17,29 @@ extern "C" {
 
 
 
+/** Helper for computing offsets between pixels in an 8-bit image.
+ * 
+ * Gives the address delta associated with moving the specified number of
+ * rows, columns and channels through an image with the specified parameters.
+ * 
+ * \param IMG           (nn_image_params_t*) Pointer to image params.
+ * \param DELTA_ROWS    (signed int) Number of rows
+ * \param DELTA_COLS    (signed int) Number of columns
+ * \param DELTA_CHANS   (signed int) Number of channels
+ */
+#define IMG_ADDRESS_VECT(IMG, DELTA_ROWS, DELTA_COLS, DELTA_CHANS)      (((DELTA_ROWS) * (IMG)->width * (IMG)->channels) + ((DELTA_COLS) * (IMG)->channels) + (DELTA_CHANS))
+
+
+/** Get the number of output channel groups given the number of output channels.
+ * 
+ * This macro gives the minimum number of groups required to handle `CHANNELS` channels, which
+ * means it is effectively `(int) ceil(CHANNELS / 16.0f)`.
+ * 
+ * \param CHANNELS  Number of channels
+ */
+#define OUT_CHANNEL_GROUPS(CHANNELS)    ( ((CHANNELS) + (VPU_INT8_ACC_PERIOD-1)) >> VPU_INT8_ACC_PERIOD_LOG2 )
+
+
 /** Prepare to execute a 2D deepin-deepout convolution.
  *
  * This function initializes a `nn_conv2d_dido_params_t` struct with
@@ -256,6 +279,62 @@ void fc_boggle_BSS(
     const unsigned C_out);
 
 
+
+/**
+ * Initialize the parameters required by the `avgpool2d()` function.
+ * 
+ * This function sets the values in `pool` to those needed by the
+ * `avgpool2d()` function. This need only be called once during initialization
+ * time.
+ * 
+ * The `x` and `y` inputs describe the input and output images resectively which will be used
+ * when `avgpool2d() is called.
+ * 
+ * The `window` parameter describes the way output pixels are derived from input pixels, including
+ * the window size, strides and starting offsets.
+ * 
+ * This function requies that `x->channels` == `y->channels`. Further, *every pixel* in the input
+ * and output images must start at a word-aligned address, which means `x->channels` must be a
+ * multiple of 4.
+ * 
+ * NOTE: If this average pool describes the standard 2x2 average pool with a 2x2 stride across the entire
+ *       input image, then the `avgpool2d_2x2()` function should be used instead, which is optimized 
+ *       for that common scenario.
+ * 
+ * NOTE: If this average pool describes a global average pool, then the `avgpool2d_global` function
+ *       should be used instead, which is optimized for that scenario.
+ * 
+ * \param pool      Output. Parameters used by `avgpool2d()`
+ * \param x         Parameters of the image to be input to `avgpool2d()`
+ * \param y         Parameters of the iamge to be output from `avgpool2d()`
+ * \param window    Windowing parameters for the operation.
+ */
+void avgpool2d_init(
+    nn_avgpool_params_t* pool,
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const nn_window_map_t* window);
+
+
+/**
+ * Obtain the shift and scale parameters required by the `avgpool2d_global()` function.
+ * 
+ * The `x_height` and `x_width` inputs are the height and width of the image to be input
+ * into the `avgpool2d_global()` function.
+ * 
+ * The `shift` and `scale` values will be set by this function, and should be passed to
+ * the `shift` and `scale` inputs to `avgpool2d_global()`.
+ * 
+ * \param shift     Output. The shift parameter required by `avgpool2d_global()`
+ * \param scale     Output. The scale parameter required by `avgpool2d_global()`
+ * \param x_height  The height of the image to be input to `avgpool2d_global()`
+ * \param x_width   The width of the image to be input to `avgpool2d_global()`
+ */
+void avgpool2d_global_init(
+    uint32_t* shift,
+    uint32_t* scale,
+    const uint32_t x_height,
+    const uint32_t x_width);
 
 
 

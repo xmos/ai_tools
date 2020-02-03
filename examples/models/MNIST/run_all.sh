@@ -28,7 +28,5 @@ set -e
 
 ./generate_logistic_regression.py -v --train_model -ep 1 -bs 128
 ./generate_logistic_regression.py -v
-./generate_logistic_regression.py -v --train_model -ep 1 -bs 128 --xcore_tuned --classifier
-./generate_logistic_regression.py -v --xcore_tuned --classifier
-./generate_logistic_regression.py -v --train_model -ep 1 -bs 128 --xcore_tuned
-./generate_logistic_regression.py -v --xcore_tuned
+./generate_logistic_regression.py -v --train_model -ep 1 -bs 128 --classifier
+./generate_logistic_regression.py -v --classifier

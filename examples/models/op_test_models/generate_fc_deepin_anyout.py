@@ -12,7 +12,7 @@ DEFAULT_OUTPUT_DIM = 10
 DEFAULT_INPUT_DIM = 32
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_shallowout_final').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_anyout').resolve()
 
 
 # Prepare data function
@@ -57,9 +57,8 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
             'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
 
 
-# Class for the model
-class FcDeepinShallowoutFinal(KerasModel):
-    def build(self, input_dim, output_dim):  # add keyboard optimizer, loss and metrics???
+class FcDeepinAnyout(KerasModel):
+    def build(self, input_dim, output_dim):
         super().build()
 
         # Building
@@ -102,14 +101,20 @@ class FcDeepinShallowoutFinal(KerasModel):
         self.data['quant'] = self.data['x_train']
 
     def train(self):
-        super().train(batch_size=128, epochs=5*(self.output_dim-1))  # BS and EPOCHS
+        super().train(batch_size=128, epochs=5*(self.output_dim-1))
+
+    def to_tf_stripped(self):
+        super().to_tf_stripped(remove_softmax=True)
+
+    def to_tf_xcore(self):
+        super().to_tf_xcore(remove_softmax=True)
 
 
 def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
          train_new_model=False):
     # Instantiate model
-    test_model = FcDeepinShallowoutFinal('fc_deepin_shallowout_final', Path(path))
+    test_model = FcDeepinAnyout('fc_deepin_anyout', Path(path))
     if train_new_model:
         # Build model and compile
         test_model.build(input_dim, output_dim)

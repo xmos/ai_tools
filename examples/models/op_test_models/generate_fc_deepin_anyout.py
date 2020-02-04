@@ -151,7 +151,7 @@ if __name__ == "__main__":
         help='Number of output dimensions, must be at least 2.')
     parser.add_argument(
         '-in', '--input_dim', type=int, default=DEFAULT_INPUT_DIM,
-        help='Input dimension, must be multiple of 32.')
+        help='Input dimension.')
     parser.add_argument(
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')

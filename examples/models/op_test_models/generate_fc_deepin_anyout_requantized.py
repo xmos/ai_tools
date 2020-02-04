@@ -22,7 +22,7 @@ class FcDeepinAnyoutRequantized(FcDeepinAnyout):
         model = read_flatbuffer(str(self.models['model_quant']))
 
         # NOTE: since the output softmax is not removed during the first
-        # conversion, ReplaceDeepinAnyoutFullyConnectedIntermediatePass will
+        # conversion, ReplaceFullyConnectedIntermediatePass will
         # match and insert the requantization. Then, the softmax can be removed.
         xcore_conv.optimize_for_xcore(model, is_classifier=False, remove_softmax=False)
         xcore_conv.strip_model(model, remove_softmax=True)
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         help='Number of output dimensions, must be at least 2.')
     parser.add_argument(
         '-in', '--input_dim', type=int, default=DEFAULT_INPUT_DIM,
-        help='Input dimension, must be multiple of 32.')
+        help='Input dimension.')
     parser.add_argument(
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')

@@ -315,23 +315,20 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
 
 # TODO: write (at least regression) tests for the mutator functions
-class ReplaceDeepinAnyoutFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
+class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.FULLY_CONNECTED
 
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._weights.shape[1] % 32 == 0
-
-        return False
-
     def mutate_weights(self, op):
         with self.using(op):
-            # rename weight tensor
-            # NOTE: no weight layout rearrangement is done for this op
+            # renaming and zero_padding weight tensor
             self._weights.name = f"{op.name}/weights"
+            col_pad = 3 - (self._weights.shape[1] - 1) % 4
+            arr = np.pad(self._weights.numpy,
+                         pad_width=((0, 0), (0, col_pad)))
+            self._weights.shape = arr.shape
+            self._weights.buffer.data = arr.astype(np.int8)
 
     def mutate_biases(self, op):
         with self.using(op):
@@ -372,7 +369,7 @@ class ReplaceDeepinAnyoutFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
         return super().mutate(op)
 
 
-class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnectedPass):
+class ReplaceFullyConnectedOutputPass(ReplaceFullyConnectedPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
@@ -388,7 +385,7 @@ class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnec
 
 
 # TODO: write (at least regression) tests for the mutator functions
-class ReplaceDeepinAnyoutFullyConnectedIntermediatePass(ReplaceDeepinAnyoutFullyConnectedPass):
+class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):

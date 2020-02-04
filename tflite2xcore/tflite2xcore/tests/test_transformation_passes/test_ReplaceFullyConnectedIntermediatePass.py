@@ -4,7 +4,7 @@ import numpy
 import pytest
 
 from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.transformation_passes import ReplaceDeepinAnyoutFullyConnectedIntermediatePass
+from tflite2xcore.transformation_passes import ReplaceFullyConnectedIntermediatePass
 
 from .model_builders import (
     build_fc, build_mlp, build_logistic
@@ -32,7 +32,7 @@ NON_MATCHING_TENSORS = ('tensor_name', 'new_type'), [
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceDeepinAnyoutFullyConnectedIntermediatePass()
+    return ReplaceFullyConnectedIntermediatePass()
 
 
 @pytest.fixture(params=MATCHING_OUTPUTS)

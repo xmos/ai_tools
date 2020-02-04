@@ -3,13 +3,13 @@
 import numpy
 import pytest
 
-from tflite2xcore.transformation_passes import ReplaceDeepinAnyoutFullyConnectedOutputPass
+from tflite2xcore.transformation_passes import ReplaceFullyConnectedOutputPass
 
 from .model_builders import (
     build_fc, build_mlp,
 )
 
-from .test_ReplaceDeepinAnyoutFullyConnectedIntermediatePass import (
+from .test_ReplaceFullyConnectedIntermediatePass import (
     MATCHING_INPUT_SIZE,
     NON_MATCHING_INPUT_SIZE,
     outputs, input_size,
@@ -24,7 +24,7 @@ from .test_ReplaceDeepinDeepoutConv2DPass import (
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceDeepinAnyoutFullyConnectedOutputPass()
+    return ReplaceFullyConnectedOutputPass()
 
 
 @pytest.fixture(params=MATCHING_HIDDEN_NODES)

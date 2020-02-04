@@ -69,8 +69,8 @@ def optimize_for_xcore(model, *, is_classifier, remove_softmax):
     pass_mgr.register_pass(passes.ReplaceSingleinDeepoutDepthwiseConv2DPass())
     pass_mgr.register_pass(passes.ReplaceDeepMaxPool2DPass())
     pass_mgr.register_pass(passes.ReplaceDeepAveragePool2DPass())
-    pass_mgr.register_pass(passes.ReplaceDeepinAnyoutFullyConnectedIntermediatePass())
-    pass_mgr.register_pass(passes.ReplaceDeepinAnyoutFullyConnectedOutputPass())
+    pass_mgr.register_pass(passes.ReplaceFullyConnectedIntermediatePass())
+    pass_mgr.register_pass(passes.ReplaceFullyConnectedOutputPass())
     pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 
     pass_mgr.run_passes()

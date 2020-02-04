@@ -54,7 +54,10 @@ test_cases = [
     {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'SAME' },
     {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'VALID' },
     {'hi': 3, 'wi': 3, 'kh':3, 'kw': 3, 'pd': 'VALID' },
-    {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID' }
+    {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID' },
+    {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID', 'par': 2 },
+    {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID', 'par': 4 },
+    {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID', 'par': 5 }
 ]
 
 generate_test_cases(operator, generator, test_cases)

@@ -15,14 +15,14 @@ DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = 'same'
-DEFAULT_CONST = 0
-DEFAULT_UNIFORM = [-1, 1]
-DEFAULT_SEED = 42
+DEFAULT_CONST_INIT = tf.constant_initializer(0)
+DEFAULT_UNIF_INIT = tf.random_uniform_initializer(-1, 1)
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deepin_deepout_relu').resolve()
 
 
 class Conv2dDeepinDeepoutRelu(KerasModel):
-    def build(self, K_h, K_w, height, width, input_channels, output_channels, *, padding, bias_init, weight_init):
+    def build(self, K_h, K_w, height, width, input_channels, output_channels,
+              *, padding, bias_init, weight_init):
         assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
         assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
         assert K_h % 2 == 1, "kernel height must be odd"
@@ -64,7 +64,8 @@ def main(path=DEFAULT_PATH, *,
          input_channels=DEFAULT_INPUTS, output_channels=DEFAULT_OUTPUTS,
          height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
          K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
-         padding=DEFAULT_PADDING, bias_init = DEFAULT_CONST, weight_init = DEFAULT_UNIFORM):
+         padding=DEFAULT_PADDING,
+         bias_init=DEFAULT_CONST_INIT, weight_init=DEFAULT_UNIF_INIT):
 
     # Instantiate model
     test_model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', Path(path))
@@ -77,43 +78,37 @@ def main(path=DEFAULT_PATH, *,
     # Populate converters
     test_model.populate_converters()
 
-def check_unif_init_params(param_const, param_unif):
-    # Exception handling
-    if len(param_unif) != 2:
-        raise argparse.ArgumentTypeError('The unif_init argument must consist of 2 numbers indicating a range.')
-    if param_unif[0] > param_unif[1]:
-        raise argparse.ArgumentTypeError('The unif_init argument requires the first value to be lesser than the second.')
-    if param_const is not None:
-        raise argparse.ArgumentTypeError('Only one initializer should be specified.')
 
 def initializer_args_handler(args):
-    # Choosing the right value fo the initializer
-    # bias
-    if args.bias_unif_init is None:
-        bias_init = tf.constant_initializer(
-            DEFAULT_CONST if 'bias_const_init' not in vars(args) else args.bias_const_init
-        )
-    else:
-        check_unif_init_params(
-            None if 'bias_const_init' not in vars(args) else args.bias_const_init, args.bias_unif_init)
-        bias_init = tf.random_uniform_initializer(*args.bias_unif_init, args.seed_init)
-    # weights
-    if 'weight_unif_init' in vars(args):
-        check_unif_init_params(
-            None if 'weight_const_init' not in vars(args) else args.weight_const_init, args.weight_unif_init)
-        weight_init = tf.random_uniform_initializer(*args.weight_unif_init, args.seed_init)
-    else:
-        weight_init = tf.random_uniform_initializer(
-            *DEFAULT_UNIFORM, args.seed_init) if args.weight_const_init is None else tf.constant_initializer(args.weight_const_init)
-    logging.debug(f'Weight initializer configuration: {weight_init.get_config()}')
-    logging.debug(f'Bias initializer configuration: {bias_init.get_config()}')
-    return weight_init, bias_init
+    def check_unif_init_params(param_unif):
+        if len(param_unif) != 2:
+            raise argparse.ArgumentTypeError(
+                'The unif_init argument must consist of 2 numbers indicating a range.')
+        if param_unif[0] > param_unif[1]:
+            raise argparse.ArgumentTypeError(
+                'The unif_init argument requires the first value to be less than the second.')
+    initializers = {'weight': DEFAULT_UNIF_INIT if args.seed_init is None else tf.random_uniform_initializer(-1, 1, args.seed_init),
+                    'bias': DEFAULT_CONST_INIT}
+    for k in initializers:
+        if hasattr(args, f'{k}_unif_init') and hasattr(args, f'{k}_const_init'):
+            raise argparse.ArgumentTypeError(
+                f'Only one {k} initializer should be specified.')
+        elif hasattr(args, f'{k}_unif_init'):
+            param_unif = getattr(args, f'{k}_unif_init')
+            check_unif_init_params(param_unif)
+            initializers[k] = tf.random_uniform_initializer(*param_unif, args.seed_init)
+        elif hasattr(args, f'{k}_const_init'):
+            initializers[k] = tf.constant_initializer(getattr(args, f'{k}_const_init'))
+        logging.debug(f'{k} initializer configuration: {initializers[k].get_config()}')
+
+    return initializers
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        'path', nargs='?', default=DEFAULT_PATH,
+        '-path', nargs='?', default=DEFAULT_PATH,
         help='Path to a directory where models and data will be saved in subdirectories.')
     parser.add_argument(
         '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
@@ -138,25 +133,22 @@ if __name__ == "__main__":
         help='Padding mode')
     parser.add_argument(
         '--bias_const_init', type=float, default=argparse.SUPPRESS,
-        help='Initialize bias with a constant.\n(default: 0)'
-    )
+        help='Initialize bias with a constant. (default: 0)')
     parser.add_argument(
-        '--bias_unif_init', nargs='+', type=float,
-        help='Initialize bias with a random uniform distribution delimited by the range given.' +
-        'If not specified, bias_const_init will be used instead.'
-    )
+        '--bias_unif_init', nargs='+', type=float, default=argparse.SUPPRESS,
+        help='Initialize bias with a random uniform distribution delimited '
+             'by the range given by min and max values. '
+        'If not specified, bias_const_init will be used instead.')
     parser.add_argument(
-        '--weight_const_init', type=float,
-        help='Initialize weights with a constant.' +
-        'If not specified, weight_unif_init will be used instead.'
-    )
+        '--weight_const_init', type=float, default=argparse.SUPPRESS,
+        help='Initialize weights with a constant. '
+        'If not specified, weight_unif_init will be used instead.')
     parser.add_argument(
-            '--weight_unif_init', nargs='+', type=float, default=argparse.SUPPRESS,
-        help='Initialize weights with a random uniform distribution delimited by the range given.' +
-        '\n(default: [-1, 1])'
-    )
+        '--weight_unif_init', nargs='+', type=float, default=argparse.SUPPRESS,
+        help='Initialize weights with a random uniform distribution delimited '
+             'by the range given by min and max values. (default: [-1, 1])')
     parser.add_argument(
-        '--seed_init', type=int, default=DEFAULT_SEED,
+        '--seed_init', type=int,
         help='Set the seed value for the initializers.'
     )
     parser.add_argument(
@@ -167,12 +159,12 @@ if __name__ == "__main__":
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
-    weight_init, bias_init = initializer_args_handler(args)
+    initializers = initializer_args_handler(args)
 
     main(path=args.path,
          input_channels=args.inputs, output_channels=args.outputs,
          K_h=args.kernel_height, K_w=args.kernel_width,
          height=args.height, width=args.width,
          padding=args.padding,
-         bias_init=bias_init,
-         weight_init=weight_init)
+         bias_init=initializers['bias'],
+         weight_init=initializers['weight'])

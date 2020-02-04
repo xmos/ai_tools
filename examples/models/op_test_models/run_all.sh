@@ -9,6 +9,8 @@ set -e
 ./generate_avgpool2d_deep.py -v
 ./generate_conv2d_deepin_deepout_relu.py -v
 ./generate_conv2d_shallowin_deepout_relu.py -v
-./generate_fc_deepin_shallowout.py -v --train_model
-./generate_fc_deepin_shallowout.py -v
+./generate_fc_deepin_anyout.py -v --train_model
+./generate_fc_deepin_anyout.py -v
+./generate_fc_deepin_anyout_requantized.py -v --train_model
+./generate_fc_deepin_anyout_requantized.py -v
 ./generate_maxpool2d_deep.py -v

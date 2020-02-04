@@ -1,14 +1,13 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import pytest
-import itertools
 
-from tflite2xcore.xcore_model import XCOREModel, TensorType
-from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.transformation_passes import ReplaceDeepinDeepoutConv2DPass
 
+from .model_builders import build_conv2d as build_model
 
-# test case parameter definitions, TODO: refactor what's common here
+
 MATCHING_OUTPUT_CHANNELS = [16, 32]
 MATCHING_KERNEL_HEIGHT = [1, 3, 5]
 MATCHING_KERNEL_WIDTH = MATCHING_KERNEL_HEIGHT
@@ -16,7 +15,6 @@ MATCHING_INPUT_CHANNELS = [32, 64]
 MATCHING_INPUT_HEIGHT = [5, 8, 20]
 MATCHING_INPUT_WIDTH = [5, 9, 17]
 MATCHING_PADDING = ['SAME', 'VALID']
-
 
 NON_MATCHING_STRIDE_W = [2, 3]
 NON_MATCHING_STRIDE_H = NON_MATCHING_STRIDE_W
@@ -29,28 +27,8 @@ NON_MATCHING_TENSORS = ('tensor_name', 'new_type'), [
     ('input', TensorType.INT16), ('input', TensorType.INT32),
     ('weights', TensorType.INT16), ('weights', TensorType.INT32),
     ('biases', TensorType.INT8), ('biases', TensorType.INT16),
+    ('output', TensorType.INT16), ('output', TensorType.INT32)
 ]
-
-
-# conv2d model builder, TODO: refactor what's common here
-def build_model(*, weight_shape, input_size, padding):
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
-
-    input_shape = [1, input_size[0], input_size[1], weight_shape[-1]]
-    tin = subgraph.create_tensor('input', TensorType.INT8, shape=input_shape, isinput=True)
-    w = subgraph.create_tensor('weights', TensorType.INT8, shape=weight_shape)
-    b = subgraph.create_tensor('biases', TensorType.INT32, shape=weight_shape[:1])
-    tout = subgraph.create_tensor(
-        'output', tin.type, shape=input_shape[:-1] + weight_shape[:1], isoutput=True)
-
-    op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.CONV_2D),
-                                  inputs=[tin, w, b], outputs=[tout])
-    op.builtin_options = {'padding': padding,
-                          'stride_h': 1, 'stride_w': 1,
-                          'dilation_w_factor': 1, 'dilation_h_factor': 1}
-
-    return model
 
 
 @pytest.fixture()

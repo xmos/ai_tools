@@ -78,8 +78,19 @@ def optimize_for_xcore(model, *, is_classifier, remove_softmax):
     model.description = 'TOCO + XMOS converted.'
 
 
+def parallelize_for_xcore(model, *, num_threads):
+    pass_mgr = PassManager(
+        model,
+        passes=[
+            passes.ParallelizeDIDOPass(num_threads=num_threads)
+        ]
+    )
+
+    pass_mgr.run_passes()
+
 def convert(tflite_input_path, tflite_output_path, *,
-            is_classifier=False, remove_softmax=False):
+            is_classifier=False, remove_softmax=False, num_threads=1):
     model = read_flatbuffer(tflite_input_path)
     optimize_for_xcore(model, is_classifier=is_classifier, remove_softmax=remove_softmax)
+    parallelize_for_xcore(model, num_threads=num_threads)
     write_flatbuffer(model, tflite_output_path)

@@ -110,31 +110,39 @@ class FcDeepinAnyout(KerasModel):
         super().to_tf_xcore(remove_softmax=True)
 
 
+def run_main(model, *, train_new_model, input_dim, output_dim):
+    if train_new_model:
+        # Build model and compile
+        model.build(input_dim, output_dim)
+        # Prepare training data
+        model.prep_data()
+        # Train model
+        model.train()
+        model.save_core_model()
+    else:
+        # Recover previous state from file system
+        model.load_core_model()
+        if output_dim != model.output_dim:
+            raise ValueError(
+                f"specified output_dim ({output_dim}) "
+                f"does not match loaded model's output_dim ({model.output_dim})"
+            )
+        if input_dim != model.input_dim:
+            raise ValueError(
+                f"specified input_dim ({input_dim}) "
+                f"does not match loaded model's input_dim ({model.input_dim})"
+            )
+    # Generate test data
+    model.gen_test_data()
+    # Populate converters
+    model.populate_converters()
+
+
 def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
          train_new_model=False):
-    # Instantiate model
-    test_model = FcDeepinAnyout('fc_deepin_anyout', Path(path))
-    if train_new_model:
-        # Build model and compile
-        test_model.build(input_dim, output_dim)
-        # Prepare training data
-        test_model.prep_data()
-        # Train model
-        test_model.train()
-        test_model.save_core_model()
-    else:
-        # Recover previous state from file system
-        test_model.load_core_model()
-        if output_dim != test_model.output_dim:
-            raise ValueError(
-                f"specified output_dim ({output_dim}) "
-                f"does not match loaded model's output_dim ({test_model.output_dim})"
-            )
-    # Generate test data
-    test_model.gen_test_data()
-    # Populate converters
-    test_model.populate_converters()
+    run_main(FcDeepinAnyout('fc_deepin_anyout', Path(path)),
+             train_new_model=train_new_model, input_dim=input_dim, output_dim=output_dim)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ from generate_fc_deepin_anyout import (
 )
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_anyout_requantized').resolve()
 
-from generate_fc_deepin_anyout import FcDeepinAnyout
+from generate_fc_deepin_anyout import FcDeepinAnyout, run_main
 
 
 class FcDeepinAnyoutRequantized(FcDeepinAnyout):
@@ -33,28 +33,8 @@ class FcDeepinAnyoutRequantized(FcDeepinAnyout):
 def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
          train_new_model=False):
-    # Instantiate model
-    test_model = FcDeepinAnyoutRequantized('fc_deepin_anyout_requantized', Path(path))
-    if train_new_model:
-        # Build model and compile
-        test_model.build(input_dim, output_dim)
-        # Prepare training data
-        test_model.prep_data()
-        # Train model
-        test_model.train()
-        test_model.save_core_model()
-    else:
-        # Recover previous state from file system
-        test_model.load_core_model()
-        if output_dim != test_model.output_dim:
-            raise ValueError(
-                f"specified output_dim ({output_dim}) "
-                f"does not match loaded model's output_dim ({test_model.output_dim})"
-            )
-    # Generate test data
-    test_model.gen_test_data()
-    # Populate converters
-    test_model.populate_converters()
+    run_main(FcDeepinAnyoutRequantized('fc_deepin_anyout_requantized', Path(path)),
+             train_new_model=train_new_model, input_dim=input_dim, output_dim=output_dim)
 
 
 if __name__ == "__main__":

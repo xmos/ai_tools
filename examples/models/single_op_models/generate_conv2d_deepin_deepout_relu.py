@@ -17,6 +17,7 @@ DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = 'same'
 DEFAULT_CONST = 0
 DEFAULT_UNIFORM = [-1, 1]
+DEFAULT_SEED = 42
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deepin_deepout_relu').resolve()
 
 
@@ -90,18 +91,20 @@ def initializer_args_handler(args):
     # bias
     if args.bias_unif_init is None:
         bias_init = tf.constant_initializer(
-            DEFAULT_CONST if args.bias_const_init is None else args.bias_const_init
+            DEFAULT_CONST if 'bias_const_init' not in vars(args) else args.bias_const_init
         )
     else:
-        check_unif_init_params(args.bias_const_init, args.bias_unif_init)
-        bias_init = tf.random_uniform_initializer(*args.bias_unif_init)
+        check_unif_init_params(
+            None if 'bias_const_init' not in vars(args) else args.bias_const_init, args.bias_unif_init)
+        bias_init = tf.random_uniform_initializer(*args.bias_unif_init, args.seed_init)
     # weights
-    if args.weight_unif_init is not None:
-        check_unif_init_params(args.weight_const_init, args.weight_unif_init)
-        weight_init = tf.random_uniform_initializer(*args.weight_unif_init)
+    if 'weight_unif_init' in vars(args):
+        check_unif_init_params(
+            None if 'weight_const_init' not in vars(args) else args.weight_const_init, args.weight_unif_init)
+        weight_init = tf.random_uniform_initializer(*args.weight_unif_init, args.seed_init)
     else:
         weight_init = tf.random_uniform_initializer(
-            *DEFAULT_UNIFORM) if args.weight_const_init is None else tf.constant_initializer(args.weight_const_init)
+            *DEFAULT_UNIFORM, args.seed_init) if args.weight_const_init is None else tf.constant_initializer(args.weight_const_init)
     logging.debug(f'Weight initializer configuration: {weight_init.get_config()}')
     logging.debug(f'Bias initializer configuration: {bias_init.get_config()}')
     return weight_init, bias_init
@@ -134,20 +137,27 @@ if __name__ == "__main__":
         '-pd', '--padding', type=str, default=DEFAULT_PADDING,
         help='Padding mode')
     parser.add_argument(
-        '--bias_const_init', type=float, 
-        help='Initialize bias with a constant'
+        '--bias_const_init', type=float, default=argparse.SUPPRESS,
+        help='Initialize bias with a constant.\n(default: 0)'
     )
     parser.add_argument(
         '--bias_unif_init', nargs='+', type=float,
-        help='Initialize bias with a random uniform distribution delimited by the range given'
+        help='Initialize bias with a random uniform distribution delimited by the range given.' +
+        'If not specified, bias_const_init will be used instead.'
     )
     parser.add_argument(
         '--weight_const_init', type=float,
-        help='Initialize weights with a constant'
+        help='Initialize weights with a constant.' +
+        'If not specified, weight_unif_init will be used instead.'
     )
     parser.add_argument(
-        '--weight_unif_init', nargs='+', type=float,
-        help='Initialize weights with a random uniform distribution delimited by the range given'
+            '--weight_unif_init', nargs='+', type=float, default=argparse.SUPPRESS,
+        help='Initialize weights with a random uniform distribution delimited by the range given.' +
+        '\n(default: [-1, 1])'
+    )
+    parser.add_argument(
+        '--seed_init', type=int, default=DEFAULT_SEED,
+        help='Set the seed value for the initializers.'
     )
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
@@ -156,7 +166,6 @@ if __name__ == "__main__":
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
-
 
     weight_init, bias_init = initializer_args_handler(args)
 

@@ -15,23 +15,29 @@ from tflite2xcore import operator_codes
 
 def load_tests(name):
     if name.startswith('argmax'):
-        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_argmax_16.name, '*')
-    elif name.startswith('conv_shallowin_deepout'):
-        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+    elif name.startswith('conv2d_shallowin_deepout'):
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name, '*')
-    elif name.startswith('conv_deepin_deepout'):
-        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+    elif name.startswith('conv2d_deepin_deepout'):
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name, '*')
-    elif name.startswith('fc_deepin_anyout_final'):
-        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_fc_deepin_anyout_final.name, '*')
+    elif name.startswith('fc_deepin_anyout'):
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
+            operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name, '*')
     elif name.startswith('maxpool'):
-        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_maxpool2d_deep.name, '*')
     elif name.startswith('avgpool'):
-        pattern = os.path.join(directories.SINGLE_OP_MODELS_DATA_DIR,
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_avgpool2d_deep.name, '*')
+    elif name.startswith('requantize_18_8'):
+        name = f'{operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name}'
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
+            name, '*')
+    else:
+        raise Exception(f'Unsupported op model: {name}')
 
     test_cases = []
 
@@ -88,24 +94,29 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
     print('* Results *')
     print('***********')
     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-    return helpers.compare_tensor_files(expected_output_file, expected_quantization,
+    result = helpers.compare_tensor_files(expected_output_file, expected_quantization,
         predicted_output_file, predicted_quantization, abs_tol)
 
+    if result:
+        # remove the tmp files if the test passed
+        os.remove(predicted_output_file)
+
+    return result
 
 def test_argmax(test_model_app, argmax_test_case):
     assert(run_test_case(test_model_app, argmax_test_case))
 
 
-def test_conv_shallowin_deepout(test_model_app, conv_shallowin_deepout_test_case):
-    assert(run_test_case(test_model_app, conv_shallowin_deepout_test_case))
+def test_conv2d_shallowin_deepout(test_model_app, conv2d_shallowin_deepout_test_case):
+    assert(run_test_case(test_model_app, conv2d_shallowin_deepout_test_case))
 
 
-def test_conv_deepin_deepout(test_model_app, conv_deepin_deepout_test_case):
-    assert(run_test_case(test_model_app, conv_deepin_deepout_test_case))
+def test_conv2d_deepin_deepout(test_model_app, conv2d_deepin_deepout_test_case):
+    assert(run_test_case(test_model_app, conv2d_deepin_deepout_test_case))
 
 
-def test_fc_deepin_anyout_final(test_model_app, fc_deepin_anyout_final_test_case):
-    assert(run_test_case(test_model_app, fc_deepin_anyout_final_test_case))
+def test_fc_deepin_anyout(test_model_app, fc_deepin_anyout_test_case):
+    assert(run_test_case(test_model_app, fc_deepin_anyout_test_case))
 
 
 def test_maxpool(test_model_app, maxpool_test_case):
@@ -115,6 +126,8 @@ def test_maxpool(test_model_app, maxpool_test_case):
 def test_avgpool(test_model_app, avgpool_test_case):
     assert(run_test_case(test_model_app, avgpool_test_case))
 
+def test_avgpool(test_model_app, requantize_18_8_test_case):
+    assert(run_test_case(test_model_app, requantize_18_8_test_case))
 
 if __name__ == "__main__":
     pytest.main()

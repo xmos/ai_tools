@@ -5,7 +5,7 @@ import argparse
 import logging
 from pathlib import Path
 import numpy as np
-import tflite2xcore_conv as xcore_conv
+import tflite2xcore.converter as xcore_conv
 from tflite2xcore import read_flatbuffer, write_flatbuffer, graph_transformer
 from tflite2xcore.operator_codes import BuiltinOpCodes
 from tflite2xcore.xcore_model import TensorType
@@ -89,6 +89,13 @@ class ArgMax16(FunctionModel):
         write_flatbuffer(model, str(self.models['model_stripped']))
 
         self._save_visualization('model_stripped')
+
+    def to_tf_xcore(self):
+        # super.().to_tf_xcore() converts model_quant
+        # to avoid code duplication, here we convert model_stripped instead
+        self.models['model_quant'], tmp = self.models['model_stripped'], self.models['model_quant']
+        super().to_tf_xcore()
+        self.models['model_quant'] = tmp
 
     def save_tf_stripped_data(self):
         assert 'model_quant' in self.models

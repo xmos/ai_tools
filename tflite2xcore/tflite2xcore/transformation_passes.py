@@ -14,6 +14,7 @@ from tflite2xcore.graph_transformer import (
 )
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.parallelization import DIDOConv2DPlanner
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
@@ -132,8 +133,7 @@ class AddArgMax16OutputPass(OutputTensorMatchingPass):
         dim_tensor.buffer.data = np.int32([1])
 
 
-# TODO: write (at least regression) tests for this class
-class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
+class QuantizedOperatorMatchingPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
         self._op = None
@@ -165,6 +165,15 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
     def _matching_output_type(self):
         return TensorType.INT8
 
+    def match(self, op):
+        if op.operator_code.code == self.matching_opcode:
+            with self.using(op):
+                return (self._input.type == self._matching_input_type
+                        and self._output.type == self._matching_output_type)
+
+
+# TODO: write (at least regression) tests for this class
+class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
     @property
     @abstractmethod
     def new_opcode(self):
@@ -175,12 +184,6 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
             self.new_opcode, inputs=op.inputs, outputs=op.outputs)
         new_op.subgraph.replace_operator(op, new_op)
         return new_op
-
-    def match(self, op):
-        if op.operator_code.code == self.matching_opcode:
-            with self.using(op):
-                return (self._input.type == self._matching_input_type
-                        and self._output.type == self._matching_output_type)
 
 
 class ReplaceArgMax16Pass(ReplaceQuantizedOperatorPass):
@@ -274,17 +277,19 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         if len(scale) == 1:
             rshift = np.repeat(rshift, bias_size)
             scale = np.repeat(scale, bias_size)
-        return np.int16(rshift), np.int16(scale)
-
-    def add_shift_scale(self, op):
-        # calculate right shift/scale
-        with self.using(op):
-            rshift, scale = self._shift_scale
+        rshift, scale = np.int16(rshift), np.int16(scale)
         if rshift.shape != scale.shape:
             raise ValueError(f"Shift and scale shapes don't match: {rshift.shape} != {scale.shape}")
+        return rshift, scale
 
-        # add tensor and buffer for rshift/scale
-        shift_scale_arr = np.hstack([rshift, scale]).reshape((2, -1))
+    @property
+    @abstractmethod
+    def _shift_scale_arr(self):
+        pass
+
+    def add_shift_scale(self, op):
+        with self.using(op):
+            shift_scale_arr = self._shift_scale_arr
         shift_scale_tensor = op.subgraph.create_tensor(
             f"{op.name}/shift_scale",
             TensorType.INT16,
@@ -312,6 +317,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         return new_op
 
 
+# TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinAnyoutFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     @property
     def matching_opcode(self):
@@ -338,23 +344,15 @@ class ReplaceDeepinAnyoutFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
             self._biases.name = f"{op.name}/biases"
             self._biases.quantization['details_type'] = 'CustomQuantization'
 
-
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnectedPass):
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._output in op.subgraph.outputs
-
-        return False
-
     @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout_final)
+    def _shift_scale_arr(self):
+        # calculate right shift/scale
+        rshift, scale = self._shift_scale
+
+        # reshape into appropriate array
+        return np.hstack([rshift, scale]).reshape((2, -1))
 
     def mutate_output(self, op):
-        # NOTE: when trying to generalize this pass to non-output operators,
-        #       keep in mind that this mutation is what can affect other operators
         with self.using(op):
             self._output.type = TensorType.INT16
             self._output.name = f"{op.name}/output"
@@ -366,6 +364,24 @@ class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnec
                 'details_type': "CustomQuantization",
                 'quantized_dimension': 0
             }
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout)
+
+    @abstractmethod
+    def mutate(self, op):
+        # NOTE: Overload this in subclasses, and call mutate_output appropriately
+        return super().mutate(op)
+
+
+class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnectedPass):
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return self._output in op.subgraph.outputs
+
+        return False
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
@@ -383,9 +399,29 @@ class ReplaceDeepinAnyoutFullyConnectedIntermediatePass(ReplaceDeepinAnyoutFully
 
         return False
 
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout_intermediate)
+    def add_requantize(self, op):
+        # rename original output tensor
+        with self.using(op):
+            self._output.name = f"{op.name}/output_requant"
+        # create intermediate tensor
+        with self.using(op):
+            intermediate = op.subgraph.create_tensor(
+                f"{op.name}/intermediate", self._output.type, self._output.shape,
+                quantization=self._output.quantization
+            )
+        # create new op, insert after original op, rewire inputs/outputs
+        new_op = op.subgraph.create_operator(
+            OperatorCode(XCOREOpCodes.XC_requantize_16_to_8),
+            inputs=[intermediate], outputs=op.outputs)
+        op.outputs = [intermediate]
+        op.subgraph.insert_operator(op, new_op, after=True)
+
+    def mutate(self, op):
+        # NOTE: the order of these mutations is strict
+        new_op = super().mutate(op)
+        self.add_requantize(new_op)
+        self.mutate_output(new_op)
+        return new_op
 
 
 # TODO: write (at least regression) tests for this class
@@ -449,6 +485,17 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
             weight_quantization = self._weights.quantization
             for key in ['scale', 'zero_point']:
                 weight_quantization[key] = reorder_quant_params(weight_quantization[key])
+
+    @property
+    def _shift_scale_arr(self):
+        # calculate right shift/scale
+        rshift, scale = self._shift_scale
+
+        # reshape into appropriate array
+        new_shape = (-1, 16)
+        rshift = rshift.reshape(new_shape)  # pylint: disable=too-many-function-args
+        scale = scale.reshape(new_shape)  # pylint: disable=too-many-function-args
+        return np.stack([rshift, scale], axis=1)
 
     def mutate(self, op):
         new_op = super().mutate(op)
@@ -654,3 +701,35 @@ class RemoveUnusedBuffersPass(ModelTransformationPass):
             set(t.buffer for subgraph in model.subgraphs for t in subgraph.tensors)
             | set(m.buffer for m in model.metadata)
         )
+
+
+class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
+    def __init__(self, priority=PassPriority.PAR, *, num_threads=None, forced=False):
+        super().__init__(priority)
+        self.num_threads = num_threads or 1
+        assert isinstance(self.num_threads, int)
+        assert self.num_threads > 0
+        self.forced = forced
+
+    def run(self, *args, **kwargs):
+        if self.num_threads == 1:
+            logging.debug(f"Skipping {type(self).__name__} with num_threads={self.num_threads}")
+            return None
+        else:
+            return super().run(*args, **kwargs)
+
+    @property
+    def matching_opcode(self):
+        return XCOREOpCodes.XC_conv2d_deepin_deepout_relu
+
+    def match(self, op):
+        if super().match(op):
+            return 'par_plan' not in op.custom_options
+
+    def mutate(self, op):
+        with self.using(op):
+            _, height, width, _ = self._output.shape
+        planner = DIDOConv2DPlanner(
+            height, width, num_threads=self.num_threads, forced=self.forced)
+        plan = planner.find_optimal_plan()
+        op.add_custom_options(par_plan=[list(block) for block in plan.layout])

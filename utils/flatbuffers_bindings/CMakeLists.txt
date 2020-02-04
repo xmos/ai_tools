@@ -5,10 +5,9 @@ PROJECT(tflite2xcore VERSION 1.0.1)
 SET(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-SET(TENSORFLOW_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../tensorflow")
-SET(FLATBUFFERS_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../third_party/flatbuffers/include")
-SET(FLATBUFFERS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../third_party/flatbuffers/src")
-SET(ANYOPTION_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../AnyOption")
+SET(TENSORFLOW_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../../tensorflow")
+SET(FLATBUFFERS_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/flatbuffers/include")
+SET(FLATBUFFERS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/flatbuffers/src")
 
 #**********************
 # Build shared library

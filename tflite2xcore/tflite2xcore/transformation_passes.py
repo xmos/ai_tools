@@ -274,17 +274,19 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         if len(scale) == 1:
             rshift = np.repeat(rshift, bias_size)
             scale = np.repeat(scale, bias_size)
-        return np.int16(rshift), np.int16(scale)
-
-    def add_shift_scale(self, op):
-        # calculate right shift/scale
-        with self.using(op):
-            rshift, scale = self._shift_scale
+        rshift, scale = np.int16(rshift), np.int16(scale)
         if rshift.shape != scale.shape:
             raise ValueError(f"Shift and scale shapes don't match: {rshift.shape} != {scale.shape}")
+        return rshift, scale
 
-        # add tensor and buffer for rshift/scale
-        shift_scale_arr = np.hstack([rshift, scale]).reshape((2, -1))
+    @property
+    @abstractmethod
+    def _shift_scale_arr(self):
+        pass
+
+    def add_shift_scale(self, op):
+        with self.using(op):
+            shift_scale_arr = self._shift_scale_arr
         shift_scale_tensor = op.subgraph.create_tensor(
             f"{op.name}/shift_scale",
             TensorType.INT16,
@@ -312,6 +314,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         return new_op
 
 
+# TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinAnyoutFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     @property
     def matching_opcode(self):
@@ -338,23 +341,15 @@ class ReplaceDeepinAnyoutFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
             self._biases.name = f"{op.name}/biases"
             self._biases.quantization['details_type'] = 'CustomQuantization'
 
-
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnectedPass):
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._output in op.subgraph.outputs
-
-        return False
-
     @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout_final)
+    def _shift_scale_arr(self):
+        # calculate right shift/scale
+        rshift, scale = self._shift_scale
+
+        # reshape into appropriate array
+        return np.hstack([rshift, scale]).reshape((2, -1))
 
     def mutate_output(self, op):
-        # NOTE: when trying to generalize this pass to non-output operators,
-        #       keep in mind that this mutation is what can affect other operators
         with self.using(op):
             self._output.type = TensorType.INT16
             self._output.name = f"{op.name}/output"
@@ -366,6 +361,24 @@ class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnec
                 'details_type': "CustomQuantization",
                 'quantized_dimension': 0
             }
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout)
+
+    @abstractmethod
+    def mutate(self, op):
+        # NOTE: Overload this in subclasses, and call mutate_output appropriately
+        return super().mutate(op)
+
+
+class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnectedPass):
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return self._output in op.subgraph.outputs
+
+        return False
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
@@ -383,9 +396,29 @@ class ReplaceDeepinAnyoutFullyConnectedIntermediatePass(ReplaceDeepinAnyoutFully
 
         return False
 
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout_intermediate)
+    def add_requantize(self, op):
+        # rename original output tensor
+        with self.using(op):
+            self._output.name = f"{op.name}/output_requant"
+        # create intermediate tensor
+        with self.using(op):
+            intermediate = op.subgraph.create_tensor(
+                f"{op.name}/intermediate", self._output.type, self._output.shape,
+                quantization=self._output.quantization
+            )
+        # create new op, insert after original op, rewire inputs/outputs
+        new_op = op.subgraph.create_operator(
+            OperatorCode(XCOREOpCodes.XC_requantize_16_to_8),
+            inputs=[intermediate], outputs=op.outputs)
+        op.outputs = [intermediate]
+        op.subgraph.insert_operator(op, new_op, after=True)
+
+    def mutate(self, op):
+        # NOTE: the order of these mutations is strict
+        new_op = super().mutate(op)
+        self.add_requantize(new_op)
+        self.mutate_output(new_op)
+        return new_op
 
 
 # TODO: write (at least regression) tests for this class
@@ -449,6 +482,17 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
             weight_quantization = self._weights.quantization
             for key in ['scale', 'zero_point']:
                 weight_quantization[key] = reorder_quant_params(weight_quantization[key])
+
+    @property
+    def _shift_scale_arr(self):
+        # calculate right shift/scale
+        rshift, scale = self._shift_scale
+
+        # reshape into appropriate array
+        new_shape = (-1, 16)
+        rshift = rshift.reshape(new_shape)  # pylint: disable=too-many-function-args
+        scale = scale.reshape(new_shape)  # pylint: disable=too-many-function-args
+        return np.stack([rshift, scale], axis=1)
 
     def mutate(self, op):
         new_op = super().mutate(op)

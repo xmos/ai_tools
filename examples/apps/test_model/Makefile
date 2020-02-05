@@ -137,8 +137,7 @@ else # must be xcore
 		lib_nn/src/asm/avgpool2d_deep.S \
 		lib_nn/src/asm/conv2d_deepin_deepout_block.S \
 		lib_nn/src/asm/conv2d_shallowin_deepout_block.S \
-		lib_nn/src/asm/fc_deepin_shallowout_16.S \
-		lib_nn/src/asm/fc_deepin_shallowout_8.S \
+		lib_nn/src/asm/fully_connected_16.S \
 		lib_nn/src/asm/maxpool2d_deep.S \
 		lib_nn/src/asm/vpu_memcpy.S \
 		lib_nn/src/asm/requantize_16_to_8.S \

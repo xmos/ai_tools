@@ -349,6 +349,7 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
             bss = np.concatenate([self._bias_arr, self._shift_scale_arr], axis=1)
             self._biases.buffer.data = bss
             self._biases.shape = bss.shape
+            self._biases.type = TensorType.INT16
 
             # rename bias tensor and remove quantization info to save space
             self._biases.name = f"{op.name}/bias_shift_scale"

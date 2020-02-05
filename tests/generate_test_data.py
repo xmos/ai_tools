@@ -42,6 +42,35 @@ if os.path.exists(directories.DATA_DIR):
     shutil.rmtree(directories.DATA_DIR)
 
 #***********************************
+# Fully-connected deepin anyout
+#***********************************
+operator = operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name
+generator = os.path.join(directories.GENERATOR_DIR, 'generate_fully_connected.py')
+test_cases = [
+    {'in': 1, 'out': 2},
+    {'in': 3, 'out': 3},
+    {'in': 4, 'out': 16},
+    {'in': 16, 'out': 16},
+    {'in': 32, 'out': 16}
+]
+
+generate_test_cases(operator, generator, test_cases, train_model=True)
+
+#***********************************
+# Fully-connected deepin anyout requantized
+#***********************************
+operator = operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name
+generator = os.path.join(directories.GENERATOR_DIR, 'generate_fully_connected_requantized.py')
+test_cases = [
+    {'in': 3, 'out': 3},
+    {'in': 4, 'out': 16},
+    {'in': 16, 'out': 16},
+    {'in': 32, 'out': 16}
+]
+
+generate_test_cases(operator, generator, test_cases, train_model=True)
+
+#***********************************
 # Conv2D deepin/deepout
 #***********************************
 operator = operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name
@@ -78,28 +107,6 @@ test_cases = [
 ]
 
 generate_test_cases(operator, generator, test_cases)
-
-#***********************************
-# Fully-connected deepin anyout
-#***********************************
-operator = operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name
-generator = os.path.join(directories.GENERATOR_DIR, 'generate_fc_deepin_anyout.py')
-test_cases = [
-    {'in': 32 }
-]
-
-generate_test_cases(operator, generator, test_cases, train_model=True)
-
-#***********************************
-# Fully-connected deepin anyout requantized
-#***********************************
-operator = operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name
-generator = os.path.join(directories.GENERATOR_DIR, 'generate_fc_deepin_anyout_requantized.py')
-test_cases = [
-    {'in': 32 }
-]
-
-generate_test_cases(operator, generator, test_cases, train_model=True)
 
 #***********************************
 # ArgMax

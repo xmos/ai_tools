@@ -12,7 +12,7 @@ DEFAULT_OUTPUT_DIM = 10
 DEFAULT_INPUT_DIM = 32
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_anyout').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fully_connected').resolve()
 
 
 # Prepare data function
@@ -57,7 +57,7 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
             'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
 
 
-class FcDeepinAnyout(KerasModel):
+class FullyConnected(KerasModel):
     def build(self, input_dim, output_dim):
         super().build()
 
@@ -141,7 +141,7 @@ def run_main(model, *, train_new_model, input_dim, output_dim):
 def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
          train_new_model=False):
-    run_main(FcDeepinAnyout('fc_deepin_anyout', Path(path)),
+    run_main(FullyConnected('fully_connected', Path(path)),
              train_new_model=train_new_model, input_dim=input_dim, output_dim=output_dim)
 
 

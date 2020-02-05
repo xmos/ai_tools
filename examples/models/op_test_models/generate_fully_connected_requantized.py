@@ -7,15 +7,15 @@ from tflite2xcore.model_generation import utils
 import tflite2xcore.converter as xcore_conv
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 
-from generate_fc_deepin_anyout import (
+from generate_fully_connected import (
     DEFAULT_OUTPUT_DIM, DEFAULT_INPUT_DIM, DEFAULT_EPOCHS, DEFAULT_BS
 )
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_anyout_requantized').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fully_connected_requantized').resolve()
 
-from generate_fc_deepin_anyout import FcDeepinAnyout, run_main
+from generate_fully_connected import FullyConnected, run_main
 
 
-class FcDeepinAnyoutRequantized(FcDeepinAnyout):
+class FullyConnectedRequantized(FullyConnected):
     def to_tf_xcore(self):
         assert 'model_quant' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
@@ -33,7 +33,7 @@ class FcDeepinAnyoutRequantized(FcDeepinAnyout):
 def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
          train_new_model=False):
-    run_main(FcDeepinAnyoutRequantized('fc_deepin_anyout_requantized', Path(path)),
+    run_main(FullyConnectedRequantized('fully_connected_requantized', Path(path)),
              train_new_model=train_new_model, input_dim=input_dim, output_dim=output_dim)
 
 

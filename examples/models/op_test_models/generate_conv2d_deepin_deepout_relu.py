@@ -155,28 +155,14 @@ if __name__ == "__main__":
         help='Padding mode')
     parser.add_argument(
         '--bias_init', nargs='*', default=argparse.SUPPRESS,
-        help='Help'
+        help='Initialize bias. Possible initializers are: const init or None.'
+        f'(default: const {_DEFAULT_CONST_INIT})'  # TODO: ENUM for initializer types
     )
     parser.add_argument(
         '--weight_init', nargs='*', default=argparse.SUPPRESS,
-        help='Help'
+        help='Initialize weights. Possible initializers are: const, unif or None.'
+        f'(default: uniform {_DEFAULT_UNIF_INIT})'  # TODO ENUM for initializer types
     )
-    parser.add_argument(
-        '--bias_const_init', type=float, default=argparse.SUPPRESS,
-        help=f'Initialize bias with a constant. (default: {_DEFAULT_CONST_INIT})')
-    parser.add_argument(
-        '--bias_unif_init', nargs='+', type=float, default=argparse.SUPPRESS,
-        help='Initialize bias with a random uniform distribution delimited '
-             'by the range given by min and max values. '
-        'If not specified, bias_const_init will be used instead.')
-    parser.add_argument(
-        '--weight_const_init', type=float, default=argparse.SUPPRESS,
-        help='Initialize weights with a constant. '
-        'If not specified, weight_unif_init will be used instead.')
-    parser.add_argument(
-        '--weight_unif_init', nargs='+', type=float, default=argparse.SUPPRESS,
-        help='Initialize weights with a random uniform distribution delimited '
-             f'by the range given by min and max values. (default: {_DEFAULT_UNIF_INIT})')
     parser.add_argument(
         '--seed_init', type=int,
         help='Set the seed value for the initializers.'

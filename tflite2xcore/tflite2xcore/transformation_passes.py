@@ -310,7 +310,11 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         new_shape = (-1, ACC_PERIOD)
         rshift = self.__pad_to_acc_period(rshift).reshape(new_shape)
         scale = self.__pad_to_acc_period(scale).reshape(new_shape)
-        return np.stack([rshift, scale], axis=1)
+
+        # split left and right shift into pre and post scaling shifts
+        shift_pre = rshift if True else np.maximum(rshift, 0)  # TODO: resolve this when left shift issue is solved in conv2d kernels
+        shift_post = 14 * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
+        return np.stack([shift_pre, scale, shift_post], axis=1)
 
     def mutate_biases(self, op):
         # NOTE: by default no bias layout rearrangement is done for this op
@@ -474,6 +478,13 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
     def add_shift_scale(self, op):
         with self.using(op):
             shift_scale_arr = self._shift_scale_arr
+
+        # TODO: remove this when left shift issue is solved in conv2d kernels
+        shift_scale_arr = shift_scale_arr[:, :2, :]
+        for s in shift_scale_arr[:, 0, :].flatten():
+            if s < 0:
+                raise ValueError("Negative right shift encountered.")
+
         shift_scale_tensor = op.subgraph.create_tensor(
             f"{op.name}/shift_scale",
             TensorType.INT16,

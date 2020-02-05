@@ -83,7 +83,7 @@ def main(path=DEFAULT_PATH, *,
 
 def initializer_args_handler(args):
     def check_unif_init_params(param_unif):
-        if len(param_unif):
+        if param_unif:
             if len(param_unif) != 2:
                 raise argparse.ArgumentTypeError(
                     'The unif_init argument must consist of 2 numbers indicating a range.')
@@ -96,40 +96,24 @@ def initializer_args_handler(args):
                 'The const_init argument must consist of 1 float number or none, in wich case, ' +
                 'the default value will be used.'
             )
+    initializers_types = ['unif', 'const'] # TODO make it an enum
     initializers = {'weight_init': DEFAULT_UNIF_INIT if args.seed_init is None else tf.random_uniform_initializer(
         *_DEFAULT_UNIF_INIT, args.seed_init),
                     'bias_init': DEFAULT_CONST_INIT}
     for k in initializers:
-        # Initializer values in the dictionary of arguments else use default
-        values = vars(args)[k] if k in vars(args) else []
-        if len(values): # there is something to do
-            if isinstance(values[0], str): # First value of the arguments is a string
+        values = vars(args)[k] if k in vars(args) else []  # Initializer values in the dictionary of arguments else use default
+        if values:  # there is something to do
+            if values[0] in initializers_types:  # First value of the arguments must be valid
                 params =  values[1:]
-                if values[0].lower() == 'unif': # handle uniform
-                    # check_unif_init_params(params) # check them
+                if values[0].lower() == 'unif':  # handle uniform
                     initializers[k] = tf.random_uniform_initializer(
-                        *(float(e) for e in params) if check_unif_init_params(params) or len(params) else _DEFAULT_UNIF_INIT,
+                        *(float(e) for e in params) if check_unif_init_params(params) or params else _DEFAULT_UNIF_INIT,
                         args.seed_init
                     )
-                    '''
-                    if len(params): # has parameters
-                        check_unif_init_params(params) # check them
-                        initializers[k] = tf.random_uniform_initializer(
-                            *(float(e) for e in params), args.seed_init
-                        )
-                    else: # hasn't parameters, default
-                        initializers[k] = tf.random_uniform_initializer(
-                            *_DEFAULT_UNIF_INIT, args.seed_init
-                        )
-                    '''
                 elif values[0].lower() == 'const': # handle constant
-                    check_const_init_params(params) # check len == 1 or 0
                     initializers[k] = tf.constant_initializer(
-                        float(*params) if len(params) else _DEFAULT_CONST_INIT
+                        float(params) if check_const_init_params(params) or params else _DEFAULT_CONST_INIT
                     )
-                else: # not a supported initializer string
-                    raise argparse.ArgumentTypeError(
-                        f'The initializer types are "const" or "uniform"')
             else: # the first argument wasn't a string or None
                 raise argparse.ArgumentTypeError(
                     f'A type of initializer must be selected for {k}: "unif", "const" or None in which case, '+

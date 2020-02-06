@@ -1,11 +1,16 @@
 import argparse
 import logging
+from enum import Enum
 import tensorflow as tf
 
 _DEFAULT_CONST_INIT = 0
 _DEFAULT_UNIF_INIT = [-1, 1]
 DEFAULT_CONST_INIT = tf.constant_initializer(_DEFAULT_CONST_INIT)
 DEFAULT_UNIF_INIT = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT)
+
+class Initializers(Enum):
+    UNIF = 'unif'
+    CONST = 'const'
 
 def initializer_args_handler(args):
     def check_unif_init_params(param_unif):
@@ -22,14 +27,14 @@ def initializer_args_handler(args):
                 'The const_init argument must consist of 1 float number or none, in wich case, ' +
                 'the default value will be used.'
             )
-    initializers_types = ['unif', 'const'] # TODO make it an enum
+    # initializers_types = ['unif', 'const'] # TODO make it an enum
     initializers = {'weight_init': DEFAULT_UNIF_INIT if args.seed_init is None else tf.random_uniform_initializer(
         *_DEFAULT_UNIF_INIT, args.seed_init),
                     'bias_init': DEFAULT_CONST_INIT}
     for k in initializers:
         values = vars(args)[k] if k in vars(args) else []  # Initializer values in the dictionary of arguments else use default
         if values:  # there is something to do
-            if values[0] in initializers_types:  # First value of the arguments must be valid
+            if values[0] in set(v.value for v in Initializers):  # initializers_types:  # First value of the arguments must be valid
                 params =  values[1:]
                 if values[0].lower() == 'unif':  # handle uniform
                     initializers[k] = tf.random_uniform_initializer(
@@ -55,12 +60,12 @@ def parser_add_initializers(parser):
     parser.add_argument(
         '--bias_init', nargs='*', default=argparse.SUPPRESS,
         help='Initialize bias. Possible initializers are: const init or None.'
-        f'(default: const {_DEFAULT_CONST_INIT})'  # TODO: ENUM for initializer types
+        f'(default: {str(Initializers.CONST.value)} {_DEFAULT_CONST_INIT})'
     )
     parser.add_argument(
         '--weight_init', nargs='*', default=argparse.SUPPRESS,
         help='Initialize weights. Possible initializers are: const, unif or None.'
-        f'(default: uniform {_DEFAULT_UNIF_INIT})'  # TODO ENUM for initializer types
+        f'(default: {Initializers.UNIF.value} {_DEFAULT_UNIF_INIT})'
     )
     parser.add_argument(
         '--seed_init', type=int,

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-#
+# Script to test the integration of common_initializers in
+# generate_conv2d_deepin_deepout
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import argparse
 from pathlib import Path
@@ -7,6 +8,7 @@ import logging
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
+import common_initializers as init
 
 DEFAULT_INPUTS = 32
 DEFAULT_OUTPUTS = 16
@@ -15,10 +17,6 @@ DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = 'same'
-_DEFAULT_CONST_INIT = 0
-_DEFAULT_UNIF_INIT = [-1, 1]
-DEFAULT_CONST_INIT = tf.constant_initializer(_DEFAULT_CONST_INIT)
-DEFAULT_UNIF_INIT = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT)
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deepin_deepout_relu').resolve()
 
 
@@ -67,7 +65,7 @@ def main(path=DEFAULT_PATH, *,
          height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
          K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
          padding=DEFAULT_PADDING,
-         bias_init=DEFAULT_CONST_INIT, weight_init=DEFAULT_UNIF_INIT):
+         bias_init=init.DEFAULT_CONST_INIT, weight_init=init.DEFAULT_UNIF_INIT):
 
     # Instantiate model
     test_model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', Path(path))
@@ -79,51 +77,6 @@ def main(path=DEFAULT_PATH, *,
     test_model.save_core_model()
     # Populate converters
     test_model.populate_converters()
-
-
-def initializer_args_handler(args):
-    def check_unif_init_params(param_unif):
-        if param_unif:
-            if len(param_unif) != 2:
-                raise argparse.ArgumentTypeError(
-                    'The unif_init argument must consist of 2 numbers indicating a range.')
-            if float(param_unif[0]) > float(param_unif[1]):
-                raise argparse.ArgumentTypeError(
-                    'The unif_init argument requires the first value to be lesser than the second.')
-    def check_const_init_params(const_param):
-        if len(const_param) > 1:
-            raise argparse.ArgumentTypeError(
-                'The const_init argument must consist of 1 float number or none, in wich case, ' +
-                'the default value will be used.'
-            )
-    initializers_types = ['unif', 'const'] # TODO make it an enum
-    initializers = {'weight_init': DEFAULT_UNIF_INIT if args.seed_init is None else tf.random_uniform_initializer(
-        *_DEFAULT_UNIF_INIT, args.seed_init),
-                    'bias_init': DEFAULT_CONST_INIT}
-    for k in initializers:
-        values = vars(args)[k] if k in vars(args) else []  # Initializer values in the dictionary of arguments else use default
-        if values:  # there is something to do
-            if values[0] in initializers_types:  # First value of the arguments must be valid
-                params =  values[1:]
-                if values[0].lower() == 'unif':  # handle uniform
-                    initializers[k] = tf.random_uniform_initializer(
-                        *(float(e) for e in params) if check_unif_init_params(params) or params else _DEFAULT_UNIF_INIT,
-                        args.seed_init
-                    )
-                elif values[0].lower() == 'const': # handle constant
-                    initializers[k] = tf.constant_initializer(
-                        float(*params) if check_const_init_params(params) or params else _DEFAULT_CONST_INIT
-                    )
-            else: # the first argument wasn't a string or None
-                raise argparse.ArgumentTypeError(
-                    f'A type of initializer must be selected for {k}: "unif", "const" or None in which case, '+
-                    'the default value for the initializer will be used.'
-                    # TODO: ENUM with the initializer types
-                )
-        else: # use default and jump to the next initializer
-            continue
-    logging.debug('\n' + '\n'.join(f'{k} configuration: {initializers[k].get_config()}' for k in initializers))
-    return initializers
 
 
 if __name__ == "__main__":
@@ -154,28 +107,15 @@ if __name__ == "__main__":
         '-pd', '--padding', type=str, default=DEFAULT_PADDING,
         help='Padding mode')
     parser.add_argument(
-        '--bias_init', nargs='*', default=argparse.SUPPRESS,
-        help='Initialize bias. Possible initializers are: const init or None.'
-        f'(default: const {_DEFAULT_CONST_INIT})'  # TODO: ENUM for initializer types
-    )
-    parser.add_argument(
-        '--weight_init', nargs='*', default=argparse.SUPPRESS,
-        help='Initialize weights. Possible initializers are: const, unif or None.'
-        f'(default: uniform {_DEFAULT_UNIF_INIT})'  # TODO ENUM for initializer types
-    )
-    parser.add_argument(
-        '--seed_init', type=int,
-        help='Set the seed value for the initializers.'
-    )
-    parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
+    parser = init.parser_add_initializers(parser)
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
-    initializers = initializer_args_handler(args)
+    initializers = init.initializer_args_handler(args)
 
     main(path=args.path,
          input_channels=args.inputs, output_channels=args.outputs,

@@ -78,12 +78,12 @@ def parser_add_initializers(parser):
     parser.add_argument(
         '--bias_init', nargs='*', default=argparse.SUPPRESS,
         help='Initialize bias. Possible initializers are: const init or None.'
-        f'(default: {OpTestInitializers.CONST.value} {_DEFAULT_CONST_INIT})'
+             f'(default: {OpTestInitializers.CONST.value} {_DEFAULT_CONST_INIT})'
     )
     parser.add_argument(
         '--weight_init', nargs='*', default=argparse.SUPPRESS,
         help='Initialize weights. Possible initializers are: const, unif or None.'
-        f'(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})'
+             f'(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})'
     )
     parser.add_argument(
         '--seed', type=int,

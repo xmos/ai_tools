@@ -6,7 +6,9 @@ rm -rf ./debug
 set -e
 
 ./generate_argmax_16.py -v
-./generate_avgpool2d_deep.py -v
+./generate_avgpool2d.py -v
+./generate_avgpool2d_2x2.py -v
+./generate_avgpool2d_global.py -v
 ./generate_conv2d_deepin_deepout_relu.py -v
 ./generate_conv2d_shallowin_deepout_relu.py -v
 ./generate_fc_deepin_anyout.py -v --train_model

@@ -689,7 +689,7 @@ class ReplaceDeepAveragePool2DPass(ReplaceDeepPooling2DPass):
 
     @property
     def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_avgpool2d_deep)
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d_2x2)
 
 
 class RemoveUnusedBuffersPass(ModelTransformationPass):

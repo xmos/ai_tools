@@ -638,7 +638,7 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
         return super().mutate(op)
 
 
-class ReplaceDeepPooling2DPass(ReplaceQuantizedOperatorPass):
+class ReplacePooling2DPass(ReplaceQuantizedOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options
@@ -657,11 +657,20 @@ class ReplaceDeepPooling2DPass(ReplaceQuantizedOperatorPass):
     def _fused_activation(self):
         return self._op.builtin_options['fused_activation_function']
 
+
+class ReplaceDeepMaxPool2DPass(ReplacePooling2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.MAX_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_maxpool2d_deep)
+
     def match(self, op):
         if super().match(op):
             with self.using(op):
                 return (self._input.quantization == self._output.quantization
-                        and self._padding == 'VALID'
                         and self._strides == (2, 2)
                         and self._pool_size == (2, 2)
                         and self._fused_activation == 'NONE'
@@ -672,17 +681,7 @@ class ReplaceDeepPooling2DPass(ReplaceQuantizedOperatorPass):
         return False
 
 
-class ReplaceDeepMaxPool2DPass(ReplaceDeepPooling2DPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.MAX_POOL_2D
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_maxpool2d_deep)
-
-
-class ReplaceDeepAveragePool2DPass(ReplaceDeepPooling2DPass):
+class ReplaceAveragePool2D2x2Pass(ReplacePooling2DPass):
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.AVERAGE_POOL_2D
@@ -690,6 +689,19 @@ class ReplaceDeepAveragePool2DPass(ReplaceDeepPooling2DPass):
     @property
     def new_opcode(self):
         return OperatorCode(XCOREOpCodes.XC_avgpool2d_2x2)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (self._input.quantization == self._output.quantization
+                        and self._strides == (2, 2)
+                        and self._pool_size == (2, 2)
+                        and self._fused_activation == 'NONE'
+                        and self._input.shape[1] % 2 == 0
+                        and self._input.shape[2] % 2 == 0
+                        and self._input.shape[3] % 4 == 0)
+
+        return False
 
 
 class RemoveUnusedBuffersPass(ModelTransformationPass):

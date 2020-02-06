@@ -42,7 +42,7 @@ def build_argmax(*, input_shape, input_type):
     return model
 
 
-def build_pool(*, input_shape, builtin_opcode):
+def build_pool(*, input_shape, padding, builtin_opcode):
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
@@ -53,7 +53,8 @@ def build_pool(*, input_shape, builtin_opcode):
 
     op = subgraph.create_operator(
         OperatorCode(builtin_opcode), inputs=[tin], outputs=[tout])
-    op.builtin_options = {'padding': 'VALID',
+    assert padding in ['SAME', 'VALID']
+    op.builtin_options = {'padding': padding,
                           'stride_w': 2, 'stride_h': 2,
                           'filter_height': 2, 'filter_width': 2,
                           'fused_activation_function': 'NONE'}
@@ -61,16 +62,14 @@ def build_pool(*, input_shape, builtin_opcode):
     return model
 
 
-def build_maxpool(*, input_shape):
-    return build_pool(
-        input_shape=input_shape,
-        builtin_opcode=BuiltinOpCodes.MAX_POOL_2D)
+def build_maxpool(*, input_shape, padding):
+    return build_pool(input_shape=input_shape, padding=padding,
+                      builtin_opcode=BuiltinOpCodes.MAX_POOL_2D)
 
 
-def build_avgpool(*, input_shape):
-    return build_pool(
-        input_shape=input_shape,
-        builtin_opcode=BuiltinOpCodes.AVERAGE_POOL_2D)
+def build_avgpool(*, input_shape, padding):
+    return build_pool(input_shape=input_shape, padding=padding,
+                      builtin_opcode=BuiltinOpCodes.AVERAGE_POOL_2D)
 
 
 def build_fc(*, outputs, input_size):

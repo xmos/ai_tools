@@ -55,6 +55,9 @@ class AvgPool2D(DefaultAvgPool2DModel):
                          *, pool_size, strides, padding):
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
         assert padding.lower() == 'valid', "padding mode must be valid"
+        assert (height % 2 == 1 or width % 2 == 1
+                or pool_size[0] != 2 or pool_size[1] != 2
+                or strides[0] != 2 or strides[1] != 2), "parameters must differ from what avgpool2d_2x2 can match"
 
         self.core_model = tf.keras.Sequential(
             name=self.name,

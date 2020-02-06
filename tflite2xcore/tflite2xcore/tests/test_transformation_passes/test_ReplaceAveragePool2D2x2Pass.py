@@ -8,10 +8,11 @@ from .model_builders import build_avgpool
 
 
 from .test_ReplaceDeepMaxPool2DPass import (
+    MATCHING_STRIDES, MATCHING_POOL_SIZE,
     input_height, input_width, padding,
-    NON_MATCHING_INPUT_HEIGHT,
-    NON_MATCHING_INPUT_WIDTH,
-    NON_MATCHING_OPTIONS
+    NON_MATCHING_INPUT_HEIGHT, NON_MATCHING_INPUT_WIDTH,
+    NON_MATCHING_OPTIONS,
+    NON_MATCHING_POOL_SIZE, NON_MATCHING_STRIDES
 )
 
 MATCHING_INPUT_CHANNELS = list(range(4, 40, 4))
@@ -36,7 +37,8 @@ def input_shape(input_height, input_width, input_channels):
 
 @pytest.fixture()
 def model(input_shape, padding):
-    return build_avgpool(input_shape=input_shape, padding=padding)
+    return build_avgpool(input_shape=input_shape, padding=padding,
+                         pool_size=MATCHING_POOL_SIZE, strides=MATCHING_STRIDES)
 
 
 def test_matching_params(trf_pass, model):
@@ -46,26 +48,45 @@ def test_matching_params(trf_pass, model):
 @pytest.mark.parametrize('input_height', NON_MATCHING_INPUT_HEIGHT)
 def test_non_matching_input_height(trf_pass, input_shape, input_height, padding):
     input_shape[0] = input_height
-    model = build_avgpool(input_shape=input_shape, padding=padding)
+    model = build_avgpool(input_shape=input_shape, padding=padding,
+                          pool_size=MATCHING_POOL_SIZE, strides=MATCHING_STRIDES)
     assert not trf_pass.match(model.subgraphs[0].operators[-1])
 
 
 @pytest.mark.parametrize('input_width', NON_MATCHING_INPUT_WIDTH)
 def test_non_matching_input_width(trf_pass, input_shape, input_width, padding):
     input_shape[1] = input_width
-    model = build_avgpool(input_shape=input_shape, padding=padding)
+    model = build_avgpool(input_shape=input_shape, padding=padding,
+                          pool_size=MATCHING_POOL_SIZE, strides=MATCHING_STRIDES)
     assert not trf_pass.match(model.subgraphs[0].operators[-1])
 
 
 @pytest.mark.parametrize('input_channels', NON_MATCHING_INPUT_CHANNELS)
 def test_non_matching_input_channels(trf_pass, input_shape, input_channels, padding):
     input_shape[2] = input_channels
-    model = build_avgpool(input_shape=input_shape, padding=padding)
+    model = build_avgpool(input_shape=input_shape, padding=padding,
+                          pool_size=MATCHING_POOL_SIZE, strides=MATCHING_STRIDES)
     assert not trf_pass.match(model.subgraphs[0].operators[-1])
 
 
+@pytest.mark.parametrize('pool_size', NON_MATCHING_POOL_SIZE)
+def test_non_matching_pool_size(trf_pass, model, pool_size):
+    op = model.subgraphs[0].operators[-1]
+    op.builtin_options['filter_height'] = pool_size[0]
+    op.builtin_options['filter_width'] = pool_size[1]
+    assert not trf_pass.match(op)
+
+
+@pytest.mark.parametrize('strides', NON_MATCHING_STRIDES)
+def test_non_matching_strides(trf_pass, model, strides):
+    op = model.subgraphs[0].operators[-1]
+    op.builtin_options['stride_h'] = strides[0]
+    op.builtin_options['stride_w'] = strides[1]
+    assert not trf_pass.match(op)
+
+
 @pytest.mark.parametrize(*NON_MATCHING_OPTIONS)
-def non_matching_options(model, option, value):
+def non_matching_options(trf_pass, model, option, value):
     op = model.subgraphs[0].operators[-1]
     op.builtin_options[option] = value
     assert not trf_pass.match(op)

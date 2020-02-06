@@ -681,6 +681,33 @@ class ReplaceDeepMaxPool2DPass(ReplacePooling2DPass):
         return False
 
 
+class ReplaceAveragePool2DPass(ReplacePooling2DPass):
+    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=True):
+        super().__init__(priority)
+        self.safe_mode = safe_mode
+        if self.safe_mode:
+            self.superseding_pass = ReplaceAveragePool2D2x2Pass()
+
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.AVERAGE_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d)
+
+    def match(self, op):
+        if self.safe_mode and self.superseding_pass.match(op):
+            return False
+        if super().match(op):
+            with self.using(op):
+                return (self._input.quantization == self._output.quantization
+                        and self._fused_activation == 'NONE'
+                        and self._input.shape[3] % 4 == 0)
+
+        return False
+
+
 class ReplaceAveragePool2D2x2Pass(ReplacePooling2DPass):
     @property
     def matching_opcode(self):

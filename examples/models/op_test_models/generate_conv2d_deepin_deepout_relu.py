@@ -7,7 +7,7 @@ import logging
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
-import common_initializers as init
+import op_test_models_common as common
 
 DEFAULT_INPUTS = 32
 DEFAULT_OUTPUTS = 16
@@ -64,7 +64,7 @@ def main(path=DEFAULT_PATH, *,
          height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
          K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
          padding=DEFAULT_PADDING,
-         bias_init=init.DEFAULT_CONST_INIT, weight_init=init.DEFAULT_UNIF_INIT):
+         bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT):
 
     # Instantiate model
     test_model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', Path(path))
@@ -109,13 +109,13 @@ if __name__ == "__main__":
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
-    parser = init.parser_add_initializers(parser)
+    parser = common.parser_add_initializers(parser)
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
-    initializers = init.initializer_args_handler(args)
+    initializers = common.initializer_args_handler(args)
 
     main(path=args.path,
          input_channels=args.inputs, output_channels=args.outputs,

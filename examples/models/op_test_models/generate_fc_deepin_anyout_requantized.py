@@ -13,6 +13,7 @@ from generate_fc_deepin_anyout import (
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_anyout_requantized').resolve()
 
 from generate_fc_deepin_anyout import FcDeepinAnyout
+import op_test_models_common as common
 
 
 class FcDeepinAnyoutRequantized(FcDeepinAnyout):

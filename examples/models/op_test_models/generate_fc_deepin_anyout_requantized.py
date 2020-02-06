@@ -13,6 +13,7 @@ from generate_fc_deepin_anyout import (
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_anyout_requantized').resolve()
 
 from generate_fc_deepin_anyout import FcDeepinAnyout
+import op_test_models_common as common
 
 
 class FcDeepinAnyoutRequantized(FcDeepinAnyout):
@@ -32,12 +33,14 @@ class FcDeepinAnyoutRequantized(FcDeepinAnyout):
 
 def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
-         train_new_model=False):
+         train_new_model=False,
+         bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT):
     # Instantiate model
     test_model = FcDeepinAnyoutRequantized('fc_deepin_anyout_requantized', Path(path))
     if train_new_model:
         # Build model and compile
-        test_model.build(input_dim, output_dim)
+        test_model.build(input_dim, output_dim,
+                         bias_init=bias_init, weight_init=weight_init)
         # Prepare training data
         test_model.prep_data()
         # Train model
@@ -78,11 +81,16 @@ if __name__ == "__main__":
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
+    parser = common.parser_add_initializers(parser)
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
 
+    initializers = common.initializer_args_handler(args)
+
     main(path=args.path,
          input_dim=args.input_dim, output_dim=args.output_dim,
-         train_new_model=args.train_model)
+         train_new_model=args.train_model,
+         bias_init=initializers['bias_init'],
+         weight_init=initializers['weight_init'])

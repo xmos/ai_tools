@@ -51,6 +51,7 @@ def test_read_flatbuffer():
     assert operator.operator_code.builtin_code == BuiltinOpCodes.CONV_2D
     assert operator.operator_code.version == 3
     assert operator.operator_code.custom_code is None
+
     assert operator.builtin_options['fused_activation_function'] == 'RELU'
     assert len(operator.inputs) == 3
     assert len(operator.outputs) == 1

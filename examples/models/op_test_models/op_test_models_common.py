@@ -78,7 +78,7 @@ def parser_add_initializers(parser):
     parser.add_argument(
         '--bias_init', nargs='*', default=argparse.SUPPRESS,
         help='Initialize bias. Possible initializers are: const init or None.'
-        f'(default: {str(OpTestInitializers.CONST.value)} {_DEFAULT_CONST_INIT})'
+        f'(default: {OpTestInitializers.CONST.value} {_DEFAULT_CONST_INIT})'
     )
     parser.add_argument(
         '--weight_init', nargs='*', default=argparse.SUPPRESS,

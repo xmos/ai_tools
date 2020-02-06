@@ -17,6 +17,7 @@ DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = 'same'
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deepin_deepout_relu').resolve()
+DEFAULT_NUM_THREADS = 1
 
 
 class Conv2dDeepinDeepoutRelu(KerasModel):
@@ -59,7 +60,7 @@ class Conv2dDeepinDeepoutRelu(KerasModel):
             self.prep_data(height, width)
 
 
-def main(path=DEFAULT_PATH, *,
+def main(path=DEFAULT_PATH, *, num_threads=DEFAULT_NUM_THREADS,
          input_channels=DEFAULT_INPUTS, output_channels=DEFAULT_OUTPUTS,
          height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
          K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
@@ -76,7 +77,7 @@ def main(path=DEFAULT_PATH, *,
     # Save model
     test_model.save_core_model()
     # Populate converters
-    test_model.populate_converters()
+    test_model.populate_converters(xcore_num_threads=num_threads)
 
 
 if __name__ == "__main__":
@@ -107,6 +108,9 @@ if __name__ == "__main__":
         '-pd', '--padding', type=str, default=DEFAULT_PADDING,
         help='Padding mode')
     parser.add_argument(
+        '-par', '--par_num_threads', type=int, default=DEFAULT_NUM_THREADS,
+        help='Number of parallel threads for xcore.ai optimization.')
+    parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
     parser = common.parser_add_initializers(parser)
@@ -118,6 +122,7 @@ if __name__ == "__main__":
     initializers = common.initializer_args_handler(args)
 
     main(path=args.path,
+         num_threads=args.par_num_threads,
          input_channels=args.inputs, output_channels=args.outputs,
          K_h=args.kernel_height, K_w=args.kernel_width,
          height=args.height, width=args.width,

@@ -234,14 +234,9 @@ class Model(ABC):
         # save data
         self._save_data_dict({'x_test': x_test}, base_file_name='model_xcore')
 
-    def populate_converters(self):  # Actually, data it's being saved here too
+    def populate_converters(self, *, xcore_num_threads=None):
+        # Actually, data it's being saved here too
         # TODO: find a better name for this
-        '''
-        Create all the converters in a row in the logical order.
-        The only thing needed is the presence
-        of the original model in the models dictionary:
-        self.core_model must exist.
-        '''
         self.to_tf_float()
         self.save_tf_float_data()
         self._save_visualization('model_float')
@@ -254,7 +249,10 @@ class Model(ABC):
         self.save_tf_stripped_data()
         self._save_visualization('model_stripped')
 
-        self.to_tf_xcore()
+        if xcore_num_threads:
+            self.to_tf_xcore(num_threads=xcore_num_threads)
+        else:
+            self.to_tf_xcore()
         self.save_tf_xcore_data()
         self._save_visualization('model_xcore')
 

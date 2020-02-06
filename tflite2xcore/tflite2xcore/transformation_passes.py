@@ -14,6 +14,7 @@ from tflite2xcore.graph_transformer import (
 )
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.parallelization import DIDOConv2DPlanner
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
@@ -132,8 +133,7 @@ class AddArgMax16OutputPass(OutputTensorMatchingPass):
         dim_tensor.buffer.data = np.int32([1])
 
 
-# TODO: write (at least regression) tests for this class
-class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
+class QuantizedOperatorMatchingPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
         self._op = None
@@ -165,6 +165,15 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
     def _matching_output_type(self):
         return TensorType.INT8
 
+    def match(self, op):
+        if op.operator_code.code == self.matching_opcode:
+            with self.using(op):
+                return (self._input.type == self._matching_input_type
+                        and self._output.type == self._matching_output_type)
+
+
+# TODO: write (at least regression) tests for this class
+class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
     @property
     @abstractmethod
     def new_opcode(self):
@@ -175,12 +184,6 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
             self.new_opcode, inputs=op.inputs, outputs=op.outputs)
         new_op.subgraph.replace_operator(op, new_op)
         return new_op
-
-    def match(self, op):
-        if op.operator_code.code == self.matching_opcode:
-            with self.using(op):
-                return (self._input.type == self._matching_input_type
-                        and self._output.type == self._matching_output_type)
 
 
 class ReplaceArgMax16Pass(ReplaceQuantizedOperatorPass):
@@ -698,3 +701,35 @@ class RemoveUnusedBuffersPass(ModelTransformationPass):
             set(t.buffer for subgraph in model.subgraphs for t in subgraph.tensors)
             | set(m.buffer for m in model.metadata)
         )
+
+
+class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
+    def __init__(self, priority=PassPriority.PAR, *, num_threads=None, forced=False):
+        super().__init__(priority)
+        self.num_threads = num_threads or 1
+        assert isinstance(self.num_threads, int)
+        assert self.num_threads > 0
+        self.forced = forced
+
+    def run(self, *args, **kwargs):
+        if self.num_threads == 1:
+            logging.debug(f"Skipping {type(self).__name__} with num_threads={self.num_threads}")
+            return None
+        else:
+            return super().run(*args, **kwargs)
+
+    @property
+    def matching_opcode(self):
+        return XCOREOpCodes.XC_conv2d_deepin_deepout_relu
+
+    def match(self, op):
+        if super().match(op):
+            return 'par_plan' not in op.custom_options
+
+    def mutate(self, op):
+        with self.using(op):
+            _, height, width, _ = self._output.shape
+        planner = DIDOConv2DPlanner(
+            height, width, num_threads=self.num_threads, forced=self.forced)
+        plan = planner.find_optimal_plan()
+        op.add_custom_options(par_plan=[list(block) for block in plan.layout])

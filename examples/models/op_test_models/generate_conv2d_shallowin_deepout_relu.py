@@ -6,6 +6,8 @@ from pathlib import Path
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
+import common_initializers as init
+
 
 DEFAULT_INPUTS = 3
 DEFAULT_OUTPUTS = 16
@@ -18,7 +20,8 @@ DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_shallowin_deepout
 
 
 class Conv2dShallowinDeepoutRelu(KerasModel):
-    def build(self, K_h, K_w, height, width, input_channels, output_channels, padding):
+    def build(self, K_h, K_w, height, width, input_channels, output_channels,
+              *, padding, bias_init, weight_init):
         assert input_channels <= 4, "Number of input channels must be at most 4"
         assert K_w <= 8, "Kernel width must be at most 8"
         assert output_channels % 16 == 0, "Number of output channels must be multiple of 16"
@@ -34,7 +37,9 @@ class Conv2dShallowinDeepoutRelu(KerasModel):
                     tf.keras.layers.Conv2D(filters=output_channels,
                                            kernel_size=(K_h, K_w),
                                            padding=padding,
-                                           input_shape=(height, width, input_channels))
+                                           input_shape=(height, width, input_channels),
+                                           bias_initializer=bias_init,
+                                           kernel_initializer=weight_init)
                 ]
             )
         except ValueError as e:
@@ -68,11 +73,13 @@ def main(path=DEFAULT_PATH, *,
          input_channels=DEFAULT_INPUTS, output_channels=DEFAULT_OUTPUTS,
          height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
          K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
-         padding=DEFAULT_PADDING):
+         padding=DEFAULT_PADDING,
+         bias_init=init.DEFAULT_CONST_INIT, weight_init=init.DEFAULT_UNIF_INIT):
     # Instantiate model
     test_model = Conv2dShallowinDeepoutRelu('conv2d_shallowin_deepout_relu', Path(path))
     # Build model and compile
-    test_model.build(K_h, K_w, height, width, input_channels, output_channels, padding)
+    test_model.build(K_h, K_w, height, width, input_channels, output_channels,
+                     padding=padding, bias_init=bias_init, weight_init=weight_init)
     # Generate test data
     test_model.gen_test_data(height, width)
     # Save model
@@ -111,13 +118,18 @@ if __name__ == "__main__":
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
+    parser = init.parser_add_initializers(parser)
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
+    initializers = init.initializer_args_handler(args)
+
     main(path=args.path,
          input_channels=args.inputs, output_channels=args.outputs,
          K_h=args.kernel_height, K_w=args.kernel_width,
          height=args.height, width=args.width,
-         padding=args.padding)
+         padding=args.padding,
+         bias_init=initializers['bias_init'],
+         weight_init=initializers['weight_init'])

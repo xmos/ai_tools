@@ -10,6 +10,7 @@ from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
 import common_initializers as init
 
+
 DEFAULT_INPUTS = 32
 DEFAULT_OUTPUTS = 16
 DEFAULT_HEIGHT = 5
@@ -70,7 +71,8 @@ def main(path=DEFAULT_PATH, *,
     # Instantiate model
     test_model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', Path(path))
     # Build model and compile
-    test_model.build(K_h, K_w, height, width, input_channels, output_channels, padding=padding, bias_init=bias_init, weight_init=weight_init)
+    test_model.build(K_h, K_w, height, width, input_channels, output_channels,
+                     padding=padding, bias_init=bias_init, weight_init=weight_init)
     # Generate test data
     test_model.gen_test_data(height, width)
     # Save model

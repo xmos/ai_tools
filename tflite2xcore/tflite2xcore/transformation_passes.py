@@ -708,6 +708,60 @@ class ReplaceAveragePool2DPass(ReplacePooling2DPass):
         return False
 
 
+class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.MEAN
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d_global)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                reduction_dims = self._op.inputs[1].numpy
+                return (len(reduction_dims) == 2
+                        and np.all(reduction_dims == [1, 2])
+                        and self._input.shape[3] % 4 == 0)
+
+        return False
+
+    @property
+    def _bias_scale_shift(self):
+        num_pixels = self._input.shape[1] * self._input.shape[2]
+        rescaling = self._input.quantization['scale'][0] / self._output.quantization['scale'][0]
+        multiplier = rescaling / num_pixels
+
+        scale = np.round(multiplier * 2 ** (7 - np.ceil(np.log2(multiplier))))
+        shift = np.round(np.log2(scale / multiplier))
+        bias = np.round(
+            scale * (self._output.quantization['zero_point'][0] / multiplier
+                     - self._input.quantization['zero_point'][0] * num_pixels)
+        )
+
+        if shift > 24:
+            raise ValueError("Global Average Pool shift is greater than 24.")
+
+        return bias.astype(np.int32), scale.astype(np.int8), shift.astype(np.int16)
+
+    def mutate(self, op):
+        new_op = super().mutate(op)
+        subgraph = new_op.subgraph
+
+        with self.using(new_op):
+            # replace reduction_indices tensor with bias_scale_shift
+            subgraph.remove_tensor(new_op.inputs[1])
+            new_op.inputs[1] = subgraph.create_tensor(
+                f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7])
+            new_op.inputs[1].buffer.data = np.frombuffer(
+                b''.join(p.tostring() for p in self._bias_scale_shift),
+                dtype=np.int8
+            )
+
+        return new_op
+
+
 class ReplaceAveragePool2D2x2Pass(ReplacePooling2DPass):
     @property
     def matching_opcode(self):

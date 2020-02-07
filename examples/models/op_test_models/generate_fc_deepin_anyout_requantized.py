@@ -35,6 +35,21 @@ def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
          train_new_model=False,
          bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT):
+    kwargs = {
+        'name': 'fc_deepin_anyout_requantized',
+        'path': path if path else DEFAULT_PATH
+    }
+    common.run_main(
+        model = FcDeepinAnyoutRequantized(**kwargs),
+        train_new_model=train_new_model,
+        input_dim=input_dim,
+        output_dim=output_dim,
+        bias_init=bias_init,
+        weight_init=weight_init,
+        batch_size=None,
+        epochs=None
+    )
+    '''
     # Instantiate model
     test_model = FcDeepinAnyoutRequantized('fc_deepin_anyout_requantized', Path(path))
     if train_new_model:
@@ -58,32 +73,13 @@ def main(path=DEFAULT_PATH, *,
     test_model.gen_test_data()
     # Populate converters
     test_model.populate_converters()
-
+    '''
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        'path', nargs='?', default=DEFAULT_PATH,
-        help='Path to a directory where models and data will be saved in subdirectories.')
-    parser.add_argument(
-        '--use_gpu', action='store_true', default=False,
-        help='Use GPU for training. Might result in non-reproducible results.')
-    parser.add_argument(
-        '-out', '--output_dim', type=int, default=DEFAULT_OUTPUT_DIM,
-        help='Number of output dimensions, must be at least 2.')
-    parser.add_argument(
-        '-in', '--input_dim', type=int, default=DEFAULT_INPUT_DIM,
-        help='Input dimension, must be multiple of 32.')
-    parser.add_argument(
-        '--train_model', action='store_true', default=False,
-        help='Train new model instead of loading pretrained tf.keras model.')
-    parser.add_argument(
-        '-v', '--verbose', action='store_true', default=False,
-        help='Verbose mode.')
-    parser = common.parser_add_initializers(parser)
-    args = parser.parse_args()
+    parser = common.get_fc_parser(DEFAULT_INPUT_DIM=DEFAULT_INPUT_DIM, DEFAULT_OUTPUT_DIM=DEFAULT_OUTPUT_DIM)
 
+    args = parser.parse_args()
+    print(vars(args))
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
 

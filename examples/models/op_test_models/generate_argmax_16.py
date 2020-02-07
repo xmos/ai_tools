@@ -12,6 +12,7 @@ from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import FunctionModel
 import tensorflow as tf
+import op_test_models_common as common
 
 DEFAULT_INPUTS = 10
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'arg_max_16').resolve()
@@ -147,17 +148,7 @@ def main(path=DEFAULT_PATH, input_dim=DEFAULT_INPUTS):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        'path', nargs='?', default=DEFAULT_PATH,
-        help='Path to a directory where models and data will be saved in subdirectories.')
-    parser.add_argument(
-        '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
-        help='Input dimension')
-    parser.add_argument(
-        '-v', '--verbose', action='store_true', default=False,
-        help='Verbose mode.')
+    parser = common.get_default_parser(DEFAULT_INPUTS=DEFAULT_INPUTS)
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)

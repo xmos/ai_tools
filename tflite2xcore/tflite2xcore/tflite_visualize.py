@@ -23,8 +23,8 @@ import argparse
 import webbrowser
 import tempfile
 
-from tflite2xcore.serialization.flatbuffers_io import create_dict_from_model, FlexbufferParser
-from tflite2xcore import read_flatbuffer
+from tflite2xcore.serialization.flatbuffers_io import FlexbufferParser
+from tflite2xcore import read_flatbuffer, create_dict_from_model
 
 # A CSS description for making the visualizer
 _CSS = """<head>

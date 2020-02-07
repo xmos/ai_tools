@@ -65,6 +65,11 @@ def test_write_flatbuffer():
     bytes_expected = os.path.getsize(BUILTIN_OPERATORS_TEST_FILE)
     bytes_written = write_flatbuffer(model, tmp_file)
 
+    print()
+    #os.remove(tmp_file)
+    print(tmp_file)
+    print()
+
     assert bytes_written == bytes_expected
 
 

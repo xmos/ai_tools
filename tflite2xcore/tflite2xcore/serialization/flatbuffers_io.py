@@ -23,6 +23,10 @@ def create_xcore_model(modelT):
 
     # load metadata
     for metadataT in modelT.metadata:
+        print()
+        print(metadataT.name)
+        print(metadataT.buffer)
+        print()
         model.create_metadata(metadataT.name, buffers[metadataT.buffer])
 
     # create operator codes lookup
@@ -66,10 +70,10 @@ def create_xcore_model(modelT):
         for operatorT in subgraphT.operators:
             operator_code = operator_codes_lut[operatorT.opcodeIndex]
             options = {}
-            if hasattr(operatorT, 'builtinOptions') and operatorT.builtinOptions:
+            if hasattr(operatorT, 'builtinOptions') and operatorT.builtinOptions is not None:
                 options['builtin_options'] = BuiltinOptions(operatorT.builtinOptions, operatorT.builtinOptionsType)
 
-            if hasattr(operatorT, 'customOptions') and len(operatorT.customOptions) > 0:
+            if hasattr(operatorT, 'customOptions') and operatorT.customOptions is not None:
                 options['custom_options'] = json.loads(
                     FlexbufferParser().parse(bytes(operatorT.customOptions))
                 )
@@ -145,6 +149,7 @@ def create_flatbuffer_model(model):
                 quantizationT.min = tensor.quantization['min']
                 quantizationT.max = tensor.quantization['max']
                 quantizationT.zeroPoint = tensor.quantization['zero_point']
+                quantizationT.scale = tensor.quantization['scale']
                 quantizationT.detailsType = tensor.quantization['details_type']
                 quantizationT.details = tensor.quantization['details']
                 quantizationT.quantizedDimension = tensor.quantization['quantized_dimension']

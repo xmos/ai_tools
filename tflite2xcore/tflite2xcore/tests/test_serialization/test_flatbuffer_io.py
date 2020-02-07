@@ -29,7 +29,7 @@ def test_read_flatbuffer():
 
     assert len(model.buffers) == 19
     assert len(model.buffers[0].data) == 0
-    assert len(model.buffers[4].data) == 51200
+    assert len(model.buffers[4].data) == 128
 
     assert len(model.subgraphs) == 1
     subgraph = model.subgraphs[0]
@@ -40,21 +40,22 @@ def test_read_flatbuffer():
     assert len(subgraph.intermediates) == len(subgraph.tensors) - len(subgraph.inputs) - len(subgraph.outputs)
 
     tensor = subgraph.tensors[2]
-    assert tensor.name == 'sequential/conv2d/Conv2D/ReadVariableOp'
-    assert tensor.sanitized_name == 'sequential_conv2d_Conv2D_ReadVariableOp'
-    assert tensor.type == TensorType.INT8
-    assert tensor.standard_type == 'int8_t'
-    assert tensor.shape == [32, 5, 5, 3]
-    assert len(tensor.buffer.data) == 2400
+    assert tensor.name == 'arm_benchmark/conv2d/Conv2D_bias'
+    assert tensor.sanitized_name == 'arm_benchmark_conv2d_Conv2D_bias'
+    assert tensor.type == TensorType.INT32
+    assert tensor.standard_type == 'int32_t'
+    assert tensor.shape == [32]
+    assert len(tensor.buffer.data) == 128
 
     operator = subgraph.operators[1]
     assert operator.operator_code.builtin_code == BuiltinOpCodes.CONV_2D
     assert operator.operator_code.version == 3
     assert operator.operator_code.custom_code is None
+
     assert operator.builtin_options['fused_activation_function'] == 'RELU'
     assert len(operator.inputs) == 3
     assert len(operator.outputs) == 1
-    assert operator.outputs[0].name == 'sequential/re_lu/Relu'
+    assert operator.outputs[0].name == 'arm_benchmark/re_lu/Relu'
 
 
 def test_write_flatbuffer():
@@ -63,6 +64,8 @@ def test_write_flatbuffer():
     tmp_file = os.path.join(tempfile.mkdtemp(), 'test_write_flatbuffer.tflite')
     bytes_expected = os.path.getsize(BUILTIN_OPERATORS_TEST_FILE)
     bytes_written = write_flatbuffer(model, tmp_file)
+
+    os.remove(tmp_file)
 
     assert bytes_written == bytes_expected
 

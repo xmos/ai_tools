@@ -1,11 +1,30 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import struct
 import enum
+import re
 import collections
 
 import numpy as np
 
 from tflite2xcore.operator_codes import OperatorCode
+
+def snake_to_camel(word):
+    output = ''.join(x.capitalize() or '_' for x in word.split('_'))
+    return output[0].lower() + output[1:]
+
+
+def camel_to_snake(name):
+  name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+  return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+
+
+class ActivationFunctionType(enum.IntEnum):
+    NONE = 0
+    RELU = 1
+    RELU_N1_TO_1 = 2
+    RELU6 = 3
+    TANH = 4
+    SIGN_BIT = 5
 
 
 class TensorType(enum.IntEnum):
@@ -112,10 +131,40 @@ class Buffer():
         return [i[0] for i in struct.iter_unpack(LUT[stdtype], bytearray(self.data))]
 
 
+class BuiltinOptions(collections.UserDict):
+    def __init__(self, options_object, options_object_type=None):
+        self.options_object = options_object
+        self.options_object_type = options_object_type
+
+    def __getitem__(self, key):
+        camel_key = snake_to_camel(key)
+        if hasattr(self.options_object, camel_key):
+            value = getattr(self.options_object, camel_key)
+            if key == 'fused_activation_function':
+                return ActivationFunctionType(value).name
+            else:
+                return value
+        else:
+            raise KeyError(key)
+
+    def __setitem__(self, key, value):
+        camel_key = snake_to_camel(key)
+        if hasattr(self.options_object, camel_key):
+            return setattr(self.options_object, camel_key, value)
+        else:
+            raise KeyError(key)
+
+    def __repr__(self): 
+        bits = {camel_to_snake(k):v for k, v in vars(self.options_object).items()}
+        return repr(bits)
+
+    def __len__(self):
+        return len(vars(self.options_object).items())
+
 class Operator():
     def __init__(self, subgraph, operator_code,
                  name=None, inputs=None, outputs=None,
-                 builtin_options=None, builtin_options_type=None, custom_options=None):
+                 builtin_options=None, custom_options=None):
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
         assert isinstance(operator_code, OperatorCode)
@@ -126,9 +175,6 @@ class Operator():
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.builtin_options = builtin_options
-        self.builtin_options_type = builtin_options_type
-        if builtin_options:
-            assert builtin_options_type
         self.custom_options = custom_options
 
     def add_custom_options(self, **kwargs):
@@ -268,10 +314,10 @@ class Subgraph():
 
     def create_operator(self, operator_code, *,
                         inputs=None, outputs=None,
-                        builtin_options=None, builtin_options_type=None, custom_options=None):
+                        builtin_options=None, custom_options=None):
         name = self.generate_unique_op_name(operator_code)
         operator = Operator(self, operator_code, name, inputs, outputs,
-                            builtin_options, builtin_options_type, custom_options)
+                            builtin_options, custom_options)
         self.operators.append(operator)
         return operator
 

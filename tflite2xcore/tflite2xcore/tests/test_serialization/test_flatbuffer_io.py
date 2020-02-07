@@ -61,12 +61,13 @@ def test_read_flatbuffer():
 def test_write_flatbuffer():
     model = read_flatbuffer(BUILTIN_OPERATORS_TEST_FILE)
 
-    tmp_file = os.path.join(tempfile.mkdtemp(), 'test_write_flatbuffer.tflite')
+    # tmp_file = os.path.join(tempfile.mkdtemp(), 'test_write_flatbuffer.tflite')
+    tmp_file = os.path.join('/home/kmoulton/Documents/test_write_flatbuffer.tflite')
     bytes_expected = os.path.getsize(BUILTIN_OPERATORS_TEST_FILE)
     bytes_written = write_flatbuffer(model, tmp_file)
 
     print()
-    #os.remove(tmp_file)
+    # os.remove(tmp_file)
     print(tmp_file)
     print()
 

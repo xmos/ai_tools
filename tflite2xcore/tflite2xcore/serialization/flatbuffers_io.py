@@ -3,6 +3,7 @@ import os
 import json
 
 import flatbuffers
+import numpy as np
 
 from .schema_py_generated import Model, ModelT, BufferT, MetadataT, OperatorCodeT, \
                                  SubGraphT, TensorT, OperatorT, QuantizationParametersT
@@ -23,10 +24,6 @@ def create_xcore_model(modelT):
 
     # load metadata
     for metadataT in modelT.metadata:
-        print()
-        print(metadataT.name)
-        print(metadataT.buffer)
-        print()
         model.create_metadata(metadataT.name, buffers[metadataT.buffer])
 
     # create operator codes lookup
@@ -51,7 +48,12 @@ def create_xcore_model(modelT):
 
             # load quantization
             if hasattr(tensorT, 'quantization') and tensorT.quantization:
-                quantization = {camel_to_snake(k):v for k, v in vars(tensorT.quantization).items()}
+                quantization = {}
+                for k, v in vars(tensorT.quantization).items():
+                    if v is not None:
+                        if isinstance(v, np.ndarray):
+                            v = v.tolist()
+                        quantization[camel_to_snake(k)] = v
             else:
                 quantization = None
 
@@ -146,13 +148,20 @@ def create_flatbuffer_model(model):
             tensorT.type = tensor.type.value
             if tensor.quantization:
                 quantizationT = QuantizationParametersT()
-                quantizationT.min = tensor.quantization['min']
-                quantizationT.max = tensor.quantization['max']
-                quantizationT.zeroPoint = tensor.quantization['zero_point']
-                quantizationT.scale = tensor.quantization['scale']
-                quantizationT.detailsType = tensor.quantization['details_type']
-                quantizationT.details = tensor.quantization['details']
-                quantizationT.quantizedDimension = tensor.quantization['quantized_dimension']
+                if 'min' in tensor.quantization:
+                    quantizationT.min = tensor.quantization['min']
+                if 'max' in tensor.quantization:
+                    quantizationT.max = tensor.quantization['max']
+                if 'zero_point' in tensor.quantization:
+                    quantizationT.zeroPoint = tensor.quantization['zero_point']
+                if 'scale' in tensor.quantization:
+                    quantizationT.scale = tensor.quantization['scale']
+                if 'details_type' in tensor.quantization:
+                    quantizationT.detailsType = tensor.quantization['details_type']
+                if 'details' in tensor.quantization:
+                    quantizationT.details = tensor.quantization['details']
+                if 'quantized_dimension' in tensor.quantization:
+                    quantizationT.quantizedDimension = tensor.quantization['quantized_dimension']
                 tensorT.quantization = quantizationT
             subgraphT.tensors.append(tensorT)
 

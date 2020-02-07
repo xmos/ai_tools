@@ -28,7 +28,7 @@ def generate_test_cases(operator, generator, test_cases, *, train_model=False):
     for test_case in test_cases:
         folder, arguments = make_folder_and_arguments(**test_case)
         output_dir = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, operator, folder)
-        cmd = f'python {generator} {train_model_flag} {arguments} {output_dir}'
+        cmd = f'python {generator} {train_model_flag} {arguments} -path {output_dir}'
         print(f'generating test case {output_dir}')
         try:
             subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)

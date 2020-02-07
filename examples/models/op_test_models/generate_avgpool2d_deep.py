@@ -79,9 +79,26 @@ def main(path=DEFAULT_PATH, *,
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     parser = common.get_dim_parser(DEFAULT_PATH=DEFAULT_PATH,
                                    DEFAULT_INPUTS=DEFAULT_INPUTS, DEFAULT_WIDTH=DEFAULT_WIDTH,
                                    DEFAULT_HEIGHT=DEFAULT_HEIGHT, DEFAULT_PADDING=DEFAULT_PADDING)
+=======
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        '-path', nargs='?', default=DEFAULT_PATH,
+        help='Path to a directory where models and data will be saved in subdirectories.')
+    parser.add_argument(
+        '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
+        help='Number of input channels')
+    parser.add_argument(
+        '-hi', '--height', type=int, default=DEFAULT_HEIGHT,
+        help='Height of input image')
+    parser.add_argument(
+        '-wi', '--width', type=int, default=DEFAULT_WIDTH,
+        help='Width of input image')
+>>>>>>> develop
     parser.add_argument(
         '-st', '--strides', type=int, default=DEFAULT_STRIDES,
         help='Stride')

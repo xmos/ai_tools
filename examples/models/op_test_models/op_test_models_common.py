@@ -97,7 +97,7 @@ def get_default_parser(is_fc=False, **kwargs,):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        'path', nargs='?', default=kwargs['DEFAULT_PATH'],
+        '-path', nargs='?', default=kwargs['DEFAULT_PATH'],
         help='Path to a directory where models and data will be saved in subdirectories.')
     if not is_fc:
         parser.add_argument(

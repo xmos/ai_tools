@@ -54,7 +54,6 @@ def main(path=DEFAULT_PATH, *,
 if __name__ == "__main__":
     parser = common.get_fc_parser(DEFAULT_PATH=DEFAULT_PATH,
                                   DEFAULT_INPUT_DIM=DEFAULT_INPUT_DIM, DEFAULT_OUTPUT_DIM=DEFAULT_OUTPUT_DIM)
-
     args = parser.parse_args()
     print(vars(args))
     utils.set_verbosity(args.verbose)

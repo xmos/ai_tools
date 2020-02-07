@@ -33,7 +33,7 @@ def initializer_args_handler(args):
                 'The const argument must consist of 1 float number or '
                 'none, in wich case, the default value will be used.'
             )
-    utils.set_all_seeds(args.seed)
+    utils.set_all_seeds(args.seed) #NOTE All seeds initialized here
     initializers = {
         'weight_init': tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
         'bias_init': DEFAULT_CONST_INIT
@@ -88,7 +88,7 @@ def parser_add_initializers(parser):
     )
     parser.add_argument(
         '--seed', type=int,
-        help='Set the seed value for the initializers.'  # TODO: generalize to set all seeds with this
+        help='Set the seed value for the initializers.'
     )
     return parser
 

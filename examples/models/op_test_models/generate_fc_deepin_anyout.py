@@ -132,34 +132,10 @@ def main(path=DEFAULT_PATH, *,
         batch_size=None,
         epochs=None
     )
-    '''
-    # Instantiate model
-    test_model = FcDeepinAnyout('fc_deepin_anyout', Path(path))
-    if train_new_model:
-        # Build model and compile
-        test_model.build(input_dim, output_dim,
-                         bias_init=bias_init, weight_init=weight_init)
-        # Prepare training data
-        test_model.prep_data()
-        # Train model
-        test_model.train()
-        test_model.save_core_model()
-    else:
-        # Recover previous state from file system
-        test_model.load_core_model()
-        if output_dim != test_model.output_dim:
-            raise ValueError(
-                f"specified output_dim ({output_dim}) "
-                f"does not match loaded model's output_dim ({test_model.output_dim})"
-            )
-    # Generate test data
-    test_model.gen_test_data()
-    # Populate converters
-    test_model.populate_converters()
-    '''
 
 if __name__ == "__main__":
-    parser = common.get_fc_parser(DEFAULT_INPUT_DIM=DEFAULT_INPUT_DIM, DEFAULT_OUTPUT_DIM=DEFAULT_OUTPUT_DIM)
+    parser = common.get_fc_parser(DEFAULT_PATH=DEFAULT_PATH,
+                                  DEFAULT_INPUT_DIM=DEFAULT_INPUT_DIM, DEFAULT_OUTPUT_DIM=DEFAULT_OUTPUT_DIM)
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)

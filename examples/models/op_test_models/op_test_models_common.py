@@ -4,6 +4,7 @@ import argparse
 import logging
 from enum import Enum
 import tensorflow as tf
+from tflite2xcore.model_generation import utils
 
 _DEFAULT_CONST_INIT = 0
 _DEFAULT_UNIF_INIT = [-1, 1]
@@ -32,7 +33,7 @@ def initializer_args_handler(args):
                 'The const argument must consist of 1 float number or '
                 'none, in wich case, the default value will be used.'
             )
-
+    utils.set_all_seeds(args.seed)
     initializers = {
         'weight_init': tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
         'bias_init': DEFAULT_CONST_INIT
@@ -96,7 +97,7 @@ def get_default_parser(is_fc=False, **kwargs,):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        'path', nargs='?', default=None,
+        'path', nargs='?', default=kwargs['DEFAULT_PATH'],
         help='Path to a directory where models and data will be saved in subdirectories.')
     if not is_fc:
         parser.add_argument(
@@ -109,7 +110,7 @@ def get_default_parser(is_fc=False, **kwargs,):
 
 
 def get_dim_parser(**kwargs):  # for models with 2D dimensionality and padding
-    parser = get_default_parser(kwargs)
+    parser = get_default_parser(**kwargs)
     parser.add_argument(
         '-hi', '--height', type=int, default=kwargs['DEFAULT_HEIGHT'],
         help='Height of input image')
@@ -123,7 +124,7 @@ def get_dim_parser(**kwargs):  # for models with 2D dimensionality and padding
 
 
 def get_conv_parser(**kwargs): # for the conv models
-    parser = get_dim_parser(kwargs)
+    parser = get_dim_parser(**kwargs)
     parser.add_argument(
         '-out', '--outputs', type=int, default=kwargs['DEFAULT_OUTPUTS'],
         help='Number of output channels')
@@ -154,7 +155,7 @@ def get_fc_parser(**kwargs): # for the fc models
     parser = parser_add_initializers(parser)
     return parser
 
-
+# For FC models
 def run_main(model, *, train_new_model, input_dim, output_dim, bias_init, weight_init, batch_size, epochs):
     if train_new_model:
         # Build model and compile
@@ -177,24 +178,3 @@ def run_main(model, *, train_new_model, input_dim, output_dim, bias_init, weight
     model.gen_test_data()
     # Populate converters
     model.populate_converters()
-
-    '''
-def main(path=DEFAULT_PATH, *,
-         input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
-         train_new_model=False,
-         bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT):
-    kwargs = {
-        'name': 'fc_deepin_anyout',
-        'path': path if path else DEFAULT_PATH
-    }
-    common.run_main(
-        model = FcDeepinAnyout(**kwargs),
-        train_new_model=train_new_model,
-        input_dim=input_dim,
-        output_dim=output_dim,
-        bias_init=bias_init,
-        weight_init=weight_init,
-        batch_size=None,
-        epochs=None
-    )
-    '''

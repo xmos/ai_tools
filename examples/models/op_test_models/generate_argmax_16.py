@@ -148,7 +148,7 @@ def main(path=DEFAULT_PATH, input_dim=DEFAULT_INPUTS):
 
 
 if __name__ == "__main__":
-    parser = common.get_default_parser(DEFAULT_INPUTS=DEFAULT_INPUTS)
+    parser = common.get_default_parser(DEFAULT_PATH=DEFAULT_PATH, DEFAULT_INPUTS=DEFAULT_INPUTS)
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)

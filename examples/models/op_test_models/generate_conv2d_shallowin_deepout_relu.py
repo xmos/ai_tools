@@ -89,11 +89,12 @@ def main(path=DEFAULT_PATH, *,
 
 
 if __name__ == "__main__":
-    parser = common.get_conv_parser(DEFAULT_INPUTS=DEFAULT_INPUTS, DEFAULT_OUTPUTS=DEFAULT_OUTPUTS,
-                            DEFAULT_WIDTH=DEFAULT_WIDTH, DEFAULT_HEIGHT=DEFAULT_HEIGHT,
-                            DEFAULT_PADDING=DEFAULT_PADDING,
-                            DEFAULT_KERNEL_HEIGHT=DEFAULT_KERNEL_HEIGHT,
-                            DEFAULT_KERNEL_WIDTH=DEFAULT_KERNEL_WIDTH)
+    parser = common.get_conv_parser(DEFAULT_PATH=DEFAULT_PATH,
+                                    DEFAULT_INPUTS=DEFAULT_INPUTS, DEFAULT_OUTPUTS=DEFAULT_OUTPUTS,
+                                    DEFAULT_WIDTH=DEFAULT_WIDTH, DEFAULT_HEIGHT=DEFAULT_HEIGHT,
+                                    DEFAULT_PADDING=DEFAULT_PADDING,
+                                    DEFAULT_KERNEL_HEIGHT=DEFAULT_KERNEL_HEIGHT,
+                                    DEFAULT_KERNEL_WIDTH=DEFAULT_KERNEL_WIDTH)
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)

@@ -1,16 +1,64 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import os
 import json
+import re
+import enum
 
 import flatbuffers
 import numpy as np
 
-from .schema_py_generated import Model, ModelT, BufferT, MetadataT, OperatorCodeT, \
-                                 SubGraphT, TensorT, OperatorT, QuantizationParametersT
+from .schema_py_generated import *
 from .flatbuffers_c import FlexbufferBuilder, FlexbufferParser
 
-from ..xcore_model import XCOREModel, TensorType, BuiltinOptions, camel_to_snake
+from ..xcore_model import XCOREModel, TensorType
 from ..operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
+
+# create enums from BuiltinOptions and ActivationFunctionType classes
+#    these are used for convenience
+BuiltinOptionsEnum = enum.Enum(
+    'BuiltinOptionsEnum', 
+    {k:v for k, v in vars(BuiltinOptions).items() if not k.startswith("__")}
+)
+ActivationFunctionTypeEnum = enum.Enum(
+    'ActivationFunctionTypeEnum', 
+    {k:v for k, v in vars(ActivationFunctionType).items() if not k.startswith("__")}
+)
+
+
+def snake_to_camel(word):
+    output = ''.join(x.capitalize() or '_' for x in word.split('_'))
+    return output[0].lower() + output[1:]
+
+
+def camel_to_snake(name):
+  name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+  return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+
+
+def builtin_options_to_dict(builtin_options):
+    dict_ = {camel_to_snake(k):v for k, v in vars(builtin_options).items()}
+    if 'fused_activation_function' in dict_:
+        # convert enum value to string
+        dict_['fused_activation_function'] = \
+            ActivationFunctionTypeEnum(dict_['fused_activation_function']).name
+
+    return dict_
+
+
+def dict_to_builtin_options(type_, dict_):
+    class_identifier = BuiltinOptionsEnum(type_).name + 'T'
+
+    builtin_class = globals()[class_identifier]
+    builtin_options = builtin_class()
+
+    for k, v in dict_.items():
+        if k == 'fused_activation_function':
+            # convert string to enum
+            v = ActivationFunctionTypeEnum[v].value
+
+        setattr(builtin_options, snake_to_camel(k), v)
+
+    return builtin_options
 
 
 def create_xcore_model(modelT):
@@ -73,7 +121,8 @@ def create_xcore_model(modelT):
             operator_code = operator_codes_lut[operatorT.opcodeIndex]
             options = {}
             if hasattr(operatorT, 'builtinOptions') and operatorT.builtinOptions is not None:
-                options['builtin_options'] = BuiltinOptions(operatorT.builtinOptions, operatorT.builtinOptionsType)
+                options['builtin_options'] = builtin_options_to_dict(operatorT.builtinOptions)
+                options['builtin_options_type'] = operatorT.builtinOptionsType
 
             if hasattr(operatorT, 'customOptions') and operatorT.customOptions is not None:
                 options['custom_options'] = json.loads(
@@ -179,8 +228,9 @@ def create_flatbuffer_model(model):
                 tensor_index = subgraph.tensors.index(output_tensor)
                 operatorT.outputs.append(tensor_index)
             if operator.builtin_options:
-                operatorT.builtinOptionsType = operator.builtin_options.options_object_type
-                operatorT.builtinOptions = operator.builtin_options.options_object
+                operatorT.builtinOptionsType = operator.builtin_options_type
+                operatorT.builtinOptions = dict_to_builtin_options(operator.builtin_options_type, 
+                    operator.builtin_options)
             if operator.custom_options:
                 fbb = FlexbufferBuilder(operator.custom_options)
                 operatorT.customOptions = fbb.get_bytes()

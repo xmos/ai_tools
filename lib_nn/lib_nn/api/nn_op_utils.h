@@ -279,6 +279,38 @@ void fc_boggle_BSS(
 
 
 
+
+/**
+ * Compute the execution plan required by the `maxpool2d()` function.
+ * 
+ * `maxpool2d()` requires an execution plan (represented by a `nn_window_op_plan_t` struct)
+ * to do its job. This function computes that execution plan based on the behavior specified
+ * in `config`. The execution plan can be reused, so it need only be computed once at 
+ * initialization time.
+ * 
+ * The `x` and `y` inputs describe the input and output images which will be used
+ * when `avgpool2d() is called.
+ * 
+ * The `config` parameter describes the behavior of the operation, including pool window dimensions,
+ * stride lengths, input and output start positions, and output pixel counts. See the 
+ * `nn_maxpool_config_t` documentation for more details.
+ * 
+ * `maxpool2d()` requires that *every pixel* in the input and output images start at a word-aligned 
+ * address, which means the input and output channel counts must be a multiple of 4.
+ * 
+ * \param plan      Output. Parameters used by `maxpool2d()`
+ * \param x         Parameters of the image to be input to `maxpool2d()`
+ * \param y         Parameters of the iamge to be output from `maxpool2d()`
+ * \param config    `nn_maxpool_config_t` describing the behavior of the maxpool2d operation.
+ */
+void maxpool2d_init(
+    nn_window_op_plan_t* plan,
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const nn_window_op_config_t* config);
+
+
+
 /**
  * Initialize the parameters required by the `avgpool2d()` function.
  * 
@@ -291,7 +323,7 @@ void fc_boggle_BSS(
  * The `config` parameter describes which output pixel values will be written, and how they are mapped
  * from pixels in the input image.
  * 
- * This function requires that each pixel in both the input and output images start at a word-aligned 
+ * `avgpool2d()` requires that each pixel in both the input and output images start at a word-aligned 
  * address, thus the number of channels in the input and output images must both be multiples of 4 
  * (though the input and output images need not have the same number of channels).
  * 
@@ -402,35 +434,6 @@ void avgpool2d_global_init(
     uint32_t* scale,
     const uint32_t x_height,
     const uint32_t x_width);
-
-
-
-/**
- * Initialize the parameters required by the `maxpool2d()` function.
- * 
- * This function sets the values in `pool` to those needed by the `maxpool2d()` function. 
- * This need only be called once during initialization time.
- * 
- * The `x` and `y` inputs describe the input and output images resectively which will be used
- * when `maxpool2d() is called.
- * 
- * The `config` parameter describes the behavior of the operation, including pool window dimensions,
- * stride lengths, input and output start positions, and output pixel counts. See the 
- * `nn_maxpool_config_t` documentation for more details.
- * 
- * This function requires that *every pixel* in the input and output images start at a word-aligned 
- * address, which means the input and output channel counts must be a multiple of 4.
- * 
- * \param pool      Output. Parameters used by `maxpool2d()`
- * \param x         Parameters of the image to be input to `maxpool2d()`
- * \param y         Parameters of the iamge to be output from `maxpool2d()`
- * \param config    `nn_maxpool_config_t` describing the behavior of the maxpool2d operation.
- */
-void maxpool2d_init(
-    nn_window_op_plan_t* plan,
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const nn_window_op_config_t* config);
 
 /**
  * Initialize an instance of `nn_window_op_config_t` for a typical scenario.

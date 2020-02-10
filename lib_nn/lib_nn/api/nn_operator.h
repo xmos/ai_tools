@@ -371,70 +371,37 @@ static inline void conv2d_shallowin_deepout(
 
     
 
-
-
-
-
-
-
-
-
-
-/**  2D maxpool for "deep" input and output tensors.
- *
- *  Pool size is 2 x 2, stride is 2 in both dimensions. Number of input channels
- *  must be divisible by 32.
- *
- *  For each 2 x 2 block of input pixels (tiled across the input image), this function
- *  reduces that block to a single pixel, where each channel is handled independently.
- *  The value selected for the output channel is the maximum among the 4 values for that
- *  channel in the input block.
- *
- *  The shape of `X` is (height, width, C_in), with a standard image data layout.
- *  
- *  The shape of `Y` is (height/2, width/2, C_in), with a standard image data layout.
- *
- *  \code
- *      Y[i][j][c] = MAX(X[2*i][2*j][c], X[2*i+1][2*j][c], X[2*i][2*j+1][c], X[2*i+1][2*j+1][c])
- *  \endcode
- *
- *  \param  X       Input data tensor.
- *  \param  Y       Output data tensor. Updated by function.
- *  \param  height  Input tensor/image height, must be even.
- *  \param  width   Input tensor/image width, must be even.
- *  \param  C_in    Number of input channels, must be divisible by 32.
- */
-static inline void maxpool2d_deep(
-    const int8_t* X, 
-    int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t C_in);
-
     
-/**  2D maxpool for "deep" input and output tensors.
+/**  2D maxpool for an image
  *
- *  Pool size is 2 x 2, stride is 2 in both dimensions. Number of input channels
- *  must be divisible by 32.
+ * This function requires an execution plan (`plan`) in order to do its work. An execution plan
+ * can be generated using the `maxpool2d_init()` function. 
+ * 
+ * Max pooling 2D uses a moving window which slides across the input image, and for each position
+ * in the input window an output is computed. The specific parameters of the window (including its
+ * dimensions and stride lengths), as well as the output paramters (such as the region of the 
+ * output tensor to be written) are specified in a `nn_window_op_config_t` struct which is provided
+ * to `maxpool2d_init()`.
+ * 
+ * For a given input window location, this function finds the maximum value inside the input window
+ * for each channel (where channels are completely independent of one another), and writes those
+ * maxima to the output image.
  *
- *  For each 2 x 2 block of input pixels (tiled across the input image), this function
- *  reduces that block to a single pixel, where each channel is handled independently.
- *  The value selected for the output channel is the maximum among the 4 values for that
- *  channel in the input block.
- *
- *  The shape of `X` is (height, width, C_in), with a standard image data layout.
+ * The shape of the `X` input tensor must be `(x->height, x->width, x->channels)`, where `x` is the
+ * same `nn_image_params_t` struct passed to `maxpool2d_init()` when `plan` was computed.
  *  
- *  The shape of `Y` is (height/2, width/2, C_in), with a standard image data layout.
- *
- *  \code
- *      Y[i][j][c] = MAX(X[2*i][2*j][c], X[2*i+1][2*j][c], X[2*i][2*j+1][c], X[2*i+1][2*j+1][c])
- *  \endcode
+ * The shape of the `Y` output tensor must be `(y->height, y->width, y->channels)`, where `y` is the
+ * same `nn_image_params_t` struct passed to `maxpool2d_init()` when `plan` was computed.
+ * 
+ * \param Y     The output image tensor.
+ * \param X     The input image tensor.
+ * \param plan  The execution plan.
  *
  */
-// static inline void maxpool2d(
-//     int8_t* Y,
-//     const int8_t* X, 
-//     const nn_maxpool_params_t* plan);
+static inline void maxpool2d(
+    int8_t* Y,
+    const int8_t* X, 
+    const nn_window_op_plan_t* plan);
 
 
 /** 2D average pooling for an image.

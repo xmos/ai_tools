@@ -89,40 +89,21 @@ static inline void conv2d_shallowin_deepout(
 }
 
 
-
-static inline void maxpool2d_deep(
-    const int8_t* X, 
+static inline void maxpool2d(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t C_in)
+    const int8_t* X, 
+    const nn_window_op_plan_t* plan)
 {
-#if defined(__XS3A__) && (USE_ASM_maxpool2d_deep)
+#if defined(__XS3A__) && (USE_ASM_maxpool2d)
 
-    maxpool2d_deep_asm(X, Y, height, width, C_in);
+    maxpool2d_asm(Y, X, plan);
 
 #else
 
-    maxpool2d_deep_c(X, Y, height, width, C_in);
+    maxpool2d_c(Y, X, plan);
 
 #endif
 }
-
-// static inline void maxpool2d(
-//     int8_t* Y,
-//     const int8_t* X, 
-//     const nn_window_op_plan_t* plan)
-// {
-// #if defined(__XS3A__) && (USE_ASM_maxpool2d)
-
-//     maxpool2d_asm(Y, X, plan);
-
-// #else
-
-//     maxpool2d_c(Y, X, plan);
-
-// #endif
-// }
 
 
 

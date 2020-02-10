@@ -77,15 +77,6 @@ void fc_deepin_shallowout_8_asm(
     const int16_t* scales);
 
 
-// #ifndef USE_ASM_maxpool2d_deep
-// #define USE_ASM_maxpool2d_deep    (1)
-// #endif
-// void maxpool2d_deep_asm(
-//     const int8_t* X, 
-//     int8_t* Y,
-//     const int32_t height, 
-//     const int32_t width,
-//     const int32_t C_in);
 
 #ifndef USE_ASM_maxpool2d
 #define USE_ASM_maxpool2d       (1)

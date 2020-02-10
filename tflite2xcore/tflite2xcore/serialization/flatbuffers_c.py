@@ -15,24 +15,6 @@ else:
 
 lib = ctypes.cdll.LoadLibrary(shared_lib)
 
-class FlatbufferIO:
-    def __init__(self, data=None):
-        lib.read_flatbuffer.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
-        lib.read_flatbuffer.restype = ctypes.c_size_t
-
-        lib.write_flatbuffer.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
-        lib.write_flatbuffer.restype = ctypes.c_size_t
-
-    def read_flatbuffer(self, schema, fbs, size=100000000):
-        buffer = ctypes.create_string_buffer(size)
-        actual_size = lib.read_flatbuffer(schema.encode('ascii'), fbs.encode('ascii'), buffer)
-
-        return buffer[0:actual_size]
-
-    def write_flatbuffer(self, schema, buffer, fbs):
-        actual_size = lib.write_flatbuffer(schema.encode('ascii'), buffer, fbs.encode('ascii'))
-        return actual_size
-
 class FlexbufferBuilder:
     def __init__(self, data=None):
         lib.new_builder.restype = ctypes.c_void_p

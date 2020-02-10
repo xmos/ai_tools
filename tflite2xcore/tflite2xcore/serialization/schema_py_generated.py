@@ -4298,7 +4298,7 @@ class QuantizationParametersT(object):
         self.max = None  # type: List[float]
         self.scale = None  # type: List[float]
         self.zeroPoint = None  # type: List[int]
-        self.detailsType = None  # type: int
+        self.detailsType = 0  # type: int
         self.details = None  # type: Union[None, CustomQuantizationT]
         self.quantizedDimension = 0  # type: int
 

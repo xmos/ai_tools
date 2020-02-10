@@ -3,6 +3,7 @@
 
 import sys
 import os
+import re
 import subprocess
 import argparse
 import xml.etree.ElementTree as ET
@@ -11,20 +12,14 @@ XSIM_TRACE_FILENAME = 'xsim_trace.out'
 XSIM_TRACE_START_COLUMN = 32
 
 KNOWN_OPERATOR_FUNCTIONS = [
-    'fc_deepin_shallowout_16_asm',
-    'fc_deepin_shallowout_16_c',
-    'conv2d_deepin_deepout_init',
-    'conv2d_deepin_deepout_block_asm',
-    'conv2d_deepin_deepout_block_c',
-    'conv2d_shallowin_deepout_init',
-    'conv2d_shallowin_deepout_block_asm',
-    'conv2d_shallowin_deepout_block_c',
-    'maxpool2d_deep_asm',
-    'maxpool2d_deep_c',
-    'avgpool2d_deep_asm',
-    'avgpool2d_deep_c',
-    'argmax_16_asm',
-    'argmax_16_c'
+    'xcore.+conv.+Eval_SIDO',
+    'xcore.+conv.+Prepare_SIDO',
+    'xcore.+conv.+Eval_DIDO',
+    'xcore.+conv.+Prepare_DIDO',
+    'xcore.+fully_connected.+Eval_AOI',
+    'xcore.+arg_max.+Eval_16',
+    'xcore.+max_pool.+Eval',
+    'xcore.+avg_pool.+Eval'
 ]
 
 def load_config(config_filename):
@@ -84,7 +79,7 @@ def xsim_bench(args):
                 index_plus = line.find('+', XSIM_TRACE_START_COLUMN)
                 trace_function = line[XSIM_TRACE_START_COLUMN:index_plus].strip()
 
-                if trace_function in trace_functions:
+                if any(re.search(regex, trace_function) for regex in trace_functions):
                     index_colon = line.find(':', index_plus)
                     index_whitespace = line.find(' ', index_colon+2)
 

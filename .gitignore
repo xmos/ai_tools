@@ -2,7 +2,7 @@
 **/.vscode/
 
 # python cruft
-**/.pyc
+**/*.pyc
 **/__pycache__/*
 .venv/*
 **/.ipynb_checkpoints/*
@@ -15,6 +15,9 @@ ai_tools_gpu_venv/*
 _build
 **/.build/
 *.o
+
+# test cruft
+tests/data
 
 # MacOS cruft
 .DS_Store

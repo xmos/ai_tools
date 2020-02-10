@@ -7,12 +7,13 @@ import numpy as np
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
+import op_test_models_common as common
 
 DEFAULT_OUTPUT_DIM = 10
 DEFAULT_INPUT_DIM = 32
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_shallowout_final').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_anyout').resolve()
 
 
 # Prepare data function
@@ -57,9 +58,8 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
             'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
 
 
-# Class for the model
-class FcDeepinShallowoutFinal(KerasModel):
-    def build(self, input_dim, output_dim):  # add keyboard optimizer, loss and metrics???
+class FcDeepinAnyout(KerasModel):
+    def build(self, input_dim, output_dim, *, bias_init, weight_init):
         super().build()
 
         # Building
@@ -67,7 +67,9 @@ class FcDeepinShallowoutFinal(KerasModel):
             name=self.name,
             layers=[
                 tf.keras.layers.Flatten(input_shape=(input_dim, 1, 1)),
-                tf.keras.layers.Dense(output_dim, activation='softmax')
+                tf.keras.layers.Dense(output_dim, activation='softmax',
+                                      bias_initializer=bias_init,
+                                      kernel_initializer=weight_init)
             ]
         )
         # Compilation
@@ -102,17 +104,26 @@ class FcDeepinShallowoutFinal(KerasModel):
         self.data['quant'] = self.data['x_train']
 
     def train(self):
-        super().train(batch_size=128, epochs=5*(self.output_dim-1))  # BS and EPOCHS
+        super().train(batch_size=128, epochs=5*(self.output_dim-1))
+
+    def to_tf_stripped(self):
+        super().to_tf_stripped(remove_softmax=True)
+
+    def to_tf_xcore(self):
+        super().to_tf_xcore(remove_softmax=True)
 
 
 def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
-         train_new_model=False):
+         train_new_model=False,
+         bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT):
+
     # Instantiate model
-    test_model = FcDeepinShallowoutFinal('fc_deepin_shallowout_final', Path(path))
+    test_model = FcDeepinAnyout('fc_deepin_anyout', Path(path))
     if train_new_model:
         # Build model and compile
-        test_model.build(input_dim, output_dim)
+        test_model.build(input_dim, output_dim,
+                         bias_init=bias_init, weight_init=weight_init)
         # Prepare training data
         test_model.prep_data()
         # Train model
@@ -136,7 +147,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        'path', nargs='?', default=DEFAULT_PATH,
+        '-path', nargs='?', default=DEFAULT_PATH,
         help='Path to a directory where models and data will be saved in subdirectories.')
     parser.add_argument(
         '--use_gpu', action='store_true', default=False,
@@ -153,11 +164,16 @@ if __name__ == "__main__":
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
+    parser = common.parser_add_initializers(parser)
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
+    
+    initializers = common.initializer_args_handler(args)
 
     main(path=args.path,
          input_dim=args.input_dim, output_dim=args.output_dim,
-         train_new_model=args.train_model)
+         train_new_model=args.train_model,
+         bias_init=initializers['bias_init'],
+         weight_init=initializers['weight_init'])

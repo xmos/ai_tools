@@ -7,7 +7,7 @@ import tempfile
 import tensorflow as tf
 import numpy as np
 from abc import ABC, abstractmethod
-import tflite2xcore_conv as xcore_conv
+import tflite2xcore.converter as xcore_conv
 from tflite2xcore.model_generation import utils
 from tflite2xcore import read_flatbuffer, write_flatbuffer, tflite_visualize
 from tflite2xcore.xcore_model import TensorType
@@ -97,7 +97,6 @@ class Model(ABC):
     @abstractmethod
     def train(self):
         '''
-        GPU and CPU usage should be differentiated.
         Fit with hyperparams and if we want to save
         original model and training data,
         that should be done here.
@@ -115,33 +114,14 @@ class Model(ABC):
 
     @abstractmethod
     def to_tf_float(self):  # polymorphism affects here
-        '''
-        Create converter from original model to TensorFlow Lite Float.
-        Converter stored with the key 'model_float' in self.converters.
-        Model is saved to disk and the path of the model is
-        stored in self.models with the key 'model_float'.
-        '''
         assert self.core_model, "core model does not exist"
 
     @abstractmethod
     def to_tf_quant(self):
-        '''
-        Create converter from original model to TensorFlow Lite Float.
-        Converter stored with the key 'model_quant' in self.converters.
-        Model is saved to disk and the path of the model is
-        stored in self.models with the key 'model_quant'.
-        '''
         assert self.core_model, "core model has not been initialized"
         assert 'quant' in self.data, "representative dataset has not been prepared"
 
     def to_tf_stripped(self, **converter_args):
-        '''
-        Create converter from original model
-        to TensorFlow Lite Float.
-        Converter stored with the key 'model_stripped' in
-        self.converters. Also the path of the model is saved
-        using this function.
-        '''
         assert 'model_quant' in self.models
         model = read_flatbuffer(str(self.models['model_quant']))
         xcore_conv.strip_model(model, **converter_args)
@@ -149,18 +129,11 @@ class Model(ABC):
         write_flatbuffer(model, str(self.models['model_stripped']))
 
     def to_tf_xcore(self, **converter_args):
-        '''
-        Create converter from original model
-        to TensorFlow Lite Float.
-        Converter stored with the key 'model_xcore' in
-        self.converters. Also the path of the model is saved
-        using this function.
-        '''
-        assert 'model_stripped' in self.models
+        assert 'model_quant' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
-        xcore_conv.main(str(self.models['model_stripped']),
-                        str(self.models['model_xcore']),
-                        **converter_args)
+        xcore_conv.convert(str(self.models['model_quant']),
+                           str(self.models['model_xcore']),
+                           **converter_args)
 
     def _save_visualization(self, base_file_name):
         assert str(base_file_name) in self.models, 'Model need to exist to prepare visualization.'
@@ -261,14 +234,9 @@ class Model(ABC):
         # save data
         self._save_data_dict({'x_test': x_test}, base_file_name='model_xcore')
 
-    def populate_converters(self):  # Actually, data it's being saved here too
+    def populate_converters(self, *, xcore_num_threads=None):
+        # Actually, data it's being saved here too
         # TODO: find a better name for this
-        '''
-        Create all the converters in a row in the logical order.
-        The only thing needed is the presence
-        of the original model in the models dictionary:
-        self.core_model must exist.
-        '''
         self.to_tf_float()
         self.save_tf_float_data()
         self._save_visualization('model_float')
@@ -281,7 +249,10 @@ class Model(ABC):
         self.save_tf_stripped_data()
         self._save_visualization('model_stripped')
 
-        self.to_tf_xcore()
+        if xcore_num_threads:
+            self.to_tf_xcore(num_threads=xcore_num_threads)
+        else:
+            self.to_tf_xcore()
         self.save_tf_xcore_data()
         self._save_visualization('model_xcore')
 

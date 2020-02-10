@@ -14,6 +14,7 @@ from tflite2xcore.graph_transformer import (
 )
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.parallelization import DIDOConv2DPlanner
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
@@ -132,8 +133,7 @@ class AddArgMax16OutputPass(OutputTensorMatchingPass):
         dim_tensor.buffer.data = np.int32([1])
 
 
-# TODO: write (at least regression) tests for this class
-class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
+class QuantizedOperatorMatchingPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
         self._op = None
@@ -165,6 +165,15 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
     def _matching_output_type(self):
         return TensorType.INT8
 
+    def match(self, op):
+        if op.operator_code.code == self.matching_opcode:
+            with self.using(op):
+                return (self._input.type == self._matching_input_type
+                        and self._output.type == self._matching_output_type)
+
+
+# TODO: write (at least regression) tests for this class
+class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
     @property
     @abstractmethod
     def new_opcode(self):
@@ -175,12 +184,6 @@ class ReplaceQuantizedOperatorPass(OperatorMatchingPass):
             self.new_opcode, inputs=op.inputs, outputs=op.outputs)
         new_op.subgraph.replace_operator(op, new_op)
         return new_op
-
-    def match(self, op):
-        if op.operator_code.code == self.matching_opcode:
-            with self.using(op):
-                return (self._input.type == self._matching_input_type
-                        and self._output.type == self._matching_output_type)
 
 
 class ReplaceArgMax16Pass(ReplaceQuantizedOperatorPass):
@@ -274,17 +277,19 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         if len(scale) == 1:
             rshift = np.repeat(rshift, bias_size)
             scale = np.repeat(scale, bias_size)
-        return np.int16(rshift), np.int16(scale)
-
-    def add_shift_scale(self, op):
-        # calculate right shift/scale
-        with self.using(op):
-            rshift, scale = self._shift_scale
+        rshift, scale = np.int16(rshift), np.int16(scale)
         if rshift.shape != scale.shape:
             raise ValueError(f"Shift and scale shapes don't match: {rshift.shape} != {scale.shape}")
+        return rshift, scale
 
-        # add tensor and buffer for rshift/scale
-        shift_scale_arr = np.hstack([rshift, scale]).reshape((2, -1))
+    @property
+    @abstractmethod
+    def _shift_scale_arr(self):
+        pass
+
+    def add_shift_scale(self, op):
+        with self.using(op):
+            shift_scale_arr = self._shift_scale_arr
         shift_scale_tensor = op.subgraph.create_tensor(
             f"{op.name}/shift_scale",
             TensorType.INT16,
@@ -312,6 +317,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         return new_op
 
 
+# TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinAnyoutFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     @property
     def matching_opcode(self):
@@ -338,23 +344,15 @@ class ReplaceDeepinAnyoutFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
             self._biases.name = f"{op.name}/biases"
             self._biases.quantization['details_type'] = 'CustomQuantization'
 
-
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnectedPass):
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._output in op.subgraph.outputs
-
-        return False
-
     @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout_final)
+    def _shift_scale_arr(self):
+        # calculate right shift/scale
+        rshift, scale = self._shift_scale
+
+        # reshape into appropriate array
+        return np.hstack([rshift, scale]).reshape((2, -1))
 
     def mutate_output(self, op):
-        # NOTE: when trying to generalize this pass to non-output operators,
-        #       keep in mind that this mutation is what can affect other operators
         with self.using(op):
             self._output.type = TensorType.INT16
             self._output.name = f"{op.name}/output"
@@ -366,6 +364,24 @@ class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnec
                 'details_type': "CustomQuantization",
                 'quantized_dimension': 0
             }
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout)
+
+    @abstractmethod
+    def mutate(self, op):
+        # NOTE: Overload this in subclasses, and call mutate_output appropriately
+        return super().mutate(op)
+
+
+class ReplaceDeepinAnyoutFullyConnectedOutputPass(ReplaceDeepinAnyoutFullyConnectedPass):
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return self._output in op.subgraph.outputs
+
+        return False
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
@@ -383,9 +399,29 @@ class ReplaceDeepinAnyoutFullyConnectedIntermediatePass(ReplaceDeepinAnyoutFully
 
         return False
 
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout_intermediate)
+    def add_requantize(self, op):
+        # rename original output tensor
+        with self.using(op):
+            self._output.name = f"{op.name}/output_requant"
+        # create intermediate tensor
+        with self.using(op):
+            intermediate = op.subgraph.create_tensor(
+                f"{op.name}/intermediate", self._output.type, self._output.shape,
+                quantization=self._output.quantization
+            )
+        # create new op, insert after original op, rewire inputs/outputs
+        new_op = op.subgraph.create_operator(
+            OperatorCode(XCOREOpCodes.XC_requantize_16_to_8),
+            inputs=[intermediate], outputs=op.outputs)
+        op.outputs = [intermediate]
+        op.subgraph.insert_operator(op, new_op, after=True)
+
+    def mutate(self, op):
+        # NOTE: the order of these mutations is strict
+        new_op = super().mutate(op)
+        self.add_requantize(new_op)
+        self.mutate_output(new_op)
+        return new_op
 
 
 # TODO: write (at least regression) tests for this class
@@ -449,6 +485,17 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
             weight_quantization = self._weights.quantization
             for key in ['scale', 'zero_point']:
                 weight_quantization[key] = reorder_quant_params(weight_quantization[key])
+
+    @property
+    def _shift_scale_arr(self):
+        # calculate right shift/scale
+        rshift, scale = self._shift_scale
+
+        # reshape into appropriate array
+        new_shape = (-1, 16)
+        rshift = rshift.reshape(new_shape)  # pylint: disable=too-many-function-args
+        scale = scale.reshape(new_shape)  # pylint: disable=too-many-function-args
+        return np.stack([rshift, scale], axis=1)
 
     def mutate(self, op):
         new_op = super().mutate(op)
@@ -591,7 +638,7 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
         return super().mutate(op)
 
 
-class ReplaceDeepPooling2DPass(ReplaceQuantizedOperatorPass):
+class ReplacePooling2DPass(ReplaceQuantizedOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options
@@ -610,11 +657,20 @@ class ReplaceDeepPooling2DPass(ReplaceQuantizedOperatorPass):
     def _fused_activation(self):
         return self._op.builtin_options['fused_activation_function']
 
+
+class ReplaceDeepMaxPool2DPass(ReplacePooling2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.MAX_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_maxpool2d_deep)
+
     def match(self, op):
         if super().match(op):
             with self.using(op):
                 return (self._input.quantization == self._output.quantization
-                        and self._padding == 'VALID'
                         and self._strides == (2, 2)
                         and self._pool_size == (2, 2)
                         and self._fused_activation == 'NONE'
@@ -625,24 +681,108 @@ class ReplaceDeepPooling2DPass(ReplaceQuantizedOperatorPass):
         return False
 
 
-class ReplaceDeepMaxPool2DPass(ReplaceDeepPooling2DPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.MAX_POOL_2D
+class ReplaceAveragePool2DPass(ReplacePooling2DPass):
+    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=True):
+        super().__init__(priority)
+        self.safe_mode = safe_mode
+        if self.safe_mode:
+            self.superseding_pass = ReplaceAveragePool2D2x2Pass()
 
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_maxpool2d_deep)
-
-
-class ReplaceDeepAveragePool2DPass(ReplaceDeepPooling2DPass):
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.AVERAGE_POOL_2D
 
     @property
     def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_avgpool2d_deep)
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d)
+
+    def match(self, op):
+        if self.safe_mode and self.superseding_pass.match(op):
+            return False
+        if super().match(op):
+            with self.using(op):
+                return (self._input.quantization == self._output.quantization
+                        and self._fused_activation == 'NONE'
+                        and self._input.shape[3] % 4 == 0)
+
+        return False
+
+
+class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.MEAN
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d_global)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                reduction_dims = self._op.inputs[1].numpy
+                return (len(reduction_dims) == 2
+                        and np.all(reduction_dims == [1, 2])
+                        and self._input.shape[3] % 4 == 0)
+
+        return False
+
+    @property
+    def _bias_scale_shift(self):
+        num_pixels = self._input.shape[1] * self._input.shape[2]
+        rescaling = self._input.quantization['scale'][0] / self._output.quantization['scale'][0]
+        multiplier = rescaling / num_pixels
+
+        scale = np.round(multiplier * 2 ** (7 - np.ceil(np.log2(multiplier))))
+        shift = np.round(np.log2(scale / multiplier))
+        bias = np.round(
+            scale * (self._output.quantization['zero_point'][0] / multiplier
+                     - self._input.quantization['zero_point'][0] * num_pixels)
+        )
+
+        if shift > 24:
+            raise ValueError("Global Average Pool shift is greater than 24.")
+
+        return bias.astype(np.int32), scale.astype(np.int8), shift.astype(np.int16)
+
+    def mutate(self, op):
+        new_op = super().mutate(op)
+        subgraph = new_op.subgraph
+
+        with self.using(new_op):
+            # replace reduction_indices tensor with bias_scale_shift
+            subgraph.remove_tensor(new_op.inputs[1])
+            new_op.inputs[1] = subgraph.create_tensor(
+                f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7])
+            new_op.inputs[1].buffer.data = np.frombuffer(
+                b''.join(p.tostring() for p in self._bias_scale_shift),
+                dtype=np.int8
+            )
+
+        return new_op
+
+
+class ReplaceAveragePool2D2x2Pass(ReplacePooling2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.AVERAGE_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d_2x2)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (self._input.quantization == self._output.quantization
+                        and self._strides == (2, 2)
+                        and self._pool_size == (2, 2)
+                        and self._fused_activation == 'NONE'
+                        and self._input.shape[1] % 2 == 0
+                        and self._input.shape[2] % 2 == 0
+                        and self._input.shape[3] % 4 == 0)
+
+        return False
 
 
 class RemoveUnusedBuffersPass(ModelTransformationPass):
@@ -654,3 +794,35 @@ class RemoveUnusedBuffersPass(ModelTransformationPass):
             set(t.buffer for subgraph in model.subgraphs for t in subgraph.tensors)
             | set(m.buffer for m in model.metadata)
         )
+
+
+class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
+    def __init__(self, priority=PassPriority.PAR, *, num_threads=None, forced=False):
+        super().__init__(priority)
+        self.num_threads = num_threads or 1
+        assert isinstance(self.num_threads, int)
+        assert self.num_threads > 0
+        self.forced = forced
+
+    def run(self, *args, **kwargs):
+        if self.num_threads == 1:
+            logging.debug(f"Skipping {type(self).__name__} with num_threads={self.num_threads}")
+            return None
+        else:
+            return super().run(*args, **kwargs)
+
+    @property
+    def matching_opcode(self):
+        return XCOREOpCodes.XC_conv2d_deepin_deepout_relu
+
+    def match(self, op):
+        if super().match(op):
+            return 'par_plan' not in op.custom_options
+
+    def mutate(self, op):
+        with self.using(op):
+            _, height, width, _ = self._output.shape
+        planner = DIDOConv2DPlanner(
+            height, width, num_threads=self.num_threads, forced=self.forced)
+        plan = planner.find_optimal_plan()
+        op.add_custom_options(par_plan=[list(block) for block in plan.layout])

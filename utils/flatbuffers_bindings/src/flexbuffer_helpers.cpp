@@ -17,9 +17,12 @@ extern "C"
         return new flexbuffers::Builder();
     }
 
-    size_t builder_start_map(flexbuffers::Builder *fbb)
+    size_t builder_start_map(flexbuffers::Builder *fbb, const char* key=nullptr)
     {
-        return fbb->StartMap();
+        if (key)
+            return fbb->StartMap(key);
+        else
+            return fbb->StartMap();
     }
 
     size_t builder_end_map(flexbuffers::Builder *fbb, size_t size)
@@ -27,9 +30,12 @@ extern "C"
         return fbb->EndMap(size);
     }
 
-    size_t builder_start_vector(flexbuffers::Builder *fbb, const char* key)
+    size_t builder_start_vector(flexbuffers::Builder *fbb, const char* key=nullptr)
     {
-        return fbb->StartVector(key);
+        if (key)
+            return fbb->StartVector(key);
+        else
+            return fbb->StartVector();
     }
 
     size_t builder_end_vector(flexbuffers::Builder *fbb, size_t size, bool typed, bool fixed)

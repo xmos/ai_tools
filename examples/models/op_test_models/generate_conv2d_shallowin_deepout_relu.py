@@ -6,35 +6,49 @@ from pathlib import Path
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
+import op_test_models_common as common
 
-DEFAULT_INPUTS = 32
+
+DEFAULT_INPUTS = 3
 DEFAULT_OUTPUTS = 16
 DEFAULT_HEIGHT = 5
 DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = 'same'
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deepin_deepout_relu').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_shallowin_deepout_relu').resolve()
 
 
-class Conv2dDeepinDeepoutRelu(KerasModel):
-    def build(self, K_h, K_w, height, width, input_channels, output_channels, padding):
-        assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
-        assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
+class Conv2dShallowinDeepoutRelu(KerasModel):
+    def build(self, K_h, K_w, height, width, input_channels, output_channels,
+              *, padding, bias_init, weight_init):
+        assert input_channels <= 4, "Number of input channels must be at most 4"
+        assert K_w <= 8, "Kernel width must be at most 8"
+        assert output_channels % 16 == 0, "Number of output channels must be multiple of 16"
         assert K_h % 2 == 1, "kernel height must be odd"
         assert K_w % 2 == 1, "kernel width must be odd"
         super().build()
 
         # Building
-        self.core_model = tf.keras.Sequential(
-            name=self.name,
-            layers=[
-                tf.keras.layers.Conv2D(filters=output_channels,
-                                       kernel_size=(K_h, K_w),
-                                       padding=padding,
-                                       input_shape=(height, width, input_channels))
-            ]
-        )
+        try:
+            self.core_model = tf.keras.Sequential(
+                name=self.name,
+                layers=[
+                    tf.keras.layers.Conv2D(filters=output_channels,
+                                           kernel_size=(K_h, K_w),
+                                           padding=padding,
+                                           input_shape=(height, width, input_channels),
+                                           bias_initializer=bias_init,
+                                           kernel_initializer=weight_init)
+                ]
+            )
+        except ValueError as e:
+            if e.args[0].startswith("Negative dimension size caused by"):
+                raise ValueError(
+                    "Negative dimension size (Hint: if using 'valid' padding "
+                    "verify that the kernel is at least the size of input image)"
+                ) from e
+
         # Compilation
         self.core_model.compile(optimizer='adam',
                                 loss='sparse_categorical_crossentropy',
@@ -59,11 +73,13 @@ def main(path=DEFAULT_PATH, *,
          input_channels=DEFAULT_INPUTS, output_channels=DEFAULT_OUTPUTS,
          height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
          K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
-         padding=DEFAULT_PADDING):
+         padding=DEFAULT_PADDING,
+         bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT):
     # Instantiate model
-    test_model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', Path(path))
+    test_model = Conv2dShallowinDeepoutRelu('conv2d_shallowin_deepout_relu', Path(path))
     # Build model and compile
-    test_model.build(K_h, K_w, height, width, input_channels, output_channels, padding)
+    test_model.build(K_h, K_w, height, width, input_channels, output_channels,
+                     padding=padding, bias_init=bias_init, weight_init=weight_init)
     # Generate test data
     test_model.gen_test_data(height, width)
     # Save model
@@ -76,7 +92,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        'path', nargs='?', default=DEFAULT_PATH,
+        '-path', nargs='?', default=DEFAULT_PATH,
         help='Path to a directory where models and data will be saved in subdirectories.')
     parser.add_argument(
         '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
@@ -102,13 +118,18 @@ if __name__ == "__main__":
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
+    parser = common.parser_add_initializers(parser)
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
+    initializers = common.initializer_args_handler(args)
+
     main(path=args.path,
          input_channels=args.inputs, output_channels=args.outputs,
          K_h=args.kernel_height, K_w=args.kernel_width,
          height=args.height, width=args.width,
-         padding=args.padding)
+         padding=args.padding,
+         bias_init=initializers['bias_init'],
+         weight_init=initializers['weight_init'])

@@ -3,6 +3,7 @@ import os
 import json
 import re
 import enum
+import struct
 
 import flatbuffers
 import numpy as np
@@ -22,13 +23,16 @@ class ActivationFunctionType(enum.Enum):
     TANH = 4
     SIGN_BIT = 5
 
-# create enum at runtime from BuiltinOptions class in schema_py_generated
+class QuantizationDetails(enum.Enum):
+    NONE = 0
+    CustomQuantization = 1
+
+# create enum at runtime for BuiltinOptions class in schema_py_generated
 #    this is used for convenience
 BuiltinOptionsEnum = enum.Enum(
-    'BuiltinOptionsEnum', 
+    'BuiltinOptionsEnum',
     {k:v for k, v in vars(BuiltinOptions).items() if not k.startswith("__")}
 )
-
 
 def snake_to_camel(word):
     output = ''.join(x.capitalize() or '_' for x in word.split('_'))
@@ -104,16 +108,20 @@ def create_xcore_model(modelT):
                 quantization = {}
                 for k, v in vars(tensorT.quantization).items():
                     if v is not None:
-                        if isinstance(v, np.ndarray):
+                        if k == 'details':
+                            v = QuantizationDetails(v).name
+                        elif isinstance(v, np.ndarray):
                             v = list(v)
+                            
                         quantization[camel_to_snake(k)] = v
+
             else:
                 quantization = None
 
             tensor = subgraph.create_tensor(
                 name=tensorT.name.decode('utf-8'),
                 type_=TensorType(tensorT.type),
-                shape=(tensorT.shape if hasattr(tensorT, 'shape') else []),
+                shape=(tensorT.shape if tensorT.shape is not None  else []),
                 buffer=buffers[tensorT.buffer],
                 quantization=quantization,
                 isinput=is_input,
@@ -152,7 +160,8 @@ def create_flatbuffer_model(model):
     modelT.buffers = []
     for buffer in model.buffers:
         bufferT = BufferT()
-        bufferT.data = buffer.data
+        if len(buffer.data) > 0:
+            bufferT.data = buffer.data
         modelT.buffers.append(bufferT)
 
     # create metadata
@@ -211,7 +220,10 @@ def create_flatbuffer_model(model):
                 if 'scale' in tensor.quantization:
                     quantizationT.scale = tensor.quantization['scale']
                 if 'details_type' in tensor.quantization:
-                    quantizationT.detailsType = tensor.quantization['details_type']
+                    if isinstance(tensor.quantization['details_type'], str):
+                        quantizationT.detailsType = QuantizationDetails[tensor.quantization['details_type']].value
+                    else:
+                        quantizationT.detailsType = tensor.quantization['details_type']
                 if 'details' in tensor.quantization:
                     quantizationT.details = tensor.quantization['details']
                 if 'quantized_dimension' in tensor.quantization:
@@ -260,10 +272,9 @@ def write_flatbuffer(model, filename):
     modelT = create_flatbuffer_model(model)
     builder = flatbuffers.Builder(1024)
     model_offset = modelT.Pack(builder)
-    builder.Finish(model_offset)
 
-    f = builder.Output()
-    print(len(f))
+    builder.Finish(model_offset, file_identifier=b'TFL3')
+
     with open(filename, 'wb') as fd:
         return fd.write(builder.Output())
 

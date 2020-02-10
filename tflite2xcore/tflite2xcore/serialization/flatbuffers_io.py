@@ -13,15 +13,20 @@ from .flatbuffers_c import FlexbufferBuilder, FlexbufferParser
 from ..xcore_model import XCOREModel, TensorType
 from ..operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
 
-# create enums from BuiltinOptions and ActivationFunctionType classes
-#    these are used for convenience
+
+class ActivationFunctionType(enum.Enum):
+    NONE = 0
+    RELU = 1
+    RELU_N1_TO_1 = 2
+    RELU6 = 3
+    TANH = 4
+    SIGN_BIT = 5
+
+# create enum at runtime from BuiltinOptions class in schema_py_generated
+#    this is used for convenience
 BuiltinOptionsEnum = enum.Enum(
     'BuiltinOptionsEnum', 
     {k:v for k, v in vars(BuiltinOptions).items() if not k.startswith("__")}
-)
-ActivationFunctionTypeEnum = enum.Enum(
-    'ActivationFunctionTypeEnum', 
-    {k:v for k, v in vars(ActivationFunctionType).items() if not k.startswith("__")}
 )
 
 
@@ -40,7 +45,7 @@ def builtin_options_to_dict(builtin_options):
     if 'fused_activation_function' in dict_:
         # convert enum value to string
         dict_['fused_activation_function'] = \
-            ActivationFunctionTypeEnum(dict_['fused_activation_function']).name
+            ActivationFunctionType(dict_['fused_activation_function']).name
 
     return dict_
 
@@ -54,7 +59,7 @@ def dict_to_builtin_options(type_, dict_):
     for k, v in dict_.items():
         if k == 'fused_activation_function':
             # convert string to enum
-            v = ActivationFunctionTypeEnum[v].value
+            v = ActivationFunctionType[v].value
 
         setattr(builtin_options, snake_to_camel(k), v)
 
@@ -77,6 +82,7 @@ def create_xcore_model(modelT):
     # create operator codes lookup
     operator_codes_lut = []
     for operator_codeT in modelT.operatorCodes:
+        print('loading op code:', operator_codeT.builtinCode)
         if operator_codeT.builtinCode == BuiltinOpCodes.CUSTOM.value:
             opcode = XCOREOpCodes(operator_codeT.customCode.decode('utf-8'))
         else:
@@ -162,6 +168,7 @@ def create_flatbuffer_model(model):
     modelT.operatorCodes = []
     for operator_code in model.operator_codes:
         operatorCodeT = OperatorCodeT()
+        print('saving op code:', operator_code.builtin_code.value)
         if operator_code.builtin_code:
             operatorCodeT.builtinCode = operator_code.builtin_code.value
         if operator_code.custom_code:

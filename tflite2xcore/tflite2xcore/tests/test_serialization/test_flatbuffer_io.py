@@ -68,6 +68,7 @@ def test_write_flatbuffer():
     os.remove(tmp_file)
 
     assert bytes_written == bytes_expected
+    assert(False)
 
 
 def test_custom_options():

@@ -40,20 +40,16 @@ void maxpool2d_deep_c(
     const int32_t width,
     const int32_t C_in);
 
+// void maxpool2d_c(
+//     int8_t* Y,
+//     const int8_t* X, 
+//     const nn_window_op_plan_t* plan);
 
-
-
-void avgpool2d_2x2_c(
-    int8_t* Y,
-    const int8_t* X, 
-    const uint32_t x_height, 
-    const uint32_t x_width,
-    const uint32_t x_chans);
 
 void avgpool2d_c(
     int8_t* Y,
     const int8_t* X, 
-    const nn_avgpool_params_t* params);
+    const nn_avgpool2d_plan_t* plan);
 
 void avgpool2d_global_c(
     int8_t* Y,
@@ -61,6 +57,7 @@ void avgpool2d_global_c(
     const uint32_t x_height, 
     const uint32_t x_width,
     const uint32_t x_chans,
+    const int32_t  bias,
     const uint32_t shift,
     const uint32_t scale);
 

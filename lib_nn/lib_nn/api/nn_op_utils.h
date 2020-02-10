@@ -29,7 +29,6 @@ extern "C" {
  */
 #define IMG_ADDRESS_VECT(IMG, DELTA_ROWS, DELTA_COLS, DELTA_CHANS)      (((DELTA_ROWS) * (IMG)->width * (IMG)->channels) + ((DELTA_COLS) * (IMG)->channels) + (DELTA_CHANS))
 
-
 /** Get the number of output channel groups given the number of output channels.
  * 
  * This macro gives the minimum number of groups required to handle `CHANNELS` channels, which
@@ -283,37 +282,105 @@ void fc_boggle_BSS(
 /**
  * Initialize the parameters required by the `avgpool2d()` function.
  * 
- * This function sets the values in `pool` to those needed by the
- * `avgpool2d()` function. This need only be called once during initialization
- * time.
+ * This function sets the values in `pool` to those needed by the `avgpool2d()` function. 
+ * This need only be called once during initialization time.
  * 
- * The `x` and `y` inputs describe the input and output images resectively which will be used
+ * The `x` and `y` inputs describe the input and output images which will be used
  * when `avgpool2d() is called.
  * 
- * The `window` parameter describes the way output pixels are derived from input pixels, including
- * the window size, strides and starting offsets.
+ * The `config` parameter describes which output pixel values will be written, and how they are mapped
+ * from pixels in the input image.
  * 
- * This function requies that `x->channels` == `y->channels`. Further, *every pixel* in the input
- * and output images must start at a word-aligned address, which means `x->channels` must be a
- * multiple of 4.
+ * This function requires that each pixel in both the input and output images start at a word-aligned 
+ * address, thus the number of channels in the input and output images must both be multiples of 4 
+ * (though the input and output images need not have the same number of channels).
+ * 
+ * NOTE: See the documentation for `nn_window_op_config_t` for details about what its fields mean.
  * 
  * NOTE: If this average pool describes the standard 2x2 average pool with a 2x2 stride across the entire
  *       input image, then the `avgpool2d_2x2()` function should be used instead, which is optimized 
- *       for that common scenario.
+ *       for that common scenario. (In that case, `avgpool2d_2x2_init()` should be used instead of this)
  * 
  * NOTE: If this average pool describes a global average pool, then the `avgpool2d_global` function
- *       should be used instead, which is optimized for that scenario.
+ *       should be used instead, which is optimized for that scenario. (In that case, `avgpool2d_global_init()`
+ *       should be used instead of this.
  * 
  * \param pool      Output. Parameters used by `avgpool2d()`
  * \param x         Parameters of the image to be input to `avgpool2d()`
- * \param y         Parameters of the iamge to be output from `avgpool2d()`
- * \param window    Windowing parameters for the operation.
+ * \param y         Parameters of the image to be output from `avgpool2d()`
+ * \param config    Configuration struct specifying desired behavior.
  */
 void avgpool2d_init(
-    nn_avgpool_params_t* pool,
+    nn_avgpool2d_plan_t* pool,
     const nn_image_params_t* x,
     const nn_image_params_t* y,
-    const nn_window_map_t* window);
+    const nn_window_op_config_t* config);
+
+
+
+/**
+ * Initialize the supplied `nn_avgpool2d_plan_t` for use with `avgpool2d_2x2()`.
+ * 
+ * `avgpool2d_2x2_asm()` is an optimized implementation of the `avgpool2d()` function for when the pooling 
+ * window dimensions are 2x2 and both horizontal and vertical strides are 2.
+ * 
+ * The `x` and `y` parameters describe the shape of the input (`X[][][]`) and output (`Y[][][]`) images 
+ * respectively. When `avgpool2d_2x2_asm()` is called, input and output tensors must have the shapes specified 
+ * in `x` and `y`.
+ * 
+ * The `x_start`, `y_start`, `out_rows`, `out_cols` and `out_chans` parameters collectively define sub-tensors 
+ * in the input and output images, and can be used to bound the output to only a region of the output image. 
+ * This may be useful for parallelization.
+ * 
+ * More specifically, the subtensor in the input starts at `X[x_start->rows][x_start->cols][x_start->channels]`, 
+ * and extends to (including) `X[x_start->rows + 2*out_rows - 1][x_start->cols + 2*out_cols - 1][x_start->channels + out_chans - 1]`,
+ * and the subtensor in the output starts at `Y[y_start->rows][y_start->cols][y_start->channels]` and extends to 
+ * (including) `Y[y_start->rows + out_rows - 1][y_start->cols + out_cols -1][y_start->channels + out_chans -1]`.
+ * 
+ * The operation performed is:
+ * \code
+ *      Y[y_start->rows + i][y_start->cols + j][y_start->channels + k] <- 
+ *         (X[x_start->rows + 2*i    ][x_start->cols + 2*j    ][x_start->channels + k]
+ *        + X[x_start->rows + 2*i    ][x_start->cols + 2*j + 1][x_start->channels + k]
+ *        + X[x_start->rows + 2*i + 1][x_start->cols + 2*j    ][x_start->channels + k]
+ *        + X[x_start->rows + 2*i + 1][x_start->cols + 2*j + 1][x_start->channels + k]
+ *        + 2) >> 2;
+ *  \endcode
+ *          where `0 <= i < out_rows`,  `0 <= j < out_cols`, and  `0 <= k < out_chans`
+ * 
+ * To consume an entire input image with this operator, use (given the input image parameters `x`):
+ * \code
+ *  x_start->rows = x_start->cols = x_start->channels = 0;
+ *  y_start->rows = y_start->cols = y_start->channels = 0;
+ *  out_rows = y->height = x->height/2;
+ *  out_cols = y->width = x->width/2;
+ *  out_chans = y->channels = x->channels;
+ * \endcode
+ * 
+ * NOTE: A sub-tensor does *not* imply a contiguous region of memory. It is only contiguous (and rectangular)
+ *       in the conceptual 3-dimensional tensor.
+ * 
+ * NOTE: The `plan` generated by `avgpool2d_2x2_init()` is compatible with both `avgpool2d()`, but plans 
+ *       generated by `avgpool2d_init()` are not necessarily compatible with `avgpool2d_2x2()`.
+ * 
+ * \param plan      `nn_avgpool2d_plan_t` struct to be initialized.
+ * \param x         Parameters of the image to be input to `avgpool2d_2x2()`
+ * \param y         Parameters of the image to be output from `avgpool2d_2x2()`
+ * \param x_start   Initial position for the window, relative to the input image
+ * \param y_start   Initial position for output, relative to the output image
+ * \param out_rows  The number of rows to output
+ * \param out_cols  The number of columns to output
+ * \param out_chans The number of channels to output
+ */
+void avgpool2d_2x2_init(
+    nn_avgpool2d_plan_t* plan,
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const nn_image_vect_t* x_start,
+    const nn_image_vect_t* y_start,
+    const unsigned out_rows,
+    const unsigned out_cols,
+    const unsigned out_chans);
 
 
 /**
@@ -336,6 +403,71 @@ void avgpool2d_global_init(
     const uint32_t x_height,
     const uint32_t x_width);
 
+
+
+/**
+ * Initialize the parameters required by the `maxpool2d()` function.
+ * 
+ * This function sets the values in `pool` to those needed by the `maxpool2d()` function. 
+ * This need only be called once during initialization time.
+ * 
+ * The `x` and `y` inputs describe the input and output images resectively which will be used
+ * when `maxpool2d() is called.
+ * 
+ * The `config` parameter describes the behavior of the operation, including pool window dimensions,
+ * stride lengths, input and output start positions, and output pixel counts. See the 
+ * `nn_maxpool_config_t` documentation for more details.
+ * 
+ * This function requires that *every pixel* in the input and output images start at a word-aligned 
+ * address, which means the input and output channel counts must be a multiple of 4.
+ * 
+ * \param pool      Output. Parameters used by `maxpool2d()`
+ * \param x         Parameters of the image to be input to `maxpool2d()`
+ * \param y         Parameters of the iamge to be output from `maxpool2d()`
+ * \param config    `nn_maxpool_config_t` describing the behavior of the maxpool2d operation.
+ */
+void maxpool2d_init(
+    nn_window_op_plan_t* plan,
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const nn_window_op_config_t* config);
+
+/**
+ * Initialize an instance of `nn_window_op_config_t` for a typical scenario.
+ * 
+ * This function initializes `config` to specify the following behaviors:
+ *      - Window dimensions are `window_height` x `window_width`
+ *      - Window strides are `window_v_stride` and `window_h_stride` in the vertical and horizontal dimensions respectively.
+ *      - Output begins at the top-left pixel of the output image
+ *      - Intitial input window location is at the top-left pixel of the input image
+ *      - Output channels equal to input channels
+ *      - Input window is dense and rectangle (i.e. no pixels are skipped within a window)
+ *      - Output is dense and rectangualr (i.e. fills a rectangular region of output image, without gaps)
+ *      - Window is tiled horizontally and vertically as many times as will fit in the input image (window never pads)
+ * 
+ * \param config              `nn_window_op_config_t` struct to be initialized.
+ * \param x                   Input image parameters
+ * \param y                   Output image parameters
+ * \param window_height       Height of the pooling window (in pixels)
+ * \param window_width        Width of the pooling window (in pixels)
+ * \param window_v_stride     Vertical stride of the pooling window (in pixels)
+ * \param window_h_stride     Horizontal stride of the pooling window (in pixels)
+ */
+void nn_window_op_config_simple(
+    nn_window_op_config_t* config,
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const unsigned window_height,
+    const unsigned window_width,
+    const unsigned window_v_stride,
+    const unsigned window_h_stride);
+
+void nn_window_op_init(
+    nn_window_op_plan_t* plan,
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const nn_window_op_config_t* config,
+    const unsigned channels_per_group);
 
 
 #ifdef __XC__

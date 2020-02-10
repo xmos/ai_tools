@@ -1,14 +1,13 @@
 
 #if defined(__XS3A__)
 
+#include "window_op_plan.h"
 
 /*  
 void avgpool2d_2x2_asm(
     int8_t* Y,
     const int8_t* X, 
-    const uint32_t x_height, 
-    const uint32_t x_width,
-    const uint32_t x_chans);
+    const nn_avgpool2d_plan_t* params);
 */
 
 #define FUNCTION_NAME avgpool2d_2x2_asm
@@ -24,27 +23,28 @@ void avgpool2d_2x2_asm(
 
 #define arg_Y           r0
 #define arg_X           r1
-#define arg_x_height    r2
-#define arg_x_width     r3
-
-#define Y               r0
-#define X               r1
-
-#define x_vstride       r2
-#define chan_grp_left   r3
-#define chans           r4
-#define rows_left       r5
-#define cols_left       r6
-#define x_row_incr      r7
-#define x_chan_incr     r8
-#define y_chan_incr     r9
-#define write_mask      r10
+#define arg_params      r2
 
 
-#define STACK_X_CHANS       (NSTACKWORDS+1)
-#define STACK_Y_ROWS        9
-#define STACK_Y_COLS        10
-#define STACK_TAIL_LEN      11
+
+#define STACK_X_CHAN_GRP_INCR   9
+#define STACK_Y_CHAN_GRP_INCR   10
+#define STACK_TAIL_LEN          11
+#define STACK_OUT_ROWS          12
+#define STACK_OUT_COLS          13
+
+
+#define Y                   r0
+#define X                   r1
+#define pool_col_x          r2
+#define pool_row_x          r3
+#define cols_left           r4
+#define write_mask          r5
+#define rows_left           r6
+#define hstride_y           r7
+#define vstride_x           r8
+#define vstride_y           r9
+#define chan_grp_left       r10
 
 .align 4
 .L_macc_const: //multiplies input in VLMACC instruction
@@ -62,50 +62,55 @@ FUNCTION_NAME:
     std r4, r5, sp[1]
     std r6, r7, sp[2]
     std r8, r9, sp[3]
-    {   ldc r10, 16                             ;   stw r10, sp[8]                          }
-    {   shl r11, r10, 5                         ;   ldw chans, sp[STACK_X_CHANS]            }
-    {   mov r11, arg_x_height                   ;   vsetc r11                               }
+    {   ldc r10, 32                             ;   stw r10, sp[8]                          }
+    {   shl r11, r10, 4                         ;                                           }
+    {   mov r11, arg_params                     ;   vsetc r11                               }
+
+    {                                           ;   ldw r10, r11[WOP_OUTPUT_ROWS]           }
+    {                                           ;   stw r10, sp[STACK_OUT_ROWS]             }
+    {                                           ;   ldw r10, r11[WOP_OUTPUT_COLS]           }
+    {                                           ;   stw r10, sp[STACK_OUT_COLS]             }
+    {   ldc r6, WOP_OUTER_STRIDE_HORI_Y         ;   ldw r4, r11[WOP_OUTPUT_CHANS]           }
+    {   mov r5, r4                              ;   ldw hstride_y, r11[r6]                  }
+    {   zext r5, 4                              ;   ldw vstride_x, r11[WOP_OUTER_STRIDE_VERT_X]}
+    {   ldc r6, WOP_CHAN_STRIDE_Y               ;   ldw vstride_y, r11[WOP_OUTER_STRIDE_VERT_Y]}
+    {                                           ;   ldw r10, r11[r6]                        }
+    {   ldc r6, WOP_CHAN_STRIDE_X               ;   stw r10, sp[STACK_Y_CHAN_GRP_INCR]      }
+    {                                           ;   ldw r10, r11[r6]                        }
+    {   ldc r6, WOP_INNER_STRIDE_HORI           ;   stw r10, sp[STACK_X_CHAN_GRP_INCR]      }
+    {   ldc r6, WOP_INNER_STRIDE_VERT           ;   ldw pool_col_x, r11[r6]                 }
+    {   ldc r6, WOP_START_STRIDE_X              ;   ldw pool_row_x, r11[r6]                 }
+    {   add pool_row_x, pool_row_x, pool_col_x  ;                                           }
+    {   ldc r6, WOP_START_STRIDE_Y              ;   ldw r10, r11[r6]                        }
+    {   add X, X, r10                           ;   ldw r11, r11[r6]                        }
+    {   add Y, Y, r11                           ;   stw r5, sp[STACK_TAIL_LEN]              }
+    {   ldap r11, .L_macc_const                 ;   mov r6, r5                              }
+    {   shr chan_grp_left, r4, 4                ;   vldc r11[0]                             }
+
+    {   mkmsk write_mask, 16                    ;   bt chan_grp_left, .L_chan_loop          }
+    {   mkmsk write_mask, r6                    ;   ldc chan_grp_left, 1                    }
     
-    mul x_vstride, arg_x_width, chans
-    mul x_chan_incr, x_vstride, r11
-    {   shr arg_x_width, arg_x_width, 1         ;   shr r11, r11, 1                         }
-    {   shr y_chan_incr, x_chan_incr, 2         ;   stw r11, sp[STACK_Y_ROWS]               }
-    {   sub x_chan_incr, r10, x_chan_incr       ;   stw arg_x_width, sp[STACK_Y_COLS]       }
-    {   sub y_chan_incr, r10, y_chan_incr       ;   ldap r11, .L_macc_const                 }
-    {   sub x_row_incr, x_vstride, chans        ;   vldc r11[0]                             }    
-    {   mkmsk write_mask, 4                     ;                                           }
-    {   and r3, chans, write_mask               ;   ldc r11, 16                             }
-    {                                           ;   sub r11, r11, r3                        }
-    {   mkmsk write_mask, r3                    ;   stw r11, sp[STACK_TAIL_LEN]             }
-    {   ldc r3, 1                               ;   bt r3, .L_chan_loop                     }
-
-    {   mkmsk write_mask, 16                    ;   shr chan_grp_left, chans, 4             }
-
     .L_chan_loop:
-        {   sub chan_grp_left, chan_grp_left, 1     ;   ldw rows_left, sp[STACK_Y_ROWS]         }
+        {   sub chan_grp_left, chan_grp_left, 1     ;   ldw rows_left, sp[STACK_OUT_ROWS]       }
         .L_row_loop:
-            {   sub rows_left, rows_left, 1        ;   ldw cols_left, sp[STACK_Y_COLS]          }
+            {   sub rows_left, rows_left, 1             ;   ldw cols_left, sp[STACK_OUT_COLS]       }
             .L_col_loop:
-                {   ldap r11, .L_sat_vec                ;   vclrdr                                  }
-                {   add X, X, chans                     ;   vlmacc X[0]                             }
-                {   add X, X, x_row_incr                ;   vlmacc X[0]                             }
-                {   add X, X, chans                     ;   vlmacc X[0]                             }
-                {   sub X, X, x_row_incr                ;   vlmacc X[0]                             }
-                {   sub cols_left, cols_left, 1         ;   vlsat r11[0]                            }
+                {   ldap r11, .L_sat_vec                    ;   vclrdr                                  }
+                {   add X, X, pool_col_x                    ;   vlmacc X[0]                             }
+                {   add X, X, pool_row_x                    ;   vlmacc X[0]                             }
+                {   add X, X, pool_col_x                    ;   vlmacc X[0]                             }
+                {   sub X, X, pool_row_x                    ;   vlmacc X[0]                             }
+                {   sub cols_left, cols_left, 1             ;   vlsat r11[0]                            }
                 vstrpv Y[0], write_mask
-                {   add Y, Y, chans                     ;   bt cols_left, .L_col_loop               }
-            {   add X, X, x_vstride                 ;   bt rows_left, .L_row_loop               }
-        {   add X, X, x_chan_incr               ;                                           }
-        {   add Y, Y, y_chan_incr               ;   bt chan_grp_left, .L_chan_loop          }
-
-    .L_do_body:
-
-    {   mkmsk r3, 16                            ;   ldw r11, sp[STACK_TAIL_LEN]         }
-    {   eq r3, write_mask, r3                   ;   sub X, X, r11                       }
-    {   sub Y, Y, r11                           ;   bt r3, .L_img_end                   }
-    {   mkmsk write_mask, 16                    ;   shr chan_grp_left, chans, 4         }    
+                {   add Y, Y, hstride_y                     ;   bt cols_left, .L_col_loop               }
+            {   add Y, Y, vstride_y                     ;   ldw r11, sp[STACK_X_CHAN_GRP_INCR]      }
+            {   add X, X, vstride_x                     ;   bt rows_left, .L_row_loop               }
+        {   add X, X, r11                           ;   ldw r11, sp[STACK_Y_CHAN_GRP_INCR]      }
+        {   add Y, Y, r11                           ;   bt chan_grp_left, .L_chan_loop          }
+    {   mkmsk r4, 16                            ;   ldw r11, sp[STACK_TAIL_LEN]         }
+    {   eq r4, write_mask, r4                   ;   mkmsk write_mask, r11               }
+    {   ldc chan_grp_left, 1                    ;   bf r4, .L_img_end                   }
     {                                           ;   bt chan_grp_left, .L_chan_loop      }
-
 
 .L_img_end:
 

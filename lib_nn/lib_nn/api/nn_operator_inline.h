@@ -108,38 +108,43 @@ static inline void maxpool2d_deep(
 #endif
 }
 
+// static inline void maxpool2d(
+//     int8_t* Y,
+//     const int8_t* X, 
+//     const nn_window_op_plan_t* plan)
+// {
+// #if defined(__XS3A__) && (USE_ASM_maxpool2d)
+
+//     maxpool2d_asm(Y, X, plan);
+
+// #else
+
+//     maxpool2d_c(Y, X, plan);
+
+// #endif
+// }
 
 
-static inline void avgpool2d_2x2(
-    int8_t* Y,
-    const int8_t* X, 
-    const uint32_t x_height, 
-    const uint32_t x_width,
-    const uint32_t x_chans)
-{
-#if defined(__XS3A__) && (USE_ASM_avgpool2d_2x2)
-
-    avgpool2d_2x2_asm(Y, X, x_height, x_width, x_chans);
-
-#else
-
-    avgpool2d_2x2_c(Y, X, x_height, x_width, x_chans);
-
-#endif
-}
 
 static inline void avgpool2d(
     int8_t* Y,
     const int8_t* X, 
-    const nn_avgpool_params_t* params)
+    const nn_avgpool2d_plan_t* plan)
 {
 #if defined(__XS3A__) && (USE_ASM_avgpool2d)
 
-    avgpool2d_asm(Y, X, params);
+    switch(plan->impl){
+        case AVGPOOL2D_2X2:
+            avgpool2d_2x2_asm(Y, X, plan);
+            break;
+        default:
+            avgpool2d_asm(Y, X, plan);
+            break;
+    }
 
 #else
 
-    avgpool2d_c(Y, X, params);
+    avgpool2d_c(Y, X, plan);
 
 #endif
 }
@@ -150,16 +155,17 @@ static inline void avgpool2d_global(
     const uint32_t x_height, 
     const uint32_t x_width,
     const uint32_t x_chans,
+    const int32_t  bias,
     const uint32_t shift,
     const uint32_t scale)
 {
 #if defined(__XS3A__) && (USE_ASM_avgpool2d)
 
-    avgpool2d_global_asm(Y, X, x_height, x_width, x_chans, shift, scale);
+    avgpool2d_global_asm(Y, X, x_height, x_width, x_chans, bias, shift, scale);
 
 #else
 
-    avgpool2d_global_c(Y, X, x_height, x_width, x_chans, shift, scale);
+    avgpool2d_global_c(Y, X, x_height, x_width, x_chans, bias, shift, scale);
 
 #endif
 }

@@ -9,13 +9,14 @@ void avgpool2d_global_asm(
     const uint32_t x_height, 
     const uint32_t x_width,
     const uint32_t x_chans,
-    const uint32_t shift
+    const int32_t  bias,
+    const uint32_t shift,
     const uint32_t scale);
 */
 
 #define FUNCTION_NAME avgpool2d_global_asm
 
-#define NSTACKWORDS  20
+#define NSTACKWORDS  36
     
 .text
 .issue_mode  dual
@@ -29,9 +30,16 @@ void avgpool2d_global_asm(
 #define arg_x_height    r2
 #define arg_x_width     r3
 
+#define STACK_X_CHANS       (NSTACKWORDS+1)
+#define STACK_BIAS          (NSTACKWORDS+2)
+#define STACK_SHIFT         (NSTACKWORDS+3)
+#define STACK_SCALE         (NSTACKWORDS+4)
+#define STACK_SHIFT_VEC     (NSTACKWORDS-8)
+#define STACK_BIAS_HI_VEC   (NSTACKWORDS-16)
+#define STACK_BIAS_LO_VEC   (NSTACKWORDS-24)
+
 #define Y               r0
 #define X               r1
-
 #define pix_groups      r2
 #define chans           r3
 #define chan_grp_left   r4
@@ -42,20 +50,9 @@ void avgpool2d_global_asm(
 #define pix_count       r9
 #define _16             r10
 
-#define STACK_X_CHANS       (NSTACKWORDS+1)
-#define STACK_SHIFT         (NSTACKWORDS+2)
-#define STACK_SCALE         (NSTACKWORDS+3)
-#define STACK_TMP_VEC       (NSTACKWORDS-8)
-
 .align 4
-.L_shift_const:
-.word 0x00010001
-.L_scale_const: 
-.word 0x01010101
-
-.align 4
-.L_sat_vec:  //used in VLSAT instruction
-.short 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
+.L_bss_consts:
+.word 0x00010001, 0x01010101
 
 
 
@@ -68,36 +65,54 @@ FUNCTION_NAME:
     {   ldc _16, 16                             ;   stw r10, sp[8]                          }
     mul pix_count, arg_x_height, arg_x_width
     {   shl r11, _16, 5                         ;   ldw chans, sp[STACK_X_CHANS]            }
-    {   shr chan_grp_left, chans, 4             ;   vsetc r11                               }
+    {   ldap r11, .L_bss_consts                 ;   vsetc r11                               }
 
-    {   ldaw r6, sp[STACK_TMP_VEC]              ;   ldw r11, sp[STACK_SCALE]                }
-    std r11, r11, r6[0]
-    std r11, r11, r6[1]
-    std r11, r11, r6[2]
-    std r11, r11, r6[3]
+    {                                           ;   ldw r10, sp[STACK_SCALE]                }
+    {   ldaw r6, sp[STACK_SHIFT_VEC]            ;   ldw r4, r11[1]                          }
+    mul r10, r10, r4
+    std r10, r10, r6[0]
+    std r10, r10, r6[1]
+    std r10, r10, r6[2]
+    std r10, r10, r6[3]
     {                                           ;   vldc r6[0]                              }
-    {                                           ;   ldw r11, sp[STACK_SHIFT]                }
-    std r11, r11, r6[0]
-    std r11, r11, r6[1]
-    std r11, r11, r6[2]
-    std r11, r11, r6[3]
+    {                                           ;   ldw r4, r11[0]                          }
+    {                                           ;   ldw r10, sp[STACK_SHIFT]                }
+    mul r10, r4, r10
+    std r10, r10, r6[0]
+    std r10, r10, r6[1]
+    std r10, r10, r6[2]
+    std r10, r10, r6[3]
+    {   ldaw r6, sp[STACK_BIAS_HI_VEC]          ;   ldw r4, r11[0]                          }
+    {   ldaw r7, sp[STACK_BIAS_LO_VEC]          ;   ldw r10, sp[STACK_BIAS]                 }
+    {   shr r8, r10, 16                         ;   zext r10, 16                            }
+    mul r10, r4, r10
+    std r10, r10, r7[0]
+    std r10, r10, r7[1]
+    std r10, r10, r7[2]
+    std r10, r10, r7[3]
+    mul r10, r4, r8
+    std r10, r10, r6[0]
+    std r10, r10, r6[1]
+    std r10, r10, r6[2]
+    std r10, r10, r6[3]
+    
 
     mul x_chan_incr, pix_count, chans
-    {   sub x_chan_incr, x_chan_incr, _16       ;                                           }
-    {   mkmsk write_mask, 16                    ;                                           }
+    {   ldc _16, 16                             ;   shr chan_grp_left, chans, 4             }
+    {   sub x_chan_incr, x_chan_incr, _16       ;   mkmsk r11, 4                            }
 
-    {   mkmsk r11, 4                            ;                                           }
     {   and chan_tail, chans, r11               ;   and pix_loop_hop, pix_count, r11        }
     
-    {   ldaw r11, sp[STACK_TMP_VEC]             ;   sub pix_loop_hop, _16, pix_loop_hop     }
-    {                                           ;   bf chan_grp_left, .L_chan_loop_end      }
-
-    //TODO: HAVE TO VLDC!!!
+    {                                           ;   sub pix_loop_hop, _16, pix_loop_hop     }
+    {   mkmsk write_mask, 16                    ;   bt chan_grp_left, .L_chan_loop          }
+    {   mkmsk write_mask, chan_tail             ;   ldc chan_grp_left, 1                    }
      
     .align 4
     .L_chan_loop:
-        {   shr pix_groups, pix_count, 4            ;   vclrdr                                  }
-        {   sub chan_grp_left, chan_grp_left, 1     ;   bru pix_loop_hop                        } // Do tail first
+        {   ldaw r11, sp[STACK_BIAS_HI_VEC]         ;   sub chan_grp_left, chan_grp_left, 1     }
+        {   ldaw r11, sp[STACK_BIAS_LO_VEC]         ;   vldd r11[0]                             }
+        {   shr pix_groups, pix_count, 4            ;   vldr r11[0]                             }
+        {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   bru pix_loop_hop                        } // Do pix tail first
         .L_pix_loop:
             {   add X, X, chans                         ;   vlmacc X[0]                             }   // 0  -- should be a no-op
             {   add X, X, chans                         ;   vlmacc X[0]                             }
@@ -127,7 +142,7 @@ FUNCTION_NAME:
     {   mkmsk r11, 16                           ;   ldc chan_grp_left, 1                }
     {   eq r11, write_mask, r11                 ;                                       }
     {   mkmsk write_mask, chan_tail             ;   bf r11, .L_img_end                  }
-    {   ldaw r11, sp[STACK_TMP_VEC]             ;   bt write_mask, .L_chan_loop         }
+    {                                           ;   bt write_mask, .L_chan_loop         }
 
 
 .L_img_end:

@@ -1,17 +1,18 @@
 
 #if defined(__XS3A__)
 
+#include "window_op_plan.h"
 
 /*  
 void avgpool2d_asm(
     int8_t* Y,
     const int8_t* X, 
-    const nn_pool_params_t* params);
+    const nn_avgpool2d_plan_t* plan);
 */
 
 #define FUNCTION_NAME avgpool2d_asm
 
-#define NSTACKWORDS  26
+#define NSTACKWORDS  30
     
 .text
 .issue_mode  dual
@@ -24,44 +25,38 @@ void avgpool2d_asm(
 
 #define arg_Y           r0
 #define arg_X           r1
-#define arg_params      r2
+#define arg_plan        r2
+
+
+#define STACK_OUT_ROWS          (10)
+#define STACK_OUT_COLS          (11)
+#define STACK_OUTER_STRIDE_VX   (12)
+#define STACK_OUTER_STRIDE_VY   (13)
+#define STACK_CHAN_STRIDE_X     (14)
+#define STACK_CHAN_STRIDE_Y     (15)
+#define STACK_WIN_ROWS          (16)
+#define STACK_OUTER_STRIDE_HY   (17)
+#define STACK_CHAN_TAIL         (18)
+#define STACK_WIN_COL_LOOPS     (19)
+
+
+#define STACK_SHIFT_VEC         (NSTACKWORDS-8)
+
+#define APPLAN_SHIFT            (WOP_WORDS)
+#define APPLAN_SCALE            (WOP_WORDS+1)
     
 
 #define Y                       r0
 #define X                       r1
-#define params                  r2
-#define win_col_incr_x          r3
-#define win_row_incr_x          r4
-#define chan_incr_x             r5
-
-#define STACK_WCOL_TAIL         (9)
-#define STACK_WCOL_BODY         (10)
-#define STACK_SPEC_2X2          (11)
-#define STACK_ROWS_LEFT         (12)
-#define STACK_SHIFT_VEC         (NSTACKWORDS-8)     //Each only needs 16 bytes
-#define STACK_SCALE_VEC         (NSTACKWORDS-12)     
-
-#define PARAMS_OUT_ROWS         (0)
-#define PARAMS_OUT_COLS         (1)
-#define PARAMS_OUT_CHANS        (2)
-#define PARAMS_W_H              (3)
-#define PARAMS_W_W              (4)
-#define PARAMS_HSTRIDE_INCR_X   (5)
-#define PARAMS_VSTRIDE_INCR_X   (6)
-#define PARAMS_VSTRIDE_INCR_Y   (7)
-#define PARAMS_VSTRIDE_DBL      (3)
-#define PARAMS_SHIFT            (8)
-#define PARAMS_SCALE            (9)
-#define PARAMS_CHAN_INCR_X      (10)
-#define PARAMS_WIN_COL_INCR_X   (11)
-#define PARAMS_WIN_ROW_INCR_X   (12)
-#define PARAMS_START_INCR_X     (13)
-#define PARAMS_START_INCR_Y     (14)
-
-
-.align 4
-.L_macc_const: //multiplies input in VLMACC instruction
-.byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+#define chan_mask               r2
+#define inner_stride_h          r3
+#define inner_stride_v          r4
+#define win_col_jump            r5
+#define outer_stride_hx         r6
+#define chan_grp_left           r7
+#define out_row_left            r8
+#define out_col_left            r9
+#define win_row_left            r10   
 
 
 .align 4
@@ -70,125 +65,102 @@ FUNCTION_NAME:
     std r4, r5, sp[1]
     std r6, r7, sp[2]
     std r8, r9, sp[3]
-    {   ldc r7, 32                              ;   stw r10, sp[8]                          }
-    {   shl r11, r7, 4                          ;                                           }
+    ldc r11, 0x200
     {                                           ;   vsetc r11                               }
+    {   ldc r11, APPLAN_SCALE                   ;   stw r10, sp[8]                          }
+    {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   ldw r10, arg_plan[r11]                  }
+    std r10, r10, r11[0]
+    std r10, r10, r11[1]
+    {   ldc r10, APPLAN_SHIFT                   ;   vldc r11[0]                             }
+    {                                           ;   ldw r10, arg_plan[r10]                  }
+    std r10, r10, r11[0]
+    std r10, r10, r11[1]
+    std r10, r10, r11[2]
+    std r10, r10, r11[3]
 
-    ldaw r11, params[PARAMS_SHIFT]
-    {   mov r10, r11                            ;   ldw win_col_incr_x, r11[PARAMS_WIN_COL_INCR_X - PARAMS_SHIFT]   }
-    {                                           ;   ldw win_row_incr_x, r10[PARAMS_WIN_ROW_INCR_X - PARAMS_SHIFT]   }
-    {   ldc r8, 16                              ;   ldw chan_incr_x, r10[PARAMS_CHAN_INCR_X - PARAMS_SHIFT]         }
-    {                                           ;   ldw r11, r10[PARAMS_START_INCR_X - PARAMS_SHIFT]                }
-    {   add X, X, r11                           ;   ldw r11, r10[PARAMS_START_INCR_Y - PARAMS_SHIFT]                }
-    {   add Y, Y, r11                           ;                                                                   }
+    {                                           ;   ldw r10, arg_plan[WOP_START_STRIDE_X]   }
+    {   add X, X, r10                           ;   ldw r10, arg_plan[WOP_START_STRIDE_Y]   }
+    {   add Y, Y, r10                           ;   ldw r10, arg_plan[WOP_OUTPUT_ROWS]      }
+    {                                           ;   ldw r11, arg_plan[WOP_OUTPUT_COLS]      }
+    std r11, r10, sp[STACK_OUT_ROWS/2]
+    {                                           ;   ldw r10, arg_plan[WOP_OUTER_STRIDE_VERT_X]}
+    {   ldc r9, WOP_CHAN_STRIDE_X               ;   ldw r11, arg_plan[WOP_OUTER_STRIDE_VERT_Y]}
+    std r11, r10, sp[STACK_OUTER_STRIDE_VX/2]
+    {   ldc r9, WOP_CHAN_STRIDE_Y               ;   ldw r10, arg_plan[r9]                   }
+    {                                           ;   ldw r11, arg_plan[r9]                   }
+    std r11, r10, sp[STACK_CHAN_STRIDE_X/2]  
+    {   ldc r9, WOP_OUTER_STRIDE_HORI_Y         ;   ldw r10, arg_plan[WOP_WINDOW_ROWS]      }
+    {   ldc r7, 0                               ;   ldw r11, arg_plan[r9]                   }
+    std r11, r10, sp[STACK_WIN_ROWS/2]
 
-    {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   ldw r9, r10[PARAMS_SHIFT - PARAMS_SHIFT]    }
-    std r9, r9, r11[0]
-    std r9, r9, r11[1]
-    std r9, r9, r11[2]
-    std r9, r9, r11[3] //16  16-bit shifts
+    {                                           ;   ldw r10, arg_plan[WOP_OUTPUT_CHANS]     }
+    {   zext r10, 4                             ;                                           }
+    {                                           ;   stw r10, sp[STACK_CHAN_TAIL]            }
 
-    {   ldaw r11, sp[STACK_SCALE_VEC]           ;   ldw r9, r10[PARAMS_SCALE - PARAMS_SHIFT]    }
-    std r9, r9, r11[0]
-    std r9, r9, r11[1] //only need 16 elements in vR
-    {                                           ;   vldc r11[0]                         }
-    
-    {   mkmsk r9, 4                             ;   ldw r11, params[PARAMS_W_W]         }
-    {   and r9, r9, r11                         ;   ldc r10, 16                         }
-    {   sub r10, r10, r9                        ;   shr r11, r11, 4                     }
-    {                                           ;   stw r10, sp[STACK_WCOL_TAIL]        }
-    {                                           ;   stw r11, sp[STACK_WCOL_BODY]        }
-    {                                           ;   ldw r11, params[PARAMS_OUT_ROWS]    }
-    {                                           ;   stw r11, sp[STACK_ROWS_LEFT]        }
-    .align 4
-    .L_vstride_loop:
 
-#define out_col     r6
-#define chans_left  r7
-#define win_row     r8
-        {                                           ;   ldw out_col, params[PARAMS_OUT_COLS]}
-        .L_hstride_loop:
-            {    mkmsk r9, 4                            ;   ldw chans_left, params[PARAMS_OUT_CHANS]}
-            .L_chan_loop:
-                {                                               ;   vclrdr                          }                
-                {                                               ;   ldw win_row, params[PARAMS_W_H]     }
-#define win_tail    r9
-#define win_body    r10
-                {   ldc r11, 16                                 ;   ldw win_tail, sp[STACK_WCOL_TAIL]   }
-                {   lsu r11, r11, chans_left                    ;   ldw win_body, sp[STACK_WCOL_BODY]   }
-                .L_win_row_loop:
-                    {                                           ;   bf win_body, .L_maccs_tail          }
-                    .L_maccs_loop:
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     } // 1
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   add X, X, win_col_incr_x                ;   vlmacc X[0]                     }
-                        {   sub win_body, win_body, 1               ;   vlmacc X[0]                     } // 16
-                        {   add X, X, win_col_incr_x                ;   bt win_body, .L_maccs_loop      }
-                .L_maccs_tail:    
-                    {                                           ;   bru win_tail                        }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         } // r10 == 0
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         }
-                    {   add X, X, win_col_incr_x                ;   vlmacc X[0]                         } // r10 == 15
-                    {   sub win_row, win_row, 1                 ;   ldw win_body, sp[STACK_WCOL_BODY]   } // r10 == 16
-                    {   add X, X, win_row_incr_x                ;   bt win_row, .L_win_row_loop         }
-                .L_win_row_loop_end:
-#undef win_row
-#undef win_body
-#undef win_tail
-                {   ldaw r10, sp[STACK_SHIFT_VEC]           ;   ldc r9, 16                          }   
-                {   mkmsk r10, 16                           ;   vlsat r10[0]                        }   
-                {   mkmsk r11, chans_left                   ;   bf r11, .L_chan_tail                }
-                vstrpv Y[0], r10
-                {   add Y, Y, r9                            ;   sub chans_left, chans_left, r9      }
-                {   add X, X, chan_incr_x                   ;   bu .L_chan_loop                     }
+    {   ldc r8, 16                              ;   ldw r11, arg_plan[WOP_WINDOW_COLS]      }
+    {   shr r10, r11, 4                         ;   zext r11, 4                             }
+    {   lsu r7, r7, r11                         ;   sub r11, r8, r11                        }
+    mul win_col_jump, r7, r11
+    {   add r10, r10, r7                        ;                                           }
+    {                                           ;   stw r10, sp[STACK_WIN_COL_LOOPS]        }
 
-            .L_chan_tail:
-
-            vstrpv Y[0], r11
-            {   add Y, Y, chans_left                    ;   add X, X, chan_incr_x                   }
-            {   sub out_col, out_col, 1                 ;   ldw r11, params[PARAMS_HSTRIDE_INCR_X]  }
-            {   add X, X, r11                           ;   bt out_col, .L_hstride_loop             }
-#undef chans_left
-#undef out_col
-
-        .L_hstride_loop_end:
-
-        {                                           ;   ldw r9, sp[STACK_ROWS_LEFT]             }
-        {   sub r9, r9, 1                           ;   ldw r10, params[PARAMS_VSTRIDE_INCR_X]  }
-        {   add X, X, r10                           ;   ldw r11, params[PARAMS_VSTRIDE_INCR_Y]  }
-        {   add Y, Y, r11                           ;   stw r9, sp[STACK_ROWS_LEFT]             }
-        {                                           ;   bt r9, .L_vstride_loop                  }
-        
-    .L_vstride_loop_end:
+    {                                           ;   ldw inner_stride_h, arg_plan[WOP_INNER_STRIDE_HORI]}
+    {                                           ;   ldw inner_stride_v, arg_plan[WOP_INNER_STRIDE_VERT]}
+    {                                           ;   ldw outer_stride_hx, arg_plan[WOP_OUTER_STRIDE_HORI_X]}
 
 
 
-.L_img_end:
+    {                                           ;   ldw r11, arg_plan[WOP_OUTPUT_CHANS]     }
+    {   shr chan_grp_left, r11, 4               ;   zext r11, 4                             }
+    {   mkmsk chan_mask, 16                     ;   bt chan_grp_left, .L_chan_grp_loop      }
+    {   mkmsk chan_mask, r11                    ;                                           }    
+    .L_chan_grp_loop:
+        {   sub chan_grp_left, chan_grp_left, 1     ;   ldw out_row_left, sp[STACK_OUT_ROWS]    }
+        .L_out_rows_loop:
+            {   sub out_row_left, out_row_left, 1       ;   ldw out_col_left, sp[STACK_OUT_COLS]    }
+            .L_out_cols_loop:
+                {   sub out_col_left, out_col_left, 1       ;   ldw win_row_left, sp[STACK_WIN_ROWS]    }
+                {                                           ;   vclrdr                                  }
+                .L_pool_row_loop:
+                    {   sub win_row_left, win_row_left, 1       ;   ldw r11, sp[STACK_WIN_COL_LOOPS]        }
+                    {                                           ;   bru win_col_jump                        }
+                    .L_pool_col_loop:
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }   // 0
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }   
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }   
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }   
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }   //8
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }
+                        {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }
+                        {   sub r11, r11, 1                         ;   vlmacc X[0]                             }   //15
+                        {   add X, X, inner_stride_h                ;   bt r11, .L_pool_col_loop                }
+                    {   add X, X, inner_stride_v                ;   bt  win_row_left, .L_pool_row_loop      }
+                    
+                {   ldaw r10, sp[STACK_SHIFT_VEC]           ;   ldw r11, sp[STACK_OUTER_STRIDE_HY]      }   
+                {   add X, X, outer_stride_hx               ;   vlsat r10[0]                            }   
+                vstrpv Y[0], chan_mask
+                {   add Y, Y, r11                           ;   bt out_col_left, .L_out_cols_loop       }
+            {                                           ;   ldw r11, sp[STACK_OUTER_STRIDE_VX]      }
+            {   add X, X, r11                           ;   ldw r11, sp[STACK_OUTER_STRIDE_VY]      }
+            {   add Y, Y, r11                           ;   bt out_row_left, .L_out_rows_loop       }
+        {   mkmsk r10, 16                           ;   ldw r9, sp[STACK_CHAN_STRIDE_X]         }
+        {   eq r10, r10, chan_mask                  ;   ldw r11, sp[STACK_CHAN_STRIDE_Y]        }
+        {   add X, X, r9                            ;   bf r10, .L_img_end                      }
+        {   add Y, Y, r11                           ;   bt chan_grp_left, .L_chan_grp_loop      }
+        {                                           ;   ldw r10, sp[STACK_CHAN_TAIL]            }
+        {   mkmsk chan_mask, r10                    ;   bu .L_chan_grp_loop                     }
+
+
+    .L_img_end:        
 
 .Lfunc_end:
     {                                           ;   ldw r10, sp[8]                      }

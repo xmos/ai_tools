@@ -26,7 +26,7 @@
 #endif
 
 #define TEST_ASM ((HAS_ASM)     && 1)
-#define TEST_C ((TEST_C_GLOBAL) && 0)
+#define TEST_C ((TEST_C_GLOBAL) && 1)
 
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
 
@@ -63,37 +63,46 @@ void test_avgpool2d_global_case1()
         uint32_t height;    
         uint32_t width;
         uint32_t channels;
+        int32_t bias;
     } test_case_t;
 
     const test_case_t casses[] = {
-        //  X               //Chans
-        {   1,  1,          16          },  // 0
-        {   2,  2,          16          },  
-        {   4,  4,          16          },
-        {   6,  6,          16          },  
-        {   8,  8,          16          },
-        {   4,  2,          16          },  // 5
-        {   8,  6,          16          },
-        {   2, 16,          16          },
-        {  32, 16,          16          },
-        {  32, 32,          16          },
-        
-        {   2,  2,          32          },  // 10
-        {   2,  2,          48          },
-        {   2,  2,          64          },
-        {   2,  2,           4          },
-        {   2,  2,           8          },
-        {   2,  2,          12          },  // 15
-        {   2,  2,          20          },
-        {   2,  2,          24          },
-        {   2,  2,          28          },
-        {   2,  2,          36          },
-
-        {   4,  8,          40          },  // 20
-        {  12,  6,          12          },
-        {  16,  2,          40          },
-        {   4, 24,          36          },
-        {  32, 32,          60          },
+        //  X               //Chans     //Bias
+        {   1,  1,          16,         0          },  // 0
+        {   2,  2,          16,         0          },  
+        {   4,  4,          16,         0          },
+        {   6,  6,          16,         0          },  
+        {   8,  8,          16,         0          },
+        {   4,  2,          16,         0          },  // 5
+        {   8,  6,          16,         0          },
+        {   2, 16,          16,         0          },
+        {  32, 16,          16,         0          },
+        {  32, 32,          16,         0          },
+        {   2,  2,          32,         0          },  // 10
+        {   2,  2,          48,         0          },
+        {   2,  2,          64,         0          },
+        {   2,  2,           4,         0          },
+        {   2,  2,           8,         0          },
+        {   2,  2,          12,         0          },  // 15
+        {   2,  2,          20,         0          },
+        {   2,  2,          24,         0          },
+        {   2,  2,          28,         0          },
+        {   2,  2,          36,         0          },
+        {   4,  8,          40,         0          },  // 20
+        {  12,  6,          12,         0          },
+        {  16,  2,          40,         0          },
+        {   4, 24,          36,         0          },
+        {  32, 32,          60,         0          },
+        {   2,  2,          12,         1          },  // 25
+        {   2,  2,          20,       -10          },
+        {   2,  2,          24,        22          },
+        {   2,  2,          28,       -13          },
+        {   2,  2,          36,        40          },
+        {   4,  8,          40,       -77          },  // 30
+        {  12,  6,          12,         3          },
+        {  16,  2,          40,       -20          },
+        {   4, 24,          36,        44          },
+        {  32, 32,          60,      -100          },
     };
 
     const unsigned N_casses = sizeof(casses)/sizeof(test_case_t);
@@ -124,16 +133,18 @@ void test_avgpool2d_global_case1()
         uint32_t scale;
 
         avgpool2d_global_init(&shift, &scale, x_params.height, x_params.width);
+        
+        int32_t bias = casse->bias * x_params.height * x_params.width * scale;
 
 #if TEST_C
         PRINTF("\t\tC...\n");
         memset(Y_c, 0xCC, sizeof(Y_c));
-        avgpool2d_global_c((int8_t*)Y_c, (int8_t*)X, casse->height, casse->width, casse->channels, shift, scale);
+        avgpool2d_global_c((int8_t*)Y_c, (int8_t*)X, casse->height, casse->width, casse->channels, bias, shift, scale);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC,  sizeof(Y_asm));
-        avgpool2d_global_asm((int8_t*)Y_asm, (int8_t*)X, casse->height, casse->width, casse->channels, shift, scale);
+        avgpool2d_global_asm((int8_t*)Y_asm, (int8_t*)X, casse->height, casse->width, casse->channels, bias, shift, scale);
 #endif
 
         char str_buff[200] = {0};
@@ -145,7 +156,7 @@ void test_avgpool2d_global_case1()
 
                 for(unsigned chn = 0; chn < y_params.channels; chn++){
                     
-                    int8_t y_exp = 24 + chn;
+                    int8_t y_exp = 24 + chn + casse->bias;
 
                     int flg = 0;     //Annoying, but avoids unnecessary calls to sprintf().
 #if TEST_C      
@@ -179,6 +190,3 @@ void test_avgpool2d_global_case1()
 #undef MAX_HEIGHT
 #undef MAX_CHANS
 #undef DEBUG_ON
-
-
-

@@ -411,37 +411,30 @@ static inline void maxpool2d_deep(
     const int32_t width,
     const int32_t C_in);
 
-
-/**  2D average pool for a typical 2x2 window
+    
+/**  2D maxpool for "deep" input and output tensors.
  *
- * This is an implementation of `avgpool2d()` optimized for the common case where the
- * window size of 2x2 with a stride of 2x2.
+ *  Pool size is 2 x 2, stride is 2 in both dimensions. Number of input channels
+ *  must be divisible by 32.
  *
  *  For each 2 x 2 block of input pixels (tiled across the input image), this function
  *  reduces that block to a single pixel, where each channel is handled independently.
- *  The value selected for the output channel is the average of the 4 values for that
- *  channel in the input block (with rounding).
+ *  The value selected for the output channel is the maximum among the 4 values for that
+ *  channel in the input block.
  *
- *  The shape of `X` is `(x_height, x_width, x_chans)`, with a standard image data layout.
+ *  The shape of `X` is (height, width, C_in), with a standard image data layout.
  *  
- *  The shape of `Y` is `(x_height/2, x_width/2, x_chans)`, with a standard image data layout.
+ *  The shape of `Y` is (height/2, width/2, C_in), with a standard image data layout.
  *
  *  \code
- *      Y[i][j][c] = (X[2*i][2*j][c] + X[2*i+1][2*j][c] + X[2*i][2*j+1][c] + X[2*i+1][2*j+1][c] + 2) / 4
+ *      Y[i][j][c] = MAX(X[2*i][2*j][c], X[2*i+1][2*j][c], X[2*i][2*j+1][c], X[2*i+1][2*j+1][c])
  *  \endcode
  *
- *  \param  Y           Output data tensor. Updated by function.
- *  \param  X           Input data tensor.
- *  \param  x_height    Input tensor/image height, must be even.
- *  \param  x_width     Input tensor/image width, must be even.
- *  \param  x_chans     Number of input channels, must be divisible by 32.
  */
-static inline void avgpool2d_2x2(
-    int8_t* Y,
-    const int8_t* X, 
-    const uint32_t x_height, 
-    const uint32_t x_width,
-    const uint32_t x_chans);
+// static inline void maxpool2d(
+//     int8_t* Y,
+//     const int8_t* X, 
+//     const nn_maxpool_params_t* plan);
 
 
 /** 2D average pooling for an image.
@@ -468,13 +461,6 @@ static inline void avgpool2d_2x2(
  * The `X` parameter is the output image, as was described in the parameters to `avgpool2d_init()`
  * when `params` was initialized.
  * 
- * NOTE: If this average pool describes the standard 2x2 average pool with a 2x2 stride across the entire
- *       input image, then the `avgpool2d_2x2()` function should be used instead, which is optimized 
- *       for that common scenario.
- * 
- * NOTE: If this average pool describes a global average pool, then the `avgpool2d_global` function
- *       should be used instead, which is optimized for that scenario.
- * 
  * \param Y         Output image
  * \param X         Input image
  * \param params    Parameters for the operation
@@ -482,7 +468,7 @@ static inline void avgpool2d_2x2(
 static inline void avgpool2d(
     int8_t* Y,
     const int8_t* X, 
-    const nn_avgpool_params_t* params);
+    const nn_avgpool2d_plan_t* plan);
 
 /** 2D global average pooling for an 8-bit image
  * 
@@ -503,8 +489,9 @@ static inline void avgpool2d(
  * \param x_height  Height of input image (in pixels)
  * \param x_width   Width of input image (in pixels)
  * \param x_chans   Number of channels in the input image
- * \param shift     Shift parameter given by `avgpool2d_global_init()`
- * \param scale     Scale parameter given by `avgpool2d_global_init()`
+ * \param bias      Initial 32-bit accumulator value. Shared by all channels.
+ * \param shift     Shift parameter. Shared by all channels.
+ * \param scale     Scale parameter. Shared by all channels.
  */
 static inline void avgpool2d_global(
     int8_t* Y,
@@ -512,6 +499,7 @@ static inline void avgpool2d_global(
     const uint32_t x_height, 
     const uint32_t x_width,
     const uint32_t x_chans,
+    const int32_t  bias,
     const uint32_t shift,
     const uint32_t scale);
 

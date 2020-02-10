@@ -75,17 +75,19 @@ def main(path=DEFAULT_PATH, *,
          K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
          padding=DEFAULT_PADDING,
          bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT):
-    # Instantiate model
-    test_model = Conv2dShallowinDeepoutRelu('conv2d_shallowin_deepout_relu', Path(path))
-    # Build model and compile
-    test_model.build(K_h, K_w, height, width, input_channels, output_channels,
-                     padding=padding, bias_init=bias_init, weight_init=weight_init)
-    # Generate test data
-    test_model.gen_test_data(height, width)
-    # Save model
-    test_model.save_core_model()
-    # Populate converters
-    test_model.populate_converters()
+    kwargs = {
+        'name': 'conv2d_shallowin_deepout_relu',
+        'path': path if path else DEFAULT_PATH
+    }
+    common.run_main_conv(
+        model=Conv2dShallowinDeepoutRelu(**kwargs),
+        num_threads=None,
+        input_channels=input_channels,
+        output_channels=output_channels,
+        height=height, width=width,
+        K_h=K_h, K_w=K_w, padding=padding,
+        bias_init=bias_init, weight_init=weight_init
+    )
 
 
 if __name__ == "__main__":
@@ -99,6 +101,8 @@ if __name__ == "__main__":
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
+    
+    initializers = common.initializer_args_handler(args)
 
     main(path=args.path,
          input_channels=args.inputs, output_channels=args.outputs,

@@ -66,18 +66,19 @@ def main(path=DEFAULT_PATH, *, num_threads=DEFAULT_NUM_THREADS,
          K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
          padding=DEFAULT_PADDING,
          bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT):
-
-    # Instantiate model
-    test_model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', Path(path))
-    # Build model and compile
-    test_model.build(K_h, K_w, height, width, input_channels, output_channels,
-                     padding=padding, bias_init=bias_init, weight_init=weight_init)
-    # Generate test data
-    test_model.gen_test_data(height, width)
-    # Save model
-    test_model.save_core_model()
-    # Populate converters
-    test_model.populate_converters(xcore_num_threads=num_threads)
+    kwargs = {
+        'name': 'conv2d_deepin_deepout_relu',
+        'path': path if path else DEFAULT_PATH
+    }
+    common.run_main_conv(
+        model=Conv2dDeepinDeepoutRelu(**kwargs),
+        num_threads=num_threads,
+        input_channels=input_channels,
+        output_channels=output_channels,
+        height=height, width=width,
+        K_h=K_h, K_w=K_w, padding=padding,
+        bias_init=bias_init, weight_init=weight_init
+    )
 
 
 if __name__ == "__main__":

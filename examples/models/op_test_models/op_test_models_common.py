@@ -178,3 +178,17 @@ def run_main(model, *, train_new_model, input_dim, output_dim, bias_init, weight
     model.gen_test_data()
     # Populate converters
     model.populate_converters()
+
+# For conv models
+def run_main_conv(model, *, num_threads, input_channels, output_channels,
+                  height, width, K_h, K_w, padding, bias_init, weight_init):
+    # Instantiate model
+    # Build model and compile
+    model.build(K_h, K_w, height, width, input_channels, output_channels,
+                     padding=padding, bias_init=bias_init, weight_init=weight_init)
+    # Generate test data
+    model.gen_test_data(height, width)
+    # Save model
+    model.save_core_model()
+    # Populate converters
+    model.populate_converters(xcore_num_threads=num_threads if num_threads else None)

@@ -60,6 +60,7 @@ def test_read_flatbuffer():
 
 def test_write_flatbuffer():
     model = read_flatbuffer(BUILTIN_OPERATORS_TEST_FILE)
+    model.pprint()
 
     tmp_file = os.path.join(tempfile.mkdtemp(), 'test_write_flatbuffer.tflite')
     bytes_expected = os.path.getsize(BUILTIN_OPERATORS_TEST_FILE)
@@ -68,7 +69,6 @@ def test_write_flatbuffer():
     os.remove(tmp_file)
 
     assert bytes_written == bytes_expected
-    assert(False)
 
 
 def test_custom_options():

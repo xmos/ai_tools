@@ -82,7 +82,6 @@ def create_xcore_model(modelT):
     # create operator codes lookup
     operator_codes_lut = []
     for operator_codeT in modelT.operatorCodes:
-        print('loading op code:', operator_codeT.builtinCode)
         if operator_codeT.builtinCode == BuiltinOpCodes.CUSTOM.value:
             opcode = XCOREOpCodes(operator_codeT.customCode.decode('utf-8'))
         else:
@@ -106,7 +105,7 @@ def create_xcore_model(modelT):
                 for k, v in vars(tensorT.quantization).items():
                     if v is not None:
                         if isinstance(v, np.ndarray):
-                            v = v.tolist()
+                            v = list(v)
                         quantization[camel_to_snake(k)] = v
             else:
                 quantization = None
@@ -168,7 +167,6 @@ def create_flatbuffer_model(model):
     modelT.operatorCodes = []
     for operator_code in model.operator_codes:
         operatorCodeT = OperatorCodeT()
-        print('saving op code:', operator_code.builtin_code.value)
         if operator_code.builtin_code:
             operatorCodeT.builtinCode = operator_code.builtin_code.value
         if operator_code.custom_code:
@@ -264,6 +262,8 @@ def write_flatbuffer(model, filename):
     model_offset = modelT.Pack(builder)
     builder.Finish(model_offset)
 
+    f = builder.Output()
+    print(len(f))
     with open(filename, 'wb') as fd:
         return fd.write(builder.Output())
 

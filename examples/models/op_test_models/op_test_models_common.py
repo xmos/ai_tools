@@ -5,6 +5,7 @@ import logging
 from enum import Enum
 import tensorflow as tf
 from tflite2xcore.model_generation import utils
+import numpy as np
 
 _DEFAULT_CONST_INIT = 0
 _DEFAULT_UNIF_INIT = [-1, 1]
@@ -15,6 +16,17 @@ DEFAULT_UNIF_INIT = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT)
 class OpTestInitializers(Enum):
     UNIF = 'unif'
     CONST = 'const'
+
+
+def input_initializers(init, height, width, channels, *, batch=100):
+    # NOTE: same but with initializes as in utils.generate_dummy_data
+    data = init(shape=(batch, height, width, channels), dtype='float32').numpy()
+    subset = np.concatenate(
+        [np.zeros((1, height, width, channels), dtype=np.float32),
+         np.ones((1, height, width, channels), dtype=np.float32),
+         data[:8, :, :, :]],  # pylint: disable=unsubscriptable-object
+        axis=0)
+    return subset, data
 
 
 def initializer_args_handler(args):
@@ -36,7 +48,8 @@ def initializer_args_handler(args):
     utils.set_all_seeds(args.seed) #NOTE All seeds initialized here
     initializers = {
         'weight_init': tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
-        'bias_init': DEFAULT_CONST_INIT
+        'bias_init': DEFAULT_CONST_INIT,
+        'input_init': tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed)
     }
 
     init_args = {k: vars(args)[k] for k in initializers if k in vars(args)}
@@ -84,6 +97,11 @@ def parser_add_initializers(parser):
     parser.add_argument(
         '--weight_init', nargs='*', default=argparse.SUPPRESS,
         help='Initialize weights. Possible initializers are: const, unif or None.'
+             f'(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})'
+    )
+    parser.add_argument(
+        '--input_init', nargs='*', default=argparse.SUPPRESS,
+        help='Initialize inputs. Possible initializers are: const, unif or None.'
              f'(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})'
     )
     parser.add_argument(
@@ -181,13 +199,20 @@ def run_main(model, *, train_new_model, input_dim, output_dim, bias_init, weight
 
 # For conv models
 def run_main_conv(model, *, num_threads, input_channels, output_channels,
-                  height, width, K_h, K_w, padding, bias_init, weight_init):
+                  height, width, K_h, K_w, padding, bias_init, weight_init, input_init):
     # Instantiate model
     # Build model and compile
     model.build(K_h, K_w, height, width, input_channels, output_channels,
                      padding=padding, bias_init=bias_init, weight_init=weight_init)
+    
+    # to check if the inits work
+    for layer in model.core_model.layers: logging.debug(f'WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}') # weights
+    for layer in model.core_model.layers: logging.debug(f'BIAS DATA SAMPLE:\n{layer.get_weights()[1]}') # bias
+    
     # Generate test data
-    model.gen_test_data(height, width)
+    model.gen_test_data(height, width, input_init)
+    logging.debug(f'EXPORT DATA SAMPLE:\n{model.data["export_data"][4][0]}')
+    logging.debug(f'QUANT DATA SAMPLE:\n{model.data["quant"][0][0]}')
     # Save model
     model.save_core_model()
     # Populate converters

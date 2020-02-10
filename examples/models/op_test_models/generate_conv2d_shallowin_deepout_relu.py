@@ -8,7 +8,6 @@ from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
 import op_test_models_common as common
 
-
 DEFAULT_INPUTS = 3
 DEFAULT_OUTPUTS = 16
 DEFAULT_HEIGHT = 5
@@ -60,13 +59,14 @@ class Conv2dShallowinDeepoutRelu(KerasModel):
         pass
 
     # For training
-    def prep_data(self, height, width):
-        self.data['export_data'], self.data['quant'] = utils.generate_dummy_data(*self.input_shape)
+    def prep_data(self, height, width, input_init):
+        self.data['export_data'], self.data['quant'] = common.input_initializers(input_init, *self.input_shape)
+        #utils.generate_dummy_data(*self.input_shape)
 
     # For exports
-    def gen_test_data(self, height, width):
+    def gen_test_data(self, height, width, input_init):
         if not self.data:
-            self.prep_data(height, width)
+            self.prep_data(height, width, input_init)
 
 
 def main(path=DEFAULT_PATH, *,
@@ -74,7 +74,8 @@ def main(path=DEFAULT_PATH, *,
          height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
          K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
          padding=DEFAULT_PADDING,
-         bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT):
+         bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT,
+         input_init=common.DEFAULT_UNIF_INIT):
     kwargs = {
         'name': 'conv2d_shallowin_deepout_relu',
         'path': path if path else DEFAULT_PATH
@@ -86,7 +87,7 @@ def main(path=DEFAULT_PATH, *,
         output_channels=output_channels,
         height=height, width=width,
         K_h=K_h, K_w=K_w, padding=padding,
-        bias_init=bias_init, weight_init=weight_init
+        bias_init=bias_init, weight_init=weight_init, input_init=input_init
     )
 
 
@@ -110,4 +111,5 @@ if __name__ == "__main__":
          height=args.height, width=args.width,
          padding=args.padding,
          bias_init=initializers['bias_init'],
-         weight_init=initializers['weight_init'])
+         weight_init=initializers['weight_init'],
+         input_init=initializers['input_init'])

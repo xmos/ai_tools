@@ -157,10 +157,10 @@ int main(void)
 
 
 
-    // UnityBegin("src\\test_lookup8.xc");
-    // RUN_TEST(test_lookup8_case0);
-    // ret_val = UnityEnd();
-    // printf("\n\n");
+    UnityBegin("src\\test_lookup8.xc");
+    RUN_TEST(test_lookup8_case0);
+    ret_val = UnityEnd();
+    printf("\n\n");
 
 
     // UnityBegin("src\\test_temp.xc");

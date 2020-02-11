@@ -256,6 +256,27 @@ static inline void requantize_16_to_8(
 }
 
 
+static inline void lookup8(
+    uint8_t* Y,
+    const uint8_t* X,
+    const uint8_t* lut,
+    const unsigned length)
+{
+#if defined(__XS3A__) && (USE_ASM_lookup8)
+
+    lookup8_asm(Y, X, lut, length);
+
+#else
+
+    lookup8_c(Y, X, lut, length);
+
+#endif
+}
+
+
+
+
+
 #ifdef __XC__
 }   //extern "C"
 #endif

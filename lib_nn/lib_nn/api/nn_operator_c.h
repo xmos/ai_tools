@@ -95,6 +95,12 @@ void requantize_16_to_8_c(
     int8_t* y,
     const int16_t* x,
     const unsigned n);
+    
+void lookup8_c(
+    uint8_t* Y,
+    const uint8_t* X,
+    const uint8_t* lut,
+    const unsigned length);
 
 #ifdef __XC__
 }   //extern "C"

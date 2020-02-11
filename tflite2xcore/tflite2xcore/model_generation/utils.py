@@ -324,7 +324,7 @@ def plot_history(history, title='metrics', zoom=1, save=False, path=Path('./hist
     plt.legend(['train', 'test'], loc='upper left')
 
     # Save the png
-    fig.savefig(path)  # TODO: use pathlib
+    fig.savefig(path)
 
 
 # Augmentation

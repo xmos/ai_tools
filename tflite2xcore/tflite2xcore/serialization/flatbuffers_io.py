@@ -27,6 +27,11 @@ class QuantizationDetails(enum.Enum):
     NONE = 0
     CustomQuantization = 1
 
+class Padding(enum.Enum):
+    SAME = 0
+    VALID = 1
+
+
 # create enum at runtime for BuiltinOptions class in schema_py_generated
 #    this is used for convenience
 BuiltinOptionsEnum = enum.Enum(
@@ -50,6 +55,10 @@ def builtin_options_to_dict(builtin_options):
         # convert enum value to string
         dict_['fused_activation_function'] = \
             ActivationFunctionType(dict_['fused_activation_function']).name
+    if 'padding' in dict_:
+        # convert enum value to string
+        dict_['padding'] = \
+            Padding(dict_['padding']).name
 
     return dict_
 
@@ -64,6 +73,9 @@ def dict_to_builtin_options(type_, dict_):
         if k == 'fused_activation_function':
             # convert string to enum
             v = ActivationFunctionType[v].value
+        elif k == 'padding':
+            # convert string to enum
+            v = Padding[v].value
 
         setattr(builtin_options, snake_to_camel(k), v)
 
@@ -111,8 +123,7 @@ def create_xcore_model(modelT):
                         if k == 'details':
                             v = QuantizationDetails(v).name
                         elif isinstance(v, np.ndarray):
-                            v = list(v)
-                            
+                            v = v.tolist()
                         quantization[camel_to_snake(k)] = v
 
             else:
@@ -121,7 +132,7 @@ def create_xcore_model(modelT):
             tensor = subgraph.create_tensor(
                 name=tensorT.name.decode('utf-8'),
                 type_=TensorType(tensorT.type),
-                shape=(tensorT.shape if tensorT.shape is not None  else []),
+                shape=list(tensorT.shape.tolist() if tensorT.shape is not None  else []),
                 buffer=buffers[tensorT.buffer],
                 quantization=quantization,
                 isinput=is_input,

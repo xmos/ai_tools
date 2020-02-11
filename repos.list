@@ -1,4 +1,0 @@
-tensorflow                   https://github.com/xmos/tensorflow                       develop
-flatbuffers                  https://github.com/google/flatbuffers                    1.11.0
-gemmlowp                     https://github.com/google/gemmlowp.git                   master
-Unity                        git@github.com:astewart-xmos/Unity.git                   master

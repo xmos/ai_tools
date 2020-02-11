@@ -57,14 +57,14 @@ def create_test_cases(operator, generator, parameter_sets, *, train_model=False)
 
      return test_cases
 
-def run_generate(args):
+def run_generate(tests, jobs):
+    test_cases = []
+
     #***********************************
     # Remove all existing data
     #***********************************
     if os.path.exists(directories.DATA_DIR):
         shutil.rmtree(directories.DATA_DIR)
-
-    pool = multiprocessing.Pool(processes=args.jobs)
 
     #***********************************
     # AvgPool
@@ -77,8 +77,8 @@ def run_generate(args):
         {'in': 32, 'hi': 16, 'wi': 16, 'st':2, 'po': 2, 'pd': 'VALID' }
     ]
 
-    test_cases = create_test_cases(operator, generator, parameter_sets)
-    pool.map(generate_test_case, test_cases)
+    if operator in tests or len(tests) == 0:
+        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
 
     #***********************************
     # Conv2D deepin/deepout
@@ -99,8 +99,8 @@ def run_generate(args):
         {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID', 'par': 5 }
     ]
 
-    test_cases = create_test_cases(operator, generator, parameter_sets)
-    pool.map(generate_test_case, test_cases)
+    if operator in tests or len(tests) == 0:
+        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
 
     #***********************************
     # Conv2D shallowin/deepout
@@ -117,8 +117,8 @@ def run_generate(args):
         {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID' }
     ]
 
-    test_cases = create_test_cases(operator, generator, parameter_sets)
-    pool.map(generate_test_case, test_cases)
+    if operator in tests or len(tests) == 0:
+        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
 
     #***********************************
     # Fully-connected deepin anyout
@@ -128,9 +128,9 @@ def run_generate(args):
     parameter_sets = [
         {'in': 32 }
     ]
-
-    test_cases = create_test_cases(operator, generator, parameter_sets, train_model=True)
-    pool.map(generate_test_case, test_cases)
+    
+    if operator in tests or len(tests) == 0:
+        test_cases.extend(create_test_cases(operator, generator, parameter_sets, train_model=True))
 
 
     #***********************************
@@ -142,8 +142,8 @@ def run_generate(args):
         {'in': 32 }
     ]
 
-    test_cases = create_test_cases(operator, generator, parameter_sets, train_model=True)
-    pool.map(generate_test_case, test_cases)
+    if operator in tests or len(tests) == 0:
+        test_cases.extend(create_test_cases(operator, generator, parameter_sets, train_model=True))
 
     #***********************************
     # ArgMax
@@ -156,8 +156,8 @@ def run_generate(args):
         {'in': 100 }
     ]
 
-    test_cases = create_test_cases(operator, generator, parameter_sets)
-    pool.map(generate_test_case, test_cases)
+    if operator in tests or len(tests) == 0:
+        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
 
     #***********************************
     # MaxPool
@@ -170,12 +170,18 @@ def run_generate(args):
         {'in': 32, 'hi': 16, 'wi': 16, 'st':2, 'po': 2, 'pd': 'VALID' }
     ]
 
-    test_cases = create_test_cases(operator, generator, parameter_sets)
+    if operator in tests or len(tests) == 0:
+        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
+
+    # now generate all the test cases
+    pool = multiprocessing.Pool(processes=jobs)
     pool.map(generate_test_case, test_cases)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument('-t', '--test', action='append', default=[], help="Test to run (defaults to all)")
     parser.add_argument('-j', '--jobs', type=int, default=4, help="Allow N jobs at once")
     args = parser.parse_args()
 
-    run_generate(args)
+    run_generate(args.test, args.jobs)

@@ -202,11 +202,11 @@ def prepare_MNIST(use_aug=False, simard=False, padding=2):
                 x_train, y_train, 2, sigma=4.0, alpha=16.0)
     x_train, y_train = shuffle(x_train, y_train)
 
-    return {'x_train': np.float32(x_train[:3008]),
-            'x_test': np.float32(x_test[:500]),
+    return {'x_train': np.float32(x_train[:4096]),
+            'x_test': np.float32(x_test[:1024]),
             'x_val': np.float32(x_val[:100]),
-            'y_train': np.float32(y_train[:3008]),
-            'y_test': np.float32(y_test[:500]),
+            'y_train': np.float32(y_train[:4096]),
+            'y_test': np.float32(y_test[:1024]),
             'y_val': np.float32(y_val[:100])}
 
 

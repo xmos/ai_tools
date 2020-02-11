@@ -169,6 +169,19 @@ typedef struct {
 } nn_conv2d_region_params_t;
 
 
+typedef enum {
+    FC16_DEFAULT = 0,
+    FC16_ROW_WISE = 1,
+} nn_fc16_tail_strat_t;
+
+typedef struct {
+    int32_t c_in;
+    int32_t c_out;
+    int32_t cig_end_stride;
+    nn_fc16_tail_strat_t tail_strat;
+} nn_fully_connected_plan_t;
+
+
 
 #ifdef __XC__
 }   //extern "C"

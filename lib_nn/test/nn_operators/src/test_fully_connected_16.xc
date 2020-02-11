@@ -58,8 +58,9 @@ void test_fully_connected_16_case0()
     
     struct {
         int32_t B[ceil_C_out];
-        int16_t shift[ceil_C_out];
+        int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t shift2[ceil_C_out];
     } BSS;
 
 #if TEST_C
@@ -129,27 +130,32 @@ void test_fully_connected_16_case0()
 
         for(int k = 0; k < C_out; k++){
             BSS.B[k] = casse->bias;
-            BSS.shift[k] = casse->shift;
+            BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.shift2[k] = 14;
         }
 
         fc_boggle_BSS(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
+
+        nn_fully_connected_plan_t plan;
+        fully_connected_init(&plan, C_in, C_out);
 
 #if TEST_C
         PRINTF("\t\tC...\n");
         memset(Y_c, 0xCC, sizeof(Y_c));
         fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, C_in, C_out);
+                                     (data16_t*) &BSS, &plan);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                      (data16_t*) &BSS, C_in, C_out);
+                                      (data16_t*) &BSS, &plan);
 #endif
 
         PRINTF("\t\tChecking...\n");
@@ -209,8 +215,9 @@ void test_fully_connected_16_case1()
     
     struct {
         int32_t B[ceil_C_out];
-        int16_t shift[ceil_C_out];
+        int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t shift2[ceil_C_out];
     } BSS;
 
 #if TEST_C
@@ -280,28 +287,33 @@ void test_fully_connected_16_case1()
 
         for(int k = 0; k < C_out; k++){
             BSS.B[k] = casse->bias;
-            BSS.shift[k] = casse->shift;
+            BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.shift2[k] = 14;
         }
 
         
         fc_boggle_BSS(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
+
+        nn_fully_connected_plan_t plan;
+        fully_connected_init(&plan, C_in, C_out);
 
 #if TEST_C
         PRINTF("\t\tC...\n");
         memset(Y_c, 0xCC, sizeof(Y_c));
         fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, C_in, C_out);
+                                     (data16_t*) &BSS, &plan);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                      (data16_t*) &BSS, C_in, C_out);
+                                      (data16_t*) &BSS, &plan);
 #endif
 
         PRINTF("\t\tChecking...\n");
@@ -361,8 +373,9 @@ void test_fully_connected_16_case2()
     
     struct {
         int32_t B[ceil_C_out];
-        int16_t shift[ceil_C_out];
+        int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t shift2[ceil_C_out];
     } BSS;
 
 #if TEST_C
@@ -432,28 +445,33 @@ void test_fully_connected_16_case2()
 
         for(int k = 0; k < C_out; k++){
             BSS.B[k] = casse->bias;
-            BSS.shift[k] = casse->shift;
+            BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.shift2[k] = 14;
         }
 
 
         fc_boggle_BSS(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
+
+        nn_fully_connected_plan_t plan;
+        fully_connected_init(&plan, C_in, C_out);
 
 #if TEST_C
         PRINTF("\t\tC...\n");
         memset(Y_c, 0xCC, sizeof(Y_c));
         fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, C_in, C_out);
+                                     (data16_t*) &BSS, &plan);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                      (data16_t*) &BSS, C_in, C_out);
+                                      (data16_t*) &BSS, &plan);
 #endif
 
         PRINTF("\t\tChecking...\n");
@@ -513,8 +531,9 @@ void test_fully_connected_16_case3()
     
     struct {
         int32_t B[ceil_C_out];
-        int16_t shift[ceil_C_out];
+        int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t shift2[ceil_C_out];
     } BSS;
 
 #if TEST_C
@@ -584,28 +603,33 @@ void test_fully_connected_16_case3()
 
         for(int k = 0; k < C_out; k++){
             BSS.B[k] = casse->bias;
-            BSS.shift[k] = casse->shift;
+            BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.shift2[k] = 14;
         }
 
 
         fc_boggle_BSS(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
+
+        nn_fully_connected_plan_t plan;
+        fully_connected_init(&plan, C_in, C_out);
 
 #if TEST_C
         PRINTF("\t\tC...\n");
         memset(Y_c, 0xCC, sizeof(Y_c));
         fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, C_in, C_out);
+                                     (data16_t*) &BSS, &plan);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                      (data16_t*) &BSS, C_in, C_out);
+                                      (data16_t*) &BSS, &plan);
 #endif
 
         PRINTF("\t\tChecking...\n");
@@ -665,8 +689,9 @@ void test_fully_connected_16_case4()
     
     struct {
         int32_t B[ceil_C_out];
-        int16_t shift[ceil_C_out];
+        int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t shift2[ceil_C_out];
     } BSS;
 
 #if TEST_C
@@ -699,7 +724,7 @@ void test_fully_connected_16_case4()
 
     case_t casses[] = {
             //X         //W         //Bias          //Shift         //Scale         //Y
-        {   0x00,       0x00,       0x00000000,     0,              0x0000,         0x0000    },
+        {   0x00,       0x00,       0x00000000,     0,              0x0000,         0x0000    },    // 0
         {   0x00,       0x00,       0x00000000,     0,              0x4000,         0x0000    },
         {   0x00,       0x00,       0x00000001,     0,              0x4000,         0x0001    },
         {   0x00,       0x00,       0x00000100,     0,              0x4000,         0x0100    },
@@ -707,7 +732,7 @@ void test_fully_connected_16_case4()
         {   0x00,       0x00,       0x00000100,     4,              0x4000,         0x0010    },
         {   0x00,       0x00,       0x00000100,     4,              0x2000,         0x0008    },
 
-        {   0x01,       0x00,       0x00000000,     0,              0x4000,         0x0000    },
+        {   0x01,       0x00,       0x00000000,     0,              0x4000,         0x0000    },    // 7
         {   0x00,       0x01,       0x00000000,     0,              0x4000,         0x0000    },
         {   0x01,       0x01,       0x00000000,     0,              0x4000,         C_in      },
         {   0x02,       0x04,       0x00000000,     0,              0x4000,         8*C_in    },
@@ -732,28 +757,33 @@ void test_fully_connected_16_case4()
 
         for(int k = 0; k < C_out; k++){
             BSS.B[k] = casse->bias;
-            BSS.shift[k] = casse->shift;
+            BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.shift2[k] = 14;
         }
 
 
         fc_boggle_BSS(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
+
+        nn_fully_connected_plan_t plan;
+        fully_connected_init(&plan, C_in, C_out);
 
 #if TEST_C
         PRINTF("\t\tC...\n");
         memset(Y_c, 0xCC, sizeof(Y_c));
         fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, C_in, C_out);
+                                     (data16_t*) &BSS, &plan);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                      (data16_t*) &BSS, C_in, C_out);
+                                      (data16_t*) &BSS, &plan);
 #endif
 
         PRINTF("\t\tChecking...\n");
@@ -813,8 +843,9 @@ void test_fully_connected_16_case5()
     
     struct {
         int32_t B[ceil_C_out];
-        int16_t shift[ceil_C_out];
+        int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t shift2[ceil_C_out];
     } BSS;
 
 #if TEST_C
@@ -886,28 +917,33 @@ void test_fully_connected_16_case5()
 
         for(int k = 0; k < C_out; k++){
             BSS.B[k] = casse->bias;
-            BSS.shift[k] = casse->shift;
+            BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.shift2[k] = 14;
         }
 
 
         fc_boggle_BSS(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
+
+        nn_fully_connected_plan_t plan;
+        fully_connected_init(&plan, C_in, C_out);
 
 #if TEST_C
         PRINTF("\t\tC...\n");
         memset(Y_c, 0xCC, sizeof(Y_c));
         fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, C_in, C_out);
+                                     (data16_t*) &BSS, &plan);
 #endif
 #if TEST_ASM
         PRINTF("\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                      (data16_t*) &BSS, C_in, C_out);
+                                      (data16_t*) &BSS, &plan);
 #endif
 
         PRINTF("\t\tChecking...\n");
@@ -967,8 +1003,9 @@ void test_fully_connected_16_case6()
     
     struct {
         int32_t B[ceil_C_out];
-        int16_t shift[ceil_C_out];
+        int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t shift2[ceil_C_out];
     } BSS;
 
 #if TEST_C
@@ -1046,28 +1083,33 @@ void test_fully_connected_16_case6()
 
             for(int k = 0; k < C_out_tmp; k++){
                 BSS.B[k] = casse->bias;
-                BSS.shift[k] = casse->shift;
+                BSS.shift1[k] = casse->shift;
                 BSS.scale[k] = casse->scale;
+                BSS.shift2[k] = 14;
             }
 
 
         fc_boggle_BSS(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
+
+        nn_fully_connected_plan_t plan;
+        fully_connected_init(&plan, C_in, C_out_tmp);
 
 #if TEST_C
             PRINTF("\t\t\tC...\n");
             memset(Y_c, 0xCC, sizeof(Y_c));
             fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, C_in, C_out_tmp);
+                                        (data16_t*) &BSS, &plan);
 #endif
 #if TEST_ASM
             PRINTF("\t\t\tASM...\n");
             memset(Y_asm, 0xCC, sizeof(Y_asm));
             fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, C_in, C_out_tmp);
+                                        (data16_t*) &BSS, &plan);
 #endif
 
             PRINTF("\t\t\tChecking...\n");
@@ -1131,8 +1173,9 @@ void test_fully_connected_16_case7()
     
     struct {
         int32_t B[ceil_C_out];
-        int16_t shift[ceil_C_out];
+        int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t shift2[ceil_C_out];
     } BSS;
 
 #if TEST_C
@@ -1210,28 +1253,33 @@ void test_fully_connected_16_case7()
 
             for(int k = 0; k < C_out_tmp; k++){
                 BSS.B[k] = casse->bias;
-                BSS.shift[k] = casse->shift;
+                BSS.shift1[k] = casse->shift;
                 BSS.scale[k] = casse->scale;
+                BSS.shift2[k] = 14;
             }
 
 
             fc_boggle_BSS(  (data16_t*) &BSS, 
                             (int32_t*) &BSS.B, 
-                            (int16_t*) &BSS.shift, 
+                            (int16_t*) &BSS.shift1, 
                             (int16_t*) &BSS.scale, 
+                            (int16_t*) &BSS.shift2, 
                             NULL, C_out  );
+
+        nn_fully_connected_plan_t plan;
+        fully_connected_init(&plan, C_in, C_out_tmp);
 
 #if TEST_C
             PRINTF("\t\t\tC...\n");
             memset(Y_c, 0xCC, sizeof(Y_c));
             fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, C_in, C_out_tmp);
+                                        (data16_t*) &BSS, &plan);
 #endif
 #if TEST_ASM
             PRINTF("\t\t\tASM...\n");
             memset(Y_asm, 0xCC, sizeof(Y_asm));
             fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, C_in, C_out_tmp);
+                                        (data16_t*) &BSS, &plan);
 #endif
 
             PRINTF("\t\t\tChecking...\n");
@@ -1302,8 +1350,9 @@ void test_fully_connected_16_case8()
     
     struct {
         int32_t B[ceil_C_out];
-        int16_t shift[ceil_C_out];
+        int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t shift2[ceil_C_out];
     } BSS;
 
 #if TEST_C
@@ -1382,28 +1431,33 @@ void test_fully_connected_16_case8()
 
             for(int k = 0; k < C_out_tmp; k++){
                 BSS.B[k] = casse->bias;
-                BSS.shift[k] = casse->shift;
+                BSS.shift1[k] = casse->shift;
                 BSS.scale[k] = casse->scale;
+                BSS.shift2[k] = 14;
             }
 
 
             fc_boggle_BSS(  (data16_t*) &BSS, 
                             (int32_t*) &BSS.B, 
-                            (int16_t*) &BSS.shift, 
+                            (int16_t*) &BSS.shift1, 
                             (int16_t*) &BSS.scale, 
+                            (int16_t*) &BSS.shift2, 
                             NULL, C_out  );
+
+        nn_fully_connected_plan_t plan;
+        fully_connected_init(&plan, C_in, C_out_tmp);
 
 #if TEST_C
             PRINTF("\t\t\tC...\n");
             memset(Y_c, 0xCC, sizeof(Y_c));
             fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, C_in, C_out_tmp);
+                                        (data16_t*) &BSS, &plan);
 #endif
 #if TEST_ASM
             PRINTF("\t\t\tASM...\n");
             memset(Y_asm, 0xCC, sizeof(Y_asm));
             fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, C_in, C_out_tmp);
+                                        (data16_t*) &BSS, &plan);
 #endif
 
             PRINTF("\t\t\tChecking...\n");
@@ -1474,8 +1528,9 @@ void test_fully_connected_16_case9()
     
     struct {
         int32_t B[ceil_C_out];
-        int16_t shift[ceil_C_out];
+        int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t shift2[ceil_C_out];
     } BSS;
 
 #if TEST_C
@@ -1546,27 +1601,32 @@ void test_fully_connected_16_case9()
 
         for(int k = 0; k < C_out; k++){
             BSS.B[k] = casse->bias;
-            BSS.shift[k] = casse->shift;
+            BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.shift2[k] = 14;
         }
 
         fc_boggle_BSS(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift, 
+                        (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
+
+        nn_fully_connected_plan_t plan;
+        fully_connected_init(&plan, C_in, C_out);
 
 #if TEST_C
         PRINTF("\t\t\tC...\n");
         memset(Y_c, 0xCC, sizeof(Y_c));
         fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                    (data16_t*) &BSS, C_in, C_out);
+                                    (data16_t*) &BSS, &plan);
 #endif
 #if TEST_ASM
         PRINTF("\t\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                    (data16_t*) &BSS, C_in, C_out);
+                                    (data16_t*) &BSS, &plan);
 #endif
 
         PRINTF("\t\t\tChecking...\n");
@@ -1633,8 +1693,9 @@ void test_fully_connected_16_case10()
     
     struct {
         int32_t B[ceil_C_out];
-        int16_t shift[ceil_C_out];
+        int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t shift2[ceil_C_out];
     } BSS;
 
 #if TEST_C
@@ -1668,28 +1729,33 @@ void test_fully_connected_16_case10()
 
     for(int k = 0; k < C_out; k++){
         BSS.B[k] = 0x0000;
-        BSS.shift[k] = 1;
+        BSS.shift1[k] = 1;
         BSS.scale[k] = -0x2000;
+        BSS.shift2[k] = 14;
     }
     
 
     fc_boggle_BSS(  (data16_t*) &BSS, 
                     (int32_t*) &BSS.B, 
-                    (int16_t*) &BSS.shift, 
+                    (int16_t*) &BSS.shift1, 
                     (int16_t*) &BSS.scale, 
+                    (int16_t*) &BSS.shift2, 
                     NULL, C_out  );
+
+        nn_fully_connected_plan_t plan;
+        fully_connected_init(&plan, C_in, C_out);
 
 #if TEST_C
     PRINTF("\t\t\tC...\n");
     memset(Y_c, 0xCC, sizeof(Y_c));
     fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                (data16_t*) &BSS, C_in, C_out);
+                                (data16_t*) &BSS, &plan);
 #endif
 #if TEST_ASM
     PRINTF("\t\t\tASM...\n");
     memset(Y_asm, 0xCC, sizeof(Y_asm));
     fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                (data16_t*) &BSS, C_in, C_out);
+                                (data16_t*) &BSS, &plan);
 #endif
 
     PRINTF("\t\t\tChecking...\n");
@@ -1766,8 +1832,9 @@ void test_fully_connected_16_case11()
     
     struct {
         int32_t B[ceil_C_out];
-        int16_t shift[ceil_C_out];
+        int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t shift2[ceil_C_out];
     } BSS;
 
 #if TEST_C
@@ -1801,28 +1868,33 @@ void test_fully_connected_16_case11()
 
     for(int k = 0; k < C_out; k++){
         BSS.B[k] = 0x0000;
-        BSS.shift[k] = 1;
+        BSS.shift1[k] = 1;
         BSS.scale[k] = -0x2000;
+        BSS.shift2[k] = 14;
     }
     
 
     fc_boggle_BSS(  (data16_t*) &BSS, 
                     (int32_t*) &BSS.B, 
-                    (int16_t*) &BSS.shift, 
+                    (int16_t*) &BSS.shift1, 
                     (int16_t*) &BSS.scale, 
+                    (int16_t*) &BSS.shift2, 
                     NULL, C_out  );
+
+    nn_fully_connected_plan_t plan;
+    fully_connected_init(&plan, C_in, C_out);
 
 #if TEST_C
     PRINTF("\t\t\tC...\n");
     memset(Y_c, 0xCC, sizeof(Y_c));
     fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                (data16_t*) &BSS, C_in, C_out);
+                                (data16_t*) &BSS, &plan);
 #endif
 #if TEST_ASM
     PRINTF("\t\t\tASM...\n");
     memset(Y_asm, 0xCC, sizeof(Y_asm));
     fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                (data16_t*) &BSS, C_in, C_out);
+                                (data16_t*) &BSS, &plan);
 #endif
 
     PRINTF("\t\t\tChecking...\n");

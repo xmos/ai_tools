@@ -59,8 +59,7 @@ void fully_connected_16_asm(
     const int8_t* W, 
     const int8_t* X, 
     const data16_t* BSS,
-    const unsigned C_in, 
-    const unsigned C_out);
+    const nn_fully_connected_plan_t* plan);
 
 
 #ifndef USE_ASM_fc_deepin_shallowout_8

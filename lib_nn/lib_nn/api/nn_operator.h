@@ -181,29 +181,30 @@ vectors) and other parameters (e.g. input channel count).
 
 
 
-/**         Notes on Output Shift and Scale
+/**         Notes on Output Shifts and Scale
 
-Many functions in this API include a shift and scale on each output prior to writing the result
+Many functions in this API include shifts and a scale on each output prior to writing the result
 to memory. For the sake of brevity, the details of these operations are contained here, rather than 
 repeating them in each function's description.
 
 In general, the situation looks like this:
 
-        y[i] <- ((acc32[i] >> shr[i]) * scale[i])             (16-bit outputs)
+        y[i] <- ((acc32[i] >> shr1[i]) * scale[i]) >> shr2[i]             (16-bit outputs)
 
             or
         
-        y[i] <- ((acc32[i] >> shr[i]) * scale[i]) >> 8        (8-bit outputs)
+        y[i] <- (((acc32[i] >> shr1[i]) * scale[i]) >> shr2[i]) >> 8        (8-bit outputs)
 
       where
         i is the index of the output
         y[i] is the either 8- or 16-bit output
         acc32[i] is the 32-bit accumulator value associated with output i
             (acc32[i] is an intermediate value, which may be the result of convolution or an inner product, etc)
-        shr[i] is the shift value associated with output i
+        shr1[i] is the first shift value associated with output i
         scale[i] is the scale value associated with output i
+        shr2[i] is teh second shift value associated with output i
 
-Shift:
+Shift 1:
     The shift operation performs several actions atomically:
         - First a "virtual" arithmetic right shift of `shr` bits occurs on the 32-bit accumulator `acc32`.
         - Second, the result of the shift is rounded (as though the shift is a rounding real division by `2^-shr`)
@@ -215,17 +216,14 @@ Shift:
     As a final ideosyncrasy, the shifting of negative accumulator values will *never result in zeros*. Where
     the result of shifting a negative value would normally underflow to 0, it will instead result as -1.
 
-
 Scale:
-    The scaling is a signed 16-bit fixed-point multiplication with rounding and saturation. `scale` is 
-    treated as a signed Q1.14 fixed-point value in the range `[-2.0, 2.0)` (note that `scale` *cannot*
-    represent 2.0). This effectively means that the 16-bit result of the shift operation is multiplied
-    by `scale` using integer multiplication, and the 32-bit result is right-shifted 14 bits.
-    As with the shift operation above, rounding is applied during the right-shift, and the saturation
-    logic is applied to the result.
+    The scaling is a signed 16-bit integer multiplication for a 32-bit (actual max value is ((2^15)-1)^2). 
+
+Shift 2:
+    This behaves exactly like shift 1, but is applied after the scale.
 
 Final shift:
-    In functions that output 8-bit results, a final shift of 8 bits is applied after scaling to
+    In functions that output 8-bit results, a final shift of 8 bits is applied after shift 2 to
     reduce the bit-depth from 16 bits to 8 bits. In this case, rounding occurs, as with the other
     two operations, but no saturation is possible.
     In functions that output 16-bit results, no final shift occurs here.
@@ -495,7 +493,7 @@ static inline void fc_deepin_shallowout_16(
  * 
  * The logical operation performed is the following:
  * 
- *      Y[i] = (dot(W[i][], X[] + bias[i]) >> shift[i]) * scale[i]
+ *      Y[i] = ((dot(W[i][], X[] + bias[i]) >> shift[i]) * scale[i]) >> shift2[i];
  * 
  *   where
  *      W[i][] represents the `i`th row of the weight matrix
@@ -515,31 +513,29 @@ static inline void fc_deepin_shallowout_16(
  * 
  * `X` is the 8-bit input vector with a shape of `(C_in)`. `X` must begin at a word-aligned address.
  * 
- * `BSS` is the bias-shift-scale tensor with a shape of `(ceil(C_out/16), 4, 16)`. This tensor
+ * `BSS` is the bias-shift-scale tensor with a shape of `(ceil(C_out/16), 5, 16)`. This tensor
  * encodes the bias, shift and scale for each output channel into a single linear block of memory,
  * allowing a more efficient implementation of this operator. The function `fc_boggle_BSS()` is
  * provided to simplify the layout of this tensor. Use of `fc_boggle_BSS` is not required, but
  * refer to its documentation if you wish to layout this tensor manually (to reduce initialization
  * time). 
  * 
- * Notes:
- * 
- * This function computes inner products of arbitrary length and is thus susceptible to accumulator
+ * NOTE: This function computes inner products of arbitrary length and is thus susceptible to accumulator
  * saturation. See the Notes on Inner Products and Saturation section above for more information.
  * 
- * See the section Notes on Output Shift and Scale for more details about how the final shift
+ * NOTE: See the section Notes on Output Shift and Scale for more details about how the final shift
  * and scale are applied to get the final result.
  * 
- * This implementation will be most efficient when `C_in` is a multiple of `32`, and `C_out` is
+ * NOTE: This implementation will be most efficient when `C_in` is a multiple of `32`, and `C_out` is
  * a multiple of `16`.
  * 
- * The requirement that `C_in` be a multiple of 4 is imposed by the word-alignment constraint of the VPU.
- * To use this function with input vectors whose length is not a multiple of `4`, just pad the 
- * matrix `W` on right with zeros until its width is a multiple of `4`, and use new width 
- * as `C_in`. So long as `W` is padded with zeros, `X` does not need to be padded out. 
- * Alternatively, if setting many elements of `W` to zero is an insufferable cost, `X` can padded 
- * out with zeros so that its size is a multiple of 4 elements, in which case it does not matter
- * what `W` is padded with, *though it must still be padded*.
+ * NOTE: The requirement that `C_in` be a multiple of 4 is imposed by the word-alignment constraint of the VPU.
+ * To use this function with input vectors whose length is not a multiple of `4`, pad the matrix `W` on 
+ * right with zeros until its width is a multiple of `4`, and use new width as `C_in`. So long as `W` is 
+ * padded with zeros, `X` does not need to be padded out. Alternatively, if setting many elements of 
+ * `W` to zero is an insufferable cost, `X` can padded out with zeros so that its size is a multiple 
+ * of 4 elements, in which case it does not matter what `W` is padded with, *though it must still be 
+ * padded*.
  * 
  */
 static inline void fully_connected_16(
@@ -547,8 +543,7 @@ static inline void fully_connected_16(
     const int8_t* W, 
     const int8_t* X, 
     const data16_t* BSS,
-    const unsigned C_in, 
-    const unsigned C_out);
+    const nn_fully_connected_plan_t* plan);
 
 
 

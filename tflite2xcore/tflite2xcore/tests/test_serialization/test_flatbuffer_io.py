@@ -13,6 +13,8 @@ from tflite2xcore import (
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
 
+import tensorflow as tf
+
 BUILTIN_OPERATORS_TEST_FILE = os.path.join(
     Path(__file__).parent.absolute(),
     'data/builtin_operators.tflite'
@@ -60,14 +62,20 @@ def test_read_flatbuffer():
 
 def test_write_flatbuffer():
     model = read_flatbuffer(BUILTIN_OPERATORS_TEST_FILE)
+    model.pprint()
 
     tmp_file = os.path.join(tempfile.mkdtemp(), 'test_write_flatbuffer.tflite')
     bytes_expected = os.path.getsize(BUILTIN_OPERATORS_TEST_FILE)
     bytes_written = write_flatbuffer(model, tmp_file)
 
-    os.remove(tmp_file)
+    assert bytes_written <= bytes_expected
 
-    assert bytes_written == bytes_expected
+    # make sure it can be read by tensorflow interpreter
+    interpreter = tf.lite.Interpreter(model_path=tmp_file)
+
+    assert interpreter is not None
+
+    os.remove(tmp_file)
 
 
 def test_custom_options():

@@ -30,6 +30,7 @@ def generate_test_cases(operator, generator, test_cases, *, train_model=False):
         output_dir = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, operator, folder)
         cmd = f'python {generator} {train_model_flag} {arguments} -path {output_dir}'
         print(f'generating test case {output_dir}')
+        print(f'   command: {cmd}')
         try:
             subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
         except subprocess.CalledProcessError as cmdexc:                                                                                                   

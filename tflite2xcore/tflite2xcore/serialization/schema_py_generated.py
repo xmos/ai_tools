@@ -5138,7 +5138,7 @@ class TensorT(object):
             TensorAddQuantization(builder, quantization)
         TensorAddIsVariable(builder, self.isVariable)
         if self.sparsity is not None:
-            TensorAddSparsity(builder, sparsity)
+           TensorAddSparsity(builder, sparsity)
         tensor = TensorEnd(builder)
         return tensor
 

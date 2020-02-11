@@ -682,7 +682,9 @@ class ReplaceDeepMaxPool2DPass(ReplacePooling2DPass):
 
 
 class ReplaceAveragePool2DPass(ReplacePooling2DPass):
-    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=True):
+    # NOTE: this pass is currently not enabled in the xformer
+    # lib_nn performs the checks to dispatch the appropriate kernel
+    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=False):
         super().__init__(priority)
         self.safe_mode = safe_mode
         if self.safe_mode:

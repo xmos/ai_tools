@@ -286,4 +286,7 @@ void fully_connected_init(
     plan->c_out          = C_out;
     plan->cig_end_stride = (VPU_INT8_ACC_PERIOD-1) * C_in + 32;
     plan->tail_strat     = FC16_DEFAULT;
+
+    // const unsigned cout_tail = C_out % VPU_INT8_ACC_PERIOD;
+
 }

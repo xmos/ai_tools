@@ -170,8 +170,7 @@ typedef struct {
 
 
 typedef enum {
-    FC16_DEFAULT = 0,
-    FC16_ROW_WISE = 1,
+    FC16_DEFAULT    = 0,
 } nn_fc16_tail_strat_t;
 
 typedef struct {

@@ -134,9 +134,13 @@ FUNCTION_NAME:
 
     .L_cog_loop_end:
 
-#define needs_maccr     r5
-#define maccr_jump      r9
-#define acc_offset      r10
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////// C_out tail starts here
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
         {                                           ;   ldw plan, sp[STACK_ARG_PLAN]        }
         {                                           ;   ldw C_out, plan[PLAN_C_OUT]         }
@@ -144,9 +148,14 @@ FUNCTION_NAME:
         bf C_out, .Lfunc_end
         {                                           ;   bru r11                             }
         {                                           ;   bu .L_tail_strat_default            }
-        {                                           ;   bu .L_tail_strat_default            }
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////// TAIL STRATEGY DEFAULT
+
+#define needs_maccr     r5
+#define maccr_jump      r9
+#define acc_offset      r10
     .L_tail_strat_default:
         {   mov r11, BSS                            ;                                       }
         {   add r11, r11, _32                       ;   vldd r11[0]                         }   //load high biases
@@ -213,10 +222,11 @@ FUNCTION_NAME:
         {   mkmsk r5, r5                            ;   vlsat BSS[0]                        }
 
         vstrpv Y[0], r5
+        bu .Lfunc_end
 
-
-    
-
+#undef needs_maccr     
+#undef maccr_jump      
+#undef acc_offset   
 
 .Lfunc_end:
     {                                            ;   ldw r10, sp[6]                      }

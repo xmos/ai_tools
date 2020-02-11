@@ -115,7 +115,8 @@ class Buffer():
 class Operator():
     def __init__(self, subgraph, operator_code,
                  name=None, inputs=None, outputs=None,
-                 builtin_options=None, builtin_options_type=None, custom_options=None):
+                 builtin_options=None, builtin_options_type=None,
+                 custom_options=None):
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
         assert isinstance(operator_code, OperatorCode)
@@ -127,8 +128,6 @@ class Operator():
         self.outputs = outputs or []
         self.builtin_options = builtin_options
         self.builtin_options_type = builtin_options_type
-        if builtin_options:
-            assert builtin_options_type
         self.custom_options = custom_options
 
     def add_custom_options(self, **kwargs):
@@ -268,7 +267,8 @@ class Subgraph():
 
     def create_operator(self, operator_code, *,
                         inputs=None, outputs=None,
-                        builtin_options=None, builtin_options_type=None, custom_options=None):
+                        builtin_options=None, builtin_options_type=None, 
+                        custom_options=None):
         name = self.generate_unique_op_name(operator_code)
         operator = Operator(self, operator_code, name, inputs, outputs,
                             builtin_options, builtin_options_type, custom_options)

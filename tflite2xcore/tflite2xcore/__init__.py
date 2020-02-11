@@ -2,5 +2,6 @@
 
 from .serialization.api import (
     read_flatbuffer,
-    write_flatbuffer
+    write_flatbuffer,
+    create_dict_from_model
 )

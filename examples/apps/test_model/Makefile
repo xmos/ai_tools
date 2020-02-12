@@ -52,9 +52,9 @@ $(info Building for $(BUILD_TARGET))
 #********************
 # Dependencies
 #********************
-FLATBUFFERS_DIR := ../../../..
-GEMMLOWP_DIR := ../../../../gemmlowp
-TENSORFLOW_DIR := ../../../../tensorflow
+FLATBUFFERS_DIR := ../../../third_party/
+GEMMLOWP_DIR := ../../../third_party/gemmlowp
+TENSORFLOW_DIR := ../../../third_party/tensorflow
 LIB_NN_DIR := ../../../lib_nn
 
 INCLUDES := \

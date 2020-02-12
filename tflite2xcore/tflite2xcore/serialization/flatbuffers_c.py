@@ -6,6 +6,8 @@ import struct
 from pathlib import Path
 import ctypes
 
+import numpy as np
+
 if sys.platform.startswith("linux"):
     shared_lib = os.path.join(Path(__file__).parent.absolute(), 'linux/libtflite2xcore.so.1.0.1')
 elif sys.platform == "darwin":
@@ -14,24 +16,6 @@ else:
     shared_lib = os.path.join(Path(__file__).parent.absolute(), 'windows/libtflite2xcore.dll')
 
 lib = ctypes.cdll.LoadLibrary(shared_lib)
-
-class FlatbufferIO:
-    def __init__(self, data=None):
-        lib.read_flatbuffer.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
-        lib.read_flatbuffer.restype = ctypes.c_size_t
-
-        lib.write_flatbuffer.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
-        lib.write_flatbuffer.restype = ctypes.c_size_t
-
-    def read_flatbuffer(self, schema, fbs, size=100000000):
-        buffer = ctypes.create_string_buffer(size)
-        actual_size = lib.read_flatbuffer(schema.encode('ascii'), fbs.encode('ascii'), buffer)
-
-        return buffer[0:actual_size]
-
-    def write_flatbuffer(self, schema, buffer, fbs):
-        actual_size = lib.write_flatbuffer(schema.encode('ascii'), buffer, fbs.encode('ascii'))
-        return actual_size
 
 class FlexbufferBuilder:
     def __init__(self, data=None):
@@ -79,14 +63,14 @@ class FlexbufferBuilder:
         size = lib.builder_start_vector(obj, key)
         for list_item in data:
             list_item_type = type(list_item)
-            if list_item_type == int:
-                lib.builder_vector_int(obj, list_item)
+            if list_item_type == int or list_item_type == np.int32:
+                lib.builder_vector_int(obj, int(list_item))
             elif list_item_type == dict:
                 self.__add_map(obj, list_item)
             elif list_item_type == list:
                 self.__add_vector(obj, list_item)
             else:
-                raise Exception(f'Type {list_item_type} not supported')
+                raise Exception(f'Type {list_item_type} not supported (list item={list_item})')
         size = lib.builder_end_vector(self.obj, size, False, False)
 
         return size
@@ -106,7 +90,7 @@ class FlexbufferBuilder:
             elif value_type == list:
                 self.__add_vector(obj, value, key_ascii)
             else:
-                raise Exception(f'Type {value_type} not supported')
+                raise Exception(f'Type {value_type} not supported (key={key_ascii}, value={value})')
 
         size = lib.builder_end_map(obj, msize)
         return size

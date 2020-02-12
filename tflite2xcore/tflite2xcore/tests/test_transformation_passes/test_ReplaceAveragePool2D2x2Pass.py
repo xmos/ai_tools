@@ -15,9 +15,9 @@ from .test_ReplaceDeepMaxPool2DPass import (
     NON_MATCHING_POOL_SIZE, NON_MATCHING_STRIDES
 )
 
-MATCHING_INPUT_CHANNELS = list(range(4, 40, 4))
+MATCHING_INPUT_CHANNELS = [4, 8, 12, 20, 32, 36]
 
-NON_MATCHING_INPUT_CHANNELS = [1, 2, 3, 5, 7, 15, 31, 65]
+NON_MATCHING_INPUT_CHANNELS = [1, 2, 3, 5, 31]
 
 
 @pytest.fixture()
@@ -86,7 +86,7 @@ def test_non_matching_strides(trf_pass, model, strides):
 
 
 @pytest.mark.parametrize(*NON_MATCHING_OPTIONS)
-def non_matching_options(trf_pass, model, option, value):
+def test_non_matching_options(trf_pass, model, option, value):
     op = model.subgraphs[0].operators[-1]
     op.builtin_options[option] = value
     assert not trf_pass.match(op)

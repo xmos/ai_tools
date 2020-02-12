@@ -13,7 +13,7 @@ from .test_ReplaceAveragePool2D2x2Pass import (
     NON_MATCHING_INPUT_CHANNELS,
 )
 
-MATCHING_INPUT_HEIGHT = [3, 4, 11, 16]
+MATCHING_INPUT_HEIGHT = [3, 4, 11]
 MATCHING_INPUT_WIDTH = MATCHING_INPUT_HEIGHT
 MATCHING_POOL_SIZE = list(itertools.product([1, 2, 3], [1, 2, 3]))
 MATCHING_STRIDES = list(itertools.product([1, 2], [1, 2]))
@@ -76,7 +76,7 @@ def test_non_matching_input_channels(
 
 
 @pytest.mark.parametrize(*NON_MATCHING_OPTIONS)
-def non_matching_options(trf_pass, model, option, value):
+def test_non_matching_options(trf_pass, model, option, value):
     op = model.subgraphs[0].operators[-1]
     op.builtin_options[option] = value
     assert not trf_pass.match(op)

@@ -22,6 +22,24 @@ def build_abs(*, input_shape, tensor_type):
     return model
 
 
+def build_mean(*, input_shape, reduction_dims):
+    model = XCOREModel()
+    subgraph = model.create_subgraph()
+
+    input_shape = [1] + list(input_shape)
+    tin = subgraph.create_tensor(
+        'input', type_=TensorType.INT8, shape=input_shape, isinput=True)
+    tred = subgraph.create_tensor(
+        'reduction_dims', TensorType.INT32, [len(reduction_dims)])
+    tout = subgraph.create_tensor(
+        'output', tin.type, [tin.shape[0] + tin.shape[3]], isoutput=True)
+    tred.buffer.data = numpy.array(reduction_dims, dtype=numpy.int32)
+    subgraph.create_operator(OperatorCode(BuiltinOpCodes.MEAN),
+                             inputs=[tin, tred], outputs=[tout])
+
+    return model
+
+
 def build_argmax(*, input_shape, input_type):
     model = XCOREModel()
     subgraph = model.create_subgraph()

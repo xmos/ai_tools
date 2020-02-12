@@ -7,13 +7,12 @@ import numpy as np
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
-import op_test_models_common as common
 
 DEFAULT_OUTPUT_DIM = 10
 DEFAULT_INPUT_DIM = 32
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_anyout').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fully_connected').resolve()
 
 
 # Prepare data function
@@ -58,8 +57,8 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
             'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
 
 
-class FcDeepinAnyout(KerasModel):
-    def build(self, input_dim, output_dim, *, bias_init, weight_init):
+class FullyConnected(KerasModel):
+    def build(self, input_dim, output_dim):
         super().build()
 
         # Building
@@ -67,9 +66,7 @@ class FcDeepinAnyout(KerasModel):
             name=self.name,
             layers=[
                 tf.keras.layers.Flatten(input_shape=(input_dim, 1, 1)),
-                tf.keras.layers.Dense(output_dim, activation='softmax',
-                                      bias_initializer=bias_init,
-                                      kernel_initializer=weight_init)
+                tf.keras.layers.Dense(output_dim, activation='softmax')
             ]
         )
         # Compilation
@@ -113,34 +110,39 @@ class FcDeepinAnyout(KerasModel):
         super().to_tf_xcore(remove_softmax=True)
 
 
-def main(path=DEFAULT_PATH, *,
-         input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
-         train_new_model=False,
-         bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT):
-
-    # Instantiate model
-    test_model = FcDeepinAnyout('fc_deepin_anyout', Path(path))
+def run_main(model, *, train_new_model, input_dim, output_dim):
     if train_new_model:
         # Build model and compile
-        test_model.build(input_dim, output_dim,
-                         bias_init=bias_init, weight_init=weight_init)
+        model.build(input_dim, output_dim)
         # Prepare training data
-        test_model.prep_data()
+        model.prep_data()
         # Train model
-        test_model.train()
-        test_model.save_core_model()
+        model.train()
+        model.save_core_model()
     else:
         # Recover previous state from file system
-        test_model.load_core_model()
-        if output_dim != test_model.output_dim:
+        model.load_core_model()
+        if output_dim != model.output_dim:
             raise ValueError(
                 f"specified output_dim ({output_dim}) "
-                f"does not match loaded model's output_dim ({test_model.output_dim})"
+                f"does not match loaded model's output_dim ({model.output_dim})"
+            )
+        if input_dim != model.input_dim:
+            raise ValueError(
+                f"specified input_dim ({input_dim}) "
+                f"does not match loaded model's input_dim ({model.input_dim})"
             )
     # Generate test data
-    test_model.gen_test_data()
+    model.gen_test_data()
     # Populate converters
-    test_model.populate_converters()
+    model.populate_converters()
+
+
+def main(path=DEFAULT_PATH, *,
+         input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
+         train_new_model=False):
+    run_main(FullyConnected('fully_connected', Path(path)),
+             train_new_model=train_new_model, input_dim=input_dim, output_dim=output_dim)
 
 
 if __name__ == "__main__":
@@ -157,23 +159,18 @@ if __name__ == "__main__":
         help='Number of output dimensions, must be at least 2.')
     parser.add_argument(
         '-in', '--input_dim', type=int, default=DEFAULT_INPUT_DIM,
-        help='Input dimension, must be multiple of 32.')
+        help='Input dimension.')
     parser.add_argument(
         '--train_model', action='store_true', default=False,
         help='Train new model instead of loading pretrained tf.keras model.')
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
-    parser = common.parser_add_initializers(parser)
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
-    
-    initializers = common.initializer_args_handler(args)
 
     main(path=args.path,
          input_dim=args.input_dim, output_dim=args.output_dim,
-         train_new_model=args.train_model,
-         bias_init=initializers['bias_init'],
-         weight_init=initializers['weight_init'])
+         train_new_model=args.train_model)

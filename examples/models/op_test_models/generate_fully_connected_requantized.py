@@ -12,7 +12,8 @@ from generate_fully_connected import (
 )
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fully_connected_requantized').resolve()
 
-from generate_fully_connected import FullyConnected, run_main
+from generate_fc_deepin_anyout import FcDeepinAnyout
+import op_test_models_common as common
 
 
 class FullyConnectedRequantized(FullyConnected):
@@ -32,16 +33,38 @@ class FullyConnectedRequantized(FullyConnected):
 
 def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
-         train_new_model=False):
-    run_main(FullyConnectedRequantized('fully_connected_requantized', Path(path)),
-             train_new_model=train_new_model, input_dim=input_dim, output_dim=output_dim)
+         train_new_model=False,
+         bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT):
+    # Instantiate model
+    test_model = FcDeepinAnyoutRequantized('fc_deepin_anyout_requantized', Path(path))
+    if train_new_model:
+        # Build model and compile
+        test_model.build(input_dim, output_dim,
+                         bias_init=bias_init, weight_init=weight_init)
+        # Prepare training data
+        test_model.prep_data()
+        # Train model
+        test_model.train()
+        test_model.save_core_model()
+    else:
+        # Recover previous state from file system
+        test_model.load_core_model()
+        if output_dim != test_model.output_dim:
+            raise ValueError(
+                f"specified output_dim ({output_dim}) "
+                f"does not match loaded model's output_dim ({test_model.output_dim})"
+            )
+    # Generate test data
+    test_model.gen_test_data()
+    # Populate converters
+    test_model.populate_converters()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        'path', nargs='?', default=DEFAULT_PATH,
+        '-path', nargs='?', default=DEFAULT_PATH,
         help='Path to a directory where models and data will be saved in subdirectories.')
     parser.add_argument(
         '--use_gpu', action='store_true', default=False,
@@ -58,11 +81,16 @@ if __name__ == "__main__":
     parser.add_argument(
         '-v', '--verbose', action='store_true', default=False,
         help='Verbose mode.')
+    parser = common.parser_add_initializers(parser)
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
 
+    initializers = common.initializer_args_handler(args)
+
     main(path=args.path,
          input_dim=args.input_dim, output_dim=args.output_dim,
-         train_new_model=args.train_model)
+         train_new_model=args.train_model,
+         bias_init=initializers['bias_init'],
+         weight_init=initializers['weight_init'])

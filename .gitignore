@@ -26,3 +26,6 @@ tests/data
 **/.lock*
 **/build*/
 **/bin/
+
+#misc cruft
+**/*.local.*

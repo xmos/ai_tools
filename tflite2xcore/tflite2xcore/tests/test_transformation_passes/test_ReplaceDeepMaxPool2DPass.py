@@ -108,7 +108,7 @@ def test_non_matching_strides(trf_pass, model, strides):
 
 
 @pytest.mark.parametrize(*NON_MATCHING_OPTIONS)
-def non_matching_options(trf_pass, model, option, value):
+def test_non_matching_options(trf_pass, model, option, value):
     op = model.subgraphs[0].operators[-1]
     op.builtin_options[option] = value
     assert not trf_pass.match(op)

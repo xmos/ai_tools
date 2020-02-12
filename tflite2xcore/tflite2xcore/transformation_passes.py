@@ -704,6 +704,7 @@ class ReplaceAveragePool2DPass(ReplacePooling2DPass):
         if super().match(op):
             with self.using(op):
                 return (self._input.quantization == self._output.quantization
+                        and self._padding == 'VALID'
                         and self._fused_activation == 'NONE'
                         and self._input.shape[3] % 4 == 0)
 

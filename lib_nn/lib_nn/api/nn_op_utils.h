@@ -264,18 +264,27 @@ void conv2d_sido_boggle_K(
  * 
  * \param bss_out   The output tensor to be written
  * \param bias      The bias vector
- * \param shift     The shift vector
+ * \param shift1    The shift vector
  * \param scale     The scale vector
+ * \param shift2    The shift vector
  * \param scratch   An optional scratch buffer, or NULL
  * \param C_out     The number of output channels
  */
 void fc_boggle_BSS(
     data16_t* bss_out,
     int32_t* bias,
-    int16_t* shift,
+    int16_t* shift1,
     int16_t* scale,
+    int16_t* shift2,
     data16_t* scratch,
     const unsigned C_out);
+
+
+void fully_connected_init(
+    nn_fully_connected_plan_t* plan,
+    const unsigned C_in,
+    const unsigned C_out);
+
 
 
 

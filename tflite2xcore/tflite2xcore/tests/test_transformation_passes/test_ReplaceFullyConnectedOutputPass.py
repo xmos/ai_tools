@@ -3,15 +3,14 @@
 import numpy
 import pytest
 
-from tflite2xcore.transformation_passes import ReplaceDeepinAnyoutFullyConnectedOutputPass
+from tflite2xcore.transformation_passes import ReplaceFullyConnectedOutputPass
 
 from .model_builders import (
     build_fc, build_mlp,
 )
 
-from .test_ReplaceDeepinAnyoutFullyConnectedIntermediatePass import (
+from .test_ReplaceFullyConnectedIntermediatePass import (
     MATCHING_INPUT_SIZE,
-    NON_MATCHING_INPUT_SIZE,
     outputs, input_size,
     fc_model, logistic
 )
@@ -24,7 +23,7 @@ from .test_ReplaceDeepinDeepoutConv2DPass import (
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceDeepinAnyoutFullyConnectedOutputPass()
+    return ReplaceFullyConnectedOutputPass()
 
 
 @pytest.fixture(params=MATCHING_HIDDEN_NODES)
@@ -39,12 +38,6 @@ def mlp(outputs, hidden_nodes, input_size):
 
 def test_matching_params(trf_pass, fc_model):
     assert trf_pass.match(fc_model.subgraphs[0].operators[-1])
-
-
-@pytest.mark.parametrize('input_size', NON_MATCHING_INPUT_SIZE)
-def test_non_matching_fc_input_size(trf_pass, outputs, input_size):
-    model = build_fc(outputs=outputs, input_size=input_size)
-    assert not trf_pass.match(model.subgraphs[0].operators[-1])
 
 
 @pytest.mark.parametrize(*NON_MATCHING_TENSORS)

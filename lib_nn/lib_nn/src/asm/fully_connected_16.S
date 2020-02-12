@@ -8,8 +8,7 @@ void fully_connected_16_asm(
     const int8_t* W, 
     const int8_t* X, 
     const data16_t* BSS,
-    const unsigned C_in, 
-    const unsigned C_out);
+    const nn_fully_connected_16_plan_t* plan);
 */
 
 #define FUNCTION_NAME fully_connected_16_asm
@@ -23,243 +22,211 @@ void fully_connected_16_asm(
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
+#define PLAN_C_IN               0
+#define PLAN_C_OUT              1
+#define PLAN_CIG_END            2
+#define PLAN_TAIL_STRAT         3
 
-
-#define STACK_CIN       (NSTACKWORDS+1)
-#define STACK_COUT      (NSTACKWORDS+2)
+#define STACK_ARG_PLAN  (NSTACKWORDS+1)
 #define STACK_X         8
 #define STACK_CIG       9
 #define STACK_CIN_TAIL  10
+#define STACK_C_OUT     11
 
-#define STACK_TMP_X     (NSTACKWORDS-8)
-#define STACK_TMP_VR    (NSTACKWORDS-16)
+#define STACK_X_TAIL    (NSTACKWORDS-8)
+#define STACK_TMP_VEC   (NSTACKWORDS-16)
 
 #define Y               r0
 #define W               r1
 #define X               r2
+  #define plan            X
 #define BSS             r3
 #define C_in            r4
 #define C_out           r5
-
-#define cog_start       r6
+#define _32             r6
 #define cig_end         r7
-#define cig             r8
-#define x_tail_incr     r9             
-#define x_tail_mask     r10
+#define cig_left        r8
+#define x_tail_adj      r9
 
 .align 4
-
-.L_zero_vec:
-.word 0,0,0,0,0,0,0,0
-
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[0]
     std r6, r7, sp[1]
     std r8, r9, sp[2]
-    {   ldc r8, 32                              ;   stw r10, sp[6]                      }
+    {   ldc _32, 32                             ;   stw r10, sp[6]                      }
+    {   mov r8, X                               ;   stw X, sp[STACK_X]                  }
+    {                                           ;   ldw plan, sp[STACK_ARG_PLAN]        }
+    {   ldaw r10, sp[STACK_X_TAIL]              ;   ldw C_in, plan[PLAN_C_IN]           }
+    {   shr r11, C_in, 5                        ;   ldw C_out, plan[PLAN_C_OUT]         }
+    {   shl r11, r11, 5                         ;   ldw cig_end, plan[PLAN_CIG_END]     }
 
-    {   ldc r11, 32                             ;   ldw C_in, sp[STACK_CIN]             }
-    {   shl cog_start, C_in, 4                  ;   mkmsk r11, 5                        }
-    {   and r11, C_in, r11                      ;   stw X, sp[STACK_X]                  }
-    {   sub cog_start, cog_start, C_in          ;   ldw C_out, sp[STACK_COUT]           }  // cog_start = 16*C_in - C_in = 15 * C_in
-    {   add x_tail_incr, cog_start, r11         ;   stw r11, sp[STACK_CIN_TAIL]         }  // x_tail_incr = (15 * C_in) + (C_in % 32)
-    {   add cig_end, cog_start, r8              ;   shr C_out, C_out, 4                 }  // cig_end = (15 * C_in) + 32
-    {   mkmsk x_tail_mask, r11                  ;   bf C_out, .L_cog_loop_end           }  
+    // Save the tail of X to STACK_TMP_X
+    {   add r11, r8, r11                        ;   vclrdr                              }
+    {   mov r8, C_in                            ;   vstr r10[0]                         }
+    {   zext r8, 5                              ;   vldr r11[0]                         }
+    {   mkmsk r8, r8                            ;                                       }
+    vstrpv r10[0], r8
 
-    // {                                           ;                                       }
-    // {                                           ;                                       }
+    {   neg x_tail_adj, C_in                    ;   mov r11, C_in                       }
+    {   zext x_tail_adj, 5                      ;   shr r10, C_in, 5                    }
+    {   zext r11, 5                             ;   stw r10, sp[STACK_CIG]              }
+    {   shr C_out, C_out, 4                     ;   stw r11, sp[STACK_CIN_TAIL]         }
 
+    {                                           ;   bf C_out, .L_cog_loop_end           }
 
     .align 4
     .L_cog_loop:
-        {   ldc r8, 32                              ;   mov r11, BSS                        }
-        {   add r11, r11, r8                        ;   vldd r11[0]                         }   //load high biases
-        {   add W, W, cog_start                     ;   vldr r11[0]                         }   //load low biases
-        {   shl r11, r8, 4                          ;   add BSS, r11, r8                    }
-
-        {   shr cig, C_in, 5                        ;   vsetc r11                           }   //8 bit mode
-        {   ldc r11, 32                             ;   ldw X, sp[STACK_X]                  }
-        {                                           ;   bf cig, .L_cig_loop_tail            }
+        {   add r11, BSS, _32                       ;   vldd BSS[0]                         }   //load high biases
+        {   add BSS, r11, _32                       ;   vldr r11[0]                         }   //load low biases
+        {   shl r11, _32, 4                         ;                                       }
+        {   add W, W, cig_end                       ;   vsetc r11                           }   //8 bit mode
+        {   shr cig_left, C_in, 5                   ;   ldw X, sp[STACK_X]                  }
+        {   sub W, W, _32                           ;   bf cig_left, .L_cig_loop_tail       }
 
         .align 4
         .L_cig_loop:
-            {   add X, X, r11                           ;   vldc X[0]                           }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub cig, cig, 1                         ;   vlmaccr W[0]                        }
-            {   add W, W, cig_end                       ;   bt cig, .L_cig_loop                 }
+            {   sub cig_left, cig_left, 1           ;   vldc X[0]                           }
+        
+#define MACCR_BLOCK(INCRR)                                                                              \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   sub W, W, C_in                          ;   vlmaccr W[0]                        };      \
+            {   add W, W, INCRR                         ;   vlmaccr W[0]                        }
+
+            MACCR_BLOCK(cig_end);
+
+            {   add X, X, _32                           ;   bt cig_left, .L_cig_loop            }
 
             .L_cig_loop_tail:
-            {                                           ;   bf x_tail_mask, .L_cig_loop_end     }
+            {   shl r11, _32, 3                         ;   bf x_tail_adj, .L_cig_loop_end      }
 
-
-            // load the tail of X into vC, masking it using x_tail_mask
-            {   ldaw r11, sp[STACK_TMP_VR]              ;                                       }
-            {   ldap r11, .L_zero_vec                   ;   vstr r11[0]                         }
-            {   ldaw r11, sp[STACK_TMP_X]               ;   vldr r11[0]                         }
-            {   mov r11, X                              ;   vstr r11[0]                         }
-            {   ldaw r11, sp[STACK_TMP_X]               ;   vldr r11[0]                         }
-            vstrpv r11[0], x_tail_mask
-            {   ldaw r11, sp[STACK_TMP_VR]              ;   vldc r11[0]                         }
-            {   ldc r11, 32                             ;   vldr r11[0]                         }
+            {   ldaw r8, sp[STACK_X_TAIL]               ;                                       }
+            {                                           ;   vldc r8[0]                          }
 
             // now just do the VLMACCRs normally
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        }
-            {   add W, W, x_tail_incr                   ;   vlmaccr W[0]                        }
-            
+            MACCR_BLOCK(cig_end);
+
         .L_cig_loop_end:
         
-        {   ldc r8, 32                              ;   shl r11, r11, 3                     }
-        {                                           ;   vsetc r11                           }   //16 bit mode
-        {   add BSS, BSS, r8                        ;   vlsat BSS[0]                        }
-        {   add BSS, BSS, r8                        ;   vlmul BSS[0]                        }
+        {   sub W, W, x_tail_adj                    ;   vsetc r11                           }   //16 bit mode
+        {   add BSS, BSS, _32                       ;   vlsat BSS[0]                        }
+        {   ldaw r11, sp[STACK_TMP_VEC]             ;   vldc BSS[0]                         }
+        {   add BSS, BSS, _32                       ;   vstr r11[0]                         }
+        {                                           ;   vclrdr                              }
+        {                                           ;   vlmacc r11[0]                       }
+        {   add BSS, BSS, _32                       ;   vlsat BSS[0]                        }
         {   sub C_out, C_out, 1                     ;   vstr Y[0]                           }
-        {   add Y, Y, r8                            ;   bt C_out, .L_cog_loop               }
+        {   add Y, Y, _32                           ;   bt C_out, .L_cog_loop               }
 
     .L_cog_loop_end:
 
 
 
-        {   mkmsk r11, 4                            ;   ldw C_out, sp[STACK_COUT]           }
-        {   and C_out, C_out, r11                   ;                                       }
-        {                                           ;   bf C_out, .Lfunc_end                }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////// C_out tail starts here
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        //Load biases
-        {   ldc r8, 32                              ;   mov r11, BSS                        }
-        {   add r11, r11, r8                        ;   vldd r11[0]                         }   //load high biases
-        {                                           ;   vldr r11[0]                         }   //load low biases
-        {   shl r11, r8, 4                          ;   add BSS, r11, r8                    }
-        {                                           ;   vsetc r11                           }   //8 bit mode
-        {   sub r11, C_out, 1                       ;   ldw X, sp[STACK_X]                  }   // Reset X
+
+
+        {                                           ;   ldw plan, sp[STACK_ARG_PLAN]        }
+        {                                           ;   ldw C_out, plan[PLAN_C_OUT]         }
+        {   zext C_out, 4                           ;   ldw r11, plan[PLAN_TAIL_STRAT]      }
+        bf C_out, .Lfunc_end
+        {                                           ;   bru r11                             }
+        {                                           ;   bu .L_tail_strat_default            }
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////// TAIL STRATEGY DEFAULT
+
+#define needs_maccr     r5
+#define maccr_jump      r9
+#define acc_offset      r10
+    .L_tail_strat_default:
+        {   mov r11, BSS                            ;                                       }
+        {   add r11, r11, _32                       ;   vldd r11[0]                         }   //load high biases
+        {   add BSS, r11, _32                       ;   vldr r11[0]                         }   //load low biases
+        {   shl r11, _32, 4                         ;   ldw X, sp[STACK_X]                  }   // Reset X
+        {   sub r11, C_out, 1                       ;   vsetc r11                           }   //8 bit mode
         mul r11, r11, C_in
         {   add W, W, r11                           ;                                       }   // W = W + (C_out-1) * C_in
-        {   add cig_end, r11, r8                    ;   ldc r11, 16                         }   //cig_end = (C_out-1) * C_in + 32
-        {   sub r9, r11, C_out                      ;   ldc r11, 1                          }   // r9 = 16 - C_out
-        {   shl r6, r9, 1                           ;   stw C_out, sp[STACK_COUT]           }   // r6 = 2 * (16 - C_out)
-        {   and r5, r5, r11                         ;                                       }
-        {   sub r6, r6, r5                          ;                                       }
-        {   sub r6, r6, r5                          ;   eq r5, r5, 0                        }
+        {   add cig_end, r11, _32                   ;   ldc r11, 16                         }   //cig_end = (C_out-1) * C_in + 32
+        {   sub maccr_jump, r11, C_out              ;   ldc r11, 1                          }   // r9 = 16 - C_out
+        {   shl acc_offset, maccr_jump, 1           ;                                       }   // r6 = 2 * (16 - C_out)
+        {   and needs_maccr, needs_maccr, r11       ;                                       }
+        {   sub acc_offset, acc_offset, needs_maccr ;   shr cig_left, C_in, 5               }
+        {   sub acc_offset, acc_offset, needs_maccr ;   eq needs_maccr, needs_maccr, 0      }
         
-        {   shr cig, C_in, 5                        ;   ldc r11, 32                         }
-        {                                           ;   bf cig, .L_tail_loop_cig_tail       }
-
+        {                                           ;   bf cig_left, .L_tail_loop_cig_tail  }
 
         .align 4
         .L_tail_loop:
-            {   add X, X, r11                           ;   vldc X[0]                           }
+            {   ldaw r11, sp[STACK_TMP_VEC]             ;   vldc X[0]                           }
 
-            // Reposition accumulators at end of vector registers
-            {   ldaw r11, sp[STACK_TMP_VR]              ;                                       }
-            {   sub r11, r11, r6                        ;   vstr r11[0]                         }
-            {   ldaw r11, sp[STACK_TMP_VR]              ;   vldr r11[0]                         }
-            {   sub r11, r11, r6                        ;   vstd r11[0]                         }
-            {   ldc r11, 32                             ;   vldd r11[0]                         }
+            {   sub r11, r11, acc_offset                ;   vstr r11[0]                         }
+            {   ldaw r11, sp[STACK_TMP_VEC]             ;   vldr r11[0]                         }
+            {   sub r11, r11, acc_offset                ;   vstd r11[0]                         }
+            {                                           ;   vldd r11[0]                         }
             
-            {                                           ;   bru r5                              } // r5 should be (C_out % 2)
+            {                                           ;   bru needs_maccr                     } // r5 should be (C_out % 2)
             {                                           ;   vlmaccr W[0]                        }
-            {                                           ;   bru r9                              }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 0  <-- r9
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 1
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 2
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 3
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 4
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 5
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 6
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 7
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 8
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 9
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 10
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 11
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 12
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 13
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 14
-            {   sub cig, cig, 1                         ;   vlmaccr W[0]                        } // 15
-            {   add W, W, cig_end                       ;   bt cig, .L_tail_loop                }
+            {   sub cig_left, cig_left, 1               ;   bru maccr_jump                      }
+
+            MACCR_BLOCK(cig_end);
+
+            {   add X, X, _32                           ;   bt cig_left, .L_tail_loop           }
 
             .L_tail_loop_cig_tail:
 
-            {                                           ;   bf x_tail_mask, .L_tail_loop_end    }
-
-            // load the tail of X into vC, masking it using x_tail_mask
-            {   ldaw r11, sp[STACK_TMP_VR]              ;                                       }
-            {   ldap r11, .L_zero_vec                   ;   vstr r11[0]                         }
-            {   ldaw r11, sp[STACK_TMP_X]               ;   vldr r11[0]                         }
-            {   mov r11, X                              ;   vstr r11[0]                         }
-            {   ldaw r11, sp[STACK_TMP_X]               ;   vldr r11[0]                         }
-            vstrpv r11[0], x_tail_mask
-            {   ldaw r11, sp[STACK_TMP_VR]              ;   vldc r11[0]                         }
-            {   ldc r11, 32                             ;   vldr r11[0]                         }
+            {   ldaw r8, sp[STACK_X_TAIL]               ;   bf x_tail_adj, .L_tail_loop_end     }
+            
+            {   ldaw r11, sp[STACK_TMP_VEC]             ;   vldc r8[0]                          }
         
             // Re-align accumulators at end of vector registers
-            {   ldaw r11, sp[STACK_TMP_VR]              ;                                       }
-            {   sub r11, r11, r6                        ;   vstr r11[0]                         }
-            {   ldaw r11, sp[STACK_TMP_VR]              ;   vldr r11[0]                         }
-            {   sub r11, r11, r6                        ;   vstd r11[0]                         }
-            {   ldc r11, 32                             ;   vldd r11[0]                         }
+            {   sub r11, r11, acc_offset                ;   vstr r11[0]                         }
+            {   ldaw r11, sp[STACK_TMP_VEC]             ;   vldr r11[0]                         }
+            {   sub r11, r11, acc_offset                ;   vstd r11[0]                         }
+            {                                           ;   vldd r11[0]                         }
 
 
             // now just do the remaining VLMACCRs
-            {                                           ;   bru r5                              } // r5 should be (C_out % 2)
+            {                                           ;   bru needs_maccr                     } // r5 should be (C_out % 2)
             {                                           ;   vlmaccr W[0]                        }
-            {                                           ;   bru r9                              }
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 0  <-- r9
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 1
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 2
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 3
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 4
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 5
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 6
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 7
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 8
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 9
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 10
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 11
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 12
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 13
-            {   sub W, W, C_in                          ;   vlmaccr W[0]                        } // 14
-            {                                           ;   vlmaccr W[0]                        } // 15
+            {                                           ;   bru maccr_jump                      }
+
+            MACCR_BLOCK(cig_end);
             
         .L_tail_loop_end:
-        {   shl r11, r11, 3                         ;   ldw r5, sp[STACK_COUT]              }
-        {   shl r5, r5, 1                           ;   vsetc r11                           }
-        {   ldc r8, 32                              ;   mkmsk r5, r5                        }
-        {   add BSS, BSS, r8                        ;   vlsat BSS[0]                        }
-        {                                           ;   vlmul BSS[0]                        }
+        {   shl r11, _32, 3                         ;   ldw plan, sp[STACK_ARG_PLAN]        }
+        {   add r8, BSS, _32                        ;   ldw r5, plan[PLAN_C_OUT]            }
+        {   zext r5, 4                              ;   vsetc r11                           }
+        {   add BSS, BSS, _32                       ;   vlsat BSS[0]                        }
+        {   ldaw r11, sp[STACK_TMP_VEC]             ;   vldc BSS[0]                         }
+        {   add BSS, BSS, _32                       ;   vstr r11[0]                         }
+        {                                           ;   vclrdr                              }
+        {   shl r5, r5, 1                           ;   vlmacc r11[0]                       }
+        {   mkmsk r5, r5                            ;   vlsat BSS[0]                        }
 
         vstrpv Y[0], r5
+        bu .Lfunc_end
 
-
-    
-
+#undef needs_maccr     
+#undef maccr_jump      
+#undef acc_offset   
 
 .Lfunc_end:
     {                                            ;   ldw r10, sp[6]                      }
@@ -282,6 +249,5 @@ FUNCTION_NAME:
     .issue_mode  single
 
 #endif
-
 
 

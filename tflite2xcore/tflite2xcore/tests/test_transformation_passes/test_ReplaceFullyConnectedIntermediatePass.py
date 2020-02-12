@@ -4,7 +4,7 @@ import numpy
 import pytest
 
 from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.transformation_passes import ReplaceDeepinAnyoutFullyConnectedIntermediatePass
+from tflite2xcore.transformation_passes import ReplaceFullyConnectedIntermediatePass
 
 from .model_builders import (
     build_fc, build_mlp, build_logistic
@@ -12,16 +12,12 @@ from .model_builders import (
 
 
 MATCHING_INPUT_SIZE = [
-    (1, 1, 32), (2, 2, 8), (4, 4, 2), (32,),
-    (1, 2, 32), (4, 2, 8), (8, 8, 1), (64,)
+    (1, 1, 32), (2, 2, 8), (8, 8, 1), (64,),
+    (1, 1, 31), (2, 2, 7), (9, 4, 6), (63,)
 ]
 MATCHING_OUTPUTS = [1, 2, 10, 15, 16, 17, 100]
 MATCHING_HIDDEN_NODES = MATCHING_OUTPUTS + [numpy.prod(t) for t in MATCHING_INPUT_SIZE]
 
-NON_MATCHING_INPUT_SIZE = [
-    (1, 1, 31), (2, 2, 7), (3, 4, 3), (33,),
-    (2, 2, 15), (3, 3, 7), (9, 4, 6), (63,)
-]
 NON_MATCHING_TENSORS = ('tensor_name', 'new_type'), [
     ('input', TensorType.INT16), ('input', TensorType.INT32),
     ('weights_1', TensorType.INT16), ('weights_1', TensorType.INT32),
@@ -32,7 +28,7 @@ NON_MATCHING_TENSORS = ('tensor_name', 'new_type'), [
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceDeepinAnyoutFullyConnectedIntermediatePass()
+    return ReplaceFullyConnectedIntermediatePass()
 
 
 @pytest.fixture(params=MATCHING_OUTPUTS)
@@ -80,20 +76,6 @@ def test_logistic(logistic, trf_pass):
 
 def test_fc_non_match(fc_model, trf_pass):
     assert not trf_pass.match(fc_model.subgraphs[0].operators[-1])
-
-
-@pytest.mark.parametrize('input_size', NON_MATCHING_INPUT_SIZE)
-def test_non_matching_logistic_input_size(trf_pass, outputs, input_size):
-    model = build_logistic(outputs=outputs, input_size=input_size)
-    assert not trf_pass.match(model.subgraphs[0].operators[0])
-    assert not trf_pass.match(model.subgraphs[0].operators[-1])
-
-
-@pytest.mark.parametrize('input_size', NON_MATCHING_INPUT_SIZE)
-def test_non_matching_mlp_input_size(trf_pass, outputs, hidden_nodes, input_size):
-    model = build_mlp(outputs=outputs, hidden_nodes=hidden_nodes, input_size=input_size)
-    assert not trf_pass.match(model.subgraphs[0].operators[0])
-    assert not trf_pass.match(model.subgraphs[0].operators[-1])
 
 
 @pytest.mark.parametrize(*NON_MATCHING_TENSORS)

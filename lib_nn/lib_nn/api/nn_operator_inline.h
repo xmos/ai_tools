@@ -200,16 +200,15 @@ static inline void fully_connected_16(
     const int8_t* W, 
     const int8_t* X, 
     const data16_t* BSS,
-    const unsigned C_in, 
-    const unsigned C_out)
+    const nn_fully_connected_plan_t* plan)
 {
 #if defined(__XS3A__) && (USE_ASM_fully_connected_16)
 
-    fully_connected_16_asm(Y, W, X, BSS, C_in, C_out);
+    fully_connected_16_asm(Y, W, X, BSS, plan);
 
 #else
 
-    fully_connected_16_c(Y, W, X, BSS, C_in, C_out);
+    fully_connected_16_c(Y, W, X, BSS, plan);
 
 #endif
 }

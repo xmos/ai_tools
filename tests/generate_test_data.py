@@ -124,7 +124,7 @@ def run_generate(tests, jobs):
     # Fully-connected deepin anyout
     #***********************************
     operator = operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_fc_deepin_anyout.py')
+    generator = os.path.join(directories.GENERATOR_DIR, 'generate_fully_connected.py')
     parameter_sets = [
         {'in': 32 }
     ]
@@ -137,7 +137,7 @@ def run_generate(tests, jobs):
     # Fully-connected deepin anyout requantized
     #***********************************
     operator = operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_fc_deepin_anyout_requantized.py')
+    generator = os.path.join(directories.GENERATOR_DIR, 'generate_fully_connected_requantized.py')
     parameter_sets = [
         {'in': 32 }
     ]

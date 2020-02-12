@@ -126,6 +126,7 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/xcore/xcore_type_conversions.cc \
 	lib_nn/src/nn_operator.c \
 	lib_nn/src/nn_operator_conv.c \
+	lib_nn/src/c/fully_connected.c \
 	main.cc
 
 ifeq ($(TARGET), x86)

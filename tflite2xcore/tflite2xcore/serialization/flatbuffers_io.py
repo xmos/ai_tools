@@ -109,6 +109,7 @@ def create_xcore_model(modelT):
         subgraph = model.create_subgraph(
             name=(subgraphT.name if hasattr(subgraphT, 'name') else None)
         )
+        
         # load tensors
         tensors = []
         for tensor_index, tensorT in enumerate(subgraphT.tensors):
@@ -140,7 +141,7 @@ def create_xcore_model(modelT):
             )
             tensors.append(tensor)
 
-        # load operators
+        # load operators & set tensor producer & consumers
         for operatorT in subgraphT.operators:
             operator_code = operator_codes_lut[operatorT.opcodeIndex]
             options = {}
@@ -153,12 +154,19 @@ def create_xcore_model(modelT):
                     FlexbufferParser().parse(bytes(operatorT.customOptions))
                 )
 
-            subgraph.create_operator(
+            operator = subgraph.create_operator(
                 operator_code,
                 inputs=[tensors[input_index] for input_index in operatorT.inputs],
                 outputs=[tensors[output_index] for output_index in operatorT.outputs],
                 **options
             )
+
+            # set tensor producer & consumers
+            for output_index in operatorT.outputs:
+                tensors[output_index].producers.append(operator)
+
+            for input_index in operatorT.inputs:
+                tensors[input_index].consumers.append(operator)
 
     return model
 

@@ -141,10 +141,13 @@ class Operator():
         return self.subgraph.model
 
     def __str__(self):
+        return f'operator_code={self.operator_code} id={id(self)}'
+
+    def pprint(self):
         INDENT = ' ' * 2
 
         lines = []
-        lines.append(f'operator_code= {self.operator_code}')
+        lines.append(str(self))
         lines.append(f'{INDENT}inputs')
         lines.extend([f'{INDENT * 2}{input_}' for input_ in self.inputs])
         lines.append(f'{INDENT}outputs')
@@ -157,7 +160,9 @@ class Operator():
 
 
 class Tensor():
-    def __init__(self, subgraph, name, type_, shape, buffer=None, quantization=None):
+    def __init__(self, subgraph, name, type_, shape, 
+                buffer=None, quantization=None,
+                producers=None, consumers=None):
         # Generally, do not use this constructor to instantiate Tensor!
         # Use Subgraph.create_tensor instead.
         self.subgraph = subgraph  # parent
@@ -175,12 +180,28 @@ class Tensor():
 
         self.quantization = quantization
 
+        self.producers = producers or []
+        self.consumers = consumers or []
+
     @property
     def model(self):
         return self.subgraph.model
 
     def __str__(self):
         return f'name={self.name}, type={self.type.name}, shape={self.shape}, buffer={self.buffer}'
+
+    def pprint(self):
+        INDENT = ' ' * 2
+
+        lines = []
+        lines.append(str(self))
+        if self.producers:
+            lines.append(f'{INDENT}producers')
+            lines.extend([f'{INDENT * 2}{producer}' for producer in self.producers])
+        if self.consumers:
+            lines.append(f'{INDENT}consumers')
+            lines.extend([f'{INDENT * 2}{consumer}' for consumer in self.consumers])
+        return '\n'.join(lines)
 
     @property
     def sanitized_name(self):
@@ -233,12 +254,15 @@ class Subgraph():
         return [t for t in self.tensors if t not in (self.inputs + self.outputs)]
 
     def create_tensor(self, name, type_, shape, *,
-                      buffer=None, quantization=None, isinput=False, isoutput=False):
+                      buffer=None, quantization=None,
+                      isinput=False, isoutput=False,
+                      producers=False, consumers=False):
 
         for existing_tensor in self.tensors:
             if name in [existing_tensor.name, existing_tensor.sanitized_name]:
                 raise Exception(f'Tensor name {name} already in use')
 
+        # tensor = Tensor(self, name, type_, shape, buffer, quantization, producers, consumers)
         tensor = Tensor(self, name, type_, shape, buffer, quantization)
         self.tensors.append(tensor)
         if isinput:
@@ -395,13 +419,13 @@ class XCOREModel():
             print('* Operators *')
             print('*************')
             for operator in subgraph.operators:
-                print(operator)
+                print(operator.pprint())
 
             print('**********')
             print('* Inputs *')
             print('**********')
             for input_ in subgraph.inputs:
-                print(input_)
+                print(input_.pprint())
                 if tensor_values and len(input_.buffer):
                     print(f'   values={input_.numpy}')
 
@@ -409,7 +433,7 @@ class XCOREModel():
             print('* Intermediates *')
             print('*****************')
             for intermediate in subgraph.intermediates:
-                print(intermediate)
+                print(intermediate.pprint())
                 if tensor_values and len(intermediate.buffer):
                     print(f'   values={intermediate.numpy}')
 
@@ -417,6 +441,6 @@ class XCOREModel():
             print('* Outputs *')
             print('***********')
             for output in subgraph.outputs:
-                print(output)
+                print(output.pprint())
                 if tensor_values and len(output.buffer):
                     print(f'   values={output.numpy}')

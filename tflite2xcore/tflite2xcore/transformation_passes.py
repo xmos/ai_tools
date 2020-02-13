@@ -640,7 +640,7 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
         return super().mutate(op)
 
 
-class ReplaceDeepPooling2DPass(ReplaceQuantizedOperatorPass):
+class ReplacePooling2DPass(ReplaceQuantizedOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options
@@ -659,11 +659,20 @@ class ReplaceDeepPooling2DPass(ReplaceQuantizedOperatorPass):
     def _fused_activation(self):
         return self._op.builtin_options['fused_activation_function']
 
+
+class ReplaceDeepMaxPool2DPass(ReplacePooling2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.MAX_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_maxpool2d_deep)
+
     def match(self, op):
         if super().match(op):
             with self.using(op):
                 return (self._input.quantization == self._output.quantization
-                        and self._padding == 'VALID'
                         and self._strides == (2, 2)
                         and self._pool_size == (2, 2)
                         and self._fused_activation == 'NONE'
@@ -674,24 +683,120 @@ class ReplaceDeepPooling2DPass(ReplaceQuantizedOperatorPass):
         return False
 
 
-class ReplaceDeepMaxPool2DPass(ReplaceDeepPooling2DPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.MAX_POOL_2D
+class ReplaceAveragePool2DPass(ReplacePooling2DPass):
+    # NOTE: this pass is currently not enabled in the xformer
+    # lib_nn performs the checks to dispatch the appropriate kernel
+    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=False):
+        super().__init__(priority)
+        self.safe_mode = safe_mode
+        if self.safe_mode:
+            self.superseding_pass = ReplaceAveragePool2D2x2Pass()
 
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_maxpool2d_deep)
-
-
-class ReplaceDeepAveragePool2DPass(ReplaceDeepPooling2DPass):
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.AVERAGE_POOL_2D
 
     @property
     def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_avgpool2d_deep)
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d)
+
+    def match(self, op):
+        if self.safe_mode and self.superseding_pass.match(op):
+            return False
+        if super().match(op):
+            with self.using(op):
+                return (self._input.quantization == self._output.quantization
+                        and self._padding == 'VALID'
+                        and self._fused_activation == 'NONE'
+                        and self._input.shape[3] % 4 == 0)
+
+        return False
+
+    def mutate(self, op):
+        new_op = super().mutate(op)
+
+        with self.using(op):
+            new_op.add_custom_options(
+                stride_h=self._strides[0], stride_w=self._strides[1],
+                pool_h=self._pool_size[0], pool_w=self._pool_size[1]
+            )
+
+
+class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.MEAN
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d_global)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                reduction_dims = self._op.inputs[1].numpy
+                return (len(reduction_dims) == 2
+                        and np.all(reduction_dims == [1, 2])
+                        and self._input.shape[3] % 4 == 0)
+
+        return False
+
+    @property
+    def _bias_scale_shift(self):
+        num_pixels = self._input.shape[1] * self._input.shape[2]
+        rescaling = self._input.quantization['scale'][0] / self._output.quantization['scale'][0]
+        multiplier = rescaling / num_pixels
+
+        scale = np.round(multiplier * 2 ** (7 - np.ceil(np.log2(multiplier))))
+        shift = np.round(np.log2(scale / multiplier))
+        bias = np.round(
+            scale * (self._output.quantization['zero_point'][0] / multiplier
+                     - self._input.quantization['zero_point'][0] * num_pixels)
+        )
+
+        if shift > 24:
+            raise ValueError("Global Average Pool shift is greater than 24.")
+
+        return bias.astype(np.int32), scale.astype(np.int8), shift.astype(np.int16)
+
+    def mutate(self, op):
+        new_op = super().mutate(op)
+        subgraph = new_op.subgraph
+
+        with self.using(new_op):
+            # replace reduction_indices tensor with bias_scale_shift
+            subgraph.remove_tensor(new_op.inputs[1])
+            new_op.inputs[1] = subgraph.create_tensor(
+                f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7])
+            new_op.inputs[1].buffer.data = np.frombuffer(
+                b''.join(p.tostring() for p in self._bias_scale_shift),
+                dtype=np.int8
+            )
+
+        return new_op
+
+
+class ReplaceAveragePool2D2x2Pass(ReplacePooling2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.AVERAGE_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d_2x2)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (self._input.quantization == self._output.quantization
+                        and self._strides == (2, 2)
+                        and self._pool_size == (2, 2)
+                        and self._fused_activation == 'NONE'
+                        and self._input.shape[1] % 2 == 0
+                        and self._input.shape[2] % 2 == 0
+                        and self._input.shape[3] % 4 == 0)
+
+        return False
 
 
 class RemoveUnusedBuffersPass(ModelTransformationPass):

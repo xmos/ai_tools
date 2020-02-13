@@ -19,6 +19,9 @@ uint64_t pseudo_rand_uint64(unsigned *r);
 
 void pseudo_rand_bytes(unsigned *r, char* buffer, unsigned size);
 
-
+void print_warns(
+    int start_case, 
+    unsigned test_c, 
+    unsigned test_asm);
 
 #endif //TST_COMMON_H_

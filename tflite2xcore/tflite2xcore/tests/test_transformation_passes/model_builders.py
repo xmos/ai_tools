@@ -2,7 +2,7 @@
 
 import pytest
 import numpy
-
+from copy import deepcopy
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
 
@@ -18,6 +18,24 @@ def build_abs(*, input_shape, tensor_type):
         'output', tin.type, tin.shape, isoutput=True)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.ABS),
                              inputs=[tin], outputs=[tout])
+
+    return model
+
+
+def build_mean(*, input_shape, reduction_dims):
+    model = XCOREModel()
+    subgraph = model.create_subgraph()
+
+    input_shape = [1] + list(input_shape)
+    tin = subgraph.create_tensor(
+        'input', type_=TensorType.INT8, shape=input_shape, isinput=True)
+    tred = subgraph.create_tensor(
+        'reduction_dims', TensorType.INT32, [len(reduction_dims)])
+    tout = subgraph.create_tensor(
+        'output', tin.type, [tin.shape[0] + tin.shape[3]], isoutput=True)
+    tred.buffer.data = numpy.array(reduction_dims, dtype=numpy.int32)
+    subgraph.create_operator(OperatorCode(BuiltinOpCodes.MEAN),
+                             inputs=[tin, tred], outputs=[tout])
 
     return model
 
@@ -42,35 +60,38 @@ def build_argmax(*, input_shape, input_type):
     return model
 
 
-def build_pool(*, input_shape, builtin_opcode):
+def build_pool(builtin_opcode, *, input_shape, padding, pool_size, strides):
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
     input_shape = [1] + list(input_shape)
     output_shape = [input_shape[0], input_shape[1] / 2, input_shape[1] / 2, input_shape[3]]
-    tin = subgraph.create_tensor('input', TensorType.INT8, shape=input_shape, isinput=True)
-    tout = subgraph.create_tensor('output', tin.type, shape=output_shape, isoutput=True)
+    quantization = {'scale': [0.35], 'zero_point': [0]}
+    tin = subgraph.create_tensor(
+        'input', TensorType.INT8,
+        shape=input_shape, isinput=True, quantization=deepcopy(quantization))
+    tout = subgraph.create_tensor(
+        'output', tin.type,
+        shape=output_shape, isoutput=True, quantization=deepcopy(quantization))
 
     op = subgraph.create_operator(
         OperatorCode(builtin_opcode), inputs=[tin], outputs=[tout])
-    op.builtin_options = {'padding': 'VALID',
-                          'stride_w': 2, 'stride_h': 2,
-                          'filter_height': 2, 'filter_width': 2,
+    assert padding in ['SAME', 'VALID']
+    assert len(strides) == len(pool_size) == 2
+    op.builtin_options = {'padding': padding,
+                          'stride_h': strides[0], 'stride_w': strides[1],
+                          'filter_height': pool_size[0], 'filter_width': pool_size[1],
                           'fused_activation_function': 'NONE'}
 
     return model
 
 
-def build_maxpool(*, input_shape):
-    return build_pool(
-        input_shape=input_shape,
-        builtin_opcode=BuiltinOpCodes.MAX_POOL_2D)
+def build_maxpool(**kwargs):
+    return build_pool(BuiltinOpCodes.MAX_POOL_2D, **kwargs)
 
 
-def build_avgpool(*, input_shape):
-    return build_pool(
-        input_shape=input_shape,
-        builtin_opcode=BuiltinOpCodes.AVERAGE_POOL_2D)
+def build_avgpool(**kwargs):
+    return build_pool(BuiltinOpCodes.AVERAGE_POOL_2D, **kwargs)
 
 
 def build_fc(*, outputs, input_size):

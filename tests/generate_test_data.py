@@ -77,13 +77,12 @@ def run_generate(tests, jobs):
     # AvgPool
     #***********************************
 
-    # XC_avgpool2d_global = "XC_avgpool2d_global"    
     operator = operator_codes.XCOREOpCodes.XC_avgpool2d.name
     generator = os.path.join(directories.GENERATOR_DIR, 'generate_avgpool2d.py')
     parameter_sets = [
+        {'in': 32, 'hi': 5, 'wi': 5, 'st':(1, 2), 'po': (3, 4), 'pd': 'VALID'},
         {'in': 32, 'hi': 4, 'wi': 4, 'st':(2, 2), 'po': (4, 4), 'pd': 'VALID'},
-        {'in': 32, 'hi': 5, 'wi': 5, 'st':(2, 2), 'po': (4, 2), 'pd': 'VALID'},
-        {'in': 32, 'hi': 16, 'wi': 16, 'st':(2, 2), 'po': (6, 6), 'pd': 'VALID'}
+        {'in': 4, 'hi': 16, 'wi': 16, 'st':(1, 1), 'po': (4, 4), 'pd': 'VALID'}
     ]
 
     if operator in tests or len(tests) == 0:

@@ -19,6 +19,7 @@ class PassPriority(enum.IntEnum):
     HIGH = enum.auto()
     MEDIUM = enum.auto()
     LOW = enum.auto()
+    PAR = enum.auto()
     CLEANUP = enum.auto()
     LOWEST = CLEANUP
 

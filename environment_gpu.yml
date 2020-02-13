@@ -27,7 +27,6 @@ dependencies:
   - entrypoints=0.3
   - execnet=1.7.1
   - expat=2.2.6
-  - flatbuffers=1.11.0
   - fontconfig=2.13.0
   - freetype=2.9.1
   - fribidi=1.0.5
@@ -118,7 +117,6 @@ dependencies:
   - pytest-xdist=1.31.0
   - python=3.6.8
   - python-dateutil=2.8.0
-  - python-flatbuffers=1.11
   - pytz=2019.2
   - pywavelets=1.1.1
   - pyzmq=18.1.0
@@ -201,4 +199,5 @@ dependencies:
     - werkzeug==0.16.0
     - wheel==0.33.6
     - zookeeper==0.5.5
-
+    - -e ./third_party/flatbuffers/python/
+    - -e ./tflite2xcore

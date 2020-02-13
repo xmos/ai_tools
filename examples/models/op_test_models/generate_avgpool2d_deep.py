@@ -81,7 +81,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        'path', nargs='?', default=DEFAULT_PATH,
+        '-path', nargs='?', default=DEFAULT_PATH,
         help='Path to a directory where models and data will be saved in subdirectories.')
     parser.add_argument(
         '-in', '--inputs', type=int, default=DEFAULT_INPUTS,

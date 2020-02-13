@@ -52,9 +52,9 @@ $(info Building for $(BUILD_TARGET))
 #********************
 # Dependencies
 #********************
-FLATBUFFERS_DIR := ../../../..
-GEMMLOWP_DIR := ../../../../gemmlowp
-TENSORFLOW_DIR := ../../../../tensorflow
+FLATBUFFERS_DIR := ../../../third_party/
+GEMMLOWP_DIR := ../../../third_party/gemmlowp
+TENSORFLOW_DIR := ../../../third_party/tensorflow
 LIB_NN_DIR := ../../../lib_nn
 
 INCLUDES := \
@@ -126,6 +126,7 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/xcore/xcore_type_conversions.cc \
 	lib_nn/src/nn_operator.c \
 	lib_nn/src/nn_operator_conv.c \
+	lib_nn/src/c/fully_connected.c \
 	main.cc
 
 ifeq ($(TARGET), x86)
@@ -137,8 +138,7 @@ else # must be xcore
 		lib_nn/src/asm/avgpool2d_deep.S \
 		lib_nn/src/asm/conv2d_deepin_deepout_block.S \
 		lib_nn/src/asm/conv2d_shallowin_deepout_block.S \
-		lib_nn/src/asm/fc_deepin_shallowout_16.S \
-		lib_nn/src/asm/fc_deepin_shallowout_8.S \
+		lib_nn/src/asm/fully_connected_16.S \
 		lib_nn/src/asm/maxpool2d_deep.S \
 		lib_nn/src/asm/vpu_memcpy.S \
 		lib_nn/src/asm/requantize_16_to_8.S \

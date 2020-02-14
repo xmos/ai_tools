@@ -367,6 +367,14 @@ static inline void conv2d_shallowin_deepout(
     const int8_t* K,
     const int16_t* scales);
 
+
+static inline void conv2d_1x1(
+    int8_t* Y,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* BSS,
+    const nn_conv2d_1x1_plan_t* plan);
+
     
 
     

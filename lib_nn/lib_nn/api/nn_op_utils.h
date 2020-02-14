@@ -201,6 +201,14 @@ void conv2d_sido_boggle_K(
 
 
 
+void conv2d_1x1_init(
+    nn_conv2d_1x1_plan_t* plan,
+    const nn_image_params_t* x,
+    const nn_image_params_t* y);
+
+
+
+
 /**
  * Lays out the biases, shifts and scales into a format appropriate for the `BSS` argument
  * to the `fully_connected_16()` function.

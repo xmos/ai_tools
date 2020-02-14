@@ -51,6 +51,17 @@ void fc_deepin_shallowout_16_asm(
     const uint16_t* shifts, 
     const int16_t* scales);
 
+    
+#ifndef USE_ASM_conv2d_1x1
+#define USE_ASM_conv2d_1x1    (1)
+#endif
+void conv2d_1x1_asm(
+    int8_t* Y,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* BSS,
+    const nn_conv2d_1x1_plan_t* plan);
+
 #ifndef USE_ASM_fully_connected_16
 #define USE_ASM_fully_connected_16      (1)
 #endif

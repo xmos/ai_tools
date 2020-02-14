@@ -141,7 +141,7 @@ class Operator():
         return self.subgraph.model
 
     def __str__(self):
-        return f'operator_code={self.operator_code} id={id(self)}'
+        return f'({self.subgraph.operators.index(self)}) operator_code={self.operator_code}'
 
     def pprint(self):
         INDENT = ' ' * 2

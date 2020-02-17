@@ -1687,16 +1687,19 @@ void conv2d_1x1_c(
 void conv2d_1x1_init(
     nn_conv2d_1x1_plan_t* plan,
     const nn_image_params_t* x,
-    const nn_image_params_t* y)
+    const nn_image_params_t* y,
+    const unsigned start_row,
+    const unsigned start_col,
+    const unsigned out_pixels)
 {
     assert(x->height == y->height);
     assert(x->width == y->width);
 
-    plan->start_stride.X = 0;
-    plan->start_stride.Y = 0;
+    plan->start_stride.X = IMG_ADDRESS_VECT(x, start_row, start_col, 0);
+    plan->start_stride.Y = IMG_ADDRESS_VECT(y, start_row, start_col, 0);
     plan->start_stride.K = 0;
 
-    plan->pix_count = x->height * x->width;
+    plan->pix_count = out_pixels;
     plan->C_in = x->channels;
     plan->C_out = y->channels;
 

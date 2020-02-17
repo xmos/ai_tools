@@ -63,7 +63,7 @@ function, and the ReLU function is not available as a separate function. ReLU (a
 other piecewise-linear activation functions can be achieved implicitly using the 
 convolution or fully-connected operators by making use of the saturation boundaries. 
 
-
+    TODO: Review this. I don't believe this is still true.
 */
 
 
@@ -72,8 +72,8 @@ Standard Tensor Layout
 
 The standard layout of an N-dimensional tensor with shape `(s1, s2, ..., sN)` is the
 same as the typical layout of a C array with the same dimensions. In this layout, the
-indices of each dimension are iterated over, with indices iterating in ascending order,
-and with the later dimensions iterating fastest.
+as memory address increases, indices of each dimension are iterated over, with indices 
+iterating in ascending order, and with the later dimensions iterating fastest.
 
 For example, a tensor `A` with shape (2,2,2), in standard tensor layout would be ordered
 as:
@@ -230,6 +230,84 @@ Final shift:
 
  */
 
+/**         Bias-Shifts-Scale Tensor Layout
+
+In most cases, where a function requires a Bias-Shifts-Scale (BSS) tensor as input, the required layout will
+be as specified here [0].
+
+The BSS tensor contains information pertaining to the `C_out` output channels of an operation. Such a tensor
+is 3 dimensional and has shape (`ceil(C_out/16.0)`, `5`, `16`) with elements of type `data16_t`.
+
+The first axis corresponds to output channel groups. The `ceil( )` is applied because for the purposes of
+a BSS tensor, the output channel tail must be handled as a full output channel group. [1]
+
+The third axis corresponds to the output channel offset within the output channel group. So, all information
+corresponding to output channel `k` will be found in the elements `BSS[(k//16), :, (k%16)]`.
+
+The second axis corresponds to the parameters type, where each index has a specific meaning:
+
+    0 - Bias high half-word: The most significant 16-bits of the 32-bit bias for the output channel
+    1 - Bias low half-word: The least significant 16-bits of the 32-bit bias for the output channel
+    2 - Shift1: The first right-shift value; applied to the 32-bit accumulator for a 16-bit result.
+    3 - Scale: The scale value; applied after shift1; multiplied by the 16-bit result for a 32-bit product
+    4 - Shfit2: The second right-shift value; applied after scale; down-shifts the 32-bit product for an 8-bit result.
+
+[0]     For general information about how shifts and scales are used, see "Notes on Output Shifts and Scale", 
+        for information on how biases are used, see "Notes on Inner Products and Saturation"
+[1]     See "Notes on Channel Output and Input Groups".
+
+
+ */
+
+/**         Notes on Channel Output and Input Groups
+
+Most functions in this API are capable of handling many input and output channels. The XS3 VPU is capable
+of consuming many input channels, or producing many output channels in a single operation. These lead to the
+concept of input channel groups and output channel groups being baked deeply into this API.
+
+Most functions in this API operate on 8-bit inputs and produce 8-bit outputs [0]. The XS3 vector register size is 256
+bits, so in 8-bit mode, the XS3 VPU is capable of loading (and operating on) 32 8-bit values simultaneously [1]. When
+the operation is a vector multiply-accumulate, it is desirable to have accumulators which are significantly larger 
+than the largest possible product of two 8-bit signed integers (`2^14`). To this end, XS3 uses 32-bit accumulators 
+for 8-bit mode [2], spread across the `vD` and `vR` vector registers [3]. That leaves room for 16 accuulators in 8-bit 
+mode.
+
+The `xs3_vpu.h` header file contains macros reflecting the number of elements and number of accumulators in each
+operating mode. In particular, `VPU_INT8_EPV` is 32, and `VPU_INT8_ACC_PERIOD` is 16 [4].
+
+When the documentation for a function in this API has `C_in` input channels and `C_out` output channels, the function
+may require that the parameter tensors consumed by that function be formatted in a layout which reflects the 
+channel groups. In most cases, the number of input channel groups will be `ceil(C_in / 32.0)` -- the number of `VLMACCR`
+instructions required to multiply-accumulate all input channels -- and the number of output channel groups will be 
+`ceil(C_out / 16.0)` -- the number of outputs that can be simultaneously calculated. 
+
+Where tensors are layed out in this way, output channel group 'k' refers to output channels `16*k` to `16*k+15` (inclusive).
+Likewise, input channel group `k` refers to input channels `32*k` to `32*k+31` (inclusive). Some tensors will be arranged 
+such that one of the dimensions correponds, for example, to the ouput channel group, and another dimension will refer to
+the output channel offset. That output (or input) offset is just the offset index *within* the channel group of that channel
+(i.e. for output channel `c`, `c % 16`).
+
+Where the number of output (input) channels is not a multiple of 16 (32) --and where the function allows this -- there will be 
+an ouput (input) channel tail. The tail are the last channels which do not form complete group. Some tensors, in particular 
+the bias-shifts-scale tensors, will require that tails be padded. Whether padding must be zeros, or if it is safe to use 
+arbitrary values is specified by the function.
+
+[0]     Some functions work on elements that are not 8 bits, and most functions operate on intermediate values of
+        16 or 32 bits.
+[1]     Most instructionss in 8-bit mode that load elements from memory(VLMACCR, VLMUL, VLDR, VLADD, etc) load 32 8-bit
+        values. The main exception to this is the VLMACC instruction, which loads only 16 8-bit values.
+[2]     16-bit mode also uses 32-bit accumulators (and so `VPU_INT8_ACC_PERIOD == VPU_INT16_ACC_PERIOD`), 32-bit mode
+        uses 40-bit accumulators.
+[3]     In 8- and 16-bit modes, `vD` holds the 16 most significant bits of the accumulator and `vR` holds the 16 least
+        significant bits.
+[4]     "EPV" is elements per vector. "ACC_PERIOD" is the accumulator period. The accumulators have a "period" because of
+        the `VLMACCR` instruction, which adds a 32-element (in 8-bit mode) inner product between vector regiser `vC` and a
+        sequence of values in memory to a single accumulator, and then does a cyclic rotation of the accumulators. Then, in 
+        8-bit mode 16 (`VPU_INT8_ACC_PERIOD`) `VLMACCR` instructions will perform a full rotation of the accumulators.
+
+*/
+
+
 
 
 
@@ -368,6 +446,37 @@ static inline void conv2d_shallowin_deepout(
     const int16_t* scales);
 
 
+/**
+ * Perform a 2D convolution using a 1x1 kernel over the input image.
+ * 
+ * The operation performed is:
+ * \code
+ *      Y[i,j,k]  <--  (((bias[k] + sum(X[i,j,:] * K[k,:])) >> shift1[k]) * scale[k]) >> shift2[k]
+ * \endcode
+ * 
+ * The output tensor `Y` has shape (`y->height`, `y->width`, `y->channels`), where `y` is the same
+ * `nn_image_params_t*` passed to `conv2d_1x1_init()`.
+ * 
+ * The input tensor `X` has shape (`x->height`, `x->width`, `x->channels`), where `x` is the same
+ * `nn_image_params_t*` passed to `conv2d_1x1_init()`.
+ * 
+ * The kernel tensor `K` has shape (`C_out`, `C_in`), where `C_out` has the value of
+ * `y->channels` that was passed to `conv2d_1x1_init()`, and `C_in` has the value of 
+ * `x->channels` that was passed to `conv2d_1x1_init()`. The layout of `K` is the standard
+ * layout, in which the element at `K[i][j]` is the weight which input channel `j` contributes
+ * to output channel `i`.
+ * 
+ * The bias-shifts-scale tensor `BSS` is layed out as specified in "Bias-Shifts-Scale Tensor Layout".
+ * The accumulators for each output channel are seeded with the 32-bit biases encoded in `BSS`, and
+ * the shifts and scale are used as specified in "Notes on Output Shifts and Scales".
+ * 
+ * The input `plan` is an execution plan which contains information about how to manage the input
+ * and output data for the provided images. The execution plan can be obtained via `conv2d_1x1_init()`.
+ * 
+ * NOTE: While the `conv2d_deepin_deepout()` function is capable of handling convoutions with 1x1 kernels,
+ *       the kernel tensor layout used by this function is NOT compatible with that required by 
+ *       `conv2d_deepin_deepout()`.
+ */
 static inline void conv2d_1x1(
     int8_t* Y,
     const int8_t* X,

@@ -220,12 +220,12 @@ void test_conv2d_1x1_case0()
             BSS.shift2[k]   = casse->shift2;
         }
 
-        fc_boggle_BSS((data16_t*) &BSS, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+        nn_standard_BSS_layout((data16_t*) &BSS, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
                       (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
 
         nn_conv2d_1x1_plan_t plan;
 
-        conv2d_1x1_init(&plan, &x_params, &y_params);
+        conv2d_1x1_init(&plan, &x_params, &y_params, 0, 0, HEIGHT*WIDTH);
 
 #if (DEBUG_ON || 0)
         PRINTF("plan.start_stride.X     = %ld\n", plan.start_stride.X);
@@ -309,7 +309,7 @@ void test_conv2d_1x1_case0()
 #define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define MAX_CHANS_IN    (3*VPU_INT8_EPV)
 #define MAX_CHANS_OUT   (3*VPU_INT8_ACC_PERIOD)
-#define HEIGHT          (1)
+#define HEIGHT          (2)
 #define WIDTH           (2)
 #define CHANS_OUT_CEIL  ((MAX_CHANS_OUT + (VPU_INT8_ACC_PERIOD-1)) & (0xFFFFFFFF << VPU_INT8_ACC_PERIOD_LOG2))
 void test_conv2d_1x1_case1()
@@ -348,33 +348,47 @@ void test_conv2d_1x1_case1()
     typedef struct {
         unsigned C_in;
         unsigned C_out;
+        unsigned start[2];
+        unsigned out_pixels;
         unsigned line;
     } test_case_t;
 
     const test_case_t casses[] = {
-        //      C_in    C_out
-        {       32,     16,         __LINE__}, 
-        {       32,     32,         __LINE__}, 
-        {       32,     48,         __LINE__}, 
-        {       64,     16,         __LINE__}, 
-        {       96,     16,         __LINE__}, 
-        {       64,     32,         __LINE__}, 
-        {       16,     16,         __LINE__}, 
-        {        8,     16,         __LINE__}, 
-        {        4,     16,         __LINE__}, 
-        {       32,      8,         __LINE__}, 
-        {       32,     12,         __LINE__}, 
-        {       32,      4,         __LINE__}, 
-        {       36,     16,         __LINE__}, 
-        {       48,     16,         __LINE__},
-        {       80,     16,         __LINE__}, 
-        {       32,     24,         __LINE__}, 
-        {       32,     20,         __LINE__}, 
-        {       32,     36,         __LINE__}, 
-        {       16,      8,         __LINE__}, 
-        {        8,      8,         __LINE__}, 
-        {       48,     24,         __LINE__}, 
-        {       40,     12,         __LINE__}, 
+        //      C_in    C_out       //Start         //Out
+        {       32,     16,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       32,     32,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       32,     48,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       64,     16,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       96,     16,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       64,     32,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       16,     16,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {        8,     16,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {        4,     16,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       32,      8,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       32,     12,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       32,      4,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       36,     16,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       48,     16,         { 0, 0},        WIDTH*HEIGHT,         __LINE__},
+        {       80,     16,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       32,     24,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       32,     20,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       32,     36,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       16,      8,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {        8,      8,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       48,     24,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       40,     12,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+
+        // 22
+        {       32,     16,         { 0, 0},                   1,         __LINE__}, 
+        {       32,     32,         { 0, 0},                   2,         __LINE__}, 
+        {       32,     48,         { 0, 0},                   3,         __LINE__}, 
+        {       64,     16,         { 0, 1},                   1,         __LINE__}, 
+        {       96,     16,         { 0, 1},                   2,         __LINE__}, 
+        {       64,     32,         { 0, 1},                   3,         __LINE__}, 
+        {       16,     16,         { 1, 0},                   1,         __LINE__}, 
+        {        8,     16,         { 1, 0},                   2,         __LINE__}, 
+        {        4,     16,         { 1, 1},                   1,         __LINE__}, 
+        {       32,      8,         { 1, 1},                   1,         __LINE__}, 
         
     };
 
@@ -420,7 +434,7 @@ void test_conv2d_1x1_case1()
         nn_image_params_t x_params = { HEIGHT, WIDTH, C_in };
         nn_image_params_t y_params = { HEIGHT, WIDTH, C_out };
 
-        fc_boggle_BSS((data16_t*) &BSS, (int32_t*) (void*)BSS_flat, (int16_t*) &BSS_flat[2*C_out], 
+        nn_standard_BSS_layout((data16_t*) &BSS, (int32_t*) (void*)BSS_flat, (int16_t*) &BSS_flat[2*C_out], 
                       (int16_t*) &BSS_flat[3*C_out], (int16_t*) &BSS_flat[4*C_out], NULL, C_out);
 
         if(C_out % VPU_INT8_ACC_PERIOD){
@@ -437,7 +451,7 @@ void test_conv2d_1x1_case1()
 
         nn_conv2d_1x1_plan_t plan;
 
-        conv2d_1x1_init(&plan, &x_params, &y_params);
+        conv2d_1x1_init(&plan, &x_params, &y_params, casse->start[0], casse->start[1], casse->out_pixels);
 
 #if (DEBUG_ON || 0)
         PRINTF("plan.start_stride.X     = %ld\n", plan.start_stride.X);
@@ -454,14 +468,17 @@ void test_conv2d_1x1_case1()
 
 #if TEST_C
         PRINTF("\t\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(int8_t) * y_params.height * y_params.width);
+        memset(Y_c, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
         conv2d_1x1_c((int8_t*)Y_c, (int8_t*)X, (int8_t*)K, BSS_flat, &plan);
 #endif
 #if TEST_ASM
         PRINTF("\t\t\tASM...\n");
-        memset(Y_asm, 0xCC,  sizeof(int8_t) * y_params.height * y_params.width);
+        memset(Y_asm, 0xCC,  sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
         conv2d_1x1_asm((int8_t*)Y_asm, (int8_t*)X, (int8_t*)K, (data16_t*) &BSS, &plan);
 #endif
+
+        unsigned pix_start = casse->start[0] * y_params.width + casse->start[1];
+        unsigned pix_end   = pix_start + casse->out_pixels;
 
         char str_buff[200] = {0};
         PRINTF("\t\t\tChecking...\n");
@@ -469,7 +486,15 @@ void test_conv2d_1x1_case1()
             for(unsigned col = 0; col < y_params.width; col++){
                 for(unsigned chn = 0; chn < y_params.channels; chn++){
                     
-                    int8_t y_exp = Y_exp[chn];
+                    int8_t y_exp;
+
+                    int pdex = row * y_params.width + col;
+
+                    if(pdex >= pix_start && pdex < pix_end){
+                        y_exp = Y_exp[chn];
+                    } else {
+                        y_exp = 0xCC;
+                    }
 
                     unsigned offset = IMG_ADDRESS_VECT(&y_params, row, col, chn);
 
@@ -501,13 +526,12 @@ void test_conv2d_1x1_case1()
     }
 
 }
-#undef DEBUG_ON      
-#undef CHANS_IN      
-#undef CHANS_OUT     
-#undef HEIGHT        
-#undef WIDTH         
+#undef DEBUG_ON
+#undef MAX_CHANS_IN
+#undef MAX_CHANS_OUT
+#undef HEIGHT
+#undef WIDTH
 #undef CHANS_OUT_CEIL
-#undef REPS
 
 
 
@@ -641,12 +665,12 @@ void test_conv2d_1x1_case2()
         nn_image_params_t x_params = { HEIGHT, WIDTH, C_in };
         nn_image_params_t y_params = { HEIGHT, WIDTH, C_out };
 
-        fc_boggle_BSS((data16_t*) &BSS, (int32_t*) (void*) BSS_flat, (int16_t*) &BSS_flat[2*C_out], 
+        nn_standard_BSS_layout((data16_t*) &BSS, (int32_t*) (void*) BSS_flat, (int16_t*) &BSS_flat[2*C_out], 
                       (int16_t*) &BSS_flat[3*C_out], (int16_t*) &BSS_flat[4*C_out], NULL, C_out);
 
         nn_conv2d_1x1_plan_t plan;
 
-        conv2d_1x1_init(&plan, &x_params, &y_params);
+        conv2d_1x1_init(&plan, &x_params, &y_params, 0, 0, HEIGHT*WIDTH);
 
 #if (DEBUG_ON || 0)
         PRINTF("plan.start_stride.X     = %ld\n", plan.start_stride.X);
@@ -663,12 +687,12 @@ void test_conv2d_1x1_case2()
 
 #if TEST_C
         PRINTF("\t\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(int8_t) * y_params.height * y_params.width);
+        memset(Y_c, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
         conv2d_1x1_c((int8_t*)Y_c, (int8_t*)X, (int8_t*)K, BSS_flat, &plan);
 #endif
 #if TEST_ASM
         PRINTF("\t\t\tASM...\n");
-        memset(Y_asm, 0xCC,  sizeof(int8_t) * y_params.height * y_params.width);
+        memset(Y_asm, 0xCC,  sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
         conv2d_1x1_asm((int8_t*)Y_asm, (int8_t*)X, (int8_t*)K, (data16_t*) &BSS, &plan);
 #endif
 

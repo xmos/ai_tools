@@ -90,7 +90,7 @@ class DefaultAvgPool2DParser(argparse.ArgumentParser):
         kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
         super().__init__(*args, **kwargs)
         self.add_argument(
-            'path', nargs='?', default=defaults['path'],
+            '-path', nargs='?', default=defaults['path'],
             help='Path to a directory where models and data will be saved in subdirectories.')
         self.add_argument(
             '-in', '--inputs', type=int, default=defaults['inputs'],

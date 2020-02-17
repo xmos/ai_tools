@@ -831,3 +831,41 @@ class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
             height, width, num_threads=self.num_threads, forced=self.forced)
         plan = planner.find_optimal_plan()
         op.add_custom_options(par_plan=[list(block) for block in plan.layout])
+
+
+class ReplaceActivationPass(ReplaceQuantizedOperatorPass):
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_lookup_8)
+
+    def _dequantize(self, int_arr):
+        input_quant = self._input.quantization
+        return (np.int32(int_arr) - input_quant['zero_point'][0]) * input_quant['scale'][0]
+
+    def _quantize(self, float_arr):
+        output_quant = self._output.quantization
+        return np.int8(np.round(np.clip(
+            float_arr / output_quant['scale'][0] + output_quant['zero_point'][0],
+            -128, 127
+        )))
+
+    @abstractmethod
+    def activation(self, float_arr):
+        pass
+
+    def mutate(self, op):
+        new_op = super().mutate(op)
+
+        inputs_int = np.arange(-128, 128, dtype=np.int8)
+        with self.using(op):
+            outputs_int = self._quantize(self.activation(self._dequantize(inputs_int)))
+        outputs_int = np.concatenate([outputs_int[128:], outputs_int[0:128]])
+
+        lut_tensor = new_op.subgraph.create_tensor(
+            f"{op.name}/LUT", TensorType.INT8, shape=[len(outputs_int)])
+        lut_tensor.buffer.data = outputs_int
+        new_op.inputs.append(lut_tensor)
+        
+        
+
+

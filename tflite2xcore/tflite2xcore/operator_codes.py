@@ -135,6 +135,7 @@ class BuiltinOpCodes(ValidOpCodes):
 
 class XCOREOpCodes(ValidOpCodes):
     # TODO: consider an IntEnum for this instead of strings
+    XC_lookup_8 = "XC_lookup_8"
     XC_argmax_16 = "XC_argmax_16"
     XC_maxpool2d_deep = "XC_maxpool2d_deep"
     XC_avgpool2d = "XC_avgpool2d"

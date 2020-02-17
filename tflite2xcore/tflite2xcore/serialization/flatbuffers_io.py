@@ -92,8 +92,9 @@ def create_xcore_model(modelT):
     buffers = [model.create_buffer(**vars(bufferT)) for bufferT in modelT.buffers]
 
     # load metadata
-    for metadataT in modelT.metadata:
-        model.create_metadata(metadataT.name, buffers[metadataT.buffer])
+    if modelT.metadata:
+        for metadataT in modelT.metadata:
+            model.create_metadata(metadataT.name, buffers[metadataT.buffer])
 
     # create operator codes lookup
     operator_codes_lut = []

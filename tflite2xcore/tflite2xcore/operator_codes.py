@@ -137,7 +137,9 @@ class XCOREOpCodes(ValidOpCodes):
     # TODO: consider an IntEnum for this instead of strings
     XC_argmax_16 = "XC_argmax_16"
     XC_maxpool2d_deep = "XC_maxpool2d_deep"
-    XC_avgpool2d_deep = "XC_avgpool2d_deep"
+    XC_avgpool2d = "XC_avgpool2d"
+    XC_avgpool2d_2x2 = "XC_avgpool2d_2x2"
+    XC_avgpool2d_global = "XC_avgpool2d_global"
     XC_fc_deepin_anyout = "XC_fc_deepin_anyout"
     XC_requantize_16_to_8 = "XC_requantize_16_to_8"
     XC_conv2d_shallowin_deepout_relu = "XC_conv2d_shallowin_deepout_relu"

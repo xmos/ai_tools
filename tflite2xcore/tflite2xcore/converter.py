@@ -68,9 +68,11 @@ def optimize_for_xcore(model, *, is_classifier, remove_softmax):
     pass_mgr.register_pass(passes.ReplaceShallowinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceSingleinDeepoutDepthwiseConv2DPass())
     pass_mgr.register_pass(passes.ReplaceDeepMaxPool2DPass())
-    pass_mgr.register_pass(passes.ReplaceDeepAveragePool2DPass())
-    pass_mgr.register_pass(passes.ReplaceDeepinAnyoutFullyConnectedIntermediatePass())
-    pass_mgr.register_pass(passes.ReplaceDeepinAnyoutFullyConnectedOutputPass())
+    #pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())  # currently disabled
+    pass_mgr.register_pass(passes.ReplaceAveragePool2DPass())
+    pass_mgr.register_pass(passes.ReplaceGlobalAveragePool2DPass())
+    pass_mgr.register_pass(passes.ReplaceFullyConnectedIntermediatePass())
+    pass_mgr.register_pass(passes.ReplaceFullyConnectedOutputPass())
     pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 
     pass_mgr.run_passes()
@@ -87,6 +89,7 @@ def parallelize_for_xcore(model, *, num_threads):
     )
 
     pass_mgr.run_passes()
+
 
 def convert(tflite_input_path, tflite_output_path, *,
             is_classifier=False, remove_softmax=False, num_threads=1):

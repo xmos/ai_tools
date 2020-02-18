@@ -23,15 +23,18 @@ def load_tests(name):
     elif name.startswith('conv2d_deepin_deepout'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name, '*')
-    elif name.startswith('fc_deepin_anyout'):
+    elif name.startswith('test_fully_connected'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name, '*')
-    elif name.startswith('maxpool'):
+    elif name.startswith('maxpool2d'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_maxpool2d_deep.name, '*')
-    elif name.startswith('avgpool'):
+    elif name.startswith('avgpool2d_global'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_avgpool2d_deep.name, '*')
+            operator_codes.XCOREOpCodes.XC_avgpool2d_global.name, '*')
+    elif name.startswith('avgpool2d'):
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
+            operator_codes.XCOREOpCodes.XC_avgpool2d.name, '*')
     elif name.startswith('requantize_18_8'):
         name = f'{operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name}'
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
@@ -115,18 +118,21 @@ def test_conv2d_deepin_deepout(test_model_app, conv2d_deepin_deepout_test_case):
     assert(run_test_case(test_model_app, conv2d_deepin_deepout_test_case))
 
 
-def test_fc_deepin_anyout(test_model_app, fc_deepin_anyout_test_case):
-    assert(run_test_case(test_model_app, fc_deepin_anyout_test_case))
+def test_fully_connected(test_model_app, test_fully_connected_test_case):
+    assert(run_test_case(test_model_app, test_fully_connected_test_case))
 
 
-def test_maxpool(test_model_app, maxpool_test_case):
-    assert(run_test_case(test_model_app, maxpool_test_case))
+def test_maxpool2d(test_model_app, maxpool2d_test_case):
+    assert(run_test_case(test_model_app, maxpool2d_test_case))
 
 
-def test_avgpool(test_model_app, avgpool_test_case):
-    assert(run_test_case(test_model_app, avgpool_test_case))
+def test_avgpool2d(test_model_app, avgpool2d_test_case):
+    assert(run_test_case(test_model_app, avgpool2d_test_case))
 
-def test_avgpool(test_model_app, requantize_18_8_test_case):
+def test_avgpool2d_global(test_model_app, avgpool2d_global_test_case):
+    assert(run_test_case(test_model_app, avgpool2d_global_test_case))
+
+def test_requantize(test_model_app, requantize_18_8_test_case):
     assert(run_test_case(test_model_app, requantize_18_8_test_case))
 
 if __name__ == "__main__":

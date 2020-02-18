@@ -7,13 +7,12 @@ import numpy as np
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
-import op_test_models_common as common
 
 DEFAULT_OUTPUT_DIM = 10
 DEFAULT_INPUT_DIM = 32
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fc_deepin_anyout').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fully_connected').resolve()
 
 
 # Prepare data function
@@ -58,8 +57,8 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
             'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
 
 
-class FcDeepinAnyout(KerasModel):
-    def build(self, input_dim, output_dim, *, bias_init, weight_init):
+class FullyConnected(KerasModel):
+    def build(self, input_dim, output_dim):
         super().build()
 
         # Building
@@ -67,9 +66,7 @@ class FcDeepinAnyout(KerasModel):
             name=self.name,
             layers=[
                 tf.keras.layers.Flatten(input_shape=(input_dim, 1, 1)),
-                tf.keras.layers.Dense(output_dim, activation='softmax',
-                                      bias_initializer=bias_init,
-                                      kernel_initializer=weight_init)
+                tf.keras.layers.Dense(output_dim, activation='softmax')
             ]
         )
         # Compilation
@@ -143,11 +140,7 @@ if __name__ == "__main__":
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
-    
-    initializers = common.initializer_args_handler(args)
 
     main(path=args.path,
          input_dim=args.input_dim, output_dim=args.output_dim,
-         train_new_model=args.train_model,
-         bias_init=initializers['bias_init'],
-         weight_init=initializers['weight_init'])
+         train_new_model=args.train_model)

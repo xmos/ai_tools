@@ -40,16 +40,26 @@ void maxpool2d_deep_c(
     const int32_t width,
     const int32_t C_in);
 
+// void maxpool2d_c(
+//     int8_t* Y,
+//     const int8_t* X, 
+//     const nn_window_op_plan_t* plan);
 
 
-
-void avgpool2d_deep_c(
-    const int8_t* X, 
+void avgpool2d_c(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t C_in);
+    const int8_t* X, 
+    const nn_avgpool2d_plan_t* plan);
 
+void avgpool2d_global_c(
+    int8_t* Y,
+    const int8_t* X, 
+    const uint32_t x_height, 
+    const uint32_t x_width,
+    const uint32_t x_chans,
+    const int32_t  bias,
+    const uint32_t shift,
+    const uint32_t scale);
 
 
 
@@ -63,7 +73,12 @@ void fc_deepin_shallowout_16_c(
     const uint16_t* shifts, 
     const int16_t* scales);
 
-
+void fully_connected_16_c(
+    int16_t* Y,
+    const int8_t* W, 
+    const int8_t* X, 
+    const data16_t* BSS,
+    const nn_fully_connected_plan_t* plan);
 
 
 void fc_deepin_shallowout_8_c(

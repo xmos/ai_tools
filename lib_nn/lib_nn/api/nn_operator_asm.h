@@ -51,6 +51,16 @@ void fc_deepin_shallowout_16_asm(
     const uint16_t* shifts, 
     const int16_t* scales);
 
+#ifndef USE_ASM_fully_connected_16
+#define USE_ASM_fully_connected_16      (1)
+#endif
+void fully_connected_16_asm(
+    int16_t* Y,
+    const int8_t* W, 
+    const int8_t* X, 
+    const data16_t* BSS,
+    const nn_fully_connected_plan_t* plan);
+
 
 #ifndef USE_ASM_fc_deepin_shallowout_8
 #define USE_ASM_fc_deepin_shallowout_8    (1)
@@ -66,27 +76,50 @@ void fc_deepin_shallowout_8_asm(
     const int16_t* scales);
 
 
-#ifndef USE_ASM_maxpool2d_deep
-#define USE_ASM_maxpool2d_deep    (1)
+// #ifndef USE_ASM_maxpool2d_deep
+// #define USE_ASM_maxpool2d_deep    (1)
+// #endif
+// void maxpool2d_deep_asm(
+//     const int8_t* X, 
+//     int8_t* Y,
+//     const int32_t height, 
+//     const int32_t width,
+//     const int32_t C_in);
+
+#ifndef USE_ASM_maxpool2d
+#define USE_ASM_maxpool2d       (1)
 #endif
-void maxpool2d_deep_asm(
-    const int8_t* X, 
+void maxpool2d_asm(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t C_in);
+    const int8_t* X, 
+    const nn_window_op_plan_t* plan);
 
-
-
-#ifndef USE_ASM_avgpool2d_deep
-#define USE_ASM_avgpool2d_deep    (1)
+#ifndef USE_ASM_avgpool2d
+#define USE_ASM_avgpool2d      (1)
 #endif
-void avgpool2d_deep_asm(
-    const int8_t* X, 
+void avgpool2d_asm(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t C_in);
+    const int8_t* X, 
+    const nn_avgpool2d_plan_t* plan);
+
+void avgpool2d_2x2_asm(
+    int8_t* Y,
+    const int8_t* X, 
+    const nn_avgpool2d_plan_t* plan);
+
+
+#ifndef USE_ASM_avgpool2d_global
+#define USE_ASM_avgpool2d_global    (1)
+#endif
+void avgpool2d_global_asm(
+    int8_t* Y,
+    const int8_t* X, 
+    const uint32_t x_height, 
+    const uint32_t x_width,
+    const uint32_t x_chans,
+    const int32_t  bias,
+    const uint32_t shift,
+    const uint32_t scale);
 
 
 #ifndef USE_ASM_requantize_16_to_8

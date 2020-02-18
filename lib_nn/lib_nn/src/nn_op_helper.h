@@ -68,6 +68,15 @@ static inline int16_t vlmul_single_s16(
     return (int16_t)p;
 }
 
+static inline int8_t vlmul_single_s8(
+    int8_t vR, 
+    int8_t mem)
+{
+    int32_t p = ((int32_t)vR) * mem;
+    p = vlsat_single_s8(p, 6);
+    return (int8_t)p;
+}
+
 static inline int8_t vdepth8_single_s16(
     int16_t vR)
 {
@@ -117,6 +126,33 @@ static inline unsigned smin(
     const unsigned b)
 {
     return (a <= b)? a : b;
+}
+
+
+static inline int ceil_log2(
+    uint32_t a)
+{
+    if(a == 0) return -1;
+#ifdef  __XS3A__
+    unsigned x;
+    asm("clz %0, %1" : "=r"(x) : "r"(a));
+    unsigned y = 31-x;
+
+    //  clz(1) = 31 -> 31-31 = 0 -> 2^0 = 1
+    //  clz(2) = 30 -> 31-30 = 1 -> 2^1 = 2
+    //  clz(3) = 30 -> 31-30 = 1 -> 2^1 = 2
+    //      2^(y) <= a < 2^(y+1)
+    //  check for the lower bound, which yields a different result
+    if(a == (1<<y)) return y;
+    return y+1;
+
+#else
+    for(unsigned i = 0; i < 31; i++){
+        if((((unsigned)1)<<i) <= a){
+            return i;
+        }
+    }
+#endif
 }
 
 #endif //NN_OP_HELPER_H_

@@ -10,30 +10,7 @@ import argparse
 
 INDENT = ' ' * 2
 
-KNOWN_OPERATOR_FUNCTIONS = [
-    'argmax_16',
-    'conv2d_deepin_deepout_init',
-    'conv2d_deepin_deepout_block.',
-    'conv2d_shallowin_deepout_init',
-    'conv2d_shallowin_deepout_block.',
-    'fully_connected_init',
-    'fully_connected_16',
-    'avgpool2d',
-    'avgpool2d_global',
-    'maxpool2d',
-    'requantize_16_to_8',
-    'xcore.+argmax.+Eval_ArgMax_16',
-    'xcore.+conv.+Eval2D_SIDO',
-    'xcore.+conv.+Prepare2D_SIDO',
-    'xcore.+conv.+Eval2D_DIDO',
-    'xcore.+conv.+Prepare2D_DIDO',
-    'xcore.+fully_connected.+Eval_16',
-    'xcore.+maxpool.+Eval2D',
-    'xcore.+avgpool_global.+Eval2D',
-    'xcore.+type_conversions.+Eval_Requantize_16_to_8',
-]
-
-KNOWN_INSTRUCTIONS = [
+INSTRUCTIONS = [
     'vlmaccr',
     'vlmacc'
 ]
@@ -85,8 +62,9 @@ class TraceContext():
             # group children by identifiers
             for _, group in itertools.groupby(self.children, key=lambda c: c.identifier):
                 first_child = list(itertools.islice(group, 0, 1))[0]
-                # now update the first child with the remainder of the group
-                (first_child.update(context) for context in itertools.islice(group, 1))
+                # now update the first child with the remainder in the group
+                for context in itertools.islice(group, 1, None):
+                    first_child.update(context)
                 
                 child_report = first_child.report(clock_rate, base_indent+INDENT*2)
                 for line in child_report.split('\n'):
@@ -117,14 +95,14 @@ def trace_is_fnop(data):
     return data[12:16] == 'FNOP'
 
 def process_trace(args):
-    trace_functions = [re.compile(tf) for tf in KNOWN_OPERATOR_FUNCTIONS + args.functions]
-    trace_instructions = set(KNOWN_INSTRUCTIONS + args.instructions)
+    trace_functions = [re.compile(tf) for tf in args.functions]
+    trace_instructions = set(INSTRUCTIONS + args.instructions)
 
     context_stack = deque()
 
     # process xsim trace output
-    with open(args.trace, 'r') as fp:
-        line = fp.readline()
+    with open(args.trace, 'r') as fd:
+        line = fd.readline()
         while line:
             if trace_is_fnop(line):
                 if context_stack:
@@ -150,13 +128,14 @@ def process_trace(args):
                         
                         if not context.is_child:
                             print(context.report(args.clock_rate))
+                            print()
                     else:
                         if context_stack:
                             context_stack[-1].total_instructions += 1
                             if instruction in trace_instructions:
                                 context_stack[-1].instruction_counter[instruction] += 1
 
-            line = fp.readline()
+            line = fd.readline()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -165,8 +144,17 @@ if __name__ == "__main__":
         default=800, help='Clock rate (default is 800 MHz)')
     parser.add_argument('-f', '--function', dest='functions', action='append', default=[], 
         help='Additional function to time')
+    parser.add_argument('--trace-functions', dest='trace_functions', default='trace_functions.txt',
+        help='File of additional functions to time')
     parser.add_argument('-i', '--instruction', dest='instructions', action='append', default=[], 
         help='Additional instruction to count')
     args = parser.parse_args()
+
+    # load trace functions
+    with open(args.trace_functions, 'r') as fd:
+        line = fd.readline()
+        while line:
+            args.functions.append(line.strip())
+            line = fd.readline()
 
     process_trace(args)

@@ -122,10 +122,10 @@ class OpTestDefaultParser(argparse.ArgumentParser):
         )
 
 #  for models with 2D dimensionality and padding
-class OpTestDimParser(DefaultOpTestParser):
+class OpTestDimParser(OpTestDefaultParser):
     def __init__(self, *args, defaults, **kwargs):
         kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
             '-in', '--inputs', type=int, default=defaults['inputs'],
             help='Number of input channels')
@@ -143,9 +143,9 @@ class OpTestDimParser(DefaultOpTestParser):
 class OpTestConvParser(OpTestDimParser):
     def __init__(self, *args, defaults, **kwargs):
         kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
-            '-out', '--outputs', type=int, default=defaukts['outputs'],
+            '-out', '--outputs', type=int, default=defaults['outputs'],
             help='Number of output channels')
         self.add_argument(
             '-kh', '--kernel_height', type=int, default=defaults['kernel_height'],
@@ -156,10 +156,10 @@ class OpTestConvParser(OpTestDimParser):
         self.add_initializers()
 
 #  for fc models
-class OpTestFcParser(argparse.ArgumentParser):
+class OpTestFcParser(OpTestDefaultParser):
     def __init__(self, *args, defaults, **kwargs):
         kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
             '--use_gpu', action='store_true', default=False,
             help='Use GPU for training. Might result in non-reproducible results.')

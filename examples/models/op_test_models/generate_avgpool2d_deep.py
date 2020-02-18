@@ -79,9 +79,13 @@ def main(path=DEFAULT_PATH, *,
 
 
 if __name__ == "__main__":
-    parser = common.get_dim_parser(DEFAULT_PATH=DEFAULT_PATH,
-                                   DEFAULT_INPUTS=DEFAULT_INPUTS, DEFAULT_WIDTH=DEFAULT_WIDTH,
-                                   DEFAULT_HEIGHT=DEFAULT_HEIGHT, DEFAULT_PADDING=DEFAULT_PADDING)
+    parser =  common.OpTestDimParser(defaults={
+        'path': DEFAULT_PATH,
+        'inputs': DEFAULT_INPUTS,
+        'width': DEFAULT_WIDTH,
+        'height': DEFAULT_HEIGHT,
+        'padding': DEFAULT_PADDING
+    })
     parser.add_argument(
         '-st', '--strides', type=int, default=DEFAULT_STRIDES,
         help='Stride')

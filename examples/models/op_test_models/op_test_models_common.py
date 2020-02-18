@@ -88,92 +88,93 @@ def initializer_args_handler(args):
     return initializers
 
 
-def parser_add_initializers(parser):
-    parser.add_argument(
-        '--bias_init', nargs='*', default=argparse.SUPPRESS,
-        help='Initialize bias. Possible initializers are: const init or None.'
-             f'(default: {OpTestInitializers.CONST.value} {_DEFAULT_CONST_INIT})'
-    )
-    parser.add_argument(
-        '--weight_init', nargs='*', default=argparse.SUPPRESS,
-        help='Initialize weights. Possible initializers are: const, unif or None.'
-             f'(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})'
-    )
-    parser.add_argument(
-        '--input_init', nargs='*', default=argparse.SUPPRESS,
-        help='Initialize inputs. Possible initializers are: const, unif or None.'
-             f'(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})'
-    )
-    parser.add_argument(
-        '--seed', type=int,
-        help='Set the seed value for the initializers.'
-    )
-    return parser
 
+class OpTestDefaultParser(argparse.ArgumentParser):
+    def __init__(self, *args, defaults, **kwargs):
+        kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
+        super().__init__(*args, **kwargs)
+        self.add_argument(
+            '-path', nargs='?', default=defaults['path'],
+            help='Path to a directory where models and data will be saved in subdirectories.')
+        self.add_argument(
+            '-v', '--verbose', action='store_true', default=False,
+            help='Verbose mode.')
+    
+    def add_initializers(self):
+        self.add_argument(
+            '--bias_init', nargs='*', default=argparse.SUPPRESS,
+            help='Initialize bias. Possible initializers are: const init or None.'
+                f'(default: {OpTestInitializers.CONST.value} {_DEFAULT_CONST_INIT})'
+        )
+        self.add_argument(
+            '--weight_init', nargs='*', default=argparse.SUPPRESS,
+            help='Initialize weights. Possible initializers are: const, unif or None.'
+                f'(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})'
+        )
+        self.add_argument(
+            '--input_init', nargs='*', default=argparse.SUPPRESS,
+            help='Initialize inputs. Possible initializers are: const, unif or None.'
+                f'(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})'
+        )
+        self.add_argument(
+            '--seed', type=int,
+            help='Set the seed value for the initializers.'
+        )
 
-def get_default_parser(is_fc=False, **kwargs,):
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        '-path', nargs='?', default=kwargs['DEFAULT_PATH'],
-        help='Path to a directory where models and data will be saved in subdirectories.')
-    if not is_fc:
-        parser.add_argument(
-            '-in', '--inputs', type=int, default=kwargs['DEFAULT_INPUTS'],
+#  for models with 2D dimensionality and padding
+class OpTestDimParser(DefaultOpTestParser):
+    def __init__(self, *args, defaults, **kwargs):
+        kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
+        super().__init__(*args, **kwargs)
+        self.add_argument(
+            '-in', '--inputs', type=int, default=defaults['inputs'],
             help='Number of input channels')
-    parser.add_argument(
-        '-v', '--verbose', action='store_true', default=False,
-        help='Verbose mode.')
-    return parser
+        self.add_argument(
+            '-hi', '--height', type=int, default=defaults['height'],
+            help='Height of input image')
+        self.add_argument(
+            '-wi', '--width', type=int, default=defaults['width'],
+            help='Width of input image')
+        self.add_argument(
+            '-pd', '--padding', type=str, default=defaults['padding'],
+            help='Padding mode')
+
+#  for conv models 
+class OpTestConvParser(OpTestDimParser):
+    def __init__(self, *args, defaults, **kwargs):
+        kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
+        super().__init__(*args, **kwargs)
+        self.add_argument(
+            '-out', '--outputs', type=int, default=defaukts['outputs'],
+            help='Number of output channels')
+        self.add_argument(
+            '-kh', '--kernel_height', type=int, default=defaults['kernel_height'],
+            help='Height of kernel')
+        self.add_argument(
+            '-kw', '--kernel_width', type=int, default=defaults['kernel_width'],
+            help='Width of kernel')
+        self.add_initializers()
+
+#  for fc models
+class OpTestFcParser(argparse.ArgumentParser):
+    def __init__(self, *args, defaults, **kwargs):
+        kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
+        super().__init__(*args, **kwargs)
+        self.add_argument(
+            '--use_gpu', action='store_true', default=False,
+            help='Use GPU for training. Might result in non-reproducible results.')
+        self.add_argument(
+            '-out', '--output_dim', type=int, default=defaults['output_dim'],
+            help='Number of output dimensions, must be at least 2.')
+        self.add_argument(
+            '-in', '--input_dim', type=int, default=defaults['input_dim'],
+            help='Input dimension, must be multiple of 32.')
+        self.add_argument(
+            '--train_model', action='store_true', default=False,
+            help='Train new model instead of loading pretrained tf.keras model.')
+        self.add_initializers()
 
 
-def get_dim_parser(**kwargs):  # for models with 2D dimensionality and padding
-    parser = get_default_parser(**kwargs)
-    parser.add_argument(
-        '-hi', '--height', type=int, default=kwargs['DEFAULT_HEIGHT'],
-        help='Height of input image')
-    parser.add_argument(
-        '-wi', '--width', type=int, default=kwargs['DEFAULT_WIDTH'],
-        help='Width of input image')
-    parser.add_argument(
-        '-pd', '--padding', type=str, default=kwargs['DEFAULT_PADDING'],
-        help='Padding mode')
-    return parser
-
-
-def get_conv_parser(**kwargs): # for the conv models
-    parser = get_dim_parser(**kwargs)
-    parser.add_argument(
-        '-out', '--outputs', type=int, default=kwargs['DEFAULT_OUTPUTS'],
-        help='Number of output channels')
-    parser.add_argument(
-        '-kh', '--kernel_height', type=int, default=kwargs['DEFAULT_KERNEL_HEIGHT'],
-        help='Height of kernel')
-    parser.add_argument(
-        '-kw', '--kernel_width', type=int, default=kwargs['DEFAULT_KERNEL_WIDTH'],
-        help='Width of kernel')
-    parser = parser_add_initializers(parser)
-    return parser
-
-
-def get_fc_parser(**kwargs): # for the fc models
-    parser = get_default_parser(is_fc=True, **kwargs)
-    parser.add_argument(
-        '--use_gpu', action='store_true', default=False,
-        help='Use GPU for training. Might result in non-reproducible results.')
-    parser.add_argument(
-        '-out', '--output_dim', type=int, default=kwargs['DEFAULT_OUTPUT_DIM'],
-        help='Number of output dimensions, must be at least 2.')
-    parser.add_argument(
-        '-in', '--input_dim', type=int, default=kwargs['DEFAULT_INPUT_DIM'],
-        help='Input dimension, must be multiple of 32.')
-    parser.add_argument(
-        '--train_model', action='store_true', default=False,
-        help='Train new model instead of loading pretrained tf.keras model.')
-    parser = parser_add_initializers(parser)
-    return parser
-
-# For FC models
 def run_main(model, *, train_new_model, input_dim, output_dim, bias_init, weight_init, batch_size, epochs):
     if train_new_model:
         # Build model and compile

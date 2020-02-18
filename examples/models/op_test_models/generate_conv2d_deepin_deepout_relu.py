@@ -83,12 +83,16 @@ def main(path=DEFAULT_PATH, *, num_threads=DEFAULT_NUM_THREADS,
 
 
 if __name__ == "__main__":
-    parser = common.get_conv_parser(DEFAULT_PATH=DEFAULT_PATH,
-                                    DEFAULT_INPUTS=DEFAULT_INPUTS, DEFAULT_OUTPUTS=DEFAULT_OUTPUTS,
-                                    DEFAULT_WIDTH=DEFAULT_WIDTH, DEFAULT_HEIGHT=DEFAULT_HEIGHT,
-                                    DEFAULT_PADDING=DEFAULT_PADDING,
-                                    DEFAULT_KERNEL_HEIGHT=DEFAULT_KERNEL_HEIGHT,
-                                    DEFAULT_KERNEL_WIDTH=DEFAULT_KERNEL_WIDTH)
+    parser = common.OpTestConvParser(defaults={
+        'path': DEFAULT_PATH,
+        'inputs': DEFAULT_INPUTS,
+        'outputs': DEFAULT_OUTPUTS,
+        'width': DEFAULT_WIDTH,
+        'height': DEFAULT_HEIGHT,
+        'padding': DEFAULT_PADDING,
+        'kernel_width': DEFAULT_KERNEL_WIDTH,
+        'kernel_height': DEFAULT_KERNEL_HEIGHT
+    })
     parser.add_argument(
         '-par', '--par_num_threads', type=int, default=DEFAULT_NUM_THREADS,
         help='Number of parallel threads for xcore.ai optimization.')

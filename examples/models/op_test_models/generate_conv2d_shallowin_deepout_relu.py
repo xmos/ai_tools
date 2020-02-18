@@ -20,12 +20,13 @@ DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_shallowin_deepout
 
 class Conv2dShallowinDeepoutRelu(KerasModel):
     def build(self, K_h, K_w, height, width, input_channels, output_channels,
-              *, padding, bias_init, weight_init):
+              *, padding, bias_init, weight_init, input_init):
         assert input_channels <= 4, "Number of input channels must be at most 4"
         assert K_w <= 8, "Kernel width must be at most 8"
         assert output_channels % 16 == 0, "Number of output channels must be multiple of 16"
         assert K_h % 2 == 1, "kernel height must be odd"
         assert K_w % 2 == 1, "kernel width must be odd"
+        self.input_init = input_init
         super().build()
 
         # Building
@@ -59,14 +60,14 @@ class Conv2dShallowinDeepoutRelu(KerasModel):
         pass
 
     # For training
-    def prep_data(self, height, width, input_init):
-        self.data['export_data'], self.data['quant'] = common.input_initializers(input_init, *self.input_shape)
+    def prep_data(self, height, width):
+        self.data['export_data'], self.data['quant'] = common.input_initializers(self.input_init, *self.input_shape)
         #utils.generate_dummy_data(*self.input_shape)
 
     # For exports
-    def gen_test_data(self, height, width, input_init):
+    def gen_test_data(self, height, width):
         if not self.data:
-            self.prep_data(height, width, input_init)
+            self.prep_data(height, width)
 
 
 def main(path=DEFAULT_PATH, *,

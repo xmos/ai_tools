@@ -38,7 +38,7 @@ def main(path=DEFAULT_PATH, *,
         'name': 'fc_deepin_anyout_requantized',
         'path': path if path else DEFAULT_PATH
     }
-    common.run_main(
+    common.run_main_fc(
         model = FcDeepinAnyoutRequantized(**kwargs),
         train_new_model=train_new_model,
         input_dim=input_dim,

@@ -35,6 +35,8 @@ class Model(ABC):
         self.data = {}
         self.converters = {}
 
+        self.input_init = None  # for initializing input data wit a distribution
+
         if type(path) is pathlib.PosixPath:
             self._path = path
         elif type(path) is str:

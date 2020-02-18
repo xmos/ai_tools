@@ -175,7 +175,7 @@ class OpTestFcParser(OpTestDefaultParser):
         self.add_initializers()
 
 
-def run_main(model, *, train_new_model, input_dim, output_dim, bias_init, weight_init, batch_size, epochs):
+def run_main_fc(model, *, train_new_model, input_dim, output_dim, bias_init, weight_init, batch_size, epochs):
     if train_new_model:
         # Build model and compile
         model.build(input_dim, output_dim,
@@ -204,14 +204,14 @@ def run_main_conv(model, *, num_threads, input_channels, output_channels,
     # Instantiate model
     # Build model and compile
     model.build(K_h, K_w, height, width, input_channels, output_channels,
-                     padding=padding, bias_init=bias_init, weight_init=weight_init)
+                     padding=padding, bias_init=bias_init, weight_init=weight_init, input_init=input_init)
     
     # to check if the inits work
     for layer in model.core_model.layers: logging.debug(f'WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}') # weights
     for layer in model.core_model.layers: logging.debug(f'BIAS DATA SAMPLE:\n{layer.get_weights()[1]}') # bias
     
     # Generate test data
-    model.gen_test_data(height, width, input_init)
+    model.gen_test_data(height, width)
     logging.debug(f'EXPORT DATA SAMPLE:\n{model.data["export_data"][4][0]}')
     logging.debug(f'QUANT DATA SAMPLE:\n{model.data["quant"][0][0]}')
     # Save model

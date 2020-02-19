@@ -24,7 +24,7 @@ class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
         super().__init__(priority)
 
     def match(self, op):
-        if op.operator_code.code == BuiltinOpCodes.QUANTIZE:
+        if super().match(op) and op.operator_code.code == BuiltinOpCodes.QUANTIZE:
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
             return (input_tensor in op.subgraph.inputs
                     and output_tensor not in op.subgraph.outputs
@@ -45,7 +45,7 @@ class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
         super().__init__(priority)
 
     def match(self, op):
-        if op.operator_code.code == BuiltinOpCodes.DEQUANTIZE:
+        if super().match(op) and op.operator_code.code == BuiltinOpCodes.DEQUANTIZE:
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
             return (output_tensor in op.subgraph.outputs
                     and input_tensor not in op.subgraph.inputs
@@ -66,7 +66,7 @@ class AddQuantizerFloatInputPass(InputTensorMatchingPass):
         super().__init__(priority)
 
     def match(self, input_tensor):
-        return (input_tensor.type == TensorType.INT8)
+        return (super().match(input_tensor) and input_tensor.type == TensorType.INT8)
 
     def mutate(self, qin):
         subgraph = qin.subgraph
@@ -85,7 +85,7 @@ class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
         super().__init__(priority)
 
     def match(self, input_tensor):
-        return input_tensor.type == TensorType.INT8
+        return (super().match(input_tensor) and input_tensor.type == TensorType.INT8)
 
     def mutate(self, qout):
         subgraph = qout.subgraph
@@ -101,7 +101,8 @@ class RemoveSoftmaxOutputPass(OperatorMatchingPass):
         super().__init__(priority)
 
     def match(self, op):
-        return (op.operator_code.code == BuiltinOpCodes.SOFTMAX
+        return (super().match(op)
+                and op.operator_code.code == BuiltinOpCodes.SOFTMAX
                 and op.outputs[0] in op.subgraph.outputs)
 
     def mutate(self, op):
@@ -116,7 +117,8 @@ class AddArgMax16OutputPass(OutputTensorMatchingPass):
         super().__init__(priority)
 
     def match(self, tensor):
-        return (len(tensor.subgraph.outputs) == 1
+        return (super().match(tensor)
+                and len(tensor.subgraph.outputs) == 1
                 and tensor.subgraph.outputs[0].type == TensorType.INT16
                 and len(tensor.shape) == 2)
 
@@ -168,7 +170,7 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
         return TensorType.INT8
 
     def match(self, op):
-        if op.operator_code.code == self.matching_opcode:
+        if super().match(op) and op.operator_code.code == self.matching_opcode:
             with self.using(op):
                 return (self._input.type == self._matching_input_type
                         and self._output.type == self._matching_output_type)
@@ -640,7 +642,7 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
         return super().mutate(op)
 
 
-class ReplacePooling2DPass(ReplaceQuantizedOperatorPass):
+class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options
@@ -659,6 +661,15 @@ class ReplacePooling2DPass(ReplaceQuantizedOperatorPass):
     def _fused_activation(self):
         return self._op.builtin_options['fused_activation_function']
 
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (self._input.quantization == self._output.quantization
+                        and self._fused_activation == 'NONE'
+                        and self._input.shape[3] % 4 == 0)
+
+        return False
+
     def mutate(self, op):
         new_op = super().mutate(op)
 
@@ -669,7 +680,25 @@ class ReplacePooling2DPass(ReplaceQuantizedOperatorPass):
             )
 
 
-class ReplaceDeepMaxPool2DPass(ReplacePooling2DPass):
+class ReplacePool2D2x2Pass(ReplacePool2DPass):
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (self._strides == (2, 2)
+                        and self._pool_size == (2, 2)
+                        and self._input.shape[1] % 2 == 0
+                        and self._input.shape[2] % 2 == 0)
+
+        return False
+
+
+class ReplaceMaxPool2DPass(ReplacePool2DPass):
+    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=False):
+        super().__init__(priority)
+        self.safe_mode = safe_mode
+        if self.safe_mode:
+            self.superseding_passes.append(ReplaceMaxPool2D2x2Pass())
+
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.MAX_POOL_2D
@@ -681,23 +710,27 @@ class ReplaceDeepMaxPool2DPass(ReplacePooling2DPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return (self._input.quantization == self._output.quantization
-                        and self._strides == (2, 2)
-                        and self._pool_size == (2, 2)
-                        and self._fused_activation == 'NONE'
-                        and self._input.shape[1] % 2 == 0
-                        and self._input.shape[2] % 2 == 0
-                        and self._input.shape[3] % VE == 0)
+                return self._padding == 'VALID'
 
         return False
 
 
-class ReplaceAveragePool2DPass(ReplacePooling2DPass):
+class ReplaceMaxPool2D2x2Pass(ReplacePool2D2x2Pass, ReplacePool2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.MAX_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_maxpool2d)
+
+
+class ReplaceAveragePool2DPass(ReplacePool2DPass):
     def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=False):
         super().__init__(priority)
         self.safe_mode = safe_mode
         if self.safe_mode:
-            self.superseding_pass = ReplaceAveragePool2D2x2Pass()
+            self.superseding_passes.append(ReplaceAveragePool2D2x2Pass())
 
     @property
     def matching_opcode(self):
@@ -708,16 +741,21 @@ class ReplaceAveragePool2DPass(ReplacePooling2DPass):
         return OperatorCode(XCOREOpCodes.XC_avgpool2d)
 
     def match(self, op):
-        if self.safe_mode and self.superseding_pass.match(op):
-            return False
         if super().match(op):
             with self.using(op):
-                return (self._input.quantization == self._output.quantization
-                        and self._padding == 'VALID'
-                        and self._fused_activation == 'NONE'
-                        and self._input.shape[3] % 4 == 0)
+                return self._padding == 'VALID'
 
         return False
+
+
+class ReplaceAveragePool2D2x2Pass(ReplacePool2D2x2Pass, ReplacePool2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.AVERAGE_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d)
 
 
 class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
@@ -772,29 +810,6 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
             )
 
         return new_op
-
-
-class ReplaceAveragePool2D2x2Pass(ReplacePooling2DPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.AVERAGE_POOL_2D
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_avgpool2d)
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return (self._input.quantization == self._output.quantization
-                        and self._strides == (2, 2)
-                        and self._pool_size == (2, 2)
-                        and self._fused_activation == 'NONE'
-                        and self._input.shape[1] % 2 == 0
-                        and self._input.shape[2] % 2 == 0
-                        and self._input.shape[3] % 4 == 0)
-
-        return False
 
 
 class RemoveUnusedBuffersPass(ModelTransformationPass):

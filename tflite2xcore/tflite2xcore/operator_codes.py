@@ -3,11 +3,11 @@
 import enum
 
 
-class ValidOpCodes(enum.Enum):
+class ValidOpCodes():
     pass
 
 
-class BuiltinOpCodes(ValidOpCodes):
+class BuiltinOpCodes(ValidOpCodes, enum.Enum):
     ADD = 0
     AVERAGE_POOL_2D = 1
     CONCATENATION = 2
@@ -132,8 +132,11 @@ class BuiltinOpCodes(ValidOpCodes):
     NON_MAX_SUPPRESSION_V5 = 121
     SCATTER_ND = 122
 
+class CustomOpCode(ValidOpCodes):
+    def __init__(self, name):
+        self.name = name
 
-class XCOREOpCodes(ValidOpCodes):
+class XCOREOpCodes(ValidOpCodes, enum.Enum):
     # TODO: consider an IntEnum for this instead of strings
     XC_argmax_16 = "XC_argmax_16"
     XC_maxpool2d_deep = "XC_maxpool2d_deep"

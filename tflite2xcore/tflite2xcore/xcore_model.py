@@ -108,7 +108,8 @@ class Buffer():
         LUT = {'uint8_t': 'B',
                'int8_t': 'b',
                'int16_t': 'h',
-               'int32_t': 'i'}
+               'int32_t': 'i',
+               'float32_t': 'f'}
         return [i[0] for i in struct.iter_unpack(LUT[stdtype], bytearray(self.data))]
 
 

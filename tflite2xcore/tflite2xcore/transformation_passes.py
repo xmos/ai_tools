@@ -676,7 +676,7 @@ class ReplaceDeepMaxPool2DPass(ReplacePooling2DPass):
 
     @property
     def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_maxpool2d_deep)
+        return OperatorCode(XCOREOpCodes.XC_maxpool2d)
 
     def match(self, op):
         if super().match(op):

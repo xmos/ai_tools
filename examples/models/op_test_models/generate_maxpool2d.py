@@ -14,7 +14,7 @@ DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_POOL_SIZE = 2
 DEFAULT_PADDING = 'valid'
 DEFAULT_STRIDES = 2
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'maxpool_2d_deep').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'maxpool2d').resolve()
 
 
 class MaxPool2d(KerasModel):
@@ -66,7 +66,7 @@ def main(path=DEFAULT_PATH, *,
          padding=DEFAULT_PADDING,
          strides=DEFAULT_STRIDES):
     # nstantiate model
-    test_model = MaxPool2d('maxpool2d_deep', Path(path))
+    test_model = MaxPool2d('maxpool2d', Path(path))
     # Build model and compile
     test_model.build(height, width, input_channels, pool_size, strides, padding)
     # Generate test data

@@ -14,4 +14,4 @@ set -e
 ./generate_fully_connected.py -v
 ./generate_fully_connected_requantized.py -v --train_model
 ./generate_fully_connected_requantized.py -v
-./generate_maxpool2d_deep.py -v
+./generate_maxpool2d.py -v

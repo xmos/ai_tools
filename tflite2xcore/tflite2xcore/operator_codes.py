@@ -135,6 +135,7 @@ class BuiltinOpCodes(ValidOpCodes, enum.Enum):
 class CustomOpCode(ValidOpCodes):
     def __init__(self, name):
         self.name = name
+        self.value = name
 
 class XCOREOpCodes(ValidOpCodes, enum.Enum):
     # TODO: consider an IntEnum for this instead of strings
@@ -154,7 +155,7 @@ class OperatorCode():
         assert isinstance(opcode, ValidOpCodes), "Invalid opcode!"
         self.version = version or 1
 
-        if isinstance(opcode, XCOREOpCodes):
+        if isinstance(opcode, XCOREOpCodes) or isinstance(opcode, CustomOpCode):
             self.builtin_code = BuiltinOpCodes.CUSTOM
             self.custom_code = opcode
         else:

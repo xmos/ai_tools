@@ -874,7 +874,30 @@ class ReplaceActivationPass(ReplaceQuantizedOperatorPass):
             f"{op.name}/LUT", TensorType.INT8, shape=[len(outputs_int)])
         lut_tensor.buffer.data = outputs_int
         new_op.inputs.append(lut_tensor)
-        
-        
 
 
+class ReplaceTanhPass(ReplaceActivationPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.TANH
+
+    def activation(self, float_arr):
+        return np.tanh(float_arr)
+
+
+class ReplaceReLUPass(ReplaceActivationPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.RELU
+
+    def activation(self, float_arr):
+        return np.maximum(float_arr, 0.)
+
+
+class ReplaceReLU6Pass(ReplaceActivationPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.PRELU
+
+    def activation(self, float_arr):
+        return np.minimum(np.maximum(float_arr, 0.), 6.)

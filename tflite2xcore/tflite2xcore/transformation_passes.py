@@ -659,6 +659,15 @@ class ReplacePooling2DPass(ReplaceQuantizedOperatorPass):
     def _fused_activation(self):
         return self._op.builtin_options['fused_activation_function']
 
+    def mutate(self, op):
+        new_op = super().mutate(op)
+
+        with self.using(op):
+            new_op.add_custom_options(
+                stride_h=self._strides[0], stride_w=self._strides[1],
+                pool_h=self._pool_size[0], pool_w=self._pool_size[1]
+            )
+
 
 class ReplaceDeepMaxPool2DPass(ReplacePooling2DPass):
     @property
@@ -684,8 +693,6 @@ class ReplaceDeepMaxPool2DPass(ReplacePooling2DPass):
 
 
 class ReplaceAveragePool2DPass(ReplacePooling2DPass):
-    # NOTE: this pass is currently not enabled in the xformer
-    # lib_nn performs the checks to dispatch the appropriate kernel
     def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=False):
         super().__init__(priority)
         self.safe_mode = safe_mode
@@ -711,15 +718,6 @@ class ReplaceAveragePool2DPass(ReplacePooling2DPass):
                         and self._input.shape[3] % 4 == 0)
 
         return False
-
-    def mutate(self, op):
-        new_op = super().mutate(op)
-
-        with self.using(op):
-            new_op.add_custom_options(
-                stride_h=self._strides[0], stride_w=self._strides[1],
-                pool_h=self._pool_size[0], pool_w=self._pool_size[1]
-            )
 
 
 class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
@@ -783,7 +781,7 @@ class ReplaceAveragePool2D2x2Pass(ReplacePooling2DPass):
 
     @property
     def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_avgpool2d_2x2)
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d)
 
     def match(self, op):
         if super().match(op):

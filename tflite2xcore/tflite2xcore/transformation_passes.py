@@ -866,7 +866,7 @@ class ReplaceActivationPass(ReplaceQuantizedOperatorPass):
         new_op = super().mutate(op)
 
         inputs_int = np.arange(-128, 128, dtype=np.int8)
-        with self.using(op):
+        with self.using(new_op):
             outputs_int = self._quantize(self.activation(self._dequantize(inputs_int)))
         outputs_int = np.concatenate([outputs_int[128:], outputs_int[0:128]])
 
@@ -885,6 +885,15 @@ class ReplaceTanhPass(ReplaceActivationPass):
         return np.tanh(float_arr)
 
 
+class ReplaceLogisticPass(ReplaceActivationPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.LOGISTIC
+
+    def activation(self, float_arr):
+        return 1. / (1. + np.exp(-float_arr))
+
+
 class ReplaceReLUPass(ReplaceActivationPass):
     @property
     def matching_opcode(self):
@@ -897,7 +906,7 @@ class ReplaceReLUPass(ReplaceActivationPass):
 class ReplaceReLU6Pass(ReplaceActivationPass):
     @property
     def matching_opcode(self):
-        return BuiltinOpCodes.PRELU
+        return BuiltinOpCodes.RELU6
 
     def activation(self, float_arr):
         return np.minimum(np.maximum(float_arr, 0.), 6.)

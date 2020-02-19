@@ -23,8 +23,8 @@ class MLP(MNISTModel):
             name=self.name,
             layers=[
                 tf.keras.layers.Flatten(input_shape=(32, 32, 1), name='input'),
-                tf.keras.layers.Dense(420, activation='tanh', name='dense_1'),
-                tf.keras.layers.Dense(300, activation='tanh', name='dense_2'),
+                tf.keras.layers.Dense(390, activation='tanh', name='dense_1'),
+                tf.keras.layers.Dense(290, activation='tanh', name='dense_2'),
                 tf.keras.layers.Dense(10, activation='softmax', name='output')
             ])
         # Compilation
@@ -44,8 +44,8 @@ class MLPTuned(MLP):
             name=self.name,
             layers=[
                 tf.keras.layers.Flatten(input_shape=(32, 32, 1), name='input'),
-                tf.keras.layers.Dense(416, activation='relu', name='dense_1'),
-                tf.keras.layers.Dense(288, activation='relu', name='dense_2'),
+                tf.keras.layers.Dense(384, activation='relu', name='dense_1'),
+                tf.keras.layers.Dense(256, activation='relu', name='dense_2'),
                 tf.keras.layers.Dense(10, activation='softmax', name='output')
             ])
         # Compilation

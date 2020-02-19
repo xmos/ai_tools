@@ -18,8 +18,15 @@ def make_folder_and_arguments(**kwargs):
     folder_fields = []
     aurgment_fields = []
     for key, value in kwargs.items():
-        folder_fields.append(f'{key}_{value}')
-        aurgment_fields.append(f'-{key} {value}')
+        if isinstance(value, tuple):
+            value_folder_str = 'x'.join([str(v) for v in value])
+            value_argument_str = ' '.join([str(v) for v in value])
+        else:
+            value_folder_str = str(value)
+            value_argument_str = str(value)
+
+        folder_fields.append(f'{key}_{value_folder_str}')
+        aurgment_fields.append(f'-{key} {value_argument_str}')
 
     return '-'.join(folder_fields), ' '.join(aurgment_fields)
 
@@ -69,12 +76,36 @@ def run_generate(tests, jobs):
     #***********************************
     # AvgPool
     #***********************************
-    operator = operator_codes.XCOREOpCodes.XC_avgpool2d_deep.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_avgpool2d_deep.py')
+
+    operator = operator_codes.XCOREOpCodes.XC_avgpool2d.name
+    generator = os.path.join(directories.GENERATOR_DIR, 'generate_avgpool2d.py')
     parameter_sets = [
-        {'in': 32, 'hi': 2, 'wi': 2, 'st':2, 'po': 2, 'pd': 'VALID' },
-        {'in': 32, 'hi': 4, 'wi': 4, 'st':2, 'po': 2, 'pd': 'VALID' },
-        {'in': 32, 'hi': 16, 'wi': 16, 'st':2, 'po': 2, 'pd': 'VALID' }
+        #{'in': 32, 'hi': 5, 'wi': 5, 'st':(1, 2), 'po': (3, 4), 'pd': 'VALID'},
+        {'in': 32, 'hi': 4, 'wi': 4, 'st':(2, 2), 'po': (4, 4), 'pd': 'VALID'},
+        {'in': 4, 'hi': 16, 'wi': 16, 'st':(1, 1), 'po': (4, 4), 'pd': 'VALID'}
+    ]
+
+    if operator in tests or len(tests) == 0:
+        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
+
+    operator = operator_codes.XCOREOpCodes.XC_avgpool2d.name
+    generator = os.path.join(directories.GENERATOR_DIR, 'generate_avgpool2d_2x2.py')
+    parameter_sets = [
+        {'in': 32, 'hi': 4, 'wi': 4},
+        {'in': 32, 'hi': 6, 'wi': 12},
+        {'in': 32, 'hi': 16, 'wi': 16}
+    ]
+
+    if operator in tests or len(tests) == 0:
+        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
+
+    #***********************************
+    # AvgPool Global
+    #***********************************
+    operator = operator_codes.XCOREOpCodes.XC_avgpool2d_global.name
+    generator = os.path.join(directories.GENERATOR_DIR, 'generate_avgpool2d_global.py')
+    parameter_sets = [
+        {'in': 32, 'hi': 4, 'wi': 4},
     ]
 
     if operator in tests or len(tests) == 0:
@@ -91,9 +122,9 @@ def run_generate(tests, jobs):
         {'hi': 3, 'wi': 3, 'kh':1, 'kw': 1, 'pd': 'SAME' },
         {'hi': 3, 'wi': 3, 'kh':3, 'kw': 3, 'pd': 'SAME' },
         {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'SAME' },
-        {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'VALID' },
-        {'hi': 3, 'wi': 3, 'kh':3, 'kw': 3, 'pd': 'VALID' },
-        {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID' },
+        {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'VALID'},
+        {'hi': 3, 'wi': 3, 'kh':3, 'kw': 3, 'pd': 'VALID'},
+        {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID'},
         {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID', 'par': 2 },
         {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID', 'par': 4 },
         {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID', 'par': 5 }
@@ -112,9 +143,9 @@ def run_generate(tests, jobs):
         # {'hi': 1, 'wi': 1, 'kh':3, 'kw': 3, 'pd': 'SAME' },
         {'hi': 3, 'wi': 3, 'kh':3, 'kw': 3, 'pd': 'SAME' },
         {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'SAME' },
-        {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'VALID' },
-        {'hi': 3, 'wi': 3, 'kh':3, 'kw': 3, 'pd': 'VALID' },
-        {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID' }
+        {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'VALID'},
+        {'hi': 3, 'wi': 3, 'kh':3, 'kw': 3, 'pd': 'VALID'},
+        {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID'}
     ]
 
     if operator in tests or len(tests) == 0:
@@ -165,9 +196,9 @@ def run_generate(tests, jobs):
     operator = operator_codes.XCOREOpCodes.XC_maxpool2d_deep.name
     generator = os.path.join(directories.GENERATOR_DIR, 'generate_maxpool2d_deep.py')
     parameter_sets = [
-        {'in': 32, 'hi': 2, 'wi': 2, 'st':2, 'po': 2, 'pd': 'VALID' },
-        {'in': 32, 'hi': 4, 'wi': 4, 'st':2, 'po': 2, 'pd': 'VALID' },
-        {'in': 32, 'hi': 16, 'wi': 16, 'st':2, 'po': 2, 'pd': 'VALID' }
+        {'in': 32, 'hi': 2, 'wi': 2, 'st':2, 'po': 2, 'pd': 'VALID'},
+        {'in': 32, 'hi': 4, 'wi': 4, 'st':2, 'po': 2, 'pd': 'VALID'},
+        {'in': 32, 'hi': 16, 'wi': 16, 'st':2, 'po': 2, 'pd': 'VALID'}
     ]
 
     if operator in tests or len(tests) == 0:

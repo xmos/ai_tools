@@ -712,6 +712,15 @@ class ReplaceAveragePool2DPass(ReplacePooling2DPass):
 
         return False
 
+    def mutate(self, op):
+        new_op = super().mutate(op)
+
+        with self.using(op):
+            new_op.add_custom_options(
+                stride_h=self._strides[0], stride_w=self._strides[1],
+                pool_h=self._pool_size[0], pool_w=self._pool_size[1]
+            )
+
 
 class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
     @property

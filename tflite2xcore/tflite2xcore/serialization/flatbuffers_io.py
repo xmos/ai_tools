@@ -12,7 +12,7 @@ from .schema_py_generated import *
 from .flatbuffers_c import FlexbufferBuilder, FlexbufferParser
 
 from ..xcore_model import XCOREModel, TensorType
-from ..operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
+from ..operator_codes import OperatorCode, BuiltinOpCodes, CustomOpCode, XCOREOpCodes
 
 
 class ActivationFunctionType(enum.Enum):
@@ -92,14 +92,19 @@ def create_xcore_model(modelT):
     buffers = [model.create_buffer(**vars(bufferT)) for bufferT in modelT.buffers]
 
     # load metadata
-    for metadataT in modelT.metadata:
-        model.create_metadata(metadataT.name, buffers[metadataT.buffer])
+    if modelT.metadata:
+        for metadataT in modelT.metadata:
+            model.create_metadata(metadataT.name, buffers[metadataT.buffer])
 
     # create operator codes lookup
     operator_codes_lut = []
     for operator_codeT in modelT.operatorCodes:
         if operator_codeT.builtinCode == BuiltinOpCodes.CUSTOM.value:
-            opcode = XCOREOpCodes(operator_codeT.customCode.decode('utf-8'))
+            custom_code = operator_codeT.customCode.decode('utf-8')
+            if custom_code in XCOREOpCodes:
+                opcode = XCOREOpCodes(custom_code)
+            else:
+                opcode = CustomOpCode(custom_code)
         else:
             opcode = BuiltinOpCodes(operator_codeT.builtinCode)
         operator_codes_lut.append(OperatorCode(opcode, version=operator_codeT.version))
@@ -281,7 +286,7 @@ def read_flatbuffer(model_filename):
 
 def write_flatbuffer(model, filename):
     modelT = create_flatbuffer_model(model)
-    builder = flatbuffers.Builder(1024)
+    builder = flatbuffers.Builder(1024*1024)
     model_offset = modelT.Pack(builder)
 
     builder.Finish(model_offset, file_identifier=b'TFL3')

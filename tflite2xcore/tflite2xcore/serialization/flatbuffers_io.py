@@ -286,7 +286,7 @@ def read_flatbuffer(model_filename):
 
 def write_flatbuffer(model, filename):
     modelT = create_flatbuffer_model(model)
-    builder = flatbuffers.Builder(1024)
+    builder = flatbuffers.Builder(1024*1024)
     model_offset = modelT.Pack(builder)
 
     builder.Finish(model_offset, file_identifier=b'TFL3')

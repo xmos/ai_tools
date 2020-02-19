@@ -1,4 +1,5 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
+import sys
 import struct
 import enum
 import collections
@@ -366,6 +367,13 @@ class XCOREModel():
         sorted_operator_codes = [op_code for op_code, _ in counter.most_common()]
 
         return sorted_operator_codes
+
+    @property
+    def data_size(self):
+        nbytes = 0
+        for buffer in self.buffers:
+            nbytes += len(buffer)
+        return nbytes
 
     def pprint(self, tensor_values=False):
         print('---------')

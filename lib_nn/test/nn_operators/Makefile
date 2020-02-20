@@ -1,172 +1,134 @@
 
 
-APP_NAME = nn_operators_test
-SRC_DIR = src
-BUILD_DIR = .build
-BIN_DIR = bin
-# APP_BUILD_DIR = $(BUILD_DIR)/$(APP_NAME)
-TARGET = xcore # XU316-1024-QF60-C20
-APP_CONFIG = Default
+export PLATFORM ?= xcore
 
-#Windows command to create a directory if it doesn't exist.
-define mkdir_cmd
-	@test -d $(subst /,\,$(dir $(1))) || mkdir $(subst /,\,$(dir $(1)))
-endef
+include ./etc/platform/$(strip $(PLATFORM)).mk
+include ./etc/common.mk
 
-ifeq ($(TARGET), x86)
-	BUILD_TARGET := x86
+export TARGET_DEVICE
+export BUILD_DIR := .build
+export BIN_DIR   := bin
+export OBJ_DIR   := $(BUILD_DIR)/$(PLATFORM)
 
-	CC := gcc
-	CCFLAGS := -g -O3
+export APP_FLAGS
+export XCC_FLAGS
+export CC_FLAGS
+export CXX_FLAGS
+export AS_FLAGS
 
-	XCC := gcc
-	XCCFLAGS := -g -O3
-	
-	CXX := g++
-	CXXFLAGS := -g -O3
-	CXXFLAGS += -std=c++11
+export LIB_NAME
 
-	LDFLAGS := -L/usr/local/lib -lstdc++ -lm
+export PLATFORM_FLAGS
 
-	OBJ_DIR := .build/x86
+LIBRARY_MAKEFILE := $(abspath etc/lib_makefile)
 
-	APP = $(APP_NAME)
-else 
-	#must be xcore
-	BUILD_TARGET := xcore.ai
+$(info Building for $(PLATFORM_NAME))
 
-	PLATFORM_FLAGS := -target=XU316-1024-QF60-C20
-	# PLATFORM_FLAGS += -mcmodel=large
-	PLATFORM_FLAGS += -Os
-	# PLATFORM_FLAGS += -DXCORE
-	PLATFORM_FLAGS += -Wno-xcore-fptrgroup
-	# PLATFORM_FLAGS += -Wno-unknown-pragmas
-	# PLATFORM_FLAGS += -Wno-unknown-attributes
-	PLATFORM_FLAGS += -Wno-unused-variable
-	PLATFORM_FLAGS += -report
-	# PLATFORM_FLAGS += -fcmdline-buffer-bytes=1024
 
-	AS := xcc
-	ASFLAGS := $(PLATFORM_FLAGS)
+INCLUDES :=
+SOURCE_FILES := 
+VPATH :=
 
-	CC := xcc
-	CCFLAGS := -g
-	CCFLAGS += $(PLATFORM_FLAGS)
-	
-	XCC := xcc
-	XCCFLAGS := -g -O3
-	XCCFLAGS += $(PLATFORM_FLAGS)
 
-	CXX := xcc
-	CXXFLAGS := -std=c++11 -g -DTF_LITE_STATIC_MEMORY -DNDEBUG
-	CXXFLAGS += $(PLATFORM_FLAGS)
-
-	LDFLAGS := $(PLATFORM_FLAGS)
-
-	OBJ_DIR := .build/xcore
-
-	APP = $(APP_NAME).xe
+include app.mk
+$(call check_defined, APP_NAME, Name of the application being built)
+ifeq ($(strip $(PLATFORM)),$(strip xcore))
+  $(call check_defined, TARGET_DEVICE, The xcore device being targeted)
+  PLATFORM_FLAGS += -target=$(TARGET_DEVICE)
 endif
+APP_EXE = $(APP_NAME)$(PLATFORM_EXE_SUFFIX)
 
-$(info Building for $(BUILD_TARGET))
+OBJ_FILES := $(SOURCE_FILES:%=$(OBJ_DIR)/$(APP_NAME)/%.o)
 
+$(info Application dependencies: $(DEPENDENCIES))
+DEP_MK_PATHS := $(DEPENDENCIES:%=./etc/%.mk)
 
-DEPENDENCIES := lib_nn Unity
+API_CHECK = 1
+include $(DEP_MK_PATHS)
+API_CHECK = 0
 
-DEP_PATH := ../..
-DEP_PATHS := $(addsuffix /lib.mk,$(addprefix $(DEP_PATH)/,$(DEPENDENCIES)))
+DEPENDENCY_TARGETS := $(DEPENDENCIES:%=lib_target_%)
 
-ALL_INCLUDES :=
-ALL_OBJECT_FILES := 
-ALL_OBJECTS := 
+#######################################################
+# MAKE TARGETS
+#######################################################
+.PHONY: help all build clean $(DEPENDENCY_TARGETS)
 
-include $(DEP_PATHS)
+help:
+	$(info ***********************)
+	$(info nn_operators_test: Unit tests for the functions in lib_nn)
+	$(info ***********************)
 
-INCLUDES := -I$(SRC_DIR)
+all: build
 
-ALL_INCLUDES += $(INCLUDES)
+build: $(BIN_DIR)/$(APP_EXE)
 
-VPATH := $(SRC_DIR)
+lib_target_%: LIB_PATH = $($(subst lib_target_,,$@)_PATH)
+lib_target_%: LIB_NAME = $(subst lib_target_,,$@)
 
-APP_SOURCES := $(wildcard $(SRC_DIR)/*.xc)
-APP_SOURCES += $(wildcard $(SRC_DIR)/*.c)
+$(DEPENDENCY_TARGETS): BUILD_DIR := $(abspath $(BUILD_DIR))
+$(DEPENDENCY_TARGETS): OBJ_DIR := $(abspath $(OBJ_DIR))
 
-ifeq ($(TARGET), x86)
+$(DEPENDENCY_TARGETS): 
+	@$(MAKE) -s -e --makefile=$(LIBRARY_MAKEFILE) -C $(LIB_PATH) build
 
-else
-	APP_SOURCES += $(wildcard $(LIB_NN_DIR)/*.S)
-endif
-
-APP_OBJECT_FILES := $(addprefix $(OBJ_DIR)/,$(addsuffix .o, $(APP_SOURCES)))
-
-
-# APP_OBJECT_FILES := $(patsubst %.xc,%.o,$(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(APP_SOURCES))))))
-# APP_OBJECT_FILES := $(addprefix $(OBJ_DIR)/,$(APP_OBJECT_FILES))
-APP_OBJECTS := $(APP_SOURCES) $(APP_OBJECT_FILES)
-# OBJECTS := $(APP_SOURCES) $(OBJECT_FILES)
-
-ALL_OBJECT_FILES += $(APP_OBJECT_FILES)
-
-ALL_OBJECTS += $(APP_OBJECTS)
-
-.PHONY: all clean $(APP_NAME)
-
-all: $(BIN_DIR)/$(APP)
+MAP_xc = XCC
+MAP_c = CC
+MAP_cc = CC
+MAP_cpp = CXX
+MAP_S = AS
 
 
-# $(OBJ_DIR)/%.o: %.S
-# 	@mkdir -p $(dir $@)
-# 	$(AS) $(ASFLAGS) -o $@ -c $<
+$(filter %.c.o, $(OBJ_FILES)):   OBJ_COMP := $(CC)
+$(filter %.cc.o, $(OBJ_FILES)):  OBJ_COMP := $(CC)
+$(filter %.xc.o, $(OBJ_FILES)):  OBJ_COMP := $(XCC)
+$(filter %.cpp.o, $(OBJ_FILES)): OBJ_COMP := $(CXX)
+$(filter %.S.o, $(OBJ_FILES)):   OBJ_COMP := $(AS)
 
-# $(OBJ_DIR)/%.o: %.c
-# 	@mkdir -p $(dir $@)
-# 	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ -c $<
+$(filter %.c.o, $(OBJ_FILES)):   OBJ_FLAGS := $(PLATFORM_FLAGS) $(APP_FLAGS) $(c_FLAGS)   $(CC_FLAGS)
+$(filter %.cc.o, $(OBJ_FILES)):  OBJ_FLAGS := $(PLATFORM_FLAGS) $(APP_FLAGS) $(cc_FLAGS)  $(CC_FLAGS)
+$(filter %.xc.o, $(OBJ_FILES)):  OBJ_FLAGS := $(PLATFORM_FLAGS) $(APP_FLAGS) $(xc_FLAGS)  $(XCC_FLAGS)
+$(filter %.cpp.o, $(OBJ_FILES)): OBJ_FLAGS := $(PLATFORM_FLAGS) $(APP_FLAGS) $(cpp_FLAGS) $(CXX_FLAGS)
+$(filter %.S.o, $(OBJ_FILES)):   OBJ_FLAGS := $(PLATFORM_FLAGS) $(APP_FLAGS) $(S_FLAGS)   $(AS_FLAGS)
 
-# $(OBJ_DIR)/%.o: $(SRC_DIR)/%.xc
-# 	@mkdir -p $(dir $@)
-# 	$(XCC) $(XCCFLAGS) $(INCLUDES) -o $@ -c $<
+$(filter %.c.o, $(OBJ_FILES)):   OBJ_INCLUDES := $(PLATFORM_INCLUDES) $(INCLUDES) $(c_INCLUDES)   $(CC_INCLUDES)
+$(filter %.cc.o, $(OBJ_FILES)):  OBJ_INCLUDES := $(PLATFORM_INCLUDES) $(INCLUDES) $(cc_INCLUDES)  $(CC_INCLUDES)
+$(filter %.xc.o, $(OBJ_FILES)):  OBJ_INCLUDES := $(PLATFORM_INCLUDES) $(INCLUDES) $(xc_INCLUDES)  $(XCC_INCLUDES)
+$(filter %.cpp.o, $(OBJ_FILES)): OBJ_INCLUDES := $(PLATFORM_INCLUDES) $(INCLUDES) $(cpp_INCLUDES) $(CXX_INCLUDES)
+$(filter %.S.o, $(OBJ_FILES)):   OBJ_INCLUDES := $(PLATFORM_INCLUDES) $(INCLUDES) $(S_INCLUDES)   $(AS_INCLUDES)
 
-# $(OBJ_DIR)/%.o: %.cc
-# 	@mkdir -p $(dir $@)
-# 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ -c $<
-
-# $(OBJ_DIR)/%.o: %.cpp
-# 	@mkdir -p $(dir $@)
-# 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ -c $<
-
-$(filter %.S.o, $(APP_OBJECT_FILES)): $(OBJ_DIR)/%.o: %
+$(OBJ_FILES): $(OBJ_DIR)/$(APP_NAME)/%.o: %
 	$(call mkdir_cmd,$@)
-	$(info Compiling $<..)
-	@$(AS) $(ASFLAGS) $(ALL_INCLUDES) -o $@ -c $<
+	$(info Compiling $<)
+	@$(OBJ_COMP) $(OBJ_FLAGS) $(addprefix -I,$(OBJ_INCLUDES)) -o $@ -c $<
 
-$(filter %.cpp.o, $(APP_OBJECT_FILES)): $(OBJ_DIR)/%.o: %
-	$(call mkdir_cmd,$@)
-	$(info Compiling $<..)
-	@$(CXX) $(CXXFLAGS) $(ALL_INCLUDES) -o $@ -c $<
+-include $(OBJ_FILES:%.o=%.d)
 
-$(filter %.cc.o, $(APP_OBJECT_FILES)): $(OBJ_DIR)/%.o: %
-	$(call mkdir_cmd,$@)
-	$(info Compiling $<..)
-	@$(CC) $(CCFLAGS) $(ALL_INCLUDES) -o $@ -c $<
 
-$(filter %.c.o, $(APP_OBJECT_FILES)): $(OBJ_DIR)/%.o: %
-	$(call mkdir_cmd,$@)
-	$(info Compiling $<..)
-	@$(CC) $(CCFLAGS) $(ALL_INCLUDES) -o $@ -c $<
+# NOTE: For some reason the recursive wildcard call only sometimes
+# finds the .o files for the application, even though they're
+# compiled first... which is the reason for the filtering below.
+# Because on the occasions where rwildcard DOES find them, there
+# is a duplicate symbol error for every symbol in the app source.
 
-$(filter %.xc.o, $(APP_OBJECT_FILES)): $(OBJ_DIR)/%.o: %
-	$(call mkdir_cmd,$@)
-	$(info Compiling $<..)
-	@$(XCC) $(XCCFLAGS) $(ALL_INCLUDES) -o $@ -c $<
+# NOTE: I can't figure out how to get make to realize when the
+# binary doesn't need to be regenerated, so repeated calls to
+# 'make all' seem to generate it repeatedly. I suspect it is
+# to do with the dependency targets being phony?
 
-$(BIN_DIR)/$(APP): $(ALL_OBJECTS)
+$(BIN_DIR)/$(APP_EXE): $(OBJ_FILES) $(DEPENDENCY_TARGETS)
 	$(call mkdir_cmd,$@)
-	$(info Building executable $@..)
-	@$(XCC) $(LDFLAGS) $(ALL_OBJECT_FILES) -o $(BIN_DIR)/$(APP)
+	$(info Linking binary $@)
+	@$(XCC) $(LDFLAGS)                      \
+		$(APP_FLAGS)                        \
+		$(PLATFORM_FLAGS)                   \
+		$(OBJ_FILES)                        \
+		$(filter-out $(OBJ_DIR)/$(APP_NAME)/%,$(call rwildcard,$(OBJ_DIR),*.o))    \
+		-o $(BIN_DIR)/$(APP_EXE)
 
 clean:
 	$(info Cleaning project...)
 	rm -rvf $(BIN_DIR)
-	rm -rvf $(OBJ_DIR)
+	rm -rvf $(BUILD_DIR)
 
 

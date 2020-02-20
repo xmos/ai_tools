@@ -1,0 +1,56 @@
+
+# The library to be built is being passed into the environment as $(LIB_NAME)
+
+# The following should be passed in from the top-level makefile
+#	$(LIB_NAME) - Name of the library to be built
+#	$(OBJ_DIR)  - The directory into which object files go
+#	$(BUILD_DIR) - The build directory
+#	$(TARGET)   - THe build target (xcore or x86)
+#
+#	As well as all the various flags and such
+
+THIS_DIR = $(dir $(lastword $(MAKEFILE_LIST)))
+
+COMMON_MK := $(THIS_DIR)common.mk
+LIB_MK := $(THIS_DIR)$(LIB_NAME).mk
+
+include $(THIS_DIR)/platform/$(strip $(PLATFORM)).mk
+
+include $(COMMON_MK)
+
+$(call check_defined, LIB_NAME, Library name must be defined by parent Makefile)
+
+
+INCLUDES :=
+SOURCE_FILES := 
+VPATH :=
+
+include $(LIB_MK)
+
+OBJ_FILES := $(patsubst %, $(OBJ_DIR)/$(LIB_NAME)/%.o, $(SOURCE_FILES))
+
+.PHONY: build all
+
+all: build;
+
+MAP_xc = XCC
+MAP_c = CC
+MAP_cc = CC
+MAP_cpp = CXX
+MAP_S = AS
+
+$(OBJ_FILES): $(OBJ_DIR)/$(LIB_NAME)/%.o: %
+	$(call mkdir_cmd,$@)
+	$(info Compiling $<)
+	@$($(MAP_$(subst .,,$(suffix $<))))                      \
+		$(PLATFORM_FLAGS)                                    \
+		$($(MAP_$(subst .,,$(suffix $<)))_FLAGS)             \
+		$(addprefix -I,$($(subst .,,$(suffix $<))_INCLUDES)) \
+		$(addprefix -I,$(PLATFORM_INCLUDES))                 \
+		$(addprefix -I,$(INCLUDES))                          \
+		-o $@ -c $<
+
+-include $(OBJ_FILES:%.o=%.d)
+
+build: $(OBJ_FILES) $(SOURCE_FILES);
+

@@ -9,14 +9,14 @@ import tensorflow as tf
 
 from generate_avgpool2d import (
     DEFAULT_INPUTS, DEFAULT_HEIGHT, DEFAULT_WIDTH,
-    DefaultAvgPool2DModel,
-    DefaultAvgPool2DParser
+    DefaultPool2DModel,
+    DefaultPool2DParser
 )
 
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'avgpool2d_global').resolve()
 
 
-class AvgPool2DGlobal(DefaultAvgPool2DModel):
+class AvgPool2DGlobal(DefaultPool2DModel):
     def build_core_model(self, height, width, input_channels):
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
 
@@ -39,7 +39,7 @@ def main(path=DEFAULT_PATH, *,
 
 
 if __name__ == "__main__":
-    parser = DefaultAvgPool2DParser(defaults={
+    parser = DefaultPool2DParser(defaults={
         'path': DEFAULT_PATH,
         'inputs': DEFAULT_INPUTS,
         'height': DEFAULT_HEIGHT,

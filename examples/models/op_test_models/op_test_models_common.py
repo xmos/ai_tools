@@ -64,7 +64,6 @@ class DefaultOpTestConvModel(DefaultOpTestModel):
     def build_core_model(self, K_h, K_w, height, width, input_channels,
                          output_channels, *, padding, bias_init, weight_init,
                          input_init):
-        assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
         assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
         assert K_h % 2 == 1, "kernel height must be odd"
         assert K_w % 2 == 1, "kernel width must be odd"
@@ -223,6 +222,9 @@ class OpTestDefaultParser(argparse.ArgumentParser):
             "Initialize weights. Possible initializers are: const, unif or None."
             f"(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})",
         )
+        self.add_input_initializer()
+
+    def add_input_initializer(self):
         self.add_argument(
             "--input_init",
             nargs="*",
@@ -234,6 +236,7 @@ class OpTestDefaultParser(argparse.ArgumentParser):
         self.add_argument("--seed",
                           type=int,
                           help="Set the seed value for the initializers.")
+
 
 
 #  for models with 2D dimensionality and padding
@@ -262,13 +265,16 @@ class OpTestDimParser(OpTestDefaultParser):
             default=defaults["width"],
             help="Width of input image",
         )
-        self.add_argument(
-            "-pd",
-            "--padding",
-            type=str,
-            default=defaults["padding"],
-            help="Padding mode",
-        )
+        if 'padding' in defaults:
+            self.add_argument(
+                "-pd",
+                "--padding",
+                type=str,
+                default=defaults["padding"],
+                help="Padding mode",
+            )
+        else:
+            self.add_input_initializer()
 
 
 class OpTestPoolStridesParser(OpTestDimParser):
@@ -282,7 +288,7 @@ class OpTestPoolStridesParser(OpTestDimParser):
             type=int,
             default=argparse.SUPPRESS,
             help="Strides, vertical first "
-            f"(default: {*defaults['strides']})",
+            f"(default: {defaults['strides']})",
         )
         self.add_argument(
             "-po",
@@ -291,8 +297,9 @@ class OpTestPoolStridesParser(OpTestDimParser):
             type=int,
             default=argparse.SUPPRESS,
             help="Pool size:, vertical first "
-            f"(default: {*defaults['pool_size']})",
+            f"(default: {defaults['pool_size']})",
         )
+        self.add_input_initializer()
 
 
 #  for conv models
@@ -412,7 +419,7 @@ def run_main_conv(model, *, num_threads, input_channels, output_channels,
         logging.debug(f"BIAS DATA SAMPLE:\n{layer.get_weights()[1]}")  # bias
 
     # Generate test data
-    model.gen_test_data(height, width)
+    model.gen_test_data()
     logging.debug(f'EXPORT DATA SAMPLE:\n{model.data["export_data"][4][0]}')
     logging.debug(f'QUANT DATA SAMPLE:\n{model.data["quant"][0][0]}')
     # Save model

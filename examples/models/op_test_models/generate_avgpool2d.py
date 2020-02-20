@@ -21,7 +21,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath("debug", "avgpool2d").resolve()
 
 class AvgPool2D(common.DefaultOpTestModel):
     def build_core_model(self, height, width, input_channels, *, pool_size,
-                         strides, padding):
+                         strides, padding, input_init):
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
         if padding.lower() == 'same':
             assert (height % 2 == 0 and width % 2 == 0 and pool_size[0] == 2
@@ -31,7 +31,7 @@ class AvgPool2D(common.DefaultOpTestModel):
         else:
             assert padding.lower(
             ) == 'valid', f"invalid padding mode '{padding}'"
-
+        self.input_init = input_init
         self.core_model = tf.keras.Sequential(
             name=self.name,
             layers=[
@@ -52,14 +52,16 @@ def main(path=DEFAULT_PATH,
          width=DEFAULT_WIDTH,
          pool_size=DEFAULT_POOL_SIZE,
          strides=DEFAULT_STRIDES,
-         padding=DEFAULT_PADDING):
+         padding=DEFAULT_PADDING,
+         input_init=common.DEFAULT_UNIF_INIT):
     model = AvgPool2D("avgpool2d", Path(path))
     model.build(height,
                 width,
                 input_channels,
                 padding=padding,
                 pool_size=pool_size,
-                strides=strides)
+                strides=strides,
+                input_init=input_init)
     model.run()
 
 
@@ -80,10 +82,12 @@ if __name__ == "__main__":
     utils.set_gpu_usage(False, args.verbose)
 
     strides_pool = common.strides_pool_arg_handler(args)
+    initializers = common.initializer_args_handler(args)
 
     main(path=args.path,
          input_channels=args.inputs,
          height=args.height,
          width=args.width,
          padding=args.padding,
-         **strides_pool)
+         **strides_pool,
+         input_init=initializers['input_init'])

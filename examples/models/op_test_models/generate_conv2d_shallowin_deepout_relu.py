@@ -18,11 +18,11 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
 
 
 class Conv2dShallowinDeepoutRelu(common.DefaultOpTestConvModel):
-    def build(self, K_h, K_w, height, width, input_channels, output_channels,
+    def build_core_model(self, K_h, K_w, height, width, input_channels, output_channels,
               *, padding, bias_init, weight_init, input_init):
         assert input_channels <= 4, "Number of input channels must be at most 4"
         assert K_w <= 8, "Kernel width must be at most 8"
-        super().build(K_h,
+        super().build_core_model(K_h,
                       K_w,
                       height,
                       width,
@@ -50,18 +50,6 @@ def main(path=DEFAULT_PATH,
         'name': 'conv2d_shallowin_deepout_relu',
         'path': path if path else DEFAULT_PATH
     }
-    # build_kwargs = {
-    #     'height': height,
-    #     'width': width,
-    #     'K_h': K_h,
-    #     'K_w': K_w,
-    #     'input_channels': input_channels,
-    #     'output_channels': output_channels,
-    #     'padding': padding,
-    #     'bias_init': bias_init,
-    #     'weight_init': weight_init,
-    #     'input_init': input_init
-    # }
     common.run_main_conv(model=Conv2dShallowinDeepoutRelu(**kwargs),
                          num_threads=None,
                          input_channels=input_channels,

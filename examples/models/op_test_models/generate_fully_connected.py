@@ -58,7 +58,7 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
 
 
 class FullyConnected(KerasModel):
-    def build(self, input_dim, output_dim):
+    def build(self, input_dim, output_dim, bias_init, weight_init):
         super().build()
 
         # Building
@@ -66,7 +66,9 @@ class FullyConnected(KerasModel):
             name=self.name,
             layers=[
                 tf.keras.layers.Flatten(input_shape=(input_dim, 1, 1)),
-                tf.keras.layers.Dense(output_dim, activation='softmax')
+                tf.keras.layers.Dense(output_dim, activation='softmax',
+                                      bias_initializer=bias_init,
+                                      kernel_initializer=weight_init)
             ]
         )
         # Compilation

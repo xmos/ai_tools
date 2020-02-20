@@ -22,8 +22,7 @@ export PLATFORM_FLAGS
 
 LIBRARY_MAKEFILE := $(abspath etc/lib_makefile)
 
-$(info Building for $(PLATFORM_NAME))
-
+help: app_help; @echo > NUL
 
 INCLUDES :=
 SOURCE_FILES := 
@@ -37,10 +36,10 @@ ifeq ($(strip $(PLATFORM)),$(strip xcore))
   PLATFORM_FLAGS += -target=$(TARGET_DEVICE)
 endif
 APP_EXE = $(APP_NAME)$(PLATFORM_EXE_SUFFIX)
+APP_EXE_TARGET = $(BIN_DIR)/$(APP_EXE)
 
 OBJ_FILES := $(SOURCE_FILES:%=$(OBJ_DIR)/$(APP_NAME)/%.o)
 
-$(info Application dependencies: $(DEPENDENCIES))
 DEP_MK_PATHS := $(DEPENDENCIES:%=./etc/%.mk)
 
 API_CHECK = 1
@@ -49,35 +48,33 @@ API_CHECK = 0
 
 DEPENDENCY_TARGETS := $(DEPENDENCIES:%=lib_target_%)
 
+DEPENDENCY_ARCHIVES := $(DEPENDENCIES:%=$(BUILD_DIR)/%.a)
+
 #######################################################
 # MAKE TARGETS
 #######################################################
-.PHONY: help all build clean $(DEPENDENCY_TARGETS)
-
-help:
-	$(info ***********************)
-	$(info nn_operators_test: Unit tests for the functions in lib_nn)
-	$(info ***********************)
+.PHONY: help all build clean run FORCE MSG_PLATFORM MSG_DEPENDENCIES app_help
 
 all: build
 
-build: $(BIN_DIR)/$(APP_EXE)
+MSG_PLATFORM:
+	$(info Building for $(PLATFORM_NAME))
+MSG_DEPENDENCIES:
+	$(info Application dependencies: $(DEPENDENCIES))
 
-lib_target_%: LIB_PATH = $($(subst lib_target_,,$@)_PATH)
-lib_target_%: LIB_NAME = $(subst lib_target_,,$@)
+build: MSG_PLATFORM MSG_DEPENDENCIES  $(APP_EXE_TARGET)
+	$(info Done.)
 
-$(DEPENDENCY_TARGETS): BUILD_DIR := $(abspath $(BUILD_DIR))
-$(DEPENDENCY_TARGETS): OBJ_DIR := $(abspath $(OBJ_DIR))
 
-$(DEPENDENCY_TARGETS): 
+$(BUILD_DIR)/%.a: LIB_NAME = $(patsubst $(REL_BUILD_DIR)/%.a,%,$@)
+$(BUILD_DIR)/%.a: LIB_PATH = $($(LIB_NAME)_PATH)
+
+$(DEPENDENCY_ARCHIVES): REL_BUILD_DIR := $(BUILD_DIR)
+$(DEPENDENCY_ARCHIVES): BUILD_DIR := $(abspath $(BUILD_DIR))
+$(DEPENDENCY_ARCHIVES): OBJ_DIR := $(abspath $(OBJ_DIR))
+
+$(DEPENDENCY_ARCHIVES): FORCE
 	@$(MAKE) -s -e --makefile=$(LIBRARY_MAKEFILE) -C $(LIB_PATH) build
-
-MAP_xc = XCC
-MAP_c = CC
-MAP_cc = CC
-MAP_cpp = CXX
-MAP_S = AS
-
 
 $(filter %.c.o, $(OBJ_FILES)):   OBJ_COMP := $(CC)
 $(filter %.cc.o, $(OBJ_FILES)):  OBJ_COMP := $(CC)
@@ -116,19 +113,24 @@ $(OBJ_FILES): $(OBJ_DIR)/$(APP_NAME)/%.o: %
 # 'make all' seem to generate it repeatedly. I suspect it is
 # to do with the dependency targets being phony?
 
-$(BIN_DIR)/$(APP_EXE): $(OBJ_FILES) $(DEPENDENCY_TARGETS)
+$(APP_EXE_TARGET): $(OBJ_FILES) $(DEPENDENCY_ARCHIVES)
 	$(call mkdir_cmd,$@)
 	$(info Linking binary $@)
 	@$(XCC) $(LDFLAGS)                      \
 		$(APP_FLAGS)                        \
 		$(PLATFORM_FLAGS)                   \
 		$(OBJ_FILES)                        \
-		$(filter-out $(OBJ_DIR)/$(APP_NAME)/%,$(call rwildcard,$(OBJ_DIR),*.o))    \
-		-o $(BIN_DIR)/$(APP_EXE)
+		-o $(BIN_DIR)/$(APP_EXE)            \
+		$(DEPENDENCY_ARCHIVES)
 
 clean:
 	$(info Cleaning project...)
 	rm -rvf $(BIN_DIR)
 	rm -rvf $(BUILD_DIR)
+
+
+run: build
+	xsim $(APP_EXE_TARGET)
+
 
 

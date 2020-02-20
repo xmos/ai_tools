@@ -14,3 +14,14 @@ VPATH += $(SRC_DIR)
 
 SOURCE_FILES += $(wildcard $(SRC_DIR)/*.xc)
 SOURCE_FILES += $(wildcard $(SRC_DIR)/*.c)
+
+app_help:
+	$(info *********************************************************)
+	$(info nn_operators_test: Unit tests for the functions in lib_nn)
+	$(info                                                          )
+	$(info make targets:                                            )
+	$(info |   help:    Display this message (default)              )
+	$(info |    all:    Build application                           )
+	$(info |  clean:    Remove build files and folders from project )
+	$(info |    run:    Run the unit tests in xsim                  )
+	$(info *********************************************************)

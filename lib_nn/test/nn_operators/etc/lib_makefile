@@ -29,6 +29,8 @@ include $(LIB_MK)
 
 OBJ_FILES := $(patsubst %, $(OBJ_DIR)/$(LIB_NAME)/%.o, $(SOURCE_FILES))
 
+ARCHIVE_FILE := $(BUILD_DIR)/$(LIB_NAME).a
+
 .PHONY: build all
 
 all: build;
@@ -52,5 +54,10 @@ $(OBJ_FILES): $(OBJ_DIR)/$(LIB_NAME)/%.o: %
 
 -include $(OBJ_FILES:%.o=%.d)
 
-build: $(OBJ_FILES) $(SOURCE_FILES);
+$(ARCHIVE_FILE): $(OBJ_FILES) $(SOURCE_FILES)
+	$(info Generating archive $(LIB_NAME).a)
+	$(AR) $(AR_FLAGS) $(ARCHIVE_FILE) $(OBJ_FILES)
+
+
+build: $(ARCHIVE_FILE)
 

@@ -5,7 +5,6 @@ from abc import abstractmethod
 import argparse
 from pathlib import Path
 from tflite2xcore.model_generation import utils
-from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
 import op_test_models_common as common
 
@@ -39,19 +38,13 @@ class DefaultAvgPool2DModel(common.DefaultOpTestModel):
 
 
 class AvgPool2D(DefaultAvgPool2DModel):
-    def build_core_model(
-        self, height, width, input_channels, *, pool_size, strides, padding
-    ):
+    def build_core_model(self, height, width, input_channels, *, pool_size,
+                         strides, padding):
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
         assert padding.lower() == "valid", "padding mode must be valid"
-        assert (
-            height % 2 == 1
-            or width % 2 == 1
-            or pool_size[0] != 2
-            or pool_size[1] != 2
-            or strides[0] != 2
-            or strides[1] != 2
-        ), "parameters must differ from what avgpool2d_2x2 can match"
+        assert (height % 2 == 1 or width % 2 == 1 or pool_size[0] != 2
+                or pool_size[1] != 2 or strides[0] != 2 or strides[1] != 2
+                ), "parameters must differ from what avgpool2d_2x2 can match"
 
         self.core_model = tf.keras.Sequential(
             name=self.name,
@@ -66,80 +59,43 @@ class AvgPool2D(DefaultAvgPool2DModel):
         )
 
 
-def main(
-    path=DEFAULT_PATH,
-    *,
-    input_channels=DEFAULT_INPUTS,
-    height=DEFAULT_HEIGHT,
-    width=DEFAULT_WIDTH,
-    pool_size=DEFAULT_POOL_SIZE,
-    strides=DEFAULT_STRIDES,
-    padding=DEFAULT_PADDING,
-):
+def main(path=DEFAULT_PATH,
+         *,
+         input_channels=DEFAULT_INPUTS,
+         height=DEFAULT_HEIGHT,
+         width=DEFAULT_WIDTH,
+         pool_size=DEFAULT_POOL_SIZE,
+         strides=DEFAULT_STRIDES,
+         padding=DEFAULT_PADDING):
     model = AvgPool2D("avgpool2d", Path(path))
     model.build(
         height,
         width,
         input_channels,
+        padding=padding,
         pool_size=pool_size,
         strides=strides,
-        padding=padding,
     )
     model.run()
 
 
-def strides_pool_arg_handler(args):
-    parameters = {
-        "strides": (DEFAULT_STRIDE_HEIGHT, DEFAULT_STRIDE_WIDTH),
-        "pool_size": (DEFAULT_POOL_HEIGHT, DEFAULT_POOL_WIDTH),
-    }
-    arguments = {k: vars(args)[k] for k in parameters if k in vars(args)}
-    for k in arguments:
-        params = arguments[k]
-        if len(params) > 2:
-            raise argparse.ArgumentTypeError(
-                f"The {k} argument must be at most 2 numbers."
-            )
-        else:
-            arguments[k] = tuple(params) if len(params) == 2 else (params[0]) * 2
-
-    return arguments
-
-
 if __name__ == "__main__":
-    parser = common.OpTestDimParser(
+    parser = common.OpTestPoolStridesParser(
         defaults={
             "path": DEFAULT_PATH,
             "inputs": DEFAULT_INPUTS,
             "height": DEFAULT_HEIGHT,
             "width": DEFAULT_WIDTH,
             "padding": DEFAULT_PADDING,
-        }
-    )
-    parser.add_argument(
-        "-st",
-        "--strides",
-        nargs="+",
-        type=int,
-        default=argparse.SUPPRESS,
-        help="Strides, vertical first "
-        f"(default: {DEFAULT_STRIDE_HEIGHT} {DEFAULT_STRIDE_WIDTH})",
-    )
-    parser.add_argument(
-        "-po",
-        "--pool_size",
-        nargs="*",
-        type=int,
-        default=argparse.SUPPRESS,
-        help="Pool size:, vertical first "
-        f"(default: {DEFAULT_POOL_HEIGHT} {DEFAULT_POOL_WIDTH})",
-    )
+            "strides": DEFAULT_STRIDES,
+            "pool_size": DEFAULT_POOL_SIZE
+        })
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
-    strides_pool = strides_pool_arg_handler(args)
+    strides_pool = common.strides_pool_arg_handler(args)
 
     main(
         path=args.path,

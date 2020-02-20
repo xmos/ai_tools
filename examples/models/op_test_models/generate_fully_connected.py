@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import argparse
 from pathlib import Path
 import numpy as np
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
+import op_test_models_common as common
 
 DEFAULT_OUTPUT_DIM = 10
 DEFAULT_INPUT_DIM = 32
@@ -120,7 +120,7 @@ def main(path=DEFAULT_PATH, *,
         'path': path if path else DEFAULT_PATH
     }
     common.run_main_fc(
-        model = FcDeepinAnyout(**kwargs),
+        model = FullyConnected(**kwargs),
         train_new_model=train_new_model,
         input_dim=input_dim,
         output_dim=output_dim,
@@ -131,7 +131,7 @@ def main(path=DEFAULT_PATH, *,
     )
 
 if __name__ == "__main__":
-    parser = common.OpTestFcParser(defaults={
+    parser = common.OpTestFCParser(defaults={
         'path': DEFAULT_PATH,
         'input_dim': DEFAULT_INPUT_DIM,
         'output_dim': DEFAULT_OUTPUT_DIM

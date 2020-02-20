@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 #
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import argparse
 import logging
 from pathlib import Path
 import numpy as np
@@ -44,7 +43,6 @@ class ArgMax8To16ConversionPass(graph_transformer.OperatorMatchingPass):
 class ArgMax16(FunctionModel):
     def build(self, input_dim):
         class ArgMaxModel(tf.keras.Model):
-
             def __init__(self):
                 super(ArgMaxModel, self).__init__()
                 self._name = 'argmaxmodel'
@@ -55,14 +53,14 @@ class ArgMax16(FunctionModel):
             @tf.function
             def func(self, x):
                 return tf.math.argmax(x, axis=1, output_type=tf.int32)
+
         self.core_model = ArgMaxModel()
         self.input_dim = input_dim
 
     @property
     def concrete_function(self):
         return self.core_model.func.get_concrete_function(
-            tf.TensorSpec([1, self.input_dim], tf.float32)
-        )
+            tf.TensorSpec([1, self.input_dim], tf.float32))
 
     def prep_data(self):  # Not training this model
         pass
@@ -86,7 +84,8 @@ class ArgMax16(FunctionModel):
             model, passes=[ArgMax8To16ConversionPass()])
         pass_mgr.run_passes()
 
-        self.models['model_stripped'] = self.models['models_dir'] / "model_stripped.tflite"
+        self.models['model_stripped'] = self.models[
+            'models_dir'] / "model_stripped.tflite"
         write_flatbuffer(model, str(self.models['model_stripped']))
 
         self._save_visualization('model_stripped')
@@ -94,7 +93,8 @@ class ArgMax16(FunctionModel):
     def to_tf_xcore(self):
         # super.().to_tf_xcore() converts model_quant
         # to avoid code duplication, here we convert model_stripped instead
-        self.models['model_quant'], tmp = self.models['model_stripped'], self.models['model_quant']
+        self.models['model_quant'], tmp = self.models[
+            'model_stripped'], self.models['model_quant']
         super().to_tf_xcore()
         self.models['model_quant'] = tmp
 
@@ -107,13 +107,17 @@ class ArgMax16(FunctionModel):
         input_quant = model_stripped.subgraphs[0].inputs[0].quantization
 
         # load quant model for inference, b/c the interpreter cannot handle int16 tensors
-        interpreter = tf.lite.Interpreter(model_path=str(self.models['model_quant']))
+        interpreter = tf.lite.Interpreter(
+            model_path=str(self.models['model_quant']))
 
         logging.info(f"Extracting examples for model_stripped...")
-        x_test = utils.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0], dtype=np.int16)
-        y_test = utils.apply_interpreter_to_examples(interpreter, self.data['export_data'])
-        data = {'x_test': x_test,
-                'y_test': np.vstack(list(y_test))}
+        x_test = utils.quantize(self.data['export_data'],
+                                input_quant['scale'][0],
+                                input_quant['zero_point'][0],
+                                dtype=np.int16)
+        y_test = utils.apply_interpreter_to_examples(interpreter,
+                                                     self.data['export_data'])
+        data = {'x_test': x_test, 'y_test': np.vstack(list(y_test))}
 
         self._save_data_dict(data, base_file_name='model_stripped')
 
@@ -124,7 +128,10 @@ class ArgMax16(FunctionModel):
         input_quant = model.subgraphs[0].inputs[0].quantization
 
         # quantize test data
-        x_test = utils.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'], dtype=np.int16)
+        x_test = utils.quantize(self.data['export_data'],
+                                input_quant['scale'][0],
+                                input_quant['zero_point'],
+                                dtype=np.int16)
 
         # save data
         self._save_data_dict({'x_test': x_test}, base_file_name='model_xcore')
@@ -151,9 +158,11 @@ if __name__ == "__main__":
     parser = common.OpTestDefaultParser(defaults={
         'path': DEFAULT_PATH,
     })
-    parser.add_argument(
-        '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
-        help='Number of input channels')
+    parser.add_argument('-in',
+                        '--inputs',
+                        type=int,
+                        default=DEFAULT_INPUTS,
+                        help='Number of input channels')
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)

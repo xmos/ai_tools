@@ -1,22 +1,25 @@
-# Copyright (c) 2019, XMOS Ltd, All rights reserved
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
 
-from tflite2xcore.transformation_passes import ReplaceDeepMaxPool2DPass
+from tflite2xcore.transformation_passes import ReplaceMaxPool2D2x2Pass
 
 from .model_builders import build_maxpool
 
 
+from .test_ReplaceMaxPool2DPass import (
+    input_channels,
+    NON_MATCHING_INPUT_CHANNELS
+)
+
 MATCHING_INPUT_HEIGHT = [2, 4, 8, 12, 16, 24]
 MATCHING_INPUT_WIDTH = MATCHING_INPUT_HEIGHT
-MATCHING_INPUT_CHANNELS = [32, 64, 96]
 MATCHING_PADDING = ['SAME', 'VALID']
 MATCHING_POOL_SIZE = (2, 2)
 MATCHING_STRIDES = MATCHING_POOL_SIZE
 
 NON_MATCHING_INPUT_HEIGHT = [1, 3, 5, 7, 13, 23]
 NON_MATCHING_INPUT_WIDTH = NON_MATCHING_INPUT_HEIGHT
-NON_MATCHING_INPUT_CHANNELS = [1, 2, 3, 4, 7, 16, 31, 65]
 NON_MATCHING_POOL_SIZE = [
     (1, 2), (2, 1), (1, 3), (3, 1), (2, 3), (3, 2)
 ]
@@ -29,7 +32,7 @@ NON_MATCHING_OPTIONS = ('option', 'value'), [
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceDeepMaxPool2DPass()
+    return ReplaceMaxPool2D2x2Pass()
 
 
 @pytest.fixture(params=MATCHING_INPUT_HEIGHT)
@@ -39,11 +42,6 @@ def input_height(request):
 
 @pytest.fixture(params=MATCHING_INPUT_WIDTH)
 def input_width(request):
-    return request.param
-
-
-@pytest.fixture(params=MATCHING_INPUT_CHANNELS)
-def input_channels(request):
     return request.param
 
 

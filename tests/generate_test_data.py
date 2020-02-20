@@ -193,8 +193,8 @@ def run_generate(tests, jobs):
     #***********************************
     # MaxPool
     #***********************************
-    operator = operator_codes.XCOREOpCodes.XC_maxpool2d_deep.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_maxpool2d_deep.py')
+    operator = operator_codes.XCOREOpCodes.XC_maxpool2d.name
+    generator = os.path.join(directories.GENERATOR_DIR, 'generate_maxpool2d.py')
     parameter_sets = [
         {'in': 32, 'hi': 2, 'wi': 2, 'st':2, 'po': 2, 'pd': 'VALID'},
         {'in': 32, 'hi': 4, 'wi': 4, 'st':2, 'po': 2, 'pd': 'VALID'},

@@ -22,7 +22,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'avgpool2d').resolve()
 
 
 # TODO: refactor this since other single op models also use something similar
-class DefaultAvgPool2DModel(KerasModel):
+class DefaultPool2DModel(KerasModel):
     @abstractmethod
     def build_core_model(self, *args, **kwargs):
         pass
@@ -50,7 +50,7 @@ class DefaultAvgPool2DModel(KerasModel):
         self.populate_converters()
 
 
-class AvgPool2D(DefaultAvgPool2DModel):
+class AvgPool2D(DefaultPool2DModel):
     def build_core_model(self, height, width, input_channels,
                          *, pool_size, strides, padding):
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
@@ -87,7 +87,8 @@ def main(path=DEFAULT_PATH, *,
     model.run()
 
 
-class DefaultAvgPool2DParser(argparse.ArgumentParser):
+# TODO: refactor
+class DefaultPool2DParser(argparse.ArgumentParser):
     def __init__(self, *args, defaults, **kwargs):
         kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
         super().__init__(*args, **kwargs)
@@ -120,13 +121,15 @@ def strides_pool_arg_handler(args):
             raise argparse.ArgumentTypeError(
                 f"The {k} argument must be at most 2 numbers.")
         else:
-            arguments[k] = tuple(params) if len(params) == 2 else (params[0]) * 2
+            print(params)
+            arguments[k] = tuple(params) if len(params) == 2 else (params[0],) * 2
 
+    print(str(arguments))
     return arguments
 
 
 if __name__ == "__main__":
-    parser = DefaultAvgPool2DParser(defaults={
+    parser = DefaultPool2DParser(defaults={
         'path': DEFAULT_PATH,
         'inputs': DEFAULT_INPUTS,
         'height': DEFAULT_HEIGHT,
@@ -137,7 +140,7 @@ if __name__ == "__main__":
         help="Strides, vertical first "
              f"(default: {DEFAULT_STRIDE_HEIGHT} {DEFAULT_STRIDE_WIDTH})")
     parser.add_argument(
-        '-po', '--pool_size', nargs='*', type=int, default=argparse.SUPPRESS,
+        '-po', '--pool_size', nargs='+', type=int, default=argparse.SUPPRESS,
         help="Pool size:, vertical first "
              f"(default: {DEFAULT_POOL_HEIGHT} {DEFAULT_POOL_WIDTH})")
     parser.add_argument(
@@ -149,6 +152,7 @@ if __name__ == "__main__":
     utils.set_gpu_usage(False, args.verbose)
 
     strides_pool = strides_pool_arg_handler(args)
+    
 
     main(path=args.path,
          input_channels=args.inputs,

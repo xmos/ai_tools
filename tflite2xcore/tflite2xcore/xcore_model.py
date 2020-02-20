@@ -3,6 +3,7 @@ import sys
 import struct
 import enum
 import collections
+import logging
 
 import numpy as np
 
@@ -82,25 +83,29 @@ class Buffer():
     def data(self):
         return self._data
 
+
     @data.setter
     def data(self, data):
         if data is None:
-            self._data = []
+            self._data = np.array([], dtype=np.uint8)
         elif isinstance(data, list):
-            self._data = data
+            self._data = np.array(data, dtype=np.uint8)
         elif isinstance(data, np.ndarray):
-            self._data = list(data.flatten().tostring())
+            if data.dtype is not np.uint8:
+                logging.debug(f"Numpy array of type {data.dtype} stored in buffer")
+            self._data = np.frombuffer(data.tostring(), dtype=np.uint8)
         else:
-            raise TypeError(f"data must be list or numpy array")
+            raise TypeError(f"data must be list or numpy array of uint8 type")
+
 
     def __len__(self):
-        if self.data:
+        if self.data is not None:
             return len(self.data)
         else:
             return 0
 
     def __str__(self):
-        if self.data:
+        if self.data is not None:
             return f'Buffer[{len(self.data)}]'
         else:
             return 'Buffer[]'

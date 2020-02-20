@@ -5,6 +5,7 @@ import logging
 from enum import Enum
 import tensorflow as tf
 from tflite2xcore.model_generation import utils
+from tflite2xcore.model_generation.interface import KerasModel
 import numpy as np
 
 _DEFAULT_CONST_INIT = 0
@@ -12,21 +13,75 @@ _DEFAULT_UNIF_INIT = [-1, 1]
 DEFAULT_CONST_INIT = tf.constant_initializer(_DEFAULT_CONST_INIT)
 DEFAULT_UNIF_INIT = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT)
 
+DEFAULT_STRIDE_HEIGHT = 1
+DEFAULT_STRIDE_WIDTH = 2
+DEFAULT_POOL_HEIGHT = 3
+DEFAULT_POOL_WIDTH = 5
+
+
+class DefaultOpTestModel(KerasModel):
+    """
+    Common class for those model that don't need to be trained
+    with the default option to generate input data according to an input initializer
+    """
+
+    def train(self):
+        pass
+
+    def prep_data(self):
+        pass
+
+    def gen_test_data(self):
+        assert self.input_shape, "To generate test data this model needs an input shape"
+        assert (
+            self.input_init
+        ), "To generate test data this model needs an input initializer"
+        self.data["export_data"], self.data["quant"] = input_initializers(
+            self.input_init, *self.input_shape
+        )
+
+    def run(self):
+        # NOTE: Consider to include this on model_generation.interface
+        self.gen_test_data()
+        self.save_core_model()
+        self.populate_converters()
+
 
 class OpTestInitializers(Enum):
-    UNIF = 'unif'
-    CONST = 'const'
+    UNIF = "unif"
+    CONST = "const"
 
 
 def input_initializers(init, height, width, channels, *, batch=100):
     # NOTE: same but with initializes as in utils.generate_dummy_data
-    data = init(shape=(batch, height, width, channels), dtype='float32').numpy()
+    data = init(shape=(batch, height, width, channels), dtype="float32").numpy()
     subset = np.concatenate(
-        [np.zeros((1, height, width, channels), dtype=np.float32),
-         np.ones((1, height, width, channels), dtype=np.float32),
-         data[:8, :, :, :]],  # pylint: disable=unsubscriptable-object
-        axis=0)
+        [
+            np.zeros((1, height, width, channels), dtype=np.float32),
+            np.ones((1, height, width, channels), dtype=np.float32),
+            data[:8, :, :, :],
+        ],  # pylint: disable=unsubscriptable-object
+        axis=0,
+    )
     return subset, data
+
+
+def strides_pool_arg_handler(args):
+    parameters = {
+        "strides": (DEFAULT_STRIDE_HEIGHT, DEFAULT_STRIDE_WIDTH),
+        "pool_size": (DEFAULT_POOL_HEIGHT, DEFAULT_POOL_WIDTH),
+    }
+    arguments = {k: vars(args)[k] for k in parameters if k in vars(args)}
+    for k in arguments:
+        params = arguments[k]
+        if len(params) > 2:
+            raise argparse.ArgumentTypeError(
+                f"The {k} argument must be at most 2 numbers."
+            )
+        else:
+            arguments[k] = tuple(params) if len(params) == 2 else (params[0]) * 2
+
+    return arguments
 
 
 def initializer_args_handler(args):
@@ -34,22 +89,25 @@ def initializer_args_handler(args):
         if param_unif:
             if len(param_unif) != 2:
                 raise argparse.ArgumentTypeError(
-                    "The 'unif' initialization argument requires 2 numbers indicating a range.")
+                    "The 'unif' initialization argument requires 2 numbers indicating a range."
+                )
             if param_unif[0] > param_unif[1]:
                 raise argparse.ArgumentTypeError(
-                    "The 'unif' initialization argument requires the first value to be lesser than the second.")
+                    "The 'unif' initialization argument requires the first value to be lesser than the second."
+                )
 
     def check_const_init_params(const_param):
         if len(const_param) > 1:
             raise argparse.ArgumentTypeError(
-                'The const argument must consist of 1 float number or '
-                'none, in wich case, the default value will be used.'
+                "The const argument must consist of 1 float number or "
+                "none, in wich case, the default value will be used."
             )
-    utils.set_all_seeds(args.seed) #NOTE All seeds initialized here
+
+    utils.set_all_seeds(args.seed)  # NOTE All seeds initialized here
     initializers = {
-        'weight_init': tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
-        'bias_init': DEFAULT_CONST_INIT,
-        'input_init': tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed)
+        "weight_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
+        "bias_init": DEFAULT_CONST_INIT,
+        "input_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
     }
 
     init_args = {k: vars(args)[k] for k in initializers if k in vars(args)}
@@ -83,103 +141,165 @@ def initializer_args_handler(args):
 
     for k in initializers:
         logging.debug(
-            f"{k} configuration: {type(initializers[k]).__name__} {initializers[k].get_config()}")
+            f"{k} configuration: {type(initializers[k]).__name__} {initializers[k].get_config()}"
+        )
 
     return initializers
 
 
-
 class OpTestDefaultParser(argparse.ArgumentParser):
     def __init__(self, *args, defaults, **kwargs):
-        kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
+        kwargs["formatter_class"] = argparse.ArgumentDefaultsHelpFormatter
         super().__init__(*args, **kwargs)
         self.add_argument(
-            '-path', nargs='?', default=defaults['path'],
-            help='Path to a directory where models and data will be saved in subdirectories.')
+            "-path",
+            nargs="?",
+            default=defaults["path"],
+            help="Path to a directory where models and data will be saved in subdirectories.",
+        )
         self.add_argument(
-            '-v', '--verbose', action='store_true', default=False,
-            help='Verbose mode.')
-    
+            "-v", "--verbose", action="store_true", default=False, help="Verbose mode."
+        )
+
     def add_initializers(self):
         self.add_argument(
-            '--bias_init', nargs='*', default=argparse.SUPPRESS,
-            help='Initialize bias. Possible initializers are: const init or None.'
-                f'(default: {OpTestInitializers.CONST.value} {_DEFAULT_CONST_INIT})'
+            "--bias_init",
+            nargs="*",
+            default=argparse.SUPPRESS,
+            help="Initialize bias. Possible initializers are: const init or None."
+            f"(default: {OpTestInitializers.CONST.value} {_DEFAULT_CONST_INIT})",
         )
         self.add_argument(
-            '--weight_init', nargs='*', default=argparse.SUPPRESS,
-            help='Initialize weights. Possible initializers are: const, unif or None.'
-                f'(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})'
+            "--weight_init",
+            nargs="*",
+            default=argparse.SUPPRESS,
+            help="Initialize weights. Possible initializers are: const, unif or None."
+            f"(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})",
         )
         self.add_argument(
-            '--input_init', nargs='*', default=argparse.SUPPRESS,
-            help='Initialize inputs. Possible initializers are: const, unif or None.'
-                f'(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})'
+            "--input_init",
+            nargs="*",
+            default=argparse.SUPPRESS,
+            help="Initialize inputs. Possible initializers are: const, unif or None."
+            f"(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})",
         )
         self.add_argument(
-            '--seed', type=int,
-            help='Set the seed value for the initializers.'
+            "--seed", type=int, help="Set the seed value for the initializers."
         )
+
 
 #  for models with 2D dimensionality and padding
 class OpTestDimParser(OpTestDefaultParser):
     def __init__(self, *args, defaults, **kwargs):
-        kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
+        kwargs["formatter_class"] = argparse.ArgumentDefaultsHelpFormatter
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
-            '-in', '--inputs', type=int, default=defaults['inputs'],
-            help='Number of input channels')
+            "-in",
+            "--inputs",
+            type=int,
+            default=defaults["inputs"],
+            help="Number of input channels",
+        )
         self.add_argument(
-            '-hi', '--height', type=int, default=defaults['height'],
-            help='Height of input image')
+            "-hi",
+            "--height",
+            type=int,
+            default=defaults["height"],
+            help="Height of input image",
+        )
         self.add_argument(
-            '-wi', '--width', type=int, default=defaults['width'],
-            help='Width of input image')
+            "-wi",
+            "--width",
+            type=int,
+            default=defaults["width"],
+            help="Width of input image",
+        )
         self.add_argument(
-            '-pd', '--padding', type=str, default=defaults['padding'],
-            help='Padding mode')
+            "-pd",
+            "--padding",
+            type=str,
+            default=defaults["padding"],
+            help="Padding mode",
+        )
 
-#  for conv models 
+
+#  for conv models
 class OpTestConvParser(OpTestDimParser):
     def __init__(self, *args, defaults, **kwargs):
-        kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
+        kwargs["formatter_class"] = argparse.ArgumentDefaultsHelpFormatter
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
-            '-out', '--outputs', type=int, default=defaults['outputs'],
-            help='Number of output channels')
+            "-out",
+            "--outputs",
+            type=int,
+            default=defaults["outputs"],
+            help="Number of output channels",
+        )
         self.add_argument(
-            '-kh', '--kernel_height', type=int, default=defaults['kernel_height'],
-            help='Height of kernel')
+            "-kh",
+            "--kernel_height",
+            type=int,
+            default=defaults["kernel_height"],
+            help="Height of kernel",
+        )
         self.add_argument(
-            '-kw', '--kernel_width', type=int, default=defaults['kernel_width'],
-            help='Width of kernel')
+            "-kw",
+            "--kernel_width",
+            type=int,
+            default=defaults["kernel_width"],
+            help="Width of kernel",
+        )
         self.add_initializers()
+
 
 #  for fc models
 class OpTestFcParser(OpTestDefaultParser):
     def __init__(self, *args, defaults, **kwargs):
-        kwargs['formatter_class'] = argparse.ArgumentDefaultsHelpFormatter
+        kwargs["formatter_class"] = argparse.ArgumentDefaultsHelpFormatter
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
-            '--use_gpu', action='store_true', default=False,
-            help='Use GPU for training. Might result in non-reproducible results.')
+            "--use_gpu",
+            action="store_true",
+            default=False,
+            help="Use GPU for training. Might result in non-reproducible results.",
+        )
         self.add_argument(
-            '-out', '--output_dim', type=int, default=defaults['output_dim'],
-            help='Number of output dimensions, must be at least 2.')
+            "-out",
+            "--output_dim",
+            type=int,
+            default=defaults["output_dim"],
+            help="Number of output dimensions, must be at least 2.",
+        )
         self.add_argument(
-            '-in', '--input_dim', type=int, default=defaults['input_dim'],
-            help='Input dimension, must be multiple of 32.')
+            "-in",
+            "--input_dim",
+            type=int,
+            default=defaults["input_dim"],
+            help="Input dimension, must be multiple of 32.",
+        )
         self.add_argument(
-            '--train_model', action='store_true', default=False,
-            help='Train new model instead of loading pretrained tf.keras model.')
+            "--train_model",
+            action="store_true",
+            default=False,
+            help="Train new model instead of loading pretrained tf.keras model.",
+        )
         self.add_initializers()
 
 
-def run_main_fc(model, *, train_new_model, input_dim, output_dim, bias_init, weight_init, batch_size, epochs):
+def run_main_fc(
+    model,
+    *,
+    train_new_model,
+    input_dim,
+    output_dim,
+    bias_init,
+    weight_init,
+    batch_size,
+    epochs,
+):
     if train_new_model:
         # Build model and compile
-        model.build(input_dim, output_dim,
-                         bias_init=bias_init, weight_init=weight_init)
+        model.build(input_dim, output_dim, bias_init=bias_init, weight_init=weight_init)
         # Prepare training data
         model.prep_data()
         # Train model
@@ -198,18 +318,44 @@ def run_main_fc(model, *, train_new_model, input_dim, output_dim, bias_init, wei
     # Populate converters
     model.populate_converters()
 
+
 # For conv models
-def run_main_conv(model, *, num_threads, input_channels, output_channels,
-                  height, width, K_h, K_w, padding, bias_init, weight_init, input_init):
+def run_main_conv(
+    model,
+    *,
+    num_threads,
+    input_channels,
+    output_channels,
+    height,
+    width,
+    K_h,
+    K_w,
+    padding,
+    bias_init,
+    weight_init,
+    input_init,
+):
     # Instantiate model
     # Build model and compile
-    model.build(K_h, K_w, height, width, input_channels, output_channels,
-                     padding=padding, bias_init=bias_init, weight_init=weight_init, input_init=input_init)
-    
+    model.build(
+        K_h,
+        K_w,
+        height,
+        width,
+        input_channels,
+        output_channels,
+        padding=padding,
+        bias_init=bias_init,
+        weight_init=weight_init,
+        input_init=input_init,
+    )
+
     # to check if the inits work
-    for layer in model.core_model.layers: logging.debug(f'WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}') # weights
-    for layer in model.core_model.layers: logging.debug(f'BIAS DATA SAMPLE:\n{layer.get_weights()[1]}') # bias
-    
+    for layer in model.core_model.layers:
+        logging.debug(f"WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}")  # weights
+    for layer in model.core_model.layers:
+        logging.debug(f"BIAS DATA SAMPLE:\n{layer.get_weights()[1]}")  # bias
+
     # Generate test data
     model.gen_test_data(height, width)
     logging.debug(f'EXPORT DATA SAMPLE:\n{model.data["export_data"][4][0]}')

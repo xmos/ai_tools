@@ -16,8 +16,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
 class FullyConnectedRequantized(FullyConnected):
     def to_tf_xcore(self):
         assert 'model_quant' in self.models
-        self.models['model_xcore'] = str(self.models['models_dir'] /
-                                         'model_xcore.tflite')
+        self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
         model = read_flatbuffer(str(self.models['model_quant']))
 
         # NOTE: since the output softmax is not removed during the first
@@ -31,8 +30,7 @@ class FullyConnectedRequantized(FullyConnected):
         model = write_flatbuffer(model, self.models['model_xcore'])
 
 
-def main(path=DEFAULT_PATH,
-         *,
+def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM,
          output_dim=DEFAULT_OUTPUT_DIM,
          train_new_model=False,
@@ -53,12 +51,11 @@ def main(path=DEFAULT_PATH,
 
 
 if __name__ == "__main__":
-    parser = common.OpTestFCParser(
-        defaults={
-            'path': DEFAULT_PATH,
-            'input_dim': DEFAULT_INPUT_DIM,
-            'output_dim': DEFAULT_OUTPUT_DIM
-        })
+    parser = common.OpTestFCParser(defaults={
+        'path': DEFAULT_PATH,
+        'input_dim': DEFAULT_INPUT_DIM,
+        'output_dim': DEFAULT_OUTPUT_DIM
+    })
     args = parser.parse_args()
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)

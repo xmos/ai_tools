@@ -17,23 +17,15 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
     'debug', 'conv2d_deepin_deepout_relu').resolve()
 DEFAULT_NUM_THREADS = 1
 
-class Conv2dDeepinDeepoutRelu(common.DefaultOpTestConvModel):
-    def build_core_model(self, K_h, K_w, height, width, input_channels, output_channels,
-              *, padding, bias_init, weight_init, input_init):
-        assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
-        super().build_core_model(K_h,
-                      K_w,
-                      height,
-                      width,
-                      input_channels,
-                      output_channels,
-                      padding=padding,
-                      bias_init=bias_init,
-                      weight_init=weight_init,
-                      input_init=input_init)
 
-def main(path=DEFAULT_PATH,
-         *,
+class Conv2dDeepinDeepoutRelu(common.DefaultOpTestConvModel):
+    def build_core_model(self, *args, **kwargs):
+        input_channels = args[4]
+        assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
+        super().build_core_model(*args, **kwargs)
+
+
+def main(path=DEFAULT_PATH, *,
          num_threads=DEFAULT_NUM_THREADS,
          input_channels=DEFAULT_INPUTS,
          output_channels=DEFAULT_OUTPUTS,
@@ -64,22 +56,18 @@ def main(path=DEFAULT_PATH,
 
 
 if __name__ == "__main__":
-    parser = common.OpTestConvParser(
-        defaults={
-            'path': DEFAULT_PATH,
-            'inputs': DEFAULT_INPUTS,
-            'outputs': DEFAULT_OUTPUTS,
-            'width': DEFAULT_WIDTH,
-            'height': DEFAULT_HEIGHT,
-            'padding': DEFAULT_PADDING,
-            'kernel_width': DEFAULT_KERNEL_WIDTH,
-            'kernel_height': DEFAULT_KERNEL_HEIGHT
-        })
+    parser = common.OpTestConvParser(defaults={
+        'path': DEFAULT_PATH,
+        'inputs': DEFAULT_INPUTS,
+        'outputs': DEFAULT_OUTPUTS,
+        'width': DEFAULT_WIDTH,
+        'height': DEFAULT_HEIGHT,
+        'padding': DEFAULT_PADDING,
+        'kernel_width': DEFAULT_KERNEL_WIDTH,
+        'kernel_height': DEFAULT_KERNEL_HEIGHT
+    })
     parser.add_argument(
-        '-par',
-        '--par_num_threads',
-        type=int,
-        default=DEFAULT_NUM_THREADS,
+        '-par', '--par_num_threads', type=int, default=DEFAULT_NUM_THREADS,
         help='Number of parallel threads for xcore.ai optimization.')
     args = parser.parse_args()
 

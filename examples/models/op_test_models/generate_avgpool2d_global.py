@@ -32,18 +32,17 @@ def main(path=DEFAULT_PATH, *,
          height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
          input_init=common.DEFAULT_UNIF_INIT):
     model = AvgPool2DGlobal('avgpool2d_global', Path(path))
-    model.build(height, width, input_channels,input_init)
+    model.build(height, width, input_channels, input_init)
     model.run()
 
 
 if __name__ == "__main__":
-    parser = common.OpTestDimParser(
-        defaults={
-            "path": DEFAULT_PATH,
-            "inputs": DEFAULT_INPUTS,
-            "height": DEFAULT_HEIGHT,
-            "width": DEFAULT_WIDTH,
-        })
+    parser = common.OpTestDimParser(defaults={
+        "path": DEFAULT_PATH,
+        "inputs": DEFAULT_INPUTS,
+        "height": DEFAULT_HEIGHT,
+        "width": DEFAULT_WIDTH,
+    })
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)

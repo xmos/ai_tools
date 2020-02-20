@@ -15,7 +15,7 @@ DEFAULT_BS = 64
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fully_connected').resolve()
 
 
-# Prepare data function
+# TODO: consider refactoring this since it could be used by other functions
 def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
                                   train_samples_per_class=5120,
                                   test_samples_per_class=1024):
@@ -121,16 +121,15 @@ def main(path=DEFAULT_PATH, *,
         'name': 'fc_deepin_anyout',
         'path': path if path else DEFAULT_PATH
     }
-    common.run_main_fc(
-        model = FullyConnected(**kwargs),
-        train_new_model=train_new_model,
-        input_dim=input_dim,
-        output_dim=output_dim,
-        bias_init=bias_init,
-        weight_init=weight_init,
-        batch_size=None,
-        epochs=None
-    )
+    common.run_main_fc(model=FullyConnected(**kwargs),
+                       train_new_model=train_new_model,
+                       input_dim=input_dim,
+                       output_dim=output_dim,
+                       bias_init=bias_init,
+                       weight_init=weight_init,
+                       batch_size=None,
+                       epochs=None)
+
 
 if __name__ == "__main__":
     parser = common.OpTestFCParser(defaults={

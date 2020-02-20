@@ -84,8 +84,7 @@ class ArgMax16(FunctionModel):
             model, passes=[ArgMax8To16ConversionPass()])
         pass_mgr.run_passes()
 
-        self.models['model_stripped'] = self.models[
-            'models_dir'] / "model_stripped.tflite"
+        self.models['model_stripped'] = self.models['models_dir'] / "model_stripped.tflite"
         write_flatbuffer(model, str(self.models['model_stripped']))
 
         self._save_visualization('model_stripped')
@@ -93,8 +92,8 @@ class ArgMax16(FunctionModel):
     def to_tf_xcore(self):
         # super.().to_tf_xcore() converts model_quant
         # to avoid code duplication, here we convert model_stripped instead
-        self.models['model_quant'], tmp = self.models[
-            'model_stripped'], self.models['model_quant']
+        tmp = self.models['model_quant']
+        self.models['model_quant'] = self.models['model_stripped']
         super().to_tf_xcore()
         self.models['model_quant'] = tmp
 
@@ -138,19 +137,10 @@ class ArgMax16(FunctionModel):
 
 
 def main(path=DEFAULT_PATH, input_dim=DEFAULT_INPUTS):
-    # Instantiate model
     test_model = ArgMax16('arg_max_16', Path(path))
-
-    # Build model
     test_model.build(input_dim)
-
-    # Export data generation
     test_model.gen_test_data()
-
-    # Save model
     test_model.save_core_model()
-
-    # Populate converters and data
     test_model.populate_converters()
 
 
@@ -158,11 +148,9 @@ if __name__ == "__main__":
     parser = common.OpTestDefaultParser(defaults={
         'path': DEFAULT_PATH,
     })
-    parser.add_argument('-in',
-                        '--inputs',
-                        type=int,
-                        default=DEFAULT_INPUTS,
-                        help='Number of input channels')
+    parser.add_argument(
+        '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
+        help='Number of input channels')
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)

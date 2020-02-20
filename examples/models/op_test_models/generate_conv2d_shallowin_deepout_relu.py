@@ -18,24 +18,14 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
 
 
 class Conv2dShallowinDeepoutRelu(common.DefaultOpTestConvModel):
-    def build_core_model(self, K_h, K_w, height, width, input_channels, output_channels,
-              *, padding, bias_init, weight_init, input_init):
+    def build_core_model(self, *args, **kwargs):
+        K_w, input_channels = args[1], args[4]
         assert input_channels <= 4, "Number of input channels must be at most 4"
         assert K_w <= 8, "Kernel width must be at most 8"
-        super().build_core_model(K_h,
-                      K_w,
-                      height,
-                      width,
-                      input_channels,
-                      output_channels,
-                      padding=padding,
-                      bias_init=bias_init,
-                      weight_init=weight_init,
-                      input_init=input_init)
+        super().build_core_model(*args, **kwargs)
 
 
-def main(path=DEFAULT_PATH,
-         *,
+def main(path=DEFAULT_PATH, *,
          input_channels=DEFAULT_INPUTS,
          output_channels=DEFAULT_OUTPUTS,
          height=DEFAULT_HEIGHT,
@@ -65,17 +55,16 @@ def main(path=DEFAULT_PATH,
 
 
 if __name__ == "__main__":
-    parser = common.OpTestConvParser(
-        defaults={
-            'path': DEFAULT_PATH,
-            'inputs': DEFAULT_INPUTS,
-            'outputs': DEFAULT_OUTPUTS,
-            'width': DEFAULT_WIDTH,
-            'height': DEFAULT_HEIGHT,
-            'padding': DEFAULT_PADDING,
-            'kernel_width': DEFAULT_KERNEL_WIDTH,
-            'kernel_height': DEFAULT_KERNEL_HEIGHT
-        })
+    parser = common.OpTestConvParser(defaults={
+        'path': DEFAULT_PATH,
+        'inputs': DEFAULT_INPUTS,
+        'outputs': DEFAULT_OUTPUTS,
+        'width': DEFAULT_WIDTH,
+        'height': DEFAULT_HEIGHT,
+        'padding': DEFAULT_PADDING,
+        'kernel_width': DEFAULT_KERNEL_WIDTH,
+        'kernel_height': DEFAULT_KERNEL_HEIGHT
+    })
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)

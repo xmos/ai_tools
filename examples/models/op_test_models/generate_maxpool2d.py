@@ -6,20 +6,19 @@ from tflite2xcore.model_generation import utils
 import tensorflow as tf
 import op_test_models_common as common
 
-DEFAULT_INPUTS = 36
-DEFAULT_HEIGHT = 5
-DEFAULT_WIDTH = 9
-DEFAULT_POOL_HEIGHT = 3
-DEFAULT_POOL_WIDTH = 5
-DEFAULT_POOL_SIZE = (DEFAULT_POOL_HEIGHT, DEFAULT_POOL_WIDTH)
-DEFAULT_PADDING = "valid"
-DEFAULT_STRIDE_HEIGHT = 1
-DEFAULT_STRIDE_WIDTH = 2
-DEFAULT_STRIDES = (DEFAULT_STRIDE_HEIGHT, DEFAULT_STRIDE_WIDTH)
-DEFAULT_PATH = Path(__file__).parent.joinpath("debug", "avgpool2d").resolve()
+from generate_avgpool2d import (
+    DEFAULT_INPUTS,
+    DEFAULT_HEIGHT,
+    DEFAULT_WIDTH,
+    DEFAULT_POOL_SIZE,
+    DEFAULT_PADDING,
+    DEFAULT_STRIDES,
+)
+
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'maxpool2d').resolve()
 
 
-class AvgPool2D(common.DefaultOpTestModel):
+class MaxPool2d(common.DefaultOpTestModel):
     def build_core_model(self, height, width, input_channels, *, pool_size,
                          strides, padding):
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
@@ -35,14 +34,12 @@ class AvgPool2D(common.DefaultOpTestModel):
         self.core_model = tf.keras.Sequential(
             name=self.name,
             layers=[
-                tf.keras.layers.AveragePooling2D(
-                    pool_size=pool_size,
-                    strides=strides,
-                    padding=padding,
-                    input_shape=(height, width, input_channels),
-                )
-            ],
-        )
+                tf.keras.layers.MaxPool2D(pool_size=pool_size,
+                                          strides=strides,
+                                          padding=padding,
+                                          input_shape=(height, width,
+                                                       input_channels))
+            ])
 
 
 def main(path=DEFAULT_PATH,
@@ -53,13 +50,13 @@ def main(path=DEFAULT_PATH,
          pool_size=DEFAULT_POOL_SIZE,
          strides=DEFAULT_STRIDES,
          padding=DEFAULT_PADDING):
-    model = AvgPool2D("avgpool2d", Path(path))
+    model = MaxPool2d('maxpool2d', Path(path))
     model.build(height,
                 width,
                 input_channels,
-                padding=padding,
                 pool_size=pool_size,
-                strides=strides)
+                strides=strides,
+                padding=padding)
     model.run()
 
 

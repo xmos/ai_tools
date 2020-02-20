@@ -17,22 +17,6 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
     'debug', 'conv2d_deepin_deepout_relu').resolve()
 DEFAULT_NUM_THREADS = 1
 
-
-class Conv2dDeepinDeepoutRelu(common.DefaultOpTestModel):
-    def build(self, K_h, K_w, height, width, input_channels, output_channels,
-              *, padding, bias_init, weight_init, input_init):
-        super().build(K_h,
-                      K_w,
-                      height,
-                      width,
-                      input_channels,
-                      output_channels,
-                      padding=padding,
-                      bias_init=bias_init,
-                      weight_init=weight_init,
-                      input_init=input_init)
-
-
 def main(path=DEFAULT_PATH,
          *,
          num_threads=DEFAULT_NUM_THREADS,
@@ -50,19 +34,7 @@ def main(path=DEFAULT_PATH,
         'name': 'conv2d_deepin_deepout_relu',
         'path': path if path else DEFAULT_PATH
     }
-    # build_kwargs = {
-    #     'height': height,
-    #     'width': width,
-    #     'K_h': K_h,
-    #     'K_w': K_w,
-    #     'input_channels': input_channels,
-    #     'output_channels': output_channels,
-    #     'padding': padding,
-    #     'bias_init': bias_init,
-    #     'weight_init': weight_init,
-    #     'input_init': input_init
-    # }
-    common.run_main_conv(model=Conv2dDeepinDeepoutRelu(**kwargs),
+    common.run_main_conv(model=common.DefaultOpTestConvModel(**kwargs),
                          num_threads=num_threads,
                          input_channels=input_channels,
                          output_channels=output_channels,

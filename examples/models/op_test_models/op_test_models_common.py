@@ -7,6 +7,7 @@ import tensorflow as tf
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
 import numpy as np
+from abc import abstractmethod
 
 _DEFAULT_CONST_INIT = 0
 _DEFAULT_UNIF_INIT = [-1, 1]
@@ -24,6 +25,20 @@ class DefaultOpTestModel(KerasModel):
     Common class for those model that don't need to be trained
     with the default option to generate input data according to an input initializer
     """
+    @abstractmethod
+    def build_core_model(self, *args, **kwargs):
+        pass
+
+    def build(self, *args, **kwargs):
+        self._prep_backend()
+        self.build_core_model(*args, **kwargs)
+        self.core_model.compile(
+            optimizer="adam",
+            loss="sparse_categorical_crossentropy",
+            metrics=["accuracy"],
+        )
+        self.core_model.summary()
+
     def train(self):
         pass
 
@@ -46,14 +61,14 @@ class DefaultOpTestModel(KerasModel):
 
 
 class DefaultOpTestConvModel(DefaultOpTestModel):
-    def build(self, K_h, K_w, height, width, input_channels, output_channels,
-              *, padding, bias_init, weight_init, input_init):
+    def build_core_model(self, K_h, K_w, height, width, input_channels,
+                         output_channels, *, padding, bias_init, weight_init,
+                         input_init):
         assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
         assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
         assert K_h % 2 == 1, "kernel height must be odd"
         assert K_w % 2 == 1, "kernel width must be odd"
         self.input_init = input_init
-        super().build()
         # Building
         try:
             self.core_model = tf.keras.Sequential(
@@ -73,12 +88,6 @@ class DefaultOpTestConvModel(DefaultOpTestModel):
                     "Negative dimension size (Hint: if using 'valid' padding "
                     "verify that the kernel is at least the size of input image)"
                 ) from e
-        # Compilation
-        self.core_model.compile(optimizer='adam',
-                                loss='sparse_categorical_crossentropy',
-                                metrics=['accuracy'])
-        # Show summary
-        self.core_model.summary()
 
 
 class OpTestInitializers(Enum):

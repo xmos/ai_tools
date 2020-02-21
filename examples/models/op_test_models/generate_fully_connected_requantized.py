@@ -7,8 +7,11 @@ import tflite2xcore.converter as xcore_conv
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 import op_test_models_common as common
 from generate_fully_connected import FullyConnected
-from generate_fully_connected import (DEFAULT_OUTPUT_DIM, DEFAULT_INPUT_DIM,
-                                      DEFAULT_EPOCHS, DEFAULT_BS)
+
+from generate_fully_connected import (
+    DEFAULT_OUTPUT_DIM, DEFAULT_INPUT_DIM,
+    DEFAULT_EPOCHS, DEFAULT_BS
+)
 DEFAULT_PATH = Path(__file__).parent.joinpath(
     'debug', 'fully_connected_requantized').resolve()
 
@@ -22,9 +25,7 @@ class FullyConnectedRequantized(FullyConnected):
         # NOTE: since the output softmax is not removed during the first
         # conversion, ReplaceFullyConnectedIntermediatePass will
         # match and insert the requantization. Then, the softmax can be removed.
-        xcore_conv.optimize_for_xcore(model,
-                                      is_classifier=False,
-                                      remove_softmax=False)
+        xcore_conv.optimize_for_xcore(model, is_classifier=False, remove_softmax=False)
         xcore_conv.strip_model(model, remove_softmax=True)
 
         model = write_flatbuffer(model, self.models['model_xcore'])
@@ -34,6 +35,8 @@ def main(path=DEFAULT_PATH, *,
          input_dim=DEFAULT_INPUT_DIM,
          output_dim=DEFAULT_OUTPUT_DIM,
          train_new_model=False,
+         batch_size=DEFAULT_BS,
+         epochs=DEFAULT_EPOCHS,
          bias_init=common.DEFAULT_CONST_INIT,
          weight_init=common.DEFAULT_UNIF_INIT):
     kwargs = {
@@ -46,21 +49,30 @@ def main(path=DEFAULT_PATH, *,
                        output_dim=output_dim,
                        bias_init=bias_init,
                        weight_init=weight_init,
-                       batch_size=None,
-                       epochs=None)
+                       batch_size=batch_size,
+                       epochs=epochs)
 
 
 if __name__ == "__main__":
     parser = common.OpTestFCParser(defaults={
         'path': DEFAULT_PATH,
         'input_dim': DEFAULT_INPUT_DIM,
-        'output_dim': DEFAULT_OUTPUT_DIM
+        'output_dim': DEFAULT_OUTPUT_DIM,
+        'batch_size': DEFAULT_BS,
+        'epochs': DEFAULT_EPOCHS
     })
     args = parser.parse_args()
+
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
+
+    initializers = common.initializer_args_handler(args)
 
     main(path=args.path,
          input_dim=args.input_dim,
          output_dim=args.output_dim,
-         train_new_model=args.train_model)
+         train_new_model=args.train_model,
+         batch_size=args.batch_size,
+         epochs=args.epochs,
+         bias_init=initializers['bias_init'],
+         weight_init=initializers['weight_init'])

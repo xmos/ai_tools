@@ -293,12 +293,20 @@ class OpTestTrainableParser(OpTestDefaultParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
+            "--train_model", action="store_true", default=False,
+            help="Train new model instead of loading pretrained tf.keras model.",
+        )
+        self.add_argument(
             "--use_gpu", action="store_true", default=False,
             help="Use GPU for training. Might result in non-reproducible results.",
         )
         self.add_argument(
-            "--train_model", action="store_true", default=False,
-            help="Train new model instead of loading pretrained tf.keras model.",
+            "-bs", "--batch_size", type=int, default=defaults["batch_size"],
+            help="Set the training batch size."
+        )
+        self.add_argument(
+            "-ep", "--epochs", type=int, default=defaults["epochs"],
+            help="Set the number of training epochs size."
         )
 
 

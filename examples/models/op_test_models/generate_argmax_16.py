@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 #
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import argparse
 import logging
 from pathlib import Path
 import numpy as np
@@ -12,6 +11,7 @@ from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import FunctionModel
 import tensorflow as tf
+import op_test_models_common as common
 
 DEFAULT_INPUTS = 10
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'arg_max_16').resolve()
@@ -43,7 +43,6 @@ class ArgMax8To16ConversionPass(graph_transformer.OperatorMatchingPass):
 class ArgMax16(FunctionModel):
     def build(self, input_dim):
         class ArgMaxModel(tf.keras.Model):
-
             def __init__(self):
                 super(ArgMaxModel, self).__init__()
                 self._name = 'argmaxmodel'
@@ -54,14 +53,14 @@ class ArgMax16(FunctionModel):
             @tf.function
             def func(self, x):
                 return tf.math.argmax(x, axis=1, output_type=tf.int32)
+
         self.core_model = ArgMaxModel()
         self.input_dim = input_dim
 
     @property
     def concrete_function(self):
         return self.core_model.func.get_concrete_function(
-            tf.TensorSpec([1, self.input_dim], tf.float32)
-        )
+            tf.TensorSpec([1, self.input_dim], tf.float32))
 
     def prep_data(self):  # Not training this model
         pass
@@ -93,7 +92,8 @@ class ArgMax16(FunctionModel):
     def to_tf_xcore(self):
         # super.().to_tf_xcore() converts model_quant
         # to avoid code duplication, here we convert model_stripped instead
-        self.models['model_quant'], tmp = self.models['model_stripped'], self.models['model_quant']
+        tmp = self.models['model_quant']
+        self.models['model_quant'] = self.models['model_stripped']
         super().to_tf_xcore()
         self.models['model_quant'] = tmp
 
@@ -106,13 +106,17 @@ class ArgMax16(FunctionModel):
         input_quant = model_stripped.subgraphs[0].inputs[0].quantization
 
         # load quant model for inference, b/c the interpreter cannot handle int16 tensors
-        interpreter = tf.lite.Interpreter(model_path=str(self.models['model_quant']))
+        interpreter = tf.lite.Interpreter(
+            model_path=str(self.models['model_quant']))
 
         logging.info(f"Extracting examples for model_stripped...")
-        x_test = utils.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0], dtype=np.int16)
-        y_test = utils.apply_interpreter_to_examples(interpreter, self.data['export_data'])
-        data = {'x_test': x_test,
-                'y_test': np.vstack(list(y_test))}
+        x_test = utils.quantize(self.data['export_data'],
+                                input_quant['scale'][0],
+                                input_quant['zero_point'][0],
+                                dtype=np.int16)
+        y_test = utils.apply_interpreter_to_examples(interpreter,
+                                                     self.data['export_data'])
+        data = {'x_test': x_test, 'y_test': np.vstack(list(y_test))}
 
         self._save_data_dict(data, base_file_name='model_stripped')
 
@@ -123,41 +127,30 @@ class ArgMax16(FunctionModel):
         input_quant = model.subgraphs[0].inputs[0].quantization
 
         # quantize test data
-        x_test = utils.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'], dtype=np.int16)
+        x_test = utils.quantize(self.data['export_data'],
+                                input_quant['scale'][0],
+                                input_quant['zero_point'],
+                                dtype=np.int16)
 
         # save data
         self._save_data_dict({'x_test': x_test}, base_file_name='model_xcore')
 
 
 def main(path=DEFAULT_PATH, input_dim=DEFAULT_INPUTS):
-    # Instantiate model
     test_model = ArgMax16('arg_max_16', Path(path))
-
-    # Build model
     test_model.build(input_dim)
-
-    # Export data generation
     test_model.gen_test_data()
-
-    # Save model
     test_model.save_core_model()
-
-    # Populate converters and data
     test_model.populate_converters()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        '-path', nargs='?', default=DEFAULT_PATH,
-        help='Path to a directory where models and data will be saved in subdirectories.')
+    parser = common.OpTestDefaultParser(defaults={
+        'path': DEFAULT_PATH,
+    })
     parser.add_argument(
         '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
-        help='Input dimension')
-    parser.add_argument(
-        '-v', '--verbose', action='store_true', default=False,
-        help='Verbose mode.')
+        help='Number of input channels')
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)

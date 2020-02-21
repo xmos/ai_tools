@@ -142,7 +142,7 @@ def initializer_args_handler(args):
                 "none, in wich case, the default value will be used."
             )
 
-    utils.set_all_seeds(args.seed)  # NOTE All seeds initialized here
+    utils.set_all_seeds(args.seed)  # NOTE: All seeds initialized here
     initializers = {
         "weight_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
         "bias_init": DEFAULT_CONST_INIT,
@@ -266,7 +266,6 @@ class OpTestPoolParser(OpTestDimParser, OpTestParserInputInitializerMixin):
         self.add_initializers()
 
 
-#  for conv models
 class OpTestConvParser(OpTestParserInitializerMixin, OpTestDimParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
@@ -312,6 +311,7 @@ class OpTestFCParser(OpTestTrainableParser, OpTestParserInitializerMixin):
         self.add_initializers()
 
 
+# TODO: this should be part of DefaultOpTestFCModel as run
 def run_main_fc(model, *, train_new_model, input_dim, output_dim, bias_init,
                 weight_init, batch_size, epochs):
     if train_new_model:
@@ -333,7 +333,7 @@ def run_main_fc(model, *, train_new_model, input_dim, output_dim, bias_init,
     model.populate_converters()
 
 
-# For conv models
+# TODO: this should be part of DefaultOpTestConvModel as run
 def run_main_conv(model, *, num_threads, input_channels, output_channels,
                   height, width, K_h, K_w, padding, bias_init, weight_init,
                   input_init):

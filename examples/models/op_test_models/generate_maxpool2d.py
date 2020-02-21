@@ -49,9 +49,7 @@ def main(path=DEFAULT_PATH, *,
          padding=DEFAULT_PADDING,
          input_init=common.DEFAULT_UNIF_INIT):
     model = MaxPool2d('maxpool2d', Path(path))
-    model.build(height,
-                width,
-                input_channels,
+    model.build(height, width, input_channels,
                 pool_size=pool_size,
                 strides=strides,
                 padding=padding,

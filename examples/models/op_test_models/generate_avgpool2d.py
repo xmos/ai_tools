@@ -52,7 +52,9 @@ def main(path=DEFAULT_PATH, *,
          input_init=common.DEFAULT_UNIF_INIT):
     model = AvgPool2D("avgpool2d", Path(path))
     model.build(height, width, input_channels,
-                pool_size=pool_size, strides=strides, padding=padding,
+                pool_size=pool_size,
+                strides=strides,
+                padding=padding,
                 input_init=input_init)
     model.run()
 

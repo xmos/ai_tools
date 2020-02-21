@@ -32,11 +32,7 @@ class DefaultOpTestModel(KerasModel):
     def build(self, *args, **kwargs):
         self._prep_backend()
         self.build_core_model(*args, **kwargs)
-        self.core_model.compile(
-            optimizer="adam",
-            loss="sparse_categorical_crossentropy",
-            metrics=["accuracy"],
-        )
+        self.core_model.build()
         self.core_model.summary()
 
     def train(self):

@@ -202,13 +202,15 @@ class OpTestDefaultParser(argparse.ArgumentParser):
 class OpTestParserInputInitializerMixin():
     def add_initializers(self):
         self.add_argument(
-            "--input_init", nargs="*", default=argparse.SUPPRESS,
-            help="Initialize inputs. Possible initializers are: const, unif or None."
-                 f"(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})",
-        )
-        self.add_argument(
             "--seed", type=int,
             help="Set the seed value for the initializers."
+        )
+        self.add_argument(
+            "--input_init", nargs="*", default=argparse.SUPPRESS,
+            help="Initialize inputs. Possible initializers are: "
+                 "const [CONST_VAL] or unif [MIN MAX]. "
+                 f"(default: {OpTestInitializers.UNIF.value} "
+                 f"{_DEFAULT_UNIF_INIT[0]} {_DEFAULT_UNIF_INIT[1]})",
         )
 
 
@@ -217,13 +219,16 @@ class OpTestParserInitializerMixin(OpTestParserInputInitializerMixin):
         super().add_initializers()
         self.add_argument(
             "--bias_init", nargs="*", default=argparse.SUPPRESS,
-            help="Initialize bias. Possible initializers are: const init or None."
+            help="Initialize bias. Possible initializers are: "
+                 "const [CONST_VAL] or unif [MIN MAX]. "
                  f"(default: {OpTestInitializers.CONST.value} {_DEFAULT_CONST_INIT})",
         )
         self.add_argument(
             "--weight_init", nargs="*", default=argparse.SUPPRESS,
-            help="Initialize weights. Possible initializers are: const, unif or None."
-                 f"(default: {OpTestInitializers.UNIF.value} {_DEFAULT_UNIF_INIT})",
+            help="Initialize weights. Possible initializers are: "
+                 "const [CONST_VAL] or unif [MIN MAX]. "
+                 f"(default: {OpTestInitializers.UNIF.value} "
+                 f"{_DEFAULT_UNIF_INIT[0]} {_DEFAULT_UNIF_INIT[1]})",
         )
 
 

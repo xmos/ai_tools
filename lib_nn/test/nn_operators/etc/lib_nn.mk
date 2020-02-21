@@ -16,15 +16,13 @@ SRC_DIR := src
 
 INCLUDES += $(LIB_PATH)/$(API_DIR) $(LIB_PATH)/$(SRC_DIR)
 
-ifneq ($(strip $(API_CHECK)),$(strip 1))
-  LIB_SOURCES += $(wildcard $(SRC_DIR)/**/*.c)
-  
-  ifeq ($(strip $(PLATFORM)),$(strip xcore))
-    LIB_SOURCES += $(wildcard $(SRC_DIR)/**/*.S)
-  endif
+LIB_SOURCES += $(wildcard $(LIB_PATH)/$(SRC_DIR)/c/*.c)
 
-  SOURCE_FILES += $(LIB_SOURCES)
+ifeq ($(strip $(PLATFORM)),$(strip xcore))
+  LIB_SOURCES += $(wildcard $(LIB_PATH)/$(SRC_DIR)/asm/*.S)
 endif
+
+SOURCE_FILES += $(LIB_SOURCES)
 
 
 

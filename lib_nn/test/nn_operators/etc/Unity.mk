@@ -15,7 +15,5 @@ SRC_DIR := src
 
 INCLUDES += $(LIB_PATH)/$(SRC_DIR)
 
-ifneq ($(strip $(API_CHECK)),$(strip 1))
-  LIB_SOURCES += $(wildcard $(SRC_DIR)/*.c)
-  SOURCE_FILES += $(LIB_SOURCES)
-endif
+LIB_SOURCES += $(wildcard $(LIB_PATH)/$(SRC_DIR)/*.c)
+SOURCE_FILES += $(LIB_SOURCES)

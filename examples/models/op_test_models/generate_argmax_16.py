@@ -48,7 +48,6 @@ class ArgMax16(FunctionModel):
                 self._name = 'argmaxmodel'
                 self._trainable = False
                 self._expects_training_arg = False
-                pass
 
             @tf.function
             def func(self, x):

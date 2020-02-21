@@ -14,7 +14,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'avgpool2d_global').resol
 
 
 class AvgPool2DGlobal(common.DefaultOpTestModel):
-    def build_core_model(self, height, width, input_channels, input_init):
+    def build_core_model(self, height, width, input_channels, *, input_init):
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
         self.input_init = input_init
         self.core_model = tf.keras.Sequential(
@@ -29,10 +29,12 @@ class AvgPool2DGlobal(common.DefaultOpTestModel):
 
 def main(path=DEFAULT_PATH, *,
          input_channels=DEFAULT_INPUTS,
-         height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
+         height=DEFAULT_HEIGHT,
+         width=DEFAULT_WIDTH,
          input_init=common.DEFAULT_UNIF_INIT):
     model = AvgPool2DGlobal('avgpool2d_global', Path(path))
-    model.build(height, width, input_channels, input_init)
+    model.build(height, width, input_channels,
+                input_init=input_init)
     model.run()
 
 

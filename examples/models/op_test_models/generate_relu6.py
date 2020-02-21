@@ -13,37 +13,18 @@ DEFAULT_HEIGHT = 5
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'relu6').resolve()
 
 
-class ReLU6(FunctionModel):
-    def build(self, height, width, input_channels, *, input_init):
-        class ReLU6Model(tf.keras.Model):
-            def __init__(self):
-                super().__init__()
-                self._name = 'relu6model'
-                self._trainable = False
-                self._expects_training_arg = False
-
-            @tf.function
-            def func(self, x):
-                return tf.nn.relu6(x)
-
-        self.core_model = ReLU6Model()
-        self.input_shape = (height, width, input_channels)
+class ReLU6(common.DefaultOpTestModel):
+    def build_core_model(self, height, width, input_channels, *, input_init):
+        self.core_model = tf.keras.Sequential(
+            name=self.name,
+            layers=[
+                tf.keras.layers.Lambda(
+                    lambda x: tf.nn.relu6(x),
+                    input_shape=(height, width, input_channels)
+                )
+            ]
+        )
         self.input_init = input_init
-
-    @property
-    def concrete_function(self):
-        return self.core_model.func.get_concrete_function(
-            tf.TensorSpec([1, *self.input_shape], tf.float32))
-
-    def prep_data(self):  # Not training this model
-        pass
-
-    def train(self):  # Not training this model
-        pass
-
-    # TODO: fix this hack
-    def gen_test_data(self, *args, **kwargs):
-        common.DefaultOpTestModel.gen_test_data(self, *args, **kwargs)
 
 
 def main(path=DEFAULT_PATH, *,

@@ -23,5 +23,7 @@ set -e
 ./generate_fully_connected_requantized.py -v
 
 # activations
-./generate_relu.py -v
-./generate_relu6.py -v
+./generate_lut_activation.py -act relu -v
+./generate_lut_activation.py -act relu6 -v
+./generate_lut_activation.py -act logistic -v
+./generate_lut_activation.py -act tanh -v

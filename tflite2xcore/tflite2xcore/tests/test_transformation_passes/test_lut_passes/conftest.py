@@ -1,6 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
+from copy import deepcopy
 
 from tflite2xcore.operator_codes import XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
@@ -34,8 +35,13 @@ def _test_non_matching_output_type(trf_pass, model, non_matching_output_type):
 
 
 def _test_mutate(trf_pass, model):
-    trf_pass.run(model)
+    # extract original tensor shapes:
     subgraph = model.subgraphs[0]
+    tin_shape = deepcopy(subgraph.get_tensor('input').shape)
+    tout_shape = deepcopy(subgraph.get_tensor('output').shape)
+
+    # run mutating pass
+    trf_pass.run(model)
     op = subgraph.operators[-1]
     assert op.operator_code.code == XCOREOpCodes.XC_lookup_8
 
@@ -47,8 +53,10 @@ def _test_mutate(trf_pass, model):
     assert len(subgraph.tensors) == 3
     assert tin in subgraph.inputs and tin not in subgraph.outputs
     assert tout in subgraph.outputs and tout not in subgraph.inputs
+    assert tin.shape == tin_shape
+    assert tout.shape == tout_shape
 
-    # check LUT
+    # check LUT shape
     lut_tensor = op.inputs[1]
     assert len(lut_tensor.buffer.data) == 256
     assert lut_tensor.shape == [256]

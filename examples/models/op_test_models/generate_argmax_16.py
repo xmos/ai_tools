@@ -9,7 +9,6 @@ from tflite2xcore import read_flatbuffer, write_flatbuffer, graph_transformer
 from tflite2xcore.operator_codes import BuiltinOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.model_generation import utils
-from tflite2xcore.model_generation.interface import FunctionModel
 import tensorflow as tf
 import op_test_models_common as common
 
@@ -40,32 +39,21 @@ class ArgMax8To16ConversionPass(graph_transformer.OperatorMatchingPass):
         }
 
 
-class ArgMax16(FunctionModel):
-    def build(self, input_dim):
-        class ArgMaxModel(tf.keras.Model):
-            def __init__(self):
-                super(ArgMaxModel, self).__init__()
-                self._name = 'argmaxmodel'
-                self._trainable = False
-                self._expects_training_arg = False
-
-            @tf.function
-            def func(self, x):
-                return tf.math.argmax(x, axis=1, output_type=tf.int32)
-
-        self.core_model = ArgMaxModel()
-        self.input_dim = input_dim
+class ArgMax16(common.DefaultOpTestModel):
+    def build_core_model(self, input_dim):
+        self.core_model = tf.keras.Sequential(
+            name=self.name,
+            layers=[
+                tf.keras.layers.Lambda(
+                    lambda x: tf.math.argmax(x, axis=1, output_type=tf.int32),
+                    input_shape=(input_dim,)
+                )
+            ]
+        )
 
     @property
-    def concrete_function(self):
-        return self.core_model.func.get_concrete_function(
-            tf.TensorSpec([1, self.input_dim], tf.float32))
-
-    def prep_data(self):  # Not training this model
-        pass
-
-    def train(self):  # Not training this model
-        pass
+    def input_dim(self):
+        return self.input_shape[0]
 
     def gen_test_data(self):
         utils.set_all_seeds()
@@ -89,8 +77,9 @@ class ArgMax16(FunctionModel):
         self._save_visualization('model_stripped')
 
     def to_tf_xcore(self):
-        # super.().to_tf_xcore() converts model_quant
+        # super().to_tf_xcore() converts model_quant
         # to avoid code duplication, here we convert model_stripped instead
+        # (because model_stripped has INT16 input that can be matched)
         tmp = self.models['model_quant']
         self.models['model_quant'] = self.models['model_stripped']
         super().to_tf_xcore()

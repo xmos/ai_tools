@@ -60,7 +60,7 @@ def main(path=DEFAULT_PATH, *,
 
 
 if __name__ == "__main__":
-    parser = common.OpTestPoolStridesParser(defaults={
+    parser = common.OpTestPoolParser(defaults={
         "path": DEFAULT_PATH,
         "inputs": DEFAULT_INPUTS,
         "height": DEFAULT_HEIGHT,

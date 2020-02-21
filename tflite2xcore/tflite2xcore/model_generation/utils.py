@@ -52,17 +52,6 @@ def apply_interpreter_to_examples(interpreter, examples, *, show_progress_step=N
     return outputs
 
 
-def generate_dummy_data(height, width, channels, *, batch=100):
-    data = np.float32(
-        np.random.uniform(0, 1, size=(batch, height, width, channels)))
-    subset = np.concatenate(
-        [np.zeros((1, height, width, channels), dtype=np.float32),
-         np.ones((1, height, width, channels), dtype=np.float32),
-         data[:8, :, :, :]],  # pylint: disable=unsubscriptable-object
-        axis=0)
-    return subset, data
-
-
 def shuffle(arr1, arr2):
     assert len(arr1) == len(arr2), 'Arrays must be same length'
     ind_list = [i for i in range(len(arr1))]

@@ -126,9 +126,9 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/xcore/xcore_pooling.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_fully_connected.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_type_conversions.cc \
-	lib_nn/src/nn_op_utils.c \
-	lib_nn/src/nn_operator.c \
-	lib_nn/src/nn_operator_conv.c \
+	lib_nn/src/c/nn_op_utils.c \
+	lib_nn/src/c/nn_operator.c \
+	lib_nn/src/c/nn_operator_conv.c \
 	lib_nn/src/c/avgpool2d.c \
 	lib_nn/src/c/maxpool2d.c \
 	lib_nn/src/c/fully_connected.c \
@@ -144,6 +144,7 @@ else # must be xcore
 		lib_nn/src/asm/conv2d_shallowin_deepout_block.S \
 		lib_nn/src/asm/fully_connected_16.S \
 		lib_nn/src/asm/avgpool2d.S \
+		lib_nn/src/asm/maxpool2d.S \
 		lib_nn/src/asm/avgpool2d_2x2.S \
 		lib_nn/src/asm/avgpool2d_global.S \
 		lib_nn/src/asm/vpu_memcpy.S \

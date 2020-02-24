@@ -125,6 +125,7 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/xcore/xcore_pooling.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_fully_connected.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_type_conversions.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_activations.cc \
 	lib_nn/src/c/nn_op_utils.c \
 	lib_nn/src/c/nn_operator.c \
 	lib_nn/src/c/nn_operator_conv.c \
@@ -149,6 +150,7 @@ else # must be xcore
 		lib_nn/src/asm/avgpool2d_global.S \
 		lib_nn/src/asm/vpu_memcpy.S \
 		lib_nn/src/asm/requantize_16_to_8.S \
+		lib_nn/src/asm/lookup8.S \
 		tensorflow/lite/micro/xcore/debug_log.cc 
 endif
 

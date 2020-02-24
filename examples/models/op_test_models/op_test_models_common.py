@@ -140,6 +140,7 @@ def initializer_args_handler(args):
 
     utils.set_all_seeds(args.seed)  # NOTE: All seeds initialized here
     initializers = {
+        "alpha_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
         "weight_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
         "bias_init": DEFAULT_CONST_INIT,
         "input_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),

@@ -122,6 +122,17 @@ void requantize_16_to_8_asm(
     const unsigned n);
 
 
+
+#ifndef USE_ASM_lookup8
+#define USE_ASM_lookup8    (1)
+#endif
+void lookup8_asm(
+    uint8_t* Y,
+    const uint8_t* X,
+    const uint8_t* lut,
+    const unsigned length);
+
+
 #endif //__XS3A__
 
 #ifdef __XC__

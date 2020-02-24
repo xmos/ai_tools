@@ -642,6 +642,35 @@ static inline void requantize_16_to_8(
 
 
 
+/** 8-bit Look-up Table
+ * 
+ * `lut` is used as a look-up table mapping 8-bit inputs to 8-bit outputs.
+ * 
+ * The following operation is applied:
+ *  
+ * \code
+ *      Y[i] <- lut[X[i]];
+ * 
+ *         for  0 <= i < length
+ * \endcode 
+ * 
+ * NOTE: This function can safely operate in-place on a buffer. To do the look-up in-place
+ *        just pass the same address for both `X` and `Y`.
+ * 
+ * \param Y         
+ * \param X         
+ * \param lut       
+ * \param length    
+ */
+static inline void lookup8(
+    uint8_t* Y,
+    const uint8_t* X,
+    const uint8_t* lut,
+    const unsigned length);
+
+
+
+
     
 
 #if defined(__XS3A__)

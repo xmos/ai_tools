@@ -5,10 +5,10 @@ ifeq ($(TARGET), x86)
 	BUILD_TARGET := x86
 
 	CC := gcc
-	CCFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -O3 
+	CCFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3 
 
 	CXX := g++
-	CXXFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -O3
+	CXXFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
 	CXXFLAGS += -std=c++11 
 
 	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm
@@ -28,16 +28,17 @@ else # must be xcore
 	PLATFORM_FLAGS += -Wno-unknown-attributes
 	PLATFORM_FLAGS += -report
 	PLATFORM_FLAGS += -fcmdline-buffer-bytes=1024
+	PLATFORM_FLAGS += -DTF_LITE_DISABLE_X86_NEON
 
 	AS := xcc
 	ASFLAGS := $(PLATFORM_FLAGS)
 
 	CC := xcc
-	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DNDEBUG
+	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -DNDEBUG
 	CCFLAGS += $(PLATFORM_FLAGS)
 
 	CXX := xcc
-	CXXFLAGS := -std=c++11 -g -DTF_LITE_STATIC_MEMORY -DNDEBUG
+	CXXFLAGS := -std=c++11 -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -DNDEBUG
 	CXXFLAGS += $(PLATFORM_FLAGS)
 
 	LDFLAGS := $(PLATFORM_FLAGS)
@@ -125,9 +126,10 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/xcore/xcore_pooling.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_fully_connected.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_type_conversions.cc \
-	lib_nn/src/nn_op_utils.c \
-	lib_nn/src/nn_operator.c \
-	lib_nn/src/nn_operator_conv.c \
+	tensorflow/lite/micro/kernels/xcore/xcore_activations.cc \
+	lib_nn/src/c/nn_op_utils.c \
+	lib_nn/src/c/nn_operator.c \
+	lib_nn/src/c/nn_operator_conv.c \
 	lib_nn/src/c/avgpool2d.c \
 	lib_nn/src/c/maxpool2d.c \
 	lib_nn/src/c/fully_connected.c \
@@ -143,10 +145,12 @@ else # must be xcore
 		lib_nn/src/asm/conv2d_shallowin_deepout_block.S \
 		lib_nn/src/asm/fully_connected_16.S \
 		lib_nn/src/asm/avgpool2d.S \
+		lib_nn/src/asm/maxpool2d.S \
 		lib_nn/src/asm/avgpool2d_2x2.S \
 		lib_nn/src/asm/avgpool2d_global.S \
 		lib_nn/src/asm/vpu_memcpy.S \
 		lib_nn/src/asm/requantize_16_to_8.S \
+		lib_nn/src/asm/lookup8.S \
 		tensorflow/lite/micro/xcore/debug_log.cc 
 endif
 

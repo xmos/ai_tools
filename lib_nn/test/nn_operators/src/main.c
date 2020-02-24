@@ -43,12 +43,8 @@ void test_fc_deepin_shallowout_8_case1_5();
 void test_fc_deepin_shallowout_8_case2();
 void test_fc_deepin_shallowout_8_case3();
 
-void test_maxpool2d_deep_case1();
-void test_maxpool2d_deep_case2();
-void test_maxpool2d_deep_case3();
-void test_maxpool2d_deep_case4();
-
 void test_maxpool2d_case1();
+void test_maxpool2d_case2();
 
 void test_avgpool2d_2x2_case1();
 void test_avgpool2d_2x2_case2();
@@ -97,19 +93,11 @@ int main(void)
     printf("\n\n");
 
 
-    UnityBegin("src\\test_maxpool2d_deep.xc");
-    RUN_TEST(test_maxpool2d_deep_case1);
-    RUN_TEST(test_maxpool2d_deep_case2);
-    RUN_TEST(test_maxpool2d_deep_case3);
-    RUN_TEST(test_maxpool2d_deep_case4);
-    ret_val = UnityEnd();
-    printf("\n\n");
-
-
-    //   UnityBegin("src\\test_maxpool2d.xc");
-    //   RUN_TEST(test_maxpool2d_case1);
-    //   ret_val = UnityEnd();
-    //   printf("\n\n");
+      UnityBegin("src\\test_maxpool2d.xc");
+      RUN_TEST(test_maxpool2d_case1);
+      RUN_TEST(test_maxpool2d_case2);
+      ret_val = UnityEnd();
+      printf("\n\n");
 
 
     UnityBegin("src\\test_avgpool2d.xc");
@@ -169,10 +157,10 @@ int main(void)
 
 
 
-    // UnityBegin("src\\test_lookup8.xc");
-    // RUN_TEST(test_lookup8_case0);
-    // ret_val = UnityEnd();
-    // printf("\n\n");
+    UnityBegin("src\\test_lookup8.xc");
+    RUN_TEST(test_lookup8_case0);
+    ret_val = UnityEnd();
+    printf("\n\n");
 
 
     // UnityBegin("src\\test_temp.xc");

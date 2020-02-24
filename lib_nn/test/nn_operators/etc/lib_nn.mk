@@ -3,28 +3,37 @@
 # The following variables should already be defined:
 #    $(BUILD_DIR)    - The absolute path of the build directory -- where object files should be placed
 #    $(PLATFORM)     - Either "x86" or "xcore" (no quotes) depending on whether it's being built for x86 or xcore
-#    $(API_CHECK)    - Will contain the value 1 iff this file is being included (via the include make directive) to 
-#                        gather information about API headers and such.
 
 lib_nn_PATH ?= ./
 LIB_PATH := $(abspath $(lib_nn_PATH))
 
-# LIB_SRC_DIR := $(THIS_DIR)src
 
-API_DIR := api
-SRC_DIR := src
+INCLUDES += $(LIB_PATH)/api $(LIB_PATH)/src
 
-INCLUDES += $(LIB_PATH)/$(API_DIR) $(LIB_PATH)/$(SRC_DIR)
+# SOURCE_FILES = $(wildcard $(LIB_PATH)/$(SRC_DIR)/c/*.c)
 
-LIB_SOURCES += $(wildcard $(LIB_PATH)/$(SRC_DIR)/c/*.c)
-
-ifeq ($(strip $(PLATFORM)),$(strip xcore))
-  LIB_SOURCES += $(wildcard $(LIB_PATH)/$(SRC_DIR)/asm/*.S)
-endif
-
-SOURCE_FILES += $(LIB_SOURCES)
+# ifeq ($(strip $(PLATFORM)),$(strip xcore))
+#   SOURCE_FILES += $(wildcard $(LIB_PATH)/$(SRC_DIR)/asm/*.S)
+# endif
 
 
+###### 
+### [optional] Directories, relative to the dependency folder, to look for source files.
+###            defaults to nothing.
+SOURCE_DIRS := src
 
+###### 
+### [optional] Source file extentions. Defaults to: c cc xc cpp S
+###
+SOURCE_FILE_EXTS := c S
 
+######
+### [optional] List of source files to compile.
+###            
+# SOURCE_FILES :=  $(wildcard src/*.c src/*.xc)
 
+######
+### [optional] list of static libraries that
+### should be linked into the executable
+###
+# LIBRARIES := foo.a

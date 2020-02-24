@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import glob
+from pathlib import Path
 import subprocess
 import tempfile
 import pytest
@@ -16,59 +17,63 @@ from tflite2xcore import operator_codes
 def load_tests(name):
     if name.startswith('argmax'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_argmax_16.name, '*')
+            operator_codes.XCOREOpCodes.XC_argmax_16.name)
     elif name.startswith('conv2d_shallowin_deepout'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name, '*')
+            operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name)
     elif name.startswith('conv2d_deepin_deepout'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name, '*')
+            operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name)
     elif name.startswith('test_fully_connected'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name, '*')
+            operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name)
     elif name.startswith('maxpool2d'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_maxpool2d.name, '*')
+            operator_codes.XCOREOpCodes.XC_maxpool2d.name)
     elif name.startswith('avgpool2d_global'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_avgpool2d_global.name, '*')
+            operator_codes.XCOREOpCodes.XC_avgpool2d_global.name)
     elif name.startswith('avgpool2d'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_avgpool2d.name, '*')
-    elif name.startswith('requantize_18_8'):
+            operator_codes.XCOREOpCodes.XC_avgpool2d.name)
+    elif name.startswith('requantize_16_8'):
         name = f'{operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name}'
-        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            name, '*')
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, name)
+    elif name.startswith('lookup_8'):
+        name = f'{operator_codes.XCOREOpCodes.XC_lookup_8.name}'
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, name)
     else:
         raise Exception(f'Unsupported op model: {name}')
 
     test_cases = []
 
-    for directory in glob.glob(pattern):
-        flatbuffer_xcore = os.path.join(directory, 'models/model_xcore.tflite')
-        input_files = glob.glob(os.path.join(directory, 'test_data/model_xcore/*.x'))
-        model = read_flatbuffer(flatbuffer_xcore)
-        input_quantization = model.subgraphs[0].outputs[0].quantization
+    for directory in Path(pattern).rglob('*'):
+        if os.path.isdir(directory):
+            flatbuffer_xcore = os.path.join(directory, 'models/model_xcore.tflite')
+            if os.path.isfile(flatbuffer_xcore):
+                input_files = glob.glob(os.path.join(directory, 'test_data/model_xcore/*.x'))
+                model = read_flatbuffer(flatbuffer_xcore)
+                input_quantization = model.subgraphs[0].outputs[0].quantization
 
-        flatbuffer_stripped = os.path.join(directory, 'models/model_stripped.tflite')
-        output_files = glob.glob(os.path.join(directory, 'test_data/model_stripped/*.y'))
-        model = read_flatbuffer(flatbuffer_stripped)
-        output_quantization = model.subgraphs[0].outputs[0].quantization
+                flatbuffer_stripped = os.path.join(directory, 'models/model_stripped.tflite')
+                output_files = glob.glob(os.path.join(directory, 'test_data/model_stripped/*.y'))
+                model = read_flatbuffer(flatbuffer_stripped)
+                output_quantization = model.subgraphs[0].outputs[0].quantization
 
-        for input_file, output_file in zip(sorted(input_files), sorted(output_files)):
-            fields = directory.split('/')
-            test_cases.append({
-                'id': '/'.join(fields[-2:]),
-                'flatbuffer': flatbuffer_xcore,
-                'input': {
-                    'filename': input_file,
-                    'quantization': input_quantization
-                },
-                'expected_output': {
-                    'filename': output_file,
-                    'quantization': output_quantization
-                }
-            })
+                for input_file, output_file in zip(sorted(input_files), sorted(output_files)):
+                    test_cases.append({
+                        'id': '/'.join(directory.parts[-2:]),
+                        'flatbuffer': flatbuffer_xcore,
+                        'input': {
+                            'filename': input_file,
+                            'quantization': input_quantization
+                        },
+                        'expected_output': {
+                            'filename': output_file,
+                            'quantization': output_quantization
+                        }
+                    })
+
     return test_cases
 
 
@@ -109,6 +114,11 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
 
     return result
 
+
+def test_lookup(test_model_app, lookup_8_test_case):
+    assert(run_test_case(test_model_app, lookup_8_test_case))
+
+
 def test_argmax(test_model_app, argmax_test_case):
     assert(run_test_case(test_model_app, argmax_test_case))
 
@@ -139,8 +149,8 @@ def test_avgpool2d_global(test_model_app, avgpool2d_global_test_case):
     assert(run_test_case(test_model_app, avgpool2d_global_test_case))
 
 
-def test_requantize(test_model_app, requantize_18_8_test_case):
-    assert(run_test_case(test_model_app, requantize_18_8_test_case))
+def test_requantize(test_model_app, requantize_16_8_test_case):
+    assert(run_test_case(test_model_app, requantize_16_8_test_case))
 
 
 if __name__ == "__main__":

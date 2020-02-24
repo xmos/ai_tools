@@ -83,7 +83,6 @@ class Buffer():
     def data(self):
         return self._data
 
-
     @data.setter
     def data(self, data):
         if data is None:
@@ -91,12 +90,11 @@ class Buffer():
         elif isinstance(data, list):
             self._data = np.array(data, dtype=np.uint8)
         elif isinstance(data, np.ndarray):
-            if data.dtype is not np.uint8:
+            if data.dtype not in (np.uint8, 'uint8'):
                 logging.debug(f"Numpy array of type {data.dtype} stored in buffer")
             self._data = np.frombuffer(data.tostring(), dtype=np.uint8)
         else:
             raise TypeError(f"data must be list or numpy array of uint8 type")
-
 
     def __len__(self):
         if self.data is not None:
@@ -274,7 +272,7 @@ class Subgraph():
 
     def create_operator(self, operator_code, *,
                         inputs=None, outputs=None,
-                        builtin_options=None, builtin_options_type=None, 
+                        builtin_options=None, builtin_options_type=None,
                         custom_options=None):
         name = self.generate_unique_op_name(operator_code)
         operator = Operator(self, operator_code, name, inputs, outputs,

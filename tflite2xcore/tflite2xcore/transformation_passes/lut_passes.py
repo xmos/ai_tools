@@ -36,7 +36,8 @@ class ReplaceWithXCLookup8Pass(ReplaceQuantizedOperatorPass):
         outputs_int = np.concatenate([outputs_int[128:], outputs_int[0:128]])
 
         lut_tensor = new_op.subgraph.create_tensor(
-            f"{op.name}/LUT", TensorType.INT8, shape=[len(outputs_int)])
+            f"{op.name}/LUT", TensorType.INT8, shape=[len(outputs_int)],
+            consumers=[new_op])
         lut_tensor.buffer.data = outputs_int
         new_op.inputs.append(lut_tensor)
 

@@ -36,6 +36,7 @@ class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
     def mutate(self, op):
         subgraph = op.subgraph
         subgraph.inputs.append(op.outputs[0])
+        op.outputs[0].producers.remove(op)
         subgraph.remove_tensor(op.inputs[0])
         subgraph.remove_operator(op)
 
@@ -57,6 +58,7 @@ class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
     def mutate(self, op):
         subgraph = op.subgraph
         subgraph.outputs.append(op.inputs[0])
+        op.inputs[0].consumers.remove(op)
         subgraph.remove_tensor(op.outputs[0])
         subgraph.remove_operator(op)
 
@@ -108,6 +110,7 @@ class RemoveSoftmaxOutputPass(OperatorMatchingPass):
     def mutate(self, op):
         subgraph = op.subgraph
         subgraph.outputs.append(op.inputs[0])
+        op.inputs[0].consumers.remove(op)
         subgraph.remove_tensor(op.outputs[0])
         subgraph.remove_operator(op)
 
@@ -424,13 +427,19 @@ class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
         with self.using(op):
             intermediate = op.subgraph.create_tensor(
                 f"{op.name}/intermediate", self._output.type, self._output.shape,
-                quantization=self._output.quantization
+                quantization=self._output.quantization,
+                producers=[op]
             )
+        # rewire outputs of original FC op
+        for output_tensor in op.outputs:
+            output_tensor.producers.remove(op)
+        op.outputs = [intermediate]
         # create new op, insert after original op, rewire inputs/outputs
         new_op = op.subgraph.create_operator(
             OperatorCode(XCOREOpCodes.XC_requantize_16_to_8),
             inputs=[intermediate], outputs=op.outputs)
-        op.outputs = [intermediate]
+        # move operator to correct location
+        # TODO: remove this when we have execution planning
         op.subgraph.insert_operator(op, new_op, after=True)
 
     def mutate(self, op):
@@ -495,10 +504,9 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
                 raise ValueError("Negative right shift encountered.")
 
         shift_scale_tensor = op.subgraph.create_tensor(
-            f"{op.name}/shift_scale",
-            TensorType.INT16,
-            shift_scale_arr.shape,
-            buffer=op.model.create_buffer(shift_scale_arr)
+            f"{op.name}/shift_scale", TensorType.INT16, shift_scale_arr.shape,
+            buffer=op.model.create_buffer(shift_scale_arr),
+            consumers=[op]
         )
         op.inputs.append(shift_scale_tensor)
 
@@ -829,7 +837,8 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
             # replace reduction_indices tensor with bias_scale_shift
             subgraph.remove_tensor(new_op.inputs[1])
             new_op.inputs[1] = subgraph.create_tensor(
-                f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7])
+                f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7],
+                consumers=[new_op])
             new_op.inputs[1].buffer.data = np.frombuffer(
                 b''.join(p.tostring() for p in self._bias_scale_shift),
                 dtype=np.int8

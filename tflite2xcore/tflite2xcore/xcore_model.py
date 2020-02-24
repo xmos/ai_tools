@@ -165,9 +165,9 @@ class Operator():
 
 
 class Tensor():
-    def __init__(self, subgraph, name, type_, shape, 
-                buffer=None, quantization=None,
-                producers=None, consumers=None):
+    def __init__(self, subgraph, name, type_, shape,
+                 buffer=None, quantization=None,
+                 producers=None, consumers=None):
         # Generally, do not use this constructor to instantiate Tensor!
         # Use Subgraph.create_tensor instead.
         self.subgraph = subgraph  # parent
@@ -261,7 +261,7 @@ class Subgraph():
     def create_tensor(self, name, type_, shape, *,
                       buffer=None, quantization=None,
                       isinput=False, isoutput=False,
-                      producers=False, consumers=False):
+                      producers=None, consumers=None):
 
         for existing_tensor in self.tensors:
             if name in [existing_tensor.name, existing_tensor.sanitized_name]:
@@ -283,7 +283,7 @@ class Subgraph():
             self.inputs.remove(tensor)
         if tensor in self.outputs:
             self.outputs.remove(tensor)
-
+        tensor.consumers, tensor.producers = [], []
         tensor.subgraph = tensor.buffer = None
 
     def generate_unique_op_name(self, operator_code):
@@ -302,6 +302,10 @@ class Subgraph():
         operator = Operator(self, operator_code, name, inputs, outputs,
                             builtin_options, builtin_options_type, custom_options)
         self.operators.append(operator)
+        for input_tensor in inputs:
+            input_tensor.consumers.append(operator)
+        for output_tensor in outputs:
+            output_tensor.producers.append(operator)
         return operator
 
     def remove_operator(self, op):

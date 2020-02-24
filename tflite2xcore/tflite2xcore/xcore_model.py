@@ -1,7 +1,9 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
+import sys
 import struct
 import enum
 import collections
+import logging
 
 import numpy as np
 
@@ -84,22 +86,24 @@ class Buffer():
     @data.setter
     def data(self, data):
         if data is None:
-            self._data = []
+            self._data = np.array([], dtype=np.uint8)
         elif isinstance(data, list):
-            self._data = data
+            self._data = np.array(data, dtype=np.uint8)
         elif isinstance(data, np.ndarray):
-            self._data = list(data.flatten().tostring())
+            if data.dtype not in (np.uint8, 'uint8'):
+                logging.debug(f"Numpy array of type {data.dtype} stored in buffer")
+            self._data = np.frombuffer(data.tostring(), dtype=np.uint8)
         else:
-            raise TypeError(f"data must be list or numpy array")
+            raise TypeError(f"data must be list or numpy array of uint8 type")
 
     def __len__(self):
-        if self.data:
+        if self.data is not None:
             return len(self.data)
         else:
             return 0
 
     def __str__(self):
-        if self.data:
+        if self.data is not None:
             return f'Buffer[{len(self.data)}]'
         else:
             return 'Buffer[]'
@@ -108,7 +112,8 @@ class Buffer():
         LUT = {'uint8_t': 'B',
                'int8_t': 'b',
                'int16_t': 'h',
-               'int32_t': 'i'}
+               'int32_t': 'i',
+               'float32_t': 'f'}
         return [i[0] for i in struct.iter_unpack(LUT[stdtype], bytearray(self.data))]
 
 
@@ -267,7 +272,7 @@ class Subgraph():
 
     def create_operator(self, operator_code, *,
                         inputs=None, outputs=None,
-                        builtin_options=None, builtin_options_type=None, 
+                        builtin_options=None, builtin_options_type=None,
                         custom_options=None):
         name = self.generate_unique_op_name(operator_code)
         operator = Operator(self, operator_code, name, inputs, outputs,
@@ -365,6 +370,13 @@ class XCOREModel():
         sorted_operator_codes = [op_code for op_code, _ in counter.most_common()]
 
         return sorted_operator_codes
+
+    @property
+    def data_size(self):
+        nbytes = 0
+        for buffer in self.buffers:
+            nbytes += len(buffer)
+        return nbytes
 
     def pprint(self, tensor_values=False):
         print('---------')

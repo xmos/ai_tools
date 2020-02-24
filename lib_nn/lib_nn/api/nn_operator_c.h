@@ -32,18 +32,10 @@ void conv2d_shallowin_deepout_block_c(
     const int16_t* scales);
 
 
-
-void maxpool2d_deep_c(
-    const int8_t* X, 
+void maxpool2d_c(
     int8_t* Y,
-    const int32_t height, 
-    const int32_t width,
-    const int32_t C_in);
-
-// void maxpool2d_c(
-//     int8_t* Y,
-//     const int8_t* X, 
-//     const nn_window_op_plan_t* plan);
+    const int8_t* X, 
+    const nn_window_op_plan_t* plan);
 
 
 void avgpool2d_c(

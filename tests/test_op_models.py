@@ -28,7 +28,7 @@ def load_tests(name):
             operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name, '*')
     elif name.startswith('maxpool2d'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_maxpool2d_deep.name, '*')
+            operator_codes.XCOREOpCodes.XC_maxpool2d.name, '*')
     elif name.startswith('avgpool2d_global'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_avgpool2d_global.name, '*')

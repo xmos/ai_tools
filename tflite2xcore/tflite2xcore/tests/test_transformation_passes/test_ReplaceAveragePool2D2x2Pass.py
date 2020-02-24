@@ -7,17 +7,27 @@ from tflite2xcore.transformation_passes import ReplaceAveragePool2D2x2Pass
 from .model_builders import build_avgpool
 
 
-from .test_ReplaceDeepMaxPool2DPass import (
-    MATCHING_STRIDES, MATCHING_POOL_SIZE,
-    input_height, input_width, padding,
-    NON_MATCHING_INPUT_HEIGHT, NON_MATCHING_INPUT_WIDTH,
-    NON_MATCHING_OPTIONS,
-    NON_MATCHING_POOL_SIZE, NON_MATCHING_STRIDES
+from .test_ReplaceAveragePool2DPass import (
+    input_channels,
+    NON_MATCHING_INPUT_CHANNELS
 )
 
-MATCHING_INPUT_CHANNELS = [4, 8, 12, 20, 32, 36]
+MATCHING_INPUT_HEIGHT = [2, 4, 8, 12, 16, 24]
+MATCHING_INPUT_WIDTH = MATCHING_INPUT_HEIGHT
+MATCHING_PADDING = ['SAME', 'VALID']
+MATCHING_POOL_SIZE = (2, 2)
+MATCHING_STRIDES = MATCHING_POOL_SIZE
 
-NON_MATCHING_INPUT_CHANNELS = [1, 2, 3, 5, 31]
+NON_MATCHING_INPUT_HEIGHT = [1, 3, 5, 7, 13, 23]
+NON_MATCHING_INPUT_WIDTH = NON_MATCHING_INPUT_HEIGHT
+NON_MATCHING_POOL_SIZE = [
+    (1, 2), (2, 1), (1, 3), (3, 1), (2, 3), (3, 2)
+]
+NON_MATCHING_STRIDES = NON_MATCHING_POOL_SIZE
+NON_MATCHING_OPTIONS = ('option', 'value'), [
+    ('fused_activation_function', 'RELU'),
+    ('fused_activation_function', 'RELU6'),
+]
 
 
 @pytest.fixture()
@@ -25,14 +35,24 @@ def trf_pass():
     return ReplaceAveragePool2D2x2Pass()
 
 
-@pytest.fixture(params=MATCHING_INPUT_CHANNELS)
-def input_channels(request):
+@pytest.fixture(params=MATCHING_INPUT_HEIGHT)
+def input_height(request):
+    return request.param
+
+
+@pytest.fixture(params=MATCHING_INPUT_WIDTH)
+def input_width(request):
     return request.param
 
 
 @pytest.fixture()
 def input_shape(input_height, input_width, input_channels):
     return [input_height, input_width, input_channels]
+
+
+@pytest.fixture(params=MATCHING_PADDING)
+def padding(request):
+    return request.param
 
 
 @pytest.fixture()

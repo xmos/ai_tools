@@ -1,25 +1,22 @@
 #!/usr/bin/env python
 #
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import argparse
 from pathlib import Path
 from tflite2xcore.model_generation import utils
-from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
+import op_test_models_common as common
 
 from generate_avgpool2d import (
     DEFAULT_INPUTS, DEFAULT_HEIGHT, DEFAULT_WIDTH,
-    DefaultPool2DModel,
-    DefaultPool2DParser
 )
 
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'avgpool2d_global').resolve()
 
 
-class AvgPool2DGlobal(DefaultPool2DModel):
-    def build_core_model(self, height, width, input_channels):
+class AvgPool2DGlobal(common.DefaultOpTestModel):
+    def build_core_model(self, height, width, input_channels, *, input_init):
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
-
+        self.input_init = input_init
         self.core_model = tf.keras.Sequential(
             name=self.name,
             layers=[
@@ -32,25 +29,31 @@ class AvgPool2DGlobal(DefaultPool2DModel):
 
 def main(path=DEFAULT_PATH, *,
          input_channels=DEFAULT_INPUTS,
-         height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH):
+         height=DEFAULT_HEIGHT,
+         width=DEFAULT_WIDTH,
+         input_init=common.DEFAULT_UNIF_INIT):
     model = AvgPool2DGlobal('avgpool2d_global', Path(path))
-    model.build(height, width, input_channels)
+    model.build(height, width, input_channels,
+                input_init=input_init)
     model.run()
 
 
 if __name__ == "__main__":
-    parser = DefaultPool2DParser(defaults={
-        'path': DEFAULT_PATH,
-        'inputs': DEFAULT_INPUTS,
-        'height': DEFAULT_HEIGHT,
-        'width': DEFAULT_WIDTH
+    parser = common.OpTestDimParser(defaults={
+        "path": DEFAULT_PATH,
+        "inputs": DEFAULT_INPUTS,
+        "height": DEFAULT_HEIGHT,
+        "width": DEFAULT_WIDTH,
     })
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
+    initializers = common.initializer_args_handler(args)
+
     main(path=args.path,
          input_channels=args.inputs,
-         height=args.height, width=args.width
-         )
+         height=args.height,
+         width=args.width,
+         input_init=initializers['input_init'])

@@ -82,22 +82,14 @@ def run_generate(tests, jobs):
     parameter_sets = [
         #{'in': 32, 'hi': 5, 'wi': 5, 'st':(1, 2), 'po': (3, 4), 'pd': 'VALID'},
         {'in': 32, 'hi': 4, 'wi': 4, 'st':(2, 2), 'po': (4, 4), 'pd': 'VALID'},
-        {'in': 4, 'hi': 16, 'wi': 16, 'st':(1, 1), 'po': (4, 4), 'pd': 'VALID'}
+        {'in': 4, 'hi': 16, 'wi': 16, 'st':(1, 1), 'po': (4, 4), 'pd': 'VALID'},
+        {'in': 32, 'hi': 4, 'wi': 4, 'st':(2, 2), 'po': (2, 2), 'pd': 'VALID'},
+        {'in': 4, 'hi': 16, 'wi': 16, 'st':(1, 1), 'po': (2, 2), 'pd': 'VALID'}
     ]
 
     if operator in tests or len(tests) == 0:
         test_cases.extend(create_test_cases(operator, generator, parameter_sets))
 
-    operator = operator_codes.XCOREOpCodes.XC_avgpool2d.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_avgpool2d_2x2.py')
-    parameter_sets = [
-        {'in': 32, 'hi': 4, 'wi': 4},
-        {'in': 32, 'hi': 6, 'wi': 12},
-        {'in': 32, 'hi': 16, 'wi': 16}
-    ]
-
-    if operator in tests or len(tests) == 0:
-        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
 
     #***********************************
     # AvgPool Global
@@ -193,8 +185,8 @@ def run_generate(tests, jobs):
     #***********************************
     # MaxPool
     #***********************************
-    operator = operator_codes.XCOREOpCodes.XC_maxpool2d_deep.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_maxpool2d_deep.py')
+    operator = operator_codes.XCOREOpCodes.XC_maxpool2d.name
+    generator = os.path.join(directories.GENERATOR_DIR, 'generate_maxpool2d.py')
     parameter_sets = [
         {'in': 32, 'hi': 2, 'wi': 2, 'st':2, 'po': 2, 'pd': 'VALID'},
         {'in': 32, 'hi': 4, 'wi': 4, 'st':2, 'po': 2, 'pd': 'VALID'},

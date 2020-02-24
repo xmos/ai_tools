@@ -16,7 +16,7 @@ from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCod
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.parallelization import DIDOConv2DPlanner
 
-VE, ACC_PERIOD = 32, 16
+VE, ACC_PERIOD, WORD_SIZE = 32, 16, 4
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
@@ -261,7 +261,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
     def __pad_to_acc_period(self, arr):
         pad = ACC_PERIOD - 1 - (arr.shape[0] - 1) % ACC_PERIOD
-        return np.pad(arr, pad_width=((0, pad)))
+        return np.pad(arr, pad_width=[(0, pad)])
 
     @property
     def _bias_arr(self):
@@ -337,9 +337,14 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
         super().mutate_weights(op)
         with self.using(op):
             # zero_padding weight tensor
-            col_pad = 4 - 1 - (self._weights.shape[1] - 1) % 4
-            arr = np.pad(self._weights.numpy.astype(np.int8),
-                         pad_width=((0, 0), (0, col_pad)))
+            col_pad = WORD_SIZE - 1 - (self._weights.shape[1] - 1) % WORD_SIZE
+            arr = np.pad(
+                self._weights.numpy.astype(np.int8),
+                pad_width=[(0, 0),
+                           (0, col_pad)]
+            )
+
+            # save weight tensor and update shape
             self._weights.buffer.data = arr
             self._weights.shape = arr.shape
 
@@ -470,9 +475,11 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
             new_bias = self._bias_arr
             self._biases.buffer.data = new_bias
 
-            # change bias tensor metadata and change quantization mode to alert users to unusual layout
+            # change bias tensor metadata
             self._biases.type = TensorType.INT16
             self._biases.shape = new_bias.shape
+
+            # remove quantization info to save space
             self._biases.quantization = None
 
     def add_shift_scale(self, op):
@@ -528,18 +535,22 @@ class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
         super().mutate_weights(op)
         with self.using(op):
             # rearrange weight tensor
-            weights = self._weights.numpy
-            new_shape = (weights.shape[0] // ACC_PERIOD, ACC_PERIOD,
-                         weights.shape[1], weights.shape[2],
-                         weights.shape[3] // VE, VE)
-            weights = weights.reshape(new_shape)
+            weights = self._weights.numpy.astype(np.int8)
+            weights = weights.reshape((
+                weights.shape[0] // ACC_PERIOD,
+                ACC_PERIOD,
+                weights.shape[1],
+                weights.shape[2],
+                weights.shape[3] // VE,
+                VE
+            ))
             weights = np.transpose(
                 np.flip(weights, axis=1),
                 axes=(0, 2, 3, 4, 1, 5)
             )
 
             # save weight tensor and update shape
-            self._weights.buffer.data = np.int8(weights)
+            self._weights.buffer.data = weights
             self._weights.shape = weights.shape
 
             # remove quantization info to save space
@@ -548,6 +559,9 @@ class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
 
 # TODO: write tests (of subclasses?) to test input operator matching
 class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
+    MAX_INPUT_CHANNELS = WORD_SIZE
+    MAX_KERNEL_WIDTH = VE // MAX_INPUT_CHANNELS
+
     def match(self, op):
         if super().match(op):
             with self.using(op):
@@ -564,26 +578,38 @@ class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
         #       keep in mind that this mutation is what can affect other operators
         with self.using(op):
             self._input.name = f"{op.name}/input"
-            self._input.shape[3] = 4  # new, zero-padded shape
+            self._input.shape[3] = self.MAX_INPUT_CHANNELS  # new, zero-padded shape
 
     def mutate_weights(self, op):
         super().mutate_weights(op)
         with self.using(op):
             # rearrange and zero pad weight tensor
-            weights = self._weights.numpy
+            weights = self._weights.numpy.astype(np.int8)
             weights = np.pad(
                 weights,
                 pad_width=[(0, 0),
                            (0, 0),
-                           (0, 8 - weights.shape[2]),
-                           (0, 4 - weights.shape[3])]
+                           (0, self.MAX_KERNEL_WIDTH - weights.shape[2]),
+                           (0, self.MAX_INPUT_CHANNELS - weights.shape[3])]
             )
-            new_shape = (weights.shape[0] // ACC_PERIOD, ACC_PERIOD, weights.shape[1], 8, 4)
-            weights = np.int8(weights.reshape(new_shape))
-            weights = np.transpose(np.flip(weights, axis=1), axes=(0, 2, 1, 3, 4))
+            weights = weights.reshape((
+                weights.shape[0] // ACC_PERIOD,
+                ACC_PERIOD,
+                weights.shape[1],
+                self.MAX_KERNEL_WIDTH,
+                self.MAX_INPUT_CHANNELS
+            ))
+            weights = np.transpose(
+                np.flip(weights, axis=1),
+                axes=(0, 2, 1, 3, 4)
+            )
 
+            # save weight tensor and update shape
             self._weights.shape = weights.shape
             self._weights.buffer.data = weights
+
+            # remove quantization info to save space
+            self._weights.quantization = None
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
@@ -604,8 +630,8 @@ class ReplaceShallowinDeepoutConv2DPass(ReplaceDeepoutConv2DInputPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return (self._weights.shape[3] <= 4  # shallowin
-                        and self._weights.shape[2] <= 8)  # max kernel width
+                return (self._weights.shape[3] <= self.MAX_INPUT_CHANNELS
+                        and self._weights.shape[2] <= self.MAX_KERNEL_WIDTH)
 
         return False
 
@@ -619,7 +645,7 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
         if super().match(op):
             with self.using(op):
                 return (self._weights.shape[3] == 1  # depthwise only matched with single input channel
-                        and self._weights.shape[2] <= 8)  # max kernel width
+                        and self._weights.shape[2] <= self.MAX_KERNEL_WIDTH)  # max kernel width
 
         return False
 
@@ -708,7 +734,7 @@ class ReplaceAveragePool2DPass(ReplacePooling2DPass):
                 return (self._input.quantization == self._output.quantization
                         and self._padding == 'VALID'
                         and self._fused_activation == 'NONE'
-                        and self._input.shape[3] % 4 == 0)
+                        and self._input.shape[3] % WORD_SIZE == 0)
 
         return False
 
@@ -737,7 +763,7 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
                 reduction_dims = self._op.inputs[1].numpy
                 return (len(reduction_dims) == 2
                         and np.all(reduction_dims == [1, 2])
-                        and self._input.shape[3] % 4 == 0)
+                        and self._input.shape[3] % WORD_SIZE == 0)
 
         return False
 
@@ -794,7 +820,7 @@ class ReplaceAveragePool2D2x2Pass(ReplacePooling2DPass):
                         and self._fused_activation == 'NONE'
                         and self._input.shape[1] % 2 == 0
                         and self._input.shape[2] % 2 == 0
-                        and self._input.shape[3] % 4 == 0)
+                        and self._input.shape[3] % WORD_SIZE == 0)
 
         return False
 

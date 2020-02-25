@@ -8,14 +8,16 @@ import ctypes
 
 import numpy as np
 
+__PARENT_DIR = Path(__file__).parent.absolute()
 if sys.platform.startswith("linux"):
-    shared_lib = os.path.join(Path(__file__).parent.absolute(), 'linux/libtflite2xcore.so.1.0.1')
+    shared_lib = os.path.join(__PARENT_DIR, 'linux/libtflite2xcore.so.1.0.1')
 elif sys.platform == "darwin":
-    shared_lib = os.path.join(Path(__file__).parent.absolute(), 'macos/libtflite2xcore.1.0.1.dylib')
+    shared_lib = os.path.join(__PARENT_DIR, 'macos/libtflite2xcore.1.0.1.dylib')
 else:
-    shared_lib = os.path.join(Path(__file__).parent.absolute(), 'windows/libtflite2xcore.dll')
+    shared_lib = os.path.join(__PARENT_DIR, 'windows/libtflite2xcore.dll')
 
 lib = ctypes.cdll.LoadLibrary(shared_lib)
+
 
 class FlexbufferBuilder:
     def __init__(self, data=None):
@@ -101,22 +103,23 @@ class FlexbufferBuilder:
         self.__add_map(self.obj, data)
 
         lib.builder_finish(self.obj)
-    
+
     def get_bytes(self, size=1024):
         buf = ctypes.create_string_buffer(size)
         actual_size = lib.builder_get_buffer(self.obj, buf)
         return [ubyte[0] for ubyte in struct.iter_unpack('B', buf[0:actual_size])]
+
 
 class FlexbufferParser:
     def __init__(self):
         lib.parse_flexbuffer.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
         lib.parse_flexbuffer.restype = ctypes.c_size_t
 
-
     def parse(self, buffer, size=100000):
         char_array = ctypes.c_char * len(buffer)
         json_buffer = ctypes.create_string_buffer(size)
 
-        actual_size = lib.parse_flexbuffer(char_array.from_buffer_copy(buffer), len(buffer), json_buffer, size)
-    
+        actual_size = lib.parse_flexbuffer(
+            char_array.from_buffer_copy(buffer), len(buffer), json_buffer, size)
+
         return json_buffer[0:actual_size]

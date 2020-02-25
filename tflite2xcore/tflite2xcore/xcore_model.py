@@ -72,12 +72,13 @@ class TensorType(enum.IntEnum):
 
 
 class Buffer():
-    def __init__(self, model, data=None):
+    def __init__(self, model, data=None, *, owners=None):
         # Generally, do not use this constructor to instantiate Buffer!
         # Use XCOREModel.create_buffer instead.
 
         self.model = model  # parent
         self.data = data
+        self.owners = owners or []
 
     @property
     def data(self):
@@ -115,6 +116,11 @@ class Buffer():
                'int32_t': 'i',
                'float32_t': 'f'}
         return [i[0] for i in struct.iter_unpack(LUT[stdtype], bytearray(self.data))]
+
+    def sanity_check(self):
+        assert self in self.model.buffers
+        for owner in self.owners:
+            assert owner.buffer is self
 
 
 class Operator():
@@ -193,6 +199,7 @@ class Tensor():
             assert isinstance(buffer, Buffer)
             assert buffer in self.model.buffers
             self.buffer = buffer
+        self.buffer.owners.append(self)
 
         self.quantization = quantization
 
@@ -221,6 +228,7 @@ class Tensor():
 
     def sanity_check(self):
         assert self in self.subgraph.tensors
+        assert self in self.buffer.owners
         # check for duplicates
         assert len(self.consumers) == len(set(self.consumers))
         assert len(self.producers) == len(set(self.producers))
@@ -315,6 +323,7 @@ class Subgraph():
             except ValueError:
                 pass
         tensor.consumers, tensor.producers = [], []
+        tensor.buffer.owners.remove(tensor)
         tensor.subgraph = tensor.buffer = None
 
     def generate_unique_op_name(self, operator_code):
@@ -393,6 +402,9 @@ class Subgraph():
         assert len(self.outputs) == len(set(self.outputs))
         assert len(self.operators) == len(set(self.operators))
         assert len(self.tensors) == len(set(self.tensors))
+        # make sure inputs and outputs are not misplaced
+        for tensor in (self.inputs + self.outputs):
+            assert tensor in self.tensors
         # the subgraph is sane as long as all its objects are sane
         for op in self.operators:
             op.sanity_check()
@@ -412,9 +424,13 @@ class Metadata():
             self.buffer = buffer
         else:
             self.buffer = self.model.create_buffer()
+        self.buffer.owners.append(self)
 
     def __str__(self):
         return f'name={self.name}, buffer={self.buffer}'
+
+    def sanity_check(self):
+        assert self in self.buffer.owners
 
 
 class XCOREModel():
@@ -519,7 +535,12 @@ class XCOREModel():
     def sanity_check(self):
         # check for duplicates
         assert len(self.subgraphs) == len(set(self.subgraphs))
+        assert len(self.buffers) == len(set(self.buffers))
+        assert len(self.metadata) == len(set(self.metadata))
         # the model is sane as long as all its subgraphs are sane
-        # TODO: implement for metadata and buffers
         for subgraph in self.subgraphs:
             subgraph.sanity_check()
+        for buffer in self.buffers:
+            buffer.sanity_check()
+        for metadata in self.metadata:
+            metadata.sanity_check()

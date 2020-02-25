@@ -29,8 +29,8 @@ This document assumes familiarity with the XMOS xCORE architecture, the XMOS too
 
 The table below gives a quick overview of the API's in lib_nn. For full documentation of each API function, please refer to the description in the lib_nn/api/nn_operator.h header file.
 
-Group | API | Constraints | Additional memory required for optimizations (bytes) | VPU Optimized | Comments |
-|:----| :---| :------------ | :---------------- | :--------------------------------------------------------| :-------------| :------------- |
+| Group | API | Constraints | Additional memory required for optimizations (bytes) | VPU Optimized | Comments |
+|:----|:---|:------------|:----------------|:--------------------------------------------------------|:-------------|
 |Convolution| | | | | |
 | |conv2d_deepin_deepout|Input must have a multiple of 32 input channels, and output must have a multiple of 16 output channels|TODO|Yes|Loosening the input and output constraints to multiples of 4 is **in development**|
 | |conv2d_shallowin_deepout|Input must have a multiple of 4 input channels, and output must have a multiple of 16 output channels|TODO|Yes|Loosening the input and output constraints to multiples of 4 is **in development**|

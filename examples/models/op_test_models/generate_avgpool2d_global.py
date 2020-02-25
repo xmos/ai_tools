@@ -39,7 +39,7 @@ def main(path=DEFAULT_PATH, *,
 
 
 if __name__ == "__main__":
-    parser = common.OpTestDimParser(defaults={
+    parser = common.OpTestImgParser(defaults={
         "path": DEFAULT_PATH,
         "inputs": DEFAULT_INPUTS,
         "height": DEFAULT_HEIGHT,
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
-    initializers = common.initializer_args_handler(args)
+    initializers = parser.initializer_args_handler(args)
 
     main(path=args.path,
          input_channels=args.inputs,

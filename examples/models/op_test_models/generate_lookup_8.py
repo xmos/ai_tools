@@ -51,16 +51,18 @@ def main(activation, path=DEFAULT_PATH, *,
     test_model.run()
 
 
-class OpTestActivationParser(common.OpTestDimParser):
+class OpTestActivationParser(common.OpTestImgParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
-            '-act', '--activation', choices=defaults['choices'],
+            '-act', '--activation', default=defaults['choices'][0],
+            choices=defaults['choices'],
             help='Chosen activation function to build a test model of.'
         )
 
     def parse_args(self, *args, **kwargs):
         args = super().parse_args(*args, **kwargs)
+        print(args)
         args.path = Path(args.path).joinpath(args.activation)
         return args
 
@@ -78,7 +80,7 @@ if __name__ == "__main__":
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
-    initializers = common.initializer_args_handler(args)
+    initializers = parser.initializer_args_handler(args)
 
     main(args.activation,
          path=args.path,

@@ -36,7 +36,7 @@ def main(path=DEFAULT_PATH, *,
     test_model.run()
 
 
-class OpTestPReLUParser(common.OpTestDimParser):
+class OpTestPReLUParser(common.OpTestImgParser):
     def add_initializers(self):
         super().add_initializers()
         self.add_argument(
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
-    initializers = common.initializer_args_handler(args)
+    initializers = parser.initializer_args_handler(args)
 
     main(path=args.path,
          input_channels=args.inputs,

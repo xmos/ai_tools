@@ -6,7 +6,7 @@ from tflite2xcore.model_generation import utils
 import tflite2xcore.converter as xcore_conv
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 import op_test_models_common as common
-from generate_fully_connected import FullyConnected
+from op_test_models_common import DefaultOpTestFCModel
 
 from generate_fully_connected import (
     DEFAULT_OUTPUT_DIM, DEFAULT_INPUT_DIM,
@@ -16,7 +16,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
     'debug', 'fully_connected_requantized').resolve()
 
 
-class FullyConnectedRequantized(FullyConnected):
+class FullyConnectedRequantized(DefaultOpTestFCModel):
     def to_tf_xcore(self):
         assert 'model_quant' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
@@ -43,14 +43,14 @@ def main(path=DEFAULT_PATH, *,
         'name': 'fc_deepin_anyout_requantized',
         'path': path if path else DEFAULT_PATH
     }
-    common.run_main_fc(model=FullyConnectedRequantized(**kwargs),
-                       train_new_model=train_new_model,
-                       input_dim=input_dim,
-                       output_dim=output_dim,
-                       bias_init=bias_init,
-                       weight_init=weight_init,
-                       batch_size=batch_size,
-                       epochs=epochs)
+    model = FullyConnectedRequantized(**kwargs)
+    model.run(train_new_model=train_new_model,
+              input_dim=input_dim,
+              output_dim=output_dim,
+              bias_init=bias_init,
+              weight_init=weight_init,
+              batch_size=batch_size,
+              epochs=epochs)
 
 
 if __name__ == "__main__":
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
 
-    initializers = common.initializer_args_handler(args)
+    initializers = parser.initializer_args_handler(args)
 
     main(path=args.path,
          input_dim=args.input_dim,

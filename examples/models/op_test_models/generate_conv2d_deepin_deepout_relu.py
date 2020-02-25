@@ -41,18 +41,18 @@ def main(path=DEFAULT_PATH, *,
         'name': 'conv2d_deepin_deepout_relu',
         'path': path if path else DEFAULT_PATH
     }
-    common.run_main_conv(model=Conv2dDeepinDeepoutRelu(**kwargs),
-                         num_threads=num_threads,
-                         input_channels=input_channels,
-                         output_channels=output_channels,
-                         height=height,
-                         width=width,
-                         K_h=K_h,
-                         K_w=K_w,
-                         padding=padding,
-                         bias_init=bias_init,
-                         weight_init=weight_init,
-                         input_init=input_init)
+    model = Conv2dDeepinDeepoutRelu(**kwargs)
+    model.run(num_threads=num_threads,
+              input_channels=input_channels,
+              output_channels=output_channels,
+              height=height,
+              width=width,
+              K_h=K_h,
+              K_w=K_w,
+              padding=padding,
+              bias_init=bias_init,
+              weight_init=weight_init,
+              input_init=input_init)
 
 
 if __name__ == "__main__":
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
-    initializers = common.initializer_args_handler(args)
+    initializers = parser.initializer_args_handler(args)
 
     main(path=args.path,
          num_threads=args.par_num_threads,

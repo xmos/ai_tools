@@ -72,8 +72,8 @@ if __name__ == "__main__":
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
-    strides_pool = common.strides_pool_arg_handler(args)
-    initializers = common.initializer_args_handler(args)
+    strides_pool = parser.strides_pool_arg_handler(args)
+    initializers = parser.initializer_args_handler(args)
 
     main(path=args.path,
          input_channels=args.inputs,

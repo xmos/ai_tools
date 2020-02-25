@@ -50,7 +50,7 @@ class DefaultOpTestModel(KerasModel):
         # logging.debug(f'QUANT DATA SAMPLE:\n{self.data["quant"][0][0]}')
 
     def run(self):
-        # TODO: Consider including this in model_generation.interface
+        # NOTE: Consider including this in model_generation.interface
         self.gen_test_data()
         self.save_core_model()
         self.populate_converters()
@@ -64,7 +64,6 @@ class DefaultOpTestConvModel(DefaultOpTestModel):
         assert K_h % 2 == 1, "kernel height must be odd"
         assert K_w % 2 == 1, "kernel width must be odd"
         self.input_init = input_init
-
         try:
             self.core_model = tf.keras.Sequential(
                 name=self.name,
@@ -82,6 +81,135 @@ class DefaultOpTestConvModel(DefaultOpTestModel):
                     "Negative dimension size (Hint: if using 'valid' padding "
                     "verify that the kernel is at least the size of input image)"
                 ) from e
+        finally:
+            for layer in self.core_model.layers:
+                logging.debug(f"WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}")
+                logging.debug(f"BIAS DATA SAMPLE:\n{layer.get_weights()[1]}")
+
+
+    def run(self, *, num_threads, input_channels, output_channels,
+                    height, width, K_h, K_w, padding, bias_init, weight_init,
+                    input_init):
+        self.build(K_h, K_w, height, width, input_channels, output_channels,
+                    padding=padding,
+                    bias_init=bias_init,
+                    weight_init=weight_init,
+                    input_init=input_init)
+        self.gen_test_data()
+        self.save_core_model()
+        self.populate_converters(
+            xcore_num_threads=num_threads if num_threads else None)
+
+
+class DefaultOpTestFCModel(KerasModel):
+    def build(self, input_dim, output_dim, bias_init, weight_init):
+        super().build()
+
+        self.core_model = tf.keras.Sequential(
+            name=self.name,
+            layers=[
+                tf.keras.layers.Flatten(input_shape=(input_dim, 1, 1)),
+                tf.keras.layers.Dense(output_dim, activation='softmax',
+                                      bias_initializer=bias_init,
+                                      kernel_initializer=weight_init)
+            ]
+        )
+        self.core_model.compile(optimizer='adam',
+                                loss='sparse_categorical_crossentropy',
+                                metrics=['accuracy'])
+        self.core_model.summary()
+
+    @property
+    def input_dim(self):
+        return self.input_shape[0]
+
+    @property
+    def output_dim(self):
+        return self.output_shape[0]
+
+    # For training
+    def prep_data(self):
+        self.data = generate_fake_lin_sep_dataset(
+            self.output_dim, self.input_dim,
+            train_samples_per_class=51200//self.output_dim,
+            test_samples_per_class=10240//self.output_dim)
+
+    # For exports
+    def gen_test_data(self):
+        if not self.data:
+            self.prep_data()
+        subset_inds = np.searchsorted(
+            self.data['y_test'].flatten(), np.arange(self.output_dim))
+        self.data['export_data'] = self.data['x_test'][subset_inds]
+        self.data['quant'] = self.data['x_train']
+
+    def to_tf_stripped(self):
+        super().to_tf_stripped(remove_softmax=True)
+
+    def to_tf_xcore(self):
+        super().to_tf_xcore(remove_softmax=True)
+
+    def run(self, *, train_new_model, input_dim, output_dim, bias_init,
+                    weight_init, batch_size, epochs):
+        if train_new_model:
+            self.build(input_dim, output_dim,
+                        bias_init=bias_init,
+                        weight_init=weight_init)
+            self.prep_data()
+            self.train(batch_size=batch_size, epochs=epochs)
+            self.save_core_model()
+        else:
+            # Recover previous state from file system
+            self.load_core_model()
+            if output_dim and output_dim != self.output_dim:
+                raise ValueError(
+                    f"specified output_dim ({output_dim}) "
+                    f"does not match loaded model's output_dim ({self.output_dim})"
+                )
+        self.gen_test_data()
+        self.populate_converters()
+
+
+# TODO: consider refactoring this since it could be used by other functions
+def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
+                                  train_samples_per_class=5120,
+                                  test_samples_per_class=1024):
+    z = np.linspace(0, 2*np.pi, dim)
+
+    # generate data and class labels
+    x_train, x_test, y_train, y_test = [], [], [], []
+    for j in range(classes):
+        mean = np.sin(z) + 10*j/classes
+        cov = 10 * np.diag(.5*np.cos(j * z) + 2) / (classes-1)
+        x_train.append(
+            np.random.multivariate_normal(
+                mean, cov, size=train_samples_per_class))
+        x_test.append(
+            np.random.multivariate_normal(
+                mean, cov, size=test_samples_per_class))
+        y_train.append(j * np.ones((train_samples_per_class, 1)))
+        y_test.append(j * np.ones((test_samples_per_class, 1)))
+
+    # stack arrays
+    x_train = np.vstack(x_train)
+    y_train = np.vstack(y_train)
+    x_test = np.vstack(x_test)
+    y_test = np.vstack(y_test)
+
+    # normalize
+    mean = np.mean(x_train, axis=0)
+    std = np.std(x_train, axis=0)
+    x_train = (x_train - mean) / std
+    x_test = (x_test - mean) / std
+
+    # expand dimensions for TFLite compatibility
+    def expand_array(arr):
+        return np.reshape(arr, arr.shape + (1, 1))
+    x_train = expand_array(x_train)
+    x_test = expand_array(x_test)
+
+    return {'x_train': np.float32(x_train), 'y_train': np.float32(y_train),
+            'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
 
 
 class OpTestInitializers(Enum):
@@ -98,88 +226,6 @@ def input_initializers(init, *args, batch=100, subset_len=10):
     return subset, data
 
 
-# TODO: this should be part of parse_args in the appropriate class
-def strides_pool_arg_handler(args):
-    parameters = {
-        "strides": (DEFAULT_STRIDE_HEIGHT, DEFAULT_STRIDE_WIDTH),
-        "pool_size": (DEFAULT_POOL_HEIGHT, DEFAULT_POOL_WIDTH),
-    }
-    arguments = {k: vars(args)[k] for k in parameters if k in vars(args)}
-    for k in arguments:
-        params = arguments[k]
-        if len(params) > 2:
-            raise argparse.ArgumentTypeError(
-                f"The {k} argument must be at most 2 numbers.")
-        else:
-            arguments[k] = tuple(params) if len(params) == 2 else (params[0],) * 2
-
-    return arguments
-
-
-# TODO: this should be part of parse_args in the appropriate class
-def initializer_args_handler(args):
-    def check_unif_init_params(param_unif):
-        if param_unif:
-            if len(param_unif) != 2:
-                raise argparse.ArgumentTypeError(
-                    "The 'unif' initialization argument requires "
-                    "2 numbers indicating a range."
-                )
-            if param_unif[0] > param_unif[1]:
-                raise argparse.ArgumentTypeError(
-                    "The 'unif' initialization argument requires "
-                    "the first value to be lesser than the second."
-                )
-
-    def check_const_init_params(const_param):
-        if len(const_param) > 1:
-            raise argparse.ArgumentTypeError(
-                "The const argument must consist of 1 float number or "
-                "none, in wich case, the default value will be used."
-            )
-
-    utils.set_all_seeds(args.seed)  # NOTE: All seeds initialized here
-    initializers = {
-        "alpha_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
-        "weight_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
-        "bias_init": DEFAULT_CONST_INIT,
-        "input_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
-    }
-
-    init_args = {k: vars(args)[k] for k in initializers if k in vars(args)}
-    for k, arg_params in init_args.items():
-        try:
-            init_type = OpTestInitializers(arg_params[0].lower())
-        except (IndexError, ValueError):
-            raise argparse.ArgumentTypeError(
-                f"A type of initializer for {k} must be selected from "
-                f"{[v.value for v in OpTestInitializers]}."
-            )
-
-        try:
-            params = [float(n) for n in arg_params[1:]]
-        except ValueError:
-            raise argparse.ArgumentTypeError(
-                f"Invalid numeric parameter(s) {arg_params[1:]} for "
-                f"{k} {init_type.value} initialization"
-            )
-
-        if init_type is OpTestInitializers.UNIF:
-            check_unif_init_params(params)
-            initializers[k] = tf.random_uniform_initializer(
-                *(params if params else _DEFAULT_UNIF_INIT), args.seed)
-        elif init_type is OpTestInitializers.CONST:
-            check_const_init_params(params)
-            initializers[k] = tf.constant_initializer(
-                params[0] if params else _DEFAULT_CONST_INIT)
-
-    for k in initializers:
-        logging.debug(
-            f"{k} configuration: "
-            f"{type(initializers[k]).__name__} {initializers[k].get_config()}"
-        )
-
-    return initializers
 
 
 class OpTestDefaultParser(argparse.ArgumentParser):
@@ -210,9 +256,73 @@ class OpTestParserInputInitializerMixin():
                  f"{_DEFAULT_UNIF_INIT[0]} {_DEFAULT_UNIF_INIT[1]})",
         )
 
+    def initializer_args_handler(self, args):
+        def check_unif_init_params(param_unif):
+            if param_unif:
+                if len(param_unif) != 2:
+                    raise argparse.ArgumentTypeError(
+                        "The 'unif' initialization argument requires "
+                        "2 numbers indicating a range."
+                    )
+                if param_unif[0] > param_unif[1]:
+                    raise argparse.ArgumentTypeError(
+                        "The 'unif' initialization argument requires "
+                        "the first value to be lesser than the second."
+                    )
+
+        def check_const_init_params(const_param):
+            if len(const_param) > 1:
+                raise argparse.ArgumentTypeError(
+                    "The const argument must consist of 1 float number or "
+                    "none, in wich case, the default value will be used."
+                )
+
+        utils.set_all_seeds(args.seed)  # NOTE: All seeds initialized here
+        initializers = {
+            "alpha_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
+            "weight_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
+            "bias_init": DEFAULT_CONST_INIT,
+            "input_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
+        }
+
+        init_args = {k: vars(args)[k] for k in initializers if k in vars(args)}
+        for k, arg_params in init_args.items():
+            try:
+                init_type = OpTestInitializers(arg_params[0].lower())
+            except (IndexError, ValueError):
+                raise argparse.ArgumentTypeError(
+                    f"A type of initializer for {k} must be selected from "
+                    f"{[v.value for v in OpTestInitializers]}."
+                )
+
+            try:
+                params = [float(n) for n in arg_params[1:]]
+            except ValueError:
+                raise argparse.ArgumentTypeError(
+                    f"Invalid numeric parameter(s) {arg_params[1:]} for "
+                    f"{k} {init_type.value} initialization"
+                )
+
+            if init_type is OpTestInitializers.UNIF:
+                check_unif_init_params(params)
+                initializers[k] = tf.random_uniform_initializer(
+                    *(params if params else _DEFAULT_UNIF_INIT), args.seed)
+            elif init_type is OpTestInitializers.CONST:
+                check_const_init_params(params)
+                initializers[k] = tf.constant_initializer(
+                    params[0] if params else _DEFAULT_CONST_INIT)
+
+        for k in initializers:
+            logging.debug(
+                f"{k} configuration: "
+                f"{type(initializers[k]).__name__} {initializers[k].get_config()}"
+            )
+
+        return initializers
+
 
 class OpTestParserInitializerMixin(OpTestParserInputInitializerMixin):
-    def add_initializers(self):
+    def add_initializers(self, seed=False):
         super().add_initializers()
         self.add_argument(
             "--bias_init", nargs="*", default=argparse.SUPPRESS,
@@ -228,9 +338,8 @@ class OpTestParserInitializerMixin(OpTestParserInputInitializerMixin):
                  f"{_DEFAULT_UNIF_INIT[0]} {_DEFAULT_UNIF_INIT[1]})",
         )
 
-
 #  for models with 2D dimensionality and padding
-class OpTestDimParser(OpTestDefaultParser, OpTestParserInputInitializerMixin):
+class OpTestImgParser(OpTestDefaultParser, OpTestParserInputInitializerMixin):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
@@ -250,11 +359,9 @@ class OpTestDimParser(OpTestDefaultParser, OpTestParserInputInitializerMixin):
                 "-pd", "--padding", type=str, default=defaults["padding"],
                 help="Padding mode",
             )
-        else:
-            self.add_initializers()
+        self.add_initializers()
 
-
-class OpTestPoolParser(OpTestDimParser, OpTestParserInputInitializerMixin):
+class OpTestPoolParser(OpTestImgParser, OpTestParserInputInitializerMixin):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
@@ -265,10 +372,28 @@ class OpTestPoolParser(OpTestDimParser, OpTestParserInputInitializerMixin):
             "-po", "--pool_size", nargs="+", type=int, default=argparse.SUPPRESS,
             help=f"Pool size:, vertical first (default: {defaults['pool_size']})",
         )
-        self.add_initializers()
+        #self.add_initializers()
+
+    def strides_pool_arg_handler(self, args):
+        parameters = {
+            "strides": (DEFAULT_STRIDE_HEIGHT, DEFAULT_STRIDE_WIDTH),
+            "pool_size": (DEFAULT_POOL_HEIGHT, DEFAULT_POOL_WIDTH),
+        }
+        arguments = {k: vars(args)[k] for k in parameters if k in vars(args)}
+        for k in arguments:
+            params = arguments[k]
+            if len(params) > 2:
+                raise argparse.ArgumentTypeError(
+                    f"The {k} argument must be at most 2 numbers.")
+            else:
+                arguments[k] = tuple(params) if len(params) == 2 else (params[0],) * 2
+
+        return arguments
 
 
-class OpTestConvParser(OpTestParserInitializerMixin, OpTestDimParser):
+
+
+class OpTestConvParser(OpTestParserInitializerMixin, OpTestImgParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
@@ -283,7 +408,6 @@ class OpTestConvParser(OpTestParserInitializerMixin, OpTestDimParser):
             "-kw", "--kernel_width", type=int, default=defaults["kernel_width"],
             help="Width of kernel",
         )
-        self.add_initializers()
 
 
 class OpTestTrainableParser(OpTestDefaultParser):
@@ -321,44 +445,5 @@ class OpTestFCParser(OpTestTrainableParser, OpTestParserInitializerMixin):
         self.add_initializers()
 
 
-# TODO: this should be part of DefaultOpTestFCModel as run
-def run_main_fc(model, *, train_new_model, input_dim, output_dim, bias_init,
-                weight_init, batch_size, epochs):
-    if train_new_model:
-        model.build(input_dim, output_dim,
-                    bias_init=bias_init,
-                    weight_init=weight_init)
-        model.prep_data()
-        model.train(batch_size=batch_size, epochs=epochs)
-        model.save_core_model()
-    else:
-        # Recover previous state from file system
-        model.load_core_model()
-        if output_dim and output_dim != model.output_dim:
-            raise ValueError(
-                f"specified output_dim ({output_dim}) "
-                f"does not match loaded model's output_dim ({model.output_dim})"
-            )
-    model.gen_test_data()
-    model.populate_converters()
 
 
-# TODO: this should be part of DefaultOpTestConvModel as run
-def run_main_conv(model, *, num_threads, input_channels, output_channels,
-                  height, width, K_h, K_w, padding, bias_init, weight_init,
-                  input_init):
-    model.build(K_h, K_w, height, width, input_channels, output_channels,
-                padding=padding,
-                bias_init=bias_init,
-                weight_init=weight_init,
-                input_init=input_init)
-
-    # TODO: this debug logging should probably live in model.build
-    # for layer in model.core_model.layers:
-    #     logging.debug(f"WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}")
-    #     logging.debug(f"BIAS DATA SAMPLE:\n{layer.get_weights()[1]}")
-
-    model.gen_test_data()
-    model.save_core_model()
-    model.populate_converters(
-        xcore_num_threads=num_threads if num_threads else None)

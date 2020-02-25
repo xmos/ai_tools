@@ -319,6 +319,10 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         shift_post = 14 * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
         return np.stack([shift_pre, scale, shift_post], axis=1)
 
+    @property
+    def _bss_arr(self):
+        return np.concatenate([self._bias_arr, self._shift_scale_arr], axis=1)
+
     def mutate_biases(self, op):
         # NOTE: by default no bias layout rearrangement is done for this op
         with self.using(op):
@@ -358,7 +362,7 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
         super().mutate_biases(op)
         with self.using(op):
             # calculate and save the bias/shift/scale tensor
-            bss = np.concatenate([self._bias_arr, self._shift_scale_arr], axis=1)
+            bss = self._bss_arr
             self._biases.buffer.data = bss
             self._biases.shape = bss.shape
             self._biases.type = TensorType.INT16
@@ -447,8 +451,7 @@ class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
         return new_op
 
 
-# TODO: write (at least regression) tests for this class
-class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
+class ReplaceConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options
@@ -469,10 +472,61 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
                 if self._dilation != (1, 1):
                     logging.warning(f"Found non-supported dilation: {self._dilation}")
                 else:
-                    return (self._strides == (1, 1)
-                            and self._weights.shape[1] % 2 == 1  # kernel height is odd
-                            and self._weights.shape[2] % 2 == 1  # kernel width is odd
-                            and self._weights.shape[0] % ACC_PERIOD == 0)  # deepout
+                    return True
+
+        return False
+
+
+class Replace1x1Conv2dPass(ReplaceConv2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.CONV_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_conv2d_1x1)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
+                        and self._weights.shape[1] == 1
+                        and self._weights.shape[2] == 1
+                        and self._weights.shape[3] % WORD_SIZE == 0)  # Cin divisible by 4
+
+        return False
+
+    def mutate_biases(self, op):
+        # TODO: this is the same as in ReplaceFullyConnectedPass, refactor
+        super().mutate_biases(op)
+        with self.using(op):
+            # calculate and save the bias/shift/scale tensor
+            bss = self._bss_arr
+            self._biases.buffer.data = bss
+            self._biases.shape = bss.shape
+            self._biases.type = TensorType.INT16
+
+            # rename bias tensor and remove quantization info to save space
+            self._biases.name = f"{op.name}/bias_shift_scale"
+            self._biases.quantization = None
+
+    def mutate_weights(self, op):
+        super().mutate_weights(op)
+        with self.using(op):
+            # NOTE: This is not strictly necessary since height == width == 1
+            old_shape = self._weights.shape
+            self._weights.shape = [old_shape[0], old_shape[3]]
+
+
+# TODO: write (at least regression) tests for this class
+class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (self._strides == (1, 1)
+                        and self._weights.shape[1] % 2 == 1  # kernel height is odd
+                        and self._weights.shape[2] % 2 == 1  # kernel width is odd
+                        and self._weights.shape[0] % ACC_PERIOD == 0)  # deepout
 
         return False
 

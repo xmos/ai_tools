@@ -150,6 +150,7 @@ class XCOREOpCodes(ValidOpCodes, enum.Enum):
     XC_requantize_16_to_8 = "XC_requantize_16_to_8"
     XC_conv2d_shallowin_deepout_relu = "XC_conv2d_shallowin_deepout_relu"
     XC_conv2d_deepin_deepout_relu = "XC_conv2d_deepin_deepout_relu"
+    XC_conv2d_1x1 = "XC_conv2d_1x1"
 
 
 class OperatorCode():

@@ -72,13 +72,11 @@ def build_argmax(*, input_shape, input_type):
         'input', type_=input_type, shape=input_shape, isinput=True)
     tout = subgraph.create_tensor(
         'output', TensorType.INT32, tin.shape, isoutput=True)
-    op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.ARG_MAX),
-                                  inputs=[tin], outputs=[tout])
-
     dim_tensor = subgraph.create_tensor(
-        f"{op.name}/axis", TensorType.INT32, shape=[])
-    op.inputs.append(dim_tensor)
+        "axis", TensorType.INT32, shape=[])
     dim_tensor.buffer.data = numpy.int32([1])
+    subgraph.create_operator(OperatorCode(BuiltinOpCodes.ARG_MAX),
+                             inputs=[tin, dim_tensor], outputs=[tout])
 
     return model
 

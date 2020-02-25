@@ -25,6 +25,7 @@ import tempfile
 
 from tflite2xcore.serialization.flatbuffers_io import FlexbufferParser
 from tflite2xcore import read_flatbuffer, create_dict_from_model
+from tflite2xcore.operator_codes import XCOREOpCodes
 
 # A CSS description for making the visualizer
 _CSS = """<head>
@@ -205,6 +206,18 @@ class OpCodeMapper():
             for d in data["operator_codes"]
         ]
 
+        self.color = []
+        for d in data["operator_codes"]:
+            if d["builtin_code"] == "CUSTOM":
+                try:
+                    XCOREOpCodes(d["custom_code"])
+                    color = "#00a000"  # xcore optimized custom opcode
+                except ValueError:
+                    color = "#a00000"  # unknown custom opcode
+            else:
+                color = "#000000"
+            self.color.append(color)
+
     def __call__(self, opcode_idx, op_idx=None):
         s = self.opcode_idx_to_name[opcode_idx] if opcode_idx < len(self.opcode_idx_to_name) else "UNKNOWN"
         return f"{s} [{opcode_idx}]" if op_idx is None else f"({op_idx}) {s}"
@@ -294,7 +307,7 @@ def GenerateGraph(subgraph_idx, g, opcode_mapper):
             'text': o_node_text,
             'width': NodeWidth(o_node_text),
             'height': NodeHeight(o_node_text),
-            'color': "#00a000" if 'XC_' in o_node_text else "#000000"  # TODO: do this for all custom ops, not by text
+            'color': opcode_mapper.color[op["opcode_index"]]
         })
 
         # coloring intermediate tensors

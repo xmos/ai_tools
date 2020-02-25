@@ -77,6 +77,7 @@ def test_match(simple_model, trf_pass):
 def test_mutate(simple_model, trf_pass):
     subgraph = simple_model.subgraphs[0]
     trf_pass.mutate(subgraph.operators[1])
+    subgraph.sanity_check()
 
     tin = subgraph.get_tensor('input')
     tout = subgraph.get_tensor('pre_output')
@@ -90,6 +91,7 @@ def test_mutate(simple_model, trf_pass):
 
 def test_run_simple(simple_model, trf_pass):
     trf_pass.run(simple_model)
+    simple_model.sanity_check()
     subgraph = simple_model.subgraphs[0]
 
     tin = subgraph.get_tensor('input')
@@ -104,6 +106,7 @@ def test_run_simple(simple_model, trf_pass):
 
 def test_run_dual_output(dual_output_model, trf_pass):
     trf_pass.run(dual_output_model)
+    dual_output_model.sanity_check()
     subgraph = dual_output_model.subgraphs[0]
 
     tin = subgraph.get_tensor('input')

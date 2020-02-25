@@ -7,19 +7,42 @@ from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
 
 
-def build_abs(*, input_shape, tensor_type):
+def build_elementwise_op(builtin_opcode, *, input_shape, tensor_type):
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
     input_shape = [1] + list(input_shape)
+    quantization = {'scale': [0.35], 'zero_point': [0]}
     tin = subgraph.create_tensor(
-        'input', type_=tensor_type, shape=input_shape, isinput=True)
+        'input', tensor_type, shape=input_shape, isinput=True,
+        quantization=deepcopy(quantization))
     tout = subgraph.create_tensor(
-        'output', tin.type, tin.shape, isoutput=True)
-    subgraph.create_operator(OperatorCode(BuiltinOpCodes.ABS),
+        'output', tin.type, shape=tin.shape, isoutput=True,
+        quantization=deepcopy(quantization))
+    subgraph.create_operator(OperatorCode(builtin_opcode),
                              inputs=[tin], outputs=[tout])
 
     return model
+
+
+def build_relu(**kwargs):
+    return build_elementwise_op(BuiltinOpCodes.RELU, **kwargs)
+
+
+def build_relu6(**kwargs):
+    return build_elementwise_op(BuiltinOpCodes.RELU6, **kwargs)
+
+
+def build_tanh(**kwargs):
+    return build_elementwise_op(BuiltinOpCodes.TANH, **kwargs)
+
+
+def build_logistic(**kwargs):
+    return build_elementwise_op(BuiltinOpCodes.LOGISTIC, **kwargs)
+
+
+def build_abs(**kwargs):
+    return build_elementwise_op(BuiltinOpCodes.ABS, **kwargs)
 
 
 def build_mean(*, input_shape, reduction_dims):
@@ -49,13 +72,11 @@ def build_argmax(*, input_shape, input_type):
         'input', type_=input_type, shape=input_shape, isinput=True)
     tout = subgraph.create_tensor(
         'output', TensorType.INT32, tin.shape, isoutput=True)
-    op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.ARG_MAX),
-                                  inputs=[tin], outputs=[tout])
-
     dim_tensor = subgraph.create_tensor(
-        f"{op.name}/axis", TensorType.INT32, shape=[])
-    op.inputs.append(dim_tensor)
+        "axis", TensorType.INT32, shape=[])
     dim_tensor.buffer.data = numpy.int32([1])
+    subgraph.create_operator(OperatorCode(BuiltinOpCodes.ARG_MAX),
+                             inputs=[tin, dim_tensor], outputs=[tout])
 
     return model
 
@@ -130,7 +151,7 @@ def build_intermediate_fc(*, outputs, input_size):
     return model
 
 
-def build_logistic(*, outputs, input_size):
+def build_softmax(*, outputs, input_size):
     model = build_intermediate_fc(outputs=outputs, input_size=input_size)
     subgraph = model.subgraphs[0]
     tmid = subgraph.get_tensor('intermediate')

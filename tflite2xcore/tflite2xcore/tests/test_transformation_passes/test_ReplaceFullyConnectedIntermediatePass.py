@@ -7,7 +7,7 @@ from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.transformation_passes import ReplaceFullyConnectedIntermediatePass
 
 from .model_builders import (
-    build_fc, build_mlp, build_logistic
+    build_fc, build_mlp, build_softmax
 )
 
 
@@ -53,7 +53,7 @@ def mlp(outputs, hidden_nodes, input_size):
 
 @pytest.fixture()
 def logistic(outputs, input_size):
-    return build_logistic(outputs=outputs, input_size=input_size)
+    return build_softmax(outputs=outputs, input_size=input_size)
 
 
 @pytest.fixture()

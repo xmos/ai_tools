@@ -8,17 +8,14 @@ from tflite2xcore.transformation_passes import ReplaceAveragePool2DPass
 from .model_builders import build_avgpool
 
 
-from .test_ReplaceAveragePool2D2x2Pass import (
-    input_channels,
-    NON_MATCHING_INPUT_CHANNELS,
-)
-
+MATCHING_INPUT_CHANNELS = [4, 8, 12, 20, 32, 36]
 MATCHING_INPUT_HEIGHT = [3, 4, 11]
 MATCHING_INPUT_WIDTH = MATCHING_INPUT_HEIGHT
 MATCHING_POOL_SIZE = list(itertools.product([1, 2, 3], [1, 2, 3]))
 MATCHING_STRIDES = list(itertools.product([1, 2], [1, 2]))
 MATCHING_PADDING = 'VALID'
 
+NON_MATCHING_INPUT_CHANNELS = [1, 2, 3, 5, 31]
 NON_MATCHING_OPTIONS = ('option', 'value'), [
     ('fused_activation_function', 'RELU'),
     ('fused_activation_function', 'RELU6'),
@@ -38,6 +35,11 @@ def input_height(request):
 
 @pytest.fixture(params=MATCHING_INPUT_WIDTH)
 def input_width(request):
+    return request.param
+
+
+@pytest.fixture(params=MATCHING_INPUT_CHANNELS)
+def input_channels(request):
     return request.param
 
 

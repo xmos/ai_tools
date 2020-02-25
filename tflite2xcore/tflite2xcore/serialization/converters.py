@@ -68,7 +68,7 @@ def create_dict_from_subgraph(subgraph):
 
 
 def create_dict_from_buffer(buffer):
-    return {'data': buffer.data} if buffer.data else {}
+    return {'data': buffer.data} if buffer.data is not None else {}
 
 
 def create_dict_from_metadata(metadata):

@@ -52,17 +52,6 @@ def apply_interpreter_to_examples(interpreter, examples, *, show_progress_step=N
     return outputs
 
 
-def generate_dummy_data(height, width, channels, *, batch=100):
-    data = np.float32(
-        np.random.uniform(0, 1, size=(batch, height, width, channels)))
-    subset = np.concatenate(
-        [np.zeros((1, height, width, channels), dtype=np.float32),
-         np.ones((1, height, width, channels), dtype=np.float32),
-         data[:8, :, :, :]],  # pylint: disable=unsubscriptable-object
-        axis=0)
-    return subset, data
-
-
 def shuffle(arr1, arr2):
     assert len(arr1) == len(arr2), 'Arrays must be same length'
     ind_list = [i for i in range(len(arr1))]
@@ -186,12 +175,12 @@ def ecc(nsizex=29, nsizey=29, ch=1):
 
 
 # Prepare data function for MNIST dataset
-def prepare_MNIST(use_aug=False, simard=False):
+def prepare_MNIST(use_aug=False, simard=False, padding=2):
     if simard:
         x_train, x_test, x_val, y_train, y_test, y_val = ecc()
     else:
         x_train, x_test, x_val, y_train, y_test, y_val = get_mnist(
-            padding=2, categorical=False, flatten=False, y_float=True)
+            padding=padding, categorical=False, flatten=False, y_float=True)
     if use_aug:
         if simard:
             x_train, y_train = expand_dataset(
@@ -202,11 +191,11 @@ def prepare_MNIST(use_aug=False, simard=False):
                 x_train, y_train, 2, sigma=4.0, alpha=16.0)
     x_train, y_train = shuffle(x_train, y_train)
 
-    return {'x_train': np.float32(x_train[:3008]),
-            'x_test': np.float32(x_test[:500]),
+    return {'x_train': np.float32(x_train[:4096]),
+            'x_test': np.float32(x_test[:1024]),
             'x_val': np.float32(x_val[:100]),
-            'y_train': np.float32(y_train[:3008]),
-            'y_test': np.float32(y_test[:500]),
+            'y_train': np.float32(y_train[:4096]),
+            'y_test': np.float32(y_test[:1024]),
             'y_val': np.float32(y_val[:100])}
 
 
@@ -324,7 +313,7 @@ def plot_history(history, title='metrics', zoom=1, save=False, path=Path('./hist
     plt.legend(['train', 'test'], loc='upper left')
 
     # Save the png
-    fig.savefig(path)  # TODO: use pathlib
+    fig.savefig(path)
 
 
 # Augmentation

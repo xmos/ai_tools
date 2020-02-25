@@ -42,6 +42,7 @@ def _test_mutate(trf_pass, model):
 
     # run mutating pass
     trf_pass.run(model)
+    model.sanity_check()
     op = subgraph.operators[-1]
     assert op.operator_code.code == XCOREOpCodes.XC_lookup_8
 

@@ -163,6 +163,17 @@ class Operator():
         lines.append(f'{INDENT * 2}{self.custom_options}')
         return '\n'.join(lines)
 
+    def sanity_check(self):
+        assert self in self.subgraph.operators
+        # check for duplicates
+        assert len(self.inputs) == len(set(self.inputs))
+        assert len(self.outputs) == len(set(self.outputs))
+        # check double links with inputs/outputs
+        for tensor in self.inputs:
+            assert self in tensor.consumers
+        for tensor in self.outputs:
+            assert self in tensor.producers
+
 
 class Tensor():
     def __init__(self, subgraph, name, type_, shape,
@@ -207,6 +218,17 @@ class Tensor():
             lines.append(f'{INDENT}consumers')
             lines.extend([f'{INDENT * 2}{consumer}' for consumer in self.consumers])
         return '\n'.join(lines)
+
+    def sanity_check(self):
+        assert self in self.subgraph.tensors
+        # check for duplicates
+        assert len(self.consumers) == len(set(self.consumers))
+        assert len(self.producers) == len(set(self.producers))
+        # check double links with consumers/producers
+        for op in self.producers:
+            assert self in op.outputs
+        for op in self.consumers:
+            assert self in op.inputs
 
     @property
     def sanitized_name(self):
@@ -267,8 +289,7 @@ class Subgraph():
             if name in [existing_tensor.name, existing_tensor.sanitized_name]:
                 raise Exception(f'Tensor name {name} already in use')
 
-        # tensor = Tensor(self, name, type_, shape, buffer, quantization, producers, consumers)
-        tensor = Tensor(self, name, type_, shape, buffer, quantization)
+        tensor = Tensor(self, name, type_, shape, buffer, quantization, producers, consumers)
         self.tensors.append(tensor)
         if isinput:
             self.inputs.append(tensor)
@@ -283,6 +304,16 @@ class Subgraph():
             self.inputs.remove(tensor)
         if tensor in self.outputs:
             self.outputs.remove(tensor)
+        for op in tensor.consumers:
+            try:
+                op.inputs.remove(tensor)
+            except ValueError:
+                pass
+        for op in tensor.producers:
+            try:
+                op.outputs.remove(tensor)
+            except ValueError:
+                pass
         tensor.consumers, tensor.producers = [], []
         tensor.subgraph = tensor.buffer = None
 
@@ -311,7 +342,18 @@ class Subgraph():
     def remove_operator(self, op):
         assert op in self.operators
         self.operators.remove(op)
-        op.inputs, op.outputs, op.subgraph = [], [], None
+        for t in op.inputs:
+            try:
+                t.consumers.remove(op)
+            except ValueError:
+                pass
+        for t in op.outputs:
+            try:
+                t.producers.remove(op)
+            except ValueError:
+                pass
+        op.inputs, op.outputs = [], []
+        op.subgraph = None
 
     def insert_operator(self, ref_op, new_op, after=False):
         """NOTE: this does not rewire inputs/outputs"""
@@ -343,6 +385,19 @@ class Subgraph():
             if t.name == name:
                 return t
         raise ValueError(f"Tensor with name {name} not found!")
+
+    def sanity_check(self):
+        assert self in self.model.subgraphs
+        # check for duplicates
+        assert len(self.inputs) == len(set(self.inputs))
+        assert len(self.outputs) == len(set(self.outputs))
+        assert len(self.operators) == len(set(self.operators))
+        assert len(self.tensors) == len(set(self.tensors))
+        # the subgraph is sane as long as all its objects are sane
+        for op in self.operators:
+            op.sanity_check()
+        for tensor in self.tensors:
+            tensor.sanity_check()
 
 
 class Metadata():
@@ -460,3 +515,11 @@ class XCOREModel():
                 print(output.pprint())
                 if tensor_values and len(output.buffer):
                     print(f'   values={output.numpy}')
+
+    def sanity_check(self):
+        # check for duplicates
+        assert len(self.subgraphs) == len(set(self.subgraphs))
+        # the model is sane as long as all its subgraphs are sane
+        # TODO: implement for metadata and buffers
+        for subgraph in self.subgraphs:
+            subgraph.sanity_check()

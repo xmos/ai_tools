@@ -36,7 +36,6 @@ class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
     def mutate(self, op):
         subgraph = op.subgraph
         subgraph.inputs.append(op.outputs[0])
-        op.outputs[0].producers.remove(op)
         subgraph.remove_tensor(op.inputs[0])
         subgraph.remove_operator(op)
 
@@ -58,7 +57,6 @@ class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
     def mutate(self, op):
         subgraph = op.subgraph
         subgraph.outputs.append(op.inputs[0])
-        op.inputs[0].consumers.remove(op)
         subgraph.remove_tensor(op.outputs[0])
         subgraph.remove_operator(op)
 
@@ -110,7 +108,6 @@ class RemoveSoftmaxOutputPass(OperatorMatchingPass):
     def mutate(self, op):
         subgraph = op.subgraph
         subgraph.outputs.append(op.inputs[0])
-        op.inputs[0].consumers.remove(op)
         subgraph.remove_tensor(op.outputs[0])
         subgraph.remove_operator(op)
 
@@ -135,7 +132,8 @@ class AddArgMax16OutputPass(OutputTensorMatchingPass):
 
         # add tensor with axis info
         dim_tensor = subgraph.create_tensor(
-            f"{op.name}/axis", TensorType.INT32, shape=[])
+            f"{op.name}/axis", TensorType.INT32, shape=[],
+            consumers=[op])
         op.inputs.append(dim_tensor)
         dim_tensor.buffer.data = np.int32([1])
 
@@ -835,7 +833,7 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
 
         with self.using(new_op):
             # replace reduction_indices tensor with bias_scale_shift
-            subgraph.remove_tensor(new_op.inputs[1])
+            old_tensor = new_op.inputs[1]
             new_op.inputs[1] = subgraph.create_tensor(
                 f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7],
                 consumers=[new_op])
@@ -843,6 +841,7 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
                 b''.join(p.tostring() for p in self._bias_scale_shift),
                 dtype=np.int8
             )
+            subgraph.remove_tensor(old_tensor)
 
         return new_op
 

@@ -218,10 +218,9 @@ def run_generate(tests, jobs):
         if os.path.exists(directories.DATA_DIR):
             shutil.rmtree(directories.DATA_DIR)
 
-        # now generate all the test cases
+    # now generate all the test cases
     pool = multiprocessing.Pool(processes=jobs)
     func = partial(generate_test_case, args.dry_run)
-    # pool.map(generate_test_case, test_cases)
     pool.map(func, test_cases)
 
 if __name__ == "__main__":

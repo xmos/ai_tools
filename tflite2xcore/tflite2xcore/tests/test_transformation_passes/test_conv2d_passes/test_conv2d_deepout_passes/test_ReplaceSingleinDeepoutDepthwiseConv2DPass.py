@@ -5,7 +5,7 @@ import pytest
 from tflite2xcore.transformation_passes import ReplaceSingleinDeepoutDepthwiseConv2DPass
 
 from ...model_builders import build_depthwise_conv2d as build_model
-from .conftest import (
+from ..conftest import (
     _test_non_matching_stride_w,
     _test_non_matching_stride_h,
     _test_non_matching_output_channels,
@@ -51,8 +51,9 @@ def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
 
 
 @pytest.fixture()
-def model(weight_shape, input_size, padding):
-    return build_model(weight_shape=weight_shape, input_size=input_size, padding=padding)
+def model(weight_shape, input_size, padding, strides):
+    return build_model(weight_shape=weight_shape, input_size=input_size,
+                       padding=padding, strides=strides)
 
 
 #  ----------------------------------------------------------------------------
@@ -72,34 +73,34 @@ def test_non_matching_stride_h(trf_pass, model, non_matching_stride_h):
 
 
 def test_non_matching_output_channels(trf_pass,
-                                      weight_shape, input_size, padding,
+                                      weight_shape, input_size, padding, strides,
                                       non_matching_output_channels):
     _test_non_matching_output_channels(trf_pass, build_model,
-                                       weight_shape, input_size, padding,
+                                       weight_shape, input_size, padding, strides,
                                        non_matching_output_channels)
 
 
 def test_non_matching_kernel_height(trf_pass,
-                                    weight_shape, input_size, padding,
+                                    weight_shape, input_size, padding, strides,
                                     non_matching_kernel_height):
     _test_non_matching_kernel_height(trf_pass, build_model,
-                                     weight_shape, input_size, padding,
+                                     weight_shape, input_size, padding, strides,
                                      non_matching_kernel_height)
 
 
 def test_non_matching_kernel_width(trf_pass,
-                                   weight_shape, input_size, padding,
+                                   weight_shape, input_size, padding, strides,
                                    non_matching_kernel_width):
     _test_non_matching_kernel_width(trf_pass, build_model,
-                                    weight_shape, input_size, padding,
+                                    weight_shape, input_size, padding, strides,
                                     non_matching_kernel_width)
 
 
 def test_non_matching_input_channels(trf_pass,
-                                     weight_shape, input_size, padding,
+                                     weight_shape, input_size, padding, strides,
                                      non_matching_input_channels):
     _test_non_matching_input_channels(trf_pass, build_model,
-                                      weight_shape, input_size, padding,
+                                      weight_shape, input_size, padding, strides,
                                       non_matching_input_channels)
 
 

@@ -2,13 +2,106 @@
 
 import pytest
 
+from tflite2xcore.xcore_model import TensorType
 
 
-# helpers
+#  ----------------------------------------------------------------------------
+#                              PARAMETER VALUES
+#  ----------------------------------------------------------------------------
+
+MATCHING_INPUT_HEIGHT = [9, 20]
+MATCHING_INPUT_WIDTH = [7, 17]
+MATCHING_PADDING = ['SAME', 'VALID']
+
+NON_MATCHING_TENSORS = [
+    ('input', TensorType.INT16), ('input', TensorType.INT32),
+    ('weights', TensorType.INT16), ('weights', TensorType.INT32),
+    ('biases', TensorType.INT8), ('biases', TensorType.INT16),
+    ('output', TensorType.INT16), ('output', TensorType.INT32)
+]
 
 
+#  ----------------------------------------------------------------------------
+#                                   HELPERS
+#  ----------------------------------------------------------------------------
+
+def _test_non_matching_stride_w(trf_pass, model, non_matching_stride_w):
+    op = model.subgraphs[0].operators[0]
+    op.builtin_options['stride_w'] = non_matching_stride_w
+    assert not trf_pass.match(model.subgraphs[0].operators[-1])
 
 
-# fixtures
+def _test_non_matching_stride_h(trf_pass, model, non_matching_stride_h):
+    op = model.subgraphs[0].operators[0]
+    op.builtin_options['stride_h'] = non_matching_stride_h
+    assert not trf_pass.match(model.subgraphs[0].operators[-1])
 
 
+def _test_non_matching_dim(trf_pass, build_model,
+                           weight_shape, input_size, padding, strides):
+    model = build_model(weight_shape=weight_shape, input_size=input_size,
+                        padding=padding, strides=strides)
+    assert not trf_pass.match(model.subgraphs[0].operators[-1])
+
+
+def _test_non_matching_output_channels(trf_pass, build_model,
+                                       weight_shape, input_size, padding, strides,
+                                       non_matching_output_channels):
+    weight_shape[0] = non_matching_output_channels
+    _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
+
+
+def _test_non_matching_kernel_height(trf_pass, build_model,
+                                     weight_shape, input_size, padding, strides,
+                                     non_matching_kernel_height):
+    weight_shape[1] = non_matching_kernel_height
+    _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
+
+
+def _test_non_matching_kernel_width(trf_pass, build_model,
+                                    weight_shape, input_size, padding, strides,
+                                    non_matching_kernel_width):
+    weight_shape[2] = non_matching_kernel_width
+    _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
+
+
+def _test_non_matching_input_channels(trf_pass, build_model,
+                                      weight_shape, input_size, padding, strides,
+                                      non_matching_input_channels):
+    weight_shape[3] = non_matching_input_channels
+    _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
+
+
+def _test_non_matching_types(trf_pass, model, non_matching_tensors):
+    subgraph = model.subgraphs[0]
+    subgraph.get_tensor(non_matching_tensors[0]).type = non_matching_tensors[1]
+    assert not trf_pass.match(subgraph.operators[-1])
+
+
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
+
+@pytest.fixture(params=MATCHING_INPUT_HEIGHT)
+def input_height(request):
+    return request.param
+
+
+@pytest.fixture(params=MATCHING_INPUT_WIDTH)
+def input_width(request):
+    return request.param
+
+
+@pytest.fixture()
+def input_size(input_height, input_width):
+    return [input_height, input_width]
+
+
+@pytest.fixture(params=MATCHING_PADDING)
+def padding(request):
+    return request.param
+
+
+@pytest.fixture(params=NON_MATCHING_TENSORS)
+def non_matching_tensors(request):
+    return request.param

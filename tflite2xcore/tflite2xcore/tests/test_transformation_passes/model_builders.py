@@ -4,7 +4,7 @@ import pytest
 import numpy
 from copy import deepcopy
 from tflite2xcore.xcore_model import XCOREModel, TensorType
-from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
 
 
 def build_elementwise_op(builtin_opcode, *, input_shape, tensor_type):
@@ -179,27 +179,42 @@ def build_mlp(*, outputs, hidden_nodes, input_size):
     return model
 
 
-def build_conv2d(*, weight_shape, input_size, padding):
+def build_conv2d(*, weight_shape, input_size, padding, strides):
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
-    input_shape = [1, input_size[0], input_size[1], weight_shape[-1]]
-    tin = subgraph.create_tensor('input', TensorType.INT8, shape=input_shape, isinput=True)
-    w = subgraph.create_tensor('weights', TensorType.INT8, shape=weight_shape)
-    b = subgraph.create_tensor('biases', TensorType.INT32, shape=weight_shape[:1])
+    height, width = input_size
+    C_out, K_h, K_w, C_in = weight_shape
+
+    input_shape = [1, height, width, C_in]
+    tin = subgraph.create_tensor(
+        'input', TensorType.INT8, shape=input_shape, isinput=True)
+    w = subgraph.create_tensor(
+        'weights', TensorType.INT8, shape=weight_shape)
+    b = subgraph.create_tensor(
+        'biases', TensorType.INT32, shape=weight_shape[:1])
+
+    if padding == 'SAME':
+        output_shape = [1, height, width, C_out]
+    elif padding == 'VALID':
+        output_shape = [1,
+                        int(numpy.ceil((height - K_h + 1) / strides[0])),
+                        int(numpy.ceil((width - K_w + 1) / strides[1])),
+                        C_out]
+
     tout = subgraph.create_tensor(
-        'output', tin.type, shape=input_shape[:-1] + weight_shape[:1], isoutput=True)
+        'output', tin.type, shape=output_shape, isoutput=True)
 
     op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.CONV_2D),
                                   inputs=[tin, w, b], outputs=[tout])
     op.builtin_options = {'padding': padding,
-                          'stride_h': 1, 'stride_w': 1,
+                          'stride_h': strides[0], 'stride_w': strides[1],
                           'dilation_w_factor': 1, 'dilation_h_factor': 1}
 
     return model
 
 
-def build_depthwise_conv2d(*, weight_shape, input_size, padding):
+def build_depthwise_conv2d(*, weight_shape, input_size, padding, strides=(1, 1)):
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
@@ -213,7 +228,35 @@ def build_depthwise_conv2d(*, weight_shape, input_size, padding):
     op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.DEPTHWISE_CONV_2D),
                                   inputs=[tin, w, b], outputs=[tout])
     op.builtin_options = {'padding': padding,
-                          'stride_h': 1, 'stride_w': 1,
+                          'stride_h': strides[0], 'stride_w': strides[1],
                           'dilation_w_factor': 1, 'dilation_h_factor': 1}
+
+    return model
+
+
+def build_DIDO(*, weight_shape, input_size, padding):
+    model = XCOREModel()
+    subgraph = model.create_subgraph()
+
+    height, width = input_size
+    C_out, K_h, K_w, C_in = weight_shape
+
+    input_shape = [1, height, width, C_in]
+    tin = subgraph.create_tensor('input', TensorType.INT8, shape=input_shape, isinput=True)
+    w = subgraph.create_tensor('weights', TensorType.INT8,
+                               shape=[C_out // 16, K_h, K_w, C_in // 32, 16, 32])
+    b = subgraph.create_tensor('biases', TensorType.INT16, shape=[C_out // 16, 2, 16])
+    s = subgraph.create_tensor('scales', TensorType.INT16, shape=deepcopy(b.shape))
+
+    if padding == 'SAME':
+        output_shape = [1, height, width, C_out]
+    elif padding == 'VALID':
+        output_shape = [1, height - K_h + 1, width - K_w + 1, C_out]
+    tout = subgraph.create_tensor('output', TensorType.INT8, shape=output_shape)
+
+    op = subgraph.create_operator(
+        OperatorCode(XCOREOpCodes.XC_conv2d_deepin_deepout_relu),
+        inputs=[tin, w, b, s], outputs=[tout])
+    op.add_custom_options(padding=padding, stride_h=1, stride_w=1)
 
     return model

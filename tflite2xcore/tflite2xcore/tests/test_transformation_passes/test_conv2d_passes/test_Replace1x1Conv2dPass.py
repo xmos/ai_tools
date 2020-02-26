@@ -3,11 +3,10 @@
 import pytest
 
 from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.transformation_passes import ReplaceDeepinDeepoutConv2DPass
+from tflite2xcore.transformation_passes import Replace1x1Conv2dPass
 
-from ...model_builders import build_conv2d as build_model
-from .conftest import MATCHING_KERNEL_HEIGHT, NON_MATCHING_KERNEL_HEIGHT
-from ..conftest import (
+from ..model_builders import build_conv2d as build_model
+from .conftest import (
     _test_non_matching_stride_w,
     _test_non_matching_stride_h,
     _test_non_matching_output_channels,
@@ -22,11 +21,17 @@ from ..conftest import (
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
+MATCHING_KERNEL_HEIGHT = [1]
 MATCHING_KERNEL_WIDTH = MATCHING_KERNEL_HEIGHT
-MATCHING_INPUT_CHANNELS = [32, 64]
+MATCHING_INPUT_CHANNELS = [4, 8, 16, 32]
+MATCHING_OUTPUT_CHANNELS = MATCHING_INPUT_CHANNELS
+MATCHING_STRIDE_W = [1, 2, 3]
+MATCHING_STRIDE_H = MATCHING_STRIDE_W
 
+NON_MATCHING_KERNEL_HEIGHT = [2, 3, 5]
 NON_MATCHING_KERNEL_WIDTH = NON_MATCHING_KERNEL_HEIGHT
-NON_MATCHING_INPUT_CHANNELS = [8, 16, 33, 48]
+NON_MATCHING_INPUT_CHANNELS = [3, 9, 15]
+NON_MATCHING_OUTPUT_CHANNELS = NON_MATCHING_INPUT_CHANNELS
 
 
 #  ----------------------------------------------------------------------------
@@ -35,7 +40,22 @@ NON_MATCHING_INPUT_CHANNELS = [8, 16, 33, 48]
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceDeepinDeepoutConv2DPass()
+    return Replace1x1Conv2dPass()
+
+
+@pytest.fixture(params=MATCHING_KERNEL_HEIGHT)
+def kernel_height(request):
+    return request.param
+
+
+@pytest.fixture(params=NON_MATCHING_KERNEL_HEIGHT)
+def non_matching_kernel_height(request):
+    return request.param
+
+
+@pytest.fixture(params=MATCHING_KERNEL_WIDTH)
+def kernel_width(request):
+    return request.param
 
 
 @pytest.fixture(params=NON_MATCHING_KERNEL_WIDTH)
@@ -53,15 +73,41 @@ def non_matching_input_channels(request):
     return request.param
 
 
+@pytest.fixture(params=MATCHING_OUTPUT_CHANNELS)
+def output_channels(request):
+    return request.param
+
+
+@pytest.fixture(params=NON_MATCHING_OUTPUT_CHANNELS)
+def non_matching_output_channels(request):
+    return request.param
+
+
 @pytest.fixture()
 def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
     return [output_channels, kernel_height, kernel_width, input_channels]
 
 
+@pytest.fixture(params=MATCHING_STRIDE_W)
+def stride_w(request):
+    return request.param
+
+
+@pytest.fixture(params=MATCHING_STRIDE_H)
+def stride_h(request):
+    return request.param
+
+
+@pytest.fixture()
+def strides(stride_h, stride_w):
+    return (stride_h, stride_w)
+
+
 @pytest.fixture()
 def model(weight_shape, input_size, padding, strides):
-    return build_model(weight_shape=weight_shape, input_size=input_size,
-                       padding=padding, strides=strides)
+    model = build_model(weight_shape=weight_shape, input_size=input_size,
+                        padding=padding, strides=strides)
+    return model
 
 
 #  ----------------------------------------------------------------------------
@@ -70,14 +116,6 @@ def model(weight_shape, input_size, padding, strides):
 
 def test_matching_params(trf_pass, model):
     assert trf_pass.match(model.subgraphs[0].operators[-1])
-
-
-def test_non_matching_stride_w(trf_pass, model, non_matching_stride_w):
-    _test_non_matching_stride_w(trf_pass, model, non_matching_stride_w)
-
-
-def test_non_matching_stride_h(trf_pass, model, non_matching_stride_h):
-    _test_non_matching_stride_h(trf_pass, model, non_matching_stride_h)
 
 
 def test_non_matching_output_channels(trf_pass,

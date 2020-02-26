@@ -10,7 +10,8 @@ from tflite2xcore.graph_transformer import (
     ModelTransformationPass,
     OperatorMatchingPass,
     InputTensorMatchingPass,
-    OutputTensorMatchingPass
+    OutputTensorMatchingPass,
+    TensorMatchingPass
 )
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
@@ -850,10 +851,22 @@ class RemoveUnusedBuffersPass(ModelTransformationPass):
         super().__init__(priority)
 
     def run(self, model):
-        model.buffers = list(
-            set(t.buffer for subgraph in model.subgraphs for t in subgraph.tensors)
-            | set(m.buffer for m in model.metadata)
-        )
+        model.buffers = [b for b in model.buffers if b.owners]
+
+
+class RemoveDanglingTensorsPass(TensorMatchingPass):
+    def __init__(self, priority=PassPriority.CLEANUP):
+        super().__init__(priority)
+
+    def match(self, tensor):
+        return (super().match(tensor)
+                and tensor not in tensor.subgraph.inputs
+                and tensor not in tensor.subgraph.outputs
+                and not tensor.consumers
+                and not tensor.producers)
+
+    def mutate(self, tensor):
+        tensor.subgraph.remove_tensor(tensor)
 
 
 class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):

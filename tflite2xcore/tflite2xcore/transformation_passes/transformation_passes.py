@@ -419,11 +419,10 @@ class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
         return False
 
     def add_requantize(self, op):
-        # rename original output tensor
         with self.using(op):
+            # rename original output tensor
             self._output.name = f"{op.name}/output_requant"
-        # create intermediate tensor
-        with self.using(op):
+            # create intermediate tensor
             intermediate = op.subgraph.create_tensor(
                 f"{op.name}/intermediate", self._output.type, self._output.shape,
                 quantization=self._output.quantization,
@@ -432,11 +431,11 @@ class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
         # rewire outputs of original FC op
         for output_tensor in op.outputs:
             output_tensor.producers.remove(op)
-        op.outputs = [intermediate]
         # create new op, insert after original op, rewire inputs/outputs
         new_op = op.subgraph.create_operator(
             OperatorCode(XCOREOpCodes.XC_requantize_16_to_8),
             inputs=[intermediate], outputs=op.outputs)
+        op.outputs = [intermediate]
         # move operator to correct location
         # TODO: remove this when we have execution planning
         op.subgraph.insert_operator(op, new_op, after=True)

@@ -62,7 +62,6 @@ class OpTestActivationParser(common.OpTestImgParser):
 
     def parse_args(self, *args, **kwargs):
         args = super().parse_args(*args, **kwargs)
-        print(args)
         args.path = Path(args.path).joinpath(args.activation)
         return args
 
@@ -76,15 +75,12 @@ if __name__ == "__main__":
         "choices": LUTActivation.ACTIVATIONS
     })
     args = parser.parse_args()
-
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
-
-    initializers = parser.initializer_args_handler(args)
 
     main(args.activation,
          path=args.path,
          input_channels=args.inputs,
          height=args.height,
          width=args.width,
-         input_init=initializers['input_init'])
+         input_init=args.inits['input_init'])

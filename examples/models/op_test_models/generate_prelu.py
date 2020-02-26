@@ -56,15 +56,12 @@ if __name__ == "__main__":
         'height': DEFAULT_HEIGHT
     })
     args = parser.parse_args()
-
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
-
-    initializers = parser.initializer_args_handler(args)
 
     main(path=args.path,
          input_channels=args.inputs,
          height=args.height,
          width=args.width,
-         alpha_init=initializers['alpha_init'],
-         input_init=initializers['input_init'])
+         alpha_init=args.inits['alpha_init'],
+         input_init=args.inits['input_init'])

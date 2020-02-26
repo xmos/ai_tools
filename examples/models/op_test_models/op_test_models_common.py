@@ -13,7 +13,12 @@ _DEFAULT_CONST_INIT = 0
 _DEFAULT_UNIF_INIT = [-1, 1]
 DEFAULT_CONST_INIT = tf.constant_initializer(_DEFAULT_CONST_INIT)
 DEFAULT_UNIF_INIT = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT)
-
+DEFAULT_INITS_WB = {
+    'bias_init': DEFAULT_CONST_INIT,
+    'weight_init': DEFAULT_UNIF_INIT,
+}
+DEFAULT_INITS = DEFAULT_INITS_WB.update({
+    'input_init': DEFAULT_UNIF_INIT})
 DEFAULT_STRIDE_HEIGHT = 1
 DEFAULT_STRIDE_WIDTH = 2
 DEFAULT_POOL_HEIGHT = 3
@@ -22,7 +27,7 @@ DEFAULT_POOL_WIDTH = 5
 
 class DefaultOpTestModel(KerasModel):
     """
-    Common class for those model that don't need to be trained
+    Common class for those models that don't need to be trained
     with the default option to generate input data according to an input initializer
     """
     @abstractmethod
@@ -59,11 +64,11 @@ class DefaultOpTestModel(KerasModel):
 class DefaultOpTestConvModel(DefaultOpTestModel):
     def build_core_model(
             self, K_h, K_w, height, width, input_channels, output_channels, *,
-            padding, bias_init, weight_init, input_init):
+            padding, inits):
         assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
         assert K_h % 2 == 1, "kernel height must be odd"
         assert K_w % 2 == 1, "kernel width must be odd"
-        self.input_init = input_init
+        self.input_init = inits['input_init']
         try:
             self.core_model = tf.keras.Sequential(
                 name=self.name,
@@ -72,8 +77,8 @@ class DefaultOpTestConvModel(DefaultOpTestModel):
                                            kernel_size=(K_h, K_w),
                                            padding=padding,
                                            input_shape=(height, width, input_channels),
-                                           bias_initializer=bias_init,
-                                           kernel_initializer=weight_init)
+                                           bias_initializer=inits['bias_init'],
+                                           kernel_initializer=inits['weight_init'])
                 ])
         except ValueError as e:
             if e.args[0].startswith("Negative dimension size caused by"):
@@ -81,20 +86,15 @@ class DefaultOpTestConvModel(DefaultOpTestModel):
                     "Negative dimension size (Hint: if using 'valid' padding "
                     "verify that the kernel is at least the size of input image)"
                 ) from e
-        finally:
-            for layer in self.core_model.layers:
-                logging.debug(f"WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}")
-                logging.debug(f"BIAS DATA SAMPLE:\n{layer.get_weights()[1]}")
-
+        # finally:
+        #     for layer in self.core_model.layers:
+        #         logging.debug(f"WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}")
+        #         logging.debug(f"BIAS DATA SAMPLE:\n{layer.get_weights()[1]}")
 
     def run(self, *, num_threads, input_channels, output_channels,
-                    height, width, K_h, K_w, padding, bias_init, weight_init,
-                    input_init):
+            height, width, K_h, K_w, padding, inits):
         self.build(K_h, K_w, height, width, input_channels, output_channels,
-                    padding=padding,
-                    bias_init=bias_init,
-                    weight_init=weight_init,
-                    input_init=input_init)
+                   padding=padding, inits=inits)
         self.gen_test_data()
         self.save_core_model()
         self.populate_converters(
@@ -102,7 +102,7 @@ class DefaultOpTestConvModel(DefaultOpTestModel):
 
 
 class DefaultOpTestFCModel(KerasModel):
-    def build(self, input_dim, output_dim, bias_init, weight_init):
+    def build(self, input_dim, output_dim, inits):
         super().build()
 
         self.core_model = tf.keras.Sequential(
@@ -110,8 +110,8 @@ class DefaultOpTestFCModel(KerasModel):
             layers=[
                 tf.keras.layers.Flatten(input_shape=(input_dim, 1, 1)),
                 tf.keras.layers.Dense(output_dim, activation='softmax',
-                                      bias_initializer=bias_init,
-                                      kernel_initializer=weight_init)
+                                      bias_initializer=inits['bias_init'],
+                                      kernel_initializer=inits['weight_init'])
             ]
         )
         self.core_model.compile(optimizer='adam',
@@ -149,12 +149,9 @@ class DefaultOpTestFCModel(KerasModel):
     def to_tf_xcore(self):
         super().to_tf_xcore(remove_softmax=True)
 
-    def run(self, *, train_new_model, input_dim, output_dim, bias_init,
-                    weight_init, batch_size, epochs):
+    def run(self, *, train_new_model, input_dim, output_dim, inits, batch_size, epochs):
         if train_new_model:
-            self.build(input_dim, output_dim,
-                        bias_init=bias_init,
-                        weight_init=weight_init)
+            self.build(input_dim, output_dim, inits)
             self.prep_data()
             self.train(batch_size=batch_size, epochs=epochs)
             self.save_core_model()
@@ -170,7 +167,6 @@ class DefaultOpTestFCModel(KerasModel):
         self.populate_converters()
 
 
-# TODO: consider refactoring this since it could be used by other functions
 def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
                                   train_samples_per_class=5120,
                                   test_samples_per_class=1024):
@@ -226,8 +222,6 @@ def input_initializers(init, *args, batch=100, subset_len=10):
     return subset, data
 
 
-
-
 class OpTestDefaultParser(argparse.ArgumentParser):
     def __init__(self, *args, defaults, **kwargs):
         kwargs["formatter_class"] = argparse.ArgumentDefaultsHelpFormatter
@@ -242,7 +236,7 @@ class OpTestDefaultParser(argparse.ArgumentParser):
         )
 
 
-class OpTestParserInputInitializerMixin():
+class OpTestParserInputInitializerMixin(OpTestDefaultParser):
     def add_initializers(self):
         self.add_argument(
             "--seed", type=int,
@@ -255,6 +249,12 @@ class OpTestParserInputInitializerMixin():
                  f"(default: {OpTestInitializers.UNIF.value} "
                  f"{_DEFAULT_UNIF_INIT[0]} {_DEFAULT_UNIF_INIT[1]})",
         )
+
+    def parse_args(self, *args, **kwargs):
+        args = super().parse_args(*args, **kwargs)
+        initializers = self.initializer_args_handler(args)
+        args.__setattr__("inits", initializers)
+        return args
 
     def initializer_args_handler(self, args):
         def check_unif_init_params(param_unif):
@@ -284,7 +284,6 @@ class OpTestParserInputInitializerMixin():
             "bias_init": DEFAULT_CONST_INIT,
             "input_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
         }
-
         init_args = {k: vars(args)[k] for k in initializers if k in vars(args)}
         for k, arg_params in init_args.items():
             try:
@@ -317,7 +316,7 @@ class OpTestParserInputInitializerMixin():
                 f"{k} configuration: "
                 f"{type(initializers[k]).__name__} {initializers[k].get_config()}"
             )
-
+        # initializers = {k: v for k, v in initializers.items() if k in vars(args)}
         return initializers
 
 
@@ -338,8 +337,9 @@ class OpTestParserInitializerMixin(OpTestParserInputInitializerMixin):
                  f"{_DEFAULT_UNIF_INIT[0]} {_DEFAULT_UNIF_INIT[1]})",
         )
 
+
 #  for models with 2D dimensionality and padding
-class OpTestImgParser(OpTestDefaultParser, OpTestParserInputInitializerMixin):
+class OpTestImgParser(OpTestParserInputInitializerMixin):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
@@ -361,7 +361,8 @@ class OpTestImgParser(OpTestDefaultParser, OpTestParserInputInitializerMixin):
             )
         self.add_initializers()
 
-class OpTestPoolParser(OpTestImgParser, OpTestParserInputInitializerMixin):
+
+class OpTestPoolParser(OpTestImgParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
@@ -372,7 +373,7 @@ class OpTestPoolParser(OpTestImgParser, OpTestParserInputInitializerMixin):
             "-po", "--pool_size", nargs="+", type=int, default=argparse.SUPPRESS,
             help=f"Pool size:, vertical first (default: {defaults['pool_size']})",
         )
-        #self.add_initializers()
+        # self.add_initializers()
 
     def strides_pool_arg_handler(self, args):
         parameters = {
@@ -390,7 +391,11 @@ class OpTestPoolParser(OpTestImgParser, OpTestParserInputInitializerMixin):
 
         return arguments
 
-
+    def parse_args(self, *args, **kwargs):
+        args = super().parse_args(*args, **kwargs)
+        strides_pool = self.strides_pool_arg_handler(args)
+        args.__setattr__("strides_pool", strides_pool)
+        return args
 
 
 class OpTestConvParser(OpTestParserInitializerMixin, OpTestImgParser):
@@ -443,7 +448,3 @@ class OpTestFCParser(OpTestTrainableParser, OpTestParserInitializerMixin):
             help="Input dimension, must be multiple of 32.",
         )
         self.add_initializers()
-
-
-
-

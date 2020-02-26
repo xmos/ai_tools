@@ -70,17 +70,13 @@ if __name__ == "__main__":
         "pool_size": DEFAULT_POOL_SIZE
     })
     args = parser.parse_args()
-
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
-
-    strides_pool = parser.strides_pool_arg_handler(args)
-    initializers = parser.initializer_args_handler(args)
 
     main(path=args.path,
          input_channels=args.inputs,
          height=args.height,
          width=args.width,
          padding=args.padding,
-         **strides_pool,
-         input_init=initializers['input_init'])
+         **args.strides_pool,
+         input_init=args.inits['input_init'])

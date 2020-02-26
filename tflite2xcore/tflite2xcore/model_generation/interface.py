@@ -258,6 +258,9 @@ class Model(ABC):
 
 
 class KerasModel(Model):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.input_init = None
 
     @abstractmethod
     def build(self):

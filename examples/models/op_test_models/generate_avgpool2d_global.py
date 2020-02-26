@@ -46,14 +46,11 @@ if __name__ == "__main__":
         "width": DEFAULT_WIDTH,
     })
     args = parser.parse_args()
-
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
-
-    initializers = parser.initializer_args_handler(args)
 
     main(path=args.path,
          input_channels=args.inputs,
          height=args.height,
          width=args.width,
-         input_init=initializers['input_init'])
+         input_init=args.inits['input_init'])

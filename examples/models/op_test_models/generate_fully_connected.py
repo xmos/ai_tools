@@ -21,8 +21,7 @@ def main(path=DEFAULT_PATH, *,
          train_new_model=False,
          batch_size=DEFAULT_BS,
          epochs=DEFAULT_EPOCHS,
-         bias_init=common.DEFAULT_CONST_INIT,
-         weight_init=common.DEFAULT_UNIF_INIT):
+         inits=common.DEFAULT_INITS_WB):
     kwargs = {
         'name': 'fc_deepin_anyout',
         'path': path if path else DEFAULT_PATH
@@ -31,8 +30,7 @@ def main(path=DEFAULT_PATH, *,
     model.run(train_new_model=train_new_model,
               input_dim=input_dim,
               output_dim=output_dim,
-              bias_init=bias_init,
-              weight_init=weight_init,
+              inits=inits,
               batch_size=batch_size,
               epochs=epochs)
 
@@ -46,11 +44,8 @@ if __name__ == "__main__":
         'epochs': DEFAULT_EPOCHS
     })
     args = parser.parse_args()
-
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
-
-    initializers = parser.initializer_args_handler(args)
 
     main(path=args.path,
          input_dim=args.input_dim,
@@ -58,5 +53,4 @@ if __name__ == "__main__":
          train_new_model=args.train_model,
          batch_size=args.batch_size,
          epochs=args.epochs,
-         bias_init=initializers['bias_init'],
-         weight_init=initializers['weight_init'])
+         inits=args.inits)

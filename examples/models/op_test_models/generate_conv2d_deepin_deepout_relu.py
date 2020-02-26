@@ -34,9 +34,7 @@ def main(path=DEFAULT_PATH, *,
          K_h=DEFAULT_KERNEL_HEIGHT,
          K_w=DEFAULT_KERNEL_WIDTH,
          padding=DEFAULT_PADDING,
-         bias_init=common.DEFAULT_CONST_INIT,
-         weight_init=common.DEFAULT_UNIF_INIT,
-         input_init=common.DEFAULT_UNIF_INIT):
+         inits=common.DEFAULT_INITS):
     kwargs = {
         'name': 'conv2d_deepin_deepout_relu',
         'path': path if path else DEFAULT_PATH
@@ -50,9 +48,7 @@ def main(path=DEFAULT_PATH, *,
               K_h=K_h,
               K_w=K_w,
               padding=padding,
-              bias_init=bias_init,
-              weight_init=weight_init,
-              input_init=input_init)
+              inits=inits)
 
 
 if __name__ == "__main__":
@@ -70,11 +66,8 @@ if __name__ == "__main__":
         '-par', '--par_num_threads', type=int, default=DEFAULT_NUM_THREADS,
         help='Number of parallel threads for xcore.ai optimization.')
     args = parser.parse_args()
-
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
-
-    initializers = parser.initializer_args_handler(args)
 
     main(path=args.path,
          num_threads=args.par_num_threads,
@@ -85,6 +78,4 @@ if __name__ == "__main__":
          height=args.height,
          width=args.width,
          padding=args.padding,
-         bias_init=initializers['bias_init'],
-         weight_init=initializers['weight_init'],
-         input_init=initializers['input_init'])
+         inits=args.inits)

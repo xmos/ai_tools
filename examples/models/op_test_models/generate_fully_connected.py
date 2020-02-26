@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 #
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import argparse
 from pathlib import Path
 import numpy as np
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
+import op_test_models_common as common
 
 DEFAULT_OUTPUT_DIM = 10
 DEFAULT_INPUT_DIM = 32
-DEFAULT_EPOCHS = 10
-DEFAULT_BS = 64
+DEFAULT_EPOCHS = 5 * (DEFAULT_OUTPUT_DIM - 1)
+DEFAULT_BS = 128
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'fully_connected').resolve()
 
 
-# Prepare data function
+# TODO: consider refactoring this since it could be used by other functions
 def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
                                   train_samples_per_class=5120,
                                   test_samples_per_class=1024):
@@ -58,7 +58,7 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
 
 
 class FullyConnected(KerasModel):
-    def build(self, input_dim, output_dim):
+    def build(self, input_dim, output_dim, bias_init, weight_init):
         super().build()
 
         # Building
@@ -66,7 +66,9 @@ class FullyConnected(KerasModel):
             name=self.name,
             layers=[
                 tf.keras.layers.Flatten(input_shape=(input_dim, 1, 1)),
-                tf.keras.layers.Dense(output_dim, activation='softmax')
+                tf.keras.layers.Dense(output_dim, activation='softmax',
+                                      bias_initializer=bias_init,
+                                      kernel_initializer=weight_init)
             ]
         )
         # Compilation
@@ -100,9 +102,6 @@ class FullyConnected(KerasModel):
         self.data['export_data'] = self.data['x_test'][subset_inds]
         self.data['quant'] = self.data['x_train']
 
-    def train(self):
-        super().train(batch_size=128, epochs=5*(self.output_dim-1))
-
     def to_tf_stripped(self):
         super().to_tf_stripped(remove_softmax=True)
 
@@ -110,67 +109,48 @@ class FullyConnected(KerasModel):
         super().to_tf_xcore(remove_softmax=True)
 
 
-def run_main(model, *, train_new_model, input_dim, output_dim):
-    if train_new_model:
-        # Build model and compile
-        model.build(input_dim, output_dim)
-        # Prepare training data
-        model.prep_data()
-        # Train model
-        model.train()
-        model.save_core_model()
-    else:
-        # Recover previous state from file system
-        model.load_core_model()
-        if output_dim != model.output_dim:
-            raise ValueError(
-                f"specified output_dim ({output_dim}) "
-                f"does not match loaded model's output_dim ({model.output_dim})"
-            )
-        if input_dim != model.input_dim:
-            raise ValueError(
-                f"specified input_dim ({input_dim}) "
-                f"does not match loaded model's input_dim ({model.input_dim})"
-            )
-    # Generate test data
-    model.gen_test_data()
-    # Populate converters
-    model.populate_converters()
-
-
 def main(path=DEFAULT_PATH, *,
-         input_dim=DEFAULT_INPUT_DIM, output_dim=DEFAULT_OUTPUT_DIM,
-         train_new_model=False):
-    run_main(FullyConnected('fully_connected', Path(path)),
-             train_new_model=train_new_model, input_dim=input_dim, output_dim=output_dim)
+         input_dim=DEFAULT_INPUT_DIM,
+         output_dim=DEFAULT_OUTPUT_DIM,
+         train_new_model=False,
+         batch_size=DEFAULT_BS,
+         epochs=DEFAULT_EPOCHS,
+         bias_init=common.DEFAULT_CONST_INIT,
+         weight_init=common.DEFAULT_UNIF_INIT):
+    kwargs = {
+        'name': 'fc_deepin_anyout',
+        'path': path if path else DEFAULT_PATH
+    }
+    common.run_main_fc(model=FullyConnected(**kwargs),
+                       train_new_model=train_new_model,
+                       input_dim=input_dim,
+                       output_dim=output_dim,
+                       bias_init=bias_init,
+                       weight_init=weight_init,
+                       batch_size=batch_size,
+                       epochs=epochs)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        '-path', nargs='?', default=DEFAULT_PATH,
-        help='Path to a directory where models and data will be saved in subdirectories.')
-    parser.add_argument(
-        '--use_gpu', action='store_true', default=False,
-        help='Use GPU for training. Might result in non-reproducible results.')
-    parser.add_argument(
-        '-out', '--output_dim', type=int, default=DEFAULT_OUTPUT_DIM,
-        help='Number of output dimensions, must be at least 2.')
-    parser.add_argument(
-        '-in', '--input_dim', type=int, default=DEFAULT_INPUT_DIM,
-        help='Input dimension.')
-    parser.add_argument(
-        '--train_model', action='store_true', default=False,
-        help='Train new model instead of loading pretrained tf.keras model.')
-    parser.add_argument(
-        '-v', '--verbose', action='store_true', default=False,
-        help='Verbose mode.')
+    parser = common.OpTestFCParser(defaults={
+        'path': DEFAULT_PATH,
+        'input_dim': DEFAULT_INPUT_DIM,
+        'output_dim': DEFAULT_OUTPUT_DIM,
+        'batch_size': DEFAULT_BS,
+        'epochs': DEFAULT_EPOCHS
+    })
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
 
+    initializers = common.initializer_args_handler(args)
+
     main(path=args.path,
-         input_dim=args.input_dim, output_dim=args.output_dim,
-         train_new_model=args.train_model)
+         input_dim=args.input_dim,
+         output_dim=args.output_dim,
+         train_new_model=args.train_model,
+         batch_size=args.batch_size,
+         epochs=args.epochs,
+         bias_init=initializers['bias_init'],
+         weight_init=initializers['weight_init'])

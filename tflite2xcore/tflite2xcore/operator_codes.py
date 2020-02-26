@@ -132,17 +132,19 @@ class BuiltinOpCodes(ValidOpCodes, enum.Enum):
     NON_MAX_SUPPRESSION_V5 = 121
     SCATTER_ND = 122
 
+
 class CustomOpCode(ValidOpCodes):
     def __init__(self, name):
         self.name = name
         self.value = name
 
+
 class XCOREOpCodes(ValidOpCodes, enum.Enum):
     # TODO: consider an IntEnum for this instead of strings
+    XC_lookup_8 = "XC_lookup_8"
     XC_argmax_16 = "XC_argmax_16"
-    XC_maxpool2d_deep = "XC_maxpool2d_deep"
+    XC_maxpool2d = "XC_maxpool2d"
     XC_avgpool2d = "XC_avgpool2d"
-    XC_avgpool2d_2x2 = "XC_avgpool2d_2x2"
     XC_avgpool2d_global = "XC_avgpool2d_global"
     XC_fc_deepin_anyout = "XC_fc_deepin_anyout"
     XC_requantize_16_to_8 = "XC_requantize_16_to_8"

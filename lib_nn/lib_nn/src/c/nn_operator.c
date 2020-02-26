@@ -1,7 +1,7 @@
 
 
 #include "nn_operator.h"
-#include "nn_op_helper.h"
+#include "../nn_op_helper.h"
 
 #include "xs3_vpu.h"
 
@@ -42,5 +42,22 @@ void requantize_16_to_8_c(
 {
     for(int i = 0; i < n; i++){
         y[i] = vdepth8_single_s16(x[i]);
+    }
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+void lookup8_c(
+    uint8_t* Y,
+    const uint8_t* X,
+    const uint8_t* lut,
+    const unsigned length)
+{
+    for(int i = 0; i < length; i++){
+        Y[i] = lut[X[i]];
     }
 }

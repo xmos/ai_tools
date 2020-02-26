@@ -67,6 +67,7 @@ def test_non_matching_input_shape(trf_pass, input_shape):
 
 def test_mutate(argmax_model, trf_pass):
     trf_pass.run(argmax_model)
+    argmax_model.sanity_check()
     subgraph = argmax_model.subgraphs[0]
     assert subgraph.operators[-1].operator_code.code == XCOREOpCodes.XC_argmax_16
 

@@ -76,15 +76,6 @@ void fc_deepin_shallowout_8_asm(
     const int16_t* scales);
 
 
-// #ifndef USE_ASM_maxpool2d_deep
-// #define USE_ASM_maxpool2d_deep    (1)
-// #endif
-// void maxpool2d_deep_asm(
-//     const int8_t* X, 
-//     int8_t* Y,
-//     const int32_t height, 
-//     const int32_t width,
-//     const int32_t C_in);
 
 #ifndef USE_ASM_maxpool2d
 #define USE_ASM_maxpool2d       (1)
@@ -129,6 +120,17 @@ void requantize_16_to_8_asm(
     int8_t* y,
     const int16_t* x,
     const unsigned n);
+
+
+
+#ifndef USE_ASM_lookup8
+#define USE_ASM_lookup8    (1)
+#endif
+void lookup8_asm(
+    uint8_t* Y,
+    const uint8_t* X,
+    const uint8_t* lut,
+    const unsigned length);
 
 
 #endif //__XS3A__

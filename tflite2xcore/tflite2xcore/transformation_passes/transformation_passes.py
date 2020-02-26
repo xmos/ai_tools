@@ -16,7 +16,7 @@ from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCod
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.parallelization import DIDOConv2DPlanner
 
-VE, ACC_PERIOD = 32, 16
+VE, ACC_PERIOD, WORD_SIZE = 32, 16, 4
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
@@ -24,7 +24,7 @@ class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
         super().__init__(priority)
 
     def match(self, op):
-        if op.operator_code.code == BuiltinOpCodes.QUANTIZE:
+        if super().match(op) and op.operator_code.code == BuiltinOpCodes.QUANTIZE:
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
             return (input_tensor in op.subgraph.inputs
                     and output_tensor not in op.subgraph.outputs
@@ -45,7 +45,7 @@ class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
         super().__init__(priority)
 
     def match(self, op):
-        if op.operator_code.code == BuiltinOpCodes.DEQUANTIZE:
+        if super().match(op) and op.operator_code.code == BuiltinOpCodes.DEQUANTIZE:
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
             return (output_tensor in op.subgraph.outputs
                     and input_tensor not in op.subgraph.inputs
@@ -66,7 +66,7 @@ class AddQuantizerFloatInputPass(InputTensorMatchingPass):
         super().__init__(priority)
 
     def match(self, input_tensor):
-        return (input_tensor.type == TensorType.INT8)
+        return (super().match(input_tensor) and input_tensor.type == TensorType.INT8)
 
     def mutate(self, qin):
         subgraph = qin.subgraph
@@ -85,7 +85,7 @@ class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
         super().__init__(priority)
 
     def match(self, input_tensor):
-        return input_tensor.type == TensorType.INT8
+        return (super().match(input_tensor) and input_tensor.type == TensorType.INT8)
 
     def mutate(self, qout):
         subgraph = qout.subgraph
@@ -101,7 +101,8 @@ class RemoveSoftmaxOutputPass(OperatorMatchingPass):
         super().__init__(priority)
 
     def match(self, op):
-        return (op.operator_code.code == BuiltinOpCodes.SOFTMAX
+        return (super().match(op)
+                and op.operator_code.code == BuiltinOpCodes.SOFTMAX
                 and op.outputs[0] in op.subgraph.outputs)
 
     def mutate(self, op):
@@ -116,7 +117,8 @@ class AddArgMax16OutputPass(OutputTensorMatchingPass):
         super().__init__(priority)
 
     def match(self, tensor):
-        return (len(tensor.subgraph.outputs) == 1
+        return (super().match(tensor)
+                and len(tensor.subgraph.outputs) == 1
                 and tensor.subgraph.outputs[0].type == TensorType.INT16
                 and len(tensor.shape) == 2)
 
@@ -130,7 +132,8 @@ class AddArgMax16OutputPass(OutputTensorMatchingPass):
 
         # add tensor with axis info
         dim_tensor = subgraph.create_tensor(
-            f"{op.name}/axis", TensorType.INT32, shape=[])
+            f"{op.name}/axis", TensorType.INT32, shape=[],
+            consumers=[op])
         op.inputs.append(dim_tensor)
         dim_tensor.buffer.data = np.int32([1])
 
@@ -168,7 +171,7 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
         return TensorType.INT8
 
     def match(self, op):
-        if op.operator_code.code == self.matching_opcode:
+        if super().match(op) and op.operator_code.code == self.matching_opcode:
             with self.using(op):
                 return (self._input.type == self._matching_input_type
                         and self._output.type == self._matching_output_type)
@@ -261,7 +264,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
     def __pad_to_acc_period(self, arr):
         pad = ACC_PERIOD - 1 - (arr.shape[0] - 1) % ACC_PERIOD
-        return np.pad(arr, pad_width=((0, pad)))
+        return np.pad(arr, pad_width=[(0, pad)])
 
     @property
     def _bias_arr(self):
@@ -337,9 +340,14 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
         super().mutate_weights(op)
         with self.using(op):
             # zero_padding weight tensor
-            col_pad = 4 - 1 - (self._weights.shape[1] - 1) % 4
-            arr = np.pad(self._weights.numpy.astype(np.int8),
-                         pad_width=((0, 0), (0, col_pad)))
+            col_pad = WORD_SIZE - 1 - (self._weights.shape[1] - 1) % WORD_SIZE
+            arr = np.pad(
+                self._weights.numpy.astype(np.int8),
+                pad_width=[(0, 0),
+                           (0, col_pad)]
+            )
+
+            # save weight tensor and update shape
             self._weights.buffer.data = arr
             self._weights.shape = arr.shape
 
@@ -410,20 +418,25 @@ class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
         return False
 
     def add_requantize(self, op):
-        # rename original output tensor
         with self.using(op):
+            # rename original output tensor
             self._output.name = f"{op.name}/output_requant"
-        # create intermediate tensor
-        with self.using(op):
+            # create intermediate tensor
             intermediate = op.subgraph.create_tensor(
                 f"{op.name}/intermediate", self._output.type, self._output.shape,
-                quantization=self._output.quantization
+                quantization=self._output.quantization,
+                producers=[op]
             )
+        # rewire outputs of original FC op
+        for output_tensor in op.outputs:
+            output_tensor.producers.remove(op)
         # create new op, insert after original op, rewire inputs/outputs
         new_op = op.subgraph.create_operator(
             OperatorCode(XCOREOpCodes.XC_requantize_16_to_8),
             inputs=[intermediate], outputs=op.outputs)
         op.outputs = [intermediate]
+        # move operator to correct location
+        # TODO: remove this when we have execution planning
         op.subgraph.insert_operator(op, new_op, after=True)
 
     def mutate(self, op):
@@ -470,9 +483,11 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
             new_bias = self._bias_arr
             self._biases.buffer.data = new_bias
 
-            # change bias tensor metadata and change quantization mode to alert users to unusual layout
+            # change bias tensor metadata
             self._biases.type = TensorType.INT16
             self._biases.shape = new_bias.shape
+
+            # remove quantization info to save space
             self._biases.quantization = None
 
     def add_shift_scale(self, op):
@@ -486,10 +501,9 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
                 raise ValueError("Negative right shift encountered.")
 
         shift_scale_tensor = op.subgraph.create_tensor(
-            f"{op.name}/shift_scale",
-            TensorType.INT16,
-            shift_scale_arr.shape,
-            buffer=op.model.create_buffer(shift_scale_arr)
+            f"{op.name}/shift_scale", TensorType.INT16, shift_scale_arr.shape,
+            buffer=op.model.create_buffer(shift_scale_arr),
+            consumers=[op]
         )
         op.inputs.append(shift_scale_tensor)
 
@@ -528,18 +542,22 @@ class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
         super().mutate_weights(op)
         with self.using(op):
             # rearrange weight tensor
-            weights = self._weights.numpy
-            new_shape = (weights.shape[0] // ACC_PERIOD, ACC_PERIOD,
-                         weights.shape[1], weights.shape[2],
-                         weights.shape[3] // VE, VE)
-            weights = weights.reshape(new_shape)
+            weights = self._weights.numpy.astype(np.int8)
+            weights = weights.reshape((
+                weights.shape[0] // ACC_PERIOD,
+                ACC_PERIOD,
+                weights.shape[1],
+                weights.shape[2],
+                weights.shape[3] // VE,
+                VE
+            ))
             weights = np.transpose(
                 np.flip(weights, axis=1),
                 axes=(0, 2, 3, 4, 1, 5)
             )
 
             # save weight tensor and update shape
-            self._weights.buffer.data = np.int8(weights)
+            self._weights.buffer.data = weights
             self._weights.shape = weights.shape
 
             # remove quantization info to save space
@@ -548,6 +566,9 @@ class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
 
 # TODO: write tests (of subclasses?) to test input operator matching
 class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
+    MAX_INPUT_CHANNELS = WORD_SIZE
+    MAX_KERNEL_WIDTH = VE // MAX_INPUT_CHANNELS
+
     def match(self, op):
         if super().match(op):
             with self.using(op):
@@ -564,26 +585,38 @@ class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
         #       keep in mind that this mutation is what can affect other operators
         with self.using(op):
             self._input.name = f"{op.name}/input"
-            self._input.shape[3] = 4  # new, zero-padded shape
+            self._input.shape[3] = self.MAX_INPUT_CHANNELS  # new, zero-padded shape
 
     def mutate_weights(self, op):
         super().mutate_weights(op)
         with self.using(op):
             # rearrange and zero pad weight tensor
-            weights = self._weights.numpy
+            weights = self._weights.numpy.astype(np.int8)
             weights = np.pad(
                 weights,
                 pad_width=[(0, 0),
                            (0, 0),
-                           (0, 8 - weights.shape[2]),
-                           (0, 4 - weights.shape[3])]
+                           (0, self.MAX_KERNEL_WIDTH - weights.shape[2]),
+                           (0, self.MAX_INPUT_CHANNELS - weights.shape[3])]
             )
-            new_shape = (weights.shape[0] // ACC_PERIOD, ACC_PERIOD, weights.shape[1], 8, 4)
-            weights = np.int8(weights.reshape(new_shape))
-            weights = np.transpose(np.flip(weights, axis=1), axes=(0, 2, 1, 3, 4))
+            weights = weights.reshape((
+                weights.shape[0] // ACC_PERIOD,
+                ACC_PERIOD,
+                weights.shape[1],
+                self.MAX_KERNEL_WIDTH,
+                self.MAX_INPUT_CHANNELS
+            ))
+            weights = np.transpose(
+                np.flip(weights, axis=1),
+                axes=(0, 2, 1, 3, 4)
+            )
 
+            # save weight tensor and update shape
             self._weights.shape = weights.shape
             self._weights.buffer.data = weights
+
+            # remove quantization info to save space
+            self._weights.quantization = None
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
@@ -604,8 +637,8 @@ class ReplaceShallowinDeepoutConv2DPass(ReplaceDeepoutConv2DInputPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return (self._weights.shape[3] <= 4  # shallowin
-                        and self._weights.shape[2] <= 8)  # max kernel width
+                return (self._weights.shape[3] <= self.MAX_INPUT_CHANNELS
+                        and self._weights.shape[2] <= self.MAX_KERNEL_WIDTH)
 
         return False
 
@@ -619,7 +652,7 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
         if super().match(op):
             with self.using(op):
                 return (self._weights.shape[3] == 1  # depthwise only matched with single input channel
-                        and self._weights.shape[2] <= 8)  # max kernel width
+                        and self._weights.shape[2] <= self.MAX_KERNEL_WIDTH)  # max kernel width
 
         return False
 
@@ -640,7 +673,7 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
         return super().mutate(op)
 
 
-class ReplacePooling2DPass(ReplaceQuantizedOperatorPass):
+class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options
@@ -659,54 +692,10 @@ class ReplacePooling2DPass(ReplaceQuantizedOperatorPass):
     def _fused_activation(self):
         return self._op.builtin_options['fused_activation_function']
 
-
-class ReplaceDeepMaxPool2DPass(ReplacePooling2DPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.MAX_POOL_2D
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_maxpool2d_deep)
-
     def match(self, op):
         if super().match(op):
             with self.using(op):
                 return (self._input.quantization == self._output.quantization
-                        and self._strides == (2, 2)
-                        and self._pool_size == (2, 2)
-                        and self._fused_activation == 'NONE'
-                        and self._input.shape[1] % 2 == 0
-                        and self._input.shape[2] % 2 == 0
-                        and self._input.shape[3] % VE == 0)
-
-        return False
-
-
-class ReplaceAveragePool2DPass(ReplacePooling2DPass):
-    # NOTE: this pass is currently not enabled in the xformer
-    # lib_nn performs the checks to dispatch the appropriate kernel
-    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=False):
-        super().__init__(priority)
-        self.safe_mode = safe_mode
-        if self.safe_mode:
-            self.superseding_pass = ReplaceAveragePool2D2x2Pass()
-
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.AVERAGE_POOL_2D
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_avgpool2d)
-
-    def match(self, op):
-        if self.safe_mode and self.superseding_pass.match(op):
-            return False
-        if super().match(op):
-            with self.using(op):
-                return (self._input.quantization == self._output.quantization
-                        and self._padding == 'VALID'
                         and self._fused_activation == 'NONE'
                         and self._input.shape[3] % 4 == 0)
 
@@ -720,6 +709,84 @@ class ReplaceAveragePool2DPass(ReplacePooling2DPass):
                 stride_h=self._strides[0], stride_w=self._strides[1],
                 pool_h=self._pool_size[0], pool_w=self._pool_size[1]
             )
+
+
+class ReplacePool2D2x2Pass(ReplacePool2DPass):
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (self._strides == (2, 2)
+                        and self._pool_size == (2, 2)
+                        and self._input.shape[1] % 2 == 0
+                        and self._input.shape[2] % 2 == 0)
+
+        return False
+
+
+class ReplaceMaxPool2DPass(ReplacePool2DPass):
+    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=False):
+        super().__init__(priority)
+        self.safe_mode = safe_mode
+        if self.safe_mode:
+            self.superseding_passes.append(ReplaceMaxPool2D2x2Pass())
+
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.MAX_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_maxpool2d)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return self._padding == 'VALID'
+
+        return False
+
+
+class ReplaceMaxPool2D2x2Pass(ReplacePool2D2x2Pass, ReplacePool2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.MAX_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_maxpool2d)
+
+
+class ReplaceAveragePool2DPass(ReplacePool2DPass):
+    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=False):
+        super().__init__(priority)
+        self.safe_mode = safe_mode
+        if self.safe_mode:
+            self.superseding_passes.append(ReplaceAveragePool2D2x2Pass())
+
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.AVERAGE_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return self._padding == 'VALID'
+
+        return False
+
+
+class ReplaceAveragePool2D2x2Pass(ReplacePool2D2x2Pass, ReplacePool2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.AVERAGE_POOL_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_avgpool2d)
 
 
 class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
@@ -737,7 +804,7 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
                 reduction_dims = self._op.inputs[1].numpy
                 return (len(reduction_dims) == 2
                         and np.all(reduction_dims == [1, 2])
-                        and self._input.shape[3] % 4 == 0)
+                        and self._input.shape[3] % WORD_SIZE == 0)
 
         return False
 
@@ -765,38 +832,17 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
 
         with self.using(new_op):
             # replace reduction_indices tensor with bias_scale_shift
-            subgraph.remove_tensor(new_op.inputs[1])
+            old_tensor = new_op.inputs[1]
             new_op.inputs[1] = subgraph.create_tensor(
-                f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7])
+                f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7],
+                consumers=[new_op])
             new_op.inputs[1].buffer.data = np.frombuffer(
                 b''.join(p.tostring() for p in self._bias_scale_shift),
                 dtype=np.int8
             )
+            subgraph.remove_tensor(old_tensor)
 
         return new_op
-
-
-class ReplaceAveragePool2D2x2Pass(ReplacePooling2DPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.AVERAGE_POOL_2D
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_avgpool2d_2x2)
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return (self._input.quantization == self._output.quantization
-                        and self._strides == (2, 2)
-                        and self._pool_size == (2, 2)
-                        and self._fused_activation == 'NONE'
-                        and self._input.shape[1] % 2 == 0
-                        and self._input.shape[2] % 2 == 0
-                        and self._input.shape[3] % 4 == 0)
-
-        return False
 
 
 class RemoveUnusedBuffersPass(ModelTransformationPass):

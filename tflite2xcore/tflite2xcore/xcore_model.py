@@ -72,17 +72,17 @@ class TensorType(enum.IntEnum):
 
 
 class Buffer():
-    def __init__(self, model, data=None):
+    def __init__(self, model, data=None, *, owners=None):
         # Generally, do not use this constructor to instantiate Buffer!
         # Use XCOREModel.create_buffer instead.
 
         self.model = model  # parent
         self.data = data
+        self.owners = owners or []
 
     @property
     def data(self):
         return self._data
-
 
     @data.setter
     def data(self, data):
@@ -91,12 +91,11 @@ class Buffer():
         elif isinstance(data, list):
             self._data = np.array(data, dtype=np.uint8)
         elif isinstance(data, np.ndarray):
-            if data.dtype is not np.uint8:
+            if data.dtype not in (np.uint8, 'uint8'):
                 logging.debug(f"Numpy array of type {data.dtype} stored in buffer")
             self._data = np.frombuffer(data.tostring(), dtype=np.uint8)
         else:
             raise TypeError(f"data must be list or numpy array of uint8 type")
-
 
     def __len__(self):
         if self.data is not None:
@@ -117,6 +116,11 @@ class Buffer():
                'int32_t': 'i',
                'float32_t': 'f'}
         return [i[0] for i in struct.iter_unpack(LUT[stdtype], bytearray(self.data))]
+
+    def sanity_check(self):
+        assert self in self.model.buffers
+        for owner in self.owners:
+            assert owner.buffer is self
 
 
 class Operator():
@@ -148,10 +152,13 @@ class Operator():
         return self.subgraph.model
 
     def __str__(self):
+        return f'({self.subgraph.operators.index(self)}) operator_code={self.operator_code}'
+
+    def pprint(self):
         INDENT = ' ' * 2
 
         lines = []
-        lines.append(f'operator_code= {self.operator_code}')
+        lines.append(str(self))
         lines.append(f'{INDENT}inputs')
         lines.extend([f'{INDENT * 2}{input_}' for input_ in self.inputs])
         lines.append(f'{INDENT}outputs')
@@ -162,9 +169,22 @@ class Operator():
         lines.append(f'{INDENT * 2}{self.custom_options}')
         return '\n'.join(lines)
 
+    def sanity_check(self):
+        assert self in self.subgraph.operators
+        # check for duplicates
+        assert len(self.inputs) == len(set(self.inputs))
+        assert len(self.outputs) == len(set(self.outputs))
+        # check double links with inputs/outputs
+        for tensor in self.inputs:
+            assert self in tensor.consumers
+        for tensor in self.outputs:
+            assert self in tensor.producers
+
 
 class Tensor():
-    def __init__(self, subgraph, name, type_, shape, buffer=None, quantization=None):
+    def __init__(self, subgraph, name, type_, shape,
+                 buffer=None, quantization=None,
+                 producers=None, consumers=None):
         # Generally, do not use this constructor to instantiate Tensor!
         # Use Subgraph.create_tensor instead.
         self.subgraph = subgraph  # parent
@@ -179,8 +199,12 @@ class Tensor():
             assert isinstance(buffer, Buffer)
             assert buffer in self.model.buffers
             self.buffer = buffer
+        self.buffer.owners.append(self)
 
         self.quantization = quantization
+
+        self.producers = producers or []
+        self.consumers = consumers or []
 
     @property
     def model(self):
@@ -188,6 +212,31 @@ class Tensor():
 
     def __str__(self):
         return f'name={self.name}, type={self.type.name}, shape={self.shape}, buffer={self.buffer}'
+
+    def pprint(self):
+        INDENT = ' ' * 2
+
+        lines = []
+        lines.append(str(self))
+        if self.producers:
+            lines.append(f'{INDENT}producers')
+            lines.extend([f'{INDENT * 2}{producer}' for producer in self.producers])
+        if self.consumers:
+            lines.append(f'{INDENT}consumers')
+            lines.extend([f'{INDENT * 2}{consumer}' for consumer in self.consumers])
+        return '\n'.join(lines)
+
+    def sanity_check(self):
+        assert self in self.subgraph.tensors
+        assert self in self.buffer.owners
+        # check for duplicates
+        assert len(self.consumers) == len(set(self.consumers))
+        assert len(self.producers) == len(set(self.producers))
+        # check double links with consumers/producers
+        for op in self.producers:
+            assert self in op.outputs
+        for op in self.consumers:
+            assert self in op.inputs
 
     @property
     def sanitized_name(self):
@@ -240,13 +289,15 @@ class Subgraph():
         return [t for t in self.tensors if t not in (self.inputs + self.outputs)]
 
     def create_tensor(self, name, type_, shape, *,
-                      buffer=None, quantization=None, isinput=False, isoutput=False):
+                      buffer=None, quantization=None,
+                      isinput=False, isoutput=False,
+                      producers=None, consumers=None):
 
         for existing_tensor in self.tensors:
             if name in [existing_tensor.name, existing_tensor.sanitized_name]:
                 raise Exception(f'Tensor name {name} already in use')
 
-        tensor = Tensor(self, name, type_, shape, buffer, quantization)
+        tensor = Tensor(self, name, type_, shape, buffer, quantization, producers, consumers)
         self.tensors.append(tensor)
         if isinput:
             self.inputs.append(tensor)
@@ -261,7 +312,18 @@ class Subgraph():
             self.inputs.remove(tensor)
         if tensor in self.outputs:
             self.outputs.remove(tensor)
-
+        for op in tensor.consumers:
+            try:
+                op.inputs.remove(tensor)
+            except ValueError:
+                pass
+        for op in tensor.producers:
+            try:
+                op.outputs.remove(tensor)
+            except ValueError:
+                pass
+        tensor.consumers, tensor.producers = [], []
+        tensor.buffer.owners.remove(tensor)
         tensor.subgraph = tensor.buffer = None
 
     def generate_unique_op_name(self, operator_code):
@@ -274,18 +336,33 @@ class Subgraph():
 
     def create_operator(self, operator_code, *,
                         inputs=None, outputs=None,
-                        builtin_options=None, builtin_options_type=None, 
+                        builtin_options=None, builtin_options_type=None,
                         custom_options=None):
         name = self.generate_unique_op_name(operator_code)
         operator = Operator(self, operator_code, name, inputs, outputs,
                             builtin_options, builtin_options_type, custom_options)
         self.operators.append(operator)
+        for input_tensor in inputs:
+            input_tensor.consumers.append(operator)
+        for output_tensor in outputs:
+            output_tensor.producers.append(operator)
         return operator
 
     def remove_operator(self, op):
         assert op in self.operators
         self.operators.remove(op)
-        op.inputs, op.outputs, op.subgraph = [], [], None
+        for t in op.inputs:
+            try:
+                t.consumers.remove(op)
+            except ValueError:
+                pass
+        for t in op.outputs:
+            try:
+                t.producers.remove(op)
+            except ValueError:
+                pass
+        op.inputs, op.outputs = [], []
+        op.subgraph = None
 
     def insert_operator(self, ref_op, new_op, after=False):
         """NOTE: this does not rewire inputs/outputs"""
@@ -318,6 +395,22 @@ class Subgraph():
                 return t
         raise ValueError(f"Tensor with name {name} not found!")
 
+    def sanity_check(self):
+        assert self in self.model.subgraphs
+        # check for duplicates
+        assert len(self.inputs) == len(set(self.inputs))
+        assert len(self.outputs) == len(set(self.outputs))
+        assert len(self.operators) == len(set(self.operators))
+        assert len(self.tensors) == len(set(self.tensors))
+        # make sure inputs and outputs are not misplaced
+        for tensor in (self.inputs + self.outputs):
+            assert tensor in self.tensors
+        # the subgraph is sane as long as all its objects are sane
+        for op in self.operators:
+            op.sanity_check()
+        for tensor in self.tensors:
+            tensor.sanity_check()
+
 
 class Metadata():
     def __init__(self, model, name, buffer=None):
@@ -331,9 +424,13 @@ class Metadata():
             self.buffer = buffer
         else:
             self.buffer = self.model.create_buffer()
+        self.buffer.owners.append(self)
 
     def __str__(self):
         return f'name={self.name}, buffer={self.buffer}'
+
+    def sanity_check(self):
+        assert self in self.buffer.owners
 
 
 class XCOREModel():
@@ -409,13 +506,13 @@ class XCOREModel():
             print('* Operators *')
             print('*************')
             for operator in subgraph.operators:
-                print(operator)
+                print(operator.pprint())
 
             print('**********')
             print('* Inputs *')
             print('**********')
             for input_ in subgraph.inputs:
-                print(input_)
+                print(input_.pprint())
                 if tensor_values and len(input_.buffer):
                     print(f'   values={input_.numpy}')
 
@@ -423,7 +520,7 @@ class XCOREModel():
             print('* Intermediates *')
             print('*****************')
             for intermediate in subgraph.intermediates:
-                print(intermediate)
+                print(intermediate.pprint())
                 if tensor_values and len(intermediate.buffer):
                     print(f'   values={intermediate.numpy}')
 
@@ -431,6 +528,19 @@ class XCOREModel():
             print('* Outputs *')
             print('***********')
             for output in subgraph.outputs:
-                print(output)
+                print(output.pprint())
                 if tensor_values and len(output.buffer):
                     print(f'   values={output.numpy}')
+
+    def sanity_check(self):
+        # check for duplicates
+        assert len(self.subgraphs) == len(set(self.subgraphs))
+        assert len(self.buffers) == len(set(self.buffers))
+        assert len(self.metadata) == len(set(self.metadata))
+        # the model is sane as long as all its subgraphs are sane
+        for subgraph in self.subgraphs:
+            subgraph.sanity_check()
+        for buffer in self.buffers:
+            buffer.sanity_check()
+        for metadata in self.metadata:
+            metadata.sanity_check()

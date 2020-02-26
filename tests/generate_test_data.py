@@ -6,6 +6,7 @@ import os
 import sys
 import re
 import shutil
+from functools import partial
 import subprocess
 import multiprocessing
 import argparse
@@ -32,7 +33,7 @@ def make_folder_and_arguments(**kwargs):
 
     return '_'.join(folder_fields), ' '.join(aurgment_fields)
 
-def generate_test_case(test_case):
+def generate_test_case(dry_run, test_case):
     if test_case['train_model']:
         train_model_flag = '--train_model'
     else:
@@ -48,10 +49,11 @@ def generate_test_case(test_case):
     with stdout_lock:
         print(f'generating test case {output_dir}')
         print(f'   command: {cmd}')
-    try:
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-    except subprocess.CalledProcessError as cmdexc:                                                                                                   
-        print(cmdexc.output.decode('utf-8'))
+    if not dry_run:
+        try:
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+        except subprocess.CalledProcessError as cmdexc:                                                                                                   
+            print(cmdexc.output.decode('utf-8'))
 
 def create_test_cases(operator, generator, parameter_sets, *, train_model=False):
      test_cases = []
@@ -70,36 +72,40 @@ def run_generate(tests, jobs):
     test_cases = []
 
     #***********************************
-    # Remove all existing data
+    # AvgPool
     #***********************************
-    if os.path.exists(directories.DATA_DIR):
-        shutil.rmtree(directories.DATA_DIR)
+    operator = operator_codes.XCOREOpCodes.XC_lookup_8.name
+    generator = os.path.join(directories.GENERATOR_DIR, 'generate_lookup_8.py')
+    parameter_sets = [
+        {'-in': 32, '-hi': 5, '-wi': 5, '-act': 'relu', '--input_init': ('unif', -10, 10)},
+        {'-in': 3, '-hi': 2, '-wi': 5, '-act': 'relu', '--input_init': ('unif', -10, -1)},
+        {'-in': 4, '-hi': 5, '-wi': 2, '-act': 'relu', '--input_init': ('unif', 1, 10)},
+        {'-in': 32, '-hi': 5, '-wi': 5, '-act': 'relu6', '--input_init': ('unif', -10, 7)},
+        {'-in': 3, '-hi': 2, '-wi': 5, '-act': 'relu6', '--input_init': ('unif', 1, 2)},
+        {'-in': 4, '-hi': 5, '-wi': 2, '-act': 'relu6', '--input_init': ('unif', 6, 10)},
+        {'-in': 4, '-hi': 5, '-wi': 5, '-act': 'logistic', '--input_init': ('unif', -1, 1)},
+        {'-in': 4, '-hi': 5, '-wi': 5, '-act': 'tanh', '--input_init': ('unif', -1, 1)}
+    ]
+
+    if operator in tests or len(tests) == 0:
+        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
 
     #***********************************
     # AvgPool
     #***********************************
-
     operator = operator_codes.XCOREOpCodes.XC_avgpool2d.name
     generator = os.path.join(directories.GENERATOR_DIR, 'generate_avgpool2d.py')
     parameter_sets = [
         {'-in': 32, '-hi': 5, '-wi': 5, '-st':(1, 2), '-po': (3, 4), '-pd': 'VALID'}, # expected failure. see issue https://github.com/xmos/ai_tools/issues/83
         {'-in': 32, '-hi': 4, '-wi': 4, '-st':(2, 2), '-po': (4, 4), '-pd': 'VALID'},
-        {'-in': 4, '-hi': 16, '-wi': 16, '-st':(1, 1), '-po': (4, 4), '-pd': 'VALID'}
+        {'-in': 4, '-hi': 16, '-wi': 16, '-st':(1, 1), '-po': (4, 4), '-pd': 'VALID'},
+        {'-in': 32, '-hi': 4, '-wi': 4, '-st':(2, 2), '-po': (2, 2), '-pd': 'VALID'},
+        {'-in': 4, '-hi': 16, '-wi': 16, '-st':(1, 1), '-po': (2, 2), '-pd': 'VALID'}
     ]
 
     if operator in tests or len(tests) == 0:
         test_cases.extend(create_test_cases(operator, generator, parameter_sets))
 
-    operator = operator_codes.XCOREOpCodes.XC_avgpool2d.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_avgpool2d_2x2.py')
-    parameter_sets = [
-        {'-in': 32, '-hi': 4, '-wi': 4},
-        {'-in': 32, '-hi': 6, '-wi': 12},
-        {'-in': 32, '-hi': 16, '-wi': 16}
-    ]
-
-    if operator in tests or len(tests) == 0:
-        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
 
     #***********************************
     # AvgPool Global
@@ -195,8 +201,8 @@ def run_generate(tests, jobs):
     #***********************************
     # MaxPool
     #***********************************
-    operator = operator_codes.XCOREOpCodes.XC_maxpool2d_deep.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_maxpool2d_deep.py')
+    operator = operator_codes.XCOREOpCodes.XC_maxpool2d.name
+    generator = os.path.join(directories.GENERATOR_DIR, 'generate_maxpool2d.py')
     parameter_sets = [
         {'-in': 32, '-hi': 2, '-wi': 2, '-st':2, '-po': 2, '-pd': 'VALID'},
         {'-in': 32, '-hi': 4, '-wi': 4, '-st':2, '-po': 2, '-pd': 'VALID'},
@@ -206,15 +212,23 @@ def run_generate(tests, jobs):
     if operator in tests or len(tests) == 0:
         test_cases.extend(create_test_cases(operator, generator, parameter_sets))
 
-    # now generate all the test cases
-    pool = multiprocessing.Pool(processes=jobs)
-    pool.map(generate_test_case, test_cases)
 
+    if not args.dry_run:
+        # Remove all existing data
+        if os.path.exists(directories.DATA_DIR):
+            shutil.rmtree(directories.DATA_DIR)
+
+        # now generate all the test cases
+    pool = multiprocessing.Pool(processes=jobs)
+    func = partial(generate_test_case, args.dry_run)
+    # pool.map(generate_test_case, test_cases)
+    pool.map(func, test_cases)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--test', action='append', default=[], help="Test to run (defaults to all)")
     parser.add_argument('-j', '--jobs', type=int, default=4, help="Allow N jobs at once")
+    parser.add_argument('--dry-run', action='store_true', default=False, help='Perform a dry run.')
     args = parser.parse_args()
 
     run_generate(args.test, args.jobs)

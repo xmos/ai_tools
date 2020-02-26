@@ -1,10 +1,9 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
-
 import numpy as np
 from abc import abstractmethod
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.transformation_passes import ReplaceQuantizedOperatorPass
+from .transformation_passes import ReplaceQuantizedOperatorPass
 
 
 class ReplaceWithXCLookup8Pass(ReplaceQuantizedOperatorPass):

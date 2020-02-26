@@ -9,10 +9,14 @@ from tflite2xcore.operator_codes import OperatorCode, XCOREOpCodes
 from tflite2xcore.transformation_passes import ParallelizeDIDOPass
 
 
-from .test_ReplaceDeepinDeepoutConv2DPass import (
-    output_channels, kernel_height, kernel_width, input_channels, weight_shape,
+from .test_conv2d_passes.test_conv2d_deepout_passes.conftest import (
+    output_channels, kernel_height, kernel_width,
     input_height, input_width, input_size,
     padding
+)
+
+from .test_conv2d_passes.test_conv2d_deepout_passes.test_ReplaceSingleinDeepoutDepthwiseConv2DPass import (
+    input_channels, weight_shape, model
 )
 
 

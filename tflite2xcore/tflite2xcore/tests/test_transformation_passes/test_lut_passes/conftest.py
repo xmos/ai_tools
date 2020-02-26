@@ -6,6 +6,11 @@ from copy import deepcopy
 from tflite2xcore.operator_codes import XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
 
+
+#  ----------------------------------------------------------------------------
+#                              PARAMETER VALUES
+#  ----------------------------------------------------------------------------
+
 MATCHING_INPUT_CHANNELS = [1, 3, 4, 16, 32]
 MATCHING_INPUT_HEIGHT = [1, 3, 8]
 MATCHING_INPUT_WIDTH = MATCHING_INPUT_HEIGHT
@@ -16,7 +21,9 @@ NON_MATCHING_INPUT_TYPE = [
 NON_MATCHING_OUTPUT_TYPE = NON_MATCHING_INPUT_TYPE
 
 
-# helpers
+#  ----------------------------------------------------------------------------
+#                                   HELPERS
+#  ----------------------------------------------------------------------------
 
 def _test_matching_params(trf_pass, model):
     assert trf_pass.match(model.subgraphs[0].operators[0])
@@ -63,7 +70,9 @@ def _test_mutate(trf_pass, model):
     assert lut_tensor.shape == [256]
 
 
-# fixtures
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
 
 @pytest.fixture(params=MATCHING_INPUT_CHANNELS)
 def input_channels(request):

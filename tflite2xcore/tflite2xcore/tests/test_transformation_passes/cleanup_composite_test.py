@@ -5,13 +5,11 @@ import pytest
 from tflite2xcore.transformation_passes import RemoveUnusedBuffersPass, RemoveDanglingTensorsPass
 from tflite2xcore.xcore_model import TensorType
 
-# TODO: stop using fixtures for parameters, since it makes model sharing accross test modules difficult
-from .test_ReplaceSingleinDeepoutDepthwiseConv2DPass import (
-    output_channels, kernel_height, kernel_width,
-    input_height, input_width, input_size, input_channels,
-    weight_shape, padding, model
+# TODO: use multiple different models instead of just mlp
+from .test_RemoveDanglingTensorsPass import (
+    outputs, hidden_nodes, input_size, mlp,
+    count_tensors
 )
-from .test_RemoveDanglingTensorsPass import count_tensors
 
 
 @pytest.fixture()
@@ -19,7 +17,8 @@ def trf_pass():
     return RemoveUnusedBuffersPass()
 
 
-def test_mutate(model, trf_pass):
+def test_mutate(mlp, trf_pass):
+    model = mlp  # TODO: fix this by refactoring
     model.subgraphs[0].create_tensor(
         'dangling_tensor', TensorType.INT16, [1, 32, 1, 1],
         buffer=model.create_buffer()

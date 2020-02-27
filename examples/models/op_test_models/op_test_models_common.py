@@ -226,6 +226,7 @@ class OpTestDefaultParser(argparse.ArgumentParser):
     def __init__(self, *args, defaults, **kwargs):
         kwargs["formatter_class"] = argparse.ArgumentDefaultsHelpFormatter
         super().__init__(*args, **kwargs)
+        self._init_names = []
         self.add_argument(
             "-path", nargs="?", default=defaults["path"],
             help="Path to a directory where models and data will be saved in subdirectories.",
@@ -237,6 +238,11 @@ class OpTestDefaultParser(argparse.ArgumentParser):
 
 
 class OpTestParserInputInitializerMixin(OpTestDefaultParser):
+    def __init__(self, *args, defaults, **kwargs):
+        super().__init__(*args, defaults=defaults, **kwargs)
+        self._init_names.append("input_init")  # only input_init
+        self._seed = None
+
     def add_initializers(self):
         self.add_argument(
             "--seed", type=int,
@@ -277,14 +283,39 @@ class OpTestParserInputInitializerMixin(OpTestDefaultParser):
                     "none, in wich case, the default value will be used."
                 )
 
+        def get_initializers():
+            """
+            Add here new initializers.
+            """
+            supported_initializers = {
+                "input_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, self._seed),
+                "weight_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, self._seed),
+                "bias_init": DEFAULT_CONST_INIT,
+                "alpha_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, self._seed),
+            }
+            return supported_initializers
+
+        def filter_initializers(args):
+            initializers = {}
+            init_names = self._init_names
+            for k, init in get_initializers().items():
+                if k in init_names:
+                    initializers.update({k: init})
+            for k, init in initializers.items():
+                print(f"{k}: {init}")
+            return initializers
+
+        self._seed = args.seed
         utils.set_all_seeds(args.seed)  # NOTE: All seeds initialized here
-        initializers = {
-            "alpha_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
-            "weight_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
-            "bias_init": DEFAULT_CONST_INIT,
-            "input_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
-        }
+        initializers = filter_initializers(args)
         init_args = {k: vars(args)[k] for k in initializers if k in vars(args)}
+        # level the initializers dict
+        # initializers = {
+        #     "alpha_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
+        #     "weight_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
+        #     "bias_init": DEFAULT_CONST_INIT,
+        #     "input_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
+        # }
         for k, arg_params in init_args.items():
             try:
                 init_type = OpTestInitializers(arg_params[0].lower())
@@ -321,6 +352,10 @@ class OpTestParserInputInitializerMixin(OpTestDefaultParser):
 
 
 class OpTestParserInitializerMixin(OpTestParserInputInitializerMixin):
+    def __init__(self, *args, defaults, **kwargs):
+        super().__init__(*args, defaults=defaults, **kwargs)
+        self._init_names.extend(["bias_init", "weight_init"])  # init + bias + weight inits
+
     def add_initializers(self, seed=False):
         super().add_initializers()
         self.add_argument(
@@ -373,7 +408,6 @@ class OpTestPoolParser(OpTestImgParser):
             "-po", "--pool_size", nargs="+", type=int, default=argparse.SUPPRESS,
             help=f"Pool size:, vertical first (default: {defaults['pool_size']})",
         )
-        # self.add_initializers()
 
     def strides_pool_arg_handler(self, args):
         parameters = {

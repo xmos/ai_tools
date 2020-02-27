@@ -20,6 +20,10 @@ To run all tests
 
     > pytest
 
+To run tests using multiple CPUs
+
+    > pytest -n NUM
+
 To run a single test
 
     > pytest -k name_of_test

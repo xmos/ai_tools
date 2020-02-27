@@ -4,7 +4,7 @@
 
 import os
 import sys
-import re
+# import re
 import shutil
 from functools import partial
 import subprocess
@@ -12,26 +12,10 @@ import multiprocessing
 import argparse
 
 import directories
+from helpers import make_folder_and_arguments
 from tflite2xcore import operator_codes
 
 stdout_lock = multiprocessing.Lock()
-
-def make_folder_and_arguments(**kwargs):
-    folder_fields = []
-    aurgment_fields = []
-    for key, value in kwargs.items():
-        hyphenless_key = re.search('(?<=-)\w+', key).group(0) # strip off leading hyphens
-        if isinstance(value, tuple):
-            value_folder_str = 'x'.join([str(v) for v in value])
-            value_argument_str = ' '.join([str(v) for v in value])
-        else:
-            value_folder_str = str(value)
-            value_argument_str = str(value)
-
-        folder_fields.append(f'{hyphenless_key}={value_folder_str}')
-        aurgment_fields.append(f'{key} {value_argument_str}')
-
-    return '_'.join(folder_fields), ' '.join(aurgment_fields)
 
 def generate_test_case(dry_run, test_case):
     if test_case['train_model']:

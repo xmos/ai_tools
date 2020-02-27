@@ -6,19 +6,50 @@ from copy import deepcopy
 from tflite2xcore.operator_codes import XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
 
+from ..conftest import _pytest_generate_tests
+
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-MATCHING_INPUT_CHANNELS = [1, 3, 4, 16, 32]
-MATCHING_INPUT_HEIGHT = [1, 3, 8]
-MATCHING_INPUT_WIDTH = MATCHING_INPUT_HEIGHT
+PARAMS = {
+    "default": {
+        "input_channels": [1, 2, 3, 4, 8, 16, 32],
+        "input_height": [1, 2, 3, 4, 5, 9],
+        "input_width": [1, 2, 3, 4, 5, 9],
+        "non_matching_input_type": [
+            TensorType.INT16, TensorType.INT32, TensorType.UINT8, TensorType.FLOAT32
+        ],
+        "non_matching_output_type": [
+            TensorType.INT16, TensorType.INT32, TensorType.UINT8, TensorType.FLOAT32
+        ]
+    },
+    "smoke": {
+        "input_channels": [1, 4, 32],
+        "input_height": [1, 9],
+        "input_width": [1, 9],
+        "non_matching_input_type": [
+            TensorType.INT16, TensorType.FLOAT32
+        ],
+        "non_matching_output_type": [
+            TensorType.INT16, TensorType.FLOAT32
+        ]
+    }
+}
 
-NON_MATCHING_INPUT_TYPE = [
-    TensorType.INT16, TensorType.INT32, TensorType.UINT8, TensorType.FLOAT32
-]
-NON_MATCHING_OUTPUT_TYPE = NON_MATCHING_INPUT_TYPE
+
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
+
+def pytest_generate_tests(metafunc):
+    _pytest_generate_tests(metafunc, PARAMS)
+
+
+@pytest.fixture()
+def input_shape(input_height, input_width, input_channels):
+    return [input_height, input_width, input_channels]
 
 
 #  ----------------------------------------------------------------------------
@@ -68,37 +99,3 @@ def _test_mutate(trf_pass, model):
     lut_tensor = op.inputs[1]
     assert len(lut_tensor.buffer.data) == 256
     assert lut_tensor.shape == [256]
-
-
-#  ----------------------------------------------------------------------------
-#                                   FIXTURES
-#  ----------------------------------------------------------------------------
-
-@pytest.fixture(params=MATCHING_INPUT_CHANNELS)
-def input_channels(request):
-    return request.param
-
-
-@pytest.fixture(params=MATCHING_INPUT_HEIGHT)
-def input_height(request):
-    return request.param
-
-
-@pytest.fixture(params=MATCHING_INPUT_WIDTH)
-def input_width(request):
-    return request.param
-
-
-@pytest.fixture()
-def input_shape(input_height, input_width, input_channels):
-    return [input_height, input_width, input_channels]
-
-
-@pytest.fixture(params=NON_MATCHING_INPUT_TYPE)
-def non_matching_input_type(request):
-    return request.param
-
-
-@pytest.fixture(params=NON_MATCHING_OUTPUT_TYPE)
-def non_matching_output_type(request):
-    return request.param

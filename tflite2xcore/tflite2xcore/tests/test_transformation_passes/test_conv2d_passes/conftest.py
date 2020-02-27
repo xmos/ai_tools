@@ -2,7 +2,7 @@
 
 import pytest
 
-from tflite2xcore.tests.conftest import _pytest_generate_tests
+from ..conftest import _pytest_generate_tests
 from tflite2xcore.xcore_model import TensorType
 
 

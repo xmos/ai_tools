@@ -73,6 +73,21 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
             old_shape = self._weights.shape
             self._weights.shape = [old_shape[0], old_shape[3]]
 
+            # remove quantization info to save space
+            self._weights.quantization = None
+
+    def mutate(self, op):
+        # NOTE: the order of these mutations is strict
+        new_op = super().mutate(op)
+        self.mutate_biases(new_op)
+        self.mutate_weights(new_op)
+
+        with self.using(op):
+            new_op.add_custom_options(
+                stride_h=self._strides[0], stride_w=self._strides[1]
+            )
+        return new_op
+
 
 # TODO: write (at least regression) tests for this class
 class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):

@@ -13,6 +13,7 @@ set -e
 ./generate_maxpool2d.py -v
 
 # convolutions
+./generate_conv2d_1x1.py -v
 ./generate_conv2d_deepin_deepout_relu.py -v
 ./generate_conv2d_shallowin_deepout_relu.py -v
 

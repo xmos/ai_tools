@@ -7,6 +7,7 @@ class ValidOpCodes():
     pass
 
 
+# TODO: reference the schema
 class BuiltinOpCodes(ValidOpCodes, enum.Enum):
     ADD = 0
     AVERAGE_POOL_2D = 1

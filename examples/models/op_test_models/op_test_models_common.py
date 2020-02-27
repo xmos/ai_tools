@@ -60,9 +60,6 @@ class DefaultOpTestConvModel(DefaultOpTestModel):
     def build_core_model(
             self, K_h, K_w, height, width, input_channels, output_channels, *,
             padding, bias_init, weight_init, input_init):
-        assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
-        assert K_h % 2 == 1, "kernel height must be odd"
-        assert K_w % 2 == 1, "kernel width must be odd"
         self.input_init = input_init
 
         try:
@@ -82,6 +79,15 @@ class DefaultOpTestConvModel(DefaultOpTestModel):
                     "Negative dimension size (Hint: if using 'valid' padding "
                     "verify that the kernel is at least the size of input image)"
                 ) from e
+
+
+class OpTestDeepoutConvModel(DefaultOpTestConvModel):
+    def build_core_model(self, *args, **kwargs):
+        K_h, K_w, _, _, _, output_channels = args
+        assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
+        assert K_h % 2 == 1, "kernel height must be odd"
+        assert K_w % 2 == 1, "kernel width must be odd"
+        super().build_core_model(*args, **kwargs)
 
 
 class OpTestInitializers(Enum):

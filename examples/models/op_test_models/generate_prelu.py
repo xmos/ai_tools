@@ -39,7 +39,6 @@ def main(path=DEFAULT_PATH, *,
 class OpTestPReLUParser(common.OpTestImgParser):
     def add_initializers(self):
         super().add_initializers()
-        self._init_names.append("alpha_init")
         self.add_argument(
             "--alpha_init", nargs="*", default=argparse.SUPPRESS,
             help="Initialize learnable parameters. Possible initializers are: "
@@ -54,7 +53,11 @@ if __name__ == "__main__":
         'path': DEFAULT_PATH,
         'inputs': DEFAULT_INPUTS,
         'width': DEFAULT_WIDTH,
-        'height': DEFAULT_HEIGHT
+        'height': DEFAULT_HEIGHT,
+        'inits': {
+            'input_init': common.OpTestInitializers.UNIF,
+            'alpha_init': common.OpTestInitializers.UNIF
+        }
     })
     args = parser.parse_args()
     utils.set_verbosity(args.verbose)

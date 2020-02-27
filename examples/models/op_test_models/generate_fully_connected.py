@@ -41,7 +41,10 @@ if __name__ == "__main__":
         'input_dim': DEFAULT_INPUT_DIM,
         'output_dim': DEFAULT_OUTPUT_DIM,
         'batch_size': DEFAULT_BS,
-        'epochs': DEFAULT_EPOCHS
+        'epochs': DEFAULT_EPOCHS,
+        'inits': {
+            'bias_init': common.OpTestInitializers.CONST,
+            'weight_init': common.OpTestInitializers.UNIF}
     })
     args = parser.parse_args()
     utils.set_verbosity(args.verbose)

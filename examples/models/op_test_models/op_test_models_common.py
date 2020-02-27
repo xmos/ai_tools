@@ -226,7 +226,6 @@ class OpTestDefaultParser(argparse.ArgumentParser):
     def __init__(self, *args, defaults, **kwargs):
         kwargs["formatter_class"] = argparse.ArgumentDefaultsHelpFormatter
         super().__init__(*args, **kwargs)
-        self._init_names = []
         self.add_argument(
             "-path", nargs="?", default=defaults["path"],
             help="Path to a directory where models and data will be saved in subdirectories.",
@@ -240,8 +239,8 @@ class OpTestDefaultParser(argparse.ArgumentParser):
 class OpTestParserInputInitializerMixin(OpTestDefaultParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
-        self._init_names.append("input_init")  # only input_init
         self._seed = None
+        self.defaults = defaults
 
     def add_initializers(self):
         self.add_argument(
@@ -283,39 +282,32 @@ class OpTestParserInputInitializerMixin(OpTestDefaultParser):
                     "none, in wich case, the default value will be used."
                 )
 
-        def get_initializers():
+        def filtered_inits():
             """
-            Add here new initializers.
+            Returns a dictionary with names and default values (and initialized
+            with a seed if specified) of the initializers declared on the default
+            dict in the creation of the parser.
             """
-            supported_initializers = {
-                "input_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, self._seed),
-                "weight_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, self._seed),
-                "bias_init": DEFAULT_CONST_INIT,
-                "alpha_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, self._seed),
-            }
-            return supported_initializers
-
-        def filter_initializers(args):
+            def instantiate_default_init(init_type):
+                """
+                Instantiates a initializer based on its type (OpTestInitializer).
+                """
+                if init_type is OpTestInitializers.UNIF:
+                    init = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, self._seed)
+                else:
+                    init = DEFAULT_CONST_INIT
+                return init
             initializers = {}
-            init_names = self._init_names
-            for k, init in get_initializers().items():
-                if k in init_names:
-                    initializers.update({k: init})
-            for k, init in initializers.items():
-                print(f"{k}: {init}")
+            for k, init_type in self.defaults["inits"].items():
+                initializers.update({k: instantiate_default_init(init_type)})
             return initializers
 
         self._seed = args.seed
         utils.set_all_seeds(args.seed)  # NOTE: All seeds initialized here
-        initializers = filter_initializers(args)
+        initializers = filtered_inits()
+        # for k, init in initializers.items():
+        #     print(f"{k}: {init}")
         init_args = {k: vars(args)[k] for k in initializers if k in vars(args)}
-        # level the initializers dict
-        # initializers = {
-        #     "alpha_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
-        #     "weight_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
-        #     "bias_init": DEFAULT_CONST_INIT,
-        #     "input_init": tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, args.seed),
-        # }
         for k, arg_params in init_args.items():
             try:
                 init_type = OpTestInitializers(arg_params[0].lower())
@@ -354,7 +346,6 @@ class OpTestParserInputInitializerMixin(OpTestDefaultParser):
 class OpTestParserInitializerMixin(OpTestParserInputInitializerMixin):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
-        self._init_names.extend(["bias_init", "weight_init"])  # init + bias + weight inits
 
     def add_initializers(self, seed=False):
         super().add_initializers()

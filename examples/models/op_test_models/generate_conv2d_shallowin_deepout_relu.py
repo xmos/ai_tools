@@ -59,7 +59,11 @@ if __name__ == "__main__":
         'height': DEFAULT_HEIGHT,
         'padding': DEFAULT_PADDING,
         'kernel_width': DEFAULT_KERNEL_WIDTH,
-        'kernel_height': DEFAULT_KERNEL_HEIGHT
+        'kernel_height': DEFAULT_KERNEL_HEIGHT,
+        'inits': {
+            'input_init': common.OpTestInitializers.UNIF,
+            'bias_init': common.OpTestInitializers.CONST,
+            'weight_init': common.OpTestInitializers.UNIF}
     })
     args = parser.parse_args()
     utils.set_verbosity(args.verbose)

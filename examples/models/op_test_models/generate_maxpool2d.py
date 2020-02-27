@@ -65,7 +65,8 @@ if __name__ == "__main__":
         "width": DEFAULT_WIDTH,
         "padding": DEFAULT_PADDING,
         "strides": DEFAULT_STRIDES,
-        "pool_size": DEFAULT_POOL_SIZE
+        "pool_size": DEFAULT_POOL_SIZE,
+        'inits': {'input_init': common.OpTestInitializers.UNIF}
     })
     args = parser.parse_args()
     utils.set_verbosity(args.verbose)

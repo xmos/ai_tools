@@ -60,7 +60,11 @@ if __name__ == "__main__":
         'height': DEFAULT_HEIGHT,
         'padding': DEFAULT_PADDING,
         'kernel_width': DEFAULT_KERNEL_WIDTH,
-        'kernel_height': DEFAULT_KERNEL_HEIGHT
+        'kernel_height': DEFAULT_KERNEL_HEIGHT,
+        'inits': {
+            'input_init': common.OpTestInitializers.UNIF,
+            'bias_init': common.OpTestInitializers.CONST,
+            'weight_init': common.OpTestInitializers.UNIF}
     })
     parser.add_argument(
         '-par', '--par_num_threads', type=int, default=DEFAULT_NUM_THREADS,

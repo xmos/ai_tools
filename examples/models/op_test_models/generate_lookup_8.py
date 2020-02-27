@@ -72,7 +72,8 @@ if __name__ == "__main__":
         "inputs": DEFAULT_INPUTS,
         "height": DEFAULT_HEIGHT,
         "width": DEFAULT_WIDTH,
-        "choices": LUTActivation.ACTIVATIONS
+        "choices": LUTActivation.ACTIVATIONS,
+        'inits': {'input_init': common.OpTestInitializers.UNIF}
     })
     args = parser.parse_args()
     utils.set_verbosity(args.verbose)

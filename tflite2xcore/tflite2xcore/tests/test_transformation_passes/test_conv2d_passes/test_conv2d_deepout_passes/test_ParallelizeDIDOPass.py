@@ -6,15 +6,32 @@ from copy import deepcopy
 
 from tflite2xcore.transformation_passes import ParallelizeDIDOPass
 
-from ...model_builders import build_DIDO
-from .test_ReplaceDeepinDeepoutConv2DPass import (
-    input_channels, weight_shape
-)
+from tflite2xcore.tests.test_transformation_passes.model_builders import build_DIDO
+from . import test_ReplaceDeepinDeepoutConv2DPass
+from .conftest import _pytest_generate_tests
+
+
+#  ----------------------------------------------------------------------------
+#                              PARAMETER VALUES
+#  ----------------------------------------------------------------------------
+
+PARAMS = {
+    "default": {
+        "input_channels": test_ReplaceDeepinDeepoutConv2DPass.PARAMS["default"]["input_channels"]
+    },
+    "smoke": {
+        "input_channels": test_ReplaceDeepinDeepoutConv2DPass.PARAMS["smoke"]["input_channels"]
+    }
+}
 
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
+def pytest_generate_tests(metafunc):
+    _pytest_generate_tests(metafunc, PARAMS)
+
 
 @pytest.fixture()
 def trf_pass(num_threads):

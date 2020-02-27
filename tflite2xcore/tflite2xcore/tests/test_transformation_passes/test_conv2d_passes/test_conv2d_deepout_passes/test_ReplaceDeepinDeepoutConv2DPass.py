@@ -5,9 +5,12 @@ import pytest
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.transformation_passes import ReplaceDeepinDeepoutConv2DPass
 
-from ...model_builders import build_conv2d as build_model
-from .conftest import MATCHING_KERNEL_HEIGHT, NON_MATCHING_KERNEL_HEIGHT
-from ..conftest import (
+from tflite2xcore.tests.test_transformation_passes.model_builders import (
+    build_conv2d as build_model
+)
+from . import conftest
+from .conftest import (
+    _pytest_generate_tests,
     _test_non_matching_stride_w,
     _test_non_matching_stride_h,
     _test_non_matching_output_channels,
@@ -22,40 +25,31 @@ from ..conftest import (
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-MATCHING_KERNEL_WIDTH = MATCHING_KERNEL_HEIGHT
-MATCHING_INPUT_CHANNELS = [32, 64]
-
-NON_MATCHING_KERNEL_WIDTH = NON_MATCHING_KERNEL_HEIGHT
-NON_MATCHING_INPUT_CHANNELS = [8, 16, 33, 48]
+PARAMS = {
+    "default": {
+        "non_matching_kernel_width": conftest.PARAMS["default"]["non_matching_kernel_height"],
+        "input_channels": [32, 64],
+        "non_matching_input_channels": [8, 16, 33, 48]
+    },
+    "smoke": {
+        "non_matching_kernel_width": conftest.PARAMS["smoke"]["non_matching_kernel_height"],
+        "input_channels": [32],
+        "non_matching_input_channels": [16]
+    }
+}
 
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
 
+def pytest_generate_tests(metafunc):
+    _pytest_generate_tests(metafunc, PARAMS)
+
+
 @pytest.fixture()
 def trf_pass():
     return ReplaceDeepinDeepoutConv2DPass()
-
-
-@pytest.fixture(params=NON_MATCHING_KERNEL_WIDTH)
-def non_matching_kernel_width(request):
-    return request.param
-
-
-@pytest.fixture(params=MATCHING_INPUT_CHANNELS)
-def input_channels(request):
-    return request.param
-
-
-@pytest.fixture(params=NON_MATCHING_INPUT_CHANNELS)
-def non_matching_input_channels(request):
-    return request.param
-
-
-@pytest.fixture()
-def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
-    return [output_channels, kernel_height, kernel_width, input_channels]
 
 
 @pytest.fixture()

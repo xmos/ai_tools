@@ -2,6 +2,7 @@
 
 import pytest
 
+from tflite2xcore.tests.conftest import _pytest_generate_tests
 from tflite2xcore.xcore_model import TensorType
 
 
@@ -9,32 +10,53 @@ from tflite2xcore.xcore_model import TensorType
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-MATCHING_INPUT_HEIGHT = [9, 20]
-MATCHING_INPUT_WIDTH = [7, 17]
-MATCHING_PADDING = ['SAME', 'VALID']
+PARAMS = {
+    "default": {
+        "input_height": [9, 20],
+        "input_width": [7, 17],
+        "padding": ['SAME', 'VALID'],
+        "non_matching_tensors": [
+            ('input', TensorType.INT16), ('input', TensorType.INT32),
+            ('weights', TensorType.INT16), ('weights', TensorType.INT32),
+            ('biases', TensorType.INT8), ('biases', TensorType.INT16),
+            ('output', TensorType.INT16), ('output', TensorType.INT32)
+        ]
+    },
+    "smoke": {
+        "input_height": [9, 20],
+        "input_width": [7, 17],
+        "padding": ['SAME', 'VALID'],
+        "non_matching_tensors": [
+            ('input', TensorType.INT16),
+            ('weights', TensorType.INT16),
+            ('biases', TensorType.INT8),
+            ('output', TensorType.INT16)
+        ]
+    }
+}
 
-NON_MATCHING_TENSORS = [
-    ('input', TensorType.INT16), ('input', TensorType.INT32),
-    ('weights', TensorType.INT16), ('weights', TensorType.INT32),
-    ('biases', TensorType.INT8), ('biases', TensorType.INT16),
-    ('output', TensorType.INT16), ('output', TensorType.INT32)
-]
+
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
+
+def pytest_generate_tests(metafunc):
+    _pytest_generate_tests(metafunc, PARAMS)
+
+
+@pytest.fixture()
+def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
+    return [output_channels, kernel_height, kernel_width, input_channels]
+
+
+@pytest.fixture()
+def input_size(input_height, input_width):
+    return [input_height, input_width]
 
 
 #  ----------------------------------------------------------------------------
 #                                   HELPERS
 #  ----------------------------------------------------------------------------
-
-def _test_non_matching_stride_w(trf_pass, model, non_matching_stride_w):
-    op = model.subgraphs[0].operators[0]
-    op.builtin_options['stride_w'] = non_matching_stride_w
-    assert not trf_pass.match(model.subgraphs[0].operators[-1])
-
-
-def _test_non_matching_stride_h(trf_pass, model, non_matching_stride_h):
-    op = model.subgraphs[0].operators[0]
-    op.builtin_options['stride_h'] = non_matching_stride_h
-    assert not trf_pass.match(model.subgraphs[0].operators[-1])
 
 
 def _test_non_matching_dim(trf_pass, build_model,
@@ -76,32 +98,3 @@ def _test_non_matching_types(trf_pass, model, non_matching_tensors):
     subgraph = model.subgraphs[0]
     subgraph.get_tensor(non_matching_tensors[0]).type = non_matching_tensors[1]
     assert not trf_pass.match(subgraph.operators[-1])
-
-
-#  ----------------------------------------------------------------------------
-#                                   FIXTURES
-#  ----------------------------------------------------------------------------
-
-@pytest.fixture(params=MATCHING_INPUT_HEIGHT)
-def input_height(request):
-    return request.param
-
-
-@pytest.fixture(params=MATCHING_INPUT_WIDTH)
-def input_width(request):
-    return request.param
-
-
-@pytest.fixture()
-def input_size(input_height, input_width):
-    return [input_height, input_width]
-
-
-@pytest.fixture(params=MATCHING_PADDING)
-def padding(request):
-    return request.param
-
-
-@pytest.fixture(params=NON_MATCHING_TENSORS)
-def non_matching_tensors(request):
-    return request.param

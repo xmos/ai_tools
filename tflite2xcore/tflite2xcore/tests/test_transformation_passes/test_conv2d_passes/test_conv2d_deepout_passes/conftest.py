@@ -2,61 +2,63 @@
 
 import pytest
 
+from ..conftest import (
+    _pytest_generate_tests,
+    _test_non_matching_output_channels,
+    _test_non_matching_kernel_height,
+    _test_non_matching_kernel_width,
+    _test_non_matching_input_channels,
+    _test_non_matching_types
+)
+
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-MATCHING_OUTPUT_CHANNELS = [16, 32]
-MATCHING_KERNEL_HEIGHT = [1, 3, 5, 7]
-MATCHING_KERNEL_WIDTH = MATCHING_KERNEL_HEIGHT
-MATCHING_STRIDES = (1, 1)
-
-NON_MATCHING_STRIDE_W = [2, 3]
-NON_MATCHING_STRIDE_H = NON_MATCHING_STRIDE_W
-NON_MATCHING_OUTPUT_CHANNELS = [8, 24, 17, 63]
-NON_MATCHING_KERNEL_HEIGHT = [2, 4, 6]
+PARAMS = {
+    "default": {
+        "output_channels": [16, 32],
+        "non_matching_output_channels": [8, 24, 17, 63],
+        "kernel_height": [1, 3, 5, 7],
+        "non_matching_kernel_height": [2, 4, 6],
+        "kernel_width": [1, 3, 5, 7],
+        "strides": [(1, 1)],
+        "non_matching_stride_w": [2, 3],
+        "non_matching_stride_h": [2, 3]
+    },
+    "smoke": {
+        "output_channels": [16],
+        "non_matching_output_channels": [8],
+        "kernel_height": [1, 3],
+        "non_matching_kernel_height": [2],
+        "kernel_width": [1, 3],
+        "strides": [(1, 1)],
+        "non_matching_stride_w": [2],
+        "non_matching_stride_h": [2]
+    }
+}
 
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
 
-@pytest.fixture()
-def strides():
-    return MATCHING_STRIDES
+def pytest_generate_tests(metafunc):
+    _pytest_generate_tests(metafunc, PARAMS)
 
 
-@pytest.fixture(params=MATCHING_OUTPUT_CHANNELS)
-def output_channels(request):
-    return request.param
+#  ----------------------------------------------------------------------------
+#                                   HELPERS
+#  ----------------------------------------------------------------------------
+
+def _test_non_matching_stride_w(trf_pass, model, non_matching_stride_w):
+    op = model.subgraphs[0].operators[0]
+    op.builtin_options['stride_w'] = non_matching_stride_w
+    assert not trf_pass.match(model.subgraphs[0].operators[-1])
 
 
-@pytest.fixture(params=NON_MATCHING_OUTPUT_CHANNELS)
-def non_matching_output_channels(request):
-    return request.param
-
-
-@pytest.fixture(params=MATCHING_KERNEL_HEIGHT)
-def kernel_height(request):
-    return request.param
-
-
-@pytest.fixture(params=NON_MATCHING_KERNEL_HEIGHT)
-def non_matching_kernel_height(request):
-    return request.param
-
-
-@pytest.fixture(params=MATCHING_KERNEL_WIDTH)
-def kernel_width(request):
-    return request.param
-
-
-@pytest.fixture(params=NON_MATCHING_STRIDE_W)
-def non_matching_stride_w(request):
-    return request.param
-
-
-@pytest.fixture(params=NON_MATCHING_STRIDE_H)
-def non_matching_stride_h(request):
-    return request.param
+def _test_non_matching_stride_h(trf_pass, model, non_matching_stride_h):
+    op = model.subgraphs[0].operators[0]
+    op.builtin_options['stride_h'] = non_matching_stride_h
+    assert not trf_pass.match(model.subgraphs[0].operators[-1])

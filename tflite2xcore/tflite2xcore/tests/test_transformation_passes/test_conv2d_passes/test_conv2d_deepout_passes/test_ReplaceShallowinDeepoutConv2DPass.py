@@ -4,8 +4,9 @@ import pytest
 
 from tflite2xcore.transformation_passes import ReplaceShallowinDeepoutConv2DPass
 
-from ...model_builders import build_conv2d as build_model
-from ..conftest import (
+from tflite2xcore.tests.test_transformation_passes.model_builders import build_conv2d as build_model
+from .conftest import (
+    _pytest_generate_tests,
     _test_non_matching_stride_w,
     _test_non_matching_stride_h,
     _test_non_matching_output_channels,
@@ -20,39 +21,31 @@ from ..conftest import (
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-MATCHING_INPUT_CHANNELS = [2, 3, 4]
-
-NON_MATCHING_KERNEL_WIDTH = [2, 4, 6, 9]
-NON_MATCHING_INPUT_CHANNELS = [5, 16, 32]
+PARAMS = {
+    "default": {
+        "non_matching_kernel_width": [2, 4, 6, 9],
+        "input_channels": [1, 2, 3, 4],
+        "non_matching_input_channels": [5, 16, 32]
+    },
+    "smoke": {
+        "non_matching_kernel_width": [2, 9],
+        "input_channels": [1, 4],
+        "non_matching_input_channels": [5, 32]
+    }
+}
 
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
 
+def pytest_generate_tests(metafunc):
+    _pytest_generate_tests(metafunc, PARAMS)
+
+
 @pytest.fixture()
 def trf_pass():
     return ReplaceShallowinDeepoutConv2DPass()
-
-
-@pytest.fixture(params=NON_MATCHING_KERNEL_WIDTH)
-def non_matching_kernel_width(request):
-    return request.param
-
-
-@pytest.fixture(params=MATCHING_INPUT_CHANNELS)
-def input_channels(request):
-    return request.param
-
-
-@pytest.fixture(params=NON_MATCHING_INPUT_CHANNELS)
-def non_matching_input_channels(request):
-    return request.param
-
-
-@pytest.fixture()
-def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
-    return [output_channels, kernel_height, kernel_width, input_channels]
 
 
 @pytest.fixture()

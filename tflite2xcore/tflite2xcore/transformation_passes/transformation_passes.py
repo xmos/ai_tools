@@ -305,6 +305,11 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         return rshift, scale
 
     @property
+    @abstractmethod
+    def _MAX_POST_SHIFT(self):
+        pass
+
+    @property
     def _shift_scale_arr(self):
         # calculate right shift/scale
         rshift, scale = self._shift_scale
@@ -316,7 +321,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
         # split left and right shift into pre and post scaling shifts
         shift_pre = rshift if True else np.maximum(rshift, 0)  # TODO: resolve this when left shift issue is solved in conv2d kernels
-        shift_post = 14 * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
+        shift_post = self._MAX_POST_SHIFT * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
         return np.stack([shift_pre, scale, shift_post], axis=1)
 
     @property
@@ -357,6 +362,10 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
 
             # remove quantization info to save space
             self._weights.quantization = None
+
+    @property
+    def _MAX_POST_SHIFT(self):
+        return 32 - 16 - 2  # this is because the output is 16 bit
 
     def mutate_biases(self, op):
         super().mutate_biases(op)

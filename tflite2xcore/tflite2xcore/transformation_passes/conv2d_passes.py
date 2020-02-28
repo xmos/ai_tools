@@ -33,6 +33,10 @@ class ReplaceConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
 
         return False
 
+    @property
+    def _MAX_POST_SHIFT(self):
+        return 32 - 8 - 2  # this is because the output is 8 bit
+
 
 class Replace1x1Conv2dPass(ReplaceConv2DPass):
     @property
@@ -53,10 +57,6 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
                         and self._weights.shape[3] % WORD_SIZE == 0)  # Cin divisible by 4
 
         return False
-
-    @property
-    def _MAX_POST_SHIFT(self):
-        return 32 - 8 - 2  # this is because the output is 8 bit
 
     def mutate_biases(self, op):
         # TODO: this is the same as in ReplaceFullyConnectedPass, refactor

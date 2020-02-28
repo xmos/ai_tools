@@ -21,7 +21,9 @@ DEFAULT_NUM_THREADS = 1
 class Conv2dDeepinDeepoutRelu(common.OpTestDeepoutConvModel):
     def build_core_model(self, *args, **kwargs):
         input_channels = args[4]
+        K_h, K_w = args[0], args[1]
         assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
+        assert K_h != 1 or K_w != 1, "1x1 kernel is not allowed for DIDO testing"
         super().build_core_model(*args, **kwargs)
 
 

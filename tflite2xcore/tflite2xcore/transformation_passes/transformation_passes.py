@@ -10,7 +10,8 @@ from tflite2xcore.graph_transformer import (
     ModelTransformationPass,
     OperatorMatchingPass,
     InputTensorMatchingPass,
-    OutputTensorMatchingPass
+    OutputTensorMatchingPass,
+    TensorMatchingPass
 )
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
@@ -132,7 +133,8 @@ class AddArgMax16OutputPass(OutputTensorMatchingPass):
 
         # add tensor with axis info
         dim_tensor = subgraph.create_tensor(
-            f"{op.name}/axis", TensorType.INT32, shape=[])
+            f"{op.name}/axis", TensorType.INT32, shape=[],
+            consumers=[op])
         op.inputs.append(dim_tensor)
         dim_tensor.buffer.data = np.int32([1])
 
@@ -417,20 +419,25 @@ class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
         return False
 
     def add_requantize(self, op):
-        # rename original output tensor
         with self.using(op):
+            # rename original output tensor
             self._output.name = f"{op.name}/output_requant"
-        # create intermediate tensor
-        with self.using(op):
+            # create intermediate tensor
             intermediate = op.subgraph.create_tensor(
                 f"{op.name}/intermediate", self._output.type, self._output.shape,
-                quantization=self._output.quantization
+                quantization=self._output.quantization,
+                producers=[op]
             )
+        # rewire outputs of original FC op
+        for output_tensor in op.outputs:
+            output_tensor.producers.remove(op)
         # create new op, insert after original op, rewire inputs/outputs
         new_op = op.subgraph.create_operator(
             OperatorCode(XCOREOpCodes.XC_requantize_16_to_8),
             inputs=[intermediate], outputs=op.outputs)
         op.outputs = [intermediate]
+        # move operator to correct location
+        # TODO: remove this when we have execution planning
         op.subgraph.insert_operator(op, new_op, after=True)
 
     def mutate(self, op):
@@ -495,10 +502,9 @@ class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
                 raise ValueError("Negative right shift encountered.")
 
         shift_scale_tensor = op.subgraph.create_tensor(
-            f"{op.name}/shift_scale",
-            TensorType.INT16,
-            shift_scale_arr.shape,
-            buffer=op.model.create_buffer(shift_scale_arr)
+            f"{op.name}/shift_scale", TensorType.INT16, shift_scale_arr.shape,
+            buffer=op.model.create_buffer(shift_scale_arr),
+            consumers=[op]
         )
         op.inputs.append(shift_scale_tensor)
 
@@ -827,13 +833,15 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
 
         with self.using(new_op):
             # replace reduction_indices tensor with bias_scale_shift
-            subgraph.remove_tensor(new_op.inputs[1])
+            old_tensor = new_op.inputs[1]
             new_op.inputs[1] = subgraph.create_tensor(
-                f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7])
+                f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7],
+                consumers=[new_op])
             new_op.inputs[1].buffer.data = np.frombuffer(
                 b''.join(p.tostring() for p in self._bias_scale_shift),
                 dtype=np.int8
             )
+            subgraph.remove_tensor(old_tensor)
 
         return new_op
 
@@ -843,10 +851,22 @@ class RemoveUnusedBuffersPass(ModelTransformationPass):
         super().__init__(priority)
 
     def run(self, model):
-        model.buffers = list(
-            set(t.buffer for subgraph in model.subgraphs for t in subgraph.tensors)
-            | set(m.buffer for m in model.metadata)
-        )
+        model.buffers = [b for b in model.buffers if b.owners]
+
+
+class RemoveDanglingTensorsPass(TensorMatchingPass):
+    def __init__(self, priority=PassPriority.CLEANUP):
+        super().__init__(priority)
+
+    def match(self, tensor):
+        return (super().match(tensor)
+                and tensor not in tensor.subgraph.inputs
+                and tensor not in tensor.subgraph.outputs
+                and not tensor.consumers
+                and not tensor.producers)
+
+    def mutate(self, tensor):
+        tensor.subgraph.remove_tensor(tensor)
 
 
 class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):

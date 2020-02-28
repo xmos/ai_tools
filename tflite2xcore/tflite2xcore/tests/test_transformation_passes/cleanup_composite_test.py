@@ -2,7 +2,7 @@
 
 import pytest
 
-from tflite2xcore.transformation_passes import RemoveUnusedBuffersPass
+from tflite2xcore.transformation_passes import RemoveUnusedBuffersPass, RemoveDanglingTensorsPass
 from tflite2xcore.xcore_model import TensorType
 
 # TODO: stop using fixtures for parameters, since it makes model sharing accross test modules difficult
@@ -11,6 +11,7 @@ from .test_ReplaceSingleinDeepoutDepthwiseConv2DPass import (
     input_height, input_width, input_size, input_channels,
     weight_shape, padding, model
 )
+from .test_RemoveDanglingTensorsPass import count_tensors
 
 
 @pytest.fixture()
@@ -18,32 +19,25 @@ def trf_pass():
     return RemoveUnusedBuffersPass()
 
 
-def test_run_identity(model, trf_pass):
-    num_buffers = len(model.buffers)
-    trf_pass.run(model)
-    model.sanity_check()
-    assert num_buffers == len(model.buffers)
-
-
-def test_run_mutating(model, trf_pass):
-    model.create_buffer()
-    model.create_metadata("dummy")
-    num_buffers = len(model.buffers)
-    trf_pass.run(model)
-    model.sanity_check()
-    assert num_buffers == len(model.buffers) + 1
-
-
-def test_run_non_mutating(model, trf_pass):
+def test_mutate(model, trf_pass):
     model.subgraphs[0].create_tensor(
         'dangling_tensor', TensorType.INT16, [1, 32, 1, 1],
         buffer=model.create_buffer()
     )
     model.create_metadata("dummy")
+    num_tensors = count_tensors(model)
     num_buffers = len(model.buffers)
-    trf_pass.run(model)
+
+    pass1 = RemoveDanglingTensorsPass()
+    pass1.run(model)
     model.sanity_check()
-    assert num_buffers == len(model.buffers)
+
+    pass2 = RemoveUnusedBuffersPass()
+    pass2.run(model)
+    model.sanity_check()
+
+    assert num_tensors == count_tensors(model) + 1
+    assert num_buffers == len(model.buffers) + 1
 
 
 if __name__ == "__main__":

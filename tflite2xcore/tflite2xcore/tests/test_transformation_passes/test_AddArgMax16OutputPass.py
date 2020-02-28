@@ -63,6 +63,7 @@ def test_non_matching_outpu_count(trf_pass, model, output_count):
 
 def test_mutate(model, trf_pass):
     trf_pass.run(model)
+    model.sanity_check()
     subgraph = model.subgraphs[0]
     assert subgraph.operators[-1].operator_code.code == BuiltinOpCodes.ARG_MAX
 

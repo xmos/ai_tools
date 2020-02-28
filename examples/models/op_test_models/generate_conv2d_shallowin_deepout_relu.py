@@ -17,7 +17,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
     'debug', 'conv2d_shallowin_deepout_relu').resolve()
 
 
-class Conv2dShallowinDeepoutRelu(common.DefaultOpTestConvModel):
+class Conv2dShallowinDeepoutRelu(common.OpTestDefaultConvModel):
     def build_core_model(self, *args, **kwargs):
         K_w, input_channels = args[1], args[4]
         assert input_channels <= 4, "Number of input channels must be at most 4"
@@ -66,7 +66,6 @@ if __name__ == "__main__":
             'weight_init': common.OpTestInitializers.UNIF}
     })
     args = parser.parse_args()
-    utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
     main(path=args.path,

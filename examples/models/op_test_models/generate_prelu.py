@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 #
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import argparse
 from pathlib import Path
 from tflite2xcore.model_generation import utils
 import tensorflow as tf
@@ -11,7 +10,7 @@ from generate_lookup_8 import DEFAULT_HEIGHT, DEFAULT_WIDTH, DEFAULT_INPUTS
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'prelu').resolve()
 
 
-class PReLU(common.DefaultOpTestModel):
+class PReLU(common.OpTestDefaultModel):
     def build_core_model(self, height, width, input_channels, *,
                          input_init, alpha_init):
         self.input_init = input_init
@@ -24,48 +23,30 @@ class PReLU(common.DefaultOpTestModel):
         )
 
 
-def main(path=DEFAULT_PATH, *,
-         input_channels=DEFAULT_INPUTS,
-         height=DEFAULT_HEIGHT,
-         width=DEFAULT_WIDTH,
-         alpha_init=common.DEFAULT_UNIF_INIT,
-         input_init=common.DEFAULT_UNIF_INIT):
-    test_model = PReLU('prelu', Path(path))
-    test_model.build(height, width, input_channels,
-                     input_init=input_init, alpha_init=alpha_init)
-    test_model.run()
-
-
-class OpTestPReLUParser(common.OpTestImgParser):
-    def add_initializers(self):
-        super().add_initializers()
-        self.add_argument(
-            "--alpha_init", nargs="*", default=argparse.SUPPRESS,
-            help="Initialize learnable parameters. Possible initializers are: "
-                 "const [CONST_VAL] or unif [MIN MAX]. "
-                 f"(default: {common.OpTestInitializers.UNIF.value} "
-                 f"{common._DEFAULT_UNIF_INIT[0]} {common._DEFAULT_UNIF_INIT[1]})",
-        )
-
-
-if __name__ == "__main__":
-    parser = OpTestPReLUParser(defaults={
+def main(raw_args=None):
+    parser = common.OpTestImgParser(defaults={
         'path': DEFAULT_PATH,
         'inputs': DEFAULT_INPUTS,
         'width': DEFAULT_WIDTH,
         'height': DEFAULT_HEIGHT,
         'inits': {
-            'input_init': common.OpTestInitializers.UNIF,
-            'alpha_init': common.OpTestInitializers.UNIF
+            'input_init': {
+                'type': common.OpTestInitializers.UNIF,
+                'help': "Initializer for input data distribution."
+            },
+            'alpha_init': {
+                'type': common.OpTestInitializers.UNIF,
+                'help': "Initializer for learnable parameters."
+            }
         }
     })
-    args = parser.parse_args()
-    utils.set_verbosity(args.verbose)
+    args = parser.parse_args(raw_args)
     utils.set_gpu_usage(False, args.verbose)
 
-    main(path=args.path,
-         input_channels=args.inputs,
-         height=args.height,
-         width=args.width,
-         alpha_init=args.inits['alpha_init'],
-         input_init=args.inits['input_init'])
+    test_model = PReLU('prelu', args.path)
+    test_model.build(args.height, args.width, args.inputs, **args.inits)
+    test_model.run()
+
+
+if __name__ == "__main__":
+    main()

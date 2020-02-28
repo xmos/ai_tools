@@ -26,7 +26,7 @@ def main(path=DEFAULT_PATH, *,
         'name': 'fc_deepin_anyout',
         'path': path if path else DEFAULT_PATH
     }
-    model = common.DefaultOpTestFCModel(**kwargs)
+    model = common.OpTestDefaultFCModel(**kwargs)
     model.run(train_new_model=train_new_model,
               input_dim=input_dim,
               output_dim=output_dim,
@@ -47,7 +47,6 @@ if __name__ == "__main__":
             'weight_init': common.OpTestInitializers.UNIF}
     })
     args = parser.parse_args()
-    utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
 
     main(path=args.path,

@@ -3,6 +3,7 @@
 import argparse
 import logging
 from enum import Enum
+from pathlib import Path
 import tensorflow as tf
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
@@ -25,10 +26,14 @@ DEFAULT_POOL_HEIGHT = 3
 DEFAULT_POOL_WIDTH = 5
 
 
-class DefaultOpTestModel(KerasModel):
+#  ----------------------------------------------------------------------------
+#                                  MODELS
+#  ----------------------------------------------------------------------------
+
+class OpTestDefaultModel(KerasModel):
     """
-    Common class for those models that don't need to be trained
-    with the default option to generate input data according to an input initializer
+    Common class for those models that don't need to be trained and use an
+    input initializer to generate input data
     """
     @abstractmethod
     def build_core_model(self, *args, **kwargs):
@@ -49,19 +54,18 @@ class DefaultOpTestModel(KerasModel):
     def gen_test_data(self):
         assert self.input_shape, "To generate test data this model needs an input shape"
         assert self.input_init, "To generate test data this model needs an input initializer"
-        self.data["export_data"], self.data["quant"] = input_initializers(
+        self.data["export_data"], self.data["quant"] = input_initializer(
             self.input_init, *self.input_shape)
         # logging.debug(f'EXPORT DATA SAMPLE:\n{self.data["export_data"][4][0]}')
         # logging.debug(f'QUANT DATA SAMPLE:\n{self.data["quant"][0][0]}')
 
     def run(self):
-        # NOTE: Consider including this in model_generation.interface
         self.gen_test_data()
         self.save_core_model()
         self.populate_converters()
 
 
-class DefaultOpTestConvModel(DefaultOpTestModel):
+class OpTestDefaultConvModel(OpTestDefaultModel):
     def build_core_model(
             self, K_h, K_w, height, width, input_channels, output_channels, *,
             padding, inits):
@@ -80,16 +84,15 @@ class DefaultOpTestConvModel(DefaultOpTestModel):
                                            bias_initializer=inits['bias_init'],
                                            kernel_initializer=inits['weight_init'])
                 ])
+            # for layer in self.core_model.layers:
+            #     logging.debug(f"WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}")
+            #     logging.debug(f"BIAS DATA SAMPLE:\n{layer.get_weights()[1]}")
         except ValueError as e:
             if e.args[0].startswith("Negative dimension size caused by"):
                 raise ValueError(
                     "Negative dimension size (Hint: if using 'valid' padding "
                     "verify that the kernel is at least the size of input image)"
                 ) from e
-        # finally:
-        #     for layer in self.core_model.layers:
-        #         logging.debug(f"WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}")
-        #         logging.debug(f"BIAS DATA SAMPLE:\n{layer.get_weights()[1]}")
 
     def run(self, *, num_threads, input_channels, output_channels,
             height, width, K_h, K_w, padding, inits):
@@ -208,13 +211,17 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
             'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
 
 
+#  ----------------------------------------------------------------------------
+#                                   PARSERS
+#  ----------------------------------------------------------------------------
+
 class OpTestInitializers(Enum):
     UNIF = "unif"
     CONST = "const"
 
 
 # TODO: generalize this to produce a tensor of any rank between 2 and 4
-def input_initializers(init, *args, batch=100, subset_len=10):
+def input_initializer(init, *args, batch=100, subset_len=10):
     assert batch >= subset_len, "Example subset cannot be larger than the full quantization set"
     height, width, channels = args[:3]  # pylint: disable=unbalanced-tuple-unpacking
     data = init(shape=(batch, height, width, channels), dtype="float32").numpy()
@@ -235,33 +242,69 @@ class OpTestDefaultParser(argparse.ArgumentParser):
             help="Verbose mode."
         )
 
+    def parse_args(self, *args, **kwargs):
+        args = super().parse_args(*args, **kwargs)
+        utils.set_verbosity(args.verbose)
+        args.path = Path(args.path)
+        return args
+
 
 class OpTestParserInputInitializerMixin(OpTestDefaultParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
-        self._seed = None
-        self.defaults = defaults
 
-    def add_initializers(self):
+        self.seed = None
         self.add_argument(
             "--seed", type=int,
             help="Set the seed value for the initializers."
         )
-        self.add_argument(
-            "--input_init", nargs="*", default=argparse.SUPPRESS,
-            help="Initialize inputs. Possible initializers are: "
-                 "const [CONST_VAL] or unif [MIN MAX]. "
-                 f"(default: {OpTestInitializers.UNIF.value} "
-                 f"{_DEFAULT_UNIF_INIT[0]} {_DEFAULT_UNIF_INIT[1]})",
-        )
+
+        self.default_inits = defaults["inits"]
+        for init_name, init_settings in self.default_inits.items():
+            init_type = init_settings['type']
+            assert init_type in OpTestInitializers
+
+            def_str = f"{init_type} "
+            if init_type is OpTestInitializers.UNIF:
+                def_str += f"{_DEFAULT_UNIF_INIT[0]} {_DEFAULT_UNIF_INIT[1]}"
+            elif init_type is OpTestInitializers.CONST:
+                def_str += f"{_DEFAULT_CONST_INIT}"
+
+            self.add_argument(
+                f"--{init_name}", nargs="*", default=argparse.SUPPRESS,
+                help=f"{init_settings['help']} "
+                     "Possible initializers are: const [CONST_VAL] or unif [MIN MAX]. "
+                     f"(default: {def_str})"
+            )
 
     def parse_args(self, *args, **kwargs):
         args = super().parse_args(*args, **kwargs)
-        initializers = self.initializer_args_handler(args)
-        args.__setattr__("inits", initializers)
+        self.seed = args.seed
+        args.inits = self._initializer_args_handler(args)
         return args
 
-    def initializer_args_handler(self, args):
+    @property
+    def _filtered_inits(self):
+        """
+        Returns a dictionary with names and default values (and initialized
+        with a seed if specified) of the initializers declared on the default
+        dict in the creation of the parser.
+        """
+        def instantiate_default_init(init_type):
+            """
+            Instantiates a initializer based on its type (OpTestInitializer).
+            """
+            if init_type is OpTestInitializers.UNIF:
+                init = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, self.seed)
+            else:
+                init = DEFAULT_CONST_INIT
+            return init
+        initializers = {}
+        for k, init_settings in self.default_inits.items():
+            initializers.update({k: instantiate_default_init(init_settings['type'])})
+        return initializers
+
+    def _initializer_args_handler(self, args):
         def check_unif_init_params(param_unif):
             if param_unif:
                 if len(param_unif) != 2:
@@ -282,29 +325,7 @@ class OpTestParserInputInitializerMixin(OpTestDefaultParser):
                     "none, in wich case, the default value will be used."
                 )
 
-        def filtered_inits():
-            """
-            Returns a dictionary with names and default values (and initialized
-            with a seed if specified) of the initializers declared on the default
-            dict in the creation of the parser.
-            """
-            def instantiate_default_init(init_type):
-                """
-                Instantiates a initializer based on its type (OpTestInitializer).
-                """
-                if init_type is OpTestInitializers.UNIF:
-                    init = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, self._seed)
-                else:
-                    init = DEFAULT_CONST_INIT
-                return init
-            initializers = {}
-            for k, init_type in self.defaults["inits"].items():
-                initializers.update({k: instantiate_default_init(init_type)})
-            return initializers
-
-        self._seed = args.seed
-        utils.set_all_seeds(args.seed)  # NOTE: All seeds initialized here
-        initializers = filtered_inits()
+        initializers = self._filtered_inits
         # for k, init in initializers.items():
         #     print(f"{k}: {init}")
         init_args = {k: vars(args)[k] for k in initializers if k in vars(args)}
@@ -328,7 +349,7 @@ class OpTestParserInputInitializerMixin(OpTestDefaultParser):
             if init_type is OpTestInitializers.UNIF:
                 check_unif_init_params(params)
                 initializers[k] = tf.random_uniform_initializer(
-                    *(params if params else _DEFAULT_UNIF_INIT), args.seed)
+                    *(params if params else _DEFAULT_UNIF_INIT), self.seed)
             elif init_type is OpTestInitializers.CONST:
                 check_const_init_params(params)
                 initializers[k] = tf.constant_initializer(
@@ -344,9 +365,6 @@ class OpTestParserInputInitializerMixin(OpTestDefaultParser):
 
 
 class OpTestParserInitializerMixin(OpTestParserInputInitializerMixin):
-    def __init__(self, *args, defaults, **kwargs):
-        super().__init__(*args, defaults=defaults, **kwargs)
-
     def add_initializers(self, seed=False):
         super().add_initializers()
         self.add_argument(
@@ -364,7 +382,6 @@ class OpTestParserInitializerMixin(OpTestParserInputInitializerMixin):
         )
 
 
-#  for models with 2D dimensionality and padding
 class OpTestImgParser(OpTestParserInputInitializerMixin):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
@@ -385,7 +402,6 @@ class OpTestImgParser(OpTestParserInputInitializerMixin):
                 "-pd", "--padding", type=str, default=defaults["padding"],
                 help="Padding mode",
             )
-        self.add_initializers()
 
 
 class OpTestPoolParser(OpTestImgParser):
@@ -405,7 +421,8 @@ class OpTestPoolParser(OpTestImgParser):
             "strides": (DEFAULT_STRIDE_HEIGHT, DEFAULT_STRIDE_WIDTH),
             "pool_size": (DEFAULT_POOL_HEIGHT, DEFAULT_POOL_WIDTH),
         }
-        arguments = {k: vars(args)[k] for k in parameters if k in vars(args)}
+        arguments = {k: vars(args)[k] if k in vars(args) else parameters[k]
+                     for k in parameters}
         for k in arguments:
             params = arguments[k]
             if len(params) > 2:
@@ -419,7 +436,8 @@ class OpTestPoolParser(OpTestImgParser):
     def parse_args(self, *args, **kwargs):
         args = super().parse_args(*args, **kwargs)
         strides_pool = self.strides_pool_arg_handler(args)
-        args.__setattr__("strides_pool", strides_pool)
+        args.strides = strides_pool['strides']
+        args.pool_size = strides_pool['pool_size']
         return args
 
 
@@ -472,4 +490,3 @@ class OpTestFCParser(OpTestTrainableParser, OpTestParserInitializerMixin):
             "-in", "--input_dim", type=int, default=defaults["input_dim"],
             help="Input dimension, must be multiple of 32.",
         )
-        self.add_initializers()

@@ -39,7 +39,7 @@ class ArgMax8To16ConversionPass(graph_transformer.OperatorMatchingPass):
         }
 
 
-class ArgMax16(common.DefaultOpTestModel):
+class ArgMax16(common.OpTestDefaultModel):
     def build_core_model(self, input_dim):
         self.core_model = tf.keras.Sequential(
             name=self.name,
@@ -124,24 +124,20 @@ class ArgMax16(common.DefaultOpTestModel):
         self._save_data_dict({'x_test': x_test}, base_file_name='model_xcore')
 
 
-def main(path=DEFAULT_PATH, input_dim=DEFAULT_INPUTS):
-    test_model = ArgMax16('arg_max_16', Path(path))
-    test_model.build(input_dim)
-    test_model.gen_test_data()
-    test_model.save_core_model()
-    test_model.populate_converters()
-
-
-if __name__ == "__main__":
+def main(raw_args=None):
     parser = common.OpTestDefaultParser(defaults={
         'path': DEFAULT_PATH,
     })
     parser.add_argument(
         '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
         help='Number of input channels')
-    args = parser.parse_args()
-
-    utils.set_verbosity(args.verbose)
+    args = parser.parse_args(raw_args)
     utils.set_gpu_usage(False, args.verbose)
 
-    main(path=args.path, input_dim=args.inputs)
+    test_model = ArgMax16('arg_max_16', args.path)
+    test_model.build(args.inputs)
+    test_model.run()
+
+
+if __name__ == "__main__":
+    main()

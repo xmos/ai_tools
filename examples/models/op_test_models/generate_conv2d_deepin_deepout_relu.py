@@ -18,7 +18,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
 DEFAULT_NUM_THREADS = 1
 
 
-class Conv2dDeepinDeepoutRelu(common.DefaultOpTestConvModel):
+class Conv2dDeepinDeepoutRelu(common.OpTestDefaultConvModel):
     def build_core_model(self, *args, **kwargs):
         input_channels = args[4]
         assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
@@ -70,7 +70,6 @@ if __name__ == "__main__":
         '-par', '--par_num_threads', type=int, default=DEFAULT_NUM_THREADS,
         help='Number of parallel threads for xcore.ai optimization.')
     args = parser.parse_args()
-    utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
     main(path=args.path,

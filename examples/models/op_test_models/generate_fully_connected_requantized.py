@@ -6,7 +6,6 @@ from tflite2xcore.model_generation import utils
 import tflite2xcore.converter as xcore_conv
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 import op_test_models_common as common
-from op_test_models_common import DefaultOpTestFCModel
 
 from generate_fully_connected import (
     DEFAULT_OUTPUT_DIM, DEFAULT_INPUT_DIM,
@@ -16,7 +15,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
     'debug', 'fully_connected_requantized').resolve()
 
 
-class FullyConnectedRequantized(DefaultOpTestFCModel):
+class FullyConnectedRequantized(common.OpTestDefaultFCModel):
     def to_tf_xcore(self):
         assert 'model_quant' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
@@ -63,7 +62,6 @@ if __name__ == "__main__":
             'weight_init': common.OpTestInitializers.UNIF}
     })
     args = parser.parse_args()
-    utils.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
 
     main(path=args.path,

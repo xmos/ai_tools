@@ -12,7 +12,7 @@ DEFAULT_HEIGHT = 5
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug').resolve()
 
 
-class LUTActivation(common.DefaultOpTestModel):
+class LUTActivation(common.OpTestDefaultModel):
     _ACTIVATION_MAP = {
         'relu': lambda *args, **kwargs:
             tf.keras.layers.Activation('relu', *args, **kwargs),
@@ -40,17 +40,6 @@ class LUTActivation(common.DefaultOpTestModel):
         )
 
 
-def main(activation, path=DEFAULT_PATH, *,
-         input_channels=DEFAULT_INPUTS,
-         height=DEFAULT_HEIGHT,
-         width=DEFAULT_WIDTH,
-         input_init=common.DEFAULT_UNIF_INIT):
-    test_model = LUTActivation(activation, Path(path))
-    test_model.build(height, width, input_channels,
-                     input_init=input_init, activation=activation)
-    test_model.run()
-
-
 class OpTestActivationParser(common.OpTestImgParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
@@ -62,26 +51,33 @@ class OpTestActivationParser(common.OpTestImgParser):
 
     def parse_args(self, *args, **kwargs):
         args = super().parse_args(*args, **kwargs)
-        args.path = Path(args.path).joinpath(args.activation)
+        args.path = args.path.joinpath(args.activation)
         return args
 
 
-if __name__ == "__main__":
+def main(raw_args=None):
     parser = OpTestActivationParser(defaults={
         "path": DEFAULT_PATH,
         "inputs": DEFAULT_INPUTS,
         "height": DEFAULT_HEIGHT,
         "width": DEFAULT_WIDTH,
         "choices": LUTActivation.ACTIVATIONS,
-        'inits': {'input_init': common.OpTestInitializers.UNIF}
+        'inits': {
+            'input_init': {
+                'type': common.OpTestInitializers.UNIF,
+                'help': "Initializer for input data distribution."
+            }
+        }
     })
-    args = parser.parse_args()
-    utils.set_verbosity(args.verbose)
+    args = parser.parse_args(raw_args)
     utils.set_gpu_usage(False, args.verbose)
 
-    main(args.activation,
-         path=args.path,
-         input_channels=args.inputs,
-         height=args.height,
-         width=args.width,
-         input_init=args.inits['input_init'])
+    test_model = LUTActivation(args.activation, args.path)
+    test_model.build(args.height, args.width, args.inputs,
+                     activation=args.activation,
+                     **args.inits)
+    test_model.run()
+
+
+if __name__ == "__main__":
+    main()

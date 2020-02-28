@@ -36,8 +36,6 @@ scripts_with_input=(
     "generate_avgpool2d_global.py"
     "generate_conv2d_deepin_deepout_relu.py"
     "generate_conv2d_shallowin_deepout_relu.py"
-    "generate_fully_connected.py"
-    "generate_fully_connected_requantized.py"
     "generate_lookup_8.py"
     "generate_maxpool2d.py"
 ) ## generate prelu is broken ##

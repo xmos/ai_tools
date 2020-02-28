@@ -30,7 +30,7 @@ class FullyConnectedRequantized(common.OpTestDefaultFCModel):
         model = write_flatbuffer(model, self.models['model_xcore'])
 
 
-def main(raw_args):
+def main(raw_args=None):
     parser = common.OpTestFCParser(defaults={
         'path': DEFAULT_PATH,
         'input_dim': DEFAULT_INPUT_DIM,
@@ -38,19 +38,26 @@ def main(raw_args):
         'batch_size': DEFAULT_BS,
         'epochs': DEFAULT_EPOCHS,
         'inits': {
-            'bias_init': common.OpTestInitializers.CONST,
-            'weight_init': common.OpTestInitializers.UNIF}
+            'weight_init': {
+                'type': common.OpTestInitializers.UNIF,
+                'help': "Initializer for weight distribution."
+            },
+            'bias_init': {
+                'type': common.OpTestInitializers.CONST,
+                'help': "Initializer for bias distribution."
+            }
+        }
     })
-    args = parser.parse_args()
+    args = parser.parse_args(raw_args)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
 
     model = FullyConnectedRequantized('fc_deepin_anyout_requantized', args.path)
-    model.run(train_new_model=args.train_new_model,
+    model.run(train_model=args.train_model,
               input_dim=args.input_dim,
               output_dim=args.output_dim,
-              inits=**args.inits,
               batch_size=args.batch_size,
-              epochs=args.epochs)
+              epochs=args.epochs,
+              **args.inits)
 
 
 if __name__ == "__main__":

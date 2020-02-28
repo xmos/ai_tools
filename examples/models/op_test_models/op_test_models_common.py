@@ -62,11 +62,11 @@ class OpTestDefaultModel(KerasModel):
 class OpTestDefaultConvModel(OpTestDefaultModel):
     def build_core_model(
             self, K_h, K_w, height, width, input_channels, output_channels, *,
-            padding, bias_init, weight_init, input_init):
+            padding, **inits):
         assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
         assert K_h % 2 == 1, "kernel height must be odd"
         assert K_w % 2 == 1, "kernel width must be odd"
-        self.input_init = input_init
+        self.input_init = inits['input_init']
         try:
             self.core_model = tf.keras.Sequential(
                 name=self.name,
@@ -75,9 +75,10 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
                                            kernel_size=(K_h, K_w),
                                            padding=padding,
                                            input_shape=(height, width, input_channels),
-                                           bias_initializer=bias_init,
-                                           kernel_initializer=weight_init
-                ])
+                                           bias_initializer=inits['bias_init'],
+                                           kernel_initializer=inits['weight_init'])
+                ]
+            )
             # for layer in self.core_model.layers:
             #     logging.debug(f"WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}")
             #     logging.debug(f"BIAS DATA SAMPLE:\n{layer.get_weights()[1]}")
@@ -88,19 +89,19 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
                     "verify that the kernel is at least the size of input image)"
                 ) from e
 
-    def run(self, *, num_threads, input_channels, output_channels,
-            height, width, K_h, K_w, padding, weight_init, bias_init, input_init):
-        self.build(K_h, K_w, height, width, input_channels, output_channels, padding=padding,
-                   weight_init=weight_init, bias_init=bias_init, input_init=intput_init)
+    def run(self, *,
+            num_threads, input_channels, output_channels,
+            height, width, K_h, K_w, padding, **inits):
+        self.build(K_h, K_w, height, width, input_channels, output_channels,
+                   padding=padding, **inits)
         self.gen_test_data()
         self.save_core_model()
         self.populate_converters(
             xcore_num_threads=num_threads if num_threads else None)
 
 
-class DefaultOpTestFCModel(KerasModel):
-    def build(self, input_dim, output_dim,
-              weight_init, bias_init):
+class OpTestDefaultFCModel(KerasModel):
+    def build(self, input_dim, output_dim, **inits):
         super().build()
 
         self.core_model = tf.keras.Sequential(
@@ -147,10 +148,10 @@ class DefaultOpTestFCModel(KerasModel):
     def to_tf_xcore(self):
         super().to_tf_xcore(remove_softmax=True)
 
-    def run(self, *, train_new_model, input_dim, output_dim, weight_init, bias_init,
-            batch_size, epochs):
-        if train_new_model:
-            self.build(input_dim, output_dim, weight_init, bias_init)
+    def run(self, *, train_model, input_dim, output_dim, batch_size, epochs,
+            **inits):
+        if train_model:
+            self.build(input_dim, output_dim, **inits)
             self.prep_data()
             self.train(batch_size=batch_size, epochs=epochs)
             self.save_core_model()
@@ -245,7 +246,7 @@ class OpTestDefaultParser(argparse.ArgumentParser):
         return args
 
 
-class OpTestParserInputInitializerMixin(OpTestDefaultParser):
+class OpTestInitializerParser(OpTestDefaultParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
 
@@ -279,27 +280,6 @@ class OpTestParserInputInitializerMixin(OpTestDefaultParser):
         args.inits = self._initializer_args_handler(args)
         return args
 
-    @property
-    def _filtered_inits(self):
-        """
-        Returns a dictionary with names and default values (and initialized
-        with a seed if specified) of the initializers declared on the default
-        dict in the creation of the parser.
-        """
-        def instantiate_default_init(init_type):
-            """
-            Instantiates a initializer based on its type (OpTestInitializer).
-            """
-            if init_type is OpTestInitializers.UNIF:
-                init = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, self.seed)
-            else:
-                init = DEFAULT_CONST_INIT
-            return init
-        initializers = {}
-        for k, init_settings in self.default_inits.items():
-            initializers.update({k: instantiate_default_init(init_settings['type'])})
-        return initializers
-
     def _initializer_args_handler(self, args):
         def check_unif_init_params(param_unif):
             if param_unif:
@@ -321,9 +301,15 @@ class OpTestParserInputInitializerMixin(OpTestDefaultParser):
                     "none, in wich case, the default value will be used."
                 )
 
-        initializers = self._filtered_inits
-        # for k, init in initializers.items():
-        #     print(f"{k}: {init}")
+        def instantiate_default_init(init_type):
+            if init_type is OpTestInitializers.UNIF:
+                init = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, self.seed)
+            else:
+                init = DEFAULT_CONST_INIT
+            return init
+
+        initializers = {k: instantiate_default_init(init_settings['type'])
+                        for k, init_settings in self.default_inits.items()}
         init_args = {k: vars(args)[k] for k in initializers if k in vars(args)}
         for k, arg_params in init_args.items():
             try:
@@ -360,25 +346,7 @@ class OpTestParserInputInitializerMixin(OpTestDefaultParser):
         return initializers
 
 
-class OpTestParserInitializerMixin(OpTestParserInputInitializerMixin):
-    def add_initializers(self, seed=False):
-        super().add_initializers()
-        self.add_argument(
-            "--bias_init", nargs="*", default=argparse.SUPPRESS,
-            help="Initialize bias. Possible initializers are: "
-                 "const [CONST_VAL] or unif [MIN MAX]. "
-                 f"(default: {OpTestInitializers.CONST.value} {_DEFAULT_CONST_INIT})",
-        )
-        self.add_argument(
-            "--weight_init", nargs="*", default=argparse.SUPPRESS,
-            help="Initialize weights. Possible initializers are: "
-                 "const [CONST_VAL] or unif [MIN MAX]. "
-                 f"(default: {OpTestInitializers.UNIF.value} "
-                 f"{_DEFAULT_UNIF_INIT[0]} {_DEFAULT_UNIF_INIT[1]})",
-        )
-
-
-class OpTestImgParser(OpTestParserInputInitializerMixin):
+class OpTestImgParser(OpTestInitializerParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
@@ -437,7 +405,7 @@ class OpTestPoolParser(OpTestImgParser):
         return args
 
 
-class OpTestConvParser(OpTestParserInitializerMixin, OpTestImgParser):
+class OpTestConvParser(OpTestImgParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
@@ -454,7 +422,7 @@ class OpTestConvParser(OpTestParserInitializerMixin, OpTestImgParser):
         )
 
 
-class OpTestTrainableParser(OpTestDefaultParser):
+class OpTestTrainableParser(OpTestInitializerParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
@@ -475,7 +443,7 @@ class OpTestTrainableParser(OpTestDefaultParser):
         )
 
 
-class OpTestFCParser(OpTestTrainableParser, OpTestParserInitializerMixin):
+class OpTestFCParser(OpTestTrainableParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(

@@ -40,29 +40,29 @@ def main(raw_args=None):
                 'type': common.OpTestInitializers.UNIF,
                 'help': "Initializer for input data distribution."
             },
-            'bias_init': {
-                'type': common.OpTestInitializers.CONST,
-                'help': "Initializer for bias distribution."
-            },
             'weight_init': {
                 'type': common.OpTestInitializers.UNIF,
                 'help': "Initializer for weight distribution."
+            },
+            'bias_init': {
+                'type': common.OpTestInitializers.CONST,
+                'help': "Initializer for bias distribution."
             }
         }
     })
-    args = parser.parse_args()
+    args = parser.parse_args(raw_args)
     utils.set_gpu_usage(False, args.verbose)
 
     model = Conv2dShallowinDeepoutRelu('conv2d_shallowin_deepout_relu', args.path)
     model.run(num_threads=None,
-              input_channels=args.input_channels,
-              output_channels=args.output_channels,
+              input_channels=args.inputs,
+              output_channels=args.outputs,
               height=args.height,
               width=args.width,
-              K_h=args.K_h,
-              K_w=args.K_w,
+              K_h=args.kernel_height,
+              K_w=args.kernel_width,
               padding=args.padding,
-              inits=**args.inits)
+              **args.inits)
 
 
 if __name__ == "__main__":

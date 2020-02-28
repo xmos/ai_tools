@@ -14,12 +14,6 @@ _DEFAULT_CONST_INIT = 0
 _DEFAULT_UNIF_INIT = [-1, 1]
 DEFAULT_CONST_INIT = tf.constant_initializer(_DEFAULT_CONST_INIT)
 DEFAULT_UNIF_INIT = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT)
-DEFAULT_INITS_WB = {
-    'bias_init': DEFAULT_CONST_INIT,
-    'weight_init': DEFAULT_UNIF_INIT,
-}
-DEFAULT_INITS = DEFAULT_INITS_WB.update({
-    'input_init': DEFAULT_UNIF_INIT})
 DEFAULT_STRIDE_HEIGHT = 1
 DEFAULT_STRIDE_WIDTH = 2
 DEFAULT_POOL_HEIGHT = 3
@@ -68,11 +62,11 @@ class OpTestDefaultModel(KerasModel):
 class OpTestDefaultConvModel(OpTestDefaultModel):
     def build_core_model(
             self, K_h, K_w, height, width, input_channels, output_channels, *,
-            padding, inits):
+            padding, bias_init, weight_init, input_init):
         assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
         assert K_h % 2 == 1, "kernel height must be odd"
         assert K_w % 2 == 1, "kernel width must be odd"
-        self.input_init = inits['input_init']
+        self.input_init = input_init
         try:
             self.core_model = tf.keras.Sequential(
                 name=self.name,
@@ -81,8 +75,8 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
                                            kernel_size=(K_h, K_w),
                                            padding=padding,
                                            input_shape=(height, width, input_channels),
-                                           bias_initializer=inits['bias_init'],
-                                           kernel_initializer=inits['weight_init'])
+                                           bias_initializer=bias_init,
+                                           kernel_initializer=weight_init
                 ])
             # for layer in self.core_model.layers:
             #     logging.debug(f"WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}")
@@ -95,9 +89,9 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
                 ) from e
 
     def run(self, *, num_threads, input_channels, output_channels,
-            height, width, K_h, K_w, padding, inits):
-        self.build(K_h, K_w, height, width, input_channels, output_channels,
-                   padding=padding, inits=inits)
+            height, width, K_h, K_w, padding, weight_init, bias_init, input_init):
+        self.build(K_h, K_w, height, width, input_channels, output_channels, padding=padding,
+                   weight_init=weight_init, bias_init=bias_init, input_init=intput_init)
         self.gen_test_data()
         self.save_core_model()
         self.populate_converters(
@@ -105,7 +99,8 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
 
 
 class DefaultOpTestFCModel(KerasModel):
-    def build(self, input_dim, output_dim, inits):
+    def build(self, input_dim, output_dim,
+              weight_init, bias_init):
         super().build()
 
         self.core_model = tf.keras.Sequential(
@@ -152,9 +147,10 @@ class DefaultOpTestFCModel(KerasModel):
     def to_tf_xcore(self):
         super().to_tf_xcore(remove_softmax=True)
 
-    def run(self, *, train_new_model, input_dim, output_dim, inits, batch_size, epochs):
+    def run(self, *, train_new_model, input_dim, output_dim, weight_init, bias_init,
+            batch_size, epochs):
         if train_new_model:
-            self.build(input_dim, output_dim, inits)
+            self.build(input_dim, output_dim, weight_init, bias_init)
             self.prep_data()
             self.train(batch_size=batch_size, epochs=epochs)
             self.save_core_model()

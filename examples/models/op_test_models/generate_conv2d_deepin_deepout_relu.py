@@ -25,33 +25,7 @@ class Conv2dDeepinDeepoutRelu(common.OpTestDefaultConvModel):
         super().build_core_model(*args, **kwargs)
 
 
-def main(path=DEFAULT_PATH, *,
-         num_threads=DEFAULT_NUM_THREADS,
-         input_channels=DEFAULT_INPUTS,
-         output_channels=DEFAULT_OUTPUTS,
-         height=DEFAULT_HEIGHT,
-         width=DEFAULT_WIDTH,
-         K_h=DEFAULT_KERNEL_HEIGHT,
-         K_w=DEFAULT_KERNEL_WIDTH,
-         padding=DEFAULT_PADDING,
-         inits=common.DEFAULT_INITS):
-    kwargs = {
-        'name': 'conv2d_deepin_deepout_relu',
-        'path': path if path else DEFAULT_PATH
-    }
-    model = Conv2dDeepinDeepoutRelu(**kwargs)
-    model.run(num_threads=num_threads,
-              input_channels=input_channels,
-              output_channels=output_channels,
-              height=height,
-              width=width,
-              K_h=K_h,
-              K_w=K_w,
-              padding=padding,
-              inits=inits)
-
-
-if __name__ == "__main__":
+def main(raw_args=None):
     parser = common.OpTestConvParser(defaults={
         'path': DEFAULT_PATH,
         'inputs': DEFAULT_INPUTS,
@@ -62,23 +36,37 @@ if __name__ == "__main__":
         'kernel_width': DEFAULT_KERNEL_WIDTH,
         'kernel_height': DEFAULT_KERNEL_HEIGHT,
         'inits': {
-            'input_init': common.OpTestInitializers.UNIF,
-            'bias_init': common.OpTestInitializers.CONST,
-            'weight_init': common.OpTestInitializers.UNIF}
+            'input_init': {
+                'type': common.OpTestInitializers.UNIF,
+                'help': "Initializer for input data distribution."
+            },
+            'bias_init': {
+                'type': common.OpTestInitializers.CONST,
+                'help': "Initializer for bias distribution."
+            },
+            'weight_init': {
+                'type': common.OpTestInitializers.UNIF,
+                'help': "Initializer for weight distribution."
+            }
+        }
     })
     parser.add_argument(
         '-par', '--par_num_threads', type=int, default=DEFAULT_NUM_THREADS,
         help='Number of parallel threads for xcore.ai optimization.')
-    args = parser.parse_args()
+    args = parser.parse_args(raw_args)
     utils.set_gpu_usage(False, args.verbose)
 
-    main(path=args.path,
-         num_threads=args.par_num_threads,
-         input_channels=args.inputs,
-         output_channels=args.outputs,
-         K_h=args.kernel_height,
-         K_w=args.kernel_width,
-         height=args.height,
-         width=args.width,
-         padding=args.padding,
-         inits=args.inits)
+    model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', args.path)
+    model.run(num_threads=args.num_threads,
+              input_channels=args.input_channels,
+              output_channels=args.output_channels,
+              height=args.height,
+              width=args.width,
+              K_h=args.K_h,
+              K_w=args.K_w,
+              padding=args.padding,
+              inits=**args.inits)
+
+
+if __name__ == "__main__":
+    main()

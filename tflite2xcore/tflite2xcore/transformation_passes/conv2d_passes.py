@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.graph_transformer import PassPriority
 from tflite2xcore.utils import VE, ACC_PERIOD, WORD_SIZE
 from .transformation_passes import ReplaceXCOREWeightBiasOperatorPass
 
@@ -149,6 +150,12 @@ class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
 
 # TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
+    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=False):
+        super().__init__(priority)
+        self.safe_mode = safe_mode
+        if self.safe_mode:
+            self.superseding_passes.append(Replace1x1Conv2dPass())
+
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.CONV_2D

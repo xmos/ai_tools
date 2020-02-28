@@ -15,6 +15,9 @@ PARAMS = {
         "input_height": [9, 20],
         "input_width": [7, 17],
         "padding": ['SAME', 'VALID'],
+        "strides": [(1, 1)],
+        "non_matching_stride_w": [2, 3],
+        "non_matching_stride_h": [2, 3],
         "non_matching_tensors": [
             ('input', TensorType.INT16), ('input', TensorType.INT32),
             ('weights', TensorType.INT16), ('weights', TensorType.INT32),
@@ -26,6 +29,9 @@ PARAMS = {
         "input_height": [9, 20],
         "input_width": [7, 17],
         "padding": ['SAME', 'VALID'],
+        "strides": [(1, 1)],
+        "non_matching_stride_w": [2],
+        "non_matching_stride_h": [2],
         "non_matching_tensors": [
             ('input', TensorType.INT16),
             ('weights', TensorType.INT16),

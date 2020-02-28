@@ -62,10 +62,6 @@ class OpTestConv1x1Parser(common.OpTestParserInitializerMixin, common.OpTestDimP
             "-out", "--outputs", type=int, default=defaults["outputs"],
             help="Number of output channels",
         )
-        self.add_argument(
-            "-st", "--strides", nargs="+", type=int, default=argparse.SUPPRESS,
-            help=f"Strides, vertical first (default: {defaults['strides']})",
-        )
         self.add_initializers()
 
 
@@ -76,8 +72,7 @@ if __name__ == "__main__":
         'outputs': DEFAULT_OUTPUTS,
         'width': DEFAULT_WIDTH,
         'height': DEFAULT_HEIGHT,
-        'padding': DEFAULT_PADDING,
-        'strides': DEFAULT_STRIDES,
+        'padding': DEFAULT_PADDING
     })
     args = parser.parse_args()
 

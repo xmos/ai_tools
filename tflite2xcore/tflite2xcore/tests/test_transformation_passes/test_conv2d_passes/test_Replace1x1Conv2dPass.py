@@ -31,9 +31,7 @@ PARAMS = {
         "input_channels": [4, 8, 16, 32],
         "non_matching_input_channels": [3, 9, 15],
         "output_channels": [4, 8, 16, 32],
-        "non_matching_output_channels": [3, 9, 15],
-        "stride_h": [1, 2, 3],
-        "stride_w": [1, 2, 3]
+        "non_matching_output_channels": [3, 9, 15]
     },
     "smoke": {
         "kernel_width": [1],
@@ -43,9 +41,7 @@ PARAMS = {
         "input_channels": [4, 32],
         "non_matching_input_channels": [3, 9],
         "output_channels": [4, 32],
-        "non_matching_output_channels": [3, 9],
-        "stride_h": [1, 2],
-        "stride_w": [1, 2]
+        "non_matching_output_channels": [3, 9]
     }
 }
 
@@ -61,11 +57,6 @@ def pytest_generate_tests(metafunc):
 @pytest.fixture()
 def trf_pass():
     return Replace1x1Conv2dPass()
-
-
-@pytest.fixture()
-def strides(stride_h, stride_w):
-    return (stride_h, stride_w)
 
 
 @pytest.fixture()

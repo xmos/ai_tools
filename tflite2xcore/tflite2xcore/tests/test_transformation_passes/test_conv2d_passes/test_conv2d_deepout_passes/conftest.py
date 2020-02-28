@@ -22,20 +22,14 @@ PARAMS = {
         "non_matching_output_channels": [8, 24, 17, 63],
         "kernel_height": [1, 3, 5, 7],
         "non_matching_kernel_height": [2, 4, 6],
-        "kernel_width": [1, 3, 5, 7],
-        "strides": [(1, 1)],
-        "non_matching_stride_w": [2, 3],
-        "non_matching_stride_h": [2, 3]
+        "kernel_width": [1, 3, 5, 7]
     },
     "smoke": {
         "output_channels": [16],
         "non_matching_output_channels": [8],
         "kernel_height": [1, 3],
         "non_matching_kernel_height": [2],
-        "kernel_width": [1, 3],
-        "strides": [(1, 1)],
-        "non_matching_stride_w": [2],
-        "non_matching_stride_h": [2]
+        "kernel_width": [1, 3]
     }
 }
 

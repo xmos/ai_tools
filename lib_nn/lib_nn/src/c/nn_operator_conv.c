@@ -1587,7 +1587,7 @@ void conv2d_1x1_c(
 
         const int32_t cig_stride = (cog < C_out_groups)? plan->cig_stride.body : plan->cig_stride.tail;
 
-        K = &K[cig_stride - VPU_INT8_EPV];
+        K = &K[(int)(cig_stride - VPU_INT8_EPV)];
 
         const unsigned group_chans = (cog < C_out_groups)? VPU_INT8_ACC_PERIOD : C_out_tail;
         if(!group_chans) break;
@@ -1621,14 +1621,14 @@ void conv2d_1x1_c(
                     }
 
                     if(k != 0)
-                        K = &K[- plan->C_in];
+                        K = &K[(int)- plan->C_in];
 
                     // ADDR(X, "cout end", "");
                     // ADDR(Y, "cout end", "");
                     // ADDR(K, "cout end", "");
                 }
                 if(cig == C_in_groups){
-                    K = &K[C_in_tail - 32];
+                    K = &K[(int)(C_in_tail - 32)];
                 }
 
                 X = &X[chans_in];
@@ -1652,7 +1652,7 @@ void conv2d_1x1_c(
                 Y[k] = (int8_t) res;
             }
 
-            K = &K[-plan->C_in];
+            K = &K[(int)-plan->C_in];
             Y = &Y[plan->C_out];
             // ADDR(X, "pixel end", "");
             // ADDR(Y, "pixel end", "");

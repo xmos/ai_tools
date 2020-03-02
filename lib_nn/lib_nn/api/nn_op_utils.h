@@ -201,9 +201,54 @@ void conv2d_sido_boggle_K(
 
 
 
+
+/** Compute an execution plan for a 2D convolution with a 1x1 kernel.
+ * 
+ * The output `plan` is the execution plan to be computed. It is passed to the `conv2d_1x1()`
+ * function when performing the convolution.
+ * 
+ * `x` contains the parameters for the input image `X` to `conv2d_1x1()`.
+ * 
+ * `y` contains the parameters for the output image `Y` to be computed by `conv2d_1x1()`.
+ * 
+ * The `start_row`, `start_col` and `out_pixels` parameters can be used to limit which
+ * output pixels are computed. This can be used to parallelize work across cores. The call
+ * to `conv2d_1x1()` using this plan will compute `out_pixels` output pixels, beginning at
+ * the specified row and column of the output image. With this scheme, the image is effectively
+ * flattened by concatenating rows of the input image, and the pixels computed will be a
+ * contiguous subsequence of pixels in the flattened image.
+ * 
+ * \param plan          Output. Execution plan to be computed.
+ * \param x             `conv2d_1x1()` input image parameters.
+ * \param y             `conv2d_1x1()` output image parameters.
+ * \param start_row     Row of output image `Y` at which to begin computing outputs.
+ * \param start_col     Column of output image `Y` at which to begin computing outputs.
+ * \param out_pixels    Numbers of output pixels to compute.
+ */
+void conv2d_1x1_init(
+    nn_conv2d_1x1_plan_t* plan,
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const unsigned start_row,
+    const unsigned start_col,
+    const unsigned out_pixels);
+
+
+
+
 /**
- * Lays out the biases, shifts and scales into a format appropriate for the `BSS` argument
- * to the `fully_connected_16()` function.
+ * Lays out the biases, shifts and scales into the layout required for the standard bias-
+ * shifts-scale tensor used by many of the API functions.
+ * 
+ * This is a helper function which consumes separate vectors for each component of the BSS
+ * tensor and 'boggles' it into the required format. Calls to this function can be avoided
+ * if necessary by storing the data in the layout specified in the secion "Bias-Shifts-Scale 
+ * Tensor Layout". To understand how these values are used, see the section "Notes on Output
+ * Shifts and Scales".
+ * 
+ * `bias` is a pointer to a 1-D vector with length `C_out` of 32-bit biases. `shift1`, `scale` 
+ * and `shift2` are each pointers to 1-D vectors with length `C_out` of 16-bit elements. In
+ * each case, the `i`th element corresponds to output channel `i`.
  * 
  * If `bss_out` and `bias` do not point to the same memory location, it will be assumed that
  * the `bss_out` tensor does not overlap the memory of the `bias`, `shift` and `scale`
@@ -211,56 +256,16 @@ void conv2d_sido_boggle_K(
  * 
  * If the `bss_out` and `bias` pointers do point to the same memory location, a temporary scratch 
  * buffer is needed to perform the reformatting. In this case, if the `scratch` parameter is not
- * NULL, the memory to which is points will be used as the scratch buffer. If the `scratch` 
- * parameter is NULL, memory will be `malloc`ed for a scratch buffer. That memory will be `free`ed
+ * `NULL`, the memory to which it points will be used as the scratch buffer. If the `scratch` 
+ * parameter is `NULL`, memory will be `malloc`ed for a scratch buffer. That memory will be `free`ed
  * before returning.
  * 
- * The `bias`, `shift` and `scale` vectors are each `C_out` elements long, and the `i`th
- * of each vector is the value which applies to the `i`th output channel.
- * 
- * The `bss_out` tensor must be large enough to hold `(4 * ((C_out + 15)//16) * 16)` elements
+ * The `bss_out` tensor must be large enough to hold `(5 * ((C_out + 15)//16) * 16)` elements
  * of type `data16_t`. `((C_out + 15)//16)*16` is the number of output channels rounded up
  * to the nearest multiple of `16`.
  * 
  * If `scratch` is provided, it must be large enough to store all `C_out` elements of the
  * `bias`, `shift` and `scale` vectors.
- * 
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * As this function may need to move around a large amount of data, it can be costly to
- * execute it at initialization time. To avoid this cost, you can pre-layout the data in 
- * ROM.
- * 
- * The output `bss_out` tensor will be organized in memory the same as `bss_tensor` in the 
- * following:
- *      
- *      struct {
- *          data16_t biases_high[16];
- *          data16_t biases_low[16];
- *          int16_t shifts[16];
- *          int16_t scales[16];
- *      } bss_tensor[(C_out+15)/16];
- * 
- * Each element of `bss_tensor` contains the biases, shifts and scales for a single output
- * channel group. An output channel group comprises `16` output channels which are computed
- * in parallel. The number of channel output groups is `ceil(C_out/16.0)` == `(C_out+15/16)`, which 
- * is also the length of `bss_tensor`.
- * 
- * The parameters for the first `16` output channels are found in `bss_tensor[0]`. The parameters for 
- * the next `16` output channels are found in `bss_tensor[1]`, and so on.
- * 
- * The `biases_high` field contains the most significant 16 bits of the bias for each of the 16 
- * channels. Likewise, the `biases_low` field contains the 16 least significant bits of the 32-bit 
- * biases. `shifts` and `scales` respectively store the shifts and scales for the output channels. 
- * Within each field, the output channels are in ascending order.
- * 
- * As an example, `bss_tensor[i].scales[k]` stores the scale value for output channel `16*i + k`,
- * taken from `scale[16*i+k]`.
- * 
- * Equivalently, `bss_out` has the shape `((C_out+15)/16, 4, 16)`, where the first index is the
- * channel output group, the second index refers to the parameter (bias high, bias low, shift,
- * scale -- in that order). And the final index corresponds to the offset of the channel within
- * the channel output group (i.e.  `channel_id % 16`).
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * 
  * \param bss_out   The output tensor to be written
  * \param bias      The bias vector
@@ -270,7 +275,7 @@ void conv2d_sido_boggle_K(
  * \param scratch   An optional scratch buffer, or NULL
  * \param C_out     The number of output channels
  */
-void fc_boggle_BSS(
+void nn_standard_BSS_layout(
     data16_t* bss_out,
     int32_t* bias,
     int16_t* shift1,
@@ -280,6 +285,15 @@ void fc_boggle_BSS(
     const unsigned C_out);
 
 
+/** Compute an execution plan for a 16-bit fully-connected layer.
+ * 
+ * The output `plan` is the execution plan to be computed.
+ * 
+ * `C_in` is the number of input elements.
+ * 
+ * `C_out` is the number of output elements.
+ * 
+ */
 void fully_connected_init(
     nn_fully_connected_plan_t* plan,
     const unsigned C_in,

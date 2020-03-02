@@ -14,6 +14,7 @@ from tensorflow import keras
 warnings.filterwarnings(action='default')
 
 
+VE, ACC_PERIOD, WORD_SIZE = 32, 16, 4
 DEFAULT_SEED = 123
 
 

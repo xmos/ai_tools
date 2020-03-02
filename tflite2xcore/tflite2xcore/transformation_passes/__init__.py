@@ -7,3 +7,9 @@ from .lut_passes import (
     ReplaceReLUPass,
     ReplaceReLU6Pass,
 )
+from .conv2d_passes import (
+    Replace1x1Conv2dPass,
+    ReplaceDeepinDeepoutConv2DPass,
+    ReplaceShallowinDeepoutConv2DPass,
+    ReplaceSingleinDeepoutDepthwiseConv2DPass
+)

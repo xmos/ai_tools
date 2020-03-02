@@ -12,7 +12,7 @@
 #include "xs3_vpu.h"
 
 // #include "dsp_xs3_vector.h"
-#include "Unity.h"
+#include "unity.h"
 
 #ifdef __XC__
 #define WORD_ALIGNED [[aligned(4)]]
@@ -137,7 +137,7 @@ void test_fully_connected_16_case0()
             BSS.shift2[k] = 14;
         }
 
-        fc_boggle_BSS(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
@@ -297,7 +297,7 @@ void test_fully_connected_16_case1()
         }
 
         
-        fc_boggle_BSS(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
@@ -457,7 +457,7 @@ void test_fully_connected_16_case2()
         }
 
 
-        fc_boggle_BSS(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
@@ -617,7 +617,7 @@ void test_fully_connected_16_case3()
         }
 
 
-        fc_boggle_BSS(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
@@ -773,7 +773,7 @@ void test_fully_connected_16_case4()
         }
 
 
-        fc_boggle_BSS(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
@@ -935,7 +935,7 @@ void test_fully_connected_16_case5()
         }
 
 
-        fc_boggle_BSS(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
@@ -1103,7 +1103,7 @@ void test_fully_connected_16_case6()
             }
 
 
-        fc_boggle_BSS(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
@@ -1275,7 +1275,7 @@ void test_fully_connected_16_case7()
             }
 
 
-            fc_boggle_BSS(  (data16_t*) &BSS, 
+            nn_standard_BSS_layout(  (data16_t*) &BSS, 
                             (int32_t*) &BSS.B, 
                             (int16_t*) &BSS.shift1, 
                             (int16_t*) &BSS.scale, 
@@ -1455,7 +1455,7 @@ void test_fully_connected_16_case8()
             }
 
 
-            fc_boggle_BSS(  (data16_t*) &BSS, 
+            nn_standard_BSS_layout(  (data16_t*) &BSS, 
                             (int32_t*) &BSS.B, 
                             (int16_t*) &BSS.shift1, 
                             (int16_t*) &BSS.scale, 
@@ -1626,7 +1626,7 @@ void test_fully_connected_16_case9()
             BSS.shift2[k] = 14;
         }
 
-        fc_boggle_BSS(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (data16_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
@@ -1757,7 +1757,7 @@ void test_fully_connected_16_case10()
     }
     
 
-    fc_boggle_BSS(  (data16_t*) &BSS, 
+    nn_standard_BSS_layout(  (data16_t*) &BSS, 
                     (int32_t*) &BSS.B, 
                     (int16_t*) &BSS.shift1, 
                     (int16_t*) &BSS.scale, 
@@ -1898,7 +1898,7 @@ void test_fully_connected_16_case11()
     }
     
 
-    fc_boggle_BSS(  (data16_t*) &BSS, 
+    nn_standard_BSS_layout(  (data16_t*) &BSS, 
                     (int32_t*) &BSS.B, 
                     (int16_t*) &BSS.shift1, 
                     (int16_t*) &BSS.scale, 

@@ -187,6 +187,37 @@ typedef struct {
 } nn_conv2d_region_params_t;
 
 
+
+
+
+typedef struct {
+    struct {
+        int32_t X;
+        int32_t Y;
+        int32_t K;
+    } start_stride;
+    
+    struct {
+        int32_t Y;
+        int32_t K;
+    } cog_stride;
+
+    struct {
+        int32_t body;
+        int32_t tail;
+    } cig_stride;
+
+    uint32_t pix_count;
+    uint32_t C_in;
+    uint32_t C_out;
+
+} nn_conv2d_1x1_plan_t;
+
+
+
+
+
+
 typedef enum {
     FC16_DEFAULT    = 0,
 } nn_fc16_tail_strat_t;

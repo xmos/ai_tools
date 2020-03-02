@@ -31,6 +31,12 @@ void conv2d_shallowin_deepout_block_c(
     const int8_t* K,
     const int16_t* scales);
 
+void conv2d_1x1_c(
+    int8_t* Y,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* BSS,
+    const nn_conv2d_1x1_plan_t* plan);
 
 void maxpool2d_c(
     int8_t* Y,

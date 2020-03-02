@@ -103,18 +103,34 @@ def run_generate(tests, jobs):
     if operator in tests or len(tests) == 0:
         test_cases.extend(create_test_cases(operator, generator, parameter_sets))
 
+
+    #***********************************
+    # Conv2D 1x1
+    #***********************************
+    operator = operator_codes.XCOREOpCodes.XC_conv2d_1x1.name
+    generator = os.path.join(directories.GENERATOR_DIR, 'generate_conv2d_1x1.py')
+    parameter_sets = [
+        {'-in': 4, '-out': 4, '-hi': 2, '-wi': 2, '--bias_init': ('const', 0), '--weight_init': ('const', 1), '--input_init': ('const', 1)},
+        #{'-in': 4, '-out': 4, '-hi': 2, '-wi': 2},
+        # {'-in': 4, '-out': 4, '-hi': 5, '-wi': 5},
+        # {'-in': 12, '-out': 8, '-hi': 5, '-wi': 5},
+        # {'-in': 4, '-out': 4, '-hi': 5, '-wi': 5,},
+        # {'-in': 16, '-out': 8, '-hi': 5, '-wi': 5}
+    ]
+
+    if operator in tests or len(tests) == 0:
+        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
+
+
     #***********************************
     # Conv2D deepin/deepout
     #***********************************
     operator = operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name
     generator = os.path.join(directories.GENERATOR_DIR, 'generate_conv2d_deepin_deepout_relu.py')
     parameter_sets = [
-        {'-hi': 1, '-wi': 1, '-kh':1, '-kw': 1, '-pd': 'SAME' },
         {'-hi': 1, '-wi': 1, '-kh':3, '-kw': 3, '-pd': 'SAME' }, # expected failure. see issue https://github.com/xmos/ai_tools/issues/88
-        {'-hi': 3, '-wi': 3, '-kh':1, '-kw': 1, '-pd': 'SAME' },
         {'-hi': 3, '-wi': 3, '-kh':3, '-kw': 3, '-pd': 'SAME' },
         {'-hi': 5, '-wi': 5, '-kh':3, '-kw': 3, '-pd': 'SAME' },
-        {'-hi': 1, '-wi': 1, '-kh':1, '-kw': 1, '-pd': 'VALID'},
         {'-hi': 3, '-wi': 3, '-kh':3, '-kw': 3, '-pd': 'VALID'},
         {'-hi': 5, '-wi': 5, '-kh':3, '-kw': 3, '-pd': 'VALID'},
         {'-hi': 5, '-wi': 5, '-kh':3, '-kw': 3, '-pd': 'VALID', '-par': 2 },
@@ -149,7 +165,10 @@ def run_generate(tests, jobs):
     operator = operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name
     generator = os.path.join(directories.GENERATOR_DIR, 'generate_fully_connected.py')
     parameter_sets = [
-        {'-in': 32 }
+        {'-in': 32, '-out': 16},
+        {'-in': 4, '-out': 4},
+        {'-in': 4, '-out': 8},
+        {'-in': 8, '-out': 4}
     ]
     
     if operator in tests or len(tests) == 0:

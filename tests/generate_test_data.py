@@ -144,12 +144,9 @@ def run_generate(tests, jobs):
     operator = operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name
     generator = os.path.join(directories.GENERATOR_DIR, 'generate_conv2d_deepin_deepout_relu.py')
     parameter_sets = [
-        {'-hi': 1, '-wi': 1, '-kh':1, '-kw': 1, '-pd': 'SAME' },
         {'-hi': 1, '-wi': 1, '-kh':3, '-kw': 3, '-pd': 'SAME' }, # expected failure. see issue https://github.com/xmos/ai_tools/issues/88
-        {'-hi': 3, '-wi': 3, '-kh':1, '-kw': 1, '-pd': 'SAME' },
         {'-hi': 3, '-wi': 3, '-kh':3, '-kw': 3, '-pd': 'SAME' },
         {'-hi': 5, '-wi': 5, '-kh':3, '-kw': 3, '-pd': 'SAME' },
-        {'-hi': 1, '-wi': 1, '-kh':1, '-kw': 1, '-pd': 'VALID'},
         {'-hi': 3, '-wi': 3, '-kh':3, '-kw': 3, '-pd': 'VALID'},
         {'-hi': 5, '-wi': 5, '-kh':3, '-kw': 3, '-pd': 'VALID'},
         {'-hi': 5, '-wi': 5, '-kh':3, '-kw': 3, '-pd': 'VALID', '-par': 2 },

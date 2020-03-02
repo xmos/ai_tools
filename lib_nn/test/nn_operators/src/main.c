@@ -21,6 +21,10 @@ void test_conv2d_shallowin_deepout_1x1_xsize();
 void test_conv2d_shallowin_deepout_3x3();
 void test_conv2d_shallowin_deepout_regions();
 
+void test_conv2d_1x1_case0();
+void test_conv2d_1x1_case1();
+void test_conv2d_1x1_case2();
+
 void test_fully_connected_16_case0();
 void test_fully_connected_16_case1();
 void test_fully_connected_16_case2();
@@ -93,11 +97,19 @@ int main(void)
     printf("\n\n");
 
 
-      UnityBegin("src\\test_maxpool2d.xc");
-      RUN_TEST(test_maxpool2d_case1);
-      RUN_TEST(test_maxpool2d_case2);
-      ret_val = UnityEnd();
-      printf("\n\n");
+    UnityBegin("src\\test_conv2d_1x1.xc");
+    RUN_TEST(test_conv2d_1x1_case0);
+    RUN_TEST(test_conv2d_1x1_case1);
+    RUN_TEST(test_conv2d_1x1_case2);
+    ret_val = UnityEnd();
+    printf("\n\n");
+
+
+    UnityBegin("src\\test_maxpool2d.xc");
+    RUN_TEST(test_maxpool2d_case1);
+    RUN_TEST(test_maxpool2d_case2);
+    ret_val = UnityEnd();
+    printf("\n\n");
 
 
     UnityBegin("src\\test_avgpool2d.xc");
@@ -163,10 +175,10 @@ int main(void)
     printf("\n\n");
 
 
-    // UnityBegin("src\\test_temp.xc");
-    // RUN_TEST(test_temp1);
-    // ret_val = UnityEnd();
-    // printf("\n\n");
+    UnityBegin("src\\test_temp.xc");
+    RUN_TEST(test_temp1);
+    ret_val = UnityEnd();
+    printf("\n\n");
 
 
     return ret_val;

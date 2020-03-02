@@ -9,10 +9,10 @@
 #include "tst_common.h"
 
 #include "nn_operator.h"
-#include "../nn_op_helper.h"
+#include "nn_op_helper.h"
 #include "xs3_vpu.h"
 
-#include "Unity.h"
+#include "unity.h"
 
 #ifdef __XC__
 #define WORD_ALIGNED [[aligned(4)]]

@@ -17,6 +17,25 @@ from tflite2xcore import operator_codes
 
 stdout_lock = multiprocessing.Lock()
 
+def make_folder_and_arguments(**kwargs):
+    folder_fields = []
+    aurgment_fields = []
+    compiled_re = re.compile('(?<=-)\w+')
+
+    for key, value in kwargs.items():
+        hyphenless_key = compiled_re.search(key).group(0) # strip off leading hyphens
+        if isinstance(value, tuple):
+            value_folder_str = 'x'.join([str(v) for v in value])
+            value_argument_str = ' '.join([str(v) for v in value])
+        else:
+            value_folder_str = str(value)
+            value_argument_str = str(value)
+
+        folder_fields.append(f'{hyphenless_key}={value_folder_str}')
+        aurgment_fields.append(f'{key} {value_argument_str}')
+
+    return '_'.join(folder_fields), ' '.join(aurgment_fields)
+
 def generate_test_case(dry_run, test_case):
     if test_case['train_model']:
         train_model_flag = '--train_model'
@@ -29,7 +48,10 @@ def generate_test_case(dry_run, test_case):
 
     folder, arguments = make_folder_and_arguments(**parameters)
     output_dir = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, operator, folder)
-    cmd = f'python {generator} {train_model_flag} {arguments} -path {output_dir}'
+    if train_model_flag:
+        cmd = f'python {generator} {train_model_flag} {arguments} -path {output_dir}'
+    else:
+        cmd = f'python {generator} {arguments} -path {output_dir}'
     with stdout_lock:
         print(f'generating test case {output_dir}')
         print(f'   command: {cmd}')
@@ -111,11 +133,11 @@ def run_generate(tests, jobs):
     generator = os.path.join(directories.GENERATOR_DIR, 'generate_conv2d_1x1.py')
     parameter_sets = [
         {'-in': 4, '-out': 4, '-hi': 2, '-wi': 2, '--bias_init': ('const', 0), '--weight_init': ('const', 1), '--input_init': ('const', 1)},
-        #{'-in': 4, '-out': 4, '-hi': 2, '-wi': 2},
-        # {'-in': 4, '-out': 4, '-hi': 5, '-wi': 5},
-        # {'-in': 12, '-out': 8, '-hi': 5, '-wi': 5},
-        # {'-in': 4, '-out': 4, '-hi': 5, '-wi': 5,},
-        # {'-in': 16, '-out': 8, '-hi': 5, '-wi': 5}
+        {'-in': 4, '-out': 4, '-hi': 2, '-wi': 2},
+        {'-in': 4, '-out': 4, '-hi': 5, '-wi': 5},
+        {'-in': 12, '-out': 8, '-hi': 5, '-wi': 5},
+        {'-in': 4, '-out': 4, '-hi': 5, '-wi': 5,},
+        {'-in': 16, '-out': 8, '-hi': 5, '-wi': 5}
     ]
 
     if operator in tests or len(tests) == 0:

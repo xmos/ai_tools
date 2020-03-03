@@ -81,6 +81,8 @@ def load_tests(name):
 
 
 def pytest_generate_tests(metafunc):
+    test_file = metafunc.config.getoption('--test-file')
+
     for fixture in metafunc.fixturenames:
         if fixture.endswith('test_case'):
             tests = load_tests(fixture)
@@ -112,9 +114,7 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
         result = helpers.compare_tensor_files(expected_output_file, expected_quantization,
             predicted_output_file, predicted_quantization, abs_tol)
 
-        if result:
-            # remove the tmp files if the test passed
-            os.remove(predicted_output_file)
+        os.remove(predicted_output_file)
 
         return result
     except subprocess.CalledProcessError as ex:

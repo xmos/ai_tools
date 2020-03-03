@@ -3,26 +3,6 @@ import re
 
 import numpy as np
 
-def make_folder_and_arguments(**kwargs):
-    folder_fields = []
-    aurgment_fields = []
-    compiled_re = re.compile('(?<=-)\w+')
-
-    for key, value in kwargs.items():
-        hyphenless_key = compiled_re.search(key).group(0) # strip off leading hyphens
-        if isinstance(value, tuple):
-            value_folder_str = 'x'.join([str(v) for v in value])
-            value_argument_str = ' '.join([str(v) for v in value])
-        else:
-            value_folder_str = str(value)
-            value_argument_str = str(value)
-
-        folder_fields.append(f'{hyphenless_key}={value_folder_str}')
-        aurgment_fields.append(f'{key} {value_argument_str}')
-
-    return '_'.join(folder_fields), ' '.join(aurgment_fields)
-
-
 def compare_tensor_files(expected_file, expected_quantization, predicted_file,
                          predicted_quantization, abs_tol):
     expected_values = np.fromfile(expected_file, dtype='int8') 

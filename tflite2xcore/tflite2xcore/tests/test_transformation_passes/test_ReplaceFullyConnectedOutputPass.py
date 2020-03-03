@@ -3,6 +3,7 @@
 import numpy
 import pytest
 
+from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.transformation_passes import ReplaceFullyConnectedOutputPass
 
 from .model_builders import (
@@ -16,9 +17,12 @@ from .test_ReplaceFullyConnectedIntermediatePass import (
 )
 MATCHING_HIDDEN_NODES = [numpy.prod(t) for t in MATCHING_INPUT_SIZE]
 
-from .test_ReplaceDeepinDeepoutConv2DPass import (
-    NON_MATCHING_TENSORS
-)
+NON_MATCHING_TENSORS = ('tensor_name', 'new_type'), [
+    ('input', TensorType.INT16), ('input', TensorType.INT32),
+    ('weights', TensorType.INT16), ('weights', TensorType.INT32),
+    ('biases', TensorType.INT8), ('biases', TensorType.INT16),
+    ('output', TensorType.INT16), ('output', TensorType.INT32)
+]
 
 
 @pytest.fixture()

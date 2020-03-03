@@ -143,6 +143,7 @@ else # must be xcore
 	SOURCES += \
 		lib_nn/src/asm/conv2d_deepin_deepout_block.S \
 		lib_nn/src/asm/conv2d_shallowin_deepout_block.S \
+		lib_nn/src/asm/conv2d_1x1.S \
 		lib_nn/src/asm/fully_connected_16.S \
 		lib_nn/src/asm/avgpool2d.S \
 		lib_nn/src/asm/maxpool2d.S \

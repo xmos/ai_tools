@@ -18,6 +18,9 @@ def load_tests(name):
     if name.startswith('argmax'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_argmax_16.name)
+    elif name.startswith('conv2d_1x1'):
+        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
+            operator_codes.XCOREOpCodes.XC_conv2d_1x1.name)
     elif name.startswith('conv2d_shallowin_deepout'):
         pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
             operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name)
@@ -121,6 +124,10 @@ def test_lookup(test_model_app, lookup_8_test_case):
 
 def test_argmax(test_model_app, argmax_test_case):
     assert(run_test_case(test_model_app, argmax_test_case))
+
+
+def test_conv2d_1x1(test_model_app, conv2d_1x1_test_case):
+    assert(run_test_case(test_model_app, conv2d_1x1_test_case))
 
 
 @pytest.mark.xfail

@@ -8,36 +8,37 @@ import struct
 import flatbuffers
 import numpy as np
 
-from .schema_py_generated import *
+from . import schema_py_generated as schema
 from .flatbuffers_c import FlexbufferBuilder, FlexbufferParser
 
 from ..xcore_model import XCOREModel, TensorType
 from ..operator_codes import OperatorCode, BuiltinOpCodes, CustomOpCode, XCOREOpCodes
 
 
-class ActivationFunctionType(enum.Enum):
-    NONE = 0
-    RELU = 1
-    RELU_N1_TO_1 = 2
-    RELU6 = 3
-    TANH = 4
-    SIGN_BIT = 5
-
-class QuantizationDetails(enum.Enum):
-    NONE = 0
-    CustomQuantization = 1
-
-class Padding(enum.Enum):
-    SAME = 0
-    VALID = 1
-
-
-# create enum at runtime for BuiltinOptions class in schema_py_generated
-#    this is used for convenience
-BuiltinOptionsEnum = enum.Enum(
-    'BuiltinOptionsEnum',
-    {k:v for k, v in vars(BuiltinOptions).items() if not k.startswith("__")}
+# for convenience, create enums for these classes in schema_py_generated
+ActivationFunctionType = enum.Enum(
+    'ActivationFunctionType',
+    {k: v for k, v in vars(schema.ActivationFunctionType).items() if not k.startswith("__")}
 )
+
+
+QuantizationDetails = enum.Enum(
+    'QuantizationDetails',
+    {k: v for k, v in vars(schema.QuantizationDetails).items() if not k.startswith("__")}
+)
+
+
+Padding = enum.Enum(
+    'Padding',
+    {k: v for k, v in vars(schema.Padding).items() if not k.startswith("__")}
+)
+
+
+BuiltinOptions = enum.Enum(
+    'BuiltinOptions',
+    {k: v for k, v in vars(schema.BuiltinOptions).items() if not k.startswith("__")}
+)
+
 
 def snake_to_camel(word):
     output = ''.join(x.capitalize() or '_' for x in word.split('_'))
@@ -45,12 +46,12 @@ def snake_to_camel(word):
 
 
 def camel_to_snake(name):
-  name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-  return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+    name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
 
 
 def builtin_options_to_dict(builtin_options):
-    dict_ = {camel_to_snake(k):v for k, v in vars(builtin_options).items()}
+    dict_ = {camel_to_snake(k): v for k, v in vars(builtin_options).items()}
     if 'fused_activation_function' in dict_:
         # convert enum value to string
         dict_['fused_activation_function'] = \
@@ -64,9 +65,9 @@ def builtin_options_to_dict(builtin_options):
 
 
 def dict_to_builtin_options(type_, dict_):
-    class_identifier = BuiltinOptionsEnum(type_).name + 'T'
+    class_identifier = BuiltinOptions(type_).name + 'T'
 
-    builtin_class = globals()[class_identifier]
+    builtin_class = getattr(schema, class_identifier)
     builtin_options = builtin_class()
 
     for k, v in dict_.items():
@@ -114,6 +115,7 @@ def create_xcore_model(modelT):
         subgraph = model.create_subgraph(
             name=(subgraphT.name if hasattr(subgraphT, 'name') else None)
         )
+
         # load tensors
         tensors = []
         for tensor_index, tensorT in enumerate(subgraphT.tensors):
@@ -137,7 +139,7 @@ def create_xcore_model(modelT):
             tensor = subgraph.create_tensor(
                 name=tensorT.name.decode('utf-8'),
                 type_=TensorType(tensorT.type),
-                shape=list(tensorT.shape.tolist() if tensorT.shape is not None  else []),
+                shape=list(tensorT.shape.tolist() if tensorT.shape is not None else []),
                 buffer=buffers[tensorT.buffer],
                 quantization=quantization,
                 isinput=is_input,
@@ -145,7 +147,7 @@ def create_xcore_model(modelT):
             )
             tensors.append(tensor)
 
-        # load operators
+        # load operators & set tensor producer & consumers
         for operatorT in subgraphT.operators:
             operator_code = operator_codes_lut[operatorT.opcodeIndex]
             options = {}
@@ -165,17 +167,19 @@ def create_xcore_model(modelT):
                 **options
             )
 
+    model.sanity_check()
     return model
 
+
 def create_flatbuffer_model(model):
-    modelT = ModelT()
+    modelT = schema.ModelT()
     modelT.version = model.version
     modelT.description = model.description
 
     # create buffers
     modelT.buffers = []
     for buffer in model.buffers:
-        bufferT = BufferT()
+        bufferT = schema.BufferT()
         if len(buffer.data) > 0:
             bufferT.data = buffer.data
         modelT.buffers.append(bufferT)
@@ -183,7 +187,7 @@ def create_flatbuffer_model(model):
     # create metadata
     modelT.metadata = []
     for metadata in model.metadata:
-        metadataT = MetadataT()
+        metadataT = schema.MetadataT()
         metadataT.name = metadata.name
         metadataT.buffer = model.buffers.index(metadata.buffer)
         modelT.metadata.append(metadataT)
@@ -191,7 +195,7 @@ def create_flatbuffer_model(model):
     # create operator_codes
     modelT.operatorCodes = []
     for operator_code in model.operator_codes:
-        operatorCodeT = OperatorCodeT()
+        operatorCodeT = schema.OperatorCodeT()
         if operator_code.builtin_code:
             operatorCodeT.builtinCode = operator_code.builtin_code.value
         if operator_code.custom_code:
@@ -202,9 +206,9 @@ def create_flatbuffer_model(model):
     # create subgraphs
     modelT.subgraphs = []
     for subgraph in model.subgraphs:
-        subgraphT = SubGraphT()
+        subgraphT = schema.SubGraphT()
         subgraphT.name = subgraph.name
-        
+
         # set inputs
         subgraphT.inputs = []
         for input_ in subgraph.inputs:
@@ -220,13 +224,13 @@ def create_flatbuffer_model(model):
         # set tensors
         subgraphT.tensors = []
         for tensor in subgraph.tensors:
-            tensorT = TensorT()
+            tensorT = schema.TensorT()
             tensorT.name = tensor.name
             tensorT.shape = tensor.shape
             tensorT.buffer = model.buffers.index(tensor.buffer)
             tensorT.type = tensor.type.value
             if tensor.quantization:
-                quantizationT = QuantizationParametersT()
+                quantizationT = schema.QuantizationParametersT()
                 if 'min' in tensor.quantization:
                     quantizationT.min = tensor.quantization['min']
                 if 'max' in tensor.quantization:
@@ -250,7 +254,7 @@ def create_flatbuffer_model(model):
         # set operators
         subgraphT.operators = []
         for operator in subgraph.operators:
-            operatorT = OperatorT()
+            operatorT = schema.OperatorT()
             operatorT.opcodeIndex = model.operator_codes.index(operator.operator_code)
             operatorT.inputs = []
             for input_tensor in operator.inputs:
@@ -262,8 +266,8 @@ def create_flatbuffer_model(model):
                 operatorT.outputs.append(tensor_index)
             if operator.builtin_options:
                 operatorT.builtinOptionsType = operator.builtin_options_type
-                operatorT.builtinOptions = dict_to_builtin_options(operator.builtin_options_type, 
-                    operator.builtin_options)
+                operatorT.builtinOptions = dict_to_builtin_options(
+                    operator.builtin_options_type, operator.builtin_options)
             if operator.custom_options:
                 fbb = FlexbufferBuilder(operator.custom_options)
                 operatorT.customOptions = fbb.get_bytes()
@@ -278,8 +282,8 @@ def read_flatbuffer(model_filename):
     with open(model_filename, "rb") as fd:
         bits = bytearray(fd.read())
 
-    model_obj = Model.GetRootAsModel(bits, 0)
-    modelT = ModelT.InitFromObj(model_obj)
+    model_obj = schema.Model.GetRootAsModel(bits, 0)
+    modelT = schema.ModelT.InitFromObj(model_obj)
 
     return create_xcore_model(modelT)
 
@@ -295,4 +299,3 @@ def write_flatbuffer(model, filename):
         return fd.write(builder.Output())
 
     return 0
-

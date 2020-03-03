@@ -10,13 +10,13 @@ from tflite2xcore.graph_transformer import (
     ModelTransformationPass,
     OperatorMatchingPass,
     InputTensorMatchingPass,
-    OutputTensorMatchingPass
+    OutputTensorMatchingPass,
+    TensorMatchingPass
 )
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.parallelization import DIDOConv2DPlanner
-
-VE, ACC_PERIOD, WORD_SIZE = 32, 16, 4
+from tflite2xcore.utils import VE, ACC_PERIOD, WORD_SIZE
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
@@ -132,7 +132,8 @@ class AddArgMax16OutputPass(OutputTensorMatchingPass):
 
         # add tensor with axis info
         dim_tensor = subgraph.create_tensor(
-            f"{op.name}/axis", TensorType.INT32, shape=[])
+            f"{op.name}/axis", TensorType.INT32, shape=[],
+            consumers=[op])
         op.inputs.append(dim_tensor)
         dim_tensor.buffer.data = np.int32([1])
 
@@ -304,6 +305,11 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         return rshift, scale
 
     @property
+    @abstractmethod
+    def _MAX_POST_SHIFT(self):
+        pass
+
+    @property
     def _shift_scale_arr(self):
         # calculate right shift/scale
         rshift, scale = self._shift_scale
@@ -315,8 +321,12 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
         # split left and right shift into pre and post scaling shifts
         shift_pre = rshift if True else np.maximum(rshift, 0)  # TODO: resolve this when left shift issue is solved in conv2d kernels
-        shift_post = 14 * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
+        shift_post = self._MAX_POST_SHIFT * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
         return np.stack([shift_pre, scale, shift_post], axis=1)
+
+    @property
+    def _bss_arr(self):
+        return np.concatenate([self._bias_arr, self._shift_scale_arr], axis=1)
 
     def mutate_biases(self, op):
         # NOTE: by default no bias layout rearrangement is done for this op
@@ -353,11 +363,15 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
             # remove quantization info to save space
             self._weights.quantization = None
 
+    @property
+    def _MAX_POST_SHIFT(self):
+        return 32 - 16 - 2  # this is because the output is 16 bit
+
     def mutate_biases(self, op):
         super().mutate_biases(op)
         with self.using(op):
             # calculate and save the bias/shift/scale tensor
-            bss = np.concatenate([self._bias_arr, self._shift_scale_arr], axis=1)
+            bss = self._bss_arr
             self._biases.buffer.data = bss
             self._biases.shape = bss.shape
             self._biases.type = TensorType.INT16
@@ -417,20 +431,25 @@ class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
         return False
 
     def add_requantize(self, op):
-        # rename original output tensor
         with self.using(op):
+            # rename original output tensor
             self._output.name = f"{op.name}/output_requant"
-        # create intermediate tensor
-        with self.using(op):
+            # create intermediate tensor
             intermediate = op.subgraph.create_tensor(
                 f"{op.name}/intermediate", self._output.type, self._output.shape,
-                quantization=self._output.quantization
+                quantization=self._output.quantization,
+                producers=[op]
             )
+        # rewire outputs of original FC op
+        for output_tensor in op.outputs:
+            output_tensor.producers.remove(op)
         # create new op, insert after original op, rewire inputs/outputs
         new_op = op.subgraph.create_operator(
             OperatorCode(XCOREOpCodes.XC_requantize_16_to_8),
             inputs=[intermediate], outputs=op.outputs)
         op.outputs = [intermediate]
+        # move operator to correct location
+        # TODO: remove this when we have execution planning
         op.subgraph.insert_operator(op, new_op, after=True)
 
     def mutate(self, op):
@@ -439,233 +458,6 @@ class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
         self.add_requantize(new_op)
         self.mutate_output(new_op)
         return new_op
-
-
-# TODO: write (at least regression) tests for this class
-class ReplaceDeepoutConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
-    @property
-    def _strides(self):
-        options = self._op.builtin_options
-        return options['stride_h'], options['stride_w']
-
-    @property
-    def _dilation(self):
-        options = self._op.builtin_options
-        return options['dilation_h_factor'], options['dilation_w_factor']
-
-    @property
-    def _padding(self):
-        return self._op.builtin_options['padding']
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                if self._dilation != (1, 1):
-                    logging.warning(f"Found non-supported dilation: {self._dilation}")
-                else:
-                    return (self._strides == (1, 1)
-                            and self._weights.shape[1] % 2 == 1  # kernel height is odd
-                            and self._weights.shape[2] % 2 == 1  # kernel width is odd
-                            and self._weights.shape[0] % ACC_PERIOD == 0)  # deepout
-
-        return False
-
-    def mutate_biases(self, op):
-        super().mutate_biases(op)
-        with self.using(op):
-            # calculate new bias tensor and save to buffer
-            new_bias = self._bias_arr
-            self._biases.buffer.data = new_bias
-
-            # change bias tensor metadata
-            self._biases.type = TensorType.INT16
-            self._biases.shape = new_bias.shape
-
-            # remove quantization info to save space
-            self._biases.quantization = None
-
-    def add_shift_scale(self, op):
-        with self.using(op):
-            shift_scale_arr = self._shift_scale_arr
-
-        # TODO: remove this when left shift issue is solved in conv2d kernels
-        shift_scale_arr = shift_scale_arr[:, :2, :]
-        for s in shift_scale_arr[:, 0, :].flatten():
-            if s < 0:
-                raise ValueError("Negative right shift encountered.")
-
-        shift_scale_tensor = op.subgraph.create_tensor(
-            f"{op.name}/shift_scale",
-            TensorType.INT16,
-            shift_scale_arr.shape,
-            buffer=op.model.create_buffer(shift_scale_arr)
-        )
-        op.inputs.append(shift_scale_tensor)
-
-    def mutate(self, op):
-        # NOTE: the order of these mutations is strict
-        new_op = super().mutate(op)
-        self.add_shift_scale(new_op)
-        self.mutate_biases(new_op)
-        self.mutate_weights(new_op)
-
-        with self.using(op):
-            new_op.add_custom_options(
-                padding=self._padding, stride_h=self._strides[0], stride_w=self._strides[1]
-            )
-        return new_op
-
-
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.CONV_2D
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._weights.shape[3] % VE == 0  # deepin
-
-        return False
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_conv2d_deepin_deepout_relu)
-
-    def mutate_weights(self, op):
-        super().mutate_weights(op)
-        with self.using(op):
-            # rearrange weight tensor
-            weights = self._weights.numpy.astype(np.int8)
-            weights = weights.reshape((
-                weights.shape[0] // ACC_PERIOD,
-                ACC_PERIOD,
-                weights.shape[1],
-                weights.shape[2],
-                weights.shape[3] // VE,
-                VE
-            ))
-            weights = np.transpose(
-                np.flip(weights, axis=1),
-                axes=(0, 2, 3, 4, 1, 5)
-            )
-
-            # save weight tensor and update shape
-            self._weights.buffer.data = weights
-            self._weights.shape = weights.shape
-
-            # remove quantization info to save space
-            self._weights.quantization = None
-
-
-# TODO: write tests (of subclasses?) to test input operator matching
-class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
-    MAX_INPUT_CHANNELS = WORD_SIZE
-    MAX_KERNEL_WIDTH = VE // MAX_INPUT_CHANNELS
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._input in op.subgraph.inputs
-
-        return False
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_conv2d_shallowin_deepout_relu)
-
-    def mutate_input(self, op):
-        # NOTE: when trying to generalize this pass to non-input operators,
-        #       keep in mind that this mutation is what can affect other operators
-        with self.using(op):
-            self._input.name = f"{op.name}/input"
-            self._input.shape[3] = self.MAX_INPUT_CHANNELS  # new, zero-padded shape
-
-    def mutate_weights(self, op):
-        super().mutate_weights(op)
-        with self.using(op):
-            # rearrange and zero pad weight tensor
-            weights = self._weights.numpy.astype(np.int8)
-            weights = np.pad(
-                weights,
-                pad_width=[(0, 0),
-                           (0, 0),
-                           (0, self.MAX_KERNEL_WIDTH - weights.shape[2]),
-                           (0, self.MAX_INPUT_CHANNELS - weights.shape[3])]
-            )
-            weights = weights.reshape((
-                weights.shape[0] // ACC_PERIOD,
-                ACC_PERIOD,
-                weights.shape[1],
-                self.MAX_KERNEL_WIDTH,
-                self.MAX_INPUT_CHANNELS
-            ))
-            weights = np.transpose(
-                np.flip(weights, axis=1),
-                axes=(0, 2, 1, 3, 4)
-            )
-
-            # save weight tensor and update shape
-            self._weights.shape = weights.shape
-            self._weights.buffer.data = weights
-
-            # remove quantization info to save space
-            self._weights.quantization = None
-
-    def mutate(self, op):
-        # NOTE: the order of these mutations is strict
-        with self.using(op):
-            unpadded_shape = self._weights.shape
-        new_op = super().mutate(op)
-        self.mutate_input(new_op)
-        new_op.add_custom_options(unpadded_shape=unpadded_shape)
-        return new_op
-
-
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceShallowinDeepoutConv2DPass(ReplaceDeepoutConv2DInputPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.CONV_2D
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return (self._weights.shape[3] <= self.MAX_INPUT_CHANNELS
-                        and self._weights.shape[2] <= self.MAX_KERNEL_WIDTH)
-
-        return False
-
-
-class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.DEPTHWISE_CONV_2D
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return (self._weights.shape[3] == 1  # depthwise only matched with single input channel
-                        and self._weights.shape[2] <= self.MAX_KERNEL_WIDTH)  # max kernel width
-
-        return False
-
-    def mutate(self, op):
-        # NOTE: the order of these mutations is strict
-        with self.using(op):
-            # NOTE: weight tensor channel ordering is:
-            # kOHWI, // TFLite conv weights
-            # kHWIO, // TensorFlow conv weights
-            # k1HWO, // TFLite DepthwiseConv weights
-            # kHWIM, // TensorFlow DepthwiseConv weights
-            # Therefore, this permutation results in kOHW1 which is the same as
-            #    TFLite conv weight order for a single input channel
-            # NOTE: this happens before the standard weight mutation on purpose
-            new_weights = np.transpose(self._weights.numpy, axes=(3, 1, 2, 0))
-            self._weights.shape = new_weights.shape
-            self._weights.buffer.data = new_weights
-        return super().mutate(op)
 
 
 class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
@@ -827,13 +619,15 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
 
         with self.using(new_op):
             # replace reduction_indices tensor with bias_scale_shift
-            subgraph.remove_tensor(new_op.inputs[1])
+            old_tensor = new_op.inputs[1]
             new_op.inputs[1] = subgraph.create_tensor(
-                f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7])
+                f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7],
+                consumers=[new_op])
             new_op.inputs[1].buffer.data = np.frombuffer(
                 b''.join(p.tostring() for p in self._bias_scale_shift),
                 dtype=np.int8
             )
+            subgraph.remove_tensor(old_tensor)
 
         return new_op
 
@@ -843,10 +637,22 @@ class RemoveUnusedBuffersPass(ModelTransformationPass):
         super().__init__(priority)
 
     def run(self, model):
-        model.buffers = list(
-            set(t.buffer for subgraph in model.subgraphs for t in subgraph.tensors)
-            | set(m.buffer for m in model.metadata)
-        )
+        model.buffers = [b for b in model.buffers if b.owners]
+
+
+class RemoveDanglingTensorsPass(TensorMatchingPass):
+    def __init__(self, priority=PassPriority.CLEANUP):
+        super().__init__(priority)
+
+    def match(self, tensor):
+        return (super().match(tensor)
+                and tensor not in tensor.subgraph.inputs
+                and tensor not in tensor.subgraph.outputs
+                and not tensor.consumers
+                and not tensor.producers)
+
+    def mutate(self, tensor):
+        tensor.subgraph.remove_tensor(tensor)
 
 
 class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):

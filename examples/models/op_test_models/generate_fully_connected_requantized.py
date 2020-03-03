@@ -6,7 +6,6 @@ from tflite2xcore.model_generation import utils
 import tflite2xcore.converter as xcore_conv
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 import op_test_models_common as common
-from generate_fully_connected import FullyConnected
 
 from generate_fully_connected import (
     DEFAULT_OUTPUT_DIM, DEFAULT_INPUT_DIM,
@@ -16,7 +15,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
     'debug', 'fully_connected_requantized').resolve()
 
 
-class FullyConnectedRequantized(FullyConnected):
+class FullyConnectedRequantized(common.OpTestDefaultFCModel):
     def to_tf_xcore(self):
         assert 'model_quant' in self.models
         self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
@@ -31,48 +30,35 @@ class FullyConnectedRequantized(FullyConnected):
         model = write_flatbuffer(model, self.models['model_xcore'])
 
 
-def main(path=DEFAULT_PATH, *,
-         input_dim=DEFAULT_INPUT_DIM,
-         output_dim=DEFAULT_OUTPUT_DIM,
-         train_new_model=False,
-         batch_size=DEFAULT_BS,
-         epochs=DEFAULT_EPOCHS,
-         bias_init=common.DEFAULT_CONST_INIT,
-         weight_init=common.DEFAULT_UNIF_INIT):
-    kwargs = {
-        'name': 'fc_deepin_anyout_requantized',
-        'path': path if path else DEFAULT_PATH
-    }
-    common.run_main_fc(model=FullyConnectedRequantized(**kwargs),
-                       train_new_model=train_new_model,
-                       input_dim=input_dim,
-                       output_dim=output_dim,
-                       bias_init=bias_init,
-                       weight_init=weight_init,
-                       batch_size=batch_size,
-                       epochs=epochs)
-
-
-if __name__ == "__main__":
+def main(raw_args=None):
     parser = common.OpTestFCParser(defaults={
         'path': DEFAULT_PATH,
         'input_dim': DEFAULT_INPUT_DIM,
         'output_dim': DEFAULT_OUTPUT_DIM,
         'batch_size': DEFAULT_BS,
-        'epochs': DEFAULT_EPOCHS
+        'epochs': DEFAULT_EPOCHS,
+        'inits': {
+            'weight_init': {
+                'type': common.OpTestInitializers.UNIF,
+                'help': "Initializer for weight distribution."
+            },
+            'bias_init': {
+                'type': common.OpTestInitializers.CONST,
+                'help': "Initializer for bias distribution."
+            }
+        }
     })
-    args = parser.parse_args()
-
-    utils.set_verbosity(args.verbose)
+    args = parser.parse_args(raw_args)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
 
-    initializers = common.initializer_args_handler(args)
+    model = FullyConnectedRequantized('fc_deepin_anyout_requantized', args.path)
+    model.run(train_model=args.train_model,
+              input_dim=args.input_dim,
+              output_dim=args.output_dim,
+              batch_size=args.batch_size,
+              epochs=args.epochs,
+              **args.inits)
 
-    main(path=args.path,
-         input_dim=args.input_dim,
-         output_dim=args.output_dim,
-         train_new_model=args.train_model,
-         batch_size=args.batch_size,
-         epochs=args.epochs,
-         bias_init=initializers['bias_init'],
-         weight_init=initializers['weight_init'])
+
+if __name__ == "__main__":
+    main()

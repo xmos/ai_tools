@@ -18,7 +18,7 @@ from generate_avgpool2d import (
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'maxpool2d').resolve()
 
 
-class MaxPool2d(common.DefaultOpTestModel):
+class MaxPool2d(common.OpTestDefaultModel):
     def build_core_model(self, height, width, input_channels, *, pool_size,
                          strides, padding, input_init):
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
@@ -40,24 +40,7 @@ class MaxPool2d(common.DefaultOpTestModel):
         )
 
 
-def main(path=DEFAULT_PATH, *,
-         input_channels=DEFAULT_INPUTS,
-         height=DEFAULT_HEIGHT,
-         width=DEFAULT_WIDTH,
-         pool_size=DEFAULT_POOL_SIZE,
-         strides=DEFAULT_STRIDES,
-         padding=DEFAULT_PADDING,
-         input_init=common.DEFAULT_UNIF_INIT):
-    model = MaxPool2d('maxpool2d', Path(path))
-    model.build(height, width, input_channels,
-                pool_size=pool_size,
-                strides=strides,
-                padding=padding,
-                input_init=input_init)
-    model.run()
-
-
-if __name__ == "__main__":
+def main(raw_args=None):
     parser = common.OpTestPoolParser(defaults={
         "path": DEFAULT_PATH,
         "inputs": DEFAULT_INPUTS,
@@ -65,20 +48,25 @@ if __name__ == "__main__":
         "width": DEFAULT_WIDTH,
         "padding": DEFAULT_PADDING,
         "strides": DEFAULT_STRIDES,
-        "pool_size": DEFAULT_POOL_SIZE
+        "pool_size": DEFAULT_POOL_SIZE,
+        'inits': {
+            'input_init': {
+                'type': common.OpTestInitializers.UNIF,
+                'help': "Initializer for input data distribution."
+            }
+        }
     })
-    args = parser.parse_args()
-
-    utils.set_verbosity(args.verbose)
+    args = parser.parse_args(raw_args)
     utils.set_gpu_usage(False, args.verbose)
 
-    strides_pool = common.strides_pool_arg_handler(args)
-    initializers = common.initializer_args_handler(args)
+    model = MaxPool2d('maxpool2d', args.path)
+    model.build(args.height, args.width, args.inputs,
+                padding=args.padding,
+                strides=args.strides,
+                pool_size=args.pool_size,
+                **args.inits)
+    model.run()
 
-    main(path=args.path,
-         input_channels=args.inputs,
-         height=args.height,
-         width=args.width,
-         padding=args.padding,
-         **strides_pool,
-         input_init=initializers['input_init'])
+
+if __name__ == "__main__":
+    main()

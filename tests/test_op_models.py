@@ -98,7 +98,7 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
     if test_model_app.endswith('.xe'):
         cmd = f'xsim --args {test_model_app} {flatbuffer} {input_file} {predicted_output_file}'
     else:
-        cmd = f'{test_model_app} {flatbuffer} {input_file} {predicted_output_file}'
+        cmd = f'{test_model_app}q {flatbuffer} {input_file} {predicted_output_file}'
     print('**********')
     print('* Inputs *')
     print('**********')
@@ -107,16 +107,19 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
     print('***********')
     print('* Results *')
     print('***********')
-    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-    result = helpers.compare_tensor_files(expected_output_file, expected_quantization,
-        predicted_output_file, predicted_quantization, abs_tol)
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+        result = helpers.compare_tensor_files(expected_output_file, expected_quantization,
+            predicted_output_file, predicted_quantization, abs_tol)
 
-    if result:
-        # remove the tmp files if the test passed
-        os.remove(predicted_output_file)
+        if result:
+            # remove the tmp files if the test passed
+            os.remove(predicted_output_file)
 
-    return result
-
+        return result
+    except subprocess.CalledProcessError as ex:
+        print(ex)
+        return False
 
 def test_lookup(test_model_app, lookup_8_test_case):
     assert(run_test_case(test_model_app, lookup_8_test_case))

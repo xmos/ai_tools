@@ -63,9 +63,6 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
     def build_core_model(
             self, K_h, K_w, height, width, input_channels, output_channels, *,
             padding, **inits):
-        assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
-        assert K_h % 2 == 1, "kernel height must be odd"
-        assert K_w % 2 == 1, "kernel width must be odd"
         self.input_init = inits['input_init']
         try:
             self.core_model = tf.keras.Sequential(
@@ -98,6 +95,15 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
         self.save_core_model()
         self.populate_converters(
             xcore_num_threads=num_threads if num_threads else None)
+
+
+class OpTestDeepoutConvModel(OpTestDefaultConvModel):
+    def build_core_model(self, *args, **kwargs):
+        K_h, K_w, _, _, _, output_channels = args
+        assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
+        assert K_h % 2 == 1, "kernel height must be odd"
+        assert K_w % 2 == 1, "kernel width must be odd"
+        super().build_core_model(*args, **kwargs)
 
 
 class OpTestDefaultFCModel(KerasModel):
@@ -211,6 +217,7 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
 #  ----------------------------------------------------------------------------
 #                                   PARSERS
 #  ----------------------------------------------------------------------------
+
 
 class OpTestInitializers(Enum):
     UNIF = "unif"
@@ -364,6 +371,7 @@ class OpTestImgParser(OpTestInitializerParser):
         if 'padding' in defaults:
             self.add_argument(
                 "-pd", "--padding", type=str, default=defaults["padding"],
+                choices=['same', 'valid'],
                 help="Padding mode",
             )
 

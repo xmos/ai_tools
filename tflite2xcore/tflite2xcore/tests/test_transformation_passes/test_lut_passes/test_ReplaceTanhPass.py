@@ -6,7 +6,7 @@ import numpy
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.transformation_passes import ReplaceTanhPass
 
-from ..model_builders import build_tanh
+from tflite2xcore.tests.test_transformation_passes.model_builders import build_tanh
 from .conftest import (
     _test_matching_params,
     _test_non_matching_input_type,
@@ -14,6 +14,10 @@ from .conftest import (
     _test_mutate
 )
 
+
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
 
 @pytest.fixture()
 def trf_pass():
@@ -24,6 +28,10 @@ def trf_pass():
 def tanh_model(input_shape):
     return build_tanh(input_shape=input_shape, tensor_type=TensorType.INT8)
 
+
+#  ----------------------------------------------------------------------------
+#                               TEST FUNCTIONS
+#  ----------------------------------------------------------------------------
 
 def test_matching_params(trf_pass, tanh_model):
     _test_matching_params(trf_pass, tanh_model)

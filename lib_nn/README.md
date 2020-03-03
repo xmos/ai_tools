@@ -27,32 +27,29 @@ This document assumes familiarity with the XMOS xCORE architecture, the XMOS too
 
 ## API
 
-The table below gives a quick overview of the API's in lib_nn. For full documentation of each API function, please refer to the description in the lib_nn/api/nn_operator.h header file.
+The table below gives a quick overview of the API's in lib_nn. The following symbols are used:
+- Cin - The number of input channels
+- Cout - The number of output channels
 
-| Group | API | Constraints | Additional memory required for optimizations (bytes) | VPU Optimized | Comments |
+For full documentation of each API function, please refer to the description in the lib_nn/api/nn_operator.h header file.
+
+| Group | API | VPU Optimized | Constraints    | Additional memory required for optimization (bytes) | Comments |
 |:----|:---|:------------|:----------------|:--------------------------------------------------------|:-------------|
 |Convolution| | | | | |
-| |conv2d_deepin_deepout|Input must have a multiple of 32 input channels, and output must have a multiple of 16 output channels|TODO|Yes|Loosening the input and output constraints to multiples of 4 is **in development**|
-| |conv2d_shallowin_deepout|Input must have a multiple of 4 input channels, and output must have a multiple of 16 output channels|TODO|Yes|Loosening the input and output constraints to multiples of 4 is **in development**|
-| |conv2d_1x1| |TODO|Yes| |
-| |depthwise conv2d| | |**In development**| |
+| |conv2d_deepin_deepout|**In re-development**|Cin % 4 = 0, Cout % 4 = 0|(160 * (Cout + 15) >> 4) - (Cout * 4)| |
+| |conv2d_shallowin_deepout|**In re-development**|Cin % 4 = 0, Cout % 4 = 0|(160 * (Cout + 15) >> 4) - (Cout * 4)| |
+| |conv2d_1x1|Yes|Cin % 4 = 0, Cout % 4 = 0|(160 * (Cout + 15) >> 4) - (Cout * 4)|
+| |depthwise conv2d|**In development**|Cin % 4 = 0, Cout % 4 = 0|(160 * (Cout + 15) >> 4) - (Cout * 4)| |
 |Fully Connected| | | | | |
-| |fully_connected_16|Input channels must be a multiple of 4|TODO|Yes| |
+| |fully_connected_16|Yes|Cin % 4 = 0, Cout % 4 = 0|(160 * (Cout + 15) >> 4) - (Cout * 4)| |
 |Pooling| | | | | |
-| |maxpool2d| |0|Yes| |
-| |avgpool2d|Input and output channels must be a multiple of 4|0|Yes| |
-| |avgpool2d_global|Input channels must be a multiple of 4|0|Yes| |
+| |maxpool2d|Yes|None|0| |
+| |avgpool2d|Yes|Cin % 4 = 0, Cout % 4 = 0|0| |
+| |avgpool2d_global|Yes|Cin % 4 = 0, Cout % 4 = 0|0| |
 |Argmax| | | | | |
-| |argmax_16|None|0|No| |
-|Softmax| | | | | |
-| | | | |**In development**| |
+| |argmax_16|No|None|0| |
 |Activations| | | | | |
-| |lookup8|None|256|Yes|Logistic (sigmoid), tanh & ReLU activation functions can be implemented using a look-up table mapping 8-bit inputs to 8-bit outputs|
-|Concat| | | | | |
-| | | | |**In development**| |
+| |lookup8|Yes|None|256|Logistic (sigmoid), tanh & ReLU activation functions can be implemented using a look-up table mapping 8-bit inputs to 8-bit outputs|
 |Misc| | | | | |
-| |requantize_16_to_8|Input and output tensors must be word-aligned|0|Yes|Reduces the bit depth of a 16-bit vector to 8 bits|
+| |requantize_16_to_8|Yes|Cin % 4 = 0, Cout % 4 = 0|0|Reduces the bit depth of a 16-bit vector to 8 bits|
 
-## Weight & Bias Tensor Layout
-
-TODO: Write something summary-like here!

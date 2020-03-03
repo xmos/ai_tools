@@ -17,5 +17,6 @@ from .pooling_passes import (
     ReplaceMaxPool2DPass,
     ReplaceMaxPool2D2x2Pass,
     ReplaceAveragePool2DPass,
-    ReplaceAveragePool2D2x2Pass
+    ReplaceAveragePool2D2x2Pass,
+    ReplaceGlobalAveragePool2DPass
 )

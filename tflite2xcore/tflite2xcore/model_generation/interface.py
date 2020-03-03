@@ -35,8 +35,6 @@ class Model(ABC):
         self.data = {}
         self.converters = {}
 
-        self.input_init = None  # for initializing input data wit a distribution
-
         if type(path) is pathlib.PosixPath:
             self._path = path
         elif type(path) is str:
@@ -260,6 +258,9 @@ class Model(ABC):
 
 
 class KerasModel(Model):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.input_init = None
 
     @abstractmethod
     def build(self):

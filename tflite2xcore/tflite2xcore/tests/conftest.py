@@ -12,14 +12,18 @@ def pytest_addoption(parser):
 
 
 #  ----------------------------------------------------------------------------
-#                                   HELPERS
+#                                   HOOKS
 #  ----------------------------------------------------------------------------
 
-def _pytest_generate_tests(metafunc, PARAMS):
-    if metafunc.config.getoption("smoke"):
-        params = PARAMS["smoke"]
-    else:
-        params = PARAMS["default"]
+def pytest_generate_tests(metafunc):
+    try:
+        PARAMS = metafunc.module.PARAMS
+        if metafunc.config.getoption("smoke"):
+            params = PARAMS["smoke"]
+        else:
+            params = PARAMS["default"]
+    except AttributeError:
+        params = {}
 
     for name, values in params.items():
         if name in metafunc.fixturenames:

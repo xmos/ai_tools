@@ -13,3 +13,9 @@ from .conv2d_passes import (
     ReplaceShallowinDeepoutConv2DPass,
     ReplaceSingleinDeepoutDepthwiseConv2DPass
 )
+from .pooling_passes import (
+    ReplaceMaxPool2DPass,
+    ReplaceMaxPool2D2x2Pass,
+    ReplaceAveragePool2DPass,
+    ReplaceAveragePool2D2x2Pass
+)

@@ -13,7 +13,7 @@ help: app_help; @echo > NUL
 BUILD_DIR := .build
 BIN_DIR   := bin
 OBJ_DIR   := $(BUILD_DIR)/$(PLATFORM)
-LIB_BUILD_DIR := $(OBJ_DIR)/$(PLATFORM)/lib
+LIB_BUILD_DIR := $(OBJ_DIR)/lib
 EXE_DIR   := $(BIN_DIR)/$(PLATFORM)
 
 #######################################################
@@ -89,6 +89,7 @@ BUILD_STATIC_LIBRARIES := 1
 #######################################################
 
 SOURCE_FILE_EXTS := $(SOURCE_FILE_EXTENSIONS)
+APP_REQUIRE_CONFIG_SPECIFIC := 1
 
 APP_COMMON_MK_FILE := $(wildcard $(APP_COMMON_MK_FILE_NAME))
 ifneq ($(APP_COMMON_MK_FILE),$(EMPTY_STR))
@@ -96,27 +97,29 @@ ifneq ($(APP_COMMON_MK_FILE),$(EMPTY_STR))
   include $(APP_COMMON_MK_FILE)
 endif
 
-#
-# Check whether to load default application makefile
-#   or to load a specific configuration makefile
-#
-APP_MK_FILE_NAME := $(APP_MK_FILE_DEFAULT)
-ifdef CONFIG
-  $(info Using config: $(CONFIG))
-  EXE_DIR := $(EXE_DIR)/$(CONFIG)
-  APP_MK_FILE_NAME = $(CONFIG:%=$(APP_CONFIG_MK_PATTERN))
+ifeq ($(APP_REQUIRE_CONFIG_SPECIFIC),1)
+  #
+  # Check whether to load default application makefile
+  #   or to load a specific configuration makefile
+  #
+  APP_MK_FILE_NAME := $(APP_MK_FILE_DEFAULT)
+  ifdef CONFIG
+    $(info Using config: $(CONFIG))
+    EXE_DIR := $(EXE_DIR)/$(CONFIG)
+    APP_MK_FILE_NAME = $(CONFIG:%=$(APP_CONFIG_MK_PATTERN))
+  endif
+  
+  #
+  # Load application make file. Give error if not found
+  #
+  APP_MK_FILE := $(wildcard $(APP_MK_FILE_NAME))
+  
+  ifeq ($(APP_MK_FILE),$(EMPTY_STR))
+    $(error Could not find application make file: $(APP_MK_FILE_NAME))
+  endif
+  
+  include $(APP_MK_FILE)
 endif
-
-#
-# Load application make file. Give error if not found
-#
-APP_MK_FILE := $(wildcard $(APP_MK_FILE_NAME))
-
-ifeq ($(APP_MK_FILE),$(EMPTY_STR))
-  $(error Could not find application make file: $(APP_MK_FILE_NAME))
-endif
-
-include $(APP_MK_FILE)
 
 #
 # Check whether the application make files have defined the
@@ -318,21 +321,21 @@ endif # BUILD_STATIC_LIBRARIES
 #######################################################
 # APPLICATION TARGET
 #######################################################
-$(APP_EXE_FILE): external_libs
-$(APP_EXE_FILE): app_objects
+executable: external_libs
+executable: app_objects
 
 REQUIRED_LIBARIES := $(EXTERNAL_LIBRARIES)
 REQUIRED_OBJECT_FILES := $(APP_OBJECT_FILES)
 
 ifeq ($(BUILD_STATIC_LIBRARIES),1)
-  $(APP_EXE_FILE): archives
+  executable: archives
   REQUIRED_LIBRARIES += $(DEPENDENCY_ARCHIVES)
 else
-  $(APP_EXE_FILE): lib_objects
+  executable: lib_objects
   REQUIRED_OBJECT_FILES += $(DEPENDENCY_OBJECT_FILES)
 endif
 
-$(APP_EXE_FILE): 
+$(APP_EXE_FILE): $(REQUIRED_OBJECT_FILES) $(REQUIRED_LIBRARIES)
 	$(call mkdir_cmd,$@)
 	$(info Linking binary $@)
 	@$(XCC) $(LDFLAGS)                      \

@@ -30,6 +30,19 @@ typedef struct {
 } nn_index_vector2d_t;
 
 
+#define BSS_BLOCK_COUNT(OUT_CHANS) ((OUT_CHANS+(VPU_INT8_VLMACC_ELMS-1))>>VPU_INT8_VLMACC_ELMS_LOG2)
+
+/**
+ * Represents the Bias, shifts and scale for a single output channel group.
+ */
+typedef struct {
+    data16_t bias_hi[VPU_INT8_ACC_PERIOD];
+    data16_t bias_lo[VPU_INT8_ACC_PERIOD];
+    data16_t shift1[VPU_INT8_ACC_PERIOD];
+    data16_t scale[VPU_INT8_ACC_PERIOD];
+    data16_t shift2[VPU_INT8_ACC_PERIOD];
+} nn_bss_block_t;
+
 /**
 
 */
@@ -212,6 +225,87 @@ typedef struct {
     uint32_t C_out;
 
 } nn_conv2d_1x1_plan_t;
+
+
+
+typedef struct {
+
+    struct {
+        struct {
+            struct { 
+                int32_t col;
+                int32_t row;
+            } inner;
+            struct {
+                int32_t col;
+            } outer;
+        } X;
+
+        struct {
+            int32_t col;
+        } Y;
+
+        struct {
+            //K col stride = Y col stride
+            int32_t chan_group;
+        } K;
+    } stride;
+
+    struct {
+        unsigned height;
+        unsigned width;
+        unsigned vstride;
+        unsigned hstride;
+    } kernel;
+
+    int32_t zero_point;
+
+} nn_conv2d_depthwise_plan_t;
+
+typedef struct {
+    struct {
+        struct {
+            int32_t start;
+            int32_t chan_group;
+            struct {
+                int32_t row;
+            } outer;
+        } X;
+        struct {
+            int32_t start;
+            int32_t chan_group;
+            int32_t row;
+        } Y;
+        struct {
+            int32_t start;
+        } K;
+        struct {
+            int32_t start;
+        } BSS;
+    } stride;
+
+    struct {
+        unsigned rows;
+        unsigned cols;
+        unsigned channels;
+    } output;
+
+    struct {
+        int32_t top;
+        int32_t left;
+        int32_t bottom;
+        int32_t right;
+    } init_padding;
+} nn_conv2d_depthwise_job_t;
+
+
+typedef struct {
+    nn_image_vect_t y_start;
+    unsigned out_rows;
+    unsigned out_cols;
+    unsigned out_channels;
+} nn_conv2d_job_params_t;
+
 
 
 

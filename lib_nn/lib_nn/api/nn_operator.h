@@ -484,6 +484,17 @@ static inline void conv2d_1x1(
     const data16_t* BSS,
     const nn_conv2d_1x1_plan_t* plan);
 
+
+
+
+static inline void conv2d_depthwise(
+    int8_t* Y,
+    const int8_t* X,
+    const int8_t* K,
+    const nn_bss_block_t* BSS,
+    const nn_conv2d_depthwise_plan_t* plan,
+    const nn_conv2d_depthwise_job_t* job);
+
     
 
     

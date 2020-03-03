@@ -234,6 +234,21 @@ void conv2d_1x1_init(
     const unsigned out_pixels);
 
 
+    
+void conv2d_depthwise_init(
+    nn_conv2d_depthwise_plan_t* plan,
+    nn_conv2d_depthwise_job_t* jobs,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_conv2d_job_params_t* job_params,
+    const unsigned kernel_start_row,
+    const unsigned kernel_start_col,
+    const unsigned K_h,
+    const unsigned K_w,
+    const unsigned v_stride,
+    const unsigned h_stride,
+    const int8_t zero_point,
+    const unsigned job_count);
 
 
 /**

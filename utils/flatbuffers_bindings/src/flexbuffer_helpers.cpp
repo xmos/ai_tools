@@ -68,9 +68,34 @@ extern "C"
         fbb->UInt(val);
     }
 
+    void builder_bool(flexbuffers::Builder *fbb, const char* key, bool val)
+    {
+        fbb->Bool(key, val);
+    }
+
+    void builder_vector_bool(flexbuffers::Builder *fbb, bool val)
+    {
+        fbb->Bool(val);
+    }
+
+    void builder_float(flexbuffers::Builder *fbb, const char* key, float val)
+    {
+        fbb->Float(key, val);
+    }
+
+    void builder_vector_float(flexbuffers::Builder *fbb, float val)
+    {
+        fbb->Float(val);
+    }
+
     void builder_string(flexbuffers::Builder *fbb, const char* key, const char* val)
     {
         fbb->String(key, val);
+    }
+
+    void builder_vector_string(flexbuffers::Builder *fbb, const char* val)
+    {
+        fbb->String(val);
     }
 
     void builder_finish(flexbuffers::Builder *fbb)

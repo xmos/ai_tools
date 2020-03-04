@@ -12,7 +12,7 @@ We have implemented a library (lib_nn) of efficient neural network functions dev
 
 Only XS3 based microcontrollers are supported with this library. The previous generation XS1 and XS2 based microcontrollers are not supported.
 
-XS3 based microcontrollers, like xcore.ai, have a vector unit with 256 bit wide registers and can operates in 8bit, 16bit or 32bit integer mode.
+XS3 based microcontrollers, like xcore.ai, have a vector unit with 256 bit wide registers and can operate in 8bit, 16bit or 32bit integer mode.
 
 The vector unit implements a hardware ring buffer that allows highly efficient computation of very deep convolutions. In each instruction the vector unit:
 * loads a vector of data;
@@ -27,9 +27,13 @@ This document assumes familiarity with the XMOS xCORE architecture, the XMOS too
 
 ## API
 
-The table below gives a quick overview of the API's in lib_nn. The following symbols are used:
+The table below gives a quick overview of the APIs in lib_nn.
+Unless otherwise noted, all kernels below operate on signed 8-bit input and output tensors.
+The following symbols are used:
 - Cin - The number of input channels
 - Cout - The number of output channels
+- Kh - Kernel/filter/pool height
+- Kw - Kernel/filter/pool width
 
 For full documentation of each API function, please refer to the description in the lib_nn/api/nn_operator.h header file.
 
@@ -37,19 +41,19 @@ For full documentation of each API function, please refer to the description in 
 |:----|:---|:------------|:----------------|:--------------------------------------------------------|:-------------|
 |Convolution| | | | | |
 | |conv2d_deepin_deepout|**In re-development**|Cin % 4 = 0, Cout % 4 = 0|(160 * (Cout + 15) >> 4) - (Cout * 4)| |
-| |conv2d_shallowin_deepout|**In re-development**|Cin % 4 = 0, Cout % 4 = 0|(160 * (Cout + 15) >> 4) - (Cout * 4)| |
-| |conv2d_1x1|Yes|Cin % 4 = 0, Cout % 4 = 0|(160 * (Cout + 15) >> 4) - (Cout * 4)|
-| |depthwise conv2d|**In development**|Cin % 4 = 0, Cout % 4 = 0|(160 * (Cout + 15) >> 4) - (Cout * 4)| |
+| |conv2d_shallowin_deepout|**In re-development**|Cin % 4 = 0, Cout % 4 = 0, Cin * Kh = 32|(160 * (Cout + 15) >> 4) - (Cout * 4)| |
+| |conv2d_1x1|Yes|Cin % 4 = 0, Cout % 4 = 0, Kh = Kw = 1|(160 * (Cout + 15) >> 4) - (Cout * 4)|
+| |depthwise conv2d|**In development**|Cin % 4 = 0, Cout % 4 = 0, Cin = Cout|(160 * (Cout + 15) >> 4) - (Cout * 4)| |
 |Fully Connected| | | | | |
-| |fully_connected_16|Yes|Cin % 4 = 0, Cout % 4 = 0|(160 * (Cout + 15) >> 4) - (Cout * 4)| |
+| |fully_connected_16|Yes|Cin % 4 = 0, Cout % 4 = 0|(160 * (Cout + 15) >> 4) - (Cout * 4)|Output is 16-bit|
 |Pooling| | | | | |
 | |maxpool2d|Yes|None|0| |
 | |avgpool2d|Yes|Cin % 4 = 0, Cout % 4 = 0|0| |
 | |avgpool2d_global|Yes|Cin % 4 = 0, Cout % 4 = 0|0| |
 |Argmax| | | | | |
-| |argmax_16|No|None|0| |
+| |argmax_16|No|Input is rank-1|0|Input is 16-bit|
 |Activations| | | | | |
-| |lookup8|Yes|None|256|Logistic (sigmoid), tanh & ReLU activation functions can be implemented using a look-up table mapping 8-bit inputs to 8-bit outputs|
+| |lookup8|No|None|256|Logistic (sigmoid), tanh & ReLU activation functions can be implemented using a look-up table mapping 8-bit inputs to 8-bit outputs|
 |Misc| | | | | |
 | |requantize_16_to_8|Yes|Cin % 4 = 0, Cout % 4 = 0|0|Reduces the bit depth of a 16-bit vector to 8 bits|
 

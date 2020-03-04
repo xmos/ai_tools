@@ -89,6 +89,24 @@ static inline void conv2d_shallowin_deepout(
 }
 
 
+
+static inline void conv2d_1x1(
+    int8_t* Y,
+    const int8_t* X,
+    const int8_t* K,
+    const data16_t* BSS,
+    const nn_conv2d_1x1_plan_t* plan)
+{
+#if defined(__XS3A__) && (USE_ASM_conv2d_1x1)
+    conv2d_1x1_asm(Y, X, K, BSS, plan);
+#else
+    conv2d_1x1_c(Y, X, K, BSS, plan);
+#endif
+}
+
+
+
+
 static inline void maxpool2d(
     int8_t* Y,
     const int8_t* X, 

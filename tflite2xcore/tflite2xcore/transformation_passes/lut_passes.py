@@ -1,10 +1,9 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
-
 import numpy as np
 from abc import abstractmethod
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.transformation_passes import ReplaceQuantizedOperatorPass
+from .transformation_passes import ReplaceQuantizedOperatorPass
 
 
 class ReplaceWithXCLookup8Pass(ReplaceQuantizedOperatorPass):
@@ -36,7 +35,8 @@ class ReplaceWithXCLookup8Pass(ReplaceQuantizedOperatorPass):
         outputs_int = np.concatenate([outputs_int[128:], outputs_int[0:128]])
 
         lut_tensor = new_op.subgraph.create_tensor(
-            f"{op.name}/LUT", TensorType.INT8, shape=[len(outputs_int)])
+            f"{op.name}/LUT", TensorType.INT8, shape=[len(outputs_int)],
+            consumers=[new_op])
         lut_tensor.buffer.data = outputs_int
         new_op.inputs.append(lut_tensor)
 

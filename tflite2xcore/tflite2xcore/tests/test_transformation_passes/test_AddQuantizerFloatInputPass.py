@@ -64,6 +64,7 @@ def test_match(simple_model, trf_pass):
 def test_mutate(simple_model, trf_pass):
     subgraph = simple_model.subgraphs[0]
     trf_pass.mutate(subgraph.inputs[0])
+    simple_model.sanity_check()
 
     qin = subgraph.get_tensor('quantized_input')
     fin = subgraph.get_tensor('quantized_input_float')
@@ -80,6 +81,7 @@ def test_mutate(simple_model, trf_pass):
 
 def test_run_simple(simple_model, trf_pass):
     trf_pass.run(simple_model)
+    simple_model.sanity_check()
     subgraph = simple_model.subgraphs[0]
 
     qin = subgraph.get_tensor('quantized_input')
@@ -97,6 +99,7 @@ def test_run_simple(simple_model, trf_pass):
 
 def test_run_dual_input(dual_input_model, trf_pass):
     trf_pass.run(dual_input_model)
+    dual_input_model.sanity_check()
     subgraph = dual_input_model.subgraphs[0]
 
     qin1 = subgraph.get_tensor('quantized_input_1')

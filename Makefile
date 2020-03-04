@@ -2,12 +2,12 @@
 
 .PHONY: lib_nn_test
 lib_nn_test:
-	cd lib_nn/test/nn_operators && xmake
-	cd lib_nn/test/nn_operators && xsim bin/nn_operators_test.xe
+	cd lib_nn/test/nn_operators && make all
+	cd lib_nn/test/nn_operators && make run
 
 .PHONY: lib_nn_test_clean
 lib_nn_test_clean:
-	cd lib_nn/test/nn_operators && xmake clean
+	cd lib_nn/test/nn_operators && make clean
 
 .PHONY: test_model
 test_model: lib_nn

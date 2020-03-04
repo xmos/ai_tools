@@ -82,8 +82,10 @@ def test_custom_options():
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
-    input_tensor = subgraph.create_tensor('input_tensor', TensorType.INT8, [1, 5, 5, 4], isinput=True)
-    output_tensor = subgraph.create_tensor('output_tensor', TensorType.INT8, [1, 5, 5, 2], isoutput=True)
+    input_tensor = subgraph.create_tensor(
+        'input_tensor', TensorType.INT8, [1, 5, 5, 4], isinput=True)
+    output_tensor = subgraph.create_tensor(
+        'output_tensor', TensorType.INT8, [1, 5, 5, 2], isoutput=True)
     expected_operator = subgraph.create_operator(
         OperatorCode(XCOREOpCodes.XC_argmax_16),
         inputs=[input_tensor], outputs=[output_tensor]

@@ -5,12 +5,6 @@ import pytest
 
 def pytest_addoption(parser):
     parser.addoption(
-        '--test-file',
-        action='store',
-        default='all_tests.txt',
-        help="Path to test file"
-    )
-    parser.addoption(
         '--test-app',
         action='store',
         default='../examples/apps/test_model/bin/test_model.xe',

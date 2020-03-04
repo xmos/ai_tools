@@ -1,6 +1,4 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import re
-
 import numpy as np
 
 def compare_tensor_files(expected_file, expected_quantization, predicted_file,

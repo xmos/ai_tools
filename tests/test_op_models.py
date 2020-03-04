@@ -14,43 +14,26 @@ import directories
 from tflite2xcore import read_flatbuffer
 from tflite2xcore import operator_codes
 
-def load_tests(name):
-    if name.startswith('argmax'):
-        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_argmax_16.name)
-    elif name.startswith('conv2d_1x1'):
-        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_conv2d_1x1.name)
-    elif name.startswith('conv2d_shallowin_deepout'):
-        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name)
-    elif name.startswith('conv2d_deepin_deepout'):
-        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name)
-    elif name.startswith('test_fully_connected'):
-        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name)
-    elif name.startswith('maxpool2d'):
-        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_maxpool2d.name)
-    elif name.startswith('avgpool2d_global'):
-        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_avgpool2d_global.name)
-    elif name.startswith('avgpool2d'):
-        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR,
-            operator_codes.XCOREOpCodes.XC_avgpool2d.name)
-    elif name.startswith('requantize_16_8'):
-        name = f'{operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name}'
-        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, name)
-    elif name.startswith('lookup_8'):
-        name = f'{operator_codes.XCOREOpCodes.XC_lookup_8.name}'
-        pattern = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, name)
-    else:
-        raise Exception(f'Unsupported op model: {name}')
+def load_tests(test_name):
+    supported_operators = set([
+        operator_codes.XCOREOpCodes.XC_argmax_16.name,
+        operator_codes.XCOREOpCodes.XC_conv2d_1x1.name,
+        operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name,
+        operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name,
+        operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name,
+        operator_codes.XCOREOpCodes.XC_maxpool2d.name,
+        operator_codes.XCOREOpCodes.XC_avgpool2d.name,
+        operator_codes.XCOREOpCodes.XC_avgpool2d_global.name,
+        operator_codes.XCOREOpCodes.XC_lookup_8.name,
+        operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name
+    ])
+
+    operator_name = test_name[:-10]
+    if operator_name not in supported_operators:
+        raise Exception(f'Unsupported op model: {operator_name}')
 
     test_cases = []
-
-    for directory in Path(pattern).rglob('*'):
+    for directory in Path(os.path.join(directories.OP_TEST_MODELS_DATA_DIR, operator_name)).rglob('*'):
         if os.path.isdir(directory):
             flatbuffer_xcore = os.path.join(directory, 'models/model_xcore.tflite')
             if os.path.isfile(flatbuffer_xcore):
@@ -81,8 +64,6 @@ def load_tests(name):
 
 
 def pytest_generate_tests(metafunc):
-    test_file = metafunc.config.getoption('--test-file')
-
     for fixture in metafunc.fixturenames:
         if fixture.endswith('test_case'):
             tests = load_tests(fixture)
@@ -100,7 +81,7 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
     if test_model_app.endswith('.xe'):
         cmd = f'xsim --args {test_model_app} {flatbuffer} {input_file} {predicted_output_file}'
     else:
-        cmd = f'{test_model_app}q {flatbuffer} {input_file} {predicted_output_file}'
+        cmd = f'{test_model_app} {flatbuffer} {input_file} {predicted_output_file}'
     print('**********')
     print('* Inputs *')
     print('**********')
@@ -121,46 +102,47 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
         print(ex)
         return False
 
-def test_lookup(test_model_app, lookup_8_test_case):
-    assert(run_test_case(test_model_app, lookup_8_test_case))
+def test_XC_lookup_8(test_model_app, XC_lookup_8_test_case):
+    assert(run_test_case(test_model_app, XC_lookup_8_test_case))
 
 
-def test_argmax(test_model_app, argmax_test_case):
-    assert(run_test_case(test_model_app, argmax_test_case))
+def test_XC_argmax_16(test_model_app, XC_argmax_16_test_case):
+    assert(run_test_case(test_model_app, XC_argmax_16_test_case))
 
 
-def test_conv2d_1x1(test_model_app, conv2d_1x1_test_case):
-    assert(run_test_case(test_model_app, conv2d_1x1_test_case))
-
-
-@pytest.mark.xfail
-def test_conv2d_shallowin_deepout(test_model_app, conv2d_shallowin_deepout_test_case):
-    assert(run_test_case(test_model_app, conv2d_shallowin_deepout_test_case))
+def test_XC_conv2d_1x1(test_model_app, XC_conv2d_1x1_test_case):
+    assert(run_test_case(test_model_app, XC_conv2d_1x1_test_case))
 
 
 @pytest.mark.xfail
-def test_conv2d_deepin_deepout(test_model_app, conv2d_deepin_deepout_test_case):
-    assert(run_test_case(test_model_app, conv2d_deepin_deepout_test_case))
+def test_XC_conv2d_shallowin_deepout_relu(test_model_app, XC_conv2d_shallowin_deepout_relu_test_case):
+    assert(run_test_case(test_model_app, XC_conv2d_shallowin_deepout_relu_test_case))
 
-
-def test_fully_connected(test_model_app, test_fully_connected_test_case):
-    assert(run_test_case(test_model_app, test_fully_connected_test_case))
-
-
-def test_maxpool2d(test_model_app, maxpool2d_test_case):
-    assert(run_test_case(test_model_app, maxpool2d_test_case))
 
 @pytest.mark.xfail
-def test_avgpool2d(test_model_app, avgpool2d_test_case):
-    assert(run_test_case(test_model_app, avgpool2d_test_case))
+def test_XC_conv2d_deepin_deepout_relu(test_model_app, XC_conv2d_deepin_deepout_relu_test_case):
+    assert(run_test_case(test_model_app, XC_conv2d_deepin_deepout_relu_test_case))
 
 
-def test_avgpool2d_global(test_model_app, avgpool2d_global_test_case):
-    assert(run_test_case(test_model_app, avgpool2d_global_test_case))
+def test_XC_fc_deepin_anyout(test_model_app, XC_fc_deepin_anyout_test_case):
+    assert(run_test_case(test_model_app, XC_fc_deepin_anyout_test_case))
 
 
-def test_requantize(test_model_app, requantize_16_8_test_case):
-    assert(run_test_case(test_model_app, requantize_16_8_test_case))
+def test_XC_maxpool2d(test_model_app, XC_maxpool2d_test_case):
+    assert(run_test_case(test_model_app, XC_maxpool2d_test_case))
+
+
+@pytest.mark.xfail
+def test_XC_avgpool2d(test_model_app, XC_avgpool2d_test_case):
+    assert(run_test_case(test_model_app, XC_avgpool2d_test_case))
+
+
+def test_XC_avgpool2d_global(test_model_app, XC_avgpool2d_global_test_case):
+    assert(run_test_case(test_model_app, XC_avgpool2d_global_test_case))
+
+
+def test_XC_requantize_16_to_8(test_model_app, XC_requantize_16_to_8_test_case):
+    assert(run_test_case(test_model_app, XC_requantize_16_to_8_test_case))
 
 
 if __name__ == "__main__":

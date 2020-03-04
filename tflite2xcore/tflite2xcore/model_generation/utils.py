@@ -155,7 +155,6 @@ def get_mnist(padding=2, categorical=False, val_split=True, flatten=False,
     return x_train, x_test, y_train, y_test
 
 
-# TODO: this takes a while, add progress bar
 def ecc(nsizex=29, nsizey=29, ch=1):
     '''
     Crop the dataset images using resize from skimage,
@@ -165,11 +164,12 @@ def ecc(nsizex=29, nsizey=29, ch=1):
         padding=0, categorical=False)
     from skimage.transform import resize
     with tqdm(total=30) as pbar:
-        o_train = resize(x_train, (x_train.shape[0], nsizex, nsizey, ch))
+        # order=3: bicubic interpolation
+        o_train = resize(x_train, (x_train.shape[0], nsizex, nsizey, ch), order=3)
         pbar.update(10)
-        o_test = resize(x_test, (x_test.shape[0], nsizex, nsizey, ch))
+        o_test = resize(x_test, (x_test.shape[0], nsizex, nsizey, ch), order=3)
         pbar.update(10)
-        o_val = resize(x_val, (x_val.shape[0], nsizex, nsizey, ch))
+        o_val = resize(x_val, (x_val.shape[0], nsizex, nsizey, ch), order=3)
         pbar.update(10)
     return o_train, o_test, o_val, y_train, y_test, y_val
 
@@ -197,6 +197,14 @@ def prepare_MNIST(use_aug=False, simard=False, padding=2):
             'y_train': np.float32(y_train[:4096]),
             'y_test': np.float32(y_test[:1024]),
             'y_val': np.float32(y_val[:100])}
+
+
+def normalize_std(narray):
+    #narray = (2 * narray) - 1
+    mean = np.mean(narray)
+    std = np.std(narray)
+    narray = (narray - mean) / std
+    return narray
 
 
 # Viz

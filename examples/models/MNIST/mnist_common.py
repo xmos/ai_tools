@@ -13,6 +13,9 @@ class MNISTModel(KerasClassifier):
 
     def prep_data(self, *, simard_resize=False, padding=2):
         self.data = utils.prepare_MNIST(self._use_aug, simard=simard_resize, padding=padding)
+        self.data['x_train'] = utils.normalize_std(self.data['x_train'])
+        self.data['x_val'] = utils.normalize_std(self.data['x_val'])
+        self.data['x_test'] = utils.normalize_std(self.data['x_test'])
         for k, v in self.data.items():
             logging.debug(f"Prepped data[{k}] with shape: {v.shape}")
 

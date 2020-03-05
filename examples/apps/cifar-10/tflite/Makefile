@@ -80,12 +80,12 @@ SOURCES := \
 	tensorflow/lite/core/api/tensor_utils.cc \
 	tensorflow/lite/kernels/kernel_util.cc \
 	tensorflow/lite/kernels/internal/quantization_util.cc \
-	tensorflow/lite/micro/debug_log_numbers.cc \
 	tensorflow/lite/micro/memory_helpers.cc \
 	tensorflow/lite/micro/micro_allocator.cc \
 	tensorflow/lite/micro/micro_error_reporter.cc \
 	tensorflow/lite/micro/micro_interpreter.cc \
 	tensorflow/lite/micro/micro_utils.cc \
+	tensorflow/lite/micro/micro_string.cc \
 	tensorflow/lite/micro/simple_memory_allocator.cc \
 	tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc \
 	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc \
@@ -112,6 +112,7 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/pooling.cc \
 	tensorflow/lite/micro/kernels/prelu.cc \
 	tensorflow/lite/micro/kernels/quantize.cc \
+	tensorflow/lite/micro/kernels/reduce.cc \
 	tensorflow/lite/micro/kernels/reshape.cc \
 	tensorflow/lite/micro/kernels/round.cc \
 	tensorflow/lite/micro/kernels/softmax.cc \

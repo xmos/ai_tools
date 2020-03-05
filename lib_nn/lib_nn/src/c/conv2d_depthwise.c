@@ -121,6 +121,7 @@ void conv2d_depthwise_c(
     // ADDR(X, "initial");
     // ADDR(Y, "initial");
     // ADDR(K, "initial");
+    const int8_t* K_initial = K;
 
     int8_t zero_point_vec[VPU_INT8_VLMACC_ELMS];
     memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
@@ -219,6 +220,8 @@ void conv2d_depthwise_c(
                 for(int i = cur_pad_b; i > 0; i--){
                     // printf("PAD_B??\t%d\t%d\n", cur_pad_b, i);
                     for(int j = plan->kernel.width; j > 0; j--){
+                        // ADDR(cur_K - K_initial, "pad_b");
+                        // ADDR(cur_K, "pad_b");
                         vlmacc8(accs, zero_point_vec, cur_K);
                         X = &X[plan->stride.X.inner.col];
                         cur_K = &cur_K[plan->stride.Y.col];
@@ -278,27 +281,38 @@ void nn_compute_patch_v2_asm(
     const unsigned chans_to_write,
     const int8_t* zero_point_vec);
 
-void nn_compute_patch_v3_asm(
+void nn_compute_patch_depthwise_padded_asm(
     int8_t* Y,
-    const int8_t* X,
+    const int8_t* X, 
     const int8_t* K,
     const nn_bss_block_t* BSS,
-    const unsigned rows,
-    const unsigned cols,
-    const int32_t col_stride,
+    const unsigned K_h,
+    const unsigned K_w,
+    const unsigned pad_t,
+    const unsigned pad_l,
+    const unsigned pad_b,
+    const unsigned pad_r,
+    const int32_t xk_col_stride,
     const int32_t x_row_stride,
-    const int32_t k_row_stride,
-    const unsigned write_chans,
-    const int8_t* vDvR);
-    
-void nn_compute_patch_v3_zero_asm(
-    int8_t* vDvR,
-    const int8_t* zero_point_vec,
+    const int32_t window_hstride,
+    const int32_t y_col_stride,
+    const unsigned out_cols,
+    const unsigned chans_to_write,
+    const int8_t* zero_point_vec);
+
+void nn_compute_patch_depthwise_asm(
+    int8_t* Y,
+    const int8_t* X, 
     const int8_t* K,
-    const unsigned rows,
-    const unsigned cols,
-    const int32_t col_stride,
-    const int32_t row_stride);
+    const nn_bss_block_t* BSS,
+    const unsigned K_h,
+    const unsigned K_w,
+    const int32_t xk_col_stride,
+    const int32_t x_row_stride,
+    const int32_t window_hstride,
+    const int32_t y_col_stride,
+    const unsigned out_cols,
+    const unsigned chans_to_write);
 
 void conv2d_depthwise_asm(
     int8_t* Y,
@@ -341,41 +355,25 @@ void conv2d_depthwise_asm(
 
             const int cur_pad_t = (pad_t > 0)? pad_t : 0;
             const int cur_pad_b = (pad_b > 0)? pad_b : 0;
-
-            for(int out_col = 0; out_col < job->output.cols; out_col++){
-
-                // ADDR(X, "out col start");
-                // ADDR(Y, "out col start");
-                // ADDR(K, "out col start");
-
-                const int cur_pad_l = (pad_l > 0)? pad_l : 0;
-                const int cur_pad_r = (pad_r > 0)? pad_r : 0;
-
-                // printf("pads:  (%d, %d, %d, %d)\n", pad_t, pad_l, pad_b, pad_r);
-                // printf("cur_pads:  (%d, %d, %d, %d)\n", cur_pad_t, cur_pad_l, cur_pad_b, cur_pad_r);
-
-                // printf("#\t&X = 0x%08X\t\t&Y = 0x%08X\t\t&K = 0x%08X\n", (unsigned) X, (unsigned) Y, (unsigned) K);
-                nn_compute_patch_v2_asm(Y, X, K, BSS, plan->stride.X.inner.col,
-                                        plan->kernel.height, plan->kernel.width,
-                                        cur_pad_t, cur_pad_l, cur_pad_b, cur_pad_r,
-                                        plan->stride.X.inner.row, cur_chans, 
-                                        zero_point_vec);
-                
-                X = &X[(int)(plan->stride.X.inner.col * plan->kernel.hstride - plan->stride.X.outer.col)];
-                // printf("#\t&X = 0x%08X\t\t&Y = 0x%08X\t\t&K = 0x%08X\n", (unsigned) X, (unsigned) Y, (unsigned) K);
-                
-                pad_l -= (int) plan->kernel.hstride;
-                pad_r += (int) plan->kernel.hstride;
-                
-                X = &X[plan->stride.X.outer.col];
-                Y = &Y[plan->stride.Y.col];
+            
+            if(0){
+                nn_compute_patch_depthwise_asm(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
+                        plan->stride.X.inner.col, plan->stride.X.inner.row,
+                        plan->kernel.hstride * plan->stride.X.inner.col, plan->stride.Y.col, job->output.cols, cur_chans);
+            } else {
+                nn_compute_patch_depthwise_padded_asm(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
+                            cur_pad_t, job->init_padding.left, cur_pad_b, job->init_padding.right,
+                            plan->stride.X.inner.col, plan->stride.X.inner.row, 
+                            plan->kernel.hstride * plan->stride.X.inner.col, plan->stride.Y.col, job->output.cols, 
+                            cur_chans, zero_point_vec);
             }
 
             pad_t -= plan->kernel.vstride;
             pad_b += plan->kernel.vstride;
-
-            X = &X[job->stride.X.outer.row];
-            Y = &Y[job->stride.Y.row];
+            // printf("!! %ld\n", (int32_t) plan->stride.X.inner.col * plan->kernel.hstride * job->output.cols + job->stride.X.outer.row);
+            X = &X[plan->stride.X.inner.col * plan->kernel.hstride * job->output.cols + job->stride.X.outer.row];
+            Y = &Y[plan->stride.Y.col * job->output.cols + job->stride.Y.row];
+            
         }
 
         X = &X[job->stride.X.chan_group];

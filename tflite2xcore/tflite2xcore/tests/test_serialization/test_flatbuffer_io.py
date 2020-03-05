@@ -93,8 +93,13 @@ def test_custom_options():
 
     expected_operator.custom_options = {
         'int': 1,
-        'vector_of_ints': [3, 2, 1],
+        'bool': True,
+        'float': 1.100000023842,
         'string': 'test string',
+        'vector_of_ints': [3, 2, 1],
+        'vector_of_bools': [True, False],
+        'vector_of_floats': [1.100000023842, 1.100000023842],
+        'vector_of_strings': ['str1', 'str2', 'str3'],
         'map': {'one': 1, 'two': 2},
         'vector_of_vectors': [[3, 2, 1], [1, 2, 3], [3, 2, 1]],
         'vector_of_maps ': [

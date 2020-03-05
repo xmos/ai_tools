@@ -44,11 +44,26 @@ class FlexbufferBuilder:
         lib.builder_uint.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint]
         lib.builder_uint.restype = ctypes.c_void_p
 
+        lib.builder_bool.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_bool]
+        lib.builder_bool.restype = ctypes.c_void_p
+
+        lib.builder_float.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_float]
+        lib.builder_float.restype = ctypes.c_void_p
+
         lib.builder_string.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
         lib.builder_string.restype = ctypes.c_void_p
 
         lib.builder_vector_int.argtypes = [ctypes.c_void_p, ctypes.c_int]
         lib.builder_vector_int.restype = ctypes.c_void_p
+
+        lib.builder_vector_bool.argtypes = [ctypes.c_void_p, ctypes.c_bool]
+        lib.builder_vector_bool.restype = ctypes.c_void_p
+
+        lib.builder_vector_float.argtypes = [ctypes.c_void_p, ctypes.c_float]
+        lib.builder_vector_float.restype = ctypes.c_void_p
+
+        lib.builder_vector_string.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        lib.builder_vector_string.restype = ctypes.c_void_p
 
         lib.builder_finish.argtypes = [ctypes.c_void_p]
         lib.builder_finish.restype = ctypes.c_void_p
@@ -67,6 +82,12 @@ class FlexbufferBuilder:
             list_item_type = type(list_item)
             if list_item_type == int or list_item_type == np.int32:
                 lib.builder_vector_int(obj, int(list_item))
+            elif list_item_type == bool or list_item_type == np.bool:
+                lib.builder_vector_bool(obj, bool(list_item))
+            elif list_item_type == float or list_item_type == np.float32:
+                lib.builder_vector_float(obj, float(list_item))
+            elif list_item_type == str:
+                lib.builder_vector_string(obj, list_item.encode('ascii'))
             elif list_item_type == dict:
                 self.__add_map(obj, list_item)
             elif list_item_type == list:
@@ -85,6 +106,10 @@ class FlexbufferBuilder:
             value_type = type(value)
             if value_type == int:
                 lib.builder_int(obj, key_ascii, value)
+            elif value_type == bool:
+                lib.builder_bool(obj, key_ascii, value)
+            elif value_type == float:
+                lib.builder_float(obj, key_ascii, value)
             elif value_type == str:
                 lib.builder_string(obj, key_ascii, value.encode('ascii'))
             elif value_type == dict:

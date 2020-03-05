@@ -139,12 +139,10 @@ class Operator():
         self.outputs = outputs or []
         self.builtin_options = builtin_options
         self.builtin_options_type = builtin_options_type
-        self.custom_options = custom_options
+        self.custom_options = custom_options or {}
 
     def add_custom_options(self, **kwargs):
         if kwargs:
-            if self.custom_options is None:
-                self.custom_options = {}
             self.custom_options.update(kwargs)
 
     @property

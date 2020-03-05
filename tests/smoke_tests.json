@@ -1,38 +1,31 @@
 [
     {
         "generator": "../examples/models/op_test_models/generate_lookup_8.py",
-        "operator": "XC_lookup_8",
-        "train_model": false
+        "operator": "XC_lookup_8"
     },
     {
         "generator": "../examples/models/op_test_models/generate_maxpool2d.py",
-        "operator": "XC_maxpool2d",
-        "train_model": false
+        "operator": "XC_maxpool2d"
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d.py",
-        "operator": "XC_avgpool2d",
-        "train_model": false
+        "operator": "XC_avgpool2d"
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d_global.py",
-        "operator": "XC_avgpool2d_global",
-        "train_model": false
+        "operator": "XC_avgpool2d_global"
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
-        "operator": "XC_conv2d_deepin_deepout_relu",
-        "train_model": false
+        "operator": "XC_conv2d_deepin_deepout_relu"
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
-        "operator": "XC_conv2d_shallowin_deepout_relu",
-        "train_model": false
+        "operator": "XC_conv2d_shallowin_deepout_relu"
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_1x1.py",
-        "operator": "XC_conv2d_1x1",
-        "train_model": false
+        "operator": "XC_conv2d_1x1"
     },
     {
         "generator": "../examples/models/op_test_models/generate_fully_connected.py",
@@ -46,7 +39,6 @@
     },
     {
         "generator": "../examples/models/op_test_models/generate_argmax_16.py",
-        "operator": "XC_argmax_16",
-        "train_model": false
+        "operator": "XC_argmax_16"
     }
 ]

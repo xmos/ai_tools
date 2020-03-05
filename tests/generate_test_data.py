@@ -39,17 +39,17 @@ def make_folder_and_arguments(**kwargs):
         return 'defaults', ''
 
 def generate_test_case(dry_run, test_case):
-    if test_case['train_model']:
-        train_model_flag = '--train_model'
-    else:
-        train_model_flag = ''
-
     operator = test_case['operator']
     generator = test_case['generator']
     if 'parameters' in test_case:
         parameters = test_case['parameters']
     else:
         parameters = {}
+
+    if 'train_model' in test_case and test_case['train_model']:
+        train_model_flag = '--train_model'
+    else:
+        train_model_flag = ''
 
     folder, arguments = make_folder_and_arguments(**parameters)
     output_dir = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, operator, folder)

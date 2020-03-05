@@ -3,534 +3,275 @@
         "generator": "../examples/models/op_test_models/generate_lookup_8.py",
         "operator": "XC_lookup_8",
         "parameters": {
-            "--input_init": [
-                "unif",
-                -10,
-                10
-            ],
-            "-act": "relu",
-            "-hi": 5,
-            "-in": 32,
-            "-wi": 5
-        },
-        "train_model": false
+            "--input_init": ["unif", -10, 10], "-act": "relu", "-in": 32, "-wi": 5, "-hi": 5
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_lookup_8.py",
         "operator": "XC_lookup_8",
         "parameters": {
-            "--input_init": [
-                "unif",
-                -10,
-                -1
-            ],
-            "-act": "relu",
-            "-hi": 2,
-            "-in": 3,
-            "-wi": 5
-        },
-        "train_model": false
+            "--input_init": ["unif", -10, -1], "-act": "relu", "-in": 3, "-wi": 5, "-hi": 2
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_lookup_8.py",
         "operator": "XC_lookup_8",
         "parameters": {
-            "--input_init": [
-                "unif",
-                1,
-                10
-            ],
-            "-act": "relu",
-            "-hi": 5,
-            "-in": 4,
-            "-wi": 2
-        },
-        "train_model": false
+            "--input_init": ["unif", 1, 10], "-act": "relu", "-in": 4, "-wi": 2, "-hi": 5
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_lookup_8.py",
         "operator": "XC_lookup_8",
         "parameters": {
-            "--input_init": [
-                "unif",
-                -10,
-                7
-            ],
-            "-act": "relu6",
-            "-hi": 5,
-            "-in": 32,
-            "-wi": 5
-        },
-        "train_model": false
+            "--input_init": ["unif", -10, 7], "-act": "relu6", "-in": 32, "-wi": 5, "-hi": 5
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_lookup_8.py",
         "operator": "XC_lookup_8",
         "parameters": {
-            "--input_init": [
-                "unif",
-                1,
-                2
-            ],
-            "-act": "relu6",
-            "-hi": 2,
-            "-in": 3,
-            "-wi": 5
-        },
-        "train_model": false
+            "--input_init": ["unif", 1, 2], "-act": "relu6", "-in": 3, "-wi": 5, "-hi": 2
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_lookup_8.py",
         "operator": "XC_lookup_8",
         "parameters": {
-            "--input_init": [
-                "unif",
-                6,
-                10
-            ],
-            "-act": "relu6",
-            "-hi": 5,
-            "-in": 4,
-            "-wi": 2
-        },
-        "train_model": false
+            "--input_init": ["unif", 6, 10], "-act": "relu6", "-in": 4, "-wi": 2, "-hi": 5
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_lookup_8.py",
         "operator": "XC_lookup_8",
         "parameters": {
-            "--input_init": [
-                "unif",
-                -1,
-                1
-            ],
-            "-act": "logistic",
-            "-hi": 5,
-            "-in": 4,
-            "-wi": 5
-        },
-        "train_model": false
+            "--input_init": ["unif", -1, 1], "-act": "logistic", "-in": 4, "-wi": 5, "-hi": 5
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_lookup_8.py",
         "operator": "XC_lookup_8",
         "parameters": {
-            "--input_init": [
-                "unif",
-                -1,
-                1
-            ],
-            "-act": "tanh",
-            "-hi": 5,
-            "-in": 4,
-            "-wi": 5
-        },
-        "train_model": false
+            "--input_init": ["unif", -1, 1], "-act": "tanh", "-in": 4, "-wi": 5, "-hi": 5
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d.py",
         "operator": "XC_avgpool2d",
         "_comment": "expected failure. see issue https://github.com/xmos/ai_tools/issues/83",
         "parameters": {
-            "-hi": 5,
-            "-in": 32,
-            "-pd": "valid",
-            "-po": [
-                3,
-                4
-            ],
-            "-st": [
-                1,
-                2
-            ],
-            "-wi": 5
-        },
-        "train_model": false
+            "-in": 4, "-wi": 5, "-hi": 5, "-po": [3, 4], "-st": [1, 2], "-pd": "valid"
+         }
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d.py",
         "operator": "XC_avgpool2d",
         "parameters": {
-            "-hi": 4,
-            "-in": 32,
-            "-pd": "valid",
-            "-po": [
-                4,
-                4
-            ],
-            "-st": [
-                2,
-                2
-            ],
-            "-wi": 4
-        },
-        "train_model": false
+            "-in": 32, "-wi": 4, "-hi": 4, "-po": [4, 4], "-st": [2, 2], "-pd": "valid"
+         }
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d.py",
         "operator": "XC_avgpool2d",
         "parameters": {
-            "-hi": 16,
-            "-in": 4,
-            "-pd": "valid",
-            "-po": [
-                4,
-                4
-            ],
-            "-st": [
-                1,
-                1
-            ],
-            "-wi": 16
-        },
-        "train_model": false
+            "-in": 4, "-wi": 16, "-hi": 16, "-po": [4, 4], "-st": [1, 1], "-pd": "valid"
+         }
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d.py",
         "operator": "XC_avgpool2d",
         "parameters": {
-            "-hi": 4,
-            "-in": 32,
-            "-pd": "valid",
-            "-po": [
-                2,
-                2
-            ],
-            "-st": [
-                2,
-                2
-            ],
-            "-wi": 4
-        },
-        "train_model": false
+            "-in": 32, "-wi": 4, "-hi": 4, "-po": [2, 2], "-st": [2, 2], "-pd": "valid"
+         }
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d.py",
         "operator": "XC_avgpool2d",
         "parameters": {
-            "-hi": 16,
-            "-in": 4,
-            "-pd": "valid",
-            "-po": [
-                2,
-                2
-            ],
-            "-st": [
-                1,
-                1
-            ],
-            "-wi": 16
-        },
-        "train_model": false
+            "-in": 4, "-wi": 16, "-hi": 16, "-po": [2, 2], "-st": [1, 1], "-pd": "valid"
+         }
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d_global.py",
         "operator": "XC_avgpool2d_global",
         "parameters": {
-            "-hi": 2,
-            "-in": 4,
-            "-wi": 2
-        },
-        "train_model": false
+            "-in": 4, "-wi": 2, "-hi": 2
+         }
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d_global.py",
         "operator": "XC_avgpool2d_global",
         "parameters": {
-            "-hi": 2,
-            "-in": 16,
-            "-wi": 2
-        },
-        "train_model": false
+            "-in": 16, "-wi": 2, "-hi": 2
+         }
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d_global.py",
         "operator": "XC_avgpool2d_global",
         "parameters": {
-            "-hi": 3,
-            "-in": 16,
-            "-wi": 3
-        },
-        "train_model": false
+            "-in": 16, "-wi": 3, "-hi": 3
+         }
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d_global.py",
         "operator": "XC_avgpool2d_global",
         "parameters": {
-            "-hi": 4,
-            "-in": 32,
-            "-wi": 4
-        },
-        "train_model": false
+            "-in": 32, "-wi": 4, "-hi": 4
+         }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_1x1.py",
         "operator": "XC_conv2d_1x1",
         "parameters": {
-            "--bias_init": [
-                "const",
-                0
-            ],
-            "--input_init": [
-                "const",
-                1
-            ],
-            "--weight_init": [
-                "const",
-                1
-            ],
-            "-hi": 2,
-            "-in": 4,
-            "-out": 4,
-            "-wi": 2
-        },
-        "train_model": false
+            "--input_init": ["const", 1], "--bias_init": ["const", 1], "--weight_init": ["const", 1], "-in": 4, "-out": 4, "-wi": 2, "-hi": 2
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_1x1.py",
         "operator": "XC_conv2d_1x1",
         "parameters": {
-            "-hi": 2,
-            "-in": 4,
-            "-out": 4,
-            "-wi": 2
-        },
-        "train_model": false
+            "-in": 4, "-out": 4, "-wi": 2, "-hi": 2
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_1x1.py",
         "operator": "XC_conv2d_1x1",
         "parameters": {
-            "-hi": 5,
-            "-in": 4,
-            "-out": 4,
-            "-wi": 5
-        },
-        "train_model": false
+            "-in": 4, "-out": 4, "-wi": 5, "-hi": 5
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_1x1.py",
         "operator": "XC_conv2d_1x1",
         "parameters": {
-            "-hi": 5,
-            "-in": 12,
-            "-out": 8,
-            "-wi": 5
-        },
-        "train_model": false
+            "-in": 12, "-out": 8, "-wi": 5, "-hi": 5
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_1x1.py",
         "operator": "XC_conv2d_1x1",
         "parameters": {
-            "-hi": 5,
-            "-in": 4,
-            "-out": 4,
-            "-wi": 5
-        },
-        "train_model": false
+            "-in": 4, "-out": 8, "-wi": 5, "-hi": 5
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_1x1.py",
         "operator": "XC_conv2d_1x1",
         "parameters": {
-            "-hi": 5,
-            "-in": 16,
-            "-out": 8,
-            "-wi": 5
-        },
-        "train_model": false
+            "-in": 16, "-out": 8, "-wi": 5, "-hi": 5
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
         "operator": "XC_conv2d_deepin_deepout_relu",
-        "_comment": "expected failure. see issue https://github.com/xmos/ai_tools/issues/83",
+        "_comment": "expected failure. see issue https://github.com/xmos/ai_tools/issues/88",
         "parameters": {
-            "-hi": 1,
-            "-kh": 3,
-            "-kw": 3,
-            "-pd": "same",
-            "-wi": 1
-        },
-        "train_model": false
+            "-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
         "operator": "XC_conv2d_deepin_deepout_relu",
         "parameters": {
-            "-hi": 3,
-            "-kh": 3,
-            "-kw": 3,
-            "-pd": "same",
-            "-wi": 3
-        },
-        "train_model": false
+            "-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "same"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
         "operator": "XC_conv2d_deepin_deepout_relu",
         "parameters": {
-            "-hi": 5,
-            "-kh": 3,
-            "-kw": 3,
-            "-pd": "same",
-            "-wi": 5
-        },
-        "train_model": false
+            "-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
         "operator": "XC_conv2d_deepin_deepout_relu",
         "parameters": {
-            "-hi": 3,
-            "-kh": 3,
-            "-kw": 3,
-            "-pd": "valid",
-            "-wi": 3
-        },
-        "train_model": false
+            "-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "valid"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
         "operator": "XC_conv2d_deepin_deepout_relu",
         "parameters": {
-            "-hi": 5,
-            "-kh": 3,
-            "-kw": 3,
-            "-pd": "valid",
-            "-wi": 5
-        },
-        "train_model": false
+            "-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
         "operator": "XC_conv2d_deepin_deepout_relu",
         "parameters": {
-            "-hi": 5,
-            "-kh": 3,
-            "-kw": 3,
-            "-par": 2,
-            "-pd": "valid",
-            "-wi": 5
-        },
-        "train_model": false
+            "-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 2
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
         "operator": "XC_conv2d_deepin_deepout_relu",
         "parameters": {
-            "-hi": 5,
-            "-kh": 3,
-            "-kw": 3,
-            "-par": 4,
-            "-pd": "valid",
-            "-wi": 5
-        },
-        "train_model": false
+            "-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 4
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
         "operator": "XC_conv2d_deepin_deepout_relu",
         "parameters": {
-            "-hi": 5,
-            "-kh": 3,
-            "-kw": 3,
-            "-par": 5,
-            "-pd": "valid",
-            "-wi": 5
-        },
-        "train_model": false
+            "-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 5
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
         "operator": "XC_conv2d_shallowin_deepout_relu",
         "parameters": {
-            "-hi": 1,
-            "-kh": 1,
-            "-kw": 1,
-            "-pd": "same",
-            "-wi": 1
-        },
-        "train_model": false
+            "-wi": 1, "-hi": 1, "-kw": 1, "-kh": 1, "-pd": "same"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
         "operator": "XC_conv2d_shallowin_deepout_relu",
         "parameters": {
-            "-hi": 1,
-            "-kh": 3,
-            "-kw": 3,
-            "-pd": "same",
-            "-wi": 1
-        },
-        "train_model": false
+            "-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
         "operator": "XC_conv2d_shallowin_deepout_relu",
         "parameters": {
-            "-hi": 3,
-            "-kh": 3,
-            "-kw": 3,
-            "-pd": "same",
-            "-wi": 3
-        },
-        "train_model": false
+            "-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "same"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
         "operator": "XC_conv2d_shallowin_deepout_relu",
         "parameters": {
-            "-hi": 5,
-            "-kh": 3,
-            "-kw": 3,
-            "-pd": "same",
-            "-wi": 5
-        },
-        "train_model": false
+            "-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
         "operator": "XC_conv2d_shallowin_deepout_relu",
         "parameters": {
-            "-hi": 1,
-            "-kh": 1,
-            "-kw": 1,
-            "-pd": "valid",
-            "-wi": 1
-        },
-        "train_model": false
+            "-wi": 1, "-hi": 1, "-kw": 1, "-kh": 1, "-pd": "valid"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
         "operator": "XC_conv2d_shallowin_deepout_relu",
         "parameters": {
-            "-hi": 3,
-            "-kh": 3,
-            "-kw": 3,
-            "-pd": "valid",
-            "-wi": 3
-        },
-        "train_model": false
+            "-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "valid"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
         "operator": "XC_conv2d_shallowin_deepout_relu",
         "parameters": {
-            "-hi": 5,
-            "-kh": 3,
-            "-kw": 3,
-            "-pd": "valid",
-            "-wi": 5
-        },
-        "train_model": false
+            "-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_fully_connected.py",
         "operator": "XC_fc_deepin_anyout",
         "parameters": {
-            "-in": 32,
-            "-out": 16
+            "-in": 32, "-out": 16
         },
         "train_model": true
     },
@@ -538,8 +279,7 @@
         "generator": "../examples/models/op_test_models/generate_fully_connected.py",
         "operator": "XC_fc_deepin_anyout",
         "parameters": {
-            "-in": 4,
-            "-out": 4
+            "-in": 4, "-out": 4
         },
         "train_model": true
     },
@@ -547,8 +287,7 @@
         "generator": "../examples/models/op_test_models/generate_fully_connected.py",
         "operator": "XC_fc_deepin_anyout",
         "parameters": {
-            "-in": 4,
-            "-out": 8
+            "-in": 4, "-out": 8
         },
         "train_model": true
     },
@@ -556,8 +295,7 @@
         "generator": "../examples/models/op_test_models/generate_fully_connected.py",
         "operator": "XC_fc_deepin_anyout",
         "parameters": {
-            "-in": 8,
-            "-out": 4
+            "-in": 8, "-out": 4
         },
         "train_model": true
     },
@@ -590,62 +328,41 @@
         "operator": "XC_argmax_16",
         "parameters": {
             "-in": 1
-        },
-        "train_model": false
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_argmax_16.py",
         "operator": "XC_argmax_16",
         "parameters": {
             "-in": 10
-        },
-        "train_model": false
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_argmax_16.py",
         "operator": "XC_argmax_16",
         "parameters": {
             "-in": 100
-        },
-        "train_model": false
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_maxpool2d.py",
         "operator": "XC_maxpool2d",
         "parameters": {
-            "-hi": 2,
-            "-in": 32,
-            "-pd": "valid",
-            "-po": 2,
-            "-st": 2,
-            "-wi": 2
-        },
-        "train_model": false
+            "-in": 32, "-wi": 2, "-hi": 2, "-po": 2, "-st": 2, "-pd": "valid"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_maxpool2d.py",
         "operator": "XC_maxpool2d",
         "parameters": {
-            "-hi": 4,
-            "-in": 32,
-            "-pd": "valid",
-            "-po": 2,
-            "-st": 2,
-            "-wi": 4
-        },
-        "train_model": false
+            "-in": 32, "-wi": 4, "-hi": 4, "-po": 2, "-st": 2, "-pd": "valid"
+        }
     },
     {
         "generator": "../examples/models/op_test_models/generate_maxpool2d.py",
         "operator": "XC_maxpool2d",
         "parameters": {
-            "-hi": 16,
-            "-in": 32,
-            "-pd": "valid",
-            "-po": 2,
-            "-st": 2,
-            "-wi": 16
-        },
-        "train_model": false
+            "-in": 4, "-wi": 16, "-hi": 16, "-po": 2, "-st": 2, "-pd": "valid"
+        }
     }
 ]

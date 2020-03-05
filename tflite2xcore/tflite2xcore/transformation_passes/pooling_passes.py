@@ -2,16 +2,14 @@
 
 import numpy as np
 
-from abc import abstractmethod
-
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.graph_transformer import PassPriority
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import VE, WORD_SIZE
-from .transformation_passes import QuantizedOperatorMatchingPass, ReplaceQuantizedOperatorPass
+from .transformation_passes import ReplaceQuantizedOperatorPass
 
 
-class ReplacePool2DPass(QuantizedOperatorMatchingPass):
+class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options
@@ -33,21 +31,18 @@ class ReplacePool2DPass(QuantizedOperatorMatchingPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return ("XC_op" not in op.custom_options
-                        and self._input.quantization == self._output.quantization
+                return (self._input.quantization == self._output.quantization
                         and self._fused_activation == 'NONE'
                         and self._input.shape[3] % 4 == 0)
 
         return False
 
-    @property
-    @abstractmethod
-    def new_opcode(self):
-        raise NotImplementedError()
-
     def mutate(self, op):
+        new_op = super().mutate(op)
+
         with self.using(op):
-            op.add_custom_options(XC_op=self.new_opcode.code.value)
+            new_op.add_custom_options(
+                stride=list(self._strides), pool=list(self._pool_size))
 
 
 class ReplacePool2D2x2Pass(ReplacePool2DPass):

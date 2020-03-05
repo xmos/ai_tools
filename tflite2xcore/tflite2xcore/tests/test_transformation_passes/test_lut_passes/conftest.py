@@ -6,8 +6,6 @@ from copy import deepcopy
 from tflite2xcore.operator_codes import XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
 
-from ..conftest import _pytest_generate_tests
-
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
@@ -43,36 +41,32 @@ PARAMS = {
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
 
-def pytest_generate_tests(metafunc):
-    _pytest_generate_tests(metafunc, PARAMS)
-
-
 @pytest.fixture()
 def input_shape(input_height, input_width, input_channels):
     return [input_height, input_width, input_channels]
 
 
 #  ----------------------------------------------------------------------------
-#                                   HELPERS
+#                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
 
-def _test_matching_params(trf_pass, model):
+def test_matching_params(trf_pass, model):
     assert trf_pass.match(model.subgraphs[0].operators[0])
 
 
-def _test_non_matching_input_type(trf_pass, model, non_matching_input_type):
+def test_non_matching_input_type(trf_pass, model, non_matching_input_type):
     op = model.subgraphs[0].operators[0]
     op.inputs[0].type = non_matching_input_type
     assert not trf_pass.match(op)
 
 
-def _test_non_matching_output_type(trf_pass, model, non_matching_output_type):
+def test_non_matching_output_type(trf_pass, model, non_matching_output_type):
     op = model.subgraphs[0].operators[0]
     op.outputs[0].type = non_matching_output_type
     assert not trf_pass.match(op)
 
 
-def _test_mutate(trf_pass, model):
+def test_mutate(trf_pass, model):
     # extract original tensor shapes:
     subgraph = model.subgraphs[0]
     tin_shape = deepcopy(subgraph.get_tensor('input').shape)

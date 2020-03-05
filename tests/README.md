@@ -26,4 +26,4 @@ To run a single test
 
 To run the tests on the host PC
 
-    > pytest --test-model=../examples/apps/test_model/bin/test_model
+    > pytest --test-app=../examples/apps/test_model/bin/test_model -n NUM

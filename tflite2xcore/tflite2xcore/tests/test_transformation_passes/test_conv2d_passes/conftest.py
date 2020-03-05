@@ -2,7 +2,6 @@
 
 import pytest
 
-from ..conftest import _pytest_generate_tests
 from tflite2xcore.xcore_model import TensorType
 
 
@@ -46,9 +45,6 @@ PARAMS = {
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
 
-def pytest_generate_tests(metafunc):
-    _pytest_generate_tests(metafunc, PARAMS)
-
 
 @pytest.fixture()
 def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
@@ -72,35 +68,43 @@ def _test_non_matching_dim(trf_pass, build_model,
     assert not trf_pass.match(model.subgraphs[0].operators[-1])
 
 
-def _test_non_matching_output_channels(trf_pass, build_model,
-                                       weight_shape, input_size, padding, strides,
-                                       non_matching_output_channels):
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
+
+def test_matching_params(trf_pass, model):
+    assert trf_pass.match(model.subgraphs[0].operators[-1])
+
+
+def test_non_matching_output_channels(trf_pass, build_model,
+                                      weight_shape, input_size, padding, strides,
+                                      non_matching_output_channels):
     weight_shape[0] = non_matching_output_channels
     _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
 
 
-def _test_non_matching_kernel_height(trf_pass, build_model,
-                                     weight_shape, input_size, padding, strides,
-                                     non_matching_kernel_height):
+def test_non_matching_kernel_height(trf_pass, build_model,
+                                    weight_shape, input_size, padding, strides,
+                                    non_matching_kernel_height):
     weight_shape[1] = non_matching_kernel_height
     _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
 
 
-def _test_non_matching_kernel_width(trf_pass, build_model,
-                                    weight_shape, input_size, padding, strides,
-                                    non_matching_kernel_width):
+def test_non_matching_kernel_width(trf_pass, build_model,
+                                   weight_shape, input_size, padding, strides,
+                                   non_matching_kernel_width):
     weight_shape[2] = non_matching_kernel_width
     _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
 
 
-def _test_non_matching_input_channels(trf_pass, build_model,
-                                      weight_shape, input_size, padding, strides,
-                                      non_matching_input_channels):
+def test_non_matching_input_channels(trf_pass, build_model,
+                                     weight_shape, input_size, padding, strides,
+                                     non_matching_input_channels):
     weight_shape[3] = non_matching_input_channels
     _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
 
 
-def _test_non_matching_types(trf_pass, model, non_matching_tensors):
+def test_non_matching_types(trf_pass, model, non_matching_tensors):
     subgraph = model.subgraphs[0]
     subgraph.get_tensor(non_matching_tensors[0]).type = non_matching_tensors[1]
     assert not trf_pass.match(subgraph.operators[-1])

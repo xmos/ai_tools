@@ -1242,7 +1242,7 @@ void test_conv2d_depthwise_case7()
     // printf("C - ASM: %u\n", (t_end[0]-t_start[0]) - (t_end[1]-t_start[1]));
     // printf("C / ASM: %f\n", (t_end[0]-t_start[0]) / ((float)(t_end[1]-t_start[1])));
 
-    float old_asm_v1 = 760620;
+    float old_asm_v1 = 662394;
     float old_asm_v2 = 642855;
     printf("ASM / old_ASM_v1: %f\n", (t_end[1]-t_start[1]) / old_asm_v1);
     printf("ASM / old_ASM_v2: %f\n", (t_end[1]-t_start[1]) / old_asm_v2);

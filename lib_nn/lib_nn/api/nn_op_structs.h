@@ -295,6 +295,7 @@ typedef struct {
         int32_t left;
         int32_t bottom;
         int32_t right;
+        unsigned unpadded;
     } init_padding;
 } nn_conv2d_depthwise_job_t;
 

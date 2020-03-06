@@ -4,7 +4,7 @@
 /**
 
 
-void nn_compute_patch_depthwise_asm(
+void nn_compute_hstrip_depthwise_asm(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
@@ -19,7 +19,7 @@ void nn_compute_patch_depthwise_asm(
     const unsigned chans_to_write);
 */
 
-#define FUNCTION_NAME nn_compute_patch_depthwise_asm
+#define FUNCTION_NAME nn_compute_hstrip_depthwise_asm
 
 #define NSTACKWORDS  32
     
@@ -49,7 +49,16 @@ void nn_compute_patch_depthwise_asm(
 #define Y               r0
 #define X               r1
 #define K               r2
+#define xk_col_stride   r3
+#define x_row_stride    r4
+#define _32             r5
+#define rows_left       r6
+#define cols_left       r7
+#define window_hstride  r8
+#define pix_left        r9
+#define X_start         r10
 
+#define Q(RSOMETHING)    RSOMETHING
 
 .align 16
 FUNCTION_NAME:
@@ -63,31 +72,12 @@ FUNCTION_NAME:
     {                                           ;   stw r3, sp[STACK_BSS_PSTART]            }
     {                                           ;   ldw r5, sp[STACK_XK_COL_STRIDE]         }
     {                                           ;   stw K, sp[STACK_K_PSTART]               }
+    {                                           ;   ldw x_row_stride, sp[STACK_X_ROW_STRIDE]}
     
-///////////////////////////////////////////////
-//// The top and bottom padding won't change within this function, so, rather than adding the
-//// top and bottom padding for every pixel, just do it once, and cache the adjusted biases.
-
-// I'll use this macro when I'm using a register by name for a purpose other than
-//  what it's name nominally says it it. e.g. if I'm using 'cols_left' outside of
-//  one of the columns loops, I'll use Q(cols_left).
-
-// I think this will be less confusing than directly using numbered registers, and
-// it will be easier to change the register to which a value is assigned later if
-//  I need to.
-#define Q(RSOMETHING)    RSOMETHING
 
 // #define Y               r0
 // #define X               r1
 // #define K               r2
-#define xk_col_stride   r3
-#define x_row_stride    r4
-#define _32             r5
-#define rows_left       r6
-#define cols_left       r7
-#define window_hstride  r8
-#define pix_left        r9
-#define X_start         r10
 
     {   mov xk_col_stride, r5                      ;   ldw window_hstride, sp[STACK_WINDOW_HSTRIDE]}
     {   mov X_start, X                             ;   ldw pix_left, sp[STACK_OUT_COLS]        }

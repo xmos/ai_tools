@@ -93,6 +93,27 @@ void conv2d_depthwise_init(
         job->init_padding.bottom = init_padding_bottom + params->y_start.rows * plan->kernel.vstride;
         job->init_padding.right  = init_padding_right  + params->y_start.cols * plan->kernel.hstride;
 
+        const int32_t end_padding_top    = init_padding_top    - ((params->y_start.rows + params->out_rows - 1) * plan->kernel.vstride);
+        const int32_t end_padding_left   = init_padding_left   - ((params->y_start.cols + params->out_cols - 1) * plan->kernel.hstride);
+        const int32_t end_padding_bottom = init_padding_bottom + ((params->y_start.rows + params->out_rows - 1) * plan->kernel.vstride);
+        const int32_t end_padding_right  = init_padding_right  + ((params->y_start.cols + params->out_cols - 1) * plan->kernel.hstride);
+
+        job->init_padding.unpadded = (job->init_padding.top <= 0 && job->init_padding.left <= 0
+                                    && job->init_padding.bottom <= 0 && job->init_padding.right <= 0
+                                    && end_padding_top <= 0 && end_padding_left <= 0
+                                    && end_padding_bottom <= 0 && end_padding_right <= 0);
+
+        // printf("job->init_padding.unpadded = %u\n", job->init_padding.unpadded);
+        // printf("job->init_padding.top = %ld\n", job->init_padding.top);
+        // printf("job->init_padding.left = %ld\n", job->init_padding.left);
+        // printf("job->init_padding.bottom = %ld\n", job->init_padding.bottom);
+        // printf("job->init_padding.right = %ld\n\n", job->init_padding.right);
+        
+        // printf("end_padding_top = %ld\n", end_padding_top);
+        // printf("end_padding_left = %ld\n", end_padding_left);
+        // printf("end_padding_bottom = %ld\n", end_padding_bottom);
+        // printf("end_padding_right = %ld\n", end_padding_right);
+
         job->stride.BSS.start = (params->y_start.channels / VPU_INT8_ACC_PERIOD) * sizeof(nn_bss_block_t);
         job->stride.K.start   = params->y_start.channels;
         job->stride.Y.start   = params->y_start.rows * y_row_bytes + y_params->channels * params->y_start.cols + params->y_start.channels;
@@ -265,23 +286,7 @@ void conv2d_depthwise_c(
 
 }
 
-void nn_compute_patch_v2_asm(
-    int8_t* Y,
-    const int8_t* X, 
-    const int8_t* K,
-    const nn_bss_block_t* BSS,
-    const unsigned C_in,
-    const unsigned K_h,
-    const unsigned K_w,
-    const unsigned pad_t,
-    const unsigned pad_l,
-    const unsigned pad_b,
-    const unsigned pad_r,
-    const int32_t x_row_stride,
-    const unsigned chans_to_write,
-    const int8_t* zero_point_vec);
-
-void nn_compute_patch_depthwise_padded_asm(
+void nn_compute_hstrip_depthwise_padded_asm(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
@@ -289,9 +294,9 @@ void nn_compute_patch_depthwise_padded_asm(
     const unsigned K_h,
     const unsigned K_w,
     const unsigned pad_t,
-    const unsigned pad_l,
+    const unsigned pad_l_initial,
     const unsigned pad_b,
-    const unsigned pad_r,
+    const unsigned pad_r_initial,
     const int32_t xk_col_stride,
     const int32_t x_row_stride,
     const int32_t window_hstride,
@@ -300,7 +305,7 @@ void nn_compute_patch_depthwise_padded_asm(
     const unsigned chans_to_write,
     const int8_t* zero_point_vec);
 
-void nn_compute_patch_depthwise_asm(
+void nn_compute_hstrip_depthwise_asm(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
@@ -356,12 +361,12 @@ void conv2d_depthwise_asm(
             const int cur_pad_t = (pad_t > 0)? pad_t : 0;
             const int cur_pad_b = (pad_b > 0)? pad_b : 0;
             
-            if(0){
-                nn_compute_patch_depthwise_asm(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
+            if(job->init_padding.unpadded){
+                nn_compute_hstrip_depthwise_asm(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
                         plan->stride.X.inner.col, plan->stride.X.inner.row,
                         plan->kernel.hstride * plan->stride.X.inner.col, plan->stride.Y.col, job->output.cols, cur_chans);
             } else {
-                nn_compute_patch_depthwise_padded_asm(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
+                nn_compute_hstrip_depthwise_padded_asm(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
                             cur_pad_t, job->init_padding.left, cur_pad_b, job->init_padding.right,
                             plan->stride.X.inner.col, plan->stride.X.inner.row, 
                             plan->kernel.hstride * plan->stride.X.inner.col, plan->stride.Y.col, job->output.cols, 

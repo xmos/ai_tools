@@ -4,7 +4,7 @@
 /**
 
 
-void nn_compute_patch_depthwise_padded_asm(
+void nn_compute_hstrip_depthwise_padded_asm(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
@@ -24,7 +24,7 @@ void nn_compute_patch_depthwise_padded_asm(
     const int8_t* zero_point_vec);
 */
 
-#define FUNCTION_NAME nn_compute_patch_depthwise_padded_asm
+#define FUNCTION_NAME nn_compute_hstrip_depthwise_padded_asm
 
 #define NSTACKWORDS  48
     
@@ -103,17 +103,7 @@ FUNCTION_NAME:
     {   ldaw r11, sp[STACK_VEC_ZERO]            ;   vldc r11[0]                             }
 /**/{                                           ;   bu .L_vbias_adj                         }
     
-///////////////////////////////////////////////
-//// The top and bottom padding won't change within this function, so, rather than adding the
-//// top and bottom padding for every pixel, just do it once, and cache the adjusted biases.
 
-// I'll use this macro when I'm using a register by name for a purpose other than
-//  what it's name nominally says it it. e.g. if I'm using 'cols_left' outside of
-//  one of the columns loops, I'll use Q(cols_left).
-
-// I think this will be less confusing than directly using numbered registers, and
-// it will be easier to change the register to which a value is assigned later if
-//  I need to.
 #define Q(RSOMETHING)    RSOMETHING
 
 #define xk_col_stride   r3
@@ -125,6 +115,7 @@ FUNCTION_NAME:
 #define pad_b           r9
 #define K_w             r10
 
+// FUNCTION_NAME + 0x80
     .align 16
     .L_vbias_adj:
 /**/{   mov xk_col_stride, r5                   ;   vstc r11[0]                             }
@@ -171,6 +162,7 @@ FUNCTION_NAME:
 #define pix_left        r9
 #define X_start         r10
 
+// FUNCTION_NAME + d0
 /**/{                                           ;   vstr r11[0]                             }
     {   mov X_start, X                          ;   ldw window_hstride, sp[STACK_WINDOW_HSTRIDE]}
     {                                           ;   ldw pix_left, sp[STACK_OUT_COLS]        }
@@ -200,12 +192,13 @@ FUNCTION_NAME:
                 {   add K, K, xk_col_stride                 ;   bt cols_left, .L_patch_ctr              }
 
             {   ldaw r11, sp[STACK_VEC_ZERO]            ;   ldw cols_left, sp[STACK_PAD_R]          }
-/**/        {   lss r11, Q(_32), cols_left              ;   vldc r11[0]                             }
+/**/        {   lss r11, Q(_32), cols_left              ;   vldc r11[0]                             } // + 0x120
             mul cols_left, cols_left, r11
             {   add X, X, cols_left                     ;   bf cols_left, .L_patch_right_end        }
+            {   nop                                     ;   nop                                     }
             .L_patch_right:
-                {   sub cols_left, cols_left, xk_col_stride ;   vlmacc K[0]                             }
-/**/            {   add K, K, xk_col_stride                 ;   bt cols_left, .L_patch_right            }
+/**/            {   sub cols_left, cols_left, xk_col_stride ;   vlmacc K[0]                             }
+                {   add K, K, xk_col_stride                 ;   bt cols_left, .L_patch_right            }
             .L_patch_right_end:
             {   add X, X, x_row_stride                  ;   bt rows_left, .L_patch_row              }
         {   ldc _32, 32                             ;   bu .L_pix_finish                        }
@@ -216,7 +209,7 @@ FUNCTION_NAME:
         {   ldaw r11, sp[STACK_VEC_TMP]             ;   vsetc r11                               }
         {                                           ;   ldw Q(rows_left), sp[STACK_BSS_PSTART]  }
         {   add Q(rows_left), Q(rows_left), _32     ;   vlsat Q(rows_left)[0]                   }
-/**/    {                                           ;   vstr r11[0]                             }   
+/**/    {                                           ;   vstr r11[0]                             }
         {   add Q(rows_left), Q(rows_left), _32     ;   vldc Q(rows_left)[0]                    }
         {                                           ;   vclrdr                                  }
         {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
@@ -251,8 +244,8 @@ FUNCTION_NAME:
 
 .Lfunc_end:
     {                                           ;   ldw r10, sp[8]                          }
-    ldd r8, r9, sp[3]
-/**/ldd r6, r7, sp[2]
+/**/ldd r8, r9, sp[3]
+    ldd r6, r7, sp[2]
     ldd r4, r5, sp[1]
     ////////////////// FNOP HERE ///////////////////
     retsp NSTACKWORDS

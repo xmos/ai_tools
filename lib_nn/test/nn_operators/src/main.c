@@ -194,15 +194,18 @@ int main(void)
     printf("\n\n");
 
 
-    // UnityBegin("src\\test_temp.local.xc");
-    // RUN_TEST(test_temp1);
-    // ret_val = UnityEnd();
-    // printf("\n\n");
 
-    // UnityBegin("src\\test_nn_compute_patch_v1.local.xc");
-    // RUN_TEST(test_nn_compute_patch_v1_case0);
-    // ret_val = UnityEnd();
-    // printf("\n\n");
+
+
+    UnityBegin("src\\test_temp.local.xc");
+    RUN_TEST(test_temp1);
+    ret_val = UnityEnd();
+    printf("\n\n");
+
+    UnityBegin("src\\test_nn_compute_patch_v1.local.xc");
+    RUN_TEST(test_nn_compute_patch_v1_case0);
+    ret_val = UnityEnd();
+    printf("\n\n");
 
     return ret_val;
 }

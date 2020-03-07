@@ -6,9 +6,11 @@
 #include "nn_types.h"
 #include "nn_op_structs.h"
 #include "nn_op_utils.h"
+#include "nn_op_init.h"
 #include "nn_operator_asm.h"
 #include "nn_operator_c.h"
 #include "nn_operator_inline.h"
+#include "nn_op_advanced.h"
 
 #include <stdint.h>
 
@@ -487,6 +489,62 @@ static inline void conv2d_1x1(
 
 
 
+/**
+ * Perform a depthwise 2D convolution of an image.
+ * 
+ * A depthwise 2D convolution is one in which the number of output channels is equal to the
+ * number of input channels, and where the `k`th output channel receives contributions from 
+ * only the `k`th input channel (and the bias, shifts and scale associated with channel `k`). 
+ * 
+ * This function requires a plan (`nn_conv2d_depthwise_plan_t`) and a job (`nn_conv2d_depthwise_job_t`)
+ * which specify the work to be performed and how to perform it. These structs are initialized
+ * with a call to `conv2d_depthwise_init()`.
+ * 
+ * The computation of the output image can be done all at once with a single call, or may be 
+ * divided among multiple calls. In either case, the particular work to be done by a given call
+ * is specified via a job. Each job specifies a rectangular region of the output image to be computed
+ * in a call to `conv2d_depthwise()`.
+ * 
+ * Dividing the work among several jobs can be used to parallelize the
+ * work to be done across cores, or, for example, to periodically return control to the caller 
+ * so that other resources can be serviced in a timely manner.
+ * 
+ * `Y` is a pointer to the output image to be computed (either fully or partially, depending on `job`).
+ * The output image must have the same dimensions as were supplied via the `y_params` argument to
+ *  `conv2d_depthwise_init()` when `plan` was initialized.
+ * 
+ * `X` is a pointer to the input image. The input image must have the same dimensions as were supplied
+ * via the `x_params` argument to `conv2d_depthwise_init()` when `plan` was initialized.
+ * 
+ * `K` is a pointer to the kernel tensor which is to be convolved with the input image to produce the
+ * output image. The shape of the kernel tensor must be `(K_h, K_w, C_in)`, where `K_h` and `K_w` are the
+ * height and width respectively of the kernel tensor, and `C_in` is the number of channels in the input 
+ * image (via `x_params->channels`) as supplied to `conv2d_depthwise_init()` when `plan` was initialized. 
+ * 
+ * `BSS` is a pointer to the bias-shifts-scale tensor. `BSS` is layed out as specified in "Bias-Shifts-
+ * Scale Tensor Layout". The accumulators for each output channel are seeded with the 32-bit biases 
+ * encoded in `BSS`, and the shifts and scale are used as specified in "Notes on Output Shifts 
+ * and Scales".
+ * 
+ * `plan` is a pointer to the depthwise convolution plan initialized by a previous call to
+ * `conv2d_depthwise_init()`.
+ * 
+ * `job` is a pointer to a single depthwise convolution job initialized with `plan` in a previous call
+ * to `conv2d_depthwise_init()`. If more than one job was initialized with `plan`, then to perform
+ * all jobs, the user must call this function multiple times, each time passing the same plan, 
+ * and a different one of the initialized jobs.
+ * 
+ * Constraints:
+ *  - `Y`, `X`, `K` and `BSS` must all point to word-aligned addresses.
+ *  - The input and output images must each have a multiple of 4 channels.
+ * 
+ * \param Y     The output image.
+ * \param X     The input image.
+ * \param K     The kernel tensor.
+ * \param BSS   The bias-shifts-scale tensor.
+ * \param plan  The execution plan initialized by `conv2d_depthwise_init()`.
+ * \param job   The (single) job to be performed.
+ */
 static inline void conv2d_depthwise(
     int8_t* Y,
     const int8_t* X,

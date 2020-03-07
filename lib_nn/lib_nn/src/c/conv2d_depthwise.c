@@ -53,83 +53,179 @@ void conv2d_depthwise_init(
 
     const int32_t window_start_offset = kernel_start_row * x_row_bytes + x_params->channels * kernel_start_col;
 
-    plan->stride.X.inner.col = x_params->channels;
-    plan->stride.X.inner.row = x_row_bytes - x_params->channels * K_w;
-    plan->stride.X.outer.col = x_params->channels * h_stride - x_row_bytes * K_h;
-
-    plan->stride.Y.col = y_params->channels;
-
-    plan->stride.K.chan_group = VPU_INT8_VLMACC_ELMS - (K_h * K_w * y_params->channels);
+    plan->channels.X = x_params->channels;
+    plan->channels.Y = y_params->channels;
 
     plan->zero_point = zero_point;
+
+    plan->stride.X.row = x_row_bytes - x_params->channels * K_w;
+    plan->stride.window.col = x_params->channels * h_stride;
 
     plan->kernel.height  = K_h;
     plan->kernel.width   = K_w;
     plan->kernel.vstride = v_stride;
-    plan->kernel.hstride = h_stride;
     
     const int32_t init_padding_top    = -kernel_start_row;
     const int32_t init_padding_bottom =  kernel_start_row + K_h - x_params->height;
     const int32_t init_padding_left   = -kernel_start_col;
     const int32_t init_padding_right  =  kernel_start_col + K_w  - x_params->width;
 
-    nn_conv2d_job_params_t full_job = {{0,0,0}, y_params->height, y_params->width, y_params->channels };
+    nn_conv2d_job_params_t full_job = {{0,0,0}, {y_params->height, y_params->width, y_params->channels} };
 
     for(int i = 0; i < job_count; i++){
         const nn_conv2d_job_params_t* params = (job_params != NULL)? &job_params[i] : &full_job;
         nn_conv2d_depthwise_job_t* job = &jobs[i];
         
-        assert(params->y_start.rows >= 0 && params->y_start.cols >= 0 && params->y_start.channels >= 0);
-        assert(params->y_start.rows + params->out_rows <= y_params->height);
-        assert(params->y_start.cols + params->out_cols <= y_params->width);
-        assert(params->y_start.channels + params->out_channels <= y_params->channels);
+        assert(params->start.rows >= 0 && params->start.cols >= 0 && params->start.channels >= 0);
+        assert(params->start.rows + params->size.rows <= y_params->height);
+        assert(params->start.cols + params->size.cols <= y_params->width);
+        assert(params->start.channels + params->size.channels <= y_params->channels);
 
-        job->output.rows = params->out_rows;
-        job->output.cols = params->out_cols;
-        job->output.channels = params->out_channels;
+        job->output.rows = params->size.rows;
+        job->output.cols = params->size.cols;
+        job->output.channels = params->size.channels;
 
-        job->init_padding.top    = init_padding_top    - params->y_start.rows * plan->kernel.vstride;
-        job->init_padding.left   = init_padding_left   - params->y_start.cols * plan->kernel.hstride;
-        job->init_padding.bottom = init_padding_bottom + params->y_start.rows * plan->kernel.vstride;
-        job->init_padding.right  = init_padding_right  + params->y_start.cols * plan->kernel.hstride;
+        job->init_padding.top    = init_padding_top    - params->start.rows * plan->kernel.vstride;
+        job->init_padding.left   = init_padding_left   - params->start.cols * h_stride;
+        job->init_padding.bottom = init_padding_bottom + params->start.rows * plan->kernel.vstride;
+        job->init_padding.right  = init_padding_right  + params->start.cols * h_stride;
 
-        const int32_t end_padding_top    = init_padding_top    - ((params->y_start.rows + params->out_rows - 1) * plan->kernel.vstride);
-        const int32_t end_padding_left   = init_padding_left   - ((params->y_start.cols + params->out_cols - 1) * plan->kernel.hstride);
-        const int32_t end_padding_bottom = init_padding_bottom + ((params->y_start.rows + params->out_rows - 1) * plan->kernel.vstride);
-        const int32_t end_padding_right  = init_padding_right  + ((params->y_start.cols + params->out_cols - 1) * plan->kernel.hstride);
+        const int32_t end_padding_top    = init_padding_top    - ((params->start.rows + params->size.rows - 1) * plan->kernel.vstride);
+        const int32_t end_padding_left   = init_padding_left   - ((params->start.cols + params->size.cols - 1) * h_stride);
+        const int32_t end_padding_bottom = init_padding_bottom + ((params->start.rows + params->size.rows - 1) * plan->kernel.vstride);
+        const int32_t end_padding_right  = init_padding_right  + ((params->start.cols + params->size.cols - 1) * h_stride);
 
-        job->init_padding.unpadded = (job->init_padding.top <= 0 && job->init_padding.left <= 0
+        job->init_padding.unpadded =  (job->init_padding.top    <= 0 && job->init_padding.left  <= 0
                                     && job->init_padding.bottom <= 0 && job->init_padding.right <= 0
-                                    && end_padding_top <= 0 && end_padding_left <= 0
-                                    && end_padding_bottom <= 0 && end_padding_right <= 0);
+                                    && end_padding_top          <= 0 && end_padding_left        <= 0
+                                    && end_padding_bottom       <= 0 && end_padding_right       <= 0);
 
-        // printf("job->init_padding.unpadded = %u\n", job->init_padding.unpadded);
-        // printf("job->init_padding.top = %ld\n", job->init_padding.top);
-        // printf("job->init_padding.left = %ld\n", job->init_padding.left);
-        // printf("job->init_padding.bottom = %ld\n", job->init_padding.bottom);
-        // printf("job->init_padding.right = %ld\n\n", job->init_padding.right);
-        
-        // printf("end_padding_top = %ld\n", end_padding_top);
-        // printf("end_padding_left = %ld\n", end_padding_left);
-        // printf("end_padding_bottom = %ld\n", end_padding_bottom);
-        // printf("end_padding_right = %ld\n", end_padding_right);
 
-        job->stride.BSS.start = (params->y_start.channels / VPU_INT8_ACC_PERIOD) * sizeof(nn_bss_block_t);
-        job->stride.K.start   = params->y_start.channels;
-        job->stride.Y.start   = params->y_start.rows * y_row_bytes + y_params->channels * params->y_start.cols + params->y_start.channels;
+        job->stride.start.BSS  = (params->start.channels / VPU_INT8_ACC_PERIOD);
+        job->stride.start.K    = params->start.channels;
+        job->stride.start.Y    = params->start.rows * y_row_bytes + y_params->channels * params->start.cols + params->start.channels;
 
-        job->stride.X.start = window_start_offset 
-                            + params->y_start.rows * plan->kernel.vstride * x_row_bytes
-                            + params->y_start.cols * plan->kernel.hstride * x_params->channels
-                            + params->y_start.channels;
+        job->stride.start.X    = window_start_offset 
+                                + params->start.rows * plan->kernel.vstride * x_row_bytes
+                                + params->start.cols * h_stride * x_params->channels
+                                + params->start.channels;
 
-        job->stride.X.outer.row = x_row_bytes * plan->kernel.vstride - plan->kernel.hstride * x_params->channels * job->output.cols;
-        job->stride.X.chan_group = VPU_INT8_VLMACC_ELMS - x_row_bytes * plan->kernel.vstride * job->output.rows;
+        job->stride.row.window  = x_row_bytes * plan->kernel.vstride;
+        job->stride.row.Y       = y_row_bytes;
 
-        job->stride.Y.row = y_row_bytes - job->output.cols * y_params->channels;
-        job->stride.Y.chan_group = VPU_INT8_VLMACC_ELMS - y_row_bytes * job->output.rows;
+        job->stride.chan_group.X = VPU_INT8_VLMACC_ELMS - x_row_bytes * job->output.rows * plan->kernel.vstride;
+        job->stride.chan_group.Y = VPU_INT8_VLMACC_ELMS - y_row_bytes * job->output.rows;
     }
 }
+
+
+static void nn_compute_hstrip_depthwise_padded_c(
+    int8_t* Y,
+    const int8_t* X_in, 
+    const int8_t* K_in,
+    const nn_bss_block_t* BSS,
+    const unsigned pad_t,
+    const unsigned pad_b,
+    const unsigned chans_to_write,
+    const int8_t* zero_point_vec,
+    const nn_conv2d_depthwise_plan_t* plan,
+    const nn_conv2d_depthwise_job_t* job)
+{
+
+    int pad_l = job->init_padding.left * plan->channels.X;
+    int pad_r = job->init_padding.right * plan->channels.X;
+
+    for(int out_col = 0; out_col < job->output.cols; out_col++){
+
+        const int8_t* X = X_in;
+        const int8_t* K = K_in;
+        // ADDR(X, "out col start");
+        // ADDR(Y, "out col start");
+        // ADDR(K, "out col start");
+
+        const int cur_pad_l = (pad_l > 0)? pad_l : 0;
+        const int cur_pad_r = (pad_r > 0)? pad_r : 0;
+
+        // printf("pads:  (%d, %d, %d, %d)\n", pad_t, pad_l, pad_l, pad_r);
+        // printf("cur_pads:  (%d, %d, %d, %d)\n", pad_t, cur_pad_l, cur_pad_l, cur_pad_r);
+
+        int32_t accs[VPU_INT8_VLMACC_ELMS];
+
+        for(int k = 0; k < VPU_INT8_VLMACC_ELMS; k++)
+            accs[k] = ((int32_t)BSS->bias_hi[k]) << VPU_INT8_ACC_VR_BITS;
+        
+        for(int k = 0; k < VPU_INT8_VLMACC_ELMS; k++)
+            accs[k] |= BSS->bias_lo[k];
+        
+        //THIS LOOP IS IN PADDING (above image)
+        for(int i = pad_t; i > 0; i--){
+            // printf("PAD_T??\t%d\t%d\n", pad_t, i);
+            for(int j = plan->kernel.width; j > 0; j--){
+                vlmacc8(accs, zero_point_vec, K);
+                X = &X[plan->channels.X];
+                K = &K[plan->channels.X];
+            }
+            X = &X[plan->stride.X.row];
+        }
+
+        // These rows are inside image (vertically)
+        for(int i = plan->kernel.height - (pad_t + pad_b); i > 0; i--){
+
+            //THIS LOOP IS IN PADDING (left of image)
+            for(int j = cur_pad_l; j > 0; j -= plan->stride.window.col){
+                // printf("PAD_L??\t%d\t%d\n", cur_pad_l, j);
+                vlmacc8(accs, zero_point_vec, K);
+                X = &X[plan->channels.X];
+                K = &K[plan->channels.X];
+            }
+
+            for(int j = plan->kernel.width * plan->stride.window.col - (cur_pad_l + cur_pad_r); j > 0; j-= plan->stride.window.col){
+                vlmacc8(accs, X, K);
+                X = &X[plan->channels.X];
+                K = &K[plan->channels.X];
+            }
+
+            //THIS LOOP IS IN PADDING (right of image)
+            for(int j = cur_pad_r; j > 0; j -= plan->stride.window.col){
+                // printf("PAD_R??\t%d\t%d\n", cur_pad_r, j);
+                vlmacc8(accs, zero_point_vec, K);
+                X = &X[plan->channels.X];
+                K = &K[plan->channels.X];
+            }
+
+            X = &X[plan->stride.X.row];
+        }
+        
+        //THIS LOOP IS IN PADDING (below image)
+        for(int i = pad_b; i > 0; i--){
+            // printf("PAD_B??\t%d\t%d\n", pad_b, i);
+            for(int j = plan->kernel.width; j > 0; j--){
+                vlmacc8(accs, zero_point_vec, K);
+                X = &X[plan->channels.X];
+                K = &K[plan->channels.X];
+            }
+            X = &X[plan->stride.X.row];
+        }
+
+        for(int k = 0; k < chans_to_write; k++){
+            int16_t shift1  = BSS->shift1[k];
+            int16_t scale   = BSS->scale[k];
+            int16_t shift2  = BSS->shift2[k];
+            accs[k] = vlsat_single_s16(accs[k], shift1);
+            accs[k] = accs[k] * scale;
+            accs[k] = vlsat_single_s8(accs[k], shift2);
+            Y[k] = (int8_t) accs[k];
+        }
+
+        pad_l -= (int) plan->stride.window.col;
+        pad_r += (int) plan->stride.window.col;
+        
+        X_in = &X_in[plan->stride.window.col];
+        Y = &Y[plan->channels.Y];
+    }
+}
+
+
 
 void conv2d_depthwise_c(
     int8_t* Y,
@@ -142,15 +238,14 @@ void conv2d_depthwise_c(
     // ADDR(X, "initial");
     // ADDR(Y, "initial");
     // ADDR(K, "initial");
-    const int8_t* K_initial = K;
 
     int8_t zero_point_vec[VPU_INT8_VLMACC_ELMS];
     memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
 
-    X = &X[job->stride.X.start];
-    Y = &Y[job->stride.Y.start];
-    K = &K[job->stride.K.start];
-    BSS = (nn_bss_block_t*) &(((int8_t*)BSS)[job->stride.BSS.start]);
+    X = &X[job->stride.start.X];
+    Y = &Y[job->stride.start.Y];
+    K = &K[job->stride.start.K];
+    BSS = &BSS[job->stride.start.BSS];
 
     // ADDR(X, "start strided");
     // ADDR(Y, "start strided");
@@ -174,111 +269,17 @@ void conv2d_depthwise_c(
             const int cur_pad_t = (pad_t > 0)? pad_t : 0;
             const int cur_pad_b = (pad_b > 0)? pad_b : 0;
 
-            for(int out_col = 0; out_col < job->output.cols; out_col++){
-
-                // ADDR(X, "out col start");
-                // ADDR(Y, "out col start");
-                // ADDR(K, "out col start");
-
-                const int cur_pad_l = (pad_l > 0)? pad_l : 0;
-                const int cur_pad_r = (pad_r > 0)? pad_r : 0;
-
-                // printf("pads:  (%d, %d, %d, %d)\n", pad_t, pad_l, pad_l, pad_r);
-                // printf("cur_pads:  (%d, %d, %d, %d)\n", cur_pad_t, cur_pad_l, cur_pad_l, cur_pad_r);
-                // printf("@\t&X = 0x%08X\t\t&Y = 0x%08X\t\t&K = 0x%08X\n", (unsigned) X, (unsigned) Y, (unsigned) K);
-                
-                const int8_t* cur_K = K;
-                const nn_bss_block_t* cur_BSS = BSS;
-
-                int32_t accs[VPU_INT8_VLMACC_ELMS];
-
-                for(int k = 0; k < VPU_INT8_VLMACC_ELMS; k++)
-                    accs[k] = ((int32_t)cur_BSS->bias_hi[k]) << VPU_INT8_ACC_VR_BITS;
-                
-                for(int k = 0; k < VPU_INT8_VLMACC_ELMS; k++)
-                    accs[k] |= cur_BSS->bias_lo[k];
-                
-                //THIS LOOP IS IN PADDING (above image)
-                for(int i = cur_pad_t; i > 0; i--){
-                    // printf("PAD_T??\t%d\t%d\n", cur_pad_t, i);
-                    for(int j = plan->kernel.width; j > 0; j--){
-                        vlmacc8(accs, zero_point_vec, cur_K);
-                        X = &X[plan->stride.X.inner.col];
-                        cur_K = &cur_K[plan->stride.Y.col];
-                    }
-                    X = &X[plan->stride.X.inner.row];
-                }
-
-                // These rows are inside image (vertically)
-                for(int i = plan->kernel.height - (cur_pad_t + cur_pad_b); i > 0; i--){
-
-                    //THIS LOOP IS IN PADDING (left of image)
-                    for(int j = cur_pad_l; j > 0; j--){
-                        // printf("PAD_L??\t%d\t%d\n", cur_pad_l, j);
-                        vlmacc8(accs, zero_point_vec, cur_K);
-                        X = &X[plan->stride.X.inner.col];
-                        cur_K = &cur_K[plan->stride.Y.col];
-                    }
-
-                    for(int j = plan->kernel.width - (cur_pad_l + cur_pad_r); j > 0; j--){
-                        vlmacc8(accs, X, cur_K);
-                        X = &X[plan->stride.X.inner.col];
-                        cur_K = &cur_K[plan->stride.Y.col];
-                    }
-
-                    //THIS LOOP IS IN PADDING (right of image)
-                    for(int j = cur_pad_r; j > 0; j--){
-                        // printf("PAD_R??\t%d\t%d\n", cur_pad_r, j);
-                        vlmacc8(accs, zero_point_vec, cur_K);
-                        X = &X[plan->stride.X.inner.col];
-                        cur_K = &cur_K[plan->stride.Y.col];
-                    }
-
-                    X = &X[plan->stride.X.inner.row];
-                }
-                
-                //THIS LOOP IS IN PADDING (below image)
-                for(int i = cur_pad_b; i > 0; i--){
-                    // printf("PAD_B??\t%d\t%d\n", cur_pad_b, i);
-                    for(int j = plan->kernel.width; j > 0; j--){
-                        // ADDR(cur_K - K_initial, "pad_b");
-                        // ADDR(cur_K, "pad_b");
-                        vlmacc8(accs, zero_point_vec, cur_K);
-                        X = &X[plan->stride.X.inner.col];
-                        cur_K = &cur_K[plan->stride.Y.col];
-                    }
-                    X = &X[plan->stride.X.inner.row];
-                }
-
-                // printf("&Y[0] = 0x%08X\taccs[0] = %ld\n", (unsigned) &Y[0], accs[0]);
-
-                for(int k = 0; k < cur_chans; k++){
-                    int16_t shift1  = cur_BSS->shift1[k];
-                    int16_t scale   = cur_BSS->scale[k];
-                    int16_t shift2  = cur_BSS->shift2[k];
-                    accs[k] = vlsat_single_s16(accs[k], shift1);
-                    accs[k] = accs[k] * scale;
-                    accs[k] = vlsat_single_s8(accs[k], shift2);
-                    Y[k] = (int8_t) accs[k];
-                }
-                // printf("@\t&X = 0x%08X\t\t&Y = 0x%08X\t\t&K = 0x%08X\n", (unsigned) X, (unsigned) Y, (unsigned) K);
-                
-                pad_l -= (int) plan->kernel.hstride;
-                pad_r += (int) plan->kernel.hstride;
-                
-                X = &X[plan->stride.X.outer.col];
-                Y = &Y[plan->stride.Y.col];
-            }
+            nn_compute_hstrip_depthwise_padded_c( Y, X, K, BSS, cur_pad_t, cur_pad_b, cur_chans, zero_point_vec, plan, job);
 
             pad_t -= plan->kernel.vstride;
             pad_b += plan->kernel.vstride;
 
-            X = &X[job->stride.X.outer.row];
-            Y = &Y[job->stride.Y.row];
+            X = &X[job->stride.row.window];
+            Y = &Y[job->stride.row.Y];
         }
 
-        X = &X[job->stride.X.chan_group];
-        Y = &Y[job->stride.Y.chan_group];
+        X = &X[job->stride.chan_group.X];
+        Y = &Y[job->stride.chan_group.Y];
 
         BSS = &BSS[1];
         K = &K[VPU_INT8_VLMACC_ELMS];
@@ -286,38 +287,8 @@ void conv2d_depthwise_c(
 
 }
 
-void nn_compute_hstrip_depthwise_padded_asm(
-    int8_t* Y,
-    const int8_t* X, 
-    const int8_t* K,
-    const nn_bss_block_t* BSS,
-    const unsigned K_h,
-    const unsigned K_w,
-    const unsigned pad_t,
-    const unsigned pad_l_initial,
-    const unsigned pad_b,
-    const unsigned pad_r_initial,
-    const int32_t xk_col_stride,
-    const int32_t x_row_stride,
-    const int32_t window_hstride,
-    const int32_t y_col_stride,
-    const unsigned out_cols,
-    const unsigned chans_to_write,
-    const int8_t* zero_point_vec);
 
-void nn_compute_hstrip_depthwise_asm(
-    int8_t* Y,
-    const int8_t* X, 
-    const int8_t* K,
-    const nn_bss_block_t* BSS,
-    const unsigned K_h,
-    const unsigned K_w,
-    const int32_t xk_col_stride,
-    const int32_t x_row_stride,
-    const int32_t window_hstride,
-    const int32_t y_col_stride,
-    const unsigned out_cols,
-    const unsigned chans_to_write);
+#if defined(__XS3A__)
 
 void conv2d_depthwise_asm(
     int8_t* Y,
@@ -334,10 +305,10 @@ void conv2d_depthwise_asm(
     int8_t zero_point_vec[VPU_INT8_VLMACC_ELMS];
     memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
 
-    X = &X[job->stride.X.start];
-    Y = &Y[job->stride.Y.start];
-    K = &K[job->stride.K.start];
-    BSS = (nn_bss_block_t*) &(((int8_t*)BSS)[job->stride.BSS.start]);
+    X = &X[job->stride.start.X];
+    Y = &Y[job->stride.start.Y];
+    K = &K[job->stride.start.K];
+    BSS = &BSS[job->stride.start.BSS];
 
     // ADDR(X, "start strided");
     // ADDR(Y, "start strided");
@@ -355,37 +326,36 @@ void conv2d_depthwise_asm(
             // ADDR(Y, "out row start");
             // ADDR(K, "out row start");
 
-            int pad_l = job->init_padding.left;
-            int pad_r = job->init_padding.right;
-
             const int cur_pad_t = (pad_t > 0)? pad_t : 0;
             const int cur_pad_b = (pad_b > 0)? pad_b : 0;
             
             if(job->init_padding.unpadded){
                 nn_compute_hstrip_depthwise_asm(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
-                        plan->stride.X.inner.col, plan->stride.X.inner.row,
-                        plan->kernel.hstride * plan->stride.X.inner.col, plan->stride.Y.col, job->output.cols, cur_chans);
+                        plan->channels.X, plan->stride.X.row,
+                        plan->stride.window.col, plan->channels.Y, job->output.cols, cur_chans);
             } else {
                 nn_compute_hstrip_depthwise_padded_asm(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
                             cur_pad_t, job->init_padding.left, cur_pad_b, job->init_padding.right,
-                            plan->stride.X.inner.col, plan->stride.X.inner.row, 
-                            plan->kernel.hstride * plan->stride.X.inner.col, plan->stride.Y.col, job->output.cols, 
+                            plan->channels.X, plan->stride.X.row, 
+                            plan->stride.window.col, plan->channels.Y, job->output.cols, 
                             cur_chans, zero_point_vec);
             }
 
             pad_t -= plan->kernel.vstride;
             pad_b += plan->kernel.vstride;
-            // printf("!! %ld\n", (int32_t) plan->stride.X.inner.col * plan->kernel.hstride * job->output.cols + job->stride.X.outer.row);
-            X = &X[plan->stride.X.inner.col * plan->kernel.hstride * job->output.cols + job->stride.X.outer.row];
-            Y = &Y[plan->stride.Y.col * job->output.cols + job->stride.Y.row];
+
+            X = &X[job->stride.row.window];
+            Y = &Y[job->stride.row.Y];
             
         }
 
-        X = &X[job->stride.X.chan_group];
-        Y = &Y[job->stride.Y.chan_group];
+        X = &X[job->stride.chan_group.X];
+        Y = &Y[job->stride.chan_group.Y];
 
         BSS = &BSS[1];
         K = &K[VPU_INT8_VLMACC_ELMS];
     }
 
 }
+
+#endif //defined(__XS3A__)

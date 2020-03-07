@@ -82,8 +82,10 @@ def test_custom_options():
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
-    input_tensor = subgraph.create_tensor('input_tensor', TensorType.INT8, [1, 5, 5, 4], isinput=True)
-    output_tensor = subgraph.create_tensor('output_tensor', TensorType.INT8, [1, 5, 5, 2], isoutput=True)
+    input_tensor = subgraph.create_tensor(
+        'input_tensor', TensorType.INT8, [1, 5, 5, 4], isinput=True)
+    output_tensor = subgraph.create_tensor(
+        'output_tensor', TensorType.INT8, [1, 5, 5, 2], isoutput=True)
     expected_operator = subgraph.create_operator(
         OperatorCode(XCOREOpCodes.XC_argmax_16),
         inputs=[input_tensor], outputs=[output_tensor]
@@ -91,8 +93,13 @@ def test_custom_options():
 
     expected_operator.custom_options = {
         'int': 1,
-        'vector_of_ints': [3, 2, 1],
+        'bool': True,
+        'float': 1.100000023842,
         'string': 'test string',
+        'vector_of_ints': [3, 2, 1],
+        'vector_of_bools': [True, False],
+        'vector_of_floats': [1.100000023842, 1.100000023842],
+        'vector_of_strings': ['str1', 'str2', 'str3'],
         'map': {'one': 1, 'two': 2},
         'vector_of_vectors': [[3, 2, 1], [1, 2, 3], [3, 2, 1]],
         'vector_of_maps ': [

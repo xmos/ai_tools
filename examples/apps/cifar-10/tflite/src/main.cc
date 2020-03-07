@@ -19,7 +19,7 @@ const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
-constexpr int kTensorArenaSize = 60000;  //TODO: How can this be determined?
+constexpr int kTensorArenaSize = 65000;  //TODO: How can this be determined?
 uint8_t tensor_arena[kTensorArenaSize];
 
 static int load_test_input(const char *filename, char *input, size_t esize)

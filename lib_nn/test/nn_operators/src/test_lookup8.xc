@@ -12,7 +12,7 @@
 #include "xs3_vpu.h"
 
 // #include "dsp_xs3_vector.h"
-#include "Unity.h"
+#include "unity.h"
 
 #ifdef __XC__
 #define WORD_ALIGNED [[aligned(4)]]

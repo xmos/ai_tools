@@ -4,184 +4,87 @@
 
 import os
 import sys
+import re
+import json
 import shutil
+from functools import partial
 import subprocess
 import multiprocessing
 import argparse
 
 import directories
-from tflite2xcore import operator_codes
 
 stdout_lock = multiprocessing.Lock()
 
 def make_folder_and_arguments(**kwargs):
     folder_fields = []
     aurgment_fields = []
-    for key, value in kwargs.items():
-        folder_fields.append(f'{key}_{value}')
-        aurgment_fields.append(f'-{key} {value}')
+    compiled_re = re.compile('(?<=-)\w+')
 
-    return '-'.join(folder_fields), ' '.join(aurgment_fields)
+    if kwargs:
+        for key, value in kwargs.items():
+            hyphenless_key = compiled_re.search(key).group(0) # strip off leading hyphens
+            if isinstance(value, list):
+                value_folder_str = 'x'.join([str(v) for v in value])
+                value_argument_str = ' '.join([str(v) for v in value])
+            else:
+                value_folder_str = str(value)
+                value_argument_str = str(value)
 
-def generate_test_case(test_case):
-    if test_case['train_model']:
+            folder_fields.append(f'{hyphenless_key}={value_folder_str}')
+            aurgment_fields.append(f'{key} {value_argument_str}')
+
+        return '_'.join(folder_fields), ' '.join(aurgment_fields)
+    else:
+        return 'defaults', ''
+
+def generate_test_case(dry_run, test_case):
+    operator = test_case['operator']
+    generator = test_case['generator']
+    if 'parameters' in test_case:
+        parameters = test_case['parameters']
+    else:
+        parameters = {}
+
+    if 'train_model' in test_case and test_case['train_model']:
         train_model_flag = '--train_model'
     else:
         train_model_flag = ''
-
-    parameters = test_case['parameters']
-    operator = test_case['operator']
-    generator = test_case['generator']
 
     folder, arguments = make_folder_and_arguments(**parameters)
     output_dir = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, operator, folder)
     cmd = f'python {generator} {train_model_flag} {arguments} -path {output_dir}'
     with stdout_lock:
-        print(f'generating test case {output_dir}')
-        print(f'   command: {cmd}')
-    try:
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-    except subprocess.CalledProcessError as cmdexc:                                                                                                   
-        print(cmdexc.output.decode('utf-8'))
+        print(f'running: {cmd}')
+    if not dry_run:
+        try:
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+        except subprocess.CalledProcessError as cmdexc:                                                                                                   
+            print(cmdexc.output.decode('utf-8'))
 
-def create_test_cases(operator, generator, parameter_sets, *, train_model=False):
-     test_cases = []
-     
-     for parameter_sets in parameter_sets:
-        test_cases.append({
-            'operator': operator,
-            'generator': generator,
-            'train_model': train_model,
-            'parameters': parameter_sets
-        })
+def run_generate(test_file, jobs):
+    with open(test_file, 'r') as fd:
+        test_cases = json.loads(fd.read())
 
-     return test_cases
+        # Remove all existing data
+        if not args.dry_run:
+            if os.path.exists(directories.DATA_DIR):
+                shutil.rmtree(directories.DATA_DIR)
 
-def run_generate(tests, jobs):
-    test_cases = []
-
-    #***********************************
-    # Remove all existing data
-    #***********************************
-    if os.path.exists(directories.DATA_DIR):
-        shutil.rmtree(directories.DATA_DIR)
-
-    #***********************************
-    # AvgPool
-    #***********************************
-    operator = operator_codes.XCOREOpCodes.XC_avgpool2d_deep.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_avgpool2d_deep.py')
-    parameter_sets = [
-        {'in': 32, 'hi': 2, 'wi': 2, 'st':2, 'po': 2, 'pd': 'VALID' },
-        {'in': 32, 'hi': 4, 'wi': 4, 'st':2, 'po': 2, 'pd': 'VALID' },
-        {'in': 32, 'hi': 16, 'wi': 16, 'st':2, 'po': 2, 'pd': 'VALID' }
-    ]
-
-    if operator in tests or len(tests) == 0:
-        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
-
-    #***********************************
-    # Conv2D deepin/deepout
-    #***********************************
-    operator = operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_conv2d_deepin_deepout_relu.py')
-    parameter_sets = [
-        {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'SAME' },
-        # {'hi': 1, 'wi': 1, 'kh':3, 'kw': 3, 'pd': 'SAME' },
-        {'hi': 3, 'wi': 3, 'kh':1, 'kw': 1, 'pd': 'SAME' },
-        {'hi': 3, 'wi': 3, 'kh':3, 'kw': 3, 'pd': 'SAME' },
-        {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'SAME' },
-        {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'VALID' },
-        {'hi': 3, 'wi': 3, 'kh':3, 'kw': 3, 'pd': 'VALID' },
-        {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID' },
-        {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID', 'par': 2 },
-        {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID', 'par': 4 },
-        {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID', 'par': 5 }
-    ]
-
-    if operator in tests or len(tests) == 0:
-        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
-
-    #***********************************
-    # Conv2D shallowin/deepout
-    #***********************************
-    operator = operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_conv2d_shallowin_deepout_relu.py')
-    parameter_sets = [
-        {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'SAME' },
-        # {'hi': 1, 'wi': 1, 'kh':3, 'kw': 3, 'pd': 'SAME' },
-        {'hi': 3, 'wi': 3, 'kh':3, 'kw': 3, 'pd': 'SAME' },
-        {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'SAME' },
-        {'hi': 1, 'wi': 1, 'kh':1, 'kw': 1, 'pd': 'VALID' },
-        {'hi': 3, 'wi': 3, 'kh':3, 'kw': 3, 'pd': 'VALID' },
-        {'hi': 5, 'wi': 5, 'kh':3, 'kw': 3, 'pd': 'VALID' }
-    ]
-
-    if operator in tests or len(tests) == 0:
-        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
-
-    #***********************************
-    # Fully-connected deepin anyout
-    #***********************************
-    operator = operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_fully_connected.py')
-    parameter_sets = [
-        {'in': 32 }
-    ]
-    
-    if operator in tests or len(tests) == 0:
-        test_cases.extend(create_test_cases(operator, generator, parameter_sets, train_model=True))
-
-
-    #***********************************
-    # Fully-connected deepin anyout requantized
-    #***********************************
-    operator = operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_fully_connected_requantized.py')
-    parameter_sets = [
-        {'in': 32 }
-    ]
-
-    if operator in tests or len(tests) == 0:
-        test_cases.extend(create_test_cases(operator, generator, parameter_sets, train_model=True))
-
-    #***********************************
-    # ArgMax
-    #***********************************
-    operator = operator_codes.XCOREOpCodes.XC_argmax_16.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_argmax_16.py')
-    parameter_sets = [
-        {'in': 1 },
-        {'in': 10 },
-        {'in': 100 }
-    ]
-
-    if operator in tests or len(tests) == 0:
-        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
-
-    #***********************************
-    # MaxPool
-    #***********************************
-    operator = operator_codes.XCOREOpCodes.XC_maxpool2d_deep.name
-    generator = os.path.join(directories.GENERATOR_DIR, 'generate_maxpool2d_deep.py')
-    parameter_sets = [
-        {'in': 32, 'hi': 2, 'wi': 2, 'st':2, 'po': 2, 'pd': 'VALID' },
-        {'in': 32, 'hi': 4, 'wi': 4, 'st':2, 'po': 2, 'pd': 'VALID' },
-        {'in': 32, 'hi': 16, 'wi': 16, 'st':2, 'po': 2, 'pd': 'VALID' }
-    ]
-
-    if operator in tests or len(tests) == 0:
-        test_cases.extend(create_test_cases(operator, generator, parameter_sets))
-
-    # now generate all the test cases
-    pool = multiprocessing.Pool(processes=jobs)
-    pool.map(generate_test_case, test_cases)
-
+        # now generate all the test cases
+        pool = multiprocessing.Pool(processes=jobs)
+        func = partial(generate_test_case, args.dry_run)
+        pool.map(func, test_cases)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--test', action='append', default=[], help="Test to run (defaults to all)")
-    parser.add_argument('-j', '--jobs', type=int, default=4, help="Allow N jobs at once")
+    parser.add_argument('-t', '--test-file', default='all_tests.json', help="Test to run (defaults to all_tests.json)")
+    parser.add_argument('-n', '--jobs', type=int, default=multiprocessing.cpu_count(), help="Allow N jobs at once")
+    parser.add_argument('--smoke', action='store_true', default=False, help='Run smoke tests (smoke_tests.json)')
+    parser.add_argument('--dry-run', action='store_true', default=False, help='Perform a dry run')
     args = parser.parse_args()
 
-    run_generate(args.test, args.jobs)
+    if args.smoke:
+        args.test_file = 'smoke_tests.json'
+
+    run_generate(args.test_file, args.jobs)

@@ -4,22 +4,45 @@ import pytest
 import numpy
 from copy import deepcopy
 from tflite2xcore.xcore_model import XCOREModel, TensorType
-from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
 
 
-def build_abs(*, input_shape, tensor_type):
+def build_elementwise_op(builtin_opcode, *, input_shape, tensor_type):
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
     input_shape = [1] + list(input_shape)
+    quantization = {'scale': [0.35], 'zero_point': [0]}
     tin = subgraph.create_tensor(
-        'input', type_=tensor_type, shape=input_shape, isinput=True)
+        'input', tensor_type, shape=input_shape, isinput=True,
+        quantization=deepcopy(quantization))
     tout = subgraph.create_tensor(
-        'output', tin.type, tin.shape, isoutput=True)
-    subgraph.create_operator(OperatorCode(BuiltinOpCodes.ABS),
+        'output', tin.type, shape=tin.shape, isoutput=True,
+        quantization=deepcopy(quantization))
+    subgraph.create_operator(OperatorCode(builtin_opcode),
                              inputs=[tin], outputs=[tout])
 
     return model
+
+
+def build_relu(**kwargs):
+    return build_elementwise_op(BuiltinOpCodes.RELU, **kwargs)
+
+
+def build_relu6(**kwargs):
+    return build_elementwise_op(BuiltinOpCodes.RELU6, **kwargs)
+
+
+def build_tanh(**kwargs):
+    return build_elementwise_op(BuiltinOpCodes.TANH, **kwargs)
+
+
+def build_logistic(**kwargs):
+    return build_elementwise_op(BuiltinOpCodes.LOGISTIC, **kwargs)
+
+
+def build_abs(**kwargs):
+    return build_elementwise_op(BuiltinOpCodes.ABS, **kwargs)
 
 
 def build_mean(*, input_shape, reduction_dims):
@@ -49,13 +72,11 @@ def build_argmax(*, input_shape, input_type):
         'input', type_=input_type, shape=input_shape, isinput=True)
     tout = subgraph.create_tensor(
         'output', TensorType.INT32, tin.shape, isoutput=True)
-    op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.ARG_MAX),
-                                  inputs=[tin], outputs=[tout])
-
     dim_tensor = subgraph.create_tensor(
-        f"{op.name}/axis", TensorType.INT32, shape=[])
-    op.inputs.append(dim_tensor)
+        "axis", TensorType.INT32, shape=[])
     dim_tensor.buffer.data = numpy.int32([1])
+    subgraph.create_operator(OperatorCode(BuiltinOpCodes.ARG_MAX),
+                             inputs=[tin, dim_tensor], outputs=[tout])
 
     return model
 
@@ -130,7 +151,7 @@ def build_intermediate_fc(*, outputs, input_size):
     return model
 
 
-def build_logistic(*, outputs, input_size):
+def build_softmax(*, outputs, input_size):
     model = build_intermediate_fc(outputs=outputs, input_size=input_size)
     subgraph = model.subgraphs[0]
     tmid = subgraph.get_tensor('intermediate')
@@ -158,27 +179,42 @@ def build_mlp(*, outputs, hidden_nodes, input_size):
     return model
 
 
-def build_conv2d(*, weight_shape, input_size, padding):
+def build_conv2d(*, weight_shape, input_size, padding, strides):
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
-    input_shape = [1, input_size[0], input_size[1], weight_shape[-1]]
-    tin = subgraph.create_tensor('input', TensorType.INT8, shape=input_shape, isinput=True)
-    w = subgraph.create_tensor('weights', TensorType.INT8, shape=weight_shape)
-    b = subgraph.create_tensor('biases', TensorType.INT32, shape=weight_shape[:1])
+    height, width = input_size
+    C_out, K_h, K_w, C_in = weight_shape
+
+    input_shape = [1, height, width, C_in]
+    tin = subgraph.create_tensor(
+        'input', TensorType.INT8, shape=input_shape, isinput=True)
+    w = subgraph.create_tensor(
+        'weights', TensorType.INT8, shape=weight_shape)
+    b = subgraph.create_tensor(
+        'biases', TensorType.INT32, shape=weight_shape[:1])
+
+    if padding == 'SAME':
+        output_shape = [1, height, width, C_out]
+    elif padding == 'VALID':
+        output_shape = [1,
+                        int(numpy.ceil((height - K_h + 1) / strides[0])),
+                        int(numpy.ceil((width - K_w + 1) / strides[1])),
+                        C_out]
+
     tout = subgraph.create_tensor(
-        'output', tin.type, shape=input_shape[:-1] + weight_shape[:1], isoutput=True)
+        'output', tin.type, shape=output_shape, isoutput=True)
 
     op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.CONV_2D),
                                   inputs=[tin, w, b], outputs=[tout])
     op.builtin_options = {'padding': padding,
-                          'stride_h': 1, 'stride_w': 1,
+                          'stride_h': strides[0], 'stride_w': strides[1],
                           'dilation_w_factor': 1, 'dilation_h_factor': 1}
 
     return model
 
 
-def build_depthwise_conv2d(*, weight_shape, input_size, padding):
+def build_depthwise_conv2d(*, weight_shape, input_size, padding, strides=(1, 1)):
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
@@ -192,7 +228,35 @@ def build_depthwise_conv2d(*, weight_shape, input_size, padding):
     op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.DEPTHWISE_CONV_2D),
                                   inputs=[tin, w, b], outputs=[tout])
     op.builtin_options = {'padding': padding,
-                          'stride_h': 1, 'stride_w': 1,
+                          'stride_h': strides[0], 'stride_w': strides[1],
                           'dilation_w_factor': 1, 'dilation_h_factor': 1}
+
+    return model
+
+
+def build_DIDO(*, weight_shape, input_size, padding):
+    model = XCOREModel()
+    subgraph = model.create_subgraph()
+
+    height, width = input_size
+    C_out, K_h, K_w, C_in = weight_shape
+
+    input_shape = [1, height, width, C_in]
+    tin = subgraph.create_tensor('input', TensorType.INT8, shape=input_shape, isinput=True)
+    w = subgraph.create_tensor('weights', TensorType.INT8,
+                               shape=[C_out // 16, K_h, K_w, C_in // 32, 16, 32])
+    b = subgraph.create_tensor('biases', TensorType.INT16, shape=[C_out // 16, 2, 16])
+    s = subgraph.create_tensor('scales', TensorType.INT16, shape=deepcopy(b.shape))
+
+    if padding == 'SAME':
+        output_shape = [1, height, width, C_out]
+    elif padding == 'VALID':
+        output_shape = [1, height - K_h + 1, width - K_w + 1, C_out]
+    tout = subgraph.create_tensor('output', TensorType.INT8, shape=output_shape)
+
+    op = subgraph.create_operator(
+        OperatorCode(XCOREOpCodes.XC_conv2d_deepin_deepout_relu),
+        inputs=[tin, w, b, s], outputs=[tout])
+    op.add_custom_options(padding=padding, stride_h=1, stride_w=1)
 
     return model

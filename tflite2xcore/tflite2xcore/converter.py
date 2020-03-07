@@ -48,7 +48,7 @@ def add_float_input_output(model):
     model.buffers.insert(0, input_tensor.buffer)
 
 
-def optimize_for_xcore(model, *, is_classifier, remove_softmax):
+def optimize_for_xcore(model, *, is_classifier, remove_softmax, cleanup=True):
     pass_mgr = PassManager(
         model,
         passes=[
@@ -64,16 +64,26 @@ def optimize_for_xcore(model, *, is_classifier, remove_softmax):
         pass_mgr.register_pass(passes.AddArgMax16OutputPass())
 
     pass_mgr.register_pass(passes.ReplaceArgMax16Pass())
+    pass_mgr.register_pass(passes.Replace1x1Conv2dPass())
     pass_mgr.register_pass(passes.ReplaceDeepinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceShallowinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceSingleinDeepoutDepthwiseConv2DPass())
-    pass_mgr.register_pass(passes.ReplaceDeepMaxPool2DPass())
-    #pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())  # currently disabled
+    pass_mgr.register_pass(passes.ReplaceMaxPool2DPass())
+    pass_mgr.register_pass(passes.ReplaceMaxPool2D2x2Pass())
+    pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())
     pass_mgr.register_pass(passes.ReplaceAveragePool2DPass())
     pass_mgr.register_pass(passes.ReplaceGlobalAveragePool2DPass())
-    pass_mgr.register_pass(passes.ReplaceDeepinAnyoutFullyConnectedIntermediatePass())
-    pass_mgr.register_pass(passes.ReplaceDeepinAnyoutFullyConnectedOutputPass())
-    pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
+    pass_mgr.register_pass(passes.ReplaceFullyConnectedIntermediatePass())
+    pass_mgr.register_pass(passes.ReplaceFullyConnectedOutputPass())
+
+    pass_mgr.register_pass(passes.ReplaceReLUPass())
+    pass_mgr.register_pass(passes.ReplaceReLU6Pass())
+    pass_mgr.register_pass(passes.ReplaceTanhPass())
+    pass_mgr.register_pass(passes.ReplaceLogisticPass())
+
+    if cleanup:
+        pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
+        pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 
     pass_mgr.run_passes()
 
@@ -96,4 +106,5 @@ def convert(tflite_input_path, tflite_output_path, *,
     model = read_flatbuffer(tflite_input_path)
     optimize_for_xcore(model, is_classifier=is_classifier, remove_softmax=remove_softmax)
     parallelize_for_xcore(model, num_threads=num_threads)
+    model.sanity_check()
     write_flatbuffer(model, tflite_output_path)

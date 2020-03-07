@@ -252,7 +252,7 @@ The second axis corresponds to the parameters type, where each index has a speci
     1 - Bias low half-word: The least significant 16-bits of the 32-bit bias for the output channel
     2 - Shift1: The first right-shift value; applied to the 32-bit accumulator for a 16-bit result.
     3 - Scale: The scale value; applied after shift1; multiplied by the 16-bit result for a 32-bit product
-    4 - Shfit2: The second right-shift value; applied after scale; down-shifts the 32-bit product for an 8-bit result.
+    4 - Shift2: The second right-shift value; applied after scale; down-shifts the 32-bit product for an 8-bit result.
 
 [0]     For general information about how shifts and scales are used, see "Notes on Output Shifts and Scale", 
         for information on how biases are used, see "Notes on Inner Products and Saturation"
@@ -466,7 +466,7 @@ static inline void conv2d_shallowin_deepout(
  * `y->channels` that was passed to `conv2d_1x1_init()`, and `C_in` has the value of 
  * `x->channels` that was passed to `conv2d_1x1_init()`. The layout of `K` is the standard
  * layout, in which the element at `K[i][j]` is the weight which input channel `j` contributes
- * to output channel `i`.
+ * to output channel `i`. Both `C_out` and `C_in` must be multiples of 4.
  * 
  * The bias-shifts-scale tensor `BSS` is layed out as specified in "Bias-Shifts-Scale Tensor Layout".
  * The accumulators for each output channel are seeded with the 32-bit biases encoded in `BSS`, and

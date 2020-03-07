@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 #
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import argparse
 from pathlib import Path
-import logging
 from tflite2xcore.model_generation import utils
-from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
 import op_test_models_common as common
 
@@ -16,116 +13,62 @@ DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = 'same'
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deepin_deepout_relu').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath(
+    'debug', 'conv2d_deepin_deepout_relu').resolve()
 DEFAULT_NUM_THREADS = 1
 
 
-class Conv2dDeepinDeepoutRelu(KerasModel):
-    def build(self, K_h, K_w, height, width, input_channels, output_channels,
-              *, padding, bias_init, weight_init):
+class Conv2dDeepinDeepoutRelu(common.OpTestDeepoutConvModel):
+    def build_core_model(self, *args, **kwargs):
+        input_channels = args[4]
+        K_h, K_w = args[0], args[1]
         assert input_channels % 32 == 0, "# of input channels must be multiple of 32"
-        assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
-        assert K_h % 2 == 1, "kernel height must be odd"
-        assert K_w % 2 == 1, "kernel width must be odd"
-        super().build()
-        # Building
-        self.core_model = tf.keras.Sequential(
-            name=self.name,
-            layers=[
-                tf.keras.layers.Conv2D(filters=output_channels,
-                                       kernel_size=(K_h, K_w),
-                                       padding=padding,
-                                       input_shape=(height, width, input_channels),
-                                       bias_initializer=bias_init,
-                                       kernel_initializer=weight_init)
-            ]
-        )
-        # Compilation
-        self.core_model.compile(optimizer='adam',
-                                loss='sparse_categorical_crossentropy',
-                                metrics=['accuracy'])
-        # Show summary
-        self.core_model.summary()
-
-    def train(self):  # Not training this model
-        pass
-
-    # For training
-    def prep_data(self, height, width):
-        self.data['export_data'], self.data['quant'] = utils.generate_dummy_data(*self.input_shape)
-
-    # For exports
-    def gen_test_data(self, height, width):
-        if not self.data:
-            self.prep_data(height, width)
+        assert K_h != 1 or K_w != 1, "1x1 kernel is not allowed for DIDO testing"
+        super().build_core_model(*args, **kwargs)
 
 
-def main(path=DEFAULT_PATH, *, num_threads=DEFAULT_NUM_THREADS,
-         input_channels=DEFAULT_INPUTS, output_channels=DEFAULT_OUTPUTS,
-         height=DEFAULT_HEIGHT, width=DEFAULT_WIDTH,
-         K_h=DEFAULT_KERNEL_HEIGHT, K_w=DEFAULT_KERNEL_WIDTH,
-         padding=DEFAULT_PADDING,
-         bias_init=common.DEFAULT_CONST_INIT, weight_init=common.DEFAULT_UNIF_INIT):
+def main(raw_args=None):
+    parser = common.OpTestConvParser(defaults={
+        'path': DEFAULT_PATH,
+        'inputs': DEFAULT_INPUTS,
+        'outputs': DEFAULT_OUTPUTS,
+        'width': DEFAULT_WIDTH,
+        'height': DEFAULT_HEIGHT,
+        'padding': DEFAULT_PADDING,
+        'kernel_width': DEFAULT_KERNEL_WIDTH,
+        'kernel_height': DEFAULT_KERNEL_HEIGHT,
+        'inits': {
+            'input_init': {
+                'type': common.OpTestInitializers.UNIF,
+                'help': "Initializer for input data distribution."
+            },
+            'weight_init': {
+                'type': common.OpTestInitializers.UNIF,
+                'help': "Initializer for weight distribution."
+            },
+            'bias_init': {
+                'type': common.OpTestInitializers.CONST,
+                'help': "Initializer for bias distribution."
+            }
+        }
+    })
+    parser.add_argument(
+        '-par', '--num_threads', type=int, default=DEFAULT_NUM_THREADS,
+        help='Number of parallel threads for xcore.ai optimization.')
+    args = parser.parse_args(raw_args)
+    utils.set_gpu_usage(False, args.verbose)
 
-    # Instantiate model
-    test_model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', Path(path))
-    # Build model and compile
-    test_model.build(K_h, K_w, height, width, input_channels, output_channels,
-                     padding=padding, bias_init=bias_init, weight_init=weight_init)
-    # Generate test data
-    test_model.gen_test_data(height, width)
-    # Save model
-    test_model.save_core_model()
-    # Populate converters
-    test_model.populate_converters(xcore_num_threads=num_threads)
+    model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', args.path)
+    model.run(num_threads=args.num_threads,
+              input_channels=args.inputs,
+              output_channels=args.outputs,
+              height=args.height,
+              width=args.width,
+              K_h=args.kernel_height,
+              K_w=args.kernel_width,
+              padding=args.padding,
+              **args.inits)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        '-path', nargs='?', default=DEFAULT_PATH,
-        help='Path to a directory where models and data will be saved in subdirectories.')
-    parser.add_argument(
-        '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
-        help='Number of input channels')
-    parser.add_argument(
-        '-out', '--outputs', type=int, default=DEFAULT_OUTPUTS,
-        help='Number of output channels')
-    parser.add_argument(
-        '-hi', '--height', type=int, default=DEFAULT_HEIGHT,
-        help='Height of input image')
-    parser.add_argument(
-        '-wi', '--width', type=int, default=DEFAULT_WIDTH,
-        help='Width of input image')
-    parser.add_argument(
-        '-kh', '--kernel_height', type=int, default=DEFAULT_KERNEL_HEIGHT,
-        help='Height of kernel')
-    parser.add_argument(
-        '-kw', '--kernel_width', type=int, default=DEFAULT_KERNEL_WIDTH,
-        help='Width of kernel')
-    parser.add_argument(
-        '-pd', '--padding', type=str, default=DEFAULT_PADDING,
-        help='Padding mode')
-    parser.add_argument(
-        '-par', '--par_num_threads', type=int, default=DEFAULT_NUM_THREADS,
-        help='Number of parallel threads for xcore.ai optimization.')
-    parser.add_argument(
-        '-v', '--verbose', action='store_true', default=False,
-        help='Verbose mode.')
-    parser = common.parser_add_initializers(parser)
-    args = parser.parse_args()
-
-    utils.set_verbosity(args.verbose)
-    utils.set_gpu_usage(False, args.verbose)
-
-    initializers = common.initializer_args_handler(args)
-
-    main(path=args.path,
-         num_threads=args.par_num_threads,
-         input_channels=args.inputs, output_channels=args.outputs,
-         K_h=args.kernel_height, K_w=args.kernel_width,
-         height=args.height, width=args.width,
-         padding=args.padding,
-         bias_init=initializers['bias_init'],
-         weight_init=initializers['weight_init'])
+    main()

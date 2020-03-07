@@ -1,7 +1,5 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-
 import numpy as np
-
 
 def compare_tensor_files(expected_file, expected_quantization, predicted_file,
                          predicted_quantization, abs_tol):
@@ -30,10 +28,8 @@ def compare_tensor_files(expected_file, expected_quantization, predicted_file,
         tv = pv >> predicted_rshift
         abs_diff = abs(ev-tv)
         if abs_diff > abs_tol:
-            print(f'Difference {abs_diff} > {abs_tol}')
-            print(f'   Index: {i}')
-            print(f'   Expected: quantized value={ev}')
-            print(f'   Predicted: truncated value={tv}, quantized value={pv}')
+            print(f'Difference {abs_diff}>{abs_tol}: index={i}, ' \
+                f'expected value={ev}, predicted value={tv} {predicted_rshift}')
             retval = False
 
     return retval

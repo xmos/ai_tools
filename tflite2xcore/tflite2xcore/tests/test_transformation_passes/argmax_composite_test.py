@@ -10,9 +10,11 @@ from .test_AddArgMax16OutputPass import input_shape, model
 def test_mutate(model):
     pass1 = AddArgMax16OutputPass()
     pass1.run(model)
+    model.sanity_check()
 
     pass2 = ReplaceArgMax16Pass()
     pass2.run(model)
+    model.sanity_check()
 
     subgraph = model.subgraphs[0]
     assert subgraph.operators[-1].operator_code.code == XCOREOpCodes.XC_argmax_16

@@ -5,10 +5,10 @@ ifeq ($(TARGET), x86)
 	BUILD_TARGET := x86
 
 	CC := gcc
-	CCFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -O3 
+	CCFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
 
 	CXX := g++
-	CXXFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -O3
+	CXXFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
 	CXXFLAGS += -std=c++11 
 
 	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm
@@ -28,16 +28,17 @@ else # must be xcore
 	PLATFORM_FLAGS += -Wno-unknown-attributes
 	PLATFORM_FLAGS += -report
 	PLATFORM_FLAGS += -fcmdline-buffer-bytes=1024
+	PLATFORM_FLAGS += -DTF_LITE_DISABLE_X86_NEON
 
 	AS := xcc
 	ASFLAGS := $(PLATFORM_FLAGS)
 
 	CC := xcc
-	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DNDEBUG
+	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -DNDEBUG
 	CCFLAGS += $(PLATFORM_FLAGS)
 
 	CXX := xcc
-	CXXFLAGS := -std=c++11 -g -DTF_LITE_STATIC_MEMORY -DNDEBUG
+	CXXFLAGS := -std=c++11 -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -DNDEBUG
 	CXXFLAGS += $(PLATFORM_FLAGS)
 
 	LDFLAGS := $(PLATFORM_FLAGS)
@@ -62,6 +63,7 @@ INCLUDES := \
 	-I$(GEMMLOWP_DIR) \
 	-I$(TENSORFLOW_DIR) \
 	-I$(LIB_NN_DIR)/lib_nn/api \
+	-I$(LIB_NN_DIR)/lib_nn/src \
 	-Isrc
 
 # source file paths
@@ -79,12 +81,12 @@ SOURCES := \
 	tensorflow/lite/core/api/tensor_utils.cc \
 	tensorflow/lite/kernels/kernel_util.cc \
 	tensorflow/lite/kernels/internal/quantization_util.cc \
-	tensorflow/lite/micro/debug_log_numbers.cc \
 	tensorflow/lite/micro/memory_helpers.cc \
 	tensorflow/lite/micro/micro_allocator.cc \
 	tensorflow/lite/micro/micro_error_reporter.cc \
 	tensorflow/lite/micro/micro_interpreter.cc \
 	tensorflow/lite/micro/micro_utils.cc \
+	tensorflow/lite/micro/micro_string.cc \
 	tensorflow/lite/micro/simple_memory_allocator.cc \
 	tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc \
 	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc \
@@ -111,6 +113,7 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/pooling.cc \
 	tensorflow/lite/micro/kernels/prelu.cc \
 	tensorflow/lite/micro/kernels/quantize.cc \
+	tensorflow/lite/micro/kernels/reduce.cc \
 	tensorflow/lite/micro/kernels/reshape.cc \
 	tensorflow/lite/micro/kernels/round.cc \
 	tensorflow/lite/micro/kernels/softmax.cc \
@@ -124,8 +127,12 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/xcore/xcore_pooling.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_fully_connected.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_type_conversions.cc \
-	lib_nn/src/nn_operator.c \
-	lib_nn/src/nn_operator_conv.c \
+	tensorflow/lite/micro/kernels/xcore/xcore_activations.cc \
+	lib_nn/src/c/nn_op_utils.c \
+	lib_nn/src/c/nn_operator.c \
+	lib_nn/src/c/nn_operator_conv.c \
+	lib_nn/src/c/avgpool2d.c \
+	lib_nn/src/c/maxpool2d.c \
 	lib_nn/src/c/fully_connected.c \
 	main.cc
 
@@ -135,13 +142,17 @@ ifeq ($(TARGET), x86)
 		tensorflow/lite/micro/debug_log.cc 
 else # must be xcore
 	SOURCES += \
-		lib_nn/src/asm/avgpool2d_deep.S \
 		lib_nn/src/asm/conv2d_deepin_deepout_block.S \
 		lib_nn/src/asm/conv2d_shallowin_deepout_block.S \
+		lib_nn/src/asm/conv2d_1x1.S \
 		lib_nn/src/asm/fully_connected_16.S \
-		lib_nn/src/asm/maxpool2d_deep.S \
+		lib_nn/src/asm/avgpool2d.S \
+		lib_nn/src/asm/maxpool2d.S \
+		lib_nn/src/asm/avgpool2d_2x2.S \
+		lib_nn/src/asm/avgpool2d_global.S \
 		lib_nn/src/asm/vpu_memcpy.S \
 		lib_nn/src/asm/requantize_16_to_8.S \
+		lib_nn/src/asm/lookup8.S \
 		tensorflow/lite/micro/xcore/debug_log.cc 
 endif
 

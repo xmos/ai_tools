@@ -32,13 +32,13 @@ The following symbols are used:
 
 For full documentation of each API function, please refer to the description in the lib_nn/api/nn_operator.h header file.
 
-| Group | API | VPU Optimized | Constraints    | Comments |
-|:----|:---|:------------|:----------------|:--------------------------------------------------------|:-------------|
+| Group | API | VPU Optimized | Constraints | Comments |
+|:----|:---|:------------|:----------------|:--------------------------------------------------------|
 |Convolution| | | | |
-| |conv2d_deepin_deepout|**In re-development**|Cin % 4 = 0, Cout % 4 = 0 |
-| |conv2d_shallowin_deepout|**In re-development**|Cin % 4 = 0, Cout % 4 = 0, Cin * Kw = 32 |
-| |conv2d_1x1|Yes|Cin % 4 = 0, Cout % 4 = 0, Kh = Kw = 1, Sh = Sw = 1
-| |depthwise conv2d|**In development**|Cin % 4 = 0, Cout % 4 = 0, Cin = Cout |
+| |conv2d_deepin_deepout|**In re-development**|Cin % 4 = 0, Cout % 4 = 0 | |
+| |conv2d_shallowin_deepout|**In re-development**|Cin % 4 = 0, Cout % 4 = 0, Cin * Kw = 32 | |
+| |conv2d_1x1|Yes|Cin % 4 = 0, Cout % 4 = 0, Kh = Kw = 1, Sh = Sw = 1 | |
+| |depthwise conv2d|**In development**|Cin % 4 = 0, Cout % 4 = 0, Cin = Cout | |
 |Fully Connected| | | | |
 | |fully_connected_16|Yes|Cin % 4 = 0<sup>1</sup>|Output is 16-bit|
 |Pooling| | | | |

@@ -68,13 +68,13 @@ There is a Makefile in the root directory that has some useful targets - especia
 
 ### Installing Tools 15.0.0 Engineering Release
 
-We currently require build 310 or newer.  Build 310 can be downloaded from http://srv-bri-jtools:8080/job/xmos-tools%20MANUAL/job/tools_installers/job/master/310/
+We currently require build 348 or newer.  Build 310 can be downloaded from http://srv-bri-jtools:8080/job/xmos-tools%20MANUAL/job/tools_installers/job/master/348/
 
 NOTE: This link to the Engineering Release requires being inside the XMOS firewall.  We will replace this link once Tools 15 is officially released.
 
 Linux users may want to manually add the SetEnv.sh script to the `.bashrc` file.  Add the following lines:
 
-    XTIMEVER=Community_15.0.0_eng
+    XTIMEVER=Community_15.0.0
     pushd /usr/local/XMOS/xTIMEcomposer/$XTIMEVER/ > /dev/null
     source SetEnv
     popd > /dev/null

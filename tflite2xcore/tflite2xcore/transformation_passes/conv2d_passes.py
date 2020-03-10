@@ -38,6 +38,67 @@ class ReplaceConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
         return 32 - 8 - 2  # this is because the output is 8 bit
 
 
+class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.DEPTHWISE_CONV_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_conv2d_depthwise)
+
+    @property
+    def _depth_multiplier(self):
+        return self._op.builtin_options['depth_multiplier']
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                if self._depth_multiplier != 1:
+                    logging.warning(f"Found non-supported depthwise multiplier: {self._depth_multiplier}")
+                else:
+                    return self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+
+        return False
+
+    def mutate_biases(self, op):
+        # TODO: this is the same as in ReplaceFullyConnectedPass, refactor
+        # TODO: this is the same as in Replace1x1Conv2dPass, refactor
+        super().mutate_biases(op)
+        with self.using(op):
+            # calculate and save the bias/shift/scale tensor
+            bss = self._bss_arr
+            self._biases.buffer.data = bss
+            self._biases.shape = bss.shape
+            self._biases.type = TensorType.INT16
+
+            # rename bias tensor and remove quantization info to save space
+            self._biases.name = f"{op.name}/bias_shift_scale"
+            self._biases.quantization = None
+
+    def mutate_weights(self, op):
+        super().mutate_weights(op)
+        with self.using(op):
+            # NOTE: This is not strictly necessary since the depth multiplier should be 1
+            self._weights.shape = self._weights.shape[1:]
+
+            # remove quantization info to save space
+            self._weights.quantization = None
+
+    def mutate(self, op):
+        # TODO: this is the same as in Replace1x1Conv2dPass, refactor
+        # NOTE: the order of these mutations is strict
+        new_op = super().mutate(op)
+        self.mutate_biases(new_op)
+        self.mutate_weights(new_op)
+
+        with self.using(op):
+            new_op.add_custom_options(
+                stride_h=self._strides[0], stride_w=self._strides[1]
+            )
+        return new_op
+
+
 class Replace1x1Conv2dPass(ReplaceConv2DPass):
     @property
     def matching_opcode(self):
@@ -307,6 +368,6 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
             # NOTE: this happens before the standard weight mutation on purpose
             new_weights = np.transpose(self._weights.numpy.astype(np.int8),
                                        axes=(3, 1, 2, 0))
-            self._weights.shape = list(new_weights.shape)
+            self._weights.shape = list(new_weights.shape)  # TODO: this should not be necessary when flexbuffers can deal with tuples
             self._weights.buffer.data = new_weights
         return super().mutate(op)

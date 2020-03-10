@@ -27,13 +27,13 @@ from .conftest import (
 PARAMS = deepcopy(PARAMS)
 
 PARAMS["default"].update({
-    "non_matching_kernel_width": PARAMS["default"]["non_matching_kernel_height"],
+    "non_matching_kernel_width": PARAMS["default"]["non_matching_kernel_height"],  # TODO: the parity constraint is deprecated after the conv2d improvements
     "input_channels": [32, 64],
     "non_matching_input_channels": [8, 16, 33, 48]
 })
 
 PARAMS["smoke"].update({
-    "non_matching_kernel_width": PARAMS["smoke"]["non_matching_kernel_height"],
+    "non_matching_kernel_width": PARAMS["smoke"]["non_matching_kernel_height"],  # TODO: the parity constraint is deprecated after the conv2d improvements
     "input_channels": [32],
     "non_matching_input_channels": [16]
 })

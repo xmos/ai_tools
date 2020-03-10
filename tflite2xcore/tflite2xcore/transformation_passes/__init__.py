@@ -9,6 +9,7 @@ from .lut_passes import (
 )
 from .conv2d_passes import (
     Replace1x1Conv2dPass,
+    ReplaceDepthwiseConv2dPass,
     ReplaceDeepinDeepoutConv2DPass,
     ReplaceShallowinDeepoutConv2DPass,
     ReplaceSingleinDeepoutDepthwiseConv2DPass

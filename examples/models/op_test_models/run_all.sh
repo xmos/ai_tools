@@ -16,6 +16,7 @@ set -e
 ./generate_conv2d_1x1.py -v
 ./generate_conv2d_deepin_deepout_relu.py -v
 ./generate_conv2d_shallowin_deepout_relu.py -v
+./generate_conv2d_depthwise.py -v
 
 # fully connected
 ./generate_fully_connected.py -v --train_model -ep 1

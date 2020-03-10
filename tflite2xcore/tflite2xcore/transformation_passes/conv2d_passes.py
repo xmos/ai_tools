@@ -103,7 +103,7 @@ class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
                 return (self._strides == (1, 1)
                         and self._weights.shape[1] % 2 == 1  # kernel height is odd
                         and self._weights.shape[2] % 2 == 1  # kernel width is odd
-                        and self._weights.shape[0] % ACC_PERIOD == 0)  # deepout
+                        and self._output.shape[3] % ACC_PERIOD == 0)  # deepout
 
         return False
 
@@ -288,7 +288,8 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return (self._weights.shape[3] == 1  # depthwise only matched with single input channel
+                print(self._input.shape)
+                return (self._input.shape[3] == 1  # depthwise only matched with single input channel
                         and self._weights.shape[2] <= self.MAX_KERNEL_WIDTH)  # max kernel width
 
         return False
@@ -304,7 +305,8 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
             # Therefore, this permutation results in kOHW1 which is the same as
             #    TFLite conv weight order for a single input channel
             # NOTE: this happens before the standard weight mutation on purpose
-            new_weights = np.transpose(self._weights.numpy, axes=(3, 1, 2, 0))
-            self._weights.shape = new_weights.shape
+            new_weights = np.transpose(self._weights.numpy.astype(np.int8),
+                                       axes=(3, 1, 2, 0))
+            self._weights.shape = list(new_weights.shape)
             self._weights.buffer.data = new_weights
         return super().mutate(op)

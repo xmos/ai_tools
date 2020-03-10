@@ -6,6 +6,7 @@ from copy import deepcopy
 
 from ..conftest import (
     PARAMS,
+    _test_non_matching_dim,
     test_matching_params,
     test_non_matching_output_channels,
     test_non_matching_kernel_height,

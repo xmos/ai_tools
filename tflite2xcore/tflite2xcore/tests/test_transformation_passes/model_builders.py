@@ -218,16 +218,31 @@ def build_depthwise_conv2d(*, weight_shape, input_size, padding, strides=(1, 1))
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
-    input_shape = [1, input_size[0], input_size[1], weight_shape[-1]]
+    # NOTE: weight_shape uses channel order HWIM (following TensorFlow DepthwiseConv)
+    height, width = input_size
+    K_h, K_w, C_in, depth_multiplier = weight_shape
+    C_out = C_in * depth_multiplier
+
+    input_shape = [1, input_size[0], input_size[1], C_in]
+    weight_shape = [1, K_h, K_w, C_out]
     tin = subgraph.create_tensor('input', TensorType.INT8, shape=input_shape, isinput=True)
     w = subgraph.create_tensor('weights', TensorType.INT8, shape=weight_shape)
-    b = subgraph.create_tensor('biases', TensorType.INT32, shape=weight_shape[:1])
+    b = subgraph.create_tensor('biases', TensorType.INT32, shape=[C_out])
+
+    if padding == 'SAME':
+        output_shape = [1, height, width, C_out]
+    elif padding == 'VALID':
+        output_shape = [1,
+                        int(numpy.ceil((height - K_h + 1) / strides[0])),
+                        int(numpy.ceil((width - K_w + 1) / strides[1])),
+                        C_out]
     tout = subgraph.create_tensor(
-        'output', tin.type, shape=input_shape[:-1] + weight_shape[:1], isoutput=True)
+        'output', tin.type, shape=output_shape, isoutput=True)
 
     op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.DEPTHWISE_CONV_2D),
                                   inputs=[tin, w, b], outputs=[tout])
     op.builtin_options = {'padding': padding,
+                          'depth_multiplier': depth_multiplier,
                           'stride_h': strides[0], 'stride_w': strides[1],
                           'dilation_w_factor': 1, 'dilation_h_factor': 1}
 

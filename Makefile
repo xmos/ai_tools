@@ -26,7 +26,7 @@ tflite2xcore_test:
 .PHONY: integration_test
 integration_test: test_model
 	cd tests && ./generate_test_data.py
-	cd tests && pytest -v --test-model=../examples/apps/test_model/bin/test_model
+	cd tests && pytest -v --test-app=../examples/apps/test_model/bin/test_model
 	cd tests && pytest -v
 
 .PHONY: clean

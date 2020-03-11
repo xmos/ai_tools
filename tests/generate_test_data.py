@@ -3,6 +3,7 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import sys
 import re
 import json

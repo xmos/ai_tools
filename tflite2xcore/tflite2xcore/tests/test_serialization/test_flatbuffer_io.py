@@ -46,7 +46,7 @@ def test_read_flatbuffer():
     assert tensor.sanitized_name == 'arm_benchmark_conv2d_Conv2D_bias'
     assert tensor.type == TensorType.INT32
     assert tensor.standard_type == 'int32_t'
-    assert tensor.shape == [32]
+    assert tensor.shape == (32,)
     assert len(tensor.buffer.data) == 128
 
     operator = subgraph.operators[1]

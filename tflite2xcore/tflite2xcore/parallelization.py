@@ -90,9 +90,9 @@ class ParallelizationPlanner(ABC):
 class UnidirectionalSplitPlanner(ParallelizationPlanner):
     def __init__(self, height, width, **kwargs):
         super().__init__(**kwargs)
-        assert isinstance(height, int)
-        assert isinstance(width, int)
-        assert height * width > 0
+        assert isinstance(height, int), f"received height={height} with type {type(height)}"
+        assert isinstance(width, int), f"received width={width} with type {type(width)}"
+        assert height * width > 0, f"received height={height}, width={width}"
         self.height, self.width = height, width
 
     _adjustments = {
@@ -162,4 +162,3 @@ class DIDOConv2DPlanner(UnidirectionalSplitPlanner):
             #       and one block without any edges
             # do this with both horizontal and vertical orientation
             pass
-    

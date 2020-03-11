@@ -139,7 +139,7 @@ def create_xcore_model(modelT):
             tensor = subgraph.create_tensor(
                 name=tensorT.name.decode('utf-8'),
                 type_=TensorType(tensorT.type),
-                shape=list(tensorT.shape.tolist() if tensorT.shape is not None else []),
+                shape=tensorT.shape,
                 buffer=buffers[tensorT.buffer],
                 quantization=quantization,
                 isinput=is_input,

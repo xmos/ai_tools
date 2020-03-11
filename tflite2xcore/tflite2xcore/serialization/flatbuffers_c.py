@@ -116,6 +116,8 @@ class FlexbufferBuilder:
                 self.__add_map(obj, value, key_ascii)
             elif value_type == list:
                 self.__add_vector(obj, value, key_ascii)
+            elif value_type == tuple:
+                self.__add_vector(obj, list(value), key_ascii)
             else:
                 raise Exception(f'Type {value_type} not supported (key={key_ascii}, value={value})')
 

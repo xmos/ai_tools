@@ -17,7 +17,7 @@ DEFAULT_BS = 64
 
 
 class Mobilenet(ImageNetModel):
-    def build(self, num_classes=500):
+    def build(self, num_classes=100):
         self._prep_backend()
         # Base model without classifier or padding in between the depthwise convs
         base_model = MobileNet(include_top=False, depth_multiplier=1, weights='imagenet',

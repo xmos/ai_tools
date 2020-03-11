@@ -11,7 +11,7 @@ ifeq ($(TARGET), x86)
 	CXXFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
 	CXXFLAGS += -std=c++11 
 
-	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm
+	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm -lpthread
 
 	OBJ_DIR := .build/x86
 
@@ -28,7 +28,6 @@ else # must be xcore
 	PLATFORM_FLAGS += -Wno-unknown-attributes
 	PLATFORM_FLAGS += -report
 	PLATFORM_FLAGS += -fcmdline-buffer-bytes=1024
-	PLATFORM_FLAGS += -DTF_LITE_DISABLE_X86_NEON
 
 	AS := xcc
 	ASFLAGS := $(PLATFORM_FLAGS)
@@ -41,7 +40,7 @@ else # must be xcore
 	CXXFLAGS := -std=c++11 -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -DNDEBUG
 	CXXFLAGS += $(PLATFORM_FLAGS)
 
-	LDFLAGS := $(PLATFORM_FLAGS)
+	LDFLAGS := $(PLATFORM_FLAGS) -lxcore
 
 	OBJ_DIR := .build/xcore
 
@@ -57,6 +56,7 @@ FLATBUFFERS_DIR := ../../../third_party/
 GEMMLOWP_DIR := ../../../third_party/gemmlowp
 TENSORFLOW_DIR := ../../../third_party/tensorflow
 LIB_NN_DIR := ../../../lib_nn
+LIB_OP_DIR := ../../../operators
 
 INCLUDES := \
 	-I$(FLATBUFFERS_DIR)/flatbuffers/include \
@@ -64,6 +64,7 @@ INCLUDES := \
 	-I$(TENSORFLOW_DIR) \
 	-I$(LIB_NN_DIR)/lib_nn/api \
 	-I$(LIB_NN_DIR)/lib_nn/src \
+	-I$(LIB_OP_DIR) \
 	-Isrc
 
 # source file paths

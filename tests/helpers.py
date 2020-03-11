@@ -29,7 +29,7 @@ def compare_tensor_files(expected_file, expected_quantization, predicted_file,
         abs_diff = abs(ev-tv)
         if abs_diff > abs_tol:
             print(f'Difference {abs_diff}>{abs_tol}: index={i}, ' \
-                f'expected value={ev}, predicted value={tv} {predicted_rshift}')
+                f'expected value={ev}, predicted value={tv}')
             retval = False
 
     return retval

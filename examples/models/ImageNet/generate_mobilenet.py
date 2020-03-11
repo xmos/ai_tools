@@ -186,7 +186,7 @@ def MobileNet(input_shape=None,
                              '`0.25`, `0.50`, `0.75` or `1.0` only.')
 
         if rows != cols or rows not in [128, 160, 192, 224]:
-            rows = 224
+            rows = 128
 
     if input_tensor is None:
         img_input = layers.Input(shape=input_shape)
@@ -282,7 +282,7 @@ def MobileNet(input_shape=None,
 def _conv_block(inputs, filters, alpha, kernel=(3, 3), strides=(1, 1)):
     channel_axis = 1 if backend.image_data_format() == 'channels_first' else -1
     filters = int(filters * alpha)
-    x = layers.ZeroPadding2D(padding=((0, 1), (0, 1)), name='conv1_pad')(inputs)
+    # x = layers.ZeroPadding2D(padding=((0, 1), (0, 1)), name='conv1_pad')(inputs)
     x = inputs
     x = layers.Conv2D(filters, kernel,
                       padding='valid',
@@ -329,31 +329,38 @@ def _depthwise_conv_block(inputs, pointwise_conv_filters, alpha,
 
 
 class Mobilenet(ImageNetModel):
-    def build(self):
+    def build(self, num_classes=500):
         self._prep_backend()
         # Base model without classifier or padding in between the depthwise convs
-        base_model = MobileNet(include_top=False, depth_multiplier=1, weights='imagenet',  
-                                    input_shape=(159, 159, 3), alpha=0.25)
+        base_model = MobileNet(include_top=False, depth_multiplier=1, weights='imagenet',
+                               input_shape=(159, 159, 3), alpha=0.25)
 
         # model to which extract the weights of the last layer
-        top_weights = tf.keras.applications.MobileNet(include_top=True, depth_multiplier=1, weights='imagenet',  
-                                                            input_shape=(128, 128, 3), alpha=0.25)
+        top_weights = tf.keras.applications.MobileNet(include_top=True, depth_multiplier=1, weights='imagenet',
+                                                      input_shape=(128, 128, 3), alpha=0.25)
 
         # Mobilenet V2 (doesn't fit)
         # self.core_model = tf.keras.applications.MobileNetV2(input_shape=(128,128,3), weights='imagenet', alpha=0.35, include_top=Flase)
+        # base_model.compile(
+        #     loss='sparse_categorical_crossentropy',
+        #     optimizer=tf.keras.optimizers.RMSprop(),
+        #     metrics=['accuracy']
+        # )
+        # base_model.summary()
         top_weights.compile(
             loss='sparse_categorical_crossentropy',
             optimizer=tf.keras.optimizers.RMSprop(),
             metrics=['accuracy']
         )
+        #top_weights.summary()
         # Weight surgery
         w, b = top_weights.layers[90].get_weights()
-        print('weights shape', w.shape)
-        print('bias shape', b.shape)
-        num_classes = 100
+        # print('weights shape', w.shape)
+        # print('bias shape', b.shape)
+        #num_classes = 500
         wt, bt = w[0, 0, :, :num_classes], b[:num_classes]
-        print('truncated weights shape', wt.shape)
-        print('truncated bias shape', bt.shape)
+        # print('truncated weights shape', wt.shape)
+        # print('truncated bias shape', bt.shape)
         global_avg_layer = tf.keras.layers.GlobalAveragePooling2D()
         preds = tf.keras.layers.Dense(num_classes, activation='softmax',
                                       kernel_initializer=tf.keras.initializers.Constant(wt.tolist()),
@@ -367,9 +374,10 @@ class Mobilenet(ImageNetModel):
         )
         # Quick check, are we adding the right weights in the right place?
         wn, bn = self.core_model.layers[2].get_weights()
-        print(wn.shape, bn.shape)
-        print(np.all(wn == wt)) # assert True
-        print(np.all(bn == bt)) # assert True
+        assert np.all(wn == wt) and np.all(bn == bt)
+        # print(wn.shape, bn.shape)
+        # print(np.all(wn == wt))  # assert True
+        # print(np.all(bn == bt))  # assert True
 
         self.core_model.summary()
 

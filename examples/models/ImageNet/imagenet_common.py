@@ -15,15 +15,6 @@ class ImageNetModel(KerasClassifier):
         self._use_aug = use_aug
 
     def prep_data(self, *, simard_resize=False, padding=2):
-        # See available datasets
-        # print(tfds.list_builders())
-        # Construct a tf.data.Dataset
-        # ds_train = tfds.load(name="Imagenette", split=tfds.Split.TRAIN, shuffle_files=True, batch_size=-1)
-        # numpy_ds = tfds.as_numpy(ds_train)
-        # print(type(numpy_ds))
-        # print(len(numpy_ds['image']))
-        # print(type(numpy_ds['image']))
-        # print(numpy_ds['image'][0].shape)
         image_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/grace_hopper.jpg"
         f = tf.keras.utils.get_file("grace_hopper.jpg", image_url)
         img = tf.keras.preprocessing.image.load_img(f, target_size=[159, 159])

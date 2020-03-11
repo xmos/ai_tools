@@ -131,6 +131,7 @@ SOURCES := \
 	lib_nn/src/c/nn_op_utils.c \
 	lib_nn/src/c/nn_operator.c \
 	lib_nn/src/c/nn_operator_conv.c \
+	lib_nn/src/c/conv2d_1x1.c \
 	lib_nn/src/c/avgpool2d.c \
 	lib_nn/src/c/maxpool2d.c \
 	lib_nn/src/c/fully_connected.c \

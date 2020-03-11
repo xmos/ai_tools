@@ -23,6 +23,7 @@ class Conv2D1x1(common.OpTestDefaultConvModel):
         K_h, K_w, _, _, input_channels, output_channels = args
         assert K_h == 1, "Kernel height must be 1"
         assert K_w == 1, "Kernel width must be 1"
+        # TODO: move these to a parent class after the conv2d enhancements
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
         assert output_channels % 4 == 0, "# of output channels must be multiple of 4"
         super().build_core_model(*args, **kwargs)

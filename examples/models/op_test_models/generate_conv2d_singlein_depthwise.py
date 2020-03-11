@@ -7,30 +7,34 @@ from tflite2xcore.model_generation import utils
 import tensorflow as tf
 import op_test_models_common as common
 
-DEFAULT_OUTPUTS = 8
+DEFAULT_OUTPUTS = 16
 DEFAULT_HEIGHT = 5
 DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = 'same'
 DEFAULT_PATH = Path(__file__).parent.joinpath(
-    'debug', 'conv2d_depthwise').resolve()
+    'debug', 'conv2d_singlein_depthwise').resolve()
 
 
-class Conv2dDepthwise(common.OpTestDefaultModel):
+class Conv2dSingleInDeepoutDepthwise(common.OpTestDefaultModel):
     def build_core_model(
             self, K_h, K_w, height, width, output_channels, *,
             padding, **inits):
-        assert output_channels % 4 == 0, "# of output channels must be multiple of 4"
+        assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
+        assert K_w <= 8, "Kernel width must be at most 8"
+        # TODO: remove these constraints when conv2d improvements are ready
+        assert K_h % 2 == 1, "kernel height must be odd"
+        assert K_w % 2 == 1, "kernel width must be odd"
         self.input_init = inits['input_init']
         try:
             self.core_model = tf.keras.Sequential(
                 name=self.name,
                 layers=[
                     tf.keras.layers.DepthwiseConv2D(kernel_size=(K_h, K_w),
-                                                    depth_multiplier=1,
+                                                    depth_multiplier=output_channels,
                                                     padding=padding,
-                                                    input_shape=(height, width, output_channels),
+                                                    input_shape=(height, width, 1),
                                                     bias_initializer=inits['bias_init'],
                                                     depthwise_initializer=inits['weight_init'])
                 ]
@@ -91,7 +95,7 @@ def main(raw_args=None):
     args = parser.parse_args(raw_args)
     utils.set_gpu_usage(False, args.verbose)
 
-    model = Conv2dDepthwise('conv2d_depthwise', args.path)
+    model = Conv2dSingleInDeepoutDepthwise('conv2d_singlein_depthwise', args.path)
     model.run(num_threads=None,
               output_channels=args.outputs,
               height=args.height,

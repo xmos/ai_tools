@@ -63,17 +63,11 @@ def get_default_parser(**kwargs):
 
 
 def run_main(model, *, train_new_model, epochs=None, batch_size=None):
-    #if train_new_model:
     # Build model and compile
     model.build()
     # Prepare training data
     model.prep_data()
-    # Train model
-    #model.train(batch_size=batch_size, epochs=epochs)
     model.save_core_model()
-    #else:
-    # Recover previous state from file system
-    #model.load_core_model()
     # Generate test data
     model.gen_test_data()
     # Populate converters

@@ -7,8 +7,13 @@ from imagenet_common import ImageNetModel, get_default_parser, run_main
 import tensorflow as tf
 import warnings
 import json
-import os 
+import os
+import numpy as np
 
+from tensorflow.python.keras.utils import all_utils as keras_utils
+from tensorflow.python.keras import backend
+from tensorflow.python.keras import layers
+from tensorflow.python.keras import models
 
 DEFAULT_PATH = {
     'mobilenet': Path(__file__).parent.joinpath('debug', 'mobilenet').resolve(),
@@ -16,109 +21,12 @@ DEFAULT_PATH = {
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
 
-
 #  ----------------------------------------------------------------------------
 #                                KERAS MOBILENET
 #  ----------------------------------------------------------------------------
 
 BASE_WEIGHT_PATH = ('https://github.com/fchollet/deep-learning-models/'
                     'releases/download/v0.6/')
-
-backend = None
-layers = None
-models = None
-keras_utils = None
-
-_KERAS_BACKEND = None
-_KERAS_LAYERS = None
-_KERAS_MODELS = None
-_KERAS_UTILS = None
-
-CLASS_INDEX = None
-CLASS_INDEX_PATH = ('https://storage.googleapis.com/download.tensorflow.org/'
-                    'data/imagenet_class_index.json')
-
-
-def keras_modules_injection(base_fun):
-  """Decorator injecting tf.keras replacements for Keras modules.
-  Arguments:
-      base_fun: Application function to decorate (e.g. `MobileNet`).
-  Returns:
-      Decorated function that injects keyword argument for the tf.keras
-      modules required by the Applications.
-  """
-  from tensorflow.python.keras import backend
-  from tensorflow.python.keras import layers
-  from tensorflow.python.keras import models
-  from tensorflow.python.keras.utils import all_utils
-
-  def wrapper(*args, **kwargs):
-    kwargs['backend'] = backend
-    if 'layers' not in kwargs:
-      kwargs['layers'] = layers
-    kwargs['models'] = models
-    kwargs['utils'] = all_utils
-    return base_fun(*args, **kwargs)
-  return wrapper
-
-def decode_predictions(preds, top=5, **kwargs):
-    """Decodes the prediction of an ImageNet model.
-    # Arguments
-        preds: Numpy tensor encoding a batch of predictions.
-        top: Integer, how many top-guesses to return.
-    # Returns
-        A list of lists of top class prediction tuples
-        `(class_name, class_description, score)`.
-        One list of tuples per sample in batch input.
-    # Raises
-        ValueError: In case of invalid shape of the `pred` array
-            (must be 2D).
-    """
-    global CLASS_INDEX
-
-    backend, _, _, keras_utils = get_submodules_from_kwargs(kwargs)
-
-    if len(preds.shape) != 2 or preds.shape[1] != 1000:
-        raise ValueError('`decode_predictions` expects '
-                         'a batch of predictions '
-                         '(i.e. a 2D array of shape (samples, 1000)). '
-                         'Found array with shape: ' + str(preds.shape))
-    if CLASS_INDEX is None:
-        fpath = keras_utils.get_file(
-            'imagenet_class_index.json',
-            CLASS_INDEX_PATH,
-            cache_subdir='models',
-            file_hash='c2c37ea517e94d9795004a39431a14cb')
-        with open(fpath) as f:
-            CLASS_INDEX = json.load(f)
-    results = []
-    for pred in preds:
-        top_indices = pred.argsort()[-top:][::-1]
-        result = [tuple(CLASS_INDEX[str(i)]) + (pred[i],) for i in top_indices]
-        result.sort(key=lambda x: x[2], reverse=True)
-        results.append(result)
-    return results
-
-
-def get_submodules_from_kwargs(kwargs):
-    backend = kwargs.get('backend', _KERAS_BACKEND)
-    layers = kwargs.get('layers', _KERAS_LAYERS)
-    models = kwargs.get('models', _KERAS_MODELS)
-    utils = kwargs.get('utils', _KERAS_UTILS)
-    for key in kwargs.keys():
-        if key not in ['backend', 'layers', 'models', 'utils']:
-            raise TypeError('Invalid keyword argument: %s', key)
-    return backend, layers, models, utils
-
-
-def preprocess_input(x, **kwargs):
-    """Preprocesses a numpy array encoding a batch of images.
-    # Arguments
-        x: a 4D numpy array consists of RGB values within [0, 255].
-    # Returns
-        Preprocessed array.
-    """
-    return preprocess_input(x, mode='tf', **kwargs)
 
 
 def _obtain_input_shape(input_shape,
@@ -216,7 +124,7 @@ def _obtain_input_shape(input_shape,
                              'Got `input_shape=' + str(input_shape) + '`')
     return input_shape
 
-@keras_modules_injection
+
 def MobileNet(input_shape=None,
               alpha=1.0,
               depth_multiplier=1,
@@ -225,11 +133,7 @@ def MobileNet(input_shape=None,
               weights='imagenet',
               input_tensor=None,
               pooling=None,
-              classes=1000,
-              **kwargs):
-
-    global backend, layers, models, keras_utils
-    backend, layers, models, keras_utils = get_submodules_from_kwargs(kwargs)
+              classes=1000):
 
     if not (weights in {'imagenet', None} or os.path.exists(weights)):
         raise ValueError('The `weights` argument should be either '
@@ -393,12 +297,12 @@ def _depthwise_conv_block(inputs, pointwise_conv_filters, alpha,
                           depth_multiplier=1, strides=(1, 1), block_id=1):
     channel_axis = 1 if backend.image_data_format() == 'channels_first' else -1
     pointwise_conv_filters = int(pointwise_conv_filters * alpha)
-    if strides == (1, 1):
-        x = inputs
-    else:
-        x = layers.ZeroPadding2D(((0, 1), (0, 1)),
-                                 name='conv_pad_%d' % block_id)(inputs)
-    # x = inputs FIXME:
+    # if strides == (1, 1):
+    #     x = inputs
+    # else:
+    #     x = layers.ZeroPadding2D(((0, 1), (0, 1)),
+    #                              name='conv_pad_%d' % block_id)(inputs)
+    x = inputs
     x = layers.DepthwiseConv2D((3, 3),
                                padding='same' if strides == (1, 1) else 'valid',
                                depth_multiplier=depth_multiplier,
@@ -451,7 +355,7 @@ class Mobilenet(ImageNetModel):
         print('truncated weights shape', wt.shape)
         print('truncated bias shape', bt.shape)
         global_avg_layer = tf.keras.layers.GlobalAveragePooling2D()
-        preds = tf.keras.layers.Dense(100, activation='softmax',
+        preds = tf.keras.layers.Dense(num_classes, activation='softmax',
                                       kernel_initializer=tf.keras.initializers.Constant(wt.tolist()),
                                       bias_initializer=tf.keras.initializers.Constant(bt.tolist()))
         self.core_model = tf.keras.Sequential([
@@ -463,7 +367,6 @@ class Mobilenet(ImageNetModel):
         )
         # Quick check, are we adding the right weights in the right place?
         wn, bn = self.core_model.layers[2].get_weights()
-        import numpy as np
         print(wn.shape, bn.shape)
         print(np.all(wn == wt)) # assert True
         print(np.all(bn == bt)) # assert True

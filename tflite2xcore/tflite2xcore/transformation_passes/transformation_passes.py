@@ -331,7 +331,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def mutate_biases(self, op):
         # NOTE: by default no bias layout rearrangement is done for this op
         with self.using(op):
-            self._weights.name = f"{op.name}/biases"
+            self._biases.name = f"{op.name}/biases"
 
     def mutate_weights(self, op):
         # NOTE: by default no weight layout rearrangement is done for this op

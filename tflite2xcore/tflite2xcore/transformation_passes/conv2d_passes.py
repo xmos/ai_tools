@@ -152,7 +152,7 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
 
         with self.using(op):
             new_op.add_custom_options(
-                stride_h=self._strides[0], stride_w=self._strides[1]  # TODO: change to 'stride'
+                stride=list(self._strides)  # TODO: this cast to list should not be necessary when flexbuffers can deal with tuples
             )
         return new_op
 

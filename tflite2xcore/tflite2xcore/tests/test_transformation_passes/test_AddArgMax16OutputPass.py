@@ -84,7 +84,7 @@ def test_mutate(model, trf_pass):
 
     dim_tensor = argmax_input_tensors[1]
     assert dim_tensor.type == TensorType.INT32
-    assert dim_tensor.shape == []
+    assert len(dim_tensor.shape) == 0
     assert dim_tensor.numpy == 1
 
 

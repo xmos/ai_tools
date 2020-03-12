@@ -285,7 +285,7 @@ class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
         #       keep in mind that this mutation is what can affect other operators
         with self.using(op):
             self._input.name = f"{op.name}/input"
-            self._input.shape[3] = self.MAX_INPUT_CHANNELS  # new, zero-padded shape
+            self._input.shape = [*self._input.shape[:3], self.MAX_INPUT_CHANNELS]  # new, zero-padded shape
 
     def mutate_weights(self, op):
         super().mutate_weights(op)

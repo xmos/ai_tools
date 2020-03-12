@@ -7,6 +7,8 @@ import logging
 
 import numpy as np
 
+from copy import deepcopy
+
 from tflite2xcore.operator_codes import OperatorCode
 
 
@@ -189,7 +191,7 @@ class Tensor():
         self.name = name
         assert isinstance(type_, TensorType)
         self.type = type_
-        self.shape = list(shape)
+        self.shape = shape
 
         if buffer is None:
             self.buffer = self.model.create_buffer()
@@ -203,6 +205,26 @@ class Tensor():
 
         self.producers = producers or []
         self.consumers = consumers or []
+
+    @property
+    def shape(self):
+        return self._shape
+
+    __SHAPE_MAPPER = {
+        type(None): lambda x: tuple(),
+        tuple: lambda x: x,
+        list: lambda x: tuple(x),
+        np.ndarray: lambda x: tuple(x.tolist())
+    }
+
+    @shape.setter
+    def shape(self, shape):
+        shape_type = type(shape)
+        try:
+            self._shape = self.__SHAPE_MAPPER[shape_type](shape)
+        except KeyError as e:
+            raise TypeError("Type of Tensor.shape should be one of "
+                            f"{self.__SHAPE_MAPPER.keys()}") from e
 
     @property
     def model(self):

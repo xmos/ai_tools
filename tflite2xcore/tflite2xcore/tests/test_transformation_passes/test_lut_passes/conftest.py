@@ -92,4 +92,4 @@ def test_mutate(trf_pass, model):
     # check LUT shape
     lut_tensor = op.inputs[1]
     assert len(lut_tensor.buffer.data) == 256
-    assert lut_tensor.shape == [256]
+    assert lut_tensor.shape == (256,)

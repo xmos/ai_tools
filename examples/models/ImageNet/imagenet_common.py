@@ -1,5 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+# TODO: fix this hack
+from os.path import dirname, realpath
+import sys
+sys.path.append(dirname(dirname(realpath(__file__))))
+
+# best to import this before tf
+from model_common import DefaultParser
+
 import logging
 import argparse
 from pathlib import Path
@@ -40,21 +48,3 @@ class ImageNetModel(KerasClassifier):
         self.gen_test_data()
         # Populate converters
         self.populate_converters()
-
-
-class ImagenetDefaultParser(argparse.ArgumentParser):
-
-    def __init__(self, *args, defaults, **kwargs):
-        kwargs["formatter_class"] = argparse.ArgumentDefaultsHelpFormatter
-        super().__init__(*args, **kwargs)
-        self.add_argument(
-            'path', nargs='?', default=defaults['path'],
-            help='Path to a directory where models and data will be saved in subdirectories.')
-        self.add_argument(
-            '-v', '--verbose', action='store_true', default=False,
-            help='Verbose mode.')
-
-    def parse_args(self, *args, **kwargs):
-        args = super().parse_args(*args, **kwargs)
-        utils.set_verbosity(args.verbose)
-        return args

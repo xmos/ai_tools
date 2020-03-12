@@ -87,6 +87,7 @@ def main(raw_args=None):
         'path': DEFAULT_PATH,
     })
     args = parser.parse_args(raw_args)
+
     kwargs = {
         'name': args.name,
         'path': args.path,
@@ -95,7 +96,7 @@ def main(raw_args=None):
     }
     model = SimardTuned(**kwargs) if args.xcore_tuned else Simard(**kwargs)
     model.run(train_new_model=args.train_model,
-              batch_size=args.batch, epochs=args.epochs)
+              batch_size=args.batch_size, epochs=args.epochs)
 
 
 if __name__ == "__main__":

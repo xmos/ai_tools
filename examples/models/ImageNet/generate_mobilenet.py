@@ -2,7 +2,7 @@
 #
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 from pathlib import Path
-from imagenet_common import ImageNetModel, ImagenetDefaultParser
+from imagenet_common import ImageNetModel, DefaultParser
 import tensorflow as tf
 import numpy as np
 from mobilenet_builder import MobileNet
@@ -52,7 +52,7 @@ class Mobilenet(ImageNetModel):
 
 
 def main(raw_args=None):
-    parser = ImagenetDefaultParser(defaults={
+    parser = DefaultParser(defaults={
         'path': DEFAULT_PATH,
     })
     args = parser.parse_args()

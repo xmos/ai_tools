@@ -1,11 +1,22 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+# TODO: fix this hack
+from os.path import dirname, realpath
+import sys
+sys.path.append(dirname(dirname(realpath(__file__))))
+
+from model_common import TrainableParser
+
 import logging
 import argparse
 from pathlib import Path
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasClassifier
 
+
+#  ----------------------------------------------------------------------------
+#                                  MODELS
+#  ----------------------------------------------------------------------------
 
 class MNISTModel(KerasClassifier):
     def __init__(self, *args, use_aug=False, **kwargs):
@@ -47,67 +58,44 @@ class MNISTModel(KerasClassifier):
 #                                   PARSERS
 #  ----------------------------------------------------------------------------
 
-
-class CommonDefaultParser(argparse.ArgumentParser):
+class MNISTDefaultParser(TrainableParser):
 
     def __init__(self, *args, defaults, **kwargs):
-        kwargs["formatter_class"] = argparse.ArgumentDefaultsHelpFormatter
-        super().__init__(*args, **kwargs)
-        self.add_argument(
-            'path', nargs='?', default=defaults['path'],
-            help='Path to a directory where models and data will be saved in subdirectories.')
+        super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
             '--name', type=str, default=defaults['name'],
-            help='Name of the model, used in the creation of the model itself and subdirectories.')
-        self.add_argument(
-            '--use_gpu', action='store_true', default=False,
-            help='Use GPU for training. Might result in non-reproducible results.')
-        self.add_argument(
-            '--train_model', action='store_true', default=False,
-            help='Train new model instead of loading pretrained tf.keras model.')
+            help="Name of the model, used in the creation of the model itself "
+                 "and the target subdirectories."
+        )
         self.add_argument(
             '--classifier', action='store_true', default=False,
-            help='Apply classifier optimizations during xcore conversion.')
-        self.add_argument(
-            '-bs', '--batch', type=int, default=defaults['batch_size'],
-            help='Batch size.')
-        self.add_argument(
-            '-ep', '--epochs', type=int, default=defaults['epochs'],
-            help='Number of epochs.')
+            help='Apply classifier optimizations during xcore conversion.'
+        )
         self.add_argument(
             '-aug', '--augment_dataset', action='store_true', default=False,
-            help='Create a dataset with elastic transformations.')
-        self.add_argument(
-            '-v', '--verbose', action='store_true', default=False,
-            help='Verbose mode.')
+            help='Create a dataset with elastic transformations.'  # TODO: does this always mean elastic trf?
+        )
 
-    def parse_args(self, *args, **kwargs):
-        args = super().parse_args(*args, **kwargs)
-        utils.set_verbosity(args.verbose)
-        utils.set_gpu_usage(args.use_gpu, args.verbose)
-        return args
-
-
-class MNISTDefaultParser(CommonDefaultParser):
-
-    def parse_args(self, *args, **kwargs):
-        args = super().parse_args(*args, **kwargs)
+    def _name_handler(self, args):
         if args.classifier:
             args.name = '_'.join([args.name, 'cls'])
+
+    def parse_args(self, *args, **kwargs):
+        args = super().parse_args(*args, **kwargs)
+        self._name_handler(args)
         args.path = Path(args.path)/args.name
         return args
 
 
-class XcoreTunedParser(CommonDefaultParser):
+class XcoreTunedParser(MNISTDefaultParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
             '--xcore_tuned', action='store_true', default=False,
-            help='Use a variation of the model tuned for xcore.ai.')
+            help='Use a variation of the model tuned for xcore.ai.'
+        )
 
-    def parse_args(self, *args, **kwargs):
-        args = super().parse_args(*args, **kwargs)
+    def _name_handler(self, args):
         if args.xcore_tuned:
-            args.name = '_'.join([args.name, ('cls' if args.classifier else 'tuned')])
-        args.path = Path(args.path)/args.name
-        return args
+            args.name = '_'.join([args.name, 'tuned'])
+        super()._name_handler(args)

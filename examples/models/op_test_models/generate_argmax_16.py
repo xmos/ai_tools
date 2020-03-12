@@ -125,7 +125,7 @@ class ArgMax16(common.OpTestDefaultModel):
 
 
 def main(raw_args=None):
-    parser = common.OpTestDefaultParser(defaults={
+    parser = common.DefaultParser(defaults={
         'path': DEFAULT_PATH,
     })
     parser.add_argument(

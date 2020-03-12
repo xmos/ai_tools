@@ -2,14 +2,12 @@
 #
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 from pathlib import Path
-from tflite2xcore.model_generation import utils
-from mnist_common import MNISTModel, get_default_parser, run_main
+from mnist_common import MNISTModel, MNISTDefaultParser
 import tensorflow as tf
+from tensorflow.keras import layers
 
-DEFAULT_PATH = {
-    'logistic_regression': Path(__file__).parent.joinpath('debug', 'logistic_regression').resolve(),
-    'logistic_regression_cls': Path(__file__).parent.joinpath('debug', 'logistic_regression_cls').resolve()
-}
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug')
+DEFAULT_NAME = 'logistic_regression'
 DEFAULT_EPOCHS = 30
 DEFAULT_BS = 64
 
@@ -18,14 +16,13 @@ class LogisticRegression(MNISTModel):
 
     def build(self):
         self._prep_backend()
-        utils.set_all_seeds(seed=824)
         # Building
         self.core_model = tf.keras.Sequential(
             name=self.name,
             layers=[
-                tf.keras.layers.Flatten(input_shape=(28, 28, 1), name='input'),
-                tf.keras.layers.Dense(10, activation='softmax',
-                                      kernel_regularizer=tf.keras.regularizers.l1(2e-5))
+                layers.Flatten(input_shape=(28, 28, 1), name='input'),
+                layers.Dense(10, activation='softmax',
+                             kernel_regularizer=tf.keras.regularizers.l1(2e-5))
             ]
         )
         # Compilation
@@ -41,33 +38,24 @@ class LogisticRegression(MNISTModel):
         super().prep_data(padding=0)
 
 
-def main(path=None, train_new_model=False,
-         batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
-         use_aug=False, opt_classifier=False):
-    name = 'logistic_regression_cls' if opt_classifier else 'logistic_regression'
+def main(raw_args=None):
+    parser = MNISTDefaultParser(defaults={
+        'batch_size': DEFAULT_BS,
+        'epochs': DEFAULT_EPOCHS,
+        'name': DEFAULT_NAME,
+        'path': DEFAULT_PATH,
+    })
+    args = parser.parse_args(raw_args)
     kwargs = {
-        'name': name,
-        'path': path if path else DEFAULT_PATH[name],
-        'opt_classifier': opt_classifier,
-        'use_aug': use_aug
+        'name': args.name,
+        'path': args.path,
+        'opt_classifier': args.classifier,
+        'use_aug': args.augment_dataset
     }
-    run_main(
-        model=LogisticRegression(**kwargs),
-        train_new_model=train_new_model,
-        batch_size=batch_size, epochs=epochs
-    )
+    model = LogisticRegression(**kwargs)
+    model.run(train_new_model=args.train_model,
+              batch_size=args.batch, epochs=args.epochs)
 
 
 if __name__ == '__main__':
-    parser = get_default_parser(DEFAULT_BS=DEFAULT_BS, DEFAULT_EPOCHS=DEFAULT_EPOCHS)
-    args = parser.parse_args()
-
-    utils.set_verbosity(args.verbose)
-    utils.set_gpu_usage(args.use_gpu, args.verbose)
-
-    main(path=args.path,
-         train_new_model=args.train_model,
-         batch_size=args.batch,
-         epochs=args.epochs,
-         use_aug=args.augment_dataset,
-         opt_classifier=args.classifier)
+    main()

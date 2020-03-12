@@ -11,7 +11,7 @@ DEFAULT_PATH = {
     'mlp_tuned': Path(__file__).parent.joinpath('debug', 'mlp_tuned').resolve(),
     'mlp_cls': Path(__file__).parent.joinpath('debug', 'mlp_cls').resolve()
 }
-DEFAULT_EPOCHS = 67
+DEFAULT_EPOCHS = 90
 DEFAULT_BS = 512
 
 
@@ -24,18 +24,18 @@ class MLP(MNISTModel):
             layers=[
                 tf.keras.layers.Flatten(input_shape=(32, 32, 1), name='input'),
                 tf.keras.layers.Dense(390, activation='tanh', name='dense_1',
-                                      kernel_regularizer=tf.keras.regularizers.l1(1.25e-05)),
-                tf.keras.layers.Dropout(0.11),
+                                      kernel_regularizer=tf.keras.regularizers.l1(7.999999999999999e-05)),
+                tf.keras.layers.Dropout(0.17),
                 tf.keras.layers.Dense(290, activation='tanh', name='dense_2',
-                                      kernel_regularizer=tf.keras.regularizers.l1(1.25e-05)),
-                tf.keras.layers.Dropout(0.11),
+                                      kernel_regularizer=tf.keras.regularizers.l1(7.999999999999999e-055)),
+                tf.keras.layers.Dropout(0.17),
                 tf.keras.layers.Dense(10, activation='softmax', name='output',
-                                      kernel_regularizer=tf.keras.regularizers.l1(1.25e-05))
+                                      kernel_regularizer=tf.keras.regularizers.l1(7.999999999999999e-055))
             ])
         # Compilation
         self.core_model.compile(
             loss='sparse_categorical_crossentropy',
-            optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.011447083554223036),
+            optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.010007774219692843),
             metrics=['accuracy'])
         # Show summary
         self.core_model.summary()

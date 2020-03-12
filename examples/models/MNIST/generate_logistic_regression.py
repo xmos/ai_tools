@@ -10,28 +10,28 @@ DEFAULT_PATH = {
     'logistic_regression': Path(__file__).parent.joinpath('debug', 'logistic_regression').resolve(),
     'logistic_regression_cls': Path(__file__).parent.joinpath('debug', 'logistic_regression_cls').resolve()
 }
-DEFAULT_EPOCHS = 30
-DEFAULT_BS = 64
+DEFAULT_EPOCHS = 10
+DEFAULT_BS = 512
 
 
 class LogisticRegression(MNISTModel):
 
     def build(self):
         self._prep_backend()
-        utils.set_all_seeds(seed=824)
+        utils.set_all_seeds(seed=42)
         # Building
         self.core_model = tf.keras.Sequential(
             name=self.name,
             layers=[
                 tf.keras.layers.Flatten(input_shape=(28, 28, 1), name='input'),
                 tf.keras.layers.Dense(10, activation='softmax',
-                                      kernel_regularizer=tf.keras.regularizers.l1(2e-5))
+                                      kernel_regularizer=tf.keras.regularizers.l1(0.00019899999999999999))
             ]
         )
         # Compilation
         self.core_model.compile(
             loss='sparse_categorical_crossentropy',
-            optimizer='adam',
+            optimizer=tf.keras.optimizers.Adam(0.012877456566121567),
             metrics=['accuracy']
         )
         # Show summary

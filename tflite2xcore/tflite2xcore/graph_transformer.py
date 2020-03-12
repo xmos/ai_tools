@@ -18,6 +18,7 @@ class PassPriority(enum.IntEnum):
     PREP = HIGHEST
     HIGH = enum.auto()
     MEDIUM = enum.auto()
+    FUSING = enum.auto()
     ARGMAX = enum.auto()
     PAR = enum.auto()
     CLEANUP = enum.auto()

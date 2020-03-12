@@ -7,7 +7,7 @@ from tflite2xcore.xcore_model import TensorType
 
 # TODO: use multiple different models instead of just mlp
 from .test_ReplaceFullyConnectedIntermediatePass import (
-    outputs, hidden_nodes, input_size, mlp
+    outputs, hidden_nodes, input_shape, mlp
 )
 
 

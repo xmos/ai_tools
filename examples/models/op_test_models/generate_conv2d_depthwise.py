@@ -61,7 +61,7 @@ def main(raw_args=None):
         conflict_handler='resolve',
         defaults={
             'path': DEFAULT_PATH,
-            'inputs': 1,
+            'inputs': -1,
             'outputs': DEFAULT_OUTPUTS,
             'width': DEFAULT_WIDTH,
             'height': DEFAULT_HEIGHT,
@@ -85,8 +85,8 @@ def main(raw_args=None):
         }
     )
     parser.add_argument(
-        "-in", "--inputs", type=int, default=1, choices=[1],
-        help=argparse.SUPPRESS,
+        "-in", "--inputs", type=int, default=-1, choices=[-1],
+        help=argparse.SUPPRESS
     )
     args = parser.parse_args(raw_args)
     utils.set_gpu_usage(False, args.verbose)

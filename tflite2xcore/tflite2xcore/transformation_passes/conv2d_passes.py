@@ -95,6 +95,7 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
 
         with self.using(op):
             new_op.add_custom_options(
+                pad=self._padding,
                 stride=list(self._strides)  # TODO: this cast to list should not be necessary when flexbuffers can deal with tuples
             )
         return new_op
@@ -209,7 +210,7 @@ class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
 
         with self.using(op):
             new_op.add_custom_options(
-                padding=self._padding, stride_h=self._strides[0], stride_w=self._strides[1]  # TODO: change to 'stride'
+                padding=self._padding, stride_h=self._strides[0], stride_w=self._strides[1]  # TODO: change to 'stride' and 'pad'
             )
         return new_op
 

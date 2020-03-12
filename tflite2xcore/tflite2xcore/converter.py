@@ -82,6 +82,8 @@ def optimize_for_xcore(model, *, is_classifier, remove_softmax, cleanup=True):
     pass_mgr.register_pass(passes.ReplaceTanhPass())
     pass_mgr.register_pass(passes.ReplaceLogisticPass())
 
+    pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
+
     if cleanup:
         pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
         pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())

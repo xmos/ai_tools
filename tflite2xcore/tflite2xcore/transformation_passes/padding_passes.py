@@ -49,4 +49,21 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
         return True
 
     def mutate(self, op):
-        raise NotImplementedError()
+        old_input = op.inputs[0]
+        producer = old_input.producers[0]
+
+        # add connection from unpadded input to convolution operator
+        op.inputs[0] = producer.inputs[0]
+        producer.inputs[0].consumers.append(op)
+
+        # remove old input and padding op (if it has no other consumers)
+        # NOTE: the paddings tensor will be dangling and will be cleaned up later
+        pad_params = producer.inputs[1].numpy.tolist()
+        op.subgraph.remove_tensor(old_input)
+        if not producer.outputs:
+            op.subgraph.remove_operator(producer)
+
+        # set padding: [top, left, zero_point]
+        op.custom_options['pad'] = [pad_params[1][0],
+                                    pad_params[2][0],
+                                    op.inputs[0].quantization['zero_point'][0]]

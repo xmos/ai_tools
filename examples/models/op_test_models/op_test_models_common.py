@@ -85,6 +85,8 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
                     "Negative dimension size (Hint: if using 'valid' padding "
                     "verify that the kernel is at least the size of input image)"
                 ) from e
+            else:
+                raise e from None
 
     def run(self, *,
             num_threads, input_channels, output_channels,
@@ -377,6 +379,7 @@ class OpTestImgParser(OpTestInitializerParser):
             )
 
 
+# TODO: after the conv2d enhancements, this should be used in the conv parsers
 class OpTestPoolParser(OpTestImgParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)

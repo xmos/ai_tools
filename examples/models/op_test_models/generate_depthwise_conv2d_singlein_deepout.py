@@ -48,6 +48,8 @@ class DepthwiseConv2DSingleinDeepout(common.OpTestDefaultModel):
                     "Negative dimension size (Hint: if using 'valid' padding "
                     "verify that the kernel is at least the size of input image)"
                 ) from e
+            else:
+                raise e from None
 
     def run(self, *,
             num_threads, output_channels,

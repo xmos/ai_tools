@@ -20,7 +20,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
 class DepthwiseConv2D(common.OpTestDefaultModel):
     def build_core_model(
             self, K_h, K_w, height, width, output_channels, *,
-            padding, **inits):
+            padding, strides, **inits):
         assert output_channels % 4 == 0, "# of output channels must be multiple of 4"
         self.input_init = inits['input_init']
         try:
@@ -30,6 +30,7 @@ class DepthwiseConv2D(common.OpTestDefaultModel):
                     tf.keras.layers.DepthwiseConv2D(kernel_size=(K_h, K_w),
                                                     depth_multiplier=1,
                                                     padding=padding,
+                                                    strides=strides,
                                                     input_shape=(height, width, output_channels),
                                                     bias_initializer=inits['bias_init'],
                                                     depthwise_initializer=inits['weight_init'])
@@ -44,12 +45,14 @@ class DepthwiseConv2D(common.OpTestDefaultModel):
                     "Negative dimension size (Hint: if using 'valid' padding "
                     "verify that the kernel is at least the size of input image)"
                 ) from e
+            else:
+                raise e from None
 
     def run(self, *,
             num_threads, output_channels,
-            height, width, K_h, K_w, padding, **inits):
+            height, width, K_h, K_w, padding, strides, **inits):
         self.build(K_h, K_w, height, width, output_channels,
-                   padding=padding, **inits)
+                   padding=padding, strides=strides, **inits)
         self.gen_test_data()
         self.save_core_model()
         self.populate_converters(
@@ -88,7 +91,12 @@ def main(raw_args=None):
         "-in", "--inputs", type=int, default=-1, choices=[-1],
         help=argparse.SUPPRESS
     )
+    parser.add_argument(  # TODO: use the a better parser for this after the conv2d enhancements
+        "-st", "--strides", nargs=2, type=int, default=[1, 1],
+        help=f"Strides, vertical first",
+    )
     args = parser.parse_args(raw_args)
+    args.strides = tuple(args.strides)  # TODO: fix this
     utils.set_gpu_usage(False, args.verbose)
 
     model = DepthwiseConv2D('depthwise_conv2d', args.path)
@@ -99,6 +107,7 @@ def main(raw_args=None):
               K_h=args.kernel_height,
               K_w=args.kernel_width,
               padding=args.padding,
+              strides=args.strides,
               **args.inits)
 
 

@@ -17,7 +17,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
     'debug', 'conv2d_shallowin_deepout_relu').resolve()
 
 
-class Conv2dShallowinDeepoutRelu(common.OpTestDeepoutConvModel):
+class Conv2DShallowinDeepoutRelu(common.OpTestDeepoutConvModel):
     def build_core_model(self, *args, **kwargs):
         K_w, input_channels = args[1], args[4]
         assert input_channels <= 4, "Number of input channels must be at most 4"
@@ -53,7 +53,7 @@ def main(raw_args=None):
     args = parser.parse_args(raw_args)
     utils.set_gpu_usage(False, args.verbose)
 
-    model = Conv2dShallowinDeepoutRelu('conv2d_shallowin_deepout_relu', args.path)
+    model = Conv2DShallowinDeepoutRelu('conv2d_shallowin_deepout_relu', args.path)
     model.run(num_threads=None,
               input_channels=args.inputs,
               output_channels=args.outputs,

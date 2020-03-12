@@ -18,7 +18,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
 DEFAULT_NUM_THREADS = 1
 
 
-class Conv2dDeepinDeepoutRelu(common.OpTestDeepoutConvModel):
+class Conv2DDeepinDeepoutRelu(common.OpTestDeepoutConvModel):
     def build_core_model(self, *args, **kwargs):
         input_channels = args[4]
         K_h, K_w = args[0], args[1]
@@ -58,7 +58,7 @@ def main(raw_args=None):
     args = parser.parse_args(raw_args)
     utils.set_gpu_usage(False, args.verbose)
 
-    model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', args.path)
+    model = Conv2DDeepinDeepoutRelu('conv2d_deepin_deepout_relu', args.path)
     model.run(num_threads=args.num_threads,
               input_channels=args.inputs,
               output_channels=args.outputs,

@@ -9,7 +9,7 @@ from tflite2xcore.transformation_passes import ReplaceDepthwiseConv2dPass
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_depthwise_conv2d
 from .conftest import (
     PARAMS,
-    _test_non_matching_dim,
+    _test_non_matching_params,
     test_matching_params,
     test_non_matching_types
 )
@@ -70,7 +70,9 @@ def test_non_matching_depth_multiplier(trf_pass, build_model,
                                        weight_shape, input_size, padding, strides,
                                        non_matching_depth_multiplier):
     weight_shape[3] = non_matching_depth_multiplier
-    _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
+    model = build_model(weight_shape=weight_shape, input_size=input_size,
+                        padding=padding, strides=strides)
+    _test_non_matching_params(trf_pass, model)
 
 
 if __name__ == "__main__":

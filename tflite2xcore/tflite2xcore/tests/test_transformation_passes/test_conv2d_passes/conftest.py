@@ -78,12 +78,12 @@ def input_size(input_height, input_width):
 #                                   HELPERS
 #  ----------------------------------------------------------------------------
 
-
-def _test_non_matching_dim(trf_pass, build_model,
-                           weight_shape, input_size, padding, strides):
-    model = build_model(weight_shape=weight_shape, input_size=input_size,
-                        padding=padding, strides=strides)
+def _test_non_matching_params(trf_pass, model):
     assert not trf_pass.match(model.subgraphs[0].operators[-1])
+
+
+def _test_matching_params(trf_pass, model):
+    assert trf_pass.match(model.subgraphs[0].operators[-1])
 
 
 #  ----------------------------------------------------------------------------
@@ -91,50 +91,58 @@ def _test_non_matching_dim(trf_pass, build_model,
 #  ----------------------------------------------------------------------------
 
 def test_matching_params(trf_pass, model):
-    assert trf_pass.match(model.subgraphs[0].operators[-1])
+    _test_matching_params(trf_pass, model)
 
 
 def test_non_matching_output_channels(trf_pass, build_model,
                                       weight_shape, input_size, padding, strides,
                                       non_matching_output_channels):
     weight_shape[0] = non_matching_output_channels
-    _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
+    model = build_model(weight_shape=weight_shape, input_size=input_size,
+                        padding=padding, strides=strides)
+    _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_kernel_height(trf_pass, build_model,
                                     weight_shape, input_size, padding, strides,
                                     non_matching_kernel_height):
     weight_shape[1] = non_matching_kernel_height
-    _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
+    model = build_model(weight_shape=weight_shape, input_size=input_size,
+                        padding=padding, strides=strides)
+    _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_kernel_width(trf_pass, build_model,
                                    weight_shape, input_size, padding, strides,
                                    non_matching_kernel_width):
     weight_shape[2] = non_matching_kernel_width
-    _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
+    model = build_model(weight_shape=weight_shape, input_size=input_size,
+                        padding=padding, strides=strides)
+    _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_input_channels(trf_pass, build_model,
                                      weight_shape, input_size, padding, strides,
                                      non_matching_input_channels):
     weight_shape[3] = non_matching_input_channels
-    _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
+    model = build_model(weight_shape=weight_shape, input_size=input_size,
+                        padding=padding, strides=strides)
+    _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_types(trf_pass, model, non_matching_tensors):
     subgraph = model.subgraphs[0]
     subgraph.get_tensor(non_matching_tensors[0]).type = non_matching_tensors[1]
-    assert not trf_pass.match(subgraph.operators[-1])
+    _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_stride_w(trf_pass, model, non_matching_stride_w):
     op = model.subgraphs[0].operators[0]
     op.builtin_options['stride_w'] = non_matching_stride_w
-    assert not trf_pass.match(model.subgraphs[0].operators[-1])
+    _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_stride_h(trf_pass, model, non_matching_stride_h):
     op = model.subgraphs[0].operators[0]
     op.builtin_options['stride_h'] = non_matching_stride_h
-    assert not trf_pass.match(model.subgraphs[0].operators[-1])
+    _test_non_matching_params(trf_pass, model)

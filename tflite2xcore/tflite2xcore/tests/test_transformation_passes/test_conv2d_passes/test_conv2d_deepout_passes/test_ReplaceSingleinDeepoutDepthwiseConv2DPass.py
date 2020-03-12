@@ -13,7 +13,7 @@ from ..test_ReplaceDepthwiseConv2dPass import (
 )
 from .conftest import (
     PARAMS,
-    _test_non_matching_dim,
+    _test_non_matching_params,
     test_matching_params,
     test_non_matching_types,
     test_non_matching_stride_w,
@@ -63,21 +63,27 @@ def test_non_matching_kernel_height(trf_pass, build_model,
                                     weight_shape, input_size, padding, strides,
                                     non_matching_kernel_height):
     weight_shape[0] = non_matching_kernel_height
-    _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
+    model = build_model(weight_shape=weight_shape, input_size=input_size,
+                        padding=padding, strides=strides)
+    _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_kernel_width(trf_pass, build_model,
                                    weight_shape, input_size, padding, strides,
                                    non_matching_kernel_width):
     weight_shape[1] = non_matching_kernel_width
-    _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
+    model = build_model(weight_shape=weight_shape, input_size=input_size,
+                        padding=padding, strides=strides)
+    _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_input_channels(trf_pass, build_model,
                                      weight_shape, input_size, padding, strides,
                                      non_matching_input_channels):
     weight_shape[2] = non_matching_input_channels
-    _test_non_matching_dim(trf_pass, build_model, weight_shape, input_size, padding, strides)
+    model = build_model(weight_shape=weight_shape, input_size=input_size,
+                        padding=padding, strides=strides)
+    _test_non_matching_params(trf_pass, model)
 
 
 if __name__ == "__main__":

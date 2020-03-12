@@ -289,9 +289,9 @@ def build_DW(subgraph=None, *, weight_shape, input_size, padding, strides):
     tout = subgraph.create_tensor('output', tin.type, output_shape, isoutput=True)
 
     op = subgraph.create_operator(
-        OperatorCode(XCOREOpCodes.XC_conv2d_deepin_deepout_relu),
+        OperatorCode(XCOREOpCodes.XC_conv2d_depthwise),
         inputs=[tin, w, b], outputs=[tout])
-    op.add_custom_options(padding=padding, stride=[strides[0], strides[1]])
+    op.add_custom_options(pad=padding, stride=[strides[0], strides[1]])
 
     return subgraph.model
 
@@ -304,9 +304,8 @@ def build_pad(subgraph=None, *, input_shape, paddings):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     output_shape = [i + sum(p) for i, p in zip(input_shape, paddings)]
-    tin = subgraph.create_tensor(
-        'input', TensorType.INT8, input_shape, isinput=True)
-    tout = subgraph.create_tensor('output', tin.type, output_shape, isoutput=True)
+    tin = subgraph.create_tensor('unpadded', TensorType.INT8, input_shape, isinput=True)
+    tout = subgraph.create_tensor('padded', tin.type, output_shape, isoutput=True)
     p = subgraph.create_tensor('paddings', TensorType.INT32, shape=[4, 2])
     p.buffer.data = numpy.int32(paddings)
 
@@ -314,3 +313,23 @@ def build_pad(subgraph=None, *, input_shape, paddings):
                              inputs=[tin, p], outputs=[tout])
 
     return subgraph.model
+
+
+def build_padded_DW(subgraph=None, *, weight_shape, input_size, paddings, strides):
+    input_shape = [1, *input_size, weight_shape[-1]]
+    model = build_pad(subgraph, input_shape=input_shape, paddings=paddings)
+    subgraph = subgraph or model.subgraphs[0]
+    output_shape = subgraph.outputs[0].shape
+
+    build_DW(subgraph,
+             weight_shape=weight_shape, input_size=output_shape[1:3],
+             padding='VALID', strides=strides)
+
+    pad_op, conv_op = subgraph.operators[:2]
+    old_input = conv_op.inputs[0]
+    conv_op.inputs[0] = pad_op.outputs[0]
+    subgraph.remove_tensor(old_input)
+    subgraph.outputs.remove(pad_op.outputs[0])
+    pad_op.outputs[0].consumers.append(conv_op)
+
+    return model

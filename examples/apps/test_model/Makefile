@@ -132,6 +132,7 @@ SOURCES := \
 	lib_nn/src/c/nn_operator.c \
 	lib_nn/src/c/nn_operator_conv.c \
 	lib_nn/src/c/conv2d_1x1.c \
+	lib_nn/src/c/conv2d_depthwise.c \
 	lib_nn/src/c/avgpool2d.c \
 	lib_nn/src/c/maxpool2d.c \
 	lib_nn/src/c/fully_connected.c \
@@ -154,6 +155,11 @@ else # must be xcore
 		lib_nn/src/asm/vpu_memcpy.S \
 		lib_nn/src/asm/requantize_16_to_8.S \
 		lib_nn/src/asm/lookup8.S \
+		lib_nn/src/asm/util/nn_compute_hstrip_depthwise.S \
+		lib_nn/src/asm/util/nn_compute_patch_depthwise.S \
+		lib_nn/src/asm/util/nn_compute_hstrip_depthwise_bias_adj.S \
+		lib_nn/src/asm/util/nn_compute_patch_depthwise_padded.S \
+		lib_nn/src/asm/util/nn_compute_hstrip_depthwise_padded.S \
 		tensorflow/lite/micro/xcore/debug_log.cc 
 endif
 

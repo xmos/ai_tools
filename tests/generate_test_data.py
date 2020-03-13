@@ -52,8 +52,10 @@ def generate_test_case(dry_run, test_case):
     else:
         train_model_flag = ''
 
+    subtype = test_case.get('subtype', '')
+
     folder, arguments = make_folder_and_arguments(**parameters)
-    output_dir = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, operator, folder)
+    output_dir = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, operator, subtype, folder)
     cmd = f'python {generator} {train_model_flag} {arguments} -path {output_dir}'
     with stdout_lock:
         print(f'running: {cmd}')

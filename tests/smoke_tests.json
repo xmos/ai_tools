@@ -40,5 +40,20 @@
     {
         "generator": "../examples/models/op_test_models/generate_argmax_16.py",
         "operator": "XC_argmax_16"
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "depthwise"
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_padded.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "padded"
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_singlein_deepout.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "singlein_deepout"
     }
 ]

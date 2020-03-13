@@ -18,6 +18,7 @@ def load_tests(test_name):
     supported_operators = set([
         operator_codes.XCOREOpCodes.XC_argmax_16.name,
         operator_codes.XCOREOpCodes.XC_conv2d_1x1.name,
+        operator_codes.XCOREOpCodes.XC_conv2d_depthwise.name,
         operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name,
         operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name,
         operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name,
@@ -112,6 +113,10 @@ def test_XC_argmax_16(test_model_app, XC_argmax_16_test_case):
 
 def test_XC_conv2d_1x1(test_model_app, XC_conv2d_1x1_test_case):
     assert(run_test_case(test_model_app, XC_conv2d_1x1_test_case))
+
+
+def test_XC_conv2d_depthwise(test_model_app, XC_conv2d_depthwise_test_case):
+    assert(run_test_case(test_model_app, XC_conv2d_depthwise_test_case))
 
 
 @pytest.mark.xfail

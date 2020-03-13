@@ -268,6 +268,94 @@
         }
     },
     {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "depthwise",
+        "parameters": {
+            "-wi": 4, "-hi": 4, "-pd": "same", "-out": 4, "-kh": 3, "-kw": 3, "-st": [1, 1]
+        }
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "depthwise",
+        "parameters": {
+            "-wi": 4, "-hi": 4, "-pd": "valid", "-out": 4, "-kh": 3, "-kw": 3, "-st": [1, 1]
+        }
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "depthwise",
+        "parameters": {
+            "-wi": 5, "-hi": 5, "-pd": "valid", "-out": 8, "-kh": 3, "-kw": 3, "-st": [1, 1]
+        }
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "depthwise",
+        "parameters": {
+            "-wi": 10, "-hi": 10, "-pd": "valid", "-out": 8, "-kh": 5, "-kw": 5, "-st": [2, 2]
+        }
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_padded.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "padded",
+        "parameters": {
+            "-wi": 5, "-hi": 5, "-out": 4, "-kh": 3, "-kw": 3, "-pd": [1, 1, 1, 1], "-st": [1, 1]
+        }
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_padded.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "padded",
+        "parameters": {
+            "-wi": 10, "-hi": 10, "-out": 8, "-kh": 5, "-kw": 5, "-pd": [2, 2, 2, 2], "-st": [1, 1]
+        }
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_padded.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "padded",
+        "parameters": {
+            "-wi": 10, "-hi": 10, "-out": 8, "-kh": 3, "-kw": 3, "-pd": [1, 1, 1, 1], "-st": [2, 2]
+        }
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_padded.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "padded",
+        "parameters": {
+            "-wi": 10, "-hi": 10, "-out": 4, "-kh": 3, "-kw": 3, "-pd": [1, 1, 1, 1], "-st": [2, 2]
+        }
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_padded.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "padded",
+        "parameters": {
+            "-wi": 10, "-hi": 10, "-out": 4, "-kh": 5, "-kw": 5, "-pd": [2, 2, 1, 1], "-st": [1, 1]
+        }
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_singlein_deepout.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "singlein_deepout",
+        "parameters": {
+            "-wi": 5, "-hi": 5, "-pd": "same", "-out": 16, "-kh": 3, "-kw": 3
+        }
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_singlein_deepout.py",
+        "operator": "XC_conv2d_depthwise",
+        "subtype": "singlein_deepout",
+        "parameters": {
+            "-wi": 5, "-hi": 5, "-pd": "valid", "-out": 32, "-kh": 3, "-kw": 3
+        }
+    },
+    {
         "generator": "../examples/models/op_test_models/generate_fully_connected.py",
         "operator": "XC_fc_deepin_anyout",
         "parameters": {

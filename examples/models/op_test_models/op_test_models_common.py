@@ -55,10 +55,10 @@ class OpTestDefaultModel(KerasModel):
     def gen_test_data(self):
         assert self.input_shape, "To generate test data this model needs an input shape"
         assert self.input_init, "To generate test data this model needs an input initializer"
-        self.data["export_data"], self.data["quant"] = input_initializer(
+        self.data['export'], self.data['quant'] = input_initializer(
             self.input_init, *self.input_shape)
-        # logging.debug(f'EXPORT DATA SAMPLE:\n{self.data["export_data"][4][0]}')
-        # logging.debug(f'QUANT DATA SAMPLE:\n{self.data["quant"][0][0]}')
+        # logging.debug(f'EXPORT DATA SAMPLE:\n{self.data['export'][4][0]}')
+        # logging.debug(f'QUANT DATA SAMPLE:\n{self.data['quant'][0][0]}')
 
     def run(self):
         self.save_core_model()
@@ -148,7 +148,7 @@ class OpTestDefaultFCModel(KerasModel):
             self.prep_data()
         subset_inds = np.searchsorted(
             self.data['y_test'].flatten(), np.arange(self.output_dim))
-        self.data['export_data'] = self.data['x_test'][subset_inds]  # pylint: disable=unsubscriptable-object
+        self.data['export'] = self.data['x_test'][subset_inds]  # pylint: disable=unsubscriptable-object
         self.data['quant'] = self.data['x_train']
 
     def convert_to_stripped(self, **converter_args):
@@ -220,6 +220,7 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
 
 
 # TODO: generalize this to produce a tensor of any rank between 2 and 4
+# TODO: rename and probably move this to model_generation utils
 def input_initializer(init, *args, batch=100, subset_len=10):
     assert batch >= subset_len, "Example subset cannot be larger than the full quantization set"
     height, width, channels = args[:3]  # pylint: disable=unbalanced-tuple-unpacking
@@ -231,7 +232,6 @@ def input_initializer(init, *args, batch=100, subset_len=10):
 #  ----------------------------------------------------------------------------
 #                                   PARSERS
 #  ----------------------------------------------------------------------------
-
 
 class OpTestInitializers(Enum):
     UNIF = "unif"

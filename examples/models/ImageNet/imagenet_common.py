@@ -35,7 +35,7 @@ class ImageNetModel(KerasClassifier):
     def gen_test_data(self):
         if not self.data:
             self.prep_data()
-        self.data['export_data'] = self.data['x_test']
+        self.data['export'] = self.data['x_test']
         self.data['quant'] = self.data['x_train']
 
     def run(self):

@@ -42,13 +42,19 @@ def add_float_input_output(model):
     input_tensor = subgraph.inputs[0]
     output_tensor = subgraph.outputs[0]
 
+    input_tensor.buffer.owners = []
     model.buffers.remove(input_tensor.buffer)
     model.buffers.remove(output_tensor.buffer)
     input_tensor.buffer = output_tensor.buffer
+    input_tensor.buffer.owners.append(input_tensor)
     model.buffers.insert(0, input_tensor.buffer)
 
 
-def optimize_for_xcore(model, *, is_classifier, remove_softmax, cleanup=True):
+def optimize_for_xcore(model, *,
+                       is_classifier=False,
+                       remove_softmax=False,
+                       cleanup=True,
+                       num_threads=None):
     pass_mgr = PassManager(
         model,
         passes=[
@@ -81,30 +87,24 @@ def optimize_for_xcore(model, *, is_classifier, remove_softmax, cleanup=True):
     pass_mgr.register_pass(passes.ReplaceTanhPass())
     pass_mgr.register_pass(passes.ReplaceLogisticPass())
 
+    if num_threads:
+        pass_mgr.register_pass(passes.ParallelizeDIDOPass(num_threads=num_threads))
+
     if cleanup:
         pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
         pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 
     pass_mgr.run_passes()
+    model.sanity_check()
 
-    model.description = 'TOCO + XMOS converted.'
-
-
-def parallelize_for_xcore(model, *, num_threads):
-    pass_mgr = PassManager(
-        model,
-        passes=[
-            passes.ParallelizeDIDOPass(num_threads=num_threads)
-        ]
-    )
-
-    pass_mgr.run_passes()
+    model.description = 'XMOS converted.'
 
 
 def convert(tflite_input_path, tflite_output_path, *,
             is_classifier=False, remove_softmax=False, num_threads=None):
     model = read_flatbuffer(tflite_input_path)
-    optimize_for_xcore(model, is_classifier=is_classifier, remove_softmax=remove_softmax)
-    parallelize_for_xcore(model, num_threads=num_threads)
-    model.sanity_check()
+    optimize_for_xcore(model,
+                       is_classifier=is_classifier,
+                       remove_softmax=remove_softmax,
+                       num_threads=num_threads)
     write_flatbuffer(model, tflite_output_path)

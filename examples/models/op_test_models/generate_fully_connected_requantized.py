@@ -4,7 +4,7 @@
 from pathlib import Path
 from tflite2xcore.model_generation import utils
 import tflite2xcore.converter as xcore_conv
-from tflite2xcore import read_flatbuffer, write_flatbuffer
+from tflite2xcore.serialization.flatbuffers_io import serialize_model, deserialize_model
 import op_test_models_common as common
 
 from generate_fully_connected import (
@@ -17,17 +17,13 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
 
 class FullyConnectedRequantized(common.OpTestDefaultFCModel):
     def convert_to_xcore(self, **converter_args):
-        assert 'model_quant' in self.models
-        self.models['model_xcore'] = str(self.models_dir / 'model_xcore.tflite')
-        model = read_flatbuffer(str(self.models['model_quant']))
-
         # NOTE: since the output softmax is not removed during the first
         # conversion, ReplaceFullyConnectedIntermediatePass will
         # match and insert the requantization. Then, the softmax can be removed.
-        xcore_conv.optimize_for_xcore(model, is_classifier=False, remove_softmax=False)
+        super().convert_to_xcore(remove_softmax=False, **converter_args)
+        model = deserialize_model(self.buffers['model_xcore'])
         xcore_conv.strip_model(model, remove_softmax=True)
-
-        model = write_flatbuffer(model, self.models['model_xcore'])
+        self.buffers['model_xcore'] = serialize_model(model)
 
 
 def main(raw_args=None):

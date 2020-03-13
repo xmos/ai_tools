@@ -279,28 +279,35 @@ def create_flatbuffer_model(model):
     return modelT
 
 
+def deserialize_model(bits):
+    model_obj = schema.Model.GetRootAsModel(bits, 0)
+    modelT = schema.ModelT.InitFromObj(model_obj)
+    return create_xcore_model(modelT)
+
+
 def read_flatbuffer(filename):
     if isinstance(filename, pathlib.Path):
         filename = str(filename)
+
     with open(filename, "rb") as fd:
-        bits = bytearray(fd.read())
+        bits = bytes(fd.read())
 
-    model_obj = schema.Model.GetRootAsModel(bits, 0)
-    modelT = schema.ModelT.InitFromObj(model_obj)
+    return deserialize_model(bits)
 
-    return create_xcore_model(modelT)
+
+def serialize_model(model):
+    modelT = create_flatbuffer_model(model)
+    builder = flatbuffers.Builder(1024*1024)
+    model_offset = modelT.Pack(builder)
+    builder.Finish(model_offset, file_identifier=b'TFL3')
+    return bytes(builder.Output())
 
 
 def write_flatbuffer(model, filename):
     if isinstance(filename, pathlib.Path):
         filename = str(filename)
-    modelT = create_flatbuffer_model(model)
-    builder = flatbuffers.Builder(1024*1024)
-    model_offset = modelT.Pack(builder)
-
-    builder.Finish(model_offset, file_identifier=b'TFL3')
 
     with open(filename, 'wb') as fd:
-        return fd.write(builder.Output())
+        return fd.write(serialize_model(model))
 
     return 0

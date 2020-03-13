@@ -31,7 +31,7 @@ class MNISTModel(KerasClassifier):
     def gen_test_data(self):
         if not self.data:
             self.prep_data()
-        self.data['export_data'] = self.data['x_test'][:10]
+        self.data['export'] = self.data['x_test'][:10]
         self.data['quant'] = self.data['x_train'][:10]
 
     def run(self, train_new_model=False, epochs=None, batch_size=None):

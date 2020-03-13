@@ -13,7 +13,7 @@ from tflite2xcore import read_flatbuffer, write_flatbuffer, tflite_visualize
 from tflite2xcore.xcore_model import TensorType
 
 
-# Abstract parent class
+# TODO: get rid of read_flatbuffer where possible by saving flatbuffers in the object
 class Model(ABC):
 
     def __init__(self, name, path):
@@ -23,9 +23,11 @@ class Model(ABC):
         \t- path       (Path): Working directory where everything is stored
         Other properties derived:
         \t- core_model(Model): The main model from which others derive
-        \t- models     (dict): To store model, and dir paths
-        \t\t- keys: 'model_float', 'model_quant', 'data_dir', 'models_dir'
-        \t- data       (dict): To store all kinds of data
+        \t- models     (dict): To store model paths
+        \t\t- keys: 'model_float', 'model_quant', 'model_stripped', 'model_xcore'
+        \t- model_dir  (Path): parent directory of model paths
+        \t- data_dir   (Path): directory where data is stored
+        \t- data       (dict): various data arrays
         \t\t- keys: 'quant', 'export', are necessary
         \t- converters (dict): To store all converter objects
         '''
@@ -40,11 +42,11 @@ class Model(ABC):
         elif type(path) is str:
             self._path = pathlib.Path(path)
 
-        self._path.mkdir(parents=True, exist_ok=True)  # Path generation
-        self.models['data_dir'] = self._path / 'test_data'
-        self.models['data_dir'].mkdir(exist_ok=True)
-        self.models['models_dir'] = self._path / 'models'
-        self.models['models_dir'].mkdir(exist_ok=True)
+        self._path.mkdir(parents=True, exist_ok=True)
+        self.data_dir = self._path / 'test_data'
+        self.data_dir.mkdir(exist_ok=True)
+        self.models_dir = self._path / 'models'
+        self.models_dir.mkdir(exist_ok=True)
 
     @property
     def name(self):
@@ -76,7 +78,6 @@ class Model(ABC):
 
     @abstractmethod
     def load_core_model(self, load_path):
-        # restore Models state with submode
         '''
         If we don't want to build our model from scratch and
         we have it stored somewhere, we can load it with this function.
@@ -85,8 +86,7 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def prep_data(self):  # Loading and preprocessing
-        # everything that doesn't happend on the fly
+    def prep_data(self):
         '''
         To prepare or download the training and test data.
         Should return a dictionary:
@@ -113,37 +113,37 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def to_tf_float(self):  # polymorphism affects here
+    def convert_to_float(self, **converter_args):
         assert self.core_model, "core model does not exist"
 
     @abstractmethod
-    def to_tf_quant(self):
+    def convert_to_quant(self, **converter_args):
         assert self.core_model, "core model has not been initialized"
         assert 'quant' in self.data, "representative dataset has not been prepared"
 
-    def to_tf_stripped(self, **converter_args):
+    def convert_to_stripped(self, **converter_args):
         assert 'model_quant' in self.models
         model = read_flatbuffer(str(self.models['model_quant']))
         xcore_conv.strip_model(model, **converter_args)
-        self.models['model_stripped'] = self.models['models_dir'] / "model_stripped.tflite"
+        self.models['model_stripped'] = self.models_dir / "model_stripped.tflite"
         write_flatbuffer(model, str(self.models['model_stripped']))
 
-    def to_tf_xcore(self, **converter_args):
+    def convert_to_xcore(self, **converter_args):
         assert 'model_quant' in self.models
-        self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
+        self.models['model_xcore'] = str(self.models_dir / 'model_xcore.tflite')
         xcore_conv.convert(str(self.models['model_quant']),
                            str(self.models['model_xcore']),
                            **converter_args)
 
     def _save_visualization(self, base_file_name):
         assert str(base_file_name) in self.models, 'Model need to exist to prepare visualization.'
-        model_html = self.models['models_dir'] / f"{base_file_name}.html"
+        model_html = self.models_dir / f"{base_file_name}.html"
         tflite_visualize.main(self.models[base_file_name], model_html)
         logging.info(f"{base_file_name} visualization saved to {os.path.realpath(model_html)}")
 
     def _save_data_dict(self, data, *, base_file_name):
         # save test data in numpy format
-        test_data_dir = self.models['data_dir'] / base_file_name
+        test_data_dir = self.data_dir / base_file_name
         test_data_dir.mkdir(exist_ok=True, parents=True)
         np.savez(test_data_dir / f"{base_file_name}.npz", **data)
 
@@ -156,21 +156,19 @@ class Model(ABC):
         logging.info(f"test examples for {base_file_name} saved to {test_data_dir}")
 
     def _save_data_for_canonical_model(self, model_key):
-        # create interpreter
         interpreter = tf.lite.Interpreter(model_path=str(self.models[model_key]))
 
-        # extract reference labels for the test examples
+        # extract labels for the test examples
         logging.info(f"Extracting examples for {model_key}...")
         x_test = self.data['export_data']
         data = {'x_test': x_test,
                 'y_test': utils.apply_interpreter_to_examples(interpreter, x_test)}
 
-        # save data
         self._save_data_dict(data, base_file_name=model_key)
 
     def _save_from_tflite_converter(self, model_key):
         converter = self.converters[model_key]
-        self.models[model_key] = self.models['models_dir'] / f"{model_key}.tflite"
+        self.models[model_key] = self.models_dir / f"{model_key}.tflite"
         logging.info(f"Converting {model_key}...")
         size = self.models[model_key].write_bytes(converter.convert())
         logging.info(f"{self.models[model_key]} size: {size/1024:.0f} KB")
@@ -223,7 +221,9 @@ class Model(ABC):
                                       "not supported in save_tf_xcore_data")
 
         # quantize test data
-        x_test = utils.quantize(self.data['export_data'], input_quant['scale'][0], input_quant['zero_point'][0])
+        x_test = utils.quantize(self.data['export_data'],
+                                input_quant['scale'][0],
+                                input_quant['zero_point'][0])
 
         # we pad tensor dimensions other than the first (i.e. batch)
         assert len(input_tensor.shape) == len(x_test.shape)
@@ -234,27 +234,34 @@ class Model(ABC):
         # save data
         self._save_data_dict({'x_test': x_test}, base_file_name='model_xcore')
 
-    def populate_converters(self, *, xcore_num_threads=None):
-        # Actually, data it's being saved here too
-        # TODO: find a better name for this
-        self.to_tf_float()
-        self.save_tf_float_data()
-        self._save_visualization('model_float')
+    def _convert_and_save(self, model_key, **converter_args):
+        converters = {
+            'model_float': self.convert_to_float,
+            'model_quant': self.convert_to_quant,
+            'model_stripped': self.convert_to_stripped,
+            'model_xcore': self.convert_to_xcore
+        }
+        converters[model_key](**converter_args)
 
-        self.to_tf_quant()
-        self.save_tf_quant_data()
-        self._save_visualization('model_quant')
+    def _save_data(self, model_key):
+        savers = {
+            'model_float': self.save_tf_float_data,
+            'model_quant': self.save_tf_quant_data,
+            'model_stripped': self.save_tf_stripped_data,
+            'model_xcore': self.save_tf_xcore_data
+        }
+        savers[model_key]()
 
-        self.to_tf_stripped()
-        self.save_tf_stripped_data()
-        self._save_visualization('model_stripped')
-
-        if xcore_num_threads:
-            self.to_tf_xcore(num_threads=xcore_num_threads)
-        else:
-            self.to_tf_xcore()
-        self.save_tf_xcore_data()
-        self._save_visualization('model_xcore')
+    def convert_and_save(self, *, visualize=True, xcore_num_threads=None):
+        self.gen_test_data()
+        for model_key in ['model_float', 'model_quant', 'model_stripped', 'model_xcore']:
+            if model_key is 'model_xcore':
+                self._convert_and_save(model_key, num_threads=xcore_num_threads)
+            else:
+                self._convert_and_save(model_key)
+            if visualize:
+                self._save_visualization(model_key)
+            self._save_data(model_key)
 
 
 class KerasModel(Model):
@@ -291,17 +298,17 @@ class KerasModel(Model):
         with utils.LoggingContext(logging.getLogger(), logging.INFO):
             utils.plot_history(
                 self.history, title=self.name+' metrics',
-                path=self.models['models_dir']/('training_history.png'))
+                path=self.models_dir/('training_history.png'))
 
     def save_core_model(self):
         if not (len(self.data.keys()) == 0):
             logging.info(f"Saving the following data keys: {self.data.keys()}")
-            np.savez(self.models['data_dir'] / 'data', **self.data)
-        self.core_model.save(str(self.models['models_dir']/'model.h5'))
+            np.savez(self.data_dir / 'data', **self.data)
+        self.core_model.save(str(self.models_dir/'model.h5'))
 
     def load_core_model(self):
-        data_path = self.models['data_dir']/'data.npz'
-        model_path = self.models['models_dir']/'model.h5'
+        data_path = self.data_dir/'data.npz'
+        model_path = self.models_dir/'model.h5'
         try:
             logging.info(f"Loading data from {data_path}")
             self.data = dict(np.load(data_path))
@@ -311,14 +318,14 @@ class KerasModel(Model):
             raise FileNotFoundError(
                 f"Model file not found (Hint: use the --train_model flag)") from e
 
-    def to_tf_float(self):
-        super().to_tf_float()
+    def convert_to_float(self, **converter_args):
+        super().convert_to_float()
         self.converters['model_float'] = tf.lite.TFLiteConverter.from_keras_model(
             self.core_model)
         self._save_from_tflite_converter('model_float')
 
-    def to_tf_quant(self):
-        super().to_tf_quant()
+    def convert_to_quant(self, **converter_args):
+        super().convert_to_quant()
         self.converters['model_quant'] = tf.lite.TFLiteConverter.from_keras_model(
             self.core_model)
         utils.quantize_converter(
@@ -331,8 +338,9 @@ class KerasClassifier(KerasModel):
         super().__init__(*args, **kwargs)
         self._opt_classifier = opt_classifier
 
-    def to_tf_xcore(self):
-        super().to_tf_xcore(is_classifier=self._opt_classifier)
+    def convert_to_xcore(self, **converter_args):
+        converter_args.setdefault('is_classifier', self._opt_classifier)
+        super().convert_to_xcore(**converter_args)
 
 
 class FunctionModel(Model):
@@ -347,17 +355,17 @@ class FunctionModel(Model):
 
     # Import and export core model
     def save_core_model(self):
-        model_path = str(self.models['models_dir']/'model')
+        model_path = str(self.models_dir/'model')
         if not (len(self.data.keys()) == 0):
             logging.info(f"Saving the following data keys: {self.data.keys()}")
-            np.savez(self.models['data_dir'] / 'data', **self.data)
+            np.savez(self.data_dir / 'data', **self.data)
         tf.saved_model.save(
             self.core_model, model_path, signatures=self.concrete_function
         )
 
     def load_core_model(self):
-        data_path = self.models['data_dir']/'data.npz'
-        model_path = str(self.models['models_dir']/'model')
+        data_path = self.data_dir/'data.npz'
+        model_path = str(self.models_dir/'model')
         try:
             logging.info(f"Loading data from {data_path}")
             self.data = dict(np.load(data_path))
@@ -372,15 +380,14 @@ class FunctionModel(Model):
     def concrete_function(self):
         pass
 
-    # Conversions
-    def to_tf_float(self):
-        super().to_tf_float()
+    def convert_to_float(self, **converter_args):
+        super().convert_to_float()
         self.converters['model_float'] = tf.lite.TFLiteConverter.from_concrete_functions(
             [self.concrete_function])
         self._save_from_tflite_converter('model_float')
 
-    def to_tf_quant(self):
-        super().to_tf_quant()
+    def convert_to_quant(self, **converter_args):
+        super().convert_to_quant()
         self.converters['model_quant'] = tf.lite.TFLiteConverter.from_concrete_functions(
             [self.concrete_function])
         utils.quantize_converter(

@@ -102,7 +102,7 @@ def parallelize_for_xcore(model, *, num_threads):
 
 
 def convert(tflite_input_path, tflite_output_path, *,
-            is_classifier=False, remove_softmax=False, num_threads=1):
+            is_classifier=False, remove_softmax=False, num_threads=None):
     model = read_flatbuffer(tflite_input_path)
     optimize_for_xcore(model, is_classifier=is_classifier, remove_softmax=remove_softmax)
     parallelize_for_xcore(model, num_threads=num_threads)

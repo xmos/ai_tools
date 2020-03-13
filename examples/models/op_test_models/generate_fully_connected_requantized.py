@@ -16,9 +16,9 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
 
 
 class FullyConnectedRequantized(common.OpTestDefaultFCModel):
-    def to_tf_xcore(self):
+    def convert_to_xcore(self, **converter_args):
         assert 'model_quant' in self.models
-        self.models['model_xcore'] = str(self.models['models_dir'] / 'model_xcore.tflite')
+        self.models['model_xcore'] = str(self.models_dir / 'model_xcore.tflite')
         model = read_flatbuffer(str(self.models['model_quant']))
 
         # NOTE: since the output softmax is not removed during the first

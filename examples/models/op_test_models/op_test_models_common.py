@@ -61,9 +61,8 @@ class OpTestDefaultModel(KerasModel):
         # logging.debug(f'QUANT DATA SAMPLE:\n{self.data["quant"][0][0]}')
 
     def run(self):
-        self.gen_test_data()
         self.save_core_model()
-        self.populate_converters()
+        self.convert_and_save()
 
 
 class OpTestDefaultConvModel(OpTestDefaultModel):
@@ -94,14 +93,12 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
                 ) from e
 
     def run(self, *,
-            num_threads, input_channels, output_channels,
+            num_threads=None, input_channels, output_channels,
             height, width, K_h, K_w, padding, **inits):
         self.build(K_h, K_w, height, width, input_channels, output_channels,
                    padding=padding, **inits)
-        self.gen_test_data()
         self.save_core_model()
-        self.populate_converters(
-            xcore_num_threads=num_threads if num_threads else None)
+        self.convert_and_save(xcore_num_threads=num_threads)
 
 
 class OpTestDeepoutConvModel(OpTestDefaultConvModel):
@@ -146,20 +143,21 @@ class OpTestDefaultFCModel(KerasModel):
             train_samples_per_class=51200//self.output_dim,
             test_samples_per_class=10240//self.output_dim)
 
-    # For exports
     def gen_test_data(self):
         if not self.data:
             self.prep_data()
         subset_inds = np.searchsorted(
             self.data['y_test'].flatten(), np.arange(self.output_dim))
-        self.data['export_data'] = self.data['x_test'][subset_inds]
+        self.data['export_data'] = self.data['x_test'][subset_inds]  # pylint: disable=unsubscriptable-object
         self.data['quant'] = self.data['x_train']
 
-    def to_tf_stripped(self):
-        super().to_tf_stripped(remove_softmax=True)
+    def convert_to_stripped(self, **converter_args):
+        converter_args.setdefault('remove_softmax', True)
+        super().convert_to_stripped(**converter_args)
 
-    def to_tf_xcore(self):
-        super().to_tf_xcore(remove_softmax=True)
+    def convert_to_xcore(self, **converter_args):
+        converter_args.setdefault('remove_softmax', True)
+        super().convert_to_xcore(**converter_args)
 
     def run(self, *, train_model, input_dim, output_dim, batch_size, epochs,
             **inits):
@@ -176,10 +174,10 @@ class OpTestDefaultFCModel(KerasModel):
                     f"specified output_dim ({output_dim}) "
                     f"does not match loaded model's output_dim ({self.output_dim})"
                 )
-        self.gen_test_data()
-        self.populate_converters()
+        self.convert_and_save()
 
 
+# TODO: move this to model_generation utils
 def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
                                   train_samples_per_class=5120,
                                   test_samples_per_class=1024):
@@ -361,6 +359,8 @@ class OpTestPoolParser(OpTestImgParser):
             help=f"Pool size:, vertical first (default: {defaults['pool_size']})",
         )
 
+    # TODO: decouple handling of strides and pool size
+    # TODO: this should be used for convolutions as well, and pool renamed to filter for generality
     def strides_pool_arg_handler(self, args):
         parameters = {
             "strides": (DEFAULT_STRIDE_HEIGHT, DEFAULT_STRIDE_WIDTH),

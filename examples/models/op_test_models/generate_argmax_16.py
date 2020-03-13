@@ -63,7 +63,7 @@ class ArgMax16(common.OpTestDefaultModel):
         self.data['export_data'] = x_test_float
         self.data['quant'] = x_test_float
 
-    def to_tf_stripped(self):
+    def convert_to_stripped(self, **converter_args):
         model = read_flatbuffer(str(self.models['model_quant']))
         xcore_conv.strip_model(model)
 
@@ -71,18 +71,18 @@ class ArgMax16(common.OpTestDefaultModel):
             model, passes=[ArgMax8To16ConversionPass()])
         pass_mgr.run_passes()
 
-        self.models['model_stripped'] = self.models['models_dir'] / "model_stripped.tflite"
+        self.models['model_stripped'] = self.models_dir / "model_stripped.tflite"
         write_flatbuffer(model, str(self.models['model_stripped']))
 
         self._save_visualization('model_stripped')
 
-    def to_tf_xcore(self):
-        # super().to_tf_xcore() converts model_quant
+    def convert_to_xcore(self, **converter_args):
+        # super().convert_to_xcore() converts model_quant
         # to avoid code duplication, here we convert model_stripped instead
         # (because model_stripped has INT16 input that can be matched)
         tmp = self.models['model_quant']
         self.models['model_quant'] = self.models['model_stripped']
-        super().to_tf_xcore()
+        super().convert_to_xcore(**converter_args)
         self.models['model_quant'] = tmp
 
     def save_tf_stripped_data(self):

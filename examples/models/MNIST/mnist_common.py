@@ -35,6 +35,7 @@ class MNISTModel(KerasClassifier):
         self.data['quant'] = self.data['x_train'][:10]
 
     def run(self, train_new_model=False, epochs=None, batch_size=None):
+        self._prep_backend()
         if train_new_model:
             assert epochs
             assert batch_size
@@ -48,10 +49,7 @@ class MNISTModel(KerasClassifier):
         else:
             # Recover previous state from file system
             self.load_core_model()
-        # Generate test data
-        self.gen_test_data()
-        # Populate converters
-        self.populate_converters()
+        self.convert_and_save()
 
 
 #  ----------------------------------------------------------------------------

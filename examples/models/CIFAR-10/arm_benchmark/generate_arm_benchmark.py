@@ -138,10 +138,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
     else:
         # Recover previous state from file system
         arm_benchmark.load_core_model()
-    # Generate test data
-    arm_benchmark.gen_test_data()
-    # Populate converters
-    arm_benchmark.populate_converters()
+    arm_benchmark.convert_and_save()
 
 
 if __name__ == "__main__":

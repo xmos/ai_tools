@@ -39,12 +39,7 @@ class ImageNetModel(KerasClassifier):
         self.data['quant'] = self.data['x_train']
 
     def run(self):
-        # Build model and compile
         self.build()
-        # Prepare training data
         self.prep_data()
         self.save_core_model()
-        # Generate test data
-        self.gen_test_data()
-        # Populate converters
-        self.populate_converters()
+        self.convert_and_save()

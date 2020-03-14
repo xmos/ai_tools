@@ -70,8 +70,6 @@ INCLUDES := \
 VPATH := \
 	$(FLATBUFFERS_DIR) \
 	$(TENSORFLOW_DIR) \
-	$(LIB_NN_DIR) \
-	src
 
 SOURCES := \
 	tensorflow/lite/c/common.c \
@@ -121,22 +119,9 @@ SOURCES := \
 	tensorflow/lite/micro/kernels/strided_slice.cc \
 	tensorflow/lite/micro/kernels/svdf.cc \
 	tensorflow/lite/micro/kernels/unpack.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_conv2d.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_arg_min_max.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_pooling.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_fully_connected.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_type_conversions.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_activations.cc \
-	lib_nn/src/c/nn_op_utils.c \
-	lib_nn/src/c/nn_operator.c \
-	lib_nn/src/c/nn_operator_conv.c \
-	lib_nn/src/c/conv2d_1x1.c \
-	lib_nn/src/c/conv2d_depthwise.c \
-	lib_nn/src/c/avgpool2d.c \
-	lib_nn/src/c/maxpool2d.c \
-	lib_nn/src/c/fully_connected.c \
-	main.cc
+	$(wildcard $(TENSORFLOW_DIR)/tensorflow/lite/micro/kernels/xcore/*.cc) \
+	$(wildcard $(LIB_NN_DIR)/lib_nn/src/c/*.c) \
+	$(wildcard src/*.cc) \
 
 ifeq ($(TARGET), x86)
 	SOURCES += \
@@ -144,22 +129,8 @@ ifeq ($(TARGET), x86)
 		tensorflow/lite/micro/debug_log.cc 
 else # must be xcore
 	SOURCES += \
-		lib_nn/src/asm/conv2d_deepin_deepout_block.S \
-		lib_nn/src/asm/conv2d_shallowin_deepout_block.S \
-		lib_nn/src/asm/conv2d_1x1.S \
-		lib_nn/src/asm/fully_connected_16.S \
-		lib_nn/src/asm/avgpool2d.S \
-		lib_nn/src/asm/maxpool2d.S \
-		lib_nn/src/asm/avgpool2d_2x2.S \
-		lib_nn/src/asm/avgpool2d_global.S \
-		lib_nn/src/asm/vpu_memcpy.S \
-		lib_nn/src/asm/requantize_16_to_8.S \
-		lib_nn/src/asm/lookup8.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_depthwise.S \
-		lib_nn/src/asm/util/nn_compute_patch_depthwise.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_depthwise_bias_adj.S \
-		lib_nn/src/asm/util/nn_compute_patch_depthwise_padded.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_depthwise_padded.S \
+		$(wildcard $(LIB_NN_DIR)/lib_nn/src/asm/*.S) \
+		$(wildcard $(LIB_NN_DIR)/lib_nn/src/asm/util/*.S) \
 		tensorflow/lite/micro/xcore/debug_log.cc 
 endif
 

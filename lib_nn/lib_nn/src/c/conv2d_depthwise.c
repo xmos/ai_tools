@@ -135,6 +135,10 @@ static void nn_compute_hstrip_depthwise_padded_c(
     int pad_l = job->init_padding.left * plan->channels.X;
     int pad_r = job->init_padding.right * plan->channels.X;
 
+    int center_cols = plan->channels.X * plan->kernel.width;
+    if(pad_l >= 0)  center_cols -= pad_l;
+    if(pad_r >= 0)  center_cols -= pad_r;
+
     for(int out_col = 0; out_col < job->output.cols; out_col++){
 
         const int8_t* X = X_in;
@@ -172,21 +176,21 @@ static void nn_compute_hstrip_depthwise_padded_c(
         for(int i = plan->kernel.height - (pad_t + pad_b); i > 0; i--){
 
             //THIS LOOP IS IN PADDING (left of image)
-            for(int j = cur_pad_l; j > 0; j -= plan->stride.window.col){
+            for(int j = cur_pad_l; j > 0; j -= plan->channels.X){
                 // printf("PAD_L??\t%d\t%d\n", cur_pad_l, j);
                 vlmacc8(accs, zero_point_vec, K);
                 X = &X[plan->channels.X];
                 K = &K[plan->channels.X];
             }
 
-            for(int j = plan->kernel.width * plan->stride.window.col - (cur_pad_l + cur_pad_r); j > 0; j-= plan->stride.window.col){
+            for(int j = center_cols; j > 0; j-= plan->channels.X){
                 vlmacc8(accs, X, K);
                 X = &X[plan->channels.X];
                 K = &K[plan->channels.X];
             }
 
             //THIS LOOP IS IN PADDING (right of image)
-            for(int j = cur_pad_r; j > 0; j -= plan->stride.window.col){
+            for(int j = cur_pad_r; j > 0; j -= plan->channels.X){
                 // printf("PAD_R??\t%d\t%d\n", cur_pad_r, j);
                 vlmacc8(accs, zero_point_vec, K);
                 X = &X[plan->channels.X];
@@ -217,11 +221,22 @@ static void nn_compute_hstrip_depthwise_padded_c(
             Y[k] = (int8_t) accs[k];
         }
 
+        if(pad_l > 0){
+            int tmp = (pad_l <= plan->stride.window.col)? pad_l : plan->stride.window.col;
+            center_cols += tmp;
+        }
+
         pad_l -= (int) plan->stride.window.col;
         pad_r += (int) plan->stride.window.col;
+
+        if(pad_r > 0){
+            int tmp = (pad_r <= plan->stride.window.col)? pad_r : plan->stride.window.col;
+            center_cols -= tmp;
+        }
         
         X_in = &X_in[plan->stride.window.col];
         Y = &Y[plan->channels.Y];
+
     }
 }
 

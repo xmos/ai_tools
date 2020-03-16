@@ -1019,6 +1019,127 @@ void test_conv2d_depthwise_case5()
 
 
 
+#define DEBUG_ON        (0 || TEST_DEBUG_ON)
+#define CHANNELS        (4)
+#define X_HEIGHT        (5)
+#define X_WIDTH         (5)
+#define Y_HEIGHT        (3)
+#define Y_WIDTH         (3)
+#define K_h             (3)
+#define K_w             (3)
+#define v_stride        (2)
+#define h_stride        (2)
+#define ZERO_POINT      (0)
+void test_conv2d_depthwise_case6()
+{
+    int8_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANNELS];
+
+    int8_t WORD_ALIGNED  K[K_h][K_w][CHANNELS];
+
+    struct {
+        int32_t bias[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t shift1[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t shift2[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+    } BSS;
+
+    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANNELS)];
+
+
+#if TEST_C
+    int8_t WORD_ALIGNED  Y_c[Y_HEIGHT][Y_WIDTH][CHANNELS];
+#endif
+#if TEST_ASM
+    int8_t WORD_ALIGNED  Y_asm[Y_HEIGHT][Y_WIDTH][CHANNELS];
+#endif
+
+    PRINTF( "test_conv2d_depthwise_case6()...\n");
+
+    print_warns(-1, TEST_C, TEST_ASM);
+
+    
+    nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANNELS };
+    nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANNELS };
+
+    memset(X, 1, x_params.height * x_params.width * x_params.channels * sizeof(int8_t));
+    memset(K, 1, K_h * K_w * y_params.channels * sizeof(int8_t));
+
+    for(int k = 0; k < y_params.channels; k++){
+        BSS.bias[k]     = k;
+        BSS.shift1[k]   = 0;
+        BSS.scale[k]    = 1;
+        BSS.shift2[k]   = 0;
+    }
+
+    nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+
+    nn_conv2d_depthwise_plan_t plan;
+    nn_conv2d_depthwise_job_t job;
+
+    conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, -(K_h/2), -(K_w/2), K_h, K_w, v_stride, h_stride, ZERO_POINT, 1);
+
+
+#if TEST_C
+    PRINTF("\t\t\tC...\n");
+    memset(Y_c, 0xCC, sizeof(Y_c)); 
+    conv2d_depthwise_c((int8_t*)Y_c, (int8_t*)X, (int8_t*)K, (nn_bss_block_t*) bss, &plan, &job);
+#endif
+#if TEST_ASM
+    PRINTF("\t\t\tASM...\n");
+    memset(Y_asm, 0xCC,  sizeof(Y_asm));
+    conv2d_depthwise_asm((int8_t*)Y_asm, (int8_t*)X, (int8_t*)K, (nn_bss_block_t*) bss, &plan, &job);
+#endif
+
+/*
+
+    0 0 0 0 0 0 0
+    0{1}1{1}1{1}0
+    0 1 1 1 1 1 0
+    0{1}1{1}1{1}0
+    0 1 1 1 1 1 0
+    0{1}1{1}1{1}0
+    0 0 0 0 0 0 0
+
+*/
+
+
+    int8_t Y_exp[Y_HEIGHT][Y_WIDTH] = {
+        {   0x04, 0x06, 0x04 },
+        {   0x06, 0x09, 0x06 },
+        {   0x04, 0x06, 0x04 },
+    };
+
+    PRINTF("\t\t\tChecking...\n");
+    for(unsigned row = 0; row < y_params.height; row++){
+        for(unsigned col = 0; col < y_params.width; col++){
+            for(unsigned chn = 0; chn < y_params.channels; chn++){
+                
+                int8_t y_exp = Y_exp[row][col] + chn;
+
+                check_Y(y_exp, row, col, chn, 0, Y_C_ASM, &y_params);
+            }
+        }
+
+    }
+
+
+}
+#undef DEBUG_ON         
+#undef CHANNELS         
+#undef X_HEIGHT         
+#undef X_WIDTH          
+#undef Y_HEIGHT         
+#undef Y_WIDTH          
+#undef K_h          
+#undef K_w          
+#undef v_stride         
+#undef h_stride         
+#undef ZERO_POINT        
+
+
+
+
 
 
 

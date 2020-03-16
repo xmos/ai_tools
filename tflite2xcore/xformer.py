@@ -2,13 +2,13 @@
 #
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-import os
-import sys
 import logging
 import argparse
 
+from pathlib import Path
+
+from tflite2xcore import utils
 import tflite2xcore.converter as xcore_conv
-from tflite2xcore.model_generation import utils
 
 
 if __name__ == "__main__":
@@ -20,23 +20,21 @@ if __name__ == "__main__":
                              "(e.g. softmax removal and output argmax).")
     parser.add_argument('--remove_softmax', action='store_true', default=False,
                         help="Remove output softmax operation.")
+    parser.add_argument(
+        '-par', '--num_threads', type=int, default=1,
+        help='Number of parallel threads for xcore.ai optimization.'
+    )
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help='Verbose mode.')
     args = parser.parse_args()
 
-    verbose = args.verbose
+    utils.set_verbosity(args.verbose)
+    utils.set_gpu_usage(False, args.verbose)
 
-    if verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.getLogger('tensorflow').setLevel(logging.ERROR)
-
-    utils.set_gpu_usage(False, verbose)
-
-    tflite_input_path = os.path.realpath(args.tflite_input)
-    tflite_output_path = os.path.realpath(args.tflite_output)
-    is_classifier = args.classifier
-    remove_softmax = args.remove_softmax
+    tflite_input_path = Path(args.tflite_input)
+    tflite_output_path = Path(args.tflite_output)
 
     xcore_conv.convert(tflite_input_path, tflite_output_path,
-         is_classifier=is_classifier, remove_softmax=remove_softmax)
+                       is_classifier=args.classifier,
+                       remove_softmax=args.remove_softmax,
+                       num_threads=args.num_threads)

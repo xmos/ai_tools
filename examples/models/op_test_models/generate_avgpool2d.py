@@ -59,7 +59,6 @@ def main(raw_args=None):
         }
     })
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(False, args.verbose)
 
     model = AvgPool2D("avgpool2d", args.path)
     model.build(args.height, args.width, args.inputs,

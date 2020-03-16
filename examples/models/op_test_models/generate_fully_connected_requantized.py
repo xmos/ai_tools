@@ -45,7 +45,6 @@ def main(raw_args=None):
         }
     })
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(args.use_gpu, args.verbose)
 
     model = FullyConnectedRequantized('fc_deepin_anyout_requantized', args.path)
     model.run(train_model=args.train_model,

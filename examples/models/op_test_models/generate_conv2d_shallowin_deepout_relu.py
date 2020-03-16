@@ -51,7 +51,6 @@ def main(raw_args=None):
         }
     })
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(False, args.verbose)
 
     model = Conv2DShallowinDeepoutRelu('conv2d_shallowin_deepout_relu', args.path)
     model.run(num_threads=None,

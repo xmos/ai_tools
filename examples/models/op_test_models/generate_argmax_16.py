@@ -61,7 +61,7 @@ class ArgMax16(common.OpTestDefaultModel):
         x_test_float = np.float32(
             np.random.uniform(0, 1, size=(self.input_dim, self.input_dim)))
         x_test_float += np.eye(self.input_dim)
-        self.data['export'] = self.data['quant'] =x_test_float
+        self.data['export'] = self.data['quant'] = x_test_float
 
     def convert_to_stripped(self, **converter_args):
         super().convert_to_stripped(**converter_args)
@@ -122,7 +122,6 @@ def main(raw_args=None):
         '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
         help='Number of input channels')
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(False, args.verbose)
 
     test_model = ArgMax16('arg_max_16', args.path)
     test_model.build(args.inputs)

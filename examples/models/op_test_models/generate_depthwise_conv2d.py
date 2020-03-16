@@ -48,16 +48,6 @@ class DepthwiseConv2D(common.OpTestDefaultModel):
             else:
                 raise e from None
 
-    def run(self, *,
-            num_threads, output_channels,
-            height, width, K_h, K_w, padding, strides, **inits):
-        self.build(K_h, K_w, height, width, output_channels,
-                   padding=padding, strides=strides, **inits)
-        self.gen_test_data()
-        self.save_core_model()
-        self.populate_converters(
-            xcore_num_threads=num_threads if num_threads else None)
-
 
 def main(raw_args=None):
     parser = common.OpTestConvParser(
@@ -97,18 +87,15 @@ def main(raw_args=None):
     )
     args = parser.parse_args(raw_args)
     args.strides = tuple(args.strides)  # TODO: fix this
-    utils.set_gpu_usage(False, args.verbose)
 
     model = DepthwiseConv2D('depthwise_conv2d', args.path)
-    model.run(num_threads=None,
-              output_channels=args.outputs,
-              height=args.height,
-              width=args.width,
-              K_h=args.kernel_height,
-              K_w=args.kernel_width,
-              padding=args.padding,
-              strides=args.strides,
-              **args.inits)
+    model.build(args.kernel_height, args.kernel_width,
+                args.height, args.width,
+                args.outputs,
+                padding=args.padding,
+                strides=args.strides,
+                **args.inits)
+    model.run()
 
 
 if __name__ == "__main__":

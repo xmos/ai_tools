@@ -56,7 +56,6 @@ def main(raw_args=None):
         help="Number of output channels",
     )
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(False, args.verbose)
 
     model = Conv2D1x1('conv2d_1x1', args.path)
     model.run(num_threads=None,

@@ -33,7 +33,6 @@ def main(raw_args=None):
         }
     })
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(args.use_gpu, args.verbose)
 
     model = common.OpTestDefaultFCModel('fc_deepin_deepout', args.path)
     model.run(train_model=args.train_model,

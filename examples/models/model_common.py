@@ -23,6 +23,8 @@ class DefaultParser(argparse.ArgumentParser):
     def parse_args(self, *args, **kwargs):
         args = super().parse_args(*args, **kwargs)
         utils.set_verbosity(args.verbose)
+        utils.set_gpu_usage(args.use_gpu if hasattr(args, 'use_gpu') else False,
+                            args.verbose)
         args.path = Path(args.path)
         return args
 
@@ -71,8 +73,3 @@ class TrainableParser(InitializerParser):
             "-ep", "--epochs", type=int, default=defaults["epochs"],
             help="Set the number of training epochs size."
         )
-
-    def parse_args(self, *args, **kwargs):
-        args = super().parse_args(*args, **kwargs)
-        utils.set_gpu_usage(args.use_gpu, args.verbose)
-        return args

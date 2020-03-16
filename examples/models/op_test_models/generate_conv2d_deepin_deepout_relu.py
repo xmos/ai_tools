@@ -56,7 +56,6 @@ def main(raw_args=None):
         '-par', '--num_threads', type=int, default=DEFAULT_NUM_THREADS,
         help='Number of parallel threads for xcore.ai optimization.')
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(False, args.verbose)
 
     model = Conv2DDeepinDeepoutRelu('conv2d_deepin_deepout_relu', args.path)
     model.run(num_threads=args.num_threads,

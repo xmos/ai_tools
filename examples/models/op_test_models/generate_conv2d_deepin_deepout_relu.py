@@ -38,18 +38,9 @@ def main(raw_args=None):
         'kernel_width': DEFAULT_KERNEL_WIDTH,
         'kernel_height': DEFAULT_KERNEL_HEIGHT,
         'inits': {
-            'input_init': {
-                'type': common.OpTestInitializers.UNIF,
-                'help': "Initializer for input data distribution."
-            },
-            'weight_init': {
-                'type': common.OpTestInitializers.UNIF,
-                'help': "Initializer for weight distribution."
-            },
-            'bias_init': {
-                'type': common.OpTestInitializers.CONST,
-                'help': "Initializer for bias distribution."
-            }
+            'input_init': {'type': common.OpTestInitializers.UNIF},
+            'weight_init': {'type': common.OpTestInitializers.UNIF},
+            'bias_init': {'type': common.OpTestInitializers.CONST}
         }
     })
     parser.add_argument(
@@ -58,15 +49,11 @@ def main(raw_args=None):
     args = parser.parse_args(raw_args)
 
     model = Conv2DDeepinDeepoutRelu('conv2d_deepin_deepout_relu', args.path)
-    model.run(num_threads=args.num_threads,
-              input_channels=args.inputs,
-              output_channels=args.outputs,
-              height=args.height,
-              width=args.width,
-              K_h=args.kernel_height,
-              K_w=args.kernel_width,
-              padding=args.padding,
-              **args.inits)
+    model.build(args.kernel_height, args.kernel_width,
+                args.height, args.width,
+                args.inputs, args.outputs,
+                padding=args.padding, **args.inits)
+    model.run(num_threads=args.num_threads)
 
 
 if __name__ == "__main__":

@@ -30,43 +30,37 @@ class Conv2D1x1(common.OpTestDefaultConvModel):
 
 
 def main(raw_args=None):
-    parser = common.OpTestImgParser(defaults={
+    parser = common.OpTestConvParser(defaults={
         'path': DEFAULT_PATH,
         'inputs': DEFAULT_INPUTS,
+        'outputs': DEFAULT_OUTPUTS,
         'width': DEFAULT_WIDTH,
         'height': DEFAULT_HEIGHT,
         'padding': DEFAULT_PADDING,
+        'kernel_width': 1,
+        'kernel_height': 1,
         'inits': {
-            'input_init': {
-                'type': common.OpTestInitializers.UNIF,
-                'help': "Initializer for input data distribution."
-            },
-            'weight_init': {
-                'type': common.OpTestInitializers.UNIF,
-                'help': "Initializer for weight distribution."
-            },
-            'bias_init': {
-                'type': common.OpTestInitializers.CONST,
-                'help': "Initializer for bias distribution."
-            }
+            'input_init': {'type': common.OpTestInitializers.UNIF},
+            'weight_init': {'type': common.OpTestInitializers.UNIF},
+            'bias_init': {'type': common.OpTestInitializers.CONST}
         }
     })
     parser.add_argument(
-        "-out", "--outputs", type=int, default=DEFAULT_OUTPUTS,
-        help="Number of output channels",
+        "-kh", "--kernel_height", type=int, default=1, choices=[1],
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "-kw", "--kernel_width", type=int, default=1, choices=[1],
+        help=argparse.SUPPRESS,
     )
     args = parser.parse_args(raw_args)
 
     model = Conv2D1x1('conv2d_1x1', args.path)
-    model.run(num_threads=None,
-              input_channels=args.inputs,
-              output_channels=args.outputs,
-              height=args.height,
-              width=args.width,
-              K_h=1,
-              K_w=1,
-              padding=args.padding,
-              **args.inits)
+    model.build(1, 1,
+                args.height, args.width,
+                args.inputs, args.outputs,
+                padding=args.padding, **args.inits)
+    model.run()
 
 
 if __name__ == "__main__":

@@ -23,60 +23,39 @@ class DepthwiseConv2D(common.OpTestDefaultModel):
             padding, strides, **inits):
         assert output_channels % 4 == 0, "# of output channels must be multiple of 4"
         self.input_init = inits['input_init']
-        try:
-            self.core_model = tf.keras.Sequential(
-                name=self.name,
-                layers=[
-                    tf.keras.layers.DepthwiseConv2D(kernel_size=(K_h, K_w),
-                                                    depth_multiplier=1,
-                                                    padding=padding,
-                                                    strides=strides,
-                                                    input_shape=(height, width, output_channels),
-                                                    bias_initializer=inits['bias_init'],
-                                                    depthwise_initializer=inits['weight_init'])
-                ]
-            )
-            # for layer in self.core_model.layers:
-            #     logging.debug(f"WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}")
-            #     logging.debug(f"BIAS DATA SAMPLE:\n{layer.get_weights()[1]}")
-        except ValueError as e:
-            if e.args[0].startswith("Negative dimension size caused by"):
-                raise ValueError(
-                    "Negative dimension size (Hint: if using 'valid' padding "
-                    "verify that the kernel is at least the size of input image)"
-                ) from e
-            else:
-                raise e from None
+        self.core_model = tf.keras.Sequential(
+            name=self.name,
+            layers=[
+                tf.keras.layers.DepthwiseConv2D(kernel_size=(K_h, K_w),
+                                                depth_multiplier=1,
+                                                padding=padding,
+                                                strides=strides,
+                                                input_shape=(height, width, output_channels),
+                                                bias_initializer=inits['bias_init'],
+                                                depthwise_initializer=inits['weight_init'])
+            ]
+        )
+        # for layer in self.core_model.layers:
+        #     logging.debug(f"WEIGHT SAMPLE:\n{layer.get_weights()[0][1]}")
+        #     logging.debug(f"BIAS SAMPLE:\n{layer.get_weights()[1]}")
 
 
 def main(raw_args=None):
-    parser = common.OpTestConvParser(
-        conflict_handler='resolve',
-        defaults={
-            'path': DEFAULT_PATH,
-            'inputs': -1,
-            'outputs': DEFAULT_OUTPUTS,
-            'width': DEFAULT_WIDTH,
-            'height': DEFAULT_HEIGHT,
-            'padding': DEFAULT_PADDING,
-            'kernel_width': DEFAULT_KERNEL_WIDTH,
-            'kernel_height': DEFAULT_KERNEL_HEIGHT,
-            'inits': {
-                'input_init': {
-                    'type': common.OpTestInitializers.UNIF,
-                    'help': "Initializer for input data distribution."
-                },
-                'weight_init': {
-                    'type': common.OpTestInitializers.UNIF,
-                    'help': "Initializer for weight distribution."
-                },
-                'bias_init': {
-                    'type': common.OpTestInitializers.CONST,
-                    'help': "Initializer for bias distribution."
-                }
-            }
+    parser = common.OpTestConvParser(defaults={
+        'path': DEFAULT_PATH,
+        'inputs': -1,
+        'outputs': DEFAULT_OUTPUTS,
+        'width': DEFAULT_WIDTH,
+        'height': DEFAULT_HEIGHT,
+        'padding': DEFAULT_PADDING,
+        'kernel_width': DEFAULT_KERNEL_WIDTH,
+        'kernel_height': DEFAULT_KERNEL_HEIGHT,
+        'inits': {
+            'input_init': {'type': common.OpTestInitializers.UNIF},
+            'weight_init': {'type': common.OpTestInitializers.UNIF},
+            'bias_init': {'type': common.OpTestInitializers.CONST}
         }
-    )
+    })
     parser.add_argument(
         "-in", "--inputs", type=int, default=-1, choices=[-1],
         help=argparse.SUPPRESS

@@ -9,7 +9,8 @@ from tflite2xcore.model_generation import utils
 
 class DefaultParser(argparse.ArgumentParser):
     def __init__(self, *args, defaults, **kwargs):
-        kwargs["formatter_class"] = argparse.ArgumentDefaultsHelpFormatter
+        kwargs.setdefault('formatter_class', argparse.ArgumentDefaultsHelpFormatter)
+        kwargs.setdefault('conflict_handler', 'resolve')
         super().__init__(*args, **kwargs)
         self.add_argument(
             "-path", nargs="?", default=defaults["path"],

@@ -30,10 +30,7 @@ def main(raw_args=None):
         'width': DEFAULT_WIDTH,
         'height': DEFAULT_HEIGHT,
         'inits': {
-            'input_init': {
-                'type': common.OpTestInitializers.UNIF,
-                'help': "Initializer for input data distribution."
-            },
+            'input_init': {'type': common.OpTestInitializers.UNIF},
             'alpha_init': {
                 'type': common.OpTestInitializers.UNIF,
                 'help': "Initializer for learnable parameters."

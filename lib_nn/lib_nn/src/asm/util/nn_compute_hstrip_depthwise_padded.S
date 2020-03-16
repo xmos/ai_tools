@@ -225,17 +225,25 @@ FUNCTION_NAME:
         //  We're shifting the patch to the right, so SUBTRACT from left padding. But if it was
         //  positive (>0) BEFORE, then CTR_COLS has to INCREASE commensurately, because we have 
         //  less left-padding
+
         {   lss Q(cols_left), r11, Q(rows_left)             ;   ldw Q(_32), sp[STACK_CTR_COLS]          }
-        maccs r11, Q(_32), Q(cols_left), window_hstride
+        {   lss Q(cols_left), Q(rows_left), window_hstride  ;   bf Q(cols_left), .L_werwer              }
+        {   add Q(cols_left), Q(cols_left), 1               ;   bru Q(cols_left)                        }
+/**/    {   add Q(_32), Q(_32), window_hstride              ;   bru Q(cols_left)                        }
+        {   add Q(_32), Q(_32), Q(rows_left)                ;                                           }
+    .L_werwer:
         {   sub Q(rows_left), Q(rows_left), window_hstride  ;   ldw Q(cols_left), sp[STACK_PAD_R]       }
         //  We're shifting the patch to the right, so ADD to right padding. But if it is
         //  positive (>0) AFTER, then CTR_COLS has to DECREASE commensurately, because we have 
         //  more right-padding
-/**/    {   add Q(cols_left), Q(cols_left), window_hstride  ;   stw Q(rows_left), sp[STACK_PAD_L]       }
-        {   ldc r11, 0                                      ;                                           }
+        {   add Q(cols_left), Q(cols_left), window_hstride  ;   stw Q(rows_left), sp[STACK_PAD_L]       }
+/**/    {   ldc r11, 0                                      ;                                           }
         {   lss Q(rows_left), r11, Q(cols_left)             ;   stw Q(cols_left), sp[STACK_PAD_R]       } 
-        {   neg Q(rows_left), Q(rows_left)                  ;                                           }
-/**/    maccs r11, Q(_32), Q(rows_left), window_hstride 
+        {   lss Q(rows_left), Q(cols_left), window_hstride  ;   bf Q(rows_left), .L_rewrew              }
+        {   add Q(rows_left), Q(rows_left), 1               ;   bru Q(rows_left)                        }
+/**/    {   sub Q(_32), Q(_32), window_hstride              ;   bru Q(rows_left)                        }
+        {   sub Q(_32), Q(_32), Q(cols_left)                ;                                           }
+    .L_rewrew:
         {                                                   ;   stw Q(_32), sp[STACK_CTR_COLS]          }
         {   ldc _32, 32                                     ;   bt pix_left, .L_pix_start               }
 
@@ -243,12 +251,11 @@ FUNCTION_NAME:
 #undef _32
 
 .Lfunc_end:
-    {                                           ;   ldw r10, sp[8]                          }
-/**/ldd r8, r9, sp[3]
+/**/{                                           ;   ldw r10, sp[8]                          }
+    ldd r8, r9, sp[3]
     ldd r6, r7, sp[2]
     ldd r4, r5, sp[1]
-    ////////////////// FNOP HERE ///////////////////
-    retsp NSTACKWORDS
+/**/retsp NSTACKWORDS
 
 
     .cc_bottom FUNCTION_NAME.function

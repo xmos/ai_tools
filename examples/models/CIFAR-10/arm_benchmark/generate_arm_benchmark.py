@@ -75,7 +75,7 @@ class ArmBenchmark(KerasClassifier):
         sorted_inds = np.argsort(self.data['y_test'], axis=0, kind='mergesort')
         subset_inds = np.searchsorted(self.data['y_test'][sorted_inds].flatten(), np.arange(10))  # pylint: disable=unsubscriptable-object
         subset_inds = sorted_inds[subset_inds]
-        self.data['export_data'] = self.data['x_test'][subset_inds.flatten()]  # pylint: disable=unsubscriptable-object
+        self.data['export'] = self.data['x_test'][subset_inds.flatten()]  # pylint: disable=unsubscriptable-object
         self.data['quant'] = self.data['x_train']
 
     def train(self, *, batch_size, save_history=True, **kwargs):
@@ -138,10 +138,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
     else:
         # Recover previous state from file system
         arm_benchmark.load_core_model()
-    # Generate test data
-    arm_benchmark.gen_test_data()
-    # Populate converters
-    arm_benchmark.populate_converters()
+    arm_benchmark.convert_and_save()
 
 
 if __name__ == "__main__":

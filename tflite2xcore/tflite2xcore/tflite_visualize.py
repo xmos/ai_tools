@@ -417,14 +417,8 @@ def GenerateTableHtml(items, keys_to_print, display_index=True):
     return html
 
 
-def CreateHtmlFile(tflite_input, html_output):
-    """Given a tflite model in `tflite_input` file, produce html description."""
-
-    if not os.path.exists(tflite_input):
-        raise RuntimeError(f"Invalid filename {tflite_input}")
-
-    model = read_flatbuffer(tflite_input)
-    data = create_dict_from_model(model)
+def CreateHtml(data):
+    """Given a tflite model as a dictionary, produce html description."""
 
     indent = " " * 2
 
@@ -433,7 +427,6 @@ def CreateHtmlFile(tflite_input, html_output):
     html += "\n<body>\n"
     html += "<h1>TensorFlow Lite Model</h1>\n"
 
-    data["filename"] = tflite_input  # Avoid special case
     toplevel_stuff = [("filename", None),
                       ("version", None),
                       ("description", None)]
@@ -505,7 +498,19 @@ def CreateHtmlFile(tflite_input, html_output):
 
     html += "</body>\n</html>\n"
 
-    with open(html_output, "w") as f:
+    return html
+
+
+def CreateHtmlFile(tflite_input, html_file):
+    if not os.path.exists(tflite_input):
+        raise RuntimeError(f"Invalid filename {tflite_input}")
+
+    model = read_flatbuffer(tflite_input)
+    data = create_dict_from_model(model)
+    data["filename"] = tflite_input
+
+    html = CreateHtml(data)
+    with open(html_file, "w") as f:
         f.write(html)
 
 

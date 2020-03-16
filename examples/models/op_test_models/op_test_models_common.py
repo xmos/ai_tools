@@ -1,14 +1,21 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+# TODO: fix this hack
+from os.path import dirname, realpath
+import sys
+sys.path.append(dirname(dirname(realpath(__file__))))
+
+# best to import this before tf
+from model_common import DefaultParser, InitializerParser, TrainableParser
+
 import argparse
 import logging
-from enum import Enum
-from pathlib import Path
-import tensorflow as tf
-from tflite2xcore.model_generation import utils
-from tflite2xcore.model_generation.interface import KerasModel
 import numpy as np
+import tensorflow as tf
+from enum import Enum
 from abc import abstractmethod
+from tflite2xcore.model_generation.interface import KerasModel
+
 
 _DEFAULT_CONST_INIT = 0
 _DEFAULT_UNIF_INIT = [-1, 1]
@@ -48,15 +55,14 @@ class OpTestDefaultModel(KerasModel):
     def gen_test_data(self):
         assert self.input_shape, "To generate test data this model needs an input shape"
         assert self.input_init, "To generate test data this model needs an input initializer"
-        self.data["export_data"], self.data["quant"] = input_initializer(
+        self.data['export'], self.data['quant'] = input_initializer(
             self.input_init, *self.input_shape)
-        # logging.debug(f'EXPORT DATA SAMPLE:\n{self.data["export_data"][4][0]}')
-        # logging.debug(f'QUANT DATA SAMPLE:\n{self.data["quant"][0][0]}')
+        # logging.debug(f'EXPORT DATA SAMPLE:\n{self.data['export'][4][0]}')
+        # logging.debug(f'QUANT DATA SAMPLE:\n{self.data['quant'][0][0]}')
 
     def run(self):
-        self.gen_test_data()
         self.save_core_model()
-        self.populate_converters()
+        self.convert_and_save()
 
 
 class OpTestDefaultConvModel(OpTestDefaultModel):
@@ -89,14 +95,12 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
                 raise e from None
 
     def run(self, *,
-            num_threads, input_channels, output_channels,
+            num_threads=None, input_channels, output_channels,
             height, width, K_h, K_w, padding, **inits):
         self.build(K_h, K_w, height, width, input_channels, output_channels,
                    padding=padding, **inits)
-        self.gen_test_data()
         self.save_core_model()
-        self.populate_converters(
-            xcore_num_threads=num_threads if num_threads else None)
+        self.convert_and_save(xcore_num_threads=num_threads)
 
 
 class OpTestDeepoutConvModel(OpTestDefaultConvModel):
@@ -142,20 +146,21 @@ class OpTestDefaultFCModel(KerasModel):
             train_samples_per_class=51200//self.output_dim,
             test_samples_per_class=10240//self.output_dim)
 
-    # For exports
     def gen_test_data(self):
         if not self.data:
             self.prep_data()
         subset_inds = np.searchsorted(
             self.data['y_test'].flatten(), np.arange(self.output_dim))
-        self.data['export_data'] = self.data['x_test'][subset_inds]
+        self.data['export'] = self.data['x_test'][subset_inds]  # pylint: disable=unsubscriptable-object
         self.data['quant'] = self.data['x_train']
 
-    def to_tf_stripped(self):
-        super().to_tf_stripped(remove_softmax=True)
+    def convert_to_stripped(self, **converter_args):
+        converter_args.setdefault('remove_softmax', True)
+        super().convert_to_stripped(**converter_args)
 
-    def to_tf_xcore(self):
-        super().to_tf_xcore(remove_softmax=True)
+    def convert_to_xcore(self, **converter_args):
+        converter_args.setdefault('remove_softmax', True)
+        super().convert_to_xcore(**converter_args)
 
     def run(self, *, train_model, input_dim, output_dim, batch_size, epochs,
             **inits):
@@ -172,10 +177,10 @@ class OpTestDefaultFCModel(KerasModel):
                     f"specified output_dim ({output_dim}) "
                     f"does not match loaded model's output_dim ({self.output_dim})"
                 )
-        self.gen_test_data()
-        self.populate_converters()
+        self.convert_and_save()
 
 
+# TODO: move this to model_generation utils
 def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
                                   train_samples_per_class=5120,
                                   test_samples_per_class=1024):
@@ -217,17 +222,8 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
             'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
 
 
-#  ----------------------------------------------------------------------------
-#                                   PARSERS
-#  ----------------------------------------------------------------------------
-
-
-class OpTestInitializers(Enum):
-    UNIF = "unif"
-    CONST = "const"
-
-
 # TODO: generalize this to produce a tensor of any rank between 2 and 4
+# TODO: rename and probably move this to model_generation utils
 def input_initializer(init, *args, batch=100, subset_len=10):
     assert batch >= subset_len, "Example subset cannot be larger than the full quantization set"
     height, width, channels = args[:3]  # pylint: disable=unbalanced-tuple-unpacking
@@ -236,36 +232,17 @@ def input_initializer(init, *args, batch=100, subset_len=10):
     return subset, data
 
 
-class OpTestDefaultParser(argparse.ArgumentParser):
-    def __init__(self, *args, defaults, **kwargs):
-        kwargs["formatter_class"] = argparse.ArgumentDefaultsHelpFormatter
-        super().__init__(*args, **kwargs)
-        self.add_argument(
-            "-path", nargs="?", default=defaults["path"],
-            help="Path to a directory where models and data will be saved in subdirectories.",
-        )
-        self.add_argument(
-            "-v", "--verbose", action="store_true", default=False,
-            help="Verbose mode."
-        )
+#  ----------------------------------------------------------------------------
+#                                   PARSERS
+#  ----------------------------------------------------------------------------
 
-    def parse_args(self, *args, **kwargs):
-        args = super().parse_args(*args, **kwargs)
-        utils.set_verbosity(args.verbose)
-        args.path = Path(args.path)
-        return args
+class OpTestInitializers(Enum):
+    UNIF = "unif"
+    CONST = "const"
 
 
-class OpTestInitializerParser(OpTestDefaultParser):
-    def __init__(self, *args, defaults, **kwargs):
-        super().__init__(*args, defaults=defaults, **kwargs)
-
-        self.seed = None
-        self.add_argument(
-            "--seed", type=int,
-            help="Set the seed value for the initializers."
-        )
-
+class OpTestInitializerParser(InitializerParser):
+    def _default_handler(self, defaults):
         self.default_inits = defaults["inits"]
         for init_name, init_settings in self.default_inits.items():
             init_type = init_settings['type']
@@ -283,12 +260,6 @@ class OpTestInitializerParser(OpTestDefaultParser):
                      "Possible initializers are: const [CONST_VAL] or unif [MIN MAX]. "
                      f"(default: {def_str})"
             )
-
-    def parse_args(self, *args, **kwargs):
-        args = super().parse_args(*args, **kwargs)
-        self.seed = args.seed
-        args.inits = self._initializer_args_handler(args)
-        return args
 
     def _initializer_args_handler(self, args):
         def check_unif_init_params(param_unif):
@@ -353,7 +324,7 @@ class OpTestInitializerParser(OpTestDefaultParser):
                 f"{type(initializers[k]).__name__} {initializers[k].get_config()}"
             )
         # initializers = {k: v for k, v in initializers.items() if k in vars(args)}
-        return initializers
+        args.inits = initializers
 
 
 class OpTestImgParser(OpTestInitializerParser):
@@ -392,6 +363,8 @@ class OpTestPoolParser(OpTestImgParser):
             help=f"Pool size:, vertical first (default: {defaults['pool_size']})",
         )
 
+    # TODO: decouple handling of strides and pool size
+    # TODO: this should be used for convolutions as well, and pool renamed to filter for generality
     def strides_pool_arg_handler(self, args):
         parameters = {
             "strides": (DEFAULT_STRIDE_HEIGHT, DEFAULT_STRIDE_WIDTH),
@@ -434,28 +407,7 @@ class OpTestConvParser(OpTestImgParser):
         )
 
 
-class OpTestTrainableParser(OpTestInitializerParser):
-    def __init__(self, *args, defaults, **kwargs):
-        super().__init__(*args, defaults=defaults, **kwargs)
-        self.add_argument(
-            "--train_model", action="store_true", default=False,
-            help="Train new model instead of loading pretrained tf.keras model.",
-        )
-        self.add_argument(
-            "--use_gpu", action="store_true", default=False,
-            help="Use GPU for training. Might result in non-reproducible results.",
-        )
-        self.add_argument(
-            "-bs", "--batch_size", type=int, default=defaults["batch_size"],
-            help="Set the training batch size."
-        )
-        self.add_argument(
-            "-ep", "--epochs", type=int, default=defaults["epochs"],
-            help="Set the number of training epochs size."
-        )
-
-
-class OpTestFCParser(OpTestTrainableParser):
+class OpTestFCParser(TrainableParser, OpTestInitializerParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(

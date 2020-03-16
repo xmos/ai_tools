@@ -4,7 +4,6 @@
 from pathlib import Path
 import numpy as np
 from tflite2xcore.model_generation import utils
-from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
 import op_test_models_common as common
 

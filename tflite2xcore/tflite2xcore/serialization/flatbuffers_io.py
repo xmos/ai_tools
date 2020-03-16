@@ -1,9 +1,8 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import os
 import json
 import re
 import enum
-import struct
+import pathlib
 
 import flatbuffers
 import numpy as np
@@ -11,8 +10,10 @@ import numpy as np
 from . import schema_py_generated as schema
 from .flatbuffers_c import FlexbufferBuilder, FlexbufferParser
 
-from ..xcore_model import XCOREModel, TensorType
-from ..operator_codes import OperatorCode, BuiltinOpCodes, CustomOpCode, XCOREOpCodes
+from tflite2xcore.xcore_model import XCOREModel, TensorType
+from tflite2xcore.operator_codes import (
+    OperatorCode, BuiltinOpCodes, CustomOpCode, XCOREOpCodes
+)
 
 
 # for convenience, create enums for these classes in schema_py_generated
@@ -278,24 +279,35 @@ def create_flatbuffer_model(model):
     return modelT
 
 
-def read_flatbuffer(model_filename):
-    with open(model_filename, "rb") as fd:
-        bits = bytearray(fd.read())
-
+def deserialize_model(bits):
     model_obj = schema.Model.GetRootAsModel(bits, 0)
     modelT = schema.ModelT.InitFromObj(model_obj)
-
     return create_xcore_model(modelT)
 
 
-def write_flatbuffer(model, filename):
+def read_flatbuffer(filename):
+    if isinstance(filename, pathlib.Path):
+        filename = str(filename)
+
+    with open(filename, "rb") as fd:
+        bits = bytes(fd.read())
+
+    return deserialize_model(bits)
+
+
+def serialize_model(model):
     modelT = create_flatbuffer_model(model)
     builder = flatbuffers.Builder(1024*1024)
     model_offset = modelT.Pack(builder)
-
     builder.Finish(model_offset, file_identifier=b'TFL3')
+    return bytes(builder.Output())
+
+
+def write_flatbuffer(model, filename):
+    if isinstance(filename, pathlib.Path):
+        filename = str(filename)
 
     with open(filename, 'wb') as fd:
-        return fd.write(builder.Output())
+        return fd.write(serialize_model(model))
 
     return 0

@@ -37,6 +37,14 @@ class ReplaceConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
     def _MAX_POST_SHIFT(self):
         return 32 - 8 - 2  # this is because the output is 8 bit
 
+    @property
+    def _zero_point_bias(self):
+        weights = self._weights.numpy
+        input_zero_point = int(self._input.quantization['zero_point'][0])
+        arr = np.sum(weights * input_zero_point, axis=(1, 2, 3))
+        logging.debug(f"calculated zero_point_bias of shape {arr.shape}:\n{arr}")
+        return arr
+
 
 class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
     @property
@@ -61,6 +69,15 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
 
         return False
 
+    @property
+    def _zero_point_bias(self):
+        weights = self._weights.numpy
+        input_zero_point = int(self._input.quantization['zero_point'][0])
+        # NOTE: first dimension of the kernel is always 1 in depthwise conv2d
+        arr = np.sum(weights[0] * input_zero_point, axis=(0, 1)).flatten()
+        logging.debug(f"calculated zero_point_bias of shape {arr.shape}:\n{arr}")
+        return arr
+
     def mutate_biases(self, op):
         # TODO: this is the same as in ReplaceFullyConnectedPass, refactor
         # TODO: this is the same as in Replace1x1Conv2dPass, refactor
@@ -82,6 +99,8 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
             # NOTE: This is not strictly necessary since the first dimension of
             #       the kernel should be 1 in TFLite
             self._weights.shape = self._weights.shape[1:]
+            logging.debug(f"calculated {np.int8} weights of shape {self._weights.shape}:"
+                          f"\n{self._weights.numpy.astype(np.int8)}")
 
             # remove quantization info to save space
             self._weights.quantization = None
@@ -141,6 +160,8 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
             # NOTE: This is not strictly necessary since height == width == 1
             old_shape = self._weights.shape
             self._weights.shape = [old_shape[0], old_shape[3]]
+            logging.debug(f"calculated {np.int8} weights of shape {self._weights.shape}:"
+                          f"\n{self._weights.numpy.astype(np.int8)}")
 
             # remove quantization info to save space
             self._weights.quantization = None
@@ -255,6 +276,7 @@ class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
                 np.flip(weights, axis=1),
                 axes=(0, 2, 3, 4, 1, 5)
             )
+            logging.debug(f"calculated {weights.dtype} weights of shape {weights.shape}:\n{weights}")
 
             # save weight tensor and update shape
             self._weights.buffer.data = weights
@@ -310,6 +332,7 @@ class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
                 np.flip(weights, axis=1),
                 axes=(0, 2, 1, 3, 4)
             )
+            logging.debug(f"calculated {weights.dtype} weights of shape {weights.shape}:\n{weights}")
 
             # save weight tensor and update shape
             self._weights.shape = weights.shape

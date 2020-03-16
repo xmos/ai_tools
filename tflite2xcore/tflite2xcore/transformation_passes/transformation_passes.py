@@ -188,15 +188,15 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         return bias_scale / output_scale
 
     @property
-    def _unified_bias(self):
-        weights = self._weights.numpy
-        biases = self._biases.numpy
-        input_zero_point = int(self._input.quantization['zero_point'][0])
-        output_zero_point = int(self._output.quantization['zero_point'][0])
+    @abstractmethod
+    def _zero_point_bias(self):
+        pass
 
-        zero_point_bias = np.sum(weights * input_zero_point,
-                                 axis=tuple(j for j in range(1, len(weights.shape))))
-        return np.int32(biases - zero_point_bias
+    @property
+    def _unified_bias(self):
+        biases = self._biases.numpy
+        output_zero_point = int(self._output.quantization['zero_point'][0])
+        return np.int32(biases - self._zero_point_bias
                         + np.int32(np.round(output_zero_point / self._multiplier)))
 
     def __pad_to_acc_period(self, arr):
@@ -210,6 +210,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
         # zero pad and reshape
         bias = self.__pad_to_acc_period(bias)
+        logging.debug(f"calculated {bias.dtype} biases of shape {bias.shape}:\n{bias}")
 
         # splitting lower and upper 16 bits of each 32 bit value
         tmp_shape = (bias.shape[0] // ACC_PERIOD, ACC_PERIOD, -1)
@@ -259,7 +260,12 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         # split left and right shift into pre and post scaling shifts
         shift_pre = rshift if True else np.maximum(rshift, 0)  # TODO: resolve this when left shift issue is solved in conv2d kernels
         shift_post = self._MAX_POST_SHIFT * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
-        return np.stack([shift_pre, scale, shift_post], axis=1)
+        arr = np.stack([shift_pre, scale, shift_post], axis=1)
+        logging.debug(f"calculated {arr.dtype} shift_scale_arr of shape {arr.shape}")
+        logging.debug(f"calculated shift_pre:\n{arr[:, 0]}")
+        logging.debug(f"calculated scale:\n{arr[:, 1]}")
+        logging.debug(f"calculated shift_post:\n{arr[:, 2]}")
+        return arr
 
     @property
     def _bss_arr(self):
@@ -303,6 +309,14 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     @property
     def _MAX_POST_SHIFT(self):
         return 32 - 16 - 2  # this is because the output is 16 bit
+
+    @property
+    def _zero_point_bias(self):
+        weights = self._weights.numpy
+        input_zero_point = int(self._input.quantization['zero_point'][0])
+        arr = np.sum(weights * input_zero_point, axis=1)
+        logging.debug(f"calculated zero_point_bias of shape {arr.shape}:\n{arr}")
+        return arr
 
     def mutate_biases(self, op):
         super().mutate_biases(op)

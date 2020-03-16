@@ -224,7 +224,7 @@ class Model(ABC):
                                 input_quant['scale'][0],
                                 input_quant['zero_point'][0])
         y_test = utils.apply_interpreter_to_examples(interpreter, self.data['export'])
-        # The next line breaks in FunctionModels & Keras without ouput dimension
+        # The next line breaks in FunctionModels & Keras without output dimension
         y_test = [
             utils.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0])
             for y in y_test

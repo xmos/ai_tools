@@ -95,7 +95,7 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
 
     def _pad(self):
         # pad: [top, left, zero_point]
-        pad = [int((o - 1) * s - i + k) // 2
+        pad = [max(int((o - 1) * s - i + k) // 2, 0)
                for o, s, i, k in zip(self._output.shape[1:3],
                                      self._op.custom_options['stride'],
                                      self._input.shape[1:3],

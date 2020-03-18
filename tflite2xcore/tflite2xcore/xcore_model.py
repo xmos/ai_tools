@@ -94,7 +94,9 @@ class Buffer():
             self._data = np.array(data, dtype=np.uint8)
         elif isinstance(data, np.ndarray):
             if data.dtype not in (np.uint8, 'uint8'):
-                logging.debug(f"Numpy array of type {data.dtype} stored in buffer")
+                logging.getLogger('XCOREModel').debug(
+                    f"Numpy array of type {data.dtype} stored in buffer"
+                )
             self._data = np.frombuffer(data.tostring(), dtype=np.uint8)
         else:
             raise TypeError(f"data must be list or numpy array of uint8 type")

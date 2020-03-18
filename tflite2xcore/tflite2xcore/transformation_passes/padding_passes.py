@@ -57,10 +57,10 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
         producer.inputs[0].consumers.append(op)
 
         # remove old input and padding op (if it has no other consumers)
-        # NOTE: the paddings tensor will be dangling and will be cleaned up later
         pad_params = producer.inputs[1].numpy.tolist()
         op.subgraph.remove_tensor(old_input)
         if not producer.outputs:
+            # NOTE: the paddings tensor will be dangling and will be cleaned up later
             op.subgraph.remove_operator(producer)
 
         # set padding: [top, left, zero_point]

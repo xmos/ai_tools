@@ -38,9 +38,6 @@ class DepthwiseConv2DSingleinDeepout(common.OpTestDefaultModel):
                                                 depthwise_initializer=inits['weight_init'])
             ]
         )
-        # for layer in self.core_model.layers:
-        #     logging.debug(f"WEIGHT SAMPLE:\n{layer.get_weights()[0][1]}")
-        #     logging.debug(f"BIAS SAMPLE:\n{layer.get_weights()[1]}")
 
 
 def main(raw_args=None):

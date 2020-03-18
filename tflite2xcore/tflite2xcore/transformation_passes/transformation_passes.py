@@ -17,6 +17,7 @@ from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCod
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.parallelization import DIDOConv2DPlanner
 from tflite2xcore.utils import ACC_PERIOD, WORD_SIZE
+from .utils import Log
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
@@ -132,6 +133,14 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
         return self._op.inputs[0]
 
     @property
+    def _input_zero_point(self):
+        return int(self._input.quantization['zero_point'][0])
+
+    @property
+    def _output_zero_point(self):
+        return int(self._output.quantization['zero_point'][0])
+
+    @property
     @abstractmethod
     def matching_opcode(self):
         raise NotImplementedError()
@@ -171,6 +180,12 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _weights(self):
         return self._op.inputs[1]
 
+    def _log_weights(self):
+        self.logger.debug(
+            "_weights:\n"
+            + Log._log_array_msg(self._weights.numpy.astype(np.int8))
+        )
+
     @property
     def _biases(self):
         return self._op.inputs[2]
@@ -181,45 +196,41 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
                 return (self._weights.type == TensorType.INT8
                         and self._biases.type == TensorType.INT32)
 
-    @property
     def _multiplier(self):
         output_scale = self._output.quantization['scale'][0]
         bias_scale = np.array(self._biases.quantization['scale'])
         return bias_scale / output_scale
 
-    @property
     @abstractmethod
     def _zero_point_bias(self):
         pass
 
-    @property
+    @Log.output
     def _unified_bias(self):
         biases = self._biases.numpy
-        output_zero_point = int(self._output.quantization['zero_point'][0])
-        return np.int32(biases - self._zero_point_bias
-                        + np.int32(np.round(output_zero_point / self._multiplier)))
+        return np.int32(biases - self._zero_point_bias()
+                        + np.int32(np.round(self._output_zero_point / self._multiplier())))
 
-    def __pad_to_acc_period(self, arr):
+    @staticmethod
+    def __pad_to_acc_period(arr):
         pad = ACC_PERIOD - 1 - (arr.shape[0] - 1) % ACC_PERIOD
         return np.pad(arr, pad_width=[(0, pad)])
 
-    @property
     def _bias_arr(self):
         # calculate bias values with the effect of quantization changes
-        bias = self._unified_bias
+        bias = self._unified_bias()
 
         # zero pad and reshape
         bias = self.__pad_to_acc_period(bias)
-        logging.debug(f"calculated {bias.dtype} biases of shape {bias.shape}:\n{bias}")
+        self.logger.debug("_bias_arr padded biases:\n" + Log._log_array_msg(bias))
 
         # splitting lower and upper 16 bits of each 32 bit value
         tmp_shape = (bias.shape[0] // ACC_PERIOD, ACC_PERIOD, -1)
         new_bias = np.frombuffer(bias.flatten().tostring(), dtype=np.int16).reshape(tmp_shape)
         return np.stack([new_bias[:, :, 1], new_bias[:, :, 0]], axis=1)
 
-    @property
     def _shift_scale(self):
-        multiplier = self._multiplier
+        multiplier = self._multiplier()
         # NOTE: VLMUL expects one factor in Q2.14
         # we have 1 <= scale < 2 represented in Q2.14
         rshift = -np.ceil(np.log2(multiplier)) + 1
@@ -247,10 +258,10 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _MAX_POST_SHIFT(self):
         pass
 
-    @property
+    @Log.output
     def _shift_scale_arr(self):
         # calculate right shift/scale
-        rshift, scale = self._shift_scale
+        rshift, scale = self._shift_scale()
 
         # zero pad and reshape into appropriate array
         new_shape = (-1, ACC_PERIOD)
@@ -260,16 +271,10 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         # split left and right shift into pre and post scaling shifts
         shift_pre = rshift if True else np.maximum(rshift, 0)  # TODO: resolve this when left shift issue is solved in conv2d kernels
         shift_post = self._MAX_POST_SHIFT * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
-        arr = np.stack([shift_pre, scale, shift_post], axis=1)
-        logging.debug(f"calculated {arr.dtype} shift_scale_arr of shape {arr.shape}")
-        logging.debug(f"calculated shift_pre:\n{arr[:, 0]}")
-        logging.debug(f"calculated scale:\n{arr[:, 1]}")
-        logging.debug(f"calculated shift_post:\n{arr[:, 2]}")
-        return arr
+        return np.stack([shift_pre, scale, shift_post], axis=1)
 
-    @property
     def _bss_arr(self):
-        return np.concatenate([self._bias_arr, self._shift_scale_arr], axis=1)
+        return np.concatenate([self._bias_arr(), self._shift_scale_arr()], axis=1)
 
     def mutate_biases(self, op):
         # NOTE: by default no bias layout rearrangement is done for this op
@@ -310,19 +315,15 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     def _MAX_POST_SHIFT(self):
         return 32 - 16 - 2  # this is because the output is 16 bit
 
-    @property
+    @Log.output
     def _zero_point_bias(self):
-        weights = self._weights.numpy
-        input_zero_point = int(self._input.quantization['zero_point'][0])
-        arr = np.sum(weights * input_zero_point, axis=1)
-        logging.debug(f"calculated zero_point_bias of shape {arr.shape}:\n{arr}")
-        return arr
+        return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
 
     def mutate_biases(self, op):
         super().mutate_biases(op)
         with self.using(op):
             # calculate and save the bias/shift/scale tensor
-            bss = self._bss_arr
+            bss = self._bss_arr()
             self._biases.buffer.data = bss
             self._biases.shape = bss.shape
             self._biases.type = TensorType.INT16
@@ -339,7 +340,7 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
                 'min': self._output.quantization['min'],
                 'max': self._output.quantization['max'],
                 'scale': [self._output.quantization['scale'][0] / 2**8],
-                'zero_point': [int(self._output.quantization['zero_point'][0] * 2**8)],
+                'zero_point': [self._output_zero_point * 2**8],
                 'details_type': "CustomQuantization",
                 'quantized_dimension': 0
             }
@@ -444,7 +445,7 @@ class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
 
     def run(self, *args, **kwargs):
         if self.num_threads == 1:
-            logging.debug(f"Skipping {type(self).__name__} with num_threads={self.num_threads}")
+            self.logger.debug(f"Skipping pass b/c num_threads={self.num_threads}")
             return None
         else:
             return super().run(*args, **kwargs)

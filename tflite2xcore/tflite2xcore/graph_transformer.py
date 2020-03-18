@@ -28,6 +28,7 @@ class PassPriority(enum.IntEnum):
 class ModelTransformationPass(ABC):
     def __init__(self, priority):
         assert isinstance(priority, PassPriority)
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.priority = priority
 
     @abstractmethod
@@ -62,7 +63,7 @@ class SubgraphTransformationPass(ModelTransformationPass):
         pass
 
     def log_match(self, obj):
-        logging.debug(f"{type(self).__name__} matched {obj}")
+        self.logger.info(f"matched {obj}")
 
     def run_subgraph(self, subgraph):
         keep_running = True
@@ -77,7 +78,7 @@ class SubgraphTransformationPass(ModelTransformationPass):
 
     def run(self, model):
         for j, subgraph in enumerate(model.subgraphs):
-            logging.debug(f"{type(self).__name__} running on subgraph {j}")
+            self.logger.debug(f"running on subgraph {j}")
             self.run_subgraph(subgraph)
 
 
@@ -129,6 +130,7 @@ class PassManager():
     def __init__(self, model=None, passes=[]):
         self._queue = []
         self._counter = itertools.count()
+        self.logger = logging.getLogger(self.__class__.__name__)
         if model:
             self.register_model(model)
         for trf_pass in passes:
@@ -149,5 +151,5 @@ class PassManager():
     def run_passes(self):
         while self._queue:
             trf_pass = self.pop_pass()
-            logging.debug(f"running {trf_pass}...")
+            self.logger.debug(f"running {trf_pass}...")
             trf_pass.run(self._model)

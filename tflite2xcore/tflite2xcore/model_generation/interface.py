@@ -32,6 +32,7 @@ class Model(ABC):
         '''
         self.name = name
         self.core_model = None
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.models = {}
         self.buffers = {}
         self.data = {}
@@ -65,7 +66,7 @@ class Model(ABC):
     def _save_training_data(self):
         keys = self.data.keys()
         if keys:
-            logging.info(f"Saving the following data keys: {keys}")
+            self.logger.info(f"Saving the following data keys: {keys}")
             np.savez(self.data_dir / 'data', **self.data)
 
     def save_core_model(self):
@@ -75,7 +76,7 @@ class Model(ABC):
         '''
         self._save_training_data()
         self.models['core'] = self.models_dir / 'model.h5'
-        logging.info(f"Saving {self.__class__.__name__} to {self.models['core']}")
+        self.logger.info(f"Saving core model to {self.models['core']}")
         self._save_core_model()
 
     @abstractmethod
@@ -84,8 +85,8 @@ class Model(ABC):
 
     def _load_training_data(self):
         data_path = self.data_dir / 'data.npz'
-        logging.info(f"Loading data from {data_path}")
         self.data = dict(np.load(data_path))
+        self.logger.info(f"Loaded data keys {self.data.keys()} from {data_path}")
 
     def load_core_model(self):
         '''
@@ -95,7 +96,7 @@ class Model(ABC):
         self.models['core'] = self.models_dir / 'model.h5'
         try:
             self._load_training_data()
-            logging.info(f"Loading {self.__class__.__name__} from {self.models['core']}")
+            self.logger.info(f"Loading core model from {self.models['core']}")
             self._load_core_model()
         except FileNotFoundError as e:
             raise FileNotFoundError(
@@ -143,7 +144,7 @@ class Model(ABC):
 
     def convert_to_stripped(self, **converter_args):
         assert 'model_quant' in self.buffers
-        logging.info(f"Converting model_quant...")
+        self.logger.info(f"Converting model_quant...")
         model = deserialize_model(self.buffers['model_quant'])
         xcore_conv.strip_model(model, **converter_args)
         self.models['model_stripped'] = self.models_dir / "model_stripped.tflite"
@@ -152,7 +153,7 @@ class Model(ABC):
     def convert_to_xcore(self, *, source='model_quant', **converter_args):
         assert source in ['model_quant', 'model_stripped']
         assert source in self.buffers
-        logging.info(f"Converting {source}...")
+        self.logger.info(f"Converting {source}...")
         model = deserialize_model(self.buffers[source])
         xcore_conv.optimize_for_xcore(model, **converter_args)
         self.models['model_xcore'] = self.models_dir / 'model_xcore.tflite'
@@ -160,19 +161,19 @@ class Model(ABC):
 
     def _convert_from_tflite_converter(self, model_key):
         assert model_key in self.converters
-        logging.info(f"Converting {model_key}...")
+        self.logger.info(f"Converting {model_key}...")
         self.models[model_key] = self.models_dir / f"{model_key}.tflite"
         self.buffers[model_key] = self.converters[model_key].convert()
 
     def _save_buffer(self, model_key):
         size = self.models[model_key].write_bytes(self.buffers[model_key])
-        logging.info(f"{self.models[model_key]} size: {size/1024:.0f} KB")
+        self.logger.info(f"{self.models[model_key]} size: {size/1024:.0f} KB")
 
     def _save_visualization(self, model_key):
         assert model_key in self.models, 'Model needs to exist to prepare visualization.'
         model_html = self.models[model_key].with_suffix('.html')
         tflite_visualize.main(self.models[model_key], model_html)
-        logging.info(f"{model_key} visualization saved to {model_html}")
+        self.logger.info(f"{model_key} visualization saved to {model_html}")
 
     def _save_data_dict(self, data, *, base_file_name):
         # TODO: this should probably be a util
@@ -187,13 +188,13 @@ class Model(ABC):
                 with open(test_data_dir / f"test_{j}.{key[0]}", 'wb') as f:
                     f.write(arr.flatten().tostring())
 
-        logging.info(f"test examples for {base_file_name} saved to {test_data_dir}")
+        self.logger.info(f"test examples for {base_file_name} saved to {test_data_dir}")
 
     def _save_data_for_canonical_model(self, model_key):
         interpreter = tf.lite.Interpreter(model_content=self.buffers[model_key])
 
         # extract labels for the test examples
-        logging.info(f"Extracting examples for {model_key}...")
+        self.logger.debug(f"Extracting and saving examples for {model_key}...")
         x_test = self.data['export']
         data = {'x_test': x_test,
                 'y_test': utils.apply_interpreter_to_examples(interpreter, x_test)}
@@ -219,7 +220,7 @@ class Model(ABC):
         interpreter = tf.lite.Interpreter(model_content=serialize_model(model))
 
         # extract and quantize reference labels for the test examples
-        logging.info("Extracting examples for model_stripped...")
+        self.logger.debug("Extracting and saving examples for model_stripped...")
         x_test = utils.quantize(self.data['export'],
                                 input_quant['scale'][0],
                                 input_quant['zero_point'][0])

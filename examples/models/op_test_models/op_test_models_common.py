@@ -66,8 +66,9 @@ class OpTestDefaultModel(KerasModel):
         assert self.input_init, "To generate test data this model needs an input initializer"
         self.data['export'], self.data['quant'] = input_initializer(
             self.input_init, *self.input_shape)
-        # logging.debug(f'EXPORT DATA SAMPLE:\n{self.data['export'][4][0]}')
-        # logging.debug(f'QUANT DATA SAMPLE:\n{self.data['quant'][0][0]}')
+        # TODO: use array log message helper from utils
+        # self.logger.debug(f"data['export'] sample:\n{self.data['export'][-1]}")
+        # self.logger.debug(f"data['quant'] sample:\n{self.data['quant'][-1]}")
 
     def run(self, *, num_threads=None):
         self.save_core_model()
@@ -90,9 +91,6 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
                                        kernel_initializer=inits['weight_init'])
             ]
         )
-        # for layer in self.core_model.layers:
-        #     logging.debug(f"WEIGHT SAMPLE:\n{layer.get_weights()[0][1]}")
-        #     logging.debug(f"BIAS SAMPLE:\n{layer.get_weights()[1]}")
 
 
 class OpTestDeepoutConvModel(OpTestDefaultConvModel):
@@ -322,7 +320,7 @@ class OpTestInitializerParser(InitializerParser):
                     params[0] if params else _DEFAULT_CONST_INIT)
 
         for k in initializers:
-            logging.debug(
+            self.logger.debug(
                 f"{k} configuration: "
                 f"{type(initializers[k]).__name__} {initializers[k].get_config()}"
             )

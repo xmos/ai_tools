@@ -1,59 +1,100 @@
 [
     {
         "generator": "../examples/models/op_test_models/generate_lookup_8.py",
-        "operator": "XC_lookup_8"
-    },
-    {
-        "generator": "../examples/models/op_test_models/generate_maxpool2d.py",
-        "operator": "XC_maxpool2d"
+        "operator": "XC_lookup_8",
+        "parameters": [
+            {"--input_init": ["unif", -10, 10], "-act": "relu", "-in": 32, "-wi": 5, "-hi": 5}
+        ]
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d.py",
-        "operator": "XC_avgpool2d"
+        "operator": "XC_avgpool2d",
+        "_comment": "expected failure. see issue https://github.com/xmos/ai_tools/issues/83",
+        "parameters": [
+            {"-in": 32, "-wi": 4, "-hi": 4, "-po": [4, 4], "-st": [2, 2], "-pd": "valid"}
+        ]
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d_global.py",
-        "operator": "XC_avgpool2d_global"
-    },
-    {
-        "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
-        "operator": "XC_conv2d_deepin_deepout_relu"
-    },
-    {
-        "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
-        "operator": "XC_conv2d_shallowin_deepout_relu"
+        "operator": "XC_avgpool2d_global",
+        "parameters": [
+            {"-in": 16, "-wi": 2, "-hi": 2}
+        ]
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_1x1.py",
-        "operator": "XC_conv2d_1x1"
+        "operator": "XC_conv2d_1x1",
+        "parameters": [
+            {"-in": 4, "-out": 4, "-wi": 5, "-hi": 5}
+        ]
     },
     {
-        "generator": "../examples/models/op_test_models/generate_fully_connected.py",
-        "operator": "XC_fc_deepin_anyout",
-        "train_model": true
+        "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
+        "operator": "XC_conv2d_deepin_deepout_relu",
+        "_comment": "expected failures. see issue https://github.com/xmos/ai_tools/issues/88",
+        "parameters": [
+            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same"}
+        ]
     },
     {
-        "generator": "../examples/models/op_test_models/generate_fully_connected_requantized.py",
-        "operator": "XC_requantize_16_to_8",
-        "train_model": true
-    },
-    {
-        "generator": "../examples/models/op_test_models/generate_argmax_16.py",
-        "operator": "XC_argmax_16"
+        "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
+        "operator": "XC_conv2d_shallowin_deepout_relu",
+        "parameters": [
+            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same"}
+        ]
     },
     {
         "generator": "../examples/models/op_test_models/generate_depthwise_conv2d.py",
         "operator": "XC_conv2d_depthwise",
-        "subtype": "depthwise"
+        "subtype": "depthwise",
+        "parameters": [
+            {"-wi": 5, "-hi": 5, "-pd": "same", "-out": 8, "-kh": 3, "-kw": 3, "-st": [1, 1]}
+        ]
     },
     {
         "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_padded.py",
         "operator": "XC_conv2d_depthwise",
-        "subtype": "padded"
+        "subtype": "padded",
+        "parameters": [
+            {"-wi": 5, "-hi": 5, "-out": 4, "-kh": 3, "-kw": 3, "-pd": [1, 1, 1, 1], "-st": [1, 1]}
+        ]
     },
     {
         "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_singlein_deepout.py",
         "operator": "XC_conv2d_depthwise",
-        "subtype": "singlein_deepout"
+        "subtype": "singlein_deepout",
+        "parameters": [
+            {"-wi": 5, "-hi": 5, "-pd": "same", "-out": 16, "-kh": 3, "-kw": 3}
+        ]
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_fully_connected.py",
+        "operator": "XC_fc_deepin_anyout",
+        "train_model": true,
+        "parameters": [
+            {"-in": 4, "-out": 4}
+        ]
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_fully_connected_requantized.py",
+        "operator": "XC_requantize_16_to_8",
+        "train_model": true,
+        "parameters": [
+            {"-in": 4}
+        ]
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_argmax_16.py",
+        "operator": "XC_argmax_16",
+        "parameters": [
+            {"-in": 10}
+        ]
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_maxpool2d.py",
+        "operator": "XC_maxpool2d",
+        "parameters": [
+            {"-in": 4, "-wi": 16, "-hi": 16, "-po": 2, "-st": 2, "-pd": "valid"}
+        ]
     }
 ]

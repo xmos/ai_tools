@@ -14,7 +14,7 @@ import directories
 from tflite2xcore import read_flatbuffer
 from tflite2xcore import operator_codes
 
-def load_tests(test_name):
+def load_tests(test_name, test_dir, max_count):
     supported_operators = set([
         operator_codes.XCOREOpCodes.XC_argmax_16.name,
         operator_codes.XCOREOpCodes.XC_conv2d_1x1.name,
@@ -34,7 +34,7 @@ def load_tests(test_name):
         raise Exception(f'Unsupported op model: {operator_name}')
 
     test_cases = []
-    for directory in Path(os.path.join(directories.OP_TEST_MODELS_DATA_DIR, operator_name)).rglob('*'):
+    for directory in Path(os.path.join(test_dir, operator_name)).rglob('*'):
         if os.path.isdir(directory):
             flatbuffer_xcore = os.path.join(directory, 'models/model_xcore.tflite')
             if os.path.isfile(flatbuffer_xcore):
@@ -60,14 +60,19 @@ def load_tests(test_name):
                             'quantization': output_quantization
                         }
                     })
+                    if len(test_cases) >= max_count:
+                        break 
 
     return test_cases
 
 
 def pytest_generate_tests(metafunc):
+    max_count = metafunc.config.getoption('--max-count')
+    test_dir = metafunc.config.getoption('--test-dir')
+
     for fixture in metafunc.fixturenames:
         if fixture.endswith('test_case'):
-            tests = load_tests(fixture)
+            tests = load_tests(fixture, test_dir, max_count)
             ids = [test['id'] for test in tests]
             metafunc.parametrize(fixture, tests, ids=ids)
 
@@ -86,7 +91,7 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
     print('**********')
     print('* Inputs *')
     print('**********')
-    print('Testcase:', json.dumps(test_case, indent=4))
+    # print('Testcase:', json.dumps(test_case, indent=4))
     print('Command:', cmd)
     print('***********')
     print('* Results *')
@@ -103,51 +108,51 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
         print(ex)
         return False
 
-def test_XC_lookup_8(test_model_app, XC_lookup_8_test_case):
-    assert(run_test_case(test_model_app, XC_lookup_8_test_case))
+def test_XC_lookup_8(test_model_app, XC_lookup_8_test_case, abs_tol):
+    assert(run_test_case(test_model_app, XC_lookup_8_test_case, abs_tol))
 
 
-def test_XC_argmax_16(test_model_app, XC_argmax_16_test_case):
-    assert(run_test_case(test_model_app, XC_argmax_16_test_case))
+def test_XC_argmax_16(test_model_app, XC_argmax_16_test_case, abs_tol):
+    assert(run_test_case(test_model_app, XC_argmax_16_test_case, abs_tol))
 
 
-def test_XC_conv2d_1x1(test_model_app, XC_conv2d_1x1_test_case):
-    assert(run_test_case(test_model_app, XC_conv2d_1x1_test_case))
+def test_XC_conv2d_1x1(test_model_app, XC_conv2d_1x1_test_case, abs_tol):
+    assert(run_test_case(test_model_app, XC_conv2d_1x1_test_case, abs_tol))
 
 
-def test_XC_conv2d_depthwise(test_model_app, XC_conv2d_depthwise_test_case):
-    assert(run_test_case(test_model_app, XC_conv2d_depthwise_test_case))
-
-
-@pytest.mark.xfail
-def test_XC_conv2d_shallowin_deepout_relu(test_model_app, XC_conv2d_shallowin_deepout_relu_test_case):
-    assert(run_test_case(test_model_app, XC_conv2d_shallowin_deepout_relu_test_case))
+def test_XC_conv2d_depthwise(test_model_app, XC_conv2d_depthwise_test_case, abs_tol):
+    assert(run_test_case(test_model_app, XC_conv2d_depthwise_test_case, abs_tol))
 
 
 @pytest.mark.xfail
-def test_XC_conv2d_deepin_deepout_relu(test_model_app, XC_conv2d_deepin_deepout_relu_test_case):
-    assert(run_test_case(test_model_app, XC_conv2d_deepin_deepout_relu_test_case))
-
-
-def test_XC_fc_deepin_anyout(test_model_app, XC_fc_deepin_anyout_test_case):
-    assert(run_test_case(test_model_app, XC_fc_deepin_anyout_test_case))
-
-
-def test_XC_maxpool2d(test_model_app, XC_maxpool2d_test_case):
-    assert(run_test_case(test_model_app, XC_maxpool2d_test_case))
+def test_XC_conv2d_shallowin_deepout_relu(test_model_app, XC_conv2d_shallowin_deepout_relu_test_case, abs_tol):
+    assert(run_test_case(test_model_app, XC_conv2d_shallowin_deepout_relu_test_case, abs_tol))
 
 
 @pytest.mark.xfail
-def test_XC_avgpool2d(test_model_app, XC_avgpool2d_test_case):
-    assert(run_test_case(test_model_app, XC_avgpool2d_test_case))
+def test_XC_conv2d_deepin_deepout_relu(test_model_app, XC_conv2d_deepin_deepout_relu_test_case, abs_tol):
+    assert(run_test_case(test_model_app, XC_conv2d_deepin_deepout_relu_test_case, abs_tol))
 
 
-def test_XC_avgpool2d_global(test_model_app, XC_avgpool2d_global_test_case):
-    assert(run_test_case(test_model_app, XC_avgpool2d_global_test_case))
+def test_XC_fc_deepin_anyout(test_model_app, XC_fc_deepin_anyout_test_case, abs_tol):
+    assert(run_test_case(test_model_app, XC_fc_deepin_anyout_test_case, abs_tol))
 
 
-def test_XC_requantize_16_to_8(test_model_app, XC_requantize_16_to_8_test_case):
-    assert(run_test_case(test_model_app, XC_requantize_16_to_8_test_case))
+def test_XC_maxpool2d(test_model_app, XC_maxpool2d_test_case, abs_tol):
+    assert(run_test_case(test_model_app, XC_maxpool2d_test_case, abs_tol))
+
+
+@pytest.mark.xfail
+def test_XC_avgpool2d(test_model_app, XC_avgpool2d_test_case, abs_tol):
+    assert(run_test_case(test_model_app, XC_avgpool2d_test_case, abs_tol))
+
+
+def test_XC_avgpool2d_global(test_model_app, XC_avgpool2d_global_test_case, abs_tol):
+    assert(run_test_case(test_model_app, XC_avgpool2d_global_test_case, abs_tol))
+
+
+def test_XC_requantize_16_to_8(test_model_app, XC_requantize_16_to_8_test_case, abs_tol):
+    assert(run_test_case(test_model_app, XC_requantize_16_to_8_test_case, abs_tol))
 
 
 if __name__ == "__main__":

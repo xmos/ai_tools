@@ -4,7 +4,6 @@ import logging
 import numpy as np
 
 from abc import abstractmethod
-from contextlib import contextmanager
 from tflite2xcore.graph_transformer import PassPriority
 from tflite2xcore.graph_transformer import (
     ModelTransformationPass,
@@ -116,13 +115,6 @@ class RemoveSoftmaxOutputPass(OperatorMatchingPass):
 class QuantizedOperatorMatchingPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
-        self._op = None
-
-    @contextmanager
-    def using(self, op):
-        self._op, original_op = op, self._op
-        yield
-        self._op = original_op
 
     @property
     def _output(self):

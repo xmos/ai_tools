@@ -5,6 +5,7 @@ import heapq
 import logging
 import itertools
 
+from contextlib import contextmanager
 from abc import ABC, abstractmethod
 from tflite2xcore.xcore_model import XCOREModel
 
@@ -85,9 +86,16 @@ class SubgraphTransformationPass(ModelTransformationPass):
 class OperatorMatchingPass(SubgraphTransformationPass):
     def __init__(self, priority):
         super().__init__(priority)
+        self._op = None
 
     def target_iterable(self, subgraph):
         return subgraph.operators
+
+    @contextmanager
+    def using(self, op):
+        self._op, original_op = op, self._op
+        yield
+        self._op = original_op
 
     def log_match(self, op):
         super().log_match(f"operator {op.operator_code}")

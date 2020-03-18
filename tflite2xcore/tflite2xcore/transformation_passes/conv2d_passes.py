@@ -93,11 +93,15 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
             # remove quantization info to save space
             self._weights.quantization = None
 
-    # @property
-    # def _pad(self):
-    #     input_zero_point = int(self._input.quantization['zero_point'][0])
-    #     if self._padding is 'VALID':
-    #         return
+    def _pad(self):
+        # pad: [top, left, zero_point]
+        pad = [int((o - 1) * s - i + k) // 2
+               for o, s, i, k in zip(self._output.shape[1:3],
+                                     self._op.custom_options['stride'],
+                                     self._input.shape[1:3],
+                                     self._weights.shape[0:2])]
+        pad.append(self._input_zero_point)
+        return pad
 
     def mutate(self, op):
         # TODO: this is the same as in Replace1x1Conv2dPass, refactor
@@ -107,10 +111,9 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
         self.mutate_weights(new_op)
 
         with self.using(op):
-            new_op.add_custom_options(
-                pad=self._padding,
-                stride=list(self._strides)  # TODO: this cast to list should not be necessary when flexbuffers can deal with tuples
-            )
+            new_op.add_custom_options(stride=self._strides)
+        with self.using(new_op):
+            new_op.add_custom_options(pad=self._pad())
         return new_op
 
 
@@ -171,7 +174,7 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
 
         with self.using(op):
             new_op.add_custom_options(
-                stride=list(self._strides)  # TODO: this cast to list should not be necessary when flexbuffers can deal with tuples
+                stride=self._strides
             )
         return new_op
 
@@ -394,7 +397,6 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
             # NOTE: this happens before the standard weight mutation on purpose
             new_weights = np.transpose(self._weights.numpy.astype(np.int8),
                                        axes=(3, 1, 2, 0))
-            # TODO: this cast to list should not be necessary when flexbuffers can deal with tuples
-            self._weights.shape = list(new_weights.shape)
+            self._weights.shape = new_weights.shape
             self._weights.buffer.data = new_weights
         return super().mutate(op)

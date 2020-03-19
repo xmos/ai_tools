@@ -49,7 +49,7 @@ def apply_interpreter_to_examples(interpreter, examples, *, show_progress_step=N
         y = interpreter.get_tensor(interpreter_output_ind)
         outputs.append(y)
 
-    return outputs
+    return np.vstack(outputs) if isinstance(examples, np.ndarray) else outputs
 
 
 def shuffle(arr1, arr2):

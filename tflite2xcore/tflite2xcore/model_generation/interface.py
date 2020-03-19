@@ -2,6 +2,7 @@
 import logging
 import pathlib
 from tflite2xcore.model_generation import utils
+from tflite2xcore.utils import Log
 import tensorflow as tf
 import numpy as np
 from abc import ABC, abstractmethod
@@ -224,14 +225,16 @@ class Model(ABC):
         x_test = utils.quantize(self.data['export'],
                                 input_quant['scale'][0],
                                 input_quant['zero_point'][0])
-        y_test = utils.apply_interpreter_to_examples(interpreter, self.data['export'])
-        # The next line breaks in FunctionModels & Keras without output dimension
-        y_test = [
-            utils.quantize(y, output_quant['scale'][0], output_quant['zero_point'][0])
-            for y in y_test
-        ]
-        data = {'x_test': x_test,
-                'y_test': np.vstack(y_test)}
+        y_test_float = utils.apply_interpreter_to_examples(interpreter,
+                                                           self.data['export'])
+        y_test = utils.quantize(y_test_float,
+                                output_quant['scale'][0],
+                                output_quant['zero_point'][0])
+        self.logger.debug("model_stripped input example: "
+                          f"{Log._array_msg(x_test[-1])}")
+        self.logger.debug("model_stripped output example: "
+                          f"{Log._array_msg(y_test[-1])}")
+        data = {'x_test': x_test, 'y_test': y_test}
 
         self._save_data_dict(data, base_file_name='model_stripped')
 

@@ -175,7 +175,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _log_weights(self):
         self.logger.debug(
             "_weights:\n"
-            + Log._log_array_msg(self._weights.numpy.astype(np.int8))
+            + Log._array_msg(self._weights.numpy.astype(np.int8))
         )
 
     @property
@@ -214,7 +214,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
         # zero pad and reshape
         bias = self.__pad_to_acc_period(bias)
-        self.logger.debug("_bias_arr padded biases:\n" + Log._log_array_msg(bias))
+        self.logger.debug("_bias_arr padded biases:\n" + Log._array_msg(bias))
 
         # splitting lower and upper 16 bits of each 32 bit value
         tmp_shape = (bias.shape[0] // ACC_PERIOD, ACC_PERIOD, -1)
@@ -263,10 +263,16 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         # split left and right shift into pre and post scaling shifts
         shift_pre = rshift if True else np.maximum(rshift, 0)  # TODO: resolve this when left shift issue is solved in conv2d kernels
         shift_post = self._MAX_POST_SHIFT * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
+        if np.any(shift_post.flatten() < 0):
+            raise ValueError("Negative shift_post encountered: "
+                             f"{Log._array_msg(shift_post)}")
         return np.stack([shift_pre, scale, shift_post], axis=1)
 
     def _bss_arr(self):
-        return np.concatenate([self._bias_arr(), self._shift_scale_arr()], axis=1)
+        # TODO: resolve this when left shift issue is solved in conv2d kernels
+        shift_scale_arr = self._shift_scale_arr()
+        shift_scale_arr[:, 0, :] = np.maximum(shift_scale_arr[:, 0, :], 0)
+        return np.concatenate([self._bias_arr(), shift_scale_arr], axis=1)
 
     def mutate_biases(self, op):
         # NOTE: by default no bias layout rearrangement is done for this op

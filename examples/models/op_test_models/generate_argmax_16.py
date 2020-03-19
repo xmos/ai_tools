@@ -94,7 +94,7 @@ class ArgMax16(common.OpTestDefaultModel):
                                 dtype=np.int16)
         y_test = utils.apply_interpreter_to_examples(interpreter,
                                                      self.data['export'])
-        data = {'x_test': x_test, 'y_test': np.vstack(list(y_test))}
+        data = {'x_test': x_test, 'y_test': y_test}
 
         self._save_data_dict(data, base_file_name='model_stripped')
 

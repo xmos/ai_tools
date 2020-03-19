@@ -24,6 +24,7 @@ void vlmacc8(
     }
 }
 
+#define INDEX_CAST(X)   ((int32_t)(X))
 
 
 
@@ -166,10 +167,10 @@ static void nn_compute_hstrip_depthwise_padded_c(
             // printf("PAD_T??\t%d\t%d\n", pad_t, i);
             for(int j = plan->kernel.width; j > 0; j--){
                 vlmacc8(accs, zero_point_vec, K);
-                X = &X[plan->channels.X];
-                K = &K[plan->channels.X];
+                X = &X[INDEX_CAST(plan->channels.X)];
+                K = &K[INDEX_CAST(plan->channels.X)];
             }
-            X = &X[plan->stride.X.row];
+            X = &X[INDEX_CAST(plan->stride.X.row)];
         }
 
         // These rows are inside image (vertically)
@@ -179,25 +180,25 @@ static void nn_compute_hstrip_depthwise_padded_c(
             for(int j = cur_pad_l; j > 0; j -= plan->channels.X){
                 // printf("PAD_L??\t%d\t%d\n", cur_pad_l, j);
                 vlmacc8(accs, zero_point_vec, K);
-                X = &X[plan->channels.X];
-                K = &K[plan->channels.X];
+                X = &X[INDEX_CAST(plan->channels.X)];
+                K = &K[INDEX_CAST(plan->channels.X)];
             }
 
             for(int j = center_cols; j > 0; j-= plan->channels.X){
                 vlmacc8(accs, X, K);
-                X = &X[plan->channels.X];
-                K = &K[plan->channels.X];
+                X = &X[INDEX_CAST(plan->channels.X)];
+                K = &K[INDEX_CAST(plan->channels.X)];
             }
 
             //THIS LOOP IS IN PADDING (right of image)
             for(int j = cur_pad_r; j > 0; j -= plan->channels.X){
                 // printf("PAD_R??\t%d\t%d\n", cur_pad_r, j);
                 vlmacc8(accs, zero_point_vec, K);
-                X = &X[plan->channels.X];
-                K = &K[plan->channels.X];
+                X = &X[INDEX_CAST(plan->channels.X)];
+                K = &K[INDEX_CAST(plan->channels.X)];
             }
 
-            X = &X[plan->stride.X.row];
+            X = &X[INDEX_CAST(plan->stride.X.row)];
         }
         
         //THIS LOOP IS IN PADDING (below image)
@@ -205,10 +206,10 @@ static void nn_compute_hstrip_depthwise_padded_c(
             // printf("PAD_B??\t%d\t%d\n", pad_b, i);
             for(int j = plan->kernel.width; j > 0; j--){
                 vlmacc8(accs, zero_point_vec, K);
-                X = &X[plan->channels.X];
-                K = &K[plan->channels.X];
+                X = &X[INDEX_CAST(plan->channels.X)];
+                K = &K[INDEX_CAST(plan->channels.X)];
             }
-            X = &X[plan->stride.X.row];
+            X = &X[INDEX_CAST(plan->stride.X.row)];
         }
 
         for(int k = 0; k < chans_to_write; k++){
@@ -234,8 +235,8 @@ static void nn_compute_hstrip_depthwise_padded_c(
             center_cols -= tmp;
         }
         
-        X_in = &X_in[plan->stride.window.col];
-        Y = &Y[plan->channels.Y];
+        X_in = &X_in[INDEX_CAST(plan->stride.window.col)];
+        Y = &Y[INDEX_CAST(plan->channels.Y)];
 
     }
 }
@@ -259,10 +260,10 @@ void conv2d_depthwise_c(
     int8_t zero_point_vec[VPU_INT8_VLMACC_ELMS];
     memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
 
-    X = &X[job->stride.start.X];
-    Y = &Y[job->stride.start.Y];
-    K = &K[job->stride.start.K];
-    BSS = &BSS[job->stride.start.BSS];
+    X = &X[INDEX_CAST(job->stride.start.X)];
+    Y = &Y[INDEX_CAST(job->stride.start.Y)];
+    K = &K[INDEX_CAST(job->stride.start.K)];
+    BSS = &BSS[INDEX_CAST(job->stride.start.BSS)];
 
     // ADDR(X, "start strided");
     // ADDR(Y, "start strided");
@@ -291,15 +292,15 @@ void conv2d_depthwise_c(
             pad_t -= plan->kernel.vstride;
             pad_b += plan->kernel.vstride;
 
-            X = &X[job->stride.row.window];
-            Y = &Y[job->stride.row.Y];
+            X = &X[INDEX_CAST(job->stride.row.window)];
+            Y = &Y[INDEX_CAST(job->stride.row.Y)];
         }
 
-        X = &X[job->stride.chan_group.X];
-        Y = &Y[job->stride.chan_group.Y];
+        X = &X[INDEX_CAST(job->stride.chan_group.X)];
+        Y = &Y[INDEX_CAST(job->stride.chan_group.Y)];
 
-        BSS = &BSS[1];
-        K = &K[VPU_INT8_VLMACC_ELMS];
+        BSS = &BSS[INDEX_CAST(1)];
+        K = &K[INDEX_CAST(VPU_INT8_VLMACC_ELMS)];
     }
 
 }
@@ -322,10 +323,10 @@ void conv2d_depthwise_asm(
     int8_t zero_point_vec[VPU_INT8_VLMACC_ELMS];
     memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
 
-    X = &X[job->stride.start.X];
-    Y = &Y[job->stride.start.Y];
-    K = &K[job->stride.start.K];
-    BSS = &BSS[job->stride.start.BSS];
+    X = &X[INDEX_CAST(job->stride.start.X)];
+    Y = &Y[INDEX_CAST(job->stride.start.Y)];
+    K = &K[INDEX_CAST(job->stride.start.K)];
+    BSS = &BSS[INDEX_CAST(job->stride.start.BSS)];
 
     // ADDR(X, "start strided");
     // ADDR(Y, "start strided");
@@ -361,16 +362,16 @@ void conv2d_depthwise_asm(
             pad_t -= plan->kernel.vstride;
             pad_b += plan->kernel.vstride;
 
-            X = &X[job->stride.row.window];
-            Y = &Y[job->stride.row.Y];
+            X = &X[INDEX_CAST(job->stride.row.window)];
+            Y = &Y[INDEX_CAST(job->stride.row.Y)];
             
         }
 
-        X = &X[job->stride.chan_group.X];
-        Y = &Y[job->stride.chan_group.Y];
+        X = &X[INDEX_CAST(job->stride.chan_group.X)];
+        Y = &Y[INDEX_CAST(job->stride.chan_group.Y)];
 
-        BSS = &BSS[1];
-        K = &K[VPU_INT8_VLMACC_ELMS];
+        BSS = &BSS[INDEX_CAST(1)];
+        K = &K[INDEX_CAST(VPU_INT8_VLMACC_ELMS)];
     }
 
 }

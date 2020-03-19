@@ -1206,15 +1206,6 @@ void test_conv2d_depthwise_case6()
 
     conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, 0, 0, K_h, K_w, v_stride, h_stride, ZERO_POINT, 1);
 
-    printf("plan: ");
-    for(int i = 0; i < sizeof(nn_conv2d_depthwise_plan_t)/sizeof(unsigned); i++)
-        printf("0x%08X, ", ((unsigned*) &plan)[i]);
-    printf("\n");
-    printf("job: ");
-    for(int i = 0; i < sizeof(nn_conv2d_depthwise_job_t)/sizeof(unsigned); i++)
-        printf("0x%08X, ", ((unsigned*) &job)[i]);
-    printf("\n");
-
 #if TEST_C
     PRINTF("\t\t\tC...\n");
     memset(Y_c, 0xCC, sizeof(Y_c)); 

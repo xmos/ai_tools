@@ -247,7 +247,7 @@ typedef struct {
     struct {
         unsigned height;
         unsigned width;
-        unsigned vstride; //TODO: get rid of this
+        int vstride; //TODO: get rid of this
     } kernel;
 
     struct {

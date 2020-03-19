@@ -232,12 +232,12 @@ void conv2d_depthwise_init(
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params,
     const nn_conv2d_job_params_t* job_params,
-    const unsigned window_start_row,
-    const unsigned window_start_col,
+    const int window_start_row,
+    const int window_start_col,
     const unsigned K_h,
     const unsigned K_w,
-    const unsigned v_stride,
-    const unsigned h_stride,
+    const int v_stride,
+    const int h_stride,
     const int8_t zero_point,
     const unsigned job_count);
 

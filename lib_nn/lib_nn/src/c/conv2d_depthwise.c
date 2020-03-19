@@ -33,12 +33,12 @@ void conv2d_depthwise_init(
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params,
     const nn_conv2d_job_params_t* job_params,
-    const unsigned kernel_start_row,
-    const unsigned kernel_start_col,
+    const int kernel_start_row,
+    const int kernel_start_col,
     const unsigned K_h,
     const unsigned K_w,
-    const unsigned v_stride,
-    const unsigned h_stride,
+    const int v_stride,
+    const int h_stride,
     const int8_t zero_point,
     const unsigned job_count)
 {
@@ -253,6 +253,8 @@ void conv2d_depthwise_c(
     // ADDR(X, "initial");
     // ADDR(Y, "initial");
     // ADDR(K, "initial");
+
+
 
     int8_t zero_point_vec[VPU_INT8_VLMACC_ELMS];
     memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));

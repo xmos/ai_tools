@@ -48,6 +48,7 @@ def main(raw_args=None):
                 args.height, args.width,
                 args.inputs, args.outputs,
                 padding=args.padding, **args.inits)
+    model.run()
 
 
 if __name__ == "__main__":

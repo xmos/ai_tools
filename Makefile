@@ -27,8 +27,6 @@ tflite2xcore_test:
 
 .PHONY: integration_test
 integration_test: test_model
-	# NOTE: generate_test_data MUST be run using a single process because of a limitation/bug
-	#       in the GPU build of tensorflow
 	cd tests && ./generate_test_data.py
 	cd tests && pytest -v --test-app=../examples/apps/test_model/bin/test_model -n $(NUM_PROCS)
 	cd tests && pytest -v -n $(NUM_PROCS)

@@ -23,6 +23,8 @@ import argparse
 import webbrowser
 import tempfile
 
+from collections import Counter
+
 from tflite2xcore.serialization.flatbuffers_io import FlexbufferParser
 from tflite2xcore import read_flatbuffer, create_dict_from_model
 from tflite2xcore.operator_codes import XCOREOpCodes
@@ -440,12 +442,6 @@ def CreateHtml(data):
         html += "</tr>"
     html += "</table>\n"
 
-    # Spec on what keys to display
-    buffer_keys_to_display = [("data", DataSizeMapper())]
-    operator_keys_to_display = [("builtin_code", None),
-                                ("custom_code", None),
-                                ("version", None)]
-
     for subgraph_idx, g in enumerate(data["subgraphs"]):
         # Subgraph local specs on what to display
         html += "\n<div class='subgraph'>"
@@ -489,10 +485,21 @@ def CreateHtml(data):
         html += "</div>\n\n"
 
     # Buffers have no data, but maybe in the future they will
+    buffer_keys_to_display = [("data", DataSizeMapper())]
     html += "<h2>Buffers</h2>\n"
     html += GenerateTableHtml(data["buffers"], buffer_keys_to_display)
 
     # Operator codes
+    operator_keys_to_display = [("builtin_code", None),
+                                ("custom_code", None),
+                                ("version", None),
+                                ("count", None)]
+    op_cnt = Counter(op["opcode_index"]
+                     for subgraph in data["subgraphs"]
+                     for op in subgraph["operators"])
+    op_cnt = sorted(op_cnt.items(), key=lambda t: t[0])
+    for d, p in zip(data["operator_codes"], op_cnt):
+        d['count'] = p[1]
     html += "<h2>Operator Codes</h2>\n"
     html += GenerateTableHtml(data["operator_codes"], operator_keys_to_display)
 

@@ -35,8 +35,9 @@ def create_dict_from_operator(operator):
     return operator_dict
 
 
-def create_dict_from_tensor(tensor):
-    buffers = tensor.subgraph.model.buffers
+def create_dict_from_tensor(tensor, *, extended=False):
+    subgraph = tensor.subgraph
+    buffers = subgraph.model.buffers
 
     tensor_dict = {
         'name': tensor.name,
@@ -48,14 +49,22 @@ def create_dict_from_tensor(tensor):
     if tensor.quantization:
         tensor_dict['quantization'] = tensor.quantization
 
+    if extended:
+        operators = subgraph.operators
+        tensor_dict['consumers'] = sorted(operators.index(t)
+                                          for t in tensor.consumers)
+        tensor_dict['producers'] = sorted(operators.index(t)
+                                          for t in tensor.producers)
+
     return tensor_dict
 
 
-def create_dict_from_subgraph(subgraph):
+def create_dict_from_subgraph(subgraph, *, extended=False):
     tensors = subgraph.tensors
 
     subgraph_dict = {
-        'tensors': [create_dict_from_tensor(tensor) for tensor in tensors],
+        'tensors': [create_dict_from_tensor(tensor, extended=extended)
+                    for tensor in tensors],
         'inputs': [tensors.index(input_tensor) for input_tensor in subgraph.inputs],
         'outputs': [tensors.index(output_tensor) for output_tensor in subgraph.outputs],
         'operators': [create_dict_from_operator(operator) for operator in subgraph.operators]
@@ -67,10 +76,10 @@ def create_dict_from_subgraph(subgraph):
     return subgraph_dict
 
 
-def create_dict_from_buffer(buffer, *, include_owners=False):
+def create_dict_from_buffer(buffer, *, extended=False):
     buffer_dict = {'data': buffer.data} if buffer.data is not None else {}
 
-    if include_owners:
+    if extended:
         owners_dict = dict()
         model = buffer.model
 
@@ -102,9 +111,9 @@ def create_dict_from_model(model, *, extended=False):
         'description': model.description,
         'metadata': [create_dict_from_metadata(metadata)
                      for metadata in model.metadata],
-        'buffers': [create_dict_from_buffer(buffer, include_owners=extended)
+        'buffers': [create_dict_from_buffer(buffer, extended=extended)
                     for buffer in model.buffers],
-        'subgraphs': [create_dict_from_subgraph(subgraph)
+        'subgraphs': [create_dict_from_subgraph(subgraph, extended=extended)
                       for subgraph in model.subgraphs],
         'operator_codes': [create_dict_from_operator_code(operator_code)
                            for operator_code in model.operator_codes]

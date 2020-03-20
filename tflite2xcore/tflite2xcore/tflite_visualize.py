@@ -223,6 +223,22 @@ class OpCodeMapper():
         return f"{s} [{opcode_idx}]" if op_idx is None else f"({op_idx}) {s}"
 
 
+class OpCodeTooltipMapper():
+    """Maps a list of opcode indices to a tooltip hoverable indicator of more."""
+
+    def __init__(self, model_dict, subgraph):
+        self.operators = subgraph['operators']
+        self.opcode_mapper = OpCodeMapper(model_dict)
+
+    def __call__(self, idx_list):
+        html = "<span class='tooltip'><span class='tooltipcontent'>"
+        for idx in idx_list:
+            html += self.opcode_mapper(self.operators[idx]["opcode_index"], idx)
+            html += ' <br>'
+        html += f"</span>{idx_list}</span>"
+        return html
+
+
 class DataSizeMapper():
     """For buffers, report the number of bytes."""
 
@@ -470,6 +486,7 @@ def CreateHtml(data):
         html += "\n<div class='subgraph'>"
         tensor_mapper = TensorTooltipMapper(g)
         opcode_mapper = OpCodeMapper(data)
+        opcode_tooltip_mapper = OpCodeTooltipMapper(data, g)
         custom_options_mapper = CustomOptionsMapper()
         op_keys_to_display = [("inputs", tensor_mapper),
                               ("outputs", tensor_mapper),
@@ -477,6 +494,8 @@ def CreateHtml(data):
                               ("builtin_options", None),
                               ("custom_options", custom_options_mapper)]
         tensor_keys_to_display = [("name", None),
+                                  ("consumers", opcode_tooltip_mapper),
+                                  ("producers", opcode_tooltip_mapper),
                                   ("type", None),
                                   ("shape", None),
                                   ("buffer", None),

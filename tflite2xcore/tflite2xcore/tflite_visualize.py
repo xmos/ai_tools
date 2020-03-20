@@ -120,6 +120,7 @@ function buildGraph() {
     .attr("x", function(d){return d.x})
     .attr("y", function(d){return d.y})
     .attr("node_width", function(d){return d.node_width})
+    .attr("node_height", function(d){return d.node_height})
     .attr("transform", function(d) {
       return "translate( " + d.x + ", " + d.y + ")"
     })
@@ -138,9 +139,6 @@ function buildGraph() {
           }));
   // Within the group, draw a box for the node position and text
   // on the side.
-
-  var node_width = 150;
-  var node_height = 30;
 
   node.append("rect")
       .attr("r", "5px")
@@ -183,7 +181,7 @@ function buildGraph() {
       return (1.0-t) * a + t * b;
     }
     var x1 = proc(name_to_g[d.source],"x") + proc(name_to_g[d.source],"node_width") / 2;
-    var y1 = proc(name_to_g[d.source],"y") + node_height;
+    var y1 = proc(name_to_g[d.source],"y") + proc(name_to_g[d.source],"node_height");
     var x2 = proc(name_to_g[d.target],"x") + proc(name_to_g[d.target],"node_width") / 2;
     var y2 = proc(name_to_g[d.target],"y");
     var s = "M " + x1 + " " + y1

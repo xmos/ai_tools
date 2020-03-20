@@ -110,8 +110,15 @@ function buildGraph() {
       .force("charge", d3.forceManyBody())
       .force("center", d3.forceCenter(0.5 * width, 0.5 * height));
 
-  var edge = svg.append("g").attr("class", "edges").selectAll("line")
-    .data(graph.edges).enter().append("path").attr("stroke","black").attr("fill","none")
+  var edge = svg.append("g")
+                .attr("class", "edges")
+                .selectAll("line")
+                .data(graph.edges)
+                .enter()
+                .append("path")
+                .attr("stroke","black")
+                .attr("stroke-width", 1)
+                .attr("fill","none");
 
   // Make the node group
   var node = svg.selectAll(".nodes")
@@ -121,6 +128,7 @@ function buildGraph() {
     .attr("y", function(d){return d.y})
     .attr("node_width", function(d){return d.node_width})
     .attr("node_height", function(d){return d.node_height})
+    .attr("id", function(d){return d.id})
     .attr("transform", function(d) {
       return "translate( " + d.x + ", " + d.y + ")"
     })
@@ -137,15 +145,16 @@ function buildGraph() {
             if (!d3.event.active) simulation.alphaTarget(0);
             d.fx = d.fy = null;
           }));
+
   // Within the group, draw a box for the node position and text
   // on the side.
-
-  node.append("rect")
+  let rect = node.append("rect")
       .attr("r", "5px")
       .attr("width", function(d) { return d.node_width; })
       .attr("height", function(d) { return d.node_height; })
       .attr("rx", function(d) { return d.edge_radius; })
       .attr("stroke", "#000000")
+      .attr("stroke-width", 1)
       .attr("fill", function(d) { return d.fill_color; })
   let text = node.append("text")
       .text("")
@@ -160,6 +169,13 @@ function buildGraph() {
       .text(d => d)
       .attr("x", 5)
       .attr("dy", 15);
+
+  node.on("mouseover", function(d, i) {
+    d3.select(this).select("rect").attr("stroke-width", 3)
+  });
+  node.on("mouseout", function(d, i) {
+    d3.select(this).select("rect").attr("stroke-width", 1)
+  });
 
   // Setup force parameters and update position callback
 
@@ -187,8 +203,21 @@ function buildGraph() {
     var s = "M " + x1 + " " + y1
         + " C " + x1 + " " + lerp(.5, y1, y2)
         + " " + x2 + " " + lerp(.5, y1, y2)
-        + " " + x2  + " " + y2
+        + " " + x2  + " " + y2;
     return s;
+  });
+  edge.attr("source", function(d) {return d.source;})
+      .attr("target", function(d) {return d.target;});
+
+  edge.on("mouseover", function(d, i) {
+    d3.select(this).attr("stroke-width", 4);
+    d3.select("#" + d.source).select("rect").attr("stroke-width", 3);
+    d3.select("#" + d.target).select("rect").attr("stroke-width", 3);
+  });
+  edge.on("mouseout", function(d, i) {
+    d3.select(this).attr("stroke-width", 1);
+    d3.select("#" + d.source).select("rect").attr("stroke-width", 1);
+    d3.select("#" + d.target).select("rect").attr("stroke-width", 1);
   });
 }
 
@@ -215,7 +244,7 @@ class OpCodeMapper():
                 except ValueError:
                     color = "#a00000"  # unknown custom opcode
             else:
-                color = "#000000"
+                color = "#0000a0"
             self.color.append(color)
 
     def __call__(self, opcode_idx, op_idx=None):

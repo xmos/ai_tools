@@ -80,6 +80,8 @@
         "operator": "XC_conv2d_depthwise",
         "subtype": "depthwise",
         "parameters": [
+            {"-wi": 1, "-hi": 1, "-pd": "same", "-out": 4, "-kh": 2, "-kw": 2, "-st": [1, 1]},
+            {"-wi": 1, "-hi": 1, "-pd": "same", "-out": 4, "-kh": 2, "-kw": 2, "-st": [2, 2]},
             {"-wi": 4, "-hi": 4, "-pd": "same", "-out": 4, "-kh": 3, "-kw": 3, "-st": [1, 1]},
             {"-wi": 4, "-hi": 4, "-pd": "valid", "-out": 4, "-kh": 3, "-kw": 3, "-st": [1, 1]},
             {"-wi": 5, "-hi": 5, "-pd": "valid", "-out": 8, "-kh": 3, "-kw": 3, "-st": [1, 1]},

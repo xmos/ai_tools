@@ -6,13 +6,11 @@ import pytest
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.transformation_passes import ReplaceFullyConnectedOutputPass
 
-from .model_builders import (
-    build_fc, build_mlp,
-)
+from .model_builders import build_mlp
 
 from .test_ReplaceFullyConnectedIntermediatePass import (
     MATCHING_INPUT_SIZE,
-    outputs, input_size,
+    outputs, input_shape,
     fc_model, logistic
 )
 MATCHING_HIDDEN_NODES = [numpy.prod(t) for t in MATCHING_INPUT_SIZE]
@@ -36,8 +34,8 @@ def hidden_nodes(request):
 
 
 @pytest.fixture()
-def mlp(outputs, hidden_nodes, input_size):
-    return build_mlp(outputs=outputs, hidden_nodes=hidden_nodes, input_size=input_size)
+def mlp(outputs, hidden_nodes, input_shape):
+    return build_mlp(outputs=outputs, hidden_nodes=hidden_nodes, input_shape=input_shape)
 
 
 def test_matching_params(trf_pass, fc_model):

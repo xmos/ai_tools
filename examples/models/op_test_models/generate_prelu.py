@@ -30,10 +30,7 @@ def main(raw_args=None):
         'width': DEFAULT_WIDTH,
         'height': DEFAULT_HEIGHT,
         'inits': {
-            'input_init': {
-                'type': common.OpTestInitializers.UNIF,
-                'help': "Initializer for input data distribution."
-            },
+            'input_init': {'type': common.OpTestInitializers.UNIF},
             'alpha_init': {
                 'type': common.OpTestInitializers.UNIF,
                 'help': "Initializer for learnable parameters."
@@ -41,7 +38,6 @@ def main(raw_args=None):
         }
     })
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(False, args.verbose)
 
     test_model = PReLU('prelu', args.path)
     test_model.build(args.height, args.width, args.inputs, **args.inits)

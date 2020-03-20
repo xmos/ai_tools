@@ -26,7 +26,7 @@ class MNISTModel(KerasClassifier):
     def prep_data(self, *, simard_resize=False, padding=2):
         self.data = utils.prepare_MNIST(self._use_aug, simard=simard_resize, padding=padding)
         for k, v in self.data.items():
-            logging.debug(f"Prepped data[{k}] with shape: {v.shape}")
+            self.logger.debug(f"Prepped data[{k}] with shape: {v.shape}")
 
     def gen_test_data(self):
         if not self.data:

@@ -26,24 +26,24 @@ PARAMS = deepcopy(PARAMS)
 
 PARAMS["default"].update({
     "kernel_width": [1],
-    "non_matching_kernel_width": [2, 3, 5],
+    "non_matching_kernel_width": [2, 3, 5, 7],
     "kernel_height": [1],
-    "non_matching_kernel_height": [2, 3, 5],
-    "input_channels": [4, 8, 16, 32],
-    "non_matching_input_channels": [3, 9, 15],
-    "output_channels": [4, 8, 16, 32],
-    "non_matching_output_channels": [3, 9, 15]
+    "non_matching_kernel_height": [2, 3, 5, 7],
+    "stride_h": [1],
+    "non_matching_stride_h": [2, 3],
+    "stride_w": [1],
+    "non_matching_stride_w": [2, 3]
 })
 
 PARAMS["smoke"].update({
     "kernel_width": [1],
-    "non_matching_kernel_width": [3, 5],
+    "non_matching_kernel_width": [2, 3],
     "kernel_height": [1],
-    "non_matching_kernel_height": [3, 5],
-    "input_channels": [4, 32],
-    "non_matching_input_channels": [3, 9],
-    "output_channels": [4, 32],
-    "non_matching_output_channels": [3, 9]
+    "non_matching_kernel_height": [2, 3],
+    "stride_h": [1],
+    "non_matching_stride_h": [2],
+    "stride_w": [1],
+    "non_matching_stride_w": [2]
 })
 
 

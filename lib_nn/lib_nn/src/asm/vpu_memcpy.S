@@ -23,24 +23,28 @@ void vpu_memcpy(
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
 
+#define dst         r0
+#define src         r11
+#define len         r2
+#define _32         r1
+#define tail        r3
+
 .align 4
-
-
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
-
-    {   mkmsk r3, 5             ;   mov r11, r1             }
-    {   and r3, r2, r3          ;   shr r2, r2, 5           }
-    {   ldc r1, 32              ;   sub r2, r2, 1           }
+    {   mkmsk r3, 5                 ;   mov src, r1                 }
+    {   and tail, len , r3          ;   shr len , len , 5           }
+    {   ldc _32, 32                 ;   bf len , .L_loop_end        }
 
     .L_loop_top:
+        {   sub len , len , 1           ;   vldr src[0]                 }
+        {   add src, src, _32           ;   vstr dst[0]                 }
+        {   add dst, dst, _32           ;   bt len , .L_loop_top        }
+//      {       FNOP        }
 
-        {   add r11, r11, r1        ;   vldr r11[0]             }
-        {   add r0, r0, r1          ;   vstr r0[0]              }
-        {   sub r2, r2, 1           ;   bt r2, .L_loop_top      }
-
-    {   mkmsk r3, r3            ;   vldr r11[0]             }
-    vstrpv r0[0], r3
+    .L_loop_end:
+    {   mkmsk tail, tail            ;   vldr src[0]                 }
+    vstrpv dst[0], tail
 
 
 .Lfunc_end:

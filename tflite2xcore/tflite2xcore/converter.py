@@ -71,6 +71,7 @@ def optimize_for_xcore(model, *,
 
     pass_mgr.register_pass(passes.ReplaceArgMax16Pass())
     pass_mgr.register_pass(passes.Replace1x1Conv2dPass())
+    pass_mgr.register_pass(passes.ReplaceDepthwiseConv2dPass())
     pass_mgr.register_pass(passes.ReplaceDeepinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceShallowinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceSingleinDeepoutDepthwiseConv2DPass())
@@ -86,6 +87,8 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())
     pass_mgr.register_pass(passes.ReplaceTanhPass())
     pass_mgr.register_pass(passes.ReplaceLogisticPass())
+
+    pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
 
     if num_threads:
         pass_mgr.register_pass(passes.ParallelizeDIDOPass(num_threads=num_threads))

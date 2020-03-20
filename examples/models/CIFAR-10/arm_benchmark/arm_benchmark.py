@@ -101,7 +101,7 @@ def execute_job(args):
     interpreter = tf.lite.Interpreter(model_content=model_bin)
     y = common.apply_interpreter_to_examples(
         interpreter, x, show_progress_step=show_progress_step, show_pid=True)
-    return np.argmax(np.vstack(y), axis=1).flatten()
+    return np.argmax(y, axis=1).flatten()
 
 
 def evaluate_model(model_file, data, *, base_file_name, num_workers=8, show_progress_step=None):

@@ -30,8 +30,9 @@ class ParallelizationPlanner(ABC):
     def __init__(self, *, num_threads, forced=False):
         assert isinstance(num_threads, int)
         assert 0 < num_threads <= self.MAX_THREADS
+        self.logger = logging.getLogger(self.__class__.__name__)
         if num_threads == 1:
-            logging.warning(f"{type(self).__name__} initialized with 1 thread.")
+            self.logger.warning(f"initialized with 1 thread.")
         self.num_threads = num_threads
 
         self.forced = forced
@@ -64,7 +65,7 @@ class ParallelizationPlanner(ABC):
 
         best_plan = min(self._candidate_plans, key=lambda plan: plan.cost)
         if best_plan.num_threads == self.num_threads:
-            logging.debug(f"{type(self).__name__} found best {repr(best_plan)}")
+            self.logger.debug(f"found best plan: {repr(best_plan)}")
             return best_plan
         else:
             forced_candidates = [plan for plan in self._candidate_plans
@@ -72,15 +73,13 @@ class ParallelizationPlanner(ABC):
             best_forced_plan = min(forced_candidates, key=lambda plan: plan.cost)
 
         if self.forced:
-            logging.warning(
-                f"{type(self).__name__} is "
+            self.logger.warning(
                 f"forcing suboptimal plan {repr(best_forced_plan)} "
                 f"when better alternative {repr(best_plan)} exists."
             )
             return best_forced_plan
         else:
-            logging.info(
-                f"{type(self).__name__} is "
+            self.logger.info(
                 f"replacing suboptimal plan {repr(best_forced_plan)} "
                 f"with better alternative {repr(best_plan)}."
             )

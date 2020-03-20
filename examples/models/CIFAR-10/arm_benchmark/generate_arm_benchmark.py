@@ -65,7 +65,7 @@ class ArmBenchmark(KerasClassifier):
     def prep_data(self):
         self.data = get_normalized_data()
         for k, v in self.data.items():
-            logging.debug(f"Prepped data[{k}] with shape: {v.shape}")
+            self.logger.debug(f"Prepped data[{k}] with shape: {v.shape}")
 
     # For exports
     def gen_test_data(self):

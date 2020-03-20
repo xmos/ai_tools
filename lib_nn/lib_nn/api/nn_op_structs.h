@@ -30,6 +30,19 @@ typedef struct {
 } nn_index_vector2d_t;
 
 
+#define BSS_BLOCK_COUNT(OUT_CHANS) ((OUT_CHANS+(VPU_INT8_VLMACC_ELMS-1))>>VPU_INT8_VLMACC_ELMS_LOG2)
+
+/**
+ * Represents the Bias, shifts and scale for a single output channel group.
+ */
+typedef struct {
+    data16_t bias_hi[VPU_INT8_ACC_PERIOD];
+    data16_t bias_lo[VPU_INT8_ACC_PERIOD];
+    data16_t shift1[VPU_INT8_ACC_PERIOD];
+    data16_t scale[VPU_INT8_ACC_PERIOD];
+    data16_t shift2[VPU_INT8_ACC_PERIOD];
+} nn_bss_block_t;
+
 /**
 
 */
@@ -212,6 +225,116 @@ typedef struct {
     uint32_t C_out;
 
 } nn_conv2d_1x1_plan_t;
+
+
+/**
+ * Struct represents the shared parameters required to execute a 
+ * `conv2d_depthwise()` operation. 
+ */
+typedef struct {
+
+    struct {
+        struct {
+            int32_t row;
+        } X;
+
+        struct {
+            int32_t col;
+        } window;
+
+    } stride;
+
+    struct {
+        unsigned height;
+        unsigned width;
+        int vstride; //TODO: get rid of this
+    } kernel;
+
+    struct {
+        uint32_t X;
+        uint32_t Y;
+    } channels;
+
+    int32_t zero_point;
+
+} nn_conv2d_depthwise_plan_t;
+
+/**
+ * Struct represents the job-specific parameters required to execute a 
+ * `conv2d_depthwise()` operation. 
+ */
+typedef struct {
+
+    struct {
+        struct {
+            int32_t X;
+            int32_t Y;
+            int32_t K;
+            int32_t BSS;
+        } start;
+
+        struct {
+            int32_t X;
+            int32_t Y;
+        } chan_group;
+
+        struct {
+            int32_t window;
+            int32_t Y;
+        } row;
+    } stride;
+
+    struct {
+        unsigned rows;
+        unsigned cols;
+        unsigned channels;
+    } output;
+
+    struct {
+        int32_t top;
+        int32_t left;
+        int32_t bottom;
+        int32_t right;
+        unsigned unpadded;
+    } init_padding;
+} nn_conv2d_depthwise_job_t;
+
+
+/**
+ * Some of the functions in this API can have their work split into
+ * multiple parts, each called a "job". This is useful, for example, 
+ * for parallelizing a computation across multiple cores, or to reduce
+ * the delay between which the calling function can service some other
+ * resource.
+ *  
+ * This struct contains the parameters required to specify how work
+ * can be split according to the region of the output image in which
+ * the job operates.
+ * 
+ * For an output image `Y` with shape `(Y_height, Y_width, Y_chans)`,
+ * the value of this struct indicates that a particular job should
+ * compute the output values in the rectangular region
+ *   `Y[  start.rows     : (start.rows + size.rows), 
+ *        start.cols     : (start.cols + size.cols), 
+ *        start.channels : (start.channels + size.channels) ]`
+ */
+typedef struct {
+    /** 
+     * Indices in an output image at which to begin producing output.
+     * 
+     * Typically channels must be a multiple of 4.
+     */
+    nn_image_vect_t start;
+
+    /**
+     * The number of rows, columns and channels of output to produce.
+     * 
+     * Typically channels must be a multiple of 4.
+     */
+    nn_image_vect_t size;
+
+} nn_conv2d_job_params_t;
+
 
 
 

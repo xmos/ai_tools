@@ -23,10 +23,10 @@ XCC := xcc
 CXX := xcc
 AR := xmosar
 
-AS_FLAGS := 
+AS_FLAGS := -g
 CC_FLAGS := -g
 XCC_FLAGS := -g -O3
 CXX_FLAGS := -std=c++11 -g
 LD_FLAGS :=
 
-AR_FLAGS := qc
+AR_FLAGS := rc

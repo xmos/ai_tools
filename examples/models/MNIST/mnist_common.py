@@ -1,10 +1,22 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+# TODO: fix this hack
+from os.path import dirname, realpath
+import sys
+sys.path.append(dirname(dirname(realpath(__file__))))
+
+from model_common import TrainableParser
+
 import logging
 import argparse
+from pathlib import Path
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasClassifier
 
+
+#  ----------------------------------------------------------------------------
+#                                  MODELS
+#  ----------------------------------------------------------------------------
 
 class MNISTModel(KerasClassifier):
     def __init__(self, *args, use_aug=False, **kwargs):
@@ -14,60 +26,74 @@ class MNISTModel(KerasClassifier):
     def prep_data(self, *, simard_resize=False, padding=2):
         self.data = utils.prepare_MNIST(self._use_aug, simard=simard_resize, padding=padding)
         for k, v in self.data.items():
-            logging.debug(f"Prepped data[{k}] with shape: {v.shape}")
+            self.logger.debug(f"Prepped data[{k}] with shape: {v.shape}")
 
     def gen_test_data(self):
         if not self.data:
             self.prep_data()
-        self.data['export_data'] = self.data['x_test'][:10]
+        self.data['export'] = self.data['x_test'][:10]
         self.data['quant'] = self.data['x_train'][:10]
 
-
-def get_default_parser(**kwargs):
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        'path', nargs='?', default=None,
-        help='Path to a directory where models and data will be saved in subdirectories.')
-    parser.add_argument(
-        '--use_gpu', action='store_true', default=False,
-        help='Use GPU for training. Might result in non-reproducible results.')
-    parser.add_argument(
-        '--train_model', action='store_true', default=False,
-        help='Train new model instead of loading pretrained tf.keras model.')
-    parser.add_argument(
-        '--classifier', action='store_true', default=False,
-        help='Apply classifier optimizations during xcore conversion.')
-    parser.add_argument(
-        '-bs', '--batch', type=int, default=kwargs['DEFAULT_BS'],
-        help='Batch size.')
-    parser.add_argument(
-        '-ep', '--epochs', type=int, default=kwargs['DEFAULT_EPOCHS'],
-        help='Number of epochs.')
-    parser.add_argument(
-        '-aug', '--augment_dataset', action='store_true', default=False,
-        help='Create a dataset with elastic transformations.')
-    parser.add_argument(
-        '-v', '--verbose', action='store_true', default=False,
-        help='Verbose mode.')
-    return parser
+    def run(self, train_new_model=False, epochs=None, batch_size=None):
+        self._prep_backend()
+        if train_new_model:
+            assert epochs
+            assert batch_size
+            # Build model and compile
+            self.build()
+            # Prepare training data
+            self.prep_data()
+            # Train model
+            self.train(batch_size=batch_size, epochs=epochs)
+            self.save_core_model()
+        else:
+            # Recover previous state from file system
+            self.load_core_model()
+        self.convert_and_save()
 
 
-def run_main(model, *, train_new_model, epochs=None, batch_size=None):
-    if train_new_model:
-        assert epochs
-        assert batch_size
-        # Build model and compile
-        model.build()
-        # Prepare training data
-        model.prep_data()
-        # Train model
-        model.train(batch_size=batch_size, epochs=epochs)
-        model.save_core_model()
-    else:
-        # Recover previous state from file system
-        model.load_core_model()
-    # Generate test data
-    model.gen_test_data()
-    # Populate converters
-    model.populate_converters()
+#  ----------------------------------------------------------------------------
+#                                   PARSERS
+#  ----------------------------------------------------------------------------
+
+class MNISTDefaultParser(TrainableParser):
+
+    def __init__(self, *args, defaults, **kwargs):
+        super().__init__(*args, defaults=defaults, **kwargs)
+        self.add_argument(
+            '--name', type=str, default=defaults['name'],
+            help="Name of the model, used in the creation of the model itself "
+                 "and the target subdirectories."
+        )
+        self.add_argument(
+            '--classifier', action='store_true', default=False,
+            help='Apply classifier optimizations during xcore conversion.'
+        )
+        self.add_argument(
+            '-aug', '--augment_dataset', action='store_true', default=False,
+            help='Create a dataset with elastic transformations.'  # TODO: does this always mean elastic trf?
+        )
+
+    def _name_handler(self, args):
+        if args.classifier:
+            args.name = '_'.join([args.name, 'cls'])
+
+    def parse_args(self, *args, **kwargs):
+        args = super().parse_args(*args, **kwargs)
+        self._name_handler(args)
+        args.path = Path(args.path)/args.name
+        return args
+
+
+class XcoreTunedParser(MNISTDefaultParser):
+    def __init__(self, *args, defaults, **kwargs):
+        super().__init__(*args, defaults=defaults, **kwargs)
+        self.add_argument(
+            '--xcore_tuned', action='store_true', default=False,
+            help='Use a variation of the model tuned for xcore.ai.'
+        )
+
+    def _name_handler(self, args):
+        if args.xcore_tuned:
+            args.name = '_'.join([args.name, 'tuned'])
+        super()._name_handler(args)

@@ -6,6 +6,7 @@ from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.graph_transformer import PassPriority
 from tflite2xcore.utils import VE, ACC_PERIOD, WORD_SIZE
 from .transformation_passes import ReplaceXCOREWeightBiasOperatorPass
+from .utils import Log
 
 
 class ReplaceConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
@@ -27,7 +28,7 @@ class ReplaceConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
         if super().match(op):
             with self.using(op):
                 if self._dilation != (1, 1):
-                    logging.warning(f"Found non-supported dilation: {self._dilation}")
+                    self.logger.warning(f"Found non-supported dilation: {self._dilation}")
                 else:
                     return True
 
@@ -36,6 +37,84 @@ class ReplaceConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
     @property
     def _MAX_POST_SHIFT(self):
         return 32 - 8 - 2  # this is because the output is 8 bit
+
+
+class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.DEPTHWISE_CONV_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_conv2d_depthwise)
+
+    @property
+    def _depth_multiplier(self):
+        return self._op.builtin_options['depth_multiplier']
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                if self._depth_multiplier != 1:
+                    self.logger.warning(f"Found non-supported depthwise multiplier: {self._depth_multiplier}")
+                else:
+                    return self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+
+        return False
+
+    @Log.output
+    def _zero_point_bias(self):
+        # NOTE: first dimension of the kernel is always 1 in depthwise conv2d
+        return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2)).squeeze()
+
+    def mutate_biases(self, op):
+        # TODO: this is the same as in ReplaceFullyConnectedPass, refactor
+        # TODO: this is the same as in Replace1x1Conv2dPass, refactor
+        super().mutate_biases(op)
+        with self.using(op):
+            # calculate and save the bias/shift/scale tensor
+            bss = self._bss_arr()
+            self._biases.buffer.data = bss
+            self._biases.shape = bss.shape
+            self._biases.type = TensorType.INT16
+
+            # rename bias tensor and remove quantization info to save space
+            self._biases.name = f"{op.name}/bias_shift_scale"
+            self._biases.quantization = None
+
+    def mutate_weights(self, op):
+        super().mutate_weights(op)
+        with self.using(op):
+            # NOTE: This is not strictly necessary since the first dimension of
+            #       the kernel should be 1 in TFLite
+            self._weights.shape = self._weights.shape[1:]
+            self._log_weights()
+
+            # remove quantization info to save space
+            self._weights.quantization = None
+
+    def _pad(self):
+        # pad: [top, left, zero_point]
+        pad = [max(int((o - 1) * s - i + k) // 2, 0)
+               for o, s, i, k in zip(self._output.shape[1:3],
+                                     self._op.custom_options['stride'],
+                                     self._input.shape[1:3],
+                                     self._weights.shape[0:2])]
+        pad.append(self._input_zero_point)
+        return pad
+
+    def mutate(self, op):
+        # TODO: this is the same as in Replace1x1Conv2dPass, refactor
+        # NOTE: the order of these mutations is strict
+        new_op = super().mutate(op)
+        self.mutate_biases(new_op)
+        self.mutate_weights(new_op)
+
+        with self.using(op):
+            new_op.add_custom_options(stride=self._strides)
+        with self.using(new_op):
+            new_op.add_custom_options(pad=self._pad())
+        return new_op
 
 
 class Replace1x1Conv2dPass(ReplaceConv2DPass):
@@ -58,12 +137,16 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
 
         return False
 
+    @Log.output
+    def _zero_point_bias(self):
+        return np.sum(self._weights.numpy * self._input_zero_point, axis=3).squeeze()
+
     def mutate_biases(self, op):
         # TODO: this is the same as in ReplaceFullyConnectedPass, refactor
         super().mutate_biases(op)
         with self.using(op):
             # calculate and save the bias/shift/scale tensor
-            bss = self._bss_arr
+            bss = self._bss_arr()
             self._biases.buffer.data = bss
             self._biases.shape = bss.shape
             self._biases.type = TensorType.INT16
@@ -78,6 +161,7 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
             # NOTE: This is not strictly necessary since height == width == 1
             old_shape = self._weights.shape
             self._weights.shape = [old_shape[0], old_shape[3]]
+            self._log_weights()
 
             # remove quantization info to save space
             self._weights.quantization = None
@@ -90,7 +174,7 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
 
         with self.using(op):
             new_op.add_custom_options(
-                stride_h=self._strides[0], stride_w=self._strides[1]
+                stride=self._strides
             )
         return new_op
 
@@ -103,15 +187,19 @@ class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
                 return (self._strides == (1, 1)
                         and self._weights.shape[1] % 2 == 1  # kernel height is odd
                         and self._weights.shape[2] % 2 == 1  # kernel width is odd
-                        and self._weights.shape[0] % ACC_PERIOD == 0)  # deepout
+                        and self._output.shape[3] % ACC_PERIOD == 0)  # deepout
 
         return False
+
+    @Log.output
+    def _zero_point_bias(self):
+        return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2, 3))
 
     def mutate_biases(self, op):
         super().mutate_biases(op)
         with self.using(op):
             # calculate new bias tensor and save to buffer
-            new_bias = self._bias_arr
+            new_bias = self._bias_arr()
             self._biases.buffer.data = new_bias
 
             # change bias tensor metadata
@@ -123,7 +211,7 @@ class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
 
     def add_shift_scale(self, op):
         with self.using(op):
-            shift_scale_arr = self._shift_scale_arr
+            shift_scale_arr = self._shift_scale_arr()
 
         # TODO: remove this when left shift issue is solved in conv2d kernels
         shift_scale_arr = shift_scale_arr[:, :2, :]
@@ -147,7 +235,7 @@ class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
 
         with self.using(op):
             new_op.add_custom_options(
-                padding=self._padding, stride_h=self._strides[0], stride_w=self._strides[1]
+                padding=self._padding, stride_h=self._strides[0], stride_w=self._strides[1]  # TODO: change to 'stride' and 'pad'
             )
         return new_op
 
@@ -192,6 +280,7 @@ class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
                 np.flip(weights, axis=1),
                 axes=(0, 2, 3, 4, 1, 5)
             )
+            self._log_weights()
 
             # save weight tensor and update shape
             self._weights.buffer.data = weights
@@ -222,7 +311,7 @@ class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
         #       keep in mind that this mutation is what can affect other operators
         with self.using(op):
             self._input.name = f"{op.name}/input"
-            self._input.shape[3] = self.MAX_INPUT_CHANNELS  # new, zero-padded shape
+            self._input.shape = [*self._input.shape[:3], self.MAX_INPUT_CHANNELS]  # new, zero-padded shape
 
     def mutate_weights(self, op):
         super().mutate_weights(op)
@@ -247,6 +336,7 @@ class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
                 np.flip(weights, axis=1),
                 axes=(0, 2, 1, 3, 4)
             )
+            self._log_weights()
 
             # save weight tensor and update shape
             self._weights.shape = weights.shape
@@ -288,7 +378,8 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return (self._weights.shape[3] == 1  # depthwise only matched with single input channel
+                print(self._input.shape)
+                return (self._input.shape[3] == 1  # depthwise only matched with single input channel
                         and self._weights.shape[2] <= self.MAX_KERNEL_WIDTH)  # max kernel width
 
         return False
@@ -304,7 +395,8 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
             # Therefore, this permutation results in kOHW1 which is the same as
             #    TFLite conv weight order for a single input channel
             # NOTE: this happens before the standard weight mutation on purpose
-            new_weights = np.transpose(self._weights.numpy, axes=(3, 1, 2, 0))
+            new_weights = np.transpose(self._weights.numpy.astype(np.int8),
+                                       axes=(3, 1, 2, 0))
             self._weights.shape = new_weights.shape
             self._weights.buffer.data = new_weights
         return super().mutate(op)

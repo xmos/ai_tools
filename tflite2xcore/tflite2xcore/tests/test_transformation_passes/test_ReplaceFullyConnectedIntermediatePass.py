@@ -11,7 +11,7 @@ from .model_builders import (
 )
 
 
-MATCHING_INPUT_SIZE = [
+MATCHING_INPUT_SIZE = [  # TODO: this should be called input_shape
     (1, 1, 32), (2, 2, 8), (8, 8, 1), (64,),
     (1, 1, 31), (2, 2, 7), (9, 4, 6), (63,)
 ]
@@ -37,7 +37,7 @@ def outputs(request):
 
 
 @pytest.fixture(params=MATCHING_INPUT_SIZE)
-def input_size(request):
+def input_shape(request):  # TODO: this should be called input_shape
     return request.param
 
 
@@ -47,18 +47,18 @@ def hidden_nodes(request):
 
 
 @pytest.fixture()
-def mlp(outputs, hidden_nodes, input_size):
-    return build_mlp(outputs=outputs, hidden_nodes=hidden_nodes, input_size=input_size)
+def mlp(outputs, hidden_nodes, input_shape):
+    return build_mlp(outputs=outputs, hidden_nodes=hidden_nodes, input_shape=input_shape)
 
 
 @pytest.fixture()
-def logistic(outputs, input_size):
-    return build_softmax(outputs=outputs, input_size=input_size)
+def logistic(outputs, input_shape):
+    return build_softmax(outputs=outputs, input_shape=input_shape)
 
 
 @pytest.fixture()
-def fc_model(outputs, input_size):
-    return build_fc(outputs=outputs, input_size=input_size)
+def fc_model(outputs, input_shape):
+    return build_fc(outputs=outputs, input_shape=input_shape)
 
 
 def test_mlp_input_match(trf_pass, mlp):

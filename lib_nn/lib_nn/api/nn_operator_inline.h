@@ -106,6 +106,22 @@ static inline void conv2d_1x1(
 
 
 
+static inline void conv2d_depthwise(
+    int8_t* Y,
+    const int8_t* X,
+    const int8_t* K,
+    const nn_bss_block_t* BSS,
+    const nn_conv2d_depthwise_plan_t* plan,
+    const nn_conv2d_depthwise_job_t* job)
+{
+#if defined(__XS3A__) && (USE_ASM_conv2d_depthwise)
+    conv2d_depthwise_asm(Y, X, K, BSS, plan, job);
+#else
+    conv2d_depthwise_c(Y, X, K, BSS, plan, job);
+#endif
+}
+
+
 
 static inline void maxpool2d(
     int8_t* Y,

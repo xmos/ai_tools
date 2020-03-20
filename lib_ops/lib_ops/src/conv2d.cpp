@@ -27,7 +27,7 @@ XCoreStatus Conv2D_DIDO::Init(int32_t X_h, int32_t X_w, int32_t zero_point,
     init_params.K_w = options.K_w;
     init_params.C_in = options.C_in;
     init_params.C_out = options.C_out;
-    init_params.pad_mode = options.padding_mode;
+    init_params.pad_mode = options.padding.mode;
     init_params.zero_point = zero_point;
 
     for(const auto& region: par) {

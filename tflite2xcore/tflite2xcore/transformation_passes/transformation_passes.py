@@ -4,7 +4,6 @@ import logging
 import numpy as np
 
 from abc import abstractmethod
-from contextlib import contextmanager
 from tflite2xcore.graph_transformer import PassPriority
 from tflite2xcore.graph_transformer import (
     ModelTransformationPass,
@@ -17,6 +16,7 @@ from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCod
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.parallelization import DIDOConv2DPlanner
 from tflite2xcore.utils import ACC_PERIOD, WORD_SIZE
+from .utils import Log
 
 
 class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
@@ -112,42 +112,9 @@ class RemoveSoftmaxOutputPass(OperatorMatchingPass):
         subgraph.remove_operator(op)
 
 
-class AddArgMax16OutputPass(OutputTensorMatchingPass):
-    def __init__(self, priority=PassPriority.LOW):
-        super().__init__(priority)
-
-    def match(self, tensor):
-        return (super().match(tensor)
-                and len(tensor.subgraph.outputs) == 1
-                and tensor.subgraph.outputs[0].type == TensorType.INT16
-                and len(tensor.shape) == 2)
-
-    def mutate(self, tensor):
-        subgraph = tensor.subgraph
-        tout = subgraph.create_tensor(
-            f"{tensor.name}_argmax", TensorType.INT32, tensor.shape[:1], isoutput=True)
-        subgraph.outputs.remove(tensor)
-        op = subgraph.create_operator(
-            OperatorCode(BuiltinOpCodes.ARG_MAX), inputs=[tensor], outputs=[tout])
-
-        # add tensor with axis info
-        dim_tensor = subgraph.create_tensor(
-            f"{op.name}/axis", TensorType.INT32, shape=[],
-            consumers=[op])
-        op.inputs.append(dim_tensor)
-        dim_tensor.buffer.data = np.int32([1])
-
-
 class QuantizedOperatorMatchingPass(OperatorMatchingPass):
     def __init__(self, priority=PassPriority.MEDIUM):
         super().__init__(priority)
-        self._op = None
-
-    @contextmanager
-    def using(self, op):
-        self._op, original_op = op, self._op
-        yield
-        self._op = original_op
 
     @property
     def _output(self):
@@ -156,6 +123,14 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
     @property
     def _input(self):
         return self._op.inputs[0]
+
+    @property
+    def _input_zero_point(self):
+        return int(self._input.quantization['zero_point'][0])
+
+    @property
+    def _output_zero_point(self):
+        return int(self._output.quantization['zero_point'][0])
 
     @property
     @abstractmethod
@@ -191,48 +166,17 @@ class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
         return new_op
 
 
-class ReplaceArgMax16Pass(ReplaceQuantizedOperatorPass):
-    def __init__(self, priority=PassPriority.LOW):
-        super().__init__(priority)
-
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.ARG_MAX
-
-    @property
-    def _matching_input_type(self):
-        return TensorType.INT16
-
-    @property
-    def _matching_output_type(self):
-        return TensorType.INT32
-
-    @property
-    def _axis(self):
-        return self._op.inputs[1].numpy
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_argmax_16)
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return (len(self._input.shape) == 2  # only 2D tensors are matched
-                        and self._axis == 1)
-
-    def mutate(self, op):
-        new_op = super().mutate(op)
-        new_op.subgraph.remove_tensor(new_op.inputs[1])
-        new_op.inputs = new_op.inputs[:1]
-        return new_op
-
-
 # TODO: write (at least regression) tests for this class
 class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     @property
     def _weights(self):
         return self._op.inputs[1]
+
+    def _log_weights(self):
+        self.logger.debug(
+            "_weights:\n"
+            + Log._array_msg(self._weights.numpy.astype(np.int8))
+        )
 
     @property
     def _biases(self):
@@ -244,44 +188,41 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
                 return (self._weights.type == TensorType.INT8
                         and self._biases.type == TensorType.INT32)
 
-    @property
     def _multiplier(self):
         output_scale = self._output.quantization['scale'][0]
         bias_scale = np.array(self._biases.quantization['scale'])
         return bias_scale / output_scale
 
-    @property
+    @abstractmethod
+    def _zero_point_bias(self):
+        pass
+
+    @Log.output
     def _unified_bias(self):
-        weights = self._weights.numpy
         biases = self._biases.numpy
-        input_zero_point = int(self._input.quantization['zero_point'][0])
-        output_zero_point = int(self._output.quantization['zero_point'][0])
+        return np.int32(biases - self._zero_point_bias()
+                        + np.int32(np.round(self._output_zero_point / self._multiplier())))
 
-        zero_point_bias = np.sum(weights * input_zero_point,
-                                 axis=tuple(j for j in range(1, len(weights.shape))))
-        return np.int32(biases - zero_point_bias
-                        + np.int32(np.round(output_zero_point / self._multiplier)))
-
-    def __pad_to_acc_period(self, arr):
+    @staticmethod
+    def __pad_to_acc_period(arr):
         pad = ACC_PERIOD - 1 - (arr.shape[0] - 1) % ACC_PERIOD
         return np.pad(arr, pad_width=[(0, pad)])
 
-    @property
     def _bias_arr(self):
         # calculate bias values with the effect of quantization changes
-        bias = self._unified_bias
+        bias = self._unified_bias()
 
         # zero pad and reshape
         bias = self.__pad_to_acc_period(bias)
+        self.logger.debug("_bias_arr padded biases:\n" + Log._array_msg(bias))
 
         # splitting lower and upper 16 bits of each 32 bit value
         tmp_shape = (bias.shape[0] // ACC_PERIOD, ACC_PERIOD, -1)
         new_bias = np.frombuffer(bias.flatten().tostring(), dtype=np.int16).reshape(tmp_shape)
         return np.stack([new_bias[:, :, 1], new_bias[:, :, 0]], axis=1)
 
-    @property
     def _shift_scale(self):
-        multiplier = self._multiplier
+        multiplier = self._multiplier()
         # NOTE: VLMUL expects one factor in Q2.14
         # we have 1 <= scale < 2 represented in Q2.14
         rshift = -np.ceil(np.log2(multiplier)) + 1
@@ -309,10 +250,10 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _MAX_POST_SHIFT(self):
         pass
 
-    @property
+    @Log.output
     def _shift_scale_arr(self):
         # calculate right shift/scale
-        rshift, scale = self._shift_scale
+        rshift, scale = self._shift_scale()
 
         # zero pad and reshape into appropriate array
         new_shape = (-1, ACC_PERIOD)
@@ -322,16 +263,21 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         # split left and right shift into pre and post scaling shifts
         shift_pre = rshift if True else np.maximum(rshift, 0)  # TODO: resolve this when left shift issue is solved in conv2d kernels
         shift_post = self._MAX_POST_SHIFT * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
+        if np.any(shift_post.flatten() < 0):
+            raise ValueError("Negative shift_post encountered: "
+                             f"{Log._array_msg(shift_post)}")
         return np.stack([shift_pre, scale, shift_post], axis=1)
 
-    @property
     def _bss_arr(self):
-        return np.concatenate([self._bias_arr, self._shift_scale_arr], axis=1)
+        # TODO: resolve this when left shift issue is solved in conv2d kernels
+        shift_scale_arr = self._shift_scale_arr()
+        shift_scale_arr[:, 0, :] = np.maximum(shift_scale_arr[:, 0, :], 0)
+        return np.concatenate([self._bias_arr(), shift_scale_arr], axis=1)
 
     def mutate_biases(self, op):
         # NOTE: by default no bias layout rearrangement is done for this op
         with self.using(op):
-            self._weights.name = f"{op.name}/biases"
+            self._biases.name = f"{op.name}/biases"
 
     def mutate_weights(self, op):
         # NOTE: by default no weight layout rearrangement is done for this op
@@ -367,11 +313,15 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     def _MAX_POST_SHIFT(self):
         return 32 - 16 - 2  # this is because the output is 16 bit
 
+    @Log.output
+    def _zero_point_bias(self):
+        return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
+
     def mutate_biases(self, op):
         super().mutate_biases(op)
         with self.using(op):
             # calculate and save the bias/shift/scale tensor
-            bss = self._bss_arr
+            bss = self._bss_arr()
             self._biases.buffer.data = bss
             self._biases.shape = bss.shape
             self._biases.type = TensorType.INT16
@@ -388,7 +338,7 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
                 'min': self._output.quantization['min'],
                 'max': self._output.quantization['max'],
                 'scale': [self._output.quantization['scale'][0] / 2**8],
-                'zero_point': [int(self._output.quantization['zero_point'][0] * 2**8)],
+                'zero_point': [self._output_zero_point * 2**8],
                 'details_type': "CustomQuantization",
                 'quantized_dimension': 0
             }
@@ -493,7 +443,7 @@ class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
 
     def run(self, *args, **kwargs):
         if self.num_threads == 1:
-            logging.debug(f"Skipping {type(self).__name__} with num_threads={self.num_threads}")
+            self.logger.debug(f"Skipping pass b/c num_threads={self.num_threads}")
             return None
         else:
             return super().run(*args, **kwargs)

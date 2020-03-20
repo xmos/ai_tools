@@ -63,14 +63,10 @@ def main(raw_args=None):
         "width": DEFAULT_WIDTH,
         "choices": LUTActivation.ACTIVATIONS,
         'inits': {
-            'input_init': {
-                'type': common.OpTestInitializers.UNIF,
-                'help': "Initializer for input data distribution."
-            }
+            'input_init': {'type': common.OpTestInitializers.UNIF}
         }
     })
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(False, args.verbose)
 
     test_model = LUTActivation(args.activation, args.path)
     test_model.build(args.height, args.width, args.inputs,

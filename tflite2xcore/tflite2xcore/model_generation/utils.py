@@ -49,7 +49,7 @@ def apply_interpreter_to_examples(interpreter, examples, *, show_progress_step=N
         y = interpreter.get_tensor(interpreter_output_ind)
         outputs.append(y)
 
-    return outputs
+    return np.vstack(outputs) if isinstance(examples, np.ndarray) else outputs
 
 
 def shuffle(arr1, arr2):
@@ -96,6 +96,7 @@ def save_data_to_file(path, x, y, xt=0, yt=0):
     np.savez(path, **data)
 
 
+# TODO: move this to MNIST specific utils file
 def get_mnist(padding=2, categorical=False, val_split=True, flatten=False,
               debug=True, y_float=False):
     '''
@@ -156,6 +157,7 @@ def get_mnist(padding=2, categorical=False, val_split=True, flatten=False,
 
 
 # TODO: this takes a while, add progress bar
+# TODO: change name to something more meaningful
 def ecc(nsizex=29, nsizey=29, ch=1):
     '''
     Crop the dataset images using resize from skimage,
@@ -174,7 +176,7 @@ def ecc(nsizex=29, nsizey=29, ch=1):
     return o_train, o_test, o_val, y_train, y_test, y_val
 
 
-# Prepare data function for MNIST dataset
+# TODO: move this to MNIST specific utils file
 def prepare_MNIST(use_aug=False, simard=False, padding=2):
     if simard:
         x_train, x_test, x_val, y_train, y_test, y_val = ecc()
@@ -360,93 +362,3 @@ def expand_dataset(images, labels, distortions, sigma=4.0, alpha=60.0,
     x_data = np.concatenate([np.reshape(images, (-1, sizex, sizey)), new_images_batch])
     y_data = np.concatenate([labels, new_labels_batch])
     return x_data.reshape(x_data.shape[0], sizex, sizey, 1), y_data
-
-
-# Model definition
-def get_model(t, l1=False):
-    from tensorflow.keras import layers
-    model = tf.keras.Sequential(name=t)
-    if t == 'MLP1':
-        model.add(layers.Flatten(input_shape=(32, 32, 1), name='input'))
-        model.add(layers.Dense(420, activation='tanh', name='dense_1'))
-        model.add(layers.Dense(300, activation='tanh', name='dense_2'))
-    elif t == 'MLP2':
-        model.add(layers.Flatten(input_shape=(32, 32, 1), name='input'))
-        model.add(layers.Dense(416, activation='relu', name='dense_1'))
-        model.add(layers.Dense(288, activation='relu', name='dense_2'))
-    elif t == 'lenet5':
-        model.add(tf.keras.Input(shape=(32, 32, 1), name='input'))
-        model.add(layers.Conv2D(6, (5, 5), strides=1,
-                                activation='tanh', name='conv_1'))
-        model.add(layers.AvgPool2D((2, 2), strides=2, name='avg_pool_1'))
-        model.add(layers.BatchNormalization())
-        model.add(layers.Conv2D(16, (5, 5), strides=1,
-                                activation='tanh', name='conv_2'))
-        model.add(layers.AvgPool2D((2, 2), strides=2, name='avg_pool_2'))
-        model.add(layers.BatchNormalization())
-        model.add(layers.Conv2D(120, (5, 5), strides=1,
-                                activation='tanh', name='conv_3'))
-        model.add(layers.Dense(84, activation='tanh', name='fc_1'))
-    elif t == 'lenet5_tuned':
-        model.add(tf.keras.Input(shape=(32, 32, 1), name='input'))
-        model.add(layers.Conv2D(8, (5, 5), strides=1,
-                                activation='relu', name='conv_1'))
-        model.add(layers.AvgPool2D((2, 2), strides=2, name='avg_pool_1'))
-        model.add(layers.BatchNormalization())
-        model.add(layers.Conv2D(16, (5, 5), strides=1,
-                                activation='relu', name='conv_2'))
-        model.add(layers.AvgPool2D((2, 2), strides=2, name='avg_pool_2'))
-        model.add(layers.BatchNormalization())
-        model.add(layers.Conv2D(128, (5, 5), strides=1,
-                                activation='relu', name='conv_3'))
-        model.add(layers.Dense(96, activation='relu', name='fc_1'))
-    elif t == 'simard':
-        model.add(tf.keras.Input(shape=(29, 29, 1), name='input'))
-        model.add(layers.Conv2D(5, (5, 5), strides=2,
-                                activation='relu', name='conv_1'))
-        model.add(layers.Conv2D(50, (5, 5), strides=2,
-                                activation='relu', name='conv_2'))
-        model.add(layers.Flatten(name='flaten'))
-        model.add(layers.Dense(100, activation='relu', name='fc_1'))
-    elif t == 'simard_tuned_a':
-        model.add(tf.keras.Input(shape=(29, 29, 1), name='input'))
-        model.add(layers.Conv2D(8, (5, 5), strides=2,
-                                activation='relu', name='conv_1'))
-        model.add(layers.Conv2D(64, (5, 5), strides=2,
-                                activation='relu', name='conv_2'))
-        model.add(layers.Flatten(name='flaten'))
-        model.add(layers.Dense(98, activation='relu', name='fc_1'))
-    elif t == 'simard_tuned_b':
-        model.add(tf.keras.Input(shape=(29, 29, 1), name='input'))
-        model.add(layers.Conv2D(8, (5, 5), strides=2,
-                                activation='relu', name='conv_1'))
-        model.add(layers.Conv2D(64, (5, 5), strides=2,
-                                activation='relu', name='conv_2'))
-        model.add(layers.Flatten(name='flaten'))
-        model.add(layers.Dense(128, activation='relu', name='fc_1'))
-    elif t == 'rodrigob':
-        # TODO
-        return
-    else:
-        print("Select a valid option:\n'MLP1'\n'MLP2'\n'lenet5'\n 'lenet5_tuned'\n")
-        return
-    if not l1:
-        model.add(layers.Dense(10, activation='softmax', name='output'))
-    else:
-        model.add(layers.Dense(10, activation='softmax',
-                               kernel_regularizer=tf.keras.regularizers.l1(1e-5),
-                               name='output'))
-    return model
-
-
-def build_model(t):
-    model = get_model(t)
-    if t != 'MLP1' and t != 'MLP2':
-        opt = tf.keras.optimizers.SGD(lr=0.01, momentum=0.9, decay=1e-2 / 10)
-        model.compile(loss=tf.keras.losses.CategoricalCrossentropy(),
-                      optimizer=opt, metrics=['accuracy'])
-    else:
-        model.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-                      optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-3),
-                      metrics=['accuracy'])
-    return model

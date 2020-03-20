@@ -13,8 +13,17 @@ extern "C" {
 namespace xcore {
 namespace conv { 
 
+union padding_t {
+  padding_mode_t mode;
+  struct padding_data_t {
+    int8_t top;
+    int8_t left;
+    int8_t zero_point;
+  } data;
+};
+
 struct Conv2DOptions {
-    padding_mode_t padding_mode;
+    padding_t padding;
     int32_t C_in;
     int32_t C_out;
     int32_t K_h;

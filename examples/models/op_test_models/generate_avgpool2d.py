@@ -52,14 +52,10 @@ def main(raw_args=None):
         "strides": DEFAULT_STRIDES,
         "pool_size": DEFAULT_POOL_SIZE,
         'inits': {
-            'input_init': {
-                'type': common.OpTestInitializers.UNIF,
-                'help': "Initializer for input data distribution."
-            }
+            'input_init': {'type': common.OpTestInitializers.UNIF}
         }
     })
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(False, args.verbose)
 
     model = AvgPool2D("avgpool2d", args.path)
     model.build(args.height, args.width, args.inputs,

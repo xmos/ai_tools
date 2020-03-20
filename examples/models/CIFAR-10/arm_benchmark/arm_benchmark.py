@@ -101,7 +101,7 @@ def execute_job(args):
     interpreter = tf.lite.Interpreter(model_content=model_bin)
     y = common.apply_interpreter_to_examples(
         interpreter, x, show_progress_step=show_progress_step, show_pid=True)
-    return np.argmax(np.vstack(y), axis=1).flatten()
+    return np.argmax(y, axis=1).flatten()
 
 
 def evaluate_model(model_file, data, *, base_file_name, num_workers=8, show_progress_step=None):
@@ -153,7 +153,7 @@ def main(*, train_new_model=False, evaluate_models=False, num_workers=8):
         if USE_TENSORBOARD:
             # TODO: this is untested, may not work
             log_dir = (DIRNAME / "logs") / datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-            tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(log_dir), histogram_freq=0)
+            tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir, histogram_freq=0)
 
             tflite_utils.set_all_seeds(seed=SEED)
             model.fit_generator(datagen.flow(data['x_train'], data['y_train'], batch_size=batch_size),

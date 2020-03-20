@@ -7,6 +7,8 @@ import logging
 
 import numpy as np
 
+from copy import deepcopy
+
 from tflite2xcore.operator_codes import OperatorCode
 
 
@@ -92,7 +94,9 @@ class Buffer():
             self._data = np.array(data, dtype=np.uint8)
         elif isinstance(data, np.ndarray):
             if data.dtype not in (np.uint8, 'uint8'):
-                logging.debug(f"Numpy array of type {data.dtype} stored in buffer")
+                logging.getLogger('XCOREModel').debug(
+                    f"Numpy array of type {data.dtype} stored in buffer"
+                )
             self._data = np.frombuffer(data.tostring(), dtype=np.uint8)
         else:
             raise TypeError(f"data must be list or numpy array of uint8 type")
@@ -189,7 +193,7 @@ class Tensor():
         self.name = name
         assert isinstance(type_, TensorType)
         self.type = type_
-        self.shape = list(shape)
+        self.shape = shape
 
         if buffer is None:
             self.buffer = self.model.create_buffer()
@@ -203,6 +207,26 @@ class Tensor():
 
         self.producers = producers or []
         self.consumers = consumers or []
+
+    @property
+    def shape(self):
+        return self._shape
+
+    __SHAPE_MAPPER = {
+        type(None): lambda x: tuple(),
+        tuple: lambda x: x,
+        list: lambda x: tuple(x),
+        np.ndarray: lambda x: tuple(x.tolist())
+    }
+
+    @shape.setter
+    def shape(self, shape):
+        shape_type = type(shape)
+        try:
+            self._shape = self.__SHAPE_MAPPER[shape_type](shape)
+        except KeyError as e:
+            raise TypeError("Type of Tensor.shape should be one of "
+                            f"{self.__SHAPE_MAPPER.keys()}") from e
 
     @property
     def model(self):

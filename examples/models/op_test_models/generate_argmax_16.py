@@ -4,8 +4,9 @@
 import logging
 from pathlib import Path
 import numpy as np
+from tflite2xcore.serialization.flatbuffers_io import serialize_model, deserialize_model
 import tflite2xcore.converter as xcore_conv
-from tflite2xcore import read_flatbuffer, write_flatbuffer, graph_transformer
+from tflite2xcore import graph_transformer
 from tflite2xcore.operator_codes import BuiltinOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.model_generation import utils
@@ -60,62 +61,51 @@ class ArgMax16(common.OpTestDefaultModel):
         x_test_float = np.float32(
             np.random.uniform(0, 1, size=(self.input_dim, self.input_dim)))
         x_test_float += np.eye(self.input_dim)
-        self.data['export_data'] = x_test_float
-        self.data['quant'] = x_test_float
+        self.data['export'] = self.data['quant'] = x_test_float
 
-    def to_tf_stripped(self):
-        model = read_flatbuffer(str(self.models['model_quant']))
-        xcore_conv.strip_model(model)
+    def convert_to_stripped(self, **converter_args):
+        super().convert_to_stripped(**converter_args)
+        model = deserialize_model(self.buffers['model_stripped'])
 
         pass_mgr = graph_transformer.PassManager(
             model, passes=[ArgMax8To16ConversionPass()])
         pass_mgr.run_passes()
 
-        self.models['model_stripped'] = self.models['models_dir'] / "model_stripped.tflite"
-        write_flatbuffer(model, str(self.models['model_stripped']))
+        self.buffers['model_stripped'] = serialize_model(model)
 
-        self._save_visualization('model_stripped')
+    def convert_to_xcore(self, **converter_args):
+        super().convert_to_xcore(source='model_stripped', **converter_args)
 
-    def to_tf_xcore(self):
-        # super().to_tf_xcore() converts model_quant
-        # to avoid code duplication, here we convert model_stripped instead
-        # (because model_stripped has INT16 input that can be matched)
-        tmp = self.models['model_quant']
-        self.models['model_quant'] = self.models['model_stripped']
-        super().to_tf_xcore()
-        self.models['model_quant'] = tmp
-
-    def save_tf_stripped_data(self):
-        assert 'model_quant' in self.models
-        assert 'model_stripped' in self.models
+    def save_stripped_data(self):
+        assert 'model_quant' in self.buffers
+        assert 'model_stripped' in self.buffers
 
         # load stripped model for quantization info
-        model_stripped = read_flatbuffer(str(self.models['model_stripped']))
+        model_stripped = deserialize_model(self.buffers['model_stripped'])
         input_quant = model_stripped.subgraphs[0].inputs[0].quantization
 
         # load quant model for inference, b/c the interpreter cannot handle int16 tensors
-        interpreter = tf.lite.Interpreter(
-            model_path=str(self.models['model_quant']))
+        interpreter = tf.lite.Interpreter(model_content=self.buffers['model_quant'])
 
         logging.info(f"Extracting examples for model_stripped...")
-        x_test = utils.quantize(self.data['export_data'],
+        x_test = utils.quantize(self.data['export'],
                                 input_quant['scale'][0],
                                 input_quant['zero_point'][0],
                                 dtype=np.int16)
         y_test = utils.apply_interpreter_to_examples(interpreter,
-                                                     self.data['export_data'])
-        data = {'x_test': x_test, 'y_test': np.vstack(list(y_test))}
+                                                     self.data['export'])
+        data = {'x_test': x_test, 'y_test': y_test}
 
         self._save_data_dict(data, base_file_name='model_stripped')
 
-    def save_tf_xcore_data(self):
-        assert 'model_xcore' in self.models
+    def save_xcore_data(self):
+        assert 'model_xcore' in self.buffers
 
-        model = read_flatbuffer(str(self.models['model_xcore']))
+        model = deserialize_model(self.buffers['model_xcore'])
         input_quant = model.subgraphs[0].inputs[0].quantization
 
         # quantize test data
-        x_test = utils.quantize(self.data['export_data'],
+        x_test = utils.quantize(self.data['export'],
                                 input_quant['scale'][0],
                                 input_quant['zero_point'],
                                 dtype=np.int16)
@@ -125,14 +115,13 @@ class ArgMax16(common.OpTestDefaultModel):
 
 
 def main(raw_args=None):
-    parser = common.OpTestDefaultParser(defaults={
+    parser = common.DefaultParser(defaults={
         'path': DEFAULT_PATH,
     })
     parser.add_argument(
         '-in', '--inputs', type=int, default=DEFAULT_INPUTS,
         help='Number of input channels')
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(False, args.verbose)
 
     test_model = ArgMax16('arg_max_16', args.path)
     test_model.build(args.inputs)

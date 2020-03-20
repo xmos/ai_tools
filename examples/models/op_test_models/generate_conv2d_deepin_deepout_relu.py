@@ -18,7 +18,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath(
 DEFAULT_NUM_THREADS = 1
 
 
-class Conv2dDeepinDeepoutRelu(common.OpTestDeepoutConvModel):
+class Conv2DDeepinDeepoutRelu(common.OpTestDeepoutConvModel):
     def build_core_model(self, *args, **kwargs):
         input_channels = args[4]
         K_h, K_w = args[0], args[1]
@@ -38,36 +38,22 @@ def main(raw_args=None):
         'kernel_width': DEFAULT_KERNEL_WIDTH,
         'kernel_height': DEFAULT_KERNEL_HEIGHT,
         'inits': {
-            'input_init': {
-                'type': common.OpTestInitializers.UNIF,
-                'help': "Initializer for input data distribution."
-            },
-            'weight_init': {
-                'type': common.OpTestInitializers.UNIF,
-                'help': "Initializer for weight distribution."
-            },
-            'bias_init': {
-                'type': common.OpTestInitializers.CONST,
-                'help': "Initializer for bias distribution."
-            }
+            'input_init': {'type': common.OpTestInitializers.UNIF},
+            'weight_init': {'type': common.OpTestInitializers.UNIF},
+            'bias_init': {'type': common.OpTestInitializers.CONST}
         }
     })
     parser.add_argument(
         '-par', '--num_threads', type=int, default=DEFAULT_NUM_THREADS,
         help='Number of parallel threads for xcore.ai optimization.')
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(False, args.verbose)
 
-    model = Conv2dDeepinDeepoutRelu('conv2d_deepin_deepout_relu', args.path)
-    model.run(num_threads=args.num_threads,
-              input_channels=args.inputs,
-              output_channels=args.outputs,
-              height=args.height,
-              width=args.width,
-              K_h=args.kernel_height,
-              K_w=args.kernel_width,
-              padding=args.padding,
-              **args.inits)
+    model = Conv2DDeepinDeepoutRelu('conv2d_deepin_deepout_relu', args.path)
+    model.build(args.kernel_height, args.kernel_width,
+                args.height, args.width,
+                args.inputs, args.outputs,
+                padding=args.padding, **args.inits)
+    model.run(num_threads=args.num_threads)
 
 
 if __name__ == "__main__":

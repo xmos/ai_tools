@@ -2,21 +2,16 @@
 #
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 from pathlib import Path
-from tflite2xcore.model_generation import utils
-from mnist_common import MNISTModel, get_default_parser, run_main
+from mnist_common import MNISTModel, XcoreTunedParser
 import tensorflow as tf
+from tensorflow.keras import layers
 
-DEFAULT_PATH = {
-    'lenet5': Path(__file__).parent.joinpath('debug', 'lenet5').resolve(),
-    'lenet5_tuned': Path(__file__).parent.joinpath('debug', 'lenet5_tuned').resolve(),
-    'lenet5_cls': Path(__file__).parent.joinpath('debug', 'lenet5_cls').resolve()
-}
+DEFAULT_PATH = Path(__file__).parent.joinpath('debug')
+DEFAULT_NAME = 'lenet5'
 DEFAULT_EPOCHS = 10
 DEFAULT_BS = 64
 
 
-# Broken in TensorFlow 2.0, solved in Tensorflow 2.1
-# Issue: 'tanh' before AvgPool2D
 class LeNet5(MNISTModel):
 
     def build(self):
@@ -27,28 +22,27 @@ class LeNet5(MNISTModel):
             layers=[
                 tf.keras.Input(shape=(32, 32, 1), name='input'),
 
-                tf.keras.layers.Conv2D(6, kernel_size=5, name='conv_1'),
-                tf.keras.layers.BatchNormalization(),
-                tf.keras.layers.Activation('tanh'),
+                layers.Conv2D(6, kernel_size=5, name='conv_1'),
+                layers.BatchNormalization(),
+                layers.Activation('tanh'),
 
-                tf.keras.layers.AvgPool2D(pool_size=2, strides=2, name='avg_pool_1'),
+                layers.AvgPool2D(pool_size=2, strides=2, name='avg_pool_1'),
 
-                tf.keras.layers.Conv2D(16, kernel_size=5, name='conv_2'),
-                tf.keras.layers.BatchNormalization(),
-                tf.keras.layers.Activation('tanh'),
+                layers.Conv2D(16, kernel_size=5, name='conv_2'),
+                layers.BatchNormalization(),
+                layers.Activation('tanh'),
 
-                tf.keras.layers.AvgPool2D(pool_size=2, strides=2, name='avg_pool_2'),
+                layers.AvgPool2D(pool_size=2, strides=2, name='avg_pool_2'),
 
-                tf.keras.layers.Conv2D(120, kernel_size=5, name='conv_3'),
-                tf.keras.layers.Activation('tanh'),
+                layers.Conv2D(120, kernel_size=5, name='conv_3'),
+                layers.Activation('tanh'),
 
-                tf.keras.layers.Flatten(),
-                tf.keras.layers.Dense(84, activation='tanh', name='fc_1'),
-                tf.keras.layers.Dense(10, activation='softmax', name='output')
+                layers.Flatten(),
+                layers.Dense(84, activation='tanh', name='fc_1'),
+                layers.Dense(10, activation='softmax', name='output')
             ]
         )
         opt = tf.keras.optimizers.SGD(lr=0.01, momentum=0.9, decay=1e-2 / 10)
-        # 10 epochs with categorical data
         # Compilation
         self.core_model.compile(loss='sparse_categorical_crossentropy',
                                 optimizer=opt, metrics=['accuracy'])
@@ -82,24 +76,24 @@ class LeNet5Tuned(LeNet5):
             layers=[
                 tf.keras.Input(shape=(32, 32, 1), name='input'),
 
-                tf.keras.layers.Conv2D(8, kernel_size=5, name='conv_1'),
-                tf.keras.layers.BatchNormalization(),
-                tf.keras.layers.ReLU(),
+                layers.Conv2D(8, kernel_size=5, name='conv_1'),
+                layers.BatchNormalization(),
+                layers.ReLU(),
 
-                tf.keras.layers.AvgPool2D(pool_size=2, strides=2, name='avg_pool_1'),
+                layers.AvgPool2D(pool_size=2, strides=2, name='avg_pool_1'),
 
-                tf.keras.layers.Conv2D(16, kernel_size=5, name='conv_2'),
-                tf.keras.layers.BatchNormalization(),
-                tf.keras.layers.ReLU(),
+                layers.Conv2D(16, kernel_size=5, name='conv_2'),
+                layers.BatchNormalization(),
+                layers.ReLU(),
 
-                tf.keras.layers.AvgPool2D(pool_size=2, strides=2, name='avg_pool_2'),
+                layers.AvgPool2D(pool_size=2, strides=2, name='avg_pool_2'),
 
-                tf.keras.layers.Conv2D(128, kernel_size=5, name='conv_3'),
-                tf.keras.layers.ReLU(),
+                layers.Conv2D(128, kernel_size=5, name='conv_3'),
+                layers.ReLU(),
 
-                tf.keras.layers.Flatten(),
-                tf.keras.layers.Dense(96, activation='relu', name='fc_1'),
-                tf.keras.layers.Dense(10, activation='softmax', name='output')
+                layers.Flatten(),
+                layers.Dense(96, activation='relu', name='fc_1'),
+                layers.Dense(10, activation='softmax', name='output')
             ]
         )
         opt = tf.keras.optimizers.SGD(lr=0.01, momentum=0.9, decay=1e-2 / 10)
@@ -111,39 +105,25 @@ class LeNet5Tuned(LeNet5):
         self.core_model.summary()
 
 
-def main(path=None, train_new_model=False,
-         batch_size=DEFAULT_BS, epochs=DEFAULT_EPOCHS,
-         use_aug=False, xcore_tuned=False, opt_classifier=False):
+def main(raw_args=None):
+    parser = XcoreTunedParser(defaults={
+        'batch_size': DEFAULT_BS,
+        'epochs': DEFAULT_EPOCHS,
+        'name': DEFAULT_NAME,
+        'path': DEFAULT_PATH,
+    })
+    args = parser.parse_args(raw_args)
 
-    name = ('lenet5_cls' if opt_classifier else 'lenet5_tuned') if xcore_tuned else 'lenet5'
     kwargs = {
-        'name': name,
-        'path': path if path else DEFAULT_PATH[name],
-        'opt_classifier': opt_classifier,
-        'use_aug': use_aug
+        'name': args.name,
+        'path': args.path,
+        'opt_classifier': args.classifier,
+        'use_aug': args.augment_dataset
     }
-
-    run_main(
-        model=LeNet5Tuned(**kwargs) if xcore_tuned else LeNet5(**kwargs),
-        train_new_model=train_new_model,
-        batch_size=batch_size, epochs=epochs
-    )
+    model = LeNet5Tuned(**kwargs) if args.xcore_tuned else LeNet5(**kwargs)
+    model.run(train_new_model=args.train_model,
+              batch_size=args.batch_size, epochs=args.epochs)
 
 
 if __name__ == "__main__":
-    parser = get_default_parser(DEFAULT_BS=DEFAULT_BS, DEFAULT_EPOCHS=DEFAULT_EPOCHS)
-    parser.add_argument(
-        '--xcore_tuned', action='store_true', default=False,
-        help='Use a variation of the model tuned for xcore.ai.')
-    args = parser.parse_args()
-
-    utils.set_verbosity(args.verbose)
-    utils.set_gpu_usage(args.use_gpu, args.verbose)
-
-    main(path=args.path,
-         train_new_model=args.train_model,
-         batch_size=args.batch,
-         epochs=args.epochs,
-         use_aug=args.augment_dataset,
-         xcore_tuned=args.xcore_tuned,
-         opt_classifier=args.classifier)
+    main()

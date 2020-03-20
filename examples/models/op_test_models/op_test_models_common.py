@@ -42,7 +42,16 @@ class OpTestDefaultModel(KerasModel):
 
     def build(self, *args, **kwargs):
         self._prep_backend()
-        self.build_core_model(*args, **kwargs)
+        try:
+            self.build_core_model(*args, **kwargs)
+        except ValueError as e:
+            if e.args[0].startswith("Negative dimension size caused by"):
+                raise ValueError(
+                    "Negative dimension size (Hint: if using 'valid' padding "
+                    "verify that the kernel is at least the size of input image)"
+                ) from e
+            else:
+                raise e from None
         self.core_model.build()
         self.core_model.summary()
 
@@ -57,12 +66,13 @@ class OpTestDefaultModel(KerasModel):
         assert self.input_init, "To generate test data this model needs an input initializer"
         self.data['export'], self.data['quant'] = input_initializer(
             self.input_init, *self.input_shape)
-        # logging.debug(f'EXPORT DATA SAMPLE:\n{self.data['export'][4][0]}')
-        # logging.debug(f'QUANT DATA SAMPLE:\n{self.data['quant'][0][0]}')
+        # TODO: use array log message helper from utils
+        # self.logger.debug(f"data['export'] sample:\n{self.data['export'][-1]}")
+        # self.logger.debug(f"data['quant'] sample:\n{self.data['quant'][-1]}")
 
-    def run(self):
+    def run(self, *, num_threads=None):
         self.save_core_model()
-        self.convert_and_save()
+        self.convert_and_save(xcore_num_threads=num_threads)
 
 
 class OpTestDefaultConvModel(OpTestDefaultModel):
@@ -70,41 +80,24 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
             self, K_h, K_w, height, width, input_channels, output_channels, *,
             padding, **inits):
         self.input_init = inits['input_init']
-        try:
-            self.core_model = tf.keras.Sequential(
-                name=self.name,
-                layers=[
-                    tf.keras.layers.Conv2D(filters=output_channels,
-                                           kernel_size=(K_h, K_w),
-                                           padding=padding,
-                                           input_shape=(height, width, input_channels),
-                                           bias_initializer=inits['bias_init'],
-                                           kernel_initializer=inits['weight_init'])
-                ]
-            )
-            # for layer in self.core_model.layers:
-            #     logging.debug(f"WEIGHT DATA SAMPLE:\n{layer.get_weights()[0][1]}")
-            #     logging.debug(f"BIAS DATA SAMPLE:\n{layer.get_weights()[1]}")
-        except ValueError as e:
-            if e.args[0].startswith("Negative dimension size caused by"):
-                raise ValueError(
-                    "Negative dimension size (Hint: if using 'valid' padding "
-                    "verify that the kernel is at least the size of input image)"
-                ) from e
-
-    def run(self, *,
-            num_threads=None, input_channels, output_channels,
-            height, width, K_h, K_w, padding, **inits):
-        self.build(K_h, K_w, height, width, input_channels, output_channels,
-                   padding=padding, **inits)
-        self.save_core_model()
-        self.convert_and_save(xcore_num_threads=num_threads)
+        self.core_model = tf.keras.Sequential(
+            name=self.name,
+            layers=[
+                tf.keras.layers.Conv2D(filters=output_channels,
+                                       kernel_size=(K_h, K_w),
+                                       padding=padding,
+                                       input_shape=(height, width, input_channels),
+                                       bias_initializer=inits['bias_init'],
+                                       kernel_initializer=inits['weight_init'])
+            ]
+        )
 
 
 class OpTestDeepoutConvModel(OpTestDefaultConvModel):
     def build_core_model(self, *args, **kwargs):
         K_h, K_w, _, _, _, output_channels = args
         assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
+        # TODO: remove these constraints when conv2d improvements are ready
         assert K_h % 2 == 1, "kernel height must be odd"
         assert K_w % 2 == 1, "kernel width must be odd"
         super().build_core_model(*args, **kwargs)
@@ -159,22 +152,19 @@ class OpTestDefaultFCModel(KerasModel):
         converter_args.setdefault('remove_softmax', True)
         super().convert_to_xcore(**converter_args)
 
-    def run(self, *, train_model, input_dim, output_dim, batch_size, epochs,
-            **inits):
-        if train_model:
-            self.build(input_dim, output_dim, **inits)
-            self.prep_data()
-            self.train(batch_size=batch_size, epochs=epochs)
-            self.save_core_model()
-        else:
-            # Recover previous state from file system
-            self.load_core_model()
-            if output_dim and output_dim != self.output_dim:
-                raise ValueError(
-                    f"specified output_dim ({output_dim}) "
-                    f"does not match loaded model's output_dim ({self.output_dim})"
-                )
-        self.convert_and_save()
+    def build_and_train(self, input_dim, output_dim, batch_size, epochs, **inits):
+        self.build(input_dim, output_dim, **inits)
+        self.prep_data()
+        self.train(batch_size=batch_size, epochs=epochs)
+        self.save_core_model()
+
+    def load_core_model(self, output_dim):
+        super().load_core_model()
+        if output_dim and output_dim != self.output_dim:
+            raise ValueError(
+                f"specified output_dim ({output_dim}) "
+                f"does not match loaded model's output_dim ({self.output_dim})"
+            )
 
 
 # TODO: move this to model_generation utils
@@ -239,6 +229,12 @@ class OpTestInitializers(Enum):
 
 
 class OpTestInitializerParser(InitializerParser):
+    __INIT_HELPERS = {
+        'input_init': "Initializer for input data distribution.",
+        'weight_init': "Initializer for weight distribution.",
+        'bias_init': "Initializer for bias distribution."
+    }
+
     def _default_handler(self, defaults):
         self.default_inits = defaults["inits"]
         for init_name, init_settings in self.default_inits.items():
@@ -251,9 +247,17 @@ class OpTestInitializerParser(InitializerParser):
             elif init_type is OpTestInitializers.CONST:
                 def_str += f"{_DEFAULT_CONST_INIT}"
 
+            try:
+                init_help = init_settings['help']
+            except KeyError:
+                try:
+                    init_help = self.__INIT_HELPERS[init_name]
+                except KeyError:
+                    init_help = "[MISSING INITIALIZER DESCRIPTION]"
+
             self.add_argument(
                 f"--{init_name}", nargs="*", default=argparse.SUPPRESS,
-                help=f"{init_settings['help']} "
+                help=f"{init_help} "
                      "Possible initializers are: const [CONST_VAL] or unif [MIN MAX]. "
                      f"(default: {def_str})"
             )
@@ -316,7 +320,7 @@ class OpTestInitializerParser(InitializerParser):
                     params[0] if params else _DEFAULT_CONST_INIT)
 
         for k in initializers:
-            logging.debug(
+            self.logger.debug(
                 f"{k} configuration: "
                 f"{type(initializers[k]).__name__} {initializers[k].get_config()}"
             )
@@ -347,6 +351,7 @@ class OpTestImgParser(OpTestInitializerParser):
             )
 
 
+# TODO: after the conv2d enhancements, this should be used in the conv parsers
 class OpTestPoolParser(OpTestImgParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)

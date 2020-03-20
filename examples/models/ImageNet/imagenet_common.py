@@ -30,7 +30,7 @@ class ImageNetModel(KerasClassifier):
         self.data['x_test'] = example_tensor
         self.data['x_train'] = example_tensor
         for k, v in self.data.items():
-            logging.debug(f"Prepped data[{k}] with shape: {v.shape}")
+            self.logger.debug(f"Prepped data[{k}] with shape: {v.shape}")
 
     def gen_test_data(self):
         if not self.data:

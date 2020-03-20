@@ -50,7 +50,7 @@ SOURCE_DIRS := src
 # libraries (.a files) will be created for dependencies, and the executable
 # will be linked directly against library object files.
 #
-BUILD_STATIC_LIBRARIES := 1
+BUILD_STATIC_LIBRARIES := 0
 
 ######
 ### [required]

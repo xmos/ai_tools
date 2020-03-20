@@ -22,26 +22,20 @@ def main(raw_args=None):
         'batch_size': DEFAULT_BS,
         'epochs': DEFAULT_EPOCHS,
         'inits': {
-            'weight_init': {
-                'type': common.OpTestInitializers.UNIF,
-                'help': "Initializer for weight distribution."
-            },
-            'bias_init': {
-                'type': common.OpTestInitializers.CONST,
-                'help': "Initializer for bias distribution."
-            }
+            'weight_init': {'type': common.OpTestInitializers.UNIF},
+            'bias_init': {'type': common.OpTestInitializers.CONST}
         }
     })
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(args.use_gpu, args.verbose)
 
     model = common.OpTestDefaultFCModel('fc_deepin_deepout', args.path)
-    model.run(train_model=args.train_model,
-              input_dim=args.input_dim,
-              output_dim=args.output_dim,
-              batch_size=args.batch_size,
-              epochs=args.epochs,
-              **args.inits)
+    if args.train_model:
+        model.build_and_train(args.input_dim, args.output_dim,
+                              args.batch_size, args.epochs,
+                              **args.inits)
+    else:
+        model.load_core_model(args.output_dim)
+    model.convert_and_save()
 
 
 if __name__ == "__main__":

@@ -34,14 +34,10 @@ def main(raw_args=None):
         "height": DEFAULT_HEIGHT,
         "width": DEFAULT_WIDTH,
         'inits': {
-            'input_init': {
-                'type': common.OpTestInitializers.UNIF,
-                'help': "Initializer for input data distribution."
-            }
+            'input_init': {'type': common.OpTestInitializers.UNIF}
         }
     })
     args = parser.parse_args(raw_args)
-    utils.set_gpu_usage(False, args.verbose)
 
     model = AvgPool2DGlobal('avgpool2d_global', args.path)
     model.build(args.height, args.width, args.inputs,

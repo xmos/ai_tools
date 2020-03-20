@@ -27,3 +27,17 @@ To run a single test
 To run the tests on the host PC
 
     > pytest --test-app=../examples/apps/test_model/bin/test_model -n NUM
+
+Useful, custom command line options.
+
+    --test-dir path/to/non-default/test/data
+    --abs-tol 2
+    --max-count 1
+
+ Run 
+
+    > pytest -v
+
+for more info on custom options.  
+
+

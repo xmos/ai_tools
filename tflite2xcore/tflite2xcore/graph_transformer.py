@@ -5,6 +5,7 @@ import heapq
 import logging
 import itertools
 
+from contextlib import contextmanager
 from abc import ABC, abstractmethod
 from tflite2xcore.xcore_model import XCOREModel
 
@@ -18,7 +19,8 @@ class PassPriority(enum.IntEnum):
     PREP = HIGHEST
     HIGH = enum.auto()
     MEDIUM = enum.auto()
-    LOW = enum.auto()
+    FUSING = enum.auto()
+    ARGMAX = enum.auto()
     PAR = enum.auto()
     CLEANUP = enum.auto()
     LOWEST = CLEANUP
@@ -27,6 +29,7 @@ class PassPriority(enum.IntEnum):
 class ModelTransformationPass(ABC):
     def __init__(self, priority):
         assert isinstance(priority, PassPriority)
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.priority = priority
 
     @abstractmethod
@@ -61,7 +64,7 @@ class SubgraphTransformationPass(ModelTransformationPass):
         pass
 
     def log_match(self, obj):
-        logging.debug(f"{type(self).__name__} matched {obj}")
+        self.logger.info(f"matched {obj}")
 
     def run_subgraph(self, subgraph):
         keep_running = True
@@ -76,16 +79,23 @@ class SubgraphTransformationPass(ModelTransformationPass):
 
     def run(self, model):
         for j, subgraph in enumerate(model.subgraphs):
-            logging.debug(f"{type(self).__name__} running on subgraph {j}")
+            self.logger.debug(f"running on subgraph {j}")
             self.run_subgraph(subgraph)
 
 
 class OperatorMatchingPass(SubgraphTransformationPass):
     def __init__(self, priority):
         super().__init__(priority)
+        self._op = None
 
     def target_iterable(self, subgraph):
         return subgraph.operators
+
+    @contextmanager
+    def using(self, op):
+        self._op, original_op = op, self._op
+        yield
+        self._op = original_op
 
     def log_match(self, op):
         super().log_match(f"operator {op.operator_code}")
@@ -128,6 +138,7 @@ class PassManager():
     def __init__(self, model=None, passes=[]):
         self._queue = []
         self._counter = itertools.count()
+        self.logger = logging.getLogger(self.__class__.__name__)
         if model:
             self.register_model(model)
         for trf_pass in passes:
@@ -148,5 +159,5 @@ class PassManager():
     def run_passes(self):
         while self._queue:
             trf_pass = self.pop_pass()
-            logging.debug(f"running {trf_pass}...")
+            self.logger.debug(f"running {trf_pass}...")
             trf_pass.run(self._model)

@@ -287,7 +287,7 @@ def deserialize_model(bits):
 
 def read_flatbuffer(filename):
     if isinstance(filename, pathlib.Path):
-        filename = str(filename)
+        filename = str(filename.resolve())
 
     with open(filename, "rb") as fd:
         bits = bytes(fd.read())
@@ -305,7 +305,7 @@ def serialize_model(model):
 
 def write_flatbuffer(model, filename):
     if isinstance(filename, pathlib.Path):
-        filename = str(filename)
+        filename = str(filename.resolve())
 
     with open(filename, 'wb') as fd:
         return fd.write(serialize_model(model))

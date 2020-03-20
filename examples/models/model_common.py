@@ -1,6 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import argparse
+import logging
 
 from pathlib import Path
 
@@ -9,7 +10,9 @@ from tflite2xcore.model_generation import utils
 
 class DefaultParser(argparse.ArgumentParser):
     def __init__(self, *args, defaults, **kwargs):
-        kwargs["formatter_class"] = argparse.ArgumentDefaultsHelpFormatter
+        self.logger = logging.getLogger(self.__class__.__name__)
+        kwargs.setdefault('formatter_class', argparse.ArgumentDefaultsHelpFormatter)
+        kwargs.setdefault('conflict_handler', 'resolve')
         super().__init__(*args, **kwargs)
         self.add_argument(
             "-path", nargs="?", default=defaults["path"],
@@ -23,6 +26,8 @@ class DefaultParser(argparse.ArgumentParser):
     def parse_args(self, *args, **kwargs):
         args = super().parse_args(*args, **kwargs)
         utils.set_verbosity(args.verbose)
+        utils.set_gpu_usage(args.use_gpu if hasattr(args, 'use_gpu') else False,
+                            args.verbose)
         args.path = Path(args.path)
         return args
 
@@ -71,8 +76,3 @@ class TrainableParser(InitializerParser):
             "-ep", "--epochs", type=int, default=defaults["epochs"],
             help="Set the number of training epochs size."
         )
-
-    def parse_args(self, *args, **kwargs):
-        args = super().parse_args(*args, **kwargs)
-        utils.set_gpu_usage(args.use_gpu, args.verbose)
-        return args

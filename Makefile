@@ -1,3 +1,5 @@
+NUM_PROCS := 1
+
 .DEFAULT_GOAL := all
 
 .PHONY: lib_nn_test
@@ -26,8 +28,8 @@ tflite2xcore_test:
 .PHONY: integration_test
 integration_test: test_model
 	cd tests && ./generate_test_data.py
-	cd tests && pytest -v --test-app=../examples/apps/test_model/bin/test_model
-	cd tests && pytest -v
+	cd tests && pytest -v --test-app=../examples/apps/test_model/bin/test_model -n $(NUM_PROCS)
+	cd tests && pytest -v -n $(NUM_PROCS)
 
 .PHONY: clean
 clean: lib_nn_test_clean test_model_clean

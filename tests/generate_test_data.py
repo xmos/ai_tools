@@ -42,18 +42,19 @@ def make_folder_and_arguments(**kwargs):
 def generate_test_case(dry_run, test_case):
     operator = test_case['operator']
     generator = test_case['generator']
+    subtype = test_case['subtype']
     if 'parameters' in test_case:
         parameters = test_case['parameters']
     else:
         parameters = {}
 
-    if 'train_model' in test_case and test_case['train_model']:
+    if test_case['train_model']:
         train_model_flag = '--train_model'
     else:
         train_model_flag = ''
 
     folder, arguments = make_folder_and_arguments(**parameters)
-    output_dir = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, operator, folder)
+    output_dir = os.path.join(directories.OP_TEST_MODELS_DATA_DIR, operator, subtype, folder)
     cmd = f'python {generator} {train_model_flag} {arguments} -path {output_dir}'
     with stdout_lock:
         print(f'running: {cmd}')
@@ -63,19 +64,33 @@ def generate_test_case(dry_run, test_case):
         except subprocess.CalledProcessError as cmdexc:                                                                                                   
             print(cmdexc.output.decode('utf-8'))
 
-def run_generate(test_file, jobs):
+def load_test_cases(test_file):
+    test_cases = []
     with open(test_file, 'r') as fd:
-        test_cases = json.loads(fd.read())
+        operators = json.loads(fd.read())
+        for operator in operators:
+            for params in operator['parameters']:
+                test_cases.append({
+                    'operator': operator['operator'],
+                    'subtype': operator.get('subtype', ''),
+                    'generator': operator['generator'],
+                    'train_model': operator.get('train_model', False),
+                    'parameters': params
+                })
+    return test_cases
 
-        # Remove all existing data
-        if not args.dry_run:
-            if os.path.exists(directories.DATA_DIR):
-                shutil.rmtree(directories.DATA_DIR)
+def run_generate(test_file, jobs):
+    test_cases = load_test_cases(test_file)
 
-        # now generate all the test cases
-        pool = multiprocessing.Pool(processes=jobs)
-        func = partial(generate_test_case, args.dry_run)
-        pool.map(func, test_cases)
+    # Remove all existing data
+    if not args.dry_run:
+        if os.path.exists(directories.DATA_DIR):
+            shutil.rmtree(directories.DATA_DIR)
+
+    # now generate all the test cases
+    pool = multiprocessing.Pool(processes=jobs)
+    func = partial(generate_test_case, args.dry_run)
+    pool.map(func, test_cases)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

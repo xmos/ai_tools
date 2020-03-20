@@ -72,3 +72,16 @@ class LoggingContext():
             self.logger.removeHandler(self.handler)
         if self.handler and self.close:
             self.handler.close()
+
+
+class Log():
+    @classmethod
+    def _array_msg(cls, arr, style=''):
+        msg = f"numpy.ndarray (shape={arr.shape}, dtype={arr.dtype}):\n"
+        if style.endswith('_shift_scale_arr'):
+            msg += f"shift_pre:\n{arr[:, 0]}\n"
+            msg += f"scale:\n{arr[:, 1]}\n"
+            msg += f"shift_post:\n{arr[:, 2]}"
+        else:
+            msg += f"{arr}"
+        return msg + '\n'

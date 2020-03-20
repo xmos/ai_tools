@@ -17,6 +17,11 @@ set -e
 ./generate_conv2d_deepin_deepout_relu.py -v
 ./generate_conv2d_shallowin_deepout_relu.py -v
 
+# depthwise convolutions
+./generate_depthwise_conv2d.py -v
+./generate_depthwise_conv2d_singlein_deepout.py -v
+./generate_depthwise_conv2d_padded.py -v
+
 # fully connected
 ./generate_fully_connected.py -v --train_model -ep 1
 ./generate_fully_connected.py -v

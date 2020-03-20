@@ -61,6 +61,18 @@ void conv2d_1x1_asm(
     const int8_t* K,
     const data16_t* BSS,
     const nn_conv2d_1x1_plan_t* plan);
+    
+
+#ifndef USE_ASM_conv2d_depthwise
+#define USE_ASM_conv2d_depthwise    (1)
+#endif
+void conv2d_depthwise_asm(
+    int8_t* Y,
+    const int8_t* X,
+    const int8_t* K,
+    const nn_bss_block_t* BSS,
+    const nn_conv2d_depthwise_plan_t* plan,
+    const nn_conv2d_depthwise_job_t* job);
 
 #ifndef USE_ASM_fully_connected_16
 #define USE_ASM_fully_connected_16      (1)

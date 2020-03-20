@@ -3,7 +3,12 @@
 #ifndef XCORE_FULLY_CONNECTED_OPERATOR_HPP_
 #define XCORE_FULLY_CONNECTED_OPERATOR_HPP_
 
-#include "operators.hpp"
+#include <cstdint>
+#include "lib_ops/api/lib_ops.h"
+
+extern "C" {
+    #include "lib_nn/api/nn_operator.h"
+}
 
 namespace xcore {
 namespace fully_connected { 
@@ -13,13 +18,8 @@ class FullyConnected_16 {
         FullyConnected_16() {}
         ~FullyConnected_16() {}
 
-        void Init(int32_t C_in, int32_t C_out) {
-            fully_connected_init(&plan_, C_in, C_out);
-        }
-
-        void Eval(int16_t* Y, const int8_t* W, const int8_t* X, const int16_t* BSS) {
-            fully_connected_16(Y, W, X, (data16_t*) BSS, &plan_);
-        }
+        XCoreStatus Init(int32_t C_in, int32_t C_out);
+        XCoreStatus Eval(int16_t* Y, const int8_t* W, const int8_t* X, const int16_t* BSS);
 
     private:
         nn_fully_connected_plan_t plan_;

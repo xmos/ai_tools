@@ -9,6 +9,8 @@
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
 
+#include "lib_ops/api/lib_ops.h"
+
 tflite::ErrorReporter* error_reporter = nullptr;
 const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
@@ -87,9 +89,16 @@ static void setup_tflite(const char *model_buffer) {
     interpreter = &static_interpreter;
 
     // Allocate memory from the tensor_arena for the model's tensors.
-    TfLiteStatus allocate_status = interpreter->AllocateTensors();
-    if (allocate_status != kTfLiteOk) {
+    TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();
+    if (allocate_tensors_status != kTfLiteOk) {
         error_reporter->Report("AllocateTensors() failed");
+    return;
+    }
+
+    // Allocate xCORE KernelDispatcher after AllocateTensors
+    xcore::XCoreStatus allocate_xcore_status = xcore::AllocateKernelDispatcher();
+    if (allocate_xcore_status != xcore::kXCoreOk) {
+        error_reporter->Report("AllocateKernelDispatcher() failed");
     return;
     }
 

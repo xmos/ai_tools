@@ -6,9 +6,11 @@ ifeq ($(TARGET), x86)
 
 	CC := gcc
 	CCFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
+	#CCFLAGS += -DNDEBUG  
 
 	CXX := g++
-	CXXFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
+	CXXFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
+	#CXXFLAGS += -DNDEBUG  
 	CXXFLAGS += -std=c++11 
 
 	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm -lpthread
@@ -33,11 +35,13 @@ else # must be xcore
 	ASFLAGS := $(PLATFORM_FLAGS)
 
 	CC := xcc
-	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -DNDEBUG
+	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON
+	#CCFLAGS += -DNDEBUG  
 	CCFLAGS += $(PLATFORM_FLAGS)
 
 	CXX := xcc
-	CXXFLAGS := -std=c++11 -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -DNDEBUG
+	CXXFLAGS := -std=c++11 -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON
+	#CXXFLAGS += -DNDEBUG  
 	CXXFLAGS += $(PLATFORM_FLAGS)
 
 	LDFLAGS := $(PLATFORM_FLAGS) -lxcore
@@ -56,15 +60,15 @@ FLATBUFFERS_DIR := ../../../third_party/
 GEMMLOWP_DIR := ../../../third_party/gemmlowp
 TENSORFLOW_DIR := ../../../third_party/tensorflow
 LIB_NN_DIR := ../../../lib_nn
-LIB_OP_DIR := ../../../operators
+LIB_OPS_DIR := ../../../lib_ops
 
 INCLUDES := \
 	-I$(FLATBUFFERS_DIR)/flatbuffers/include \
 	-I$(GEMMLOWP_DIR) \
 	-I$(TENSORFLOW_DIR) \
+	-I$(LIB_NN_DIR) \
 	-I$(LIB_NN_DIR)/lib_nn/api \
-	-I$(LIB_NN_DIR)/lib_nn/src \
-	-I$(LIB_OP_DIR) \
+	-I$(LIB_OPS_DIR) \
 	-Isrc
 
 # source file paths
@@ -72,7 +76,8 @@ VPATH := \
 	$(FLATBUFFERS_DIR) \
 	$(TENSORFLOW_DIR) \
 	$(LIB_NN_DIR) \
-	src
+	$(LIB_OPS_DIR) \
+	src \
 
 SOURCES := \
 	tensorflow/lite/c/common.c \
@@ -135,7 +140,15 @@ SOURCES := \
 	lib_nn/src/c/avgpool2d.c \
 	lib_nn/src/c/maxpool2d.c \
 	lib_nn/src/c/fully_connected.c \
+	lib_ops/src/kernel_dispatcher.cpp \
+	lib_ops/src/conv2d.cpp \
+	lib_ops/src/fully_connected.cpp\
+	lib_ops/src/activations.cpp \
+	lib_ops/src/pooling.cpp \
+	lib_ops/src/arg_min_max.cpp \
+	lib_ops/src/type_conversions.cpp \
 	main.cc
+
 
 ifeq ($(TARGET), x86)
 	SOURCES += \

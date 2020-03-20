@@ -63,6 +63,19 @@ There is a Makefile in the root directory that has some useful targets - especia
 * `integration_test` - Build any necessary components, generate all test data, and run all integration tests
 * `clean` - Cleans all builds
 
+To run the integration tests using multiple processors run 
+
+  make integration_tests NUM_PROCS=4
+
+Replace 4 with the number of processors you want to use.  
+
+On Linux you can utilize all your cores with
+
+  make integration_tests NUM_PROCS=$(grep -c ^processor /proc/cpuinfo)
+
+On macOS you can utilize all your cores with
+
+  make integration_test NUM_PROCS=$(system_profiler SPHardwareDataType | awk '/Total Number of Cores/{print $5}{next;}')
 
 ## Development Tips
 

@@ -67,8 +67,28 @@ def create_dict_from_subgraph(subgraph):
     return subgraph_dict
 
 
-def create_dict_from_buffer(buffer):
-    return {'data': buffer.data} if buffer.data is not None else {}
+def create_dict_from_buffer(buffer, *, include_owners=False):
+    buffer_dict = {'data': buffer.data} if buffer.data is not None else {}
+
+    if include_owners:
+        owners_dict = dict()
+        model = buffer.model
+
+        # track down and tally all owners
+        for owner in buffer.owners:
+            subgraph = owner.subgraph
+            subgraph_idx = model.subgraphs.index(subgraph)
+            owners_in_subgraph = owners_dict.setdefault(subgraph_idx, [])
+            owners_in_subgraph.append(subgraph.tensors.index(owner))
+
+        # sort the ordering
+        owners_dict = dict(sorted(owners_dict.items()))
+        for subgraph_idx in owners_dict:
+            owners_dict[subgraph_idx].sort()
+
+        buffer_dict['owners'] = owners_dict
+
+    return buffer_dict
 
 
 def create_dict_from_metadata(metadata):
@@ -76,12 +96,16 @@ def create_dict_from_metadata(metadata):
             'buffer': metadata.model.buffers.index(metadata.buffer)}
 
 
-def create_dict_from_model(model):
+def create_dict_from_model(model, *, extended=False):
     return {
         'version': model.version,
         'description': model.description,
-        'metadata': [create_dict_from_metadata(mdata) for mdata in model.metadata],
-        'buffers': [create_dict_from_buffer(buffer) for buffer in model.buffers],
-        'subgraphs': [create_dict_from_subgraph(subgraph) for subgraph in model.subgraphs],
-        'operator_codes': [create_dict_from_operator_code(operator_code) for operator_code in model.operator_codes]
+        'metadata': [create_dict_from_metadata(metadata)
+                     for metadata in model.metadata],
+        'buffers': [create_dict_from_buffer(buffer, include_owners=extended)
+                    for buffer in model.buffers],
+        'subgraphs': [create_dict_from_subgraph(subgraph)
+                      for subgraph in model.subgraphs],
+        'operator_codes': [create_dict_from_operator_code(operator_code)
+                           for operator_code in model.operator_codes]
     }

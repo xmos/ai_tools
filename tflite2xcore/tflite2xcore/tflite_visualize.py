@@ -226,8 +226,32 @@ class OpCodeMapper():
 class DataSizeMapper():
     """For buffers, report the number of bytes."""
 
+    @classmethod
+    def _format_bytes(cls, n):
+        return f"{n:,d} bytes"
+
     def __call__(self, x):
-        return "--" if x is None else f"{len(x):d} bytes"
+        return "--" if x is None else self._format_bytes(len(x))
+
+
+class BufferOwnerMapper():
+    """For buffers, report the owners with tooltips."""
+
+    def __init__(self, model_dict):
+        self.subgraphs = model_dict['subgraphs']
+
+    def __call__(self, d):
+        if not isinstance(d, dict):
+            print(type(d), d)
+            return 'N/A'
+
+        html_list = []
+        for subgraph_idx, owners in d.items():
+            subgraph = self.subgraphs[subgraph_idx]
+            tensor_mapper = TensorTooltipMapper(subgraph)
+            html_list.append(f"{subgraph_idx}: {tensor_mapper(owners)}")
+
+        return ', '.join(html_list) if html_list else '--'
 
 
 class TensorMapper():
@@ -428,6 +452,7 @@ def CreateHtml(data):
     html += "<h1>TensorFlow Lite Model</h1>\n"
 
     toplevel_stuff = [("filename", None),
+                      ("filesize", DataSizeMapper()._format_bytes),
                       ("version", None),
                       ("description", None)]
 
@@ -435,8 +460,8 @@ def CreateHtml(data):
     for key, mapping in toplevel_stuff:
         html += "<tr>\n"
         html += f"{indent}<th>{key}</th>\n"
-        key = key if mapping is None else mapping(data.get(key))
-        html += f"{indent}<td>{key}</td>\n"
+        val = data.get(key) if mapping is None else mapping(data.get(key))
+        html += f"{indent}<td>{val}</td>\n"
         html += "</tr>"
     html += "</table>\n"
 
@@ -482,9 +507,17 @@ def CreateHtml(data):
         html += GenerateGraph(subgraph_idx, g, opcode_mapper)
         html += "</div>\n\n"
 
-    # Buffers have no data, but maybe in the future they will
-    buffer_keys_to_display = [("data", DataSizeMapper())]
-    html += "<h2>Buffers</h2>\n"
+    # Buffers
+    size_mapper = DataSizeMapper()
+    buffer_keys_to_display = [("data", size_mapper),
+                              ("owners", BufferOwnerMapper(data))]
+    total_bytes = sum(len(d['data']) for d in data["buffers"])
+    html += (
+        "<h2>Buffers "
+        f"(total: {size_mapper._format_bytes(total_bytes)}, "
+        f"{total_bytes/data['filesize']:.2%} of filesize)"
+        "</h2>\n"
+    )
     html += GenerateTableHtml(data["buffers"], buffer_keys_to_display)
 
     # Operator codes
@@ -492,10 +525,9 @@ def CreateHtml(data):
                                 ("custom_code", None),
                                 ("version", None),
                                 ("count", None)]
-    op_cnt = Counter(op["opcode_index"]
-                     for subgraph in data["subgraphs"]
-                     for op in subgraph["operators"])
-    op_cnt = sorted(op_cnt.items(), key=lambda t: t[0])
+    op_cnt = sorted(Counter(op["opcode_index"]
+                            for subgraph in data["subgraphs"]
+                            for op in subgraph["operators"]).items())
     for d, p in zip(data["operator_codes"], op_cnt):
         d['count'] = p[1]
     html += "<h2>Operator Codes</h2>\n"
@@ -511,8 +543,15 @@ def CreateHtmlFile(tflite_input, html_file):
         raise RuntimeError(f"Invalid filename {tflite_input}")
 
     model = read_flatbuffer(tflite_input)
-    data = create_dict_from_model(model)
+    try:
+        data = create_dict_from_model(model, extended=True)
+    except AttributeError as e:
+        if e.args[0] == "'Buffer' object has no attribute 'owners'":
+            data = create_dict_from_model(model, extended=False)
+        else:
+            raise
     data["filename"] = tflite_input
+    data["filesize"] = os.stat(tflite_input).st_size
 
     html = CreateHtml(data)
     with open(html_file, "w") as f:

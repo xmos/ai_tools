@@ -94,8 +94,9 @@ _D3_HTML_TEMPLATE = """<script>
 function buildGraph() {
   // Build graph data
   var graph = %s;
+  var subgraph_id = "%d";
 
-  var svg = d3.select("#subgraph%d")
+  var svg = d3.select("#subgraph" + subgraph_id);
   var width = svg.attr("width");
   var height = svg.attr("height");
   // Make the graph scrollable.
@@ -104,6 +105,7 @@ function buildGraph() {
   })).append("g");
 
   var color = d3.scaleOrdinal(d3.schemeDark2);
+  var stroke_widths = { low:1, mid:5, high:7};
 
   var simulation = d3.forceSimulation()
       .force("link", d3.forceLink().id(function(d) {return d.id;}))
@@ -116,14 +118,16 @@ function buildGraph() {
                 .data(graph.edges)
                 .enter()
                 .append("path")
+                .attr("selected", 0)
                 .attr("stroke","black")
-                .attr("stroke-width", 1)
+                .attr("stroke-width", stroke_widths.low)
                 .attr("fill","none");
 
   // Make the node group
   var node = svg.selectAll(".nodes")
     .data(graph.nodes)
     .enter().append("g")
+    .attr("selected", 0)
     .attr("x", function(d){return d.x})
     .attr("y", function(d){return d.y})
     .attr("node_width", function(d){return d.node_width})
@@ -154,7 +158,7 @@ function buildGraph() {
       .attr("height", function(d) { return d.node_height; })
       .attr("rx", function(d) { return d.edge_radius; })
       .attr("stroke", "#000000")
-      .attr("stroke-width", 1)
+      .attr("stroke-width", stroke_widths.low)
       .attr("fill", function(d) { return d.fill_color; })
   let text = node.append("text")
       .text("")
@@ -170,12 +174,75 @@ function buildGraph() {
       .attr("x", 5)
       .attr("dy", 15);
 
+  // node hover and selection
   node.on("mouseover", function(d, i) {
-    d3.select(this).select("rect").attr("stroke-width", 3)
+    var _this = d3.select(this);
+    var id = _this.attr("id");
+    if (_this.attr("selected") == "1") {
+      _this.select("rect")
+           .attr("stroke-width", stroke_widths.high);
+    } else {
+      _this.select("rect")
+           .attr("stroke-width", stroke_widths.mid);
+    }
+
+    svg.selectAll("path[source='" + id +  "'][selected='0']")
+       .attr("stroke-width", stroke_widths.mid);
+    svg.selectAll("path[source='" + id +  "'][selected='1']")
+       .attr("stroke-width", stroke_widths.high);
+    svg.selectAll("path[target='" + id +  "'][selected='0']")
+       .attr("stroke-width", stroke_widths.mid);
+    svg.selectAll("path[target='" + id +  "'][selected='1']")
+       .attr("stroke-width", stroke_widths.high);
   });
   node.on("mouseout", function(d, i) {
-    d3.select(this).select("rect").attr("stroke-width", 1)
+    var _this = d3.select(this);
+    var id = _this.attr("id");
+    if (_this.attr("selected") == "1") {
+      _this.select("rect")
+           .attr("stroke-width", stroke_widths.mid);
+    } else {
+      _this.select("rect")
+           .attr("stroke-width", stroke_widths.low);
+    }
+
+    svg.selectAll("path[source='" + id +  "'][selected='0']")
+       .attr("stroke-width", stroke_widths.low);
+    svg.selectAll("path[source='" + id +  "'][selected='1']")
+       .attr("stroke-width", stroke_widths.mid);
+    svg.selectAll("path[target='" + id +  "'][selected='0']")
+       .attr("stroke-width", stroke_widths.low);
+    svg.selectAll("path[target='" + id +  "'][selected='1']")
+       .attr("stroke-width", stroke_widths.mid);
   });
+  node.on("click", function() {
+    var _this = d3.select(this);
+    if (_this.attr("selected") == "1") {
+        _this.attr("selected", 0)
+             .select("rect").attr("stroke-width", stroke_widths.mid);
+    } else {
+        _this.attr("selected", 1)
+             .select("rect").attr("stroke-width", stroke_widths.high);
+    }
+  });
+  node.on("contextmenu", function (d, i) {
+    var _this = d3.select(this);
+    var id = _this.attr("id");
+
+    _this.dispatch("click");
+    var source_paths = svg.selectAll("path[source='" + id +  "']");
+    var target_paths = svg.selectAll("path[target='" + id +  "']");
+    if (_this.attr("selected") == "1") {
+      source_paths.attr("selected", 0);
+      target_paths.attr("selected", 0);
+    } else {
+      source_paths.attr("selected", 1);
+      target_paths.attr("selected", 1);
+    }
+    source_paths.dispatch("click");
+    target_paths.dispatch("click");
+  });
+
 
   // Setup force parameters and update position callback
 
@@ -192,32 +259,91 @@ function buildGraph() {
   function proc(w, t) {
     return parseInt(w.getAttribute(t));
   }
-  edge.attr("d", function(d) {
-    function lerp(t, a, b) {
-      return (1.0-t) * a + t * b;
-    }
-    var x1 = proc(name_to_g[d.source],"x") + proc(name_to_g[d.source],"node_width") / 2;
-    var y1 = proc(name_to_g[d.source],"y") + proc(name_to_g[d.source],"node_height");
-    var x2 = proc(name_to_g[d.target],"x") + proc(name_to_g[d.target],"node_width") / 2;
-    var y2 = proc(name_to_g[d.target],"y");
-    var s = "M " + x1 + " " + y1
-        + " C " + x1 + " " + lerp(.5, y1, y2)
-        + " " + x2 + " " + lerp(.5, y1, y2)
-        + " " + x2  + " " + y2;
-    return s;
-  });
   edge.attr("source", function(d) {return d.source;})
-      .attr("target", function(d) {return d.target;});
+      .attr("target", function(d) {return d.target;})
+      .attr("d", function(d) {
+        function lerp(t, a, b) {
+          return (1.0-t) * a + t * b;
+        }
+        var x1 = proc(name_to_g[d.source],"x") + proc(name_to_g[d.source],"node_width") / 2;
+        var y1 = proc(name_to_g[d.source],"y") + proc(name_to_g[d.source],"node_height");
+        var x2 = proc(name_to_g[d.target],"x") + proc(name_to_g[d.target],"node_width") / 2;
+        var y2 = proc(name_to_g[d.target],"y");
+        var s = "M " + x1 + " " + y1
+            + " C " + x1 + " " + lerp(.5, y1, y2)
+            + " " + x2 + " " + lerp(.5, y1, y2)
+            + " " + x2  + " " + y2;
+        return s;
+      });
 
+  // node hover and selection
   edge.on("mouseover", function(d, i) {
-    d3.select(this).attr("stroke-width", 4);
-    d3.select("#" + d.source).select("rect").attr("stroke-width", 3);
-    d3.select("#" + d.target).select("rect").attr("stroke-width", 3);
+    var _this = d3.select(this);
+
+    if (_this.attr("selected") == '1') {
+      _this.attr("stroke-width", stroke_widths.high);
+    } else {
+      _this.attr("stroke-width", stroke_widths.mid);
+    }
+
+    svg.select("#" + d.source + "[selected='1']")
+       .select("rect").attr("stroke-width", stroke_widths.high);
+    svg.select("#" + d.source + "[selected='0']")
+       .select("rect").attr("stroke-width", stroke_widths.mid);
+    svg.select("#" + d.target + "[selected='1']")
+       .select("rect").attr("stroke-width", stroke_widths.high);
+    svg.select("#" + d.target + "[selected='0']")
+       .select("rect").attr("stroke-width", stroke_widths.mid);
   });
   edge.on("mouseout", function(d, i) {
-    d3.select(this).attr("stroke-width", 1);
-    d3.select("#" + d.source).select("rect").attr("stroke-width", 1);
-    d3.select("#" + d.target).select("rect").attr("stroke-width", 1);
+    var _this = d3.select(this);
+
+    if (_this.attr("selected") == '1') {
+      _this.attr("stroke-width", stroke_widths.mid);
+    } else {
+      _this.attr("stroke-width", stroke_widths.low);
+    }
+
+    svg.select("#" + d.source + "[selected='1']")
+       .select("rect").attr("stroke-width", stroke_widths.mid);
+    svg.select("#" + d.source + "[selected='0']")
+       .select("rect").attr("stroke-width", stroke_widths.low);
+    svg.select("#" + d.target + "[selected='1']")
+       .select("rect").attr("stroke-width", stroke_widths.mid);
+    svg.select("#" + d.target + "[selected='0']")
+       .select("rect").attr("stroke-width", stroke_widths.low);
+  });
+  edge.on("click", function() {
+    var _this = d3.select(this);
+    if (_this.attr("selected") == "1") {
+        _this.attr("selected", 0)
+             .attr("stroke-width", stroke_widths.mid);
+    } else {
+        _this.attr("selected", 1)
+             .attr("stroke-width", stroke_widths.high);
+    }
+  });
+  edge.on("contextmenu", function (d, i) {
+    var _this = d3.select(this);
+
+    _this.dispatch("click");
+    var source = svg.select("#" + d.source);
+    var target = svg.select("#" + d.target);
+    if (_this.attr("selected") == "1") {
+      source.attr("selected", 0);
+      target.attr("selected", 0);
+    } else {
+      source.attr("selected", 1);
+      target.attr("selected", 1);
+    }
+    source.dispatch("click");
+    target.dispatch("click");
+  });
+
+  // override right click behavior on graph
+  d3.select("#subgraph" + subgraph_id)
+    .on("contextmenu", function (d, i) {
+      d3.event.preventDefault();
   });
 }
 

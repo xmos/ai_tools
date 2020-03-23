@@ -364,9 +364,9 @@ class Subgraph():
         operator = Operator(self, operator_code, name, inputs, outputs,
                             builtin_options, builtin_options_type, custom_options)
         self.operators.append(operator)
-        for input_tensor in inputs:
+        for input_tensor in operator.inputs:
             input_tensor.consumers.append(operator)
-        for output_tensor in outputs:
+        for output_tensor in operator.outputs:
             output_tensor.producers.append(operator)
         return operator
 

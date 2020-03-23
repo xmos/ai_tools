@@ -59,7 +59,8 @@ def optimize_for_xcore(model, *,
         model,
         passes=[
             passes.RemoveQuantizerFloatInputPass(),
-            passes.RemoveDequantizerFloatOutputPass()
+            passes.RemoveDequantizerFloatOutputPass(),
+            passes.SplitPaddingPass()
         ]
     )
 

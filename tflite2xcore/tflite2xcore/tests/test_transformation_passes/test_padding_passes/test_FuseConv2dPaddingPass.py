@@ -9,10 +9,11 @@ from tflite2xcore.transformation_passes import FuseConv2dPaddingPass
 
 from ..model_builders import build_padded_DW
 from ..test_conv2d_passes.conftest import (
-    PARAMS, input_size, strides,
+    PARAMS, strides,
     _test_non_matching_params,
     test_matching_params
 )
+
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
@@ -21,6 +22,7 @@ from ..test_conv2d_passes.conftest import (
 PARAMS = deepcopy(PARAMS)
 
 PADS = [0, 1, 2]
+
 PARAMS["default"].update({
     "pad_t": PADS,
     "pad_b": PADS,
@@ -28,6 +30,7 @@ PARAMS["default"].update({
     "pad_r": PADS,
     "non_matching_pad": [p for p in product(PADS, PADS) if p != (0, 0)]
 })
+
 PARAMS["default"].update({
     "pad_t": PADS[:2],
     "pad_b": PADS[:2],
@@ -35,6 +38,7 @@ PARAMS["default"].update({
     "pad_r": PADS[:2],
     "non_matching_pad": [p for p in product(PADS[:2], PADS[:2]) if p != (0, 0)]
 })
+
 PARAMS["smoke"].update({
     "pad_t": PADS[:1],
     "pad_b": PADS[:1],

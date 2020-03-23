@@ -2,57 +2,60 @@
 
 import pytest
 
+from copy import deepcopy
+
 from tflite2xcore.xcore_model import TensorType
+
+from ..conftest import (
+    PARAMS,
+    _test_non_matching_params,
+    test_matching_params
+)
 
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-PARAMS = {
-    "default": {
-        "input_height": [9, 20],
-        "input_width": [7, 17],
-        "kernel_height": [2, 3, 5, 7],
-        "kernel_width": [2, 3, 5, 7],
-        "input_channels": [4, 8, 16, 32],
-        "non_matching_input_channels": [3, 9, 15],
-        "output_channels": [4, 8, 16, 32],
-        "non_matching_output_channels": [3, 9, 15],
-        "padding": ['SAME', 'VALID'],
-        "stride_h": [1],  # TODO: this should be extended after the conv2d improvements
-        "non_matching_stride_h": [2, 3],  # TODO: this should be removed after the conv2d improvements
-        "stride_w": [1],  # TODO: this should be extended after the conv2d improvements
-        "non_matching_stride_w": [2, 3],  # TODO: this should be removed after the conv2d improvements
-        "non_matching_tensors": [
-            ('input', TensorType.INT16), ('input', TensorType.INT32),
-            ('weights', TensorType.INT16), ('weights', TensorType.INT32),
-            ('biases', TensorType.INT8), ('biases', TensorType.INT16),
-            ('output', TensorType.INT16), ('output', TensorType.INT32)
-        ]
-    },
-    "smoke": {
-        "input_height": [9, 20],
-        "input_width": [7, 17],
-        "kernel_height": [2, 3],
-        "kernel_width": [2, 3],
-        "input_channels": [4, 32],
-        "non_matching_input_channels": [3, 9],
-        "output_channels": [4, 32],
-        "non_matching_output_channels": [3, 9],
-        "padding": ['SAME', 'VALID'],
-        "stride_h": [1],  # TODO: this should be extended after the conv2d improvements
-        "non_matching_stride_h": [2],  # TODO: this should be removed after the conv2d improvements
-        "stride_w": [1],  # TODO: this should be extended after the conv2d improvements
-        "non_matching_stride_w": [2],  # TODO: this should be removed after the conv2d improvements
-        "non_matching_tensors": [
-            ('input', TensorType.INT16),
-            ('weights', TensorType.INT16),
-            ('biases', TensorType.INT8),
-            ('output', TensorType.INT16)
-        ]
-    }
-}
+PARAMS = deepcopy(PARAMS)
+
+PARAMS["default"].update({
+    "kernel_height": [2, 3, 5, 7],
+    "kernel_width": [2, 3, 5, 7],
+    "non_matching_input_channels": [3, 9, 15],
+    "output_channels": [4, 8, 16, 32],
+    "non_matching_output_channels": [3, 9, 15],
+    "padding": ['SAME', 'VALID'],
+    "stride_h": [1],  # TODO: this should be extended after the conv2d improvements
+    "non_matching_stride_h": [2, 3],  # TODO: this should be removed after the conv2d improvements
+    "stride_w": [1],  # TODO: this should be extended after the conv2d improvements
+    "non_matching_stride_w": [2, 3],  # TODO: this should be removed after the conv2d improvements
+    "non_matching_tensors": [
+        ('input', TensorType.INT16), ('input', TensorType.INT32),
+        ('weights', TensorType.INT16), ('weights', TensorType.INT32),
+        ('biases', TensorType.INT8), ('biases', TensorType.INT16),
+        ('output', TensorType.INT16), ('output', TensorType.INT32)
+    ]
+})
+
+PARAMS["smoke"].update({
+    "kernel_height": [2, 3],
+    "kernel_width": [2, 3],
+    "non_matching_input_channels": [3, 9],
+    "output_channels": [4, 32],
+    "non_matching_output_channels": [3, 9],
+    "padding": ['SAME', 'VALID'],
+    "stride_h": [1],  # TODO: this should be extended after the conv2d improvements
+    "non_matching_stride_h": [2],  # TODO: this should be removed after the conv2d improvements
+    "stride_w": [1],  # TODO: this should be extended after the conv2d improvements
+    "non_matching_stride_w": [2],  # TODO: this should be removed after the conv2d improvements
+    "non_matching_tensors": [
+        ('input', TensorType.INT16),
+        ('weights', TensorType.INT16),
+        ('biases', TensorType.INT8),
+        ('output', TensorType.INT16)
+    ]
+})
 
 
 #  ----------------------------------------------------------------------------
@@ -69,30 +72,9 @@ def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
     return [output_channels, kernel_height, kernel_width, input_channels]
 
 
-@pytest.fixture()
-def input_size(input_height, input_width):
-    return [input_height, input_width]
-
-
-#  ----------------------------------------------------------------------------
-#                                   HELPERS
-#  ----------------------------------------------------------------------------
-
-def _test_non_matching_params(trf_pass, model):
-    assert not trf_pass.match(model.subgraphs[0].operators[-1])
-
-
-def _test_matching_params(trf_pass, model):
-    assert trf_pass.match(model.subgraphs[0].operators[-1])
-
-
 #  ----------------------------------------------------------------------------
 #                                   TESTS
 #  ----------------------------------------------------------------------------
-
-def test_matching_params(trf_pass, model):
-    _test_matching_params(trf_pass, model)
-
 
 def test_non_matching_output_channels(trf_pass, build_model,
                                       weight_shape, input_size, padding, strides,

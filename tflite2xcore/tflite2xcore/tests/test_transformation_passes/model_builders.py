@@ -1,7 +1,7 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import pytest
-import numpy
+import numpy as np
 from copy import deepcopy
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
@@ -54,7 +54,7 @@ def build_mean(subgraph=None, *, input_shape, reduction_dims):
         'reduction_dims', TensorType.INT32, [len(reduction_dims)])
     tout = subgraph.create_tensor(
         'output', tin.type, [tin.shape[0] + tin.shape[3]], isoutput=True)
-    tred.buffer.data = numpy.array(reduction_dims, dtype=numpy.int32)
+    tred.buffer.data = np.array(reduction_dims, dtype=np.int32)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.MEAN),
                              inputs=[tin, tred], outputs=[tout])
 
@@ -71,7 +71,7 @@ def build_argmax(subgraph=None, *, input_shape, input_type):
         'output', TensorType.INT32, tin.shape, isoutput=True)
     dim_tensor = subgraph.create_tensor(
         "axis", TensorType.INT32, shape=[])
-    dim_tensor.buffer.data = numpy.int32([1])
+    dim_tensor.buffer.data = np.int32([1])
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.ARG_MAX),
                              inputs=[tin, dim_tensor], outputs=[tout])
 
@@ -115,7 +115,7 @@ def build_fc(subgraph=None, *, outputs, input_shape):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, *input_shape]
-    weight_shape = [outputs, numpy.prod(input_shape[1:])]
+    weight_shape = [outputs, np.prod(input_shape[1:])]
     tin = subgraph.create_tensor(
         'input', TensorType.INT8, input_shape, isinput=True)
     w = subgraph.create_tensor(
@@ -192,8 +192,8 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
         output_shape = [1, height, width, C_out]
     elif padding == 'VALID':
         output_shape = [1,
-                        int(numpy.ceil((height - K_h + 1) / strides[0])),
-                        int(numpy.ceil((width - K_w + 1) / strides[1])),
+                        int(np.ceil((height - K_h + 1) / strides[0])),
+                        int(np.ceil((width - K_w + 1) / strides[1])),
                         C_out]
 
     tout = subgraph.create_tensor(
@@ -226,8 +226,8 @@ def build_depthwise_conv2d(subgraph=None, *, weight_shape, input_size, padding, 
         output_shape = [1, height, width, C_out]
     elif padding == 'VALID':
         output_shape = [1,
-                        int(numpy.ceil((height - K_h + 1) / strides[0])),
-                        int(numpy.ceil((width - K_w + 1) / strides[1])),
+                        int(np.ceil((height - K_h + 1) / strides[0])),
+                        int(np.ceil((width - K_w + 1) / strides[1])),
                         C_out]
     tout = subgraph.create_tensor(
         'output', tin.type, output_shape, isoutput=True)
@@ -279,10 +279,11 @@ def build_DW(subgraph=None, *, weight_shape, input_size, pads, strides):
         assert len(p) == 2, f"padding[{j}] is not a pair"
 
     input_shape = [1, height, width, C_out]
-    bias_shape = [int(numpy.ceil(C_out / 16)), 5, 16]
-    tin = subgraph.create_tensor('input', TensorType.INT8, input_shape, isinput=True)
+    bss_shape = [int(np.ceil(C_out / 16)), 5, 16]
+    tin = subgraph.create_tensor(
+        'input', TensorType.INT8, input_shape, isinput=True)
     w = subgraph.create_tensor('weights', TensorType.INT8, weight_shape)
-    b = subgraph.create_tensor('bss', TensorType.INT16, bias_shape)
+    b = subgraph.create_tensor('bss', TensorType.INT16, bss_shape)
 
     out_size = [(i - k + p[0] + p[1]) / s + 1
                 for p, s, i, k in zip(pads, strides, input_size, weight_shape[:2])]
@@ -293,7 +294,7 @@ def build_DW(subgraph=None, *, weight_shape, input_size, pads, strides):
         OperatorCode(XCOREOpCodes.XC_conv2d_depthwise),
         inputs=[tin, w, b], outputs=[tout])
     op.add_custom_options(
-        pad=[pads[0][0], pads[1][0], -1],
+        pad=[pads[0][0], pads[1][0], -127],
         stride=[strides[0], strides[1]]
     )
 
@@ -311,7 +312,7 @@ def build_pad(subgraph=None, *, input_shape, paddings):
     tin = subgraph.create_tensor('unpadded', TensorType.INT8, input_shape, isinput=True)
     tout = subgraph.create_tensor('padded', tin.type, output_shape, isoutput=True)
     p = subgraph.create_tensor('paddings', TensorType.INT32, shape=[4, 2])
-    p.buffer.data = numpy.int32(paddings)
+    p.buffer.data = np.int32(paddings)
 
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.PAD),
                              inputs=[tin, p], outputs=[tout])
@@ -337,5 +338,8 @@ def build_padded_DW(subgraph=None, *,
     subgraph.remove_tensor(old_input)
     subgraph.outputs.remove(pad_op.outputs[0])
     pad_op.outputs[0].consumers.append(conv_op)
+
+    pad_op.outputs[0].quantization = old_input.quantization
+    pad_op.inputs[0].quantization = old_input.quantization
 
     return model

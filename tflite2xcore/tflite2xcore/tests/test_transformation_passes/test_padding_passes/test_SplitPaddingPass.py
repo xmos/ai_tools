@@ -87,7 +87,7 @@ def model(input_shape, paddings):
 #  ----------------------------------------------------------------------------
 
 def test_mutate(trf_pass, model):
-    # extract original tensor shapes:
+    # extract original padding values
     subgraph = model.subgraphs[0]
     params_ori = subgraph.operators[-1].inputs[1].numpy.tolist()
 

@@ -22,13 +22,16 @@ Before sending your pull request, make sure your changes are consistent with the
 
 Changes to Python code should conform to [PEP 8 -- Style Guide for Python Code](https://www.python.org/dev/peps/pep-0008/)
 
-Use `pylint` to check your Python changes. To install `pylint` and check a file
-with `pylint` against TensorFlow's custom style definition:
+Use `pylint` to check your Python changes. To install `pylint` and check a file with `pylint`:
 
 ```bash
 pip install pylint
 pylint myfile.py
 ```
+
+Pylint imposes different style guidelines than PEP8, so we recommend using the settings here: https://code.visualstudio.com/docs/python/linting#_default-pylint-rules
+
+Before we have a detailed styleguide, consider also using `pycodestyle` to check for PEP8 compliance. If using `pycodestyle`, disable E501,E226,W503.
 
 #### C, xC and ASM coding style
 
@@ -132,6 +135,8 @@ To suppress the annoying warning `"Unable to watch for file changes in this larg
       "**/.git/**": true,
       "**/.ipynb_checkpoints/**": true,
       "**/__pycache__/**": true,
+      "**/.pytest_cache/**": true,
+      "**/*.egg-info/**": true,
       "**/ai_tools_venv/**": true,
       "**/ai_tools_gpu_venv/**": true,
       "**/.venv/**": true,
@@ -140,4 +145,12 @@ To suppress the annoying warning `"Unable to watch for file changes in this larg
       "**/build/**": true,
       "**/bin/**": true,
     },
+```
+
+To ensure that your linter is configured correctly add these lines to your `.vscode/settings.json`:
+```
+    "python.linting.pylintEnabled": true,
+    "python.linting.pylintUseMinimalCheckers": true,
+    "python.linting.pycodestyleEnabled": true,
+    "python.linting.pycodestyleArgs": ["--ignore=E501,E226,W503"],
 ```

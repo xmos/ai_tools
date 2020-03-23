@@ -23,6 +23,8 @@ import argparse
 import webbrowser
 import tempfile
 
+from collections import Counter
+
 from tflite2xcore.serialization.flatbuffers_io import FlexbufferParser
 from tflite2xcore import read_flatbuffer, create_dict_from_model
 from tflite2xcore.operator_codes import XCOREOpCodes
@@ -92,8 +94,9 @@ _D3_HTML_TEMPLATE = """<script>
 function buildGraph() {
   // Build graph data
   var graph = %s;
+  var subgraph_id = "%d";
 
-  var svg = d3.select("#subgraph%d")
+  var svg = d3.select("#subgraph" + subgraph_id);
   var width = svg.attr("width");
   var height = svg.attr("height");
   // Make the graph scrollable.
@@ -102,22 +105,34 @@ function buildGraph() {
   })).append("g");
 
   var color = d3.scaleOrdinal(d3.schemeDark2);
+  var stroke_widths = { low:1, mid:5, high:7};
 
   var simulation = d3.forceSimulation()
       .force("link", d3.forceLink().id(function(d) {return d.id;}))
       .force("charge", d3.forceManyBody())
       .force("center", d3.forceCenter(0.5 * width, 0.5 * height));
 
-  var edge = svg.append("g").attr("class", "edges").selectAll("line")
-    .data(graph.edges).enter().append("path").attr("stroke","black").attr("fill","none")
+  var edge = svg.append("g")
+                .attr("class", "edges")
+                .selectAll("line")
+                .data(graph.edges)
+                .enter()
+                .append("path")
+                .attr("selected", 0)
+                .attr("stroke","black")
+                .attr("stroke-width", stroke_widths.low)
+                .attr("fill","none");
 
   // Make the node group
   var node = svg.selectAll(".nodes")
     .data(graph.nodes)
     .enter().append("g")
+    .attr("selected", 0)
     .attr("x", function(d){return d.x})
     .attr("y", function(d){return d.y})
     .attr("node_width", function(d){return d.node_width})
+    .attr("node_height", function(d){return d.node_height})
+    .attr("id", function(d){return d.id})
     .attr("transform", function(d) {
       return "translate( " + d.x + ", " + d.y + ")"
     })
@@ -134,18 +149,16 @@ function buildGraph() {
             if (!d3.event.active) simulation.alphaTarget(0);
             d.fx = d.fy = null;
           }));
+
   // Within the group, draw a box for the node position and text
   // on the side.
-
-  var node_width = 150;
-  var node_height = 30;
-
-  node.append("rect")
+  let rect = node.append("rect")
       .attr("r", "5px")
       .attr("width", function(d) { return d.node_width; })
       .attr("height", function(d) { return d.node_height; })
       .attr("rx", function(d) { return d.edge_radius; })
       .attr("stroke", "#000000")
+      .attr("stroke-width", stroke_widths.low)
       .attr("fill", function(d) { return d.fill_color; })
   let text = node.append("text")
       .text("")
@@ -160,6 +173,76 @@ function buildGraph() {
       .text(d => d)
       .attr("x", 5)
       .attr("dy", 15);
+
+  // node hover and selection
+  node.on("mouseover", function(d, i) {
+    var _this = d3.select(this);
+    var id = _this.attr("id");
+    if (_this.attr("selected") == "1") {
+      _this.select("rect")
+           .attr("stroke-width", stroke_widths.high);
+    } else {
+      _this.select("rect")
+           .attr("stroke-width", stroke_widths.mid);
+    }
+
+    svg.selectAll("path[source='" + id +  "'][selected='0']")
+       .attr("stroke-width", stroke_widths.mid);
+    svg.selectAll("path[source='" + id +  "'][selected='1']")
+       .attr("stroke-width", stroke_widths.high);
+    svg.selectAll("path[target='" + id +  "'][selected='0']")
+       .attr("stroke-width", stroke_widths.mid);
+    svg.selectAll("path[target='" + id +  "'][selected='1']")
+       .attr("stroke-width", stroke_widths.high);
+  });
+  node.on("mouseout", function(d, i) {
+    var _this = d3.select(this);
+    var id = _this.attr("id");
+    if (_this.attr("selected") == "1") {
+      _this.select("rect")
+           .attr("stroke-width", stroke_widths.mid);
+    } else {
+      _this.select("rect")
+           .attr("stroke-width", stroke_widths.low);
+    }
+
+    svg.selectAll("path[source='" + id +  "'][selected='0']")
+       .attr("stroke-width", stroke_widths.low);
+    svg.selectAll("path[source='" + id +  "'][selected='1']")
+       .attr("stroke-width", stroke_widths.mid);
+    svg.selectAll("path[target='" + id +  "'][selected='0']")
+       .attr("stroke-width", stroke_widths.low);
+    svg.selectAll("path[target='" + id +  "'][selected='1']")
+       .attr("stroke-width", stroke_widths.mid);
+  });
+  node.on("click", function() {
+    var _this = d3.select(this);
+    if (_this.attr("selected") == "1") {
+        _this.attr("selected", 0)
+             .select("rect").attr("stroke-width", stroke_widths.mid);
+    } else {
+        _this.attr("selected", 1)
+             .select("rect").attr("stroke-width", stroke_widths.high);
+    }
+  });
+  node.on("contextmenu", function (d, i) {
+    var _this = d3.select(this);
+    var id = _this.attr("id");
+
+    _this.dispatch("click");
+    var source_paths = svg.selectAll("path[source='" + id +  "']");
+    var target_paths = svg.selectAll("path[target='" + id +  "']");
+    if (_this.attr("selected") == "1") {
+      source_paths.attr("selected", 0);
+      target_paths.attr("selected", 0);
+    } else {
+      source_paths.attr("selected", 1);
+      target_paths.attr("selected", 1);
+    }
+    source_paths.dispatch("click");
+    target_paths.dispatch("click");
+  });
+
 
   // Setup force parameters and update position callback
 
@@ -176,19 +259,91 @@ function buildGraph() {
   function proc(w, t) {
     return parseInt(w.getAttribute(t));
   }
-  edge.attr("d", function(d) {
-    function lerp(t, a, b) {
-      return (1.0-t) * a + t * b;
+  edge.attr("source", function(d) {return d.source;})
+      .attr("target", function(d) {return d.target;})
+      .attr("d", function(d) {
+        function lerp(t, a, b) {
+          return (1.0-t) * a + t * b;
+        }
+        var x1 = proc(name_to_g[d.source],"x") + proc(name_to_g[d.source],"node_width") / 2;
+        var y1 = proc(name_to_g[d.source],"y") + proc(name_to_g[d.source],"node_height");
+        var x2 = proc(name_to_g[d.target],"x") + proc(name_to_g[d.target],"node_width") / 2;
+        var y2 = proc(name_to_g[d.target],"y");
+        var s = "M " + x1 + " " + y1
+            + " C " + x1 + " " + lerp(.5, y1, y2)
+            + " " + x2 + " " + lerp(.5, y1, y2)
+            + " " + x2  + " " + y2;
+        return s;
+      });
+
+  // node hover and selection
+  edge.on("mouseover", function(d, i) {
+    var _this = d3.select(this);
+
+    if (_this.attr("selected") == '1') {
+      _this.attr("stroke-width", stroke_widths.high);
+    } else {
+      _this.attr("stroke-width", stroke_widths.mid);
     }
-    var x1 = proc(name_to_g[d.source],"x") + proc(name_to_g[d.source],"node_width") / 2;
-    var y1 = proc(name_to_g[d.source],"y") + node_height;
-    var x2 = proc(name_to_g[d.target],"x") + proc(name_to_g[d.target],"node_width") / 2;
-    var y2 = proc(name_to_g[d.target],"y");
-    var s = "M " + x1 + " " + y1
-        + " C " + x1 + " " + lerp(.5, y1, y2)
-        + " " + x2 + " " + lerp(.5, y1, y2)
-        + " " + x2  + " " + y2
-    return s;
+
+    svg.select("#" + d.source + "[selected='1']")
+       .select("rect").attr("stroke-width", stroke_widths.high);
+    svg.select("#" + d.source + "[selected='0']")
+       .select("rect").attr("stroke-width", stroke_widths.mid);
+    svg.select("#" + d.target + "[selected='1']")
+       .select("rect").attr("stroke-width", stroke_widths.high);
+    svg.select("#" + d.target + "[selected='0']")
+       .select("rect").attr("stroke-width", stroke_widths.mid);
+  });
+  edge.on("mouseout", function(d, i) {
+    var _this = d3.select(this);
+
+    if (_this.attr("selected") == '1') {
+      _this.attr("stroke-width", stroke_widths.mid);
+    } else {
+      _this.attr("stroke-width", stroke_widths.low);
+    }
+
+    svg.select("#" + d.source + "[selected='1']")
+       .select("rect").attr("stroke-width", stroke_widths.mid);
+    svg.select("#" + d.source + "[selected='0']")
+       .select("rect").attr("stroke-width", stroke_widths.low);
+    svg.select("#" + d.target + "[selected='1']")
+       .select("rect").attr("stroke-width", stroke_widths.mid);
+    svg.select("#" + d.target + "[selected='0']")
+       .select("rect").attr("stroke-width", stroke_widths.low);
+  });
+  edge.on("click", function() {
+    var _this = d3.select(this);
+    if (_this.attr("selected") == "1") {
+        _this.attr("selected", 0)
+             .attr("stroke-width", stroke_widths.mid);
+    } else {
+        _this.attr("selected", 1)
+             .attr("stroke-width", stroke_widths.high);
+    }
+  });
+  edge.on("contextmenu", function (d, i) {
+    var _this = d3.select(this);
+
+    _this.dispatch("click");
+    var source = svg.select("#" + d.source);
+    var target = svg.select("#" + d.target);
+    if (_this.attr("selected") == "1") {
+      source.attr("selected", 0);
+      target.attr("selected", 0);
+    } else {
+      source.attr("selected", 1);
+      target.attr("selected", 1);
+    }
+    source.dispatch("click");
+    target.dispatch("click");
+  });
+
+  // override right click behavior on graph
+  d3.select("#subgraph" + subgraph_id)
+    .on("contextmenu", function (d, i) {
+      d3.event.preventDefault();
   });
 }
 
@@ -215,7 +370,7 @@ class OpCodeMapper():
                 except ValueError:
                     color = "#a00000"  # unknown custom opcode
             else:
-                color = "#000000"
+                color = "#0000a0"
             self.color.append(color)
 
     def __call__(self, opcode_idx, op_idx=None):
@@ -223,11 +378,51 @@ class OpCodeMapper():
         return f"{s} [{opcode_idx}]" if op_idx is None else f"({op_idx}) {s}"
 
 
+class OpCodeTooltipMapper():
+    """Maps a list of opcode indices to a tooltip hoverable indicator of more."""
+
+    def __init__(self, model_dict, subgraph):
+        self.operators = subgraph['operators']
+        self.opcode_mapper = OpCodeMapper(model_dict)
+
+    def __call__(self, idx_list):
+        html = "<span class='tooltip'><span class='tooltipcontent'>"
+        for idx in idx_list:
+            html += self.opcode_mapper(self.operators[idx]["opcode_index"], idx)
+            html += ' <br>'
+        html += f"</span>{idx_list}</span>"
+        return html
+
+
 class DataSizeMapper():
     """For buffers, report the number of bytes."""
 
+    @classmethod
+    def _format_bytes(cls, n):
+        return f"{n:,d} bytes"
+
     def __call__(self, x):
-        return "--" if x is None else f"{len(x):d} bytes"
+        return "--" if x is None else self._format_bytes(len(x))
+
+
+class BufferOwnerMapper():
+    """For buffers, report the owners with tooltips."""
+
+    def __init__(self, model_dict):
+        self.subgraphs = model_dict['subgraphs']
+
+    def __call__(self, d):
+        if not isinstance(d, dict):
+            print(type(d), d)
+            return 'N/A'
+
+        html_list = []
+        for subgraph_idx, owners in d.items():
+            subgraph = self.subgraphs[subgraph_idx]
+            tensor_mapper = TensorTooltipMapper(subgraph)
+            html_list.append(f"{subgraph_idx}: {tensor_mapper(owners)}")
+
+        return ', '.join(html_list) if html_list else '--'
 
 
 class TensorMapper():
@@ -428,6 +623,7 @@ def CreateHtml(data):
     html += "<h1>TensorFlow Lite Model</h1>\n"
 
     toplevel_stuff = [("filename", None),
+                      ("filesize", DataSizeMapper()._format_bytes),
                       ("version", None),
                       ("description", None)]
 
@@ -435,22 +631,17 @@ def CreateHtml(data):
     for key, mapping in toplevel_stuff:
         html += "<tr>\n"
         html += f"{indent}<th>{key}</th>\n"
-        key = key if mapping is None else mapping(data.get(key))
-        html += f"{indent}<td>{key}</td>\n"
+        val = data.get(key) if mapping is None else mapping(data.get(key))
+        html += f"{indent}<td>{val}</td>\n"
         html += "</tr>"
     html += "</table>\n"
-
-    # Spec on what keys to display
-    buffer_keys_to_display = [("data", DataSizeMapper())]
-    operator_keys_to_display = [("builtin_code", None),
-                                ("custom_code", None),
-                                ("version", None)]
 
     for subgraph_idx, g in enumerate(data["subgraphs"]):
         # Subgraph local specs on what to display
         html += "\n<div class='subgraph'>"
         tensor_mapper = TensorTooltipMapper(g)
         opcode_mapper = OpCodeMapper(data)
+        opcode_tooltip_mapper = OpCodeTooltipMapper(data, g)
         custom_options_mapper = CustomOptionsMapper()
         op_keys_to_display = [("inputs", tensor_mapper),
                               ("outputs", tensor_mapper),
@@ -458,6 +649,8 @@ def CreateHtml(data):
                               ("builtin_options", None),
                               ("custom_options", custom_options_mapper)]
         tensor_keys_to_display = [("name", None),
+                                  ("consumers", opcode_tooltip_mapper),
+                                  ("producers", opcode_tooltip_mapper),
                                   ("type", None),
                                   ("shape", None),
                                   ("buffer", None),
@@ -488,11 +681,29 @@ def CreateHtml(data):
         html += GenerateGraph(subgraph_idx, g, opcode_mapper)
         html += "</div>\n\n"
 
-    # Buffers have no data, but maybe in the future they will
-    html += "<h2>Buffers</h2>\n"
+    # Buffers
+    size_mapper = DataSizeMapper()
+    buffer_keys_to_display = [("data", size_mapper),
+                              ("owners", BufferOwnerMapper(data))]
+    total_bytes = sum(len(d['data']) for d in data["buffers"])
+    html += (
+        "<h2>Buffers "
+        f"(total: {size_mapper._format_bytes(total_bytes)}, "
+        f"{total_bytes/data['filesize']:.2%} of filesize)"
+        "</h2>\n"
+    )
     html += GenerateTableHtml(data["buffers"], buffer_keys_to_display)
 
     # Operator codes
+    operator_keys_to_display = [("builtin_code", None),
+                                ("custom_code", None),
+                                ("version", None),
+                                ("count", None)]
+    op_cnt = sorted(Counter(op["opcode_index"]
+                            for subgraph in data["subgraphs"]
+                            for op in subgraph["operators"]).items())
+    for d, p in zip(data["operator_codes"], op_cnt):
+        d['count'] = p[1]
     html += "<h2>Operator Codes</h2>\n"
     html += GenerateTableHtml(data["operator_codes"], operator_keys_to_display)
 
@@ -506,8 +717,15 @@ def CreateHtmlFile(tflite_input, html_file):
         raise RuntimeError(f"Invalid filename {tflite_input}")
 
     model = read_flatbuffer(tflite_input)
-    data = create_dict_from_model(model)
+    try:
+        data = create_dict_from_model(model, extended=True)
+    except AttributeError as e:
+        if e.args[0] == "'Buffer' object has no attribute 'owners'":
+            data = create_dict_from_model(model, extended=False)
+        else:
+            raise
     data["filename"] = tflite_input
+    data["filesize"] = os.stat(tflite_input).st_size
 
     html = CreateHtml(data)
     with open(html_file, "w") as f:

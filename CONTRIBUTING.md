@@ -81,7 +81,7 @@ On macOS you can utilize all your cores with
 
 ### Installing Tools 15.0.0 Engineering Release
 
-We currently require build 348 or newer.  Build 310 can be downloaded from http://srv-bri-jtools:8080/job/xmos-tools%20MANUAL/job/tools_installers/job/master/348/
+We currently require build 385 or newer.  Build 385 can be downloaded from http://srv-bri-jtools.xmos.local:8080/job/xmos-tools%20MANUAL/job/tools_installers/job/master/385/
 
 NOTE: This link to the Engineering Release requires being inside the XMOS firewall.  We will replace this link once Tools 15 is officially released.
 

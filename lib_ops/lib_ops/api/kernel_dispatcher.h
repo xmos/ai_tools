@@ -8,9 +8,6 @@
 #include "lib_ops/api/par_structs.h"
 
 #ifdef XCORE
-#ifndef _Bool
-#define _Bool int  // TODO: FIXME when new toolchain build is released
-#endif
 
 extern "C" {
 #include "lib_ops/src/xs1.h"  // TODO: FIXME remove someday

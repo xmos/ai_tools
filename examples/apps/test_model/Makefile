@@ -21,7 +21,8 @@ ifeq ($(TARGET), x86)
 else # must be xcore
 	BUILD_TARGET := xcore.ai
 	
-	PLATFORM_FLAGS := -target=XU316-1024-QF60-C20
+	PLATFORM_FLAGS := -target=XU316-1024-FB265-C32  # 800MHz
+	#PLATFORM_FLAGS := -target=XU316-1024-FB265-I28 # 700MHz
 	PLATFORM_FLAGS += -mcmodel=large
 	PLATFORM_FLAGS += -Os
 	PLATFORM_FLAGS += -DXCORE
@@ -44,7 +45,7 @@ else # must be xcore
 	CXXFLAGS += -DNDEBUG  
 	CXXFLAGS += $(PLATFORM_FLAGS)
 
-	LDFLAGS := $(PLATFORM_FLAGS) -lxcore
+	LDFLAGS := $(PLATFORM_FLAGS)
 
 	OBJ_DIR := .build/xcore
 

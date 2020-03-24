@@ -1,4 +1,5 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
+#include <cstdlib>
 #include <cassert>
 
 #include "lib_ops/api/kernel_dispatcher.h"

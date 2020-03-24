@@ -1,8 +1,9 @@
 
 // Copyright (c) 2019, XMOS Ltd, All rights reserved
-#include <stddef.h>
-#include <stdio.h>
-#include <stdint.h>
+#include <iostream>
+#include <cstddef>
+#include <cstdio>
+#include <cstdint>
 
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"

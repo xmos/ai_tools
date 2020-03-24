@@ -6,21 +6,21 @@
 #include "lib_ops/api/lib_ops.h"
 
 extern "C" {
-    #include "lib_nn/api/nn_operator.h"
+#include "lib_nn/api/nn_operator.h"
 }
 
 namespace xcore {
-namespace type_conversions { 
+namespace type_conversions {
 
 class Requantize_16_to_8 {
-    public:
-        Requantize_16_to_8() {}
-        ~Requantize_16_to_8() {}
+ public:
+  Requantize_16_to_8() {}
+  ~Requantize_16_to_8() {}
 
-        XCoreStatus Eval(int8_t* Y, const int16_t* X, const int32_t length);
+  XCoreStatus Eval(int8_t* Y, const int16_t* X, const int32_t length);
 };
 
-} // namespace type_conversions
-} // namespace xcore
+}  // namespace type_conversions
+}  // namespace xcore
 
 #endif  // XCORE_TYPE_CONVERSION_OPERATORS_H_

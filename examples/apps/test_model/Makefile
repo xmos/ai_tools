@@ -35,13 +35,13 @@ else # must be xcore
 	ASFLAGS := $(PLATFORM_FLAGS)
 
 	CC := xcc
-	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON
-	#CCFLAGS += -DNDEBUG  
+	CCFLAGS := -DTF_LITE_STATIC_MEMORY
+	CCFLAGS += -DNDEBUG  
 	CCFLAGS += $(PLATFORM_FLAGS)
 
 	CXX := xcc
-	CXXFLAGS := -std=c++11 -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON
-	#CXXFLAGS += -DNDEBUG  
+	CXXFLAGS := -std=c++11 -DTF_LITE_STATIC_MEMORY
+	CXXFLAGS += -DNDEBUG  
 	CXXFLAGS += $(PLATFORM_FLAGS)
 
 	LDFLAGS := $(PLATFORM_FLAGS) -lxcore
@@ -56,7 +56,7 @@ $(info Building for $(BUILD_TARGET))
 #********************
 # Dependencies
 #********************
-FLATBUFFERS_DIR := ../../../third_party/
+FLATBUFFERS_DIR := ../../../third_party
 GEMMLOWP_DIR := ../../../third_party/gemmlowp
 TENSORFLOW_DIR := ../../../third_party/tensorflow
 LIB_NN_DIR := ../../../lib_nn
@@ -95,38 +95,43 @@ SOURCES := \
 	tensorflow/lite/micro/micro_string.cc \
 	tensorflow/lite/micro/simple_memory_allocator.cc \
 	tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc \
-	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc \
-	tensorflow/lite/micro/kernels/activations.cc \
-	tensorflow/lite/micro/kernels/add.cc \
-	tensorflow/lite/micro/kernels/all_ops_resolver.cc \
-	tensorflow/lite/micro/kernels/arg_min_max.cc \
-	tensorflow/lite/micro/kernels/ceil.cc \
-	tensorflow/lite/micro/kernels/comparisons.cc \
-	tensorflow/lite/micro/kernels/concatenation.cc \
-	tensorflow/lite/micro/kernels/conv.cc \
-	tensorflow/lite/micro/kernels/depthwise_conv.cc \
-	tensorflow/lite/micro/kernels/dequantize.cc \
-	tensorflow/lite/micro/kernels/elementwise.cc \
-	tensorflow/lite/micro/kernels/floor.cc \
-	tensorflow/lite/micro/kernels/fully_connected.cc \
-	tensorflow/lite/micro/kernels/logical.cc \
-	tensorflow/lite/micro/kernels/logistic.cc \
-	tensorflow/lite/micro/kernels/maximum_minimum.cc \
-	tensorflow/lite/micro/kernels/mul.cc \
-	tensorflow/lite/micro/kernels/neg.cc \
-	tensorflow/lite/micro/kernels/pack.cc \
-	tensorflow/lite/micro/kernels/pad.cc \
-	tensorflow/lite/micro/kernels/pooling.cc \
-	tensorflow/lite/micro/kernels/prelu.cc \
-	tensorflow/lite/micro/kernels/quantize.cc \
-	tensorflow/lite/micro/kernels/reduce.cc \
-	tensorflow/lite/micro/kernels/reshape.cc \
-	tensorflow/lite/micro/kernels/round.cc \
-	tensorflow/lite/micro/kernels/softmax.cc \
-	tensorflow/lite/micro/kernels/split.cc \
-	tensorflow/lite/micro/kernels/strided_slice.cc \
-	tensorflow/lite/micro/kernels/svdf.cc \
-	tensorflow/lite/micro/kernels/unpack.cc \
+	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc
+
+
+#SOURCES += \
+	# tensorflow/lite/micro/kernels/activations.cc \
+	# tensorflow/lite/micro/kernels/add.cc \
+	# tensorflow/lite/micro/kernels/all_ops_resolver.cc \
+	# tensorflow/lite/micro/kernels/arg_min_max.cc \
+	# tensorflow/lite/micro/kernels/ceil.cc \
+	# tensorflow/lite/micro/kernels/comparisons.cc \
+	# tensorflow/lite/micro/kernels/concatenation.cc \
+	# tensorflow/lite/micro/kernels/conv.cc \
+	# tensorflow/lite/micro/kernels/depthwise_conv.cc \
+	# tensorflow/lite/micro/kernels/dequantize.cc \
+	# tensorflow/lite/micro/kernels/elementwise.cc \
+	# tensorflow/lite/micro/kernels/floor.cc \
+	# tensorflow/lite/micro/kernels/fully_connected.cc \
+	# tensorflow/lite/micro/kernels/logical.cc \
+	# tensorflow/lite/micro/kernels/logistic.cc \
+	# tensorflow/lite/micro/kernels/maximum_minimum.cc \
+	# tensorflow/lite/micro/kernels/mul.cc \
+	# tensorflow/lite/micro/kernels/neg.cc \
+	# tensorflow/lite/micro/kernels/pack.cc \
+	# tensorflow/lite/micro/kernels/pad.cc \
+	# tensorflow/lite/micro/kernels/pooling.cc \
+	# tensorflow/lite/micro/kernels/prelu.cc \
+	# tensorflow/lite/micro/kernels/quantize.cc \
+	# tensorflow/lite/micro/kernels/reduce.cc \
+	# tensorflow/lite/micro/kernels/reshape.cc \
+	# tensorflow/lite/micro/kernels/round.cc \
+	# tensorflow/lite/micro/kernels/softmax.cc \
+	# tensorflow/lite/micro/kernels/split.cc \
+	# tensorflow/lite/micro/kernels/strided_slice.cc \
+	# tensorflow/lite/micro/kernels/svdf.cc \
+	# tensorflow/lite/micro/kernels/unpack.cc \
+
+SOURCES += \
 	tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_conv2d.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_arg_min_max.cc \

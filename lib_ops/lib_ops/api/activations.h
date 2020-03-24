@@ -6,17 +6,18 @@
 #include "lib_ops/api/lib_ops.h"
 
 namespace xcore {
-namespace activations { 
+namespace activations {
 
 class Lookup8 {
-    public:
-        Lookup8() {}
-        ~Lookup8() {}
+ public:
+  Lookup8() {}
+  ~Lookup8() {}
 
-        XCoreStatus Eval(uint8_t* Y, const uint8_t* X, const uint8_t* lut, const int32_t length);
+  XCoreStatus Eval(uint8_t* Y, const uint8_t* X, const uint8_t* lut,
+                   const int32_t length);
 };
 
-} // namespace activations
-} // namespace xcore
+}  // namespace activations
+}  // namespace xcore
 
 #endif  // XCORE_ACTIVATIONS_OPERATORS_H_

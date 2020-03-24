@@ -6,21 +6,21 @@
 #include "lib_ops/api/lib_ops.h"
 
 extern "C" {
-    #include "lib_nn/api/nn_operator.h"
+#include "lib_nn/api/nn_operator.h"
 }
 
 namespace xcore {
-namespace arg_min_max { 
+namespace arg_min_max {
 
 class ArgMax16 {
-    public:
-        ArgMax16() {}
-        ~ArgMax16() {}
+ public:
+  ArgMax16() {}
+  ~ArgMax16() {}
 
-        XCoreStatus Eval(const int16_t* A, int32_t* C, const int32_t length);
+  XCoreStatus Eval(const int16_t* A, int32_t* C, const int32_t length);
 };
 
-} // namespace arg_min_max
-} // namespace xcore
+}  // namespace arg_min_max
+}  // namespace xcore
 
 #endif  // XCORE_ARG_MIN_MAX_OPERATORS_H_

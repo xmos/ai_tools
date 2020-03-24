@@ -177,3 +177,36 @@ class FuseConsecutivePadsPass(OperatorMatchingPass):
         except IndexError:
             # No producers found for input
             return False
+
+    def mutate(self, op):
+        subgraph = op.subgraph
+        with self.using(op):
+            producer = self._producer
+            this_params = self._pad_params
+            with self.using(producer):
+                producer_params = self._pad_params
+            new_params = [[sum(p) for p in zip(p1, p2)]
+                          for p1, p2 in zip(this_params, producer_params)]
+
+        # cut connection from old inputs to the anchor op
+        intermediate = op.inputs[0]
+        intermediate.consumers.remove(op)
+        op.inputs[1].consumers.remove(op)
+
+        # create new parameter tensor for the op, and replace old
+        # this is needed because multiple ops can share the same parameter tensor
+        # NOTE: the old paddings tensor might be dangling and will be cleaned up later
+        op.inputs[1] = subgraph.create_tensor(
+            f"{op.name}/paddings", TensorType.INT32, shape=[4, 2],
+            consumers=[op]
+        )
+        op.inputs[1].buffer.data = numpy.int32(new_params)
+
+        # set up bypass connection
+        op.inputs[0] = producer.inputs[0]
+        producer.inputs[0].consumers.append(op)
+
+        # remove producer if needed
+        if not intermediate.consumers:
+            # NOTE: the paddings tensor of the producer might be dangling and will be cleaned up later
+            subgraph.remove_operator(producer)

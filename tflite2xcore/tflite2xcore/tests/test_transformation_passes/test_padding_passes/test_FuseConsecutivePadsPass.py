@@ -54,6 +54,46 @@ def model(input_shape, paddings, paddings_NC):
 #                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
 
+def test_mutate(trf_pass, model):
+    # extract original padding values
+    subgraph = model.subgraphs[0]
+    assert len(subgraph.operators) == 2
+    pad_1_ori = subgraph.operators[0].inputs[1]
+    pad_2_ori = subgraph.operators[1].inputs[1]
+    paddings_1_ori = pad_1_ori.numpy.tolist()
+    paddings_2_ori = pad_2_ori.numpy.tolist()
+    in_ori, out_ori = subgraph.inputs[0], subgraph.outputs[0]
+
+    # run mutating pass
+    trf_pass.run(model)
+    model.sanity_check()
+
+    # check operator
+    assert len(subgraph.operators) == 1
+    op = subgraph.operators[0]
+    assert len(op.inputs) == 2
+    assert len(op.outputs) == 1
+
+    # check input/output tensors
+    assert len(subgraph.inputs) == len(subgraph.outputs) == 1
+    in_new, out_new = subgraph.inputs[0], subgraph.outputs[0]
+    assert in_ori is in_new is op.inputs[0]
+    assert out_ori is out_new is op.outputs[0]
+
+    # check parameters
+    pad_new = subgraph.operators[0].inputs[1]
+    paddings_new = pad_new.numpy.tolist()
+    assert pad_new is not pad_1_ori
+    assert pad_new is not pad_2_ori
+    assert paddings_new[0][0] == paddings_1_ori[0][0] + paddings_2_ori[0][0]
+    assert paddings_new[0][1] == paddings_1_ori[0][1] + paddings_2_ori[0][1]
+    assert paddings_new[1][0] == paddings_1_ori[1][0] + paddings_2_ori[1][0]
+    assert paddings_new[1][1] == paddings_1_ori[1][1] + paddings_2_ori[1][1]
+    assert paddings_new[2][0] == paddings_1_ori[2][0] + paddings_2_ori[2][0]
+    assert paddings_new[2][1] == paddings_1_ori[2][1] + paddings_2_ori[2][1]
+    assert paddings_new[3][0] == paddings_1_ori[3][0] + paddings_2_ori[3][0]
+    assert paddings_new[3][1] == paddings_1_ori[3][1] + paddings_2_ori[3][1]
+
 
 def test_non_matching_single_pad(trf_pass, input_shape, paddings):
     model = build_pad(input_shape=input_shape, paddings=paddings)

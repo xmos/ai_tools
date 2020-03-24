@@ -79,6 +79,7 @@ def test_mutate(trf_pass, model):
     assert len(subgraph.operators) == 1
     op = subgraph.operators[0]
     assert len(op.inputs) == 3
+    assert len(op.outputs) == 1
 
     # check input/output tensors
     assert len(subgraph.inputs) == len(subgraph.outputs) == 1

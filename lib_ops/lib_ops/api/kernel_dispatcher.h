@@ -22,11 +22,11 @@ extern "C" {
 
 typedef thread_function_t kernel_function_t;
 typedef threadgroup_t thread_group_t;
-#else
+#else // not XCORE
 #include <thread>
 
 #define ATTRIBUTE_KERNEL_FUNCTION
-#define GET_STACKWORDS(...) 0
+#define GET_STACKWORDS(DEST, NAME) DEST=0
 
 typedef void (*kernel_function_t)(void*);
 typedef std::vector<std::thread> thread_group_t;

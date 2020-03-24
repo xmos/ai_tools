@@ -54,7 +54,7 @@ XCoreStatus Conv2D_DIDO::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   // reserve threads and stack memory
   KernelDispatcher& dispatcher = GetKernelDispatcher();
-  size_t stack_words;
+  size_t stack_words=0;
   GET_STACKWORDS(stack_words, conv2d_dido_thread_worker);
   dispatcher.Reserve(params_.size(), stack_words);
 

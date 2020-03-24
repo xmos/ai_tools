@@ -14,7 +14,7 @@
 
 extern "C" {
 #include "lib_ops/src/xs1.h"  // TODO: FIXME remove someday
-    //    this must appear BEFORE including xcore/thread.h
+//    this must appear BEFORE including xcore/thread.h
 #include <xcore/thread.h>
 }
 

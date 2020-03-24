@@ -27,5 +27,6 @@ from .pooling_passes import (
 )
 from .padding_passes import (
     FuseConv2dPaddingPass,
-    SplitPaddingPass
+    SplitPaddingPass,
+    FuseConsecutivePadsPass
 )

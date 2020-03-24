@@ -332,6 +332,19 @@ def _glue_ops(op1, op2):
     old_output.consumers.append(op2)
 
 
+def build_consecutive_pads(subgraph=None, *,
+                           input_shape, paddings_1, paddings_2):
+    model = build_pad(subgraph, input_shape=input_shape, paddings=paddings_1)
+    subgraph = subgraph or model.subgraphs[0]
+
+    build_pad(subgraph, input_shape=subgraph.outputs[0].shape, paddings=paddings_2)
+
+    pad_1, pad_2 = subgraph.operators[:2]
+    _glue_ops(pad_1, pad_2)
+
+    return model
+
+
 def build_padded_DW(subgraph=None, *,
                     weight_shape, input_size, paddings, strides,
                     pads=[(0, 0), (0, 0)]):

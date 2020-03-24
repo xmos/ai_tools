@@ -121,7 +121,8 @@ class SplitPaddingPass(OperatorMatchingPass):
 
         # create new parameter tensor for the op, and replace old
         # the old op will become the spatial padding
-        # this is needed because multiple ops can share the same tensor
+        # this is needed because multiple ops can share the same parameter tensor
+        # NOTE: the old paddings tensor might be dangling and will be cleaned up later
         op.inputs[1].consumers.remove(op)
         op.inputs[1] = subgraph.create_tensor(
             f"{op.name}/paddings", TensorType.INT32, shape=[4, 2],
@@ -152,3 +153,27 @@ class SplitPaddingPass(OperatorMatchingPass):
             consumers=[op], producers=[new_op]
         )
         new_op.outputs.append(op.inputs[0])
+
+
+class FuseConsecutivePadsPass(OperatorMatchingPass):
+    def __init__(self, priority=PassPriority.FUSING):
+        super().__init__(priority)
+
+    @property
+    def _producer(self):
+        return self._op.inputs[0].producers[0]
+
+    @property
+    def _pad_params(self):
+        return self._op.inputs[1].numpy.tolist()
+
+    def match(self, op):
+        # the anchor is the second of two consecutive PAD ops
+        try:
+            with self.using(op):
+                return (super().match(op)
+                        and self._op.operator_code.code is BuiltinOpCodes.PAD
+                        and self._producer.operator_code.code is BuiltinOpCodes.PAD)
+        except IndexError:
+            # No producers found for input
+            return False

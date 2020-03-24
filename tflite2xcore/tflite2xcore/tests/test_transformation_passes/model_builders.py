@@ -320,6 +320,18 @@ def build_pad(subgraph=None, *, input_shape, paddings):
     return subgraph.model
 
 
+def _glue_ops(op1, op2):
+    subgraph = op1.subgraph
+    assert subgraph is op2.subgraph
+
+    old_input, old_output = op2.inputs[0], op1.outputs[0]
+    op2.inputs[0] = old_output
+    subgraph.remove_tensor(old_input)
+    if old_output in subgraph.outputs:
+        subgraph.outputs.remove(old_output)
+    old_output.consumers.append(op2)
+
+
 def build_padded_DW(subgraph=None, *,
                     weight_shape, input_size, paddings, strides,
                     pads=[(0, 0), (0, 0)]):
@@ -333,12 +345,9 @@ def build_padded_DW(subgraph=None, *,
              pads=pads, strides=strides)
 
     pad_op, conv_op = subgraph.operators[:2]
-    old_input = conv_op.inputs[0]
-    conv_op.inputs[0] = pad_op.outputs[0]
-    subgraph.remove_tensor(old_input)
-    subgraph.outputs.remove(pad_op.outputs[0])
-    pad_op.outputs[0].consumers.append(conv_op)
+    _glue_ops(pad_op, conv_op)
 
+    old_input = conv_op.inputs[0]
     pad_op.outputs[0].quantization = old_input.quantization
     pad_op.inputs[0].quantization = old_input.quantization
 

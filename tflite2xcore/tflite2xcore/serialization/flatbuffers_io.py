@@ -87,7 +87,7 @@ def dict_to_builtin_options(type_, dict_):
 def create_xcore_model(modelT):
     model = XCOREModel(
         version=modelT.version,
-        description=modelT.description
+        description=modelT.description.decode('utf-8') if modelT.description else None
     )
 
     # create buffers
@@ -96,7 +96,10 @@ def create_xcore_model(modelT):
     # load metadata
     if modelT.metadata:
         for metadataT in modelT.metadata:
-            model.create_metadata(metadataT.name, buffers[metadataT.buffer])
+            model.create_metadata(
+                name=metadataT.name.decode('utf-8') if metadataT.name else None,
+                buffer=buffers[metadataT.buffer]
+            )
 
     # create operator codes lookup
     operator_codes_lut = []
@@ -114,7 +117,7 @@ def create_xcore_model(modelT):
     # load subgraphs
     for subgraphT in modelT.subgraphs:
         subgraph = model.create_subgraph(
-            name=(subgraphT.name if hasattr(subgraphT, 'name') else None)
+            name=subgraphT.name.decode('utf-8') if subgraphT.name else None
         )
 
         # load tensors

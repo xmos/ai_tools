@@ -5,8 +5,12 @@ Summary
 -------
 
 
-Install conda environment
--------------------------
+Installation
+------------
+Some dependent libraries are included as git submodules. These can be obtained by cloning this repository with the following command:
+
+> git clone --recurse-submodules git@github.com:xmos/ai_tools.git
+
 Install conda on your system if you don't already have it:
 https://docs.conda.io/projects/conda/en/latest/user-guide/install/
 
@@ -27,19 +31,12 @@ Then you can install the conda environment via:
 conda env create -p ./ai_tools_gpu_venv -f environment_gpu.yml
 ```
 .
-Activate the environment by specifying the path, then install the ai-tools python package:
+Activate the environment by specifying the path:
 ```
 conda activate ai_tools_venv/
-pip install -e tflite2xcore/
 ```
 
 To remove the environment, deactivate and run:
 ```
 conda remove -p ai_tools_venv/ --all
 ```
-
-Submodules
-----------
-Some dependent libraries are included as git submodules. These can be obtained by cloning this repository with the following command:
-
-> git clone --recurse-submodules git@github.com:xmos/ai_tools.git

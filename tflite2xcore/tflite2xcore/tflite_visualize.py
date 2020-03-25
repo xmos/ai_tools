@@ -417,10 +417,13 @@ class BufferOwnerMapper():
             return 'N/A'
 
         html_list = []
-        for subgraph_idx, owners in d.items():
-            subgraph = self.subgraphs[subgraph_idx]
-            tensor_mapper = TensorTooltipMapper(subgraph)
-            html_list.append(f"{subgraph_idx}: {tensor_mapper(owners)}")
+        for k, owners in d.items():
+            if k == 'metadata':
+                html_list.append(f"{k}: {str(owners)}")
+            else:
+                subgraph = self.subgraphs[k]
+                tensor_mapper = TensorTooltipMapper(subgraph)
+                html_list.append(f"{k}: {tensor_mapper(owners)}")
 
         return ', '.join(html_list) if html_list else '--'
 

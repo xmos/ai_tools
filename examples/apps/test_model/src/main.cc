@@ -17,7 +17,7 @@ const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
-constexpr int kTensorArenaSize = 100000;  // Hopefully this is big enough for all tests
+constexpr int kTensorArenaSize = 300000;  // Hopefully this is big enough for all tests
 uint8_t tensor_arena[kTensorArenaSize];
 
 static int load_model(const char *filename, char **buffer, size_t *size)

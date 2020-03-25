@@ -85,10 +85,14 @@ def create_dict_from_buffer(buffer, *, extended=False):
 
         # track down and tally all owners
         for owner in buffer.owners:
-            subgraph = owner.subgraph
-            subgraph_idx = model.subgraphs.index(subgraph)
-            owners_in_subgraph = owners_dict.setdefault(subgraph_idx, [])
-            owners_in_subgraph.append(subgraph.tensors.index(owner))
+            if owner in model.metadata:
+                metadata_owners = owners_dict.setdefault('metadata', [])
+                metadata_owners.append(owner.name)
+            else:  # owner is a tensor
+                subgraph = owner.subgraph
+                subgraph_idx = model.subgraphs.index(subgraph)
+                owners_in_subgraph = owners_dict.setdefault(subgraph_idx, [])
+                owners_in_subgraph.append(subgraph.tensors.index(owner))
 
         # sort the ordering
         owners_dict = dict(sorted(owners_dict.items()))

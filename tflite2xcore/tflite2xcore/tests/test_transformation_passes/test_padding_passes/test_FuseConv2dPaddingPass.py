@@ -5,6 +5,7 @@ import pytest
 from copy import deepcopy
 
 from tflite2xcore.transformation_passes import FuseConv2dPaddingPass
+from tflite2xcore.operator_codes import XCOREOpCodes
 
 from ..model_builders import build_padded_DW
 from ..test_conv2d_passes.conftest import (
@@ -78,6 +79,7 @@ def test_mutate(trf_pass, model):
     # check operator
     assert len(subgraph.operators) == 1
     op = subgraph.operators[0]
+    assert op.operator_code.code is XCOREOpCodes.XC_conv2d_depthwise
     assert len(op.inputs) == 3
     assert len(op.outputs) == 1
 

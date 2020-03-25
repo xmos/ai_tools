@@ -44,8 +44,6 @@ def trf_pass():
 
 @pytest.fixture()
 def model(input_shape, paddings):
-    if sum(sum(p) for p in paddings) == 0:
-        pytest.skip("skipping constant zero padding case")
     return build_pad(input_shape=input_shape, paddings=paddings)
 
 

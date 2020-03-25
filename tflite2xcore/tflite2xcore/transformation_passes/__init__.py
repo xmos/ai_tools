@@ -26,5 +26,7 @@ from .pooling_passes import (
     ReplaceGlobalAveragePool2DPass
 )
 from .padding_passes import (
-    FuseConv2dPaddingPass
+    FuseConv2dPaddingPass,
+    SplitPaddingPass,
+    FuseConsecutivePadsPass
 )

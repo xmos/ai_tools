@@ -315,10 +315,7 @@ class Subgraph():
                       isinput=False, isoutput=False,
                       producers=None, consumers=None):
 
-        for existing_tensor in self.tensors:
-            if name in [existing_tensor.name, existing_tensor.sanitized_name]:
-                raise Exception(f'Tensor name {name} already in use')
-
+        name = self.make_unique_tensor_name(name)
         tensor = Tensor(self, name, type_, shape, buffer, quantization, producers, consumers)
         self.tensors.append(tensor)
         if isinput:
@@ -356,6 +353,17 @@ class Subgraph():
             if new_name not in existing_names:
                 return new_name
 
+    def make_unique_tensor_name(self, candidate_name):
+        existing_names = [name
+                          for tensor in self.tensors
+                          for name in (tensor.name, tensor.sanitized_name)]
+
+        j, new_name = 1, candidate_name
+        while True:
+            if new_name not in existing_names:
+                return new_name
+            j, new_name = j+1, f"{candidate_name}_{j}"
+
     def create_operator(self, operator_code, *,
                         inputs=None, outputs=None,
                         builtin_options=None, builtin_options_type=None,
@@ -364,9 +372,9 @@ class Subgraph():
         operator = Operator(self, operator_code, name, inputs, outputs,
                             builtin_options, builtin_options_type, custom_options)
         self.operators.append(operator)
-        for input_tensor in inputs:
+        for input_tensor in operator.inputs:
             input_tensor.consumers.append(operator)
-        for output_tensor in outputs:
+        for output_tensor in operator.outputs:
             output_tensor.producers.append(operator)
         return operator
 

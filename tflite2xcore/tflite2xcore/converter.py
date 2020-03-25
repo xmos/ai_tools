@@ -59,7 +59,8 @@ def optimize_for_xcore(model, *,
         model,
         passes=[
             passes.RemoveQuantizerFloatInputPass(),
-            passes.RemoveDequantizerFloatOutputPass()
+            passes.RemoveDequantizerFloatOutputPass(),
+            passes.SplitPaddingPass()
         ]
     )
 
@@ -88,7 +89,9 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.ReplaceTanhPass())
     pass_mgr.register_pass(passes.ReplaceLogisticPass())
 
+    # NOTE: the order of these is strict
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
+    pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
     if num_threads:
         pass_mgr.register_pass(passes.ParallelizeDIDOPass(num_threads=num_threads))

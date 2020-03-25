@@ -1,0 +1,99 @@
+# Copyright (c) 2019, XMOS Ltd, All rights reserved
+
+import pytest
+
+from copy import deepcopy
+
+from tflite2xcore.transformation_passes import SplitPaddingPass
+from tflite2xcore.operator_codes import BuiltinOpCodes
+
+from ..model_builders import build_pad
+from .conftest import (
+    PARAMS,
+    _test_non_matching_params,
+    test_matching_params,
+    update_params_with_paddings
+)
+
+
+#  ----------------------------------------------------------------------------
+#                              PARAMETER VALUES
+#  ----------------------------------------------------------------------------
+
+PARAMS = update_params_with_paddings(
+    deepcopy(PARAMS),
+    is_matching=lambda padding:
+        ((padding[0] != [0, 0] or padding[3] != [0, 0])
+         and (padding[1] != [0, 0] or padding[2] != [0, 0]))
+)
+
+
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
+
+@pytest.fixture()
+def build_model():
+    return build_pad
+
+
+@pytest.fixture()
+def trf_pass():
+    return SplitPaddingPass()
+
+
+@pytest.fixture()
+def model(input_shape, paddings):
+    return build_pad(input_shape=input_shape, paddings=paddings)
+
+
+#  ----------------------------------------------------------------------------
+#                               TEST FUNCTIONS
+#  ----------------------------------------------------------------------------
+
+def test_mutate(trf_pass, model):
+    # extract original padding values
+    subgraph = model.subgraphs[0]
+    params_ori = subgraph.operators[-1].inputs[1].numpy.tolist()
+
+    # run mutating pass
+    trf_pass.run(model)
+    model.sanity_check()
+
+    # check operators
+    operators = subgraph.operators
+    assert len(operators) == 2
+    op_NC, op_HW = operators
+    assert op_NC.operator_code.code is op_HW.operator_code.code is BuiltinOpCodes.PAD
+    assert len(op_NC.inputs) == len(op_HW.inputs) == 2
+    assert len(op_NC.outputs) == len(op_HW.outputs) == 1
+
+    # check input/output tensors
+    assert len(subgraph.inputs) == len(subgraph.outputs) == 1
+    input_tensor, output_tensor = subgraph.inputs[0], subgraph.outputs[0]
+    assert input_tensor in op_NC.inputs
+    assert input_tensor not in op_NC.outputs + op_HW.inputs + op_HW.outputs
+    assert output_tensor in op_HW.outputs
+    assert output_tensor not in op_HW.inputs + op_NC.inputs + op_NC.outputs
+
+    # check wiring
+    assert op_NC.outputs[0] is op_HW.inputs[0]
+
+    # check parameters
+    params_NC = op_NC.inputs[1].numpy.tolist()
+    params_HW = op_HW.inputs[1].numpy.tolist()
+    assert params_NC[1] == params_NC[2] == [0, 0]
+    assert params_HW[0] == params_HW[3] == [0, 0]
+    assert params_NC[0] == params_ori[0]
+    assert params_NC[3] == params_ori[3]
+    assert params_HW[1] == params_ori[1]
+    assert params_HW[2] == params_ori[2]
+
+
+def test_non_matching_paddings(trf_pass, input_shape, non_matching_paddings):
+    model = build_pad(input_shape=input_shape, paddings=non_matching_paddings)
+    _test_non_matching_params(trf_pass, model)
+
+
+if __name__ == "__main__":
+    pytest.main()

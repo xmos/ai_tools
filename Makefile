@@ -23,7 +23,7 @@ test_model_clean:
 
 .PHONY: tflite2xcore_test
 tflite2xcore_test:
-	cd tflite2xcore/tflite2xcore/tests && ./runtests.py -n $(NUM_PROCS)
+	./runtests.py tflite2xcore/tflite2xcore/tests -n $(NUM_PROCS)
 
 .PHONY: integration_test
 integration_test: test_model

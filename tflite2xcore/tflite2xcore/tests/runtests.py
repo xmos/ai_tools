@@ -1,19 +1,115 @@
 #!/usr/bin/env python
 
+import os
 import pytest
 import argparse
 import sys
-import pathlib
-from timeit import default_timer as timer
 
 import multiprocessing as mp
 
 from io import StringIO
+from collections import Counter
+from timeit import default_timer as timer
+
+
+class CollectorPlugin():
+    def __init__(self, *, mode='files'):
+        self.counter = Counter()
+        if mode in ['files', 'tests']:
+            self.mode = mode
+        else:
+            raise ValueError(f"Invalid collection mode: '{mode}'")
+    
+    def tests(self):
+        return self.counter.most_common()
+
+    def pytest_collection_modifyitems(self, items):
+        if self.mode is 'files':
+            self.counter = Counter(item.nodeid.split('::')[0] for item in items)            
+        elif self.mode is 'tests':
+            self.counter = Counter(item.nodeid.split('[')[0] for item in items)
+
+
+class JobCollector():
+    def __init__(self, path, *, smoke=False, verbose=False):
+        if not (os.path.exists(path) and os.path.isdir(path)):
+            raise ValueError(f"Invalid directory path: {path}")
+
+        self.plugin = CollectorPlugin()
+        self.verbose = verbose
+        self.jobs = []
+        self.smoke = smoke
+
+        self.collection_job = [path, "--collect-only", "-qq"]
+        if self.smoke:
+            self.collection_job.append("--smoke")
+
+    def collect(self):
+        print("Collecting test cases...")
+        start = timer()
+        sys.stdout = StringIO()
+        try:
+            exit_code = pytest.main(self.collection_job, plugins=[self.plugin])
+        finally:
+            output = sys.stdout.getvalue()
+            sys.stdout = sys.__stdout__
+            print(f"Collection finished in {timer() - start:.2f}s.")
+
+            if self.verbose or exit_code:
+                print(output)
+
+        if not exit_code:
+            tests = self.plugin.tests()
+            self.jobs = [
+                [path, "-qq", "--tb=short"] + (["--smoke"] if self.smoke else [])
+                 for path, _ in tests
+            ]
+            print(f"{sum(cnt for _, cnt in tests)} CASES IN {len(self.jobs)} JOBS:")
+            for job, (_, cnt) in zip(self.jobs, tests):
+                print(f"{cnt} CASES IN: {' '.join(job)}")
+
+        return exit_code
+
+
+class JobExecutor():
+    def __init__(self, job_fun, *, workers=1, verbose=False):
+        cpu_count = mp.cpu_count()
+        if workers == -1 or workers > cpu_count:
+            workers = cpu_count
+        elif workers < -1 or workers == 0:
+            raise ValueError(f"Invalid number of workers: {workers}")
+
+        self.workers = workers
+        self.verbose = verbose
+        self.pool = mp.Pool(self.workers)
+        self.job_fun = job_fun
+
+    def execute(self, jobs):
+        print(f"Executing {len(jobs)} jobs on {self.workers} workers...")
+
+        start = timer()
+        outputs = self.pool.map(self.job_fun, jobs)
+        total = timer() - start
+
+        passed = failed = 0
+        for job, output, t, exit_code in outputs:
+            job_str = f"TIME={t:.2f}s in {' '.join(job)}"
+            if exit_code:
+                failed += 1
+                print("FAILED:", job_str)
+                if self.verbose:
+                    print(output)
+                    print()
+            else:
+                passed += 1
+                print("PASSED:", job_str)
+
+        print(f"TOTAL: PASSED={passed}, FAILED={failed}, TIME={total:.2f}s")
+        return outputs
 
 
 def run_job(job):
     sys.stdout = StringIO()
-    t = None
     try:
         import pytest as pt
         start = timer()
@@ -25,82 +121,27 @@ def run_job(job):
     return job, output, t, exit_code
 
 
-if __name__ == "__main__":
+def main(raw_args=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument('dir', nargs='?', default=os.path.curdir)
     parser.add_argument('--smoke', action='store_true', default=False)
     parser.add_argument('--collect-only', action='store_true', default=False)
     parser.add_argument('-n', '--workers', type=int, default=1)
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
-    args = parser.parse_args()
+    args = parser.parse_args(raw_args)
 
-    cpu_count = mp.cpu_count()
-    if args.workers == -1 or args.workers > cpu_count:
-        args.workers = cpu_count
-    elif args.workers == 0:
-        args.collect_only = True
-    elif args.workers < -1:
-        raise argparse.ArgumentTypeError(f"Invalid number of workers: {args.workers}")
+    collector = JobCollector(args.dir,
+                             smoke=args.smoke,
+                             verbose=args.verbose)
+    exit_code = collector.collect()
+    if exit_code or args.collect_only or not args.workers:
+        exit(exit_code)
 
-    print("Collecting test cases...")
-    start = timer()
-    sys.stdout = StringIO()
-    try:
-        collect_job = [".", "--collect-only", "-qq"]
-        if args.smoke:
-            collect_job.append("--smoke")
-        exit_code = pytest.main(collect_job)
-    finally:
-        output = sys.stdout.getvalue()
-        sys.stdout = sys.__stdout__
-        print(f"Collection finished in {timer() - start:.2f}s.")
+    executor = JobExecutor(run_job,
+                           workers=args.workers,
+                           verbose=args.verbose)
+    executor.execute(collector.jobs)
 
-        if args.verbose or exit_code:
-            print(output)
-        if exit_code:
-            exit(exit_code)
 
-    def line_parser(line):
-        parts = line.split(' ')
-        if len(parts) != 2:
-            return
-        path, cnt = parts
-        path = pathlib.Path(path[:-1])  # ends with a colon
-        if path.suffix != '.py':
-            return
-        return int(cnt), str(path)
-
-    testfiles = sorted(
-        [line_parser(line) for line in output.split('\n')
-         if line.startswith("test_")],
-        reverse=True
-    )
-    jobs = [[path, "-qq", "--tb=short"] + (["--smoke"] if args.smoke else [])
-            for cnt, path in testfiles]
-    print(f"{sum(cnt for cnt, _ in testfiles)} CASES IN {len(jobs)} JOBS:")
-    for job, (cnt, _) in zip(jobs, testfiles):
-        print(f"{cnt} CASES IN: {' '.join(job)}")
-
-    if args.collect_only:
-        exit()
-
-    print()
-    print(f"Executing jobs on {args.workers} workers...")
-    pool = mp.Pool(args.workers)
-    start = timer()
-    outputs = pool.map(run_job, jobs)
-    total = timer() - start
-
-    passed = failed = 0
-    for job, output, t, exit_code in outputs:
-        job_str = f"TIME={t:.2f}s in {' '.join(job)}"
-        if exit_code:
-            failed += 1
-            print("FAILED:", job_str)
-            if args.verbose:
-                print(output)
-                print()
-        else:
-            passed += 1
-            print("PASSED:", job_str)
-
-    print(f"TOTAL: PASSED={passed}, FAILED={failed}, TIME={total:.2f}s")
+if __name__ == "__main__":
+    main()

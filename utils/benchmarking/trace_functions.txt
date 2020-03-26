@@ -1,22 +1,5 @@
-# regex, alternative report representation
-lookup8
-argmax_16
-requantize_16_to_8
-fully_connected_init
-fully_connected_16
-maxpool2d_init
-maxpool2d
-avgpool2d_init
-avgpool2d
-avgpool2d_global
-conv2d_deepin_deepout_init
-conv2d_deepin_deepout
-conv2d_shallowin_deepout_init
-conv2d_shallowin_deepout
-conv2d_1x1_init
-conv2d_1x1
-conv2d_depthwise_init
-conv2d_depthwise
+# regular expression for operator function mangled name, alternative name for reporting, thread worker function
+#   NOTE: only the regex is required
 xcore.+activations.+Lookup8.+Eval, Lookup8.Eval
 xcore.+arg_min_max.+ArgMax16.+Eval, ArgMax16.Eval
 xcore.+type_conversions.+Requantize_16_to_8.+Eval, Requantize_16_to_8.Eval
@@ -29,7 +12,7 @@ xcore.+pooling.+AvgPool.+Eval, AvgPool.Eval
 xcore.+pooling.+AvgPool_Global.+Init, AvgPool_Global.Init
 xcore.+pooling.+AvgPool_Global.+Eval, AvgPool_Global.Eval
 xcore.+conv.+Conv2D_DIDO.+Init, Conv2D_DIDO.Init
-xcore.+conv.+Conv2D_DIDO.+Eval, Conv2D_DIDO.Eval
+xcore.+conv.+Conv2D_DIDO.+Eval, Conv2D_DIDO.Eval, conv2d_dido_thread_worker
 xcore.+conv.+Conv2D_SIDO.+Init, Conv2D_SIDO.Init
 xcore.+conv.+Conv2D_SIDO.+Eval, Conv2D_SIDO.Eval
 xcore.+conv.+Conv2D_Depthwise.+Init, Conv2D_Depthwise.Init

@@ -97,7 +97,7 @@ static void setup_tflite(const char *model_buffer) {
     }
 
     // Allocate xCORE KernelDispatcher after AllocateTensors
-    xcore::XCoreStatus allocate_xcore_status = xcore::AllocateKernelDispatcher();
+    xcore::XCoreStatus allocate_xcore_status = xcore::AllocateOperatorDispatcher();
     if (allocate_xcore_status != xcore::kXCoreOk) {
         error_reporter->Report("AllocateKernelDispatcher() failed");
     return;

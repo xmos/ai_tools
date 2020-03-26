@@ -148,7 +148,7 @@ SOURCES += \
 	lib_nn/src/c/avgpool2d.c \
 	lib_nn/src/c/maxpool2d.c \
 	lib_nn/src/c/fully_connected.c \
-	lib_ops/src/kernel_dispatcher.cpp \
+	lib_ops/src/operator_dispatcher.cpp \
 	lib_ops/src/conv2d.cpp \
 	lib_ops/src/fully_connected.cpp\
 	lib_ops/src/activations.cpp \

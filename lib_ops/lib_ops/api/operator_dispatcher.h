@@ -1,6 +1,6 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#ifndef XCORE_KERNEL_DISPATCHER_H_
-#define XCORE_KERNEL_DISPATCHER_H_
+#ifndef XCORE_OPERATOR_DISPATCHER_H_
+#define XCORE_OPERATOR_DISPATCHER_H_
 
 #include <vector>
 
@@ -36,10 +36,10 @@ namespace xcore {
 
 struct KernelCommand;
 
-class KernelDispatcher {
+class OperatorDispatcher {
  public:
-  KernelDispatcher(bool use_current = true);
-  ~KernelDispatcher();
+  OperatorDispatcher(bool use_current = true);
+  ~OperatorDispatcher();
 
   void Reserve(int32_t num_threads, size_t stack_words);
   XCoreStatus Allocate(/*allocator here*/);
@@ -57,10 +57,10 @@ class KernelDispatcher {
   std::vector<KernelCommand> commands_;
 };
 
-// static, shared KernelDispatcher object
-KernelDispatcher& GetKernelDispatcher();
-XCoreStatus AllocateKernelDispatcher();
+// static, shared OperatorDispatcher object
+OperatorDispatcher& GetOperatorDispatcher();
+XCoreStatus AllocateOperatorDispatcher();
 
 }  // namespace xcore
 
-#endif  // XCORE_KERNEL_DISPATCHER_H_
+#endif  // XCORE_OPERATOR_DISPATCHER_H_

@@ -2,20 +2,20 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "lib_ops/api/kernel_dispatcher.h"
+#include "lib_ops/api/operator_dispatcher.h"
 
 namespace xcore {
 
 constexpr size_t maxthreads = 8;
 constexpr size_t bytes_per_stackword = 4;
 
-KernelDispatcher& GetKernelDispatcher() {
-  static KernelDispatcher dispatcher;
+OperatorDispatcher& GetOperatorDispatcher() {
+  static OperatorDispatcher dispatcher;
   return dispatcher;
 }
 
-XCoreStatus AllocateKernelDispatcher(/*TODO: allocator here*/) {
-  KernelDispatcher& dispatcher = GetKernelDispatcher();
+XCoreStatus AllocateOperatorDispatcher(/*TODO: allocator here*/) {
+  OperatorDispatcher& dispatcher = GetOperatorDispatcher();
   return dispatcher.Allocate();
 }
 
@@ -30,15 +30,15 @@ struct KernelCommand {
 };
 
 #ifdef XCORE
-// xCORE KernelDispatcher implementation.
+// xCORE OperatorDispatcher implementation.
 // Uses a threadgroup_t to dispatch kernel funnctions to HW threads.
-KernelDispatcher::KernelDispatcher(bool use_current)
+OperatorDispatcher::OperatorDispatcher(bool use_current)
     : use_current_(use_current), stack_ptr_(nullptr) {
   group_ = thread_group_alloc();
 }
-KernelDispatcher::~KernelDispatcher() { thread_group_free(group_); }
+OperatorDispatcher::~OperatorDispatcher() { thread_group_free(group_); }
 
-void KernelDispatcher::Start() {
+void OperatorDispatcher::Start() {
   auto cend = commands_.cend();
 
   if (use_current_) --cend;
@@ -55,17 +55,17 @@ void KernelDispatcher::Start() {
   }
 }
 
-void KernelDispatcher::Wait() { thread_group_wait(group_); }
+void OperatorDispatcher::Wait() { thread_group_wait(group_); }
 
 #else
-// x86 KernelDispatcher implementation.
+// x86 OperatorDispatcher implementation.
 // Uses a std::vector of std::thread to dispatch kernel funnctions to SW
 // threads.
-KernelDispatcher::KernelDispatcher(bool use_current)
+OperatorDispatcher::OperatorDispatcher(bool use_current)
     : use_current_(use_current), stack_ptr_(nullptr) {}
-KernelDispatcher::~KernelDispatcher() {}
+OperatorDispatcher::~OperatorDispatcher() {}
 
-void KernelDispatcher::Start() {
+void OperatorDispatcher::Start() {
   auto cend = commands_.cend();
 
   if (use_current_) --cend;
@@ -80,7 +80,7 @@ void KernelDispatcher::Start() {
   }
 }
 
-void KernelDispatcher::Wait() {
+void OperatorDispatcher::Wait() {
   for (auto& thread : group_) {
     thread.join();
   }
@@ -90,14 +90,14 @@ void KernelDispatcher::Wait() {
 
 #endif
 
-void KernelDispatcher::Reserve(int32_t num_threads, size_t stack_words) {
+void OperatorDispatcher::Reserve(int32_t num_threads, size_t stack_words) {
   assert(num_threads <= maxthreads);
   size_t stack_size = stack_words * bytes_per_stackword * num_threads;
   reserved_stack_ = std::max(stack_size, reserved_stack_);
   reserved_threads_ = std::max(num_threads, reserved_threads_);
 }
 
-XCoreStatus KernelDispatcher::Allocate(/*TODO: allocator here*/) {
+XCoreStatus OperatorDispatcher::Allocate(/*TODO: allocator here*/) {
   stack_ptr_ = (char*)malloc(reserved_stack_);
 
   if (stack_ptr_) return kXCoreOk;
@@ -105,7 +105,7 @@ XCoreStatus KernelDispatcher::Allocate(/*TODO: allocator here*/) {
   return kXCoreError;
 }
 
-XCoreStatus KernelDispatcher::Add(kernel_function_t function, void* argument,
+XCoreStatus OperatorDispatcher::Add(kernel_function_t function, void* argument,
                                   size_t stack_words) {
   assert(stack_ptr_);
   int32_t offset = stack_words * bytes_per_stackword * commands_.size();

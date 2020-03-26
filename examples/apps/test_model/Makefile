@@ -13,7 +13,7 @@ ifeq ($(TARGET), x86)
 	#CXXFLAGS += -DNDEBUG  
 	CXXFLAGS += -std=c++11 
 
-	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm -lpthread
+	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm -pthread
 
 	OBJ_DIR := .build/x86
 

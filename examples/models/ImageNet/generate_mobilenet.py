@@ -59,7 +59,7 @@ def main(raw_args=None):
         '--classifier', action='store_true', default=False,
         help='Apply classifier optimizations during xcore conversion.'
     )
-    args = parser.parse_args()
+    args = parser.parse_args(raw_args)
     model = Mobilenet(name=DEFAULT_NAME, path=args.path, opt_classifier=args.classifier)
     model.run()
 

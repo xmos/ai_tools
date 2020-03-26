@@ -39,10 +39,12 @@ class JobCollector():
         self.verbose = verbose
         self.jobs = []
         self.smoke = smoke
+        self.path = path
 
-        self.collection_job = [path, "--collect-only", "-qq"]
+        self.optional_args = ["-qq"]
         if self.smoke:
-            self.collection_job.append("--smoke")
+            self.optional_args.append("--smoke")
+        self.collection_job = [self.path, "--collect-only"] + self.optional_args
 
     def collect(self):
         print("Collecting test cases...")
@@ -61,7 +63,7 @@ class JobCollector():
         if not exit_code:
             tests = self.plugin.tests()
             self.jobs = [
-                [path, "-qq", "--tb=short"] + (["--smoke"] if self.smoke else [])
+                [os.path.join(self.path, path), "--tb=short"] + self.optional_args
                  for path, _ in tests
             ]
             print(f"{sum(cnt for _, cnt in tests)} CASES IN {len(self.jobs)} JOBS:")

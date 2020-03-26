@@ -98,6 +98,7 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
     print('***********')
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+        #print(output.decode('utf-8'))
         result = helpers.compare_tensor_files(expected_output_file, expected_quantization,
             predicted_output_file, predicted_quantization, abs_tol)
 
@@ -105,6 +106,7 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
 
         return result
     except subprocess.CalledProcessError as ex:
+        #print(ex.output.decode('utf-8'))
         print(ex)
         return False
 

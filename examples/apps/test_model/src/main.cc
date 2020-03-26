@@ -1,20 +1,23 @@
 
 // Copyright (c) 2019, XMOS Ltd, All rights reserved
-#include <stddef.h>
-#include <stdio.h>
-#include <stdint.h>
+#include <iostream>
+#include <cstddef>
+#include <cstdio>
+#include <cstdint>
 
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
 
+#include "lib_ops/api/lib_ops.h"
+
 tflite::ErrorReporter* error_reporter = nullptr;
 const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
-constexpr int kTensorArenaSize = 100000;  // Hopefully this is big enough for all tests
+constexpr int kTensorArenaSize = 300000;  // Hopefully this is big enough for all tests
 uint8_t tensor_arena[kTensorArenaSize];
 
 static int load_model(const char *filename, char **buffer, size_t *size)
@@ -87,9 +90,16 @@ static void setup_tflite(const char *model_buffer) {
     interpreter = &static_interpreter;
 
     // Allocate memory from the tensor_arena for the model's tensors.
-    TfLiteStatus allocate_status = interpreter->AllocateTensors();
-    if (allocate_status != kTfLiteOk) {
+    TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();
+    if (allocate_tensors_status != kTfLiteOk) {
         error_reporter->Report("AllocateTensors() failed");
+    return;
+    }
+
+    // Allocate xCORE KernelDispatcher after AllocateTensors
+    xcore::XCoreStatus allocate_xcore_status = xcore::AllocateKernelDispatcher();
+    if (allocate_xcore_status != xcore::kXCoreOk) {
+        error_reporter->Report("AllocateKernelDispatcher() failed");
     return;
     }
 

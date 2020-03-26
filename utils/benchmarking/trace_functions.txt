@@ -1,20 +1,38 @@
-conv2d_deepin_deepout_init.
-conv2d_deepin_deepout_block.
-conv2d_shallowin_deepout_init.
-conv2d_shallowin_deepout_block.
-fully_connected_init.
-fully_connected_16.
-argmax_16.
-avgpool2d.
-avgpool2d_global.
-maxpool2d.
-requantize_16_to_8.
-xcore.+argmax.+Eval_ArgMax_16
-xcore.+conv.+Eval2D_SIDO
-xcore.+conv.+Prepare2D_SIDO
-xcore.+conv.+Eval2D_DIDO
-xcore.+conv.+Prepare2D_DIDO
-xcore.+fully_connected.+Eval_16
-xcore.+maxpool.+Eval2D
-xcore.+avgpool_global.+Eval2D
-xcore.+type_conversions.+Eval_Requantize_16_to_8
+# regex, alternative report representation
+lookup8
+argmax_16
+requantize_16_to_8
+fully_connected_init
+fully_connected_16
+maxpool2d_init
+maxpool2d
+avgpool2d_init
+avgpool2d
+avgpool2d_global
+conv2d_deepin_deepout_init
+conv2d_deepin_deepout
+conv2d_shallowin_deepout_init
+conv2d_shallowin_deepout
+conv2d_1x1_init
+conv2d_1x1
+conv2d_depthwise_init
+conv2d_depthwise
+xcore.+activations.+Lookup8.+Eval, Lookup8.Eval
+xcore.+arg_min_max.+ArgMax16.+Eval, ArgMax16.Eval
+xcore.+type_conversions.+Requantize_16_to_8.+Eval, Requantize_16_to_8.Eval
+xcore.+fully_connected.+FullyConnected_16.+Init, FullyConnected_16.Init
+xcore.+fully_connected.+FullyConnected_16.+Eval, FullyConnected_16.Eval
+xcore.+pooling.+MaxPool.+Init, +MaxPool.Init
+xcore.+pooling.+MaxPool.+Eval, MaxPool.Eval
+xcore.+pooling.+AvgPool.+Init, AvgPool.Init
+xcore.+pooling.+AvgPool.+Eval, AvgPool.Eval
+xcore.+pooling.+AvgPool_Global.+Init, AvgPool_Global.Init
+xcore.+pooling.+AvgPool_Global.+Eval, AvgPool_Global.Eval
+xcore.+conv.+Conv2D_DIDO.+Init, Conv2D_DIDO.Init
+xcore.+conv.+Conv2D_DIDO.+Eval, Conv2D_DIDO.Eval
+xcore.+conv.+Conv2D_SIDO.+Init, Conv2D_SIDO.Init
+xcore.+conv.+Conv2D_SIDO.+Eval, Conv2D_SIDO.Eval
+xcore.+conv.+Conv2D_Depthwise.+Init, Conv2D_Depthwise.Init
+xcore.+conv.+Conv2D_Depthwise.+Eval, Conv2D_Depthwise.Eval
+xcore.+conv.+Conv2D_1x1.+Init, Conv2D_1x1.Init
+xcore.+conv.+Conv2D_1x1.+Eval, Conv2D_1x1.Eval

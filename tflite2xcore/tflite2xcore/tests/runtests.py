@@ -31,19 +31,17 @@ class CollectorPlugin():
 
 
 class JobCollector():
-    def __init__(self, path, *, smoke=False, verbose=False):
+    def __init__(self, path, *, coverage_options=None, verbose=False):
         if not (os.path.exists(path) and os.path.isdir(path)):
             raise ValueError(f"Invalid directory path: {path}")
 
         self.plugin = CollectorPlugin()
         self.verbose = verbose
         self.jobs = []
-        self.smoke = smoke
         self.path = path
 
-        self.optional_args = ["-qq"]
-        if self.smoke:
-            self.optional_args.append("--smoke")
+        coverage_options = coverage_options or []
+        self.optional_args = ["-qq"] + coverage_options
         self.collection_job = [self.path, "--collect-only"] + self.optional_args
 
     def collect(self):
@@ -127,13 +125,22 @@ def main(raw_args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('dir', nargs='?', default=os.path.curdir)
     parser.add_argument('--smoke', action='store_true', default=False)
+    parser.add_argument('--extended', action='store_true', default=False)
     parser.add_argument('--collect-only', action='store_true', default=False)
     parser.add_argument('-n', '--workers', type=int, default=1)
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
     args = parser.parse_args(raw_args)
 
+    coverage_options = []
+    if args.smoke and args.extended:
+        raise ValueError('Only one of "--smoke" and "--extended" can be used')
+    elif args.smoke:
+        coverage_options.append("--smoke")
+    elif args.extended:
+        coverage_options.append("--extended")
+
     collector = JobCollector(args.dir,
-                             smoke=args.smoke,
+                             coverage_options=coverage_options,
                              verbose=args.verbose)
     exit_code = collector.collect()
     if exit_code or args.collect_only or not args.workers:

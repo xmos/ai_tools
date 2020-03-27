@@ -40,8 +40,10 @@ def test_inference():
 
     interpreter.allocate_tensors()
 
-    input_ = np.fromfile(BUILTIN_OPERATORS_TEST_INPUT, dtype=float)
-    expected_output = np.fromfile(BUILTIN_OPERATORS_TEST_OUTPUT, dtype=float)
+    input_ = np.fromfile(BUILTIN_OPERATORS_TEST_INPUT, dtype=np.float32)
+    input_.shape=(1,4,1,1)
+    expected_output = np.fromfile(BUILTIN_OPERATORS_TEST_OUTPUT, dtype=np.float32)
+    expected_output.shape=(1,4)
     computed_output = expected_output.copy()
     
     interpreter.set_tensor(5, input_)

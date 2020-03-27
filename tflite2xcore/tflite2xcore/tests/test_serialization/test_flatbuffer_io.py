@@ -17,7 +17,7 @@ import tensorflow as tf
 
 BUILTIN_OPERATORS_TEST_FILE = os.path.join(
     Path(__file__).parent.absolute(),
-    'data/builtin_operators.tflite'
+    'builtin_operators.tflite'
 )
 
 

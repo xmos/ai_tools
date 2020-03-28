@@ -14,8 +14,10 @@ class XCOREInterpreter {
  public:
   XCOREInterpreter() {}
   ~XCOREInterpreter() {
+    if (interpreter_)
+      delete interpreter_;  // NOTE: interpreter_ must be deleted before
+                            // tensor_arena_
     if (tensor_arena_) delete tensor_arena_;
-    if (interpreter_) delete interpreter_;
   }
 
   XCoreStatus Initialize(const char* model_buffer, size_t arena_size) {
@@ -37,6 +39,7 @@ class XCOREInterpreter {
     tensor_arena_ = new uint8_t[arena_size];
     interpreter_ = new tflite::MicroInterpreter(
         model_, resolver_, tensor_arena_, arena_size, &micro_error_reporter_);
+
     return kXCoreOk;
   }
 
@@ -49,7 +52,7 @@ class XCOREInterpreter {
       return kXCoreError;
     }
 
-    // Allocate xCORE OperatorDispatcher 
+    // Allocate xCORE OperatorDispatcher
     //   NOTE: must be called after AllocateTensors
     xcore::XCoreStatus allocate_xcore_status =
         xcore::AllocateOperatorDispatcher();
@@ -66,7 +69,6 @@ class XCOREInterpreter {
     TfLiteStatus invoke_status = interpreter_->Invoke();
     if (invoke_status != kTfLiteOk) {
       error_msg_.clear();
-      error_msg_ << "Invoke failed";
       return kXCoreError;
     }
 
@@ -163,13 +165,13 @@ xcore::XCOREInterpreter* new_interpreter() {
   return new xcore::XCOREInterpreter();
 }
 
+void delete_interpreter(xcore::XCOREInterpreter* interpreter) {
+  delete interpreter;
+}
+
 int initialize(xcore::XCOREInterpreter* interpreter, const char* model_content,
                size_t arena_size) {
   return interpreter->Initialize(model_content, arena_size);
-}
-
-void delete_interpreter(xcore::XCOREInterpreter* interpreter) {
-  delete interpreter;
 }
 
 int allocate_tensors(xcore::XCOREInterpreter* interpreter) {

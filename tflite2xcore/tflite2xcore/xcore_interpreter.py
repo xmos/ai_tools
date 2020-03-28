@@ -16,7 +16,7 @@ class XCOREInterpreterStatus(Enum):
     Error = 1
 
 class NumpyToTfLiteTensorType(Enum):
-    # see tensorflow/tensorflow/lite/c/c_api_internal.h
+    # see tensorflow/tensorflow/lite/c/c_api_internal.h for values
     float32 = 1     # kTfLiteFloat32
     int32 = 2       # kTfLiteInt32
     unint8 = 3      # kTfLiteUInt8

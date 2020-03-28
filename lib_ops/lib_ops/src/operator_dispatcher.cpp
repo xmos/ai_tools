@@ -1,4 +1,5 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
+#include <iostream>
 #include <cstdlib>
 #include <cassert>
 
@@ -66,18 +67,19 @@ OperatorDispatcher::OperatorDispatcher(bool use_current)
 OperatorDispatcher::~OperatorDispatcher() {}
 
 void OperatorDispatcher::Start() {
-  auto cend = commands_.cend();
+  auto cbegin = commands_.cbegin();
 
-  if (use_current_) --cend;
+  if (use_current_) {
+    KernelCommand const& command = *cbegin;
+    (*command.function)(command.argument);
+    ++cbegin;
+  }
 
-  for (auto it = commands_.cbegin(); it < cend; ++it) {
+  for (auto it = cbegin; it < commands_.cend(); ++it) {
     group_.push_back(std::thread(it->function, it->argument));
   }
 
-  if (use_current_) {
-    KernelCommand const& command = commands_.back();
-    (*command.function)(command.argument);
-  }
+
 }
 
 void OperatorDispatcher::Wait() {
@@ -86,6 +88,7 @@ void OperatorDispatcher::Wait() {
   }
 
   group_.clear();
+  commands_.clear();
 }
 
 #endif

@@ -6,11 +6,11 @@ ifeq ($(TARGET), x86)
 
 	CC := gcc
 	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
-	#CCFLAGS += -DNDEBUG  
+	CCFLAGS += -DNDEBUG  
 
 	CXX := g++
 	CXXFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
-	#CXXFLAGS += -DNDEBUG  
+	CXXFLAGS += -DNDEBUG  
 	CXXFLAGS += -std=c++11 
 
 	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm -pthread

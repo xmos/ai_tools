@@ -59,6 +59,22 @@ class TensorType(enum.IntEnum):
     @staticmethod
     def to_numpy_type(tensor_type):
         LUT = {
+            TensorType.FLOAT32: np.float64,
+            TensorType.FLOAT16: np.float64,
+            TensorType.INT32: np.int64,
+            TensorType.UINT8: np.int64,
+            TensorType.INT64: np.int64,
+            # TensorType.STRING: None,  # intentionally not supported
+            TensorType.BOOL: np.int64,
+            TensorType.INT16: np.int64,
+            # TensorType.COMPLEX64: None,  # intentionally not supported
+            TensorType.INT8: np.int64,
+        }
+        return LUT[tensor_type]
+
+    @staticmethod
+    def to_numpy_dtype(tensor_type):
+        LUT = {
             TensorType.FLOAT32: np.float32,
             TensorType.FLOAT16: np.single,
             TensorType.INT32: np.int32,

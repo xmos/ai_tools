@@ -19,7 +19,7 @@ def strip_model(model, *, remove_softmax=False):
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
     pass_mgr.run_passes()
-    model.description = 'TOCO converted + XMOS stripped.'
+    model.description = model.description + ' + XMOS stripped.'
 
 
 def add_float_input_output(model):
@@ -32,7 +32,7 @@ def add_float_input_output(model):
     )
 
     pass_mgr.run_passes()
-    model.description = 'TOCO converted + XMOS stripped + float interface'
+    model.description = model.description + ' + XMOS stripped + float interface'
 
     # fix input/output buffers so built-in interpreter could run it
     assert len(model.subgraphs) == 1
@@ -103,7 +103,7 @@ def optimize_for_xcore(model, *,
     pass_mgr.run_passes()
     model.sanity_check()
 
-    model.description = 'XMOS converted.'
+    model.description = model.description + ' + XMOS optimized.'
 
 
 def convert(tflite_input_path, tflite_output_path, *,

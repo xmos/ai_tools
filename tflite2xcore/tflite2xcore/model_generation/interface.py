@@ -151,12 +151,15 @@ class Model(ABC):
         self.models['model_stripped'] = self.models_dir / "model_stripped.tflite"
         self.buffers['model_stripped'] = serialize_model(model)
 
+    def _convert_to_xcore(self, model, **converter_args):
+        xcore_conv.optimize_for_xcore(model, **converter_args)
+
     def convert_to_xcore(self, *, source='model_quant', **converter_args):
         assert source in ['model_quant', 'model_stripped']
         assert source in self.buffers
         self.logger.info(f"Converting {source}...")
         model = deserialize_model(self.buffers[source])
-        xcore_conv.optimize_for_xcore(model, **converter_args)
+        self._convert_to_xcore(model, **converter_args)
         self.models['model_xcore'] = self.models_dir / 'model_xcore.tflite'
         self.buffers['model_xcore'] = serialize_model(model)
 
@@ -177,7 +180,6 @@ class Model(ABC):
         self.logger.info(f"{model_key} visualization saved to {model_html}")
 
     def _save_data_dict(self, data, *, base_file_name):
-        # TODO: this should probably be a util
         # save test data in numpy format
         test_data_dir = self.data_dir / base_file_name
         test_data_dir.mkdir(exist_ok=True, parents=True)
@@ -300,7 +302,16 @@ class Model(ABC):
 class KerasModel(Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.input_init = None
+        self._input_init = tf.initializers.Initializer()
+
+    @property
+    def input_init(self):
+        return self._input_init
+
+    @input_init.setter
+    def input_init(self, initializer):
+        assert isinstance(initializer, tf.initializers.Initializer)
+        self._input_init = initializer
 
     def _prep_backend(self):
         tf.keras.backend.clear_session()

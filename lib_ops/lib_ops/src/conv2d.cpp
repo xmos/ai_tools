@@ -39,7 +39,7 @@ XCoreStatus Conv2D_DIDO::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   init_params.K_w = params.K_w;
   init_params.C_in = C_in;
   init_params.C_out = C_out;
-  init_params.pad_mode = params.padding_mode;
+  init_params.pad_mode = padding_mode_;
   init_params.zero_point = zero_point;
 
   if (par_plan.size() == 0) {
@@ -112,7 +112,7 @@ XCoreStatus Conv2D_SIDO::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   init_params.K_w = unpadded_shape.K_w;
   init_params.C_in = C_in;
   init_params.C_out = unpadded_shape.C_out;
-  init_params.pad_mode = params.padding_mode;
+  init_params.pad_mode = padding_mode_;
   init_params.zero_point = zero_point;
 
   region_params.top = 0;
@@ -185,12 +185,11 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   params_out.channels = C_out;
 
   conv2d_depthwise_init(&plan_, &job_, &params_in, &params_out,
-                        nullptr,  // job_params
-                        -params.pad.top, // window_start_row
-                        -params.pad.left, // window_start_col
-                        params.K_h,
-                        params.K_w, params.stride_h, params.stride_w,
-                        params.pad.zero_point,
+                        nullptr,           // job_params
+                        -params.pad.top,   // window_start_row
+                        -params.pad.left,  // window_start_col
+                        params.K_h, params.K_w, params.stride_h,
+                        params.stride_w, params.pad.zero_point,
                         1  // job_count
   );
 

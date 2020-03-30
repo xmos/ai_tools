@@ -26,15 +26,6 @@ struct Conv2DPadding {
   int8_t zero_point;
 };
 
-struct Conv2DLegacyParams {
-  // parameters that use the legacy padding mode
-  padding_mode_t padding_mode;
-  int32_t K_h;
-  int32_t K_w;
-  int32_t stride_h;
-  int32_t stride_w;
-};
-
 struct Conv2DParams {
   Conv2DPadding pad;
   int32_t K_h;
@@ -45,8 +36,9 @@ struct Conv2DParams {
 
 class Conv2D_DIDO {
  public:
-  Conv2D_DIDO(const Conv2DLegacyParams& params, const ParPlan& par_plan)
-      : params(params), par_plan(par_plan) {}
+  Conv2D_DIDO(const Conv2DParams& params, const ParPlan& par_plan,
+              const padding_mode_t padding_mode)
+      : params(params), par_plan(par_plan), padding_mode_(padding_mode) {}
   ~Conv2D_DIDO() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
@@ -55,18 +47,22 @@ class Conv2D_DIDO {
   XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
                    const int16_t* SS);
 
-  Conv2DLegacyParams params;
+  Conv2DParams params;
   ParPlan par_plan;
 
  private:
   std::vector<nn_conv2d_dido_params_t> params_;
+  padding_mode_t padding_mode_;
 };
 
 class Conv2D_SIDO {
  public:
-  Conv2D_SIDO(const Conv2DLegacyParams& params,
-              const Conv2DUnpaddedShape& unpadded_shape)
-      : params(params), unpadded_shape(unpadded_shape) {}
+  Conv2D_SIDO(const Conv2DParams& params,
+              const Conv2DUnpaddedShape& unpadded_shape,
+              const padding_mode_t padding_mode)
+      : params(params),
+        unpadded_shape(unpadded_shape),
+        padding_mode_(padding_mode) {}
   ~Conv2D_SIDO() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
@@ -75,16 +71,18 @@ class Conv2D_SIDO {
   XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
                    const int16_t* SS);
 
-  Conv2DLegacyParams params;
+  Conv2DParams params;
   Conv2DUnpaddedShape unpadded_shape;
 
  private:
   nn_conv2d_sido_params_t params_;
+  padding_mode_t padding_mode_;
 };
 
 class Conv2D_1x1 {
  public:
-  Conv2D_1x1(const Conv2DLegacyParams& params) : params(params) {}
+  Conv2D_1x1(const Conv2DParams& params, const padding_mode_t padding_mode)
+      : params(params), padding_mode_(padding_mode) {}
   ~Conv2D_1x1() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
@@ -93,10 +91,11 @@ class Conv2D_1x1 {
   XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
                    const int16_t* BSS);
 
-  Conv2DLegacyParams params;
+  Conv2DParams params;
 
  private:
   nn_conv2d_1x1_plan_t plan_;
+  padding_mode_t padding_mode_;
 };
 
 class Conv2D_Depthwise {

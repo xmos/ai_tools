@@ -191,7 +191,6 @@ def test_XC_maxpool2d(test_model_app, XC_maxpool2d_test_case, abs_tol):
     assert(run_test_case(test_model_app, XC_maxpool2d_test_case, abs_tol))
 
 
-@pytest.mark.xfail
 def test_XC_avgpool2d(test_model_app, XC_avgpool2d_test_case, abs_tol):
     assert(run_test_case(test_model_app, XC_avgpool2d_test_case, abs_tol))
 

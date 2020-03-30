@@ -5,3 +5,11 @@ from .serialization.api import (
     write_flatbuffer,
     create_dict_from_model
 )
+
+from . import converter
+from . import graph_transformer
+from . import operator_codes
+from . import parallelization
+from . import tflite_visualize
+from . import utils
+from . import xcore_model

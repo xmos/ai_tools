@@ -44,17 +44,13 @@ def test_inference():
     input_.shape=(1,4,1,1)
     expected_output = np.fromfile(BUILTIN_OPERATORS_TEST_OUTPUT, dtype=np.float32)
     expected_output.shape=(1,4)
-    computed_output = expected_output.copy()
+    computed_output = np.zeros(expected_output.shape, dtype=expected_output.dtype)
     
     interpreter.set_tensor(5, input_)
     interpreter.invoke()
     interpreter.get_tensor(6, computed_output)
 
-    print()
-    print('expected_output')
-    print(expected_output)
-    print('computed_output')
-    print(computed_output)
+    np.testing.assert_equal(computed_output, expected_output)
 
 if __name__ == "__main__":
     pytest.main()

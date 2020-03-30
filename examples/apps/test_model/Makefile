@@ -140,6 +140,7 @@ SOURCES += \
 	tensorflow/lite/micro/kernels/xcore/xcore_fully_connected.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_type_conversions.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_activations.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_custom_options.cc \
 	lib_nn/src/c/nn_op_utils.c \
 	lib_nn/src/c/nn_operator.c \
 	lib_nn/src/c/nn_operator_conv.c \

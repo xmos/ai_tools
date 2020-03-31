@@ -50,7 +50,7 @@ def apply_interpreter_to_examples(interpreter, examples, *,
                 logging.info(f"(PID {os.getpid()}) Evaluated examples {j+1:6d}/{examples.shape[0]}")
             else:
                 logging.info(f"Evaluated examples {j+1:6d}/{examples.shape[0]}")
-        interpreter.set_tensor(interpreter_input_ind, tf.expand_dims(x, 0))
+        interpreter.set_tensor(interpreter_input_ind, np.expand_dims(x, 0))
         interpreter.invoke()
         y = interpreter.get_tensor(interpreter_output_ind)
         outputs.append(y)

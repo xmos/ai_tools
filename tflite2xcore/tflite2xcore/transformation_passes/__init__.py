@@ -30,3 +30,11 @@ from .padding_passes import (
     SplitPaddingPass,
     FuseConsecutivePadsPass
 )
+
+from .quantize_dequantize_passes import (
+    LegalizeQuantizedInputPass,
+    LegalizeQuantizedOutputPass,
+    LegalizeFloatInputPass,
+    LegalizeFloatOutputPass,
+    LegalizeQuantizeVersionPass,
+)

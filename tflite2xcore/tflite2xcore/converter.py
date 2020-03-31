@@ -9,8 +9,8 @@ def strip_model(model, *, remove_softmax=False):
     pass_mgr = PassManager(
         model,
         passes=[
-            passes.RemoveQuantizerFloatInputPass(),
-            passes.RemoveDequantizerFloatOutputPass(),
+            passes.LegalizeQuantizedInputPass(),
+            passes.LegalizeQuantizedOutputPass(),
             passes.RemoveUnusedBuffersPass()
         ]
     )
@@ -26,8 +26,8 @@ def add_float_input_output(model):
     pass_mgr = PassManager(
         model,
         passes=[
-            passes.AddQuantizerFloatInputPass(),
-            passes.AddDequantizerFloatOutputPass()
+            passes.LegalizeFloatInputPass(),
+            passes.LegalizeFloatOutputPass()
         ]
     )
 
@@ -58,8 +58,8 @@ def optimize_for_xcore(model, *,
     pass_mgr = PassManager(
         model,
         passes=[
-            passes.RemoveQuantizerFloatInputPass(),
-            passes.RemoveDequantizerFloatOutputPass(),
+            passes.LegalizeQuantizedInputPass(),
+            passes.LegalizeQuantizedOutputPass(),
             passes.SplitPaddingPass()
         ]
     )
@@ -92,6 +92,8 @@ def optimize_for_xcore(model, *,
     # NOTE: the order of these is strict
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
+
+    pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
 
     if num_threads:
         pass_mgr.register_pass(passes.ParallelizeDIDOPass(num_threads=num_threads))

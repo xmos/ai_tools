@@ -422,7 +422,7 @@ class Subgraph():
         if new_op in self.operators:
             self.operators.remove(new_op)
 
-        # (re)insert new op after reference op
+        # (re)insert new op before/after reference op
         self.operators.insert(ref_idx + (1 if after else 0), new_op)
 
     def replace_operator(self, op, new_op):

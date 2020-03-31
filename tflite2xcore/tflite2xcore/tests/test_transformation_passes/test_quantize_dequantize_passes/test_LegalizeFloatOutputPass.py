@@ -4,9 +4,9 @@ import pytest
 
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
-from tflite2xcore.transformation_passes import AddDequantizerFloatOutputPass
+from tflite2xcore.transformation_passes import LegalizeFloatOutputPass
 
-from .test_AddQuantizerFloatInputPass import simple_model, non_matching_model
+from .test_LegalizeFloatInputPass import simple_model, non_matching_model
 
 
 @pytest.fixture()
@@ -26,7 +26,7 @@ def dual_output_model():
 
 @pytest.fixture()
 def trf_pass():
-    return AddDequantizerFloatOutputPass()
+    return LegalizeFloatOutputPass()
 
 
 def test_match(simple_model, trf_pass):

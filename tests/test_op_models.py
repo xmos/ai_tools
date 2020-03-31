@@ -113,8 +113,8 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
             print(ex)
             return False
     else:
-        # cmd = f'{test_model_app} {flatbuffer} {input_file} {predicted_output_file}'
-        # print('Command:', cmd)
+        cmd = f'{test_model_app} {flatbuffer} {input_file} {predicted_output_file}'
+        print('Command:', cmd)
         # try:
         #     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
         #     #print(output.decode('utf-8'))

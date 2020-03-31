@@ -16,14 +16,22 @@ class XCOREInterpreter {
   ~XCOREInterpreter() {
     if (interpreter_)
       delete interpreter_;  // NOTE: interpreter_ must be deleted before
-                            // tensor_arena_
+                            // resolver, micro_error_reporter_, tensor_arena_
+                            // amd model_buffer_
+    if (resolver_) delete resolver_;
+    if (micro_error_reporter_) delete micro_error_reporter_;
     if (tensor_arena_) delete tensor_arena_;
+    if (model_buffer_) delete model_buffer_;
   }
 
-  XCoreStatus Initialize(const char* model_buffer, size_t arena_size) {
+  XCoreStatus Initialize(const char* model_buffer, size_t model_buffer_size, size_t arena_size) {
+    // We need to keep a copy of the model content
+    model_buffer_ = new char[model_buffer_size];
+    memcpy(model_buffer_, model_buffer, model_buffer_size);
+
     // Map the model into a usable data structure. This doesn't involve any
     // copying or parsing, it's a very lightweight operation.
-    model_ = tflite::GetModel(model_buffer);
+    model_ = tflite::GetModel(model_buffer_);
     if (model_->version() != TFLITE_SCHEMA_VERSION) {
       error_msg_.clear();
       error_msg_ << "Model provided is schema version " << model_->version()
@@ -31,14 +39,17 @@ class XCOREInterpreter {
       return kXCoreError;
     }
 
+    micro_error_reporter_ = new tflite::MicroErrorReporter();
+    resolver_ = new tflite::ops::micro::AllOpsResolver();
+    
     // Adds xCORE custom operators
     tflite::ops::micro::xcore::add_custom_ops(
-        reinterpret_cast<tflite::MicroMutableOpResolver*>(&resolver_));
+        reinterpret_cast<tflite::MicroMutableOpResolver*>(resolver_));
 
     // Build an interpreter to run the model with.
     tensor_arena_ = new uint8_t[arena_size];
     interpreter_ = new tflite::MicroInterpreter(
-        model_, resolver_, tensor_arena_, arena_size, &micro_error_reporter_);
+        model_, *resolver_, tensor_arena_, arena_size, micro_error_reporter_);
 
     return kXCoreOk;
   }
@@ -149,11 +160,12 @@ class XCOREInterpreter {
   }
 
  private:
-  tflite::ops::micro::AllOpsResolver resolver_;
-  tflite::MicroErrorReporter micro_error_reporter_;
+  tflite::ops::micro::AllOpsResolver* resolver_ = nullptr;
+  tflite::MicroErrorReporter* micro_error_reporter_ = nullptr;
   const tflite::Model* model_ = nullptr;
-  uint8_t* tensor_arena_ = nullptr;
   tflite::MicroInterpreter* interpreter_ = nullptr;
+  char* model_buffer_ = nullptr;
+  uint8_t* tensor_arena_ = nullptr;
   std::stringstream error_msg_;
 };
 
@@ -170,8 +182,8 @@ void delete_interpreter(xcore::XCOREInterpreter* interpreter) {
 }
 
 int initialize(xcore::XCOREInterpreter* interpreter, const char* model_content,
-               size_t arena_size) {
-  return interpreter->Initialize(model_content, arena_size);
+               size_t model_content_size, size_t arena_size) {
+  return interpreter->Initialize(model_content, model_content_size, arena_size);
 }
 
 int allocate_tensors(xcore::XCOREInterpreter* interpreter) {

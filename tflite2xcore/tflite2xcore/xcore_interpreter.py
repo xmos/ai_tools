@@ -59,14 +59,13 @@ class XCOREInterpreter:
 
         self._is_allocated = False
         self.obj = lib.new_interpreter()
-        status = lib.initialize(self.obj, model_content, arena_size) 
+        status = lib.initialize(self.obj, model_content, len(model_content), arena_size) 
         if status == XCOREInterpreterStatus.Error:
             raise RuntimeError('Unable to initialize interpreter')
 
     
     def __del__(self):
         lib.delete_interpreter(self.obj)
-
 
     def _check_status(self, status):
         if not self._is_allocated:

@@ -61,11 +61,13 @@ class OpTestDefaultModel(KerasModel):
     def prep_data(self):
         pass
 
-    def gen_test_data(self):
+    def gen_test_data(self, batch=100, subset_len=10):
         assert self.input_shape, "To generate test data this model needs an input shape"
         assert self.input_init, "To generate test data this model needs an input initializer"
-        self.data['export'], self.data['quant'] = input_initializer(
-            self.input_init, *self.input_shape)
+        (())
+        self.data['export'] = self.input_init(shape=(batch, *self.input_shape),
+                                              dtype="float32").numpy()
+        self.data['quant'] = self.data['export'][:subset_len]
         # TODO: use array log message helper from utils
         # self.logger.debug(f"data['export'] sample:\n{self.data['export'][-1]}")
         # self.logger.debug(f"data['quant'] sample:\n{self.data['quant'][-1]}")
@@ -207,16 +209,6 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
 
     return {'x_train': np.float32(x_train), 'y_train': np.float32(y_train),
             'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
-
-
-# TODO: generalize this to produce a tensor of any rank between 2 and 4
-# TODO: rename and probably move this to model_generation utils
-def input_initializer(init, *args, batch=100, subset_len=10):
-    assert batch >= subset_len, "Example subset cannot be larger than the full quantization set"
-    height, width, channels = args[:3]  # pylint: disable=unbalanced-tuple-unpacking
-    data = init(shape=(batch, height, width, channels), dtype="float32").numpy()
-    subset = data[:subset_len, :, :, :]
-    return subset, data
 
 
 #  ----------------------------------------------------------------------------

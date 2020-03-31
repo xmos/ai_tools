@@ -3,16 +3,37 @@
 import os
 import random
 import logging
+import warnings
+import sys
+import importlib
 
 import numpy as np
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
-import warnings
-warnings.filterwarnings(action='ignore')
-import tensorflow as tf  # nopep8
-from tensorflow import keras
-warnings.filterwarnings(action='default')
 
+def lazy(fullname):
+    try:
+        return sys.modules[fullname]
+    except KeyError:
+        pass
+    # parent module is loaded eagerly
+    spec = importlib.util.find_spec(fullname)
+    try:
+        lazy_loader = importlib.util.LazyLoader(spec.loader)
+    except AttributeError:
+        return lazy(fullname)
+
+    module = importlib.util.module_from_spec(spec)
+    lazy_loader.exec_module(module)
+    sys.modules[fullname] = module
+    if '.' in fullname:
+        parent_name, _, child_name = fullname.rpartition('.')
+        parent_module = sys.modules[parent_name]
+        setattr(parent_module, child_name, module)
+    return module
+
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+tf = lazy('tensorflow')
 
 VE, ACC_PERIOD, WORD_SIZE = 32, 16, 4
 DEFAULT_SEED = 123

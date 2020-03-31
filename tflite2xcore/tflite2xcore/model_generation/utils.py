@@ -32,9 +32,15 @@ def quantize_converter(converter, representative_data):
     converter.representative_dataset = representative_data_gen
 
 
-def apply_interpreter_to_examples(interpreter, examples, *, show_progress_step=None, show_pid=False):
-    interpreter_input_ind = interpreter.get_input_details()[0]["index"]
-    interpreter_output_ind = interpreter.get_output_details()[0]["index"]
+def apply_interpreter_to_examples(interpreter, examples, *,
+                                  interpreter_input_ind=None,
+                                  interpreter_output_ind=None,
+                                  show_progress_step=None,
+                                  show_pid=False):
+    if interpreter_input_ind is None:
+        interpreter_input_ind = interpreter.get_input_details()[0]["index"]
+    if interpreter_output_ind is None:
+        interpreter_output_ind = interpreter.get_output_details()[0]["index"]
     interpreter.allocate_tensors()
 
     outputs = []

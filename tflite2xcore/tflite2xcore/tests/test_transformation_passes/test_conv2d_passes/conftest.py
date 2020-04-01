@@ -62,10 +62,6 @@ PARAMS["smoke"].update({
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
 
-@pytest.fixture()
-def strides(stride_h, stride_w):
-    return (stride_h, stride_w)
-
 
 @pytest.fixture()
 def weight_shape(output_channels, kernel_height, kernel_width, input_channels):

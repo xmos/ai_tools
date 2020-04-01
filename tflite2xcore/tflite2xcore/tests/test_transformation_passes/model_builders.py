@@ -78,7 +78,10 @@ def build_argmax(subgraph=None, *, input_shape, input_type):
     return subgraph.model
 
 
-def build_pool(builtin_opcode, subgraph=None, *, input_shape, padding, pool_size, strides):
+def build_pool(builtin_opcode, subgraph=None, *,
+               input_shape, padding, pool_size, strides,
+               fused_activation='NONE'):
+    assert fused_activation in ['NONE', 'RELU', 'RELU6']
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, *input_shape]
@@ -98,7 +101,7 @@ def build_pool(builtin_opcode, subgraph=None, *, input_shape, padding, pool_size
     op.builtin_options = {'padding': padding,
                           'stride_h': strides[0], 'stride_w': strides[1],
                           'filter_height': pool_size[0], 'filter_width': pool_size[1],
-                          'fused_activation_function': 'NONE'}
+                          'fused_activation_function': fused_activation}
 
     return subgraph.model
 

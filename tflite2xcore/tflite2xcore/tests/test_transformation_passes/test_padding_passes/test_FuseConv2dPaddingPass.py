@@ -10,7 +10,6 @@ from tflite2xcore.operator_codes import XCOREOpCodes
 from ..model_builders import build_padded_DW
 from ..test_conv2d_passes.conftest import (
     PARAMS as CONV_PARAMS,
-    strides,
     _test_non_matching_params,
     test_matching_params
 )

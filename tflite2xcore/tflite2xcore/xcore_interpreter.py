@@ -105,6 +105,8 @@ class XCOREInterpreter:
 
 
     def allocate_tensors(self):
+        if self._is_allocated:
+            return #NOTE: the TFLu interpreter can not be allocated multiple times
         self._is_allocated = True
         self._check_status(lib.allocate_tensors(self.obj))
 

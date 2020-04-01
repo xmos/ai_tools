@@ -30,6 +30,8 @@ def test_allocate_tensors():
     interpreter = XCOREInterpreter(model_content=model_content, arena_size=30000)
     interpreter.allocate_tensors()
     assert(interpreter)
+    interpreter.allocate_tensors()
+    assert(interpreter)
 
 
 def test_model_content():

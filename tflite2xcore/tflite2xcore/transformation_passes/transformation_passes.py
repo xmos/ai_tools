@@ -3,12 +3,88 @@
 import numpy as np
 
 from abc import abstractmethod
+from contextlib import contextmanager
 
-from tflite2xcore.graph_transformer import OperatorMatchingPass
+from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.operator_codes import BuiltinOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import ACC_PERIOD
 from .utils import Log
+
+
+class SubgraphTransformationPass(ModelTransformationPass):
+    @abstractmethod
+    def match(self, obj):
+        return True
+
+    @abstractmethod
+    def mutate(self, obj):
+        pass
+
+    @abstractmethod
+    def target_iterable(self, subgraph):
+        pass
+
+    def log_match(self, obj):
+        self.logger.info(f"matched {obj}")
+
+    def run_subgraph(self, subgraph):
+        keep_running = True
+        while keep_running:
+            for obj in self.target_iterable(subgraph):
+                if self.match(obj):
+                    self.log_match(obj)
+                    self.mutate(obj)
+                    break
+            else:
+                keep_running = False
+
+    def run(self, model):
+        for j, subgraph in enumerate(model.subgraphs):
+            self.logger.debug(f"running on subgraph {j}")
+            self.run_subgraph(subgraph)
+
+
+class OperatorMatchingPass(SubgraphTransformationPass):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._op = None
+
+    def target_iterable(self, subgraph):
+        return subgraph.operators
+
+    @contextmanager
+    def using(self, op):
+        self._op, original_op = op, self._op
+        yield
+        self._op = original_op
+
+    def log_match(self, op):
+        super().log_match(f"operator {op.operator_code}")
+
+
+class TensorMatchingPass(SubgraphTransformationPass):
+    def target_iterable(self, subgraph):
+        return subgraph.tensors
+
+    def log_match(self, tensor):
+        super().log_match(f"tensor {tensor.name}")
+
+
+class InputTensorMatchingPass(SubgraphTransformationPass):
+    def target_iterable(self, subgraph):
+        return subgraph.inputs
+
+    def log_match(self, tensor):
+        super().log_match(f"input tensor {tensor.name}")
+
+
+class OutputTensorMatchingPass(SubgraphTransformationPass):
+    def target_iterable(self, subgraph):
+        return subgraph.outputs
+
+    def log_match(self, tensor):
+        super().log_match(f"output tensor {tensor.name}")
 
 
 class RemoveSoftmaxOutputPass(OperatorMatchingPass):

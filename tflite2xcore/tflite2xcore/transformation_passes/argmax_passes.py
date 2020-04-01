@@ -1,18 +1,20 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import numpy
+import numpy as np
 
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.graph_transformer import OutputTensorMatchingPass
-from .transformation_passes import ReplaceQuantizedOperatorPass
+from .transformation_passes import (
+    OutputTensorMatchingPass,
+    ReplaceQuantizedOperatorPass
+)
 
 
 class AddArgMax16OutputPass(OutputTensorMatchingPass):
     def match(self, tensor):
         return (super().match(tensor)
                 and len(tensor.subgraph.outputs) == 1
-                and tensor.subgraph.outputs[0].type == TensorType.INT16
+                and tensor.subgraph.outputs[0].type is TensorType.INT16
                 and len(tensor.shape) == 2)
 
     def mutate(self, tensor):
@@ -28,7 +30,7 @@ class AddArgMax16OutputPass(OutputTensorMatchingPass):
             f"{op.name}/axis", TensorType.INT32, shape=[],
             consumers=[op])
         op.inputs.append(dim_tensor)
-        dim_tensor.buffer.data = numpy.int32([1])
+        dim_tensor.buffer.data = np.int32([1])
 
 
 class ReplaceArgMax16Pass(ReplaceQuantizedOperatorPass):

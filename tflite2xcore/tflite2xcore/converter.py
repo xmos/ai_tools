@@ -1,6 +1,6 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-from tflite2xcore.graph_transformer import PassManager
+from tflite2xcore.pass_manager import PassManager
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 from tflite2xcore import transformation_passes as passes
 

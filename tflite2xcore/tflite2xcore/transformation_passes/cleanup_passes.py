@@ -1,6 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from tflite2xcore.graph_transformer import (
+from tflite2xcore.transformation_passes import (
     ModelTransformationPass,
     TensorMatchingPass
 )

@@ -21,7 +21,7 @@ from .serialization.api import (
 )
 
 from . import converter
-from . import graph_transformer
+from . import pass_manager
 from . import operator_codes
 from . import parallelization
 from . import tflite_visualize

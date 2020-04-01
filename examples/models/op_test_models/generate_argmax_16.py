@@ -5,8 +5,8 @@ import logging
 from pathlib import Path
 import numpy as np
 from tflite2xcore.serialization.flatbuffers_io import serialize_model, deserialize_model
-import tflite2xcore.converter as xcore_conv
-from tflite2xcore import graph_transformer
+from tflite2xcore.transformation_passes import OperatorMatchingPass
+from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.operator_codes import BuiltinOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.model_generation import utils
@@ -17,7 +17,7 @@ DEFAULT_INPUTS = 10
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'arg_max_16').resolve()
 
 
-class ArgMax8To16ConversionPass(graph_transformer.OperatorMatchingPass):
+class ArgMax8To16ConversionPass(OperatorMatchingPass):
     def match(self, op):
         if op.operator_code.code is BuiltinOpCodes.ARG_MAX:
             return op.inputs[0].type == TensorType.INT8
@@ -64,7 +64,7 @@ class ArgMax16(common.OpTestDefaultModel):
         super().convert_to_stripped(**converter_args)
         model = deserialize_model(self.buffers['model_stripped'])
 
-        pass_mgr = graph_transformer.PassManager(
+        pass_mgr = PassManager(
             model, passes=[ArgMax8To16ConversionPass()])
         pass_mgr.run_passes()
 

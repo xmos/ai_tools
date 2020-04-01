@@ -2,7 +2,7 @@
 
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode
-from tflite2xcore.graph_transformer import (
+from tflite2xcore.transformation_passes import (
     OperatorMatchingPass,
     InputTensorMatchingPass,
     OutputTensorMatchingPass

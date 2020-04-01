@@ -34,18 +34,8 @@ class ModelTransformationPass(ABC):
 
 
 class SubgraphTransformationPass(ModelTransformationPass):
-    def __init__(self, *args, safe_mode=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.safe_mode = safe_mode
-        self.superseding_passes = []  # TODO: remove this
-
     @abstractmethod
     def match(self, obj):
-        if self.safe_mode:
-            for p in self.superseding_passes:
-                if p.match(obj):
-                    return False
-
         return True
 
     @abstractmethod

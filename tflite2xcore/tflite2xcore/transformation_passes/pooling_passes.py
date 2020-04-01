@@ -57,12 +57,6 @@ class ReplacePool2D2x2Pass(ReplacePool2DPass):
 
 
 class ReplaceMaxPool2DPass(ReplacePool2DPass):
-    def __init__(self, *args, safe_mode=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.safe_mode = safe_mode  # TODO: remove this
-        if self.safe_mode:
-            self.superseding_passes.append(ReplaceMaxPool2D2x2Pass())
-
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.MAX_POOL_2D
@@ -90,12 +84,6 @@ class ReplaceMaxPool2D2x2Pass(ReplacePool2D2x2Pass):
 
 
 class ReplaceAveragePool2DPass(ReplacePool2DPass):
-    def __init__(self, *args, safe_mode=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.safe_mode = safe_mode  # TODO: remove this
-        if self.safe_mode:
-            self.superseding_passes.append(ReplaceAveragePool2D2x2Pass())
-
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.AVERAGE_POOL_2D

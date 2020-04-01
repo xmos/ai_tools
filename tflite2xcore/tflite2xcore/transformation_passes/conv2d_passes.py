@@ -245,12 +245,6 @@ class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
 
 # TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
-    def __init__(self, *args, safe_mode=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.safe_mode = safe_mode  # TODO: remove this
-        if self.safe_mode:
-            self.superseding_passes.append(Replace1x1Conv2dPass())
-
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.CONV_2D

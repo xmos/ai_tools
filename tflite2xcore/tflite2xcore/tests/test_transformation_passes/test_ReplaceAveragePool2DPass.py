@@ -25,7 +25,7 @@ NON_MATCHING_OPTIONS = ('option', 'value'), [
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceAveragePool2DPass(safe_mode=False)
+    return ReplaceAveragePool2DPass()
 
 
 @pytest.fixture(params=MATCHING_INPUT_HEIGHT)

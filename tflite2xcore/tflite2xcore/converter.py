@@ -33,7 +33,7 @@ def add_float_input_output(model):
     )
 
     pass_mgr.run_passes()
-    model.description = model.description + ' + XMOS stripped + float interface'
+    model.description = model.description + ' float interface.'
 
     # fix input/output buffers so built-in interpreter could run it
     assert len(model.subgraphs) == 1
@@ -43,11 +43,13 @@ def add_float_input_output(model):
     input_tensor = subgraph.inputs[0]
     output_tensor = subgraph.outputs[0]
 
+    assert len(input_tensor.buffer.owners) == 1
     input_tensor.buffer.owners = []
     model.buffers.remove(input_tensor.buffer)
-    model.buffers.remove(output_tensor.buffer)
+
     input_tensor.buffer = output_tensor.buffer
     input_tensor.buffer.owners.append(input_tensor)
+    model.buffers.remove(input_tensor.buffer)
     model.buffers.insert(0, input_tensor.buffer)
 
 
@@ -56,6 +58,7 @@ def optimize_for_xcore(model, *,
                        remove_softmax=False,
                        cleanup=True,
                        num_threads=None):
+    # NOTE: the order of the passes is mostly strict
     pass_mgr = PassManager(
         model,
         passes=[
@@ -74,8 +77,8 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.ReplaceDeepinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceShallowinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceSingleinDeepoutDepthwiseConv2DPass())
-    pass_mgr.register_pass(passes.ReplaceMaxPool2DPass())
     pass_mgr.register_pass(passes.ReplaceMaxPool2D2x2Pass())
+    pass_mgr.register_pass(passes.ReplaceMaxPool2DPass())
     pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())
     pass_mgr.register_pass(passes.ReplaceAveragePool2DPass())
     pass_mgr.register_pass(passes.ReplaceGlobalAveragePool2DPass())
@@ -87,7 +90,6 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.ReplaceTanhPass())
     pass_mgr.register_pass(passes.ReplaceLogisticPass())
 
-    # NOTE: the order of these is strict
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 

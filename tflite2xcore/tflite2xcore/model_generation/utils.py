@@ -33,11 +33,11 @@ def apply_interpreter_to_examples(interpreter, examples, *,
                                   interpreter_output_ind=None,
                                   show_progress_step=None,
                                   show_pid=False):
+    interpreter.allocate_tensors()
     if interpreter_input_ind is None:
         interpreter_input_ind = interpreter.get_input_details()[0]["index"]
     if interpreter_output_ind is None:
         interpreter_output_ind = interpreter.get_output_details()[0]["index"]
-    interpreter.allocate_tensors()
 
     outputs = []
     for j, x in enumerate(examples):

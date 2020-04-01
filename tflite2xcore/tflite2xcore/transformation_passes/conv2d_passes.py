@@ -4,8 +4,12 @@ import numpy as np
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.graph_transformer import PassPriority
+from tflite2xcore.parallelization import DIDOConv2DPlanner
 from tflite2xcore.utils import VE, ACC_PERIOD, WORD_SIZE
-from .transformation_passes import ReplaceXCOREWeightBiasOperatorPass
+from .transformation_passes import (
+    ReplaceXCOREWeightBiasOperatorPass,
+    QuantizedOperatorMatchingPass
+)
 from .utils import Log
 
 
@@ -400,3 +404,35 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
             self._weights.shape = new_weights.shape
             self._weights.buffer.data = new_weights
         return super().mutate(op)
+
+
+class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
+    def __init__(self, priority=PassPriority.PAR, *, num_threads=None, forced=False):
+        super().__init__(priority)
+        self.num_threads = num_threads or 1
+        assert isinstance(self.num_threads, int)
+        assert self.num_threads > 0
+        self.forced = forced
+
+    def run(self, *args, **kwargs):
+        if self.num_threads == 1:
+            self.logger.debug(f"Skipping pass b/c num_threads={self.num_threads}")
+            return None
+        else:
+            return super().run(*args, **kwargs)
+
+    @property
+    def matching_opcode(self):
+        return XCOREOpCodes.XC_conv2d_deepin_deepout_relu
+
+    def match(self, op):
+        if super().match(op):
+            return 'par_plan' not in op.custom_options
+
+    def mutate(self, op):
+        with self.using(op):
+            _, height, width, _ = self._output.shape
+        planner = DIDOConv2DPlanner(
+            height, width, num_threads=self.num_threads, forced=self.forced)
+        plan = planner.find_optimal_plan()
+        op.add_custom_options(par_plan=[list(block) for block in plan.layout])

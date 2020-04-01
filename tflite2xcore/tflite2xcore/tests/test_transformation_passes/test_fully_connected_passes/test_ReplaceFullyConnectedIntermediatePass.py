@@ -6,7 +6,7 @@ import pytest
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.transformation_passes import ReplaceFullyConnectedIntermediatePass
 
-from .model_builders import (
+from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_fc, build_mlp, build_softmax
 )
 

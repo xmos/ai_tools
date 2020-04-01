@@ -6,7 +6,7 @@ import pytest
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.transformation_passes import ReplaceFullyConnectedOutputPass
 
-from .model_builders import build_mlp
+from tflite2xcore.tests.test_transformation_passes.model_builders import build_mlp
 
 from .test_ReplaceFullyConnectedIntermediatePass import (
     MATCHING_INPUT_SIZE,

@@ -16,8 +16,15 @@ from .conv2d_passes import (
     ReplaceDepthwiseConv2dPass,
     ReplaceDeepinDeepoutConv2DPass,
     ReplaceShallowinDeepoutConv2DPass,
-    ReplaceSingleinDeepoutDepthwiseConv2DPass
+    ReplaceSingleinDeepoutDepthwiseConv2DPass,
+    ParallelizeDIDOPass
 )
+
+from .fully_connected_passes import (
+    ReplaceFullyConnectedOutputPass,
+    ReplaceFullyConnectedIntermediatePass
+)
+
 from .pooling_passes import (
     ReplaceMaxPool2DPass,
     ReplaceMaxPool2D2x2Pass,
@@ -37,4 +44,9 @@ from .quantize_dequantize_passes import (
     LegalizeFloatInputPass,
     LegalizeFloatOutputPass,
     LegalizeQuantizeVersionPass,
+)
+
+from .cleanup_passes import (
+    RemoveUnusedBuffersPass,
+    RemoveDanglingTensorsPass
 )

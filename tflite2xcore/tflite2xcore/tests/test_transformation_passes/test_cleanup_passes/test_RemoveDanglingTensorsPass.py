@@ -6,7 +6,7 @@ from tflite2xcore.transformation_passes import RemoveDanglingTensorsPass
 from tflite2xcore.xcore_model import TensorType
 
 # TODO: use multiple different models instead of just mlp
-from .test_ReplaceFullyConnectedIntermediatePass import (
+from ..test_fully_connected_passes.test_ReplaceFullyConnectedIntermediatePass import (
     outputs, hidden_nodes, input_shape, mlp
 )
 

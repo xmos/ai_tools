@@ -72,6 +72,9 @@ class XCOREInterpreter:
             raise RuntimeError('allocate_tensors not called')
         if status == XCOREInterpreterStatus.Error.value:
             lib.get_error(self.obj, self._error_msg)
+            print('qqqqq')
+            print(self._error_msg.value.decode('utf-8'))
+            print('qqqqq')
             raise RuntimeError(self._error_msg.value.decode('utf-8'))
 
 

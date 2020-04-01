@@ -96,12 +96,14 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
     print('***********')
     print('* Results *')
     print('***********')
-    if test_model_app.endswith('.xe'):
-        cmd = f'xsim --args {test_model_app} {flatbuffer} {input_file} {predicted_output_file}'
+    if test_model_app:
+        if test_model_app.endswith('.xe'):
+            cmd = f'xsim --args {test_model_app} {flatbuffer} {input_file} {predicted_output_file}'
+        else:
+            cmd = f'{test_model_app} {flatbuffer} {input_file} {predicted_output_file}'
         print('Command:', cmd)
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-            #print(output.decode('utf-8'))
             result = helpers.compare_tensor_files(expected_output_file, expected_quantization,
                 predicted_output_file, predicted_quantization, abs_tol)
 
@@ -109,25 +111,11 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
 
             return result
         except subprocess.CalledProcessError as ex:
-            #print(ex.output.decode('utf-8'))
+            print(ex.output.decode('utf-8'))
             print(ex)
             return False
     else:
-        cmd = f'{test_model_app} {flatbuffer} {input_file} {predicted_output_file}'
-        print('Command:', cmd)
-        # try:
-        #     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-        #     #print(output.decode('utf-8'))
-        #     result = helpers.compare_tensor_files(expected_output_file, expected_quantization,
-        #         predicted_output_file, predicted_quantization, abs_tol)
-
-        #     os.remove(predicted_output_file)
-
-        #     return result
-        # except subprocess.CalledProcessError as ex:
-        #     #print(ex.output.decode('utf-8'))
-        #     print(ex)
-        #     return False
+        # use interpreter
         model = read_flatbuffer(flatbuffer)
 
         input_tensor = model.subgraphs[0].inputs[0]
@@ -154,6 +142,7 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
 
         result = helpers.compare_tensor_files(expected_output_file, expected_quantization,
             predicted_output_file, predicted_quantization, abs_tol)
+
         return result
 
 

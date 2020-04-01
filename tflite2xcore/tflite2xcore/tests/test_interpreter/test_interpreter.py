@@ -23,6 +23,18 @@ BUILTIN_OPERATORS_TEST_OUTPUT = os.path.join(
     'test_0.y'
 )
 
+def test_allocate_tensors():
+    MODEL = os.path.join(
+        Path(__file__).parent.absolute(),
+        'face_quant.tflite'
+    )
+    with open(MODEL, 'rb') as fd:
+        model_content = fd.read()
+    print(len(model_content))
+    interpreter = XCOREInterpreter(model_content=model_content, arena_size=30000000)
+    interpreter.allocate_tensors()
+    assert(interpreter)
+
 def test_model_content():
     with open(BUILTIN_OPERATORS_TEST_MODEL, 'rb') as fd:
         model_content = fd.read()

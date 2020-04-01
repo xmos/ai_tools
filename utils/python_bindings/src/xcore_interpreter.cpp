@@ -8,8 +8,6 @@
 
 #include "lib_ops/api/lib_ops.h"
 
-#define REPORT_ERROR(reporter, ...)
-
 namespace xcore {
 
 constexpr int max_log_len = 256;
@@ -18,7 +16,15 @@ class XCOREInterpreterErrorReporter : public tflite::ErrorReporter {
  public:
   ~XCOREInterpreterErrorReporter() {}
 
-  int Report(const char* format, va_list args) override {
+  int Report(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    int code = Report(format, args);
+    va_end(args);
+    return code;
+  }
+
+  int Report(const char* format, va_list args) {
     char log_buffer[max_log_len];
     std::vsnprintf(log_buffer, max_log_len, format, args);
     log_stream_ << log_buffer;
@@ -62,10 +68,10 @@ class XCOREInterpreter {
     // copying or parsing, it's a very lightweight operation.
     model_ = tflite::GetModel(model_buffer_);
     if (model_->version() != TFLITE_SCHEMA_VERSION) {
-      REPORT_ERROR(error_reporter_,
-                   "Model provided is schema version %d not equal "
-                   "to supported version %d.",
-                   model_->version(), TFLITE_SCHEMA_VERSION);
+      error_reporter_->Report(
+          "Model provided is schema version %d not equal "
+          "to supported version %d.",
+          model_->version(), TFLITE_SCHEMA_VERSION);
       return kXCoreError;
     }
 
@@ -94,7 +100,7 @@ class XCOREInterpreter {
     xcore::XCoreStatus allocate_xcore_status =
         xcore::AllocateOperatorDispatcher();
     if (allocate_xcore_status != xcore::kXCoreOk) {
-      REPORT_ERROR("AllocateOperatorDispatcher failed");
+      error_reporter_->Report("AllocateOperatorDispatcher failed");
       return kXCoreError;
     }
 
@@ -113,7 +119,7 @@ class XCOREInterpreter {
   }
   size_t outputs_size() const { return interpreter_->outputs_size(); }
   size_t output_tensor_index(size_t output_index) {
-    const TfLiteTensor* output_tensor = interpreter_->input(output_index);
+    const TfLiteTensor* output_tensor = interpreter_->output(output_index);
     for (size_t i = 0; i < tensors_size(); i++) {
       const TfLiteTensor* tensor = interpreter_->tensor(i);
       if (tensor == output_tensor) return i;
@@ -124,7 +130,6 @@ class XCOREInterpreter {
   XCoreStatus Invoke() {
     TfLiteStatus invoke_status = interpreter_->Invoke();
     if (invoke_status != kTfLiteOk) {
-      error_msg_.clear();
       return kXCoreError;
     }
 
@@ -139,19 +144,21 @@ class XCOREInterpreter {
     }
 
     if (tensor->dims->size != size) {
-      REPORT_ERROR("tensor dims size %d != %d", tensor->dims->size, size);
+      error_reporter_->Report("tensor dims size %d != %d", tensor->dims->size,
+                              size);
       return kXCoreError;
     }
 
     for (int i = 0; i < size; i++) {
       if (tensor->dims->data[i] != shape[i]) {
-        REPORT_ERROR("tensor dim %d != %d", tensor->dims->data[i], shape[i]);
+        error_reporter_->Report("tensor dim %d != %d", tensor->dims->data[i],
+                                shape[i]);
         return kXCoreError;
       }
     }
 
     if (tensor->type != type) {
-      REPORT_ERROR("tensor type %d != %d", tensor->type, type);
+      error_reporter_->Report("tensor type %d != %d", tensor->type, type);
       return kXCoreError;
     }
 
@@ -167,19 +174,21 @@ class XCOREInterpreter {
     }
 
     if (tensor->dims->size != size) {
-      REPORT_ERROR("tensor dims size %d != %d", tensor->dims->size, size);
+      error_reporter_->Report("tensor dims size %d != %d", tensor->dims->size,
+                              size);
       return kXCoreError;
     }
 
     for (int i = 0; i < size; i++) {
       if (tensor->dims->data[i] != shape[i]) {
-        REPORT_ERROR("tensor dim %d != %d", tensor->dims->data[i], shape[i]);
+        error_reporter_->Report("tensor dim %d != %d", tensor->dims->data[i],
+                                shape[i]);
         return kXCoreError;
       }
     }
 
     if (tensor->type != type) {
-      REPORT_ERROR("tensor type %d != %d", tensor->type, type);
+      error_reporter_->Report("tensor type %d != %d", tensor->type, type);
       return kXCoreError;
     }
 
@@ -187,12 +196,22 @@ class XCOREInterpreter {
     return kXCoreOk;
   }
 
-  XCoreStatus GetTensorDims(size_t tensor_index, int* dims) {
+  XCoreStatus GetTensorDetailsBufferSizes(size_t tensor_index, size_t* dims,
+                                          size_t* scales, size_t* zero_points) {
     TfLiteTensor* tensor = interpreter_->tensor(tensor_index);
     if (tensor == nullptr) {
       return kXCoreError;
     }
     *dims = tensor->dims->size;
+    TfLiteAffineQuantization* quantization_params =
+        static_cast<TfLiteAffineQuantization*>(tensor->quantization.params);
+    if (quantization_params) {
+      *scales = quantization_params->scale->size;
+      *zero_points = quantization_params->zero_point->size;
+    } else {
+      *scales = 1;
+      *zero_points = 1;
+    }
     return kXCoreOk;
   }
 
@@ -209,12 +228,18 @@ class XCOREInterpreter {
       shape[i] = tensor->dims->data[i];
     }
     *type = tensor->type;
-    *scale = tensor->type;
-    TfLiteQuantizationParams* quantization_params =
-        static_cast<TfLiteQuantizationParams*>(tensor->quantization.params);
+    TfLiteAffineQuantization* quantization_params =
+        static_cast<TfLiteAffineQuantization*>(tensor->quantization.params);
     if (quantization_params) {
-      *scale = quantization_params->scale;
-      *zero_point = quantization_params->zero_point;
+      for (int i = 0; i < quantization_params->scale->size; i++) {
+        scale[i] = quantization_params->scale->data[i];
+      }
+      for (int i = 0; i < quantization_params->zero_point->size; i++) {
+        zero_point[i] = quantization_params->zero_point->data[i];
+      }
+    } else {
+      *scale = 0.0;
+      *zero_point = 0;
     }
     return kXCoreOk;
   }
@@ -232,7 +257,6 @@ class XCOREInterpreter {
   const tflite::Model* model_ = nullptr;
   char* model_buffer_ = nullptr;
   uint8_t* tensor_arena_ = nullptr;
-  std::stringstream error_msg_;
 };
 
 }  // namespace xcore
@@ -279,9 +303,11 @@ int get_tensor(xcore::XCOREInterpreter* interpreter, size_t tensor_index,
   return interpreter->GetTensor(tensor_index, value, size, shape, type);
 }
 
-size_t get_tensor_dims(xcore::XCOREInterpreter* interpreter,
-                       size_t tensor_index, int* dims) {
-  return interpreter->GetTensorDims(tensor_index, dims);
+size_t get_tensor_details_buffer_sizes(xcore::XCOREInterpreter* interpreter,
+                                       size_t tensor_index, size_t* dims,
+                                       size_t* scales, size_t* zero_points) {
+  return interpreter->GetTensorDetailsBufferSizes(tensor_index, dims, scales,
+                                                  zero_points);
 }
 
 int get_tensor_details(xcore::XCOREInterpreter* interpreter,

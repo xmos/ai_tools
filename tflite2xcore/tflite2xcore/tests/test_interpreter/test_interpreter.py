@@ -43,7 +43,6 @@ def test_model_path():
     interpreter = XCOREInterpreter(model_path=BUILTIN_OPERATORS_TEST_MODEL)
     assert(interpreter)
 
-
 def test_inference():
     with open(BUILTIN_OPERATORS_TEST_MODEL, 'rb') as fd:
         model_content = fd.read()

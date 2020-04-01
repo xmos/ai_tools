@@ -131,11 +131,10 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
 
         input_ = np.fromfile(input_file, dtype=TensorType.to_numpy_dtype(input_tensor.type))
         input_ = input_.reshape(input_tensor.shape)
-        predicted_output = np.zeros(output_tensor.shape, dtype=TensorType.to_numpy_dtype(output_tensor.type))
 
         interpreter.set_tensor(input_index, input_)
         interpreter.invoke()
-        interpreter.get_tensor(output_index, predicted_output)
+        predicted_output = interpreter.get_tensor(output_index)
 
         with open(predicted_output_file, 'wb') as fd:
             fd.write(predicted_output.tobytes())

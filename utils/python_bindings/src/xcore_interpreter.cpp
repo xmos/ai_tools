@@ -101,6 +101,26 @@ class XCOREInterpreter {
     return kXCoreOk;
   }
 
+  size_t tensors_size() const { return interpreter_->tensors_size(); }
+  size_t inputs_size() const { return interpreter_->inputs_size(); }
+  size_t input_tensor_index(size_t input_index) {
+    const TfLiteTensor* input_tensor = interpreter_->input(input_index);
+    for (size_t i = 0; i < tensors_size(); i++) {
+      const TfLiteTensor* tensor = interpreter_->tensor(i);
+      if (tensor == input_tensor) return i;
+    }
+    return -1;
+  }
+  size_t outputs_size() const { return interpreter_->outputs_size(); }
+  size_t output_tensor_index(size_t output_index) {
+    const TfLiteTensor* output_tensor = interpreter_->input(output_index);
+    for (size_t i = 0; i < tensors_size(); i++) {
+      const TfLiteTensor* tensor = interpreter_->tensor(i);
+      if (tensor == output_tensor) return i;
+    }
+    return -1;
+  }
+
   XCoreStatus Invoke() {
     TfLiteStatus invoke_status = interpreter_->Invoke();
     if (invoke_status != kTfLiteOk) {
@@ -111,7 +131,7 @@ class XCOREInterpreter {
     return kXCoreOk;
   }
 
-  XCoreStatus SetTensor(int tensor_index, const void* value, const int size,
+  XCoreStatus SetTensor(size_t tensor_index, const void* value, const int size,
                         const int* shape, const int type) {
     TfLiteTensor* tensor = interpreter_->tensor(tensor_index);
     if (tensor == nullptr) {
@@ -139,7 +159,7 @@ class XCOREInterpreter {
     return kXCoreOk;
   }
 
-  XCoreStatus GetTensor(int tensor_index, void* value, const int size,
+  XCoreStatus GetTensor(size_t tensor_index, void* value, const int size,
                         const int* shape, const int type) {
     TfLiteTensor* tensor = interpreter_->tensor(tensor_index);
     if (tensor == nullptr) {
@@ -164,6 +184,38 @@ class XCOREInterpreter {
     }
 
     std::memcpy(value, tensor->data.raw, tensor->bytes);
+    return kXCoreOk;
+  }
+
+  XCoreStatus GetTensorDims(size_t tensor_index, int* dims) {
+    TfLiteTensor* tensor = interpreter_->tensor(tensor_index);
+    if (tensor == nullptr) {
+      return kXCoreError;
+    }
+    *dims = tensor->dims->size;
+    return kXCoreOk;
+  }
+
+  XCoreStatus GetTensorDetails(size_t tensor_index, char* name, int name_len,
+                               int* shape, int* type, float* scale,
+                               int32_t* zero_point) {
+    TfLiteTensor* tensor = interpreter_->tensor(tensor_index);
+    if (tensor == nullptr) {
+      return kXCoreError;
+    }
+    std::strncpy(name, tensor->name, name_len);
+
+    for (int i = 0; i < tensor->dims->size; i++) {
+      shape[i] = tensor->dims->data[i];
+    }
+    *type = tensor->type;
+    *scale = tensor->type;
+    TfLiteQuantizationParams* quantization_params =
+        static_cast<TfLiteQuantizationParams*>(tensor->quantization.params);
+    if (quantization_params) {
+      *scale = quantization_params->scale;
+      *zero_point = quantization_params->zero_point;
+    }
     return kXCoreOk;
   }
 
@@ -204,22 +256,56 @@ int allocate_tensors(xcore::XCOREInterpreter* interpreter) {
   return interpreter->AllocateTensors();
 }
 
-int set_tensor(xcore::XCOREInterpreter* interpreter, int tensor_index,
+int tensors_size(xcore::XCOREInterpreter* interpreter) {
+  return interpreter->tensors_size();
+}
+
+size_t inputs_size(xcore::XCOREInterpreter* interpreter) {
+  return interpreter->inputs_size();
+}
+
+size_t outputs_size(xcore::XCOREInterpreter* interpreter) {
+  return interpreter->outputs_size();
+}
+
+int set_tensor(xcore::XCOREInterpreter* interpreter, size_t tensor_index,
                const void* value, const int size, const int* shape,
                const int type) {
   return interpreter->SetTensor(tensor_index, value, size, shape, type);
 }
 
-int get_tensor(xcore::XCOREInterpreter* interpreter, int tensor_index,
+int get_tensor(xcore::XCOREInterpreter* interpreter, size_t tensor_index,
                void* value, const int size, const int* shape, const int type) {
   return interpreter->GetTensor(tensor_index, value, size, shape, type);
+}
+
+size_t get_tensor_dims(xcore::XCOREInterpreter* interpreter,
+                       size_t tensor_index, int* dims) {
+  return interpreter->GetTensorDims(tensor_index, dims);
+}
+
+int get_tensor_details(xcore::XCOREInterpreter* interpreter,
+                       size_t tensor_index, char* name, int name_len,
+                       int* shape, int* type, float* scale, int* zero_point) {
+  return interpreter->GetTensorDetails(tensor_index, name, name_len, shape,
+                                       type, scale, zero_point);
+}
+
+size_t input_tensor_index(xcore::XCOREInterpreter* interpreter,
+                          size_t input_index) {
+  return interpreter->input_tensor_index(input_index);
+}
+
+size_t output_tensor_index(xcore::XCOREInterpreter* interpreter,
+                           size_t output_index) {
+  return interpreter->output_tensor_index(output_index);
 }
 
 int invoke(xcore::XCOREInterpreter* interpreter) {
   return interpreter->Invoke();
 }
 
-int get_error(xcore::XCOREInterpreter* interpreter, char* msg) {
+size_t get_error(xcore::XCOREInterpreter* interpreter, char* msg) {
   return interpreter->GetError(msg);
 }
 

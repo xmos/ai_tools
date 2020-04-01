@@ -23,17 +23,14 @@ BUILTIN_OPERATORS_TEST_OUTPUT = os.path.join(
     'test_0.y'
 )
 
+
 def test_allocate_tensors():
-    MODEL = os.path.join(
-        Path(__file__).parent.absolute(),
-        'face_quant.tflite'
-    )
-    with open(MODEL, 'rb') as fd:
+    with open(BUILTIN_OPERATORS_TEST_MODEL, 'rb') as fd:
         model_content = fd.read()
-    print(len(model_content))
-    interpreter = XCOREInterpreter(model_content=model_content, arena_size=30000000)
+    interpreter = XCOREInterpreter(model_content=model_content, arena_size=30000)
     interpreter.allocate_tensors()
     assert(interpreter)
+
 
 def test_model_content():
     with open(BUILTIN_OPERATORS_TEST_MODEL, 'rb') as fd:
@@ -41,9 +38,11 @@ def test_model_content():
     interpreter = XCOREInterpreter(model_content=model_content)
     assert(interpreter)
 
+
 def test_model_path():
     interpreter = XCOREInterpreter(model_path=BUILTIN_OPERATORS_TEST_MODEL)
     assert(interpreter)
+
 
 def test_inference():
     with open(BUILTIN_OPERATORS_TEST_MODEL, 'rb') as fd:
@@ -52,15 +51,18 @@ def test_inference():
 
     interpreter.allocate_tensors()
 
-    input_ = np.fromfile(BUILTIN_OPERATORS_TEST_INPUT, dtype=np.float32)
-    input_.shape=(1,4,1,1)
-    expected_output = np.fromfile(BUILTIN_OPERATORS_TEST_OUTPUT, dtype=np.float32)
-    expected_output.shape=(1,4)
-    computed_output = np.zeros(expected_output.shape, dtype=expected_output.dtype)
-    
-    interpreter.set_tensor(5, input_)
+    input_tensor_details = interpreter.get_input_details()[0]
+    output_tensor_details = interpreter.get_output_details()[0]
+
+    input_tensor = np.fromfile(BUILTIN_OPERATORS_TEST_INPUT, dtype=input_tensor_details['dtype'])
+    input_tensor.shape = input_tensor_details['shape']
+
+    expected_output = np.fromfile(BUILTIN_OPERATORS_TEST_OUTPUT, dtype=output_tensor_details['dtype'])
+    expected_output.shape = output_tensor_details['shape']
+
+    interpreter.set_tensor(input_tensor_details['index'], input_tensor)
     interpreter.invoke()
-    interpreter.get_tensor(6, computed_output)
+    computed_output = interpreter.get_tensor(output_tensor_details['index'])
 
     np.testing.assert_equal(computed_output, expected_output)
 

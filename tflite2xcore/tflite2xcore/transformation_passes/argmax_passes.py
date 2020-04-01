@@ -4,14 +4,11 @@ import numpy
 
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.graph_transformer import OutputTensorMatchingPass, PassPriority
+from tflite2xcore.graph_transformer import OutputTensorMatchingPass
 from .transformation_passes import ReplaceQuantizedOperatorPass
 
 
 class AddArgMax16OutputPass(OutputTensorMatchingPass):
-    def __init__(self, priority=PassPriority.ARGMAX):
-        super().__init__(priority)
-
     def match(self, tensor):
         return (super().match(tensor)
                 and len(tensor.subgraph.outputs) == 1
@@ -35,9 +32,6 @@ class AddArgMax16OutputPass(OutputTensorMatchingPass):
 
 
 class ReplaceArgMax16Pass(ReplaceQuantizedOperatorPass):
-    def __init__(self, priority=PassPriority.ARGMAX):
-        super().__init__(priority)
-
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.ARG_MAX

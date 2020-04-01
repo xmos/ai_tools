@@ -1,9 +1,8 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
-import logging
+
 import numpy as np
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.graph_transformer import PassPriority
 from tflite2xcore.parallelization import DIDOConv2DPlanner
 from tflite2xcore.utils import VE, ACC_PERIOD, WORD_SIZE
 from .transformation_passes import (
@@ -246,9 +245,9 @@ class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
 
 # TODO: write (at least regression) tests for the mutator functions
 class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
-    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=False):
-        super().__init__(priority)
-        self.safe_mode = safe_mode
+    def __init__(self, *args, safe_mode=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.safe_mode = safe_mode  # TODO: remove this
         if self.safe_mode:
             self.superseding_passes.append(Replace1x1Conv2dPass())
 
@@ -407,8 +406,8 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
 
 
 class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
-    def __init__(self, priority=PassPriority.PAR, *, num_threads=None, forced=False):
-        super().__init__(priority)
+    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
+        super().__init__(*args, **kwargs)
         self.num_threads = num_threads or 1
         assert isinstance(self.num_threads, int)
         assert self.num_threads > 0

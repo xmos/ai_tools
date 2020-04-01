@@ -3,7 +3,6 @@
 import numpy as np
 
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
-from tflite2xcore.graph_transformer import PassPriority
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import VE, WORD_SIZE
 from .transformation_passes import ReplaceQuantizedOperatorPass
@@ -58,9 +57,9 @@ class ReplacePool2D2x2Pass(ReplacePool2DPass):
 
 
 class ReplaceMaxPool2DPass(ReplacePool2DPass):
-    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=False):
-        super().__init__(priority)
-        self.safe_mode = safe_mode
+    def __init__(self, *args, safe_mode=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.safe_mode = safe_mode  # TODO: remove this
         if self.safe_mode:
             self.superseding_passes.append(ReplaceMaxPool2D2x2Pass())
 
@@ -91,9 +90,9 @@ class ReplaceMaxPool2D2x2Pass(ReplacePool2D2x2Pass):
 
 
 class ReplaceAveragePool2DPass(ReplacePool2DPass):
-    def __init__(self, priority=PassPriority.MEDIUM, *, safe_mode=False):
-        super().__init__(priority)
-        self.safe_mode = safe_mode
+    def __init__(self, *args, safe_mode=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.safe_mode = safe_mode  # TODO: remove this
         if self.safe_mode:
             self.superseding_passes.append(ReplaceAveragePool2D2x2Pass())
 

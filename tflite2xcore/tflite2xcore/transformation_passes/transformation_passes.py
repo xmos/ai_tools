@@ -3,12 +3,8 @@
 import numpy as np
 
 from abc import abstractmethod
-from tflite2xcore.graph_transformer import PassPriority
-from tflite2xcore.graph_transformer import (
-    ModelTransformationPass,
-    OperatorMatchingPass,
-    TensorMatchingPass
-)
+
+from tflite2xcore.graph_transformer import OperatorMatchingPass
 from tflite2xcore.operator_codes import BuiltinOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import ACC_PERIOD
@@ -16,9 +12,6 @@ from .utils import Log
 
 
 class RemoveSoftmaxOutputPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.HIGH):
-        super().__init__(priority)
-
     def match(self, op):
         return (super().match(op)
                 and op.operator_code.code == BuiltinOpCodes.SOFTMAX
@@ -32,9 +25,6 @@ class RemoveSoftmaxOutputPass(OperatorMatchingPass):
 
 
 class QuantizedOperatorMatchingPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.MEDIUM):
-        super().__init__(priority)
-
     @property
     def _output(self):
         return self._op.outputs[0]

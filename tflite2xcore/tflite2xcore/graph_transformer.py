@@ -7,6 +7,7 @@ import itertools
 
 from contextlib import contextmanager
 from abc import ABC, abstractmethod
+
 from tflite2xcore.xcore_model import XCOREModel
 
 
@@ -14,21 +15,13 @@ class PassPriority(enum.IntEnum):
     def _generate_next_value_(name, start, count, last_values):  # pylint: disable=no-self-argument
         return last_values[-1] + 1 if last_values else 0
 
-    # TODO: change these to meaningful names
-    HIGHEST = enum.auto()
-    PREP = HIGHEST
     HIGH = enum.auto()
     MEDIUM = enum.auto()
-    FUSING = enum.auto()
-    ARGMAX = enum.auto()
-    PAR = enum.auto()
-    CLEANUP = enum.auto()
-    LOWEST = CLEANUP
+    LOW = enum.auto()
 
 
 class ModelTransformationPass(ABC):
-    def __init__(self, priority):
-        assert isinstance(priority, PassPriority)
+    def __init__(self, *, priority=PassPriority.MEDIUM):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.priority = priority
 
@@ -41,10 +34,10 @@ class ModelTransformationPass(ABC):
 
 
 class SubgraphTransformationPass(ModelTransformationPass):
-    def __init__(self, priority, *, safe_mode=False):
-        super().__init__(priority)
+    def __init__(self, *args, safe_mode=False, **kwargs):
+        super().__init__(*args, **kwargs)
         self.safe_mode = safe_mode
-        self.superseding_passes = []
+        self.superseding_passes = []  # TODO: remove this
 
     @abstractmethod
     def match(self, obj):
@@ -84,8 +77,8 @@ class SubgraphTransformationPass(ModelTransformationPass):
 
 
 class OperatorMatchingPass(SubgraphTransformationPass):
-    def __init__(self, priority):
-        super().__init__(priority)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._op = None
 
     def target_iterable(self, subgraph):
@@ -102,9 +95,6 @@ class OperatorMatchingPass(SubgraphTransformationPass):
 
 
 class TensorMatchingPass(SubgraphTransformationPass):
-    def __init__(self, priority):
-        super().__init__(priority)
-
     def target_iterable(self, subgraph):
         return subgraph.tensors
 
@@ -113,9 +103,6 @@ class TensorMatchingPass(SubgraphTransformationPass):
 
 
 class InputTensorMatchingPass(SubgraphTransformationPass):
-    def __init__(self, priority):
-        super().__init__(priority)
-
     def target_iterable(self, subgraph):
         return subgraph.inputs
 
@@ -124,9 +111,6 @@ class InputTensorMatchingPass(SubgraphTransformationPass):
 
 
 class OutputTensorMatchingPass(SubgraphTransformationPass):
-    def __init__(self, priority):
-        super().__init__(priority)
-
     def target_iterable(self, subgraph):
         return subgraph.outputs
 

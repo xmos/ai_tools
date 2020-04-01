@@ -1,6 +1,6 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-from tflite2xcore.graph_transformer import PassManager, PassPriority
+from tflite2xcore.graph_transformer import PassManager
 from tflite2xcore import read_flatbuffer, write_flatbuffer
 from tflite2xcore import transformation_passes as passes
 
@@ -11,12 +11,13 @@ def strip_model(model, *, remove_softmax=False):
         passes=[
             passes.LegalizeQuantizedInputPass(),
             passes.LegalizeQuantizedOutputPass(),
-            passes.RemoveUnusedBuffersPass()
         ]
     )
 
     if remove_softmax:
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
+
+    pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 
     pass_mgr.run_passes()
     model.description = model.description + ' + XMOS stripped.'
@@ -67,9 +68,6 @@ def optimize_for_xcore(model, *,
     if is_classifier or remove_softmax:
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
-    if is_classifier:
-        pass_mgr.register_pass(passes.AddArgMax16OutputPass())
-
     pass_mgr.register_pass(passes.ReplaceArgMax16Pass())
     pass_mgr.register_pass(passes.Replace1x1Conv2dPass())
     pass_mgr.register_pass(passes.ReplaceDepthwiseConv2dPass())
@@ -93,7 +91,8 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
-    pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
+    if is_classifier:
+        pass_mgr.register_pass(passes.AddArgMax16OutputPass())
 
     if num_threads:
         pass_mgr.register_pass(passes.ParallelizeDIDOPass(num_threads=num_threads))
@@ -101,6 +100,8 @@ def optimize_for_xcore(model, *,
     if cleanup:
         pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
         pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
+
+    pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
 
     pass_mgr.run_passes()
     model.sanity_check()

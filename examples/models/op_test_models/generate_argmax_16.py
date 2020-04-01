@@ -18,9 +18,6 @@ DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'arg_max_16').resolve()
 
 
 class ArgMax8To16ConversionPass(graph_transformer.OperatorMatchingPass):
-    def __init__(self):
-        super().__init__(priority=graph_transformer.PassPriority.MEDIUM)
-
     def match(self, op):
         if op.operator_code.code is BuiltinOpCodes.ARG_MAX:
             return op.inputs[0].type == TensorType.INT8

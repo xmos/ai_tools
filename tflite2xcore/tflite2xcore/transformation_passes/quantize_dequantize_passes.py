@@ -2,7 +2,6 @@
 
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode
-from tflite2xcore.graph_transformer import PassPriority
 from tflite2xcore.graph_transformer import (
     OperatorMatchingPass,
     InputTensorMatchingPass,
@@ -12,9 +11,6 @@ from tflite2xcore.graph_transformer import (
 
 # TODO: improve tests for this
 class LegalizeQuantizedInputPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.PREP):
-        super().__init__(priority)
-
     def match(self, op):
         if super().match(op) and op.operator_code.code is BuiltinOpCodes.QUANTIZE:
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
@@ -34,9 +30,6 @@ class LegalizeQuantizedInputPass(OperatorMatchingPass):
 
 # TODO: improve tests for this
 class LegalizeQuantizedOutputPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.PREP):
-        super().__init__(priority)
-
     def match(self, op):
         if super().match(op) and op.operator_code.code is BuiltinOpCodes.DEQUANTIZE:
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
@@ -56,9 +49,6 @@ class LegalizeQuantizedOutputPass(OperatorMatchingPass):
 
 # TODO: improve tests for this
 class LegalizeFloatInputPass(InputTensorMatchingPass):
-    def __init__(self, priority=PassPriority.CLEANUP):
-        super().__init__(priority)
-
     def match(self, input_tensor):
         return (super().match(input_tensor)
                 and input_tensor.type is TensorType.INT8)
@@ -79,9 +69,6 @@ class LegalizeFloatInputPass(InputTensorMatchingPass):
 
 # TODO: improve tests for this
 class LegalizeFloatOutputPass(OutputTensorMatchingPass):
-    def __init__(self, priority=PassPriority.CLEANUP):
-        super().__init__(priority)
-
     def match(self, input_tensor):
         return (super().match(input_tensor)
                 and input_tensor.type is TensorType.INT8)
@@ -99,9 +86,6 @@ class LegalizeFloatOutputPass(OutputTensorMatchingPass):
 
 # TODO: implement tests for this
 class LegalizeQuantizeVersionPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.LOWEST):
-        super().__init__(priority)
-
     def match(self, op):
         if super().match(op):
             opcode = op.operator_code

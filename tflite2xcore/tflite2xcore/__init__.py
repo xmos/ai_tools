@@ -14,12 +14,6 @@ else:
 
 libtflite2xcore = ctypes.cdll.LoadLibrary(lib_path)
 
-from .serialization.api import (
-    read_flatbuffer,
-    write_flatbuffer,
-    create_dict_from_model
-)
-
 from . import converter
 from . import pass_manager
 from . import operator_codes

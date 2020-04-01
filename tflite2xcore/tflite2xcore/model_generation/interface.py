@@ -8,7 +8,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 import tflite2xcore.converter as xcore_conv
 from tflite2xcore import tflite_visualize
-from tflite2xcore.serialization.flatbuffers_io import serialize_model, deserialize_model
+from tflite2xcore.serialization import serialize_model, deserialize_model
 from tflite2xcore.xcore_model import TensorType
 
 

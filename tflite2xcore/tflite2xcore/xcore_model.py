@@ -1,13 +1,12 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import sys
+
 import struct
 import enum
-import collections
 import logging
 
 import numpy as np
 
-from copy import deepcopy
+from collections import Counter
 
 from tflite2xcore.operator_codes import OperatorCode
 
@@ -506,7 +505,7 @@ class XCOREModel():
     def operator_codes(self):
         # sort the operators codes from most frequent to least frequent
         #   why? because the flatbuffer is a tiny bit smaller if we do
-        counter = collections.Counter()
+        counter = Counter()
 
         for subgraph in self.subgraphs:
             for operator in subgraph.operators:

@@ -13,10 +13,11 @@ import numpy as np
 
 import helpers
 import directories
-from tflite2xcore import read_flatbuffer
 from tflite2xcore import operator_codes
+from tflite2xcore.serialization import read_flatbuffer
 from tflite2xcore.xcore_interpreter import XCOREInterpreter
 from tflite2xcore.xcore_model import TensorType
+
 
 def load_tests(test_name, test_dir, max_count):
     supported_operators = set([

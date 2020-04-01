@@ -23,8 +23,11 @@ import tempfile
 
 from collections import Counter
 
-from tflite2xcore.serialization.flatbuffers_io import FlexbufferParser
-from tflite2xcore import read_flatbuffer, create_dict_from_model
+from tflite2xcore.serialization import (
+    FlexbufferParser,
+    create_dict_from_model,
+    read_flatbuffer
+)
 from tflite2xcore.operator_codes import XCOREOpCodes
 
 # A CSS description for making the visualizer

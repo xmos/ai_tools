@@ -4,7 +4,7 @@
 import logging
 from pathlib import Path
 import numpy as np
-from tflite2xcore.serialization.flatbuffers_io import serialize_model, deserialize_model
+from tflite2xcore.serialization import serialize_model, deserialize_model
 from tflite2xcore.transformation_passes import OperatorMatchingPass
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.operator_codes import BuiltinOpCodes

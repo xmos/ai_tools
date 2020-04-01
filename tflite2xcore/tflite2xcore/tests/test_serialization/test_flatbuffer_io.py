@@ -3,15 +3,15 @@
 import os
 import tempfile
 import pytest
-from pathlib import Path
 
-from tflite2xcore import (
-    read_flatbuffer,
-    write_flatbuffer
-)
+from pathlib import Path
 
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
+from tflite2xcore.serialization import (
+    read_flatbuffer,
+    write_flatbuffer
+)
 
 import tensorflow as tf
 

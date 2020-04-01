@@ -158,23 +158,15 @@ class XCOREInterpreter:
 
 
     def get_input_details(self):
-        input_details = []
-        tensor_details = self.get_tensor_details()
-        
         inputs_size = lib.inputs_size(self.obj)
-        for input_index in range(inputs_size):
-            tensor_index = lib.input_tensor_index(self.obj, input_index)
-            input_details.append(tensor_details[tensor_index])
+        input_indices = [lib.input_tensor_index(self.obj, input_index) for input_index in range(inputs_size)]
+        tensor_details = self.get_tensor_details()
 
-        return input_details
+        return [tensor_details[input_index] for input_index in input_indices]
 
     def get_output_details(self):
-        output_details = []
-        tensor_details = self.get_tensor_details()
-        
         outputs_size = lib.outputs_size(self.obj)
-        for output_index in range(outputs_size):
-            tensor_index = lib.output_tensor_index(self.obj, output_index)
-            output_details.append(tensor_details[tensor_index])
+        output_indices = [lib.output_tensor_index(self.obj, output_index) for output_index in range(outputs_size)]
+        tensor_details = self.get_tensor_details()
 
-        return output_details
+        return [tensor_details[output_index] for output_index in output_indices]

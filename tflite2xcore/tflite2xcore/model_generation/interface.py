@@ -33,7 +33,7 @@ class Model(ABC):
         '''
         self.name = name
         self.core_model = None
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = utils.Log.getLogger(self.__class__.__name__)
         self.models = {}
         self.buffers = {}
         self.data = {}

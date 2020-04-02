@@ -10,7 +10,7 @@ from tflite2xcore.model_generation import utils
 
 class DefaultParser(argparse.ArgumentParser):
     def __init__(self, *args, defaults, **kwargs):
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = utils.Log.getLogger(self.__class__.__name__)
         kwargs.setdefault('formatter_class', argparse.ArgumentDefaultsHelpFormatter)
         kwargs.setdefault('conflict_handler', 'resolve')
         super().__init__(*args, **kwargs)

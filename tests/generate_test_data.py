@@ -25,16 +25,20 @@ def make_folder_and_arguments(**kwargs):
 
     if kwargs:
         for key, value in kwargs.items():
-            hyphenless_key = compiled_re.search(key).group(0)  # strip off leading hyphens
+            if key.startswith('-'):
+                hyphenless_key = compiled_re.search(key).group(0)  # strip off leading hyphens
+            else:
+                hyphenless_key = key
             if isinstance(value, list):
-                value_folder_str = 'x'.join([str(v) for v in value])
+                value_folder_str = 'x'.join([str(v).lower() for v in value])
                 value_argument_str = ' '.join([str(v) for v in value])
             else:
-                value_folder_str = str(value)
+                value_folder_str = str(value).lower()
                 value_argument_str = str(value)
 
             folder_fields.append(f'{hyphenless_key}={value_folder_str}')
-            aurgment_fields.append(f'{key} {value_argument_str}')
+            if key != 'xfail':
+                aurgment_fields.append(f'{key} {value_argument_str}')
 
         return '_'.join(folder_fields), ' '.join(aurgment_fields)
     else:

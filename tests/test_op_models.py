@@ -54,7 +54,7 @@ def load_tests(test_name, test_dir, max_count):
 
                 for input_file, output_file in zip(sorted(input_files), sorted(output_files)):
                     test_cases.append({
-                        'id': '/'.join(directory.parts[-2:]),
+                        'id': '/'.join(directory.parts[-2:])+'_',
                         'flatbuffer': flatbuffer_xcore,
                         'input': {
                             'filename': input_file,
@@ -145,54 +145,73 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
 
         return result
 
+def is_xfail(test_case):
+    index = test_case['id'].find('xfail=true')
+    return index > 0
 
 def test_XC_lookup_8(test_model_app, XC_lookup_8_test_case, abs_tol):
+    if is_xfail(XC_lookup_8_test_case):
+        pytest.xfail()
     assert(run_test_case(test_model_app, XC_lookup_8_test_case, abs_tol))
 
 
 def test_XC_argmax_16(test_model_app, XC_argmax_16_test_case, abs_tol):
+    if is_xfail(XC_argmax_16_test_case):
+        pytest.xfail()
     assert(run_test_case(test_model_app, XC_argmax_16_test_case, abs_tol))
 
 
 def test_XC_conv2d_1x1(test_model_app, XC_conv2d_1x1_test_case, abs_tol):
+    if is_xfail(XC_conv2d_1x1_test_case):
+        pytest.xfail()
     assert(run_test_case(test_model_app, XC_conv2d_1x1_test_case, abs_tol))
 
 
 def test_XC_conv2d_depthwise(test_model_app, XC_conv2d_depthwise_test_case, abs_tol):
+    if is_xfail(XC_conv2d_depthwise_test_case):
+        pytest.xfail()
     assert(run_test_case(test_model_app, XC_conv2d_depthwise_test_case, abs_tol))
 
 
 def test_XC_conv2d_shallowin_deepout_relu(test_model_app, XC_conv2d_shallowin_deepout_relu_test_case, abs_tol):
-    if XC_conv2d_shallowin_deepout_relu_test_case['id'] == 'XC_conv2d_shallowin_deepout_relu/wi=1_hi=1_kw=3_kh=3_pd=same':
-        # see bug: https://github.com/xmos/ai_tools/issues/88
+    if is_xfail(XC_conv2d_shallowin_deepout_relu_test_case):
         pytest.xfail()
     assert(run_test_case(test_model_app, XC_conv2d_shallowin_deepout_relu_test_case, abs_tol))
 
 
 def test_XC_conv2d_deepin_deepout_relu(test_model_app, XC_conv2d_deepin_deepout_relu_test_case, abs_tol):
-    if XC_conv2d_deepin_deepout_relu_test_case['id'] == 'XC_conv2d_deepin_deepout_relu/wi=1_hi=1_kw=3_kh=3_pd=same':
-        # see bug: https://github.com/xmos/ai_tools/issues/88
+    if is_xfail(XC_conv2d_deepin_deepout_relu_test_case):
         pytest.xfail()
     assert(run_test_case(test_model_app, XC_conv2d_deepin_deepout_relu_test_case, abs_tol))
 
 
 def test_XC_fc_deepin_anyout(test_model_app, XC_fc_deepin_anyout_test_case, abs_tol):
+    if is_xfail(XC_fc_deepin_anyout_test_case):
+        pytest.xfail()
     assert(run_test_case(test_model_app, XC_fc_deepin_anyout_test_case, abs_tol))
 
 
 def test_XC_maxpool2d(test_model_app, XC_maxpool2d_test_case, abs_tol):
+    if is_xfail(XC_maxpool2d_test_case):
+        pytest.xfail()
     assert(run_test_case(test_model_app, XC_maxpool2d_test_case, abs_tol))
 
 
 def test_XC_avgpool2d(test_model_app, XC_avgpool2d_test_case, abs_tol):
+    if is_xfail(XC_avgpool2d_test_case):
+        pytest.xfail()
     assert(run_test_case(test_model_app, XC_avgpool2d_test_case, abs_tol))
 
 
 def test_XC_avgpool2d_global(test_model_app, XC_avgpool2d_global_test_case, abs_tol):
+    if is_xfail(XC_avgpool2d_global_test_case):
+        pytest.xfail()
     assert(run_test_case(test_model_app, XC_avgpool2d_global_test_case, abs_tol))
 
 
 def test_XC_requantize_16_to_8(test_model_app, XC_requantize_16_to_8_test_case, abs_tol):
+    if is_xfail(XC_requantize_16_to_8_test_case):
+        pytest.xfail()
     assert(run_test_case(test_model_app, XC_requantize_16_to_8_test_case, abs_tol))
 
 

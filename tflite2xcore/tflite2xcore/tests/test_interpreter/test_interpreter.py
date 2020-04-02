@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-from tflite2xcore.xcore_interpreter import XCOREInterpreter
+import tflite2xcore.xcore_interpreter as xcore
 
 BUILTIN_OPERATORS_TEST_MODEL = os.path.join(
     Path(__file__).parent.absolute(),
@@ -23,11 +23,10 @@ BUILTIN_OPERATORS_TEST_OUTPUT = os.path.join(
     'test_0.y'
 )
 
-
 def test_allocate_tensors():
     with open(BUILTIN_OPERATORS_TEST_MODEL, 'rb') as fd:
         model_content = fd.read()
-    interpreter = XCOREInterpreter(model_content=model_content, arena_size=30000)
+    interpreter = xcore.XCOREInterpreter(model_content=model_content, arena_size=30000)
     interpreter.allocate_tensors()
     assert(interpreter)
     interpreter.allocate_tensors()
@@ -37,18 +36,18 @@ def test_allocate_tensors():
 def test_model_content():
     with open(BUILTIN_OPERATORS_TEST_MODEL, 'rb') as fd:
         model_content = fd.read()
-    interpreter = XCOREInterpreter(model_content=model_content)
+    interpreter = xcore.XCOREInterpreter(model_content=model_content)
     assert(interpreter)
 
 
 def test_model_path():
-    interpreter = XCOREInterpreter(model_path=BUILTIN_OPERATORS_TEST_MODEL)
+    interpreter = xcore.XCOREInterpreter(model_path=BUILTIN_OPERATORS_TEST_MODEL)
     assert(interpreter)
 
 def test_inference():
     with open(BUILTIN_OPERATORS_TEST_MODEL, 'rb') as fd:
         model_content = fd.read()
-    interpreter = XCOREInterpreter(model_content=model_content)
+    interpreter = xcore.XCOREInterpreter(model_content=model_content)
 
     interpreter.allocate_tensors()
 

@@ -1,4 +1,5 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
+#include <iostream>
 #include "lib_ops/api/conv2d.h"
 
 namespace xcore {
@@ -42,12 +43,13 @@ XCoreStatus Conv2D_DIDO::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   init_params.pad_mode = padding_mode_;
   init_params.zero_point = zero_point;
 
-  if (par_plan.size() == 0) {
+  if (par_regions.size == 0) {
     // there is no par plan so process entire input
-    par_plan.emplace_back(0, 0, Y_h, Y_w);
+    par_regions.append({0, 0, Y_h, Y_w});
   }
 
-  for (const auto& region : par_plan) {
+  for (int i = 0; i < par_regions.size; i++) {
+    const ParRegion& region = par_regions[i];
     nn_conv2d_dido_params_t params;
 
     region_params.top = region.top;

@@ -36,9 +36,9 @@ struct Conv2DParams {
 
 class Conv2D_DIDO {
  public:
-  Conv2D_DIDO(const Conv2DParams& params, const ParPlan& par_plan,
+  Conv2D_DIDO(const Conv2DParams& params, const ParRegionArray& par_regions,
               const padding_mode_t padding_mode)
-      : params(params), par_plan(par_plan), padding_mode_(padding_mode) {}
+      : params(params), par_regions(par_regions), padding_mode_(padding_mode) {}
   ~Conv2D_DIDO() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
@@ -48,10 +48,12 @@ class Conv2D_DIDO {
                    const int16_t* SS);
 
   Conv2DParams params;
-  ParPlan par_plan;
+  ParRegionArray par_regions;
 
  private:
-  std::vector<nn_conv2d_dido_params_t> params_;
+  std::vector<nn_conv2d_dido_params_t>
+      params_;  // FIXME: This std::vector can be removed innext version of the
+                // DIDO operator.  Will be replaced by a single job param
   padding_mode_t padding_mode_;
 };
 

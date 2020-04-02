@@ -1,13 +1,13 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#include <iostream>
-#include <cstdlib>
 #include <cassert>
+#include <cstdlib>
+#include <iostream>
 
+#include "lib_ops/api/par.h"
 #include "lib_ops/api/operator_dispatcher.h"
 
 namespace xcore {
 
-constexpr size_t maxthreads = 8;
 constexpr size_t bytes_per_stackword = 4;
 
 OperatorDispatcher& GetOperatorDispatcher() {
@@ -17,18 +17,8 @@ OperatorDispatcher& GetOperatorDispatcher() {
 
 XCoreStatus AllocateOperatorDispatcher(/*TODO: allocator here*/) {
   OperatorDispatcher& dispatcher = GetOperatorDispatcher();
-  return dispatcher.Allocate();
+  return dispatcher.Allocate(/*TODO: allocator here*/);
 }
-
-struct KernelCommand {
-  ATTRIBUTE_KERNEL_FUNCTION kernel_function_t function;
-  void* argument;
-  size_t stack_words;
-  void* stack;
-  KernelCommand(kernel_function_t f, void* a = nullptr, size_t w = 0,
-                void* s = nullptr)
-      : function(f), argument(a), stack_words(w), stack(s) {}
-};
 
 #ifdef XCORE
 // xCORE OperatorDispatcher implementation.
@@ -40,20 +30,21 @@ OperatorDispatcher::OperatorDispatcher(bool use_current)
 OperatorDispatcher::~OperatorDispatcher() { thread_group_free(group_); }
 
 void OperatorDispatcher::Start() {
-  auto cend = commands_.cend();
-
-  if (use_current_) --cend;
-
-  for (auto it = commands_.cbegin(); it < cend; ++it) {
-    thread_group_add(group_, it->function, it->argument,
-                     stack_base(it->stack, it->stack_words));
-  }
-  thread_group_start(group_);
+  int begin = 0;
 
   if (use_current_) {
-    KernelCommand const& command = commands_.back();
-    (*command.function)(command.argument);
+    const KernelCommand& command = commands_.data[begin];
+    (command.function)(command.argument);
+    begin++;
   }
+
+  for (int i = begin; i < commands_.size; i++) {
+    const KernelCommand& command = commands_.data[i];
+    thread_group_add(group_, command.function, command.argument,
+                     stack_base(command.stack, command.stack_words));
+  }
+
+  thread_group_start(group_);
 }
 
 void OperatorDispatcher::Wait() { thread_group_wait(group_); }
@@ -63,32 +54,35 @@ void OperatorDispatcher::Wait() { thread_group_wait(group_); }
 // Uses a std::vector of std::thread to dispatch kernel funnctions to SW
 // threads.
 OperatorDispatcher::OperatorDispatcher(bool use_current)
-    : use_current_(use_current), stack_ptr_(nullptr) {}
+    : use_current_(use_current), stack_ptr_(nullptr) {
+  commands_.size = 0;
+  commands_.data = nullptr;
+}
+
 OperatorDispatcher::~OperatorDispatcher() {}
 
 void OperatorDispatcher::Start() {
-  auto cbegin = commands_.cbegin();
+  int begin = 0;
 
   if (use_current_) {
-    KernelCommand const& command = *cbegin;
-    (*command.function)(command.argument);
-    ++cbegin;
+    const KernelCommand& command = commands_.data[begin];
+    (command.function)(command.argument);
+    begin++;
   }
 
-  for (auto it = cbegin; it < commands_.cend(); ++it) {
-    group_.push_back(std::thread(it->function, it->argument));
+  for (int i = begin; i < commands_.size; i++) {
+    const KernelCommand& command = commands_.data[i];
+    group_.push_back(std::thread(command.function, command.argument));
   }
-
-
 }
 
 void OperatorDispatcher::Wait() {
   for (auto& thread : group_) {
     thread.join();
   }
-
   group_.clear();
-  commands_.clear();
+
+  commands_.size = 0;
 }
 
 #endif
@@ -101,7 +95,8 @@ void OperatorDispatcher::Reserve(int32_t num_threads, size_t stack_words) {
 }
 
 XCoreStatus OperatorDispatcher::Allocate(/*TODO: allocator here*/) {
-  stack_ptr_ = (char*)malloc(reserved_stack_);
+  stack_ptr_ = (char*)malloc(reserved_stack_);     // TODO: use allocator here
+  commands_.data = new KernelCommand[maxthreads];  // TODO: use allocator here
 
   if (stack_ptr_) return kXCoreOk;
 
@@ -109,17 +104,21 @@ XCoreStatus OperatorDispatcher::Allocate(/*TODO: allocator here*/) {
 }
 
 XCoreStatus OperatorDispatcher::Add(kernel_function_t function, void* argument,
-                                  size_t stack_words) {
+                                    size_t stack_words) {
   assert(stack_ptr_);
-  int32_t offset = stack_words * bytes_per_stackword * commands_.size();
+  int32_t offset = stack_words * bytes_per_stackword * commands_.size;
 
   if (offset > reserved_stack_) {
     return kXCoreError;
   }
 
   void* stack = stack_ptr_ + offset;
-  commands_.emplace_back(function, (void*)argument, stack_words, stack);
-  assert(commands_.size() <= maxthreads);
+
+  commands_.data[commands_.size] = {function, (void*)argument, stack_words,
+                                    stack};
+  commands_.size++;
+
+  assert(commands_.size < maxthreads);
 
   return kXCoreOk;
 }

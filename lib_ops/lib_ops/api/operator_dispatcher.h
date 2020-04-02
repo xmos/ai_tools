@@ -2,10 +2,7 @@
 #ifndef XCORE_OPERATOR_DISPATCHER_H_
 #define XCORE_OPERATOR_DISPATCHER_H_
 
-#include <vector>
-
 #include "lib_ops/api/lib_ops.h"
-#include "lib_ops/api/par_structs.h"
 
 #ifdef XCORE
 
@@ -23,6 +20,7 @@ extern "C" {
 typedef thread_function_t kernel_function_t;
 typedef threadgroup_t thread_group_t;
 #else // not XCORE
+#include <vector>
 #include <thread>
 
 #define ATTRIBUTE_KERNEL_FUNCTION
@@ -34,7 +32,17 @@ typedef std::vector<std::thread> thread_group_t;
 
 namespace xcore {
 
-struct KernelCommand;
+typedef struct KernelCommand {
+  ATTRIBUTE_KERNEL_FUNCTION kernel_function_t function;
+  void* argument;
+  size_t stack_words;
+  void* stack;
+} KernelCommand;
+
+typedef struct KernelCommandArray {
+  int size;
+  KernelCommand* data;
+} KernelCommandArray;
 
 class OperatorDispatcher {
  public:
@@ -54,7 +62,7 @@ class OperatorDispatcher {
   size_t reserved_stack_;
   char* stack_ptr_;
   thread_group_t group_;
-  std::vector<KernelCommand> commands_;
+  KernelCommandArray commands_;
 };
 
 // static, shared OperatorDispatcher object

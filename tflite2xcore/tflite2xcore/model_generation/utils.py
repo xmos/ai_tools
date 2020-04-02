@@ -17,6 +17,10 @@ def quantize(arr, scale, zero_point, dtype=np.int8):
     return dtype(np.round(np.clip(t, np.iinfo(dtype).min, np.iinfo(dtype).max)))
 
 
+def dequantize(arr, scale, zero_point):
+    return np.float32((arr.astype(np.int32) - np.int32(zero_point)) * scale)
+
+
 def quantize_converter(converter, representative_data):
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     converter.target_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]

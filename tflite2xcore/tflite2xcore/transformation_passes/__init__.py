@@ -50,3 +50,7 @@ from .cleanup_passes import (
     RemoveUnusedBuffersPass,
     RemoveDanglingTensorsPass
 )
+
+from .minification_passes import (
+    LegalizeOutputTensorNamePass
+)

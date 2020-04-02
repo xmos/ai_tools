@@ -3,7 +3,7 @@
 from .transformation_passes import OperatorMatchingPass
 
 
-class LegalizeOutputTensorNamePass(OperatorMatchingPass):
+class LegalizeOperatorOutputTensorNamePass(OperatorMatchingPass):
     def match(self, op):
         if super().match(op):
             if len(op.outputs) == 1:

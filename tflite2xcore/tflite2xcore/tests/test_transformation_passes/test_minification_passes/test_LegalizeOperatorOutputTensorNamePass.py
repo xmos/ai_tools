@@ -5,7 +5,7 @@ import pytest
 from copy import deepcopy
 
 from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.transformation_passes import LegalizeOutputTensorNamePass
+from tflite2xcore.transformation_passes import LegalizeOperatorOutputTensorNamePass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_relu, build_consecutive_pads, build_split
@@ -38,7 +38,7 @@ PARAMS["smoke"].update({
 
 @pytest.fixture()
 def trf_pass():
-    return LegalizeOutputTensorNamePass()
+    return LegalizeOperatorOutputTensorNamePass()
 
 
 @pytest.fixture()

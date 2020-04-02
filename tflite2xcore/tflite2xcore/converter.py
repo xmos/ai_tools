@@ -100,9 +100,12 @@ def optimize_for_xcore(model, *,
         pass_mgr.register_pass(passes.ParallelizeDIDOPass(num_threads=num_threads))
 
     if cleanup:
+        # TODO: these should be turned off in debug mode
         pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
         pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 
+    # TODO: these should be turned off in debug mode
+    pass_mgr.register_pass(passes.LegalizeOperatorOutputTensorNamePass())
     pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
 
     pass_mgr.run_passes()

@@ -52,5 +52,5 @@ from .cleanup_passes import (
 )
 
 from .minification_passes import (
-    LegalizeOutputTensorNamePass
+    LegalizeOperatorOutputTensorNamePass
 )

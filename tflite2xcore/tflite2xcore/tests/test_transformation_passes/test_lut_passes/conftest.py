@@ -6,6 +6,11 @@ from copy import deepcopy
 from tflite2xcore.operator_codes import XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
 
+from ..conftest import (
+    test_matching_params,
+    _test_non_matching_params
+)
+
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
@@ -38,32 +43,19 @@ PARAMS = {
 
 
 #  ----------------------------------------------------------------------------
-#                                   FIXTURES
-#  ----------------------------------------------------------------------------
-
-@pytest.fixture()
-def input_shape(input_height, input_width, input_channels):
-    return [input_height, input_width, input_channels]
-
-
-#  ----------------------------------------------------------------------------
 #                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
-
-def test_matching_params(trf_pass, model):
-    assert trf_pass.match(model.subgraphs[0].operators[0])
-
 
 def test_non_matching_input_type(trf_pass, model, non_matching_input_type):
     op = model.subgraphs[0].operators[0]
     op.inputs[0].type = non_matching_input_type
-    assert not trf_pass.match(op)
+    _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_output_type(trf_pass, model, non_matching_output_type):
     op = model.subgraphs[0].operators[0]
     op.outputs[0].type = non_matching_output_type
-    assert not trf_pass.match(op)
+    _test_non_matching_params(trf_pass, model)
 
 
 def test_mutate(trf_pass, model):

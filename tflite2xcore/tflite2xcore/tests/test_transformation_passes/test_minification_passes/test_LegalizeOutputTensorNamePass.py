@@ -2,18 +2,34 @@
 
 import pytest
 
+from copy import deepcopy
+
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.transformation_passes import LegalizeOutputTensorNamePass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
-    build_relu, build_consecutive_pads
+    build_relu, build_consecutive_pads, build_split
 )
 
-from ..conftest import (
+from .conftest import (
     PARAMS,
     _test_matching_params,
     _test_non_matching_params
 )
+
+#  ----------------------------------------------------------------------------
+#                              PARAMETER VALUES
+#  ----------------------------------------------------------------------------
+
+PARAMS = deepcopy(PARAMS)
+
+PARAMS["default"].update({
+    "num_splits": [2, 4]
+})
+
+PARAMS["smoke"].update({
+    "num_splits": [2]
+})
 
 
 #  ----------------------------------------------------------------------------
@@ -37,6 +53,12 @@ def model_multi_op(input_shape):
                                   paddings_1=paddings, paddings_2=paddings)
 
 
+@pytest.fixture()
+def model_multi_out(input_shape, num_splits):
+    return build_split(input_shape=input_shape, num_splits=num_splits,
+                       tensor_type=TensorType.INT8, axis=2)
+
+
 #  ----------------------------------------------------------------------------
 #                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
@@ -51,6 +73,19 @@ def test_matching_multi_op(trf_pass, model_multi_op):
     assert trf_pass.match(operators[1])
 
 
+def test_matching_multi_out(trf_pass, model_multi_out):
+    _test_matching_params(trf_pass, model_multi_out)
+
+
+def test_matching_multi_out_partial(trf_pass, model_multi_out):
+    subgraph = model_multi_out.subgraphs[0]
+    op = subgraph.operators[0]
+    for j, tensor in enumerate(op.outputs[1:]):
+        tensor.name = f"{op.name}/output_{j}"
+
+    _test_matching_params(trf_pass, model_multi_out)
+
+
 def test_non_matching_simple(trf_pass, model_simple):
     subgraph = model_simple.subgraphs[0]
     op = subgraph.operators[0]
@@ -61,13 +96,22 @@ def test_non_matching_simple(trf_pass, model_simple):
 
 def test_non_matching_multi_op(trf_pass, model_multi_op):
     subgraph = model_multi_op.subgraphs[0]
-    op0, op1 = subgraph.operators
-    t_out_0, t_out_1 = op0.outputs[0], op1.outputs[0]
+    for op in subgraph.operators:
+        assert len(op.outputs) == 1
+        t_out = op.outputs[0]
+        t_out.name = f"{op.name}/output"
 
-    t_out_0.name = f"{op0.name}/output"
-    t_out_1.name = f"{op1.name}/output"
-    assert not trf_pass.match(op0)
-    assert not trf_pass.match(op1)
+    for j, op in enumerate(subgraph.operators):
+        assert not trf_pass.match(op), f"op {j} should not be matched"
+
+
+def test_non_matching_multi_out(trf_pass, model_multi_out):
+    subgraph = model_multi_out.subgraphs[0]
+    op = subgraph.operators[0]
+    for j, tensor in enumerate(op.outputs):
+        tensor.name = f"{op.name}/output_{j}"
+
+    _test_non_matching_params(trf_pass, model_multi_out)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,33 @@ from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
 
 
+def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
+    assert 0 <= axis < len(input_shape)
+    assert 1 < num_splits <= input_shape[axis]
+    assert input_shape[axis] % num_splits == 0
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, *input_shape]
+    tin = subgraph.create_tensor(
+        'input', tensor_type, shape=input_shape, isinput=True)
+    t_axis = subgraph.create_tensor('axis', TensorType.INT32, shape=[])
+    t_axis.buffer.data = np.array([axis], dtype=np.int32)
+
+    out_shape = (*input_shape[:axis],
+                 int(input_shape[axis] // num_splits),
+                 *input_shape[axis+1:])
+    outputs = [
+        subgraph.create_tensor(
+            f'output_{j}', tin.type, out_shape, isoutput=True)
+        for j in range(num_splits)
+    ]
+    op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.SPLIT),
+                                  inputs=[t_axis, tin], outputs=outputs)
+    op.builtin_options = {'num_splits': num_splits}
+
+    return subgraph.model
+
+
 def build_elementwise_op(builtin_opcode, subgraph=None, *, input_shape, tensor_type):
     subgraph = subgraph or XCOREModel().create_subgraph()
 

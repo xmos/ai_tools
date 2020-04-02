@@ -162,13 +162,17 @@ def test_XC_conv2d_depthwise(test_model_app, XC_conv2d_depthwise_test_case, abs_
     assert(run_test_case(test_model_app, XC_conv2d_depthwise_test_case, abs_tol))
 
 
-@pytest.mark.xfail
 def test_XC_conv2d_shallowin_deepout_relu(test_model_app, XC_conv2d_shallowin_deepout_relu_test_case, abs_tol):
+    if XC_conv2d_shallowin_deepout_relu_test_case['id'] == 'XC_conv2d_shallowin_deepout_relu/wi=1_hi=1_kw=3_kh=3_pd=same':
+        # see bug: https://github.com/xmos/ai_tools/issues/88
+        pytest.xfail()
     assert(run_test_case(test_model_app, XC_conv2d_shallowin_deepout_relu_test_case, abs_tol))
 
 
-@pytest.mark.xfail
 def test_XC_conv2d_deepin_deepout_relu(test_model_app, XC_conv2d_deepin_deepout_relu_test_case, abs_tol):
+    if XC_conv2d_deepin_deepout_relu_test_case['id'] == 'XC_conv2d_deepin_deepout_relu/wi=1_hi=1_kw=3_kh=3_pd=same':
+        # see bug: https://github.com/xmos/ai_tools/issues/88
+        pytest.xfail()
     assert(run_test_case(test_model_app, XC_conv2d_deepin_deepout_relu_test_case, abs_tol))
 
 

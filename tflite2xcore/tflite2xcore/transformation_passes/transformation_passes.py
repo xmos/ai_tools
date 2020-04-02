@@ -158,7 +158,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         return self._op.inputs[1]
 
     def _log_weights(self):
-        self.logger.debug(
+        self.logger.xdebug(
             "_weights:\n"
             + Log._array_msg(self._weights.numpy.astype(np.int8))
         )
@@ -199,7 +199,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
         # zero pad and reshape
         bias = self.__pad_to_acc_period(bias)
-        self.logger.debug("_bias_arr padded biases:\n" + Log._array_msg(bias))
+        self.logger.xdebug("_bias_arr padded biases:\n" + Log._array_msg(bias))
 
         # splitting lower and upper 16 bits of each 32 bit value
         tmp_shape = (bias.shape[0] // ACC_PERIOD, ACC_PERIOD, -1)

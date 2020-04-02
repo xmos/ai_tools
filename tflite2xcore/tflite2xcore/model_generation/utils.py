@@ -1,7 +1,7 @@
 # Copyright (c) 2018-2020, XMOS Ltd, All rights reserved
 
 from tflite2xcore.utils import (
-    set_all_seeds, set_gpu_usage, set_verbosity, LoggingContext
+    set_all_seeds, set_gpu_usage, Log, LoggingContext
 )
 
 import os
@@ -23,7 +23,7 @@ def dequantize(arr, scale, zero_point):
 
 def quantize_converter(converter, representative_data):
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    converter.target_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+    converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
     x_train_ds = tf.data.Dataset.from_tensor_slices(representative_data).batch(1)
 
     def representative_data_gen():

@@ -26,11 +26,11 @@ if __name__ == "__main__":
         '-par', '--num_threads', type=int, default=1,
         help='Number of parallel threads for xcore.ai optimization.'
     )
-    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+    parser.add_argument('-v', '--verbose', action='count', default=0,
                         help='Verbose mode.')
     args = parser.parse_args()
 
-    utils.set_verbosity(args.verbose)
+    utils.Log.set_verbosity(args.verbose)
     utils.set_gpu_usage(False, args.verbose)
 
     tflite_input_path = Path(args.tflite_input)

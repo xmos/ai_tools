@@ -8,6 +8,7 @@ import itertools
 from abc import ABC, abstractmethod
 
 from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.utils import Log
 
 
 class PassPriority(enum.IntEnum):
@@ -20,9 +21,10 @@ class PassPriority(enum.IntEnum):
 
 
 class ModelTransformationPass(ABC):
-    def __init__(self, *, priority=PassPriority.MEDIUM):
-        self.logger = logging.getLogger(self.__class__.__name__)
+    def __init__(self, *, priority=PassPriority.MEDIUM, debug=False):
+        self.logger = Log.getLogger(self.__class__.__name__)
         self.priority = priority
+        self.debug = debug
 
     @abstractmethod
     def run(self, model):
@@ -33,10 +35,11 @@ class ModelTransformationPass(ABC):
 
 
 class PassManager():
-    def __init__(self, model=None, passes=[]):
+    def __init__(self, model=None, passes=[], *, debug=False):
         self._queue = []
+        self.debug = debug
         self._counter = itertools.count()
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = Log.getLogger(self.__class__.__name__)
         if model:
             self.register_model(model)
         for trf_pass in passes:
@@ -57,5 +60,6 @@ class PassManager():
     def run_passes(self):
         while self._queue:
             trf_pass = self.pop_pass()
-            self.logger.debug(f"running {trf_pass}...")
+            self.logger.debug(
+                f"running {trf_pass} (priority={trf_pass.priority.name})...")
             trf_pass.run(self._model)

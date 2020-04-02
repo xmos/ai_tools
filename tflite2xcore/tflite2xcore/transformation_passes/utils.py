@@ -18,6 +18,6 @@ class Log(utils.Log):
                 msg += cls._array_msg(out, func.__name__)
             else:
                 msg += f"{out}\n"
-            self.logger.debug(msg)
+            self.logger.xdebug(msg)
             return out
         return wrapper

@@ -65,13 +65,6 @@ def set_gpu_usage(use_gpu, verbose):
     logging.debug(f"Eager execution enabled: {tf.executing_eagerly()}")
 
 
-def set_verbosity(verbose=False):
-    if verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.getLogger('tensorflow').setLevel(logging.ERROR)
-
-
 class LoggingContext():
     def __init__(self, logger, level=None, handler=None, close=True):
         self.logger = logger
@@ -96,6 +89,19 @@ class LoggingContext():
 
 
 class Log():
+    XDEBUG = logging.DEBUG - 1
+
+    VERBOSITIES = [
+        logging.WARNING, logging.INFO, logging.DEBUG, XDEBUG]
+
+    @classmethod
+    def set_verbosity(cls, verbosity=0):
+        assert verbosity >= 0 
+
+        logging.basicConfig(level=cls.VERBOSITIES[verbosity])
+        if verbosity == 0:
+            logging.getLogger('tensorflow').setLevel(logging.ERROR)
+
     @classmethod
     def _array_msg(cls, arr, style=''):
         msg = f"numpy.ndarray (shape={arr.shape}, dtype={arr.dtype}):\n"
@@ -106,3 +112,12 @@ class Log():
         else:
             msg += f"{arr}"
         return msg + '\n'
+
+    @classmethod
+    def getLogger(cls, *args, **kwargs):
+        logger = logging.getLogger(*args, *kwargs)
+        logger.xdebug = lambda *args, **kwargs: logger.log(cls.XDEBUG, *args, **kwargs)
+        return logger
+
+
+logging.addLevelName(Log.XDEBUG, "XDEBUG")

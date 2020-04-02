@@ -162,12 +162,11 @@ if __name__ == "__main__":
     parser.add_argument(
         '-ep', '--epochs', type=int, default=DEFAULT_EPOCHS,
         help='Number of epochs.')
-    parser.add_argument(
-        '-v', '--verbose', action='store_true', default=False,
-        help='Verbose mode.')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+                        help='Verbose mode.')
     args = parser.parse_args()
 
-    utils.set_verbosity(args.verbose)
+    utils.Log.set_verbosity(args.verbose)
     utils.set_gpu_usage(args.use_gpu, args.verbose)
 
     main(path=args.path,

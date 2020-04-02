@@ -51,6 +51,11 @@ from .cleanup_passes import (
     RemoveDanglingTensorsPass
 )
 
-from .minification_passes import (
+from .renaming_passes import (
     LegalizeOperatorOutputTensorNamePass
+)
+
+from .minification_passes import (
+    MinifyQuantInfoPass,
+    MinifyTensorNamesPass
 )

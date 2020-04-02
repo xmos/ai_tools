@@ -1,38 +1,39 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from .transformation_passes import OperatorMatchingPass
+from tflite2xcore.operator_codes import XCOREOpCodes, BuiltinOpCodes
+from .transformation_passes import TensorMatchingPass
 
 
-class LegalizeOperatorOutputTensorNamePass(OperatorMatchingPass):
-    def match(self, op):
-        if super().match(op):
-            if len(op.outputs) == 1:
-                return not op.outputs[0].name.startswith(f"{op.name}/output")
+class MinifyQuantInfoPass(TensorMatchingPass):
+    # NOTE: it's risky to include the builtin ops here, but (at least in the
+    #       micro interpreter), min/max info does not seem to be used
+    SAFE_OP_CODES = [c for c in XCOREOpCodes] + [c for c in BuiltinOpCodes]
 
-            for j, tensor in enumerate(op.outputs):
-                candidate_name = f"{op.name}/output_{j}"
-                if not tensor.name.startswith(candidate_name):
-                    return True
-
+    def match(self, tensor):
+        dependents = tensor.consumers + tensor.producers
+        quantization = tensor.quantization
+        
+        if super().match(tensor) and quantization and dependents:
+            for op in dependents:
+                if op.operator_code.code not in self.SAFE_OP_CODES:
+                    # min/max info is removed if tensor only interacts with XC ops
+                    return False
+            else:
+                return 'min' in quantization or 'max' in quantization
         return False
 
-    def __mutate_tensor_name(self, tensor, candidate_name):
-        subgraph = tensor.subgraph
-        if tensor.name != candidate_name:
-            unique_name = subgraph.make_unique_tensor_name(candidate_name)
+    def mutate(self, tensor):
+        tensor.quantization.pop('min', None)
+        tensor.quantization.pop('max', None)
 
-            if unique_name is not candidate_name:
-                self.logger.warning(
-                    f"candidate_name {candidate_name} is already used by "
-                    f"tensor {subgraph.tensors.index(tensor)}, "
-                    f"defaulting to {unique_name}"
-                )
 
-            tensor.name = unique_name
+class MinifyTensorNamesPass(TensorMatchingPass):
+    def __new_tensor_name(self, tensor):
+        return str(tensor.subgraph.tensors.index(tensor))
 
-    def mutate(self, op):
-        if len(op.outputs) == 1:
-            self.__mutate_tensor_name(op.outputs[0], f"{op.name}/output")
-        else:
-            for j, tensor in enumerate(op.outputs):
-                self.__mutate_tensor_name(tensor, f"{op.name}/output_{j}")
+    def match(self, tensor):
+        return (super().match(tensor)
+                and tensor.name != self.__new_tensor_name(tensor))
+
+    def mutate(self, tensor):
+        tensor.name = self.__new_tensor_name(tensor)

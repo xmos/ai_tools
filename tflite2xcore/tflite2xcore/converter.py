@@ -57,6 +57,7 @@ def optimize_for_xcore(model, *,
                        is_classifier=False,
                        remove_softmax=False,
                        cleanup=True,
+                       minification=False,
                        num_threads=None):
     # NOTE: the order of the passes is mostly strict
     pass_mgr = PassManager(
@@ -108,6 +109,11 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.LegalizeOperatorOutputTensorNamePass())
     pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
 
+    if minification:
+        # TODO: these should be turned off in debug mode
+        pass_mgr.register_pass(passes.MinifyQuantInfoPass())
+        pass_mgr.register_pass(passes.MinifyTensorNamesPass())
+
     pass_mgr.run_passes()
     model.sanity_check()
 
@@ -115,10 +121,14 @@ def optimize_for_xcore(model, *,
 
 
 def convert(tflite_input_path, tflite_output_path, *,
-            is_classifier=False, remove_softmax=False, num_threads=None):
+            is_classifier=False,
+            remove_softmax=False,
+            num_threads=None,
+            minification=False):
     model = read_flatbuffer(tflite_input_path)
     optimize_for_xcore(model,
                        is_classifier=is_classifier,
                        remove_softmax=remove_softmax,
+                       minification=minification,
                        num_threads=num_threads)
     write_flatbuffer(model, tflite_output_path)

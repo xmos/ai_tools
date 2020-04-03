@@ -1,5 +1,4 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-
 #include "lib_ops/api/fully_connected.h"
 
 namespace xcore {

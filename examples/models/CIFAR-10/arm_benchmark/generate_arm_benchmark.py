@@ -142,6 +142,7 @@ def main(path=DEFAULT_PATH, train_new_model=False,
 
 
 if __name__ == "__main__":
+    parser = utils.VerbosityParser()
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
@@ -162,13 +163,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '-ep', '--epochs', type=int, default=DEFAULT_EPOCHS,
         help='Number of epochs.')
-    parser.add_argument(
-        '-v', '--verbose', action='store_true', default=False,
-        help='Verbose mode.')
     args = parser.parse_args()
-
-    utils.set_verbosity(args.verbose)
-    utils.set_gpu_usage(args.use_gpu, args.verbose)
 
     main(path=args.path,
          train_new_model=args.train_model,

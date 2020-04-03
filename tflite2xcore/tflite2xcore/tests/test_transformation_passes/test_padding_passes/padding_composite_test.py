@@ -15,7 +15,7 @@ from ..model_builders import build_pad, build_padded_DW
 from .test_SplitPaddingPass import PARAMS as SPLIT_PARAMS
 from .test_FuseConv2dPaddingPass import (
     PARAMS as CONV_PARAMS,
-    weight_shape, strides
+    weight_shape
 )
 from .conftest import PARAMS
 

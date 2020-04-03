@@ -240,7 +240,7 @@ if __name__ == "__main__":
                         help='Evaluate models on test set.')
     parser.add_argument('--num_workers', type=int, default=8,
                         help='Number of parallel workers to use when evaluating model accuracy.')
-    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+    parser.add_argument('-v', '--verbose', action='count', default=0,
                         help='Verbose mode.')
     args = parser.parse_args()
 

@@ -27,8 +27,18 @@ PARAMS = {
 
 
 @pytest.fixture()
+def strides(stride_h, stride_w):
+    return (stride_h, stride_w)
+
+
+@pytest.fixture()
 def input_size(input_height, input_width):
     return [input_height, input_width]
+
+
+@pytest.fixture()
+def input_shape(input_size, input_channels):
+    return [*input_size, input_channels]
 
 
 #  ----------------------------------------------------------------------------

@@ -10,13 +10,7 @@ import argparse
 
 INDENT = ' ' * 2
 
-# INSTRUCTIONS = [
-#     'vlmaccr',
-#     'vlmacc'
-# ]
-
 class TraceContext():
-    # def __init__(self, tile, core, identifier, entry_cycle_clock, parent=None, identifier_alt=None):
     def __init__(self, tile, core, identifier, entry_cycle_clock, identifier_alt=None, thread_worker=None):
         self.tile = tile
         self.core = core

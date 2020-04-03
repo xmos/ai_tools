@@ -2,10 +2,8 @@
 #
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import argparse
-import numpy as np
 from pathlib import Path
 from tflite2xcore.model_generation import utils
-from tflite2xcore import read_flatbuffer
 import tensorflow as tf
 import op_test_models_common as common
 

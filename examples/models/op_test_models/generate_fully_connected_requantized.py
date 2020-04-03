@@ -4,7 +4,7 @@
 from pathlib import Path
 from tflite2xcore.model_generation import utils
 import tflite2xcore.converter as xcore_conv
-from tflite2xcore.serialization.flatbuffers_io import serialize_model, deserialize_model
+from tflite2xcore.serialization import serialize_model, deserialize_model
 import op_test_models_common as common
 
 from generate_fully_connected import (

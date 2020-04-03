@@ -12,7 +12,7 @@ extern "C" {
 namespace xcore {
 namespace pooling {
 
-struct PoolingOptions {
+struct PoolingParams {
   int32_t pool_h;
   int32_t pool_w;
   int32_t stride_h;
@@ -21,14 +21,14 @@ struct PoolingOptions {
 
 class MaxPool {
  public:
-  MaxPool() {}
+  MaxPool(const PoolingParams& params) : params(params) {}
   ~MaxPool() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                    int32_t Y_w, int32_t C_out);
   XCoreStatus Eval(int8_t* Y, const int8_t* X);
 
-  PoolingOptions options;
+  PoolingParams params;
 
  private:
   nn_window_op_plan_t plan_;
@@ -36,14 +36,14 @@ class MaxPool {
 
 class AvgPool {
  public:
-  AvgPool() {}
+  AvgPool(const PoolingParams& params) : params(params) {}
   ~AvgPool() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                    int32_t Y_w, int32_t C_out);
   XCoreStatus Eval(int8_t* Y, const int8_t* X);
 
-  PoolingOptions options;
+  PoolingParams params;
 
  private:
   nn_avgpool2d_plan_t plan_;
@@ -57,8 +57,6 @@ class AvgPool_Global {
   XCoreStatus Init(int32_t bias, int32_t shift, int32_t scale);
   XCoreStatus Eval(int8_t* Y, const int8_t* X, int32_t X_h, int32_t X_w,
                    uint32_t C_in);
-
-  PoolingOptions options;
 
  private:
   int32_t bias_;

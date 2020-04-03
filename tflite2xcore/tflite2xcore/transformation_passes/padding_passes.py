@@ -1,16 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import numpy
+import numpy as np
 
-from tflite2xcore.graph_transformer import OperatorMatchingPass, PassPriority
+from tflite2xcore.transformation_passes import OperatorMatchingPass
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.operator_codes import BuiltinOpCodes, XCOREOpCodes, OperatorCode
 
 
 class FuseConv2dPaddingPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.FUSING):
-        super().__init__(priority)
-
     matching_conv_opcodes = (XCOREOpCodes.XC_conv2d_depthwise,)
 
     @property
@@ -87,9 +84,6 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
 
 
 class SplitPaddingPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.PREP):
-        super().__init__(priority)
-
     @property
     def _pad_params(self):
         return self._op.inputs[1].numpy.tolist()
@@ -128,7 +122,7 @@ class SplitPaddingPass(OperatorMatchingPass):
             f"{op.name}/paddings", TensorType.INT32, shape=[4, 2],
             consumers=[op]
         )
-        op.inputs[1].buffer.data = numpy.int32(pads_HW)
+        op.inputs[1].buffer.data = np.int32(pads_HW)
 
         # create new (batch/channel-wise) operator
         new_op = subgraph.create_operator(
@@ -143,7 +137,7 @@ class SplitPaddingPass(OperatorMatchingPass):
             f"{new_op.name}/paddings", TensorType.INT32, shape=[4, 2],
             consumers=[new_op]
         ))
-        new_op.inputs[1].buffer.data = numpy.int32(pads_NC)
+        new_op.inputs[1].buffer.data = np.int32(pads_NC)
 
         # create intermediate tensor and wire it up
         intermediate_shape = [size + pad[0] + pad[1]
@@ -156,9 +150,6 @@ class SplitPaddingPass(OperatorMatchingPass):
 
 
 class FuseConsecutivePadsPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.FUSING):
-        super().__init__(priority)
-
     @property
     def _producer(self):
         return self._op.inputs[0].producers[0]
@@ -200,7 +191,7 @@ class FuseConsecutivePadsPass(OperatorMatchingPass):
             f"{op.name}/paddings", TensorType.INT32, shape=[4, 2],
             consumers=[op]
         )
-        op.inputs[1].buffer.data = numpy.int32(new_params)
+        op.inputs[1].buffer.data = np.int32(new_params)
 
         # set up bypass connection
         op.inputs[0] = producer.inputs[0]

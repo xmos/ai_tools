@@ -1,15 +1,15 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import logging
+
 import pathlib
-from tflite2xcore.model_generation import utils
-from tflite2xcore.utils import Log
+from tflite2xcore.utils import set_all_seeds
 import tensorflow as tf
 import numpy as np
 from abc import ABC, abstractmethod
 import tflite2xcore.converter as xcore_conv
-from tflite2xcore import tflite_visualize
-from tflite2xcore.serialization.flatbuffers_io import serialize_model, deserialize_model
+from tflite2xcore.serialization import serialize_model, deserialize_model
 from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.model_generation import utils
+from tflite2xcore import logging, tflite_visualize
 
 
 class Model(ABC):
@@ -232,10 +232,10 @@ class Model(ABC):
         y_test = utils.quantize(y_test_float,
                                 output_quant['scale'][0],
                                 output_quant['zero_point'][0])
-        self.logger.debug("model_stripped input example: "
-                          f"{Log._array_msg(x_test[-1])}")
-        self.logger.debug("model_stripped output example: "
-                          f"{Log._array_msg(y_test[-1])}")
+        self.logger.xdebug("model_stripped input example: "
+                           f"{logging._array_msg(x_test[-1])}")
+        self.logger.xdebug("model_stripped output example: "
+                           f"{logging._array_msg(y_test[-1])}")
         data = {'x_test': x_test, 'y_test': y_test}
 
         self._save_data_dict(data, base_file_name='model_stripped')
@@ -315,7 +315,7 @@ class KerasModel(Model):
 
     def _prep_backend(self):
         tf.keras.backend.clear_session()
-        utils.set_all_seeds()
+        set_all_seeds()
 
     @property
     def input_shape(self):
@@ -337,7 +337,7 @@ class KerasModel(Model):
             self.save_training_history()
 
     def save_training_history(self):
-        with utils.LoggingContext(logging.getLogger(), logging.INFO):
+        with logging.LoggingContext(logging.getLogger(), logging.INFO):
             utils.plot_history(self.history,
                                title=f"{self.name} metrics",
                                path=self.models_dir / 'training_history.png')

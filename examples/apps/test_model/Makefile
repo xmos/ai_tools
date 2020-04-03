@@ -5,7 +5,7 @@ ifeq ($(TARGET), x86)
 	BUILD_TARGET := x86
 
 	CC := gcc
-	CCFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
+	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
 	#CCFLAGS += -DNDEBUG  
 
 	CXX := g++
@@ -36,12 +36,12 @@ else # must be xcore
 	ASFLAGS := $(PLATFORM_FLAGS)
 
 	CC := xcc
-	CCFLAGS := -DTF_LITE_STATIC_MEMORY
+	CCFLAGS := -DTF_LITE_STATIC_MEMORY -DTF_LITE_STRIP_ERROR_STRINGS
 	CCFLAGS += -DNDEBUG
 	CCFLAGS += $(PLATFORM_FLAGS)
 
 	CXX := xcc
-	CXXFLAGS := -std=c++11 -DTF_LITE_STATIC_MEMORY
+	CXXFLAGS := -std=c++11 -DTF_LITE_STATIC_MEMORY -DTF_LITE_STRIP_ERROR_STRINGS
 	CXXFLAGS += -DNDEBUG
 	CXXFLAGS += $(PLATFORM_FLAGS)
 
@@ -140,6 +140,7 @@ SOURCES += \
 	tensorflow/lite/micro/kernels/xcore/xcore_fully_connected.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_type_conversions.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_activations.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_custom_options.cc \
 	lib_nn/src/c/nn_op_utils.c \
 	lib_nn/src/c/nn_operator.c \
 	lib_nn/src/c/nn_operator_conv.c \

@@ -28,9 +28,9 @@ XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
   params_out.channels = C_out;
 
   nn_window_op_config_t config;
-  nn_window_op_config_simple(&config, &params_in, &params_out, options.pool_h,
-                             options.pool_w, options.stride_h,
-                             options.stride_w);
+  nn_window_op_config_simple(&config, &params_in, &params_out, params.pool_h,
+                             params.pool_w, params.stride_h,
+                             params.stride_w);
 
   maxpool2d_init(&plan_, &params_in, &params_out, &config);
 
@@ -62,9 +62,9 @@ XCoreStatus AvgPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
   params_out.channels = C_out;
 
   nn_window_op_config_t config;
-  nn_window_op_config_simple(&config, &params_in, &params_out, options.pool_h,
-                             options.pool_w, options.stride_h,
-                             options.stride_w);
+  nn_window_op_config_simple(&config, &params_in, &params_out, params.pool_h,
+                             params.pool_w, params.stride_h,
+                             params.stride_w);
 
   avgpool2d_init(&plan_, &params_in, &params_out, &config);
 

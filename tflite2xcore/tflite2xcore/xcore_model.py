@@ -1,15 +1,14 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import sys
+
 import struct
 import enum
-import collections
-import logging
 
 import numpy as np
 
-from copy import deepcopy
+from collections import Counter
 
 from tflite2xcore.operator_codes import OperatorCode
+from tflite2xcore import logging
 
 
 class TensorType(enum.IntEnum):
@@ -72,6 +71,22 @@ class TensorType(enum.IntEnum):
         }
         return LUT[tensor_type]
 
+    @staticmethod
+    def to_numpy_dtype(tensor_type):
+        LUT = {
+            TensorType.FLOAT32: np.float32,
+            TensorType.FLOAT16: np.single,
+            TensorType.INT32: np.int32,
+            TensorType.UINT8: np.uint8,
+            TensorType.INT64: np.int64,
+            # TensorType.STRING: None,  # intentionally not supported
+            TensorType.BOOL: np.bool_,
+            TensorType.INT16: np.int16,
+            # TensorType.COMPLEX64: None,  # intentionally not supported
+            TensorType.INT8: np.int8,
+        }
+        return LUT[tensor_type]
+
 
 class Buffer():
     def __init__(self, model, data=None, *, owners=None):
@@ -94,7 +109,7 @@ class Buffer():
             self._data = np.array(data, dtype=np.uint8)
         elif isinstance(data, np.ndarray):
             if data.dtype not in (np.uint8, 'uint8'):
-                logging.getLogger('XCOREModel').debug(
+                logging.getLogger('XCOREModel').xdebug(
                     f"Numpy array of type {data.dtype} stored in buffer"
                 )
             self._data = np.frombuffer(data.tostring(), dtype=np.uint8)
@@ -406,7 +421,7 @@ class Subgraph():
         if new_op in self.operators:
             self.operators.remove(new_op)
 
-        # (re)insert new op after reference op
+        # (re)insert new op before/after reference op
         self.operators.insert(ref_idx + (1 if after else 0), new_op)
 
     def replace_operator(self, op, new_op):
@@ -490,7 +505,7 @@ class XCOREModel():
     def operator_codes(self):
         # sort the operators codes from most frequent to least frequent
         #   why? because the flatbuffer is a tiny bit smaller if we do
-        counter = collections.Counter()
+        counter = Counter()
 
         for subgraph in self.subgraphs:
             for operator in subgraph.operators:

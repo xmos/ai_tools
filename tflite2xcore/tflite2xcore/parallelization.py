@@ -1,9 +1,10 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import logging
 import numbers
 
 from abc import ABC, abstractmethod
+
+from tflite2xcore import logging
 
 
 class ParPlan():

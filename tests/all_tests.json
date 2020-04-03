@@ -17,7 +17,6 @@
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d.py",
         "operator": "XC_avgpool2d",
-        "_comment": "expected failure. see issue https://github.com/xmos/ai_tools/issues/83",
         "parameters": [
             {"-in": 4, "-wi": 5, "-hi": 5, "-po": [3, 4], "-st": [1, 2], "-pd": "valid"},
             {"-in": 32, "-wi": 4, "-hi": 4, "-po": [4, 4], "-st": [2, 2], "-pd": "valid"},
@@ -51,9 +50,9 @@
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
         "operator": "XC_conv2d_deepin_deepout_relu",
-        "_comment": "expected failures. see issue https://github.com/xmos/ai_tools/issues/88",
+        "_comment": "some expected failures. see issue https://github.com/xmos/ai_tools/issues/88",
         "parameters": [
-            {"-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same"},
+            {"-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same", "xfail": true},
             {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "same"},
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same"},
             {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "valid"},
@@ -65,9 +64,10 @@
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
         "operator": "XC_conv2d_shallowin_deepout_relu",
+        "_comment": "some expected failures. see issue https://github.com/xmos/ai_tools/issues/88",
         "parameters": [
             {"-wi": 1, "-hi": 1, "-kw": 1, "-kh": 1, "-pd": "same"},
-            {"-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same"},
+            {"-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same", "xfail": true},
             {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "same"},
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same"},
             {"-wi": 1, "-hi": 1, "-kw": 1, "-kh": 1, "-pd": "valid"},

@@ -8,7 +8,7 @@ from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCod
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import ReplaceXCOREWeightBiasOperatorPass
-from .utils import log_method_output
+from tflite2xcore.logging import log_method_output
 
 
 # TODO: write (at least regression) tests for the mutator functions

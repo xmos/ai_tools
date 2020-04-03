@@ -1,5 +1,9 @@
 # Copyright (c) 2018-2020, XMOS Ltd, All rights reserved
 
+import numpy as np
+
+from functools import wraps
+
 import logging as _logging
 from logging import NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
@@ -57,3 +61,17 @@ class LoggingContext():
             self.logger.removeHandler(self.handler)
         if self.handler and self.close:
             self.handler.close()
+
+
+def log_method_output(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        out = func(self, *args, **kwargs)
+        msg = f"{func.__name__} output:\n"
+        if isinstance(out, np.ndarray):
+            msg += _array_msg(out, func.__name__)
+        else:
+            msg += f"{out}\n"
+        self.logger.xdebug(msg)
+        return out
+    return wrapper

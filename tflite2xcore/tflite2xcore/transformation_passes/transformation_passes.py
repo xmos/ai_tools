@@ -10,7 +10,6 @@ from tflite2xcore.operator_codes import BuiltinOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import ACC_PERIOD
 from tflite2xcore import logging
-from .utils import log_method_output
 
 
 class SubgraphTransformationPass(ModelTransformationPass):
@@ -199,7 +198,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _zero_point_bias(self):
         pass
 
-    @log_method_output
+    @logging.log_method_output
     def _unified_bias(self):
         biases = self._biases.numpy
         return np.int32(biases - self._zero_point_bias()
@@ -252,7 +251,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _MAX_POST_SHIFT(self):
         pass
 
-    @log_method_output
+    @logging.log_method_output
     def _shift_scale_arr(self):
         # calculate right shift/scale
         rshift, scale = self._shift_scale()

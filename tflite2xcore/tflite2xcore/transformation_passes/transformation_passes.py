@@ -198,7 +198,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _zero_point_bias(self):
         pass
 
-    @logging.log_method_output
+    @logging.log_method_output()
     def _unified_bias(self):
         biases = self._biases.numpy
         return np.int32(biases - self._zero_point_bias()
@@ -251,7 +251,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _MAX_POST_SHIFT(self):
         pass
 
-    @logging.log_method_output
+    @logging.log_method_output()
     def _shift_scale_arr(self):
         # calculate right shift/scale
         rshift, scale = self._shift_scale()

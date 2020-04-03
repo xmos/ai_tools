@@ -65,7 +65,7 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
 
         return False
 
-    @log_method_output
+    @log_method_output()
     def _zero_point_bias(self):
         # NOTE: first dimension of the kernel is always 1 in depthwise conv2d
         return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2)).squeeze()
@@ -140,7 +140,7 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
 
         return False
 
-    @log_method_output
+    @log_method_output()
     def _zero_point_bias(self):
         return np.sum(self._weights.numpy * self._input_zero_point, axis=3).squeeze()
 
@@ -194,7 +194,7 @@ class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
 
         return False
 
-    @log_method_output
+    @log_method_output()
     def _zero_point_bias(self):
         return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2, 3))
 

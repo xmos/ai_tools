@@ -63,15 +63,18 @@ class LoggingContext():
             self.handler.close()
 
 
-def log_method_output(func):
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        out = func(self, *args, **kwargs)
-        msg = f"{func.__name__} output:\n"
-        if isinstance(out, np.ndarray):
-            msg += _array_msg(out, func.__name__)
-        else:
-            msg += f"{out}\n"
-        self.logger.xdebug(msg)
-        return out
-    return wrapper
+def log_method_output(level=XDEBUG, logger=None):
+    def _log_method_output(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            out = func(self, *args, **kwargs)
+            msg = f"{func.__name__} output:\n"
+            if isinstance(out, np.ndarray):
+                msg += _array_msg(out, func.__name__)
+            else:
+                msg += f"{out}\n"
+            _logger = logger or self.logger
+            _logger.log(level, msg)
+            return out
+        return wrapper
+    return _log_method_output

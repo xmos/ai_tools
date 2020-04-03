@@ -39,7 +39,7 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     def _MAX_POST_SHIFT(self):
         return 32 - 16 - 2  # this is because the output is 16 bit
 
-    @log_method_output
+    @log_method_output()
     def _zero_point_bias(self):
         return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
 

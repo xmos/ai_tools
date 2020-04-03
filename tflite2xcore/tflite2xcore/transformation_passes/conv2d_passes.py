@@ -410,7 +410,7 @@ class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
     def run(self, *args, **kwargs):
         if self.num_threads == 1:
             self.logger.debug(f"Skipping pass b/c num_threads={self.num_threads}")
-            return None
+            return 0
         else:
             return super().run(*args, **kwargs)
 

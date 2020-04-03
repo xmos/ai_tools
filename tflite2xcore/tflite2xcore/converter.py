@@ -1,5 +1,7 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
+import pathlib
+
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.serialization import read_flatbuffer, write_flatbuffer
 from tflite2xcore import transformation_passes as passes
@@ -122,6 +124,8 @@ def optimize_for_xcore(model, *,
     model.sanity_check()
 
     model.description = model.description + ' + XMOS optimized.'
+
+    pass_mgr.save_intermediates(pathlib.Path('./debug/').resolve())
 
 
 def convert(tflite_input_path, tflite_output_path, *,

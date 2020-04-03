@@ -7,6 +7,7 @@ from tflite2xcore.transformation_passes import (
 
 
 class RemoveUnusedBuffersPass(ModelTransformationPass):
+    # TODO: modify this to use match/mutate
     def run(self, model):
         dangling = [j for j, b in enumerate(model.buffers) if not b.owners]
         if dangling:
@@ -16,6 +17,7 @@ class RemoveUnusedBuffersPass(ModelTransformationPass):
         if dangling:
             self.logger.info(f"Removed {len(dangling)} dangling buffers")
 
+        return len(dangling)
 
 
 class RemoveDanglingTensorsPass(TensorMatchingPass):

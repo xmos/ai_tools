@@ -34,10 +34,11 @@ class SubgraphTransformationPass(ModelTransformationPass):
         self.logger.info(f"matched {obj}")
 
     def run_subgraph(self, subgraph):
-        keep_running = True
-        while keep_running:
+        num_matches = 0
+        while True:
             for self._obj_index, obj in enumerate(self.target_iterable(subgraph)):
                 if self.match(obj):
+                    num_matches += 1
                     self.log_match(obj)
                     if self.debug:
                         try:
@@ -49,16 +50,22 @@ class SubgraphTransformationPass(ModelTransformationPass):
                     break
             else:
                 self._obj_index = -1
-                keep_running = False
+                return num_matches
 
     def run(self, model):
+        modified_cnt = 0
         for self._subgraph_idx, subgraph in enumerate(model.subgraphs):
             self.logger.debug(f"running on subgraph {self._subgraph_idx}")
-            self.run_subgraph(subgraph)
+            if self.run_subgraph(subgraph):
+                modified_cnt += 1
             if self.debug:
-                subgraph.sanity_check()
-        else:
-            self._subgraph_idx = -1
+                try:
+                    subgraph.sanity_check()
+                except AssertionError as e:
+                    self.logger.exception(e)
+
+        self._subgraph_idx = -1
+        return modified_cnt
 
 
 class OperatorMatchingPass(SubgraphTransformationPass):

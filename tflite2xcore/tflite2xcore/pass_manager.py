@@ -2,13 +2,12 @@
 
 import enum
 import heapq
-import logging
 import itertools
 
 from abc import ABC, abstractmethod
 
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.utils import Log
+from tflite2xcore import logging
 
 
 class PassPriority(enum.IntEnum):
@@ -22,7 +21,7 @@ class PassPriority(enum.IntEnum):
 
 class ModelTransformationPass(ABC):
     def __init__(self, *, priority=PassPriority.MEDIUM, debug=False):
-        self.logger = Log.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.priority = priority
         self.debug = debug
 
@@ -39,7 +38,8 @@ class PassManager():
         self._queue = []
         self.debug = debug
         self._counter = itertools.count()
-        self.logger = Log.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self._model = None
         if model:
             self.register_model(model)
         for trf_pass in passes:
@@ -51,6 +51,7 @@ class PassManager():
 
     def register_pass(self, trf_pass):
         assert isinstance(trf_pass, ModelTransformationPass)
+        trf_pass.debug = trf_pass.debug or self.debug
         heapq.heappush(self._queue,
                        (trf_pass.priority, next(self._counter), trf_pass))
 
@@ -58,8 +59,18 @@ class PassManager():
         return heapq.heappop(self._queue)[-1]
 
     def run_passes(self):
+        if not self._model:
+            raise Exception("No model registered!")
+
+        self.logger.debug(f"Running {len(self._queue)} passes...")
+        cnt = 0
         while self._queue:
             trf_pass = self.pop_pass()
-            self.logger.debug(
-                f"running {trf_pass} (priority={trf_pass.priority.name})...")
+
+            self.logger.debug(f"Running pass #{cnt}: "
+                              f"{trf_pass} (priority={trf_pass.priority.name})...")
+            if self.debug:
+                import pdb; pdb.set_trace()
+
             trf_pass.run(self._model)
+            cnt += 1

@@ -29,7 +29,7 @@ class MinifyQuantInfoPass(TensorMatchingPass):
 
 class MinifyTensorNamesPass(TensorMatchingPass):
     def __new_tensor_name(self, tensor):
-        return str(tensor.subgraph.tensors.index(tensor))
+        return str(self._obj_index)
 
     def match(self, tensor):
         return (super().match(tensor)

@@ -5,13 +5,14 @@ from tflite2xcore.serialization import read_flatbuffer, write_flatbuffer
 from tflite2xcore import transformation_passes as passes
 
 
-def strip_model(model, *, remove_softmax=False):
+def strip_model(model, *, remove_softmax=False, debug=False):
     pass_mgr = PassManager(
         model,
         passes=[
             passes.LegalizeQuantizedInputPass(),
             passes.LegalizeQuantizedOutputPass(),
-        ]
+        ],
+        debug=debug
     )
 
     if remove_softmax:
@@ -23,13 +24,14 @@ def strip_model(model, *, remove_softmax=False):
     model.description = model.description + ' + XMOS stripped.'
 
 
-def add_float_input_output(model):
+def add_float_input_output(model, debug=False):
     pass_mgr = PassManager(
         model,
         passes=[
             passes.LegalizeFloatInputPass(),
             passes.LegalizeFloatOutputPass()
-        ]
+        ],
+        debug=debug
     )
 
     pass_mgr.run_passes()
@@ -58,7 +60,8 @@ def optimize_for_xcore(model, *,
                        remove_softmax=False,
                        cleanup=True,
                        minification=False,
-                       num_threads=None):
+                       num_threads=None,
+                       debug=False):
     # NOTE: the order of the passes is mostly strict
     pass_mgr = PassManager(
         model,
@@ -66,7 +69,8 @@ def optimize_for_xcore(model, *,
             passes.LegalizeQuantizedInputPass(),
             passes.LegalizeQuantizedOutputPass(),
             passes.SplitPaddingPass()
-        ]
+        ],
+        debug=debug
     )
 
     if is_classifier or remove_softmax:
@@ -124,11 +128,13 @@ def convert(tflite_input_path, tflite_output_path, *,
             is_classifier=False,
             remove_softmax=False,
             num_threads=None,
-            minification=False):
+            minification=False,
+            debug=False):
     model = read_flatbuffer(tflite_input_path)
     optimize_for_xcore(model,
                        is_classifier=is_classifier,
                        remove_softmax=remove_softmax,
                        minification=minification,
-                       num_threads=num_threads)
+                       num_threads=num_threads,
+                       debug=debug)
     write_flatbuffer(model, tflite_output_path)

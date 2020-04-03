@@ -9,10 +9,16 @@ from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.operator_codes import BuiltinOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import ACC_PERIOD
-from .utils import Log
+from tflite2xcore import logging
+from .utils import log_method_output
 
 
 class SubgraphTransformationPass(ModelTransformationPass):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._subgraph_idx = -1
+        self._obj_index = -1
+
     @abstractmethod
     def match(self, obj):
         return True
@@ -31,18 +37,29 @@ class SubgraphTransformationPass(ModelTransformationPass):
     def run_subgraph(self, subgraph):
         keep_running = True
         while keep_running:
-            for obj in self.target_iterable(subgraph):
+            for self._obj_index, obj in enumerate(self.target_iterable(subgraph)):
                 if self.match(obj):
                     self.log_match(obj)
+                    if self.debug:
+                        try:
+                            obj.sanity_check()
+                        except AssertionError as e:
+                            self.logger.exception(e)
+                        import pdb; pdb.set_trace()
                     self.mutate(obj)
                     break
             else:
+                self._obj_index = -1
                 keep_running = False
 
     def run(self, model):
-        for j, subgraph in enumerate(model.subgraphs):
-            self.logger.debug(f"running on subgraph {j}")
+        for self._subgraph_idx, subgraph in enumerate(model.subgraphs):
+            self.logger.debug(f"running on subgraph {self._subgraph_idx}")
             self.run_subgraph(subgraph)
+            if self.debug:
+                subgraph.sanity_check()
+        else:
+            self._subgraph_idx = -1
 
 
 class OperatorMatchingPass(SubgraphTransformationPass):
@@ -60,7 +77,7 @@ class OperatorMatchingPass(SubgraphTransformationPass):
         self._op = original_op
 
     def log_match(self, op):
-        super().log_match(f"operator {op.operator_code}")
+        super().log_match(f"operator [{self._obj_index}]: {op.operator_code}")
 
 
 class TensorMatchingPass(SubgraphTransformationPass):
@@ -68,7 +85,7 @@ class TensorMatchingPass(SubgraphTransformationPass):
         return subgraph.tensors
 
     def log_match(self, tensor):
-        super().log_match(f"tensor {tensor.name}")
+        super().log_match(f"tensor [{self._obj_index}]: {tensor.name}")
 
 
 class InputTensorMatchingPass(SubgraphTransformationPass):
@@ -76,7 +93,7 @@ class InputTensorMatchingPass(SubgraphTransformationPass):
         return subgraph.inputs
 
     def log_match(self, tensor):
-        super().log_match(f"input tensor {tensor.name}")
+        super().log_match(f"input [{self._obj_index}]: {tensor.name}")
 
 
 class OutputTensorMatchingPass(SubgraphTransformationPass):
@@ -84,7 +101,7 @@ class OutputTensorMatchingPass(SubgraphTransformationPass):
         return subgraph.outputs
 
     def log_match(self, tensor):
-        super().log_match(f"output tensor {tensor.name}")
+        super().log_match(f"output [{self._obj_index}]: {tensor.name}")
 
 
 class RemoveSoftmaxOutputPass(OperatorMatchingPass):
@@ -160,7 +177,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _log_weights(self):
         self.logger.xdebug(
             "_weights:\n"
-            + Log._array_msg(self._weights.numpy.astype(np.int8))
+            + logging._array_msg(self._weights.numpy.astype(np.int8))
         )
 
     @property
@@ -182,7 +199,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _zero_point_bias(self):
         pass
 
-    @Log.output
+    @log_method_output
     def _unified_bias(self):
         biases = self._biases.numpy
         return np.int32(biases - self._zero_point_bias()
@@ -199,7 +216,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
         # zero pad and reshape
         bias = self.__pad_to_acc_period(bias)
-        self.logger.xdebug("_bias_arr padded biases:\n" + Log._array_msg(bias))
+        self.logger.xdebug("_bias_arr padded biases:\n" + logging._array_msg(bias))
 
         # splitting lower and upper 16 bits of each 32 bit value
         tmp_shape = (bias.shape[0] // ACC_PERIOD, ACC_PERIOD, -1)
@@ -235,7 +252,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _MAX_POST_SHIFT(self):
         pass
 
-    @Log.output
+    @log_method_output
     def _shift_scale_arr(self):
         # calculate right shift/scale
         rshift, scale = self._shift_scale()
@@ -250,7 +267,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         shift_post = self._MAX_POST_SHIFT * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
         if np.any(shift_post.flatten() < 0):
             raise ValueError("Negative shift_post encountered: "
-                             f"{Log._array_msg(shift_post)}")
+                             f"{logging._array_msg(shift_post)}")
         return np.stack([shift_pre, scale, shift_post], axis=1)
 
     def _bss_arr(self):

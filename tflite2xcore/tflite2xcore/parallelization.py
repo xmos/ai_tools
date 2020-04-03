@@ -1,11 +1,10 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import logging
 import numbers
 
 from abc import ABC, abstractmethod
 
-from tflite2xcore.utils import Log
+from tflite2xcore import logging
 
 
 class ParPlan():
@@ -32,7 +31,7 @@ class ParallelizationPlanner(ABC):
     def __init__(self, *, num_threads, forced=False):
         assert isinstance(num_threads, int)
         assert 0 < num_threads <= self.MAX_THREADS
-        self.logger = Log.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(self.__class__.__name__)
         if num_threads == 1:
             self.logger.warning(f"initialized with 1 thread.")
         self.num_threads = num_threads

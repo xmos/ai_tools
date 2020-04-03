@@ -2,13 +2,13 @@
 
 import struct
 import enum
-import logging
 
 import numpy as np
 
 from collections import Counter
 
 from tflite2xcore.operator_codes import OperatorCode
+from tflite2xcore import logging
 
 
 class TensorType(enum.IntEnum):
@@ -109,7 +109,7 @@ class Buffer():
             self._data = np.array(data, dtype=np.uint8)
         elif isinstance(data, np.ndarray):
             if data.dtype not in (np.uint8, 'uint8'):
-                logging.getLogger('XCOREModel').debug(
+                logging.getLogger('XCOREModel').xdebug(
                     f"Numpy array of type {data.dtype} stored in buffer"
                 )
             self._data = np.frombuffer(data.tostring(), dtype=np.uint8)

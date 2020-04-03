@@ -8,7 +8,7 @@ from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCod
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import ReplaceXCOREWeightBiasOperatorPass
-from .utils import Log
+from .utils import log_method_output
 
 
 # TODO: write (at least regression) tests for the mutator functions
@@ -39,7 +39,7 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     def _MAX_POST_SHIFT(self):
         return 32 - 16 - 2  # this is because the output is 16 bit
 
-    @Log.output
+    @log_method_output
     def _zero_point_bias(self):
         return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
 

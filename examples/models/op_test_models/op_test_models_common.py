@@ -9,7 +9,6 @@ sys.path.append(dirname(dirname(realpath(__file__))))
 from model_common import DefaultParser, InitializerParser, TrainableParser
 
 import argparse
-import logging
 import numpy as np
 import tensorflow as tf
 from enum import Enum

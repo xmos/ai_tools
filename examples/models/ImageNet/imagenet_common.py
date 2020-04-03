@@ -8,8 +8,6 @@ sys.path.append(dirname(dirname(realpath(__file__))))
 # best to import this before tf
 from model_common import DefaultParser
 
-import logging
-import argparse
 from pathlib import Path
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasClassifier

@@ -1,33 +1,20 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import argparse
-import logging
-
 from pathlib import Path
 
-from tflite2xcore.model_generation import utils
+from tflite2xcore.utils import VerbosityParser
 
 
-class DefaultParser(argparse.ArgumentParser):
+class DefaultParser(VerbosityParser):
     def __init__(self, *args, defaults, **kwargs):
-        self.logger = utils.Log.getLogger(self.__class__.__name__)
-        kwargs.setdefault('formatter_class', argparse.ArgumentDefaultsHelpFormatter)
-        kwargs.setdefault('conflict_handler', 'resolve')
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, defaults, **kwargs)
         self.add_argument(
             "-path", nargs="?", default=defaults["path"],
             help="Path to a directory where models and data will be saved in subdirectories.",
         )
-        self.add_argument(
-            "-v", "--verbose", action="store_true", default=False,
-            help="Verbose mode."
-        )
 
     def parse_args(self, *args, **kwargs):
         args = super().parse_args(*args, **kwargs)
-        utils.Log.set_verbosity(args.verbose)
-        utils.set_gpu_usage(args.use_gpu if hasattr(args, 'use_gpu') else False,
-                            args.verbose)
         args.path = Path(args.path)
         return args
 

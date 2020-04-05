@@ -9,7 +9,7 @@ import importlib
 
 import numpy as np
 
-from tflite2xcore import logging
+from tflite2xcore import xlogging as logging
 
 
 def lazy_import(fullname):
@@ -60,11 +60,11 @@ def set_gpu_usage(use_gpu, verbose):
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, enable=True)
         else:
-            logging._logging.info("GPUs disabled.")
+            logging.getLogger().info("GPUs disabled.")
             tf.config.experimental.set_visible_devices([], 'GPU')
     elif use_gpu:
-        logging._logging.warning('No available GPUs found, defaulting to CPU.')
-    logging._logging.debug(f"Eager execution enabled: {tf.executing_eagerly()}")
+        logging.getLogger().warning('No available GPUs found, defaulting to CPU.')
+    logging.getLogger().debug(f"Eager execution enabled: {tf.executing_eagerly()}")
 
 
 class VerbosityParser(argparse.ArgumentParser):

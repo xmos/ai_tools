@@ -7,7 +7,7 @@ import itertools
 from abc import ABC, abstractmethod
 
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore import logging, tflite_visualize
+from tflite2xcore import xlogging as logging, tflite_visualize
 from tflite2xcore.serialization import serialize_model
 from tflite2xcore.utils import convert_path
 

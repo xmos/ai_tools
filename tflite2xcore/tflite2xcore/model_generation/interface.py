@@ -9,7 +9,7 @@ import tflite2xcore.converter as xcore_conv
 from tflite2xcore.serialization import serialize_model, deserialize_model
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.model_generation import utils
-from tflite2xcore import logging, tflite_visualize
+from tflite2xcore import xlogging as logging, tflite_visualize
 
 
 class Model(ABC):

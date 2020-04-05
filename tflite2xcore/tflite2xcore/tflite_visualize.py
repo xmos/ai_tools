@@ -16,7 +16,6 @@
 
 import json
 import os
-import logging
 import argparse
 import webbrowser
 import tempfile
@@ -764,8 +763,5 @@ if __name__ == "__main__":
                         help='Do not open browser after the .html is created.')
     args = parser.parse_args()
     tflite_input, html_output = args.tflite_input, args.html_output
-
-    if args.verbose:
-        logging.basicConfig(level=logging.DEBUG)
 
     main(tflite_input, html_output, no_browser=args.no_browser)

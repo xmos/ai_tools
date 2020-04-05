@@ -13,7 +13,7 @@ from pathlib import Path
 from tqdm import tqdm
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasClassifier
-from tflite2xcore import logging
+from tflite2xcore import xlogging as logging
 
 import tensorflow as tf
 from sklearn.utils import shuffle
@@ -76,7 +76,7 @@ def get_mnist(padding=2, categorical=False, val_split=True, flatten=False,
             x_val = x_val.reshape(x_val.shape[0], -1)
     if not categorical:
         train_labels_count = np.unique(y_train, return_counts=True)
-        logging._logging.debug(f"labels counts: {train_labels_count[1]}")
+        logging.getLogger().debug(f"labels counts: {train_labels_count[1]}")
     if val_split:
         return x_train, x_test, x_val, y_train, y_test, y_val
     return x_train, x_test, y_train, y_test

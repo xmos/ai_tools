@@ -30,6 +30,12 @@ if __name__ == "__main__":
         help='Number of parallel threads for xcore.ai optimization.'
     )
     parser.add_argument(
+        '--intermediates_path', default=None,
+        help="Path to directory for storing intermediate models. If not given "
+             "intermediate models will not be saved. If path doesn't exists, "
+             "it will be created. Contents may be overwritten."
+    )
+    parser.add_argument(
         '--debug', action='store_true', default=False,
         help='Use the xformer in debug mode. Inserts a pdb breakpoint before '
              'each pass, and after a pass matches but before it mutates. '
@@ -49,4 +55,5 @@ if __name__ == "__main__":
                        remove_softmax=args.remove_softmax,
                        minification=args.minify,
                        num_threads=args.num_threads,
+                       intermediates_path=args.intermediates_path,
                        debug=args.debug)

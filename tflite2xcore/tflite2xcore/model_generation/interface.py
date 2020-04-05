@@ -1,7 +1,7 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
 import pathlib
-from tflite2xcore.utils import set_all_seeds
+from tflite2xcore.utils import set_all_seeds, convert_path
 import tensorflow as tf
 import numpy as np
 from abc import ABC, abstractmethod
@@ -39,13 +39,7 @@ class Model(ABC):
         self.data = {}
         self.converters = {}
 
-        if isinstance(path, pathlib.Path):
-            self._path = path
-        elif isinstance(path, str):
-            self._path = pathlib.Path(path)
-        else:
-            raise TypeError(f"Expected path of type str or pathlib.Path, got {type(path)}")
-
+        self._path = convert_path(path)
         self._path.mkdir(parents=True, exist_ok=True)
         self.data_dir = self._path / 'test_data'
         self.data_dir.mkdir(exist_ok=True)

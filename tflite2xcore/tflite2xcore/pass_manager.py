@@ -37,7 +37,7 @@ class ModelTransformationPass(ABC):
 
 class PassManager():
     def __init__(self, model=None, passes=[], *,
-                 debug=False, keep_intermediates=True):
+                 debug=False, keep_intermediates=False):
         self._queue = []
         self.debug = debug
         self._counter = itertools.count()
@@ -66,7 +66,7 @@ class PassManager():
 
     def save_intermediates(self, dirpath, *, visualize=True):
         if len(self._intermediates) == 0:
-            self.logger.warning("No intermediate models states were recorded!")
+            self.logger.warning("No intermediate models were recorded!")
             return
 
         dirpath = convert_path(dirpath)

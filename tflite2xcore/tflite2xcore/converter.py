@@ -63,6 +63,7 @@ def optimize_for_xcore(model, *,
                        cleanup=True,
                        minification=False,
                        num_threads=None,
+                       intermediates_path=None,
                        debug=False):
     # NOTE: the order of the passes is mostly strict
     pass_mgr = PassManager(
@@ -72,6 +73,7 @@ def optimize_for_xcore(model, *,
             passes.LegalizeQuantizedOutputPass(),
             passes.SplitPaddingPass()
         ],
+        keep_intermediates=bool(intermediates_path),
         debug=debug
     )
 
@@ -125,7 +127,8 @@ def optimize_for_xcore(model, *,
 
     model.description = model.description + ' + XMOS optimized.'
 
-    pass_mgr.save_intermediates(pathlib.Path('./debug/').resolve())
+    if pass_mgr.keep_intermediates:
+        pass_mgr.save_intermediates(intermediates_path)
 
 
 def convert(tflite_input_path, tflite_output_path, *,
@@ -133,6 +136,7 @@ def convert(tflite_input_path, tflite_output_path, *,
             remove_softmax=False,
             num_threads=None,
             minification=False,
+            intermediates_path=None,
             debug=False):
     model = read_flatbuffer(tflite_input_path)
     optimize_for_xcore(model,
@@ -140,5 +144,6 @@ def convert(tflite_input_path, tflite_output_path, *,
                        remove_softmax=remove_softmax,
                        minification=minification,
                        num_threads=num_threads,
+                       intermediates_path=intermediates_path,
                        debug=debug)
     write_flatbuffer(model, tflite_output_path)

@@ -1,26 +1,24 @@
 # Copyright (c) 2018-2020, XMOS Ltd, All rights reserved
 
-import numpy as np
-
 from functools import wraps
 
-import logging as _logging
+import logging
 from logging import NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 
 XDEBUG = DEBUG - 1
 VERBOSITIES = [WARNING, INFO, DEBUG, XDEBUG]
 
-_logging.addLevelName(XDEBUG, "XDEBUG")
+logging.addLevelName(XDEBUG, "XDEBUG")
 
 
 def set_verbosity(verbosity=0):
     assert verbosity >= 0
     verbosity = min(verbosity, len(VERBOSITIES) - 1)
 
-    _logging.basicConfig(level=VERBOSITIES[verbosity])
+    logging.basicConfig(level=VERBOSITIES[verbosity])
     if verbosity == 0:
-        _logging.getLogger('tensorflow').setLevel(_logging.ERROR)
+        logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
 
 def _array_msg(arr, style=''):
@@ -35,7 +33,7 @@ def _array_msg(arr, style=''):
 
 
 def getLogger(*args, **kwargs):
-    logger = _logging.getLogger(*args, *kwargs)
+    logger = logging.getLogger(*args, *kwargs)
     logger.xdebug = lambda *args, **kwargs: logger.log(XDEBUG, *args, **kwargs)
     return logger
 
@@ -69,6 +67,7 @@ def log_method_output(level=XDEBUG, logger=None):
         def wrapper(self, *args, **kwargs):
             out = func(self, *args, **kwargs)
             msg = f"{func.__name__} output:\n"
+            import numpy as np
             if isinstance(out, np.ndarray):
                 msg += _array_msg(out, func.__name__)
             else:

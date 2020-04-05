@@ -4,7 +4,7 @@ import numbers
 
 from abc import ABC, abstractmethod
 
-from tflite2xcore import logging
+from tflite2xcore import xlogging as logging
 
 
 class ParPlan():

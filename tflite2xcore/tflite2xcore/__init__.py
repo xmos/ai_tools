@@ -20,5 +20,5 @@ from . import operator_codes
 from . import parallelization
 from . import tflite_visualize
 from . import utils
-from . import logging
+from . import xlogging
 from . import xcore_model

@@ -4,7 +4,7 @@
 
 from pathlib import Path
 
-from tflite2xcore import utils, logging
+from tflite2xcore import utils, xlogging as logging
 import tflite2xcore.converter as xcore_conv
 
 

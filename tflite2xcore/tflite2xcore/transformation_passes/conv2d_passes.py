@@ -9,7 +9,7 @@ from .transformation_passes import (
     ReplaceXCOREWeightBiasOperatorPass,
     QuantizedOperatorMatchingPass
 )
-from tflite2xcore.logging import log_method_output
+from tflite2xcore.xlogging import log_method_output
 
 
 class ReplaceConv2DPass(ReplaceXCOREWeightBiasOperatorPass):

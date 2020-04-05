@@ -8,7 +8,7 @@ import numpy as np
 from collections import Counter
 
 from tflite2xcore.operator_codes import OperatorCode
-from tflite2xcore import logging
+from tflite2xcore import xlogging as logging
 
 
 class TensorType(enum.IntEnum):

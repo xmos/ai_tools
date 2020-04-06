@@ -9,6 +9,7 @@
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
 
+#include "lib_ops/api/lib_ops.h"
 #include "xcore_model.h"
 
 #define TEST_INPUT_SIZE = 32 * 32 * 4
@@ -68,6 +69,13 @@ static void setup() {
     TfLiteStatus allocate_status = interpreter->AllocateTensors();
     if (allocate_status != kTfLiteOk) {
         error_reporter->Report("AllocateTensors() failed");
+    return;
+    }
+
+    // Allocate xCORE KernelDispatcher after AllocateTensors
+    xcore::XCoreStatus allocate_xcore_status = xcore::AllocateOperatorDispatcher();
+    if (allocate_xcore_status != xcore::kXCoreOk) {
+        error_reporter->Report("AllocateKernelDispatcher() failed");
     return;
     }
 

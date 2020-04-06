@@ -5,7 +5,7 @@ ifeq ($(TARGET), x86)
 	BUILD_TARGET := x86
 
 	CC := gcc
-	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
+	CCFLAGS := -DNDEBUG -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
 	#CCFLAGS += -DNDEBUG  
 
 	CXX := g++
@@ -17,7 +17,7 @@ ifeq ($(TARGET), x86)
 
 	OBJ_DIR := .build/x86
 
-	APP = test_model
+	APP = cifar-10
 else # must be xcore
 	BUILD_TARGET := xcore.ai
 	
@@ -36,12 +36,13 @@ else # must be xcore
 	ASFLAGS := $(PLATFORM_FLAGS)
 
 	CC := xcc
-	CCFLAGS := -DTF_LITE_STATIC_MEMORY -DTF_LITE_STRIP_ERROR_STRINGS
+	CCFLAGS := -DTF_LITE_STATIC_MEMORY
 	CCFLAGS += -DNDEBUG
+
 	CCFLAGS += $(PLATFORM_FLAGS)
 
 	CXX := xcc
-	CXXFLAGS := -std=c++11 -DTF_LITE_STATIC_MEMORY -DTF_LITE_STRIP_ERROR_STRINGS
+	CXXFLAGS := -std=c++11 -DTF_LITE_STATIC_MEMORY
 	CXXFLAGS += -DNDEBUG
 	CXXFLAGS += $(PLATFORM_FLAGS)
 
@@ -49,7 +50,7 @@ else # must be xcore
 
 	OBJ_DIR := .build/xcore
 
-	APP = test_model.xe
+	APP = cifar-10.xe
 endif
 
 $(info Building for $(BUILD_TARGET))
@@ -71,7 +72,7 @@ VPATH += src
 
 SOURCES := $(TENSORFLOW_SOURCES)
 SOURCES += $(LIBS_SOURCES)
-SOURCES += main.cc
+SOURCES += main.cc xcore_model.c
 
 OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))))
 OBJECT_FILES := $(addprefix $(OBJ_DIR)/,$(OBJECT_FILES))

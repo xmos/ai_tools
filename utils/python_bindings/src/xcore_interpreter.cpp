@@ -1,6 +1,8 @@
 // Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 #include <iostream>
+#include <vector>
 
+#include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
@@ -11,6 +13,23 @@
 namespace xcore {
 
 constexpr int max_log_len = 256;
+
+typedef void (*invoke_callback_t)(int);
+typedef TfLiteStatus (*invoke_function_t)(TfLiteContext*, TfLiteNode*);
+
+class CallbackContext {
+ public:
+  CallbackContext() : current_operator(0), callback(nullptr) {}
+  void Reset() {
+    current_operator = 0;
+    callback = nullptr;
+    invoke_functions.clear();
+  }
+  int current_operator;
+  invoke_callback_t callback;
+  std::vector<invoke_function_t> invoke_functions;
+};
+static CallbackContext gCallbackContext;
 
 class XCOREInterpreterErrorReporter : public tflite::ErrorReporter {
  public:
@@ -40,6 +59,19 @@ class XCOREInterpreterErrorReporter : public tflite::ErrorReporter {
  private:
   std::stringstream log_stream_;
 };
+
+TfLiteStatus CallbackInvoke(TfLiteContext* context, TfLiteNode* node) {
+  int current_operator = gCallbackContext.current_operator;
+
+  invoke_function_t invoke =
+      gCallbackContext.invoke_functions[current_operator];
+
+  TfLiteStatus status = invoke(context, node);
+  gCallbackContext.callback(current_operator);
+  gCallbackContext.current_operator++;
+
+  return status;
+}
 
 class XCOREInterpreter {
  public:
@@ -127,8 +159,47 @@ class XCOREInterpreter {
     return -1;
   }
 
-  XCoreStatus Invoke() {
+  XCoreStatus Invoke(invoke_callback_t callback = nullptr) {
+    if (callback) {
+      gCallbackContext.callback = callback;
+      // Save the registered invoke functions
+      for (size_t node_index = 0; node_index < interpreter_->operators_size();
+           node_index++) {
+        tflite::NodeAndRegistration node_and_reg =
+            interpreter_->node_and_registration(static_cast<int>(node_index));
+
+        gCallbackContext.invoke_functions.push_back(
+            node_and_reg.registration->invoke);
+      }
+      // Set the invoke function to the CallbackInvoke
+      for (size_t node_index = 0; node_index < interpreter_->operators_size();
+           node_index++) {
+        tflite::NodeAndRegistration node_and_reg =
+            interpreter_->node_and_registration(static_cast<int>(node_index));
+        const TfLiteRegistration* reg = node_and_reg.registration;
+
+        // Disregard const qualifier to workaround existing API.
+        (const_cast<TfLiteRegistration*>(reg))->invoke = CallbackInvoke;
+      }
+    }
+
     TfLiteStatus invoke_status = interpreter_->Invoke();
+
+    // Set back the original invoke function
+    if (callback) {
+      // Set the invoke function to the CallbackInvoke
+      for (size_t node_index = 0; node_index < interpreter_->operators_size();
+           node_index++) {
+        tflite::NodeAndRegistration node_and_reg =
+            interpreter_->node_and_registration(static_cast<int>(node_index));
+        const TfLiteRegistration* reg = node_and_reg.registration;
+
+        // Disregard const qualifier to workaround existing API.
+        (const_cast<TfLiteRegistration*>(reg))->invoke =
+            gCallbackContext.invoke_functions[node_index];
+      }
+      gCallbackContext.Reset();
+    }
     if (invoke_status != kTfLiteOk) {
       return kXCoreError;
     }
@@ -244,6 +315,52 @@ class XCOREInterpreter {
     return kXCoreOk;
   }
 
+  XCoreStatus GetOperatorDetailsBufferSizes(size_t operator_index,
+                                            size_t* inputs, size_t* outputs) {
+    if (operator_index >= interpreter_->operators_size()) {
+      error_reporter_->Report("Invalid operator index %d", operator_index);
+      return kXCoreError;
+    }
+
+    tflite::NodeAndRegistration node_and_reg =
+        interpreter_->node_and_registration(static_cast<int>(operator_index));
+    const TfLiteNode& node = node_and_reg.node;
+    *inputs = node.inputs->size;
+    *outputs = node.outputs->size;
+
+    return kXCoreOk;
+  }
+
+  XCoreStatus GetOperatorDetails(size_t operator_index, char* name,
+                                 int name_len, int* version, int* inputs,
+                                 int* outputs) {
+    if (operator_index >= interpreter_->operators_size()) {
+      error_reporter_->Report("Invalid operator index %d", operator_index);
+      return kXCoreError;
+    }
+
+    tflite::NodeAndRegistration node_and_reg =
+        interpreter_->node_and_registration(static_cast<int>(operator_index));
+    const TfLiteNode& node = node_and_reg.node;
+    const TfLiteRegistration* reg = node_and_reg.registration;
+
+    if (reg->custom_name != nullptr) {
+      std::strncpy(name, reg->custom_name, name_len);
+    } else {
+      std::strncpy(name, tflite::EnumNamesBuiltinOperator()[reg->builtin_code],
+                   name_len);
+    }
+    *version = reg->version;
+    for (int i = 0; i < node.inputs->size; i++) {
+      inputs[i] = node.inputs->data[i];
+    }
+    for (int i = 0; i < node.outputs->size; i++) {
+      outputs[i] = node.outputs->data[i];
+    }
+
+    return kXCoreOk;
+  }
+
   size_t GetError(char* msg) {
     const std::string& error_msg = error_reporter_->GetError();
     std::strncpy(msg, error_msg.c_str(), error_msg.length());
@@ -262,7 +379,6 @@ class XCOREInterpreter {
 }  // namespace xcore
 
 extern "C" {
-
 xcore::XCOREInterpreter* new_interpreter() {
   return new xcore::XCOREInterpreter();
 }
@@ -317,6 +433,20 @@ int get_tensor_details(xcore::XCOREInterpreter* interpreter,
                                        type, scale, zero_point);
 }
 
+size_t get_operator_details_buffer_sizes(xcore::XCOREInterpreter* interpreter,
+                                         size_t operator_index, size_t* inputs,
+                                         size_t* outputs) {
+  return interpreter->GetOperatorDetailsBufferSizes(operator_index, inputs,
+                                                    outputs);
+}
+
+int get_operator_details(xcore::XCOREInterpreter* interpreter,
+                         size_t operator_index, char* name, int name_len,
+                         int* version, int* inputs, int* outputs) {
+  return interpreter->GetOperatorDetails(operator_index, name, name_len,
+                                         version, inputs, outputs);
+}
+
 size_t input_tensor_index(xcore::XCOREInterpreter* interpreter,
                           size_t input_index) {
   return interpreter->input_tensor_index(input_index);
@@ -327,8 +457,9 @@ size_t output_tensor_index(xcore::XCOREInterpreter* interpreter,
   return interpreter->output_tensor_index(output_index);
 }
 
-int invoke(xcore::XCOREInterpreter* interpreter) {
-  return interpreter->Invoke();
+int invoke(xcore::XCOREInterpreter* interpreter,
+           xcore::invoke_callback_t callback = nullptr) {
+  return interpreter->Invoke(callback);
 }
 
 size_t get_error(xcore::XCOREInterpreter* interpreter, char* msg) {

@@ -60,10 +60,12 @@ class XCOREInterpreter:
         lib.output_tensor_index.argtypes = [ctypes.c_void_p, ctypes.c_size_t]
 
         lib.set_tensor.restype = ctypes.c_int
-        lib.set_tensor.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p, ctypes.c_int]
+        lib.set_tensor.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_int,
+            ctypes.c_void_p, ctypes.c_int]
 
         lib.get_tensor.restype = ctypes.c_int
-        lib.get_tensor.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p, ctypes.c_int]
+        lib.get_tensor.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_int,
+            ctypes.c_void_p, ctypes.c_int]
 
         lib.get_tensor_details_buffer_sizes.restype = ctypes.c_int
         lib.get_tensor_details_buffer_sizes.argtypes = [ctypes.c_void_p, ctypes.c_size_t,
@@ -73,6 +75,15 @@ class XCOREInterpreter:
         lib.get_tensor_details.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_int,
             ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_float),
             ctypes.POINTER(ctypes.c_int32)]
+
+        lib.get_operator_details_buffer_sizes.restype = ctypes.c_int
+        lib.get_operator_details_buffer_sizes.argtypes = [ctypes.c_void_p, ctypes.c_size_t,
+            ctypes.POINTER(ctypes.c_size_t), ctypes.POINTER(ctypes.c_size_t)]
+
+        lib.get_operator_details.restype = ctypes.c_int
+        lib.get_operator_details.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_char_p,
+            ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int)]
 
         lib.invoke.restype = ctypes.c_int
         lib.invoke.argtypes = [ctypes.c_void_p]
@@ -111,9 +122,43 @@ class XCOREInterpreter:
         self._check_status(lib.allocate_tensors(self.obj))
 
 
-    def invoke(self):
+    def invoke(self, py_callback=None):
+        INVOKE_CALLBACK_FUNC = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_int)
+        def c_callback(operator_index):
+            # get the dimensions of the operator inputs and outputs
+            inputs_size = ctypes.c_size_t()
+            outputs_size = ctypes.c_size_t()
+            self._check_status(lib.get_operator_details_buffer_sizes(self.obj, operator_index,
+                ctypes.byref(inputs_size), ctypes.byref(outputs_size)))
+            # get the inputs and outputs tensor indices
+            operator_name_max_len = 1024
+            operator_name = ctypes.create_string_buffer(operator_name_max_len)
+            operator_version = ctypes.c_int()
+            operator_inputs = (ctypes.c_int * inputs_size.value)()
+            operator_outputs = (ctypes.c_int * outputs_size.value)()
+            self._check_status(lib.get_operator_details(self.obj, operator_index,
+                operator_name, operator_name_max_len, ctypes.byref(operator_version),
+                operator_inputs, operator_outputs))
+            # get the details
+            tensor_details = self.get_tensor_details()
+            operator_details = {
+                'index': operator_index,
+                'name': operator_name.value.decode('utf-8'),
+                'version': operator_version.value,
+                'inputs': [tensor_details[input_index] for input_index in operator_inputs],
+                'outputs':[tensor_details[output_index] for output_index in operator_outputs]
+            }
+            
+            py_callback(self, operator_details)
+
         self._verify_allocated()
-        self._check_status(lib.invoke(self.obj))
+        
+        if py_callback:
+            cb = INVOKE_CALLBACK_FUNC(c_callback)
+        else:
+            cb = None
+
+        self._check_status(lib.invoke(self.obj, cb))
 
 
     def set_tensor(self, tensor_index, value):

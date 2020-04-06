@@ -80,7 +80,6 @@ def optimize_for_xcore(model, *,
     if is_classifier or remove_softmax:
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
-    pass_mgr.register_pass(passes.ReplaceArgMax16Pass())
     pass_mgr.register_pass(passes.Replace1x1Conv2dPass())
     pass_mgr.register_pass(passes.ReplaceDepthwiseConv2dPass())
     pass_mgr.register_pass(passes.ReplaceDeepinDeepoutConv2DPass())
@@ -91,6 +90,8 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())
     pass_mgr.register_pass(passes.ReplaceAveragePool2DPass())
     pass_mgr.register_pass(passes.ReplaceGlobalAveragePool2DPass())
+
+    # TODO: revise how these are done
     pass_mgr.register_pass(passes.ReplaceFullyConnectedIntermediatePass())
     pass_mgr.register_pass(passes.ReplaceFullyConnectedOutputPass())
 
@@ -103,22 +104,21 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
     if is_classifier:
+        # TODO: revise how this is done
         pass_mgr.register_pass(passes.AddArgMax16OutputPass())
+    pass_mgr.register_pass(passes.ReplaceArgMax16Pass())
 
     if num_threads:
         pass_mgr.register_pass(passes.ParallelizeDIDOPass(num_threads=num_threads))
 
     if cleanup:
-        # TODO: these should be turned off in debug mode
         pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
         pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 
-    # TODO: these should be turned off in debug mode
     pass_mgr.register_pass(passes.LegalizeOperatorOutputTensorNamePass())
     pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
 
     if minification:
-        # TODO: these should be turned off in debug mode
         pass_mgr.register_pass(passes.MinifyQuantInfoPass())
         pass_mgr.register_pass(passes.MinifyTensorNamesPass())
 

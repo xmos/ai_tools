@@ -132,14 +132,19 @@ class Model(ABC):
                                       "(Hint: run Model.gen_test_data first)")
 
     def convert_to_float(self, **converter_args):
+        self.logger.info("Converting model_float...")
         self._convert_from_tflite_converter('model_float')
 
     def convert_to_quant(self, **converter_args):
+        self.logger.info(
+            "Converting model_quant "
+            f"(representative dataset size: {len(self.data['quant'])})..."
+        )
         self._convert_from_tflite_converter('model_quant')
 
     def convert_to_stripped(self, **converter_args):
         assert 'model_quant' in self.buffers
-        self.logger.info(f"Converting model_quant...")
+        self.logger.info(f"Converting model_stripped...")
         model = deserialize_model(self.buffers['model_quant'])
         xcore_conv.strip_model(model, **converter_args)
         self.models['model_stripped'] = self.models_dir / "model_stripped.tflite"
@@ -159,7 +164,6 @@ class Model(ABC):
 
     def _convert_from_tflite_converter(self, model_key):
         assert model_key in self.converters
-        self.logger.info(f"Converting {model_key}...")
         self.models[model_key] = self.models_dir / f"{model_key}.tflite"
         self.buffers[model_key] = self.converters[model_key].convert()
 
@@ -388,3 +392,4 @@ class FunctionModel(Model):
             [self.concrete_function])
         utils.quantize_converter(
             self.converters['model_quant'], self.data['quant'])
+    

@@ -1,15 +1,15 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import logging
+
 import pathlib
-from tflite2xcore.model_generation import utils
-from tflite2xcore.utils import Log
+from tflite2xcore.utils import set_all_seeds, convert_path
 import tensorflow as tf
 import numpy as np
 from abc import ABC, abstractmethod
 import tflite2xcore.converter as xcore_conv
-from tflite2xcore import tflite_visualize
-from tflite2xcore.serialization.flatbuffers_io import serialize_model, deserialize_model
+from tflite2xcore.serialization import serialize_model, deserialize_model
 from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.model_generation import utils
+from tflite2xcore import xlogging as logging, tflite_visualize
 
 
 class Model(ABC):
@@ -39,13 +39,7 @@ class Model(ABC):
         self.data = {}
         self.converters = {}
 
-        if isinstance(path, pathlib.Path):
-            self._path = path
-        elif isinstance(path, str):
-            self._path = pathlib.Path(path)
-        else:
-            raise TypeError(f"Expected path of type str or pathlib.Path, got {type(path)}")
-
+        self._path = convert_path(path)
         self._path.mkdir(parents=True, exist_ok=True)
         self.data_dir = self._path / 'test_data'
         self.data_dir.mkdir(exist_ok=True)
@@ -138,31 +132,38 @@ class Model(ABC):
                                       "(Hint: run Model.gen_test_data first)")
 
     def convert_to_float(self, **converter_args):
+        self.logger.info("Converting model_float...")
         self._convert_from_tflite_converter('model_float')
 
     def convert_to_quant(self, **converter_args):
+        self.logger.info(
+            "Converting model_quant "
+            f"(representative dataset size: {len(self.data['quant'])})..."
+        )
         self._convert_from_tflite_converter('model_quant')
 
     def convert_to_stripped(self, **converter_args):
         assert 'model_quant' in self.buffers
-        self.logger.info(f"Converting model_quant...")
+        self.logger.info(f"Converting model_stripped...")
         model = deserialize_model(self.buffers['model_quant'])
         xcore_conv.strip_model(model, **converter_args)
         self.models['model_stripped'] = self.models_dir / "model_stripped.tflite"
         self.buffers['model_stripped'] = serialize_model(model)
+
+    def _convert_to_xcore(self, model, **converter_args):
+        xcore_conv.optimize_for_xcore(model, **converter_args)
 
     def convert_to_xcore(self, *, source='model_quant', **converter_args):
         assert source in ['model_quant', 'model_stripped']
         assert source in self.buffers
         self.logger.info(f"Converting {source}...")
         model = deserialize_model(self.buffers[source])
-        xcore_conv.optimize_for_xcore(model, **converter_args)
+        self._convert_to_xcore(model, **converter_args)
         self.models['model_xcore'] = self.models_dir / 'model_xcore.tflite'
         self.buffers['model_xcore'] = serialize_model(model)
 
     def _convert_from_tflite_converter(self, model_key):
         assert model_key in self.converters
-        self.logger.info(f"Converting {model_key}...")
         self.models[model_key] = self.models_dir / f"{model_key}.tflite"
         self.buffers[model_key] = self.converters[model_key].convert()
 
@@ -177,7 +178,6 @@ class Model(ABC):
         self.logger.info(f"{model_key} visualization saved to {model_html}")
 
     def _save_data_dict(self, data, *, base_file_name):
-        # TODO: this should probably be a util
         # save test data in numpy format
         test_data_dir = self.data_dir / base_file_name
         test_data_dir.mkdir(exist_ok=True, parents=True)
@@ -230,10 +230,10 @@ class Model(ABC):
         y_test = utils.quantize(y_test_float,
                                 output_quant['scale'][0],
                                 output_quant['zero_point'][0])
-        self.logger.debug("model_stripped input example: "
-                          f"{Log._array_msg(x_test[-1])}")
-        self.logger.debug("model_stripped output example: "
-                          f"{Log._array_msg(y_test[-1])}")
+        self.logger.xdebug("model_stripped input example: "
+                           f"{logging._array_msg(x_test[-1])}")
+        self.logger.xdebug("model_stripped output example: "
+                           f"{logging._array_msg(y_test[-1])}")
         data = {'x_test': x_test, 'y_test': y_test}
 
         self._save_data_dict(data, base_file_name='model_stripped')
@@ -300,11 +300,20 @@ class Model(ABC):
 class KerasModel(Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.input_init = None
+        self._input_init = tf.initializers.Initializer()
+
+    @property
+    def input_init(self):
+        return self._input_init
+
+    @input_init.setter
+    def input_init(self, initializer):
+        assert isinstance(initializer, tf.initializers.Initializer)
+        self._input_init = initializer
 
     def _prep_backend(self):
         tf.keras.backend.clear_session()
-        utils.set_all_seeds()
+        set_all_seeds()
 
     @property
     def input_shape(self):
@@ -326,7 +335,7 @@ class KerasModel(Model):
             self.save_training_history()
 
     def save_training_history(self):
-        with utils.LoggingContext(logging.getLogger(), logging.INFO):
+        with logging.LoggingContext(logging.getLogger(), logging.INFO):
             utils.plot_history(self.history,
                                title=f"{self.name} metrics",
                                path=self.models_dir / 'training_history.png')
@@ -383,3 +392,4 @@ class FunctionModel(Model):
             [self.concrete_function])
         utils.quantize_converter(
             self.converters['model_quant'], self.data['quant'])
+    

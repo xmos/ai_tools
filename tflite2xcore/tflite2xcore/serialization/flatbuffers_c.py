@@ -8,16 +8,7 @@ import ctypes
 
 import numpy as np
 
-__PARENT_DIR = Path(__file__).parent.absolute()
-if sys.platform.startswith("linux"):
-    shared_lib = os.path.join(__PARENT_DIR, 'linux/libtflite2xcore.so.1.0.1')
-elif sys.platform == "darwin":
-    shared_lib = os.path.join(__PARENT_DIR, 'macos/libtflite2xcore.1.0.1.dylib')
-else:
-    shared_lib = os.path.join(__PARENT_DIR, 'windows/libtflite2xcore.dll')
-
-lib = ctypes.cdll.LoadLibrary(shared_lib)
-
+from tflite2xcore import libtflite2xcore as lib
 
 class FlexbufferBuilder:
     def __init__(self, data=None):

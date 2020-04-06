@@ -1,10 +1,37 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import pytest
-import numpy
+import numpy as np
 from copy import deepcopy
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
+
+
+def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
+    assert 0 <= axis < len(input_shape)
+    assert 1 < num_splits <= input_shape[axis]
+    assert input_shape[axis] % num_splits == 0
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, *input_shape]
+    tin = subgraph.create_tensor(
+        'input', tensor_type, shape=input_shape, isinput=True)
+    t_axis = subgraph.create_tensor('axis', TensorType.INT32, shape=[])
+    t_axis.buffer.data = np.array([axis], dtype=np.int32)
+
+    out_shape = (*input_shape[:axis],
+                 int(input_shape[axis] // num_splits),
+                 *input_shape[axis+1:])
+    outputs = [
+        subgraph.create_tensor(
+            f'output_{j}', tin.type, out_shape, isoutput=True)
+        for j in range(num_splits)
+    ]
+    op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.SPLIT),
+                                  inputs=[t_axis, tin], outputs=outputs)
+    op.builtin_options = {'num_splits': num_splits}
+
+    return subgraph.model
 
 
 def build_elementwise_op(builtin_opcode, subgraph=None, *, input_shape, tensor_type):
@@ -54,7 +81,7 @@ def build_mean(subgraph=None, *, input_shape, reduction_dims):
         'reduction_dims', TensorType.INT32, [len(reduction_dims)])
     tout = subgraph.create_tensor(
         'output', tin.type, [tin.shape[0] + tin.shape[3]], isoutput=True)
-    tred.buffer.data = numpy.array(reduction_dims, dtype=numpy.int32)
+    tred.buffer.data = np.array(reduction_dims, dtype=np.int32)
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.MEAN),
                              inputs=[tin, tred], outputs=[tout])
 
@@ -71,14 +98,17 @@ def build_argmax(subgraph=None, *, input_shape, input_type):
         'output', TensorType.INT32, tin.shape, isoutput=True)
     dim_tensor = subgraph.create_tensor(
         "axis", TensorType.INT32, shape=[])
-    dim_tensor.buffer.data = numpy.int32([1])
+    dim_tensor.buffer.data = np.int32([1])
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.ARG_MAX),
                              inputs=[tin, dim_tensor], outputs=[tout])
 
     return subgraph.model
 
 
-def build_pool(builtin_opcode, subgraph=None, *, input_shape, padding, pool_size, strides):
+def build_pool(builtin_opcode, subgraph=None, *,
+               input_shape, padding, pool_size, strides,
+               fused_activation='NONE'):
+    assert fused_activation in ['NONE', 'RELU', 'RELU6']
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, *input_shape]
@@ -98,7 +128,7 @@ def build_pool(builtin_opcode, subgraph=None, *, input_shape, padding, pool_size
     op.builtin_options = {'padding': padding,
                           'stride_h': strides[0], 'stride_w': strides[1],
                           'filter_height': pool_size[0], 'filter_width': pool_size[1],
-                          'fused_activation_function': 'NONE'}
+                          'fused_activation_function': fused_activation}
 
     return subgraph.model
 
@@ -115,7 +145,7 @@ def build_fc(subgraph=None, *, outputs, input_shape):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, *input_shape]
-    weight_shape = [outputs, numpy.prod(input_shape[1:])]
+    weight_shape = [outputs, np.prod(input_shape[1:])]
     tin = subgraph.create_tensor(
         'input', TensorType.INT8, input_shape, isinput=True)
     w = subgraph.create_tensor(
@@ -192,8 +222,8 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
         output_shape = [1, height, width, C_out]
     elif padding == 'VALID':
         output_shape = [1,
-                        int(numpy.ceil((height - K_h + 1) / strides[0])),
-                        int(numpy.ceil((width - K_w + 1) / strides[1])),
+                        int(np.ceil((height - K_h + 1) / strides[0])),
+                        int(np.ceil((width - K_w + 1) / strides[1])),
                         C_out]
 
     tout = subgraph.create_tensor(
@@ -226,8 +256,8 @@ def build_depthwise_conv2d(subgraph=None, *, weight_shape, input_size, padding, 
         output_shape = [1, height, width, C_out]
     elif padding == 'VALID':
         output_shape = [1,
-                        int(numpy.ceil((height - K_h + 1) / strides[0])),
-                        int(numpy.ceil((width - K_w + 1) / strides[1])),
+                        int(np.ceil((height - K_h + 1) / strides[0])),
+                        int(np.ceil((width - K_w + 1) / strides[1])),
                         C_out]
     tout = subgraph.create_tensor(
         'output', tin.type, output_shape, isoutput=True)
@@ -279,10 +309,11 @@ def build_DW(subgraph=None, *, weight_shape, input_size, pads, strides):
         assert len(p) == 2, f"padding[{j}] is not a pair"
 
     input_shape = [1, height, width, C_out]
-    bias_shape = [int(numpy.ceil(C_out / 16)), 5, 16]
-    tin = subgraph.create_tensor('input', TensorType.INT8, input_shape, isinput=True)
+    bss_shape = [int(np.ceil(C_out / 16)), 5, 16]
+    tin = subgraph.create_tensor(
+        'input', TensorType.INT8, input_shape, isinput=True)
     w = subgraph.create_tensor('weights', TensorType.INT8, weight_shape)
-    b = subgraph.create_tensor('bss', TensorType.INT16, bias_shape)
+    b = subgraph.create_tensor('bss', TensorType.INT16, bss_shape)
 
     out_size = [(i - k + p[0] + p[1]) / s + 1
                 for p, s, i, k in zip(pads, strides, input_size, weight_shape[:2])]
@@ -293,7 +324,7 @@ def build_DW(subgraph=None, *, weight_shape, input_size, pads, strides):
         OperatorCode(XCOREOpCodes.XC_conv2d_depthwise),
         inputs=[tin, w, b], outputs=[tout])
     op.add_custom_options(
-        pad=[pads[0][0], pads[1][0], -1],
+        pad=[pads[0][0], pads[1][0], -127],
         stride=[strides[0], strides[1]]
     )
 
@@ -311,12 +342,37 @@ def build_pad(subgraph=None, *, input_shape, paddings):
     tin = subgraph.create_tensor('unpadded', TensorType.INT8, input_shape, isinput=True)
     tout = subgraph.create_tensor('padded', tin.type, output_shape, isoutput=True)
     p = subgraph.create_tensor('paddings', TensorType.INT32, shape=[4, 2])
-    p.buffer.data = numpy.int32(paddings)
+    p.buffer.data = np.int32(paddings)
 
     subgraph.create_operator(OperatorCode(BuiltinOpCodes.PAD),
                              inputs=[tin, p], outputs=[tout])
 
     return subgraph.model
+
+
+def _glue_ops(op1, op2):
+    subgraph = op1.subgraph
+    assert subgraph is op2.subgraph
+
+    old_input, old_output = op2.inputs[0], op1.outputs[0]
+    op2.inputs[0] = old_output
+    subgraph.remove_tensor(old_input)
+    if old_output in subgraph.outputs:
+        subgraph.outputs.remove(old_output)
+    old_output.consumers.append(op2)
+
+
+def build_consecutive_pads(subgraph=None, *,
+                           input_shape, paddings_1, paddings_2):
+    model = build_pad(subgraph, input_shape=input_shape, paddings=paddings_1)
+    subgraph = subgraph or model.subgraphs[0]
+
+    build_pad(subgraph, input_shape=subgraph.outputs[0].shape, paddings=paddings_2)
+
+    pad_1, pad_2 = subgraph.operators[:2]
+    _glue_ops(pad_1, pad_2)
+
+    return model
 
 
 def build_padded_DW(subgraph=None, *,
@@ -332,10 +388,10 @@ def build_padded_DW(subgraph=None, *,
              pads=pads, strides=strides)
 
     pad_op, conv_op = subgraph.operators[:2]
+    _glue_ops(pad_op, conv_op)
+
     old_input = conv_op.inputs[0]
-    conv_op.inputs[0] = pad_op.outputs[0]
-    subgraph.remove_tensor(old_input)
-    subgraph.outputs.remove(pad_op.outputs[0])
-    pad_op.outputs[0].consumers.append(conv_op)
+    pad_op.outputs[0].quantization = old_input.quantization
+    pad_op.inputs[0].quantization = old_input.quantization
 
     return model

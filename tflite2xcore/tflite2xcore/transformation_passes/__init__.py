@@ -1,6 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from .transformation_passes import *
+from .transformation_passes import *  # TODO: fix this
 from .argmax_passes import (
     AddArgMax16OutputPass,
     ReplaceArgMax16Pass
@@ -16,8 +16,15 @@ from .conv2d_passes import (
     ReplaceDepthwiseConv2dPass,
     ReplaceDeepinDeepoutConv2DPass,
     ReplaceShallowinDeepoutConv2DPass,
-    ReplaceSingleinDeepoutDepthwiseConv2DPass
+    ReplaceSingleinDeepoutDepthwiseConv2DPass,
+    ParallelizeDIDOPass
 )
+
+from .fully_connected_passes import (
+    ReplaceFullyConnectedOutputPass,
+    ReplaceFullyConnectedIntermediatePass
+)
+
 from .pooling_passes import (
     ReplaceMaxPool2DPass,
     ReplaceMaxPool2D2x2Pass,
@@ -26,5 +33,29 @@ from .pooling_passes import (
     ReplaceGlobalAveragePool2DPass
 )
 from .padding_passes import (
-    FuseConv2dPaddingPass
+    FuseConv2dPaddingPass,
+    SplitPaddingPass,
+    FuseConsecutivePadsPass
+)
+
+from .quantize_dequantize_passes import (
+    LegalizeQuantizedInputPass,
+    LegalizeQuantizedOutputPass,
+    LegalizeFloatInputPass,
+    LegalizeFloatOutputPass,
+    LegalizeQuantizeVersionPass,
+)
+
+from .cleanup_passes import (
+    RemoveUnusedBuffersPass,
+    RemoveDanglingTensorsPass
+)
+
+from .renaming_passes import (
+    LegalizeOperatorOutputTensorNamePass
+)
+
+from .minification_passes import (
+    MinifyQuantInfoPass,
+    MinifyTensorNamesPass
 )

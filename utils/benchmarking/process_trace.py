@@ -10,77 +10,34 @@ import argparse
 
 INDENT = ' ' * 2
 
-INSTRUCTIONS = [
-    'vlmaccr',
-    'vlmacc'
-]
-
 class TraceContext():
-    def __init__(self, tile, core, identifier, entry_cycle_clock, is_child=False):
+    def __init__(self, tile, core, identifier, entry_cycle_clock, identifier_alt=None, thread_worker=None):
         self.tile = tile
         self.core = core
         self.identifier = identifier
+        self.identifier_alt = identifier_alt
+        self.thread_worker = thread_worker
         self.entry_cycle_clock = entry_cycle_clock
         self.exit_cycle_clock = None
-        self.is_child = is_child
-
-        self.children = []
-        self.instruction_counter = Counter()
-        self.total_instructions = 0
-
-    def update(self, other):
-        self.entry_cycle_clock = min(
-            other.entry_cycle_clock,
-            self.entry_cycle_clock,
-        )
-        self.exit_cycle_clock = max(
-            other.exit_cycle_clock,
-            self.exit_cycle_clock,
-        )
-        self.total_instructions += other.total_instructions
-        self.instruction_counter.update(other.instruction_counter)
-        self.children.extend(other.children)
+        self.thread_cores = set([core])
 
     def report(self, clock_rate, base_indent=''):
         duration = int((self.exit_cycle_clock - self.entry_cycle_clock) / clock_rate)
 
-        # header line
-        lines = []
-        lines.append(f'{base_indent}[{duration} us]     {str(self)}')
-        
-        # instruction counts
-        line = f'{base_indent}{INDENT}{self.total_instructions} instructions'
-        fields = []
-        for instruction, count in self.instruction_counter.items():
-            fields.append(f'{count} {instruction}')
-        line += f' ({", ".join(fields)})'
-        lines.append(line)
-
-        # children
-        if self.children:
-            lines.append(f'{base_indent}{INDENT}children')
-            # group children by identifiers
-            for _, group in itertools.groupby(self.children, key=lambda c: c.identifier):
-                first_child = list(itertools.islice(group, 0, 1))[0]
-                # now update the first child with the remainder in the group
-                for context in itertools.islice(group, 1, None):
-                    first_child.update(context)
-                
-                child_report = first_child.report(clock_rate, base_indent+INDENT*2)
-                for line in child_report.split('\n'):
-                    lines.append(f'{base_indent}{line}')
-
-        return '\n'.join(lines)
+        return f'{base_indent}[{duration} us]     {str(self)}'
 
     def __str__(self):
-        return f'{self.tile}@{self.core}     {self.identifier}'
+        cores_str = ','.join([str(c) for c in sorted(list(self.thread_cores))])
+        identifier_str = self.identifier_alt or self.identifier
+        return f'Tile={self.tile}     Cores={cores_str}     {identifier_str}'
 
 def parse_trace(data):
-    TRACE_START_COLUMN = 32
-    tile = data[:7]
-    core = data[8]
-    index_plus = data.find('+', TRACE_START_COLUMN)
-    identifier = data[TRACE_START_COLUMN:index_plus].strip()
+    TRACE_START_COLUMN = 30
+    tile = int(data[5])
+    core = int(data[8])
+    index_open_paren = data.find('(', TRACE_START_COLUMN)
+    index_plus = data.find('+', index_open_paren+1)
+    identifier = data[index_open_paren+1:index_plus].strip()
 
     index_colon = data.find(':', index_plus)
     index_whitespace = data.find(' ', index_colon+2)
@@ -94,46 +51,48 @@ def parse_trace(data):
 def trace_is_fnop(data):
     return data[12:16] == 'FNOP'
 
-def process_trace(args):
-    trace_functions = [re.compile(tf) for tf in args.functions]
-    trace_instructions = set(INSTRUCTIONS + args.instructions)
+def process_trace(args,functions):
+    trace_functions_re = []
+    thread_worker_functions_re = []
+    thread_worker_functions_lut = {}
 
-    context_stack = deque()
+    trace_functions_alt = {}
+    for tf in functions:
+        tf_c = re.compile(tf[0])
+        trace_functions_re.append(tf_c)
+        if tf[2]:
+            wf_c = re.compile(tf[2])
+            thread_worker_functions_re.append(wf_c)
+            thread_worker_functions_lut[tf_c] = wf_c
+
+        trace_functions_alt[tf_c] = tf[1]
+
+    context_stack = [deque()] * 8
 
     # process xsim trace output
     with open(args.trace, 'r') as fd:
         line = fd.readline()
         while line:
-            if trace_is_fnop(line):
-                if context_stack:
-                    if 'FNOP' in trace_instructions:
-                        context_stack[-1].instruction_counter['FNOP'] += 1
-            else:
+            if not trace_is_fnop(line):
                 tile, core, identifier, instruction, cycle_clock = parse_trace(line)
 
-                if any(trace_function.search(identifier) for trace_function in trace_functions):
-                    if instruction == 'entsp' or instruction == 'dualentsp':
-                        new_context = TraceContext(tile, core, identifier, cycle_clock)
-                        new_context.instruction_count = 1
-
-                        if context_stack:
-                            new_context.is_child = True
-                            context_stack[-1].children.append(new_context)
-
-                        context_stack.append(new_context)
-                    elif instruction == 'retsp':
-                        context = context_stack.pop()
-                        context.instruction_count += 1
-                        context.exit_cycle_clock = cycle_clock
-                        
-                        if not context.is_child:
+                for trace_function in trace_functions_re:
+                    if trace_function.search(identifier):
+                        if instruction == 'entsp' or instruction == 'dualentsp':
+                            new_context = TraceContext(tile, core, identifier, cycle_clock,
+                                identifier_alt=trace_functions_alt.get(trace_function, None),
+                                thread_worker=thread_worker_functions_lut.get(trace_function, None))
+                            context_stack[core].append(new_context)
+                        elif instruction == 'retsp':
+                            context = context_stack[core].pop()
+                            context.exit_cycle_clock = cycle_clock
                             print(context.report(args.clock_rate))
-                            print()
-                    else:
-                        if context_stack:
-                            context_stack[-1].total_instructions += 1
-                            if instruction in trace_instructions:
-                                context_stack[-1].instruction_counter[instruction] += 1
+                for thread_worker in thread_worker_functions_re:
+                    if thread_worker.search(identifier):
+                        if instruction == 'entsp' or instruction == 'dualentsp':
+                            curr_context = context_stack[core][-1]
+                            if thread_worker == curr_context.thread_worker:
+                                curr_context.thread_cores.add(core)
 
             line = fd.readline()
 
@@ -142,19 +101,23 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--trace', required=True, help='Input trace file file')
     parser.add_argument('-c', '--clock-rate', dest='clock_rate', type=int, 
         default=800, help='Clock rate (default is 800 MHz)')
-    parser.add_argument('-f', '--function', dest='functions', action='append', default=[], 
-        help='Additional function to time')
     parser.add_argument('--trace-functions', dest='trace_functions', default='trace_functions.txt',
         help='File of additional functions to time')
-    parser.add_argument('-i', '--instruction', dest='instructions', action='append', default=[], 
-        help='Additional instruction to count')
     args = parser.parse_args()
 
     # load trace functions
+    functions = []
     with open(args.trace_functions, 'r') as fd:
         line = fd.readline()
         while line:
-            args.functions.append(line.strip())
+            if not line.startswith('#'):
+                fields = line.strip().split(',')
+                if len(fields) == 1:
+                    functions.append((fields[0].strip(), None, None))
+                elif len(fields) == 2:
+                    functions.append((fields[0].strip(), fields[1].strip(), None))
+                elif len(fields) > 2:
+                    functions.append((fields[0].strip(), fields[1].strip(), fields[2].strip()))
             line = fd.readline()
 
-    process_trace(args)
+    process_trace(args, functions)

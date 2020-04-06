@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 #
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import logging
+
 from pathlib import Path
 import numpy as np
-from tflite2xcore.serialization.flatbuffers_io import serialize_model, deserialize_model
-import tflite2xcore.converter as xcore_conv
-from tflite2xcore import graph_transformer
+from tflite2xcore.serialization import serialize_model, deserialize_model
+from tflite2xcore.transformation_passes import OperatorMatchingPass
+from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.operator_codes import BuiltinOpCodes
 from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.utils import set_all_seeds
 from tflite2xcore.model_generation import utils
 import tensorflow as tf
 import op_test_models_common as common
@@ -17,10 +18,7 @@ DEFAULT_INPUTS = 10
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'arg_max_16').resolve()
 
 
-class ArgMax8To16ConversionPass(graph_transformer.OperatorMatchingPass):
-    def __init__(self):
-        super().__init__(priority=graph_transformer.PassPriority.MEDIUM)
-
+class ArgMax8To16ConversionPass(OperatorMatchingPass):
     def match(self, op):
         if op.operator_code.code is BuiltinOpCodes.ARG_MAX:
             return op.inputs[0].type == TensorType.INT8
@@ -57,7 +55,7 @@ class ArgMax16(common.OpTestDefaultModel):
         return self.input_shape[0]
 
     def gen_test_data(self):
-        utils.set_all_seeds()
+        set_all_seeds()
         x_test_float = np.float32(
             np.random.uniform(0, 1, size=(self.input_dim, self.input_dim)))
         x_test_float += np.eye(self.input_dim)
@@ -67,7 +65,7 @@ class ArgMax16(common.OpTestDefaultModel):
         super().convert_to_stripped(**converter_args)
         model = deserialize_model(self.buffers['model_stripped'])
 
-        pass_mgr = graph_transformer.PassManager(
+        pass_mgr = PassManager(
             model, passes=[ArgMax8To16ConversionPass()])
         pass_mgr.run_passes()
 
@@ -87,7 +85,7 @@ class ArgMax16(common.OpTestDefaultModel):
         # load quant model for inference, b/c the interpreter cannot handle int16 tensors
         interpreter = tf.lite.Interpreter(model_content=self.buffers['model_quant'])
 
-        logging.info(f"Extracting examples for model_stripped...")
+        self.logger.debug("Extracting and saving examples for model_stripped...")
         x_test = utils.quantize(self.data['export'],
                                 input_quant['scale'][0],
                                 input_quant['zero_point'][0],

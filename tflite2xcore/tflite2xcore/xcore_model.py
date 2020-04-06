@@ -1,15 +1,14 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-import sys
+
 import struct
 import enum
-import collections
-import logging
 
 import numpy as np
 
-from copy import deepcopy
+from collections import Counter
 
 from tflite2xcore.operator_codes import OperatorCode
+from tflite2xcore import xlogging as logging
 
 
 class TensorType(enum.IntEnum):
@@ -72,6 +71,22 @@ class TensorType(enum.IntEnum):
         }
         return LUT[tensor_type]
 
+    @staticmethod
+    def to_numpy_dtype(tensor_type):
+        LUT = {
+            TensorType.FLOAT32: np.float32,
+            TensorType.FLOAT16: np.single,
+            TensorType.INT32: np.int32,
+            TensorType.UINT8: np.uint8,
+            TensorType.INT64: np.int64,
+            # TensorType.STRING: None,  # intentionally not supported
+            TensorType.BOOL: np.bool_,
+            TensorType.INT16: np.int16,
+            # TensorType.COMPLEX64: None,  # intentionally not supported
+            TensorType.INT8: np.int8,
+        }
+        return LUT[tensor_type]
+
 
 class Buffer():
     def __init__(self, model, data=None, *, owners=None):
@@ -94,7 +109,7 @@ class Buffer():
             self._data = np.array(data, dtype=np.uint8)
         elif isinstance(data, np.ndarray):
             if data.dtype not in (np.uint8, 'uint8'):
-                logging.getLogger('XCOREModel').debug(
+                logging.getLogger('XCOREModel').xdebug(
                     f"Numpy array of type {data.dtype} stored in buffer"
                 )
             self._data = np.frombuffer(data.tostring(), dtype=np.uint8)
@@ -315,10 +330,7 @@ class Subgraph():
                       isinput=False, isoutput=False,
                       producers=None, consumers=None):
 
-        for existing_tensor in self.tensors:
-            if name in [existing_tensor.name, existing_tensor.sanitized_name]:
-                raise Exception(f'Tensor name {name} already in use')
-
+        name = self.make_unique_tensor_name(name)
         tensor = Tensor(self, name, type_, shape, buffer, quantization, producers, consumers)
         self.tensors.append(tensor)
         if isinput:
@@ -356,6 +368,17 @@ class Subgraph():
             if new_name not in existing_names:
                 return new_name
 
+    def make_unique_tensor_name(self, candidate_name):
+        existing_names = [name
+                          for tensor in self.tensors
+                          for name in (tensor.name, tensor.sanitized_name)]
+
+        j, new_name = 1, candidate_name
+        while True:
+            if new_name not in existing_names:
+                return new_name
+            j, new_name = j+1, f"{candidate_name}_{j}"
+
     def create_operator(self, operator_code, *,
                         inputs=None, outputs=None,
                         builtin_options=None, builtin_options_type=None,
@@ -364,9 +387,9 @@ class Subgraph():
         operator = Operator(self, operator_code, name, inputs, outputs,
                             builtin_options, builtin_options_type, custom_options)
         self.operators.append(operator)
-        for input_tensor in inputs:
+        for input_tensor in operator.inputs:
             input_tensor.consumers.append(operator)
-        for output_tensor in outputs:
+        for output_tensor in operator.outputs:
             output_tensor.producers.append(operator)
         return operator
 
@@ -398,7 +421,7 @@ class Subgraph():
         if new_op in self.operators:
             self.operators.remove(new_op)
 
-        # (re)insert new op after reference op
+        # (re)insert new op before/after reference op
         self.operators.insert(ref_idx + (1 if after else 0), new_op)
 
     def replace_operator(self, op, new_op):
@@ -482,7 +505,7 @@ class XCOREModel():
     def operator_codes(self):
         # sort the operators codes from most frequent to least frequent
         #   why? because the flatbuffer is a tiny bit smaller if we do
-        counter = collections.Counter()
+        counter = Counter()
 
         for subgraph in self.subgraphs:
             for operator in subgraph.operators:

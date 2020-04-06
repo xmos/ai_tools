@@ -8,7 +8,7 @@ import itertools
 import numpy as np
 
 from tflite2xcore.parallelization import DIDOConv2DPlanner
-from tflite2xcore.utils import LoggingContext
+from tflite2xcore.xlogging import LoggingContext
 
 
 __DIR_PATH = pathlib.Path(__file__).parent

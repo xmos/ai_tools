@@ -16,18 +16,19 @@
 
 import json
 import os
-import sys
-import shutil
-import logging
 import argparse
 import webbrowser
 import tempfile
 
 from collections import Counter
 
-from tflite2xcore.serialization.flatbuffers_io import FlexbufferParser
-from tflite2xcore import read_flatbuffer, create_dict_from_model
+from tflite2xcore.serialization import (
+    FlexbufferParser,
+    create_dict_from_model,
+    read_flatbuffer
+)
 from tflite2xcore.operator_codes import XCOREOpCodes
+from tflite2xcore.utils import VerbosityParser
 
 # A CSS description for making the visualizer
 _CSS = """<head>
@@ -417,10 +418,13 @@ class BufferOwnerMapper():
             return 'N/A'
 
         html_list = []
-        for subgraph_idx, owners in d.items():
-            subgraph = self.subgraphs[subgraph_idx]
-            tensor_mapper = TensorTooltipMapper(subgraph)
-            html_list.append(f"{subgraph_idx}: {tensor_mapper(owners)}")
+        for k, owners in d.items():
+            if k == 'metadata':
+                html_list.append(f"{k}: {str(owners)}")
+            else:
+                subgraph = self.subgraphs[k]
+                tensor_mapper = TensorTooltipMapper(subgraph)
+                html_list.append(f"{k}: {tensor_mapper(owners)}")
 
         return ', '.join(html_list) if html_list else '--'
 
@@ -749,18 +753,15 @@ def main(tflite_input, html_output, *, no_browser=True):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = VerbosityParser(verbosity_config=dict(
+        action='store_true', default=False, help='Verbose mode.'
+    ))
     parser.add_argument('tflite_input', help='Input .tflite file.')
     parser.add_argument('-o', '--html_output', required=False, default=None,
                         help='Output .html file. If not specified, a temporary file is created.')
     parser.add_argument('--no_browser', action='store_true', default=False,
                         help='Do not open browser after the .html is created.')
-    parser.add_argument('-v', '--verbose', action='store_true', default=False,
-                        help='Verbose mode.')
     args = parser.parse_args()
     tflite_input, html_output = args.tflite_input, args.html_output
-
-    if args.verbose:
-        logging.basicConfig(level=logging.DEBUG)
 
     main(tflite_input, html_output, no_browser=args.no_browser)

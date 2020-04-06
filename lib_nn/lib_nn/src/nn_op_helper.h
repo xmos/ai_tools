@@ -150,7 +150,7 @@ static inline int ceil_log2(
 
 #else
     for(unsigned i = 0; i < 31; i++){
-        if((((unsigned)1)<<i) <= a){
+        if((((unsigned)1)<<i) >= a){
             return i;
         }
     }

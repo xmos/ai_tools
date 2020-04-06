@@ -1,105 +1,116 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-import logging
 import numpy as np
 
 from abc import abstractmethod
-from tflite2xcore.graph_transformer import PassPriority
-from tflite2xcore.graph_transformer import (
-    ModelTransformationPass,
-    OperatorMatchingPass,
-    InputTensorMatchingPass,
-    OutputTensorMatchingPass,
-    TensorMatchingPass
-)
-from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
+from contextlib import contextmanager
+
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.operator_codes import BuiltinOpCodes
 from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.parallelization import DIDOConv2DPlanner
-from tflite2xcore.utils import ACC_PERIOD, WORD_SIZE
-from .utils import Log
+from tflite2xcore.utils import ACC_PERIOD
+from tflite2xcore import xlogging as logging
 
 
-class RemoveQuantizerFloatInputPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.PREP):
-        super().__init__(priority)
+class SubgraphTransformationPass(ModelTransformationPass):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._subgraph_idx = -1
+        self._obj_index = -1
 
-    def match(self, op):
-        if super().match(op) and op.operator_code.code == BuiltinOpCodes.QUANTIZE:
-            input_tensor, output_tensor = op.inputs[0], op.outputs[0]
-            return (input_tensor in op.subgraph.inputs
-                    and output_tensor not in op.subgraph.outputs
-                    and output_tensor.type == TensorType.INT8
-                    and input_tensor.type == TensorType.FLOAT32)
+    @abstractmethod
+    def match(self, obj):
+        return True
 
-        return False
+    @abstractmethod
+    def mutate(self, obj):
+        pass
 
-    def mutate(self, op):
-        subgraph = op.subgraph
-        subgraph.inputs.append(op.outputs[0])
-        subgraph.remove_tensor(op.inputs[0])
-        subgraph.remove_operator(op)
+    @abstractmethod
+    def target_iterable(self, subgraph):
+        pass
 
+    def log_match(self, obj):
+        self.logger.info(f"matched {obj}")
 
-class RemoveDequantizerFloatOutputPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.PREP):
-        super().__init__(priority)
+    def run_subgraph(self, subgraph):
+        num_matches = 0
+        while True:
+            for self._obj_index, obj in enumerate(self.target_iterable(subgraph)):
+                if self.match(obj):
+                    num_matches += 1
+                    self.log_match(obj)
+                    if self.debug:
+                        try:
+                            obj.sanity_check()
+                        except AssertionError as e:
+                            self.logger.exception(e)
+                        import pdb; pdb.set_trace()
+                    self.mutate(obj)
+                    break
+            else:
+                self._obj_index = -1
+                return num_matches
 
-    def match(self, op):
-        if super().match(op) and op.operator_code.code == BuiltinOpCodes.DEQUANTIZE:
-            input_tensor, output_tensor = op.inputs[0], op.outputs[0]
-            return (output_tensor in op.subgraph.outputs
-                    and input_tensor not in op.subgraph.inputs
-                    and output_tensor.type == TensorType.FLOAT32
-                    and input_tensor.type == TensorType.INT8)
+    def run(self, model):
+        modified_cnt = 0
+        for self._subgraph_idx, subgraph in enumerate(model.subgraphs):
+            self.logger.debug(f"running on subgraph {self._subgraph_idx}")
+            if self.run_subgraph(subgraph):
+                modified_cnt += 1
+            if self.debug:
+                try:
+                    subgraph.sanity_check()
+                except AssertionError as e:
+                    self.logger.exception(e)
 
-        return False
-
-    def mutate(self, op):
-        subgraph = op.subgraph
-        subgraph.outputs.append(op.inputs[0])
-        subgraph.remove_tensor(op.outputs[0])
-        subgraph.remove_operator(op)
-
-
-class AddQuantizerFloatInputPass(InputTensorMatchingPass):
-    def __init__(self, priority=PassPriority.CLEANUP):
-        super().__init__(priority)
-
-    def match(self, input_tensor):
-        return (super().match(input_tensor) and input_tensor.type == TensorType.INT8)
-
-    def mutate(self, qin):
-        subgraph = qin.subgraph
-        fin = subgraph.create_tensor(
-            f"{qin.name}_float", TensorType.FLOAT32, qin.shape, isinput=True)
-        subgraph.inputs.remove(qin)
-        op = subgraph.create_operator(
-            OperatorCode(BuiltinOpCodes.QUANTIZE), inputs=[fin], outputs=[qin])
-        # python interpreter prefers ops ordered this way
-        subgraph.operators.remove(op)
-        subgraph.operators.insert(0, op)
+        self._subgraph_idx = -1
+        return modified_cnt
 
 
-class AddDequantizerFloatOutputPass(OutputTensorMatchingPass):
-    def __init__(self, priority=PassPriority.CLEANUP):
-        super().__init__(priority)
+class OperatorMatchingPass(SubgraphTransformationPass):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._op = None
 
-    def match(self, input_tensor):
-        return (super().match(input_tensor) and input_tensor.type == TensorType.INT8)
+    def target_iterable(self, subgraph):
+        return subgraph.operators
 
-    def mutate(self, qout):
-        subgraph = qout.subgraph
-        fout = subgraph.create_tensor(
-            f"{qout.name}_float", TensorType.FLOAT32, qout.shape, isoutput=True)
-        subgraph.outputs.remove(qout)
-        subgraph.create_operator(
-            OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qout], outputs=[fout])
+    @contextmanager
+    def using(self, op):
+        self._op, original_op = op, self._op
+        yield
+        self._op = original_op
+
+    def log_match(self, op):
+        super().log_match(f"operator [{self._obj_index}]: {op.operator_code}")
+
+
+class TensorMatchingPass(SubgraphTransformationPass):
+    def target_iterable(self, subgraph):
+        return subgraph.tensors
+
+    def log_match(self, tensor):
+        super().log_match(f"tensor [{self._obj_index}]: {tensor.name}")
+
+
+class InputTensorMatchingPass(SubgraphTransformationPass):
+    def target_iterable(self, subgraph):
+        return subgraph.inputs
+
+    def log_match(self, tensor):
+        super().log_match(f"input [{self._obj_index}]: {tensor.name}")
+
+
+class OutputTensorMatchingPass(SubgraphTransformationPass):
+    def target_iterable(self, subgraph):
+        return subgraph.outputs
+
+    def log_match(self, tensor):
+        super().log_match(f"output [{self._obj_index}]: {tensor.name}")
 
 
 class RemoveSoftmaxOutputPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.HIGH):
-        super().__init__(priority)
-
     def match(self, op):
         return (super().match(op)
                 and op.operator_code.code == BuiltinOpCodes.SOFTMAX
@@ -113,9 +124,6 @@ class RemoveSoftmaxOutputPass(OperatorMatchingPass):
 
 
 class QuantizedOperatorMatchingPass(OperatorMatchingPass):
-    def __init__(self, priority=PassPriority.MEDIUM):
-        super().__init__(priority)
-
     @property
     def _output(self):
         return self._op.outputs[0]
@@ -173,9 +181,9 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         return self._op.inputs[1]
 
     def _log_weights(self):
-        self.logger.debug(
+        self.logger.xdebug(
             "_weights:\n"
-            + Log._array_msg(self._weights.numpy.astype(np.int8))
+            + logging._array_msg(self._weights.numpy.astype(np.int8))
         )
 
     @property
@@ -197,7 +205,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _zero_point_bias(self):
         pass
 
-    @Log.output
+    @logging.log_method_output()
     def _unified_bias(self):
         biases = self._biases.numpy
         return np.int32(biases - self._zero_point_bias()
@@ -214,7 +222,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
         # zero pad and reshape
         bias = self.__pad_to_acc_period(bias)
-        self.logger.debug("_bias_arr padded biases:\n" + Log._array_msg(bias))
+        self.logger.xdebug("_bias_arr padded biases:\n" + logging._array_msg(bias))
 
         # splitting lower and upper 16 bits of each 32 bit value
         tmp_shape = (bias.shape[0] // ACC_PERIOD, ACC_PERIOD, -1)
@@ -250,7 +258,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _MAX_POST_SHIFT(self):
         pass
 
-    @Log.output
+    @logging.log_method_output()
     def _shift_scale_arr(self):
         # calculate right shift/scale
         rshift, scale = self._shift_scale()
@@ -265,7 +273,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         shift_post = self._MAX_POST_SHIFT * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
         if np.any(shift_post.flatten() < 0):
             raise ValueError("Negative shift_post encountered: "
-                             f"{Log._array_msg(shift_post)}")
+                             f"{logging._array_msg(shift_post)}")
         return np.stack([shift_pre, scale, shift_post], axis=1)
 
     def _bss_arr(self):
@@ -283,183 +291,3 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         # NOTE: by default no weight layout rearrangement is done for this op
         with self.using(op):
             self._weights.name = f"{op.name}/weights"
-
-
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.FULLY_CONNECTED
-
-    def mutate_weights(self, op):
-        super().mutate_weights(op)
-        with self.using(op):
-            # zero_padding weight tensor
-            col_pad = WORD_SIZE - 1 - (self._weights.shape[1] - 1) % WORD_SIZE
-            arr = np.pad(
-                self._weights.numpy.astype(np.int8),
-                pad_width=[(0, 0),
-                           (0, col_pad)]
-            )
-
-            # save weight tensor and update shape
-            self._weights.buffer.data = arr
-            self._weights.shape = arr.shape
-
-            # remove quantization info to save space
-            self._weights.quantization = None
-
-    @property
-    def _MAX_POST_SHIFT(self):
-        return 32 - 16 - 2  # this is because the output is 16 bit
-
-    @Log.output
-    def _zero_point_bias(self):
-        return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
-
-    def mutate_biases(self, op):
-        super().mutate_biases(op)
-        with self.using(op):
-            # calculate and save the bias/shift/scale tensor
-            bss = self._bss_arr()
-            self._biases.buffer.data = bss
-            self._biases.shape = bss.shape
-            self._biases.type = TensorType.INT16
-
-            # rename bias tensor and remove quantization info to save space
-            self._biases.name = f"{op.name}/bias_shift_scale"
-            self._biases.quantization = None
-
-    def mutate_output(self, op):
-        with self.using(op):
-            self._output.type = TensorType.INT16
-            self._output.name = f"{op.name}/output"
-            self._output.quantization = {
-                'min': self._output.quantization['min'],
-                'max': self._output.quantization['max'],
-                'scale': [self._output.quantization['scale'][0] / 2**8],
-                'zero_point': [self._output_zero_point * 2**8],
-                'details_type': "CustomQuantization",
-                'quantized_dimension': 0
-            }
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout)
-
-    @abstractmethod
-    def mutate(self, op):
-        # NOTE: Overload this in subclasses, and call mutate_output appropriately
-        # NOTE: the order of these mutations is strict
-        new_op = super().mutate(op)
-        self.mutate_biases(new_op)
-        self.mutate_weights(new_op)
-        return new_op
-
-
-class ReplaceFullyConnectedOutputPass(ReplaceFullyConnectedPass):
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._output in op.subgraph.outputs
-
-        return False
-
-    def mutate(self, op):
-        new_op = super().mutate(op)
-        self.mutate_output(new_op)
-        return new_op
-
-
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._output not in op.subgraph.outputs
-
-        return False
-
-    def add_requantize(self, op):
-        with self.using(op):
-            # rename original output tensor
-            self._output.name = f"{op.name}/output_requant"
-            # create intermediate tensor
-            intermediate = op.subgraph.create_tensor(
-                f"{op.name}/intermediate", self._output.type, self._output.shape,
-                quantization=self._output.quantization,
-                producers=[op]
-            )
-        # rewire outputs of original FC op
-        for output_tensor in op.outputs:
-            output_tensor.producers.remove(op)
-        # create new op, insert after original op, rewire inputs/outputs
-        new_op = op.subgraph.create_operator(
-            OperatorCode(XCOREOpCodes.XC_requantize_16_to_8),
-            inputs=[intermediate], outputs=op.outputs)
-        op.outputs = [intermediate]
-        # move operator to correct location
-        # TODO: remove this when we have execution planning
-        op.subgraph.insert_operator(op, new_op, after=True)
-
-    def mutate(self, op):
-        # NOTE: the order of these mutations is strict
-        new_op = super().mutate(op)
-        self.add_requantize(new_op)
-        self.mutate_output(new_op)
-        return new_op
-
-
-class RemoveUnusedBuffersPass(ModelTransformationPass):
-    def __init__(self, priority=PassPriority.CLEANUP):
-        super().__init__(priority)
-
-    def run(self, model):
-        model.buffers = [b for b in model.buffers if b.owners]
-
-
-class RemoveDanglingTensorsPass(TensorMatchingPass):
-    def __init__(self, priority=PassPriority.CLEANUP):
-        super().__init__(priority)
-
-    def match(self, tensor):
-        return (super().match(tensor)
-                and tensor not in tensor.subgraph.inputs
-                and tensor not in tensor.subgraph.outputs
-                and not tensor.consumers
-                and not tensor.producers)
-
-    def mutate(self, tensor):
-        tensor.subgraph.remove_tensor(tensor)
-
-
-class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
-    def __init__(self, priority=PassPriority.PAR, *, num_threads=None, forced=False):
-        super().__init__(priority)
-        self.num_threads = num_threads or 1
-        assert isinstance(self.num_threads, int)
-        assert self.num_threads > 0
-        self.forced = forced
-
-    def run(self, *args, **kwargs):
-        if self.num_threads == 1:
-            self.logger.debug(f"Skipping pass b/c num_threads={self.num_threads}")
-            return None
-        else:
-            return super().run(*args, **kwargs)
-
-    @property
-    def matching_opcode(self):
-        return XCOREOpCodes.XC_conv2d_deepin_deepout_relu
-
-    def match(self, op):
-        if super().match(op):
-            return 'par_plan' not in op.custom_options
-
-    def mutate(self, op):
-        with self.using(op):
-            _, height, width, _ = self._output.shape
-        planner = DIDOConv2DPlanner(
-            height, width, num_threads=self.num_threads, forced=self.forced)
-        plan = planner.find_optimal_plan()
-        op.add_custom_options(par_plan=[list(block) for block in plan.layout])

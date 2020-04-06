@@ -14,13 +14,8 @@
 
 #include "unity.h"
 
-#ifdef __XC__
-#define WORD_ALIGNED [[aligned(4)]]
-#else
-#define WORD_ALIGNED
-#endif
 
-#if (defined(__XS3A__) && USE_ASM_conv2d_depthwise)
+#if USE_ASM(conv2d_depthwise)
  #define HAS_ASM (1)
 #else
  #define HAS_ASM (0)
@@ -39,13 +34,10 @@
   #error Neither TEST_C nor TEST_ASM is specified.
 #endif
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
-
-#define PRINTF(...)     do{if (DO_PRINT_EXTRA) {printf(__VA_ARGS__);}} while(0)
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 #define MIN_CHAN_OUT_GROUPS(CHAN_COUNT) (((CHAN_COUNT+(VPU_INT8_VLMACC_ELMS-1))>>VPU_INT8_VLMACC_ELMS_LOG2)<<VPU_INT8_VLMACC_ELMS_LOG2)
 
-static unsigned seed = 4321434;
 
 
 static void check_Y(
@@ -132,7 +124,7 @@ void test_conv2d_depthwise_case0()
     int8_t WORD_ALIGNED  Y_asm[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
 #endif
 
-    PRINTF("test_conv2d_depthwise_case0()...\n");
+    PRINTF("%s...\n", __func__);
 
     typedef struct {
         int8_t x;
@@ -187,7 +179,7 @@ void test_conv2d_depthwise_case0()
 
         const test_case_t* casse = (const test_case_t*) &casses[v];
 
-        printf("\ttest vector %u...\n", v);
+        PRINTF("\ttest vector %u...\n", v);
             
         nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
         nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -338,7 +330,7 @@ void test_conv2d_depthwise_case1()
         for(int p = 0; p < sizeof(chan_counts)/sizeof(unsigned); p++){
             unsigned channel_count = chan_counts[p];
             
-            printf("\ttest vector %u...(%u channels)\n", v, channel_count);
+            PRINTF("\ttest vector %u...(%u channels)\n", v, channel_count);
             
             nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, channel_count };
             nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, channel_count };
@@ -497,7 +489,7 @@ void test_conv2d_depthwise_case2()
 
         unsigned y_height = 1 + (X_HEIGHT - casse->K_h) / casse->v_stride;
         unsigned y_width  = 1 + (X_WIDTH  - casse->K_w)  / casse->h_stride;
-        printf("\ttest vector %u... (%d, %d)\n", v, y_height, y_width);
+        PRINTF("\ttest vector %u... (%d, %d)\n", v, y_height, y_width);
 
         
         nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANNELS };
@@ -784,7 +776,7 @@ void test_conv2d_depthwise_case4()
 
         const test_case_t* casse = (const test_case_t*) &casses[v];
 
-        printf("\ttest vector %u...\n", v);
+        PRINTF("\ttest vector %u...\n", v);
             
         nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANNELS };
         nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANNELS };
@@ -954,13 +946,7 @@ void test_conv2d_depthwise_case5()
 
     conv2d_depthwise_init(&plan, job, &x_params, &y_params, job_params, -(K_h/2), -(K_w/2), K_h, K_w, v_stride, h_stride, ZERO_POINT, JOB_COUNT);
 
-#if (DEBUG_ON || 0)
 
-#endif //DEBUG_ON
-
-
-    timer t;
-    unsigned t_start[2], t_end[2];
 
 #if TEST_C
     PRINTF("\t\t\tC...\n");
@@ -1347,15 +1333,15 @@ void test_conv2d_depthwise_case6()
 //     t :> t_end[1];
 // #endif
 
-//     // printf("C took: %u \n", t_end[0]-t_start[0]);
-//     printf("ASM took: %u \n", t_end[1]-t_start[1]);
-//     // printf("C - ASM: %u\n", (t_end[0]-t_start[0]) - (t_end[1]-t_start[1]));
-//     // printf("C / ASM: %f\n", (t_end[0]-t_start[0]) / ((float)(t_end[1]-t_start[1])));
+//     // PRINTF("C took: %u \n", t_end[0]-t_start[0]);
+//     PRINTF("ASM took: %u \n", t_end[1]-t_start[1]);
+//     // PRINTF("C - ASM: %u\n", (t_end[0]-t_start[0]) - (t_end[1]-t_start[1]));
+//     // PRINTF("C / ASM: %f\n", (t_end[0]-t_start[0]) / ((float)(t_end[1]-t_start[1])));
 
 //     float old_asm_v1 = 760620;
 //     float old_asm_v2 = 620148;
-//     printf("ASM / old_ASM_v1: %f\n", (t_end[1]-t_start[1]) / old_asm_v1);
-//     printf("ASM / old_ASM_v2: %f\n", (t_end[1]-t_start[1]) / old_asm_v2);
+//     PRINTF("ASM / old_ASM_v1: %f\n", (t_end[1]-t_start[1]) / old_asm_v1);
+//     PRINTF("ASM / old_ASM_v2: %f\n", (t_end[1]-t_start[1]) / old_asm_v2);
 
 // }
 // #undef DEBUG_ON         
@@ -1469,15 +1455,15 @@ void test_conv2d_depthwise_case6()
 //     t :> t_end[1];
 // #endif
 
-//     // printf("C took: %u \n", t_end[0]-t_start[0]);
-//     printf("ASM took: %u \n", t_end[1]-t_start[1]);
-//     // printf("C - ASM: %u\n", (t_end[0]-t_start[0]) - (t_end[1]-t_start[1]));
-//     // printf("C / ASM: %f\n", (t_end[0]-t_start[0]) / ((float)(t_end[1]-t_start[1])));
+//     // PRINTF("C took: %u \n", t_end[0]-t_start[0]);
+//     PRINTF("ASM took: %u \n", t_end[1]-t_start[1]);
+//     // PRINTF("C - ASM: %u\n", (t_end[0]-t_start[0]) - (t_end[1]-t_start[1]));
+//     // PRINTF("C / ASM: %f\n", (t_end[0]-t_start[0]) / ((float)(t_end[1]-t_start[1])));
 
 //     float old_asm_v1 = 662394;
 //     float old_asm_v2 = 642855;
-//     printf("ASM / old_ASM_v1: %f\n", (t_end[1]-t_start[1]) / old_asm_v1);
-//     printf("ASM / old_ASM_v2: %f\n", (t_end[1]-t_start[1]) / old_asm_v2);
+//     PRINTF("ASM / old_ASM_v1: %f\n", (t_end[1]-t_start[1]) / old_asm_v1);
+//     PRINTF("ASM / old_ASM_v2: %f\n", (t_end[1]-t_start[1]) / old_asm_v2);
 
 // }
 // #undef DEBUG_ON         
@@ -1491,3 +1477,17 @@ void test_conv2d_depthwise_case6()
 // #undef v_stride         
 // #undef h_stride         
 // #undef ZERO_POINT        
+
+
+void test_conv2d_depthwise()
+{
+    UNITY_SET_FILE();
+
+    RUN_TEST(test_conv2d_depthwise_case0);
+    RUN_TEST(test_conv2d_depthwise_case1);
+    RUN_TEST(test_conv2d_depthwise_case2);
+    RUN_TEST(test_conv2d_depthwise_case3);
+    RUN_TEST(test_conv2d_depthwise_case4);
+    RUN_TEST(test_conv2d_depthwise_case5);
+    RUN_TEST(test_conv2d_depthwise_case6);
+}

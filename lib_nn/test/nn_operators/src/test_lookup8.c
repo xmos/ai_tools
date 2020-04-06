@@ -14,13 +14,8 @@
 // #include "dsp_xs3_vector.h"
 #include "unity.h"
 
-#ifdef __XC__
-#define WORD_ALIGNED [[aligned(4)]]
-#else
-#define WORD_ALIGNED
-#endif
 
-#if (defined(__XS3A__) && USE_ASM_avgpool2d_global)
+#if USE_ASM(avgpool2d_global)
  #define HAS_ASM (1)
 #else
  #define HAS_ASM (1)
@@ -29,12 +24,7 @@
 #define TEST_ASM ((HAS_ASM)     && 1)
 #define TEST_C ((TEST_C_GLOBAL) && 1)
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
-
-#define PRINTF(...)     do{if (DO_PRINT_EXTRA) {printf(__VA_ARGS__);}} while(0)
-
-static unsigned seed = 4412311;
-
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
 
@@ -47,8 +37,9 @@ static unsigned seed = 4412311;
 #define REPS            50
 void test_lookup8_case0()
 {
+    unsigned seed = 12312314;
 
-    PRINTF("test_lookup8_case0()...\n");
+    PRINTF("%s...\n", __func__);
 
     uint8_t WORD_ALIGNED src[MAX_LEN] = { 0 };
 
@@ -62,8 +53,8 @@ void test_lookup8_case0()
     uint8_t WORD_ALIGNED dst_asm[MAX_LEN] = { 0 };
 #endif
 
-    pseudo_rand_bytes(&seed, src, MAX_LEN);
-    pseudo_rand_bytes(&seed, lut, 256);
+    pseudo_rand_bytes(&seed, (char*) src, MAX_LEN);
+    pseudo_rand_bytes(&seed, (char*) lut, 256);
 
 
     for(int k = 0; k < REPS; k++){
@@ -101,3 +92,9 @@ void test_lookup8_case0()
 
 
 
+void test_lookup8()
+{
+    UNITY_SET_FILE();
+
+    RUN_TEST(test_lookup8_case0);
+}

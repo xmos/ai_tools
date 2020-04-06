@@ -17,51 +17,96 @@ extern "C" {
 
 
 
-/** Prepare to execute a 2D deepin-deepout convolution.
- *
- * This function initializes a `nn_conv2d_dido_params_t` struct with
- * the values necessary to perform the specified convolution.
+/** 
+ * @brief Prepare an execution plan for a 2D deep convolution.
  * 
- * Once initialized, the contents of the `params` struct will not
- * change, so it need only be initialized once for many (identical)
- * convolutions.
- *
- * The convolution itself may require several partial convolutions corresponding
- * to different (non-overlapping) regions of the output image. Each of these 
- * partial convolutions is described by a `nn_conv2d_dido_block_params_t` struct.
- * As the number of these blocks is not known a priori, their memory is
- * allocated from the heap. The `nn_conv2d_dido_params_t.blocks` field of `params` 
- * will point to the (contiguous) array of `nn_conv2d_dido_block_params_t` blocks.
- *
- * The `nn_conv2d_dido_params_t` struct is intended to be opaque, however, because
- * memory is allocated from the heap, if the same params struct is to be 
- * initialized again, or if it is to go out of scope, it should be properly
- * de-initialized using `conv2d_deepin_deepout_deinit()`.
- */
-void conv2d_deepin_deepout_init(
-    nn_conv2d_dido_params_t* params,
-    const nn_conv2d_init_params_t* init_params,
-    const nn_conv2d_region_params_t* region_params,
-    const int8_t* K,
-    const data16_t* B);
-
-/**
- * De-initialize a `nn_conv2d_dido_params_t` struct which
- * has been previously initialized.
- *
- * Because `conv2d_deepin_deepout_init()` uses `malloc()`, these
- * structs should be de-initialized if they are going to be 
- * initialized again or before they are allowed to go out of scope.
+ * When `conv2d_deep()` is called, a plan (`nn_conv2d_deep_plan_t`) and a
+ * job (`nn_conv2d_deep_job_t`) must be supplied to tell it how to do its work. This 
+ * function initializes that plan and one or more jobs to be supplied in subsequent calls
+ * to `conv2d_deep()`.
  * 
- * This function will free the memory allocated by 
- * `conv2d_deepin_deepout_init()`.
+ * A plan contains information shared by all jobs. A job, when provided to `conv2d_deep()`,
+ * computes a rectangular sub-tensor of the output image (possibly the entire image).
+ * 
+ * `plan` is a pointer to the execution plan to be initialized. It need only be 
+ * initialized once for many calls to `conv2d_deep()`.
+ * 
+ * `jobs` is a pointer, supplied by the caller to an array of `nn_conv2d_deep_job_t` 
+ * structs which will be initialized by this function. `job_count` jobs will be 
+ * initialized.
+ * 
+ * `x_params` is a pointer to image parameters for an input image @tensor{X} that will be
+ * passed to `conv2d_deep()` in subsequent calls.
+ * 
+ * `y_params` is a pointer to image parameters for an output image @tensor{Y} that will be
+ * computed by subsequent calls to `conv2d_deep()`.
+ * 
+ * `job_params` points to either an array of `nn_conv2d_job_params_t` structs or else
+ * is `NULL`. A `job_params` value of  `NULL` indicates that there will only be a single
+ * job which computes the entire output image. If `job_params` is `NULL`, then `job_count` 
+ * must be `1`. If `job_params` is not `NULL`, it must point to an array containing 
+ * `job_count` `nn_conv2d_job_params_t` elements.
+ * 
+ * It is the callers responsibility to ensure that the supplied list of job params
+ * collectively computes the entire output image. It is also the caller's responsibility
+ * to ensure that the supplied list of jobs does not include duplicate calculation of
+ * outputs.
+ * 
+ * `conv_window` points to a `nn_conv2d_window_params_t` struct which describes the 
+ * relationship between the input image, the convolution window and the output image.
+ * `conv_window->shape` describes the height and width of the convolution window. 
+ * 
+ * `conv_window->start` specifies where the top-left cell of the convolution window is
+ * placed, relative to the top-left pixel of the input image, for the top-left pixel of
+ * the output image. For example, a `start` value of `(0,0)` indicates that the top-left 
+ * pixel of the output image has the convolution window aligned with the top-left corner
+ * of the input image, with no implied padding a the top or left side of the input image.
+ * 
+ * `conv_window->stride.horizontal` indicates how many pixels to the right the convolution
+ * window moves (across the input image) for each pixel moved to the right in the output image. 
+ * `conv_window->stride.vertical` indicates how many pixels downwards the convolution
+ * window moves (across the input image) for each pixel moved downwards in the output image.
+ * 
+ * `zero_point` specifies the value associated with the (implied) padding space around the input
+ * image. For any output pixel whereupon the corresponding convolution window location
+ * in the input image extends beyond the bounds of the input image, those coefficients
+ * in the convolution window which are in the padding are multiplied by `zero_point`
+ * rather than by values from the input image. All input channels currently share a
+ * common zero-point value.
+ * 
+ * `job_count` indicates the number of elements in the `jobs` array that is supplied 
+ * by the user, as well the number of elements in the `job_params` array if it is not
+ * `NULL`.
+ * 
+ * Constraints:
+ *  - @math{X_c} (i.e. `x_params->channels`) and @math{Y_c} (i.e. `y_params->channels`) must 
+ *    each be a multiple of `4`.
+ * 
+ * 
+ * @param[out] plan         The plan to be initialized
+ * @param[out] jobs         Array of jobs to be initialized (length: `job_count`)
+ * @param[in]  x_params     Parameters describing the shape of each input image tensor @tensor{X}
+ * @param[in]  y_params     Parameters describing the shape of each output image tensor @tensor{K}
+ * @param[in]  job_params   Array with configuration parameters for each job, or `NULL`
+ * @param[in]  conv_window  Parameters describing the relationship between the convolution window, the
+ *                          input image and hte output image
+ * @param[in]  zero_point   The value to be used (for all channels) for padding
+ * @param[in]  job_count    The number of jobs to initialize
  */
-void conv2d_deepin_deepout_deinit(
-    nn_conv2d_dido_params_t* params);
+void conv2d_deep_init(
+    nn_conv2d_deep_plan_t* plan,
+    nn_conv2d_deep_job_t* jobs,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_conv2d_job_params_t* job_params,
+    const nn_conv2d_window_params_t* conv_window,
+    const int8_t zero_point,
+    const unsigned job_count);
 
 
 
-/** Prepare to execute a 2D deepin-deepout convolution.
+
+/** Prepare to execute a 2D shallowin-deepout convolution.
  *
  * This function initializes a `nn_conv2d_dido_params_t` struct with
  * the values necessary to perform the specified convolution.
@@ -163,7 +208,7 @@ void conv2d_1x1_init(
  * `y_params` is a pointer to image parameters for the output image `Y` that will be
  * computed by subsequent calls to `conv2d_depthwise()`.
  * 
- * `job_params` points to wither an array of `nn_conv2d_job_params_t` structs or else
+ * `job_params` points to either an array of `nn_conv2d_job_params_t` structs or else
  * is `NULL`. A `job_params` value of  `NULL` indicates that there will only be a single
  * job which computes the entire output image. If `job_params` is `NULL`, then `job_count` 
  * must be 1. If `job_params` is not `NULL`, it must point to an array containing 
@@ -212,19 +257,19 @@ void conv2d_1x1_init(
  *  - There must always be at least one pixel of the convolution window within the 
  *      input image.
  * 
- * \param plan              The plan to be initialized.
- * \param jobs              Array of jobs to be initialized (length: `job_count).
- * \param x_params          `conv2d_depthwise()` input image parameters.
- * \param y_params          `conv2d_depthwise()` output image parameters.
- * \param job_params        Array with configuration parameters for each job, or NULL.
- * \param window_start_row  The row at which the convolution window starts.
- * \param window_start_col  The column at which the convolution window starts.
- * \param K_h               The height of the convolution window (in pixels).
- * \param K_w               The width of the convolution window (in pixels).
- * \param v_stride          The vertical stride of the convolution window (in pixels).
- * \param h_stride          The horizontal stride of the convolution window (in pixels).
- * \param zero_point        The zero-point value of the input image.
- * \param job_count         The number of jobs to initialize.
+ * @param plan              The plan to be initialized.
+ * @param jobs              Array of jobs to be initialized (length: `job_count`).
+ * @param x_params          `conv2d_depthwise()` input image parameters.
+ * @param y_params          `conv2d_depthwise()` output image parameters.
+ * @param job_params        Array with configuration parameters for each job, or NULL.
+ * @param window_start_row  The row at which the convolution window starts.
+ * @param window_start_col  The column at which the convolution window starts.
+ * @param K_h               The height of the convolution window (in pixels).
+ * @param K_w               The width of the convolution window (in pixels).
+ * @param v_stride          The vertical stride of the convolution window (in pixels).
+ * @param h_stride          The horizontal stride of the convolution window (in pixels).
+ * @param zero_point        The zero-point value of the input image.
+ * @param job_count         The number of jobs to initialize.
  */
 void conv2d_depthwise_init(
     nn_conv2d_depthwise_plan_t* plan,

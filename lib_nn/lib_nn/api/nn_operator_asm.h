@@ -15,17 +15,6 @@ extern "C" {
 #ifdef __XS3A__
 
 
-#ifndef USE_ASM_conv2d_deepin_deepout_block
-#define USE_ASM_conv2d_deepin_deepout_block     (1)
-#endif
-void conv2d_deepin_deepout_block_asm(
-    int8_t* Y,
-    const nn_conv2d_dido_params_t* params,
-    const nn_conv2d_dido_block_params_t* block,
-    const int8_t* X,
-    const int8_t* K,
-    const int16_t* scales);
-
  
 #ifndef USE_ASM_conv2d_shallowin_deepout_block
 #define USE_ASM_conv2d_shallowin_deepout_block     (1)

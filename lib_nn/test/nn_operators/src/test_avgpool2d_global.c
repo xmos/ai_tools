@@ -13,13 +13,8 @@
 
 #include "unity.h"
 
-#ifdef __XC__
-#define WORD_ALIGNED [[aligned(4)]]
-#else
-#define WORD_ALIGNED
-#endif
 
-#if (defined(__XS3A__) && USE_ASM_avgpool2d_global)
+#if USE_ASM(avgpool2d_global)
  #define HAS_ASM (1)
 #else
  #define HAS_ASM (0)
@@ -28,13 +23,7 @@
 #define TEST_ASM ((HAS_ASM)     && 1)
 #define TEST_C ((TEST_C_GLOBAL) && 1)
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
-
-#define PRINTF(...)     do{if (DO_PRINT_EXTRA) {printf(__VA_ARGS__);}} while(0)
-
-
-
-static unsigned seed = 4321234;
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
 
@@ -56,7 +45,7 @@ void test_avgpool2d_global_case1()
     int8_t WORD_ALIGNED  Y_asm[MAX_CHANS];
 #endif
 
-    PRINTF("test_avgpool2d_global_case1()...\n");
+    PRINTF("%s...\n", __func__);
 
     
     typedef struct {
@@ -116,7 +105,7 @@ void test_avgpool2d_global_case1()
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
 
-        printf("\ttest vector %u...\n", v);
+        PRINTF("\ttest vector %u...\n", v);
             
         nn_image_params_t x_params = { casse->height, casse->width, casse->channels };
         nn_image_params_t y_params = { 1, 1, casse->channels };
@@ -190,3 +179,10 @@ void test_avgpool2d_global_case1()
 #undef MAX_HEIGHT
 #undef MAX_CHANS
 #undef DEBUG_ON
+
+void test_avgpool2d_global()
+{
+    UNITY_SET_FILE();
+
+    RUN_TEST(test_avgpool2d_global_case1);
+}

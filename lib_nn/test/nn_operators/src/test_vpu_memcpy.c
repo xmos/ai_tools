@@ -14,23 +14,10 @@
 // #include "dsp_xs3_vector.h"
 #include "unity.h"
 
-#ifdef __XC__
-#define WORD_ALIGNED [[aligned(4)]]
-#else
-#define WORD_ALIGNED
-#endif
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
-
-#define PRINTF(...)     do{if (DO_PRINT_EXTRA) {printf(__VA_ARGS__);}} while(0)
-
-static unsigned seed = 4412311;
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
-
-
-
-unsafe {
 
 
 
@@ -41,7 +28,7 @@ unsafe {
 void test_vpu_memcpy_case0()
 {
 
-    PRINTF("test_vpu_memcpy_case0()...\n");
+    PRINTF("%s...\n", __func__);
 
     uint8_t WORD_ALIGNED src[BUFF_SIZE] = { 0 };
     uint8_t WORD_ALIGNED dst[BUFF_SIZE] = { 0 };
@@ -69,13 +56,14 @@ void test_vpu_memcpy_case0()
 #define REPS            100
 void test_vpu_memcpy_case1()
 {
+    unsigned seed = 452345;
 
-    PRINTF("test_vpu_memcpy_case1()...\n");
+    PRINTF("%s...\n", __func__);
 
     uint8_t WORD_ALIGNED src[BUFF_SIZE];
     uint8_t WORD_ALIGNED dst[BUFF_SIZE];
 
-    pseudo_rand_bytes(&seed, src, BUFF_SIZE);
+    pseudo_rand_bytes(&seed, (char*) src, BUFF_SIZE);
 
     for(int k = 0; k < REPS; k++){
 
@@ -102,6 +90,10 @@ void test_vpu_memcpy_case1()
 
 
 
+void test_vpu_memcpy()
+{
+    UNITY_SET_FILE();
 
-
+    RUN_TEST(test_vpu_memcpy_case0);
+    RUN_TEST(test_vpu_memcpy_case1);
 }

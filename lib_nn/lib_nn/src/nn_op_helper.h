@@ -46,6 +46,7 @@ static inline int8_t vlsat_single_s8(
     int32_t acc, 
     int16_t shr)
 {
+    shr = (shr <= 0)? 0 : shr;
     int64_t acc64 = acc;
     if(shr > 0) acc64 += 1<<(shr-1);
     return sat_s8(acc64 >> shr);
@@ -55,6 +56,7 @@ static inline int16_t vlsat_single_s16(
     int32_t acc, 
     int16_t shr)
 {
+    shr = (shr <= 0)? 0 : shr;
     if(shr > 0) acc += 1<<(shr-1);
     return sat_s16(acc >> shr);
 }
@@ -153,6 +155,7 @@ static inline int ceil_log2(
         }
     }
 #endif
+    return -1;
 }
 
 #endif //NN_OP_HELPER_H_

@@ -3,19 +3,32 @@
 #ifndef NN_OP_ADVANCED_H_
 #define NN_OP_ADVANCED_H_
 
-#include "nn_types.h"
-#include "nn_op_structs.h"
-
-#include <stdint.h>
+#include "nn_op_advanced_asm.h"
+#include "nn_op_advanced_c.h"
+#include "nn_op_advanced_inline.h"
 
 #include "xs3_vpu.h"
+
 
 #ifdef __XC__
 extern "C" {
 #endif
 
-
 #if defined(__XS3A__)
+
+
+/**
+ * Macro to get the address of the start of the last output channel of the `COG`<sup>th</sup> output
+ * channel group of 4D kernel tensor `KRN`.
+ * 
+ * @param KRN[in]   4D kernel tensor
+ * @param COG[in]   Output channel group
+ * 
+ * @return  Address of start of last output channel of `COG`<sup>th</sup> output channel group.
+ */
+#define KERNEL_4D_COG_LAST_CHAN_START(KRN, COG)    ((nn_tensor_t*) &(KRN[(VPU_INT8_ACC_PERIOD*(COG))+(VPU_INT8_ACC_PERIOD-1)][0][0][0]))
+
+
 
 /**
  * Compute adjusted biases for a depthwise kernel, taking into account only the padding at the top
@@ -517,6 +530,356 @@ void nn_compute_hstrip_depthwise_asm(
     const int32_t Y_c,
     const unsigned out_pixels,
     const unsigned chans_to_write);
+
+
+/**
+ * @brief Compute a row of output pixels for a deep 2D convolution (Full @ttref{VPU_INT8_ACC_PERIOD} channels) 
+ * 
+ * A deep 2D convolution is one in which each output channel is a function of every input channel. This function
+ * is intended to be invoked multiple times to do a full 2D convolution. Each invocation will compute 
+ * @ttref{VPU_INT8_ACC_PERIOD} channels on each of `out_cols` pixels in a single row of @tensor{Y}.
+ * 
+ * `y` points to output tensor @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}. @math{Y_w} must
+ * be at least `out_cols`, and @math{Y_c} must be at least @ttref{VPU_INT8_ACC_PERIOD}. Rather than pointing
+ * at the start of @tensor{Y}, the `y` passed to this function should point to the first channel to be output
+ * of the first pixel to be output. The address to which `y` points will be the first memory written.
+ * 
+ * `x` points to the input tensor @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}. Rather than pointing
+ * at the start of @tensor{X}, the `x` passed to this function should point to the beginning of the first 
+ * pixel of the convolution window. If the convolution window starts in padding, then this *may point
+ * outside of @tensor{X}.
+ * 
+ * For example, the diagram below shows a `3x3` convolution being applied to a `4x4` image. The input image pixels
+ * are marked with `X`'s, and the (implied) padding is marked with `P`'s. In this case, the convolution window 
+ * starts in the padding at `(-1, -1, 0)` in @vector{X}'s coordinate space (i.e. @math{X[-1][-1]}) as is indicated 
+ * by `P*` in the diagram. If `X_image` points to the start of the input image, then the argument `x` should 
+ * be `(nn_image_t*) &X_image[-1][-1][0]`.
+ * 
+ * @inlinecode
+ *  _ _ _      
+ * |P*P P|P P P
+ * |P X X|X X P
+ * |P_X_X|X X P
+ *  P X X X X P
+ *  P X X X X P
+ *  P P P P P P  
+ *   
+ * @endinlinecode
+ * 
+ * `k` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, K_h, K_w, X_c}. @math{Y_c} and 
+ * @math{X_c} are the channel counts of the output and input images respectively. @math{K_h} and @math{K_w}
+ * are the spatial height and width of the 2D convolution window respectively, expressed in pixels. Rather than
+ * pointing at the start of @tensor{K}, the `k` passed to this function should point to the beginning of the
+ * <b>final</b> channel of the output channel group being processed in the call.
+ * 
+ * For example, if @tensor{K} has shape @tensor_shape{48,5,5,32}, defined as `nn_tensor_t kernel[48][5][5][32]`,
+ * then to process the output channel group (output channels `16` through `31`), then the address passed to this
+ * call as `k` should be `&kernel[31][0][0][0]`. The `KERNEL_4D_COG_LAST_CHAN_START()` macro can be used to 
+ * simplify this. The memory layout of @tensor{K} is the standard memory layout for 4D tensors (see 
+ * @ref standard_layout).
+ * 
+ * `bss` points to the `nn_bss_block_t` describing the biases, shifts and scale for the current group of output 
+ * channels. `bss` can be initialized with `nn_standard_BSS_layout()`. See @ref bss_layout for more information.
+ * 
+ * `K_height` and `K_width` are the height and width respectively of the 2D convolution window.
+ * 
+ * `K_hori_stride` is the horizontal stride (in pixels) taken by the 2D convolution window between between
+ * output pixels.
+ * 
+ * `C_in` (or @math{X_c}) is the number of channels in the input image @tensor{X}.
+ * 
+ * `pad_t` and `pad_b` are the number of rows of padding at the top and bottom of the convolution window 
+ * respectively. Because this function computes a horizontal strip of output pixels, the padding at the
+ * top and bottom of the convolution window does not change during one invocation. These values are non-negative, 
+ * and so 'negative' amounts of top or bottom padding should be conveyed as zeros. See example below.
+ * 
+ * `pad_l_initial` and `pad_r_initial` are the number of columns of padding at the left and right sides of the 
+ * convolution window at the begining of the operation. Because this function computes a horizontal strip of output
+ * pixels, the amount of left and right padding may change during an invocation. Unlike `pad_t` and `pad_b`, 
+ * `pad_l_initial` and `pad_r_initial` indicate the *signed* padding, where gaps between the convolution window
+ * and the edge of the input image may be negative, as in the following example.
+ * 
+ * @inlinecode
+ *            pad_r_initial = -3
+ *         |-----|  
+ *    _____       _
+ *   |W W W|      | pad_t = max(1,0) = 1
+ *   |W W W|X X X ̅
+ *   |W W W|X X X
+ *   |W_W_W|X X X _ pad_b = max(-2,0) = 0
+ *      X X X X X |
+ *      X X X X X |
+ *   |-|          ̅
+ *     pad_l_initial = 1    
+ * @endinlinecode
+ * 
+ * The diagram above shows a `4x3` convolution window over a `5x5` image. In this case, `pad_t` is `1`, because the
+ * top row of the convolution window is outside the input image. `pad_b` is `0`, because the bottom of the convolution
+ * window is 2 pixels above the bottom of the image. `pad_l_initial` is `1`, because the left column of the 
+ * convolution window is outside the input image. And `pad_r_initial` is `-3`, because if the convolution window
+ * moves to the right 3 pixels, the edge of the convolution window will coincide with the edge of the input image.
+ * Note also that `pad_r_initial` is *independent of* `K_hori_stride`; `pad_r_initial` is expressed as *input image*
+ * pixels, not *output image* pixels.
+ * 
+ * `x_v_stride` is the memory stride required to move a pointer from (immediately after) the right edge of the 
+ * convolution window to (immediately after) the left edge of the convolution window on the following row (note: 
+ * "immediately after" because the convolution window's right and left edges are effectively *between* memory 
+ * addresses). This is equivalent to @math{\left(X_w-K_w\right)\cdot X_c}.
+ * 
+ * `k_cout_stride` is the memory stride required to move a pointer from the beginning of one output channel of 
+ * @tensor{K} to the output channel with index one *lower*, i.e. stride required to decrement the output channel
+ * by one. This is equivalent to @math{-\left(K_h\cdot K_w\cdot X_c\right)}.
+ * 
+ * `y_h_stride` is the memory stride required to move one pixel to the right in @tensor{Y}. This is equivalent 
+ * to @math{Y_c}.
+ * 
+ * `out_cols` is the number of output pixels for each of which @ttref{VPU_INT8_ACC_PERIOD} channels are to be computed.
+ * 
+ * `zero_point_vec` is a pointer to an `int8_t` buffer with length @ttref{VPU_INT8_EPV}. This is supplied by
+ * the user as a vector to save time (it allows the same vector to be reused, rather than copying a single
+ * `int8_t` value several times).
+ * 
+ * @requires_word_alignment{y,x,k,bss}
+ * 
+ * @par Requirements and Constraints
+ *   - `C_in` must be a multiple of `4`.
+ *   - `y_h_stride` must be a multiple of `4`.
+ * 
+ * @param[out] y                    Pointer to output image @tensor{Y}
+ * @param[in]  x                    Pointer to input image @tensor{X}
+ * @param[in]  k                    The kernel tensor @tensor{K}
+ * @param[in]  bss                  The bias-shift-scale parameters
+ * @param[in]  K_height             Kernel height @math{K_h} (in pixels)
+ * @param[in]  K_width              Kernel width @math{K_w} (in pixels)
+ * @param[in]  K_hori_stride        Horizontal stride of the convolution window (in pixels)
+ * @param[in]  C_in                 Number of input channels, @math{X_c}
+ * @param[in]  pad_t                (unsigned) Number of rows of padding at the top of the convolution window
+ * @param[in]  pad_b                (unsigned) Number or rows of padding at the bottom of the convolution window
+ * @param[in]  pad_l_initial        (signed) Number of columns of padding at the left of the convolution window (at 
+ *                                  its initial location)
+ * @param[in]  pad_r_initial        (signed) Number of columns of padding at the right of the convolution window (at
+ *                                  its initial location)
+ * @param[in]  x_v_stride           Stride to move from the right edge of a patch to the left-most pixel 
+ *                                  of the following row (in bytes)
+ * @param[in]  k_cout_stride        
+ * @param[in]  y_h_stride           Stride to move the output pointer from one pixel to the next (in bytes)
+ * @param[in]  out_cols             Number of output pixels to write.
+ * @param[in]  zero_point_vec       Vector containing `VPU_INT8_EPV` copies of the zero point value.
+ */
+static inline void nn_compute_hstrip_deep_padded(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,    
+        const nn_bss_block_t* BSS,
+        const unsigned K_height,
+        const unsigned K_width,
+        const unsigned K_hori_stride,
+        const channel_count_t C_in,
+        const unsigned pad_t,
+        const unsigned pad_b,
+        const int pad_l_initial,
+        const int pad_r_initial,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t k_cout_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const int8_t* zero_point_vec);
+
+
+/**
+ * @brief Compute a row of output pixels for a deep 2D convolution (Full @ttref{VPU_INT8_ACC_PERIOD} channels) 
+ * 
+ * A deep 2D convolution is one in which each output channel is a function of every input channel. This function
+ * is intended to be invoked multiple times to do a full 2D convolution. Each invocation will compute 
+ * @ttref{VPU_INT8_ACC_PERIOD} channels on each of `out_cols` pixels in a single row of @tensor{Y}.
+ * 
+ * `y` points to output tensor @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}. @math{Y_w} must
+ * be at least `out_cols`, and @math{Y_c} must be at least @ttref{VPU_INT8_ACC_PERIOD}. Rather than pointing
+ * at the start of @tensor{Y}, the `y` passed to this function should point to the first channel to be output
+ * of the first pixel to be output. The address to which `y` points will be the first memory written.
+ * 
+ * `x` points to the input tensor @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}. Rather than pointing
+ * at the start of @tensor{X}, the `x` passed to this function should point to the beginning of the first 
+ * pixel of the convolution window. If the convolution window starts in padding, then this *may point
+ * outside of @tensor{X}.
+ * 
+ * For example, the diagram below shows a `3x3` convolution being applied to a `4x4` image. The input image pixels
+ * are marked with `X`'s, and the (implied) padding is marked with `P`'s. In this case, the convolution window 
+ * starts in the padding at `(-1, -1, 0)` in @vector{X}'s coordinate space (i.e. @math{X[-1][-1]}) as is indicated 
+ * by `P*` in the diagram. If `X_image` points to the start of the input image, then the argument `x` should 
+ * be `(nn_image_t*) &X_image[-1][-1][0]`.
+ * 
+ * @inlinecode
+ *  _ _ _      
+ * |P*P P|P P P
+ * |P X X|X X P
+ * |P_X_X|X X P
+ *  P X X X X P
+ *  P X X X X P
+ *  P P P P P P  
+ *   
+ * @endinlinecode
+ * 
+ * `k` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, K_h, K_w, X_c}. @math{Y_c} and 
+ * @math{X_c} are the channel counts of the output and input images respectively. @math{K_h} and @math{K_w}
+ * are the spatial height and width of the 2D convolution window respectively, expressed in pixels. Rather than
+ * pointing at the start of @tensor{K}, the `k` passed to this function should point to the beginning of the
+ * <b>final</b> channel of the output channel group being processed in the call.
+ * 
+ * For example, if @tensor{K} has shape @tensor_shape{60,5,5,32}, defined as `nn_tensor_t kernel[60][5][5][32]`,
+ * then to process the output channel tail (output channels `48` through `59`), then the address passed to this
+ * call as `k` should be `&kernel[59][0][0][0]`. The `KERNEL_4D_COG_LAST_CHAN_START()` macro can be used to 
+ * simplify this. The memory layout of @tensor{K} is the standard memory layout for 4D tensors (see 
+ * @ref standard_layout).
+ * 
+ * `bss` points to the `nn_bss_block_t` describing the biases, shifts and scale for the current group of output 
+ * channels. `bss` can be initialized with `nn_standard_BSS_layout()`. See @ref bss_layout for more information.
+ * 
+ * `K_height` and `K_width` are the height and width respectively of the 2D convolution window.
+ * 
+ * `K_hori_stride` is the horizontal stride (in pixels) taken by the 2D convolution window between between
+ * output pixels.
+ * 
+ * `C_in` (or @math{X_c}) is the number of channels in the input image @tensor{X}.
+ * 
+ * `pad_t` and `pad_b` are the number of rows of padding at the top and bottom of the convolution window 
+ * respectively. Because this function computes a horizontal strip of output pixels, the padding at the
+ * top and bottom of the convolution window does not change during one invocation. These values are non-negative, 
+ * and so 'negative' amounts of top or bottom padding should be conveyed as zeros. See example below.
+ * 
+ * `pad_l_initial` and `pad_r_initial` are the number of columns of padding at the left and right sides of the 
+ * convolution window at the begining of the operation. Because this function computes a horizontal strip of output
+ * pixels, the amount of left and right padding may change during an invocation. Unlike `pad_t` and `pad_b`, 
+ * `pad_l_initial` and `pad_r_initial` indicate the *signed* padding, where gaps between the convolution window
+ * and the edge of the input image may be negative, as in the following example.
+ * 
+ * @inlinecode
+ *            pad_r_initial = -3
+ *         |-----|  
+ *    _____       _
+ *   |W W W|      | pad_t = max(1,0) = 1
+ *   |W W W|X X X ̅
+ *   |W W W|X X X
+ *   |W_W_W|X X X _ pad_b = max(-2,0) = 0
+ *      X X X X X |
+ *      X X X X X |
+ *   |-|          ̅
+ *     pad_l_initial = 1    
+ * @endinlinecode
+ * 
+ * The diagram above shows a `4x3` convolution window over a `5x5` image. In this case, `pad_t` is `1`, because the
+ * top row of the convolution window is outside the input image. `pad_b` is `0`, because the bottom of the convolution
+ * window is 2 pixels above the bottom of the image. `pad_l_initial` is `1`, because the left column of the 
+ * convolution window is outside the input image. And `pad_r_initial` is `-3`, because if the convolution window
+ * moves to the right 3 pixels, the edge of the convolution window will coincide with the edge of the input image.
+ * Note also that `pad_r_initial` is *independent of* `K_hori_stride`; `pad_r_initial` is expressed as *input image*
+ * pixels, not *output image* pixels.
+ * 
+ * `x_v_stride` is the memory stride required to move a pointer from (immediately after) the right edge of the 
+ * convolution window to (immediately after) the left edge of the convolution window on the following row (note: 
+ * "immediately after" because the convolution window's right and left edges are effectively *between* memory 
+ * addresses). This is equivalent to @math{\left(X_w-K_w\right)\cdot X_c}.
+ * 
+ * `k_cout_stride` is the memory stride required to move a pointer from the beginning of one output channel of 
+ * @tensor{K} to the output channel with index one *lower*, i.e. stride required to decrement the output channel
+ * by one. This is equivalent to @math{-\left(K_h\cdot K_w\cdot X_c\right)}.
+ * 
+ * `y_h_stride` is the memory stride required to move one pixel to the right in @tensor{Y}. This is equivalent 
+ * to @math{Y_c}.
+ * 
+ * `out_cols` is the number of output pixels for each of which @ttref{VPU_INT8_ACC_PERIOD} channels are to be computed.
+ * 
+ * `zero_point_vec` is a pointer to an `int8_t` buffer with length @ttref{VPU_INT8_EPV}. This is supplied by
+ * the user as a vector to save time (it allows the same vector to be reused, rather than copying a single
+ * `int8_t` value several times).
+ * 
+ * `C_out_tail` is the tail of the output channel count. The value given should be @math{left(Y_c mod 16\right}.
+ * 
+ * @requires_word_alignment{y,x,k,bss}
+ * 
+ * @par Requirements and Constraints
+ *   - `C_in` must be a multiple of `4`.
+ *   - `y_h_stride` must be a multiple of `4`.
+ *   - `C_out_tail` must be a multiple of `4`.
+ * 
+ * @param[out] y                    Pointer to output image @tensor{Y}
+ * @param[in]  x                    Pointer to input image @tensor{X}
+ * @param[in]  k                    The kernel tensor @tensor{K}
+ * @param[in]  bss                  The bias-shift-scale parameters
+ * @param[in]  K_height             Kernel height @math{K_h} (in pixels)
+ * @param[in]  K_width              Kernel width @math{K_w} (in pixels)
+ * @param[in]  K_hori_stride        Horizontal stride of the convolution window (in pixels)
+ * @param[in]  C_in                 Number of input channels, @math{X_c}
+ * @param[in]  pad_t                (unsigned) Number of rows of padding at the top of the convolution window
+ * @param[in]  pad_b                (unsigned) Number or rows of padding at the bottom of the convolution window
+ * @param[in]  pad_l_initial        (signed) Number of columns of padding at the left of the convolution window (at 
+ *                                  its initial location)
+ * @param[in]  pad_r_initial        (signed) Number of columns of padding at the right of the convolution window (at
+ *                                  its initial location)
+ * @param[in]  x_v_stride           Stride to move from the right edge of a patch to the left-most pixel 
+ *                                  of the following row (in bytes)
+ * @param[in]  k_cout_stride        
+ * @param[in]  y_h_stride           Stride to move the output pointer from one pixel to the next (in bytes)
+ * @param[in]  out_cols             Number of output pixels to write.
+ * @param[in]  zero_point_vec       Vector containing `VPU_INT8_EPV` copies of the zero point value.
+ * @param[in]  C_out_tail           The tail of the output channel count.
+ */
+static inline void nn_compute_hstrip_tail_deep_padded(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,    
+        const nn_bss_block_t* BSS,
+        const unsigned K_height,
+        const unsigned K_width,
+        const unsigned K_hori_stride,
+        const channel_count_t C_in,
+        const unsigned pad_t,
+        const unsigned pad_b,
+        const int pad_l_initial,
+        const int pad_r_initial,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t k_cout_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const int8_t* zero_point_vec,
+        const channel_count_t C_out_tail);
+
+
+
+
+static inline void nn_compute_hstrip_deep(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,    
+        const nn_bss_block_t* BSS,
+        const unsigned K_height,
+        const unsigned K_width,
+        const unsigned K_hori_stride,
+        const channel_count_t C_in,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t k_cout_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols);
+
+
+
+
+
+static inline void nn_compute_hstrip_tail_deep(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,    
+        const nn_bss_block_t* BSS,
+        const unsigned K_height,
+        const unsigned K_width,
+        const unsigned K_hori_stride,
+        const channel_count_t C_in,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t k_cout_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const channel_count_t C_out_tail);
+
 
 #endif //defined(__XS3A__)
 

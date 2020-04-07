@@ -29,8 +29,8 @@
         ]
     },
     {
-        "generator": "../examples/models/op_test_models/generate_conv2d_deepin_deepout_relu.py",
-        "operator": "XC_conv2d_deepin_deepout_relu",
+        "generator": "../examples/models/op_test_models/generate_conv2d_deep.py",
+        "operator": "XC_conv2d_deep",
         "_comment": "expected failures. see issue https://github.com/xmos/ai_tools/issues/88",
         "parameters": [
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same"}

@@ -7,7 +7,7 @@ from .xcore_model import TensorType
 
 def calc_subgraph_mem_req(subgraph):
     operators = copy(subgraph.operators)
-    coexisting = set()
+    coexisting = set(subgraph.inputs)
     op_mem_reqs = dict()
     while operators:
         op = operators.pop(0)

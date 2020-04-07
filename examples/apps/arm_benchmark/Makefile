@@ -34,6 +34,7 @@ else # must be xcore
 	PLATFORM_FLAGS += -Wno-unknown-attributes
 	PLATFORM_FLAGS += -report
 	PLATFORM_FLAGS += -fcmdline-buffer-bytes=1024
+	#PLATFORM_FLAGS += -nodefaultlibs
 
 	AS := xcc
 	ASFLAGS := $(PLATFORM_FLAGS)

@@ -19,8 +19,6 @@ TENSORFLOW_SOURCES := \
 	tensorflow/lite/core/api/flatbuffer_conversions.cc \
 	tensorflow/lite/core/api/op_resolver.cc \
 	tensorflow/lite/core/api/tensor_utils.cc \
-	tensorflow/lite/kernels/kernel_util.cc \
-	tensorflow/lite/kernels/internal/quantization_util.cc \
 	tensorflow/lite/micro/memory_helpers.cc \
 	tensorflow/lite/micro/micro_allocator.cc \
 	tensorflow/lite/micro/micro_error_reporter.cc \
@@ -31,8 +29,9 @@ TENSORFLOW_SOURCES := \
 	tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc \
 	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc
 
-
 #TENSORFLOW_SOURCES += \
+	# tensorflow/lite/kernels/kernel_util.cc \
+	# tensorflow/lite/kernels/internal/quantization_util.cc \
 	# tensorflow/lite/micro/kernels/activations.cc \
 	# tensorflow/lite/micro/kernels/add.cc \
 	# tensorflow/lite/micro/kernels/all_ops_resolver.cc \

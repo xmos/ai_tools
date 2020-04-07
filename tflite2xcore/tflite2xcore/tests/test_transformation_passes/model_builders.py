@@ -272,52 +272,67 @@ def build_depthwise_conv2d(subgraph=None, *, weight_shape, input_size, padding, 
     return subgraph.model
 
 
-def build_DIDO(subgraph=None, *, weight_shape, input_size, padding):
+def build_XC_conv2d_deep(subgraph=None, *,
+                         weight_shape, input_size, strides):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     height, width = input_size
-    C_out, K_h, K_w, C_in = weight_shape
+    C_out, _, _, C_in = weight_shape
 
     input_shape = [1, height, width, C_in]
-    tin = subgraph.create_tensor('input', TensorType.INT8, input_shape, isinput=True)
-    w = subgraph.create_tensor('weights', TensorType.INT8,
-                               shape=[C_out // 16, K_h, K_w, C_in // 32, 16, 32])
-    b = subgraph.create_tensor('biases', TensorType.INT16, shape=[C_out // 16, 2, 16])
-    s = subgraph.create_tensor('scales', TensorType.INT16, b.shape)
-
-    if padding == 'SAME':
-        output_shape = [1, height, width, C_out]
-    elif padding == 'VALID':
-        output_shape = [1, height - K_h + 1, width - K_w + 1, C_out]
-    tout = subgraph.create_tensor('output', tin.type, output_shape, isoutput=True)
-
-    op = subgraph.create_operator(
-        OperatorCode(XCOREOpCodes.XC_conv2d_deepin_deepout_relu),
-        inputs=[tin, w, b, s], outputs=[tout])
-    op.add_custom_options(padding=padding, stride_h=1, stride_w=1)
-
-    return subgraph.model
-
-
-def build_DW(subgraph=None, *, weight_shape, input_size, pads, strides):
-    subgraph = subgraph or XCOREModel().create_subgraph()
-
-    height, width = input_size
-    C_out = weight_shape[2]
-    assert len(pads) == 2
-    for j, p in enumerate(pads):
-        assert len(p) == 2, f"padding[{j}] is not a pair"
-
-    input_shape = [1, height, width, C_out]
     bss_shape = [int(np.ceil(C_out / 16)), 5, 16]
     tin = subgraph.create_tensor(
         'input', TensorType.INT8, input_shape, isinput=True)
     w = subgraph.create_tensor('weights', TensorType.INT8, weight_shape)
     b = subgraph.create_tensor('bss', TensorType.INT16, bss_shape)
 
-    out_size = [(i - k + p[0] + p[1]) / s + 1
-                for p, s, i, k in zip(pads, strides, input_size, weight_shape[:2])]
-    output_shape = [1, *out_size, C_out]
+    # valid padding
+    pads = [
+        (0, np.ceil((i - k) / s) * s - i + k)
+        for s, i, k in zip(strides, input_size, weight_shape[1:3])
+    ]
+    out_size = [
+        (i - k + p[0] + p[1]) / s + 1
+        for p, s, i, k in zip(pads, strides, input_size, weight_shape[1:3])
+    ]
+    output_shape = [C_out, *out_size, C_in]
+    tout = subgraph.create_tensor('output', tin.type, output_shape, isoutput=True)
+
+    op = subgraph.create_operator(
+        OperatorCode(XCOREOpCodes.XC_conv2d_deep),
+        inputs=[tin, w, b], outputs=[tout])
+    op.add_custom_options(
+        pad=[pads[0][0], pads[1][0], -127],
+        stride=[strides[0], strides[1]]
+    )
+
+    return subgraph.model
+
+
+def build_XC_conv2d_depthwise(subgraph=None, *,
+                              weight_shape, input_size, strides):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    height, width = input_size
+    C_in = weight_shape[2]
+
+    input_shape = [1, height, width, C_in]
+    bss_shape = [int(np.ceil(C_in / 16)), 5, 16]
+    tin = subgraph.create_tensor(
+        'input', TensorType.INT8, input_shape, isinput=True)
+    w = subgraph.create_tensor('weights', TensorType.INT8, weight_shape)
+    b = subgraph.create_tensor('bss', TensorType.INT16, bss_shape)
+
+    # valid padding
+    pads = [
+        (0, np.ceil((i - k) / s) * s - i + k)
+        for s, i, k in zip(strides, input_size, weight_shape[:2])
+    ]
+    out_size = [
+        (i - k + p[0] + p[1]) / s + 1
+        for p, s, i, k in zip(pads, strides, input_size, weight_shape[:2])
+    ]
+    output_shape = [1, *out_size, C_in]
     tout = subgraph.create_tensor('output', tin.type, output_shape, isoutput=True)
 
     op = subgraph.create_operator(
@@ -376,16 +391,16 @@ def build_consecutive_pads(subgraph=None, *,
 
 
 def build_padded_DW(subgraph=None, *,
-                    weight_shape, input_size, paddings, strides,
-                    pads=[(0, 0), (0, 0)]):
+                    weight_shape, input_size, paddings, strides):
     input_shape = [1, *input_size, weight_shape[-1]]
     model = build_pad(subgraph, input_shape=input_shape, paddings=paddings)
     subgraph = subgraph or model.subgraphs[0]
     output_shape = subgraph.outputs[0].shape
 
-    build_DW(subgraph,
-             weight_shape=weight_shape, input_size=output_shape[1:3],
-             pads=pads, strides=strides)
+    build_XC_conv2d_depthwise(subgraph,
+                              weight_shape=weight_shape,
+                              input_size=output_shape[1:3],
+                              strides=strides)
 
     pad_op, conv_op = subgraph.operators[:2]
     _glue_ops(pad_op, conv_op)

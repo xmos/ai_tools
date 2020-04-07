@@ -73,6 +73,7 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
     def mutate_biases(self, op):
         # TODO: this is the same as in ReplaceFullyConnectedPass, refactor
         # TODO: this is the same as in Replace1x1Conv2dPass, refactor
+        # TODO: this is the same as in ReplaceDeepConv2dPass, refactor
         super().mutate_biases(op)
         with self.using(op):
             # calculate and save the bias/shift/scale tensor
@@ -83,7 +84,7 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
 
             # rename bias tensor and remove quantization info to save space
             self._biases.name = f"{op.name}/bias_shift_scale"
-            self._biases.quantization = None
+            self._biases.quantization = None  # TODO: this should happen in another legalization pass
 
     def mutate_weights(self, op):
         super().mutate_weights(op)
@@ -97,6 +98,7 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
             self._weights.quantization = None
 
     def _pad(self):
+        # TODO: this is very similar to the one in ReplaceDeepConv2dPass, refactor
         # pad: [top, left, zero_point]
         pad = [max(int((o - 1) * s - i + k) // 2, 0)
                for o, s, i, k in zip(self._output.shape[1:3],
@@ -146,6 +148,8 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
 
     def mutate_biases(self, op):
         # TODO: this is the same as in ReplaceFullyConnectedPass, refactor
+        # TODO: this is the same as in ReplaceDepthwiseConv2dPass, refactor
+        # TODO: this is the same as in ReplaceDeepConv2dPass, refactor
         super().mutate_biases(op)
         with self.using(op):
             # calculate and save the bias/shift/scale tensor
@@ -171,18 +175,86 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
+        # TODO: this is the same as in ReplaceDepthwiseConv2dPass, refactor
+        new_op = super().mutate(op)
+        self.mutate_biases(new_op)
+        self.mutate_weights(new_op)
+
+        return new_op
+
+
+class ReplaceDeepConv2dPass(ReplaceConv2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.CONV_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_conv2d_deep)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
+                        and self._weights.shape[3] % WORD_SIZE == 0)  # Cin divisible by 4
+
+        return False
+
+    # TODO: refactor this
+    @log_method_output()
+    def _zero_point_bias(self):
+        return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2, 3))
+
+    def mutate_biases(self, op):
+        # TODO: this is the same as in ReplaceFullyConnectedPass, refactor
+        # TODO: this is the same as in ReplaceDepthwiseConv2dPass, refactor
+        # TODO: this is the same as in Replace1x1Conv2dPass, refactor
+        super().mutate_biases(op)
+        with self.using(op):
+            # calculate and save the bias/shift/scale tensor
+            bss = self._bss_arr()
+            self._biases.buffer.data = bss
+            self._biases.shape = bss.shape
+            self._biases.type = TensorType.INT16
+
+            # rename bias tensor and remove quantization info to save space
+            self._biases.name = f"{op.name}/bias_shift_scale"
+            self._biases.quantization = None  # TODO: this should happen in another legalization pass
+
+    def mutate_weights(self, op):
+        super().mutate_weights(op)
+        with self.using(op):
+            # remove quantization info to save space
+            # TODO: this should happen in another legalization pass
+            self._weights.quantization = None
+
+    def _pad(self):
+        # TODO: this is very similar to the one in ReplaceDepthwiseConv2dPass, refactor
+        # pad: [top, left, zero_point]
+        pad = [max(int((o - 1) * s - i + k) // 2, 0)
+               for o, s, i, k in zip(self._output.shape[1:3],
+                                     self._op.custom_options['stride'],
+                                     self._input.shape[1:3],
+                                     self._weights.shape[1:3])]
+        pad.append(self._input_zero_point)
+        return pad
+
+    def mutate(self, op):
+        # TODO: this is the same as in ReplaceDepthwiseConv2dPass, refactor
+        # TODO: this is the same as in Replace1x1Conv2dPass, refactor
+        # NOTE: the order of these mutations is strict
         new_op = super().mutate(op)
         self.mutate_biases(new_op)
         self.mutate_weights(new_op)
 
         with self.using(op):
-            new_op.add_custom_options(
-                stride=self._strides
-            )
+            new_op.add_custom_options(stride=self._strides)
+        with self.using(new_op):
+            new_op.add_custom_options(pad=self._pad())
         return new_op
 
 
-# TODO: write (at least regression) tests for this class
+# TODO: Consider deprecating this when conv2d enhancements are done
 class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
     def match(self, op):
         if super().match(op):
@@ -241,50 +313,6 @@ class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
                 padding=self._padding, stride_h=self._strides[0], stride_w=self._strides[1]  # TODO: change to 'stride' and 'pad'
             )
         return new_op
-
-
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceDeepinDeepoutConv2DPass(ReplaceDeepoutConv2DPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.CONV_2D
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._weights.shape[3] % VE == 0  # deepin
-
-        return False
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_conv2d_deepin_deepout_relu)
-
-    def mutate_weights(self, op):
-        super().mutate_weights(op)
-        with self.using(op):
-            # rearrange weight tensor
-            weights = self._weights.numpy.astype(np.int8)
-            weights = weights.reshape((
-                weights.shape[0] // ACC_PERIOD,
-                ACC_PERIOD,
-                weights.shape[1],
-                weights.shape[2],
-                weights.shape[3] // VE,
-                VE
-            ))
-            weights = np.transpose(
-                np.flip(weights, axis=1),
-                axes=(0, 2, 3, 4, 1, 5)
-            )
-            self._log_weights()
-
-            # save weight tensor and update shape
-            self._weights.buffer.data = weights
-            self._weights.shape = weights.shape
-
-            # remove quantization info to save space
-            self._weights.quantization = None
 
 
 # TODO: write tests (of subclasses?) to test input operator matching
@@ -399,7 +427,7 @@ class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
         return super().mutate(op)
 
 
-class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
+class ParallelizeDeepConv2dPass(QuantizedOperatorMatchingPass):
     def __init__(self, *args, num_threads=None, forced=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.num_threads = num_threads or 1
@@ -416,7 +444,7 @@ class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
 
     @property
     def matching_opcode(self):
-        return XCOREOpCodes.XC_conv2d_deepin_deepout_relu
+        return XCOREOpCodes.XC_conv2d_deep
 
     def match(self, op):
         if super().match(op):
@@ -425,7 +453,9 @@ class ParallelizeDIDOPass(QuantizedOperatorMatchingPass):
     def mutate(self, op):
         with self.using(op):
             _, height, width, _ = self._output.shape
+        assert int(height) == height
+        assert int(width) == width
         planner = DIDOConv2DPlanner(
-            height, width, num_threads=self.num_threads, forced=self.forced)
+            int(height), int(width), num_threads=self.num_threads, forced=self.forced)
         plan = planner.find_optimal_plan()
         op.add_custom_options(par_plan=[list(block) for block in plan.layout])

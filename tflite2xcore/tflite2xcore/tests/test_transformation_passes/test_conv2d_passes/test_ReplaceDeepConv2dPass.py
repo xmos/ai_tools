@@ -4,19 +4,15 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.transformation_passes import ReplaceDeepinDeepoutConv2DPass
+from tflite2xcore.transformation_passes import ReplaceDeepConv2dPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_conv2d
 from .conftest import (
     PARAMS,
     test_matching_params,
     test_non_matching_output_channels,
-    test_non_matching_kernel_height,
-    test_non_matching_kernel_width,
     test_non_matching_input_channels,
-    test_non_matching_types,
-    test_non_matching_stride_w,
-    test_non_matching_stride_h
+    test_non_matching_types
 )
 
 
@@ -26,16 +22,19 @@ from .conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
+PARAMS["extended"].update({
+    "stride_h": [1, 2, 3],  # TODO: this should be the default after the conv2d improvements
+    "stride_w": [1, 2, 3],  # TODO: this should be the default after the conv2d improvements
+})
+
 PARAMS["default"].update({
-    "non_matching_kernel_width": PARAMS["default"]["non_matching_kernel_height"],  # TODO: the parity constraint is deprecated after the conv2d improvements
-    "input_channels": [32, 64],
-    "non_matching_input_channels": [8, 16, 33, 48]
+    "stride_h": [1, 2],  # TODO: this should be the default after the conv2d improvements
+    "stride_w": [1, 2],  # TODO: this should be the default after the conv2d improvements
 })
 
 PARAMS["smoke"].update({
-    "non_matching_kernel_width": PARAMS["smoke"]["non_matching_kernel_height"],  # TODO: the parity constraint is deprecated after the conv2d improvements
-    "input_channels": [32],
-    "non_matching_input_channels": [16]
+    "stride_h": [1],  # TODO: this should be the default after the conv2d improvements
+    "stride_w": [1],  # TODO: this should be the default after the conv2d improvements
 })
 
 
@@ -50,7 +49,7 @@ def build_model():
 
 @pytest.fixture()
 def trf_pass():
-    return ReplaceDeepinDeepoutConv2DPass()
+    return ReplaceDeepConv2dPass()
 
 
 @pytest.fixture()

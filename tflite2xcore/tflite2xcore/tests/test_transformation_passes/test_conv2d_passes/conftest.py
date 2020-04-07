@@ -19,12 +19,35 @@ from ..conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
-PARAMS["default"].update({
+PARAMS["extended"].update({
     "kernel_height": [2, 3, 5, 7],
     "kernel_width": [2, 3, 5, 7],
     "non_matching_input_channels": [3, 9, 15],
-    "output_channels": [4, 8, 16, 32],
+    "output_channels": PARAMS["extended"]["input_channels"],
     "non_matching_output_channels": [3, 9, 15],
+    "padding": ['SAME', 'VALID'],
+    "stride_h": [1],  # TODO: this should be extended after the conv2d improvements
+    "non_matching_stride_h": [2, 3],  # TODO: this should be removed after the conv2d improvements
+    "stride_w": [1],  # TODO: this should be extended after the conv2d improvements
+    "non_matching_stride_w": [2, 3],  # TODO: this should be removed after the conv2d improvements
+    "non_matching_tensors": [
+        ('input', TensorType.INT16), ('input', TensorType.INT32),
+        ('input', TensorType.UINT8), ('input', TensorType.FLOAT32),
+        ('weights', TensorType.INT16), ('weights', TensorType.INT32),
+        ('weights', TensorType.UINT8), ('weights', TensorType.FLOAT32),
+        ('biases', TensorType.INT8), ('biases', TensorType.INT16),
+        ('biases', TensorType.UINT8), ('biases', TensorType.FLOAT32),
+        ('output', TensorType.INT16), ('output', TensorType.INT32),
+        ('output', TensorType.UINT8), ('output', TensorType.FLOAT32)
+    ]
+})
+
+PARAMS["default"].update({
+    "kernel_height": [2, 3, 7],
+    "kernel_width": [2, 3, 7],
+    "non_matching_input_channels": [3, 15],
+    "output_channels": PARAMS["default"]["input_channels"],
+    "non_matching_output_channels": [3, 15],
     "padding": ['SAME', 'VALID'],
     "stride_h": [1],  # TODO: this should be extended after the conv2d improvements
     "non_matching_stride_h": [2, 3],  # TODO: this should be removed after the conv2d improvements
@@ -41,9 +64,9 @@ PARAMS["default"].update({
 PARAMS["smoke"].update({
     "kernel_height": [2, 3],
     "kernel_width": [2, 3],
-    "non_matching_input_channels": [3, 9],
-    "output_channels": [4, 32],
-    "non_matching_output_channels": [3, 9],
+    "non_matching_input_channels": [9],
+    "output_channels": PARAMS["smoke"]["input_channels"],
+    "non_matching_output_channels": [9],
     "padding": ['SAME', 'VALID'],
     "stride_h": [1],  # TODO: this should be extended after the conv2d improvements
     "non_matching_stride_h": [2],  # TODO: this should be removed after the conv2d improvements

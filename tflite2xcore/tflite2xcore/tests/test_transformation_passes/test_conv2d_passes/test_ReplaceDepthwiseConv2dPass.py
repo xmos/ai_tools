@@ -21,18 +21,25 @@ from .conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
-PARAMS["default"].update({
+PARAMS["extended"].update({
     "stride_h": [1, 2, 3],  # TODO: this should be the default after the conv2d improvements
     "stride_w": [1, 2, 3],  # TODO: this should be the default after the conv2d improvements
     "depth_multiplier": [1],
-    "non_matching_depth_multiplier": [2, 3, 4, 16]
+    "non_matching_depth_multiplier": [2, 5, 16]
 })
 
-PARAMS["smoke"].update({
+PARAMS["default"].update({
     "stride_h": [1, 2],  # TODO: this should be the default after the conv2d improvements
     "stride_w": [1, 2],  # TODO: this should be the default after the conv2d improvements
     "depth_multiplier": [1],
     "non_matching_depth_multiplier": [2, 16]
+})
+
+PARAMS["smoke"].update({
+    "stride_h": [1],  # TODO: this should be the default after the conv2d improvements
+    "stride_w": [1],  # TODO: this should be the default after the conv2d improvements
+    "depth_multiplier": [1],
+    "non_matching_depth_multiplier": [16]
 })
 
 
@@ -65,6 +72,15 @@ def model(weight_shape, input_size, padding, strides):
 #  ----------------------------------------------------------------------------
 #                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
+
+def test_non_matching_input_channels(trf_pass, build_model,
+                                     weight_shape, input_size, padding, strides,
+                                     non_matching_input_channels):
+    weight_shape[2] = non_matching_input_channels
+    model = build_model(weight_shape=weight_shape, input_size=input_size,
+                        padding=padding, strides=strides)
+    _test_non_matching_params(trf_pass, model)
+
 
 def test_non_matching_depth_multiplier(trf_pass, build_model,
                                        weight_shape, input_size, padding, strides,

@@ -24,6 +24,7 @@ CONV_PARAMS = deepcopy(CONV_PARAMS)
 PARAMS = deepcopy(PARAMS)
 
 # NOTE: this is intentional to keep test case count lower
+PARAMS["extended"].update(CONV_PARAMS["default"])
 PARAMS["default"].update(CONV_PARAMS["smoke"])
 PARAMS["smoke"].update(CONV_PARAMS["smoke"])
 

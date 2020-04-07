@@ -5,19 +5,22 @@ ifeq ($(TARGET), x86)
 	BUILD_TARGET := x86
 
 	CC := gcc
-	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
+	CCFLAGS := -g -O3
+	CCFLAGS += -DTF_LITE_STATIC_MEMORY
+	CCFLAGS += -DTF_LITE_DISABLE_X86_NEON
 	#CCFLAGS += -DNDEBUG  
 
 	CXX := g++
-	CXXFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
+	CXXFLAGS := -g -O3 -std=c++11 
+	CXXFLAGS += -DTF_LITE_STATIC_MEMORY
+	CXXFLAGS += -DTF_LITE_DISABLE_X86_NEON
 	#CXXFLAGS += -DNDEBUG  
-	CXXFLAGS += -std=c++11 
 
 	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm -pthread
 
 	OBJ_DIR := .build/x86
 
-	APP = test_model
+	APP = cifar-10
 else # must be xcore
 	BUILD_TARGET := xcore.ai
 	
@@ -31,6 +34,7 @@ else # must be xcore
 	PLATFORM_FLAGS += -Wno-unknown-attributes
 	PLATFORM_FLAGS += -report
 	PLATFORM_FLAGS += -fcmdline-buffer-bytes=1024
+	#PLATFORM_FLAGS += -nodefaultlibs
 
 	AS := xcc
 	ASFLAGS := $(PLATFORM_FLAGS)
@@ -39,6 +43,7 @@ else # must be xcore
 	CCFLAGS := -DTF_LITE_STATIC_MEMORY
 	CCFLAGS += -DTF_LITE_STRIP_ERROR_STRINGS
 	CCFLAGS += -DNDEBUG
+
 	CCFLAGS += $(PLATFORM_FLAGS)
 
 	CXX := xcc
@@ -51,7 +56,7 @@ else # must be xcore
 
 	OBJ_DIR := .build/xcore
 
-	APP = test_model.xe
+	APP = cifar-10.xe
 endif
 
 $(info Building for $(BUILD_TARGET))
@@ -73,7 +78,7 @@ VPATH += src
 
 SOURCES := $(TENSORFLOW_SOURCES)
 SOURCES += $(LIBS_SOURCES)
-SOURCES += main.cc
+SOURCES += main.cc xcore_model.c
 
 OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))))
 OBJECT_FILES := $(addprefix $(OBJ_DIR)/,$(OBJECT_FILES))

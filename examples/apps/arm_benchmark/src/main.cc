@@ -9,6 +9,7 @@
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
 
+#include "lib_ops/api/lib_ops.h"
 #include "xcore_model.h"
 
 #define TEST_INPUT_SIZE = 32 * 32 * 4
@@ -49,7 +50,7 @@ static void setup() {
     // copying or parsing, it's a very lightweight operation.
     model = tflite::GetModel(xcore_model);
     if (model->version() != TFLITE_SCHEMA_VERSION) {
-        error_reporter->Report(
+        TF_LITE_REPORT_ERROR(error_reporter,
             "Model provided is schema version %d not equal "
             "to supported version %d.",
             model->version(), TFLITE_SCHEMA_VERSION);
@@ -67,7 +68,14 @@ static void setup() {
     // Allocate memory from the tensor_arena for the model's tensors.
     TfLiteStatus allocate_status = interpreter->AllocateTensors();
     if (allocate_status != kTfLiteOk) {
-        error_reporter->Report("AllocateTensors() failed");
+        TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
+    return;
+    }
+
+    // Allocate xCORE KernelDispatcher after AllocateTensors
+    xcore::XCoreStatus allocate_xcore_status = xcore::AllocateOperatorDispatcher();
+    if (allocate_xcore_status != xcore::kXCoreOk) {
+        TF_LITE_REPORT_ERROR(error_reporter, "AllocateKernelDispatcher() failed");
     return;
     }
 
@@ -94,7 +102,7 @@ int main(int argc, char *argv[])
     // Run inference, and report any error
     TfLiteStatus invoke_status = interpreter->Invoke();
     if (invoke_status != kTfLiteOk) {
-        error_reporter->Report("Invoke failed on input filename=%s\n", argv[1]);
+        TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed on input filename=%s\n", argv[1]);
         return -1;
     }
 

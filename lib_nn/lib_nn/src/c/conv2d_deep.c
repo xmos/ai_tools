@@ -14,7 +14,7 @@
 
 
 
-#define INDEX_CAST(X)   ((int32_t)(X))
+#define ADDR(V, INDEX)      &V[((int)(INDEX))]
 
 void conv2d_deep_init(
     nn_conv2d_deep_plan_t* plan,
@@ -121,10 +121,10 @@ void conv2d_deep(
     int8_t zero_point_vec[VPU_INT8_EPV];
     memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
     
-    X = &X[INDEX_CAST(job->stride.start.X)];
-    Y = &Y[INDEX_CAST(job->stride.start.Y)];
-    K = &K[INDEX_CAST(job->stride.start.K)];
-    BSS = &BSS[INDEX_CAST(job->stride.start.BSS)];
+    X = ADDR(X,job->stride.start.X);
+    Y = ADDR(Y, job->stride.start.Y);
+    K = ADDR(K, job->stride.start.K);
+    BSS = ADDR(BSS, job->stride.start.BSS);
 
     const unsigned C_out_tail = plan->channels.Y % VPU_INT8_ACC_PERIOD;
 
@@ -135,7 +135,7 @@ void conv2d_deep(
         int pad_t = job->init_padding.top;
         int pad_b = job->init_padding.bottom;
 
-        K = &K[INDEX_CAST(plan->stride.K.cout * (cur_chans - 1))];
+        K = ADDR(K, plan->stride.K.cout * (cur_chans - 1));
 
         const nn_image_t* X_cog = X;
 
@@ -181,8 +181,8 @@ void conv2d_deep(
             pad_t -= plan->window.stride.vertical;
             pad_b += plan->window.stride.vertical;
 
-            X_cog = &X_cog[INDEX_CAST(job->stride.row.window)];
-            Y = &Y[INDEX_CAST(job->stride.row.Y)];
+            X_cog = ADDR(X_cog, job->stride.row.window);
+            Y = ADDR(Y, job->stride.row.Y);
         }
 
         K = &K[INDEX_CAST(plan->stride.K.cout)];

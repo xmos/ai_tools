@@ -17,22 +17,22 @@ namespace pooling {
 //**************************************
 XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                           int32_t Y_w, int32_t C_out) {
-  nn_image_params_t params_in;
-  params_in.height = X_h;
-  params_in.width = X_w;
-  params_in.channels = C_in;
+  nn_image_params_t in_params;
+  in_params.height = X_h;
+  in_params.width = X_w;
+  in_params.channels = C_in;
 
-  nn_image_params_t params_out;
-  params_out.height = Y_h;
-  params_out.width = Y_w;
-  params_out.channels = C_out;
+  nn_image_params_t out_params;
+  out_params.height = Y_h;
+  out_params.width = Y_w;
+  out_params.channels = C_out;
 
   nn_window_op_config_t config;
-  nn_window_op_config_simple(&config, &params_in, &params_out, params.pool_h,
+  nn_window_op_config_simple(&config, &in_params, &out_params, params.pool_h,
                              params.pool_w, params.stride_h,
                              params.stride_w);
 
-  maxpool2d_init(&plan_, &params_in, &params_out, &config);
+  maxpool2d_init(&plan_, &in_params, &out_params, &config);
 
   return kXCoreOk;
 }
@@ -51,22 +51,22 @@ XCoreStatus MaxPool::Eval(int8_t* Y, const int8_t* X) {
 //**************************************
 XCoreStatus AvgPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                           int32_t Y_w, int32_t C_out) {
-  nn_image_params_t params_in;
-  params_in.height = X_h;
-  params_in.width = X_w;
-  params_in.channels = C_in;
+  nn_image_params_t in_params;
+  in_params.height = X_h;
+  in_params.width = X_w;
+  in_params.channels = C_in;
 
-  nn_image_params_t params_out;
-  params_out.height = Y_h;
-  params_out.width = Y_w;
-  params_out.channels = C_out;
+  nn_image_params_t out_params;
+  out_params.height = Y_h;
+  out_params.width = Y_w;
+  out_params.channels = C_out;
 
   nn_window_op_config_t config;
-  nn_window_op_config_simple(&config, &params_in, &params_out, params.pool_h,
+  nn_window_op_config_simple(&config, &in_params, &out_params, params.pool_h,
                              params.pool_w, params.stride_h,
                              params.stride_w);
 
-  avgpool2d_init(&plan_, &params_in, &params_out, &config);
+  avgpool2d_init(&plan_, &in_params, &out_params, &config);
 
   return kXCoreOk;
 }

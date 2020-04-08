@@ -34,27 +34,23 @@ struct Conv2DParams {
   int32_t stride_w;
 };
 
-class Conv2D_DIDO {
+class Conv2D_Deep {
  public:
-  Conv2D_DIDO(const Conv2DParams& params, const ParRegionArray& par_regions,
-              const padding_mode_t padding_mode)
-      : params(params), par_regions(par_regions), padding_mode_(padding_mode) {}
-  ~Conv2D_DIDO() {}
+  Conv2D_Deep(const Conv2DParams& params, const ParRegionArray& par_regions)
+      : params(params), par_regions(par_regions), jobs_(nullptr) {}
+  ~Conv2D_Deep() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                   int32_t Y_w, int32_t C_out, int32_t zero_point,
-                   const int8_t* K, const int16_t* bias);
+                   int32_t Y_w, int32_t C_out);
   XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
-                   const int16_t* SS);
+                   const int16_t* BSS);
 
   Conv2DParams params;
   ParRegionArray par_regions;
 
  private:
-  std::vector<nn_conv2d_dido_params_t>
-      params_;  // FIXME: This std::vector can be removed innext version of the
-                // DIDO operator.  Will be replaced by a single job param
-  padding_mode_t padding_mode_;
+  nn_conv2d_deep_plan_t plan_;
+  nn_conv2d_deep_job_t* jobs_;
 };
 
 class Conv2D_SIDO {

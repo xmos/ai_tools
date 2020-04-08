@@ -43,8 +43,8 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   nn_conv2d_window_params_t window_params;
   window_params.shape.height = params.K_h;
   window_params.shape.width = params.K_w;
-  window_params.start.row = -params.pad.left;
-  window_params.start.column = -params.pad.top;
+  window_params.start.row = -params.pad.top;
+  window_params.start.column = -params.pad.left;
   window_params.stride.vertical = params.stride_h;
   window_params.stride.horizontal = params.stride_w;
 
@@ -89,7 +89,6 @@ XCoreStatus Conv2D_Deep::Eval(int8_t* Y, const int8_t* X, const int8_t* K,
 
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_deep_thread_worker);
-
   for (int i = 0; i < par_regions.size; i++) {
     Conv2DDeepThreadData* data = new Conv2DDeepThreadData();
 

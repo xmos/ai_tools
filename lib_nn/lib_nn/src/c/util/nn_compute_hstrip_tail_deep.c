@@ -106,7 +106,7 @@ void nn_compute_hstrip_tail_deep_c(
                     VSTC(vec_tmp2);
                     VLDC(ADDR(vec_tmp2, C_in_tail-32));
 
-                    const nn_image_t* K_tmp = patch_K + (C_in_tail - 32);
+                    const nn_image_t* K_tmp = ADDR(patch_K, (C_in_tail - 32));
                     DO_VLMACCRS(C_in_tail);
 
                     patch_X = ADDR(patch_X, C_in_tail);

@@ -84,7 +84,7 @@ void nn_compute_hstrip_deep_c(
                     VSTC(mask_vec);
                     VLDC(mask_vec + tail_offset);
                     
-                    const nn_image_t* K_tmp = patch_K + tail_offset;
+                    const nn_image_t* K_tmp = ADDR(patch_K, tail_offset);
 
                     for(int cout = VPU_INT8_ACC_PERIOD; cout; cout--){
                         VLMACCR(K_tmp);

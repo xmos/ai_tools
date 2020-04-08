@@ -25,10 +25,13 @@ def make_folder_and_arguments(**kwargs):
 
     if kwargs:
         for key, value in kwargs.items():
-            if key.startswith('-'):
+            if key == 'smoke':
+                continue
+            elif key.startswith('-'):
                 hyphenless_key = compiled_re.search(key).group(0)  # strip off leading hyphens
             else:
                 hyphenless_key = key
+
             if isinstance(value, list):
                 value_folder_str = 'x'.join([str(v).lower() for v in value])
                 value_argument_str = ' '.join([str(v) for v in value])
@@ -71,41 +74,42 @@ def generate_test_case(dry_run, test_case):
             print(cmdexc.output.decode('utf-8'))
 
 
-def load_test_cases(test_file):
+def load_test_cases(test_file, smoke=False):
     test_cases = []
     with open(test_file, 'r') as fd:
         operators = json.loads(fd.read())
         for operator in operators:
             for params in operator['parameters']:
-                test_cases.append({
-                    'operator': operator['operator'],
-                    'subtype': operator.get('subtype', ''),
-                    'generator': operator['generator'],
-                    'train_model': operator.get('train_model', False),
-                    'parameters': params
-                })
+                if not smoke or (smoke and params.get('smoke', False)):
+                    test_cases.append({
+                        'operator': operator['operator'],
+                        'subtype': operator.get('subtype', ''),
+                        'generator': operator['generator'],
+                        'train_model': operator.get('train_model', False),
+                        'parameters': params
+                    })
     return test_cases
 
 
-def run_generate(test_file, jobs):
-    test_cases = load_test_cases(test_file)
+def run_generate(test_file, jobs, *, dry_run=False, smoke=False):
+    test_cases = load_test_cases(test_file, smoke)
 
     # Remove all existing data
-    if not args.dry_run:
+    if not dry_run:
         if os.path.exists(directories.DATA_DIR):
             shutil.rmtree(directories.DATA_DIR)
 
     # now generate all the test cases
     pool = mp.Pool(processes=jobs)
-    func = partial(generate_test_case, args.dry_run)
+    func = partial(generate_test_case, dry_run)
     pool.map(func, test_cases)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-t', '--test-file', default='all_tests.json',
-        help="Test to run (defaults to all_tests.json)"
+        '-t', '--test-file', default='tests.json',
+        help="Test to run (defaults to tests.json)"
     )
     parser.add_argument(
         '-n', '--workers', type=int, default=1,
@@ -130,7 +134,5 @@ if __name__ == "__main__":
     elif args.workers < -1:
         raise argparse.ArgumentTypeError(f"Invalid number of workers: {args.workers}")
 
-    if args.smoke:
-        args.test_file = 'smoke_tests.json'
-
-    run_generate(args.test_file, args.workers)
+    run_generate(args.test_file, args.workers,
+        dry_run=args.dry_run, smoke=args.smoke)

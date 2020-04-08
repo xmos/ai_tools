@@ -3,15 +3,15 @@
         "generator": "../examples/models/op_test_models/generate_lookup_8.py",
         "operator": "XC_lookup_8",
         "parameters": [
-            {"--input_init": ["unif", -10, 10], "-act": "relu", "-in": 32, "-wi": 5, "-hi": 5},
+            {"--input_init": ["unif", -10, 10], "-act": "relu", "-in": 32, "-wi": 5, "-hi": 5, "smoke": true},
             {"--input_init": ["unif", -10, -1], "-act": "relu", "-in": 3, "-wi": 5, "-hi": 2},
             {"--input_init": ["unif", 1, 10], "-act": "relu", "-in": 4, "-wi": 2, "-hi": 5},
-            {"--input_init": ["unif", -10, 7], "-act": "relu6", "-in": 32, "-wi": 5, "-hi": 5},
+            {"--input_init": ["unif", -10, 7], "-act": "relu6", "-in": 32, "-wi": 5, "-hi": 5, "smoke": true},
             {"--input_init": ["unif", 1, 2], "-act": "relu6", "-in": 3, "-wi": 5, "-hi": 2},
             {"--input_init": ["unif", 1, 2], "-act": "relu6", "-in": 3, "-wi": 5, "-hi": 2},
             {"--input_init": ["unif", 6, 10], "-act": "relu6", "-in": 4, "-wi": 2, "-hi": 5},
-            {"--input_init": ["unif", -1, 1], "-act": "logistic", "-in": 4, "-wi": 5, "-hi": 5},
-            {"--input_init": ["unif", -1, 1], "-act": "tanh", "-in": 4, "-wi": 5, "-hi": 5}
+            {"--input_init": ["unif", -1, 1], "-act": "logistic", "-in": 4, "-wi": 5, "-hi": 5, "smoke": true},
+            {"--input_init": ["unif", -1, 1], "-act": "tanh", "-in": 4, "-wi": 5, "-hi": 5, "smoke": true}
         ]
     },
     {
@@ -22,14 +22,14 @@
             {"-in": 32, "-wi": 4, "-hi": 4, "-po": [4, 4], "-st": [2, 2], "-pd": "valid"},
             {"-in": 4, "-wi": 16, "-hi": 16, "-po": [4, 4], "-st": [1, 1], "-pd": "valid"},
             {"-in": 32, "-wi": 4, "-hi": 4, "-po": [2, 2], "-st": [2, 2], "-pd": "valid"},
-            {"-in": 4, "-wi": 16, "-hi": 16, "-po": [2, 2], "-st": [1, 1], "-pd": "valid"}
+            {"-in": 4, "-wi": 16, "-hi": 16, "-po": [2, 2], "-st": [1, 1], "-pd": "valid", "smoke": true}
         ]
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d_global.py",
         "operator": "XC_avgpool2d_global",
         "parameters": [
-            {"-in": 4, "-wi": 2, "-hi": 2},
+            {"-in": 4, "-wi": 2, "-hi": 2, "smoke": true},
             {"-in": 16, "-wi": 2, "-hi": 2},
             {"-in": 16, "-wi": 3, "-hi": 3},
             {"-in": 32, "-wi": 4, "-hi": 4}
@@ -40,7 +40,7 @@
         "operator": "XC_conv2d_1x1",
         "parameters": [
             {"--input_init": ["const", 1], "--bias_init": ["const", 1], "--weight_init": ["const", 1], "-in": 4, "-out": 4, "-wi": 2, "-hi": 2},
-            {"-in": 4, "-out": 4, "-wi": 2, "-hi": 2},
+            {"-in": 4, "-out": 4, "-wi": 2, "-hi": 2, "smoke": true},
             {"-in": 4, "-out": 4, "-wi": 5, "-hi": 5},
             {"-in": 12, "-out": 8, "-wi": 5, "-hi": 5},
             {"-in": 4, "-out": 8, "-wi": 5, "-hi": 5},
@@ -54,7 +54,7 @@
         "parameters": [
             {"-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same", "xfail": true},
             {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "same"},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same"},
+            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same", "smoke": true},
             {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "valid"},
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 2},
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 4},
@@ -69,7 +69,7 @@
             {"-wi": 1, "-hi": 1, "-kw": 1, "-kh": 1, "-pd": "same"},
             {"-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same", "xfail": true},
             {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "same"},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same"},
+            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same", "smoke": true},
             {"-wi": 1, "-hi": 1, "-kw": 1, "-kh": 1, "-pd": "valid"},
             {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "valid"},
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid"}
@@ -84,7 +84,7 @@
             {"-wi": 1, "-hi": 1, "-pd": "same", "-out": 4, "-kh": 2, "-kw": 2, "-st": [2, 2]},
             {"-wi": 4, "-hi": 4, "-pd": "same", "-out": 4, "-kh": 3, "-kw": 3, "-st": [1, 1]},
             {"-wi": 4, "-hi": 4, "-pd": "valid", "-out": 4, "-kh": 3, "-kw": 3, "-st": [1, 1]},
-            {"-wi": 5, "-hi": 5, "-pd": "valid", "-out": 8, "-kh": 3, "-kw": 3, "-st": [1, 1]},
+            {"-wi": 5, "-hi": 5, "-pd": "valid", "-out": 8, "-kh": 3, "-kw": 3, "-st": [1, 1], "smoke": true},
             {"-wi": 10, "-hi": 10, "-pd": "valid", "-out": 8, "-kh": 5, "-kw": 5, "-st": [2, 2]},
             {"-wi": 10, "-hi": 10, "-pd": "same", "-out": 8, "-kh": 5, "-kw": 5, "-st": [2, 2]}
         ]
@@ -94,7 +94,7 @@
         "operator": "XC_conv2d_depthwise",
         "subtype": "padded",
         "parameters": [
-            {"-wi": 5, "-hi": 5, "-out": 4, "-kh": 3, "-kw": 3, "-pd": [1, 1, 1, 1], "-st": [1, 1]},
+            {"-wi": 5, "-hi": 5, "-out": 4, "-kh": 3, "-kw": 3, "-pd": [1, 1, 1, 1], "-st": [1, 1], "smoke": true},
             {"-wi": 10, "-hi": 10, "-out": 8, "-kh": 5, "-kw": 5, "-pd": [2, 2, 2, 2], "-st": [1, 1]},
             {"-wi": 5, "-hi": 5, "-out": 4, "-kh": 3, "-kw": 3, "-pd": [1, 1, 1, 1], "-st": [2, 2]},
             {"-wi": 10, "-hi": 10, "-out": 8, "-kh": 3, "-kw": 3, "-pd": [1, 1, 1, 1], "-st": [2, 2]},
@@ -108,7 +108,7 @@
         "subtype": "singlein_deepout",
         "parameters": [
             {"-wi": 5, "-hi": 5, "-pd": "same", "-out": 16, "-kh": 3, "-kw": 3},
-            {"-wi": 5, "-hi": 5, "-pd": "valid", "-out": 32, "-kh": 3, "-kw": 3}
+            {"-wi": 5, "-hi": 5, "-pd": "valid", "-out": 32, "-kh": 3, "-kw": 3, "smoke": true}
         ]
     },
     {
@@ -117,7 +117,7 @@
         "train_model": true,
         "parameters": [
             {"-in": 32, "-out": 16},
-            {"-in": 4, "-out": 4},
+            {"-in": 4, "-out": 4, "smoke": true},
             {"-in": 4, "-out": 8},
             {"-in": 8, "-out": 4}
         ]
@@ -127,7 +127,7 @@
         "operator": "XC_requantize_16_to_8",
         "train_model": true,
         "parameters": [
-            {"-in": 4},
+            {"-in": 4, "smoke": true},
             {"-in": 16},
             {"-in": 32}
         ]
@@ -137,7 +137,7 @@
         "operator": "XC_argmax_16",
         "parameters": [
             {"-in": 1},
-            {"-in": 10},
+            {"-in": 10, "smoke": true},
             {"-in": 100}
         ]
     },
@@ -145,7 +145,7 @@
         "generator": "../examples/models/op_test_models/generate_maxpool2d.py",
         "operator": "XC_maxpool2d",
         "parameters": [
-            {"-in": 32, "-wi": 2, "-hi": 2, "-po": 2, "-st": 2, "-pd": "valid"},
+            {"-in": 32, "-wi": 2, "-hi": 2, "-po": 2, "-st": 2, "-pd": "valid", "smoke": true},
             {"-in": 32, "-wi": 4, "-hi": 4, "-po": 2, "-st": 2, "-pd": "valid"},
             {"-in": 4, "-wi": 16, "-hi": 16, "-po": 2, "-st": 2, "-pd": "valid"}
         ]

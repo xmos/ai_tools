@@ -40,7 +40,7 @@ void nn_compute_hstrip_deep_padded_c(
     //First half is for zeroing out tail elements. Second half is actually just
     //  tmp stuff
     uint8_t tmp_vec[2*XS3_VPU_VREG_WIDTH_BYTES] = { 0 };
-    uint8_t* mask_vec = &tmp_vec[XS3_VPU_VREG_WIDTH_BYTES];
+    uint8_t* mask_vec = ADDR(tmp_vec, XS3_VPU_VREG_WIDTH_BYTES);
 
     int8_t zero_tail[XS3_VPU_VREG_WIDTH_BYTES] = { 0 };
 
@@ -51,8 +51,6 @@ void nn_compute_hstrip_deep_padded_c(
     //Number of rows to actually be computed in a patch
     const unsigned patch_rows = K_h - pad_t - pad_b;
 
-    data16_t* BSS_p = (data16_t*) BSS;
-
     VSETC(MODE_S8);
 
     //Set the masked tail zero vector
@@ -60,10 +58,8 @@ void nn_compute_hstrip_deep_padded_c(
     VSTRPV(zero_tail, (1 << C_in_tail)-1);
 
     //Load Biases for current C_out group
-    VLDD(&(BSS_p[0]));
-    BSS_p = ADDR(BSS_p, VPU_INT8_ACC_PERIOD);
-    VLDR(&(BSS->bias_lo[0]));
-    BSS_p = ADDR(BSS_p, VPU_INT8_ACC_PERIOD);
+    VLDD(BSS->bias_hi);
+    VLDR(BSS->bias_lo);
 
     //Adjust for bias at top
     if(pad_t){
@@ -287,25 +283,20 @@ void nn_compute_hstrip_deep_padded_c(
         //Set mode to 16-bit
         VSETC(MODE_S16);
 
-        data16_t* BSS_tmp = BSS_p;
-
         //Saturate to 16-bit values
-        VLSAT(BSS_tmp);
-        BSS_tmp = ADDR(BSS_tmp, VPU_INT16_ACC_PERIOD);
+        VLSAT(BSS->shift1);
 
         //Load scales into vC
-        VLDC(BSS_tmp);
+        VLDC(BSS->scale);
         VSTR(mask_vec);
         VCLRDR();
         VLMACC(mask_vec);
-        BSS_tmp = ADDR(BSS_tmp, VPU_INT16_ACC_PERIOD);
 
         //Set mode back to 8-bit
         VSETC(MODE_S8);
 
         //Saturate to 8-bit values
-        VLSAT(BSS_tmp);
-        BSS_tmp = ADDR(BSS_tmp, VPU_INT16_ACC_PERIOD);
+        VLSAT(BSS->shift2);
 
         //Store result in Y
         const unsigned mask16 = 0xFFFF;

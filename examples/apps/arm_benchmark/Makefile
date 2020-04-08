@@ -20,7 +20,7 @@ ifeq ($(TARGET), x86)
 
 	OBJ_DIR := .build/x86
 
-	APP = cifar-10
+	APP = arm_benchmark
 else # must be xcore
 	BUILD_TARGET := xcore.ai
 	
@@ -56,7 +56,7 @@ else # must be xcore
 
 	OBJ_DIR := .build/xcore
 
-	APP = cifar-10.xe
+	APP = arm_benchmark.xe
 endif
 
 $(info Building for $(BUILD_TARGET))

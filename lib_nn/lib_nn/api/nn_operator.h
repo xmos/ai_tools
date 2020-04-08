@@ -5,6 +5,7 @@
 
 #include "nn_types.h"
 #include "nn_op_structs.h"
+#include "nn_conv2d_structs.h"
 #include "nn_op_utils.h"
 #include "nn_op_init.h"
 #include "nn_operator_asm.h"
@@ -21,358 +22,79 @@ extern "C" {
 #endif
 
 
-
 /**
-Saturation, Accumulation, Shifts and Scales
-
-For the convolution and fully-connected layers, it is important to understand the 
-behavior of the XS3 VPU.
-
-Each output comprises a series of 8-bit multiplies which accumulate into a 32-bit 
-accumulator -- effectively the 32-bit dot-product of two 8-bit vectors. Prior to
-this dot product, the accumulator is seeded with a 32-bit bias value.
-
-While accumulating, if at any point the sum would go beyond the range `(2^-31 + 1, 2^31-1)`,
-the accumulator will saturate to `-2^31 + 1` if the sum is negative and `2^31-1` if 
-it's positive. The accumulator does not roll-over.
-
-After 32-bit accumulation is completed the following occurs:
-- The output has a user-specified arithmetic right bit-shift applied (rounded).
-- The result is saturated to 16-bit bounds (2^15+1, 2^15-1) if necessary.
-- The result is quantized to 16 bits by discarding the upper half word.
-
-After shifting a scale factor is applied to each output, which consists of:
-- Multiplying the 16-bit result by a 16-bit signed integer
-- Applying an arithmetic right shift of 14 bits to the 30-bit result (rounded).
-- Saturating the result to 16-bit bounds.
-(This can be thought of as a rounding, saturating fixed-point multiplication in which
-the 16-bit accumulator value is treated as a signed Q15.0 fixed-point value and the
-scale factor is treated as a signed Q1.14 fixed-point value).
-
-For `fc_deepin_shallowout_16()` the results are then stored in the output.
-
-For the 2D convolution functions, the final step before storing the result is to
-quantize the 16-bit results down to signed 8-bit results by right-shifting 8 bits 
-and rounding.
-
-*/
-
-/**
-ReLU
-
-The convolution and fully-connected layers do not include a built-in ReLU activation
-function, and the ReLU function is not available as a separate function. ReLU (and certain
-other piecewise-linear activation functions can be achieved implicitly using the 
-convolution or fully-connected operators by making use of the saturation boundaries. 
-
-    TODO: Review this. I don't believe this is still true.
-*/
-
-
-/**
-Standard Tensor Layout
-
-The standard layout of an N-dimensional tensor with shape `(s1, s2, ..., sN)` is the
-same as the typical layout of a C array with the same dimensions. In this layout, the
-as memory address increases, indices of each dimension are iterated over, with indices 
-iterating in ascending order, and with the later dimensions iterating fastest.
-
-For example, a tensor `A` with shape (2,2,2), in standard tensor layout would be ordered
-as:
-
-`A[0,0,0], A[0,0,1], A[0,1,0], A[0,1,1], A[1,0,0], A[1,0,1], A[1,1,0], A[1,1,1]`
-
-*/
-
-
-/**
-Bias Tensor Layout (Form 1)
-
-A bias vector is a `C_out`-element sequence of 32-bit values, where each element seeds a
-32-bit accumulator with an initial value. The standard-form bias vector can be 
-represented as:
-
-\code
-    int32_t biases[C_out];
-\endcode
-
-A form 1 bias tensor layout rearranges the data to minimize the pointer arithmetic required
-during computation. Form 1 layout can be represented as:
-
-\code
-    data16_t B[C_out/16][2][16];
-\endcode
-
-In this layout, the biases are taken 16 at a time (due to the 16 accumulators used in the
-8- and 16-bit modes of the XS3 VPU), and the upper and lower half-words are separated (also
-due to an ideosyncrasy of the XS3 VPU).
-
-More specifically, the data in this tensor is arranged in memory such that:
-- The first set of 16 data16_t values are the upper 16 bits of output channels 0-15.
-- The second set of 16 data16_t values are the lower 16 bits of output channels 0-15.
-- The third set of 16 data16_t values are the upper 16 bits of output channels 16-31.
-- The fourth set of 16 data16_t values are the lower 16 bits of output channels 16-31.
-- And so on.
-
-The following represents how this rearrangement may be achieved:
-
-\code
-    for(int i = 0; i < C_out; i++){
-        B[i/16][0][i%16] = biases[i] >> 16;
-        B[i/16][1][i%16] = biases[i] & (0xFFFF);
-    }
-/endcode
-
-Thus, in this layout, the elements `B[i][0][j]` and `B[i][1][j]` represent the upper and
-lower (respectively) 16 bits of the 32-bit bias for output channel `(16*i + j)`.
-*/
-
-
-
-
-
-/**             Notes on Inner Products and Saturation
-
- Many functions in this API compute inner products between vectors with many elements. These
- inner products are computed as long sequences of multiply-accumulates on the VPU. Unlike on
- the scalar unit, on the VPU multiplications, additions and subtractions *are not associative*. 
-
- The lack of associativity is due to the saturation logic used on the VPU. Where the scalar
- unit will roll-over in the case of integer overflows, the XS3 VPU will clamp results
- to the bounds appropriate to the element bit-depth, which, for N-bit (signed) integers,
- is the symmetric range  [-(2^(N-1))+1, (2^(N-1))-1]. Macros are provided for convenience.
-
-    Saturation Bounds:
-
-        Bit depth   Min             Min Macro           Max             Max Macro
-        =========   ===             =========           ===             =========
-        8-bit:      -127            VPU_INT8_MIN        127             VPU_INT8_MAX
-        16-bit:     -65535          VPU_INT16_MIN       65535           VPU_INT16_MAX
-        32-bit:     -2147483647     VPU_INT32_MIN       2147483647      VPU_INT32_MAX
-
-
-When computing inner products, saturation occurs based on the *accumulator* bit depth, rather than
-the multiplicand (vector element) bit depth.
-
-        Element         Accumulator
-        =======         ===========
-        8-bit           32-bit
-        16-bit          32-bit
-        32-bit          40-bit
-
-Most inner products computed in this API use 8-bit input vectors. The product of two 8-bit signed
-integers can be no larger in magnitude than 2^14  (from -(2^7)*-(2^7) ). The largest 32-bit accumulator
-value is approximately 2^31, which is (2^14 * 2^17). Thus, an 8-bit inner product cannot 
-saturate its 32-bit accumulator unless the vectors are about 128,000 elements long.
-
-However, when inner products are computed, the accumulator is (usually) seeded with an arbitrary
-user-supplied 32-bit bias. This bias makes it possible for saturation to occur on inner products
-with operand vectors of any length.
-
-Further, saturation can occur at any point during the accumulation, and subsequent steps may
-move the accumulator away from the saturation point, and so it may not always be obvious whether
-saturation has occurred somewhere inside the inner product, skewing the final result.
-
-Finally, *the functions in this API neither specify nor guarantee the order in which elements
-are accumulated when computing inner products*.
-
-Therefore, where saturation in unacceptable, it is incumbent upon the *user* of this library to 
-ensure that saturation is not possible given the inputs (matrix/kernel coefficients and input
-vectors) and other parameters (e.g. input channel count).
+ * @brief Perform a deep 2D convolution of an input image.
+ * 
+ * The convolution performed by this function is "deep" in the sense that many input channels and many
+ * output channels are supported, though both the input channel count @math{X_c} and output channel count 
+ * @math{Y_c} must be a multiple of `4`. 
+ * 
+ * This function also supports implied padding of the input image in which a specified value is used as 
+ * the padding value.
+ * 
+ * Before performing a 2D convolution using this function, a call must be made to `conv2d_deep_init()` to
+ * initialize a `nn_conv2d_deep_plan_t` struct and one or more `nn_conv2d_deep_job_t` structs. Each job,
+ * together with the plan shared by all jobs, contains the information required to compute a subset of the
+ * pixels in the output image. More specifically, each job corresponds to a rectangular subtensor of @tensor{Y},
+ * which is to be computed by that job.
+ * 
+ * Splitting the convolution into multiple jobs may serve several ends, including parallelization, returning
+ * control to caller to service other application resources, or even to improve the performance of the 
+ * operation itself.
+ * 
+ * `Y` points to the output image tensor @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}, which correspond to
+ * the output image rows, columns and channels respectively. The dimensions of @tensor{Y} must be as specified 
+ * when `plan` was initialized. The address supplied for `Y` should be the start address of the output image
+ * tensor, *not* the start address of the sub-tensor being computed by the current job.
+ * 
+ * `X` points to the input image tensor @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}, which correspond to
+ * the input image rows, columns and channels respectively. The dimensions of @tensor{X} must be as specified
+ * when `plan` was initialized. The address supplied for `X` should be the start address of input image tensor,
+ * *not* the address at which the convolution window starts for the job being processed.
+ * 
+ * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
+ * standard_layout).
+ * 
+ * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, K_h, K_w, X_c}, which correspond to
+ * the output image channels, convolution window rows and columns, and the input image channels respectively.
+ * The dimensions of @tensor{K} must be as specified when `plan` was initialized. The address supplied for `K`
+ * should be the start address of the kernel tensor.
+ * 
+ * The memory layout of @tensor{K} is the standard memory layout for 4D tensors (see @ref standard_layout).
+ * 
+ * `BSS` points to an array of bias-shifts-scale parameters required for this convolution. Each 
+ * `nn_bss_block_t` in the array contains the bias-shifts-scale parameters for a single output channel group,
+ * (@ttref{VPU_INT8_ACC_PERIOD} output channels). If @math{Y_c} is not a multiple of @ttref{VPU_INT8_ACC_PERIOD}, 
+ * then the output channel tail ( the last @math{(Y_c mod 16)} output channels) also gets `nn_bss_block_t`, where
+ * the entries corresponding to channels beyond @math{Y_c} are ignored. The address supplied for `BSS` should be
+ * the start address of the the array, *not* the address of the `nn_bss_block_t` corresponding of the first output
+ * channel of the job being processed.
+ * 
+ * `plan` points to the `nn_conv2d_deep_plan_t` which was previously initialized with a call to `conv2d_deep_init()`.
+ * 
+ * `job` points to the job to be performed in this call, which was previously initialized along-side `plan`. 
+ * 
+ * Note that a single call to this function processes only a *single job*. If multiple jobs were initialized,
+ * performing the complete convolution requires multiple calls to this function. In such a case, the `Y`, `X`,
+ * `K`, `BSS`, and `plan` pointers will be identical in each call, and the `job` pointer will be different with
+ * each call.
+ * 
+ * @requires_word_alignment{Y,X,K,BSS}
+ * 
+ * @param[out] Y        The output image @tensor{Y}
+ * @param[in]  X        The input image @tensor{X}
+ * @param[in]  K        The kernel tensor @tensor{K}
+ * @param[in]  BSS      The bias-shifts-scale parameters
+ * @param[in]  plan     The convolution plan
+ * @param[in]  job      The convolution job
  */
-
-
-
-/**         Notes on Output Shifts and Scale
-
-Many functions in this API include shifts and a scale on each output prior to writing the result
-to memory. For the sake of brevity, the details of these operations are contained here, rather than 
-repeating them in each function's description.
-
-In general, the situation looks like this:
-
-        y[i] <- ((acc32[i] >> shr1[i]) * scale[i]) >> shr2[i]             (16-bit outputs)
-
-            or
-        
-        y[i] <- (((acc32[i] >> shr1[i]) * scale[i]) >> shr2[i]) >> 8        (8-bit outputs)
-
-      where
-        i is the index of the output
-        y[i] is the either 8- or 16-bit output
-        acc32[i] is the 32-bit accumulator value associated with output i
-            (acc32[i] is an intermediate value, which may be the result of convolution or an inner product, etc)
-        shr1[i] is the first shift value associated with output i
-        scale[i] is the scale value associated with output i
-        shr2[i] is teh second shift value associated with output i
-
-Shift 1:
-    The shift operation performs several actions atomically:
-        - First a "virtual" arithmetic right shift of `shr` bits occurs on the 32-bit accumulator `acc32`.
-        - Second, the result of the shift is rounded (as though the shift is a rounding real division by `2^-shr`)
-        with ties rounding towards positive infinity.
-        - Third, saturation logic is applied to the result of the rounding, clamping the result to [-65535, 65535]. Note
-        that this saturation is symmetric.
-        - Finally, the bit-depth of the result is reduced to 16 bits.
-    While `shr` is a signed 16-bit value, *negative values will be treated as zero*.
-    As a final ideosyncrasy, the shifting of negative accumulator values will *never result in zeros*. Where
-    the result of shifting a negative value would normally underflow to 0, it will instead result as -1.
-
-Scale:
-    The scaling is a signed 16-bit integer multiplication for a 32-bit (actual max value is ((2^15)-1)^2). 
-
-Shift 2:
-    This behaves exactly like shift 1, but is applied after the scale.
-
-Final shift:
-    In functions that output 8-bit results, a final shift of 8 bits is applied after shift 2 to
-    reduce the bit-depth from 16 bits to 8 bits. In this case, rounding occurs, as with the other
-    two operations, but no saturation is possible.
-    In functions that output 16-bit results, no final shift occurs here.
-
- */
-
-/**         Bias-Shifts-Scale Tensor Layout
-
-In most cases, where a function requires a Bias-Shifts-Scale (BSS) tensor as input, the required layout will
-be as specified here [0].
-
-The BSS tensor contains information pertaining to the `C_out` output channels of an operation. Such a tensor
-is 3 dimensional and has shape (`ceil(C_out/16.0)`, `5`, `16`) with elements of type `data16_t`.
-
-The first axis corresponds to output channel groups. The `ceil( )` is applied because for the purposes of
-a BSS tensor, the output channel tail must be handled as a full output channel group. [1]
-
-The third axis corresponds to the output channel offset within the output channel group. So, all information
-corresponding to output channel `k` will be found in the elements `BSS[(k//16), :, (k%16)]`.
-
-The second axis corresponds to the parameters type, where each index has a specific meaning:
-
-    0 - Bias high half-word: The most significant 16-bits of the 32-bit bias for the output channel
-    1 - Bias low half-word: The least significant 16-bits of the 32-bit bias for the output channel
-    2 - Shift1: The first right-shift value; applied to the 32-bit accumulator for a 16-bit result.
-    3 - Scale: The scale value; applied after shift1; multiplied by the 16-bit result for a 32-bit product
-    4 - Shift2: The second right-shift value; applied after scale; down-shifts the 32-bit product for an 8-bit result.
-
-[0]     For general information about how shifts and scales are used, see "Notes on Output Shifts and Scale", 
-        for information on how biases are used, see "Notes on Inner Products and Saturation"
-[1]     See "Notes on Channel Output and Input Groups".
-
-
- */
-
-/**         Notes on Channel Output and Input Groups
-
-Most functions in this API are capable of handling many input and output channels. The XS3 VPU is capable
-of consuming many input channels, or producing many output channels in a single operation. These lead to the
-concept of input channel groups and output channel groups being baked deeply into this API.
-
-Most functions in this API operate on 8-bit inputs and produce 8-bit outputs [0]. The XS3 vector register size is 256
-bits, so in 8-bit mode, the XS3 VPU is capable of loading (and operating on) 32 8-bit values simultaneously [1]. When
-the operation is a vector multiply-accumulate, it is desirable to have accumulators which are significantly larger 
-than the largest possible product of two 8-bit signed integers (`2^14`). To this end, XS3 uses 32-bit accumulators 
-for 8-bit mode [2], spread across the `vD` and `vR` vector registers [3]. That leaves room for 16 accuulators in 8-bit 
-mode.
-
-The `xs3_vpu.h` header file contains macros reflecting the number of elements and number of accumulators in each
-operating mode. In particular, `VPU_INT8_EPV` is 32, and `VPU_INT8_ACC_PERIOD` is 16 [4].
-
-When the documentation for a function in this API has `C_in` input channels and `C_out` output channels, the function
-may require that the parameter tensors consumed by that function be formatted in a layout which reflects the 
-channel groups. In most cases, the number of input channel groups will be `ceil(C_in / 32.0)` -- the number of `VLMACCR`
-instructions required to multiply-accumulate all input channels -- and the number of output channel groups will be 
-`ceil(C_out / 16.0)` -- the number of outputs that can be simultaneously calculated. 
-
-Where tensors are layed out in this way, output channel group 'k' refers to output channels `16*k` to `16*k+15` (inclusive).
-Likewise, input channel group `k` refers to input channels `32*k` to `32*k+31` (inclusive). Some tensors will be arranged 
-such that one of the dimensions correponds, for example, to the ouput channel group, and another dimension will refer to
-the output channel offset. That output (or input) offset is just the offset index *within* the channel group of that channel
-(i.e. for output channel `c`, `c % 16`).
-
-Where the number of output (input) channels is not a multiple of 16 (32) --and where the function allows this -- there will be 
-an ouput (input) channel tail. The tail are the last channels which do not form complete group. Some tensors, in particular 
-the bias-shifts-scale tensors, will require that tails be padded. Whether padding must be zeros, or if it is safe to use 
-arbitrary values is specified by the function.
-
-[0]     Some functions work on elements that are not 8 bits, and most functions operate on intermediate values of
-        16 or 32 bits.
-[1]     Most instructionss in 8-bit mode that load elements from memory(VLMACCR, VLMUL, VLDR, VLADD, etc) load 32 8-bit
-        values. The main exception to this is the VLMACC instruction, which loads only 16 8-bit values.
-[2]     16-bit mode also uses 32-bit accumulators (and so `VPU_INT8_ACC_PERIOD == VPU_INT16_ACC_PERIOD`), 32-bit mode
-        uses 40-bit accumulators.
-[3]     In 8- and 16-bit modes, `vD` holds the 16 most significant bits of the accumulator and `vR` holds the 16 least
-        significant bits.
-[4]     "EPV" is elements per vector. "ACC_PERIOD" is the accumulator period. The accumulators have a "period" because of
-        the `VLMACCR` instruction, which adds a 32-element (in 8-bit mode) inner product between vector regiser `vC` and a
-        sequence of values in memory to a single accumulator, and then does a cyclic rotation of the accumulators. Then, in 
-        8-bit mode 16 (`VPU_INT8_ACC_PERIOD`) `VLMACCR` instructions will perform a full rotation of the accumulators.
-
-*/
-
-
-
-
-
-/** Execute an 8-bit 2D convolution on a region of an image.
- *
- * This function performs a 2D convolution of an input image with the specified 
- * kernel. This function requires that the convolution's input have a multiple 
- * of 32 input channels, and that the output have a multiple of 16 output channels.
- *
- * All pointer arguments must refer to word-aligned addresses.
- * 
- * The `nn_conv2d_dido_params_t*` input parameter must have been initialized with 
- * a call to `conv2d_deepin_deepout_init()`.
- *
- * The dimensions and types of the `Y`, `X`, `K`, `shifts` and `scales` must be consistent
- * with those provided to `conv2d_deepin_deepout_init()`.
- * 
- * The height and width of `Y` depends on the `padding_mode` parameter supplied to `conv2d_deepin_deepout_init()`.
- * For `PADDING_MODE_SAME`, `Y`'s shape is  (X_height, X_width, C_out),
- * For `PADDING_MODE_VALID`, `Y`'s shape is (X_height - K_h//2, X_width - K_w//2, C_out).
- * In either case, `Y`'s data layout will be the standard tensor layout, with indices 
- * corresponding to the rows, columns and channels of the image.
- *
- * The shape of `X` is (X_height, X_width, C_in), with a standard tensor layout with indices
- * corresponding to the rows, columns and channels of the image.
- * 
- * The shape of `K` is (C_out // 16, K_h, K_w, C_in // 32, 16, 32). The kernel tensor is layed
- * out so as to minimize overhead from pointer arithmetic. The following pseudocode illustrates
- * this layout:
-    \code
-      int8_t kernel_tensor[C_out][K_h][K_w][C_in] = {...}; //standard kernel tensor
-      int8_t K[C_out/16][K_h][K_w][C_in/32][16][32];  //re-arranged kernel tensor
-
-      for(int krow = 0; krow < K_h; krow++)
-        for(int kcol = 0; kcol < K_w; kcol++)
-          for(int cout = 0; cout < C_out; cout++)
-            for(int cin = 0; cin < C_in; cin++)
-              K[cout/16][krow][kcol][cin/32][15-(cout % 16)][cin % 32] = kernel_tensor[cout][krow][kcol][cin];
-    \endcode
- *  Note that the fifth dimension of `K` is reversed.
- *
- * The shape of the `scales` tensor is (C_out // 16, 2, 16). The first index is the channel group, second indicates shift (0) or scale (1), and the third is the channel offset within the channel group.
- * 
- * where `X_height`, `X_width`, `C_in`, `C_out`, `K_h` and `K_w` are from the parameters supplied to
- * `conv2d_deepin_deepout_init()`.
- * 
- * 
- * \param Y         Pointer to beginning of output data tensor. Updated by function.
- * \param params    Pointer to `nn_conv2d_dido_params_t` initialized with `conv2d_deepin_deepout_init()`
- * \param X         Pointer to beginning of input data tensor
- * \param K         Pointer to beginning of kernel tensor
- * \param scales    Pointer to beginning of scales tensor
- */
-static inline void conv2d_deepin_deepout(
-    int8_t* Y,
-    const nn_conv2d_dido_params_t* params,
-    const int8_t* X,
-    const int8_t* K,
-    const int16_t* scales);
-
-
-
-
+void conv2d_deep(
+    nn_image_t* Y,
+    const nn_image_t* X,
+    const nn_tensor_t* K,
+    const nn_bss_block_t* BSS,
+    const nn_conv2d_deep_plan_t* plan,
+    const nn_conv2d_deep_job_t* job);
 
 
 

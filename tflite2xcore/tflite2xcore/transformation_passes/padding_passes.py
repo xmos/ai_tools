@@ -8,7 +8,10 @@ from tflite2xcore.operator_codes import BuiltinOpCodes, XCOREOpCodes, OperatorCo
 
 
 class FuseConv2dPaddingPass(OperatorMatchingPass):
-    matching_conv_opcodes = (XCOREOpCodes.XC_conv2d_depthwise,)
+    matching_conv_opcodes = (
+        XCOREOpCodes.XC_conv2d_depthwise,
+        XCOREOpCodes.XC_conv2d_deep
+    )
 
     @property
     def _producer(self):
@@ -52,7 +55,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
         if len(pad) == 3 and not isinstance(pad, str):
             return True
         elif pad in ['SAME', 'VALID']:
-            self.logger.warning(f"Deprecated 'pad' option in {opcode}: 'pad'={pad}")
+            raise ValueError(f"Deprecated 'pad' option in {opcode}: 'pad'={pad}")
         else:
             self.logger.warning(f"Invalid option in {opcode}: 'pad'={pad}")
 

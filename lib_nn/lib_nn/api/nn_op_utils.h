@@ -52,25 +52,6 @@ data16_t* conv2d_boggle_B(
     int32_t* B,
     const unsigned C_out);
 
-/**
- * Rearranges the data in kernel tensor `K`, provided in standard tensor
- * layout ( with shape (C_out, K_h, K_w, C_in) corresponding to the
- * output channel, kernel row, kernel column and input channel
- * respectively) into the layout required by `conv2d_deepin_deepout()`.
- * 
- * \param K         Kernel tensor
- * \param K_h       Kernel height
- * \param K_w       Kernel width
- * \param C_in      Input channel count
- * \param C_out     Output Channel count
- */
-void conv2d_dido_boggle_K(
-    int8_t* K,
-    const unsigned K_h,
-    const unsigned K_w,
-    const unsigned C_in,
-    const unsigned C_out);
-    
 
 /**
  * Re-layout the shift-scale tensor to the format expected by the convolution kernels.

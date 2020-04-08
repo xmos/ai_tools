@@ -70,6 +70,7 @@ list(FILTER TENSORFLOW_LITE_MICRO_SOURCES EXCLUDE REGEX ".test.")  # filter out 
 file (GLOB XCORE_SOURCES 
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/*.cc"
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/*.c"
+  "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/*.c"
   "${LIB_OPS_SOURCE_DIR}/lib_ops/src/*.cpp"
 )
 

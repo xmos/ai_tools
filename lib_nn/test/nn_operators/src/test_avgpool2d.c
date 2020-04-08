@@ -13,13 +13,8 @@
 
 #include "unity.h"
 
-#ifdef __XC__
-#define WORD_ALIGNED [[aligned(4)]]
-#else
-#define WORD_ALIGNED
-#endif
 
-#if (defined(__XS3A__) && USE_ASM_avgpool2d)
+#if USE_ASM(avgpool2d)
  #define HAS_ASM (1)
 #else
  #define HAS_ASM (0)
@@ -28,12 +23,7 @@
 #define TEST_ASM ((HAS_ASM)     && 1)
 #define TEST_C ((TEST_C_GLOBAL) && 1)
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
-
-#define PRINTF(...)     do{if (DO_PRINT_EXTRA) {printf(__VA_ARGS__);}} while(0)
-
-
-static unsigned seed = 4321234;
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
 #define DEBUG_ON    (0 || TEST_DEBUG_ON)
@@ -50,7 +40,7 @@ void test_avgpool2d_case1()
     int8_t WORD_ALIGNED  Y_asm[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS];
 #endif
 
-    PRINTF("test_avgpool2d_case1()...\n");
+    PRINTF("%s...\n", __func__);
 
     
     typedef struct {
@@ -119,7 +109,7 @@ void test_avgpool2d_case1()
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
 
-        printf("\ttest vector %u...\n", v);
+        PRINTF("\ttest vector %u...\n", v);
             
         nn_image_params_t x_params = { casse->X.height, casse->X.width, casse->channels };
         nn_image_params_t y_params = { casse->Y.height, casse->Y.width, casse->channels };
@@ -233,6 +223,7 @@ void test_avgpool2d_case1()
 #define WIDTH       (24)
 void test_avgpool2d_case2()
 {
+    unsigned seed = 34524666;
     int8_t WORD_ALIGNED  X[HEIGHT][WIDTH][CHANS] = {{{0}}};
     int8_t WORD_ALIGNED Y_exp[HEIGHT][WIDTH][CHANS];
 
@@ -243,7 +234,7 @@ void test_avgpool2d_case2()
     int8_t WORD_ALIGNED  Y_asm[HEIGHT][WIDTH][CHANS];
 #endif
 
-    PRINTF("test_avgpool2d_case2()...\n");
+    PRINTF("%s...\n", __func__);
 
     
     typedef struct {
@@ -282,7 +273,7 @@ void test_avgpool2d_case2()
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
 
-        printf("\ttest vector %u...\n", v);
+        PRINTF("\ttest vector %u...\n", v);
             
         nn_image_params_t x_params = { HEIGHT, WIDTH, CHANS };
         nn_image_params_t y_params = { HEIGHT, WIDTH, CHANS };
@@ -428,7 +419,7 @@ void test_avgpool2d_case3()
     int8_t WORD_ALIGNED  Y_asm[Y_HEIGHT][Y_WIDTH][CHANS];
 #endif
 
-    PRINTF("test_avgpool2d_case3()...\n");
+    PRINTF("%s...\n", __func__);
 
     
     typedef struct {
@@ -465,7 +456,7 @@ void test_avgpool2d_case3()
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
 
-        printf("\tTest vector %u...\n", v);
+        PRINTF("\tTest vector %u...\n", v);
             
         nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS };
         nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS };
@@ -556,7 +547,7 @@ void test_avgpool2d_case3()
                 for(unsigned y_chn = 0; y_chn < y_params.channels; y_chn++){
                     
                     int8_t y_exp = Y_exp[row][col][y_chn];
-                    if(y_exp != 0xCC)
+                    if(y_exp != (int8_t)0xCC)
                         hadsomething = 1;
 
                     int flg = 0;     //Annoying, but avoids unnecessary calls to sprintf().
@@ -614,7 +605,7 @@ void test_avgpool2d_2x2_case1()
     int8_t WORD_ALIGNED  Y_asm[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS];
 #endif
 
-    PRINTF("test_avgpool2d_2x2_case1()...\n");
+    PRINTF("%s...\n", __func__);
 
     
     typedef struct {
@@ -665,7 +656,7 @@ void test_avgpool2d_2x2_case1()
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
 
-        printf("\ttest vector %u...\n", v);
+        PRINTF("\ttest vector %u...\n", v);
 
 #if (DEBUG_ON || 0)
     PRINTF("\t\t(X_height, X_width, X_channels) = (%u, %u, %u)\n", casse->height, casse->width, casse->channels);
@@ -791,7 +782,7 @@ void test_avgpool2d_2x2_case2()
     int8_t WORD_ALIGNED  Y_asm[Y_HEIGHT][Y_WIDTH][CHANS];
 #endif
 
-    PRINTF("test_avgpool2d_2x2_case2()...\n");
+    PRINTF("%s...\n", __func__);
 
     
     typedef struct {
@@ -823,7 +814,7 @@ void test_avgpool2d_2x2_case2()
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
 
-        printf("\tTest vector %u...\n", v);
+        PRINTF("\tTest vector %u...\n", v);
             
         nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS };
         nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS };
@@ -898,7 +889,7 @@ void test_avgpool2d_2x2_case2()
                 for(unsigned y_chn = 0; y_chn < y_params.channels; y_chn++){
                     
                     int8_t y_exp = Y_exp[row][col][y_chn];
-                    if(y_exp != 0xCC)
+                    if(y_exp != (int8_t) 0xCC)
                         hadsomething = 1;
 
                     int flg = 0;     //Annoying, but avoids unnecessary calls to sprintf().
@@ -935,3 +926,14 @@ void test_avgpool2d_2x2_case2()
 #undef X_WIDTH
 #undef X_HEIGHT
 #undef DEBUG_ON
+
+void test_avgpool2d()
+{
+    UNITY_SET_FILE();
+    
+    RUN_TEST(test_avgpool2d_case1);
+    RUN_TEST(test_avgpool2d_case2);
+    RUN_TEST(test_avgpool2d_case3);
+    RUN_TEST(test_avgpool2d_2x2_case1);
+    RUN_TEST(test_avgpool2d_2x2_case2);
+}

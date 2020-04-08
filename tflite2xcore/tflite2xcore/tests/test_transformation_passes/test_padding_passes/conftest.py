@@ -32,6 +32,8 @@ PARAMS["default"].update({
     "pad_channel_r": PADS
 })
 
+PARAMS["extended"].update(PARAMS["default"])
+
 PARAMS["smoke"].update({
     "input_batches": [1],
     "pad_t": PADS[:2],

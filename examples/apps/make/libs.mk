@@ -11,14 +11,20 @@ LIBS_VPATH += \
 	$(LIB_OPS_DIR)
 
 LIBS_SOURCES := \
+	lib_nn/src/c/vpu_sim.c \
 	lib_nn/src/c/nn_op_utils.c \
 	lib_nn/src/c/nn_operator.c \
 	lib_nn/src/c/nn_operator_conv.c \
+	lib_nn/src/c/conv2d_deep.c \
 	lib_nn/src/c/conv2d_1x1.c \
 	lib_nn/src/c/conv2d_depthwise.c \
 	lib_nn/src/c/avgpool2d.c \
 	lib_nn/src/c/maxpool2d.c \
 	lib_nn/src/c/fully_connected.c \
+	lib_nn/src/c/util/nn_compute_hstrip_deep.c \
+	lib_nn/src/c/util/nn_compute_hstrip_deep_padded.c \
+	lib_nn/src/c/util/nn_compute_hstrip_tail_deep.c \
+	lib_nn/src/c/util/nn_compute_hstrip_tail_deep_padded.c \
 	lib_ops/src/operator_dispatcher.cpp \
 	lib_ops/src/conv2d.cpp \
 	lib_ops/src/fully_connected.cpp\
@@ -29,7 +35,6 @@ LIBS_SOURCES := \
 
 ifneq ($(TARGET), x86)
 	LIBS_SOURCES += \
-		lib_nn/src/asm/conv2d_deepin_deepout_block.S \
 		lib_nn/src/asm/conv2d_shallowin_deepout_block.S \
 		lib_nn/src/asm/conv2d_1x1.S \
 		lib_nn/src/asm/fully_connected_16.S \
@@ -40,6 +45,10 @@ ifneq ($(TARGET), x86)
 		lib_nn/src/asm/vpu_memcpy.S \
 		lib_nn/src/asm/requantize_16_to_8.S \
 		lib_nn/src/asm/lookup8.S \
+		lib_nn/src/asm/util/nn_compute_hstrip_deep.S \
+		lib_nn/src/asm/util/nn_compute_hstrip_deep_padded.S \
+		lib_nn/src/asm/util/nn_compute_hstrip_tail_deep.S \
+		lib_nn/src/asm/util/nn_compute_hstrip_tail_deep_padded.S \
 		lib_nn/src/asm/util/nn_compute_hstrip_depthwise.S \
 		lib_nn/src/asm/util/nn_compute_hstrip_depthwise_bias_adj.S \
 		lib_nn/src/asm/util/nn_compute_hstrip_depthwise_padded.S \

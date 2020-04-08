@@ -8,32 +8,32 @@
 #define XS3_VPU_VREG_WIDTH_WORDS    (XS3_VPU_VREG_WIDTH_BYTES >> 2)
 
 enum {
-    VEC_INT_32 = 0,
-    VEC_INT_16 = 1,
-    VEC_INT_8  = 2,
-    VEC_FLT_32 = 4,
-    VEC_FLT_16 = 5,
-    VEC_FLT_8  = 6,
+    VEC_INT_32 = 0,   /**< 0 */
+    VEC_INT_16 = 1,   /**< 1 */
+    VEC_INT_8  = 2,   /**< 2 */
+    VEC_FLT_32 = 4,   /**< 4 */
+    VEC_FLT_16 = 5,   /**< 5 */
+    VEC_FLT_8  = 6,   /**< 6 */
 };
 
 enum {
-    VEC_SH0 = 0,
-    VEC_SHL = 1,
-    VEC_SHR = 2,
+    VEC_SH0 = 0,   /**< 0 */
+    VEC_SHL = 1,   /**< 1 */
+    VEC_SHR = 2,   /**< 2 */
 };
 
 /**
  * The saturation bounds for signed integers in each VPU operating mode.
  */
 enum {
-    VPU_INT8_MAX =  0x7F,
-    VPU_INT8_MIN = -0x7F,
+    VPU_INT8_MAX =  0x7F,              /**<  0x7F */
+    VPU_INT8_MIN = -0x7F,              /**< -0x7F */
 
-    VPU_INT16_MAX =  0x7FFF,
-    VPU_INT16_MIN = -0x7FFF,
+    VPU_INT16_MAX =  0x7FFF,           /**<  0x7FFF */
+    VPU_INT16_MIN = -0x7FFF,           /**< -0x7FFF */
 
-    VPU_INT32_MAX =  0x7FFFFFFF,
-    VPU_INT32_MIN = -0x7FFFFFFF,
+    VPU_INT32_MAX =  0x7FFFFFFF,       /**<  0x7FFFFFFF */
+    VPU_INT32_MIN = -0x7FFFFFFF,       /**< -0x7FFFFFFF */
 };
 
 /**
@@ -45,9 +45,9 @@ enum {
  * in vR.
  */
 enum {
-    VPU_INT8_ACC_SIZE = 32,
-    VPU_INT16_ACC_SIZE = 32,
-    VPU_INT32_ACC_SIZE = 40,
+    VPU_INT8_ACC_SIZE = 32,    /**< 32 */
+    VPU_INT16_ACC_SIZE = 32,   /**< 32 */
+    VPU_INT32_ACC_SIZE = 40,   /**< 40 */
 };
 
 /**
@@ -55,18 +55,18 @@ enum {
  * bits are stored in vR, with the remaining bits stored in vD.
  */
 enum {
-    VPU_INT8_ACC_VR_BITS = 16,
-    VPU_INT16_ACC_VR_BITS = 16,
-    VPU_INT32_ACC_VR_BITS = 32,
+    VPU_INT8_ACC_VR_BITS = 16,     /**< 16 */
+    VPU_INT16_ACC_VR_BITS = 16,    /**< 16 */
+    VPU_INT32_ACC_VR_BITS = 32,    /**< 32 */
 };
 /**
  * When vD and vR contain accumulators, the values in this enum can be used to mask off the bits of
  * the accumulator value which correspond to the portion in vR.
  */
 enum {
-    VPU_INT8_ACC_VR_MASK = 0xFFFF,
-    VPU_INT16_ACC_VR_MASK = 0xFFFF,
-    VPU_INT32_ACC_VR_MASK = 0xFFFFFFFF,
+    VPU_INT8_ACC_VR_MASK = 0xFFFF,         /**< 0xFFFF */
+    VPU_INT16_ACC_VR_MASK = 0xFFFF,        /**< 0xFFFF */
+    VPU_INT32_ACC_VR_MASK = 0xFFFFFFFF,    /**< 0xFFFFFFFF */
 };
 
 /**
@@ -93,18 +93,18 @@ typedef int64_t vpu_int32_acc_t;
  *      
  */
 enum {
-    VPU_INT8_EPV    = 32,
-    VPU_INT16_EPV   = 16,
-    VPU_INT32_EPV   =  8,
+    VPU_INT8_EPV    = 32,   /**< 32 */
+    VPU_INT16_EPV   = 16,   /**< 16 */
+    VPU_INT32_EPV   =  8,   /**< 8 */
 };
 
 /**
  * log-base-2 of the corresponding VPU_INT*_EPV values.
  */
 enum {
-    VPU_INT8_EPV_LOG2    = 5,
-    VPU_INT16_EPV_LOG2   = 4,
-    VPU_INT32_EPV_LOG2   = 3,
+    VPU_INT8_EPV_LOG2    = 5,   /**< 5 */
+    VPU_INT16_EPV_LOG2   = 4,   /**< 4 */
+    VPU_INT32_EPV_LOG2   = 3,   /**< 3 */
 };
 
 /**
@@ -114,18 +114,18 @@ enum {
  * VLMACC instruction.
  */
 enum {
-    VPU_INT8_ACC_PERIOD  = 16,
-    VPU_INT16_ACC_PERIOD = 16,
-    VPU_INT32_ACC_PERIOD =  8,
+    VPU_INT8_ACC_PERIOD  = 16,    /**< 16 */
+    VPU_INT16_ACC_PERIOD = 16,    /**< 16 */
+    VPU_INT32_ACC_PERIOD =  8,    /**< 8 */
 };
 
 /**
  * log-base-2 of the corresponding VPU_INT*_ACC_PERIOD values.
  */
 enum {
-    VPU_INT8_ACC_PERIOD_LOG2  = 4,
-    VPU_INT16_ACC_PERIOD_LOG2 = 4,
-    VPU_INT32_ACC_PERIOD_LOG2 = 3,
+    VPU_INT8_ACC_PERIOD_LOG2  = 4,   /**< 4 */
+    VPU_INT16_ACC_PERIOD_LOG2 = 4,   /**< 4 */
+    VPU_INT32_ACC_PERIOD_LOG2 = 3,   /**< 3 */
 };
 
 /**
@@ -134,18 +134,18 @@ enum {
  * instruction.
  */
 enum {
-    VPU_INT8_VLMACC_ELMS = 16,
-    VPU_INT16_VLMACC_ELMS = 16,
-    VPU_INT32_VLMACC_ELMS = 8,
+    VPU_INT8_VLMACC_ELMS = 16,    /**< 16 */
+    VPU_INT16_VLMACC_ELMS = 16,   /**< 16 */
+    VPU_INT32_VLMACC_ELMS = 8,    /**< 8 */
 };
 
 /**
  * log-base-2 of the corresponding VPU_INT*_VLMACC_ELMS values.
  */
 enum {
-    VPU_INT8_VLMACC_ELMS_LOG2 = 4,
-    VPU_INT16_VLMACC_ELMS_LOG2 = 4,
-    VPU_INT32_VLMACC_ELMS_LOG2 = 3,
+    VPU_INT8_VLMACC_ELMS_LOG2 = 4,    /**< 4 */
+    VPU_INT16_VLMACC_ELMS_LOG2 = 4,   /**< 4 */
+    VPU_INT32_VLMACC_ELMS_LOG2 = 3,   /**< 3 */
 };
 
 #endif //XS3_VPU_H_

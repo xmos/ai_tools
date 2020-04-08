@@ -15,13 +15,8 @@
 // #include "dsp_xs3_vector.h"
 #include "unity.h"
 
-#ifdef __XC__
-#define WORD_ALIGNED [[aligned(4)]]
-#else
-#define WORD_ALIGNED
-#endif
 
-#if (defined(__XS3A__) && USE_ASM_conv2d_shallowin_deepout_block)
+#if USE_ASM(conv2d_shallowin_deepout_block)
  #define HAS_ASM (1)
 #else
  #define HAS_ASM (1)
@@ -30,16 +25,7 @@
 #define TEST_ASM ((HAS_ASM) && 1)
 #define TEST_C ((TEST_C_GLOBAL) && 1)
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
-
-#define PRINTF(...)     do{if (DO_PRINT_EXTRA) {printf(__VA_ARGS__);}} while(0)
-
-
-unsafe {
-
-
-
-
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
 
@@ -163,7 +149,7 @@ void test_conv2d_shallowin_deepout_1x1()
 
     const unsigned casse_count = sizeof(casses) / sizeof(case1x1_params_t);
 
-    PRINTF("test_conv2d_shallowin_deepout_1x1()...\n");
+    PRINTF("%s...\n", __func__);
 
     for(int v = START_ON_CASE; v < casse_count && v < STOP_ON_CASE; v++){
         PRINTF("\tVector %u...\n", v);
@@ -217,7 +203,7 @@ void test_conv2d_shallowin_deepout_1x1()
             conv2d_sido_boggle_K((int8_t*) K, K_h, VPU_INT8_EPV / C_in, C_in, C_out);
             conv2d_boggle_B(B, C_out);
             conv2d_boggle_shift_scale((int16_t*)scales, C_out, NULL);
-            conv2d_shallowin_deepout_init(&params, &init_params, &region_params, (int8_t*) K, (data16_t* unsafe) B);
+            conv2d_shallowin_deepout_init(&params, &init_params, &region_params, (int8_t*) K, (data16_t*) B);
 
 
             //There should always be exactly one block in this test.  
@@ -227,7 +213,7 @@ void test_conv2d_shallowin_deepout_1x1()
     #if TEST_C
             memset(Y_c, 0xCC, sizeof(Y_c));
             for(int block = 0; block < params.block_count; block++){
-                const nn_conv2d_sido_block_params_t* unsafe blk = &params.blocks[block];
+                const nn_conv2d_sido_block_params_t* blk = &params.blocks[block];
                 conv2d_shallowin_deepout_block_c(  (int8_t*)Y_c,     &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
     #endif
@@ -235,7 +221,7 @@ void test_conv2d_shallowin_deepout_1x1()
     #if TEST_ASM
             memset(Y_asm, 0xCC, sizeof(Y_asm));
             for(int block = 0; block < params.block_count; block++){
-                const nn_conv2d_sido_block_params_t* unsafe blk = &params.blocks[block];
+                const nn_conv2d_sido_block_params_t* blk = &params.blocks[block];
                 conv2d_shallowin_deepout_block_asm((int8_t*)Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
     #endif
@@ -429,7 +415,7 @@ void test_conv2d_shallowin_deepout_1x1_chans()
 
     const unsigned casse_count = sizeof(casses) / sizeof(case1x1_params_t);
 
-    PRINTF("test_conv2d_shallowin_deepout_1x1_chans()...\n");
+    PRINTF("%s...\n", __func__);
 
     for(int v = START_ON_CASE; v < casse_count && v < STOP_ON_CASE; v++){
         PRINTF("\tVector %u...\n", v);
@@ -483,7 +469,7 @@ void test_conv2d_shallowin_deepout_1x1_chans()
             conv2d_sido_boggle_K((int8_t*) K, K_h, 32/C_in, C_in, C_out);
             conv2d_boggle_B(B, C_out);
             conv2d_boggle_shift_scale((int16_t*)scales, C_out, NULL);
-            conv2d_shallowin_deepout_init(&params, &init_params, &region_params, (int8_t*) K, (data16_t* unsafe) B);
+            conv2d_shallowin_deepout_init(&params, &init_params, &region_params, (int8_t*) K, (data16_t*) B);
 
 
             //There should always be exactly one block in this test.  
@@ -493,7 +479,7 @@ void test_conv2d_shallowin_deepout_1x1_chans()
     #if TEST_C
             memset(Y_c, 0xCC, sizeof(Y_c));
             for(int block = 0; block < params.block_count; block++){
-                const nn_conv2d_sido_block_params_t* unsafe blk = &params.blocks[block];
+                const nn_conv2d_sido_block_params_t* blk = &params.blocks[block];
                 conv2d_shallowin_deepout_block_c(  (int8_t*)Y_c,     &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
     #endif
@@ -501,7 +487,7 @@ void test_conv2d_shallowin_deepout_1x1_chans()
     #if TEST_ASM
             memset(Y_asm, 0xCC, sizeof(Y_asm));
             for(int block = 0; block < params.block_count; block++){
-                const nn_conv2d_sido_block_params_t* unsafe blk = &params.blocks[block];
+                const nn_conv2d_sido_block_params_t* blk = &params.blocks[block];
                 conv2d_shallowin_deepout_block_asm((int8_t*)Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
     #endif
@@ -724,7 +710,7 @@ void test_conv2d_shallowin_deepout_1x1_xsize()
 
     const unsigned casse_count = sizeof(casses) / sizeof(case1x1_params_t);
 
-    PRINTF("test_conv2d_shallowin_deepout_1x1_xsize()...\n");
+    PRINTF("%s...\n", __func__);
 
     for(int v = START_ON_CASE; v < casse_count && v < STOP_ON_CASE; v++){
         PRINTF("\tVector %u...\n", v);
@@ -776,8 +762,8 @@ void test_conv2d_shallowin_deepout_1x1_xsize()
 
                 int8_t value = casse->kernel.scale * cout + casse->kernel.offset;
 
-                // printf("K[%d] -> %d\n", cout, value);
-                // printf("B[%d] -> %d\n", cout, B[cout]);
+                // PRINTF("K[%d] -> %d\n", cout, value);
+                // PRINTF("B[%d] -> %d\n", cout, B[cout]);
                 memset(&K[cout], value, sizeof(int8_t) * K_h * K_w * C_in);
 
                 // for(int krow = 0; krow < K_h; krow++){
@@ -792,7 +778,7 @@ void test_conv2d_shallowin_deepout_1x1_xsize()
             conv2d_sido_boggle_K((int8_t*) K, K_h, VPU_INT8_EPV/C_in, C_in, C_out);
             conv2d_boggle_B(B, C_out);
             conv2d_boggle_shift_scale((int16_t*)scales, C_out, NULL);
-            conv2d_shallowin_deepout_init(&params, &init_params, NULL, (int8_t*) K, (data16_t* unsafe) B);
+            conv2d_shallowin_deepout_init(&params, &init_params, NULL, (int8_t*) K, (data16_t* ) B);
 
 
             //There should always be exactly one block in this test.  
@@ -802,7 +788,7 @@ void test_conv2d_shallowin_deepout_1x1_xsize()
 #if TEST_C
             memset(Y_c, OxXX, sizeof(Y_c));
             for(int block = 0; block < params.block_count; block++){
-                const nn_conv2d_sido_block_params_t* unsafe blk = &params.blocks[block];
+                const nn_conv2d_sido_block_params_t*  blk = &params.blocks[block];
                 conv2d_shallowin_deepout_block_c(  (int8_t*)Y_c,     &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
 #endif
@@ -810,7 +796,7 @@ void test_conv2d_shallowin_deepout_1x1_xsize()
 #if TEST_ASM
             memset(Y_asm, OxXX, sizeof(Y_asm));
             for(int block = 0; block < params.block_count; block++){
-                const nn_conv2d_sido_block_params_t* unsafe blk = &params.blocks[block];
+                const nn_conv2d_sido_block_params_t*  blk = &params.blocks[block];
                 conv2d_shallowin_deepout_block_asm((int8_t*)Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
 #endif
@@ -1044,16 +1030,16 @@ void test_conv2d_shallowin_deepout_3x3()
 
     const unsigned casse_count = sizeof(casses) / sizeof(case1x1_params_t);
 
-    PRINTF("test_conv2d_shallowin_deepout_3x3()...\n");
+    PRINTF("%s...\n", __func__);
 
     for(int v = START_ON_CASE; v < casse_count && v < STOP_ON_CASE; v++){
         PRINTF("\tVector %u...\n", v);
         
         case1x1_params_t* casse = &casses[v];
         
-        int8_t* unsafe casse_X[X_height] = {(int8_t* unsafe) &casse->X_row1,(int8_t* unsafe)  &casse->X_row2,(int8_t* unsafe)  &casse->X_row3};
-        int8_t* unsafe casse_K[K_h]      = {(int8_t* unsafe) &casse->K_row1,(int8_t* unsafe)  &casse->K_row2,(int8_t* unsafe)  &casse->K_row3};
-        int8_t* unsafe casse_Y[X_height] = {(int8_t* unsafe) &casse->Y_row1,(int8_t* unsafe)  &casse->Y_row2,(int8_t* unsafe)  &casse->Y_row3};
+        int8_t*  casse_X[X_height] = {(int8_t* ) &casse->X_row1,(int8_t* )  &casse->X_row2,(int8_t* )  &casse->X_row3};
+        int8_t*  casse_K[K_h]      = {(int8_t* ) &casse->K_row1,(int8_t* )  &casse->K_row2,(int8_t* )  &casse->K_row3};
+        int8_t*  casse_Y[X_height] = {(int8_t* ) &casse->Y_row1,(int8_t* )  &casse->Y_row2,(int8_t* )  &casse->Y_row3};
         
         padding_mode_t pmodes[] = {PADDING_SAME, PADDING_VALID};
         for(int p = 0; p < sizeof(pmodes)/sizeof(padding_mode_t); p++){
@@ -1129,7 +1115,7 @@ void test_conv2d_shallowin_deepout_3x3()
             conv2d_sido_boggle_K((int8_t*) K, K_h, VPU_INT8_EPV/C_in, C_in, C_out);
             conv2d_boggle_B(B, C_out);
             conv2d_boggle_shift_scale((int16_t*)scales, C_out, NULL);
-            conv2d_shallowin_deepout_init(&params, &init_params, NULL, (int8_t*) K, (data16_t* unsafe) B);
+            conv2d_shallowin_deepout_init(&params, &init_params, NULL, (int8_t*) K, (data16_t* ) B);
 
             //Padding mode SAME should have 1 block, mode VALID should have K_h*K_w
             TEST_ASSERT_EQUAL_MESSAGE((init_params.pad_mode == PADDING_VALID)? 1 : K_h*K_w, params.block_count, "Wrong number of convolution blocks.");
@@ -1138,7 +1124,7 @@ void test_conv2d_shallowin_deepout_3x3()
 #if TEST_C
             memset(Y_c, 0xCC, sizeof(Y_c));
             for(int block = 0; block < params.block_count; block++){
-                const nn_conv2d_sido_block_params_t* unsafe blk = &params.blocks[block];
+                const nn_conv2d_sido_block_params_t*  blk = &params.blocks[block];
                 int8_t* Y_targ = (init_params.pad_mode == PADDING_SAME)? (int8_t*)Y_c : (int8_t*) &Y_c[X_height>>1][X_width>>1];
                 conv2d_shallowin_deepout_block_c(  Y_targ,     &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
@@ -1147,7 +1133,7 @@ void test_conv2d_shallowin_deepout_3x3()
 #if TEST_ASM
             memset(Y_asm, 0xCC, sizeof(Y_asm));
             for(int block = 0; block < params.block_count; block++){
-                const nn_conv2d_sido_block_params_t* unsafe blk = &params.blocks[block];
+                const nn_conv2d_sido_block_params_t*  blk = &params.blocks[block];
                 int8_t* Y_targ = (init_params.pad_mode == PADDING_SAME)? (int8_t*)Y_asm : (int8_t*) &Y_asm[X_height>>1][X_width>>1];
                 conv2d_shallowin_deepout_block_asm(Y_targ, &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
             }
@@ -1340,7 +1326,7 @@ void test_conv2d_shallowin_deepout_regions()
 
     const unsigned casse_count = sizeof(casses) / sizeof(case1x1_params_t);
 
-    PRINTF("test_conv2d_shallowin_deepout_regions()...\n");
+    PRINTF("%s...\n", __func__);
 
     for(int v = START_ON_CASE; v < casse_count && v < STOP_ON_CASE; v++){
         
@@ -1369,7 +1355,7 @@ void test_conv2d_shallowin_deepout_regions()
         // conv2d_sido_boggle_K((int8_t*) K, K_h, K_w, C_in, C_out);
         conv2d_boggle_B(B, C_out);
         conv2d_boggle_shift_scale((int16_t*)scales, C_out, NULL);
-        conv2d_shallowin_deepout_init(&params, &init_params, &reg, (int8_t*) K, (data16_t* unsafe) B);
+        conv2d_shallowin_deepout_init(&params, &init_params, &reg, (int8_t*) K, (data16_t* ) B);
 
         //Perform the actual convolution(s)   (run both C and ASM before checking either)
 #if TEST_C
@@ -1377,7 +1363,7 @@ void test_conv2d_shallowin_deepout_regions()
         memset(Y_c, 0xCC, sizeof(Y_c));
         for(int block = 0; block < params.block_count; block++){
             // PRINTF("\t\t\tblock %d...\n", block);
-            const nn_conv2d_sido_block_params_t* unsafe blk = &params.blocks[block];
+            const nn_conv2d_sido_block_params_t*  blk = &params.blocks[block];
             conv2d_shallowin_deepout_block_c( (int8_t*) Y_c, &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
         }
 #endif
@@ -1387,7 +1373,7 @@ void test_conv2d_shallowin_deepout_regions()
         memset(Y_asm, 0xCC, sizeof(Y_asm));
         for(int block = 0; block < params.block_count; block++){
             // PRINTF("\t\t\tblock %d...\n", block);
-            const nn_conv2d_sido_block_params_t* unsafe blk = &params.blocks[block];
+            const nn_conv2d_sido_block_params_t*  blk = &params.blocks[block];
             conv2d_shallowin_deepout_block_asm( (int8_t*) Y_asm, &params, blk, (int8_t*)X, (int8_t*)K, (int16_t*) scales);
         }
 #endif
@@ -1455,4 +1441,13 @@ void test_conv2d_shallowin_deepout_regions()
 
 
 
+void test_conv2d_shallowin_deepout()
+{
+    UNITY_SET_FILE();
+    
+    RUN_TEST(test_conv2d_shallowin_deepout_1x1);
+    RUN_TEST(test_conv2d_shallowin_deepout_1x1_chans);
+    RUN_TEST(test_conv2d_shallowin_deepout_1x1_xsize);
+    RUN_TEST(test_conv2d_shallowin_deepout_3x3);
+    RUN_TEST(test_conv2d_shallowin_deepout_regions);
 }

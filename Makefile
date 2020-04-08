@@ -38,7 +38,7 @@ integration_test_x86: test_model
 .PHONY: integration_test_xc
 integration_test_xc: test_model
 	cd tests && ./generate_test_data.py -n $(NUM_PROCS)
-	cd tests && pytest -v --test-app=../examples/apps/test_model/bin/test_model.xe -n $(NUM_PROCS)
+	cd tests && pytest -v --test-app=../examples/apps/test_model/bin/test_model.xe --max-count 10 -n $(NUM_PROCS)
 
 .PHONY: clean
 clean: lib_nn_test_clean test_model_clean

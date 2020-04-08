@@ -14,11 +14,6 @@
 // #include "dsp_xs3_vector.h"
 #include "unity.h"
 
-#ifdef __XC__
-#define WORD_ALIGNED [[aligned(4)]]
-#else
-#define WORD_ALIGNED
-#endif
 
 #if (defined(__XS3A__) && USE_ASM_fc_deepin_shallowout_16)
  #define HAS_ASM (1)
@@ -32,9 +27,8 @@
 #define TEST_ASM (1)
 #define TEST_C ((TEST_C_GLOBAL) && 1)
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
-#define PRINTF(...)     do{if (DO_PRINT_EXTRA) {printf(__VA_ARGS__);}} while(0)
 
 
 
@@ -80,7 +74,7 @@ void test_fully_connected_16_case0()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fully_connected_16_case0()...\n");
+    PRINTF("%s...\n", __func__);
 
     typedef struct {
         int8_t x;
@@ -239,7 +233,7 @@ void test_fully_connected_16_case1()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fully_connected_16_case1()...\n");
+    PRINTF("%s...\n", __func__);
 
     typedef struct {
         int8_t x;
@@ -399,7 +393,7 @@ void test_fully_connected_16_case2()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fully_connected_16_case2()...\n");
+    PRINTF("%s...\n", __func__);
 
     typedef struct {
         int8_t x;
@@ -559,7 +553,7 @@ void test_fully_connected_16_case3()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fully_connected_16_case3()...\n");
+    PRINTF("%s...\n", __func__);
 
     typedef struct {
         int8_t x;
@@ -719,7 +713,7 @@ void test_fully_connected_16_case4()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fully_connected_16_case4()...\n");
+    PRINTF("%s...\n", __func__);
 
     typedef struct {
         int8_t x;
@@ -875,7 +869,7 @@ void test_fully_connected_16_case5()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fully_connected_16_case5()...\n");
+    PRINTF("%s...\n", __func__);
 
     typedef struct {
         int8_t x;
@@ -1037,7 +1031,7 @@ void test_fully_connected_16_case6()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fully_connected_16_case6()...\n");
+    PRINTF("%s...\n", __func__);
 
     typedef struct {
         int8_t x;
@@ -1209,7 +1203,7 @@ void test_fully_connected_16_case7()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fully_connected_16_case7()...\n");
+    PRINTF("%s...\n", __func__);
 
     typedef struct {
         int8_t x;
@@ -1388,7 +1382,7 @@ void test_fully_connected_16_case8()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fully_connected_16_case8()...\n");
+    PRINTF("%s...\n", __func__);
 
     typedef struct {
         int8_t x;
@@ -1568,7 +1562,7 @@ void test_fully_connected_16_case9()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fully_connected_16_case9()...\n");
+    PRINTF("%s...\n", __func__);
 
     typedef struct {
         int8_t x;
@@ -1735,7 +1729,7 @@ void test_fully_connected_16_case10()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fully_connected_16_case10()...\n");
+    PRINTF("%s...\n", __func__);
 
     print_warns(-1, TEST_C, TEST_ASM);
 
@@ -1876,7 +1870,7 @@ void test_fully_connected_16_case11()
     PRINTF("\n\n");
 #endif
 
-    PRINTF("test_fully_connected_16_case11()...\n");
+    PRINTF("%s...\n", __func__);
     
     print_warns(-1, TEST_C, TEST_ASM);
 
@@ -1966,3 +1960,22 @@ void test_fully_connected_16_case11()
 #undef C_in
 #undef C_out
 #undef DEBUG_ON
+
+
+void test_fully_connected_16()
+{
+    UNITY_SET_FILE();
+    
+    RUN_TEST(test_fully_connected_16_case0);
+    RUN_TEST(test_fully_connected_16_case1);
+    RUN_TEST(test_fully_connected_16_case2);
+    RUN_TEST(test_fully_connected_16_case3);
+    RUN_TEST(test_fully_connected_16_case4);
+    RUN_TEST(test_fully_connected_16_case5);
+    RUN_TEST(test_fully_connected_16_case6);
+    RUN_TEST(test_fully_connected_16_case7);
+    RUN_TEST(test_fully_connected_16_case8);
+    RUN_TEST(test_fully_connected_16_case9);
+    RUN_TEST(test_fully_connected_16_case10);
+    RUN_TEST(test_fully_connected_16_case11);
+}

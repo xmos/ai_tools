@@ -14,13 +14,8 @@
 
 #include "unity.h"
 
-#ifdef __XC__
-#define WORD_ALIGNED [[aligned(4)]]
-#else
-#define WORD_ALIGNED
-#endif
 
-#if (defined(__XS3A__) && USE_ASM_maxpool2d)
+#if USE_ASM(maxpool2d)
  #define HAS_ASM (1)
 #else
  #define HAS_ASM (0)
@@ -29,12 +24,9 @@
 #define TEST_ASM ((HAS_ASM)     && 1)
 #define TEST_C ((TEST_C_GLOBAL) && 1)
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
-
-#define PRINTF(...)     do{if (DO_PRINT_EXTRA) {printf(__VA_ARGS__);}} while(0)
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
-static unsigned seed = 4321434;
 
 
 #define DEBUG_ON        (0 || TEST_DEBUG_ON)
@@ -64,7 +56,7 @@ void test_conv2d_1x1_case0()
     int8_t WORD_ALIGNED  Y_asm[HEIGHT][WIDTH][CHANS_OUT];
 #endif
 
-    PRINTF("test_conv2d_1x1_case0()...\n");
+    PRINTF("%s...\n", __func__);
 
     
     typedef struct {
@@ -178,7 +170,7 @@ void test_conv2d_1x1_case0()
 
         const test_case_t* casse = (const test_case_t*) &casses[v];
 
-        printf("\ttest vector %u...\n", v);
+        PRINTF("\ttest vector %u...\n", v);
             
         nn_image_params_t x_params = { HEIGHT, WIDTH, CHANS_IN };
         nn_image_params_t y_params = { HEIGHT, WIDTH, CHANS_OUT };
@@ -333,7 +325,7 @@ void test_conv2d_1x1_case1()
 #if TEST_ASM
     int8_t WORD_ALIGNED  Y_asm[HEIGHT][WIDTH][MAX_CHANS_OUT];
 #endif
-    PRINTF("test_conv2d_1x1_case1()...\n");
+    PRINTF("%s...\n", __func__);
 
     int8_t* K_flat  = (int8_t*)K;
     int8_t* X_flat  = (int8_t*)X;
@@ -402,7 +394,7 @@ void test_conv2d_1x1_case1()
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
-        printf("\ttest vector %u...\n", v);
+        PRINTF("\ttest vector %u...\n", v);
 
         const unsigned C_out = casse->C_out;
         const unsigned C_in = casse->C_in;
@@ -550,6 +542,7 @@ void test_conv2d_1x1_case1()
 #define REPS            (50)
 void test_conv2d_1x1_case2()
 {
+    unsigned seed = 2341234;
     int8_t WORD_ALIGNED  X[HEIGHT][WIDTH][MAX_CHANS_IN];
 
     int8_t WORD_ALIGNED  K[MAX_CHANS_OUT][MAX_CHANS_IN];
@@ -581,7 +574,7 @@ void test_conv2d_1x1_case2()
     int8_t* Y_asm_flat = (int8_t*) Y_asm;
 #endif
 
-    PRINTF("test_conv2d_1x1_case2()...\n");
+    PRINTF("%s...\n", __func__);
 
     print_warns(-1, TEST_C, TEST_ASM);
 
@@ -605,7 +598,7 @@ void test_conv2d_1x1_case2()
             C_out = VPU_INT8_ACC_PERIOD;
         }
         
-        printf("\trep %u...(%u, %u)\n", rep, C_in, C_out);
+        PRINTF("\trep %u...(%u, %u)\n", rep, C_in, C_out);
 
 
         for(int k = 0; k < C_out; k++){
@@ -647,7 +640,7 @@ void test_conv2d_1x1_case2()
             BSS_flat[4*C_out + k] = shift2;
 
             // if(!skip_reps)
-            //     printf("%d:\t% 4d\t0x%08X\t0x%08X\n", k, k_val, bias, acc32);
+            //     PRINTF("%d:\t% 4d\t0x%08X\t0x%08X\n", k, k_val, bias, acc32);
 
             Y_exp[k] = output;
 #if (DEBUG_ON || 0) // in case you need to convince yourself not all outputs are 0, -127 or 127
@@ -741,3 +734,13 @@ void test_conv2d_1x1_case2()
 #undef WIDTH         
 #undef CHANS_OUT_CEIL
 #undef REPS
+
+
+void test_conv2d_1x1()
+{
+    UNITY_SET_FILE();
+    
+    RUN_TEST(test_conv2d_1x1_case0);
+    RUN_TEST(test_conv2d_1x1_case1);
+    RUN_TEST(test_conv2d_1x1_case2);
+}

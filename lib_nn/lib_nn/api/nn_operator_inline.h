@@ -16,42 +16,6 @@ extern "C" {
 
 
 
-static inline void conv2d_deepin_deepout_block(
-    int8_t* Y,
-    const nn_conv2d_dido_params_t* params,
-    const nn_conv2d_dido_block_params_t* block,
-    const int8_t* X,
-    const int8_t* K,
-    const int16_t* scales)
-{
-#if defined(__XS3A__) && (USE_ASM_conv2d_deepin_deepout_block)
-
-    conv2d_deepin_deepout_block_asm(Y, params, block, X, K, scales);
-
-#else
-
-    conv2d_deepin_deepout_block_c(Y, params, block, X, K, scales);
-
-#endif
-}
-
-static inline void conv2d_deepin_deepout(
-    int8_t* Y,
-    const nn_conv2d_dido_params_t* params,
-    const int8_t* X,
-    const int8_t* K,
-    const int16_t* scales)
-{
-    const unsigned block_count = params->block_count;
-    for(int i = 0; i < block_count; i++){
-        conv2d_deepin_deepout_block(
-            Y, params, &params->blocks[i],
-            X, K, scales
-        );
-    }
-}
-
-
 static inline void conv2d_shallowin_deepout_block(
     int8_t* Y,
     const nn_conv2d_sido_params_t* params,

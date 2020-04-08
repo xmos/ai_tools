@@ -37,3 +37,17 @@ SOURCE_FILE_EXTS := c S
 ### should be linked into the executable
 ###
 # LIBRARIES := foo.a
+
+
+DOC_DIR := $(LIB_PATH)/doc
+DOC_BUILD_DIR := $(DOC_DIR)/.build
+
+docs:
+	$(info Building documentation..)
+	cd $(DOC_DIR) && doxygen
+
+clean_docs:
+	$(info Cleaning documentation...)
+	rm -rf $(DOC_BUILD_DIR)
+
+clean: clean_docs

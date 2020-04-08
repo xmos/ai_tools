@@ -15,13 +15,7 @@
 // #include "dsp_xs3_vector.h"
 #include "unity.h"
 
-#ifdef __XC__
-#define WORD_ALIGNED [[aligned(4)]]
-#else
-#define WORD_ALIGNED
-#endif
-
-#if (defined(__XS3A__) && USE_ASM_requantize_16_to_8)
+#if USE_ASM(requantize_16_to_8)
  #define HAS_ASM (1)
 #else
  #define HAS_ASM (0)
@@ -30,13 +24,7 @@
 #define TEST_ASM ((HAS_ASM)     && 1)
 #define TEST_C ((TEST_C_GLOBAL) && 1)
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
-
-#define PRINTF(...)     do{if (DO_PRINT_EXTRA) {printf(__VA_ARGS__);}} while(0)
-
-
-
-static unsigned seed = 4321234;
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
 typedef enum {
@@ -60,12 +48,11 @@ const char* lang_map[] = { "C", "ASM" };
 int its_a_trap[10/LANG_COUNT] = {0};
 
 
-unsafe {
 
 ////////////////////////////////////////////////
 static void call_requantize_16_to_8(
-    int8_t* unsafe y,
-    const int16_t* unsafe x,
+    int8_t* y,
+    const int16_t* x,
     const unsigned n,
     lang_t lang)
 {
@@ -81,7 +68,7 @@ static void call_requantize_16_to_8(
             break;
 #endif
         default:
-            printf("Default case should never be hit.\n");
+            PRINTF("Default case should never be hit.\n");
             __builtin_trap();
             break;
     }
@@ -90,7 +77,7 @@ static void call_requantize_16_to_8(
 
 ////////////////////////////////////////////////
 static void memset16(
-    void* unsafe dst,
+    void* dst,
     const int16_t val,
     const unsigned len)
 {
@@ -112,7 +99,7 @@ static char str_buff[200];
 #define VEC_LEN         (VPU_INT16_EPV)
 void test_requantize_16_to_8_case0()
 {
-    PRINTF("test_requantize_16_to_8_case0()...\n");
+    PRINTF("%s...\n", __func__);
     
     int8_t WORD_ALIGNED y[VEC_LEN] = {0};
     int16_t WORD_ALIGNED x[VEC_LEN]  = {0};
@@ -202,8 +189,9 @@ void test_requantize_16_to_8_case0()
 #define REPS            50
 void test_requantize_16_to_8_case1()
 {
+    unsigned seed = 6654734;
 
-    PRINTF("test_requantize_16_to_8_case1()...\n");
+    PRINTF("%s...\n", __func__);
 
     int8_t  WORD_ALIGNED y[MAX_LEN];
     int16_t WORD_ALIGNED x[MAX_LEN];
@@ -264,5 +252,10 @@ void test_requantize_16_to_8_case1()
 
 
 
-
+void test_requantize_16_to_8()
+{
+    UNITY_SET_FILE();
+    
+    RUN_TEST(test_requantize_16_to_8_case0);
+    RUN_TEST(test_requantize_16_to_8_case1);
 }

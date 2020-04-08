@@ -101,9 +101,9 @@ FUNCTION_NAME:
     {                                           ;   ldw r0, sp[STACK_K_h_stride]            }
     {                                           ;   ldw r1, sp[STACK_C_IN]                  }
     mul r0, r0, r1
-    {   shr r1, r1, 5                           ;   stw r0, sp[STACK_WIN_H_STRIDE]          }
-    {   zext r0, 5                              ;   stw r1, sp[STACK_C_IN_GROUPS]           }
-    {                                           ;   stw r0, sp[STACK_C_IN_TAIL]             }
+    {   shr r0, r1, 5                           ;   stw r0, sp[STACK_WIN_H_STRIDE]          }
+    {   zext r1, 5                              ;   stw r0, sp[STACK_C_IN_GROUPS]           }
+    {                                           ;   stw r1, sp[STACK_C_IN_TAIL]             }
 
     //  To move N accumulators from the beginning of vD:vR to the end of vD:vR (which is where
     //  they need to be at the beginning of a VLMACCR sequence), we can store them to address

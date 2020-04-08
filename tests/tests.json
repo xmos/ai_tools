@@ -51,9 +51,8 @@
         "generator": "../examples/models/op_test_models/generate_conv2d_deep.py",
         "operator": "XC_conv2d_deep",
         "subtype": "deep",
-        "_comment": "some expected failures. see issue https://github.com/xmos/ai_tools/issues/88",
         "parameters": [
-            {"-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same", "xfail": true},
+            {"-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same"},
             {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "same"},
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-st": [2, 2], "-pd": "same"},
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same", "smoke": true},

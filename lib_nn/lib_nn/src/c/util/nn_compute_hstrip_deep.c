@@ -29,6 +29,7 @@ void nn_compute_hstrip_deep_c(
         const mem_stride_t y_h_stride,
         const unsigned out_cols)
 {
+    xs3_vpu vpu;
     const mem_stride_t window_h_stride = K_h_stride * C_in;
 
     //First half is for zeroing out tail elements. Second half is actually just
@@ -42,7 +43,7 @@ void nn_compute_hstrip_deep_c(
     const unsigned C_in_groups = C_in >> VPU_INT8_EPV_LOG2;
     const unsigned C_in_tail = C_in % VPU_INT8_EPV;
 
-    VSETC(MODE_S8);
+    VSETC(&vpu, MODE_S8);
 
     //Loop over the output pixels
     for(int out_col = 0; out_col < out_cols; out_col++){
@@ -51,8 +52,8 @@ void nn_compute_hstrip_deep_c(
         const nn_image_t* patch_K = K;
 
         //Initialize accumulators
-        VLDD(&BSS->bias_hi);
-        VLDR(&BSS->bias_lo);
+        VLDD(&vpu, &BSS->bias_hi);
+        VLDR(&vpu, &BSS->bias_lo);
 
         // These rows are between top and bottom padding
         for(int pr = K_h; pr; pr--){
@@ -61,12 +62,12 @@ void nn_compute_hstrip_deep_c(
 
                 for(int cig = C_in_groups; cig; cig--){
 
-                    VLDC(patch_X);
+                    VLDC(&vpu, patch_X);
 
                     const nn_image_t* K_tmp = patch_K;
 
                     for(int cout = VPU_INT8_ACC_PERIOD; cout; cout--){
-                        VLMACCR(K_tmp);
+                        VLMACCR(&vpu, K_tmp);
                         K_tmp = ADDR(K_tmp, k_cout_stride);
                     }
 
@@ -80,14 +81,14 @@ void nn_compute_hstrip_deep_c(
                     //  at the *END* of the vector. Means K needs to have the 
                     //  corresponding elements at the end, too.
                     const mem_stride_t tail_offset = C_in_tail - VPU_INT8_EPV;
-                    VLDC(patch_X);
-                    VSTC(mask_vec);
-                    VLDC(mask_vec + tail_offset);
+                    VLDC(&vpu, patch_X);
+                    VSTC(&vpu, mask_vec);
+                    VLDC(&vpu, mask_vec + tail_offset);
                     
                     const nn_image_t* K_tmp = ADDR(patch_K, tail_offset);
 
                     for(int cout = VPU_INT8_ACC_PERIOD; cout; cout--){
-                        VLMACCR(K_tmp);
+                        VLMACCR(&vpu, K_tmp);
                         K_tmp = ADDR(K_tmp, k_cout_stride);
                     }
 
@@ -104,27 +105,27 @@ void nn_compute_hstrip_deep_c(
         //Done accumulating for the current patch
 
         //Set mode to 16-bit
-        VSETC(MODE_S16);
+        VSETC(&vpu, MODE_S16);
 
         //Saturate to 16-bit values
-        VLSAT(BSS->shift1);
+        VLSAT(&vpu, BSS->shift1);
 
         //Load scales into vC
-        VLDC(BSS->scale);
+        VLDC(&vpu, BSS->scale);
 
-        VSTR(mask_vec);
-        VCLRDR();
-        VLMACC(mask_vec);
+        VSTR(&vpu, mask_vec);
+        VCLRDR(&vpu);
+        VLMACC(&vpu, mask_vec);
 
         //Set mode back to 8-bit
-        VSETC(MODE_S8);
+        VSETC(&vpu, MODE_S8);
 
         //Saturate to 8-bit values
-        VLSAT(BSS->shift2);
+        VLSAT(&vpu, BSS->shift2);
 
         //Store result in Y
         const unsigned mask16 = 0xFFFF;
-        VSTRPV(Y, mask16);
+        VSTRPV(&vpu, Y, mask16);
         
         X = ADDR(X, window_h_stride);
         Y = ADDR(Y, y_h_stride);

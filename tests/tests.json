@@ -58,7 +58,9 @@
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same", "smoke": true},
             {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "valid"},
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-st": [2, 2], "-pd": "valid"},
+            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 1},
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 2},
+            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 3},
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 4},
             {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 5}
         ]

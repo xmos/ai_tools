@@ -124,7 +124,7 @@ void nn_compute_hstrip_tail_deep_padded_c(
     }
 
     if(pad_b){
-        const nn_tensor_t* K_bot = ADDR(K, patch_rows * K_w * C_in);
+        const nn_tensor_t* K_bot = ADDR(K, (patch_rows * K_w * C_in));
         for(int row = pad_b; row; row--){
 
             for(int col = K_w; col; col--){
@@ -242,7 +242,7 @@ void nn_compute_hstrip_tail_deep_padded_c(
                         VSTC(vec_tmp2);
                         VLDC(ADDR(vec_tmp2, (C_in_tail-32)));
 
-                        const nn_image_t* K_tmp = ADDR(patch_K, C_in_tail - 32);
+                        const nn_image_t* K_tmp = ADDR(patch_K, (C_in_tail - 32));
                         DO_VLMACCRS(patch_K, C_in_tail);
                         patch_X = ADDR(patch_X, C_in_tail);
                     }
@@ -278,7 +278,7 @@ void nn_compute_hstrip_tail_deep_padded_c(
                         VSTC(vec_tmp2);
                         VLDC(ADDR(vec_tmp2, (C_in_tail-32)));
 
-                        const nn_image_t* K_tmp = ADDR(patch_K, C_in_tail - 32);
+                        const nn_image_t* K_tmp = ADDR(patch_K, (C_in_tail - 32));
                         DO_VLMACCRS(patch_K, C_in_tail);
                         patch_X = ADDR(patch_X, C_in_tail);
                     }

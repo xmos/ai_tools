@@ -32,21 +32,17 @@ typedef struct {
 } xs3_vpu;
 
 
-void VSETC(const vector_mode mode);
-void VCLRDR();
-void VLDR(const void* addr);
-void VLDD(const void* addr);
-void VLDC(const void* addr);
-void VSTR(void* addr);
-void VSTD(void* addr);
-void VSTC(void* addr);
-void VSTRPV(void* addr, unsigned mask);
-void VLMACC(const void* addr);
-void VLMACCR(const void* addr);
-void VLSAT(const void* addr);
-
-
-void print_vR(const unsigned hex, const char* extra, const unsigned line);
-void print_vD(const unsigned hex, const char* extra, const unsigned line);
-void print_vC(const unsigned hex, const char* extra, const unsigned line);
-void print_accumulators(const unsigned hex);
+void VSETC(
+    xs3_vpu* vpu,
+    const vector_mode mode);
+void VCLRDR(xs3_vpu* vpu);
+void VLDR(xs3_vpu* vpu, const void* addr);
+void VLDD(xs3_vpu* vpu, const void* addr);
+void VLDC(xs3_vpu* vpu, const void* addr);
+void VSTR(const xs3_vpu* vpu, void* addr);
+void VSTD(const xs3_vpu* vpu, void* addr);
+void VSTC(const xs3_vpu* vpu, void* addr);
+void VSTRPV(const xs3_vpu* vpu, void* addr, unsigned mask);
+void VLMACC(xs3_vpu* vpu, const void* addr);
+void VLMACCR(xs3_vpu* vpu, const void* addr);
+void VLSAT(xs3_vpu* vpu, const void* addr);

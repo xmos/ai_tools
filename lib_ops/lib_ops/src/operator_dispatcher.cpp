@@ -63,7 +63,6 @@ OperatorDispatcher::~OperatorDispatcher() {}
 
 void OperatorDispatcher::Start() {
   int begin = 0;
-
   if (use_current_) {
     const KernelCommand& command = commands_.data[begin];
     (command.function)(command.argument);
@@ -106,6 +105,8 @@ XCoreStatus OperatorDispatcher::Allocate(/*TODO: allocator here*/) {
 XCoreStatus OperatorDispatcher::Add(kernel_function_t function, void* argument,
                                     size_t stack_words) {
   assert(stack_ptr_);
+  assert(commands_.size < maxthreads);
+
   int32_t offset = stack_words * bytes_per_stackword * commands_.size;
 
   if (offset > reserved_stack_) {
@@ -113,12 +114,9 @@ XCoreStatus OperatorDispatcher::Add(kernel_function_t function, void* argument,
   }
 
   void* stack = stack_ptr_ + offset;
-
   commands_.data[commands_.size] = {function, (void*)argument, stack_words,
                                     stack};
   commands_.size++;
-
-  assert(commands_.size < maxthreads);
 
   return kXCoreOk;
 }

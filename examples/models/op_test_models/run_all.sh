@@ -14,7 +14,8 @@ set -e
 
 # convolutions
 ./generate_conv2d_1x1.py -v
-./generate_conv2d_deepin_deepout_relu.py -v
+./generate_conv2d_deep.py -v
+./generate_conv2d_deep_padded.py -v
 ./generate_conv2d_shallowin_deepout_relu.py -v
 
 # depthwise convolutions

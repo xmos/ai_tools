@@ -8,6 +8,11 @@ import pytest
 #  ----------------------------------------------------------------------------
 
 PARAMS = {
+    "extended": {
+        "input_height": [7, 9, 17, 20, 32],
+        "input_width": [7, 9, 17, 20, 32],
+        "input_channels": [4, 8, 16, 32, 36, 64]
+    },
     "default": {
         "input_height": [9, 20],
         "input_width": [7, 17],

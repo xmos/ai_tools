@@ -44,7 +44,7 @@ class TensorType(enum.IntEnum):
         LUT = {
             TensorType.FLOAT32: 4,
             TensorType.FLOAT16: 2,
-            TensorType.INT32: 2,
+            TensorType.INT32: 4,
             TensorType.UINT8: 1,
             TensorType.INT64: 8,
             TensorType.STRING: None,

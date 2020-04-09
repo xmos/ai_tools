@@ -26,9 +26,9 @@ class ParRegionArray {
     return regions[i];
   }
   void append(const ParRegion& region) {
+    assert(size < maxthreads);
     regions[size] = std::move(region);
     size++;
-    assert(size < maxthreads);
   }
   void clear() { size = 0; }
 };

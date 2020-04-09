@@ -25,7 +25,7 @@ def load_tests(test_name, test_dir, max_count):
         operator_codes.XCOREOpCodes.XC_conv2d_1x1.name,
         operator_codes.XCOREOpCodes.XC_conv2d_depthwise.name,
         operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name,
-        operator_codes.XCOREOpCodes.XC_conv2d_deepin_deepout_relu.name,
+        operator_codes.XCOREOpCodes.XC_conv2d_deep.name,
         operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name,
         operator_codes.XCOREOpCodes.XC_maxpool2d.name,
         operator_codes.XCOREOpCodes.XC_avgpool2d.name,
@@ -179,10 +179,10 @@ def test_XC_conv2d_shallowin_deepout_relu(test_model_app, XC_conv2d_shallowin_de
     assert(run_test_case(test_model_app, XC_conv2d_shallowin_deepout_relu_test_case, abs_tol))
 
 
-def test_XC_conv2d_deepin_deepout_relu(test_model_app, XC_conv2d_deepin_deepout_relu_test_case, abs_tol):
-    if is_xfail(XC_conv2d_deepin_deepout_relu_test_case):
+def test_XC_conv2d_deep(test_model_app, XC_conv2d_deep_test_case, abs_tol):
+    if is_xfail(XC_conv2d_deep_test_case):
         pytest.xfail()
-    assert(run_test_case(test_model_app, XC_conv2d_deepin_deepout_relu_test_case, abs_tol))
+    assert(run_test_case(test_model_app, XC_conv2d_deep_test_case, abs_tol))
 
 
 def test_XC_fc_deepin_anyout(test_model_app, XC_fc_deepin_anyout_test_case, abs_tol):

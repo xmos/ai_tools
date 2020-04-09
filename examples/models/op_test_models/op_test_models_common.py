@@ -79,7 +79,7 @@ class OpTestDefaultModel(KerasModel):
 class OpTestDefaultConvModel(OpTestDefaultModel):
     def build_core_model(
             self, K_h, K_w, height, width, input_channels, output_channels, *,
-            padding, **inits):
+            padding, strides=(1,1), **inits):
         self.input_init = inits['input_init']
         self.core_model = tf.keras.Sequential(
             name=self.name,
@@ -87,21 +87,32 @@ class OpTestDefaultConvModel(OpTestDefaultModel):
                 tf.keras.layers.Conv2D(filters=output_channels,
                                        kernel_size=(K_h, K_w),
                                        padding=padding,
+                                       strides=strides,
                                        input_shape=(height, width, input_channels),
                                        bias_initializer=inits['bias_init'],
                                        kernel_initializer=inits['weight_init'])
             ]
         )
 
-
-class OpTestDeepoutConvModel(OpTestDefaultConvModel):
-    def build_core_model(self, *args, **kwargs):
-        K_h, K_w, _, _, _, output_channels = args
-        assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
-        # TODO: remove these constraints when conv2d improvements are ready
-        assert K_h % 2 == 1, "kernel height must be odd"
-        assert K_w % 2 == 1, "kernel width must be odd"
-        super().build_core_model(*args, **kwargs)
+class OpTestPaddedConvModel(OpTestDefaultModel):
+    def build_core_model(
+            self, K_h, K_w, height, width, input_channels, output_channels, *,
+            padding, strides=(1,1), **inits):
+        self.input_init = inits['input_init']
+        self.core_model = tf.keras.Sequential(
+            name=self.name,
+            layers=[
+                tf.keras.layers.ZeroPadding2D(padding=padding,
+                                              input_shape=(height, width, output_channels)),
+                tf.keras.layers.Conv2D(filters=output_channels,
+                                       kernel_size=(K_h, K_w),
+                                       padding='valid',
+                                       strides=strides,
+                                       input_shape=(height, width, input_channels),
+                                       bias_initializer=inits['bias_init'],
+                                       kernel_initializer=inits['weight_init'])
+            ]
+        )
 
 
 class OpTestDefaultFCModel(KerasModel):

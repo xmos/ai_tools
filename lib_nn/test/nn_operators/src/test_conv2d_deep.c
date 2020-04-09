@@ -1549,6 +1549,131 @@ void test_conv2d_deep_case16()
 
 
 
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+#define CHANS_IN        ( 20 )
+#define CHANS_OUT       ( 20 )
+#define K_H             ( 3 )
+#define K_W             ( 3 )
+#define X_HEIGHT        ( 5 )
+#define X_WIDTH         ( 5 )
+#define Y_HEIGHT        ( 3 )
+#define Y_WIDTH         ( 3 )
+#define K_V_STRIDE      ( 2 )
+#define K_H_STRIDE      ( 2 )
+#define ZERO_POINT      ( 8 )
+void test_conv2d_deep_case17()
+{
+
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
+    nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
+    
+    struct {
+        int32_t bias[CHANS_OUT];
+        int16_t shift1[CHANS_OUT];
+        int16_t scale[CHANS_OUT];
+        int16_t shift2[CHANS_OUT];
+    } BSS;
+
+    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+
+    PRINTF("%s...\n", __func__);
+
+    nn_conv2d_deep_plan_t plan;
+    nn_conv2d_deep_job_t job;
+
+    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
+
+    nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
+    nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
+
+    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+
+    nn_image_t X_vals[X_HEIGHT][X_WIDTH] = {
+        {  6,  6, 2, 8, 4 },
+        {  6,  6, 4, 2, 8 },
+        {  8,  4, 2, 2, 4 },
+        {  2, 16, 2, 8, 2 },
+        {  2,  4, 2, 2, 4 },
+    };
+    for(int row = 0; row < x_params.height; row++)
+        for(int col = 0; col < x_params.width; col++)
+            for(int cin = 0; cin < x_params.channels; cin++)
+                X[row][col][cin] = X_vals[row][col];
+                
+    for(int cout = 0; cout < y_params.channels; cout++)
+        for(int row = 0; row < conv2d_window.shape.height; row++)
+            for(int col = 0; col < conv2d_window.shape.width; col++)
+                for(int cin = 0; cin < x_params.channels; cin++)
+                    K[cout][row][col][cin] = 1;
+
+    for(int k = 0; k < CHANS_OUT; k++){
+        BSS.bias[k] = 0;// k * (1<<6);
+        BSS.shift1[k] = 1;
+        BSS.scale[k] = 2;
+        BSS.shift2[k] = 6;
+    }
+    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+
+    memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
+
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+
+/*       __ __
+       |8  8  8| 8  8  8  8 
+       |8  6  6| 2  8  4  8
+       |8__6__6| 4  2  8  8
+        8  8  4  2  2  4  8
+        8  2 16  2  8  2  8
+        8  2  4  2  2  4  8
+        8  8  8  8  8  8  8
+
+        52*20*
+
+*/
+
+    int32_t Y_exp[Y_HEIGHT][Y_WIDTH] = {
+        { 8+8+8+8+6+6+8+6+6 , 8+8+8+6+2+8+6+4+2 , 8+8+8+8+4+8+2+8+8},
+        { 8+6+6+8+8+4+8+2+16, 6+4+2+4+2+2+16+2+8, 2+8+8+2+4+8+8+2+8},
+        { 8+2+16+8+2+4+8+8+8, 16+2+8+4+2+2+8+8+8, 8+2+8+2+4+8+8+8+8},
+    };
+
+    for(int row = 0; row < y_params.height; row++){
+        for(int col = 0; col < y_params.width; col++){
+            for(int cout = 0; cout < y_params.channels; cout++){
+
+                int32_t acc = x_params.channels * Y_exp[row][col] + BSS.bias[cout];
+                // printf("%ld\n", acc);
+                acc = acc >> BSS.shift1[cout];
+                acc *= BSS.scale[cout];
+
+                acc = acc + (1 << (BSS.shift2[cout] - 1));
+                acc = acc >> BSS.shift2[cout];
+
+                int8_t y_exp = acc;
+                check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, cout, __LINE__);
+            }
+        }
+    }
+}
+#undef CHANS_IN
+#undef CHANS_OUT
+#undef K_H
+#undef K_W
+#undef X_HEIGHT
+#undef X_WIDTH
+#undef Y_HEIGHT
+#undef Y_WIDTH
+#undef K_V_STRIDE
+#undef K_H_STRIDE
+#undef ZERO_POINT
+
+
+
+
+
 
 
 void test_conv2d_deep()
@@ -1572,4 +1697,5 @@ void test_conv2d_deep()
     RUN_TEST(test_conv2d_deep_case14);
     RUN_TEST(test_conv2d_deep_case15);
     RUN_TEST(test_conv2d_deep_case16);
+    RUN_TEST(test_conv2d_deep_case17);
 }

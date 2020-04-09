@@ -35,6 +35,8 @@ void nn_compute_hstrip_deep_padded_c(
         const unsigned out_cols,
         const int8_t* zero_point_vec)
 {
+    xs3_vpu vpu;
+
     const mem_stride_t window_h_stride = K_h_stride * C_in;
 
     //First half is for zeroing out tail elements. Second half is actually just
@@ -51,27 +53,27 @@ void nn_compute_hstrip_deep_padded_c(
     //Number of rows to actually be computed in a patch
     const unsigned patch_rows = K_h - pad_t - pad_b;
 
-    VSETC(MODE_S8);
+    VSETC(&vpu, MODE_S8);
 
     //Set the masked tail zero vector
-    VLDR(zero_point_vec);
-    VSTRPV(zero_tail, (1 << C_in_tail)-1);
+    VLDR(&vpu, zero_point_vec);
+    VSTRPV(&vpu, zero_tail, (1 << C_in_tail)-1);
 
     //Load Biases for current C_out group
-    VLDD(BSS->bias_hi);
-    VLDR(BSS->bias_lo);
+    VLDD(&vpu, BSS->bias_hi);
+    VLDR(&vpu, BSS->bias_lo);
 
     //Adjust for bias at top
     if(pad_t){
 
         for(int row = pad_t; row; row--){
             for(int col = K_w; col; col--){
-                VLDC(zero_point_vec);
+                VLDC(&vpu, zero_point_vec);
                 for(int cig = C_in_groups; cig; cig--){
 
                     const nn_image_t* K_tmp = K;
                     for(int c_out = VPU_INT8_ACC_PERIOD; c_out; c_out--){
-                        VLMACCR(K_tmp);
+                        VLMACCR(&vpu, K_tmp);
                         K_tmp = ADDR(K_tmp, k_cout_stride);
                     }
 
@@ -80,11 +82,11 @@ void nn_compute_hstrip_deep_padded_c(
                 }
 
                 if(C_in_tail){
-                    VLDC(zero_tail);
+                    VLDC(&vpu, zero_tail);
 
                     const nn_image_t* K_tmp = K;
                     for(int c_out = VPU_INT8_ACC_PERIOD; c_out; c_out--){
-                        VLMACCR(K_tmp);
+                        VLMACCR(&vpu, K_tmp);
                         K_tmp = ADDR(K_tmp, k_cout_stride);
                     }
 
@@ -98,7 +100,7 @@ void nn_compute_hstrip_deep_padded_c(
     }
 
     if(pad_b){
-        VLDC(zero_point_vec);
+        VLDC(&vpu, zero_point_vec);
 
         //Skip middle rows
 
@@ -108,12 +110,12 @@ void nn_compute_hstrip_deep_padded_c(
 
         for(int row = pad_b; row; row--){
             for(int col = K_w; col; col--){
-                VLDC(zero_point_vec);
+                VLDC(&vpu, zero_point_vec);
                 for(int cig = C_in_groups; cig; cig--){
 
                     const nn_image_t* K_tmp2 = K_tmp;
                     for(int c_out = VPU_INT8_ACC_PERIOD; c_out; c_out--){
-                        VLMACCR(K_tmp2);
+                        VLMACCR(&vpu, K_tmp2);
                         K_tmp2 = ADDR(K_tmp2, k_cout_stride);
                     }
 
@@ -121,11 +123,11 @@ void nn_compute_hstrip_deep_padded_c(
                 }
 
                 if(C_in_tail){
-                    VLDC(zero_tail);
+                    VLDC(&vpu, zero_tail);
 
                     const nn_image_t* K_tmp2 = K_tmp;
                     for(int c_out = VPU_INT8_ACC_PERIOD; c_out; c_out--){
-                        VLMACCR(K_tmp2);
+                        VLMACCR(&vpu, K_tmp2);
                         K_tmp2 = ADDR(K_tmp2, k_cout_stride);
                     }
 
@@ -139,8 +141,8 @@ void nn_compute_hstrip_deep_padded_c(
     vpu_vector_t adj_bias_hi;
     vpu_vector_t adj_bias_lo;
 
-    VSTD(&adj_bias_hi.u16[0]);
-    VSTR(&adj_bias_lo.u16[0]);
+    VSTD(&vpu, &adj_bias_hi.u16[0]);
+    VSTR(&vpu, &adj_bias_lo.u16[0]);
     
     //Alright! Now we can do the actual patches.
     
@@ -166,21 +168,21 @@ void nn_compute_hstrip_deep_padded_c(
         const int cur_pad_r = (pad_r > 0)? pad_r : 0;
 
         //Initialize accumulators
-        VLDD(&adj_bias_hi.u16[0]);
-        VLDR(&adj_bias_lo.u16[0]);
+        VLDD(&vpu, &adj_bias_hi.u16[0]);
+        VLDR(&vpu, &adj_bias_lo.u16[0]);
 
         // These rows are between top and bottom padding
         for(int pr = patch_rows; pr; pr--){
 
             if(cur_pad_l){
                 for(int col = cur_pad_l; col; col--){
-                    VLDC(zero_point_vec);
+                    VLDC(&vpu, zero_point_vec);
 
                     for(int cig = C_in_groups; cig; cig--){
                         const nn_image_t* K_tmp = patch_K;
 
                         for(int cout = VPU_INT8_ACC_PERIOD; cout; cout--){
-                            VLMACCR(K_tmp);
+                            VLMACCR(&vpu, K_tmp);
                             K_tmp = ADDR(K_tmp, k_cout_stride);
                         }
 
@@ -189,11 +191,11 @@ void nn_compute_hstrip_deep_padded_c(
                     }
 
                     if(C_in_tail){
-                        VLDC(zero_tail);
+                        VLDC(&vpu, zero_tail);
                         const nn_image_t* K_tmp = patch_K;
 
                         for(int cout = VPU_INT8_ACC_PERIOD; cout; cout--){
-                            VLMACCR(K_tmp);
+                            VLMACCR(&vpu, K_tmp);
                             K_tmp = ADDR(K_tmp, k_cout_stride);
                         }
 
@@ -208,12 +210,12 @@ void nn_compute_hstrip_deep_padded_c(
 
                     for(int cig = C_in_groups; cig; cig--){
 
-                        VLDC(patch_X);
+                        VLDC(&vpu, patch_X);
 
                         const nn_image_t* K_tmp = patch_K;
 
                         for(int cout = VPU_INT8_ACC_PERIOD; cout; cout--){
-                            VLMACCR(K_tmp);
+                            VLMACCR(&vpu, K_tmp);
                             K_tmp = ADDR(K_tmp, k_cout_stride);
                         }
 
@@ -226,14 +228,14 @@ void nn_compute_hstrip_deep_padded_c(
                         //  at the *END* of the vector. Means K needs to have the 
                         //  corresponding elements at the end, too.
                         const mem_stride_t tail_offset = C_in_tail - VPU_INT8_EPV;
-                        VLDC(patch_X);
-                        VSTC(mask_vec);
-                        VLDC(mask_vec + tail_offset);
+                        VLDC(&vpu, patch_X);
+                        VSTC(&vpu, mask_vec);
+                        VLDC(&vpu, mask_vec + tail_offset);
                         
-                        const nn_image_t* K_tmp = patch_K + tail_offset;
+                        const nn_image_t* K_tmp = ADDR(patch_K, tail_offset);
 
                         for(int cout = VPU_INT8_ACC_PERIOD; cout; cout--){
-                            VLMACCR(K_tmp);
+                            VLMACCR(&vpu, K_tmp);
                             K_tmp = ADDR(K_tmp, k_cout_stride);
                         }
 
@@ -245,12 +247,12 @@ void nn_compute_hstrip_deep_padded_c(
 
             if(cur_pad_r){
                 for(int col = cur_pad_r; col; col--){
-                    VLDC(zero_point_vec);
+                    VLDC(&vpu, zero_point_vec);
                     for(int cig = C_in_groups; cig; cig--){
                         const nn_image_t* K_tmp = patch_K;
 
                         for(int cout = VPU_INT8_ACC_PERIOD; cout; cout--){
-                            VLMACCR(K_tmp);
+                            VLMACCR(&vpu, K_tmp);
                             K_tmp = ADDR(K_tmp, k_cout_stride);
                         }
 
@@ -259,11 +261,11 @@ void nn_compute_hstrip_deep_padded_c(
                     }
 
                     if(C_in_tail){
-                        VLDC(zero_tail);
+                        VLDC(&vpu, zero_tail);
                         const nn_image_t* K_tmp = patch_K;
 
                         for(int cout = VPU_INT8_ACC_PERIOD; cout; cout--){
-                            VLMACCR(K_tmp);
+                            VLMACCR(&vpu, K_tmp);
                             K_tmp = ADDR(K_tmp, k_cout_stride);
                         }
 
@@ -281,26 +283,26 @@ void nn_compute_hstrip_deep_padded_c(
         //Done accumulating for the current patch
 
         //Set mode to 16-bit
-        VSETC(MODE_S16);
+        VSETC(&vpu, MODE_S16);
 
         //Saturate to 16-bit values
-        VLSAT(BSS->shift1);
+        VLSAT(&vpu, BSS->shift1);
 
         //Load scales into vC
-        VLDC(BSS->scale);
-        VSTR(mask_vec);
-        VCLRDR();
-        VLMACC(mask_vec);
+        VLDC(&vpu, BSS->scale);
+        VSTR(&vpu, mask_vec);
+        VCLRDR(&vpu);
+        VLMACC(&vpu, mask_vec);
 
         //Set mode back to 8-bit
-        VSETC(MODE_S8);
+        VSETC(&vpu, MODE_S8);
 
         //Saturate to 8-bit values
-        VLSAT(BSS->shift2);
+        VLSAT(&vpu, BSS->shift2);
 
         //Store result in Y
         const unsigned mask16 = 0xFFFF;
-        VSTRPV(Y, mask16);
+        VSTRPV(&vpu, Y, mask16);
 
         //Now make adjustments to pad_l, pad_r and center_cols
 

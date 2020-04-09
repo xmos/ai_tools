@@ -14,10 +14,10 @@ from .lut_passes import (
 from .conv2d_passes import (
     Replace1x1Conv2dPass,
     ReplaceDepthwiseConv2dPass,
-    ReplaceDeepinDeepoutConv2DPass,
+    ReplaceDeepConv2dPass,
     ReplaceShallowinDeepoutConv2DPass,
     ReplaceSingleinDeepoutDepthwiseConv2DPass,
-    ParallelizeDIDOPass
+    ParallelizeDeepConv2dPass
 )
 
 from .fully_connected_passes import (

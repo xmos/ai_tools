@@ -11,8 +11,8 @@ xcore.+pooling.+AvgPool.+Init, AvgPool.Init
 xcore.+pooling.+AvgPool.+Eval, AvgPool.Eval
 xcore.+pooling.+AvgPool_Global.+Init, AvgPool_Global.Init
 xcore.+pooling.+AvgPool_Global.+Eval, AvgPool_Global.Eval
-xcore.+conv.+Conv2D_DIDO.+Init, Conv2D_DIDO.Init
-xcore.+conv.+Conv2D_DIDO.+Eval, Conv2D_DIDO.Eval, conv2d_dido_thread_worker
+xcore.+conv.+Conv2D_Deep.+Init, Conv2D_Deep.Init
+xcore.+conv.+Conv2D_Deep.+Eval, Conv2D_Deep.Eval, conv2d_deep_thread_worker
 xcore.+conv.+Conv2D_SIDO.+Init, Conv2D_SIDO.Init
 xcore.+conv.+Conv2D_SIDO.+Eval, Conv2D_SIDO.Eval
 xcore.+conv.+Conv2D_Depthwise.+Init, Conv2D_Depthwise.Init

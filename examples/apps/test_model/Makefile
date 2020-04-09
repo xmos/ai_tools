@@ -36,12 +36,14 @@ else # must be xcore
 	ASFLAGS := $(PLATFORM_FLAGS)
 
 	CC := xcc
-	CCFLAGS := -DTF_LITE_STATIC_MEMORY -DTF_LITE_STRIP_ERROR_STRINGS
+	CCFLAGS := -DTF_LITE_STATIC_MEMORY
+	CCFLAGS += -DTF_LITE_STRIP_ERROR_STRINGS
 	CCFLAGS += -DNDEBUG
 	CCFLAGS += $(PLATFORM_FLAGS)
 
 	CXX := xcc
-	CXXFLAGS := -std=c++11 -DTF_LITE_STATIC_MEMORY -DTF_LITE_STRIP_ERROR_STRINGS
+	CXXFLAGS := -std=c++11 -DTF_LITE_STATIC_MEMORY
+	CXXFLAGS += -DTF_LITE_STRIP_ERROR_STRINGS
 	CXXFLAGS += -DNDEBUG
 	CXXFLAGS += $(PLATFORM_FLAGS)
 
@@ -57,132 +59,21 @@ $(info Building for $(BUILD_TARGET))
 #********************
 # Dependencies
 #********************
-FLATBUFFERS_DIR := ../../../third_party
-GEMMLOWP_DIR := ../../../third_party/gemmlowp
-TENSORFLOW_DIR := ../../../third_party/tensorflow
-LIB_NN_DIR := ../../../lib_nn
-LIB_OPS_DIR := ../../../lib_ops
+include ../make/tensorflow.mk
+include ../make/libs.mk
 
-INCLUDES := \
-	-I$(FLATBUFFERS_DIR)/flatbuffers/include \
-	-I$(GEMMLOWP_DIR) \
-	-I$(TENSORFLOW_DIR) \
-	-I$(LIB_NN_DIR) \
-	-I$(LIB_NN_DIR)/lib_nn/api \
-	-I$(LIB_OPS_DIR) \
-	-Isrc
+INCLUDES := $(TENSORFLOW_INCLUDES)
+INCLUDES += $(LIBS_INCLUDES)
+INCLUDES += -Isrc
 
 # source file paths
-VPATH := \
-	$(FLATBUFFERS_DIR) \
-	$(TENSORFLOW_DIR) \
-	$(LIB_NN_DIR) \
-	$(LIB_OPS_DIR) \
-	src \
+VPATH := $(TENSORFLOW_VPATH)
+VPATH += $(LIBS_VPATH)
+VPATH += src
 
-SOURCES := \
-	tensorflow/lite/c/common.c \
-	tensorflow/lite/core/api/error_reporter.cc \
-	tensorflow/lite/core/api/flatbuffer_conversions.cc \
-	tensorflow/lite/core/api/op_resolver.cc \
-	tensorflow/lite/core/api/tensor_utils.cc \
-	tensorflow/lite/kernels/kernel_util.cc \
-	tensorflow/lite/kernels/internal/quantization_util.cc \
-	tensorflow/lite/micro/memory_helpers.cc \
-	tensorflow/lite/micro/micro_allocator.cc \
-	tensorflow/lite/micro/micro_error_reporter.cc \
-	tensorflow/lite/micro/micro_interpreter.cc \
-	tensorflow/lite/micro/micro_utils.cc \
-	tensorflow/lite/micro/micro_string.cc \
-	tensorflow/lite/micro/simple_memory_allocator.cc \
-	tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc \
-	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc
-
-
-#SOURCES += \
-	# tensorflow/lite/micro/kernels/activations.cc \
-	# tensorflow/lite/micro/kernels/add.cc \
-	# tensorflow/lite/micro/kernels/all_ops_resolver.cc \
-	# tensorflow/lite/micro/kernels/arg_min_max.cc \
-	# tensorflow/lite/micro/kernels/ceil.cc \
-	# tensorflow/lite/micro/kernels/comparisons.cc \
-	# tensorflow/lite/micro/kernels/concatenation.cc \
-	# tensorflow/lite/micro/kernels/conv.cc \
-	# tensorflow/lite/micro/kernels/depthwise_conv.cc \
-	# tensorflow/lite/micro/kernels/dequantize.cc \
-	# tensorflow/lite/micro/kernels/elementwise.cc \
-	# tensorflow/lite/micro/kernels/floor.cc \
-	# tensorflow/lite/micro/kernels/fully_connected.cc \
-	# tensorflow/lite/micro/kernels/logical.cc \
-	# tensorflow/lite/micro/kernels/logistic.cc \
-	# tensorflow/lite/micro/kernels/maximum_minimum.cc \
-	# tensorflow/lite/micro/kernels/mul.cc \
-	# tensorflow/lite/micro/kernels/neg.cc \
-	# tensorflow/lite/micro/kernels/pack.cc \
-	# tensorflow/lite/micro/kernels/pad.cc \
-	# tensorflow/lite/micro/kernels/pooling.cc \
-	# tensorflow/lite/micro/kernels/prelu.cc \
-	# tensorflow/lite/micro/kernels/quantize.cc \
-	# tensorflow/lite/micro/kernels/reduce.cc \
-	# tensorflow/lite/micro/kernels/reshape.cc \
-	# tensorflow/lite/micro/kernels/round.cc \
-	# tensorflow/lite/micro/kernels/softmax.cc \
-	# tensorflow/lite/micro/kernels/split.cc \
-	# tensorflow/lite/micro/kernels/strided_slice.cc \
-	# tensorflow/lite/micro/kernels/svdf.cc \
-	# tensorflow/lite/micro/kernels/unpack.cc \
-
-SOURCES += \
-	tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_conv2d.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_arg_min_max.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_pooling.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_fully_connected.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_type_conversions.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_activations.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_custom_options.cc \
-	lib_nn/src/c/nn_op_utils.c \
-	lib_nn/src/c/nn_operator.c \
-	lib_nn/src/c/nn_operator_conv.c \
-	lib_nn/src/c/conv2d_1x1.c \
-	lib_nn/src/c/conv2d_depthwise.c \
-	lib_nn/src/c/avgpool2d.c \
-	lib_nn/src/c/maxpool2d.c \
-	lib_nn/src/c/fully_connected.c \
-	lib_ops/src/operator_dispatcher.cpp \
-	lib_ops/src/conv2d.cpp \
-	lib_ops/src/fully_connected.cpp\
-	lib_ops/src/activations.cpp \
-	lib_ops/src/pooling.cpp \
-	lib_ops/src/arg_min_max.cpp \
-	lib_ops/src/type_conversions.cpp \
-	main.cc
-
-
-ifeq ($(TARGET), x86)
-	SOURCES += \
-		flatbuffers/src/util.cpp \
-		tensorflow/lite/micro/debug_log.cc 
-else # must be xcore
-	SOURCES += \
-		lib_nn/src/asm/conv2d_deepin_deepout_block.S \
-		lib_nn/src/asm/conv2d_shallowin_deepout_block.S \
-		lib_nn/src/asm/conv2d_1x1.S \
-		lib_nn/src/asm/fully_connected_16.S \
-		lib_nn/src/asm/avgpool2d.S \
-		lib_nn/src/asm/maxpool2d.S \
-		lib_nn/src/asm/avgpool2d_2x2.S \
-		lib_nn/src/asm/avgpool2d_global.S \
-		lib_nn/src/asm/vpu_memcpy.S \
-		lib_nn/src/asm/requantize_16_to_8.S \
-		lib_nn/src/asm/lookup8.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_depthwise.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_depthwise_bias_adj.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_depthwise_padded.S \
-		lib_nn/src/asm/util/nn_compute_patch_depthwise.S \
-		lib_nn/src/asm/util/nn_compute_patch_depthwise_padded.S \
-		tensorflow/lite/micro/xcore/debug_log.cc 	
-endif
+SOURCES := $(TENSORFLOW_SOURCES)
+SOURCES += $(LIBS_SOURCES)
+SOURCES += main.cc
 
 OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))))
 OBJECT_FILES := $(addprefix $(OBJ_DIR)/,$(OBJECT_FILES))

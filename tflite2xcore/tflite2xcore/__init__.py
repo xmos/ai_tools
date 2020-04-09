@@ -22,3 +22,4 @@ from . import tflite_visualize
 from . import utils
 from . import xlogging
 from . import xcore_model
+from . import analyze

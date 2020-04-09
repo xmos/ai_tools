@@ -185,8 +185,8 @@ void conv2d_deep(
             Y = ADDR(Y, job->stride.row.Y);
         }
 
-        K = &K[INDEX_CAST(plan->stride.K.cout)];
-        Y = &Y[INDEX_CAST(job->stride.chan_group.Y)];
-        BSS = &BSS[INDEX_CAST(1)];
+        K = ADDR(K, plan->stride.K.cout);
+        Y = ADDR(Y, job->stride.chan_group.Y);
+        BSS = ADDR(BSS, 1);
     }
 }

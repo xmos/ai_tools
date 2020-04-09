@@ -1549,117 +1549,27 @@ void test_conv2d_deep_case16()
 
 
 
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-#define CHANS_IN        ( 20 )
-#define CHANS_OUT       ( 20 )
-#define K_H             ( 3 )
-#define K_W             ( 3 )
-#define X_HEIGHT        ( 5 )
-#define X_WIDTH         ( 5 )
-#define Y_HEIGHT        ( 1 )
-#define Y_WIDTH         ( 1 )
-#define K_V_STRIDE      ( 1 )
-#define K_H_STRIDE      ( 1 )
-#define ZERO_POINT      ( 0 )
-void test_conv2d_deep_tmp()
-{
-
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
-    nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
-    nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
-    
-    struct {
-        int32_t bias[CHANS_OUT];
-        int16_t shift1[CHANS_OUT];
-        int16_t scale[CHANS_OUT];
-        int16_t shift2[CHANS_OUT];
-    } BSS;
-
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
-
-    PRINTF("%s...\n", __func__);
-
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
-
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
-
-    nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
-    nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
-
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
-
-    nn_image_t X_vals[X_HEIGHT][X_WIDTH] = {
-        {  0,  0,  0,  0,  0},
-        {  0,  0,  0,  0,  0},
-        {  0,  0,  0,  0,  0},
-        {  0,  0,  0,  0,  0},
-        {  0,  0,  0,  0,  0},
-    };
-    for(int row = 0; row < x_params.height; row++)
-        for(int col = 0; col < x_params.width; col++)
-            for(int cin = 0; cin < x_params.channels; cin++)
-                X[row][col][cin] = X_vals[row][col];
-                
-    for(int cout = 0; cout < y_params.channels; cout++)
-        for(int row = 0; row < conv2d_window.shape.height; row++)
-            for(int col = 0; col < conv2d_window.shape.width; col++)
-                for(int cin = 0; cin < x_params.channels; cin++)
-                    K[cout][row][col][cin] = 0;
-
-    for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = 0;
-        BSS.shift1[k] = 0;
-        BSS.scale[k] = 1;
-        BSS.shift2[k] = 0;
-    }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
-
-    memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
-
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
-
-}
-#undef CHANS_IN
-#undef CHANS_OUT
-#undef K_H
-#undef K_W
-#undef X_HEIGHT
-#undef X_WIDTH
-#undef Y_HEIGHT
-#undef Y_WIDTH
-#undef K_V_STRIDE
-#undef K_H_STRIDE
-#undef ZERO_POINT
-
-
-
-
-
 
 
 void test_conv2d_deep()
 {
     UNITY_SET_FILE();
     
-    // RUN_TEST(test_conv2d_deep_case0);
-    // RUN_TEST(test_conv2d_deep_case1);
-    // RUN_TEST(test_conv2d_deep_case2);
-    // RUN_TEST(test_conv2d_deep_case3);
-    // RUN_TEST(test_conv2d_deep_case4);
-    // RUN_TEST(test_conv2d_deep_case5);
-    // RUN_TEST(test_conv2d_deep_case6);
-    // RUN_TEST(test_conv2d_deep_case7);
-    // RUN_TEST(test_conv2d_deep_case8);
-    // RUN_TEST(test_conv2d_deep_case9);
-    // RUN_TEST(test_conv2d_deep_case10);
-    // RUN_TEST(test_conv2d_deep_case11);
-    // RUN_TEST(test_conv2d_deep_case12);
-    // RUN_TEST(test_conv2d_deep_case13);
-    // RUN_TEST(test_conv2d_deep_case14);
-    // RUN_TEST(test_conv2d_deep_case15);
+    RUN_TEST(test_conv2d_deep_case0);
+    RUN_TEST(test_conv2d_deep_case1);
+    RUN_TEST(test_conv2d_deep_case2);
+    RUN_TEST(test_conv2d_deep_case3);
+    RUN_TEST(test_conv2d_deep_case4);
+    RUN_TEST(test_conv2d_deep_case5);
+    RUN_TEST(test_conv2d_deep_case6);
+    RUN_TEST(test_conv2d_deep_case7);
+    RUN_TEST(test_conv2d_deep_case8);
+    RUN_TEST(test_conv2d_deep_case9);
+    RUN_TEST(test_conv2d_deep_case10);
+    RUN_TEST(test_conv2d_deep_case11);
+    RUN_TEST(test_conv2d_deep_case12);
+    RUN_TEST(test_conv2d_deep_case13);
+    RUN_TEST(test_conv2d_deep_case14);
+    RUN_TEST(test_conv2d_deep_case15);
     RUN_TEST(test_conv2d_deep_case16);
-    RUN_TEST(test_conv2d_deep_tmp);
 }

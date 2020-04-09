@@ -14,7 +14,7 @@ extern "C" {
 #if defined(__XS3A__)
 
 #ifndef DISABLE_ASM
-#define DISABLE_ASM (1)
+#define DISABLE_ASM (0)
 #endif
 
 #if !defined(USE_ASM_nn_compute_hstrip_deep_padded) && !(DISABLE_ASM)
@@ -124,6 +124,23 @@ void nn_conv2d_hstrip_shallowin_padded_asm(
         const mem_stride_t y_h_stride,
         const unsigned out_cols,
         const int8_t* zero_point_vec);
+
+
+
+#if !defined(USE_ASM_nn_conv2d_hstrip_shallowin) && !(DISABLE_ASM)
+#define USE_ASM_nn_conv2d_hstrip_shallowin  (1)
+#endif
+void nn_conv2d_hstrip_shallowin_asm(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bss_block_t* BSS,
+        const unsigned K_h,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols);
 
 #endif //defined(__XS3A__)
 

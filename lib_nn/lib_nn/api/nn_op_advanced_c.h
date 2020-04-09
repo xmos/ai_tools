@@ -102,6 +102,18 @@ void nn_conv2d_hstrip_shallowin_padded_c(
         const unsigned out_cols,
         const int8_t* zero_point_vec);
 
+void nn_conv2d_hstrip_shallowin_c(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bss_block_t* BSS,
+        const unsigned K_h,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols);
+
 #ifdef __XC__
 }   //extern "C"
 #endif

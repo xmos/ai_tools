@@ -86,12 +86,15 @@ void nn_conv2d_hstrip_shallowin_padded_c(
     int pad_l = pad_l_initial * C_in;
     int pad_r = pad_r_initial * C_in;
 
+    int pad_l_relu = (pad_l > 0)? pad_l : 0;
+    int pad_r_relu = (pad_r > 0)? pad_r : 0;
+
     uint32_t pad_mask = 32;
 
-    pad_mask -= (pad_l > 0)? pad_l : 0;
-    pad_mask -= (pad_r > 0)? pad_r : 0;
+    pad_mask -= pad_l_relu;
+    pad_mask -= pad_r_relu;
 
-    pad_mask = (1<<pad_mask)-1;
+    pad_mask = ((1<<pad_mask)-1) << pad_l_relu;
 
 
     //Loop over the output pixels
@@ -117,16 +120,14 @@ void nn_conv2d_hstrip_shallowin_padded_c(
             VLDR(vec_vr.s16);
             patch_X = ADDR(patch_X, x_v_stride);
 
-            for(int i = 0; i < VPU_INT8_ACC_PERIOD; i++){
-                const nn_tensor_t* K_tmp = K;
+            const nn_tensor_t* K_tmp = patch_K;
 
-                for(int i = 0; i < VPU_INT8_ACC_PERIOD; i++){
-                    VLMACCR(K_tmp);
-                    K_tmp = ADDR(K_tmp, -k_cout_str);
-                }
-                
-                patch_K = ADDR(patch_K, VPU_INT8_EPV);
+            for(int i = 0; i < VPU_INT8_ACC_PERIOD; i++){
+                VLMACCR(K_tmp);
+                K_tmp = ADDR(K_tmp, -k_cout_str);
             }
+            
+            patch_K = ADDR(patch_K, VPU_INT8_EPV);
         }
         
         //Done accumulating for the current patch
@@ -160,11 +161,14 @@ void nn_conv2d_hstrip_shallowin_padded_c(
         pad_l -= window_h_stride;
         pad_r += window_h_stride;
 
-        pad_mask = 32;
-        pad_mask -= (pad_l > 0)? pad_l : 0;
-        pad_mask -= (pad_r > 0)? pad_r : 0;
+        int pad_l_relu = (pad_l > 0)? pad_l : 0;
+        int pad_r_relu = (pad_r > 0)? pad_r : 0;
 
-        pad_mask = (1<<pad_mask)-1;
+        pad_mask = 32;
+        pad_mask -= pad_l_relu;
+        pad_mask -= pad_r_relu;
+
+        pad_mask = ((1<<pad_mask)-1) << pad_l_relu;
     }
 }
 

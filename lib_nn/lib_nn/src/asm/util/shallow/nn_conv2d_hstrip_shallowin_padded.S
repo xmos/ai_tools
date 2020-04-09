@@ -25,7 +25,7 @@ void nn_conv2d_hstrip_shallowin_padded_asm(
 
 #define NSTACKVECS  (4)
 
-#define NSTACKWORDS  ((NSTACKVECS*8)+12)
+#define NSTACKWORDS  ((NSTACKVECS*8)+10)
     
 .text
 .issue_mode  dual
@@ -54,8 +54,8 @@ void nn_conv2d_hstrip_shallowin_padded_asm(
 #define STACK_VEC_VR            (NSTACKWORDS-32)
 
 #define STACK_PATCH_ROWS        STACK_K_H
-#define STACK_K                 11
-#define STACK_BSS               12
+#define STACK_K                 7
+#define STACK_BSS               8
 #define STACK_WIN_H_STRIDE      STACK_K_h_stride
 
 
@@ -131,7 +131,7 @@ FUNCTION_NAME:
         {   sub rows_left, rows_left, 1             ;   vlmaccr tmp[0]                          }
         {   add K, K, _32                           ;   bt rows_left, .L_pad_tb_row_start       }
     .L_pad_tb_end:
-    {   ldaw Q(X), sp[STACK_VEC_ADJ_B_HI]       ;   bt r11, .L_pad_tb_done                  }
+    {   ldaw Q(vec_zp), sp[STACK_VEC_ADJ_B_HI]  ;   bt r11, .L_pad_tb_done                  }
     {                                           ;   ldw rows_left, sp[STACK_PAD_B]          }
     {                                           ;   ldw tmp, sp[STACK_PATCH_ROWS]           }
     maccu r11, K, _32, tmp  //  move K past non-padding rows
@@ -139,13 +139,13 @@ FUNCTION_NAME:
 
     .L_pad_tb_done:
     //Save adjusted biases on the stack.
-    {   ldaw Q(X), sp[STACK_VEC_ADJ_B_LO]       ;   vstd Q(X)[0]                            }
-    {                                           ;   vstr Q(X)[0]                            }
+    {   ldaw Q(vec_zp), sp[STACK_VEC_ADJ_B_LO]  ;   vstd Q(vec_zp)[0]                       }
+    {                                           ;   vstr Q(vec_zp)[0]                       }
 
 
 #define pad_mask        r3
 
-    
+    {                                           ;   ldw vec_zp, sp[STACK_VEC_ZERO_POINT]    }
     {   mkmsk pad_mask, 32                      ;   ldw Q(rows_left), sp[STACK_C_IN]        }
     
     // Figure out the initial padding mask. From here on the left/right padding will be

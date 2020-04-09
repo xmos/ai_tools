@@ -4,7 +4,7 @@
 ### [required]
 ### Application name. Used as output file name.
 ###
-APP_NAME = nn_operators_test
+APP_NAME = unit_test
 
 ######
 ### [required if $(PLATFORM) is xcore]
@@ -51,6 +51,12 @@ SOURCE_DIRS := src
 # will be linked directly against library object files.
 #
 BUILD_STATIC_LIBRARIES := 0
+
+ifeq ($(NO_ASM),1)
+  $(info Disabling ASM...)
+  CC_FLAGS += -DDISABLE_ASM=1
+  c_FLAGS += -O0
+endif
 
 ######
 ### [required]

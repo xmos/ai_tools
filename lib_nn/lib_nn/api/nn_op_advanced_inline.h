@@ -182,6 +182,31 @@ static inline void nn_conv2d_hstrip_shallowin_padded(
 #endif
 }
 
+static inline void nn_conv2d_hstrip_shallowin(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bss_block_t* BSS,
+        const unsigned K_h,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols)
+{
+#if defined(__XS3A__) && (USE_ASM_nn_conv2d_hstrip_shallowin)
+
+    nn_conv2d_hstrip_shallowin_asm(Y, X, K, BSS, K_h, K_h_stride, C_in,
+                                   x_v_stride, y_h_stride, out_cols);
+
+#else
+
+    nn_conv2d_hstrip_shallowin_c(Y, X, K, BSS, K_h, K_h_stride, C_in,
+                                 x_v_stride, y_h_stride, out_cols);
+
+#endif
+}
+
 
 #ifdef __XC__
 }   //extern "C"

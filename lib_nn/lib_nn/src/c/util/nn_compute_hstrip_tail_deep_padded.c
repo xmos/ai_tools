@@ -20,20 +20,20 @@
     do {                                                                    \
         switch(C_out_mod2){                                                 \
             case 0:                                                         \
-                VLMACCR(K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
-                VLMACCR(K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
-                VLMACCR(K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
-                VLMACCR(K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
+                VLMACCR(&vpu, K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
+                VLMACCR(&vpu, K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
+                VLMACCR(&vpu, K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
+                VLMACCR(&vpu, K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
             case 4:                                                         \
-                VLMACCR(K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
-                VLMACCR(K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
-                VLMACCR(K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
-                VLMACCR(K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
+                VLMACCR(&vpu, K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
+                VLMACCR(&vpu, K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
+                VLMACCR(&vpu, K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
+                VLMACCR(&vpu, K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
             case 8:                                                         \
-                VLMACCR(K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
-                VLMACCR(K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
-                VLMACCR(K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
-                VLMACCR(K_tmp); K_addr = ADDR(K_addr, K_INCR);              \
+                VLMACCR(&vpu, K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
+                VLMACCR(&vpu, K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
+                VLMACCR(&vpu, K_tmp); K_tmp = ADDR(K_tmp, k_cout_stride);         \
+                VLMACCR(&vpu, K_tmp); K_addr = ADDR(K_addr, K_INCR);              \
                 break;                                                      \
             default:                                                        \
                 assert(0);                                                  \
@@ -61,17 +61,19 @@ void nn_compute_hstrip_tail_deep_padded_c(
         const int8_t* zero_point_vec,
         const channel_count_t C_out_tail)
 {
+    xs3_vpu vpu;
+
     vpu_vector_t vec_adj_b_hi;
     vpu_vector_t vec_adj_b_lo;
 
     int8_t  vec_tmp1[2*XS3_VPU_VREG_WIDTH_BYTES];
     int8_t* vec_tmp2 = ADDR(vec_tmp1, XS3_VPU_VREG_WIDTH_BYTES);
 
-    VSETC(MODE_S8);
-    VCLRDR();
-    VSTR(vec_tmp1);
-    VLDD(BSS->bias_hi);
-    VLDR(BSS->bias_lo);
+    VSETC(&vpu, MODE_S8);
+    VCLRDR(&vpu);
+    VSTR(&vpu, vec_tmp1);
+    VLDD(&vpu, BSS->bias_hi);
+    VLDR(&vpu, BSS->bias_lo);
 
     
     const unsigned patch_rows = K_h - pad_t - pad_b;
@@ -89,14 +91,14 @@ void nn_compute_hstrip_tail_deep_padded_c(
         for(int row = pad_t; row; row--){
 
             for(int col = K_w; col; col--){
-                VLDC(zero_point_vec);
+                VLDC(&vpu, zero_point_vec);
 
                 for(int cig = C_in_groups; cig; cig--){
 
-                    VSTR(vec_tmp2);
-                    VLDR(ADDR(vec_tmp2, -C_out_mod1));
-                    VSTD(vec_tmp2);
-                    VLDD(ADDR(vec_tmp2, -C_out_mod1));
+                    VSTR(&vpu, vec_tmp2);
+                    VLDR(&vpu, ADDR(vec_tmp2, -C_out_mod1));
+                    VSTD(&vpu, vec_tmp2);
+                    VLDD(&vpu, ADDR(vec_tmp2, -C_out_mod1));
 
                     const nn_image_t* K_tmp = ADDR(K, 0);
                     DO_VLMACCRS(K, VPU_INT8_EPV);
@@ -105,13 +107,13 @@ void nn_compute_hstrip_tail_deep_padded_c(
 
                 if(C_in_tail){
 
-                    VSTR(vec_tmp2);
-                    VLDR(ADDR(vec_tmp2, -C_out_mod1));
-                    VSTD(vec_tmp2);
-                    VLDD(ADDR(vec_tmp2, -C_out_mod1));
+                    VSTR(&vpu, vec_tmp2);
+                    VLDR(&vpu, ADDR(vec_tmp2, -C_out_mod1));
+                    VSTD(&vpu, vec_tmp2);
+                    VLDD(&vpu, ADDR(vec_tmp2, -C_out_mod1));
 
-                    VSTC(vec_tmp2);
-                    VLDC(ADDR(vec_tmp2, (C_in_tail-32) ));
+                    VSTC(&vpu, vec_tmp2);
+                    VLDC(&vpu, ADDR(vec_tmp2, (C_in_tail-32) ));
 
                     const nn_image_t* K_tmp = ADDR(K, (C_in_tail - 32));
                     DO_VLMACCRS(K, C_in_tail);
@@ -128,14 +130,14 @@ void nn_compute_hstrip_tail_deep_padded_c(
         for(int row = pad_b; row; row--){
 
             for(int col = K_w; col; col--){
-                VLDC(zero_point_vec);
+                VLDC(&vpu, zero_point_vec);
 
                 for(int cig = C_in_groups; cig; cig--){
 
-                    VSTR(vec_tmp2);
-                    VLDR(ADDR(vec_tmp2, -C_out_mod1));
-                    VSTD(vec_tmp2);
-                    VLDD(ADDR(vec_tmp2, -C_out_mod1));
+                    VSTR(&vpu, vec_tmp2);
+                    VLDR(&vpu, ADDR(vec_tmp2, -C_out_mod1));
+                    VSTD(&vpu, vec_tmp2);
+                    VLDD(&vpu, ADDR(vec_tmp2, -C_out_mod1));
 
                     const nn_image_t* K_tmp = ADDR(K_bot, 0);
                     DO_VLMACCRS(K_bot, VPU_INT8_EPV);
@@ -143,13 +145,13 @@ void nn_compute_hstrip_tail_deep_padded_c(
 
                 if(C_in_tail){
 
-                    VSTR(vec_tmp2);
-                    VLDR(ADDR(vec_tmp2, -C_out_mod1));
-                    VSTD(vec_tmp2);
-                    VLDD(ADDR(vec_tmp2, -C_out_mod1));
+                    VSTR(&vpu, vec_tmp2);
+                    VLDR(&vpu, ADDR(vec_tmp2, -C_out_mod1));
+                    VSTD(&vpu, vec_tmp2);
+                    VLDD(&vpu, ADDR(vec_tmp2, -C_out_mod1));
 
-                    VSTC(vec_tmp2);
-                    VLDC(ADDR(vec_tmp2, (C_in_tail-32)));
+                    VSTC(&vpu, vec_tmp2);
+                    VLDC(&vpu, ADDR(vec_tmp2, (C_in_tail-32)));
 
                     const nn_image_t* K_tmp = ADDR(K_bot, (C_in_tail - 32));
                     DO_VLMACCRS(K_bot, C_in_tail);
@@ -158,8 +160,8 @@ void nn_compute_hstrip_tail_deep_padded_c(
         }
     }
 
-    VSTD(vec_adj_b_hi.s16);
-    VSTR(vec_adj_b_lo.s16);
+    VSTD(&vpu, vec_adj_b_hi.s16);
+    VSTR(&vpu, vec_adj_b_lo.s16);
 
     int pad_l = pad_l_initial;
     int pad_r = pad_r_initial;
@@ -173,22 +175,22 @@ void nn_compute_hstrip_tail_deep_padded_c(
         const nn_image_t* patch_X = ADDR(X, 0);
         const nn_image_t* patch_K = ADDR(K, 0);
 
-        VLDD(vec_adj_b_hi.u16);
-        VLDR(vec_adj_b_lo.u16);
+        VLDD(&vpu, vec_adj_b_hi.u16);
+        VLDR(&vpu, vec_adj_b_lo.u16);
 
         for(int pr = patch_rows; pr; pr--){
 
             const int cur_pad_l = (pad_l > 0)? pad_l : 0;
             if(cur_pad_l){
                 for(int col = cur_pad_l; col; col--){
-                    VLDC(zero_point_vec);
+                    VLDC(&vpu, zero_point_vec);
 
                     for(int cig = C_in_groups; cig; cig--){
 
-                        VSTR(vec_tmp2);
-                        VLDR(ADDR(vec_tmp2, -C_out_mod1));
-                        VSTD(vec_tmp2);
-                        VLDD(ADDR(vec_tmp2, -C_out_mod1));
+                        VSTR(&vpu, vec_tmp2);
+                        VLDR(&vpu, ADDR(vec_tmp2, -C_out_mod1));
+                        VSTD(&vpu, vec_tmp2);
+                        VLDD(&vpu, ADDR(vec_tmp2, -C_out_mod1));
 
                         const nn_image_t* K_tmp = ADDR(patch_K, 0);
                         DO_VLMACCRS(patch_K, VPU_INT8_EPV);
@@ -197,13 +199,13 @@ void nn_compute_hstrip_tail_deep_padded_c(
 
                     if(C_in_tail){
 
-                        VSTR(vec_tmp2);
-                        VLDR(ADDR(vec_tmp2, -C_out_mod1));
-                        VSTD(vec_tmp2);
-                        VLDD(ADDR(vec_tmp2, -C_out_mod1));
+                        VSTR(&vpu, vec_tmp2);
+                        VLDR(&vpu, ADDR(vec_tmp2, -C_out_mod1));
+                        VSTD(&vpu, vec_tmp2);
+                        VLDD(&vpu, ADDR(vec_tmp2, -C_out_mod1));
 
-                        VSTC(vec_tmp2);
-                        VLDC(ADDR(vec_tmp2, (C_in_tail-32)));
+                        VSTC(&vpu, vec_tmp2);
+                        VLDC(&vpu, ADDR(vec_tmp2, (C_in_tail-32)));
 
                         const nn_image_t* K_tmp = ADDR(patch_K, (C_in_tail - 32));
                         DO_VLMACCRS(patch_K, C_in_tail);
@@ -217,13 +219,13 @@ void nn_compute_hstrip_tail_deep_padded_c(
 
                     for(int cig = C_in_groups; cig; cig--){
 
-                        VLDC(patch_X);
+                        VLDC(&vpu, patch_X);
                         patch_X = ADDR(patch_X, VPU_INT8_EPV);
 
-                        VSTR(vec_tmp2);
-                        VLDR(ADDR(vec_tmp2, -C_out_mod1));
-                        VSTD(vec_tmp2);
-                        VLDD(ADDR(vec_tmp2, -C_out_mod1));
+                        VSTR(&vpu, vec_tmp2);
+                        VLDR(&vpu, ADDR(vec_tmp2, -C_out_mod1));
+                        VSTD(&vpu, vec_tmp2);
+                        VLDD(&vpu, ADDR(vec_tmp2, -C_out_mod1));
 
                         const nn_image_t* K_tmp = patch_K;
                         DO_VLMACCRS(patch_K, VPU_INT8_EPV);
@@ -232,15 +234,15 @@ void nn_compute_hstrip_tail_deep_padded_c(
 
                     if(C_in_tail){
 
-                        VLDC(patch_X);
+                        VLDC(&vpu, patch_X);
 
-                        VSTR(vec_tmp2);
-                        VLDR(ADDR(vec_tmp2, -C_out_mod1));
-                        VSTD(vec_tmp2);
-                        VLDD(ADDR(vec_tmp2, -C_out_mod1));
+                        VSTR(&vpu, vec_tmp2);
+                        VLDR(&vpu, ADDR(vec_tmp2, -C_out_mod1));
+                        VSTD(&vpu, vec_tmp2);
+                        VLDD(&vpu, ADDR(vec_tmp2, -C_out_mod1));
 
-                        VSTC(vec_tmp2);
-                        VLDC(ADDR(vec_tmp2, (C_in_tail-32)));
+                        VSTC(&vpu, vec_tmp2);
+                        VLDC(&vpu, ADDR(vec_tmp2, (C_in_tail-32)));
 
                         const nn_image_t* K_tmp = ADDR(patch_K, (C_in_tail - 32));
                         DO_VLMACCRS(patch_K, C_in_tail);
@@ -253,14 +255,14 @@ void nn_compute_hstrip_tail_deep_padded_c(
 
             if(cur_pad_r){
                 for(int col = cur_pad_r; col; col--){
-                    VLDC(zero_point_vec);
+                    VLDC(&vpu, zero_point_vec);
 
                     for(int cig = C_in_groups; cig; cig--){
 
-                        VSTR(vec_tmp2);
-                        VLDR(ADDR(vec_tmp2, -C_out_mod1));
-                        VSTD(vec_tmp2);
-                        VLDD(ADDR(vec_tmp2, -C_out_mod1));
+                        VSTR(&vpu, vec_tmp2);
+                        VLDR(&vpu, ADDR(vec_tmp2, -C_out_mod1));
+                        VSTD(&vpu, vec_tmp2);
+                        VLDD(&vpu, ADDR(vec_tmp2, -C_out_mod1));
 
                         const nn_image_t* K_tmp = patch_K;
                         DO_VLMACCRS(patch_K, VPU_INT8_EPV);
@@ -270,13 +272,13 @@ void nn_compute_hstrip_tail_deep_padded_c(
 
                     if(C_in_tail){
 
-                        VSTR(vec_tmp2);
-                        VLDR(ADDR(vec_tmp2, -C_out_mod1));
-                        VSTD(vec_tmp2);
-                        VLDD(ADDR(vec_tmp2, -C_out_mod1));
+                        VSTR(&vpu, vec_tmp2);
+                        VLDR(&vpu, ADDR(vec_tmp2, -C_out_mod1));
+                        VSTD(&vpu, vec_tmp2);
+                        VLDD(&vpu, ADDR(vec_tmp2, -C_out_mod1));
 
-                        VSTC(vec_tmp2);
-                        VLDC(ADDR(vec_tmp2, (C_in_tail-32)));
+                        VSTC(&vpu, vec_tmp2);
+                        VLDC(&vpu, ADDR(vec_tmp2, (C_in_tail-32)));
 
                         const nn_image_t* K_tmp = ADDR(patch_K, (C_in_tail - 32));
                         DO_VLMACCRS(patch_K, C_in_tail);
@@ -293,25 +295,25 @@ void nn_compute_hstrip_tail_deep_padded_c(
         //Done accumulating for the current patch
 
         //Set mode to 16-bit
-        VSETC(MODE_S16);
+        VSETC(&vpu, MODE_S16);
 
         //Saturate to 16-bit values
-        VLSAT(BSS->shift1);
+        VLSAT(&vpu, BSS->shift1);
 
         //Load scales into vC
-        VLDC(BSS->scale);
-        VSTR(vec_tmp2);
-        VCLRDR();
-        VLMACC(vec_tmp2);
+        VLDC(&vpu, BSS->scale);
+        VSTR(&vpu, vec_tmp2);
+        VCLRDR(&vpu);
+        VLMACC(&vpu, vec_tmp2);
 
         //Set mode back to 8-bit
-        VSETC(MODE_S8);
+        VSETC(&vpu, MODE_S8);
 
         //Saturate to 8-bit values
-        VLSAT(BSS->shift2);
+        VLSAT(&vpu, BSS->shift2);
 
         //Store result in Y
-        VSTRPV(Y, write_mask);
+        VSTRPV(&vpu, Y, write_mask);
 
         //Now make adjustments to pad_l, pad_r and center_cols
 

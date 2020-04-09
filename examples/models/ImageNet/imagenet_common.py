@@ -30,13 +30,44 @@ KOALA_urls = [
 
 
 class ImageNetModel(KerasClassifier):
+    def __init__(self, *args, classes=None, input_size=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        classes = classes or 1000
+        if isinstance(classes, int):
+            classes = [classes]
+        if isinstance(classes, (tuple, list)):
+            if len(classes) == 1:
+                self.classes = list(range(classes[0]))
+            else:
+                self.classes = np.unique(classes).tolist()
+        else:
+            raise TypeError("classes must be an integer or tuple/list.")
+        assert 1 < len(self.classes) <= 1000
+        assert self.classes[0] >= 0
+        assert self.classes[-1] < 1000
+
+        input_size = input_size or 128
+        if isinstance(input_size, int):
+            input_size = (input_size,)
+        if isinstance(input_size, (tuple, list)):
+            if len(input_size) > 2:
+                raise ValueError("input_size must be one or two numbers!")
+            elif len(input_size) == 1:
+                input_size *= 2
+        else:
+            raise TypeError("input_size must be an integer or tuple/list.")
+        self.input_size = input_size
+
     def train(self):
         pass
 
     def prep_data(self):
         pass
 
-    def gen_test_data(self, target_size=(128, 128)):
+    def gen_test_data(self, target_size=None):
+        target_size = target_size or (128, 128)
+
         # TODO: fix this
         koalas = []
         for j, url in enumerate(KOALA_urls):

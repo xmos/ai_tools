@@ -5,6 +5,8 @@ from os.path import dirname, realpath
 import sys
 sys.path.append(dirname(dirname(realpath(__file__))))
 
+from model_common import DefaultParser
+
 from pathlib import Path
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasClassifier

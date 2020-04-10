@@ -12,21 +12,23 @@ from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasClassifier
 import tensorflow as tf
 import numpy as np
+import json
 
 
-# TODO: fix this
-KOALA_urls = [
-    "http://farm1.static.flickr.com/159/403176078_a2415ddf33.jpg",
-    "http://farm1.static.flickr.com/179/423878571_29ce38383e.jpg",
-    "http://farm2.static.flickr.com/1330/1135686352_43553d0dac.jpg",
-    "http://farm1.static.flickr.com/136/378225968_28eb9274cd.jpg",
-    "http://farm1.static.flickr.com/154/415086724_ceb3964c77.jpg",
-    "http://farm3.static.flickr.com/2195/2079170850_5952195903.jpg",
-    "http://farm1.static.flickr.com/157/399669613_8180eb8e83.jpg",
-    "http://farm2.static.flickr.com/1208/558914192_f0302b27f0.jpg",
-    "http://static.flickr.com/31/382204367_abfc8cc74a.jpg",
-    "http://farm2.static.flickr.com/1365/867539333_6b17578bbd.jpg",
-]
+with open(Path(__file__).parent / "example_urls.json", 'r') as f:
+    IMAGENET_URLS = json.load(f)
+
+CLASS_INDEX_PATH = ("https://storage.googleapis.com/download.tensorflow.org"
+                    "/data/imagenet_class_index.json")
+
+fpath = tf.keras.utils.get_file(
+    'imagenet_class_index.json',
+    CLASS_INDEX_PATH,
+    cache_subdir='models',
+    file_hash='c2c37ea517e94d9795004a39431a14cb'
+)
+with open(fpath) as f:
+    CLASS_INDEX = json.load(f)
 
 
 class ImageNetModel(KerasClassifier):
@@ -65,16 +67,36 @@ class ImageNetModel(KerasClassifier):
     def prep_data(self):
         pass
 
-    def gen_test_data(self, target_size=None):
-        target_size = target_size or (128, 128)
+    def gen_test_data(self, *, samples_per_class=10):
+        cache_dir = self._path / "cache" / "imagenet"
+        cache_dir.mkdir(exist_ok=True, parents=True)
 
-        # TODO: fix this
-        koalas = []
-        for j, url in enumerate(KOALA_urls):
-            f = tf.keras.utils.get_file(f"koala_{j}.jpg", url)
-            img = tf.keras.preprocessing.image.load_img(f, target_size=target_size)
-            x = tf.keras.preprocessing.image.img_to_array(img).astype(np.float32)
-            koalas.append(x)
-        example_tensor = (np.stack(koalas) / 127.5 - 1.)
-        self.data['export'] = example_tensor
-        self.data['quant'] = example_tensor
+        examples = []
+        for class_idx in self.classes:
+            class_key = str(class_idx)
+            class_name = CLASS_INDEX[class_key][1]
+            class_urls = IMAGENET_URLS[class_key][:samples_per_class]
+            assert len(class_urls) == samples_per_class
+            print(f"Loading images for class {class_idx}: '{class_name}'...")
+
+            class_examples = []
+            for j, url in enumerate(class_urls):
+                f = tf.keras.utils.get_file(
+                    f"{j:02d}.jpg",
+                    origin=url,
+                    cache_dir=cache_dir,
+                    cache_subdir="_".join([f"{class_idx:03d}", class_name])
+                )
+                img = tf.keras.preprocessing.image.load_img(
+                    f, target_size=self.input_size
+                )
+                class_examples.append(
+                    tf.keras.preprocessing.image.img_to_array(img).astype(np.float32)
+                )
+            assert len(class_examples) == samples_per_class
+
+            examples += class_examples
+
+        examples = (np.stack(examples) / 127.5 - 1.)
+        self.data['export'] = examples
+        self.data['quant'] = examples

@@ -94,7 +94,7 @@ def main(raw_args=None):
                       input_size=args.input_size,
                       opt_classifier=args.classifier)
     model.build(alpha=args.alpha)
-    model.gen_test_data(target_size=args.input_size)
+    model.gen_test_data()
     model.save_core_model()
     model.convert_and_save()
 

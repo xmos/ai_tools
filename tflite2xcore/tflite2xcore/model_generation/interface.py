@@ -283,7 +283,8 @@ class Model(ABC):
 
     def convert_and_save(self, *,
                          visualize=True, save_buffers=True, xcore_num_threads=None):
-        self.gen_test_data()
+        if 'export' not in self.data or 'quant' not in self.data:
+            self.gen_test_data()
         self.populate_converters()
         for model_key in ['model_float', 'model_quant', 'model_stripped', 'model_xcore']:
             if model_key is 'model_xcore':

@@ -20,6 +20,9 @@ TfLiteTensor *output = nullptr;
 constexpr int kTensorArenaSize =
     300000; // Hopefully this is big enough for all tests
 uint8_t tensor_arena[kTensorArenaSize];
+constexpr int kXCOREArenaSize = 5000;
+uint8_t xcore_arena[kXCOREArenaSize];
+
 
 static int load_model(const char *filename, char **buffer, size_t *size) {
   FILE *fd = fopen(filename, "rb");
@@ -87,18 +90,18 @@ static void setup_tflite(const char *model_buffer) {
       model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
   interpreter = &static_interpreter;
 
+  // Allocate xCORE KernelDispatcher BEFORE AllocateTensors
+  xcore::XCoreStatus allocate_xcore_status =
+      xcore::InitializeDispatcher(xcore_arena, kXCOREArenaSize);
+  if (allocate_xcore_status != xcore::kXCoreOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "InitializeDispatcher() failed");
+    return;
+  }
+
   // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();
   if (allocate_tensors_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
-    return;
-  }
-
-  // Allocate xCORE KernelDispatcher after AllocateTensors
-  xcore::XCoreStatus allocate_xcore_status =
-      xcore::AllocateOperatorDispatcher();
-  if (allocate_xcore_status != xcore::kXCoreOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "AllocateKernelDispatcher() failed");
     return;
   }
 

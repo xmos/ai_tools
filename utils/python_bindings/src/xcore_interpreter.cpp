@@ -77,18 +77,20 @@ class XCOREInterpreter {
  public:
   XCOREInterpreter() {}
   ~XCOREInterpreter() {
+    GetOperatorDispatcher().Reset();
     if (interpreter_)
       delete interpreter_;  // NOTE: interpreter_ must be deleted before
                             // resolver, error_reporter_, tensor_arena_
-                            // amd model_buffer_
+                            // xcore_arena_ and model_buffer_
     if (resolver_) delete resolver_;
     if (error_reporter_) delete error_reporter_;
     if (tensor_arena_) delete tensor_arena_;
+    if (xcore_arena_) delete xcore_arena_;
     if (model_buffer_) delete model_buffer_;
   }
 
   XCoreStatus Initialize(const char* model_buffer, size_t model_buffer_size,
-                         size_t arena_size) {
+                         size_t tensor_arena_size, size_t xcore_arena_size) {
     // We need to keep a copy of the model content
     model_buffer_ = new char[model_buffer_size];
     memcpy(model_buffer_, model_buffer, model_buffer_size);
@@ -112,27 +114,32 @@ class XCOREInterpreter {
     tflite::ops::micro::xcore::add_custom_ops(
         reinterpret_cast<tflite::MicroMutableOpResolver*>(resolver_));
 
+    tensor_arena_size_ = tensor_arena_size;
+    tensor_arena_ = new uint8_t[tensor_arena_size_];
+
+    xcore_arena_size_ = xcore_arena_size;
+    xcore_arena_ = new uint8_t[xcore_arena_size_];
+
     // Build an interpreter to run the model with.
-    tensor_arena_ = new uint8_t[arena_size];
     interpreter_ = new tflite::MicroInterpreter(
-        model_, *resolver_, tensor_arena_, arena_size, error_reporter_);
+        model_, *resolver_, tensor_arena_, tensor_arena_size_, error_reporter_);
 
     return kXCoreOk;
   }
 
   XCoreStatus AllocateTensors() {
-    // Allocate memory from the tensor_arena for the model's tensors.
-    TfLiteStatus allocate_tensors_status = interpreter_->AllocateTensors();
-    if (allocate_tensors_status != kTfLiteOk) {
+    // Allocate xCORE OperatorDispatcher
+    //   NOTE: must be called BEFORE AllocateTensors
+    xcore::XCoreStatus allocate_xcore_status =
+        xcore::InitializeDispatcher(xcore_arena_, xcore_arena_size_);
+    if (allocate_xcore_status != xcore::kXCoreOk) {
+      error_reporter_->Report("InitializeDispatcher failed");
       return kXCoreError;
     }
 
-    // Allocate xCORE OperatorDispatcher
-    //   NOTE: must be called after AllocateTensors
-    xcore::XCoreStatus allocate_xcore_status =
-        xcore::AllocateOperatorDispatcher();
-    if (allocate_xcore_status != xcore::kXCoreOk) {
-      error_reporter_->Report("AllocateOperatorDispatcher failed");
+    // Allocate memory from the tensor_arena for the model's tensors.
+    TfLiteStatus allocate_tensors_status = interpreter_->AllocateTensors();
+    if (allocate_tensors_status != kTfLiteOk) {
       return kXCoreError;
     }
 
@@ -374,6 +381,9 @@ class XCOREInterpreter {
   const tflite::Model* model_ = nullptr;
   char* model_buffer_ = nullptr;
   uint8_t* tensor_arena_ = nullptr;
+  size_t tensor_arena_size_ = 0;
+  uint8_t* xcore_arena_ = nullptr;
+  size_t xcore_arena_size_ = 0;
 };
 
 }  // namespace xcore
@@ -388,8 +398,10 @@ void delete_interpreter(xcore::XCOREInterpreter* interpreter) {
 }
 
 int initialize(xcore::XCOREInterpreter* interpreter, const char* model_content,
-               size_t model_content_size, size_t arena_size) {
-  return interpreter->Initialize(model_content, model_content_size, arena_size);
+               size_t model_content_size, size_t tensor_arena_size,
+               size_t xcore_arena_size) {
+  return interpreter->Initialize(model_content, model_content_size,
+                                 tensor_arena_size, xcore_arena_size);
 }
 
 int allocate_tensors(xcore::XCOREInterpreter* interpreter) {

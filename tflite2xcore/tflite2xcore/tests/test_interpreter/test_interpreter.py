@@ -26,7 +26,7 @@ BUILTIN_OPERATORS_TEST_OUTPUT = os.path.join(
 def test_allocate_tensors():
     with open(BUILTIN_OPERATORS_TEST_MODEL, 'rb') as fd:
         model_content = fd.read()
-    interpreter = xcore.XCOREInterpreter(model_content=model_content, arena_size=30000)
+    interpreter = xcore.XCOREInterpreter(model_content=model_content, tensor_arena_size=30000)
     interpreter.allocate_tensors()
     assert(interpreter)
     interpreter.allocate_tensors()

@@ -28,6 +28,16 @@ ATTRIBUTE_KERNEL_FUNCTION void conv2d_deep_thread_worker(void* context) {
 }
 }
 
+Conv2D_Deep::Conv2D_Deep(const Conv2DParams& params,
+                         const ParRegionArray& par_regions)
+    : params(params), par_regions(par_regions), jobs_(nullptr) {
+  OperatorDispatcher& dispatcher = GetOperatorDispatcher();
+
+  jobs_ = reinterpret_cast<nn_conv2d_deep_job_t*>(
+      dispatcher.AllocatePersistentBuffer(sizeof(nn_conv2d_deep_job_t) *
+                                          par_regions.size));
+}
+
 XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                               int32_t Y_h, int32_t Y_w, int32_t C_out) {
   nn_image_params_t in_params;
@@ -54,9 +64,6 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   }
 
   nn_conv2d_job_params_t job_params[par_regions.size];
-  // FIXME: fix dynamic allocation here
-  jobs_ = (nn_conv2d_deep_job_t*)malloc(sizeof(nn_conv2d_deep_job_t) *
-                                        par_regions.size);
 
   for (int i = 0; i < par_regions.size; i++) {
     const ParRegion& region = par_regions[i];
@@ -71,14 +78,13 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   conv2d_deep_init(&plan_, jobs_, &in_params, &out_params, &job_params[0],
                    &window_params, params.pad.zero_point,
                    par_regions.size  // job_count
-
   );
 
   // reserve threads and stack memory
   OperatorDispatcher& dispatcher = GetOperatorDispatcher();
   size_t stack_words = 0;
   GET_STACKWORDS(stack_words, conv2d_deep_thread_worker);
-  dispatcher.Reserve(par_regions.size, stack_words);
+  dispatcher.AllocateStackBuffer(par_regions.size, stack_words);
 
   return kXCoreOk;
 }
@@ -89,16 +95,18 @@ XCoreStatus Conv2D_Deep::Eval(int8_t* Y, const int8_t* X, const int8_t* K,
 
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_deep_thread_worker);
-  for (int i = 0; i < par_regions.size; i++) {
-    Conv2DDeepThreadData* data = new Conv2DDeepThreadData();
 
-    data->Y = (nn_image_t*)Y;
-    data->X = (const nn_image_t*)X;
-    data->K = (const nn_tensor_t*)K;
-    data->BSS = (const nn_bss_block_t*)BSS;
-    data->plan = &plan_;
-    data->job = &jobs_[i];
-    dispatcher.Add(conv2d_deep_thread_worker, (void*)data, stack_words);
+  Conv2DDeepThreadData thread_data[par_regions.size];
+
+  for (int i = 0; i < par_regions.size; i++) {
+    thread_data[i].Y = (nn_image_t*)Y;
+    thread_data[i].X = (const nn_image_t*)X;
+    thread_data[i].K = (const nn_tensor_t*)K;
+    thread_data[i].BSS = (const nn_bss_block_t*)BSS;
+    thread_data[i].plan = &plan_;
+    thread_data[i].job = &jobs_[i];
+    dispatcher.Add(conv2d_deep_thread_worker,
+                   reinterpret_cast<void*>(&thread_data[i]), stack_words);
   }
 
   dispatcher.Start();

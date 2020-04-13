@@ -2,6 +2,7 @@
 #ifndef NN_OP_HELPER_H_
 #define NN_OP_HELPER_H_
 
+#define WEAK_FUNC __attribute__((weak))
 
 static inline int8_t sat_s8(
     const int32_t acc32)

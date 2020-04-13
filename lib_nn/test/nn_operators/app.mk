@@ -33,7 +33,7 @@ SOURCE_DIRS := src
 ###### 
 ### [optional] Source file extentions. Defaults to: c cc xc cpp S
 ###
-# SOURCE_FILE_EXTS := c cc xc cpp S
+SOURCE_FILE_EXTS := c cc xc cpp S
 
 ######
 ### [optional] List of source files to compile.
@@ -52,11 +52,6 @@ SOURCE_DIRS := src
 #
 BUILD_STATIC_LIBRARIES := 0
 
-ifeq ($(NO_ASM),1)
-  $(info Disabling ASM...)
-  CC_FLAGS += -DDISABLE_ASM=1
-  c_FLAGS += -O0
-endif
 
 ######
 ### [required]

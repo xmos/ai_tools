@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <syscall.h>
 
-#include "../tst_common.h"
+#include "../../tst_common.h"
 
 #include "nn_operator.h"
 #include "nn_op_helper.h"
@@ -15,7 +15,7 @@
 #include "unity.h"
 
 
-#if USE_ASM(nn_conv2d_hstrip_shallowin_padded)
+#if USE_ASM(nn_compute_hstrip_deep_padded)
  #define HAS_ASM (1)
 #else
  #define HAS_ASM (0)
@@ -87,9 +87,8 @@ static void check_Y(
 
 
 
-#define CHANS_OUT       (VPU_INT8_ACC_PERIOD)
-#define Y_HEIGHT        (1)
-#define K_w_array       (32/CHANS_IN)
+
+
 
 
 
@@ -102,21 +101,24 @@ static void check_Y(
 ///////////////////////////////////////////////////
 ///     1 pixel; no padding
 ///////////////////////////////////////////////////
-#define CHANS_IN        (4)
+#define DEBUG_ON        TEST_DEBUG_ON && 0
+#define CHANS_IN        (VPU_INT8_EPV + 4)
+#define CHANS_OUT       (VPU_INT8_ACC_PERIOD)
+#define X_HEIGHT        (1)
+#define X_WIDTH         (1)
+#define Y_HEIGHT        (1)
+#define Y_WIDTH         (X_WIDTH)
 #define K_h             (1)
 #define K_w             (1)
 #define K_hstride       (1)
-#define X_HEIGHT        (1)
-#define X_WIDTH         (1)
-#define Y_WIDTH         (1)
-#define ZERO_POINT      (0xCC)
-void test_nn_conv2d_hstrip_shallowin_padded_case0()
+#define ZERO_POINT      (0)
+void test_nn_compute_hstrip_deep_padded_case0()
 {
     PRINTF("%s...\n", __func__);
 
     nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
 
-    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w_array][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w][CHANS_IN];
 
     struct {
         int32_t bias[CHANS_OUT];
@@ -162,17 +164,13 @@ void test_nn_conv2d_hstrip_shallowin_padded_case0()
 
         test_case_t* casse = &casses[v];
 
-        nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN  };
+        nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
         nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
 
         memset(X, casse->x, x_params.height * x_params.width * x_params.channels * sizeof(int8_t));
-                        
-        for(int cout = 0; cout < y_params.channels; cout++)
-            for(int row = 0; row < K_h; row++)
-                for(int col = 0; col < K_w_array; col++)
-                    for(int cin = 0; cin < x_params.channels; cin++)
-                        K[cout][row][col][cin] = (col < K_w)? casse->k : 0;
+        memset(K, casse->k, y_params.channels * K_h * K_w * x_params.channels * sizeof(int8_t));
+
 
         for(int k = 0; k < y_params.channels; k++){
             BSS.bias[k]     = k;
@@ -182,29 +180,23 @@ void test_nn_conv2d_hstrip_shallowin_padded_case0()
         }
 
         nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
-
-        const mem_stride_t x_v_stride = x_params.width*x_params.channels;
-        const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
-        const unsigned pad_t = 0;
-        const unsigned pad_b = K_h - pad_t - X_HEIGHT;
-        const int pad_l = 0;
-        const int pad_r = K_w_array - pad_l - X_WIDTH;
-
+                                (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
 
 #if TEST_C
         PRINTF("\t\t\tC...\n");
         memset(Y_c, 0xCC, sizeof(Y_c));
-        nn_conv2d_hstrip_shallowin_padded_c((nn_image_t*) Y_c, (nn_image_t*) X, K_init, (nn_bss_block_t*) &bss, 
-                                        K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
-                                        x_v_stride, y_params.channels, y_params.width, zero_point_vec);
+        nn_compute_hstrip_deep_padded_c((nn_image_t*) Y_c, (nn_image_t*) X, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
+                                        (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels, 0, 0, 0, 0,
+                                        (x_params.width-K_w)*x_params.channels, -K_h*K_w*x_params.channels,
+                                        y_params.channels, 1, zero_point_vec);
 #endif
 #if TEST_ASM
         PRINTF("\t\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
-        nn_conv2d_hstrip_shallowin_padded_asm((nn_image_t*) Y_asm, (nn_image_t*) X, K_init, (nn_bss_block_t*) &bss, 
-                                        K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
-                                        x_v_stride, y_params.channels, y_params.width, zero_point_vec);
+        nn_compute_hstrip_deep_padded_asm((nn_image_t*) Y_asm, (nn_image_t*) X, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
+                                        (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels, 0, 0, 0, 0,
+                                        (x_params.width-K_w)*x_params.channels, -K_h*K_w*x_params.channels,
+                                        y_params.channels, 1, zero_point_vec);
 #endif
 
     
@@ -212,20 +204,25 @@ void test_nn_conv2d_hstrip_shallowin_padded_case0()
         for(unsigned row = 0; row < y_params.height; row++){
             for(unsigned col = 0; col < y_params.width; col++){
                 for(unsigned chn = 0; chn < y_params.channels; chn++){
+                    
                     int8_t y_exp = casse->expected + chn;
+
                     check_Y(y_exp, row, col, chn, casse->line, Y_C_ASM, &y_params);
                 }
             }
         }
     }
 }
+#undef DEBUG_ON  
 #undef CHANS_IN  
+#undef CHANS_OUT 
+#undef X_HEIGHT  
+#undef X_WIDTH   
+#undef Y_HEIGHT  
+#undef Y_WIDTH   
 #undef K_h       
 #undef K_w       
 #undef K_hstride 
-#undef X_HEIGHT  
-#undef X_WIDTH   
-#undef Y_WIDTH   
 #undef ZERO_POINT
 
 
@@ -243,20 +240,23 @@ void test_nn_conv2d_hstrip_shallowin_padded_case0()
 ///////////////////////////////////////////////////
 ///     1 pixel; Top and bottom padding
 ///////////////////////////////////////////////////
-#define CHANS_IN        (4)
+#define DEBUG_ON        TEST_DEBUG_ON && 0
+#define CHANS_IN        (VPU_INT8_EPV + 4)
+#define CHANS_OUT       (VPU_INT8_ACC_PERIOD)
+#define X_HEIGHT        (1)
+#define X_WIDTH         (1)
+#define Y_HEIGHT        (1)
+#define Y_WIDTH         (X_WIDTH)
 #define K_h             (3)
 #define K_w             (1)
 #define K_hstride       (1)
-#define X_HEIGHT        (1)
-#define X_WIDTH         (1)
-#define Y_WIDTH         (X_WIDTH)
-void test_nn_conv2d_hstrip_shallowin_padded_case1()
+void test_nn_compute_hstrip_deep_padded_case1()
 {
     PRINTF("%s...\n", __func__);
 
     nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
 
-    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w_array][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w][CHANS_IN];
 
     struct {
         int32_t bias[CHANS_OUT];
@@ -316,12 +316,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case1()
         memset(zero_point_vec, casse->zero_point, sizeof(zero_point_vec));
 
         memset(X, casse->x, x_params.height * x_params.width * x_params.channels * sizeof(int8_t));
-        
-        for(int cout = 0; cout < y_params.channels; cout++)
-            for(int row = 0; row < K_h; row++)
-                for(int col = 0; col < K_w_array; col++)
-                    for(int cin = 0; cin < x_params.channels; cin++)
-                        K[cout][row][col][cin] = (col < K_w)? casse->k : 0;
+        memset(K, casse->k, y_params.channels * K_h * K_w * x_params.channels * sizeof(int8_t));
 
 
         for(int k = 0; k < y_params.channels; k++){
@@ -339,27 +334,27 @@ void test_nn_conv2d_hstrip_shallowin_padded_case1()
         for(unsigned pad_t = 0; pad_t < 3; pad_t++){
             PRINTF("\t\t\tpad_t = %u\n", pad_t);
             
-            
-            unsigned pad_b = K_h - pad_t - X_HEIGHT;
+            unsigned pad_b = 2 - pad_t;
             int pad_l = 0;
-            int pad_r = K_w_array - pad_l - X_WIDTH;
-            const mem_stride_t x_v_stride = x_params.width*x_params.channels;
-            const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
+            int pad_r = 0;
 
             nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
+
 #if TEST_C
-            PRINTF("\t\t\tC...\n");
+            PRINTF("\t\t\t\tC...\n");
             memset(Y_c, 0xCC, sizeof(Y_c));
-            nn_conv2d_hstrip_shallowin_padded_c((nn_image_t*) Y_c, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
-                                            K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
-                                            x_v_stride, y_params.channels, y_params.width, zero_point_vec);
+            nn_compute_hstrip_deep_padded_c((nn_image_t*) Y_c, X_patch_start, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
+                                        (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels, 
+                                        pad_t, pad_b, pad_l, pad_r, (x_params.width-K_w)*x_params.channels, 
+                                        -K_h*K_w*x_params.channels, y_params.channels, 1, zero_point_vec);
 #endif
 #if TEST_ASM
-            PRINTF("\t\t\tASM...\n");
+            PRINTF("\t\t\t\tASM...\n");
             memset(Y_asm, 0xCC, sizeof(Y_asm));
-            nn_conv2d_hstrip_shallowin_padded_asm((nn_image_t*) Y_asm, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
-                                            K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
-                                            x_v_stride, y_params.channels, y_params.width, zero_point_vec);
+            nn_compute_hstrip_deep_padded_asm((nn_image_t*) Y_asm, X_patch_start, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
+                                        (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels, 
+                                        pad_t, pad_b, pad_l, pad_r, (x_params.width-K_w)*x_params.channels, 
+                                        -K_h*K_w*x_params.channels, y_params.channels, 1, zero_point_vec);
 #endif
 
         
@@ -377,13 +372,16 @@ void test_nn_conv2d_hstrip_shallowin_padded_case1()
         }
     }
 }
+#undef DEBUG_ON  
 #undef CHANS_IN  
+#undef CHANS_OUT 
+#undef X_HEIGHT  
+#undef X_WIDTH   
+#undef Y_HEIGHT  
+#undef Y_WIDTH   
 #undef K_h       
 #undef K_w       
 #undef K_hstride 
-#undef X_HEIGHT  
-#undef X_WIDTH   
-#undef Y_WIDTH   
 
 
 
@@ -406,7 +404,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case1()
 ///////////////////////////////////////////////////
 ///     1 pixel; Left and right padding
 ///////////////////////////////////////////////////
-#define CHANS_IN        (4)
+#define DEBUG_ON        TEST_DEBUG_ON && 0
+#define CHANS_IN        (VPU_INT8_EPV + 4)
+#define CHANS_OUT       (VPU_INT8_ACC_PERIOD)
 #define X_HEIGHT        (1)
 #define X_WIDTH         (1)
 #define Y_HEIGHT        (1)
@@ -414,13 +414,13 @@ void test_nn_conv2d_hstrip_shallowin_padded_case1()
 #define K_h             (1)
 #define K_w             (3)
 #define K_hstride       (1)
-void test_nn_conv2d_hstrip_shallowin_padded_case2()
+void test_nn_compute_hstrip_deep_padded_case2()
 {
     PRINTF("%s...\n", __func__);
 
     nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
 
-    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w_array][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w][CHANS_IN];
 
     struct {
         int32_t bias[CHANS_OUT];
@@ -480,12 +480,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case2()
         memset(zero_point_vec, casse->zero_point, sizeof(zero_point_vec));
 
         memset(X, casse->x, x_params.height * x_params.width * x_params.channels * sizeof(int8_t));
-        
-        for(int cout = 0; cout < y_params.channels; cout++)
-            for(int row = 0; row < K_h; row++)
-                for(int col = 0; col < K_w_array; col++)
-                    for(int cin = 0; cin < x_params.channels; cin++)
-                        K[cout][row][col][cin] = (col < K_w)? casse->k : 0;
+        memset(K, casse->k, y_params.channels * K_h * K_w * x_params.channels * sizeof(int8_t));
 
         for(int k = 0; k < y_params.channels; k++){
             BSS.bias[k]     = k;
@@ -499,30 +494,30 @@ void test_nn_conv2d_hstrip_shallowin_padded_case2()
 
         // Start the convolution window from each of 3 different positions
         // results same for each position
-        for(int pad_l = 0; pad_l < 3; pad_l++){
+        for(unsigned pad_l = 0; pad_l < 3; pad_l++){
             PRINTF("\t\t\tpad_l = %u\n", pad_l);
             
             unsigned pad_t = 0;
-            unsigned pad_b = K_h - pad_t - X_HEIGHT;
-            int pad_r = K_w_array - pad_l - X_WIDTH;
-            
-            const mem_stride_t x_v_stride = x_params.width*x_params.channels;
-            const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
+            unsigned pad_b = 0;
+            int pad_r = 2 - pad_l;
 
             nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
+
 #if TEST_C
-            PRINTF("\t\t\tC...\n");
+            PRINTF("\t\t\t\tC...\n");
             memset(Y_c, 0xCC, sizeof(Y_c));
-            nn_conv2d_hstrip_shallowin_padded_c((nn_image_t*) Y_c, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
-                                            K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
-                                            x_v_stride, y_params.channels, y_params.width, zero_point_vec);
+            nn_compute_hstrip_deep_padded_c((nn_image_t*) Y_c, X_patch_start, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
+                                            (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels, 
+                                            pad_t, pad_b, pad_l, pad_r, (x_params.width-K_w)*x_params.channels, 
+                                            -K_h*K_w*x_params.channels, y_params.channels, 1, zero_point_vec);
 #endif
 #if TEST_ASM
-            PRINTF("\t\t\tASM...\n");
+            PRINTF("\t\t\t\tASM...\n");
             memset(Y_asm, 0xCC, sizeof(Y_asm));
-            nn_conv2d_hstrip_shallowin_padded_asm((nn_image_t*) Y_asm, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
-                                            K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
-                                            x_v_stride, y_params.channels, y_params.width, zero_point_vec);
+            nn_compute_hstrip_deep_padded_asm((nn_image_t*) Y_asm, X_patch_start, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
+                                            (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels, 
+                                            pad_t, pad_b, pad_l, pad_r, (x_params.width-K_w)*x_params.channels, 
+                                            -K_h*K_w*x_params.channels, y_params.channels, 1, zero_point_vec);
 #endif
 
         
@@ -540,7 +535,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case2()
         }
     }
 }
+#undef DEBUG_ON  
 #undef CHANS_IN  
+#undef CHANS_OUT 
 #undef X_HEIGHT  
 #undef X_WIDTH   
 #undef Y_HEIGHT  
@@ -570,7 +567,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case2()
 ///////////////////////////////////////////////////
 ///     1 pixel; Padding on all sides
 ///////////////////////////////////////////////////
-#define CHANS_IN        (4)
+#define DEBUG_ON        TEST_DEBUG_ON && 0
+#define CHANS_IN        (VPU_INT8_EPV + 4)
+#define CHANS_OUT       (VPU_INT8_ACC_PERIOD)
 #define X_HEIGHT        (1)
 #define X_WIDTH         (1)
 #define Y_HEIGHT        (1)
@@ -578,13 +577,13 @@ void test_nn_conv2d_hstrip_shallowin_padded_case2()
 #define K_h             (3)
 #define K_w             (3)
 #define K_hstride       (1)
-void test_nn_conv2d_hstrip_shallowin_padded_case3()
+void test_nn_compute_hstrip_deep_padded_case3()
 {
     PRINTF("%s...\n", __func__);
 
     nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
 
-    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w_array][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w][CHANS_IN];
 
     struct {
         int32_t bias[CHANS_OUT];
@@ -644,12 +643,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case3()
         memset(zero_point_vec, casse->zero_point, sizeof(zero_point_vec));
 
         memset(X, casse->x, x_params.height * x_params.width * x_params.channels * sizeof(int8_t));
-        
-        for(int cout = 0; cout < y_params.channels; cout++)
-            for(int row = 0; row < K_h; row++)
-                for(int col = 0; col < K_w_array; col++)
-                    for(int cin = 0; cin < x_params.channels; cin++)
-                        K[cout][row][col][cin] = (col < K_w)? casse->k : 0;
+        memset(K, casse->k, y_params.channels * K_h * K_w * x_params.channels * sizeof(int8_t));
 
 
         for(int k = 0; k < y_params.channels; k++){
@@ -669,26 +663,26 @@ void test_nn_conv2d_hstrip_shallowin_padded_case3()
             for(int pad_l = 0; pad_l < K_w; pad_l++){
                 PRINTF("\t\t\t\tpad_l = %d\n", pad_l);
                 
-                unsigned pad_b = K_h - pad_t - X_HEIGHT;
-                int pad_r = K_w_array - pad_l - X_WIDTH;
-            
-                const mem_stride_t x_v_stride = x_params.width*x_params.channels;
-                const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
+                unsigned pad_b = 2 - pad_t;
+                int pad_r = 2 - pad_l;
 
                 nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
+
 #if TEST_C
-                PRINTF("\t\t\tC...\n");
+                PRINTF("\t\t\t\t\tC...\n");
                 memset(Y_c, 0xCC, sizeof(Y_c));
-                nn_conv2d_hstrip_shallowin_padded_c((nn_image_t*) Y_c, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
-                                                K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
-                                                x_v_stride, y_params.channels, y_params.width, zero_point_vec);
+                nn_compute_hstrip_deep_padded_c((nn_image_t*) Y_c, X_patch_start, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
+                                                (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels, 
+                                                pad_t, pad_b, pad_l, pad_r, (x_params.width-K_w)*x_params.channels, 
+                                                -K_h*K_w*x_params.channels, y_params.channels, 1, zero_point_vec);
 #endif
 #if TEST_ASM
-                PRINTF("\t\t\tASM...\n");
+                PRINTF("\t\t\t\t\tASM...\n");
                 memset(Y_asm, 0xCC, sizeof(Y_asm));
-                nn_conv2d_hstrip_shallowin_padded_asm((nn_image_t*) Y_asm, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
-                                                K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
-                                                x_v_stride, y_params.channels, y_params.width, zero_point_vec);
+                nn_compute_hstrip_deep_padded_asm((nn_image_t*) Y_asm, X_patch_start, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
+                                                (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels, 
+                                                pad_t, pad_b, pad_l, pad_r, (x_params.width-K_w)*x_params.channels, 
+                                                -K_h*K_w*x_params.channels, y_params.channels, 1, zero_point_vec);
 #endif
 
             
@@ -707,7 +701,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case3()
         }
     }
 }
+#undef DEBUG_ON  
 #undef CHANS_IN  
+#undef CHANS_OUT 
 #undef X_HEIGHT  
 #undef X_WIDTH   
 #undef Y_HEIGHT  
@@ -733,7 +729,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case3()
 ///////////////////////////////////////////////////
 ///     1x1 conv window; 3 output pixels
 ///////////////////////////////////////////////////
-#define CHANS_IN        (4)
+#define DEBUG_ON        TEST_DEBUG_ON && 0
+#define CHANS_IN        (VPU_INT8_EPV + 4)
+#define CHANS_OUT       (VPU_INT8_ACC_PERIOD)
 #define X_HEIGHT        (1)
 #define X_WIDTH         (3)
 #define Y_HEIGHT        (1)
@@ -741,14 +739,14 @@ void test_nn_conv2d_hstrip_shallowin_padded_case3()
 #define K_h             (1)
 #define K_w             (1)
 #define K_hstride       (1)
-#define ZERO_POINT      (0xCC)
-void test_nn_conv2d_hstrip_shallowin_padded_case4()
+#define ZERO_POINT      (0)
+void test_nn_compute_hstrip_deep_padded_case4()
 {
     PRINTF("%s...\n", __func__);
 
     nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
 
-    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w_array][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w][CHANS_IN];
 
     struct {
         int32_t bias[CHANS_OUT];
@@ -797,16 +795,10 @@ void test_nn_conv2d_hstrip_shallowin_padded_case4()
         nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
         nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-        for(int row = 0; row < X_HEIGHT; row++)
-            for(int col = 0; col < X_WIDTH; col++)
-                for(int cin = 0; cin < x_params.channels; cin++)
-                    X[row][col][cin] = casse->x * (col+1);
 
-        for(int cout = 0; cout < y_params.channels; cout++)
-            for(int row = 0; row < K_h; row++)
-                for(int col = 0; col < K_w_array; col++)
-                    for(int cin = 0; cin < x_params.channels; cin++)
-                        K[cout][row][col][cin] = (col < K_w)? casse->k : 0;
+        memset(X, casse->x, x_params.height * x_params.width * x_params.channels * sizeof(int8_t));
+        memset(K, casse->k, y_params.channels * K_h * K_w * x_params.channels * sizeof(int8_t));
+
 
         for(int k = 0; k < y_params.channels; k++){
             BSS.bias[k]     =-k;
@@ -820,27 +812,27 @@ void test_nn_conv2d_hstrip_shallowin_padded_case4()
 
         
         unsigned pad_t = 0;
-        unsigned pad_b = K_h - pad_t - X_HEIGHT;
+        unsigned pad_b = 0;
         int pad_l = 0;
-        int pad_r = K_w_array - pad_l - X_WIDTH;
+        int pad_r = -2;
 
-            
-        const mem_stride_t x_v_stride = x_params.width*x_params.channels;
-        const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
         nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
+
 #if TEST_C
         PRINTF("\t\t\tC...\n");
         memset(Y_c, 0xCC, sizeof(Y_c));
-        nn_conv2d_hstrip_shallowin_padded_c((nn_image_t*) Y_c, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
-                                        K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
-                                        x_v_stride, y_params.channels, y_params.width, zero_point_vec);
+        nn_compute_hstrip_deep_padded_c((nn_image_t*) Y_c, X_patch_start, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
+                                        (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels, 
+                                        pad_t, pad_b, pad_l, pad_r, (x_params.width-K_w)*x_params.channels, 
+                                        -K_h*K_w*x_params.channels, y_params.channels, Y_WIDTH, zero_point_vec);
 #endif
 #if TEST_ASM
         PRINTF("\t\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
-        nn_conv2d_hstrip_shallowin_padded_asm((nn_image_t*) Y_asm, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
-                                        K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
-                                        x_v_stride, y_params.channels, y_params.width, zero_point_vec);
+        nn_compute_hstrip_deep_padded_asm((nn_image_t*) Y_asm, X_patch_start, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
+                                        (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels, 
+                                        pad_t, pad_b, pad_l, pad_r, (x_params.width-K_w)*x_params.channels, 
+                                        -K_h*K_w*x_params.channels, y_params.channels, Y_WIDTH, zero_point_vec);
 #endif
 
     
@@ -849,7 +841,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case4()
             for(unsigned col = 0; col < y_params.width; col++){
                 for(unsigned chn = 0; chn < y_params.channels; chn++){
                     
-                    int8_t y_exp = (col+1) * casse->expected - chn;
+                    int8_t y_exp = casse->expected - chn;
 
                     check_Y(y_exp, row, col, chn, casse->line, Y_C_ASM, &y_params);
                 }
@@ -857,7 +849,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case4()
         }
     }
 }
+#undef DEBUG_ON  
 #undef CHANS_IN  
+#undef CHANS_OUT 
 #undef X_HEIGHT  
 #undef X_WIDTH   
 #undef Y_HEIGHT  
@@ -884,7 +878,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case4()
 ///////////////////////////////////////////////////
 ///     3x3 conv window; 3x3 input image; 1x3 output image
 ///////////////////////////////////////////////////
-#define CHANS_IN        (4)
+#define DEBUG_ON        TEST_DEBUG_ON && 0
+#define CHANS_IN        (VPU_INT8_EPV + 4)
+#define CHANS_OUT       (VPU_INT8_ACC_PERIOD)
 #define X_HEIGHT        (3)
 #define X_WIDTH         (3)
 #define Y_HEIGHT        (1)
@@ -892,13 +888,13 @@ void test_nn_conv2d_hstrip_shallowin_padded_case4()
 #define K_h             (3)
 #define K_w             (3)
 #define K_hstride       (1)
-void test_nn_conv2d_hstrip_shallowin_padded_case5()
+void test_nn_compute_hstrip_deep_padded_case5()
 {
     PRINTF("%s...\n", __func__);
 
     nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
 
-    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w_array][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w][CHANS_IN];
 
     struct {
         int32_t bias[CHANS_OUT];
@@ -959,12 +955,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case5()
 
 
         memset(X, casse->x, x_params.height * x_params.width * x_params.channels * sizeof(int8_t));
-        
-        for(int cout = 0; cout < y_params.channels; cout++)
-            for(int row = 0; row < K_h; row++)
-                for(int col = 0; col < K_w_array; col++)
-                    for(int cin = 0; cin < x_params.channels; cin++)
-                        K[cout][row][col][cin] = (col < K_w)? casse->k : 0;
+        memset(K, casse->k, y_params.channels * K_h * K_w * x_params.channels * sizeof(int8_t));
 
 
         for(int k = 0; k < y_params.channels; k++){
@@ -979,27 +970,27 @@ void test_nn_conv2d_hstrip_shallowin_padded_case5()
 
         
         unsigned pad_t = 0;
-        unsigned pad_b = K_h - pad_t - X_HEIGHT;
+        unsigned pad_b = 0;
         int pad_l = 0;
-        int pad_r = K_w_array - pad_l - X_WIDTH;
-            
-        const mem_stride_t x_v_stride = x_params.width*x_params.channels;
-        const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
+        int pad_r = 0;
 
         nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
+
 #if TEST_C
         PRINTF("\t\t\tC...\n");
         memset(Y_c, 0xCC, sizeof(Y_c));
-        nn_conv2d_hstrip_shallowin_padded_c((nn_image_t*) Y_c, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
-                                        K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
-                                        x_v_stride, y_params.channels, y_params.width, zero_point_vec);
+        nn_compute_hstrip_deep_padded_c((nn_image_t*) Y_c, X_patch_start, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
+                                        (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels, 
+                                        pad_t, pad_b, pad_l, pad_r, (x_params.width-K_w)*x_params.channels, 
+                                        -K_h*K_w*x_params.channels, y_params.channels, Y_WIDTH, zero_point_vec);
 #endif
 #if TEST_ASM
         PRINTF("\t\t\tASM...\n");
         memset(Y_asm, 0xCC, sizeof(Y_asm));
-        nn_conv2d_hstrip_shallowin_padded_asm((nn_image_t*) Y_asm, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
-                                        K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
-                                        x_v_stride, y_params.channels, y_params.width, zero_point_vec);
+        nn_compute_hstrip_deep_padded_asm((nn_image_t*) Y_asm, X_patch_start, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
+                                        (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels, 
+                                        pad_t, pad_b, pad_l, pad_r, (x_params.width-K_w)*x_params.channels, 
+                                        -K_h*K_w*x_params.channels, y_params.channels, Y_WIDTH, zero_point_vec);
 #endif
 
 
@@ -1025,7 +1016,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case5()
         }
     }
 }
+#undef DEBUG_ON  
 #undef CHANS_IN  
+#undef CHANS_OUT 
 #undef X_HEIGHT  
 #undef X_WIDTH   
 #undef Y_HEIGHT  
@@ -1038,14 +1031,14 @@ void test_nn_conv2d_hstrip_shallowin_padded_case5()
 
 
 
-void test_nn_conv2d_hstrip_shallowin_padded()
+void test_nn_compute_hstrip_deep_padded()
 {
     UNITY_SET_FILE();
 
-    RUN_TEST(test_nn_conv2d_hstrip_shallowin_padded_case0);
-    RUN_TEST(test_nn_conv2d_hstrip_shallowin_padded_case1);
-    RUN_TEST(test_nn_conv2d_hstrip_shallowin_padded_case2);
-    RUN_TEST(test_nn_conv2d_hstrip_shallowin_padded_case3);
-    RUN_TEST(test_nn_conv2d_hstrip_shallowin_padded_case4);
-    RUN_TEST(test_nn_conv2d_hstrip_shallowin_padded_case5);
+    RUN_TEST(test_nn_compute_hstrip_deep_padded_case0);
+    RUN_TEST(test_nn_compute_hstrip_deep_padded_case1);
+    RUN_TEST(test_nn_compute_hstrip_deep_padded_case2);
+    RUN_TEST(test_nn_compute_hstrip_deep_padded_case3);
+    RUN_TEST(test_nn_compute_hstrip_deep_padded_case4);
+    RUN_TEST(test_nn_compute_hstrip_deep_padded_case5);
 }

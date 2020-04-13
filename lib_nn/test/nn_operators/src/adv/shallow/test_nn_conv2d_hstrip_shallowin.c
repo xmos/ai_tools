@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <syscall.h>
 
-#include "../tst_common.h"
+#include "../../tst_common.h"
 
 #include "nn_operator.h"
 #include "nn_op_helper.h"

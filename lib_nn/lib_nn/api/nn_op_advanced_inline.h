@@ -208,6 +208,43 @@ static inline void nn_conv2d_hstrip_shallowin(
 }
 
 
+static inline void nn_conv2d_hstrip_tail_shallowin_padded(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bss_block_t* BSS,
+        const unsigned K_h,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const unsigned pad_t,
+        const unsigned pad_b,
+        const int pad_l_initial,
+        const int pad_r_initial,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const int8_t* zero_point_vec,
+        const channel_count_t C_out_tail)
+{
+#if defined(__XS3A__) && (USE_ASM_nn_conv2d_hstrip_tail_shallowin_padded)
+
+    nn_conv2d_hstrip_tail_shallowin_padded_asm(Y, X, K, BSS, K_h, K_h_stride, C_in,
+                                        pad_t, pad_b, pad_l_initial, pad_r_initial, 
+                                        x_v_stride, y_h_stride, out_cols, zero_point_vec,
+                                        C_out_tail);
+
+#else
+
+    nn_conv2d_hstrip_tail_shallowin_padded_c(Y, X, K, BSS, K_h, K_h_stride, C_in,
+                                        pad_t, pad_b, pad_l_initial, pad_r_initial, 
+                                        x_v_stride, y_h_stride, out_cols, zero_point_vec,
+                                        C_out_tail);
+
+#endif
+}
+
+
+
 #ifdef __XC__
 }   //extern "C"
 #endif

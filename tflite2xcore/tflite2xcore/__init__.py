@@ -6,7 +6,7 @@ from pathlib import Path
 
 __PARENT_DIR = Path(__file__).parent.absolute()
 if sys.platform.startswith("linux"):
-    lib_path = os.path.join(__PARENT_DIR, 'libs/linux/libtflite2xcore.so.1.0.1')
+    lib_path = os.path.join(__PARENT_DIR, 'libs/linux/libtflite2xcore.so')
 elif sys.platform == "darwin":
     lib_path = os.path.join(__PARENT_DIR, 'libs/macos/libtflite2xcore.dylib')
 else:

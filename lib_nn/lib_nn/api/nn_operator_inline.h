@@ -52,59 +52,6 @@ static inline void conv2d_shallowin_deepout(
     }
 }
 
-
-
-static inline void conv2d_1x1(
-    int8_t* Y,
-    const int8_t* X,
-    const int8_t* K,
-    const data16_t* BSS,
-    const nn_conv2d_1x1_plan_t* plan)
-{
-#if defined(__XS3A__) && (USE_ASM_conv2d_1x1)
-    conv2d_1x1_asm(Y, X, K, BSS, plan);
-#else
-    conv2d_1x1_c(Y, X, K, BSS, plan);
-#endif
-}
-
-
-
-static inline void conv2d_depthwise(
-    int8_t* Y,
-    const int8_t* X,
-    const int8_t* K,
-    const nn_bss_block_t* BSS,
-    const nn_conv2d_depthwise_plan_t* plan,
-    const nn_conv2d_depthwise_job_t* job)
-{
-#if defined(__XS3A__) && (USE_ASM_conv2d_depthwise)
-    conv2d_depthwise_asm(Y, X, K, BSS, plan, job);
-#else
-    conv2d_depthwise_c(Y, X, K, BSS, plan, job);
-#endif
-}
-
-
-
-static inline void maxpool2d(
-    int8_t* Y,
-    const int8_t* X, 
-    const nn_window_op_plan_t* plan)
-{
-#if defined(__XS3A__) && (USE_ASM_maxpool2d)
-
-    maxpool2d_asm(Y, X, plan);
-
-#else
-
-    maxpool2d_c(Y, X, plan);
-
-#endif
-}
-
-
-
 static inline void avgpool2d(
     int8_t* Y,
     const int8_t* X, 
@@ -128,28 +75,6 @@ static inline void avgpool2d(
 #endif
 }
 
-static inline void avgpool2d_global(
-    int8_t* Y,
-    const int8_t* X, 
-    const uint32_t x_height, 
-    const uint32_t x_width,
-    const uint32_t x_chans,
-    const int32_t  bias,
-    const uint32_t shift,
-    const uint32_t scale)
-{
-#if defined(__XS3A__) && (USE_ASM_avgpool2d)
-
-    avgpool2d_global_asm(Y, X, x_height, x_width, x_chans, bias, shift, scale);
-
-#else
-
-    avgpool2d_global_c(Y, X, x_height, x_width, x_chans, bias, shift, scale);
-
-#endif
-}
-
-
 
 
 static inline void fc_deepin_shallowout_16(
@@ -172,26 +97,6 @@ static inline void fc_deepin_shallowout_16(
 
 #endif
 }
-
-
-static inline void fully_connected_16(
-    int16_t* Y,
-    const int8_t* W, 
-    const int8_t* X, 
-    const data16_t* BSS,
-    const nn_fully_connected_plan_t* plan)
-{
-#if defined(__XS3A__) && (USE_ASM_fully_connected_16)
-
-    fully_connected_16_asm(Y, W, X, BSS, plan);
-
-#else
-
-    fully_connected_16_c(Y, W, X, BSS, plan);
-
-#endif
-}
-
 
 
 static inline void fc_deepin_shallowout_8(

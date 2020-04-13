@@ -149,7 +149,7 @@ extern "C" {
  * \param chans_to_write    Number of channels to write in each output pixel
  * \param zero_point_vec    Vector of zero-points for each channel
  */
-void nn_compute_hstrip_depthwise_padded_asm(
+void nn_compute_hstrip_depthwise_padded(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
@@ -256,7 +256,7 @@ void nn_compute_hstrip_depthwise_padded_asm(
  * \param out_pixels        Number of pixels to be written
  * \param chans_to_write    Number of channels to write in each output pixel
  */
-void nn_compute_hstrip_depthwise_asm(
+void nn_compute_hstrip_depthwise(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,

@@ -201,7 +201,7 @@ static inline void conv2d_shallowin_deepout(
  *       the kernel tensor layout used by this function is NOT compatible with that required by 
  *       `conv2d_deepin_deepout()`.
  */
-static inline void conv2d_1x1(
+void conv2d_1x1(
     int8_t* Y,
     const int8_t* X,
     const int8_t* K,
@@ -267,7 +267,7 @@ static inline void conv2d_1x1(
  * \param plan  The execution plan initialized by `conv2d_depthwise_init()`.
  * \param job   The (single) job to be performed.
  */
-static inline void conv2d_depthwise(
+void conv2d_depthwise(
     int8_t* Y,
     const int8_t* X,
     const int8_t* K,
@@ -304,7 +304,7 @@ static inline void conv2d_depthwise(
  * \param plan  The execution plan.
  *
  */
-static inline void maxpool2d(
+void maxpool2d(
     int8_t* Y,
     const int8_t* X, 
     const nn_window_op_plan_t* plan);
@@ -366,7 +366,7 @@ static inline void avgpool2d(
  * \param shift     Shift parameter. Shared by all channels.
  * \param scale     Scale parameter. Shared by all channels.
  */
-static inline void avgpool2d_global(
+void avgpool2d_global(
     int8_t* Y,
     const int8_t* X, 
     const uint32_t x_height, 
@@ -473,7 +473,7 @@ static inline void fc_deepin_shallowout_16(
  * padded*.
  * 
  */
-static inline void fully_connected_16(
+void fully_connected_16(
     int16_t* Y,
     const int8_t* W, 
     const int8_t* X, 

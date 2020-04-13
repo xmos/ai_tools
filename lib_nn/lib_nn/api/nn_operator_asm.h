@@ -39,39 +39,7 @@ void fc_deepin_shallowout_16_asm(
     const int32_t C_in,
     const uint16_t* shifts, 
     const int16_t* scales);
-
     
-#ifndef USE_ASM_conv2d_1x1
-#define USE_ASM_conv2d_1x1    (1)
-#endif
-void conv2d_1x1_asm(
-    int8_t* Y,
-    const int8_t* X,
-    const int8_t* K,
-    const data16_t* BSS,
-    const nn_conv2d_1x1_plan_t* plan);
-    
-
-#ifndef USE_ASM_conv2d_depthwise
-#define USE_ASM_conv2d_depthwise    (1)
-#endif
-void conv2d_depthwise_asm(
-    int8_t* Y,
-    const int8_t* X,
-    const int8_t* K,
-    const nn_bss_block_t* BSS,
-    const nn_conv2d_depthwise_plan_t* plan,
-    const nn_conv2d_depthwise_job_t* job);
-
-#ifndef USE_ASM_fully_connected_16
-#define USE_ASM_fully_connected_16      (1)
-#endif
-void fully_connected_16_asm(
-    int16_t* Y,
-    const int8_t* W, 
-    const int8_t* X, 
-    const data16_t* BSS,
-    const nn_fully_connected_plan_t* plan);
 
 
 #ifndef USE_ASM_fc_deepin_shallowout_8
@@ -88,15 +56,6 @@ void fc_deepin_shallowout_8_asm(
     const int16_t* scales);
 
 
-
-#ifndef USE_ASM_maxpool2d
-#define USE_ASM_maxpool2d       (1)
-#endif
-void maxpool2d_asm(
-    int8_t* Y,
-    const int8_t* X, 
-    const nn_window_op_plan_t* plan);
-
 #ifndef USE_ASM_avgpool2d
 #define USE_ASM_avgpool2d      (1)
 #endif
@@ -109,21 +68,6 @@ void avgpool2d_2x2_asm(
     int8_t* Y,
     const int8_t* X, 
     const nn_avgpool2d_plan_t* plan);
-
-
-#ifndef USE_ASM_avgpool2d_global
-#define USE_ASM_avgpool2d_global    (1)
-#endif
-void avgpool2d_global_asm(
-    int8_t* Y,
-    const int8_t* X, 
-    const uint32_t x_height, 
-    const uint32_t x_width,
-    const uint32_t x_chans,
-    const int32_t  bias,
-    const uint32_t shift,
-    const uint32_t scale);
-
 
 
 #endif //__XS3A__

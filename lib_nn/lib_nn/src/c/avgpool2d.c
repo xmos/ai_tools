@@ -80,8 +80,8 @@ void avgpool2d_c(
 
 
 
-
-void avgpool2d_global_c(
+WEAK_FUNC
+void avgpool2d_global(
     int8_t* Y,
     const int8_t* X, 
     const uint32_t x_height, 

@@ -4,7 +4,7 @@
 /**
 
 
-void nn_compute_hstrip_depthwise_asm(
+void nn_compute_hstrip_depthwise(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
@@ -19,7 +19,7 @@ void nn_compute_hstrip_depthwise_asm(
     const unsigned chans_to_write);
 */
 
-#define FUNCTION_NAME nn_compute_hstrip_depthwise_asm
+#define FUNCTION_NAME nn_compute_hstrip_depthwise
 
 #define NSTACKWORDS  32
     

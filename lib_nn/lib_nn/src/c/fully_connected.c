@@ -18,7 +18,6 @@
 
 
 
-
 void fc_deepin_shallowout_16_c(
     const int8_t* W, 
     const int32_t* B,
@@ -78,7 +77,8 @@ void fc_deepin_shallowout_16_c(
 
 
 
-void fully_connected_16_c(
+WEAK_FUNC
+void fully_connected_16(
     int16_t* Y,
     const int8_t* W, 
     const int8_t* X, 

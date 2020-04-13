@@ -13,16 +13,6 @@
 
 #define ADDR(VR, STR)   printf("!\t%s = 0x%08X\t\t(%s)\n", (#VR), (unsigned) (VR), (STR))
 
-void vlmacc8(
-    int32_t* acc,
-    const int8_t* X,
-    const int8_t* W)
-{
-    for(int k = 0; k < VPU_INT8_VLMACC_ELMS; k++){
-        // printf("!@ %d\t%d\t%d\n", k, X[k], W[k]);
-        acc[k] += ((int32_t)X[k]) * W[k];
-    }
-}
 
 #define INDEX_CAST(X)   ((int32_t)(X))
 
@@ -120,195 +110,7 @@ void conv2d_depthwise_init(
 }
 
 
-static void nn_compute_hstrip_depthwise_padded_c(
-    int8_t* Y,
-    const int8_t* X_in, 
-    const int8_t* K_in,
-    const nn_bss_block_t* BSS,
-    const unsigned pad_t,
-    const unsigned pad_b,
-    const unsigned chans_to_write,
-    const int8_t* zero_point_vec,
-    const nn_conv2d_depthwise_plan_t* plan,
-    const nn_conv2d_depthwise_job_t* job)
-{
-
-    int pad_l = job->init_padding.left * plan->channels.X;
-    int pad_r = job->init_padding.right * plan->channels.X;
-
-    int center_cols = plan->channels.X * plan->kernel.width;
-    if(pad_l >= 0)  center_cols -= pad_l;
-    if(pad_r >= 0)  center_cols -= pad_r;
-
-    for(int out_col = 0; out_col < job->output.cols; out_col++){
-
-        const int8_t* X = X_in;
-        const int8_t* K = K_in;
-        // ADDR(X, "out col start");
-        // ADDR(Y, "out col start");
-        // ADDR(K, "out col start");
-
-        const int cur_pad_l = (pad_l > 0)? pad_l : 0;
-        const int cur_pad_r = (pad_r > 0)? pad_r : 0;
-
-        // printf("pads:  (%d, %d, %d, %d)\n", pad_t, pad_l, pad_l, pad_r);
-        // printf("cur_pads:  (%d, %d, %d, %d)\n", pad_t, cur_pad_l, cur_pad_l, cur_pad_r);
-
-        int32_t accs[VPU_INT8_VLMACC_ELMS];
-
-        for(int k = 0; k < VPU_INT8_VLMACC_ELMS; k++)
-            accs[k] = ((int32_t)BSS->bias_hi[k]) << VPU_INT8_ACC_VR_BITS;
-        
-        for(int k = 0; k < VPU_INT8_VLMACC_ELMS; k++)
-            accs[k] |= BSS->bias_lo[k];
-        
-        //THIS LOOP IS IN PADDING (above image)
-        for(int i = pad_t; i > 0; i--){
-            // printf("PAD_T??\t%d\t%d\n", pad_t, i);
-            for(int j = plan->kernel.width; j > 0; j--){
-                vlmacc8(accs, zero_point_vec, K);
-                X = &X[INDEX_CAST(plan->channels.X)];
-                K = &K[INDEX_CAST(plan->channels.X)];
-            }
-            X = &X[INDEX_CAST(plan->stride.X.row)];
-        }
-
-        // These rows are inside image (vertically)
-        for(int i = plan->kernel.height - (pad_t + pad_b); i > 0; i--){
-
-            //THIS LOOP IS IN PADDING (left of image)
-            for(int j = cur_pad_l; j > 0; j -= plan->channels.X){
-                // printf("PAD_L??\t%d\t%d\n", cur_pad_l, j);
-                vlmacc8(accs, zero_point_vec, K);
-                X = &X[INDEX_CAST(plan->channels.X)];
-                K = &K[INDEX_CAST(plan->channels.X)];
-            }
-
-            for(int j = center_cols; j > 0; j-= plan->channels.X){
-                vlmacc8(accs, X, K);
-                X = &X[INDEX_CAST(plan->channels.X)];
-                K = &K[INDEX_CAST(plan->channels.X)];
-            }
-
-            //THIS LOOP IS IN PADDING (right of image)
-            for(int j = cur_pad_r; j > 0; j -= plan->channels.X){
-                // printf("PAD_R??\t%d\t%d\n", cur_pad_r, j);
-                vlmacc8(accs, zero_point_vec, K);
-                X = &X[INDEX_CAST(plan->channels.X)];
-                K = &K[INDEX_CAST(plan->channels.X)];
-            }
-
-            X = &X[INDEX_CAST(plan->stride.X.row)];
-        }
-        
-        //THIS LOOP IS IN PADDING (below image)
-        for(int i = pad_b; i > 0; i--){
-            // printf("PAD_B??\t%d\t%d\n", pad_b, i);
-            for(int j = plan->kernel.width; j > 0; j--){
-                vlmacc8(accs, zero_point_vec, K);
-                X = &X[INDEX_CAST(plan->channels.X)];
-                K = &K[INDEX_CAST(plan->channels.X)];
-            }
-            X = &X[INDEX_CAST(plan->stride.X.row)];
-        }
-
-        for(int k = 0; k < chans_to_write; k++){
-            int16_t shift1  = BSS->shift1[k];
-            int16_t scale   = BSS->scale[k];
-            int16_t shift2  = BSS->shift2[k];
-            accs[k] = vlsat_single_s16(accs[k], shift1);
-            accs[k] = accs[k] * scale;
-            accs[k] = vlsat_single_s8(accs[k], shift2);
-            Y[k] = (int8_t) accs[k];
-        }
-
-        if(pad_l > 0){
-            int tmp = (pad_l <= plan->stride.window.col)? pad_l : plan->stride.window.col;
-            center_cols += tmp;
-        }
-
-        pad_l -= (int) plan->stride.window.col;
-        pad_r += (int) plan->stride.window.col;
-
-        if(pad_r > 0){
-            int tmp = (pad_r <= plan->stride.window.col)? pad_r : plan->stride.window.col;
-            center_cols -= tmp;
-        }
-        
-        X_in = &X_in[INDEX_CAST(plan->stride.window.col)];
-        Y = &Y[INDEX_CAST(plan->channels.Y)];
-
-    }
-}
-
-
-
-void conv2d_depthwise_c(
-    int8_t* Y,
-    const int8_t* X,
-    const int8_t* K,
-    const nn_bss_block_t* BSS,
-    const nn_conv2d_depthwise_plan_t* plan,
-    const nn_conv2d_depthwise_job_t* job)
-{
-    // ADDR(X, "initial");
-    // ADDR(Y, "initial");
-    // ADDR(K, "initial");
-
-
-
-    int8_t zero_point_vec[VPU_INT8_VLMACC_ELMS];
-    memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
-
-    X = &X[INDEX_CAST(job->stride.start.X)];
-    Y = &Y[INDEX_CAST(job->stride.start.Y)];
-    K = &K[INDEX_CAST(job->stride.start.K)];
-    BSS = &BSS[INDEX_CAST(job->stride.start.BSS)];
-
-    // ADDR(X, "start strided");
-    // ADDR(Y, "start strided");
-    // ADDR(K, "start strided");
-
-    for(int out_chan = 0; out_chan < job->output.channels; out_chan += VPU_INT8_VLMACC_ELMS){
-
-        const unsigned cur_chans = (job->output.channels - out_chan >= VPU_INT8_VLMACC_ELMS)? VPU_INT8_VLMACC_ELMS : job->output.channels - out_chan; 
-
-        int pad_t = job->init_padding.top;
-        int pad_b = job->init_padding.bottom;
-
-        for(int out_row = 0; out_row < job->output.rows; out_row++){
-            // ADDR(X, "out row start");
-            // ADDR(Y, "out row start");
-            // ADDR(K, "out row start");
-
-            int pad_l = job->init_padding.left;
-            int pad_r = job->init_padding.right;
-
-            const int cur_pad_t = (pad_t > 0)? pad_t : 0;
-            const int cur_pad_b = (pad_b > 0)? pad_b : 0;
-
-            nn_compute_hstrip_depthwise_padded_c( Y, X, K, BSS, cur_pad_t, cur_pad_b, cur_chans, zero_point_vec, plan, job);
-
-            pad_t -= plan->kernel.vstride;
-            pad_b += plan->kernel.vstride;
-
-            X = &X[INDEX_CAST(job->stride.row.window)];
-            Y = &Y[INDEX_CAST(job->stride.row.Y)];
-        }
-
-        X = &X[INDEX_CAST(job->stride.chan_group.X)];
-        Y = &Y[INDEX_CAST(job->stride.chan_group.Y)];
-
-        BSS = &BSS[INDEX_CAST(1)];
-        K = &K[INDEX_CAST(VPU_INT8_VLMACC_ELMS)];
-    }
-
-}
-
-
-#if defined(__XS3A__)
-
-void conv2d_depthwise_asm(
+void conv2d_depthwise(
     int8_t* Y,
     const int8_t* X,
     const int8_t* K,
@@ -348,11 +150,11 @@ void conv2d_depthwise_asm(
             const int cur_pad_b = (pad_b > 0)? pad_b : 0;
             
             if(job->init_padding.unpadded){
-                nn_compute_hstrip_depthwise_asm(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
+                nn_compute_hstrip_depthwise(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
                         plan->channels.X, plan->stride.X.row,
                         plan->stride.window.col, plan->channels.Y, job->output.cols, cur_chans);
             } else {
-                nn_compute_hstrip_depthwise_padded_asm(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
+                nn_compute_hstrip_depthwise_padded(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
                             cur_pad_t, job->init_padding.left, cur_pad_b, job->init_padding.right,
                             plan->channels.X, plan->stride.X.row, 
                             plan->stride.window.col, plan->channels.Y, job->output.cols, 
@@ -375,5 +177,3 @@ void conv2d_depthwise_asm(
     }
 
 }
-
-#endif //defined(__XS3A__)

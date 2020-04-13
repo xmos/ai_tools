@@ -4,7 +4,7 @@
 /**
 
 
-void nn_compute_hstrip_depthwise_padded_asm(
+void nn_compute_hstrip_depthwise_padded(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
@@ -24,7 +24,7 @@ void nn_compute_hstrip_depthwise_padded_asm(
     const int8_t* zero_point_vec);
 */
 
-#define FUNCTION_NAME nn_compute_hstrip_depthwise_padded_asm
+#define FUNCTION_NAME nn_compute_hstrip_depthwise_padded
 
 #define NSTACKWORDS  48
     

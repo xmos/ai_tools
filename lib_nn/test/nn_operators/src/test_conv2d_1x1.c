@@ -15,15 +15,6 @@
 #include "unity.h"
 
 
-#if USE_ASM(maxpool2d)
- #define HAS_ASM (1)
-#else
- #define HAS_ASM (0)
-#endif
-
-#define TEST_ASM ((HAS_ASM)     && 1)
-#define TEST_C ((TEST_C_GLOBAL) && 1)
-
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
@@ -48,13 +39,7 @@ void test_conv2d_1x1_case0()
         int16_t shift2[CHANS_OUT_CEIL];
     } BSS;
 
-
-#if TEST_C
-    int8_t WORD_ALIGNED  Y_c[HEIGHT][WIDTH][CHANS_OUT];
-#endif
-#if TEST_ASM
-    int8_t WORD_ALIGNED  Y_asm[HEIGHT][WIDTH][CHANS_OUT];
-#endif
+    int8_t WORD_ALIGNED  Y[HEIGHT][WIDTH][CHANS_OUT];
 
     PRINTF("%s...\n", __func__);
 
@@ -164,7 +149,7 @@ void test_conv2d_1x1_case0()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case, 1, 1);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
 
@@ -232,16 +217,9 @@ void test_conv2d_1x1_case0()
         PRINTF("plan.C_out              = %ld\n", plan.C_out);
 #endif //DEBUG_ON
 
-#if TEST_C
         PRINTF("\t\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(Y_c));    //too expensive to write the whole image, so just do the part that's in play
-        conv2d_1x1_c((int8_t*)Y_c, (int8_t*)X, (int8_t*)K, (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\t\tASM...\n");
-        memset(Y_asm, 0xCC,  sizeof(Y_asm));
-        conv2d_1x1_asm((int8_t*)Y_asm, (int8_t*)X, (int8_t*)K, (data16_t*) &BSS, &plan);
-#endif
+        memset(Y, 0xCC, sizeof(Y));    //too expensive to write the whole image, so just do the part that's in play
+        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, (data16_t*) &BSS, &plan);
 
         char str_buff[200] = {0};
         PRINTF("\t\t\tChecking...\n");
@@ -256,27 +234,13 @@ void test_conv2d_1x1_case0()
                         y_exp = exps[casse->k];
                     }
 
-                    int flg = 0;     //Annoying, but avoids unnecessary calls to sprintf().
-#if TEST_C      
-                    int8_t y_c = Y_c[row][col][chn];
-                    flg |= (y_c == y_exp)? 0x00 : 0x01;
-#endif
-#if TEST_ASM
-                    int8_t y_asm = Y_asm[row][col][chn];
-                    flg |= (y_asm == y_exp)? 0x00 : 0x02;
-#endif
-                    if(flg){
-                        sprintf(str_buff, "%s%s%s failed. (row, col, chn) = (%u, %u, %u)  [test vector @ line %u]", 
-                                (flg&0x01)? "C" : "", (flg==0x03)? " and " : "", (flg&0x02)? "ASM" : "",
+                    int8_t y = Y[row][col][chn];
+                    if(y != y_exp){
+                        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)  [test vector @ line %u]", 
                                 row, col, chn, casse->line);
                     }
 
-#if TEST_C
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_c, str_buff);
-#endif
-#if TEST_ASM
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_asm, str_buff);
-#endif
+                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
                 }
             }
         }
@@ -319,23 +283,15 @@ void test_conv2d_1x1_case1()
 
     int8_t Y_exp[MAX_CHANS_OUT];
 
-#if TEST_C
-    int8_t WORD_ALIGNED  Y_c[HEIGHT][WIDTH][MAX_CHANS_OUT];
-#endif
-#if TEST_ASM
-    int8_t WORD_ALIGNED  Y_asm[HEIGHT][WIDTH][MAX_CHANS_OUT];
-#endif
+    int8_t WORD_ALIGNED  Y[HEIGHT][WIDTH][MAX_CHANS_OUT];
+
     PRINTF("%s...\n", __func__);
 
     int8_t* K_flat  = (int8_t*)K;
     int8_t* X_flat  = (int8_t*)X;
     data16_t* BSS_flat = (data16_t*) &BSS;
-#if TEST_C
-    int8_t* Y_c_flat = (int8_t*) Y_c;
-#endif
-#if TEST_ASM
-    int8_t* Y_asm_flat = (int8_t*) Y_asm;
-#endif
+    
+    int8_t* Y_flat = (int8_t*) Y;
 
     typedef struct {
         unsigned C_in;
@@ -387,7 +343,7 @@ void test_conv2d_1x1_case1()
     const unsigned N_casses = sizeof(casses)/sizeof(test_case_t);
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case, 1, 1);
 
     const int8_t x_val = 0x01;
     memset(X, x_val, sizeof(X));
@@ -458,17 +414,9 @@ void test_conv2d_1x1_case1()
         PRINTF("plan.C_out              = %ld\n", plan.C_out);
 #endif //DEBUG_ON
 
-#if TEST_C
         PRINTF("\t\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
-        conv2d_1x1_c((int8_t*)Y_c, (int8_t*)X, (int8_t*)K, BSS_flat, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\t\tASM...\n");
-        memset(Y_asm, 0xCC,  sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
-        conv2d_1x1_asm((int8_t*)Y_asm, (int8_t*)X, (int8_t*)K, (data16_t*) &BSS, &plan);
-#endif
-
+        memset(Y, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
+        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, BSS_flat, &plan);
         unsigned pix_start = casse->start[0] * y_params.width + casse->start[1];
         unsigned pix_end   = pix_start + casse->out_pixels;
 
@@ -490,27 +438,14 @@ void test_conv2d_1x1_case1()
 
                     unsigned offset = IMG_ADDRESS_VECT(&y_params, row, col, chn);
 
-                    int flg = 0;     //Annoying, but avoids unnecessary calls to sprintf().
-#if TEST_C      
-                    int8_t y_c = ((int8_t*)Y_c)[offset];
-                    flg |= (y_c == y_exp)? 0x00 : 0x01;
-#endif
-#if TEST_ASM
-                    int8_t y_asm = ((int8_t*)Y_asm)[offset];
-                    flg |= (y_asm == y_exp)? 0x00 : 0x02;
-#endif
-                    if(flg){
-                        sprintf(str_buff, "%s%s%s failed. (row, col, chn) = (%u, %u, %u)  [test vector @ line %u]", 
-                                (flg&0x01)? "C" : "", (flg==0x03)? " and " : "", (flg&0x02)? "ASM" : "",
+                    int8_t y = ((int8_t*)Y)[offset];
+                    
+                    if(y != y_exp){
+                        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)  [test vector @ line %u]", 
                                 row, col, chn, casse->line);
                     }
 
-#if TEST_C
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_c, str_buff);
-#endif
-#if TEST_ASM
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_asm, str_buff);
-#endif
+                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
                 }
             }
         }
@@ -557,26 +492,17 @@ void test_conv2d_1x1_case2()
 
     int8_t Y_exp[MAX_CHANS_OUT];
 
-#if TEST_C
-    int8_t WORD_ALIGNED  Y_c[HEIGHT][WIDTH][MAX_CHANS_OUT];
-#endif
-#if TEST_ASM
-    int8_t WORD_ALIGNED  Y_asm[HEIGHT][WIDTH][MAX_CHANS_OUT];
-#endif
+    int8_t WORD_ALIGNED  Y[HEIGHT][WIDTH][MAX_CHANS_OUT];
 
     int8_t* K_flat  = (int8_t*)K;
     int8_t* X_flat  = (int8_t*)X;
     data16_t* BSS_flat = (data16_t*) &BSS;
-#if TEST_C
-    int8_t* Y_c_flat = (int8_t*) Y_c;
-#endif
-#if TEST_ASM
-    int8_t* Y_asm_flat = (int8_t*) Y_asm;
-#endif
+
+    int8_t* Y_flat = (int8_t*) Y;
 
     PRINTF("%s...\n", __func__);
 
-    print_warns(-1, TEST_C, TEST_ASM);
+    print_warns(-1, 1, 1);
 
     const int8_t x_val = 1;
 
@@ -678,16 +604,9 @@ void test_conv2d_1x1_case2()
         PRINTF("plan.C_out              = %ld\n", plan.C_out);
 #endif //DEBUG_ON
 
-#if TEST_C
         PRINTF("\t\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
-        conv2d_1x1_c((int8_t*)Y_c, (int8_t*)X, (int8_t*)K, BSS_flat, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\t\tASM...\n");
-        memset(Y_asm, 0xCC,  sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
-        conv2d_1x1_asm((int8_t*)Y_asm, (int8_t*)X, (int8_t*)K, (data16_t*) &BSS, &plan);
-#endif
+        memset(Y, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
+        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, BSS_flat, &plan);
 
         char str_buff[200] = {0};
         PRINTF("\t\t\tChecking...\n");
@@ -699,27 +618,12 @@ void test_conv2d_1x1_case2()
 
                     unsigned offset = IMG_ADDRESS_VECT(&y_params, row, col, chn);
 
-                    int flg = 0;     //Annoying, but avoids unnecessary calls to sprintf().
-#if TEST_C      
-                    int8_t y_c = ((int8_t*)Y_c)[offset];
-                    flg |= (y_c == y_exp)? 0x00 : 0x01;
-#endif
-#if TEST_ASM
-                    int8_t y_asm = ((int8_t*)Y_asm)[offset];
-                    flg |= (y_asm == y_exp)? 0x00 : 0x02;
-#endif
-                    if(flg){
-                        sprintf(str_buff, "%s%s%s failed. (row, col, chn) = (%u, %u, %u)", 
-                                (flg&0x01)? "C" : "", (flg==0x03)? " and " : "", (flg&0x02)? "ASM" : "",
-                                row, col, chn);
+                    int8_t y = ((int8_t*)Y)[offset];
+                    if(y != y_exp){
+                        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)", row, col, chn);
                     }
 
-#if TEST_C
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_c, str_buff);
-#endif
-#if TEST_ASM
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_asm, str_buff);
-#endif
+                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
                 }
             }
         }

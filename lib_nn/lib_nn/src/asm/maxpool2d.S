@@ -3,15 +3,15 @@
 
 
 /*  
-void maxpool2d_asm(
+void maxpool2d(
     int8_t* Y,
     const int8_t* X, 
-    const nn_maxpool_params_t* params);
+    const nn_window_op_plan_t* params);
 */
 
 #include "window_op_plan.h"
 
-#define FUNCTION_NAME maxpool2d_asm
+#define FUNCTION_NAME maxpool2d
 
 #define NSTACKWORDS     (40)
     

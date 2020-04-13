@@ -2,7 +2,7 @@
 #if defined(__XS3A__)
 
 /**
-void nn_conv2d_hstrip_shallowin_asm(
+void nn_conv2d_hstrip_shallowin(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -15,7 +15,7 @@ void nn_conv2d_hstrip_shallowin_asm(
         const unsigned out_cols)
 */
 
-#define FUNCTION_NAME nn_conv2d_hstrip_shallowin_asm
+#define FUNCTION_NAME nn_conv2d_hstrip_shallowin
 
 
 #define NSTACKVECS  (1)

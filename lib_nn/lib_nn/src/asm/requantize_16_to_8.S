@@ -3,13 +3,13 @@
 
 
 /*
-void requantize_16_to_8_asm(
+void requantize_16_to_8(
     int8_t* y,
     const int16_t* x,
     const unsigned n);
 */
 
-#define FUNCTION_NAME requantize_16_to_8_asm
+#define FUNCTION_NAME requantize_16_to_8
 
 #define NSTACKWORDS  4
     

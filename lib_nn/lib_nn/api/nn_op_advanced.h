@@ -621,7 +621,7 @@ static inline void nn_compute_hstrip_tail_deep(
 
 
 
-static inline void nn_conv2d_hstrip_shallowin_padded(
+void nn_conv2d_hstrip_shallowin_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -640,7 +640,7 @@ static inline void nn_conv2d_hstrip_shallowin_padded(
 
 
 
-static inline void nn_conv2d_hstrip_shallowin(
+void nn_conv2d_hstrip_shallowin(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -654,7 +654,7 @@ static inline void nn_conv2d_hstrip_shallowin(
 
 
 
-static inline void nn_conv2d_hstrip_tail_shallowin_padded(
+void nn_conv2d_hstrip_tail_shallowin_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,

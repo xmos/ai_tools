@@ -125,25 +125,6 @@ void avgpool2d_global_asm(
     const uint32_t scale);
 
 
-#ifndef USE_ASM_requantize_16_to_8
-#define USE_ASM_requantize_16_to_8    (1)
-#endif
-void requantize_16_to_8_asm(
-    int8_t* y,
-    const int16_t* x,
-    const unsigned n);
-
-
-
-#ifndef USE_ASM_lookup8
-#define USE_ASM_lookup8    (1)
-#endif
-void lookup8_asm(
-    uint8_t* Y,
-    const uint8_t* X,
-    const uint8_t* lut,
-    const unsigned length);
-
 
 #endif //__XS3A__
 

@@ -2,7 +2,7 @@
 #if defined(__XS3A__)
 
 /**
-void nn_conv2d_hstrip_tail_shallowin_padded_asm(
+void nn_conv2d_hstrip_tail_shallowin_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -21,7 +21,7 @@ void nn_conv2d_hstrip_tail_shallowin_padded_asm(
         const channel_count_t C_out_tail)
 */
 
-#define FUNCTION_NAME nn_conv2d_hstrip_tail_shallowin_padded_asm
+#define FUNCTION_NAME nn_conv2d_hstrip_tail_shallowin_padded
 
 
 #define NSTACKVECS  (4)

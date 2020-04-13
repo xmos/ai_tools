@@ -15,7 +15,8 @@
 
 #define ADDR(V, INDEX)      &V[((int)(INDEX))]
 
-void nn_conv2d_hstrip_shallowin_padded_c(
+WEAK_FUNC
+void nn_conv2d_hstrip_shallowin_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,

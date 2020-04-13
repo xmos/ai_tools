@@ -15,64 +15,8 @@
 // #include "dsp_xs3_vector.h"
 #include "unity.h"
 
-#if USE_ASM(requantize_16_to_8)
- #define HAS_ASM (1)
-#else
- #define HAS_ASM (0)
-#endif
-
-#define TEST_ASM ((HAS_ASM)     && 1)
-#define TEST_C ((TEST_C_GLOBAL) && 1)
-
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
-
-typedef enum {
-    LANG_C = 0,
-    LANG_ASM = 1,
-} lang_t;
-
-#define LANG_COUNT  ((TEST_C) + (TEST_ASM))
-unsigned langs[LANG_COUNT] = {
-#if TEST_C
-    LANG_C,
-#endif
-#if TEST_ASM
-    LANG_ASM,
-#endif
-};
-
-const char* lang_map[] = { "C", "ASM" };
-
-//Should fail to compile if both TEST_C and TEST_ASM are false
-int its_a_trap[10/LANG_COUNT] = {0};
-
-
-
-////////////////////////////////////////////////
-static void call_requantize_16_to_8(
-    int8_t* y,
-    const int16_t* x,
-    const unsigned n,
-    lang_t lang)
-{
-    switch(lang){
-#if TEST_C
-        case LANG_C:
-            requantize_16_to_8_c(y, x, n);
-            break;
-#endif
-#if TEST_ASM   
-        case LANG_ASM:
-            requantize_16_to_8_asm(y, x, n);
-            break;
-#endif
-        default:
-            PRINTF("Default case should never be hit.\n");
-            __builtin_trap();
-            break;
-    }
-}
 
 
 ////////////////////////////////////////////////
@@ -129,48 +73,40 @@ void test_requantize_16_to_8_case0()
 
     const int8_t XXX = 0xCC;
     
-    for(int l = 0; l < LANG_COUNT; l++){
+    for(int v = first_case; v < N_casses && v <= last_case; v++){
 
-        lang_t lang = langs[l];
-        PRINTF("\t%s...\n", lang_map[lang]);
+        test_case_t* casse = &casses[v];
 
-        for(int v = first_case; v < N_casses && v <= last_case; v++){
+        PRINTF("\t\tsub-case %d...\n", v);
 
-            test_case_t* casse = &casses[v];
-
-            PRINTF("\t\tsub-case %d...\n", v);
-
-            for(unsigned in_place = 0; in_place <= 1; in_place++){
+        for(unsigned in_place = 0; in_place <= 1; in_place++){
 
 #if DEBUG_ON
-                PRINTF("\t\t\t%s...\n", in_place? "in-place" : "not in-place");
+            PRINTF("\t\t\t%s...\n", in_place? "in-place" : "not in-place");
 #endif
 
-                int8_t* dest = in_place? (int8_t*) x : (int8_t*) y;
+            int8_t* dest = in_place? (int8_t*) x : (int8_t*) y;
 
-                memset16(x, casse->x_val, VEC_LEN);
-                memset(y, XXX, VEC_LEN * sizeof(int8_t));
+            memset16(x, casse->x_val, VEC_LEN);
+            memset(y, XXX, VEC_LEN * sizeof(int8_t));
 
-                call_requantize_16_to_8(dest, (int16_t*)x, casse->N, lang);
+            requantize_16_to_8(dest, (int16_t*)x, casse->N);
 
-                for(int k = 0; k < casse->N; k++){
+            for(int k = 0; k < casse->N; k++){
+                if(dest[k] != casse->exp_y)
+                    sprintf(str_buff, "(vector: %d) (in-place: %u) (k: %d.)", v, in_place, k);
+                TEST_ASSERT_EQUAL_MESSAGE(casse->exp_y, dest[k], str_buff);
+            }
+
+            if(!in_place){
+                for(int k = casse->N; k < VEC_LEN; k++){
                     if(dest[k] != casse->exp_y)
-                        sprintf(str_buff, "(vector: %d) (in-place: %u) (k: %d.)", v, in_place, k);
-                    TEST_ASSERT_EQUAL_MESSAGE(casse->exp_y, dest[k], str_buff);
-                }
-
-                if(!in_place){
-                    for(int k = casse->N; k < VEC_LEN; k++){
-                        if(dest[k] != casse->exp_y)
-                            sprintf(str_buff, "Operator didn't respect N. (Vector %d. Element index %d.)", v, k);
-                        TEST_ASSERT_EQUAL_MESSAGE(XXX, dest[k], str_buff);
-                    }
+                        sprintf(str_buff, "Operator didn't respect N. (Vector %d. Element index %d.)", v, k);
+                    TEST_ASSERT_EQUAL_MESSAGE(XXX, dest[k], str_buff);
                 }
             }
         }
     }
- 
-
 }
 #undef VEC_LEN
 #undef DEBUG_ON
@@ -199,49 +135,42 @@ void test_requantize_16_to_8_case1()
     int16_t WORD_ALIGNED x_orig[MAX_LEN];
     
     const int8_t XXX = 0xCC;
-    
-    for(int l = 0; l < LANG_COUNT; l++){
 
-        lang_t lang = langs[l];
-        PRINTF("\t%s...\n", lang_map[lang]);
+    for(int v = 0; v < REPS; v++){
 
-        for(int v = 0; v < REPS; v++){
+        PRINTF("\t\trep %d...\n", v); 
 
-            PRINTF("\t\trep %d...\n", v); 
+        const unsigned N = pseudo_rand_uint16(&seed) % (MAX_LEN+1);
 
-            const unsigned N = pseudo_rand_uint16(&seed) % (MAX_LEN+1);
+        pseudo_rand_bytes(&seed, (char*)x_orig, sizeof(x_orig));
+        vpu_memcpy(x, x_orig, sizeof(x));
+        
+        memset(y, XXX, sizeof(y));
 
-            pseudo_rand_bytes(&seed, (char*)x_orig, sizeof(x_orig));
-            vpu_memcpy(x, x_orig, sizeof(x));
-            
-            memset(y, XXX, sizeof(y));
-
-            for(int in_place = 0; in_place < 2; in_place++){
+        for(int in_place = 0; in_place < 2; in_place++){
 
 #if DEBUG_ON
-                PRINTF("\t\t\t%s...\n", in_place? "in-place" : "not in-place");
+            PRINTF("\t\t\t%s...\n", in_place? "in-place" : "not in-place");
 #endif
 
-                int8_t* dest = in_place? (int8_t*) x : (int8_t*) y;
+            int8_t* dest = in_place? (int8_t*) x : (int8_t*) y;
 
-                call_requantize_16_to_8(dest, x, N, lang);
+            requantize_16_to_8(dest, x, N);
 
-                for(int i = 0; i < N; i++){
+            for(int i = 0; i < N; i++){
 
-                    int8_t exp_val = vdepth8_single_s16(x_orig[i]);
+                int8_t exp_val = vdepth8_single_s16(x_orig[i]);
 
-                    if(dest[i] != exp_val)
-                        sprintf(str_buff, "(%s) (rep: %d) (N: %u) (index: %d) (x[%d] = %d)", lang_map[lang], v, N, i, i, x_orig[i]);
+                if(dest[i] != exp_val)
+                    sprintf(str_buff, "(rep: %d) (N: %u) (index: %d) (x[%d] = %d)", v, N, i, i, x_orig[i]);
 
-                    TEST_ASSERT_EQUAL_MESSAGE(exp_val, dest[i], str_buff);
-                }
-
-                if(!in_place){
-                    for(int i = N; i < MAX_LEN; i++)
-                        TEST_ASSERT_EQUAL(XXX, dest[i]);
-                }
+                TEST_ASSERT_EQUAL_MESSAGE(exp_val, dest[i], str_buff);
             }
 
+            if(!in_place){
+                for(int i = N; i < MAX_LEN; i++)
+                    TEST_ASSERT_EQUAL(XXX, dest[i]);
+            }
         }
     }
 }

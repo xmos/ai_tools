@@ -15,7 +15,7 @@
 #include "unity.h"
 
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
 
@@ -34,14 +34,11 @@ static void check_Y(
 
     unsigned y_offset = IMG_ADDRESS_VECT(y_params, row, col, chn);
 
-    int flg = 0;
-
     //Only sprintf-ing if the test will fail saves a ton of time.
     int8_t y = Y[y_offset];
 
     if(y != y_exp){
-        sprintf(str_buff, "%s%s%s failed. (row, col, chn) = (%u, %u, %u)  [test vector @ %u]", 
-                (flg&0x01)? "C" : "", (flg==0x03)? " and " : "", (flg&0x02)? "ASM" : "",
+        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)  [test vector @ %u]", 
                 row, col, chn, line);
     }
 

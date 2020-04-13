@@ -482,37 +482,6 @@ static inline void fully_connected_16(
 
 
 
-// /**  Fully connected layer for "deep" input and "shallow" output tensors.
-//  *
-//  *  Number of inputs must be divisible by 32. No activation is applied (i.e. linear).
-//  *
-//  *  \param  W       Weight tensor of shape (C_out, C_in) using standard layout
-//  *                  such that:
-//  *                      W[i, j]  =  K[C_in * i  +  j]
-//  *  \param  B       Bias tensor of shape (C_out) using a standard layout.
-//  *  \param  X       Input tensor of shape (C_in) using standard layout.
-//  *  \param  Y       Output tensor of shape (C_out) using standard layout.
-//  *  \param  C_out   Number of output channels.
-//  *  \param  C_in    Number of input channels, must be divisible by 32.
-//  *  \param  shifts  Shift tensor of shape (C_out) using standard layout.
-//  *                  Defines the shift used in the 32 to 8 bit conversion via
-//  *                  VLSAT. For c >= C_out, the value shifts[y] is undefined.
-//  *  \param  scales  Scale tensor of shape (C_out) using standard layout.
-//  *                  Defines the scale applied after the 32 to 8 bit
-//  *                  conversion. Optional. Can be assumed to be between 0x4000
-//  *                  and 0x7FFF. For c >= C_out, the value scales[y] is
-//  *                  undefined.
-//  */
-// static inline void fc_deepin_shallowout_8(
-//     const int8_t* W, 
-//     const int32_t* B,
-//     const int8_t* X, 
-//     int8_t* Y,
-//     const int32_t C_out, 
-//     const int32_t C_in,
-//     const uint16_t* shifts, 
-//     const int16_t* scales);
-
 
 /**  Determines the index of the largest element of a vector.
  *
@@ -522,7 +491,7 @@ static inline void fully_connected_16(
  *  \param  C       Output tensor of shape (1).
  *  \param  N       Number of elements in the input tensor A.
  */
-static inline void argmax_16(
+void argmax_16(
     const int16_t* A,
     int32_t* C,
     const int32_t N);
@@ -543,7 +512,7 @@ static inline void argmax_16(
  * \param x     Input tensor
  * \param n     Length of input and output tensors (in elements)
  */
-static inline void requantize_16_to_8(
+void requantize_16_to_8(
     int8_t* y,
     const int16_t* x,
     const unsigned n);
@@ -570,18 +539,13 @@ static inline void requantize_16_to_8(
  * \param lut       
  * \param length    
  */
-static inline void lookup8(
+void lookup8(
     uint8_t* Y,
     const uint8_t* X,
     const uint8_t* lut,
     const unsigned length);
 
 
-
-
-    
-
-#if defined(__XS3A__)
 
 /**
  * Copy size bytes from src to dst.
@@ -597,7 +561,6 @@ void vpu_memcpy(
     void* src,
     unsigned size);
 
-#endif
 
 #ifdef __XC__
 } // extern "C"

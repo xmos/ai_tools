@@ -219,58 +219,6 @@ static inline void fc_deepin_shallowout_8(
 
 
 
-static inline void argmax_16(
-    const int16_t* A,
-    int32_t* C,
-    const int32_t N)
-{
-#if defined(__XS3A__) && (USE_ASM_argmax_16)
-
-    argmax_16_asm(A, C, N);
-
-#else
-
-    argmax_16_c(A, C, N);
-
-#endif
-}
-
-
-static inline void requantize_16_to_8(
-    int8_t* y,
-    const int16_t* x,
-    const unsigned n)
-{
-#if defined(__XS3A__) && (USE_ASM_requantize_16_to_8)
-
-    requantize_16_to_8_asm(y, x, n);
-
-#else
-
-    requantize_16_to_8_c(y, x, n);
-
-#endif
-}
-
-
-static inline void lookup8(
-    uint8_t* Y,
-    const uint8_t* X,
-    const uint8_t* lut,
-    const unsigned length)
-{
-#if defined(__XS3A__) && (USE_ASM_lookup8)
-
-    lookup8_asm(Y, X, lut, length);
-
-#else
-
-    lookup8_c(Y, X, lut, length);
-
-#endif
-}
-
-
 
 
 

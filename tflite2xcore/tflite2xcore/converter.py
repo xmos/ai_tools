@@ -112,6 +112,7 @@ def optimize_for_xcore(model, *,
         pass_mgr.register_pass(passes.ParallelizeDeepConv2dPass(num_threads=num_threads))
 
     if cleanup:
+        pass_mgr.register_pass(passes.RemoveXCOREWeightBiasOperatorQuantInfo())
         pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
         pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 

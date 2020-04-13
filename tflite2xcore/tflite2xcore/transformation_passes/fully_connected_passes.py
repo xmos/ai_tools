@@ -32,9 +32,6 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
             self._weights.buffer.data = arr
             self._weights.shape = arr.shape
 
-            # remove quantization info to save space
-            self._weights.quantization = None
-
     @property
     def _MAX_POST_SHIFT(self):
         return 32 - 16 - 2  # this is because the output is 16 bit
@@ -51,10 +48,7 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
             self._biases.buffer.data = bss
             self._biases.shape = bss.shape
             self._biases.type = TensorType.INT16
-
-            # rename bias tensor and remove quantization info to save space
             self._biases.name = f"{op.name}/bias_shift_scale"
-            self._biases.quantization = None
 
     def mutate_output(self, op):
         with self.using(op):

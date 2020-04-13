@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.14)
 
 project(tflite2xcore VERSION 1.0.1)
 
+
+# This variable is ignored on platforms other than Apple
+set(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX10.13.sdk) 
+
 #**********************
 # Paths
 #**********************
@@ -92,4 +96,12 @@ target_include_directories(libtflite2xcore
   PRIVATE ${LIB_OPS_INCLUDE_DIR}
 )
 
-install(TARGETS libtflite2xcore DESTINATION lib)
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  set(INSTALL_DIR "${PROJECT_SOURCE_DIR}/../../tflite2xcore/tflite2xcore/libs/linux")
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(INSTALL_DIR "${PROJECT_SOURCE_DIR}/../../tflite2xcore/tflite2xcore/libs/macos")
+else() # must be Windows
+  set(INSTALL_DIR "${PROJECT_SOURCE_DIR}/../../tflite2xcore/tflite2xcore/libs/windows")
+endif()
+
+install(TARGETS libtflite2xcore DESTINATION ${INSTALL_DIR})

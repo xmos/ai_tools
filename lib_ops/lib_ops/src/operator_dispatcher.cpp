@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "lib_ops/api/par.h"
 #include "lib_ops/api/operator_dispatcher.h"
+#include "lib_ops/api/par.h"
 
 namespace xcore {
 
@@ -15,16 +15,16 @@ OperatorDispatcher& GetOperatorDispatcher() {
   return dispatcher;
 }
 
-XCoreStatus AllocateOperatorDispatcher(/*TODO: allocator here*/) {
+XCoreStatus InitializeDispatcher(void* buffer, size_t size) {
   OperatorDispatcher& dispatcher = GetOperatorDispatcher();
-  return dispatcher.Allocate(/*TODO: allocator here*/);
+  return dispatcher.SetAllocatorBuffer(buffer, size);
 }
 
 #ifdef XCORE
 // xCORE OperatorDispatcher implementation.
 // Uses a threadgroup_t to dispatch kernel funnctions to HW threads.
 OperatorDispatcher::OperatorDispatcher(bool use_current)
-    : use_current_(use_current), stack_ptr_(nullptr) {
+    : use_current_(use_current), reserved_stack_(0), stack_ptr_(nullptr) {
   group_ = thread_group_alloc();
 }
 OperatorDispatcher::~OperatorDispatcher() { thread_group_free(group_); }
@@ -56,7 +56,6 @@ void OperatorDispatcher::Wait() { thread_group_wait(group_); }
 OperatorDispatcher::OperatorDispatcher(bool use_current)
     : use_current_(use_current), stack_ptr_(nullptr) {
   commands_.size = 0;
-  commands_.data = nullptr;
 }
 
 OperatorDispatcher::~OperatorDispatcher() {}
@@ -86,20 +85,34 @@ void OperatorDispatcher::Wait() {
 
 #endif
 
-void OperatorDispatcher::Reserve(int32_t num_threads, size_t stack_words) {
+XCoreStatus OperatorDispatcher::SetAllocatorBuffer(void* buffer, size_t size) {
+  allocator_.SetBuffer(buffer, size);
+
+  return kXCoreOk;
+}
+
+XCoreStatus OperatorDispatcher::Reset() {
+  reserved_stack_ = 0;
+  stack_ptr_ = nullptr;
+  allocator_.Reset();
+
+  return kXCoreOk;
+}
+
+void* OperatorDispatcher::AllocateStackBuffer(int32_t num_threads,
+                                              size_t stack_words) {
   assert(num_threads <= maxthreads);
   size_t stack_size = stack_words * bytes_per_stackword * num_threads;
   reserved_stack_ = std::max(stack_size, reserved_stack_);
-  reserved_threads_ = std::max(num_threads, reserved_threads_);
+  // reserved_threads_ = std::max(num_threads, reserved_threads_);
+  stack_ptr_ = reinterpret_cast<char*>(
+      allocator_.Reallocate(stack_ptr_, reserved_stack_));
+
+  return stack_ptr_;
 }
 
-XCoreStatus OperatorDispatcher::Allocate(/*TODO: allocator here*/) {
-  stack_ptr_ = (char*)malloc(reserved_stack_);     // TODO: use allocator here
-  commands_.data = new KernelCommand[maxthreads];  // TODO: use allocator here
-
-  if (stack_ptr_) return kXCoreOk;
-
-  return kXCoreError;
+void* OperatorDispatcher::AllocatePersistentBuffer(size_t size) {
+  return allocator_.Allocate(size);
 }
 
 XCoreStatus OperatorDispatcher::Add(kernel_function_t function, void* argument,

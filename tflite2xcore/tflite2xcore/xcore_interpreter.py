@@ -13,6 +13,7 @@ from tflite2xcore.xcore_model import TensorType
 
 
 DEFAULT_TENSOR_ARENA_SIZE = 4000000
+DEFAULT_XCORE_ARENA_SIZE = 25000
 
 class XCOREInterpreterStatus(Enum):
     Ok = 0
@@ -29,7 +30,9 @@ class NumpyToTfLiteTensorType(Enum):
     int8 = 9        # kTfLiteInt8
 
 class XCOREInterpreter:
-    def __init__(self, model_path=None, model_content=None, arena_size=DEFAULT_TENSOR_ARENA_SIZE):
+    def __init__(self, model_path=None, model_content=None,
+        tensor_arena_size=DEFAULT_TENSOR_ARENA_SIZE,
+        xcore_arena_size=DEFAULT_XCORE_ARENA_SIZE):
         self._error_msg = ctypes.create_string_buffer(1024)
 
         lib.new_interpreter.restype = ctypes.c_void_p
@@ -39,7 +42,7 @@ class XCOREInterpreter:
         lib.delete_interpreter.argtypes = [ctypes.c_void_p]
 
         lib.initialize.restype = ctypes.c_int
-        lib.initialize.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_size_t]
+        lib.initialize.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_size_t]
 
         lib.allocate_tensors.restype = ctypes.c_int
         lib.allocate_tensors.argtypes = [ctypes.c_void_p]
@@ -97,7 +100,8 @@ class XCOREInterpreter:
 
         self._is_allocated = False
         self.obj = lib.new_interpreter()
-        status = lib.initialize(self.obj, model_content, len(model_content), arena_size) 
+        status = lib.initialize(self.obj, model_content, len(model_content),
+            tensor_arena_size, xcore_arena_size) 
         if status == XCOREInterpreterStatus.Error:
             raise RuntimeError('Unable to initialize interpreter')
 

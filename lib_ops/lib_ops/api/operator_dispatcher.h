@@ -2,6 +2,8 @@
 #ifndef XCORE_OPERATOR_DISPATCHER_H_
 #define XCORE_OPERATOR_DISPATCHER_H_
 
+#include "lib_ops/api/par.h"
+#include "lib_ops/api/operator_allocator.h"
 #include "lib_ops/api/lib_ops.h"
 
 #ifdef XCORE
@@ -41,7 +43,7 @@ typedef struct KernelCommand {
 
 typedef struct KernelCommandArray {
   int size;
-  KernelCommand* data;
+  KernelCommand data[maxthreads];
 } KernelCommandArray;
 
 class OperatorDispatcher {
@@ -49,8 +51,10 @@ class OperatorDispatcher {
   OperatorDispatcher(bool use_current = true);
   ~OperatorDispatcher();
 
-  void Reserve(int32_t num_threads, size_t stack_words);
-  XCoreStatus Allocate(/*allocator here*/);
+  void* AllocateStackBuffer(int32_t num_threads, size_t stack_words);
+  void* AllocatePersistentBuffer(size_t size);
+  XCoreStatus SetAllocatorBuffer(void* buffer, size_t size);
+  XCoreStatus Reset();
   XCoreStatus Add(kernel_function_t function, void* argument,
                   size_t stack_words);
   void Start();
@@ -58,16 +62,17 @@ class OperatorDispatcher {
 
  private:
   bool use_current_;
-  int32_t reserved_threads_;
+  //int32_t reserved_threads_;
   size_t reserved_stack_;
   char* stack_ptr_;
   thread_group_t group_;
   KernelCommandArray commands_;
+  LinearAllocator allocator_;
 };
 
 // static, shared OperatorDispatcher object
 OperatorDispatcher& GetOperatorDispatcher();
-XCoreStatus AllocateOperatorDispatcher();
+XCoreStatus InitializeDispatcher(void* buffer, size_t size);
 
 }  // namespace xcore
 

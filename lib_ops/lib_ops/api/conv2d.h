@@ -36,8 +36,7 @@ struct Conv2DParams {
 
 class Conv2D_Deep {
  public:
-  Conv2D_Deep(const Conv2DParams& params, const ParRegionArray& par_regions)
-      : params(params), par_regions(par_regions), jobs_(nullptr) {}
+  Conv2D_Deep(const Conv2DParams& params, const ParRegionArray& par_regions);
   ~Conv2D_Deep() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,

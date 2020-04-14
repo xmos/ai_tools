@@ -1,10 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from .transformation_passes import *  # TODO: fix this
-from .argmax_passes import (
-    AddArgMax16OutputPass,
-    ReplaceArgMax16Pass
-)
+
 from .lut_passes import (
     ReplaceTanhPass,
     ReplaceLogisticPass,

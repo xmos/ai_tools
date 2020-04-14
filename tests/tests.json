@@ -149,15 +149,6 @@
         ]
     },
     {
-        "generator": "../examples/models/op_test_models/generate_argmax_16.py",
-        "operator": "XC_argmax_16",
-        "parameters": [
-            {"-in": 1},
-            {"-in": 10, "smoke": true},
-            {"-in": 100}
-        ]
-    },
-    {
         "generator": "../examples/models/op_test_models/generate_maxpool2d.py",
         "operator": "XC_maxpool2d",
         "parameters": [

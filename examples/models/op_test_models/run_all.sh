@@ -5,8 +5,6 @@
 rm -rf ./debug
 set -e
 
-./generate_argmax_16.py -v
-
 # pooling
 ./generate_avgpool2d.py -v
 ./generate_avgpool2d_global.py -v

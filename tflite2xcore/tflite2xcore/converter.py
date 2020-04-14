@@ -101,11 +101,6 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
-    if is_classifier:
-        # TODO: revise how this is done
-        pass_mgr.register_pass(passes.AddArgMax16OutputPass())
-    pass_mgr.register_pass(passes.ReplaceArgMax16Pass())
-
     if num_threads:
         pass_mgr.register_pass(passes.ParallelizeDeepConv2dPass(num_threads=num_threads))
 

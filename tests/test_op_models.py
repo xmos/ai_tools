@@ -30,7 +30,6 @@ def load_tests(test_name, test_dir, max_count):
         operator_codes.XCOREOpCodes.XC_avgpool2d.name,
         operator_codes.XCOREOpCodes.XC_avgpool2d_global.name,
         operator_codes.XCOREOpCodes.XC_lookup_8.name,
-        operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name
     ])
 
     operator_name = test_name[:-10]
@@ -208,12 +207,6 @@ def test_XC_avgpool2d_global(test_model_app, XC_avgpool2d_global_test_case, abs_
     if is_xfail(XC_avgpool2d_global_test_case):
         pytest.xfail()
     assert(run_test_case(test_model_app, XC_avgpool2d_global_test_case, abs_tol))
-
-
-def test_XC_requantize_16_to_8(test_model_app, XC_requantize_16_to_8_test_case, abs_tol):
-    if is_xfail(XC_requantize_16_to_8_test_case):
-        pytest.xfail()
-    assert(run_test_case(test_model_app, XC_requantize_16_to_8_test_case, abs_tol))
 
 
 if __name__ == "__main__":

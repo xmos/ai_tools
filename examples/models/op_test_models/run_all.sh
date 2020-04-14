@@ -24,8 +24,6 @@ set -e
 # fully connected
 ./generate_fully_connected.py -v --train_model -ep 1
 ./generate_fully_connected.py -v
-./generate_fully_connected_requantized.py -v --train_model -ep 1
-./generate_fully_connected_requantized.py -v
 
 # activations
 ./generate_lookup_8.py -act relu -v

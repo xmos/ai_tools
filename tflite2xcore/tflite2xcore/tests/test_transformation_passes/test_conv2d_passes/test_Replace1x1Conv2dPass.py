@@ -16,7 +16,7 @@ from .conftest import (
     test_non_matching_input_channels,
     test_non_matching_stride_h,
     test_non_matching_stride_w,
-    test_non_matching_types
+    test_non_matching_tensors
 )
 
 

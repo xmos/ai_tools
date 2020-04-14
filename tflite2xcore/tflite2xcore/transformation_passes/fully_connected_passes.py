@@ -52,14 +52,17 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
         # TODO: revise this when FC becomes 8bit output
         with self.using(op):
             self._output.type = TensorType.INT16
-            self._output.quantization = {
-                'min': self._output.quantization['min'],
-                'max': self._output.quantization['max'],
+            new_quantization = {
+                k: v for k, v in self._output.quantization.items()
+                if k in ['min', 'max']
+            }
+            new_quantization.update({
                 'scale': [self._output.quantization['scale'][0] / 2**8],
                 'zero_point': [self._output_zero_point * 2**8],
                 'details_type': "CustomQuantization",
                 'quantized_dimension': 0
-            }
+            })
+            self._output.quantization = new_quantization
 
     @property
     def new_opcode(self):

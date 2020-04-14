@@ -91,9 +91,7 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.ReplaceAveragePool2DPass())
     pass_mgr.register_pass(passes.ReplaceGlobalAveragePool2DPass())
 
-    # TODO: revise how these are done
-    pass_mgr.register_pass(passes.ReplaceFullyConnectedIntermediatePass())
-    pass_mgr.register_pass(passes.ReplaceFullyConnectedOutputPass())
+    pass_mgr.register_pass(passes.ReplaceFullyConnectedPass())
 
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())

@@ -21,8 +21,7 @@ from .conv2d_passes import (
 )
 
 from .fully_connected_passes import (
-    ReplaceFullyConnectedOutputPass,
-    ReplaceFullyConnectedIntermediatePass
+    ReplaceFullyConnectedPass
 )
 
 from .pooling_passes import (

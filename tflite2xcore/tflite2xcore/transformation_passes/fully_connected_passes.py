@@ -2,8 +2,6 @@
 
 import numpy as np
 
-from abc import abstractmethod
-
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import WORD_SIZE
@@ -51,9 +49,9 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
             self._biases.name = f"{op.name}/bias_shift_scale"
 
     def mutate_output(self, op):
+        # TODO: revise this when FC becomes 8bit output
         with self.using(op):
             self._output.type = TensorType.INT16
-            self._output.name = f"{op.name}/output"
             self._output.quantization = {
                 'min': self._output.quantization['min'],
                 'max': self._output.quantization['max'],
@@ -67,44 +65,9 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     def new_opcode(self):
         return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout)
 
-    @abstractmethod
-    def mutate(self, op):
-        # NOTE: Overload this in subclasses, and call mutate_output appropriately
-        # NOTE: the order of these mutations is strict
-        new_op = super().mutate(op)
-        self.mutate_biases(new_op)
-        self.mutate_weights(new_op)
-        return new_op
-
-
-class ReplaceFullyConnectedOutputPass(ReplaceFullyConnectedPass):
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._output in op.subgraph.outputs
-
-        return False
-
-    def mutate(self, op):
-        new_op = super().mutate(op)
-        self.mutate_output(new_op)
-        return new_op
-
-
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._output not in op.subgraph.outputs
-
-        return False
-
     def add_requantize(self, op):
-        # TODO: this should happen in a separate pass
+        # TODO: remove this when FC becomes 8bit output
         with self.using(op):
-            # rename original output tensor
-            self._output.name = f"{op.name}/output_requant"
             # create intermediate tensor
             intermediate = op.subgraph.create_tensor(
                 f"{op.name}/intermediate", self._output.type, self._output.shape,
@@ -126,6 +89,8 @@ class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
         new_op = super().mutate(op)
+        self.mutate_biases(new_op)
+        self.mutate_weights(new_op)
         self.add_requantize(new_op)
         self.mutate_output(new_op)
         return new_op

@@ -64,3 +64,9 @@ def _test_matching_params(trf_pass, model):
 
 def test_matching_params(trf_pass, model):
     _test_matching_params(trf_pass, model)
+
+
+def test_non_matching_tensors(trf_pass, model, non_matching_tensors):
+    subgraph = model.subgraphs[0]
+    subgraph.get_tensor(non_matching_tensors[0]).type = non_matching_tensors[1]
+    _test_non_matching_params(trf_pass, model)

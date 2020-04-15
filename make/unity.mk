@@ -1,0 +1,7 @@
+UNITY_PATH := $(PROJECT_ROOT_DIR)/third_party/unity
+
+UNITY_INCLUDES := -I$(UNITY_PATH)/src
+
+UNITY_VPATH := $(UNITY_PATH)/src
+
+UNITY_SOURCES := unity.c

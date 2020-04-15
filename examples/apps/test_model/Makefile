@@ -59,6 +59,7 @@ $(info Building for $(BUILD_TARGET))
 #********************
 # Dependencies
 #********************
+PROJECT_ROOT_DIR = ${CURDIR}/../../..
 include ../../../make/tensorflow.mk
 include ../../../make/libs.mk
 

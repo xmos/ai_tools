@@ -45,7 +45,9 @@ class SubgraphTransformationPass(ModelTransformationPass):
                             obj.sanity_check()
                         except AssertionError as e:
                             self.logger.exception(e)
-                        import pdb; pdb.set_trace()
+                        import pdb
+
+                        pdb.set_trace()
                     self.mutate(obj)
                     break
             else:
@@ -112,9 +114,11 @@ class OutputTensorMatchingPass(SubgraphTransformationPass):
 
 class RemoveSoftmaxOutputPass(OperatorMatchingPass):
     def match(self, op):
-        return (super().match(op)
-                and op.operator_code.code == BuiltinOpCodes.SOFTMAX
-                and op.outputs[0] in op.subgraph.outputs)
+        return (
+            super().match(op)
+            and op.operator_code.code == BuiltinOpCodes.SOFTMAX
+            and op.outputs[0] in op.subgraph.outputs
+        )
 
     def mutate(self, op):
         subgraph = op.subgraph
@@ -134,11 +138,11 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
 
     @property
     def _input_zero_point(self):
-        return int(self._input.quantization['zero_point'][0])
+        return int(self._input.quantization["zero_point"][0])
 
     @property
     def _output_zero_point(self):
-        return int(self._output.quantization['zero_point'][0])
+        return int(self._output.quantization["zero_point"][0])
 
     @property
     @abstractmethod
@@ -156,8 +160,10 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
     def match(self, op):
         if super().match(op) and op.operator_code.code == self.matching_opcode:
             with self.using(op):
-                return (self._input.type == self._matching_input_type
-                        and self._output.type == self._matching_output_type)
+                return (
+                    self._input.type == self._matching_input_type
+                    and self._output.type == self._matching_output_type
+                )
 
 
 # TODO: write (at least regression) tests for this class
@@ -169,7 +175,8 @@ class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
 
     def mutate(self, op):
         new_op = op.subgraph.create_operator(
-            self.new_opcode, inputs=op.inputs, outputs=op.outputs)
+            self.new_opcode, inputs=op.inputs, outputs=op.outputs
+        )
         new_op.subgraph.replace_operator(op, new_op)
         return new_op
 
@@ -182,8 +189,7 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
     def _log_weights(self):
         self.logger.xdebug(
-            "_weights:\n"
-            + logging._array_msg(self._weights.numpy.astype(np.int8))
+            "_weights:\n" + logging._array_msg(self._weights.numpy.astype(np.int8))
         )
 
     @property
@@ -193,12 +199,14 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return (self._weights.type == TensorType.INT8
-                        and self._biases.type == TensorType.INT32)
+                return (
+                    self._weights.type == TensorType.INT8
+                    and self._biases.type == TensorType.INT32
+                )
 
     def _multiplier(self):
-        output_scale = self._output.quantization['scale'][0]
-        bias_scale = np.array(self._biases.quantization['scale'])
+        output_scale = self._output.quantization["scale"][0]
+        bias_scale = np.array(self._biases.quantization["scale"])
         return bias_scale / output_scale
 
     @abstractmethod
@@ -208,8 +216,11 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     @logging.log_method_output()
     def _unified_bias(self):
         biases = self._biases.numpy
-        return np.int32(biases - self._zero_point_bias()
-                        + np.int32(np.round(self._output_zero_point / self._multiplier())))
+        return np.int32(
+            biases
+            - self._zero_point_bias()
+            + np.int32(np.round(self._output_zero_point / self._multiplier()))
+        )
 
     @staticmethod
     def __pad_to_acc_period(arr):
@@ -226,7 +237,9 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
         # splitting lower and upper 16 bits of each 32 bit value
         tmp_shape = (bias.shape[0] // ACC_PERIOD, ACC_PERIOD, -1)
-        new_bias = np.frombuffer(bias.flatten().tostring(), dtype=np.int16).reshape(tmp_shape)
+        new_bias = np.frombuffer(bias.flatten().tostring(), dtype=np.int16).reshape(
+            tmp_shape
+        )
         return np.stack([new_bias[:, :, 1], new_bias[:, :, 0]], axis=1)
 
     def _shift_scale(self):
@@ -234,10 +247,10 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         # NOTE: VLMUL expects one factor in Q2.14
         # we have 1 <= scale < 2 represented in Q2.14
         rshift = -np.ceil(np.log2(multiplier)) + 1
-        scale = np.round(2**14 * (multiplier * 2**rshift))
+        scale = np.round(2 ** 14 * (multiplier * 2 ** rshift))
 
         for j in range(len(scale)):
-            if scale[j] == 2**15:
+            if scale[j] == 2 ** 15:
                 rshift[j] -= 1
                 scale[j] /= 2
             # we are using 16 bits instead of 8 so we need to adjust the shift
@@ -250,7 +263,9 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
             scale = np.repeat(scale, bias_size)
         rshift, scale = np.int16(rshift), np.int16(scale)
         if rshift.shape != scale.shape:
-            raise ValueError(f"Shift and scale shapes don't match: {rshift.shape} != {scale.shape}")
+            raise ValueError(
+                f"Shift and scale shapes don't match: {rshift.shape} != {scale.shape}"
+            )
         return rshift, scale
 
     @property
@@ -269,11 +284,16 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         scale = self.__pad_to_acc_period(scale).reshape(new_shape)
 
         # split left and right shift into pre and post scaling shifts
-        shift_pre = rshift if True else np.maximum(rshift, 0)  # TODO: resolve this when left shift issue is solved in conv2d kernels
-        shift_post = self._MAX_POST_SHIFT * np.ones(rshift.shape, dtype=rshift.dtype) + np.minimum(rshift, 0)
+        shift_pre = (
+            rshift if True else np.maximum(rshift, 0)
+        )  # TODO: resolve this when left shift issue is solved in conv2d kernels
+        shift_post = self._MAX_POST_SHIFT * np.ones(
+            rshift.shape, dtype=rshift.dtype
+        ) + np.minimum(rshift, 0)
         if np.any(shift_post.flatten() < 0):
-            raise ValueError("Negative shift_post encountered: "
-                             f"{logging._array_msg(shift_post)}")
+            raise ValueError(
+                "Negative shift_post encountered: " f"{logging._array_msg(shift_post)}"
+            )
         return np.stack([shift_pre, scale, shift_post], axis=1)
 
     def _bss_arr(self):

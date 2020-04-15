@@ -37,8 +37,9 @@ from .quantize_dequantize_passes import (
     LegalizeQuantizedOutputPass,
     LegalizeFloatInputPass,
     LegalizeFloatOutputPass,
-    LegalizeQuantizeVersionPass,
 )
+
+from .op_version_passes import LegalizeQuantizeVersionPass
 
 from .cleanup_passes import (
     RemoveXCOREWeightBiasOperatorQuantInfo,

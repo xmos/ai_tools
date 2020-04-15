@@ -12,7 +12,7 @@ import numpy as np
 from pathlib import Path
 from tqdm import tqdm
 from tflite2xcore.model_generation import utils
-from tflite2xcore.model_generation.interface import KerasClassifier
+from tflite2xcore.model_generation.interface import KerasModel
 from tflite2xcore import xlogging as logging
 
 import tensorflow as tf
@@ -174,7 +174,7 @@ def prepare_MNIST(use_aug=False, simard=False, padding=2):
 #                                  MODELS
 #  ----------------------------------------------------------------------------
 
-class MNISTModel(KerasClassifier):
+class MNISTModel(KerasModel):
     def __init__(self, *args, use_aug=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._use_aug = use_aug
@@ -222,22 +222,17 @@ class MNISTDefaultParser(TrainableParser):
                  "and the target subdirectories."
         )
         self.add_argument(
-            '--classifier', action='store_true', default=False,
-            help='Apply classifier optimizations during xcore conversion.'
-        )
-        self.add_argument(
             '-aug', '--augment_dataset', action='store_true', default=False,
             help='Create a dataset with elastic transformations.'  # TODO: does this always mean elastic trf?
         )
 
     def _name_handler(self, args):
-        if args.classifier:
-            args.name = '_'.join([args.name, 'cls'])
+        pass
 
     def parse_args(self, *args, **kwargs):
         args = super().parse_args(*args, **kwargs)
         self._name_handler(args)
-        args.path = Path(args.path)/args.name
+        args.path = Path(args.path) / args.name
         return args
 
 
@@ -252,4 +247,3 @@ class XcoreTunedParser(MNISTDefaultParser):
     def _name_handler(self, args):
         if args.xcore_tuned:
             args.name = '_'.join([args.name, 'tuned'])
-        super()._name_handler(args)

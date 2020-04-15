@@ -81,10 +81,7 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
             self._biases.buffer.data = bss
             self._biases.shape = bss.shape
             self._biases.type = TensorType.INT16
-
-            # rename bias tensor and remove quantization info to save space
             self._biases.name = f"{op.name}/bias_shift_scale"
-            self._biases.quantization = None  # TODO: this should happen in another legalization pass
 
     def mutate_weights(self, op):
         super().mutate_weights(op)
@@ -93,9 +90,6 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
             #       the kernel should be 1 in TFLite
             self._weights.shape = self._weights.shape[1:]
             self._log_weights()
-
-            # remove quantization info to save space
-            self._weights.quantization = None
 
     def _pad(self):
         # TODO: this is very similar to the one in ReplaceDeepConv2dPass, refactor
@@ -157,10 +151,7 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
             self._biases.buffer.data = bss
             self._biases.shape = bss.shape
             self._biases.type = TensorType.INT16
-
-            # rename bias tensor and remove quantization info to save space
             self._biases.name = f"{op.name}/bias_shift_scale"
-            self._biases.quantization = None
 
     def mutate_weights(self, op):
         super().mutate_weights(op)
@@ -169,9 +160,6 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
             old_shape = self._weights.shape
             self._weights.shape = [old_shape[0], old_shape[3]]
             self._log_weights()
-
-            # remove quantization info to save space
-            self._weights.quantization = None
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
@@ -216,17 +204,7 @@ class ReplaceDeepConv2dPass(ReplaceConv2DPass):
             self._biases.buffer.data = bss
             self._biases.shape = bss.shape
             self._biases.type = TensorType.INT16
-
-            # rename bias tensor and remove quantization info to save space
             self._biases.name = f"{op.name}/bias_shift_scale"
-            self._biases.quantization = None  # TODO: this should happen in another legalization pass
-
-    def mutate_weights(self, op):
-        super().mutate_weights(op)
-        with self.using(op):
-            # remove quantization info to save space
-            # TODO: this should happen in another legalization pass
-            self._weights.quantization = None
 
     def _pad(self):
         # TODO: this is very similar to the one in ReplaceDepthwiseConv2dPass, refactor

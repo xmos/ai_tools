@@ -9,7 +9,8 @@ from tflite2xcore.xcore_model import TensorType
 from ..conftest import (
     PARAMS,
     _test_non_matching_params,
-    test_matching_params
+    test_matching_params,
+    test_non_matching_tensors
 )
 
 
@@ -75,7 +76,7 @@ PARAMS["smoke"].update({
     "non_matching_tensors": [
         ('input', TensorType.INT16),
         ('weights', TensorType.INT16),
-        ('biases', TensorType.INT8),
+        ('biases', TensorType.INT16),
         ('output', TensorType.INT16)
     ]
 })
@@ -128,12 +129,6 @@ def test_non_matching_input_channels(trf_pass, build_model,
     weight_shape[3] = non_matching_input_channels
     model = build_model(weight_shape=weight_shape, input_size=input_size,
                         padding=padding, strides=strides)
-    _test_non_matching_params(trf_pass, model)
-
-
-def test_non_matching_types(trf_pass, model, non_matching_tensors):
-    subgraph = model.subgraphs[0]
-    subgraph.get_tensor(non_matching_tensors[0]).type = non_matching_tensors[1]
     _test_non_matching_params(trf_pass, model)
 
 

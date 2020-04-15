@@ -9,7 +9,7 @@ from model_common import DefaultParser
 
 from pathlib import Path
 from tflite2xcore.model_generation import utils
-from tflite2xcore.model_generation.interface import KerasClassifier
+from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
 import numpy as np
 import json
@@ -31,7 +31,7 @@ with open(fpath) as f:
     CLASS_INDEX = json.load(f)
 
 
-class ImageNetModel(KerasClassifier):
+class ImageNetModel(KerasModel):
     def __init__(self, *args, classes=None, input_size=None, **kwargs):
         super().__init__(*args, **kwargs)
 

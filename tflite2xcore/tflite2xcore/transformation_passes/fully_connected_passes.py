@@ -2,8 +2,6 @@
 
 import numpy as np
 
-from abc import abstractmethod
-
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import WORD_SIZE
@@ -32,9 +30,6 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
             self._weights.buffer.data = arr
             self._weights.shape = arr.shape
 
-            # remove quantization info to save space
-            self._weights.quantization = None
-
     @property
     def _MAX_POST_SHIFT(self):
         return 32 - 16 - 2  # this is because the output is 16 bit
@@ -51,66 +46,31 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
             self._biases.buffer.data = bss
             self._biases.shape = bss.shape
             self._biases.type = TensorType.INT16
-
-            # rename bias tensor and remove quantization info to save space
             self._biases.name = f"{op.name}/bias_shift_scale"
-            self._biases.quantization = None
 
     def mutate_output(self, op):
+        # TODO: revise this when FC becomes 8bit output
         with self.using(op):
             self._output.type = TensorType.INT16
-            self._output.name = f"{op.name}/output"
-            self._output.quantization = {
-                'min': self._output.quantization['min'],
-                'max': self._output.quantization['max'],
+            new_quantization = {
+                k: v for k, v in self._output.quantization.items()
+                if k in ['min', 'max']
+            }
+            new_quantization.update({
                 'scale': [self._output.quantization['scale'][0] / 2**8],
                 'zero_point': [self._output_zero_point * 2**8],
                 'details_type': "CustomQuantization",
                 'quantized_dimension': 0
-            }
+            })
+            self._output.quantization = new_quantization
 
     @property
     def new_opcode(self):
         return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout)
 
-    @abstractmethod
-    def mutate(self, op):
-        # NOTE: Overload this in subclasses, and call mutate_output appropriately
-        # NOTE: the order of these mutations is strict
-        new_op = super().mutate(op)
-        self.mutate_biases(new_op)
-        self.mutate_weights(new_op)
-        return new_op
-
-
-class ReplaceFullyConnectedOutputPass(ReplaceFullyConnectedPass):
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._output in op.subgraph.outputs
-
-        return False
-
-    def mutate(self, op):
-        new_op = super().mutate(op)
-        self.mutate_output(new_op)
-        return new_op
-
-
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._output not in op.subgraph.outputs
-
-        return False
-
     def add_requantize(self, op):
-        # TODO: this should happen in a separate pass
+        # TODO: remove this when FC becomes 8bit output
         with self.using(op):
-            # rename original output tensor
-            self._output.name = f"{op.name}/output_requant"
             # create intermediate tensor
             intermediate = op.subgraph.create_tensor(
                 f"{op.name}/intermediate", self._output.type, self._output.shape,
@@ -132,6 +92,8 @@ class ReplaceFullyConnectedIntermediatePass(ReplaceFullyConnectedPass):
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
         new_op = super().mutate(op)
+        self.mutate_biases(new_op)
+        self.mutate_weights(new_op)
         self.add_requantize(new_op)
         self.mutate_output(new_op)
         return new_op

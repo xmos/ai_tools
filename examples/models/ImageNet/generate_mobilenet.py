@@ -68,10 +68,6 @@ def main(raw_args=None):
         'path': DEFAULT_PATH,
     })
     parser.add_argument(
-        '--classifier', action='store_true', default=False,
-        help='Apply classifier optimizations during xcore conversion.'
-    )
-    parser.add_argument(
         '-i', '--input_size', nargs="+", type=int, default=[128, 128],
         help="Input image size in pixels [height, [width]]. "
              "If only one number is specified it will be used for both dimensions."
@@ -91,8 +87,7 @@ def main(raw_args=None):
     model = Mobilenet(name=DEFAULT_NAME,
                       path=args.path,
                       classes=args.classes,
-                      input_size=args.input_size,
-                      opt_classifier=args.classifier)
+                      input_size=args.input_size)
     model.build(alpha=args.alpha)
     model.gen_test_data()
     model.save_core_model()

@@ -32,6 +32,35 @@ class NumpyToTfLiteTensorType(Enum):
     int8 = 9  # kTfLiteInt8
 
 
+def make_op_state_capture_callback(op_states, *, inputs=True, outputs=True):
+    assert isinstance(op_states, list)
+
+    keys = []
+    if inputs:
+        keys.append("inputs")
+    if outputs:
+        keys.append("outputs")
+
+    def _callback(interpreter, operator_details):
+        try:
+            op_state = op_states[operator_details["index"]]
+            assert isinstance(op_state, dict)
+        except IndexError:
+            op_state = {}
+            op_states.append(op_state)
+
+        for key in keys:
+            op_state[key] = [
+                {
+                    "index": tensor["index"],
+                    "values": interpreter.get_tensor(tensor["index"]),
+                }
+                for tensor in operator_details[key]
+            ]
+
+    return _callback
+
+
 class XCOREInterpreter:
     def __init__(
         self,
@@ -145,6 +174,7 @@ class XCOREInterpreter:
                 model_content = fd.read()
 
         self._is_allocated = False
+        self._op_states = []
         self.obj = lib.new_interpreter()
         status = lib.initialize(
             self.obj,
@@ -169,12 +199,26 @@ class XCOREInterpreter:
             raise RuntimeError(self._error_msg.value.decode("utf-8"))
 
     def allocate_tensors(self):
+        self._op_states = []
         if self._is_allocated:
             return  # NOTE: the TFLu interpreter can not be allocated multiple times
         self._is_allocated = True
         self._check_status(lib.allocate_tensors(self.obj))
 
-    def invoke(self, *, preinvoke_callback=None, postinvoke_callback=None):
+    def invoke(
+        self,
+        *,
+        preinvoke_callback=None,
+        postinvoke_callback=None,
+        capture_op_states=False
+    ):
+        if capture_op_states:
+            # NOTE: the original callbacks are ignored
+            self._op_states = []
+            cb_pre = make_op_state_capture_callback(self._op_states, outputs=False)
+            cb_post = make_op_state_capture_callback(self._op_states, inputs=False)
+            return self.invoke(preinvoke_callback=cb_pre, postinvoke_callback=cb_post)
+
         INVOKE_CALLBACK_FUNC = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_int)
 
         def make_operator_details(operator_index):

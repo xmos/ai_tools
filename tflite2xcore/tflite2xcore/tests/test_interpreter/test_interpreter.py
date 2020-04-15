@@ -68,8 +68,9 @@ def test_inference():
     np.testing.assert_equal(computed_output, expected_output)
 
 def test_callback():
-    def callback(interpreter, operator_details):
-        print('Operator:')
+    def preinvoke_callback(interpreter, operator_details):
+        print()
+        print('Operator Pre-Invoke:')
         print(operator_details)
         print('Inputs:')
         for input_ in operator_details['inputs']:
@@ -82,6 +83,21 @@ def test_callback():
             tensor = interpreter.get_tensor(output['index'])
             print(tensor)
 
+
+    def postinvoke_callback(interpreter, operator_details):
+        print('Operator Post-Invoke:')
+        print(operator_details)
+        print('Inputs:')
+        for input_ in operator_details['inputs']:
+            print(input_)
+            tensor = interpreter.get_tensor(input_['index'])
+            print(tensor)
+        print('Outputs:')
+        for output in operator_details['outputs']:
+            print(output)
+            tensor = interpreter.get_tensor(output['index'])
+            print(tensor)
+        print()
 
     with open(BUILTIN_OPERATORS_TEST_MODEL, 'rb') as fd:
         model_content = fd.read()
@@ -99,10 +115,16 @@ def test_callback():
     expected_output.shape = output_tensor_details['shape']
 
     interpreter.set_tensor(input_tensor_details['index'], input_tensor)
-    interpreter.invoke(callback)
+    interpreter.invoke(preinvoke_callback=preinvoke_callback, postinvoke_callback=postinvoke_callback)
 
     computed_output = interpreter.get_tensor(output_tensor_details['index'])
     np.testing.assert_equal(computed_output, expected_output)
+
+    interpreter.invoke(postinvoke_callback=postinvoke_callback)
+
+    interpreter.invoke(preinvoke_callback=preinvoke_callback)
+
+
 
 
 if __name__ == "__main__":

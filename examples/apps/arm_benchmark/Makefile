@@ -64,8 +64,8 @@ $(info Building for $(BUILD_TARGET))
 #********************
 # Dependencies
 #********************
-include ../make/tensorflow.mk
-include ../make/libs.mk
+include ../../../make/tensorflow.mk
+include ../../../make/libs.mk
 
 INCLUDES := $(TENSORFLOW_INCLUDES)
 INCLUDES += $(LIBS_INCLUDES)

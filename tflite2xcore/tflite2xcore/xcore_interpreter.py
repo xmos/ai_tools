@@ -309,66 +309,64 @@ class XCOREInterpreter:
         )
         return tensor
 
+    def _get_tensor_details(self, tensor_index):
+        # first get the dimensions of the tensor
+        dims_size = ctypes.c_size_t()
+        shape_size = ctypes.c_size_t()
+        zero_point_size = ctypes.c_size_t()
+        self._check_status(
+            lib.get_tensor_details_buffer_sizes(
+                self.obj,
+                tensor_index,
+                ctypes.byref(dims_size),
+                ctypes.byref(shape_size),
+                ctypes.byref(zero_point_size),
+            )
+        )
+        # allocate buffer for shape
+        tensor_shape = (ctypes.c_int * dims_size.value)()
+        tensor_name_max_len = 1024
+        tensor_name = ctypes.create_string_buffer(tensor_name_max_len)
+        tensor_type = ctypes.c_int()
+        tensor_scale = (ctypes.c_float * shape_size.value)()
+        tensor_zero_point = (ctypes.c_int32 * zero_point_size.value)()
+
+        self._check_status(
+            lib.get_tensor_details(
+                self.obj,
+                tensor_index,
+                tensor_name,
+                tensor_name_max_len,
+                tensor_shape,
+                ctypes.byref(tensor_type),
+                tensor_scale,
+                tensor_zero_point,
+            )
+        )
+
+        scales = np.array(tensor_scale, dtype=np.float)
+        if len(tensor_scale) == 1:
+            scales = scales[0]
+
+        zero_points = np.array(tensor_zero_point, dtype=np.int32)
+        if len(tensor_scale) == 1:
+            zero_points = zero_points[0]
+
+        return {
+            "index": tensor_index,
+            "name": tensor_name.value.decode("utf-8"),
+            "shape": np.array(tensor_shape, dtype=np.int32),
+            "dtype": TensorType.to_numpy_dtype(tensor_type.value),
+            "quantization": (scales, zero_points),
+        }
+
     def get_tensor_details(self):
         self._verify_allocated()
-
-        tensor_details = []
-
         tensor_count = lib.tensors_size(self.obj)
-        for tensor_index in range(tensor_count):
-            # first get the dimensions of the tensor
-            dims_size = ctypes.c_size_t()
-            shape_size = ctypes.c_size_t()
-            zero_point_size = ctypes.c_size_t()
-            self._check_status(
-                lib.get_tensor_details_buffer_sizes(
-                    self.obj,
-                    tensor_index,
-                    ctypes.byref(dims_size),
-                    ctypes.byref(shape_size),
-                    ctypes.byref(zero_point_size),
-                )
-            )
-            # allocate buffer for shape
-            tensor_shape = (ctypes.c_int * dims_size.value)()
-            tensor_name_max_len = 1024
-            tensor_name = ctypes.create_string_buffer(tensor_name_max_len)
-            tensor_type = ctypes.c_int()
-            tensor_scale = (ctypes.c_float * shape_size.value)()
-            tensor_zero_point = (ctypes.c_int32 * zero_point_size.value)()
-
-            self._check_status(
-                lib.get_tensor_details(
-                    self.obj,
-                    tensor_index,
-                    tensor_name,
-                    tensor_name_max_len,
-                    tensor_shape,
-                    ctypes.byref(tensor_type),
-                    tensor_scale,
-                    tensor_zero_point,
-                )
-            )
-
-            scales = np.array(tensor_scale, dtype=np.float)
-            if len(tensor_scale) == 1:
-                scales = scales[0]
-
-            zero_points = np.array(tensor_zero_point, dtype=np.int32)
-            if len(tensor_scale) == 1:
-                zero_points = zero_points[0]
-
-            tensor_details.append(
-                {
-                    "index": tensor_index,
-                    "name": tensor_name.value.decode("utf-8"),
-                    "shape": np.array(tensor_shape, dtype=np.int32),
-                    "dtype": TensorType.to_numpy_dtype(tensor_type.value),
-                    "quantization": (scales, zero_points),
-                }
-            )
-
-        return tensor_details
+        return [
+            self._get_tensor_details(tensor_index)
+            for tensor_index in range(tensor_count)
+        ]
 
     def get_input_details(self):
         self._verify_allocated()
@@ -378,9 +376,8 @@ class XCOREInterpreter:
             lib.input_tensor_index(self.obj, input_index)
             for input_index in range(inputs_size)
         ]
-        tensor_details = self.get_tensor_details()
 
-        return [tensor_details[input_index] for input_index in input_indices]
+        return [self._get_tensor_details(idx) for idx in input_indices]
 
     def get_output_details(self):
         self._verify_allocated()
@@ -390,6 +387,5 @@ class XCOREInterpreter:
             lib.output_tensor_index(self.obj, output_index)
             for output_index in range(outputs_size)
         ]
-        tensor_details = self.get_tensor_details()
 
-        return [tensor_details[output_index] for output_index in output_indices]
+        return [self._get_tensor_details(idx) for idx in output_indices]

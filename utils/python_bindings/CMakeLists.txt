@@ -26,9 +26,8 @@ set(LIB_OPS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../lib_ops")
 #**********************
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(BUILD_FLAGS "-g -DTF_LITE_DISABLE_X86_NEON -O3")
-set(CMAKE_CXX_FLAGS ${BUILD_FLAGS})
+set(CMAKE_CXX_FLAGS "${BUILD_FLAGS} -stdlib=libc++")
 set(CMAKE_C_FLAGS ${BUILD_FLAGS})
 
 #**********************

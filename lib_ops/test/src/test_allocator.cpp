@@ -17,6 +17,7 @@ TEST(allocator, test_allocate) {
   size_t data_size = 20;
   void* data;
   size_t allocated_size = 0;
+  size_t free_size = 0;
 
   xcore::LinearAllocator allocator;
   allocator.SetBuffer(buffer, buffer_size);
@@ -25,6 +26,9 @@ TEST(allocator, test_allocate) {
 
   allocated_size = allocator.GetAllocatedSize();
   TEST_ASSERT_EQUAL_INT(allocated_size, data_size);
+
+  free_size = allocator.GetFreeSize();
+  TEST_ASSERT_EQUAL_INT(free_size, buffer_size - data_size);
 }
 
 TEST(allocator, test_failed_allocate) {

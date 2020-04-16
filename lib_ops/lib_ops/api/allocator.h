@@ -1,9 +1,9 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 #ifndef XCORE_OPERATOR_ALLOCATOR_H_
 #define XCORE_OPERATOR_ALLOCATOR_H_
-#include <cstdint>
-#include <cstddef>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 
 namespace xcore {
 
@@ -18,7 +18,8 @@ class LinearAllocator {
   void* Reallocate(void* ptr, size_t size);
   void Reset();
 
-  size_t GetAllocatedSize() {return allocated_size_;}
+  size_t GetAllocatedSize() { return allocated_size_; }
+  size_t GetFreeSize() { return buffer_size_ - allocated_size_; }
 
  private:
   // Prevent copies because it might cause errors

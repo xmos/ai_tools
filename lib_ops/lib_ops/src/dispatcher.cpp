@@ -1,9 +1,10 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
+#include "lib_ops/api/dispatcher.h"
+
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
 
-#include "lib_ops/api/dispatcher.h"
 #include "lib_ops/api/par.h"
 
 namespace xcore {
@@ -69,6 +70,7 @@ Dispatcher::Dispatcher(void* buffer, size_t size, int num_threads,
                        bool use_current_thread)
     : num_threads_(num_threads),
       use_current_thread_(use_current_thread),
+      stack_size_(0),
       stack_ptr_(nullptr) {
   allocator_.SetBuffer(buffer, size);
 
@@ -108,6 +110,7 @@ void Dispatcher::Wait() {
 XCoreStatus Dispatcher::Reset() {
   stack_size_ = 0;
   stack_ptr_ = nullptr;
+  tasks_.size = 0;
   allocator_.Reset();
 
   return kXCoreOk;

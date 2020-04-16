@@ -6,7 +6,7 @@ ifeq ($(TARGET), x86)
 
 	CC := gcc
 	CCFLAGS := -g -O3
-
+	CCFLAGS += -std=c99
 	CXX := g++
 	CXXFLAGS := -g -O3
 	CXXFLAGS += -std=c++11 
@@ -19,7 +19,7 @@ ifeq ($(TARGET), x86)
 else # must be xcore
 	BUILD_TARGET := xcore.ai
 	
-	PLATFORM_FLAGS := -target=XU316-1024-FB265-C32  # 800MHz
+	PLATFORM_FLAGS := -target=XU316-1024-FB265-C32
 	PLATFORM_FLAGS += -mcmodel=large
 	PLATFORM_FLAGS += -Os
 	PLATFORM_FLAGS += -DXCORE
@@ -27,6 +27,7 @@ else # must be xcore
 	PLATFORM_FLAGS += -Wno-unknown-pragmas
 	PLATFORM_FLAGS += -Wno-unknown-attributes
 	PLATFORM_FLAGS += -report
+	PLATFORM_FLAGS += -fcmdline-buffer-bytes=1024
 
 	AS := xcc
 	ASFLAGS := $(PLATFORM_FLAGS)
@@ -54,21 +55,20 @@ PROJECT_ROOT_DIR = ${CURDIR}/../..
 include ../../make/libs.mk
 include ../../make/unity.mk
 
-$(info $(UNITY_INCLUDES))
-
-INCLUDES += $(LIBS_INCLUDES)
+INCLUDES := $(LIBS_INCLUDES)
 INCLUDES += $(UNITY_INCLUDES)
 #INCLUDES += -Isrc
 
 # source file paths
-VPATH += $(LIBS_VPATH)
+VPATH := $(LIBS_VPATH)
 VPATH += $(UNITY_VPATH)
 VPATH += src
 
-SOURCES += $(LIBS_SOURCES)
+SOURCES := $(LIBS_SOURCES)
 SOURCES += $(UNITY_SOURCES)
 SOURCES += test_allocator.cpp
-#SOURCES += test_dispatcher.cpp
+SOURCES += test_dispatcher.cpp
+SOURCES += test_par_region.cpp
 SOURCES += main.cpp
 
 OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES))))

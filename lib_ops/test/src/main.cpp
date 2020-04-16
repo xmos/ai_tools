@@ -2,13 +2,19 @@
 #include <iostream>
 
 #include "unity.h"
+#include "unity_fixture.h"
 
-void test_one();
-void test_two();
+static void RunTests(void) {
+  RUN_TEST_GROUP(allocator);
+  RUN_TEST_GROUP(dispatcher);
+  RUN_TEST_GROUP(par_region);
+}
 
-int main(int argc, char *argv[]) {
-  UNITY_BEGIN();
-  RUN_TEST(test_one);
-  RUN_TEST(test_two);
-  return UNITY_END();
+int main(int argc, const char* argv[]) {
+  UnityGetCommandLineOptions(argc, argv);
+  UnityBegin(argv[0]);
+  RunTests();
+  UnityEnd();
+
+  return (int)Unity.TestFailures;
 }

@@ -1,9 +1,9 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
+#include "lib_ops/api/allocator.h"
+
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
-
-#include "lib_ops/api/allocator.h"
 
 namespace xcore {
 

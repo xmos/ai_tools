@@ -18,11 +18,13 @@ tflite::MicroInterpreter *interpreter = nullptr;
 TfLiteTensor *input = nullptr;
 TfLiteTensor *output = nullptr;
 constexpr int kTensorArenaSize =
-    300000; // Hopefully this is big enough for all tests
+    300000;  // Hopefully this is big enough for all tests
 uint8_t tensor_arena[kTensorArenaSize];
+
+xcore::Dispatcher *dispatcher = nullptr;
+constexpr int num_threads = 5;
 constexpr int kXCOREArenaSize = 5000;
 uint8_t xcore_arena[kXCOREArenaSize];
-
 
 static int load_model(const char *filename, char **buffer, size_t *size) {
   FILE *fd = fopen(filename, "rb");
@@ -81,22 +83,23 @@ static void setup_tflite(const char *model_buffer) {
     return;
   }
 
+  // Setup xCORE dispatcher (BEFORE calling AllocateTensors)
+  static xcore::Dispatcher static_dispatcher(xcore_arena, kXCOREArenaSize,
+                                             num_threads);
+  xcore::XCoreStatus xcore_status = xcore::InitializeXCore(&static_dispatcher);
+  if (xcore_status != xcore::kXCoreOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "InitializeXCore() failed");
+    return;
+  }
+  dispatcher = &static_dispatcher;
+
   // This pulls in all the operation implementations we need.
-  // static tflite::ops::micro::AllOpsResolver resolver;
   static tflite::ops::micro::xcore::XcoreOpsResolver resolver;
 
   // Build an interpreter to run the model with.
   static tflite::MicroInterpreter static_interpreter(
       model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
   interpreter = &static_interpreter;
-
-  // Allocate xCORE KernelDispatcher BEFORE AllocateTensors
-  xcore::XCoreStatus allocate_xcore_status =
-      xcore::InitializeDispatcher(xcore_arena, kXCOREArenaSize);
-  if (allocate_xcore_status != xcore::kXCoreOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "InitializeDispatcher() failed");
-    return;
-  }
 
   // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();
@@ -111,7 +114,6 @@ static void setup_tflite(const char *model_buffer) {
 }
 
 int main(int argc, char *argv[]) {
-
   if (argc < 4) {
     printf("Three arguments expected: mode.tflite input-file output-file\n");
     return -1;

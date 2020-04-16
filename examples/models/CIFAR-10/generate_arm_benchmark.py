@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 from tflite2xcore.utils import VerbosityParser
 from tflite2xcore.model_generation.cifar10 import get_normalized_data
-from tflite2xcore.model_generation.interface import KerasClassifier
+from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
 
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'arm_benchmark').resolve()
@@ -21,7 +21,7 @@ DEFAULT_EPOCHS = 30
 DEFAULT_BS = 32
 
 
-class ArmBenchmark(KerasClassifier):
+class ArmBenchmark(KerasModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.aug = None
@@ -132,13 +132,9 @@ def main(raw_args=None):
         'epochs': DEFAULT_EPOCHS,
         'path': DEFAULT_PATH,
     })
-    parser.add_argument(
-        '--classifier', action='store_true', default=False,
-        help='Apply classifier optimizations during xcore conversion.')
     args = parser.parse_args(raw_args)
 
-    model = ArmBenchmark(
-        'arm_benchmark', args.path, opt_classifier=args.classifier)
+    model = ArmBenchmark('arm_benchmark', args.path)
 
     if args.train_model:
         model.build()

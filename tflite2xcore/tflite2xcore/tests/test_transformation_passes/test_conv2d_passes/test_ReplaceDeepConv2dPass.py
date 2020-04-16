@@ -12,7 +12,7 @@ from .conftest import (
     test_matching_params,
     test_non_matching_output_channels,
     test_non_matching_input_channels,
-    test_non_matching_types
+    test_non_matching_tensors
 )
 
 

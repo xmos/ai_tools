@@ -58,7 +58,6 @@ def add_float_input_output(model, debug=False):
 
 
 def optimize_for_xcore(model, *,
-                       is_classifier=False,
                        remove_softmax=False,
                        cleanup=True,
                        minification=False,
@@ -77,7 +76,7 @@ def optimize_for_xcore(model, *,
         debug=debug
     )
 
-    if is_classifier or remove_softmax:
+    if remove_softmax:
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
     pass_mgr.register_pass(passes.Replace1x1Conv2dPass())
@@ -91,9 +90,7 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.ReplaceAveragePool2DPass())
     pass_mgr.register_pass(passes.ReplaceGlobalAveragePool2DPass())
 
-    # TODO: revise how these are done
-    pass_mgr.register_pass(passes.ReplaceFullyConnectedIntermediatePass())
-    pass_mgr.register_pass(passes.ReplaceFullyConnectedOutputPass())
+    pass_mgr.register_pass(passes.ReplaceFullyConnectedPass())
 
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())
@@ -103,15 +100,11 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
-    if is_classifier:
-        # TODO: revise how this is done
-        pass_mgr.register_pass(passes.AddArgMax16OutputPass())
-    pass_mgr.register_pass(passes.ReplaceArgMax16Pass())
-
     if num_threads:
         pass_mgr.register_pass(passes.ParallelizeDeepConv2dPass(num_threads=num_threads))
 
     if cleanup:
+        pass_mgr.register_pass(passes.RemoveXCOREWeightBiasOperatorQuantInfo())
         pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
         pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 
@@ -132,7 +125,6 @@ def optimize_for_xcore(model, *,
 
 
 def convert(tflite_input_path, tflite_output_path, *,
-            is_classifier=False,
             remove_softmax=False,
             num_threads=None,
             minification=False,
@@ -140,7 +132,6 @@ def convert(tflite_input_path, tflite_output_path, *,
             debug=False):
     model = read_flatbuffer(tflite_input_path)
     optimize_for_xcore(model,
-                       is_classifier=is_classifier,
                        remove_softmax=remove_softmax,
                        minification=minification,
                        num_threads=num_threads,

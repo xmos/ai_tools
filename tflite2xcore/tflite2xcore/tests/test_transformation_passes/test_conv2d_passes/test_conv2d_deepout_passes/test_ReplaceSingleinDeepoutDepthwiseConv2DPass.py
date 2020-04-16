@@ -15,7 +15,7 @@ from .conftest import (
     PARAMS,
     _test_non_matching_params,
     test_matching_params,
-    test_non_matching_types,
+    test_non_matching_tensors,
     test_non_matching_stride_w,
     test_non_matching_stride_h
 )

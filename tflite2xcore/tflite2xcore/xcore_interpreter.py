@@ -126,9 +126,10 @@ class XCOREInterpreter:
         self._check_status(lib.allocate_tensors(self.obj))
 
 
-    def invoke(self, py_callback=None):
+    def invoke(self, *, preinvoke_callback=None, postinvoke_callback=None):
         INVOKE_CALLBACK_FUNC = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_int)
-        def c_callback(operator_index):
+
+        def make_operator_details(operator_index):
             # get the dimensions of the operator inputs and outputs
             inputs_size = ctypes.c_size_t()
             outputs_size = ctypes.c_size_t()
@@ -145,24 +146,33 @@ class XCOREInterpreter:
                 operator_inputs, operator_outputs))
             # get the details
             tensor_details = self.get_tensor_details()
-            operator_details = {
+            return {
                 'index': operator_index,
                 'name': operator_name.value.decode('utf-8'),
                 'version': operator_version.value,
                 'inputs': [tensor_details[input_index] for input_index in operator_inputs],
                 'outputs':[tensor_details[output_index] for output_index in operator_outputs]
             }
-            
-            py_callback(self, operator_details)
+
+        def preinvoke_callback_hook(operator_index):
+            preinvoke_callback(self, make_operator_details(operator_index))
+
+        def postinvoke_callback_hook(operator_index):
+            postinvoke_callback(self, make_operator_details(operator_index))
 
         self._verify_allocated()
         
-        if py_callback:
-            cb = INVOKE_CALLBACK_FUNC(c_callback)
+        if preinvoke_callback:
+            preinvoke_hook = INVOKE_CALLBACK_FUNC(preinvoke_callback_hook)
         else:
-            cb = None
+            preinvoke_hook = None
 
-        self._check_status(lib.invoke(self.obj, cb))
+        if postinvoke_callback:
+            postinvoke_hook = INVOKE_CALLBACK_FUNC(postinvoke_callback_hook)
+        else:
+            postinvoke_hook = None
+
+        self._check_status(lib.invoke(self.obj, preinvoke_hook, postinvoke_hook))
 
 
     def set_tensor(self, tensor_index, value):

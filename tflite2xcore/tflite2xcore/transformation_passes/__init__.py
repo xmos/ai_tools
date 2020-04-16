@@ -1,10 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from .transformation_passes import *  # TODO: fix this
-from .argmax_passes import (
-    AddArgMax16OutputPass,
-    ReplaceArgMax16Pass
-)
+
 from .lut_passes import (
     ReplaceTanhPass,
     ReplaceLogisticPass,
@@ -21,8 +18,7 @@ from .conv2d_passes import (
 )
 
 from .fully_connected_passes import (
-    ReplaceFullyConnectedOutputPass,
-    ReplaceFullyConnectedIntermediatePass
+    ReplaceFullyConnectedPass
 )
 
 from .pooling_passes import (
@@ -47,6 +43,7 @@ from .quantize_dequantize_passes import (
 )
 
 from .cleanup_passes import (
+    RemoveXCOREWeightBiasOperatorQuantInfo,
     RemoveUnusedBuffersPass,
     RemoveDanglingTensorsPass
 )

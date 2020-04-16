@@ -357,16 +357,6 @@ class KerasModel(Model):
             self.converters['model_quant'], self.data['quant'])
 
 
-class KerasClassifier(KerasModel):
-    def __init__(self, *args, opt_classifier=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._opt_classifier = opt_classifier
-
-    def convert_to_xcore(self, **converter_args):
-        converter_args.setdefault('is_classifier', self._opt_classifier)
-        super().convert_to_xcore(**converter_args)
-
-
 class FunctionModel(Model):
 
     def __init__(self, name, path):

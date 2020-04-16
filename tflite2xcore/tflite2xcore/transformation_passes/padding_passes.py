@@ -8,7 +8,7 @@ from tflite2xcore.operator_codes import BuiltinOpCodes, XCOREOpCodes, OperatorCo
 
 
 class FuseConv2dPaddingPass(OperatorMatchingPass):
-    matching_conv_opcodes = (
+    MATCHING_OP_CODES = (
         XCOREOpCodes.XC_conv2d_depthwise,
         XCOREOpCodes.XC_conv2d_deep
     )
@@ -31,7 +31,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
 
         with self.using(op):
             opcode = self._op.operator_code.code
-            if opcode not in self.matching_conv_opcodes:
+            if opcode not in self.MATCHING_OP_CODES:
                 return False
 
             try:

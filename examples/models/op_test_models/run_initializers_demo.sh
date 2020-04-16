@@ -44,11 +44,9 @@ scripts_bias_weights=(
     "generate_conv2d_deep.py"
     "generate_conv2d_shallowin_deepout_relu.py"
     "generate_fully_connected.py"
-    "generate_fully_connected_requantized.py"
 )
 
 scripts_trainable=(
-    "generate_fully_connected_requantized.py"
     "generate_fully_connected.py"
 )
 ## EXECUTING INITIALIZERS

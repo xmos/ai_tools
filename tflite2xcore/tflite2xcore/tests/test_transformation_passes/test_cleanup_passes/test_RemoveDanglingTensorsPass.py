@@ -5,35 +5,31 @@ import pytest
 from tflite2xcore.transformation_passes import RemoveDanglingTensorsPass
 from tflite2xcore.xcore_model import TensorType
 
-# TODO: use multiple different models instead of just mlp
-from ..test_fully_connected_passes.test_ReplaceFullyConnectedIntermediatePass import (
-    outputs, hidden_nodes, input_shape, mlp
-)
+from .conftest import model, count_tensors, add_dangling_tensor
 
+
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
 
 @pytest.fixture()
 def trf_pass():
     return RemoveDanglingTensorsPass()
 
 
-def count_tensors(model):
-    return sum(len(subgraph.tensors) for subgraph in model.subgraphs)
+#  ----------------------------------------------------------------------------
+#                               TEST FUNCTIONS
+#  ----------------------------------------------------------------------------
 
-
-def test_run_identity(mlp, trf_pass):
-    model = mlp  # TODO: fix this by refactoring
+def test_mutate_identity(model, trf_pass):
     num_tensors = count_tensors(model)
     trf_pass.run(model)
     model.sanity_check()
     assert num_tensors == count_tensors(model)
 
 
-def test_run_mutating(mlp, trf_pass):
-    model = mlp  # TODO: fix this by refactoring
-    model.subgraphs[0].create_tensor(
-        'dangling_tensor', TensorType.INT16, [1, 32, 1, 1],
-        buffer=model.create_buffer()
-    )
+def test_mutate(model, trf_pass):
+    add_dangling_tensor(model)
     num_tensors = count_tensors(model)
     trf_pass.run(model)
     model.sanity_check()

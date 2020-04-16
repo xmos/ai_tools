@@ -20,14 +20,19 @@ typedef TfLiteStatus (*invoke_function_t)(TfLiteContext*, TfLiteNode*);
 
 class CallbackContext {
  public:
-  CallbackContext() : current_operator(0), callback(nullptr) {}
+  CallbackContext()
+      : current_operator(0),
+        preinvoke_callback(nullptr),
+        postinvoke_callback(nullptr) {}
   void Reset() {
     current_operator = 0;
-    callback = nullptr;
+    preinvoke_callback = nullptr;
+    postinvoke_callback = nullptr;
     invoke_functions.clear();
   }
   int current_operator;
-  invoke_callback_t callback;
+  invoke_callback_t preinvoke_callback;
+  invoke_callback_t postinvoke_callback;
   std::vector<invoke_function_t> invoke_functions;
 };
 static CallbackContext gCallbackContext;
@@ -67,8 +72,11 @@ TfLiteStatus CallbackInvoke(TfLiteContext* context, TfLiteNode* node) {
   invoke_function_t invoke =
       gCallbackContext.invoke_functions[current_operator];
 
+  if (gCallbackContext.preinvoke_callback)
+    gCallbackContext.preinvoke_callback(current_operator);
   TfLiteStatus status = invoke(context, node);
-  gCallbackContext.callback(current_operator);
+  if (gCallbackContext.postinvoke_callback)
+    gCallbackContext.postinvoke_callback(current_operator);
   gCallbackContext.current_operator++;
 
   return status;
@@ -166,9 +174,11 @@ class XCOREInterpreter {
     return -1;
   }
 
-  XCoreStatus Invoke(invoke_callback_t callback = nullptr) {
-    if (callback) {
-      gCallbackContext.callback = callback;
+  XCoreStatus Invoke(invoke_callback_t preinvoke_callback = nullptr,
+                     invoke_callback_t postinvoke_callback = nullptr) {
+    if (preinvoke_callback || postinvoke_callback) {
+      gCallbackContext.preinvoke_callback = preinvoke_callback;
+      gCallbackContext.postinvoke_callback = postinvoke_callback;
       // Save the registered invoke functions
       for (size_t node_index = 0; node_index < interpreter_->operators_size();
            node_index++) {
@@ -193,7 +203,7 @@ class XCOREInterpreter {
     TfLiteStatus invoke_status = interpreter_->Invoke();
 
     // Set back the original invoke function
-    if (callback) {
+    if (preinvoke_callback || postinvoke_callback) {
       // Set the invoke function to the CallbackInvoke
       for (size_t node_index = 0; node_index < interpreter_->operators_size();
            node_index++) {
@@ -471,8 +481,9 @@ size_t output_tensor_index(xcore::XCOREInterpreter* interpreter,
 }
 
 int invoke(xcore::XCOREInterpreter* interpreter,
-           xcore::invoke_callback_t callback = nullptr) {
-  return interpreter->Invoke(callback);
+           xcore::invoke_callback_t preinvoke_callback = nullptr,
+           xcore::invoke_callback_t postinvoke_callback = nullptr) {
+  return interpreter->Invoke(preinvoke_callback, postinvoke_callback);
 }
 
 size_t get_error(xcore::XCOREInterpreter* interpreter, char* msg) {

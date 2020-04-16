@@ -50,7 +50,6 @@ def main(raw_args=None):
     kwargs = {
         'name': args.name,
         'path': args.path,
-        'opt_classifier': args.classifier,
         'use_aug': args.augment_dataset
     }
     model = LogisticRegression(**kwargs)

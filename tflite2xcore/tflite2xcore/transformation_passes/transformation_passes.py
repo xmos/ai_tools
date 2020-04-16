@@ -216,11 +216,15 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     @logging.log_method_output()
     def _unified_bias(self):
         biases = self._biases.numpy
-        return np.int32(
-            biases
-            - self._zero_point_bias()
-            + np.int32(np.round(self._output_zero_point / self._multiplier()))
+        arr_64 = (
+            biases.astype(np.int64)
+            - self._zero_point_bias().astype(np.int64)
+            + np.int64(np.round(self._output_zero_point / self._multiplier()))
         )
+        arr_32 = np.clip(arr_64, -(2 ** 31), 2 ** 31 - 1).astype(np.int32)
+        if np.any(arr_32 != arr_64):
+            self.logger.warning("_unified_bias saturated 32 bit!")
+        return arr_32
 
     @staticmethod
     def __pad_to_acc_period(arr):

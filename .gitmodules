@@ -2,9 +2,13 @@
 	path = lib_nn/Unity
 	url = git@github.com:xmos/Unity
 	ignore = dirty
+[submodule "third_party/unity"]
+	path = third_party/unity
+	url = git@github.com:ThrowTheSwitch/Unity.git
+	ignore = dirty
 [submodule "third_party/flatbuffers"]
 	path = third_party/flatbuffers
-	url = https://github.com/google/flatbuffers.git
+	url = git@github.com:google/flatbuffers.git
 	ignore = dirty
 [submodule "third_party/tensorflow"]
 	path = third_party/tensorflow
@@ -13,5 +17,5 @@
 	branch = develop
 [submodule "third_party/gemmlowp"]
 	path = third_party/gemmlowp
-	url = https://github.com/google/gemmlowp.git
+	url = git@github.com:google/gemmlowp.git
 	ignore = dirty

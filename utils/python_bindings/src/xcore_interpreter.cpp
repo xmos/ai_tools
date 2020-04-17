@@ -13,6 +13,7 @@
 namespace xcore {
 
 constexpr int max_log_len = 256;
+constexpr int num_threads = 5;
 
 typedef void (*invoke_callback_t)(int);
 typedef TfLiteStatus (*invoke_function_t)(TfLiteContext*, TfLiteNode*);
@@ -36,9 +37,9 @@ class CallbackContext {
 };
 static CallbackContext gCallbackContext;
 
-class XCOREInterpreterErrorReporter : public tflite::ErrorReporter {
+class InterpreterErrorReporter : public tflite::ErrorReporter {
  public:
-  ~XCOREInterpreterErrorReporter() {}
+  ~InterpreterErrorReporter() {}
 
   int Report(const char* format, ...) {
     va_list args;
@@ -85,7 +86,6 @@ class XCOREInterpreter {
  public:
   XCOREInterpreter() {}
   ~XCOREInterpreter() {
-    GetOperatorDispatcher().Reset();
     if (interpreter_)
       delete interpreter_;  // NOTE: interpreter_ must be deleted before
                             // resolver, error_reporter_, tensor_arena_
@@ -93,6 +93,7 @@ class XCOREInterpreter {
     if (resolver_) delete resolver_;
     if (error_reporter_) delete error_reporter_;
     if (tensor_arena_) delete tensor_arena_;
+    if (dispatcher_) delete dispatcher_;
     if (xcore_arena_) delete xcore_arena_;
     if (model_buffer_) delete model_buffer_;
   }
@@ -104,7 +105,7 @@ class XCOREInterpreter {
     memcpy(model_buffer_, model_buffer, model_buffer_size);
 
     // Create error reporter
-    error_reporter_ = new XCOREInterpreterErrorReporter();
+    error_reporter_ = new InterpreterErrorReporter();
 
     // Map the model into a usable data structure. This doesn't involve any
     // copying or parsing, it's a very lightweight operation.
@@ -122,11 +123,19 @@ class XCOREInterpreter {
     tflite::ops::micro::xcore::add_custom_ops(
         reinterpret_cast<tflite::MicroMutableOpResolver*>(resolver_));
 
-    tensor_arena_size_ = tensor_arena_size;
-    tensor_arena_ = new uint8_t[tensor_arena_size_];
-
     xcore_arena_size_ = xcore_arena_size;
     xcore_arena_ = new uint8_t[xcore_arena_size_];
+    // Setup xCORE dispatcher
+    dispatcher_ =
+        new xcore::Dispatcher(xcore_arena_, xcore_arena_size_, num_threads);
+    xcore::XCoreStatus xcore_status = xcore::InitializeXCore(dispatcher_);
+    if (xcore_status != xcore::kXCoreOk) {
+      error_reporter_->Report("InitializeXCore() failed");
+      return kXCoreError;
+    }
+
+    tensor_arena_size_ = tensor_arena_size;
+    tensor_arena_ = new uint8_t[tensor_arena_size_];
 
     // Build an interpreter to run the model with.
     interpreter_ = new tflite::MicroInterpreter(
@@ -136,15 +145,6 @@ class XCOREInterpreter {
   }
 
   XCoreStatus AllocateTensors() {
-    // Allocate xCORE OperatorDispatcher
-    //   NOTE: must be called BEFORE AllocateTensors
-    xcore::XCoreStatus allocate_xcore_status =
-        xcore::InitializeDispatcher(xcore_arena_, xcore_arena_size_);
-    if (allocate_xcore_status != xcore::kXCoreOk) {
-      error_reporter_->Report("InitializeDispatcher failed");
-      return kXCoreError;
-    }
-
     // Allocate memory from the tensor_arena for the model's tensors.
     TfLiteStatus allocate_tensors_status = interpreter_->AllocateTensors();
     if (allocate_tensors_status != kTfLiteOk) {
@@ -385,13 +385,14 @@ class XCOREInterpreter {
   }
 
  private:
-  XCOREInterpreterErrorReporter* error_reporter_ = nullptr;
+  InterpreterErrorReporter* error_reporter_ = nullptr;
   tflite::ops::micro::AllOpsResolver* resolver_ = nullptr;
   tflite::MicroInterpreter* interpreter_ = nullptr;
   const tflite::Model* model_ = nullptr;
   char* model_buffer_ = nullptr;
   uint8_t* tensor_arena_ = nullptr;
   size_t tensor_arena_size_ = 0;
+  xcore::Dispatcher* dispatcher_ = nullptr;
   uint8_t* xcore_arena_ = nullptr;
   size_t xcore_arena_size_ = 0;
 };

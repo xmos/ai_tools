@@ -22,7 +22,7 @@ struct Conv2DDeepThreadData {
 };
 
 extern "C" {
-ATTRIBUTE_KERNEL_FUNCTION void conv2d_deep_thread_worker(void* context) {
+ATTRIBUTE_THREAD_FUNCTION void conv2d_deep_thread_worker(void* context) {
   Conv2DDeepThreadData* data = (Conv2DDeepThreadData*)context;
   conv2d_deep(data->Y, data->X, data->K, data->BSS, data->plan, data->job);
 }
@@ -31,11 +31,12 @@ ATTRIBUTE_KERNEL_FUNCTION void conv2d_deep_thread_worker(void* context) {
 Conv2D_Deep::Conv2D_Deep(const Conv2DParams& params,
                          const ParRegionArray& par_regions)
     : params(params), par_regions(par_regions), jobs_(nullptr) {
-  OperatorDispatcher& dispatcher = GetOperatorDispatcher();
+  Dispatcher* dispatcher = GetDispatcher();
 
+  int njobs = (par_regions.size > 0) ? par_regions.size : 1;
   jobs_ = reinterpret_cast<nn_conv2d_deep_job_t*>(
-      dispatcher.AllocatePersistentBuffer(sizeof(nn_conv2d_deep_job_t) *
-                                          par_regions.size));
+      dispatcher->AllocatePersistentBuffer(sizeof(nn_conv2d_deep_job_t) *
+                                           njobs));
 }
 
 XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
@@ -81,17 +82,17 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   );
 
   // reserve threads and stack memory
-  OperatorDispatcher& dispatcher = GetOperatorDispatcher();
+  Dispatcher* dispatcher = GetDispatcher();
   size_t stack_words = 0;
   GET_STACKWORDS(stack_words, conv2d_deep_thread_worker);
-  dispatcher.AllocateStackBuffer(par_regions.size, stack_words);
+  dispatcher->AllocateStackBuffer(par_regions.size, stack_words);
 
   return kXCoreOk;
 }
 
 XCoreStatus Conv2D_Deep::Eval(int8_t* Y, const int8_t* X, const int8_t* K,
                               const int16_t* BSS) {
-  OperatorDispatcher& dispatcher = GetOperatorDispatcher();
+  Dispatcher* dispatcher = GetDispatcher();
 
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_deep_thread_worker);
@@ -105,12 +106,12 @@ XCoreStatus Conv2D_Deep::Eval(int8_t* Y, const int8_t* X, const int8_t* K,
     thread_data[i].BSS = (const nn_bss_block_t*)BSS;
     thread_data[i].plan = &plan_;
     thread_data[i].job = &jobs_[i];
-    dispatcher.Add(conv2d_deep_thread_worker,
-                   reinterpret_cast<void*>(&thread_data[i]), stack_words);
+    dispatcher->Add(conv2d_deep_thread_worker,
+                    reinterpret_cast<void*>(&thread_data[i]), stack_words);
   }
 
-  dispatcher.Start();
-  dispatcher.Wait();
+  dispatcher->Start();
+  dispatcher->Wait();
 
   return kXCoreOk;
 }

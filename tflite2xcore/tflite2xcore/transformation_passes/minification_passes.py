@@ -12,19 +12,19 @@ class MinifyQuantInfoPass(TensorMatchingPass):
     def match(self, tensor):
         dependents = tensor.consumers + tensor.producers
         quantization = tensor.quantization
-        
+
         if super().match(tensor) and quantization and dependents:
             for op in dependents:
                 if op.operator_code.code not in self.SAFE_OP_CODES:
                     # min/max info is removed if tensor only interacts with XC ops
                     return False
             else:
-                return 'min' in quantization or 'max' in quantization
+                return "min" in quantization or "max" in quantization
         return False
 
     def mutate(self, tensor):
-        tensor.quantization.pop('min', None)
-        tensor.quantization.pop('max', None)
+        tensor.quantization.pop("min", None)
+        tensor.quantization.pop("max", None)
 
 
 class MinifyTensorNamesPass(TensorMatchingPass):
@@ -32,8 +32,7 @@ class MinifyTensorNamesPass(TensorMatchingPass):
         return str(self._obj_index)
 
     def match(self, tensor):
-        return (super().match(tensor)
-                and tensor.name != self.__new_tensor_name(tensor))
+        return super().match(tensor) and tensor.name != self.__new_tensor_name(tensor)
 
     def mutate(self, tensor):
         tensor.name = self.__new_tensor_name(tensor)

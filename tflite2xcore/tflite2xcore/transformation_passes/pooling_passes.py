@@ -12,27 +12,29 @@ class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options
-        return options['stride_h'], options['stride_w']
+        return options["stride_h"], options["stride_w"]
 
     @property
     def _pool_size(self):
         options = self._op.builtin_options
-        return options['filter_height'], options['filter_width']
+        return options["filter_height"], options["filter_width"]
 
     @property
     def _padding(self):
-        return self._op.builtin_options['padding']
+        return self._op.builtin_options["padding"]
 
     @property
     def _fused_activation(self):
-        return self._op.builtin_options['fused_activation_function']
+        return self._op.builtin_options["fused_activation_function"]
 
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return (self._input.quantization == self._output.quantization
-                        and self._fused_activation == 'NONE'
-                        and self._input.shape[3] % 4 == 0)
+                return (
+                    self._input.quantization == self._output.quantization
+                    and self._fused_activation == "NONE"
+                    and self._input.shape[3] % 4 == 0
+                )
 
         return False
 
@@ -41,17 +43,20 @@ class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
 
         with self.using(op):
             new_op.add_custom_options(
-                stride=list(self._strides), pool=list(self._pool_size))
+                stride=list(self._strides), pool=list(self._pool_size)
+            )
 
 
 class ReplacePool2D2x2Pass(ReplacePool2DPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return (self._strides == (2, 2)
-                        and self._pool_size == (2, 2)
-                        and self._input.shape[1] % 2 == 0
-                        and self._input.shape[2] % 2 == 0)
+                return (
+                    self._strides == (2, 2)
+                    and self._pool_size == (2, 2)
+                    and self._input.shape[1] % 2 == 0
+                    and self._input.shape[2] % 2 == 0
+                )
 
         return False
 
@@ -68,7 +73,7 @@ class ReplaceMaxPool2DPass(ReplacePool2DPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return self._padding == 'VALID'
+                return self._padding == "VALID"
 
         return False
 
@@ -95,7 +100,7 @@ class ReplaceAveragePool2DPass(ReplacePool2DPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return self._padding == 'VALID'
+                return self._padding == "VALID"
 
         return False
 
@@ -123,23 +128,30 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
         if super().match(op):
             with self.using(op):
                 reduction_dims = self._op.inputs[1].numpy
-                return (len(reduction_dims) == 2
-                        and np.all(reduction_dims == [1, 2])
-                        and self._input.shape[3] % WORD_SIZE == 0)
+                return (
+                    len(reduction_dims) == 2
+                    and np.all(reduction_dims == [1, 2])
+                    and self._input.shape[3] % WORD_SIZE == 0
+                )
 
         return False
 
     @property
     def _bias_scale_shift(self):
         num_pixels = self._input.shape[1] * self._input.shape[2]
-        rescaling = self._input.quantization['scale'][0] / self._output.quantization['scale'][0]
+        rescaling = (
+            self._input.quantization["scale"][0] / self._output.quantization["scale"][0]
+        )
         multiplier = rescaling / num_pixels
 
         scale = np.round(multiplier * 2 ** (7 - np.ceil(np.log2(multiplier))))
         shift = np.round(np.log2(scale / multiplier))
         bias = np.round(
-            scale * (self._output.quantization['zero_point'][0] / multiplier
-                     - self._input.quantization['zero_point'][0] * num_pixels)
+            scale
+            * (
+                self._output.quantization["zero_point"][0] / multiplier
+                - self._input.quantization["zero_point"][0] * num_pixels
+            )
         )
 
         if shift > 24:
@@ -155,11 +167,13 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
             # replace reduction_indices tensor with bias_scale_shift
             old_tensor = new_op.inputs[1]
             new_op.inputs[1] = subgraph.create_tensor(
-                f"{new_op.name}/bias_scale_shift", TensorType.INT8, shape=[7],
-                consumers=[new_op])
+                f"{new_op.name}/bias_scale_shift",
+                TensorType.INT8,
+                shape=[7],
+                consumers=[new_op],
+            )
             new_op.inputs[1].buffer.data = np.frombuffer(
-                b''.join(p.tostring() for p in self._bias_scale_shift),
-                dtype=np.int8
+                b"".join(p.tostring() for p in self._bias_scale_shift), dtype=np.int8
             )
             subgraph.remove_tensor(old_tensor)
 

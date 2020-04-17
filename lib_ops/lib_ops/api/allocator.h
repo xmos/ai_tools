@@ -1,35 +1,36 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 #ifndef XCORE_OPERATOR_ALLOCATOR_H_
 #define XCORE_OPERATOR_ALLOCATOR_H_
-#include <cstdint>
-#include <cstddef>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 
 namespace xcore {
 
 class LinearAllocator {
- public:
+public:
   LinearAllocator() {}
-  LinearAllocator(void* buffer, size_t size);
+  LinearAllocator(void *buffer, size_t size);
   ~LinearAllocator() {}
 
-  void SetBuffer(void* buffer, size_t size);
-  void* Allocate(size_t size);
-  void* Reallocate(void* ptr, size_t size);
+  void SetBuffer(void *buffer, size_t size);
+  void *Allocate(size_t size);
+  void Free(void *ptr);
+  void *Reallocate(void *ptr, size_t size);
   void Reset();
 
-  size_t GetAllocatedSize() {return allocated_size_;}
+  size_t GetAllocatedSize() { return allocated_size_; }
 
- private:
+private:
   // Prevent copies because it might cause errors
-  LinearAllocator& operator=(const LinearAllocator&);
+  LinearAllocator &operator=(const LinearAllocator &);
 
   uintptr_t buffer_;
   size_t buffer_size_;
   size_t allocated_size_;
-  size_t last_allocation_offset_;  // For realloc support only
+  size_t last_allocation_offset_; // For LIFO realloc and free support only
 };
 
-}  // namespace xcore
+} // namespace xcore
 
-#endif  // XCORE_OPERATOR_ALLOCATOR_H_
+#endif // XCORE_OPERATOR_ALLOCATOR_H_

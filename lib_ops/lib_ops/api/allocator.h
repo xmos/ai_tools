@@ -1,36 +1,70 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#ifndef XCORE_OPERATOR_ALLOCATOR_H_
-#define XCORE_OPERATOR_ALLOCATOR_H_
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
+#ifndef XCORE_ALLOCATOR_H_
+#define XCORE_ALLOCATOR_H_
 
-namespace xcore {
+#include <stddef.h>
+#include <stdint.h>
 
-class LinearAllocator {
- public:
-  LinearAllocator() {}
-  LinearAllocator(void* buffer, size_t size);
-  ~LinearAllocator() {}
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-  void SetBuffer(void* buffer, size_t size);
-  void* Allocate(size_t size);
-  void* Reallocate(void* ptr, size_t size);
-  void Reset();
+/** Specify memory to use for dynamic allocations.
+ *
+ * All pointers returned by the heap word be word-aligned.
+ * Some heap memory may be lost due to this alignment.
+ *
+ *
+ * \param buffer  Pointer to beginning of heap data.
+ * \param size    Size of buffer (in bytes)
+ */
+void xcSetHeap(void *buffer, size_t size);
 
-  size_t GetAllocatedSize() { return allocated_size_; }
-  size_t GetFreeSize() { return buffer_size_ - allocated_size_; }
+/** Get the size (in bytes) of the heap.
+ */
+size_t xcGetHeapSize();
 
- private:
-  // Prevent copies because it might cause errors
-  LinearAllocator& operator=(const LinearAllocator&);
+/** Get the size (in bytes) of memory allocated from the heap.
+ */
+size_t xcGetHeapAllocatedSize();
 
-  uintptr_t buffer_;
-  size_t buffer_size_;
-  size_t allocated_size_;
-  size_t last_allocation_offset_;  // For realloc support only
-};
+/** Get the size (in bytes) of available memory in the heap.
+ */
+size_t xcGetHeapFreeSize();
 
-}  // namespace xcore
+/** Reset the heap so the memory can be re-used.
+ */
+void xcResetHeap();
 
-#endif  // XCORE_OPERATOR_ALLOCATOR_H_
+/** Allocate memory.
+ * \param size    Size of allocation (in bytes)
+ */
+void *xcMalloc(size_t size);
+
+/** Reallocate memory
+ *
+ * This heap implementation only allow the last allocation to be
+ * reallocated (LIFO). Attempting to reallocate a block that is not the
+ * last allocation will return a null pointer.
+ *
+ *
+ * \param ptr     Pointer to previously allocated data.
+ * \param size    Size of new allocation (in bytes)
+ */
+void *xcRealloc(void *ptr, size_t size);
+
+/** Free an allocation
+ *
+ * This heap implementation only allow the last allocation to be
+ * freed (LIFO). Attempting to free a block that is not the
+ * last allocation results in a no-op.
+ *
+ *
+ * \param ptr     Pointer to previously allocated data.
+ */
+void xcFree(void *ptr);
+
+#ifdef __cplusplus
+}
+#endif
+#endif  // XCORE_ALLOCATOR_H_

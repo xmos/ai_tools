@@ -25,8 +25,8 @@ LIBS_SOURCES := \
 	lib_nn/src/c/util/nn_compute_hstrip_deep_padded.c \
 	lib_nn/src/c/util/nn_compute_hstrip_tail_deep.c \
 	lib_nn/src/c/util/nn_compute_hstrip_tail_deep_padded.c \
+	lib_ops/src/allocator.c \
 	lib_ops/src/dispatcher.cpp \
-	lib_ops/src/allocator.cpp \
 	lib_ops/src/conv2d.cpp \
 	lib_ops/src/fully_connected.cpp\
 	lib_ops/src/activations.cpp \

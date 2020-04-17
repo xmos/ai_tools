@@ -29,7 +29,7 @@ TEST(dispatcher, test_current_core) {
   xcore::Dispatcher dispatcher(buffer, buffer_size, num_cores, true);
   GET_STACKWORDS(stack_words, thread_worker);
   // reserve threads and stack memory
-  dispatcher.AllocateStackBuffer(num_cores, stack_words);
+  // dispatcher.AllocateStackBuffer(num_cores, stack_words);
 
   ThreadData data[num_cores];
   for (int i = 0; i < num_cores; i++) {
@@ -53,7 +53,7 @@ TEST(dispatcher, test_not_current_core) {
   xcore::Dispatcher dispatcher(buffer, buffer_size, num_cores, true);
   GET_STACKWORDS(stack_words, thread_worker);
   // reserve threads and stack memory
-  dispatcher.AllocateStackBuffer(num_cores, stack_words);
+  // dispatcher.AllocateStackBuffer(num_cores, stack_words);
 
   ThreadData data[num_cores];
   for (int i = 0; i < num_cores; i++) {
@@ -80,7 +80,7 @@ TEST(dispatcher, test_reset) {
 
   for (int iter = 0; iter < 100; iter++) {
     // reserve threads and stack memory
-    dispatcher.AllocateStackBuffer(num_cores, stack_words);
+    // dispatcher.AllocateStackBuffer(num_cores, stack_words);
     for (int i = 0; i < num_cores; i++) {
       data[i].value = i;
       dispatcher.AddThread(thread_worker, reinterpret_cast<void *>(&data[i]),
@@ -96,20 +96,8 @@ TEST(dispatcher, test_reset) {
   }
 }
 
-TEST(dispatcher, test_allocate_persistant_buffer) {
-  size_t buffer_size = 1000;
-  void *buffer[buffer_size];
-  size_t data_size = 200;
-  void *data;
-  xcore::Dispatcher dispatcher(buffer, buffer_size, 5);
-
-  data = dispatcher.AllocatePersistentBuffer(data_size);
-  TEST_ASSERT_NOT_NULL(data);
-}
-
 TEST_GROUP_RUNNER(dispatcher) {
   RUN_TEST_CASE(dispatcher, test_not_current_core);
   RUN_TEST_CASE(dispatcher, test_current_core);
   RUN_TEST_CASE(dispatcher, test_reset);
-  RUN_TEST_CASE(dispatcher, test_allocate_persistant_buffer);
 }

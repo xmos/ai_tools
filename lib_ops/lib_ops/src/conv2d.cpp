@@ -1,6 +1,9 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 #include "lib_ops/api/conv2d.h"
+
 #include <iostream>
+
+#include "lib_ops/api/allocator.h"
 
 namespace xcore {
 namespace conv {
@@ -35,8 +38,7 @@ Conv2D_Deep::Conv2D_Deep(const Conv2DParams &params,
 
   int njobs = (par_regions.size > 0) ? par_regions.size : 1;
   jobs_ = reinterpret_cast<nn_conv2d_deep_job_t *>(
-      dispatcher->AllocatePersistentBuffer(sizeof(nn_conv2d_deep_job_t) *
-                                           njobs));
+      xcMalloc(sizeof(nn_conv2d_deep_job_t) * njobs));
 }
 
 XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
@@ -78,14 +80,14 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   conv2d_deep_init(&plan_, jobs_, &in_params, &out_params, &job_params[0],
                    &window_params, params.pad.zero_point,
-                   par_regions.size // job_count
+                   par_regions.size  // job_count
   );
 
   // reserve threads and stack memory
-  Dispatcher *dispatcher = GetDispatcher();
-  size_t stack_words = 0;
-  GET_STACKWORDS(stack_words, conv2d_deep_thread_worker);
-  dispatcher->AllocateStackBuffer(par_regions.size, stack_words);
+  // Dispatcher *dispatcher = GetDispatcher();
+  // size_t stack_words = 0;
+  // GET_STACKWORDS(stack_words, conv2d_deep_thread_worker);
+  // dispatcher->AllocateStackBuffer(par_regions.size, stack_words);
 
   return kXCoreOk;
 }
@@ -208,12 +210,12 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   out_params.channels = C_out;
 
   conv2d_depthwise_init(&plan_, &job_, &in_params, &out_params,
-                        nullptr,          // job_params
-                        -params.pad.top,  // window_start_row
-                        -params.pad.left, // window_start_col
+                        nullptr,           // job_params
+                        -params.pad.top,   // window_start_row
+                        -params.pad.left,  // window_start_col
                         params.K_h, params.K_w, params.stride_h,
                         params.stride_w, params.pad.zero_point,
-                        1 // job_count
+                        1  // job_count
   );
 
   return kXCoreOk;
@@ -225,5 +227,5 @@ XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
   return kXCoreOk;
 }
 
-} // namespace conv
-} // namespace xcore
+}  // namespace conv
+}  // namespace xcore

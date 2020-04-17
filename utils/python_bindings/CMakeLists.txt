@@ -75,6 +75,7 @@ file (GLOB XCORE_SOURCES
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/*.cc"
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/*.c"
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/*.c"
+  "${LIB_OPS_SOURCE_DIR}/lib_ops/src/*.c"
   "${LIB_OPS_SOURCE_DIR}/lib_ops/src/*.cpp"
 )
 

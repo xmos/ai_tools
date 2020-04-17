@@ -4,7 +4,7 @@ from tflite2xcore.operator_codes import XCOREOpCodes
 from tflite2xcore.transformation_passes import (
     ModelTransformationPass,
     TensorMatchingPass,
-    OperatorMatchingPass
+    OperatorMatchingPass,
 )
 
 
@@ -18,9 +18,11 @@ class RemoveXCOREWeightBiasOperatorQuantInfo(OperatorMatchingPass):
     ]
 
     def match(self, op):
-        return (super().match(op)
-                and op.operator_code.code in self.MATCHING_OP_CODES
-                and (op.inputs[1].quantization or op.inputs[2].quantization))
+        return (
+            super().match(op)
+            and op.operator_code.code in self.MATCHING_OP_CODES
+            and (op.inputs[1].quantization or op.inputs[2].quantization)
+        )
 
     def mutate(self, op):
         op.inputs[1].quantization = None  # weights
@@ -43,11 +45,13 @@ class RemoveUnusedBuffersPass(ModelTransformationPass):
 
 class RemoveDanglingTensorsPass(TensorMatchingPass):
     def match(self, tensor):
-        return (super().match(tensor)
-                and tensor not in tensor.subgraph.inputs
-                and tensor not in tensor.subgraph.outputs
-                and not tensor.consumers
-                and not tensor.producers)
+        return (
+            super().match(tensor)
+            and tensor not in tensor.subgraph.inputs
+            and tensor not in tensor.subgraph.outputs
+            and not tensor.consumers
+            and not tensor.producers
+        )
 
     def mutate(self, tensor):
         tensor.subgraph.remove_tensor(tensor)

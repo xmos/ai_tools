@@ -14,24 +14,22 @@ from .conv2d_passes import (
     ReplaceDeepConv2dPass,
     ReplaceShallowinDeepoutConv2DPass,
     ReplaceSingleinDeepoutDepthwiseConv2DPass,
-    ParallelizeDeepConv2dPass
+    ParallelizeDeepConv2dPass,
 )
 
-from .fully_connected_passes import (
-    ReplaceFullyConnectedPass
-)
+from .fully_connected_passes import ReplaceFullyConnectedPass
 
 from .pooling_passes import (
     ReplaceMaxPool2DPass,
     ReplaceMaxPool2D2x2Pass,
     ReplaceAveragePool2DPass,
     ReplaceAveragePool2D2x2Pass,
-    ReplaceGlobalAveragePool2DPass
+    ReplaceGlobalAveragePool2DPass,
 )
 from .padding_passes import (
     FuseConv2dPaddingPass,
     SplitPaddingPass,
-    FuseConsecutivePadsPass
+    FuseConsecutivePadsPass,
 )
 
 from .quantize_dequantize_passes import (
@@ -39,20 +37,16 @@ from .quantize_dequantize_passes import (
     LegalizeQuantizedOutputPass,
     LegalizeFloatInputPass,
     LegalizeFloatOutputPass,
-    LegalizeQuantizeVersionPass,
 )
+
+from .op_version_passes import LegalizeQuantizeVersionPass
 
 from .cleanup_passes import (
     RemoveXCOREWeightBiasOperatorQuantInfo,
     RemoveUnusedBuffersPass,
-    RemoveDanglingTensorsPass
+    RemoveDanglingTensorsPass,
 )
 
-from .renaming_passes import (
-    LegalizeOperatorOutputTensorNamePass
-)
+from .renaming_passes import LegalizeOperatorOutputTensorNamePass
 
-from .minification_passes import (
-    MinifyQuantInfoPass,
-    MinifyTensorNamesPass
-)
+from .minification_passes import MinifyQuantInfoPass, MinifyTensorNamesPass

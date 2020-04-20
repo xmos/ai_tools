@@ -21,10 +21,16 @@ LIBS_SOURCES := \
 	lib_nn/src/c/avgpool2d.c \
 	lib_nn/src/c/maxpool2d.c \
 	lib_nn/src/c/fully_connected.c \
-	lib_nn/src/c/util/nn_compute_hstrip_deep.c \
-	lib_nn/src/c/util/nn_compute_hstrip_deep_padded.c \
-	lib_nn/src/c/util/nn_compute_hstrip_tail_deep.c \
-	lib_nn/src/c/util/nn_compute_hstrip_tail_deep_padded.c \
+	lib_nn/src/c/util/deep/nn_conv2d_hstrip_deep.c \
+	lib_nn/src/c/util/deep/nn_conv2d_hstrip_deep_padded.c \
+	lib_nn/src/c/util/deep/nn_conv2d_hstrip_tail_deep.c \
+	lib_nn/src/c/util/deep/nn_conv2d_hstrip_tail_deep_padded.c \
+	lib_nn/src/c/util/shallow/nn_conv2d_hstrip_tail_shallowin_padded.c \
+	lib_nn/src/c/util/shallow/nn_conv2d_hstrip_shallowin.c \
+	lib_nn/src/c/util/shallow/nn_conv2d_hstrip_shallowin_padded.c \
+	lib_nn/src/c/util/shallow/nn_conv2d_hstrip_tail_shallowin.c \
+	lib_nn/src/c/util/depthwise/nn_conv2d_hstrip_depthwise.c \
+	lib_nn/src/c/util/depthwise/nn_conv2d_hstrip_depthwise_padded.c \
 	lib_ops/src/operator_dispatcher.cpp \
 	lib_ops/src/conv2d.cpp \
 	lib_ops/src/fully_connected.cpp\

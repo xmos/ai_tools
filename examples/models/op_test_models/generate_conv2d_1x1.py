@@ -13,6 +13,7 @@ DEFAULT_HEIGHT = 4
 DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_PADDING = 'same'
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_1x1').resolve()
+DEFAULT_NUM_THREADS = 1
 
 
 class Conv2D1x1(common.OpTestDefaultConvModel):
@@ -50,6 +51,9 @@ def main(raw_args=None):
         "-kw", "--kernel_width", type=int, default=1, choices=[1],
         help=argparse.SUPPRESS,
     )
+    parser.add_argument(
+        '-par', '--num_threads', type=int, default=DEFAULT_NUM_THREADS,
+        help='Number of parallel threads for xcore.ai optimization.')
     args = parser.parse_args(raw_args)
 
     model = Conv2D1x1('conv2d_1x1', args.path)
@@ -57,7 +61,7 @@ def main(raw_args=None):
                 args.height, args.width,
                 args.inputs, args.outputs,
                 padding=args.padding, **args.inits)
-    model.run()
+    model.run(num_threads=args.num_threads)
 
 
 if __name__ == "__main__":

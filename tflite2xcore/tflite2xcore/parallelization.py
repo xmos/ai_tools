@@ -136,6 +136,19 @@ class UnidirectionalSplitPlanner(ParallelizationPlanner):
             )
 
 
+# TODO: write tests for this
+class GenericConv2DPlanner(UnidirectionalSplitPlanner):
+    def estimate_block_cost(self, y_start, x_start, y_width, x_width):
+        return y_width * x_width
+
+    def estimate_layout_cost(self, layout):
+        return max(self.estimate_block_cost(*block) for block in layout)
+
+    def create_n_thread_candidates(self, num_threads):
+        self.add_layout_candidate(num_threads, self.unidir_height_layout(num_threads))
+
+
+# TODO: remove this
 class DIDOConv2DPlanner(UnidirectionalSplitPlanner):
     def __init__(self, height, width, *, padding="VALID", **kwargs):
         super().__init__(height, width, **kwargs)

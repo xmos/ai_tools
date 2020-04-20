@@ -71,6 +71,7 @@ class XCOREInterpreter {
 
   XCoreStatus GetOperatorDetailsBufferSizes(size_t operator_index,
                                             size_t* inputs, size_t* outputs);
+
   XCoreStatus GetOperatorDetails(size_t operator_index, char* name,
                                  int name_len, int* version, int* inputs,
                                  int* outputs);

@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-#define TEST_C_GLOBAL         (1)
+#define TEST_C_GLOBAL         (0)
 #define DO_PRINT_EXTRA_GLOBAL (1)
 
 #define UNITY_SET_FILE()        Unity.TestFile = __FILE__

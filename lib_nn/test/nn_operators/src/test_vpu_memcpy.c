@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <syscall.h>
+
 
 #include "tst_common.h"
 

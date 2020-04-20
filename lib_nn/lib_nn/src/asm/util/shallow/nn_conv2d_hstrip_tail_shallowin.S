@@ -114,6 +114,7 @@ FUNCTION_NAME:
 
     // Load other needed parameters
     {                                           ;   ldw x_v_stride, sp[STACK_X_V_STRIDE]    }
+    {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
     
     .L_out_col_start:
         // K, BSS and X_patch and rows_left reset each iteration.

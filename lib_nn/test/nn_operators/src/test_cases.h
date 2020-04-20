@@ -3,10 +3,10 @@
 
 void test_vpu_memcpy();
 
-void test_nn_compute_hstrip_deep_padded();
-void test_nn_compute_hstrip_deep();
-void test_nn_compute_hstrip_tail_deep_padded();
-void test_nn_compute_hstrip_tail_deep();
+void test_nn_conv2d_hstrip_deep_padded();
+void test_nn_conv2d_hstrip_deep();
+void test_nn_conv2d_hstrip_tail_deep_padded();
+void test_nn_conv2d_hstrip_tail_deep();
 
 void test_nn_conv2d_hstrip_shallowin_padded();
 void test_nn_conv2d_hstrip_shallowin();
@@ -14,6 +14,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_padded();
 void test_nn_conv2d_hstrip_tail_shallowin();
 
 void test_conv2d_deep();
+void test_conv2d_shallowin();
 void test_conv2d_shallowin_deepout();
 void test_conv2d_1x1();
 void test_conv2d_depthwise();

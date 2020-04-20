@@ -150,11 +150,11 @@ void conv2d_depthwise(
             const int cur_pad_b = (pad_b > 0)? pad_b : 0;
             
             if(job->init_padding.unpadded){
-                nn_compute_hstrip_depthwise(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
+                nn_conv2d_hstrip_depthwise(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
                         plan->channels.X, plan->stride.X.row,
                         plan->stride.window.col, plan->channels.Y, job->output.cols, cur_chans);
             } else {
-                nn_compute_hstrip_depthwise_padded(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
+                nn_conv2d_hstrip_depthwise_padded(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
                             cur_pad_t, job->init_padding.left, cur_pad_b, job->init_padding.right,
                             plan->channels.X, plan->stride.X.row, 
                             plan->stride.window.col, plan->channels.Y, job->output.cols, 

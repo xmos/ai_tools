@@ -4,7 +4,7 @@
 /**
 
 
-void nn_compute_hstrip_depthwise_bias_adj_asm(
+void nn_conv2d_hstrip_depthwise_bias_adj_asm(
     data16_t* adj_biases,
     const int8_t* K,
     const data16_t* bias_hi_lo,
@@ -16,7 +16,7 @@ void nn_compute_hstrip_depthwise_bias_adj_asm(
     const unsigned pad_b);
 */
 
-#define FUNCTION_NAME nn_compute_hstrip_depthwise_bias_adj_asm
+#define FUNCTION_NAME nn_conv2d_hstrip_depthwise_bias_adj_asm
 
 #define NSTACKWORDS  48
     

@@ -16,8 +16,8 @@
 
 
 
-
-void avgpool2d_c(
+WEAK_FUNC
+void avgpool2d_gen(
     int8_t* Y,
     const int8_t* X, 
     const nn_avgpool2d_plan_t* plan)
@@ -76,17 +76,25 @@ void avgpool2d_c(
     }
 }
 
+WEAK_FUNC
+void avgpool2d_2x2(
+    int8_t* Y,
+    const int8_t* X, 
+    const nn_avgpool2d_plan_t* plan)
+{
+    avgpool2d(Y, X, plan);
+}
 
 
 
 
 WEAK_FUNC
 void avgpool2d_global(
-    int8_t* Y,
-    const int8_t* X, 
+    nn_image_t* Y,
+    const nn_image_t* X, 
     const uint32_t x_height, 
     const uint32_t x_width,
-    const uint32_t x_chans,
+    const channel_count_t x_chans,
     const int32_t  bias,
     const uint32_t shift,
     const uint32_t scale)

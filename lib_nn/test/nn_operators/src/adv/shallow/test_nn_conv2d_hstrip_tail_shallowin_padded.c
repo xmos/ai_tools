@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <syscall.h>
+
 
 #include "../../tst_common.h"
 
@@ -150,7 +150,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_padded_case0()
             const int pad_l = 0;
             const int pad_r = K_w_array - pad_l - X_WIDTH;
 
-            PRINTF("\t\t\tC...\n");
+
             memset(Y, 0xCC, sizeof(Y));
             nn_conv2d_hstrip_tail_shallowin_padded((nn_image_t*) Y, (nn_image_t*) X, K_init, (nn_bss_block_t*) &bss, 
                                             K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
@@ -300,7 +300,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_padded_case1()
 
                 nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
                 
-                PRINTF("\t\t\t\tC...\n");
+
                 memset(Y, 0xCC, sizeof(Y));
                 nn_conv2d_hstrip_tail_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
                                                 K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
@@ -458,7 +458,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_padded_case2()
 
                 nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
                 
-                PRINTF("\t\t\t\tC...\n");
+
                 memset(Y, 0xCC, sizeof(Y));
                 nn_conv2d_hstrip_tail_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
                                                 K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
@@ -619,7 +619,6 @@ void test_nn_conv2d_hstrip_tail_shallowin_padded_case3()
 
                     nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
                     
-                    PRINTF("\t\t\t\t\tC...\n");
                     memset(Y, 0xCC, sizeof(Y));
                     nn_conv2d_hstrip_tail_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
                                                     K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
@@ -766,7 +765,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_padded_case4()
             const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
             nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
             
-            PRINTF("\t\t\tC...\n");
+
             memset(Y, 0xCC, sizeof(Y));
             nn_conv2d_hstrip_tail_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
                                             K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
@@ -920,7 +919,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_padded_case5()
 
             nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
 
-            PRINTF("\t\t\tC...\n");
+
             memset(Y, 0xCC, sizeof(Y));
             nn_conv2d_hstrip_tail_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
                                             K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,

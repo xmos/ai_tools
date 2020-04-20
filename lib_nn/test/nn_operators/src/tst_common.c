@@ -1,8 +1,10 @@
 
 #include "tst_common.h"
 
+#if defined(__XS3A__)
 #include <xs1.h>
 #include <xclib.h>
+#endif //defined(__XS3A__)
 #include <stdio.h>
 #include <assert.h>
 
@@ -44,8 +46,6 @@ uint64_t pseudo_rand_uint64(unsigned *r){
 }
 
 void pseudo_rand_bytes(unsigned *r, char* buffer, unsigned size){
-
-    assert((((unsigned)buffer) & 0x3) == 0);
 
     unsigned b = 0;
 

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <syscall.h>
+
 
 #include "../../tst_common.h"
 
@@ -140,7 +140,7 @@ void test_nn_conv2d_hstrip_shallowin_case0()
         const mem_stride_t x_v_stride = x_params.width * x_params.channels;
         const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
 
-        PRINTF("\t\t\tC...\n");
+
         memset(Y, 0xCC, sizeof(Y));
         nn_conv2d_hstrip_shallowin((nn_image_t*) Y, (nn_image_t*) X, K_init, (nn_bss_block_t*) &bss, 
                                         K_h, K_hstride, x_params.channels,
@@ -260,7 +260,7 @@ void test_nn_conv2d_hstrip_shallowin_case1()
         const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
         nn_image_t* X_patch_start = &X[0][0][0];
 
-        PRINTF("\t\t\tC...\n");
+
         memset(Y, 0xCC, sizeof(Y));
         nn_conv2d_hstrip_shallowin((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
                                         K_h, K_hstride, x_params.channels, 
@@ -359,7 +359,6 @@ void test_nn_conv2d_hstrip_shallowin_case2()
     const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
     nn_image_t* X_patch_start = &X[0][0][0];
 
-    PRINTF("\t\t\tC...\n");
     memset(Y, 0xCC, sizeof(Y));
     nn_conv2d_hstrip_shallowin((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
                                     K_h, K_hstride, x_params.channels, 
@@ -468,7 +467,6 @@ void test_nn_conv2d_hstrip_shallowin_case3()
     const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
     nn_image_t* X_patch_start = &X[0][0][0];
 
-    PRINTF("\t\t\tC...\n");
     memset(Y, 0xCC, sizeof(Y));
     nn_conv2d_hstrip_shallowin((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
                                     K_h, K_hstride, x_params.channels, 
@@ -476,16 +474,21 @@ void test_nn_conv2d_hstrip_shallowin_case3()
 
 
     PRINTF("\t\t\tChecking...\n");
-    for(unsigned row = 0; row < y_params.height; row++){
-        for(unsigned col = 0; col < y_params.width; col++){
+    for(unsigned row = 0; row < Y_HEIGHT; row++){
+        for(unsigned col = 0; col < Y_WIDTH; col++){
             for(unsigned chn = 0; chn < y_params.channels; chn++){
                 
                 int32_t acc = BSS.bias[chn];
 
-                for(int xr = 0; xr < x_params.height; xr++)
-                    for(int xc = 0; xc < x_params.width; xc++)
-                        for(int xchn = 0; xchn < x_params.channels; xchn++)
-                            acc += ((int32_t)X[xr][col+xc][xchn]) * K[chn][xr][xc][xchn];
+                for(unsigned xr = 0; xr < X_HEIGHT; xr++){
+                    for(unsigned xc = 0; xc < X_WIDTH; xc++){
+                        for(unsigned xchn = 0; xchn < x_params.channels; xchn++){
+                            int32_t xv = X[xr][col+xc][xchn];
+                            int32_t kv = K[chn][xr][xc][xchn];
+                            acc += xv*kv;
+                        }
+                    }
+                }
 
                 acc = (acc + (1<<(BSS.shift1[chn]-1))) >> BSS.shift1[chn];
                 acc = acc * BSS.scale[chn];

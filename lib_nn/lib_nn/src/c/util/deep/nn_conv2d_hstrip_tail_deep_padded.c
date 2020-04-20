@@ -40,8 +40,8 @@
         }                                                                   \
     } while(0)
 
-
-void nn_compute_hstrip_tail_deep_padded_c(
+WEAK_FUNC
+void nn_conv2d_hstrip_tail_deep_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,

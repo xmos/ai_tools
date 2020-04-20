@@ -33,7 +33,11 @@ SOURCE_DIRS := src
 ###### 
 ### [optional] Source file extentions. Defaults to: c cc xc cpp S
 ###
-SOURCE_FILE_EXTS := c cc xc cpp S
+SOURCE_FILE_EXTS := c cc cpp
+
+ifeq ($(PLAYFORM),xcore)
+  SOURCE_FILE_EXTS += xc
+endif
 
 ######
 ### [optional] List of source files to compile.
@@ -51,6 +55,11 @@ SOURCE_FILE_EXTS := c cc xc cpp S
 # will be linked directly against library object files.
 #
 BUILD_STATIC_LIBRARIES := 0
+
+ifeq ($(DEBUG),1)
+  $(info Debug enabled..)
+  CC_FLAGS += -O0
+endif
 
 
 ######

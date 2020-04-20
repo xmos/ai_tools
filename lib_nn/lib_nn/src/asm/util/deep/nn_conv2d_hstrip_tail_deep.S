@@ -4,7 +4,7 @@
 /**
 
 
-void nn_compute_hstrip_tail_deep_asm(
+void nn_conv2d_hstrip_tail_deep(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -20,7 +20,7 @@ void nn_compute_hstrip_tail_deep_asm(
         const channel_count_t C_out_tail)
 */
 
-#define FUNCTION_NAME nn_compute_hstrip_tail_deep_asm
+#define FUNCTION_NAME nn_conv2d_hstrip_tail_deep
 
 
 #define NSTACKVECS  (2)

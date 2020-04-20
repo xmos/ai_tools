@@ -17,8 +17,8 @@
 
 
 
-
-void fc_deepin_shallowout_16_c(
+WEAK_FUNC
+void fc_deepin_shallowout_16(
     const int8_t* W, 
     const int32_t* B,
     const int8_t* X, 
@@ -82,7 +82,7 @@ void fully_connected_16(
     int16_t* Y,
     const int8_t* W, 
     const int8_t* X, 
-    const data16_t* BSS,
+    const nn_bss_block_t* BSS,
     const nn_fully_connected_plan_t* plan)
 {
     const unsigned ACCS = VPU_INT8_ACC_PERIOD;
@@ -95,7 +95,7 @@ void fully_connected_16(
         const unsigned cog = cout >> VPU_INT8_ACC_PERIOD_LOG2;
         const unsigned coff = cout & (ACCS - 1);
 
-        const data16_t* BSS_cog = &BSS[5*ACCS * cog];
+        const data16_t* BSS_cog = (data16_t*) &BSS[5*ACCS * cog];
         const int8_t* W_row = &W[cout * C_in];
         const int32_t bias_hi = BSS_cog[coff + 0*ACCS];
         const int32_t bias_lo = BSS_cog[coff + 1*ACCS];
@@ -132,8 +132,8 @@ void fully_connected_16(
 
 
 
-
-void fc_deepin_shallowout_8_c(
+WEAK_FUNC
+void fc_deepin_shallowout_8(
     const int8_t* W, 
     const int32_t* B,
     const int8_t* X, 

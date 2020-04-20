@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <syscall.h>
+
 
 #include "tst_common.h"
 
@@ -108,7 +108,7 @@ void test_avgpool2d_global_case1()
         
         int32_t bias = casse->bias * x_params.height * x_params.width * scale;
 
-        PRINTF("\t\tC...\n");
+        
         memset(Y, 0xCC, sizeof(Y));
         avgpool2d_global((int8_t*)Y, (int8_t*)X, casse->height, casse->width, casse->channels, bias, shift, scale);
 
@@ -129,12 +129,7 @@ void test_avgpool2d_global_case1()
                         sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)", row, col, chn);
                     }
 
-#if TEST_C
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_c, str_buff);
-#endif
-#if TEST_ASM        
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_asm, str_buff);
-#endif
+                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
                 }
             }
         }

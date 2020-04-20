@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <syscall.h>
+
 
 #include "../../tst_common.h"
 
@@ -14,25 +14,6 @@
 
 #include "unity.h"
 
-
-#if USE_ASM(nn_compute_hstrip_tail_deep)
- #define HAS_ASM (1)
-#else
- #define HAS_ASM (0)
-#endif
-
-#define TEST_ASM ((HAS_ASM)     && 1)
-#define TEST_C ((TEST_C_GLOBAL) && 1)
-
-#if TEST_C && TEST_ASM
-  #define Y_C_ASM  (int8_t*)Y_c, (int8_t*)Y_asm
-#elif TEST_C && !TEST_ASM
-  #define Y_C_ASM (int8_t*)Y_c
-#elif !TEST_C && TEST_ASM
-  #define Y_C_ASM (int8_t*)Y_asm
-#else
-  #error Neither TEST_C nor TEST_ASM is specified.
-#endif
 
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
@@ -46,42 +27,22 @@ static void check_Y(
     const unsigned col,
     const unsigned chn,
     const unsigned line,
-#if TEST_C
-    const nn_image_t* Y_c,
-#endif
-#if TEST_ASM
-    const nn_image_t* Y_asm,
-#endif
+    const nn_image_t* Y,
     const nn_image_params_t* y_params)
 {
     char str_buff[200];
 
     unsigned y_offset = IMG_ADDRESS_VECT(y_params, row, col, chn);
 
-    int flg = 0;
-
     //Only sprintf-ing if the test will fail saves a ton of time.
-#if TEST_C
-    int8_t y_c = Y_c[y_offset];
-    flg |= (y_c == y_exp)? 0x00 : 0x01;
-#endif
-#if TEST_ASM
-    int8_t y_asm = Y_asm[y_offset];
-    flg |= (y_asm == y_exp)? 0x00 : 0x02;
-#endif
+    int8_t y = Y[y_offset];
 
-    if(flg){
-        sprintf(str_buff, "%s%s%s failed. (row, col, chn) = (%u, %u, %u)  [test vector @ %u]", 
-                (flg&0x01)? "C" : "", (flg==0x03)? " and " : "", (flg&0x02)? "ASM" : "",
+    if(y != y_exp){
+        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)  [test vector @ %u]", 
                 row, col, chn, line);
     }
 
-#if TEST_C
-    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_c, str_buff);
-#endif
-#if TEST_ASM
-    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_asm, str_buff);
-#endif
+    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
 }
 
 
@@ -107,7 +68,7 @@ static void check_Y(
 #define K_h             (1)
 #define K_w             (1)
 #define K_hstride       (1)
-void test_nn_compute_hstrip_tail_deep_case0()
+void test_nn_conv2d_hstrip_tail_deep_case0()
 {
     PRINTF("%s...\n", __func__);
 
@@ -124,8 +85,8 @@ void test_nn_compute_hstrip_tail_deep_case0()
 
     nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT_MAX)];
 
-    nn_image_t WORD_ALIGNED  Y_c[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
-    nn_image_t WORD_ALIGNED  Y_asm[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
+    nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
+
     
     typedef struct {
         int8_t x;
@@ -149,7 +110,7 @@ void test_nn_compute_hstrip_tail_deep_case0()
     const unsigned start_case = 0;
     const unsigned stop_case = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case, 1, 1);
 
     for(int v = start_case; v < N_casses && v <= stop_case; v++){
         PRINTF("\tvector %d..\n", v);
@@ -181,22 +142,11 @@ void test_nn_compute_hstrip_tail_deep_case0()
             mem_stride_t k_cout_stride = -K_h*K_w*x_params.channels;
             nn_tensor_t* K_init = &K[C_out-1][0][0][0];
 
-#if TEST_C
-            PRINTF("\t\t\tC...\n");
-            memset(Y_c, 0xCC, sizeof(Y_c));
-            nn_compute_hstrip_tail_deep_c((nn_image_t*) Y_c, (nn_image_t*) X, K_init, 
+            memset(Y, 0xCC, sizeof(Y));
+            nn_conv2d_hstrip_tail_deep((nn_image_t*) Y, (nn_image_t*) X, K_init, 
                                             (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels,
                                             (x_params.width-K_w)*x_params.channels, k_cout_stride,
                                             y_params.channels, 1, C_out);
-#endif
-#if TEST_ASM
-            PRINTF("\t\t\tASM...\n");
-            memset(Y_asm, 0xCC, sizeof(Y_asm));
-            nn_compute_hstrip_tail_deep_asm((nn_image_t*) Y_asm, (nn_image_t*) X, K_init, 
-                                            (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels,
-                                            (x_params.width-K_w)*x_params.channels, k_cout_stride,
-                                            y_params.channels, 1, C_out);
-#endif
 
     
             PRINTF("\t\t\tChecking...\n");
@@ -206,7 +156,7 @@ void test_nn_compute_hstrip_tail_deep_case0()
                         
                         int8_t y_exp = casse->expected + chn;
 
-                        check_Y(y_exp, row, col, chn, casse->line, Y_C_ASM, &y_params);
+                        check_Y(y_exp, row, col, chn, casse->line, (nn_image_t*) Y, &y_params);
                     }
                 }
             }
@@ -245,7 +195,7 @@ void test_nn_compute_hstrip_tail_deep_case0()
 #define K_h             (3)
 #define K_w             (2)
 #define K_hstride       (2)
-void test_nn_compute_hstrip_tail_deep_case1()
+void test_nn_conv2d_hstrip_tail_deep_case1()
 {
     PRINTF("%s...\n", __func__);
 
@@ -261,10 +211,10 @@ void test_nn_compute_hstrip_tail_deep_case1()
 
     nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT_MAX)];
 
-    nn_image_t WORD_ALIGNED  Y_c[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
-    nn_image_t WORD_ALIGNED  Y_asm[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
+    nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
 
-    print_warns(0, TEST_C, TEST_ASM);
+
+    print_warns(0, 1, 1);
 
     for(int C_out = 4; C_out < CHANS_OUT_MAX; C_out += 4){
 
@@ -309,23 +259,12 @@ void test_nn_compute_hstrip_tail_deep_case1()
 
         mem_stride_t k_cout_stride = -K_h*K_w*x_params.channels;
         nn_tensor_t* K_init = &K[C_out-1][0][0][0];
-
-#if TEST_C
-        PRINTF("\t\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(Y_c));
-        nn_compute_hstrip_tail_deep_c((nn_image_t*) Y_c, (nn_image_t*) X, K_init, 
+        
+        memset(Y, 0xCC, sizeof(Y));
+        nn_conv2d_hstrip_tail_deep((nn_image_t*) Y, (nn_image_t*) X, K_init, 
                                         (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels,
                                         (x_params.width-K_w)*x_params.channels, k_cout_stride,
                                         y_params.channels, Y_WIDTH, C_out);
-#endif
-#if TEST_ASM
-        PRINTF("\t\t\tASM...\n");
-        memset(Y_asm, 0xCC, sizeof(Y_asm));
-        nn_compute_hstrip_tail_deep_asm((nn_image_t*) Y_asm, (nn_image_t*) X, K_init, 
-                                        (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels,
-                                        (x_params.width-K_w)*x_params.channels, k_cout_stride,
-                                        y_params.channels, Y_WIDTH, C_out);
-#endif
 
         PRINTF("\t\t\tChecking...\n");
         for(unsigned row = 0; row < y_params.height; row++){
@@ -334,7 +273,7 @@ void test_nn_compute_hstrip_tail_deep_case1()
                     
                     int8_t y_expected = y_exp[col] - chn;
 
-                    check_Y(y_expected, row, col, chn, __LINE__, Y_C_ASM, &y_params);
+                    check_Y(y_expected, row, col, chn, __LINE__, (nn_image_t*) Y, &y_params);
                 }
             }
         }
@@ -354,10 +293,10 @@ void test_nn_compute_hstrip_tail_deep_case1()
 
 
 
-void test_nn_compute_hstrip_tail_deep()
+void test_nn_conv2d_hstrip_tail_deep()
 {
     UNITY_SET_FILE();
 
-    RUN_TEST(test_nn_compute_hstrip_tail_deep_case0);
-    RUN_TEST(test_nn_compute_hstrip_tail_deep_case1);
+    RUN_TEST(test_nn_conv2d_hstrip_tail_deep_case0);
+    RUN_TEST(test_nn_conv2d_hstrip_tail_deep_case1);
 }

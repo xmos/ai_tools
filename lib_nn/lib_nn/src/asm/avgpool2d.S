@@ -4,13 +4,13 @@
 #include "window_op_plan.h"
 
 /*  
-void avgpool2d_asm(
+void avgpool2d_gen(
     int8_t* Y,
     const int8_t* X, 
     const nn_avgpool2d_plan_t* plan);
 */
 
-#define FUNCTION_NAME avgpool2d_asm
+#define FUNCTION_NAME avgpool2d_gen
 
 #define NSTACKWORDS  30
     

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <syscall.h>
+
 
 #include "tst_common.h"
 
@@ -46,7 +46,7 @@ void test_lookup8_case0()
         uint32_t size = pseudo_rand_uint32(&seed) % MAX_LEN;
 
         memset(dst, 0xCC, sizeof(dst));
-        PRINTF("\t\tC...\n");
+        
         lookup8((uint8_t*)dst, (uint8_t*) src, (uint8_t*) lut, size);
         for(int i = 0; i < MAX_LEN; i++)
             TEST_ASSERT_EQUAL( (i < size)? lut[src[i]] : 0xCC, dst[i]);

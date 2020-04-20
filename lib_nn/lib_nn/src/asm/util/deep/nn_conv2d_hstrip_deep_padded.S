@@ -4,7 +4,7 @@
 /**
 
 
-void nn_compute_hstrip_deep_padded_asm(
+void nn_conv2d_hstrip_deep_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -25,7 +25,7 @@ void nn_compute_hstrip_deep_padded_asm(
         const int8_t* zero_point_vec)
 */
 
-#define FUNCTION_NAME nn_compute_hstrip_deep_padded_asm
+#define FUNCTION_NAME nn_conv2d_hstrip_deep_padded
 
 
 #define NSTACKVECS  (4)

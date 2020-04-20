@@ -7,7 +7,7 @@ void fully_connected_16(
     int16_t* Y,
     const int8_t* W, 
     const int8_t* X, 
-    const data16_t* BSS,
+    const nn_bss_block_t* BSS,
     const nn_fully_connected_16_plan_t* plan);
 */
 

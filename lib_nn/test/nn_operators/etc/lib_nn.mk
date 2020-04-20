@@ -25,14 +25,13 @@ SOURCE_DIRS := src
 ###### 
 ### [optional] Source file extentions. Defaults to: c cc xc cpp S
 ###
-# SOURCE_FILE_EXTS := c S
+SOURCE_FILE_EXTS := c
 
-ifeq ($(NO_ASM),1)
-  $(info Disabling ASM compilation..)
-  c_FLAGS += -O0
-  SOURCE_FILE_EXTS := c
-else
-  SOURCE_FILE_EXTS := c S
+ifeq ($(PLATFORM),xcore)
+  ifeq ($(NO_ASM),1)
+    $(info Disabling ASM compilation..)
+    c_FLAGS += -O0
+  endif
 endif
 
 ######

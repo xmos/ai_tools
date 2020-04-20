@@ -159,7 +159,8 @@ FUNCTION_NAME:
     mul r11, r11, Q(rows_left)
     {   lss tmp, r11, tmp                       ;   stw r11, sp[STACK_PAD_R]                }
     {   sub r11, _32, r11                       ;   bru tmp                                 }
-    {   zext pad_mask, r11                      ;   ldw tmp, sp[STACK_OUT_COLS]             }
+    {   zext pad_mask, r11                      ;                                           }
+    {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
 
     .L_out_col_start:
         // load number of patch rows, initialize accumulators, decrement out cols

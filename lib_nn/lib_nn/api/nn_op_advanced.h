@@ -3,18 +3,12 @@
 #ifndef NN_OP_ADVANCED_H_
 #define NN_OP_ADVANCED_H_
 
-#include "nn_op_advanced_asm.h"
-#include "nn_op_advanced_c.h"
-#include "nn_op_advanced_inline.h"
-
 #include "xs3_vpu.h"
 
 
 #ifdef __XC__
 extern "C" {
 #endif
-
-#if defined(__XS3A__)
 
 
 /**
@@ -27,6 +21,63 @@ extern "C" {
  * @return  Address of start of last output channel of `COG`<sup>th</sup> output channel group.
  */
 #define KERNEL_4D_COG_LAST_CHAN_START(KRN, COG)    ((nn_tensor_t*) &(KRN[(VPU_INT8_ACC_PERIOD*(COG))+(VPU_INT8_ACC_PERIOD-1)][0][0][0]))
+
+
+
+void avgpool2d_gen(
+    nn_image_t* Y,
+    const nn_image_t* X, 
+    const nn_avgpool2d_plan_t* plan);
+    
+void avgpool2d_2x2(
+    nn_image_t* Y,
+    const nn_image_t* X, 
+    const nn_avgpool2d_plan_t* plan);
+
+
+
+/**  Fully connected layer for "deep" input and "shallow" output tensors.
+ *
+ *  Number of inputs must be divisible by 32. No activation is applied (i.e. linear).
+ *
+ * Weight tensor `W` is a 2D matrix with shape (C_out, C_in) in standard layout.
+ *
+ * Bias tensor `B` has shape (C_out), and is in standard layout.
+ * 
+ * Input tensor `X` has shape (C_in), and is in standard layout.
+ * 
+ * Output tensor `Y` has shape (C_out), and will be in standard layout.
+ *
+ * The `shifts` tensor has shape (C_out) and is in standard layout. The 32-bit accumulant
+ * is arithmetically right-shifted by this number of bits, with rounding to the nearest integer.
+ * Saturation to 16-bit bounds is applied immediately after the shift-and-round.
+ * 
+ * The `scales` tensor has shape (C_out) and is in standard layout. The scales can be
+ * interpreted as signed Q1.14 fixed-point values.
+ * 
+ * Each output `Y[i]` is computed as
+ *
+ *  Y[i] = ( ( B[i] + sum(W[i,:] * X[:]) ) >> shifts[i] ) * scales[i]
+ *
+ *
+ *  \param  W       Weight tensor
+ *  \param  B       Bias tensor
+ *  \param  X       Input tensor
+ *  \param  Y       Output tensor
+ *  \param  C_out   Number of output channels
+ *  \param  C_in    Number of input channels, must be divisible by 32.
+ *  \param  shifts  Shift tensor
+ *  \param  scales  Scale tensor
+ */
+void fc_deepin_shallowout_16(
+    const nn_tensor_t* W, 
+    const int32_t* B,
+    const nn_image_t* X, 
+    int16_t* Y,
+    const int32_t C_out, 
+    const int32_t C_in,
+    const uint16_t* shifts, 
+    const int16_t* scales);
 
 
     
@@ -149,7 +200,7 @@ extern "C" {
  * \param chans_to_write    Number of channels to write in each output pixel
  * \param zero_point_vec    Vector of zero-points for each channel
  */
-void nn_compute_hstrip_depthwise_padded(
+void nn_conv2d_hstrip_depthwise_padded(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
@@ -192,7 +243,7 @@ void nn_compute_hstrip_depthwise_padded(
  * 
  * In this example, the convolution window never extends beyond the bounds of the input
  * image. Padding is not supported by this function. If padding is needed, use 
- * `nn_compute_hstrip_depthwise_padded_asm()` instead.
+ * `nn_conv2d_hstrip_depthwise_padded_asm()` instead.
  * 
  * This example corresponds to calling `nn_compute_patch_depthwise_asm()` 4 times
  * with appropriate adjustments made to its `Y` and `X` arguments each time. 
@@ -256,7 +307,7 @@ void nn_compute_hstrip_depthwise_padded(
  * \param out_pixels        Number of pixels to be written
  * \param chans_to_write    Number of channels to write in each output pixel
  */
-void nn_compute_hstrip_depthwise(
+void nn_conv2d_hstrip_depthwise(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
@@ -405,7 +456,7 @@ void nn_compute_hstrip_depthwise(
  * @param[in]  out_cols             Number of output pixels to write.
  * @param[in]  zero_point_vec       Vector containing `VPU_INT8_EPV` copies of the zero point value.
  */
-static inline void nn_compute_hstrip_deep_padded(
+void nn_conv2d_hstrip_deep_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,    
@@ -563,7 +614,7 @@ static inline void nn_compute_hstrip_deep_padded(
  * @param[in]  zero_point_vec       Vector containing `VPU_INT8_EPV` copies of the zero point value.
  * @param[in]  C_out_tail           The tail of the output channel count.
  */
-static inline void nn_compute_hstrip_tail_deep_padded(
+void nn_conv2d_hstrip_tail_deep_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,    
@@ -586,7 +637,7 @@ static inline void nn_compute_hstrip_tail_deep_padded(
 
 
 
-static inline void nn_compute_hstrip_deep(
+void nn_conv2d_hstrip_deep(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,    
@@ -604,7 +655,7 @@ static inline void nn_compute_hstrip_deep(
 
 
 
-static inline void nn_compute_hstrip_tail_deep(
+void nn_conv2d_hstrip_tail_deep(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,    
@@ -688,9 +739,6 @@ void nn_conv2d_hstrip_tail_shallowin(
         const channel_count_t C_out_tail);
 
 
-
-
-#endif //defined(__XS3A__)
 
 #ifdef __XC__
 }   //extern "C"

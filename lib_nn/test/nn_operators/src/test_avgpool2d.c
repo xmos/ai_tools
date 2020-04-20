@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <syscall.h>
+
 
 #include "tst_common.h"
 
@@ -13,15 +13,6 @@
 
 #include "unity.h"
 
-
-#if USE_ASM(avgpool2d)
- #define HAS_ASM (1)
-#else
- #define HAS_ASM (0)
-#endif
-
-#define TEST_ASM ((HAS_ASM)     && 1)
-#define TEST_C ((TEST_C_GLOBAL) && 1)
 
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
@@ -33,12 +24,8 @@
 void test_avgpool2d_case1()
 {
     int8_t WORD_ALIGNED  X[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS] = {{{0}}};
-#if TEST_C
-    int8_t WORD_ALIGNED  Y_c[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS];
-#endif
-#if TEST_ASM
-    int8_t WORD_ALIGNED  Y_asm[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS];
-#endif
+    
+    int8_t WORD_ALIGNED  Y[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS];
 
     PRINTF("%s...\n", __func__);
 
@@ -102,7 +89,7 @@ void test_avgpool2d_case1()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case, 1, 1);
 
     memset(X, 120, sizeof(X));
 
@@ -155,16 +142,9 @@ void test_avgpool2d_case1()
     PRINTF("plan.shift                              = 0x%08X\n", plan.shift);
 #endif //DEBUG_ON
 
-#if TEST_C
-        PRINTF("\t\tC...\n");
-        memset(Y_c, 0xCC, casse->Y.height * casse->Y.width * casse->channels);    //too expensive to write the whole image, so just do the part that's in play
-        avgpool2d_c((int8_t*)Y_c, (int8_t*)X, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\tASM...\n");
-        memset(Y_asm, 0xCC,  casse->Y.height * casse->Y.width * casse->channels);
-        avgpool2d_asm((int8_t*)Y_asm, (int8_t*)X, &plan);
-#endif
+
+        memset(Y, 0xCC, casse->Y.height * casse->Y.width * casse->channels);    //too expensive to write the whole image, so just do the part that's in play
+        avgpool2d((int8_t*)Y, (int8_t*)X, &plan);
 
         char str_buff[200] = {0};
         PRINTF("\t\tChecking...\n");
@@ -179,27 +159,13 @@ void test_avgpool2d_case1()
                     
                     int8_t y_exp = (chn&1)? 120 : -120;
 
-                    int flg = 0;     //Annoying, but avoids unnecessary calls to sprintf().
-#if TEST_C      
-                    int8_t y_c = ((int8_t*)Y_c)[y_base + chn];
-                    flg |= (y_c == y_exp)? 0x00 : 0x01;
-#endif
-#if TEST_ASM
-                    int8_t y_asm = ((int8_t*)Y_asm)[y_base + chn];
-                    flg |= (y_asm == y_exp)? 0x00 : 0x02;
-#endif
-                    if(flg){
-                        sprintf(str_buff, "%s%s%s failed. (row, col, chn) = (%u, %u, %u)", 
-                                (flg&0x01)? "C" : "", (flg==0x03)? " and " : "", (flg&0x02)? "ASM" : "",
-                                row, col, chn);
+                    int8_t y = ((int8_t*)Y)[y_base + chn];
+
+                    if(y != y_exp){
+                        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)", row, col, chn);
                     }
 
-#if TEST_C
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_c, str_buff);
-#endif
-#if TEST_ASM
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_asm, str_buff);
-#endif
+                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
                 }
             }
         }
@@ -227,12 +193,7 @@ void test_avgpool2d_case2()
     int8_t WORD_ALIGNED  X[HEIGHT][WIDTH][CHANS] = {{{0}}};
     int8_t WORD_ALIGNED Y_exp[HEIGHT][WIDTH][CHANS];
 
-#if TEST_C
-    int8_t WORD_ALIGNED  Y_c[HEIGHT][WIDTH][CHANS];
-#endif
-#if TEST_ASM
-    int8_t WORD_ALIGNED  Y_asm[HEIGHT][WIDTH][CHANS];
-#endif
+    int8_t WORD_ALIGNED  Y[HEIGHT][WIDTH][CHANS];
 
     PRINTF("%s...\n", __func__);
 
@@ -268,7 +229,7 @@ void test_avgpool2d_case2()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case, 1, 1);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
@@ -348,16 +309,9 @@ void test_avgpool2d_case2()
     PRINTF("plan.shift                              = 0x%08X\n", plan.shift);
 #endif //DEBUG_ON
 
-#if TEST_C
-        PRINTF("\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(Y_c));    //too expensive to write the whole image, so just do the part that's in play
-        avgpool2d_c((int8_t*)Y_c, (int8_t*)X, &params);
-#endif
-#if TEST_ASM
-        PRINTF("\t\tASM...\n");
-        memset(Y_asm, 0xCC,  sizeof(Y_asm));
-        avgpool2d_asm((int8_t*)Y_asm, (int8_t*)X, &params);
-#endif
+        PRINTF("\t\tRunning avgpool2d()...\n");
+        memset(Y, 0xCC, sizeof(Y));    //too expensive to write the whole image, so just do the part that's in play
+        avgpool2d((int8_t*)Y, (int8_t*)X, &params);
 
         char str_buff[200] = {0};
         PRINTF("\t\tChecking...\n");
@@ -368,27 +322,13 @@ void test_avgpool2d_case2()
                     int8_t y_exp = Y_exp[row][col][chn];
                     if(y_exp == -128)   y_exp = -127;
 
-                    int flg = 0;     //Annoying, but avoids unnecessary calls to sprintf().
-#if TEST_C      
-                    int8_t y_c = Y_c[row][col][chn];
-                    flg |= (y_c == y_exp)? 0x00 : 0x01;
-#endif
-#if TEST_ASM
-                    int8_t y_asm = Y_asm[row][col][chn];
-                    flg |= (y_asm == y_exp)? 0x00 : 0x02;
-#endif
-                    if(flg){
-                        sprintf(str_buff, "%s%s%s failed. (row, col, chn) = (%u, %u, %u)", 
-                                (flg&0x01)? "C" : "", (flg==0x03)? " and " : "", (flg&0x02)? "ASM" : "",
-                                row, col, chn);
+                    int8_t y = Y[row][col][chn];
+                    
+                    if(y != y_exp){
+                        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)", row, col, chn);
                     }
 
-#if TEST_C
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_c, str_buff);
-#endif
-#if TEST_ASM
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_asm, str_buff);
-#endif
+                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
                 }
             }
         }
@@ -412,12 +352,7 @@ void test_avgpool2d_case3()
 {
     int8_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS] = {{{0}}};
     int8_t WORD_ALIGNED  Y_exp[Y_HEIGHT][Y_WIDTH][CHANS] = {{{0}}};
-#if TEST_C
-    int8_t WORD_ALIGNED  Y_c[Y_HEIGHT][Y_WIDTH][CHANS];
-#endif
-#if TEST_ASM
-    int8_t WORD_ALIGNED  Y_asm[Y_HEIGHT][Y_WIDTH][CHANS];
-#endif
+    int8_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS];
 
     PRINTF("%s...\n", __func__);
 
@@ -451,7 +386,7 @@ void test_avgpool2d_case3()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case, 1, 1);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
@@ -527,16 +462,8 @@ void test_avgpool2d_case3()
     PRINTF("plan.shift                              = 0x%08X\n", plan.shift);
 #endif //DEBUG_ON
 
-#if TEST_C
-        PRINTF("\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(Y_c));
-        avgpool2d_c((int8_t*)Y_c, (int8_t*)X, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\tASM...\n");
-        memset(Y_asm, 0xCC,  sizeof(Y_asm));
-        avgpool2d_asm((int8_t*)Y_asm, (int8_t*)X, &plan);
-#endif
+        memset(Y, 0xCC, sizeof(Y));
+        avgpool2d((int8_t*)Y, (int8_t*)X, &plan);
 
 
         unsigned hadsomething = 0;
@@ -550,27 +477,12 @@ void test_avgpool2d_case3()
                     if(y_exp != (int8_t)0xCC)
                         hadsomething = 1;
 
-                    int flg = 0;     //Annoying, but avoids unnecessary calls to sprintf().
-#if TEST_C      
-                    int8_t y_c = Y_c[row][col][y_chn];
-                    flg |= (y_c == y_exp)? 0x00 : 0x01;
-#endif
-#if TEST_ASM
-                    int8_t y_asm = Y_asm[row][col][y_chn];
-                    flg |= (y_asm == y_exp)? 0x00 : 0x02;
-#endif
-                    if(flg){
-                        sprintf(str_buff, "%s%s%s failed. (row, col, chn) = (%u, %u, %u)", 
-                                (flg&0x01)? "C" : "", (flg==0x03)? " and " : "", (flg&0x02)? "ASM" : "",
-                                row, col, y_chn);
+                    int8_t y = Y[row][col][y_chn];
+                    if(y != y_exp){
+                        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)", row, col, y_chn);
                     }
 
-#if TEST_C
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_c, str_buff);
-#endif
-#if TEST_ASM
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_asm, str_buff);
-#endif
+                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
                 }
             }
         }
@@ -598,12 +510,7 @@ void test_avgpool2d_case3()
 void test_avgpool2d_2x2_case1()
 {
     int8_t WORD_ALIGNED  X[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS] = {{{0}}};
-#if TEST_C
-    int8_t WORD_ALIGNED  Y_c[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS];
-#endif
-#if TEST_ASM
-    int8_t WORD_ALIGNED  Y_asm[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS];
-#endif
+    int8_t WORD_ALIGNED  Y[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS];
 
     PRINTF("%s...\n", __func__);
 
@@ -649,7 +556,7 @@ void test_avgpool2d_2x2_case1()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case, 1, 1);
 
     memset(X, 120, sizeof(X));
 
@@ -705,17 +612,8 @@ void test_avgpool2d_2x2_case1()
 #endif //DEBUG_ON
 
 
-
-#if TEST_C
-        PRINTF("\t\tC...\n");
-        memset(Y_c, 0xCC, casse->height * casse->width * casse->channels / 4);
-        avgpool2d_c((int8_t*)Y_c, (int8_t*)X, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\tASM...\n");
-        memset(Y_asm, 0xCC,  casse->height * casse->width * casse->channels / 4);
-        avgpool2d_2x2_asm((int8_t*)Y_asm, (int8_t*)X, &plan);
-#endif
+        memset(Y, 0xCC, casse->height * casse->width * casse->channels / 4);
+        avgpool2d((int8_t*)Y, (int8_t*)X, &plan);
 
         char str_buff[200] = {0};
         PRINTF("\t\tChecking...\n");
@@ -728,27 +626,12 @@ void test_avgpool2d_2x2_case1()
                     
                     int8_t y_exp = (chn&1)? 100 : -100;
 
-                    int flg = 0;     //Annoying, but avoids unnecessary calls to sprintf().
-#if TEST_C      
-                    int8_t y_c = ((int8_t*)Y_c)[y_base + chn];
-                    flg |= (y_c == y_exp)? 0x00 : 0x01;
-#endif
-#if TEST_ASM
-                    int8_t y_asm = ((int8_t*)Y_asm)[y_base + chn];
-                    flg |= (y_asm == y_exp)? 0x00 : 0x02;
-#endif
-                    if(flg){
-                        sprintf(str_buff, "%s%s%s failed. (row, col, chn) = (%u, %u, %u)", 
-                                (flg&0x01)? "C" : "", (flg==0x03)? " and " : "", (flg&0x02)? "ASM" : "",
-                                row, col, chn);
+                    int8_t y = ((int8_t*)Y)[y_base + chn];
+                    if(y != y_exp){
+                        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)", row, col, chn);
                     }
 
-#if TEST_C
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_c, str_buff);
-#endif
-#if TEST_ASM        
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_asm, str_buff);
-#endif
+                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
                 }
             }
         }
@@ -775,12 +658,7 @@ void test_avgpool2d_2x2_case2()
 {
     int8_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS] = {{{0}}};
     int8_t WORD_ALIGNED  Y_exp[Y_HEIGHT][Y_WIDTH][CHANS] = {{{0}}};
-#if TEST_C
-    int8_t WORD_ALIGNED  Y_c[Y_HEIGHT][Y_WIDTH][CHANS];
-#endif
-#if TEST_ASM
-    int8_t WORD_ALIGNED  Y_asm[Y_HEIGHT][Y_WIDTH][CHANS];
-#endif
+    int8_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS];
 
     PRINTF("%s...\n", __func__);
 
@@ -809,7 +687,7 @@ void test_avgpool2d_2x2_case2()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case, 1, 1);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
@@ -869,16 +747,8 @@ void test_avgpool2d_2x2_case2()
     PRINTF("plan.shift                              = 0x%08X\n", plan.shift);
 #endif //DEBUG_ON
 
-#if TEST_C
-        PRINTF("\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(Y_c));
-        avgpool2d_c((int8_t*)Y_c, (int8_t*)X, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\tASM...\n");
-        memset(Y_asm, 0xCC,  sizeof(Y_asm));
-        avgpool2d_2x2_asm((int8_t*)Y_asm, (int8_t*)X, &plan);
-#endif
+        memset(Y, 0xCC, sizeof(Y));
+        avgpool2d((int8_t*)Y, (int8_t*)X, &plan);
 
 
         unsigned hadsomething = 0;
@@ -892,27 +762,12 @@ void test_avgpool2d_2x2_case2()
                     if(y_exp != (int8_t) 0xCC)
                         hadsomething = 1;
 
-                    int flg = 0;     //Annoying, but avoids unnecessary calls to sprintf().
-#if TEST_C      
-                    int8_t y_c = Y_c[row][col][y_chn];
-                    flg |= (y_c == y_exp)? 0x00 : 0x01;
-#endif
-#if TEST_ASM
-                    int8_t y_asm = Y_asm[row][col][y_chn];
-                    flg |= (y_asm == y_exp)? 0x00 : 0x02;
-#endif
-                    if(flg){
-                        sprintf(str_buff, "%s%s%s failed. (row, col, chn) = (%u, %u, %u)", 
-                                (flg&0x01)? "C" : "", (flg==0x03)? " and " : "", (flg&0x02)? "ASM" : "",
-                                row, col, y_chn);
+                    int8_t y = Y[row][col][y_chn];
+                    if(y != y_exp){
+                        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)", row, col, y_chn);
                     }
 
-#if TEST_C
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_c, str_buff);
-#endif
-#if TEST_ASM
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y_asm, str_buff);
-#endif
+                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
                 }
             }
         }

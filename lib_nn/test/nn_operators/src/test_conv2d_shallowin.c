@@ -44,6 +44,8 @@ static void check_Y(
 }
 
 
+#define K_W_ARRAY   (VPU_INT8_EPV / CHANS_IN)
+
 
 
 
@@ -58,10 +60,10 @@ static void check_Y(
 #define Y_HEIGHT        ( 1 )
 #define Y_WIDTH         ( 1 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case0()
+void test_conv2d_shallowin_case0()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -76,18 +78,26 @@ void test_conv2d_deep_case0()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
-    nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
+    nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN  };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
-    memset(K, 0, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
+
+    memset(K, 0, sizeof(K));
+    for(channel_count_t cout = 0; cout < CHANS_OUT; cout++)
+        for(int row = 0; row < K_H; row++)
+            for(int col = 0; col < K_W; col++)
+                for(int cin = 0; cin < x_params.channels; cin++)
+                    K[cout][row][col][cin] = 0;
+
+
 
     for(int k = 0; k < CHANS_OUT; k++){
         BSS.bias[k] = 0;
@@ -100,7 +110,7 @@ void test_conv2d_deep_case0()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -137,10 +147,10 @@ void test_conv2d_deep_case0()
 #define Y_HEIGHT        ( 1 )
 #define Y_WIDTH         ( 1 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case1()
+void test_conv2d_shallowin_case1()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -155,18 +165,18 @@ void test_conv2d_deep_case1()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
-    memset(K, 0, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
+    memset(K, 0, sizeof(K));
 
     for(int bias = -10; bias < 10; bias++){
 
@@ -183,7 +193,7 @@ void test_conv2d_deep_case1()
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+        conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
             for(int col = 0; col < y_params.width; col++){
@@ -194,7 +204,6 @@ void test_conv2d_deep_case1()
             }
         }
     }
-
 }
 #undef CHANS_IN
 #undef CHANS_OUT
@@ -221,10 +230,10 @@ void test_conv2d_deep_case1()
 #define Y_HEIGHT        ( 1 )
 #define Y_WIDTH         ( 1 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case2()
+void test_conv2d_shallowin_case2()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -239,18 +248,18 @@ void test_conv2d_deep_case2()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
-    memset(K, 0, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
+    memset(K, 0, sizeof(K));
 
     for(int shift1 = 0; shift1 < 4; shift1++){
 
@@ -267,7 +276,7 @@ void test_conv2d_deep_case2()
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+        conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
             for(int col = 0; col < y_params.width; col++){
@@ -305,10 +314,10 @@ void test_conv2d_deep_case2()
 #define Y_HEIGHT        ( 1 )
 #define Y_WIDTH         ( 1 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case3()
+void test_conv2d_shallowin_case3()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -323,18 +332,18 @@ void test_conv2d_deep_case3()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
-    memset(K, 0, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
+    memset(K, 0, sizeof(K));
 
     for(int scale = -10; scale < 10; scale++){
 
@@ -351,7 +360,7 @@ void test_conv2d_deep_case3()
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+        conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
             for(int col = 0; col < y_params.width; col++){
@@ -389,10 +398,10 @@ void test_conv2d_deep_case3()
 #define Y_HEIGHT        ( 1 )
 #define Y_WIDTH         ( 1 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case4()
+void test_conv2d_shallowin_case4()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -407,18 +416,18 @@ void test_conv2d_deep_case4()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
-    memset(K, 0, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
+    memset(K, 0, sizeof(K));
 
     for(int shift2 = 0; shift2 < 4; shift2++){
 
@@ -435,7 +444,7 @@ void test_conv2d_deep_case4()
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+        conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
             for(int col = 0; col < y_params.width; col++){
@@ -473,10 +482,10 @@ void test_conv2d_deep_case4()
 #define Y_HEIGHT        ( 1 )
 #define Y_WIDTH         ( 1 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case5()
+void test_conv2d_shallowin_case5()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -491,18 +500,18 @@ void test_conv2d_deep_case5()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     memset(X, 1, x_params.height * x_params.width * x_params.channels);
-    memset(K, 0, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
+    memset(K, 0, sizeof(K));
 
     for(int k = 0; k < CHANS_OUT; k++){
         BSS.bias[k] = k;
@@ -515,7 +524,7 @@ void test_conv2d_deep_case5()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -552,10 +561,10 @@ void test_conv2d_deep_case5()
 #define Y_HEIGHT        ( 1 )
 #define Y_WIDTH         ( 1 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case6()
+void test_conv2d_shallowin_case6()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -570,18 +579,25 @@ void test_conv2d_deep_case6()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
-    memset(K, 1, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
+
+    memset(K, 0, sizeof(K));
+    
+    for(int cout = 0; cout < y_params.channels; cout++)
+        for(int row = 0; row < conv2d_window.shape.height; row++)
+            for(int col = 0; col < conv2d_window.shape.width; col++)
+                for(int cin = 0; cin < x_params.channels; cin++)
+                    K[cout][row][col][cin] = 1;
 
     for(int k = 0; k < CHANS_OUT; k++){
         BSS.bias[k] = k;
@@ -594,7 +610,7 @@ void test_conv2d_deep_case6()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -631,10 +647,10 @@ void test_conv2d_deep_case6()
 #define Y_HEIGHT        ( 1 )
 #define Y_WIDTH         ( 1 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case7()
+void test_conv2d_shallowin_case7()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -649,18 +665,25 @@ void test_conv2d_deep_case7()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     memset(X, 1, x_params.height * x_params.width * x_params.channels);
-    memset(K, 1, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
+
+    memset(K, 0, sizeof(K));
+    
+    for(int cout = 0; cout < y_params.channels; cout++)
+        for(int row = 0; row < conv2d_window.shape.height; row++)
+            for(int col = 0; col < conv2d_window.shape.width; col++)
+                for(int cin = 0; cin < x_params.channels; cin++)
+                    K[cout][row][col][cin] = 1;
 
     for(int k = 0; k < CHANS_OUT; k++){
         BSS.bias[k] = k;
@@ -673,7 +696,7 @@ void test_conv2d_deep_case7()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -701,7 +724,7 @@ void test_conv2d_deep_case7()
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-#define CHANS_IN        ( 36 )
+#define CHANS_IN        ( 8 )
 #define CHANS_OUT       ( 4 )
 #define K_H             ( 1 )
 #define K_W             ( 1 )
@@ -710,10 +733,10 @@ void test_conv2d_deep_case7()
 #define Y_HEIGHT        ( 1 )
 #define Y_WIDTH         ( 1 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case8()
+void test_conv2d_shallowin_case8()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -728,18 +751,26 @@ void test_conv2d_deep_case8()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     memset(X, 1, x_params.height * x_params.width * x_params.channels);
-    memset(K, 1, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
+
+    memset(K, 0, sizeof(K));
+
+    for(int cout = 0; cout < y_params.channels; cout++)
+        for(int row = 0; row < conv2d_window.shape.height; row++)
+            for(int col = 0; col < conv2d_window.shape.width; col++)
+                for(int cin = 0; cin < x_params.channels; cin++)
+                    K[cout][row][col][cin] = 1;
+
 
     for(int k = 0; k < CHANS_OUT; k++){
         BSS.bias[k] = k;
@@ -752,7 +783,7 @@ void test_conv2d_deep_case8()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -789,10 +820,10 @@ void test_conv2d_deep_case8()
 #define Y_HEIGHT        ( 1 )
 #define Y_WIDTH         ( 1 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case9()
+void test_conv2d_shallowin_case9()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -807,18 +838,24 @@ void test_conv2d_deep_case9()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     memset(X, 1, x_params.height * x_params.width * x_params.channels);
-    memset(K, 1, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
+    
+    memset(K, 0, sizeof(K));
+    for(int cout = 0; cout < y_params.channels; cout++)
+        for(int row = 0; row < conv2d_window.shape.height; row++)
+            for(int col = 0; col < conv2d_window.shape.width; col++)
+                for(int cin = 0; cin < x_params.channels; cin++)
+                    K[cout][row][col][cin] = 1;
 
     for(int k = 0; k < CHANS_OUT; k++){
         BSS.bias[k] = k;
@@ -831,7 +868,7 @@ void test_conv2d_deep_case9()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -868,10 +905,10 @@ void test_conv2d_deep_case9()
 #define Y_HEIGHT        ( 1 )
 #define Y_WIDTH         ( 1 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case10()
+void test_conv2d_shallowin_case10()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -886,21 +923,22 @@ void test_conv2d_deep_case10()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
             for(int chn = 0; chn < x_params.channels; chn++)
                 X[row][col][chn] = chn;
-                
+    
+    memset(K, 0, sizeof(K));            
     for(int cout = 0; cout < y_params.channels; cout++)
         for(int row = 0; row < conv2d_window.shape.height; row++)
             for(int col = 0; col < conv2d_window.shape.width; col++)
@@ -918,7 +956,7 @@ void test_conv2d_deep_case10()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -955,10 +993,10 @@ void test_conv2d_deep_case10()
 #define Y_HEIGHT        ( 3 )
 #define Y_WIDTH         ( 2 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case11()
+void test_conv2d_shallowin_case11()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -973,21 +1011,22 @@ void test_conv2d_deep_case11()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
             for(int cin = 0; cin < x_params.channels; cin++)
                 X[row][col][cin] = 1;
                 
+    memset(K, 0, sizeof(K));   
     for(int cout = 0; cout < y_params.channels; cout++)
         for(int row = 0; row < conv2d_window.shape.height; row++)
             for(int col = 0; col < conv2d_window.shape.width; col++)
@@ -1005,7 +1044,7 @@ void test_conv2d_deep_case11()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -1044,10 +1083,10 @@ void test_conv2d_deep_case11()
 #define K_V_STRIDE      ( 1 )
 #define K_H_STRIDE      ( 1 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case12()
+void test_conv2d_shallowin_case12()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1062,21 +1101,22 @@ void test_conv2d_deep_case12()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
             for(int cin = 0; cin < x_params.channels; cin++)
                 X[row][col][cin] = 1;
                 
+    memset(K, 0, sizeof(K));   
     for(int cout = 0; cout < y_params.channels; cout++)
         for(int row = 0; row < conv2d_window.shape.height; row++)
             for(int col = 0; col < conv2d_window.shape.width; col++)
@@ -1094,7 +1134,7 @@ void test_conv2d_deep_case12()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -1134,10 +1174,10 @@ void test_conv2d_deep_case12()
 #define K_V_STRIDE      ( 2 )
 #define K_H_STRIDE      ( 3 )
 #define ZERO_POINT      ( -128 )
-void test_conv2d_deep_case13()
+void test_conv2d_shallowin_case13()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1152,21 +1192,22 @@ void test_conv2d_deep_case13()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
             for(int cin = 0; cin < x_params.channels; cin++)
                 X[row][col][cin] = 1;
                 
+    memset(K, 0, sizeof(K));   
     for(int cout = 0; cout < y_params.channels; cout++)
         for(int row = 0; row < conv2d_window.shape.height; row++)
             for(int col = 0; col < conv2d_window.shape.width; col++)
@@ -1184,7 +1225,7 @@ void test_conv2d_deep_case13()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -1224,10 +1265,10 @@ void test_conv2d_deep_case13()
 #define K_V_STRIDE      ( 1 )
 #define K_H_STRIDE      ( 1 )
 #define ZERO_POINT      ( 2 )
-void test_conv2d_deep_case14()
+void test_conv2d_shallowin_case14()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1242,21 +1283,22 @@ void test_conv2d_deep_case14()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
             for(int cin = 0; cin < x_params.channels; cin++)
                 X[row][col][cin] = 1;
                 
+    memset(K, 0, sizeof(K));   
     for(int cout = 0; cout < y_params.channels; cout++)
         for(int row = 0; row < conv2d_window.shape.height; row++)
             for(int col = 0; col < conv2d_window.shape.width; col++)
@@ -1274,7 +1316,7 @@ void test_conv2d_deep_case14()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
     nn_image_t  WORD_ALIGNED Y_exp[Y_HEIGHT][Y_WIDTH] = {
         { 14, 12, 14},
@@ -1309,7 +1351,7 @@ void test_conv2d_deep_case14()
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-#define CHANS_IN        ( 64 )
+#define CHANS_IN        ( 4 )
 #define CHANS_OUT       ( 32 )
 #define K_H             ( 3 )
 #define K_W             ( 3 )
@@ -1320,10 +1362,10 @@ void test_conv2d_deep_case14()
 #define K_V_STRIDE      ( 2 )
 #define K_H_STRIDE      ( 2 )
 #define ZERO_POINT      ( 8 )
-void test_conv2d_deep_case15()
+void test_conv2d_shallowin_case15()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1338,15 +1380,15 @@ void test_conv2d_deep_case15()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     nn_image_t X_vals[X_HEIGHT][X_WIDTH] = {
         {  2,  4, 2, 8, 4 },
@@ -1360,6 +1402,7 @@ void test_conv2d_deep_case15()
             for(int cin = 0; cin < x_params.channels; cin++)
                 X[row][col][cin] = X_vals[row][col];
                 
+    memset(K, 0, sizeof(K));   
     for(int cout = 0; cout < y_params.channels; cout++)
         for(int row = 0; row < conv2d_window.shape.height; row++)
             for(int col = 0; col < conv2d_window.shape.width; col++)
@@ -1367,17 +1410,17 @@ void test_conv2d_deep_case15()
                     K[cout][row][col][cin] = 1;
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = k * (1<<7);
+        BSS.bias[k] = k * (1<<3);
         BSS.shift1[k] = 1;
         BSS.scale[k] = 2;
-        BSS.shift2[k] = 7;
+        BSS.shift2[k] = 3;
     }
     nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
 /*       __ __
        |8  8  8| 8  8  8  8 
@@ -1423,7 +1466,7 @@ void test_conv2d_deep_case15()
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-#define CHANS_IN        ( 64 )
+#define CHANS_IN        ( 4 )
 #define CHANS_OUT       ( 32 )
 #define K_H             ( 3 )
 #define K_W             ( 3 )
@@ -1434,10 +1477,10 @@ void test_conv2d_deep_case15()
 #define K_V_STRIDE      ( 2 )
 #define K_H_STRIDE      ( 2 )
 #define ZERO_POINT      ( 8 )
-void test_conv2d_deep_case16()
+void test_conv2d_shallowin_case16()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1452,8 +1495,8 @@ void test_conv2d_deep_case16()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job[5];
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job[5];
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
@@ -1471,7 +1514,7 @@ void test_conv2d_deep_case16()
 
     const unsigned job_count = sizeof(job_params) / sizeof(nn_conv2d_job_params_t);
 
-    conv2d_deep_init(&plan, job, &x_params, &y_params, job_params, &conv2d_window, ZERO_POINT, job_count);
+    conv2d_shallowin_init(&plan, job, &x_params, &y_params, job_params, &conv2d_window, ZERO_POINT, job_count);
 
     nn_image_t X_vals[X_HEIGHT][X_WIDTH] = {
         {  2,  4, 2, 8, 4 },
@@ -1485,6 +1528,7 @@ void test_conv2d_deep_case16()
             for(int cin = 0; cin < x_params.channels; cin++)
                 X[row][col][cin] = X_vals[row][col];
                 
+    memset(K, 0, sizeof(K));   
     for(int cout = 0; cout < y_params.channels; cout++)
         for(int row = 0; row < conv2d_window.shape.height; row++)
             for(int col = 0; col < conv2d_window.shape.width; col++)
@@ -1492,10 +1536,10 @@ void test_conv2d_deep_case16()
                     K[cout][row][col][cin] = 1;
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = k * (1<<7);
+        BSS.bias[k] = k * (1<<3);
         BSS.shift1[k] = 1;
         BSS.scale[k] = 2;
-        BSS.shift2[k] = 7;
+        BSS.shift2[k] = 3;
     }
     nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
@@ -1503,7 +1547,7 @@ void test_conv2d_deep_case16()
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
     for(int i = 0; i < job_count; i++)
-        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job[i]);
+        conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job[i]);
 
 /*       __ __
        |8  8  8| 8  8  8  8 
@@ -1551,7 +1595,7 @@ void test_conv2d_deep_case16()
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-#define CHANS_IN        ( 20 )
+#define CHANS_IN        ( 8 )
 #define CHANS_OUT       ( 20 )
 #define K_H             ( 3 )
 #define K_W             ( 3 )
@@ -1562,10 +1606,10 @@ void test_conv2d_deep_case16()
 #define K_V_STRIDE      ( 2 )
 #define K_H_STRIDE      ( 2 )
 #define ZERO_POINT      ( 8 )
-void test_conv2d_deep_case17()
+void test_conv2d_shallowin_case17()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1580,15 +1624,15 @@ void test_conv2d_deep_case17()
 
     PRINTF("%s...\n", __func__);
 
-    nn_conv2d_deep_plan_t plan;
-    nn_conv2d_deep_job_t job;
+    nn_conv2d_shallowin_plan_t plan;
+    nn_conv2d_shallowin_job_t job;
 
     nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_deep_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_shallowin_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
 
     nn_image_t X_vals[X_HEIGHT][X_WIDTH] = {
         {  6,  6, 2, 8, 4 },
@@ -1602,6 +1646,7 @@ void test_conv2d_deep_case17()
             for(int cin = 0; cin < x_params.channels; cin++)
                 X[row][col][cin] = X_vals[row][col];
                 
+    memset(K, 0, sizeof(K));   
     for(int cout = 0; cout < y_params.channels; cout++)
         for(int row = 0; row < conv2d_window.shape.height; row++)
             for(int col = 0; col < conv2d_window.shape.width; col++)
@@ -1619,7 +1664,7 @@ void test_conv2d_deep_case17()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_shallowin((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
 
 /*       __ __
        |8  8  8| 8  8  8  8 
@@ -1676,26 +1721,26 @@ void test_conv2d_deep_case17()
 
 
 
-void test_conv2d_deep()
+void test_conv2d_shallowin()
 {
     UNITY_SET_FILE();
     
-    RUN_TEST(test_conv2d_deep_case0);
-    RUN_TEST(test_conv2d_deep_case1);
-    RUN_TEST(test_conv2d_deep_case2);
-    RUN_TEST(test_conv2d_deep_case3);
-    RUN_TEST(test_conv2d_deep_case4);
-    RUN_TEST(test_conv2d_deep_case5);
-    RUN_TEST(test_conv2d_deep_case6);
-    RUN_TEST(test_conv2d_deep_case7);
-    RUN_TEST(test_conv2d_deep_case8);
-    RUN_TEST(test_conv2d_deep_case9);
-    RUN_TEST(test_conv2d_deep_case10);
-    RUN_TEST(test_conv2d_deep_case11);
-    RUN_TEST(test_conv2d_deep_case12);
-    RUN_TEST(test_conv2d_deep_case13);
-    RUN_TEST(test_conv2d_deep_case14);
-    RUN_TEST(test_conv2d_deep_case15);
-    RUN_TEST(test_conv2d_deep_case16);
-    RUN_TEST(test_conv2d_deep_case17);
+    // RUN_TEST(test_conv2d_shallowin_case0);
+    // RUN_TEST(test_conv2d_shallowin_case1);
+    // RUN_TEST(test_conv2d_shallowin_case2);
+    // RUN_TEST(test_conv2d_shallowin_case3);
+    // RUN_TEST(test_conv2d_shallowin_case4);
+    // RUN_TEST(test_conv2d_shallowin_case5);
+    // RUN_TEST(test_conv2d_shallowin_case6);
+    // RUN_TEST(test_conv2d_shallowin_case7);
+    // RUN_TEST(test_conv2d_shallowin_case8);
+    // RUN_TEST(test_conv2d_shallowin_case9);
+    // RUN_TEST(test_conv2d_shallowin_case10);
+    // RUN_TEST(test_conv2d_shallowin_case11);
+    // RUN_TEST(test_conv2d_shallowin_case12);
+    // RUN_TEST(test_conv2d_shallowin_case13);
+    // RUN_TEST(test_conv2d_shallowin_case14);
+    // RUN_TEST(test_conv2d_shallowin_case15);
+    // RUN_TEST(test_conv2d_shallowin_case16);
+    RUN_TEST(test_conv2d_shallowin_case17);
 }

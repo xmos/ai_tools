@@ -28,7 +28,7 @@ static void vlmacc8(
 }
 
 WEAK_FUNC
-void nn_compute_hstrip_depthwise(
+void nn_conv2d_hstrip_depthwise(
     int8_t* Y,
     const int8_t* X_in, 
     const int8_t* K_in,

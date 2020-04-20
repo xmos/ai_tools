@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <syscall.h>
+
 
 #include "../../tst_common.h"
 
@@ -141,7 +141,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_case0()
             const mem_stride_t x_v_stride = x_params.width * x_params.channels;
             const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
 
-            PRINTF("\t\t\tC...\n");
+
             memset(Y, 0xCC, sizeof(Y));
             nn_conv2d_hstrip_tail_shallowin((nn_image_t*) Y, (nn_image_t*) X, K_init, (nn_bss_block_t*) &bss, 
                                             K_h, K_hstride, x_params.channels, x_v_stride, y_params.channels, 
@@ -367,7 +367,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_case2()
         const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
         nn_image_t* X_patch_start = &X[0][0][0];
 
-        PRINTF("\t\tC...\n");
+        
         memset(Y, 0xCC, sizeof(Y));
         nn_conv2d_hstrip_tail_shallowin((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
                                         K_h, K_hstride, x_params.channels, x_v_stride, y_params.channels, 
@@ -478,7 +478,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_case3()
         const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
         nn_image_t* X_patch_start = &X[0][0][0];
 
-        PRINTF("\t\tC...\n");
+        
         memset(Y, 0xCC, sizeof(Y));
         nn_conv2d_hstrip_tail_shallowin((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
                                         K_h, K_hstride, x_params.channels, x_v_stride, y_params.channels, 
@@ -494,7 +494,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_case3()
                     for(int xr = 0; xr < x_params.height; xr++)
                         for(int xc = 0; xc < x_params.width; xc++)
                             for(int xchn = 0; xchn < x_params.channels; xchn++)
-                                acc += ((int32_t)X[xr][col+xc][xchn]) * K[chn][xr][xc][xchn];
+                                acc += ((int32_t)(X[xr][col+xc][xchn])) * K[chn][xr][xc][xchn];
 
                     acc = (acc + (1<<(BSS.shift1[chn]-1))) >> BSS.shift1[chn];
                     acc = acc * BSS.scale[chn];

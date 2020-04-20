@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <syscall.h>
+
 
 #include "tst_common.h"
 
@@ -123,10 +123,10 @@ void test_fully_connected_16_case0()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-        PRINTF("\t\tC...\n");
+        
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, &plan);
+                                     (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -252,10 +252,10 @@ void test_fully_connected_16_case1()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-        PRINTF("\t\tC...\n");
+        
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, &plan);
+                                     (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -381,10 +381,10 @@ void test_fully_connected_16_case2()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-        PRINTF("\t\tC...\n");
+        
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, &plan);
+                                     (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -508,10 +508,10 @@ void test_fully_connected_16_case3()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-        PRINTF("\t\tC...\n");
+        
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, &plan);
+                                     (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -632,10 +632,10 @@ void test_fully_connected_16_case4()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-        PRINTF("\t\tC...\n");
+        
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, &plan);
+                                     (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -762,10 +762,10 @@ void test_fully_connected_16_case5()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-        PRINTF("\t\tC...\n");
+        
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, &plan);
+                                     (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -904,7 +904,7 @@ void test_fully_connected_16_case6()
             PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
             fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, &plan);
+                                        (nn_bss_block_t*) &BSS, &plan);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1050,7 +1050,7 @@ void test_fully_connected_16_case7()
             PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
             fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, &plan);
+                                        (nn_bss_block_t*) &BSS, &plan);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1204,7 +1204,7 @@ void test_fully_connected_16_case8()
             PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
             fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, &plan);
+                                        (nn_bss_block_t*) &BSS, &plan);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1349,7 +1349,7 @@ void test_fully_connected_16_case9()
         PRINTF("\t\t\tC...\n");
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                    (data16_t*) &BSS, &plan);
+                                    (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -1452,7 +1452,7 @@ void test_fully_connected_16_case10()
         PRINTF("\t\t\tC...\n");
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                    (data16_t*) &BSS, &plan);
+                                    (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -1552,7 +1552,7 @@ void test_fully_connected_16_case11()
     PRINTF("\t\t\tC...\n");
     memset(Y, 0xCC, sizeof(Y));
     fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                (data16_t*) &BSS, &plan);
+                                (nn_bss_block_t*) &BSS, &plan);
 
     PRINTF("\t\t\tChecking...\n");
     char str_buff[200] = {0};

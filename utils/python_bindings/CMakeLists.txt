@@ -86,6 +86,7 @@ target_sources(libtflite2xcore
   PRIVATE ${XCORE_SOURCES}
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/flexbuffer_helpers.cpp"
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/xcore_interpreter.cpp"
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/arena_size.cpp"
 )
 
 target_include_directories(libtflite2xcore
@@ -95,6 +96,7 @@ target_include_directories(libtflite2xcore
   PRIVATE ${LIB_NN_ALT_INCLUDE_DIR}
   PRIVATE ${LIB_NN_INCLUDE_DIR}
   PRIVATE ${LIB_OPS_INCLUDE_DIR}
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")

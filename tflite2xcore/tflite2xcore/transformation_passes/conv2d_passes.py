@@ -143,8 +143,8 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
                     and self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
                     and self._weights.shape[1] == 1
                     and self._weights.shape[2] == 1
-                    and self._weights.shape[3] % WORD_SIZE == 0
-                )  # Cin divisible by 4
+                    and self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+                )
 
         return False
 

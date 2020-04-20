@@ -7,6 +7,7 @@ from .lut_passes import (
     ReplaceLogisticPass,
     ReplaceReLUPass,
     ReplaceReLU6Pass,
+    LegalizeXCLookupTablePass,
 )
 from .conv2d_passes import (
     Replace1x1Conv2dPass,

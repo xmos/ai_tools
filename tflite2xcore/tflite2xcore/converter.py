@@ -72,6 +72,7 @@ def optimize_for_xcore(
     pass_mgr = PassManager(
         model,
         passes=[
+            # TODO: these are actually canonicalization passes
             passes.LegalizeQuantizedInputPass(),
             passes.LegalizeQuantizedOutputPass(),
             passes.SplitPaddingPass(),
@@ -80,14 +81,22 @@ def optimize_for_xcore(
         debug=debug,
     )
 
+    # TODO: remove this
     if remove_softmax:
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
+
+    pass_mgr.register_pass(passes.ReplaceReLUPass())
+    pass_mgr.register_pass(passes.ReplaceReLU6Pass())
+    pass_mgr.register_pass(passes.ReplaceTanhPass())
+    pass_mgr.register_pass(passes.ReplaceLogisticPass())
 
     pass_mgr.register_pass(passes.Replace1x1Conv2dPass())
     pass_mgr.register_pass(passes.ReplaceDepthwiseConv2dPass())
     pass_mgr.register_pass(passes.ReplaceDeepConv2dPass())
+
     pass_mgr.register_pass(passes.ReplaceShallowinDeepoutConv2DPass())
     pass_mgr.register_pass(passes.ReplaceSingleinDeepoutDepthwiseConv2DPass())
+
     pass_mgr.register_pass(passes.ReplaceMaxPool2D2x2Pass())
     pass_mgr.register_pass(passes.ReplaceMaxPool2DPass())
     pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())
@@ -96,10 +105,7 @@ def optimize_for_xcore(
 
     pass_mgr.register_pass(passes.ReplaceFullyConnectedPass())
 
-    pass_mgr.register_pass(passes.ReplaceReLUPass())
-    pass_mgr.register_pass(passes.ReplaceReLU6Pass())
-    pass_mgr.register_pass(passes.ReplaceTanhPass())
-    pass_mgr.register_pass(passes.ReplaceLogisticPass())
+    pass_mgr.register_pass(passes.LegalizeXCLookupTablePass())
 
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
@@ -114,6 +120,7 @@ def optimize_for_xcore(
         pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
         pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 
+    # TODO: this is actually a canonicalization pass
     pass_mgr.register_pass(passes.LegalizeOperatorOutputTensorNamePass())
     pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
 

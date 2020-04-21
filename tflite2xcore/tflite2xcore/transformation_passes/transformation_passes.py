@@ -215,6 +215,11 @@ class ReplaceWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         with self.using(op):
             self._weights.name = f"{op.name}/weights"
 
+    def mutate(self, op):
+        new_op = super().mutate(op)
+        new_op.add_custom_options(illegal_params=True)
+        return new_op
+
 
 # TODO: refactor properties
 class LegalizeXCWeightBiasPass(QuantizedOperatorMatchingPass):

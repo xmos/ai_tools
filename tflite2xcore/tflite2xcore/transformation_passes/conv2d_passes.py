@@ -94,7 +94,6 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
             new_op.add_custom_options(stride=self._strides)
         with self.using(new_op):
             new_op.add_custom_options(pad=self._pad())
-        new_op.add_custom_options(illegal_params=True)
         return new_op
 
 
@@ -137,44 +136,31 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
                     and self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
                     and self._weights.shape[1] == 1
                     and self._weights.shape[2] == 1
-                    and self._weights.shape[3] % WORD_SIZE == 0
-                )  # Cin divisible by 4
+                    and self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+                )
 
         return False
+
+
+class LegalizeXC1x1ConvPass(LegalizeXCConvPass):
+    @property
+    def matching_opcode(self):
+        return XCOREOpCodes.XC_conv2d_1x1
 
     @log_method_output()
     def _zero_point_bias(self):
         return np.sum(self._weights.numpy * self._input_zero_point, axis=3).squeeze()
 
-    def mutate_biases(self, op):
-        # TODO: this is the same as in ReplaceFullyConnectedPass, refactor
-        # TODO: this is the same as in ReplaceDepthwiseConv2dPass, refactor
-        # TODO: this is the same as in ReplaceDeepConv2dPass, refactor
-        super().mutate_biases(op)
-        with self.using(op):
-            # calculate and save the bias/shift/scale tensor
-            bss = self._bss_arr()
-            self._biases.buffer.data = bss
-            self._biases.shape = bss.shape
-            self._biases.type = TensorType.INT16
-            self._biases.name = f"{op.name}/bias_shift_scale"
-
     def mutate_weights(self, op):
-        super().mutate_weights(op)
         with self.using(op):
-            # NOTE: This is not strictly necessary since height == width == 1
+            # NOTE: The reshape is not strictly necessary since height == width == 1
             old_shape = self._weights.shape
-            self._weights.shape = [old_shape[0], old_shape[3]]
+            self._replace_weights(
+                self._weights.numpy.astype(np.int8).reshape(
+                    [old_shape[0], old_shape[3]]
+                )
+            )
             self._log_weights()
-
-    def mutate(self, op):
-        # NOTE: the order of these mutations is strict
-        # TODO: this is the same as in ReplaceDepthwiseConv2dPass, refactor
-        new_op = super().mutate(op)
-        self.mutate_biases(new_op)
-        self.mutate_weights(new_op)
-
-        return new_op
 
 
 class ReplaceDeepConv2dPass(ReplaceConv2DPass):

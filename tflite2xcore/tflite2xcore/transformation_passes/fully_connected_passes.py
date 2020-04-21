@@ -71,7 +71,6 @@ class ReplaceFullyConnectedPass(ReplaceWeightBiasOperatorPass):
         new_op = super().mutate(op)
         self.add_requantize(new_op)
         self.mutate_output(new_op)
-        new_op.add_custom_options(illegal_params=True)
         return new_op
 
 

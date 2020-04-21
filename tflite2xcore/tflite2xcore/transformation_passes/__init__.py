@@ -11,6 +11,7 @@ from .lut_passes import (
 )
 from .conv2d_passes import (
     Replace1x1Conv2dPass,
+    LegalizeXC1x1ConvPass,
     ReplaceDepthwiseConv2dPass,
     LegalizeXCDepthwiseConvPass,
     ReplaceDeepConv2dPass,

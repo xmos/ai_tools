@@ -5,7 +5,10 @@ import numpy as np
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import WORD_SIZE
-from .transformation_passes import ReplaceXCOREWeightBiasOperatorPass
+from .transformation_passes import (
+    ReplaceXCOREWeightBiasOperatorPass,
+    QuantizedOperatorMatchingPass,
+)
 from tflite2xcore.xlogging import log_method_output
 
 
@@ -70,7 +73,6 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
         return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout)
 
     def add_requantize(self, op):
-        # TODO: remove this when FC becomes 8bit output
         with self.using(op):
             # create intermediate tensor
             intermediate = op.subgraph.create_tensor(
@@ -98,7 +100,52 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
         # NOTE: the order of these mutations is strict
         new_op = super().mutate(op)
         self.mutate_biases(new_op)
-        self.mutate_weights(new_op)
         self.add_requantize(new_op)
         self.mutate_output(new_op)
+        new_op.add_custom_options(illegal_inputs=[1])
         return new_op
+
+
+class LegalizeXCFullyConnectedWeightPass(QuantizedOperatorMatchingPass):
+    @property
+    def matching_opcode(self):
+        return XCOREOpCodes.XC_fc_deepin_anyout
+
+    @property
+    def _matching_output_type(self):
+        return TensorType.INT16
+
+    @property
+    def _weights(self):
+        return self._op.inputs[1]
+
+    def match(self, op):
+        if super().match(op) and "illegal_inputs" in op.custom_options:
+            return 1 in op.custom_options["illegal_inputs"]
+
+    def mutate(self, op):
+        with self.using(op):
+            subgraph = self._op.subgraph
+
+            # zero_padding weight tensor
+            col_pad = WORD_SIZE - 1 - (self._weights.shape[1] - 1) % WORD_SIZE
+            arr = np.pad(
+                self._weights.numpy.astype(np.int8), pad_width=[(0, 0), (0, col_pad)]
+            )
+
+            # create and populate new weight tensor
+            new_weights = subgraph.create_tensor(
+                f"{self._op.name}/weights",
+                TensorType.INT8,
+                arr.shape,
+                isinput=self._weights in subgraph.inputs,
+                isoutput=self._weights in subgraph.outputs,
+                consumers=[self._op],
+            )
+            new_weights.buffer.data = arr
+
+            # replace old tensor
+            self._weights.consumers.remove(self._op)
+            self._op.inputs[1] = new_weights
+
+            self._op.custom_options["illegal_inputs"].remove(1)

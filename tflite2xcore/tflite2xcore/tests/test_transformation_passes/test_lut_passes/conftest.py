@@ -88,6 +88,7 @@ def test_mutate(trf_pass, legalize_table_pass, model):
 
     # run table legalization pass
     legalize_table_pass.run(model)
+    model.sanity_check()
     assert "original_opcode" not in op.custom_options
 
     # check input/output tensors

@@ -18,7 +18,10 @@ from .conv2d_passes import (
     ParallelizeDeepConv2dPass,
 )
 
-from .fully_connected_passes import ReplaceFullyConnectedPass
+from .fully_connected_passes import (
+    ReplaceFullyConnectedPass,
+    LegalizeXCFullyConnectedWeightPass,
+)
 
 from .pooling_passes import (
     ReplaceMaxPool2DPass,

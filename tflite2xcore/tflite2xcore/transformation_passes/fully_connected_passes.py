@@ -13,14 +13,12 @@ from .transformation_passes import (
 from tflite2xcore.xlogging import log_method_output
 
 
-# TODO: write (at least regression) tests for the mutator functions
 class ReplaceFullyConnectedPass(ReplaceWeightBiasOperatorPass):
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.FULLY_CONNECTED
 
     def mutate_output(self, op):
-        # TODO: revise this when FC becomes 8bit output
         with self.using(op):
             self._output.type = TensorType.INT16
             new_quantization = {

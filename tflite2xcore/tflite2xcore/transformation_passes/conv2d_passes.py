@@ -59,75 +59,6 @@ class LegalizeXCConvPass(LegalizeXCWeightBiasPass):
             self._log_weights()
 
 
-class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.DEPTHWISE_CONV_2D
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_conv2d_depthwise)
-
-    @property
-    def _depth_multiplier(self):
-        return self._op.builtin_options["depth_multiplier"]
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                if self._depth_multiplier != 1:
-                    self.logger.warning(
-                        f"Found non-supported depthwise multiplier: {self._depth_multiplier}"
-                    )
-                else:
-                    return self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
-
-        return False
-
-    def _pad(self):
-        # TODO: this is very similar to the one in ReplaceDeepConv2dPass, refactor
-        # pad: [top, left, zero_point]
-        pad = [
-            max(int((o - 1) * s - i + k) // 2, 0)
-            for o, s, i, k in zip(
-                self._output.shape[1:3],
-                self._op.custom_options["stride"],
-                self._input.shape[1:3],
-                self._weights.shape[0:2],
-            )
-        ]
-        pad.append(self._input_zero_point)
-        return pad
-
-    def mutate(self, op):
-        new_op = super().mutate(op)
-
-        with self.using(op):
-            new_op.add_custom_options(stride=self._strides)
-        with self.using(new_op):
-            new_op.add_custom_options(pad=self._pad())
-        return new_op
-
-
-class LegalizeXCDepthwiseConvPass(LegalizeXCConvPass):
-    @property
-    def matching_opcode(self):
-        return XCOREOpCodes.XC_conv2d_depthwise
-
-    @log_method_output()
-    def _zero_point_bias(self):
-        # NOTE: first dimension of the kernel is always 1 in depthwise conv2d
-        return np.sum(
-            self._weights.numpy * self._input_zero_point, axis=(1, 2)
-        ).squeeze()
-
-    @property
-    def _new_weight_shape(self):
-        # NOTE: The reshape is not strictly necessary since the first dimension of
-        #       the kernel should be 1 in TFLite
-        return self._weights.shape[1:]
-
-
 class Replace1x1Conv2dPass(ReplaceConv2DPass):
     @property
     def matching_opcode(self):
@@ -168,27 +99,8 @@ class LegalizeXC1x1ConvPass(LegalizeXCConvPass):
         return [old_shape[0], old_shape[3]]
 
 
-class ReplaceDeepConv2dPass(ReplaceConv2DPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.CONV_2D
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_conv2d_deep)
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return (
-                    self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
-                    and self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
-                )
-
-        return False
-
+class ReplacePaddedConv2DPass(ReplaceConv2DPass):
     def _pad(self):
-        # TODO: this is very similar to the one in ReplaceDepthwiseConv2dPass, refactor
         # pad: [top, left, zero_point]
         pad = [
             max(int((o - 1) * s - i + k) // 2, 0)
@@ -210,6 +122,71 @@ class ReplaceDeepConv2dPass(ReplaceConv2DPass):
         with self.using(new_op):
             new_op.add_custom_options(pad=self._pad())
         return new_op
+
+
+class ReplaceDepthwiseConv2dPass(ReplacePaddedConv2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.DEPTHWISE_CONV_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_conv2d_depthwise)
+
+    @property
+    def _depth_multiplier(self):
+        return self._op.builtin_options["depth_multiplier"]
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                if self._depth_multiplier != 1:
+                    self.logger.warning(
+                        f"Found non-supported depthwise multiplier: {self._depth_multiplier}"
+                    )
+                else:
+                    return self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+
+        return False
+
+
+class LegalizeXCDepthwiseConvPass(LegalizeXCConvPass):
+    @property
+    def matching_opcode(self):
+        return XCOREOpCodes.XC_conv2d_depthwise
+
+    @log_method_output()
+    def _zero_point_bias(self):
+        # NOTE: first dimension of the kernel is always 1 in depthwise conv2d
+        return np.sum(
+            self._weights.numpy * self._input_zero_point, axis=(1, 2)
+        ).squeeze()
+
+    @property
+    def _new_weight_shape(self):
+        # NOTE: The reshape is not strictly necessary since the first dimension of
+        #       the kernel should be 1 in TFLite
+        return self._weights.shape[1:]
+
+
+class ReplaceDeepConv2dPass(ReplacePaddedConv2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.CONV_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_conv2d_deep)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (
+                    self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
+                    and self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+                )
+
+        return False
 
 
 class LegalizeXCDeepConvPass(LegalizeXCConvPass):

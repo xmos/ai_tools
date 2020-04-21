@@ -46,6 +46,18 @@ class LegalizeXCConvPass(LegalizeXCWeightBiasPass):
     def _MAX_POST_SHIFT(self):
         return 32 - 8 - 2  # this is because the output is 8 bit
 
+    @property
+    def _new_weight_shape(self):
+        # by default, no reshaping is done
+        return self._weights.shape
+
+    def mutate_weights(self, op):
+        with self.using(op):
+            self._replace_weights(
+                self._weights.numpy.astype(np.int8).reshape(self._new_weight_shape)
+            )
+            self._log_weights()
+
 
 class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
     @property
@@ -109,14 +121,11 @@ class LegalizeXCDepthwiseConvPass(LegalizeXCConvPass):
             self._weights.numpy * self._input_zero_point, axis=(1, 2)
         ).squeeze()
 
-    def mutate_weights(self, op):
-        with self.using(op):
-            # NOTE: The reshape is not strictly necessary since the first dimension of
-            #       the kernel should be 1 in TFLite
-            self._replace_weights(
-                self._weights.numpy.astype(np.int8).reshape(self._weights.shape[1:])
-            )
-            self._log_weights()
+    @property
+    def _new_weight_shape(self):
+        # NOTE: The reshape is not strictly necessary since the first dimension of
+        #       the kernel should be 1 in TFLite
+        return self._weights.shape[1:]
 
 
 class Replace1x1Conv2dPass(ReplaceConv2DPass):
@@ -151,16 +160,12 @@ class LegalizeXC1x1ConvPass(LegalizeXCConvPass):
     def _zero_point_bias(self):
         return np.sum(self._weights.numpy * self._input_zero_point, axis=3).squeeze()
 
-    def mutate_weights(self, op):
-        with self.using(op):
-            # NOTE: The reshape is not strictly necessary since height == width == 1
-            old_shape = self._weights.shape
-            self._replace_weights(
-                self._weights.numpy.astype(np.int8).reshape(
-                    [old_shape[0], old_shape[3]]
-                )
-            )
-            self._log_weights()
+    @property
+    def _new_weight_shape(self):
+        # NOTE: The reshape is not strictly necessary since the first dimension of
+        #       the kernel should be 1 in TFLite
+        old_shape = self._weights.shape
+        return [old_shape[0], old_shape[3]]
 
 
 class ReplaceDeepConv2dPass(ReplaceConv2DPass):
@@ -215,11 +220,6 @@ class LegalizeXCDeepConvPass(LegalizeXCConvPass):
     @log_method_output()
     def _zero_point_bias(self):
         return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2, 3))
-
-    def mutate_weights(self, op):
-        with self.using(op):
-            self._replace_weights(self._weights.numpy.astype(np.int8))
-            self._log_weights()
 
 
 class ParallelizeDeepConv2dPass(QuantizedOperatorMatchingPass):

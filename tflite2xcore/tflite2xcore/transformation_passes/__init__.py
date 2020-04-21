@@ -18,8 +18,7 @@ from .conv2d_passes import (
 
 from .fully_connected_passes import (
     ReplaceFullyConnectedPass,
-    LegalizeXCFullyConnectedWeightPass,
-    LegalizeXCFullyConnectedBiasPass,
+    LegalizeXCFullyConnectedPass,
 )
 
 from .pooling_passes import (

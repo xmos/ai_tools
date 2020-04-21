@@ -103,8 +103,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.ReplaceFullyConnectedPass())
 
     pass_mgr.register_pass(passes.LegalizeXCLookupTablePass())
-    pass_mgr.register_pass(passes.LegalizeXCFullyConnectedWeightPass())
-    pass_mgr.register_pass(passes.LegalizeXCFullyConnectedBiasPass())
+    pass_mgr.register_pass(passes.LegalizeXCFullyConnectedPass())
 
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())

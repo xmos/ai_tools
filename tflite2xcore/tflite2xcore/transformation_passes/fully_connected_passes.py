@@ -8,7 +8,7 @@ from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
     QuantizedOperatorMatchingPass,
-    LegalizeXCBiasPass,
+    LegalizeXCWeightBiasPass,
 )
 from tflite2xcore.xlogging import log_method_output
 
@@ -71,11 +71,11 @@ class ReplaceFullyConnectedPass(ReplaceWeightBiasOperatorPass):
         new_op = super().mutate(op)
         self.add_requantize(new_op)
         self.mutate_output(new_op)
-        new_op.add_custom_options(illegal_inputs=[1, 2])
+        new_op.add_custom_options(illegal_params=True)
         return new_op
 
 
-class LegalizeXCFullyConnectedWeightPass(QuantizedOperatorMatchingPass):
+class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
     @property
     def matching_opcode(self):
         return XCOREOpCodes.XC_fc_deepin_anyout
@@ -85,14 +85,14 @@ class LegalizeXCFullyConnectedWeightPass(QuantizedOperatorMatchingPass):
         return TensorType.INT16
 
     @property
-    def _weights(self):
-        return self._op.inputs[1]
+    def _MAX_POST_SHIFT(self):
+        return 32 - 16 - 2  # this is because the output is 16 bit
 
-    def match(self, op):
-        if super().match(op) and "illegal_inputs" in op.custom_options:
-            return 1 in op.custom_options["illegal_inputs"]
+    @log_method_output()
+    def _zero_point_bias(self):
+        return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
 
-    def mutate(self, op):
+    def mutate_weights(self, op):
         with self.using(op):
             subgraph = self._op.subgraph
 
@@ -116,27 +116,3 @@ class LegalizeXCFullyConnectedWeightPass(QuantizedOperatorMatchingPass):
             # replace old tensor
             self._weights.consumers.remove(self._op)
             self._op.inputs[1] = new_weights
-
-            self._op.custom_options["illegal_inputs"].remove(1)
-
-
-class LegalizeXCFullyConnectedBiasPass(LegalizeXCBiasPass):
-    @property
-    def matching_opcode(self):
-        return XCOREOpCodes.XC_fc_deepin_anyout
-
-    @property
-    def _matching_output_type(self):
-        return TensorType.INT16
-
-    @property
-    def _MAX_POST_SHIFT(self):
-        return 32 - 16 - 2  # this is because the output is 16 bit
-
-    @log_method_output()
-    def _zero_point_bias(self):
-        return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
-
-    def match(self, op):
-        if super().match(op) and "illegal_inputs" in op.custom_options:
-            return 2 in op.custom_options["illegal_inputs"]

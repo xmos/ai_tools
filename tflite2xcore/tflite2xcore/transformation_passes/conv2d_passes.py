@@ -4,10 +4,11 @@ import numpy as np
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.parallelization import DIDOConv2DPlanner
-from tflite2xcore.utils import VE, ACC_PERIOD, WORD_SIZE
+from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
     QuantizedOperatorMatchingPass,
+    LegalizeXCWeightBiasPass,
 )
 from tflite2xcore.xlogging import log_method_output
 
@@ -39,6 +40,8 @@ class ReplaceConv2DPass(ReplaceWeightBiasOperatorPass):
 
         return False
 
+
+class LegalizeXCConvPass(LegalizeXCWeightBiasPass):
     @property
     def _MAX_POST_SHIFT(self):
         return 32 - 8 - 2  # this is because the output is 8 bit
@@ -247,73 +250,6 @@ class ReplaceDeepConv2dPass(ReplaceConv2DPass):
             new_op.add_custom_options(stride=self._strides)
         with self.using(new_op):
             new_op.add_custom_options(pad=self._pad())
-        return new_op
-
-
-# TODO: Consider deprecating this when conv2d enhancements are done
-class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return (
-                    self._strides == (1, 1)
-                    and self._weights.shape[1] % 2 == 1  # kernel height is odd
-                    and self._weights.shape[2] % 2 == 1  # kernel width is odd
-                    and self._output.shape[3] % ACC_PERIOD == 0
-                )  # deepout
-
-        return False
-
-    @log_method_output()
-    def _zero_point_bias(self):
-        return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2, 3))
-
-    def mutate_biases(self, op):
-        super().mutate_biases(op)
-        with self.using(op):
-            # calculate new bias tensor and save to buffer
-            new_bias = self._bias_arr()
-            self._biases.buffer.data = new_bias
-
-            # change bias tensor metadata
-            self._biases.type = TensorType.INT16
-            self._biases.shape = new_bias.shape
-
-            # remove quantization info to save space
-            self._biases.quantization = None
-
-    def add_shift_scale(self, op):
-        with self.using(op):
-            shift_scale_arr = self._shift_scale_arr()
-
-        # TODO: remove this when left shift issue is solved in conv2d kernels
-        shift_scale_arr = shift_scale_arr[:, :2, :]
-        for s in shift_scale_arr[:, 0, :].flatten():
-            if s < 0:
-                raise ValueError("Negative right shift encountered.")
-
-        shift_scale_tensor = op.subgraph.create_tensor(
-            f"{op.name}/shift_scale",
-            TensorType.INT16,
-            shift_scale_arr.shape,
-            buffer=op.model.create_buffer(shift_scale_arr),
-            consumers=[op],
-        )
-        op.inputs.append(shift_scale_tensor)
-
-    def mutate(self, op):
-        # NOTE: the order of these mutations is strict
-        new_op = super().mutate(op)
-        self.add_shift_scale(new_op)
-        self.mutate_biases(new_op)
-        self.mutate_weights(new_op)
-
-        with self.using(op):
-            new_op.add_custom_options(
-                padding=self._padding,
-                stride_h=self._strides[0],
-                stride_w=self._strides[1],  # TODO: change to 'stride' and 'pad'
-            )
         return new_op
 
 

@@ -217,7 +217,7 @@ class ReplaceWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
 
 # TODO: refactor properties
-class LegalizeXCBiasPass(QuantizedOperatorMatchingPass):
+class LegalizeXCWeightBiasPass(QuantizedOperatorMatchingPass):
     @property
     def _biases(self):
         return self._op.inputs[2]
@@ -328,7 +328,7 @@ class LegalizeXCBiasPass(QuantizedOperatorMatchingPass):
         shift_scale_arr[:, 0, :] = np.maximum(shift_scale_arr[:, 0, :], 0)
         return np.concatenate([self._bias_arr(), shift_scale_arr], axis=1)
 
-    def mutate(self, op):
+    def mutate_biases(self, op):
         with self.using(op):
             subgraph = self._op.subgraph
 
@@ -350,5 +350,15 @@ class LegalizeXCBiasPass(QuantizedOperatorMatchingPass):
             self._biases.consumers.remove(self._op)
             self._op.inputs[2] = new_biases
 
-            self._op.custom_options["illegal_inputs"].remove(2)
-            assert not self._op.custom_options.pop("illegal_inputs")
+    @abstractmethod
+    def mutate_weights(self, op):
+        pass
+
+    def match(self, op):
+        if super().match(op) and "illegal_params" in op.custom_options:
+            return op.custom_options["illegal_params"]
+
+    def mutate(self, op):
+        self.mutate_biases(op)
+        self.mutate_weights(op)
+        op.custom_options.pop("illegal_params")

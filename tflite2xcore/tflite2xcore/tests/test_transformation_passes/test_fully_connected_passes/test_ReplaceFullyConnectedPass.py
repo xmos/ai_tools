@@ -6,8 +6,7 @@ import numpy as np
 
 from tflite2xcore.transformation_passes import (
     ReplaceFullyConnectedPass,
-    LegalizeXCFullyConnectedWeightPass,
-    LegalizeXCFullyConnectedBiasPass,
+    LegalizeXCFullyConnectedPass,
 )
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_fc
@@ -51,19 +50,16 @@ def test_mutate(model, trf_pass):
     model.sanity_check()
     new_op = model.subgraphs[0].operators[0]
 
-    # run weight legalization pass
-    LegalizeXCFullyConnectedWeightPass().run(model)
+    # run legalization pass
+    LegalizeXCFullyConnectedPass().run(model)
     model.sanity_check()
+    assert len(new_op.inputs) == 3
 
     # check weight tensors
     weight_shape_new = new_op.inputs[1].shape
     assert len(weight_shape_new) == 2
     assert weight_shape_new[0] == dim_out
     assert weight_shape_new[1] == int(np.ceil(dim_in / 4)) * 4
-
-    # run bias legalization pass
-    LegalizeXCFullyConnectedBiasPass().run(model)
-    model.sanity_check()
 
     # check bias tensor
     bss_shape = new_op.inputs[2].shape

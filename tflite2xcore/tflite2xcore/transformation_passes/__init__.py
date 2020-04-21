@@ -13,14 +13,13 @@ from .conv2d_passes import (
     Replace1x1Conv2dPass,
     ReplaceDepthwiseConv2dPass,
     ReplaceDeepConv2dPass,
-    ReplaceShallowinDeepoutConv2DPass,
-    ReplaceSingleinDeepoutDepthwiseConv2DPass,
     ParallelizeDeepConv2dPass,
 )
 
 from .fully_connected_passes import (
     ReplaceFullyConnectedPass,
     LegalizeXCFullyConnectedWeightPass,
+    LegalizeXCFullyConnectedBiasPass,
 )
 
 from .pooling_passes import (

@@ -6,13 +6,13 @@ from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.parallelization import DIDOConv2DPlanner
 from tflite2xcore.utils import VE, ACC_PERIOD, WORD_SIZE
 from .transformation_passes import (
-    ReplaceXCOREWeightBiasOperatorPass,
+    ReplaceWeightBiasOperatorPass,
     QuantizedOperatorMatchingPass,
 )
 from tflite2xcore.xlogging import log_method_output
 
 
-class ReplaceConv2DPass(ReplaceXCOREWeightBiasOperatorPass):
+class ReplaceConv2DPass(ReplaceWeightBiasOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options
@@ -315,128 +315,6 @@ class ReplaceDeepoutConv2DPass(ReplaceConv2DPass):
                 stride_w=self._strides[1],  # TODO: change to 'stride' and 'pad'
             )
         return new_op
-
-
-# TODO: write tests (of subclasses?) to test input operator matching
-class ReplaceDeepoutConv2DInputPass(ReplaceDeepoutConv2DPass):
-    MAX_INPUT_CHANNELS = WORD_SIZE
-    MAX_KERNEL_WIDTH = VE // MAX_INPUT_CHANNELS
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return self._input in op.subgraph.inputs
-
-        return False
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_conv2d_shallowin_deepout_relu)
-
-    def mutate_input(self, op):
-        # NOTE: when trying to generalize this pass to non-input operators,
-        #       keep in mind that this mutation is what can affect other operators
-        with self.using(op):
-            self._input.name = f"{op.name}/input"
-            self._input.shape = [
-                *self._input.shape[:3],
-                self.MAX_INPUT_CHANNELS,
-            ]  # new, zero-padded shape
-
-    def mutate_weights(self, op):
-        super().mutate_weights(op)
-        with self.using(op):
-            # rearrange and zero pad weight tensor
-            weights = self._weights.numpy.astype(np.int8)
-            weights = np.pad(
-                weights,
-                pad_width=[
-                    (0, 0),
-                    (0, 0),
-                    (0, self.MAX_KERNEL_WIDTH - weights.shape[2]),
-                    (0, self.MAX_INPUT_CHANNELS - weights.shape[3]),
-                ],
-            )
-            weights = weights.reshape(
-                (
-                    weights.shape[0] // ACC_PERIOD,
-                    ACC_PERIOD,
-                    weights.shape[1],
-                    self.MAX_KERNEL_WIDTH,
-                    self.MAX_INPUT_CHANNELS,
-                )
-            )
-            weights = np.transpose(np.flip(weights, axis=1), axes=(0, 2, 1, 3, 4))
-            self._log_weights()
-
-            # save weight tensor and update shape
-            self._weights.shape = weights.shape
-            self._weights.buffer.data = weights
-
-            # remove quantization info to save space
-            self._weights.quantization = None
-
-    def mutate(self, op):
-        # NOTE: the order of these mutations is strict
-        with self.using(op):
-            unpadded_shape = self._weights.shape
-        new_op = super().mutate(op)
-        self.mutate_input(new_op)
-        new_op.add_custom_options(unpadded_shape=unpadded_shape)
-        return new_op
-
-
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceShallowinDeepoutConv2DPass(ReplaceDeepoutConv2DInputPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.CONV_2D
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return (
-                    self._weights.shape[3] <= self.MAX_INPUT_CHANNELS
-                    and self._weights.shape[2] <= self.MAX_KERNEL_WIDTH
-                )
-
-        return False
-
-
-class ReplaceSingleinDeepoutDepthwiseConv2DPass(ReplaceDeepoutConv2DInputPass):
-    @property
-    def matching_opcode(self):
-        return BuiltinOpCodes.DEPTHWISE_CONV_2D
-
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                print(self._input.shape)
-                return (
-                    self._input.shape[3]
-                    == 1  # depthwise only matched with single input channel
-                    and self._weights.shape[2] <= self.MAX_KERNEL_WIDTH
-                )  # max kernel width
-
-        return False
-
-    def mutate(self, op):
-        # NOTE: the order of these mutations is strict
-        with self.using(op):
-            # NOTE: weight tensor channel ordering is:
-            # kOHWI, // TFLite conv weights
-            # kHWIO, // TensorFlow conv weights
-            # k1HWO, // TFLite DepthwiseConv weights
-            # kHWIM, // TensorFlow DepthwiseConv weights
-            # Therefore, this permutation results in kOHW1 which is the same as
-            #    TFLite conv weight order for a single input channel
-            # NOTE: this happens before the standard weight mutation on purpose
-            new_weights = np.transpose(
-                self._weights.numpy.astype(np.int8), axes=(3, 1, 2, 0)
-            )
-            self._weights.shape = new_weights.shape
-            self._weights.buffer.data = new_weights
-        return super().mutate(op)
 
 
 class ParallelizeDeepConv2dPass(QuantizedOperatorMatchingPass):

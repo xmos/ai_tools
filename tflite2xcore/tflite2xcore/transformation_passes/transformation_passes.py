@@ -181,8 +181,7 @@ class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
         return new_op
 
 
-# TODO: write (at least regression) tests for this class
-class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
+class ReplaceWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     @property
     def _weights(self):
         return self._op.inputs[1]
@@ -200,9 +199,32 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         if super().match(op):
             with self.using(op):
                 return (
-                    self._weights.type == TensorType.INT8
-                    and self._biases.type == TensorType.INT32
+                    self._weights.type is TensorType.INT8
+                    and self._biases.type is TensorType.INT32
                 )
+
+    # TODO: remove
+    def mutate_biases(self, op):
+        # NOTE: by default no bias layout rearrangement is done for this op
+        with self.using(op):
+            self._biases.name = f"{op.name}/biases"
+
+    # TODO: remove
+    def mutate_weights(self, op):
+        # NOTE: by default no weight layout rearrangement is done for this op
+        with self.using(op):
+            self._weights.name = f"{op.name}/weights"
+
+
+# TODO: refactor properties
+class LegalizeXCBiasPass(QuantizedOperatorMatchingPass):
+    @property
+    def _biases(self):
+        return self._op.inputs[2]
+
+    @property
+    def _weights(self):
+        return self._op.inputs[1]
 
     def _multiplier(self):
         output_scale = self._output.quantization["scale"][0]
@@ -306,12 +328,27 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         shift_scale_arr[:, 0, :] = np.maximum(shift_scale_arr[:, 0, :], 0)
         return np.concatenate([self._bias_arr(), shift_scale_arr], axis=1)
 
-    def mutate_biases(self, op):
-        # NOTE: by default no bias layout rearrangement is done for this op
+    def mutate(self, op):
         with self.using(op):
-            self._biases.name = f"{op.name}/biases"
+            subgraph = self._op.subgraph
 
-    def mutate_weights(self, op):
-        # NOTE: by default no weight layout rearrangement is done for this op
-        with self.using(op):
-            self._weights.name = f"{op.name}/weights"
+            # calculate the bias/shift/scale tensor
+            bss = self._bss_arr()
+
+            # create and populate new bias tensor
+            new_biases = subgraph.create_tensor(
+                f"{self._op.name}/bias_shift_scale",
+                TensorType.INT16,
+                bss.shape,
+                isinput=self._biases in subgraph.inputs,
+                isoutput=self._biases in subgraph.outputs,
+                consumers=[self._op],
+            )
+            new_biases.buffer.data = bss
+
+            # replace old tensor
+            self._biases.consumers.remove(self._op)
+            self._op.inputs[2] = new_biases
+
+            self._op.custom_options["illegal_inputs"].remove(2)
+            assert not self._op.custom_options.pop("illegal_inputs")

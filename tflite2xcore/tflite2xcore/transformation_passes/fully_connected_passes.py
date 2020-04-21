@@ -6,48 +6,18 @@ from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCod
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import (
-    ReplaceXCOREWeightBiasOperatorPass,
+    ReplaceWeightBiasOperatorPass,
     QuantizedOperatorMatchingPass,
+    LegalizeXCBiasPass,
 )
 from tflite2xcore.xlogging import log_method_output
 
 
 # TODO: write (at least regression) tests for the mutator functions
-class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
+class ReplaceFullyConnectedPass(ReplaceWeightBiasOperatorPass):
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.FULLY_CONNECTED
-
-    def mutate_weights(self, op):
-        super().mutate_weights(op)
-        with self.using(op):
-            # zero_padding weight tensor
-            col_pad = WORD_SIZE - 1 - (self._weights.shape[1] - 1) % WORD_SIZE
-            arr = np.pad(
-                self._weights.numpy.astype(np.int8), pad_width=[(0, 0), (0, col_pad)]
-            )
-
-            # save weight tensor and update shape
-            self._weights.buffer.data = arr
-            self._weights.shape = arr.shape
-
-    @property
-    def _MAX_POST_SHIFT(self):
-        return 32 - 16 - 2  # this is because the output is 16 bit
-
-    @log_method_output()
-    def _zero_point_bias(self):
-        return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
-
-    def mutate_biases(self, op):
-        super().mutate_biases(op)
-        with self.using(op):
-            # calculate and save the bias/shift/scale tensor
-            bss = self._bss_arr()
-            self._biases.buffer.data = bss
-            self._biases.shape = bss.shape
-            self._biases.type = TensorType.INT16
-            self._biases.name = f"{op.name}/bias_shift_scale"
 
     def mutate_output(self, op):
         # TODO: revise this when FC becomes 8bit output
@@ -99,10 +69,9 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
         new_op = super().mutate(op)
-        self.mutate_biases(new_op)
         self.add_requantize(new_op)
         self.mutate_output(new_op)
-        new_op.add_custom_options(illegal_inputs=[1])
+        new_op.add_custom_options(illegal_inputs=[1, 2])
         return new_op
 
 
@@ -149,3 +118,25 @@ class LegalizeXCFullyConnectedWeightPass(QuantizedOperatorMatchingPass):
             self._op.inputs[1] = new_weights
 
             self._op.custom_options["illegal_inputs"].remove(1)
+
+
+class LegalizeXCFullyConnectedBiasPass(LegalizeXCBiasPass):
+    @property
+    def matching_opcode(self):
+        return XCOREOpCodes.XC_fc_deepin_anyout
+
+    @property
+    def _matching_output_type(self):
+        return TensorType.INT16
+
+    @property
+    def _MAX_POST_SHIFT(self):
+        return 32 - 16 - 2  # this is because the output is 16 bit
+
+    @log_method_output()
+    def _zero_point_bias(self):
+        return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
+
+    def match(self, op):
+        if super().match(op) and "illegal_inputs" in op.custom_options:
+            return 2 in op.custom_options["illegal_inputs"]

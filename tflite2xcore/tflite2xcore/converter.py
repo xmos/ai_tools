@@ -94,9 +94,6 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.ReplaceDepthwiseConv2dPass())
     pass_mgr.register_pass(passes.ReplaceDeepConv2dPass())
 
-    pass_mgr.register_pass(passes.ReplaceShallowinDeepoutConv2DPass())
-    pass_mgr.register_pass(passes.ReplaceSingleinDeepoutDepthwiseConv2DPass())
-
     pass_mgr.register_pass(passes.ReplaceMaxPool2D2x2Pass())
     pass_mgr.register_pass(passes.ReplaceMaxPool2DPass())
     pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())
@@ -107,6 +104,7 @@ def optimize_for_xcore(
 
     pass_mgr.register_pass(passes.LegalizeXCLookupTablePass())
     pass_mgr.register_pass(passes.LegalizeXCFullyConnectedWeightPass())
+    pass_mgr.register_pass(passes.LegalizeXCFullyConnectedBiasPass())
 
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())

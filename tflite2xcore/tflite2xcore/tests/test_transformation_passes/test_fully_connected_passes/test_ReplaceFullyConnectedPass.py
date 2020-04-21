@@ -7,6 +7,7 @@ import numpy as np
 from tflite2xcore.transformation_passes import (
     ReplaceFullyConnectedPass,
     LegalizeXCFullyConnectedWeightPass,
+    LegalizeXCFullyConnectedBiasPass,
 )
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_fc
@@ -61,7 +62,8 @@ def test_mutate(model, trf_pass):
     assert weight_shape_new[1] == int(np.ceil(dim_in / 4)) * 4
 
     # run bias legalization pass
-    # TODO:
+    LegalizeXCFullyConnectedBiasPass().run(model)
+    model.sanity_check()
 
     # check bias tensor
     bss_shape = new_op.inputs[2].shape

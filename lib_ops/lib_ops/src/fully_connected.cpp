@@ -11,7 +11,7 @@ XCoreStatus FullyConnected_16::Init(int32_t C_in, int32_t C_out) {
 
 XCoreStatus FullyConnected_16::Eval(int16_t* Y, const int8_t* W,
                                     const int8_t* X, const int16_t* BSS) {
-  fully_connected_16(Y, W, X, (data16_t*)BSS, &plan_);
+  fully_connected_16(Y, W, X, (nn_bss_block_t*)BSS, &plan_);
   return kXCoreOk;
 }
 

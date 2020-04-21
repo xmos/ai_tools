@@ -1,5 +1,6 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 #include "lib_ops/api/conv2d.h"
+
 #include <iostream>
 
 namespace xcore {
@@ -117,32 +118,32 @@ XCoreStatus Conv2D_Deep::Eval(int8_t* Y, const int8_t* X, const int8_t* K,
 XCoreStatus Conv2D_SIDO::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                               int32_t Y_h, int32_t Y_w, int32_t zero_point,
                               const int8_t* K, const int16_t* bias) {
-  nn_conv2d_init_params_t init_params;
-  nn_conv2d_region_params_t region_params;
+  // nn_conv2d_init_params_t init_params;
+  // nn_conv2d_region_params_t region_params;
 
-  init_params.X_height = X_h;
-  init_params.X_width = X_w;
-  init_params.K_h = unpadded_shape.K_h;
-  init_params.K_w = unpadded_shape.K_w;
-  init_params.C_in = C_in;
-  init_params.C_out = unpadded_shape.C_out;
-  init_params.pad_mode = padding_mode_;
-  init_params.zero_point = zero_point;
+  // init_params.X_height = X_h;
+  // init_params.X_width = X_w;
+  // init_params.K_h = unpadded_shape.K_h;
+  // init_params.K_w = unpadded_shape.K_w;
+  // init_params.C_in = C_in;
+  // init_params.C_out = unpadded_shape.C_out;
+  // init_params.pad_mode = padding_mode_;
+  // init_params.zero_point = zero_point;
 
-  region_params.top = 0;
-  region_params.left = 0;
-  region_params.rows = Y_h;
-  region_params.cols = Y_w;
+  // region_params.top = 0;
+  // region_params.left = 0;
+  // region_params.rows = Y_h;
+  // region_params.cols = Y_w;
 
-  conv2d_shallowin_deepout_init(&params_, &init_params, &region_params, K,
-                                (data16_t*)bias);
+  // conv2d_shallowin_deepout_init(&params_, &init_params, &region_params, K,
+  //                               (data16_t*)bias);
 
   return kXCoreOk;
 }
 
 XCoreStatus Conv2D_SIDO::Eval(int8_t* Y, const int8_t* X, const int8_t* K,
                               const int16_t* SS) {
-  conv2d_shallowin_deepout(Y, &params_, X, K, SS);
+  // conv2d_shallowin_deepout(Y, &params_, X, K, SS);
   return kXCoreOk;
 }
 

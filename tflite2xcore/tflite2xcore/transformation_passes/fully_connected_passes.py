@@ -94,25 +94,10 @@ class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
 
     def mutate_weights(self, op):
         with self.using(op):
-            subgraph = self._op.subgraph
-
             # zero_padding weight tensor
             col_pad = WORD_SIZE - 1 - (self._weights.shape[1] - 1) % WORD_SIZE
             arr = np.pad(
                 self._weights.numpy.astype(np.int8), pad_width=[(0, 0), (0, col_pad)]
             )
 
-            # create and populate new weight tensor
-            new_weights = subgraph.create_tensor(
-                f"{self._op.name}/weights",
-                TensorType.INT8,
-                arr.shape,
-                isinput=self._weights in subgraph.inputs,
-                isoutput=self._weights in subgraph.outputs,
-                consumers=[self._op],
-            )
-            new_weights.buffer.data = arr
-
-            # replace old tensor
-            self._weights.consumers.remove(self._op)
-            self._op.inputs[1] = new_weights
+            self._replace_weights(arr)

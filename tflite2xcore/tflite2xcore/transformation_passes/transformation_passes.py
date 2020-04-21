@@ -226,6 +226,11 @@ class LegalizeXCWeightBiasPass(QuantizedOperatorMatchingPass):
     def _weights(self):
         return self._op.inputs[1]
 
+    def _log_weights(self):
+        self.logger.xdebug(
+            "_weights:\n" + logging._array_msg(self._weights.numpy.astype(np.int8))
+        )
+
     def _multiplier(self):
         output_scale = self._output.quantization["scale"][0]
         bias_scale = np.array(self._biases.quantization["scale"])
@@ -354,11 +359,29 @@ class LegalizeXCWeightBiasPass(QuantizedOperatorMatchingPass):
     def mutate_weights(self, op):
         pass
 
+    def _replace_weights(self, arr):
+        # create and populate new weight tensor
+        subgraph = self._op.subgraph
+        new_weights = subgraph.create_tensor(
+            f"{self._op.name}/weights",
+            TensorType.INT8,
+            arr.shape,
+            isinput=self._weights in subgraph.inputs,
+            isoutput=self._weights in subgraph.outputs,
+            consumers=[self._op],
+        )
+        new_weights.buffer.data = arr
+
+        # replace old tensor
+        self._weights.consumers.remove(self._op)
+        self._op.inputs[1] = new_weights
+
     def match(self, op):
         if super().match(op) and "illegal_params" in op.custom_options:
             return op.custom_options["illegal_params"]
 
     def mutate(self, op):
+        # NOTE: the order of these mutations is strict
         self.mutate_biases(op)
         self.mutate_weights(op)
         op.custom_options.pop("illegal_params")

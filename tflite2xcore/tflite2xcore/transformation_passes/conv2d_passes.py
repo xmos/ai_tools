@@ -72,34 +72,6 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
 
         return False
 
-    @log_method_output()
-    def _zero_point_bias(self):
-        # NOTE: first dimension of the kernel is always 1 in depthwise conv2d
-        return np.sum(
-            self._weights.numpy * self._input_zero_point, axis=(1, 2)
-        ).squeeze()
-
-    def mutate_biases(self, op):
-        # TODO: this is the same as in ReplaceFullyConnectedPass, refactor
-        # TODO: this is the same as in Replace1x1Conv2dPass, refactor
-        # TODO: this is the same as in ReplaceDeepConv2dPass, refactor
-        super().mutate_biases(op)
-        with self.using(op):
-            # calculate and save the bias/shift/scale tensor
-            bss = self._bss_arr()
-            self._biases.buffer.data = bss
-            self._biases.shape = bss.shape
-            self._biases.type = TensorType.INT16
-            self._biases.name = f"{op.name}/bias_shift_scale"
-
-    def mutate_weights(self, op):
-        super().mutate_weights(op)
-        with self.using(op):
-            # NOTE: This is not strictly necessary since the first dimension of
-            #       the kernel should be 1 in TFLite
-            self._weights.shape = self._weights.shape[1:]
-            self._log_weights()
-
     def _pad(self):
         # TODO: this is very similar to the one in ReplaceDeepConv2dPass, refactor
         # pad: [top, left, zero_point]
@@ -116,17 +88,36 @@ class ReplaceDepthwiseConv2dPass(ReplaceConv2DPass):
         return pad
 
     def mutate(self, op):
-        # TODO: this is the same as in Replace1x1Conv2dPass, refactor
-        # NOTE: the order of these mutations is strict
         new_op = super().mutate(op)
-        self.mutate_biases(new_op)
-        self.mutate_weights(new_op)
 
         with self.using(op):
             new_op.add_custom_options(stride=self._strides)
         with self.using(new_op):
             new_op.add_custom_options(pad=self._pad())
+        new_op.add_custom_options(illegal_params=True)
         return new_op
+
+
+class LegalizeXCDepthwiseConvPass(LegalizeXCConvPass):
+    @property
+    def matching_opcode(self):
+        return XCOREOpCodes.XC_conv2d_depthwise
+
+    @log_method_output()
+    def _zero_point_bias(self):
+        # NOTE: first dimension of the kernel is always 1 in depthwise conv2d
+        return np.sum(
+            self._weights.numpy * self._input_zero_point, axis=(1, 2)
+        ).squeeze()
+
+    def mutate_weights(self, op):
+        with self.using(op):
+            # NOTE: The reshape is not strictly necessary since the first dimension of
+            #       the kernel should be 1 in TFLite
+            self._replace_weights(
+                self._weights.numpy.astype(np.int8).reshape(self._weights.shape[1:])
+            )
+            self._log_weights()
 
 
 class Replace1x1Conv2dPass(ReplaceConv2DPass):

@@ -25,7 +25,7 @@
 #define REPS        (3)
 void test_maxpool2d_case1()
 {
-    unsigned seed = 66535;
+    srand(66535);
 
     int8_t WORD_ALIGNED  X[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS] = {{{0}}};
     
@@ -93,7 +93,7 @@ void test_maxpool2d_case1()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
@@ -134,7 +134,7 @@ void test_maxpool2d_case1()
         const unsigned x_bytes = x_params.height * x_params.width * x_params.channels;
         const unsigned y_bytes = y_params.height * y_params.width * y_params.channels;
 
-        pseudo_rand_bytes(&seed, (char*)X, x_bytes);
+        pseudo_rand_bytes((char*)X, x_bytes);
 
         for(unsigned rep = 0; rep < REPS; rep++){
             PRINTF("\t\tRep %d...\n", rep);
@@ -205,7 +205,7 @@ void test_maxpool2d_case1()
 #define REPS        (4)
 void test_maxpool2d_case2()
 {
-    unsigned seed = 123124;
+    srand(3523466);
 
     int8_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS] = {{{0}}};
     int8_t WORD_ALIGNED  Y_exp[Y_HEIGHT][Y_WIDTH][CHANS] = {{{0}}};
@@ -244,7 +244,7 @@ void test_maxpool2d_case2()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
@@ -289,13 +289,13 @@ void test_maxpool2d_case2()
 
                 const unsigned max_chan = CHANS - casse->output.shape.channels + 1;
 
-                window_config.window.start.rows = pseudo_rand_uint16(&seed) % x_max_row;
-                window_config.window.start.cols = pseudo_rand_uint16(&seed) % x_max_col;
-                window_config.window.start.channels = (pseudo_rand_uint16(&seed) % max_chan) & 0xFFFFFFFC; //has to be word-aligned
+                window_config.window.start.rows = pseudo_rand_uint16() % x_max_row;
+                window_config.window.start.cols = pseudo_rand_uint16() % x_max_col;
+                window_config.window.start.channels = (pseudo_rand_uint16() % max_chan) & 0xFFFFFFFC; //has to be word-aligned
                 
-                window_config.output.start.rows = pseudo_rand_uint16(&seed) % y_max_row;
-                window_config.output.start.cols = pseudo_rand_uint16(&seed) % y_max_col;
-                window_config.output.start.channels = (pseudo_rand_uint16(&seed) % max_chan) & 0xFFFFFFFC; 
+                window_config.output.start.rows = pseudo_rand_uint16() % y_max_row;
+                window_config.output.start.cols = pseudo_rand_uint16() % y_max_col;
+                window_config.output.start.channels = (pseudo_rand_uint16() % max_chan) & 0xFFFFFFFC; 
             }
             
             nn_window_op_plan_t plan;
@@ -389,6 +389,7 @@ void test_maxpool2d_case2()
 
 void test_maxpool2d()
 {
+
     UNITY_SET_FILE();
     
     RUN_TEST(test_maxpool2d_case1);

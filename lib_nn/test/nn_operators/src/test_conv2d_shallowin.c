@@ -1725,22 +1725,22 @@ void test_conv2d_shallowin()
 {
     UNITY_SET_FILE();
     
-    // RUN_TEST(test_conv2d_shallowin_case0);
-    // RUN_TEST(test_conv2d_shallowin_case1);
-    // RUN_TEST(test_conv2d_shallowin_case2);
-    // RUN_TEST(test_conv2d_shallowin_case3);
-    // RUN_TEST(test_conv2d_shallowin_case4);
-    // RUN_TEST(test_conv2d_shallowin_case5);
-    // RUN_TEST(test_conv2d_shallowin_case6);
-    // RUN_TEST(test_conv2d_shallowin_case7);
-    // RUN_TEST(test_conv2d_shallowin_case8);
-    // RUN_TEST(test_conv2d_shallowin_case9);
-    // RUN_TEST(test_conv2d_shallowin_case10);
-    // RUN_TEST(test_conv2d_shallowin_case11);
-    // RUN_TEST(test_conv2d_shallowin_case12);
-    // RUN_TEST(test_conv2d_shallowin_case13);
-    // RUN_TEST(test_conv2d_shallowin_case14);
-    // RUN_TEST(test_conv2d_shallowin_case15);
-    // RUN_TEST(test_conv2d_shallowin_case16);
+    RUN_TEST(test_conv2d_shallowin_case0);
+    RUN_TEST(test_conv2d_shallowin_case1);
+    RUN_TEST(test_conv2d_shallowin_case2);
+    RUN_TEST(test_conv2d_shallowin_case3);
+    RUN_TEST(test_conv2d_shallowin_case4);
+    RUN_TEST(test_conv2d_shallowin_case5);
+    RUN_TEST(test_conv2d_shallowin_case6);
+    RUN_TEST(test_conv2d_shallowin_case7);
+    RUN_TEST(test_conv2d_shallowin_case8);
+    RUN_TEST(test_conv2d_shallowin_case9);
+    RUN_TEST(test_conv2d_shallowin_case10);
+    RUN_TEST(test_conv2d_shallowin_case11);
+    RUN_TEST(test_conv2d_shallowin_case12);
+    RUN_TEST(test_conv2d_shallowin_case13);
+    RUN_TEST(test_conv2d_shallowin_case14);
+    RUN_TEST(test_conv2d_shallowin_case15);
+    RUN_TEST(test_conv2d_shallowin_case16);
     RUN_TEST(test_conv2d_shallowin_case17);
 }

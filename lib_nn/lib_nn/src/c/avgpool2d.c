@@ -82,7 +82,7 @@ void avgpool2d_2x2(
     const int8_t* X, 
     const nn_avgpool2d_plan_t* plan)
 {
-    avgpool2d(Y, X, plan);
+    avgpool2d_gen(Y, X, plan);
 }
 
 

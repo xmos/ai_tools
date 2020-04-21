@@ -28,10 +28,18 @@ SOURCE_DIRS := src
 SOURCE_FILE_EXTS := c
 
 ifeq ($(PLATFORM),xcore)
+
   ifeq ($(NO_ASM),1)
     $(info Disabling ASM compilation..)
-    c_FLAGS += -O0
+	NO_OPTIMIZE = 1
+  else
+    SOURCE_FILE_EXTS += S
   endif
+endif
+
+ifeq ($(NO_OPTIMIZE),1)
+  $(info Disabling C optimizations..)
+  c_FLAGS += -O0
 endif
 
 ######

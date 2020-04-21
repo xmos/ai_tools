@@ -81,7 +81,7 @@ void test_avgpool2d_global_case1()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     memset(X, 120, sizeof(X));
 

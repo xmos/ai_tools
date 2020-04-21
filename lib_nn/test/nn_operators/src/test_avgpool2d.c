@@ -75,7 +75,7 @@ void test_avgpool2d_case1()
         {   { 4,  4},       { 2,  2},       {  1,  1,  2,  2},        16          },
         {   { 9,  9},       { 3,  3},       {  1,  1,  3,  3},        16          },
         
-        {   { 4,  4},       { 2,  2},       {  2,  2,  2,  2},        16          },  //30
+        {   { 4,  4},       { 2,  2},       {  2,  2,  1,  2},        16          },  //30
         {   { 4,  4},       { 3,  3},       {  2,  2,  1,  1},        16          },
         {   { 9,  9},       { 3,  3},       {  3,  3,  3,  3},        16          },
         {   { 9,  9},       { 3,  3},       {  3,  3,  3,  3},        32          },
@@ -89,7 +89,7 @@ void test_avgpool2d_case1()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     memset(X, 120, sizeof(X));
 
@@ -113,6 +113,7 @@ void test_avgpool2d_case1()
         nn_avgpool2d_plan_t plan;
 
         avgpool2d_init(&plan, &x_params, &y_params, &window_config);
+        plan.impl = AVGPOOL2D_DEFAULT;
 
         for(int r = 0; r < x_params.height; r++){
             for(int c = 0; c < x_params.width; c++){
@@ -189,7 +190,7 @@ void test_avgpool2d_case1()
 #define WIDTH       (24)
 void test_avgpool2d_case2()
 {
-    unsigned seed = 34524666;
+    srand(34524666);
     int8_t WORD_ALIGNED  X[HEIGHT][WIDTH][CHANS] = {{{0}}};
     int8_t WORD_ALIGNED Y_exp[HEIGHT][WIDTH][CHANS];
 
@@ -229,7 +230,7 @@ void test_avgpool2d_case2()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
@@ -264,6 +265,8 @@ void test_avgpool2d_case2()
 
         avgpool2d_init(&params, &x_params, &y_params, &window_config);
 
+        params.impl = AVGPOOL2D_DEFAULT;
+
         PRINTF("\t\tSetting X...\n");
         memset(Y_exp, 0xCC, sizeof(Y_exp));
         for(int vpos = 0; vpos < window_config.output.shape.height; vpos++){
@@ -276,7 +279,7 @@ void test_avgpool2d_case2()
 
                     // const unsigned pix = casse->window.height * casse->window.width;
                     // const unsigned pix_mod2 = pix & 0x01;
-                    int8_t avg = pseudo_rand_uint32(&seed) & 0xFF;
+                    int8_t avg = pseudo_rand_uint32() & 0xFF;
 
                     for(int xr = 0; xr < casse->window.height; xr++){
                         for(int xc = 0; xc < casse->window.width; xc++){
@@ -386,7 +389,7 @@ void test_avgpool2d_case3()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
@@ -416,6 +419,8 @@ void test_avgpool2d_case3()
         nn_avgpool2d_plan_t plan;
 
         avgpool2d_init(&plan, &x_params, &y_params, &window_config);
+
+        plan.impl = AVGPOOL2D_DEFAULT;
 
         memset(Y_exp, 0xCC, sizeof(Y_exp));
         memset(X, 0xAA, sizeof(X));
@@ -556,7 +561,7 @@ void test_avgpool2d_2x2_case1()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     memset(X, 120, sizeof(X));
 
@@ -687,7 +692,7 @@ void test_avgpool2d_2x2_case2()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];

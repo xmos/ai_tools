@@ -130,7 +130,7 @@ void test_conv2d_depthwise_case0()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
 
@@ -264,7 +264,7 @@ void test_conv2d_depthwise_case1()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
 
@@ -409,7 +409,7 @@ void test_conv2d_depthwise_case2()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
 
@@ -522,9 +522,6 @@ void test_conv2d_depthwise_case3()
 
     PRINTF( "test_conv2d_depthwise_case3()...\n");
 
-    print_warns(-1, 1, 1);
-
-    
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANNELS };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANNELS };
 
@@ -669,7 +666,7 @@ void test_conv2d_depthwise_case4()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
 
@@ -792,9 +789,6 @@ void test_conv2d_depthwise_case5()
 
     PRINTF( "test_conv2d_depthwise_case5()...\n");
 
-    print_warns(-1, 1, 1);
-
-    
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANNELS };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANNELS };
 
@@ -910,9 +904,6 @@ void test_conv2d_depthwise_case6_()
 
     PRINTF( "test_conv2d_depthwise_case6()...\n");
 
-    print_warns(-1, 1, 1);
-
-    
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANNELS };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANNELS };
 
@@ -1031,8 +1022,6 @@ void test_conv2d_depthwise_case6()
 
     PRINTF( "test_conv2d_depthwise_case6()...\n");
 
-    print_warns(-1, 1, 1);
-    
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANNELS };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANNELS };
 

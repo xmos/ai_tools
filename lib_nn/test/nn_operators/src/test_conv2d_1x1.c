@@ -149,7 +149,7 @@ void test_conv2d_1x1_case0()
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
 
@@ -343,7 +343,7 @@ void test_conv2d_1x1_case1()
     const unsigned N_casses = sizeof(casses)/sizeof(test_case_t);
     const unsigned start_case =  0;
     const unsigned stop_case  = -1;
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     const int8_t x_val = 0x01;
     memset(X, x_val, sizeof(X));
@@ -477,7 +477,7 @@ void test_conv2d_1x1_case1()
 #define REPS            (50)
 void test_conv2d_1x1_case2()
 {
-    unsigned seed = 2341234;
+    srand(2341234);
     int8_t WORD_ALIGNED  X[HEIGHT][WIDTH][MAX_CHANS_IN];
 
     int8_t WORD_ALIGNED  K[MAX_CHANS_OUT][MAX_CHANS_IN];
@@ -502,8 +502,6 @@ void test_conv2d_1x1_case2()
 
     PRINTF("%s...\n", __func__);
 
-    print_warns(-1, 1, 1);
-
     const int8_t x_val = 1;
 
     memset(X, x_val, sizeof(X));
@@ -517,8 +515,8 @@ void test_conv2d_1x1_case2()
 
     for(unsigned rep = SKIP_REPS; rep < REPS; rep++){
 
-        unsigned C_in = 4 * (pseudo_rand_uint32(&seed) % ((MAX_CHANS_IN>>2)-1)) + 4;
-        unsigned C_out = 4 * (pseudo_rand_uint32(&seed) % ((MAX_CHANS_OUT>>2)-1)) + 4;
+        unsigned C_in = 4 * (pseudo_rand_uint32() % ((MAX_CHANS_IN>>2)-1)) + 4;
+        unsigned C_out = 4 * (pseudo_rand_uint32() % ((MAX_CHANS_OUT>>2)-1)) + 4;
         if(rep == 0){
             C_in = VPU_INT8_EPV;
             C_out = VPU_INT8_ACC_PERIOD;
@@ -528,13 +526,13 @@ void test_conv2d_1x1_case2()
 
 
         for(int k = 0; k < C_out; k++){
-            int8_t k_val = pseudo_rand_uint32(&seed);
+            int8_t k_val = pseudo_rand_uint32();
 
             memset(&K_flat[k*C_in], k_val, sizeof(int8_t) * C_in);
             
             const int32_t dot_prod = k_val * x_val * C_in;
 
-            int32_t bias = pseudo_rand_int32(&seed) >> 8;
+            int32_t bias = pseudo_rand_int32() >> 8;
 
             const int32_t acc32 = bias + dot_prod;
 
@@ -542,11 +540,11 @@ void test_conv2d_1x1_case2()
 
             int16_t shift1 = 0;
             if(l2_ub > 15)
-                shift1 = (pseudo_rand_uint32(&seed) % 4) + (l2_ub - 15);
+                shift1 = (pseudo_rand_uint32() % 4) + (l2_ub - 15);
 
             int16_t prescale = vlsat_single_s16(acc32, shift1);
 
-            int16_t scale = pseudo_rand_uint32(&seed);
+            int16_t scale = pseudo_rand_uint32();
             scale = 2;
 
             int32_t postscale = prescale * ((int32_t)scale);
@@ -555,7 +553,7 @@ void test_conv2d_1x1_case2()
             
             int16_t shift2 = 0;
             if(l2_ub > 7 && !(postscale*postscale == 1<<14)){
-                 shift2 = l2_ub - 7 + pseudo_rand_uint32(&seed) % (3);
+                 shift2 = l2_ub - 7 + pseudo_rand_uint32() % (3);
             }
 
             int8_t output = vlsat_single_s8(postscale, shift2);

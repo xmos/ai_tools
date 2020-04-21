@@ -125,8 +125,6 @@ void test_requantize_16_to_8_case0()
 #define REPS            50
 void test_requantize_16_to_8_case1()
 {
-    unsigned seed = 6654734;
-
     PRINTF("%s...\n", __func__);
 
     int8_t  WORD_ALIGNED y[MAX_LEN];
@@ -140,9 +138,9 @@ void test_requantize_16_to_8_case1()
 
         PRINTF("\t\trep %d...\n", v); 
 
-        const unsigned N = pseudo_rand_uint16(&seed) % (MAX_LEN+1);
+        const unsigned N = pseudo_rand_uint16() % (MAX_LEN+1);
 
-        pseudo_rand_bytes(&seed, (char*)x_orig, sizeof(x_orig));
+        pseudo_rand_bytes((char*)x_orig, sizeof(x_orig));
         vpu_memcpy(x, x_orig, sizeof(x));
         
         memset(y, XXX, sizeof(y));
@@ -183,6 +181,8 @@ void test_requantize_16_to_8_case1()
 
 void test_requantize_16_to_8()
 {
+    srand(6654734);
+
     UNITY_SET_FILE();
     
     RUN_TEST(test_requantize_16_to_8_case0);

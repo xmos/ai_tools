@@ -110,7 +110,7 @@ void test_nn_conv2d_hstrip_tail_deep_case0()
     const unsigned start_case = 0;
     const unsigned stop_case = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= stop_case; v++){
         PRINTF("\tvector %d..\n", v);
@@ -212,9 +212,6 @@ void test_nn_conv2d_hstrip_tail_deep_case1()
     nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT_MAX)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
-
-
-    print_warns(0, 1, 1);
 
     for(int C_out = 4; C_out < CHANS_OUT_MAX; C_out += 4){
 

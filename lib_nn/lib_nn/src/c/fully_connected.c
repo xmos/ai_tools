@@ -4,6 +4,7 @@
 #include "../nn_op_helper.h"
 
 #include "xs3_vpu.h"
+#include "vpu_sim.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -85,6 +86,7 @@ void fully_connected_16(
     const nn_bss_block_t* BSS,
     const nn_fully_connected_plan_t* plan)
 {
+    xs3_vpu vpu;
     const unsigned ACCS = VPU_INT8_ACC_PERIOD;
 
     const unsigned C_in = plan->c_in;
@@ -95,13 +97,14 @@ void fully_connected_16(
         const unsigned cog = cout >> VPU_INT8_ACC_PERIOD_LOG2;
         const unsigned coff = cout & (ACCS - 1);
 
-        const data16_t* BSS_cog = (data16_t*) &BSS[5*ACCS * cog];
+        const nn_bss_block_t* BSS_cog = &BSS[cog];
+
         const int8_t* W_row = &W[cout * C_in];
-        const int32_t bias_hi = BSS_cog[coff + 0*ACCS];
-        const int32_t bias_lo = BSS_cog[coff + 1*ACCS];
-        const int16_t shift1  = BSS_cog[coff + 2*ACCS];
-        const int16_t scale   = BSS_cog[coff + 3*ACCS];
-        const int16_t shift2  = BSS_cog[coff + 4*ACCS];
+        const int32_t bias_hi = BSS_cog->bias_hi[coff];
+        const int32_t bias_lo = BSS_cog->bias_lo[coff];
+        const int16_t shift1  = BSS_cog->shift1[coff];
+        const int16_t scale   = BSS_cog->scale[coff];
+        const int16_t shift2  = BSS_cog->shift2[coff];
 
         int64_t acc64 = (bias_hi << 16) | bias_lo;
 

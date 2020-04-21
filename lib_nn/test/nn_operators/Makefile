@@ -270,6 +270,7 @@ $(COMPONENT_OBJECT_FILES): OBJ_INCLUDES = $(strip $(foreach grp,$(call includes_
 $(COMPONENT_OBJECT_FILES):
 	$(call mkdir_cmd,$@)
 	$(info [$(OBJ_COMPONENT)] Compiling $<)
+
 	@$(OBJ_COMPILER)                              \
 	     $(OBJ_FLAGS)                             \
 		 $(addprefix -I,$(OBJ_INCLUDES))          \
@@ -313,7 +314,7 @@ $(newline)))
 $(DEPENDENCY_ARCHIVES): $(LIB_BUILD_DIR)/%.a :
 	$(call mkdir_cmd,$@)
 	$(info Generating archive $(LIB_NAME).a)
-	@$(AR) $(AR_FLAGS) $@ $(LIB_OBJECT_FILES)
+	$(AR) $(AR_FLAGS) $@ $(LIB_OBJECT_FILES)
 
 endif # BUILD_STATIC_LIBRARIES
 
@@ -338,7 +339,7 @@ endif
 $(APP_EXE_FILE): $(REQUIRED_OBJECT_FILES) $(REQUIRED_LIBRARIES)
 	$(call mkdir_cmd,$@)
 	$(info Linking binary $@)
-	@$(XCC) $(LDFLAGS)                      \
+	@$(XCC) $(LD_FLAGS)                     \
 		$(APP_FLAGS)                        \
 		$(PLATFORM_FLAGS)                   \
 		$(REQUIRED_OBJECT_FILES)            \

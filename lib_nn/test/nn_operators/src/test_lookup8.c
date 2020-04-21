@@ -25,7 +25,7 @@
 #define REPS            50
 void test_lookup8_case0()
 {
-    unsigned seed = 12312314;
+    srand(12312314);
 
     PRINTF("%s...\n", __func__);
 
@@ -35,15 +35,15 @@ void test_lookup8_case0()
 
     uint8_t WORD_ALIGNED dst[MAX_LEN] = { 0 };
 
-    pseudo_rand_bytes(&seed, (char*) src, MAX_LEN);
-    pseudo_rand_bytes(&seed, (char*) lut, 256);
+    pseudo_rand_bytes((char*) src, MAX_LEN);
+    pseudo_rand_bytes((char*) lut, 256);
 
 
     for(int k = 0; k < REPS; k++){
 
         PRINTF("\trep %d...\n", k); 
 
-        uint32_t size = pseudo_rand_uint32(&seed) % MAX_LEN;
+        uint32_t size = pseudo_rand_uint32() % MAX_LEN;
 
         memset(dst, 0xCC, sizeof(dst));
         

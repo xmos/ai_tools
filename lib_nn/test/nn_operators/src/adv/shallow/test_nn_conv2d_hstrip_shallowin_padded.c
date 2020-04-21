@@ -116,7 +116,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case0()
     const unsigned start_case = 0;
     const unsigned stop_case = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= stop_case; v++){
         PRINTF("\tvector %d..\n", v);
@@ -147,8 +147,8 @@ void test_nn_conv2d_hstrip_shallowin_padded_case0()
 
         const mem_stride_t x_v_stride = x_params.width*x_params.channels;
         const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
-        const unsigned pad_t = 0;
-        const unsigned pad_b = K_h - pad_t - X_HEIGHT;
+        const int pad_t = 0;
+        const int pad_b = K_h - pad_t - X_HEIGHT;
         const int pad_l = 0;
         const int pad_r = K_w_array - pad_l - X_WIDTH;
 
@@ -251,7 +251,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case1()
     const unsigned start_case = 0;
     const unsigned stop_case = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= stop_case; v++){
         PRINTF("\tvector %d..\n", v);
@@ -285,11 +285,11 @@ void test_nn_conv2d_hstrip_shallowin_padded_case1()
 
         // Start the convolution window from each of 3 different positions
         // results same for each position
-        for(unsigned pad_t = 0; pad_t < 3; pad_t++){
+        for(int pad_t = 0; pad_t < 3; pad_t++){
             PRINTF("\t\t\tpad_t = %u\n", pad_t);
             
             
-            unsigned pad_b = K_h - pad_t - X_HEIGHT;
+            int pad_b = K_h - pad_t - X_HEIGHT;
             int pad_l = 0;
             int pad_r = K_w_array - pad_l - X_WIDTH;
             const mem_stride_t x_v_stride = x_params.width*x_params.channels;
@@ -406,7 +406,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case2()
     const unsigned start_case = 0;
     const unsigned stop_case = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= stop_case; v++){
         PRINTF("\tvector %d..\n", v);
@@ -442,8 +442,8 @@ void test_nn_conv2d_hstrip_shallowin_padded_case2()
         for(int pad_l = 0; pad_l < 3; pad_l++){
             PRINTF("\t\t\tpad_l = %u\n", pad_l);
             
-            unsigned pad_t = 0;
-            unsigned pad_b = K_h - pad_t - X_HEIGHT;
+            int pad_t = 0;
+            int pad_b = K_h - pad_t - X_HEIGHT;
             int pad_r = K_w_array - pad_l - X_WIDTH;
             
             const mem_stride_t x_v_stride = x_params.width*x_params.channels;
@@ -560,7 +560,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case3()
     const unsigned start_case = 0;
     const unsigned stop_case = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= stop_case; v++){
         PRINTF("\tvector %d..\n", v);
@@ -594,12 +594,12 @@ void test_nn_conv2d_hstrip_shallowin_padded_case3()
 
         // Start the convolution window from each of 9 different positions
         // results same for each position
-        for(unsigned pad_t = 1; pad_t < K_h; pad_t++){
+        for(int pad_t = 1; pad_t < K_h; pad_t++){
             PRINTF("\t\t\tpad_t = %u\n", pad_t);
             for(int pad_l = 0; pad_l < K_w; pad_l++){
                 PRINTF("\t\t\t\tpad_l = %d\n", pad_l);
                 
-                unsigned pad_b = K_h - pad_t - X_HEIGHT;
+                int pad_b = K_h - pad_t - X_HEIGHT;
                 int pad_r = K_w_array - pad_l - X_WIDTH;
             
                 const mem_stride_t x_v_stride = x_params.width*x_params.channels;
@@ -708,7 +708,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case4()
     const unsigned start_case = 0;
     const unsigned stop_case = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= stop_case; v++){
         PRINTF("\tvector %d..\n", v);
@@ -740,8 +740,8 @@ void test_nn_conv2d_hstrip_shallowin_padded_case4()
                                 (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
 
         
-        unsigned pad_t = 0;
-        unsigned pad_b = K_h - pad_t - X_HEIGHT;
+        int pad_t = 0;
+        int pad_b = K_h - pad_t - X_HEIGHT;
         int pad_l = 0;
         int pad_r = K_w_array - pad_l - X_WIDTH;
 
@@ -855,7 +855,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case5()
     const unsigned start_case = 0;
     const unsigned stop_case = -1;
 
-    print_warns(start_case, 1, 1);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= stop_case; v++){
         PRINTF("\tvector %d..\n", v);
@@ -889,8 +889,8 @@ void test_nn_conv2d_hstrip_shallowin_padded_case5()
                                 (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
 
         
-        unsigned pad_t = 0;
-        unsigned pad_b = K_h - pad_t - X_HEIGHT;
+        int pad_t = 0;
+        int pad_b = K_h - pad_t - X_HEIGHT;
         int pad_l = 0;
         int pad_r = K_w_array - pad_l - X_WIDTH;
             

@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <vector>
+
 #include "lib_ops/api/lib_ops.h"
 
 extern "C" {
@@ -78,8 +79,7 @@ class Conv2D_SIDO {
 
 class Conv2D_1x1 {
  public:
-  Conv2D_1x1(const Conv2DParams& params, const padding_mode_t padding_mode)
-      : params(params) {}
+  Conv2D_1x1(const Conv2DParams& params, const ParRegionArray& par_regions);
   ~Conv2D_1x1() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
@@ -89,14 +89,16 @@ class Conv2D_1x1 {
                    const int16_t* BSS);
 
   Conv2DParams params;
+  ParRegionArray par_regions;
 
  private:
-  nn_conv2d_1x1_plan_t plan_;
+  nn_conv2d_1x1_plan_t* plans_;
 };
 
 class Conv2D_Depthwise {
  public:
-  Conv2D_Depthwise(const Conv2DParams& params) : params(params) {}
+  Conv2D_Depthwise(const Conv2DParams& params,
+                   const ParRegionArray& par_regions);
   ~Conv2D_Depthwise() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
@@ -105,10 +107,11 @@ class Conv2D_Depthwise {
                    const int16_t* BSS);
 
   Conv2DParams params;
+  ParRegionArray par_regions;
 
  private:
   nn_conv2d_depthwise_plan_t plan_;
-  nn_conv2d_depthwise_job_t job_;
+  nn_conv2d_depthwise_job_t* jobs_;
 };
 
 }  // namespace conv

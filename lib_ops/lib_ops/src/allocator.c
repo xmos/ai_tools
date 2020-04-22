@@ -11,7 +11,7 @@ static size_t kBufferSize;
 static size_t kAllocatedSize;
 static size_t kLastAllocationOffset;  // For LIFO realloc and free support only
 
-inline uintptr_t align_forward(uintptr_t ptr) {
+static uintptr_t align_forward(uintptr_t ptr) {
   uintptr_t aligned_result = ((ptr + (ALIGNMENT - 1)) / ALIGNMENT) * ALIGNMENT;
   return aligned_result;
 }

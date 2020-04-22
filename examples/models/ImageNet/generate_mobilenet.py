@@ -9,6 +9,7 @@ import numpy as np
 
 DEFAULT_NAME = "mobilenet"
 DEFAULT_PATH = Path(__file__).parent.joinpath("debug", DEFAULT_NAME).resolve()
+DEFAULT_NUM_THREADS = 1
 
 
 class Mobilenet(ImageNetModel):
@@ -98,6 +99,13 @@ def main(raw_args=None):
         "ImageNet classes are targeted. If a list of inteegers is given, "
         "the classes with the given indices as targeted",
     )
+    parser.add_argument(
+        "-par",
+        "--num_threads",
+        type=int,
+        default=DEFAULT_NUM_THREADS,
+        help="Number of parallel threads for xcore.ai optimization.",
+    )
     args = parser.parse_args(raw_args)
 
     model = Mobilenet(
@@ -109,7 +117,7 @@ def main(raw_args=None):
     model.build(alpha=args.alpha)
     model.gen_test_data()
     model.save_core_model()
-    model.convert_and_save()
+    model.convert_and_save(xcore_num_threads=args.num_threads)
 
 
 if __name__ == "__main__":

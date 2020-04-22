@@ -78,6 +78,20 @@
         ]
     },
     {
+        "generator": "../examples/models/op_test_models/generate_conv2d_shallowin.py",
+        "operator": "XC_conv2d_shallowin",
+        "_comment": "some expected failures. see issue https://github.com/xmos/ai_tools/issues/88",
+        "parameters": [
+            {"-wi": 1, "-hi": 1, "-kw": 1, "-kh": 1, "-pd": "same", "xfail": true},
+            {"-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same", "xfail": true},
+            {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "same", "xfail": true},
+            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same", "smoke": true, "xfail": true},
+            {"-wi": 1, "-hi": 1, "-kw": 1, "-kh": 1, "-pd": "valid", "xfail": true},
+            {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "valid", "xfail": true},
+            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "xfail": true}
+        ]
+    },
+    {
         "generator": "../examples/models/op_test_models/generate_depthwise_conv2d.py",
         "operator": "XC_conv2d_depthwise",
         "subtype": "depthwise",

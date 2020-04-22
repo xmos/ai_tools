@@ -72,7 +72,6 @@ def optimize_for_xcore(
     pass_mgr = PassManager(
         model,
         passes=[
-            # TODO: these are actually canonicalization passes
             passes.CanonicalizeQuantizedInputPass(),
             passes.CanonicalizeQuantizedOutputPass(),
             passes.SplitPaddingPass(),

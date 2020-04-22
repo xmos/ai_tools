@@ -25,14 +25,15 @@ struct Conv2DPadding {
   int8_t top;
   int8_t left;
   int8_t zero_point;
+  int8_t unused;
 };
 
 struct Conv2DParams {
-  Conv2DPadding pad;
   int32_t K_h;
   int32_t K_w;
   int32_t stride_h;
   int32_t stride_w;
+  Conv2DPadding pad;
 };
 
 class Conv2D_Deep {

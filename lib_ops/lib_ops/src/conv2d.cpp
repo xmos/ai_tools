@@ -38,13 +38,7 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_deep_thread_worker(void *context) {
 
 Conv2D_Deep::Conv2D_Deep(const Conv2DParams &params,
                          const ParRegionArray &par_regions)
-    : params(params), par_regions(par_regions), jobs_(nullptr) {
-  Dispatcher *dispatcher = GetDispatcher();
-
-  int njobs = (par_regions.size > 0) ? par_regions.size : 1;
-  jobs_ = reinterpret_cast<nn_conv2d_deep_job_t *>(
-      xcMalloc(sizeof(nn_conv2d_deep_job_t) * njobs));
-}
+    : params(params), par_regions(par_regions), jobs_(nullptr) {}
 
 XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                               int32_t Y_h, int32_t Y_w, int32_t C_out) {
@@ -70,6 +64,9 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
     // there is no par plan so process entire input
     par_regions.append({0, 0, Y_h, Y_w});
   }
+
+  jobs_ = reinterpret_cast<nn_conv2d_deep_job_t *>(
+      xcMalloc(sizeof(nn_conv2d_deep_job_t) * par_regions.size));
 
   nn_conv2d_job_params_t job_params[par_regions.size];
 
@@ -178,13 +175,7 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_1x1_thread_worker(void *context) {
 
 Conv2D_1x1::Conv2D_1x1(const Conv2DParams &params,
                        const ParRegionArray &par_regions)
-    : params(params), par_regions(par_regions) {
-  Dispatcher *dispatcher = GetDispatcher();
-
-  int njobs = (par_regions.size > 0) ? par_regions.size : 1;
-  plans_ = reinterpret_cast<nn_conv2d_1x1_plan_t *>(
-      xcMalloc(sizeof(nn_conv2d_1x1_plan_t) * njobs));
-}
+    : params(params), par_regions(par_regions), plans_(nullptr) {}
 
 XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                              int32_t Y_h, int32_t Y_w, int32_t C_out,
@@ -205,7 +196,10 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
     par_regions.append({0, 0, Y_h, Y_w});
   }
 
-  nn_conv2d_1x1_plan_t job_params[par_regions.size];
+  plans_ = reinterpret_cast<nn_conv2d_1x1_plan_t *>(
+      xcMalloc(sizeof(nn_conv2d_1x1_plan_t) * par_regions.size));
+
+  // nn_conv2d_1x1_plan_t job_params[par_regions.size];
 
   for (int i = 0; i < par_regions.size; i++) {
     const ParRegion &region = par_regions[i];
@@ -217,7 +211,7 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
     // job_params[i].size.cols = region.cols;
     // job_params[i].size.channels = C_out;
     conv2d_1x1_init(&plans_[i], &in_params, &out_params, region.top,
-                    region.left, out_pixels);
+                    region.left, region.rows * region.cols);
   }
 
   return kXCoreOk;
@@ -246,7 +240,6 @@ XCoreStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
   dispatcher->Join();
 
   return kXCoreOk;
-  return kXCoreOk;
 }
 
 //**************************************
@@ -272,13 +265,7 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_depthwise_thread_worker(void *context) {
 
 Conv2D_Depthwise::Conv2D_Depthwise(const Conv2DParams &params,
                                    const ParRegionArray &par_regions)
-    : params(params), par_regions(par_regions) {
-  Dispatcher *dispatcher = GetDispatcher();
-
-  int njobs = (par_regions.size > 0) ? par_regions.size : 1;
-  jobs_ = reinterpret_cast<nn_conv2d_depthwise_job_t *>(
-      xcMalloc(sizeof(nn_conv2d_depthwise_job_t) * njobs));
-}
+    : params(params), par_regions(par_regions), jobs_(nullptr) {}
 
 XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                                    int32_t Y_h, int32_t Y_w, int32_t C_out) {
@@ -304,6 +291,9 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
     // there is no par plan so process entire input
     par_regions.append({0, 0, Y_h, Y_w});
   }
+
+  jobs_ = reinterpret_cast<nn_conv2d_depthwise_job_t *>(
+      xcMalloc(sizeof(nn_conv2d_depthwise_job_t) * par_regions.size));
 
   nn_conv2d_job_params_t job_params[par_regions.size];
 

@@ -13,7 +13,7 @@ from tflite2xcore.xcore_model import TensorType
 
 
 MAX_TENSOR_ARENA_SIZE = 1000000
-DEFAULT_XCORE_ARENA_SIZE = 25000
+DEFAULT_XCORE_ARENA_SIZE = 50000
 
 
 class XCOREInterpreterStatus(Enum):

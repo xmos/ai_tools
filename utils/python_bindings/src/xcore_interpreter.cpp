@@ -3,13 +3,6 @@
 
 #include <iostream>
 #include <vector>
-// #include "arena_size.h"
-// #include "lib_ops/api/lib_ops.h"
-// #include "tensorflow/lite/c/common.h"
-// #include "tensorflow/lite/core/api/error_reporter.h"
-// #include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
-// #include "tensorflow/lite/micro/micro_interpreter.h"
-// #include "tensorflow/lite/version.h"
 
 namespace xcore {
 
@@ -95,6 +88,19 @@ std::string InterpreterErrorReporter::GetError() {
 //****************************
 //****************************
 //****************************
+XCOREInterpreter::XCOREInterpreter() {
+  error_reporter_ = nullptr;
+  resolver_ = nullptr;
+  interpreter_ = nullptr;
+  model_ = nullptr;
+  model_buffer_ = nullptr;
+  tensor_arena_ = nullptr;
+  tensor_arena_size_ = 0;
+  dispatcher_ = nullptr;
+  xcore_arena_ = nullptr;
+  xcore_arena_size_ = 0;
+}
+
 XCOREInterpreter::~XCOREInterpreter() {
   if (interpreter_)
     delete interpreter_;  // NOTE: interpreter_ must be deleted before
@@ -102,10 +108,10 @@ XCOREInterpreter::~XCOREInterpreter() {
                           // xcore_arena_ and model_buffer_
   if (resolver_) delete resolver_;
   if (error_reporter_) delete error_reporter_;
-  if (tensor_arena_) delete tensor_arena_;
+  if (tensor_arena_) delete[] tensor_arena_;
   if (dispatcher_) delete dispatcher_;
-  if (xcore_arena_) delete xcore_arena_;
-  if (model_buffer_) delete model_buffer_;
+  if (xcore_arena_) delete[] xcore_arena_;
+  if (model_buffer_) delete[] model_buffer_;
 }
 
 XCoreStatus XCOREInterpreter::Initialize(const char* model_buffer,
@@ -130,13 +136,9 @@ XCoreStatus XCOREInterpreter::Initialize(const char* model_buffer,
     return kXCoreError;
   }
 
-  // Create all ops resolver and add xCORE custom operators
-  resolver_ = new tflite::ops::micro::AllOpsResolver();
-  tflite::ops::micro::xcore::add_custom_ops(
-      reinterpret_cast<tflite::MicroMutableOpResolver*>(resolver_));
-
   xcore_arena_size_ = xcore_arena_size;
   xcore_arena_ = new uint8_t[xcore_arena_size_];
+  memset(xcore_arena_, 0, xcore_arena_size_);
   // Setup xCORE dispatcher
   dispatcher_ =
       new xcore::Dispatcher(xcore_arena_, xcore_arena_size_, num_threads);
@@ -146,8 +148,14 @@ XCoreStatus XCOREInterpreter::Initialize(const char* model_buffer,
     return kXCoreError;
   }
 
+  // Create all ops resolver and add xCORE custom operators
+  resolver_ = new tflite::ops::micro::AllOpsResolver();
+  tflite::ops::micro::xcore::add_custom_ops(
+      reinterpret_cast<tflite::MicroMutableOpResolver*>(resolver_));
+
   tensor_arena_size_ = tensor_arena_size;
   tensor_arena_ = new uint8_t[tensor_arena_size_];
+  memset(tensor_arena_, 0, tensor_arena_size_);
 
   // Build an interpreter to run the model with.
   interpreter_ = new tflite::MicroInterpreter(

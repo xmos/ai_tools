@@ -12,9 +12,10 @@ DEFAULT_HEIGHT = 5
 DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
-DEFAULT_PADDING = 'same'
-DEFAULT_PATH = Path(__file__).parent.joinpath(
-    'debug', 'conv2d_shallowin_deepout_relu').resolve()
+DEFAULT_PADDING = "same"
+DEFAULT_PATH = (
+    Path(__file__).parent.joinpath("debug", "conv2d_shallowin_deepout_relu").resolve()
+)
 
 
 class Conv2DShallowinDeepoutRelu(common.OpTestDefaultConvModel):
@@ -29,28 +30,36 @@ class Conv2DShallowinDeepoutRelu(common.OpTestDefaultConvModel):
 
 
 def main(raw_args=None):
-    parser = common.OpTestConvParser(defaults={
-        'path': DEFAULT_PATH,
-        'inputs': DEFAULT_INPUTS,
-        'outputs': DEFAULT_OUTPUTS,
-        'width': DEFAULT_WIDTH,
-        'height': DEFAULT_HEIGHT,
-        'padding': DEFAULT_PADDING,
-        'kernel_width': DEFAULT_KERNEL_WIDTH,
-        'kernel_height': DEFAULT_KERNEL_HEIGHT,
-        'inits': {
-            'input_init': {'type': common.OpTestInitializers.UNIF},
-            'weight_init': {'type': common.OpTestInitializers.UNIF},
-            'bias_init': {'type': common.OpTestInitializers.CONST}
+    parser = common.OpTestConvParser(
+        defaults={
+            "path": DEFAULT_PATH,
+            "inputs": DEFAULT_INPUTS,
+            "outputs": DEFAULT_OUTPUTS,
+            "width": DEFAULT_WIDTH,
+            "height": DEFAULT_HEIGHT,
+            "padding": DEFAULT_PADDING,
+            "kernel_width": DEFAULT_KERNEL_WIDTH,
+            "kernel_height": DEFAULT_KERNEL_HEIGHT,
+            "inits": {
+                "input_init": {"type": common.OpTestInitializers.UNIF},
+                "weight_init": {"type": common.OpTestInitializers.UNIF},
+                "bias_init": {"type": common.OpTestInitializers.CONST},
+            },
         }
-    })
+    )
     args = parser.parse_args(raw_args)
 
-    model = Conv2DShallowinDeepoutRelu('conv2d_shallowin_deepout_relu', args.path)
-    model.build(args.kernel_height, args.kernel_width,
-                args.height, args.width,
-                args.inputs, args.outputs,
-                padding=args.padding, **args.inits)
+    model = Conv2DShallowinDeepoutRelu("conv2d_shallowin_deepout_relu", args.path)
+    model.build(
+        args.kernel_height,
+        args.kernel_width,
+        args.height,
+        args.width,
+        args.inputs,
+        args.outputs,
+        padding=args.padding,
+        **args.inits
+    )
     model.run()
 
 

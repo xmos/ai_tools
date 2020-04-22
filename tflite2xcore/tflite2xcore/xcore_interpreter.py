@@ -12,7 +12,7 @@ from tflite2xcore import libtflite2xcore as lib
 from tflite2xcore.xcore_model import TensorType
 
 
-DEFAULT_TENSOR_ARENA_SIZE = 4000000
+MAX_TENSOR_ARENA_SIZE = 1000000
 DEFAULT_XCORE_ARENA_SIZE = 25000
 
 
@@ -66,7 +66,7 @@ class XCOREInterpreter:
         self,
         model_path=None,
         model_content=None,
-        tensor_arena_size=DEFAULT_TENSOR_ARENA_SIZE,
+        max_tensor_arena_size=MAX_TENSOR_ARENA_SIZE,
         xcore_arena_size=DEFAULT_XCORE_ARENA_SIZE,
     ):
         self._error_msg = ctypes.create_string_buffer(1024)
@@ -169,18 +169,28 @@ class XCOREInterpreter:
         lib.get_error.restype = ctypes.c_size_t
         lib.get_error.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
 
+        lib.get_tensor_arena_size.restype = ctypes.c_size_t
+        lib.get_tensor_arena_size.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_size_t,
+            ctypes.c_size_t,
+        ]
+
         if model_path:
             with open(model_path, "rb") as fd:
                 model_content = fd.read()
 
         self._is_allocated = False
         self._op_states = []
+        self._tensor_arena_size = lib.get_tensor_arena_size(
+            model_content, len(model_content), max_tensor_arena_size
+        )
         self.obj = lib.new_interpreter()
         status = lib.initialize(
             self.obj,
             model_content,
             len(model_content),
-            tensor_arena_size,
+            self._tensor_arena_size,
             xcore_arena_size,
         )
         if status == XCOREInterpreterStatus.Error:
@@ -197,6 +207,10 @@ class XCOREInterpreter:
         if status == XCOREInterpreterStatus.Error.value:
             lib.get_error(self.obj, self._error_msg)
             raise RuntimeError(self._error_msg.value.decode("utf-8"))
+
+    @property
+    def tensor_arena_size(self):
+        return self._tensor_arena_size
 
     def allocate_tensors(self):
         self._op_states = []

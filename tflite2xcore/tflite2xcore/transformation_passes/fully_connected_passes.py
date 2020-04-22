@@ -18,6 +18,34 @@ class ReplaceFullyConnectedPass(ReplaceWeightBiasOperatorPass):
     def matching_opcode(self):
         return BuiltinOpCodes.FULLY_CONNECTED
 
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout)
+
+
+class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
+    @property
+    def matching_opcode(self):
+        return XCOREOpCodes.XC_fc_deepin_anyout
+
+    @property
+    def _MAX_POST_SHIFT(self):
+        return 32 - 16 - 2  # this is because the output is 16 bit
+
+    @log_method_output()
+    def _zero_point_bias(self):
+        return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
+
+    def mutate_weights(self, op):
+        with self.using(op):
+            # zero_padding weight tensor
+            col_pad = WORD_SIZE - 1 - (self._weights.shape[1] - 1) % WORD_SIZE
+            arr = np.pad(
+                self._weights.numpy.astype(np.int8), pad_width=[(0, 0), (0, col_pad)]
+            )
+
+            self._replace_weights(arr)
+
     def mutate_output(self, op):
         with self.using(op):
             self._output.type = TensorType.INT16
@@ -35,10 +63,6 @@ class ReplaceFullyConnectedPass(ReplaceWeightBiasOperatorPass):
                 }
             )
             self._output.quantization = new_quantization
-
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout)
 
     def add_requantize(self, op):
         with self.using(op):
@@ -66,35 +90,6 @@ class ReplaceFullyConnectedPass(ReplaceWeightBiasOperatorPass):
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
-        new_op = super().mutate(op)
-        self.add_requantize(new_op)
-        self.mutate_output(new_op)
-        return new_op
-
-
-class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
-    @property
-    def matching_opcode(self):
-        return XCOREOpCodes.XC_fc_deepin_anyout
-
-    @property
-    def _matching_output_type(self):
-        return TensorType.INT16
-
-    @property
-    def _MAX_POST_SHIFT(self):
-        return 32 - 16 - 2  # this is because the output is 16 bit
-
-    @log_method_output()
-    def _zero_point_bias(self):
-        return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
-
-    def mutate_weights(self, op):
-        with self.using(op):
-            # zero_padding weight tensor
-            col_pad = WORD_SIZE - 1 - (self._weights.shape[1] - 1) % WORD_SIZE
-            arr = np.pad(
-                self._weights.numpy.astype(np.int8), pad_width=[(0, 0), (0, col_pad)]
-            )
-
-            self._replace_weights(arr)
+        super().mutate(op)
+        self.add_requantize(op)
+        self.mutate_output(op)

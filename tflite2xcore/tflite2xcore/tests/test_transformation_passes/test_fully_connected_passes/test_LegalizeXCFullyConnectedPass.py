@@ -19,7 +19,8 @@ from .conftest import PARAMS
 
 def test_mutate(model):
     # extract original parameters
-    op = model.subgraphs[0].operators[0]
+    subgraph = model.subgraphs[0]
+    op = subgraph.operators[0]
 
     weight_shape_old = op.inputs[1].shape
     assert len(weight_shape_old) == 2
@@ -32,11 +33,13 @@ def test_mutate(model):
     # run replacement pass
     ReplaceFullyConnectedPass().run(model)
     model.sanity_check()
-    new_op = model.subgraphs[0].operators[0]
+    assert len(subgraph.operators) == 1
 
     # run legalization pass
     LegalizeXCFullyConnectedPass().run(model)
     model.sanity_check()
+    assert len(subgraph.operators) == 2
+    new_op = subgraph.operators[0]
     assert len(new_op.inputs) == 3
 
     # check weight tensors

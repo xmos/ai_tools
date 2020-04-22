@@ -13,19 +13,15 @@ DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = "same"
-DEFAULT_PATH = (
-    Path(__file__).parent.joinpath("debug", "conv2d_shallowin_deepout_relu").resolve()
-)
+DEFAULT_PATH = Path(__file__).parent.joinpath("debug", "conv2d_shallowin").resolve()
 
 
-class Conv2DShallowinDeepoutRelu(common.OpTestDefaultConvModel):
+class Conv2DShallowin(common.OpTestDefaultConvModel):
     def build_core_model(self, *args, **kwargs):
         K_h, K_w, _, _, input_channels, output_channels = args
-        assert output_channels % 16 == 0, "# of output channels must be multiple of 16"
+        assert output_channels % 4 == 0, "# of output channels must be multiple of 4"
         assert input_channels <= 4, "Number of input channels must be at most 4"
         assert K_w <= 8, "Kernel width must be at most 8"
-        assert K_h % 2 == 1, "kernel height must be odd"
-        assert K_w % 2 == 1, "kernel width must be odd"
         super().build_core_model(*args, **kwargs)
 
 
@@ -49,7 +45,7 @@ def main(raw_args=None):
     )
     args = parser.parse_args(raw_args)
 
-    model = Conv2DShallowinDeepoutRelu("conv2d_shallowin_deepout_relu", args.path)
+    model = Conv2DShallowin("conv2d_shallowin", args.path)
     model.build(
         args.kernel_height,
         args.kernel_width,

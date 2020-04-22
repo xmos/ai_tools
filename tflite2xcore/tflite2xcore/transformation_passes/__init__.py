@@ -47,7 +47,6 @@ from .quantize_dequantize_passes import (
 from .op_version_passes import LegalizeQuantizeVersionPass
 
 from .cleanup_passes import (
-    RemoveXCOREWeightBiasOperatorQuantInfo,
     RemoveUnusedBuffersPass,
     RemoveDanglingTensorsPass,
 )

@@ -7,24 +7,41 @@ from tflite2xcore.serialization import read_flatbuffer, write_flatbuffer
 from tflite2xcore import transformation_passes as passes
 
 
-def strip_model(model, *, remove_softmax=False, debug=False, legalize_op_versions=True):
-    pass_mgr = PassManager(
-        model,
-        passes=[
-            passes.CanonicalizeQuantizedInputPass(),
-            passes.CanonicalizeQuantizedOutputPass(),
-        ],
-        debug=debug,
-    )
+class CleanupManager(PassManager):
+    def __init__(self, model=None, **kwargs):
+        super().__init__(
+            model,
+            passes=[
+                passes.RemoveDanglingTensorsPass(),
+                passes.RemoveUnusedBuffersPass(),
+            ],
+            **kwargs
+        )
 
+
+class InputOutputCanonicalizationManager(PassManager):
+    def __init__(self, model=None, **kwargs):
+        super().__init__(
+            model,
+            passes=[
+                passes.CanonicalizeQuantizedInputPass(),
+                passes.CanonicalizeQuantizedOutputPass(),
+            ],
+            **kwargs
+        )
+
+
+def strip_model(model, *, remove_softmax=False, debug=False, legalize_op_versions=True):
+    pass_mgr = InputOutputCanonicalizationManager(model, debug=debug)
+
+    # TODO: remove this
     if remove_softmax:
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
     if legalize_op_versions:
         pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
 
-    pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
-    pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
+    pass_mgr.register_passes(CleanupManager())
 
     pass_mgr.run_passes()
     model.description = model.description + " + XMOS stripped."
@@ -69,16 +86,10 @@ def optimize_for_xcore(
     debug=False
 ):
     # NOTE: the order of the passes is mostly strict
-    pass_mgr = PassManager(
-        model,
-        passes=[
-            passes.CanonicalizeQuantizedInputPass(),
-            passes.CanonicalizeQuantizedOutputPass(),
-            passes.SplitPaddingPass(),
-        ],
-        keep_intermediates=bool(intermediates_path),
-        debug=debug,
+    pass_mgr = InputOutputCanonicalizationManager(
+        model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
+    pass_mgr.register_pass(passes.SplitPaddingPass())
 
     # TODO: remove this
     if remove_softmax:
@@ -116,9 +127,7 @@ def optimize_for_xcore(
         )
 
     if cleanup:
-        pass_mgr.register_pass(passes.RemoveXCOREWeightBiasOperatorQuantInfo())
-        pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
-        pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
+        pass_mgr.register_passes(CleanupManager())
 
     # TODO: this is actually a canonicalization pass
     pass_mgr.register_pass(passes.LegalizeOperatorOutputTensorNamePass())

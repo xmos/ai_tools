@@ -38,8 +38,8 @@ from .padding_passes import (
 )
 
 from .quantize_dequantize_passes import (
-    LegalizeQuantizedInputPass,
-    LegalizeQuantizedOutputPass,
+    CanonicalizeQuantizedInputPass,
+    CanonicalizeQuantizedOutputPass,
     LegalizeFloatInputPass,
     LegalizeFloatOutputPass,
 )

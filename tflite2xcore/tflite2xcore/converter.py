@@ -11,8 +11,8 @@ def strip_model(model, *, remove_softmax=False, debug=False, legalize_op_version
     pass_mgr = PassManager(
         model,
         passes=[
-            passes.LegalizeQuantizedInputPass(),
-            passes.LegalizeQuantizedOutputPass(),
+            passes.CanonicalizeQuantizedInputPass(),
+            passes.CanonicalizeQuantizedOutputPass(),
         ],
         debug=debug,
     )
@@ -73,8 +73,8 @@ def optimize_for_xcore(
         model,
         passes=[
             # TODO: these are actually canonicalization passes
-            passes.LegalizeQuantizedInputPass(),
-            passes.LegalizeQuantizedOutputPass(),
+            passes.CanonicalizeQuantizedInputPass(),
+            passes.CanonicalizeQuantizedOutputPass(),
             passes.SplitPaddingPass(),
         ],
         keep_intermediates=bool(intermediates_path),

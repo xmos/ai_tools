@@ -5,28 +5,28 @@ import numpy as np
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
 from tflite2xcore.utils import WORD_SIZE
-from .transformation_passes import ReplaceXCOREWeightBiasOperatorPass
+from .transformation_passes import (
+    ReplaceWeightBiasOperatorPass,
+    QuantizedOperatorMatchingPass,
+    LegalizeXCWeightBiasPass,
+)
 from tflite2xcore.xlogging import log_method_output
 
 
-# TODO: write (at least regression) tests for the mutator functions
-class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
+class ReplaceFullyConnectedPass(ReplaceWeightBiasOperatorPass):
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.FULLY_CONNECTED
 
-    def mutate_weights(self, op):
-        super().mutate_weights(op)
-        with self.using(op):
-            # zero_padding weight tensor
-            col_pad = WORD_SIZE - 1 - (self._weights.shape[1] - 1) % WORD_SIZE
-            arr = np.pad(
-                self._weights.numpy.astype(np.int8), pad_width=[(0, 0), (0, col_pad)]
-            )
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout)
 
-            # save weight tensor and update shape
-            self._weights.buffer.data = arr
-            self._weights.shape = arr.shape
+
+class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
+    @property
+    def matching_opcode(self):
+        return XCOREOpCodes.XC_fc_deepin_anyout
 
     @property
     def _MAX_POST_SHIFT(self):
@@ -36,18 +36,17 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
     def _zero_point_bias(self):
         return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
 
-    def mutate_biases(self, op):
-        super().mutate_biases(op)
+    def mutate_weights(self, op):
         with self.using(op):
-            # calculate and save the bias/shift/scale tensor
-            bss = self._bss_arr()
-            self._biases.buffer.data = bss
-            self._biases.shape = bss.shape
-            self._biases.type = TensorType.INT16
-            self._biases.name = f"{op.name}/bias_shift_scale"
+            # zero_padding weight tensor
+            col_pad = WORD_SIZE - 1 - (self._weights.shape[1] - 1) % WORD_SIZE
+            arr = np.pad(
+                self._weights.numpy.astype(np.int8), pad_width=[(0, 0), (0, col_pad)]
+            )
+
+            self._replace_weights(arr)
 
     def mutate_output(self, op):
-        # TODO: revise this when FC becomes 8bit output
         with self.using(op):
             self._output.type = TensorType.INT16
             new_quantization = {
@@ -65,12 +64,7 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
             )
             self._output.quantization = new_quantization
 
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout)
-
     def add_requantize(self, op):
-        # TODO: remove this when FC becomes 8bit output
         with self.using(op):
             # create intermediate tensor
             intermediate = op.subgraph.create_tensor(
@@ -96,9 +90,6 @@ class ReplaceFullyConnectedPass(ReplaceXCOREWeightBiasOperatorPass):
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
-        new_op = super().mutate(op)
-        self.mutate_biases(new_op)
-        self.mutate_weights(new_op)
-        self.add_requantize(new_op)
-        self.mutate_output(new_op)
-        return new_op
+        super().mutate(op)
+        self.add_requantize(op)
+        self.mutate_output(op)

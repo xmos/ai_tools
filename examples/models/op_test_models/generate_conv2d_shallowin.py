@@ -1,27 +1,27 @@
 #!/usr/bin/env python
 #
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
-
 from pathlib import Path
+from tflite2xcore.model_generation import utils
+import tensorflow as tf
 import op_test_models_common as common
 
-DEFAULT_INPUTS = 20
-DEFAULT_OUTPUTS = 20
+DEFAULT_INPUTS = 3
+DEFAULT_OUTPUTS = 16
 DEFAULT_HEIGHT = 5
 DEFAULT_WIDTH = DEFAULT_HEIGHT
 DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = "same"
-DEFAULT_PATH = Path(__file__).parent.joinpath("debug", "conv2d_deep").resolve()
-DEFAULT_NUM_THREADS = 1
+DEFAULT_PATH = Path(__file__).parent.joinpath("debug", "conv2d_shallowin").resolve()
 
 
-class Conv2DDeep(common.OpTestDefaultConvModel):
+class Conv2DShallowin(common.OpTestDefaultConvModel):
     def build_core_model(self, *args, **kwargs):
         K_h, K_w, _, _, input_channels, output_channels = args
         assert output_channels % 4 == 0, "# of output channels must be multiple of 4"
-        assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
-        assert K_h != 1 or K_w != 1, "1x1 kernel is not allowed for DIDO testing"
+        assert input_channels <= 4, "Number of input channels must be at most 4"
+        assert K_w <= 8, "Kernel width must be at most 8"
         super().build_core_model(*args, **kwargs)
 
 
@@ -43,25 +43,9 @@ def main(raw_args=None):
             },
         }
     )
-    parser.add_argument(  # TODO: use the a better parser for this after the conv2d enhancements
-        "-st",
-        "--strides",
-        nargs=2,
-        type=int,
-        default=[1, 1],
-        help=f"Strides, vertical first",
-    )
-    parser.add_argument(
-        "-par",
-        "--num_threads",
-        type=int,
-        default=DEFAULT_NUM_THREADS,
-        help="Number of parallel threads for xcore.ai optimization.",
-    )
     args = parser.parse_args(raw_args)
-    args.strides = tuple(args.strides)  # TODO: fix this
 
-    model = Conv2DDeep("conv2d_deep", args.path)
+    model = Conv2DShallowin("conv2d_shallowin", args.path)
     model.build(
         args.kernel_height,
         args.kernel_width,
@@ -70,10 +54,9 @@ def main(raw_args=None):
         args.inputs,
         args.outputs,
         padding=args.padding,
-        strides=args.strides,
-        **args.inits,
+        **args.inits
     )
-    model.run(num_threads=args.num_threads)
+    model.run()
 
 
 if __name__ == "__main__":

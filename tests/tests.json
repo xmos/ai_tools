@@ -473,8 +473,8 @@
         ]
     },
     {
-        "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
-        "operator": "XC_conv2d_shallowin_deepout_relu",
+        "generator": "../examples/models/op_test_models/generate_conv2d_shallowin.py",
+        "operator": "XC_conv2d_shallowin",
         "_comment": "some expected failures. see issue https://github.com/xmos/ai_tools/issues/88",
         "parameters": [
             {
@@ -482,7 +482,8 @@
                 "-hi": 1,
                 "-kw": 1,
                 "-kh": 1,
-                "-pd": "same"
+                "-pd": "same",
+                "xfail": true
             },
             {
                 "-wi": 1,
@@ -497,7 +498,8 @@
                 "-hi": 3,
                 "-kw": 3,
                 "-kh": 3,
-                "-pd": "same"
+                "-pd": "same",
+                "xfail": true
             },
             {
                 "-wi": 5,
@@ -505,28 +507,32 @@
                 "-kw": 3,
                 "-kh": 3,
                 "-pd": "same",
-                "smoke": true
+                "smoke": true,
+                "xfail": true
             },
             {
                 "-wi": 1,
                 "-hi": 1,
                 "-kw": 1,
                 "-kh": 1,
-                "-pd": "valid"
+                "-pd": "valid",
+                "xfail": true
             },
             {
                 "-wi": 3,
                 "-hi": 3,
                 "-kw": 3,
                 "-kh": 3,
-                "-pd": "valid"
+                "-pd": "valid",
+                "xfail": true
             },
             {
                 "-wi": 5,
                 "-hi": 5,
                 "-kw": 3,
                 "-kh": 3,
-                "-pd": "valid"
+                "-pd": "valid",
+                "xfail": true
             }
         ]
     },
@@ -794,30 +800,6 @@
                     1,
                     1
                 ]
-            }
-        ]
-    },
-    {
-        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_singlein_deepout.py",
-        "operator": "XC_conv2d_depthwise",
-        "subtype": "singlein_deepout",
-        "parameters": [
-            {
-                "-wi": 5,
-                "-hi": 5,
-                "-pd": "same",
-                "-out": 16,
-                "-kh": 3,
-                "-kw": 3
-            },
-            {
-                "-wi": 5,
-                "-hi": 5,
-                "-pd": "valid",
-                "-out": 32,
-                "-kh": 3,
-                "-kw": 3,
-                "smoke": true
             }
         ]
     },

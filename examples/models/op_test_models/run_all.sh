@@ -14,11 +14,10 @@ set -e
 ./generate_conv2d_1x1.py -v
 ./generate_conv2d_deep.py -v
 ./generate_conv2d_deep_padded.py -v
-./generate_conv2d_shallowin_deepout_relu.py -v
+./generate_conv2d_shallowin.py -v
 
 # depthwise convolutions
 ./generate_depthwise_conv2d.py -v
-./generate_depthwise_conv2d_singlein_deepout.py -v
 ./generate_depthwise_conv2d_padded.py -v
 
 # fully connected

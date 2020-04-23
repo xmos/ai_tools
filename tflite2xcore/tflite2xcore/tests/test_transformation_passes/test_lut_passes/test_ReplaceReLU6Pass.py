@@ -11,13 +11,14 @@ from .conftest import (
     test_matching_params,
     test_non_matching_input_type,
     test_non_matching_output_type,
-    test_mutate
+    test_mutate,
 )
 
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def trf_pass():

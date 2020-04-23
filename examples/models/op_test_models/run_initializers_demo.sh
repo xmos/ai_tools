@@ -35,14 +35,14 @@ scripts_with_input=(
     "generate_avgpool2d.py"
     "generate_avgpool2d_global.py"
     "generate_conv2d_deep.py"
-    "generate_conv2d_shallowin_deepout_relu.py"
+    "generate_conv2d_shallowin.py"
     "generate_lookup_8.py"
     "generate_maxpool2d.py"
 ) ## generate prelu is broken ##
 
 scripts_bias_weights=(
     "generate_conv2d_deep.py"
-    "generate_conv2d_shallowin_deepout_relu.py"
+    "generate_conv2d_shallowin.py"
     "generate_fully_connected.py"
 )
 

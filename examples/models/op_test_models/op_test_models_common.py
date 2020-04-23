@@ -3,6 +3,7 @@
 # TODO: fix this hack
 from os.path import dirname, realpath
 import sys
+
 sys.path.append(dirname(dirname(realpath(__file__))))
 
 # best to import this before tf
@@ -30,11 +31,13 @@ DEFAULT_POOL_WIDTH = 5
 #                                  MODELS
 #  ----------------------------------------------------------------------------
 
+
 class OpTestDefaultModel(KerasModel):
     """
     Common class for those models that don't need to be trained and use an
     input initializer to generate input data
     """
+
     @abstractmethod
     def build_core_model(self, *args, **kwargs):
         pass
@@ -62,11 +65,14 @@ class OpTestDefaultModel(KerasModel):
 
     def gen_test_data(self, batch=100, subset_len=10):
         assert self.input_shape, "To generate test data this model needs an input shape"
-        assert self.input_init, "To generate test data this model needs an input initializer"
+        assert (
+            self.input_init
+        ), "To generate test data this model needs an input initializer"
         (())
-        self.data['export'] = self.input_init(shape=(batch, *self.input_shape),
-                                              dtype="float32").numpy()
-        self.data['quant'] = self.data['export'][:subset_len]
+        self.data["export"] = self.input_init(
+            shape=(batch, *self.input_shape), dtype="float32"
+        ).numpy()
+        self.data["quant"] = self.data["export"][:subset_len]
         # TODO: use array log message helper from utils
         # self.logger.debug(f"data['export'] sample:\n{self.data['export'][-1]}")
         # self.logger.debug(f"data['quant'] sample:\n{self.data['quant'][-1]}")
@@ -78,40 +84,66 @@ class OpTestDefaultModel(KerasModel):
 
 class OpTestDefaultConvModel(OpTestDefaultModel):
     def build_core_model(
-            self, K_h, K_w, height, width, input_channels, output_channels, *,
-            padding, strides=(1,1), **inits):
-        self.input_init = inits['input_init']
+        self,
+        K_h,
+        K_w,
+        height,
+        width,
+        input_channels,
+        output_channels,
+        *,
+        padding,
+        strides=(1, 1),
+        **inits,
+    ):
+        self.input_init = inits["input_init"]
         self.core_model = tf.keras.Sequential(
             name=self.name,
             layers=[
-                tf.keras.layers.Conv2D(filters=output_channels,
-                                       kernel_size=(K_h, K_w),
-                                       padding=padding,
-                                       strides=strides,
-                                       input_shape=(height, width, input_channels),
-                                       bias_initializer=inits['bias_init'],
-                                       kernel_initializer=inits['weight_init'])
-            ]
+                tf.keras.layers.Conv2D(
+                    filters=output_channels,
+                    kernel_size=(K_h, K_w),
+                    padding=padding,
+                    strides=strides,
+                    input_shape=(height, width, input_channels),
+                    bias_initializer=inits["bias_init"],
+                    kernel_initializer=inits["weight_init"],
+                )
+            ],
         )
+
 
 class OpTestPaddedConvModel(OpTestDefaultModel):
     def build_core_model(
-            self, K_h, K_w, height, width, input_channels, output_channels, *,
-            padding, strides=(1,1), **inits):
-        self.input_init = inits['input_init']
+        self,
+        K_h,
+        K_w,
+        height,
+        width,
+        input_channels,
+        output_channels,
+        *,
+        padding,
+        strides=(1, 1),
+        **inits,
+    ):
+        self.input_init = inits["input_init"]
         self.core_model = tf.keras.Sequential(
             name=self.name,
             layers=[
-                tf.keras.layers.ZeroPadding2D(padding=padding,
-                                              input_shape=(height, width, output_channels)),
-                tf.keras.layers.Conv2D(filters=output_channels,
-                                       kernel_size=(K_h, K_w),
-                                       padding='valid',
-                                       strides=strides,
-                                       input_shape=(height, width, input_channels),
-                                       bias_initializer=inits['bias_init'],
-                                       kernel_initializer=inits['weight_init'])
-            ]
+                tf.keras.layers.ZeroPadding2D(
+                    padding=padding, input_shape=(height, width, output_channels)
+                ),
+                tf.keras.layers.Conv2D(
+                    filters=output_channels,
+                    kernel_size=(K_h, K_w),
+                    padding="valid",
+                    strides=strides,
+                    input_shape=(height, width, input_channels),
+                    bias_initializer=inits["bias_init"],
+                    kernel_initializer=inits["weight_init"],
+                ),
+            ],
         )
 
 
@@ -123,14 +155,19 @@ class OpTestDefaultFCModel(KerasModel):
             name=self.name,
             layers=[
                 tf.keras.layers.Flatten(input_shape=(input_dim, 1, 1)),
-                tf.keras.layers.Dense(output_dim, activation='softmax',
-                                      bias_initializer=inits['bias_init'],
-                                      kernel_initializer=inits['weight_init'])
-            ]
+                tf.keras.layers.Dense(
+                    output_dim,
+                    activation="softmax",
+                    bias_initializer=inits["bias_init"],
+                    kernel_initializer=inits["weight_init"],
+                ),
+            ],
         )
-        self.core_model.compile(optimizer='adam',
-                                loss='sparse_categorical_crossentropy',
-                                metrics=['accuracy'])
+        self.core_model.compile(
+            optimizer="adam",
+            loss="sparse_categorical_crossentropy",
+            metrics=["accuracy"],
+        )
         self.core_model.summary()
 
     @property
@@ -144,24 +181,29 @@ class OpTestDefaultFCModel(KerasModel):
     # For training
     def prep_data(self):
         self.data = generate_fake_lin_sep_dataset(
-            self.output_dim, self.input_dim,
-            train_samples_per_class=51200//self.output_dim,
-            test_samples_per_class=10240//self.output_dim)
+            self.output_dim,
+            self.input_dim,
+            train_samples_per_class=51200 // self.output_dim,
+            test_samples_per_class=10240 // self.output_dim,
+        )
 
     def gen_test_data(self):
         if not self.data:
             self.prep_data()
         subset_inds = np.searchsorted(
-            self.data['y_test'].flatten(), np.arange(self.output_dim))
-        self.data['export'] = self.data['x_test'][subset_inds]  # pylint: disable=unsubscriptable-object
-        self.data['quant'] = self.data['x_train']
+            self.data["y_test"].flatten(), np.arange(self.output_dim)
+        )
+        self.data["export"] = self.data["x_test"][
+            subset_inds
+        ]  # pylint: disable=unsubscriptable-object
+        self.data["quant"] = self.data["x_train"]
 
     def convert_to_stripped(self, **converter_args):
-        converter_args.setdefault('remove_softmax', True)
+        converter_args.setdefault("remove_softmax", True)
         super().convert_to_stripped(**converter_args)
 
     def convert_to_xcore(self, **converter_args):
-        converter_args.setdefault('remove_softmax', True)
+        converter_args.setdefault("remove_softmax", True)
         super().convert_to_xcore(**converter_args)
 
     def build_and_train(self, input_dim, output_dim, batch_size, epochs, **inits):
@@ -180,22 +222,22 @@ class OpTestDefaultFCModel(KerasModel):
 
 
 # TODO: move this to model_generation utils
-def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
-                                  train_samples_per_class=5120,
-                                  test_samples_per_class=1024):
-    z = np.linspace(0, 2*np.pi, dim)
+def generate_fake_lin_sep_dataset(
+    classes=2, dim=32, *, train_samples_per_class=5120, test_samples_per_class=1024
+):
+    z = np.linspace(0, 2 * np.pi, dim)
 
     # generate data and class labels
     x_train, x_test, y_train, y_test = [], [], [], []
     for j in range(classes):
-        mean = np.sin(z) + 10*j/classes
-        cov = 10 * np.diag(.5*np.cos(j * z) + 2) / (classes-1)
+        mean = np.sin(z) + 10 * j / classes
+        cov = 10 * np.diag(0.5 * np.cos(j * z) + 2) / (classes - 1)
         x_train.append(
-            np.random.multivariate_normal(
-                mean, cov, size=train_samples_per_class))
+            np.random.multivariate_normal(mean, cov, size=train_samples_per_class)
+        )
         x_test.append(
-            np.random.multivariate_normal(
-                mean, cov, size=test_samples_per_class))
+            np.random.multivariate_normal(mean, cov, size=test_samples_per_class)
+        )
         y_train.append(j * np.ones((train_samples_per_class, 1)))
         y_test.append(j * np.ones((test_samples_per_class, 1)))
 
@@ -214,16 +256,22 @@ def generate_fake_lin_sep_dataset(classes=2, dim=32, *,
     # expand dimensions for TFLite compatibility
     def expand_array(arr):
         return np.reshape(arr, arr.shape + (1, 1))
+
     x_train = expand_array(x_train)
     x_test = expand_array(x_test)
 
-    return {'x_train': np.float32(x_train), 'y_train': np.float32(y_train),
-            'x_test': np.float32(x_test), 'y_test': np.float32(y_test)}
+    return {
+        "x_train": np.float32(x_train),
+        "y_train": np.float32(y_train),
+        "x_test": np.float32(x_test),
+        "y_test": np.float32(y_test),
+    }
 
 
 #  ----------------------------------------------------------------------------
 #                                   PARSERS
 #  ----------------------------------------------------------------------------
+
 
 class OpTestInitializers(Enum):
     UNIF = "unif"
@@ -232,15 +280,15 @@ class OpTestInitializers(Enum):
 
 class OpTestInitializerParser(InitializerParser):
     __INIT_HELPERS = {
-        'input_init': "Initializer for input data distribution.",
-        'weight_init': "Initializer for weight distribution.",
-        'bias_init': "Initializer for bias distribution."
+        "input_init": "Initializer for input data distribution.",
+        "weight_init": "Initializer for weight distribution.",
+        "bias_init": "Initializer for bias distribution.",
     }
 
     def _default_handler(self, defaults):
         self.default_inits = defaults["inits"]
         for init_name, init_settings in self.default_inits.items():
-            init_type = init_settings['type']
+            init_type = init_settings["type"]
             assert init_type in OpTestInitializers
 
             def_str = f"{init_type} "
@@ -250,7 +298,7 @@ class OpTestInitializerParser(InitializerParser):
                 def_str += f"{_DEFAULT_CONST_INIT}"
 
             try:
-                init_help = init_settings['help']
+                init_help = init_settings["help"]
             except KeyError:
                 try:
                     init_help = self.__INIT_HELPERS[init_name]
@@ -258,10 +306,12 @@ class OpTestInitializerParser(InitializerParser):
                     init_help = "[MISSING INITIALIZER DESCRIPTION]"
 
             self.add_argument(
-                f"--{init_name}", nargs="*", default=argparse.SUPPRESS,
+                f"--{init_name}",
+                nargs="*",
+                default=argparse.SUPPRESS,
                 help=f"{init_help} "
-                     "Possible initializers are: const [CONST_VAL] or unif [MIN MAX]. "
-                     f"(default: {def_str})"
+                "Possible initializers are: const [CONST_VAL] or unif [MIN MAX]. "
+                f"(default: {def_str})",
             )
 
     def _initializer_args_handler(self, args):
@@ -292,8 +342,10 @@ class OpTestInitializerParser(InitializerParser):
                 init = DEFAULT_CONST_INIT
             return init
 
-        initializers = {k: instantiate_default_init(init_settings['type'])
-                        for k, init_settings in self.default_inits.items()}
+        initializers = {
+            k: instantiate_default_init(init_settings["type"])
+            for k, init_settings in self.default_inits.items()
+        }
         init_args = {k: vars(args)[k] for k in initializers if k in vars(args)}
         for k, arg_params in init_args.items():
             try:
@@ -315,11 +367,13 @@ class OpTestInitializerParser(InitializerParser):
             if init_type is OpTestInitializers.UNIF:
                 check_unif_init_params(params)
                 initializers[k] = tf.random_uniform_initializer(
-                    *(params if params else _DEFAULT_UNIF_INIT), self.seed)
+                    *(params if params else _DEFAULT_UNIF_INIT), self.seed
+                )
             elif init_type is OpTestInitializers.CONST:
                 check_const_init_params(params)
                 initializers[k] = tf.constant_initializer(
-                    params[0] if params else _DEFAULT_CONST_INIT)
+                    params[0] if params else _DEFAULT_CONST_INIT
+                )
 
         for k in initializers:
             self.logger.debug(
@@ -334,21 +388,33 @@ class OpTestImgParser(OpTestInitializerParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
-            "-in", "--inputs", type=int, default=defaults["inputs"],
+            "-in",
+            "--inputs",
+            type=int,
+            default=defaults["inputs"],
             help="Number of input channels",
         )
         self.add_argument(
-            "-hi", "--height", type=int, default=defaults["height"],
+            "-hi",
+            "--height",
+            type=int,
+            default=defaults["height"],
             help="Height of input image",
         )
         self.add_argument(
-            "-wi", "--width", type=int, default=defaults["width"],
+            "-wi",
+            "--width",
+            type=int,
+            default=defaults["width"],
             help="Width of input image",
         )
-        if 'padding' in defaults:
+        if "padding" in defaults:
             self.add_argument(
-                "-pd", "--padding", type=str, default=defaults["padding"],
-                choices=['same', 'valid'],
+                "-pd",
+                "--padding",
+                type=str,
+                default=defaults["padding"],
+                choices=["same", "valid"],
                 help="Padding mode",
             )
 
@@ -358,11 +424,19 @@ class OpTestPoolParser(OpTestImgParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
-            "-st", "--strides", nargs="+", type=int, default=argparse.SUPPRESS,
+            "-st",
+            "--strides",
+            nargs="+",
+            type=int,
+            default=argparse.SUPPRESS,
             help=f"Strides, vertical first (default: {defaults['strides']})",
         )
         self.add_argument(
-            "-po", "--pool_size", nargs="+", type=int, default=argparse.SUPPRESS,
+            "-po",
+            "--pool_size",
+            nargs="+",
+            type=int,
+            default=argparse.SUPPRESS,
             help=f"Pool size:, vertical first (default: {defaults['pool_size']})",
         )
 
@@ -373,13 +447,15 @@ class OpTestPoolParser(OpTestImgParser):
             "strides": (DEFAULT_STRIDE_HEIGHT, DEFAULT_STRIDE_WIDTH),
             "pool_size": (DEFAULT_POOL_HEIGHT, DEFAULT_POOL_WIDTH),
         }
-        arguments = {k: vars(args)[k] if k in vars(args) else parameters[k]
-                     for k in parameters}
+        arguments = {
+            k: vars(args)[k] if k in vars(args) else parameters[k] for k in parameters
+        }
         for k in arguments:
             params = arguments[k]
             if len(params) > 2:
                 raise argparse.ArgumentTypeError(
-                    f"The {k} argument must be at most 2 numbers.")
+                    f"The {k} argument must be at most 2 numbers."
+                )
             else:
                 arguments[k] = tuple(params) if len(params) == 2 else (params[0],) * 2
 
@@ -388,8 +464,8 @@ class OpTestPoolParser(OpTestImgParser):
     def parse_args(self, *args, **kwargs):
         args = super().parse_args(*args, **kwargs)
         strides_pool = self.strides_pool_arg_handler(args)
-        args.strides = strides_pool['strides']
-        args.pool_size = strides_pool['pool_size']
+        args.strides = strides_pool["strides"]
+        args.pool_size = strides_pool["pool_size"]
         return args
 
 
@@ -397,15 +473,24 @@ class OpTestConvParser(OpTestImgParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
-            "-out", "--outputs", type=int, default=defaults["outputs"],
+            "-out",
+            "--outputs",
+            type=int,
+            default=defaults["outputs"],
             help="Number of output channels",
         )
         self.add_argument(
-            "-kh", "--kernel_height", type=int, default=defaults["kernel_height"],
+            "-kh",
+            "--kernel_height",
+            type=int,
+            default=defaults["kernel_height"],
             help="Height of kernel",
         )
         self.add_argument(
-            "-kw", "--kernel_width", type=int, default=defaults["kernel_width"],
+            "-kw",
+            "--kernel_width",
+            type=int,
+            default=defaults["kernel_width"],
             help="Width of kernel",
         )
 
@@ -414,10 +499,16 @@ class OpTestFCParser(TrainableParser, OpTestInitializerParser):
     def __init__(self, *args, defaults, **kwargs):
         super().__init__(*args, defaults=defaults, **kwargs)
         self.add_argument(
-            "-out", "--output_dim", type=int, default=defaults["output_dim"],
+            "-out",
+            "--output_dim",
+            type=int,
+            default=defaults["output_dim"],
             help="Number of output dimensions, must be at least 2.",
         )
         self.add_argument(
-            "-in", "--input_dim", type=int, default=defaults["input_dim"],
+            "-in",
+            "--input_dim",
+            type=int,
+            default=defaults["input_dim"],
             help="Input dimension, must be multiple of 32.",
         )

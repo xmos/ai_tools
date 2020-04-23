@@ -181,8 +181,7 @@ class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
         return new_op
 
 
-# TODO: write (at least regression) tests for this class
-class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
+class ReplaceWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     @property
     def _weights(self):
         return self._op.inputs[1]
@@ -200,9 +199,42 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         if super().match(op):
             with self.using(op):
                 return (
-                    self._weights.type == TensorType.INT8
-                    and self._biases.type == TensorType.INT32
+                    self._weights.type is TensorType.INT8
+                    and self._biases.type is TensorType.INT32
                 )
+
+    # TODO: remove
+    def mutate_biases(self, op):
+        # NOTE: by default no bias layout rearrangement is done for this op
+        with self.using(op):
+            self._biases.name = f"{op.name}/biases"
+
+    # TODO: remove
+    def mutate_weights(self, op):
+        # NOTE: by default no weight layout rearrangement is done for this op
+        with self.using(op):
+            self._weights.name = f"{op.name}/weights"
+
+    def mutate(self, op):
+        new_op = super().mutate(op)
+        new_op.add_custom_options(illegal_params=True)
+        return new_op
+
+
+# TODO: refactor properties
+class LegalizeXCWeightBiasPass(QuantizedOperatorMatchingPass):
+    @property
+    def _biases(self):
+        return self._op.inputs[2]
+
+    @property
+    def _weights(self):
+        return self._op.inputs[1]
+
+    def _log_weights(self):
+        self.logger.xdebug(
+            "_weights:\n" + logging._array_msg(self._weights.numpy.astype(np.int8))
+        )
 
     def _multiplier(self):
         output_scale = self._output.quantization["scale"][0]
@@ -307,11 +339,54 @@ class ReplaceXCOREWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         return np.concatenate([self._bias_arr(), shift_scale_arr], axis=1)
 
     def mutate_biases(self, op):
-        # NOTE: by default no bias layout rearrangement is done for this op
         with self.using(op):
-            self._biases.name = f"{op.name}/biases"
+            subgraph = self._op.subgraph
 
+            # calculate the bias/shift/scale tensor
+            bss = self._bss_arr()
+
+            # create and populate new bias tensor
+            new_biases = subgraph.create_tensor(
+                f"{self._op.name}/bias_shift_scale",
+                TensorType.INT16,
+                bss.shape,
+                isinput=self._biases in subgraph.inputs,
+                isoutput=self._biases in subgraph.outputs,
+                consumers=[self._op],
+            )
+            new_biases.buffer.data = bss
+
+            # replace old tensor
+            self._biases.consumers.remove(self._op)
+            self._op.inputs[2] = new_biases
+
+    @abstractmethod
     def mutate_weights(self, op):
-        # NOTE: by default no weight layout rearrangement is done for this op
-        with self.using(op):
-            self._weights.name = f"{op.name}/weights"
+        pass
+
+    def _replace_weights(self, arr):
+        # create and populate new weight tensor
+        subgraph = self._op.subgraph
+        new_weights = subgraph.create_tensor(
+            f"{self._op.name}/weights",
+            TensorType.INT8,
+            arr.shape,
+            isinput=self._weights in subgraph.inputs,
+            isoutput=self._weights in subgraph.outputs,
+            consumers=[self._op],
+        )
+        new_weights.buffer.data = arr
+
+        # replace old tensor
+        self._weights.consumers.remove(self._op)
+        self._op.inputs[1] = new_weights
+
+    def match(self, op):
+        if super().match(op) and "illegal_params" in op.custom_options:
+            return op.custom_options["illegal_params"]
+
+    def mutate(self, op):
+        # NOTE: the order of these mutations is strict
+        self.mutate_biases(op)
+        self.mutate_weights(op)
+        op.custom_options.pop("illegal_params")

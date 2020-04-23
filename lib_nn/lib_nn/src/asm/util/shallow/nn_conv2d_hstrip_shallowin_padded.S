@@ -217,6 +217,8 @@ FUNCTION_NAME:
         {   add tmp, tmp, _32                       ;   vldc tmp[0]       /*load scale into vC*/}
         {                                           ;   vclrdr   /*clear accumulate for VLMACC*/}
         {   shl r11, _32, 4                         ;   vlmacc r11[0]              /*do VLMACC*/}
+        {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
+        {   add tmp, tmp, _32                       ;   vlmacc tmp[0]                           }
         {                                           ;   vsetc r11             /*set 8-bit mode*/}
         {   mkmsk tmp, 16        /*16 out channels*/;   vlsat tmp[0]       /*apply final shift*/}
         vstrpv Y[0], tmp         /* Store output */

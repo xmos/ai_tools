@@ -171,6 +171,8 @@ FUNCTION_NAME:
         {   add BSS, BSS, _32                       ;   vldc BSS[0]       /*load scale into vC*/}
         {                                           ;   vclrdr   /*clear accumulate for VLMACC*/}
         {   shl r11, _32, 4                         ;   vlmacc r11[0]              /*do VLMACC*/}
+        {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
+        {   add BSS, BSS, _32                       ;   vlmacc BSS[0]                           }
         {                                           ;   vsetc r11             /*set 8-bit mode*/}
         {                                           ;   vlsat BSS[0]       /*apply final shift*/}
         {                                           ;   ldw tmp, sp[STACK_WRITE_MASK]           }

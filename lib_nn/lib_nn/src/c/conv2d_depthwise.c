@@ -11,12 +11,6 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define ADDR(VR, STR)   printf("!\t%s = 0x%08X\t\t(%s)\n", (#VR), (unsigned) (VR), (STR))
-
-
-#define INDEX_CAST(X)   ((int32_t)(X))
-
-
 
 void conv2d_depthwise_init(
     nn_conv2d_depthwise_plan_t* plan,
@@ -118,21 +112,14 @@ void conv2d_depthwise(
     const nn_conv2d_depthwise_plan_t* plan,
     const nn_conv2d_depthwise_job_t* job)
 {
-    // ADDR(X, "initial");
-    // ADDR(Y, "initial");
-    // ADDR(K, "initial");
 
     int8_t zero_point_vec[VPU_INT8_VLMACC_ELMS];
     memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
 
-    X = &X[INDEX_CAST(job->stride.start.X)];
-    Y = &Y[INDEX_CAST(job->stride.start.Y)];
-    K = &K[INDEX_CAST(job->stride.start.K)];
-    BSS = &BSS[INDEX_CAST(job->stride.start.BSS)];
-
-    // ADDR(X, "start strided");
-    // ADDR(Y, "start strided");
-    // ADDR(K, "start strided");
+    X = ADDR(X, job->stride.start.X);
+    Y = ADDR(Y, job->stride.start.Y);
+    K = ADDR(K, job->stride.start.K);
+    BSS = ADDR(BSS, job->stride.start.BSS);
 
     for(int out_chan = 0; out_chan < job->output.channels; out_chan += VPU_INT8_VLMACC_ELMS){
 
@@ -142,9 +129,6 @@ void conv2d_depthwise(
         int pad_b = job->init_padding.bottom;
 
         for(int out_row = 0; out_row < job->output.rows; out_row++){
-            // ADDR(X, "out row start");
-            // ADDR(Y, "out row start");
-            // ADDR(K, "out row start");
 
             const int cur_pad_t = (pad_t > 0)? pad_t : 0;
             const int cur_pad_b = (pad_b > 0)? pad_b : 0;
@@ -164,16 +148,16 @@ void conv2d_depthwise(
             pad_t -= plan->kernel.vstride;
             pad_b += plan->kernel.vstride;
 
-            X = &X[INDEX_CAST(job->stride.row.window)];
-            Y = &Y[INDEX_CAST(job->stride.row.Y)];
+            X = ADDR(X, job->stride.row.window);
+            Y = ADDR(Y, job->stride.row.Y);
             
         }
 
-        X = &X[INDEX_CAST(job->stride.chan_group.X)];
-        Y = &Y[INDEX_CAST(job->stride.chan_group.Y)];
+        X = ADDR(X, job->stride.chan_group.X);
+        Y = ADDR(Y, job->stride.chan_group.Y);
 
-        BSS = &BSS[INDEX_CAST(1)];
-        K = &K[INDEX_CAST(VPU_INT8_VLMACC_ELMS)];
+        BSS = ADDR(BSS, 1);
+        K = ADDR(K, VPU_INT8_VLMACC_ELMS);
     }
 
 }

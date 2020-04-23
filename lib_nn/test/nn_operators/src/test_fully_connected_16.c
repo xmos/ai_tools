@@ -41,6 +41,8 @@ void test_fully_connected_16_case0()
         int32_t B[ceil_C_out];
         int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
     } BSS;
 
@@ -110,13 +112,17 @@ void test_fully_connected_16_case0()
             BSS.B[k] = casse->bias;
             BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k] = 14;
         }
 
-        nn_standard_BSS_layout(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.offset_scale,
+                        (int16_t*) &BSS.offset,
                         (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
 
@@ -169,6 +175,8 @@ void test_fully_connected_16_case1()
         int32_t B[ceil_C_out];
         int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
     } BSS;
 
@@ -238,14 +246,18 @@ void test_fully_connected_16_case1()
             BSS.B[k] = casse->bias;
             BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k] = 14;
         }
 
         
-        nn_standard_BSS_layout(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.offset_scale,
+                        (int16_t*) &BSS.offset,
                         (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
 
@@ -298,6 +310,8 @@ void test_fully_connected_16_case2()
         int32_t B[ceil_C_out];
         int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
     } BSS;
 
@@ -367,14 +381,18 @@ void test_fully_connected_16_case2()
             BSS.B[k] = casse->bias;
             BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k] = 14;
         }
 
 
-        nn_standard_BSS_layout(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.offset_scale,
+                        (int16_t*) &BSS.offset,
                         (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
 
@@ -425,6 +443,8 @@ void test_fully_connected_16_case3()
         int32_t B[ceil_C_out];
         int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
     } BSS;
 
@@ -494,14 +514,18 @@ void test_fully_connected_16_case3()
             BSS.B[k] = casse->bias;
             BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k] = 14;
         }
 
 
-        nn_standard_BSS_layout(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.offset_scale,
+                        (int16_t*) &BSS.offset,
                         (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
 
@@ -553,6 +577,8 @@ void test_fully_connected_16_case4()
         int32_t B[ceil_C_out];
         int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
     } BSS;
 
@@ -618,14 +644,18 @@ void test_fully_connected_16_case4()
             BSS.B[k] = casse->bias;
             BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k] = 14;
         }
 
 
-        nn_standard_BSS_layout(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.offset_scale,
+                        (int16_t*) &BSS.offset,
                         (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
 
@@ -677,6 +707,8 @@ void test_fully_connected_16_case5()
         int32_t B[ceil_C_out];
         int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
     } BSS;
 
@@ -748,14 +780,18 @@ void test_fully_connected_16_case5()
             BSS.B[k] = casse->bias;
             BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k] = 14;
         }
 
 
-        nn_standard_BSS_layout(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.offset_scale,
+                        (int16_t*) &BSS.offset,
                         (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
 
@@ -810,6 +846,8 @@ void test_fully_connected_16_case6()
         int32_t B[ceil_C_out];
         int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
     } BSS;
 
@@ -887,14 +925,18 @@ void test_fully_connected_16_case6()
                 BSS.B[k] = casse->bias;
                 BSS.shift1[k] = casse->shift;
                 BSS.scale[k] = casse->scale;
+                BSS.offset_scale[k] = 0;
+                BSS.offset[k]       = 0;
                 BSS.shift2[k] = 14;
             }
 
 
-            nn_standard_BSS_layout(  (data16_t*) &BSS, 
+            nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
                             (int32_t*) &BSS.B, 
                             (int16_t*) &BSS.shift1, 
                             (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.offset_scale,
+                        (int16_t*) &BSS.offset,
                             (int16_t*) &BSS.shift2, 
                             NULL, C_out  );
 
@@ -956,6 +998,8 @@ void test_fully_connected_16_case7()
         int32_t B[ceil_C_out];
         int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
     } BSS;
 
@@ -1033,14 +1077,18 @@ void test_fully_connected_16_case7()
                 BSS.B[k] = casse->bias;
                 BSS.shift1[k] = casse->shift;
                 BSS.scale[k] = casse->scale;
+                BSS.offset_scale[k] = 0;
+                BSS.offset[k]       = 0;
                 BSS.shift2[k] = 14;
             }
 
 
-            nn_standard_BSS_layout(  (data16_t*) &BSS, 
+            nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
                             (int32_t*) &BSS.B, 
                             (int16_t*) &BSS.shift1, 
                             (int16_t*) &BSS.scale, 
+                            (int16_t*) &BSS.offset_scale,
+                            (int16_t*) &BSS.offset,
                             (int16_t*) &BSS.shift2, 
                             NULL, C_out  );
 
@@ -1109,6 +1157,8 @@ void test_fully_connected_16_case8()
         int32_t B[ceil_C_out];
         int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
     } BSS;
 
@@ -1187,14 +1237,18 @@ void test_fully_connected_16_case8()
                 BSS.B[k] = casse->bias;
                 BSS.shift1[k] = casse->shift;
                 BSS.scale[k] = casse->scale;
+                BSS.offset_scale[k] = 0;
+                BSS.offset[k]       = 0;
                 BSS.shift2[k] = 14;
             }
 
 
-            nn_standard_BSS_layout(  (data16_t*) &BSS, 
+            nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
                             (int32_t*) &BSS.B, 
                             (int16_t*) &BSS.shift1, 
                             (int16_t*) &BSS.scale, 
+                            (int16_t*) &BSS.offset_scale,
+                            (int16_t*) &BSS.offset,
                             (int16_t*) &BSS.shift2, 
                             NULL, C_out  );
 
@@ -1263,6 +1317,8 @@ void test_fully_connected_16_case9()
         int32_t B[ceil_C_out];
         int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
     } BSS;
 
@@ -1333,13 +1389,17 @@ void test_fully_connected_16_case9()
             BSS.B[k] = casse->bias;
             BSS.shift1[k] = casse->shift;
             BSS.scale[k] = casse->scale;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k] = 14;
         }
 
-        nn_standard_BSS_layout(  (data16_t*) &BSS, 
+        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
                         (int32_t*) &BSS.B, 
                         (int16_t*) &BSS.shift1, 
                         (int16_t*) &BSS.scale, 
+                        (int16_t*) &BSS.offset_scale,
+                        (int16_t*) &BSS.offset,
                         (int16_t*) &BSS.shift2, 
                         NULL, C_out  );
 
@@ -1404,6 +1464,8 @@ void test_fully_connected_16_case10()
         int32_t B[ceil_C_out];
         int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
     } BSS;
 
@@ -1435,14 +1497,18 @@ void test_fully_connected_16_case10()
         BSS.B[k] = 0x0000;
         BSS.shift1[k] = 1;
         BSS.scale[k] = -0x2000;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 14;
     }
     
 
-    nn_standard_BSS_layout(  (data16_t*) &BSS, 
+    nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
                     (int32_t*) &BSS.B, 
                     (int16_t*) &BSS.shift1, 
                     (int16_t*) &BSS.scale, 
+                    (int16_t*) &BSS.offset_scale,
+                    (int16_t*) &BSS.offset,
                     (int16_t*) &BSS.shift2, 
                     NULL, C_out  );
 
@@ -1502,6 +1568,8 @@ void test_fully_connected_16_case11()
         int32_t B[ceil_C_out];
         int16_t shift1[ceil_C_out];
         int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
     } BSS;
 
@@ -1533,14 +1601,18 @@ void test_fully_connected_16_case11()
         BSS.B[k] = 0x0000;
         BSS.shift1[k] = 1;
         BSS.scale[k] = -0x2000;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 14;
     }
     
 
-    nn_standard_BSS_layout(  (data16_t*) &BSS, 
+    nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
                     (int32_t*) &BSS.B, 
                     (int16_t*) &BSS.shift1, 
                     (int16_t*) &BSS.scale, 
+                    (int16_t*) &BSS.offset_scale,
+                    (int16_t*) &BSS.offset,
                     (int16_t*) &BSS.shift2, 
                     NULL, C_out  );
 

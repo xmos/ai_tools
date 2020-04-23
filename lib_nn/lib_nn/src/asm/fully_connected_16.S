@@ -128,6 +128,8 @@ FUNCTION_NAME:
         {   add BSS, BSS, _32                       ;   vstr r11[0]                         }
         {                                           ;   vclrdr                              }
         {                                           ;   vlmacc r11[0]                       }
+        {   add BSS, BSS, _32                       ;   vldc BSS[0]                         }
+        {   add BSS, BSS, _32                       ;   vlmacc BSS[0]                       }
         {   add BSS, BSS, _32                       ;   vlsat BSS[0]                        }
         {   sub C_out, C_out, 1                     ;   vstr Y[0]                           }
         {   add Y, Y, _32                           ;   bt C_out, .L_cog_loop               }
@@ -219,6 +221,8 @@ FUNCTION_NAME:
         {   add BSS, BSS, _32                       ;   vstr r11[0]                         }
         {                                           ;   vclrdr                              }
         {   shl r5, r5, 1                           ;   vlmacc r11[0]                       }
+        {   add BSS, BSS, _32                       ;   vldc BSS[0]                         }
+        {   add BSS, BSS, _32                       ;   vlmacc BSS[0]                       }
         {   mkmsk r5, r5                            ;   vlsat BSS[0]                        }
 
         vstrpv Y[0], r5

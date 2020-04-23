@@ -124,19 +124,23 @@ void conv2d_sido_boggle_K(
  * If `scratch` is provided, it must be large enough to store all `C_out` elements of the
  * `bias`, `shift` and `scale` vectors.
  * 
- * \param bss_out   The output tensor to be written
- * \param bias      The bias vector
- * \param shift1    The shift vector
- * \param scale     The scale vector
- * \param shift2    The shift vector
- * \param scratch   An optional scratch buffer, or NULL
- * \param C_out     The number of output channels
+ * @param bss_out       The output tensor to be written
+ * @param bias          The bias vector
+ * @param shift1        The shift vector
+ * @param scale         The scale vector
+ * @param offset_scale  The offset scale
+ * @param offset        The offset
+ * @param shift2        The shift vector
+ * @param scratch       An optional scratch buffer, or NULL
+ * @param C_out         The number of output channels
  */
 void nn_standard_BSS_layout(
-    data16_t* bss_out,
+    nn_bss_block_t* bss_out,
     int32_t* bias,
     int16_t* shift1,
     int16_t* scale,
+    int16_t* offset_scale,
+    int16_t* offset,
     int16_t* shift2,
     data16_t* scratch,
     const unsigned C_out);

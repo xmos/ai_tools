@@ -170,6 +170,8 @@ FUNCTION_NAME:
         {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
         {                                           ;   vclrdr                                  }
         {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
+        {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
+        {   add BSS, BSS, _32                       ;   vlmacc BSS[0]                           }
         {                                           ;   vsetc r11                               }
         {                                           ;   vlsat BSS[0]                            }
         {   mkmsk tmp, 16                           ;   ldw Q(rows_left), sp[STACK_Y]           }

@@ -79,6 +79,8 @@ void test_nn_conv2d_hstrip_shallowin_case0()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -131,11 +133,13 @@ void test_nn_conv2d_hstrip_shallowin_case0()
             BSS.bias[k]     = k;
             BSS.shift1[k]   = 0;
             BSS.scale[k]    = 1;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k]   = 0;
         }
 
-        nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
         const mem_stride_t x_v_stride = x_params.width * x_params.channels;
         const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
@@ -196,6 +200,8 @@ void test_nn_conv2d_hstrip_shallowin_case1()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -250,11 +256,13 @@ void test_nn_conv2d_hstrip_shallowin_case1()
             BSS.bias[k]     =-k;
             BSS.shift1[k]   = 0;
             BSS.scale[k]    = 1;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k]   = 0;
         }
 
-        nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
             
         const mem_stride_t x_v_stride = x_params.width*x_params.channels;
         const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
@@ -318,6 +326,8 @@ void test_nn_conv2d_hstrip_shallowin_case2()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -346,11 +356,13 @@ void test_nn_conv2d_hstrip_shallowin_case2()
         BSS.bias[k]     = - 100 * k;
         BSS.shift1[k]   = shift1s[k];
         BSS.scale[k]    = 8;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k]   = 3;
     }
 
-    nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
         
     const mem_stride_t x_v_stride = x_params.width*x_params.channels;
     const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
@@ -423,6 +435,8 @@ void test_nn_conv2d_hstrip_shallowin_case3()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -451,11 +465,13 @@ void test_nn_conv2d_hstrip_shallowin_case3()
         BSS.bias[k]     = - 100 * k;
         BSS.shift1[k]   = shift1s[k];
         BSS.scale[k]    = 8;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k]   = 3;
     }
 
-    nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
         
     const mem_stride_t x_v_stride = x_params.width*x_params.channels;
     const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];

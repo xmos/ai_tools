@@ -115,6 +115,7 @@ void test_avgpool2d_case1()
         avgpool2d_init(&plan, &x_params, &y_params, &window_config);
         plan.impl = AVGPOOL2D_DEFAULT;
 
+        PRINTF("\t\tSetting X...\n");
         for(int r = 0; r < x_params.height; r++){
             for(int c = 0; c < x_params.width; c++){
                 for(int ch = 0; ch < x_params.channels; ch++){

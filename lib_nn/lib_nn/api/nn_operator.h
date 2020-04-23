@@ -371,7 +371,7 @@ void conv2d_1x1(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,
-    const data16_t* BSS,
+    const nn_bss_block_t* BSS,
     const nn_conv2d_1x1_plan_t* plan);
 
 

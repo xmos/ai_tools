@@ -13,23 +13,17 @@
 
 
 
-
-#define ADDR(VR, STR, PSTR)   printf("!\t%s = 0x%08X\t\t(%s)\n%s", (#VR), (unsigned) (VR), (STR), ("" PSTR))
-
 WEAK_FUNC
 void conv2d_1x1(
     int8_t* Y,
     const int8_t* X,
     const int8_t* K,
-    const data16_t* BSS,
+    const nn_bss_block_t* BSS,
     const nn_conv2d_1x1_plan_t* plan)
 {
-    X = &X[plan->start_stride.X];
-    Y = &Y[plan->start_stride.Y];
-    K = &K[plan->start_stride.K];
-    // ADDR(X, "start", "");
-    // ADDR(Y, "start", "");
-    // ADDR(K, "start", "");
+    X = ADDR(X, plan->start_stride.X);
+    Y = ADDR(Y, plan->start_stride.Y);
+    K = ADDR(K, plan->start_stride.K);
 
     const int8_t* X_start = X;
 
@@ -42,26 +36,20 @@ void conv2d_1x1(
 
         const int32_t cig_stride = (cog < C_out_groups)? plan->cig_stride.body : plan->cig_stride.tail;
 
-        K = &K[(int)(cig_stride - VPU_INT8_EPV)];
+        K = ADDR(K, cig_stride - VPU_INT8_EPV);
 
         const unsigned group_chans = (cog < C_out_groups)? VPU_INT8_ACC_PERIOD : C_out_tail;
         if(!group_chans) break;
 
-        X = X_start;
-        // ADDR(X, "cog start", "");
-        // ADDR(Y, "cog start", "");
-        // ADDR(K, "cog start", "\n");
+        X = ADDR(X_start, 0);
 
         for(int pix = 0; pix < plan->pix_count; pix++){
             int64_t acc64[VPU_INT8_ACC_PERIOD];
-            // ADDR(X, "pixel start", "");
-            // ADDR(Y, "pixel start", "");
-            // ADDR(K, "pixel start", "");
 
             //Biases
             for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++)
-                acc64[k] = (BSS[VPU_INT8_ACC_PERIOD * 0 + k] << VPU_INT8_ACC_VR_BITS)
-                         | (BSS[VPU_INT8_ACC_PERIOD * 1 + k] <<  0);
+                acc64[k] = (BSS->bias_hi[k] << VPU_INT8_ACC_VR_BITS)
+                         | (BSS->bias_lo[k] << 0);
 
             for(unsigned cig = 0; cig <= C_in_groups; cig++){
 
@@ -76,49 +64,42 @@ void conv2d_1x1(
                     }
 
                     if(k != 0)
-                        K = &K[(int)-plan->C_in];
+                        K = ADDR(K, -plan->C_in);
 
-                    // ADDR(X, "cout end", "");
-                    // ADDR(Y, "cout end", "");
-                    // ADDR(K, "cout end", "");
                 }
                 if(cig == C_in_groups){
-                    K = &K[(int)(C_in_tail - 32)];
+                    K = ADDR(K, C_in_tail - 32);
                 }
 
-                X = &X[chans_in];
-                K = &K[cig_stride];
-                // ADDR(X, "cig end", "");
-                // ADDR(Y, "cig end", "");
-                // ADDR(K, "cig end", "");
+                X = ADDR(X,chans_in);
+                K = ADDR(K, cig_stride);
             }
 
             for(unsigned k = 0; k < group_chans; k++){
 
 
-                int16_t shift1  = BSS[VPU_INT8_ACC_PERIOD * 2 + k];
-                int16_t scale   = BSS[VPU_INT8_ACC_PERIOD * 3 + k];
-                int16_t shift2  = BSS[VPU_INT8_ACC_PERIOD * 4 + k];
+                int16_t shift1  = BSS->shift1[k];
+                int16_t scale   = BSS->scale[k];
+                int16_t shift2  = BSS->shift2[k];
+                int16_t offset_scale = BSS->offset_scale[k];
+                int16_t offset       = BSS->offset[k];
                 
                 int32_t res = vlsat_single_s16((int32_t)acc64[k], shift1);
                 res = res * scale;
+                res = res + ((int32_t)offset_scale) * offset;
+                
                 res = vlsat_single_s8(res, shift2);
 
                 Y[k] = (int8_t) res;
             }
 
-            K = &K[(int)-plan->C_in];
-            Y = &Y[plan->C_out];
-            // ADDR(X, "pixel end", "");
-            // ADDR(Y, "pixel end", "");
-            // ADDR(K, "pixel end", "\n");
+            K = ADDR(K,-plan->C_in);
+            Y = ADDR(Y, plan->C_out);
         }
 
-        Y = &Y[plan->cog_stride.Y];
-        K = &K[plan->C_in];
-        // ADDR(Y, "cog end", "");
-        // ADDR(K, "cog end", "\n");
-        BSS = &BSS[5*VPU_INT8_ACC_PERIOD];
+        Y = ADDR(Y, plan->cog_stride.Y);
+        K = ADDR(K, plan->C_in);
+        BSS = ADDR(BSS, 1);
     }
 }
 #undef ADDR

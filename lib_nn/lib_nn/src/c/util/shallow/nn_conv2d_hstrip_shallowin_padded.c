@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define ADDR(V, INDEX)      &V[((int)(INDEX))]
+
 
 WEAK_FUNC
 void nn_conv2d_hstrip_shallowin_padded(
@@ -146,6 +146,8 @@ void nn_conv2d_hstrip_shallowin_padded(
         VSTR(&vpu, vec_tmp.s16);
         VCLRDR(&vpu);
         VLMACC(&vpu, vec_tmp.s16);
+        VLDC(&vpu, BSS->offset_scale);
+        VLMACC(&vpu, BSS->offset);
 
         //Set mode back to 8-bit
         VSETC(&vpu, MODE_S8);

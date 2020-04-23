@@ -14,8 +14,6 @@
 
 
 
-#define ADDR(V, INDEX)      &V[((int)(INDEX))]
-
 void conv2d_deep_init(
     nn_conv2d_deep_plan_t* plan,
     nn_conv2d_deep_job_t* jobs,

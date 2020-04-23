@@ -100,11 +100,13 @@ void fully_connected_16(
         const nn_bss_block_t* BSS_cog = &BSS[cog];
 
         const int8_t* W_row = &W[cout * C_in];
-        const int32_t bias_hi = BSS_cog->bias_hi[coff];
-        const int32_t bias_lo = BSS_cog->bias_lo[coff];
-        const int16_t shift1  = BSS_cog->shift1[coff];
-        const int16_t scale   = BSS_cog->scale[coff];
-        const int16_t shift2  = BSS_cog->shift2[coff];
+        const int32_t bias_hi      = BSS_cog->bias_hi[coff];
+        const int32_t bias_lo      = BSS_cog->bias_lo[coff];
+        const int16_t shift1       = BSS_cog->shift1[coff];
+        const int16_t scale        = BSS_cog->scale[coff];
+        const int16_t offset_scale = BSS_cog->offset_scale[coff];
+        const int16_t offset       = BSS_cog->offset[coff];
+        const int16_t shift2       = BSS_cog->shift2[coff];
 
         int64_t acc64 = (bias_hi << 16) | bias_lo;
 
@@ -124,6 +126,7 @@ void fully_connected_16(
 
         int32_t res = vlsat_single_s16((int32_t)acc64, shift1);
         res = res * scale;
+        res = res + ((int32_t)offset_scale) * offset;
         res = vlsat_single_s16(res, shift2);
 
         Y[cout] = (int16_t) res;

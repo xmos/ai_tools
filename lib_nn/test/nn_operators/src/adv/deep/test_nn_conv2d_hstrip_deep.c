@@ -79,6 +79,8 @@ void test_nn_conv2d_hstrip_deep_case0()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -128,11 +130,13 @@ void test_nn_conv2d_hstrip_deep_case0()
             BSS.bias[k]     = k;
             BSS.shift1[k]   = 0;
             BSS.scale[k]    = 1;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k]   = 0;
         }
 
-        nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
 
         memset(Y, 0xCC, sizeof(Y));
         nn_conv2d_hstrip_deep((nn_image_t*) Y, (nn_image_t*) X, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 
@@ -197,6 +201,8 @@ void test_nn_conv2d_hstrip_deep_case1()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -235,11 +241,13 @@ void test_nn_conv2d_hstrip_deep_case1()
         BSS.shift1[k]   = 6;
         BSS.bias[k]     = -(1<<BSS.shift1[k]) * k;
         BSS.scale[k]    = 64;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k]   = 6;
     }
 
-    nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
 
     memset(Y, 0xCC, sizeof(Y));
     nn_conv2d_hstrip_deep((nn_image_t*) Y, (nn_image_t*) X, KERNEL_4D_COG_LAST_CHAN_START(K, 0), 

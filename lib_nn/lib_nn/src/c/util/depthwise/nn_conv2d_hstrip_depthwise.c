@@ -13,8 +13,6 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define ADDR(V, INDEX)      &V[((int)(INDEX))]
-#define INDEX_CAST(X)   ((int32_t)(X))
 
 static void vlmacc8(
     int32_t* acc,
@@ -61,11 +59,11 @@ void nn_conv2d_hstrip_depthwise(
 
             for(int j = xk_col_stride * K_w; j > 0; j-= xk_col_stride){
                 vlmacc8(accs, X, K);
-                X = &X[INDEX_CAST(xk_col_stride)];
-                K = &K[INDEX_CAST(xk_col_stride)];
+                X = ADDR(X, xk_col_stride);
+                K = ADDR(K, xk_col_stride);
             }
 
-            X = &X[INDEX_CAST(x_row_stride)];
+            X = ADDR(X, x_row_stride);
         }
         
         for(int k = 0; k < chans_to_write; k++){
@@ -78,8 +76,8 @@ void nn_conv2d_hstrip_depthwise(
             Y[k] = (int8_t) accs[k];
         }
         
-        X_in = &X_in[INDEX_CAST(window_hstride)];
-        Y = &Y[INDEX_CAST(y_col_stride)];
+        X_in = ADDR(X_in, window_hstride);
+        Y = ADDR(Y, y_col_stride);
 
     }
 }

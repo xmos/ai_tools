@@ -71,6 +71,8 @@ void test_conv2d_shallowin_case0()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -103,10 +105,12 @@ void test_conv2d_shallowin_case0()
         BSS.bias[k] = 0;
         BSS.shift1[k] = 0;
         BSS.scale[k] = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 0;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -158,6 +162,8 @@ void test_conv2d_shallowin_case1()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -186,10 +192,12 @@ void test_conv2d_shallowin_case1()
             BSS.bias[k] = bias * k;
             BSS.shift1[k] = 0;
             BSS.scale[k] = 1;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k] = 0;
         }
-        nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -241,6 +249,8 @@ void test_conv2d_shallowin_case2()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -269,10 +279,12 @@ void test_conv2d_shallowin_case2()
             BSS.bias[k] = 16 * k;
             BSS.shift1[k] = shift1;
             BSS.scale[k] = 1;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k] = 0;
         }
-        nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -325,6 +337,8 @@ void test_conv2d_shallowin_case3()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -353,10 +367,12 @@ void test_conv2d_shallowin_case3()
             BSS.bias[k] = k;
             BSS.shift1[k] = 0;
             BSS.scale[k] = scale;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k] = 0;
         }
-        nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -409,6 +425,8 @@ void test_conv2d_shallowin_case4()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -437,10 +455,12 @@ void test_conv2d_shallowin_case4()
             BSS.bias[k] = 16 * k;
             BSS.shift1[k] = 0;
             BSS.scale[k] = 1;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k] = shift2;
         }
-        nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -493,6 +513,8 @@ void test_conv2d_shallowin_case5()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -517,10 +539,12 @@ void test_conv2d_shallowin_case5()
         BSS.bias[k] = k;
         BSS.shift1[k] = 0;
         BSS.scale[k] = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 0;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -572,6 +596,8 @@ void test_conv2d_shallowin_case6()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -603,10 +629,12 @@ void test_conv2d_shallowin_case6()
         BSS.bias[k] = k;
         BSS.shift1[k] = 0;
         BSS.scale[k] = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 0;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -658,6 +686,8 @@ void test_conv2d_shallowin_case7()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -689,10 +719,12 @@ void test_conv2d_shallowin_case7()
         BSS.bias[k] = k;
         BSS.shift1[k] = 0;
         BSS.scale[k] = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 0;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -744,6 +776,8 @@ void test_conv2d_shallowin_case8()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -776,10 +810,12 @@ void test_conv2d_shallowin_case8()
         BSS.bias[k] = k;
         BSS.shift1[k] = 0;
         BSS.scale[k] = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 0;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -831,6 +867,8 @@ void test_conv2d_shallowin_case9()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -861,10 +899,12 @@ void test_conv2d_shallowin_case9()
         BSS.bias[k] = k;
         BSS.shift1[k] = 0;
         BSS.scale[k] = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 0;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -916,6 +956,8 @@ void test_conv2d_shallowin_case10()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -949,10 +991,12 @@ void test_conv2d_shallowin_case10()
         BSS.bias[k] = k;
         BSS.shift1[k] = 0;
         BSS.scale[k] = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 0;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -1004,6 +1048,8 @@ void test_conv2d_shallowin_case11()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -1037,10 +1083,12 @@ void test_conv2d_shallowin_case11()
         BSS.bias[k] = 0;
         BSS.shift1[k] = 0;
         BSS.scale[k] = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 0;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -1094,6 +1142,8 @@ void test_conv2d_shallowin_case12()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -1127,10 +1177,12 @@ void test_conv2d_shallowin_case12()
         BSS.bias[k] = 0;
         BSS.shift1[k] = 0;
         BSS.scale[k] = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 0;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -1185,6 +1237,8 @@ void test_conv2d_shallowin_case13()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -1218,10 +1272,12 @@ void test_conv2d_shallowin_case13()
         BSS.bias[k] = 0;
         BSS.shift1[k] = 0;
         BSS.scale[k] = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 0;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -1276,6 +1332,8 @@ void test_conv2d_shallowin_case14()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -1309,10 +1367,12 @@ void test_conv2d_shallowin_case14()
         BSS.bias[k] = k;
         BSS.shift1[k] = 0;
         BSS.scale[k] = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 0;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -1373,6 +1433,8 @@ void test_conv2d_shallowin_case15()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -1413,10 +1475,12 @@ void test_conv2d_shallowin_case15()
         BSS.bias[k] = k * (1<<3);
         BSS.shift1[k] = 1;
         BSS.scale[k] = 2;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 3;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -1488,6 +1552,8 @@ void test_conv2d_shallowin_case16()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -1539,10 +1605,12 @@ void test_conv2d_shallowin_case16()
         BSS.bias[k] = k * (1<<3);
         BSS.shift1[k] = 1;
         BSS.scale[k] = 2;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 3;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
@@ -1617,6 +1685,8 @@ void test_conv2d_shallowin_case17()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -1657,10 +1727,12 @@ void test_conv2d_shallowin_case17()
         BSS.bias[k] = 0;// k * (1<<6);
         BSS.shift1[k] = 1;
         BSS.scale[k] = 2;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k] = 6;
     }
-    nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 

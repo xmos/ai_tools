@@ -213,6 +213,8 @@ FUNCTION_NAME:
         {   add Q(rows_left), Q(rows_left), _32     ;   vldc Q(rows_left)[0]                    }
         {                                           ;   vclrdr                                  }
         {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
+        {   add Q(rows_left), Q(rows_left), _32     ;   vldc Q(rows_left)[0]                    }
+        {   add Q(rows_left), Q(rows_left), _32     ;   vlmacc Q(rows_left)[0]                  }
 /**/    {   mkmsk Q(cols_left), Q(cols_left)        ;   vsetc r11                               }
         {                                           ;   vlsat Q(rows_left)[0]                   }
         vstrpv Y[0], Q(cols_left)

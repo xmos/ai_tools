@@ -109,6 +109,8 @@ FUNCTION_NAME:
         {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
         {                                           ;   vclrdr                                  }
         {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
+        {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
+        {   add BSS, BSS, _32                       ;   vlmacc BSS[0]                           }
         {   mkmsk Q(cols_left), Q(cols_left)        ;   vsetc r11                               }
         {                                           ;   vlsat BSS[0]                            }
         vstrpv Y[0], Q(cols_left)

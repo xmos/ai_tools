@@ -47,6 +47,8 @@ typedef struct {
     data16_t bias_lo[VPU_INT8_ACC_PERIOD];
     data16_t shift1[VPU_INT8_ACC_PERIOD];
     data16_t scale[VPU_INT8_ACC_PERIOD];
+    data16_t offset_scale[VPU_INT8_ACC_PERIOD];
+    data16_t offset[VPU_INT8_ACC_PERIOD];
     data16_t shift2[VPU_INT8_ACC_PERIOD];
 } nn_bss_block_t;
 

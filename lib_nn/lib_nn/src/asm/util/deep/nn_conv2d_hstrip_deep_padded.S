@@ -498,6 +498,8 @@ FUNCTION_NAME:
         {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
         {                                           ;   vclrdr                                  }
         {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
+        {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
+        {   add tmp, tmp, _32                       ;   vlmacc tmp[0]                           }
         {                                           ;   vsetc r11                               }
         {                                           ;   vlsat tmp[0]                            }
         {   mkmsk tmp, 16                           ;   ldw Q(rows_left), sp[STACK_Y]           }

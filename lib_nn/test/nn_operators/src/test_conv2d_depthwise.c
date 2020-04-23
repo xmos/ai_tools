@@ -74,6 +74,8 @@ void test_conv2d_depthwise_case0()
         int32_t bias[CHANS_OUT];
         int16_t shift1[CHANS_OUT];
         int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
     } BSS;
 
@@ -148,12 +150,14 @@ void test_conv2d_depthwise_case0()
             BSS.bias[k]     = casse->bias;
             BSS.shift1[k]   = casse->shift1;
             BSS.scale[k]    = casse->scale;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k]   = casse->shift2;
         }
 
 
-        nn_standard_BSS_layout((data16_t*) bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
 
         nn_conv2d_depthwise_plan_t plan;
         nn_conv2d_depthwise_job_t job;
@@ -229,6 +233,8 @@ void test_conv2d_depthwise_case1()
         int32_t bias[CHANS_OUT_MAX];
         int16_t shift1[CHANS_OUT_MAX];
         int16_t scale[CHANS_OUT_MAX];
+        int16_t offset_scale[CHANS_OUT_MAX];
+        int16_t offset[CHANS_OUT_MAX];
         int16_t shift2[CHANS_OUT_MAX];
     } BSS;
 
@@ -287,11 +293,13 @@ void test_conv2d_depthwise_case1()
                 BSS.bias[k]     = 0;
                 BSS.shift1[k]   = 0;
                 BSS.scale[k]    = 1;
+                BSS.offset_scale[k] = 0;
+                BSS.offset[k]       = 0;
                 BSS.shift2[k]   = 0;
             }
 
-            nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                    (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, channel_count);
+            nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                                    (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, channel_count);
 
             nn_conv2d_depthwise_plan_t plan;
             nn_conv2d_depthwise_job_t job;
@@ -368,6 +376,8 @@ void test_conv2d_depthwise_case2()
         int32_t bias[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift1[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t offset_scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t offset[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift2[MIN_CHAN_OUT_GROUPS(CHANNELS)];
     } BSS;
 
@@ -430,11 +440,13 @@ void test_conv2d_depthwise_case2()
             BSS.bias[k]     = 0;
             BSS.shift1[k]   = 0;
             BSS.scale[k]    = 1;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k]   = 0;
         }
 
-        nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANNELS);
 
         nn_conv2d_depthwise_plan_t plan;
         nn_conv2d_depthwise_job_t job;
@@ -513,6 +525,8 @@ void test_conv2d_depthwise_case3()
         int32_t bias[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift1[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t offset_scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t offset[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift2[MIN_CHAN_OUT_GROUPS(CHANNELS)];
     } BSS;
 
@@ -532,11 +546,13 @@ void test_conv2d_depthwise_case3()
         BSS.bias[k]     = k;
         BSS.shift1[k]   = 0;
         BSS.scale[k]    = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k]   = 0;
     }
 
-    nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANNELS);
 
     nn_conv2d_depthwise_plan_t plan;
     nn_conv2d_depthwise_job_t job;
@@ -622,6 +638,8 @@ void test_conv2d_depthwise_case4()
         int32_t bias[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift1[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t offset_scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t offset[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift2[MIN_CHAN_OUT_GROUPS(CHANNELS)];
     } BSS;
 
@@ -684,11 +702,13 @@ void test_conv2d_depthwise_case4()
             BSS.bias[k]     = k;
             BSS.shift1[k]   = 0;
             BSS.scale[k]    = 1;
+            BSS.offset_scale[k] = 0;
+            BSS.offset[k]       = 0;
             BSS.shift2[k]   = 0;
         }
 
-        nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANNELS);
 
         nn_conv2d_depthwise_plan_t plan;
         nn_conv2d_depthwise_job_t job;
@@ -780,6 +800,8 @@ void test_conv2d_depthwise_case5()
         int32_t bias[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift1[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t offset_scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t offset[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift2[MIN_CHAN_OUT_GROUPS(CHANNELS)];
     } BSS;
 
@@ -799,11 +821,13 @@ void test_conv2d_depthwise_case5()
         BSS.bias[k]     = k;
         BSS.shift1[k]   = 0;
         BSS.scale[k]    = 1;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k]   = 0;
     }
 
-    nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANNELS);
 
 #define JOB_COUNT 9
     nn_conv2d_depthwise_plan_t plan;
@@ -895,6 +919,8 @@ void test_conv2d_depthwise_case6_()
         int32_t bias[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift1[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t offset_scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t offset[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift2[MIN_CHAN_OUT_GROUPS(CHANNELS)];
     } BSS;
 
@@ -914,11 +940,13 @@ void test_conv2d_depthwise_case6_()
         BSS.bias[k]     = 4*k;
         BSS.shift1[k]   = 1;
         BSS.scale[k]    = 2;
+        BSS.offset_scale[k] = 0;
+        BSS.offset[k]       = 0;
         BSS.shift2[k]   = 2;
     }
 
-    nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANNELS);
 
     nn_conv2d_depthwise_plan_t plan;
     nn_conv2d_depthwise_job_t job;
@@ -1008,11 +1036,15 @@ void test_conv2d_depthwise_case6()
         int32_t bias[CHANNELS];
         int16_t shift1[CHANNELS];
         int16_t scale[CHANNELS];
+        int16_t offset_scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+        int16_t offset[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift2[CHANNELS];
     } BSS = {
         {  -93,     1,   -55,  -219, },
         {    0,     0,     0,     0, },
         {16520, 16748, 32565, 22546, },
+        {    0,     0,     0,     0, },
+        {    0,     0,     0,     0, },
         {   21,    21,    22,    22, },
     };
 
@@ -1026,8 +1058,8 @@ void test_conv2d_depthwise_case6()
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANNELS };
 
 
-    nn_standard_BSS_layout((data16_t*) &bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANNELS);
 
     nn_conv2d_depthwise_plan_t plan;
     nn_conv2d_depthwise_job_t job;

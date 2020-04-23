@@ -13,9 +13,6 @@
 #include <assert.h>
 
 
-#define ADDR(V, INDEX)      &V[((int)(INDEX))]
-
-
 void conv2d_shallowin_init(
     nn_conv2d_shallowin_plan_t* plan,
     nn_conv2d_shallowin_job_t* jobs,

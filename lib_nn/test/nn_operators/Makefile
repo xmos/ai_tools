@@ -354,7 +354,7 @@ executable: $(APP_EXE_FILE)
 
 .PHONY: help all check_required_libs build clean run FORCE MSG_PLATFORM MSG_DEPENDENCIES app_help
 
-all: build; @echo > NUL
+all: build;
 
 MSG_PLATFORM:
 	$(info Building for $(PLATFORM_NAME))

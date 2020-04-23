@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define ADDR(V, INDEX)      &V[((int)(INDEX))]
 
 
 #define DO_VLMACCRS(K_addr, K_INCR)                                         \
@@ -305,6 +304,8 @@ void nn_conv2d_hstrip_tail_deep_padded(
         VSTR(&vpu, vec_tmp2);
         VCLRDR(&vpu);
         VLMACC(&vpu, vec_tmp2);
+        VLDC(&vpu, BSS->offset_scale);
+        VLMACC(&vpu, BSS->offset);
 
         //Set mode back to 8-bit
         VSETC(&vpu, MODE_S8);

@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "lib_ops/api/allocator.h"
+#include "lib_ops/api/logging.h"
 
 namespace xcore {
 namespace conv {
@@ -42,6 +43,11 @@ Conv2D_Deep::Conv2D_Deep(const Conv2DParams &params,
 
 XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                               int32_t Y_h, int32_t Y_w, int32_t C_out) {
+  xcTrace(
+      "Conv2D_Deep Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
+      "C_out=%ld\n",
+      this, X_h, X_w, C_in, Y_h, Y_w, C_out);
+
   nn_image_params_t in_params;
   in_params.height = X_h;
   in_params.width = X_w;
@@ -72,6 +78,9 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   for (int i = 0; i < par_regions.size; i++) {
     const ParRegion &region = par_regions[i];
+    xcTrace(
+        "Conv2D_Deep Init id=%p region top=%ld left=%ld rows=%ld cols=%ld\n",
+        this, region.top, region.left, region.rows, region.cols);
     job_params[i].start.rows = region.top;
     job_params[i].start.cols = region.left;
     job_params[i].start.channels = 0;
@@ -90,6 +99,7 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
 XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                               const int16_t *BSS) {
+  xcTrace("Conv2D_Deep Eval id=%p\n", this);
   Dispatcher *dispatcher = GetDispatcher();
 
   size_t stack_words;
@@ -178,9 +188,12 @@ Conv2D_1x1::Conv2D_1x1(const Conv2DParams &params,
     : params(params), par_regions(par_regions), plans_(nullptr) {}
 
 XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
-                             int32_t Y_h, int32_t Y_w, int32_t C_out,
-                             int32_t start_row, int32_t start_col,
-                             int32_t out_pixels) {
+                             int32_t Y_h, int32_t Y_w, int32_t C_out) {
+  xcTrace(
+      "Conv2D_1x1 Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
+      "C_out=%ld\n",
+      this, X_h, X_w, C_in, Y_h, Y_w, C_out);
+
   nn_image_params_t in_params;
   in_params.height = X_h;
   in_params.width = X_w;
@@ -203,6 +216,8 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   for (int i = 0; i < par_regions.size; i++) {
     const ParRegion &region = par_regions[i];
+    xcTrace("Conv2D_1x1 Init id=%p region top=%ld left=%ld rows=%ld cols=%ld\n",
+            this, region.top, region.left, region.rows, region.cols);
 
     // job_params[i].start.rows = region.top;
     // job_params[i].start.cols = region.left;
@@ -219,6 +234,8 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
 XCoreStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                              const int16_t *BSS) {
+  xcTrace("Conv2D_1x1 Eval id=%p\n", this);
+
   Dispatcher *dispatcher = GetDispatcher();
 
   size_t stack_words;
@@ -269,6 +286,11 @@ Conv2D_Depthwise::Conv2D_Depthwise(const Conv2DParams &params,
 
 XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                                    int32_t Y_h, int32_t Y_w, int32_t C_out) {
+  xcTrace(
+      "Conv2D_Depthwise Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
+      "C_out=%ld\n",
+      this, X_h, X_w, C_in, Y_h, Y_w, C_out);
+
   nn_image_params_t in_params;
   in_params.height = X_h;
   in_params.width = X_w;
@@ -299,6 +321,11 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   for (int i = 0; i < par_regions.size; i++) {
     const ParRegion &region = par_regions[i];
+    xcTrace(
+        "Conv2D_Depthwise Init id=%p region top=%ld left=%ld rows=%ld "
+        "cols=%ld\n",
+        this, region.top, region.left, region.rows, region.cols);
+
     job_params[i].start.rows = region.top;
     job_params[i].start.cols = region.left;
     job_params[i].start.channels = 0;
@@ -321,6 +348,8 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
 XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                                    const int16_t *BSS) {
+  xcTrace("Conv2D_Depthwise Eval id=%p\n", this);
+
   Dispatcher *dispatcher = GetDispatcher();
 
   size_t stack_words;

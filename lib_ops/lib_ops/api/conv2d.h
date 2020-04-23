@@ -84,8 +84,7 @@ class Conv2D_1x1 {
   ~Conv2D_1x1() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                   int32_t Y_w, int32_t C_out, int32_t start_row,
-                   int32_t start_col, int32_t out_pixels);
+                   int32_t Y_w, int32_t C_out);
   XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
                    const int16_t* BSS);
 

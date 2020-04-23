@@ -7,9 +7,11 @@ ifeq ($(TARGET), x86)
 	CC := gcc
 	CCFLAGS := -g -O3
 	CCFLAGS += -std=c99
+	CCFLAGS += -DXCORE_TRACE -DXCORE_ERROR
 	CXX := g++
 	CXXFLAGS := -g -O3
 	CXXFLAGS += -std=c++11 
+	CXXFLAGS += -DXCORE_TRACE -DXCORE_ERROR
 
 	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm -pthread
 

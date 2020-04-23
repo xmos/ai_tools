@@ -3,6 +3,7 @@
 #define XCORE_POOLING_OPERATORS_H_
 
 #include <cstdint>
+
 #include "lib_ops/api/lib_ops.h"
 
 extern "C" {

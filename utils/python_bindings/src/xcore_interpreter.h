@@ -39,7 +39,7 @@ class InterpreterErrorReporter : public tflite::ErrorReporter {
 //****************************
 class XCOREInterpreter {
  public:
-  XCOREInterpreter() {}
+  XCOREInterpreter();
   ~XCOREInterpreter();
 
   XCoreStatus Initialize(const char* model_buffer, size_t model_buffer_size,
@@ -78,16 +78,16 @@ class XCOREInterpreter {
   size_t GetError(char* msg);
 
  private:
-  InterpreterErrorReporter* error_reporter_ = nullptr;
-  tflite::ops::micro::AllOpsResolver* resolver_ = nullptr;
-  tflite::MicroInterpreter* interpreter_ = nullptr;
-  const tflite::Model* model_ = nullptr;
-  char* model_buffer_ = nullptr;
-  uint8_t* tensor_arena_ = nullptr;
-  size_t tensor_arena_size_ = 0;
-  xcore::Dispatcher* dispatcher_ = nullptr;
-  uint8_t* xcore_arena_ = nullptr;
-  size_t xcore_arena_size_ = 0;
+  InterpreterErrorReporter* error_reporter_;
+  tflite::ops::micro::AllOpsResolver* resolver_;
+  tflite::MicroInterpreter* interpreter_;
+  const tflite::Model* model_;
+  char* model_buffer_;
+  uint8_t* tensor_arena_;
+  size_t tensor_arena_size_;
+  xcore::Dispatcher* dispatcher_;
+  uint8_t* xcore_arena_;
+  size_t xcore_arena_size_;
 };
 
 }  // namespace xcore

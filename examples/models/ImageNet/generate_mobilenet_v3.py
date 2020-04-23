@@ -12,15 +12,14 @@ import numpy as np
 
 DEFAULT_NAME = "mobilenet_v3"
 DEFAULT_PATH = Path(__file__).parent.joinpath("debug", DEFAULT_NAME).resolve()
+DEFAULT_NUM_THREADS = 1
 
 
 class MobilenetV3(ImageNetModel):
     def build(self, **kwargs):
         keras_kwargs = dict(layers=layers, backend=backend, utils=utils, models=models)
         self.core_model = MobileNetV3Small(
-            input_shape=(*self.input_size, 3),
-            minimalistic=True,
-            **keras_kwargs
+            input_shape=(*self.input_size, 3), minimalistic=True, **keras_kwargs
         )
 
         # assert "classes" not in kwargs, "classes should be set in constructor"
@@ -99,18 +98,22 @@ def main(raw_args=None):
         "ImageNet classes are targeted. If a list of inteegers is given, "
         "the classes with the given indices as targeted",
     )
+    parser.add_argument(
+        "-par",
+        "--num_threads",
+        type=int,
+        default=DEFAULT_NUM_THREADS,
+        help="Number of parallel threads for xcore.ai optimization.",
+    )
     args = parser.parse_args(raw_args)
 
     model = MobilenetV3(
-        name=DEFAULT_NAME,
-        path=args.path,
-        classes=args.classes,
-        input_size=224,
+        name=DEFAULT_NAME, path=args.path, classes=args.classes, input_size=224,
     )
     model.build()
     model.gen_test_data()
     # model.save_core_model()
-    model.convert_and_save()
+    model.convert_and_save(xcore_num_threads=args.num_threads)
 
 
 if __name__ == "__main__":

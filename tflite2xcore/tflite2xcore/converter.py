@@ -122,9 +122,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
     if num_threads:
-        pass_mgr.register_pass(
-            passes.ParallelizeDeepConv2dPass(num_threads=num_threads)
-        )
+        pass_mgr.register_pass(passes.ParallelizeXCConv2dPass(num_threads=num_threads))
 
     if cleanup:
         pass_mgr.register_passes(CleanupManager())

@@ -3,12 +3,13 @@
 import numpy as np
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.parallelization import DIDOConv2DPlanner
+from tflite2xcore.parallelization import DIDOConv2DPlanner, GenericConv2DPlanner
 from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
     QuantizedOperatorMatchingPass,
     LegalizeXCWeightBiasPass,
+    OperatorMatchingPass,
 )
 from tflite2xcore.xlogging import log_method_output
 
@@ -197,6 +198,42 @@ class LegalizeXCDeepConvPass(LegalizeXCConvPass):
     @log_method_output()
     def _zero_point_bias(self):
         return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2, 3))
+
+
+class ParallelizeXCConv2dPass(OperatorMatchingPass):
+    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.num_threads = num_threads or 1
+        assert isinstance(self.num_threads, int)
+        assert self.num_threads > 0
+        self.forced = forced
+
+    MATCHING_OPCODES = (
+        XCOREOpCodes.XC_conv2d_depthwise,
+        XCOREOpCodes.XC_conv2d_deep,
+        XCOREOpCodes.XC_conv2d_1x1,
+    )
+
+    def run(self, *args, **kwargs):
+        if self.num_threads == 1:
+            self.logger.debug(f"Skipping pass b/c num_threads={self.num_threads}")
+            return 0
+        else:
+            return super().run(*args, **kwargs)
+
+    def match(self, op):
+        if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
+            return "par_plan" not in op.custom_options
+
+    def mutate(self, op):
+        _, height, width, _ = op.outputs[0].shape
+        assert int(height) == height
+        assert int(width) == width
+        planner = GenericConv2DPlanner(
+            int(height), int(width), num_threads=self.num_threads, forced=self.forced
+        )
+        plan = planner.find_optimal_plan()
+        op.add_custom_options(par_plan=[list(block) for block in plan.layout])
 
 
 class ParallelizeDeepConv2dPass(QuantizedOperatorMatchingPass):

@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.14)
 
 project(tflite2xcore VERSION 1.0.1)
 
+
+# This variable is ignored on platforms other than Apple
+set(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX10.13.sdk) 
+
 #**********************
 # Paths
 #**********************
@@ -22,7 +26,6 @@ set(LIB_OPS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../lib_ops")
 #**********************
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(BUILD_FLAGS "-g -DTF_LITE_DISABLE_X86_NEON -O3")
 set(CMAKE_CXX_FLAGS ${BUILD_FLAGS})
 set(CMAKE_C_FLAGS ${BUILD_FLAGS})
@@ -34,6 +37,7 @@ set(CMAKE_C_FLAGS ${BUILD_FLAGS})
 add_library(libtflite2xcore SHARED)
 set_target_properties(libtflite2xcore PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(libtflite2xcore PROPERTIES PREFIX "")
+target_link_libraries(libtflite2xcore stdc++ m pthread)
 
 #**********************
 # Flatbuffer sources
@@ -71,6 +75,7 @@ file (GLOB XCORE_SOURCES
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/*.cc"
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/*.c"
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/*.c"
+  "${LIB_OPS_SOURCE_DIR}/lib_ops/src/*.c"
   "${LIB_OPS_SOURCE_DIR}/lib_ops/src/*.cpp"
 )
 
@@ -81,6 +86,7 @@ target_sources(libtflite2xcore
   PRIVATE ${XCORE_SOURCES}
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/flexbuffer_helpers.cpp"
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/xcore_interpreter.cpp"
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/arena_size.cpp"
 )
 
 target_include_directories(libtflite2xcore
@@ -90,6 +96,15 @@ target_include_directories(libtflite2xcore
   PRIVATE ${LIB_NN_ALT_INCLUDE_DIR}
   PRIVATE ${LIB_NN_INCLUDE_DIR}
   PRIVATE ${LIB_OPS_INCLUDE_DIR}
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
-install(TARGETS libtflite2xcore DESTINATION lib)
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  set(INSTALL_DIR "${PROJECT_SOURCE_DIR}/../../tflite2xcore/tflite2xcore/libs/linux")
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(INSTALL_DIR "${PROJECT_SOURCE_DIR}/../../tflite2xcore/tflite2xcore/libs/macos")
+else() # must be Windows
+  set(INSTALL_DIR "${PROJECT_SOURCE_DIR}/../../tflite2xcore/tflite2xcore/libs/windows")
+endif()
+
+install(TARGETS libtflite2xcore DESTINATION ${INSTALL_DIR})

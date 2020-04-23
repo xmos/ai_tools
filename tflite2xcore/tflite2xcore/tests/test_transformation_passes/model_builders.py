@@ -146,18 +146,30 @@ def build_fc(subgraph=None, *, outputs, input_shape):
 
     input_shape = [1, *input_shape]
     weight_shape = [outputs, np.prod(input_shape[1:])]
+
     tin = subgraph.create_tensor(
-        'input', TensorType.INT8, input_shape, isinput=True)
+        'input', TensorType.INT8, input_shape, isinput=True,
+        quantization={'scale': [0.02874], 'zero_point': [-2]}
+    )
     w = subgraph.create_tensor(
         'weights', TensorType.INT8, weight_shape,
-        quantization={'scale': [0.35], 'zero_point': [0]})
+        quantization={'scale': [0.00836], 'zero_point': [0]}
+    )
     b = subgraph.create_tensor(
-        'biases', TensorType.INT32, weight_shape[:1])
+        'biases', TensorType.INT32, weight_shape[:1],
+        quantization={'scale': [0.00024], 'zero_point': [0]}
+    )
     tout = subgraph.create_tensor(
-        'output', tin.type, shape=[1, weight_shape[0]], isoutput=True)
+        'output', tin.type, shape=[1, weight_shape[0]], isoutput=True,
+        quantization={'scale': [0.11332], 'zero_point': [6]}
+    )
     subgraph.create_operator(
         OperatorCode(BuiltinOpCodes.FULLY_CONNECTED),
         inputs=[tin, w, b], outputs=[tout])
+
+    # add dummy data so that the op can be mutated
+    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
+    b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
 
     return subgraph.model
 

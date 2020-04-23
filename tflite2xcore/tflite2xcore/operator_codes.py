@@ -143,12 +143,12 @@ class CustomOpCode(ValidOpCodes):
 class XCOREOpCodes(ValidOpCodes, enum.Enum):
     # TODO: consider an IntEnum for this instead of strings
     XC_lookup_8 = "XC_lookup_8"
-    XC_argmax_16 = "XC_argmax_16"
+    XC_argmax_16 = "XC_argmax_16"  # currently not used by any passes
     XC_maxpool2d = "XC_maxpool2d"
     XC_avgpool2d = "XC_avgpool2d"
     XC_avgpool2d_global = "XC_avgpool2d_global"
     XC_fc_deepin_anyout = "XC_fc_deepin_anyout"
-    XC_requantize_16_to_8 = "XC_requantize_16_to_8"
+    XC_requantize_16_to_8 = "XC_requantize_16_to_8"  # currently only used after FC
     XC_conv2d_shallowin_deepout_relu = "XC_conv2d_shallowin_deepout_relu"
     XC_conv2d_deep = "XC_conv2d_deep"
     XC_conv2d_1x1 = "XC_conv2d_1x1"

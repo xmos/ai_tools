@@ -7,7 +7,7 @@
 
 namespace xcore {
 
-constexpr size_t maxthreads = 5;
+constexpr size_t max_regions = 5;
 
 typedef struct ParRegion {
   int32_t top;
@@ -20,13 +20,13 @@ class ParRegionArray {
  public:
   ParRegionArray() : size(0) {}
   int size;
-  ParRegion regions[maxthreads];
+  ParRegion regions[max_regions];
   const ParRegion& operator[](int i) {
     assert(i < size);
     return regions[i];
   }
   void append(const ParRegion& region) {
-    assert(size < maxthreads);
+    assert(size < max_regions);
     regions[size] = std::move(region);
     size++;
   }

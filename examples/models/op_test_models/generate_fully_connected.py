@@ -28,7 +28,7 @@ def main(raw_args=None):
     })
     args = parser.parse_args(raw_args)
 
-    model = common.OpTestDefaultFCModel('fc_deepin_deepout', args.path)
+    model = common.OpTestDefaultFCModel('fully_connected', args.path)
     if args.train_model:
         model.build_and_train(args.input_dim, args.output_dim,
                               args.batch_size, args.epochs,

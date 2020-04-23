@@ -1,6 +1,6 @@
-FLATBUFFERS_DIR := ../../../third_party
-GEMMLOWP_DIR := ../../../third_party/gemmlowp
-TENSORFLOW_DIR := ../../../third_party/tensorflow
+FLATBUFFERS_DIR := ${PROJECT_ROOT_DIR}/third_party
+GEMMLOWP_DIR := ${PROJECT_ROOT_DIR}/third_party/gemmlowp
+TENSORFLOW_DIR := ${PROJECT_ROOT_DIR}/third_party/tensorflow
 
 TENSORFLOW_INCLUDES := \
 	-I$(FLATBUFFERS_DIR)/flatbuffers/include \

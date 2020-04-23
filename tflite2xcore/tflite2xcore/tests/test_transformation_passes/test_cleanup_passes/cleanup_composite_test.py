@@ -2,27 +2,21 @@
 
 import pytest
 
-from tflite2xcore.transformation_passes import RemoveUnusedBuffersPass, RemoveDanglingTensorsPass
+from tflite2xcore.transformation_passes import (
+    RemoveUnusedBuffersPass,
+    RemoveDanglingTensorsPass
+)
 from tflite2xcore.xcore_model import TensorType
 
-# TODO: use multiple different models instead of just mlp
-from .test_RemoveDanglingTensorsPass import (
-    outputs, hidden_nodes, input_shape, mlp,
-    count_tensors
-)
+from .conftest import model, count_tensors, add_dangling_tensor
 
 
-@pytest.fixture()
-def trf_pass():
-    return RemoveUnusedBuffersPass()
+#  ----------------------------------------------------------------------------
+#                               TEST FUNCTIONS
+#  ----------------------------------------------------------------------------
 
-
-def test_mutate(mlp, trf_pass):
-    model = mlp  # TODO: fix this by refactoring
-    model.subgraphs[0].create_tensor(
-        'dangling_tensor', TensorType.INT16, [1, 32, 1, 1],
-        buffer=model.create_buffer()
-    )
+def test_mutate(model):
+    add_dangling_tensor(model)
     model.create_metadata("dummy")
     num_tensors = count_tensors(model)
     num_buffers = len(model.buffers)

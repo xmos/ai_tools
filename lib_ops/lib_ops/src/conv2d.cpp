@@ -178,9 +178,7 @@ Conv2D_1x1::Conv2D_1x1(const Conv2DParams &params,
     : params(params), par_regions(par_regions), plans_(nullptr) {}
 
 XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
-                             int32_t Y_h, int32_t Y_w, int32_t C_out,
-                             int32_t start_row, int32_t start_col,
-                             int32_t out_pixels) {
+                             int32_t Y_h, int32_t Y_w, int32_t C_out) {
   nn_image_params_t in_params;
   in_params.height = X_h;
   in_params.width = X_w;

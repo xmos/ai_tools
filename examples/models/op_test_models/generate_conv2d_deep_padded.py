@@ -2,7 +2,6 @@
 #
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
-import argparse
 from pathlib import Path
 import op_test_models_common as common
 
@@ -14,7 +13,6 @@ DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = (1, 1, 1, 1)
 DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'conv2d_deep_padded').resolve()
-DEFAULT_NUM_THREADS = 1
 
 
 class Conv2DDeepPadded(common.OpTestPaddedConvModel):

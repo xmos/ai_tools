@@ -88,6 +88,7 @@ dependencies:
   - pcre=8.43
   - pexpect=4.7.0
   - pickleshare=0.7.5
+  - pillow=6.2.0
   - pip=19.2.3
   - pixman=0.38.0
   - pluggy=0.13.0
@@ -142,6 +143,7 @@ dependencies:
     - cachetools==4.0.0
     - chardet==3.0.4
     - decopatch==1.4.7
+    - dill==0.3.1.1
     - flatbuffers==1.12.0
     - gast==0.2.2
     - google-auth==1.10.2

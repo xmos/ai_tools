@@ -21,7 +21,6 @@ from tflite2xcore.xcore_model import TensorType
 
 def load_tests(test_name, test_dir, max_count):
     supported_operators = set([
-        operator_codes.XCOREOpCodes.XC_argmax_16.name,
         operator_codes.XCOREOpCodes.XC_conv2d_1x1.name,
         operator_codes.XCOREOpCodes.XC_conv2d_depthwise.name,
         operator_codes.XCOREOpCodes.XC_conv2d_shallowin_deepout_relu.name,
@@ -31,7 +30,6 @@ def load_tests(test_name, test_dir, max_count):
         operator_codes.XCOREOpCodes.XC_avgpool2d.name,
         operator_codes.XCOREOpCodes.XC_avgpool2d_global.name,
         operator_codes.XCOREOpCodes.XC_lookup_8.name,
-        operator_codes.XCOREOpCodes.XC_requantize_16_to_8.name
     ])
 
     operator_name = test_name[:-10]
@@ -66,7 +64,7 @@ def load_tests(test_name, test_dir, max_count):
                         }
                     })
                     if len(test_cases) >= max_count:
-                        break 
+                        break
 
     return test_cases
 
@@ -105,8 +103,11 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
         print('Command:', cmd)
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-            result = helpers.compare_tensor_files(expected_output_file, expected_quantization,
-                predicted_output_file, predicted_quantization, abs_tol)
+            result = helpers.compare_tensor_files(
+                expected_output_file, expected_quantization,
+                predicted_output_file, predicted_quantization,
+                abs_tol
+            )
 
             os.remove(predicted_output_file)
 
@@ -120,9 +121,9 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
         model = read_flatbuffer(flatbuffer)
 
         input_tensor = model.subgraphs[0].inputs[0]
-        input_index= model.subgraphs[0].tensors.index(model.subgraphs[0].inputs[0])
+        input_index = model.subgraphs[0].tensors.index(model.subgraphs[0].inputs[0])
         output_tensor = model.subgraphs[0].outputs[0]
-        output_index= model.subgraphs[0].tensors.index(model.subgraphs[0].outputs[0])
+        output_index = model.subgraphs[0].tensors.index(model.subgraphs[0].outputs[0])
 
         with open(flatbuffer, 'rb') as fd:
             model_content = fd.read()
@@ -140,25 +141,24 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
         with open(predicted_output_file, 'wb') as fd:
             fd.write(predicted_output.tobytes())
 
-        result = helpers.compare_tensor_files(expected_output_file, expected_quantization,
-            predicted_output_file, predicted_quantization, abs_tol)
+        result = helpers.compare_tensor_files(
+            expected_output_file, expected_quantization,
+            predicted_output_file, predicted_quantization,
+            abs_tol
+        )
 
         return result
+
 
 def is_xfail(test_case):
     index = test_case['id'].find('xfail=true')
     return index > 0
 
+
 def test_XC_lookup_8(test_model_app, XC_lookup_8_test_case, abs_tol):
     if is_xfail(XC_lookup_8_test_case):
         pytest.xfail()
     assert(run_test_case(test_model_app, XC_lookup_8_test_case, abs_tol))
-
-
-def test_XC_argmax_16(test_model_app, XC_argmax_16_test_case, abs_tol):
-    if is_xfail(XC_argmax_16_test_case):
-        pytest.xfail()
-    assert(run_test_case(test_model_app, XC_argmax_16_test_case, abs_tol))
 
 
 def test_XC_conv2d_1x1(test_model_app, XC_conv2d_1x1_test_case, abs_tol):
@@ -207,12 +207,6 @@ def test_XC_avgpool2d_global(test_model_app, XC_avgpool2d_global_test_case, abs_
     if is_xfail(XC_avgpool2d_global_test_case):
         pytest.xfail()
     assert(run_test_case(test_model_app, XC_avgpool2d_global_test_case, abs_tol))
-
-
-def test_XC_requantize_16_to_8(test_model_app, XC_requantize_16_to_8_test_case, abs_tol):
-    if is_xfail(XC_requantize_16_to_8_test_case):
-        pytest.xfail()
-    assert(run_test_case(test_model_app, XC_requantize_16_to_8_test_case, abs_tol))
 
 
 if __name__ == "__main__":

@@ -18,8 +18,13 @@ tflite::MicroInterpreter *interpreter = nullptr;
 TfLiteTensor *input = nullptr;
 TfLiteTensor *output = nullptr;
 constexpr int kTensorArenaSize =
-    300000; // Hopefully this is big enough for all tests
+    300000;  // Hopefully this is big enough for all tests
 uint8_t tensor_arena[kTensorArenaSize];
+
+xcore::Dispatcher *dispatcher = nullptr;
+constexpr int num_threads = 5;
+constexpr int kXCOREArenaSize = 5000;
+uint8_t xcore_arena[kXCOREArenaSize];
 
 static int load_model(const char *filename, char **buffer, size_t *size) {
   FILE *fd = fopen(filename, "rb");
@@ -78,8 +83,17 @@ static void setup_tflite(const char *model_buffer) {
     return;
   }
 
+  // Setup xCORE dispatcher (BEFORE calling AllocateTensors)
+  static xcore::Dispatcher static_dispatcher(xcore_arena, kXCOREArenaSize,
+                                             num_threads);
+  xcore::XCoreStatus xcore_status = xcore::InitializeXCore(&static_dispatcher);
+  if (xcore_status != xcore::kXCoreOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "InitializeXCore() failed");
+    return;
+  }
+  dispatcher = &static_dispatcher;
+
   // This pulls in all the operation implementations we need.
-  // static tflite::ops::micro::AllOpsResolver resolver;
   static tflite::ops::micro::xcore::XcoreOpsResolver resolver;
 
   // Build an interpreter to run the model with.
@@ -94,21 +108,12 @@ static void setup_tflite(const char *model_buffer) {
     return;
   }
 
-  // Allocate xCORE KernelDispatcher after AllocateTensors
-  xcore::XCoreStatus allocate_xcore_status =
-      xcore::AllocateOperatorDispatcher();
-  if (allocate_xcore_status != xcore::kXCoreOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "AllocateKernelDispatcher() failed");
-    return;
-  }
-
   // Obtain pointers to the model's input and output tensors.
   input = interpreter->input(0);
   output = interpreter->output(0);
 }
 
 int main(int argc, char *argv[]) {
-
   if (argc < 4) {
     printf("Three arguments expected: mode.tflite input-file output-file\n");
     return -1;

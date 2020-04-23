@@ -15,6 +15,7 @@ DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = 'same'
 DEFAULT_PATH = Path(__file__).parent.joinpath(
     'debug', 'depthwise_conv2d').resolve()
+DEFAULT_NUM_THREADS = 1
 
 
 class DepthwiseConv2D(common.OpTestDefaultModel):
@@ -61,6 +62,9 @@ def main(raw_args=None):
         "-st", "--strides", nargs=2, type=int, default=[1, 1],
         help=f"Strides, vertical first",
     )
+    parser.add_argument(
+        '-par', '--num_threads', type=int, default=DEFAULT_NUM_THREADS,
+        help='Number of parallel threads for xcore.ai optimization.')
     args = parser.parse_args(raw_args)
     args.strides = tuple(args.strides)  # TODO: fix this
 
@@ -71,7 +75,7 @@ def main(raw_args=None):
                 padding=args.padding,
                 strides=args.strides,
                 **args.inits)
-    model.run()
+    model.run(num_threads=args.num_threads)
 
 
 if __name__ == "__main__":

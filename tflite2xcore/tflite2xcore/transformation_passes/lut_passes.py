@@ -13,14 +13,22 @@ class ReplaceWithXCLookup8Pass(ReplaceQuantizedOperatorPass):
 
     def _dequantize(self, int_arr):
         input_quant = self._input.quantization
-        return (np.int32(int_arr) - input_quant['zero_point'][0]) * input_quant['scale'][0]
+        return (np.int32(int_arr) - input_quant["zero_point"][0]) * input_quant[
+            "scale"
+        ][0]
 
     def _quantize(self, float_arr):
         output_quant = self._output.quantization
-        return np.int8(np.round(np.clip(
-            float_arr / output_quant['scale'][0] + output_quant['zero_point'][0],
-            -128, 127
-        )))
+        return np.int8(
+            np.round(
+                np.clip(
+                    float_arr / output_quant["scale"][0]
+                    + output_quant["zero_point"][0],
+                    -128,
+                    127,
+                )
+            )
+        )
 
     @abstractmethod
     def activation(self, float_arr):
@@ -35,8 +43,11 @@ class ReplaceWithXCLookup8Pass(ReplaceQuantizedOperatorPass):
         outputs_int = np.concatenate([outputs_int[128:], outputs_int[0:128]])
 
         lut_tensor = new_op.subgraph.create_tensor(
-            f"{op.name}/LUT", TensorType.INT8, shape=[len(outputs_int)],
-            consumers=[new_op])
+            f"{op.name}/LUT",
+            TensorType.INT8,
+            shape=[len(outputs_int)],
+            consumers=[new_op],
+        )
         lut_tensor.buffer.data = outputs_int
         new_op.inputs.append(lut_tensor)
 
@@ -47,7 +58,7 @@ class ReplaceReLUPass(ReplaceWithXCLookup8Pass):
         return BuiltinOpCodes.RELU
 
     def activation(self, float_arr):
-        return np.maximum(float_arr, 0.)
+        return np.maximum(float_arr, 0.0)
 
 
 class ReplaceReLU6Pass(ReplaceWithXCLookup8Pass):
@@ -56,7 +67,7 @@ class ReplaceReLU6Pass(ReplaceWithXCLookup8Pass):
         return BuiltinOpCodes.RELU6
 
     def activation(self, float_arr):
-        return np.minimum(np.maximum(float_arr, 0.), 6.)
+        return np.minimum(np.maximum(float_arr, 0.0), 6.0)
 
 
 class ReplaceTanhPass(ReplaceWithXCLookup8Pass):
@@ -74,4 +85,4 @@ class ReplaceLogisticPass(ReplaceWithXCLookup8Pass):
         return BuiltinOpCodes.LOGISTIC
 
     def activation(self, float_arr):
-        return 1. / (1. + np.exp(-float_arr))
+        return 1.0 / (1.0 + np.exp(-float_arr))

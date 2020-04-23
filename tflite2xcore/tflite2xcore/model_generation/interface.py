@@ -283,7 +283,8 @@ class Model(ABC):
 
     def convert_and_save(self, *,
                          visualize=True, save_buffers=True, xcore_num_threads=None):
-        self.gen_test_data()
+        if 'export' not in self.data or 'quant' not in self.data:
+            self.gen_test_data()
         self.populate_converters()
         for model_key in ['model_float', 'model_quant', 'model_stripped', 'model_xcore']:
             if model_key is 'model_xcore':
@@ -354,16 +355,6 @@ class KerasModel(Model):
             self.core_model)
         utils.quantize_converter(
             self.converters['model_quant'], self.data['quant'])
-
-
-class KerasClassifier(KerasModel):
-    def __init__(self, *args, opt_classifier=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._opt_classifier = opt_classifier
-
-    def convert_to_xcore(self, **converter_args):
-        converter_args.setdefault('is_classifier', self._opt_classifier)
-        super().convert_to_xcore(**converter_args)
 
 
 class FunctionModel(Model):

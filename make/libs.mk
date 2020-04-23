@@ -1,5 +1,5 @@
-LIB_NN_DIR := ../../../lib_nn
-LIB_OPS_DIR := ../../../lib_ops
+LIB_NN_DIR := ${PROJECT_ROOT_DIR}/lib_nn
+LIB_OPS_DIR := ${PROJECT_ROOT_DIR}/lib_ops
 
 LIBS_INCLUDES := \
 	-I$(LIB_NN_DIR) \

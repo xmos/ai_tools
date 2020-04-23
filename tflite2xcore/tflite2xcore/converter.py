@@ -7,37 +7,38 @@ from tflite2xcore.serialization import read_flatbuffer, write_flatbuffer
 from tflite2xcore import transformation_passes as passes
 
 
-def strip_model(model, *, remove_softmax=False, debug=False):
+def strip_model(model, *, remove_softmax=False, debug=False, legalize_op_versions=True):
     pass_mgr = PassManager(
         model,
         passes=[
             passes.LegalizeQuantizedInputPass(),
             passes.LegalizeQuantizedOutputPass(),
         ],
-        debug=debug
+        debug=debug,
     )
 
     if remove_softmax:
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
+    if legalize_op_versions:
+        pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
+
+    pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
     pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 
     pass_mgr.run_passes()
-    model.description = model.description + ' + XMOS stripped.'
+    model.description = model.description + " + XMOS stripped."
 
 
 def add_float_input_output(model, debug=False):
     pass_mgr = PassManager(
         model,
-        passes=[
-            passes.LegalizeFloatInputPass(),
-            passes.LegalizeFloatOutputPass()
-        ],
-        debug=debug
+        passes=[passes.LegalizeFloatInputPass(), passes.LegalizeFloatOutputPass()],
+        debug=debug,
     )
 
     pass_mgr.run_passes()
-    model.description = model.description + ' float interface.'
+    model.description = model.description + " float interface."
 
     # fix input/output buffers so built-in interpreter could run it
     assert len(model.subgraphs) == 1
@@ -57,27 +58,29 @@ def add_float_input_output(model, debug=False):
     model.buffers.insert(0, input_tensor.buffer)
 
 
-def optimize_for_xcore(model, *,
-                       is_classifier=False,
-                       remove_softmax=False,
-                       cleanup=True,
-                       minification=False,
-                       num_threads=None,
-                       intermediates_path=None,
-                       debug=False):
+def optimize_for_xcore(
+    model,
+    *,
+    remove_softmax=False,
+    cleanup=True,
+    minification=False,
+    num_threads=None,
+    intermediates_path=None,
+    debug=False
+):
     # NOTE: the order of the passes is mostly strict
     pass_mgr = PassManager(
         model,
         passes=[
             passes.LegalizeQuantizedInputPass(),
             passes.LegalizeQuantizedOutputPass(),
-            passes.SplitPaddingPass()
+            passes.SplitPaddingPass(),
         ],
         keep_intermediates=bool(intermediates_path),
-        debug=debug
+        debug=debug,
     )
 
-    if is_classifier or remove_softmax:
+    if remove_softmax:
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
     pass_mgr.register_pass(passes.Replace1x1Conv2dPass())
@@ -91,9 +94,7 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.ReplaceAveragePool2DPass())
     pass_mgr.register_pass(passes.ReplaceGlobalAveragePool2DPass())
 
-    # TODO: revise how these are done
-    pass_mgr.register_pass(passes.ReplaceFullyConnectedIntermediatePass())
-    pass_mgr.register_pass(passes.ReplaceFullyConnectedOutputPass())
+    pass_mgr.register_pass(passes.ReplaceFullyConnectedPass())
 
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())
@@ -103,15 +104,11 @@ def optimize_for_xcore(model, *,
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
-    if is_classifier:
-        # TODO: revise how this is done
-        pass_mgr.register_pass(passes.AddArgMax16OutputPass())
-    pass_mgr.register_pass(passes.ReplaceArgMax16Pass())
-
     if num_threads:
-        pass_mgr.register_pass(passes.ParallelizeDeepConv2dPass(num_threads=num_threads))
+        pass_mgr.register_pass(passes.ParallelizeXCConv2dPass(num_threads=num_threads))
 
     if cleanup:
+        pass_mgr.register_pass(passes.RemoveXCOREWeightBiasOperatorQuantInfo())
         pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
         pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
 
@@ -125,25 +122,29 @@ def optimize_for_xcore(model, *,
     pass_mgr.run_passes()
     model.sanity_check()
 
-    model.description = model.description + ' + XMOS optimized.'
+    model.description = model.description + " + XMOS optimized."
 
     if pass_mgr.keep_intermediates:
         pass_mgr.save_intermediates(intermediates_path)
 
 
-def convert(tflite_input_path, tflite_output_path, *,
-            is_classifier=False,
-            remove_softmax=False,
-            num_threads=None,
-            minification=False,
-            intermediates_path=None,
-            debug=False):
+def convert(
+    tflite_input_path,
+    tflite_output_path,
+    *,
+    remove_softmax=False,
+    num_threads=None,
+    minification=False,
+    intermediates_path=None,
+    debug=False
+):
     model = read_flatbuffer(tflite_input_path)
-    optimize_for_xcore(model,
-                       is_classifier=is_classifier,
-                       remove_softmax=remove_softmax,
-                       minification=minification,
-                       num_threads=num_threads,
-                       intermediates_path=intermediates_path,
-                       debug=debug)
+    optimize_for_xcore(
+        model,
+        remove_softmax=remove_softmax,
+        minification=minification,
+        num_threads=num_threads,
+        intermediates_path=intermediates_path,
+        debug=debug,
+    )
     write_flatbuffer(model, tflite_output_path)

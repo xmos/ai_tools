@@ -55,3 +55,5 @@ from .cleanup_passes import (
 from .renaming_passes import LegalizeOperatorOutputTensorNamePass
 
 from .minification_passes import MinifyQuantInfoPass, MinifyTensorNamesPass
+
+from .word_alignment_passes import CanonicalizeConv2DInputChannels

@@ -2,7 +2,7 @@
 
 import pytest
 
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_schema import TensorType
 from tflite2xcore.transformation_passes import ReplaceReLUPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_relu

@@ -13,25 +13,25 @@ import numpy as np
 
 import helpers
 import directories
-from tflite2xcore import operator_codes
+from tflite2xcore.xcore_schema import XCOREOpCodes, TensorType
 from tflite2xcore.serialization import read_flatbuffer
 from tflite2xcore.xcore_interpreter import XCOREInterpreter
-from tflite2xcore.xcore_model import XCOREModel, TensorType
+from tflite2xcore.xcore_model import XCOREModel
 
 
 def load_tests(test_name, test_dir, max_count):
     # pylint: disable=no-member
     supported_operators = set(
         [
-            operator_codes.XCOREOpCodes.XC_conv2d_1x1.name,
-            operator_codes.XCOREOpCodes.XC_conv2d_depthwise.name,
-            operator_codes.XCOREOpCodes.XC_conv2d_shallowin.name,
-            operator_codes.XCOREOpCodes.XC_conv2d_deep.name,
-            operator_codes.XCOREOpCodes.XC_fc_deepin_anyout.name,
-            operator_codes.XCOREOpCodes.XC_maxpool2d.name,
-            operator_codes.XCOREOpCodes.XC_avgpool2d.name,
-            operator_codes.XCOREOpCodes.XC_avgpool2d_global.name,
-            operator_codes.XCOREOpCodes.XC_lookup_8.name,
+            XCOREOpCodes.XC_conv2d_1x1.name,
+            XCOREOpCodes.XC_conv2d_depthwise.name,
+            XCOREOpCodes.XC_conv2d_shallowin.name,
+            XCOREOpCodes.XC_conv2d_deep.name,
+            XCOREOpCodes.XC_fc_deepin_anyout.name,
+            XCOREOpCodes.XC_maxpool2d.name,
+            XCOREOpCodes.XC_avgpool2d.name,
+            XCOREOpCodes.XC_avgpool2d_global.name,
+            XCOREOpCodes.XC_lookup_8.name,
         ]
     )
     # pylint: enable=no-member

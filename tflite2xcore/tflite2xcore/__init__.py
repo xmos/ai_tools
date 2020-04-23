@@ -16,14 +16,7 @@ else:
 libtflite2xcore = ctypes.cdll.LoadLibrary(lib_path)
 
 from . import serialization
-
-operator_codes = ModuleType("operator_codes")
-operator_codes.BuiltinOpCodes = serialization.xcore_schema.BuiltinOpCodes
-operator_codes.CustomOpCode = serialization.xcore_schema.CustomOpCode
-operator_codes.XCOREOpCodes = serialization.xcore_schema.XCOREOpCodes
-operator_codes.OperatorCode = serialization.xcore_schema.OperatorCode
-sys.modules.setdefault("tflite2xcore.operator_codes", operator_codes)
-
+from . import xcore_schema
 from . import converter
 from . import pass_manager
 from . import parallelization

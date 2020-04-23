@@ -2,8 +2,8 @@
 
 import pytest
 
-from tflite2xcore.xcore_model import XCOREModel, TensorType
-from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import TensorType, OperatorCode, BuiltinOpCodes
 from tflite2xcore.transformation_passes import LegalizeFloatOutputPass
 
 from .test_LegalizeFloatInputPass import simple_model, non_matching_model

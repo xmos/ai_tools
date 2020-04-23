@@ -3,7 +3,7 @@
 import pytest
 
 from tflite2xcore.transformation_passes import RemoveDanglingTensorsPass
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_schema import TensorType
 
 from .conftest import model, count_tensors, add_dangling_tensor
 
@@ -11,6 +11,7 @@ from .conftest import model, count_tensors, add_dangling_tensor
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def trf_pass():
@@ -20,6 +21,7 @@ def trf_pass():
 #  ----------------------------------------------------------------------------
 #                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
+
 
 def test_mutate_identity(model, trf_pass):
     num_tensors = count_tensors(model)

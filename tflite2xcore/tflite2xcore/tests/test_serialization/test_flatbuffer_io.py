@@ -6,8 +6,13 @@ import pytest
 
 from pathlib import Path
 
-from tflite2xcore.xcore_model import XCOREModel, TensorType
-from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import (
+    TensorType,
+    OperatorCode,
+    BuiltinOpCodes,
+    XCOREOpCodes,
+)
 from tflite2xcore.serialization import write_flatbuffer
 
 import tensorflow as tf

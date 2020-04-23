@@ -1,8 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode
 from tflite2xcore.transformation_passes import QuantizedOperatorMatchingPass
-from tflite2xcore.serialization.xcore_schema import BuiltinOptions
+from tflite2xcore.xcore_schema import BuiltinOptions, BuiltinOpCodes, OperatorCode
 
 
 class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):

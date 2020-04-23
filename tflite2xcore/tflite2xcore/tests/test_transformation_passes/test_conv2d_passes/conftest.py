@@ -4,7 +4,7 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_schema import TensorType
 
 from ..conftest import (
     PARAMS,

@@ -4,7 +4,7 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_schema import TensorType
 from tflite2xcore.transformation_passes import ReplaceFullyConnectedPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_fc

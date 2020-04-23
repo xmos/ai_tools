@@ -7,9 +7,8 @@ import numpy as np
 
 from collections import Counter
 
-from tflite2xcore.operator_codes import OperatorCode
 from tflite2xcore import xlogging as logging
-from tflite2xcore.serialization.xcore_schema import TensorType
+from tflite2xcore.xcore_schema import TensorType, OperatorCode
 from tflite2xcore.serialization.flatbuffers_io import XCORESerializationMixin
 
 

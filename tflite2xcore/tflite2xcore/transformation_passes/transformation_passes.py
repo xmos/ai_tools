@@ -6,8 +6,7 @@ from abc import abstractmethod
 from contextlib import contextmanager
 
 from tflite2xcore.pass_manager import ModelTransformationPass
-from tflite2xcore.operator_codes import BuiltinOpCodes
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes
 from tflite2xcore.utils import ACC_PERIOD
 from tflite2xcore import xlogging as logging
 

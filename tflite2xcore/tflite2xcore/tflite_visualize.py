@@ -26,7 +26,7 @@ from tflite2xcore.serialization import (
     FlexbufferParser,
 )
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.operator_codes import XCOREOpCodes
+from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.utils import VerbosityParser
 
 # A CSS description for making the visualizer

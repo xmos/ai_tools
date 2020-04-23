@@ -9,7 +9,7 @@ import ctypes
 import numpy as np
 
 from tflite2xcore import libtflite2xcore as lib
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_schema import TensorType
 
 
 MAX_TENSOR_ARENA_SIZE = 1000000

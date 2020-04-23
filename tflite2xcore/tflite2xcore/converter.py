@@ -3,7 +3,7 @@
 import pathlib
 
 from tflite2xcore.pass_manager import PassManager
-from tflite2xcore.serialization import read_flatbuffer, write_flatbuffer
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import transformation_passes as passes
 
 
@@ -154,7 +154,7 @@ def convert(
     intermediates_path=None,
     debug=False
 ):
-    model = read_flatbuffer(tflite_input_path)
+    model = XCOREModel.read_flatbuffer(tflite_input_path)
     optimize_for_xcore(
         model,
         remove_softmax=remove_softmax,
@@ -163,4 +163,4 @@ def convert(
         intermediates_path=intermediates_path,
         debug=debug,
     )
-    write_flatbuffer(model, tflite_output_path)
+    model.write_flatbuffer(tflite_output_path)

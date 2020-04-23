@@ -16,10 +16,11 @@ import directories
 from tflite2xcore import operator_codes
 from tflite2xcore.serialization import read_flatbuffer
 from tflite2xcore.xcore_interpreter import XCOREInterpreter
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_model import XCOREModel, TensorType
 
 
 def load_tests(test_name, test_dir, max_count):
+    # pylint: disable=no-member
     supported_operators = set(
         [
             operator_codes.XCOREOpCodes.XC_conv2d_1x1.name,
@@ -33,6 +34,7 @@ def load_tests(test_name, test_dir, max_count):
             operator_codes.XCOREOpCodes.XC_lookup_8.name,
         ]
     )
+    # pylint: enable=no-member
 
     operator_name = test_name[:-10]
     if operator_name not in supported_operators:
@@ -114,7 +116,7 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
             cmd = f"{test_model_app} {flatbuffer} {input_file} {predicted_output_file}"
         print("Command:", cmd)
         try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+            _ = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
             result = helpers.compare_tensor_files(
                 expected_output_file,
                 expected_quantization,
@@ -136,7 +138,7 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
 
         input_tensor = model.subgraphs[0].inputs[0]
         input_index = model.subgraphs[0].tensors.index(model.subgraphs[0].inputs[0])
-        output_tensor = model.subgraphs[0].outputs[0]
+        # output_tensor = model.subgraphs[0].outputs[0]
         output_index = model.subgraphs[0].tensors.index(model.subgraphs[0].outputs[0])
 
         with open(flatbuffer, "rb") as fd:

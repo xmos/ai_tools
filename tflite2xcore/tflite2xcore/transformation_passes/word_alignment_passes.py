@@ -2,7 +2,7 @@
 
 from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode
 from tflite2xcore.transformation_passes import QuantizedOperatorMatchingPass
-from tflite2xcore.serialization.flatbuffers_io import BuiltinOptions
+from tflite2xcore.serialization.xcore_schema import BuiltinOptions
 
 
 class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):
@@ -19,3 +19,12 @@ class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):
 
     def mutate(self, op):
         pass
+        # subgraph = op.subgraph
+
+        # # create new (batch/channel-wise) operator
+        # new_op = subgraph.create_operator(
+        #     OperatorCode(BuiltinOpCodes.PAD),
+        #     builtin_options_type=BuiltinOptions.PadOptions,
+        #     inputs=[],  # TODO:
+        # )
+        # subgraph.insert_operator(op, new_op)

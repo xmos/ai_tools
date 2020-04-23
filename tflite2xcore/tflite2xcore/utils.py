@@ -1,6 +1,7 @@
 # Copyright (c) 2018-2020, XMOS Ltd, All rights reserved
 
 import os
+import re
 import pathlib
 import random
 import argparse
@@ -99,3 +100,13 @@ def convert_path(path):
         return pathlib.Path(path)
     else:
         raise TypeError(f"Expected path of type str or pathlib.Path, got {type(path)}")
+
+
+def snake_to_camel(word):
+    output = "".join(x.capitalize() or "_" for x in word.split("_"))
+    return output[0].lower() + output[1:]
+
+
+def camel_to_snake(name):
+    name = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", name).lower()

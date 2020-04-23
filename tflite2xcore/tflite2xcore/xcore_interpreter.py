@@ -370,7 +370,7 @@ class XCOREInterpreter:
             "index": tensor_index,
             "name": tensor_name.value.decode("utf-8"),
             "shape": np.array(tensor_shape, dtype=np.int32),
-            "dtype": TensorType.to_numpy_dtype(tensor_type.value),
+            "dtype": TensorType(tensor_type.value).to_numpy_dtype(),
             "quantization": (scales, zero_points),
         }
 

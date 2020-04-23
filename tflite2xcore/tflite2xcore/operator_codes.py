@@ -3,7 +3,7 @@
 import enum
 
 
-class ValidOpCodes():
+class ValidOpCodes:
     pass
 
 
@@ -149,13 +149,13 @@ class XCOREOpCodes(ValidOpCodes, enum.Enum):
     XC_avgpool2d_global = "XC_avgpool2d_global"
     XC_fc_deepin_anyout = "XC_fc_deepin_anyout"
     XC_requantize_16_to_8 = "XC_requantize_16_to_8"  # currently only used after FC
-    XC_conv2d_shallowin_deepout_relu = "XC_conv2d_shallowin_deepout_relu"
+    XC_conv2d_shallowin = "XC_conv2d_shallowin"
     XC_conv2d_deep = "XC_conv2d_deep"
     XC_conv2d_1x1 = "XC_conv2d_1x1"
     XC_conv2d_depthwise = "XC_conv2d_depthwise"
 
 
-class OperatorCode():
+class OperatorCode:
     def __init__(self, opcode, *, custom_code=None, version=None):
         assert isinstance(opcode, ValidOpCodes), "Invalid opcode!"
         self.version = version or 1
@@ -166,24 +166,31 @@ class OperatorCode():
         else:
             self.builtin_code = opcode
             if self.builtin_code == BuiltinOpCodes.CUSTOM:
-                assert isinstance(custom_code, XCOREOpCodes), \
-                    "Must provide custom_code if builtin_code is 'CUSTOM'!"
+                assert isinstance(
+                    custom_code, XCOREOpCodes
+                ), "Must provide custom_code if builtin_code is 'CUSTOM'!"
                 self.custom_code = custom_code
             else:
                 self.custom_code = None
 
     @property
     def code(self):
-        return self.custom_code if self.builtin_code == BuiltinOpCodes.CUSTOM else self.builtin_code
+        return (
+            self.custom_code
+            if self.builtin_code == BuiltinOpCodes.CUSTOM
+            else self.builtin_code
+        )
 
     @property
     def name(self):
         return self.code.name
 
     def __eq__(self, obj):
-        return (isinstance(obj, OperatorCode)
-                and obj.code == self.code
-                and obj.version == self.version)
+        return (
+            isinstance(obj, OperatorCode)
+            and obj.code == self.code
+            and obj.version == self.version
+        )
 
     def __hash__(self):
         return hash(str(self))

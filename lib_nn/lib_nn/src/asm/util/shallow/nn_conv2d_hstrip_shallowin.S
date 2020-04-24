@@ -6,7 +6,7 @@ void nn_conv2d_hstrip_shallowin(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_h,
         const unsigned K_h_stride,
         const channel_count_t C_in,
@@ -40,14 +40,14 @@ void nn_conv2d_hstrip_shallowin(
 #define STACK_VEC_TMP           (NSTACKWORDS-8)
 
 #define STACK_K                 7
-#define STACK_BSS               8
+#define STACK_BSO               8
 #define STACK_WIN_H_STRIDE      STACK_K_h_stride
 
 
 #define Y               r0
 #define X               r1
 #define K               r2
-#define BSS             r3
+#define BSO             r3
 #define x_v_stride      r4
 #define k_cout_str      r5
 #define rows_left       r6
@@ -66,7 +66,7 @@ FUNCTION_NAME:
     {   ldc _32, 32                             ;   stw r10, sp[6]                          }
     {   shl r11, _32, 4                         ;   stw K, sp[STACK_K]                      }
     {                                           ;   vsetc r11                               }
-    {                                           ;   stw BSS, sp[STACK_BSS]                  }
+    {                                           ;   stw BSO, sp[STACK_BSO]                  }
     {                                           ;   ldw tmp, sp[STACK_K_H]                  }
     {   shl k_cout_str, tmp, 5                  ;   ldw tmp, sp[STACK_K_h_stride]           }
     {                                           ;   ldw r11, sp[STACK_C_IN]                 }
@@ -77,11 +77,11 @@ FUNCTION_NAME:
 
     .L_out_col_start:
         // load number of patch rows, initialize accumulators, decrement out cols
-        {   sub tmp, tmp, 1                         ;   ldw BSS, sp[STACK_BSS]                  }
+        {   sub tmp, tmp, 1                         ;   ldw BSO, sp[STACK_BSO]                  }
         {                                           ;   stw tmp, sp[STACK_OUT_COLS]             }
         {   mov X_patch, X                          ;   ldw rows_left, sp[STACK_K_H]            }
-        {   add r11, BSS, _32                       ;   vldd BSS[0]                             }
-        {   add BSS, r11, _32                       ;   vldr r11[0]                             }
+        {   add r11, BSO, _32                       ;   vldd BSO[0]                             }
+        {   add BSO, r11, _32                       ;   vldr r11[0]                             }
         
         // K resets for every output pixel
         {                                           ;   ldw K, sp[STACK_K]                      }
@@ -114,15 +114,15 @@ FUNCTION_NAME:
 
         {   shl r11, _32, 3                         ;                                           }
         {   ldaw r11, sp[STACK_VEC_TMP]             ;   vsetc r11            /*set 16-bit mode*/}
-        {   add BSS, BSS, _32                       ;   vlsat BSS[0]       /*apply first shift*/}
+        {   add BSO, BSO, _32                       ;   vlsat BSO[0]       /*apply first shift*/}
         {                                           ;   vstr r11[0] /*save 16-bit intermediate*/}
-        {   add BSS, BSS, _32                       ;   vldc BSS[0]       /*load scale into vC*/}
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]       /*load scale into vC*/}
         {                                           ;   vclrdr   /*clear accumulate for VLMACC*/}
         {   shl r11, _32, 4                         ;   vlmacc r11[0]              /*do VLMACC*/}
-        {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
-        {   add BSS, BSS, _32                       ;   vlmacc BSS[0]                           }
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+        {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
         {                                           ;   vsetc r11             /*set 8-bit mode*/}
-        {   mkmsk tmp, 16        /*16 out channels*/;   vlsat BSS[0]       /*apply final shift*/}
+        {   mkmsk tmp, 16        /*16 out channels*/;   vlsat BSO[0]       /*apply final shift*/}
         vstrpv Y[0], tmp         /* Store output */
         {                                           ;   ldw tmp, sp[STACK_Y_H_STRIDE]           }
         {   add Y, Y, tmp                           ;   ldw tmp, sp[STACK_WIN_H_STRIDE]         }

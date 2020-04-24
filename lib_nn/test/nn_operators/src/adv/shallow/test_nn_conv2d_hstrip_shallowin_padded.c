@@ -87,9 +87,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case0()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
 
@@ -138,16 +138,16 @@ void test_nn_conv2d_hstrip_shallowin_padded_case0()
                         K[cout][row][col][cin] = (col < K_w)? casse->k : 0;
 
         for(int k = 0; k < y_params.channels; k++){
-            BSS.bias[k]     = k;
-            BSS.shift1[k]   = 0;
-            BSS.scale[k]    = 1;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = 0;
+            BSO.bias[k]     = k;
+            BSO.shift1[k]   = 0;
+            BSO.scale[k]    = 1;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k]   = 0;
         }
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
         const mem_stride_t x_v_stride = x_params.width*x_params.channels;
         const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
@@ -157,7 +157,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case0()
         const int pad_r = K_w_array - pad_l - X_WIDTH;
 
         memset(Y, 0xCC, sizeof(Y));
-        nn_conv2d_hstrip_shallowin_padded((nn_image_t*) Y, (nn_image_t*) X, K_init, (nn_bss_block_t*) &bss, 
+        nn_conv2d_hstrip_shallowin_padded((nn_image_t*) Y, (nn_image_t*) X, K_init, (nn_bso_block_t*) &bso, 
                                         K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
                                         x_v_stride, y_params.channels, y_params.width, zero_point_vec);
 
@@ -219,9 +219,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case1()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -280,16 +280,16 @@ void test_nn_conv2d_hstrip_shallowin_padded_case1()
 
 
         for(int k = 0; k < y_params.channels; k++){
-            BSS.bias[k]     = k;
-            BSS.shift1[k]   = 0;
-            BSS.scale[k]    = 1;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = 0;
+            BSO.bias[k]     = k;
+            BSO.shift1[k]   = 0;
+            BSO.scale[k]    = 1;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k]   = 0;
         }
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANS_OUT);
 
         // Start the convolution window from each of 3 different positions
         // results same for each position
@@ -307,7 +307,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case1()
 
 
             memset(Y, 0xCC, sizeof(Y));
-            nn_conv2d_hstrip_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
+            nn_conv2d_hstrip_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bso_block_t*) &bso, 
                                             K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
                                             x_v_stride, y_params.channels, y_params.width, zero_point_vec);
 
@@ -378,9 +378,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case2()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -438,16 +438,16 @@ void test_nn_conv2d_hstrip_shallowin_padded_case2()
                         K[cout][row][col][cin] = (col < K_w)? casse->k : 0;
 
         for(int k = 0; k < y_params.channels; k++){
-            BSS.bias[k]     = k;
-            BSS.shift1[k]   = 0;
-            BSS.scale[k]    = 1;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = 0;
+            BSO.bias[k]     = k;
+            BSO.shift1[k]   = 0;
+            BSO.scale[k]    = 1;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k]   = 0;
         }
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANS_OUT);
 
         // Start the convolution window from each of 3 different positions
         // results same for each position
@@ -465,7 +465,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case2()
 
 
             memset(Y, 0xCC, sizeof(Y));
-            nn_conv2d_hstrip_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
+            nn_conv2d_hstrip_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bso_block_t*) &bso, 
                                             K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
                                             x_v_stride, y_params.channels, y_params.width, zero_point_vec);
         
@@ -536,9 +536,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case3()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -597,16 +597,16 @@ void test_nn_conv2d_hstrip_shallowin_padded_case3()
 
 
         for(int k = 0; k < y_params.channels; k++){
-            BSS.bias[k]     = 16*k;
-            BSS.shift1[k]   = 4;
-            BSS.scale[k]    = 8;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = 3;
+            BSO.bias[k]     = 0;
+            BSO.shift1[k]   = 4;
+            BSO.scale[k]    = 8;
+            BSO.offset_scale[k] = 1<<3;
+            BSO.offset[k]       = k;
+            BSO.shift2[k]   = 3;
         }
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANS_OUT);
 
         // Start the convolution window from each of 9 different positions
         // results same for each position
@@ -625,7 +625,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case3()
                 
     
                 memset(Y, 0xCC, sizeof(Y));
-                nn_conv2d_hstrip_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
+                nn_conv2d_hstrip_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bso_block_t*) &bso, 
                                                 K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
                                                 x_v_stride, y_params.channels, y_params.width, zero_point_vec);
 
@@ -695,9 +695,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case4()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
 
@@ -748,16 +748,16 @@ void test_nn_conv2d_hstrip_shallowin_padded_case4()
                         K[cout][row][col][cin] = (col < K_w)? casse->k : 0;
 
         for(int k = 0; k < y_params.channels; k++){
-            BSS.bias[k]     =-k;
-            BSS.shift1[k]   = 0;
-            BSS.scale[k]    = 1;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = 0;
+            BSO.bias[k]     =-k;
+            BSO.shift1[k]   = 0;
+            BSO.scale[k]    = 1;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k]   = 0;
         }
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANS_OUT);
 
         
         int pad_t = 0;
@@ -771,7 +771,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case4()
         nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
 
         memset(Y, 0xCC, sizeof(Y));
-        nn_conv2d_hstrip_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
+        nn_conv2d_hstrip_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bso_block_t*) &bso, 
                                         K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
                                         x_v_stride, y_params.channels, y_params.width, zero_point_vec);
 
@@ -839,9 +839,9 @@ void test_nn_conv2d_hstrip_shallowin_padded_case5()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -901,16 +901,16 @@ void test_nn_conv2d_hstrip_shallowin_padded_case5()
 
 
         for(int k = 0; k < y_params.channels; k++){
-            BSS.bias[k]     = 0;
-            BSS.shift1[k]   = casse->shift1;
-            BSS.scale[k]    = 8;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = 3;
+            BSO.bias[k]     = 0;
+            BSO.shift1[k]   = casse->shift1;
+            BSO.scale[k]    = 8;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k]   = 3;
         }
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANS_OUT);
 
         
         int pad_t = 0;
@@ -924,7 +924,7 @@ void test_nn_conv2d_hstrip_shallowin_padded_case5()
         nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
 
         memset(Y, 0xCC, sizeof(Y));
-        nn_conv2d_hstrip_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
+        nn_conv2d_hstrip_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bso_block_t*) &bso, 
                                         K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
                                         x_v_stride, y_params.channels, y_params.width, zero_point_vec);
 

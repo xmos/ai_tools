@@ -13,9 +13,9 @@
 
 
 
-#define BSS_INNER_SIZE  (sizeof(nn_bss_block_t) / (VPU_INT8_ACC_PERIOD * sizeof(data16_t)) )
-void nn_standard_BSS_layout(
-    nn_bss_block_t* bss_out,
+#define BSO_INNER_SIZE  (sizeof(nn_bso_block_t) / (VPU_INT8_ACC_PERIOD * sizeof(data16_t)) )
+void nn_standard_BSO_layout(
+    nn_bso_block_t* bso_out,
     int32_t* bias,
     int16_t* shift1,
     int16_t* scale,
@@ -29,15 +29,15 @@ void nn_standard_BSS_layout(
 
     data16_t* buff = NULL;
 
-    if(((void*)bias) == ((void*)bss_out)){
-        //bss_out is being updated in-place. We will need to use a scratch buffer
+    if(((void*)bias) == ((void*)bso_out)){
+        //bso_out is being updated in-place. We will need to use a scratch buffer
 
         if(scratch != NULL){
             //scratch buffer was provided by user
             buff = scratch;
         } else {
             //need to malloc a scratch buffer.
-            buff = (data16_t*) malloc(C_out * BSS_INNER_SIZE *  sizeof(data16_t));
+            buff = (data16_t*) malloc(C_out * BSO_INNER_SIZE *  sizeof(data16_t));
 
             if(buff == NULL){
                 printf("Failed to allocate scratch buffer.");
@@ -46,8 +46,8 @@ void nn_standard_BSS_layout(
         }
 
     } else {
-        //bss_out is not being updated in-place, just copy from the inputs to
-        //  bss_out.
+        //bso_out is not being updated in-place, just copy from the inputs to
+        //  bso_out.
     }
 
 
@@ -71,7 +71,7 @@ void nn_standard_BSS_layout(
 
     for(int cog = 0; cog < C_out_groups; cog++){
 
-        nn_bss_block_t* bss_cog = &bss_out[cog];
+        nn_bso_block_t* bso_cog = &bso_out[cog];
 
         for(int coff = 0; coff < VPU_INT8_ACC_PERIOD; coff++){
 
@@ -81,13 +81,13 @@ void nn_standard_BSS_layout(
             data16_t b_lo = b & 0xFFFF;
             data16_t b_hi = (b & 0xFFFF0000) >> 16;
 
-            bss_cog->bias_hi[coff] = b_hi;
-            bss_cog->bias_lo[coff] = b_lo;
-            bss_cog->shift1[coff] = shift1[cout];
-            bss_cog->scale[coff] = scale[cout];
-            bss_cog->offset_scale[coff] = offset_scale[cout];
-            bss_cog->offset[coff] = offset[cout];
-            bss_cog->shift2[coff] = shift2[cout];
+            bso_cog->bias_hi[coff] = b_hi;
+            bso_cog->bias_lo[coff] = b_lo;
+            bso_cog->shift1[coff] = shift1[cout];
+            bso_cog->scale[coff] = scale[cout];
+            bso_cog->offset_scale[coff] = offset_scale[cout];
+            bso_cog->offset[coff] = offset[cout];
+            bso_cog->shift2[coff] = shift2[cout];
             
         }
     }

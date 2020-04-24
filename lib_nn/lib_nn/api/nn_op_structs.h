@@ -30,14 +30,14 @@ typedef struct {
 } nn_index_vector2d_t;
 
 /**
- * Macro returns the number of `nn_bss_block_t`s required for `OUT_CHANS` output channels. This is
+ * Macro returns the number of `nn_bso_block_t`s required for `OUT_CHANS` output channels. This is
  * the same as the number output channel groups, rounded up.
  * 
  * @param[in] OUT_CHANS     Number of output channels
  * 
- * @return  Number of required `nn_bss_block_t`.
+ * @return  Number of required `nn_bso_block_t`.
  */
-#define BSS_BLOCK_COUNT(OUT_CHANS) ((OUT_CHANS+(VPU_INT8_VLMACC_ELMS-1))>>VPU_INT8_VLMACC_ELMS_LOG2)
+#define BSO_BLOCK_COUNT(OUT_CHANS) ((OUT_CHANS+(VPU_INT8_VLMACC_ELMS-1))>>VPU_INT8_VLMACC_ELMS_LOG2)
 
 /**
  * Represents the Bias, shifts and scale for a single output channel group.
@@ -50,7 +50,7 @@ typedef struct {
     data16_t offset_scale[VPU_INT8_ACC_PERIOD];
     data16_t offset[VPU_INT8_ACC_PERIOD];
     data16_t shift2[VPU_INT8_ACC_PERIOD];
-} nn_bss_block_t;
+} nn_bso_block_t;
 
 
 

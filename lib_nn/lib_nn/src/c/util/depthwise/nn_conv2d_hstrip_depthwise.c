@@ -30,7 +30,7 @@ void nn_conv2d_hstrip_depthwise(
     int8_t* Y,
     const int8_t* X_in, 
     const int8_t* K_in,
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const unsigned K_h,
     const unsigned K_w,
     const int32_t xk_col_stride,
@@ -49,10 +49,10 @@ void nn_conv2d_hstrip_depthwise(
         int32_t accs[VPU_INT8_VLMACC_ELMS];
 
         for(int k = 0; k < VPU_INT8_VLMACC_ELMS; k++)
-            accs[k] = ((int32_t)BSS->bias_hi[k]) << VPU_INT8_ACC_VR_BITS;
+            accs[k] = ((int32_t)BSO->bias_hi[k]) << VPU_INT8_ACC_VR_BITS;
         
         for(int k = 0; k < VPU_INT8_VLMACC_ELMS; k++)
-            accs[k] |= BSS->bias_lo[k];
+            accs[k] |= BSO->bias_lo[k];
 
         // These rows are inside image (vertically)
         for(int i = K_h; i > 0; i--){
@@ -67,9 +67,9 @@ void nn_conv2d_hstrip_depthwise(
         }
         
         for(int k = 0; k < chans_to_write; k++){
-            int16_t shift1  = BSS->shift1[k];
-            int16_t scale   = BSS->scale[k];
-            int16_t shift2  = BSS->shift2[k];
+            int16_t shift1  = BSO->shift1[k];
+            int16_t scale   = BSO->scale[k];
+            int16_t shift2  = BSO->shift2[k];
             accs[k] = vlsat_single_s16(accs[k], shift1);
             accs[k] = accs[k] * scale;
             accs[k] = vlsat_single_s8(accs[k], shift2);

@@ -83,9 +83,9 @@ void test_nn_conv2d_hstrip_tail_deep_case0()
         int16_t offset_scale[CHANS_OUT_MAX];
         int16_t offset[CHANS_OUT_MAX];
         int16_t shift2[CHANS_OUT_MAX];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT_MAX)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
 
@@ -132,23 +132,23 @@ void test_nn_conv2d_hstrip_tail_deep_case0()
 
 
             for(int k = 0; k < y_params.channels; k++){
-                BSS.bias[k]     = k;
-                BSS.shift1[k]   = 0;
-                BSS.scale[k]    = 1;
-                BSS.offset_scale[k] = 0;
-                BSS.offset[k]       = 0;
-                BSS.shift2[k]   = 0;
+                BSO.bias[k]     = k;
+                BSO.shift1[k]   = 0;
+                BSO.scale[k]    = 1;
+                BSO.offset_scale[k] = 0;
+                BSO.offset[k]       = 0;
+                BSO.shift2[k]   = 0;
             }
 
-            nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                    (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, C_out);
+            nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                    (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, C_out);
 
             mem_stride_t k_cout_stride = -K_h*K_w*x_params.channels;
             nn_tensor_t* K_init = &K[C_out-1][0][0][0];
 
             memset(Y, 0xCC, sizeof(Y));
             nn_conv2d_hstrip_tail_deep((nn_image_t*) Y, (nn_image_t*) X, K_init, 
-                                            (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels,
+                                            (nn_bso_block_t*) &bso, K_h, K_w, K_hstride, x_params.channels,
                                             (x_params.width-K_w)*x_params.channels, k_cout_stride,
                                             y_params.channels, 1, C_out);
 
@@ -213,9 +213,9 @@ void test_nn_conv2d_hstrip_tail_deep_case1()
         int16_t offset_scale[CHANS_OUT_MAX];
         int16_t offset[CHANS_OUT_MAX];
         int16_t shift2[CHANS_OUT_MAX];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT_MAX)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
 
@@ -251,23 +251,140 @@ void test_nn_conv2d_hstrip_tail_deep_case1()
         }
 
         for(int k = 0; k < y_params.channels; k++){
-            BSS.shift1[k]   = 6;
-            BSS.bias[k]     = -(1<<BSS.shift1[k]) * k;
-            BSS.scale[k]    = 64;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = 6;
+            BSO.shift1[k]   = 6;
+            BSO.bias[k]     = -(1<<BSO.shift1[k]) * k;
+            BSO.scale[k]    = 64;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k]   = 6;
         }
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, C_out);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, C_out);
 
         mem_stride_t k_cout_stride = -K_h*K_w*x_params.channels;
         nn_tensor_t* K_init = &K[C_out-1][0][0][0];
         
         memset(Y, 0xCC, sizeof(Y));
         nn_conv2d_hstrip_tail_deep((nn_image_t*) Y, (nn_image_t*) X, K_init, 
-                                        (nn_bss_block_t*) &bss, K_h, K_w, K_hstride, x_params.channels,
+                                        (nn_bso_block_t*) &bso, K_h, K_w, K_hstride, x_params.channels,
+                                        (x_params.width-K_w)*x_params.channels, k_cout_stride,
+                                        y_params.channels, Y_WIDTH, C_out);
+
+        PRINTF("\t\t\tChecking...\n");
+        for(unsigned row = 0; row < y_params.height; row++){
+            for(unsigned col = 0; col < y_params.width; col++){
+                for(unsigned chn = 0; chn < y_params.channels; chn++){
+                    
+                    int8_t y_expected = y_exp[col] - chn;
+
+                    check_Y(y_expected, row, col, chn, __LINE__, (nn_image_t*) Y, &y_params);
+                }
+            }
+        }
+    }
+}
+#undef DEBUG_ON  
+#undef CHANS_IN  
+#undef CHANS_OUT_MAX 
+#undef X_HEIGHT  
+#undef X_WIDTH   
+#undef Y_HEIGHT  
+#undef Y_WIDTH   
+#undef K_h       
+#undef K_w       
+#undef K_hstride
+
+
+
+
+
+
+
+
+
+
+
+
+#define DEBUG_ON        TEST_DEBUG_ON && 0
+#define CHANS_IN        (VPU_INT8_EPV + 4)
+#define CHANS_OUT_MAX   (VPU_INT8_ACC_PERIOD)
+#define X_HEIGHT        (3)
+#define X_WIDTH         (8)
+#define Y_HEIGHT        (1)
+#define Y_WIDTH         (4)
+#define K_h             (3)
+#define K_w             (2)
+#define K_hstride       (2)
+void test_nn_conv2d_hstrip_tail_deep_case2()
+{
+    PRINTF("%s...\n", __func__);
+
+    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT_MAX][K_h][K_w][CHANS_IN];
+
+    struct {
+        int32_t bias[CHANS_OUT_MAX];
+        int16_t shift1[CHANS_OUT_MAX];
+        int16_t scale[CHANS_OUT_MAX];
+        int16_t offset_scale[CHANS_OUT_MAX];
+        int16_t offset[CHANS_OUT_MAX];
+        int16_t shift2[CHANS_OUT_MAX];
+    } BSO;
+
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
+
+    nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
+
+    for(int C_out = 4; C_out < CHANS_OUT_MAX; C_out += 4){
+
+        PRINTF("\t\tC_out = %d\n", C_out);
+
+        nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
+        nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, C_out };
+
+
+        const int8_t x_vals[] = {1,3,5,7};
+        const int8_t k_vals[] = {2,4,10};
+
+        const int8_t y_exp[] = {18,54,90,126}; // minus the channel index
+
+        for(int i = 0; i < x_params.height; i++){
+            for(int j = 0; j < x_params.width; j++){
+                for(int k = 0; k < x_params.channels; k++){
+                    X[i][j][k] = x_vals[j/K_w];
+                }
+            }
+        }    
+        
+        for(int h = 0; h < y_params.channels; h++){
+            for(int i = 0; i < K_h; i++){
+                for(int j = 0; j < K_w; j++){
+                    for(int k = 0; k < x_params.channels; k++){
+                        K[h][i][j][k] = k_vals[i];
+                    }
+                }
+            }
+        }
+
+        for(int k = 0; k < y_params.channels; k++){
+            BSO.shift1[k]   = 6;
+            BSO.bias[k]     = 0;
+            BSO.scale[k]    = 64;
+            BSO.shift2[k]   = 6;
+            BSO.offset_scale[k] = 1<<BSO.shift2[k];
+            BSO.offset[k]       = -k;
+        }
+
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, C_out);
+
+        mem_stride_t k_cout_stride = -K_h*K_w*x_params.channels;
+        nn_tensor_t* K_init = &K[C_out-1][0][0][0];
+        
+        memset(Y, 0xCC, sizeof(Y));
+        nn_conv2d_hstrip_tail_deep((nn_image_t*) Y, (nn_image_t*) X, K_init, 
+                                        (nn_bso_block_t*) &bso, K_h, K_w, K_hstride, x_params.channels,
                                         (x_params.width-K_w)*x_params.channels, k_cout_stride,
                                         y_params.channels, Y_WIDTH, C_out);
 
@@ -304,4 +421,5 @@ void test_nn_conv2d_hstrip_tail_deep()
 
     RUN_TEST(test_nn_conv2d_hstrip_tail_deep_case0);
     RUN_TEST(test_nn_conv2d_hstrip_tail_deep_case1);
+    RUN_TEST(test_nn_conv2d_hstrip_tail_deep_case2);
 }

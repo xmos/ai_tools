@@ -44,7 +44,7 @@ void test_fully_connected_16_case0()
         int16_t offset_scale[ceil_C_out];
         int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
-    } BSS;
+    } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
@@ -109,21 +109,21 @@ void test_fully_connected_16_case0()
         memset(W, casse->w, sizeof(W));
 
         for(int k = 0; k < C_out; k++){
-            BSS.B[k] = casse->bias;
-            BSS.shift1[k] = casse->shift;
-            BSS.scale[k] = casse->scale;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k] = 14;
+            BSO.B[k] = casse->bias;
+            BSO.shift1[k] = casse->shift;
+            BSO.scale[k] = casse->scale;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k] = 14;
         }
 
-        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
-                        (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, 
-                        (int16_t*) &BSS.offset_scale,
-                        (int16_t*) &BSS.offset,
-                        (int16_t*) &BSS.shift2, 
+        nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                        (int32_t*) &BSO.B, 
+                        (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, 
+                        (int16_t*) &BSO.offset_scale,
+                        (int16_t*) &BSO.offset,
+                        (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
@@ -132,7 +132,7 @@ void test_fully_connected_16_case0()
         
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bss_block_t*) &BSS, &plan);
+                                     (nn_bso_block_t*) &BSO, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -178,7 +178,7 @@ void test_fully_connected_16_case1()
         int16_t offset_scale[ceil_C_out];
         int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
-    } BSS;
+    } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
@@ -243,22 +243,22 @@ void test_fully_connected_16_case1()
         memset(W, casse->w, sizeof(W));
 
         for(int k = 0; k < C_out; k++){
-            BSS.B[k] = casse->bias;
-            BSS.shift1[k] = casse->shift;
-            BSS.scale[k] = casse->scale;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k] = 14;
+            BSO.B[k] = casse->bias;
+            BSO.shift1[k] = casse->shift;
+            BSO.scale[k] = casse->scale;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k] = 14;
         }
 
         
-        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
-                        (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, 
-                        (int16_t*) &BSS.offset_scale,
-                        (int16_t*) &BSS.offset,
-                        (int16_t*) &BSS.shift2, 
+        nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                        (int32_t*) &BSO.B, 
+                        (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, 
+                        (int16_t*) &BSO.offset_scale,
+                        (int16_t*) &BSO.offset,
+                        (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
@@ -267,7 +267,7 @@ void test_fully_connected_16_case1()
         
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bss_block_t*) &BSS, &plan);
+                                     (nn_bso_block_t*) &BSO, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -313,7 +313,7 @@ void test_fully_connected_16_case2()
         int16_t offset_scale[ceil_C_out];
         int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
-    } BSS;
+    } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
@@ -378,22 +378,22 @@ void test_fully_connected_16_case2()
         memset(W, casse->w, sizeof(W));
 
         for(int k = 0; k < C_out; k++){
-            BSS.B[k] = casse->bias;
-            BSS.shift1[k] = casse->shift;
-            BSS.scale[k] = casse->scale;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k] = 14;
+            BSO.B[k] = casse->bias;
+            BSO.shift1[k] = casse->shift;
+            BSO.scale[k] = casse->scale;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k] = 14;
         }
 
 
-        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
-                        (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, 
-                        (int16_t*) &BSS.offset_scale,
-                        (int16_t*) &BSS.offset,
-                        (int16_t*) &BSS.shift2, 
+        nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                        (int32_t*) &BSO.B, 
+                        (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, 
+                        (int16_t*) &BSO.offset_scale,
+                        (int16_t*) &BSO.offset,
+                        (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
@@ -402,7 +402,7 @@ void test_fully_connected_16_case2()
         
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bss_block_t*) &BSS, &plan);
+                                     (nn_bso_block_t*) &BSO, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -446,7 +446,7 @@ void test_fully_connected_16_case3()
         int16_t offset_scale[ceil_C_out];
         int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
-    } BSS;
+    } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
@@ -511,22 +511,22 @@ void test_fully_connected_16_case3()
         memset(W, casse->w, sizeof(W));
 
         for(int k = 0; k < C_out; k++){
-            BSS.B[k] = casse->bias;
-            BSS.shift1[k] = casse->shift;
-            BSS.scale[k] = casse->scale;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k] = 14;
+            BSO.B[k] = casse->bias;
+            BSO.shift1[k] = casse->shift;
+            BSO.scale[k] = casse->scale;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k] = 14;
         }
 
 
-        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
-                        (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, 
-                        (int16_t*) &BSS.offset_scale,
-                        (int16_t*) &BSS.offset,
-                        (int16_t*) &BSS.shift2, 
+        nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                        (int32_t*) &BSO.B, 
+                        (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, 
+                        (int16_t*) &BSO.offset_scale,
+                        (int16_t*) &BSO.offset,
+                        (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
@@ -535,7 +535,7 @@ void test_fully_connected_16_case3()
         
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bss_block_t*) &BSS, &plan);
+                                     (nn_bso_block_t*) &BSO, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -580,7 +580,7 @@ void test_fully_connected_16_case4()
         int16_t offset_scale[ceil_C_out];
         int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
-    } BSS;
+    } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
@@ -641,22 +641,22 @@ void test_fully_connected_16_case4()
         memset(W, casse->w, sizeof(W));
 
         for(int k = 0; k < C_out; k++){
-            BSS.B[k] = casse->bias;
-            BSS.shift1[k] = casse->shift;
-            BSS.scale[k] = casse->scale;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k] = 14;
+            BSO.B[k] = casse->bias;
+            BSO.shift1[k] = casse->shift;
+            BSO.scale[k] = casse->scale;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k] = 14;
         }
 
 
-        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
-                        (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, 
-                        (int16_t*) &BSS.offset_scale,
-                        (int16_t*) &BSS.offset,
-                        (int16_t*) &BSS.shift2, 
+        nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                        (int32_t*) &BSO.B, 
+                        (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, 
+                        (int16_t*) &BSO.offset_scale,
+                        (int16_t*) &BSO.offset,
+                        (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
@@ -665,7 +665,7 @@ void test_fully_connected_16_case4()
         
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bss_block_t*) &BSS, &plan);
+                                     (nn_bso_block_t*) &BSO, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -710,7 +710,7 @@ void test_fully_connected_16_case5()
         int16_t offset_scale[ceil_C_out];
         int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
-    } BSS;
+    } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
@@ -777,22 +777,22 @@ void test_fully_connected_16_case5()
         memset(W, casse->w, sizeof(W));
 
         for(int k = 0; k < C_out; k++){
-            BSS.B[k] = casse->bias;
-            BSS.shift1[k] = casse->shift;
-            BSS.scale[k] = casse->scale;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k] = 14;
+            BSO.B[k] = casse->bias;
+            BSO.shift1[k] = casse->shift;
+            BSO.scale[k] = casse->scale;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k] = 14;
         }
 
 
-        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
-                        (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, 
-                        (int16_t*) &BSS.offset_scale,
-                        (int16_t*) &BSS.offset,
-                        (int16_t*) &BSS.shift2, 
+        nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                        (int32_t*) &BSO.B, 
+                        (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, 
+                        (int16_t*) &BSO.offset_scale,
+                        (int16_t*) &BSO.offset,
+                        (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
@@ -801,7 +801,7 @@ void test_fully_connected_16_case5()
         
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bss_block_t*) &BSS, &plan);
+                                     (nn_bso_block_t*) &BSO, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -849,7 +849,7 @@ void test_fully_connected_16_case6()
         int16_t offset_scale[ceil_C_out];
         int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
-    } BSS;
+    } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
@@ -922,22 +922,22 @@ void test_fully_connected_16_case6()
             memset(W, casse->w, sizeof(W));
 
             for(int k = 0; k < C_out_tmp; k++){
-                BSS.B[k] = casse->bias;
-                BSS.shift1[k] = casse->shift;
-                BSS.scale[k] = casse->scale;
-                BSS.offset_scale[k] = 0;
-                BSS.offset[k]       = 0;
-                BSS.shift2[k] = 14;
+                BSO.B[k] = casse->bias;
+                BSO.shift1[k] = casse->shift;
+                BSO.scale[k] = casse->scale;
+                BSO.offset_scale[k] = 0;
+                BSO.offset[k]       = 0;
+                BSO.shift2[k] = 14;
             }
 
 
-            nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
-                            (int32_t*) &BSS.B, 
-                            (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, 
-                        (int16_t*) &BSS.offset_scale,
-                        (int16_t*) &BSS.offset,
-                            (int16_t*) &BSS.shift2, 
+            nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                            (int32_t*) &BSO.B, 
+                            (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, 
+                        (int16_t*) &BSO.offset_scale,
+                        (int16_t*) &BSO.offset,
+                            (int16_t*) &BSO.shift2, 
                             NULL, C_out  );
 
             nn_fully_connected_plan_t plan;
@@ -946,7 +946,7 @@ void test_fully_connected_16_case6()
             PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
             fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                        (nn_bss_block_t*) &BSS, &plan);
+                                        (nn_bso_block_t*) &BSO, &plan);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1001,7 +1001,7 @@ void test_fully_connected_16_case7()
         int16_t offset_scale[ceil_C_out];
         int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
-    } BSS;
+    } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
@@ -1074,22 +1074,22 @@ void test_fully_connected_16_case7()
             memset(W, casse->w, sizeof(W));
 
             for(int k = 0; k < C_out_tmp; k++){
-                BSS.B[k] = casse->bias;
-                BSS.shift1[k] = casse->shift;
-                BSS.scale[k] = casse->scale;
-                BSS.offset_scale[k] = 0;
-                BSS.offset[k]       = 0;
-                BSS.shift2[k] = 14;
+                BSO.B[k] = casse->bias;
+                BSO.shift1[k] = casse->shift;
+                BSO.scale[k] = casse->scale;
+                BSO.offset_scale[k] = 0;
+                BSO.offset[k]       = 0;
+                BSO.shift2[k] = 14;
             }
 
 
-            nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
-                            (int32_t*) &BSS.B, 
-                            (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, 
-                            (int16_t*) &BSS.offset_scale,
-                            (int16_t*) &BSS.offset,
-                            (int16_t*) &BSS.shift2, 
+            nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                            (int32_t*) &BSO.B, 
+                            (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, 
+                            (int16_t*) &BSO.offset_scale,
+                            (int16_t*) &BSO.offset,
+                            (int16_t*) &BSO.shift2, 
                             NULL, C_out  );
 
             nn_fully_connected_plan_t plan;
@@ -1098,7 +1098,7 @@ void test_fully_connected_16_case7()
             PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
             fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                        (nn_bss_block_t*) &BSS, &plan);
+                                        (nn_bso_block_t*) &BSO, &plan);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1160,7 +1160,7 @@ void test_fully_connected_16_case8()
         int16_t offset_scale[ceil_C_out];
         int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
-    } BSS;
+    } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
@@ -1234,22 +1234,22 @@ void test_fully_connected_16_case8()
             memset(W, casse->w, sizeof(W));
 
             for(int k = 0; k < C_out_tmp; k++){
-                BSS.B[k] = casse->bias;
-                BSS.shift1[k] = casse->shift;
-                BSS.scale[k] = casse->scale;
-                BSS.offset_scale[k] = 0;
-                BSS.offset[k]       = 0;
-                BSS.shift2[k] = 14;
+                BSO.B[k] = casse->bias;
+                BSO.shift1[k] = casse->shift;
+                BSO.scale[k] = casse->scale;
+                BSO.offset_scale[k] = 0;
+                BSO.offset[k]       = 0;
+                BSO.shift2[k] = 14;
             }
 
 
-            nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
-                            (int32_t*) &BSS.B, 
-                            (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, 
-                            (int16_t*) &BSS.offset_scale,
-                            (int16_t*) &BSS.offset,
-                            (int16_t*) &BSS.shift2, 
+            nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                            (int32_t*) &BSO.B, 
+                            (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, 
+                            (int16_t*) &BSO.offset_scale,
+                            (int16_t*) &BSO.offset,
+                            (int16_t*) &BSO.shift2, 
                             NULL, C_out  );
 
             nn_fully_connected_plan_t plan;
@@ -1258,7 +1258,7 @@ void test_fully_connected_16_case8()
             PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
             fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                        (nn_bss_block_t*) &BSS, &plan);
+                                        (nn_bso_block_t*) &BSO, &plan);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1320,7 +1320,7 @@ void test_fully_connected_16_case9()
         int16_t offset_scale[ceil_C_out];
         int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
-    } BSS;
+    } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
@@ -1386,21 +1386,21 @@ void test_fully_connected_16_case9()
         memset(W, casse->w, sizeof(W));
 
         for(int k = 0; k < C_out; k++){
-            BSS.B[k] = casse->bias;
-            BSS.shift1[k] = casse->shift;
-            BSS.scale[k] = casse->scale;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k] = 14;
+            BSO.B[k] = casse->bias;
+            BSO.shift1[k] = casse->shift;
+            BSO.scale[k] = casse->scale;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k] = 14;
         }
 
-        nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
-                        (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, 
-                        (int16_t*) &BSS.offset_scale,
-                        (int16_t*) &BSS.offset,
-                        (int16_t*) &BSS.shift2, 
+        nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                        (int32_t*) &BSO.B, 
+                        (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, 
+                        (int16_t*) &BSO.offset_scale,
+                        (int16_t*) &BSO.offset,
+                        (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
@@ -1409,7 +1409,7 @@ void test_fully_connected_16_case9()
         PRINTF("\t\t\tC...\n");
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                    (nn_bss_block_t*) &BSS, &plan);
+                                    (nn_bso_block_t*) &BSO, &plan);
 
         PRINTF("\t\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -1467,7 +1467,7 @@ void test_fully_connected_16_case10()
         int16_t offset_scale[ceil_C_out];
         int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
-    } BSS;
+    } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out];
 
@@ -1494,22 +1494,22 @@ void test_fully_connected_16_case10()
     }
 
     for(int k = 0; k < C_out; k++){
-        BSS.B[k] = 0x0000;
-        BSS.shift1[k] = 1;
-        BSS.scale[k] = -0x2000;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 14;
+        BSO.B[k] = 0x0000;
+        BSO.shift1[k] = 1;
+        BSO.scale[k] = -0x2000;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 14;
     }
     
 
-    nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
-                    (int32_t*) &BSS.B, 
-                    (int16_t*) &BSS.shift1, 
-                    (int16_t*) &BSS.scale, 
-                    (int16_t*) &BSS.offset_scale,
-                    (int16_t*) &BSS.offset,
-                    (int16_t*) &BSS.shift2, 
+    nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                    (int32_t*) &BSO.B, 
+                    (int16_t*) &BSO.shift1, 
+                    (int16_t*) &BSO.scale, 
+                    (int16_t*) &BSO.offset_scale,
+                    (int16_t*) &BSO.offset,
+                    (int16_t*) &BSO.shift2, 
                     NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
@@ -1518,7 +1518,7 @@ void test_fully_connected_16_case10()
         PRINTF("\t\t\tC...\n");
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                    (nn_bss_block_t*) &BSS, &plan);
+                                    (nn_bso_block_t*) &BSO, &plan);
 
         PRINTF("\t\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -1571,7 +1571,7 @@ void test_fully_connected_16_case11()
         int16_t offset_scale[ceil_C_out];
         int16_t offset[ceil_C_out];
         int16_t shift2[ceil_C_out];
-    } BSS;
+    } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out];
 
@@ -1598,22 +1598,22 @@ void test_fully_connected_16_case11()
     }
 
     for(int k = 0; k < C_out; k++){
-        BSS.B[k] = 0x0000;
-        BSS.shift1[k] = 1;
-        BSS.scale[k] = -0x2000;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 14;
+        BSO.B[k] = 0x0000;
+        BSO.shift1[k] = 1;
+        BSO.scale[k] = -0x2000;
+        BSO.offset_scale[k] = 1<<14;
+        BSO.offset[k]       = 1;
+        BSO.shift2[k] = 14;
     }
     
 
-    nn_standard_BSS_layout(  (nn_bss_block_t*) &BSS, 
-                    (int32_t*) &BSS.B, 
-                    (int16_t*) &BSS.shift1, 
-                    (int16_t*) &BSS.scale, 
-                    (int16_t*) &BSS.offset_scale,
-                    (int16_t*) &BSS.offset,
-                    (int16_t*) &BSS.shift2, 
+    nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                    (int32_t*) &BSO.B, 
+                    (int16_t*) &BSO.shift1, 
+                    (int16_t*) &BSO.scale, 
+                    (int16_t*) &BSO.offset_scale,
+                    (int16_t*) &BSO.offset,
+                    (int16_t*) &BSO.shift2, 
                     NULL, C_out  );
 
     nn_fully_connected_plan_t plan;
@@ -1622,7 +1622,7 @@ void test_fully_connected_16_case11()
     PRINTF("\t\t\tC...\n");
     memset(Y, 0xCC, sizeof(Y));
     fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                (nn_bss_block_t*) &BSS, &plan);
+                                (nn_bso_block_t*) &BSO, &plan);
 
     PRINTF("\t\t\tChecking...\n");
     char str_buff[200] = {0};
@@ -1641,7 +1641,7 @@ void test_fully_connected_16_case11()
         
         // -((sum >> 1) / 2)
 
-        int16_t exp_val = -( (c-24)*(C_in-1)*(C_in/2) - 64*(c-24)*C_in ) / 4;
+        int16_t exp_val = (-( (c-24)*(C_in-1)*(C_in/2) - 64*(c-24)*C_in ) / 4) + 1;
 
         if(Y[c] != exp_val)
             sprintf(str_buff, "C failed. (index: %u)", c);

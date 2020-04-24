@@ -80,9 +80,9 @@ void test_nn_conv2d_hstrip_tail_shallowin_case0()
         int16_t offset_scale[CHANS_OUT_MAX];
         int16_t offset[CHANS_OUT_MAX];
         int16_t shift2[CHANS_OUT_MAX];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT_MAX)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
     
@@ -131,23 +131,23 @@ void test_nn_conv2d_hstrip_tail_shallowin_case0()
                             K[cout][row][col][cin] = (col < K_w)? casse->k : 0;
 
             for(int k = 0; k < y_params.channels; k++){
-                BSS.bias[k]     = k;
-                BSS.shift1[k]   = 0;
-                BSS.scale[k]    = 1;
-                BSS.offset_scale[k] = 0;
-                BSS.offset[k]       = 0;
-                BSS.shift2[k]   = 0;
+                BSO.bias[k]     = 0;
+                BSO.shift1[k]   = 0;
+                BSO.scale[k]    = 1;
+                BSO.offset_scale[k] = 1;
+                BSO.offset[k]       = k;
+                BSO.shift2[k]   = 0;
             }
 
-            nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                    (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+            nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                    (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
             const mem_stride_t x_v_stride = x_params.width * x_params.channels;
             const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
 
 
             memset(Y, 0xCC, sizeof(Y));
-            nn_conv2d_hstrip_tail_shallowin((nn_image_t*) Y, (nn_image_t*) X, K_init, (nn_bss_block_t*) &bss, 
+            nn_conv2d_hstrip_tail_shallowin((nn_image_t*) Y, (nn_image_t*) X, K_init, (nn_bso_block_t*) &bso, 
                                             K_h, K_hstride, x_params.channels, x_v_stride, y_params.channels, 
                                             y_params.width, y_params.channels);
 
@@ -204,9 +204,9 @@ void test_nn_conv2d_hstrip_tail_shallowin_case1()
         int16_t offset_scale[CHANS_OUT_MAX];
         int16_t offset[CHANS_OUT_MAX];
         int16_t shift2[CHANS_OUT_MAX];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT_MAX)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
     
@@ -258,16 +258,16 @@ void test_nn_conv2d_hstrip_tail_shallowin_case1()
                             K[cout][row][col][cin] = (col < K_w)? casse->k : 0;
 
             for(int k = 0; k < y_params.channels; k++){
-                BSS.bias[k]     =-k;
-                BSS.shift1[k]   = 0;
-                BSS.scale[k]    = 1;
-                BSS.offset_scale[k] = 0;
-                BSS.offset[k]       = 0;
-                BSS.shift2[k]   = 0;
+                BSO.bias[k]     =-k;
+                BSO.shift1[k]   = 0;
+                BSO.scale[k]    = 1;
+                BSO.offset_scale[k] = 0;
+                BSO.offset[k]       = 0;
+                BSO.shift2[k]   = 0;
             }
 
-            nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                    (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+            nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                    (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
                 
             const mem_stride_t x_v_stride = x_params.width*x_params.channels;
             const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
@@ -275,7 +275,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_case1()
 
             PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
-            nn_conv2d_hstrip_tail_shallowin((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
+            nn_conv2d_hstrip_tail_shallowin((nn_image_t*) Y, X_patch_start, K_init, (nn_bso_block_t*) &bso, 
                                             K_h, K_hstride, x_params.channels, x_v_stride, y_params.channels, 
                                             y_params.width, y_params.channels);
     
@@ -333,9 +333,9 @@ void test_nn_conv2d_hstrip_tail_shallowin_case2()
         int16_t offset_scale[CHANS_OUT_MAX];
         int16_t offset[CHANS_OUT_MAX];
         int16_t shift2[CHANS_OUT_MAX];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT_MAX)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
     
@@ -361,16 +361,16 @@ void test_nn_conv2d_hstrip_tail_shallowin_case2()
 
         int16_t shift1s[] = { 8, 8, 2, 8, 8, 6, 6, 7, 8, 8, 9, 9, 7, 5, 7, 8 };
         for(int k = 0; k < y_params.channels; k++){
-            BSS.bias[k]     = - 100 * k;
-            BSS.shift1[k]   = shift1s[k];
-            BSS.scale[k]    = 8;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = 3;
+            BSO.bias[k]     = - 100 * k;
+            BSO.shift1[k]   = shift1s[k];
+            BSO.scale[k]    = 8;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k]   = 3;
         }
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
             
         const mem_stride_t x_v_stride = x_params.width*x_params.channels;
         const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
@@ -378,7 +378,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_case2()
 
         
         memset(Y, 0xCC, sizeof(Y));
-        nn_conv2d_hstrip_tail_shallowin((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
+        nn_conv2d_hstrip_tail_shallowin((nn_image_t*) Y, X_patch_start, K_init, (nn_bso_block_t*) &bso, 
                                         K_h, K_hstride, x_params.channels, x_v_stride, y_params.channels, 
                                         y_params.width, y_params.channels);
 
@@ -387,16 +387,16 @@ void test_nn_conv2d_hstrip_tail_shallowin_case2()
             for(unsigned col = 0; col < y_params.width; col++){
                 for(unsigned chn = 0; chn < y_params.channels; chn++){
                     
-                    int32_t acc = BSS.bias[chn];
+                    int32_t acc = BSO.bias[chn];
 
                     for(int xr = 0; xr < x_params.height; xr++)
                         for(int xc = 0; xc < x_params.width; xc++)
                             for(int xchn = 0; xchn < x_params.channels; xchn++)
                                 acc += ((int32_t)X[xr][xc][xchn]) * K[chn][xr][xc][xchn];
 
-                    acc = (acc + (1<<(BSS.shift1[chn]-1))) >> BSS.shift1[chn];
-                    acc = acc * BSS.scale[chn];
-                    acc = (acc + (1<<(BSS.shift2[chn]-1))) >> BSS.shift2[chn];
+                    acc = (acc + (1<<(BSO.shift1[chn]-1))) >> BSO.shift1[chn];
+                    acc = acc * BSO.scale[chn];
+                    acc = (acc + (1<<(BSO.shift2[chn]-1))) >> BSO.shift2[chn];
 
                     int8_t y_exp = acc;
 
@@ -447,9 +447,9 @@ void test_nn_conv2d_hstrip_tail_shallowin_case3()
         int16_t offset_scale[CHANS_OUT_MAX];
         int16_t offset[CHANS_OUT_MAX];
         int16_t shift2[CHANS_OUT_MAX];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT_MAX)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
 
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
     
@@ -474,16 +474,16 @@ void test_nn_conv2d_hstrip_tail_shallowin_case3()
 
         int16_t shift1s[] = { 10, 11, 26, 26, 26, 26, 9, 10, 11, 26, 26, 26, 26, 9, 10, 11 };
         for(int k = 0; k < y_params.channels; k++){
-            BSS.bias[k]     = - 100 * k;
-            BSS.shift1[k]   = shift1s[k];
-            BSS.scale[k]    = 8;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = 3;
+            BSO.bias[k]     = - 100 * k;
+            BSO.shift1[k]   = shift1s[k];
+            BSO.scale[k]    = 8;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k]   = 3;
         }
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
             
         const mem_stride_t x_v_stride = x_params.width*x_params.channels;
         const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
@@ -491,7 +491,7 @@ void test_nn_conv2d_hstrip_tail_shallowin_case3()
 
         
         memset(Y, 0xCC, sizeof(Y));
-        nn_conv2d_hstrip_tail_shallowin((nn_image_t*) Y, X_patch_start, K_init, (nn_bss_block_t*) &bss, 
+        nn_conv2d_hstrip_tail_shallowin((nn_image_t*) Y, X_patch_start, K_init, (nn_bso_block_t*) &bso, 
                                         K_h, K_hstride, x_params.channels, x_v_stride, y_params.channels, 
                                         y_params.width, y_params.channels);
 
@@ -500,16 +500,16 @@ void test_nn_conv2d_hstrip_tail_shallowin_case3()
             for(unsigned col = 0; col < y_params.width; col++){
                 for(unsigned chn = 0; chn < y_params.channels; chn++){
                     
-                    int32_t acc = BSS.bias[chn];
+                    int32_t acc = BSO.bias[chn];
 
                     for(int xr = 0; xr < x_params.height; xr++)
                         for(int xc = 0; xc < x_params.width; xc++)
                             for(int xchn = 0; xchn < x_params.channels; xchn++)
                                 acc += ((int32_t)(X[xr][col+xc][xchn])) * K[chn][xr][xc][xchn];
 
-                    acc = (acc + (1<<(BSS.shift1[chn]-1))) >> BSS.shift1[chn];
-                    acc = acc * BSS.scale[chn];
-                    acc = (acc + (1<<(BSS.shift2[chn]-1))) >> BSS.shift2[chn];
+                    acc = (acc + (1<<(BSO.shift1[chn]-1))) >> BSO.shift1[chn];
+                    acc = acc * BSO.scale[chn];
+                    acc = (acc + (1<<(BSO.shift2[chn]-1))) >> BSO.shift2[chn];
 
                     int8_t y_exp = acc;
 

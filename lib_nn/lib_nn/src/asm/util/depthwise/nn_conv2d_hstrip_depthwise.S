@@ -8,7 +8,7 @@ void nn_conv2d_hstrip_depthwise(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const unsigned K_h,
     const unsigned K_w,
     const int32_t xk_col_stride,
@@ -43,7 +43,7 @@ void nn_conv2d_hstrip_depthwise(
 #define STACK_VEC_TMP           (NSTACKWORDS-8)
 
 #define STACK_K_PSTART      (9)
-#define STACK_BSS_PSTART    (10)
+#define STACK_BSO_PSTART    (10)
 
 
 #define Y               r0
@@ -69,7 +69,7 @@ FUNCTION_NAME:
     std r4, r5, sp[1]
     std r6, r7, sp[2]
     {   ldc r10, 32                             ;   vsetc r11                               }
-    {                                           ;   stw r3, sp[STACK_BSS_PSTART]            }
+    {                                           ;   stw r3, sp[STACK_BSO_PSTART]            }
     {                                           ;   ldw r5, sp[STACK_XK_COL_STRIDE]         }
     {                                           ;   stw K, sp[STACK_K_PSTART]               }
     {                                           ;   ldw x_row_stride, sp[STACK_X_ROW_STRIDE]}
@@ -86,7 +86,7 @@ FUNCTION_NAME:
     .align 16
     .L_pix_start:
         {   sub pix_left, pix_left, 1               ;   mov X, X_start                          }
-        {    add X_start, X_start, window_hstride   ;   ldw r11, sp[STACK_BSS_PSTART]           }
+        {    add X_start, X_start, window_hstride   ;   ldw r11, sp[STACK_BSO_PSTART]           }
         {                                           ;   ldw K, sp[STACK_K_PSTART]               }
         {   add r11, r11, _32                       ;   vldd r11[0]                             }
         {                                           ;   vldr r11[0]                             }
@@ -99,20 +99,20 @@ FUNCTION_NAME:
                 {   add K, K, xk_col_stride                 ;   bt cols_left, .L_patch_col              }
             {   add X, X, x_row_stride                  ;   bt rows_left, .L_patch_row              }
 
-#define BSS     rows_left
+#define BSO     rows_left
     .L_pix_finish:
-        {   shl r11, _32, 3                         ;   ldw BSS, sp[STACK_BSS_PSTART]           }
+        {   shl r11, _32, 3                         ;   ldw BSO, sp[STACK_BSO_PSTART]           }
         {   shl Q(cols_left), _32, 1                ;   vsetc r11                               }
-        {   add BSS, BSS, Q(cols_left)              ;   ldw Q(cols_left), sp[STACK_CHAN2WRITE]  }
-        {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat BSS[0]                            }
-        {   add BSS, BSS, _32                       ;   vstr r11[0]                             }   
-        {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
+        {   add BSO, BSO, Q(cols_left)              ;   ldw Q(cols_left), sp[STACK_CHAN2WRITE]  }
+        {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat BSO[0]                            }
+        {   add BSO, BSO, _32                       ;   vstr r11[0]                             }   
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
         {                                           ;   vclrdr                                  }
         {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
-        {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
-        {   add BSS, BSS, _32                       ;   vlmacc BSS[0]                           }
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+        {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
         {   mkmsk Q(cols_left), Q(cols_left)        ;   vsetc r11                               }
-        {                                           ;   vlsat BSS[0]                            }
+        {                                           ;   vlsat BSO[0]                            }
         vstrpv Y[0], Q(cols_left)
         {                                           ;   ldw Q(cols_left), sp[STACK_Y_COL_STRIDE]}
         {   add Y, Y, Q(cols_left)                  ;   bt pix_left, .L_pix_start               }

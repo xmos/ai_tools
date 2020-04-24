@@ -18,7 +18,7 @@ void conv2d_1x1(
     int8_t* Y,
     const int8_t* X,
     const int8_t* K,
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const nn_conv2d_1x1_plan_t* plan)
 {
     X = ADDR(X, plan->start_stride.X);
@@ -48,8 +48,8 @@ void conv2d_1x1(
 
             //Biases
             for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++)
-                acc64[k] = (BSS->bias_hi[k] << VPU_INT8_ACC_VR_BITS)
-                         | (BSS->bias_lo[k] << 0);
+                acc64[k] = (BSO->bias_hi[k] << VPU_INT8_ACC_VR_BITS)
+                         | (BSO->bias_lo[k] << 0);
 
             for(unsigned cig = 0; cig <= C_in_groups; cig++){
 
@@ -78,11 +78,11 @@ void conv2d_1x1(
             for(unsigned k = 0; k < group_chans; k++){
 
 
-                int16_t shift1  = BSS->shift1[k];
-                int16_t scale   = BSS->scale[k];
-                int16_t shift2  = BSS->shift2[k];
-                int16_t offset_scale = BSS->offset_scale[k];
-                int16_t offset       = BSS->offset[k];
+                int16_t shift1  = BSO->shift1[k];
+                int16_t scale   = BSO->scale[k];
+                int16_t shift2  = BSO->shift2[k];
+                int16_t offset_scale = BSO->offset_scale[k];
+                int16_t offset       = BSO->offset[k];
                 
                 int32_t res = vlsat_single_s16((int32_t)acc64[k], shift1);
                 res = res * scale;
@@ -99,7 +99,7 @@ void conv2d_1x1(
 
         Y = ADDR(Y, plan->cog_stride.Y);
         K = ADDR(K, plan->C_in);
-        BSS = ADDR(BSS, 1);
+        BSO = ADDR(BSO, 1);
     }
 }
 #undef ADDR

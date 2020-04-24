@@ -77,9 +77,9 @@ void test_conv2d_depthwise_case0()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     int8_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
 
@@ -147,17 +147,17 @@ void test_conv2d_depthwise_case0()
         memset(K, casse->k, sizeof(K));
 
         for(int k = 0; k < CHANS_OUT; k++){
-            BSS.bias[k]     = casse->bias;
-            BSS.shift1[k]   = casse->shift1;
-            BSS.scale[k]    = casse->scale;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = casse->shift2;
+            BSO.bias[k]     = casse->bias;
+            BSO.shift1[k]   = casse->shift1;
+            BSO.scale[k]    = casse->scale;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k]   = casse->shift2;
         }
 
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANS_OUT);
 
         nn_conv2d_depthwise_plan_t plan;
         nn_conv2d_depthwise_job_t job;
@@ -172,7 +172,7 @@ void test_conv2d_depthwise_case0()
 #endif //DEBUG_ON
 
         memset(Y, 0xCC, sizeof(Y)); 
-        conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bss_block_t*) &bss, &plan, &job);
+        conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &bso, &plan, &job);
 
         PRINTF("\t\t\tChecking...\n");
         for(unsigned row = 0; row < y_params.height; row++){
@@ -236,9 +236,9 @@ void test_conv2d_depthwise_case1()
         int16_t offset_scale[CHANS_OUT_MAX];
         int16_t offset[CHANS_OUT_MAX];
         int16_t shift2[CHANS_OUT_MAX];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT_MAX)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
 
     int8_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
 
@@ -290,16 +290,16 @@ void test_conv2d_depthwise_case1()
             memset(K, casse->k, K_h * K_w * y_params.channels * sizeof(int8_t));
 
             for(int k = 0; k < y_params.channels; k++){
-                BSS.bias[k]     = 0;
-                BSS.shift1[k]   = 0;
-                BSS.scale[k]    = 1;
-                BSS.offset_scale[k] = 0;
-                BSS.offset[k]       = 0;
-                BSS.shift2[k]   = 0;
+                BSO.bias[k]     = 0;
+                BSO.shift1[k]   = 0;
+                BSO.scale[k]    = 1;
+                BSO.offset_scale[k] = 0;
+                BSO.offset[k]       = 0;
+                BSO.shift2[k]   = 0;
             }
 
-            nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                    (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, channel_count);
+            nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                    (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, channel_count);
 
             nn_conv2d_depthwise_plan_t plan;
             nn_conv2d_depthwise_job_t job;
@@ -313,7 +313,7 @@ void test_conv2d_depthwise_case1()
 #endif //DEBUG_ON
 
             memset(Y, 0xCC, sizeof(Y)); 
-            conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bss_block_t*) bss, &plan, &job);
+            conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, &plan, &job);
 
             PRINTF("\t\t\tChecking...\n");
             for(unsigned row = 0; row < y_params.height; row++){
@@ -379,9 +379,9 @@ void test_conv2d_depthwise_case2()
         int16_t offset_scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t offset[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift2[MIN_CHAN_OUT_GROUPS(CHANNELS)];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANNELS)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANNELS)];
 
     int8_t WORD_ALIGNED  Y[Y_HEIGHT_MAX][Y_WIDTH_MAX][CHANNELS+1];
 
@@ -437,16 +437,16 @@ void test_conv2d_depthwise_case2()
         memset(K, casse->k, casse->K_h * casse->K_w * y_params.channels * sizeof(int8_t));
 
         for(int k = 0; k < y_params.channels; k++){
-            BSS.bias[k]     = 0;
-            BSS.shift1[k]   = 0;
-            BSS.scale[k]    = 1;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = 0;
+            BSO.bias[k]     = 0;
+            BSO.shift1[k]   = 0;
+            BSO.scale[k]    = 1;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k]   = 0;
         }
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANNELS);
 
         nn_conv2d_depthwise_plan_t plan;
         nn_conv2d_depthwise_job_t job;
@@ -461,7 +461,7 @@ void test_conv2d_depthwise_case2()
 
 
         memset(Y, 0xCC, sizeof(Y)); 
-        conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bss_block_t*) bss, &plan, &job);
+        conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, &plan, &job);
 
         char str_buff[200] = {0};
         PRINTF("\t\t\tChecking...\n");
@@ -528,9 +528,9 @@ void test_conv2d_depthwise_case3()
         int16_t offset_scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t offset[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift2[MIN_CHAN_OUT_GROUPS(CHANNELS)];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANNELS)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANNELS)];
 
     int8_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANNELS];
 
@@ -543,16 +543,16 @@ void test_conv2d_depthwise_case3()
     memset(K, 1, sizeof(K));
 
     for(int k = 0; k < y_params.channels; k++){
-        BSS.bias[k]     = k;
-        BSS.shift1[k]   = 0;
-        BSS.scale[k]    = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k]   = 0;
+        BSO.bias[k]     = k;
+        BSO.shift1[k]   = 0;
+        BSO.scale[k]    = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k]   = 0;
     }
 
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANNELS);
 
     nn_conv2d_depthwise_plan_t plan;
     nn_conv2d_depthwise_job_t job;
@@ -566,7 +566,7 @@ void test_conv2d_depthwise_case3()
 #endif //DEBUG_ON
 
     memset(Y, 0xCC, sizeof(Y)); 
-    conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bss_block_t*) bss, &plan, &job);
+    conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, &plan, &job);
     // int8_t Y_exp[Y_HEIGHT][Y_WIDTH] = { {  41  } };
 
     int8_t Y_exp[Y_HEIGHT][Y_WIDTH] = {
@@ -641,9 +641,9 @@ void test_conv2d_depthwise_case4()
         int16_t offset_scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t offset[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift2[MIN_CHAN_OUT_GROUPS(CHANNELS)];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[MIN_CHAN_OUT_GROUPS(CHANNELS)];
+    nn_bso_block_t bso[MIN_CHAN_OUT_GROUPS(CHANNELS)];
 
     int8_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANNELS];
 
@@ -699,16 +699,16 @@ void test_conv2d_depthwise_case4()
         memset(K, 1, K_h * K_w * y_params.channels * sizeof(int8_t));
 
         for(int k = 0; k < y_params.channels; k++){
-            BSS.bias[k]     = k;
-            BSS.shift1[k]   = 0;
-            BSS.scale[k]    = 1;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = 0;
+            BSO.bias[k]     = 0;
+            BSO.shift1[k]   = 0;
+            BSO.scale[k]    = 2;
+            BSO.offset_scale[k] = 2;
+            BSO.offset[k]       = k;
+            BSO.shift2[k]   = 1;
         }
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANNELS);
 
         nn_conv2d_depthwise_plan_t plan;
         nn_conv2d_depthwise_job_t job;
@@ -725,7 +725,7 @@ void test_conv2d_depthwise_case4()
 #endif //DEBUG_ON
 
         memset(Y, 0xCC, sizeof(Y)); 
-        conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bss_block_t*) bss, &plan, &job);
+        conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, &plan, &job);
 
         int8_t Y_exp[Y_HEIGHT][Y_WIDTH] = {
             {   0x33,  0x27,  0x33,  },
@@ -803,9 +803,9 @@ void test_conv2d_depthwise_case5()
         int16_t offset_scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t offset[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift2[MIN_CHAN_OUT_GROUPS(CHANNELS)];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANNELS)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANNELS)];
 
     int8_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANNELS];
 
@@ -818,16 +818,16 @@ void test_conv2d_depthwise_case5()
     memset(K, 1, K_h * K_w * y_params.channels * sizeof(int8_t));
 
     for(int k = 0; k < y_params.channels; k++){
-        BSS.bias[k]     = k;
-        BSS.shift1[k]   = 0;
-        BSS.scale[k]    = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k]   = 0;
+        BSO.bias[k]     = k;
+        BSO.shift1[k]   = 0;
+        BSO.scale[k]    = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k]   = 0;
     }
 
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANNELS);
 
 #define JOB_COUNT 9
     nn_conv2d_depthwise_plan_t plan;
@@ -854,7 +854,7 @@ void test_conv2d_depthwise_case5()
     memset(Y, 0xCC, sizeof(Y)); 
 
     for(int i = 0; i < JOB_COUNT; i++)
-        conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bss_block_t*) bss, &plan, &job[i]);
+        conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, &plan, &job[i]);
 
     int8_t Y_exp[Y_HEIGHT][Y_WIDTH] = {
         {   0x33,  0x27,  0x33,  },
@@ -922,9 +922,9 @@ void test_conv2d_depthwise_case6_()
         int16_t offset_scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t offset[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift2[MIN_CHAN_OUT_GROUPS(CHANNELS)];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANNELS)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANNELS)];
 
     int8_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANNELS];
 
@@ -937,16 +937,16 @@ void test_conv2d_depthwise_case6_()
     memset(K, 2, K_h * K_w * y_params.channels * sizeof(int8_t));
 
     for(int k = 0; k < y_params.channels; k++){
-        BSS.bias[k]     = 4*k;
-        BSS.shift1[k]   = 1;
-        BSS.scale[k]    = 2;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k]   = 2;
+        BSO.bias[k]     = 4*k;
+        BSO.shift1[k]   = 1;
+        BSO.scale[k]    = 2;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k]   = 2;
     }
 
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANNELS);
 
     nn_conv2d_depthwise_plan_t plan;
     nn_conv2d_depthwise_job_t job;
@@ -956,7 +956,7 @@ void test_conv2d_depthwise_case6_()
                         ZERO_POINT, 1);
 
     memset(Y, 0xCC, sizeof(Y)); 
-    conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bss_block_t*) bss, &plan, &job);
+    conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, &plan, &job);
 /*
     _____
    |5 5 5|5 5 5 5 5 5 5 5 5
@@ -1039,7 +1039,7 @@ void test_conv2d_depthwise_case6()
         int16_t offset_scale[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t offset[MIN_CHAN_OUT_GROUPS(CHANNELS)];
         int16_t shift2[CHANNELS];
-    } BSS = {
+    } BSO = {
         {  -93,     1,   -55,  -219, },
         {    0,     0,     0,     0, },
         {16520, 16748, 32565, 22546, },
@@ -1048,7 +1048,7 @@ void test_conv2d_depthwise_case6()
         {   21,    21,    22,    22, },
     };
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANNELS)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANNELS)];
 
     int8_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANNELS];
 
@@ -1058,8 +1058,8 @@ void test_conv2d_depthwise_case6()
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANNELS };
 
 
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, CHANNELS);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANNELS);
 
     nn_conv2d_depthwise_plan_t plan;
     nn_conv2d_depthwise_job_t job;
@@ -1071,7 +1071,7 @@ void test_conv2d_depthwise_case6()
                         ZERO_POINT, 1);
 
     memset(Y, 0xCC, sizeof(Y)); 
-    conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bss_block_t*) bss, &plan, &job);
+    conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, &plan, &job);
 
     int8_t Y_exp[Y_HEIGHT][Y_WIDTH][CHANNELS] = {
         {{ -100, -19, -38, 6}}

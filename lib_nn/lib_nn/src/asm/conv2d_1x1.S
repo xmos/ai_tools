@@ -8,7 +8,7 @@ void conv2d_1x1(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
-    const data16_t* BSS,
+    const data16_t* BSO,
     const nn_conv2d_1x1_plan_t* plan);
 
 
@@ -85,13 +85,13 @@ Optimizing assumptions:
 #define STACK_COG_STRIDE_K  12
 #define STACK_TAIL_MASK     13
 #define STACK_C_OUT         14
-#define STACK_BSS           15
+#define STACK_BSO           15
 
 
 #define Y               r0
 #define X               r1
 #define K               r2
-#define BSS             r3
+#define BSO             r3
 #define C_in            r4
 #define cin_tail        r5
 #define _32             r6
@@ -110,7 +110,7 @@ FUNCTION_NAME:
     std r6, r7, sp[2]
     std r8, r9, sp[3]
     {   ldc _32, 32                             ;   stw r10, sp[8]                          }
-    {   shl r11, _32, 4                         ;   stw BSS, sp[STACK_BSS]                  }
+    {   shl r11, _32, 4                         ;   stw BSO, sp[STACK_BSO]                  }
     {                                           ;   vsetc r11                               }
     {                                           ;   ldw plan, sp[STACK_PLAN]                }
 
@@ -142,10 +142,10 @@ FUNCTION_NAME:
         {   add K, K, K_cig_stride              ;   ldw pix_left, sp[STACK_PIX_COUNT]       }
         {   sub K, K, _32                       ;   sub cog_left, cog_left, 1               }
         .L_pix_loop:    
-            {                                           ;   ldw BSS, sp[STACK_BSS]                  }
-            {   add r11, BSS, _32                       ;   vldd BSS[0]                             }
+            {                                           ;   ldw BSO, sp[STACK_BSO]                  }
+            {   add r11, BSO, _32                       ;   vldd BSO[0]                             }
             {   shr cig_left, C_in, 5                   ;   vldr r11[0]                             }
-            {   add BSS, r11, _32                       ;   bf cig_left, .L_cig_tail                }
+            {   add BSO, r11, _32                       ;   bf cig_left, .L_cig_tail                }
             .L_cig_loop:
                 {   sub cig_left, cig_left, 1               ;   vldc X[0]                               }
                 VLMACCR_GROUP(C_in, K_cig_stride)
@@ -160,21 +160,21 @@ FUNCTION_NAME:
             .L_get_res:
             {   shl r11, _32, 3                         ;   sub pix_left, pix_left, 1               }
             {   ldaw r11, sp[STACK_VEC_TMP]             ;   vsetc r11                               }
-            {   add BSS, BSS, _32                       ;   vlsat BSS[0]                            }
+            {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
             {   add X, X, cin_tail                      ;   vstr r11[0]                             }   
-            {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
+            {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
             {                                           ;   vclrdr                                  }
             {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
-            {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
-            {   add BSS, BSS, _32                       ;   vlmacc BSS[0]                           }
+            {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+            {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
             {   mkmsk r11, 16                           ;   vsetc r11                               }
-            {   add BSS, BSS, _32                       ;   vlsat BSS[0]                            }
+            {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
             vstrpv Y[0], r11
             {   sub K, K, C_in                          ;   ldw cig_left, sp[STACK_C_OUT]           }
             {   add Y, Y, cig_left                      ;   bt pix_left, .L_pix_loop                }
         {   add K, K, C_in                          ;   ldw r11, sp[STACK_COG_STRIDE_Y]         }
         {   ldc cig_left, 40                        ;   ldw X, sp[STACK_X]                      }
-        {                                           ;   stw BSS, sp[STACK_BSS]                  }
+        {                                           ;   stw BSO, sp[STACK_BSO]                  }
         {   add Y, Y, r11                           ;   bt cog_left, .L_cog_loop                }
 
 #define macc_hop        cog_left
@@ -190,11 +190,11 @@ FUNCTION_NAME:
         {   sub reset_offset, reset_offset, r11     ;   ldw K_cig_stride, plan[PLAN_TAIL_KSTRIDE]}
         {   add K, K, K_cig_stride                  ;   ldw r8, sp[STACK_PIX_COUNT]             }
         .L_pix_loop2:
-            {                                           ;   ldw BSS, sp[STACK_BSS]                  }
-            {   add r11, BSS, _32                       ;   vldd BSS[0]                             }
+            {                                           ;   ldw BSO, sp[STACK_BSO]                  }
+            {   add r11, BSO, _32                       ;   vldd BSO[0]                             }
             {   sub r8, r8, 1                           ;   vldr r11[0]                             }
             {   shr cig_left, C_in, 5                   ;   stw r8, sp[STACK_PIX_COUNT]             }
-            {   add BSS, r11, _32                       ;   bf cig_left, .L_cig_tail2               }
+            {   add BSO, r11, _32                       ;   bf cig_left, .L_cig_tail2               }
             .L_cig_loop2:
                 {   ldaw r11, sp[STACK_VEC_TMP]             ;   vldc X[0]                               }
                 {   sub r11, r11, reset_offset              ;   vstr r11[0]                             }
@@ -219,15 +219,15 @@ FUNCTION_NAME:
             .L_get_res2:
             {   shl r11, _32, 3                         ;                                           }     
             {                                           ;   vsetc r11                               }
-            {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat BSS[0]                            }
-            {   add BSS, BSS, _32                       ;   vstr r11[0]                             }   
-            {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
+            {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat BSO[0]                            }
+            {   add BSO, BSO, _32                       ;   vstr r11[0]                             }   
+            {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
             {   add X, X, cin_tail                      ;   vclrdr                                  }
             {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
-            {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
-            {   add BSS, BSS, _32                       ;   vlmacc BSS[0]                           }
+            {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+            {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
             {                                           ;   vsetc r11                               }
-            {                                           ;   vlsat BSS[0]                            }
+            {                                           ;   vlsat BSO[0]                            }
             {                                           ;   ldw r11, sp[STACK_TAIL_MASK]            }
             vstrpv Y[0], r11
             {                                           ;   ldw r8, sp[STACK_C_OUT]                 }

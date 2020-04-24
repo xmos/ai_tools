@@ -39,7 +39,7 @@ void test_conv2d_1x1_case0()
         int16_t offset_scale[CHANS_OUT_CEIL];
         int16_t offset[CHANS_OUT_CEIL];
         int16_t shift2[CHANS_OUT_CEIL];
-    } BSS;
+    } BSO;
 
     int8_t WORD_ALIGNED  Y[HEIGHT][WIDTH][CHANS_OUT];
 
@@ -193,17 +193,17 @@ void test_conv2d_1x1_case0()
         }   
 
         for(int k = 0; k < CHANS_OUT; k++){
-            BSS.bias[k]     = casse->bias;
-            BSS.shift1[k]   = casse->shift1;
-            BSS.scale[k]    = casse->scale;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k]   = casse->shift2;
+            BSO.bias[k]     = casse->bias;
+            BSO.shift1[k]   = casse->shift1;
+            BSO.scale[k]    = casse->scale;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k]   = casse->shift2;
         }
 
-        nn_standard_BSS_layout((nn_bss_block_t*) &BSS, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                      (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, 
-                      (int16_t*) &BSS.shift2, NULL, CHANS_OUT);
+        nn_standard_BSO_layout((nn_bso_block_t*) &BSO, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                      (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, 
+                      (int16_t*) &BSO.shift2, NULL, CHANS_OUT);
 
         nn_conv2d_1x1_plan_t plan;
 
@@ -224,7 +224,7 @@ void test_conv2d_1x1_case0()
 
         PRINTF("\t\t\tC...\n");
         memset(Y, 0xCC, sizeof(Y));    //too expensive to write the whole image, so just do the part that's in play
-        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bss_block_t*) &BSS, &plan);
+        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &BSO, &plan);
 
         char str_buff[200] = {0};
         PRINTF("\t\t\tChecking...\n");
@@ -286,9 +286,9 @@ void test_conv2d_1x1_case1()
         int16_t offset_scale[CHANS_OUT_CEIL];
         int16_t offset[CHANS_OUT_CEIL];
         int16_t shift2[CHANS_OUT_CEIL];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(MAX_CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(MAX_CHANS_OUT)];
 
     int8_t Y_exp[MAX_CHANS_OUT];
 
@@ -374,19 +374,19 @@ void test_conv2d_1x1_case1()
 
             memset(&K_flat[k*C_in], c, sizeof(int8_t) * C_out * C_in);
 
-            int32_t bias = 0x1 << d;
+            int32_t bias = 0;
             int16_t shift1 = d;
             int16_t scale = 1;
-            int16_t offset_scale = 0;
-            int16_t offset = 0;
+            int16_t offset_scale = 1;
+            int16_t offset = 1;
             int16_t shift2 = 0;
 
-            BSS.bias[k] = bias;
-            BSS.shift1[k] = shift1;
-            BSS.scale[k] = scale;
-            BSS.offset_scale[k] = offset_scale;
-            BSS.offset[k] = offset;
-            BSS.shift2[k] = shift2;
+            BSO.bias[k] = bias;
+            BSO.shift1[k] = shift1;
+            BSO.scale[k] = scale;
+            BSO.offset_scale[k] = offset_scale;
+            BSO.offset[k] = offset;
+            BSO.shift2[k] = shift2;
 
             Y_exp[k] = ((x_val * c * C_in) >> d) + 1;
         }
@@ -394,22 +394,22 @@ void test_conv2d_1x1_case1()
         nn_image_params_t x_params = { HEIGHT, WIDTH, C_in };
         nn_image_params_t y_params = { HEIGHT, WIDTH, C_out };
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, 
-                                (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, 
+                                (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
 
         if(C_out % VPU_INT8_ACC_PERIOD){
             int a = C_out % VPU_INT8_ACC_PERIOD;
 
             for(int k = a; k < VPU_INT8_ACC_PERIOD; k++){
-                bss[BSS_BLOCK_COUNT(CHANS_OUT_CEIL)-1].bias_hi[k] = 0xBEEF;
-                bss[BSS_BLOCK_COUNT(CHANS_OUT_CEIL)-1].bias_lo[k] = 0xFEED;
-                bss[BSS_BLOCK_COUNT(CHANS_OUT_CEIL)-1].shift1[k] = 0xDEAD;
-                bss[BSS_BLOCK_COUNT(CHANS_OUT_CEIL)-1].scale[k] = 0xACED;
-                bss[BSS_BLOCK_COUNT(CHANS_OUT_CEIL)-1].offset_scale[k] = 0xDEAF;
-                bss[BSS_BLOCK_COUNT(CHANS_OUT_CEIL)-1].offset[k] = 0xF001;
-                bss[BSS_BLOCK_COUNT(CHANS_OUT_CEIL)-1].shift2[k] = 0xFABB;
+                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].bias_hi[k] = 0xBEEF;
+                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].bias_lo[k] = 0xFEED;
+                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].shift1[k] = 0xDEAD;
+                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].scale[k] = 0xACED;
+                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].offset_scale[k] = 0xDEAF;
+                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].offset[k] = 0xF001;
+                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].shift2[k] = 0xFABB;
             }
         }
 
@@ -432,7 +432,7 @@ void test_conv2d_1x1_case1()
 
         PRINTF("\t\t\tC...\n");
         memset(Y, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
-        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bss, &plan);
+        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan);
         unsigned pix_start = casse->start[0] * y_params.width + casse->start[1];
         unsigned pix_end   = pix_start + casse->out_pixels;
 
@@ -505,8 +505,8 @@ void test_conv2d_1x1_case2()
         int16_t offset_scale[CHANS_OUT_CEIL];
         int16_t offset[CHANS_OUT_CEIL];
         int16_t shift2[CHANS_OUT_CEIL];
-    } BSS;
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(MAX_CHANS_OUT)];
+    } BSO;
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(MAX_CHANS_OUT)];
 
     int8_t Y_exp[MAX_CHANS_OUT];
 
@@ -575,12 +575,12 @@ void test_conv2d_1x1_case2()
 
             int8_t output = vlsat_single_s8(postscale, shift2);
             
-            BSS.bias[k] = bias;
-            BSS.shift1[k] = shift1;
-            BSS.scale[k] = scale;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k] = 0;
-            BSS.shift2[k] = shift2;
+            BSO.bias[k] = bias;
+            BSO.shift1[k] = shift1;
+            BSO.scale[k] = scale;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k] = 0;
+            BSO.shift2[k] = shift2;
 
             // if(!skip_reps)
             //     PRINTF("%d:\t% 4d\t0x%08X\t0x%08X\n", k, k_val, bias, acc32);
@@ -601,9 +601,9 @@ void test_conv2d_1x1_case2()
         nn_image_params_t x_params = { HEIGHT, WIDTH, C_in };
         nn_image_params_t y_params = { HEIGHT, WIDTH, C_out };
 
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                                (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, 
-                                (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                                (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, 
+                                (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
         nn_conv2d_1x1_plan_t plan;
 
@@ -624,7 +624,7 @@ void test_conv2d_1x1_case2()
 
         PRINTF("\t\t\tC...\n");
         memset(Y, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
-        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bss, &plan);
+        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan);
 
         char str_buff[200] = {0};
         PRINTF("\t\t\tChecking...\n");

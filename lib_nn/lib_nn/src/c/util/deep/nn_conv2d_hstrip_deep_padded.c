@@ -19,7 +19,7 @@ void nn_conv2d_hstrip_deep_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_h,
         const unsigned K_w,
         const unsigned K_h_stride,
@@ -60,8 +60,8 @@ void nn_conv2d_hstrip_deep_padded(
     VSTRPV(&vpu, zero_tail, (1 << C_in_tail)-1);
 
     //Load Biases for current C_out group
-    VLDD(&vpu, BSS->bias_hi);
-    VLDR(&vpu, BSS->bias_lo);
+    VLDD(&vpu, BSO->bias_hi);
+    VLDR(&vpu, BSO->bias_lo);
 
     //Adjust for bias at top
     if(pad_t){
@@ -149,7 +149,7 @@ void nn_conv2d_hstrip_deep_padded(
     //At this point, 
     //  - X should be pointing at the top-left of the effective patch
     //  - K should be pointing at the first cell below the top padding
-    //  - BSS_p should be pointing at the shift1's
+    //  - BSO_p should be pointing at the shift1's
 
     int pad_l = pad_l_initial;
     int pad_r = pad_r_initial;
@@ -286,21 +286,21 @@ void nn_conv2d_hstrip_deep_padded(
         VSETC(&vpu, MODE_S16);
 
         //Saturate to 16-bit values
-        VLSAT(&vpu, BSS->shift1);
+        VLSAT(&vpu, BSO->shift1);
 
         //Load scales into vC
-        VLDC(&vpu, BSS->scale);
+        VLDC(&vpu, BSO->scale);
         VSTR(&vpu, mask_vec);
         VCLRDR(&vpu);
         VLMACC(&vpu, mask_vec);
-        VLDC(&vpu, BSS->offset_scale);
-        VLMACC(&vpu, BSS->offset);
+        VLDC(&vpu, BSO->offset_scale);
+        VLMACC(&vpu, BSO->offset);
 
         //Set mode back to 8-bit
         VSETC(&vpu, MODE_S8);
 
         //Saturate to 8-bit values
-        VLSAT(&vpu, BSS->shift2);
+        VLSAT(&vpu, BSO->shift2);
 
         //Store result in Y
         const unsigned mask16 = 0xFFFF;

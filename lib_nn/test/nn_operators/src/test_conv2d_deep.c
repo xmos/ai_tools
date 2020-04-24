@@ -72,9 +72,9 @@ void test_conv2d_deep_case0()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -92,19 +92,19 @@ void test_conv2d_deep_case0()
     memset(K, 0, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = 0;
-        BSS.shift1[k] = 0;
-        BSS.scale[k] = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 0;
+        BSO.bias[k] = 0;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 0;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -155,9 +155,9 @@ void test_conv2d_deep_case1()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -179,19 +179,19 @@ void test_conv2d_deep_case1()
         PRINTF("\tbias_mult = %d...\n", bias);
 
         for(int k = 0; k < CHANS_OUT; k++){
-            BSS.bias[k] = bias * k;
-            BSS.shift1[k] = 0;
-            BSS.scale[k] = 1;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k] = 0;
+            BSO.bias[k] = bias * k;
+            BSO.shift1[k] = 0;
+            BSO.scale[k] = 1;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k] = 0;
         }
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
             for(int col = 0; col < y_params.width; col++){
@@ -243,9 +243,9 @@ void test_conv2d_deep_case2()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -267,19 +267,19 @@ void test_conv2d_deep_case2()
         PRINTF("\tshift1 = %d...\n", shift1);
 
         for(int k = 0; k < CHANS_OUT; k++){
-            BSS.bias[k] = 16 * k;
-            BSS.shift1[k] = shift1;
-            BSS.scale[k] = 1;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k] = 0;
+            BSO.bias[k] = 16 * k;
+            BSO.shift1[k] = shift1;
+            BSO.scale[k] = 1;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k] = 0;
         }
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
             for(int col = 0; col < y_params.width; col++){
@@ -331,9 +331,9 @@ void test_conv2d_deep_case3()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -355,19 +355,19 @@ void test_conv2d_deep_case3()
         PRINTF("\tscale = %d...\n", scale);
 
         for(int k = 0; k < CHANS_OUT; k++){
-            BSS.bias[k] = k;
-            BSS.shift1[k] = 0;
-            BSS.scale[k] = scale;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k] = 0;
+            BSO.bias[k] = k;
+            BSO.shift1[k] = 0;
+            BSO.scale[k] = scale;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k] = 0;
         }
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
             for(int col = 0; col < y_params.width; col++){
@@ -419,9 +419,9 @@ void test_conv2d_deep_case4()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -443,19 +443,19 @@ void test_conv2d_deep_case4()
         PRINTF("\tshift2 = %d...\n", shift2);
 
         for(int k = 0; k < CHANS_OUT; k++){
-            BSS.bias[k] = 16 * k;
-            BSS.shift1[k] = 0;
-            BSS.scale[k] = 1;
-            BSS.offset_scale[k] = 0;
-            BSS.offset[k]       = 0;
-            BSS.shift2[k] = shift2;
+            BSO.bias[k] = 16 * k;
+            BSO.shift1[k] = 0;
+            BSO.scale[k] = 1;
+            BSO.offset_scale[k] = 0;
+            BSO.offset[k]       = 0;
+            BSO.shift2[k] = shift2;
         }
-        nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                            (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+        nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
             for(int col = 0; col < y_params.width; col++){
@@ -507,9 +507,9 @@ void test_conv2d_deep_case5()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -527,19 +527,19 @@ void test_conv2d_deep_case5()
     memset(K, 0, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = k;
-        BSS.shift1[k] = 0;
-        BSS.scale[k] = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 0;
+        BSO.bias[k] = k;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 0;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -590,9 +590,9 @@ void test_conv2d_deep_case6()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -610,19 +610,19 @@ void test_conv2d_deep_case6()
     memset(K, 1, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = k;
-        BSS.shift1[k] = 0;
-        BSS.scale[k] = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 0;
+        BSO.bias[k] = k;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 0;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -673,9 +673,9 @@ void test_conv2d_deep_case7()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -693,19 +693,19 @@ void test_conv2d_deep_case7()
     memset(K, 1, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = k;
-        BSS.shift1[k] = 0;
-        BSS.scale[k] = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 0;
+        BSO.bias[k] = k;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 0;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -756,9 +756,9 @@ void test_conv2d_deep_case8()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -776,19 +776,19 @@ void test_conv2d_deep_case8()
     memset(K, 1, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = k;
-        BSS.shift1[k] = 0;
-        BSS.scale[k] = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 0;
+        BSO.bias[k] = k;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 0;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -839,9 +839,9 @@ void test_conv2d_deep_case9()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -859,19 +859,19 @@ void test_conv2d_deep_case9()
     memset(K, 1, y_params.channels * conv2d_window.shape.height * conv2d_window.shape.width * x_params.channels);
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = k;
-        BSS.shift1[k] = 0;
-        BSS.scale[k] = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 0;
+        BSO.bias[k] = k;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 0;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -922,9 +922,9 @@ void test_conv2d_deep_case10()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -950,19 +950,19 @@ void test_conv2d_deep_case10()
                     K[cout][row][col][cin] = cout;
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = k;
-        BSS.shift1[k] = 0;
-        BSS.scale[k] = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 0;
+        BSO.bias[k] = k;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 0;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -1013,9 +1013,9 @@ void test_conv2d_deep_case11()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -1041,19 +1041,19 @@ void test_conv2d_deep_case11()
                     K[cout][row][col][cin] = 1;
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = 0;
-        BSS.shift1[k] = 0;
-        BSS.scale[k] = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 0;
+        BSO.bias[k] = 0;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 0;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -1106,9 +1106,9 @@ void test_conv2d_deep_case12()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -1134,19 +1134,19 @@ void test_conv2d_deep_case12()
                     K[cout][row][col][cin] = col+1;
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = 0;
-        BSS.shift1[k] = 0;
-        BSS.scale[k] = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 0;
+        BSO.bias[k] = 0;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 0;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -1200,9 +1200,9 @@ void test_conv2d_deep_case13()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -1228,19 +1228,19 @@ void test_conv2d_deep_case13()
                     K[cout][row][col][cin] = K_W * row + col + 1;
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = 0;
-        BSS.shift1[k] = 0;
-        BSS.scale[k] = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 0;
+        BSO.bias[k] = 0;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 0;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -1294,9 +1294,9 @@ void test_conv2d_deep_case14()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -1322,19 +1322,19 @@ void test_conv2d_deep_case14()
                     K[cout][row][col][cin] = 1;
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = k;
-        BSS.shift1[k] = 0;
-        BSS.scale[k] = 1;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 0;
+        BSO.bias[k] = 0;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 2;
+        BSO.offset_scale[k] = 2;
+        BSO.offset[k]       = k;
+        BSO.shift2[k] = 1;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
     nn_image_t  WORD_ALIGNED Y_exp[Y_HEIGHT][Y_WIDTH] = {
         { 14, 12, 14},
@@ -1394,9 +1394,9 @@ void test_conv2d_deep_case15()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -1429,19 +1429,19 @@ void test_conv2d_deep_case15()
                     K[cout][row][col][cin] = 1;
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = k * (1<<7);
-        BSS.shift1[k] = 1;
-        BSS.scale[k] = 2;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 7;
+        BSO.bias[k] = k * (1<<7);
+        BSO.shift1[k] = 1;
+        BSO.scale[k] = 2;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 7;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
 /*       __ __
        |8  8  8| 8  8  8  8 
@@ -1512,9 +1512,9 @@ void test_conv2d_deep_case16()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -1558,20 +1558,20 @@ void test_conv2d_deep_case16()
                     K[cout][row][col][cin] = 1;
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = k * (1<<7);
-        BSS.shift1[k] = 1;
-        BSS.scale[k] = 2;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 7;
+        BSO.bias[k] = k * (1<<7);
+        BSO.shift1[k] = 1;
+        BSO.scale[k] = 2;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 7;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
     for(int i = 0; i < job_count; i++)
-        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job[i]);
+        conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job[i]);
 
 /*       __ __
        |8  8  8| 8  8  8  8 
@@ -1644,9 +1644,9 @@ void test_conv2d_deep_case17()
         int16_t offset_scale[CHANS_OUT];
         int16_t offset[CHANS_OUT];
         int16_t shift2[CHANS_OUT];
-    } BSS;
+    } BSO;
 
-    nn_bss_block_t bss[BSS_BLOCK_COUNT(CHANS_OUT)];
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
 
     PRINTF("%s...\n", __func__);
 
@@ -1679,19 +1679,19 @@ void test_conv2d_deep_case17()
                     K[cout][row][col][cin] = 1;
 
     for(int k = 0; k < CHANS_OUT; k++){
-        BSS.bias[k] = 0;// k * (1<<6);
-        BSS.shift1[k] = 1;
-        BSS.scale[k] = 2;
-        BSS.offset_scale[k] = 0;
-        BSS.offset[k]       = 0;
-        BSS.shift2[k] = 6;
+        BSO.bias[k] = 0;// k * (1<<6);
+        BSO.shift1[k] = 1;
+        BSO.scale[k] = 2;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 6;
     }
-    nn_standard_BSS_layout(bss, (int32_t*) &BSS.bias, (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, (int16_t*) &BSS.offset_scale, (int16_t*) &BSS.offset, (int16_t*) &BSS.shift2, NULL, y_params.channels);
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bss, &plan, &job);
+    conv2d_deep((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
 
 /*       __ __
        |8  8  8| 8  8  8  8 
@@ -1716,13 +1716,13 @@ void test_conv2d_deep_case17()
         for(int col = 0; col < y_params.width; col++){
             for(int cout = 0; cout < y_params.channels; cout++){
 
-                int32_t acc = x_params.channels * Y_exp[row][col] + BSS.bias[cout];
+                int32_t acc = x_params.channels * Y_exp[row][col] + BSO.bias[cout];
                 // printf("%ld\n", acc);
-                acc = acc >> BSS.shift1[cout];
-                acc *= BSS.scale[cout];
+                acc = acc >> BSO.shift1[cout];
+                acc *= BSO.scale[cout];
 
-                acc = acc + (1 << (BSS.shift2[cout] - 1));
-                acc = acc >> BSS.shift2[cout];
+                acc = acc + (1 << (BSO.shift2[cout] - 1));
+                acc = acc >> BSO.shift2[cout];
 
                 int8_t y_exp = acc;
                 check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, cout, __LINE__);

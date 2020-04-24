@@ -86,7 +86,7 @@ void conv2d_depthwise_init(
                                     && end_padding_bottom       <= 0 && end_padding_right       <= 0);
 
 
-        job->stride.start.BSS  = (params->start.channels / VPU_INT8_ACC_PERIOD);
+        job->stride.start.BSO  = (params->start.channels / VPU_INT8_ACC_PERIOD);
         job->stride.start.K    = params->start.channels;
         job->stride.start.Y    = params->start.rows * y_row_bytes + y_params->channels * params->start.cols + params->start.channels;
 
@@ -108,7 +108,7 @@ void conv2d_depthwise(
     int8_t* Y,
     const int8_t* X,
     const int8_t* K,
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const nn_conv2d_depthwise_plan_t* plan,
     const nn_conv2d_depthwise_job_t* job)
 {
@@ -119,7 +119,7 @@ void conv2d_depthwise(
     X = ADDR(X, job->stride.start.X);
     Y = ADDR(Y, job->stride.start.Y);
     K = ADDR(K, job->stride.start.K);
-    BSS = ADDR(BSS, job->stride.start.BSS);
+    BSO = ADDR(BSO, job->stride.start.BSO);
 
     for(int out_chan = 0; out_chan < job->output.channels; out_chan += VPU_INT8_VLMACC_ELMS){
 
@@ -134,11 +134,11 @@ void conv2d_depthwise(
             const int cur_pad_b = (pad_b > 0)? pad_b : 0;
             
             if(job->init_padding.unpadded){
-                nn_conv2d_hstrip_depthwise(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
+                nn_conv2d_hstrip_depthwise(Y, X, K, BSO, plan->kernel.height, plan->kernel.width,
                         plan->channels.X, plan->stride.X.row,
                         plan->stride.window.col, plan->channels.Y, job->output.cols, cur_chans);
             } else {
-                nn_conv2d_hstrip_depthwise_padded(Y, X, K, BSS, plan->kernel.height, plan->kernel.width,
+                nn_conv2d_hstrip_depthwise_padded(Y, X, K, BSO, plan->kernel.height, plan->kernel.width,
                             cur_pad_t, job->init_padding.left, cur_pad_b, job->init_padding.right,
                             plan->channels.X, plan->stride.X.row, 
                             plan->stride.window.col, plan->channels.Y, job->output.cols, 
@@ -156,7 +156,7 @@ void conv2d_depthwise(
         X = ADDR(X, job->stride.chan_group.X);
         Y = ADDR(Y, job->stride.chan_group.Y);
 
-        BSS = ADDR(BSS, 1);
+        BSO = ADDR(BSO, 1);
         K = ADDR(K, VPU_INT8_VLMACC_ELMS);
     }
 

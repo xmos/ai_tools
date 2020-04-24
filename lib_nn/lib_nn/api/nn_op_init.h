@@ -117,48 +117,7 @@ void conv2d_shallowin_init(
 
 
 
-/** Prepare to execute a 2D shallowin-deepout convolution.
- *
- * This function initializes a `nn_conv2d_dido_params_t` struct with
- * the values necessary to perform the specified convolution.
- * 
- * Once initialized, the contents of the `params` struct will not
- * change, so it need only be initialized once for many (identical)
- * convolutions.
- *
- * The convolution itself may require several partial convolutions corresponding
- * to different (non-overlapping) regions of the output image. Each of these 
- * partial convolutions is described by a `nn_conv2d_dido_block_params_t` struct.
- * As the number of these blocks is not known a priori, their memory is
- * allocated from the heap. The `nn_conv2d_dido_params_t.blocks` field of `params` 
- * will point to the (contiguous) array of `nn_conv2d_dido_block_params_t` blocks.
- *
- * The `nn_conv2d_dido_params_t` struct is intended to be opaque, however, because
- * memory is allocated from the heap, if the same params struct is to be 
- * initialized again, or if it is to go out of scope, it should be properly
- * de-initialized using `conv2d_deepin_deepout_deinit()`.
- */
-void conv2d_shallowin_deepout_init(
-    nn_conv2d_sido_params_t* params,
-    const nn_conv2d_init_params_t* init_params,
-    const nn_conv2d_region_params_t* region_params,
-    const int8_t* K,
-    const data16_t* B);
 
-
-/**
- * De-initialize a `nn_conv2d_sido_params_t` struct which
- * has been previously initialized.
- *
- * Because `conv2d_shallowin_deepout_init()` uses `malloc()`, these
- * structs should be de-initialized if they are going to be 
- * initialized again or before they are allowed to go out of scope.
- * 
- * This function will free the memory allocated by 
- * `conv2d_shallowin_deepout_init()`.
- */
-void conv2d_shallowin_deepout_deinit(
-    nn_conv2d_sido_params_t* params);
 
 
 

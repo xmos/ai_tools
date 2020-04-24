@@ -8,7 +8,7 @@ void nn_conv2d_hstrip_depthwise_padded(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const unsigned K_h,
     const unsigned K_w,
     const unsigned pad_t,
@@ -61,7 +61,7 @@ void nn_conv2d_hstrip_depthwise_padded(
 #define STACK_CTR_COLS      (10)
 #define STACK_X_PSTART      (11)
 #define STACK_K_PSTART      (12)
-#define STACK_BSS_PSTART    (13)
+#define STACK_BSO_PSTART    (13)
 
 
 #define Y               r0
@@ -81,7 +81,7 @@ FUNCTION_NAME:
 
     {   add r11, r3, r10                        ;   vldd r3[0]                              }
 /**/{   add r11, r11, r10                       ;   vldr r11[0]                             }
-    {                                           ;   stw r11, sp[STACK_BSS_PSTART]           }
+    {                                           ;   stw r11, sp[STACK_BSO_PSTART]           }
 
     {    ldc r10, 0                             ;   ldw r3, sp[STACK_K_H]                   }
     {                                           ;   ldw r11, sp[STACK_PAD_T]                }
@@ -207,7 +207,7 @@ FUNCTION_NAME:
     .L_pix_finish:
 /**/    {   shl r11, _32, 3                         ;   ldw Q(cols_left), sp[STACK_CHAN2WRITE]  }
         {   ldaw r11, sp[STACK_VEC_TMP]             ;   vsetc r11                               }
-        {                                           ;   ldw Q(rows_left), sp[STACK_BSS_PSTART]  }
+        {                                           ;   ldw Q(rows_left), sp[STACK_BSO_PSTART]  }
         {   add Q(rows_left), Q(rows_left), _32     ;   vlsat Q(rows_left)[0]                   }
 /**/    {                                           ;   vstr r11[0]                             }
         {   add Q(rows_left), Q(rows_left), _32     ;   vldc Q(rows_left)[0]                    }

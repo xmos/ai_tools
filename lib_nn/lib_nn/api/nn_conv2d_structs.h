@@ -148,7 +148,7 @@ typedef struct {
             int32_t X;
             int32_t Y;
             int32_t K;
-            int32_t BSS;
+            int32_t BSO;
         } start;
 
         struct {
@@ -221,7 +221,7 @@ typedef struct {
             int32_t X;
             int32_t Y;
             int32_t K;
-            int32_t BSS;
+            int32_t BSO;
         } start;
 
         struct {
@@ -248,97 +248,6 @@ typedef struct {
     } init_padding;
 } nn_conv2d_shallowin_job_t;
 
-
-
-/**
-* 
-*/
-typedef struct {
-
-    struct {
-
-        struct {
-            int32_t X;
-            int32_t Y;
-            int32_t K;
-        } start_offset;
-
-        data16_t* biases;
-
-    } init;
-
-    struct {
-        int32_t K;
-    } cout_group_incr;
-
-    struct {
-        unsigned rows;
-        unsigned cols;
-
-
-        //Bytes the pointer needs to be incremented by to move to handle moving to a new
-        //  output image row
-        struct {
-            int32_t X;
-            int32_t Y;
-        } row_incr;
-    } output;
-
-
-
-    struct {
-        uint32_t pad_mask;
-
-        unsigned rows;
-
-        struct {
-            int32_t X;
-            int32_t K;
-        } row_incr;
-
-
-    } patch;
-
-} nn_conv2d_sido_block_params_t;
-
-/**
-*
-*/
-typedef struct {
-
-    unsigned block_count;
-
-    unsigned chans_in;
-    unsigned chans_out;
-    unsigned C_in_groups;
-    unsigned C_out_groups;
-    int32_t zero_point;
-
-    nn_conv2d_sido_block_params_t* blocks;
-
-} nn_conv2d_sido_params_t;
-
-
-
-typedef struct {
-    uint32_t X_height;
-    uint32_t X_width;
-    uint32_t K_h;
-    uint32_t K_w;
-    uint32_t C_in;
-    uint32_t C_out;
-    padding_mode_t pad_mode;
-    int8_t zero_point;
-} nn_conv2d_init_params_t;
-
-
-
-typedef struct {
-    uint32_t top;
-    uint32_t left;
-    uint32_t rows;
-    uint32_t cols;
-} nn_conv2d_region_params_t;
 
 
 
@@ -411,7 +320,7 @@ typedef struct {
             int32_t X;
             int32_t Y;
             int32_t K;
-            int32_t BSS;
+            int32_t BSO;
         } start;
 
         struct {

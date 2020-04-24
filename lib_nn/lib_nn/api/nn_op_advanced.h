@@ -131,7 +131,7 @@ void fc_deepin_shallowout_16(
  * 
  * `K` is the convolution kernel, and has shape `(K_h, K_w, K_c)`.
  * 
- * `BSS` are the biases shifts and scale which are applied to the convolution. See _________
+ * `BSO` are the biases shifts and scale which are applied to the convolution. See _________
  * 
  * `K_h` is the height of the convolution window in pixels.
  * 
@@ -178,14 +178,14 @@ void fc_deepin_shallowout_16(
  * `zero_point_vec` is a vector of `chans_to_write` zero-point values for each channel.
  * 
  * Constraints:
- *  - `Y`, `X`, `K`, and `BSS` must all point to word-aligned memory addresses.
+ *  - `Y`, `X`, `K`, and `BSO` must all point to word-aligned memory addresses.
  *  - `0 <= chans_to_write <= 16`  (though 0 is an expensive no-op)
  *  - `K_c` and `Y_c` must be a multiple of 4.
  * 
  * \param Y                 Address at which to write first outputs
  * \param X                 Address in input image of the initial convolution window location
  * \param K                 Convolution kernel
- * \param BSS               Bias, shifts and scale tensor
+ * \param BSO               Bias, shifts and scale tensor
  * \param K_h               Convolution window height
  * \param K_w               Convolution window width
  * \param pad_t             Number of rows of padding at the top of the convolution window
@@ -204,7 +204,7 @@ void nn_conv2d_hstrip_depthwise_padded(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const unsigned K_h,
     const unsigned K_w,
     const int32_t pad_t,
@@ -263,7 +263,7 @@ void nn_conv2d_hstrip_depthwise_padded(
  * 
  * `K` is the convolution kernel, and has shape `(K_h, K_w, K_c)`.
  * 
- * `BSS` are the biases shifts and scale which are applied to the convolution. See _________
+ * `BSO` are the biases shifts and scale which are applied to the convolution. See _________
  * 
  * `K_h` is the height of the convolution window in pixels.
  * 
@@ -290,14 +290,14 @@ void nn_conv2d_hstrip_depthwise_padded(
  * `chans_to_write` is the number of output channels to be written. 
  * 
  * Constraints:
- *  - `Y`, `X`, `K`, and `BSS` must all point to word-aligned memory addresses.
+ *  - `Y`, `X`, `K`, and `BSO` must all point to word-aligned memory addresses.
  *  - `0 <= chans_to_write <= 16`  (although 0 is an expensive no-op)
  *  - `K_c` and `Y_c` must be a multiple of 4.
  * 
  * \param Y                 Address at which to write first outputs
  * \param X                 Address in input image of the initial convolution window location
  * \param K                 Convolution kernel
- * \param BSS               Bias, shifts and scale tensor
+ * \param BSO               Bias, shifts and scale tensor
  * \param K_h               Convolution window height
  * \param K_w               Convolution window width
  * \param K_c               Number of channels in the input image and the kernel tensor
@@ -311,7 +311,7 @@ void nn_conv2d_hstrip_depthwise(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const unsigned K_h,
     const unsigned K_w,
     const int32_t K_c,
@@ -368,8 +368,8 @@ void nn_conv2d_hstrip_depthwise(
  * simplify this. The memory layout of @tensor{K} is the standard memory layout for 4D tensors (see 
  * @ref standard_layout).
  * 
- * `bss` points to the `nn_bss_block_t` describing the biases, shifts and scale for the current group of output 
- * channels. `bss` can be initialized with `nn_standard_BSS_layout()`. See @ref bss_layout for more information.
+ * `bso` points to the `nn_bso_block_t` describing the biases, shifts and scale for the current group of output 
+ * channels. `bso` can be initialized with `nn_standard_BSO_layout()`. See @ref bso_layout for more information.
  * 
  * `K_height` and `K_width` are the height and width respectively of the 2D convolution window.
  * 
@@ -429,7 +429,7 @@ void nn_conv2d_hstrip_depthwise(
  * the user as a vector to save time (it allows the same vector to be reused, rather than copying a single
  * `int8_t` value several times).
  * 
- * @requires_word_alignment{y,x,k,bss}
+ * @requires_word_alignment{y,x,k,bso}
  * 
  * @par Requirements and Constraints
  *   - `C_in` must be a multiple of `4`.
@@ -438,7 +438,7 @@ void nn_conv2d_hstrip_depthwise(
  * @param[out] y                    Pointer to output image @tensor{Y}
  * @param[in]  x                    Pointer to input image @tensor{X}
  * @param[in]  k                    The kernel tensor @tensor{K}
- * @param[in]  bss                  The bias-shift-scale parameters
+ * @param[in]  bso                  The bias-scale-offset parameters
  * @param[in]  K_height             Kernel height @math{K_h} (in pixels)
  * @param[in]  K_width              Kernel width @math{K_w} (in pixels)
  * @param[in]  K_hori_stride        Horizontal stride of the convolution window (in pixels)
@@ -460,7 +460,7 @@ void nn_conv2d_hstrip_deep_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,    
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_height,
         const unsigned K_width,
         const unsigned K_hori_stride,
@@ -522,8 +522,8 @@ void nn_conv2d_hstrip_deep_padded(
  * simplify this. The memory layout of @tensor{K} is the standard memory layout for 4D tensors (see 
  * @ref standard_layout).
  * 
- * `bss` points to the `nn_bss_block_t` describing the biases, shifts and scale for the current group of output 
- * channels. `bss` can be initialized with `nn_standard_BSS_layout()`. See @ref bss_layout for more information.
+ * `bso` points to the `nn_bso_block_t` describing the biases, shifts and scale for the current group of output 
+ * channels. `bso` can be initialized with `nn_standard_BSO_layout()`. See @ref bso_layout for more information.
  * 
  * `K_height` and `K_width` are the height and width respectively of the 2D convolution window.
  * 
@@ -585,7 +585,7 @@ void nn_conv2d_hstrip_deep_padded(
  * 
  * `C_out_tail` is the tail of the output channel count. The value given should be @math{left(Y_c mod 16\right}.
  * 
- * @requires_word_alignment{y,x,k,bss}
+ * @requires_word_alignment{y,x,k,bso}
  * 
  * @par Requirements and Constraints
  *   - `C_in` must be a multiple of `4`.
@@ -595,7 +595,7 @@ void nn_conv2d_hstrip_deep_padded(
  * @param[out] y                    Pointer to output image @tensor{Y}
  * @param[in]  x                    Pointer to input image @tensor{X}
  * @param[in]  k                    The kernel tensor @tensor{K}
- * @param[in]  bss                  The bias-shift-scale parameters
+ * @param[in]  bso                  The bias-scale-offset parameters
  * @param[in]  K_height             Kernel height @math{K_h} (in pixels)
  * @param[in]  K_width              Kernel width @math{K_w} (in pixels)
  * @param[in]  K_hori_stride        Horizontal stride of the convolution window (in pixels)
@@ -618,7 +618,7 @@ void nn_conv2d_hstrip_tail_deep_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,    
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_height,
         const unsigned K_width,
         const unsigned K_hori_stride,
@@ -641,7 +641,7 @@ void nn_conv2d_hstrip_deep(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,    
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_height,
         const unsigned K_width,
         const unsigned K_hori_stride,
@@ -659,7 +659,7 @@ void nn_conv2d_hstrip_tail_deep(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,    
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_height,
         const unsigned K_width,
         const unsigned K_hori_stride,
@@ -676,7 +676,7 @@ void nn_conv2d_hstrip_shallowin_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_h,
         const unsigned K_h_stride,
         const channel_count_t C_in,
@@ -695,7 +695,7 @@ void nn_conv2d_hstrip_shallowin(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_h,
         const unsigned K_h_stride,
         const channel_count_t C_in,
@@ -709,7 +709,7 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_h,
         const unsigned K_h_stride,
         const channel_count_t C_in,
@@ -729,7 +729,7 @@ void nn_conv2d_hstrip_tail_shallowin(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_h,
         const unsigned K_h_stride,
         const channel_count_t C_in,

@@ -88,7 +88,7 @@ void conv2d_shallowin_init(
         job->init_padding.bottom = init_padding_bottom + params->start.rows * plan->window.stride.vertical;
         job->init_padding.right  = init_padding_right  + params->start.cols * plan->window.stride.horizontal;
 
-        job->stride.start.BSS  = (params->start.channels / VPU_INT8_ACC_PERIOD);
+        job->stride.start.BSO  = (params->start.channels / VPU_INT8_ACC_PERIOD);
         job->stride.start.K    = params->start.channels * plan->window.shape.height * VPU_INT8_EPV;
         job->stride.start.Y    = params->start.rows * y_row_bytes 
                                + params->start.cols * y_params->channels
@@ -112,7 +112,7 @@ void conv2d_shallowin(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const nn_conv2d_shallowin_plan_t* plan,
     const nn_conv2d_shallowin_job_t* job)
 { 
@@ -122,7 +122,7 @@ void conv2d_shallowin(
     X = ADDR(X,job->stride.start.X);
     Y = ADDR(Y, job->stride.start.Y);
     K = ADDR(K, job->stride.start.K);
-    BSS = ADDR(BSS, job->stride.start.BSS);
+    BSO = ADDR(BSO, job->stride.start.BSO);
 
     const unsigned C_out_tail = plan->channels.Y % VPU_INT8_ACC_PERIOD;
 
@@ -164,22 +164,22 @@ void conv2d_shallowin(
 
             if(cur_chans == VPU_INT8_ACC_PERIOD){
                 if(requires_padding){
-                    nn_conv2d_hstrip_shallowin_padded(Y, X_cog, K, BSS, plan->window.shape.height,
+                    nn_conv2d_hstrip_shallowin_padded(Y, X_cog, K, BSO, plan->window.shape.height,
                         plan->window.stride.horizontal, plan->channels.X, cur_pad_t, cur_pad_b, pad_l, 
                         pad_r, plan->stride.X.row, plan->channels.Y, job->output.cols, zero_point_vec);
                 } else {
-                    nn_conv2d_hstrip_shallowin( Y, X_cog, K, BSS, plan->window.shape.height,
+                    nn_conv2d_hstrip_shallowin( Y, X_cog, K, BSO, plan->window.shape.height,
                         plan->window.stride.horizontal, plan->channels.X, plan->stride.X.row, 
                         plan->channels.Y, job->output.cols);
                 }
             } else {
                 if(requires_padding){
-                    nn_conv2d_hstrip_tail_shallowin_padded( Y, X_cog, K, BSS, plan->window.shape.height, 
+                    nn_conv2d_hstrip_tail_shallowin_padded( Y, X_cog, K, BSO, plan->window.shape.height, 
                         plan->window.stride.horizontal, plan->channels.X, cur_pad_t, cur_pad_b, pad_l, 
                         pad_r, plan->stride.X.row, plan->channels.Y, job->output.cols, zero_point_vec, 
                         C_out_tail);
                 } else {
-                    nn_conv2d_hstrip_tail_shallowin( Y, X_cog, K, BSS, plan->window.shape.height, 
+                    nn_conv2d_hstrip_tail_shallowin( Y, X_cog, K, BSO, plan->window.shape.height, 
                         plan->window.stride.horizontal, plan->channels.X, plan->stride.X.row, 
                         plan->channels.Y, job->output.cols, C_out_tail);
                 }
@@ -194,6 +194,6 @@ void conv2d_shallowin(
 
         K = ADDR(K, plan->window.shape.height * VPU_INT8_EPV);
         Y = ADDR(Y, job->stride.chan_group.Y);
-        BSS = ADDR(BSS, 1);
+        BSO = ADDR(BSO, 1);
     }
 }

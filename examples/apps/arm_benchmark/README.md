@@ -21,7 +21,7 @@ Note, `xcore` is the default target.
 
 Running with the xCORE simulator
 
-    > xsim --args bin/cifar-10.xe ../test_inputs/dog.bin
+    > xsim --args bin/arm_benchmark.xe ../test_inputs/dog.bin
 
 ## x86
 
@@ -31,9 +31,9 @@ Building for x86
 
 Running
 
-    > ./bin/test_model ../test_inputs/ship.bin
+    > ./bin/arm_benchmark ../test_inputs/ship.bin
 
 ## Computing Accuracy on xCORE
 
     > cd test_inputs
-    > ./test_accuracy.py --xe path/to/some.xe
+    > ./test_accuracy.py --xe path/to/arm_benchmark.xe

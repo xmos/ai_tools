@@ -1,19 +1,19 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 #include <stdio.h>
 
-#ifndef XCORE_LOGGING_H_
-#define XCORE_LOGGING_H_
+#ifndef LIB_OPS_LOGGING_H_
+#define LIB_OPS_LOGGING_H_
 
-#ifdef XCORE_ERROR
-#define xcError(...) printf(__VA_ARGS__)
+#ifdef ENABLE_ERROR_LOGGING
+#define LOG_ERROR(...) printf(__VA_ARGS__)
 #else
-#define xcError(...)
-#endif  // XCORE_ERROR
+#define LOG_ERROR(...)
+#endif  // ENABLE_ERROR_LOGGING
 
-#ifdef XCORE_TRACE
-#define xcTrace(...) printf(__VA_ARGS__)
+#ifdef ENABLE_TRACE_LOGGING
+#define LOG_TRACE(...) printf(__VA_ARGS__)
 #else
-#define xcTrace(...)
-#endif  // XCORE_TRACE
+#define LOG_TRACE(...)
+#endif  // ENABLE_TRACE_LOGGING
 
-#endif  // XCORE_LOGGING_H_
+#endif  // LIB_OPS_LOGGING_H_

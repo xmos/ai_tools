@@ -12,7 +12,7 @@ namespace activations {
 
 XCoreStatus Lookup8::Eval(uint8_t* Y, const uint8_t* X, const uint8_t* lut,
                           const int32_t length) {
-  xcTrace("Lookup8 Eval id=%p\n", this);
+  LOG_TRACE("Lookup8 Eval id=%p\n", this);
 
   lookup8(Y, X, lut, length);
 

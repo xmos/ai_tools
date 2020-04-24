@@ -7,8 +7,8 @@ namespace xcore {
 namespace fully_connected {
 
 XCoreStatus FullyConnected_16::Init(int32_t C_in, int32_t C_out) {
-  xcTrace("FullyConnected_16 Init id=%p C_in=%ld C_out=%ld\n", this, C_in,
-          C_out);
+  LOG_TRACE("FullyConnected_16 Init id=%p C_in=%ld C_out=%ld\n", this, C_in,
+            C_out);
 
   fully_connected_init(&plan_, C_in, C_out);
   return kXCoreOk;

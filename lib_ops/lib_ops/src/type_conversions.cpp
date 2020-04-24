@@ -12,7 +12,7 @@ namespace type_conversions {
 
 XCoreStatus Requantize_16_to_8::Eval(int8_t* Y, const int16_t* X,
                                      const int32_t length) {
-  xcTrace("Requantize_16_to_8 Eval id=%p\n", this);
+  LOG_TRACE("Requantize_16_to_8 Eval id=%p\n", this);
   requantize_16_to_8(Y, X, length);
 
   return kXCoreOk;

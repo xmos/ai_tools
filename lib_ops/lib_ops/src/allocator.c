@@ -50,8 +50,8 @@ void *xcMalloc(size_t size) {
   }
 
   // Allocator is out of memory for this allocation
-  xcError("Failed to allocate memory, %d bytes required\n",
-          (offset + size) - kBufferSize);
+  LOG_ERROR("Failed to allocate memory, %d bytes required\n",
+            (offset + size) - kBufferSize);
   return NULL;
 }
 
@@ -65,7 +65,7 @@ void *xcRealloc(void *ptr, size_t size) {
     return xcMalloc(size);
   }
   // Reallocating an arbitrary allocation is not supported
-  xcError("Reallocating an arbitrary allocation is not supported\n");
+  LOG_ERROR("Reallocating an arbitrary allocation is not supported\n");
   return NULL;
 }
 
@@ -77,5 +77,5 @@ void xcFree(void *ptr) {
     kAllocatedSize = raw_ptr - kBuffer;
     return;
   }
-  xcError("Freeing an arbitrary allocation is not supported\n");
+  LOG_ERROR("Freeing an arbitrary allocation is not supported\n");
 }

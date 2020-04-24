@@ -11,7 +11,7 @@ namespace xcore {
 namespace arg_min_max {
 
 XCoreStatus ArgMax16::Eval(const int16_t* A, int32_t* C, const int32_t length) {
-  xcTrace("ArgMax16 Eval id=%p\n", this);
+  LOG_TRACE("ArgMax16 Eval id=%p\n", this);
 
   argmax_16(A, C, length);
 

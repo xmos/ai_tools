@@ -19,7 +19,7 @@ namespace pooling {
 //**************************************
 XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                           int32_t Y_w, int32_t C_out) {
-  xcTrace(
+  LOG_TRACE(
       "MaxPool Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
 
@@ -43,7 +43,7 @@ XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
 }
 
 XCoreStatus MaxPool::Eval(int8_t* Y, const int8_t* X) {
-  xcTrace("MaxPool Eval id=%p\n", this);
+  LOG_TRACE("MaxPool Eval id=%p\n", this);
   maxpool2d(Y, X, &plan_);
   return kXCoreOk;
 }
@@ -57,7 +57,7 @@ XCoreStatus MaxPool::Eval(int8_t* Y, const int8_t* X) {
 //**************************************
 XCoreStatus AvgPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                           int32_t Y_w, int32_t C_out) {
-  xcTrace(
+  LOG_TRACE(
       "AvgPool Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
   nn_image_params_t in_params;
@@ -80,7 +80,7 @@ XCoreStatus AvgPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
 }
 
 XCoreStatus AvgPool::Eval(int8_t* Y, const int8_t* X) {
-  xcTrace("AvgPool Eval id=%p\n", this);
+  LOG_TRACE("AvgPool Eval id=%p\n", this);
   avgpool2d(Y, X, &plan_);
   return kXCoreOk;
 }
@@ -93,7 +93,7 @@ XCoreStatus AvgPool::Eval(int8_t* Y, const int8_t* X) {
 //**************************************
 //**************************************
 XCoreStatus AvgPool_Global::Init(int32_t bias, int32_t shift, int32_t scale) {
-  xcTrace("AvgPool_Global Init id=%p\n", this);
+  LOG_TRACE("AvgPool_Global Init id=%p\n", this);
   bias_ = bias;
   shift_ = shift;
   scale_ = scale;
@@ -103,7 +103,7 @@ XCoreStatus AvgPool_Global::Init(int32_t bias, int32_t shift, int32_t scale) {
 
 XCoreStatus AvgPool_Global::Eval(int8_t* Y, const int8_t* X, int32_t X_h,
                                  int32_t X_w, uint32_t C_in) {
-  xcTrace("AvgPool_Global Eval id=%p\n", this);
+  LOG_TRACE("AvgPool_Global Eval id=%p\n", this);
   avgpool2d_global(Y, X, X_h, X_w, C_in, bias_, shift_, scale_);
 
   return kXCoreOk;

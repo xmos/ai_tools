@@ -12,7 +12,7 @@ from .conftest import (
     test_matching_params,
     test_non_matching_output_channels,
     test_non_matching_input_channels,
-    test_non_matching_tensors
+    test_non_matching_tensors,
 )
 
 
@@ -22,25 +22,11 @@ from .conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
-PARAMS["extended"].update({
-    "stride_h": [1, 2, 3],  # TODO: this should be the default after the conv2d improvements
-    "stride_w": [1, 2, 3],  # TODO: this should be the default after the conv2d improvements
-})
-
-PARAMS["default"].update({
-    "stride_h": [1, 2],  # TODO: this should be the default after the conv2d improvements
-    "stride_w": [1, 2],  # TODO: this should be the default after the conv2d improvements
-})
-
-PARAMS["smoke"].update({
-    "stride_h": [1],  # TODO: this should be the default after the conv2d improvements
-    "stride_w": [1],  # TODO: this should be the default after the conv2d improvements
-})
-
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def build_model():
@@ -54,8 +40,12 @@ def trf_pass():
 
 @pytest.fixture()
 def model(weight_shape, input_size, padding, strides):
-    return build_conv2d(weight_shape=weight_shape, input_size=input_size,
-                        padding=padding, strides=strides)
+    return build_conv2d(
+        weight_shape=weight_shape,
+        input_size=input_size,
+        padding=padding,
+        strides=strides,
+    )
 
 
 if __name__ == "__main__":

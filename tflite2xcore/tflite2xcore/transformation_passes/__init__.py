@@ -7,18 +7,23 @@ from .lut_passes import (
     ReplaceLogisticPass,
     ReplaceReLUPass,
     ReplaceReLU6Pass,
+    LegalizeXCLookupTablePass,
 )
 from .conv2d_passes import (
     Replace1x1Conv2dPass,
+    LegalizeXC1x1ConvPass,
     ReplaceDepthwiseConv2dPass,
+    LegalizeXCDepthwiseConvPass,
     ReplaceDeepConv2dPass,
+    LegalizeXCDeepConvPass,
     ParallelizeXCConv2dPass,
-    ReplaceShallowinDeepoutConv2DPass,
-    ReplaceSingleinDeepoutDepthwiseConv2DPass,
     ParallelizeDeepConv2dPass,
 )
 
-from .fully_connected_passes import ReplaceFullyConnectedPass
+from .fully_connected_passes import (
+    ReplaceFullyConnectedPass,
+    LegalizeXCFullyConnectedPass,
+)
 
 from .pooling_passes import (
     ReplaceMaxPool2DPass,
@@ -34,8 +39,8 @@ from .padding_passes import (
 )
 
 from .quantize_dequantize_passes import (
-    LegalizeQuantizedInputPass,
-    LegalizeQuantizedOutputPass,
+    CanonicalizeQuantizedInputPass,
+    CanonicalizeQuantizedOutputPass,
     LegalizeFloatInputPass,
     LegalizeFloatOutputPass,
 )
@@ -43,7 +48,6 @@ from .quantize_dequantize_passes import (
 from .op_version_passes import LegalizeQuantizeVersionPass
 
 from .cleanup_passes import (
-    RemoveXCOREWeightBiasOperatorQuantInfo,
     RemoveUnusedBuffersPass,
     RemoveDanglingTensorsPass,
 )
@@ -51,3 +55,5 @@ from .cleanup_passes import (
 from .renaming_passes import LegalizeOperatorOutputTensorNamePass
 
 from .minification_passes import MinifyQuantInfoPass, MinifyTensorNamesPass
+
+from .word_alignment_passes import CanonicalizeConv2DInputChannels

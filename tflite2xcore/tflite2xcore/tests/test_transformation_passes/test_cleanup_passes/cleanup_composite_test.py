@@ -4,9 +4,9 @@ import pytest
 
 from tflite2xcore.transformation_passes import (
     RemoveUnusedBuffersPass,
-    RemoveDanglingTensorsPass
+    RemoveDanglingTensorsPass,
 )
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_schema import TensorType
 
 from .conftest import model, count_tensors, add_dangling_tensor
 
@@ -14,6 +14,7 @@ from .conftest import model, count_tensors, add_dangling_tensor
 #  ----------------------------------------------------------------------------
 #                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
+
 
 def test_mutate(model):
     add_dangling_tensor(model)

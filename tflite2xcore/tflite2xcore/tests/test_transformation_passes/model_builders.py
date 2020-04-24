@@ -2,9 +2,11 @@
 
 import pytest
 import numpy as np
+
 from copy import deepcopy
-from tflite2xcore.xcore_model import XCOREModel, TensorType
-from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes, XCOREOpCodes
+
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import TensorType, OperatorCode, BuiltinOpCodes, XCOREOpCodes
 
 
 def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):

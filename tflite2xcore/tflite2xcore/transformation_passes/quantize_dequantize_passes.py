@@ -1,7 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode
+from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes, OperatorCode
 from tflite2xcore.transformation_passes import (
     OperatorMatchingPass,
     InputTensorMatchingPass,
@@ -10,7 +9,7 @@ from tflite2xcore.transformation_passes import (
 
 
 # TODO: improve tests for this
-class LegalizeQuantizedInputPass(OperatorMatchingPass):
+class CanonicalizeQuantizedInputPass(OperatorMatchingPass):
     def match(self, op):
         if super().match(op) and op.operator_code.code is BuiltinOpCodes.QUANTIZE:
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
@@ -31,7 +30,7 @@ class LegalizeQuantizedInputPass(OperatorMatchingPass):
 
 
 # TODO: improve tests for this
-class LegalizeQuantizedOutputPass(OperatorMatchingPass):
+class CanonicalizeQuantizedOutputPass(OperatorMatchingPass):
     def match(self, op):
         if super().match(op) and op.operator_code.code is BuiltinOpCodes.DEQUANTIZE:
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]

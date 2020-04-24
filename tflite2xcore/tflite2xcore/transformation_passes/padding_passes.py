@@ -3,8 +3,13 @@
 import numpy as np
 
 from tflite2xcore.transformation_passes import OperatorMatchingPass
-from tflite2xcore.xcore_model import TensorType
-from tflite2xcore.operator_codes import BuiltinOpCodes, XCOREOpCodes, OperatorCode
+from tflite2xcore.xcore_schema import (
+    TensorType,
+    BuiltinOpCodes,
+    XCOREOpCodes,
+    OperatorCode,
+    BuiltinOptions,
+)
 
 
 class FuseConv2dPaddingPass(OperatorMatchingPass):
@@ -127,7 +132,7 @@ class SplitPaddingPass(OperatorMatchingPass):
         # create new (batch/channel-wise) operator
         new_op = subgraph.create_operator(
             OperatorCode(BuiltinOpCodes.PAD),
-            builtin_options_type=op.builtin_options_type,
+            builtin_options_type=BuiltinOptions.PadOptions,
             inputs=[old_input],
         )
         subgraph.insert_operator(op, new_op)

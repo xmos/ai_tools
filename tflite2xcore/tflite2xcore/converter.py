@@ -3,28 +3,45 @@
 import pathlib
 
 from tflite2xcore.pass_manager import PassManager
-from tflite2xcore.serialization import read_flatbuffer, write_flatbuffer
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import transformation_passes as passes
 
 
-def strip_model(model, *, remove_softmax=False, debug=False, legalize_op_versions=True):
-    pass_mgr = PassManager(
-        model,
-        passes=[
-            passes.LegalizeQuantizedInputPass(),
-            passes.LegalizeQuantizedOutputPass(),
-        ],
-        debug=debug,
-    )
+class CleanupManager(PassManager):
+    def __init__(self, model=None, **kwargs):
+        super().__init__(
+            model,
+            passes=[
+                passes.RemoveDanglingTensorsPass(),
+                passes.RemoveUnusedBuffersPass(),
+            ],
+            **kwargs
+        )
 
+
+class InputOutputCanonicalizationManager(PassManager):
+    def __init__(self, model=None, **kwargs):
+        super().__init__(
+            model,
+            passes=[
+                passes.CanonicalizeQuantizedInputPass(),
+                passes.CanonicalizeQuantizedOutputPass(),
+            ],
+            **kwargs
+        )
+
+
+def strip_model(model, *, remove_softmax=False, debug=False, legalize_op_versions=True):
+    pass_mgr = InputOutputCanonicalizationManager(model, debug=debug)
+
+    # TODO: remove this
     if remove_softmax:
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
     if legalize_op_versions:
         pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
 
-    pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
-    pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
+    pass_mgr.register_passes(CleanupManager())
 
     pass_mgr.run_passes()
     model.description = model.description + " + XMOS stripped."
@@ -69,25 +86,24 @@ def optimize_for_xcore(
     debug=False
 ):
     # NOTE: the order of the passes is mostly strict
-    pass_mgr = PassManager(
-        model,
-        passes=[
-            passes.LegalizeQuantizedInputPass(),
-            passes.LegalizeQuantizedOutputPass(),
-            passes.SplitPaddingPass(),
-        ],
-        keep_intermediates=bool(intermediates_path),
-        debug=debug,
+    pass_mgr = InputOutputCanonicalizationManager(
+        model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
+    pass_mgr.register_pass(passes.SplitPaddingPass())
 
+    # TODO: remove this
     if remove_softmax:
         pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
+
+    pass_mgr.register_pass(passes.ReplaceReLUPass())
+    pass_mgr.register_pass(passes.ReplaceReLU6Pass())
+    pass_mgr.register_pass(passes.ReplaceTanhPass())
+    pass_mgr.register_pass(passes.ReplaceLogisticPass())
 
     pass_mgr.register_pass(passes.Replace1x1Conv2dPass())
     pass_mgr.register_pass(passes.ReplaceDepthwiseConv2dPass())
     pass_mgr.register_pass(passes.ReplaceDeepConv2dPass())
-    pass_mgr.register_pass(passes.ReplaceShallowinDeepoutConv2DPass())
-    pass_mgr.register_pass(passes.ReplaceSingleinDeepoutDepthwiseConv2DPass())
+
     pass_mgr.register_pass(passes.ReplaceMaxPool2D2x2Pass())
     pass_mgr.register_pass(passes.ReplaceMaxPool2DPass())
     pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())
@@ -96,10 +112,11 @@ def optimize_for_xcore(
 
     pass_mgr.register_pass(passes.ReplaceFullyConnectedPass())
 
-    pass_mgr.register_pass(passes.ReplaceReLUPass())
-    pass_mgr.register_pass(passes.ReplaceReLU6Pass())
-    pass_mgr.register_pass(passes.ReplaceTanhPass())
-    pass_mgr.register_pass(passes.ReplaceLogisticPass())
+    pass_mgr.register_pass(passes.LegalizeXCLookupTablePass())
+    pass_mgr.register_pass(passes.LegalizeXCFullyConnectedPass())
+    pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
+    pass_mgr.register_pass(passes.LegalizeXC1x1ConvPass())
+    pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
 
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
@@ -108,10 +125,9 @@ def optimize_for_xcore(
         pass_mgr.register_pass(passes.ParallelizeXCConv2dPass(num_threads=num_threads))
 
     if cleanup:
-        pass_mgr.register_pass(passes.RemoveXCOREWeightBiasOperatorQuantInfo())
-        pass_mgr.register_pass(passes.RemoveDanglingTensorsPass())
-        pass_mgr.register_pass(passes.RemoveUnusedBuffersPass())
+        pass_mgr.register_passes(CleanupManager())
 
+    # TODO: this is actually a canonicalization pass
     pass_mgr.register_pass(passes.LegalizeOperatorOutputTensorNamePass())
     pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
 
@@ -138,7 +154,7 @@ def convert(
     intermediates_path=None,
     debug=False
 ):
-    model = read_flatbuffer(tflite_input_path)
+    model = XCOREModel.read_flatbuffer(tflite_input_path)
     optimize_for_xcore(
         model,
         remove_softmax=remove_softmax,
@@ -147,4 +163,4 @@ def convert(
         intermediates_path=intermediates_path,
         debug=debug,
     )
-    write_flatbuffer(model, tflite_output_path)
+    model.write_flatbuffer(tflite_output_path)

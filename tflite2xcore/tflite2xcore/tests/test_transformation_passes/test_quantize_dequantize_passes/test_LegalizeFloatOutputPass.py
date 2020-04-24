@@ -2,8 +2,8 @@
 
 import pytest
 
-from tflite2xcore.xcore_model import XCOREModel, TensorType
-from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import TensorType, OperatorCode, BuiltinOpCodes
 from tflite2xcore.transformation_passes import LegalizeFloatOutputPass
 
 from .test_LegalizeFloatInputPass import simple_model, non_matching_model
@@ -15,11 +15,18 @@ def dual_output_model():
     subgraph = model.create_subgraph()
 
     # TODO: add operator options to specify split axis and number
-    qin = subgraph.create_tensor('quantized_input', TensorType.INT8, [1, 5, 5, 4], isinput=True)
-    qout1 = subgraph.create_tensor('quantized_output_1', TensorType.INT8, [1, 5, 5, 2], isoutput=True)
-    qout2 = subgraph.create_tensor('quantized_output_2', TensorType.INT8, [1, 5, 5, 2], isoutput=True)
-    subgraph.create_operator(OperatorCode(BuiltinOpCodes.SPLIT),
-                             inputs=[qin], outputs=[qout1, qout2])
+    qin = subgraph.create_tensor(
+        "quantized_input", TensorType.INT8, [1, 5, 5, 4], isinput=True
+    )
+    qout1 = subgraph.create_tensor(
+        "quantized_output_1", TensorType.INT8, [1, 5, 5, 2], isoutput=True
+    )
+    qout2 = subgraph.create_tensor(
+        "quantized_output_2", TensorType.INT8, [1, 5, 5, 2], isoutput=True
+    )
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.SPLIT), inputs=[qin], outputs=[qout1, qout2]
+    )
 
     return model
 
@@ -38,9 +45,9 @@ def test_mutate(simple_model, trf_pass):
     trf_pass.mutate(subgraph.outputs[0])
     subgraph.sanity_check()
 
-    qin = subgraph.get_tensor('quantized_input')
-    qout = subgraph.get_tensor('quantized_output')
-    fout = subgraph.get_tensor('quantized_output_float')
+    qin = subgraph.get_tensor("quantized_input")
+    qout = subgraph.get_tensor("quantized_output")
+    fout = subgraph.get_tensor("quantized_output_float")
 
     assert len(subgraph.operators) == 2
     assert len(subgraph.tensors) == 3
@@ -56,9 +63,9 @@ def test_run(simple_model, trf_pass):
     simple_model.sanity_check()
     subgraph = simple_model.subgraphs[0]
 
-    qin = subgraph.get_tensor('quantized_input')
-    qout = subgraph.get_tensor('quantized_output')
-    fout = subgraph.get_tensor('quantized_output_float')
+    qin = subgraph.get_tensor("quantized_input")
+    qout = subgraph.get_tensor("quantized_output")
+    fout = subgraph.get_tensor("quantized_output_float")
 
     assert len(subgraph.operators) == 2
     assert len(subgraph.tensors) == 3
@@ -74,11 +81,11 @@ def test_run_dual_output(dual_output_model, trf_pass):
     dual_output_model.sanity_check()
     subgraph = dual_output_model.subgraphs[0]
 
-    qin = subgraph.get_tensor('quantized_input')
-    qout_1 = subgraph.get_tensor('quantized_output_1')
-    qout_2 = subgraph.get_tensor('quantized_output_2')
-    fout_1 = subgraph.get_tensor('quantized_output_1_float')
-    fout_2 = subgraph.get_tensor('quantized_output_2_float')
+    qin = subgraph.get_tensor("quantized_input")
+    qout_1 = subgraph.get_tensor("quantized_output_1")
+    qout_2 = subgraph.get_tensor("quantized_output_2")
+    fout_1 = subgraph.get_tensor("quantized_output_1_float")
+    fout_2 = subgraph.get_tensor("quantized_output_2_float")
 
     assert len(subgraph.operators) == 3
     assert len(subgraph.tensors) == 5

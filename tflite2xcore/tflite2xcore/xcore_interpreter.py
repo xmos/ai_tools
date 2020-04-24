@@ -9,7 +9,7 @@ import ctypes
 import numpy as np
 
 from tflite2xcore import libtflite2xcore as lib
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_schema import TensorType
 
 
 MAX_TENSOR_ARENA_SIZE = 1000000
@@ -370,7 +370,7 @@ class XCOREInterpreter:
             "index": tensor_index,
             "name": tensor_name.value.decode("utf-8"),
             "shape": np.array(tensor_shape, dtype=np.int32),
-            "dtype": TensorType.to_numpy_dtype(tensor_type.value),
+            "dtype": TensorType(tensor_type.value).to_numpy_dtype(),
             "quantization": (scales, zero_points),
         }
 

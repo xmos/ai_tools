@@ -89,6 +89,12 @@ def optimize_for_xcore(
     pass_mgr = InputOutputCanonicalizationManager(
         model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
+
+    # canonicalize word alignment
+    pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())
+
+    # word alignment canonicalization introduces new pads, so first fuse then split
+    pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
     pass_mgr.register_pass(passes.SplitPaddingPass())
 
     # TODO: remove this

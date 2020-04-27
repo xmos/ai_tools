@@ -232,6 +232,10 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     b = subgraph.create_tensor(
         'biases', TensorType.INT32, weight_shape[:1])
 
+    # add dummy data so that the op can be mutated
+    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
+    b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
+
     if padding == 'SAME':
         output_shape = [1, height, width, C_out]
     elif padding == 'VALID':

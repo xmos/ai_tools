@@ -480,8 +480,9 @@
             {
                 "-wi": 1,
                 "-hi": 1,
-                "-kw": 1,
-                "-kh": 1,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 7,
                 "-pd": "same",
                 "xfail": true
             },
@@ -490,6 +491,7 @@
                 "-hi": 1,
                 "-kw": 3,
                 "-kh": 3,
+                "-in": 4,
                 "-pd": "same",
                 "xfail": true
             },
@@ -498,6 +500,7 @@
                 "-hi": 3,
                 "-kw": 3,
                 "-kh": 3,
+                "-in": 8,
                 "-pd": "same",
                 "xfail": true
             },
@@ -506,15 +509,17 @@
                 "-hi": 5,
                 "-kw": 3,
                 "-kh": 3,
+                "-in": 5,
                 "-pd": "same",
                 "smoke": true,
                 "xfail": true
             },
             {
-                "-wi": 1,
-                "-hi": 1,
-                "-kw": 1,
-                "-kh": 1,
+                "-wi": 5,
+                "-hi": 3,
+                "-kw": 5,
+                "-kh": 3,
+                "-in": 1,
                 "-pd": "valid",
                 "xfail": true
             },
@@ -523,14 +528,16 @@
                 "-hi": 3,
                 "-kw": 3,
                 "-kh": 3,
+                "-in": 2,
                 "-pd": "valid",
                 "xfail": true
             },
             {
                 "-wi": 5,
                 "-hi": 5,
-                "-kw": 3,
+                "-kw": 1,
                 "-kh": 3,
+                "-in": 31,
                 "-pd": "valid",
                 "xfail": true
             }

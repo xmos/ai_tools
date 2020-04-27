@@ -204,6 +204,50 @@ class LegalizeXCDeepConvPass(LegalizeXCConvPass):
         return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2, 3))
 
 
+class ReplaceShallowinConv2dPass(ReplacePaddedConv2DPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.CONV_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_conv2d_shallowin)
+
+    def match(self, op):
+        if super().match(op):
+            with self.using(op):
+                return (
+                    self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
+                    and self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+                    and np.prod(self._weights.shape[2:]) <= 32  # K_w * Cin <= 32
+                )
+
+        return False
+
+
+class LegalizeXCShallowinConvPass(LegalizeXCConvPass):
+    @property
+    def matching_opcode(self):
+        return XCOREOpCodes.XC_conv2d_shallowin
+
+    @log_method_output()
+    def _zero_point_bias(self):
+        return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2, 3))
+
+    def mutate_weights(self, op):
+        with self.using(op):
+            Kw_pad = int(32 / self._weights.shape[3] - self._weights.shape[2])
+            unpadded_weights = self._weights.numpy.astype(np.int8).reshape(
+                self._new_weight_shape
+            )
+            self._replace_weights(
+                np.pad(
+                    unpadded_weights, pad_width=[(0, 0), (0, 0), (0, Kw_pad), (0, 0)],
+                )
+            )
+            self._log_weights()
+
+
 class ParallelizeXCConv2dPass(OperatorMatchingPass):
     def __init__(self, *args, num_threads=None, forced=False, **kwargs):
         super().__init__(*args, **kwargs)

@@ -16,6 +16,8 @@ from .conv2d_passes import (
     LegalizeXCDepthwiseConvPass,
     ReplaceDeepConv2dPass,
     LegalizeXCDeepConvPass,
+    ReplaceShallowinConv2dPass,
+    LegalizeXCShallowinConvPass,
     ParallelizeXCConv2dPass,
     ParallelizeDeepConv2dPass,
 )

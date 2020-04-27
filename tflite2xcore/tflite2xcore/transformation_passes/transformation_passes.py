@@ -202,18 +202,6 @@ class ReplaceWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
                     and self._biases.type is TensorType.INT32
                 )
 
-    # TODO: remove
-    def mutate_biases(self, op):
-        # NOTE: by default no bias layout rearrangement is done for this op
-        with self.using(op):
-            self._biases.name = f"{op.name}/biases"
-
-    # TODO: remove
-    def mutate_weights(self, op):
-        # NOTE: by default no weight layout rearrangement is done for this op
-        with self.using(op):
-            self._weights.name = f"{op.name}/weights"
-
     def mutate(self, op):
         new_op = super().mutate(op)
         new_op.add_custom_options(illegal_params=True)

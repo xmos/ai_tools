@@ -339,6 +339,10 @@ def build_depthwise_conv2d(
     w = subgraph.create_tensor("weights", TensorType.INT8, weight_shape)
     b = subgraph.create_tensor("biases", TensorType.INT32, shape=[C_out])
 
+    # add dummy data so that the op can be mutated
+    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
+    b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
+
     if padding == "SAME":
         output_shape = [1, height, width, C_out]
     elif padding == "VALID":

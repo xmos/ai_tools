@@ -55,7 +55,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
 
             pad_params = self._pad_params
             if pad_params[0] != [0, 0] or pad_params[3] != [0, 0]:
-                # TODO: a standalone pass should split off channel- and batch-wise padding
+                # NOTE: SplitPaddingPass decouples channel- and batch-wise padding
                 return False
 
         if len(pad) == 3 and not isinstance(pad, str):

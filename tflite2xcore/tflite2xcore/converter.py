@@ -90,12 +90,17 @@ def optimize_for_xcore(
         model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
 
+    # canonicalize convolutions
+    pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
+    pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
+
     # canonicalize word alignment
     pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())
 
     # word alignment canonicalization introduces new pads, so first fuse then split
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
     pass_mgr.register_pass(passes.SplitPaddingPass())
+    # TODO: run DCE passes here when ready
 
     # TODO: remove this
     if remove_softmax:

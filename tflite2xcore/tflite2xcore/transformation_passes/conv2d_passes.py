@@ -1,9 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import numpy as np
+
+from copy import deepcopy
+
 from tflite2xcore.xcore_schema import (
     TensorType,
     BuiltinOpCodes,
+    BuiltinOptions,
     OperatorCode,
     XCOREOpCodes,
 )
@@ -12,10 +16,64 @@ from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
     QuantizedOperatorMatchingPass,
+    LegalizeWeightBiasPass,
     LegalizeXCWeightBiasPass,
     OperatorMatchingPass,
 )
 from tflite2xcore.xlogging import log_method_output
+
+
+class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceWeightBiasOperatorPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.DEPTHWISE_CONV_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(BuiltinOpCodes.CONV_2D, version=3)
+
+    @property
+    def _depth_multiplier(self):
+        return self._op.builtin_options["depth_multiplier"]
+
+    def match(self, op):
+        with self.using(op):
+            # TODO: update this when conv2d output channel word alignment is done
+            return (
+                super().match(op)
+                and self._input.shape[3] == 1
+                and self._output.shape[3] % WORD_SIZE == 0  # Cout divisible by 4
+            )
+
+    def mutate(self, op):
+        with self.using(op):
+            builtin_options = deepcopy(self._op.builtin_options)
+            depth_multiplier = builtin_options.pop("depth_multiplier")
+            assert depth_multiplier == self._weights.shape[3]
+
+        # create new op and update builtin options
+        new_op = super().mutate(op)
+        new_op.builtin_options_type = BuiltinOptions.Conv2DOptions
+        new_op.builtin_options = builtin_options
+
+        return new_op
+
+
+class LegalizeSingleinConv2DPass(LegalizeWeightBiasPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.CONV_2D
+
+    def mutate_biases(self, op):
+        # NOTE: nothing to be done on the biases
+        pass
+
+    def mutate_weights(self, op):
+        with self.using(op):
+            self._replace_weights(
+                np.transpose(self._weights.numpy.astype(np.int8), [3, 1, 2, 0])
+            )
+            self._log_weights()
 
 
 class ReplaceConv2DPass(ReplaceWeightBiasOperatorPass):

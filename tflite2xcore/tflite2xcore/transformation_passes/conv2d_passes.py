@@ -224,6 +224,13 @@ class ReplaceShallowinConv2dPass(ReplacePaddedConv2DPass):
 
         return False
 
+    def mutate(self, op):
+        new_op = super().mutate(op)
+
+        with self.using(new_op):
+            new_op.add_custom_options(Kw=int(self._weights.shape[2]))
+        return new_op
+
 
 class LegalizeXCShallowinConvPass(LegalizeXCConvPass):
     @property

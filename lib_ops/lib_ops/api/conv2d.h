@@ -14,13 +14,6 @@ extern "C" {
 namespace xcore {
 namespace conv {
 
-// struct Conv2DUnpaddedShape {
-//   int32_t K_h;
-//   int32_t K_w;
-//   int32_t C_in;
-//   int32_t C_out;
-// };
-
 struct Conv2DPadding {
   int8_t top;
   int8_t left;
@@ -60,10 +53,9 @@ class Conv2D_Shallow {
   ~Conv2D_Shallow() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                   int32_t Y_w, int32_t zero_point, const int8_t* K,
-                   const int16_t* bias);
+                   int32_t Y_w, int32_t C_out);
   XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
-                   const int16_t* SS);
+                   const int16_t* BSS);
 
   Conv2DParams params;
   ParRegionArray par_regions;

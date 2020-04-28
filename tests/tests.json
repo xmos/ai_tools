@@ -516,7 +516,8 @@
                 "-kw": 5,
                 "-kh": 3,
                 "-in": 1,
-                "-pd": "valid"
+                "-pd": "valid",
+                "xfail": true
             },
             {
                 "-wi": 3,

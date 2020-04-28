@@ -13,7 +13,11 @@ from tflite2xcore.xcore_schema import (
 
 
 class FuseConv2dPaddingPass(OperatorMatchingPass):
-    MATCHING_OPCODES = (XCOREOpCodes.XC_conv2d_depthwise, XCOREOpCodes.XC_conv2d_deep)
+    MATCHING_OPCODES = (
+        XCOREOpCodes.XC_conv2d_depthwise,
+        XCOREOpCodes.XC_conv2d_deep,
+        XCOREOpCodes.XC_conv2d_shallowin,
+    )
 
     @property
     def _producer(self):
@@ -74,6 +78,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
         op.inputs[0] = producer.inputs[0]
         producer.inputs[0].consumers.append(op)
 
+        # TODO: remove this when DCE passes take care of this
         # remove old input and padding op (if it has no other consumers)
         op.subgraph.remove_tensor(old_input)
         if not producer.outputs:
@@ -213,6 +218,7 @@ class FuseConsecutivePadsPass(OperatorMatchingPass):
         op.inputs[0] = producer.inputs[0]
         producer.inputs[0].consumers.append(op)
 
+        # TODO: remove this when DCE passes take care of this
         # remove producer if needed
         if not intermediate.consumers:
             # NOTE: the paddings tensor of the producer might be dangling and will be cleaned up later

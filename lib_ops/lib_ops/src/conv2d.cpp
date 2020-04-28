@@ -127,13 +127,13 @@ XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
 //**************************************
 //**************************************
 //**************************************
-// Conv2D_SIDO
+// Conv2D_Shallow
 //**************************************
 //**************************************
 //**************************************
-XCoreStatus Conv2D_SIDO::Init(int32_t X_h, int32_t X_w, int32_t C_in,
-                              int32_t Y_h, int32_t Y_w, int32_t zero_point,
-                              const int8_t *K, const int16_t *bias) {
+XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
+                                 int32_t Y_h, int32_t Y_w, int32_t zero_point,
+                                 const int8_t *K, const int16_t *bias) {
   // nn_conv2d_init_params_t init_params;
   // nn_conv2d_region_params_t region_params;
 
@@ -157,8 +157,8 @@ XCoreStatus Conv2D_SIDO::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   return kXCoreOk;
 }
 
-XCoreStatus Conv2D_SIDO::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
-                              const int16_t *SS) {
+XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
+                                 const int16_t *SS) {
   // conv2d_shallowin_deepout(Y, &params_, X, K, SS);
   return kXCoreOk;
 }

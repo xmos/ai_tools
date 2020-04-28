@@ -27,11 +27,13 @@ TENSORFLOW_SOURCES := \
 	tensorflow/lite/micro/micro_string.cc \
 	tensorflow/lite/micro/simple_memory_allocator.cc \
 	tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc \
-	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc
+	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc \
+	tensorflow/lite/kernels/internal/quantization_util.cc \
+	tensorflow/lite/kernels/kernel_util.cc \
+	tensorflow/lite/micro/kernels/pad.cc \
+	tensorflow/lite/micro/kernels/softmax.cc
 
 #TENSORFLOW_SOURCES += \
-	# tensorflow/lite/kernels/kernel_util.cc \
-	# tensorflow/lite/kernels/internal/quantization_util.cc \
 	# tensorflow/lite/micro/kernels/activations.cc \
 	# tensorflow/lite/micro/kernels/add.cc \
 	# tensorflow/lite/micro/kernels/all_ops_resolver.cc \
@@ -51,7 +53,6 @@ TENSORFLOW_SOURCES := \
 	# tensorflow/lite/micro/kernels/mul.cc \
 	# tensorflow/lite/micro/kernels/neg.cc \
 	# tensorflow/lite/micro/kernels/pack.cc \
-	# tensorflow/lite/micro/kernels/pad.cc \
 	# tensorflow/lite/micro/kernels/pooling.cc \
 	# tensorflow/lite/micro/kernels/prelu.cc \
 	# tensorflow/lite/micro/kernels/quantize.cc \

@@ -39,6 +39,7 @@ class SubgraphTransformationPass(ModelTransformationPass):
                 if self.match(obj):
                     num_matches += 1
                     self.log_match(obj)
+
                     if self.debug:
                         try:
                             obj.sanity_check()
@@ -47,6 +48,7 @@ class SubgraphTransformationPass(ModelTransformationPass):
                         import pdb
 
                         pdb.set_trace()
+
                     self.mutate(obj)
                     break
             else:
@@ -59,6 +61,7 @@ class SubgraphTransformationPass(ModelTransformationPass):
             self.logger.debug(f"running on subgraph {self._subgraph_idx}")
             if self.run_subgraph(subgraph):
                 modified_cnt += 1
+
             if self.debug:
                 try:
                     subgraph.sanity_check()
@@ -93,6 +96,49 @@ class TensorMatchingPass(SubgraphTransformationPass):
 
     def log_match(self, tensor):
         super().log_match(f"tensor [{self._obj_index}]: {tensor.name}")
+
+
+class BufferMatchingPass(ModelTransformationPass):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._buffer_idx = -1
+
+    @abstractmethod
+    def match(self, buffer):
+        return True
+
+    @abstractmethod
+    def mutate(self, buffer):
+        pass
+
+    def log_match(self, buffer):
+        self.logger.info(
+            f"matched buffer [{self._buffer_idx}] of length "
+            f"{len(buffer)} with {len(buffer.owners)} owners"
+        )
+
+    def run(self, model):
+        modified_cnt = 0
+        while True:
+            for self._buffer_idx, buffer in enumerate(model.buffers):
+                if self.match(buffer):
+                    self.log_match(buffer)
+                    modified_cnt += 1
+
+                    if self.debug:
+                        try:
+                            model.sanity_check()
+                        except AssertionError as e:
+                            self.logger.exception(e)
+                        import pdb
+
+                        pdb.set_trace()
+
+                    self.mutate(buffer)
+                    break
+            else:
+                self._buffer_idx = -1
+                return modified_cnt
 
 
 class InputTensorMatchingPass(SubgraphTransformationPass):

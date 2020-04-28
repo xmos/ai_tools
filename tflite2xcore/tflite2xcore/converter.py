@@ -12,8 +12,8 @@ class CleanupManager(PassManager):
         super().__init__(
             model,
             passes=[
-                passes.RemoveDanglingTensorsPass(),
-                passes.RemoveUnusedBuffersPass(),
+                passes.EliminateDeadTensorsPass(),
+                passes.EliminateDeadBuffersPass(),
             ],
             **kwargs
         )

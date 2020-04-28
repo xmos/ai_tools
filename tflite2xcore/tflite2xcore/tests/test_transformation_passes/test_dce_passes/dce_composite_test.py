@@ -3,8 +3,8 @@
 import pytest
 
 from tflite2xcore.transformation_passes import (
-    RemoveUnusedBuffersPass,
-    RemoveDanglingTensorsPass,
+    EliminateDeadBuffersPass,
+    EliminateDeadTensorsPass,
 )
 from tflite2xcore.xcore_schema import TensorType
 
@@ -22,11 +22,11 @@ def test_mutate(model):
     num_tensors = count_tensors(model)
     num_buffers = len(model.buffers)
 
-    pass1 = RemoveDanglingTensorsPass()
+    pass1 = EliminateDeadTensorsPass()
     pass1.run(model)
     model.sanity_check()
 
-    pass2 = RemoveUnusedBuffersPass()
+    pass2 = EliminateDeadBuffersPass()
     pass2.run(model)
     model.sanity_check()
 

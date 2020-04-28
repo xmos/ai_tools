@@ -49,10 +49,7 @@ from .quantize_dequantize_passes import (
 
 from .op_version_passes import LegalizeQuantizeVersionPass
 
-from .cleanup_passes import (
-    RemoveUnusedBuffersPass,
-    RemoveDanglingTensorsPass,
-)
+from .dce_passes import EliminateDeadTensorsPass, EliminateDeadBuffersPass
 
 from .renaming_passes import LegalizeOperatorOutputTensorNamePass
 

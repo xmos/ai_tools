@@ -475,7 +475,7 @@
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_shallowin.py",
         "operator": "XC_conv2d_shallowin",
-        "_comment": "some expected failures. see issue https://github.com/xmos/ai_tools/issues/88",
+        "subtype": "shallowin",
         "parameters": [
             {
                 "-wi": 1,
@@ -533,6 +533,83 @@
                 "-kh": 3,
                 "-in": 31,
                 "-pd": "valid"
+            }
+        ]
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_padded.py",
+        "operator": "XC_conv2d_shallowin",
+        "subtype": "padded",
+        "parameters": [
+            {
+                "-wi": 3,
+                "-hi": 3,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 7,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ]
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 3,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "smoke": true
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 1,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "-st": [
+                    2,
+                    2
+                ]
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 2,
+                "-pd": [
+                    2,
+                    2,
+                    1,
+                    1
+                ]
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 4,
+                "-pd": [
+                    2,
+                    2,
+                    1,
+                    1
+                ]
             }
         ]
     },

@@ -75,34 +75,33 @@ void nn_conv2d_hstrip_tail_deep_padded(
 
 #define Q(R)      R
 
-.align 16
 FUNCTION_NAME:
-    dualentsp NSTACKWORDS
+/**/dualentsp NSTACKWORDS
     std r4, r5, sp[0]
     std r6, r7, sp[1]
     std r8, r9, sp[2]
-    {                                           ;   stw r10, sp[6]                          }
+/**/{                                           ;   stw r10, sp[6]                          }
     {                                           ;   stw r0, sp[STACK_Y]                     }
     {                                           ;   stw r1, sp[STACK_X]                     }
     {   ldc r0, 32                              ;   stw r2, sp[STACK_K]                     }
-    {   shl r11, r0, 4                          ;                                           }
+/**/{   shl r11, r0, 4                          ;                                           }
     {   mov r11, r1                             ;   vsetc r11                               }
     {   ldaw r1, sp[STACK_VEC_TMP1]             ;   vclrdr                                  }
     {                                           ;   vstr r1[0]                              }
-    {   add r11, r3, r0                         ;   vldd r3[0]                              }
+/**/{   add r11, r3, r0                         ;   vldd r3[0]                              }
     {   add r11, r11, r0                        ;   vldr r11[0]                             }
     {                                           ;   stw r11, sp[STACK_BSO]                  }
     
     {                                           ;   ldw r0, sp[STACK_K_H]                   }
-    {                                           ;   ldw r1, sp[STACK_PAD_T]                 }
+/**/{                                           ;   ldw r1, sp[STACK_PAD_T]                 }
     {   sub r0, r0, r1                          ;   ldw r1, sp[STACK_PAD_B]                 }
     {   sub r0, r0, r1                          ;                                           }
     {                                           ;   stw r0, sp[STACK_PATCH_ROWS]            }
-    {                                           ;   ldw r0, sp[STACK_K_h_stride]            }
+/**/{                                           ;   ldw r0, sp[STACK_K_h_stride]            }
     {                                           ;   ldw r1, sp[STACK_C_IN]                  }
     mul r0, r0, r1
     {   shr r0, r1, 5                           ;   stw r0, sp[STACK_WIN_H_STRIDE]          }
-    {   zext r1, 5                              ;   stw r0, sp[STACK_C_IN_GROUPS]           }
+/**/{   zext r1, 5                              ;   stw r0, sp[STACK_C_IN_GROUPS]           }
     {                                           ;   stw r1, sp[STACK_C_IN_TAIL]             }
 
     //  To move N accumulators from the beginning of vD:vR to the end of vD:vR (which is where
@@ -116,7 +115,7 @@ FUNCTION_NAME:
     //  and sub 4; then the reverse)
     {   ldc r11, 16                             ;   ldw r0, sp[STACK_C_OUT_TAIL]            }
     {   sub r0, r11, r0                         ;   mkmsk r2, r0                            }
-    {   shl r0, r0, 1                           ;   stw r2, sp[STACK_WRITE_MASK]            }
+/**/{   shl r0, r0, 1                           ;   stw r2, sp[STACK_WRITE_MASK]            }
     {                                           ;   stw r0, sp[STACK_C_OUT_TAIL]            }
 
 #define rows_left       r0
@@ -135,13 +134,13 @@ FUNCTION_NAME:
 
     {                                           ;   ldw X, sp[STACK_X]                      }
     {                                           ;   ldw K, sp[STACK_K]                      }
-    {   ldc _32, 32                             ;   ldw k_cout_stride, sp[STACK_K_COUT_STRIDE]}
+/**/{   ldc _32, 32                             ;   ldw k_cout_stride, sp[STACK_K_COUT_STRIDE]}
     {                                           ;   ldw c_in_tail, sp[STACK_C_IN_TAIL]      }
     {                                           ;   ldw c_out_tail, sp[STACK_C_OUT_TAIL]    }
 
     //Check if any top padding
     {                                           ;   ldw rows_left, sp[STACK_PAD_T]          }
-    {                                           ;   bf rows_left, .L_pad_t_end              }
+/**/{                                           ;   bf rows_left, .L_pad_t_end              }
     .L_pad_t_start:
         {                                           ;   ldw vec_zp, sp[STACK_VEC_ZERO_POINT]    }
 
@@ -149,35 +148,35 @@ FUNCTION_NAME:
             {   sub rows_left, rows_left, 1             ;   ldw cols_left, sp[STACK_K_W]             }
             .L_pad_t_col_start:
                 {   sub cols_left, cols_left, 1             ;   vldc vec_zp[0]                          }
-                {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   ldw cig_left, sp[STACK_C_IN_GROUPS]     }
+/**/            {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   ldw cig_left, sp[STACK_C_IN_GROUPS]     }
                 {   sub r11, tmp, c_out_tail                ;   bf cig_left, .L_pad_t_cig_end           }
                 .L_pad_t_cig_start:
                 //reset accumulator positions
                     {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
                     {   sub c_out_tail, c_out_tail, 4           ;   vldr r11[0]                             }
-                    {   sub cig_left, cig_left, 1               ;   vstd tmp[0]                             }
+/**/                {   sub cig_left, cig_left, 1               ;   vstd tmp[0]                             }
                     {   mov tmp, K                              ;   vldd r11[0]                             }
 
                 //do vlmaccrs
                     {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+
+                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add K, K, _32                           ;   vlmaccr tmp[0]                          }
 
                     {   shl c_out_tail, c_out_tail, 1           ;   add X, X, _32                           }
-                    {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   bt cig_left, .L_pad_t_cig_start         }
+/**/                {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   bt cig_left, .L_pad_t_cig_start         }
                 .L_pad_t_cig_end:
                 {                                           ;   bf c_in_tail, .L_pad_t_tail_end         }
                 .L_pad_t_tail_start:
@@ -185,37 +184,37 @@ FUNCTION_NAME:
                 //reset accumulator positions
                     {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
                     {   sub c_out_tail, c_out_tail, 4           ;   vldr r11[0]                             }
-                    {   sub tmp, c_in_tail, _32                 ;   vstd tmp[0]                             }
+/**/                {   sub tmp, c_in_tail, _32                 ;   vstd tmp[0]                             }
                     {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vldd r11[0]                             }
 
                 //mask C_in_tail
                     {   add r11, r11, tmp                       ;   vstc r11[0]                             }
                     {   add X, X, c_in_tail                     ;   vldc r11[0]                             }
-                    {   add tmp, K, tmp                         ;                                           }
+/**/                {   add tmp, K, tmp                         ;                                           }
 
                 //do vlmaccrs
                     {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+
+                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add K, K, c_in_tail                     ;   vlmaccr tmp[0]                          }
 
                 .L_pad_t_tail_end:
                 {   shl c_out_tail, c_out_tail, 1           ;   bt cols_left, .L_pad_t_col_start        }    
             .L_pad_t_col_end:
             {                                           ;   ldw tmp, sp[STACK_X_V_STRIDE]           }
-            {   add X, X, tmp                           ;   bt rows_left, .L_pad_t_row_start        }
+/**/        {   add X, X, tmp                           ;   bt rows_left, .L_pad_t_row_start        }
         .L_pad_t_row_end:
         {                                           ;   stw X, sp[STACK_X]                      }
         {                                           ;   stw K, sp[STACK_K]                      }
@@ -225,13 +224,13 @@ FUNCTION_NAME:
     // Check if any bottom padding
 
     {                                           ;   ldw rows_left, sp[STACK_PAD_B]          }
-    {   ldaw Q(X), sp[STACK_VEC_ADJ_B_HI]       ;   bf rows_left, .L_pad_b_end              }
+/**/{   ldaw Q(X), sp[STACK_VEC_ADJ_B_HI]       ;   bf rows_left, .L_pad_b_end              }
     
     //Move K past the non-padding rows
     {                                           ;   ldw Q(X), sp[STACK_C_IN_GROUPS]         }
     { shl Q(X), Q(X), 5                         ;   ldw tmp, sp[STACK_K_W]                  }
     { add Q(X), Q(X), c_in_tail                 ;                                           }
-    mul Q(X), Q(X), tmp
+/**/mul Q(X), Q(X), tmp
     {   ldc Q(_32), 0                           ;   ldw tmp, sp[STACK_PATCH_ROWS]           }
     maccu Q(_32), K, Q(X), tmp
 
@@ -239,35 +238,35 @@ FUNCTION_NAME:
         {   ldc _32, 32                             ;   ldw vec_zp, sp[STACK_VEC_ZERO_POINT]    }
 
         .L_pad_b_row_start:
-            {   sub rows_left, rows_left, 1             ;   ldw cols_left, sp[STACK_K_W]             }
+/**/        {   sub rows_left, rows_left, 1             ;   ldw cols_left, sp[STACK_K_W]             }
             .L_pad_b_col_start:
                 {   sub cols_left, cols_left, 1             ;   vldc vec_zp[0]                          }
                 {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   ldw cig_left, sp[STACK_C_IN_GROUPS]     }
                 {   sub r11, tmp, c_out_tail                ;   bf cig_left, .L_pad_b_cig_end           }
                 .L_pad_b_cig_start:
                 //reset accumulator positions
-                    {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
+/**/                {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
                     {   sub c_out_tail, c_out_tail, 4           ;   vldr r11[0]                             }
                     {   sub cig_left, cig_left, 1               ;   vstd tmp[0]                             }
                     {   mov tmp, K                              ;   vldd r11[0]                             }
 
                 //do vlmaccrs
-                    {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
+/**/                {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add K, K, _32                           ;   vlmaccr tmp[0]                          }
+/**/                {   add K, K, _32                           ;   vlmaccr tmp[0]                          }
 
                     {   shl c_out_tail, c_out_tail, 1           ;                                           }
                     {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   bt cig_left, .L_pad_b_cig_start         }
@@ -275,36 +274,36 @@ FUNCTION_NAME:
                 {                                           ;   bf c_in_tail, .L_pad_b_tail_end         }
                 .L_pad_b_tail_start:
                 //reset accumulator positions
-                    {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
+/**/                {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
                     {   sub c_out_tail, c_out_tail, 4           ;   vldr r11[0]                             }
                     {   sub tmp, c_in_tail, _32                 ;   vstd tmp[0]                             }
                     {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vldd r11[0]                             }
 
                 //mask C_in_tail
-                    {   add r11, r11, tmp                       ;   vstc r11[0]                             }
+/**/                {   add r11, r11, tmp                       ;   vstc r11[0]                             }
                     {   add X, X, c_in_tail                     ;   vldc r11[0]                             }
                     {   add tmp, K, tmp                         ;                                           }
 
                 //do vlmaccrs
                     {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
 
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add K, K, c_in_tail                     ;   vlmaccr tmp[0]                          }
 
                 .L_pad_b_tail_end:
-                {   shl c_out_tail, c_out_tail, 1           ;   bt cols_left, .L_pad_b_col_start        }    
+/**/            {   shl c_out_tail, c_out_tail, 1           ;   bt cols_left, .L_pad_b_col_start        }    
             .L_pad_b_col_end:
             {   ldaw Q(X), sp[STACK_VEC_ADJ_B_HI]       ;   bt rows_left, .L_pad_b_row_start        }
         .L_pad_b_row_end:
@@ -331,11 +330,11 @@ FUNCTION_NAME:
 #undef _32        
 
     // Calculate the number of center (not left or right padding) columns
-    {   ldc r9, 0                               ;   ldw r11, sp[STACK_PAD_L]                }
+/**/{   ldc r9, 0                               ;   ldw r11, sp[STACK_PAD_L]                }
     {   lss r1, r11, r9                         ;   ldw r10, sp[STACK_PAD_R]                }
     {   lss r2, r10, r9                         ;   ldw r0, sp[STACK_K_W]                   } 
     {                                           ;   bt r1, .L_neg_pad_l                     }
-    {   sub r0, r0, r11                         ;   bt r2, .L_neg_pad_r                     }
+/**/{   sub r0, r0, r11                         ;   bt r2, .L_neg_pad_r                     }
     .L_neg_pad_l:
     {                                           ;   bt r2, .L_neg_pad_r                     }
     {   sub r0, r0, r10                         ;                                           }
@@ -356,66 +355,66 @@ FUNCTION_NAME:
 #define tmp             r9
 #define c_out_tail      r10
 
-    {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
+/**/{                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
     {                                           ;   ldw c_in_tail, sp[STACK_C_IN_TAIL]      }
     {                                           ;   ldw X, sp[STACK_X]                      }
     {                                           ;   ldw k_cout_stride, sp[STACK_K_COUT_STRIDE]}
-    {                                           ;   ldw vec_zp, sp[STACK_VEC_ZERO_POINT]    }
+/**/{                                           ;   ldw vec_zp, sp[STACK_VEC_ZERO_POINT]    }
     {                                           ;   ldw c_out_tail, sp[STACK_C_OUT_TAIL]    }
 
     .L_out_col_start:
         {   ldaw r11, sp[STACK_VEC_ADJ_B_HI]        ;   ldw rows_left, sp[STACK_PATCH_ROWS]     }
         {   ldaw r11, sp[STACK_VEC_ADJ_B_LO]        ;   vldd r11[0]                             }
-        {   sub tmp, tmp, 1                         ;   vldr r11[0]                             }
+/**/    {   sub tmp, tmp, 1                         ;   vldr r11[0]                             }
         {                                           ;   stw tmp, sp[STACK_OUT_COLS]             }
         {   ldc tmp, 0                              ;   ldw K, sp[STACK_K]                      }
 
         .L_patch_row_start: //tmp is 0 on first pass, x_v_stride on subsequent iterations
             {   add X, X, tmp                           ;   ldw cols_left, sp[STACK_PAD_L]          }
-            {   shr Q(cig_left), cols_left, 24          ;   bf cols_left, .L_pad_l_end              }   //If cols_left == 0, skip pad_l
+/**/        {   shr Q(cig_left), cols_left, 24          ;   bf cols_left, .L_pad_l_end              }   //If cols_left == 0, skip pad_l
             {                                           ;   bt Q(cig_left), .L_pad_l_end            }   //if cols_left < 0, skip  pad_;
             .L_pad_l_start:
                 {   sub cols_left, cols_left, 1             ;   vldc vec_zp[0]                          }
                 {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   ldw cig_left, sp[STACK_C_IN_GROUPS]     }
-                {   sub r11, tmp, c_out_tail                ;   bf cig_left, .L_pad_l_cig_end           }
+/**/            {   sub r11, tmp, c_out_tail                ;   bf cig_left, .L_pad_l_cig_end           }
                 .L_pad_l_cig_start:
                     
                 //reset accumulator positions
                     {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
                     {   sub c_out_tail, c_out_tail, 4           ;   vldr r11[0]                             }
                     {   sub cig_left, cig_left, 1               ;   vstd tmp[0]                             }
-                    {   mov tmp, K                              ;   vldd r11[0]                             }
+/**/                {   mov tmp, K                              ;   vldd r11[0]                             }
 
                 //do vlmaccrs
                     {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+
+                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add K, K, _32                           ;   vlmaccr tmp[0]                          }
 
                     {   shl c_out_tail, c_out_tail, 1           ;   add X, X, _32                           }
                     {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   bt cig_left, .L_pad_l_cig_start         }
 
                 .L_pad_l_cig_end:
-                {                                           ;   bf c_in_tail, .L_pad_l_tail_end         }
+/**/            {                                           ;   bf c_in_tail, .L_pad_l_tail_end         }
                 .L_pad_l_tail_start:
             
                 //reset accumulator positions
                     {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
                     {   sub c_out_tail, c_out_tail, 4           ;   vldr r11[0]                             }
                     {   sub tmp, c_in_tail, _32                 ;   vstd tmp[0]                             }
-                    {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vldd r11[0]                             }
+/**/                {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vldd r11[0]                             }
 
                 //mask C_in_tail
                     {   add r11, r11, tmp                       ;   vstc r11[0]                             }
@@ -423,28 +422,28 @@ FUNCTION_NAME:
                     {   add tmp, K, tmp                         ;                                           }
 
                 //do vlmaccrs
-                    {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
+/**/                {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add K, K, c_in_tail                     ;   vlmaccr tmp[0]                          }
+/**/                {   add K, K, c_in_tail                     ;   vlmaccr tmp[0]                          }
 
                 .L_pad_l_tail_end:
                 {   shl c_out_tail, c_out_tail, 1           ;   bt cols_left, .L_pad_l_start            }
             .L_pad_l_end:
             {                                           ;   ldw cols_left, sp[STACK_CENTER_COLS]    }
-            {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   bf cols_left, .L_center_end             }
+/**/        {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   bf cols_left, .L_center_end             }
             .L_center_start:
                 {   sub cols_left, cols_left, 1             ;   ldw cig_left, sp[STACK_C_IN_GROUPS]     }
                 {   sub r11, tmp, c_out_tail                ;   bf cig_left, .L_center_cig_end          }
@@ -454,28 +453,28 @@ FUNCTION_NAME:
                     {   add X, X, _32                           ;   vldc X[0]                               }
                     
                 //reset accumulator positions
-                    {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
+/**/                {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
                     {   sub c_out_tail, c_out_tail, 4           ;   vldr r11[0]                             }
                     {   sub cig_left, cig_left, 1               ;   vstd tmp[0]                             }
                     {   mov tmp, K                              ;   vldd r11[0]                             }
 
                 //do vlmaccrs
-                    {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
+/**/                {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add K, K, _32                           ;   vlmaccr tmp[0]                          }
+/**/                {   add K, K, _32                           ;   vlmaccr tmp[0]                          }
 
                     {   shl c_out_tail, c_out_tail, 1           ;                                           }
                     {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   bt cig_left, .L_center_cig_start        }
@@ -485,41 +484,41 @@ FUNCTION_NAME:
                 .L_center_tail_start:
 
                 //reset accumulator positions
-                    {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
+/**/                {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
                     {   sub c_out_tail, c_out_tail, 4           ;   vldr r11[0]                             }
                     {   sub tmp, c_in_tail, _32                 ;   vstd tmp[0]                             }
                     {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vldd r11[0]                             }
 
                 //mask C_in_tail
-                    {   add X, X, c_in_tail                     ;   vldc X[0]                               }
+/**/                {   add X, X, c_in_tail                     ;   vldc X[0]                               }
                     {   add r11, r11, tmp                       ;   vstc r11[0]                             }
                     {   add tmp, K, tmp                         ;   vldc r11[0]                             }
 
                 //do vlmaccrs
                     {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
 
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add K, K, c_in_tail                     ;   vlmaccr tmp[0]                          }
 
                 .L_center_tail_end:
-                {   shl c_out_tail, c_out_tail, 1           ;                                           }
+/**/            {   shl c_out_tail, c_out_tail, 1           ;                                           }
                 {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   bt cols_left, .L_center_start           }
             .L_center_end:
             {                                           ;   ldw cols_left, sp[STACK_PAD_R]          }
             {   shr tmp, cols_left, 24                  ;   bf cols_left, .L_pad_r_end              }
-            {                                           ;   bt tmp, .L_pad_r_end                    }
+/**/        {                                           ;   bt tmp, .L_pad_r_end                    }
             .L_pad_r_start:
                 {   sub cols_left, cols_left, 1             ;   vldc vec_zp[0]                          }
                 {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   ldw cig_left, sp[STACK_C_IN_GROUPS]     }
@@ -527,28 +526,28 @@ FUNCTION_NAME:
                 .L_pad_r_cig_start:
                     
                 //reset accumulator positions
-                    {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
+/**/                {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
                     {   sub c_out_tail, c_out_tail, 4           ;   vldr r11[0]                             }
                     {   sub cig_left, cig_left, 1               ;   vstd tmp[0]                             }
                     {   mov tmp, K                              ;   vldd r11[0]                             }
 
                 //do vlmaccrs
-                    {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
+/**/                {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add K, K, _32                           ;   vlmaccr tmp[0]                          }
+/**/                {   add K, K, _32                           ;   vlmaccr tmp[0]                          }
 
                     {   shl c_out_tail, c_out_tail, 1           ;   add X, X, _32                           }
                     {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   bt cig_left, .L_pad_r_cig_start         }
@@ -558,36 +557,36 @@ FUNCTION_NAME:
                 .L_pad_r_tail_start:
             
                 //reset accumulator positions
-                    {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
+/**/                {   shr c_out_tail, c_out_tail, 1           ;   vstr tmp[0]                             }
                     {   sub c_out_tail, c_out_tail, 4           ;   vldr r11[0]                             }
                     {   sub tmp, c_in_tail, _32                 ;   vstd tmp[0]                             }
                     {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vldd r11[0]                             }
 
                 //mask C_in_tail
-                    {   add r11, r11, tmp                       ;   vstc r11[0]                             }
+/**/                {   add r11, r11, tmp                       ;   vstc r11[0]                             }
                     {   add X, X, c_in_tail                     ;   vldc r11[0]                             }
                     {   add tmp, K, tmp                         ;                                           }
 
                 //do vlmaccrs
                     {   add c_out_tail, c_out_tail, 4           ;   bru c_out_tail                          }
 
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
-
-                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
 
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+                    {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
+
+/**/                {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add K, K, c_in_tail                     ;   vlmaccr tmp[0]                          }
 
                 .L_pad_r_tail_end:
-                {   shl c_out_tail, c_out_tail, 1           ;   bt cols_left, .L_pad_r_start            }
+/**/            {   shl c_out_tail, c_out_tail, 1           ;   bt cols_left, .L_pad_r_start            }
             .L_pad_r_end:
             //                                          // Added to X back up at the start of the row
             {   sub rows_left, rows_left, 1             ;   ldw tmp, sp[STACK_X_V_STRIDE]           }
@@ -595,23 +594,23 @@ FUNCTION_NAME:
         .L_patch_row_end:
 
         {   shl r11, _32, 3                         ;   ldw tmp, sp[STACK_BSO]                  }
-        {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vsetc r11                               }
+/**/    {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vsetc r11                               }
         {   add tmp, tmp, _32                       ;   vlsat tmp[0]                            }
         {                                           ;   vstr r11[0]                             }
         {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
-        {                                           ;   vclrdr                                  }
+/**/    {                                           ;   vclrdr                                  }
         {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
         {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
         {   add tmp, tmp, _32                       ;   vlmacc tmp[0]                           }
-        {                                           ;   vsetc r11                               }
+/**/    {                                           ;   vsetc r11                               }
         {                                           ;   vlsat tmp[0]                            }
         {   mkmsk tmp, 16                           ;   ldw Q(rows_left), sp[STACK_Y]           }
         {                                           ;   ldw tmp, sp[STACK_WRITE_MASK]           }
-        vstrpv Q(rows_left)[0], tmp
+/**/    vstrpv Q(rows_left)[0], tmp
         {                                           ;   ldw tmp, sp[STACK_Y_H_STRIDE]           }
         {   add Q(rows_left), Q(rows_left), tmp     ;   ldw tmp, sp[STACK_WIN_H_STRIDE]         }
         {                                           ;   ldw X, sp[STACK_X]                      }
-        {   add X, X, tmp                           ;   stw Q(rows_left), sp[STACK_Y]           }
+/**/    {   add X, X, tmp                           ;   stw Q(rows_left), sp[STACK_Y]           }
         {                                           ;   stw X, sp[STACK_X]                      }
 
 #define l_padding       cols_left
@@ -621,21 +620,21 @@ FUNCTION_NAME:
 
         {   ldc r11, 0                              ;   ldw l_padding, sp[STACK_PAD_L]          }
         {                                           ;   ldw center_cols, sp[STACK_CENTER_COLS]  }
-        {   lss tmp, r11, l_padding                 ;   ldw k_h_stride, sp[STACK_K_h_stride]    }
+/**/    {   lss tmp, r11, l_padding                 ;   ldw k_h_stride, sp[STACK_K_h_stride]    }
         {   lss tmp, l_padding, k_h_stride          ;   bf tmp, .L_werwer                       }
         {   add tmp, tmp, 1                         ;   bru tmp                                 }
         {   add center_cols, center_cols, k_h_stride;   bru tmp                                 }
-        {   add center_cols, center_cols, l_padding ;                                           }
+/**/    {   add center_cols, center_cols, l_padding ;                                           }
         .L_werwer:
         {   sub l_padding, l_padding, k_h_stride    ;   ldw r_padding, sp[STACK_PAD_R]          }
         {   add r_padding, r_padding, k_h_stride    ;   stw l_padding, sp[STACK_PAD_L]          }
         {   lss tmp, r11, r_padding                 ;   stw r_padding, sp[STACK_PAD_R]          }
-        {   lss tmp, r_padding, k_h_stride          ;   bf tmp, .L_rewrew                       }
+/**/    {   lss tmp, r_padding, k_h_stride          ;   bf tmp, .L_rewrew                       }
         {   add tmp, tmp, 1                         ;   bru tmp                                 }
         {   sub center_cols, center_cols, k_h_stride;   bru tmp                                 }
         {   sub center_cols, center_cols, r_padding ;                                           }
         .L_rewrew:
-        {                                           ;   stw center_cols, sp[STACK_CENTER_COLS]  }
+/**/    {                                           ;   stw center_cols, sp[STACK_CENTER_COLS]  }
         {   ldc _32, 32                             ;   ldw tmp, sp[STACK_OUT_COLS]             }
         bt tmp, .L_out_col_start
     .L_out_col_end:
@@ -648,7 +647,7 @@ FUNCTION_NAME:
 
 .Lfunc_end:
     {                                           ;   ldw r10, sp[6]                          }
-    ldd r8, r9, sp[2]
+/**/ldd r8, r9, sp[2]
     ldd r6, r7, sp[1]
     ldd r4, r5, sp[0]
     retsp NSTACKWORDS

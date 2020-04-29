@@ -3,7 +3,7 @@
 import pathlib
 
 from tflite2xcore.pass_manager import PassManager
-from tflite2xcore.serialization import read_flatbuffer, write_flatbuffer
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import transformation_passes as passes
 
 
@@ -12,8 +12,8 @@ class CleanupManager(PassManager):
         super().__init__(
             model,
             passes=[
-                passes.RemoveDanglingTensorsPass(),
-                passes.RemoveUnusedBuffersPass(),
+                passes.EliminateDeadTensorsPass(),
+                passes.EliminateDeadBuffersPass(),
             ],
             **kwargs
         )
@@ -89,7 +89,18 @@ def optimize_for_xcore(
     pass_mgr = InputOutputCanonicalizationManager(
         model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
+
+    # canonicalize convolutions
+    pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
+    pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
+
+    # canonicalize word alignment
+    pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())
+
+    # word alignment canonicalization introduces new pads, so first fuse then split
+    pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
     pass_mgr.register_pass(passes.SplitPaddingPass())
+    # TODO: run DCE passes here when ready
 
     # TODO: remove this
     if remove_softmax:
@@ -101,6 +112,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.ReplaceLogisticPass())
 
     pass_mgr.register_pass(passes.Replace1x1Conv2dPass())
+    pass_mgr.register_pass(passes.ReplaceShallowinConv2dPass())
     pass_mgr.register_pass(passes.ReplaceDepthwiseConv2dPass())
     pass_mgr.register_pass(passes.ReplaceDeepConv2dPass())
 
@@ -114,8 +126,9 @@ def optimize_for_xcore(
 
     pass_mgr.register_pass(passes.LegalizeXCLookupTablePass())
     pass_mgr.register_pass(passes.LegalizeXCFullyConnectedPass())
-    pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXC1x1ConvPass())
+    pass_mgr.register_pass(passes.LegalizeXCShallowinConvPass())
+    pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
 
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
@@ -154,7 +167,7 @@ def convert(
     intermediates_path=None,
     debug=False
 ):
-    model = read_flatbuffer(tflite_input_path)
+    model = XCOREModel.read_flatbuffer(tflite_input_path)
     optimize_for_xcore(
         model,
         remove_softmax=remove_softmax,
@@ -163,4 +176,4 @@ def convert(
         intermediates_path=intermediates_path,
         debug=debug,
     )
-    write_flatbuffer(model, tflite_output_path)
+    model.write_flatbuffer(tflite_output_path)

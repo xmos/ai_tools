@@ -132,14 +132,13 @@ class OpTestPaddedConvModel(OpTestDefaultModel):
             name=self.name,
             layers=[
                 tf.keras.layers.ZeroPadding2D(
-                    padding=padding, input_shape=(height, width, output_channels)
+                    padding=padding, input_shape=(height, width, input_channels)
                 ),
                 tf.keras.layers.Conv2D(
                     filters=output_channels,
                     kernel_size=(K_h, K_w),
                     padding="valid",
                     strides=strides,
-                    input_shape=(height, width, input_channels),
                     bias_initializer=inits["bias_init"],
                     kernel_initializer=inits["weight_init"],
                 ),

@@ -21,7 +21,7 @@ class Conv2DDeep(common.OpTestDefaultConvModel):
         K_h, K_w, _, _, input_channels, output_channels = args
         assert output_channels % 4 == 0, "# of output channels must be multiple of 4"
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
-        assert K_h != 1 or K_w != 1, "1x1 kernel is not allowed for DIDO testing"
+        assert K_h != 1 or K_w != 1, "1x1 kernel is not allowed for deep conv2d testing"
         super().build_core_model(*args, **kwargs)
 
 

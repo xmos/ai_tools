@@ -4,18 +4,16 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_schema import TensorType
 from tflite2xcore.transformation_passes import LegalizeOperatorOutputTensorNamePass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
-    build_relu, build_consecutive_pads, build_split
+    build_relu,
+    build_consecutive_pads,
+    build_split,
 )
 
-from .conftest import (
-    PARAMS,
-    _test_matching_params,
-    _test_non_matching_params
-)
+from .conftest import PARAMS, _test_matching_params, _test_non_matching_params
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
@@ -23,18 +21,15 @@ from .conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
-PARAMS["default"].update({
-    "num_splits": [2, 4]
-})
+PARAMS["default"].update({"num_splits": [2, 4]})
 
-PARAMS["smoke"].update({
-    "num_splits": [2]
-})
+PARAMS["smoke"].update({"num_splits": [2]})
 
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def trf_pass():
@@ -49,20 +44,29 @@ def model_simple(input_shape):
 @pytest.fixture()
 def model_multi_op(input_shape):
     paddings = [[0] * 2] * 4
-    return build_consecutive_pads(input_shape=[1, *input_shape],
-                                  paddings_1=paddings, paddings_2=paddings)
+    return build_consecutive_pads(
+        input_shape=[1, *input_shape], paddings_1=paddings, paddings_2=paddings
+    )
 
 
 @pytest.fixture()
 def model_multi_out(input_shape, num_splits):
-    return build_split(input_shape=input_shape, num_splits=num_splits,
-                       tensor_type=TensorType.INT8, axis=2)
+    return build_split(
+        input_shape=input_shape,
+        num_splits=num_splits,
+        tensor_type=TensorType.INT8,
+        axis=2,
+    )
 
 
 @pytest.fixture()
 def model_multi_out_partial(input_shape, num_splits):
-    model = build_split(input_shape=input_shape, num_splits=num_splits,
-                        tensor_type=TensorType.INT8, axis=2)
+    model = build_split(
+        input_shape=input_shape,
+        num_splits=num_splits,
+        tensor_type=TensorType.INT8,
+        axis=2,
+    )
     op = model.subgraphs[0].operators[0]
     for j, tensor in enumerate(op.outputs[1:]):
         tensor.name = f"{op.name}/output_{j+1}"
@@ -72,6 +76,7 @@ def model_multi_out_partial(input_shape, num_splits):
 #  ----------------------------------------------------------------------------
 #                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
+
 
 def test_matching_simple(trf_pass, model_simple):
     _test_matching_params(trf_pass, model_simple)
@@ -136,7 +141,9 @@ def test_mutate_multi_op(trf_pass, model_multi_op):
     for j, op in enumerate(model_multi_op.subgraphs[0].operators):
         expected_name = f"{op.name}/output"
         name = op.outputs[0].name
-        assert name == expected_name, f"op {j} name: expected '{expected_name}', found '{name}'"
+        assert (
+            name == expected_name
+        ), f"op {j} name: expected '{expected_name}', found '{name}'"
 
 
 def test_mutate_multi_out(trf_pass, model_multi_out):
@@ -148,7 +155,9 @@ def test_mutate_multi_out(trf_pass, model_multi_out):
     for j, tensor in enumerate(op.outputs):
         expected_name = f"{op.name}/output_{j}"
         name = tensor.name
-        assert name == expected_name, f"tensor {j} name: expected '{expected_name}', found '{name}'"
+        assert (
+            name == expected_name
+        ), f"tensor {j} name: expected '{expected_name}', found '{name}'"
 
 
 def test_mutate_multi_out_partial(trf_pass, model_multi_out_partial):
@@ -160,7 +169,9 @@ def test_mutate_multi_out_partial(trf_pass, model_multi_out_partial):
     for j, tensor in enumerate(op.outputs):
         expected_name = f"{op.name}/output_{j}"
         name = tensor.name
-        assert name == expected_name, f"tensor {j} name: expected '{expected_name}', found '{name}'"
+        assert (
+            name == expected_name
+        ), f"tensor {j} name: expected '{expected_name}', found '{name}'"
 
 
 if __name__ == "__main__":

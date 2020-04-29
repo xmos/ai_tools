@@ -7,85 +7,9 @@ import numpy as np
 
 from collections import Counter
 
-from tflite2xcore.operator_codes import OperatorCode
 from tflite2xcore import xlogging as logging
-
-
-class TensorType(enum.IntEnum):
-    FLOAT32 = 0
-    FLOAT16 = 1
-    INT32 = 2
-    UINT8 = 3
-    INT64 = 4
-    STRING = 5
-    BOOL = 6
-    INT16 = 7
-    COMPLEX64 = 8
-    INT8 = 9
-
-    @staticmethod
-    def to_stdint_type(tensor_type):
-        LUT = {
-            TensorType.FLOAT32: 'float32_t',
-            TensorType.FLOAT16: 'float16_t',
-            TensorType.INT32: 'int32_t',
-            TensorType.UINT8: 'uint8_t',
-            TensorType.INT64: 'int64_t',
-            TensorType.STRING: None,
-            TensorType.BOOL: 'uint8_t',
-            TensorType.INT16: 'int16_t',
-            TensorType.COMPLEX64: None,
-            TensorType.INT8: 'int8_t'
-        }
-        return LUT[tensor_type]
-
-    @staticmethod
-    def to_bytes(tensor_type):
-        LUT = {
-            TensorType.FLOAT32: 4,
-            TensorType.FLOAT16: 2,
-            TensorType.INT32: 4,
-            TensorType.UINT8: 1,
-            TensorType.INT64: 8,
-            TensorType.STRING: None,
-            TensorType.BOOL: 1,
-            TensorType.INT16: 2,
-            TensorType.COMPLEX64: None,
-            TensorType.INT8: 1
-        }
-        return LUT[tensor_type]
-
-    @staticmethod
-    def to_numpy_type(tensor_type):
-        LUT = {
-            TensorType.FLOAT32: np.float64,
-            TensorType.FLOAT16: np.float64,
-            TensorType.INT32: np.int64,
-            TensorType.UINT8: np.int64,
-            TensorType.INT64: np.int64,
-            # TensorType.STRING: None,  # intentionally not supported
-            TensorType.BOOL: np.int64,
-            TensorType.INT16: np.int64,
-            # TensorType.COMPLEX64: None,  # intentionally not supported
-            TensorType.INT8: np.int64,
-        }
-        return LUT[tensor_type]
-
-    @staticmethod
-    def to_numpy_dtype(tensor_type):
-        LUT = {
-            TensorType.FLOAT32: np.float32,
-            TensorType.FLOAT16: np.single,
-            TensorType.INT32: np.int32,
-            TensorType.UINT8: np.uint8,
-            TensorType.INT64: np.int64,
-            # TensorType.STRING: None,  # intentionally not supported
-            TensorType.BOOL: np.bool_,
-            TensorType.INT16: np.int16,
-            # TensorType.COMPLEX64: None,  # intentionally not supported
-            TensorType.INT8: np.int8,
-        }
-        return LUT[tensor_type]
+from tflite2xcore.xcore_schema import TensorType, OperatorCode
+from tflite2xcore.serialization.flatbuffers_io import XCORESerializationMixin
 
 
 class Buffer():
@@ -291,11 +215,11 @@ class Tensor():
     @property
     def standard_type(self):
         '''Return type (from cstdint.h)'''
-        return TensorType.to_stdint_type(self.type)
+        return self.type.to_stdint_type()
 
     @property
     def size(self):
-        size = TensorType.to_bytes(self.type)
+        size = self.type.to_bytes()
         for s in self.shape:
             size *= s
         return size
@@ -303,8 +227,8 @@ class Tensor():
     @property
     def numpy(self):
         arr = np.array(
-            self.buffer.unpack(TensorType.to_stdint_type(self.type)),
-            dtype=TensorType.to_numpy_type(self.type)
+            self.buffer.unpack(self.type.to_stdint_type()),
+            dtype=self.type.to_numpy_type()
         )
         return arr.reshape(self.shape)
 
@@ -478,7 +402,7 @@ class Metadata():
         assert self in self.buffer.owners
 
 
-class XCOREModel():
+class XCOREModel(XCORESerializationMixin):
     def __init__(self, version=None, description=None, subgraphs=None, buffers=None, metadata=None):
         self.version = version or 3
         self.description = description or ''

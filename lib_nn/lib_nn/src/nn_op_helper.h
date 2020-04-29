@@ -3,6 +3,13 @@
 #define NN_OP_HELPER_H_
 
 
+#if defined(__XS3A__)
+  #define WEAK_FUNC __attribute__((weak))
+#else
+  //For some reason the above isn't working on x86 in cygwin. Linker refuses to find any weak symbols.
+  #define WEAK_FUNC
+#endif
+
 static inline int8_t sat_s8(
     const int32_t acc32)
 {

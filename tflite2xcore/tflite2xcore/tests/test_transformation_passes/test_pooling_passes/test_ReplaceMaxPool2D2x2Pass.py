@@ -17,13 +17,14 @@ from .conftest import (
     test_non_matching_pool_h,
     test_non_matching_pool_w,
     test_non_matching_stride_h,
-    test_non_matching_stride_w
+    test_non_matching_stride_w,
 )
 
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def build_model():

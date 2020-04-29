@@ -25,7 +25,22 @@ SOURCE_DIRS := src
 ###### 
 ### [optional] Source file extentions. Defaults to: c cc xc cpp S
 ###
-SOURCE_FILE_EXTS := c S
+SOURCE_FILE_EXTS := c
+
+ifeq ($(PLATFORM),xcore)
+
+  ifeq ($(NO_ASM),1)
+    $(info Disabling ASM compilation..)
+	NO_OPTIMIZE = 1
+  else
+    SOURCE_FILE_EXTS += S
+  endif
+endif
+
+ifeq ($(NO_OPTIMIZE),1)
+  $(info Disabling C optimizations..)
+  c_FLAGS += -O0
+endif
 
 ######
 ### [optional] List of source files to compile.

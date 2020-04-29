@@ -8,9 +8,10 @@ import logging
 #                                   HOOKS
 #  ----------------------------------------------------------------------------
 
+
 def pytest_addoption(parser):
     parser.addoption("--smoke", action="store_true", help="smoke test")
-    parser.addoption("--extended", action="store_true", help="extended test")    
+    parser.addoption("--extended", action="store_true", help="extended test")
 
 
 # TODO: this is deprecated, find a better way

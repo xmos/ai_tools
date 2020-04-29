@@ -15,7 +15,9 @@
 
 
 #define ADDR(VR, STR, PSTR)   printf("!\t%s = 0x%08X\t\t(%s)\n%s", (#VR), (unsigned) (VR), (STR), ("" PSTR))
-void conv2d_1x1_c(
+
+WEAK_FUNC
+void conv2d_1x1(
     int8_t* Y,
     const int8_t* X,
     const int8_t* K,

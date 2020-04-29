@@ -7,7 +7,6 @@ from collections import deque
 
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import xlogging as logging, tflite_visualize
-from tflite2xcore.serialization import serialize_model
 from tflite2xcore.utils import convert_path
 
 
@@ -101,7 +100,7 @@ class PassManager:
                         new_desc,
                         self._model.description,
                     )
-                    self._intermediates.append(serialize_model(self._model))
+                    self._intermediates.append(self._model.serialize())
                     self._model.description = old_desc
 
         msg = "\n".join(

@@ -24,10 +24,9 @@ from collections import Counter
 
 from tflite2xcore.serialization import (
     FlexbufferParser,
-    create_dict_from_model,
-    read_flatbuffer
 )
-from tflite2xcore.operator_codes import XCOREOpCodes
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.utils import VerbosityParser
 
 # A CSS description for making the visualizer
@@ -720,12 +719,12 @@ def CreateHtmlFile(tflite_input, html_file):
     if not os.path.exists(tflite_input):
         raise RuntimeError(f"Invalid filename {tflite_input}")
 
-    model = read_flatbuffer(tflite_input)
+    model = XCOREModel.read_flatbuffer(tflite_input)
     try:
-        data = create_dict_from_model(model, extended=True)
+        data = model.to_dict(extended=True)
     except AttributeError as e:
         if e.args[0] == "'Buffer' object has no attribute 'owners'":
-            data = create_dict_from_model(model, extended=False)
+            data = model.to_dict(extended=False)
         else:
             raise
     data["filename"] = tflite_input

@@ -14,7 +14,7 @@
 
 
 
-#define INDEX_CAST(X)   ((int32_t)(X))
+#define ADDR(V, INDEX)      &V[((int)(INDEX))]
 
 void conv2d_deep_init(
     nn_conv2d_deep_plan_t* plan,
@@ -121,10 +121,10 @@ void conv2d_deep(
     int8_t zero_point_vec[VPU_INT8_EPV];
     memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
     
-    X = &X[INDEX_CAST(job->stride.start.X)];
-    Y = &Y[INDEX_CAST(job->stride.start.Y)];
-    K = &K[INDEX_CAST(job->stride.start.K)];
-    BSS = &BSS[INDEX_CAST(job->stride.start.BSS)];
+    X = ADDR(X,job->stride.start.X);
+    Y = ADDR(Y, job->stride.start.Y);
+    K = ADDR(K, job->stride.start.K);
+    BSS = ADDR(BSS, job->stride.start.BSS);
 
     const unsigned C_out_tail = plan->channels.Y % VPU_INT8_ACC_PERIOD;
 
@@ -135,7 +135,7 @@ void conv2d_deep(
         int pad_t = job->init_padding.top;
         int pad_b = job->init_padding.bottom;
 
-        K = &K[INDEX_CAST(plan->stride.K.cout * (cur_chans - 1))];
+        K = ADDR(K, plan->stride.K.cout * (cur_chans - 1));
 
         const nn_image_t* X_cog = X;
 
@@ -157,22 +157,22 @@ void conv2d_deep(
 
             if(cur_chans == VPU_INT8_ACC_PERIOD){
                 if(requires_padding){
-                    nn_compute_hstrip_deep_padded( Y, X_cog, K, BSS, plan->window.shape.height, plan->window.shape.width, 
+                    nn_conv2d_hstrip_deep_padded( Y, X_cog, K, BSS, plan->window.shape.height, plan->window.shape.width, 
                         plan->window.stride.horizontal, plan->channels.X, cur_pad_t, cur_pad_b, pad_l, pad_r, 
                         plan->stride.X.row, -plan->stride.K.cout, plan->channels.Y, job->output.cols, zero_point_vec);
                 } else {
-                    nn_compute_hstrip_deep( Y, X_cog, K, BSS, plan->window.shape.height, plan->window.shape.width, 
+                    nn_conv2d_hstrip_deep( Y, X_cog, K, BSS, plan->window.shape.height, plan->window.shape.width, 
                         plan->window.stride.horizontal, plan->channels.X, plan->stride.X.row, -plan->stride.K.cout, 
                         plan->channels.Y, job->output.cols);
                 }
             } else {
                 if(requires_padding){
-                    nn_compute_hstrip_tail_deep_padded( Y, X_cog, K, BSS, plan->window.shape.height, plan->window.shape.width, 
+                    nn_conv2d_hstrip_tail_deep_padded( Y, X_cog, K, BSS, plan->window.shape.height, plan->window.shape.width, 
                         plan->window.stride.horizontal, plan->channels.X, cur_pad_t, cur_pad_b, pad_l, pad_r, 
                         plan->stride.X.row, -plan->stride.K.cout, plan->channels.Y, job->output.cols, 
                         zero_point_vec, C_out_tail);
                 } else {
-                    nn_compute_hstrip_tail_deep( Y, X_cog, K, BSS, plan->window.shape.height, plan->window.shape.width, 
+                    nn_conv2d_hstrip_tail_deep( Y, X_cog, K, BSS, plan->window.shape.height, plan->window.shape.width, 
                         plan->window.stride.horizontal, plan->channels.X, plan->stride.X.row, -plan->stride.K.cout, 
                         plan->channels.Y, job->output.cols, C_out_tail);
                 }
@@ -181,12 +181,12 @@ void conv2d_deep(
             pad_t -= plan->window.stride.vertical;
             pad_b += plan->window.stride.vertical;
 
-            X_cog = &X_cog[INDEX_CAST(job->stride.row.window)];
-            Y = &Y[INDEX_CAST(job->stride.row.Y)];
+            X_cog = ADDR(X_cog, job->stride.row.window);
+            Y = ADDR(Y, job->stride.row.Y);
         }
 
-        K = &K[INDEX_CAST(plan->stride.K.cout)];
-        Y = &Y[INDEX_CAST(job->stride.chan_group.Y)];
-        BSS = &BSS[INDEX_CAST(1)];
+        K = ADDR(K, plan->stride.K.cout);
+        Y = ADDR(Y, job->stride.chan_group.Y);
+        BSS = ADDR(BSS, 1);
     }
 }

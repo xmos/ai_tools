@@ -9,13 +9,14 @@ from .conftest import (
     PARAMS,
     test_matching_params,
     test_non_matching_input_channels,
-    test_non_matching_fused_activation
+    test_non_matching_fused_activation,
 )
 
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def build_model():

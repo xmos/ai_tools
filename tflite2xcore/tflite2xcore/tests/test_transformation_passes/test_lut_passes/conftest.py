@@ -4,8 +4,7 @@ import pytest
 from copy import deepcopy
 
 from tflite2xcore.transformation_passes import LegalizeXCLookupTablePass
-from tflite2xcore.operator_codes import XCOREOpCodes
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_schema import TensorType, XCOREOpCodes
 
 from ..conftest import test_matching_params, _test_non_matching_params
 

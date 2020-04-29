@@ -1,8 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import numpy as np
-from tflite2xcore.operator_codes import BuiltinOpCodes, OperatorCode, XCOREOpCodes
-from tflite2xcore.xcore_model import TensorType
+
+from tflite2xcore.xcore_schema import (
+    TensorType,
+    BuiltinOpCodes,
+    OperatorCode,
+    XCOREOpCodes,
+)
 from .transformation_passes import (
     ReplaceQuantizedOperatorPass,
     QuantizedOperatorMatchingPass,

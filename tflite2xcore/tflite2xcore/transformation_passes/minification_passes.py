@@ -1,6 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from tflite2xcore.operator_codes import XCOREOpCodes, BuiltinOpCodes
+from tflite2xcore.xcore_schema import XCOREOpCodes, BuiltinOpCodes
 from .transformation_passes import TensorMatchingPass
 
 

@@ -8,9 +8,6 @@
 #include "nn_conv2d_structs.h"
 #include "nn_op_utils.h"
 #include "nn_op_init.h"
-#include "nn_operator_asm.h"
-#include "nn_operator_c.h"
-#include "nn_operator_inline.h"
 #include "nn_op_advanced.h"
 
 #include <stdint.h>
@@ -41,6 +38,71 @@ extern "C" {
  * Splitting the convolution into multiple jobs may serve several ends, including parallelization, returning
  * control to caller to service other application resources, or even to improve the performance of the 
  * operation itself.
+ * 
+ * ___
+ * 
+ * The operation performed is the following:
+ * 
+ * @f[
+ *      V\left[r,c,p\right]=
+ *          B_p+
+ *          \sum_{w_r=0}^{K_h-1}\sum_{w_c=0}^{K_w-1}\sum_{k=0}^{X_c-1} 
+ *          X\left[ w_{r0}+r\cdot w_{vert}+w_r,
+ *                  w_{c0}+c\cdot w_{hori}+w_c,
+ *                  k\right]\cdot K\left[p,w_r,w_c,k\right]\\\
+ * 
+ *       Y\left[r,c,p\right]= sat_{8}\left(\frac{\left(sat_{16}\left(\frac{V\left[r,c,p\right]}
+ *              {2^{s_{1p}}}\right)\cdot s_{2p}\right)}{2^{s_{3p}}}\right)
+ * @f]
+ * 
+ * where  
+ * @tensor{V} is an intermediate value,  
+ * @math{(r,c,p)} are the output row, column and channel,  
+ * @math{(w_{vert},w_{hori})} are the vertical and horizontal strides of the convolution window,
+ *      as provided to `conv2d_shallowin_init()`,  
+ * @math{(w_{r0},w_{c0})} is the initial row and column of the convolution window,
+ *      as provided to `conv2d_shallowin_init()`,  
+ * @math{(B_i, s_{1p}, s_{2p}, s_{3p})} are the `bias`, `shift1`, `scale` and `shift2` values
+ *      respectively) encoded in the `BSS` data, associated with output channel @math{i}, and  
+ * @math{sat_8\left(\cdot\right)} and @math{sat_{16}\left(\cdot\right)} saturate their arguments 
+ *      to the symmetric @math{8}- and @math{16}-bit bounds.
+ * 
+ * ____
+ * 
+ * The following diagram shows an example of a @math{3\times{}3} convolution window moving across 
+ * an input image with shape @math{5\times{}7}, with vertical stride of @math{3} and a horizontal
+ * stride of @math{2} to produce a @math{2\times{}4} output image. (Note: channel depth is not
+ * shown)
+ * 
+ * @inlinecode
+ *    _____                     _____                      _____                    _____   
+ *   |O O O|P P P P P P     P P|O O O|P P P P      P P P P|O O O|P P    P P P P P P|O O O|  
+ *   |O O O|X X X X X P     P X|O O O|X X X P      P X X X|O O O|X P    P X X X X X|O O O|
+ *   |O_O_O|X X X X X P     P X|O_O_O|X X X P      P X X X|O_O_O|X P    P X X X X X|O_O_O|
+ *    P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
+ *    P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
+ *    P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
+ *                                                                                            
+ *        Y _ _ _               Y Y _ _                Y Y Y _             Y Y Y Y
+ *        _ _ _ _               _ _ _ _                _ _ _ _             _ _ _ _
+ *                                                                                          
+ *                                                                                                
+ *    P P P P P P P P P     P P P P P P P P P      P P P P P P P P P    P P P P P P P P P 
+ *    P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
+ *    P_X_X X X X X X P     P X X_X_X X X X P      P X X X X_X_X X P    P X X X X X X_X_P
+ *   |O O O|X X X X X P     P X|O O O|X X X P      P X X X|O O O|X P    P X X X X X|O O O| 
+ *   |O O O|X X X X X P     P X|O O O|X X X P      P X X X|O O O|X P    P X X X X X|O O O| 
+ *   |O_O_O|X X X X X P     P X|O_O_O|X X X P      P X X X|O_O_O|X P    P X X X X X|O_O_O| 
+ *                                                                                            
+ *        Y Y Y Y               Y Y Y Y                Y Y Y Y             Y Y Y Y
+ *        Y _ _ _               Y Y _ _                Y Y Y _             Y Y Y Y  
+ *  
+ * 
+ * @endinlinecode
+ * 
+ * The input, output, (implied) padding and window pixels are represented by `X`, `Y`, `P` 
+ * and `O` respectively.
+ * ___
  * 
  * `Y` points to the output image tensor @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}, which correspond to
  * the output image rows, columns and channels respectively. The dimensions of @tensor{Y} must be as specified 
@@ -98,85 +160,189 @@ void conv2d_deep(
 
 
 
-
-
-
-
-
-/** Execute an 8-bit 2D convolution on a region of an image.
- *
- * This function performs a 2D convolution of an input image with the specified 
- * kernel. This function requires that the convolution's 
- * output have a multiple of 16 output channels. Further, this function requires that
- * the product of the kernel width and input channel count (`K_w` * C_in`) be no
- * larger than 32, and `C_in` must be a multiple of 4.
- *
- * All pointer arguments must refer to word-aligned addresses.
+/**
+ * @brief Perform a 2D convolution of a shallow input image.
  * 
- * The `nn_conv2d_sido_params_t*` input parameter
- * must have been initialized with a call to `conv2d_shallowin_deepout_init()`.
- *
- * The dimensions and types of the `Y`, `X`, `K`, `B`, `shifts` and `scales` must be consistent
- * with those provided to `conv2d_shallowin_deepout_init()`.
+ * Perform a 2D convolution of kernel tensor @tensor{K} with input image @tensor{X}
+ * to produce output image @tensor{Y}.
+ *  
+ * This function is optimized for shallow input images. A "shallow" image is one with a small number 
+ * of input channels. With this function, the product of the input channel count and the 
+ * convolution window width must be less than or equal to the byte-width of the vectors 
+ * (@ttref{VPU_INT8_EPV}).
  * 
- * The height and width of `Y` depends on the `padding_mode` parameter supplied to `conv2d_shallowin_deepout_init()`.
- * For `PADDING_MODE_SAME`, `Y`'s shape is  (X_height, X_width, C_out),
- * For `PADDING_MODE_VALID`, `Y`'s shape is (X_height - K_h//2, X_width - K_w//2, C_out).
- * In either case, `Y`'s data layout will be the standard layout, with indices 
- * corresponding to the rows, columns and channels of the image.
- *
- * The shape of `X` is (X_height, X_width, C_in), with a standard image data layout. Each pixel
- * of `X` must start of a word-aligned boundary. Hence, if the input image has only 3 channels 
- * (e.g. RGB), the input image must be padded with a 4th channel to ensure word-alignment.
+ * @math{X_c \cdot K_h \leq 32}
  * 
- * The shape of `K` is (C_out // 16, K_h, 16, 32 / C_in, C_in). The kernel tensor is layed
- * out so as to minimize overhead from pointer arithmetic. The following pseudocode illustrates
- * this layout:
-    \code
-      int8_t kernel_tensor[C_out][K_h][K_w][C_in] = {...}; //standard kernel tensor
-      int8_t K[C_out/16][K_h][16][32 / C_in][C_in] = {{{{{0}}}}};  //re-arranged kernel tensor
-
-      for(int krow = 0; krow < K_h; krow++)
-        for(int kcol = 0; kcol < K_w; kcol++)
-          for(int cout = 0; cout < C_out; cout++)
-            for(int cin = 0; cin < C_in; cin++)
-              K[cout/16][krow][15-(cout % 16)][kcol][cin] = kernel_tensor[cout][krow][kcol][cin];
-    \endcode
- *  Note that the third dimension of `K` is reversed. Note also that the forth dimension, 
- *  corresponding to kernel width has a size of `32/C_in`, rather than `K_w`. This dimension is
- *  zero-padded (if necessary) so that the product of the final two dimensions is 32.
- *
- * The shape of `B` is (C_out // 16, 2, 16), and is layed out in Bias Tensor Layout (Form 1) 
- * as described above.
- *
- * The shape of the `scales` tensor is (C_out // 16, 2, 16). The first index is the channel group, second indicates shift (0) or scale (1), and the third is the channel offset within the channel group.
+ * The output image may be deep. Both the input channel count @math{X_c} and the output channel count 
+ * @math{Y_c} must be a multiple of 4.
  * 
- * where `X_height`, `X_width`, `C_in`, `C_out`, `K_h` and `K_w` are from the parameters supplied to
- * `conv2d_shallowin_deepout_init()`.
+ * This function also supports implied padding of the input image in which a specified value is used as 
+ * the padding value.
  * 
- * \param Y         Pointer to beginning of output data tensor. Updated by function.
- * \param params    Pointer to `nn_conv2d_sido_params_t` initialized with `conv2d_shallowin_deepout_init()`
- * \param block     Pointer to `nn_conv2d_sido_block_params_t` initialized with `conv2d_shallowin_deepout_init()`
- * \param X         Pointer to beginning of input data tensor
- * \param K         Pointer to beginning of kernel tensor
- * \param B         Pointer to beginning of bias tensor
- * \param scales    Pointer to beginning of scales tensor
+ * Before performing a 2D convolution using this function, a call must be made to `conv2d_shallowin_init()`
+ * to initialize a `nn_conv2d_shallowin_plan_t` struct and one or more `nn_conv2d_shallowin_job_t` structs. 
+ * Each job, together with the plan shared by all jobs, contains the information required to compute a subset 
+ * of the pixels in the output image. More specifically, each job corresponds to a rectangular subtensor 
+ * of @tensor{Y}, which is to be computed by that job.
+ * 
+ * Splitting the convolution into multiple jobs may serve several ends, including parallelization, returning
+ * control to caller to service other application resources, or even to improve the performance of the 
+ * operation itself.
+ * 
+ * ___
+ * 
+ * The operation performed is the following:
+ * 
+ * @f[
+ *      V\left[r,c,p\right]=
+ *          B_p+
+ *          \sum_{w_r=0}^{K_h-1}\sum_{w_c=0}^{K_w-1}\sum_{k=0}^{X_c-1} 
+ *          X\left[ w_{r0}+r\cdot w_{vert}+w_r,
+ *                  w_{c0}+c\cdot w_{hori}+w_c,
+ *                  k\right]\cdot K\left[p,w_r,w_c,k\right]\\\
+ * 
+ *       Y\left[r,c,p\right]= sat_{8}\left(\frac{\left(sat_{16}\left(\frac{V\left[r,c,p\right]}
+ *              {2^{s_{1p}}}\right)\cdot s_{2p}\right)}{2^{s_{3p}}}\right)
+ * @f]
+ * 
+ * where  
+ * @tensor{V} is an intermediate value,  
+ * @math{(r,c,p)} are the output row, column and channel,  
+ * @math{(w_{vert},w_{hori})} are the vertical and horizontal strides of the convolution window,
+ *      as provided to `conv2d_shallowin_init()`,  
+ * @math{(w_{r0},w_{c0})} is the initial row and column of the convolution window,
+ *      as provided to `conv2d_shallowin_init()`,  
+ * @math{(B_i, s_{1p}, s_{2p}, s_{3p})} are the `bias`, `shift1`, `scale` and `shift2` values
+ *      respectively) encoded in the `BSS` data, associated with output channel @math{i}, and  
+ * @math{sat_8\left(\cdot\right)} and @math{sat_{16}\left(\cdot\right)} saturate their arguments 
+ *      to the symmetric @math{8}- and @math{16}-bit bounds.
+ * 
+ * ____
+ * 
+ * The following diagram shows an example of a @math{3\times{}3} convolution window moving across 
+ * an input image with shape @math{5\times{}7}, with vertical stride of @math{3} and a horizontal
+ * stride of @math{2} to produce a @math{2\times{}4} output image. (Note: channel depth is not
+ * shown)
+ * 
+ * @inlinecode
+ *    _____                     _____                      _____                    _____   
+ *   |O O O|P P P P P P     P P|O O O|P P P P      P P P P|O O O|P P    P P P P P P|O O O|  
+ *   |O O O|X X X X X P     P X|O O O|X X X P      P X X X|O O O|X P    P X X X X X|O O O|
+ *   |O_O_O|X X X X X P     P X|O_O_O|X X X P      P X X X|O_O_O|X P    P X X X X X|O_O_O|
+ *    P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
+ *    P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
+ *    P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
+ *                                                                                            
+ *        Y _ _ _               Y Y _ _                Y Y Y _             Y Y Y Y
+ *        _ _ _ _               _ _ _ _                _ _ _ _             _ _ _ _
+ *                                                                                          
+ *                                                                                                
+ *    P P P P P P P P P     P P P P P P P P P      P P P P P P P P P    P P P P P P P P P 
+ *    P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
+ *    P_X_X X X X X X P     P X X_X_X X X X P      P X X X X_X_X X P    P X X X X X X_X_P
+ *   |O O O|X X X X X P     P X|O O O|X X X P      P X X X|O O O|X P    P X X X X X|O O O| 
+ *   |O O O|X X X X X P     P X|O O O|X X X P      P X X X|O O O|X P    P X X X X X|O O O| 
+ *   |O_O_O|X X X X X P     P X|O_O_O|X X X P      P X X X|O_O_O|X P    P X X X X X|O_O_O| 
+ *                                                                                            
+ *        Y Y Y Y               Y Y Y Y                Y Y Y Y             Y Y Y Y
+ *        Y _ _ _               Y Y _ _                Y Y Y _             Y Y Y Y  
+ *  
+ * 
+ * @endinlinecode
+ * 
+ * The input, output, (implied) padding and window pixels are represented by `X`, `Y`, `P` 
+ * and `O` respectively.
+ * ___
+ * 
+ * `Y` points to the output image tensor @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}, which 
+ * correspond to the output image rows, columns and channels respectively. The dimensions of @tensor{Y} 
+ * must be as specified when `plan` was initialized. The address supplied for `Y` should be the start 
+ * address of the output image tensor, *not* the start address of the sub-tensor being computed by the 
+ * current job.
+ * 
+ * `X` points to the input image tensor @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}, which 
+ * correspond to the input image rows, columns and channels respectively. The dimensions of @tensor{X} 
+ * must be as specified when `plan` was initialized. The address supplied for `X` should be the start 
+ * address of input image tensor, *not* the address at which the convolution window starts for the job 
+ * being processed.
+ * 
+ * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
+ * standard_layout).
+ * 
+ * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, K_h, \hat{K_w}, X_c}, where @math{Y_c},
+ * @math{K_h} and @math{X_c} correspond to the output image channels, convolution window rows and the input image 
+ * channel count respectively. @math{\hat{K_w}} is the augmented convolution window width, which must be exactly
+ * @math{32/X_c}.The address supplied for `K` should be the start address of the kernel tensor.
+ * 
+ * The memory layout of @tensor{K} is the standard memory layout for 4D tensors (see @ref standard_layout). Further,
+ * the coefficients for all elements @math{K\left[i,j,k,l\right]} where @math{k\geq K_w} must have the value 0.
+ * 
+ * `BSS` points to an array of bias-shifts-scale parameters required for this convolution. Each 
+ * `nn_bss_block_t` in the array contains the bias-shifts-scale parameters for a single output channel group,
+ * (@ttref{VPU_INT8_ACC_PERIOD} output channels). If @math{Y_c} is not a multiple of @ttref{VPU_INT8_ACC_PERIOD}, 
+ * then the output channel tail ( the last @math{(Y_c mod 16)} output channels) also gets `nn_bss_block_t`, where
+ * the entries corresponding to channels beyond @math{Y_c} are ignored. The address supplied for `BSS` should be
+ * the start address of the the array, *not* the address of the `nn_bss_block_t` corresponding of the first output
+ * channel of the job being processed.
+ * 
+ * `plan` points to the `nn_conv2d_shallowin_plan_t` which was previously initialized with a call to 
+ * `conv2d_shallowin_init()`.
+ * 
+ * `job` points to the job to be performed in this call, which was previously initialized along-side `plan`. 
+ * 
+ * Note that a single call to this function processes only a *single job*. If multiple jobs were initialized,
+ * performing the complete convolution requires multiple calls to this function. In such a case, the `Y`, `X`,
+ * `K`, `BSS`, and `plan` pointers will be identical in each call, and the `job` pointer will be different with
+ * each call.
+ * 
+ * @requires_word_alignment{Y,X,K,BSS}
+ * 
+ * @param[out] Y        The output image @tensor{Y}
+ * @param[in]  X        The input image @tensor{X}
+ * @param[in]  K        The kernel tensor @tensor{K}
+ * @param[in]  BSS      The bias-shifts-scale parameters
+ * @param[in]  plan     The convolution plan
+ * @param[in]  job      The convolution job
  */
-static inline void conv2d_shallowin_deepout(
-    int8_t* Y,
-    const nn_conv2d_sido_params_t* params,
-    const int8_t* X,
-    const int8_t* K,
-    const int16_t* scales);
+void conv2d_shallowin(
+    nn_image_t* Y,
+    const nn_image_t* X,
+    const nn_tensor_t* K,
+    const nn_bss_block_t* BSS,
+    const nn_conv2d_shallowin_plan_t* plan,
+    const nn_conv2d_shallowin_job_t* job);
+
+
 
 
 /**
  * Perform a 2D convolution using a 1x1 kernel over the input image.
  * 
- * The operation performed is:
- * \code
- *      Y[i,j,k]  <--  (((bias[k] + sum(X[i,j,:] * K[k,:])) >> shift1[k]) * scale[k]) >> shift2[k]
- * \endcode
+ * 
+ * ___
+ * 
+ * The operation performed is the following:
+ * 
+ * @f[
+ *      V\left[r,c,p\right]=
+ *          B_p+\sum_{k=0}^{X_c-1} 
+ *          X\left[ r,c,k\right]\cdot K\left[p,k\right]\\\
+ * 
+ *       Y\left[r,c,p\right]= sat_{8}\left(\frac{\left(sat_{16}\left(\frac{V\left[r,c,p\right]}
+ *              {2^{s_{1p}}}\right)\cdot s_{2p}\right)}{2^{s_{3p}}}\right)
+ * @f]
+ * 
+ * where  
+ * @tensor{V} is an intermediate value,  
+ * @math{(r,c,p)} are the output row, column and channel,  
+ * @math{(w_{vert},w_{hori})} are the vertical and horizontal strides of the convolution window,
+ *      as provided to `conv2d_shallowin_init()`,  
+ * @math{(B_i, s_{1p}, s_{2p}, s_{3p})} are the `bias`, `shift1`, `scale` and `shift2` values
+ *      respectively) encoded in the `BSS` data, associated with output channel @math{i}, and  
+ * @math{sat_8\left(\cdot\right)} and @math{sat_{16}\left(\cdot\right)} saturate their arguments 
+ *      to the symmetric @math{8}- and @math{16}-bit bounds.
+ * 
+ * ____
  * 
  * The output tensor `Y` has shape (`y->height`, `y->width`, `y->channels`), where `y` is the same
  * `nn_image_params_t*` passed to `conv2d_1x1_init()`.
@@ -201,10 +367,10 @@ static inline void conv2d_shallowin_deepout(
  *       the kernel tensor layout used by this function is NOT compatible with that required by 
  *       `conv2d_deepin_deepout()`.
  */
-static inline void conv2d_1x1(
-    int8_t* Y,
-    const int8_t* X,
-    const int8_t* K,
+void conv2d_1x1(
+    nn_image_t* Y,
+    const nn_image_t* X,
+    const nn_tensor_t* K,
     const data16_t* BSS,
     const nn_conv2d_1x1_plan_t* plan);
 
@@ -231,34 +397,79 @@ static inline void conv2d_1x1(
  * work to be done across cores, or, for example, to periodically return control to the caller 
  * so that other resources can be serviced in a timely manner.
  * 
- * `Y` is a pointer to the output image to be computed (either fully or partially, depending on `job`).
- * The output image must have the same dimensions as were supplied via the `y_params` argument to
- *  `conv2d_depthwise_init()` when `plan` was initialized.
  * 
- * `X` is a pointer to the input image. The input image must have the same dimensions as were supplied
- * via the `x_params` argument to `conv2d_depthwise_init()` when `plan` was initialized.
+ * ___
  * 
- * `K` is a pointer to the kernel tensor which is to be convolved with the input image to produce the
- * output image. The shape of the kernel tensor must be `(K_h, K_w, C_in)`, where `K_h` and `K_w` are the
- * height and width respectively of the kernel tensor, and `C_in` is the number of channels in the input 
- * image (via `x_params->channels`) as supplied to `conv2d_depthwise_init()` when `plan` was initialized. 
+ * The operation performed is the following:
  * 
- * `BSS` is a pointer to the bias-shifts-scale tensor. `BSS` is layed out as specified in "Bias-Shifts-
- * Scale Tensor Layout". The accumulators for each output channel are seeded with the 32-bit biases 
- * encoded in `BSS`, and the shifts and scale are used as specified in "Notes on Output Shifts 
- * and Scales".
+ * @f[
+ *      V\left[r,c,p\right]=
+ *          B_p+\sum_{w_r=0}^{K_h-1}\sum_{w_c=0}^{K_w-1} 
+ *          X\left[ w_{r0}+r\cdot w_{vert}+w_r,
+ *                  w_{c0}+c\cdot w_{hori}+w_c,
+ *                  p\right]\cdot K\left[w_r,w_c,p\right]\\\
  * 
- * `plan` is a pointer to the depthwise convolution plan initialized by a previous call to
+ *       Y\left[r,c,p\right]= sat_{8}\left(\frac{\left(sat_{16}\left(\frac{V\left[r,c,p\right]}
+ *              {2^{s_{1p}}}\right)\cdot s_{2p}\right)}{2^{s_{3p}}}\right)
+ * @f]
+ * 
+ * where  
+ * @tensor{V} is an intermediate value,  
+ * @math{(r,c,p)} are the output row, column and channel,  
+ * @math{(w_{vert},w_{hori})} are the vertical and horizontal strides of the convolution window,
+ *      as provided to `conv2d_shallowin_init()`,  
+ * @math{(w_{r0},w_{c0})} is the initial row and column of the convolution window,
+ *      as provided to `conv2d_shallowin_init()`,  
+ * @math{(B_i, s_{1p}, s_{2p}, s_{3p})} are the `bias`, `shift1`, `scale` and `shift2` values
+ *      respectively) encoded in the `BSS` data, associated with output channel @math{i}, and  
+ * @math{sat_8\left(\cdot\right)} and @math{sat_{16}\left(\cdot\right)} saturate their arguments 
+ *      to the symmetric @math{8}- and @math{16}-bit bounds.
+ * 
+ * ____
+ * 
+ * `Y` points to the output image tensor @tensor{Y} with shape @tensor_shape{Y_h, Y_w, X_c}, which 
+ * correspond to the output image rows, columns and channels respectively. The dimensions of @tensor{Y} 
+ * must be as specified when `plan` was initialized. The address supplied for `Y` should be the start 
+ * address of the output image tensor, *not* the start address of the sub-tensor being computed by the 
+ * current job.
+ * 
+ * `X` points to the input image tensor @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}, which 
+ * correspond to the input image rows, columns and channels respectively. The dimensions of @tensor{X} 
+ * must be as specified when `plan` was initialized. The address supplied for `X` should be the start 
+ * address of input image tensor, *not* the address at which the convolution window starts for the job 
+ * being processed.
+ * 
+ * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
+ * standard_layout).
+ * 
+ * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{K_h, K_w, X_c}, which correspond to
+ * the convolution window rows and columns, and the input image channels respectively. The dimensions of 
+ * @tensor{K} must be as specified when `plan` was initialized. The address supplied for `K` should be the 
+ * start address of the kernel tensor.
+ * 
+ * The memory layout of @tensor{K} is the standard memory layout for 3D tensors (see @ref standard_layout).
+ * 
+ * `BSS` points to an array of bias-shifts-scale parameters required for this convolution. Each 
+ * `nn_bss_block_t` in the array contains the bias-shifts-scale parameters for a single output channel group,
+ * (@ttref{VPU_INT8_ACC_PERIOD} output channels). If @math{X_c} is not a multiple of @ttref{VPU_INT8_ACC_PERIOD}, 
+ * then the output channel tail ( the last @math{(X_c mod 16)} output channels) also gets `nn_bss_block_t`, where
+ * the entries corresponding to channels beyond @math{X_c} are ignored. The address supplied for `BSS` should be
+ * the start address of the the array, *not* the address of the `nn_bss_block_t` corresponding of the first output
+ * channel of the job being processed.
+ * 
+ * `plan` points to the `nn_conv2d_depthwise_plan_t` which was previously initialized with a call to 
  * `conv2d_depthwise_init()`.
  * 
- * `job` is a pointer to a single depthwise convolution job initialized with `plan` in a previous call
- * to `conv2d_depthwise_init()`. If more than one job was initialized with `plan`, then to perform
- * all jobs, the user must call this function multiple times, each time passing the same plan, 
- * and a different one of the initialized jobs.
+ * `job` points to the job to be performed in this call, which was previously initialized along-side `plan`. 
+ * 
+ * Note that a single call to this function processes only a *single job*. If multiple jobs were initialized,
+ * performing the complete convolution requires multiple calls to this function. In such a case, the `Y`, `X`,
+ * `K`, `BSS`, and `plan` pointers will be identical in each call, and the `job` pointer will be different with
+ * each call.
  * 
  * Constraints:
  *  - `Y`, `X`, `K` and `BSS` must all point to word-aligned addresses.
- *  - The input and output images must each have a multiple of 4 channels.
+ *  - @math{X_c} must be a multiple of 4.
  * 
  * \param Y     The output image.
  * \param X     The input image.
@@ -267,10 +478,10 @@ static inline void conv2d_1x1(
  * \param plan  The execution plan initialized by `conv2d_depthwise_init()`.
  * \param job   The (single) job to be performed.
  */
-static inline void conv2d_depthwise(
-    int8_t* Y,
-    const int8_t* X,
-    const int8_t* K,
+void conv2d_depthwise(
+    nn_image_t* Y,
+    const nn_image_t* X,
+    const nn_tensor_t* K,
     const nn_bss_block_t* BSS,
     const nn_conv2d_depthwise_plan_t* plan,
     const nn_conv2d_depthwise_job_t* job);
@@ -304,9 +515,9 @@ static inline void conv2d_depthwise(
  * \param plan  The execution plan.
  *
  */
-static inline void maxpool2d(
-    int8_t* Y,
-    const int8_t* X, 
+void maxpool2d(
+    nn_image_t* Y,
+    const nn_image_t* X, 
     const nn_window_op_plan_t* plan);
 
 
@@ -339,9 +550,19 @@ static inline void maxpool2d(
  * \param params    Parameters for the operation
  */
 static inline void avgpool2d(
-    int8_t* Y,
-    const int8_t* X, 
-    const nn_avgpool2d_plan_t* plan);
+    nn_image_t* Y,
+    const nn_image_t* X, 
+    const nn_avgpool2d_plan_t* plan)
+{
+    switch(plan->impl){
+        case AVGPOOL2D_2X2:
+            avgpool2d_2x2(Y, X, plan);
+            break;
+        default:
+            avgpool2d_gen(Y, X, plan);
+            break;
+    }
+}
 
 /** 2D global average pooling for an 8-bit image
  * 
@@ -366,60 +587,15 @@ static inline void avgpool2d(
  * \param shift     Shift parameter. Shared by all channels.
  * \param scale     Scale parameter. Shared by all channels.
  */
-static inline void avgpool2d_global(
-    int8_t* Y,
-    const int8_t* X, 
+void avgpool2d_global(
+    nn_image_t* Y,
+    const nn_image_t* X, 
     const uint32_t x_height, 
     const uint32_t x_width,
-    const uint32_t x_chans,
+    const channel_count_t x_chans,
     const int32_t  bias,
     const uint32_t shift,
     const uint32_t scale);
-
-
-
-/**  Fully connected layer for "deep" input and "shallow" output tensors.
- *
- *  Number of inputs must be divisible by 32. No activation is applied (i.e. linear).
- *
- * Weight tensor `W` is a 2D matrix with shape (C_out, C_in) in standard layout.
- *
- * Bias tensor `B` has shape (C_out), and is in standard layout.
- * 
- * Input tensor `X` has shape (C_in), and is in standard layout.
- * 
- * Output tensor `Y` has shape (C_out), and will be in standard layout.
- *
- * The `shifts` tensor has shape (C_out) and is in standard layout. The 32-bit accumulant
- * is arithmetically right-shifted by this number of bits, with rounding to the nearest integer.
- * Saturation to 16-bit bounds is applied immediately after the shift-and-round.
- * 
- * The `scales` tensor has shape (C_out) and is in standard layout. The scales can be
- * interpreted as signed Q1.14 fixed-point values.
- * 
- * Each output `Y[i]` is computed as
- *
- *  Y[i] = ( ( B[i] + sum(W[i,:] * X[:]) ) >> shifts[i] ) * scales[i]
- *
- *
- *  \param  W       Weight tensor
- *  \param  B       Bias tensor
- *  \param  X       Input tensor
- *  \param  Y       Output tensor
- *  \param  C_out   Number of output channels
- *  \param  C_in    Number of input channels, must be divisible by 32.
- *  \param  shifts  Shift tensor
- *  \param  scales  Scale tensor
- */
-static inline void fc_deepin_shallowout_16(
-    const int8_t* W, 
-    const int32_t* B,
-    const int8_t* X, 
-    int16_t* Y,
-    const int32_t C_out, 
-    const int32_t C_in,
-    const uint16_t* shifts, 
-    const int16_t* scales);
 
 
 
@@ -473,104 +649,113 @@ static inline void fc_deepin_shallowout_16(
  * padded*.
  * 
  */
-static inline void fully_connected_16(
+void fully_connected_16(
     int16_t* Y,
-    const int8_t* W, 
-    const int8_t* X, 
-    const data16_t* BSS,
+    const nn_tensor_t* W, 
+    const nn_tensor_t* X, 
+    const nn_bss_block_t* BSS,
     const nn_fully_connected_plan_t* plan);
 
 
 
-// /**  Fully connected layer for "deep" input and "shallow" output tensors.
-//  *
-//  *  Number of inputs must be divisible by 32. No activation is applied (i.e. linear).
-//  *
-//  *  \param  W       Weight tensor of shape (C_out, C_in) using standard layout
-//  *                  such that:
-//  *                      W[i, j]  =  K[C_in * i  +  j]
-//  *  \param  B       Bias tensor of shape (C_out) using a standard layout.
-//  *  \param  X       Input tensor of shape (C_in) using standard layout.
-//  *  \param  Y       Output tensor of shape (C_out) using standard layout.
-//  *  \param  C_out   Number of output channels.
-//  *  \param  C_in    Number of input channels, must be divisible by 32.
-//  *  \param  shifts  Shift tensor of shape (C_out) using standard layout.
-//  *                  Defines the shift used in the 32 to 8 bit conversion via
-//  *                  VLSAT. For c >= C_out, the value shifts[y] is undefined.
-//  *  \param  scales  Scale tensor of shape (C_out) using standard layout.
-//  *                  Defines the scale applied after the 32 to 8 bit
-//  *                  conversion. Optional. Can be assumed to be between 0x4000
-//  *                  and 0x7FFF. For c >= C_out, the value scales[y] is
-//  *                  undefined.
-//  */
-// static inline void fc_deepin_shallowout_8(
-//     const int8_t* W, 
-//     const int32_t* B,
-//     const int8_t* X, 
-//     int8_t* Y,
-//     const int32_t C_out, 
-//     const int32_t C_in,
-//     const uint16_t* shifts, 
-//     const int16_t* scales);
 
-
-/**  Determines the index of the largest element of a vector.
- *
- * The output `C` will be set to the index of the largest element of `A`.
+/**  Determines the index of the largest element of a tensor.
+ * 
+ * ___
+ * 
+ * The operation performed is the following:
+ * 
+ * @f[
+ *      C \leftarrow argmax_{k}\{ A\left[k\right] \} \text{ for } 0 \leq k \lt l
+ * @f]
+ * 
+ * ____
+ * 
+ * `A` points to the input tensor @tensor{A} with shape @tensor_shape{l}.
+ * 
+ * `C` points to the output tensor with shape @tensor_shape{1}.
+ * 
+ * `length` is the size @math{l} of the input tensor @tensor{A} in elements.
  *
  *  \param  A       Tensor of shape (N) using a standard layout.
  *  \param  C       Output tensor of shape (1).
- *  \param  N       Number of elements in the input tensor A.
+ *  \param  length  Number of elements in the input tensor A.
  */
-static inline void argmax_16(
+void argmax_16(
     const int16_t* A,
     int32_t* C,
-    const int32_t N);
+    const int32_t length);
 
 
 /** Reduce the bit depth of a 16-bit vector to 8 bits
  * 
- * Each output ``y[i]`` is computed as:
- *
- *  ``y[i] = (int8_t) round( x[i] / 256.0 )``
- *
- *  If ``y`` and ``x`` point to the same address, the operator
- *  will work in-place on the input vector.
- *
- *  Both ``y`` and ``x`` must be word-aligned.
- *
- * \param y     Output tensor
- * \param x     Input tensor
- * \param n     Length of input and output tensors (in elements)
- */
-static inline void requantize_16_to_8(
-    int8_t* y,
-    const int16_t* x,
-    const unsigned n);
-
-
-
-/** 8-bit Look-up Table
+ * ___
  * 
- * `lut` is used as a look-up table mapping 8-bit inputs to 8-bit outputs.
+ * The operation performed is the following:
  * 
- * The following operation is applied:
- *  
- * \code
- *      Y[i] <- lut[X[i]];
+ * @f[
+ *      Y\left[k\right] \overset{8-bit}{\longleftarrow} X\left[k\right] \text{for } 0 \leq k \lt l
+ * @f]
  * 
- *         for  0 <= i < length
- * \endcode 
+ * ____
  * 
- * NOTE: This function can safely operate in-place on a buffer. To do the look-up in-place
+ * `Y` points to the start of the output tensor @tensor{Y} with shape @tensor_shape{l}.
+ * 
+ * `X` points to the start of the input tensor @tensor{X} with shape @tensor_shape{l}.
+ * 
+ * `length` is the size of the input and output tensors @math{l}. If @tensor{X} and @tensor{Y} 
+ * are multi-dimensional tensors (e.g. images), then @math{l} should be the product of the 
+ * dimensions of the input tensors.
+ * 
+ * @note This function can safely operate in-place on a buffer. To do the look-up in-place
  *        just pass the same address for both `X` and `Y`.
  * 
- * \param Y         
- * \param X         
- * \param lut       
- * \param length    
+ *
+ * \param Y         Output tensor
+ * \param X         Input tensor
+ * \param length    Length of input and output tensors (in elements)
  */
-static inline void lookup8(
+void requantize_16_to_8(
+    int8_t* Y,
+    const int16_t* X,
+    const unsigned length);
+
+
+
+/** Transform an input using a look-up table
+ * 
+ * This function transforms an 8-bit input tensor @tensor{X} into the 8-bit output tensor
+ * @tensor{Y} using the look-up table @tensor{T}.
+ * 
+ * ___
+ * 
+ * The operation performed is the following:
+ * 
+ * @f[
+ *      Y\left[k\right] = T\left[X\left[k\right]\right] \text{for } 0 \leq k \lt l
+ * @f]
+ * 
+ * ____
+ * 
+ * `Y` points to the start of the output tensor @tensor{Y} with shape @tensor_shape{l}.
+ * 
+ * `X` points to the start of the input tensor @tensor{X} with shape @tensor_shape{l}.
+ * 
+ * `lut` points to the start of the look-up table @math{T} with shape @tensor_shape{256}.
+ * 
+ * `length` is the size of the input and output tensors @math{l}. If @tensor{X} and @tensor{Y} 
+ * are multi-dimensional tensors (e.g. images), then @math{l} should be the product of the 
+ * dimensions of the input tensors.
+ * 
+ * @note This function can safely operate in-place on a buffer. To do the look-up in-place
+ *        just pass the same address for both `X` and `Y`.
+ * 
+ * \param Y         Output tensor
+ * \param X         Input tensor
+ * \param lut       Look-up table
+ * \param length    Length of input and output tensors
+ */
+void lookup8(
     uint8_t* Y,
     const uint8_t* X,
     const uint8_t* lut,
@@ -578,26 +763,20 @@ static inline void lookup8(
 
 
 
-
-    
-
-#if defined(__XS3A__)
-
 /**
  * Copy size bytes from src to dst.
  *   
  * dst and src both must be word-aligned.
  *  
- * \param dst
- * \param src
- * \param size
+ * \param dst   Destination address
+ * \param src   Source address
+ * \param size  Number of bytes to be copied
 */
 void vpu_memcpy(
     void* dst,
     void* src,
     unsigned size);
 
-#endif
 
 #ifdef __XC__
 } // extern "C"

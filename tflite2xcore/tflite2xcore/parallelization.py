@@ -55,9 +55,9 @@ class ParallelizationPlanner(ABC):
 
     def add_layout_candidate(self, *args):
         self._candidate_plans.append(
-            ParPlan(
+            ParPlan(  # pylint: disable=no-value-for-parameter
                 *args, cost=lambda layout: self.estimate_layout_cost(layout)
-            )  # pylint: disable=no-value-for-parameter
+            )
         )
 
     def create_candidate_plans(self):

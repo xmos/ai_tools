@@ -4,7 +4,7 @@
 #include "window_op_plan.h"
 
 /*  
-void conv2d_1x1_asm(
+void conv2d_1x1(
     int8_t* Y,
     const int8_t* X, 
     const int8_t* K,
@@ -19,7 +19,7 @@ Optimizing assumptions:
 
 */
 
-#define FUNCTION_NAME conv2d_1x1_asm
+#define FUNCTION_NAME conv2d_1x1
 
 #define NSTACKWORDS  34
     

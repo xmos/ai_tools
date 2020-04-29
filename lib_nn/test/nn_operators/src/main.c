@@ -13,13 +13,18 @@ int main(void)
 
     test_vpu_memcpy();
 
-    test_nn_compute_hstrip_deep_padded();
-    test_nn_compute_hstrip_deep();
-    test_nn_compute_hstrip_tail_deep_padded();
-    test_nn_compute_hstrip_tail_deep();
+    test_nn_conv2d_hstrip_deep_padded();
+    test_nn_conv2d_hstrip_deep();
+    test_nn_conv2d_hstrip_tail_deep_padded();
+    test_nn_conv2d_hstrip_tail_deep();
+    
+    test_nn_conv2d_hstrip_shallowin_padded();
+    test_nn_conv2d_hstrip_shallowin();
+    test_nn_conv2d_hstrip_tail_shallowin_padded();
+    test_nn_conv2d_hstrip_tail_shallowin();
 
     test_conv2d_deep();
-    test_conv2d_shallowin_deepout();
+    test_conv2d_shallowin();
     test_conv2d_1x1();
     test_conv2d_depthwise();
     test_maxpool2d();

@@ -18,18 +18,18 @@ def set_verbosity(verbosity=0):
 
     logging.basicConfig(level=VERBOSITIES[verbosity])
     if verbosity == 0:
-        logging.getLogger('tensorflow').setLevel(logging.ERROR)
+        logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 
-def _array_msg(arr, style=''):
+def _array_msg(arr, style=""):
     msg = f"numpy.ndarray, shape={arr.shape}, dtype={arr.dtype}:\n"
-    if style.endswith('_shift_scale_arr'):
+    if style.endswith("_shift_scale_arr"):
         msg += f"shift_pre:\n{arr[:, 0]}\n"
         msg += f"scale:\n{arr[:, 1]}\n"
         msg += f"shift_post:\n{arr[:, 2]}"
     else:
         msg += f"{arr}"
-    return msg + '\n'
+    return msg + "\n"
 
 
 def getLogger(*args, **kwargs):
@@ -38,7 +38,7 @@ def getLogger(*args, **kwargs):
     return logger
 
 
-class LoggingContext():
+class LoggingContext:
     def __init__(self, logger, level=None, handler=None, close=True):
         self.logger = logger
         self.level = level
@@ -68,6 +68,7 @@ def log_method_output(level=XDEBUG, logger=None):
             out = func(self, *args, **kwargs)
             msg = f"{func.__name__} output:\n"
             import numpy as np
+
             if isinstance(out, np.ndarray):
                 msg += _array_msg(out, func.__name__)
             else:
@@ -75,5 +76,7 @@ def log_method_output(level=XDEBUG, logger=None):
             _logger = logger or self.logger
             _logger.log(level, msg)
             return out
+
         return wrapper
+
     return _log_method_output

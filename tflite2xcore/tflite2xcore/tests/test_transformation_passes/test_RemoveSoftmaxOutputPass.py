@@ -2,8 +2,8 @@
 
 import pytest
 
-from tflite2xcore.xcore_model import XCOREModel, TensorType
-from tflite2xcore.operator_codes import OperatorCode, BuiltinOpCodes
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import TensorType, OperatorCode, BuiltinOpCodes
 from tflite2xcore.transformation_passes import RemoveSoftmaxOutputPass
 
 
@@ -12,14 +12,18 @@ def simple_model(request):
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
-    tin = subgraph.create_tensor('input', type_=request.param, shape=[1, 5, 5, 3], isinput=True)
-    pre_out = subgraph.create_tensor('pre_output', tin.type, tin.shape)
-    subgraph.create_operator(OperatorCode(BuiltinOpCodes.ABS),
-                             inputs=[tin], outputs=[pre_out])
+    tin = subgraph.create_tensor(
+        "input", type_=request.param, shape=[1, 5, 5, 3], isinput=True
+    )
+    pre_out = subgraph.create_tensor("pre_output", tin.type, tin.shape)
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.ABS), inputs=[tin], outputs=[pre_out]
+    )
 
-    tout = subgraph.create_tensor('output', pre_out.type, pre_out.shape, isoutput=True)
-    subgraph.create_operator(OperatorCode(BuiltinOpCodes.SOFTMAX),
-                             inputs=[pre_out], outputs=[tout])
+    tout = subgraph.create_tensor("output", pre_out.type, pre_out.shape, isoutput=True)
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.SOFTMAX), inputs=[pre_out], outputs=[tout]
+    )
 
     return model
 
@@ -30,19 +34,26 @@ def dual_output_model():
     subgraph = model.create_subgraph()
 
     # TODO: add operator options to specify split axis and number
-    tin = subgraph.create_tensor('input', TensorType.INT8, [1, 5, 5, 4], isinput=True)
-    pre_out1 = subgraph.create_tensor('pre_output_1', tin.type, [1, 5, 5, 2])
-    pre_out2 = subgraph.create_tensor('pre_output_2', tin.type, [1, 5, 5, 2])
-    subgraph.create_operator(OperatorCode(BuiltinOpCodes.SPLIT),
-                             inputs=[tin], outputs=[pre_out1, pre_out2])
+    tin = subgraph.create_tensor("input", TensorType.INT8, [1, 5, 5, 4], isinput=True)
+    pre_out1 = subgraph.create_tensor("pre_output_1", tin.type, [1, 5, 5, 2])
+    pre_out2 = subgraph.create_tensor("pre_output_2", tin.type, [1, 5, 5, 2])
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.SPLIT), inputs=[tin], outputs=[pre_out1, pre_out2]
+    )
 
-    out1 = subgraph.create_tensor('output_1', pre_out1.type, pre_out1.shape, isoutput=True)
-    subgraph.create_operator(OperatorCode(BuiltinOpCodes.SOFTMAX),
-                             inputs=[pre_out1], outputs=[out1])
+    out1 = subgraph.create_tensor(
+        "output_1", pre_out1.type, pre_out1.shape, isoutput=True
+    )
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.SOFTMAX), inputs=[pre_out1], outputs=[out1]
+    )
 
-    out2 = subgraph.create_tensor('output_2', pre_out2.type, pre_out2.shape, isoutput=True)
-    subgraph.create_operator(OperatorCode(BuiltinOpCodes.SOFTMAX),
-                             inputs=[pre_out2], outputs=[out2])
+    out2 = subgraph.create_tensor(
+        "output_2", pre_out2.type, pre_out2.shape, isoutput=True
+    )
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.SOFTMAX), inputs=[pre_out2], outputs=[out2]
+    )
 
     return model
 
@@ -52,15 +63,25 @@ def non_matching_model():
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
-    fin1 = subgraph.create_tensor('input_1', TensorType.FLOAT32, [1, 5, 5, 3], isinput=True)
-    qout1 = subgraph.create_tensor('quantized_output_1', TensorType.INT8, fin1.shape, isoutput=True)
-    subgraph.create_operator(OperatorCode(BuiltinOpCodes.QUANTIZE),
-                             inputs=[fin1], outputs=[qout1])
+    fin1 = subgraph.create_tensor(
+        "input_1", TensorType.FLOAT32, [1, 5, 5, 3], isinput=True
+    )
+    qout1 = subgraph.create_tensor(
+        "quantized_output_1", TensorType.INT8, fin1.shape, isoutput=True
+    )
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.QUANTIZE), inputs=[fin1], outputs=[qout1]
+    )
 
-    qin2 = subgraph.create_tensor('quantized_input_2', TensorType.INT8, [1, 3, 3, 8], isinput=True)
-    fout2 = subgraph.create_tensor('output_2', TensorType.FLOAT32, qin2.shape, isoutput=True)
-    subgraph.create_operator(OperatorCode(BuiltinOpCodes.DEQUANTIZE),
-                             inputs=[qin2], outputs=[fout2])
+    qin2 = subgraph.create_tensor(
+        "quantized_input_2", TensorType.INT8, [1, 3, 3, 8], isinput=True
+    )
+    fout2 = subgraph.create_tensor(
+        "output_2", TensorType.FLOAT32, qin2.shape, isoutput=True
+    )
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qin2], outputs=[fout2]
+    )
 
     return model
 
@@ -79,8 +100,8 @@ def test_mutate(simple_model, trf_pass):
     trf_pass.mutate(subgraph.operators[1])
     subgraph.sanity_check()
 
-    tin = subgraph.get_tensor('input')
-    tout = subgraph.get_tensor('pre_output')
+    tin = subgraph.get_tensor("input")
+    tout = subgraph.get_tensor("pre_output")
 
     assert len(subgraph.operators) == 1
     assert subgraph.operators[0].operator_code.code == BuiltinOpCodes.ABS
@@ -94,8 +115,8 @@ def test_run_simple(simple_model, trf_pass):
     simple_model.sanity_check()
     subgraph = simple_model.subgraphs[0]
 
-    tin = subgraph.get_tensor('input')
-    tout = subgraph.get_tensor('pre_output')
+    tin = subgraph.get_tensor("input")
+    tout = subgraph.get_tensor("pre_output")
 
     assert len(subgraph.operators) == 1
     assert subgraph.operators[0].operator_code.code == BuiltinOpCodes.ABS
@@ -109,9 +130,9 @@ def test_run_dual_output(dual_output_model, trf_pass):
     dual_output_model.sanity_check()
     subgraph = dual_output_model.subgraphs[0]
 
-    tin = subgraph.get_tensor('input')
-    out_1 = subgraph.get_tensor('pre_output_1')
-    out_2 = subgraph.get_tensor('pre_output_2')
+    tin = subgraph.get_tensor("input")
+    out_1 = subgraph.get_tensor("pre_output_1")
+    out_2 = subgraph.get_tensor("pre_output_2")
 
     assert len(subgraph.operators) == 1
     assert subgraph.operators[0].operator_code.code == BuiltinOpCodes.SPLIT

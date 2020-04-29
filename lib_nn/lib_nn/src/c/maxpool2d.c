@@ -14,8 +14,8 @@
 
 
 
-
-void maxpool2d_c(
+WEAK_FUNC
+void maxpool2d(
     int8_t* Y,
     const int8_t* X, 
     const nn_window_op_plan_t* plan)

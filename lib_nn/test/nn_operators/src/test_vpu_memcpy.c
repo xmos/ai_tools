@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <syscall.h>
+
 
 #include "tst_common.h"
 
@@ -56,20 +56,19 @@ void test_vpu_memcpy_case0()
 #define REPS            100
 void test_vpu_memcpy_case1()
 {
-    unsigned seed = 452345;
 
     PRINTF("%s...\n", __func__);
 
     uint8_t WORD_ALIGNED src[BUFF_SIZE];
     uint8_t WORD_ALIGNED dst[BUFF_SIZE];
 
-    pseudo_rand_bytes(&seed, (char*) src, BUFF_SIZE);
+    pseudo_rand_bytes((char*) src, BUFF_SIZE);
 
     for(int k = 0; k < REPS; k++){
 
         PRINTF("\trep %d...\n", k); 
 
-        uint32_t size = pseudo_rand_uint32(&seed) % BUFF_SIZE;
+        uint32_t size = pseudo_rand_uint32() % BUFF_SIZE;
         memset(dst, 0, sizeof(dst));
 
         vpu_memcpy(dst, src, size);
@@ -92,6 +91,8 @@ void test_vpu_memcpy_case1()
 
 void test_vpu_memcpy()
 {
+    srand(452345);
+
     UNITY_SET_FILE();
 
     RUN_TEST(test_vpu_memcpy_case0);

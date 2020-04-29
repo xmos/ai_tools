@@ -11,18 +11,18 @@ PARAMS = {
     "extended": {
         "input_height": [7, 9, 17, 20, 32],
         "input_width": [7, 9, 17, 20, 32],
-        "input_channels": [4, 8, 16, 32, 36, 64]
+        "input_channels": [4, 8, 16, 32, 36, 64],
     },
     "default": {
         "input_height": [9, 20],
         "input_width": [7, 17],
-        "input_channels": [4, 8, 16, 32]
+        "input_channels": [4, 8, 16, 32],
     },
     "smoke": {
         "input_height": [9, 20],
         "input_width": [7, 17],
-        "input_channels": [4, 32]
-    }
+        "input_channels": [4, 32],
+    },
 }
 
 
@@ -50,6 +50,7 @@ def input_shape(input_size, input_channels):
 #                                   HELPERS
 #  ----------------------------------------------------------------------------
 
+
 def _test_non_matching_params(trf_pass, model):
     assert not trf_pass.match(model.subgraphs[0].operators[-1])
 
@@ -61,6 +62,7 @@ def _test_matching_params(trf_pass, model):
 #  ----------------------------------------------------------------------------
 #                                   TESTS
 #  ----------------------------------------------------------------------------
+
 
 def test_matching_params(trf_pass, model):
     _test_matching_params(trf_pass, model)

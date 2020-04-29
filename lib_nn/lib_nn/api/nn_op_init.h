@@ -105,6 +105,17 @@ void conv2d_deep_init(
 
 
 
+void conv2d_shallowin_init(
+    nn_conv2d_shallowin_plan_t* plan,
+    nn_conv2d_shallowin_job_t* jobs,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_conv2d_job_params_t* job_params,
+    const nn_conv2d_window_params_t* conv_window,
+    const int8_t zero_point,
+    const unsigned job_count);
+
+
 
 /** Prepare to execute a 2D shallowin-deepout convolution.
  *

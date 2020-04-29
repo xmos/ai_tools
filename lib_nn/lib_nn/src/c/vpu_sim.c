@@ -220,7 +220,9 @@ void VLSAT(
 
         for(int i = 0; i < VPU_INT8_ACC_PERIOD; i++){
             int32_t acc = get_accumulator(vpu, i);
-            acc = acc + (1 << (addr16[i]-1));   //Round
+
+            if(addr16[i] != 0)
+                acc = acc + (1 << (addr16[i]-1));   //Round
             acc = acc >> addr16[i];             //Shift
             int8_t val = saturate(acc, 8);      //Saturate
 
@@ -233,7 +235,9 @@ void VLSAT(
 
         for(int i = 0; i < VPU_INT16_ACC_PERIOD; i++){
             int32_t acc = get_accumulator(vpu, i);
-            acc = acc + (1 << (addr16[i]-1));   //Round
+            if(addr16[i] != 0)
+                acc = acc + (1 << ((int16_t)(addr16[i]-1)));   //Round
+
             acc = acc >> addr16[i];             //Shift
             int16_t val = saturate(acc, 16);    //Saturate
 
@@ -246,7 +250,8 @@ void VLSAT(
 
         for(int i = 0; i < VPU_INT32_ACC_PERIOD; i++){
             int64_t acc = get_accumulator(vpu, i);
-            acc = acc + (1 << (addr32[i]-1));   //Round
+            if(addr32[i] != 0)
+                acc = acc + (1 << (addr32[i]-1));   //Round
             acc = acc >> addr32[i];             //Shift
             int32_t val = saturate(acc, 32);    //Saturate
 

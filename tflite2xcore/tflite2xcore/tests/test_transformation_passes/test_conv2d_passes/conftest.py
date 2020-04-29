@@ -4,7 +4,7 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_schema import TensorType
 
 from ..conftest import (
     PARAMS,
@@ -112,15 +112,21 @@ def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
 def test_non_matching_output_channels(
     trf_pass,
     build_model,
-    weight_shape,
+    non_matching_output_channels,
+    kernel_height,
+    kernel_width,
+    input_channels,
     input_size,
     padding,
     strides,
-    non_matching_output_channels,
 ):
-    weight_shape[0] = non_matching_output_channels
     model = build_model(
-        weight_shape=weight_shape,
+        weight_shape=[
+            non_matching_output_channels,
+            kernel_height,
+            kernel_width,
+            input_channels,
+        ],
         input_size=input_size,
         padding=padding,
         strides=strides,
@@ -131,15 +137,21 @@ def test_non_matching_output_channels(
 def test_non_matching_kernel_height(
     trf_pass,
     build_model,
-    weight_shape,
+    output_channels,
+    non_matching_kernel_height,
+    kernel_width,
+    input_channels,
     input_size,
     padding,
     strides,
-    non_matching_kernel_height,
 ):
-    weight_shape[1] = non_matching_kernel_height
     model = build_model(
-        weight_shape=weight_shape,
+        weight_shape=[
+            output_channels,
+            non_matching_kernel_height,
+            kernel_width,
+            input_channels,
+        ],
         input_size=input_size,
         padding=padding,
         strides=strides,
@@ -150,15 +162,21 @@ def test_non_matching_kernel_height(
 def test_non_matching_kernel_width(
     trf_pass,
     build_model,
-    weight_shape,
+    output_channels,
+    kernel_height,
+    non_matching_kernel_width,
+    input_channels,
     input_size,
     padding,
     strides,
-    non_matching_kernel_width,
 ):
-    weight_shape[2] = non_matching_kernel_width
     model = build_model(
-        weight_shape=weight_shape,
+        weight_shape=[
+            output_channels,
+            kernel_height,
+            non_matching_kernel_width,
+            input_channels,
+        ],
         input_size=input_size,
         padding=padding,
         strides=strides,
@@ -169,15 +187,21 @@ def test_non_matching_kernel_width(
 def test_non_matching_input_channels(
     trf_pass,
     build_model,
-    weight_shape,
+    output_channels,
+    kernel_height,
+    kernel_width,
+    non_matching_input_channels,
     input_size,
     padding,
     strides,
-    non_matching_input_channels,
 ):
-    weight_shape[3] = non_matching_input_channels
     model = build_model(
-        weight_shape=weight_shape,
+        weight_shape=[
+            output_channels,
+            kernel_height,
+            kernel_width,
+            non_matching_input_channels,
+        ],
         input_size=input_size,
         padding=padding,
         strides=strides,

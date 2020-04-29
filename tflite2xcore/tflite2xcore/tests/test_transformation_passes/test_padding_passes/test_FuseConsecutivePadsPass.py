@@ -4,6 +4,7 @@ import pytest
 
 from copy import deepcopy
 
+from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes import FuseConsecutivePadsPass
 from tflite2xcore.xcore_schema import BuiltinOpCodes
 
@@ -65,6 +66,10 @@ def test_mutate(trf_pass, model):
 
     # run mutating pass
     trf_pass.run(model)
+    model.sanity_check()
+
+    # need to clean up dangling ops/tensors
+    CleanupManager(model).run_passes()
     model.sanity_check()
 
     # check operator

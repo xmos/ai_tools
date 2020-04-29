@@ -20,7 +20,7 @@ PARAMS = deepcopy(PARAMS)
 
 PADS = [0, 1, 2]
 
-PARAMS["default"].update(
+PARAMS["extended"].update(
     {
         "input_batches": [1, 4],
         "pad_t": PADS,
@@ -34,7 +34,19 @@ PARAMS["default"].update(
     }
 )
 
-PARAMS["extended"].update(PARAMS["default"])
+PARAMS["default"].update(
+    {
+        "input_batches": [1],
+        "pad_t": PADS,
+        "pad_b": PADS,
+        "pad_l": PADS,
+        "pad_r": PADS,
+        "pad_batch_l": [0],
+        "pad_batch_r": [0],
+        "pad_channel_l": [0],
+        "pad_channel_r": PADS,
+    }
+)
 
 PARAMS["smoke"].update(
     {
@@ -44,7 +56,7 @@ PARAMS["smoke"].update(
         "pad_l": PADS[:2],
         "pad_r": PADS[:2],
         "pad_batch_l": [0],
-        "pad_batch_r": PADS[:2],
+        "pad_batch_r": [0],
         "pad_channel_l": [0],
         "pad_channel_r": PADS[:2],
     }

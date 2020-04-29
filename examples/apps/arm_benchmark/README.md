@@ -9,7 +9,7 @@
 
 The following unix command will generate a C source file that contains the TensorFlow Lite model as a char array
 
-    > python ../../../third_party/tensorflow/tensorflow/lite/python/convert_file_to_c_source.py --input_tflite_file model_xcore_classifier.tflite --output_header_file src/xcore_model.h --output_source_file src/xcore_model.c --array_variable_name xcore_model --include_guard XCORE_MODEL_H_
+    > python ../../../third_party/tensorflow/tensorflow/lite/python/convert_file_to_c_source.py --input_tflite_file ../../models/CIFAR-10/debug/arm_benchmark/models/model_xcore.tflite --output_header_file src/xcore_model.h --output_source_file src/xcore_model.c --array_variable_name xcore_model --include_guard XCORE_MODEL_H_
 
 ## xCORE
 

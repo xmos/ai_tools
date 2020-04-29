@@ -6,12 +6,12 @@ ifeq ($(TARGET), x86)
 
 	CC := gcc
 	CCFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
-	CCFLAGS += -DENABLE_TRACE_LOGGING -DENABLE_ERROR_LOGGING
+	CCFLAGS += -DENABLE_TRACING
 	#CCFLAGS += -DNDEBUG  
 
 	CXX := g++
 	CXXFLAGS := -g -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
-	CXXFLAGS += -DENABLE_TRACE_LOGGING -DENABLE_ERROR_LOGGING
+	CXXFLAGS += -DENABLE_TRACING
 	#CXXFLAGS += -DNDEBUG  
 	CXXFLAGS += -std=c++11 
 
@@ -23,7 +23,6 @@ ifeq ($(TARGET), x86)
 else # must be xcore
 	BUILD_TARGET := xcore.ai
 	
-	#PLATFORM_FLAGS := -target=XU316-1024-FB265-C32  # 800MHz
 	PLATFORM_FLAGS := -target=XCORE-AI-EXPLORER  # 700MHz
 	PLATFORM_FLAGS += -mcmodel=large
 	PLATFORM_FLAGS += -Os
@@ -40,14 +39,14 @@ else # must be xcore
 	CC := xcc
 	CCFLAGS := -DTF_LITE_STATIC_MEMORY
 	CCFLAGS += -DTF_LITE_STRIP_ERROR_STRINGS
-	CCFLAGS += -DENABLE_TRACE_LOGGING -DENABLE_ERROR_LOGGING
+	#CCFLAGS += -DENABLE_TRACING
 	CCFLAGS += -DNDEBUG
 	CCFLAGS += $(PLATFORM_FLAGS)
 
 	CXX := xcc
 	CXXFLAGS := -std=c++11 -DTF_LITE_STATIC_MEMORY
 	CXXFLAGS += -DTF_LITE_STRIP_ERROR_STRINGS
-	CXXFLAGS += -DENABLE_TRACE_LOGGING -DENABLE_ERROR_LOGGING
+	#CXXFLAGS += -DENABLE_TRACING
 	CXXFLAGS += -DNDEBUG
 	CXXFLAGS += $(PLATFORM_FLAGS)
 
@@ -75,14 +74,6 @@ INCLUDES += -Isrc
 VPATH := $(TENSORFLOW_VPATH)
 VPATH += $(LIBS_VPATH)
 VPATH += src
-
-# Add built in ops from TFLu that are needed
-TENSORFLOW_SOURCES += \
-	tensorflow/lite/kernels/kernel_util.cc \
-	tensorflow/lite/kernels/internal/quantization_util.cc \
-	tensorflow/lite/micro/kernels/conv.cc \
-	tensorflow/lite/micro/kernels/pad.cc \
-	tensorflow/lite/micro/kernels/softmax.cc
 
 SOURCES := $(TENSORFLOW_SOURCES)
 SOURCES += $(LIBS_SOURCES)

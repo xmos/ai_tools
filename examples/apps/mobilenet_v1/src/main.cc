@@ -1,11 +1,13 @@
 
 // Copyright (c) 2019, XMOS Ltd, All rights reserved
+
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
 
 #include "lib_ops/api/lib_ops.h"
+#include "lib_ops/api/stopwatch.h"
 #include "mobilenet_ops_resolver.h"
 #include "mobilenet_v1.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
@@ -17,12 +19,12 @@ const tflite::Model *model = nullptr;
 tflite::MicroInterpreter *interpreter = nullptr;
 TfLiteTensor *input = nullptr;
 TfLiteTensor *output = nullptr;
-constexpr int kTensorArenaSize = 136200;
+constexpr int kTensorArenaSize = 148700;
 uint8_t tensor_arena[kTensorArenaSize];
 
 xcore::Dispatcher *dispatcher = nullptr;
 constexpr int num_threads = 5;
-constexpr int kXCOREArenaSize = 6000;
+constexpr int kXCOREArenaSize = 8000;
 uint8_t xcore_arena[kXCOREArenaSize];
 
 static int load_input(const char *filename, char *input, size_t esize) {
@@ -42,12 +44,10 @@ static int load_input(const char *filename, char *input, size_t esize) {
   return 1;
 }
 
-static int save_output(const char *filename, const char *output, size_t osize) {
-  FILE *fd = fopen(filename, "wb");
-  fwrite(output, sizeof(int8_t), osize, fd);
-  fclose(fd);
-
-  return 1;
+static void print_output(const char *output, size_t osize) {
+  for (int i = 0; i < osize; i++) {
+    printf("i=%u   output=%d\n", i, output[i]);
+  }
 }
 
 static void setup_tflite() {
@@ -97,34 +97,31 @@ static void setup_tflite() {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc < 3) {
-    printf("Two arguments expected: input-file output-file\n");
-    return -1;
-  }
-
-  char *input_filename = argv[1];
-  char *output_filename = argv[2];
-
   // setup runtime
   setup_tflite();
 
-  // Load input tensor
-  if (!load_input(input_filename, input->data.raw, input->bytes)) {
-    printf("error loading input filename=%s\n", input_filename);
-    return -1;
+  if (argc > 1) {
+    printf("input filename=%s\n", argv[1]);
+    // Load input tensor
+    if (!load_input(argv[1], input->data.raw, input->bytes)) return -1;
+  } else {
+    printf("no input file\n");
+    memset(input->data.raw, 0, input->bytes);
   }
 
   // Run inference, and report any error
+  printf("Running inference...\n");
+  xcore::Stopwatch sw;
+  sw.Start();
   TfLiteStatus invoke_status = interpreter->Invoke();
+  sw.Stop();
+  printf("Inference duration %u (us)\n", sw.GetEllapsedMicroseconds());
+
   if (invoke_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed\n");
     return -1;
   }
 
-  // save output
-  if (!save_output(output_filename, output->data.raw, output->bytes)) {
-    printf("error saving output filename=%s\n", output_filename);
-    return -1;
-  }
+  print_output(output->data.raw, output->bytes);
   return 0;
 }

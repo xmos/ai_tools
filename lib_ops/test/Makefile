@@ -7,11 +7,11 @@ ifeq ($(TARGET), x86)
 	CC := gcc
 	CCFLAGS := -g -O3
 	CCFLAGS += -std=c99
-	CCFLAGS += -DENABLE_TRACE_LOGGING -DENABLE_ERROR_LOGGING
+	CCFLAGS += -DENABLE_TRACING
 	CXX := g++
 	CXXFLAGS := -g -O3
 	CXXFLAGS += -std=c++11 
-	CXXFLAGS += -DENABLE_TRACE_LOGGING -DENABLE_ERROR_LOGGING
+	CXXFLAGS += -DENABLE_TRACING
 
 	LDFLAGS  := -L/usr/local/lib -lstdc++ -lm -pthread
 
@@ -37,12 +37,12 @@ else # must be xcore
 
 	CC := xcc
 	CCFLAGS += $(PLATFORM_FLAGS)
-	CCFLAGS += -DENABLE_TRACE_LOGGING -DENABLE_ERROR_LOGGING
+	CCFLAGS += -DENABLE_TRACING
 
 	CXX := xcc
 	CXXFLAGS := -std=c++11
 	CXXFLAGS += $(PLATFORM_FLAGS)
-	CXXFLAGS += -DENABLE_TRACE_LOGGING -DENABLE_ERROR_LOGGING
+	CXXFLAGS += -DENABLE_TRACING
 
 	LDFLAGS := $(PLATFORM_FLAGS)
 
@@ -74,6 +74,7 @@ SOURCES += $(UNITY_SOURCES)
 SOURCES += test_allocator.cpp
 SOURCES += test_dispatcher.cpp
 SOURCES += test_par_region.cpp
+SOURCES += test_stopwatch.cpp
 SOURCES += main.cpp
 
 OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES))))

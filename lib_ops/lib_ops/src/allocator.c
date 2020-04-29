@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "lib_ops/api/logging.h"
+#include "lib_ops/api/tracing.h"
 
 #define ALIGNMENT 4
 
@@ -50,8 +50,8 @@ void *xcMalloc(size_t size) {
   }
 
   // Allocator is out of memory for this allocation
-  LOG_ERROR("Failed to allocate memory, %d bytes required\n",
-            (offset + size) - kBufferSize);
+  TRACE_ERROR("Failed to allocate memory, %d bytes required\n",
+              (offset + size) - kBufferSize);
   return NULL;
 }
 
@@ -65,7 +65,7 @@ void *xcRealloc(void *ptr, size_t size) {
     return xcMalloc(size);
   }
   // Reallocating an arbitrary allocation is not supported
-  LOG_ERROR("Reallocating an arbitrary allocation is not supported\n");
+  TRACE_ERROR("Reallocating an arbitrary allocation is not supported\n");
   return NULL;
 }
 
@@ -77,5 +77,5 @@ void xcFree(void *ptr) {
     kAllocatedSize = raw_ptr - kBuffer;
     return;
   }
-  LOG_ERROR("Freeing an arbitrary allocation is not supported\n");
+  TRACE_ERROR("Freeing an arbitrary allocation is not supported\n");
 }

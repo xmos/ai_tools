@@ -26,7 +26,7 @@ TEST(allocator, test_allocate) {
   allocated_size = xcGetHeapAllocatedSize();
   TEST_ASSERT_EQUAL_INT(allocated_size, data_size);
 
-  free_size = allocator.GetFreeSize();
+  free_size = xcGetHeapFreeSize();
   TEST_ASSERT_EQUAL_INT(free_size, buffer_size - data_size);
 }
 

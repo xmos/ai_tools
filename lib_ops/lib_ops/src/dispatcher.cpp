@@ -65,6 +65,7 @@ XCoreStatus Dispatcher::Join() {
   thread_group_wait(group_);
 
   xcFree(stack);
+  tasks_.size = 0;
 
   return kXCoreOk;
 }

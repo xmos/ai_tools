@@ -11,8 +11,8 @@ namespace xcore {
 void add_registered_ops(MicroMutableOpResolver *resolver) {
   resolver->AddBuiltin(BuiltinOperator_SOFTMAX, Register_SOFTMAX(), 1, 2);
   resolver->AddBuiltin(BuiltinOperator_PAD, Register_PAD(), 1, 2);
-  resolver->AddBuiltin(BuiltinOperator_CONV_2D, Register_CONV_2D(), 1, 3);
-  resolver->AddCustom("XC_conv2d_depthwise", Register_Conv2D_depthwise());
+  resolver->AddCustom("XC_conv2d_shallowin", Register_Conv2D_Shallow());
+  resolver->AddCustom("XC_conv2d_depthwise", Register_Conv2D_Depthwise());
   resolver->AddCustom("XC_conv2d_1x1", Register_Conv2D_1x1());
   resolver->AddCustom("XC_avgpool2d_global", Register_AvgPool2D_Global());
   resolver->AddCustom("XC_fc_deepin_anyout", Register_FullyConnected_16());

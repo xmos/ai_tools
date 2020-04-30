@@ -4,6 +4,7 @@ import pytest
 
 from copy import deepcopy
 
+from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes import (
     SplitPaddingPass,
     FuseConsecutivePadsPass,
@@ -53,6 +54,11 @@ def test_split_fuse_pad(input_shape, paddings):
     split_pass = FuseConsecutivePadsPass()
     split_pass.run(model)
     model.sanity_check()
+
+    # need to clean up dangling ops/tensors
+    CleanupManager(model).run_passes()
+    model.sanity_check()
+
     assert len(operators) == 1
     pad_new = operators[0].inputs[1]
     assert pad_new is not pad_ori
@@ -89,6 +95,11 @@ def test_split_fuse_conv2d(weight_shape, input_size, paddings, strides):
     split_pass = FuseConv2dPaddingPass()
     split_pass.run(model)
     model.sanity_check()
+
+    # need to clean up dangling ops/tensors
+    CleanupManager(model).run_passes()
+    model.sanity_check()
+
     assert len(operators) == 2
     op1, op2 = operators
     assert op1.operator_code.code is BuiltinOpCodes.PAD

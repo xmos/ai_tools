@@ -4,6 +4,7 @@
 from pathlib import Path
 from tflite2xcore.model_generation import utils
 import tensorflow as tf
+import numpy as np
 import op_test_models_common as common
 
 DEFAULT_INPUTS = 3
@@ -20,8 +21,15 @@ class Conv2DShallowin(common.OpTestDefaultConvModel):
     def build_core_model(self, *args, **kwargs):
         K_h, K_w, _, _, input_channels, output_channels = args
         assert output_channels % 4 == 0, "# of output channels must be multiple of 4"
-        assert input_channels <= 4, "Number of input channels must be at most 4"
-        assert K_w <= 8, "Kernel width must be at most 8"
+        assert (
+            K_h != 1 or K_w != 1
+        ), "1x1 kernel is not allowed for shallowin conv2d testing"
+
+        padded_inputs = np.ceil(input_channels / 4) * 4
+        assert (
+            padded_inputs * K_w <= 32
+        ), f"product of padded inputs count and kernel width must be at most 32"
+
         super().build_core_model(*args, **kwargs)
 
 
@@ -54,7 +62,7 @@ def main(raw_args=None):
         args.inputs,
         args.outputs,
         padding=args.padding,
-        **args.inits
+        **args.inits,
     )
     model.run()
 

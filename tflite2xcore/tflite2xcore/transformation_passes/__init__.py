@@ -10,12 +10,16 @@ from .lut_passes import (
     LegalizeXCLookupTablePass,
 )
 from .conv2d_passes import (
+    CanonicalizeSingleinDepthwiseConv2DPass,
+    LegalizeSingleinConv2DPass,
     Replace1x1Conv2dPass,
     LegalizeXC1x1ConvPass,
     ReplaceDepthwiseConv2dPass,
     LegalizeXCDepthwiseConvPass,
     ReplaceDeepConv2dPass,
     LegalizeXCDeepConvPass,
+    ReplaceShallowinConv2dPass,
+    LegalizeXCShallowinConvPass,
     ParallelizeXCConv2dPass,
     ParallelizeDeepConv2dPass,
 )
@@ -47,9 +51,10 @@ from .quantize_dequantize_passes import (
 
 from .op_version_passes import LegalizeQuantizeVersionPass
 
-from .cleanup_passes import (
-    RemoveUnusedBuffersPass,
-    RemoveDanglingTensorsPass,
+from .dce_passes import (
+    EliminateDeadOperatorsPass,
+    EliminateDeadTensorsPass,
+    EliminateDeadBuffersPass,
 )
 
 from .renaming_passes import LegalizeOperatorOutputTensorNamePass

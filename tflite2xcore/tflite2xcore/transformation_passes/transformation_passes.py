@@ -39,6 +39,7 @@ class SubgraphTransformationPass(ModelTransformationPass):
                 if self.match(obj):
                     num_matches += 1
                     self.log_match(obj)
+
                     if self.debug:
                         try:
                             obj.sanity_check()
@@ -47,6 +48,7 @@ class SubgraphTransformationPass(ModelTransformationPass):
                         import pdb
 
                         pdb.set_trace()
+
                     self.mutate(obj)
                     break
             else:
@@ -59,6 +61,7 @@ class SubgraphTransformationPass(ModelTransformationPass):
             self.logger.debug(f"running on subgraph {self._subgraph_idx}")
             if self.run_subgraph(subgraph):
                 modified_cnt += 1
+
             if self.debug:
                 try:
                     subgraph.sanity_check()
@@ -93,6 +96,49 @@ class TensorMatchingPass(SubgraphTransformationPass):
 
     def log_match(self, tensor):
         super().log_match(f"tensor [{self._obj_index}]: {tensor.name}")
+
+
+class BufferMatchingPass(ModelTransformationPass):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._buffer_idx = -1
+
+    @abstractmethod
+    def match(self, buffer):
+        return True
+
+    @abstractmethod
+    def mutate(self, buffer):
+        pass
+
+    def log_match(self, buffer):
+        self.logger.info(
+            f"matched buffer [{self._buffer_idx}] of length "
+            f"{len(buffer)} with {len(buffer.owners)} owners"
+        )
+
+    def run(self, model):
+        modified_cnt = 0
+        while True:
+            for self._buffer_idx, buffer in enumerate(model.buffers):
+                if self.match(buffer):
+                    self.log_match(buffer)
+                    modified_cnt += 1
+
+                    if self.debug:
+                        try:
+                            model.sanity_check()
+                        except AssertionError as e:
+                            self.logger.exception(e)
+                        import pdb
+
+                        pdb.set_trace()
+
+                    self.mutate(buffer)
+                    break
+            else:
+                self._buffer_idx = -1
+                return modified_cnt
 
 
 class InputTensorMatchingPass(SubgraphTransformationPass):
@@ -202,18 +248,6 @@ class ReplaceWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
                     and self._biases.type is TensorType.INT32
                 )
 
-    # TODO: remove
-    def mutate_biases(self, op):
-        # NOTE: by default no bias layout rearrangement is done for this op
-        with self.using(op):
-            self._biases.name = f"{op.name}/biases"
-
-    # TODO: remove
-    def mutate_weights(self, op):
-        # NOTE: by default no weight layout rearrangement is done for this op
-        with self.using(op):
-            self._weights.name = f"{op.name}/weights"
-
     def mutate(self, op):
         new_op = super().mutate(op)
         new_op.add_custom_options(illegal_params=True)
@@ -221,7 +255,7 @@ class ReplaceWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
 
 
 # TODO: refactor properties
-class LegalizeXCWeightBiasPass(QuantizedOperatorMatchingPass):
+class LegalizeWeightBiasPass(QuantizedOperatorMatchingPass):
     @property
     def _biases(self):
         return self._op.inputs[2]
@@ -235,6 +269,43 @@ class LegalizeXCWeightBiasPass(QuantizedOperatorMatchingPass):
             "_weights:\n" + logging._array_msg(self._weights.numpy.astype(np.int8))
         )
 
+    @abstractmethod
+    def mutate_biases(self, op):
+        pass
+
+    @abstractmethod
+    def mutate_weights(self, op):
+        pass
+
+    def _replace_weights(self, arr):
+        # create and populate new weight tensor
+        subgraph = self._op.subgraph
+        new_weights = subgraph.create_tensor(
+            f"{self._op.name}/weights",
+            TensorType.INT8,
+            arr.shape,
+            isinput=self._weights in subgraph.inputs,
+            isoutput=self._weights in subgraph.outputs,
+            consumers=[self._op],
+        )
+        new_weights.buffer.data = arr
+
+        # replace old tensor
+        self._weights.consumers.remove(self._op)
+        self._op.inputs[1] = new_weights
+
+    def match(self, op):
+        if super().match(op) and "illegal_params" in op.custom_options:
+            return op.custom_options["illegal_params"]
+
+    def mutate(self, op):
+        # NOTE: the order of these mutations is strict
+        self.mutate_biases(op)
+        self.mutate_weights(op)
+        op.custom_options.pop("illegal_params")
+
+
+class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
     def _multiplier(self):
         output_scale = self._output.quantization["scale"][0]
         bias_scale = np.array(self._biases.quantization["scale"])
@@ -319,9 +390,7 @@ class LegalizeXCWeightBiasPass(QuantizedOperatorMatchingPass):
         scale = self.__pad_to_acc_period(scale).reshape(new_shape)
 
         # split left and right shift into pre and post scaling shifts
-        shift_pre = (
-            rshift if True else np.maximum(rshift, 0)
-        )  # TODO: resolve this when left shift issue is solved in conv2d kernels
+        shift_pre = np.maximum(rshift, 0)
         shift_post = self._MAX_POST_SHIFT * np.ones(
             rshift.shape, dtype=rshift.dtype
         ) + np.minimum(rshift, 0)
@@ -332,10 +401,7 @@ class LegalizeXCWeightBiasPass(QuantizedOperatorMatchingPass):
         return np.stack([shift_pre, scale, shift_post], axis=1)
 
     def _bss_arr(self):
-        # TODO: resolve this when left shift issue is solved in conv2d kernels
-        shift_scale_arr = self._shift_scale_arr()
-        shift_scale_arr[:, 0, :] = np.maximum(shift_scale_arr[:, 0, :], 0)
-        return np.concatenate([self._bias_arr(), shift_scale_arr], axis=1)
+        return np.concatenate([self._bias_arr(), self._shift_scale_arr()], axis=1)
 
     def mutate_biases(self, op):
         with self.using(op):
@@ -358,34 +424,3 @@ class LegalizeXCWeightBiasPass(QuantizedOperatorMatchingPass):
             # replace old tensor
             self._biases.consumers.remove(self._op)
             self._op.inputs[2] = new_biases
-
-    @abstractmethod
-    def mutate_weights(self, op):
-        pass
-
-    def _replace_weights(self, arr):
-        # create and populate new weight tensor
-        subgraph = self._op.subgraph
-        new_weights = subgraph.create_tensor(
-            f"{self._op.name}/weights",
-            TensorType.INT8,
-            arr.shape,
-            isinput=self._weights in subgraph.inputs,
-            isoutput=self._weights in subgraph.outputs,
-            consumers=[self._op],
-        )
-        new_weights.buffer.data = arr
-
-        # replace old tensor
-        self._weights.consumers.remove(self._op)
-        self._op.inputs[1] = new_weights
-
-    def match(self, op):
-        if super().match(op) and "illegal_params" in op.custom_options:
-            return op.custom_options["illegal_params"]
-
-    def mutate(self, op):
-        # NOTE: the order of these mutations is strict
-        self.mutate_biases(op)
-        self.mutate_weights(op)
-        op.custom_options.pop("illegal_params")

@@ -13,7 +13,11 @@ from tflite2xcore.xcore_schema import (
 
 
 class FuseConv2dPaddingPass(OperatorMatchingPass):
-    MATCHING_OPCODES = (XCOREOpCodes.XC_conv2d_depthwise, XCOREOpCodes.XC_conv2d_deep)
+    MATCHING_OPCODES = (
+        XCOREOpCodes.XC_conv2d_depthwise,
+        XCOREOpCodes.XC_conv2d_deep,
+        XCOREOpCodes.XC_conv2d_shallowin,
+    )
 
     @property
     def _producer(self):
@@ -51,7 +55,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
 
             pad_params = self._pad_params
             if pad_params[0] != [0, 0] or pad_params[3] != [0, 0]:
-                # TODO: a standalone pass should split off channel- and batch-wise padding
+                # NOTE: SplitPaddingPass decouples channel- and batch-wise padding
                 return False
 
         if len(pad) == 3 and not isinstance(pad, str):
@@ -68,17 +72,13 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
             producer = self._producer
             pad_params = self._pad_params
             old_pad = self._pad
-        old_input = op.inputs[0]
+
+        # cut connection to old input
+        op.inputs[0].consumers.remove(op)
 
         # add connection from unpadded input to convolution operator
         op.inputs[0] = producer.inputs[0]
-        producer.inputs[0].consumers.append(op)
-
-        # remove old input and padding op (if it has no other consumers)
-        op.subgraph.remove_tensor(old_input)
-        if not producer.outputs:
-            # NOTE: the paddings tensor might be dangling and will be cleaned up later
-            op.subgraph.remove_operator(producer)
+        op.inputs[0].consumers.append(op)
 
         # set padding: [top, left, zero_point]
         op.custom_options["pad"] = [
@@ -212,8 +212,3 @@ class FuseConsecutivePadsPass(OperatorMatchingPass):
         # set up bypass connection
         op.inputs[0] = producer.inputs[0]
         producer.inputs[0].consumers.append(op)
-
-        # remove producer if needed
-        if not intermediate.consumers:
-            # NOTE: the paddings tensor of the producer might be dangling and will be cleaned up later
-            subgraph.remove_operator(producer)

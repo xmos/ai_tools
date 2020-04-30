@@ -7,6 +7,7 @@
 
 #include "lib_ops/api/lib_ops.h"
 #include "mobilenet_ops_resolver.h"
+#include "mobilenet_v1.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
@@ -16,30 +17,13 @@ const tflite::Model *model = nullptr;
 tflite::MicroInterpreter *interpreter = nullptr;
 TfLiteTensor *input = nullptr;
 TfLiteTensor *output = nullptr;
-constexpr int kTensorArenaSize =
-    136200;  // Hopefully this is big enough for all tests
+constexpr int kTensorArenaSize = 136200;
 uint8_t tensor_arena[kTensorArenaSize];
 
 xcore::Dispatcher *dispatcher = nullptr;
 constexpr int num_threads = 5;
-constexpr int kXCOREArenaSize = 10000;
+constexpr int kXCOREArenaSize = 6000;
 uint8_t xcore_arena[kXCOREArenaSize];
-
-static int load_model(const char *filename, char **buffer, size_t *size) {
-  FILE *fd = fopen(filename, "rb");
-  fseek(fd, 0, SEEK_END);
-  size_t fsize = ftell(fd);
-
-  *buffer = (char *)malloc(fsize);
-
-  fseek(fd, 0, SEEK_SET);
-  fread(*buffer, 1, fsize, fd);
-  fclose(fd);
-
-  *size = fsize;
-
-  return 1;
-}
 
 static int load_input(const char *filename, char *input, size_t esize) {
   FILE *fd = fopen(filename, "rb");
@@ -66,14 +50,14 @@ static int save_output(const char *filename, const char *output, size_t osize) {
   return 1;
 }
 
-static void setup_tflite(const char *model_buffer) {
+static void setup_tflite() {
   // Set up logging.
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
-  model = tflite::GetModel(model_buffer);
+  model = tflite::GetModel(mobilenet_v1_model);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
     TF_LITE_REPORT_ERROR(error_reporter,
                          "Model provided is schema version %d not equal "
@@ -113,25 +97,16 @@ static void setup_tflite(const char *model_buffer) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc < 4) {
-    printf("Three arguments expected: mode.tflite input-file output-file\n");
+  if (argc < 3) {
+    printf("Two arguments expected: input-file output-file\n");
     return -1;
   }
 
-  char *model_filename = argv[1];
-  char *input_filename = argv[2];
-  char *output_filename = argv[3];
-
-  // load model
-  char *model_buffer = nullptr;
-  size_t model_size;
-  if (!load_model(model_filename, &model_buffer, &model_size)) {
-    printf("error loading model filename=%s\n", model_filename);
-    return -1;
-  }
+  char *input_filename = argv[1];
+  char *output_filename = argv[2];
 
   // setup runtime
-  setup_tflite(model_buffer);
+  setup_tflite();
 
   // Load input tensor
   if (!load_input(input_filename, input->data.raw, input->bytes)) {

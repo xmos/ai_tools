@@ -1,5 +1,5 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#include "lib_ops/api/stopwatch.h"
+#include "lib_ops/api/benchmarking.h"
 #include "unity.h"
 #include "unity_fixture.h"
 
@@ -20,4 +20,12 @@ TEST(stopwatch, test_stopwatch) {
                                sw.GetEllapsedNanoseconds());
 }
 
-TEST_GROUP_RUNNER(stopwatch) { RUN_TEST_CASE(stopwatch, test_stopwatch); }
+TEST(stopwatch, test_macros) {
+  TIMER_START();
+  TIMER_STOP("test_macros");
+}
+
+TEST_GROUP_RUNNER(stopwatch) {
+  RUN_TEST_CASE(stopwatch, test_stopwatch);
+  RUN_TEST_CASE(stopwatch, test_macros);
+}

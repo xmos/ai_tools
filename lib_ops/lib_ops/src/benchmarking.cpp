@@ -1,5 +1,5 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#include "lib_ops/api/stopwatch.h"
+#include "lib_ops/api/benchmarking.h"
 
 namespace xcore {
 

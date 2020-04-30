@@ -1,8 +1,16 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#include <stdio.h>
-
 #ifndef LIB_OPS_TRACING_H_
 #define LIB_OPS_TRACING_H_
+
+#include <stdio.h>
+
+//*****************************
+//*****************************
+//*****************************
+// Macros for tracing
+//*****************************
+//*****************************
+//*****************************
 
 #ifdef ENABLE_TRACING
 

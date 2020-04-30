@@ -1,4 +1,6 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
+#ifndef LIB_OPS_STOPWATCH_H_
+#define LIB_OPS_STOPWATCH_H_
 
 #ifdef XCORE
 extern "C" {
@@ -32,3 +34,30 @@ class Stopwatch {
 #endif  // XCORE
 };
 }  // namespace xcore
+
+//*****************************
+//*****************************
+//*****************************
+// Macros for benchmarking
+//*****************************
+//*****************************
+//*****************************
+
+#ifdef ENABLE_BENCHMARKING
+
+#define TIMER_START()      \
+  xcore::Stopwatch __sw__; \
+  __sw__.Start()
+
+#define TIMER_STOP(...) \
+  __sw__.Stop();        \
+  printf(__VA_ARGS__);  \
+  printf(" : %u (us)\n", __sw__.GetEllapsedMicroseconds())
+#else
+
+#define TIMER_START()
+#define TIMER_STOP(...)
+
+#endif  // ENABLE_BENCHMARKING
+
+#endif  // LIB_OPS_STOPWATCH_H_

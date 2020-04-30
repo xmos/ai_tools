@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "lib_ops/api/benchmarking.h"
 #include "lib_ops/api/lib_ops.h"
-#include "lib_ops/api/stopwatch.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"

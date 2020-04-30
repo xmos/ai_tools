@@ -12,18 +12,16 @@ include ../../make/unity.mk
 ifeq ($(TARGET), x86)
 	APP = lib_ops_test
 else # must be xcore
+	APPFLAGS += -fcmdline-buffer-bytes=1024
 	APP = lib_ops_test.xe
 endif
 
-#CCFLAGS += -DNDEBUG
-#CXXFLAGS += -DNDEBUG
-
-CCFLAGS += -DENABLE_TRACING
-CXXFLAGS += -DENABLE_TRACING
+APPFLAGS := -DENABLE_TRACING
+APPFLAGS += -DENABLE_BENCHMARKING
+#APPFLAGS += -DNDEBUG
 
 INCLUDES := $(LIBS_INCLUDES)
 INCLUDES += $(UNITY_INCLUDES)
-#INCLUDES += -Isrc
 
 # source file paths
 VPATH := $(LIBS_VPATH)
@@ -52,15 +50,15 @@ $(OBJ_DIR)/%.o: %.S
 
 $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ -c $<
+	$(CC) $(CCFLAGS) $(APPFLAGS) $(INCLUDES) -o $@ -c $<
 
 $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ -c $<
+	$(CXX) $(CXXFLAGS) $(APPFLAGS) $(INCLUDES) -o $@ -c $<
 
 $(BIN_DIR)/$(APP): $(OBJECTS)
 	@mkdir -p $(dir $@)
-	$(CXX) $(LDFLAGS) $(OBJECT_FILES) -o $(BIN_DIR)/$(APP)
+	$(CXX) $(LDFLAGS) $(APPFLAGS) $(OBJECT_FILES) -o $(BIN_DIR)/$(APP)
 
 clean:
 	-@rm -rvf $(OBJECT_FILES) $(BIN_DIR)/$(APP)

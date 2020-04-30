@@ -34,7 +34,7 @@ LIBS_SOURCES := \
 	lib_nn/src/c/util/depthwise/nn_conv2d_hstrip_depthwise.c \
 	lib_nn/src/c/util/depthwise/nn_conv2d_hstrip_depthwise_padded.c \
 	lib_ops/src/allocator.c \
-	lib_ops/src/stopwatch.cpp \
+	lib_ops/src/benchmarking.cpp \
 	lib_ops/src/dispatcher.cpp \
 	lib_ops/src/conv2d.cpp \
 	lib_ops/src/fully_connected.cpp\

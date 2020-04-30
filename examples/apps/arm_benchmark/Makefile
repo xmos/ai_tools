@@ -9,19 +9,16 @@ include ../../../make/libs.mk
 #********************
 # App specific
 #********************
+APPFLAGS := -DNDEBUG
+#APPFLAGS += -DENABLE_TRACING
+#APPFLAGS += -DENABLE_BENCHMARKING
+
 ifeq ($(TARGET), x86)
 	APP = arm_benchmark
 else # must be xcore
-	CCFLAGS += -fcmdline-buffer-bytes=1024
-	CXXFLAGS += -fcmdline-buffer-bytes=1024
+	APPFLAGS += -fcmdline-buffer-bytes=1024
 	APP = arm_benchmark.xe
 endif
-
-CCFLAGS += -DNDEBUG
-CXXFLAGS += -DNDEBUG
-
-# CCFLAGS += -DENABLE_TRACING
-# CXXFLAGS += -DENABLE_TRACING
 
 INCLUDES := $(TENSORFLOW_INCLUDES)
 INCLUDES += $(LIBS_INCLUDES)
@@ -50,19 +47,19 @@ $(OBJ_DIR)/%.o: %.S
 
 $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ -c $<
+	$(CC) $(CCFLAGS) $(APPFLAGS) $(INCLUDES) -o $@ -c $<
 
 $(OBJ_DIR)/%.o: %.cc
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ -c $<
+	$(CXX) $(CXXFLAGS) $(APPFLAGS) $(INCLUDES) -o $@ -c $<
 
 $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ -c $<
+	$(CXX) $(CXXFLAGS) $(APPFLAGS) $(INCLUDES) -o $@ -c $<
 
 $(BIN_DIR)/$(APP): $(OBJECTS)
 	@mkdir -p $(dir $@)
-	$(CXX) $(LDFLAGS) $(OBJECT_FILES) -o $(BIN_DIR)/$(APP)
+	$(CXX) $(LDFLAGS) $(APPFLAGS) $(OBJECT_FILES) -o $(BIN_DIR)/$(APP)
 
 clean:
 	-@rm -rvf $(OBJECT_FILES) $(BIN_DIR)/$(APP)

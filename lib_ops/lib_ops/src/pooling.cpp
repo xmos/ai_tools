@@ -1,6 +1,7 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 #include "lib_ops/api/pooling.h"
 
+#include "lib_ops/api/benchmarking.h"
 #include "lib_ops/api/tracing.h"
 
 extern "C" {
@@ -44,7 +45,11 @@ XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
 
 XCoreStatus MaxPool::Eval(int8_t* Y, const int8_t* X) {
   TRACE_INFO("MaxPool Eval id=%p\n", this);
+  TIMER_START();
+
   maxpool2d(Y, X, &plan_);
+
+  TIMER_STOP("MaxPool id=%p", this);
   return kXCoreOk;
 }
 
@@ -81,7 +86,11 @@ XCoreStatus AvgPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
 
 XCoreStatus AvgPool::Eval(int8_t* Y, const int8_t* X) {
   TRACE_INFO("AvgPool Eval id=%p\n", this);
+  TIMER_START();
+
   avgpool2d(Y, X, &plan_);
+
+  TIMER_STOP("AvgPool id=%p", this);
   return kXCoreOk;
 }
 
@@ -104,8 +113,11 @@ XCoreStatus AvgPool_Global::Init(int32_t bias, int32_t shift, int32_t scale) {
 XCoreStatus AvgPool_Global::Eval(int8_t* Y, const int8_t* X, int32_t X_h,
                                  int32_t X_w, uint32_t C_in) {
   TRACE_INFO("AvgPool_Global Eval id=%p\n", this);
+  TIMER_START();
+
   avgpool2d_global(Y, X, X_h, X_w, C_in, bias_, shift_, scale_);
 
+  TIMER_STOP("AvgPool_Global id=%p", this);
   return kXCoreOk;
 }
 

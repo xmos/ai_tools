@@ -6,8 +6,8 @@
 #include <cstdio>
 #include <iostream>
 
+#include "lib_ops/api/benchmarking.h"
 #include "lib_ops/api/lib_ops.h"
-#include "lib_ops/api/stopwatch.h"
 #include "mobilenet_ops_resolver.h"
 #include "mobilenet_v1.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"

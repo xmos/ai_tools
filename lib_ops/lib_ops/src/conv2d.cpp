@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "lib_ops/api/allocator.h"
+#include "lib_ops/api/benchmarking.h"
 #include "lib_ops/api/tracing.h"
 
 namespace xcore {
@@ -98,6 +99,8 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                               const int16_t *BSS) {
   TRACE_INFO("Conv2D_Deep Eval id=%p\n", this);
+  TIMER_START();
+
   Dispatcher *dispatcher = GetDispatcher();
 
   size_t stack_words;
@@ -119,6 +122,7 @@ XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
 
   dispatcher->Join();
 
+  TIMER_STOP("Conv2D_Deep id=%p", this);
   return kXCoreOk;
 }
 
@@ -205,6 +209,8 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                                  const int16_t *BSS) {
   TRACE_INFO("Conv2D_Shallow Eval id=%p\n", this);
+  TIMER_START();
+
   Dispatcher *dispatcher = GetDispatcher();
 
   size_t stack_words;
@@ -226,6 +232,7 @@ XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
 
   dispatcher->Join();
 
+  TIMER_STOP("Conv2D_Shallow id=%p", this);
   return kXCoreOk;
 }
 
@@ -301,6 +308,7 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 XCoreStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                              const int16_t *BSS) {
   TRACE_INFO("Conv2D_1x1 Eval id=%p\n", this);
+  TIMER_START();
 
   Dispatcher *dispatcher = GetDispatcher();
 
@@ -322,6 +330,7 @@ XCoreStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
 
   dispatcher->Join();
 
+  TIMER_STOP("Conv2D_1x1 id=%p", this);
   return kXCoreOk;
 }
 
@@ -415,6 +424,7 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                                    const int16_t *BSS) {
   TRACE_INFO("Conv2D_Depthwise Eval id=%p\n", this);
+  TIMER_START();
 
   Dispatcher *dispatcher = GetDispatcher();
 
@@ -436,6 +446,8 @@ XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
   }
 
   dispatcher->Join();
+
+  TIMER_STOP("Conv2D_Depthwise id=%p", this);
   return kXCoreOk;
 }
 

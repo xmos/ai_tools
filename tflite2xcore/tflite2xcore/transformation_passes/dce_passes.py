@@ -8,6 +8,22 @@ from tflite2xcore.transformation_passes import (
 )
 
 
+class EliminateDeadOperatorsPass(OperatorMatchingPass):
+    def match(self, op):
+        if super().match(op):
+            subgraph = op.subgraph
+            for t in op.outputs:
+                if t in subgraph.inputs + subgraph.outputs or t.consumers:
+                    return False
+            else:
+                return True
+
+        return False
+
+    def mutate(self, op):
+        op.subgraph.remove_operator(op)
+
+
 class EliminateDeadTensorsPass(TensorMatchingPass):
     def match(self, tensor):
         return (

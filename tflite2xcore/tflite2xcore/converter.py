@@ -12,6 +12,7 @@ class CleanupManager(PassManager):
         super().__init__(
             model,
             passes=[
+                passes.EliminateDeadOperatorsPass(),
                 passes.EliminateDeadTensorsPass(),
                 passes.EliminateDeadBuffersPass(),
             ],
@@ -100,7 +101,9 @@ def optimize_for_xcore(
     # word alignment canonicalization introduces new pads, so first fuse then split
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
     pass_mgr.register_pass(passes.SplitPaddingPass())
-    # TODO: run DCE passes here when ready
+
+    # need to cleanup after the first round of canonicalization
+    pass_mgr.register_passes(CleanupManager())
 
     # TODO: remove this
     if remove_softmax:
@@ -149,12 +152,12 @@ def optimize_for_xcore(
         pass_mgr.register_pass(passes.MinifyTensorNamesPass())
 
     pass_mgr.run_passes()
+    if pass_mgr.keep_intermediates:
+        pass_mgr.save_intermediates(intermediates_path)
+
     model.sanity_check()
 
     model.description = model.description + " + XMOS optimized."
-
-    if pass_mgr.keep_intermediates:
-        pass_mgr.save_intermediates(intermediates_path)
 
 
 def convert(

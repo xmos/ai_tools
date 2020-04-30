@@ -17,6 +17,51 @@
 
 
 
+#if CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
+
+
+#define CHANS   (3*VPU_INT8_ACC_PERIOD - 4)
+#define HEIGHT  (32)
+#define WIDTH   (32)
+void test_avgpool2d_global_case0()
+{
+    nn_image_t WORD_ALIGNED  X[HEIGHT][WIDTH][CHANS] = {{{0}}};
+    nn_image_t WORD_ALIGNED  Y[CHANS];
+
+    PRINTF("%s...\n", __func__);
+
+    nn_image_params_t x_params = { HEIGHT, WIDTH, CHANS };
+    nn_image_params_t y_params = { 1, 1, CHANS };
+
+    memset(X, 0, sizeof(X));
+
+
+    uint32_t shift;
+    uint32_t scale;
+
+    avgpool2d_global_init(&shift, &scale, x_params.height, x_params.width);
+    
+    int32_t bias = ((int)0x807FFFFF) >> (24-shift);
+
+    avgpool2d_global(Y, (nn_image_t*)X, HEIGHT, WIDTH, CHANS, bias, shift, scale);
+
+    char str_buff[200] = {0};
+
+    PRINTF("\t\tChecking...\n");
+
+    for(unsigned chn = 0; chn < y_params.channels; chn++){
+        nn_image_t y_exp = NEG_SAT_VAL;
+        nn_image_t y = Y[chn];
+        TEST_ASSERT_EQUAL(y_exp, y);
+    }
+}
+#undef WIDTH
+#undef HEIGHT
+#undef CHANS
 
 
 #define DEBUG_ON    (0 || TEST_DEBUG_ON)
@@ -146,5 +191,6 @@ void test_avgpool2d_global()
 {
     UNITY_SET_FILE();
 
-    RUN_TEST(test_avgpool2d_global_case1);
+    RUN_TEST(test_avgpool2d_global_case0);
+    // RUN_TEST(test_avgpool2d_global_case1);
 }

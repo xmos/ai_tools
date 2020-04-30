@@ -1,6 +1,7 @@
 
 #if defined(__XS3A__)
 
+#include "nn_config.h"
 
 /*
 void requantize_16_to_8(
@@ -8,11 +9,6 @@ void requantize_16_to_8(
     const int16_t* x,
     const unsigned n);
 */
-
-#ifndef CONFIG_SYMMETRIC_SATURATION
-  #define CONFIG_SYMMETRIC_SATURATION (0)
-#endif 
-
 
 #define FUNCTION_NAME requantize_16_to_8
 
@@ -40,7 +36,7 @@ void requantize_16_to_8(
 #define _16         r5
 #define tmp         r6
 
-#if !CONFIG_SYMMETRIC_SATURATION
+#if !CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
   #define X           r7
 #else
   #define X         r11
@@ -102,7 +98,7 @@ FUNCTION_NAME:
 /**/{   ldc _32, 32                         ;   ldc _16, 16                         }
 
 
-#if !CONFIG_SYMMETRIC_SATURATION
+#if !CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
     {   ldap r11, .L_constA                 ;   vclrdr                              }
     {   mov r11, X                          ;   vldc r11[0]                         }
     {                                       ;   nop                                 }
@@ -131,7 +127,7 @@ FUNCTION_NAME:
         {                                       ;   vlmacc tmp[0]                       }
         vstrpv Y[0], tail_mask
 
-#else  // CONFIG_SYMMETRIC_SATURATION
+#else  // CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
 
     .L_loop_top:
         {   add X, X, _32                       ;   vldr X[0]                           }
@@ -145,7 +141,7 @@ FUNCTION_NAME:
         {                                       ;   vdepth8                             }
 /**/    vstrpv Y[0], tail_mask
 
-#endif // CONFIG_SYMMETRIC_SATURATION
+#endif // CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
 
 
     

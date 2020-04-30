@@ -86,6 +86,11 @@ void avgpool2d_2x2(
 }
 
 
+#if CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
 
 
 WEAK_FUNC
@@ -113,10 +118,12 @@ void avgpool2d_global(
             acc += x * sc;
         }
 
-        Y[ch] = vlsat_single_s8(acc, sh);
+        
+        Y[ch] = (acc < 0x8080)? NEG_SAT_VAL : vlsat_single_s8(acc, sh);
     }
 }
 
+#undef NEG_SAT_VAL
 
 
 static inline int matches_2x2_impl(

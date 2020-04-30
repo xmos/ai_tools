@@ -1,6 +1,7 @@
 
 #if defined(__XS3A__)
 
+#include "nn_config.h"
 
 /*  
 void avgpool2d_global_asm(
@@ -14,9 +15,9 @@ void avgpool2d_global_asm(
     const uint32_t scale);
 */
 
-#define FUNCTION_NAME avgpool2d_global_asm
+#define FUNCTION_NAME avgpool2d_global
 
-#define NSTACKWORDS  36
+#define NSTACKWORDS  (4*8 + 12)
     
 .text
 .issue_mode  dual
@@ -37,6 +38,7 @@ void avgpool2d_global_asm(
 #define STACK_SHIFT_VEC     (NSTACKWORDS-8)
 #define STACK_BIAS_HI_VEC   (NSTACKWORDS-16)
 #define STACK_BIAS_LO_VEC   (NSTACKWORDS-24)
+#define STACK_VEC_TMP       (NSTACKWORDS-32)
 
 #define Y               r0
 #define X               r1
@@ -50,13 +52,19 @@ void avgpool2d_global_asm(
 #define pix_count       r9
 #define _16             r10
 
+#define Q(ASD)          ASD
+
 .align 4
 .L_bso_consts:
 .word 0x00010001, 0x01010101
 
+.L_vec_0x007F:
+.short 0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F
 
+.L_vec_0x80:
+.byte 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
 
-.align 4
+.align 16
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[1]
@@ -109,10 +117,15 @@ FUNCTION_NAME:
      
     .align 4
     .L_chan_loop:
-        {   ldaw r11, sp[STACK_BIAS_HI_VEC]         ;   sub chan_grp_left, chan_grp_left, 1     }
+        {   shl r11, _16, 5                         ;   sub chan_grp_left, chan_grp_left, 1     }
+        {   ldaw r11, sp[STACK_BIAS_HI_VEC]         ;   vsetc r11                               }
         {   ldaw r11, sp[STACK_BIAS_LO_VEC]         ;   vldd r11[0]                             }
         {   shr pix_groups, pix_count, 4            ;   vldr r11[0]                             }
+#if CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
         {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   bru pix_loop_hop                        } // Do pix tail first
+#else //CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
+        {   shl r11, _16, 4                         ;   bru pix_loop_hop                        } // Do pix tail first
+#endif //CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
         .L_pix_loop:
             {   add X, X, chans                         ;   vlmacc X[0]                             }   // 0  -- should be a no-op
             {   add X, X, chans                         ;   vlmacc X[0]                             }
@@ -133,9 +146,25 @@ FUNCTION_NAME:
             {   sub pix_groups, pix_groups, 1           ;   bt pix_groups, .L_pix_loop              }   // 16
         .L_pix_loop_end:        
 
+#if CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
         {   sub X, X, x_chan_incr                   ;   vlsat r11[0]                            }
         vstrpv Y[0], write_mask
         {   add Y, Y, _16                           ;   bt chan_grp_left, .L_chan_loop          }
+#else //CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
+        {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   vsetc r11       /* 16-bit mode */       }
+        {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat r11[0]                            }
+        {   sub X, X, x_chan_incr                   ;   vstr r11[0]                             }
+        {                                           ;   vdepth8                                 }
+        vstrpv Y[0], write_mask
+        {   ldap r11, .L_vec_0x007F                 ;   vldr r11[0]                             }
+        {                                           ;   vladd r11[0]                            }   //only 0xFF80 will remain negative (0xFFFF)
+        {   ldaw r11, sp[STACK_VEC_TMP]             ;   vdepth1                                 }   //values that should result in -0x80 will get 1 here
+        {                                           ;   vstr r11[0]                             }
+        {   ldap r11, .L_vec_0x80                   ;   ldw Q(pix_groups), sp[STACK_VEC_TMP]    }
+        {   and r11, Q(pix_groups), write_mask      ;   vldr r11[0]                             }
+        vstrpv Y[0], r11
+        {   add Y, Y, _16                           ;   bt chan_grp_left, .L_chan_loop          }
+#endif //CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
 
     .L_chan_loop_end:
     

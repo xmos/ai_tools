@@ -7,6 +7,7 @@ LIBS_INCLUDES := \
 	-I$(LIB_OPS_DIR)
 
 LIBS_VPATH += \
+	$(LIB_LOGGING_DIR) \
 	$(LIB_NN_DIR) \
 	$(LIB_OPS_DIR)
 

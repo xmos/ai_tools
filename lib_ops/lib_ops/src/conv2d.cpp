@@ -295,7 +295,6 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
     conv2d_1x1_init(&plans_[i], &in_params, &out_params, region.top,
                     region.left, region.rows * region.cols);
   }
-
   return kXCoreOk;
 }
 
@@ -437,7 +436,6 @@ XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
   }
 
   dispatcher->Join();
-
   return kXCoreOk;
 }
 

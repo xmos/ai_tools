@@ -7,12 +7,10 @@
 #ifdef ENABLE_TRACING
 
 #define TRACE_ERROR(...) \
-  printf("ERROR: ");     \
+  printf("[ERROR] ");    \
   printf(__VA_ARGS__)
 
-#define TRACE_INFO(...) \
-  printf("INFO: ");     \
-  printf(__VA_ARGS__)
+#define TRACE_INFO(...) printf(__VA_ARGS__)
 
 #else
 

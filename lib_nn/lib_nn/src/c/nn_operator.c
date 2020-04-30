@@ -35,6 +35,12 @@ void argmax_16(
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+#if CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
+
 WEAK_FUNC
 void requantize_16_to_8(
     int8_t* y,
@@ -42,9 +48,11 @@ void requantize_16_to_8(
     const unsigned n)
 {
     for(int i = 0; i < n; i++){
-        y[i] = vdepth8_single_s16(x[i]);
+        y[i] = (x[i] < -0x7F80)? NEG_SAT_VAL : vdepth8_single_s16(x[i]);
     }
 }
+
+#undef NEG_SAT_VAL
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

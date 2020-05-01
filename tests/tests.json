@@ -948,5 +948,29 @@
                 "-pd": "valid"
             }
         ]
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_offset_saturating_ops.py",
+        "operator": "XC_conv2d_shallowin",
+        "parameters": [
+            {
+                "--case": 0
+            }
+        ]
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_offset_saturating_ops.py",
+        "operator": "XC_conv2d_1x1",
+        "parameters": [
+            {
+                "--case": 1
+            },
+            {
+                "--case": 2
+            },
+            {
+                "--case": 3
+            }
+        ]
     }
 ]

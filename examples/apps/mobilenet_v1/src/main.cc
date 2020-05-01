@@ -19,13 +19,13 @@ const tflite::Model *model = nullptr;
 tflite::MicroInterpreter *interpreter = nullptr;
 TfLiteTensor *input = nullptr;
 TfLiteTensor *output = nullptr;
-constexpr int kTensorArenaSize = 148700;
+constexpr int kTensorArenaSize = 148704;
 uint8_t tensor_arena[kTensorArenaSize];
 
 xcore::Dispatcher *dispatcher = nullptr;
 constexpr int num_threads = 5;
-constexpr int kXCOREArenaSize = 8000;
-uint8_t xcore_arena[kXCOREArenaSize];
+constexpr int kXCOREHeapSize = 7904;
+uint8_t xcore_heap[kXCOREHeapSize];
 
 static int load_input(const char *filename, char *input, size_t esize) {
   FILE *fd = fopen(filename, "rb");
@@ -67,7 +67,7 @@ static void setup_tflite() {
   }
 
   // Setup xCORE dispatcher (BEFORE calling AllocateTensors)
-  static xcore::Dispatcher static_dispatcher(xcore_arena, kXCOREArenaSize,
+  static xcore::Dispatcher static_dispatcher(xcore_heap, kXCOREHeapSize,
                                              num_threads);
   xcore::XCoreStatus xcore_status = xcore::InitializeXCore(&static_dispatcher);
   if (xcore_status != xcore::kXCoreOk) {

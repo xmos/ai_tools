@@ -97,27 +97,27 @@ XCOREInterpreter::XCOREInterpreter() {
   tensor_arena_ = nullptr;
   tensor_arena_size_ = 0;
   dispatcher_ = nullptr;
-  xcore_arena_ = nullptr;
-  xcore_arena_size_ = 0;
+  xcore_heap_ = nullptr;
+  xcore_heap_size_ = 0;
 }
 
 XCOREInterpreter::~XCOREInterpreter() {
   if (interpreter_)
     delete interpreter_;  // NOTE: interpreter_ must be deleted before
                           // resolver, error_reporter_, tensor_arena_
-                          // xcore_arena_ and model_buffer_
+                          // xcore_heap_ and model_buffer_
   if (resolver_) delete resolver_;
   if (error_reporter_) delete error_reporter_;
   if (tensor_arena_) delete[] tensor_arena_;
   if (dispatcher_) delete dispatcher_;
-  if (xcore_arena_) delete[] xcore_arena_;
+  if (xcore_heap_) delete[] xcore_heap_;
   if (model_buffer_) delete[] model_buffer_;
 }
 
 XCoreStatus XCOREInterpreter::Initialize(const char* model_buffer,
                                          size_t model_buffer_size,
                                          size_t tensor_arena_size,
-                                         size_t xcore_arena_size) {
+                                         size_t xcore_heap_size) {
   // We need to keep a copy of the model content
   model_buffer_ = new char[model_buffer_size];
   memcpy(model_buffer_, model_buffer, model_buffer_size);
@@ -136,12 +136,12 @@ XCoreStatus XCOREInterpreter::Initialize(const char* model_buffer,
     return kXCoreError;
   }
 
-  xcore_arena_size_ = xcore_arena_size;
-  xcore_arena_ = new uint8_t[xcore_arena_size_];
-  memset(xcore_arena_, 0, xcore_arena_size_);
+  xcore_heap_size_ = xcore_heap_size;
+  xcore_heap_ = new uint8_t[xcore_heap_size_];
+  memset(xcore_heap_, 0, xcore_heap_size_);
   // Setup xCORE dispatcher
   dispatcher_ =
-      new xcore::Dispatcher(xcore_arena_, xcore_arena_size_, num_threads);
+      new xcore::Dispatcher(xcore_heap_, xcore_heap_size_, num_threads);
   xcore::XCoreStatus xcore_status = xcore::InitializeXCore(dispatcher_);
   if (xcore_status != xcore::kXCoreOk) {
     error_reporter_->Report("InitializeXCore() failed");
@@ -429,9 +429,9 @@ void delete_interpreter(xcore::XCOREInterpreter* interpreter) {
 
 int initialize(xcore::XCOREInterpreter* interpreter, const char* model_content,
                size_t model_content_size, size_t tensor_arena_size,
-               size_t xcore_arena_size) {
+               size_t xcore_heap_size) {
   return interpreter->Initialize(model_content, model_content_size,
-                                 tensor_arena_size, xcore_arena_size);
+                                 tensor_arena_size, xcore_heap_size);
 }
 
 int allocate_tensors(xcore::XCOREInterpreter* interpreter) {

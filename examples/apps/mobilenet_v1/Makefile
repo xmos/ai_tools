@@ -10,7 +10,7 @@ include ../../../make/libs.mk
 # App specific
 #********************
 APPFLAGS := -DNDEBUG
-#APPFLAGS += -DENABLE_TRACING
+APPFLAGS += -DENABLE_TRACING
 APPFLAGS += -DENABLE_BENCHMARKING
 
 ifeq ($(TARGET), x86)

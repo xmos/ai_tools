@@ -13,7 +13,7 @@ struct Conv2DThreadData {
   nn_image_t *Y;
   const nn_image_t *X;
   const nn_tensor_t *K;
-  const nn_bss_block_t *BSS;
+  const nn_bso_block_t *BSO;
 };
 
 //**************************************
@@ -32,7 +32,7 @@ struct Conv2DDeepThreadData {
 extern "C" {
 ATTRIBUTE_THREAD_FUNCTION void conv2d_deep_thread_worker(void *context) {
   Conv2DDeepThreadData *td = (Conv2DDeepThreadData *)context;
-  conv2d_deep(td->data.Y, td->data.X, td->data.K, td->data.BSS, td->plan,
+  conv2d_deep(td->data.Y, td->data.X, td->data.K, td->data.BSO, td->plan,
               td->job);
 }
 }
@@ -96,7 +96,7 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 }
 
 XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
-                              const int16_t *BSS) {
+                              const int16_t *BSO) {
   LOG_TRACE("Conv2D_Deep Eval id=%p\n", this);
   Dispatcher *dispatcher = GetDispatcher();
 
@@ -109,7 +109,7 @@ XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
     deep_thread_data[i].data.Y = (nn_image_t *)Y;
     deep_thread_data[i].data.X = (const nn_image_t *)X;
     deep_thread_data[i].data.K = (const nn_tensor_t *)K;
-    deep_thread_data[i].data.BSS = (const nn_bss_block_t *)BSS;
+    deep_thread_data[i].data.BSO = (const nn_bso_block_t *)BSO;
     deep_thread_data[i].plan = &plan_;
     deep_thread_data[i].job = &jobs_[i];
     dispatcher->AddThread(conv2d_deep_thread_worker,
@@ -138,7 +138,7 @@ struct Conv2DShallowThreadData {
 extern "C" {
 ATTRIBUTE_THREAD_FUNCTION void conv2d_shallow_thread_worker(void *context) {
   Conv2DShallowThreadData *td = (Conv2DShallowThreadData *)context;
-  conv2d_shallowin(td->data.Y, td->data.X, td->data.K, td->data.BSS, td->plan,
+  conv2d_shallowin(td->data.Y, td->data.X, td->data.K, td->data.BSO, td->plan,
                    td->job);
 }
 }
@@ -203,7 +203,7 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 }
 
 XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
-                                 const int16_t *BSS) {
+                                 const int16_t *BSO) {
   LOG_TRACE("Conv2D_Shallow Eval id=%p\n", this);
   Dispatcher *dispatcher = GetDispatcher();
 
@@ -216,7 +216,7 @@ XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
     shallow_thread_data[i].data.Y = (nn_image_t *)Y;
     shallow_thread_data[i].data.X = (const nn_image_t *)X;
     shallow_thread_data[i].data.K = (const nn_tensor_t *)K;
-    shallow_thread_data[i].data.BSS = (const nn_bss_block_t *)BSS;
+    shallow_thread_data[i].data.BSO = (const nn_bso_block_t *)BSO;
     shallow_thread_data[i].plan = &plan_;
     shallow_thread_data[i].job = &jobs_[i];
     dispatcher->AddThread(conv2d_shallow_thread_worker,
@@ -244,8 +244,7 @@ struct Conv2D1x1ThreadData {
 extern "C" {
 ATTRIBUTE_THREAD_FUNCTION void conv2d_1x1_thread_worker(void *context) {
   Conv2D1x1ThreadData *td = (Conv2D1x1ThreadData *)context;
-  conv2d_1x1(td->data.Y, td->data.X, td->data.K, (data16_t *)td->data.BSS,
-             td->plan);
+  conv2d_1x1(td->data.Y, td->data.X, td->data.K, td->data.BSO, td->plan);
 }
 }
 
@@ -300,7 +299,7 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 }
 
 XCoreStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
-                             const int16_t *BSS) {
+                             const int16_t *BSO) {
   LOG_TRACE("Conv2D_1x1 Eval id=%p\n", this);
 
   Dispatcher *dispatcher = GetDispatcher();
@@ -314,7 +313,7 @@ XCoreStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
     thread_data[i].data.Y = (nn_image_t *)Y;
     thread_data[i].data.X = (const nn_image_t *)X;
     thread_data[i].data.K = (const nn_tensor_t *)K;
-    thread_data[i].data.BSS = (const nn_bss_block_t *)BSS;
+    thread_data[i].data.BSO = (const nn_bso_block_t *)BSO;
     thread_data[i].plan = &plans_[i];
     dispatcher->AddThread(conv2d_1x1_thread_worker,
                           reinterpret_cast<void *>(&thread_data[i]),
@@ -343,7 +342,7 @@ extern "C" {
 ATTRIBUTE_THREAD_FUNCTION void conv2d_depthwise_thread_worker(void *context) {
   Conv2DDepthwiseThreadData *td = (Conv2DDepthwiseThreadData *)context;
   conv2d_depthwise(td->data.Y, td->data.X, td->data.K,
-                   (nn_bss_block_t *)td->data.BSS, td->plan, td->job);
+                   (nn_bso_block_t *)td->data.BSO, td->plan, td->job);
 }
 }
 
@@ -414,7 +413,7 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 }
 
 XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
-                                   const int16_t *BSS) {
+                                   const int16_t *BSO) {
   LOG_TRACE("Conv2D_Depthwise Eval id=%p\n", this);
 
   Dispatcher *dispatcher = GetDispatcher();
@@ -428,7 +427,7 @@ XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
     thread_data[i].data.Y = (nn_image_t *)Y;
     thread_data[i].data.X = (const nn_image_t *)X;
     thread_data[i].data.K = (const nn_tensor_t *)K;
-    thread_data[i].data.BSS = (const nn_bss_block_t *)BSS;
+    thread_data[i].data.BSO = (const nn_bso_block_t *)BSO;
     thread_data[i].plan = &plan_;
     thread_data[i].job = &jobs_[i];
     dispatcher->AddThread(conv2d_depthwise_thread_worker,

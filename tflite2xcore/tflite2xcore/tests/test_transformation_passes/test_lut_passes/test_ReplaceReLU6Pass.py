@@ -2,7 +2,7 @@
 
 import pytest
 
-from tflite2xcore.xcore_model import TensorType
+from tflite2xcore.xcore_schema import TensorType
 from tflite2xcore.transformation_passes import ReplaceReLU6Pass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_relu6
@@ -11,13 +11,14 @@ from .conftest import (
     test_matching_params,
     test_non_matching_input_type,
     test_non_matching_output_type,
-    test_mutate
+    test_mutate,
 )
 
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def trf_pass():

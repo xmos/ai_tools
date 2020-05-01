@@ -24,12 +24,11 @@ set(LIB_OPS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../lib_ops")
 #**********************
 # Build flags
 #**********************
+set(BUILD_FLAGS "-g -DTF_LITE_DISABLE_X86_NEON -O3")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(BUILD_FLAGS "-g -DTF_LITE_DISABLE_X86_NEON -O3")
 set(CMAKE_CXX_FLAGS ${BUILD_FLAGS})
-set(CMAKE_C_FLAGS ${BUILD_FLAGS})
+set(CMAKE_C_FLAGS "${BUILD_FLAGS} -std=c99")
 
 #**********************
 # Build shared library
@@ -38,6 +37,7 @@ set(CMAKE_C_FLAGS ${BUILD_FLAGS})
 add_library(libtflite2xcore SHARED)
 set_target_properties(libtflite2xcore PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(libtflite2xcore PROPERTIES PREFIX "")
+target_link_libraries(libtflite2xcore stdc++ m pthread)
 
 #**********************
 # Flatbuffer sources
@@ -75,6 +75,10 @@ file (GLOB XCORE_SOURCES
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/*.cc"
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/*.c"
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/*.c"
+  "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/deep/*.c"
+  "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/depthwise/*.c"
+  "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/shallow/*.c"
+  "${LIB_OPS_SOURCE_DIR}/lib_ops/src/*.c"
   "${LIB_OPS_SOURCE_DIR}/lib_ops/src/*.cpp"
 )
 
@@ -85,6 +89,7 @@ target_sources(libtflite2xcore
   PRIVATE ${XCORE_SOURCES}
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/flexbuffer_helpers.cpp"
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/xcore_interpreter.cpp"
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/arena_size.cpp"
 )
 
 target_include_directories(libtflite2xcore
@@ -94,6 +99,7 @@ target_include_directories(libtflite2xcore
   PRIVATE ${LIB_NN_ALT_INCLUDE_DIR}
   PRIVATE ${LIB_NN_INCLUDE_DIR}
   PRIVATE ${LIB_OPS_INCLUDE_DIR}
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")

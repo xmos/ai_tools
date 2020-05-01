@@ -5,14 +5,14 @@ import pytest
 from copy import deepcopy
 
 from tflite2xcore.transformation_passes import SplitPaddingPass
-from tflite2xcore.operator_codes import BuiltinOpCodes
+from tflite2xcore.xcore_schema import BuiltinOpCodes
 
 from ..model_builders import build_pad
 from .conftest import (
     PARAMS,
     _test_non_matching_params,
     test_matching_params,
-    update_params_with_paddings
+    update_params_with_paddings,
 )
 
 
@@ -22,15 +22,17 @@ from .conftest import (
 
 PARAMS = update_params_with_paddings(
     deepcopy(PARAMS),
-    is_matching=lambda padding:
-        ((padding[0] != [0, 0] or padding[3] != [0, 0])
-         and (padding[1] != [0, 0] or padding[2] != [0, 0]))
+    is_matching=lambda padding: (
+        (padding[0] != [0, 0] or padding[3] != [0, 0])
+        and (padding[1] != [0, 0] or padding[2] != [0, 0])
+    ),
 )
 
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def build_model():
@@ -50,6 +52,7 @@ def model(input_shape, paddings):
 #  ----------------------------------------------------------------------------
 #                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
+
 
 def test_mutate(trf_pass, model):
     # extract original padding values

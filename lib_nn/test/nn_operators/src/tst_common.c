@@ -1,58 +1,49 @@
 
 #include "tst_common.h"
 
-#include <xs1.h>
-#include <xclib.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 
 
-int16_t  pseudo_rand_int16(unsigned *r){
-    test_crc32(r);
-    return (int16_t)*r;
+int16_t  pseudo_rand_int16(){
+    return (int16_t)rand();
 }
 
-uint16_t pseudo_rand_uint16(unsigned *r){
-    test_crc32(r);
-    return (uint16_t)*r;
+uint16_t pseudo_rand_uint16(){
+    return (uint16_t)rand();
 }
 
-int32_t  pseudo_rand_int32(unsigned *r){
-    test_crc32(r);
-    return (int32_t)*r;
+int32_t  pseudo_rand_int32(){
+    return (int32_t)rand();
 }
 
-uint32_t pseudo_rand_uint32(unsigned *r){
-    test_crc32(r);
-    return (uint32_t)*r;
+uint32_t pseudo_rand_uint32(){
+    return (uint32_t)rand();
 }
 
-int64_t  pseudo_rand_int64(unsigned *r){
-    test_crc32(r);
-    int64_t a = (int64_t)*r;
-    test_crc32(r);
-    int64_t b = (int64_t)*r;
+int64_t  pseudo_rand_int64(){
+    
+    int64_t a = rand();
+    int64_t b = rand();
     return (int64_t)(a + (b<<32));
 }
 
-uint64_t pseudo_rand_uint64(unsigned *r){
-    test_crc32(r);
-    int64_t a = (int64_t)*r;
-    test_crc32(r);
-    int64_t b = (int64_t)*r;
+uint64_t pseudo_rand_uint64(){
+    int64_t a = (int64_t) rand();
+    int64_t b = (int64_t) rand();
     return (uint64_t)(a + (b<<32));
 }
 
-void pseudo_rand_bytes(unsigned *r, char* buffer, unsigned size){
-
-    assert((((unsigned)buffer) & 0x3) == 0);
+void pseudo_rand_bytes(char* buffer, unsigned size){
 
     unsigned b = 0;
 
     while(size >= sizeof(unsigned)){
-        test_crc32(r);
 
-        char* rch = (char*) r;
+        int r = rand();
+
+        char* rch = (char*) &r;
 
         for(int i = 0; i < sizeof(unsigned); i++)
             buffer[b++] = rch[i];
@@ -60,8 +51,7 @@ void pseudo_rand_bytes(unsigned *r, char* buffer, unsigned size){
         size -= sizeof(unsigned);
     }
     
-    test_crc32(r);
-    unsigned tmp = *r;
+    unsigned tmp = rand();
     while(size){
         buffer[b++] = (char) (tmp & 0xFF);
         tmp >>= 8;
@@ -71,23 +61,11 @@ void pseudo_rand_bytes(unsigned *r, char* buffer, unsigned size){
 
 
 void print_warns(
-    int start_case, 
-    unsigned test_c, 
-    unsigned test_asm)
+    int start_case)
 {
     if(start_case != -1 && start_case != 0){
         printf("\t\t\t\t\t\t************************************************\n");
         printf("\t\t\t\t\t\t***** WARNING: Test not started on case 0 ******\n");
-        printf("\t\t\t\t\t\t************************************************\n");
-    }
-    if(!test_c){
-        printf("\t\t\t\t\t\t************************************************\n");
-        printf("\t\t\t\t\t\t***** WARNING: Not testing C implementation ****\n");
-        printf("\t\t\t\t\t\t************************************************\n");
-    }
-    if(!test_asm){
-        printf("\t\t\t\t\t\t************************************************\n");
-        printf("\t\t\t\t\t\t***** WARNING: Not testing ASM implementation **\n");
         printf("\t\t\t\t\t\t************************************************\n");
     }
 }

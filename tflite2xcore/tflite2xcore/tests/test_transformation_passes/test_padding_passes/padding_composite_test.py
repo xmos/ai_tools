@@ -4,19 +4,17 @@ import pytest
 
 from copy import deepcopy
 
+from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes import (
     SplitPaddingPass,
     FuseConsecutivePadsPass,
-    FuseConv2dPaddingPass
+    FuseConv2dPaddingPass,
 )
-from tflite2xcore.operator_codes import BuiltinOpCodes, XCOREOpCodes
+from tflite2xcore.xcore_schema import BuiltinOpCodes, XCOREOpCodes
 
 from ..model_builders import build_pad, build_padded_DW
 from .test_SplitPaddingPass import PARAMS as SPLIT_PARAMS
-from .test_FuseConv2dPaddingPass import (
-    PARAMS as CONV_PARAMS,
-    weight_shape
-)
+from .test_FuseConv2dPaddingPass import PARAMS as CONV_PARAMS, weight_shape
 from .conftest import PARAMS
 
 
@@ -38,6 +36,7 @@ for k in PARAMS:
 #                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
 
+
 def test_split_fuse_pad(input_shape, paddings):
     model = build_pad(input_shape=input_shape, paddings=paddings)
     operators = model.subgraphs[0].operators
@@ -55,6 +54,11 @@ def test_split_fuse_pad(input_shape, paddings):
     split_pass = FuseConsecutivePadsPass()
     split_pass.run(model)
     model.sanity_check()
+
+    # need to clean up dangling ops/tensors
+    CleanupManager(model).run_passes()
+    model.sanity_check()
+
     assert len(operators) == 1
     pad_new = operators[0].inputs[1]
     assert pad_new is not pad_ori
@@ -70,8 +74,12 @@ def test_split_fuse_pad(input_shape, paddings):
 
 
 def test_split_fuse_conv2d(weight_shape, input_size, paddings, strides):
-    model = build_padded_DW(weight_shape=weight_shape, input_size=input_size,
-                            paddings=paddings, strides=strides)
+    model = build_padded_DW(
+        weight_shape=weight_shape,
+        input_size=input_size,
+        paddings=paddings,
+        strides=strides,
+    )
     operators = model.subgraphs[0].operators
     assert len(operators) == 2
     paddings_ori = operators[0].inputs[1].numpy.tolist()
@@ -87,6 +95,11 @@ def test_split_fuse_conv2d(weight_shape, input_size, paddings, strides):
     split_pass = FuseConv2dPaddingPass()
     split_pass.run(model)
     model.sanity_check()
+
+    # need to clean up dangling ops/tensors
+    CleanupManager(model).run_passes()
+    model.sanity_check()
+
     assert len(operators) == 2
     op1, op2 = operators
     assert op1.operator_code.code is BuiltinOpCodes.PAD

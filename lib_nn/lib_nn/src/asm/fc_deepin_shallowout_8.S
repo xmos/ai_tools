@@ -3,7 +3,7 @@
 
 
 /*  
-void fc_deepin_shallowout_8_asm(
+void fc_deepin_shallowout_8(
     const int8_t* W, 
     const int32_t* B,
     const int8_t* X, 
@@ -14,7 +14,7 @@ void fc_deepin_shallowout_8_asm(
     const int16_t* scales);
 */
 
-#define FUNCTION_NAME fc_deepin_shallowout_8_asm
+#define FUNCTION_NAME fc_deepin_shallowout_8
 
 #define NSTACKWORDS  16
     

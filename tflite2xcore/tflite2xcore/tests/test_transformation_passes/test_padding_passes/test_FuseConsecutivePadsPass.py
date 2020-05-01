@@ -4,15 +4,16 @@ import pytest
 
 from copy import deepcopy
 
+from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes import FuseConsecutivePadsPass
-from tflite2xcore.operator_codes import BuiltinOpCodes
+from tflite2xcore.xcore_schema import BuiltinOpCodes
 
 from ..model_builders import build_pad, build_consecutive_pads
 from .conftest import (
     PARAMS,
     _test_non_matching_params,
     test_matching_params,
-    update_params_with_paddings
+    update_params_with_paddings,
 )
 
 
@@ -20,10 +21,7 @@ from .conftest import (
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-PARAMS = update_params_with_paddings(
-    deepcopy(PARAMS),
-    is_matching=lambda padding: True
-)
+PARAMS = update_params_with_paddings(deepcopy(PARAMS), is_matching=lambda padding: True)
 
 # NOTE: this is intentional to keep test case count lower
 PARAMS["default"]["paddings"] = PARAMS["smoke"]["paddings"]
@@ -32,6 +30,7 @@ PARAMS["default"]["paddings"] = PARAMS["smoke"]["paddings"]
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def build_model():
@@ -45,14 +44,15 @@ def trf_pass():
 
 @pytest.fixture()
 def model(input_shape, paddings, paddings_NC):
-    return build_consecutive_pads(input_shape=input_shape,
-                                  paddings_1=paddings,
-                                  paddings_2=paddings_NC)
+    return build_consecutive_pads(
+        input_shape=input_shape, paddings_1=paddings, paddings_2=paddings_NC
+    )
 
 
 #  ----------------------------------------------------------------------------
 #                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
+
 
 def test_mutate(trf_pass, model):
     # extract original padding values
@@ -66,6 +66,10 @@ def test_mutate(trf_pass, model):
 
     # run mutating pass
     trf_pass.run(model)
+    model.sanity_check()
+
+    # need to clean up dangling ops/tensors
+    CleanupManager(model).run_passes()
     model.sanity_check()
 
     # check operator

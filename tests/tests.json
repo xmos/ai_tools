@@ -3,48 +3,317 @@
         "generator": "../examples/models/op_test_models/generate_lookup_8.py",
         "operator": "XC_lookup_8",
         "parameters": [
-            {"--input_init": ["unif", -10, 10], "-act": "relu", "-in": 32, "-wi": 5, "-hi": 5, "smoke": true},
-            {"--input_init": ["unif", -10, -1], "-act": "relu", "-in": 3, "-wi": 5, "-hi": 2},
-            {"--input_init": ["unif", 1, 10], "-act": "relu", "-in": 4, "-wi": 2, "-hi": 5},
-            {"--input_init": ["unif", -10, 7], "-act": "relu6", "-in": 32, "-wi": 5, "-hi": 5, "smoke": true},
-            {"--input_init": ["unif", 1, 2], "-act": "relu6", "-in": 3, "-wi": 5, "-hi": 2},
-            {"--input_init": ["unif", 1, 2], "-act": "relu6", "-in": 3, "-wi": 5, "-hi": 2},
-            {"--input_init": ["unif", 6, 10], "-act": "relu6", "-in": 4, "-wi": 2, "-hi": 5},
-            {"--input_init": ["unif", -1, 1], "-act": "logistic", "-in": 4, "-wi": 5, "-hi": 5, "smoke": true},
-            {"--input_init": ["unif", -1, 1], "-act": "tanh", "-in": 4, "-wi": 5, "-hi": 5, "smoke": true}
+            {
+                "--input_init": [
+                    "unif",
+                    -10,
+                    10
+                ],
+                "-act": "relu",
+                "-in": 32,
+                "-wi": 5,
+                "-hi": 5,
+                "smoke": true
+            },
+            {
+                "--input_init": [
+                    "unif",
+                    -10,
+                    -1
+                ],
+                "-act": "relu",
+                "-in": 3,
+                "-wi": 5,
+                "-hi": 2
+            },
+            {
+                "--input_init": [
+                    "unif",
+                    1,
+                    10
+                ],
+                "-act": "relu",
+                "-in": 4,
+                "-wi": 2,
+                "-hi": 5
+            },
+            {
+                "--input_init": [
+                    "unif",
+                    -10,
+                    7
+                ],
+                "-act": "relu6",
+                "-in": 32,
+                "-wi": 5,
+                "-hi": 5,
+                "smoke": true
+            },
+            {
+                "--input_init": [
+                    "unif",
+                    1,
+                    2
+                ],
+                "-act": "relu6",
+                "-in": 3,
+                "-wi": 5,
+                "-hi": 2
+            },
+            {
+                "--input_init": [
+                    "unif",
+                    1,
+                    2
+                ],
+                "-act": "relu6",
+                "-in": 3,
+                "-wi": 5,
+                "-hi": 2
+            },
+            {
+                "--input_init": [
+                    "unif",
+                    6,
+                    10
+                ],
+                "-act": "relu6",
+                "-in": 4,
+                "-wi": 2,
+                "-hi": 5
+            },
+            {
+                "--input_init": [
+                    "unif",
+                    -1,
+                    1
+                ],
+                "-act": "logistic",
+                "-in": 4,
+                "-wi": 5,
+                "-hi": 5,
+                "smoke": true
+            },
+            {
+                "--input_init": [
+                    "unif",
+                    -1,
+                    1
+                ],
+                "-act": "tanh",
+                "-in": 4,
+                "-wi": 5,
+                "-hi": 5,
+                "smoke": true
+            }
         ]
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d.py",
         "operator": "XC_avgpool2d",
         "parameters": [
-            {"-in": 4, "-wi": 5, "-hi": 5, "-po": [3, 4], "-st": [1, 2], "-pd": "valid"},
-            {"-in": 32, "-wi": 4, "-hi": 4, "-po": [4, 4], "-st": [2, 2], "-pd": "valid"},
-            {"-in": 4, "-wi": 16, "-hi": 16, "-po": [4, 4], "-st": [1, 1], "-pd": "valid"},
-            {"-in": 32, "-wi": 4, "-hi": 4, "-po": [2, 2], "-st": [2, 2], "-pd": "valid"},
-            {"-in": 4, "-wi": 16, "-hi": 16, "-po": [2, 2], "-st": [1, 1], "-pd": "valid", "smoke": true}
+            {
+                "-in": 4,
+                "-wi": 5,
+                "-hi": 5,
+                "-po": [
+                    3,
+                    4
+                ],
+                "-st": [
+                    1,
+                    2
+                ],
+                "-pd": "valid"
+            },
+            {
+                "-in": 32,
+                "-wi": 4,
+                "-hi": 4,
+                "-po": [
+                    4,
+                    4
+                ],
+                "-st": [
+                    2,
+                    2
+                ],
+                "-pd": "valid"
+            },
+            {
+                "-in": 4,
+                "-wi": 16,
+                "-hi": 16,
+                "-po": [
+                    4,
+                    4
+                ],
+                "-st": [
+                    1,
+                    1
+                ],
+                "-pd": "valid"
+            },
+            {
+                "-in": 32,
+                "-wi": 4,
+                "-hi": 4,
+                "-po": [
+                    2,
+                    2
+                ],
+                "-st": [
+                    2,
+                    2
+                ],
+                "-pd": "valid"
+            },
+            {
+                "-in": 32,
+                "-wi": 5,
+                "-hi": 5,
+                "-po": [
+                    3,
+                    4
+                ],
+                "-st": [
+                    1,
+                    2
+                ],
+                "-pd": "valid"
+            },
+            {
+                "-in": 4,
+                "-wi": 16,
+                "-hi": 16,
+                "-po": [
+                    2,
+                    2
+                ],
+                "-st": [
+                    1,
+                    1
+                ],
+                "-pd": "valid",
+                "smoke": true
+            }
         ]
     },
     {
         "generator": "../examples/models/op_test_models/generate_avgpool2d_global.py",
         "operator": "XC_avgpool2d_global",
         "parameters": [
-            {"-in": 4, "-wi": 2, "-hi": 2, "smoke": true},
-            {"-in": 16, "-wi": 2, "-hi": 2},
-            {"-in": 16, "-wi": 3, "-hi": 3},
-            {"-in": 32, "-wi": 4, "-hi": 4}
+            {
+                "-in": 4,
+                "-wi": 2,
+                "-hi": 2,
+                "smoke": true
+            },
+            {
+                "-in": 16,
+                "-wi": 2,
+                "-hi": 2
+            },
+            {
+                "-in": 16,
+                "-wi": 3,
+                "-hi": 3
+            },
+            {
+                "-in": 32,
+                "-wi": 4,
+                "-hi": 4
+            }
         ]
     },
     {
         "generator": "../examples/models/op_test_models/generate_conv2d_1x1.py",
         "operator": "XC_conv2d_1x1",
         "parameters": [
-            {"--input_init": ["const", 1], "--bias_init": ["const", 1], "--weight_init": ["const", 1], "-in": 4, "-out": 4, "-wi": 2, "-hi": 2},
-            {"-in": 4, "-out": 4, "-wi": 2, "-hi": 2, "smoke": true},
-            {"-in": 4, "-out": 4, "-wi": 5, "-hi": 5},
-            {"-in": 12, "-out": 8, "-wi": 5, "-hi": 5},
-            {"-in": 4, "-out": 8, "-wi": 5, "-hi": 5},
-            {"-in": 16, "-out": 8, "-wi": 5, "-hi": 5}
+            {
+                "--input_init": [
+                    "const",
+                    1
+                ],
+                "--bias_init": [
+                    "const",
+                    1
+                ],
+                "--weight_init": [
+                    "const",
+                    1
+                ],
+                "-in": 4,
+                "-out": 4,
+                "-wi": 2,
+                "-hi": 2
+            },
+            {
+                "-in": 4,
+                "-out": 4,
+                "-wi": 2,
+                "-hi": 2,
+                "smoke": true
+            },
+            {
+                "-in": 4,
+                "-out": 4,
+                "-wi": 5,
+                "-hi": 5
+            },
+            {
+                "-in": 12,
+                "-out": 8,
+                "-wi": 5,
+                "-hi": 5
+            },
+            {
+                "-in": 4,
+                "-out": 8,
+                "-wi": 5,
+                "-hi": 5
+            },
+            {
+                "-in": 16,
+                "-out": 8,
+                "-wi": 5,
+                "-hi": 5
+            },
+            {
+                "-in": 16,
+                "-out": 8,
+                "-wi": 16,
+                "-hi": 16,
+                "-par": 1
+            },
+            {
+                "-in": 16,
+                "-out": 8,
+                "-wi": 16,
+                "-hi": 16,
+                "-par": 2
+            },
+            {
+                "-in": 16,
+                "-out": 8,
+                "-wi": 16,
+                "-hi": 16,
+                "-par": 3
+            },
+            {
+                "-in": 16,
+                "-out": 8,
+                "-wi": 16,
+                "-hi": 16,
+                "-par": 4
+            },
+            {
+                "-in": 16,
+                "-out": 8,
+                "-wi": 16,
+                "-hi": 16,
+                "-par": 5
+            }
         ]
     },
     {
@@ -52,17 +321,97 @@
         "operator": "XC_conv2d_deep",
         "subtype": "deep",
         "parameters": [
-            {"-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same"},
-            {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "same"},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-st": [2, 2], "-pd": "same"},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same", "smoke": true},
-            {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "valid"},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-st": [2, 2], "-pd": "valid"},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 1},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 2},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 3},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 4},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid", "-par": 5}
+            {
+                "-wi": 1,
+                "-hi": 1,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": "same"
+            },
+            {
+                "-wi": 3,
+                "-hi": 3,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": "same"
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-st": [
+                    2,
+                    2
+                ],
+                "-pd": "same"
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": "same",
+                "smoke": true
+            },
+            {
+                "-wi": 3,
+                "-hi": 3,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": "valid"
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-st": [
+                    2,
+                    2
+                ],
+                "-pd": "valid"
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": "valid",
+                "-par": 1
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": "valid",
+                "-par": 2
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": "valid",
+                "-par": 3
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": "valid",
+                "-par": 4
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": "valid",
+                "-par": 5
+            }
         ]
     },
     {
@@ -70,25 +419,212 @@
         "operator": "XC_conv2d_deep",
         "subtype": "padded",
         "parameters": [
-            {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": [1, 1, 1, 1]},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": [1, 1, 1, 1], "smoke": true},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": [1, 1, 1, 1], "-st": [2, 2]},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": [2, 2, 1, 1]},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": [2, 2, 1, 1]}
+            {
+                "-wi": 3,
+                "-hi": 3,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ]
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "smoke": true
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "-st": [
+                    2,
+                    2
+                ]
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": [
+                    2,
+                    2,
+                    1,
+                    1
+                ]
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-pd": [
+                    2,
+                    2,
+                    1,
+                    1
+                ]
+            }
         ]
     },
     {
-        "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_deepout_relu.py",
-        "operator": "XC_conv2d_shallowin_deepout_relu",
-        "_comment": "some expected failures. see issue https://github.com/xmos/ai_tools/issues/88",
+        "generator": "../examples/models/op_test_models/generate_conv2d_shallowin.py",
+        "operator": "XC_conv2d_shallowin",
+        "subtype": "shallowin",
         "parameters": [
-            {"-wi": 1, "-hi": 1, "-kw": 1, "-kh": 1, "-pd": "same"},
-            {"-wi": 1, "-hi": 1, "-kw": 3, "-kh": 3, "-pd": "same", "xfail": true},
-            {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "same"},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "same", "smoke": true},
-            {"-wi": 1, "-hi": 1, "-kw": 1, "-kh": 1, "-pd": "valid"},
-            {"-wi": 3, "-hi": 3, "-kw": 3, "-kh": 3, "-pd": "valid"},
-            {"-wi": 5, "-hi": 5, "-kw": 3, "-kh": 3, "-pd": "valid"}
+            {
+                "-wi": 1,
+                "-hi": 1,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 7,
+                "-pd": "same"
+            },
+            {
+                "-wi": 1,
+                "-hi": 1,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 4,
+                "-pd": "same"
+            },
+            {
+                "-wi": 3,
+                "-hi": 3,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 8,
+                "-pd": "same"
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 5,
+                "-pd": "same",
+                "smoke": true
+            },
+            {
+                "-wi": 5,
+                "-hi": 3,
+                "-kw": 5,
+                "-kh": 3,
+                "-in": 1,
+                "-pd": "valid"
+            },
+            {
+                "-wi": 3,
+                "-hi": 3,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 2,
+                "-pd": "valid"
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 1,
+                "-kh": 3,
+                "-in": 31,
+                "-pd": "valid"
+            }
+        ]
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_conv2d_shallowin_padded.py",
+        "operator": "XC_conv2d_shallowin",
+        "subtype": "padded",
+        "parameters": [
+            {
+                "-wi": 3,
+                "-hi": 3,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 7,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ]
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 3,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "smoke": true
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 1,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "-st": [
+                    2,
+                    2
+                ]
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 2,
+                "-pd": [
+                    2,
+                    2,
+                    1,
+                    1
+                ]
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 4,
+                "-pd": [
+                    2,
+                    2,
+                    1,
+                    1
+                ]
+            }
         ]
     },
     {
@@ -96,13 +632,156 @@
         "operator": "XC_conv2d_depthwise",
         "subtype": "depthwise",
         "parameters": [
-            {"-wi": 1, "-hi": 1, "-pd": "same", "-out": 4, "-kh": 2, "-kw": 2, "-st": [1, 1]},
-            {"-wi": 1, "-hi": 1, "-pd": "same", "-out": 4, "-kh": 2, "-kw": 2, "-st": [2, 2]},
-            {"-wi": 4, "-hi": 4, "-pd": "same", "-out": 4, "-kh": 3, "-kw": 3, "-st": [1, 1]},
-            {"-wi": 4, "-hi": 4, "-pd": "valid", "-out": 4, "-kh": 3, "-kw": 3, "-st": [1, 1]},
-            {"-wi": 5, "-hi": 5, "-pd": "valid", "-out": 8, "-kh": 3, "-kw": 3, "-st": [1, 1], "smoke": true},
-            {"-wi": 10, "-hi": 10, "-pd": "valid", "-out": 8, "-kh": 5, "-kw": 5, "-st": [2, 2]},
-            {"-wi": 10, "-hi": 10, "-pd": "same", "-out": 8, "-kh": 5, "-kw": 5, "-st": [2, 2]}
+            {
+                "-wi": 1,
+                "-hi": 1,
+                "-pd": "same",
+                "-out": 4,
+                "-kh": 2,
+                "-kw": 2,
+                "-st": [
+                    1,
+                    1
+                ]
+            },
+            {
+                "-wi": 1,
+                "-hi": 1,
+                "-pd": "same",
+                "-out": 4,
+                "-kh": 2,
+                "-kw": 2,
+                "-st": [
+                    2,
+                    2
+                ]
+            },
+            {
+                "-wi": 4,
+                "-hi": 4,
+                "-pd": "same",
+                "-out": 4,
+                "-kh": 3,
+                "-kw": 3,
+                "-st": [
+                    1,
+                    1
+                ]
+            },
+            {
+                "-wi": 4,
+                "-hi": 4,
+                "-pd": "valid",
+                "-out": 4,
+                "-kh": 3,
+                "-kw": 3,
+                "-st": [
+                    1,
+                    1
+                ]
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-pd": "valid",
+                "-out": 8,
+                "-kh": 3,
+                "-kw": 3,
+                "-st": [
+                    1,
+                    1
+                ],
+                "smoke": true
+            },
+            {
+                "-wi": 10,
+                "-hi": 10,
+                "-pd": "valid",
+                "-out": 8,
+                "-kh": 5,
+                "-kw": 5,
+                "-st": [
+                    2,
+                    2
+                ]
+            },
+            {
+                "-wi": 10,
+                "-hi": 10,
+                "-pd": "same",
+                "-out": 8,
+                "-kh": 5,
+                "-kw": 5,
+                "-st": [
+                    2,
+                    2
+                ]
+            },
+            {
+                "-wi": 10,
+                "-hi": 10,
+                "-pd": "valid",
+                "-out": 8,
+                "-kh": 3,
+                "-kw": 3,
+                "-st": [
+                    1,
+                    1
+                ],
+                "-par": 1
+            },
+            {
+                "-wi": 10,
+                "-hi": 10,
+                "-pd": "valid",
+                "-out": 8,
+                "-kh": 3,
+                "-kw": 3,
+                "-st": [
+                    1,
+                    1
+                ],
+                "-par": 2
+            },
+            {
+                "-wi": 10,
+                "-hi": 10,
+                "-pd": "valid",
+                "-out": 8,
+                "-kh": 3,
+                "-kw": 3,
+                "-st": [
+                    1,
+                    1
+                ],
+                "-par": 3
+            },
+            {
+                "-wi": 10,
+                "-hi": 10,
+                "-pd": "valid",
+                "-out": 8,
+                "-kh": 3,
+                "-kw": 3,
+                "-st": [
+                    1,
+                    1
+                ],
+                "-par": 4
+            },
+            {
+                "-wi": 10,
+                "-hi": 10,
+                "-pd": "valid",
+                "-out": 8,
+                "-kh": 3,
+                "-kw": 3,
+                "-st": [
+                    1,
+                    1
+                ],
+                "-par": 5
+            }
         ]
     },
     {
@@ -110,21 +789,109 @@
         "operator": "XC_conv2d_depthwise",
         "subtype": "padded",
         "parameters": [
-            {"-wi": 5, "-hi": 5, "-out": 4, "-kh": 3, "-kw": 3, "-pd": [1, 1, 1, 1], "-st": [1, 1], "smoke": true},
-            {"-wi": 10, "-hi": 10, "-out": 8, "-kh": 5, "-kw": 5, "-pd": [2, 2, 2, 2], "-st": [1, 1]},
-            {"-wi": 5, "-hi": 5, "-out": 4, "-kh": 3, "-kw": 3, "-pd": [1, 1, 1, 1], "-st": [2, 2]},
-            {"-wi": 10, "-hi": 10, "-out": 8, "-kh": 3, "-kw": 3, "-pd": [1, 1, 1, 1], "-st": [2, 2]},
-            {"-wi": 10, "-hi": 10, "-out": 4, "-kh": 3, "-kw": 3, "-pd": [1, 1, 1, 1], "-st": [2, 2]},
-            {"-wi": 10, "-hi": 10, "-out": 4, "-kh": 5, "-kw": 5, "-pd": [2, 2, 1, 1], "-st": [1, 1]}
-        ]
-    },
-    {
-        "generator": "../examples/models/op_test_models/generate_depthwise_conv2d_singlein_deepout.py",
-        "operator": "XC_conv2d_depthwise",
-        "subtype": "singlein_deepout",
-        "parameters": [
-            {"-wi": 5, "-hi": 5, "-pd": "same", "-out": 16, "-kh": 3, "-kw": 3},
-            {"-wi": 5, "-hi": 5, "-pd": "valid", "-out": 32, "-kh": 3, "-kw": 3, "smoke": true}
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-out": 4,
+                "-kh": 3,
+                "-kw": 3,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "-st": [
+                    1,
+                    1
+                ],
+                "smoke": true
+            },
+            {
+                "-wi": 10,
+                "-hi": 10,
+                "-out": 8,
+                "-kh": 5,
+                "-kw": 5,
+                "-pd": [
+                    2,
+                    2,
+                    2,
+                    2
+                ],
+                "-st": [
+                    1,
+                    1
+                ]
+            },
+            {
+                "-wi": 5,
+                "-hi": 5,
+                "-out": 4,
+                "-kh": 3,
+                "-kw": 3,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "-st": [
+                    2,
+                    2
+                ]
+            },
+            {
+                "-wi": 10,
+                "-hi": 10,
+                "-out": 8,
+                "-kh": 3,
+                "-kw": 3,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "-st": [
+                    2,
+                    2
+                ]
+            },
+            {
+                "-wi": 10,
+                "-hi": 10,
+                "-out": 4,
+                "-kh": 3,
+                "-kw": 3,
+                "-pd": [
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "-st": [
+                    2,
+                    2
+                ]
+            },
+            {
+                "-wi": 10,
+                "-hi": 10,
+                "-out": 4,
+                "-kh": 5,
+                "-kw": 5,
+                "-pd": [
+                    2,
+                    2,
+                    1,
+                    1
+                ],
+                "-st": [
+                    1,
+                    1
+                ]
+            }
         ]
     },
     {
@@ -132,19 +899,54 @@
         "operator": "XC_fc_deepin_anyout",
         "train_model": true,
         "parameters": [
-            {"-in": 32, "-out": 16},
-            {"-in": 4, "-out": 4, "smoke": true},
-            {"-in": 4, "-out": 8},
-            {"-in": 8, "-out": 4}
+            {
+                "-in": 32,
+                "-out": 16
+            },
+            {
+                "-in": 4,
+                "-out": 4,
+                "smoke": true
+            },
+            {
+                "-in": 4,
+                "-out": 8
+            },
+            {
+                "-in": 8,
+                "-out": 4
+            }
         ]
     },
     {
         "generator": "../examples/models/op_test_models/generate_maxpool2d.py",
         "operator": "XC_maxpool2d",
         "parameters": [
-            {"-in": 32, "-wi": 2, "-hi": 2, "-po": 2, "-st": 2, "-pd": "valid", "smoke": true},
-            {"-in": 32, "-wi": 4, "-hi": 4, "-po": 2, "-st": 2, "-pd": "valid"},
-            {"-in": 4, "-wi": 16, "-hi": 16, "-po": 2, "-st": 2, "-pd": "valid"}
+            {
+                "-in": 32,
+                "-wi": 2,
+                "-hi": 2,
+                "-po": 2,
+                "-st": 2,
+                "-pd": "valid",
+                "smoke": true
+            },
+            {
+                "-in": 32,
+                "-wi": 4,
+                "-hi": 4,
+                "-po": 2,
+                "-st": 2,
+                "-pd": "valid"
+            },
+            {
+                "-in": 4,
+                "-wi": 16,
+                "-hi": 16,
+                "-po": 2,
+                "-st": 2,
+                "-pd": "valid"
+            }
         ]
     }
 ]

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <syscall.h>
+
 
 #include "tst_common.h"
 
@@ -13,19 +13,6 @@
 
 // #include "dsp_xs3_vector.h"
 #include "unity.h"
-
-
-#if (defined(__XS3A__) && USE_ASM_fc_deepin_shallowout_16)
- #define HAS_ASM (1)
-#else
- #define HAS_ASM (0)
-#endif
-
-// static unsigned seed = 4434;
-
-// #define TEST_ASM ((HAS_ASM) && 1)
-#define TEST_ASM (1)
-#define TEST_C ((TEST_C_GLOBAL) && 1)
 
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
@@ -57,12 +44,7 @@ void test_fully_connected_16_case0()
         int16_t shift2[ceil_C_out];
     } BSS;
 
-#if TEST_C
-    int16_t WORD_ALIGNED  Y_c[C_out]        = { 0 };
-#endif
-#if TEST_ASM
-    int16_t WORD_ALIGNED  Y_asm[C_out]        = { 0 };
-#endif
+    int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
 #if DEBUG_ON
     PRINTF("&W = 0x%08X\n", W);
@@ -114,7 +96,7 @@ void test_fully_connected_16_case0()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case);
     
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -141,48 +123,22 @@ void test_fully_connected_16_case0()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-#if TEST_C
-        PRINTF("\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(Y_c));
-        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\tASM...\n");
-        memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                      (data16_t*) &BSS, &plan);
-#endif
+        
+        memset(Y, 0xCC, sizeof(Y));
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
+                                     (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
         for(unsigned c = 0; c < C_out; c++){
 
-#if TEST_C || TEST_ASM
-  #if TEST_C
-            if(Y_c[c] != casse->y)
-                sprintf(str_buff, "C failed. (vector: %u) (index: %u)", v, c);
-  #endif
-  #if TEST_ASM
-            if(Y_asm[c] != casse->y)
-                sprintf(str_buff, "ASM failed. (vector: %u) (index: %u)", v, c);
-  #endif
-#endif
+            if(Y[c] != casse->y)
+                sprintf(str_buff, "(vector: %u) (index: %u)", v, c);
 
-
-
-#if TEST_C
-            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y_c[c], str_buff);
-#endif
-#if TEST_ASM
-            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y_asm[c], str_buff);
-
-#endif
+            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y[c], str_buff);
 
         }
-
     }
-
 }
 #undef ceil_C_out
 #undef C_in
@@ -216,12 +172,7 @@ void test_fully_connected_16_case1()
         int16_t shift2[ceil_C_out];
     } BSS;
 
-#if TEST_C
-    int16_t WORD_ALIGNED  Y_c[C_out]        = { 0 };
-#endif
-#if TEST_ASM
-    int16_t WORD_ALIGNED  Y_asm[C_out]        = { 0 };
-#endif
+    int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
 #if DEBUG_ON
     PRINTF("&W = 0x%08X\n", W);
@@ -273,7 +224,7 @@ void test_fully_connected_16_case1()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -301,48 +252,22 @@ void test_fully_connected_16_case1()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-#if TEST_C
-        PRINTF("\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(Y_c));
-        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\tASM...\n");
-        memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                      (data16_t*) &BSS, &plan);
-#endif
+        
+        memset(Y, 0xCC, sizeof(Y));
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
+                                     (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
         for(unsigned c = 0; c < C_out; c++){
 
-#if TEST_C || TEST_ASM
-  #if TEST_C
-            if(Y_c[c] != casse->y)
-                sprintf(str_buff, "C failed. (vector: %u) (index: %u)", v, c);
-  #endif
-  #if TEST_ASM
-            if(Y_asm[c] != casse->y)
-                sprintf(str_buff, "ASM failed. (vector: %u) (index: %u)", v, c);
-  #endif
-#endif
+            if(Y[c] != casse->y)
+                sprintf(str_buff, "(vector: %u) (index: %u)", v, c);
 
-
-
-#if TEST_C
-            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y_c[c], str_buff);
-#endif
-#if TEST_ASM
-            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y_asm[c], str_buff);
-
-#endif
+            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y[c], str_buff);
 
         }
-
     }
-
 }
 #undef ceil_C_out
 #undef C_in
@@ -376,12 +301,7 @@ void test_fully_connected_16_case2()
         int16_t shift2[ceil_C_out];
     } BSS;
 
-#if TEST_C
-    int16_t WORD_ALIGNED  Y_c[C_out]        = { 0 };
-#endif
-#if TEST_ASM
-    int16_t WORD_ALIGNED  Y_asm[C_out]        = { 0 };
-#endif
+    int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
 #if DEBUG_ON
     PRINTF("&W = 0x%08X\n", W);
@@ -433,7 +353,7 @@ void test_fully_connected_16_case2()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -461,48 +381,20 @@ void test_fully_connected_16_case2()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-#if TEST_C
-        PRINTF("\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(Y_c));
-        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\tASM...\n");
-        memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                      (data16_t*) &BSS, &plan);
-#endif
+        
+        memset(Y, 0xCC, sizeof(Y));
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
+                                     (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
         for(unsigned c = 0; c < C_out; c++){
+            if(Y[c] != casse->y)
+                sprintf(str_buff, "(vector: %u) (index: %u)", v, c);
 
-#if TEST_C || TEST_ASM
-  #if TEST_C
-            if(Y_c[c] != casse->y)
-                sprintf(str_buff, "C failed. (vector: %u) (index: %u)", v, c);
-  #endif
-  #if TEST_ASM
-            if(Y_asm[c] != casse->y)
-                sprintf(str_buff, "ASM failed. (vector: %u) (index: %u)", v, c);
-  #endif
-#endif
-
-
-
-#if TEST_C
-            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y_c[c], str_buff);
-#endif
-#if TEST_ASM
-            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y_asm[c], str_buff);
-
-#endif
-
+            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y[c], str_buff);
         }
-
     }
-
 }
 #undef ceil_C_out
 #undef C_in
@@ -536,12 +428,7 @@ void test_fully_connected_16_case3()
         int16_t shift2[ceil_C_out];
     } BSS;
 
-#if TEST_C
-    int16_t WORD_ALIGNED  Y_c[C_out]        = { 0 };
-#endif
-#if TEST_ASM
-    int16_t WORD_ALIGNED  Y_asm[C_out]        = { 0 };
-#endif
+    int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
 #if DEBUG_ON
     PRINTF("&W = 0x%08X\n", W);
@@ -593,7 +480,7 @@ void test_fully_connected_16_case3()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -621,48 +508,21 @@ void test_fully_connected_16_case3()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-#if TEST_C
-        PRINTF("\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(Y_c));
-        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\tASM...\n");
-        memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                      (data16_t*) &BSS, &plan);
-#endif
+        
+        memset(Y, 0xCC, sizeof(Y));
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
+                                     (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
         for(unsigned c = 0; c < C_out; c++){
 
-#if TEST_C || TEST_ASM
-  #if TEST_C
-            if(Y_c[c] != casse->y)
-                sprintf(str_buff, "C failed. (vector: %u) (index: %u)", v, c);
-  #endif
-  #if TEST_ASM
-            if(Y_asm[c] != casse->y)
-                sprintf(str_buff, "ASM failed. (vector: %u) (index: %u)", v, c);
-  #endif
-#endif
+            if(Y[c] != casse->y)
+                sprintf(str_buff, "(vector: %u) (index: %u)", v, c);
 
-
-
-#if TEST_C
-            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y_c[c], str_buff);
-#endif
-#if TEST_ASM
-            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y_asm[c], str_buff);
-
-#endif
-
+            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y[c], str_buff);
         }
-
     }
-
 }
 #undef ceil_C_out
 #undef C_in
@@ -696,12 +556,7 @@ void test_fully_connected_16_case4()
         int16_t shift2[ceil_C_out];
     } BSS;
 
-#if TEST_C
-    int16_t WORD_ALIGNED  Y_c[C_out]        = { 0 };
-#endif
-#if TEST_ASM
-    int16_t WORD_ALIGNED  Y_asm[C_out]        = { 0 };
-#endif
+    int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
 #if DEBUG_ON
     PRINTF("&W = 0x%08X\n", W);
@@ -749,7 +604,7 @@ void test_fully_connected_16_case4()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -777,48 +632,21 @@ void test_fully_connected_16_case4()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-#if TEST_C
-        PRINTF("\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(Y_c));
-        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\tASM...\n");
-        memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                      (data16_t*) &BSS, &plan);
-#endif
+        
+        memset(Y, 0xCC, sizeof(Y));
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
+                                     (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
         for(unsigned c = 0; c < C_out; c++){
 
-#if TEST_C || TEST_ASM
-  #if TEST_C
-            if(Y_c[c] != casse->y)
-                sprintf(str_buff, "C failed. (vector: %u) (index: %u)", v, c);
-  #endif
-  #if TEST_ASM
-            if(Y_asm[c] != casse->y)
-                sprintf(str_buff, "ASM failed. (vector: %u) (index: %u)", v, c);
-  #endif
-#endif
+            if(Y[c] != casse->y)
+                sprintf(str_buff, "(vector: %u) (index: %u)", v, c);
 
-
-
-#if TEST_C
-            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y_c[c], str_buff);
-#endif
-#if TEST_ASM
-            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y_asm[c], str_buff);
-
-#endif
-
+            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y[c], str_buff);
         }
-
     }
-
 }
 #undef ceil_C_out
 #undef C_in
@@ -852,12 +680,7 @@ void test_fully_connected_16_case5()
         int16_t shift2[ceil_C_out];
     } BSS;
 
-#if TEST_C
-    int16_t WORD_ALIGNED  Y_c[C_out]        = { 0 };
-#endif
-#if TEST_ASM
-    int16_t WORD_ALIGNED  Y_asm[C_out]        = { 0 };
-#endif
+    int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
 #if DEBUG_ON
     PRINTF("&W = 0x%08X\n", W);
@@ -911,7 +734,7 @@ void test_fully_connected_16_case5()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -939,43 +762,19 @@ void test_fully_connected_16_case5()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-#if TEST_C
-        PRINTF("\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(Y_c));
-        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                     (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\tASM...\n");
-        memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                      (data16_t*) &BSS, &plan);
-#endif
+        
+        memset(Y, 0xCC, sizeof(Y));
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
+                                     (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
         for(unsigned c = 0; c < C_out; c++){
 
-#if TEST_C || TEST_ASM
-  #if TEST_C
-            if(Y_c[c] != casse->y)
-                sprintf(str_buff, "C failed. (vector: %u) (index: %u)", v, c);
-  #endif
-  #if TEST_ASM
-            if(Y_asm[c] != casse->y)
-                sprintf(str_buff, "ASM failed. (vector: %u) (index: %u)", v, c);
-  #endif
-#endif
+            if(Y[c] != casse->y)
+                sprintf(str_buff, "(vector: %u) (index: %u)", v, c);
 
-
-
-#if TEST_C
-            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y_c[c], str_buff);
-#endif
-#if TEST_ASM
-            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y_asm[c], str_buff);
-
-#endif
+            TEST_ASSERT_EQUAL_MESSAGE(casse->y, Y[c], str_buff);
 
         }
 
@@ -1014,12 +813,7 @@ void test_fully_connected_16_case6()
         int16_t shift2[ceil_C_out];
     } BSS;
 
-#if TEST_C
-    int16_t WORD_ALIGNED  Y_c[C_out]        = { 0 };
-#endif
-#if TEST_ASM
-    int16_t WORD_ALIGNED  Y_asm[C_out]        = { 0 };
-#endif
+    int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
 #if DEBUG_ON
     PRINTF("&W = 0x%08X\n", W);
@@ -1071,7 +865,7 @@ void test_fully_connected_16_case6()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -1097,28 +891,20 @@ void test_fully_connected_16_case6()
             }
 
 
-        nn_standard_BSS_layout(  (data16_t*) &BSS, 
-                        (int32_t*) &BSS.B, 
-                        (int16_t*) &BSS.shift1, 
-                        (int16_t*) &BSS.scale, 
-                        (int16_t*) &BSS.shift2, 
-                        NULL, C_out  );
+            nn_standard_BSS_layout(  (data16_t*) &BSS, 
+                            (int32_t*) &BSS.B, 
+                            (int16_t*) &BSS.shift1, 
+                            (int16_t*) &BSS.scale, 
+                            (int16_t*) &BSS.shift2, 
+                            NULL, C_out  );
 
-        nn_fully_connected_plan_t plan;
-        fully_connected_init(&plan, C_in, C_out_tmp);
+            nn_fully_connected_plan_t plan;
+            fully_connected_init(&plan, C_in, C_out_tmp);
 
-#if TEST_C
             PRINTF("\t\t\tC...\n");
-            memset(Y_c, 0xCC, sizeof(Y_c));
-            fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-            PRINTF("\t\t\tASM...\n");
-            memset(Y_asm, 0xCC, sizeof(Y_asm));
-            fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, &plan);
-#endif
+            memset(Y, 0xCC, sizeof(Y));
+            fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
+                                        (nn_bss_block_t*) &BSS, &plan);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1129,23 +915,10 @@ void test_fully_connected_16_case6()
                 if(oddness && c == C_out_tmp)
                     exp_val = (int16_t) 0xCCCC;
 
-#if TEST_C || TEST_ASM
-  #if TEST_C
-                if(Y_c[c] != exp_val)
-                    sprintf(str_buff, "C failed. (vector: %u) (index: %u)", v, c);
-  #endif
-  #if TEST_ASM
-                if(Y_asm[c] != exp_val)
-                    sprintf(str_buff, "ASM failed. (vector: %u) (index: %u)", v, c);
-  #endif
-#endif
+                if(Y[c] != exp_val)
+                    sprintf(str_buff, "(vector: %u) (index: %u)", v, c);
 
-#if TEST_C
-                TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y_c[c], str_buff);
-#endif
-#if TEST_ASM
-                TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y_asm[c], str_buff);
-#endif
+                TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y[c], str_buff);
 
             }
 
@@ -1186,12 +959,7 @@ void test_fully_connected_16_case7()
         int16_t shift2[ceil_C_out];
     } BSS;
 
-#if TEST_C
-    int16_t WORD_ALIGNED  Y_c[C_out]        = { 0 };
-#endif
-#if TEST_ASM
-    int16_t WORD_ALIGNED  Y_asm[C_out]        = { 0 };
-#endif
+    int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
 #if DEBUG_ON
     PRINTF("&W = 0x%08X\n", W);
@@ -1243,7 +1011,7 @@ void test_fully_connected_16_case7()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -1276,21 +1044,13 @@ void test_fully_connected_16_case7()
                             (int16_t*) &BSS.shift2, 
                             NULL, C_out  );
 
-        nn_fully_connected_plan_t plan;
-        fully_connected_init(&plan, C_in, C_out_tmp);
+            nn_fully_connected_plan_t plan;
+            fully_connected_init(&plan, C_in, C_out_tmp);
 
-#if TEST_C
             PRINTF("\t\t\tC...\n");
-            memset(Y_c, 0xCC, sizeof(Y_c));
-            fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-            PRINTF("\t\t\tASM...\n");
-            memset(Y_asm, 0xCC, sizeof(Y_asm));
-            fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, &plan);
-#endif
+            memset(Y, 0xCC, sizeof(Y));
+            fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
+                                        (nn_bss_block_t*) &BSS, &plan);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1301,23 +1061,10 @@ void test_fully_connected_16_case7()
                 if(oddness && c == C_out_tmp)
                     exp_val = (int16_t) 0xCCCC;
 
-#if TEST_C || TEST_ASM
-  #if TEST_C
-                if(Y_c[c] != exp_val)
-                    sprintf(str_buff, "C failed. (vector: %u) (index: %u)", v, c);
-  #endif
-  #if TEST_ASM
-                if(Y_asm[c] != exp_val)
-                    sprintf(str_buff, "ASM failed. (vector: %u) (index: %u)", v, c);
-  #endif
-#endif
+                if(Y[c] != exp_val)
+                    sprintf(str_buff, "(vector: %u) (index: %u)", v, c);
 
-#if TEST_C
-                TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y_c[c], str_buff);
-#endif
-#if TEST_ASM
-                TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y_asm[c], str_buff);
-#endif
+                TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y[c], str_buff);
 
             }
 
@@ -1365,12 +1112,7 @@ void test_fully_connected_16_case8()
         int16_t shift2[ceil_C_out];
     } BSS;
 
-#if TEST_C
-    int16_t WORD_ALIGNED  Y_c[C_out]        = { 0 };
-#endif
-#if TEST_ASM
-    int16_t WORD_ALIGNED  Y_asm[C_out]        = { 0 };
-#endif
+    int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
 #if DEBUG_ON
     PRINTF("&W = 0x%08X\n", W);
@@ -1423,7 +1165,7 @@ void test_fully_connected_16_case8()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -1456,21 +1198,13 @@ void test_fully_connected_16_case8()
                             (int16_t*) &BSS.shift2, 
                             NULL, C_out  );
 
-        nn_fully_connected_plan_t plan;
-        fully_connected_init(&plan, C_in, C_out_tmp);
+            nn_fully_connected_plan_t plan;
+            fully_connected_init(&plan, C_in, C_out_tmp);
 
-#if TEST_C
             PRINTF("\t\t\tC...\n");
-            memset(Y_c, 0xCC, sizeof(Y_c));
-            fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-            PRINTF("\t\t\tASM...\n");
-            memset(Y_asm, 0xCC, sizeof(Y_asm));
-            fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                        (data16_t*) &BSS, &plan);
-#endif
+            memset(Y, 0xCC, sizeof(Y));
+            fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
+                                        (nn_bss_block_t*) &BSS, &plan);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1481,23 +1215,10 @@ void test_fully_connected_16_case8()
                 if(oddness && c == C_out_tmp)
                     exp_val = (int16_t) 0xCCCC;
 
-#if TEST_C || TEST_ASM
-  #if TEST_C
-                if(Y_c[c] != exp_val)
-                    sprintf(str_buff, "C failed. (vector: %u) (index: %u)", v, c);
-  #endif
-  #if TEST_ASM
-                if(Y_asm[c] != exp_val)
-                    sprintf(str_buff, "ASM failed. (vector: %u) (index: %u)", v, c);
-  #endif
-#endif
+                if(Y[c] != exp_val)
+                    sprintf(str_buff, "(vector: %u) (index: %u)", v, c);
 
-#if TEST_C
-                TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y_c[c], str_buff);
-#endif
-#if TEST_ASM
-                TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y_asm[c], str_buff);
-#endif
+                TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y[c], str_buff);
 
             }
 
@@ -1545,12 +1266,7 @@ void test_fully_connected_16_case9()
         int16_t shift2[ceil_C_out];
     } BSS;
 
-#if TEST_C
-    int16_t WORD_ALIGNED  Y_c[C_out]        = { 0 };
-#endif
-#if TEST_ASM
-    int16_t WORD_ALIGNED  Y_asm[C_out]        = { 0 };
-#endif
+    int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
 
 #if DEBUG_ON
     PRINTF("&W = 0x%08X\n", W);
@@ -1603,7 +1319,7 @@ void test_fully_connected_16_case9()
     const unsigned start_case = 0;
     const unsigned last_case = -1;
 
-    print_warns(start_case, TEST_C, TEST_ASM);
+    print_warns(start_case);
 
     for(int v = start_case; v < N_casses && v <= last_case; v++){
         PRINTF("\tvector %u...\n", v);
@@ -1630,18 +1346,10 @@ void test_fully_connected_16_case9()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-#if TEST_C
         PRINTF("\t\t\tC...\n");
-        memset(Y_c, 0xCC, sizeof(Y_c));
-        fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                    (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-        PRINTF("\t\t\tASM...\n");
-        memset(Y_asm, 0xCC, sizeof(Y_asm));
-        fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                    (data16_t*) &BSS, &plan);
-#endif
+        memset(Y, 0xCC, sizeof(Y));
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
+                                    (nn_bss_block_t*) &BSS, &plan);
 
         PRINTF("\t\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -1649,23 +1357,10 @@ void test_fully_connected_16_case9()
 
             int16_t exp_val = casse->y;
 
-#if TEST_C || TEST_ASM
-  #if TEST_C
-            if(Y_c[c] != exp_val)
-                sprintf(str_buff, "C failed. (vector: %u) (index: %u)", v, c);
-  #endif
-  #if TEST_ASM
-            if(Y_asm[c] != exp_val)
-                sprintf(str_buff, "ASM failed. (vector: %u) (index: %u)", v, c);
-  #endif
-#endif
+            if(Y[c] != exp_val)
+                sprintf(str_buff, "(vector: %u) (index: %u)", v, c);
 
-#if TEST_C
-            TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y_c[c], str_buff);
-#endif
-#if TEST_ASM
-            TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y_asm[c], str_buff);
-#endif
+            TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y[c], str_buff);
 
         }
 
@@ -1712,12 +1407,7 @@ void test_fully_connected_16_case10()
         int16_t shift2[ceil_C_out];
     } BSS;
 
-#if TEST_C
-    int16_t WORD_ALIGNED  Y_c[C_out];
-#endif
-#if TEST_ASM
-    int16_t WORD_ALIGNED  Y_asm[C_out];
-#endif
+    int16_t WORD_ALIGNED  Y[C_out];
 
 #if DEBUG_ON
     PRINTF("&W = 0x%08X\n", W);
@@ -1730,8 +1420,6 @@ void test_fully_connected_16_case10()
 #endif
 
     PRINTF("%s...\n", __func__);
-
-    print_warns(-1, TEST_C, TEST_ASM);
 
     for(int k = 0; k < C_in; k++){
         X[k] = 1;
@@ -1761,58 +1449,22 @@ void test_fully_connected_16_case10()
         nn_fully_connected_plan_t plan;
         fully_connected_init(&plan, C_in, C_out);
 
-#if TEST_C
-    PRINTF("\t\t\tC...\n");
-    memset(Y_c, 0xCC, sizeof(Y_c));
-    fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-    PRINTF("\t\t\tASM...\n");
-    memset(Y_asm, 0xCC, sizeof(Y_asm));
-    fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                (data16_t*) &BSS, &plan);
-#endif
+        PRINTF("\t\t\tC...\n");
+        memset(Y, 0xCC, sizeof(Y));
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
+                                    (nn_bss_block_t*) &BSS, &plan);
 
-    PRINTF("\t\t\tChecking...\n");
-    char str_buff[200] = {0};
-    for(unsigned c = 0; c < C_out; c++){
-
-        // X[] = [1, 1, 1, ..., 1]
-        // W[c][] = [c-64+0, c-64+1, c-64+2, ..., c-64+(C_in-1)]
-
-        // X[]*W[c][] = [c-64+0, c-64+1, c-64+2, ..., c-64+(C_in-1)]
-
-        // sum = -C_in*64 + C_in*c + (0 + 1 + 2 + ... + (C_in-1))
-        //     = -C_in*64 + C_in*c + (C_in-1) * C_in / 2
-        //     = C_in*(c-64) + (C_in/2)*(C_in-1)
-        
-        // -((sum >> 1) / 2)
-        // -(C_in*(c-64) + (C_in/2)*(C_in-1))/4
+        PRINTF("\t\t\tChecking...\n");
+        char str_buff[200] = {0};
+        for(unsigned c = 0; c < C_out; c++){
 
         int16_t exp_val = -(C_in*(c-64) + (C_in/2)*(C_in-1))/4;
 
-#if TEST_C || TEST_ASM
-  #if TEST_C
-        if(Y_c[c] != exp_val)
+        if(Y[c] != exp_val)
             sprintf(str_buff, "C failed. (index: %u)", c);
-  #endif
-  #if TEST_ASM
-        if(Y_asm[c] != exp_val)
-            sprintf(str_buff, "ASM failed. (index: %u)", c);
-  #endif
-#endif
 
-#if TEST_C
-        TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y_c[c], str_buff);
-#endif
-#if TEST_ASM
-        TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y_asm[c], str_buff);
-#endif
-
-
+        TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y[c], str_buff);
     }
-
 }
 #undef ceil_C_out
 #undef C_in
@@ -1853,12 +1505,7 @@ void test_fully_connected_16_case11()
         int16_t shift2[ceil_C_out];
     } BSS;
 
-#if TEST_C
-    int16_t WORD_ALIGNED  Y_c[C_out];
-#endif
-#if TEST_ASM
-    int16_t WORD_ALIGNED  Y_asm[C_out];
-#endif
+    int16_t WORD_ALIGNED  Y[C_out];
 
 #if DEBUG_ON
     PRINTF("&W = 0x%08X\n", W);
@@ -1871,8 +1518,6 @@ void test_fully_connected_16_case11()
 #endif
 
     PRINTF("%s...\n", __func__);
-    
-    print_warns(-1, TEST_C, TEST_ASM);
 
     for(int k = 0; k < C_in; k++){
         X[k] = k-64 ;
@@ -1902,18 +1547,10 @@ void test_fully_connected_16_case11()
     nn_fully_connected_plan_t plan;
     fully_connected_init(&plan, C_in, C_out);
 
-#if TEST_C
     PRINTF("\t\t\tC...\n");
-    memset(Y_c, 0xCC, sizeof(Y_c));
-    fully_connected_16_c((int16_t*) Y_c, (int8_t*) W, (int8_t*) X,
-                                (data16_t*) &BSS, &plan);
-#endif
-#if TEST_ASM
-    PRINTF("\t\t\tASM...\n");
-    memset(Y_asm, 0xCC, sizeof(Y_asm));
-    fully_connected_16_asm((int16_t*) Y_asm, (int8_t*) W, (int8_t*) X,
-                                (data16_t*) &BSS, &plan);
-#endif
+    memset(Y, 0xCC, sizeof(Y));
+    fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
+                                (nn_bss_block_t*) &BSS, &plan);
 
     PRINTF("\t\t\tChecking...\n");
     char str_buff[200] = {0};
@@ -1934,27 +1571,11 @@ void test_fully_connected_16_case11()
 
         int16_t exp_val = -( (c-24)*(C_in-1)*(C_in/2) - 64*(c-24)*C_in ) / 4;
 
-#if TEST_C || TEST_ASM
-  #if TEST_C
-        if(Y_c[c] != exp_val)
+        if(Y[c] != exp_val)
             sprintf(str_buff, "C failed. (index: %u)", c);
-  #endif
-  #if TEST_ASM
-        if(Y_asm[c] != exp_val)
-            sprintf(str_buff, "ASM failed. (index: %u)", c);
-  #endif
-#endif
 
-#if TEST_C
-        TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y_c[c], str_buff);
-#endif
-#if TEST_ASM
-        TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y_asm[c], str_buff);
-#endif
-
-
+        TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y[c], str_buff);
     }
-
 }
 #undef ceil_C_out
 #undef C_in

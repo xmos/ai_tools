@@ -1,10 +1,13 @@
 
 
-
 ifeq ($(OS),Windows_NT)
-mkdir_cmd = @test -d $(subst /,\,$(dir $(1))) || mkdir $(subst /,\,$(dir $(1)))
+  ifeq ($(findstring windows32,$(shell uname -s)),windows32)
+    mkdir_cmd = @test -d $(subst /,\,$(dir $(1))) || mkdir $(subst /,\,$(dir $(1)))
+  else
+    mkdir_cmd = @mkdir -p $(dir $(1))
+  endif
 else
-mkdir_cmd = @mkdir -p $(dir $(1))
+  mkdir_cmd = @mkdir -p $(dir $(1))
 endif
 
 check_defined = $(strip $(foreach 1,$1, $(call __check_defined,$1,$(strip $(value 2)))))

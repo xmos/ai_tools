@@ -12,25 +12,25 @@ from collections import Counter
 from timeit import default_timer as timer
 
 
-class CollectorPlugin():
-    def __init__(self, *, mode='files'):
+class CollectorPlugin:
+    def __init__(self, *, mode="files"):
         self.counter = Counter()
-        if mode in ['files', 'tests']:
+        if mode in ["files", "tests"]:
             self.mode = mode
         else:
             raise ValueError(f"Invalid collection mode: '{mode}'")
-    
+
     def tests(self):
         return self.counter.most_common()
 
     def pytest_collection_modifyitems(self, items):
-        if self.mode is 'files':
-            self.counter = Counter(item.nodeid.split('::')[0] for item in items)            
-        elif self.mode is 'tests':
-            self.counter = Counter(item.nodeid.split('[')[0] for item in items)
+        if self.mode is "files":
+            self.counter = Counter(item.nodeid.split("::")[0] for item in items)
+        elif self.mode is "tests":
+            self.counter = Counter(item.nodeid.split("[")[0] for item in items)
 
 
-class JobCollector():
+class JobCollector:
     def __init__(self, path, *, coverage_options=None, verbose=False):
         if not (os.path.exists(path) and os.path.isdir(path)):
             raise ValueError(f"Invalid directory path: {path}")
@@ -62,7 +62,7 @@ class JobCollector():
             tests = self.plugin.tests()
             self.jobs = [
                 [os.path.join(self.path, path), "--tb=short"] + self.optional_args
-                 for path, _ in tests
+                for path, _ in tests
             ]
             print(f"{sum(cnt for _, cnt in tests)} CASES IN {len(self.jobs)} JOBS:")
             for job, (_, cnt) in zip(self.jobs, tests):
@@ -71,7 +71,7 @@ class JobCollector():
         return exit_code
 
 
-class JobExecutor():
+class JobExecutor:
     def __init__(self, job_fun, *, workers=1, verbose=False):
         cpu_count = mp.cpu_count()
         if workers == -1 or workers > cpu_count:
@@ -112,6 +112,7 @@ def run_job(job):
     sys.stdout = StringIO()
     try:
         import pytest as pt
+
         start = timer()
         exit_code = pt.main(job)
         t = timer() - start
@@ -123,12 +124,12 @@ def run_job(job):
 
 def main(raw_args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('dir', nargs='?', default=os.path.curdir)
-    parser.add_argument('--smoke', action='store_true', default=False)
-    parser.add_argument('--extended', action='store_true', default=False)
-    parser.add_argument('--collect-only', action='store_true', default=False)
-    parser.add_argument('-n', '--workers', type=int, default=1)
-    parser.add_argument('-v', '--verbose', action='store_true', default=False)
+    parser.add_argument("dir", nargs="?", default=os.path.curdir)
+    parser.add_argument("--smoke", action="store_true", default=False)
+    parser.add_argument("--extended", action="store_true", default=False)
+    parser.add_argument("--collect-only", action="store_true", default=False)
+    parser.add_argument("-n", "--workers", type=int, default=1)
+    parser.add_argument("-v", "--verbose", action="store_true", default=False)
     args = parser.parse_args(raw_args)
 
     coverage_options = []
@@ -139,16 +140,14 @@ def main(raw_args=None):
     elif args.extended:
         coverage_options.append("--extended")
 
-    collector = JobCollector(args.dir,
-                             coverage_options=coverage_options,
-                             verbose=args.verbose)
+    collector = JobCollector(
+        args.dir, coverage_options=coverage_options, verbose=args.verbose
+    )
     exit_code = collector.collect()
     if exit_code or args.collect_only or not args.workers:
         exit(exit_code)
 
-    executor = JobExecutor(run_job,
-                           workers=args.workers,
-                           verbose=args.verbose)
+    executor = JobExecutor(run_job, workers=args.workers, verbose=args.verbose)
     executor.execute(collector.jobs)
 
 

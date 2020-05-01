@@ -7,10 +7,12 @@ import tensorflow as tf
 import op_test_models_common as common
 
 from generate_avgpool2d import (
-    DEFAULT_INPUTS, DEFAULT_HEIGHT, DEFAULT_WIDTH,
+    DEFAULT_INPUTS,
+    DEFAULT_HEIGHT,
+    DEFAULT_WIDTH,
 )
 
-DEFAULT_PATH = Path(__file__).parent.joinpath('debug', 'avgpool2d_global').resolve()
+DEFAULT_PATH = Path(__file__).parent.joinpath("debug", "avgpool2d_global").resolve()
 
 
 class AvgPool2DGlobal(common.OpTestDefaultModel):
@@ -23,25 +25,24 @@ class AvgPool2DGlobal(common.OpTestDefaultModel):
                 tf.keras.layers.GlobalAveragePooling2D(
                     input_shape=(height, width, input_channels)
                 )
-            ]
+            ],
         )
 
 
 def main(raw_args=None):
-    parser = common.OpTestImgParser(defaults={
-        "path": DEFAULT_PATH,
-        "inputs": DEFAULT_INPUTS,
-        "height": DEFAULT_HEIGHT,
-        "width": DEFAULT_WIDTH,
-        'inits': {
-            'input_init': {'type': common.OpTestInitializers.UNIF}
+    parser = common.OpTestImgParser(
+        defaults={
+            "path": DEFAULT_PATH,
+            "inputs": DEFAULT_INPUTS,
+            "height": DEFAULT_HEIGHT,
+            "width": DEFAULT_WIDTH,
+            "inits": {"input_init": {"type": common.OpTestInitializers.UNIF}},
         }
-    })
+    )
     args = parser.parse_args(raw_args)
 
-    model = AvgPool2DGlobal('avgpool2d_global', args.path)
-    model.build(args.height, args.width, args.inputs,
-                **args.inits)
+    model = AvgPool2DGlobal("avgpool2d_global", args.path)
+    model.build(args.height, args.width, args.inputs, **args.inits)
     model.run()
 
 

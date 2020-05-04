@@ -24,7 +24,7 @@ else # must be xcore
 	PLATFORM_FLAGS += -DXCORE
 	PLATFORM_FLAGS += -Wno-xcore-fptrgroup
 	PLATFORM_FLAGS += -Wno-unknown-pragmas
-	PLATFORM_FLAGS += -Wno-unknown-attributes
+	#PLATFORM_FLAGS += -Wno-unknown-attributes
 	PLATFORM_FLAGS += -report
 	PLATFORM_FLAGS += -fxscope
 	PLATFORM_FLAGS += config.xscope

@@ -14,11 +14,13 @@
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
 
+#include "app.h"
+
 tflite::ErrorReporter *error_reporter = nullptr;
 const tflite::Model *model = nullptr;
 tflite::MicroInterpreter *interpreter = nullptr;
-TfLiteTensor *input = nullptr;
-TfLiteTensor *output = nullptr;
+// TfLiteTensor *input = nullptr;
+// TfLiteTensor *output = nullptr;
 constexpr int kTensorArenaSize = 148704;
 uint8_t tensor_arena[kTensorArenaSize];
 
@@ -27,22 +29,22 @@ constexpr int num_threads = 5;
 constexpr int kXCOREHeapSize = 7904;
 uint8_t xcore_heap[kXCOREHeapSize];
 
-static int load_input(const char *filename, char *input, size_t esize) {
-  FILE *fd = fopen(filename, "rb");
-  fseek(fd, 0, SEEK_END);
-  size_t fsize = ftell(fd);
+// static int load_input(const char *filename, char *input, size_t esize) {
+//   FILE *fd = fopen(filename, "rb");
+//   fseek(fd, 0, SEEK_END);
+//   size_t fsize = ftell(fd);
 
-  if (fsize != esize) {
-    printf("Incorrect input file size. Expected %d bytes.\n", esize);
-    return 0;
-  }
+//   if (fsize != esize) {
+//     printf("Incorrect input file size. Expected %d bytes.\n", esize);
+//     return 0;
+//   }
 
-  fseek(fd, 0, SEEK_SET);
-  fread(input, 1, esize, fd);
-  fclose(fd);
+//   fseek(fd, 0, SEEK_SET);
+//   fread(input, 1, esize, fd);
+//   fclose(fd);
 
-  return 1;
-}
+//   return 1;
+// }
 
 static void print_output(const char *output, size_t osize) {
   for (int i = 0; i < osize; i++) {
@@ -50,7 +52,21 @@ static void print_output(const char *output, size_t osize) {
   }
 }
 
-static void setup_tflite() {
+void invoke_tflite() {
+  // Run inference, and report any error
+  printf("Running inference...\n");
+  xcore::Stopwatch sw;
+  sw.Start();
+  TfLiteStatus invoke_status = interpreter->Invoke();
+  sw.Stop();
+  printf("Inference duration %u (us)\n", sw.GetEllapsedMicroseconds());
+
+  if (invoke_status != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed\n");
+  }
+}
+
+void setup_tflite(unsigned char *input, unsigned char *output) {
   // Set up logging.
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
@@ -92,36 +108,37 @@ static void setup_tflite() {
   }
 
   // Obtain pointers to the model's input and output tensors.
-  input = interpreter->input(0);
-  output = interpreter->output(0);
+  input = (unsigned char *)interpreter->input(0);
+  output = (unsigned char *)interpreter->output(0);
 }
 
-int main(int argc, char *argv[]) {
-  // setup runtime
-  setup_tflite();
+// int main(int argc, char *argv[]) {
+//   // setup runtime
+//   setup_tflite();
 
-  if (argc > 1) {
-    printf("input filename=%s\n", argv[1]);
-    // Load input tensor
-    if (!load_input(argv[1], input->data.raw, input->bytes)) return -1;
-  } else {
-    printf("no input file\n");
-    memset(input->data.raw, 0, input->bytes);
-  }
+//   if (argc > 1) {
+//     printf("input filename=%s\n", argv[1]);
+//     // Load input tensor
+//     if (!load_input(argv[1], input->data.raw, input->bytes))
+//       return -1;
+//   } else {
+//     printf("no input file\n");
+//     memset(input->data.raw, 0, input->bytes);
+//   }
 
-  // Run inference, and report any error
-  printf("Running inference...\n");
-  xcore::Stopwatch sw;
-  sw.Start();
-  TfLiteStatus invoke_status = interpreter->Invoke();
-  sw.Stop();
-  printf("Inference duration %u (us)\n", sw.GetEllapsedMicroseconds());
+//   // Run inference, and report any error
+//   printf("Running inference...\n");
+//   xcore::Stopwatch sw;
+//   sw.Start();
+//   TfLiteStatus invoke_status = interpreter->Invoke();
+//   sw.Stop();
+//   printf("Inference duration %u (us)\n", sw.GetEllapsedMicroseconds());
 
-  if (invoke_status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed\n");
-    return -1;
-  }
+//   if (invoke_status != kTfLiteOk) {
+//     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed\n");
+//     return -1;
+//   }
 
-  print_output(output->data.raw, output->bytes);
-  return 0;
-}
+//   print_output(output->data.raw, output->bytes);
+//   return 0;
+// }

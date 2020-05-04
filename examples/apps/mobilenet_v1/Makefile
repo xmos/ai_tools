@@ -16,7 +16,6 @@ APPFLAGS += -DENABLE_BENCHMARKING
 ifeq ($(TARGET), x86)
 	APP = mobilenet
 else # must be xcore
-	APPFLAGS += -fcmdline-buffer-bytes=1024
 	APP = mobilenet.xe
 endif
 
@@ -39,9 +38,11 @@ SOURCES := $(TENSORFLOW_SOURCES)
 SOURCES += $(LIBS_SOURCES)
 SOURCES += mobilenet_ops_resolver.cc
 SOURCES += mobilenet_v1.c
-SOURCES += main.cc 
+SOURCES += app.cc 
+SOURCES += main.xc
 
-OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))))
+#OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))))
+OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.xc,%.o,$(patsubst %.S,%.o,$(SOURCES))))))
 OBJECT_FILES := $(addprefix $(OBJ_DIR)/,$(OBJECT_FILES))
 OBJECTS := $(SOURCES) $(OBJECT_FILES)
 
@@ -58,6 +59,10 @@ $(OBJ_DIR)/%.o: %.c
 $(OBJ_DIR)/%.o: %.cc
 	@mkdir -p $(dir $@)
 	$(CC) $(CXXFLAGS) $(APPFLAGS) $(INCLUDES) -o $@ -c $<
+
+$(OBJ_DIR)/%.o: %.xc
+	@mkdir -p $(dir $@)
+	$(CC) $(CCFLAGS) $(APPFLAGS) $(INCLUDES) -o $@ -c $<
 
 $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)

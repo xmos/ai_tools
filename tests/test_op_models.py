@@ -65,7 +65,7 @@ def load_tests(test_name, test_dir, max_count):
                 ):
                     test_cases.append(
                         {
-                            "id": "/".join(directory.parts[-2:]) + "_",
+                            "id": "/".join(directory.parts[2:]) + "_",
                             "flatbuffer": flatbuffer_xcore,
                             "input": {
                                 "filename": input_file,

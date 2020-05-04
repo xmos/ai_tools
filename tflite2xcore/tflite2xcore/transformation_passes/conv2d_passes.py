@@ -106,8 +106,8 @@ class ReplaceConv2DPass(ReplaceWeightBiasOperatorPass):
 
 class LegalizeXCConvPass(LegalizeXCWeightBiasPass):
     @property
-    def _MAX_POST_SHIFT(self):
-        return 32 - 8 - 2  # this is because the output is 8 bit
+    def _OUTPUT_BITS(self):
+        return 8
 
     @property
     def _new_weight_shape(self):

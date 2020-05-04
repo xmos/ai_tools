@@ -49,6 +49,7 @@ class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
             )
 
             self._replace_weights(arr)
+            self._log_weights()
 
     def mutate_output(self, op):
         with self.using(op):

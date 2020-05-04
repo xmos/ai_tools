@@ -397,7 +397,9 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
 
         # calculate offset
         raw_offset = (
-            np.float64(self._output_zero_point) * 2 ** shift_post.astype(np.float64)
+            np.float64(self._output_zero_point)
+            * 2 ** shift_post.astype(np.float64)
+            * 2 ** (22 - self._MAX_POST_SHIFT)
         ).flatten()
 
         self.logger.xdebug(

@@ -1,6 +1,7 @@
 
 #if defined(__XS3A__)
 
+#include "nn_config.h"
 #include "window_op_plan.h"
 
 /*  
@@ -12,7 +13,7 @@ void avgpool2d_2x2(
 
 #define FUNCTION_NAME avgpool2d_2x2
 
-#define NSTACKWORDS  20
+#define NSTACKWORDS  (20+8*1)
     
 .text
 .issue_mode  dual
@@ -26,12 +27,15 @@ void avgpool2d_2x2(
 #define arg_params      r2
 
 
+#define STACK_VEC_TMP           (NSTACKWORDS-8)
 
 #define STACK_X_CHAN_GRP_INCR   9
 #define STACK_Y_CHAN_GRP_INCR   10
 #define STACK_TAIL_LEN          11
 #define STACK_OUT_ROWS          12
 #define STACK_OUT_COLS          13
+#define STACK_COG_LEFT          14
+#define STACK_TMP               15
 
 
 #define Y                   r0
@@ -44,19 +48,22 @@ void avgpool2d_2x2(
 #define hstride_y           r7
 #define vstride_x           r8
 #define vstride_y           r9
-#define chan_grp_left       r10
+#define tmp                 r10
 
-.align 4
+.align 16
 .L_macc_const: //multiplies input in VLMACC instruction
 .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
 
-.align 4
 .L_sat_vec:  //used in VLSAT instruction
 .short 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
 
+.L_vec_0x007F:
+.short 0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F
+
+.L_vec_0x80:
+.byte 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
 
 
-.align 4
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[1]
@@ -85,15 +92,17 @@ FUNCTION_NAME:
     {   add X, X, r10                           ;   ldw r11, r11[r6]                        }
     {   add Y, Y, r11                           ;   stw r5, sp[STACK_TAIL_LEN]              }
     {   ldap r11, .L_macc_const                 ;   mov r6, r5                              }
-    {   shr chan_grp_left, r4, 4                ;   vldc r11[0]                             }
+    {   shr tmp, r4, 4                          ;   vldc r11[0]                             }
 
-    {   mkmsk write_mask, 16                    ;   bt chan_grp_left, .L_chan_loop          }
-    {   mkmsk write_mask, r6                    ;   ldc chan_grp_left, 1                    }
+    {   mkmsk write_mask, 16                    ;   bt tmp, .L_chan_loop                    }
+    {   mkmsk write_mask, r6                    ;   ldc tmp, 1                              }
     
     .L_chan_loop:
-        {   sub chan_grp_left, chan_grp_left, 1     ;   ldw rows_left, sp[STACK_OUT_ROWS]       }
+        {   sub tmp, tmp, 1                         ;   ldw rows_left, sp[STACK_OUT_ROWS]       }
+        {                                           ;   stw tmp, sp[STACK_COG_LEFT]             }
         .L_row_loop:
             {   sub rows_left, rows_left, 1             ;   ldw cols_left, sp[STACK_OUT_COLS]       }
+#if CONFIG_SYMMETRIC_SATURATION_avgpool2d
             .L_col_loop:
                 {   ldap r11, .L_sat_vec                    ;   vclrdr                                  }
                 {   add X, X, pool_col_x                    ;   vlmacc X[0]                             }
@@ -103,14 +112,44 @@ FUNCTION_NAME:
                 {   sub cols_left, cols_left, 1             ;   vlsat r11[0]                            }
                 vstrpv Y[0], write_mask
                 {   add Y, Y, hstride_y                     ;   bt cols_left, .L_col_loop               }
+#else
+            .L_col_loop:
+                {   ldap r11, .L_vec_0x80                   ;   ldc tmp, 32                             }
+                {   shl r11, tmp, 3                         ;   vldr r11[0]                             }
+                vstrpv Y[0], write_mask
+                {   sub cols_left, cols_left, 1             ;   vclrdr                                  }
+
+                {   add X, X, pool_col_x                    ;   vlmacc X[0]                             }
+                {   add X, X, pool_row_x                    ;   vlmacc X[0]                             }
+                {   add X, X, pool_col_x                    ;   vlmacc X[0]                             }
+                {   sub X, X, pool_row_x                    ;   vlmacc X[0]                             }
+
+                {   ldap r11, .L_sat_vec                    ;   vsetc r11       /* 16-bit mode */       }
+                {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat r11[0]                            }
+                {   ldap r11, .L_vec_0x007F                 ;   vstr r11[0]                             }
+                {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
+                {   mkmsk tmp, 4                            ;   vdepth1                                 }
+                vstrpv r11[0], write_mask
+                {   ldc tmp, 0                              ;                                           }
+                {   ldaw r11, sp[STACK_VEC_TMP]             ;   sub tmp, tmp, 8                         }
+                vlashr r11[0], tmp
+                {   mov r11, write_mask                     ;   ldw tmp, sp[STACK_TMP]                  }
+                {   andnot r11, tmp                         ;   vdepth8                                 }
+                vstrpv Y[0], r11
+                {   ldc tmp, 32                             ;                                           }
+                {   shl r11, tmp, 4                         ;                                           }
+                {                                           ; vsetc r11                                 }
+                {   add Y, Y, hstride_y                     ;   bt cols_left, .L_col_loop               }
+#endif
             {   add Y, Y, vstride_y                     ;   ldw r11, sp[STACK_X_CHAN_GRP_INCR]      }
             {   add X, X, vstride_x                     ;   bt rows_left, .L_row_loop               }
         {   add X, X, r11                           ;   ldw r11, sp[STACK_Y_CHAN_GRP_INCR]      }
-        {   add Y, Y, r11                           ;   bt chan_grp_left, .L_chan_loop          }
+        {                                           ;   ldw tmp, sp[STACK_COG_LEFT]             }
+        {   add Y, Y, r11                           ;   bt tmp, .L_chan_loop                    }
     {   mkmsk r4, 16                            ;   ldw r11, sp[STACK_TAIL_LEN]         }
     {   eq r4, write_mask, r4                   ;   mkmsk write_mask, r11               }
-    {   ldc chan_grp_left, 1                    ;   bf r4, .L_img_end                   }
-    {                                           ;   bt chan_grp_left, .L_chan_loop      }
+    {   ldc tmp, 1                              ;   bf r4, .L_img_end                   }
+    {                                           ;   bt tmp, .L_chan_loop                }
 
 .L_img_end:
 

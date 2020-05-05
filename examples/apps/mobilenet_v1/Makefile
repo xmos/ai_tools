@@ -10,7 +10,7 @@ include ../../../make/libs.mk
 # App specific
 #********************
 APPFLAGS := -DNDEBUG
-APPFLAGS += -DENABLE_TRACING
+#APPFLAGS += -DENABLE_TRACING
 APPFLAGS += -DENABLE_BENCHMARKING
 
 ifeq ($(TARGET), x86)
@@ -21,9 +21,6 @@ endif
 
 CCFLAGS += -DNDEBUG
 CXXFLAGS += -DNDEBUG
-
-# CCFLAGS += -DENABLE_TRACING
-# CXXFLAGS += -DENABLE_TRACING
 
 INCLUDES := $(TENSORFLOW_INCLUDES)
 INCLUDES += $(LIBS_INCLUDES)
@@ -38,10 +35,13 @@ SOURCES := $(TENSORFLOW_SOURCES)
 SOURCES += $(LIBS_SOURCES)
 SOURCES += mobilenet_ops_resolver.cc
 SOURCES += mobilenet_v1.c
-SOURCES += app.cc 
-SOURCES += main.xc
+SOURCES += ai_engine.cc 
+ifeq ($(TARGET), x86)
+	SOURCES += x86_main.cc
+else # must be xcore
+	SOURCES += xcore_main.xc
+endif
 
-#OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))))
 OBJECT_FILES := $(patsubst %.cpp,%.o,$(patsubst %.cc,%.o,$(patsubst %.c,%.o,$(patsubst %.xc,%.o,$(patsubst %.S,%.o,$(SOURCES))))))
 OBJECT_FILES := $(addprefix $(OBJ_DIR)/,$(OBJECT_FILES))
 OBJECTS := $(SOURCES) $(OBJECT_FILES)

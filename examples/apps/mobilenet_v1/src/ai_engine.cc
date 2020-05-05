@@ -1,6 +1,8 @@
 
 // Copyright (c) 2019, XMOS Ltd, All rights reserved
 
+#include "ai_engine.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -13,8 +15,6 @@
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
-
-#include "app.h"
 
 tflite::ErrorReporter *error_reporter = nullptr;
 const tflite::Model *model = nullptr;
@@ -29,44 +29,23 @@ constexpr int num_threads = 5;
 constexpr int kXCOREHeapSize = 7904;
 uint8_t xcore_heap[kXCOREHeapSize];
 
-// static int load_input(const char *filename, char *input, size_t esize) {
-//   FILE *fd = fopen(filename, "rb");
-//   fseek(fd, 0, SEEK_END);
-//   size_t fsize = ftell(fd);
-
-//   if (fsize != esize) {
-//     printf("Incorrect input file size. Expected %d bytes.\n", esize);
-//     return 0;
-//   }
-
-//   fseek(fd, 0, SEEK_SET);
-//   fread(input, 1, esize, fd);
-//   fclose(fd);
-
-//   return 1;
-// }
-
-static void print_output(const char *output, size_t osize) {
-  for (int i = 0; i < osize; i++) {
-    printf("i=%u   output=%d\n", i, output[i]);
-  }
-}
-
-void invoke_tflite() {
+void ai_invoke() {
   // Run inference, and report any error
   printf("Running inference...\n");
   xcore::Stopwatch sw;
   sw.Start();
   TfLiteStatus invoke_status = interpreter->Invoke();
   sw.Stop();
-  printf("Inference duration %u (us)\n", sw.GetEllapsedMicroseconds());
 
   if (invoke_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed\n");
   }
+
+  printf("Inference duration %u (us)\n", sw.GetEllapsedMicroseconds());
 }
 
-void setup_tflite(unsigned char *input, unsigned char *output) {
+void ai_initialize(unsigned char **input, unsigned *input_size,
+                   unsigned char **output, unsigned *output_size) {
   // Set up logging.
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
@@ -108,37 +87,8 @@ void setup_tflite(unsigned char *input, unsigned char *output) {
   }
 
   // Obtain pointers to the model's input and output tensors.
-  input = (unsigned char *)interpreter->input(0);
-  output = (unsigned char *)interpreter->output(0);
+  *input = (unsigned char *)(interpreter->input(0)->data.raw);
+  *input_size = interpreter->input(0)->bytes;
+  *output = (unsigned char *)(interpreter->output(0)->data.raw);
+  *output_size = interpreter->output(0)->bytes;
 }
-
-// int main(int argc, char *argv[]) {
-//   // setup runtime
-//   setup_tflite();
-
-//   if (argc > 1) {
-//     printf("input filename=%s\n", argv[1]);
-//     // Load input tensor
-//     if (!load_input(argv[1], input->data.raw, input->bytes))
-//       return -1;
-//   } else {
-//     printf("no input file\n");
-//     memset(input->data.raw, 0, input->bytes);
-//   }
-
-//   // Run inference, and report any error
-//   printf("Running inference...\n");
-//   xcore::Stopwatch sw;
-//   sw.Start();
-//   TfLiteStatus invoke_status = interpreter->Invoke();
-//   sw.Stop();
-//   printf("Inference duration %u (us)\n", sw.GetEllapsedMicroseconds());
-
-//   if (invoke_status != kTfLiteOk) {
-//     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed\n");
-//     return -1;
-//   }
-
-//   print_output(output->data.raw, output->bytes);
-//   return 0;
-// }

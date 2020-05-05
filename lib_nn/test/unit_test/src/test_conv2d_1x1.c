@@ -18,6 +18,11 @@
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_1x1
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
 
 
 #define DEBUG_ON        (0 || TEST_DEBUG_ON)
@@ -76,9 +81,9 @@ void test_conv2d_1x1_case0()
         {   0x00,   0x00,       0x0000007F,     0,          0x0001,     0,          0x7F,       __LINE__}, 
         {   0x00,   0x00,      -0x0000007F,     0,          0x0001,     0,         -0x7F,       __LINE__}, 
         {   0x00,   0x00,       0x00000080,     0,          0x0001,     0,          0x7F,       __LINE__}, 
-        {   0x00,   0x00,      -0x00000080,     0,          0x0001,     0,         -0x7F,       __LINE__}, 
+        {   0x00,   0x00,      -0x00000080,     0,          0x0001,     0,   NEG_SAT_VAL,       __LINE__}, 
         {   0x00,   0x00,       0x0FFFFFFF,     0,          0x0001,     0,          0x7F,       __LINE__}, 
-        {   0x00,   0x00,      -0x0FFFFFFF,     0,          0x0001,     0,         -0x7F,       __LINE__}, 
+        {   0x00,   0x00,      -0x0FFFFFFF,     0,          0x0001,     0,   NEG_SAT_VAL,       __LINE__}, 
 
         {   0x00,   0x00,       0x00000002,     0,          0x0001,     1,          0x01,       __LINE__}, 
         {   0x00,   0x00,       0x00000004,     0,          0x0001,     1,          0x02,       __LINE__}, 
@@ -222,7 +227,7 @@ void test_conv2d_1x1_case0()
         PRINTF("plan.C_out              = %ld\n", plan.C_out);
 #endif //DEBUG_ON
 
-        PRINTF("\t\t\tC...\n");
+        PRINTF("\t\t\tRunning Op...\n");
         memset(Y, 0xCC, sizeof(Y));    //too expensive to write the whole image, so just do the part that's in play
         conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &BSO, &plan);
 
@@ -267,7 +272,6 @@ void test_conv2d_1x1_case0()
 
 
 
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define MAX_CHANS_IN    (3*VPU_INT8_EPV)
 #define MAX_CHANS_OUT   (3*VPU_INT8_ACC_PERIOD)
 #define HEIGHT          (2)
@@ -327,12 +331,12 @@ void test_conv2d_1x1_case1()
         {       48,     16,         { 0, 0},        WIDTH*HEIGHT,         __LINE__},
         {       80,     16,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
         {       32,     24,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
-        {       32,     20,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       32,     20,         { 0, 0},        WIDTH*HEIGHT,         __LINE__},
         {       32,     36,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
         {       16,      8,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
         {        8,      8,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
         {       48,     24,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
-        {       40,     12,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
+        {       40,     12,         { 0, 0},        WIDTH*HEIGHT,         __LINE__},
 
         // 22
         {       32,     16,         { 0, 0},                   1,         __LINE__}, 
@@ -417,20 +421,8 @@ void test_conv2d_1x1_case1()
 
         conv2d_1x1_init(&plan, &x_params, &y_params, casse->start[0], casse->start[1], casse->out_pixels);
 
-#if (DEBUG_ON || 0)
-        PRINTF("plan.start_stride.X     = %ld\n", plan.start_stride.X);
-        PRINTF("plan.start_stride.Y     = %ld\n", plan.start_stride.Y);
-        PRINTF("plan.start_stride.K     = %ld\n", plan.start_stride.K);
-        PRINTF("plan.cog_stride.Y       = %ld\n", plan.cog_stride.Y);
-        PRINTF("plan.cog_stride.K       = %ld\n", plan.cog_stride.K);
-        PRINTF("plan.cig_stride.body    = %ld\n", plan.cig_stride.body);
-        PRINTF("plan.cig_stride.tail    = %ld\n", plan.cig_stride.tail);
-        PRINTF("plan.pix_count          = %ld\n", plan.pix_count);
-        PRINTF("plan.C_in               = %ld\n", plan.C_in);
-        PRINTF("plan.C_out              = %ld\n", plan.C_out);
-#endif //DEBUG_ON
 
-        PRINTF("\t\t\tC...\n");
+        PRINTF("\t\t\tRunning Op...\n");
         memset(Y, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
         conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan);
         unsigned pix_start = casse->start[0] * y_params.width + casse->start[1];
@@ -469,7 +461,6 @@ void test_conv2d_1x1_case1()
     }
 
 }
-#undef DEBUG_ON
 #undef MAX_CHANS_IN
 #undef MAX_CHANS_OUT
 #undef HEIGHT
@@ -622,7 +613,7 @@ void test_conv2d_1x1_case2()
         PRINTF("plan.C_out              = %ld\n", plan.C_out);
 #endif //DEBUG_ON
 
-        PRINTF("\t\t\tC...\n");
+        PRINTF("\t\t\tRunning Op...\n");
         memset(Y, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
         conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan);
 
@@ -658,6 +649,95 @@ void test_conv2d_1x1_case2()
 #undef REPS
 
 
+
+
+
+
+
+
+
+
+
+#define CHANS_OUT   (20)
+#define CHANS_IN    (36)
+#define HEIGHT      (2)
+#define WIDTH       (2)
+#define CHANS_OUT_CEIL  (16)
+void test_conv2d_1x1_case3()
+{
+    PRINTF("%s...\n", __func__);
+
+    srand(2341234);
+
+
+    nn_image_t WORD_ALIGNED  X[HEIGHT][WIDTH][CHANS_IN];
+    memset(X, 0, sizeof(X));
+
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][CHANS_IN];
+    memset(K, 0, sizeof(K));
+
+    struct {
+        int32_t bias[CHANS_OUT];
+        int16_t shift1[CHANS_OUT];
+        int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
+        int16_t shift2[CHANS_OUT];
+    } BSO;
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
+
+    nn_image_t Y_exp[CHANS_OUT];
+
+    nn_image_t WORD_ALIGNED  Y[HEIGHT][WIDTH][CHANS_OUT];
+
+
+    for(int k = 0; k < CHANS_OUT; k++){
+        
+        BSO.bias[k] = -128;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k] = 0;
+        BSO.shift2[k] = 0;
+
+    }
+        
+    nn_image_params_t x_params = { HEIGHT, WIDTH, CHANS_IN };
+    nn_image_params_t y_params = { HEIGHT, WIDTH, CHANS_OUT };
+
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, 
+                            (int16_t*) &BSO.shift2, NULL, y_params.channels);
+
+
+    nn_conv2d_1x1_plan_t plan;
+
+    conv2d_1x1_init(&plan, &x_params, &y_params, 0, 0, HEIGHT*WIDTH);
+
+    PRINTF("\t\t\tRunning op...\n");
+    conv2d_1x1((nn_image_t*)Y, (nn_image_t*)X, (nn_tensor_t*)K, bso, &plan);
+
+    PRINTF("\t\t\tChecking...\n");
+    for(unsigned row = 0; row < y_params.height; row++){
+        for(unsigned col = 0; col < y_params.width; col++){
+            for(unsigned chn = 0; chn < y_params.channels; chn++){
+                
+                TEST_ASSERT_EQUAL(NEG_SAT_VAL, Y[row][col][chn]);
+                // printf("Y[%d][%d][%d] = %d\n", row, col, chn, Y[row][col][chn]);
+
+            }
+        }
+
+    }
+
+}
+#undef CHANS_IN      
+#undef CHANS_OUT     
+#undef HEIGHT        
+#undef WIDTH         
+#undef CHANS_OUT_CEIL
+
+
 void test_conv2d_1x1()
 {
     UNITY_SET_FILE();
@@ -665,4 +745,5 @@ void test_conv2d_1x1()
     RUN_TEST(test_conv2d_1x1_case0);
     RUN_TEST(test_conv2d_1x1_case1);
     RUN_TEST(test_conv2d_1x1_case2);
+    RUN_TEST(test_conv2d_1x1_case3); 
 }

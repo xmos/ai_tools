@@ -1,6 +1,7 @@
 
 #if defined(__XS3A__)
 
+#include "nn_config.h"
 #include "window_op_plan.h"
 
 /*  
@@ -86,6 +87,7 @@ Optimizing assumptions:
 #define STACK_TAIL_MASK     13
 #define STACK_C_OUT         14
 #define STACK_BSO           15
+#define STACK_TMP           16
 
 
 #define Y               r0
@@ -101,9 +103,16 @@ Optimizing assumptions:
 #define pix_left        r9
 #define K_cig_stride    r10
 
+#define Q(R)    R
 
+.align 16
 
-.align 4
+.L_vec_0x007F:
+.short 0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F
+
+.L_vec_0x80:
+.byte 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
+
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[1]
@@ -142,7 +151,13 @@ FUNCTION_NAME:
         {   add K, K, K_cig_stride              ;   ldw pix_left, sp[STACK_PIX_COUNT]       }
         {   sub K, K, _32                       ;   sub cog_left, cog_left, 1               }
         .L_pix_loop:    
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_1x1
             {                                           ;   ldw BSO, sp[STACK_BSO]                  }
+#else
+            {   ldap r11, .L_vec_0x80                   ;   ldw BSO, sp[STACK_BSO]                  }
+            {   mkmsk r11, 16                           ;   vldr r11[0]                             }
+            vstrpv Y[0], r11
+#endif
             {   add r11, BSO, _32                       ;   vldd BSO[0]                             }
             {   shr cig_left, C_in, 5                   ;   vldr r11[0]                             }
             {   add BSO, r11, _32                       ;   bf cig_left, .L_cig_tail                }
@@ -158,6 +173,8 @@ FUNCTION_NAME:
                 {   sub cin_tail, _32, cin_tail             ;   vldc r11[0]                             }
                 VLMACCR_GROUP(C_in, K_cig_stride)
             .L_get_res:
+            
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_1x1
             {   shl r11, _32, 3                         ;   sub pix_left, pix_left, 1               }
             {   ldaw r11, sp[STACK_VEC_TMP]             ;   vsetc r11                               }
             {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
@@ -170,12 +187,80 @@ FUNCTION_NAME:
             {   mkmsk r11, 16                           ;   vsetc r11                               }
             {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
             vstrpv Y[0], r11
-            {   sub K, K, C_in                          ;   ldw cig_left, sp[STACK_C_OUT]           }
-            {   add Y, Y, cig_left                      ;   bt pix_left, .L_pix_loop                }
+            {   sub K, K, C_in                          ;   ldw Q(cig_left), sp[STACK_C_OUT]        }
+            {   add Y, Y, Q(cig_left)                   ;   bt pix_left, .L_pix_loop                }
+
+
+
+            // Move 32-bit accumulators into memory:
+
+            // {   shl r11, _32, 3                         ;   ldw r10, sp[STACK_0x11111111]           }
+            // {   ldaw r8, sp[STACK_VEC_A]                ;   vsetc r11                               }
+            // {   ldaw r9, sp[STACK_VEC_B]                ;   vstr r8[0]                              }
+            // vlashr r8[0], tmp
+            // {   ldap r11, .L_vec_zero                   ;   vstd r9[0]                              }
+            // vstrpv r9[0], r10
+            // {   ldap r11, .L_vec_0x0008                 ;   vldr r11[0]                             }
+            // {   shl r10, r10, 1                         ;   vlsat r11[0]                            }
+            // vstrpv r8[0], r10
+            // {   shl r11, _32, 4                         ;   vclrdr                                  }
+            // {   ldap r11, .L_vec_0x01                   ;   vsetc r11                               }
+            // {   ldaw r11, sp[STACK_VEC_32BIT]           ;   vldc r11[0]                             }
+            // {                                           ;   vlmacc r8[0]                            }
+            // {   ldaw r8, sp[STACK_VEC_A + 4]            ;   vstr r11[0]                             }
+            // {                                           ;   vclrdr                                  }
+            // {   ldaw r11, sp[STACK_VEC_32BIT + 8]       ;   vlmacc r8[0]                            }
+            // {   shl r8, r10, 2                          ;   vstr r11[0]                             }
+            // {   ldap r11, .L_vec_0x7F                   ;   vclrdr                                  }
+            // {   add r10, r8, r10                        ;   vldc r9[0]                              }
+            // {   ldaw r9, sp[STACK_VEC_B + 4]            ;   vlmacc r11[0]                           }
+            // {   ldap r11, .L_vec_0x02                   ;   vlmacc r11[0]                           }
+            // {   ldaw r11, sp[STACK_VEC_32BIT]           ;   vlmacc r11[0]                           }
+            // vstrpv r11[0], r10
+            // {                                           ;   vclrdr                                  }
+            // {   ldap r11, .L_vec_0x7F                   ;   vldc r9[0]                              }
+            // {                                           ;   vlmacc r11[0]                           }
+            // {   ldap r11, .L_vec_0x02                   ;   vlmacc r11[0]                           }
+            // {   ldaw r11, sp[STACK_VEC_32BIT+8]         ;   vlmacc r11[0]                           }
+            // vstrpv r11[0], r10
+
+
+
+
+
+#else
+            {   shl r11, _32, 3                         ;   sub pix_left, pix_left, 1               }
+            {   ldaw r11, sp[STACK_VEC_TMP]             ;   vsetc r11    /* 16-bit mode */          }
+            {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
+            {   add X, X, cin_tail                      ;   vstr r11[0]                             }   
+            {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+            {                                           ;   vclrdr                                  }
+            {                                           ;   vlmacc r11[0]                           }
+            {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+            {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
+
+            {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
+            {   ldap r11, .L_vec_0x007F                 ;   vstr r11[0]                             }
+            {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
+            {   mkmsk Q(cig_left), 4                    ;   vdepth1                                 }
+            vstrpv r11[0], Q(cig_left)
+            {   ldc Q(cig_left), 0                      ;                                           }
+            {   ldaw r11, sp[STACK_VEC_TMP]             ;   sub Q(cig_left), Q(cig_left), 8         }
+            vlashr r11[0], Q(cig_left)
+            {   mkmsk r11, 16                           ;   ldw Q(cig_left), sp[STACK_TMP]          }
+            {   andnot r11, Q(cig_left)                 ;   vdepth8                                 }
+            vstrpv Y[0], r11
+            {   shl r11, _32, 4                         ;   ldw Q(cig_left), sp[STACK_C_OUT]        }
+            {   sub K, K, C_in                          ;   vsetc r11   /* 8-bit mode */            }
+            {   add Y, Y, Q(cig_left)                   ;                                           }
+            bt pix_left, .L_pix_loop
+
+#endif
         {   add K, K, C_in                          ;   ldw r11, sp[STACK_COG_STRIDE_Y]         }
         {   ldc cig_left, 40                        ;   ldw X, sp[STACK_X]                      }
         {                                           ;   stw BSO, sp[STACK_BSO]                  }
-        {   add Y, Y, r11                           ;   bt cog_left, .L_cog_loop                }
+        {   add Y, Y, r11                           ;                                           }
+        bt cog_left, .L_cog_loop
 
 #define macc_hop        cog_left
 #define reset_offset    pix_left
@@ -190,7 +275,14 @@ FUNCTION_NAME:
         {   sub reset_offset, reset_offset, r11     ;   ldw K_cig_stride, plan[PLAN_TAIL_KSTRIDE]}
         {   add K, K, K_cig_stride                  ;   ldw r8, sp[STACK_PIX_COUNT]             }
         .L_pix_loop2:
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_1x1
             {                                           ;   ldw BSO, sp[STACK_BSO]                  }
+#else
+            {   ldap r11, .L_vec_0x80                   ;   ldw BSO, sp[STACK_BSO]                  }
+            {                                           ;   vldr r11[0]                             }
+            {                                           ;   ldw r11, sp[STACK_TAIL_MASK]            }
+            vstrpv Y[0], r11
+#endif
             {   add r11, BSO, _32                       ;   vldd BSO[0]                             }
             {   sub r8, r8, 1                           ;   vldr r11[0]                             }
             {   shr cig_left, C_in, 5                   ;   stw r8, sp[STACK_PIX_COUNT]             }
@@ -217,6 +309,7 @@ FUNCTION_NAME:
                 {   sub cig_left, cig_left, 1               ;   bru macc_hop                            }
                 VLMACCR_GROUP_TAIL(C_in, K_cig_stride)
             .L_get_res2:
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_1x1
             {   shl r11, _32, 3                         ;                                           }     
             {                                           ;   vsetc r11                               }
             {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat BSO[0]                            }
@@ -233,6 +326,35 @@ FUNCTION_NAME:
             {                                           ;   ldw r8, sp[STACK_C_OUT]                 }
             {   add Y, Y, r8                            ;   ldw r8, sp[STACK_PIX_COUNT]             }
             {   sub K, K, C_in                          ;   bt r8, .L_pix_loop2                     }
+#else
+            {   shl r11, _32, 3                         ;                                           }     
+            {                                           ;   vsetc r11                               }
+            {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat BSO[0]                            }
+            {   add BSO, BSO, _32                       ;   vstr r11[0]                             }   
+            {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+            {   add X, X, cin_tail                      ;   vclrdr                                  }
+            {                                           ;   vlmacc r11[0]                           }
+            {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+            {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
+
+            {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
+            {   ldap r11, .L_vec_0x007F                 ;   vstr r11[0]                             }
+            {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
+            {   mkmsk Q(cig_left), 4                    ;   vdepth1                                 }
+            vstrpv r11[0], Q(cig_left)
+            {   ldc Q(cig_left), 0                      ;                                           }
+            {   ldaw r11, sp[STACK_VEC_TMP]             ;   sub Q(cig_left), Q(cig_left), 8         }
+            vlashr r11[0], Q(cig_left)
+            {                                           ;   ldw Q(cig_left), sp[STACK_TMP]          }
+            {                                           ;   ldw r11, sp[STACK_TAIL_MASK]            }
+            {   andnot r11, Q(cig_left)                 ;   vdepth8                                 }
+            vstrpv Y[0], r11
+            {   shl r11, _32, 4                         ;   ldw Q(cig_left), sp[STACK_C_OUT]        }
+            {   sub K, K, C_in                          ;   vsetc r11   /* 8-bit mode */            }
+            {   add Y, Y, Q(cig_left)                   ;   ldw Q(cig_left), sp[STACK_PIX_COUNT]    }
+            bt Q(cig_left), .L_pix_loop2
+
+#endif
 
 
 .L_img_end:

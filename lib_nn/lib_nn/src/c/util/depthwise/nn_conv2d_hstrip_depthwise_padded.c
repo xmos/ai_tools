@@ -130,9 +130,12 @@ void nn_conv2d_hstrip_depthwise_padded(
         for(int k = 0; k < chans_to_write; k++){
             int16_t shift1  = BSO->shift1[k];
             int16_t scale   = BSO->scale[k];
+            int16_t offset_scale = BSO->offset_scale[k];
+            int16_t offset = BSO->offset[k];
             int16_t shift2  = BSO->shift2[k];
             accs[k] = vlsat_single_s16(accs[k], shift1);
             accs[k] = accs[k] * scale;
+            accs[k] += ((int32_t)offset_scale) * offset;
             accs[k] = vlsat_single_s8(accs[k], shift2);
             Y[k] = (int8_t) accs[k];
         }

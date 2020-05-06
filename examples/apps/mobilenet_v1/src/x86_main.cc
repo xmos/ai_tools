@@ -27,9 +27,8 @@ static int load_input(const char *filename) {
 }
 
 void print_output() {
-  printf("Output tensor:\n");
   for (int i = 0; i < output_size; i++) {
-    printf("   index=%u   value=%i\n", i, (signed char)output[i]);
+    printf("Output index=%u, value=%i\n", i, (signed char)output[i]);
   }
 }
 

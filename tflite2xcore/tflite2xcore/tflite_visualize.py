@@ -758,7 +758,7 @@ if __name__ == "__main__":
     parser.add_argument('tflite_input', help='Input .tflite file.')
     parser.add_argument('-o', '--html_output', required=False, default=None,
                         help='Output .html file. If not specified, a temporary file is created.')
-    parser.add_argument('--no_browser', action='store_true', default=False,
+    parser.add_argument('--no_browser', action='store_false',
                         help='Do not open browser after the .html is created.')
     args = parser.parse_args()
     tflite_input, html_output = args.tflite_input, args.html_output

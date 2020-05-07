@@ -13,6 +13,33 @@
 #include <stdio.h>
 #include <assert.h>
 
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
+
+static inline int8_t sat_s8_lcl(
+    const int32_t acc32)
+{
+    if(acc32 >= VPU_INT8_MAX)
+        return VPU_INT8_MAX;
+    if(acc32 < VPU_INT8_MIN)
+        return NEG_SAT_VAL;
+    
+    return (int8_t) acc32;
+}
+
+static inline int8_t vlsat_single_s8_lcl(
+    int32_t acc, 
+    int16_t shr)
+{
+    shr = (shr <= 0)? 0 : shr;
+    int64_t acc64 = acc;
+    if(shr > 0) acc64 += 1<<(shr-1);
+    return sat_s8_lcl(acc64 >> shr);
+}
+
 
 
 static void vlmacc8(
@@ -130,10 +157,13 @@ void nn_conv2d_hstrip_depthwise_padded(
         for(int k = 0; k < chans_to_write; k++){
             int16_t shift1  = BSO->shift1[k];
             int16_t scale   = BSO->scale[k];
+            int16_t offset_scale = BSO->offset_scale[k];
+            int16_t offset  = BSO->offset[k];
             int16_t shift2  = BSO->shift2[k];
             accs[k] = vlsat_single_s16(accs[k], shift1);
             accs[k] = accs[k] * scale;
-            accs[k] = vlsat_single_s8(accs[k], shift2);
+            accs[k] += ((int32_t)offset_scale)*offset;
+            accs[k] = vlsat_single_s8_lcl(accs[k], shift2);
             Y[k] = (int8_t) accs[k];
         }
 

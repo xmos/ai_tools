@@ -124,8 +124,11 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
 
     pad_mask -= pad_l_relu;
     pad_mask -= pad_r_relu;
-
-    pad_mask = ((1<<pad_mask)-1) << pad_l_relu;
+    
+    if(pad_mask == 32)
+        pad_mask = 0xFFFFFFFF;
+    else
+        pad_mask = ((1<<pad_mask)-1) << pad_l_relu;
 
 
     //Loop over the output pixels

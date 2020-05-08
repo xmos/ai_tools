@@ -102,6 +102,10 @@ At times submodule repositories will need to be updated.  To update all submodul
 
 > git submodule update --init --recursive
 
+Users of older git versions, may need to use the following command
+
+> git pull --recurse-submodules
+
 
 ### Conda Environment
 

@@ -16,13 +16,8 @@ XCoreStatus FullyConnected_16::Init(int32_t C_in, int32_t C_out) {
 }
 
 XCoreStatus FullyConnected_16::Eval(int16_t* Y, const int8_t* W,
-                                    const int8_t* X, const int16_t* BSS) {
-  TRACE_INFO("FullyConnected_16 Eval id=%p\n", this);
-  TIMER_START();
-
-  fully_connected_16(Y, W, X, (nn_bss_block_t*)BSS, &plan_);
-
-  TIMER_STOP("fully_connected_16 id=%p", this);
+                                    const int8_t* X, const int16_t* BSO) {
+  fully_connected_16(Y, W, X, (nn_bso_block_t*)BSO, &plan_);
   return kXCoreOk;
 }
 

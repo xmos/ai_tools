@@ -7,7 +7,7 @@ void fully_connected_16(
     int16_t* Y,
     const int8_t* W, 
     const int8_t* X, 
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const nn_fully_connected_16_plan_t* plan);
 */
 
@@ -40,7 +40,7 @@ void fully_connected_16(
 #define W               r1
 #define X               r2
   #define plan            X
-#define BSS             r3
+#define BSO             r3
 #define C_in            r4
 #define C_out           r5
 #define _32             r6
@@ -78,8 +78,8 @@ FUNCTION_NAME:
 
     .align 4
     .L_cog_loop:
-        {   add r11, BSS, _32                       ;   vldd BSS[0]                         }   //load high biases
-        {   add BSS, r11, _32                       ;   vldr r11[0]                         }   //load low biases
+        {   add r11, BSO, _32                       ;   vldd BSO[0]                         }   //load high biases
+        {   add BSO, r11, _32                       ;   vldr r11[0]                         }   //load low biases
         {   shl r11, _32, 4                         ;                                       }
         {   add W, W, cig_end                       ;   vsetc r11                           }   //8 bit mode
         {   shr cig_left, C_in, 5                   ;   ldw X, sp[STACK_X]                  }
@@ -123,12 +123,14 @@ FUNCTION_NAME:
         .L_cig_loop_end:
         
         {   sub W, W, x_tail_adj                    ;   vsetc r11                           }   //16 bit mode
-        {   add BSS, BSS, _32                       ;   vlsat BSS[0]                        }
-        {   ldaw r11, sp[STACK_TMP_VEC]             ;   vldc BSS[0]                         }
-        {   add BSS, BSS, _32                       ;   vstr r11[0]                         }
+        {   add BSO, BSO, _32                       ;   vlsat BSO[0]                        }
+        {   ldaw r11, sp[STACK_TMP_VEC]             ;   vldc BSO[0]                         }
+        {   add BSO, BSO, _32                       ;   vstr r11[0]                         }
         {                                           ;   vclrdr                              }
         {                                           ;   vlmacc r11[0]                       }
-        {   add BSS, BSS, _32                       ;   vlsat BSS[0]                        }
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                         }
+        {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                       }
+        {   add BSO, BSO, _32                       ;   vlsat BSO[0]                        }
         {   sub C_out, C_out, 1                     ;   vstr Y[0]                           }
         {   add Y, Y, _32                           ;   bt C_out, .L_cog_loop               }
 
@@ -157,9 +159,9 @@ FUNCTION_NAME:
 #define maccr_jump      r9
 #define acc_offset      r10
     .L_tail_strat_default:
-        {   mov r11, BSS                            ;                                       }
+        {   mov r11, BSO                            ;                                       }
         {   add r11, r11, _32                       ;   vldd r11[0]                         }   //load high biases
-        {   add BSS, r11, _32                       ;   vldr r11[0]                         }   //load low biases
+        {   add BSO, r11, _32                       ;   vldr r11[0]                         }   //load low biases
         {   shl r11, _32, 4                         ;   ldw X, sp[STACK_X]                  }   // Reset X
         {   sub r11, C_out, 1                       ;   vsetc r11                           }   //8 bit mode
         mul r11, r11, C_in
@@ -212,14 +214,16 @@ FUNCTION_NAME:
             
         .L_tail_loop_end:
         {   shl r11, _32, 3                         ;   ldw plan, sp[STACK_ARG_PLAN]        }
-        {   add r8, BSS, _32                        ;   ldw r5, plan[PLAN_C_OUT]            }
+        {   add r8, BSO, _32                        ;   ldw r5, plan[PLAN_C_OUT]            }
         {   zext r5, 4                              ;   vsetc r11                           }
-        {   add BSS, BSS, _32                       ;   vlsat BSS[0]                        }
-        {   ldaw r11, sp[STACK_TMP_VEC]             ;   vldc BSS[0]                         }
-        {   add BSS, BSS, _32                       ;   vstr r11[0]                         }
+        {   add BSO, BSO, _32                       ;   vlsat BSO[0]                        }
+        {   ldaw r11, sp[STACK_TMP_VEC]             ;   vldc BSO[0]                         }
+        {   add BSO, BSO, _32                       ;   vstr r11[0]                         }
         {                                           ;   vclrdr                              }
         {   shl r5, r5, 1                           ;   vlmacc r11[0]                       }
-        {   mkmsk r5, r5                            ;   vlsat BSS[0]                        }
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                         }
+        {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                       }
+        {   mkmsk r5, r5                            ;   vlsat BSO[0]                        }
 
         vstrpv Y[0], r5
         bu .Lfunc_end

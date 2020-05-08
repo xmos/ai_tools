@@ -6,7 +6,7 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_h,
         const unsigned K_h_stride,
         const channel_count_t C_in,
@@ -57,7 +57,7 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
 
 #define STACK_PATCH_ROWS        STACK_K_H
 #define STACK_K                 7
-#define STACK_BSS               8
+#define STACK_BSO               8
 #define STACK_WRITE_MASK        9
 #define STACK_Y                 10
 #define STACK_WIN_H_STRIDE      STACK_K_h_stride
@@ -77,7 +77,7 @@ FUNCTION_NAME:
 #define Y               r0
 #define X               r1
 #define K               r2
-#define BSS             r3
+#define BSO             r3
 #define x_v_stride      r4
 #define k_cout_str      r5
 #define rows_left       r6
@@ -98,12 +98,12 @@ FUNCTION_NAME:
 
     //Load the biases into vD:vR. We're going to adjust these by integrating the top and
     //  bottom padding, and store the adjusted biases on the stack. Store the address of the
-    //  shift1 values in place of BSS, since we'll still need those, but not the original
+    //  shift1 values in place of BSO, since we'll still need those, but not the original
     //  biases
-    {   add r11, BSS, _32                       ;   vldd BSS[0]                             }
+    {   add r11, BSO, _32                       ;   vldd BSO[0]                             }
     {   add r11, r11, _32                       ;   vldr r11[0]                             }
-    {                                           ;   stw r11, sp[STACK_BSS]                  }
-#undef BSS
+    {                                           ;   stw r11, sp[STACK_BSO]                  }
+#undef BSO
 
     // - Compute the number of rows of the patch between the top and bottom padding. Store
     //   on the stack, as we'll need to reset that for every output pixel
@@ -278,13 +278,15 @@ FUNCTION_NAME:
 
         .L_patch_row_end:
 
-        {   shl r11, _32, 3                         ;   ldw tmp, sp[STACK_BSS]      /*load BSS*/}
+        {   shl r11, _32, 3                         ;   ldw tmp, sp[STACK_BSO]      /*load BSO*/}
         {   ldaw r11, sp[STACK_VEC_TMP1]            ;   vsetc r11            /*set 16-bit mode*/}
         {   add tmp, tmp, _32                       ;   vlsat tmp[0]       /*apply first shift*/}
         {                                           ;   vstr r11[0] /*save 16-bit intermediate*/}
         {   add tmp, tmp, _32                       ;   vldc tmp[0]       /*load scale into vC*/}
         {                                           ;   vclrdr   /*clear accumulate for VLMACC*/}
         {   shl r11, _32, 4                         ;   vlmacc r11[0]              /*do VLMACC*/}
+        {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
+        {   add tmp, tmp, _32                       ;   vlmacc tmp[0]                           }
         {                                           ;   vsetc r11             /*set 8-bit mode*/}
         {                                           ;   vlsat tmp[0]       /*apply final shift*/}
         {                                           ;   ldw Q(rows_left), sp[STACK_Y]           }

@@ -62,7 +62,6 @@ ifneq ($(TARGET), x86)
 		lib_nn/src/asm/util/deep/nn_conv2d_hstrip_deep_padded.S \
 		lib_nn/src/asm/util/deep/nn_conv2d_hstrip_tail_deep.S \
 		lib_nn/src/asm/util/deep/nn_conv2d_hstrip_tail_deep_padded.S \
-		lib_nn/src/asm/util/depthwise/nn_conv2d_hstrip_depthwise_bias_adj.S \
 		lib_nn/src/asm/util/depthwise/nn_conv2d_hstrip_depthwise_padded.S \
 		lib_nn/src/asm/util/depthwise/nn_conv2d_hstrip_depthwise.S
 endif

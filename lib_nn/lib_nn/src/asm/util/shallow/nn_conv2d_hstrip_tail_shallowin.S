@@ -6,7 +6,7 @@ void nn_conv2d_hstrip_tail_shallowin(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_h,
         const unsigned K_h_stride,
         const channel_count_t C_in,
@@ -42,7 +42,7 @@ void nn_conv2d_hstrip_tail_shallowin(
 #define STACK_VEC_TMP1          (NSTACKWORDS-8)
 
 #define STACK_K                 7
-#define STACK_BSS               8
+#define STACK_BSO               8
 #define STACK_WRITE_MASK        9
 #define STACK_Y                 10
 #define STACK_WIN_H_STRIDE      STACK_K_h_stride
@@ -51,7 +51,7 @@ void nn_conv2d_hstrip_tail_shallowin(
 #define Y               r0
 #define X               r1
 #define K               r2
-#define BSS             r3
+#define BSO             r3
 #define x_v_stride      r4
 #define k_cout_str      r5
 #define rows_left       r6
@@ -78,8 +78,8 @@ FUNCTION_NAME:
     //Set VPU mode to 8-bit
     {                                           ;   vsetc r11                               }
 
-    // Push BSS onto the stack. We'll need to reset it for each output pixel
-    {                                           ;   stw BSS, sp[STACK_BSS]                  }
+    // Push BSO onto the stack. We'll need to reset it for each output pixel
+    {                                           ;   stw BSO, sp[STACK_BSO]                  }
 
     // - Compute the number of rows of the patch between the top and bottom padding. Store
     //   on the stack, as we'll need to reset that for every output pixel
@@ -117,16 +117,16 @@ FUNCTION_NAME:
     {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
     
     .L_out_col_start:
-        // K, BSS and X_patch and rows_left reset each iteration.
+        // K, BSO and X_patch and rows_left reset each iteration.
         // Decrement out columns remaining
         {   ldc _32, 32                             ;   ldw K, sp[STACK_K]                      }
-        {   sub tmp, tmp, 1                         ;   ldw BSS, sp[STACK_BSS]                  }
+        {   sub tmp, tmp, 1                         ;   ldw BSO, sp[STACK_BSO]                  }
         {   mov X_patch, X                          ;   stw tmp, sp[STACK_OUT_COLS]             }
         {   ldaw tmp, sp[STACK_VEC_TMP1]            ;   ldw rows_left, sp[STACK_K_H]            }
 
         // Initialize accumulators with biases
-        {   add r11, BSS, _32                       ;   vldd BSS[0]                             }
-        {   add BSS, r11, _32                       ;   vldr r11[0]                             }
+        {   add r11, BSO, _32                       ;   vldd BSO[0]                             }
+        {   add BSO, r11, _32                       ;   vldr r11[0]                             }
 
         .L_patch_row_start:
             // Load next patch row from X into vC
@@ -166,13 +166,15 @@ FUNCTION_NAME:
 
         {   shl r11, _32, 3                         ;                                           }
         {   ldaw r11, sp[STACK_VEC_TMP1]            ;   vsetc r11            /*set 16-bit mode*/}
-        {   add BSS, BSS, _32                       ;   vlsat BSS[0]       /*apply first shift*/}
+        {   add BSO, BSO, _32                       ;   vlsat BSO[0]       /*apply first shift*/}
         {                                           ;   vstr r11[0] /*save 16-bit intermediate*/}
-        {   add BSS, BSS, _32                       ;   vldc BSS[0]       /*load scale into vC*/}
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]       /*load scale into vC*/}
         {                                           ;   vclrdr   /*clear accumulate for VLMACC*/}
         {   shl r11, _32, 4                         ;   vlmacc r11[0]              /*do VLMACC*/}
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+        {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
         {                                           ;   vsetc r11             /*set 8-bit mode*/}
-        {                                           ;   vlsat BSS[0]       /*apply final shift*/}
+        {                                           ;   vlsat BSO[0]       /*apply final shift*/}
         {                                           ;   ldw tmp, sp[STACK_WRITE_MASK]           }
         vstrpv Y[0], tmp  /* Store output */
         {                                           ;   ldw tmp, sp[STACK_Y_H_STRIDE]           }

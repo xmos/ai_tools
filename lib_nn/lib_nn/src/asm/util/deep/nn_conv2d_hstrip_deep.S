@@ -8,7 +8,7 @@ void nn_conv2d_hstrip_deep(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_h,
         const unsigned K_w,
         const unsigned K_h_stride,
@@ -51,7 +51,7 @@ void nn_conv2d_hstrip_deep(
 #define STACK_Y                 9
 #define STACK_X                 10
 #define STACK_K                 11
-#define STACK_BSS               12
+#define STACK_BSO               12
 #define STACK_H_STRIDES         STACK_K_h_stride
 
 
@@ -71,7 +71,7 @@ FUNCTION_NAME:
     {   mov r11, r1                             ;   vsetc r11                               }
     {   ldaw r1, sp[STACK_VEC_TMP1]             ;   vclrdr                                  }
     {                                           ;   vstr r1[0]                              }
-    {                                           ;   stw r3, sp[STACK_BSS]                   }
+    {                                           ;   stw r3, sp[STACK_BSO]                   }
     
     {                                           ;   ldw r1, sp[STACK_C_IN]                  }
     {                                           ;   ldw r0, sp[STACK_K_h_stride]            }
@@ -86,7 +86,7 @@ FUNCTION_NAME:
 
 #define X               r0
 #define K               r1
-#define BSS             r2
+#define BSO             r2
 #define rows_left       r3
 #define cols_left       r4
 #define cig_left        r5
@@ -101,10 +101,10 @@ FUNCTION_NAME:
     {                                           ;   ldw k_cout_stride, sp[STACK_K_COUT_STRIDE]}
 
     .L_out_col_start:
-        {                                           ;   ldw BSS, sp[STACK_BSS]                  }
+        {                                           ;   ldw BSO, sp[STACK_BSO]                  }
         {   sub tmp, tmp, 1                         ;   ldw rows_left, sp[STACK_K_H]            }
-        {   add r11, BSS, _32                       ;   vldd BSS[0]                             }
-        {   add BSS, r11, _32                       ;   vldr r11[0]                             }
+        {   add r11, BSO, _32                       ;   vldd BSO[0]                             }
+        {   add BSO, r11, _32                       ;   vldr r11[0]                             }
         {                                           ;   stw tmp, sp[STACK_OUT_COLS]             }
         {                                           ;   ldw K, sp[STACK_K]                      }
 
@@ -165,13 +165,15 @@ FUNCTION_NAME:
 
         {   shl r11, _32, 3                         ;                                           }
         {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vsetc r11                               }
-        {   add BSS, BSS, _32                       ;   vlsat BSS[0]                            }
+        {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
         {                                           ;   vstr r11[0]                             }
-        {   add BSS, BSS, _32                       ;   vldc BSS[0]                             }
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
         {                                           ;   vclrdr                                  }
         {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+        {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
         {                                           ;   vsetc r11                               }
-        {                                           ;   vlsat BSS[0]                            }
+        {                                           ;   vlsat BSO[0]                            }
         {   mkmsk tmp, 16                           ;   ldw Q(rows_left), sp[STACK_Y]           }
         vstrpv Q(rows_left)[0], tmp
         {                                           ;   ldw tmp, sp[STACK_H_STRIDES]            }

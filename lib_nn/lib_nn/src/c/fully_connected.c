@@ -83,7 +83,7 @@ void fully_connected_16(
     int16_t* Y,
     const int8_t* W, 
     const int8_t* X, 
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const nn_fully_connected_plan_t* plan)
 {
     xs3_vpu vpu;
@@ -97,14 +97,16 @@ void fully_connected_16(
         const unsigned cog = cout >> VPU_INT8_ACC_PERIOD_LOG2;
         const unsigned coff = cout & (ACCS - 1);
 
-        const nn_bss_block_t* BSS_cog = &BSS[cog];
+        const nn_bso_block_t* BSO_cog = &BSO[cog];
 
         const int8_t* W_row = &W[cout * C_in];
-        const int32_t bias_hi = BSS_cog->bias_hi[coff];
-        const int32_t bias_lo = BSS_cog->bias_lo[coff];
-        const int16_t shift1  = BSS_cog->shift1[coff];
-        const int16_t scale   = BSS_cog->scale[coff];
-        const int16_t shift2  = BSS_cog->shift2[coff];
+        const int32_t bias_hi      = BSO_cog->bias_hi[coff];
+        const int32_t bias_lo      = BSO_cog->bias_lo[coff];
+        const int16_t shift1       = BSO_cog->shift1[coff];
+        const int16_t scale        = BSO_cog->scale[coff];
+        const int16_t offset_scale = BSO_cog->offset_scale[coff];
+        const int16_t offset       = BSO_cog->offset[coff];
+        const int16_t shift2       = BSO_cog->shift2[coff];
 
         int64_t acc64 = (bias_hi << 16) | bias_lo;
 
@@ -124,6 +126,7 @@ void fully_connected_16(
 
         int32_t res = vlsat_single_s16((int32_t)acc64, shift1);
         res = res * scale;
+        res = res + ((int32_t)offset_scale) * offset;
         res = vlsat_single_s16(res, shift2);
 
         Y[cout] = (int16_t) res;

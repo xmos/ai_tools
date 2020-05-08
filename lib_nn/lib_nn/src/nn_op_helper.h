@@ -10,6 +10,19 @@
   #define WEAK_FUNC
 #endif
 
+/** Get address of array element.
+ * 
+ * For compatibility with (non-xcore) builds with 64-bit addresses, when getting the address of an array
+ * element, the indexes should be signed, or else badness ensues.
+ * 
+ * @note This macro gets the address of an array *element*. So if `V` is `int16_t`, the address is adjusted
+ *       by `2*INDEX` *bytes*.
+ * 
+ * @param V         Array
+ * @param INDEX     Element index within array.
+ */
+#define ADDR(V, INDEX)      &V[((int)(INDEX))]
+
 static inline int8_t sat_s8(
     const int32_t acc32)
 {

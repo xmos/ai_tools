@@ -378,10 +378,10 @@ def build_XC_conv2d_deep(subgraph=None, *, weight_shape, input_size, strides):
     C_out, _, _, C_in = weight_shape
 
     input_shape = [1, height, width, C_in]
-    bss_shape = [int(np.ceil(C_out / 16)), 5, 16]
+    bso_shape = [int(np.ceil(C_out / 16)), 5, 16]
     tin = subgraph.create_tensor("input", TensorType.INT8, input_shape, isinput=True)
     w = subgraph.create_tensor("weights", TensorType.INT8, weight_shape)
-    b = subgraph.create_tensor("bss", TensorType.INT16, bss_shape)
+    b = subgraph.create_tensor("bso", TensorType.INT16, bso_shape)
 
     # valid padding
     pads = [
@@ -412,10 +412,10 @@ def build_XC_conv2d_depthwise(subgraph=None, *, weight_shape, input_size, stride
     C_in = weight_shape[2]
 
     input_shape = [1, height, width, C_in]
-    bss_shape = [int(np.ceil(C_in / 16)), 5, 16]
+    bso_shape = [int(np.ceil(C_in / 16)), 5, 16]
     tin = subgraph.create_tensor("input", TensorType.INT8, input_shape, isinput=True)
     w = subgraph.create_tensor("weights", TensorType.INT8, weight_shape)
-    b = subgraph.create_tensor("bss", TensorType.INT16, bss_shape)
+    b = subgraph.create_tensor("bso", TensorType.INT16, bso_shape)
 
     # valid padding
     pads = [

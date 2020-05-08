@@ -63,7 +63,7 @@ extern "C" {
  * @math{(w_{r0},w_{c0})} is the initial row and column of the convolution window,
  *      as provided to `conv2d_shallowin_init()`,  
  * @math{(B_i, s_{1p}, s_{2p}, s_{3p})} are the `bias`, `shift1`, `scale` and `shift2` values
- *      respectively) encoded in the `BSS` data, associated with output channel @math{i}, and  
+ *      respectively) encoded in the `BSO` data, associated with output channel @math{i}, and  
  * @math{sat_8\left(\cdot\right)} and @math{sat_{16}\left(\cdot\right)} saturate their arguments 
  *      to the symmetric @math{8}- and @math{16}-bit bounds.
  * 
@@ -124,12 +124,12 @@ extern "C" {
  * 
  * The memory layout of @tensor{K} is the standard memory layout for 4D tensors (see @ref standard_layout).
  * 
- * `BSS` points to an array of bias-shifts-scale parameters required for this convolution. Each 
- * `nn_bss_block_t` in the array contains the bias-shifts-scale parameters for a single output channel group,
+ * `BSO` points to an array of bias-shifts-scale parameters required for this convolution. Each 
+ * `nn_bso_block_t` in the array contains the bias-shifts-scale parameters for a single output channel group,
  * (@ttref{VPU_INT8_ACC_PERIOD} output channels). If @math{Y_c} is not a multiple of @ttref{VPU_INT8_ACC_PERIOD}, 
- * then the output channel tail ( the last @math{(Y_c mod 16)} output channels) also gets `nn_bss_block_t`, where
- * the entries corresponding to channels beyond @math{Y_c} are ignored. The address supplied for `BSS` should be
- * the start address of the the array, *not* the address of the `nn_bss_block_t` corresponding of the first output
+ * then the output channel tail ( the last @math{(Y_c mod 16)} output channels) also gets `nn_bso_block_t`, where
+ * the entries corresponding to channels beyond @math{Y_c} are ignored. The address supplied for `BSO` should be
+ * the start address of the the array, *not* the address of the `nn_bso_block_t` corresponding of the first output
  * channel of the job being processed.
  * 
  * `plan` points to the `nn_conv2d_deep_plan_t` which was previously initialized with a call to `conv2d_deep_init()`.
@@ -138,15 +138,15 @@ extern "C" {
  * 
  * Note that a single call to this function processes only a *single job*. If multiple jobs were initialized,
  * performing the complete convolution requires multiple calls to this function. In such a case, the `Y`, `X`,
- * `K`, `BSS`, and `plan` pointers will be identical in each call, and the `job` pointer will be different with
+ * `K`, `BSO`, and `plan` pointers will be identical in each call, and the `job` pointer will be different with
  * each call.
  * 
- * @requires_word_alignment{Y,X,K,BSS}
+ * @requires_word_alignment{Y,X,K,BSO}
  * 
  * @param[out] Y        The output image @tensor{Y}
  * @param[in]  X        The input image @tensor{X}
  * @param[in]  K        The kernel tensor @tensor{K}
- * @param[in]  BSS      The bias-shifts-scale parameters
+ * @param[in]  BSO      The bias-shifts-scale parameters
  * @param[in]  plan     The convolution plan
  * @param[in]  job      The convolution job
  */
@@ -154,7 +154,7 @@ void conv2d_deep(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const nn_conv2d_deep_plan_t* plan,
     const nn_conv2d_deep_job_t* job);
 
@@ -213,7 +213,7 @@ void conv2d_deep(
  * @math{(w_{r0},w_{c0})} is the initial row and column of the convolution window,
  *      as provided to `conv2d_shallowin_init()`,  
  * @math{(B_i, s_{1p}, s_{2p}, s_{3p})} are the `bias`, `shift1`, `scale` and `shift2` values
- *      respectively) encoded in the `BSS` data, associated with output channel @math{i}, and  
+ *      respectively) encoded in the `BSO` data, associated with output channel @math{i}, and  
  * @math{sat_8\left(\cdot\right)} and @math{sat_{16}\left(\cdot\right)} saturate their arguments 
  *      to the symmetric @math{8}- and @math{16}-bit bounds.
  * 
@@ -277,12 +277,12 @@ void conv2d_deep(
  * The memory layout of @tensor{K} is the standard memory layout for 4D tensors (see @ref standard_layout). Further,
  * the coefficients for all elements @math{K\left[i,j,k,l\right]} where @math{k\geq K_w} must have the value 0.
  * 
- * `BSS` points to an array of bias-shifts-scale parameters required for this convolution. Each 
- * `nn_bss_block_t` in the array contains the bias-shifts-scale parameters for a single output channel group,
+ * `BSO` points to an array of bias-shifts-scale parameters required for this convolution. Each 
+ * `nn_bso_block_t` in the array contains the bias-shifts-scale parameters for a single output channel group,
  * (@ttref{VPU_INT8_ACC_PERIOD} output channels). If @math{Y_c} is not a multiple of @ttref{VPU_INT8_ACC_PERIOD}, 
- * then the output channel tail ( the last @math{(Y_c mod 16)} output channels) also gets `nn_bss_block_t`, where
- * the entries corresponding to channels beyond @math{Y_c} are ignored. The address supplied for `BSS` should be
- * the start address of the the array, *not* the address of the `nn_bss_block_t` corresponding of the first output
+ * then the output channel tail ( the last @math{(Y_c mod 16)} output channels) also gets `nn_bso_block_t`, where
+ * the entries corresponding to channels beyond @math{Y_c} are ignored. The address supplied for `BSO` should be
+ * the start address of the the array, *not* the address of the `nn_bso_block_t` corresponding of the first output
  * channel of the job being processed.
  * 
  * `plan` points to the `nn_conv2d_shallowin_plan_t` which was previously initialized with a call to 
@@ -292,15 +292,15 @@ void conv2d_deep(
  * 
  * Note that a single call to this function processes only a *single job*. If multiple jobs were initialized,
  * performing the complete convolution requires multiple calls to this function. In such a case, the `Y`, `X`,
- * `K`, `BSS`, and `plan` pointers will be identical in each call, and the `job` pointer will be different with
+ * `K`, `BSO`, and `plan` pointers will be identical in each call, and the `job` pointer will be different with
  * each call.
  * 
- * @requires_word_alignment{Y,X,K,BSS}
+ * @requires_word_alignment{Y,X,K,BSO}
  * 
  * @param[out] Y        The output image @tensor{Y}
  * @param[in]  X        The input image @tensor{X}
  * @param[in]  K        The kernel tensor @tensor{K}
- * @param[in]  BSS      The bias-shifts-scale parameters
+ * @param[in]  BSO      The bias-shifts-scale parameters
  * @param[in]  plan     The convolution plan
  * @param[in]  job      The convolution job
  */
@@ -308,7 +308,7 @@ void conv2d_shallowin(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const nn_conv2d_shallowin_plan_t* plan,
     const nn_conv2d_shallowin_job_t* job);
 
@@ -338,7 +338,7 @@ void conv2d_shallowin(
  * @math{(w_{vert},w_{hori})} are the vertical and horizontal strides of the convolution window,
  *      as provided to `conv2d_shallowin_init()`,  
  * @math{(B_i, s_{1p}, s_{2p}, s_{3p})} are the `bias`, `shift1`, `scale` and `shift2` values
- *      respectively) encoded in the `BSS` data, associated with output channel @math{i}, and  
+ *      respectively) encoded in the `BSO` data, associated with output channel @math{i}, and  
  * @math{sat_8\left(\cdot\right)} and @math{sat_{16}\left(\cdot\right)} saturate their arguments 
  *      to the symmetric @math{8}- and @math{16}-bit bounds.
  * 
@@ -356,8 +356,8 @@ void conv2d_shallowin(
  * layout, in which the element at `K[i][j]` is the weight which input channel `j` contributes
  * to output channel `i`. Both `C_out` and `C_in` must be multiples of 4.
  * 
- * The bias-shifts-scale tensor `BSS` is layed out as specified in "Bias-Shifts-Scale Tensor Layout".
- * The accumulators for each output channel are seeded with the 32-bit biases encoded in `BSS`, and
+ * The bias-shifts-scale tensor `BSO` is layed out as specified in "Bias-Shifts-Scale Tensor Layout".
+ * The accumulators for each output channel are seeded with the 32-bit biases encoded in `BSO`, and
  * the shifts and scale are used as specified in "Notes on Output Shifts and Scales".
  * 
  * The input `plan` is an execution plan which contains information about how to manage the input
@@ -371,7 +371,7 @@ void conv2d_1x1(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,
-    const data16_t* BSS,
+    const nn_bso_block_t* BSO,
     const nn_conv2d_1x1_plan_t* plan);
 
 
@@ -421,7 +421,7 @@ void conv2d_1x1(
  * @math{(w_{r0},w_{c0})} is the initial row and column of the convolution window,
  *      as provided to `conv2d_shallowin_init()`,  
  * @math{(B_i, s_{1p}, s_{2p}, s_{3p})} are the `bias`, `shift1`, `scale` and `shift2` values
- *      respectively) encoded in the `BSS` data, associated with output channel @math{i}, and  
+ *      respectively) encoded in the `BSO` data, associated with output channel @math{i}, and  
  * @math{sat_8\left(\cdot\right)} and @math{sat_{16}\left(\cdot\right)} saturate their arguments 
  *      to the symmetric @math{8}- and @math{16}-bit bounds.
  * 
@@ -449,12 +449,12 @@ void conv2d_1x1(
  * 
  * The memory layout of @tensor{K} is the standard memory layout for 3D tensors (see @ref standard_layout).
  * 
- * `BSS` points to an array of bias-shifts-scale parameters required for this convolution. Each 
- * `nn_bss_block_t` in the array contains the bias-shifts-scale parameters for a single output channel group,
+ * `BSO` points to an array of bias-shifts-scale parameters required for this convolution. Each 
+ * `nn_bso_block_t` in the array contains the bias-shifts-scale parameters for a single output channel group,
  * (@ttref{VPU_INT8_ACC_PERIOD} output channels). If @math{X_c} is not a multiple of @ttref{VPU_INT8_ACC_PERIOD}, 
- * then the output channel tail ( the last @math{(X_c mod 16)} output channels) also gets `nn_bss_block_t`, where
- * the entries corresponding to channels beyond @math{X_c} are ignored. The address supplied for `BSS` should be
- * the start address of the the array, *not* the address of the `nn_bss_block_t` corresponding of the first output
+ * then the output channel tail ( the last @math{(X_c mod 16)} output channels) also gets `nn_bso_block_t`, where
+ * the entries corresponding to channels beyond @math{X_c} are ignored. The address supplied for `BSO` should be
+ * the start address of the the array, *not* the address of the `nn_bso_block_t` corresponding of the first output
  * channel of the job being processed.
  * 
  * `plan` points to the `nn_conv2d_depthwise_plan_t` which was previously initialized with a call to 
@@ -464,17 +464,17 @@ void conv2d_1x1(
  * 
  * Note that a single call to this function processes only a *single job*. If multiple jobs were initialized,
  * performing the complete convolution requires multiple calls to this function. In such a case, the `Y`, `X`,
- * `K`, `BSS`, and `plan` pointers will be identical in each call, and the `job` pointer will be different with
+ * `K`, `BSO`, and `plan` pointers will be identical in each call, and the `job` pointer will be different with
  * each call.
  * 
  * Constraints:
- *  - `Y`, `X`, `K` and `BSS` must all point to word-aligned addresses.
+ *  - `Y`, `X`, `K` and `BSO` must all point to word-aligned addresses.
  *  - @math{X_c} must be a multiple of 4.
  * 
  * \param Y     The output image.
  * \param X     The input image.
  * \param K     The kernel tensor.
- * \param BSS   The bias-shifts-scale tensor.
+ * \param BSO   The bias-shifts-scale tensor.
  * \param plan  The execution plan initialized by `conv2d_depthwise_init()`.
  * \param job   The (single) job to be performed.
  */
@@ -482,7 +482,7 @@ void conv2d_depthwise(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const nn_conv2d_depthwise_plan_t* plan,
     const nn_conv2d_depthwise_job_t* job);
 
@@ -609,7 +609,7 @@ void avgpool2d_global(
  *   where
  *      W[i][] represents the `i`th row of the weight matrix
  *      dot(A,B) is the 32-bit inner product of 8-bit vectors A and B
- *      bias, shift and scale are encoded in `BSS`
+ *      bias, shift and scale are encoded in `BSO`
  * 
  * `C_in` is the number of elements in `X` as well as the number of columns in `W`. 
  * `C_in` must be a multiple of `4`.
@@ -624,10 +624,10 @@ void avgpool2d_global(
  * 
  * `X` is the 8-bit input vector with a shape of `(C_in)`. `X` must begin at a word-aligned address.
  * 
- * `BSS` is the bias-shift-scale tensor with a shape of `(ceil(C_out/16), 5, 16)`. This tensor
+ * `BSO` is the bias-scale-offset tensor with a shape of `(ceil(C_out/16), 5, 16)`. This tensor
  * encodes the bias, shift and scale for each output channel into a single linear block of memory,
- * allowing a more efficient implementation of this operator. The function `fc_boggle_BSS()` is
- * provided to simplify the layout of this tensor. Use of `fc_boggle_BSS` is not required, but
+ * allowing a more efficient implementation of this operator. The function `fc_boggle_BSO()` is
+ * provided to simplify the layout of this tensor. Use of `fc_boggle_BSO` is not required, but
  * refer to its documentation if you wish to layout this tensor manually (to reduce initialization
  * time). 
  * 
@@ -653,7 +653,7 @@ void fully_connected_16(
     int16_t* Y,
     const nn_tensor_t* W, 
     const nn_tensor_t* X, 
-    const nn_bss_block_t* BSS,
+    const nn_bso_block_t* BSO,
     const nn_fully_connected_plan_t* plan);
 
 

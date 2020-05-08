@@ -51,7 +51,7 @@ void avgpool2d_global_asm(
 #define _16             r10
 
 .align 4
-.L_bss_consts:
+.L_bso_consts:
 .word 0x00010001, 0x01010101
 
 
@@ -65,7 +65,7 @@ FUNCTION_NAME:
     {   ldc _16, 16                             ;   stw r10, sp[8]                          }
     mul pix_count, arg_x_height, arg_x_width
     {   shl r11, _16, 5                         ;   ldw chans, sp[STACK_X_CHANS]            }
-    {   ldap r11, .L_bss_consts                 ;   vsetc r11                               }
+    {   ldap r11, .L_bso_consts                 ;   vsetc r11                               }
 
     {                                           ;   ldw r10, sp[STACK_SCALE]                }
     {   ldaw r6, sp[STACK_SHIFT_VEC]            ;   ldw r4, r11[1]                          }

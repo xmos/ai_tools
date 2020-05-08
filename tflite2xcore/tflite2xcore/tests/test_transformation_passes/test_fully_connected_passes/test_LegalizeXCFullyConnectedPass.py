@@ -48,12 +48,12 @@ def test_mutate(model):
     assert weight_shape_new[0] == dim_out
     assert weight_shape_new[1] == int(np.ceil(dim_in / 4)) * 4
 
-    # check bias tensor
-    bss_shape = new_op.inputs[2].shape
-    assert len(bss_shape) == 3
-    assert bss_shape[0] == int(np.ceil(dim_out / 16))
-    assert bss_shape[1] == 5
-    assert bss_shape[2] == 16
+    # check bias/scale/offset tensor
+    bso_shape = new_op.inputs[2].shape
+    assert len(bso_shape) == 3
+    assert bso_shape[0] == int(np.ceil(dim_out / 16))
+    assert bso_shape[1] == 7
+    assert bso_shape[2] == 16
 
 
 if __name__ == "__main__":

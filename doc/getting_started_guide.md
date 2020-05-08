@@ -1,3 +1,9 @@
+# Requirements
+
+TODO
+
+MacOS 10.13 High Sierra (or newer)
+
 # Installing & Testing tflite2xcore
 
 (1) Create a Conda the environment

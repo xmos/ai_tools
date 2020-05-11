@@ -14,9 +14,13 @@ Building for xCORE
 
 Note, `xcore` is the default target.
 
-Running with the xCORE simulator
+Running with the xcore.ai Explorer board
 
-    > xsim --args bin/mobilenet.xe path/to/input.bin path/to/output.bin
+    > xrun --xscope --xscope-port localhost:10234 bin/mobilenet.xe
+
+Sending a test image to the xcore.ai Explorer board
+
+    > ./test_image.py path/to/image
 
 ## x86
 
@@ -26,4 +30,4 @@ Building for x86
 
 Running
 
-    > ./bin/mobilenet path/to/input.bin path/to/output.bin
+    > ./bin/mobilenet path/to/image

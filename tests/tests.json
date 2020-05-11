@@ -624,6 +624,35 @@
                     1,
                     1
                 ]
+            },
+            {
+                "-wi": 8,
+                "-hi": 8,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 3,
+                "-out": 4,
+                "-st": [2,2],
+                "-pd": [
+                    0,
+                    1,
+                    0,
+                    1
+                ]
+            },
+            {
+                "-wi": 8,
+                "-hi": 8,
+                "-kw": 3,
+                "-kh": 3,
+                "-in": 1,
+                "-out": 4,
+                "-pd": [
+                    0,
+                    1,
+                    0,
+                    1
+                ]
             }
         ]
     },
@@ -946,6 +975,30 @@
                 "-po": 2,
                 "-st": 2,
                 "-pd": "valid"
+            }
+        ]
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_offset_saturating_ops.py",
+        "operator": "XC_conv2d_shallowin",
+        "parameters": [
+            {
+                "--case": 0
+            }
+        ]
+    },
+    {
+        "generator": "../examples/models/op_test_models/generate_offset_saturating_ops.py",
+        "operator": "XC_conv2d_1x1",
+        "parameters": [
+            {
+                "--case": 1
+            },
+            {
+                "--case": 2
+            },
+            {
+                "--case": 3
             }
         ]
     }

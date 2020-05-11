@@ -4,12 +4,12 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "lib_ops/api/benchmarking.h"
+#include "lib_ops/api/lib_ops.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
-
-#include "lib_ops/api/lib_ops.h"
 #include "xcore_model.h"
 
 #define TEST_INPUT_SIZE = 32 * 32 * 4
@@ -19,13 +19,27 @@ const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
-constexpr int kTensorArenaSize = 65000;  // TODO: How can this be determined?
+constexpr int kTensorArenaSize = 65000;
 uint8_t tensor_arena[kTensorArenaSize];
 
 xcore::Dispatcher* dispatcher = nullptr;
 constexpr int num_threads = 5;
 constexpr int kXCOREArenaSize = 5000;
 uint8_t xcore_arena[kXCOREArenaSize];
+
+static int argmax(const int8_t* A, const int N) {
+  assert(N > 0);
+
+  int m = 0;
+
+  for (int i = 1; i < N; i++) {
+    if (A[i] > A[m]) {
+      m = i;
+    }
+  }
+
+  return m;
+}
 
 static int load_test_input(const char* filename, char* input, size_t esize) {
   FILE* fd = fopen(filename, "rb");
@@ -44,7 +58,7 @@ static int load_test_input(const char* filename, char* input, size_t esize) {
   return 1;
 }
 
-static void setup() {
+static void setup_tflite() {
   // Set up logging.
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
@@ -91,19 +105,25 @@ static void setup() {
 }
 
 int main(int argc, char* argv[]) {
-  setup();
+  setup_tflite();
 
   if (argc > 1) {
-    printf("starting: input filename=%s\n", argv[1]);
+    printf("input filename=%s\n", argv[1]);
     // Load input tensor
     if (!load_test_input(argv[1], input->data.raw, input->bytes)) return -1;
   } else {
-    printf("starting: no input file\n");
+    printf("no input file\n");
     memset(input->data.raw, 0, input->bytes);
   }
 
   // Run inference, and report any error
+  printf("Running inference...\n");
+  xcore::Stopwatch sw;
+  sw.Start();
   TfLiteStatus invoke_status = interpreter->Invoke();
+  sw.Stop();
+  printf("Inference duration %u (us)\n", sw.GetEllapsedMicroseconds());
+
   if (invoke_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed on input filename=%s\n",
                          argv[1]);
@@ -111,8 +131,9 @@ int main(int argc, char* argv[]) {
   }
 
   char classification[12] = {0};
+  int m = argmax(output->data.int8, 10);
 
-  switch (output->data.i32[0]) {
+  switch (m) {
     case 0:
       snprintf(classification, 9, "airplane");
       break;
@@ -146,7 +167,7 @@ int main(int argc, char* argv[]) {
     default:
       break;
   }
-  printf("finished: classification=%s\n", classification);
+  printf("classification=%s\n", classification);
 
   return 0;
 }

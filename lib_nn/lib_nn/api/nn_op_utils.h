@@ -38,105 +38,55 @@ extern "C" {
 #define OUT_CHANNEL_GROUPS(CHANNELS)    ( ((CHANNELS) + (VPU_INT8_ACC_PERIOD-1)) >> VPU_INT8_ACC_PERIOD_LOG2 )
 
 
-/**
- *  Rearranges the data in `B` from the standard tensor layout
- * into Bias tensor layout form 1, as required by the 
- * `conv2d_deepin_deepout()` and `conv2d_shallowin_deepout()`
- * functions.
- * 
- * \param B         Bias tensor in standard tensor layout
- * \param C_out     Length of the bias tensor
- * \returns         `B` recast as a `data16_t` pointer.
- */
-data16_t* conv2d_boggle_B(
-    int32_t* B,
-    const unsigned C_out);
-
 
 /**
- * Re-layout the shift-scale tensor to the format expected by the convolution kernels.
+ * Lays out the biases, scales and offsets into the format required for the standard bias-
+ * scale-offset tensor used by many of the API functions.
  * 
- * The input tensor should contain all of the shifts followed by all of the scales, in
- * channel order. 
- *
- * A scratch buffer parameter may optionally be supplied (same size as `shiftscales`).
- * If `scratch` is `NULL`, a buffer will be `malloc`ed (and `free`ed).
- *
- * \param shiftscales   The shift/scale tensor. Updated in-place
- * \param C_out         The number of output channels
- * \param scratch       Optional scratch buffer.
- */
-void conv2d_boggle_shift_scale(
-    int16_t* shiftscales,
-    const unsigned C_out,
-    int16_t* scratch);
-
-
-/**
- * Rearranges the data in kernel tensor `K`, provided in ..nearly... standard tensor
- * layout ( with shape (C_out, K_h, 32/C_in, C_in) corresponding to the
- * output channel, kernel row, kernel column and input channel
- * respectively) into the layout required by `conv2d_deepin_deepout()`.
+ * This is a helper function which consumes separate vectors for each component of the BSO
+ * tensor and rearranges it into the required format. Calls to this function can be avoided
+ * if necessary by storing the data in the layout specified in @ref bso_layout. To understand 
+ * how these values are used, see @ref out_shift_scale.
  * 
- * \param K         Kernel tensor
- * \param K_h       Kernel height
- * \param K_w       Kernel width
- * \param C_in      Input channel count
- * \param C_out     Output Channel count
- */
-void conv2d_sido_boggle_K(
-    int8_t* K,
-    const unsigned K_h,
-    const unsigned K_w,
-    const unsigned C_in,
-    const unsigned C_out);
-
-
-
-/**
- * Lays out the biases, shifts and scales into the layout required for the standard bias-
- * shifts-scale tensor used by many of the API functions.
+ * `bias` is a pointer to a 1-D vector (length `C_out`) of 32-bit biases. `shift1`, `scale`,
+ * `offset_scale`, `offset` and `shift2` are each pointers to 1-D vectors (length `C_out`) 
+ * of 16-bit elements. In each case, the `i`th element corresponds to output channel `i`.
  * 
- * This is a helper function which consumes separate vectors for each component of the BSS
- * tensor and 'boggles' it into the required format. Calls to this function can be avoided
- * if necessary by storing the data in the layout specified in the secion "Bias-Shifts-Scale 
- * Tensor Layout". To understand how these values are used, see the section "Notes on Output
- * Shifts and Scales".
+ * If `bso_out` and `bias` do not point to the same memory location, it will be assumed that
+ * the `bso_out` tensor does not overlap the memory of the `bias`, `shift1`, `scale`, `offset_scale`, 
+ * `offset` and `shift2` vectors. In this case, the `scratch` input will be ignored, and no 
+ * memory will be allocated.
  * 
- * `bias` is a pointer to a 1-D vector with length `C_out` of 32-bit biases. `shift1`, `scale` 
- * and `shift2` are each pointers to 1-D vectors with length `C_out` of 16-bit elements. In
- * each case, the `i`th element corresponds to output channel `i`.
- * 
- * If `bss_out` and `bias` do not point to the same memory location, it will be assumed that
- * the `bss_out` tensor does not overlap the memory of the `bias`, `shift` and `scale`
- * vectors. In this case, the `scratch` input will be ignored, and no memory will be allocated.
- * 
- * If the `bss_out` and `bias` pointers do point to the same memory location, a temporary scratch 
+ * If the `bso_out` and `bias` pointers do point to the same memory location, a temporary scratch 
  * buffer is needed to perform the reformatting. In this case, if the `scratch` parameter is not
  * `NULL`, the memory to which it points will be used as the scratch buffer. If the `scratch` 
  * parameter is `NULL`, memory will be `malloc`ed for a scratch buffer. That memory will be `free`ed
  * before returning.
  * 
- * The `bss_out` tensor must be large enough to hold `(5 * ((C_out + 15)//16) * 16)` elements
- * of type `data16_t`. `((C_out + 15)//16)*16` is the number of output channels rounded up
- * to the nearest multiple of `16`.
+ * The `bso_out` tensor must be large enough to hold `((C_out + 15)//16)` elements
+ * of type `nn_bso_block_t`. `((C_out + 15)//16)*16` is the number of output channels rounded up
+ * to the nearest multiple of @ttref{VPU_INT8_ACC_PERIOD}.
  * 
  * If `scratch` is provided, it must be large enough to store all `C_out` elements of the
- * `bias`, `shift` and `scale` vectors.
+ * `bias`, `shift1`, `scale`, `offset_scale`, `offset` and `shift2` vectors.
  * 
- * \param bss_out   The output tensor to be written
- * \param bias      The bias vector
- * \param shift1    The shift vector
- * \param scale     The scale vector
- * \param shift2    The shift vector
- * \param scratch   An optional scratch buffer, or NULL
- * \param C_out     The number of output channels
+ * @param bso_out       The output tensor to be written
+ * @param bias          The bias vector
+ * @param shift1        The shift vector
+ * @param scale         The scale vector
+ * @param offset_scale  The offset scale
+ * @param offset        The offset
+ * @param shift2        The shift vector
+ * @param scratch       An optional scratch buffer, or NULL
+ * @param C_out         The number of output channels
  */
-void nn_standard_BSS_layout(
-    data16_t* bss_out,
+void nn_standard_BSO_layout(
+    nn_bso_block_t* bso_out,
     int32_t* bias,
     int16_t* shift1,
     int16_t* scale,
+    int16_t* offset_scale,
+    int16_t* offset,
     int16_t* shift2,
     data16_t* scratch,
     const unsigned C_out);

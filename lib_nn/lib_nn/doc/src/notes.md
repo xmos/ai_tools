@@ -189,27 +189,29 @@ Final shift:
     In functions that output 16-bit results, no final shift occurs here.
 
 
-### Note 6: Bias-Shifts-Scale Tensor Layout ###      {#bss_layout}
+### Note 6: Bias-Scale-Offset Tensor Layout ###      {#bso_layout}
 
-In most cases, where a function requires a Bias-Shifts-Scale (BSS) tensor as input, the required layout will
+In most cases, where a function requires a Bias-Scale-Offset (BSO) tensor as input, the required layout will
 be as specified here [0].
 
-The BSS tensor contains information pertaining to the `C_out` output channels of an operation. Such a tensor
-is 3 dimensional and has shape (`ceil(C_out/16.0)`, `5`, `16`) with elements of type `data16_t`.
+The BSO tensor contains information pertaining to the `C_out` output channels of an operation. A BSO tensor
+is 3 dimensional with shape (`ceil(C_out/16.0)`, `7`, `16`) with elements of type `data16_t`.
 
 The first axis corresponds to output channel groups. The `ceil( )` is applied because for the purposes of
-a BSS tensor, the output channel tail must be handled as a full output channel group. [1]
+a BSO tensor, the output channel tail must be handled as a full output channel group. (see @ref c_groups)
 
-The third axis corresponds to the output channel offset within the output channel group. So, all information
-corresponding to output channel `k` will be found in the elements `BSS[(k//16), :, (k%16)]`.
+The third axis corresponds to the output channel offset within the output channel group. All information
+corresponding to output channel `k` will be found in the elements `BSO[(k//16), :, (k%16)]`.
 
-The second axis corresponds to the parameters type, where each index has a specific meaning:
+The second axis corresponds to the specific parameter. The indices are:
 
     0 - Bias high half-word: The most significant 16-bits of the 32-bit bias for the output channel
     1 - Bias low half-word: The least significant 16-bits of the 32-bit bias for the output channel
     2 - Shift1: The first right-shift value; applied to the 32-bit accumulator for a 16-bit result.
     3 - Scale: The scale value; applied after shift1; multiplied by the 16-bit result for a 32-bit product
-    4 - Shift2: The second right-shift value; applied after scale; down-shifts the 32-bit product for an 8-bit result.
+    4 - Offset Scale: Scale for Offset
+    5 - Offset: Multiplied by Offset Scale; product is accumulated into the 32-bit accumulator
+    6 - Shift2: The second right-shift value; applied after scale; down-shifts the 32-bit accumulator for an 8-bit result.
 
 [0]     For general information about how shifts and scales are used, see "Notes on Output Shifts and Scale", 
         for information on how biases are used, see "Notes on Inner Products and Saturation"

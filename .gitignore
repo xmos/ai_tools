@@ -14,6 +14,7 @@ ai_tools_gpu_venv/*
 # build cruft
 _build
 **/.build/
+**/dist/
 *.o
 
 # test cruft

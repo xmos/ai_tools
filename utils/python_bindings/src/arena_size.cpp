@@ -1,6 +1,7 @@
 // Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 #include "arena_size.h"
 
+#include "lib_ops/api/allocator.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/micro/kernels/all_ops_resolver.h"
@@ -20,13 +21,15 @@ namespace xcore {
 //*****************************************
 //*****************************************
 //*****************************************
+constexpr int max_xcore_heap_size = 128000;
+constexpr int xcore_heap_size_adjustment = 2048;
 
-static bool verify_micro_interpreter(const char* model_content,
+static bool verify_micro_interpreter(const char *model_content,
                                      size_t model_buffer_size,
                                      size_t tensor_arena_size) {
   xcore::XCOREInterpreter interpreter = xcore::XCOREInterpreter();
   interpreter.Initialize(model_content, model_buffer_size, tensor_arena_size,
-                         64000);
+                         max_xcore_heap_size);
   if (interpreter.AllocateTensors() == xcore::kXCoreOk) {
     if (interpreter.Invoke() != xcore::kXCoreOk) {
       return false;
@@ -38,31 +41,34 @@ static bool verify_micro_interpreter(const char* model_content,
   return true;
 }
 
-size_t search_tensor_arena_size(const char* model_content,
-                                size_t model_content_size, size_t min_size,
-                                size_t max_size) {
-  size_t align_to = 4;
-  size_t curr_size;
-  size_t return_size = max_size;
+void search_arena_sizes(const char *model_content, size_t model_content_size,
+                        size_t min_arena_size, size_t max_arena_size,
+                        size_t *arena_size, size_t *heap_size) {
+  size_t align_to = 12;
+  size_t curr_arena_size;
+  size_t return_size = max_arena_size;
   bool interpreter_ok;
 
-  while ((max_size - min_size) >= 32) {
-    curr_size = (min_size + max_size) / 2;
+  while ((max_arena_size - min_arena_size) >= 32) {
+    curr_arena_size = (min_arena_size + max_arena_size) / 2;
 
-    if (min_size == curr_size || max_size == curr_size) {
+    if (min_arena_size == curr_arena_size ||
+        max_arena_size == curr_arena_size) {
       break;
     }
 
-    interpreter_ok =
-        verify_micro_interpreter(model_content, model_content_size, curr_size);
+    interpreter_ok = verify_micro_interpreter(model_content, model_content_size,
+                                              curr_arena_size);
     if (interpreter_ok) {
-      return_size = curr_size;
-      max_size = curr_size;
+      return_size = curr_arena_size;
+      max_arena_size = curr_arena_size;
     } else {
-      min_size = curr_size;
+      min_arena_size = curr_arena_size;
     }
   }
-  return return_size + align_to - (return_size % align_to);
+
+  *arena_size = return_size + align_to - (return_size % align_to);
+  *heap_size = xcGetHeapAllocatedSize() + xcore_heap_size_adjustment;
 }
 
 }  // namespace xcore
@@ -77,10 +83,10 @@ size_t search_tensor_arena_size(const char* model_content,
 
 extern "C" {
 
-size_t get_tensor_arena_size(const char* model_content,
-                             size_t model_content_size, size_t max_size) {
-  return xcore::search_tensor_arena_size(model_content, model_content_size,
-                                         1024, max_size);
+void get_arena_sizes(const char *model_content, size_t model_content_size,
+                     size_t max_size, size_t *arena_size, size_t *heap_size) {
+  xcore::search_arena_sizes(model_content, model_content_size, 1024, max_size,
+                            arena_size, heap_size);
 }
 
 }  // extern "C"

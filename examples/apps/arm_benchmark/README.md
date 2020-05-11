@@ -9,7 +9,7 @@
 
 The following unix command will generate a C source file that contains the TensorFlow Lite model as a char array
 
-    > python ../../../third_party/tensorflow/tensorflow/lite/python/convert_file_to_c_source.py --input_tflite_file model_xcore_classifier.tflite --output_header_file src/xcore_model.h --output_source_file src/xcore_model.c --array_variable_name xcore_model --include_guard XCORE_MODEL_H_
+    > python ../../../third_party/tensorflow/tensorflow/lite/python/convert_file_to_c_source.py --input_tflite_file ../../models/CIFAR-10/debug/arm_benchmark/models/model_xcore.tflite --output_header_file src/xcore_model.h --output_source_file src/xcore_model.c --array_variable_name xcore_model --include_guard XCORE_MODEL_H_
 
 ## xCORE
 
@@ -21,7 +21,7 @@ Note, `xcore` is the default target.
 
 Running with the xCORE simulator
 
-    > xsim --args bin/cifar-10.xe ../test_inputs/dog.bin
+    > xsim --args bin/arm_benchmark.xe ../test_inputs/dog.bin
 
 ## x86
 
@@ -31,9 +31,9 @@ Building for x86
 
 Running
 
-    > ./bin/test_model ../test_inputs/ship.bin
+    > ./bin/arm_benchmark ../test_inputs/ship.bin
 
 ## Computing Accuracy on xCORE
 
     > cd test_inputs
-    > ./test_accuracy.py --xe path/to/some.xe
+    > ./test_accuracy.py --xe path/to/arm_benchmark.xe

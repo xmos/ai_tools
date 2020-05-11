@@ -13,14 +13,13 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define ADDR(V, INDEX)      &V[((int)(INDEX))]
 
 WEAK_FUNC
 void nn_conv2d_hstrip_deep(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_h,
         const unsigned K_w,
         const unsigned K_h_stride,
@@ -53,8 +52,8 @@ void nn_conv2d_hstrip_deep(
         const nn_image_t* patch_K = K;
 
         //Initialize accumulators
-        VLDD(&vpu, &BSS->bias_hi);
-        VLDR(&vpu, &BSS->bias_lo);
+        VLDD(&vpu, &BSO->bias_hi);
+        VLDR(&vpu, &BSO->bias_lo);
 
         // These rows are between top and bottom padding
         for(int pr = K_h; pr; pr--){
@@ -109,20 +108,22 @@ void nn_conv2d_hstrip_deep(
         VSETC(&vpu, MODE_S16);
 
         //Saturate to 16-bit values
-        VLSAT(&vpu, BSS->shift1);
+        VLSAT(&vpu, BSO->shift1);
 
         //Load scales into vC
-        VLDC(&vpu, BSS->scale);
+        VLDC(&vpu, BSO->scale);
 
         VSTR(&vpu, mask_vec);
         VCLRDR(&vpu);
         VLMACC(&vpu, mask_vec);
+        VLDC(&vpu, BSO->offset_scale);
+        VLMACC(&vpu, BSO->offset);
 
         //Set mode back to 8-bit
         VSETC(&vpu, MODE_S8);
 
         //Saturate to 8-bit values
-        VLSAT(&vpu, BSS->shift2);
+        VLSAT(&vpu, BSO->shift2);
 
         //Store result in Y
         const unsigned mask16 = 0xFFFF;

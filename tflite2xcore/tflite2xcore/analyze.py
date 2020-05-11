@@ -76,6 +76,6 @@ def analyze_model(model):
     return analysis
 
 
-def calc_tensor_arena_size(model_content):
+def calc_arena_sizes(model_content):
     interpreter = xcore_interpreter.XCOREInterpreter(model_content=model_content)
-    return interpreter.tensor_arena_size
+    return interpreter.tensor_arena_size, interpreter.xcore_heap_size

@@ -8,7 +8,7 @@ void nn_conv2d_hstrip_deep_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
-        const nn_bss_block_t* BSS,
+        const nn_bso_block_t* BSO,
         const unsigned K_h,
         const unsigned K_w,
         const unsigned K_h_stride,
@@ -66,7 +66,7 @@ void nn_conv2d_hstrip_deep_padded(
 #define STACK_Y                 9
 #define STACK_X                 10
 #define STACK_K                 11
-#define STACK_BSS               12
+#define STACK_BSO               12
 #define STACK_CENTER_COLS       STACK_K_W
 #define STACK_WIN_H_STRIDE      STACK_K_H
 
@@ -89,7 +89,7 @@ FUNCTION_NAME:
     {                                           ;   vstr r1[0]                              }
     {   add r11, r3, r0                         ;   vldd r3[0]                              }
     {   add r11, r11, r0                        ;   vldr r11[0]                             }
-    {                                           ;   stw r11, sp[STACK_BSS]                  }
+    {                                           ;   stw r11, sp[STACK_BSO]                  }
     
     {                                           ;   ldw r0, sp[STACK_K_H]                   }
     {                                           ;   ldw r1, sp[STACK_PAD_T]                 }
@@ -491,13 +491,15 @@ FUNCTION_NAME:
             bt rows_left, .L_patch_row_start
         .L_patch_row_end:
 
-        {   shl r11, _32, 3                         ;   ldw tmp, sp[STACK_BSS]                  }
+        {   shl r11, _32, 3                         ;   ldw tmp, sp[STACK_BSO]                  }
         {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vsetc r11                               }
         {   add tmp, tmp, _32                       ;   vlsat tmp[0]                            }
         {                                           ;   vstr r11[0]                             }
         {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
         {                                           ;   vclrdr                                  }
         {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
+        {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
+        {   add tmp, tmp, _32                       ;   vlmacc tmp[0]                           }
         {                                           ;   vsetc r11                               }
         {                                           ;   vlsat tmp[0]                            }
         {   mkmsk tmp, 16                           ;   ldw Q(rows_left), sp[STACK_Y]           }

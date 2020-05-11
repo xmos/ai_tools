@@ -23,10 +23,12 @@ def set_verbosity(verbosity=0):
 
 def _array_msg(arr, style=""):
     msg = f"numpy.ndarray, shape={arr.shape}, dtype={arr.dtype}:\n"
-    if style.endswith("_shift_scale_arr"):
+    if style.endswith("_scale_offset_arr"):
         msg += f"shift_pre:\n{arr[:, 0]}\n"
         msg += f"scale:\n{arr[:, 1]}\n"
-        msg += f"shift_post:\n{arr[:, 2]}"
+        msg += f"offset_scale:\n{arr[:, 2]}\n"
+        msg += f"offset:\n{arr[:, 3]}\n"
+        msg += f"shift_post:\n{arr[:, 4]}"
     else:
         msg += f"{arr}"
     return msg + "\n"

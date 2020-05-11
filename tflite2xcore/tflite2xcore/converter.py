@@ -151,9 +151,11 @@ def optimize_for_xcore(
         pass_mgr.register_pass(passes.MinifyQuantInfoPass())
         pass_mgr.register_pass(passes.MinifyTensorNamesPass())
 
-    pass_mgr.run_passes()
-    if pass_mgr.keep_intermediates:
-        pass_mgr.save_intermediates(intermediates_path)
+    try:
+        pass_mgr.run_passes()
+    finally:
+        if pass_mgr.keep_intermediates:
+            pass_mgr.save_intermediates(intermediates_path)
 
     model.sanity_check()
 

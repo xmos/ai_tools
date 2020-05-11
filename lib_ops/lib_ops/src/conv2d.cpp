@@ -4,7 +4,8 @@
 #include <iostream>
 
 #include "lib_ops/api/allocator.h"
-#include "lib_ops/api/logging.h"
+#include "lib_ops/api/benchmarking.h"
+#include "lib_ops/api/tracing.h"
 
 namespace xcore {
 namespace conv {
@@ -13,7 +14,7 @@ struct Conv2DThreadData {
   nn_image_t *Y;
   const nn_image_t *X;
   const nn_tensor_t *K;
-  const nn_bss_block_t *BSS;
+  const nn_bso_block_t *BSO;
 };
 
 //**************************************
@@ -32,7 +33,7 @@ struct Conv2DDeepThreadData {
 extern "C" {
 ATTRIBUTE_THREAD_FUNCTION void conv2d_deep_thread_worker(void *context) {
   Conv2DDeepThreadData *td = (Conv2DDeepThreadData *)context;
-  conv2d_deep(td->data.Y, td->data.X, td->data.K, td->data.BSS, td->plan,
+  conv2d_deep(td->data.Y, td->data.X, td->data.K, td->data.BSO, td->plan,
               td->job);
 }
 }
@@ -43,7 +44,7 @@ Conv2D_Deep::Conv2D_Deep(const Conv2DParams &params,
 
 XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                               int32_t Y_h, int32_t Y_w, int32_t C_out) {
-  LOG_TRACE(
+  TRACE_INFO(
       "Conv2D_Deep Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
       "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
@@ -78,7 +79,7 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   for (int i = 0; i < par_regions.size; i++) {
     const ParRegion &region = par_regions[i];
-    LOG_TRACE(
+    TRACE_INFO(
         "Conv2D_Deep Init id=%p region top=%ld left=%ld rows=%ld cols=%ld\n",
         this, region.top, region.left, region.rows, region.cols);
     job_params[i].start.rows = region.top;
@@ -96,8 +97,10 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 }
 
 XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
-                              const int16_t *BSS) {
-  LOG_TRACE("Conv2D_Deep Eval id=%p\n", this);
+                              const int16_t *BSO) {
+  TRACE_INFO("Conv2D_Deep Eval id=%p\n", this);
+  TIMER_START();
+
   Dispatcher *dispatcher = GetDispatcher();
 
   size_t stack_words;
@@ -109,7 +112,7 @@ XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
     deep_thread_data[i].data.Y = (nn_image_t *)Y;
     deep_thread_data[i].data.X = (const nn_image_t *)X;
     deep_thread_data[i].data.K = (const nn_tensor_t *)K;
-    deep_thread_data[i].data.BSS = (const nn_bss_block_t *)BSS;
+    deep_thread_data[i].data.BSO = (const nn_bso_block_t *)BSO;
     deep_thread_data[i].plan = &plan_;
     deep_thread_data[i].job = &jobs_[i];
     dispatcher->AddThread(conv2d_deep_thread_worker,
@@ -119,6 +122,7 @@ XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
 
   dispatcher->Join();
 
+  TIMER_STOP("Conv2D_Deep id=%p", this);
   return kXCoreOk;
 }
 
@@ -138,7 +142,7 @@ struct Conv2DShallowThreadData {
 extern "C" {
 ATTRIBUTE_THREAD_FUNCTION void conv2d_shallow_thread_worker(void *context) {
   Conv2DShallowThreadData *td = (Conv2DShallowThreadData *)context;
-  conv2d_shallowin(td->data.Y, td->data.X, td->data.K, td->data.BSS, td->plan,
+  conv2d_shallowin(td->data.Y, td->data.X, td->data.K, td->data.BSO, td->plan,
                    td->job);
 }
 }
@@ -149,7 +153,7 @@ Conv2D_Shallow::Conv2D_Shallow(const Conv2DParams &params,
 
 XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                                  int32_t Y_h, int32_t Y_w, int32_t C_out) {
-  LOG_TRACE(
+  TRACE_INFO(
       "Conv2D_Shallow Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
       "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
@@ -184,7 +188,7 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   for (int i = 0; i < par_regions.size; i++) {
     const ParRegion &region = par_regions[i];
-    LOG_TRACE(
+    TRACE_INFO(
         "Conv2D_Shallow Init id=%p region top=%ld left=%ld rows=%ld cols=%ld\n",
         this, region.top, region.left, region.rows, region.cols);
     job_params[i].start.rows = region.top;
@@ -203,8 +207,10 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 }
 
 XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
-                                 const int16_t *BSS) {
-  LOG_TRACE("Conv2D_Shallow Eval id=%p\n", this);
+                                 const int16_t *BSO) {
+  TRACE_INFO("Conv2D_Shallow Eval id=%p\n", this);
+  TIMER_START();
+
   Dispatcher *dispatcher = GetDispatcher();
 
   size_t stack_words;
@@ -216,7 +222,7 @@ XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
     shallow_thread_data[i].data.Y = (nn_image_t *)Y;
     shallow_thread_data[i].data.X = (const nn_image_t *)X;
     shallow_thread_data[i].data.K = (const nn_tensor_t *)K;
-    shallow_thread_data[i].data.BSS = (const nn_bss_block_t *)BSS;
+    shallow_thread_data[i].data.BSO = (const nn_bso_block_t *)BSO;
     shallow_thread_data[i].plan = &plan_;
     shallow_thread_data[i].job = &jobs_[i];
     dispatcher->AddThread(conv2d_shallow_thread_worker,
@@ -226,6 +232,7 @@ XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
 
   dispatcher->Join();
 
+  TIMER_STOP("Conv2D_Shallow id=%p", this);
   return kXCoreOk;
 }
 
@@ -244,8 +251,7 @@ struct Conv2D1x1ThreadData {
 extern "C" {
 ATTRIBUTE_THREAD_FUNCTION void conv2d_1x1_thread_worker(void *context) {
   Conv2D1x1ThreadData *td = (Conv2D1x1ThreadData *)context;
-  conv2d_1x1(td->data.Y, td->data.X, td->data.K, (data16_t *)td->data.BSS,
-             td->plan);
+  conv2d_1x1(td->data.Y, td->data.X, td->data.K, td->data.BSO, td->plan);
 }
 }
 
@@ -255,7 +261,7 @@ Conv2D_1x1::Conv2D_1x1(const Conv2DParams &params,
 
 XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                              int32_t Y_h, int32_t Y_w, int32_t C_out) {
-  LOG_TRACE(
+  TRACE_INFO(
       "Conv2D_1x1 Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
       "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
@@ -282,7 +288,7 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   for (int i = 0; i < par_regions.size; i++) {
     const ParRegion &region = par_regions[i];
-    LOG_TRACE(
+    TRACE_INFO(
         "Conv2D_1x1 Init id=%p region top=%ld left=%ld rows=%ld cols=%ld\n",
         this, region.top, region.left, region.rows, region.cols);
 
@@ -295,13 +301,13 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
     conv2d_1x1_init(&plans_[i], &in_params, &out_params, region.top,
                     region.left, region.rows * region.cols);
   }
-
   return kXCoreOk;
 }
 
 XCoreStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
-                             const int16_t *BSS) {
-  LOG_TRACE("Conv2D_1x1 Eval id=%p\n", this);
+                             const int16_t *BSO) {
+  TRACE_INFO("Conv2D_1x1 Eval id=%p\n", this);
+  TIMER_START();
 
   Dispatcher *dispatcher = GetDispatcher();
 
@@ -314,7 +320,7 @@ XCoreStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
     thread_data[i].data.Y = (nn_image_t *)Y;
     thread_data[i].data.X = (const nn_image_t *)X;
     thread_data[i].data.K = (const nn_tensor_t *)K;
-    thread_data[i].data.BSS = (const nn_bss_block_t *)BSS;
+    thread_data[i].data.BSO = (const nn_bso_block_t *)BSO;
     thread_data[i].plan = &plans_[i];
     dispatcher->AddThread(conv2d_1x1_thread_worker,
                           reinterpret_cast<void *>(&thread_data[i]),
@@ -323,6 +329,7 @@ XCoreStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
 
   dispatcher->Join();
 
+  TIMER_STOP("Conv2D_1x1 id=%p", this);
   return kXCoreOk;
 }
 
@@ -343,7 +350,7 @@ extern "C" {
 ATTRIBUTE_THREAD_FUNCTION void conv2d_depthwise_thread_worker(void *context) {
   Conv2DDepthwiseThreadData *td = (Conv2DDepthwiseThreadData *)context;
   conv2d_depthwise(td->data.Y, td->data.X, td->data.K,
-                   (nn_bss_block_t *)td->data.BSS, td->plan, td->job);
+                   (nn_bso_block_t *)td->data.BSO, td->plan, td->job);
 }
 }
 
@@ -353,7 +360,7 @@ Conv2D_Depthwise::Conv2D_Depthwise(const Conv2DParams &params,
 
 XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                                    int32_t Y_h, int32_t Y_w, int32_t C_out) {
-  LOG_TRACE(
+  TRACE_INFO(
       "Conv2D_Depthwise Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
       "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
@@ -388,7 +395,7 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   for (int i = 0; i < par_regions.size; i++) {
     const ParRegion &region = par_regions[i];
-    LOG_TRACE(
+    TRACE_INFO(
         "Conv2D_Depthwise Init id=%p region top=%ld left=%ld rows=%ld "
         "cols=%ld\n",
         this, region.top, region.left, region.rows, region.cols);
@@ -414,8 +421,9 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 }
 
 XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
-                                   const int16_t *BSS) {
-  LOG_TRACE("Conv2D_Depthwise Eval id=%p\n", this);
+                                   const int16_t *BSO) {
+  TRACE_INFO("Conv2D_Depthwise Eval id=%p\n", this);
+  TIMER_START();
 
   Dispatcher *dispatcher = GetDispatcher();
 
@@ -428,7 +436,7 @@ XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
     thread_data[i].data.Y = (nn_image_t *)Y;
     thread_data[i].data.X = (const nn_image_t *)X;
     thread_data[i].data.K = (const nn_tensor_t *)K;
-    thread_data[i].data.BSS = (const nn_bss_block_t *)BSS;
+    thread_data[i].data.BSO = (const nn_bso_block_t *)BSO;
     thread_data[i].plan = &plan_;
     thread_data[i].job = &jobs_[i];
     dispatcher->AddThread(conv2d_depthwise_thread_worker,
@@ -438,6 +446,7 @@ XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
 
   dispatcher->Join();
 
+  TIMER_STOP("Conv2D_Depthwise id=%p", this);
   return kXCoreOk;
 }
 

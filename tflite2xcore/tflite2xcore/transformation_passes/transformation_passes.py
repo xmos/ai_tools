@@ -318,11 +318,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
     @logging.log_method_output()
     def _unified_bias(self):
         biases = self._biases.numpy
-        arr_64 = (
-            biases.astype(np.int64)
-            - self._zero_point_bias().astype(np.int64)
-            + np.int64(np.round(self._output_zero_point / self._multiplier()))
-        )
+        arr_64 = biases.astype(np.int64) - self._zero_point_bias().astype(np.int64)
         arr_32 = np.clip(arr_64, -(2 ** 31), 2 ** 31 - 1).astype(np.int32)
         if np.any(arr_32 != arr_64):
             self.logger.warning("_unified_bias saturated 32 bit!")
@@ -348,6 +344,14 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
         )
         return np.stack([new_bias[:, :, 1], new_bias[:, :, 0]], axis=1)
 
+    @property
+    def _SHIFT_ADJUSTMENT(self):
+        # NOTE: If we would not need to add the offset separately, the intermediate
+        #       could never saturate, and this value would be 8. But decreasing to 7
+        #       means that we get an extra bit of headroom in the intermediate.
+        # TODO: investigate if this could be calculated/estimated from the parameters
+        return 7
+
     def _shift_scale(self):
         multiplier = self._multiplier()
         # NOTE: VLMUL expects one factor in Q2.14
@@ -360,8 +364,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
                 rshift[j] -= 1
                 scale[j] /= 2
             # we are using 16 bits instead of 8 so we need to adjust the shift
-            # NOTE: VDEPTH8 shifts down by 8 bits, not 7 as stated on some pages of the ISA
-            rshift[j] -= 8
+            rshift[j] -= self._SHIFT_ADJUSTMENT
 
         bias_size = self._biases.numpy.size
         if len(scale) == 1:
@@ -376,18 +379,22 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
 
     @property
     @abstractmethod
-    def _MAX_POST_SHIFT(self):
+    def _OUTPUT_BITS(self):
         pass
 
+    @property
+    def _MAX_POST_SHIFT(self):
+        return 22 + self._SHIFT_ADJUSTMENT - self._OUTPUT_BITS
+
     @logging.log_method_output()
-    def _shift_scale_arr(self):
+    def _scale_offset_arr(self):
         # calculate right shift/scale
         rshift, scale = self._shift_scale()
 
         # zero pad and reshape into appropriate array
         new_shape = (-1, ACC_PERIOD)
-        rshift = self.__pad_to_acc_period(rshift).reshape(new_shape)
-        scale = self.__pad_to_acc_period(scale).reshape(new_shape)
+        rshift = self.__pad_to_acc_period(rshift)
+        scale = self.__pad_to_acc_period(scale)
 
         # split left and right shift into pre and post scaling shifts
         shift_pre = np.maximum(rshift, 0)
@@ -398,28 +405,55 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
             raise ValueError(
                 "Negative shift_post encountered: " f"{logging._array_msg(shift_post)}"
             )
-        return np.stack([shift_pre, scale, shift_post], axis=1)
 
-    def _bss_arr(self):
-        return np.concatenate([self._bias_arr(), self._shift_scale_arr()], axis=1)
+        # calculate offset
+        raw_offset = (
+            np.float64(self._output_zero_point)
+            * 2 ** shift_post.astype(np.float64)
+            * 2 ** (self._OUTPUT_BITS - 8)
+        ).flatten()
+
+        self.logger.xdebug(
+            "raw_offset:\n" + logging._array_msg(raw_offset.astype(np.int32))
+        )
+        offset_scale = np.round(np.sqrt(np.abs(raw_offset))).astype(np.int16)
+        offset = np.zeros(offset_scale.shape, dtype=offset_scale.dtype)
+        pos_ind = offset_scale > 0
+        offset[pos_ind] = np.round(raw_offset[pos_ind] / offset_scale[pos_ind]).astype(
+            np.int16
+        )
+
+        return np.stack(
+            [
+                shift_pre.reshape(new_shape),
+                scale.reshape(new_shape),
+                offset_scale.reshape(new_shape),
+                offset.reshape(new_shape),
+                shift_post.reshape(new_shape),
+            ],
+            axis=1,
+        )
+
+    def _bso_arr(self):
+        return np.concatenate([self._bias_arr(), self._scale_offset_arr()], axis=1)
 
     def mutate_biases(self, op):
         with self.using(op):
             subgraph = self._op.subgraph
 
-            # calculate the bias/shift/scale tensor
-            bss = self._bss_arr()
+            # calculate the bias/scale/offset tensor
+            bso = self._bso_arr()
 
             # create and populate new bias tensor
             new_biases = subgraph.create_tensor(
                 f"{self._op.name}/bias_shift_scale",
                 TensorType.INT16,
-                bss.shape,
+                bso.shape,
                 isinput=self._biases in subgraph.inputs,
                 isoutput=self._biases in subgraph.outputs,
                 consumers=[self._op],
             )
-            new_biases.buffer.data = bss
+            new_biases.buffer.data = bso
 
             # replace old tensor
             self._biases.consumers.remove(self._op)

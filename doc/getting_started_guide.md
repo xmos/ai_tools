@@ -8,7 +8,7 @@ The XMOS AI tools are comprised of three components:
 
 This document explains how to get started with the tflite2xcore model conversion utility.  This utility is used to transform a a quantized TensorFlow Lite model to a format optimized for xcore.ai.  See the [TensorFlow Lite Getting Started Guide](https://www.tensorflow.org/lite/guide/get_started) for instructions on converting and quantizing your TensorFLow model.
 
-**Later this document will be extend with instructions on deploying your converted model to the xcore.ai development kit**
+**Later this document will be extended with instructions on deploying your converted model to the xcore.ai development kit**
 
 # Requirements
 
@@ -31,17 +31,19 @@ Activate the environment
 
     > conda activate xcore_env
 
+You may need to specify the fully-qualified path to your environment.
+
 (Step 2) Install tflite2xcore
 
     > pip install tflite2xcore-0.1.0.tar.gz 
 
 (Step 3) Test the installation
 
-The `xformer.py` script is used to transform a quantized TensorFlow Lite model to a format optimized for xcore.ai.  Run the following command to test the transformer on the `model_quant.tflite` test model provided.
-  
+The `xformer.py` script is used to transform a quantized TensorFlow Lite model to a format optimized for xcore.ai.  Run the following command to test the model conversion utility on the example `model_quant.tflite` test model provided:
+
     > xformer.py model_quant.tflite model_xcore.tflite
 
-The `tflite_visualize.py` script can be used to visualize a TensorFlow Lite model, including those converted for xcore.ai.  You can visualize the test model conversion with the following command.
+Included in the installation, the `tflite_visualize.py` script can be used to visualize a TensorFlow Lite model, including those converted for xcore.ai.  You can visualize the test model conversion with the following command:
 
     > tflite_visualize.py model_xcore.tflite -o model_xcore.html
 
@@ -53,7 +55,7 @@ Follow step (3) in "Installing & Testing tflite2xcore".  But, substitute the exa
 
 # TensorFlow Lite Operators Optimized for xcore.ai
 
-Below is a list of TensorFlow Lite Operators that have been optimized for xcore.ai.  Depending on the parameters of the operator, the optimized implementation will be 10-50 times faster than the reference implementation.
+Below is a list of TensorFlow Lite Operators that have been optimized for xcore.ai.  Depending on the parameters of the operator, the optimized implementation will be 10-50 times faster than the reference implementation, which will be used for all other operators.
 
 - CONV_2D
 - FULLY_CONNECTED
@@ -69,4 +71,4 @@ Additional operators will be optimized in future releases.
 
 # Deploying Your Model
 
-**No deployment steps can be taken t this time.**
+**No deployment steps can be taken at this time.**

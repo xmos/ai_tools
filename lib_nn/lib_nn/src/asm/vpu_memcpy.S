@@ -39,10 +39,10 @@ FUNCTION_NAME:
         {   add src, src, _32           ;   vstr dst[0]                 }
         {   add dst, dst, _32           ;   bt len , .L_loop_top        }
 .L_loop_end:
-
-    {   mkmsk tail, tail            ;   vldr src[0]                 }
+    {                               ;   bf tail, .Lfunc_end         }
     // FNOP
-/**/vstrpv dst[0], tail
+/**/{   mkmsk tail, tail            ;   vldr src[0]                 }
+    vstrpv dst[0], tail
 
 .Lfunc_end:
     retsp NSTACKWORDS

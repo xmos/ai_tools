@@ -18,6 +18,13 @@
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_deep
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
+
+
 
 
 
@@ -44,15 +51,6 @@ static void check_Y(
 
     TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
 }
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1001,6 +999,105 @@ void test_nn_conv2d_hstrip_tail_deep_padded_case5()
 
 
 
+
+
+#define CHANS_IN        (VPU_INT8_EPV)
+#define CHANS_OUT       (4)
+#define X_HEIGHT        (1)
+#define X_WIDTH         (1)
+#define Y_HEIGHT        (1)
+#define Y_WIDTH         (1)
+#define K_h             (1)
+#define K_w             (1)
+#define K_hstride       (1)
+void test_nn_conv2d_hstrip_tail_deep_padded_case6()
+{
+    PRINTF("%s...\n", __func__);
+
+    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
+
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][K_h][K_w][CHANS_IN];
+
+    struct {
+        int32_t bias[CHANS_OUT];
+        int16_t shift1[CHANS_OUT];
+        int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
+        int16_t shift2[CHANS_OUT];
+    } BSO;
+
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
+
+    nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
+
+    nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
+    nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
+
+    int8_t zero_point_vec[VPU_INT8_EPV];
+
+    memset(zero_point_vec, 0, sizeof(zero_point_vec));
+    memset(X, 0, sizeof(X));
+    memset(K, 0, sizeof(K));
+
+
+    for(int k = 0; k < y_params.channels; k++){
+        BSO.bias[k] = ((k % 2) == 0)? -128 : -127;
+        BSO.shift1[k]   = 0;
+        BSO.scale[k]    = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k]       = 0;
+    }
+
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, 
+                            (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
+
+    
+    int pad_t = 0;
+    int pad_b = 0;
+    int pad_l = 0;
+    int pad_r = 0;
+
+    nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
+
+    mem_stride_t k_cout_stride = -K_h*K_w*x_params.channels;
+    nn_tensor_t* K_init = &K[CHANS_OUT-1][0][0][0];
+
+
+    memset(Y, 0xCC, sizeof(Y));
+    nn_conv2d_hstrip_tail_deep_padded((nn_image_t*) Y, X_patch_start, K_init, 
+                                    (nn_bso_block_t*) &bso, K_h, K_w, K_hstride, x_params.channels, 
+                                    pad_t, pad_b, pad_l, pad_r, (x_params.width-K_w)*x_params.channels, 
+                                    k_cout_stride, y_params.channels, Y_WIDTH, zero_point_vec, CHANS_OUT);
+
+
+    for(unsigned row = 0; row < y_params.height; row++){
+        for(unsigned col = 0; col < y_params.width; col++){
+            for(unsigned chn = 0; chn < y_params.channels; chn++){
+                
+                int8_t y_exp = ((chn % 2) == 0)? NEG_SAT_VAL : -127;
+
+                TEST_ASSERT_EQUAL(y_exp, Y[row][col][chn]);
+            }
+        }
+    }
+}
+#undef CHANS_IN  
+#undef CHANS_OUT
+#undef X_HEIGHT  
+#undef X_WIDTH   
+#undef Y_HEIGHT  
+#undef Y_WIDTH   
+#undef K_h       
+#undef K_w       
+#undef K_hstride 
+
+
+
+
+
 void test_nn_conv2d_hstrip_tail_deep_padded()
 {
     UNITY_SET_FILE();
@@ -1011,4 +1108,5 @@ void test_nn_conv2d_hstrip_tail_deep_padded()
     RUN_TEST(test_nn_conv2d_hstrip_tail_deep_padded_case3);
     RUN_TEST(test_nn_conv2d_hstrip_tail_deep_padded_case4);
     RUN_TEST(test_nn_conv2d_hstrip_tail_deep_padded_case5);
+    RUN_TEST(test_nn_conv2d_hstrip_tail_deep_padded_case6);
 }

@@ -26,7 +26,7 @@ TEST(allocator, test_allocate) {
   allocated_size = xcGetHeapAllocatedSize();
   TEST_ASSERT_EQUAL_INT(allocated_size, data_size);
 
-  free_size = allocator.GetFreeSize();
+  free_size = xcGetHeapFreeSize();
   TEST_ASSERT_EQUAL_INT(free_size, buffer_size - data_size);
 }
 
@@ -140,7 +140,8 @@ TEST(allocator, test_reset) {
 TEST(allocator, test_align) {
   size_t buffer_size = 100;
   void *buffer[buffer_size];
-  size_t data_size = 21;  // must NOT be multiple of 4
+  size_t data_size = 21;          // must NOT be multiple of 4
+  size_t aligned_data_size = 24;  // must be multiple of 4
   void *data1;
   void *data2;
   size_t allocated_size_data1 = 0;
@@ -151,15 +152,11 @@ TEST(allocator, test_align) {
   data1 = xcMalloc(data_size);
   TEST_ASSERT_NOT_NULL(data1);
   allocated_size_data1 = xcGetHeapAllocatedSize();
-  TEST_ASSERT_EQUAL_INT(allocated_size_data1, data_size);
+  TEST_ASSERT_EQUAL_INT(aligned_data_size, allocated_size_data1);
   data2 = xcMalloc(data_size);
   TEST_ASSERT_NOT_NULL(data2);
   allocated_size_data2 = xcGetHeapAllocatedSize();
-  TEST_ASSERT_GREATER_THAN_INT(data_size,
-                               (allocated_size_data2 - allocated_size_data1));
-
-  int mod4_diff = ((char *)data2 - (char *)data1) % 4;
-  TEST_ASSERT_EQUAL_INT(mod4_diff, 0);
+  TEST_ASSERT_EQUAL_INT((aligned_data_size * 2), allocated_size_data2);
 }
 
 TEST_GROUP_RUNNER(allocator) {

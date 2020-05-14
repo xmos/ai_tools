@@ -6,9 +6,9 @@
 
 namespace xcore {
 
-size_t search_tensor_arena_size(const char* model_content,
-                                size_t model_content_size, size_t min_size,
-                                size_t max_size);
+void search_arena_sizes(const char *model_content, size_t model_content_size,
+                        size_t min_arena_size, size_t max_arena_size,
+                        size_t *arena_size, size_t *heap_size);
 
 }  // namespace xcore
 

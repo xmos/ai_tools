@@ -24,11 +24,11 @@ set(LIB_OPS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../lib_ops")
 #**********************
 # Build flags
 #**********************
+set(BUILD_FLAGS "-g -DTF_LITE_DISABLE_X86_NEON -O3")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(BUILD_FLAGS "-g -DTF_LITE_DISABLE_X86_NEON -O3")
 set(CMAKE_CXX_FLAGS ${BUILD_FLAGS})
-set(CMAKE_C_FLAGS ${BUILD_FLAGS})
+set(CMAKE_C_FLAGS "${BUILD_FLAGS} -std=c99")
 
 #**********************
 # Build shared library
@@ -75,6 +75,9 @@ file (GLOB XCORE_SOURCES
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/*.cc"
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/*.c"
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/*.c"
+  "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/deep/*.c"
+  "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/depthwise/*.c"
+  "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/shallow/*.c"
   "${LIB_OPS_SOURCE_DIR}/lib_ops/src/*.c"
   "${LIB_OPS_SOURCE_DIR}/lib_ops/src/*.cpp"
 )

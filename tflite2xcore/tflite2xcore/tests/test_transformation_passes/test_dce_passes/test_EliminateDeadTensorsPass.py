@@ -2,7 +2,7 @@
 
 import pytest
 
-from tflite2xcore.transformation_passes import RemoveDanglingTensorsPass
+from tflite2xcore.transformation_passes import EliminateDeadTensorsPass
 from tflite2xcore.xcore_schema import TensorType
 
 from .conftest import model, count_tensors, add_dangling_tensor
@@ -15,7 +15,7 @@ from .conftest import model, count_tensors, add_dangling_tensor
 
 @pytest.fixture()
 def trf_pass():
-    return RemoveDanglingTensorsPass()
+    return EliminateDeadTensorsPass()
 
 
 #  ----------------------------------------------------------------------------

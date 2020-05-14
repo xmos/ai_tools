@@ -20,7 +20,7 @@ class FullyConnected_16 {
 
   XCoreStatus Init(int32_t C_in, int32_t C_out);
   XCoreStatus Eval(int16_t* Y, const int8_t* W, const int8_t* X,
-                   const int16_t* BSS);
+                   const int16_t* BSO);
 
  private:
   nn_fully_connected_plan_t plan_;

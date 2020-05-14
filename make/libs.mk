@@ -7,6 +7,7 @@ LIBS_INCLUDES := \
 	-I$(LIB_OPS_DIR)
 
 LIBS_VPATH += \
+	$(LIB_LOGGING_DIR) \
 	$(LIB_NN_DIR) \
 	$(LIB_OPS_DIR)
 
@@ -16,6 +17,7 @@ LIBS_SOURCES := \
 	lib_nn/src/c/nn_operator.c \
 	lib_nn/src/c/nn_operator_conv.c \
 	lib_nn/src/c/conv2d_deep.c \
+	lib_nn/src/c/conv2d_shallowin.c \
 	lib_nn/src/c/conv2d_1x1.c \
 	lib_nn/src/c/conv2d_depthwise.c \
 	lib_nn/src/c/avgpool2d.c \
@@ -31,7 +33,9 @@ LIBS_SOURCES := \
 	lib_nn/src/c/util/shallow/nn_conv2d_hstrip_tail_shallowin.c \
 	lib_nn/src/c/util/depthwise/nn_conv2d_hstrip_depthwise.c \
 	lib_nn/src/c/util/depthwise/nn_conv2d_hstrip_depthwise_padded.c \
-	lib_ops/src/operator_dispatcher.cpp \
+	lib_ops/src/allocator.c \
+	lib_ops/src/benchmarking.cpp \
+	lib_ops/src/dispatcher.cpp \
 	lib_ops/src/conv2d.cpp \
 	lib_ops/src/fully_connected.cpp\
 	lib_ops/src/activations.cpp \
@@ -41,7 +45,6 @@ LIBS_SOURCES := \
 
 ifneq ($(TARGET), x86)
 	LIBS_SOURCES += \
-		lib_nn/src/asm/conv2d_shallowin_deepout_block.S \
 		lib_nn/src/asm/conv2d_1x1.S \
 		lib_nn/src/asm/fully_connected_16.S \
 		lib_nn/src/asm/avgpool2d.S \
@@ -51,13 +54,14 @@ ifneq ($(TARGET), x86)
 		lib_nn/src/asm/vpu_memcpy.S \
 		lib_nn/src/asm/requantize_16_to_8.S \
 		lib_nn/src/asm/lookup8.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_deep.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_deep_padded.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_tail_deep.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_tail_deep_padded.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_depthwise.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_depthwise_bias_adj.S \
-		lib_nn/src/asm/util/nn_compute_hstrip_depthwise_padded.S \
-		lib_nn/src/asm/util/nn_compute_patch_depthwise.S \
-		lib_nn/src/asm/util/nn_compute_patch_depthwise_padded.S
+		lib_nn/src/asm/util/shallow/nn_conv2d_hstrip_shallowin.S \
+		lib_nn/src/asm/util/shallow/nn_conv2d_hstrip_shallowin_padded.S \
+		lib_nn/src/asm/util/shallow/nn_conv2d_hstrip_tail_shallowin.S \
+		lib_nn/src/asm/util/shallow/nn_conv2d_hstrip_tail_shallowin_padded.S \
+		lib_nn/src/asm/util/deep/nn_conv2d_hstrip_deep.S \
+		lib_nn/src/asm/util/deep/nn_conv2d_hstrip_deep_padded.S \
+		lib_nn/src/asm/util/deep/nn_conv2d_hstrip_tail_deep.S \
+		lib_nn/src/asm/util/deep/nn_conv2d_hstrip_tail_deep_padded.S \
+		lib_nn/src/asm/util/depthwise/nn_conv2d_hstrip_depthwise_padded.S \
+		lib_nn/src/asm/util/depthwise/nn_conv2d_hstrip_depthwise.S
 endif

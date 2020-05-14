@@ -33,8 +33,8 @@ class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
         return XCOREOpCodes.XC_fc_deepin_anyout
 
     @property
-    def _MAX_POST_SHIFT(self):
-        return 32 - 16 - 2  # this is because the output is 16 bit
+    def _OUTPUT_BITS(self):
+        return 16
 
     @log_method_output()
     def _zero_point_bias(self):
@@ -49,6 +49,7 @@ class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
             )
 
             self._replace_weights(arr)
+            self._log_weights()
 
     def mutate_output(self, op):
         with self.using(op):

@@ -14,13 +14,6 @@ extern "C" {
 namespace xcore {
 namespace conv {
 
-struct Conv2DUnpaddedShape {
-  int32_t K_h;
-  int32_t K_w;
-  int32_t C_in;
-  int32_t C_out;
-};
-
 struct Conv2DPadding {
   int8_t top;
   int8_t left;
@@ -44,7 +37,7 @@ class Conv2D_Deep {
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                    int32_t Y_w, int32_t C_out);
   XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
-                   const int16_t* BSS);
+                   const int16_t* BSO);
 
   Conv2DParams params;
   ParRegionArray par_regions;
@@ -54,28 +47,22 @@ class Conv2D_Deep {
   nn_conv2d_deep_job_t* jobs_;
 };
 
-class Conv2D_SIDO {
+class Conv2D_Shallow {
  public:
-  Conv2D_SIDO(const Conv2DParams& params,
-              const Conv2DUnpaddedShape& unpadded_shape,
-              const padding_mode_t padding_mode)
-      : params(params),
-        unpadded_shape(unpadded_shape),
-        padding_mode_(padding_mode) {}
-  ~Conv2D_SIDO() {}
+  Conv2D_Shallow(const Conv2DParams& params, const ParRegionArray& par_regions);
+  ~Conv2D_Shallow() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                   int32_t Y_w, int32_t zero_point, const int8_t* K,
-                   const int16_t* bias);
+                   int32_t Y_w, int32_t C_out);
   XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
-                   const int16_t* SS);
+                   const int16_t* BSO);
 
   Conv2DParams params;
-  Conv2DUnpaddedShape unpadded_shape;
+  ParRegionArray par_regions;
 
  private:
-  nn_conv2d_sido_params_t params_;
-  padding_mode_t padding_mode_;
+  nn_conv2d_shallowin_plan_t plan_;
+  nn_conv2d_shallowin_job_t* jobs_;
 };
 
 class Conv2D_1x1 {
@@ -84,10 +71,9 @@ class Conv2D_1x1 {
   ~Conv2D_1x1() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                   int32_t Y_w, int32_t C_out, int32_t start_row,
-                   int32_t start_col, int32_t out_pixels);
+                   int32_t Y_w, int32_t C_out);
   XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
-                   const int16_t* BSS);
+                   const int16_t* BSO);
 
   Conv2DParams params;
   ParRegionArray par_regions;
@@ -105,7 +91,7 @@ class Conv2D_Depthwise {
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                    int32_t Y_w, int32_t C_out);
   XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
-                   const int16_t* BSS);
+                   const int16_t* BSO);
 
   Conv2DParams params;
   ParRegionArray par_regions;

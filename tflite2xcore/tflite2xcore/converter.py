@@ -12,8 +12,9 @@ class CleanupManager(PassManager):
         super().__init__(
             model,
             passes=[
-                passes.RemoveDanglingTensorsPass(),
-                passes.RemoveUnusedBuffersPass(),
+                passes.EliminateDeadOperatorsPass(),
+                passes.EliminateDeadTensorsPass(),
+                passes.EliminateDeadBuffersPass(),
             ],
             **kwargs
         )
@@ -89,7 +90,20 @@ def optimize_for_xcore(
     pass_mgr = InputOutputCanonicalizationManager(
         model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
+
+    # canonicalize convolutions
+    pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
+    pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
+
+    # canonicalize word alignment
+    pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())
+
+    # word alignment canonicalization introduces new pads, so first fuse then split
+    pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
     pass_mgr.register_pass(passes.SplitPaddingPass())
+
+    # need to cleanup after the first round of canonicalization
+    pass_mgr.register_passes(CleanupManager())
 
     # TODO: remove this
     if remove_softmax:
@@ -101,6 +115,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.ReplaceLogisticPass())
 
     pass_mgr.register_pass(passes.Replace1x1Conv2dPass())
+    pass_mgr.register_pass(passes.ReplaceShallowinConv2dPass())
     pass_mgr.register_pass(passes.ReplaceDepthwiseConv2dPass())
     pass_mgr.register_pass(passes.ReplaceDeepConv2dPass())
 
@@ -114,8 +129,9 @@ def optimize_for_xcore(
 
     pass_mgr.register_pass(passes.LegalizeXCLookupTablePass())
     pass_mgr.register_pass(passes.LegalizeXCFullyConnectedPass())
-    pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXC1x1ConvPass())
+    pass_mgr.register_pass(passes.LegalizeXCShallowinConvPass())
+    pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
 
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
@@ -135,13 +151,15 @@ def optimize_for_xcore(
         pass_mgr.register_pass(passes.MinifyQuantInfoPass())
         pass_mgr.register_pass(passes.MinifyTensorNamesPass())
 
-    pass_mgr.run_passes()
+    try:
+        pass_mgr.run_passes()
+    finally:
+        if pass_mgr.keep_intermediates:
+            pass_mgr.save_intermediates(intermediates_path)
+
     model.sanity_check()
 
     model.description = model.description + " + XMOS optimized."
-
-    if pass_mgr.keep_intermediates:
-        pass_mgr.save_intermediates(intermediates_path)
 
 
 def convert(

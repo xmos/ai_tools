@@ -75,6 +75,7 @@ class XCOREInterpreter {
   XCoreStatus GetOperatorDetails(size_t operator_index, char* name,
                                  int name_len, int* version, int* inputs,
                                  int* outputs);
+
   size_t GetError(char* msg);
 
  private:
@@ -86,8 +87,8 @@ class XCOREInterpreter {
   uint8_t* tensor_arena_;
   size_t tensor_arena_size_;
   xcore::Dispatcher* dispatcher_;
-  uint8_t* xcore_arena_;
-  size_t xcore_arena_size_;
+  uint8_t* xcore_heap_;
+  size_t xcore_heap_size_;
 };
 
 }  // namespace xcore

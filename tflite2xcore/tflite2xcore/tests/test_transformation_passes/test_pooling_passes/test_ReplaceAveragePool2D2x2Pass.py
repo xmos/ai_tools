@@ -17,7 +17,7 @@ from .conftest import (
     test_non_matching_pool_h,
     test_non_matching_pool_w,
     test_non_matching_stride_h,
-    test_non_matching_stride_w
+    test_non_matching_stride_w,
 )
 
 
@@ -27,42 +27,47 @@ from .conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
-PARAMS["default"].update({
-    "input_height": [2, 4, 8, 12],
-    "non_matching_input_height": [3, 9, 13, 23],
-    "input_width": [2, 4, 8, 12],
-    "non_matching_input_width": [3, 9, 13, 23],
-    "padding": ['SAME', 'VALID'],
-    "stride_h": [2],
-    "non_matching_stride_h": [1, 3],
-    "stride_w": [2],
-    "non_matching_stride_w": [1, 3],
-    "pool_h": [2],
-    "non_matching_pool_h": [1, 3],
-    "pool_w": [2],
-    "non_matching_pool_w": [1, 3]
-})
+PARAMS["default"].update(
+    {
+        "input_height": [2, 4, 8, 12],
+        "non_matching_input_height": [3, 9, 13, 23],
+        "input_width": [2, 4, 8, 12],
+        "non_matching_input_width": [3, 9, 13, 23],
+        "padding": ["SAME", "VALID"],
+        "stride_h": [2],
+        "non_matching_stride_h": [1, 3],
+        "stride_w": [2],
+        "non_matching_stride_w": [1, 3],
+        "pool_h": [2],
+        "non_matching_pool_h": [1, 3],
+        "pool_w": [2],
+        "non_matching_pool_w": [1, 3],
+    }
+)
 
-PARAMS["smoke"].update({
-    "input_height": [2, 12],
-    "non_matching_input_height": [3, 13],
-    "input_width": [2, 12],
-    "non_matching_input_width": [3, 13],
-    "padding": ['SAME', 'VALID'],
-    "stride_h": [2],
-    "non_matching_stride_h": [3],
-    "stride_w": [2],
-    "non_matching_stride_w": [3],
-    "pool_h": [2],
-    "non_matching_pool_h": [3],
-    "pool_w": [2],
-    "non_matching_pool_w": [3]
-})
+PARAMS["smoke"].update(
+    {
+        "input_height": [2, 12],
+        "non_matching_input_height": [3, 13],
+        "input_width": [2, 12],
+        "non_matching_input_width": [3, 13],
+        "padding": ["SAME", "VALID"],
+        "stride_h": [2],
+        "non_matching_stride_h": [3],
+        "stride_w": [2],
+        "non_matching_stride_w": [3],
+        "pool_h": [2],
+        "non_matching_pool_h": [3],
+        "pool_w": [2],
+        "non_matching_pool_w": [3],
+    }
+)
 
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def build_model():

@@ -270,30 +270,33 @@ void VLASHR(
         const int8_t* addr8 = (const int8_t*) addr;
 
         for(int i = 0; i < VPU_INT8_EPV; i++){
-            int8_t val = addr8[i];
+            int32_t val = addr8[i];
 
-            if(shr >= 7)    val = (val < 0)? -1 : 0;
-            else            val = val >> shr;
+            if(shr >= 7)        val = (val < 0)? -1 : 0;
+            else if(shr >= 0)   val = val >> shr;
+            else                val = val << (-shr);
 
-            vpu->vR.s8[i] = val;
+            vpu->vR.s8[i] = saturate(val, 8);
         }
     } else if(vpu->mode == MODE_S16){
         const int16_t* addr16 = (const int16_t*) addr;
 
         for(int i = 0; i < VPU_INT16_EPV; i++){
-            int16_t val = addr16[i];
+            int32_t val = addr16[i];
             if(shr >= 15)   val = (val < 0)? -1 : 0;
-            else            val = val >> shr;
-            vpu->vR.s16[i] = val;
+            else if(shr >= 0)   val = val >> shr;
+            else                val = val << (-shr);
+            vpu->vR.s16[i] = saturate(val, 16);
         }
     } else if(vpu->mode == MODE_S32){
         const int32_t* addr32 = (const int32_t*) addr;
 
         for(int i = 0; i < VPU_INT32_EPV; i++){
-            int32_t val = addr32[i];
+            int64_t val = addr32[i];
             if(shr >= 31)   val = (val < 0)? -1 : 0;
-            else            val = val >> shr;
-            vpu->vR.s32[i] = val;
+            else if(shr >= 0)   val = val >> shr;
+            else                val = val << (-shr);
+            vpu->vR.s32[i] = saturate(val, 32);
         }
     } else { 
         assert(0); //How'd this happen?

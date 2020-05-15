@@ -4,7 +4,7 @@ OBJECTS := $(SOURCES) $(OBJECT_FILES)
 
 $(OBJ_DIR)/%.o: %.S
 	@mkdir -p $(dir $@)
-	$(AS) $(ASFLAGS) -o $@ -c $<
+	$(AS) $(ASFLAGS)  $(INCLUDES) -o $@ -c $<
 
 $(OBJ_DIR)/%.o: %.xc
 	@mkdir -p $(dir $@)

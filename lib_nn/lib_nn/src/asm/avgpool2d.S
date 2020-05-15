@@ -68,12 +68,6 @@ void avgpool2d_gen(
 .L_vec_0x0000:
 .short 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
-.L_vec_0x007F:
-.short 0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F
-
-.L_vec_0x80:
-.byte 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
-
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
@@ -139,7 +133,7 @@ FUNCTION_NAME:
                 {   sub out_col_left, out_col_left, 1       ;   ldw tmp, sp[STACK_WIN_ROWS]             }
                 {                                           ;   vclrdr                                  }
 #else
-                {   ldap r11, .L_vec_0x80                   ;   ldw tmp, sp[STACK_WIN_ROWS]             }
+                {   ldaw r11, cp[vec_0x80]                  ;   ldw tmp, sp[STACK_WIN_ROWS]             }
                 {                                           ;   vldr r11[0]                             }
                 vstrpv Y[0], chan_mask
                 {   sub out_col_left, out_col_left, 1       ;   vclrdr                                  }
@@ -176,7 +170,7 @@ FUNCTION_NAME:
                 {   shl r11, tmp, 3                         ;                                           }
                 {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   vsetc r11       /* 16-bit mode */       }
                 {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat r11[0]                            }
-                {   ldap r11, .L_vec_0x007F                 ;   vstr r11[0]                             }
+                {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
                 {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
                 {   mkmsk tmp, 4                            ;   vdepth1                                 }
                 vstrpv r11[0], tmp

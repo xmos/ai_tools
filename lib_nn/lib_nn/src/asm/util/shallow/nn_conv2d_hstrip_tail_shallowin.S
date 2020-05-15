@@ -66,12 +66,6 @@ void nn_conv2d_hstrip_tail_shallowin(
 #define Q(R)      R
 
 
-#if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
-    .L_vec_0x007F:
-    .short 0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F
-    .L_vec_0x80:
-    .byte 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
-#endif
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
@@ -129,7 +123,7 @@ FUNCTION_NAME:
     .L_out_col_start:
 
 #if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
-        {   ldap r11, .L_vec_0x80                   ;   ldw Q(rows_left), sp[STACK_WRITE_MASK]  }
+        {   ldaw r11, cp[vec_0x80]                  ;   ldw Q(rows_left), sp[STACK_WRITE_MASK]  }
         {                                           ;   vldr r11[0]                             }
         vstrpv Y[0], Q(rows_left)
 #endif
@@ -215,7 +209,7 @@ FUNCTION_NAME:
 
 
         {                                           ;   vlsat BSO[0]                            }
-        {   ldap r11, .L_vec_0x007F                 ;   vstr r11[0]                             }
+        {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
         {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
         {   mkmsk Q(rows_left), 4                   ;   vdepth1                                 }
         vstrpv r11[0], Q(rows_left)

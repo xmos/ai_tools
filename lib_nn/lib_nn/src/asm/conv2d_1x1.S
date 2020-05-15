@@ -107,11 +107,6 @@ Optimizing assumptions:
 
 .align 16
 
-.L_vec_0x007F:
-.short 0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F
-
-.L_vec_0x80:
-.byte 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
@@ -154,7 +149,7 @@ FUNCTION_NAME:
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_1x1
             {                                           ;   ldw BSO, sp[STACK_BSO]                  }
 #else
-            {   ldap r11, .L_vec_0x80                   ;   ldw BSO, sp[STACK_BSO]                  }
+            {   ldaw r11, cp[vec_0x80]                  ;   ldw BSO, sp[STACK_BSO]                  }
             {   mkmsk r11, 16                           ;   vldr r11[0]                             }
             vstrpv Y[0], r11
 #endif
@@ -240,7 +235,7 @@ FUNCTION_NAME:
             {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
 
             {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
-            {   ldap r11, .L_vec_0x007F                 ;   vstr r11[0]                             }
+            {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
             {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
             {   mkmsk Q(cig_left), 4                    ;   vdepth1                                 }
             vstrpv r11[0], Q(cig_left)
@@ -278,7 +273,7 @@ FUNCTION_NAME:
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_1x1
             {                                           ;   ldw BSO, sp[STACK_BSO]                  }
 #else
-            {   ldap r11, .L_vec_0x80                   ;   ldw BSO, sp[STACK_BSO]                  }
+            {   ldaw r11, cp[vec_0x80]                  ;   ldw BSO, sp[STACK_BSO]                  }
             {                                           ;   vldr r11[0]                             }
             {                                           ;   ldw r11, sp[STACK_TAIL_MASK]            }
             vstrpv Y[0], r11
@@ -338,7 +333,7 @@ FUNCTION_NAME:
             {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
 
             {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
-            {   ldap r11, .L_vec_0x007F                 ;   vstr r11[0]                             }
+            {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
             {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
             {   mkmsk Q(cig_left), 4                    ;   vdepth1                                 }
             vstrpv r11[0], Q(cig_left)

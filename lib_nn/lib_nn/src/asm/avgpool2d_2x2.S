@@ -51,17 +51,6 @@ void avgpool2d_2x2(
 #define tmp                 r10
 
 .align 16
-.L_macc_const: //multiplies input in VLMACC instruction
-.byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
-
-.L_sat_vec:  //used in VLSAT instruction
-.short 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
-
-.L_vec_0x007F:
-.short 0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F
-
-.L_vec_0x80:
-.byte 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
 
 
 FUNCTION_NAME:
@@ -91,7 +80,7 @@ FUNCTION_NAME:
     {   ldc r6, WOP_START_STRIDE_Y              ;   ldw r10, r11[r6]                        }
     {   add X, X, r10                           ;   ldw r11, r11[r6]                        }
     {   add Y, Y, r11                           ;   stw r5, sp[STACK_TAIL_LEN]              }
-    {   ldap r11, .L_macc_const                 ;   mov r6, r5                              }
+    {   ldaw r11, cp[vec_0x01]                  ;   mov r6, r5                              }
     {   shr tmp, r4, 4                          ;   vldc r11[0]                             }
 
     {   mkmsk write_mask, 16                    ;   bt tmp, .L_chan_loop                    }
@@ -114,7 +103,7 @@ FUNCTION_NAME:
                 {   add Y, Y, hstride_y                     ;   bt cols_left, .L_col_loop               }
 #else
             .L_col_loop:
-                {   ldap r11, .L_vec_0x80                   ;   ldc tmp, 32                             }
+                {   ldaw r11, cp[vec_0x80]                  ;   ldc tmp, 32                             }
                 {   shl r11, tmp, 3                         ;   vldr r11[0]                             }
                 vstrpv Y[0], write_mask
                 {   sub cols_left, cols_left, 1             ;   vclrdr                                  }
@@ -124,9 +113,9 @@ FUNCTION_NAME:
                 {   add X, X, pool_col_x                    ;   vlmacc X[0]                             }
                 {   sub X, X, pool_row_x                    ;   vlmacc X[0]                             }
 
-                {   ldap r11, .L_sat_vec                    ;   vsetc r11       /* 16-bit mode */       }
+                {   ldaw r11, cp[vec_0x0002]                ;   vsetc r11       /* 16-bit mode */       }
                 {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat r11[0]                            }
-                {   ldap r11, .L_vec_0x007F                 ;   vstr r11[0]                             }
+                {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
                 {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
                 {   mkmsk tmp, 4                            ;   vdepth1                                 }
                 vstrpv r11[0], write_mask

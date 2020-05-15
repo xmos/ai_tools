@@ -58,11 +58,6 @@ void avgpool2d_global_asm(
 .L_bso_consts:
 .word 0x00010001, 0x01010101
 
-.L_vec_0x007F:
-.short 0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F
-
-.L_vec_0x80:
-.byte 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
 
 .align 16
 FUNCTION_NAME:
@@ -156,11 +151,11 @@ FUNCTION_NAME:
         {   sub X, X, x_chan_incr                   ;   vstr r11[0]                             }
         {                                           ;   vdepth8                                 }
         vstrpv Y[0], write_mask
-        {   ldap r11, .L_vec_0x007F                 ;   vldr r11[0]                             }
+        {   ldaw r11, cp[vec_0x007F]                ;   vldr r11[0]                             }
         {                                           ;   vladd r11[0]                            }   //only 0xFF80 will remain negative (0xFFFF)
         {   ldaw r11, sp[STACK_VEC_TMP]             ;   vdepth1                                 }   //values that should result in -0x80 will get 1 here
         {                                           ;   vstr r11[0]                             }
-        {   ldap r11, .L_vec_0x80                   ;   ldw Q(pix_groups), sp[STACK_VEC_TMP]    }
+        {   ldaw r11, cp[vec_0x80]                  ;   ldw Q(pix_groups), sp[STACK_VEC_TMP]    }
         {   and r11, Q(pix_groups), write_mask      ;   vldr r11[0]                             }
         vstrpv Y[0], r11
         {   add Y, Y, _16                           ;   bt chan_grp_left, .L_chan_loop          }

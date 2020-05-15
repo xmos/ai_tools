@@ -61,12 +61,6 @@ void nn_conv2d_hstrip_shallowin(
 #define Q(R)      R
 
 
-#if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
-    .L_vec_0x007F:
-    .short 0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F
-    .L_vec_0x80:
-    .byte 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
-#endif
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
@@ -87,7 +81,7 @@ FUNCTION_NAME:
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
     {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
 #else
-    {   ldap r11, .L_vec_0x80                   ;   ldw tmp, sp[STACK_OUT_COLS]             }
+    {   ldaw r11, cp[vec_0x80]                  ;   ldw tmp, sp[STACK_OUT_COLS]             }
 #endif
 
     .L_out_col_start:
@@ -164,7 +158,7 @@ FUNCTION_NAME:
         {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
 
         {                                           ;   vlsat BSO[0]                            }
-        {   ldap r11, .L_vec_0x007F                 ;   vstr r11[0]                             }
+        {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
         {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
         {   mkmsk Q(rows_left), 4                   ;   vdepth1                                 }
         vstrpv r11[0], Q(rows_left)
@@ -178,7 +172,7 @@ FUNCTION_NAME:
         {   add Y, Y, tmp                           ;   ldw tmp, sp[STACK_WIN_H_STRIDE]         }
         {   add X, X, tmp                           ;   vsetc r11                               }
         {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
-        {   ldap r11, .L_vec_0x80                   ;   bt tmp, .L_out_col_start                }
+        {   ldaw r11, cp[vec_0x80]                  ;   bt tmp, .L_out_col_start                }
 
 #endif
 

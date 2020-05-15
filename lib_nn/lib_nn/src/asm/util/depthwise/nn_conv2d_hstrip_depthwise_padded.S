@@ -74,11 +74,6 @@ void nn_conv2d_hstrip_depthwise_padded(
 
 .align 16
 
-.L_vec_0x007F:
-.short 0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F
-
-.L_vec_0x80:
-.byte 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS 
@@ -185,7 +180,7 @@ FUNCTION_NAME:
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise
         
 #else
-        {   ldap r11, .L_vec_0x80                   ;   ldw Q(rows_left), sp[STACK_CHAN2WRITE]  }
+        {   ldaw r11, cp[vec_0x80]                  ;   ldw Q(rows_left), sp[STACK_CHAN2WRITE]  }
         {   mkmsk Q(rows_left), Q(rows_left)        ;   vldr r11[0]                             }
         vstrpv Y[0], Q(rows_left)
         {   ldaw r11, sp[STACK_VEC_VD]              ;                                           }
@@ -252,7 +247,7 @@ FUNCTION_NAME:
         {   add Q(rows_left), Q(rows_left), _32     ;   vlmacc Q(rows_left)[0]                  }
         {                                           ;   vlsat Q(rows_left)[0]                   }
 
-        {   ldap r11, .L_vec_0x007F                 ;   vstr r11[0]                             }
+        {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
         {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
         {   mkmsk Q(rows_left), 4                   ;   vdepth1                                 }
         vstrpv r11[0], Q(rows_left)

@@ -23,7 +23,7 @@
 
 
 const extern int16_t vec_0x007F[VPU_INT8_ACC_PERIOD];
-const extern int8_t vec_0x80[VPU_INT8_ACC_PERIOD];
+const extern int8_t vec_0x80[VPU_INT8_EPV];
 
 WEAK_FUNC
 void nn_conv2d_hstrip_shallowin(

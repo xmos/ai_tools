@@ -14,7 +14,7 @@ static int64_t saturate(
     const int64_t max_val = (((int64_t)1)<<(bits-1))-1;
     const int64_t min_val = -max_val;
     
-    return (input >= max_val)?  max_val : (input <= min_val)? min_val : input;
+    return (input > max_val)?  max_val : (input < min_val)? min_val : input;
 }
 
 /**
@@ -311,21 +311,21 @@ void VLADD(
         const int8_t* addr8 = (const int8_t*) addr;
         for(int i = 0; i < VPU_INT8_EPV; i++){
             int32_t val = addr8[i];
-            vpu->vR.s8[i] = saturate(((int32_t)vpu->vR.s8[i]) + val, 8);
+            vpu->vR.s8[i] = saturate(vpu->vR.s8[i] + val, 8);
         }
     } else if(vpu->mode == MODE_S16){
         const int16_t* addr16 = (const int16_t*) addr;
 
         for(int i = 0; i < VPU_INT16_EPV; i++){
             int32_t val = addr16[i];
-            vpu->vR.s16[i] = saturate(((int32_t)vpu->vR.s16[i]) + val, 16);
+            vpu->vR.s16[i] = saturate(vpu->vR.s16[i] + val, 16);
         }
     } else if(vpu->mode == MODE_S32){
         const int32_t* addr32 = (const int32_t*) addr;
 
         for(int i = 0; i < VPU_INT32_EPV; i++){
             int64_t val = addr32[i];
-            vpu->vR.s32[i] = saturate(((int64_t)vpu->vR.s32[i]) + val, 32);
+            vpu->vR.s32[i] = saturate(vpu->vR.s32[i] + val, 32);
         }
     } else { 
         assert(0); //How'd this happen?
@@ -340,17 +340,17 @@ void VDEPTH1(xs3_vpu* vpu){
     uint32_t bits = 0;
     
     if(vpu->mode == MODE_S8){
-        for(int i = 0; i < VPU_INT8_ACC_PERIOD; i++){
+        for(int i = 0; i < VPU_INT8_EPV; i++){
             if(vpu->vR.s8[i] < 0)
                 bits |= (1 << i);
         }
     } else if(vpu->mode == MODE_S16){
-        for(int i = 0; i < VPU_INT16_ACC_PERIOD; i++){
+        for(int i = 0; i < VPU_INT16_EPV; i++){
             if(vpu->vR.s16[i] < 0)
                 bits |= (1 << i);
         }
     } else if(vpu->mode == MODE_S32){
-        for(int i = 0; i < VPU_INT32_ACC_PERIOD; i++){
+        for(int i = 0; i < VPU_INT32_EPV; i++){
             if(vpu->vR.s32[i] < 0)
                 bits |= (1 << i);
         }
@@ -370,14 +370,14 @@ void VDEPTH8(xs3_vpu* vpu){
     memset(&(vpu->vR), 0, sizeof(vpu_vector_t));
     
     if(vpu->mode == MODE_S16){
-        for(int i = 0; i < VPU_INT16_ACC_PERIOD; i++){
+        for(int i = 0; i < VPU_INT16_EPV; i++){
             int32_t elm = ((int32_t)vec_tmp.s16[i]) + (1 << 7);
-            vpu->vR.s8[i] = elm >> 8;
+            vpu->vR.s8[i] = saturate(elm >> 8, 8);
         }
     } else if(vpu->mode == MODE_S32){
-        for(int i = 0; i < VPU_INT32_ACC_PERIOD; i++){
+        for(int i = 0; i < VPU_INT32_EPV; i++){
             int64_t elm = ((int64_t)vec_tmp.s32[i]) + (1 << 23);
-            vpu->vR.s8[i] = elm >> 24;
+            vpu->vR.s8[i] = saturate(elm >> 24, 8);
         }
     } else { 
         assert(0);
@@ -389,12 +389,12 @@ void VDEPTH16(xs3_vpu* vpu){
 
     
     if(vpu->mode == MODE_S32){
-        for(int i = 0; i < VPU_INT32_ACC_PERIOD; i++){
+        for(int i = 0; i < VPU_INT32_EPV; i++){
             int64_t elm = ((int64_t)vpu->vR.s32[i]) + (1 << 15);
-            vpu->vR.s16[i] = elm >> 16;
+            vpu->vR.s16[i] = saturate(elm >> 16, 16);
         }
 
-        for(int i = VPU_INT32_ACC_PERIOD; i < VPU_INT16_ACC_PERIOD; i++){
+        for(int i = VPU_INT32_EPV; i < VPU_INT16_EPV; i++){
             vpu->vR.s16[i] = 0;
         }
     } else { 

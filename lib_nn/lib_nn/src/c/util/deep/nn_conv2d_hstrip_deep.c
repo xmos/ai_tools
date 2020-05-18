@@ -148,7 +148,6 @@ void nn_conv2d_hstrip_deep(
         
 #else
 
-        //Saturate to 8-bit values
         VLSAT(&vpu, BSO->shift2);
 
         VSTR(&vpu, mask_vec);
@@ -484,7 +483,6 @@ void nn_conv2d_hstrip_deep_padded(
         
 #else
 
-        //Saturate to 8-bit values
         VLSAT(&vpu, BSO->shift2);
 
         VSTR(&vpu, mask_vec);
@@ -1007,7 +1005,6 @@ void nn_conv2d_hstrip_tail_deep_padded(
         
 #else
 
-        //Saturate to 8-bit values
         VLSAT(&vpu, BSO->shift2);
 
         VSTR(&vpu, vec_tmp2);

@@ -3,6 +3,7 @@
 #ifndef NN_OPERATOR_H_
 #define NN_OPERATOR_H_
 
+#include "nn_config.h"
 #include "nn_types.h"
 #include "nn_op_structs.h"
 #include "nn_conv2d_structs.h"

@@ -12,6 +12,15 @@
 #include <assert.h>
 
 
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_1x1
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
+
+
+
+
 
 WEAK_FUNC
 void conv2d_1x1(
@@ -88,7 +97,7 @@ void conv2d_1x1(
                 res = res * scale;
                 res = res + ((int32_t)offset_scale) * offset;
                 
-                res = vlsat_single_s8(res, shift2);
+                res = vlsat_single_s8(res, shift2, NEG_SAT_VAL, VPU_INT8_MAX);
 
                 Y[k] = (int8_t) res;
             }

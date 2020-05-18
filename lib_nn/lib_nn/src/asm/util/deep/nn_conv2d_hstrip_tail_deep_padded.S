@@ -1,9 +1,9 @@
 
 #if defined(__XS3A__)
 
+#include "nn_config.h"
+
 /**
-
-
 void nn_conv2d_hstrip_tail_deep_padded(
         nn_image_t* Y,
         const nn_image_t* X,
@@ -71,11 +71,12 @@ void nn_conv2d_hstrip_tail_deep_padded(
 #define STACK_CENTER_COLS       STACK_K_W
 #define STACK_WIN_H_STRIDE      STACK_K_H
 #define STACK_WRITE_MASK        13
+#define STACK_TMP               14
 
 
 #define Q(R)      R
 
-.align 16
+
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[0]
@@ -364,11 +365,18 @@ FUNCTION_NAME:
     {                                           ;   ldw c_out_tail, sp[STACK_C_OUT_TAIL]    }
 
     .L_out_col_start:
+#if !(CONFIG_SYMMETRIC_SATURATION_conv2d_deep)
+        {   ldaw r11, cp[vec_0x80]                  ;   ldw Q(cols_left), sp[STACK_Y]           }
+        {                                           ;   ldw Q(rows_left), sp[STACK_WRITE_MASK]  }
+        {                                           ;   vldr r11[0]                             }
+        vstrpv Q(cols_left)[0], Q(rows_left)
+#endif
         {   ldaw r11, sp[STACK_VEC_ADJ_B_HI]        ;   ldw rows_left, sp[STACK_PATCH_ROWS]     }
         {   ldaw r11, sp[STACK_VEC_ADJ_B_LO]        ;   vldd r11[0]                             }
         {   sub tmp, tmp, 1                         ;   vldr r11[0]                             }
         {                                           ;   stw tmp, sp[STACK_OUT_COLS]             }
         {   ldc tmp, 0                              ;   ldw K, sp[STACK_K]                      }
+
 
         .L_patch_row_start: //tmp is 0 on first pass, x_v_stride on subsequent iterations
             {   add X, X, tmp                           ;   ldw cols_left, sp[STACK_PAD_L]          }
@@ -593,6 +601,7 @@ FUNCTION_NAME:
             {   sub rows_left, rows_left, 1             ;   ldw tmp, sp[STACK_X_V_STRIDE]           }
             bt rows_left, .L_patch_row_start
         .L_patch_row_end:
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_deep
 
         {   shl r11, _32, 3                         ;   ldw tmp, sp[STACK_BSO]                  }
         {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vsetc r11                               }
@@ -605,7 +614,7 @@ FUNCTION_NAME:
         {   add tmp, tmp, _32                       ;   vlmacc tmp[0]                           }
         {                                           ;   vsetc r11                               }
         {                                           ;   vlsat tmp[0]                            }
-        {   mkmsk tmp, 16                           ;   ldw Q(rows_left), sp[STACK_Y]           }
+        {                                           ;   ldw Q(rows_left), sp[STACK_Y]           }
         {                                           ;   ldw tmp, sp[STACK_WRITE_MASK]           }
         vstrpv Q(rows_left)[0], tmp
         {                                           ;   ldw tmp, sp[STACK_Y_H_STRIDE]           }
@@ -613,6 +622,40 @@ FUNCTION_NAME:
         {                                           ;   ldw X, sp[STACK_X]                      }
         {   add X, X, tmp                           ;   stw Q(rows_left), sp[STACK_Y]           }
         {                                           ;   stw X, sp[STACK_X]                      }
+
+#else
+
+        {   shl r11, _32, 3                         ;   ldw tmp, sp[STACK_BSO]                  }
+        {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vsetc r11                               }
+        {   add tmp, tmp, _32                       ;   vlsat tmp[0]                            }
+        {                                           ;   vstr r11[0]                             }
+        {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
+        {                                           ;   vclrdr                                  }
+        {                                           ;   vlmacc r11[0]                           }
+        {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
+        {   add tmp, tmp, _32                       ;   vlmacc tmp[0]                           }
+        {                                           ;   vlsat tmp[0]                            }
+
+        {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
+        {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
+        {   mkmsk Q(rows_left), 4                   ;   vdepth1                                 }
+        vstrpv r11[0], Q(rows_left)
+        {   ldc Q(rows_left), 0                     ;   ldw Q(cig_left), sp[STACK_Y]            }
+        {   ldaw r11, sp[STACK_VEC_TMP2]            ;   sub Q(rows_left), Q(rows_left), 8       }
+        vlashr r11[0], Q(rows_left)
+        {                                           ;   ldw tmp, sp[STACK_WRITE_MASK]           }
+        {                                           ;   ldw Q(rows_left), sp[STACK_TMP]         }
+        {   andnot tmp, Q(rows_left)                ;   vdepth8                                 }
+        vstrpv Q(cig_left)[0], tmp
+        
+        {   shl r11, _32, 4                         ;   ldw tmp, sp[STACK_Y_H_STRIDE]           }
+        {   add Q(cig_left), Q(cig_left), tmp       ;   vsetc r11                               }
+        {                                           ;   ldw tmp, sp[STACK_WIN_H_STRIDE]         }
+        {                                           ;   ldw X, sp[STACK_X]                      }
+        {   add X, X, tmp                           ;   stw Q(cig_left), sp[STACK_Y]            }
+        {                                           ;   stw X, sp[STACK_X]                      }
+
+#endif
 
 #define l_padding       cols_left
 #define r_padding       cig_left

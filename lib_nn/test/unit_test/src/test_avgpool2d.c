@@ -16,8 +16,12 @@
 
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
+#if CONFIG_SYMMETRIC_SATURATION_avgpool2d
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
 
-#define DEBUG_ON    (0 || TEST_DEBUG_ON)
 #define MAX_CHANS   (4*VPU_INT8_ACC_PERIOD)
 #define MAX_HEIGHT  (32)
 #define MAX_WIDTH   (32)
@@ -93,6 +97,16 @@ void test_avgpool2d_case1()
 
     memset(X, 120, sizeof(X));
 
+    PRINTF("\t\tSetting X...\n");
+    for(int r = 0; r < MAX_HEIGHT; r++){
+        for(int c = 0; c < MAX_WIDTH; c++){
+            for(int ch = 0; ch < MAX_CHANS; ch++){
+                X[r][c][ch] = (ch&1)? 120 : -120;
+            }
+        }
+    }
+
+
     for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
         const test_case_t* casse = (const test_case_t*) &casses[v];
 
@@ -114,35 +128,6 @@ void test_avgpool2d_case1()
 
         avgpool2d_init(&plan, &x_params, &y_params, &window_config);
         plan.impl = AVGPOOL2D_DEFAULT;
-
-        PRINTF("\t\tSetting X...\n");
-        for(int r = 0; r < x_params.height; r++){
-            for(int c = 0; c < x_params.width; c++){
-                for(int ch = 0; ch < x_params.channels; ch++){
-                    ((int8_t*)X)[IMG_ADDRESS_VECT(&x_params, r, c, ch)] = (ch&1)? 120 : -120;
-                }
-            }
-        }
-
-#if (DEBUG_ON || 0)
-    PRINTF("plan.window.output.rows                 = %d\n", plan.window.output.rows              );
-    PRINTF("plan.window.output.cols                 = %d\n", plan.window.output.cols              );
-    PRINTF("plan.window.output.channels             = %d\n", plan.window.output.channels          );
-    PRINTF("plan.window.window.rows                 = %d\n", plan.window.window.rows              );
-    PRINTF("plan.window.window.cols                 = %d\n\n", plan.window.window.cols              );
-    PRINTF("plan.window.start_stride.x              = %d\n", plan.window.start_stride.x           );
-    PRINTF("plan.window.inner_stride.horizontal.x   = %d\n", plan.window.inner_stride.horizontal.x);
-    PRINTF("plan.window.inner_stride.vertical.x     = %d\n", plan.window.inner_stride.vertical.x  );
-    PRINTF("plan.window.outer_stride.horizontal.x   = %d\n", plan.window.outer_stride.horizontal.x);
-    PRINTF("plan.window.outer_stride.vertical.x     = %d\n", plan.window.outer_stride.vertical.x  );
-    PRINTF("plan.window.chan_grp_stride.x           = %d\n\n", plan.window.chan_grp_stride.x        );
-    PRINTF("plan.window.start_stride.y              = %d\n", plan.window.start_stride.y           );
-    PRINTF("plan.window.outer_stride.horizontal.y   = %d\n", plan.window.outer_stride.horizontal.y);
-    PRINTF("plan.window.outer_stride.vertical.y     = %d\n", plan.window.outer_stride.vertical.y  );
-    PRINTF("plan.window.chan_grp_stride.y           = %d\n\n", plan.window.chan_grp_stride.y        );
-    PRINTF("plan.window.scale                       = 0x%08X\n", plan.scale);
-    PRINTF("plan.shift                              = 0x%08X\n", plan.shift);
-#endif //DEBUG_ON
 
 
         memset(Y, 0xCC, casse->Y.height * casse->Y.width * casse->channels);    //too expensive to write the whole image, so just do the part that's in play
@@ -178,17 +163,14 @@ void test_avgpool2d_case1()
 #undef MAX_WIDTH
 #undef MAX_HEIGHT
 #undef MAX_CHANS
-#undef DEBUG_ON
 
 
 
 
 
-
-#define DEBUG_ON    (0 || TEST_DEBUG_ON)
-#define CHANS       (32)
-#define HEIGHT      (24)
-#define WIDTH       (24)
+#define CHANS       (20)
+#define HEIGHT      (12)
+#define WIDTH       (12)
 void test_avgpool2d_case2()
 {
     srand(34524666);
@@ -207,22 +189,21 @@ void test_avgpool2d_case2()
     } test_case_t;
 
     const test_case_t casses[] = {
-        {       {   1,  1 },        {   0,  0 },        {   0,  0 }         }, // 0
+        {       {   1,  1 },        {   0,  0 },        {   0,  0 }         },
         {       {   2,  2 },        {   0,  0 },        {   0,  0 }         },
         {       {   3,  3 },        {   0,  0 },        {   0,  0 }         },
         {       {   4,  4 },        {   0,  0 },        {   0,  0 }         },
         {       {   5,  5 },        {   0,  0 },        {   0,  0 }         },
-        {       {   6,  6 },        {   0,  0 },        {   0,  0 }         }, // 5
+        {       {   6,  6 },        {   0,  0 },        {   0,  0 }         },
         {       {   8,  8 },        {   0,  0 },        {   0,  0 }         },
         {       {  12, 12 },        {   0,  0 },        {   0,  0 }         },
-        {       {  24, 24 },        {   0,  0 },        {   0,  0 }         },
         {       {   1,  2 },        {   0,  0 },        {   0,  0 }         },
-        {       {   2,  1 },        {   0,  0 },        {   0,  0 }         }, // 10
+        {       {   2,  1 },        {   0,  0 },        {   0,  0 }         },
         {       {   3,  8 },        {   0,  0 },        {   0,  0 }         },
-        {       {  24,  4 },        {   0,  0 },        {   0,  0 }         },
+        {       {  12,  4 },        {   0,  0 },        {   0,  0 }         },
         {       {   1,  1 },        {   1,  1 },        {   0,  0 }         },
         {       {   1,  1 },        {   0,  0 },        {   1,  1 }         },
-        {       {   2,  2 },        {   4,  4 },        {   0,  0 }         }, // 15
+        {       {   2,  2 },        {   4,  4 },        {   0,  0 }         },
         {       {   2,  2 },        {   0,  0 },        {   8,  8 }         },
         {       {   3,  3 },        {   5,  1 },        {   8,  9 }         },
     };
@@ -293,25 +274,6 @@ void test_avgpool2d_case2()
             }
         }
 
-#if (DEBUG_ON || 0)
-    PRINTF("plan.window.output.rows                 = %d\n", plan.window.output.rows              );
-    PRINTF("plan.window.output.cols                 = %d\n", plan.window.output.cols              );
-    PRINTF("plan.window.output.channels             = %d\n", plan.window.output.channels          );
-    PRINTF("plan.window.window.rows                 = %d\n", plan.window.window.rows              );
-    PRINTF("plan.window.window.cols                 = %d\n\n", plan.window.window.cols              );
-    PRINTF("plan.window.start_stride.x              = %d\n", plan.window.start_stride.x           );
-    PRINTF("plan.window.inner_stride.horizontal.x   = %d\n", plan.window.inner_stride.horizontal.x);
-    PRINTF("plan.window.inner_stride.vertical.x     = %d\n", plan.window.inner_stride.vertical.x  );
-    PRINTF("plan.window.outer_stride.horizontal.x   = %d\n", plan.window.outer_stride.horizontal.x);
-    PRINTF("plan.window.outer_stride.vertical.x     = %d\n", plan.window.outer_stride.vertical.x  );
-    PRINTF("plan.window.chan_grp_stride.x           = %d\n\n", plan.window.chan_grp_stride.x        );
-    PRINTF("plan.window.start_stride.y              = %d\n", plan.window.start_stride.y           );
-    PRINTF("plan.window.outer_stride.horizontal.y   = %d\n", plan.window.outer_stride.horizontal.y);
-    PRINTF("plan.window.outer_stride.vertical.y     = %d\n", plan.window.outer_stride.vertical.y  );
-    PRINTF("plan.window.chan_grp_stride.y           = %d\n\n", plan.window.chan_grp_stride.y        );
-    PRINTF("plan.window.scale                       = 0x%08X\n", plan.scale);
-    PRINTF("plan.shift                              = 0x%08X\n", plan.shift);
-#endif //DEBUG_ON
 
         PRINTF("\t\tRunning avgpool2d()...\n");
         memset(Y, 0xCC, sizeof(Y));    //too expensive to write the whole image, so just do the part that's in play
@@ -324,7 +286,7 @@ void test_avgpool2d_case2()
                 for(unsigned chn = 0; chn < y_params.channels; chn++){
                     
                     int8_t y_exp = Y_exp[row][col][chn];
-                    if(y_exp == -128)   y_exp = -127;
+                    if(y_exp == -128)   y_exp = NEG_SAT_VAL;
 
                     int8_t y = Y[row][col][chn];
                     
@@ -343,7 +305,6 @@ void test_avgpool2d_case2()
 #undef WIDTH
 #undef HEIGHT
 #undef CHANS
-#undef DEBUG_ON
 
 
 #define DEBUG_ON    (0 || TEST_DEBUG_ON)
@@ -503,6 +464,52 @@ void test_avgpool2d_case3()
 #undef X_HEIGHT
 #undef DEBUG_ON
 
+
+
+#define MAX_CHANS   (2*VPU_INT8_ACC_PERIOD - 4)
+#define MAX_HEIGHT  (1)
+#define MAX_WIDTH   (1)
+void test_avgpool2d_case4()
+{
+    int8_t WORD_ALIGNED  X[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS] = {{{0}}};
+    
+    int8_t WORD_ALIGNED  Y[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS];
+
+
+    memset(X, 0x80, sizeof(X));
+
+            
+    nn_image_params_t x_params = { MAX_HEIGHT, MAX_WIDTH, MAX_CHANS };
+    nn_image_params_t y_params = { MAX_HEIGHT, MAX_WIDTH, MAX_CHANS };
+
+    nn_window_op_config_t window_config;
+    nn_window_op_config_simple(&window_config, &x_params, &y_params, 
+                                1, 1, 
+                                1, 1);
+
+    window_config.output.shape.height = y_params.height;
+    window_config.output.shape.width = y_params.width;
+    window_config.output.shape.channels = y_params.channels;
+
+    nn_avgpool2d_plan_t plan;
+
+    avgpool2d_init(&plan, &x_params, &y_params, &window_config);
+
+    avgpool2d((int8_t*)Y, (int8_t*)X, &plan);
+
+    for(unsigned chn = 0; chn < y_params.channels; chn++){
+        
+        int8_t y_exp = NEG_SAT_VAL;
+
+        int8_t y = Y[0][0][chn];
+
+        TEST_ASSERT_EQUAL(y_exp, y);
+    }
+
+}
+#undef MAX_WIDTH
+#undef MAX_HEIGHT
+#undef MAX_CHANS
 
 
 
@@ -788,6 +795,106 @@ void test_avgpool2d_2x2_case2()
 #undef X_HEIGHT
 #undef DEBUG_ON
 
+
+
+
+#define CHANS   (3*VPU_INT8_ACC_PERIOD - 4)
+#define X_HEIGHT    (2)
+#define X_WIDTH     (2)
+#define Y_HEIGHT    (1)
+#define Y_WIDTH     (1)
+void test_avgpool2d_2x2_case3()
+{
+    int8_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS] = {{{0}}};
+    
+    int8_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS];
+
+
+    memset(X, 0x80, sizeof(X));
+
+            
+    nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS };
+    nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS };
+
+    
+    nn_image_vect_t start = {0, 0, 0};
+    nn_avgpool2d_plan_t plan;
+    
+    avgpool2d_2x2_init(&plan, &x_params, &y_params, &start, &start, Y_HEIGHT, Y_WIDTH, CHANS);
+    // avgpool2d_init(&plan, &x_params, &y_params, &window_config);
+
+    avgpool2d((int8_t*)Y, (int8_t*)X, &plan);
+
+    for(unsigned chn = 0; chn < y_params.channels; chn++){
+        
+        int8_t y_exp = NEG_SAT_VAL;
+
+        int8_t y = Y[0][0][chn];
+
+        TEST_ASSERT_EQUAL(y_exp, y);
+    }
+
+}
+#undef Y_WIDTH
+#undef Y_HEIGHT
+#undef X_WIDTH
+#undef X_HEIGHT
+#undef CHANS
+
+
+
+
+#define CHANS   (3*VPU_INT8_ACC_PERIOD - 4)
+#define X_HEIGHT    (4)
+#define X_WIDTH     (4)
+#define Y_HEIGHT    (2)
+#define Y_WIDTH     (2)
+void test_avgpool2d_2x2_case4()
+{
+    int8_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS] = {{{0}}};
+    
+    int8_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS];
+
+
+    memset(X, 0x80, sizeof(X));
+
+            
+    nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS };
+    nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS };
+
+    nn_window_op_config_t window_config;
+    nn_window_op_config_simple(&window_config, &x_params, &y_params, 
+                                2, 2, 
+                                2, 2);
+
+    window_config.output.shape.height = y_params.height;
+    window_config.output.shape.width = y_params.width;
+    window_config.output.shape.channels = y_params.channels;
+    
+    nn_image_vect_t start = {0, 0, 0};
+    nn_avgpool2d_plan_t plan;
+    
+    avgpool2d_2x2_init(&plan, &x_params, &y_params, &start, &start, 1, 1, CHANS);
+
+    avgpool2d((int8_t*)Y, (int8_t*)X, &plan);
+
+    for(unsigned chn = 0; chn < y_params.channels; chn++){
+        
+        int8_t y_exp = NEG_SAT_VAL;
+
+        int8_t y = Y[0][0][chn];
+
+        TEST_ASSERT_EQUAL(y_exp, y);
+    }
+
+}
+#undef Y_WIDTH
+#undef Y_HEIGHT
+#undef X_WIDTH
+#undef X_HEIGHT
+#undef CHANS
+
+
 void test_avgpool2d()
 {
     UNITY_SET_FILE();
@@ -795,6 +902,8 @@ void test_avgpool2d()
     RUN_TEST(test_avgpool2d_case1);
     RUN_TEST(test_avgpool2d_case2);
     RUN_TEST(test_avgpool2d_case3);
+    RUN_TEST(test_avgpool2d_case4);
     RUN_TEST(test_avgpool2d_2x2_case1);
     RUN_TEST(test_avgpool2d_2x2_case2);
+    RUN_TEST(test_avgpool2d_2x2_case3);
 }

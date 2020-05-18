@@ -1,6 +1,7 @@
 
 #if defined(__XS3A__)
 
+#include "nn_config.h"
 
 /*
 void requantize_16_to_8(
@@ -11,58 +12,141 @@ void requantize_16_to_8(
 
 #define FUNCTION_NAME requantize_16_to_8
 
-#define NSTACKWORDS  4
+#define NSTACKWORDS  (4+8)
     
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 4
+.align 16
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
 
-.align 4
+#define STACK_VEC_TMP   NSTACKWORDS-8
 
 #define arg_y   r0
 #define arg_x   r1
 #define arg_n   r2
 
 #define Y           r0
-#define VBYTES      r1
+#define _32         r1
 #define N_vec       r2
 #define tail_mask   r3
 #define MASK16      r4
-#define EPV         r5
-#define X           r11
+#define _16         r5
+#define tmp         r6
+
+#if !CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
+  #define X           r7
+#else
+  #define X         r11
+#endif
+
+
+/*
+    To allow the possibility of outputing 0x80 (-128), we have to do a little magic.
+
+    The main problem is that the two primary ways we have of collapsing 16-bit values down to 
+    8-bit values (VLSAT and VDEPTH8) both saturate values to -127 instead of -128. We need
+    to somehow get the outputs into the lower 16 bytes of the vector, but still as part of
+    32-bit accumulators, so that the saturation doesn't occur.
+
+    This ultimately requires combining outputs (2k) and (2k+1) into the *same* 16-bit value,
+    so that the 32-bit accumulator in 16-bit mode can be used.
+
+    So, the procedure will be to first determine which outputs should be -128 and create 
+    a correction vector with that info.
+
+    Then we do vdepth8 on the inputs as usual, and just apply the correction vector. The
+    correction vector consists of 16 8-bit values which are 1 if output should be -128 and
+    0 otherwise.
+
+    When applying the correction vector, we'll have 8-bit values in 16-bit mode. So, if we
+    make sure that vD is always 0, then the 16-bit values in vR will all be interepreted
+    as positive (i.e. unsigned).
+
+    Note that the value being subtracted when applying the adjustment will be one of the
+    following 4 values:  0x0000, 0x0001, 0x0100, or 0x0101
+
+        0x0000XXXX - 0x0000 -> 0x0000XXXX
+        0x0000XX81 - 0x0001 -> 0x0000XX80
+        0x000081XX - 0x0100 -> 0x000080XX
+        0x00008181 - 0x0101 -> 0x00008080
+
+        As long as XX is not 0x80 (-128) the logic works. And it can't be 0x80, because
+        then we wouldn't have this problem.
+    
+
+*/
+
+.L_constA:
+.short -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
+.L_constB:
+.short -0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01
 
 FUNCTION_NAME:
-    dualentsp NSTACKWORDS
+/**/dualentsp NSTACKWORDS
+    std r4, r5, sp[0]
+    std r6, r7, sp[1]
 
-    std r4, r5, sp[1]
+    {   ldc r11, 32                         ;   mov r3, arg_n                       }
+/**/{   shl r11, r11, 3                     ;   zext r3, 4                          }
+    {   mov X, arg_x                        ;   vsetc r11                           }
+    {   mkmsk tail_mask, r3                 ;   shr N_vec, arg_n, 4                 }
+    {   mkmsk MASK16, 16                    ;   bf N_vec, .L_loop_end               }
+/**/{   ldc _32, 32                         ;   ldc _16, 16                         }
 
-    {   ldc r11, 32             ;   mkmsk r3, 4             }
-    {   shl r11, r11, 3         ;   and r3, arg_n, r3       }
-    {   mov X, arg_x            ;   vsetc r11               }
-    {   mkmsk tail_mask, r3     ;   shr N_vec, arg_n, 4     }
-    {   mkmsk MASK16, 16        ;   bf N_vec, .L_loop_end   }
-    {   ldc VBYTES, 32          ;   ldc EPV, 16             }
-    .align 4
+
+#if !CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
+    {   ldap r11, .L_constA                 ;   vclrdr                              }
+    {   mov r11, X                          ;   vldc r11[0]                         }
+    {                                       ;   nop                                 }
+
     .L_loop_top:
-        {   add X, X, VBYTES        ;   vldr X[0]               }
-        {   sub N_vec, N_vec, 1     ;   vdepth8                 }
-        vstrpv Y[0], MASK16
-        {   add Y, Y, EPV           ;   bt N_vec, .L_loop_top   }
+/**/    {   ldap r11, .L_constB                 ;   vldr r11[0]                         }
+        {                                       ;   vlsub r11[0]                        }
+        {                                       ;   vpos                                }
+        {   ldaw tmp, sp[STACK_VEC_TMP]         ;   vdepth8                             }
+/**/    {   mov r11, X                          ;   vstr tmp[0]                         }
+        {   add X, X, _32                       ;   vldr r11[0]                         }
+        {   mov r11, X                          ;   vdepth8                             }
+        {   sub N_vec, N_vec, 1                 ;   vlmacc tmp[0]                       }
+/**/    vstrpv Y[0], MASK16
+        {   add Y, Y, _16                       ;   bt N_vec, .L_loop_top               }
     .L_loop_end:
 
-    {                           ;   bf tail_mask, .Lfunc_end}
-    {                           ;   vldr X[0]               }
-    {                           ;   vdepth8                 }
-    vstrpv Y[0], tail_mask
-    
-    // {                           ;                           }
+        {   mov r11, X                          ;   bf tail_mask, .Lfunc_end            }
+        {   ldap r11, .L_constB                 ;   vldr r11[0]                         }
+/**/    {                                       ;   vlsub r11[0]                        }
+        {                                       ;   vpos                                }
+        {   ldaw tmp, sp[STACK_VEC_TMP]         ;   vdepth8                             }
+        {   mov r11, X                          ;   vstr tmp[0]                         }
+/**/    {                                       ;   vldr r11[0]                         }
+        {                                       ;   vdepth8                             }
+        {                                       ;   vlmacc tmp[0]                       }
+        vstrpv Y[0], tail_mask
 
+#else  // CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
+
+    .L_loop_top:
+        {   add X, X, _32                       ;   vldr X[0]                           }
+        {   sub N_vec, N_vec, 1                 ;   vdepth8                             }
+        vstrpv Y[0], MASK16
+/**/    {   add Y, Y, _16                       ;   bt N_vec, .L_loop_top               }
+    .L_loop_end:
+
+        {                                       ;   bf tail_mask, .Lfunc_end            }
+        {                                       ;   vldr X[0]                           }
+        {                                       ;   vdepth8                             }
+/**/    vstrpv Y[0], tail_mask
+
+#endif // CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
+
+
+    
 .Lfunc_end:
-    ldd r4, r5, sp[1]
+    ldd r6, r7, sp[1]
+    ldd r4, r5, sp[0]
     retsp NSTACKWORDS
 
     .cc_bottom FUNCTION_NAME.function

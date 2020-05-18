@@ -1,6 +1,8 @@
 
 #if defined(__XS3A__)
 
+#include "nn_config.h"
+
 /**
 
 
@@ -44,6 +46,7 @@ void nn_conv2d_hstrip_depthwise(
 
 #define STACK_K_PSTART      (9)
 #define STACK_BSO_PSTART    (10)
+#define STACK_TMP           (11)
 
 
 #define Y               r0
@@ -61,6 +64,8 @@ void nn_conv2d_hstrip_depthwise(
 #define Q(RSOMETHING)    RSOMETHING
 
 .align 16
+
+
 FUNCTION_NAME:
     dualentsp NSTACKWORDS 
     {   ldc r11, 32                             ;   stw r10, sp[8]                          }
@@ -88,6 +93,14 @@ FUNCTION_NAME:
         {   sub pix_left, pix_left, 1               ;   mov X, X_start                          }
         {    add X_start, X_start, window_hstride   ;   ldw r11, sp[STACK_BSO_PSTART]           }
         {                                           ;   ldw K, sp[STACK_K_PSTART]               }
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise
+        
+#else
+        {   ldaw r11, cp[vec_0x80]                  ;   ldw Q(rows_left), sp[STACK_CHAN2WRITE]  }
+        {   mkmsk Q(rows_left), Q(rows_left)        ;   vldr r11[0]                             }
+        vstrpv Y[0], Q(rows_left)
+        {                                           ;   ldw r11, sp[STACK_BSO_PSTART]           }
+#endif
         {   add r11, r11, _32                       ;   vldd r11[0]                             }
         {                                           ;   vldr r11[0]                             }
         {                                           ;   ldw rows_left, sp[STACK_K_H]            }
@@ -101,6 +114,7 @@ FUNCTION_NAME:
 
 #define BSO     rows_left
     .L_pix_finish:
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise
         {   shl r11, _32, 3                         ;   ldw BSO, sp[STACK_BSO_PSTART]           }
         {   shl Q(cols_left), _32, 1                ;   vsetc r11                               }
         {   add BSO, BSO, Q(cols_left)              ;   ldw Q(cols_left), sp[STACK_CHAN2WRITE]  }
@@ -111,11 +125,40 @@ FUNCTION_NAME:
         {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
         {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
         {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
+
         {   mkmsk Q(cols_left), Q(cols_left)        ;   vsetc r11                               }
         {                                           ;   vlsat BSO[0]                            }
         vstrpv Y[0], Q(cols_left)
         {                                           ;   ldw Q(cols_left), sp[STACK_Y_COL_STRIDE]}
         {   add Y, Y, Q(cols_left)                  ;   bt pix_left, .L_pix_start               }
+#else
+        {   shl r11, _32, 3                         ;   ldw BSO, sp[STACK_BSO_PSTART]           }
+        {   shl Q(cols_left), _32, 1                ;   vsetc r11                               }
+        {   add BSO, BSO, Q(cols_left)              ;   ldw Q(cols_left), sp[STACK_CHAN2WRITE]  }
+        {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat BSO[0]                            }
+        {   add BSO, BSO, _32                       ;   vstr r11[0]                             }   
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+        {   mkmsk Q(cols_left), Q(cols_left)        ;   vclrdr                                  }
+        {                                           ;   vlmacc r11[0]                           }
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+        {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
+        {                                           ;   vlsat BSO[0]                            }
+
+        {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
+        {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
+        {   mkmsk Q(rows_left), 4                   ;   vdepth1                                 }
+        vstrpv r11[0], Q(rows_left)
+        {   ldc Q(rows_left), 0                     ;                                           }
+        {   ldaw r11, sp[STACK_VEC_TMP]             ;   sub Q(rows_left), Q(rows_left), 8       }
+        vlashr r11[0], Q(rows_left)
+        {   ldc r11, 32                             ;   ldw Q(rows_left), sp[STACK_TMP]         }
+        {   andnot Q(cols_left), Q(rows_left)       ;   vdepth8                                 }
+        vstrpv Y[0], Q(cols_left)
+        {   shl r11, r11, 4                         ;   ldw Q(cols_left), sp[STACK_Y_COL_STRIDE]}
+        {   add Y, Y, Q(cols_left)                  ;   vsetc r11                               }
+        {                                           ;   bt pix_left, .L_pix_start               }
+
+#endif
 
 
 .Lfunc_end:
@@ -123,7 +166,6 @@ FUNCTION_NAME:
     ldd r8, r9, sp[3]
     ldd r6, r7, sp[2]
     ldd r4, r5, sp[1]
-    ////////////////// FNOP HERE ///////////////////
     retsp NSTACKWORDS
 
 

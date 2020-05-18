@@ -17,6 +17,13 @@
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
+
+
 
 
 
@@ -986,6 +993,102 @@ void test_nn_conv2d_hstrip_tail_shallowin_padded_case5()
 
 
 
+
+
+
+#define CHANS_OUT       (4)
+#define CHANS_IN        (4)
+#define X_HEIGHT        (1)
+#define X_WIDTH         (1)
+#define Y_HEIGHT        (1)
+#define Y_WIDTH         (1)
+#define K_h             (1)
+#define K_w             (1)
+#define K_hstride       (1)
+void test_nn_conv2d_hstrip_tail_shallowin_padded_case6()
+{
+    PRINTF("%s...\n", __func__);
+
+    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
+
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT_MAX][K_h][K_w_array][CHANS_IN];
+
+    struct {
+        int32_t bias[CHANS_OUT_MAX];
+        int16_t shift1[CHANS_OUT_MAX];
+        int16_t scale[CHANS_OUT_MAX];
+        int16_t offset_scale[CHANS_OUT_MAX];
+        int16_t offset[CHANS_OUT_MAX];
+        int16_t shift2[CHANS_OUT_MAX];
+    } BSO;
+
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
+
+    nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
+    
+    nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
+    nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
+
+    int8_t zero_point_vec[VPU_INT8_EPV];
+    memset(zero_point_vec, 0, sizeof(zero_point_vec));
+
+
+    memset(X, 0, sizeof(X));
+    memset(K, 0, sizeof(K));
+
+    for(int k = 0; k < y_params.channels; k++){
+        BSO.bias[k]     = ((k % 2) == 0)? -128 : -127;
+        BSO.shift1[k]   = 0;
+        BSO.scale[k]    = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k]       = 0;
+    }
+
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, 
+                            (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, 
+                            y_params.channels);
+
+    int pad_t = 0;
+    int pad_b = K_h - pad_t - X_HEIGHT;
+    int pad_l = 0;
+    int pad_r = K_w_array - pad_l - X_WIDTH;
+        
+    const mem_stride_t x_v_stride = x_params.width*x_params.channels;
+    const nn_tensor_t* K_init = &K[y_params.channels-1][0][0][0];
+
+    nn_image_t* X_patch_start = &X[-pad_t][-pad_l][0];
+
+    memset(Y, 0xCC, sizeof(Y));
+    nn_conv2d_hstrip_tail_shallowin_padded((nn_image_t*) Y, X_patch_start, K_init, (nn_bso_block_t*) &bso, 
+                                    K_h, K_hstride, x_params.channels, pad_t, pad_b, pad_l, pad_r,
+                                    x_v_stride, y_params.channels, y_params.width, zero_point_vec, CHANS_OUT);
+
+    for(unsigned row = 0; row < y_params.height; row++){
+        for(unsigned col = 0; col < y_params.width; col++){
+            for(unsigned chn = 0; chn < y_params.channels; chn++){
+                
+                int8_t y_exp = ((chn % 2) == 0)? NEG_SAT_VAL : -127;
+                TEST_ASSERT_EQUAL(y_exp, Y[row][col][chn]);
+            }
+        }
+    }
+}
+#undef CHANS_OUT
+#undef CHANS_IN  
+#undef X_HEIGHT  
+#undef X_WIDTH   
+#undef Y_HEIGHT  
+#undef Y_WIDTH   
+#undef K_h       
+#undef K_w       
+#undef K_hstride 
+
+
+
+
+
 void test_nn_conv2d_hstrip_tail_shallowin_padded()
 {
     UNITY_SET_FILE();
@@ -996,4 +1099,5 @@ void test_nn_conv2d_hstrip_tail_shallowin_padded()
     RUN_TEST(test_nn_conv2d_hstrip_tail_shallowin_padded_case3);
     RUN_TEST(test_nn_conv2d_hstrip_tail_shallowin_padded_case4);
     RUN_TEST(test_nn_conv2d_hstrip_tail_shallowin_padded_case5);
+    RUN_TEST(test_nn_conv2d_hstrip_tail_shallowin_padded_case6);
 }

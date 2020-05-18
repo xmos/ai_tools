@@ -17,6 +17,19 @@
 
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
+#ifdef CONFIG_SYMMETRIC_SATURATION_GLOBAL
+  #define CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8 CONFIG_SYMMETRIC_SATURATION_GLOBAL
+#else
+  #ifndef CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
+    #define CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8 (0)
+  #endif 
+#endif
+
+#if CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
 
 
 ////////////////////////////////////////////////
@@ -34,6 +47,45 @@ static void memset16(
 // for sprintf() calls
 static char str_buff[200];
 
+
+void test_requantize_16_to_8_case0()
+{
+    PRINTF("%s...\n", __func__);
+    
+    int8_t WORD_ALIGNED y[VPU_INT8_ACC_PERIOD] = {0};
+    int16_t WORD_ALIGNED x[VPU_INT8_ACC_PERIOD]  = {
+        0x0000, 0x0100, 0x007F, 0x0080,
+        0x7FFF, 0x7E80, 0x7E7F, 
+        0x8000, 0x807F, 0x8080, 0x8034,
+        0,0,0
+    };
+
+    int8_t y_exp[VPU_INT8_ACC_PERIOD] = {
+        0x00, 0x01, 0x00, 0x01,
+        0x7F, 0x7F, 0x7E,
+        NEG_SAT_VAL, NEG_SAT_VAL, 0x81, NEG_SAT_VAL,
+        0,0,0
+    };
+
+    requantize_16_to_8(y, x, VPU_INT8_ACC_PERIOD);
+
+    for(int i = 0; i < VPU_INT8_ACC_PERIOD; i ++){
+        // printf("%d: 0x%04X -> %d\n", i, (unsigned)x[i], y[i]);
+        TEST_ASSERT_EQUAL(y_exp[i], y[i]);
+    }
+
+    memset(y, 0, sizeof(y));
+
+    requantize_16_to_8(y, x, VPU_INT8_ACC_PERIOD-1);
+
+    for(int i = 0; i < VPU_INT8_ACC_PERIOD-1; i ++){
+        // printf("%d: 0x%04X -> %d\n", i, (unsigned)x[i], y[i]);
+        TEST_ASSERT_EQUAL(y_exp[i], y[i]);
+    }
+
+}
+
+
 /****************************************************************************
  *
  * Case 0 - Checks several specific cases.
@@ -41,7 +93,7 @@ static char str_buff[200];
  ****************************************************************************/
 #define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define VEC_LEN         (VPU_INT16_EPV)
-void test_requantize_16_to_8_case0()
+void test_requantize_16_to_8_case1()
 {
     PRINTF("%s...\n", __func__);
     
@@ -65,6 +117,7 @@ void test_requantize_16_to_8_case0()
         {    0x0100,     1,      0x01    },
         {    0x0100,     8,      0x01    },
         {    0x0100,    15,      0x01    },
+        {   -0x8000,    16,  NEG_SAT_VAL },
     };
     const unsigned first_case = 1;
     const unsigned last_case = -1;
@@ -123,7 +176,7 @@ void test_requantize_16_to_8_case0()
 #define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define MAX_LEN         (512)
 #define REPS            50
-void test_requantize_16_to_8_case1()
+void test_requantize_16_to_8_case2()
 {
     PRINTF("%s...\n", __func__);
 
@@ -145,7 +198,7 @@ void test_requantize_16_to_8_case1()
         
         memset(y, XXX, sizeof(y));
 
-        for(int in_place = 0; in_place < 2; in_place++){
+        for(int in_place = 0; in_place < 1; in_place++){
 
 #if DEBUG_ON
             PRINTF("\t\t\t%s...\n", in_place? "in-place" : "not in-place");
@@ -158,6 +211,8 @@ void test_requantize_16_to_8_case1()
             for(int i = 0; i < N; i++){
 
                 int8_t exp_val = vdepth8_single_s16(x_orig[i]);
+                if(x_orig[i] < -0x7F80)
+                    exp_val = NEG_SAT_VAL;
 
                 if(dest[i] != exp_val)
                     sprintf(str_buff, "(rep: %d) (N: %u) (index: %d) (x[%d] = %d)", v, N, i, i, x_orig[i]);
@@ -187,4 +242,5 @@ void test_requantize_16_to_8()
     
     RUN_TEST(test_requantize_16_to_8_case0);
     RUN_TEST(test_requantize_16_to_8_case1);
+    RUN_TEST(test_requantize_16_to_8_case2);
 }

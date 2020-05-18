@@ -36,7 +36,7 @@ SOURCE_DIRS := src
 ###
 SOURCE_FILE_EXTS := c cc cpp
 
-ifeq ($(PLAYFORM),xcore)
+ifeq ($(PLATFORM),xcore)
   SOURCE_FILE_EXTS += xc
 endif
 

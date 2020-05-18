@@ -1,6 +1,8 @@
 
 #if defined(__XS3A__)
 
+#include "nn_config.h"
+
 /**
 void nn_conv2d_hstrip_tail_shallowin_padded(
         nn_image_t* Y,
@@ -60,13 +62,14 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
 #define STACK_BSO               8
 #define STACK_WRITE_MASK        9
 #define STACK_Y                 10
+#define STACK_TMP               11
 #define STACK_WIN_H_STRIDE      STACK_K_h_stride
 
 
 
 #define Q(R)      R
 
-.align 16
+
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[0]
@@ -221,6 +224,13 @@ FUNCTION_NAME:
     {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
 
     .L_out_col_start:
+#if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
+        {   ldaw r11, cp[vec_0x80]                  ;   ldw Q(rows_left), sp[STACK_Y]           }
+        {                                           ;   vldr r11[0]                             }
+        {                                           ;   ldw r11, sp[STACK_WRITE_MASK]           }
+        vstrpv Q(rows_left)[0], r11
+#endif
+
         // load number of patch rows, initialize accumulators, decrement out cols
         {   ldaw r11, sp[STACK_VEC_ADJ_B_HI]        ;   ldw rows_left, sp[STACK_PATCH_ROWS]     }
         {   ldaw r11, sp[STACK_VEC_ADJ_B_LO]        ;   vldd r11[0]                             }
@@ -278,6 +288,8 @@ FUNCTION_NAME:
 
         .L_patch_row_end:
 
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
+
         {   shl r11, _32, 3                         ;   ldw tmp, sp[STACK_BSO]      /*load BSO*/}
         {   ldaw r11, sp[STACK_VEC_TMP1]            ;   vsetc r11            /*set 16-bit mode*/}
         {   add tmp, tmp, _32                       ;   vlsat tmp[0]       /*apply first shift*/}
@@ -296,6 +308,39 @@ FUNCTION_NAME:
         {   add Q(rows_left), Q(rows_left), tmp     ;   ldw tmp, sp[STACK_WIN_H_STRIDE]         }
         {   add X, X, tmp                           ;   stw Q(rows_left), sp[STACK_Y]           }
 
+#else
+
+        {   shl r11, _32, 3                         ;   ldw tmp, sp[STACK_BSO]      /*load BSO*/}
+        {   ldaw r11, sp[STACK_VEC_TMP1]            ;   vsetc r11            /*set 16-bit mode*/}
+        {   add tmp, tmp, _32                       ;   vlsat tmp[0]       /*apply first shift*/}
+        {                                           ;   vstr r11[0] /*save 16-bit intermediate*/}
+        {   add tmp, tmp, _32                       ;   vldc tmp[0]       /*load scale into vC*/}
+        {                                           ;   vclrdr   /*clear accumulate for VLMACC*/}
+        {                                           ;   vlmacc r11[0]              /*do VLMACC*/}
+        {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
+        {   add tmp, tmp, _32                       ;   vlmacc tmp[0]                           }
+
+        {                                           ;   vlsat tmp[0]                            }
+        {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
+        {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
+        {   mkmsk Q(rows_left), 4                   ;   vdepth1                                 }
+        vstrpv r11[0], Q(rows_left)
+        {   ldc Q(rows_left), 0                     ;                                           }
+        {   ldaw r11, sp[STACK_VEC_TMP1]            ;   sub Q(rows_left), Q(rows_left), 8       }
+        vlashr r11[0], Q(rows_left)
+        {                                           ;   ldw Q(rows_left), sp[STACK_TMP]         }
+        {                                           ;   ldw r11, sp[STACK_WRITE_MASK]           }
+        {                                           ;   ldw tmp, sp[STACK_Y]                    }
+        {   andnot r11, Q(rows_left)                ;   vdepth8                                 }
+        vstrpv tmp[0], r11
+        {   shl r11, _32, 4                         ;   ldw Q(rows_left), sp[STACK_Y_H_STRIDE]  }
+        {   add Q(rows_left), tmp, Q(rows_left)     ;   ldw tmp, sp[STACK_WIN_H_STRIDE]         }
+        {   add X, X, tmp                           ;   vsetc r11                               }
+        {   ldc pad_mask, 32                        ;   stw Q(rows_left), sp[STACK_Y]           }
+
+
+#endif
+
 #define l_padding   Q(rows_left)
 #define r_padding   Q(_32)    
 
@@ -308,7 +353,9 @@ FUNCTION_NAME:
         mul l_padding, l_padding, tmp
         {   sub pad_mask, pad_mask, l_padding       ;   stw l_padding, sp[STACK_PAD_L]          }
         {   mkmsk pad_mask, pad_mask                ;   ldw tmp, sp[STACK_OUT_COLS]             }
-        {   shl pad_mask, pad_mask, l_padding       ;   bt tmp, .L_out_col_start                }
+        {   shl pad_mask, pad_mask, l_padding       ;                                           }
+        bt tmp, .L_out_col_start                
+
     .L_out_col_end:
 
 #undef l_padding

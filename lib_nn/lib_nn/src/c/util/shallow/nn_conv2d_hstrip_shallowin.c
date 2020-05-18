@@ -167,7 +167,7 @@ void nn_conv2d_hstrip_shallowin_padded(
     const mem_stride_t k_cout_str = K_h * VPU_INT8_EPV;
 
     //Number of rows to actually be computed in a patch
-    const unsigned patch_rows = K_h - pad_t - pad_b;
+    const int32_t patch_rows = K_h - pad_t - pad_b;
 
     VSETC(&vpu, MODE_S8);
 
@@ -209,18 +209,21 @@ void nn_conv2d_hstrip_shallowin_padded(
     VSTD(&vpu, &adj_bias_hi.u16[0]);
     VSTR(&vpu, &adj_bias_lo.u16[0]);
 
-    int pad_l = pad_l_initial * C_in;
-    int pad_r = pad_r_initial * C_in;
+    int32_t pad_l = pad_l_initial * C_in;
+    int32_t pad_r = pad_r_initial * C_in;
 
-    int pad_l_relu = (pad_l > 0)? pad_l : 0;
-    int pad_r_relu = (pad_r > 0)? pad_r : 0;
+    int32_t pad_l_relu = (pad_l > 0)? pad_l : 0;
+    int32_t pad_r_relu = (pad_r > 0)? pad_r : 0;
 
     uint32_t pad_mask = 32;
 
     pad_mask -= pad_l_relu;
     pad_mask -= pad_r_relu;
 
-    pad_mask = ((1<<pad_mask)-1) << pad_l_relu;
+    if(pad_mask == 32)
+        pad_mask = 0xFFFFFFFF;
+    else
+        pad_mask = ((1<<pad_mask)-1) << pad_l_relu;
 
 
     //Loop over the output pixels
@@ -318,8 +321,8 @@ void nn_conv2d_hstrip_shallowin_padded(
         pad_l -= window_h_stride;
         pad_r += window_h_stride;
 
-        int pad_l_relu = (pad_l > 0)? pad_l : 0;
-        int pad_r_relu = (pad_r > 0)? pad_r : 0;
+        int32_t pad_l_relu = (pad_l > 0)? pad_l : 0;
+        int32_t pad_r_relu = (pad_r > 0)? pad_r : 0;
 
         pad_mask = 32;
         pad_mask -= pad_l_relu;
@@ -381,9 +384,9 @@ void nn_conv2d_hstrip_tail_shallowin(
     const mem_stride_t window_h_stride = K_h_stride * C_in;
     const mem_stride_t k_cout_str = K_h * VPU_INT8_EPV;
 
-    const unsigned tail_mod1  = 2*(16-C_out_tail);
-    const unsigned tail_mod2  = 12-C_out_tail;
-    const unsigned write_mask = (1<<C_out_tail)-1;
+    const int32_t tail_mod1  = 2*(16-C_out_tail);
+    const int32_t tail_mod2  = 12-C_out_tail;
+    const int32_t write_mask = (1<<C_out_tail)-1;
 
     VSETC(&vpu, MODE_S8);
 
@@ -536,11 +539,11 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
     const mem_stride_t k_cout_str = K_h * VPU_INT8_EPV;
 
     //Number of rows to actually be computed in a patch
-    const unsigned patch_rows = K_h - pad_t - pad_b;
+    const int32_t patch_rows = K_h - pad_t - pad_b;
 
-    const unsigned tail_mod1  = 2*(16-C_out_tail);
-    const unsigned tail_mod2  = 12-C_out_tail;
-    const unsigned write_mask = (1<<C_out_tail)-1;
+    const int32_t tail_mod1  = 2*(16-C_out_tail);
+    const int32_t tail_mod2  = 12-C_out_tail;
+    const uint32_t write_mask = (1<<C_out_tail)-1;
 
     VSETC(&vpu, MODE_S8);
 
@@ -582,19 +585,22 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
     VSTD(&vpu, &adj_bias_hi.u16[0]);
     VSTR(&vpu, &adj_bias_lo.u16[0]);
 
-    int pad_l = pad_l_initial * C_in;
-    int pad_r = pad_r_initial * C_in;
+    int32_t pad_l = pad_l_initial * C_in;
+    int32_t pad_r = pad_r_initial * C_in;
 
-    int pad_l_relu = (pad_l > 0)? pad_l : 0;
-    int pad_r_relu = (pad_r > 0)? pad_r : 0;
+    int32_t pad_l_relu = (pad_l > 0)? pad_l : 0;
+    int32_t pad_r_relu = (pad_r > 0)? pad_r : 0;
 
     uint32_t pad_mask = 32;
 
     pad_mask -= pad_l_relu;
     pad_mask -= pad_r_relu;
 
-    pad_mask = ((1<<pad_mask)-1) << pad_l_relu;
 
+    if(pad_mask == 32)
+        pad_mask = 0xFFFFFFFF;
+    else
+        pad_mask = ((1<<pad_mask)-1) << pad_l_relu;
 
     //Loop over the output pixels
     for(int out_col = 0; out_col < out_cols; out_col++){
@@ -662,7 +668,6 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
         
 #else
 
-        //Saturate to 8-bit values
         VLSAT(&vpu, BSO->shift2);
 
         VSTR(&vpu, vec_tmp1.s16);
@@ -689,8 +694,8 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
         pad_l -= window_h_stride;
         pad_r += window_h_stride;
 
-        int pad_l_relu = (pad_l > 0)? pad_l : 0;
-        int pad_r_relu = (pad_r > 0)? pad_r : 0;
+        int32_t pad_l_relu = (pad_l > 0)? pad_l : 0;
+        int32_t pad_r_relu = (pad_r > 0)? pad_r : 0;
 
         pad_mask = 32;
         pad_mask -= pad_l_relu;

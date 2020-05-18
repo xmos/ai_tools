@@ -754,14 +754,14 @@ void nn_conv2d_hstrip_tail_deep_padded(
     VLDR(&vpu, BSO->bias_lo);
 
     
-    const unsigned patch_rows = K_h - pad_t - pad_b;
+    const int32_t patch_rows = K_h - pad_t - pad_b;
     const mem_stride_t win_h_stride = K_h_stride * C_in;
-    const unsigned C_in_groups = C_in >> VPU_INT8_EPV_LOG2;
-    const unsigned C_in_tail = C_in % VPU_INT8_EPV;
+    const int32_t C_in_groups = C_in >> VPU_INT8_EPV_LOG2;
+    const int32_t C_in_tail = C_in % VPU_INT8_EPV;
 
-    const unsigned C_out_mod1 = 2*(16-C_out_tail);
-    const unsigned C_out_mod2 = (C_out_mod1>>1)-4;
-    const unsigned write_mask = (1<<C_out_tail)-1;
+    const int32_t C_out_mod1 = 2*(16-C_out_tail);
+    const int32_t C_out_mod2 = (C_out_mod1>>1)-4;
+    const int32_t write_mask = (1<<C_out_tail)-1;
 
 
     if(pad_t){
@@ -841,10 +841,10 @@ void nn_conv2d_hstrip_tail_deep_padded(
     VSTD(&vpu, vec_adj_b_hi.s16);
     VSTR(&vpu, vec_adj_b_lo.s16);
 
-    int pad_l = pad_l_initial;
-    int pad_r = pad_r_initial;
+    int32_t pad_l = pad_l_initial;
+    int32_t pad_r = pad_r_initial;
 
-    int center_cols = K_w;
+    int32_t center_cols = K_w;
     if(pad_l >= 0)  center_cols -= pad_l;
     if(pad_r >= 0)  center_cols -= pad_r;
 
@@ -863,7 +863,7 @@ void nn_conv2d_hstrip_tail_deep_padded(
 
         for(int pr = patch_rows; pr; pr--){
 
-            const int cur_pad_l = (pad_l > 0)? pad_l : 0;
+            const int32_t cur_pad_l = (pad_l > 0)? pad_l : 0;
             if(cur_pad_l){
                 for(int col = cur_pad_l; col; col--){
                     VLDC(&vpu, zero_point_vec);
@@ -934,7 +934,7 @@ void nn_conv2d_hstrip_tail_deep_padded(
                 }
             }
 
-            const int cur_pad_r = (pad_r > 0)? pad_r : 0;
+            const int32_t cur_pad_r = (pad_r > 0)? pad_r : 0;
 
             if(cur_pad_r){
                 for(int col = cur_pad_r; col; col--){
@@ -1006,7 +1006,7 @@ void nn_conv2d_hstrip_tail_deep_padded(
 #else
 
         VLSAT(&vpu, BSO->shift2);
-
+        
         VSTR(&vpu, vec_tmp2);
         VLADD(&vpu, vec_0x007F);
         VDEPTH1(&vpu);
@@ -1017,7 +1017,7 @@ void nn_conv2d_hstrip_tail_deep_padded(
         
         //Store result in Y
         mask = mask & write_mask;
-        VSTRPV(&vpu, Y, write_mask);
+        VSTRPV(&vpu, Y, mask);
 
         //Set mode back to 8-bit
         VSETC(&vpu, MODE_S8);
@@ -1027,15 +1027,15 @@ void nn_conv2d_hstrip_tail_deep_padded(
         //Now make adjustments to pad_l, pad_r and center_cols
 
         if(pad_l > 0){
-            int tmp = (pad_l <= K_h_stride)? pad_l : K_h_stride;
+            int32_t tmp = (pad_l <= K_h_stride)? pad_l : K_h_stride;
             center_cols += tmp;
         }
 
-        pad_l -= (int) K_h_stride;
-        pad_r += (int) K_h_stride;
+        pad_l -= (int32_t) K_h_stride;
+        pad_r += (int32_t) K_h_stride;
 
         if(pad_r > 0){
-            int tmp = (pad_r <= K_h_stride)? pad_r : K_h_stride;
+            int32_t tmp = (pad_r <= K_h_stride)? pad_r : K_h_stride;
             center_cols -= tmp;
         }
         

@@ -311,21 +311,21 @@ void VLADD(
         const int8_t* addr8 = (const int8_t*) addr;
         for(int i = 0; i < VPU_INT8_EPV; i++){
             int32_t val = addr8[i];
-            vpu->vR.s8[i] = saturate(vpu->vR.s8[i] + val, 8);
+            vpu->vR.s8[i] = saturate(((int32_t)vpu->vR.s8[i]) + val, 8);
         }
     } else if(vpu->mode == MODE_S16){
         const int16_t* addr16 = (const int16_t*) addr;
 
         for(int i = 0; i < VPU_INT16_EPV; i++){
             int32_t val = addr16[i];
-            vpu->vR.s16[i] = saturate(vpu->vR.s16[i] + val, 16);
+            vpu->vR.s16[i] = saturate(((int32_t)vpu->vR.s16[i]) + val, 16);
         }
     } else if(vpu->mode == MODE_S32){
         const int32_t* addr32 = (const int32_t*) addr;
 
         for(int i = 0; i < VPU_INT32_EPV; i++){
             int64_t val = addr32[i];
-            vpu->vR.s32[i] = saturate(vpu->vR.s32[i] + val, 32);
+            vpu->vR.s32[i] = saturate(((int64_t)vpu->vR.s32[i]) + val, 32);
         }
     } else { 
         assert(0); //How'd this happen?
@@ -337,7 +337,7 @@ void VLADD(
 
 void VDEPTH1(xs3_vpu* vpu){
 
-    unsigned bits = 0;
+    uint32_t bits = 0;
     
     if(vpu->mode == MODE_S8){
         for(int i = 0; i < VPU_INT8_ACC_PERIOD; i++){
@@ -371,12 +371,12 @@ void VDEPTH8(xs3_vpu* vpu){
     
     if(vpu->mode == MODE_S16){
         for(int i = 0; i < VPU_INT16_ACC_PERIOD; i++){
-            int32_t elm = vec_tmp.s16[i] + (1 << 7);
+            int32_t elm = ((int32_t)vec_tmp.s16[i]) + (1 << 7);
             vpu->vR.s8[i] = elm >> 8;
         }
     } else if(vpu->mode == MODE_S32){
         for(int i = 0; i < VPU_INT32_ACC_PERIOD; i++){
-            int64_t elm = vec_tmp.s32[i] + (1 << 23);
+            int64_t elm = ((int64_t)vec_tmp.s32[i]) + (1 << 23);
             vpu->vR.s8[i] = elm >> 24;
         }
     } else { 
@@ -390,7 +390,7 @@ void VDEPTH16(xs3_vpu* vpu){
     
     if(vpu->mode == MODE_S32){
         for(int i = 0; i < VPU_INT32_ACC_PERIOD; i++){
-            int64_t elm = vpu->vR.s32[i] + (1 << 15);
+            int64_t elm = ((int64_t)vpu->vR.s32[i]) + (1 << 15);
             vpu->vR.s16[i] = elm >> 16;
         }
 

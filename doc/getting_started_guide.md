@@ -71,4 +71,4 @@ Additional operators will be optimized in future releases.
 
 # Deploying Your Model
 
-**No deployment steps can be taken at this time.**
+Development kits will be available soon. Register at xcore.ai for all the latest news - including early announcement of the first available development kits.

@@ -28,7 +28,7 @@ static inline int8_t sat_s8(
     const int8_t sat_lo,
     const int8_t sat_hi)
 {
-    if(acc32 >= VPU_INT8_MAX)
+    if(acc32 > VPU_INT8_MAX)
         return sat_hi;
     if(acc32 < VPU_INT8_MIN)
         return sat_lo;
@@ -66,11 +66,10 @@ static inline int32_t sat_s32(
 
 static inline int8_t vlsat_single_s8(
     int32_t acc, 
-    int16_t shr,
+    uint16_t shr,
     const int8_t sat_lo,
     const int8_t sat_hi)
 {
-    shr = (shr <= 0)? 0 : shr;
     int64_t acc64 = acc;
     if(shr > 0) acc64 += 1<<(shr-1);
     return sat_s8(acc64 >> shr, sat_lo, sat_hi);
@@ -78,9 +77,8 @@ static inline int8_t vlsat_single_s8(
 
 static inline int16_t vlsat_single_s16(
     int32_t acc, 
-    int16_t shr)
+    uint16_t shr)
 {
-    shr = (shr <= 0)? 0 : shr;
     if(shr > 0) acc += 1<<(shr-1);
     return sat_s16(acc >> shr);
 }

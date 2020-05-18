@@ -129,7 +129,7 @@ void avgpool2d_global(
         }
 
         
-        Y[ch] = (acc < ((int16_t)0x8080))? NEG_SAT_VAL : vlsat_single_s8(acc, sh, NEG_SAT_VAL, VPU_INT8_MAX);
+        Y[ch] = vlsat_single_s8(acc, sh, NEG_SAT_VAL, VPU_INT8_MAX);
     }
 }
 

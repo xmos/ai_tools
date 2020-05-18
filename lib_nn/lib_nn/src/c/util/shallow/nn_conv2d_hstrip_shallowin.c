@@ -22,10 +22,8 @@
 #endif 
 
 
-#if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
-const static int16_t vec_0x007F[VPU_INT8_ACC_PERIOD] = { 0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F,0x007F };
-const static int8_t vec_0x80[VPU_INT8_ACC_PERIOD] = { 0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80 };
-#endif
+const extern int16_t vec_0x007F[VPU_INT8_ACC_PERIOD];
+const extern int8_t vec_0x80[VPU_INT8_ACC_PERIOD];
 
 WEAK_FUNC
 void nn_conv2d_hstrip_shallowin(
@@ -53,6 +51,11 @@ void nn_conv2d_hstrip_shallowin(
 
         const nn_image_t* patch_X = X;
         const nn_image_t* patch_K = K;
+
+#if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
+        VLDR(&vpu, vec_0x80);
+        VSTRPV(&vpu, Y, 0xFFFF);
+#endif
 
         //Initialize accumulators
         VLDD(&vpu, BSO->bias_hi);
@@ -116,8 +119,8 @@ void nn_conv2d_hstrip_shallowin(
         VDEPTH8(&vpu);
 
         //Store result in Y
-        const unsigned mask16 = 0xFFFF;
-        VSTRPV(&vpu, Y, mask16);
+        mask = mask & 0xFFFF;
+        VSTRPV(&vpu, Y, mask);
 
         //Set mode back to 8-bit
         VSETC(&vpu, MODE_S8);
@@ -226,6 +229,11 @@ void nn_conv2d_hstrip_shallowin_padded(
         const nn_image_t* patch_X = X;
         const nn_image_t* patch_K = K_patch_start;
 
+#if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
+        VLDR(&vpu, vec_0x80);
+        VSTRPV(&vpu, Y, 0xFFFF);
+#endif
+
         //Initialize accumulators
         VLDD(&vpu, &adj_bias_hi.u16[0]);
         VLDR(&vpu, &adj_bias_lo.u16[0]);
@@ -295,8 +303,8 @@ void nn_conv2d_hstrip_shallowin_padded(
         VDEPTH8(&vpu);
         
         //Store result in Y
-        const unsigned mask16 = 0xFFFF;
-        VSTRPV(&vpu, Y, mask16);
+        mask = mask & 0xFFFF;
+        VSTRPV(&vpu, Y, mask);
 
         //Set mode back to 8-bit
         VSETC(&vpu, MODE_S8);
@@ -386,6 +394,11 @@ void nn_conv2d_hstrip_tail_shallowin(
 
         const nn_image_t* patch_X = X;
         const nn_image_t* patch_K = K_patch_start;
+        
+#if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
+        VLDR(&vpu, vec_0x80);
+        VSTRPV(&vpu, Y, write_mask);
+#endif
 
         //Initialize accumulators
         VLDD(&vpu, BSO->bias_hi);
@@ -449,7 +462,8 @@ void nn_conv2d_hstrip_tail_shallowin(
         VDEPTH8(&vpu);
         
         //Store result in Y
-        VSTRPV(&vpu, Y, write_mask);
+        mask = mask & write_mask;
+        VSTRPV(&vpu, Y, mask);
 
         //Set mode back to 8-bit
         VSETC(&vpu, MODE_S8);
@@ -588,6 +602,11 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
         const nn_image_t* patch_X = X;
         const nn_image_t* patch_K = K_patch_start;
 
+#if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
+        VLDR(&vpu, vec_0x80);
+        VSTRPV(&vpu, Y, write_mask);
+#endif
+
         //Initialize accumulators
         VLDD(&vpu, &adj_bias_hi.u16[0]);
         VLDR(&vpu, &adj_bias_lo.u16[0]);
@@ -655,7 +674,8 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
         VDEPTH8(&vpu);
         
         //Store result in Y
-        VSTRPV(&vpu, Y, write_mask);
+        mask = mask & write_mask;
+        VSTRPV(&vpu, Y, mask);
 
         //Set mode back to 8-bit
         VSETC(&vpu, MODE_S8);

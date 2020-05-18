@@ -564,7 +564,7 @@ void test_conv2d_1x1_case2()
                  shift2 = l2_ub - 7 + pseudo_rand_uint32() % (3);
             }
 
-            int8_t output = vlsat_single_s8(postscale, shift2);
+            int8_t output = vlsat_single_s8(postscale, shift2, NEG_SAT_VAL, VPU_INT8_MAX);
             
             BSO.bias[k] = bias;
             BSO.shift1[k] = shift1;

@@ -60,7 +60,6 @@ FUNCTION_NAME:
     std r4, r5, sp[1]
     std r6, r7, sp[2]
     std r8, r9, sp[3]
-    ldaw r11, cp[0]
     {                                           ;   stw r10, sp[8]                          }
     {                                           ;   ldw r10, arg_params[WOP_OUTPUT_ROWS]    }
     {                                           ;   stw r10, sp[STACK_OUT_ROWS]             }

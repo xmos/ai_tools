@@ -22,27 +22,6 @@
 
 
 
-static inline int8_t sat_s8_lcl(
-    const int32_t acc32)
-{
-    if(acc32 >= VPU_INT8_MAX)
-        return VPU_INT8_MAX;
-    if(acc32 < VPU_INT8_MIN)
-        return NEG_SAT_VAL;
-    
-    return (int8_t) acc32;
-}
-
-static inline int8_t vlsat_single_s8_lcl(
-    int32_t acc, 
-    int16_t shr)
-{
-    shr = (shr <= 0)? 0 : shr;
-    int64_t acc64 = acc;
-    if(shr > 0) acc64 += 1<<(shr-1);
-    return sat_s8_lcl(acc64 >> shr);
-}
-
 static void vlmacc8(
     int32_t* acc,
     const int8_t* X,
@@ -110,7 +89,7 @@ void nn_conv2d_hstrip_depthwise(
             accs[k] = vlsat_single_s16(accs[k], shift1);
             accs[k] = accs[k] * scale;
             accs[k] += ((int32_t)offset_scale)*offset;
-            accs[k] = vlsat_single_s8_lcl(accs[k], shift2);
+            accs[k] = vlsat_single_s8(accs[k], shift2, NEG_SAT_VAL, VPU_INT8_MAX);
             Y[k] = (int8_t) accs[k];
         }
         
@@ -236,7 +215,7 @@ void nn_conv2d_hstrip_depthwise_padded(
             accs[k] = vlsat_single_s16(accs[k], shift1);
             accs[k] = accs[k] * scale;
             accs[k] += ((int32_t)offset_scale)*offset;
-            accs[k] = vlsat_single_s8_lcl(accs[k], shift2);
+            accs[k] = vlsat_single_s8(accs[k], shift2, NEG_SAT_VAL, VPU_INT8_MAX);
             Y[k] = (int8_t) accs[k];
         }
 

@@ -16,6 +16,13 @@
 
 
 
+#if CONFIG_SYMMETRIC_SATURATION_avgpool2d
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
+
+
 WEAK_FUNC
 void avgpool2d_gen(
     int8_t* Y,
@@ -60,7 +67,8 @@ void avgpool2d_gen(
                 }
 
                 for(unsigned k = 0; k < iter_chans; k++){
-                    Y[k] = vlsat_single_s8(acc32[k], shift);
+
+                    Y[k] = vlsat_single_s8(acc32[k], shift, NEG_SAT_VAL, VPU_INT8_MAX);
                 }
 
                 X = &X[plan->window.outer_stride.horizontal.x];
@@ -85,7 +93,14 @@ void avgpool2d_2x2(
     avgpool2d_gen(Y, X, plan);
 }
 
+#undef NEG_SAT_VAL
 
+
+#if CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
 
 
 WEAK_FUNC
@@ -113,10 +128,12 @@ void avgpool2d_global(
             acc += x * sc;
         }
 
-        Y[ch] = vlsat_single_s8(acc, sh);
+        
+        Y[ch] = vlsat_single_s8(acc, sh, NEG_SAT_VAL, VPU_INT8_MAX);
     }
 }
 
+#undef NEG_SAT_VAL
 
 
 static inline int matches_2x2_impl(

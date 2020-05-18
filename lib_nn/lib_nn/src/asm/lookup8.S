@@ -10,54 +10,51 @@ void lookup8_asm(
     const unsigned length);
 */
 
-#define FUNCTION_NAME lookup8_asm
+#define FUNCTION_NAME lookup8
 
-#define NSTACKWORDS  10
+#define NSTACKWORDS  4
     
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 4
+.align 16
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
-
-
 
 #define Y       r0
 #define X       r1
 #define LUT     r2
 #define n       r3
 
-.align 4;
+#define data    r4
+#define i       r5
 
-FUNCTION_NAME:
-    dualentsp NSTACKWORDS
-    std r4, r5, sp[1]
-    std r6, r7, sp[2]
-    std r8, r9, sp[3]
-    stw r10, sp[8]
-
-    #define data    r4
-    #define i       r5
-    #define k       r6
-    
 #define BLOCK_COUNT_LOG2 (4)
 #define BLOCK_SIZE  (3)
 #define BLOCK   {                               ;   ld8u data, X[n]             };       \
                 {   sub n, n, 1                 ;   ld8u data, LUT[data]        };       \
                 st8 data, Y[n];
 
-    {   sub Y, Y, 1                     ;   sub X, X, 1                     }
-    {   ldc i, (1<<BLOCK_COUNT_LOG2)    ;   mov r11, n                      }
-    {   zext r11, BLOCK_COUNT_LOG2      ;   shr k, n, BLOCK_COUNT_LOG2      }
-    {   sub r11, i, r11                 ;   ldc i, BLOCK_SIZE               }
+FUNCTION_NAME:
+/**/dualentsp NSTACKWORDS
+    std r4, r5, sp[1]
+
+    //  We'll deal with the tail first, where tail is the first (n % BLOCK_COUNT)
+    //  elements. We deal with the tail be skipping (BLOCK_COUNT-(n % BLOCK_COUNT))
+    //  blocks using a BRU instruction.
+
+    //  i = BLOCK_SIZE*(BLOCK_COUNT-(n % BLOCK_COUNT))
+    {   ldc i, (1<<BLOCK_COUNT_LOG2)    ;   mov r11, n                      }    
+    {   zext r11, BLOCK_COUNT_LOG2      ;   sub X, X, 1                     }
+/**/{   sub r11, i, r11                 ;   ldc i, BLOCK_SIZE               }
     mul i, r11, i
-    {   add Y, Y, 1                     ;   bru i                           }
 
-    .align 4
+    {                                   ;   bf n, .Lfunc_end                }
+    {                                   ;   bru i                           }
+
     .L_loop_top:
-
-
+        // 16 blocks = 48 instructions. Unfortunately every cycle is a memory access, so there will also
+        // be a lot of FNOPs
         BLOCK
         BLOCK
         BLOCK
@@ -80,9 +77,6 @@ FUNCTION_NAME:
 
 
 .Lfunc_end:
-    ldw r10, sp[8]
-    ldd r8, r9, sp[3]
-    ldd r6, r7, sp[2]
     ldd r4, r5, sp[1]
     retsp NSTACKWORDS
 

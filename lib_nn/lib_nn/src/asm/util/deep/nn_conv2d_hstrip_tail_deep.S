@@ -1,6 +1,8 @@
 
 #if defined(__XS3A__)
 
+#include "nn_config.h"
+
 /**
 
 
@@ -25,7 +27,7 @@ void nn_conv2d_hstrip_tail_deep(
 
 #define NSTACKVECS  (2)
 
-#define NSTACKWORDS  ((NSTACKVECS*8)+12)
+#define NSTACKWORDS  ((NSTACKVECS*8)+14)
     
 .text
 .issue_mode  dual
@@ -56,11 +58,12 @@ void nn_conv2d_hstrip_tail_deep(
 #define STACK_BSO               11
 #define STACK_H_STRIDES         STACK_K_h_stride
 #define STACK_WRITE_MASK        12
+#define STACK_TMP               13
 
 
 #define Q(R)      R
 
-.align 16
+
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[0]
@@ -123,6 +126,12 @@ FUNCTION_NAME:
     {                                           ;   ldw c_out_tail, sp[STACK_C_OUT_TAIL]    }
 
     .L_out_col_start:
+#if !(CONFIG_SYMMETRIC_SATURATION_conv2d_deep)
+        {   ldaw r11, cp[vec_0x80]                  ;   ldw Q(cols_left), sp[STACK_Y]           }
+        {                                           ;   ldw Q(rows_left), sp[STACK_WRITE_MASK]  }
+        {                                           ;   vldr r11[0]                             }
+        vstrpv Q(cols_left)[0], Q(rows_left)
+#endif
         {                                           ;   ldw BSO, sp[STACK_BSO]                  }
         {   sub tmp, tmp, 1                         ;   ldw rows_left, sp[STACK_K_H]            }
         {   add r11, BSO, _32                       ;   vldd BSO[0]                             }
@@ -209,6 +218,7 @@ FUNCTION_NAME:
             {   sub rows_left, rows_left, 1             ;   ldw tmp, sp[STACK_X_V_STRIDE]           }
             bt rows_left, .L_patch_row_start
         .L_patch_row_end:
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_deep
 
         {   shl r11, _32, 3                         ;                                           }
         {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vsetc r11                               }
@@ -221,7 +231,7 @@ FUNCTION_NAME:
         {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
         {                                           ;   vsetc r11                               }
         {                                           ;   vlsat BSO[0]                            }
-        {   mkmsk tmp, 16                           ;   ldw Q(rows_left), sp[STACK_Y]           }
+        {                                           ;   ldw Q(rows_left), sp[STACK_Y]           }
         {                                           ;   ldw tmp, sp[STACK_WRITE_MASK]           }
         vstrpv Q(rows_left)[0], tmp
         {                                           ;   ldw tmp, sp[STACK_H_STRIDES]            }
@@ -232,6 +242,45 @@ FUNCTION_NAME:
         {                                           ;   stw X, sp[STACK_X]                      }
         {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
         {                                           ;   bt tmp, .L_out_col_start                }
+        
+#else
+
+        {   shl r11, _32, 3                         ;                                           }
+        {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vsetc r11                               }
+        {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
+        {                                           ;   vstr r11[0]                             }
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+        {                                           ;   vclrdr                                  }
+        {                                           ;   vlmacc r11[0]                           }
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+        {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
+
+        {                                           ;   vlsat BSO[0]                            }
+
+
+        {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
+        {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
+        {   mkmsk Q(rows_left), 4                   ;   vdepth1                                 }
+        vstrpv r11[0], Q(rows_left)
+        {   ldc Q(rows_left), 0                     ;   ldw Q(cig_left), sp[STACK_Y]            }
+        {   ldaw r11, sp[STACK_VEC_TMP2]            ;   sub Q(rows_left), Q(rows_left), 8       }
+        vlashr r11[0], Q(rows_left)
+        {                                           ;   ldw tmp, sp[STACK_WRITE_MASK]           }
+        {                                           ;   ldw Q(rows_left), sp[STACK_TMP]         }
+        {   andnot tmp, Q(rows_left)                ;   vdepth8                                 }
+        vstrpv Q(cig_left)[0], tmp
+
+        {   shl r11, _32, 4                         ;   ldw tmp, sp[STACK_H_STRIDES]            }
+        {   shr Q(cols_left), tmp, 16               ;   zext tmp, 16                            }
+        {   add Q(cig_left), Q(cig_left), tmp       ;   vsetc r11                               }
+        {                                           ;   ldw X, sp[STACK_X]                      }
+        {   add X, X, Q(cols_left)                  ;   stw Q(cig_left), sp[STACK_Y]            }
+        {                                           ;   stw X, sp[STACK_X]                      }
+        {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
+        {                                           ;   bt tmp, .L_out_col_start                }
+        
+#endif
+
     .L_out_col_end:
 
 .Lfunc_end:

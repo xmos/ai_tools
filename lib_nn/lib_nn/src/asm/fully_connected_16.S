@@ -18,8 +18,8 @@ void fully_connected_16(
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 4
 .type FUNCTION_NAME,@function
+.align 16
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
 #define PLAN_C_IN               0
@@ -48,7 +48,6 @@ void fully_connected_16(
 #define cig_left        r8
 #define x_tail_adj      r9
 
-.align 4
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS

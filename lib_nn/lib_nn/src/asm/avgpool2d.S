@@ -1,6 +1,7 @@
 
 #if defined(__XS3A__)
 
+#include "nn_config.h"
 #include "window_op_plan.h"
 
 /*  
@@ -12,7 +13,7 @@ void avgpool2d_gen(
 
 #define FUNCTION_NAME avgpool2d_gen
 
-#define NSTACKWORDS  30
+#define NSTACKWORDS  38
     
 .text
 .issue_mode  dual
@@ -27,7 +28,6 @@ void avgpool2d_gen(
 #define arg_X           r1
 #define arg_plan        r2
 
-
 #define STACK_OUT_ROWS          (10)
 #define STACK_OUT_COLS          (11)
 #define STACK_OUTER_STRIDE_VX   (12)
@@ -38,9 +38,11 @@ void avgpool2d_gen(
 #define STACK_OUTER_STRIDE_HY   (17)
 #define STACK_CHAN_TAIL         (18)
 #define STACK_WIN_COL_LOOPS     (19)
+#define STACK_TMP               (20)
 
 
 #define STACK_SHIFT_VEC         (NSTACKWORDS-8)
+#define STACK_VEC_TMP           (NSTACKWORDS-16)
 
 #define APPLAN_SHIFT            (WOP_WORDS)
 #define APPLAN_SCALE            (WOP_WORDS+1)
@@ -56,10 +58,17 @@ void avgpool2d_gen(
 #define chan_grp_left           r7
 #define out_row_left            r8
 #define out_col_left            r9
-#define win_row_left            r10   
+#define tmp                     r10   
+
+#define Q(DSA)  DSA
 
 
-.align 4
+.align 16
+
+.L_vec_0x0000:
+.short 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[1]
@@ -120,10 +129,17 @@ FUNCTION_NAME:
         .L_out_rows_loop:
             {   sub out_row_left, out_row_left, 1       ;   ldw out_col_left, sp[STACK_OUT_COLS]    }
             .L_out_cols_loop:
-                {   sub out_col_left, out_col_left, 1       ;   ldw win_row_left, sp[STACK_WIN_ROWS]    }
+#if CONFIG_SYMMETRIC_SATURATION_avgpool2d
+                {   sub out_col_left, out_col_left, 1       ;   ldw tmp, sp[STACK_WIN_ROWS]             }
                 {                                           ;   vclrdr                                  }
+#else
+                {   ldaw r11, cp[vec_0x80]                  ;   ldw tmp, sp[STACK_WIN_ROWS]             }
+                {                                           ;   vldr r11[0]                             }
+                vstrpv Y[0], chan_mask
+                {   sub out_col_left, out_col_left, 1       ;   vclrdr                                  }
+#endif
                 .L_pool_row_loop:
-                    {   sub win_row_left, win_row_left, 1       ;   ldw r11, sp[STACK_WIN_COL_LOOPS]        }
+                    {   sub tmp, tmp, 1                         ;   ldw r11, sp[STACK_WIN_COL_LOOPS]        }
                     {                                           ;   bru win_col_jump                        }
                     .L_pool_col_loop:
                         {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }   // 0
@@ -143,11 +159,34 @@ FUNCTION_NAME:
                         {   add X, X, inner_stride_h                ;   vlmacc X[0]                             }
                         {   sub r11, r11, 1                         ;   vlmacc X[0]                             }   //15
                         {   add X, X, inner_stride_h                ;   bt r11, .L_pool_col_loop                }
-                    {   add X, X, inner_stride_v                ;   bt  win_row_left, .L_pool_row_loop      }
+                    {   add X, X, inner_stride_v                ;   bt  tmp, .L_pool_row_loop               }
                     
-                {   ldaw r10, sp[STACK_SHIFT_VEC]           ;   ldw r11, sp[STACK_OUTER_STRIDE_HY]      }   
-                {   add X, X, outer_stride_hx               ;   vlsat r10[0]                            }   
+                {  ldaw tmp, sp[STACK_SHIFT_VEC]            ;   ldw r11, sp[STACK_OUTER_STRIDE_HY]      }   
+#if CONFIG_SYMMETRIC_SATURATION_avgpool2d
+                {   add X, X, outer_stride_hx               ;   vlsat tmp[0]                }   
                 vstrpv Y[0], chan_mask
+#else
+                {   ldc tmp, 32                             ;                                           }
+                {   shl r11, tmp, 3                         ;                                           }
+                {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   vsetc r11       /* 16-bit mode */       }
+                {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat r11[0]                            }
+                {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
+                {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
+                {   mkmsk tmp, 4                            ;   vdepth1                                 }
+                vstrpv r11[0], tmp
+                {   ldc tmp, 0                              ;                                           }
+                {   ldaw r11, sp[STACK_VEC_TMP]             ;   sub tmp, tmp, 8                         }
+                vlashr r11[0], tmp
+                {   mov r11, chan_mask                      ;   ldw tmp, sp[STACK_TMP]                  }
+                {   andnot r11, tmp                         ;   vdepth8                                 }
+                vstrpv Y[0], r11
+                {   ldc tmp, 32                             ;                                           }
+                {   shl r11, tmp, 4                         ;                                           }
+                {                                           ;   vsetc r11                               }
+                {   add X, X, outer_stride_hx               ;   ldw r11, sp[STACK_OUTER_STRIDE_HY]      }
+
+
+#endif
                 {   add Y, Y, r11                           ;   bt out_col_left, .L_out_cols_loop       }
             {                                           ;   ldw r11, sp[STACK_OUTER_STRIDE_VX]      }
             {   add X, X, r11                           ;   ldw r11, sp[STACK_OUTER_STRIDE_VY]      }

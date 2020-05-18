@@ -18,7 +18,7 @@ void maxpool2d(
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 4
+.align 16
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
@@ -54,9 +54,6 @@ void maxpool2d(
 #define x_hstride_incr      r7
 #define y_hstride_incr      r8
 
-.align 4
-.L_min_vals:
-.byte -0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80,-0x80
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
@@ -101,7 +98,7 @@ FUNCTION_NAME:
             {                                           ;   stw r11, sp[STACK_OUT_ROWS_LEFT]        }
             .L_out_cols_loop:
                 {   sub r11, r10, 1                         ;   ldw pool_rows_left, sp[STACK_POOL_ROWS] }
-                {   ldap r11, .L_min_vals                   ;   stw r11, sp[STACK_OUT_COLS_LEFT]        }
+                {   ldaw r11, cp[vec_0x80]                  ;   stw r11, sp[STACK_OUT_COLS_LEFT]        }
                 {   ldaw r11, sp[STACK_CURMAX_VEC]          ;   vldr r11[0]                             }
                 {   mov r11, X                              ;   vstr r11[0]                             }
                 .L_pool_row_loop:

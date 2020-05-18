@@ -1,6 +1,8 @@
 
 #if defined(__XS3A__)
 
+#include "nn_config.h"
+
 /**
 void nn_conv2d_hstrip_tail_shallowin(
         nn_image_t* Y,
@@ -45,6 +47,7 @@ void nn_conv2d_hstrip_tail_shallowin(
 #define STACK_BSO               8
 #define STACK_WRITE_MASK        9
 #define STACK_Y                 10
+#define STACK_TMP               11
 #define STACK_WIN_H_STRIDE      STACK_K_h_stride
 
 
@@ -62,7 +65,8 @@ void nn_conv2d_hstrip_tail_shallowin(
 
 #define Q(R)      R
 
-.align 16
+
+
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[0]
@@ -117,6 +121,13 @@ FUNCTION_NAME:
     {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
     
     .L_out_col_start:
+
+#if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
+        {   ldaw r11, cp[vec_0x80]                  ;   ldw Q(rows_left), sp[STACK_WRITE_MASK]  }
+        {                                           ;   vldr r11[0]                             }
+        vstrpv Y[0], Q(rows_left)
+#endif
+
         // K, BSO and X_patch and rows_left reset each iteration.
         // Decrement out columns remaining
         {   ldc _32, 32                             ;   ldw K, sp[STACK_K]                      }
@@ -164,6 +175,8 @@ FUNCTION_NAME:
 
         .L_patch_row_end:
 
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
+
         {   shl r11, _32, 3                         ;                                           }
         {   ldaw r11, sp[STACK_VEC_TMP1]            ;   vsetc r11            /*set 16-bit mode*/}
         {   add BSO, BSO, _32                       ;   vlsat BSO[0]       /*apply first shift*/}
@@ -181,6 +194,39 @@ FUNCTION_NAME:
         {   add Y, Y, tmp                           ;   ldw tmp, sp[STACK_WIN_H_STRIDE]         }
         {   add X, X, tmp                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
         {                                           ;   bt tmp, .L_out_col_start                }
+
+#else
+
+        {   shl r11, _32, 3                         ;                                           }
+        {   ldaw r11, sp[STACK_VEC_TMP1]            ;   vsetc r11            /*set 16-bit mode*/}
+        {   add BSO, BSO, _32                       ;   vlsat BSO[0]       /*apply first shift*/}
+        {                                           ;   vstr r11[0] /*save 16-bit intermediate*/}
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]       /*load scale into vC*/}
+        {                                           ;   vclrdr   /*clear accumulate for VLMACC*/}
+        {                                           ;   vlmacc r11[0]              /*do VLMACC*/}
+        {   add BSO, BSO, _32                       ;   vldc BSO[0]                             }
+        {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
+
+
+        {                                           ;   vlsat BSO[0]                            }
+        {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
+        {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
+        {   mkmsk Q(rows_left), 4                   ;   vdepth1                                 }
+        vstrpv r11[0], Q(rows_left)
+        {   ldc Q(rows_left), 0                     ;   ldw tmp, sp[STACK_WRITE_MASK]           }
+        {   ldaw r11, sp[STACK_VEC_TMP1]            ;   sub Q(rows_left), Q(rows_left), 8       }
+        vlashr r11[0], Q(rows_left)
+        {                                           ;   ldw Q(rows_left), sp[STACK_TMP]         }
+        {   andnot tmp, Q(rows_left)                ;   vdepth8                                 }
+        vstrpv Y[0], tmp
+        {   shl r11, _32, 4                         ;   ldw tmp, sp[STACK_Y_H_STRIDE]           }
+        {   add Y, Y, tmp                           ;   ldw tmp, sp[STACK_WIN_H_STRIDE]         }
+        {   add X, X, tmp                           ;   vsetc r11                               }
+        {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
+        {                                           ;   bt tmp, .L_out_col_start                }
+
+#endif
+
     .L_out_col_end:
 
 

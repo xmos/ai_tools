@@ -12,6 +12,7 @@ LIBS_VPATH += \
 	$(LIB_OPS_DIR)
 
 LIBS_SOURCES := \
+	lib_nn/src/asm/asm_constants.c \
 	lib_nn/src/c/vpu_sim.c \
 	lib_nn/src/c/nn_op_utils.c \
 	lib_nn/src/c/nn_operator.c \
@@ -24,15 +25,8 @@ LIBS_SOURCES := \
 	lib_nn/src/c/maxpool2d.c \
 	lib_nn/src/c/fully_connected.c \
 	lib_nn/src/c/util/deep/nn_conv2d_hstrip_deep.c \
-	lib_nn/src/c/util/deep/nn_conv2d_hstrip_deep_padded.c \
-	lib_nn/src/c/util/deep/nn_conv2d_hstrip_tail_deep.c \
-	lib_nn/src/c/util/deep/nn_conv2d_hstrip_tail_deep_padded.c \
-	lib_nn/src/c/util/shallow/nn_conv2d_hstrip_tail_shallowin_padded.c \
 	lib_nn/src/c/util/shallow/nn_conv2d_hstrip_shallowin.c \
-	lib_nn/src/c/util/shallow/nn_conv2d_hstrip_shallowin_padded.c \
-	lib_nn/src/c/util/shallow/nn_conv2d_hstrip_tail_shallowin.c \
 	lib_nn/src/c/util/depthwise/nn_conv2d_hstrip_depthwise.c \
-	lib_nn/src/c/util/depthwise/nn_conv2d_hstrip_depthwise_padded.c \
 	lib_ops/src/allocator.c \
 	lib_ops/src/benchmarking.cpp \
 	lib_ops/src/dispatcher.cpp \

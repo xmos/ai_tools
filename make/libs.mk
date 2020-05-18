@@ -12,6 +12,7 @@ LIBS_VPATH += \
 	$(LIB_OPS_DIR)
 
 LIBS_SOURCES := \
+	lib_nn/src/asm/asm_constants.c \
 	lib_nn/src/c/vpu_sim.c \
 	lib_nn/src/c/nn_op_utils.c \
 	lib_nn/src/c/nn_operator.c \

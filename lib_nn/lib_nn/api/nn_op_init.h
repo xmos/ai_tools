@@ -118,8 +118,8 @@ void conv2d_shallowin_init(
 
 
 void conv2d_im2col_init(
-    nn_conv2d_shallowin_plan_t* plan,
-    nn_conv2d_shallowin_job_t* jobs,
+    nn_conv2d_im2col_plan_t* plan,
+    nn_conv2d_im2col_job_t* jobs,
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params,
     const nn_conv2d_job_params_t* job_params,

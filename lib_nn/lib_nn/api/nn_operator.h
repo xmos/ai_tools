@@ -338,8 +338,8 @@ void conv2d_im2col(
     const nn_image_t* X,
     const nn_tensor_t* K,
     const nn_bso_block_t* BSO,
-    const nn_conv2d_shallowin_plan_t* plan,
-    const nn_conv2d_shallowin_job_t* job);
+    const nn_conv2d_im2col_plan_t* plan,
+    const nn_conv2d_im2col_job_t* job);
 
 
 /**

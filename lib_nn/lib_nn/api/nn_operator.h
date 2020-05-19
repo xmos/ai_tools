@@ -315,6 +315,32 @@ void conv2d_shallowin(
 
 
 
+/**
+ * @brief Perform a 2D convolution of a shallow input image.
+ * 
+ * Perform a 2D convolution of kernel tensor @tensor{K} with input image @tensor{X}
+ * to produce output image @tensor{Y}.
+ *  
+ * This function is optimized for 
+ * 
+ * 
+ * @requires_word_alignment{Y,X,K,BSO}
+ * 
+ * @param[out] Y        The output image @tensor{Y}
+ * @param[in]  X        The input image @tensor{X}
+ * @param[in]  K        The kernel tensor @tensor{K}
+ * @param[in]  BSO      The bias-shifts-scale parameters
+ * @param[in]  plan     The convolution plan
+ * @param[in]  job      The convolution job
+ */
+void conv2d_im2col(
+    nn_image_t* Y,
+    const nn_image_t* X,
+    const nn_tensor_t* K,
+    const nn_bso_block_t* BSO,
+    const nn_conv2d_shallowin_plan_t* plan,
+    const nn_conv2d_shallowin_job_t* job);
+
 
 /**
  * Perform a 2D convolution using a 1x1 kernel over the input image.

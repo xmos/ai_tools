@@ -13,8 +13,14 @@ void test_nn_conv2d_hstrip_shallowin();
 void test_nn_conv2d_hstrip_tail_shallowin_padded();
 void test_nn_conv2d_hstrip_tail_shallowin();
 
+void test_nn_conv2d_hstrip_im2col_padded();
+void test_nn_conv2d_hstrip_im2col();
+void test_nn_conv2d_hstrip_tail_im2col_padded();// may not need
+void test_nn_conv2d_hstrip_tail_im2col();// may not need
+
 void test_conv2d_deep();
 void test_conv2d_shallowin();
+void test_conv2d_im2col();
 void test_conv2d_shallowin_deepout();
 void test_conv2d_1x1();
 void test_conv2d_depthwise();

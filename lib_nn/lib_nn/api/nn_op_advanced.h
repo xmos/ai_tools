@@ -740,6 +740,74 @@ void nn_conv2d_hstrip_tail_shallowin(
 
 
 
+void nn_conv2d_hstrip_im2col_padded(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bso_block_t* BSO,
+        const unsigned K_h,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const unsigned pad_t,
+        const unsigned pad_b,
+        const int pad_l_initial,
+        const int pad_r_initial,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const int8_t* zero_point_vec);
+
+
+
+void nn_conv2d_hstrip_im2col(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bso_block_t* BSO,
+        const unsigned K_h,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols);
+
+
+
+void nn_conv2d_hstrip_tail_im2col_padded(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bso_block_t* BSO,
+        const unsigned K_h,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const unsigned pad_t,
+        const unsigned pad_b,
+        const int pad_l_initial,
+        const int pad_r_initial,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const int8_t* zero_point_vec,
+        const channel_count_t C_out_tail);
+
+
+
+void nn_conv2d_hstrip_tail_im2col(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bso_block_t* BSO,
+        const unsigned K_h,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const channel_count_t C_out_tail);
+
+
+
 #ifdef __XC__
 }   //extern "C"
 #endif

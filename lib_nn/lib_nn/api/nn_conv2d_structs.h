@@ -265,6 +265,8 @@ typedef struct {
         struct {
             unsigned height;
             unsigned width;
+            unsigned len_col;
+            unsigned kernel_row_elements;
         } shape;
 
         struct {

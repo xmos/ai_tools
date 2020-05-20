@@ -64,6 +64,7 @@ void test_conv2d_im2col_case0()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -88,7 +89,7 @@ void test_conv2d_im2col_case0()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN  };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
 
@@ -114,7 +115,7 @@ void test_conv2d_im2col_case0()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -155,6 +156,7 @@ void test_conv2d_im2col_case1()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -179,7 +181,7 @@ void test_conv2d_im2col_case1()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
     memset(K, 0, sizeof(K));
@@ -201,7 +203,7 @@ void test_conv2d_im2col_case1()
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-        conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+        conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
             for(int col = 0; col < y_params.width; col++){
@@ -242,6 +244,7 @@ void test_conv2d_im2col_case2()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -266,7 +269,7 @@ void test_conv2d_im2col_case2()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
     memset(K, 0, sizeof(K));
@@ -288,7 +291,7 @@ void test_conv2d_im2col_case2()
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-        conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+        conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
             for(int col = 0; col < y_params.width; col++){
@@ -330,6 +333,7 @@ void test_conv2d_im2col_case3()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -354,7 +358,7 @@ void test_conv2d_im2col_case3()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
     memset(K, 0, sizeof(K));
@@ -376,7 +380,7 @@ void test_conv2d_im2col_case3()
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-        conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+        conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
             for(int col = 0; col < y_params.width; col++){
@@ -418,6 +422,7 @@ void test_conv2d_im2col_case4()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -442,7 +447,7 @@ void test_conv2d_im2col_case4()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
     memset(K, 0, sizeof(K));
@@ -464,7 +469,7 @@ void test_conv2d_im2col_case4()
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-        conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+        conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
             for(int col = 0; col < y_params.width; col++){
@@ -506,6 +511,7 @@ void test_conv2d_im2col_case5()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -530,7 +536,7 @@ void test_conv2d_im2col_case5()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 1, x_params.height * x_params.width * x_params.channels);
     memset(K, 0, sizeof(K));
@@ -548,7 +554,7 @@ void test_conv2d_im2col_case5()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -589,6 +595,7 @@ void test_conv2d_im2col_case6()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -613,7 +620,7 @@ void test_conv2d_im2col_case6()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
 
@@ -638,7 +645,7 @@ void test_conv2d_im2col_case6()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -679,6 +686,7 @@ void test_conv2d_im2col_case7()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -703,7 +711,7 @@ void test_conv2d_im2col_case7()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 1, x_params.height * x_params.width * x_params.channels);
 
@@ -728,7 +736,7 @@ void test_conv2d_im2col_case7()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -769,6 +777,7 @@ void test_conv2d_im2col_case8()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -793,7 +802,7 @@ void test_conv2d_im2col_case8()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 1, x_params.height * x_params.width * x_params.channels);
 
@@ -819,7 +828,7 @@ void test_conv2d_im2col_case8()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -860,6 +869,7 @@ void test_conv2d_im2col_case9()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -884,7 +894,7 @@ void test_conv2d_im2col_case9()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 1, x_params.height * x_params.width * x_params.channels);
     
@@ -908,7 +918,7 @@ void test_conv2d_im2col_case9()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -949,6 +959,7 @@ void test_conv2d_im2col_case10()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -973,7 +984,7 @@ void test_conv2d_im2col_case10()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
@@ -1000,7 +1011,7 @@ void test_conv2d_im2col_case10()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -1041,6 +1052,7 @@ void test_conv2d_im2col_case11()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1065,7 +1077,7 @@ void test_conv2d_im2col_case11()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
@@ -1092,7 +1104,7 @@ void test_conv2d_im2col_case11()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -1135,6 +1147,7 @@ void test_conv2d_im2col_case12()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1159,7 +1172,7 @@ void test_conv2d_im2col_case12()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
@@ -1186,7 +1199,7 @@ void test_conv2d_im2col_case12()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -1230,6 +1243,7 @@ void test_conv2d_im2col_case13()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1254,7 +1268,7 @@ void test_conv2d_im2col_case13()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
@@ -1281,7 +1295,7 @@ void test_conv2d_im2col_case13()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < y_params.height; row++){
         for(int col = 0; col < y_params.width; col++){
@@ -1325,6 +1339,7 @@ void test_conv2d_im2col_case14()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1349,7 +1364,7 @@ void test_conv2d_im2col_case14()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
@@ -1376,7 +1391,7 @@ void test_conv2d_im2col_case14()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     nn_image_t  WORD_ALIGNED Y_exp[Y_HEIGHT][Y_WIDTH] = {
         { 14, 12, 14},
@@ -1426,6 +1441,7 @@ void test_conv2d_im2col_case15()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1450,7 +1466,7 @@ void test_conv2d_im2col_case15()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     nn_image_t X_vals[X_HEIGHT][X_WIDTH] = {
         {  2,  4, 2, 8, 4 },
@@ -1484,7 +1500,7 @@ void test_conv2d_im2col_case15()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
 /*       __ __
        |8  8  8| 8  8  8  8 
@@ -1545,6 +1561,7 @@ void test_conv2d_im2col_case16()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1615,7 +1632,7 @@ void test_conv2d_im2col_case16()
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
     for(int i = 0; i < job_count; i++)
-        conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job[i]);
+        conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job[i]);
 
 /*       __ __
        |8  8  8| 8  8  8  8 
@@ -1678,6 +1695,7 @@ void test_conv2d_im2col_case17()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1702,7 +1720,7 @@ void test_conv2d_im2col_case17()
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
-    conv2d_im2col_init(&plan, &job, &x_params, &y_params, NULL, &conv2d_window, ZERO_POINT, 1);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     nn_image_t X_vals[X_HEIGHT][X_WIDTH] = {
         {  6,  6, 2, 8, 4 },
@@ -1736,7 +1754,7 @@ void test_conv2d_im2col_case17()
 
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, &plan, &job);
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
 /*       __ __
        |8  8  8| 8  8  8  8 

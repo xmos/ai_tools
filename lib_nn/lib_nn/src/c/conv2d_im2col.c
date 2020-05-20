@@ -23,11 +23,9 @@ void conv2d_im2col_init(
     const int8_t zero_point,
     const unsigned job_count)
 {
-    // Input and output channels must each be a multiple of 4
-    assert(x_params->channels % 4 == 0);
-    assert(y_params->channels % 4 == 0);
-    // The product of the input channels and kernel width must be <= VPU_INT8_EPV
-    assert(x_params->channels * conv_window->shape.width <= VPU_INT8_EPV);
+
+    // The restrict to patch elements <= 128 for the time being, but should be able to relax
+    assert(x_params->channels * conv_window->shape.width * conv_window->shape.height <= VPU_INT8_EPV*4);
 
     // Need at least 1 job
     assert(job_count > 0);
@@ -49,6 +47,14 @@ void conv2d_im2col_init(
 
     plan->window.shape.height      = conv_window->shape.height;
     plan->window.shape.width       = conv_window->shape.width;
+    plan->window.shape.len_col     = ((conv_window->shape.width * 
+                                       conv_window->shape.height * 
+                                       x_params->channels + 31)>>5)<<5;
+    plan->window.shape.kernel_row_elements     = 
+                                      ((conv_window->shape.width * 
+                                       conv_window->shape.height * 
+                                       x_params->channels + 3)>>2)<<2;
+
     plan->window.stride.vertical   = conv_window->stride.vertical;
     plan->window.stride.horizontal = conv_window->stride.horizontal;
 
@@ -111,6 +117,7 @@ void conv2d_im2col_init(
 void conv2d_im2col(
     nn_image_t* Y,
     const nn_image_t* X,
+    const nn_image_t* COL,
     const nn_tensor_t* K,
     const nn_bso_block_t* BSO,
     const nn_conv2d_im2col_plan_t* plan,
@@ -124,22 +131,34 @@ void conv2d_im2col(
     K = ADDR(K, job->stride.start.K);
     BSO = ADDR(BSO, job->stride.start.BSO);
 
-    const unsigned C_out_tail = plan->channels.Y % VPU_INT8_ACC_PERIOD;
+    const unsigned C_out_tail = plan->channels.Y % VPU_INT8_ACC_PERIOD; // TODO I don't think im2col cares about tails..
 
-    for(int out_chan = 0; out_chan < job->output.channels; out_chan += VPU_INT8_ACC_PERIOD){
+    const unsigned vlmaccr_align = 4;
+    const unsigned kernel_width = plan->window.shape.width;
+    const unsigned kernel_height = plan->window.shape.width;;
+    const unsigned patch_elements = plan->channels.X * kernel_height * kernel_width;
 
-        const unsigned cur_chans = (job->output.channels - out_chan >= VPU_INT8_VLMACC_ELMS)? 
-            VPU_INT8_VLMACC_ELMS : job->output.channels - out_chan; 
+    const unsigned kernel_row_elements = plan->window.shape.kernel_row_elements;
+    const unsigned k_mat_elements = kernel_row_elements * plan->channels.Y;
+    
+    int pad_t = job->init_padding.top;
+    int pad_b = job->init_padding.bottom;
+    //Iterate once per row of the output region
+    for(unsigned output_rows = job->output.rows; output_rows > 0; output_rows--){
+        //Iterate once per col of the output region
+        for(unsigned output_cols = job->output.cols; output_cols > 0; output_cols--){
 
-        int pad_t = job->init_padding.top;
-        int pad_b = job->init_padding.bottom;
+            //V is the X-pointer for the patch. This points it at the top-left cell of the patch.
+            const int8_t* V = X;
+            const int8_t* L = K;
+            // set up "column" by copying all patch rows sequentially
+            // TODO look at Aaron's VPU memcpy (doesn't require word-aligned)
+            const int8_t* C = COL;
+            memset(C,0,sizeof(COL));// initialize pad -- zero point is handled at bias initialization
+            unsigned len = plan->channels.X * kernel_width;
+            assert(len <= VPU_INT8_EPV);//??
 
-        K = ADDR(K, plan->window.shape.height * VPU_INT8_EPV * (cur_chans - 1));
-
-        const nn_image_t* X_cog = X;
-
-        for(int out_row = 0; out_row < job->output.rows; out_row++){
-
+            // start paste
             int pad_l = job->init_padding.left;
             int pad_r = job->init_padding.right;
 
@@ -150,50 +169,120 @@ void conv2d_im2col(
             const int cur_pad_t = (pad_t > 0)? pad_t : 0;
             const int cur_pad_b = (pad_b > 0)? pad_b : 0;
 
-            //TODO: Currently job->init_padding.right is forced to make the assumption that the actual width of the
-            //      kernel is 32/C_in, regardless of the convolution window width with which the operator was initialized.
-            //      That means that we'll end up "requiring padding" when we don't actually have to, because the elements
-            //      after the user-supplied convolution window width are guaranteed (per the contract with the user) to
-            //      be zeroed out.
-            //      At the moment I'm stuffing the user-supplied convolution window width into the plan struct. I'm pretty
-            //      sure I can just adjust the conditions for "requires_padding" below using that value to handle this.
-
             const unsigned requires_padding = (pad_l       > 0) || (pad_r       > 0) 
                                            || (cur_pad_t   > 0) || (cur_pad_b   > 0) 
                                            || (final_pad_l > 0) || (final_pad_r > 0);
+            // end paste
 
-            if(cur_chans == VPU_INT8_ACC_PERIOD){
-                if(requires_padding){
-                    nn_conv2d_hstrip_shallowin_padded(Y, X_cog, K, BSO, plan->window.shape.height,
-                        plan->window.stride.horizontal, plan->channels.X, cur_pad_t, cur_pad_b, pad_l, 
-                        pad_r, plan->stride.X.row, plan->channels.Y, job->output.cols, zero_point_vec);
-                } else {
-                    nn_conv2d_hstrip_shallowin( Y, X_cog, K, BSO, plan->window.shape.height,
-                        plan->window.stride.horizontal, plan->channels.X, plan->stride.X.row, 
-                        plan->channels.Y, job->output.cols);
+            for(unsigned rows_in_patch = block->patch.rows; rows_in_patch > 0; rows_in_patch--){
+                if( block->patch.pad_mask != 0xFFFFFFFF ){
+                    int8_t padded_vals[VPU_INT8_EPV]={0};
+                    int k = 0;
+                    for(int i = 0; i < kernel_width; i++){
+                        for(int j = 0; j < params->chans_in; j++){
+                            padded_vals[k] = (tmp & 0x1) ? V[k] : 0;
+                            k++;
+                        }
+                        tmp >>=1;
+                    }  
+                    memcpy(C, padded_vals, len);
                 }
-            } else {
-                if(requires_padding){
-                    nn_conv2d_hstrip_tail_shallowin_padded( Y, X_cog, K, BSO, plan->window.shape.height, 
-                        plan->window.stride.horizontal, plan->channels.X, cur_pad_t, cur_pad_b, pad_l, 
-                        pad_r, plan->stride.X.row, plan->channels.Y, job->output.cols, zero_point_vec, 
-                        C_out_tail);
-                } else {
-                    nn_conv2d_hstrip_tail_shallowin( Y, X_cog, K, BSO, plan->window.shape.height, 
-                        plan->window.stride.horizontal, plan->channels.X, plan->stride.X.row, 
-                        plan->channels.Y, job->output.cols, C_out_tail);
+                else{
+                    memcpy(C,V,len);
+                }
+                
+                V = &V[block->patch.row_incr.X];
+                C = &C[len];
+
+           }
+
+            /*print debug info*/
+            // if(output_rows == block->output.rows && output_cols == block->output.cols){
+                // printf("\n\n %d %d \n", output_rows, output_cols);
+                // printf("Pad Mask = 0x%08X\n",block->patch.pad_mask);
+                // printf("\nKernel width: %d, Kernel height: %d, Cin: %d, Cout: %d\n",kernel_width,kernel_height,params->chans_in,params->chans_out);
+                // printf("\n kernel mat cols: %d  rows: %d \n",kernel_row_elements, params->chans_out);
+
+                // int bit = 0;
+                // unsigned raa = block->patch.pad_mask;
+                // printf("\n");
+                // for( int ind = 0; ind < 32; ind++){
+                //     printf("%X ", raa&1);
+                //     raa >>= 1;
+                //     if(++bit%kernel_width == 0) printf("\n");
+                //     if(bit > kernel_width*kernel_height) break;
+                // }
+                // printf("\n");
+
+                // unsigned l= params->chans_out;
+                // if( l < kernel_row_elements) l = kernel_row_elements;
+                
+                // for(unsigned j=0; j<l; j++){
+                //     if(j < kernel_row_elements){ 
+                //         printf("\n | %d | ", COL[j]);}
+                //     else{
+                //         printf("\n       | ");}
+                    
+                //     if( j < params->chans_out){
+                //         printf("|");
+                //         for(unsigned i = 0; i< kernel_row_elements; i++){
+                //             printf("%d ",L[i]);// TODO define L[] to reduce pointer math
+                //         }
+                //         L = &L[kernel_row_elements];
+                //         printf("|");
+                //     }
+                // }
+                // L = K;
+            // }
+            /*     */
+                                
+            unsigned jj=0;
+            for(unsigned j = 0; j < jobs->channels.Y; j++){
+                //Because this mirrors the assembly, we need to keep accumulators for each
+                // of the channels in an output channel
+                int32_t patch_acc[VPU_INT8_ACC_PERIOD];
+                jj = j%VPU_INT8_ACC_PERIOD;
+                if(jj==0){
+                    for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++){
+                        int32_t bias = BSO->bias_hi[k]<<16 + BSO->bias_lo[k];
+                        patch_acc[k] = bias;
+                    }
+                }
+                // printf("\nj=%d patch_acc[%d] = %d \t",j,jj,patch_acc[jj]);
+                for(unsigned i = 0; i< kernel_row_elements; i++){
+                    patch_acc[jj]  += (int32_t)(COL[i]*L[i]);
+                }
+                // printf("patch_acc[%d] = %d\t", jj, patch_acc[jj]);
+
+                L = &L[kernel_row_elements];
+                 //L = &L[kernel_row_elements]; // TODO make this the k row increment at initialization time
+                // The shape of the `scales` tensor is (C_out // 16, 2, 16). 
+                // The first index is the channel group, second indicates shift (0) or scale (1), 
+                // and the third is the channel offset within the channel group.
+                int16_t res16;
+                int8_t res8;
+
+                res16 = vlsat_single_s16(patch_acc[jj], BSO->shift1[jj]);
+                // printf("scales[0][jj]: %d\tscales[1][jj]: %d\t", cales[jj],cales[ jj+VPU_INT8_ACC_PERIOD]);
+                res16 = vlmul_single_s16(res16, BSO->scale[jj]);
+                res8 = vdepth8_single_s16(res16);
+                // printf("res16= 0x%04X\tres8 = %d",res16, res8);
+                Y[j] =res8;      
+                // move BSO to the next channel-output-group
+                if(jj==0){
+                    BSO = ADDR(BSO, 1);
                 }
             }
-
-            pad_t -= plan->window.stride.vertical;
-            pad_b += plan->window.stride.vertical;
-
-            X_cog = ADDR(X_cog, job->stride.row.window);
-            Y = ADDR(Y, job->stride.row.Y);
+            //Move X and Y pointers one pixel to the right
+            X = ADDR(X, job->stride.col.X);
+            Y = ADDR(Y, job->stride.col.Y);
         }
+        //Move X and Y pointers to the start of the following row
+        X = ADDR(X, job->stride.row.X);
+        Y = ADDR(Y, job->stride.row.Y);
+        pad_t -= plan->window.stride.vertical;
+        pad_b += plan->window.stride.vertical;
 
-        K = ADDR(K, plan->window.shape.height * VPU_INT8_EPV);
-        Y = ADDR(Y, job->stride.chan_group.Y);
-        BSO = ADDR(BSO, 1);
     }
+
 }

@@ -328,6 +328,7 @@ void conv2d_shallowin(
  * 
  * @param[out] Y        The output image @tensor{Y}
  * @param[in]  X        The input image @tensor{X}
+ * @param[in]  COL      Scratch space for im2col (multiple of 32 words >= |K|)
  * @param[in]  K        The kernel tensor @tensor{K}
  * @param[in]  BSO      The bias-shifts-scale parameters
  * @param[in]  plan     The convolution plan
@@ -336,6 +337,7 @@ void conv2d_shallowin(
 void conv2d_im2col(
     nn_image_t* Y,
     const nn_image_t* X,
+    const nn_image_t* COL,
     const nn_tensor_t* K,
     const nn_bso_block_t* BSO,
     const nn_conv2d_im2col_plan_t* plan,

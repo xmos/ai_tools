@@ -302,6 +302,10 @@ typedef struct {
         } chan_group;
 
         struct {
+            int32_t Y;
+        } col;
+
+        struct {
             int32_t window;
             int32_t Y;
         } row;

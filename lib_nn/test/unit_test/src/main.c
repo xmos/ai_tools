@@ -23,10 +23,10 @@ int main(void)
     // test_nn_conv2d_hstrip_tail_shallowin_padded();
     // test_nn_conv2d_hstrip_tail_shallowin();
 
-    test_nn_conv2d_hstrip_im2col_padded();
-    test_nn_conv2d_hstrip_im2col();
-    test_nn_conv2d_hstrip_tail_im2col_padded(); //probably not needed
-    test_nn_conv2d_hstrip_tail_im2col();// probably not needed
+    // test_nn_conv2d_hstrip_im2col_padded();
+    // test_nn_conv2d_hstrip_im2col();
+    // test_nn_conv2d_hstrip_tail_im2col_padded(); //probably not needed
+    // test_nn_conv2d_hstrip_tail_im2col();// probably not needed
 
     // test_conv2d_deep();
     // test_conv2d_shallowin();

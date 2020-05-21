@@ -108,6 +108,7 @@ void conv2d_im2col_init(
         job->stride.row.Y       = y_row_bytes;
 
         job->stride.chan_group.Y = VPU_INT8_ACC_PERIOD - y_row_bytes * job->output.rows;
+        job->stride.col.Y = y_row_bytes / job->output.cols;// TODO check
     }
 }
 
@@ -123,6 +124,7 @@ void conv2d_im2col(
     const nn_conv2d_im2col_plan_t* plan,
     const nn_conv2d_im2col_job_t* job)
 { 
+    printf("1\n");
     int8_t zero_point_vec[VPU_INT8_EPV];
     memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
     
@@ -134,15 +136,11 @@ void conv2d_im2col(
     const unsigned C_out_tail = plan->channels.Y % VPU_INT8_ACC_PERIOD; // TODO I don't think im2col cares about tails..
 
     const unsigned vlmaccr_align = 4;
-    const unsigned kernel_width = plan->window.shape.width;
-    const unsigned kernel_height = plan->window.shape.width;;
-    const unsigned patch_elements = plan->channels.X * kernel_height * kernel_width;
-
-    const unsigned kernel_row_elements = plan->window.shape.kernel_row_elements;
-    const unsigned k_mat_elements = kernel_row_elements * plan->channels.Y;
+    const unsigned patch_elements = plan->channels.X * plan->window.shape.height * plan->window.shape.width;
     
     int pad_t = job->init_padding.top;
     int pad_b = job->init_padding.bottom;
+    printf("2\n");
     //Iterate once per row of the output region
     for(unsigned output_rows = job->output.rows; output_rows > 0; output_rows--){
         //Iterate once per col of the output region
@@ -154,10 +152,9 @@ void conv2d_im2col(
             // set up "column" by copying all patch rows sequentially
             // TODO look at Aaron's VPU memcpy (doesn't require word-aligned)
             const int8_t* C = COL;
-            memset(C,0,sizeof(COL));// initialize pad -- zero point is handled at bias initialization
-            unsigned len = plan->channels.X * kernel_width;
-            assert(len <= VPU_INT8_EPV);//??
-
+            memset(C,0,plan->window.shape.len_col);// initialize pad -- zero point is handled at bias initialization TODO is this still true?
+            unsigned len = plan->channels.X * plan->window.shape.width;
+            printf("len = %d\n", plan->window.shape.len_col);
             // start paste
             int pad_l = job->init_padding.left;
             int pad_r = job->init_padding.right;
@@ -174,61 +171,53 @@ void conv2d_im2col(
                                            || (final_pad_l > 0) || (final_pad_r > 0);
             // end paste
 
-            for(unsigned rows_in_patch = block->patch.rows; rows_in_patch > 0; rows_in_patch--){
-                if( block->patch.pad_mask != 0xFFFFFFFF ){
-                    int8_t padded_vals[VPU_INT8_EPV]={0};
-                    int k = 0;
-                    for(int i = 0; i < kernel_width; i++){
-                        for(int j = 0; j < params->chans_in; j++){
-                            padded_vals[k] = (tmp & 0x1) ? V[k] : 0;
-                            k++;
-                        }
-                        tmp >>=1;
-                    }  
-                    memcpy(C, padded_vals, len);
+            for(unsigned rows_in_patch = plan->window.shape.height; rows_in_patch > 0; rows_in_patch--){
+                printf("3\n");
+                if( requires_padding ){
+                    memcpy(C,V,len);
+                    printf("4a\n");
+                    // int8_t padded_vals[VPU_INT8_EPV]={0};
+                    // int k = 0;
+                    // int tmp = 0;
+                    // for(int i = 0; i < plan->window.shape.width; i++){
+                    //     for(int j = 0; j < plan->channels.X; j++){
+                    //         padded_vals[k] = (tmp & 0x1) ? V[k] : 0;
+                    //         k++;
+                    //     }
+                    //     tmp >>=1;
+                    // }  
+                    // memcpy(C, padded_vals, len);
                 }
                 else{
                     memcpy(C,V,len);
+                    printf("4b\n");
                 }
                 
-                V = &V[block->patch.row_incr.X];
-                C = &C[len];
+                V = ADDR(V,job->stride.row.window);
+                C = ADDR(C,len);
 
            }
+           printf("5\n");
 
             /*print debug info*/
             // if(output_rows == block->output.rows && output_cols == block->output.cols){
                 // printf("\n\n %d %d \n", output_rows, output_cols);
-                // printf("Pad Mask = 0x%08X\n",block->patch.pad_mask);
-                // printf("\nKernel width: %d, Kernel height: %d, Cin: %d, Cout: %d\n",kernel_width,kernel_height,params->chans_in,params->chans_out);
-                // printf("\n kernel mat cols: %d  rows: %d \n",kernel_row_elements, params->chans_out);
 
-                // int bit = 0;
-                // unsigned raa = block->patch.pad_mask;
-                // printf("\n");
-                // for( int ind = 0; ind < 32; ind++){
-                //     printf("%X ", raa&1);
-                //     raa >>= 1;
-                //     if(++bit%kernel_width == 0) printf("\n");
-                //     if(bit > kernel_width*kernel_height) break;
-                // }
-                // printf("\n");
-
-                // unsigned l= params->chans_out;
-                // if( l < kernel_row_elements) l = kernel_row_elements;
+                // unsigned l= job->output.channels;
+                // if( l < plan->window.shape.kernel_row_elements) l = plan->window.shape.kernel_row_elements;
                 
                 // for(unsigned j=0; j<l; j++){
-                //     if(j < kernel_row_elements){ 
+                //     if(j < plan->window.shape.kernel_row_elements){ 
                 //         printf("\n | %d | ", COL[j]);}
                 //     else{
                 //         printf("\n       | ");}
                     
-                //     if( j < params->chans_out){
+                //     if( j < job->output.channels){
                 //         printf("|");
-                //         for(unsigned i = 0; i< kernel_row_elements; i++){
+                //         for(unsigned i = 0; i< plan->window.shape.kernel_row_elements; i++){
                 //             printf("%d ",L[i]);// TODO define L[] to reduce pointer math
                 //         }
-                //         L = &L[kernel_row_elements];
+                //         L = &L[plan->window.shape.kernel_row_elements];
                 //         printf("|");
                 //     }
                 // }
@@ -237,25 +226,28 @@ void conv2d_im2col(
             /*     */
                                 
             unsigned jj=0;
-            for(unsigned j = 0; j < jobs->channels.Y; j++){
+            for(unsigned j = 0; j < plan->channels.Y; j++){ //TODO make this use the new VLMACCR macros etc.!
                 //Because this mirrors the assembly, we need to keep accumulators for each
                 // of the channels in an output channel
                 int32_t patch_acc[VPU_INT8_ACC_PERIOD];
                 jj = j%VPU_INT8_ACC_PERIOD;
                 if(jj==0){
                     for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++){
-                        int32_t bias = BSO->bias_hi[k]<<16 + BSO->bias_lo[k];
+                        int32_t bias = (BSO->bias_hi[k]<<16) + BSO->bias_lo[k];
                         patch_acc[k] = bias;
+                    }
+                    if(j!=0){
+                        BSO = ADDR(BSO, 1);
                     }
                 }
                 // printf("\nj=%d patch_acc[%d] = %d \t",j,jj,patch_acc[jj]);
-                for(unsigned i = 0; i< kernel_row_elements; i++){
+                for(unsigned i = 0; i< plan->window.shape.kernel_row_elements; i++){
                     patch_acc[jj]  += (int32_t)(COL[i]*L[i]);
                 }
                 // printf("patch_acc[%d] = %d\t", jj, patch_acc[jj]);
 
-                L = &L[kernel_row_elements];
-                 //L = &L[kernel_row_elements]; // TODO make this the k row increment at initialization time
+                L = &L[plan->window.shape.kernel_row_elements];
+                 //L = &L[plan->window.shape.kernel_row_elements]; // TODO make this the k row increment at initialization time
                 // The shape of the `scales` tensor is (C_out // 16, 2, 16). 
                 // The first index is the channel group, second indicates shift (0) or scale (1), 
                 // and the third is the channel offset within the channel group.
@@ -269,16 +261,17 @@ void conv2d_im2col(
                 // printf("res16= 0x%04X\tres8 = %d",res16, res8);
                 Y[j] =res8;      
                 // move BSO to the next channel-output-group
-                if(jj==0){
-                    BSO = ADDR(BSO, 1);
-                }
+
             }
+            printf("6\n");
             //Move X and Y pointers one pixel to the right
-            X = ADDR(X, job->stride.col.X);
+            X = ADDR(X, plan->window.stride.horizontal);// TODO see if we need X and window
             Y = ADDR(Y, job->stride.col.Y);
+            
         }
+        printf("7\n");
         //Move X and Y pointers to the start of the following row
-        X = ADDR(X, job->stride.row.X);
+        X = ADDR(X, job->stride.row.window);
         Y = ADDR(Y, job->stride.row.Y);
         pad_t -= plan->window.stride.vertical;
         pad_b += plan->window.stride.vertical;

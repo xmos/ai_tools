@@ -147,11 +147,11 @@ void conv2d_shallowin_init(
  */
 void conv2d_1x1_init(
     nn_conv2d_1x1_plan_t* plan,
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const unsigned start_row,
-    const unsigned start_col,
-    const unsigned out_pixels);
+    nn_conv2d_1x1_job_t* jobs,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_conv2d_1x1_job_params_t* job_params,
+    const unsigned job_count);
 
 
 

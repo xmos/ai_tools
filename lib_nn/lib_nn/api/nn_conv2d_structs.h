@@ -252,29 +252,65 @@ typedef struct {
 
 
 
-
+/**
+ * Struct represents the shared parameters required to execute a `conv2d_1x1()` operation. 
+ */
 typedef struct {
+    
+    struct {
+        uint32_t X;
+        uint32_t Y;
+    } channels;
+
+} nn_conv2d_1x1_plan_t;
+
+/**
+ * Struct represents the job-specific parameters required to execute a `conv2d_1x1()` operation. 
+ */
+typedef struct {
+
     struct {
         int32_t X;
         int32_t Y;
         int32_t K;
-    } start_stride;
-    
-    struct {
-        int32_t Y;
-        int32_t K;
-    } cog_stride;
+        int32_t BSO;
+    } start;
 
     struct {
-        int32_t body;
-        int32_t tail;
-    } cig_stride;
+        unsigned pixels;
+        unsigned channels;
+    } output;
 
-    uint32_t pix_count;
-    uint32_t C_in;
-    uint32_t C_out;
+} nn_conv2d_1x1_job_t;
 
-} nn_conv2d_1x1_plan_t;
+
+/**
+
+ */
+typedef struct {
+    /** 
+     * Indices in an output image at which to begin producing output.
+     * 
+     * Typically channels must be a multiple of 16.
+     */
+    nn_image_vect_t start;
+
+    /**
+     * The number of pixels and channels of output to produce.
+     * 
+     * Whereas in `nn_conv2d_job_params_t` a number of rows and columns of the output image can be specified to 
+     * be computed, in `conv2d_1x1()` a number of pixels is specified instead. Starting at the start position,
+     * a job will continue computing outputs until the end of the row of the output image, and then move to the
+     * first column of the following row.
+     * 
+     * Typically channels must be a multiple of 4.
+     */
+    struct {
+        uint32_t pixels;
+        uint32_t channels;
+    } size;
+
+} nn_conv2d_1x1_job_params_t;
 
 
 /**

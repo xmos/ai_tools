@@ -373,7 +373,8 @@ void conv2d_1x1(
     const nn_image_t* X,
     const nn_tensor_t* K,
     const nn_bso_block_t* BSO,
-    const nn_conv2d_1x1_plan_t* plan);
+    const nn_conv2d_1x1_plan_t* plan,
+    const nn_conv2d_1x1_job_t* job);
 
 
 

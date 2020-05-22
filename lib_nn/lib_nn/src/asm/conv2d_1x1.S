@@ -3,6 +3,7 @@
 
 #include "nn_config.h"
 #include "window_op_plan.h"
+#include "asm_constants.h"
 
 /*  
 void conv2d_1x1(
@@ -50,6 +51,7 @@ Optimizing assumptions:
 #define STACK_PLAN          (NSTACKWORDS+1)
 #define STACK_JOB           (NSTACKWORDS+2)
 
+#define STACK_CP            1
 #define STACK_X             9
 #define STACK_Y_NEXT_COG    10
 #define STACK_BSO           11
@@ -85,6 +87,11 @@ FUNCTION_NAME:
     std r6, r7, sp[2]
     std r8, r9, sp[3]
     {   ldc _32, 32                             ;   stw r10, sp[8]                          }
+
+    //Change constant pool pointer to refer to the constant VPU vects needed here
+    ldaw r11, cp[vpu_vects]
+    {   ldaw r11, cp[0]                         ;   set cp, r11                             }
+    {                                           ;   stw r11, sp[STACK_CP]                   }
 
 #define plan            cig_left
 #define job             pix_left
@@ -136,7 +143,7 @@ FUNCTION_NAME:
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_1x1
             {                                           ;   ldw BSO, sp[STACK_BSO]                  }
 #else
-            {   ldaw r11, cp[vec_0x80]                  ;   ldw BSO, sp[STACK_BSO]                  }
+            {   ldaw r11, cp[VPU_VEC_0x80]              ;   ldw BSO, sp[STACK_BSO]                  }
             {   mkmsk r11, 16                           ;   vldr r11[0]                             }
             vstrpv Y[0], r11
 #endif
@@ -209,7 +216,7 @@ FUNCTION_NAME:
             {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
 
             {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
-            {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
+            {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vstr r11[0]                             }
             {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
             {   mkmsk Q(cig_left), 4                    ;   vdepth1                                 }
             vstrpv r11[0], Q(cig_left)
@@ -265,7 +272,7 @@ FUNCTION_NAME:
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_1x1
             {                                           ;   ldw BSO, sp[STACK_BSO]                  }
 #else
-            {   ldaw r11, cp[vec_0x80]                  ;   ldw BSO, sp[STACK_BSO]                  }
+            {   ldaw r11, cp[VPU_VEC_0x80]              ;   ldw BSO, sp[STACK_BSO]                  }
             {                                           ;   vldr r11[0]                             }
             {                                           ;   ldw r11, sp[STACK_JOB_OUT_TAIL]         }
             vstrpv Y[0], r11
@@ -346,7 +353,7 @@ FUNCTION_NAME:
             {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
 
             {   add BSO, BSO, _32                       ;   vlsat BSO[0]                            }
-            {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
+            {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vstr r11[0]                             }
             {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
             {   mkmsk Q(cig_left), 4                    ;   vdepth1                                 }
             vstrpv r11[0], Q(cig_left)
@@ -368,6 +375,10 @@ FUNCTION_NAME:
 .L_img_end:
 
 .Lfunc_end:
+    //Restore the original constant pool pointer
+    {                                           ;   ldw r11, sp[STACK_CP]                   }
+    {                                           ;   set cp, r11                             }
+
     {                                           ;   ldw r10, sp[8]                          }
     ldd r8, r9, sp[3]
     ldd r6, r7, sp[2]

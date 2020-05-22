@@ -2,6 +2,7 @@
 #if defined(__XS3A__)
 
 #include "nn_config.h"
+#include "../../asm_constants.h"
 
 /**
 void nn_conv2d_hstrip_shallowin(
@@ -22,7 +23,7 @@ void nn_conv2d_hstrip_shallowin(
 
 #define NSTACKVECS  (1)
 
-#define NSTACKWORDS  ((NSTACKVECS*8)+10)
+#define NSTACKWORDS  ((NSTACKVECS*8)+12)
     
 .text
 .issue_mode  dual
@@ -44,6 +45,7 @@ void nn_conv2d_hstrip_shallowin(
 #define STACK_K                 7
 #define STACK_BSO               8
 #define STACK_TMP               9
+#define STACK_CP                10
 #define STACK_WIN_H_STRIDE      STACK_K_h_stride
 
 
@@ -68,6 +70,12 @@ FUNCTION_NAME:
     std r6, r7, sp[1]
     std r8, r9, sp[2]
     {   ldc _32, 32                             ;   stw r10, sp[6]                          }
+
+    //Change constant pool pointer to refer to the constant VPU vects needed here
+    ldaw r11, cp[vpu_vects]
+    {   ldaw r11, cp[0]                         ;   set cp, r11                             }
+    {                                           ;   stw r11, sp[STACK_CP]                   }
+
     {   shl r11, _32, 4                         ;   stw K, sp[STACK_K]                      }
     {                                           ;   vsetc r11                               }
     {                                           ;   stw BSO, sp[STACK_BSO]                  }
@@ -81,7 +89,7 @@ FUNCTION_NAME:
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
     {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
 #else
-    {   ldaw r11, cp[vec_0x80]                  ;   ldw tmp, sp[STACK_OUT_COLS]             }
+    {   ldaw r11, cp[VPU_VEC_0x80]              ;   ldw tmp, sp[STACK_OUT_COLS]             }
 #endif
 
     .L_out_col_start:
@@ -158,7 +166,7 @@ FUNCTION_NAME:
         {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
 
         {                                           ;   vlsat BSO[0]                            }
-        {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
+        {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vstr r11[0]                             }
         {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
         {   mkmsk Q(rows_left), 4                   ;   vdepth1                                 }
         vstrpv r11[0], Q(rows_left)
@@ -172,12 +180,16 @@ FUNCTION_NAME:
         {   add Y, Y, tmp                           ;   ldw tmp, sp[STACK_WIN_H_STRIDE]         }
         {   add X, X, tmp                           ;   vsetc r11                               }
         {                                           ;   ldw tmp, sp[STACK_OUT_COLS]             }
-        {   ldaw r11, cp[vec_0x80]                  ;   bt tmp, .L_out_col_start                }
+        {   ldaw r11, cp[VPU_VEC_0x80]              ;   bt tmp, .L_out_col_start                }
 
 #endif
 
     .L_out_col_end:
 .Lfunc_end:
+    //Restore the original constant pool pointer
+    {                                           ;   ldw r11, sp[STACK_CP]                   }
+    {                                           ;   set cp, r11                             }
+
     {                                           ;   ldw r10, sp[6]                          }
     ldd r8, r9, sp[2]
     ldd r6, r7, sp[1]

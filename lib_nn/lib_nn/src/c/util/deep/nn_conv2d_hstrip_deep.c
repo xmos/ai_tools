@@ -6,6 +6,7 @@
 
 #include "xs3_vpu.h"
 #include "../../vpu_sim.h"
+#include "../../../asm/asm_constants.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -18,10 +19,6 @@
 #else
   #define NEG_SAT_VAL   (-128)
 #endif 
-
-
-const extern int16_t vec_0x007F[VPU_INT8_ACC_PERIOD];
-const extern int8_t vec_0x80[VPU_INT8_EPV];
 
 
 WEAK_FUNC
@@ -62,7 +59,7 @@ void nn_conv2d_hstrip_deep(
         const nn_image_t* patch_K = K;
         
 #if !CONFIG_SYMMETRIC_SATURATION_conv2d_deep
-        VLDR(&vpu, vec_0x80);
+        VLDR(&vpu, vpu_vects.vec_0x80);
         VSTRPV(&vpu, Y, 0xFFFF);
 #endif
 
@@ -151,7 +148,7 @@ void nn_conv2d_hstrip_deep(
         VLSAT(&vpu, BSO->shift2);
 
         VSTR(&vpu, mask_vec);
-        VLADD(&vpu, vec_0x007F);
+        VLADD(&vpu, vpu_vects.vec_0x007F);
         VDEPTH1(&vpu);
         uint32_t mask = ~vpu.vR.s32[0];
 
@@ -335,7 +332,7 @@ void nn_conv2d_hstrip_deep_padded(
         const int cur_pad_r = (pad_r > 0)? pad_r : 0;
 
 #if !CONFIG_SYMMETRIC_SATURATION_conv2d_deep
-        VLDR(&vpu, vec_0x80);
+        VLDR(&vpu, vpu_vects.vec_0x80);
         VSTRPV(&vpu, Y, 0xFFFF);
 #endif
 
@@ -486,7 +483,7 @@ void nn_conv2d_hstrip_deep_padded(
         VLSAT(&vpu, BSO->shift2);
 
         VSTR(&vpu, mask_vec);
-        VLADD(&vpu, vec_0x007F);
+        VLADD(&vpu, vpu_vects.vec_0x007F);
         VDEPTH1(&vpu);
         uint32_t mask = ~vpu.vR.s32[0];
 
@@ -589,7 +586,7 @@ void nn_conv2d_hstrip_tail_deep(
         const nn_image_t* patch_K = K;
 
 #if !CONFIG_SYMMETRIC_SATURATION_conv2d_deep
-        VLDR(&vpu, vec_0x80);
+        VLDR(&vpu, vpu_vects.vec_0x80);
         VSTRPV(&vpu, Y, write_mask);
 #endif
 
@@ -670,7 +667,7 @@ void nn_conv2d_hstrip_tail_deep(
         VLSAT(&vpu, BSO->shift2);
 
         VSTR(&vpu, vec_tmp2);
-        VLADD(&vpu, vec_0x007F);
+        VLADD(&vpu, vpu_vects.vec_0x007F);
         VDEPTH1(&vpu);
         uint32_t mask = ~vpu.vR.s32[0];
 
@@ -854,7 +851,7 @@ void nn_conv2d_hstrip_tail_deep_padded(
         const nn_image_t* patch_K = ADDR(K, 0);
 
 #if !CONFIG_SYMMETRIC_SATURATION_conv2d_deep
-        VLDR(&vpu, vec_0x80);
+        VLDR(&vpu, vpu_vects.vec_0x80);
         VSTRPV(&vpu, Y, write_mask);
 #endif
 
@@ -1008,7 +1005,7 @@ void nn_conv2d_hstrip_tail_deep_padded(
         VLSAT(&vpu, BSO->shift2);
         
         VSTR(&vpu, vec_tmp2);
-        VLADD(&vpu, vec_0x007F);
+        VLADD(&vpu, vpu_vects.vec_0x007F);
         VDEPTH1(&vpu);
         uint32_t mask = ~vpu.vR.s32[0];
 

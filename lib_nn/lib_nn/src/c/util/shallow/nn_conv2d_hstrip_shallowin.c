@@ -5,6 +5,7 @@
 #include "nn_op_structs.h"
 
 #include "xs3_vpu.h"
+#include "../../../asm/asm_constants.h"
 #include "../../vpu_sim.h"
 
 #include <stdlib.h>
@@ -22,8 +23,6 @@
 #endif 
 
 
-const extern int16_t vec_0x007F[VPU_INT8_ACC_PERIOD];
-const extern int8_t vec_0x80[VPU_INT8_EPV];
 
 WEAK_FUNC
 void nn_conv2d_hstrip_shallowin(
@@ -53,7 +52,7 @@ void nn_conv2d_hstrip_shallowin(
         const nn_image_t* patch_K = K;
 
 #if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
-        VLDR(&vpu, vec_0x80);
+        VLDR(&vpu, vpu_vects.vec_0x80);
         VSTRPV(&vpu, Y, 0xFFFF);
 #endif
 
@@ -111,7 +110,7 @@ void nn_conv2d_hstrip_shallowin(
         VLSAT(&vpu, BSO->shift2);
 
         VSTR(&vpu, vec_tmp.s16);
-        VLADD(&vpu, vec_0x007F);
+        VLADD(&vpu, vpu_vects.vec_0x007F);
         VDEPTH1(&vpu);
         uint32_t mask = ~vpu.vR.s32[0];
 
@@ -233,7 +232,7 @@ void nn_conv2d_hstrip_shallowin_padded(
         const nn_image_t* patch_K = K_patch_start;
 
 #if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
-        VLDR(&vpu, vec_0x80);
+        VLDR(&vpu, vpu_vects.vec_0x80);
         VSTRPV(&vpu, Y, 0xFFFF);
 #endif
 
@@ -298,7 +297,7 @@ void nn_conv2d_hstrip_shallowin_padded(
         VLSAT(&vpu, BSO->shift2);
 
         VSTR(&vpu, vec_tmp.s16);
-        VLADD(&vpu, vec_0x007F);
+        VLADD(&vpu, vpu_vects.vec_0x007F);
         VDEPTH1(&vpu);
         uint32_t mask = ~vpu.vR.s32[0];
 
@@ -399,7 +398,7 @@ void nn_conv2d_hstrip_tail_shallowin(
         const nn_image_t* patch_K = K_patch_start;
         
 #if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
-        VLDR(&vpu, vec_0x80);
+        VLDR(&vpu, vpu_vects.vec_0x80);
         VSTRPV(&vpu, Y, write_mask);
 #endif
 
@@ -457,7 +456,7 @@ void nn_conv2d_hstrip_tail_shallowin(
         VLSAT(&vpu, BSO->shift2);
 
         VSTR(&vpu, vec_tmp1.s16);
-        VLADD(&vpu, vec_0x007F);
+        VLADD(&vpu, vpu_vects.vec_0x007F);
         VDEPTH1(&vpu);
         uint32_t mask = ~vpu.vR.s32[0];
 
@@ -609,7 +608,7 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
         const nn_image_t* patch_K = K_patch_start;
 
 #if !CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
-        VLDR(&vpu, vec_0x80);
+        VLDR(&vpu, vpu_vects.vec_0x80);
         VSTRPV(&vpu, Y, write_mask);
 #endif
 
@@ -671,7 +670,7 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
         VLSAT(&vpu, BSO->shift2);
 
         VSTR(&vpu, vec_tmp1.s16);
-        VLADD(&vpu, vec_0x007F);
+        VLADD(&vpu, vpu_vects.vec_0x007F);
         VDEPTH1(&vpu);
         uint32_t mask = ~vpu.vR.s32[0];
 

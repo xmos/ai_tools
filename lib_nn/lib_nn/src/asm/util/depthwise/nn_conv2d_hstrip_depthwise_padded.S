@@ -2,6 +2,7 @@
 #if defined(__XS3A__)
 
 #include "nn_config.h"
+#include "../../asm_constants.h"
 
 /**
 
@@ -59,6 +60,7 @@ void nn_conv2d_hstrip_depthwise_padded(
 #define STACK_VEC_ZERO          (NSTACKWORDS-32)
 
 
+#define STACK_CP            (1)
 #define STACK_MID_ROWS      (9)
 #define STACK_CTR_COLS      (10)
 #define STACK_X_PSTART      (11)
@@ -83,6 +85,12 @@ FUNCTION_NAME:
     std r4, r5, sp[1]
     std r6, r7, sp[2]
     {   ldc r10, 32                             ;   vsetc r11                               }
+
+    //Change constant pool pointer to refer to the constant VPU vects needed here
+    ldaw r11, cp[vpu_vects]
+    {   ldaw r11, cp[0]                         ;   set cp, r11                             }
+    {                                           ;   stw r11, sp[STACK_CP]                   }
+
 
     {   add r11, r3, r10                        ;   vldd r3[0]                              }
     {   add r11, r11, r10                       ;   vldr r11[0]                             }
@@ -180,7 +188,7 @@ FUNCTION_NAME:
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise
         
 #else
-        {   ldaw r11, cp[vec_0x80]                  ;   ldw Q(rows_left), sp[STACK_CHAN2WRITE]  }
+        {   ldaw r11, cp[VPU_VEC_0x80]              ;   ldw Q(rows_left), sp[STACK_CHAN2WRITE]  }
         {   mkmsk Q(rows_left), Q(rows_left)        ;   vldr r11[0]                             }
         vstrpv Y[0], Q(rows_left)
         {   ldaw r11, sp[STACK_VEC_VD]              ;                                           }
@@ -247,7 +255,7 @@ FUNCTION_NAME:
         {   add Q(rows_left), Q(rows_left), _32     ;   vlmacc Q(rows_left)[0]                  }
         {                                           ;   vlsat Q(rows_left)[0]                   }
 
-        {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
+        {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vstr r11[0]                             }
         {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
         {   mkmsk Q(rows_left), 4                   ;   vdepth1                                 }
         vstrpv r11[0], Q(rows_left)
@@ -296,6 +304,10 @@ FUNCTION_NAME:
 #undef _32
 
 .Lfunc_end:
+    //Restore the original constant pool pointer
+    {                                           ;   ldw r11, sp[STACK_CP]                   }
+    {                                           ;   set cp, r11                             }
+
     {                                           ;   ldw r10, sp[8]                          }
     ldd r8, r9, sp[3]
     ldd r6, r7, sp[2]

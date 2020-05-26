@@ -92,8 +92,6 @@ void test_conv2d_im2col_case0()
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
-
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
 
     memset(K, 0, sizeof(K));
@@ -187,8 +185,6 @@ void test_conv2d_im2col_case1()
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
-
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
     memset(K, 0, sizeof(K));
 
@@ -208,7 +204,6 @@ void test_conv2d_im2col_case1()
                             (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
         memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
-
         conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
         for(int row = 0; row < y_params.height; row++){
@@ -277,8 +272,6 @@ void test_conv2d_im2col_case2()
 
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
-
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
     memset(K, 0, sizeof(K));
@@ -370,8 +363,6 @@ void test_conv2d_im2col_case3()
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
-
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
     memset(K, 0, sizeof(K));
 
@@ -461,8 +452,6 @@ void test_conv2d_im2col_case4()
 
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
-
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
     memset(K, 0, sizeof(K));
@@ -554,8 +543,6 @@ void test_conv2d_im2col_case5()
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
-
     memset(X, 1, x_params.height * x_params.width * x_params.channels);
     memset(K, 0, sizeof(K));
 
@@ -640,8 +627,6 @@ void test_conv2d_im2col_case6()
 
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
-
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
 
@@ -735,8 +720,6 @@ void test_conv2d_im2col_case7()
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
-
     memset(X, 1, x_params.height * x_params.width * x_params.channels);
 
     memset(K, 0, sizeof(K));
@@ -828,8 +811,6 @@ void test_conv2d_im2col_case8()
 
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
-
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     memset(X, 1, x_params.height * x_params.width * x_params.channels);
 
@@ -924,8 +905,6 @@ void test_conv2d_im2col_case9()
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
-
     memset(X, 1, x_params.height * x_params.width * x_params.channels);
     
     memset(K, 0, sizeof(K));
@@ -1016,8 +995,6 @@ void test_conv2d_im2col_case10()
 
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
-
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
@@ -1112,8 +1089,6 @@ void test_conv2d_im2col_case11()
 
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
-
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
@@ -1210,8 +1185,6 @@ void test_conv2d_im2col_case12()
 
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
-
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
@@ -1310,8 +1283,6 @@ void test_conv2d_im2col_case13()
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
 
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
-
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
             for(int cin = 0; cin < x_params.channels; cin++)
@@ -1408,8 +1379,6 @@ void test_conv2d_im2col_case14()
 
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
-
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     for(int row = 0; row < x_params.height; row++)
         for(int col = 0; col < x_params.width; col++)
@@ -1513,8 +1482,6 @@ void test_conv2d_im2col_case15()
 
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
-
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     nn_image_t X_vals[X_HEIGHT][X_WIDTH] = {
         {  2,  4, 2, 8, 4 },
@@ -1770,8 +1737,6 @@ void test_conv2d_im2col_case17()
 
     nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
     conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
-
-    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
 
     nn_image_t X_vals[X_HEIGHT][X_WIDTH] = {
         {  6,  6, 2, 8, 4 },

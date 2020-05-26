@@ -124,7 +124,6 @@ void conv2d_im2col(
     const nn_conv2d_im2col_plan_t* plan,
     const nn_conv2d_im2col_job_t* job)
 { 
-    printf("1\n");
     int8_t zero_point_vec[VPU_INT8_EPV];
     memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
     
@@ -140,7 +139,6 @@ void conv2d_im2col(
     
     int pad_t = job->init_padding.top;
     int pad_b = job->init_padding.bottom;
-    printf("2\n");
     //Iterate once per row of the output region
     for(unsigned output_rows = job->output.rows; output_rows > 0; output_rows--){
         //Iterate once per col of the output region
@@ -172,21 +170,22 @@ void conv2d_im2col(
             // end paste
 
             for(unsigned rows_in_patch = plan->window.shape.height; rows_in_patch > 0; rows_in_patch--){
-                printf("3\n");
                 if( requires_padding ){
-                    memcpy(C,V,len);
                     printf("4a\n");
-                    // int8_t padded_vals[VPU_INT8_EPV]={0};
-                    // int k = 0;
-                    // int tmp = 0;
-                    // for(int i = 0; i < plan->window.shape.width; i++){
-                    //     for(int j = 0; j < plan->channels.X; j++){
-                    //         padded_vals[k] = (tmp & 0x1) ? V[k] : 0;
-                    //         k++;
-                    //     }
-                    //     tmp >>=1;
-                    // }  
-                    // memcpy(C, padded_vals, len);
+                    int8_t padded_vals[128]={0}; // todo drop the 128 limit or enforce it TODO should this be zero point?
+                    int k = 0;
+                    int tmp = 0;
+                    for(int h = 0; h< plan->window.shape.height; h++){
+                        tmp = (cur_pad_t -h > 0) || (plan->window.shape.height - h <= cur_pad_b); // ???
+                        for(int i = 0; i < plan->window.shape.width; i++){
+                            tmp &= (pad_l -i > 0) || (plan->window.shape.width - i <= pad_r); // ???
+                            for(int j = 0; j < plan->channels.X; j++){
+                                padded_vals[k] = (tmp & 0x1) ? V[k] : 0;
+                                k++;
+                            }
+                        }  
+                    }
+                    memcpy(C, padded_vals, len);
                 }
                 else{
                     memcpy(C,V,len);
@@ -244,32 +243,25 @@ void conv2d_im2col(
                 for(unsigned i = 0; i< plan->window.shape.kernel_row_elements; i++){
                     patch_acc[jj]  += (int32_t)(COL[i]*L[i]);
                 }
-                // printf("patch_acc[%d] = %d\t", jj, patch_acc[jj]);
 
-                L = &L[plan->window.shape.kernel_row_elements];
-                 //L = &L[plan->window.shape.kernel_row_elements]; // TODO make this the k row increment at initialization time
-                // The shape of the `scales` tensor is (C_out // 16, 2, 16). 
-                // The first index is the channel group, second indicates shift (0) or scale (1), 
-                // and the third is the channel offset within the channel group.
+                L = ADDR(L,plan->window.shape.kernel_row_elements); // TODO make this the k row increment at initialization time
+
                 int16_t res16;
                 int8_t res8;
 
                 res16 = vlsat_single_s16(patch_acc[jj], BSO->shift1[jj]);
-                // printf("scales[0][jj]: %d\tscales[1][jj]: %d\t", cales[jj],cales[ jj+VPU_INT8_ACC_PERIOD]);
-                res16 = vlmul_single_s16(res16, BSO->scale[jj]);
-                res8 = vdepth8_single_s16(res16);
-                // printf("res16= 0x%04X\tres8 = %d",res16, res8);
+                res16 = vlmul_single_s16(res16, BSO->scale[jj]<<14);
+                res8 = vdepth8_single_s16(res16<<8);
+
                 Y[j] =res8;      
                 // move BSO to the next channel-output-group
 
             }
-            printf("6\n");
             //Move X and Y pointers one pixel to the right
             X = ADDR(X, plan->window.stride.horizontal);// TODO see if we need X and window
             Y = ADDR(Y, job->stride.col.Y);
             
         }
-        printf("7\n");
         //Move X and Y pointers to the start of the following row
         X = ADDR(X, job->stride.row.window);
         Y = ADDR(Y, job->stride.row.Y);

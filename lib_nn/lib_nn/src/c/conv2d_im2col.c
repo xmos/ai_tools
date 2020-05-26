@@ -5,6 +5,7 @@
 #include "nn_op_structs.h"
 
 #include "xs3_vpu.h"
+#include "vpu_sim.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -113,7 +114,15 @@ void conv2d_im2col_init(
 }
 
 
+#if CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
+  #define NEG_SAT_VAL   (-127)
+#else
+  #define NEG_SAT_VAL   (-128)
+#endif 
 
+
+const extern int16_t vec_0x007F[VPU_INT8_ACC_PERIOD];
+const extern int8_t vec_0x80[VPU_INT8_EPV];
 
 void conv2d_im2col(
     nn_image_t* Y,
@@ -124,9 +133,14 @@ void conv2d_im2col(
     const nn_conv2d_im2col_plan_t* plan,
     const nn_conv2d_im2col_job_t* job)
 { 
-    int8_t zero_point_vec[VPU_INT8_EPV];
-    memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
+    // int8_t zero_point_vec[VPU_INT8_EPV];
+    // memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
     
+    xs3_vpu vpu;
+    vpu_vector_t vec_tmp;
+
+    VSETC(&vpu, MODE_S8);
+
     X = ADDR(X,job->stride.start.X);
     Y = ADDR(Y, job->stride.start.Y);
     K = ADDR(K, job->stride.start.K);
@@ -144,15 +158,19 @@ void conv2d_im2col(
         //Iterate once per col of the output region
         for(unsigned output_cols = job->output.cols; output_cols > 0; output_cols--){
 
-            //V is the X-pointer for the patch. This points it at the top-left cell of the patch.
-            const int8_t* V = X;
-            const int8_t* L = K;
+            //This points it at the top-left cell of the patch.
+            const nn_image_t* patch_X = X;
+            const nn_image_t* patch_K = K;
+
+            #if !CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
+                    VLDR(&vpu, vec_0x80);
+                    VSTRPV(&vpu, Y, 0xFFFF);
+            #endif
             // set up "column" by copying all patch rows sequentially
             // TODO look at Aaron's VPU memcpy (doesn't require word-aligned)
             const int8_t* C = COL;
             memset(C,0,plan->window.shape.len_col);// initialize pad -- zero point is handled at bias initialization TODO is this still true?
             unsigned len = plan->channels.X * plan->window.shape.width;
-            printf("len = %d\n", plan->window.shape.len_col);
             // start paste
             int pad_l = job->init_padding.left;
             int pad_r = job->init_padding.right;
@@ -171,8 +189,7 @@ void conv2d_im2col(
 
             for(unsigned rows_in_patch = plan->window.shape.height; rows_in_patch > 0; rows_in_patch--){
                 if( requires_padding ){
-                    printf("4a\n");
-                    int8_t padded_vals[128]={0}; // todo drop the 128 limit or enforce it TODO should this be zero point?
+                    int8_t padded_vals[128]={0}; // todo drop the 128 limit or enforce it
                     int k = 0;
                     int tmp = 0;
                     for(int h = 0; h< plan->window.shape.height; h++){
@@ -180,7 +197,7 @@ void conv2d_im2col(
                         for(int i = 0; i < plan->window.shape.width; i++){
                             tmp &= (pad_l -i > 0) || (plan->window.shape.width - i <= pad_r); // ???
                             for(int j = 0; j < plan->channels.X; j++){
-                                padded_vals[k] = (tmp & 0x1) ? V[k] : 0;
+                                padded_vals[k] = (tmp & 0x1) ? patch_X[k] : plan->zero_point;
                                 k++;
                             }
                         }  
@@ -188,75 +205,88 @@ void conv2d_im2col(
                     memcpy(C, padded_vals, len);
                 }
                 else{
-                    memcpy(C,V,len);
-                    printf("4b\n");
+                    memcpy(C,patch_X,len);
                 }
                 
-                V = ADDR(V,job->stride.row.window);
+                patch_X = ADDR(patch_X,job->stride.row.window);
                 C = ADDR(C,len);
 
-           }
-           printf("5\n");
-
-            /*print debug info*/
-            // if(output_rows == block->output.rows && output_cols == block->output.cols){
-                // printf("\n\n %d %d \n", output_rows, output_cols);
-
-                // unsigned l= job->output.channels;
-                // if( l < plan->window.shape.kernel_row_elements) l = plan->window.shape.kernel_row_elements;
-                
-                // for(unsigned j=0; j<l; j++){
-                //     if(j < plan->window.shape.kernel_row_elements){ 
-                //         printf("\n | %d | ", COL[j]);}
-                //     else{
-                //         printf("\n       | ");}
-                    
-                //     if( j < job->output.channels){
-                //         printf("|");
-                //         for(unsigned i = 0; i< plan->window.shape.kernel_row_elements; i++){
-                //             printf("%d ",L[i]);// TODO define L[] to reduce pointer math
-                //         }
-                //         L = &L[plan->window.shape.kernel_row_elements];
-                //         printf("|");
-                //     }
-                // }
-                // L = K;
-            // }
-            /*     */
-                                
-            unsigned jj=0;
-            for(unsigned j = 0; j < plan->channels.Y; j++){ //TODO make this use the new VLMACCR macros etc.!
-                //Because this mirrors the assembly, we need to keep accumulators for each
-                // of the channels in an output channel
-                int32_t patch_acc[VPU_INT8_ACC_PERIOD];
-                jj = j%VPU_INT8_ACC_PERIOD;
-                if(jj==0){
-                    for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++){
-                        int32_t bias = (BSO->bias_hi[k]<<16) + BSO->bias_lo[k];
-                        patch_acc[k] = bias;
-                    }
-                    if(j!=0){
-                        BSO = ADDR(BSO, 1);
-                    }
-                }
-                // printf("\nj=%d patch_acc[%d] = %d \t",j,jj,patch_acc[jj]);
-                for(unsigned i = 0; i< plan->window.shape.kernel_row_elements; i++){
-                    patch_acc[jj]  += (int32_t)(COL[i]*L[i]);
-                }
-
-                L = ADDR(L,plan->window.shape.kernel_row_elements); // TODO make this the k row increment at initialization time
-
-                int16_t res16;
-                int8_t res8;
-
-                res16 = vlsat_single_s16(patch_acc[jj], BSO->shift1[jj]);
-                res16 = vlmul_single_s16(res16, BSO->scale[jj]<<14);
-                res8 = vdepth8_single_s16(res16<<8);
-
-                Y[j] =res8;      
-                // move BSO to the next channel-output-group
-
             }
+            // im2col complete what follows is just a BSO-aware K*COL = Y            
+            for(unsigned j = 0; j < plan->channels.Y; j++){ // TODO sub-optimal traversal, should do sub-rows at a time
+                
+                patch_K = ADDR(patch_K,plan->window.shape.kernel_row_elements); // TODO make this the k row increment at initialization time .  
+                COL = ADDR(COL,plan->window.shape.kernel_row_elements);   
+                
+                const nn_tensor_t* K_tmp = patch_K;
+                const nn_image_t* sub_C = COL;
+                for(int k=0; k< plan->window.shape.kernel_row_elements/VPU_INT8_ACC_PERIOD; k++){
+                    VLDD(&vpu, BSO->bias_hi);
+                    VLDR(&vpu, BSO->bias_lo);
+                    BSO = ADDR(BSO, 1);// check
+
+                    VLDC(&vpu, sub_C);
+                    sub_C = ADDR(sub_C,-VPU_INT8_ACC_PERIOD);
+
+                    for(int i = 0; i < VPU_INT8_ACC_PERIOD; i++){
+                        VLMACCR(&vpu, K_tmp);
+                        K_tmp = ADDR(K_tmp, -VPU_INT8_ACC_PERIOD);
+                    }
+                }
+                //Done accumulating for the current output channel
+                
+                //reset COL (part of sub-optimal traversal)
+                COL = ADDR(COL,-plan->window.shape.kernel_row_elements);
+
+                //Set mode to 16-bit
+                VSETC(&vpu, MODE_S16);
+
+                //Saturate to 16-bit values
+                VLSAT(&vpu, BSO->shift1);
+
+                //Load scales into vC
+                VLDC(&vpu, BSO->scale);
+                VSTR(&vpu, vec_tmp.s16);
+                VCLRDR(&vpu);
+                VLMACC(&vpu, vec_tmp.s16);
+                VLDC(&vpu, BSO->offset_scale);
+                VLMACC(&vpu, BSO->offset);
+
+                #if CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
+
+                    //Set mode back to 8-bit
+                    VSETC(&vpu, MODE_S8);
+
+                    //Saturate to 8-bit values
+                    VLSAT(&vpu, BSO->shift2);
+
+                    //Store result in Y
+                    const unsigned mask16 = 0xFFFF;
+                    VSTRPV(&vpu, Y, mask16);
+                
+                #else
+
+                    //Saturate to 8-bit values
+                    VLSAT(&vpu, BSO->shift2);
+
+                    VSTR(&vpu, vec_tmp.s16);
+                    VLADD(&vpu, vec_0x007F);
+                    VDEPTH1(&vpu);
+                    uint32_t mask = ~vpu.vR.s32[0];
+
+                    VLASHR(&vpu, vec_tmp.s16, -8);
+                    VDEPTH8(&vpu);
+
+                    //Store result in Y
+                    mask = mask & 0xFFFF;
+                    VSTRPV(&vpu, Y, mask);
+
+                    //Set mode back to 8-bit
+                    VSETC(&vpu, MODE_S8);
+
+                #endif
+            }
+            
             //Move X and Y pointers one pixel to the right
             X = ADDR(X, plan->window.stride.horizontal);// TODO see if we need X and window
             Y = ADDR(Y, job->stride.col.Y);

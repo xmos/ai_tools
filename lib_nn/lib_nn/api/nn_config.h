@@ -64,6 +64,13 @@
   #endif
 #endif 
 
+#ifndef CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
+  #ifdef CONFIG_SYMMETRIC_SATURATION_GLOBAL
+    #define CONFIG_SYMMETRIC_SATURATION_conv2d_im2col CONFIG_SYMMETRIC_SATURATION_GLOBAL
+  #else
+    #define CONFIG_SYMMETRIC_SATURATION_conv2d_im2col (0)
+  #endif
+#endif 
 
 /**
  * @macro CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise

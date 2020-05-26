@@ -19,3 +19,7 @@
 	path = third_party/gemmlowp
 	url = git@github.com:google/gemmlowp.git
 	ignore = dirty
+[submodule "third_party/ruy"]
+	path = third_party/ruy
+	url = git@github.com:google/ruy.git
+	ignore = dirty

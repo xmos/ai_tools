@@ -2,6 +2,7 @@
 #if defined(__XS3A__)
 
 #include "nn_config.h"
+#include "../../asm_constants.h"
 
 /**
 
@@ -23,7 +24,8 @@ void nn_conv2d_hstrip_depthwise(
 
 #define FUNCTION_NAME nn_conv2d_hstrip_depthwise
 
-#define NSTACKWORDS  32
+#define NSTACKVECS   1
+#define NSTACKWORDS  (8*NSTACKVECS+12)
     
 .text
 .issue_mode  dual
@@ -44,6 +46,7 @@ void nn_conv2d_hstrip_depthwise(
 
 #define STACK_VEC_TMP           (NSTACKWORDS-8)
 
+#define STACK_CP            (1)
 #define STACK_K_PSTART      (9)
 #define STACK_BSO_PSTART    (10)
 #define STACK_TMP           (11)
@@ -74,6 +77,12 @@ FUNCTION_NAME:
     std r4, r5, sp[1]
     std r6, r7, sp[2]
     {   ldc r10, 32                             ;   vsetc r11                               }
+
+    //Change constant pool pointer to refer to the constant VPU vects needed here
+    ldaw r11, cp[vpu_vects]
+    {   ldaw r11, cp[0]                         ;   set cp, r11                             }
+    {                                           ;   stw r11, sp[STACK_CP]                   }
+
     {                                           ;   stw r3, sp[STACK_BSO_PSTART]            }
     {                                           ;   ldw r5, sp[STACK_XK_COL_STRIDE]         }
     {                                           ;   stw K, sp[STACK_K_PSTART]               }
@@ -96,7 +105,7 @@ FUNCTION_NAME:
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise
         
 #else
-        {   ldaw r11, cp[vec_0x80]                  ;   ldw Q(rows_left), sp[STACK_CHAN2WRITE]  }
+        {   ldaw r11, cp[VPU_VEC_0x80]              ;   ldw Q(rows_left), sp[STACK_CHAN2WRITE]  }
         {   mkmsk Q(rows_left), Q(rows_left)        ;   vldr r11[0]                             }
         vstrpv Y[0], Q(rows_left)
         {                                           ;   ldw r11, sp[STACK_BSO_PSTART]           }
@@ -144,7 +153,7 @@ FUNCTION_NAME:
         {   add BSO, BSO, _32                       ;   vlmacc BSO[0]                           }
         {                                           ;   vlsat BSO[0]                            }
 
-        {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
+        {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vstr r11[0]                             }
         {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
         {   mkmsk Q(rows_left), 4                   ;   vdepth1                                 }
         vstrpv r11[0], Q(rows_left)
@@ -162,6 +171,10 @@ FUNCTION_NAME:
 
 
 .Lfunc_end:
+    //Restore the original constant pool pointer
+    {                                           ;   ldw r11, sp[STACK_CP]                   }
+    {                                           ;   set cp, r11                             }
+
     {                                           ;   ldw r10, sp[8]                          }
     ldd r8, r9, sp[3]
     ldd r6, r7, sp[2]

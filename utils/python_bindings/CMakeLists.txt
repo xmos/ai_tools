@@ -10,6 +10,7 @@ set(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX10.13.sdk)
 # Paths
 #**********************
 set(GEMMLOWP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/gemmlowp")
+set(RUY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/ruy")
 set(FLATBUFFERS_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/flatbuffers/include")
 set(FLATBUFFERS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/flatbuffers/src")
 set(TENSORFLOW_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/tensorflow")
@@ -96,6 +97,7 @@ target_sources(libtflite2xcore
 target_include_directories(libtflite2xcore
   PRIVATE ${FLATBUFFERS_INCLUDE_DIR}
   PRIVATE ${GEMMLOWP_INCLUDE_DIR}
+  PRIVATE ${RUY_INCLUDE_DIR}
   PRIVATE ${TENSORFLOW_INCLUDE_DIR}
   PRIVATE ${LIB_NN_ALT_INCLUDE_DIR}
   PRIVATE ${LIB_NN_INCLUDE_DIR}

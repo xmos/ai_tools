@@ -5,6 +5,7 @@
 #include "nn_op_structs.h"
 
 #include "xs3_vpu.h"
+#include "../asm/asm_constants.h"
 #include "vpu_sim.h"
 
 #include <stdlib.h>
@@ -121,9 +122,6 @@ void conv2d_im2col_init(
 #endif 
 
 
-const extern int16_t vec_0x007F[VPU_INT8_ACC_PERIOD];
-const extern int8_t vec_0x80[VPU_INT8_EPV];
-
 void conv2d_im2col(
     nn_image_t* Y,
     const nn_image_t* X,
@@ -135,7 +133,6 @@ void conv2d_im2col(
 { 
     // int8_t zero_point_vec[VPU_INT8_EPV];
     // memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
-    
     xs3_vpu vpu;
     vpu_vector_t vec_tmp;
 
@@ -163,7 +160,7 @@ void conv2d_im2col(
             const nn_image_t* patch_K = K;
 
             #if !CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
-                    VLDR(&vpu, vec_0x80);
+                    VLDR(&vpu, vpu_vects.vec_0x80);
                     VSTRPV(&vpu, Y, 0xFFFF);
             #endif
             // set up "column" by copying all patch rows sequentially
@@ -270,7 +267,7 @@ void conv2d_im2col(
                     VLSAT(&vpu, BSO->shift2);
 
                     VSTR(&vpu, vec_tmp.s16);
-                    VLADD(&vpu, vec_0x007F);
+                    VLADD(&vpu, vpu_vects.vec_0x007F);
                     VDEPTH1(&vpu);
                     uint32_t mask = ~vpu.vR.s32[0];
 

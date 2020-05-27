@@ -9,7 +9,8 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
 )
 from tflite2xcore.utils import VE, WORD_SIZE
-from .transformation_passes import ReplaceQuantizedOperatorPass
+from .transformation_passes import ReplaceQuantizedOperatorPass, OperatorMatchingPass
+from tflite2xcore.execution_planning import ChannelGroupSlicePlanner
 
 
 class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
@@ -182,3 +183,40 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
             subgraph.remove_tensor(old_tensor)
 
         return new_op
+
+
+class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
+    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_threads = num_threads or 1
+        assert isinstance(self.max_threads, int)
+        assert self.max_threads > 0
+        self.forced = forced
+        self.plan_threads = None
+
+    def run(self, *args, **kwargs):
+        if self.max_threads == 1:
+            self.logger.debug(f"Skipping pass b/c num_threads={self.max_threads}")
+            return 0
+        else:
+            return super().run(*args, **kwargs)
+
+    def match(self, op):
+        if (
+            super().match(op)
+            and op.operator_code.code == XCOREOpCodes.XC_avgpool2d_global
+        ):
+            return not self.plan_threads
+
+    def mutate(self, op):
+        _, Cout = op.outputs[0].shape
+        assert int(Cout) == Cout
+        planner = ChannelGroupSlicePlanner(
+            int(Cout), num_threads=self.max_threads, forced=self.forced
+        )
+        plan = planner.find_optimal_plan()
+        self.plan_threads = plan.num_threads
+
+        if self.plan_threads > 1:
+            op.add_custom_options(par=plan.to_dict())
+

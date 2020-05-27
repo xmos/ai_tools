@@ -20,13 +20,13 @@ from .conv2d_passes import (
     LegalizeXCDeepConvPass,
     ReplaceShallowinConv2dPass,
     LegalizeXCShallowinConvPass,
-    ParallelizeXCConv2dPass,
-    ParallelizeDeepConv2dPass,
+    PlanConv2dPass,
 )
 
 from .fully_connected_passes import (
     ReplaceFullyConnectedPass,
     LegalizeXCFullyConnectedPass,
+    PlanFullyConnectedPass,
 )
 
 from .pooling_passes import (
@@ -35,6 +35,7 @@ from .pooling_passes import (
     ReplaceAveragePool2DPass,
     ReplaceAveragePool2D2x2Pass,
     ReplaceGlobalAveragePool2DPass,
+    PlanGlobalAveragePool2DPass,
 )
 from .padding_passes import (
     FuseConv2dPaddingPass,

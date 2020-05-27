@@ -11,7 +11,7 @@ from tflite2xcore.xcore_schema import (
     OperatorCode,
     XCOREOpCodes,
 )
-from tflite2xcore.parallelization import DIDOConv2DPlanner, GenericConv2DPlanner
+from tflite2xcore.execution_planning import SlicePlanner
 from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
@@ -313,16 +313,17 @@ class LegalizeXCShallowinConvPass(LegalizeXCConvPass):
             self._log_weights()
 
 
-class ParallelizeXCConv2dPass(OperatorMatchingPass):
+class PlanConv2dPass(OperatorMatchingPass):
     def __init__(self, *args, num_threads=None, forced=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.num_threads = num_threads or 1
         assert isinstance(self.num_threads, int)
         assert self.num_threads > 0
         self.forced = forced
+        self.plan_threads = None
 
     MATCHING_OPCODES = (
-        XCOREOpCodes.XC_conv2d_depthwise,
+        XCOREOpCodes.XC_conv2d_shallowin,
         XCOREOpCodes.XC_conv2d_deep,
         XCOREOpCodes.XC_conv2d_1x1,
     )
@@ -336,49 +337,21 @@ class ParallelizeXCConv2dPass(OperatorMatchingPass):
 
     def match(self, op):
         if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
-            return "par_plan" not in op.custom_options
+            return not self.plan_threads
 
     def mutate(self, op):
-        _, height, width, _ = op.outputs[0].shape
+        _, height, width, Cout = op.outputs[0].shape
         assert int(height) == height
         assert int(width) == width
-        planner = GenericConv2DPlanner(
-            int(height), int(width), num_threads=self.num_threads, forced=self.forced
+        planner = SlicePlanner(
+            int(Cout),
+            int(height),
+            int(width),
+            num_threads=self.num_threads,
+            forced=self.forced,
         )
         plan = planner.find_optimal_plan()
-        op.add_custom_options(par_plan=[list(block) for block in plan.layout])
+        self.plan_threads = plan.num_threads
 
-
-class ParallelizeDeepConv2dPass(QuantizedOperatorMatchingPass):
-    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.num_threads = num_threads or 1
-        assert isinstance(self.num_threads, int)
-        assert self.num_threads > 0
-        self.forced = forced
-
-    def run(self, *args, **kwargs):
-        if self.num_threads == 1:
-            self.logger.debug(f"Skipping pass b/c num_threads={self.num_threads}")
-            return 0
-        else:
-            return super().run(*args, **kwargs)
-
-    @property
-    def matching_opcode(self):
-        return XCOREOpCodes.XC_conv2d_deep
-
-    def match(self, op):
-        if super().match(op):
-            return "par_plan" not in op.custom_options
-
-    def mutate(self, op):
-        with self.using(op):
-            _, height, width, _ = self._output.shape
-        assert int(height) == height
-        assert int(width) == width
-        planner = DIDOConv2DPlanner(
-            int(height), int(width), num_threads=self.num_threads, forced=self.forced
-        )
-        plan = planner.find_optimal_plan()
-        op.add_custom_options(par_plan=[list(block) for block in plan.layout])
+        if self.plan_threads > 1:
+            op.add_custom_options(plan=plan.to_dict())

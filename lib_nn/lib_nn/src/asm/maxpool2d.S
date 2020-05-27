@@ -10,6 +10,7 @@ void maxpool2d(
 */
 
 #include "window_op_plan.h"
+#include "asm_constants.h"
 
 #define FUNCTION_NAME maxpool2d
 
@@ -26,7 +27,7 @@ void maxpool2d(
 #define STACK_CURMAX_VEC    (NSTACKWORDS-8)
 #define STACK_TMP_VEC       (NSTACKWORDS-16)     
 
-
+#define STACK_CP                1
 #define STACK_OUT_ROWS          9
 #define STACK_OUT_COLS          10
 #define STACK_POOL_ROWS         11
@@ -61,6 +62,12 @@ FUNCTION_NAME:
     std r6, r7, sp[2]
     std r8, r9, sp[3]
     {                                           ;   stw r10, sp[8]                          }
+
+    //Change constant pool pointer to refer to the constant VPU vects needed here
+    ldaw r11, cp[vpu_vects]
+    {   ldaw r11, cp[0]                         ;   set cp, r11                             }
+    {                                           ;   stw r11, sp[STACK_CP]                   }
+
     {                                           ;   ldw r10, arg_params[WOP_OUTPUT_ROWS]    }
     {                                           ;   stw r10, sp[STACK_OUT_ROWS]             }
     {                                           ;   ldw r10, arg_params[WOP_OUTPUT_COLS]    }
@@ -98,7 +105,7 @@ FUNCTION_NAME:
             {                                           ;   stw r11, sp[STACK_OUT_ROWS_LEFT]        }
             .L_out_cols_loop:
                 {   sub r11, r10, 1                         ;   ldw pool_rows_left, sp[STACK_POOL_ROWS] }
-                {   ldaw r11, cp[vec_0x80]                  ;   stw r11, sp[STACK_OUT_COLS_LEFT]        }
+                {   ldaw r11, cp[VPU_VEC_0x80]              ;   stw r11, sp[STACK_OUT_COLS_LEFT]        }
                 {   ldaw r11, sp[STACK_CURMAX_VEC]          ;   vldr r11[0]                             }
                 {   mov r11, X                              ;   vstr r11[0]                             }
                 .L_pool_row_loop:
@@ -137,6 +144,10 @@ FUNCTION_NAME:
     .L_img_end:        
 
 .L_func_end:
+    //Restore the original constant pool pointer
+    {                                           ;   ldw r11, sp[STACK_CP]                   }
+    {                                           ;   set cp, r11                             }
+
     {                                           ;   ldw r10, sp[8]                      }
     ldd r8, r9, sp[3]
     ldd r6, r7, sp[2]

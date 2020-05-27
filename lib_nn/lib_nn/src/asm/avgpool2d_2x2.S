@@ -3,6 +3,7 @@
 
 #include "nn_config.h"
 #include "window_op_plan.h"
+#include "asm_constants.h"
 
 /*  
 void avgpool2d_2x2(
@@ -29,6 +30,7 @@ void avgpool2d_2x2(
 
 #define STACK_VEC_TMP           (NSTACKWORDS-8)
 
+#define STACK_CP                1
 #define STACK_X_CHAN_GRP_INCR   9
 #define STACK_Y_CHAN_GRP_INCR   10
 #define STACK_TAIL_LEN          11
@@ -59,6 +61,12 @@ FUNCTION_NAME:
     std r6, r7, sp[2]
     std r8, r9, sp[3]
     {   ldc r10, 32                             ;   stw r10, sp[8]                          }
+
+    //Change constant pool pointer to refer to the constant VPU vects needed here
+    ldaw r11, cp[vpu_vects]
+    {   ldaw r11, cp[0]                         ;   set cp, r11                             }
+    {                                           ;   stw r11, sp[STACK_CP]                   }
+
     {   shl r11, r10, 4                         ;                                           }
     {   mov r11, arg_params                     ;   vsetc r11                               }
 
@@ -80,7 +88,7 @@ FUNCTION_NAME:
     {   ldc r6, WOP_START_STRIDE_Y              ;   ldw r10, r11[r6]                        }
     {   add X, X, r10                           ;   ldw r11, r11[r6]                        }
     {   add Y, Y, r11                           ;   stw r5, sp[STACK_TAIL_LEN]              }
-    {   ldaw r11, cp[vec_0x01]                  ;   mov r6, r5                              }
+    {   ldaw r11, cp[VPU_VEC_0x01]              ;   mov r6, r5                              }
     {   shr tmp, r4, 4                          ;   vldc r11[0]                             }
 
     {   mkmsk write_mask, 16                    ;   bt tmp, .L_chan_loop                    }
@@ -103,7 +111,7 @@ FUNCTION_NAME:
                 {   add Y, Y, hstride_y                     ;   bt cols_left, .L_col_loop               }
 #else
             .L_col_loop:
-                {   ldaw r11, cp[vec_0x80]                  ;   ldc tmp, 32                             }
+                {   ldaw r11, cp[VPU_VEC_0x80]              ;   ldc tmp, 32                             }
                 {   shl r11, tmp, 3                         ;   vldr r11[0]                             }
                 vstrpv Y[0], write_mask
                 {   sub cols_left, cols_left, 1             ;   vclrdr                                  }
@@ -113,9 +121,9 @@ FUNCTION_NAME:
                 {   add X, X, pool_col_x                    ;   vlmacc X[0]                             }
                 {   sub X, X, pool_row_x                    ;   vlmacc X[0]                             }
 
-                {   ldaw r11, cp[vec_0x0002]                ;   vsetc r11       /* 16-bit mode */       }
+                {   ldaw r11, cp[VPU_VEC_0x0002]            ;   vsetc r11       /* 16-bit mode */       }
                 {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat r11[0]                            }
-                {   ldaw r11, cp[vec_0x007F]                ;   vstr r11[0]                             }
+                {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vstr r11[0]                             }
                 {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
                 {   mkmsk tmp, 4                            ;   vdepth1                                 }
                 vstrpv r11[0], write_mask
@@ -143,6 +151,10 @@ FUNCTION_NAME:
 .L_img_end:
 
 .Lfunc_end:
+    //Restore the original constant pool pointer
+    {                                           ;   ldw r11, sp[STACK_CP]                   }
+    {                                           ;   set cp, r11                             }
+    
     {                                           ;   ldw r10, sp[8]                      }
     ldd r8, r9, sp[3]
     ldd r6, r7, sp[2]

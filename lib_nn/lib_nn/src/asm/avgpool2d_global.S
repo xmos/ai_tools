@@ -2,6 +2,7 @@
 #if defined(__XS3A__)
 
 #include "nn_config.h"
+#include "asm_constants.h"
 
 /*  
 void avgpool2d_global_asm(
@@ -40,6 +41,8 @@ void avgpool2d_global_asm(
 #define STACK_BIAS_LO_VEC   (NSTACKWORDS-24)
 #define STACK_VEC_TMP       (NSTACKWORDS-32)
 
+#define STACK_CP                1
+
 #define Y               r0
 #define X               r1
 #define pix_groups      r2
@@ -66,6 +69,12 @@ FUNCTION_NAME:
     std r6, r7, sp[2]
     std r8, r9, sp[3]
     {   ldc _16, 16                             ;   stw r10, sp[8]                          }
+
+    //Change constant pool pointer to refer to the constant VPU vects needed here
+    ldaw r11, cp[vpu_vects]
+    {   ldaw r11, cp[0]                         ;   set cp, r11                             }
+    {                                           ;   stw r11, sp[STACK_CP]                   }
+
     mul pix_count, arg_x_height, arg_x_width
     {   shl r11, _16, 5                         ;   ldw chans, sp[STACK_X_CHANS]            }
     {   ldap r11, .L_bso_consts                 ;   vsetc r11                               }
@@ -151,11 +160,11 @@ FUNCTION_NAME:
         {   sub X, X, x_chan_incr                   ;   vstr r11[0]                             }
         {                                           ;   vdepth8                                 }
         vstrpv Y[0], write_mask
-        {   ldaw r11, cp[vec_0x007F]                ;   vldr r11[0]                             }
+        {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vldr r11[0]                             }
         {                                           ;   vladd r11[0]                            }   //only 0xFF80 will remain negative (0xFFFF)
         {   ldaw r11, sp[STACK_VEC_TMP]             ;   vdepth1                                 }   //values that should result in -0x80 will get 1 here
         {                                           ;   vstr r11[0]                             }
-        {   ldaw r11, cp[vec_0x80]                  ;   ldw Q(pix_groups), sp[STACK_VEC_TMP]    }
+        {   ldaw r11, cp[VPU_VEC_0x80]              ;   ldw Q(pix_groups), sp[STACK_VEC_TMP]    }
         {   and r11, Q(pix_groups), write_mask      ;   vldr r11[0]                             }
         vstrpv Y[0], r11
         {   add Y, Y, _16                           ;   bt chan_grp_left, .L_chan_loop          }
@@ -172,6 +181,10 @@ FUNCTION_NAME:
 .L_img_end:
 
 .Lfunc_end:
+    //Restore the original constant pool pointer
+    {                                           ;   ldw r11, sp[STACK_CP]                   }
+    {                                           ;   set cp, r11                             }
+
     {                                           ;   ldw r10, sp[8]                      }
     ldd r8, r9, sp[3]
     ldd r6, r7, sp[2]

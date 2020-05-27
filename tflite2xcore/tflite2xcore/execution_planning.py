@@ -40,7 +40,7 @@ class ExecutionPlan:
         if self.changrp_slices is not None:
             bits["cg"] = self.changrp_slices
         if self.rowcol_slices is not None:
-            bits["rg"] = self.rowcol_slices
+            bits["rc"] = self.rowcol_slices
 
         return bits
 

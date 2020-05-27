@@ -16,6 +16,7 @@ from generate_avgpool2d import (
 )
 
 DEFAULT_PATH = Path(__file__).parent.joinpath("debug", "maxpool2d").resolve()
+DEFAULT_NUM_THREADS = 1
 
 
 class MaxPool2d(common.OpTestDefaultModel):
@@ -58,6 +59,13 @@ def main(raw_args=None):
             "inits": {"input_init": {"type": common.OpTestInitializers.UNIF}},
         }
     )
+    parser.add_argument(
+        "-par",
+        "--num_threads",
+        type=int,
+        default=DEFAULT_NUM_THREADS,
+        help="Number of parallel threads for xcore.ai optimization.",
+    )
     args = parser.parse_args(raw_args)
 
     model = MaxPool2d("maxpool2d", args.path)
@@ -70,7 +78,7 @@ def main(raw_args=None):
         pool_size=args.pool_size,
         **args.inits,
     )
-    model.run()
+    model.run(num_threads=args.num_threads)
 
 
 if __name__ == "__main__":

@@ -63,8 +63,8 @@ static void check_Y(
 void test_conv2d_im2col_case0()
 {
 
-    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][ (((K_H*K_W*CHANS_IN+3)>>2)<<2) ];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -99,7 +99,7 @@ void test_conv2d_im2col_case0()
         for(int row = 0; row < K_H; row++)
             for(int col = 0; col < K_W; col++)
                 for(int cin = 0; cin < x_params.channels; cin++)
-                    K[cout][row][col][cin] = 0;
+                    K[cout][row*K_W*CHANS_IN + col*CHANS_IN + cin] = 0;
 
 
 
@@ -157,7 +157,7 @@ void test_conv2d_im2col_case1()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -245,7 +245,7 @@ void test_conv2d_im2col_case2()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -335,7 +335,7 @@ void test_conv2d_im2col_case3()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -425,7 +425,7 @@ void test_conv2d_im2col_case4()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -515,7 +515,7 @@ void test_conv2d_im2col_case5()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -600,7 +600,7 @@ void test_conv2d_im2col_case6()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -692,7 +692,7 @@ void test_conv2d_im2col_case7()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -784,7 +784,7 @@ void test_conv2d_im2col_case8()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -877,7 +877,7 @@ void test_conv2d_im2col_case9()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -968,7 +968,7 @@ void test_conv2d_im2col_case10()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1062,7 +1062,7 @@ void test_conv2d_im2col_case11()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1158,7 +1158,7 @@ void test_conv2d_im2col_case12()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1255,7 +1255,7 @@ void test_conv2d_im2col_case13()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1352,7 +1352,7 @@ void test_conv2d_im2col_case14()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1455,7 +1455,7 @@ void test_conv2d_im2col_case15()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1576,7 +1576,7 @@ void test_conv2d_im2col_case16()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1710,7 +1710,7 @@ void test_conv2d_im2col_case17()
 {
 
     nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W_ARRAY][CHANS_IN];
-    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+31)>>5)<<5];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
     nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
     nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
     
@@ -1831,8 +1831,8 @@ void test_conv2d_im2col()
 {
     UNITY_SET_FILE();
     
-    RUN_TEST(test_conv2d_im2col_case0);
-    // RUN_TEST(test_conv2d_im2col_case1);
+    // RUN_TEST(test_conv2d_im2col_case0);
+    RUN_TEST(test_conv2d_im2col_case1);
     // RUN_TEST(test_conv2d_im2col_case2);
     // RUN_TEST(test_conv2d_im2col_case3);
     // RUN_TEST(test_conv2d_im2col_case4);

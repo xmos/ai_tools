@@ -106,6 +106,25 @@ def build_mean(subgraph=None, *, input_shape, reduction_dims):
 
     return subgraph.model
 
+def build_XC_avgpool2d_global(subgraph=None, *, input_shape, reduction_dims):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, *input_shape]
+    tin = subgraph.create_tensor(
+        "input", type_=TensorType.INT8, shape=input_shape, isinput=True
+    )
+    tred = subgraph.create_tensor(
+        "reduction_dims", TensorType.INT32, [len(reduction_dims)]
+    )
+    tout = subgraph.create_tensor(
+        "output", tin.type, [tin.shape[0], tin.shape[3]], isoutput=True
+    )
+    tred.buffer.data = np.array(reduction_dims, dtype=np.int32)
+    subgraph.create_operator(
+        OperatorCode(XCOREOpCodes.XC_avgpool2d_global), inputs=[tin, tred], outputs=[tout]
+    )
+
+    return subgraph.model
 
 def build_argmax(subgraph=None, *, input_shape, input_type):
     subgraph = subgraph or XCOREModel().create_subgraph()
@@ -180,10 +199,56 @@ def build_pool(
 def build_maxpool(subgraph=None, **kwargs):
     return build_pool(BuiltinOpCodes.MAX_POOL_2D, subgraph, **kwargs)
 
-
 def build_avgpool(subgraph=None, **kwargs):
     return build_pool(BuiltinOpCodes.AVERAGE_POOL_2D, subgraph, **kwargs)
 
+def build_XC_pool(
+    opcode,
+    subgraph=None,
+    *,
+    input_shape,
+    pool_size,
+    strides
+):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, *input_shape]
+    output_shape = [
+        input_shape[0],
+        input_shape[1] // 2,
+        input_shape[1] // 2,
+        input_shape[3],
+    ]
+    quantization = {"scale": [0.35], "zero_point": [0]}
+    tin = subgraph.create_tensor(
+        "input",
+        TensorType.INT8,
+        input_shape,
+        isinput=True,
+        quantization=deepcopy(quantization),
+    )
+    tout = subgraph.create_tensor(
+        "output",
+        tin.type,
+        output_shape,
+        isoutput=True,
+        quantization=deepcopy(quantization),
+    )
+
+    op = subgraph.create_operator(
+        OperatorCode(opcode), inputs=[tin], outputs=[tout]
+    )
+    op.add_custom_options(
+        pool=[pool_size[0], pool_size[0]], stride=[strides[0], strides[1]]
+    )
+
+    return subgraph.model
+
+def build_XC_maxpool2d(subgraph=None, **kwargs):
+    return build_XC_pool(XCOREOpCodes.XC_maxpool2d, subgraph, **kwargs)
+
+def build_XC_avgpool2d(subgraph=None, **kwargs):
+    return build_XC_pool(XCOREOpCodes.XC_avgpool2d, subgraph, **kwargs)
 
 def build_fc(subgraph=None, *, outputs, input_shape):
     subgraph = subgraph or XCOREModel().create_subgraph()
@@ -227,6 +292,43 @@ def build_fc(subgraph=None, *, outputs, input_shape):
 
     return subgraph.model
 
+def build_XC_fc_deepin_anyout(subgraph=None, *, outputs, input_channels):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, input_channels, 1, 1]
+    weight_shape = [outputs, np.prod(input_shape[1:])]
+
+    tin = subgraph.create_tensor(
+        "input",
+        TensorType.INT8,
+        input_shape,
+        isinput=True,
+        quantization={"scale": [0.02874], "zero_point": [-2]},
+    )
+    w = subgraph.create_tensor(
+        "weights",
+        TensorType.INT8,
+        weight_shape,
+        quantization={"scale": [0.00836], "zero_point": [0]},
+    )
+    b = subgraph.create_tensor(
+        "biases",
+        TensorType.INT32,
+        weight_shape[:1],
+        quantization={"scale": [0.00024], "zero_point": [0]},
+    )
+    tout = subgraph.create_tensor(
+        "output",
+        TensorType.INT16,
+        shape=[1, weight_shape[0]],
+        isoutput=True,
+        quantization={"scale": [0.11332], "zero_point": [6]},
+    )
+    subgraph.create_operator(
+        OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout), inputs=[tin, w, b], outputs=[tout]
+    )
+
+    return subgraph.model
 
 def build_intermediate_fc(subgraph=None, *, outputs, input_shape):
     model = build_fc(subgraph, outputs=outputs, input_shape=input_shape)
@@ -370,8 +472,7 @@ def build_depthwise_conv2d(
 
     return subgraph.model
 
-
-def build_XC_conv2d_deep(subgraph=None, *, weight_shape, input_size, strides):
+def build_XC_conv2d(opcode, subgraph=None, *, weight_shape, input_size, strides):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     height, width = input_size
@@ -396,7 +497,7 @@ def build_XC_conv2d_deep(subgraph=None, *, weight_shape, input_size, strides):
     tout = subgraph.create_tensor("output", tin.type, output_shape, isoutput=True)
 
     op = subgraph.create_operator(
-        OperatorCode(XCOREOpCodes.XC_conv2d_deep), inputs=[tin, w, b], outputs=[tout]
+        OperatorCode(opcode), inputs=[tin, w, b], outputs=[tout]
     )
     op.add_custom_options(
         pad=[pads[0][0], pads[1][0], -127], stride=[strides[0], strides[1]]
@@ -404,6 +505,14 @@ def build_XC_conv2d_deep(subgraph=None, *, weight_shape, input_size, strides):
 
     return subgraph.model
 
+def build_XC_conv2d_deep(subgraph=None, **kwargs):
+    return build_XC_conv2d(XCOREOpCodes.XC_conv2d_deep, subgraph, **kwargs)
+
+def build_XC_conv2d_shallowin(subgraph=None, **kwargs):
+    return build_XC_conv2d(XCOREOpCodes.XC_conv2d_shallowin, subgraph, **kwargs)
+
+def build_XC_conv2d_1x1(subgraph=None, **kwargs):
+    return build_XC_conv2d(XCOREOpCodes.XC_conv2d_1x1, subgraph, **kwargs)
 
 def build_XC_conv2d_depthwise(subgraph=None, *, weight_shape, input_size, strides):
     subgraph = subgraph or XCOREModel().create_subgraph()

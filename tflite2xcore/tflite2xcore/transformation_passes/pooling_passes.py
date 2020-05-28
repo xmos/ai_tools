@@ -218,7 +218,7 @@ class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
         self.plan_threads = plan.num_threads
 
         if self.plan_threads > 1:
-            op.add_custom_options(par=plan.to_dict())
+            op.add_custom_options(plan=plan.to_dict())
 
 
 class PlanPooling2DPass(OperatorMatchingPass):
@@ -245,6 +245,9 @@ class PlanPooling2DPass(OperatorMatchingPass):
 
     def mutate(self, op):
         _, height, width, Cout = op.outputs[0].shape
+        print()
+        print(height, width, Cout)
+        print()
         assert int(height) == height
         assert int(width) == width
         planner = SlicePlanner(

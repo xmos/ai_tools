@@ -51,3 +51,5 @@ void VLADD(xs3_vpu* vpu, const void* addr);
 void VDEPTH1(xs3_vpu* vpu);
 void VDEPTH8(xs3_vpu* vpu);
 void VDEPTH16(xs3_vpu* vpu);
+
+void vpu_sim_print(xs3_vpu* vpu);

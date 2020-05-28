@@ -401,3 +401,51 @@ void VDEPTH16(xs3_vpu* vpu){
         assert(0);
     }
 }
+
+
+void vpu_sim_print(xs3_vpu* vpu)
+{
+    int8_t * vC8 = vpu->vC.s8;
+    int8_t * vR8 = vpu->vR.s8;
+    int8_t * vD8 = vpu->vD.s8;
+
+    int16_t * vC16 = vpu->vC.s16;
+    int16_t * vR16 = vpu->vR.s16;
+    int16_t * vD16 = vpu->vD.s16;
+
+    int32_t * vC32 = vpu->vC.s32;
+    int32_t * vR32 = vpu->vR.s32;
+    int32_t * vD32 = vpu->vD.s32;
+
+
+    switch (vpu->mode)
+    {
+    case MODE_S8:
+        printf("8-bit:  vC       vR        vD\n");
+        for(int i = 0; i< VPU_INT8_EPV; i++){
+            printf("%d\t0x%0.2X(%d)\t%d\t%d\n",i,vC8[i],vC8[i], vR8[i], vD8[i]);
+        }
+        break;
+    
+    case MODE_S16:
+        printf("16-bit:  vC     \t    vR      \t    vD\n");
+        for(int i = 0; i< VPU_INT16_EPV; i++){
+            printf("%d\t0x%0.4X(%d)\t0x%0.4X(%d)\t0x%0.4X(%d)\n",i,vC16[i], vC16[i], vR16[i], vR16[i], vD16[i],vD16[i]);
+        }
+        break;
+
+   case MODE_S32:
+        printf("32-bit:  vC     \t\t    vR      \t\t    vD\n");
+        for(int i = 0; i< VPU_INT32_EPV; i++){
+            printf("%d\t0x%0.8X(%d)\t0x%0.8X(%d)\t0x%0.8X(%d)\n",i,vC32[i], vR32[i], vD32[i]);
+        }
+        break;
+
+    default:
+        printf("In the future this might print all possible interpretations...");
+        break;
+    } 
+
+    printf("\n");
+
+}

@@ -205,17 +205,18 @@ void conv2d_im2col(
             }
 
             // im2col complete what follows is just a BSO-aware K*COL = Y    
-            int chunks = plan->window.shape.len_col / VPU_INT8_ACC_PERIOD;
+            int chunks = (plan->window.shape.kernel_row_elements+VPU_INT8_ACC_PERIOD-1) / VPU_INT8_ACC_PERIOD;
+            printf("Chunks %d\n",chunks);
             for(unsigned chunk = 0; chunk < chunks; chunk++ ){
                 for(unsigned cout = 0; cout < plan->channels.Y; cout++){
                     nn_bso_block_t bso; // TODO write helper function to boggle bso for im2col
-                    memset(bso.bias_hi, BSO[chunk].bias_hi[cout],VPU_INT16_EPV);
-                    memset(bso.bias_lo, BSO[chunk].bias_lo[cout],VPU_INT16_EPV);
-                    memset(bso.offset, BSO[chunk].offset[cout],VPU_INT16_EPV);
-                    memset(bso.offset_scale, BSO[chunk].offset_scale[cout],VPU_INT16_EPV);
-                    memset(bso.scale, BSO[chunk].scale[cout],VPU_INT16_EPV);
-                    memset(bso.shift1, BSO[chunk].shift1[cout],VPU_INT16_EPV);
-                    memset(bso.shift2, BSO[chunk].shift2[cout],VPU_INT16_EPV);
+                    memset(bso.bias_hi, BSO[chunk].bias_hi[cout],VPU_INT8_EPV);
+                    memset(bso.bias_lo, BSO[chunk].bias_lo[cout],VPU_INT8_EPV);
+                    memset(bso.offset, BSO[chunk].offset[cout],VPU_INT8_EPV);
+                    memset(bso.offset_scale, BSO[chunk].offset_scale[cout],VPU_INT8_EPV);
+                    memset(bso.scale, BSO[chunk].scale[cout],VPU_INT8_EPV);
+                    memset(bso.shift1, BSO[chunk].shift1[cout],VPU_INT8_EPV);
+                    memset(bso.shift2, BSO[chunk].shift2[cout],VPU_INT8_EPV);
                     // end inefficient boggling
 
                     const nn_image_t* sub_C = C;
@@ -230,6 +231,9 @@ void conv2d_im2col(
                     VLDC(&vpu, sub_C);
                     sub_C = ADDR(sub_C,VPU_INT8_ACC_PERIOD);
 
+                    vpu_sim_print(&vpu);
+
+
                     VLMACCR(&vpu, K_tmp);
                     K_tmp = ADDR(K_tmp, -VPU_INT8_ACC_PERIOD);
                 
@@ -243,13 +247,13 @@ void conv2d_im2col(
 
                     //Load scales into vC
                     VLDC(&vpu, bso.scale);
+                    vpu_sim_print(&vpu);
                     VSTR(&vpu, vec_tmp.s16);
                     VCLRDR(&vpu);
                     VLMACC(&vpu, vec_tmp.s16);
                     VLDC(&vpu, bso.offset_scale);
                     VLMACC(&vpu, bso.offset);
                     
-                    vpu_sim_print(&vpu);
 
                     #if CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
 
@@ -283,6 +287,8 @@ void conv2d_im2col(
                         VSETC(&vpu, MODE_S8);
 
                     #endif
+                    vpu_sim_print(&vpu);
+
                 }
                 
             }

@@ -403,6 +403,8 @@ void VDEPTH16(xs3_vpu* vpu){
 }
 
 
+static char signof(int x){return (x>=0? ' ' : '-');}
+
 void vpu_sim_print(xs3_vpu* vpu)
 {
     int8_t * vC8 = vpu->vC.s8;
@@ -421,24 +423,26 @@ void vpu_sim_print(xs3_vpu* vpu)
     switch (vpu->mode)
     {
     case MODE_S8:
-        printf("8-bit:  vC       vR        vD\n");
+        printf("8-bit:     vC     \t  vR     \t   vD\n");
         for(int i = 0; i< VPU_INT8_EPV; i++){
-            printf("%d\t0x%0.2X(%d)\t%d\t%d\n",i,vC8[i],vC8[i], vR8[i], vD8[i]);
+            printf("%d\t%c0x%0.2X(%d)\t%c0x%0.2X(%d)\t%c0x%0.2X(%d)\n",
+            i,signof(vC8[i]),abs(vC8[i]), vC8[i],signof(vR8[i]), abs(vR8[i]), vR8[i], signof(vD8[i]), abs(vD8[i]),vD8[i]);
         }
         break;
     
     case MODE_S16:
         printf("16-bit:  vC     \t    vR      \t    vD\n");
         for(int i = 0; i< VPU_INT16_EPV; i++){
-            printf("%d\t0x%0.4X(%d)\t0x%0.4X(%d)\t0x%0.4X(%d)\n",i,vC16[i], vC16[i], vR16[i], vR16[i], vD16[i],vD16[i]);
+            printf("%d\t%c0x%0.4X(%d)\t%c0x%0.4X(%d)\t%c0x%0.4X(%d)\n",
+            i,signof(vC16[i]),abs(vC16[i]), vC16[i],signof(vR16[i]), abs(vR16[i]), vR16[i], signof(vD16[i]), abs(vD16[i]),vD16[i]);
         }
         break;
 
    case MODE_S32:
         printf("32-bit:  vC     \t\t    vR      \t\t    vD\n");
         for(int i = 0; i< VPU_INT32_EPV; i++){
-            printf("%d\t0x%0.8X(%d)\t0x%0.8X(%d)\t0x%0.8X(%d)\n",i,vC32[i], vR32[i], vD32[i]);
-        }
+            printf("%d\t%c0x%0.8X(%d)\t%c0x%0.8X(%d)\t%c0x%0.8X(%d)\n",
+            i,signof(vC32[i]),abs(vC32[i]), vC32[i],signof(vR32[i]), abs(vR32[i]), vR32[i], signof(vD32[i]), abs(vD32[i]),vD32[i]);        }
         break;
 
     default:

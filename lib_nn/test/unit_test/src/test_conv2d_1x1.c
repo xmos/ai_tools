@@ -25,7 +25,7 @@
 #endif 
 
 
-void Check_Y(
+static void Check_Y(
     const nn_image_t y_exp,
     const nn_image_t* Y,
     const nn_image_params_t* y_params,

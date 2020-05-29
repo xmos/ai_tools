@@ -518,9 +518,10 @@ void conv2d_depthwise(
  *
  */
 void maxpool2d(
-    nn_image_t* Y,
-    const nn_image_t* X, 
-    const nn_window_op_plan_t* plan);
+    int8_t* Y,
+    const int8_t* X, 
+    const nn_maxpool2d_plan_t* plan,
+    const nn_maxpool2d_job_t* job);
 
 
 /** 2D average pooling for an image.

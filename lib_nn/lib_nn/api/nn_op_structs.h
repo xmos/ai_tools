@@ -340,7 +340,7 @@ typedef struct {
     struct {
         uint32_t rows;
         uint32_t cols;
-        uint32_t channels;
+        channel_count_t channels;
     } output;
 
     struct {
@@ -349,35 +349,35 @@ typedef struct {
     } window;
 
     struct {
-        int32_t x;
-        int32_t y;
+        mem_stride_t x;
+        mem_stride_t y;
     } start_stride;
 
     struct {
         struct {
-            int32_t x;
+            mem_stride_t x;
         } vertical;
 
         struct {
-            int32_t x;
+            mem_stride_t x;
         } horizontal;
     } inner_stride;
 
     struct {
         struct {
-            int32_t x;
-            int32_t y;
+            mem_stride_t x;
+            mem_stride_t y;
         } vertical;
         
         struct {
-            int32_t x;
-            int32_t y;
+            mem_stride_t x;
+            mem_stride_t y;
         } horizontal;
     } outer_stride;
 
     struct {
-        int32_t x;
-        int32_t y;
+        mem_stride_t x;
+        mem_stride_t y;
     } chan_grp_stride;
 
 } nn_window_op_plan_t;
@@ -407,6 +407,56 @@ typedef struct {
 
 } nn_avgpool2d_plan_t;
 
+/**
+ * 
+ */
+typedef struct {
+
+    struct {
+        uint32_t rows;
+        uint32_t cols;
+    } window;
+
+    struct {
+        channel_count_t X;
+        channel_count_t Y;
+    } channels;
+
+} nn_maxpool2d_plan_t;
+
+/**
+ * 
+ */
+typedef struct {
+
+    struct {
+        uint32_t rows;
+        uint32_t cols;
+        channel_count_t channels;
+    } output;
+
+    struct {
+        struct {
+            mem_stride_t start;
+            mem_stride_t row;
+            mem_stride_t cog;
+        } X;
+
+        struct {
+            mem_stride_t row;
+            mem_stride_t col;
+        } window;
+
+        struct {
+            mem_stride_t start;
+            mem_stride_t row;
+            mem_stride_t cog;
+        } Y;
+
+    } stride;
+
+} nn_maxpool2d_job_t;
+
 
 /**
  * This struct describes the basic parameters for an image tensor
@@ -423,7 +473,7 @@ typedef struct {
     /**
      * Number of channels per pixel
      */
-    uint32_t channels;
+    channel_count_t channels;
 } nn_image_params_t;
 
 

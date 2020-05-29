@@ -301,11 +301,13 @@ void fully_connected_init(
  * \param config    `nn_maxpool_config_t` describing the behavior of the maxpool2d operation.
  */
 void maxpool2d_init(
-    nn_window_op_plan_t* plan,
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const nn_window_op_config_t* config);
-
+    nn_maxpool2d_plan_t* plan,
+    nn_maxpool2d_job_t* jobs,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_conv2d_window_params_t* window_params,
+    const nn_conv2d_job_params_t* job_params,
+    const unsigned job_count);
 
 
 /**

@@ -204,56 +204,55 @@ void conv2d_im2col(
 
             }
 
-            // im2col complete what follows is just a BSO-aware K*COL = Y    
-            int chunks = (plan->window.shape.kernel_row_elements+VPU_INT8_ACC_PERIOD-1) / VPU_INT8_ACC_PERIOD;
-            printf("Chunks %d\n",chunks);
-            for(unsigned chunk = 0; chunk < chunks; chunk++ ){
-                for(unsigned cout = 0; cout < plan->channels.Y; cout++){
-                    nn_bso_block_t bso; // TODO write helper function to boggle bso for im2col
-                    memset(bso.bias_hi, BSO[chunk].bias_hi[cout],VPU_INT8_EPV);
-                    memset(bso.bias_lo, BSO[chunk].bias_lo[cout],VPU_INT8_EPV);
-                    memset(bso.offset, BSO[chunk].offset[cout],VPU_INT8_EPV);
-                    memset(bso.offset_scale, BSO[chunk].offset_scale[cout],VPU_INT8_EPV);
-                    memset(bso.scale, BSO[chunk].scale[cout],VPU_INT8_EPV);
-                    memset(bso.shift1, BSO[chunk].shift1[cout],VPU_INT8_EPV);
-                    memset(bso.shift2, BSO[chunk].shift2[cout],VPU_INT8_EPV);
-                    // end inefficient boggling
-
-                    const nn_image_t* sub_C = C;
-                    
-                    const nn_tensor_t* K_tmp = K;
-
-                    VLDD(&vpu, bso.bias_hi);
-                    VLDR(&vpu, bso.bias_lo);
-
-                    // for(int i=0; i<32; i++) printf("sub_C[%d] %d\t k_tmp[%d] %d\n",i,sub_C[i],i,K_tmp[i]);
-
-                    VLDC(&vpu, sub_C);
-                    sub_C = ADDR(sub_C,VPU_INT8_ACC_PERIOD);
-
-                    vpu_sim_print(&vpu);
-
-
-                    VLMACCR(&vpu, K_tmp);
-                    K_tmp = ADDR(K_tmp, -VPU_INT8_ACC_PERIOD);
+            // im2col complete what follows is just a BSO-aware K*COL + BSO = Y  
+            int mat_col_chunks = plan->window.shape.kernel_row_elements % VPU_INT8_EPV == 0 ?
+                                 plan->window.shape.kernel_row_elements / VPU_INT8_EPV      :
+                                 plan->window.shape.kernel_row_elements / VPU_INT8_EPV +1;
+            int mat_row_chunks = plan->channels.Y % VPU_INT8_ACC_PERIOD == 0 ?
+                                 plan->channels.Y / VPU_INT8_ACC_PERIOD      :
+                                 plan->channels.Y / VPU_INT8_ACC_PERIOD +1;  
+            int mat_row_stride = plan->window.shape.kernel_row_elements; // TODO check if this needs corner case handling
+            // outer loop increments of 32 elements over krowlen or col len
+            for(int m_col_chunk = 0; m_col_chunk < mat_col_chunks; m_col_chunk++){
+            // next loop performs up to 16 VLMACCRs  over the output channel dimension (krow) (in reverse order)
+                const nn_image_t* sub_vector = C;
+                const nn_tensor_t* sub_matrix = ADDR(K, (mat_row_chunks * VPU_INT8_ACC_PERIOD -1) * mat_row_stride);
+                //get BSO for this group of output channels
+                nn_bso_block_t * bso = &BSO[m_col_chunk];
                 
-                    //Done accumulating for the current output channel
+                for(int m_row_chunk = mat_row_chunks-1; m_row_chunk >= 0; m_row_chunk--){
+                    // load the 32 element sub-vector into vC
+                    VLDC(&vpu, sub_vector); // TODO this could go up a level if we didn't use vC for rounding..
+
+                    //load vR and vD with appropriate bso vectors TODO these could also go up a level if we reduce all at the end
+                    VLDD(&vpu, bso->bias_hi);
+                    VLDR(&vpu, bso->bias_lo);
+
+                    // VLMACCR each output channel for up to 16 channels
+                    int sub_mat_end = m_row_chunk > 0 ? VPU_INT8_ACC_PERIOD : plan->channels.Y % VPU_INT8_ACC_PERIOD;
+                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD; m_row++){ // sometimes doing dummy VLMACCRs to get accumlators in the right rotation
+                        VLMACCR(&vpu, sub_matrix);
+                        if(m_row < sub_mat_end){
+                            sub_matrix = ADDR(sub_matrix, -mat_row_stride);
+                        }
+                    }
+
+                    // Done with A*x + b need to groom and extract results now
 
                     //Set mode to 16-bit
                     VSETC(&vpu, MODE_S16);
 
                     //Saturate to 16-bit values
-                    VLSAT(&vpu, bso.shift1);
+                    VLSAT(&vpu, bso->shift1);
+
 
                     //Load scales into vC
-                    VLDC(&vpu, bso.scale);
-                    vpu_sim_print(&vpu);
+                    VLDC(&vpu, bso->scale);
                     VSTR(&vpu, vec_tmp.s16);
                     VCLRDR(&vpu);
                     VLMACC(&vpu, vec_tmp.s16);
-                    VLDC(&vpu, bso.offset_scale);
-                    VLMACC(&vpu, bso.offset);
-                    
+                    VLDC(&vpu, bso->offset_scale);
+                    VLMACC(&vpu, bso->offset);
 
                     #if CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
 
@@ -261,7 +260,7 @@ void conv2d_im2col(
                         VSETC(&vpu, MODE_S8);
 
                         //Saturate to 8-bit values
-                        VLSAT(&vpu, bso.shift2);
+                        VLSAT(&vpu, bso->shift2);
 
                         //Store result in Y
                         const unsigned mask16 = 0xFFFF;
@@ -270,7 +269,7 @@ void conv2d_im2col(
                     #else
 
                         //Saturate to 8-bit values
-                        VLSAT(&vpu, bso.shift2);
+                        VLSAT(&vpu, bso->shift2);
 
                         VSTR(&vpu, vec_tmp.s16);
                         VLADD(&vpu, vpu_vects.vec_0x007F);
@@ -287,11 +286,13 @@ void conv2d_im2col(
                         VSETC(&vpu, MODE_S8);
 
                     #endif
-                    vpu_sim_print(&vpu);
+
 
                 }
-                
+                // go to next section of vector
+                sub_vector = ADDR(sub_vector,VPU_INT8_EPV);
             }
+            
             //Move X and Y pointers one pixel to the right
             X = ADDR(X, plan->window.stride.horizontal);// TODO see if we need X and window
             Y = ADDR(Y, job->stride.col.Y);

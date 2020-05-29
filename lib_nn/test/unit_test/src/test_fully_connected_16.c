@@ -127,12 +127,13 @@ void test_fully_connected_16_case0()
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
-        fully_connected_init(&plan, C_in, C_out);
+        nn_fully_connected_job_t job;
+        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
 
         
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bso_block_t*) &BSO, &plan);
+                                     (nn_bso_block_t*) &BSO, &plan, &job);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -262,12 +263,13 @@ void test_fully_connected_16_case1()
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
-        fully_connected_init(&plan, C_in, C_out);
+        nn_fully_connected_job_t job;
+        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
 
         
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bso_block_t*) &BSO, &plan);
+                                     (nn_bso_block_t*) &BSO, &plan, &job);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -397,12 +399,13 @@ void test_fully_connected_16_case2()
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
-        fully_connected_init(&plan, C_in, C_out);
+        nn_fully_connected_job_t job;
+        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
 
         
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bso_block_t*) &BSO, &plan);
+                                     (nn_bso_block_t*) &BSO, &plan, &job);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -530,12 +533,13 @@ void test_fully_connected_16_case3()
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
-        fully_connected_init(&plan, C_in, C_out);
+        nn_fully_connected_job_t job;
+        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
 
         
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bso_block_t*) &BSO, &plan);
+                                     (nn_bso_block_t*) &BSO, &plan, &job);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -660,12 +664,13 @@ void test_fully_connected_16_case4()
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
-        fully_connected_init(&plan, C_in, C_out);
+        nn_fully_connected_job_t job;
+        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
 
         
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bso_block_t*) &BSO, &plan);
+                                     (nn_bso_block_t*) &BSO, &plan, &job);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -796,12 +801,13 @@ void test_fully_connected_16_case5()
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
-        fully_connected_init(&plan, C_in, C_out);
+        nn_fully_connected_job_t job;
+        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
 
         
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bso_block_t*) &BSO, &plan);
+                                     (nn_bso_block_t*) &BSO, &plan, &job);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -941,12 +947,13 @@ void test_fully_connected_16_case6()
                             NULL, C_out  );
 
             nn_fully_connected_plan_t plan;
-            fully_connected_init(&plan, C_in, C_out_tmp);
+            nn_fully_connected_job_t job;
+            fully_connected_init(&plan, &job, C_in, C_out_tmp, NULL, 1);
 
             PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
             fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                        (nn_bso_block_t*) &BSO, &plan);
+                                        (nn_bso_block_t*) &BSO, &plan, &job);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1092,13 +1099,14 @@ void test_fully_connected_16_case7()
                             (int16_t*) &BSO.shift2, 
                             NULL, C_out  );
 
-            nn_fully_connected_plan_t plan;
-            fully_connected_init(&plan, C_in, C_out_tmp);
+        nn_fully_connected_plan_t plan;
+        nn_fully_connected_job_t job;
+        fully_connected_init(&plan, &job, C_in, C_out_tmp, NULL, 1);
 
             PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
             fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                        (nn_bso_block_t*) &BSO, &plan);
+                                        (nn_bso_block_t*) &BSO, &plan, &job);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1253,12 +1261,13 @@ void test_fully_connected_16_case8()
                             NULL, C_out  );
 
             nn_fully_connected_plan_t plan;
-            fully_connected_init(&plan, C_in, C_out_tmp);
+            nn_fully_connected_job_t job;
+            fully_connected_init(&plan, &job, C_in, C_out_tmp, NULL, 1);
 
             PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
             fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                        (nn_bso_block_t*) &BSO, &plan);
+                                        (nn_bso_block_t*) &BSO, &plan, &job);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1404,12 +1413,13 @@ void test_fully_connected_16_case9()
                         NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
-        fully_connected_init(&plan, C_in, C_out);
+        nn_fully_connected_job_t job;
+        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
 
         PRINTF("\t\t\tC...\n");
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                    (nn_bso_block_t*) &BSO, &plan);
+                                    (nn_bso_block_t*) &BSO, &plan, &job);
 
         PRINTF("\t\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -1513,12 +1523,13 @@ void test_fully_connected_16_case10()
                     NULL, C_out  );
 
         nn_fully_connected_plan_t plan;
-        fully_connected_init(&plan, C_in, C_out);
+        nn_fully_connected_job_t job;
+        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
 
         PRINTF("\t\t\tC...\n");
         memset(Y, 0xCC, sizeof(Y));
         fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                    (nn_bso_block_t*) &BSO, &plan);
+                                    (nn_bso_block_t*) &BSO, &plan, &job);
 
         PRINTF("\t\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -1617,12 +1628,13 @@ void test_fully_connected_16_case11()
                     NULL, C_out  );
 
     nn_fully_connected_plan_t plan;
-    fully_connected_init(&plan, C_in, C_out);
+    nn_fully_connected_job_t job;
+    fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
 
     PRINTF("\t\t\tC...\n");
     memset(Y, 0xCC, sizeof(Y));
     fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                (nn_bso_block_t*) &BSO, &plan);
+                                (nn_bso_block_t*) &BSO, &plan, &job);
 
     PRINTF("\t\t\tChecking...\n");
     char str_buff[200] = {0};

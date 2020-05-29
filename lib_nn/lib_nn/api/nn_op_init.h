@@ -270,8 +270,11 @@ void conv2d_depthwise_init(
  */
 void fully_connected_init(
     nn_fully_connected_plan_t* plan,
-    const unsigned C_in,
-    const unsigned C_out);
+    nn_fully_connected_job_t* jobs,
+    const channel_count_t C_in,
+    const channel_count_t C_out,
+    const nn_fully_connected_job_params_t* job_params,
+    const unsigned job_count);
 
 
 

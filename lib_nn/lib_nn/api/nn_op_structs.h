@@ -55,19 +55,35 @@ typedef struct {
 
 
 
-
-typedef enum {
-    FC16_DEFAULT    = 0,
-} nn_fc16_tail_strat_t;
-
 typedef struct {
-    int32_t c_in;
-    int32_t c_out;
-    int32_t cig_end_stride;
-    nn_fc16_tail_strat_t tail_strat;
+    struct {
+        channel_count_t X;
+    } channels;
 } nn_fully_connected_plan_t;
 
+/**
+ * 
+ */
+typedef struct {
 
+    struct {
+        struct {
+            mem_stride_t Y;
+            mem_stride_t W;
+            mem_stride_t BSO;
+        } start;
+    } stride;
+
+    struct {
+        channel_count_t channels;
+    } output;
+} nn_fully_connected_job_t;
+
+
+typedef struct {
+    uint32_t start_channel;
+    channel_count_t out_channels;
+} nn_fully_connected_job_params_t;
 
 
 /**

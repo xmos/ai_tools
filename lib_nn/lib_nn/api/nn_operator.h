@@ -657,7 +657,8 @@ void fully_connected_16(
     const nn_tensor_t* W, 
     const nn_tensor_t* X, 
     const nn_bso_block_t* BSO,
-    const nn_fully_connected_plan_t* plan);
+    const nn_fully_connected_plan_t* plan,
+    const nn_fully_connected_job_t* job);
 
 
 

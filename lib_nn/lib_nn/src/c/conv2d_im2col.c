@@ -234,26 +234,31 @@ void conv2d_im2col(
 
                     // VLMACCR each output channel for up to 16 channels
                     int sub_mat_end = m_row_chunk > 0 ? VPU_INT8_ACC_PERIOD : plan->channels.Y % VPU_INT8_ACC_PERIOD;
-                    const nn_tensor_t* sub_matrix = ADDR( K, VPU_INT8_EPV*m_col_chunk  +  job->stride.row.K*(sub_mat_end-1));
-                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD-sub_mat_end; m_row++) VLMACCR(&vpu, sub_matrix);
+                    const nn_tensor_t* sub_matrix = ADDR( K, VPU_INT8_EPV*m_col_chunk  +  job->stride.row.K*(sub_mat_end));
+
+                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD-sub_mat_end; m_row++) VLMACCR(&vpu, sub_matrix); // DUMMY to rotate @tail
                     for(int m_row = 0; m_row < sub_mat_end; m_row++){                                            
-                        VLMACCR(&vpu, sub_matrix);
-                        // printf("\nBias =  %d\t%d\n", (int16_t)bso->bias_hi[m_row], (int16_t)bso->bias_lo[m_row]);
-                        // for(int i = 0; i < 8; i++) printf("submat[%d] = %d\t col = %d\n",i,sub_matrix[i], sub_vector[i]);
-                        // vpu_sim_print(&vpu);
+                        // printf("before\n");
+                        // for(int i = 0; i < 16; i++) printf("k[%d] = %d\t col = %d \t bias = %d\n",i,sub_matrix[i], sub_vector[i], vpu.vR.s16[i]);
                         sub_matrix = ADDR(sub_matrix, -job->stride.row.K);
+                        VLMACCR(&vpu, sub_matrix);
+                        // printf("after\n");
+                        // for(int i = 0; i < 16; i++) printf("k[%d] = %d\t col = %d \t bias = %d\n",i,sub_matrix[i], sub_vector[i], vpu.vR.s16[i]);
+                        
                     }
+                                        
                     // Done with A*x + b need to groom and extract results now
 
                     //Set mode to 16-bit
                     VSETC(&vpu, MODE_S16);
                     //Saturate to 16-bit values
                     VLSAT(&vpu, bso->shift1);
-                    
+
                     //Load scales into vC
                     VLDC(&vpu, bso->scale);
                     VSTR(&vpu, vec_tmp.s16);
                     VCLRDR(&vpu);
+                
                     VLMACC(&vpu, vec_tmp.s16);
                     VLDC(&vpu, bso->offset_scale);
                     VLMACC(&vpu, bso->offset);
@@ -274,18 +279,18 @@ void conv2d_im2col(
 
                         //Saturate to 8-bit values
                         VLSAT(&vpu, bso->shift2);
-
                         VSTR(&vpu, vec_tmp.s16);
                         VLADD(&vpu, vec_0x007F);
                         VDEPTH1(&vpu);
 
-                        uint32_t mask = ~vpu.vR.s32[0];
+                        // uint32_t mask = ~vpu.vR.s32[0];
 
                         VLASHR(&vpu, vec_tmp.s16, -8);
                         VDEPTH8(&vpu);
                         //Store result in Y
-                        mask = mask & y_mask;//0xFFFF;
-                        VSTRPV(&vpu, Y, mask);
+                        // mask = mask & 0xFFFF;
+                        
+                        VSTRPV(&vpu, Y, y_mask);
 
                         //Set mode back to 8-bit
                         VSETC(&vpu, MODE_S8);
@@ -310,5 +315,4 @@ void conv2d_im2col(
         pad_b += plan->window.stride.vertical;
 
     }
-
 }

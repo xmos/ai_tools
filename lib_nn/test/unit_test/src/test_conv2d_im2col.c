@@ -275,6 +275,12 @@ void test_conv2d_im2col_case2()
 
     memset(X, 0, x_params.height * x_params.width * x_params.channels);
     memset(K, 0, sizeof(K));
+        
+    for(int cout = 0; cout < y_params.channels; cout++)
+        for(int row = 0; row < conv2d_window.shape.height; row++)
+            for(int col = 0; col < conv2d_window.shape.width; col++)
+                for(int cin = 0; cin < x_params.channels; cin++)
+                    K[cout][row*K_W*CHANS_IN + col*CHANS_IN + cin] = cout*(((K_H*K_W*CHANS_IN+3)>>2)<<2)+ row*K_W*CHANS_IN + col*CHANS_IN + cin;
 
     for(int shift1 = 0; shift1 < 4; shift1++){
 
@@ -1830,22 +1836,22 @@ void test_conv2d_im2col()
 {
     UNITY_SET_FILE();
     
-    // RUN_TEST(test_conv2d_im2col_case0);
-    // RUN_TEST(test_conv2d_im2col_case1);
-    // RUN_TEST(test_conv2d_im2col_case2);
-    // RUN_TEST(test_conv2d_im2col_case3);
-    // RUN_TEST(test_conv2d_im2col_case4);
-    // RUN_TEST(test_conv2d_im2col_case5);
-    // RUN_TEST(test_conv2d_im2col_case6);
+    RUN_TEST(test_conv2d_im2col_case0);
+    RUN_TEST(test_conv2d_im2col_case1);
+    RUN_TEST(test_conv2d_im2col_case2);
+    RUN_TEST(test_conv2d_im2col_case3);
+    RUN_TEST(test_conv2d_im2col_case4);
+    RUN_TEST(test_conv2d_im2col_case5);
+    RUN_TEST(test_conv2d_im2col_case6);
     RUN_TEST(test_conv2d_im2col_case7);
-    // RUN_TEST(test_conv2d_im2col_case8);
-    // RUN_TEST(test_conv2d_im2col_case9);
-    // RUN_TEST(test_conv2d_im2col_case10);
-    // RUN_TEST(test_conv2d_im2col_case11);
-    // RUN_TEST(test_conv2d_im2col_case12);
-    // RUN_TEST(test_conv2d_im2col_case13);
-    // RUN_TEST(test_conv2d_im2col_case14);
-    // RUN_TEST(test_conv2d_im2col_case15);
-    // RUN_TEST(test_conv2d_im2col_case16);
-    // RUN_TEST(test_conv2d_im2col_case17);
+    RUN_TEST(test_conv2d_im2col_case8);
+    RUN_TEST(test_conv2d_im2col_case9);
+    RUN_TEST(test_conv2d_im2col_case10);
+    RUN_TEST(test_conv2d_im2col_case11);
+    RUN_TEST(test_conv2d_im2col_case12);
+    RUN_TEST(test_conv2d_im2col_case13);
+    RUN_TEST(test_conv2d_im2col_case14);
+    RUN_TEST(test_conv2d_im2col_case15);
+    RUN_TEST(test_conv2d_im2col_case16);
+    RUN_TEST(test_conv2d_im2col_case17);
 }

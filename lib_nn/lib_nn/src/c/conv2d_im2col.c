@@ -5,7 +5,7 @@
 #include "nn_op_structs.h"
 
 #include "xs3_vpu.h"
-#include "../asm/asm_constants.h"
+#include "asm_constants.h"
 #include "vpu_sim.h"
 
 #include <stdlib.h>
@@ -34,7 +34,7 @@ void conv2d_im2col_init(
     // job_params can only be NULL if there's exactly 1 job.
     assert(job_count == 1 || job_params != NULL);
 
-    const unsigned k_array_width = VPU_INT8_EPV / x_params->channels;
+    // const unsigned k_array_width = VPU_INT8_EPV / x_params->channels;
 
     const unsigned x_row_bytes = x_params->width * x_params->channels;
     const unsigned y_row_bytes = y_params->width * y_params->channels;
@@ -65,7 +65,7 @@ void conv2d_im2col_init(
     const int32_t init_padding_top    = -conv_window->start.row;
     const int32_t init_padding_bottom =  conv_window->start.row + conv_window->shape.height - x_params->height;
     const int32_t init_padding_left   = -conv_window->start.column;
-    const int32_t init_padding_right  =  conv_window->start.column + k_array_width - x_params->width;
+    const int32_t init_padding_right  =  conv_window->start.column + plan->window.shape.width - x_params->width;
 
     nn_conv2d_job_params_t full_job = {{0,0,0}, {y_params->height, y_params->width, y_params->channels} };
 
@@ -142,7 +142,7 @@ void conv2d_im2col(
     Y = ADDR(Y, job->stride.start.Y);
     K = ADDR(K, job->stride.start.K);
     BSO = ADDR(BSO, job->stride.start.BSO);
-    
+
     int pad_t = job->init_padding.top;
     int pad_b = job->init_padding.bottom;
     //Iterate once per row of the output region
@@ -152,15 +152,11 @@ void conv2d_im2col(
 
             //This points it at the top-left cell of the patch.
             const nn_image_t* patch_X = X;
-
-            #if !CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
-                    VLDR(&vpu, vpu_vects.vec_0x80);
-                    VSTRPV(&vpu, Y, 0xFFFF);
-            #endif
+            
             // set up "column" by copying all patch rows sequentially
             // TODO look at Aaron's VPU memcpy (doesn't require word-aligned)
-            const int8_t* C = COL;
-            memset(C,0,plan->window.shape.len_col);// initialize pad -- zero point is handled at bias initialization TODO is this still true?
+            const nn_image_t* C = COL;
+            memset(C,0,plan->window.shape.len_col);// initialize pad
             unsigned len = plan->channels.X * plan->window.shape.width;
             // start paste
             int pad_l = job->init_padding.left;
@@ -178,8 +174,7 @@ void conv2d_im2col(
                                            || (final_pad_l > 0) || (final_pad_r > 0);
             // end paste
 
-            for(unsigned rows_in_patch = plan->window.shape.height; rows_in_patch > 0; rows_in_patch--){
-                if( requires_padding ){
+            if( requires_padding ){
                     int8_t padded_vals[128]={0}; // todo drop the 128 limit or enforce it
                     int k = 0;
                     int tmp = 0;
@@ -188,23 +183,30 @@ void conv2d_im2col(
                         for(int i = 0; i < plan->window.shape.width; i++){
                             tmp &= (pad_l -i > 0) || (plan->window.shape.width - i <= pad_r); // ???
                             for(int j = 0; j < plan->channels.X; j++){
-                                padded_vals[k] = (tmp & 0x1) ? patch_X[k] : 0;
+                                padded_vals[k] =  (tmp & 0x1) ? patch_X[k] : plan->zero_point;
+                                printf(" \n %d ",tmp);
                                 k++;
                             }
                         }  
                     }
                     memcpy(C, padded_vals, len);
                 }
-                else{
-                    memcpy(C,patch_X,len);
+            else{
+                    for(unsigned rows_in_patch = plan->window.shape.height; rows_in_patch > 0; rows_in_patch--){
+                        memcpy(C,patch_X,len);
+                        patch_X = ADDR(patch_X,job->stride.row.window);
+                        C = ADDR(C,len);
+                    }
                 }
-                
-                patch_X = ADDR(patch_X,job->stride.row.window);
-                C = ADDR(C,len);
-
-            }
 
             // im2col complete what follows is just a BSO-aware K*COL + BSO = Y  
+            #if !CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
+                VLDR(&vpu, vpu_vects.vec_0x80);
+                VSTRPV(&vpu, Y, 0xFFFF);
+            #endif
+
+            for(int i =0; i < plan->window.shape.height*plan->window.shape.width*plan->channels.X; i++) printf("X[%d]=  %d\n",i, COL[i]);
+
             int mat_col_chunks = plan->window.shape.kernel_row_elements % VPU_INT8_EPV == 0 ?
                                  plan->window.shape.kernel_row_elements / VPU_INT8_EPV      :
                                  plan->window.shape.kernel_row_elements / VPU_INT8_EPV +1;
@@ -215,11 +217,11 @@ void conv2d_im2col(
             // outer loop increments of 32 elements over krowlen or col len
             for(int m_col_chunk = 0; m_col_chunk < mat_col_chunks; m_col_chunk++){
             // next loop performs up to 16 VLMACCRs  over the output channel dimension (krow) (in reverse order)
-                const nn_image_t* sub_vector = C;
+                const nn_image_t* sub_vector = COL;
                 const nn_tensor_t* sub_matrix = ADDR(K, (mat_row_chunks * VPU_INT8_ACC_PERIOD -1) * mat_row_stride);
                 //get BSO for this group of output channels
                 nn_bso_block_t * bso = &BSO[m_col_chunk];
-                
+
                 for(int m_row_chunk = mat_row_chunks-1; m_row_chunk >= 0; m_row_chunk--){
                     // load the 32 element sub-vector into vC
                     VLDC(&vpu, sub_vector); // TODO this could go up a level if we didn't use vC for rounding..
@@ -229,6 +231,7 @@ void conv2d_im2col(
                     VLDR(&vpu, bso->bias_lo);
 
                     // VLMACCR each output channel for up to 16 channels
+                    vpu_sim_print(&vpu);
                     int sub_mat_end = m_row_chunk > 0 ? VPU_INT8_ACC_PERIOD : plan->channels.Y % VPU_INT8_ACC_PERIOD;
                     for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD; m_row++){ // sometimes doing dummy VLMACCRs to get accumlators in the right rotation
                         VLMACCR(&vpu, sub_matrix);

@@ -7,6 +7,9 @@
 namespace xcore {
 namespace fully_connected {
 
+FullyConnected_16::FullyConnected_16(const ExecutionPlan& execution_plan)
+    : execution_plan(execution_plan) {}
+
 XCoreStatus FullyConnected_16::Init(int32_t C_in, int32_t C_out) {
   TRACE_INFO("FullyConnected_16 Init id=%p C_in=%ld C_out=%ld\n", this, C_in,
              C_out);

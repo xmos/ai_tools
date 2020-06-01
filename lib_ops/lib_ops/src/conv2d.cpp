@@ -39,8 +39,8 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_deep_thread_worker(void *context) {
 }
 
 Conv2D_Deep::Conv2D_Deep(const Conv2DParams &params,
-                         const ParRegionArray &par_regions)
-    : params(params), par_regions(par_regions), jobs_(nullptr) {}
+                         const ExecutionPlan &execution_plan)
+    : params(params), execution_plan(execution_plan), jobs_(nullptr) {}
 
 XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                               int32_t Y_h, int32_t Y_w, int32_t C_out) {
@@ -67,18 +67,18 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   window_params.stride.vertical = params.stride_h;
   window_params.stride.horizontal = params.stride_w;
 
-  if (par_regions.size == 0) {
+  if (execution_plan.threads == 0) {
     // there is no par plan so process entire input
-    par_regions.append({0, 0, Y_h, Y_w});
+    execution_plan.regions.append({0, 0, Y_h, Y_w});
   }
 
   jobs_ = reinterpret_cast<nn_conv2d_deep_job_t *>(
-      xcMalloc(sizeof(nn_conv2d_deep_job_t) * par_regions.size));
+      xcMalloc(sizeof(nn_conv2d_deep_job_t) * execution_plan.threads));
 
-  nn_conv2d_job_params_t job_params[par_regions.size];
+  nn_conv2d_job_params_t job_params[execution_plan.threads];
 
-  for (int i = 0; i < par_regions.size; i++) {
-    const ParRegion &region = par_regions[i];
+  for (int i = 0; i < execution_plan.threads; i++) {
+    const RowColRegion &region = execution_plan.regions[i];
     TRACE_INFO(
         "Conv2D_Deep Init id=%p region top=%ld left=%ld rows=%ld cols=%ld\n",
         this, region.top, region.left, region.rows, region.cols);
@@ -91,7 +91,8 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   }
 
   conv2d_deep_init(&plan_, jobs_, &in_params, &out_params, &job_params[0],
-                   &window_params, params.pad.zero_point, par_regions.size);
+                   &window_params, params.pad.zero_point,
+                   execution_plan.threads);
 
   return kXCoreOk;
 }
@@ -106,9 +107,9 @@ XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_deep_thread_worker);
 
-  Conv2DDeepThreadData deep_thread_data[par_regions.size];
+  Conv2DDeepThreadData deep_thread_data[execution_plan.threads];
 
-  for (int i = 0; i < par_regions.size; i++) {
+  for (int i = 0; i < execution_plan.threads; i++) {
     deep_thread_data[i].data.Y = (nn_image_t *)Y;
     deep_thread_data[i].data.X = (const nn_image_t *)X;
     deep_thread_data[i].data.K = (const nn_tensor_t *)K;
@@ -148,8 +149,8 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_shallow_thread_worker(void *context) {
 }
 
 Conv2D_Shallow::Conv2D_Shallow(const Conv2DParams &params,
-                               const ParRegionArray &par_regions)
-    : params(params), par_regions(par_regions), jobs_(nullptr) {}
+                               const ExecutionPlan &execution_plan)
+    : params(params), execution_plan(execution_plan), jobs_(nullptr) {}
 
 XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                                  int32_t Y_h, int32_t Y_w, int32_t C_out) {
@@ -176,18 +177,18 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   window_params.stride.vertical = params.stride_h;
   window_params.stride.horizontal = params.stride_w;
 
-  if (par_regions.size == 0) {
+  if (execution_plan.threads == 0) {
     // there is no par plan so process entire input
-    par_regions.append({0, 0, Y_h, Y_w});
+    execution_plan.regions.append({0, 0, Y_h, Y_w});
   }
 
   jobs_ = reinterpret_cast<nn_conv2d_shallowin_job_t *>(
-      xcMalloc(sizeof(nn_conv2d_shallowin_job_t) * par_regions.size));
+      xcMalloc(sizeof(nn_conv2d_shallowin_job_t) * execution_plan.threads));
 
-  nn_conv2d_job_params_t job_params[par_regions.size];
+  nn_conv2d_job_params_t job_params[execution_plan.threads];
 
-  for (int i = 0; i < par_regions.size; i++) {
-    const ParRegion &region = par_regions[i];
+  for (int i = 0; i < execution_plan.threads; i++) {
+    const RowColRegion &region = execution_plan.regions[i];
     TRACE_INFO(
         "Conv2D_Shallow Init id=%p region top=%ld left=%ld rows=%ld cols=%ld\n",
         this, region.top, region.left, region.rows, region.cols);
@@ -201,7 +202,7 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   conv2d_shallowin_init(&plan_, jobs_, &in_params, &out_params, &job_params[0],
                         &window_params, params.pad.zero_point,
-                        par_regions.size);
+                        execution_plan.threads);
 
   return kXCoreOk;
 }
@@ -216,9 +217,9 @@ XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_shallow_thread_worker);
 
-  Conv2DShallowThreadData shallow_thread_data[par_regions.size];
+  Conv2DShallowThreadData shallow_thread_data[execution_plan.threads];
 
-  for (int i = 0; i < par_regions.size; i++) {
+  for (int i = 0; i < execution_plan.threads; i++) {
     shallow_thread_data[i].data.Y = (nn_image_t *)Y;
     shallow_thread_data[i].data.X = (const nn_image_t *)X;
     shallow_thread_data[i].data.K = (const nn_tensor_t *)K;
@@ -256,8 +257,8 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_1x1_thread_worker(void *context) {
 }
 
 Conv2D_1x1::Conv2D_1x1(const Conv2DParams &params,
-                       const ParRegionArray &par_regions)
-    : params(params), par_regions(par_regions), plans_(nullptr) {}
+                       const ExecutionPlan &execution_plan)
+    : params(params), execution_plan(execution_plan), plans_(nullptr) {}
 
 XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                              int32_t Y_h, int32_t Y_w, int32_t C_out) {
@@ -276,18 +277,18 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   out_params.width = Y_w;
   out_params.channels = C_out;
 
-  if (par_regions.size == 0) {
+  if (execution_plan.threads == 0) {
     // there is no par plan so process entire input
-    par_regions.append({0, 0, Y_h, Y_w});
+    execution_plan.regions.append({0, 0, Y_h, Y_w});
   }
 
   plans_ = reinterpret_cast<nn_conv2d_1x1_plan_t *>(
-      xcMalloc(sizeof(nn_conv2d_1x1_plan_t) * par_regions.size));
+      xcMalloc(sizeof(nn_conv2d_1x1_plan_t) * execution_plan.threads));
 
-  // nn_conv2d_1x1_plan_t job_params[par_regions.size];
+  // nn_conv2d_1x1_plan_t job_params[execution_plan.threads];
 
-  for (int i = 0; i < par_regions.size; i++) {
-    const ParRegion &region = par_regions[i];
+  for (int i = 0; i < execution_plan.threads; i++) {
+    const RowColRegion &region = execution_plan.regions[i];
     TRACE_INFO(
         "Conv2D_1x1 Init id=%p region top=%ld left=%ld rows=%ld cols=%ld\n",
         this, region.top, region.left, region.rows, region.cols);
@@ -314,9 +315,9 @@ XCoreStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_1x1_thread_worker);
 
-  Conv2D1x1ThreadData thread_data[par_regions.size];
+  Conv2D1x1ThreadData thread_data[execution_plan.threads];
 
-  for (int i = 0; i < par_regions.size; i++) {
+  for (int i = 0; i < execution_plan.threads; i++) {
     thread_data[i].data.Y = (nn_image_t *)Y;
     thread_data[i].data.X = (const nn_image_t *)X;
     thread_data[i].data.K = (const nn_tensor_t *)K;
@@ -355,8 +356,8 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_depthwise_thread_worker(void *context) {
 }
 
 Conv2D_Depthwise::Conv2D_Depthwise(const Conv2DParams &params,
-                                   const ParRegionArray &par_regions)
-    : params(params), par_regions(par_regions), jobs_(nullptr) {}
+                                   const ExecutionPlan &execution_plan)
+    : params(params), execution_plan(execution_plan), jobs_(nullptr) {}
 
 XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                                    int32_t Y_h, int32_t Y_w, int32_t C_out) {
@@ -383,18 +384,18 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   window_params.stride.vertical = params.stride_h;
   window_params.stride.horizontal = params.stride_w;
 
-  if (par_regions.size == 0) {
+  if (execution_plan.threads == 0) {
     // there is no par plan so process entire input
-    par_regions.append({0, 0, Y_h, Y_w});
+    execution_plan.regions.append({0, 0, Y_h, Y_w});
   }
 
   jobs_ = reinterpret_cast<nn_conv2d_depthwise_job_t *>(
-      xcMalloc(sizeof(nn_conv2d_depthwise_job_t) * par_regions.size));
+      xcMalloc(sizeof(nn_conv2d_depthwise_job_t) * execution_plan.threads));
 
-  nn_conv2d_job_params_t job_params[par_regions.size];
+  nn_conv2d_job_params_t job_params[execution_plan.threads];
 
-  for (int i = 0; i < par_regions.size; i++) {
-    const ParRegion &region = par_regions[i];
+  for (int i = 0; i < execution_plan.threads; i++) {
+    const RowColRegion &region = execution_plan.regions[i];
     TRACE_INFO(
         "Conv2D_Depthwise Init id=%p region top=%ld left=%ld rows=%ld "
         "cols=%ld\n",
@@ -414,7 +415,7 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                         -params.pad.left,  // window_start_col
                         params.K_h, params.K_w, params.stride_h,
                         params.stride_w, params.pad.zero_point,
-                        par_regions.size  // job_count
+                        execution_plan.threads  // job_count
   );
 
   return kXCoreOk;
@@ -430,9 +431,9 @@ XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_depthwise_thread_worker);
 
-  Conv2DDepthwiseThreadData thread_data[par_regions.size];
+  Conv2DDepthwiseThreadData thread_data[execution_plan.threads];
 
-  for (int i = 0; i < par_regions.size; i++) {
+  for (int i = 0; i < execution_plan.threads; i++) {
     thread_data[i].data.Y = (nn_image_t *)Y;
     thread_data[i].data.X = (const nn_image_t *)X;
     thread_data[i].data.K = (const nn_tensor_t *)K;

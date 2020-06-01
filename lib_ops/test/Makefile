@@ -32,7 +32,7 @@ SOURCES := $(LIBS_SOURCES)
 SOURCES += $(UNITY_SOURCES)
 SOURCES += test_allocator.cpp
 SOURCES += test_dispatcher.cpp
-SOURCES += test_par_region.cpp
+SOURCES += test_execution_plan.cpp
 SOURCES += test_stopwatch.cpp
 SOURCES += main.cpp
 

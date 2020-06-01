@@ -22,7 +22,7 @@ struct PoolingParams {
 
 class MaxPool {
  public:
-  MaxPool(const PoolingParams& params) : params(params) {}
+  MaxPool(const PoolingParams& params, const ExecutionPlan& execution_plan);
   ~MaxPool() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
@@ -30,6 +30,7 @@ class MaxPool {
   XCoreStatus Eval(int8_t* Y, const int8_t* X);
 
   PoolingParams params;
+  ExecutionPlan execution_plan;
 
  private:
   nn_window_op_plan_t plan_;
@@ -37,7 +38,7 @@ class MaxPool {
 
 class AvgPool {
  public:
-  AvgPool(const PoolingParams& params) : params(params) {}
+  AvgPool(const PoolingParams& params, const ExecutionPlan& execution_plan);
   ~AvgPool() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
@@ -45,6 +46,7 @@ class AvgPool {
   XCoreStatus Eval(int8_t* Y, const int8_t* X);
 
   PoolingParams params;
+  ExecutionPlan execution_plan;
 
  private:
   nn_avgpool2d_plan_t plan_;
@@ -52,12 +54,14 @@ class AvgPool {
 
 class AvgPool_Global {
  public:
-  AvgPool_Global() {}
+  AvgPool_Global(const ExecutionPlan& execution_plan);
   ~AvgPool_Global() {}
 
   XCoreStatus Init(int32_t bias, int32_t shift, int32_t scale);
   XCoreStatus Eval(int8_t* Y, const int8_t* X, int32_t X_h, int32_t X_w,
                    uint32_t C_in);
+
+  ExecutionPlan execution_plan;
 
  private:
   int32_t bias_;

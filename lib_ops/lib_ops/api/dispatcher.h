@@ -3,7 +3,7 @@
 #define XCORE_DISPATCHER_H_
 
 #include "lib_ops/api/lib_ops.h"
-#include "lib_ops/api/par.h"
+#include "lib_ops/api/planning.h"
 
 #ifdef XCORE
 

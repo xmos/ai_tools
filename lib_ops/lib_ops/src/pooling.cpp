@@ -18,6 +18,11 @@ namespace pooling {
 //**************************************
 //**************************************
 //**************************************
+
+MaxPool::MaxPool(const PoolingParams& params,
+                 const ExecutionPlan& execution_plan)
+    : params(params), execution_plan(execution_plan) {}
+
 XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                           int32_t Y_w, int32_t C_out) {
   TRACE_INFO(
@@ -60,6 +65,10 @@ XCoreStatus MaxPool::Eval(int8_t* Y, const int8_t* X) {
 //**************************************
 //**************************************
 //**************************************
+AvgPool::AvgPool(const PoolingParams& params,
+                 const ExecutionPlan& execution_plan)
+    : params(params), execution_plan(execution_plan) {}
+
 XCoreStatus AvgPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                           int32_t Y_w, int32_t C_out) {
   TRACE_INFO(
@@ -101,6 +110,10 @@ XCoreStatus AvgPool::Eval(int8_t* Y, const int8_t* X) {
 //**************************************
 //**************************************
 //**************************************
+
+AvgPool_Global::AvgPool_Global(const ExecutionPlan& execution_plan)
+    : execution_plan(execution_plan) {}
+
 XCoreStatus AvgPool_Global::Init(int32_t bias, int32_t shift, int32_t scale) {
   TRACE_INFO("AvgPool_Global Init id=%p\n", this);
   bias_ = bias;

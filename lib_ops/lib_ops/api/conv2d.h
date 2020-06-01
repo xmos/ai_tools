@@ -31,7 +31,7 @@ struct Conv2DParams {
 
 class Conv2D_Deep {
  public:
-  Conv2D_Deep(const Conv2DParams& params, const ParRegionArray& par_regions);
+  Conv2D_Deep(const Conv2DParams& params, const ExecutionPlan& plan);
   ~Conv2D_Deep() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
@@ -40,7 +40,7 @@ class Conv2D_Deep {
                    const int16_t* BSO);
 
   Conv2DParams params;
-  ParRegionArray par_regions;
+  ExecutionPlan execution_plan;
 
  private:
   nn_conv2d_deep_plan_t plan_;
@@ -49,7 +49,7 @@ class Conv2D_Deep {
 
 class Conv2D_Shallow {
  public:
-  Conv2D_Shallow(const Conv2DParams& params, const ParRegionArray& par_regions);
+  Conv2D_Shallow(const Conv2DParams& params, const ExecutionPlan& plan);
   ~Conv2D_Shallow() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
@@ -58,7 +58,7 @@ class Conv2D_Shallow {
                    const int16_t* BSO);
 
   Conv2DParams params;
-  ParRegionArray par_regions;
+  ExecutionPlan execution_plan;
 
  private:
   nn_conv2d_shallowin_plan_t plan_;
@@ -67,7 +67,7 @@ class Conv2D_Shallow {
 
 class Conv2D_1x1 {
  public:
-  Conv2D_1x1(const Conv2DParams& params, const ParRegionArray& par_regions);
+  Conv2D_1x1(const Conv2DParams& params, const ExecutionPlan& plan);
   ~Conv2D_1x1() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
@@ -76,7 +76,7 @@ class Conv2D_1x1 {
                    const int16_t* BSO);
 
   Conv2DParams params;
-  ParRegionArray par_regions;
+  ExecutionPlan execution_plan;
 
  private:
   nn_conv2d_1x1_plan_t* plans_;
@@ -84,8 +84,7 @@ class Conv2D_1x1 {
 
 class Conv2D_Depthwise {
  public:
-  Conv2D_Depthwise(const Conv2DParams& params,
-                   const ParRegionArray& par_regions);
+  Conv2D_Depthwise(const Conv2DParams& params, const ExecutionPlan& plan);
   ~Conv2D_Depthwise() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
@@ -94,7 +93,7 @@ class Conv2D_Depthwise {
                    const int16_t* BSO);
 
   Conv2DParams params;
-  ParRegionArray par_regions;
+  ExecutionPlan execution_plan;
 
  private:
   nn_conv2d_depthwise_plan_t plan_;

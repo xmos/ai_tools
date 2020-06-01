@@ -6,7 +6,7 @@
 #include <iostream>
 
 #include "lib_ops/api/allocator.h"
-#include "lib_ops/api/par.h"
+#include "lib_ops/api/planning.h"
 
 namespace xcore {
 

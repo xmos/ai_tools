@@ -10,6 +10,6 @@ typedef enum XCoreStatus { kXCoreOk = 0, kXCoreError = 1 } XCoreStatus;
 }  // namespace xcore
 
 #include "dispatcher.h"
-#include "par.h"
+#include "planning.h"
 
 #endif  // XCORE_LIB_OPS_H_

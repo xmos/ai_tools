@@ -5,7 +5,7 @@
 #include "nn_op_structs.h"
 
 #include "xs3_vpu.h"
-#include "asm_constants.h"
+// #include "../asm/asm_constants.h"
 #include "vpu_sim.h"
 
 #include <stdlib.h>
@@ -13,7 +13,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
-
 
 void conv2d_im2col_init(
     nn_conv2d_im2col_plan_t* plan,
@@ -108,6 +107,7 @@ void conv2d_im2col_init(
 
         job->stride.row.window  = x_row_bytes * plan->window.stride.vertical;
         job->stride.row.Y       = y_row_bytes;
+        job->stride.row.K       = plan->window.shape.kernel_row_elements;
 
         job->stride.chan_group.Y = VPU_INT8_ACC_PERIOD - y_row_bytes * job->output.rows;
         job->stride.col.Y = y_row_bytes / job->output.cols;// TODO check
@@ -131,10 +131,12 @@ void conv2d_im2col(
     const nn_conv2d_im2col_plan_t* plan,
     const nn_conv2d_im2col_job_t* job)
 { 
-    // int8_t zero_point_vec[VPU_INT8_EPV];
-    // memset(zero_point_vec, plan->zero_point, sizeof(zero_point_vec));
+
     xs3_vpu vpu;
     vpu_vector_t vec_tmp;
+
+    const int16_t vec_0x007F[16] = {0x007f};
+    const int8_t vec_0x80[30] = {0x80};
 
     VSETC(&vpu, MODE_S8);
 
@@ -145,11 +147,14 @@ void conv2d_im2col(
 
     int pad_t = job->init_padding.top;
     int pad_b = job->init_padding.bottom;
+
+    int y_tail = VPU_INT8_ACC_PERIOD - plan->channels.Y * job->output.rows * job->output.cols;
     //Iterate once per row of the output region
     for(unsigned output_rows = job->output.rows; output_rows > 0; output_rows--){
         //Iterate once per col of the output region
         for(unsigned output_cols = job->output.cols; output_cols > 0; output_cols--){
-
+            unsigned y_mask = y_tail <= 0 ? 0 : 0x0000FFFF >> y_tail;// @tail
+            y_tail -= VPU_INT8_ACC_PERIOD;// @tail
             //This points it at the top-left cell of the patch.
             const nn_image_t* patch_X = X;
             
@@ -184,7 +189,6 @@ void conv2d_im2col(
                             tmp &= (pad_l -i > 0) || (plan->window.shape.width - i <= pad_r); // ???
                             for(int j = 0; j < plan->channels.X; j++){
                                 padded_vals[k] =  (tmp & 0x1) ? patch_X[k] : plan->zero_point;
-                                printf(" \n %d ",tmp);
                                 k++;
                             }
                         }  
@@ -201,11 +205,9 @@ void conv2d_im2col(
 
             // im2col complete what follows is just a BSO-aware K*COL + BSO = Y  
             #if !CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
-                VLDR(&vpu, vpu_vects.vec_0x80);
-                VSTRPV(&vpu, Y, 0xFFFF);
+                VLDR(&vpu, vec_0x80);
+                VSTRPV(&vpu, Y, y_mask);
             #endif
-
-            for(int i =0; i < plan->window.shape.height*plan->window.shape.width*plan->channels.X; i++) printf("X[%d]=  %d\n",i, COL[i]);
 
             int mat_col_chunks = plan->window.shape.kernel_row_elements % VPU_INT8_EPV == 0 ?
                                  plan->window.shape.kernel_row_elements / VPU_INT8_EPV      :
@@ -213,16 +215,16 @@ void conv2d_im2col(
             int mat_row_chunks = plan->channels.Y % VPU_INT8_ACC_PERIOD == 0 ?
                                  plan->channels.Y / VPU_INT8_ACC_PERIOD      :
                                  plan->channels.Y / VPU_INT8_ACC_PERIOD +1;  
-            int mat_row_stride = plan->window.shape.kernel_row_elements; // TODO check if this needs corner case handling
+            
+            
             // outer loop increments of 32 elements over krowlen or col len
             for(int m_col_chunk = 0; m_col_chunk < mat_col_chunks; m_col_chunk++){
             // next loop performs up to 16 VLMACCRs  over the output channel dimension (krow) (in reverse order)
                 const nn_image_t* sub_vector = COL;
-                const nn_tensor_t* sub_matrix = ADDR(K, (mat_row_chunks * VPU_INT8_ACC_PERIOD -1) * mat_row_stride);
-                //get BSO for this group of output channels
-                nn_bso_block_t * bso = &BSO[m_col_chunk];
-
                 for(int m_row_chunk = mat_row_chunks-1; m_row_chunk >= 0; m_row_chunk--){
+                    //get BSO for this group of output channels
+                    nn_bso_block_t * bso = &BSO[m_row_chunk];
+
                     // load the 32 element sub-vector into vC
                     VLDC(&vpu, sub_vector); // TODO this could go up a level if we didn't use vC for rounding..
 
@@ -231,24 +233,23 @@ void conv2d_im2col(
                     VLDR(&vpu, bso->bias_lo);
 
                     // VLMACCR each output channel for up to 16 channels
-                    vpu_sim_print(&vpu);
                     int sub_mat_end = m_row_chunk > 0 ? VPU_INT8_ACC_PERIOD : plan->channels.Y % VPU_INT8_ACC_PERIOD;
-                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD; m_row++){ // sometimes doing dummy VLMACCRs to get accumlators in the right rotation
+                    const nn_tensor_t* sub_matrix = ADDR( K, VPU_INT8_EPV*m_col_chunk  +  job->stride.row.K*(sub_mat_end-1));
+                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD-sub_mat_end; m_row++) VLMACCR(&vpu, sub_matrix);
+                    for(int m_row = 0; m_row < sub_mat_end; m_row++){                                            
                         VLMACCR(&vpu, sub_matrix);
-                        if(m_row < sub_mat_end){
-                            sub_matrix = ADDR(sub_matrix, -mat_row_stride);
-                        }
+                        // printf("\nBias =  %d\t%d\n", (int16_t)bso->bias_hi[m_row], (int16_t)bso->bias_lo[m_row]);
+                        // for(int i = 0; i < 8; i++) printf("submat[%d] = %d\t col = %d\n",i,sub_matrix[i], sub_vector[i]);
+                        // vpu_sim_print(&vpu);
+                        sub_matrix = ADDR(sub_matrix, -job->stride.row.K);
                     }
-
                     // Done with A*x + b need to groom and extract results now
 
                     //Set mode to 16-bit
                     VSETC(&vpu, MODE_S16);
-
                     //Saturate to 16-bit values
                     VLSAT(&vpu, bso->shift1);
-
-
+                    
                     //Load scales into vC
                     VLDC(&vpu, bso->scale);
                     VSTR(&vpu, vec_tmp.s16);
@@ -266,7 +267,7 @@ void conv2d_im2col(
                         VLSAT(&vpu, bso->shift2);
 
                         //Store result in Y
-                        const unsigned mask16 = 0xFFFF;
+                        const unsigned mask16 = y_mask;
                         VSTRPV(&vpu, Y, mask16);
                     
                     #else
@@ -275,14 +276,15 @@ void conv2d_im2col(
                         VLSAT(&vpu, bso->shift2);
 
                         VSTR(&vpu, vec_tmp.s16);
-                        VLADD(&vpu, vpu_vects.vec_0x007F);
+                        VLADD(&vpu, vec_0x007F);
                         VDEPTH1(&vpu);
+
                         uint32_t mask = ~vpu.vR.s32[0];
 
                         VLASHR(&vpu, vec_tmp.s16, -8);
                         VDEPTH8(&vpu);
                         //Store result in Y
-                        mask = mask & 0xFFFF;
+                        mask = mask & y_mask;//0xFFFF;
                         VSTRPV(&vpu, Y, mask);
 
                         //Set mode back to 8-bit

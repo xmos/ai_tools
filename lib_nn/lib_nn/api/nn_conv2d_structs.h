@@ -308,6 +308,7 @@ typedef struct {
         struct {
             int32_t window;
             int32_t Y;
+            int32_t K;
         } row;
     } stride;
 

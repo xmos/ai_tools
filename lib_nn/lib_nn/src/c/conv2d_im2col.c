@@ -109,8 +109,8 @@ void conv2d_im2col_init(
         job->stride.row.Y       = y_row_bytes;
         job->stride.row.K       = plan->window.shape.kernel_row_elements;
 
-        job->stride.chan_group.Y = VPU_INT8_ACC_PERIOD - y_row_bytes * job->output.rows;
-        job->stride.col.Y = y_row_bytes / job->output.cols;// TODO check
+        job->stride.chan_group.Y = VPU_INT8_ACC_PERIOD - y_row_bytes * job->output.rows; // ???
+        job->stride.col.Y = y_params->channels; // TODO should this account for multiple bytes per channel?
     }
 }
 
@@ -204,7 +204,7 @@ void conv2d_im2col(
             // im2col complete what follows is just a BSO-aware K*COL + BSO = Y  
             #if !CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
                 // VLDR(&vpu, vec_0x80);
-                // VSTRPV(&vpu, Y, y_mask);
+                // VSTRPV(&vpu, Y, y_mask);// @tail chicken and egg problem with vec registers
                 memset(Y,0x80,plan->channels.Y);
             #endif
 
@@ -291,7 +291,8 @@ void conv2d_im2col(
                         VDEPTH8(&vpu);
                         //Store result in Y
                         // mask = mask & 0xFFFF;
-                        
+                        // printf( "0x%0.4X\n",y_mask);
+                        // for(int i=0; i<32; i++)vpu.vR.s8[i]=0xff;//printf("vpu.vR.s8[%d] = %d\n", i, vpu.vR.s8[i]);
                         VSTRPV(&vpu, Y_cog, y_mask);
 
                         //Set mode back to 8-bit
@@ -312,8 +313,8 @@ void conv2d_im2col(
             
         }
         //Move X and Y pointers to the start of the following row
-        X = ADDR(X, job->stride.row.window);
-        Y = ADDR(Y, job->stride.row.Y);
+        // X = ADDR(X, plan->window.stride.vertical);
+        // Y = ADDR(Y, job->stride.row.Y);
         pad_t -= plan->window.stride.vertical;
         pad_b += plan->window.stride.vertical;
 

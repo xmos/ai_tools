@@ -35,7 +35,7 @@ static void check_Y(
     unsigned y_offset = IMG_ADDRESS_VECT(y_params, row, col, chn);
 
     int8_t y = Y[y_offset];
-    // printf( "Y[%d][%d][%d] = %d\n",row,col,chn,y );
+    // printf( "Y[%d][%d][%d] = %d  (expected  %d)\n",row,col,chn,y, y_exp );
 
     //Only sprintf-ing if the test will fail saves a ton of time.
     if(y != y_exp)
@@ -870,7 +870,7 @@ void test_conv2d_im2col_case8()
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-#define CHANS_IN        ( 4 )
+#define CHANS_IN        ( 3 )
 #define CHANS_OUT       ( 36 )
 #define K_H             ( 1 )
 #define K_W             ( 1 )

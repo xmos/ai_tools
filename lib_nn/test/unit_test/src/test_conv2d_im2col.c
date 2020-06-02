@@ -35,6 +35,7 @@ static void check_Y(
     unsigned y_offset = IMG_ADDRESS_VECT(y_params, row, col, chn);
 
     int8_t y = Y[y_offset];
+    // printf( "Y[%d][%d][%d] = %d\n",row,col,chn,y );
 
     //Only sprintf-ing if the test will fail saves a ton of time.
     if(y != y_exp)

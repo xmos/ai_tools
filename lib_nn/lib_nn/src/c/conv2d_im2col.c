@@ -153,8 +153,6 @@ void conv2d_im2col(
     for(unsigned output_rows = job->output.rows; output_rows > 0; output_rows--){
         //Iterate once per col of the output region
         for(unsigned output_cols = job->output.cols; output_cols > 0; output_cols--){
-            unsigned y_mask = y_tail <= 0 ? 0 : 0x0000FFFF >> y_tail;// @tail
-            y_tail -= VPU_INT8_ACC_PERIOD;// @tail
             //This points it at the top-left cell of the patch.
             const nn_image_t* patch_X = X;
             
@@ -205,8 +203,9 @@ void conv2d_im2col(
 
             // im2col complete what follows is just a BSO-aware K*COL + BSO = Y  
             #if !CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
-                VLDR(&vpu, vec_0x80);
-                VSTRPV(&vpu, Y, y_mask);
+                // VLDR(&vpu, vec_0x80);
+                // VSTRPV(&vpu, Y, y_mask);
+                memset(Y,0x80,plan->channels.Y);
             #endif
 
             int mat_col_chunks = plan->window.shape.kernel_row_elements % VPU_INT8_EPV == 0 ?
@@ -223,7 +222,9 @@ void conv2d_im2col(
                 for(int m_row_chunk = mat_row_chunks-1; m_row_chunk >= 0; m_row_chunk--){
                     //get BSO for this group of output channels
                     nn_bso_block_t * bso = &BSO[m_row_chunk];
-
+                    nn_image_t* Y_cog = ADDR(Y, m_row_chunk*VPU_INT8_ACC_PERIOD);
+                    uint16_t y_mask = 0xFFFF;
+                    
                     // load the 32 element sub-vector into vC
                     VLDC(&vpu, sub_vector); // TODO this could go up a level if we didn't use vC for rounding..
 
@@ -236,7 +237,7 @@ void conv2d_im2col(
                     const nn_tensor_t* sub_matrix = ADDR( K, VPU_INT8_EPV*m_col_chunk + job->stride.row.K*(sub_mat_end)
                                                             + m_row_chunk*VPU_INT8_ACC_PERIOD);// TODO make a chunk stride
 
-                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD-sub_mat_end; m_row++) {VLMACCR(&vpu, sub_matrix); /*printf(".\n");*/} // DUMMY to rotate @tail
+                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD-sub_mat_end; m_row++) {VLMACCR(&vpu, sub_matrix); y_mask>>=1; } // DUMMY to rotate @tail
                     for(int m_row = 0; m_row < sub_mat_end; m_row++){                                            
                         // printf("before\n");
                         // for(int i = 0; i < 16; i++) printf("k[%d] = %d\t col = %d \t bias = %d\n",i,sub_matrix[i], sub_vector[i], vpu.vR.s16[i]);
@@ -262,8 +263,7 @@ void conv2d_im2col(
                     VLMACC(&vpu, vec_tmp.s16);
                     VLDC(&vpu, bso->offset_scale);
                     VLMACC(&vpu, bso->offset);
-
-                    // vpu_sim_print(&vpu);
+                    
 
                     #if CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
 
@@ -275,7 +275,7 @@ void conv2d_im2col(
 
                         //Store result in Y
                         const unsigned mask16 = y_mask;
-                        VSTRPV(&vpu, Y, mask16);
+                        VSTRPV(&vpu, Y_cog, mask16);
                     
                     #else
 
@@ -292,17 +292,18 @@ void conv2d_im2col(
                         //Store result in Y
                         // mask = mask & 0xFFFF;
                         
-                        VSTRPV(&vpu, Y, y_mask);
+                        VSTRPV(&vpu, Y_cog, y_mask);
 
                         //Set mode back to 8-bit
                         VSETC(&vpu, MODE_S8);
 
                     #endif
 
-
+                   
                 }
                 // go to next section of vector
                 sub_vector = ADDR(sub_vector,VPU_INT8_EPV);
+                
             }
             
             //Move X and Y pointers one pixel to the right

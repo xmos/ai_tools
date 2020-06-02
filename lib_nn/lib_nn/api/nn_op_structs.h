@@ -474,6 +474,16 @@ typedef struct {
 } nn_maxpool2d_job_t;
 
 
+
+
+/**
+ * 
+ */
+typedef struct {
+    mem_stride_t start;
+    uint32_t length;
+} nn_requantize_16_to_8_job_t;
+
 /**
  * This struct describes the basic parameters for an image tensor
  */

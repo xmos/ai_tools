@@ -45,14 +45,54 @@ WEAK_FUNC
 void requantize_16_to_8(
     int8_t* y,
     const int16_t* x,
-    const unsigned n)
+    const nn_requantize_16_to_8_job_t* job)
 {
-    for(int i = 0; i < n; i++){
+    y = ADDR(y, job->start);
+    x = ADDR(x, job->start);
+
+    for(int i = 0; i < job->length; i++){
         y[i] = (x[i] < -0x7F80)? NEG_SAT_VAL : vdepth8_single_s16(x[i]);
     }
 }
 
 #undef NEG_SAT_VAL
+
+
+
+void requantize_16_to_8_init(
+    nn_requantize_16_to_8_job_t* jobs,
+    const uint32_t length,
+    unsigned job_count)
+{
+    // All of the jobs (except final one) must deal with a multiple
+    // of 4 inputs so that the subsequent job is guaranteed to be
+    // word-aligned.
+
+    // ceil(length/4)
+    const unsigned adj_count = (length + 3) >> 2;
+
+    const unsigned count_per_job_a = (adj_count / job_count);
+    const unsigned count_per_job_b = count_per_job_a + 1;
+    const unsigned final = length % 4;
+    const unsigned leftover = adj_count - (count_per_job_a * job_count);
+
+    int32_t pos = 0;
+
+    for(int k = 0; k < job_count; k++){
+        jobs[k].start = pos;
+
+        if(k == leftover)
+            jobs[k].length = final;
+        else if(k < leftover)
+            jobs[k].length = 4*count_per_job_b;
+        else
+            jobs[k].length = 4*count_per_job_a;
+
+        pos = pos + VPU_INT16_EPV * jobs[k].length;
+    }
+
+    assert(pos == length);
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

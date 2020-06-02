@@ -67,21 +67,22 @@ void test_requantize_16_to_8_case0()
         0,0,0
     };
 
-    requantize_16_to_8(y, x, VPU_INT8_ACC_PERIOD);
+    nn_requantize_16_to_8_job_t job;
 
-    for(int i = 0; i < VPU_INT8_ACC_PERIOD; i ++){
-        // printf("%d: 0x%04X -> %d\n", i, (unsigned)x[i], y[i]);
+    requantize_16_to_8_init(&job, VPU_INT8_ACC_PERIOD, 1);
+    requantize_16_to_8(y, x, &job);
+
+    for(int i = 0; i < VPU_INT8_ACC_PERIOD; i ++)
         TEST_ASSERT_EQUAL(y_exp[i], y[i]);
-    }
+
 
     memset(y, 0, sizeof(y));
 
-    requantize_16_to_8(y, x, VPU_INT8_ACC_PERIOD-1);
+    requantize_16_to_8_init(&job, VPU_INT8_ACC_PERIOD - 1, 1);
+    requantize_16_to_8(y, x, &job);
 
-    for(int i = 0; i < VPU_INT8_ACC_PERIOD-1; i ++){
-        // printf("%d: 0x%04X -> %d\n", i, (unsigned)x[i], y[i]);
+    for(int i = 0; i < VPU_INT8_ACC_PERIOD-1; i ++)
         TEST_ASSERT_EQUAL(y_exp[i], y[i]);
-    }
 
 }
 
@@ -91,7 +92,6 @@ void test_requantize_16_to_8_case0()
  * Case 0 - Checks several specific cases.
  *
  ****************************************************************************/
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define VEC_LEN         (VPU_INT16_EPV)
 void test_requantize_16_to_8_case1()
 {
@@ -134,16 +134,16 @@ void test_requantize_16_to_8_case1()
 
         for(unsigned in_place = 0; in_place <= 1; in_place++){
 
-#if DEBUG_ON
-            PRINTF("\t\t\t%s...\n", in_place? "in-place" : "not in-place");
-#endif
 
             int8_t* dest = in_place? (int8_t*) x : (int8_t*) y;
 
             memset16(x, casse->x_val, VEC_LEN);
             memset(y, XXX, VEC_LEN * sizeof(int8_t));
 
-            requantize_16_to_8(dest, (int16_t*)x, casse->N);
+            nn_requantize_16_to_8_job_t job;
+
+            requantize_16_to_8_init(&job, casse->N, 1);
+            requantize_16_to_8(dest, (int16_t*)x, &job);
 
             for(int k = 0; k < casse->N; k++){
                 if(dest[k] != casse->exp_y)
@@ -162,7 +162,6 @@ void test_requantize_16_to_8_case1()
     }
 }
 #undef VEC_LEN
-#undef DEBUG_ON
 
 
 
@@ -170,10 +169,9 @@ void test_requantize_16_to_8_case1()
 
 /****************************************************************************
  *
- * Case 1 - Random data/length
+ * Case 2 - Random data/length
  *
  ****************************************************************************/
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define MAX_LEN         (512)
 #define REPS            50
 void test_requantize_16_to_8_case2()
@@ -200,13 +198,13 @@ void test_requantize_16_to_8_case2()
 
         for(int in_place = 0; in_place < 1; in_place++){
 
-#if DEBUG_ON
-            PRINTF("\t\t\t%s...\n", in_place? "in-place" : "not in-place");
-#endif
 
             int8_t* dest = in_place? (int8_t*) x : (int8_t*) y;
 
-            requantize_16_to_8(dest, x, N);
+            nn_requantize_16_to_8_job_t job;
+
+            requantize_16_to_8_init(&job, N, 1);
+            requantize_16_to_8(dest, (int16_t*)x, &job);
 
             for(int i = 0; i < N; i++){
 
@@ -229,8 +227,79 @@ void test_requantize_16_to_8_case2()
 }
 #undef REPS
 #undef MAX_LEN
-#undef DEBUG_ON
 
+
+
+
+
+
+
+/****************************************************************************
+ *
+ * Case 3 - Random data/length, multiple jobs
+ *
+ ****************************************************************************/
+#define MAX_LEN         (512)
+#define MAX_JOBS        (4)
+#define REPS            50
+void test_requantize_16_to_8_case3()
+{
+    PRINTF("%s...\n", __func__);
+
+    int8_t  WORD_ALIGNED y[MAX_LEN];
+    int16_t WORD_ALIGNED x[MAX_LEN];
+
+    int16_t WORD_ALIGNED x_orig[MAX_LEN];
+    
+    const int8_t XXX = 0xCC;
+
+    nn_requantize_16_to_8_job_t jobs[MAX_JOBS];
+
+    for(int v = 0; v < REPS; v++){
+
+        PRINTF("\t\trep %d...\n", v); 
+
+        const unsigned N = pseudo_rand_uint16() % (MAX_LEN+1);
+
+        pseudo_rand_bytes((char*)x_orig, sizeof(x_orig));
+        vpu_memcpy(x, x_orig, sizeof(x));
+        
+        memset(y, XXX, sizeof(y));
+
+        const unsigned job_count = pseudo_rand_uint16() % MAX_JOBS;
+        
+        requantize_16_to_8_init(jobs, N, 1);
+
+        for(int in_place = 0; in_place < 1; in_place++){
+
+
+            int8_t* dest = in_place? (int8_t*) x : (int8_t*) y;
+
+            for(int j = 0; j < job_count; j++)
+                requantize_16_to_8(dest, (int16_t*)x, &jobs[j]);
+            
+
+            for(int i = 0; i < N; i++){
+
+                int8_t exp_val = vdepth8_single_s16(x_orig[i]);
+                if(x_orig[i] < -0x7F80)
+                    exp_val = NEG_SAT_VAL;
+
+                if(dest[i] != exp_val)
+                    sprintf(str_buff, "(rep: %d) (N: %u) (index: %d) (x[%d] = %d)", v, N, i, i, x_orig[i]);
+
+                TEST_ASSERT_EQUAL_MESSAGE(exp_val, dest[i], str_buff);
+            }
+
+            if(!in_place){
+                for(int i = N; i < MAX_LEN; i++)
+                    TEST_ASSERT_EQUAL(XXX, dest[i]);
+            }
+        }
+    }
+}
+#undef REPS
+#undef MAX_LEN
 
 
 
@@ -243,4 +312,5 @@ void test_requantize_16_to_8()
     RUN_TEST(test_requantize_16_to_8_case0);
     RUN_TEST(test_requantize_16_to_8_case1);
     RUN_TEST(test_requantize_16_to_8_case2);
+    RUN_TEST(test_requantize_16_to_8_case3);
 }

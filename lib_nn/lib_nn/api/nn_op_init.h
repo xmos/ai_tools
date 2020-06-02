@@ -438,6 +438,13 @@ void avgpool2d_global_init(
     const uint32_t x_width);
 
 
+
+void requantize_16_to_8_init(
+    nn_requantize_16_to_8_job_t* jobs,
+    const uint32_t length,
+    unsigned job_count);
+
+
 #ifdef __XC__
 }   //extern "C"
 #endif

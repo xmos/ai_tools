@@ -722,7 +722,7 @@ void argmax_16(
 void requantize_16_to_8(
     int8_t* Y,
     const int16_t* X,
-    const unsigned length);
+    const nn_requantize_16_to_8_job_t* job);
 
 
 

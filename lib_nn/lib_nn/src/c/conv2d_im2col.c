@@ -216,7 +216,6 @@ void conv2d_im2col(
                                  plan->channels.Y / VPU_INT8_ACC_PERIOD      :
                                  plan->channels.Y / VPU_INT8_ACC_PERIOD +1;  
             
-            
             // outer loop increments of 32 elements over krowlen or col len
             for(int m_col_chunk = 0; m_col_chunk < mat_col_chunks; m_col_chunk++){
             // next loop performs up to 16 VLMACCRs  over the output channel dimension (krow) (in reverse order)
@@ -233,17 +232,18 @@ void conv2d_im2col(
                     VLDR(&vpu, bso->bias_lo);
 
                     // VLMACCR each output channel for up to 16 channels
-                    int sub_mat_end = m_row_chunk > 0 ? VPU_INT8_ACC_PERIOD : plan->channels.Y % VPU_INT8_ACC_PERIOD;
-                    const nn_tensor_t* sub_matrix = ADDR( K, VPU_INT8_EPV*m_col_chunk  +  job->stride.row.K*(sub_mat_end));
+                    int sub_mat_end = m_row_chunk != (mat_row_chunks-1) ? VPU_INT8_ACC_PERIOD : plan->channels.Y % VPU_INT8_ACC_PERIOD;
+                    const nn_tensor_t* sub_matrix = ADDR( K, VPU_INT8_EPV*m_col_chunk + job->stride.row.K*(sub_mat_end)
+                                                            + m_row_chunk*VPU_INT8_ACC_PERIOD);// TODO make a chunk stride
 
-                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD-sub_mat_end; m_row++) VLMACCR(&vpu, sub_matrix); // DUMMY to rotate @tail
+                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD-sub_mat_end; m_row++) {VLMACCR(&vpu, sub_matrix); /*printf(".\n");*/} // DUMMY to rotate @tail
                     for(int m_row = 0; m_row < sub_mat_end; m_row++){                                            
                         // printf("before\n");
                         // for(int i = 0; i < 16; i++) printf("k[%d] = %d\t col = %d \t bias = %d\n",i,sub_matrix[i], sub_vector[i], vpu.vR.s16[i]);
                         sub_matrix = ADDR(sub_matrix, -job->stride.row.K);
                         VLMACCR(&vpu, sub_matrix);
                         // printf("after\n");
-                        // for(int i = 0; i < 16; i++) printf("k[%d] = %d\t col = %d \t bias = %d\n",i,sub_matrix[i], sub_vector[i], vpu.vR.s16[i]);
+                        // for(int i = 0; i < 4; i++) printf("k[%d] = %d\t col = %d \t bias = %d\n",i,sub_matrix[i], sub_vector[i], vpu.vR.s16[i]);
                         
                     }
                                         
@@ -262,6 +262,8 @@ void conv2d_im2col(
                     VLMACC(&vpu, vec_tmp.s16);
                     VLDC(&vpu, bso->offset_scale);
                     VLMACC(&vpu, bso->offset);
+
+                    // vpu_sim_print(&vpu);
 
                     #if CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
 

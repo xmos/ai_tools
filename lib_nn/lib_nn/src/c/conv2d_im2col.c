@@ -151,6 +151,21 @@ void conv2d_im2col(
     int y_tail = VPU_INT8_ACC_PERIOD - plan->channels.Y * job->output.rows * job->output.cols;
     //Iterate once per row of the output region
     for(unsigned output_rows = job->output.rows; output_rows > 0; output_rows--){
+        // start paste
+        int pad_l = job->init_padding.left;
+        int pad_r = job->init_padding.right;
+
+        const int pad_lr_delta = plan->window.stride.horizontal * (job->output.cols - 1);
+        const int final_pad_l = pad_l - pad_lr_delta;
+        const int final_pad_r = pad_r + pad_lr_delta;
+
+        const int cur_pad_t = (pad_t > 0)? pad_t : 0;
+        const int cur_pad_b = (pad_b > 0)? pad_b : 0;
+
+        const unsigned requires_padding = (pad_l       > 0) || (pad_r       > 0) 
+                                        || (cur_pad_t   > 0) || (cur_pad_b   > 0) 
+                                        || (final_pad_l > 0) || (final_pad_r > 0);
+        // end paste
         //Iterate once per col of the output region
         for(unsigned output_cols = job->output.cols; output_cols > 0; output_cols--){
             //This points it at the top-left cell of the patch.
@@ -161,36 +176,26 @@ void conv2d_im2col(
             const nn_image_t* C = COL;
             memset(C,0,plan->window.shape.len_col);// initialize pad
             unsigned len = plan->channels.X * plan->window.shape.width;
-            // start paste
-            int pad_l = job->init_padding.left;
-            int pad_r = job->init_padding.right;
-
-            const int pad_lr_delta = plan->window.stride.horizontal * (job->output.cols - 1);
-            const int final_pad_l = pad_l - pad_lr_delta;
-            const int final_pad_r = pad_r + pad_lr_delta;
-
-            const int cur_pad_t = (pad_t > 0)? pad_t : 0;
-            const int cur_pad_b = (pad_b > 0)? pad_b : 0;
-
-            const unsigned requires_padding = (pad_l       > 0) || (pad_r       > 0) 
-                                           || (cur_pad_t   > 0) || (cur_pad_b   > 0) 
-                                           || (final_pad_l > 0) || (final_pad_r > 0);
-            // end paste
 
             if( requires_padding ){
                     int8_t padded_vals[128]={0}; // todo drop the 128 limit or enforce it
+                    len *= plan->window.shape.height;
                     int k = 0;
-                    int tmp = 0;
+                    int pad = 0;
                     for(int h = 0; h< plan->window.shape.height; h++){
-                        tmp = (cur_pad_t -h > 0) || (plan->window.shape.height - h <= cur_pad_b); // ???
+                        // printf("\n(%d,%d)\n",output_rows,output_cols);
                         for(int i = 0; i < plan->window.shape.width; i++){
-                            tmp &= (pad_l -i > 0) || (plan->window.shape.width - i <= pad_r); // ???
+                            // printf("\t");
+                            pad = (cur_pad_t -h > 0) || (pad_l-i > 0) || (plan->window.shape.width - pad_r) <= i || (plan->window.shape.height - pad_b) <= h; 
                             for(int j = 0; j < plan->channels.X; j++){
-                                padded_vals[k] =  (tmp & 0x1) ? patch_X[k] : plan->zero_point;
+                                padded_vals[k] = pad ? plan->zero_point : patch_X[k];
+                                // printf(" %03d ", padded_vals[k]);
                                 k++;
                             }
                         }  
+                        // printf("\t padr = %d  WIDTH = ",pad_r);
                     }
+                    // printf("\n\n");
                     memcpy(C, padded_vals, len);
                 }
             else{
@@ -200,7 +205,6 @@ void conv2d_im2col(
                         C = ADDR(C,len);
                     }
                 }
-
             // im2col complete what follows is just a BSO-aware K*COL + BSO = Y  
             #if !CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
                 // VLDR(&vpu, vec_0x80);
@@ -308,13 +312,13 @@ void conv2d_im2col(
             }
             
             //Move X and Y pointers one pixel to the right
-            X = ADDR(X, plan->window.stride.horizontal);// TODO see if we need X and window
+            X = ADDR(X, plan->channels.X * plan->window.stride.horizontal);// TODO see if we need X and window
             Y = ADDR(Y, job->stride.col.Y);
+
+            pad_l -= plan->window.stride.horizontal;
+            pad_r += plan->window.stride.horizontal;
             
         }
-        //Move X and Y pointers to the start of the following row
-        // X = ADDR(X, plan->window.stride.vertical);
-        // Y = ADDR(Y, job->stride.row.Y);
         pad_t -= plan->window.stride.vertical;
         pad_b += plan->window.stride.vertical;
 

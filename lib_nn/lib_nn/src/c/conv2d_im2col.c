@@ -162,7 +162,7 @@ void conv2d_im2col(
         const int cur_pad_t = (pad_t > 0)? pad_t : 0;
         const int cur_pad_b = (pad_b > 0)? pad_b : 0;
 
-        const unsigned requires_padding = (pad_l       > 0) || (pad_r       > 0) 
+        const unsigned requires_padding = ( pad_l       > 0) || (pad_r       > 0) 
                                         || (cur_pad_t   > 0) || (cur_pad_b   > 0) 
                                         || (final_pad_l > 0) || (final_pad_r > 0);
         // end paste
@@ -219,40 +219,69 @@ void conv2d_im2col(
                                  plan->channels.Y / VPU_INT8_ACC_PERIOD      :
                                  plan->channels.Y / VPU_INT8_ACC_PERIOD +1;  
             
-            // outer loop increments of 32 elements over krowlen or col len
+
+        for(int m_row_chunk = mat_row_chunks-1; m_row_chunk >= 0; m_row_chunk--){
+
+            const nn_tensor_t* patch_K = ADDR(K,0);
+            const nn_image_t* sub_vector = COL;
+            //get BSO for this group of output channels
+            nn_bso_block_t * bso = &BSO[m_row_chunk];
+            nn_image_t* Y_cog = ADDR(Y, m_row_chunk*VPU_INT8_ACC_PERIOD);
+            uint16_t y_mask = 0x0000;
+            //load vR and vD with appropriate bso vectors TODO these could also go up a level if we reduce all at the end
+            VLDD(&vpu, bso->bias_hi);
+            VLDR(&vpu, bso->bias_lo);
+
             for(int m_col_chunk = 0; m_col_chunk < mat_col_chunks; m_col_chunk++){
-            // next loop performs up to 16 VLMACCRs  over the output channel dimension (krow) (in reverse order)
-                const nn_image_t* sub_vector = COL;
-                for(int m_row_chunk = mat_row_chunks-1; m_row_chunk >= 0; m_row_chunk--){
-                    //get BSO for this group of output channels
-                    nn_bso_block_t * bso = &BSO[m_row_chunk];
-                    nn_image_t* Y_cog = ADDR(Y, m_row_chunk*VPU_INT8_ACC_PERIOD);
-                    uint16_t y_mask = 0xFFFF;
+  
+                    y_mask = 0xFFFF;
                     
                     // load the 32 element sub-vector into vC
                     VLDC(&vpu, sub_vector); // TODO this could go up a level if we didn't use vC for rounding..
 
-                    //load vR and vD with appropriate bso vectors TODO these could also go up a level if we reduce all at the end
-                    VLDD(&vpu, bso->bias_hi);
-                    VLDR(&vpu, bso->bias_lo);
 
                     // VLMACCR each output channel for up to 16 channels
-                    int sub_mat_end = m_row_chunk != (mat_row_chunks-1) ? VPU_INT8_ACC_PERIOD : plan->channels.Y % VPU_INT8_ACC_PERIOD;
-                    const nn_tensor_t* sub_matrix = ADDR( K, VPU_INT8_EPV*m_col_chunk + job->stride.row.K*(sub_mat_end)
-                                                            + m_row_chunk*VPU_INT8_ACC_PERIOD);// TODO make a chunk stride
+                    int sub_mat_row_end = m_row_chunk < (mat_row_chunks-1) ? VPU_INT8_ACC_PERIOD : plan->channels.Y % VPU_INT8_ACC_PERIOD;
+                    const nn_tensor_t* sub_matrix = ADDR( patch_K, job->stride.row.K*(sub_mat_row_end) + m_row_chunk*VPU_INT8_ACC_PERIOD);// TODO make a chunk stride in job/plan
+                    
+                    //TODO still need to find hte best way to add a <=32 byte pad to K
+                    
+                    // printf("\n %d \n", patch_K-K);
+                    // for(int i=0; i < 4; i++){
+                    //     for(int j =0; j< 36; j++){
+                    //         printf(" %03d ", K[i*36+j]);
+                    //     }
+                    //     printf("\n", m_col_chunk);
+                    // }
+                    // printf("\ncol chunk %d\n", m_col_chunk);
+                    // int sub_mat_col_end = m_col_chunk == (mat_col_chunks-1) ? plan->window.shape.kernel_row_elements%VPU_INT8_EPV : VPU_INT8_EPV;
+                    // for(int i=4; i > 0; i--){
+                    //     for(int j =0; j< sub_mat_col_end; j++){
+                    //         printf(" %03d ", sub_matrix[j-i*job->stride.row.K]);
+                    //     }
+                    //     printf("\n");
+                    // }
 
-                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD-sub_mat_end; m_row++) {VLMACCR(&vpu, sub_matrix); y_mask>>=1; } // DUMMY to rotate @tail
-                    for(int m_row = 0; m_row < sub_mat_end; m_row++){                                            
+                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD-sub_mat_row_end; m_row++) {VLMACCR(&vpu, sub_matrix); y_mask>>=1; } // DUMMY to rotate @tail
+                    for(int m_row = 0; m_row < sub_mat_row_end; m_row++){                                            
                         // printf("before\n");
                         // for(int i = 0; i < 16; i++) printf("k[%d] = %d\t col = %d \t bias = %d\n",i,sub_matrix[i], sub_vector[i], vpu.vR.s16[i]);
                         sub_matrix = ADDR(sub_matrix, -job->stride.row.K);
                         VLMACCR(&vpu, sub_matrix);
                         // printf("after\n");
-                        // for(int i = 0; i < 4; i++) printf("k[%d] = %d\t col = %d \t bias = %d\n",i,sub_matrix[i], sub_vector[i], vpu.vR.s16[i]);
+                        // for(int i = 0; i < 16; i++) printf("k[%d] = %d\t col = %d \t bias = %d\n",i,sub_matrix[i], sub_vector[i], vpu.vR.s16[i]);
                         
                     }
                                         
-                    // Done with A*x + b need to groom and extract results now
+
+
+                // go to next section of vector
+                sub_vector = ADDR(sub_vector,VPU_INT8_EPV);
+                patch_K = ADDR(patch_K, VPU_INT8_EPV );
+                   
+                }
+
+                                    // Done with A*x + b need to groom and extract results now
 
                     //Set mode to 16-bit
                     VSETC(&vpu, MODE_S16);
@@ -296,18 +325,14 @@ void conv2d_im2col(
                         //Store result in Y
                         // mask = mask & 0xFFFF;
                         // printf( "0x%0.4X\n",y_mask);
-                        // for(int i=0; i<32; i++)vpu.vR.s8[i]=0xff;//printf("vpu.vR.s8[%d] = %d\n", i, vpu.vR.s8[i]);
+                        // for(int i=0; i<32; i++)printf("vpu.vR.s8[%d] = %d\n", i, vpu.vR.s8[i]);
                         VSTRPV(&vpu, Y_cog, y_mask);
-
+                        
                         //Set mode back to 8-bit
                         VSETC(&vpu, MODE_S8);
 
                     #endif
 
-                   
-                }
-                // go to next section of vector
-                sub_vector = ADDR(sub_vector,VPU_INT8_EPV);
                 
             }
             

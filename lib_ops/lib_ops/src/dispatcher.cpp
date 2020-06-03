@@ -16,6 +16,7 @@ static Dispatcher *kDispatcher = nullptr;
 
 Dispatcher *GetDispatcher() {
   assert(kDispatcher);
+  kDispatcher->ResetScratchAllocation();
   return kDispatcher;
 }
 
@@ -32,10 +33,11 @@ Dispatcher::Dispatcher(void *buffer, size_t size, int num_threads,
     : num_threads_(num_threads), use_current_thread_(use_current_thread) {
   group_ = thread_group_alloc();
 
-  xcSetHeap(buffer, size);
+  allocator_.SetHeap(buffer, size);
 
   // Allocate TaskArray
-  tasks_.data = reinterpret_cast<Task *>(xcMalloc(sizeof(Task) * num_threads_));
+  tasks_.data = reinterpret_cast<Task *>(
+      allocator_.AllocatePersistantBuffer(sizeof(Task) * num_threads_));
   tasks_.size = 0;
 }
 
@@ -51,7 +53,7 @@ XCoreStatus Dispatcher::Join() {
     begin++;
   }
 
-  stack = reinterpret_cast<char *>(xcMalloc(
+  stack = reinterpret_cast<char *>(allocator_.AllocateScratchBuffer(
       tasks_.stack_words * bytes_per_stackword * (tasks_.size - begin)));
 
   for (int i = begin; i < tasks_.size; i++) {
@@ -64,7 +66,6 @@ XCoreStatus Dispatcher::Join() {
   thread_group_start(group_);
   thread_group_wait(group_);
 
-  xcFree(stack);
   tasks_.size = 0;
 
   return kXCoreOk;
@@ -76,10 +77,11 @@ XCoreStatus Dispatcher::Join() {
 Dispatcher::Dispatcher(void *buffer, size_t size, int num_threads,
                        bool use_current_thread)
     : num_threads_(num_threads), use_current_thread_(use_current_thread) {
-  xcSetHeap(buffer, size);
+  allocator_.SetHeap(buffer, size);
 
   // Allocate TaskArray
-  tasks_.data = reinterpret_cast<Task *>(xcMalloc(sizeof(Task) * num_threads_));
+  tasks_.data = reinterpret_cast<Task *>(
+      allocator_.AllocatePersistantBuffer(sizeof(Task) * num_threads_));
   tasks_.size = 0;
 }
 
@@ -113,7 +115,13 @@ XCoreStatus Dispatcher::Join() {
 
 XCoreStatus Dispatcher::Reset() {
   tasks_.size = 0;
-  xcResetHeap();
+  allocator_.ResetHeap();
+
+  return kXCoreOk;
+}
+
+XCoreStatus Dispatcher::ResetScratchAllocation() {
+  allocator_.ResetScratch();
 
   return kXCoreOk;
 }

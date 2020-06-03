@@ -1,7 +1,8 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#ifndef XCORE_DISPATCHER_H_
-#define XCORE_DISPATCHER_H_
+#ifndef XCORE_OPERATORS_DISPATCHER_H_
+#define XCORE_OPERATORS_DISPATCHER_H_
 
+#include "lib_ops/api/allocator.h"
 #include "lib_ops/api/lib_ops.h"
 #include "lib_ops/api/planning.h"
 
@@ -52,12 +53,14 @@ class Dispatcher {
                         size_t stack_words);
   XCoreStatus Join();
   XCoreStatus Reset();
+  XCoreStatus ResetScratchAllocation();
 
  private:
   int num_threads_;
   bool use_current_thread_;
   threadgroup_t group_;
   TaskArray tasks_;
+  MemoryAllocator allocator_;
 };
 
 // static, shared Dispatcher object
@@ -66,4 +69,4 @@ XCoreStatus InitializeXCore(Dispatcher *dispatcher);
 
 }  // namespace xcore
 
-#endif  // XCORE_DISPATCHER_H_
+#endif  // XCORE_OPERATORS_DISPATCHER_H_

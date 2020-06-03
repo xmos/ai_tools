@@ -1,6 +1,6 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#ifndef XCORE_PLANNING_H_
-#define XCORE_PLANNING_H_
+#ifndef XCORE_OPERATORS_PLANNING_H_
+#define XCORE_OPERATORS_PLANNING_H_
 #include <cassert>
 #include <cstdint>
 #include <iostream>
@@ -43,4 +43,4 @@ typedef struct ExecutionPlan {
 
 }  // namespace xcore
 
-#endif  // XCORE_PLANNING_H_
+#endif  // XCORE_OPERATORS_PLANNING_H_

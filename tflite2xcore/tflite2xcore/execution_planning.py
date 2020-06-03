@@ -37,8 +37,8 @@ class ExecutionPlan:
 
     def to_dict(self):
         bits = {"tp": self.type.value, "th": self.num_threads}
-        if self.changrp_slices is not None:
-            bits["cg"] = self.changrp_slices
+        # if self.changrp_slices is not None:
+        #     bits["cg"] = self.changrp_slices
         if self.rowcol_slices is not None:
             bits["rc"] = self.rowcol_slices
 

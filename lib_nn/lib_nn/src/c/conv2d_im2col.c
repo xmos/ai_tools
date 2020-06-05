@@ -176,7 +176,6 @@ void conv2d_im2col(
             const nn_image_t* C = COL;
             memset(C,0,plan->window.shape.len_col);// initialize pad
             unsigned len = plan->channels.X * plan->window.shape.width;
-
             if( requires_padding ){
                     int8_t padded_vals[128]={0}; // todo drop the 128 limit or enforce it
                     len *= plan->window.shape.height;
@@ -188,8 +187,7 @@ void conv2d_im2col(
                             // printf("\t");
                             pad = (cur_pad_t -h > 0) || (pad_l-i > 0) || (plan->window.shape.width - pad_r) <= i || (plan->window.shape.height - pad_b) <= h; 
                             for(int j = 0; j < plan->channels.X; j++){
-                                padded_vals[k] = pad ? plan->zero_point : patch_X[k];
-                                // printf(" %03d ", padded_vals[k]);
+                                padded_vals[k] = pad ? plan->zero_point : patch_X[h*plan->stride.X.row + i*plan->channels.X + j];
                                 k++;
                             }
                         }  
@@ -201,7 +199,7 @@ void conv2d_im2col(
             else{
                     for(unsigned rows_in_patch = plan->window.shape.height; rows_in_patch > 0; rows_in_patch--){
                         memcpy(C,patch_X,len);
-                        patch_X = ADDR(patch_X,job->stride.row.window);
+                        patch_X = ADDR(patch_X, plan->stride.X.row );
                         C = ADDR(C,len);
                     }
                 }
@@ -261,11 +259,11 @@ void conv2d_im2col(
                     //     }
                     //     printf("\n");
                     // }
-
-                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD-sub_mat_row_end; m_row++) {VLMACCR(&vpu, sub_matrix); y_mask>>=1; } // DUMMY to rotate @tail
+                    
+                    for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD-sub_mat_row_end; m_row++) {VLMACCR(&vpu, COL); y_mask>>=1; } // DUMMY on safe memory to rotate @tail
                     for(int m_row = 0; m_row < sub_mat_row_end; m_row++){                                            
                         // printf("before\n");
-                        // for(int i = 0; i < 16; i++) printf("k[%d] = %d\t col = %d \t bias = %d\n",i,sub_matrix[i], sub_vector[i], vpu.vR.s16[i]);
+                        // for(int i = 0; i < 32; i++) printf("k[%d] = %d\t col = %d \t bias = %d\n",i,sub_matrix[i], sub_vector[i], vpu.vR.s16[i]);
                         sub_matrix = ADDR(sub_matrix, -job->stride.row.K);
                         VLMACCR(&vpu, sub_matrix);
                         // printf("after\n");
@@ -337,13 +335,14 @@ void conv2d_im2col(
             }
             
             //Move X and Y pointers one pixel to the right
-            X = ADDR(X, plan->channels.X * plan->window.stride.horizontal);// TODO see if we need X and window
+            X = ADDR(X, plan->channels.X * plan->window.stride.horizontal);
             Y = ADDR(Y, job->stride.col.Y);
 
             pad_l -= plan->window.stride.horizontal;
             pad_r += plan->window.stride.horizontal;
             
         }
+        X = ADDR(X, plan->stride.X.row *(plan->window.stride.vertical-1));
         pad_t -= plan->window.stride.vertical;
         pad_b += plan->window.stride.vertical;
 

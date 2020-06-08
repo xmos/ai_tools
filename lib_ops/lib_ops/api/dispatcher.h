@@ -32,31 +32,29 @@ typedef std::vector<std::thread> threadgroup_t;
 
 namespace xcore {
 
-typedef struct Task {
-  ATTRIBUTE_THREAD_FUNCTION thread_function_t function;
-  void *argument;
-} Task;
-
 typedef struct TaskArray {
-  int size;
+  ATTRIBUTE_THREAD_FUNCTION thread_function_t function;
   size_t stack_words;
-  Task *data;
+  int size;
+  void *arguments[max_threads];
 } TaskArray;
 
 class Dispatcher {
  public:
-  Dispatcher(void *buffer, size_t size, int num_cores,
-             bool use_current_core = true);
+  Dispatcher(void *buffer, size_t buffer_size, bool use_current_core = true);
   ~Dispatcher();
 
-  XCoreStatus AddThread(thread_function_t function, void *argument,
-                        size_t stack_words);
-  XCoreStatus Join();
+  XCoreStatus InitializeTasks(thread_function_t function, size_t stack_words);
+  XCoreStatus AddTask(void *argument);
+  XCoreStatus JoinTasks();
+
   XCoreStatus Reset();
+
+  void *AllocatePersistantBuffer(size_t size);
+  void *AllocateScratchBuffer(size_t size);
   XCoreStatus ResetScratchAllocation();
 
  private:
-  int num_threads_;
   bool use_current_thread_;
   threadgroup_t group_;
   TaskArray tasks_;

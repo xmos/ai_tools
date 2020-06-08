@@ -53,7 +53,7 @@ class Conv2D_Shallow {
   ~Conv2D_Shallow() {}
 
   XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                   int32_t Y_w, int32_t C_out);
+                   int32_t Y_w, int32_t C_out, int32_t K_w_padded);
   XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
                    const int16_t* BSO);
 
@@ -61,6 +61,7 @@ class Conv2D_Shallow {
   ExecutionPlan execution_plan;
 
  private:
+  size_t w_size_;
   nn_conv2d_shallowin_plan_t plan_;
   nn_conv2d_shallowin_job_t* jobs_;
 };

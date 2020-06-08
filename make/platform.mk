@@ -44,7 +44,7 @@ else # must be xcore
 	CXXFLAGS += -DTF_LITE_STATIC_MEMORY
 	CXXFLAGS += -DTF_LITE_STRIP_ERROR_STRINGS
 
-	LDFLAGS := $(PLATFORM_FLAGS)
+	LDFLAGS := $(PLATFORM_FLAGS) -lquadspi
 
 	OBJ_DIR := .build/xcore
 endif

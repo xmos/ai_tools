@@ -28,22 +28,19 @@ XCoreStatus InitializeXCore(Dispatcher *dispatcher) {
 #ifdef XCORE
 // xCORE Dispatcher implementation.
 // Uses a threadgroup_t to dispatch tasks to threads.
-Dispatcher::Dispatcher(void *buffer, size_t size, int num_threads,
+Dispatcher::Dispatcher(void *buffer, size_t buffer_size,
                        bool use_current_thread)
-    : num_threads_(num_threads), use_current_thread_(use_current_thread) {
+    : use_current_thread_(use_current_thread) {
   group_ = thread_group_alloc();
 
-  allocator_.SetHeap(buffer, size);
+  allocator_.SetHeap(buffer, buffer_size);
 
-  // Allocate TaskArray
-  tasks_.data = reinterpret_cast<Task *>(
-      allocator_.AllocatePersistantBuffer(sizeof(Task) * num_threads_));
   tasks_.size = 0;
 }
 
 Dispatcher::~Dispatcher() { thread_group_free(group_); }
 
-XCoreStatus Dispatcher::Join() {
+XCoreStatus Dispatcher::JoinTasks() {
   int begin = 0;
   char *stack = nullptr;
 
@@ -74,31 +71,27 @@ XCoreStatus Dispatcher::Join() {
 #else
 // x86 Dispatcher implementation.
 // Uses a std::vector of std::thread to dispatch tasks to threads.
-Dispatcher::Dispatcher(void *buffer, size_t size, int num_threads,
+Dispatcher::Dispatcher(void *buffer, size_t buffer_size,
                        bool use_current_thread)
-    : num_threads_(num_threads), use_current_thread_(use_current_thread) {
-  allocator_.SetHeap(buffer, size);
+    : use_current_thread_(use_current_thread) {
+  allocator_.SetHeap(buffer, buffer_size);
 
-  // Allocate TaskArray
-  tasks_.data = reinterpret_cast<Task *>(
-      allocator_.AllocatePersistantBuffer(sizeof(Task) * num_threads_));
   tasks_.size = 0;
 }
 
 Dispatcher::~Dispatcher() {}
 
-XCoreStatus Dispatcher::Join() {
+XCoreStatus Dispatcher::JoinTasks() {
   int begin = 0;
+
   if (use_current_thread_) {
-    const Task &task = tasks_.data[begin];
-    (task.function)(task.argument);
+    (tasks_.function)(tasks_.arguments[begin]);
     begin++;
   }
 
   // Start threads
   for (int i = begin; i < tasks_.size; i++) {
-    const Task &task = tasks_.data[i];
-    group_.push_back(std::thread(task.function, task.argument));
+    group_.push_back(std::thread(tasks_.function, tasks_.arguments[i]));
   }
 
   // Join threads
@@ -113,11 +106,28 @@ XCoreStatus Dispatcher::Join() {
 
 #endif  // XCORE
 
+XCoreStatus Dispatcher::InitializeTasks(thread_function_t function,
+                                        size_t stack_words) {
+  tasks_.function = function;
+  tasks_.stack_words = stack_words;
+  tasks_.size = 0;
+
+  return kXCoreOk;
+}
+
 XCoreStatus Dispatcher::Reset() {
   tasks_.size = 0;
   allocator_.ResetHeap();
 
   return kXCoreOk;
+}
+
+void *Dispatcher::AllocatePersistantBuffer(size_t size) {
+  return allocator_.AllocatePersistantBuffer(size);
+}
+
+void *Dispatcher::AllocateScratchBuffer(size_t size) {
+  return allocator_.AllocateScratchBuffer(size);
 }
 
 XCoreStatus Dispatcher::ResetScratchAllocation() {
@@ -126,13 +136,11 @@ XCoreStatus Dispatcher::ResetScratchAllocation() {
   return kXCoreOk;
 }
 
-XCoreStatus Dispatcher::AddThread(thread_function_t function, void *argument,
-                                  size_t stack_words) {
-  assert(tasks_.size < num_threads_);
+XCoreStatus Dispatcher::AddTask(void *argument) {
+  assert(tasks_.size < max_threads);
 
-  if (tasks_.size < num_threads_) {
-    tasks_.stack_words = std::max(tasks_.stack_words, stack_words);
-    tasks_.data[tasks_.size] = {function, (void *)argument};
+  if (tasks_.size < max_threads) {
+    tasks_.arguments[tasks_.size] = argument;
     tasks_.size++;
 
     return kXCoreOk;

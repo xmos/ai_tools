@@ -3,8 +3,8 @@
 
 #include <iostream>
 
-#include "lib_ops/api/allocator.h"
 #include "lib_ops/api/benchmarking.h"
+#include "lib_ops/api/device_memory.h"
 #include "lib_ops/api/tracing.h"
 
 namespace xcore {
@@ -49,6 +49,8 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
       "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
 
+  Dispatcher *dispatcher = GetDispatcher();
+
   nn_image_params_t in_params;
   in_params.height = X_h;
   in_params.width = X_w;
@@ -67,17 +69,18 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   window_params.stride.vertical = params.stride_h;
   window_params.stride.horizontal = params.stride_w;
 
-  if (execution_plan.threads == 0) {
+  if (execution_plan.GetNumThreads() == 0) {
     // there is no par plan so process entire input
-    execution_plan.regions.append({0, 0, Y_h, Y_w});
+    execution_plan.regions.Append({0, 0, Y_h, Y_w});
   }
 
   jobs_ = reinterpret_cast<nn_conv2d_deep_job_t *>(
-      xcMalloc(sizeof(nn_conv2d_deep_job_t) * execution_plan.threads));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_deep_job_t) *
+                                           execution_plan.GetNumThreads()));
 
-  nn_conv2d_job_params_t job_params[execution_plan.threads];
+  nn_conv2d_job_params_t job_params[execution_plan.GetNumThreads()];
 
-  for (int i = 0; i < execution_plan.threads; i++) {
+  for (int i = 0; i < execution_plan.GetNumThreads(); i++) {
     const RowColRegion &region = execution_plan.regions[i];
     TRACE_INFO(
         "Conv2D_Deep Init id=%p region top=%ld left=%ld rows=%ld cols=%ld\n",
@@ -92,7 +95,7 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   conv2d_deep_init(&plan_, jobs_, &in_params, &out_params, &job_params[0],
                    &window_params, params.pad.zero_point,
-                   execution_plan.threads);
+                   execution_plan.GetNumThreads());
 
   return kXCoreOk;
 }
@@ -107,21 +110,21 @@ XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_deep_thread_worker);
 
-  Conv2DDeepThreadData deep_thread_data[execution_plan.threads];
+  Conv2DDeepThreadData deep_thread_data[execution_plan.GetNumThreads()];
 
-  for (int i = 0; i < execution_plan.threads; i++) {
+  for (int i = 0; i < execution_plan.GetNumThreads(); i++) {
     deep_thread_data[i].data.Y = (nn_image_t *)Y;
     deep_thread_data[i].data.X = (const nn_image_t *)X;
     deep_thread_data[i].data.K = (const nn_tensor_t *)K;
     deep_thread_data[i].data.BSO = (const nn_bso_block_t *)BSO;
     deep_thread_data[i].plan = &plan_;
     deep_thread_data[i].job = &jobs_[i];
-    dispatcher->AddThread(conv2d_deep_thread_worker,
-                          reinterpret_cast<void *>(&deep_thread_data[i]),
-                          stack_words);
+    // dispatcher->AddThread(conv2d_deep_thread_worker,
+    //                       reinterpret_cast<void *>(&deep_thread_data[i]),
+    //                       stack_words);
   }
 
-  dispatcher->Join();
+  // dispatcher->Join();
 
   TIMER_STOP("Conv2D_Deep id=%p", this);
   return kXCoreOk;
@@ -135,9 +138,9 @@ XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
 //**************************************
 //**************************************
 struct Conv2DShallowThreadData {
-  Conv2DThreadData data;
   const nn_conv2d_shallowin_plan_t *plan;
-  const nn_conv2d_shallowin_job_t *job;
+  nn_conv2d_shallowin_job_t *job;
+  Conv2DThreadData data;
 };
 
 extern "C" {
@@ -153,11 +156,21 @@ Conv2D_Shallow::Conv2D_Shallow(const Conv2DParams &params,
     : params(params), execution_plan(execution_plan), jobs_(nullptr) {}
 
 XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
-                                 int32_t Y_h, int32_t Y_w, int32_t C_out) {
+                                 int32_t Y_h, int32_t Y_w, int32_t C_out,
+                                 int32_t K_w_padded) {
   TRACE_INFO(
       "Conv2D_Shallow Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
-      "C_out=%ld\n",
-      this, X_h, X_w, C_in, Y_h, Y_w, C_out);
+      "C_out=%ld, K_w_padded=%ld\n",
+      this, X_h, X_w, C_in, Y_h, Y_w, C_out, K_w_padded);
+
+  Dispatcher *dispatcher = GetDispatcher();
+
+  size_t stack_words;
+  GET_STACKWORDS(stack_words, conv2d_shallow_thread_worker);
+
+  dispatcher->InitializeTasks(conv2d_shallow_thread_worker, stack_words);
+
+  w_size_ = params.K_h * K_w_padded * C_in;
 
   nn_image_params_t in_params;
   in_params.height = X_h;
@@ -177,32 +190,45 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   window_params.stride.vertical = params.stride_h;
   window_params.stride.horizontal = params.stride_w;
 
-  if (execution_plan.threads == 0) {
+  if (execution_plan.GetNumThreads() == 0) {
     // there is no par plan so process entire input
-    execution_plan.regions.append({0, 0, Y_h, Y_w});
+    execution_plan.regions.Append({0, 0, Y_h, Y_w});
+    execution_plan.SetNumThreads(1);
   }
+  execution_plan.chan_groups.SetNumChannels(C_out);
+
+  int32_t n_jobs =
+      execution_plan.chan_groups.GetSize() * execution_plan.regions.GetSize();
 
   jobs_ = reinterpret_cast<nn_conv2d_shallowin_job_t *>(
-      xcMalloc(sizeof(nn_conv2d_shallowin_job_t) * execution_plan.threads));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_shallowin_job_t) *
+                                           n_jobs));
 
-  nn_conv2d_job_params_t job_params[execution_plan.threads];
+  nn_conv2d_job_params_t job_params[n_jobs];
 
-  for (int i = 0; i < execution_plan.threads; i++) {
-    const RowColRegion &region = execution_plan.regions[i];
-    TRACE_INFO(
-        "Conv2D_Shallow Init id=%p region top=%ld left=%ld rows=%ld cols=%ld\n",
-        this, region.top, region.left, region.rows, region.cols);
-    job_params[i].start.rows = region.top;
-    job_params[i].start.cols = region.left;
-    job_params[i].start.channels = 0;
-    job_params[i].size.rows = region.rows;
-    job_params[i].size.cols = region.cols;
-    job_params[i].size.channels = C_out;
+  int32_t i_job = 0;
+  for (int i = 0; i < execution_plan.chan_groups.GetSize(); i++) {
+    const ChannelGroup &changrp = execution_plan.chan_groups[i];
+    for (int j = 0; j < execution_plan.regions.GetSize(); j++) {
+      const RowColRegion &region = execution_plan.regions[j];
+      TRACE_INFO(
+          "Conv2D_Shallow Init id=%p, chan group start=%ld size=%ld, region "
+          "top=%ld left=%ld rows=%ld "
+          "cols=%ld\n",
+          this, changrp.start, changrp.size, region.top, region.left,
+          region.rows, region.cols);
+      job_params[i_job].start.rows = region.top;
+      job_params[i_job].start.cols = region.left;
+      job_params[i_job].start.channels = changrp.start;
+      job_params[i_job].size.rows = region.rows;
+      job_params[i_job].size.cols = region.cols;
+      job_params[i_job].size.channels = changrp.size;
+      i_job++;
+    }
   }
 
   conv2d_shallowin_init(&plan_, jobs_, &in_params, &out_params, &job_params[0],
-                        &window_params, params.pad.zero_point,
-                        execution_plan.threads);
+                        &window_params, params.pad.zero_point, n_jobs);
 
   return kXCoreOk;
 }
@@ -214,24 +240,34 @@ XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
 
   Dispatcher *dispatcher = GetDispatcher();
 
-  size_t stack_words;
-  GET_STACKWORDS(stack_words, conv2d_shallow_thread_worker);
+  Conv2DShallowThreadData shallow_thread_data[execution_plan.GetNumThreads()];
 
-  Conv2DShallowThreadData shallow_thread_data[execution_plan.threads];
+  int32_t i_job = 0;
+  for (int i = 0; i < execution_plan.chan_groups.GetSize(); i++) {
+    int8_t *tK;
+    int16_t *tBSO;
+    // TODO: if non_RAM these pointers need to be allocated from scratch memory
+    const ChannelGroup &changrp = execution_plan.chan_groups[i];
 
-  for (int i = 0; i < execution_plan.threads; i++) {
-    shallow_thread_data[i].data.Y = (nn_image_t *)Y;
-    shallow_thread_data[i].data.X = (const nn_image_t *)X;
-    shallow_thread_data[i].data.K = (const nn_tensor_t *)K;
-    shallow_thread_data[i].data.BSO = (const nn_bso_block_t *)BSO;
-    shallow_thread_data[i].plan = &plan_;
-    shallow_thread_data[i].job = &jobs_[i];
-    dispatcher->AddThread(conv2d_shallow_thread_worker,
-                          reinterpret_cast<void *>(&shallow_thread_data[i]),
-                          stack_words);
+    memload((void **)&tK, (void *)&K[changrp.start * w_size_],
+            changrp.size * w_size_);
+    memload((void **)&tBSO, (void *)&BSO[i * BSO_CHANNEL_GROUP_LENGTH],
+            BSO_CHANNEL_GROUP_BYTES);
+
+    for (int j = 0; j < execution_plan.regions.GetSize(); j++) {
+      shallow_thread_data[j].data.Y = (nn_image_t *)Y;
+      shallow_thread_data[j].data.X = (const nn_image_t *)X;
+      shallow_thread_data[j].data.K = (const nn_tensor_t *)tK;
+      shallow_thread_data[j].data.BSO = (const nn_bso_block_t *)tBSO;
+      shallow_thread_data[j].plan = &plan_;
+      jobs_[i_job].stride.start.K = 0;
+      jobs_[i_job].stride.start.BSO = 0;
+      shallow_thread_data[j].job = &jobs_[i_job];
+      dispatcher->AddTask(reinterpret_cast<void *>(&shallow_thread_data[j]));
+      i_job++;
+    }
+    dispatcher->JoinTasks();
   }
-
-  dispatcher->Join();
 
   TIMER_STOP("Conv2D_Shallow id=%p", this);
   return kXCoreOk;
@@ -267,6 +303,8 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
       "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
 
+  Dispatcher *dispatcher = GetDispatcher();
+
   nn_image_params_t in_params;
   in_params.height = X_h;
   in_params.width = X_w;
@@ -277,17 +315,18 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   out_params.width = Y_w;
   out_params.channels = C_out;
 
-  if (execution_plan.threads == 0) {
+  if (execution_plan.GetNumThreads() == 0) {
     // there is no par plan so process entire input
-    execution_plan.regions.append({0, 0, Y_h, Y_w});
+    execution_plan.regions.Append({0, 0, Y_h, Y_w});
   }
 
   plans_ = reinterpret_cast<nn_conv2d_1x1_plan_t *>(
-      xcMalloc(sizeof(nn_conv2d_1x1_plan_t) * execution_plan.threads));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_1x1_plan_t) *
+                                           execution_plan.GetNumThreads()));
 
-  // nn_conv2d_1x1_plan_t job_params[execution_plan.threads];
+  // nn_conv2d_1x1_plan_t job_params[execution_plan.GetNumThreads()];
 
-  for (int i = 0; i < execution_plan.threads; i++) {
+  for (int i = 0; i < execution_plan.GetNumThreads(); i++) {
     const RowColRegion &region = execution_plan.regions[i];
     TRACE_INFO(
         "Conv2D_1x1 Init id=%p region top=%ld left=%ld rows=%ld cols=%ld\n",
@@ -315,20 +354,20 @@ XCoreStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_1x1_thread_worker);
 
-  Conv2D1x1ThreadData thread_data[execution_plan.threads];
+  Conv2D1x1ThreadData thread_data[execution_plan.GetNumThreads()];
 
-  for (int i = 0; i < execution_plan.threads; i++) {
+  for (int i = 0; i < execution_plan.GetNumThreads(); i++) {
     thread_data[i].data.Y = (nn_image_t *)Y;
     thread_data[i].data.X = (const nn_image_t *)X;
     thread_data[i].data.K = (const nn_tensor_t *)K;
     thread_data[i].data.BSO = (const nn_bso_block_t *)BSO;
     thread_data[i].plan = &plans_[i];
-    dispatcher->AddThread(conv2d_1x1_thread_worker,
-                          reinterpret_cast<void *>(&thread_data[i]),
-                          stack_words);
+    // dispatcher->AddThread(conv2d_1x1_thread_worker,
+    //                       reinterpret_cast<void *>(&thread_data[i]),
+    //                       stack_words);
   }
 
-  dispatcher->Join();
+  // dispatcher->Join();
 
   TIMER_STOP("Conv2D_1x1 id=%p", this);
   return kXCoreOk;
@@ -366,6 +405,8 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
       "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
 
+  Dispatcher *dispatcher = GetDispatcher();
+
   nn_image_params_t in_params;
   in_params.height = X_h;
   in_params.width = X_w;
@@ -384,17 +425,18 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   window_params.stride.vertical = params.stride_h;
   window_params.stride.horizontal = params.stride_w;
 
-  if (execution_plan.threads == 0) {
+  if (execution_plan.GetNumThreads() == 0) {
     // there is no par plan so process entire input
-    execution_plan.regions.append({0, 0, Y_h, Y_w});
+    execution_plan.regions.Append({0, 0, Y_h, Y_w});
   }
 
   jobs_ = reinterpret_cast<nn_conv2d_depthwise_job_t *>(
-      xcMalloc(sizeof(nn_conv2d_depthwise_job_t) * execution_plan.threads));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_depthwise_job_t) *
+                                           execution_plan.GetNumThreads()));
 
-  nn_conv2d_job_params_t job_params[execution_plan.threads];
+  nn_conv2d_job_params_t job_params[execution_plan.GetNumThreads()];
 
-  for (int i = 0; i < execution_plan.threads; i++) {
+  for (int i = 0; i < execution_plan.GetNumThreads(); i++) {
     const RowColRegion &region = execution_plan.regions[i];
     TRACE_INFO(
         "Conv2D_Depthwise Init id=%p region top=%ld left=%ld rows=%ld "
@@ -415,7 +457,7 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
                         -params.pad.left,  // window_start_col
                         params.K_h, params.K_w, params.stride_h,
                         params.stride_w, params.pad.zero_point,
-                        execution_plan.threads  // job_count
+                        execution_plan.GetNumThreads()  // job_count
   );
 
   return kXCoreOk;
@@ -431,21 +473,21 @@ XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_depthwise_thread_worker);
 
-  Conv2DDepthwiseThreadData thread_data[execution_plan.threads];
+  Conv2DDepthwiseThreadData thread_data[execution_plan.GetNumThreads()];
 
-  for (int i = 0; i < execution_plan.threads; i++) {
+  for (int i = 0; i < execution_plan.GetNumThreads(); i++) {
     thread_data[i].data.Y = (nn_image_t *)Y;
     thread_data[i].data.X = (const nn_image_t *)X;
     thread_data[i].data.K = (const nn_tensor_t *)K;
     thread_data[i].data.BSO = (const nn_bso_block_t *)BSO;
     thread_data[i].plan = &plan_;
     thread_data[i].job = &jobs_[i];
-    dispatcher->AddThread(conv2d_depthwise_thread_worker,
-                          reinterpret_cast<void *>(&thread_data[i]),
-                          stack_words);
+    // dispatcher->AddThread(conv2d_depthwise_thread_worker,
+    //                       reinterpret_cast<void *>(&thread_data[i]),
+    //                       stack_words);
   }
 
-  dispatcher->Join();
+  // dispatcher->Join();
 
   TIMER_STOP("Conv2D_Depthwise id=%p", this);
   return kXCoreOk;

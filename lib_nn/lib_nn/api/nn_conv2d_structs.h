@@ -299,6 +299,7 @@ typedef struct {
 
         struct {
             int32_t Y;
+            int32_t K;
         } chan_group;
 
         struct {

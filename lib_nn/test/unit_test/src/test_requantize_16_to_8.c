@@ -15,7 +15,7 @@
 // #include "dsp_xs3_vector.h"
 #include "unity.h"
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
 
 #ifdef CONFIG_SYMMETRIC_SATURATION_GLOBAL
   #define CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8 CONFIG_SYMMETRIC_SATURATION_GLOBAL
@@ -266,9 +266,9 @@ void test_requantize_16_to_8_case3()
         
         memset(y, XXX, sizeof(y));
 
-        const unsigned job_count = pseudo_rand_uint16() % MAX_JOBS;
+        const unsigned job_count = (pseudo_rand_uint16() % (MAX_JOBS-1))+1;
         
-        requantize_16_to_8_init(jobs, N, 1);
+        requantize_16_to_8_init(jobs, N, job_count);
 
         for(int in_place = 0; in_place < 1; in_place++){
 

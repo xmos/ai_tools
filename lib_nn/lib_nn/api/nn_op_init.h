@@ -345,10 +345,13 @@ void maxpool2d_init(
  * \param config    Configuration struct specifying desired behavior.
  */
 void avgpool2d_init(
-    nn_avgpool2d_plan_t* pool,
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const nn_window_op_config_t* config);
+    nn_avgpool2d_plan_t* plan,
+    nn_pool2d_job_t* jobs,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* window_config,
+    const nn_window_op_job_params_t* job_params,
+    const unsigned job_count);
 
 
 

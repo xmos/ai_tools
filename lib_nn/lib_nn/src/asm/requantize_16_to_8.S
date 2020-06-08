@@ -5,9 +5,9 @@
 
 /*
 void requantize_16_to_8(
-    int8_t* y,
-    const int16_t* x,
-    const unsigned n);
+    int8_t* Y,
+    const int16_t* X,
+    const nn_requantize_16_to_8_job_t* job);
 */
 
 #define FUNCTION_NAME requantize_16_to_8

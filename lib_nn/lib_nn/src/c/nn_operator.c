@@ -64,31 +64,34 @@ void requantize_16_to_8_init(
     const uint32_t length,
     unsigned job_count)
 {
-    // All of the jobs (except final one) must deal with a multiple
-    // of 4 inputs so that the subsequent job is guaranteed to be
-    // word-aligned.
-
-    // ceil(length/4)
-    const unsigned adj_count = (length + 3) >> 2;
-
-    const unsigned count_per_job_a = (adj_count / job_count);
-    const unsigned count_per_job_b = count_per_job_a + 1;
-    const unsigned final = length % 4;
-    const unsigned leftover = adj_count - (count_per_job_a * job_count);
-
-    int32_t pos = 0;
-
+ 
     for(int k = 0; k < job_count; k++){
-        jobs[k].start = pos;
+        jobs[k].length = 0;
+    }
 
-        if(k == leftover)
-            jobs[k].length = final;
-        else if(k < leftover)
-            jobs[k].length = 4*count_per_job_b;
-        else
-            jobs[k].length = 4*count_per_job_a;
+    int32_t left = (length >> 2) << 2;
 
-        pos = pos + VPU_INT16_EPV * jobs[k].length;
+    while(left){
+        for(int k = 0; k < job_count; k++){
+            if(left >= 4){
+                jobs[k].length += 4;
+                left -= 4;
+            } else {
+                jobs[k].length += left;
+                left -= left;
+            }
+        }
+        if(left == 0) break;
+    }
+    jobs[job_count-1].length += (length % 4);
+
+    jobs[0].start = 0;
+
+    int32_t pos = jobs[0].length;
+
+    for(int k = 1; k < job_count; k++){
+        jobs[k].start = jobs[k-1].start + jobs[k-1].length;
+        pos += jobs[k].length;
     }
 
     assert(pos == length);

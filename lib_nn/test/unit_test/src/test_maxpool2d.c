@@ -14,7 +14,7 @@
 #include "unity.h"
 
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 #define GET_IMAGE_VAL(IMG, PRMS, ROW, COL, CHAN)         (((nn_image_t*)IMG)[ ROW*(PRMS.width * PRMS.channels) + COL*(PRMS.channels) + CHAN ])
 #define SET_IMAGE_VAL(IMG, PRMS, ROW, COL, CHAN, VAL)    ((nn_image_t*)IMG)[ ROW*(PRMS.width * PRMS.channels) + COL*(PRMS.channels) + CHAN ] = VAL

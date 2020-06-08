@@ -77,7 +77,7 @@ void maxpool2d_init(
     nn_maxpool2d_job_t* jobs,
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params,
-    const nn_conv2d_window_params_t* window_params,
+    const nn_window_params_t* window_config,
     const nn_conv2d_job_params_t* job_params,
     const unsigned job_count)
 {
@@ -91,27 +91,27 @@ void maxpool2d_init(
     plan->channels.X = x_params->channels;
     plan->channels.Y = y_params->channels;
     
-    const unsigned final_row = ((window_params->start.row    + window_params->shape.height - 1) + (window_params->stride.vertical * (y_params->height-1)));
-    const unsigned final_col = ((window_params->start.column + window_params->shape.width - 1) + (window_params->stride.horizontal * (y_params->width-1)));
+    const unsigned final_row = ((window_config->start.row    + window_config->shape.height - 1) + (window_config->stride.vertical * (y_params->height-1)));
+    const unsigned final_col = ((window_config->start.column + window_config->shape.width - 1) + (window_config->stride.horizontal * (y_params->width-1)));
 
     // This operator doesn't support padding
     assert( final_row < x_params->height);
     assert( final_col < x_params->width);
-    assert( window_params->start.row >= 0 );
-    assert( window_params->start.column >= 0 );
+    assert( window_config->start.row >= 0 );
+    assert( window_config->start.column >= 0 );
 
-    plan->window.rows = window_params->shape.height;
-    plan->window.cols = window_params->shape.width;
+    plan->window.rows = window_config->shape.height;
+    plan->window.cols = window_config->shape.width;
 
 
 
     const int32_t x_row_bytes = x_params->width * x_params->channels;
     const int32_t y_row_bytes = y_params->width * y_params->channels;
 
-    const int32_t win_start_pix = window_params->start.row * x_params->width + window_params->start.column;
+    const int32_t win_start_pix = window_config->start.row * x_params->width + window_config->start.column;
 
-    const mem_stride_t win_hstride_from_prev_start = window_params->stride.horizontal * x_params->channels;
-    const mem_stride_t win_vstride_from_prev_start = window_params->stride.vertical * x_row_bytes;
+    const mem_stride_t win_hstride_from_prev_start = window_config->stride.horizontal * x_params->channels;
+    const mem_stride_t win_vstride_from_prev_start = window_config->stride.vertical * x_row_bytes;
 
     const nn_conv2d_job_params_t full_job = { { 0, 0, 0 }, { y_params->height, y_params->width, y_params->channels } };
 
@@ -138,18 +138,18 @@ void maxpool2d_init(
 
 
         // The start row and col in X of this particular job
-        const int32_t job_start_row_x = window_params->start.row + window_params->stride.vertical * params->start.rows;
-        const int32_t job_start_col_x = window_params->start.column + window_params->stride.horizontal * params->start.cols;
+        const int32_t job_start_row_x = window_config->start.row + window_config->stride.vertical * params->start.rows;
+        const int32_t job_start_col_x = window_config->start.column + window_config->stride.horizontal * params->start.cols;
 
         job->stride.X.start = job_start_row_x * x_row_bytes + x_params->channels * job_start_col_x + params->start.channels;
         job->stride.Y.start = params->start.rows * y_row_bytes + params->start.cols * y_params->channels + params->start.channels;
 
-        job->stride.X.row = x_row_bytes - window_params->shape.width * x_params->channels;
+        job->stride.X.row = x_row_bytes - window_config->shape.width * x_params->channels;
         job->stride.Y.row = y_row_bytes - params->size.cols * y_params->channels;
 
         // The X pointer will be pointing at the start of the first row *not* inside the window 
         // when doing an hstride
-        job->stride.window.col = win_hstride_from_prev_start - window_params->shape.height * x_row_bytes;
+        job->stride.window.col = win_hstride_from_prev_start - window_config->shape.height * x_row_bytes;
 
         // The X pointer will be pointing at the start of the first patch *after* the job's output 
         // columns when doing a vstride.

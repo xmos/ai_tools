@@ -555,14 +555,15 @@ void maxpool2d(
 static inline void avgpool2d(
     nn_image_t* Y,
     const nn_image_t* X, 
-    const nn_avgpool2d_plan_t* plan)
+    const nn_avgpool2d_plan_t* plan,
+    const nn_pool2d_job_t* job)
 {
     switch(plan->impl){
         case AVGPOOL2D_2X2:
-            avgpool2d_2x2(Y, X, plan);
+            avgpool2d_2x2(Y, X, plan, job);
             break;
         default:
-            avgpool2d_gen(Y, X, plan);
+            avgpool2d_gen(Y, X, plan, job);
             break;
     }
 }

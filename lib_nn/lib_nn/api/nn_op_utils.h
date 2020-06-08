@@ -92,43 +92,6 @@ void nn_standard_BSO_layout(
     const unsigned C_out);
 
 
-/**
- * Initialize an instance of `nn_window_op_config_t` for a typical scenario.
- * 
- * This function initializes `config` to specify the following behaviors:
- *      - Window dimensions are `window_height` x `window_width`
- *      - Window strides are `window_v_stride` and `window_h_stride` in the vertical and horizontal dimensions respectively.
- *      - Output begins at the top-left pixel of the output image
- *      - Intitial input window location is at the top-left pixel of the input image
- *      - Output channels equal to input channels
- *      - Input window is dense and rectangle (i.e. no pixels are skipped within a window)
- *      - Output is dense and rectangualr (i.e. fills a rectangular region of output image, without gaps)
- *      - Window is tiled horizontally and vertically as many times as will fit in the input image (window never pads)
- * 
- * \param config              `nn_window_op_config_t` struct to be initialized.
- * \param x                   Input image parameters
- * \param y                   Output image parameters
- * \param window_height       Height of the pooling window (in pixels)
- * \param window_width        Width of the pooling window (in pixels)
- * \param window_v_stride     Vertical stride of the pooling window (in pixels)
- * \param window_h_stride     Horizontal stride of the pooling window (in pixels)
- */
-void nn_window_op_config_simple(
-    nn_window_op_config_t* config,
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const unsigned window_height,
-    const unsigned window_width,
-    const unsigned window_v_stride,
-    const unsigned window_h_stride);
-
-void nn_window_op_init(
-    nn_window_op_plan_t* plan,
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const nn_window_op_config_t* config,
-    const unsigned channels_per_group);
-
 
 
 #ifdef __XC__

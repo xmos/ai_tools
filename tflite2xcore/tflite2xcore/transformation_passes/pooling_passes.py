@@ -195,11 +195,7 @@ class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
         self.plan_threads = None
 
     def run(self, *args, **kwargs):
-        if self.max_threads == 1:
-            self.logger.debug(f"Skipping pass b/c num_threads={self.max_threads}")
-            return 0
-        else:
-            return super().run(*args, **kwargs)
+        return super().run(*args, **kwargs)
 
     def match(self, op):
         if (
@@ -233,11 +229,7 @@ class PlanPooling2DPass(OperatorMatchingPass):
     MATCHING_OPCODES = (XCOREOpCodes.XC_maxpool2d, XCOREOpCodes.XC_avgpool2d)
 
     def run(self, *args, **kwargs):
-        if self.num_threads == 1:
-            self.logger.debug(f"Skipping pass b/c num_threads={self.num_threads}")
-            return 0
-        else:
-            return super().run(*args, **kwargs)
+        return super().run(*args, **kwargs)
 
     def match(self, op):
         if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
@@ -245,9 +237,6 @@ class PlanPooling2DPass(OperatorMatchingPass):
 
     def mutate(self, op):
         _, height, width, Cout = op.outputs[0].shape
-        print()
-        print(height, width, Cout)
-        print()
         assert int(height) == height
         assert int(width) == width
         planner = SlicePlanner(

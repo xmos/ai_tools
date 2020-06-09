@@ -190,11 +190,6 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   window_params.stride.vertical = params.stride_h;
   window_params.stride.horizontal = params.stride_w;
 
-  if (execution_plan.GetNumThreads() == 0) {
-    // there is no par plan so process entire input
-    execution_plan.regions.Append({0, 0, Y_h, Y_w});
-    execution_plan.SetNumThreads(1);
-  }
   execution_plan.chan_groups.SetNumChannels(C_out);
 
   int32_t n_jobs =

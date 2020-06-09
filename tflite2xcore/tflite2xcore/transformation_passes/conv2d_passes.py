@@ -329,11 +329,7 @@ class PlanConv2dPass(OperatorMatchingPass):
     )
 
     def run(self, *args, **kwargs):
-        if self.num_threads == 1:
-            self.logger.debug(f"Skipping pass b/c num_threads={self.num_threads}")
-            return 0
-        else:
-            return super().run(*args, **kwargs)
+        return super().run(*args, **kwargs)
 
     def match(self, op):
         if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
@@ -353,8 +349,7 @@ class PlanConv2dPass(OperatorMatchingPass):
         plan = planner.find_optimal_plan()
         self.plan_threads = plan.num_threads
 
-        if self.plan_threads > 1:
-            op.add_custom_options(plan=plan.to_dict())
+        op.add_custom_options(plan=plan.to_dict())
 
 
 class PlanDepthwiseConv2dPass(OperatorMatchingPass):
@@ -367,11 +362,7 @@ class PlanDepthwiseConv2dPass(OperatorMatchingPass):
         self.plan_threads = None
 
     def run(self, *args, **kwargs):
-        if self.num_threads == 1:
-            self.logger.debug(f"Skipping pass b/c num_threads={self.num_threads}")
-            return 0
-        else:
-            return super().run(*args, **kwargs)
+        return super().run(*args, **kwargs)
 
     def match(self, op):
         if (

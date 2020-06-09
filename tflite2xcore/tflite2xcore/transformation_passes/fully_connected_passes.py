@@ -112,11 +112,7 @@ class PlanFullyConnectedPass(OperatorMatchingPass):
         self.plan_threads = None
 
     def run(self, *args, **kwargs):
-        if self.max_threads == 1:
-            self.logger.debug(f"Skipping pass b/c num_threads={self.max_threads}")
-            return 0
-        else:
-            return super().run(*args, **kwargs)
+        return super().run(*args, **kwargs)
 
     def match(self, op):
         if (

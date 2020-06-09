@@ -10,13 +10,11 @@
 #include <xcore/swmem_fill.h>
 #include <xmos_flash.h>
 
-#define SWMEM_BASE (0x40000000)
-
 #define IS_RAM(a) (((uintptr_t)a >= 0x80000) && ((uintptr_t)a <= 0x100000))
 #define IS_EXTMEM(a) \
   (((uintptr_t)a >= 0x10000000) && (((uintptr_t)a <= 0x20000000)))
 #define IS_SWMEM(a) \
-  (((uintptr_t)a >= SWMEM_BASE) && (((uintptr_t)a <= 0x80000000)))
+  (((uintptr_t)a >= 0x40000000) && (((uintptr_t)a <= 0x80000000)))
 
 flash_ports_t flash_ports_0 = {PORT_SQI_CS, PORT_SQI_SCLK, PORT_SQI_SIO,
                                XS1_CLKBLK_5};
@@ -83,7 +81,7 @@ void memload(void **dest, void *src, size_t size) {
   if (IS_RAM(src)) {
     *dest = src;
   } else if (IS_SWMEM(src)) {
-    flash_read_quad(&flash_handle, ((uintptr_t)src - SWMEM_BASE) >> 2,
+    flash_read_quad(&flash_handle, ((uintptr_t)src - XS1_SWMEM_BASE) >> 2,
                     (unsigned int *)*dest, size);
   } else if (IS_EXTMEM(src)) {
     memcpy(*dest, src, size);

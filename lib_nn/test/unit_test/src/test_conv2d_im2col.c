@@ -37,7 +37,7 @@ static void check_Y(
     int8_t y = Y[y_offset];
     #if 0
     char* message = ( y==y_exp ? "PASS" : "FAIL");
-    printf( "Y[%d][%d][%d] = %d  (expected  %d) \t%s\n",row,col,chn,y, y_exp, message );
+    printf( "Y[%d][%d][%d] = %d  (expected  %d) diff = %d \t%s\n",row,col,chn,y, y_exp, y_exp-y, message );
     #else
     //Only sprintf-ing if the test will fail saves a ton of time.
     if(y != y_exp)

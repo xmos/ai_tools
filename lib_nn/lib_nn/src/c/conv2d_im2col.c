@@ -109,8 +109,8 @@ void conv2d_im2col_init(
                                + params->start.rows * plan->window.stride.vertical * x_row_bytes
                                + params->start.cols * plan->window.stride.horizontal * x_params->channels;
 
-        job->stride.row.window  = (plan->window.stride.vertical-1) * x_row_bytes //newline
-                                  - plan->channels.X * (plan->window.stride.horizontal-1); // carriage return
+        job->stride.row.window  = (plan->window.stride.vertical) * x_row_bytes //newline
+                                  - plan->channels.X * (job->output.cols*plan->window.stride.horizontal); // carriage return
         
         const unsigned job_row_bytes = (job->output.cols) * y_params->channels;
 

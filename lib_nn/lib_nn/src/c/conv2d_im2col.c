@@ -5,7 +5,6 @@
 #include "nn_op_structs.h"
 
 #include "xs3_vpu.h"
-// #include "../asm/asm_constants.h"
 #include "vpu_sim.h"
 
 #include <stdlib.h>
@@ -143,6 +142,7 @@ void conv2d_im2col(
     xs3_vpu vpu;
     vpu_vector_t vec_tmp;
 
+    // TODO couldn't get the asm constants versions recognized
     const int16_t vec_0x007F[16] = {0x007f};
     const int8_t vec_0x80[30] = {0x80};
 
@@ -165,7 +165,6 @@ void conv2d_im2col(
         const int pad_lr_delta = plan->window.stride.horizontal * (job->output.cols - 1);
         const int final_pad_l = pad_l - pad_lr_delta;
         const int final_pad_r = pad_r + pad_lr_delta;
-
         const int cur_pad_t = (pad_t > 0)? pad_t : 0;
         const int cur_pad_b = (pad_b > 0)? pad_b : 0;
 
@@ -174,47 +173,39 @@ void conv2d_im2col(
                                         || (final_pad_l > 0) || (final_pad_r > 0);
         //Iterate once per col of the output region
         for(unsigned output_cols = job->output.cols; output_cols > 0; output_cols--){
-            //This points it at the top-left cell of the patch.
-            const nn_image_t* patch_X = X;
+            const nn_image_t* patch_X = X;//This points it at the top-left cell of the patch.
             const nn_image_t* C = COL;
-            memset(C,0,plan->window.shape.len_col);// initialize pad
-            unsigned len = plan->channels.X * plan->window.shape.width;
+            memset(C,0,plan->window.shape.len_col);// very important if len_col > kernel_row_elements!
             if( requires_padding ){
-                    int8_t padded_vals[128]={0}; // todo drop the 128 limit or enforce it
-                    len *= plan->window.shape.height;
-                    int k = 0;
                     int pad = 0;
-                    int pad_tb = 0; // ??? do we need to distinguish?
+                    int pad_tb = 0;
                     for(int h = 0; h< plan->window.shape.height; h++){
                         int p = 0;
                         pad_tb = (cur_pad_t -h > 0) || (plan->window.shape.height - pad_b) <= h; 
                         for(int i = 0; i < plan->window.shape.width; i++){
                             pad =  ((pad_l-i > 0) || (plan->window.shape.width - pad_r) <= i) || pad_tb;
-                            for(int j = 0; j < plan->channels.X; j++){
-                                if(pad){
-                                    padded_vals[k] = plan->zero_point;
-                                }
-                                else{
-                                    padded_vals[k] = patch_X[p]; // can be flattened and use more memcpy
-                                    
-                                }
-                                p++;
-                                k++;
+                            if(pad){
+                                memset(C, plan->zero_point, plan->channels.X);
                             }
+                            else{
+                                memcpy(C, ADDR(patch_X,p), plan->channels.X);
+                            }
+                            C = ADDR(C,plan->channels.X);
+                            p += plan->channels.X;
                         }  
                         patch_X = ADDR(patch_X, plan->stride.X.row);
-
                     }
-                    memcpy(C, padded_vals, len);// TODO  vpu memcpy
                 }
             else{
+                    unsigned len = plan->channels.X * plan->window.shape.width;
                     for(unsigned rows_in_patch = plan->window.shape.height; rows_in_patch > 0; rows_in_patch--){
-                        memcpy(C,patch_X,len);// TODO  vpu memcpy
+                        memcpy(C,patch_X,len);
                         patch_X = ADDR(patch_X, plan->stride.X.row );
                         C = ADDR(C,len);
                     }
                 }
             // im2col complete what follows is just a BSO-aware K*COL + BSO = Y  
+
             #if !CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
                 // VLDR(&vpu, vec_0x80);
                 // VSTRPV(&vpu, Y, y_mask);// @tail chicken and egg problem with vec registers
@@ -231,11 +222,12 @@ void conv2d_im2col(
 
             nn_image_t* Y_cog = ADDR(Y, 0);
             for(int m_row_chunk = 0; m_row_chunk< mat_row_chunks; m_row_chunk++){
+                
                 const nn_tensor_t* patch_K = ADDR(K,m_row_chunk*job->stride.chan_group.K);
                 const nn_image_t* sub_vector = COL;
-                //get BSO for this group of output channels
                 nn_bso_block_t * bso = &BSO[m_row_chunk];
                 uint16_t y_mask = 0x0000;
+
                 //load vR and vD with appropriate bso vectors
                 VLDD(&vpu, bso->bias_hi);
                 VLDR(&vpu, bso->bias_lo);

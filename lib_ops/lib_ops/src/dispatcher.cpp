@@ -45,8 +45,7 @@ XCoreStatus Dispatcher::JoinTasks() {
   char *stack = nullptr;
 
   if (use_current_thread_) {
-    const Task &task = tasks_.data[begin];
-    (task.function)(task.argument);
+    (tasks_.function)(tasks_.arguments[begin]);
     begin++;
   }
 
@@ -54,9 +53,8 @@ XCoreStatus Dispatcher::JoinTasks() {
       tasks_.stack_words * bytes_per_stackword * (tasks_.size - begin)));
 
   for (int i = begin; i < tasks_.size; i++) {
-    const Task &task = tasks_.data[i];
     int32_t stack_offset = tasks_.stack_words * bytes_per_stackword * i;
-    thread_group_add(group_, task.function, task.argument,
+    thread_group_add(group_, tasks_.function, tasks_.arguments[i],
                      stack_base(&stack[stack_offset], tasks_.stack_words));
   }
 

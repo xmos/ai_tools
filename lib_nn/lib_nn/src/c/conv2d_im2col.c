@@ -96,7 +96,11 @@ void conv2d_im2col_init(
         job->init_padding.right  = init_padding_right  + params->start.cols * plan->window.stride.horizontal;
 
         job->stride.start.BSO  = (params->start.channels / VPU_INT8_ACC_PERIOD);
-        job->stride.start.K    = params->start.channels * plan->window.shape.height * VPU_INT8_EPV; // TODO
+
+
+        job->stride.row.K       = plan->window.shape.kernel_row_elements;
+        job->stride.chan_group.K = plan->window.shape.kernel_row_elements * VPU_INT8_ACC_PERIOD;
+        job->stride.start.K    = params->start.channels * plan->window.shape.kernel_row_elements;
         job->stride.start.Y    = params->start.rows * y_row_bytes 
                                + params->start.cols * y_params->channels
                                + params->start.channels;
@@ -108,9 +112,6 @@ void conv2d_im2col_init(
         job->stride.row.window  = (plan->window.stride.vertical-1) * x_row_bytes //newline
                                   - plan->channels.X * (plan->window.stride.horizontal-1); // carriage return
         job->stride.row.Y       = y_row_bytes;
-        job->stride.row.K       = plan->window.shape.kernel_row_elements;
-        
-        job->stride.chan_group.K = plan->window.shape.kernel_row_elements * VPU_INT8_ACC_PERIOD;
 
         job->stride.chan_group.Y = VPU_INT8_ACC_PERIOD;
         job->stride.col.Y = y_params->channels; // TODO should this account for multiple bytes per channel?
@@ -153,9 +154,6 @@ void conv2d_im2col(
 
     int y_tail = VPU_INT8_ACC_PERIOD - job->output.channels * job->output.rows * job->output.cols;
     
-
-    double garbage[4];
-    const nn_image_t* tmp = X;
     //Iterate once per row of the output region
     for(unsigned output_rows = job->output.rows; output_rows > 0; output_rows--){
         // start paste
@@ -241,7 +239,7 @@ void conv2d_im2col(
 
             nn_image_t* Y_cog = ADDR(Y, 0);
             for(int m_row_chunk = 0; m_row_chunk< mat_row_chunks; m_row_chunk++){
-                const nn_tensor_t* patch_K = ADDR(K,0);
+                const nn_tensor_t* patch_K = ADDR(K,m_row_chunk*job->stride.chan_group.K);
                 const nn_image_t* sub_vector = COL;
                 //get BSO for this group of output channels
                 nn_bso_block_t * bso = &BSO[m_row_chunk];
@@ -261,7 +259,7 @@ void conv2d_im2col(
                         // VLMACCR each output channel for up to 16 channels
                         int sub_mat_row_end = m_row_chunk < (mat_row_chunks-1) ? VPU_INT8_ACC_PERIOD : job->output.channels % VPU_INT8_ACC_PERIOD;
                         if(sub_mat_row_end == 0) sub_mat_row_end = VPU_INT8_ACC_PERIOD; // todo find cleaner way to unwrap modulus
-                        const nn_tensor_t* sub_matrix = ADDR( patch_K, job->stride.row.K*(sub_mat_row_end)+m_row_chunk*job->stride.chan_group.K);
+                        const nn_tensor_t* sub_matrix = ADDR( patch_K, job->stride.row.K*(sub_mat_row_end));
                         
                         //TODO still need to find the best way to add a <=32 byte pad to K
                         
@@ -281,7 +279,7 @@ void conv2d_im2col(
                         //     }
                         //     printf("\n");
                         // }
-                        // for(int i=0; i<32; i++) printf("%d\n",sub_vector[i]);
+                        // for(int i=0; i<32; i+=4) printf("%d\n",sub_vector[i]);
                         // printf("sub_mat_row_end %d\n",sub_mat_row_end);
                         for(int m_row = 0; m_row < VPU_INT8_ACC_PERIOD-sub_mat_row_end; m_row++) {VLMACCR(&vpu, COL); y_mask>>=1; } // DUMMY on safe memory to rotate @tail
                         for(int m_row = 0; m_row < sub_mat_row_end; m_row++){                                            
@@ -356,7 +354,7 @@ void conv2d_im2col(
 
                     #endif
                     // printf("row chunk %d  Y  %d   Y_cog-Y  %d\n", m_row_chunk, Y, Y_cog-Y);
-                    Y_cog = ADDR(Y_cog, job->stride.chan_group.Y);
+                    if( mat_row_chunks > 1 ) Y_cog = ADDR(Y_cog, job->stride.chan_group.Y);
                     
                 }
             //Move X and Y pointers one pixel to the right
@@ -367,7 +365,6 @@ void conv2d_im2col(
             pad_r += plan->window.stride.horizontal;
             
         }
-
         X = ADDR(X,job->stride.row.window);
         pad_t -= plan->window.stride.vertical;
         pad_b += plan->window.stride.vertical;

@@ -116,7 +116,78 @@ void conv2d_shallowin_init(
     const unsigned job_count);
 
 
-/** TODO Docs AFC 6/9/2020 **/
+/** 
+ * @brief Prepare an execution plan for a 2D shallow im2col convolution.
+ * 
+ * When `conv2d_im2col()` is called, a plan (`nn_conv2d_im2col_plan_t`) and a
+ * job (`nn_conv2d_im2col_job_t`) must be supplied to tell it how to do its work. This 
+ * function initializes that plan and one or more jobs to be supplied in subsequent calls
+ * to `conv2d_im2col()`.
+ * 
+ * A plan contains information shared by all jobs. A job, when provided to `conv2d_im2col()`,
+ * computes a rectangular sub-tensor of the output image (possibly the entire image).
+ * 
+ * `plan` is a pointer to the execution plan to be initialized. It need only be 
+ * initialized once for many calls to `conv2d_im2col()`.
+ * 
+ * `jobs` is a pointer, supplied by the caller to an array of `nn_conv2d_im2col_job_t` 
+ * structs which will be initialized by this function. `job_count` jobs will be 
+ * initialized.
+ * 
+ * `x_params` is a pointer to image parameters for an input image @tensor{X} that will be
+ * passed to `conv2d_im2col()` in subsequent calls.
+ * 
+ * `y_params` is a pointer to image parameters for an output image @tensor{Y} that will be
+ * computed by subsequent calls to `conv2d_im2col()`.
+ * 
+ * `job_params` points to either an array of `nn_conv2d_job_params_t` structs or else
+ * is `NULL`. A `job_params` value of  `NULL` indicates that there will only be a single
+ * job which computes the entire output image. If `job_params` is `NULL`, then `job_count` 
+ * must be `1`. If `job_params` is not `NULL`, it must point to an array containing 
+ * `job_count` `nn_conv2d_job_params_t` elements.
+ * 
+ * It is the callers responsibility to ensure that the supplied list of job params
+ * collectively computes the entire output image. It is also the caller's responsibility
+ * to ensure that the supplied list of jobs does not include duplicate calculation of
+ * outputs.
+ * 
+ * `conv_window` points to a `nn_conv2d_window_params_t` struct which describes the 
+ * relationship between the input image, the convolution window and the output image.
+ * `conv_window->shape` describes the height and width of the convolution window. 
+ * 
+ * `conv_window->start` specifies where the top-left cell of the convolution window is
+ * placed, relative to the top-left pixel of the input image, for the top-left pixel of
+ * the output image. For example, a `start` value of `(0,0)` indicates that the top-left 
+ * pixel of the output image has the convolution window aligned with the top-left corner
+ * of the input image, with no implied padding a the top or left side of the input image.
+ * 
+ * `conv_window->stride.horizontal` indicates how many pixels to the right the convolution
+ * window moves (across the input image) for each pixel moved to the right in the output image. 
+ * `conv_window->stride.vertical` indicates how many pixels downwards the convolution
+ * window moves (across the input image) for each pixel moved downwards in the output image.
+ * 
+ * `zero_point` specifies the value associated with the (implied) padding space around the input
+ * image. For any output pixel whereupon the corresponding convolution window location
+ * in the input image extends beyond the bounds of the input image, those coefficients
+ * in the convolution window which are in the padding are multiplied by `zero_point`
+ * rather than by values from the input image. All input channels currently share a
+ * common zero-point value.
+ * 
+ * `job_count` indicates the number of elements in the `jobs` array that is supplied 
+ * by the user, as well the number of elements in the `job_params` array if it is not
+ * `NULL`.
+ * 
+ * 
+ * @param[out] plan         The plan to be initialized
+ * @param[out] jobs         Array of jobs to be initialized (length: `job_count`)
+ * @param[in]  x_params     Parameters describing the shape of each input image tensor @tensor{X}
+ * @param[in]  y_params     Parameters describing the shape of each output image tensor @tensor{K}
+ * @param[in]  job_params   Array with configuration parameters for each job, or `NULL`
+ * @param[in]  conv_window  Parameters describing the relationship between the convolution window, the
+ *                          input image and the output image
+ * @param[in]  zero_point   The value to be used (for all channels) for padding
+ * @param[in]  job_count    The number of jobs to initialize
+ */
 void conv2d_im2col_init(
     nn_conv2d_im2col_plan_t* plan,
     nn_conv2d_im2col_job_t* jobs,

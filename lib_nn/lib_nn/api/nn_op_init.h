@@ -116,7 +116,7 @@ void conv2d_shallowin_init(
     const unsigned job_count);
 
 
-
+/** TODO Docs AFC 6/9/2020 **/
 void conv2d_im2col_init(
     nn_conv2d_im2col_plan_t* plan,
     nn_conv2d_im2col_job_t* jobs,

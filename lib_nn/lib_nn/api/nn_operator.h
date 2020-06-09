@@ -314,14 +314,13 @@ void conv2d_shallowin(
     const nn_conv2d_shallowin_job_t* job);
 
 
-
 /**
  * @brief Perform a 2D convolution of a shallow input image.
  * 
  * Perform a 2D convolution of kernel tensor @tensor{K} with input image @tensor{X}
  * to produce output image @tensor{Y}.
  *  
- * This function is optimized for 
+ * This function is optimized for  TODO Docs AFC 6/9/2020
  * 
  * 
  * @requires_word_alignment{Y,X,K,BSO}

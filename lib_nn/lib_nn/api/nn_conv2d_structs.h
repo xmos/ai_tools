@@ -250,7 +250,7 @@ typedef struct {
 
 
 /**
- * Struct represents the shared parameters required to execute a `conv2d_deep()` operation. 
+ * Struct represents the shared parameters required to execute a `conv2d_im2col()` operation. 
  */
 typedef struct {
 
@@ -285,7 +285,7 @@ typedef struct {
 } nn_conv2d_im2col_plan_t;
 
 /**
- * Struct represents the job-specific parameters required to execute a `conv2d_deep()` operation. 
+ * Struct represents the job-specific parameters required to execute a `conv2d_im2col()` operation. 
  */
 typedef struct {
 

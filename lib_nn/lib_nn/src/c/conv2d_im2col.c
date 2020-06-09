@@ -1,17 +1,17 @@
 
 
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdio.h>
+#include <assert.h>
+
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
 #include "nn_op_structs.h"
 
 #include "xs3_vpu.h"
 #include "vpu_sim.h"
-
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
-#include <assert.h>
 
 void conv2d_im2col_init(
     nn_conv2d_im2col_plan_t* plan,

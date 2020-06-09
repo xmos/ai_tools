@@ -112,11 +112,13 @@ void conv2d_im2col_init(
         job->stride.row.window  = (plan->window.stride.vertical-1) * x_row_bytes //newline
                                   - plan->channels.X * (plan->window.stride.horizontal-1); // carriage return
         
-        const unsigned job_row_bytes = job->output.cols * y_params->channels;
-        job->stride.row.Y       = y_row_bytes - job_row_bytes;
+        const unsigned job_row_bytes = (job->output.cols) * y_params->channels;
 
         job->stride.chan_group.Y = VPU_INT8_ACC_PERIOD;
         job->stride.col.Y = y_params->channels; // TODO should this account for multiple bytes per channel?
+        job->stride.row.Y       = y_row_bytes - job_row_bytes;
+
+
     }
 }
 
@@ -315,7 +317,7 @@ void conv2d_im2col(
 
                 #endif
                 // printf("row chunk %d  Y  %d   Y_cog-Y  %d\n", m_row_chunk, Y, Y_cog-Y);
-                if( mat_row_chunks > 1 ) Y_cog = ADDR(Y_cog, job->stride.chan_group.Y);
+                Y_cog = ADDR(Y_cog, job->stride.chan_group.Y);
                     
             }
             //Move X and Y pointers one pixel to the right

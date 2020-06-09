@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-
+#include <string.h>
 
 #include "tst_common.h"
 
@@ -35,13 +35,15 @@ static void check_Y(
     unsigned y_offset = IMG_ADDRESS_VECT(y_params, row, col, chn);
 
     int8_t y = Y[y_offset];
-    printf( "Y[%d][%d][%d] = %d  (expected  %d)\n",row,col,chn,y, y_exp );
-
+    #if 0
+    char* message = ( y==y_exp ? "PASS" : "FAIL");
+    printf( "Y[%d][%d][%d] = %d  (expected  %d) \t%s\n",row,col,chn,y, y_exp, message );
+    #else
     //Only sprintf-ing if the test will fail saves a ton of time.
     if(y != y_exp)
         sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)  [test vector @ line %u]", row, col, chn, line);
-
-    // TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
+    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
+    #endif
 }
 
 
@@ -1608,9 +1610,9 @@ void test_conv2d_im2col_case16()
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
     nn_conv2d_job_params_t job_params[] = {
-        {  {  0,  0,  0}, {  1, 3, 32}  },
         {  {  1,  0,  0}, {  2, 1, 16}  },
         {  {  1,  1,  0}, {  2, 2, 16}  },
+        {  {  0,  0,  0}, {  1, 3, 32}  },
         {  {  1,  0, 16}, {  1, 3, 16}  },
         {  {  2,  0, 16}, {  1, 2, 16}  },
         //Leaves Y[2,2,16:32] uncalculated
@@ -1837,22 +1839,22 @@ void test_conv2d_im2col()
 {
     UNITY_SET_FILE();
     
-    // RUN_TEST(test_conv2d_im2col_case0);
-    // RUN_TEST(test_conv2d_im2col_case1);
-    // RUN_TEST(test_conv2d_im2col_case2);
-    // RUN_TEST(test_conv2d_im2col_case3);
-    // RUN_TEST(test_conv2d_im2col_case4);
-    // RUN_TEST(test_conv2d_im2col_case5);
-    // RUN_TEST(test_conv2d_im2col_case6);
-    // RUN_TEST(test_conv2d_im2col_case7);
-    // RUN_TEST(test_conv2d_im2col_case8);
-    // RUN_TEST(test_conv2d_im2col_case9);
-    // RUN_TEST(test_conv2d_im2col_case10);
-    // RUN_TEST(test_conv2d_im2col_case11);
-    // RUN_TEST(test_conv2d_im2col_case12);
-    // RUN_TEST(test_conv2d_im2col_case13);
+    RUN_TEST(test_conv2d_im2col_case0);
+    RUN_TEST(test_conv2d_im2col_case1);
+    RUN_TEST(test_conv2d_im2col_case2);
+    RUN_TEST(test_conv2d_im2col_case3);
+    RUN_TEST(test_conv2d_im2col_case4);
+    RUN_TEST(test_conv2d_im2col_case5);
+    RUN_TEST(test_conv2d_im2col_case6);
+    RUN_TEST(test_conv2d_im2col_case7);
+    RUN_TEST(test_conv2d_im2col_case8);
+    RUN_TEST(test_conv2d_im2col_case9);
+    RUN_TEST(test_conv2d_im2col_case10);
+    RUN_TEST(test_conv2d_im2col_case11);
+    RUN_TEST(test_conv2d_im2col_case12);
+    RUN_TEST(test_conv2d_im2col_case13);
     RUN_TEST(test_conv2d_im2col_case14);
-    // RUN_TEST(test_conv2d_im2col_case15);
-    // RUN_TEST(test_conv2d_im2col_case16);
-    // RUN_TEST(test_conv2d_im2col_case17);
+    RUN_TEST(test_conv2d_im2col_case15);
+    RUN_TEST(test_conv2d_im2col_case16);
+    RUN_TEST(test_conv2d_im2col_case17);
 }

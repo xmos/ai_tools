@@ -23,16 +23,10 @@ void conv2d_im2col_init(
     const int8_t zero_point,
     const unsigned job_count)
 {
-
-    // The restrict to patch elements <= 128 for the time being, but should be able to relax
-    assert(x_params->channels * conv_window->shape.width * conv_window->shape.height <= VPU_INT8_EPV*4);
-
     // Need at least 1 job
     assert(job_count > 0);
     // job_params can only be NULL if there's exactly 1 job.
     assert(job_count == 1 || job_params != NULL);
-
-    // const unsigned k_array_width = VPU_INT8_EPV / x_params->channels;
 
     const unsigned x_row_bytes = x_params->width * x_params->channels;
     const unsigned y_row_bytes = y_params->width * y_params->channels;
@@ -171,6 +165,7 @@ void conv2d_im2col(
         const unsigned requires_padding = ( pad_l       > 0) || (pad_r       > 0) 
                                         || (cur_pad_t   > 0) || (cur_pad_b   > 0) 
                                         || (final_pad_l > 0) || (final_pad_r > 0);
+
         //Iterate once per col of the output region
         for(unsigned output_cols = job->output.cols; output_cols > 0; output_cols--){
             const nn_image_t* patch_X = X;//This points it at the top-left cell of the patch.
@@ -204,7 +199,6 @@ void conv2d_im2col(
                         C = ADDR(C,len);
                     }
                 }
-            // im2col complete what follows is just a BSO-aware K*COL + BSO = Y  
 
             #if !CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
                 // VLDR(&vpu, vec_0x80);
@@ -297,22 +291,19 @@ void conv2d_im2col(
 
                     VLASHR(&vpu, vec_tmp.s16, -8);
                     VDEPTH8(&vpu);
+
                     //Store result in Y
-                    // mask = mask & 0xFFFF;
-                    // printf( "0x%0.4X\n",y_mask);
-                    // for(int i=0; i<32; i++)printf("vpu.vR.s8[%d] = %d\n", i, vpu.vR.s8[i]);
-                    
                     VSTRPV(&vpu, Y_cog, y_mask);
                     
                     //Set mode back to 8-bit
                     VSETC(&vpu, MODE_S8);
 
                 #endif
-                // printf("row chunk %d  Y  %d   Y_cog-Y  %d\n", m_row_chunk, Y, Y_cog-Y);
+
                 Y_cog = ADDR(Y_cog, job->stride.chan_group.Y);
                     
             }
-            //Move X and Y pointers one pixel to the right
+            
             X = ADDR(X, plan->channels.X * (plan->window.stride.horizontal));
             Y = ADDR(Y, job->stride.col.Y);
 

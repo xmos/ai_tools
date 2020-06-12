@@ -61,7 +61,7 @@ class Conv2D_Shallow {
   ExecutionPlan execution_plan;
 
  private:
-  size_t w_size_;
+  size_t weights_preload_size_;
   nn_conv2d_shallowin_plan_t plan_;
   nn_conv2d_shallowin_job_t* jobs_;
 };

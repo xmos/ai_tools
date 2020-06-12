@@ -163,42 +163,24 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
       "C_out=%ld, K_w_padded=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out, K_w_padded);
 
-  Dispatcher *dispatcher = GetDispatcher();
+  // compute size (in bytes) of 1 output channel's weights
+  weights_preload_size_ = params.K_h * K_w_padded * C_in;
 
-  size_t stack_words;
-  GET_STACKWORDS(stack_words, conv2d_shallow_thread_worker);
+  // setup kernel parameters
+  nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
+  nn_image_params_t out_params = {(uint32_t)Y_h, (uint32_t)Y_w,
+                                  (uint32_t)C_out};
+  nn_conv2d_window_params_t window_params = {
+      (uint32_t)params.K_h, (uint32_t)params.K_w, -params.pad.top,
+      -params.pad.left,     params.stride_h,      params.stride_w};
 
-  dispatcher->InitializeTasks(conv2d_shallow_thread_worker, stack_words);
-
-  w_size_ = params.K_h * K_w_padded * C_in;
-
-  nn_image_params_t in_params;
-  in_params.height = X_h;
-  in_params.width = X_w;
-  in_params.channels = C_in;
-
-  nn_image_params_t out_params;
-  out_params.height = Y_h;
-  out_params.width = Y_w;
-  out_params.channels = C_out;
-
-  nn_conv2d_window_params_t window_params;
-  window_params.shape.height = params.K_h;
-  window_params.shape.width = params.K_w;
-  window_params.start.row = -params.pad.top;
-  window_params.start.column = -params.pad.left;
-  window_params.stride.vertical = params.stride_h;
-  window_params.stride.horizontal = params.stride_w;
-
-  execution_plan.chan_groups.SetNumChannels(C_out);
-
-  int32_t n_jobs =
-      execution_plan.chan_groups.GetSize() * execution_plan.regions.GetSize();
-
+  // allocate the jobs
+  int32_t n_jobs = execution_plan.GetNumJobs();
   jobs_ = reinterpret_cast<nn_conv2d_shallowin_job_t *>(
-      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_shallowin_job_t) *
-                                           n_jobs));
+      GetDispatcher()->AllocatePersistantBuffer(
+          sizeof(nn_conv2d_shallowin_job_t) * n_jobs));
 
+  // set job parameters
   nn_conv2d_job_params_t job_params[n_jobs];
 
   int32_t i_job = 0;
@@ -212,16 +194,15 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
           "cols=%ld\n",
           this, changrp.start, changrp.size, region.top, region.left,
           region.rows, region.cols);
-      job_params[i_job].start.rows = region.top;
-      job_params[i_job].start.cols = region.left;
-      job_params[i_job].start.channels = changrp.start;
-      job_params[i_job].size.rows = region.rows;
-      job_params[i_job].size.cols = region.cols;
-      job_params[i_job].size.channels = changrp.size;
+
+      job_params[i_job] = {region.top,  region.left, changrp.start,
+                           region.rows, region.cols, changrp.size};
+
       i_job++;
     }
   }
 
+  // initialize the kernel
   conv2d_shallowin_init(&plan_, jobs_, &in_params, &out_params, &job_params[0],
                         &window_params, params.pad.zero_point, n_jobs);
 
@@ -233,7 +214,11 @@ XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
   TRACE_INFO("Conv2D_Shallow Eval id=%p\n", this);
   TIMER_START();
 
+  // initialize the dispatcher
   Dispatcher *dispatcher = GetDispatcher();
+  size_t stack_words;
+  GET_STACKWORDS(stack_words, conv2d_shallow_thread_worker);
+  dispatcher->InitializeTasks(conv2d_shallow_thread_worker, stack_words);
 
   Conv2DShallowThreadData shallow_thread_data[execution_plan.GetNumThreads()];
 
@@ -244,8 +229,8 @@ XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
     // TODO: if non_RAM these pointers need to be allocated from scratch memory
     const ChannelGroup &changrp = execution_plan.chan_groups[i];
 
-    memload((void **)&tK, (void *)&K[changrp.start * w_size_],
-            changrp.size * w_size_);
+    memload((void **)&tK, (void *)&K[changrp.start * weights_preload_size_],
+            changrp.size * weights_preload_size_);
     memload((void **)&tBSO, (void *)&BSO[i * BSO_CHANNEL_GROUP_LENGTH],
             BSO_CHANNEL_GROUP_BYTES);
 

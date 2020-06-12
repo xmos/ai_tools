@@ -81,12 +81,20 @@ enum ExecutionPlanType {
 
 class ExecutionPlan {
  public:
-  ExecutionPlan() : type_(NONE), n_threads_(0) {}
+  ExecutionPlan() : type_(NONE), n_threads_(0), n_channels_(0) {}
   ~ExecutionPlan() {}
 
   void SetType(ExecutionPlanType type) { type_ = type; }
+
+  void SetNumChannels(int32_t n_channels) {
+    chan_groups.SetNumChannels(n_channels);
+  }
+  // int32_t GetNumChannels() { return n_channels_; }
+
   void SetNumThreads(int32_t n_threads) { n_threads_ = n_threads; }
   int32_t GetNumThreads() { return n_threads_; }
+
+  int32_t GetNumJobs() { return chan_groups.GetSize() * regions.GetSize(); }
 
   RowColRegionArray regions;
   ChannelGroupArray chan_groups;
@@ -94,6 +102,7 @@ class ExecutionPlan {
  private:
   ExecutionPlanType type_;
   int32_t n_threads_;
+  int32_t n_channels_;
 };
 
 }  // namespace xcore

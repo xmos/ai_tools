@@ -9,18 +9,9 @@ from abc import ABC, abstractmethod
 from tflite2xcore import xlogging as logging
 
 
-class ExecutionPlanType(enum.Enum):
-    ROWCOL = 1
-    CHANGRP = 2
-    CHANGRP_ROWCOL = 3
-
-
 class ExecutionPlan:
-    def __init__(
-        self, num_threads, type_, *, cost, changrp_slices=None, rowcol_slices=None
-    ):
+    def __init__(self, num_threads, *, cost, changrp_slices=None, rowcol_slices=None):
         self.num_threads = num_threads
-        self.type = type_  # ExecutionPlanType
         self.changrp_slices = changrp_slices  # should be a list of 2-tuples
         self.rowcol_slices = rowcol_slices  # should be a list of 4-tuples
 
@@ -36,7 +27,7 @@ class ExecutionPlan:
         )
 
     def to_dict(self):
-        bits = {"tp": self.type.value, "th": self.num_threads}
+        bits = {"th": self.num_threads}
         if self.changrp_slices is not None:
             # bits["cg"] = self.changrp_slices
             bits["co"] = self.changrp_slices[-1][1] + 1
@@ -171,7 +162,6 @@ class RowSlicePlanner(UnidirectionalSplitPlanner):
         self.add_candidate_plan(
             ExecutionPlan(
                 num_threads,
-                ExecutionPlanType.ROWCOL,
                 cost=lambda plan: self.estimate_plan_cost(plan),
                 rowcol_slices=row_slices,
             )
@@ -221,7 +211,6 @@ class ChannelGroupSlicePlanner(ExecutionPlanner):
         self.add_candidate_plan(
             ExecutionPlan(
                 num_threads,
-                ExecutionPlanType.CHANGRP,
                 cost=lambda plan: self.estimate_plan_cost(plan),
                 changrp_slices=changrps,
             )
@@ -263,12 +252,13 @@ class SlicePlanner(ExecutionPlanner):
         return cost
 
     def create_n_thread_candidates(self, num_threads):
-        starts, widths = UnidirectionalSplitPlanner.unidir_split_helper(
-            self.width, num_threads
+
+        starts, heights = UnidirectionalSplitPlanner.unidir_split_helper(
+            self.height, num_threads
         )
 
         row_slices = [
-            [0, starts[j], self.height, widths[j]] for j in range(num_threads)
+            [starts[j], 0, heights[j], self.width] for j in range(num_threads)
         ]
         changrps = ChannelGroupSlicePlanner.changrp_split_helper(self.Cout)
 
@@ -278,7 +268,6 @@ class SlicePlanner(ExecutionPlanner):
         self.add_candidate_plan(
             ExecutionPlan(
                 num_threads,
-                ExecutionPlanType.CHANGRP_ROWCOL,
                 cost=lambda plan: self.estimate_plan_cost(plan),
                 changrp_slices=changrps,
                 rowcol_slices=row_slices,

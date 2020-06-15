@@ -1,5 +1,4 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-
 #ifndef XCORE_LIB_OPS_H_
 #define XCORE_LIB_OPS_H_
 
@@ -9,7 +8,6 @@ typedef enum XCoreStatus { kXCoreOk = 0, kXCoreError = 1 } XCoreStatus;
 
 }  // namespace xcore
 
-#include "dispatcher.h"
-#include "planning.h"
+#include "lib_ops/api/dispatcher.h"
 
 #endif  // XCORE_LIB_OPS_H_

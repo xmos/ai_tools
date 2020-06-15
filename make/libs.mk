@@ -28,6 +28,7 @@ LIBS_SOURCES := \
 	lib_nn/src/c/util/shallow/nn_conv2d_hstrip_shallowin.c \
 	lib_nn/src/c/util/depthwise/nn_conv2d_hstrip_depthwise.c \
 	lib_ops/src/device_memory.c \
+	lib_ops/src/planning.cpp \
 	lib_ops/src/allocator.cpp \
 	lib_ops/src/benchmarking.cpp \
 	lib_ops/src/dispatcher.cpp \

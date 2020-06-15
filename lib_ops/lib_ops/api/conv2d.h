@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "lib_ops/api/lib_ops.h"
+#include "lib_ops/api/planning.h"
 
 extern "C" {
 #include "lib_nn/api/nn_operator.h"

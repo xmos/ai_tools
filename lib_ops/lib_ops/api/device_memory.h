@@ -9,6 +9,18 @@
 extern "C" {
 #endif
 
+#ifdef XCORE
+
+#include "lib_ops/src/xs1.h"  // FIXME: remove someday
+//    this must appear BEFORE including xcore/thread.h
+#include <xcore/thread.h>
+
+void swmem_setup();
+void swmem_handler(void *ignored);
+void swmem_teardown();
+
+#endif  // XCORE
+
 void memload(void **dest, void *src, size_t size);
 
 #ifdef __cplusplus

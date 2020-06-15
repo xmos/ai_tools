@@ -13,6 +13,9 @@ APPFLAGS := -DNDEBUG
 #APPFLAGS += -DENABLE_TRACING
 #APPFLAGS += -DENABLE_BENCHMARKING
 
+PLATFORM_FLAGS += -fxscope
+PLATFORM_FLAGS += config.xscope
+
 ifeq ($(TARGET), x86)
 	APP = arm_benchmark
 else # must be xcore

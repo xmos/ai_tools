@@ -131,12 +131,11 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                reduction_dims = self._op.inputs[1].numpy
-                return (
-                    len(reduction_dims) == 2
-                    and np.all(reduction_dims == [1, 2])
-                    and self._input.shape[3] % WORD_SIZE == 0
-                )
+                axis = self._op.inputs[1].numpy
+                if np.all(axis == [1, 2]) or np.all(axis == [2, 1]):
+                    return self._input.shape[3] % WORD_SIZE == 0
+                else:
+                    self.logger.warning("Axis is not either [1, 2] or [2, 1]")
 
         return False
 

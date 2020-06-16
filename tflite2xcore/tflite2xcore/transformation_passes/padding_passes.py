@@ -54,6 +54,9 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
                 return False
 
             pad_params = self._pad_params
+            if len(pad_params) != 4:
+                return False
+
             if pad_params[0] != [0, 0] or pad_params[3] != [0, 0]:
                 # NOTE: SplitPaddingPass decouples channel- and batch-wise padding
                 return False
@@ -103,6 +106,9 @@ class SplitPaddingPass(OperatorMatchingPass):
                 return False
 
             pad_params = self._pad_params
+            if len(pad_params) != 4:
+                return False
+
             return (pad_params[0] != [0, 0] or pad_params[3] != [0, 0]) and (
                 pad_params[1] != [0, 0] or pad_params[2] != [0, 0]
             )

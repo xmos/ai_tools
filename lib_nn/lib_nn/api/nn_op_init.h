@@ -147,11 +147,11 @@ void conv2d_shallowin_init(
  */
 void conv2d_1x1_init(
     nn_conv2d_1x1_plan_t* plan,
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const unsigned start_row,
-    const unsigned start_col,
-    const unsigned out_pixels);
+    nn_conv2d_1x1_job_t* jobs,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_conv2d_1x1_job_params_t* job_params,
+    const unsigned job_count);
 
 
 
@@ -270,8 +270,11 @@ void conv2d_depthwise_init(
  */
 void fully_connected_init(
     nn_fully_connected_plan_t* plan,
-    const unsigned C_in,
-    const unsigned C_out);
+    nn_fully_connected_job_t* jobs,
+    const channel_count_t C_in,
+    const channel_count_t C_out,
+    const nn_fully_connected_job_params_t* job_params,
+    const unsigned job_count);
 
 
 
@@ -301,11 +304,13 @@ void fully_connected_init(
  * \param config    `nn_maxpool_config_t` describing the behavior of the maxpool2d operation.
  */
 void maxpool2d_init(
-    nn_window_op_plan_t* plan,
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const nn_window_op_config_t* config);
-
+    nn_maxpool2d_plan_t* plan,
+    nn_maxpool2d_job_t* jobs,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_conv2d_window_params_t* window_params,
+    const nn_conv2d_job_params_t* job_params,
+    const unsigned job_count);
 
 
 /**
@@ -340,10 +345,13 @@ void maxpool2d_init(
  * \param config    Configuration struct specifying desired behavior.
  */
 void avgpool2d_init(
-    nn_avgpool2d_plan_t* pool,
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const nn_window_op_config_t* config);
+    nn_avgpool2d_plan_t* plan,
+    nn_pool2d_job_t* jobs,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* window_config,
+    const nn_window_op_job_params_t* job_params,
+    const unsigned job_count);
 
 
 
@@ -431,6 +439,13 @@ void avgpool2d_global_init(
     uint32_t* scale,
     const uint32_t x_height,
     const uint32_t x_width);
+
+
+
+void requantize_16_to_8_init(
+    nn_requantize_16_to_8_job_t* jobs,
+    const uint32_t length,
+    unsigned job_count);
 
 
 #ifdef __XC__

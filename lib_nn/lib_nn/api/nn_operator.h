@@ -373,7 +373,8 @@ void conv2d_1x1(
     const nn_image_t* X,
     const nn_tensor_t* K,
     const nn_bso_block_t* BSO,
-    const nn_conv2d_1x1_plan_t* plan);
+    const nn_conv2d_1x1_plan_t* plan,
+    const nn_conv2d_1x1_job_t* job);
 
 
 
@@ -517,9 +518,10 @@ void conv2d_depthwise(
  *
  */
 void maxpool2d(
-    nn_image_t* Y,
-    const nn_image_t* X, 
-    const nn_window_op_plan_t* plan);
+    int8_t* Y,
+    const int8_t* X, 
+    const nn_maxpool2d_plan_t* plan,
+    const nn_maxpool2d_job_t* job);
 
 
 /** 2D average pooling for an image.
@@ -553,14 +555,15 @@ void maxpool2d(
 static inline void avgpool2d(
     nn_image_t* Y,
     const nn_image_t* X, 
-    const nn_avgpool2d_plan_t* plan)
+    const nn_avgpool2d_plan_t* plan,
+    const nn_pool2d_job_t* job)
 {
     switch(plan->impl){
         case AVGPOOL2D_2X2:
-            avgpool2d_2x2(Y, X, plan);
+            avgpool2d_2x2(Y, X, plan, job);
             break;
         default:
-            avgpool2d_gen(Y, X, plan);
+            avgpool2d_gen(Y, X, plan, job);
             break;
     }
 }
@@ -655,7 +658,8 @@ void fully_connected_16(
     const nn_tensor_t* W, 
     const nn_tensor_t* X, 
     const nn_bso_block_t* BSO,
-    const nn_fully_connected_plan_t* plan);
+    const nn_fully_connected_plan_t* plan,
+    const nn_fully_connected_job_t* job);
 
 
 
@@ -719,7 +723,7 @@ void argmax_16(
 void requantize_16_to_8(
     int8_t* Y,
     const int16_t* X,
-    const unsigned length);
+    const nn_requantize_16_to_8_job_t* job);
 
 
 

@@ -27,12 +27,14 @@ extern "C" {
 void avgpool2d_gen(
     nn_image_t* Y,
     const nn_image_t* X, 
-    const nn_avgpool2d_plan_t* plan);
+    const nn_avgpool2d_plan_t* plan,
+    const nn_pool2d_job_t* job);
     
 void avgpool2d_2x2(
     nn_image_t* Y,
     const nn_image_t* X, 
-    const nn_avgpool2d_plan_t* plan);
+    const nn_avgpool2d_plan_t* plan,
+    const nn_pool2d_job_t* job);
 
 
 

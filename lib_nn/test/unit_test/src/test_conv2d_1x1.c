@@ -25,7 +25,28 @@
 #endif 
 
 
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
+static void Check_Y(
+    const nn_image_t y_exp,
+    const nn_image_t* Y,
+    const nn_image_params_t* y_params,
+    const unsigned row,
+    const unsigned col,
+    const unsigned chn,
+    const unsigned line)
+{
+    char str_buff[200];
+
+    nn_image_t y = Y[IMG_ADDRESS_VECT(y_params, row, col, chn)];
+
+    if(y != y_exp){
+        sprintf(str_buff, "Y[%u][%u][%u] was wrong [line %u]", 
+                row, col, chn, line);
+    }
+
+    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
+}
+
+
 #define CHANS_IN        (VPU_INT8_EPV)
 #define CHANS_OUT       (VPU_INT8_ACC_PERIOD)
 #define HEIGHT          (2)
@@ -211,28 +232,14 @@ void test_conv2d_1x1_case0()
                       (int16_t*) &BSO.shift2, NULL, CHANS_OUT);
 
         nn_conv2d_1x1_plan_t plan;
+        nn_conv2d_1x1_job_t job;
 
-        conv2d_1x1_init(&plan, &x_params, &y_params, 0, 0, HEIGHT*WIDTH);
+        conv2d_1x1_init(&plan, &job, &x_params, &y_params, NULL, 1);
 
-#if (DEBUG_ON || 0)
-        PRINTF("plan.start_stride.X     = %ld\n", plan.start_stride.X);
-        PRINTF("plan.start_stride.Y     = %ld\n", plan.start_stride.Y);
-        PRINTF("plan.start_stride.K     = %ld\n", plan.start_stride.K);
-        PRINTF("plan.cog_stride.Y       = %ld\n", plan.cog_stride.Y);
-        PRINTF("plan.cog_stride.K       = %ld\n", plan.cog_stride.K);
-        PRINTF("plan.cig_stride.body    = %ld\n", plan.cig_stride.body);
-        PRINTF("plan.cig_stride.tail    = %ld\n", plan.cig_stride.tail);
-        PRINTF("plan.pix_count          = %ld\n", plan.pix_count);
-        PRINTF("plan.C_in               = %ld\n", plan.C_in);
-        PRINTF("plan.C_out              = %ld\n", plan.C_out);
-#endif //DEBUG_ON
-
-        PRINTF("\t\t\tRunning Op...\n");
         memset(Y, 0xCC, sizeof(Y));    //too expensive to write the whole image, so just do the part that's in play
-        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &BSO, &plan);
+        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &BSO, &plan, &job);
 
         char str_buff[200] = {0};
-        PRINTF("\t\t\tChecking...\n");
         for(unsigned row = 0; row < y_params.height; row++){
             for(unsigned col = 0; col < y_params.width; col++){
                 for(unsigned chn = 0; chn < y_params.channels; chn++){
@@ -244,13 +251,7 @@ void test_conv2d_1x1_case0()
                         y_exp = exps[casse->k];
                     }
 
-                    int8_t y = Y[row][col][chn];
-                    if(y != y_exp){
-                        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)  [test vector @ line %u]", 
-                                row, col, chn, casse->line);
-                    }
-
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
+                    Check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, chn, casse->line);
                 }
             }
         }
@@ -258,7 +259,6 @@ void test_conv2d_1x1_case0()
     }
 
 }
-#undef DEBUG_ON      
 #undef CHANS_IN      
 #undef CHANS_OUT     
 #undef HEIGHT        
@@ -376,7 +376,7 @@ void test_conv2d_1x1_case1()
             int d = 0;
 
 
-            memset(&K_flat[k*C_in], c, sizeof(int8_t) * C_out * C_in);
+            memset(&K_flat[k*C_in], c, sizeof(int8_t) * C_in);
 
             int32_t bias = 0;
             int16_t shift1 = d;
@@ -398,6 +398,8 @@ void test_conv2d_1x1_case1()
         nn_image_params_t x_params = { HEIGHT, WIDTH, C_in };
         nn_image_params_t y_params = { HEIGHT, WIDTH, C_out };
 
+        memset(Y, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
+
         nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
                                 (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, 
                                 (int16_t*) &BSO.shift2, NULL, y_params.channels);
@@ -418,42 +420,27 @@ void test_conv2d_1x1_case1()
         }
 
         nn_conv2d_1x1_plan_t plan;
+        nn_conv2d_1x1_job_t job;
+        nn_conv2d_1x1_job_params_t job_params[1] = {  
+            { {casse->start[0], casse->start[1], 0}, {casse->out_pixels, y_params.channels} },
+        };
 
-        conv2d_1x1_init(&plan, &x_params, &y_params, casse->start[0], casse->start[1], casse->out_pixels);
+        conv2d_1x1_init(&plan, &job, &x_params, &y_params, job_params, 1);
 
 
-        PRINTF("\t\t\tRunning Op...\n");
-        memset(Y, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
-        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan);
+        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan, &job);
+
         unsigned pix_start = casse->start[0] * y_params.width + casse->start[1];
         unsigned pix_end   = pix_start + casse->out_pixels;
 
-        char str_buff[200] = {0};
-        PRINTF("\t\t\tChecking...\n");
         for(unsigned row = 0; row < y_params.height; row++){
             for(unsigned col = 0; col < y_params.width; col++){
                 for(unsigned chn = 0; chn < y_params.channels; chn++){
-                    
-                    int8_t y_exp;
 
-                    int pdex = row * y_params.width + col;
+                    int pdex = row * y_params.width + col;                    
+                    int8_t y_exp = (pdex >= pix_start && pdex < pix_end)? Y_exp[chn] : 0xCC;
 
-                    if(pdex >= pix_start && pdex < pix_end){
-                        y_exp = Y_exp[chn];
-                    } else {
-                        y_exp = 0xCC;
-                    }
-
-                    unsigned offset = IMG_ADDRESS_VECT(&y_params, row, col, chn);
-
-                    int8_t y = ((int8_t*)Y)[offset];
-                    
-                    if(y != y_exp){
-                        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)  [test vector @ line %u]", 
-                                row, col, chn, casse->line);
-                    }
-
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
+                    Check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, chn, casse->line);
                 }
             }
         }
@@ -475,7 +462,6 @@ void test_conv2d_1x1_case1()
 
 
 
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define MAX_CHANS_IN    (3*VPU_INT8_EPV)
 #define MAX_CHANS_OUT   (3*VPU_INT8_ACC_PERIOD)
 #define HEIGHT          (2)
@@ -577,9 +563,6 @@ void test_conv2d_1x1_case2()
             //     PRINTF("%d:\t% 4d\t0x%08X\t0x%08X\n", k, k_val, bias, acc32);
 
             Y_exp[k] = output;
-#if (DEBUG_ON || 0) // in case you need to convince yourself not all outputs are 0, -127 or 127
-            PRINTF("Y_exp[%d] = %d\n", k, output);
-#endif
         }
 
         //Here we've done all our pseudo_rand's, so we can continue without changing the behavior.
@@ -592,47 +575,26 @@ void test_conv2d_1x1_case2()
         nn_image_params_t x_params = { HEIGHT, WIDTH, C_in };
         nn_image_params_t y_params = { HEIGHT, WIDTH, C_out };
 
+        memset(Y, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
+
         nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
                                 (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, 
                                 (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
         nn_conv2d_1x1_plan_t plan;
+        nn_conv2d_1x1_job_t job;
 
-        conv2d_1x1_init(&plan, &x_params, &y_params, 0, 0, HEIGHT*WIDTH);
+        conv2d_1x1_init(&plan, &job, &x_params, &y_params, NULL, 1);
 
-#if (DEBUG_ON || 0)
-        PRINTF("plan.start_stride.X     = %ld\n", plan.start_stride.X);
-        PRINTF("plan.start_stride.Y     = %ld\n", plan.start_stride.Y);
-        PRINTF("plan.start_stride.K     = %ld\n", plan.start_stride.K);
-        PRINTF("plan.cog_stride.Y       = %ld\n", plan.cog_stride.Y);
-        PRINTF("plan.cog_stride.K       = %ld\n", plan.cog_stride.K);
-        PRINTF("plan.cig_stride.body    = %ld\n", plan.cig_stride.body);
-        PRINTF("plan.cig_stride.tail    = %ld\n", plan.cig_stride.tail);
-        PRINTF("plan.pix_count          = %ld\n", plan.pix_count);
-        PRINTF("plan.C_in               = %ld\n", plan.C_in);
-        PRINTF("plan.C_out              = %ld\n", plan.C_out);
-#endif //DEBUG_ON
+        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan, &job);
 
-        PRINTF("\t\t\tRunning Op...\n");
-        memset(Y, 0xCC, sizeof(int8_t) * y_params.height * y_params.width * y_params.channels);
-        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan);
-
-        char str_buff[200] = {0};
-        PRINTF("\t\t\tChecking...\n");
         for(unsigned row = 0; row < y_params.height; row++){
             for(unsigned col = 0; col < y_params.width; col++){
                 for(unsigned chn = 0; chn < y_params.channels; chn++){
                     
                     int8_t y_exp = Y_exp[chn];
 
-                    unsigned offset = IMG_ADDRESS_VECT(&y_params, row, col, chn);
-
-                    int8_t y = ((int8_t*)Y)[offset];
-                    if(y != y_exp){
-                        sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)", row, col, chn);
-                    }
-
-                    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
+                    Check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, chn, __LINE__);
                 }
             }
         }
@@ -640,7 +602,6 @@ void test_conv2d_1x1_case2()
     }
 
 }
-#undef DEBUG_ON      
 #undef CHANS_IN      
 #undef CHANS_OUT     
 #undef HEIGHT        
@@ -662,7 +623,6 @@ void test_conv2d_1x1_case2()
 #define CHANS_IN    (36)
 #define HEIGHT      (2)
 #define WIDTH       (2)
-#define CHANS_OUT_CEIL  (16)
 void test_conv2d_1x1_case3()
 {
     PRINTF("%s...\n", __func__);
@@ -693,7 +653,7 @@ void test_conv2d_1x1_case3()
 
     for(int k = 0; k < CHANS_OUT; k++){
         
-        BSO.bias[k] = -128;
+        BSO.bias[k] = (k % 2 == 0)? -128 : -127;
         BSO.shift1[k] = 0;
         BSO.scale[k] = 1;
         BSO.offset_scale[k] = 0;
@@ -709,22 +669,20 @@ void test_conv2d_1x1_case3()
                             (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, 
                             (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
-
     nn_conv2d_1x1_plan_t plan;
+    nn_conv2d_1x1_job_t job;
 
-    conv2d_1x1_init(&plan, &x_params, &y_params, 0, 0, HEIGHT*WIDTH);
+    conv2d_1x1_init(&plan, &job, &x_params, &y_params, NULL, 1);
 
-    PRINTF("\t\t\tRunning op...\n");
-    conv2d_1x1((nn_image_t*)Y, (nn_image_t*)X, (nn_tensor_t*)K, bso, &plan);
+    conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan, &job);
 
-    PRINTF("\t\t\tChecking...\n");
+
     for(unsigned row = 0; row < y_params.height; row++){
         for(unsigned col = 0; col < y_params.width; col++){
             for(unsigned chn = 0; chn < y_params.channels; chn++){
-                
-                TEST_ASSERT_EQUAL(NEG_SAT_VAL, Y[row][col][chn]);
-                // printf("Y[%d][%d][%d] = %d\n", row, col, chn, Y[row][col][chn]);
+                nn_image_t y_exp = (chn % 2 == 0)? NEG_SAT_VAL : -127;
 
+                Check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, chn, __LINE__);
             }
         }
 
@@ -735,7 +693,103 @@ void test_conv2d_1x1_case3()
 #undef CHANS_OUT     
 #undef HEIGHT        
 #undef WIDTH         
-#undef CHANS_OUT_CEIL
+
+
+
+
+#define CHANS_OUT       (20)
+#define CHANS_IN        (36)
+#define HEIGHT          (4)
+#define WIDTH           (4)
+void test_conv2d_1x1_case4()
+{
+    PRINTF("%s...\n", __func__);
+
+
+    nn_image_t WORD_ALIGNED  X[HEIGHT][WIDTH][CHANS_IN];
+    memset(X, 1, sizeof(X));
+
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][CHANS_IN];
+    memset(K, 0, sizeof(K));
+
+    struct {
+        int32_t bias[CHANS_OUT];
+        int16_t shift1[CHANS_OUT];
+        int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
+        int16_t shift2[CHANS_OUT];
+    } BSO;
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
+
+    nn_image_t Y_exp[CHANS_OUT];
+
+    nn_image_t WORD_ALIGNED  Y[HEIGHT][WIDTH][CHANS_OUT];
+
+
+    for(int k = 0; k < CHANS_OUT; k++){
+        K[k][0] = 1;
+        BSO.bias[k] = k - 100;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k] = 0;
+        BSO.shift2[k] = 0;
+    }
+        
+    nn_image_params_t x_params = { HEIGHT, WIDTH, CHANS_IN };
+    nn_image_params_t y_params = { HEIGHT, WIDTH, CHANS_OUT };
+
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, 
+                            (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, 
+                            NULL, y_params.channels);
+
+    for(int r = 0; r < HEIGHT; r++)
+        for(int c = 0; c < WIDTH; c++)
+            for(int ch = 0; ch < CHANS_IN; ch++)
+                X[r][c][ch] = r+c;
+
+    memset(Y, 0xCC, sizeof(Y));
+    
+
+    nn_conv2d_1x1_plan_t plan;
+    nn_conv2d_1x1_job_t jobs[4];
+    nn_conv2d_1x1_job_params_t job_params[4] = {
+        { {0, 0,  0}, { 1, 20} },
+        { {0, 1,  0}, { 3, 20} },
+        { {1, 0,  0}, {12, 16} }, //Note, channels 16+ of the second row are not calculated!
+        { {2, 0, 16}, { 8,  4} },
+    };
+
+    conv2d_1x1_init(&plan, jobs, &x_params, &y_params, job_params, 4);
+
+    for(int i = 0; i < 4; i++)
+        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan, &jobs[i]);
+
+
+    for(unsigned row = 0; row < y_params.height; row++){
+        for(unsigned col = 0; col < y_params.width; col++){
+            for(unsigned chn = 0; chn < y_params.channels; chn++){
+                nn_image_t y_exp = row + col + (chn - 100);
+
+                if(row == 1 && chn >= 16)
+                    y_exp = 0xCC;
+                
+
+                Check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, chn, __LINE__);
+            }
+        }
+
+    }
+
+}
+#undef CHANS_IN      
+#undef CHANS_OUT     
+#undef HEIGHT        
+#undef WIDTH         
+
+
 
 
 void test_conv2d_1x1()
@@ -746,4 +800,5 @@ void test_conv2d_1x1()
     RUN_TEST(test_conv2d_1x1_case1);
     RUN_TEST(test_conv2d_1x1_case2);
     RUN_TEST(test_conv2d_1x1_case3); 
+    RUN_TEST(test_conv2d_1x1_case4); 
 }

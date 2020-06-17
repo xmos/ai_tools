@@ -288,6 +288,8 @@ ALIASES += requires_word_alignment{3}="@par Word Alignment^^The arguments `\1`, 
 ALIASES += requires_word_alignment{4}="@par Word Alignment^^The arguments `\1`, `\2`, `\3` and `\4` each must point to a word-aligned address."
 
 
+ALIASES += oper{1}="`\1`"
+ALIASES += oper_ref{1}="@ref oper_\1"
 
 
 
@@ -519,7 +521,7 @@ EXTRACT_PACKAGE        = NO
 # included in the documentation.
 # The default value is: NO.
 
-EXTRACT_STATIC         = NO
+EXTRACT_STATIC         = YES
 
 # If the EXTRACT_LOCAL_CLASSES tag is set to YES, classes (and structs) defined
 # locally in source files will be included in the documentation. If set to NO,

@@ -15,7 +15,7 @@
 // #include "dsp_xs3_vector.h"
 #include "unity.h"
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 #ifdef CONFIG_SYMMETRIC_SATURATION_GLOBAL
   #define CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8 CONFIG_SYMMETRIC_SATURATION_GLOBAL

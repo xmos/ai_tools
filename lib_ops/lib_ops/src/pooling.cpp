@@ -25,7 +25,7 @@ struct PoolingThreadData {
 //**************************************
 struct MaxPoolThreadData {
   const nn_maxpool2d_plan_t* plan;
-  nn_maxpool2d_job_t* job;
+  nn_pool2d_job_t* job;
   PoolingThreadData data;
 };
 
@@ -55,12 +55,12 @@ XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
 
   // allocate the jobs
   int32_t n_jobs = execution_plan.regions.GetSize();
-  jobs_ = reinterpret_cast<nn_maxpool2d_job_t*>(
-      GetDispatcher()->AllocatePersistantBuffer(sizeof(nn_maxpool2d_job_t) *
+  jobs_ = reinterpret_cast<nn_pool2d_job_t*>(
+      GetDispatcher()->AllocatePersistantBuffer(sizeof(nn_pool2d_job_t) *
                                                 n_jobs));
 
   // set job parameters
-  nn_conv2d_job_params_t job_params[n_jobs];
+  nn_window_op_job_params_t job_params[n_jobs];
 
   for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
     const RowColRegion& region = execution_plan.regions[i_rg];
@@ -206,27 +206,55 @@ XCoreStatus AvgPool::Eval(int8_t* Y, const int8_t* X) {
 //**************************************
 //**************************************
 //**************************************
-// struct AvgPoolGlobalThreadData {
-//   const nn_avgpool2d_plan_t* plan;
-//   nn_pool2d_job_t* job;
-//   PoolingThreadData data;
-// };
+struct AvgPoolGlobalThreadData {
+  const nn_avgpool2d_global_plan_t* plan;
+  nn_avgpool2d_global_job_t* job;
+  PoolingThreadData data;
+  int32_t bias;
+};
 
-// extern "C" {
-// ATTRIBUTE_THREAD_FUNCTION void avgpool_thread_worker(void* context) {
-//   AvgPoolGlobalThreadData* td = (AvgPoolGlobalThreadData*)context;
-//   avgpool2d(td->data.Y, td->data.X, td->plan, td->job);
-// }
-// }
+extern "C" {
+ATTRIBUTE_THREAD_FUNCTION void avgpool_global_thread_worker(void* context) {
+  AvgPoolGlobalThreadData* td = (AvgPoolGlobalThreadData*)context;
+  avgpool2d_global(td->data.Y, td->data.X, td->bias, td->plan, td->job);
+}
+}
 
 AvgPool_Global::AvgPool_Global(const ExecutionPlan& execution_plan)
-    : execution_plan(execution_plan) {}
+    : execution_plan(execution_plan), jobs_(nullptr) {}
 
-XCoreStatus AvgPool_Global::Init(int32_t bias, int32_t shift, int32_t scale) {
+XCoreStatus AvgPool_Global::Init(int32_t X_h, int32_t X_w, int32_t C_in,
+                                 int32_t bias, int32_t shift, int32_t scale) {
   TRACE_INFO("AvgPool_Global Init id=%p\n", this);
   bias_ = bias;
-  shift_ = shift;
-  scale_ = scale;
+
+  // setup kernel parameters
+  nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
+
+  // allocate the jobs
+  int32_t n_jobs = execution_plan.changrps.GetSize();
+  jobs_ = reinterpret_cast<nn_avgpool2d_global_job_t*>(
+      GetDispatcher()->AllocatePersistantBuffer(
+          sizeof(nn_avgpool2d_global_job_t) * n_jobs));
+
+  // set job parameters
+  nn_avgpool2d_global_job_params_t job_params[n_jobs];
+
+  for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
+    const ChannelGroup& changrp = execution_plan.changrps[i_cg];
+    TRACE_INFO("AvgPool_Global Init id=%p, chan group start=%ld size=%ld\n",
+               this, changrp.start, changrp.size);
+
+    job_params[i_cg] = {(uint32_t)changrp.start, (channel_count_t)changrp.size};
+  }
+
+  // initialize the kernel
+  // std::cout << "bias = " << bias << std::endl;
+  // std::cout << "shift = " << shift << std::endl;
+  // std::cout << "scale = " << scale << std::endl;
+  avgpool2d_global_init(&plan_, jobs_, &in_params, &job_params[0], n_jobs);
+  plan_.shift = shift;
+  plan_.scale = scale;
 
   return kXCoreOk;
 }
@@ -236,7 +264,37 @@ XCoreStatus AvgPool_Global::Eval(int8_t* Y, const int8_t* X, int32_t X_h,
   TRACE_INFO("AvgPool_Global Eval id=%p\n", this);
   TIMER_START();
 
-  avgpool2d_global(Y, X, X_h, X_w, C_in, bias_, shift_, scale_);
+  // initialize the dispatcher
+  Dispatcher* dispatcher = GetDispatcher();
+  size_t stack_words;
+  GET_STACKWORDS(stack_words, avgpool_global_thread_worker);
+  dispatcher->InitializeTasks(avgpool_global_thread_worker, stack_words);
+
+  // create thread data and tasks
+  int n_th = execution_plan.GetNumThreads();
+  AvgPoolGlobalThreadData thread_data[n_th];
+
+  int i_th = 0;
+
+  for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
+    const ChannelGroup& changrp = execution_plan.changrps[i_cg];
+
+    thread_data[i_th].data.Y = Y;
+    thread_data[i_th].data.X = X;
+    thread_data[i_th].bias = bias_;
+    thread_data[i_th].plan = &plan_;
+    thread_data[i_th].job = &jobs_[i_cg];
+
+    dispatcher->AddTask(reinterpret_cast<void*>(&thread_data[i_th]));
+
+    i_th++;
+    if (i_th == n_th) {
+      // start and wait for tasks to complete
+      dispatcher->JoinTasks();
+      i_th = 0;
+    }
+  }
+  dispatcher->JoinTasks();  // finish up any added tasks
 
   TIMER_STOP("AvgPool_Global id=%p", this);
   return kXCoreOk;

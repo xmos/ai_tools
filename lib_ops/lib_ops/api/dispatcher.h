@@ -34,7 +34,8 @@ namespace xcore {
 
 constexpr size_t max_threads = 5;
 constexpr size_t bytes_per_stackword = 4;
-constexpr size_t bso_changrp_len = (7 * 16);
+constexpr size_t changrp_len = (16);
+constexpr size_t bso_changrp_len = (7 * changrp_len);
 constexpr size_t bso_changrp_bytes = (bso_changrp_len * 2);
 
 typedef struct TaskArray {

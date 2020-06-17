@@ -35,7 +35,7 @@ class MaxPool {
 
  private:
   nn_maxpool2d_plan_t plan_;
-  nn_maxpool2d_job_t* jobs_;
+  nn_pool2d_job_t* jobs_;
 };
 
 class AvgPool {
@@ -60,7 +60,8 @@ class AvgPool_Global {
   AvgPool_Global(const ExecutionPlan& execution_plan);
   ~AvgPool_Global() {}
 
-  XCoreStatus Init(int32_t bias, int32_t shift, int32_t scale);
+  XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t bias,
+                   int32_t shift, int32_t scale);
   XCoreStatus Eval(int8_t* Y, const int8_t* X, int32_t X_h, int32_t X_w,
                    uint32_t C_in);
 
@@ -68,8 +69,8 @@ class AvgPool_Global {
 
  private:
   int32_t bias_;
-  uint32_t scale_;
-  uint32_t shift_;
+  nn_avgpool2d_global_plan_t plan_;
+  nn_avgpool2d_global_job_t* jobs_;
 };
 
 }  // namespace pooling

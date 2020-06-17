@@ -3,6 +3,7 @@
 #define XCORE_ARG_MIN_MAX_OPERATORS_H_
 
 #include <cstdint>
+
 #include "lib_ops/api/lib_ops.h"
 
 extern "C" {
@@ -17,7 +18,7 @@ class ArgMax16 {
   ArgMax16() {}
   ~ArgMax16() {}
 
-  XCoreStatus Eval(const int16_t* A, int32_t* C, const int32_t length);
+  XCoreStatus Eval(int32_t* Y, const int16_t* X, const int32_t length);
 };
 
 }  // namespace arg_min_max

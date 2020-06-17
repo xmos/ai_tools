@@ -200,7 +200,7 @@ class ChannelGroupSlicePlanner(ExecutionPlanner):
 
         return (
             sum(estimate_changrp_cost(changrp) for changrp in plan.changrp_slices)
-            // plan.num_threads
+            / plan.num_threads
         )
 
     def create_n_thread_candidates(self, num_threads):

@@ -210,6 +210,7 @@ class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
             int(Cout), num_threads=self.max_threads, forced=self.forced
         )
         plan = planner.find_optimal_plan()
+        plan.num_threads = min(plan.num_threads, len(plan.changrp_slices))
         self.plan_threads = plan.num_threads
 
         op.add_custom_options(plan=plan.to_dict())

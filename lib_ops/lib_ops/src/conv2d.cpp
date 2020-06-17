@@ -57,8 +57,9 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   nn_image_params_t out_params = {(uint32_t)Y_h, (uint32_t)Y_w,
                                   (uint32_t)C_out};
   nn_conv2d_window_params_t window_params = {
-      (uint32_t)params.K_h, (uint32_t)params.K_w, -params.pad.top,
-      -params.pad.left,     params.stride_h,      params.stride_w};
+      {(uint32_t)params.K_h, (uint32_t)params.K_w},
+      {-params.pad.top, -params.pad.left},
+      {params.stride_h, params.stride_w}};
 
   // allocate the jobs
   int32_t n_jobs =
@@ -82,8 +83,8 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
           region.rows, region.cols);
 
       job_params[i_cg * execution_plan.regions.GetSize() + i_rg] = {
-          region.top,  region.left, changrp.start,
-          region.rows, region.cols, changrp.size};
+          {region.top, region.left, changrp.start},
+          {region.rows, region.cols, changrp.size}};
     }
   }
 
@@ -178,8 +179,9 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   nn_image_params_t out_params = {(uint32_t)Y_h, (uint32_t)Y_w,
                                   (uint32_t)C_out};
   nn_conv2d_window_params_t window_params = {
-      (uint32_t)params.K_h, (uint32_t)params.K_w, -params.pad.top,
-      -params.pad.left,     params.stride_h,      params.stride_w};
+      {(uint32_t)params.K_h, (uint32_t)params.K_w},
+      {-params.pad.top, -params.pad.left},
+      {params.stride_h, params.stride_w}};
 
   // allocate the jobs
   int32_t n_jobs =
@@ -203,8 +205,8 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
           region.rows, region.cols);
 
       job_params[i_cg * execution_plan.regions.GetSize() + i_rg] = {
-          region.top,  region.left, changrp.start,
-          region.rows, region.cols, changrp.size};
+          {region.top, region.left, changrp.start},
+          {region.rows, region.cols, changrp.size}};
     }
   }
 
@@ -320,8 +322,8 @@ XCoreStatus Conv2D_1x1::Init(int32_t X_h, int32_t X_w, int32_t C_in,
           region.rows, region.cols);
 
       job_params[i_cg * execution_plan.regions.GetSize() + i_rg] = {
-          region.top, region.left, changrp.start,
-          (uint32_t)(region.rows * region.cols), (uint32_t)changrp.size};
+          {region.top, region.left, changrp.start},
+          {(uint32_t)(region.rows * region.cols), (uint32_t)changrp.size}};
     }
   }
 
@@ -414,9 +416,6 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
   nn_image_params_t out_params = {(uint32_t)Y_h, (uint32_t)Y_w,
                                   (uint32_t)C_out};
-  nn_conv2d_window_params_t window_params = {
-      (uint32_t)params.K_h, (uint32_t)params.K_w, -params.pad.top,
-      -params.pad.left,     params.stride_h,      params.stride_w};
 
   // allocate the jobs
   int32_t n_jobs =
@@ -440,8 +439,8 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
           region.rows, region.cols);
 
       job_params[i_cg * execution_plan.regions.GetSize() + i_rg] = {
-          region.top,  region.left, changrp.start,
-          region.rows, region.cols, changrp.size};
+          {region.top, region.left, changrp.start},
+          {region.rows, region.cols, changrp.size}};
     }
   }
 

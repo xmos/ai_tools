@@ -4,6 +4,7 @@ from copy import copy
 
 from tflite2xcore.xcore_schema import TensorType
 import tflite2xcore.xcore_interpreter as xcore_interpreter
+from tflite2xcore import xlogging as logging
 
 
 def calc_subgraph_mem_req(subgraph):
@@ -76,6 +77,32 @@ def analyze_model(model):
     return analysis
 
 
+# TODO: remove this since analysis should not rely on an interpreter
 def calc_arena_sizes(model_content):
     interpreter = xcore_interpreter.XCOREInterpreter(model_content=model_content)
     return interpreter.tensor_arena_size, interpreter.xcore_heap_size
+
+
+# TODO: remove this since analysis should not rely on an interpreter
+def print_report(tflite_output_path):
+    with open(tflite_output_path, "rb") as fd:
+        model_content = fd.read()
+        model_size = len(model_content)
+        try:
+            tensor_arena_size, xcore_heap_size = calc_arena_sizes(model_content)
+            print(f"Model size: {model_size} (bytes)")
+            print(f"Tensor arena size: {tensor_arena_size} (bytes)")
+            print(f"xCORE heap size: {xcore_heap_size} (bytes)")
+            print()
+            total_size = model_size + tensor_arena_size + xcore_heap_size
+            print(f"Total data memory required: {total_size}")
+        except RuntimeError as e:
+            prefix = "Didn't find op for builtin opcode "
+            msg = e.args[0]
+            if msg.startswith(prefix):
+                op_details = msg.split("\n", 1)[0][len(prefix) :]
+                logging.getLogger().warning(
+                    f"Arena size calculation failed because of unknown op in the interpreter: {op_details}"
+                )
+            else:
+                raise

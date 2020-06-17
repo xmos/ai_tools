@@ -127,10 +127,10 @@ void test_maxpool2d_case0()
         nn_image_params_t x_params = { casse->X.height, casse->X.width, casse->channels };
         nn_image_params_t y_params = { casse->Y.height, casse->Y.width, casse->channels };
 
-        nn_conv2d_window_params_t window_params;
+        nn_window_params_t window_params;
 
         nn_maxpool2d_plan_t plan;
-        nn_maxpool2d_job_t job;
+        nn_pool2d_job_t job;
 
         window_params.shape.height = casse->W.height;
         window_params.shape.width  = casse->W.width;
@@ -258,10 +258,10 @@ void test_maxpool2d_case1()
         nn_image_params_t y_params = { casse->output.shape.rows, casse->output.shape.cols, casse->output.shape.channels };
 
         nn_maxpool2d_plan_t plan;
-        nn_maxpool2d_job_t job;
+        nn_pool2d_job_t job;
 
-        nn_conv2d_window_params_t window_params;
-        nn_conv2d_job_params_t job_params;
+        nn_window_params_t window_params;
+        nn_window_op_job_params_t job_params;
 
         window_params.shape.height = casse->window.shape.height;
         window_params.shape.width  = casse->window.shape.width;

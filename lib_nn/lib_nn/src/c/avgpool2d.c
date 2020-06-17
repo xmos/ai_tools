@@ -106,24 +106,24 @@ WEAK_FUNC
 void avgpool2d_global(
     nn_image_t* Y,
     const nn_image_t* X, 
-    const uint32_t x_height, 
-    const uint32_t x_width,
-    const channel_count_t x_chans,
-    const int32_t  bias,
-    const uint32_t shift,
-    const uint32_t scale)
+    const int32_t bias,
+    const nn_avgpool2d_global_plan_t* plan,
+    const nn_avgpool2d_global_job_t* job)
 {
-    const unsigned pix = x_height * x_width;
+    Y = ADDR(Y, job->start_stride);
+    X = ADDR(X, job->start_stride);
 
-    const uint32_t sh = shift;
-    const uint32_t sc = scale;
+    const unsigned pix = plan->X.pixels;
+
+    const uint32_t sh = plan->shift;
+    const uint32_t sc = plan->scale;
     
-    for(unsigned ch = 0; ch < x_chans; ch++){
+    for(unsigned ch = 0; ch < job->out_channels; ch++){
 
         int32_t acc = bias;
 
         for(unsigned p = 0; p < pix; p++){
-            int32_t x = X[p*x_chans + ch];
+            int32_t x = X[p*plan->X.channels + ch];
             acc += x * sc;
         }
 
@@ -272,38 +272,53 @@ void avgpool2d_init(
 
 
 void avgpool2d_global_init(
-    uint32_t* shift,
-    uint32_t* scale,
-    const uint32_t x_height,
-    const uint32_t x_width)
+    nn_avgpool2d_global_plan_t* plan,
+    nn_avgpool2d_global_job_t* jobs,
+    const nn_image_params_t* x_params,
+    const nn_avgpool2d_global_job_params_t* job_params,
+    const unsigned job_count)
 {    
+    plan->X.channels = x_params->channels;
+
     //Figure out the scale and shift
-    const unsigned pix = x_height * x_width;
+    plan->X.pixels = x_params->height * x_params->width;
+
     //Find c = ceil(log2(pix)), which can be achieve via clz()
-    const int c = ceil_log2(pix);
+    const int c = ceil_log2(plan->X.pixels);
 
-    if(c == -1) __builtin_trap(); //pix == 0
+    assert(c != -1); //pix == 0
 
-    if(pix == (1<<c)){
+    if(plan->X.pixels == (1<<c)){
         //window pixel count is already a power of 2   (2^c)
-        *scale = 1;
-        *shift = c;
-        // printf("scale: %d\nshift: %d\ncl2: %d\npix: %u\n", scale, shift, ceil_log2(pix), pix);
-        // printf("win_h: %u\nwin_w:%u\n", win->window.height, win->window.width);
+        plan->scale = 1;
+        plan->shift = c;
     } else {
         const unsigned q = 31 - c - 6;
-        // 2^31 / pix
-        const unsigned g = 0x80000000 / pix;
+        // 2^31 / plan->X.pixels
+        const unsigned g = 0x80000000 / plan->X.pixels;
         const unsigned h = (g + (1 << (q-1))) >> q; //Rounding down-shift
 
         assert(h > (1<<6));
         assert(h < (1<<7));
 
-        *scale = (int8_t)h;
-        *shift = c+6;
+        plan->scale = (int8_t)h;
+        plan->shift = c+6;
     }
 
-    // (*scale) *= 0x01010101;
-    // (*shift) *= 0x00010001;
+    
+    const nn_avgpool2d_global_job_params_t full_job = { 0, x_params->channels };
+
+    for(int k = 0; k < job_count; k++){
+
+        const nn_avgpool2d_global_job_params_t* params = (job_params != NULL)? &job_params[k] : &full_job;
+        nn_avgpool2d_global_job_t* job = &jobs[k];
+
+        assert(params->start_channel >= 0);
+        assert((params->start_channel + params->out_channels) <= x_params->channels);
+
+        job->start_stride = params->start_channel;
+        job->out_channels = params->out_channels;
+
+    }
 }   
 

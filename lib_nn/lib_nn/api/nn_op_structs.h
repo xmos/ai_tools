@@ -18,16 +18,14 @@ extern "C" {
  * This struct represents an indexing vector for an image.
  */
 typedef struct {
+    /** Number of image pixel rows */
     int32_t rows;
+    /** Number of image pixel columns */
     int32_t cols;
+    /** Number of image pixel channels */
     int32_t channels;
 } nn_image_vect_t;
 
-
-typedef struct {
-    int32_t rows;
-    int32_t cols;
-} nn_index_vector2d_t;
 
 /**
  * Macro returns the number of `nn_bso_block_t`s required for `OUT_CHANS` output channels. This is
@@ -41,50 +39,66 @@ typedef struct {
 
 /**
  * Represents the Bias, shifts and scale for a single output channel group.
- */
-typedef struct {
-    data16_t bias_hi[VPU_INT8_ACC_PERIOD];
-    data16_t bias_lo[VPU_INT8_ACC_PERIOD];
-    data16_t shift1[VPU_INT8_ACC_PERIOD];
-    data16_t scale[VPU_INT8_ACC_PERIOD];
-    data16_t offset_scale[VPU_INT8_ACC_PERIOD];
-    data16_t offset[VPU_INT8_ACC_PERIOD];
-    data16_t shift2[VPU_INT8_ACC_PERIOD];
-} nn_bso_block_t;
-
-
-
-
-typedef struct {
-    struct {
-        channel_count_t X;
-    } channels;
-} nn_fully_connected_plan_t;
-
-/**
  * 
  */
 typedef struct {
+    /**
+     * Contains the upper 16-bits of output channel bias for an operator for (up to) 16 channels.
+     * 
+     * The full 32-bit bias for an output channel corresponding to index `k` is:
+     * 
+     * @math{ B_{hi}[k]\cdot 2^{16} + B_{lo}[k] } where @math{ B_{hi}[k] } is `bias_hi[k]` interpreted as a signed 16-bit integer,
+     * and @math{B_{lo}[k]} is `bias_lo[k]` interpreted as an unsigned 16-bit integer.
+     */
+    data16_t bias_hi[VPU_INT8_ACC_PERIOD];
 
-    struct {
-        struct {
-            mem_stride_t Y;
-            mem_stride_t W;
-            mem_stride_t BSO;
-        } start;
-    } stride;
+    /**
+     * Contains the lower 16-bits of output channel bias for an operator for (up to) 16 channels.
+     * 
+     * The full bias for an output channel corresponding to index `k` is:
+     * 
+     * @math{ B_{hi}[k]\cdot 2^{16} + B_{lo}[k] } where @math{ B_{hi}[k] } is `bias_hi[k]` interpreted as a signed 16-bit integer,
+     * and @math{B_{lo}[k]} is `bias_lo[k]` interpreted as an unsigned 16-bit integer.
+     */
+    data16_t bias_lo[VPU_INT8_ACC_PERIOD];
 
-    struct {
-        channel_count_t channels;
-    } output;
-} nn_fully_connected_job_t;
+    /**
+     * Contains the first shift value for an operator for (up to) 16 channels.
+     * 
+     * After accumulating all weights and input data, the channel corresponding to index `k` is first divided 
+     * by @math{ 2^{s_1[k]} }, where @math{s_1[k]} is `shift1[k]`.
+     */
+    data16_t shift1[VPU_INT8_ACC_PERIOD];
 
+    /**
+     * Contains the scale value for an operator for (up to) 16 channels.
+     * 
+     * After applying the first shift, the result of that is multiplied by `scale[k]`.
+     * 
+     */
+    data16_t scale[VPU_INT8_ACC_PERIOD];
 
-typedef struct {
-    uint32_t start_channel;
-    channel_count_t out_channels;
-} nn_fully_connected_job_params_t;
+    /**
+     * `offset_scale[k]` and `offset[k]` are multiplied together and added to the result of
+     * applying the scale.
+     */
+    data16_t offset_scale[VPU_INT8_ACC_PERIOD];
 
+    /**
+     * `offset_scale[k]` and `offset[k]` are multiplied together and added to the result of
+     * applying the scale.
+     */
+    data16_t offset[VPU_INT8_ACC_PERIOD];
+
+    /**
+     * Contains the second shift value for an operator for (up to) 16 channels.
+     * 
+     * After the offset and offset scale are added, the channel corresponding to index `k` is divided 
+     * by @math{ 2^{s_2[k]} }, where @math{s_2[k]} is `shift2[k]`.
+     */
+    data16_t shift2[VPU_INT8_ACC_PERIOD];
+
+} nn_bso_block_t;
 
 
 
@@ -169,6 +183,67 @@ typedef struct {
 } nn_window_op_job_params_t;
 
 
+
+
+
+/**
+ * Struct represents the parameters needed by all `fully_connected_16()` jobs.
+ * 
+ * Values are set by `fully_connected_16_init()`.
+ * 
+ * @note This struct is intended to be opaque.
+ */
+typedef struct {
+    struct {
+        channel_count_t X;
+    } channels;
+} nn_fully_connected_plan_t;
+
+/**
+ * Struct represents the parameters needed by a single `fully_connected_16()` job.
+ * 
+ * Values are set by `fully_connected_16_init()`.
+ * 
+ * @note This struct is intended to be opaque.
+ */
+typedef struct {
+
+    struct {
+        struct {
+            mem_stride_t Y;
+            mem_stride_t W;
+            mem_stride_t BSO;
+        } start;
+    } stride;
+
+    struct {
+        channel_count_t channels;
+    } output;
+} nn_fully_connected_job_t;
+
+/**
+ * Struct represents the job initialization information required by `fully_connected_16_init()`.
+ * 
+ * `fully_connected_16()` job computes a contiguous subset of the output channels.
+ * 
+ * @note When splitting a `fully_connected_16()` into multiple jobs, jobs that compute less than 16
+ *       output channels will often be *less* efficient than a full 16 channels.
+ */
+typedef struct {
+    /**
+     * The first output channel to be computed by the job. Must be a multiple of `4`.
+     */
+    uint32_t start_channel;
+
+    /**
+     * The number of output channels to be computed by the job. Does not have to be a multiple of 4,
+     * however, because the `start_channel` for each job must be a multiple of 4, this value can only
+     * be a non-multiple of 4 for the last job.
+     */
+    channel_count_t out_channels;
+} nn_fully_connected_job_params_t;
+
+
 /**
  * Enum identifies optimized assembly implementations for
  * the `avgpool2d()` function.
@@ -179,8 +254,11 @@ typedef enum {
 } nn_avgpool2d_impl_t;
 
 /**
- * Struct represents the parameters needed by the avgpool2d() funciton.
- * Values are set by avgpool2d_init().
+ * Struct represents the parameters needed by each `avgpool2d()` job.
+ * 
+ * Values are set by `avgpool2d_init()`.
+ * 
+ * @note This struct is intended to be opaque.
  */
 typedef struct {
 
@@ -200,7 +278,61 @@ typedef struct {
 
 
 /**
+ * Struct represents the parameters needed by each @oper{avgpool2d_global} job.
  * 
+ * Values are set by avgpool2d_global_init().
+ * 
+ * @note This struct is intended to be opaque.
+ */
+typedef struct {
+    struct {
+        uint32_t pixels;
+        channel_count_t channels;
+    } X;
+    uint32_t shift;
+    uint32_t scale;
+} nn_avgpool2d_global_plan_t;
+
+/**
+ * Struct represents the parameters needed by a single @oper{avgpool2d_global} job.
+ * 
+ * Values are set by avgpool2d_global_init().
+ * 
+ * @note This struct is intended to be opaque.
+ */
+typedef struct {
+    mem_stride_t start_stride;
+    channel_count_t out_channels;
+} nn_avgpool2d_global_job_t;
+
+
+/**
+ * Struct represents the job initialization information required by avgpool2d_global_init().
+ * 
+ * @oper{avgpool2d_global} job computes a contiguous subset of the output channels.
+ * 
+ */
+typedef struct {
+    /**
+     * The first output channel to be computed by the job. Must be a multiple of `4`.
+     */
+    channel_count_t start_channel;
+    
+    /**
+     * The number of output channels to be computed by the job. Does not have to be a multiple of 4,
+     * however, because the `start_channel` for each job must be a multiple of 4, this value can only
+     * be a non-multiple of 4 for the last job.
+     */
+    channel_count_t out_channels;
+} nn_avgpool2d_global_job_params_t;
+
+
+/**
+ * Struct represents the parameters needed by a single `avgpool2d()` or `maxpool2d()` job.
+ * 
+ * Values are set by the corresponding initialization function.
+ * 
+ * @note This struct is intended to be opaque.
  */
 typedef struct {
 
@@ -233,7 +365,11 @@ typedef struct {
 } nn_pool2d_job_t;
 
 /**
+ * Struct represents the parameters needed by each `maxpool2d()` job.
  * 
+ * Values are set by `maxpool2d_init()`.
+ * 
+ * @note This struct is intended to be opaque.
  */
 typedef struct {
 
@@ -249,21 +385,22 @@ typedef struct {
 
 } nn_maxpool2d_plan_t;
 
-/**
- * 
- */
-typedef nn_pool2d_job_t nn_maxpool2d_job_t;
 
 
 
 
 /**
+ * Struct represents the parameters needed by each `requantize_16_to_8()` job.
  * 
+ * Values are set by `requantize_16_to_8_init()`.
+ * 
+ * @note This struct is intended to be opaque.
  */
 typedef struct {
     mem_stride_t start;
     uint32_t length;
 } nn_requantize_16_to_8_job_t;
+
 
 /**
  * This struct describes the basic parameters for an image tensor

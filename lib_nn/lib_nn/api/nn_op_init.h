@@ -259,90 +259,104 @@ void conv2d_depthwise_init(
 
 
 
-/** Compute an execution plan for a 16-bit fully-connected layer.
- * 
- * The output `plan` is the execution plan to be computed.
- * 
- * `C_in` is the number of input elements.
- * 
- * `C_out` is the number of output elements.
- * 
- */
-void fully_connected_init(
-    nn_fully_connected_plan_t* plan,
-    nn_fully_connected_job_t* jobs,
-    const channel_count_t C_in,
-    const channel_count_t C_out,
-    const nn_fully_connected_job_params_t* job_params,
-    const unsigned job_count);
-
-
-
-
 
 /**
- * Compute the execution plan required by the `maxpool2d()` function.
+ * Initialize the plan and jobs required by the maxpool2d() function.
  * 
- * `maxpool2d()` requires an execution plan (represented by a `nn_window_op_plan_t` struct)
- * to do its job. This function computes that execution plan based on the behavior specified
- * in `config`. The execution plan can be reused, so it need only be computed once at 
- * initialization time.
+ * An instance of a `maxpool2d` operator is described by a plan and one or more jobs.
+ * This function is used to initialize the plan and any jobs, and need only be called once
+ * per instance of the `maxpool2d` operator.
  * 
- * The `x` and `y` inputs describe the input and output images which will be used
- * when `avgpool2d() is called.
+ * Once initialized, a single instance of `maxpool2d` has its hyperparameters fixed. The hyperparameters
+ * of the `maxpool2d` operator are those that capture the geometry of the input image, output image,
+ * and the mapping of the former to the latter. This includes the dimensions of the input and output 
+ * images, the pooling window dimensions, the pooling window strides, and the pooling window start
+ * position with respect to the input image.
  * 
- * The `config` parameter describes the behavior of the operation, including pool window dimensions,
- * stride lengths, input and output start positions, and output pixel counts. See the 
- * `nn_maxpool_config_t` documentation for more details.
+ * `maxpool2d` requires that the input and output channel counts be the same, and because every pixel must
+ * start on a word-aligned boundary, the channel count must be a multiple of 4.
  * 
- * `maxpool2d()` requires that *every pixel* in the input and output images start at a word-aligned 
- * address, which means the input and output channel counts must be a multiple of 4.
+ * `plan` points to a `nn_maxpool2d_plan_t` struct, which will be populated with the info needed
+ * by all jobs to implement the instance of maxpool2d().
  * 
- * \param plan      Output. Parameters used by `maxpool2d()`
- * \param x         Parameters of the image to be input to `maxpool2d()`
- * \param y         Parameters of the iamge to be output from `maxpool2d()`
- * \param config    `nn_maxpool_config_t` describing the behavior of the maxpool2d operation.
+ * `jobs` points to an array of one or more `nn_pool2d_job_t` structs, each of which will be populated
+ * with the information necessary to compute a portion of the output image.
+ * 
+ * `x_params` and `y_params` are descriptions of the input and output images for this instance of `maxpool2d`.
+ * 
+ * The `window_config` parameter describes the pooling window, and how input pixels get mapped to pixels
+ * in the output image.
+ * 
+ * `job_params` is either an array of `nn_window_op_params_t` of length `job_count`, or is `NULL`. If `NULL`,  
+ * `job_count` must be 1, and the job `jobs` points to will be initialized to compute the entire output image.
+ * If `job_count` is not `NULL`, each of the jobs in `jobs` will be initialized according to the corresponding
+ * element in `job_params`.
+ * 
+ * `job_count` is the number of jobs to be initialized in the `jobs` array.
+ * 
+ * @param plan [out]            The plan to be initialized.
+ * @param jobs [out]            Array of jobs to be initialized.
+ * @param x_params [in]         Parameters describing the shape of each input image tensor @tensor{X}.
+ * @param y_params [in]         Parameters describing the shape of each output image tensor @tensor{Y}
+ * @param window_config [in]    Pooling window configuration.
+ * @param job_params [in]       An array of `nn_window_op_job_params_t` structs, or NULL
+ * @param job_count [in]        The number of jobs to be initialized.
  */
 void maxpool2d_init(
     nn_maxpool2d_plan_t* plan,
-    nn_maxpool2d_job_t* jobs,
+    nn_pool2d_job_t* jobs,
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params,
-    const nn_conv2d_window_params_t* window_params,
-    const nn_conv2d_job_params_t* job_params,
+    const nn_window_params_t* window_config,
+    const nn_window_op_job_params_t* job_params,
     const unsigned job_count);
 
 
 /**
- * Initialize the parameters required by the `avgpool2d()` function.
+ * Initialize the plan and jobs required by the avgpool2d() function.
  * 
- * This function sets the values in `pool` to those needed by the `avgpool2d()` function. 
- * This need only be called once during initialization time.
+ * An instance of an `avgpool2d` operator is described by a plan and one or more jobs.
+ * This function is used to initialize the plan and any jobs, and need only be called once
+ * per instance of the `avgpool2d` operator.
  * 
- * The `x` and `y` inputs describe the input and output images which will be used
- * when `avgpool2d() is called.
+ * Once initialized, a single instance of `avgpool2d` has its hyperparameters fixed. The hyperparameters
+ * of the `avgpool2d` operator are those that capture the geometry of the input image, output image,
+ * and the mapping of the former to the latter. This includes the dimensions of the input and output 
+ * images, the pooling window dimensions, the pooling window strides, and the pooling window start
+ * position with respect to the input image.
  * 
- * The `config` parameter describes which output pixel values will be written, and how they are mapped
- * from pixels in the input image.
+ * `avgpool2d` requires that the input and output channel counts be the same, and because every pixel must
+ * start on a word-aligned boundary, the channel count must be a multiple of 4.
  * 
- * `avgpool2d()` requires that each pixel in both the input and output images start at a word-aligned 
- * address, thus the number of channels in the input and output images must both be multiples of 4 
- * (though the input and output images need not have the same number of channels).
+ * `plan` points to a `nn_avgpool2d_plan_t` struct, which will be populated with the info needed
+ * by all jobs to implement the instance of avgpool2d().
  * 
- * NOTE: See the documentation for `nn_window_op_config_t` for details about what its fields mean.
+ * `jobs` points to an array of one or more `nn_pool2d_job_t` structs, each of which will be populated
+ * with the information necessary to compute a portion of the output image.
  * 
- * NOTE: If this average pool describes the standard 2x2 average pool with a 2x2 stride across the entire
- *       input image, then the `avgpool2d_2x2()` function should be used instead, which is optimized 
- *       for that common scenario. (In that case, `avgpool2d_2x2_init()` should be used instead of this)
+ * `x_params` and `y_params` are descriptions of the input and output images for this instance of `avgpool2d`.
  * 
- * NOTE: If this average pool describes a global average pool, then the `avgpool2d_global` function
- *       should be used instead, which is optimized for that scenario. (In that case, `avgpool2d_global_init()`
- *       should be used instead of this.
+ * The `window_config` parameter describes the pooling window, and how input pixels get mapped to pixels
+ * in the output image.
  * 
- * \param pool      Output. Parameters used by `avgpool2d()`
- * \param x         Parameters of the image to be input to `avgpool2d()`
- * \param y         Parameters of the image to be output from `avgpool2d()`
- * \param config    Configuration struct specifying desired behavior.
+ * `job_params` is either an array of `nn_window_op_params_t` of length `job_count`, or is `NULL`. If `NULL`,  
+ * `job_count` must be 1, and the job `jobs` points to will be initialized to compute the entire output image.
+ * If `job_count` is not `NULL`, each of the jobs in `jobs` will be initialized according to the corresponding
+ * element in `job_params`.
+ * 
+ * `job_count` is the number of jobs to be initialized in the `jobs` array.
+ * 
+ * NOTE: If this average pool describes a global average pool, in which the entire input image contributes to
+ *       a single output pixel, then the `avgpool2d_global` operator should be used instead of `avgpool2d`, 
+ *       (In that case, `avgpool2d_global_init()` can be used to initialize it.)
+ * 
+ * @param plan [out]            The plan to be initialized.
+ * @param jobs [out]            Array of jobs to be initialized.
+ * @param x_params [in]         Parameters describing the shape of each input image tensor @tensor{X}.
+ * @param y_params [in]         Parameters describing the shape of each output image tensor @tensor{Y}
+ * @param window_config [in]    Pooling window configuration.
+ * @param job_params [in]       An array of `nn_window_op_job_params_t` structs, or NULL
+ * @param job_count [in]        The number of jobs to be initialized.
  */
 void avgpool2d_init(
     nn_avgpool2d_plan_t* plan,
@@ -355,70 +369,6 @@ void avgpool2d_init(
 
 
 
-/**
- * Initialize the supplied `nn_avgpool2d_plan_t` for use with `avgpool2d_2x2()`.
- * 
- * `avgpool2d_2x2_asm()` is an optimized implementation of the `avgpool2d()` function for when the pooling 
- * window dimensions are 2x2 and both horizontal and vertical strides are 2.
- * 
- * The `x` and `y` parameters describe the shape of the input (`X[][][]`) and output (`Y[][][]`) images 
- * respectively. When `avgpool2d_2x2_asm()` is called, input and output tensors must have the shapes specified 
- * in `x` and `y`.
- * 
- * The `x_start`, `y_start`, `out_rows`, `out_cols` and `out_chans` parameters collectively define sub-tensors 
- * in the input and output images, and can be used to bound the output to only a region of the output image. 
- * This may be useful for parallelization.
- * 
- * More specifically, the subtensor in the input starts at `X[x_start->rows][x_start->cols][x_start->channels]`, 
- * and extends to (including) `X[x_start->rows + 2*out_rows - 1][x_start->cols + 2*out_cols - 1][x_start->channels + out_chans - 1]`,
- * and the subtensor in the output starts at `Y[y_start->rows][y_start->cols][y_start->channels]` and extends to 
- * (including) `Y[y_start->rows + out_rows - 1][y_start->cols + out_cols -1][y_start->channels + out_chans -1]`.
- * 
- * The operation performed is:
- * \code
- *      Y[y_start->rows + i][y_start->cols + j][y_start->channels + k] <- 
- *         (X[x_start->rows + 2*i    ][x_start->cols + 2*j    ][x_start->channels + k]
- *        + X[x_start->rows + 2*i    ][x_start->cols + 2*j + 1][x_start->channels + k]
- *        + X[x_start->rows + 2*i + 1][x_start->cols + 2*j    ][x_start->channels + k]
- *        + X[x_start->rows + 2*i + 1][x_start->cols + 2*j + 1][x_start->channels + k]
- *        + 2) >> 2;
- *  \endcode
- *          where `0 <= i < out_rows`,  `0 <= j < out_cols`, and  `0 <= k < out_chans`
- * 
- * To consume an entire input image with this operator, use (given the input image parameters `x`):
- * \code
- *  x_start->rows = x_start->cols = x_start->channels = 0;
- *  y_start->rows = y_start->cols = y_start->channels = 0;
- *  out_rows = y->height = x->height/2;
- *  out_cols = y->width = x->width/2;
- *  out_chans = y->channels = x->channels;
- * \endcode
- * 
- * NOTE: A sub-tensor does *not* imply a contiguous region of memory. It is only contiguous (and rectangular)
- *       in the conceptual 3-dimensional tensor.
- * 
- * NOTE: The `plan` generated by `avgpool2d_2x2_init()` is compatible with both `avgpool2d()`, but plans 
- *       generated by `avgpool2d_init()` are not necessarily compatible with `avgpool2d_2x2()`.
- * 
- * \param plan      `nn_avgpool2d_plan_t` struct to be initialized.
- * \param x         Parameters of the image to be input to `avgpool2d_2x2()`
- * \param y         Parameters of the image to be output from `avgpool2d_2x2()`
- * \param x_start   Initial position for the window, relative to the input image
- * \param y_start   Initial position for output, relative to the output image
- * \param out_rows  The number of rows to output
- * \param out_cols  The number of columns to output
- * \param out_chans The number of channels to output
- */
-void avgpool2d_2x2_init(
-    nn_avgpool2d_plan_t* plan,
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const nn_image_vect_t* x_start,
-    const nn_image_vect_t* y_start,
-    const unsigned out_rows,
-    const unsigned out_cols,
-    const unsigned out_chans);
-
 
 /**
  * Obtain the shift and scale parameters required by the `avgpool2d_global()` function.
@@ -429,19 +379,85 @@ void avgpool2d_2x2_init(
  * The `shift` and `scale` values will be set by this function, and should be passed to
  * the `shift` and `scale` inputs to `avgpool2d_global()`.
  * 
- * \param shift     Output. The shift parameter required by `avgpool2d_global()`
- * \param scale     Output. The scale parameter required by `avgpool2d_global()`
- * \param x_height  The height of the image to be input to `avgpool2d_global()`
- * \param x_width   The width of the image to be input to `avgpool2d_global()`
+ * @param shift [out]   The shift parameter required by `avgpool2d_global()`
+ * @param scale [out]   The scale parameter required by `avgpool2d_global()`
+ * @param x_height [in] The height of the image to be input to `avgpool2d_global()`
+ * @param x_width [in]  The width of the image to be input to `avgpool2d_global()`
  */
 void avgpool2d_global_init(
-    uint32_t* shift,
-    uint32_t* scale,
-    const uint32_t x_height,
-    const uint32_t x_width);
+    nn_avgpool2d_global_plan_t* plan,
+    nn_avgpool2d_global_job_t* jobs,
+    const nn_image_params_t* x_params,
+    const nn_avgpool2d_global_job_params_t* job_params,
+    const unsigned job_count);
 
 
 
+
+/** 
+ * Initialize the plan and jobs required by the fully_connected_16() function.
+ * 
+ * An instance of a `fully_connected_16` operator is described by a plan and one or more
+ * jobs. This function is used to initialize the plan and any jobs, and need only be called once
+ * per instance of the `fully_connected_16` operator.
+ * 
+ * Once initialized, a single instance of the `fully_connected_16` has its hyperparameters fixed.
+ * The hyperparameters of the `fully_connected_16` operator are the numbers of input channels and
+ * output channels.
+ * 
+ * `plan` points to a `nn_fully_connected_plan_t` struct, which will be populated with the info needed
+ * by all jobs to implement the instance of `fully_connected_16`.
+ * 
+ * `jobs` points to an array of one or more `nn_fully_connected_job_t` structs, each of which will be
+ * populated with the information necessary to compute a contiguous subset of the output channels.
+ * 
+ * `C_in` and `C_out` are the number of input and output elements respectively.
+ * 
+ * `job_params` is either an array of `nn_fully_connected_job_params_t` of length `job_count`, or is `NULL`. 
+ * If `NULL`, `job_count` must be 1, and the job `jobs` points to will be initialized to compute the entire 
+ * output image. If `job_count` is not `NULL`, each of the jobs in `jobs` will be initialized according to 
+ * the corresponding element in `job_params`.
+ * 
+ * `job_count` is the number of jobs to be initialized in the `jobs` array.
+ * 
+ * @param plan [out]        The plan to be initialized.
+ * @param jobs [out]        Array of jobs to be initialized.
+ * @param C_in [in]         The number of input elements.
+ * @param C_out [in]        The number of output elements.
+ * @param job_params [in]   An array of `nn_fully_connected_job_params_t` structs, or `NULL`.
+ * @param job_count [in]    The number of jobs to be initialized.
+ */
+void fully_connected_init(
+    nn_fully_connected_plan_t* plan,
+    nn_fully_connected_job_t* jobs,
+    const channel_count_t C_in,
+    const channel_count_t C_out,
+    const nn_fully_connected_job_params_t* job_params,
+    const unsigned job_count);
+
+
+/**
+ * Initialize the parameters required by the `requantize_16_to_8()` function.
+ * 
+ * This function initializes one or more jobs, represented by `nn_requantize_16_to_8_job_t` structs. Each job computes a 
+ * contiguous subset of the operators's output channels.
+ * 
+ * Unlike most operators, no common parameters are required between jobs of `requantize_16_to_8()`, and so no structure
+ * representing a plan is required.
+ * 
+ * Also unlike most operators, this function makes its own decision about how the work is to be divided up between the jobs.
+ * 
+ * `jobs` points to an array of `nn_requantize_16_to_8_job_t` structs to be initialized by the call. The number of elements
+ * in the array should be `job_count`.
+ * 
+ * `length` is the number of elements in the input (and output).
+ * 
+ * `job_count` is the number of that the work is to be split between.
+ * 
+ * @param jobs [out]        Array of jobs, to be initialized by this call.
+ * @param length [in]       The number of elements in the input (and output).
+ * @param job_count [in]    The number of jobs.
+ */
 void requantize_16_to_8_init(
     nn_requantize_16_to_8_job_t* jobs,
     const uint32_t length,

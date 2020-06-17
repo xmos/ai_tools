@@ -16,10 +16,10 @@
 
 WEAK_FUNC
 void maxpool2d(
-    int8_t* Y,
-    const int8_t* X, 
+    nn_image_t* Y,
+    const nn_image_t* X, 
     const nn_maxpool2d_plan_t* plan,
-    const nn_maxpool2d_job_t* job)
+    const nn_pool2d_job_t* job)
 {
     X = ADDR(X, job->stride.X.start);
     Y = ADDR(Y, job->stride.Y.start);
@@ -74,11 +74,11 @@ void maxpool2d(
 
 void maxpool2d_init(
     nn_maxpool2d_plan_t* plan,
-    nn_maxpool2d_job_t* jobs,
+    nn_pool2d_job_t* jobs,
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params,
     const nn_window_params_t* window_config,
-    const nn_conv2d_job_params_t* job_params,
+    const nn_window_op_job_params_t* job_params,
     const unsigned job_count)
 {
     // If job_count is 1, job_params can be null
@@ -113,12 +113,12 @@ void maxpool2d_init(
     const mem_stride_t win_hstride_from_prev_start = window_config->stride.horizontal * x_params->channels;
     const mem_stride_t win_vstride_from_prev_start = window_config->stride.vertical * x_row_bytes;
 
-    const nn_conv2d_job_params_t full_job = { { 0, 0, 0 }, { y_params->height, y_params->width, y_params->channels } };
+    const nn_window_op_job_params_t full_job = { { 0, 0, 0 }, { y_params->height, y_params->width, y_params->channels } };
 
     for(int i = 0; i < job_count; i++){
 
-        const nn_conv2d_job_params_t* params = (job_params != NULL)? &job_params[i] : &full_job;
-        nn_maxpool2d_job_t* job = &jobs[i];
+        const nn_window_op_job_params_t* params = (job_params != NULL)? &job_params[i] : &full_job;
+        nn_pool2d_job_t* job = &jobs[i];
 
         assert(params->start.rows >= 0);
         assert(params->start.cols >= 0);

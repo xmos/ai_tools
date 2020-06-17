@@ -93,6 +93,22 @@ void nn_standard_BSO_layout(
 
 
 
+/**
+ * @brief Copy `size` bytes from `src` to `dst`.
+ *   
+ * `dst` and `src` both must be word-aligned addresses.
+ * 
+ * `size` need not be an integer number of words.
+ *  
+ * @param dst  [out]    Destination address
+ * @param src  [in]     Source address
+ * @param size [in]     Number of bytes to be copied
+*/
+void vpu_memcpy(
+    void* dst,
+    const void* src,
+    unsigned size);
+
 
 #ifdef __XC__
 }   //extern "C"

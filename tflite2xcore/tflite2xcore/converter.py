@@ -138,8 +138,8 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
     pass_mgr.register_pass(passes.PlanFullyConnectedPass(num_threads=num_threads))
+    pass_mgr.register_pass(passes.PlanRequant16To8Pass(num_threads=num_threads))
     pass_mgr.register_pass(passes.PlanConv2dPass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanDepthwiseConv2dPass(num_threads=num_threads))
     pass_mgr.register_pass(passes.PlanPooling2DPass(num_threads=num_threads))
     pass_mgr.register_pass(passes.PlanGlobalAveragePool2DPass(num_threads=num_threads))
 

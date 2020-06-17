@@ -10,10 +10,6 @@
 
 namespace xcore {
 
-constexpr size_t bytes_per_stackword = 4;
-constexpr size_t bso_changrp_len = (7 * 16);
-constexpr size_t bso_changrp_bytes = (bso_changrp_len * 2);
-
 static Dispatcher *kDispatcher = nullptr;
 
 Dispatcher *GetDispatcher() {
@@ -75,29 +71,34 @@ XCoreStatus Dispatcher::JoinTasks() {
   return kXCoreOk;
 }
 
-int8_t const *Dispatcher::PreloadWeights(int8_t const *src, int32_t size,
-                                         ChannelGroup const &changrp) {
-  if (IS_RAM(src)) return &src[changrp.start * size];
+void Dispatcher::PreloadBuffer(int8_t **dest, int8_t const *src, int32_t size) {
+  if (IS_RAM(src)) *dest = (int8_t *)&src[size];
 
-  int8_t *dest;
-  dest = (int8_t *)AllocateScratchBuffer(changrp.size * size);
+  if (*dest == nullptr) *dest = (int8_t *)AllocateScratchBuffer(size);
 
-  memload((void **)&dest, (void *)&src[changrp.start * size],
-          changrp.size * size);
-  return dest;
+  memload((void **)*dest, (void *)src, size);
 }
 
-int16_t const *Dispatcher::PreloadBiases(int16_t const *src,
-                                         ChannelGroup const &changrp) {
-  if (IS_RAM(src)) return &src[changrp.index * bso_changrp_len];
+void Dispatcher::PreloadWeights(int8_t **dest, int8_t const *src, int32_t size,
+                                ChannelGroup const &changrp) {
+  if (IS_RAM(src)) *dest = (int8_t *)&src[changrp.start * size];
 
-  int16_t *dest;
-  dest = (int16_t *)AllocateScratchBuffer(bso_changrp_bytes);
+  if (*dest == nullptr)
+    *dest = (int8_t *)AllocateScratchBuffer(changrp.size * size);
 
-  memload((void **)&dest, (void *)&src[changrp.index * bso_changrp_len],
+  memload((void **)*dest, (void *)&src[changrp.start * size],
+          changrp.size * size);
+}
+
+void Dispatcher::PreloadBiases(int16_t **dest, int16_t const *src,
+                               ChannelGroup const &changrp) {
+  if (IS_RAM(src)) *dest = (int16_t *)&src[changrp.index * bso_changrp_len];
+
+  if (*dest == nullptr)
+    *dest = (int16_t *)AllocateScratchBuffer(bso_changrp_bytes);
+
+  memload((void **)*dest, (void *)&src[changrp.index * bso_changrp_len],
           bso_changrp_bytes);
-
-  return dest;
 }
 
 #else
@@ -137,28 +138,31 @@ XCoreStatus Dispatcher::JoinTasks() {
   return kXCoreOk;
 }
 
-int8_t const *Dispatcher::PreloadWeights(int8_t const *src, int32_t size,
-                                         ChannelGroup const &changrp) {
-  int8_t *dest;
+void Dispatcher::PreloadBuffer(int8_t **dest, int8_t const *src, int32_t size) {
+  if (*dest == nullptr) *dest = (int8_t *)AllocateScratchBuffer(size);
 
-  dest = (int8_t *)AllocateScratchBuffer(changrp.size * size);
-
-  std::memcpy((void *)dest, (void *)&src[changrp.start * size],
-              changrp.size * size);
-
-  return dest;
+  std::memcpy((void **)*dest, (void *)src, size);
 }
 
-int16_t const *Dispatcher::PreloadBiases(int16_t const *src,
-                                         ChannelGroup const &changrp) {
-  int16_t *dest;
+void Dispatcher::PreloadWeights(int8_t **dest, int8_t const *src, int32_t size,
+                                ChannelGroup const &changrp) {
+  if (*dest == nullptr) {
+    *dest = (int8_t *)AllocateScratchBuffer(changrp.size * size);
+    std::cout << "  w allocating " << changrp.size * size << std::endl;
+  }
 
-  dest = (int16_t *)AllocateScratchBuffer(bso_changrp_bytes);
+  std::memcpy((void **)*dest, (void *)&src[changrp.start * size],
+              changrp.size * size);
+}
 
-  std::memcpy((void *)dest, (void *)&src[changrp.index * bso_changrp_len],
+void Dispatcher::PreloadBiases(int16_t **dest, int16_t const *src,
+                               ChannelGroup const &changrp) {
+  if (*dest == nullptr) {
+    *dest = (int16_t *)AllocateScratchBuffer(bso_changrp_bytes);
+    std::cout << "  bso allocating " << bso_changrp_bytes << std::endl;
+  }
+  std::memcpy((void **)*dest, (void *)&src[changrp.index * bso_changrp_len],
               bso_changrp_bytes);
-
-  return dest;
 }
 
 #endif  // XCORE

@@ -11,6 +11,11 @@ extern "C" {
 namespace xcore {
 namespace pooling {
 
+struct PoolingThreadData {
+  int8_t* Y;
+  const int8_t* X;
+};
+
 //**************************************
 //**************************************
 //**************************************
@@ -18,10 +23,22 @@ namespace pooling {
 //**************************************
 //**************************************
 //**************************************
+struct MaxPoolThreadData {
+  const nn_maxpool2d_plan_t* plan;
+  nn_maxpool2d_job_t* job;
+  PoolingThreadData data;
+};
+
+extern "C" {
+ATTRIBUTE_THREAD_FUNCTION void maxpool_thread_worker(void* context) {
+  MaxPoolThreadData* td = (MaxPoolThreadData*)context;
+  maxpool2d(td->data.Y, td->data.X, td->plan, td->job);
+}
+}
 
 MaxPool::MaxPool(const PoolingParams& params,
                  const ExecutionPlan& execution_plan)
-    : params(params), execution_plan(execution_plan) {}
+    : params(params), execution_plan(execution_plan), jobs_(nullptr) {}
 
 XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                           int32_t Y_w, int32_t C_out) {
@@ -29,21 +46,35 @@ XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
       "MaxPool Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
 
-  nn_image_params_t in_params;
-  in_params.height = X_h;
-  in_params.width = X_w;
-  in_params.channels = C_in;
+  nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
+  nn_image_params_t out_params = {(uint32_t)Y_h, (uint32_t)Y_w,
+                                  (uint32_t)C_out};
+  nn_conv2d_window_params_t window_params = {
+      (uint32_t)params.pool_h, (uint32_t)params.pool_w, 0, 0,
+      params.stride_h,         params.stride_w};
 
-  nn_image_params_t out_params;
-  out_params.height = Y_h;
-  out_params.width = Y_w;
-  out_params.channels = C_out;
+  // allocate the jobs
+  int32_t n_jobs = execution_plan.regions.GetSize();
+  jobs_ = reinterpret_cast<nn_maxpool2d_job_t*>(
+      GetDispatcher()->AllocatePersistantBuffer(sizeof(nn_maxpool2d_job_t) *
+                                                n_jobs));
 
-  nn_window_op_config_t config;
-  nn_window_op_config_simple(&config, &in_params, &out_params, params.pool_h,
-                             params.pool_w, params.stride_h, params.stride_w);
+  // set job parameters
+  nn_conv2d_job_params_t job_params[n_jobs];
 
-  maxpool2d_init(&plan_, &in_params, &out_params, &config);
+  for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
+    const RowColRegion& region = execution_plan.regions[i_rg];
+    TRACE_INFO(
+        "MaxPool Init id=%p, region top=%ld left=%ld rows=%ld cols=%ld\n", this,
+        region.top, region.left, region.rows, region.cols);
+
+    job_params[i_rg] = {region.top,  region.left, 0,
+                        region.rows, region.cols, C_out};
+  }
+
+  // initialize the kernel
+  maxpool2d_init(&plan_, jobs_, &in_params, &out_params, &window_params,
+                 &job_params[0], n_jobs);
 
   return kXCoreOk;
 }
@@ -52,11 +83,29 @@ XCoreStatus MaxPool::Eval(int8_t* Y, const int8_t* X) {
   TRACE_INFO("MaxPool Eval id=%p\n", this);
   TIMER_START();
 
-  maxpool2d(Y, X, &plan_);
+  // initialize the dispatcher
+  Dispatcher* dispatcher = GetDispatcher();
+  size_t stack_words;
+  GET_STACKWORDS(stack_words, maxpool_thread_worker);
+  dispatcher->InitializeTasks(maxpool_thread_worker, stack_words);
+
+  // create thread data and tasks
+  MaxPoolThreadData thread_data[execution_plan.GetNumThreads()];
+
+  for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
+    thread_data[i_rg].data.Y = (nn_image_t*)Y;
+    thread_data[i_rg].data.X = (const nn_image_t*)X;
+    thread_data[i_rg].plan = &plan_;
+    thread_data[i_rg].job = &jobs_[i_rg];
+    dispatcher->AddTask(reinterpret_cast<void*>(&thread_data[i_rg]));
+  }
+
+  // start and wait for tasks to complete
+  dispatcher->JoinTasks();
 
   TIMER_STOP("MaxPool id=%p", this);
   return kXCoreOk;
-}
+}  // namespace pooling
 
 //**************************************
 //**************************************
@@ -65,30 +114,59 @@ XCoreStatus MaxPool::Eval(int8_t* Y, const int8_t* X) {
 //**************************************
 //**************************************
 //**************************************
+struct AvgPoolThreadData {
+  const nn_avgpool2d_plan_t* plan;
+  nn_pool2d_job_t* job;
+  PoolingThreadData data;
+};
+
+extern "C" {
+ATTRIBUTE_THREAD_FUNCTION void avgpool_thread_worker(void* context) {
+  AvgPoolThreadData* td = (AvgPoolThreadData*)context;
+  avgpool2d(td->data.Y, td->data.X, td->plan, td->job);
+}
+}
+
 AvgPool::AvgPool(const PoolingParams& params,
                  const ExecutionPlan& execution_plan)
-    : params(params), execution_plan(execution_plan) {}
+    : params(params), execution_plan(execution_plan), jobs_(nullptr) {}
 
 XCoreStatus AvgPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                           int32_t Y_w, int32_t C_out) {
   TRACE_INFO(
       "AvgPool Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
-  nn_image_params_t in_params;
-  in_params.height = X_h;
-  in_params.width = X_w;
-  in_params.channels = C_in;
 
-  nn_image_params_t out_params;
-  out_params.height = Y_h;
-  out_params.width = Y_w;
-  out_params.channels = C_out;
+  nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
+  nn_image_params_t out_params = {(uint32_t)Y_h, (uint32_t)Y_w,
+                                  (uint32_t)C_out};
 
-  nn_window_op_config_t config;
-  nn_window_op_config_simple(&config, &in_params, &out_params, params.pool_h,
-                             params.pool_w, params.stride_h, params.stride_w);
+  nn_conv2d_window_params_t window_params = {
+      (uint32_t)params.pool_h, (uint32_t)params.pool_w, 0, 0,
+      params.stride_h,         params.stride_w};
 
-  avgpool2d_init(&plan_, &in_params, &out_params, &config);
+  // allocate the jobs
+  int32_t n_jobs = execution_plan.regions.GetSize();
+  jobs_ = reinterpret_cast<nn_pool2d_job_t*>(
+      GetDispatcher()->AllocatePersistantBuffer(sizeof(nn_pool2d_job_t) *
+                                                n_jobs));
+
+  // set job parameters
+  nn_window_op_job_params_t job_params[n_jobs];
+
+  for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
+    const RowColRegion& region = execution_plan.regions[i_rg];
+    TRACE_INFO(
+        "AvgPool Init id=%p, region top=%ld left=%ld rows=%ld cols=%ld\n", this,
+        region.top, region.left, region.rows, region.cols);
+
+    job_params[i_rg] = {region.top,  region.left, 0,
+                        region.rows, region.cols, C_out};
+  }
+
+  // initialize the kernel
+  avgpool2d_init(&plan_, jobs_, &in_params, &out_params, &window_params,
+                 &job_params[0], n_jobs);
 
   return kXCoreOk;
 }
@@ -97,7 +175,25 @@ XCoreStatus AvgPool::Eval(int8_t* Y, const int8_t* X) {
   TRACE_INFO("AvgPool Eval id=%p\n", this);
   TIMER_START();
 
-  avgpool2d(Y, X, &plan_);
+  // initialize the dispatcher
+  Dispatcher* dispatcher = GetDispatcher();
+  size_t stack_words;
+  GET_STACKWORDS(stack_words, avgpool_thread_worker);
+  dispatcher->InitializeTasks(avgpool_thread_worker, stack_words);
+
+  // create thread data and tasks
+  AvgPoolThreadData thread_data[execution_plan.GetNumThreads()];
+
+  for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
+    thread_data[i_rg].data.Y = (nn_image_t*)Y;
+    thread_data[i_rg].data.X = (const nn_image_t*)X;
+    thread_data[i_rg].plan = &plan_;
+    thread_data[i_rg].job = &jobs_[i_rg];
+    dispatcher->AddTask(reinterpret_cast<void*>(&thread_data[i_rg]));
+  }
+
+  // start and wait for tasks to complete
+  dispatcher->JoinTasks();
 
   TIMER_STOP("AvgPool id=%p", this);
   return kXCoreOk;
@@ -110,6 +206,18 @@ XCoreStatus AvgPool::Eval(int8_t* Y, const int8_t* X) {
 //**************************************
 //**************************************
 //**************************************
+// struct AvgPoolGlobalThreadData {
+//   const nn_avgpool2d_plan_t* plan;
+//   nn_pool2d_job_t* job;
+//   PoolingThreadData data;
+// };
+
+// extern "C" {
+// ATTRIBUTE_THREAD_FUNCTION void avgpool_thread_worker(void* context) {
+//   AvgPoolGlobalThreadData* td = (AvgPoolGlobalThreadData*)context;
+//   avgpool2d(td->data.Y, td->data.X, td->plan, td->job);
+// }
+// }
 
 AvgPool_Global::AvgPool_Global(const ExecutionPlan& execution_plan)
     : execution_plan(execution_plan) {}

@@ -213,8 +213,7 @@ class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
         plan = planner.find_optimal_plan()
         self.plan_threads = plan.num_threads
 
-        if self.plan_threads > 1:
-            op.add_custom_options(plan=plan.to_dict())
+        op.add_custom_options(plan=plan.to_dict())
 
 
 class PlanPooling2DPass(OperatorMatchingPass):
@@ -249,5 +248,4 @@ class PlanPooling2DPass(OperatorMatchingPass):
         plan = planner.find_optimal_plan()
         self.plan_threads = plan.num_threads
 
-        if self.plan_threads > 1:
-            op.add_custom_options(plan=plan.to_dict())
+        op.add_custom_options(plan=plan.to_dict())

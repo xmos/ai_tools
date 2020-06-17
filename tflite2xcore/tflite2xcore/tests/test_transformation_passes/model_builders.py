@@ -330,6 +330,33 @@ def build_XC_fc_deepin_anyout(subgraph=None, *, outputs, input_channels):
 
     return subgraph.model
 
+
+def build_XC_requantize_16_to_8(subgraph=None, *, outputs, input_channels):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, input_channels, 1, 1]
+    weight_shape = [outputs, np.prod(input_shape[1:])]
+
+    tin = subgraph.create_tensor(
+        "input",
+        TensorType.INT8,
+        input_shape,
+        isinput=True,
+        quantization={"scale": [0.02874], "zero_point": [-2]},
+    )
+    tout = subgraph.create_tensor(
+        "output",
+        TensorType.INT16,
+        shape=[1, weight_shape[0]],
+        isoutput=True,
+        quantization={"scale": [0.11332], "zero_point": [6]},
+    )
+    subgraph.create_operator(
+        OperatorCode(XCOREOpCodes.XC_requantize_16_to_8), inputs=[tin], outputs=[tout]
+    )
+
+    return subgraph.model
+
 def build_intermediate_fc(subgraph=None, *, outputs, input_shape):
     model = build_fc(subgraph, outputs=outputs, input_shape=input_shape)
     subgraph = subgraph or model.subgraphs[0]

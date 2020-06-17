@@ -33,6 +33,9 @@ typedef std::vector<std::thread> threadgroup_t;
 namespace xcore {
 
 constexpr size_t max_threads = 5;
+constexpr size_t bytes_per_stackword = 4;
+constexpr size_t bso_changrp_len = (7 * 16);
+constexpr size_t bso_changrp_bytes = (bso_changrp_len * 2);
 
 typedef struct TaskArray {
   ATTRIBUTE_THREAD_FUNCTION thread_function_t function;
@@ -57,9 +60,11 @@ class Dispatcher {
   void *AllocateScratchBuffer(size_t size);
   XCoreStatus ResetScratchAllocation();
 
-  int8_t const *PreloadWeights(int8_t const *src, int32_t size,
-                               ChannelGroup const &changrp);
-  int16_t const *PreloadBiases(int16_t const *src, ChannelGroup const &changrp);
+  void PreloadBuffer(int8_t **dest, int8_t const *src, int32_t size);
+  void PreloadWeights(int8_t **dest, int8_t const *src, int32_t size,
+                      ChannelGroup const &changrp);
+  void PreloadBiases(int16_t **dest, int16_t const *src,
+                     ChannelGroup const &changrp);
 
  private:
   bool use_current_thread_;

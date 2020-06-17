@@ -21,13 +21,13 @@ from .conv2d_passes import (
     ReplaceShallowinConv2dPass,
     LegalizeXCShallowinConvPass,
     PlanConv2dPass,
-    PlanDepthwiseConv2dPass,
 )
 
 from .fully_connected_passes import (
     ReplaceFullyConnectedPass,
     LegalizeXCFullyConnectedPass,
     PlanFullyConnectedPass,
+    PlanRequant16To8Pass,
 )
 
 from .pooling_passes import (

@@ -326,6 +326,7 @@ class PlanConv2dPass(OperatorMatchingPass):
         XCOREOpCodes.XC_conv2d_shallowin,
         XCOREOpCodes.XC_conv2d_deep,
         XCOREOpCodes.XC_conv2d_1x1,
+        XCOREOpCodes.XC_conv2d_depthwise,
     )
 
     def run(self, *args, **kwargs):
@@ -350,36 +351,3 @@ class PlanConv2dPass(OperatorMatchingPass):
         self.plan_threads = plan.num_threads
 
         op.add_custom_options(plan=plan.to_dict())
-
-
-class PlanDepthwiseConv2dPass(OperatorMatchingPass):
-    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.num_threads = num_threads or 1
-        assert isinstance(self.num_threads, int)
-        assert self.num_threads > 0
-        self.forced = forced
-        self.plan_threads = None
-
-    def run(self, *args, **kwargs):
-        return super().run(*args, **kwargs)
-
-    def match(self, op):
-        if (
-            super().match(op)
-            and op.operator_code.code == XCOREOpCodes.XC_conv2d_depthwise
-        ):
-            return not self.plan_threads
-
-    def mutate(self, op):
-        _, height, width, _ = op.outputs[0].shape
-        assert int(height) == height
-        assert int(width) == width
-        planner = RowSlicePlanner(
-            int(height), int(width), num_threads=self.num_threads, forced=self.forced,
-        )
-        plan = planner.find_optimal_plan()
-        self.plan_threads = plan.num_threads
-
-        if self.plan_threads > 1:
-            op.add_custom_options(plan=plan.to_dict())

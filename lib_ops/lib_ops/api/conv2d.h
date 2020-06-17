@@ -44,6 +44,7 @@ class Conv2D_Deep {
   ExecutionPlan execution_plan;
 
  private:
+  size_t weights_preload_size_;
   nn_conv2d_deep_plan_t plan_;
   nn_conv2d_deep_job_t* jobs_;
 };
@@ -81,7 +82,9 @@ class Conv2D_1x1 {
   ExecutionPlan execution_plan;
 
  private:
-  nn_conv2d_1x1_plan_t* plans_;
+  size_t weights_preload_size_;
+  nn_conv2d_1x1_plan_t plan_;
+  nn_conv2d_1x1_job_t* jobs_;
 };
 
 class Conv2D_Depthwise {
@@ -98,6 +101,7 @@ class Conv2D_Depthwise {
   ExecutionPlan execution_plan;
 
  private:
+  size_t weights_preload_size_;
   nn_conv2d_depthwise_plan_t plan_;
   nn_conv2d_depthwise_job_t* jobs_;
 };

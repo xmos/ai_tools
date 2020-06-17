@@ -27,7 +27,9 @@ class FullyConnected_16 {
   ExecutionPlan execution_plan;
 
  private:
+  size_t weights_preload_size_;
   nn_fully_connected_plan_t plan_;
+  nn_fully_connected_job_t* jobs_;
 };
 
 }  // namespace fully_connected

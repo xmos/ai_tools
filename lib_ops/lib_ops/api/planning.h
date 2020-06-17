@@ -57,8 +57,6 @@ class ExecutionPlan {
   void SetNumThreads(int32_t n_threads) { n_threads_ = n_threads; }
   int32_t GetNumThreads() { return n_threads_; }
 
-  int32_t GetNumJobs();
-
   RowColRegionArray regions;
   ChannelGroupArray changrps;
 

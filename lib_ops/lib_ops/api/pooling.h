@@ -34,7 +34,8 @@ class MaxPool {
   ExecutionPlan execution_plan;
 
  private:
-  nn_window_op_plan_t plan_;
+  nn_maxpool2d_plan_t plan_;
+  nn_maxpool2d_job_t* jobs_;
 };
 
 class AvgPool {
@@ -51,6 +52,7 @@ class AvgPool {
 
  private:
   nn_avgpool2d_plan_t plan_;
+  nn_pool2d_job_t* jobs_;
 };
 
 class AvgPool_Global {

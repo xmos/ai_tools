@@ -21,9 +21,9 @@ from .conftest import PARAMS
 
 PARAMS = deepcopy(PARAMS)
 
-PARAMS["default"].update({"num_threads": [2, 3, 4, 5]})
+PARAMS["default"].update({"num_threads": [1, 3, 4, 5]})
 
-PARAMS["smoke"].update({"num_threads": [2, 5]})
+PARAMS["smoke"].update({"num_threads": [1, 5]})
 
 PARAMS["default"].update(
     {
@@ -60,15 +60,6 @@ def model(model_builder, weight_shape, input_size, strides):
 
 def test_matching(trf_pass, model, num_threads):
     assert trf_pass.match(model.subgraphs[0].operators[-1])
-
-
-def test_single_thread_identity(model):
-    trf_pass = PlanConv2dPass(num_threads=1)
-    op = model.subgraphs[0].operators[0]
-    custom_options = deepcopy(op.custom_options)
-    trf_pass.run(model)
-    model.sanity_check()
-    assert op.custom_options == custom_options
 
 
 def test_mutate(trf_pass, model, num_threads):

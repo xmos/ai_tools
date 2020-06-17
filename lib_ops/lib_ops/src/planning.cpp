@@ -48,16 +48,4 @@ int32_t ChannelGroupArray::GetSize() {
   return (n_chans_ + changrp_len - 1) >> changrp_len_log2;
 }
 
-//*****************************
-//*****************************
-//*****************************
-// ExecutionPlan
-//*****************************
-//*****************************
-//*****************************
-
-int32_t ExecutionPlan::GetNumJobs() {
-  return changrps.GetSize() * regions.GetSize();
-}
-
 }  // namespace xcore

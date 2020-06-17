@@ -175,7 +175,7 @@ class FuseConsecutivePadsPass(OperatorMatchingPass):
 
     @property
     def _pad_params(self):
-        return self._op.inputs[1].numpy.tolist()
+        return self._op.inputs[1].numpy
 
     def match(self, op):
         # the anchor is the second of two consecutive PAD ops
@@ -195,12 +195,9 @@ class FuseConsecutivePadsPass(OperatorMatchingPass):
         with self.using(op):
             producer = self._producer
             this_params = self._pad_params
-            with self.using(producer):
-                producer_params = self._pad_params
-            new_params = [
-                [sum(p) for p in zip(p1, p2)]
-                for p1, p2 in zip(this_params, producer_params)
-            ]
+        with self.using(producer):
+            producer_params = self._pad_params
+        new_params = this_params + producer_params
 
         # cut connection from old inputs to the anchor op
         intermediate = op.inputs[0]
@@ -211,9 +208,12 @@ class FuseConsecutivePadsPass(OperatorMatchingPass):
         # this is needed because multiple ops can share the same parameter tensor
         # NOTE: the old paddings tensor might be dangling and will be cleaned up later
         op.inputs[1] = subgraph.create_tensor(
-            f"{op.name}/paddings", TensorType.INT32, shape=[4, 2], consumers=[op]
+            f"{op.name}/paddings",
+            TensorType.INT32,
+            shape=new_params.shape,
+            consumers=[op],
         )
-        op.inputs[1].buffer.data = np.int32(new_params)
+        op.inputs[1].buffer.data = new_params.astype(np.int32)
 
         # set up bypass connection
         op.inputs[0] = producer.inputs[0]

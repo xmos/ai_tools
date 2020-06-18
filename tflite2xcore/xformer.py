@@ -46,6 +46,13 @@ if __name__ == "__main__":
         "each pass, and after a pass matches but before it mutates. "
         "Verbosity is also set to maximum.",
     )
+    parser.add_argument(
+        "--analyze",
+        action="store_true",
+        default=False,
+        help="Analyze the output model. "
+        "A report is printed showing the runtime memory footprint of the model.",
+    )
     args = parser.parse_args()
 
     if args.debug:
@@ -67,5 +74,5 @@ if __name__ == "__main__":
 
     print(f"Conversion successful, output: {tflite_output_path}")
 
-    # TODO: remove dependency on interpreter
-    analyze.print_report(tflite_output_path)
+    if args.analyze:
+        analyze.print_report(tflite_output_path)

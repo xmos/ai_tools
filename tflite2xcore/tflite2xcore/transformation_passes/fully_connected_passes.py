@@ -109,14 +109,13 @@ class PlanFullyConnectedPass(OperatorMatchingPass):
         assert isinstance(self.max_threads, int)
         assert self.max_threads > 0
         self.forced = forced
-        self.plan_threads = None
 
     def run(self, *args, **kwargs):
         return super().run(*args, **kwargs)
 
     def match(self, op):
         if op.operator_code.code == XCOREOpCodes.XC_fc_deepin_anyout:
-            return not self.plan_threads
+            return "plan" not in op.custom_options
 
     def mutate(self, op):
         _, Cout = op.outputs[0].shape
@@ -126,7 +125,6 @@ class PlanFullyConnectedPass(OperatorMatchingPass):
         )
         plan = planner.find_optimal_plan()
         plan.num_threads = min(plan.num_threads, len(plan.changrp_slices))
-        self.plan_threads = plan.num_threads
 
         op.add_custom_options(plan=plan.to_dict())
 
@@ -138,14 +136,13 @@ class PlanRequant16To8Pass(OperatorMatchingPass):
         assert isinstance(self.max_threads, int)
         assert self.max_threads > 0
         self.forced = forced
-        self.plan_threads = None
 
     def run(self, *args, **kwargs):
         return super().run(*args, **kwargs)
 
     def match(self, op):
         if op.operator_code.code == XCOREOpCodes.XC_requantize_16_to_8:
-            return not self.plan_threads
+            return "plan" not in op.custom_options
 
     def mutate(self, op):
         _, Cout = op.outputs[0].shape
@@ -155,6 +152,5 @@ class PlanRequant16To8Pass(OperatorMatchingPass):
         )
         plan = planner.find_optimal_plan()
         plan.num_threads = min(plan.num_threads, len(plan.changrp_slices))
-        self.plan_threads = plan.num_threads
 
         op.add_custom_options(plan=plan.to_dict())

@@ -223,7 +223,6 @@ class PlanPooling2DPass(OperatorMatchingPass):
         assert isinstance(self.num_threads, int)
         assert self.num_threads > 0
         self.forced = forced
-        self.plan_threads = None
 
     MATCHING_OPCODES = (XCOREOpCodes.XC_maxpool2d, XCOREOpCodes.XC_avgpool2d)
 
@@ -232,7 +231,7 @@ class PlanPooling2DPass(OperatorMatchingPass):
 
     def match(self, op):
         if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
-            return not self.plan_threads
+            return "plan" not in op.custom_options
 
     def mutate(self, op):
         _, height, width, Cout = op.outputs[0].shape
@@ -246,6 +245,5 @@ class PlanPooling2DPass(OperatorMatchingPass):
             forced=self.forced,
         )
         plan = planner.find_optimal_plan()
-        self.plan_threads = plan.num_threads
 
         op.add_custom_options(plan=plan.to_dict())

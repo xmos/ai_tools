@@ -349,6 +349,7 @@ class ParallelizeXCConv2dPass(OperatorMatchingPass):
         op.add_custom_options(par_plan=[list(block) for block in plan.layout])
 
 
+# TODO: remove this
 class ParallelizeDeepConv2dPass(QuantizedOperatorMatchingPass):
     def __init__(self, *args, num_threads=None, forced=False, **kwargs):
         super().__init__(*args, **kwargs)

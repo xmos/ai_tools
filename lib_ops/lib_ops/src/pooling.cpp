@@ -49,9 +49,10 @@ XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
   nn_image_params_t out_params = {(uint32_t)Y_h, (uint32_t)Y_w,
                                   (uint32_t)C_out};
-  nn_conv2d_window_params_t window_params = {
-      (uint32_t)params.pool_h, (uint32_t)params.pool_w, 0, 0,
-      params.stride_h,         params.stride_w};
+  nn_window_params_t window_params = {
+      {(uint32_t)params.pool_h, (uint32_t)params.pool_w},
+      {0, 0},
+      {params.stride_h, params.stride_w}};
 
   // allocate the jobs
   int32_t n_jobs = execution_plan.regions.GetSize();
@@ -68,8 +69,8 @@ XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
         "MaxPool Init id=%p, region top=%ld left=%ld rows=%ld cols=%ld\n", this,
         region.top, region.left, region.rows, region.cols);
 
-    job_params[i_rg] = {region.top,  region.left, 0,
-                        region.rows, region.cols, C_out};
+    job_params[i_rg] = {{region.top, region.left, 0},
+                        {region.rows, region.cols, C_out}};
   }
 
   // initialize the kernel
@@ -141,9 +142,10 @@ XCoreStatus AvgPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
   nn_image_params_t out_params = {(uint32_t)Y_h, (uint32_t)Y_w,
                                   (uint32_t)C_out};
 
-  nn_conv2d_window_params_t window_params = {
-      (uint32_t)params.pool_h, (uint32_t)params.pool_w, 0, 0,
-      params.stride_h,         params.stride_w};
+  nn_window_params_t window_params = {
+      {(uint32_t)params.pool_h, (uint32_t)params.pool_w},
+      {0, 0},
+      {params.stride_h, params.stride_w}};
 
   // allocate the jobs
   int32_t n_jobs = execution_plan.regions.GetSize();
@@ -160,8 +162,8 @@ XCoreStatus AvgPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
         "AvgPool Init id=%p, region top=%ld left=%ld rows=%ld cols=%ld\n", this,
         region.top, region.left, region.rows, region.cols);
 
-    job_params[i_rg] = {region.top,  region.left, 0,
-                        region.rows, region.cols, C_out};
+    job_params[i_rg] = {{region.top, region.left, 0},
+                        {region.rows, region.cols, C_out}};
   }
 
   // initialize the kernel
@@ -182,7 +184,7 @@ XCoreStatus AvgPool::Eval(int8_t* Y, const int8_t* X) {
   dispatcher->InitializeTasks(avgpool_thread_worker, stack_words);
 
   // create thread data and tasks
-  AvgPoolThreadData thread_data[execution_plan.GetNumThreads()];
+  AvgPoolThreadData thread_data[execution_plan.regions.GetSize()];
 
   for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
     thread_data[i_rg].data.Y = (nn_image_t*)Y;
@@ -249,10 +251,9 @@ XCoreStatus AvgPool_Global::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   }
 
   // initialize the kernel
-  // std::cout << "bias = " << bias << std::endl;
-  // std::cout << "shift = " << shift << std::endl;
-  // std::cout << "scale = " << scale << std::endl;
   avgpool2d_global_init(&plan_, jobs_, &in_params, &job_params[0], n_jobs);
+  // NOTE: Overriding the plan's shift and scale is temporary.
+  //       See issue #144
   plan_.shift = shift;
   plan_.scale = scale;
 
@@ -277,8 +278,6 @@ XCoreStatus AvgPool_Global::Eval(int8_t* Y, const int8_t* X, int32_t X_h,
   int i_th = 0;
 
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
-    const ChannelGroup& changrp = execution_plan.changrps[i_cg];
-
     thread_data[i_th].data.Y = Y;
     thread_data[i_th].data.X = X;
     thread_data[i_th].bias = bias_;

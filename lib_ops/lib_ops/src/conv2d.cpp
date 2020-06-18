@@ -492,7 +492,6 @@ XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
       thread_data[i_rg].data.K = (const nn_tensor_t *)tK;
       thread_data[i_rg].data.BSO = (const nn_bso_block_t *)tBSO;
       thread_data[i_rg].plan = &plan_;
-      jobs_[i_job].stride.start.K = 0;
       jobs_[i_job].stride.start.BSO = 0;
       thread_data[i_rg].job = &jobs_[i_job];
       dispatcher->AddTask(reinterpret_cast<void *>(&thread_data[i_rg]));

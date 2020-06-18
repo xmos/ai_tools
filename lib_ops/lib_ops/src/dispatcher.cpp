@@ -42,6 +42,8 @@ Dispatcher::Dispatcher(void *buffer, size_t buffer_size,
 Dispatcher::~Dispatcher() { thread_group_free(group_); }
 
 XCoreStatus Dispatcher::JoinTasks() {
+  if (tasks_.size == 0) return kXCoreOk;
+
   int begin = 0;
 
   if (use_current_thread_) {
@@ -72,33 +74,39 @@ XCoreStatus Dispatcher::JoinTasks() {
 }
 
 void Dispatcher::PreloadBuffer(int8_t **dest, int8_t const *src, int32_t size) {
-  if (IS_RAM(src)) *dest = (int8_t *)&src[size];
+  if (IS_RAM(src)) {
+    *dest = (int8_t *)src;
+  } else {
+    if (*dest == nullptr) *dest = (int8_t *)AllocateScratchBuffer(size);
 
-  if (*dest == nullptr) *dest = (int8_t *)AllocateScratchBuffer(size);
-
-  memload((void **)*dest, (void *)src, size);
+    memload((void **)*dest, (void *)src, size);
+  }
 }
 
 void Dispatcher::PreloadWeights(int8_t **dest, int8_t const *src, int32_t size,
                                 ChannelGroup const &changrp) {
-  if (IS_RAM(src)) *dest = (int8_t *)&src[changrp.start * size];
+  if (IS_RAM(src)) {
+    *dest = (int8_t *)&src[changrp.start * size];
+  } else {
+    if (*dest == nullptr)
+      *dest = (int8_t *)AllocateScratchBuffer(changrp.size * size);
 
-  if (*dest == nullptr)
-    *dest = (int8_t *)AllocateScratchBuffer(changrp.size * size);
-
-  memload((void **)*dest, (void *)&src[changrp.start * size],
-          changrp.size * size);
+    memload((void **)*dest, (void *)&src[changrp.start * size],
+            changrp.size * size);
+  }
 }
 
 void Dispatcher::PreloadBiases(int16_t **dest, int16_t const *src,
                                ChannelGroup const &changrp) {
-  if (IS_RAM(src)) *dest = (int16_t *)&src[changrp.index * bso_changrp_len];
+  if (IS_RAM(src)) {
+    *dest = (int16_t *)&src[changrp.index * bso_changrp_len];
+  } else {
+    if (*dest == nullptr)
+      *dest = (int16_t *)AllocateScratchBuffer(bso_changrp_bytes);
 
-  if (*dest == nullptr)
-    *dest = (int16_t *)AllocateScratchBuffer(bso_changrp_bytes);
-
-  memload((void **)*dest, (void *)&src[changrp.index * bso_changrp_len],
-          bso_changrp_bytes);
+    memload((void **)*dest, (void *)&src[changrp.index * bso_changrp_len],
+            bso_changrp_bytes);
+  }
 }
 
 #else
@@ -116,6 +124,8 @@ Dispatcher::Dispatcher(void *buffer, size_t buffer_size,
 Dispatcher::~Dispatcher() {}
 
 XCoreStatus Dispatcher::JoinTasks() {
+  if (tasks_.size == 0) return kXCoreOk;
+
   int begin = 0;
 
   if (use_current_thread_) {

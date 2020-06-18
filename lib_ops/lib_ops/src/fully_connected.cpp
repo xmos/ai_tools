@@ -92,7 +92,6 @@ XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *W,
     thread_data[i_th].W = tW[i_th];
     thread_data[i_th].BSO = (const nn_bso_block_t *)tBSO[i_th];
     thread_data[i_th].plan = &plan_;
-    jobs_[i_cg].stride.start.Y = i_cg * changrp_len;
     jobs_[i_cg].stride.start.W = 0;
     jobs_[i_cg].stride.start.BSO = 0;
 

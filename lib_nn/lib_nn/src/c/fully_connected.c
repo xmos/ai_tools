@@ -155,8 +155,8 @@ void fully_connected_16(
 
     const unsigned C_in = plan->channels.X;
 
-    Y = ADDR(Y, job->stride.start.Y);
-    W = ADDR(W, job->stride.start.BSO);
+    Y = ADDR(Y, (job->stride.start.Y >> 1));
+    W = ADDR(W, job->stride.start.W);
     BSO = ADDR(BSO, (job->stride.start.BSO / sizeof(nn_bso_block_t)));
 
     const unsigned C_out = job->output.channels;

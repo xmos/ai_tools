@@ -36,7 +36,9 @@ def quantize_converter(converter, representative_data, *, show_progress_step=Non
 
 def quantize_keras_model(model, representative_data, show_progress_step=None):
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    quantize_converter(converter, representative_data, show_progress_step=10)
+    quantize_converter(
+        converter, representative_data, show_progress_step=show_progress_step
+    )
     return converter.convert()
 
 

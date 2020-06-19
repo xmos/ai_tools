@@ -54,7 +54,16 @@ instance of an operator.
 
 You will find that in both the operator documentation as well as the API documentation, a distinction is made (or implied)
 between conceptual ("logical") objects and their representations or corrolaries in the API. For example, in the documentation 
-for maxpool2d(), there are references to both @tensor{X} and `X`. An attempt has been made 
+for maxpool2d(), there are references to both @tensor{X} and `X`. In that case, @tensor{X} refers to a mathematical object,
+whereas `X` is a pointer to a buffer containing a particular encoding of that same object. In general, this documentation 
+attempts to use a convention whereby logical entities are identified using math script (e.g. @math{K}), and API or software
+entities are indentified using a fixed-width font (e.g. `K`).
+
+The distinction is particularly relevant in cases where certain optimizations require particular encodings. For example, most
+of the operators require a set of vectors as inputs which are the biases and scaling parameters for the output channels. 
+Logically those entities may be thought of as vectors (e.g. the bias vector @math{\bar B} and the scale vector @math{\bar s_2}), 
+but the architecture requires an encoding in which these vectors are "boggled" together and padded out (hence the `BSO` arrays
+of `nn_bso_block_t` structs).
 
 ## Operator Table       {#lib_nn_operator_table}
 
@@ -66,52 +75,55 @@ The following table enumerates the custom operators provided by this library.
 <table>
 <caption id="multi_row">`lib_nn` Operators</caption>
 
-<tr><th>Operator    <th colspan="2">Functions               <th colspan="2">Structs     <th> X
+<tr><th>Operator    <th colspan="2">Functions               <th colspan="2">Structs     <th> 
 <tr><th>            <th> Job Invocation  <th> Initialization    <th> Plan       <th>Job     <th>
 
-<tr><td>@oper{conv2d_deep}          <td>conv2d_deep()           <td>conv2d_deep_init()
-                                    <td>nn_conv2d_deep_plan_t   <td>nn_conv2d_deep_job_t
-                                    <td>
+<tr><td align="center" colspan="6">Convolution Operators
+<tr><td>@oper_ref{conv2d_deep}          <td>conv2d_deep()               <td>conv2d_deep_init()
+                                        <td>nn_conv2d_deep_plan_t       <td>nn_conv2d_deep_job_t
+                                        <td>
 
-<tr><td>@oper{conv2d_shallowin}     <td>conv2d_shallowin()          <td>conv2d_shallowin_init()
-                                    <td>nn_conv2d_shallowin_plan_t  <td>nn_conv2d_shallowin_job_t
-                                    <td>
+<tr><td>@oper_ref{conv2d_shallowin}     <td>conv2d_shallowin()          <td>conv2d_shallowin_init()
+                                        <td>nn_conv2d_shallowin_plan_t  <td>nn_conv2d_shallowin_job_t
+                                        <td>
 
-<tr><td>@oper{conv2d_1x1}           <td>conv2d_1x1()                <td>conv2d_1x1_init()
-                                    <td>nn_conv2d_1x1_plan_t        <td>nn_conv2d_1x1_job_t
-                                    <td>
+<tr><td>@oper_ref{conv2d_1x1}           <td>conv2d_1x1()                <td>conv2d_1x1_init()
+                                        <td>nn_conv2d_1x1_plan_t        <td>nn_conv2d_1x1_job_t
+                                        <td>
 
-<tr><td>@oper{conv2d_depthwise}     <td>conv2d_depthwise()          <td>conv2d_depthwise_init()
-                                    <td>nn_conv2d_depthwise_plan_t  <td>nn_conv2d_depthwise_job_t
-                                    <td>
+<tr><td>@oper_ref{conv2d_depthwise}     <td>conv2d_depthwise()          <td>conv2d_depthwise_init()
+                                        <td>nn_conv2d_depthwise_plan_t  <td>nn_conv2d_depthwise_job_t
+                                        <td>
 
-<tr><td>@oper{maxpool2d}            <td>maxpool2d()                 <td>maxpool2d_init()
-                                    <td>nn_maxpool2d_plan_t         <td>nn_pool2d_job_t
-                                    <td>
+<tr><td align="center" colspan="6">Pooling Operators
+<tr><td>@oper_ref{maxpool2d}            <td>maxpool2d()                 <td>maxpool2d_init()
+                                        <td>nn_maxpool2d_plan_t         <td>nn_pool2d_job_t
+                                        <td>
 
-<tr><td>@oper{avgpool2d}            <td>avgpool2d()                 <td>avgpool2d_init()
-                                    <td>nn_avgpool2d_plan_t         <td>nn_pool2d_job_t
-                                    <td>
+<tr><td>@oper_ref{avgpool2d}            <td>avgpool2d()                 <td>avgpool2d_init()
+                                        <td>nn_avgpool2d_plan_t         <td>nn_pool2d_job_t
+                                        <td>
 
-<tr><td>@oper{avgpool2d_global}     <td>avgpool2d_global()          <td>avgpool2d_global_init()
-                                    <td>nn_avgpool2d_global_plan_t  <td>nn_avgpool2d_global_job_t
-                                    <td>
+<tr><td>@oper_ref{avgpool2d_global}     <td>avgpool2d_global()          <td>avgpool2d_global_init()
+                                        <td>nn_avgpool2d_global_plan_t  <td>nn_avgpool2d_global_job_t
+                                        <td>
 
-<tr><td>@oper{fully_connected_16}   <td>fully_connected_16()        <td>fully_connected_init()
-                                    <td>nn_fully_connected_plan_t   <td>nn_fully_connected_job_t
-                                    <td>
+<tr><td align="center" colspan="6">Miscellaneous Operators
+<tr><td>@oper_ref{fully_connected_16}   <td>fully_connected_16()        <td>fully_connected_init()
+                                        <td>nn_fully_connected_plan_t   <td>nn_fully_connected_job_t
+                                        <td>
 
-<tr><td>@oper{argmax_16}            <td>argmax_16()                 <td align="center">N/A
-                                    <td align="center">N/A          <td align="center">N/A
-                                    <td>
+<tr><td>@oper_ref{argmax_16}            <td>argmax_16()                 <td align="center">N/A
+                                        <td align="center">N/A          <td align="center">N/A
+                                        <td>
 
-<tr><td>@oper{requantize_16_to_8}   <td>requantize_16_to_8()        <td>requantize_16_to_8_init()
-                                    <td align="center">N/A          <td>nn_requantize_16_to_8_job_t
-                                    <td>
+<tr><td>@oper_ref{requantize_16_to_8}   <td>requantize_16_to_8()        <td>requantize_16_to_8_init()
+                                        <td align="center">N/A          <td>nn_requantize_16_to_8_job_t
+                                        <td>
 
-<tr><td>@oper{lookup8}              <td>lookup8()                   <td align="center">N/A
-                                    <td align="center">N/A          <td align="center">N/A
-                                    <td>
+<tr><td>@oper_ref{lookup8}              <td>lookup8()                   <td align="center">N/A
+                                        <td align="center">N/A          <td align="center">N/A
+                                        <td>
 
 
 

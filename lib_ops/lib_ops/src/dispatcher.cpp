@@ -79,7 +79,7 @@ void Dispatcher::PreloadBuffer(int8_t **dest, int8_t const *src, int32_t size) {
   } else {
     if (*dest == nullptr) *dest = (int8_t *)AllocateScratchBuffer(size);
 
-    memload((void **)*dest, (void *)src, size);
+    memload((void **)dest, (void *)src, size);
   }
 }
 
@@ -91,7 +91,7 @@ void Dispatcher::PreloadWeights(int8_t **dest, int8_t const *src, int32_t size,
     if (*dest == nullptr)
       *dest = (int8_t *)AllocateScratchBuffer(changrp.size * size);
 
-    memload((void **)*dest, (void *)&src[changrp.start * size],
+    memload((void **)dest, (void *)&src[changrp.start * size],
             changrp.size * size);
   }
 }
@@ -104,7 +104,7 @@ void Dispatcher::PreloadBiases(int16_t **dest, int16_t const *src,
     if (*dest == nullptr)
       *dest = (int16_t *)AllocateScratchBuffer(bso_changrp_bytes);
 
-    memload((void **)*dest, (void *)&src[changrp.index * bso_changrp_len],
+    memload((void **)dest, (void *)&src[changrp.index * bso_changrp_len],
             bso_changrp_bytes);
   }
 }
@@ -149,27 +149,33 @@ XCoreStatus Dispatcher::JoinTasks() {
 }
 
 void Dispatcher::PreloadBuffer(int8_t **dest, int8_t const *src, int32_t size) {
-  if (*dest == nullptr) *dest = (int8_t *)AllocateScratchBuffer(size);
+  *dest = (int8_t *)src;
 
-  std::memcpy((void **)*dest, (void *)src, size);
+  // if (*dest == nullptr) *dest = (int8_t *)AllocateScratchBuffer(size);
+
+  // std::memcpy((void **)*dest, (void *)src, size);
 }
 
 void Dispatcher::PreloadWeights(int8_t **dest, int8_t const *src, int32_t size,
                                 ChannelGroup const &changrp) {
-  if (*dest == nullptr)
-    *dest = (int8_t *)AllocateScratchBuffer(changrp.size * size);
+  *dest = (int8_t *)&src[changrp.start * size];
 
-  std::memcpy((void **)*dest, (void *)&src[changrp.start * size],
-              changrp.size * size);
+  // if (*dest == nullptr)
+  //   *dest = (int8_t *)AllocateScratchBuffer(changrp.size * size);
+
+  // std::memcpy((void **)*dest, (void *)&src[changrp.start * size],
+  //             changrp.size * size);
 }
 
 void Dispatcher::PreloadBiases(int16_t **dest, int16_t const *src,
                                ChannelGroup const &changrp) {
-  if (*dest == nullptr)
-    *dest = (int16_t *)AllocateScratchBuffer(bso_changrp_bytes);
+  *dest = (int16_t *)&src[changrp.index * bso_changrp_len];
 
-  std::memcpy((void **)*dest, (void *)&src[changrp.index * bso_changrp_len],
-              bso_changrp_bytes);
+  // if (*dest == nullptr)
+  //   *dest = (int16_t *)AllocateScratchBuffer(bso_changrp_bytes);
+
+  // std::memcpy((void **)*dest, (void *)&src[changrp.index * bso_changrp_len],
+  //             bso_changrp_bytes);
 }
 
 #endif  // XCORE

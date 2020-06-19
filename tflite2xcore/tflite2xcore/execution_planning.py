@@ -45,8 +45,6 @@ class ExecutionPlanner(ABC):
         assert isinstance(num_threads, int)
         assert 0 < num_threads <= self.MAX_THREADS
         self.logger = logging.getLogger(self.__class__.__name__)
-        if num_threads == 1:
-            self.logger.warning(f"initialized with 1 thread.")
         self.num_threads = num_threads
 
         self.forced = forced

@@ -25,7 +25,7 @@ class Stopwatch {
 
  private:
 #ifdef XCORE
-  hwtimer_t hwtimer;
+  hwtimer_t hwtimer_;
   unsigned start_;
   unsigned stop_;
 #else   // not XCORE

@@ -61,6 +61,8 @@ class Dispatcher {
   void *AllocateScratchBuffer(size_t size);
   XCoreStatus ResetScratchAllocation();
 
+  size_t GetMaxAllocatedSize();
+
   void PreloadBuffer(int8_t **dest, int8_t const *src, int32_t size);
   void PreloadWeights(int8_t **dest, int8_t const *src, int32_t size,
                       ChannelGroup const &changrp);

@@ -2,6 +2,7 @@
 #include "arena_size.h"
 
 #include "lib_ops/api/allocator.h"
+#include "lib_ops/api/dispatcher.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/micro/kernels/all_ops_resolver.h"
@@ -21,7 +22,7 @@ namespace xcore {
 //*****************************************
 //*****************************************
 //*****************************************
-constexpr int max_xcore_heap_size = 128000;
+constexpr int max_xcore_heap_size = 512000;
 constexpr int xcore_heap_size_adjustment = 2048;
 
 static bool verify_micro_interpreter(const char *model_content,
@@ -68,7 +69,10 @@ void search_arena_sizes(const char *model_content, size_t model_content_size,
   }
 
   *arena_size = return_size + align_to - (return_size % align_to);
-  *heap_size = xcGetHeapAllocatedSize() + xcore_heap_size_adjustment;
+
+  // *heap_size = xcGetHeapAllocatedSize() + xcore_heap_size_adjustment;
+  Dispatcher *dispatcher = GetDispatcher();
+  *heap_size = dispatcher->GetMaxAllocatedSize() + xcore_heap_size_adjustment;
 }
 
 }  // namespace xcore

@@ -220,6 +220,10 @@ XCoreStatus Dispatcher::ResetScratchAllocation() {
   return kXCoreOk;
 }
 
+size_t Dispatcher::GetMaxAllocatedSize() {
+  return allocator_.GetMaxAllocatedSize();
+}
+
 XCoreStatus Dispatcher::AddTask(void *argument) {
   assert(tasks_.size < max_threads);
 

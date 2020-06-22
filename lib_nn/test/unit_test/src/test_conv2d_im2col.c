@@ -87,7 +87,7 @@ void test_conv2d_im2col_case0()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN  };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -180,7 +180,7 @@ void test_conv2d_im2col_case1()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -268,7 +268,7 @@ void test_conv2d_im2col_case2()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -364,7 +364,7 @@ void test_conv2d_im2col_case3()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -454,7 +454,7 @@ void test_conv2d_im2col_case4()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -544,7 +544,7 @@ void test_conv2d_im2col_case5()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -629,7 +629,7 @@ void test_conv2d_im2col_case6()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -720,7 +720,7 @@ void test_conv2d_im2col_case7()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -812,7 +812,7 @@ void test_conv2d_im2col_case8()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -905,7 +905,7 @@ void test_conv2d_im2col_case9()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -996,7 +996,7 @@ void test_conv2d_im2col_case10()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -1090,7 +1090,7 @@ void test_conv2d_im2col_case11()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { 1, 1 } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -1186,7 +1186,7 @@ void test_conv2d_im2col_case12()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { K_V_STRIDE, K_H_STRIDE } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -1283,7 +1283,7 @@ void test_conv2d_im2col_case13()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { K_V_STRIDE, K_H_STRIDE } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -1380,7 +1380,7 @@ void test_conv2d_im2col_case14()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -1483,7 +1483,7 @@ void test_conv2d_im2col_case15()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -1604,7 +1604,7 @@ void test_conv2d_im2col_case16()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job[5];
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -1738,7 +1738,7 @@ void test_conv2d_im2col_case17()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { -1, -1 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
@@ -1868,7 +1868,7 @@ void test_conv2d_im2col_case18()
     nn_conv2d_im2col_plan_t plan;
     nn_conv2d_im2col_job_t job;
 
-    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { K_V_STRIDE, K_H_STRIDE } }; 
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { K_V_STRIDE, K_H_STRIDE } }; 
 
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };

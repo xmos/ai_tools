@@ -9,7 +9,9 @@ include ../../../make/libs.mk
 #********************
 # App specific
 #********************
-APPFLAGS := -DNDEBUG
+APPFLAGS := -fxscope
+APPFLAGS += config.xscope
+APPFLAGS += -DNDEBUG
 #APPFLAGS += -DENABLE_TRACING
 APPFLAGS += -DENABLE_BENCHMARKING
 
@@ -18,9 +20,6 @@ ifeq ($(TARGET), x86)
 else # must be xcore
 	APP = mobilenet.xe
 endif
-
-CCFLAGS += -DNDEBUG
-CXXFLAGS += -DNDEBUG
 
 INCLUDES := $(TENSORFLOW_INCLUDES)
 INCLUDES += $(LIBS_INCLUDES)

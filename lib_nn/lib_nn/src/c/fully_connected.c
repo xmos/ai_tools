@@ -79,66 +79,6 @@ void fc_deepin_shallowout_16(
 
 
 WEAK_FUNC
-void fully_connected_16(
-    int16_t* Y,
-    const int8_t* W, 
-    const int8_t* X, 
-    const nn_bso_block_t* BSO,
-    const nn_fully_connected_plan_t* plan)
-{
-    xs3_vpu vpu;
-    const unsigned ACCS = VPU_INT8_ACC_PERIOD;
-
-    const unsigned C_in = plan->c_in;
-    const unsigned C_out = plan->c_out;
-
-    for(unsigned cout = 0; cout < C_out; cout++){
-
-        const unsigned cog = cout >> VPU_INT8_ACC_PERIOD_LOG2;
-        const unsigned coff = cout & (ACCS - 1);
-
-        const nn_bso_block_t* BSO_cog = &BSO[cog];
-
-        const int8_t* W_row = &W[cout * C_in];
-        const int32_t bias_hi      = BSO_cog->bias_hi[coff];
-        const int32_t bias_lo      = BSO_cog->bias_lo[coff];
-        const int16_t shift1       = BSO_cog->shift1[coff];
-        const int16_t scale        = BSO_cog->scale[coff];
-        const int16_t offset_scale = BSO_cog->offset_scale[coff];
-        const int16_t offset       = BSO_cog->offset[coff];
-        const int16_t shift2       = BSO_cog->shift2[coff];
-
-        int64_t acc64 = (bias_hi << 16) | bias_lo;
-
-        //For VERY deep inputs, it is possible that this doesn't match the assembly.
-        for(unsigned cin = 0; cin < C_in; cin++){
-            int32_t x = X[cin];
-            int32_t w = W_row[cin];
-            int32_t p = x * w;
-            acc64 += p;
-        }
-
-        // printf("acc64 = %ld\n", acc64);
-
-        acc64 =   (acc64 >= VPU_INT32_MAX)? VPU_INT32_MAX
-                : (acc64 <= VPU_INT32_MIN)? VPU_INT32_MIN
-                : acc64;
-
-        int32_t res = vlsat_single_s16((int32_t)acc64, shift1);
-        res = res * scale;
-        res = res + ((int32_t)offset_scale) * offset;
-        res = vlsat_single_s16(res, shift2);
-
-        Y[cout] = (int16_t) res;
-    }
-}
-
-
-
-
-
-
-WEAK_FUNC
 void fc_deepin_shallowout_8(
     const int8_t* W, 
     const int32_t* B,
@@ -200,16 +140,104 @@ void fc_deepin_shallowout_8(
 
 
 
+
+WEAK_FUNC
+void fully_connected_16(
+    int16_t* Y,
+    const int8_t* W, 
+    const int8_t* X, 
+    const nn_bso_block_t* BSO,
+    const nn_fully_connected_plan_t* plan,
+    const nn_fully_connected_job_t* job)
+{
+    xs3_vpu vpu;
+    const unsigned ACCS = VPU_INT8_ACC_PERIOD;
+
+    const unsigned C_in = plan->channels.X;
+
+    Y = ADDR(Y, (job->stride.start.Y >> 1));
+    W = ADDR(W, job->stride.start.W);
+    BSO = ADDR(BSO, (job->stride.start.BSO / sizeof(nn_bso_block_t)));
+
+    const unsigned C_out = job->output.channels;
+
+    for(unsigned cout = 0; cout < C_out; cout++){
+
+        const unsigned cog = cout >> VPU_INT8_ACC_PERIOD_LOG2;
+        const unsigned coff = cout & (ACCS - 1);
+
+        const nn_bso_block_t* BSO_cog = &BSO[cog];
+
+        const int8_t* W_row = &W[cout * C_in];
+        const int32_t bias_hi      = BSO_cog->bias_hi[coff];
+        const int32_t bias_lo      = BSO_cog->bias_lo[coff];
+        const int16_t shift1       = BSO_cog->shift1[coff];
+        const int16_t scale        = BSO_cog->scale[coff];
+        const int16_t offset_scale = BSO_cog->offset_scale[coff];
+        const int16_t offset       = BSO_cog->offset[coff];
+        const int16_t shift2       = BSO_cog->shift2[coff];
+
+        int64_t acc64 = (bias_hi << 16) | bias_lo;
+
+        //For VERY deep inputs, it is possible that this doesn't match the assembly.
+        for(unsigned cin = 0; cin < C_in; cin++){
+            int32_t x = X[cin];
+            int32_t w = W_row[cin];
+            int32_t p = x * w;
+            acc64 += p;
+        }
+
+        // printf("acc64 = %ld\n", acc64);
+
+        acc64 =   (acc64 >= VPU_INT32_MAX)? VPU_INT32_MAX
+                : (acc64 <= VPU_INT32_MIN)? VPU_INT32_MIN
+                : acc64;
+
+        int32_t res = vlsat_single_s16((int32_t)acc64, shift1);
+        res = res * scale;
+        res = res + ((int32_t)offset_scale) * offset;
+        res = vlsat_single_s16(res, shift2);
+
+        Y[cout] = (int16_t) res;
+    }
+}
+
+
+
+
+
 void fully_connected_init(
     nn_fully_connected_plan_t* plan,
-    const unsigned C_in,
-    const unsigned C_out)
+    nn_fully_connected_job_t* jobs,
+    const channel_count_t C_in,
+    const channel_count_t C_out,
+    const nn_fully_connected_job_params_t* job_params,
+    const unsigned job_count)
 {
-    plan->c_in           = C_in;
-    plan->c_out          = C_out;
-    plan->cig_end_stride = (VPU_INT8_ACC_PERIOD-1) * C_in + 32;
-    plan->tail_strat     = FC16_DEFAULT;
+    // Either a (non-NULL) job params pointer must be provided, or 
+    // job_count must be 1.
+    assert( job_count == 1 || job_params != NULL);
 
-    // const unsigned cout_tail = C_out % VPU_INT8_ACC_PERIOD;
+    plan->channels.X     = C_in;
+
+    // Params for processing the entire output 
+    const nn_fully_connected_job_params_t full_job = { 0, C_out };
+
+    for(int i = 0; i < job_count; i++){
+
+        // Job params to pull info from. If NULL was provided to the job_params argument,
+        // we'll use the full job.
+        const nn_fully_connected_job_params_t* params = (job_params != NULL)? &job_params[i] : &full_job;
+        nn_fully_connected_job_t* job = &jobs[i];
+
+        //Because of the BSO tensor format, start output channel must be a multiple of 16
+        assert(params->start_channel % VPU_INT8_ACC_PERIOD == 0);
+
+        job->output.channels = params->out_channels;
+
+        job->stride.start.Y = sizeof(int16_t) * params->start_channel;
+        job->stride.start.W = C_in * params->start_channel;
+        job->stride.start.BSO = sizeof(nn_bso_block_t) * (params->start_channel >> VPU_INT8_ACC_PERIOD_LOG2);
+    }
 
 }

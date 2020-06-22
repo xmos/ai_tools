@@ -17,6 +17,7 @@ DEFAULT_STRIDE_HEIGHT = 1
 DEFAULT_STRIDE_WIDTH = 2
 DEFAULT_STRIDES = (DEFAULT_STRIDE_HEIGHT, DEFAULT_STRIDE_WIDTH)
 DEFAULT_PATH = Path(__file__).parent.joinpath("debug", "avgpool2d").resolve()
+DEFAULT_NUM_THREADS = 1
 
 
 class AvgPool2D(common.OpTestDefaultModel):
@@ -60,6 +61,13 @@ def main(raw_args=None):
             "inits": {"input_init": {"type": common.OpTestInitializers.UNIF}},
         }
     )
+    parser.add_argument(
+        "-par",
+        "--num_threads",
+        type=int,
+        default=DEFAULT_NUM_THREADS,
+        help="Number of parallel threads for xcore.ai optimization.",
+    )
     args = parser.parse_args(raw_args)
 
     model = AvgPool2D("avgpool2d", args.path)
@@ -72,7 +80,7 @@ def main(raw_args=None):
         strides=args.strides,
         **args.inits,
     )
-    model.run()
+    model.run(num_threads=args.num_threads)
 
 
 if __name__ == "__main__":

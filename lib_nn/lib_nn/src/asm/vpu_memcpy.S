@@ -7,7 +7,7 @@ Source and dest must be word-aligned to use this.
 
 void vpu_memcpy(
     void* dst,
-    void* src,
+    const void* src,
     size_t size);
 */
 

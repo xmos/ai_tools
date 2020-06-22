@@ -9,7 +9,8 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
 )
 from tflite2xcore.utils import VE, WORD_SIZE
-from .transformation_passes import ReplaceQuantizedOperatorPass
+from .transformation_passes import ReplaceQuantizedOperatorPass, OperatorMatchingPass
+from tflite2xcore.execution_planning import ChannelGroupSlicePlanner, SlicePlanner
 
 
 class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
@@ -181,3 +182,59 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
             subgraph.remove_tensor(old_tensor)
 
         return new_op
+
+
+class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
+    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_threads = num_threads or 1
+        assert isinstance(self.max_threads, int)
+        assert self.max_threads > 0
+        self.forced = forced
+        self.plan_threads = None
+
+    def match(self, op):
+        if (
+            super().match(op)
+            and op.operator_code.code == XCOREOpCodes.XC_avgpool2d_global
+        ):
+            return not self.plan_threads
+
+    def mutate(self, op):
+        _, Cout = op.outputs[0].shape
+        planner = ChannelGroupSlicePlanner(
+            int(Cout), num_threads=self.max_threads, forced=self.forced
+        )
+        plan = planner.find_optimal_plan()
+        plan.num_threads = min(plan.num_threads, len(plan.changrp_slices))
+        self.plan_threads = plan.num_threads
+
+        op.add_custom_options(plan=plan.to_dict())
+
+
+class PlanPooling2DPass(OperatorMatchingPass):
+    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.num_threads = num_threads or 1
+        assert isinstance(self.num_threads, int)
+        assert self.num_threads > 0
+        self.forced = forced
+
+    MATCHING_OPCODES = (XCOREOpCodes.XC_maxpool2d, XCOREOpCodes.XC_avgpool2d)
+
+    def match(self, op):
+        if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
+            return "plan" not in op.custom_options
+
+    def mutate(self, op):
+        _, height, width, Cout = op.outputs[0].shape
+        planner = SlicePlanner(
+            int(Cout),
+            int(height),
+            int(width),
+            num_threads=self.num_threads,
+            forced=self.forced,
+        )
+        plan = planner.find_optimal_plan()
+
+        op.add_custom_options(plan=plan.to_dict())

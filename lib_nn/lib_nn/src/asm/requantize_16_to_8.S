@@ -5,9 +5,9 @@
 
 /*
 void requantize_16_to_8(
-    int8_t* y,
-    const int16_t* x,
-    const unsigned n);
+    int8_t* Y,
+    const int16_t* X,
+    const nn_requantize_16_to_8_job_t* job);
 */
 
 #define FUNCTION_NAME requantize_16_to_8
@@ -26,15 +26,17 @@ void requantize_16_to_8(
 
 #define arg_y   r0
 #define arg_x   r1
-#define arg_n   r2
 
-#define Y           r0
-#define _32         r1
-#define N_vec       r2
-#define tail_mask   r3
-#define MASK16      r4
-#define _16         r5
-#define tmp         r6
+#define Y               r0
+#define _32             r1
+#define length          r2
+#define tail_mask       r3
+#define MASK16          r4
+#define _16             r5
+#define tmp             r6
+
+#define JOB_START   0
+#define JOB_LENGTH  1
 
 #if !CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
   #define X           r7
@@ -85,60 +87,65 @@ void requantize_16_to_8(
 .short -0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01,-0x7F01
 
 FUNCTION_NAME:
-/**/dualentsp NSTACKWORDS
+    dualentsp NSTACKWORDS
     std r4, r5, sp[0]
     std r6, r7, sp[1]
 
-    {   ldc r11, 32                         ;   mov r3, arg_n                       }
-/**/{   shl r11, r11, 3                     ;   zext r3, 4                          }
-    {   mov X, arg_x                        ;   vsetc r11                           }
-    {   mkmsk tail_mask, r3                 ;   shr N_vec, arg_n, 4                 }
-    {   mkmsk MASK16, 16                    ;   bf N_vec, .L_loop_end               }
-/**/{   ldc _32, 32                         ;   ldc _16, 16                         }
+#define job     r2
+
+    {   ldc _16, 16                             ;   ldw r11, job[JOB_START]                 }
+    {   add Y, Y, r11                           ;   shl r11, r11, 1                         }
+    {   add X, arg_x, r11                       ;   ldc _32, 32                             }
+    {   shl r11, _32, 3                         ;   ldw length, job[JOB_LENGTH]             }
+    {   mov tail_mask, length                   ;   vsetc r11                               }
+    {   zext tail_mask, 4                       ;   shr length, length, 4                   }
+    {   mkmsk tail_mask, tail_mask              ;   mkmsk MASK16, 16                        }
+    {                                           ;   bf length, .L_loop_end                  }
 
 
 #if !CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
-    {   ldap r11, .L_constA                 ;   vclrdr                              }
-    {   mov r11, X                          ;   vldc r11[0]                         }
-    {                                       ;   nop                                 }
+    {   ldap r11, .L_constA                     ;   vclrdr                                  }
+    {   mov r11, X                              ;   vldc r11[0]                             }
 
     .L_loop_top:
-/**/    {   ldap r11, .L_constB                 ;   vldr r11[0]                         }
-        {                                       ;   vlsub r11[0]                        }
-        {                                       ;   vpos                                }
-        {   ldaw tmp, sp[STACK_VEC_TMP]         ;   vdepth8                             }
-/**/    {   mov r11, X                          ;   vstr tmp[0]                         }
-        {   add X, X, _32                       ;   vldr r11[0]                         }
-        {   mov r11, X                          ;   vdepth8                             }
-        {   sub N_vec, N_vec, 1                 ;   vlmacc tmp[0]                       }
-/**/    vstrpv Y[0], MASK16
-        {   add Y, Y, _16                       ;   bt N_vec, .L_loop_top               }
+
+        {   ldap r11, .L_constB                     ;   vldr r11[0]                             }
+        {                                           ;   vlsub r11[0]                            }
+        {                                           ;   vpos                                    }
+        {   ldaw tmp, sp[STACK_VEC_TMP]             ;   vdepth8                                 }
+        {   mov r11, X                              ;   vstr tmp[0]                             }
+        {   add X, X, _32                           ;   vldr r11[0]                             }
+        {   mov r11, X                              ;   vdepth8                                 }
+        {   sub length, length, 1                   ;   vlmacc tmp[0]                           }
+        vstrpv Y[0], MASK16
+        {   add Y, Y, _16                           ;   bt length, .L_loop_top                  }
+
     .L_loop_end:
 
-        {   mov r11, X                          ;   bf tail_mask, .Lfunc_end            }
-        {   ldap r11, .L_constB                 ;   vldr r11[0]                         }
-/**/    {                                       ;   vlsub r11[0]                        }
-        {                                       ;   vpos                                }
-        {   ldaw tmp, sp[STACK_VEC_TMP]         ;   vdepth8                             }
-        {   mov r11, X                          ;   vstr tmp[0]                         }
-/**/    {                                       ;   vldr r11[0]                         }
-        {                                       ;   vdepth8                             }
-        {                                       ;   vlmacc tmp[0]                       }
+        {   mov r11, X                              ;   bf tail_mask, .Lfunc_end                }
+        {   ldap r11, .L_constB                     ;   vldr r11[0]                             }
+        {                                           ;   vlsub r11[0]                            }
+        {                                           ;   vpos                                    }
+        {   ldaw tmp, sp[STACK_VEC_TMP]             ;   vdepth8                                 }
+        {   mov r11, X                              ;   vstr tmp[0]                             }
+        {                                           ;   vldr r11[0]                             }
+        {                                           ;   vdepth8                                 }
+        {                                           ;   vlmacc tmp[0]                           }
         vstrpv Y[0], tail_mask
 
 #else  // CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
 
     .L_loop_top:
-        {   add X, X, _32                       ;   vldr X[0]                           }
-        {   sub N_vec, N_vec, 1                 ;   vdepth8                             }
+        {   add X, X, _32                           ;   vldr X[0]                               }
+        {   sub length, length, 1                   ;   vdepth8                                 }
         vstrpv Y[0], MASK16
-/**/    {   add Y, Y, _16                       ;   bt N_vec, .L_loop_top               }
+        {   add Y, Y, _16                           ;   bt N_vec, .L_loop_top                   }
     .L_loop_end:
 
-        {                                       ;   bf tail_mask, .Lfunc_end            }
-        {                                       ;   vldr X[0]                           }
-        {                                       ;   vdepth8                             }
-/**/    vstrpv Y[0], tail_mask
+        {                                           ;   bf tail_mask, .Lfunc_end                }
+        {                                           ;   vldr X[0]                               }
+        {                                           ;   vdepth8                                 }
+        vstrpv Y[0], tail_mask
 
 #endif // CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
 

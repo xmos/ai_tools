@@ -18,7 +18,6 @@ ifeq ($(TARGET), x86)
 
 	OBJ_DIR := .build/x86
 else # must be xcore
-	# PLATFORM_FLAGS := -target=XU316-1024-FB265-C32
 	PLATFORM_FLAGS := -target=XCORE-AI-EXPLORER
 	PLATFORM_FLAGS += -mcmodel=large
 	PLATFORM_FLAGS += -Os
@@ -27,8 +26,6 @@ else # must be xcore
 	PLATFORM_FLAGS += -Wno-unknown-pragmas
 	#PLATFORM_FLAGS += -Wno-unknown-attributes
 	PLATFORM_FLAGS += -report
-	PLATFORM_FLAGS += -fxscope
-	PLATFORM_FLAGS += config.xscope
 
 	AS := xcc
 	ASFLAGS := $(PLATFORM_FLAGS)
@@ -44,7 +41,7 @@ else # must be xcore
 	CXXFLAGS += -DTF_LITE_STATIC_MEMORY
 	CXXFLAGS += -DTF_LITE_STRIP_ERROR_STRINGS
 
-	LDFLAGS := $(PLATFORM_FLAGS)
+	LDFLAGS := $(PLATFORM_FLAGS) -lquadspi
 
 	OBJ_DIR := .build/xcore
 endif

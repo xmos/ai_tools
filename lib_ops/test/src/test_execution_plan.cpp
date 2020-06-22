@@ -1,26 +1,26 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#include "lib_ops/api/par.h"
+#include "lib_ops/api/planning.h"
 #include "unity.h"
 #include "unity_fixture.h"
 
-TEST_GROUP(par_region);
+TEST_GROUP(execution_plan);
 
-TEST_SETUP(par_region) {}
+TEST_SETUP(execution_plan) {}
 
-TEST_TEAR_DOWN(par_region) {}
+TEST_TEAR_DOWN(execution_plan) {}
 
-TEST(par_region, test_par_region_array) {
+TEST(execution_plan, test_rowcol_region_array) {
   size_t num_regions = 5;
   int32_t top = 0;
   int32_t left = 1;
   int32_t rows = 2;
   int32_t cols = 3;
-  xcore::ParRegionArray regions;
+  xcore::RowColRegionArray regions;
 
   TEST_ASSERT_EQUAL_INT(regions.size, 0);
 
   for (int i = 0; i < num_regions; i++) {
-    xcore::ParRegion region = {top, left, rows, cols};
+    xcore::RowColRegion region = {top, left, rows, cols};
     regions.append(region);
     TEST_ASSERT_EQUAL_INT(regions.size, i + 1);
   }
@@ -28,7 +28,7 @@ TEST(par_region, test_par_region_array) {
   TEST_ASSERT_EQUAL_INT(regions.size, num_regions);
 
   for (int i = 0; i < num_regions; i++) {
-    const xcore::ParRegion& region = regions[i];
+    const xcore::RowColRegion& region = regions[i];
     TEST_ASSERT_EQUAL_INT(region.top, top);
     TEST_ASSERT_EQUAL_INT(region.left, left);
     TEST_ASSERT_EQUAL_INT(region.rows, rows);
@@ -36,6 +36,6 @@ TEST(par_region, test_par_region_array) {
   }
 }
 
-TEST_GROUP_RUNNER(par_region) {
-  RUN_TEST_CASE(par_region, test_par_region_array);
+TEST_GROUP_RUNNER(execution_plan) {
+  RUN_TEST_CASE(execution_plan, test_rowcol_region_array);
 }

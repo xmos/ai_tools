@@ -12,6 +12,8 @@ from generate_avgpool2d import (
     DEFAULT_WIDTH,
 )
 
+DEFAULT_NUM_THREADS = 1
+
 DEFAULT_PATH = Path(__file__).parent.joinpath("debug", "avgpool2d_global").resolve()
 
 
@@ -39,11 +41,18 @@ def main(raw_args=None):
             "inits": {"input_init": {"type": common.OpTestInitializers.UNIF}},
         }
     )
+    parser.add_argument(
+        "-par",
+        "--num_threads",
+        type=int,
+        default=DEFAULT_NUM_THREADS,
+        help="Number of parallel threads for xcore.ai optimization.",
+    )
     args = parser.parse_args(raw_args)
 
     model = AvgPool2DGlobal("avgpool2d_global", args.path)
     model.build(args.height, args.width, args.inputs, **args.inits)
-    model.run()
+    model.run(num_threads=args.num_threads)
 
 
 if __name__ == "__main__":

@@ -6,10 +6,10 @@
 // This form is useful for compiling into a binary for devices that don't have a
 // file system.
 
-#ifndef XCORE_MODEL_H_
-#define XCORE_MODEL_H_
+#ifndef CIFAR10_MODEL_H_
+#define CIFAR10_MODEL_H_
 
-extern const unsigned char xcore_model[];
-extern const int xcore_model_len;
+extern const unsigned char cifar10_model[];
+extern const int cifar10_model_len;
 
-#endif  // XCORE_MODEL_H_
+#endif  // CIFAR10_MODEL_H_

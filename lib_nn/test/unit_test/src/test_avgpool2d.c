@@ -395,7 +395,7 @@ void test_avgpool2d_2x2_case1()
 
     const test_case_t casses[] = {
         //  X               //Chans
-        {   2,  2,          16          , __LINE__},  // 0
+        // {   2,  2,          16          , __LINE__},  // 0
         {   4,  4,          16          , __LINE__},
         {   6,  6,          16          , __LINE__},
         {   8,  8,          16          , __LINE__},
@@ -472,7 +472,7 @@ void test_avgpool2d_2x2_case1()
         job_params.size.channels = y_params.channels;
 
         avgpool2d_init(&plan, &job, &x_params, &y_params, &window_config, &job_params, 1);
-        plan.impl = AVGPOOL2D_DEFAULT; // force non 2x2 implementation
+        plan.impl = AVGPOOL2D_2X2; // force non 2x2 implementation
 
         memset(Y, 0xCC, casse->height * casse->width * casse->channels / 4);
         avgpool2d((int8_t*)Y, (int8_t*)X, &plan, &job);
@@ -528,7 +528,7 @@ void test_avgpool2d_2x2_case2()
     window_config.start.column  = 0;
 
     avgpool2d_init(&plan, &job, &x_params, &y_params, &window_config, NULL, 1);
-    plan.impl = AVGPOOL2D_DEFAULT; // force non 2x2 implementation
+    plan.impl = AVGPOOL2D_2X2; // force non 2x2 implementation
     
     avgpool2d((int8_t*)Y, (int8_t*)X, &plan, &job);
 
@@ -577,7 +577,7 @@ void test_avgpool2d_2x2_case3()
     window_config.start.column  = 0;
 
     avgpool2d_init(&plan, &job, &x_params, &y_params, &window_config, NULL, 1);
-    plan.impl = AVGPOOL2D_DEFAULT; // force non 2x2 implementation
+    plan.impl = AVGPOOL2D_2X2; // force non 2x2 implementation
 
     avgpool2d((int8_t*)Y, (int8_t*)X, &plan, &job);
 

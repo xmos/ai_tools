@@ -56,7 +56,7 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
   nn_image_params_t out_params = {(uint32_t)Y_h, (uint32_t)Y_w,
                                   (uint32_t)C_out};
-  nn_conv2d_window_params_t window_params = {
+  nn_window_params_t conv_window = {
       {(uint32_t)params.K_h, (uint32_t)params.K_w},
       {-params.pad.top, -params.pad.left},
       {params.stride_h, params.stride_w}};
@@ -90,7 +90,7 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   // initialize the kernel
   conv2d_deep_init(&plan_, jobs_, &in_params, &out_params, &job_params[0],
-                   &window_params, params.pad.zero_point, n_jobs);
+                   &conv_window, params.pad.zero_point, n_jobs);
 
   return kXCoreOk;
 }
@@ -178,7 +178,7 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
   nn_image_params_t out_params = {(uint32_t)Y_h, (uint32_t)Y_w,
                                   (uint32_t)C_out};
-  nn_conv2d_window_params_t window_params = {
+  nn_window_params_t conv_window = {
       {(uint32_t)params.K_h, (uint32_t)params.K_w},
       {-params.pad.top, -params.pad.left},
       {params.stride_h, params.stride_w}};
@@ -212,7 +212,7 @@ XCoreStatus Conv2D_Shallow::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   // initialize the kernel
   conv2d_shallowin_init(&plan_, jobs_, &in_params, &out_params, &job_params[0],
-                        &window_params, params.pad.zero_point, n_jobs);
+                        &conv_window, params.pad.zero_point, n_jobs);
 
   return kXCoreOk;
 }  // namespace conv
@@ -416,6 +416,10 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
   nn_image_params_t out_params = {(uint32_t)Y_h, (uint32_t)Y_w,
                                   (uint32_t)C_out};
+  nn_window_params_t conv_window = {
+      {(uint32_t)params.K_h, (uint32_t)params.K_w},
+      {-params.pad.top, -params.pad.left},
+      {params.stride_h, params.stride_w}};
 
   // allocate the jobs
   int32_t n_jobs =
@@ -445,14 +449,8 @@ XCoreStatus Conv2D_Depthwise::Init(int32_t X_h, int32_t X_w, int32_t C_in,
   }
 
   // initialize the kernel
-  conv2d_depthwise_init(&plan_, jobs_, &in_params, &out_params,
-                        &job_params[0],    // job_params
-                        -params.pad.top,   // window_start_row
-                        -params.pad.left,  // window_start_col
-                        params.K_h, params.K_w, params.stride_h,
-                        params.stride_w, params.pad.zero_point,
-                        n_jobs  // job_count
-  );
+  conv2d_depthwise_init(&plan_, jobs_, &in_params, &out_params, &job_params[0],
+                        &conv_window, params.pad.zero_point, n_jobs);
 
   return kXCoreOk;
 }

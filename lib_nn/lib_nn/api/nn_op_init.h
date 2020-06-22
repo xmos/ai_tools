@@ -55,7 +55,7 @@ extern "C" {
  * collectively computes the entire output image (no gaps) and does not compute any output values redundantly (no 
  * overlap).
  * 
- * `conv_window` points to a `nn_conv2d_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
+ * `conv_window` points to a `nn_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
  * @math{W_{vert}), @math{W_{hori}), @math{W_{r0}) and @math{W_{c0}} hyperparameters (see @ref 
  * conv2d_deep_hyperparameters) which describe the relationship between the input image, the convolution window and the 
  * output image.
@@ -96,7 +96,7 @@ void conv2d_deep_init(
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params,
     const nn_conv2d_job_params_t* job_params,
-    const nn_conv2d_window_params_t* conv_window,
+    const nn_window_params_t* conv_window,
     const int8_t zero_point,
     const unsigned job_count);
 
@@ -140,7 +140,7 @@ void conv2d_deep_init(
  * collectively computes the entire output image (no gaps) and does not compute any output values redundantly (no 
  * overlap).
  * 
- * `conv_window` points to a `nn_conv2d_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
+ * `conv_window` points to a `nn_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
  * @math{W_{vert}}, @math{W_{hori}}, @math{W_{r0}} and @math{W_{c0}} hyperparameters (see @ref 
  * conv2d_shallowin_hyperparameters) which describe the relationship between the input image, the convolution window and 
  * the output image.
@@ -181,7 +181,7 @@ void conv2d_shallowin_init(
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params,
     const nn_conv2d_job_params_t* job_params,
-    const nn_conv2d_window_params_t* conv_window,
+    const nn_window_params_t* conv_window,
     const int8_t zero_point,
     const unsigned job_count);
 

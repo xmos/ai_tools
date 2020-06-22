@@ -12,12 +12,6 @@
 extern "C" {
 #endif
 
-/**
- * Describes the relationship between the convolution window and the 
- * input image.
- */
-typedef nn_window_params_t nn_conv2d_window_params_t;
-
 
 
 // /**

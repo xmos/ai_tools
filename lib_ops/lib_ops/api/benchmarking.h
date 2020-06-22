@@ -1,6 +1,6 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#ifndef LIB_OPS_STOPWATCH_H_
-#define LIB_OPS_STOPWATCH_H_
+#ifndef LIB_OPERATORS_BENCHMARKING_H_
+#define LIB_OPERATORS_BENCHMARKING_H_
 
 #ifdef XCORE
 extern "C" {
@@ -25,7 +25,7 @@ class Stopwatch {
 
  private:
 #ifdef XCORE
-  hwtimer_t hwtimer;
+  hwtimer_t hwtimer_;
   unsigned start_;
   unsigned stop_;
 #else   // not XCORE
@@ -60,4 +60,4 @@ class Stopwatch {
 
 #endif  // ENABLE_BENCHMARKING
 
-#endif  // LIB_OPS_STOPWATCH_H_
+#endif  // LIB_OPERATORS_BENCHMARKING_H_

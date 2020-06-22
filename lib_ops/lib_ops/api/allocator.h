@@ -1,70 +1,73 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#ifndef XCORE_ALLOCATOR_H_
-#define XCORE_ALLOCATOR_H_
+#ifndef XCORE_OPERATORS_ALLOCATOR_H_
+#define XCORE_OPERATORS_ALLOCATOR_H_
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+class MemoryAllocator {
+ public:
+  /** Construct Allocator.
+   *
+   * All pointers returned by the heap will be word-aligned.
+   * Some heap memory may be lost due to this alignment.
+   *
+   *
+   * \param buffer  Pointer to beginning of heap data.
+   * \param size    Size of buffer (in bytes)
+   */
+  MemoryAllocator()
+      : buffer_(nullptr),
+        buffer_size_(0),
+        alloc_tail_(nullptr),
+        scratch_head_(nullptr),
+        max_allocated_(0) {}
+  ~MemoryAllocator() {}
 
-/** Specify memory to use for dynamic allocations.
- *
- * All pointers returned by the heap word be word-aligned.
- * Some heap memory may be lost due to this alignment.
- *
- *
- * \param buffer  Pointer to beginning of heap data.
- * \param size    Size of buffer (in bytes)
- */
-void xcSetHeap(void *buffer, size_t size);
+  void SetHeap(void *buffer, size_t size);
 
-/** Get the size (in bytes) of the heap.
- */
-size_t xcGetHeapSize();
+  /** Get the size (in bytes) of the heap.
+   */
+  size_t GetSize();
 
-/** Get the size (in bytes) of memory allocated from the heap.
- */
-size_t xcGetHeapAllocatedSize();
+  /** Get the size (in bytes) of memory allocated from the heap.
+   */
+  size_t GetAllocatedSize();
 
-/** Get the size (in bytes) of available memory in the heap.
- */
-size_t xcGetHeapFreeSize();
+  /** Get the maximum size (in bytes) of memory allocated from the heap.
+   */
+  size_t GetMaxAllocatedSize();
 
-/** Reset the heap so the memory can be re-used.
- */
-void xcResetHeap();
+  /** Get the size (in bytes) of available memory in the heap.
+   */
+  size_t GetFreeSize();
 
-/** Allocate memory.
- * \param size    Size of allocation (in bytes)
- */
-void *xcMalloc(size_t size);
+  /** Reset the allocator so all memory can be re-used.
+   */
+  void ResetHeap();
 
-/** Reallocate memory
- *
- * This heap implementation only allow the last allocation to be
- * reallocated (LIFO). Attempting to reallocate a block that is not the
- * last allocation will return a null pointer.
- *
- *
- * \param ptr     Pointer to previously allocated data.
- * \param size    Size of new allocation (in bytes)
- */
-void *xcRealloc(void *ptr, size_t size);
+  /** Reset the allocator so the scratch memory can be re-used.
+   */
+  void ResetScratch();
 
-/** Free an allocation
- *
- * This heap implementation only allow the last allocation to be
- * freed (LIFO). Attempting to free a block that is not the
- * last allocation results in a no-op.
- *
- *
- * \param ptr     Pointer to previously allocated data.
- */
-void xcFree(void *ptr);
+  /** Allocate memory that is intended to persist for the lifetime of the
+   * allocator. \param size    Size of allocation (in bytes)
+   */
+  void *AllocatePersistantBuffer(size_t size);
 
-#ifdef __cplusplus
-}
-#endif
-#endif  // XCORE_ALLOCATOR_H_
+  /** Allocate scratch memory that will only be used temporarilly.
+   * \param size    Size of allocation (in bytes)
+   */
+  void *AllocateScratchBuffer(size_t size);
+
+ private:
+  void *AllocateBuffer(size_t size);
+
+  void *buffer_;
+  size_t buffer_size_;
+  void *alloc_tail_;
+  void *scratch_head_;
+  size_t max_allocated_;
+};
+
+#endif  // XCORE_OPERATORS_ALLOCATOR_H_

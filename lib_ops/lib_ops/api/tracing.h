@@ -1,6 +1,6 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#ifndef LIB_OPS_TRACING_H_
-#define LIB_OPS_TRACING_H_
+#ifndef XCORE_OPERATORS_TRACING_H_
+#define XCORE_OPERATORS_TRACING_H_
 
 #include <stdio.h>
 
@@ -27,4 +27,4 @@
 
 #endif  // ENABLE_TRACING
 
-#endif  // LIB_OPS_TRACING_H_
+#endif  // XCORE_OPERATORS_TRACING_H_

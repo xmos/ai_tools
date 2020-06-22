@@ -5,20 +5,17 @@
 #include "asm_constants.h"
 
 /*  
-void avgpool2d_global_asm(
+void avgpool2d_global(
     int8_t* Y,
     const int8_t* X, 
-    const uint32_t x_height, 
-    const uint32_t x_width,
-    const uint32_t x_chans,
-    const int32_t  bias,
-    const uint32_t shift,
-    const uint32_t scale);
+    const int32_t bias,
+    const nn_avgpool2d_global_plan_t* plan,
+    const nn_avgpool2d_global_job_t* job);
 */
 
 #define FUNCTION_NAME avgpool2d_global
 
-#define NSTACKWORDS  (4*8 + 12)
+#define NSTACKWORDS  (5*8 + 12)
     
 .text
 .issue_mode  dual
@@ -27,33 +24,38 @@ void avgpool2d_global_asm(
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
-#define arg_Y           r0
-#define arg_X           r1
-#define arg_x_height    r2
-#define arg_x_width     r3
+#define arg_bias        r2
+#define arg_plan        r3
 
-#define STACK_X_CHANS       (NSTACKWORDS+1)
-#define STACK_BIAS          (NSTACKWORDS+2)
-#define STACK_SHIFT         (NSTACKWORDS+3)
-#define STACK_SCALE         (NSTACKWORDS+4)
+
+#define PLAN_X_PIXELS   0
+#define PLAN_X_CHANS    1
+#define PLAN_SHIFT      2
+#define PLAN_SCALE      3
+
+#define JOB_STRIDE_START    0
+#define JOB_OUT_CHANNELS    1
+
 #define STACK_SHIFT_VEC     (NSTACKWORDS-8)
 #define STACK_BIAS_HI_VEC   (NSTACKWORDS-16)
 #define STACK_BIAS_LO_VEC   (NSTACKWORDS-24)
-#define STACK_VEC_TMP       (NSTACKWORDS-32)
+#define STACK_VEC_TMP1      (NSTACKWORDS-32)
+#define STACK_VEC_TMP2      (NSTACKWORDS-40)
 
-#define STACK_CP                1
+#define STACK_JOB           (NSTACKWORDS+1)
+#define STACK_CP            1
 
-#define Y               r0
-#define X               r1
-#define pix_groups      r2
-#define chans           r3
-#define chan_grp_left   r4
-#define x_chan_incr     r5
-#define write_mask      r6
-#define chan_tail       r7
-#define pix_loop_hop    r8
-#define pix_count       r9
-#define _16             r10
+#define Y                   r0
+#define X                   r1
+#define chans               r2
+#define pix_groups          r3
+#define chan_grp_left       r4
+#define x_chan_incr         r5
+#define write_mask          r6
+#define chan_tail           r7
+#define pix_loop_hop        r8
+#define pix_count           r9
+#define _16                 r10
 
 #define Q(ASD)          ASD
 
@@ -73,13 +75,35 @@ FUNCTION_NAME:
     //Change constant pool pointer to refer to the constant VPU vects needed here
     ldaw r11, cp[vpu_vects]
     {   ldaw r11, cp[0]                         ;   set cp, r11                             }
-    {                                           ;   stw r11, sp[STACK_CP]                   }
+    {   ldap r11, .L_bso_consts                 ;   stw r11, sp[STACK_CP]                   }
 
-    mul pix_count, arg_x_height, arg_x_width
-    {   shl r11, _16, 5                         ;   ldw chans, sp[STACK_X_CHANS]            }
+    {   ldaw r6, sp[STACK_BIAS_HI_VEC]          ;   ldw r4, r11[0]                          }
+    {   ldaw r7, sp[STACK_BIAS_LO_VEC]          ;                                           }
+    {   shr r8, arg_bias, 16                    ;   zext arg_bias, 16                       }
+    mul arg_bias, r4, arg_bias
+    std arg_bias, arg_bias, r7[0]   // Bias low
+    std arg_bias, arg_bias, r7[1]
+    std arg_bias, arg_bias, r7[2]
+    std arg_bias, arg_bias, r7[3]
+    mul arg_bias, r4, r8
+    std arg_bias, arg_bias, r6[0]   // Bias high
+    std arg_bias, arg_bias, r6[1]
+    std arg_bias, arg_bias, r6[2]
+    std arg_bias, arg_bias, r6[3]
+
+#undef arg_bias
+#define job     r2
+
+    {                                           ;   ldw job, sp[STACK_JOB]                  }
+    {                                           ;   ldw r11, job[JOB_STRIDE_START]          }
+    {   add Y, Y, r11                           ;   ldw pix_count, arg_plan[PLAN_X_PIXELS]  }
+    {   add X, X, r11                           ;                                           }
+
+
+    {   shl r11, _16, 5                         ;                                           }
     {   ldap r11, .L_bso_consts                 ;   vsetc r11                               }
 
-    {                                           ;   ldw r10, sp[STACK_SCALE]                }
+    {                                           ;   ldw r10, arg_plan[PLAN_SCALE]           }
     {   ldaw r6, sp[STACK_SHIFT_VEC]            ;   ldw r4, r11[1]                          }
     mul r10, r10, r4
     std r10, r10, r6[0]
@@ -88,32 +112,24 @@ FUNCTION_NAME:
     std r10, r10, r6[3]
     {                                           ;   vldc r6[0]                              }
     {                                           ;   ldw r4, r11[0]                          }
-    {                                           ;   ldw r10, sp[STACK_SHIFT]                }
+    {                                           ;   ldw r10, arg_plan[PLAN_SHIFT]           }
     mul r10, r4, r10
-    std r10, r10, r6[0]
-    std r10, r10, r6[1]
-    std r10, r10, r6[2]
-    std r10, r10, r6[3]
-    {   ldaw r6, sp[STACK_BIAS_HI_VEC]          ;   ldw r4, r11[0]                          }
-    {   ldaw r7, sp[STACK_BIAS_LO_VEC]          ;   ldw r10, sp[STACK_BIAS]                 }
-    {   shr r8, r10, 16                         ;   zext r10, 16                            }
-    mul r10, r4, r10
-    std r10, r10, r7[0]
-    std r10, r10, r7[1]
-    std r10, r10, r7[2]
-    std r10, r10, r7[3]
-    mul r10, r4, r8
     std r10, r10, r6[0]
     std r10, r10, r6[1]
     std r10, r10, r6[2]
     std r10, r10, r6[3]
     
+    {                                           ;   ldw r10, job[JOB_OUT_CHANNELS]          }
+    {   mov r3, r10                             ;   ldw chans, arg_plan[PLAN_X_CHANS]       }
+
+#undef arg_plan
+#undef job
 
     mul x_chan_incr, pix_count, chans
-    {   ldc _16, 16                             ;   shr chan_grp_left, chans, 4             }
+    {   ldc _16, 16                             ;   shr chan_grp_left, r3, 4                }
     {   sub x_chan_incr, x_chan_incr, _16       ;   mkmsk r11, 4                            }
 
-    {   and chan_tail, chans, r11               ;   and pix_loop_hop, pix_count, r11        }
+    {   and chan_tail, r3, r11                  ;   and pix_loop_hop, pix_count, r11        }
     
     {                                           ;   sub pix_loop_hop, _16, pix_loop_hop     }
     {   mkmsk write_mask, 16                    ;   bt chan_grp_left, .L_chan_loop          }
@@ -128,7 +144,7 @@ FUNCTION_NAME:
 #if CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
         {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   bru pix_loop_hop                        } // Do pix tail first
 #else //CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
-        {   shl r11, _16, 4                         ;   bru pix_loop_hop                        } // Do pix tail first
+        {   ldaw r11, sp[STACK_VEC_TMP1]            ;   bru pix_loop_hop                        } // Do pix tail first
 #endif //CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
         .L_pix_loop:
             {   add X, X, chans                         ;   vlmacc X[0]                             }   // 0  -- should be a no-op
@@ -155,16 +171,19 @@ FUNCTION_NAME:
         vstrpv Y[0], write_mask
         {   add Y, Y, _16                           ;   bt chan_grp_left, .L_chan_loop          }
 #else //CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
-        {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   vsetc r11       /* 16-bit mode */       }
-        {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat r11[0]                            }
-        {   sub X, X, x_chan_incr                   ;   vstr r11[0]                             }
-        {                                           ;   vdepth8                                 }
+
+        {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vstd r11[0]                             }
+        {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   vstr r11[0]                             }
+        {   shl r11, _16, 4                         ;   vlsat r11[0]                            }
+        {   ldaw r11, sp[STACK_VEC_TMP1]            ;   vsetc r11       /* 16-bit mode */       }
         vstrpv Y[0], write_mask
-        {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vldr r11[0]                             }
-        {                                           ;   vladd r11[0]                            }   //only 0xFF80 will remain negative (0xFFFF)
-        {   ldaw r11, sp[STACK_VEC_TMP]             ;   vdepth1                                 }   //values that should result in -0x80 will get 1 here
+        {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vldd r11[0]                             }
+        {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   vldr r11[0]                             }
+        {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vlsat r11[0]                            }
+        {   sub X, X, x_chan_incr                   ;   vladd r11[0]                            }   //only 0xFF80 will remain negative (0xFFFF)
+        {   ldaw r11, sp[STACK_VEC_TMP1]            ;   vdepth1                                 }   //values that should result in -0x80 will get 1 here
         {                                           ;   vstr r11[0]                             }
-        {   ldaw r11, cp[VPU_VEC_0x80]              ;   ldw Q(pix_groups), sp[STACK_VEC_TMP]    }
+        {   ldaw r11, cp[VPU_VEC_0x80]              ;   ldw Q(pix_groups), sp[STACK_VEC_TMP1]   }
         {   and r11, Q(pix_groups), write_mask      ;   vldr r11[0]                             }
         vstrpv Y[0], r11
         {   add Y, Y, _16                           ;   bt chan_grp_left, .L_chan_loop          }

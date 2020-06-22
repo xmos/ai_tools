@@ -167,9 +167,9 @@ void test_conv2d_depthwise_case0()
         nn_conv2d_depthwise_plan_t plan;
         nn_conv2d_depthwise_job_t job;
 
-        conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, 
-                            0, 0, K_h, K_w, K_vstride, K_hstride, 
-                            12, 1);
+        nn_window_params_t conv_window = {{K_h,K_w}, {0,0}, {K_vstride,K_hstride}};
+
+        conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, 12, 1);
 
 
 #if (DEBUG_ON || 0)
@@ -308,10 +308,10 @@ void test_conv2d_depthwise_case1()
 
             nn_conv2d_depthwise_plan_t plan;
             nn_conv2d_depthwise_job_t job;
+            
+            nn_window_params_t conv_window = {{K_h,K_w}, {0,0}, {K_vstride,K_hstride}};
 
-            conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, 
-                                0, 0, K_h, K_w, K_vstride, K_hstride, 
-                                12, 1);
+            conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, 12, 1);
 
 #if (DEBUG_ON || 0)
 
@@ -455,10 +455,9 @@ void test_conv2d_depthwise_case2()
 
         nn_conv2d_depthwise_plan_t plan;
         nn_conv2d_depthwise_job_t job;
+        nn_window_params_t conv_window = {{casse->K_h, casse->K_w}, {0, 0}, {casse->v_stride, casse->h_stride}};
 
-        conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, 
-                            0, 0, casse->K_h, casse->K_w, casse->v_stride, casse->h_stride, 
-                            12, 1);
+        conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, 12, 1);
 
 #if (DEBUG_ON || 0)
 
@@ -561,10 +560,9 @@ void test_conv2d_depthwise_case3()
 
     nn_conv2d_depthwise_plan_t plan;
     nn_conv2d_depthwise_job_t job;
+    nn_window_params_t conv_window = {{K_h, K_w}, {-(K_h/2), -(K_w/2)}, {v_stride, h_stride}};
 
-    conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, 
-                        -(K_h/2), -(K_w/2), K_h, K_w, v_stride, h_stride, 
-                        ZERO_POINT, 1);
+    conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, ZERO_POINT, 1);
 
 #if (DEBUG_ON || 0)
 
@@ -720,10 +718,10 @@ void test_conv2d_depthwise_case4()
 
         nn_conv2d_job_params_t job_params = { {casse->Y_start.row, casse->Y_start.col, casse->Y_start.channel}, 
                                               {casse->output.rows, casse->output.cols, casse->output.channels} };
+                                              
+        nn_window_params_t conv_window = {{K_h, K_w}, {-(K_h/2), -(K_w/2)}, {v_stride, h_stride}};
 
-        conv2d_depthwise_init(&plan, &job, &x_params, &y_params, &job_params, 
-                            -(K_h/2), -(K_w/2), K_h, K_w, v_stride, h_stride, 
-                            ZERO_POINT, 1);
+        conv2d_depthwise_init(&plan, &job, &x_params, &y_params, &job_params, &conv_window, ZERO_POINT, 1);
 
 #if (DEBUG_ON || 0)
 
@@ -852,9 +850,9 @@ void test_conv2d_depthwise_case5()
     };
     assert(sizeof(job_params)/sizeof(nn_conv2d_job_params_t) == JOB_COUNT);
 
-    conv2d_depthwise_init(&plan, job, &x_params, &y_params, job_params, 
-                        -(K_h/2), -(K_w/2), K_h, K_w, v_stride, h_stride, 
-                        ZERO_POINT, JOB_COUNT);
+    nn_window_params_t conv_window = {{K_h, K_w}, {-(K_h/2), -(K_w/2)}, {v_stride, h_stride}};
+
+    conv2d_depthwise_init(&plan, job, &x_params, &y_params, job_params, &conv_window, ZERO_POINT, JOB_COUNT);
 
     memset(Y, 0xCC, sizeof(Y)); 
 
@@ -955,10 +953,9 @@ void test_conv2d_depthwise_case6_()
 
     nn_conv2d_depthwise_plan_t plan;
     nn_conv2d_depthwise_job_t job;
+    nn_window_params_t conv_window = {{K_h, K_w}, {-(K_h/2), -(K_w/2)}, {v_stride, h_stride}};
 
-    conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, 
-                        -(K_h/2), -(K_w/2), K_h, K_w, v_stride, h_stride, 
-                        ZERO_POINT, 1);
+    conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, ZERO_POINT, 1);
 
     memset(Y, 0xCC, sizeof(Y)); 
     conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, &plan, &job);
@@ -1069,11 +1066,9 @@ void test_conv2d_depthwise_case6()
     nn_conv2d_depthwise_plan_t plan;
     nn_conv2d_depthwise_job_t job;
 
+    nn_window_params_t conv_window = {{K_h, K_w}, {0, 0}, {v_stride, h_stride}};
 
-
-    conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, 
-                        0, 0, K_h, K_w, v_stride, h_stride, 
-                        ZERO_POINT, 1);
+    conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, ZERO_POINT, 1);
 
     memset(Y, 0xCC, sizeof(Y)); 
     conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, &plan, &job);
@@ -1158,11 +1153,10 @@ void test_conv2d_depthwise_case7()
     nn_conv2d_depthwise_plan_t plan;
     nn_conv2d_depthwise_job_t job;
 
+    nn_window_params_t conv_window = {{K_h, K_w}, {-1, 0}, {v_stride, h_stride}};
 
 
-    conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, 
-                        -1, 0, K_h, K_w, v_stride, h_stride, 
-                        ZERO_POINT, 1);
+    conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, ZERO_POINT, 1);
 
     memset(Y, 0xCC, sizeof(Y)); 
     conv2d_depthwise((nn_image_t*)Y, (nn_image_t*)X, (nn_tensor_t*)K, (nn_bso_block_t*) bso, &plan, &job);

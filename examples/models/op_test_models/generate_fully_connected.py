@@ -11,6 +11,7 @@ DEFAULT_OUTPUT_DIM = 10
 DEFAULT_INPUT_DIM = 32
 DEFAULT_EPOCHS = 5 * (DEFAULT_OUTPUT_DIM - 1)
 DEFAULT_BS = 128
+DEFAULT_NUM_THREADS = 1
 DEFAULT_PATH = Path(__file__).parent.joinpath("debug", "fully_connected").resolve()
 
 
@@ -28,6 +29,13 @@ def main(raw_args=None):
             },
         }
     )
+    parser.add_argument(
+        "-par",
+        "--num_threads",
+        type=int,
+        default=DEFAULT_NUM_THREADS,
+        help="Number of parallel threads for xcore.ai optimization.",
+    )
     args = parser.parse_args(raw_args)
 
     model = common.OpTestDefaultFCModel("fully_connected", args.path)
@@ -37,7 +45,7 @@ def main(raw_args=None):
         )
     else:
         model.load_core_model(args.output_dim)
-    model.convert_and_save()
+    model.convert_and_save(xcore_num_threads=args.num_threads)
 
 
 if __name__ == "__main__":

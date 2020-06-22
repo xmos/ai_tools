@@ -8,19 +8,6 @@ from tflite2xcore import utils, xlogging as logging, analyze
 import tflite2xcore.converter as xcore_conv
 
 
-def print_report(tflite_output_path):
-    with open(tflite_output_path, "rb") as fd:
-        model_content = fd.read()
-        model_size = len(model_content)
-        tensor_arena_size, xcore_heap_size = analyze.calc_arena_sizes(model_content)
-        print(f"Model size: {model_size} (bytes)")
-        print(f"Tensor arena size: {tensor_arena_size} (bytes)")
-        print(f"xCORE heap size: {xcore_heap_size} (bytes)")
-        print()
-        total_size = model_size + tensor_arena_size + xcore_heap_size
-        print(f"Total data memory required: {total_size}")
-
-
 if __name__ == "__main__":
     parser = utils.VerbosityParser()
     parser.add_argument("tflite_input", help="Input .tflite file.")
@@ -59,6 +46,13 @@ if __name__ == "__main__":
         "each pass, and after a pass matches but before it mutates. "
         "Verbosity is also set to maximum.",
     )
+    parser.add_argument(
+        "--analyze",
+        action="store_true",
+        default=False,
+        help="Analyze the output model. "
+        "A report is printed showing the runtime memory footprint of the model.",
+    )
     args = parser.parse_args()
 
     if args.debug:
@@ -78,4 +72,7 @@ if __name__ == "__main__":
         debug=args.debug,
     )
 
-    print_report(tflite_output_path)
+    print(f"Conversion successful, output: {tflite_output_path}")
+
+    if args.analyze:
+        analyze.print_report(tflite_output_path)

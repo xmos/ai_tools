@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-
+#include <string.h>
 
 #include "tst_common.h"
 
@@ -35,13 +35,15 @@ static void check_Y(
     unsigned y_offset = IMG_ADDRESS_VECT(y_params, row, col, chn);
 
     int8_t y = Y[y_offset];
-    printf( "Y[%d][%d][%d] = %d  (expected  %d)\n",row,col,chn,y, y_exp );
-
+    #if 0
+    char* message = ( y==y_exp ? "PASS" : "FAIL");
+    printf( "Y[%d][%d][%d] = %d  (expected  %d) diff = %d \t%s\n",row,col,chn,y, y_exp, y_exp-y, message );
+    #else
     //Only sprintf-ing if the test will fail saves a ton of time.
     if(y != y_exp)
         sprintf(str_buff, "(row, col, chn) = (%u, %u, %u)  [test vector @ line %u]", row, col, chn, line);
-
-    // TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
+    TEST_ASSERT_EQUAL_MESSAGE(y_exp, y, str_buff);
+    #endif
 }
 
 
@@ -1608,9 +1610,9 @@ void test_conv2d_im2col_case16()
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
 
     nn_conv2d_job_params_t job_params[] = {
-        {  {  0,  0,  0}, {  1, 3, 32}  },
         {  {  1,  0,  0}, {  2, 1, 16}  },
         {  {  1,  1,  0}, {  2, 2, 16}  },
+        {  {  0,  0,  0}, {  1, 3, 32}  },
         {  {  1,  0, 16}, {  1, 3, 16}  },
         {  {  2,  0, 16}, {  1, 2, 16}  },
         //Leaves Y[2,2,16:32] uncalculated
@@ -1829,7 +1831,98 @@ void test_conv2d_im2col_case17()
 
 
 
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+#define CHANS_IN        ( 3 )
+#define CHANS_OUT       ( 16 )
+#define K_H             ( 2 )
+#define K_W             ( 3 )
+#define X_HEIGHT        ( 4 )
+#define X_WIDTH         ( 6 )
+#define Y_HEIGHT        ( 2 )
+#define Y_WIDTH         ( 2 )
+#define K_V_STRIDE      ( 2 )
+#define K_H_STRIDE      ( 3 )
+#define ZERO_POINT      ( -128 )
+void test_conv2d_im2col_case18()
+{
 
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][ (((K_H*K_W*CHANS_IN+3)>>2)<<2) ];
+    nn_image_t  WORD_ALIGNED COL[((K_H*K_W*CHANS_IN+VPU_INT8_EPV-1)>>VPU_INT8_EPV_LOG2)<<VPU_INT8_EPV_LOG2];
+    nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
+    nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
+    
+    struct {
+        int32_t bias[CHANS_OUT];
+        int16_t shift1[CHANS_OUT];
+        int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
+        int16_t shift2[CHANS_OUT];
+    } BSO;
+
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
+
+    PRINTF("%s...\n", __func__);
+
+    nn_conv2d_im2col_plan_t plan;
+    nn_conv2d_im2col_job_t job;
+
+    nn_conv2d_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { K_V_STRIDE, K_H_STRIDE } }; 
+
+    nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
+    nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
+
+    nn_conv2d_job_params_t job_params = {  {  0,  0,  0}, {  Y_HEIGHT, Y_WIDTH, CHANS_OUT}  };
+    conv2d_im2col_init(&plan, &job, &x_params, &y_params, &job_params, &conv2d_window, ZERO_POINT, 1);
+
+    for(int row = 0; row < x_params.height; row++)
+        for(int col = 0; col < x_params.width; col++)
+            for(int cin = 0; cin < x_params.channels; cin++)
+                X[row][col][cin] = 1;
+                
+    memset(K, 0, sizeof(K));   
+    for(int cout = 0; cout < y_params.channels; cout++)
+        for(int row = 0; row < conv2d_window.shape.height; row++)
+            for(int col = 0; col < conv2d_window.shape.width; col++)
+                for(int cin = 0; cin < x_params.channels; cin++)
+                    K[cout][row*K_W*CHANS_IN + col*CHANS_IN + cin] = K_W * row + col + 1;
+
+    for(int k = 0; k < CHANS_OUT; k++){
+        BSO.bias[k] = 0;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 0;
+    }
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, y_params.channels);
+
+    memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
+
+    conv2d_im2col((nn_image_t*) Y, (nn_image_t*) X, (nn_image_t*) COL, (nn_tensor_t*) K, bso, &plan, &job);
+
+    for(int row = 0; row < y_params.height; row++){
+        for(int col = 0; col < y_params.width; col++){
+            for(int cout = 0; cout < y_params.channels; cout++){
+                int8_t y_exp = 21 * x_params.channels;
+                check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, cout, __LINE__);
+            }
+        }
+    }
+}
+#undef CHANS_IN
+#undef CHANS_OUT
+#undef K_H
+#undef K_W
+#undef X_HEIGHT
+#undef X_WIDTH
+#undef Y_HEIGHT
+#undef Y_WIDTH
+#undef K_V_STRIDE
+#undef K_H_STRIDE
+#undef ZERO_POINT
 
 
 
@@ -1837,22 +1930,23 @@ void test_conv2d_im2col()
 {
     UNITY_SET_FILE();
     
-    // RUN_TEST(test_conv2d_im2col_case0);
-    // RUN_TEST(test_conv2d_im2col_case1);
-    // RUN_TEST(test_conv2d_im2col_case2);
-    // RUN_TEST(test_conv2d_im2col_case3);
-    // RUN_TEST(test_conv2d_im2col_case4);
-    // RUN_TEST(test_conv2d_im2col_case5);
-    // RUN_TEST(test_conv2d_im2col_case6);
-    // RUN_TEST(test_conv2d_im2col_case7);
-    // RUN_TEST(test_conv2d_im2col_case8);
-    // RUN_TEST(test_conv2d_im2col_case9);
-    // RUN_TEST(test_conv2d_im2col_case10);
-    // RUN_TEST(test_conv2d_im2col_case11);
-    // RUN_TEST(test_conv2d_im2col_case12);
-    // RUN_TEST(test_conv2d_im2col_case13);
+    RUN_TEST(test_conv2d_im2col_case0);
+    RUN_TEST(test_conv2d_im2col_case1);
+    RUN_TEST(test_conv2d_im2col_case2);
+    RUN_TEST(test_conv2d_im2col_case3);
+    RUN_TEST(test_conv2d_im2col_case4);
+    RUN_TEST(test_conv2d_im2col_case5);
+    RUN_TEST(test_conv2d_im2col_case6);
+    RUN_TEST(test_conv2d_im2col_case7);
+    RUN_TEST(test_conv2d_im2col_case8);
+    RUN_TEST(test_conv2d_im2col_case9);
+    RUN_TEST(test_conv2d_im2col_case10);
+    RUN_TEST(test_conv2d_im2col_case11);
+    RUN_TEST(test_conv2d_im2col_case12);
+    RUN_TEST(test_conv2d_im2col_case13);
     RUN_TEST(test_conv2d_im2col_case14);
-    // RUN_TEST(test_conv2d_im2col_case15);
-    // RUN_TEST(test_conv2d_im2col_case16);
-    // RUN_TEST(test_conv2d_im2col_case17);
+    RUN_TEST(test_conv2d_im2col_case15);
+    RUN_TEST(test_conv2d_im2col_case16);
+    RUN_TEST(test_conv2d_im2col_case17);
+    RUN_TEST(test_conv2d_im2col_case18);
 }

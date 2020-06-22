@@ -53,7 +53,7 @@ typedef nn_tensor_t nn_image_t;
  * `channel_count_t` is used to hint that a struct field or function parameter indicates
  * a number of channels. 
  */
-typedef unsigned channel_count_t;
+typedef uint32_t channel_count_t;
 
 /**
  * Alias for `int32_t`. 

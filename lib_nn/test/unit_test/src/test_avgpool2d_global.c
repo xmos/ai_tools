@@ -34,20 +34,20 @@ void test_avgpool2d_global_case0()
 
     PRINTF("%s...\n", __func__);
 
+
     nn_image_params_t x_params = { HEIGHT, WIDTH, CHANS };
     nn_image_params_t y_params = { 1, 1, CHANS };
 
+    nn_avgpool2d_global_plan_t plan;
+    nn_avgpool2d_global_job_t job;
+
+    avgpool2d_global_init(&plan, &job, &x_params, NULL, 1);
+    
+    int32_t bias = ((int)0x807FFFFF) >> (24-plan.shift);
+
     memset(X, 0, sizeof(X));
 
-
-    uint32_t shift;
-    uint32_t scale;
-
-    avgpool2d_global_init(&shift, &scale, x_params.height, x_params.width);
-    
-    int32_t bias = ((int)0x807FFFFF) >> (24-shift);
-
-    avgpool2d_global(Y, (nn_image_t*)X, HEIGHT, WIDTH, CHANS, bias, shift, scale);
+    avgpool2d_global((nn_image_t*) Y, (nn_image_t*) X, bias, &plan, &job);
 
     char str_buff[200] = {0};
 
@@ -70,8 +70,8 @@ void test_avgpool2d_global_case0()
 #define MAX_WIDTH   (32)
 void test_avgpool2d_global_case1()
 {
-    int8_t WORD_ALIGNED  X[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS] = {{{0}}};
-    int8_t WORD_ALIGNED  Y[MAX_CHANS];
+    nn_image_t WORD_ALIGNED  X[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS] = {{{0}}};
+    nn_image_t WORD_ALIGNED  Y[MAX_CHANS];
 
     PRINTF("%s...\n", __func__);
 
@@ -138,6 +138,9 @@ void test_avgpool2d_global_case1()
         nn_image_params_t x_params = { casse->height, casse->width, casse->channels };
         nn_image_params_t y_params = { 1, 1, casse->channels };
 
+        nn_avgpool2d_global_plan_t plan;
+        nn_avgpool2d_global_job_t job;
+
         for(int r = 0; r < x_params.height; r++){
             for(int c = 0; c < x_params.width; c++){
                 for(int ch = 0; ch < x_params.channels; ch++){
@@ -146,16 +149,12 @@ void test_avgpool2d_global_case1()
             }
         }
 
-        uint32_t shift;
-        uint32_t scale;
+        avgpool2d_global_init(&plan, &job, &x_params, NULL, 1);
 
-        avgpool2d_global_init(&shift, &scale, x_params.height, x_params.width);
-        
-        int32_t bias = casse->bias * x_params.height * x_params.width * scale;
-
+        int32_t bias = casse->bias * plan.X.pixels * plan.scale;
         
         memset(Y, 0xCC, sizeof(Y));
-        avgpool2d_global((int8_t*)Y, (int8_t*)X, casse->height, casse->width, casse->channels, bias, shift, scale);
+        avgpool2d_global((nn_image_t*)Y, (nn_image_t*)X, bias, &plan, &job);
 
         char str_buff[200] = {0};
         PRINTF("\t\tChecking...\n");
@@ -192,5 +191,5 @@ void test_avgpool2d_global()
     UNITY_SET_FILE();
 
     RUN_TEST(test_avgpool2d_global_case0);
-    // RUN_TEST(test_avgpool2d_global_case1);
+    RUN_TEST(test_avgpool2d_global_case1);
 }

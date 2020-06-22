@@ -17,7 +17,7 @@ from .conftest import PARAMS, test_matching_params, _test_non_matching_params
 
 PARAMS = deepcopy(PARAMS)
 
-PARAMS["default"].update({"reduction_dims": [(1, 2)]})
+PARAMS["default"].update({"reduction_dims": [(1, 2), (2, 1)]})
 PARAMS["default"].update(
     {
         "non_matching_reduction_dims": [

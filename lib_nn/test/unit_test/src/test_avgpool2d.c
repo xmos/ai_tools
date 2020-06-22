@@ -14,7 +14,7 @@
 #include "unity.h"
 
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 1)
+#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 #if CONFIG_SYMMETRIC_SATURATION_avgpool2d
   #define NEG_SAT_VAL   (-127)

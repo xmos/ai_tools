@@ -152,14 +152,14 @@ FUNCTION_NAME:
                 {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vstr r11[0]                             }
                 {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
                 {   mkmsk tmp, 4                            ;   vdepth1                                 }
-                vstrpv r11[0], write_mask
+                vstrpv r11[0], tmp
                 {   ldc tmp, 0                              ;                                           }
                 {   ldaw r11, sp[STACK_VEC_TMP]             ;   sub tmp, tmp, 8                         }
                 vlashr r11[0], tmp
                 {   mov r11, write_mask                     ;   ldw tmp, sp[STACK_TMP]                  }
                 {   andnot r11, tmp                         ;   vdepth8                                 }
                 vstrpv Y[0], r11
-                ldc tmp, VPU_MODE_8BIT
+                ldc r11, VPU_MODE_8BIT
                 {                                           ;   vsetc r11                               }
                 {   add Y, Y, XY_chans                      ;   bt cols_left, .L_col_loop               }
 

@@ -18,7 +18,7 @@ static nn_bso_block_t bso;
 static void benchmark_conv2d_deep_case(
     nn_image_params_t* x_params,
     nn_image_params_t* y_params,
-    nn_conv2d_window_params_t* window)
+    nn_window_params_t* window)
 {
     unsigned X_bytes = x_params->height * y_params->width * x_params->channels;
     unsigned Y_bytes = y_params->height * y_params->width * y_params->channels;
@@ -74,7 +74,7 @@ void benchmark_conv2d_deep(int argc, char** argv){
         nn_image_params_t x_params = { X_height, X_width, X_chans };
         nn_image_params_t y_params = { Y_height, Y_width, Y_chans };
 
-        nn_conv2d_window_params_t window = { { K_h, K_w }, { start_row, start_col }, { vstride, hstride } };
+        nn_window_params_t window = { { K_h, K_w }, { start_row, start_col }, { vstride, hstride } };
 
         benchmark_conv2d_deep_case(&x_params, &y_params, &window);
 

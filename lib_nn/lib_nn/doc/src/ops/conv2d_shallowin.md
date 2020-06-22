@@ -5,10 +5,10 @@
 
 ### Description 
 
-This function performs a 2D convolution of an input image to produce an output image. The convolution is considered "shallow-input" 
+This operator performs a 2D convolution of an input image to produce an output image. The convolution is considered "shallow-input" 
 when the input channel count is small.
 
-@oper{conv2d_shallowin} should be considered specialized version of @oper{conv2d_deep}, optimized for when the number of input 
+@oper{conv2d_shallowin} should be considered specialized version of @oper_ref{conv2d_deep}, optimized for when the number of input 
 channels is small. When that requirements is met, entire rows of the convolution window can be multiply-accumulated in a single 
 instruction, significantly speaking up the operation.
 
@@ -24,8 +24,9 @@ optimized for different circumstances.
 
 #### Hyperparameters        {#conv2d_shallowin_hyperparams}
 
-The following are the hyperparameters of @oper{conv2d_shallowin}. Instances of the @oper{conv2d_shallowin} operator that share the same hyperparameters
-may also share the same plan and jobs.
+The following are the hyperparameters of @oper{conv2d_shallowin}. The hyperparameters for an instance of an operator are fixed at 
+initialization.  Instances of the @oper{conv2d_shallowin} operator that share the same hyperparameters may also share the same plan 
+and jobs.
 
 @par
 
@@ -64,12 +65,12 @@ may also share the same plan and jobs.
 * The product of the final two dimensions of the kernel tensor @tensor{K} must be `32` or less.
  * The final two dimensions of @tensor{K} correspond to the convolution window width @math{K_w} and input channel count @math{X_c}.
  * (This is the optimizing constraint at the core of this operator)
- * @math{ X_c \cdot K_h \lte 32}
+ * @math{ X_c \cdot K_h \leq 32}
 
 
 #### Data Parameters
 
-The following are input and output parameters of @oper{conv2d_deep}. These parameters are supplied only when the job invocation occurs,
+The following are input and output parameters of @oper{conv2d_shallowin}. These parameters are supplied only when the job invocation occurs,
 and may change from invocation to invocation.
 
 @par
@@ -88,34 +89,19 @@ and may change from invocation to invocation.
 <tr><td>        <td>@tensor{s_3}    <td>            <td>@math{Y_c}                  <td>The final output channel shifts.
 </table>
 
-@note While there is a requirement (see @ref conv2d_shallowin_hyperparm_constraints) that @math{K_w\cdotX_c \lte 32}, in practice, the API for
+@note While there is a requirement (see @ref conv2d_shallowin_hyperparm_constraints) that @math{K_w\cdot X_c \leq 32}, in practice, the API for
     @oper{conv2d} (see @ref conv2d_shallowin_api}) requires that the actual array backing @tensor{K} be padded with zeros to guarantee it is
     exactly 32.
 
 
-### Description 
-
-
-
-#### Parameters
-
-
-
-##### Parameter Constraints
-
-* @math{ X_c = 0 mod 4 }
-* @math{ Y_c = 0 mod 4 }
-* @math{ X_c \cdot K_h \lte 32}
-
-
-#### Operation Performed
+### Operation Performed
 
 @f[
      V\left[r,c,p\right]=
          B_p+
          \sum_{w_r=0}^{K_h-1}\sum_{w_c=0}^{K_w-1}\sum_{k=0}^{X_c-1} 
-         X\left[ W_{r0}+r\cdot W_{vert}+_r,
-                 W_{c0}+c\cdot W_{hori}+_c,
+         \hat X\left[ W_{r0}+r\cdot W_{vert}+w_r,
+                 W_{c0}+c\cdot W_{hori}+w_c,
                  k\right]\cdot K\left[p,w_r,w_c,k\right]\\\
   \\\  
       Y\left[r,c,p\right]= sat_{8}\left(\frac{\left(sat_{16}\left(\frac{V\left[r,c,p\right]}
@@ -123,71 +109,94 @@ and may change from invocation to invocation.
 @f]
 
 where  
-@tensor{V} is an intermediate value,  
-@math{(r,c,p)} are the output row, column and channel,  
-@math{(K_h, K_w)} are the height and width of the convolution window,  
-@math{(W_{vert},W_{hori})} are the vertical and horizontal strides of the convolution window,  
-@math{(W_{r0},W_{c0})} are the initial row and column of the convolution window,  
-@math{(B_i, s_{1i}, s_{2i}, s_{3i})} are the `bias`, `shift1`, `scale` and `shift2` values
-     respectively encoded in the `BSO` data, associated with output channel @math{i}, and  
+
+@par
+@math{\hat X[i,j,k]} takes the value @math{X[i,j,k]} when the indices are within the input image's bounds,
+and takes the value @math{z_0} otherwise,
+
+@par
+@tensor{V} is an intermediate tensor (holding the 32-bit accumulators),
+
+@par
+@math{(r,c,p)} are the output row, column and channel,
+
+@par
 @math{sat_8\left(\cdot\right)} and @math{sat_{16}\left(\cdot\right)} saturate their arguments 
-     to the symmetric @math{8}- and @math{16}-bit bounds.
+     to @math{8}- and @math{16}-bit bounds, and
+@par
+the remaining parameters are as described above.
 
 ### Example Diagram
 
 
- The following diagram shows an example of a @math{3 \times 3} convolution window moving across an input image with shape 
- @math{5 \times 7}, with vertical stride of @math{3} and a horizontal stride of @math{2} to produce a @math{2 \times 4} 
- output image.
+The following diagram shows an example of a @math{3\times{}3} convolution window moving across 
+an input image with shape @math{5\times{}7}, with vertical stride of @math{3} and a horizontal
+stride of @math{2} to produce a @math{2\times{}4} output image. (Note: channel depth is not
+shown)
+
+@inlinecode
+   _____                     _____                      _____                    _____   
+  |O O O|P P P P P P     P P|O O O|P P P P      P P P P|O O O|P P    P P P P P P|O O O|  
+  |O O O|X X X X X P     P X|O O O|X X X P      P X X X|O O O|X P    P X X X X X|O O O|
+  |O_O_O|X X X X X P     P X|O_O_O|X X X P      P X X X|O_O_O|X P    P X X X X X|O_O_O|
+   P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
+   P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
+   P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
+                                                                                           
+       Y _ _ _               Y Y _ _                Y Y Y _             Y Y Y Y
+       _ _ _ _               _ _ _ _                _ _ _ _             _ _ _ _
+                                                                                         
+                                                                                               
+   P P P P P P P P P     P P P P P P P P P      P P P P P P P P P    P P P P P P P P P 
+   P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
+   P_X_X X X X X X P     P X X_X_X X X X P      P X X X X_X_X X P    P X X X X X X_X_P
+  |O O O|X X X X X P     P X|O O O|X X X P      P X X X|O O O|X P    P X X X X X|O O O| 
+  |O O O|X X X X X P     P X|O O O|X X X P      P X X X|O O O|X P    P X X X X X|O O O| 
+  |O_O_O|X X X X X P     P X|O_O_O|X X X P      P X X X|O_O_O|X P    P X X X X X|O_O_O| 
+                                                                                           
+       Y Y Y Y               Y Y Y Y                Y Y Y Y             Y Y Y Y
+       Y _ _ _               Y Y _ _                Y Y Y _             Y Y Y Y  
  
- @inlinecode
-    _____                     _____                      _____                    _____   
-   |O O O|P P P P P P     P P|O O O|P P P P      P P P P|O O O|P P    P P P P P P|O O O|  
-   |O O O|X X X X X P     P X|O O O|X X X P      P X X X|O O O|X P    P X X X X X|O O O|
-   |O_O_O|X X X X X P     P X|O_O_O|X X X P      P X X X|O_O_O|X P    P X X X X X|O_O_O|
-    P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
-    P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
-    P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
-                                                                                            
-        Y _ _ _               Y Y _ _                Y Y Y _             Y Y Y Y
-        _ _ _ _               _ _ _ _                _ _ _ _             _ _ _ _
-                                                                                          
-                                                                                                
-    P P P P P P P P P     P P P P P P P P P      P P P P P P P P P    P P P P P P P P P 
-    P X X X X X X X P     P X X X X X X X P      P X X X X X X X P    P X X X X X X X P
-    P_X_X X X X X X P     P X X_X_X X X X P      P X X X X_X_X X P    P X X X X X X_X_P
-   |O O O|X X X X X P     P X|O O O|X X X P      P X X X|O O O|X P    P X X X X X|O O O| 
-   |O O O|X X X X X P     P X|O O O|X X X P      P X X X|O O O|X P    P X X X X X|O O O| 
-   |O_O_O|X X X X X P     P X|O_O_O|X X X P      P X X X|O_O_O|X P    P X X X X X|O_O_O| 
-                                                                                            
-        Y Y Y Y               Y Y Y Y                Y Y Y Y             Y Y Y Y
-        Y _ _ _               Y Y _ _                Y Y Y _             Y Y Y Y  
-  
-  
 
- @endinlinecode
- 
- The input, output, (implied) padding and window pixels are represented by `X`, `Y`, `P` 
- and `O` respectively.
+@endinlinecode
 
+The input, output, (implied) padding and window pixels are represented by `X`, `Y`, `P` 
+and `O` respectively.
 
- @note For simplicity, the input and output channel depths are not shown (or equivalently, are presumed to be 1) in 
-        the diagram above.
+@note For simplicity, the input and output channel depths are not shown (or equivalently, are presumed to be 1) in 
+       the diagram above.
+
+### API                     {#conv2d_shallowin_api}
+
+Invoking an instance of @oper{conv2d_shallowin} is done with a call to conv2d_shallowin(). conv2d_shallowin() takes a pointer to 
+an initialized plan (instance of `nn_conv2d_shallowin_plan_t`) and an initialized job (instance of `nn_conv2d_shallowin_job_t`). 
+Initialization is done with a call to conv2d_shallowin_init().
+
+Each call to conv2d_shallowin() will execute exactly one job. A @oper{conv2d_shallowin} job computes a rectangular sub-tensor of
+the output image (which can be the entire image if only one job is desired). For each job the user indicates a starting row, 
+starting column and starting channel of the output image, as well as the number of rows, columns and channels to be computed by
+that job. See conv2d_shallowin_init() for more details (and constraints).
+
+It is the user's responsibility to ensure that all initialized jobs collectively compute the entire output image (no gaps) and do not
+compute outputs redundantly (overlapping jobs).
+
+If a network uses multiple instances of the @oper{conv2d_shallowin} operator, they may share the structs representing the plan and any jobs 
+*if and only if* the instances share identical hyperparameters (see @ref conv2d_shallowin_hyperparams).
 
 
 ### Configuration Options
 
-The following sections describe configurable options for the @oper{conv2d_deep} operator. Configuration options can
+The following sections describe configurable options for the @oper{conv2d_shallowin} operator. Configuration options can
 be set by adding the appropriate project-wide build flag.
 
-#### CONFIG_SYMMETRIC_SATURATION_conv2d_deep
+#### CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin
 
-By default, when the @oper{conv2d_deep} operator applies saturation logic to its output, it uses the standard bounds 8-bit 
+By default, when the @oper{conv2d_shallowin} operator applies saturation logic to its output, it uses the standard bounds 8-bit 
 signed integers, namely `(-128, 127)`. However, the XS3 VPU hardware is designed to apply symmetric saturation bounds of
 `(-127,127)`. Using the asymmetric bounds for this operation is more expensive, but necessary for some applications.
 
-If either the preprocessor symbol `CONFIG_SYMMETRIC_SATURATION_conv2d_deep` is defined to `1`, or if 
-`CONFIG_SYMMETRIC_SATURATION_conv2d_deep` is undefined, but `CONFIG_SYMMETRIC_SATURATION_GLOBAL` is defined to `1`,
+If either the preprocessor symbol `CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin` is defined to `1`, or if 
+`CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin` is undefined, but `CONFIG_SYMMETRIC_SATURATION_GLOBAL` is defined to `1`,
 then the symmetric saturation bounds will be used instead. 
 
 Note that this option *only* affects the output saturation bounds. It does *not* affect the saturation bounds of the

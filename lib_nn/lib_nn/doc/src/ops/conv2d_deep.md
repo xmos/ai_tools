@@ -5,7 +5,7 @@
 
 ### Description 
 
-This function performs a 2D convolution of an input image to produce an output image. The convolution is considered "deep" 
+This operator performs a 2D convolution of an input image to produce an output image. The convolution is considered "deep" 
 when the input and output images each have many channels.
 
 The @oper_ref{conv2d_shallowin}, @oper_ref{conv2d_1x1}, and @oper_ref{conv2d_depthwise} operators are alternative 2D convolution operators
@@ -20,8 +20,8 @@ below.
 
 #### Hyperparameters        {#conv2d_deep_hyperparams}
 
-The following are the hyperparameters of @oper{conv2d_deep}. Instances of the @oper{conv2d_deep} operator that share the same hyperparameters
-may also share the same plan and jobs.
+The following are the hyperparameters of @oper{conv2d_deep}. The hyperparameters for an instance of an operator are fixed at initialization.  
+Instances of the @oper{conv2d_deep} operator that share the same hyperparameters may also share the same plan and jobs.
 
 @par
 
@@ -57,17 +57,17 @@ and may change from invocation to invocation.
 @par
 
 <table>
-<tr><th colspan="2">Symbol          <th>Direction   <th>Shape       <th>Description
-<tr><td colspan="2">@tensor{Y}      <td>out         <td>            <td>The output image.
-<tr><td colspan="2">@tensor{X}      <td>in          <td>            <td>The input image.
-<tr><td colspan="2">@tensor{K}      <td>in          <td>            <td>The kernel tensor.
-<tr><td colspan="2">[`BSO`]         <td>in          <td>            <td>The elements of the bias-scale-offset array (see @ref out_shift_scale).
-<tr><td>        <td>@tensor{B}      <td>            <td>            <td>The output channel biases.        
-<tr><td>        <td>@tensor{s_1}    <td>            <td>            <td>The first output channel shifts.
-<tr><td>        <td>@tensor{s_2}    <td>            <td>            <td>The output channel scales.
-<tr><td>        <td>@tensor{o_a}    <td>            <td>            <td>The output channel offset scales.
-<tr><td>        <td>@tensor{o_b}    <td>            <td>            <td>The output channel offset values.
-<tr><td>        <td>@tensor{s_3}    <td>            <td>            <td>The final output channel shifts.
+<tr><th colspan="2">Symbol          <th>Direction   <th>Shape                       <th>Description
+<tr><td colspan="2">@tensor{Y}      <td>out         <td>@math{(Y_h, Y_w, Y_c)}      <td>The output image.
+<tr><td colspan="2">@tensor{X}      <td>in          <td>@math{(X_h, X_w, X_c)}      <td>The input image.
+<tr><td colspan="2">@tensor{K}      <td>in          <td>@math{(Y_c, K_h, K_w, X_c)} <td>The kernel tensor.
+<tr><td colspan="2">[`BSO`]         <td>in          <td>                            <td>The elements of the bias-scale-offset array (see @ref out_shift_scale).
+<tr><td>        <td>@tensor{B}      <td>            <td>@math{Y_c}                  <td>The output channel biases.        
+<tr><td>        <td>@tensor{s_1}    <td>            <td>@math{Y_c}                  <td>The first output channel shifts.
+<tr><td>        <td>@tensor{s_2}    <td>            <td>@math{Y_c}                  <td>The output channel scales.
+<tr><td>        <td>@tensor{o_a}    <td>            <td>@math{Y_c}                  <td>The output channel offset scales.
+<tr><td>        <td>@tensor{o_b}    <td>            <td>@math{Y_c}                  <td>The output channel offset values.
+<tr><td>        <td>@tensor{s_3}    <td>            <td>@math{Y_c}                  <td>The final output channel shifts.
 </table>
 
 
@@ -100,7 +100,7 @@ and takes the value @math{z_0} otherwise,
 
 @par
 @math{sat_8\left(\cdot\right)} and @math{sat_{16}\left(\cdot\right)} saturate their arguments 
-     to the symmetric @math{8}- and @math{16}-bit bounds, and
+     to @math{8}- and @math{16}-bit bounds, and
 @par
 the remaining parameters are as described above.
 
@@ -151,13 +151,13 @@ Invoking an instance of @oper{conv2d_deep} is done with a call to conv2d_deep().
 (instance of `nn_conv2d_deep_plan_t`) and an initialized job (instance of `nn_conv2d_deep_job_t`). Initialization is done with a call
 to conv2d_deep_init().
 
-Each call to conv2d_deep() will execute exactly one job. If only a single job is initialized and no job params (instance of 
-`nn_conv2d_window_params_t`) are supplied during initialization (by passing a `NULL` pointer for job params), the single job will
-compute the entire output image @tensor{Y}. Otherwise, the job params for @oper{conv2d_deep} specify a rectangular sub-tensor of the
-output image to be computed when that job is invoked.
+Each call to conv2d_deep() will execute exactly one job. A @oper{conv2d_deep} job computes a rectangular sub-tensor of
+the output image (which can be the entire image if only one job is desired). For each job the user indicates a starting row, 
+starting column and starting channel of the output image, as well as the number of rows, columns and channels to be computed by
+that job. See conv2d_deep_init() for more details (and constraints).
 
 It is the user's responsibility to ensure that all initialized jobs collectively compute the entire output image (no gaps) and do not
-compute redundant outs (overlapping jobs).
+compute outputs redundantly (overlapping jobs).
 
 If a network uses multiple instances of the @oper{conv2d_deep} operator, they may share the structs representing the plan and any jobs 
 *if and only if* the instances share identical hyperparameters (see @ref conv2d_deep_hyperparams).

@@ -123,6 +123,78 @@ void conv2d_shallowin(
     const nn_conv2d_shallowin_job_t* job);
 
 
+/**
+ * @brief Perform a 2D convolution of a shallow input image.
+ * 
+ * Perform a 2D convolution of kernel tensor @tensor{K} with input image @tensor{X}
+ * to produce output image @tensor{Y}.
+ *  
+ * This function is optimized for input images that have 3 channels, but will work
+ * with any number of input channels. This will use more memory than the TFLite 
+ * reference implementation, but run much faster:
+ * 
+ * Additional memory: 1 patch worth (K_w * K_h * C_in) bytes + 32 bytes + some code
+ * Performance gain: Depends on patch size vs # output channels, and padding, but approximately:
+ *                   16x faster convolutions - PATCH_SIZE copy operations
+ * 
+ * @note multiples of 16 output channels will run fastest input channels not imporant, but a PATCH_SIZE 
+ * that is a multiple of 32 will be the fastest, most memory effcient
+ * 
+  * `Y` points to the output image tensor @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}, which 
+ * correspond to the output image rows, columns and channels respectively. The dimensions of @tensor{Y} 
+ * must be as specified when `plan` was initialized. The address supplied for `Y` should be the start 
+ * address of the output image tensor, *not* the start address of the sub-tensor being computed by the 
+ * current job.
+ * 
+ * `X` points to the input image tensor @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}, which 
+ * correspond to the input image rows, columns and channels respectively. The dimensions of @tensor{X} 
+ * must be as specified when `plan` was initialized. The address supplied for `X` should be the start 
+ * address of input image tensor, *not* the address at which the convolution window starts for the job 
+ * being processed.
+ * 
+ * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
+ * standard_layout).
+ * 
+ * `COL` points to a caller supplied buffer that will be used for the internal im2col() transformation. This buffer
+ * needs to be word-aligned and a multiple of 32-bytes in length, no shorter than: (K_w * K_h * C_in) bytes. 
+ * 
+ * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, K_h * K_w * X_c}, where @math{Y_c},
+ * @math{K_h} @math{K_w} and @math{X_c} correspond to the output image channels, convolution window rows, 
+ * convolution window columns, and the input image channel count respectively.
+ * 
+ * The memory layout of @tensor{K} is a row-major 2D matrix
+ * 
+ * `BSO` points to an array of bias-shifts-scale parameters required for this convolution. Each 
+ * `nn_bso_block_t` in the array contains the bias-shifts-scale parameters for a single output channel group,
+ * (@ttref{VPU_INT8_ACC_PERIOD} output channels). If @math{Y_c} is not a multiple of @ttref{VPU_INT8_ACC_PERIOD}, 
+ * then the output channel tail ( the last @math{(Y_c mod 16)} output channels) also gets `nn_bso_block_t`, where
+ * the entries corresponding to channels beyond @math{Y_c} are ignored. The address supplied for `BSO` should be
+ * the start address of the the array, *not* the address of the `nn_bso_block_t` corresponding of the first output
+ * channel of the job being processed.
+ * 
+ * `plan` points to the `nn_conv2d_im2col_plan_t` which was previously initialized with a call to 
+ * `conv2d_im2col_init()`.
+ * 
+ * `job` points to the job to be performed in this call, which was previously initialized along-side `plan`. 
+ * 
+ * @requires_word_alignment{Y,X,COL,K,BSO}
+ * 
+ * @param[out] Y        The output image @tensor{Y}
+ * @param[in]  X        The input image @tensor{X}
+ * @param[in]  COL      Scratch space for im2col (multiple of 32 words >= |K|)
+ * @param[in]  K        The kernel tensor @tensor{K}
+ * @param[in]  BSO      The bias-shifts-scale parameters
+ * @param[in]  plan     The convolution plan
+ * @param[in]  job      The convolution job
+ */
+void conv2d_im2col(
+    nn_image_t* Y,
+    const nn_image_t* X,
+    const nn_image_t* COL,
+    const nn_tensor_t* K,
+    const nn_bso_block_t* BSO,
+    const nn_conv2d_im2col_plan_t* plan,
+    const nn_conv2d_im2col_job_t* job);
 
 
 /**

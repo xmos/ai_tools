@@ -64,6 +64,28 @@
   #endif
 #endif 
 
+/**
+ * @macro CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
+ * @brief Configure whether `-127` or `-128` is used as the saturation limit for `conv2d_im2col()`.
+ * 
+ * The output of 8-bit arithmetic on the XS3 VPU has natural symmetric saturation bounds of (`-127`, `127`). This may be
+ * unacceptable, in which case (`-128`, `127`) can be used instead.
+ * 
+ * To specify that the symmetric saturation lower bound (`-127`) should be used for `conv2d_shallowin()`, define 
+ * `CONFIG_SYMMETRIC_SATURATION_conv2d_im2col` to be `1`. If it is defined to `0`, `-128` will be used instead.
+ * 
+ * If `CONFIG_SYMMETRIC_SATURATION_conv2d_im2col` is undefined, then the value of `CONFIG_SYMMETRIC_SATURATION_GLOBAL`
+ * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_conv2d_im2col()`
+ * defaults to 0, using a lower saturation bound of `-128`.
+ * 
+ */
+#ifndef CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
+  #ifdef CONFIG_SYMMETRIC_SATURATION_GLOBAL
+    #define CONFIG_SYMMETRIC_SATURATION_conv2d_im2col CONFIG_SYMMETRIC_SATURATION_GLOBAL
+  #else
+    #define CONFIG_SYMMETRIC_SATURATION_conv2d_im2col (0)
+  #endif
+#endif 
 
 /**
  * @macro CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise

@@ -25,6 +25,7 @@ int main(void)
 
     test_conv2d_deep();
     test_conv2d_shallowin();
+    test_conv2d_im2col();
     test_conv2d_1x1();
     test_conv2d_depthwise();
     test_maxpool2d();

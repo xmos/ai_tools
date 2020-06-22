@@ -204,7 +204,83 @@ typedef struct {
 } nn_conv2d_shallowin_job_t;
 
 
+/**
+ * Struct represents the shared parameters required to execute a `conv2d_im2col()` operation. 
+ */
+typedef struct {
 
+    struct {
+        struct {
+            mem_stride_t row;
+        } X;
+
+    } stride;
+
+    struct {
+        struct {
+            unsigned height;
+            unsigned width;
+            unsigned len_col;
+            unsigned kernel_row_elements;
+        } shape;
+
+        struct {
+            int vertical;
+            int horizontal;
+        } stride;
+    } window;
+
+    struct {
+        uint32_t X;
+        uint32_t Y;
+    } channels;
+
+    int32_t zero_point;
+
+} nn_conv2d_im2col_plan_t;
+
+/**
+ * Struct represents the job-specific parameters required to execute a `conv2d_im2col()` operation. 
+ */
+typedef struct {
+
+    struct {
+        struct {
+            int32_t X;
+            int32_t Y;
+            int32_t K;
+            int32_t BSO;
+        } start;
+
+        struct {
+            int32_t Y;
+            int32_t K;
+        } chan_group;
+
+        struct {
+            int32_t Y;
+        } col;
+
+        struct {
+            int32_t window;
+            int32_t Y;
+            int32_t K;
+        } row;
+    } stride;
+
+    struct {
+        unsigned rows;
+        unsigned cols;
+        unsigned channels;
+    } output;
+
+    struct {
+        int32_t top;
+        int32_t left;
+        int32_t bottom;
+        int32_t right;
+    } init_padding;
+} nn_conv2d_im2col_job_t;
 
 
 /**

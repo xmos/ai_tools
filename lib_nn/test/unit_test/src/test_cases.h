@@ -15,6 +15,7 @@ void test_nn_conv2d_hstrip_tail_shallowin();
 
 void test_conv2d_deep();
 void test_conv2d_shallowin();
+void test_conv2d_im2col();
 void test_conv2d_shallowin_deepout();
 void test_conv2d_1x1();
 void test_conv2d_depthwise();

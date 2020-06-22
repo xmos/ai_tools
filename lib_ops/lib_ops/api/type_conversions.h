@@ -3,6 +3,7 @@
 #define XCORE_TYPE_CONVERSION_OPERATORS_H_
 
 #include <cstdint>
+
 #include "lib_ops/api/lib_ops.h"
 
 extern "C" {
@@ -14,10 +15,16 @@ namespace type_conversions {
 
 class Requantize_16_to_8 {
  public:
-  Requantize_16_to_8() {}
+  Requantize_16_to_8(const ExecutionPlan& plan);
   ~Requantize_16_to_8() {}
 
-  XCoreStatus Eval(int8_t* Y, const int16_t* X, const int32_t length);
+  XCoreStatus Init(int32_t length);
+  XCoreStatus Eval(int8_t* Y, const int16_t* X);
+
+  ExecutionPlan execution_plan;
+
+ private:
+  nn_requantize_16_to_8_job_t* jobs_;
 };
 
 }  // namespace type_conversions

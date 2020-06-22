@@ -1,5 +1,7 @@
 # MobileNet v1 Example applications
 
+**NOTE: This application is currently broken.  It will build, hwever, the model it too big to fit in RAM.  The application will soon be updated to run in flash.**
+
 ## Converting flatbuffer to Source File
 
 The following unix command will generate a C source file that contains the TensorFlow Lite model as a char array

@@ -28,8 +28,6 @@ TEST(dispatcher, test_current_core) {
 
   xcore::Dispatcher dispatcher(buffer, buffer_size, num_cores, true);
   GET_STACKWORDS(stack_words, thread_worker);
-  // reserve threads and stack memory
-  // dispatcher.AllocateStackBuffer(num_cores, stack_words);
 
   ThreadData data[num_cores];
   for (int i = 0; i < num_cores; i++) {
@@ -52,8 +50,6 @@ TEST(dispatcher, test_not_current_core) {
 
   xcore::Dispatcher dispatcher(buffer, buffer_size, num_cores, true);
   GET_STACKWORDS(stack_words, thread_worker);
-  // reserve threads and stack memory
-  // dispatcher.AllocateStackBuffer(num_cores, stack_words);
 
   ThreadData data[num_cores];
   for (int i = 0; i < num_cores; i++) {
@@ -79,8 +75,6 @@ TEST(dispatcher, test_reset) {
   GET_STACKWORDS(stack_words, thread_worker);
 
   for (int iter = 0; iter < 100; iter++) {
-    // reserve threads and stack memory
-    // dispatcher.AllocateStackBuffer(num_cores, stack_words);
     for (int i = 0; i < num_cores; i++) {
       data[i].value = i;
       dispatcher.AddThread(thread_worker, reinterpret_cast<void *>(&data[i]),

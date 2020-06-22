@@ -15,6 +15,7 @@ DEFAULT_KERNEL_HEIGHT = 3
 DEFAULT_KERNEL_WIDTH = DEFAULT_KERNEL_HEIGHT
 DEFAULT_PADDING = "same"
 DEFAULT_PATH = Path(__file__).parent.joinpath("debug", "conv2d_shallowin").resolve()
+DEFAULT_NUM_THREADS = 1
 
 
 class Conv2DShallowin(common.OpTestDefaultConvModel):
@@ -51,6 +52,13 @@ def main(raw_args=None):
             },
         }
     )
+    parser.add_argument(
+        "-par",
+        "--num_threads",
+        type=int,
+        default=DEFAULT_NUM_THREADS,
+        help="Number of parallel threads for xcore.ai optimization.",
+    )
     args = parser.parse_args(raw_args)
 
     model = Conv2DShallowin("conv2d_shallowin", args.path)
@@ -64,7 +72,7 @@ def main(raw_args=None):
         padding=args.padding,
         **args.inits,
     )
-    model.run()
+    model.run(num_threads=args.num_threads)
 
 
 if __name__ == "__main__":

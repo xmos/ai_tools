@@ -41,9 +41,9 @@ A full list and description of all transformation passes is beyond the scope of 
 
 Explore the `transformation_passes` folder for the most recent list of passes.  For more detail on any specific pass, read the source code for that pass and run the xformer in debug mode.
 
-### Parallelization Planner
+### Execution Planner
 
-Several transformation passes are for optimizing an operator for parallel inference.  The parallelization planner constructs plan by splitting an output tensor by rows, cols, and/or channels.  At runtime, the par plan instructs the inference engine how to split the computation across cores.
+Several transformation passes are for optimizing an operator for parallel inference.  The execution planner constructs plan by splitting an output tensor by rows, cols, and/or channels.  At runtime, the execution plan instructs the inference engine how to split the computation across cores.
 
 ## Testing
 

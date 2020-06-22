@@ -5,10 +5,16 @@ namespace xcore {
 
 #ifdef XCORE
 
-Stopwatch::Stopwatch() : start_(0), stop_(0) { hwtimer = hwtimer_alloc(); }
-Stopwatch::~Stopwatch() { hwtimer_free(hwtimer); }
-void Stopwatch::Start() { start_ = hwtimer_get_time(hwtimer); }
-void Stopwatch::Stop() { stop_ = hwtimer_get_time(hwtimer); }
+Stopwatch::Stopwatch() : start_(0), stop_(0) {}
+Stopwatch::~Stopwatch() {}
+void Stopwatch::Start() {
+  hwtimer_ = hwtimer_alloc();
+  start_ = hwtimer_get_time(hwtimer_);
+}
+void Stopwatch::Stop() {
+  stop_ = hwtimer_get_time(hwtimer_);
+  hwtimer_free(hwtimer_);
+}
 int Stopwatch::GetEllapsedNanoseconds() { return (stop_ - start_) * 10; }
 int Stopwatch::GetEllapsedMicroseconds() { return (stop_ - start_) / 100; }
 

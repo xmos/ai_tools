@@ -82,7 +82,7 @@ def optimize_for_xcore(
     remove_softmax=False,
     cleanup=True,
     minification=False,
-    num_threads=None,
+    num_threads=1,
     intermediates_path=None,
     debug=False
 ):
@@ -137,8 +137,11 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
-    if num_threads:
-        pass_mgr.register_pass(passes.ParallelizeXCConv2dPass(num_threads=num_threads))
+    pass_mgr.register_pass(passes.PlanFullyConnectedPass(num_threads=num_threads))
+    pass_mgr.register_pass(passes.PlanRequant16To8Pass(num_threads=num_threads))
+    pass_mgr.register_pass(passes.PlanConv2dPass(num_threads=num_threads))
+    pass_mgr.register_pass(passes.PlanPooling2DPass(num_threads=num_threads))
+    pass_mgr.register_pass(passes.PlanGlobalAveragePool2DPass(num_threads=num_threads))
 
     if cleanup:
         pass_mgr.register_passes(CleanupManager())
@@ -172,6 +175,7 @@ def convert(
     intermediates_path=None,
     debug=False
 ):
+    num_threads = num_threads or 1
     model = XCOREModel.read_flatbuffer(tflite_input_path)
     optimize_for_xcore(
         model,

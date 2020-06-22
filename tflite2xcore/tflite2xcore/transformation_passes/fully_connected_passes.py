@@ -110,16 +110,15 @@ class PlanFullyConnectedPass(OperatorMatchingPass):
         assert self.max_threads > 0
         self.forced = forced
 
-    def run(self, *args, **kwargs):
-        return super().run(*args, **kwargs)
-
     def match(self, op):
-        if op.operator_code.code == XCOREOpCodes.XC_fc_deepin_anyout:
+        if (
+            super().match(op)
+            and op.operator_code.code == XCOREOpCodes.XC_fc_deepin_anyout
+        ):
             return "plan" not in op.custom_options
 
     def mutate(self, op):
         _, Cout = op.outputs[0].shape
-        assert int(Cout) == Cout
         planner = ChannelGroupSlicePlanner(
             int(Cout), num_threads=self.max_threads, forced=self.forced
         )
@@ -137,16 +136,15 @@ class PlanRequant16To8Pass(OperatorMatchingPass):
         assert self.max_threads > 0
         self.forced = forced
 
-    def run(self, *args, **kwargs):
-        return super().run(*args, **kwargs)
-
     def match(self, op):
-        if op.operator_code.code == XCOREOpCodes.XC_requantize_16_to_8:
+        if (
+            super().match(op)
+            and op.operator_code.code == XCOREOpCodes.XC_requantize_16_to_8
+        ):
             return "plan" not in op.custom_options
 
     def mutate(self, op):
         _, Cout = op.outputs[0].shape
-        assert int(Cout) == Cout
         planner = ChannelGroupSlicePlanner(
             int(Cout), num_threads=self.max_threads, forced=self.forced
         )

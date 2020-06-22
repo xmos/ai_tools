@@ -328,17 +328,12 @@ class PlanConv2dPass(OperatorMatchingPass):
         XCOREOpCodes.XC_conv2d_depthwise,
     )
 
-    def run(self, *args, **kwargs):
-        return super().run(*args, **kwargs)
-
     def match(self, op):
         if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
             return "plan" not in op.custom_options
 
     def mutate(self, op):
         _, height, width, Cout = op.outputs[0].shape
-        assert int(height) == height
-        assert int(width) == width
         planner = SlicePlanner(
             int(Cout),
             int(height),

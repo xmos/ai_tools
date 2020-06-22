@@ -193,9 +193,6 @@ class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
         self.forced = forced
         self.plan_threads = None
 
-    def run(self, *args, **kwargs):
-        return super().run(*args, **kwargs)
-
     def match(self, op):
         if (
             super().match(op)
@@ -205,7 +202,6 @@ class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
 
     def mutate(self, op):
         _, Cout = op.outputs[0].shape
-        assert int(Cout) == Cout
         planner = ChannelGroupSlicePlanner(
             int(Cout), num_threads=self.max_threads, forced=self.forced
         )
@@ -226,17 +222,12 @@ class PlanPooling2DPass(OperatorMatchingPass):
 
     MATCHING_OPCODES = (XCOREOpCodes.XC_maxpool2d, XCOREOpCodes.XC_avgpool2d)
 
-    def run(self, *args, **kwargs):
-        return super().run(*args, **kwargs)
-
     def match(self, op):
         if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
             return "plan" not in op.custom_options
 
     def mutate(self, op):
         _, height, width, Cout = op.outputs[0].shape
-        assert int(height) == height
-        assert int(width) == width
         planner = SlicePlanner(
             int(Cout),
             int(height),

@@ -46,7 +46,7 @@ def generate_thread_cost_array(
     max_channel=MAX_OUTPUT_CHANNELS, max_height=MAX_HEIGHT, max_width=MAX_WIDTH
 ):
     thread_costs = np.zeros(
-        (max_channel, max_height, max_width, SlicePlanner.MAX_THREADS), dtype=np.int32
+        (max_channel, max_height, max_width, SlicePlanner.MAX_THREADS), dtype=np.float
     )
 
     for c, y, x in itertools.product(

@@ -30,7 +30,7 @@ def test_channel_coverage(num_channels):
 
 def generate_thread_cost_array(max_channels=MAX_OUTPUT_CHANNELS):
     thread_costs = np.zeros(
-        (max_channels, ChannelGroupSlicePlanner.MAX_THREADS), dtype=np.int32
+        (max_channels, ChannelGroupSlicePlanner.MAX_THREADS), dtype=np.float
     )
 
     for num_channels in range(1, MAX_OUTPUT_CHANNELS + 1):

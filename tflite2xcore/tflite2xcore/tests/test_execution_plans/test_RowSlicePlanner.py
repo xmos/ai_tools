@@ -32,7 +32,7 @@ def test_layout_coverage(height, width):
 
 def generate_thread_cost_array(max_height=MAX_HEIGHT, max_width=MAX_WIDTH):
     thread_costs = np.zeros(
-        (max_height, max_width, RowSlicePlanner.MAX_THREADS), dtype=np.int32
+        (max_height, max_width, RowSlicePlanner.MAX_THREADS), dtype=np.float
     )
 
     for y, x in itertools.product(range(max_height), range(max_width)):

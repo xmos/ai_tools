@@ -465,7 +465,7 @@ class RemovePaddingInputPass(OperatorMatchingPass):
         return (
             super().match(op)
             #Match operator and position in subgraph
-            and op.operator_code.code == BuiltinOpCodes.PAD
+            and op.operator_code.code is BuiltinOpCodes.PAD
             and op.inputs[0] in op.subgraph.inputs
         )
 

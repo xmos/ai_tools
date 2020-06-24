@@ -17,10 +17,11 @@ DEFAULT_XCORE_ARENA_SIZE = 50000
 
 
 class XCOREInterpreterStatus(Enum):
-    Ok = 0
-    Error = 1
+    OK = 0
+    ERROR = 1
 
 
+# TODO: remove this
 class NumpyToTfLiteTensorType(Enum):
     # see tensorflow/tensorflow/lite/c/c_api_internal.h for values
     float32 = 1  # kTfLiteFloat32
@@ -187,8 +188,11 @@ class XCOREInterpreter:
         tensor_arena_size = ctypes.c_size_t()
         heap_size = ctypes.c_size_t()
         lib.get_arena_sizes(
-            model_content, len(model_content), max_tensor_arena_size,
-            ctypes.byref(tensor_arena_size), ctypes.byref(heap_size)
+            model_content,
+            len(model_content),
+            max_tensor_arena_size,
+            ctypes.byref(tensor_arena_size),
+            ctypes.byref(heap_size),
         )
         self._tensor_arena_size = tensor_arena_size.value
         self._xcore_heap_size = heap_size.value
@@ -200,7 +204,7 @@ class XCOREInterpreter:
             self._tensor_arena_size,
             self._xcore_heap_size,
         )
-        if status == XCOREInterpreterStatus.Error:
+        if XCOREInterpreterStatus(status) is XCOREInterpreterStatus.ERROR:
             raise RuntimeError("Unable to initialize interpreter")
 
     def __del__(self):
@@ -211,7 +215,7 @@ class XCOREInterpreter:
             self.allocate_tensors()
 
     def _check_status(self, status):
-        if status == XCOREInterpreterStatus.Error.value:
+        if XCOREInterpreterStatus(status) is XCOREInterpreterStatus.ERROR:
             lib.get_error(self.obj, self._error_msg)
             raise RuntimeError(self._error_msg.value.decode("utf-8"))
 
@@ -316,7 +320,8 @@ class XCOREInterpreter:
         self._verify_allocated()
 
         shape = value.ctypes.shape_as(ctypes.c_int)
-        type_ = NumpyToTfLiteTensorType[str(value.dtype)].value
+        # type_ = TensorType.from_numpy_dtype(value.dtype).value
+        type_ = NumpyToTfLiteTensorType[str(value.dtype)].value  # TODO: fix this
         data = value.ctypes.data_as(ctypes.c_void_p)
         self._check_status(
             lib.set_tensor(self.obj, tensor_index, data, value.ndim, shape, type_)
@@ -328,7 +333,8 @@ class XCOREInterpreter:
         tensor_details = self.get_tensor_details()[tensor_index]
         tensor = np.zeros(tensor_details["shape"], dtype=tensor_details["dtype"])
         shape = tensor.ctypes.shape_as(ctypes.c_int)
-        type_ = NumpyToTfLiteTensorType[str(tensor.dtype)].value
+        # type_ = TensorType.from_numpy_dtype(tensor.dtype).value
+        type_ = NumpyToTfLiteTensorType[str(tensor.dtype)].value  # TODO: fix this
         data_ptr = tensor.ctypes.data_as(ctypes.c_void_p)
         self._check_status(
             lib.get_tensor(self.obj, tensor_index, data_ptr, tensor.ndim, shape, type_)

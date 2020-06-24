@@ -39,7 +39,7 @@ SOURCES += main.cc
 
 include ../../../make/rules.mk
 
-.PHONY: all clean $(APP)
+.PHONY: all flash ddr clean $(APP)
 
 $(BIN_DIR)/$(APP): $(OBJECTS)
 	@mkdir -p $(dir $@)

@@ -13,6 +13,12 @@ unsigned char *unsafe input;
 unsigned output_size;
 unsigned char *unsafe output;
 
+extern "C" {
+// void app_main(unsigned char **input, unsigned *input_size,
+//               unsigned char **output, unsigned *output_size);
+void app_main();
+}
+
 unsafe {
   void print_output() {
     for (int i = 0; i < output_size; i++) {
@@ -31,7 +37,7 @@ unsafe {
     while (1) {
       select {
         case xscope_data_from_host(xscope_data_in, buffer, bytes_read):
-          memcpy(input + input_bytes, buffer, bytes_read - 1);
+          // memcpy(input + input_bytes, buffer, bytes_read - 1);
           input_bytes += bytes_read - 1;
           if (input_bytes == input_size) {
             ai_invoke();
@@ -50,7 +56,8 @@ int main(void) {
   par {
     xscope_host_data(xscope_data_in);
     on tile[0] : {
-      ai_initialize(&input, &input_size, &output, &output_size);
+      // app_main(&input, &input_size, &output, &output_size);
+      app_main();
       process_xscope(xscope_data_in);
     }
   }

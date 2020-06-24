@@ -9,16 +9,17 @@ include ../../../make/libs.mk
 #********************
 # App specific
 #********************
-APPFLAGS := -fxscope
-APPFLAGS += config.xscope
-APPFLAGS += -DNDEBUG
-#APPFLAGS += -DENABLE_TRACING
+APPBASE = mobilenet
+APPFLAGS := -DNDEBUG
+APPFLAGS += -DENABLE_TRACING
 APPFLAGS += -DENABLE_BENCHMARKING
 
 ifeq ($(TARGET), x86)
-	APP = mobilenet
+	APP = $(APPBASE)
 else # must be xcore
-	APP = mobilenet.xe
+	APPFLAGS += -fxscope
+	APPFLAGS += config.xscope
+	APP = $(APPBASE).xe
 endif
 
 INCLUDES := $(TENSORFLOW_INCLUDES)
@@ -36,19 +37,33 @@ SOURCES += $(LIBS_SOURCES)
 SOURCES += mobilenet_ops_resolver.cc
 SOURCES += mobilenet_v1.c
 SOURCES += ai_engine.cc 
-ifeq ($(TARGET), x86)
-	SOURCES += x86_main.cc
-else # must be xcore
-	SOURCES += xcore_main.xc
+SOURCES += main.c
+ifeq ($(TARGET), xcore)
+	SOURCES += main.xc
 endif
 
 include ../../../make/rules.mk
 
-.PHONY: all clean $(APP)
+.PHONY: all flash ddr clean $(APP)
 
 $(BIN_DIR)/$(APP): $(OBJECTS)
 	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) $(APPFLAGS) $(OBJECT_FILES) -o $(BIN_DIR)/$(APP)
 
+flash: APPFLAGS += -DUSE_SWMEM
+flash: $(BIN_DIR)/$(APP)
+	cd $(BIN_DIR) && xobjdump --strip $(APPBASE).xe
+	cd $(BIN_DIR) && xobjdump --split $(APPBASE).xb
+	#cd $(BIN_DIR) && xflash --write-all image_n0c0.swmem --target XCORE-AI-EXPLORER
+
+ddr: APPFLAGS += -DUSE_EXTMEM
+ddr: $(BIN_DIR)/$(APP)
+
 clean:
-	-@rm -rvf $(OBJECT_FILES) $(BIN_DIR)/$(APP)
+	-@rm -rvf $(OBJECT_FILES) $(BIN_DIR)/$(APPBASE).xe
+	-@rm -rvf $(BIN_DIR)/$(APPBASE).xb
+	-@rm -rvf $(BIN_DIR)/*.bin
+	-@rm -rvf $(BIN_DIR)/*.xn
+	-@rm -rvf $(BIN_DIR)/*.swmem
+	-@rm -rvf $(BIN_DIR)/*.txt
+	-@rm -rvf $(BIN_DIR)/*.xscope

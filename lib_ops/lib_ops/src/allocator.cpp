@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 #include <memory>
 
 #include "lib_ops/api/tracing.h"

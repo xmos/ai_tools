@@ -37,11 +37,11 @@ Building for xCORE with the model in DDR
 
 Running with the xCORE simulator
 
-    > xsim --xscope "-offline trace.xmt" --args bin/cifar10.xe ../test_inputs/dog.bin
+    > xsim --xscope "-offline trace.xmt" --args bin/cifar10.xe test_inputs/horse.bin
 
 Running with hardware
 
-    > xrun --io --xscope --args bin/cifar10.xe ../test_inputs/dog.bin
+    > xrun --io --xscope --args bin/cifar10.xe test_inputs/horse.bin
 
 ## x86
 

@@ -53,7 +53,7 @@ def test_read_flatbuffer():
     assert len(tensor.buffer.data) == 128
 
     operator = subgraph.operators[1]
-    assert operator.operator_code.builtin_code == BuiltinOpCodes.CONV_2D
+    assert operator.operator_code.builtin_code is BuiltinOpCodes.CONV_2D
     assert operator.operator_code.version == 3
     assert operator.operator_code.custom_code is None
 

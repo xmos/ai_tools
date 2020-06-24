@@ -41,7 +41,7 @@ class XCORESerializationMixin:
         # create operator codes lookup
         operator_codes_lut = []
         for operator_codeT in modelT.operatorCodes:
-            if operator_codeT.builtinCode == xcore_schema.BuiltinOpCodes.CUSTOM.value:
+            if operator_codeT.builtinCode is xcore_schema.BuiltinOpCodes.CUSTOM.value:
                 custom_code = operator_codeT.customCode.decode("utf-8")
                 if custom_code in xcore_schema.XCOREOpCodes:
                     opcode = xcore_schema.XCOREOpCodes(custom_code)

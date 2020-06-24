@@ -108,7 +108,7 @@ def test_mutate(simple_model, trf_pass):
     qout = subgraph.get_tensor("quantized_output")
 
     assert len(subgraph.operators) == 1
-    assert subgraph.operators[0].operator_code.code == BuiltinOpCodes.ABS
+    assert subgraph.operators[0].operator_code.code is BuiltinOpCodes.ABS
     assert len(subgraph.tensors) == 2
     assert qin in subgraph.inputs and qin not in subgraph.outputs
     assert qout in subgraph.outputs and qout not in subgraph.inputs
@@ -123,7 +123,7 @@ def test_run_simple(simple_model, trf_pass):
     qout = subgraph.get_tensor("quantized_output")
 
     assert len(subgraph.operators) == 1
-    assert subgraph.operators[0].operator_code.code == BuiltinOpCodes.ABS
+    assert subgraph.operators[0].operator_code.code is BuiltinOpCodes.ABS
     assert len(subgraph.tensors) == 2
     assert qin in subgraph.inputs and qin not in subgraph.outputs
     assert qout in subgraph.outputs and qout not in subgraph.inputs
@@ -139,7 +139,7 @@ def test_run_dual_output(dual_output_model, trf_pass):
     qout_2 = subgraph.get_tensor("quantized_output_2")
 
     assert len(subgraph.operators) == 1
-    assert subgraph.operators[0].operator_code.code == BuiltinOpCodes.SPLIT
+    assert subgraph.operators[0].operator_code.code is BuiltinOpCodes.SPLIT
     assert len(subgraph.tensors) == 3
     assert qin in subgraph.inputs and qin not in subgraph.outputs
     assert qout_1 in subgraph.outputs and qout_1 not in subgraph.inputs

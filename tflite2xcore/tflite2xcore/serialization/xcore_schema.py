@@ -125,7 +125,7 @@ class OperatorCode:
             self.custom_code = opcode
         else:
             self.builtin_code = opcode
-            if self.builtin_code == BuiltinOpCodes.CUSTOM:
+            if self.builtin_code is BuiltinOpCodes.CUSTOM:
                 assert isinstance(
                     custom_code, XCOREOpCodes
                 ), "Must provide custom_code if builtin_code is 'CUSTOM'!"
@@ -137,7 +137,7 @@ class OperatorCode:
     def code(self):
         return (
             self.custom_code
-            if self.builtin_code == BuiltinOpCodes.CUSTOM
+            if self.builtin_code is BuiltinOpCodes.CUSTOM
             else self.builtin_code
         )
 

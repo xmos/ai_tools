@@ -113,7 +113,7 @@ class PlanFullyConnectedPass(OperatorMatchingPass):
     def match(self, op):
         if (
             super().match(op)
-            and op.operator_code.code == XCOREOpCodes.XC_fc_deepin_anyout
+            and op.operator_code.code is XCOREOpCodes.XC_fc_deepin_anyout
         ):
             return "plan" not in op.custom_options
 
@@ -139,7 +139,7 @@ class PlanRequant16To8Pass(OperatorMatchingPass):
     def match(self, op):
         if (
             super().match(op)
-            and op.operator_code.code == XCOREOpCodes.XC_requantize_16_to_8
+            and op.operator_code.code is XCOREOpCodes.XC_requantize_16_to_8
         ):
             return "plan" not in op.custom_options
 

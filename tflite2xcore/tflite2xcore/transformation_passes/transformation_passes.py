@@ -161,7 +161,7 @@ class RemoveSoftmaxOutputPass(OperatorMatchingPass):
     def match(self, op):
         return (
             super().match(op)
-            and op.operator_code.code == BuiltinOpCodes.SOFTMAX
+            and op.operator_code.code is BuiltinOpCodes.SOFTMAX
             and op.outputs[0] in op.subgraph.outputs
         )
 

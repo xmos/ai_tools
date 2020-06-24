@@ -196,7 +196,7 @@ class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
     def match(self, op):
         if (
             super().match(op)
-            and op.operator_code.code == XCOREOpCodes.XC_avgpool2d_global
+            and op.operator_code.code is XCOREOpCodes.XC_avgpool2d_global
         ):
             return not self.plan_threads
 

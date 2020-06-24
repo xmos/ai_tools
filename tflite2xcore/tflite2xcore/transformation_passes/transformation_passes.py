@@ -458,3 +458,22 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
             # replace old tensor
             self._biases.consumers.remove(self._op)
             self._op.inputs[2] = new_biases
+
+
+class RemovePaddingInputPass(OperatorMatchingPass):
+    def match(self, op):
+        return (
+            super().match(op)
+            #Match operator and position in subgraph
+            and op.operator_code.code == BuiltinOpCodes.PAD
+            and op.inputs[0] in op.subgraph.inputs
+        )
+
+    def mutate(self, op):
+        subgraph = op.subgraph
+
+        subgraph.inputs.append(op.outputs[0])
+        subgraph.remove_tensor(op.inputs[0])
+        subgraph.remove_operator(op)
+
+

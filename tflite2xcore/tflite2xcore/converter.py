@@ -84,7 +84,8 @@ def optimize_for_xcore(
     minification=False,
     num_threads=None,
     intermediates_path=None,
-    debug=False
+    debug=False,
+    ignore_input_alignment=False
 ):
     # NOTE: the order of the passes is mostly strict
     pass_mgr = InputOutputCanonicalizationManager(
@@ -97,6 +98,9 @@ def optimize_for_xcore(
 
     # canonicalize word alignment
     pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())
+
+    if ignore_input_alignment:
+        pass_mgr.register_pass(passes.RemovePaddingInputPass())
 
     # word alignment canonicalization introduces new pads, so first fuse then split
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())

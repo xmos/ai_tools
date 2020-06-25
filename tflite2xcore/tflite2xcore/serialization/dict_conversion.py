@@ -143,13 +143,12 @@ def create_dict_from_model(model, *, extended=False):
 def builtin_options_to_dict(builtin_options):
     dict_ = {camel_to_snake(k): v for k, v in vars(builtin_options).items()}
     if "fused_activation_function" in dict_:
-        # convert enum value to string
+        # convert enum value to string  # TODO: fix this
         dict_["fused_activation_function"] = xcore_schema.ActivationFunctionType(
             dict_["fused_activation_function"]
         ).name
     if "padding" in dict_:
-        # convert enum value to string
-        dict_["padding"] = xcore_schema.Padding(dict_["padding"]).name
+        dict_["padding"] = xcore_schema.Padding(dict_["padding"])
 
     return dict_
 

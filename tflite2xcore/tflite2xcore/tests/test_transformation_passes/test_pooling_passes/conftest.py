@@ -4,6 +4,8 @@ import pytest
 
 from copy import deepcopy
 
+from tflite2xcore.xcore_schema import Padding
+
 from ..conftest import PARAMS, _test_non_matching_params, test_matching_params
 
 
@@ -16,8 +18,8 @@ PARAMS = deepcopy(PARAMS)
 PARAMS["default"].update(
     {
         "non_matching_input_channels": [1, 3, 9, 15],
-        "padding": ["VALID"],
-        "non_matching_padding": ["SAME"],
+        "padding": [Padding.VALID],
+        "non_matching_padding": [Padding.SAME],
         "fused_activation": ["NONE"],
         "non_matching_fused_activation": ["RELU", "RELU6"],
         "stride_h": [1, 2],
@@ -30,8 +32,8 @@ PARAMS["default"].update(
 PARAMS["smoke"].update(
     {
         "non_matching_input_channels": [1, 9],
-        "padding": ["VALID"],
-        "non_matching_padding": ["SAME"],
+        "padding": [Padding.VALID],
+        "non_matching_padding": [Padding.SAME],
         "fused_activation": ["NONE"],
         "non_matching_fused_activation": ["RELU"],
         "stride_h": [2],

@@ -3,6 +3,7 @@
 import numpy as np
 
 from tflite2xcore.xcore_schema import (
+    Padding,
     TensorType,
     BuiltinOpCodes,
     OperatorCode,
@@ -78,7 +79,7 @@ class ReplaceMaxPool2DPass(ReplacePool2DPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return self._padding == "VALID"
+                return self._padding is Padding.VALID
 
         return False
 
@@ -105,7 +106,7 @@ class ReplaceAveragePool2DPass(ReplacePool2DPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return self._padding == "VALID"
+                return self._padding is Padding.VALID
 
         return False
 

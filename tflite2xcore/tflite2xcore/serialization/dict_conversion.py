@@ -181,3 +181,16 @@ def quantization_to_dict(quantization):
         for k, v in vars(quantization).items()
         if v is not None
     }
+
+
+def dict_to_quantization(dict_):
+    quantization = schema.QuantizationParametersT()
+
+    for k, v in dict_.items():
+        if k == "details_type":
+            # enum to value
+            v = v.value
+
+        setattr(quantization, snake_to_camel(k), v)
+
+    return quantization

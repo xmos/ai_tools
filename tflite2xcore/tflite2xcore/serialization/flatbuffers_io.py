@@ -12,6 +12,7 @@ from .dict_conversion import (
     builtin_options_to_dict,
     dict_to_builtin_options,
     quantization_to_dict,
+    dict_to_quantization,
     create_dict_from_model,
 )
 from .flatbuffers_c import FlexbufferBuilder, FlexbufferParser
@@ -186,24 +187,7 @@ class XCORESerializationMixin:
                 tensorT.buffer = self.buffers.index(tensor.buffer)
                 tensorT.type = tensor.type.value
                 if tensor.quantization:
-                    quantizationT = schema.QuantizationParametersT()
-                    if "min" in tensor.quantization:
-                        quantizationT.min = tensor.quantization["min"]
-                    if "max" in tensor.quantization:
-                        quantizationT.max = tensor.quantization["max"]
-                    if "zero_point" in tensor.quantization:
-                        quantizationT.zeroPoint = tensor.quantization["zero_point"]
-                    if "scale" in tensor.quantization:
-                        quantizationT.scale = tensor.quantization["scale"]
-                    if "details_type" in tensor.quantization:
-                        quantizationT.detailsType = tensor.quantization["details_type"].value
-                    if "details" in tensor.quantization:
-                        quantizationT.details = tensor.quantization["details"]
-                    if "quantized_dimension" in tensor.quantization:
-                        quantizationT.quantizedDimension = tensor.quantization[
-                            "quantized_dimension"
-                        ]
-                    tensorT.quantization = quantizationT
+                    tensorT.quantization = dict_to_quantization(tensor.quantization)
                 subgraphT.tensors.append(tensorT)
 
             # set operators

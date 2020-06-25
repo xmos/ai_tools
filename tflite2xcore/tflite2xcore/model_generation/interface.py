@@ -255,7 +255,7 @@ class Model(ABC):
         input_tensor = model.subgraphs[0].inputs[0]
         input_quant = input_tensor.quantization
 
-        if input_tensor.type != TensorType.INT8:
+        if input_tensor.type is not TensorType.INT8:
             raise NotImplementedError(
                 f"input tensor type {input_tensor.type} "
                 "not supported in save_xcore_data"

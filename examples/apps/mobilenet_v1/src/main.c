@@ -4,15 +4,27 @@
 
 #include "ai_engine.h"
 
+static int input_bytes = 0;
+static int input_size;
+static unsigned char *input_buffer;
+static int output_size;
+static unsigned char *output_buffer;
+
+void print_output() {
+  for (int i = 0; i < output_size; i++) {
+    printf("Output index=%u, value=%i\n", i, (signed char)output_buffer[i]);
+  }
+}
+
 #ifdef XCORE
+
+#include "lib_ops/api/device_memory.h"
 
 #define STRINGIFY(NAME) #NAME
 #define GET_STACKWORDS(DEST, NAME) \
   asm("ldc %[__dest], " STRINGIFY(NAME) ".nstackwords" : [ __dest ] "=r"(DEST))
 
 static char swmem_handler_stack[1024];
-
-#include "lib_ops/api/device_memory.h"
 
 // void app_main(unsigned char **input, unsigned *input_size,
 //               unsigned char **output, unsigned *output_size) {
@@ -28,15 +40,22 @@ void app_main() {
   printf("app_main 222\n");
 #endif
 
-  // ai_initialize(input, input_size, output, output_size);
+  ai_initialize(&input_buffer, &input_size, &output_buffer, &output_size);
+  printf("app_main 333\n");
+}
+
+void app_data(void *data, size_t size) {
+  printf("app_data received %d bytes\n", size);
+  // memcpy(input_buffer + input_bytes, data, size - 1);
+  // input_bytes += size - 1;
+  // if (input_bytes == input_size) {
+  //   ai_invoke();
+  //   print_output();
+  //   input_bytes = 0;
+  // }
 }
 
 #else  // must be x86
-
-unsigned input_size;
-unsigned char *input;
-unsigned output_size;
-unsigned char *output;
 
 static int load_input(const char *filename) {
   FILE *fd = fopen(filename, "rb");
@@ -49,28 +68,21 @@ static int load_input(const char *filename) {
   }
 
   fseek(fd, 0, SEEK_SET);
-  fread(input, 1, input_size, fd);
+  fread(input_buffer, 1, input_size, fd);
   fclose(fd);
 
   return 1;
 }
 
-void print_output() {
-  for (int i = 0; i < output_size; i++) {
-    printf("Output index=%u, value=%i\n", i, (signed char)output[i]);
-  }
-}
-
 int main(int argc, char *argv[]) {
-  ai_initialize(&input, &input_size, &output, &output_size);
-  printf("111\n");
+  ai_initialize(&input_buffer, &input_size, &output_buffer, &output_size);
+
   if (argc > 1) {
     printf("input filename=%s\n", argv[1]);
-    // Load input tensor
     if (!load_input(argv[1])) return -1;
   } else {
     printf("no input file\n");
-    memset(input, 0, input_size);
+    memset(input_buffer, 0, input_size);
   }
 
   ai_invoke();

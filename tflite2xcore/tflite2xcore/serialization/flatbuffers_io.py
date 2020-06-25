@@ -41,17 +41,13 @@ class XCORESerializationMixin:
         # create operator codes lookup
         operator_codes_lut = []
         for operator_codeT in modelT.operatorCodes:
-            if (
-                xcore_schema.BuiltinOpCodes(operator_codeT.builtinCode)
-                is xcore_schema.BuiltinOpCodes.CUSTOM
-            ):
+            opcode = xcore_schema.BuiltinOpCodes(operator_codeT.builtinCode)
+            if opcode is xcore_schema.BuiltinOpCodes.CUSTOM:
                 custom_code = operator_codeT.customCode.decode("utf-8")
                 if custom_code in xcore_schema.XCOREOpCodes:
                     opcode = xcore_schema.XCOREOpCodes(custom_code)
                 else:
                     opcode = xcore_schema.CustomOpCode(custom_code)
-            else:
-                opcode = xcore_schema.BuiltinOpCodes(operator_codeT.builtinCode)
             operator_codes_lut.append(
                 xcore_schema.OperatorCode(opcode, version=operator_codeT.version)
             )
@@ -84,9 +80,8 @@ class XCORESerializationMixin:
                 )
                 tensors.append(tensor)
 
-            # load operators & set tensor producer & consumers
+            # load operators & set inputs/outputs (registers op as tensor consumer/producer)
             for operatorT in subgraphT.operators:
-                operator_code = operator_codes_lut[operatorT.opcodeIndex]
                 options = {}
                 if (
                     hasattr(operatorT, "builtinOptions")
@@ -95,8 +90,7 @@ class XCORESerializationMixin:
                     options["builtin_options"] = builtin_options_to_dict(
                         operatorT.builtinOptions
                     )
-                    options["builtin_options_type"] = operatorT.builtinOptionsType
-
+                    options["builtin_options_type"] = xcore_schema.BuiltinOptions(operatorT.builtinOptionsType)
                 if (
                     hasattr(operatorT, "customOptions")
                     and operatorT.customOptions is not None
@@ -106,7 +100,7 @@ class XCORESerializationMixin:
                     )
 
                 subgraph.create_operator(
-                    operator_code,
+                    operator_code=operator_codes_lut[operatorT.opcodeIndex],
                     inputs=[tensors[input_index] for input_index in operatorT.inputs],
                     outputs=[
                         tensors[output_index] for output_index in operatorT.outputs
@@ -133,7 +127,7 @@ class XCORESerializationMixin:
 
         return cls.deserialize(bits)
 
-    def to_flatbuffer_model(self):
+    def _to_flatbuffer_model(self):
         modelT = schema.ModelT()
         modelT.version = self.version
         modelT.description = self.description
@@ -202,14 +196,7 @@ class XCORESerializationMixin:
                     if "scale" in tensor.quantization:
                         quantizationT.scale = tensor.quantization["scale"]
                     if "details_type" in tensor.quantization:
-                        if isinstance(tensor.quantization["details_type"], str):
-                            quantizationT.detailsType = xcore_schema.QuantizationDetails(
-                                tensor.quantization["details_type"]
-                            ).value
-                        else:
-                            quantizationT.detailsType = tensor.quantization[
-                                "details_type"
-                            ]
+                        quantizationT.detailsType = tensor.quantization["details_type"].value
                     if "details" in tensor.quantization:
                         quantizationT.details = tensor.quantization["details"]
                     if "quantized_dimension" in tensor.quantization:
@@ -235,7 +222,7 @@ class XCORESerializationMixin:
                     tensor_index = subgraph.tensors.index(output_tensor)
                     operatorT.outputs.append(tensor_index)
                 if operator.builtin_options:
-                    operatorT.builtinOptionsType = operator.builtin_options_type
+                    operatorT.builtinOptionsType = operator.builtin_options_type.value
                     operatorT.builtinOptions = dict_to_builtin_options(
                         operator.builtin_options_type, operator.builtin_options
                     )
@@ -249,7 +236,7 @@ class XCORESerializationMixin:
         return modelT
 
     def serialize(self):
-        modelT = self.to_flatbuffer_model()
+        modelT = self._to_flatbuffer_model()
         builder = flatbuffers.Builder(1024 * 1024)
         model_offset = modelT.Pack(builder)
         builder.Finish(model_offset, file_identifier=b"TFL3")

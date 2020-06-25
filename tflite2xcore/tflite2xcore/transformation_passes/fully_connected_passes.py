@@ -3,6 +3,7 @@
 import numpy as np
 
 from tflite2xcore.xcore_schema import (
+    QuantizationDetails,
     TensorType,
     BuiltinOpCodes,
     OperatorCode,
@@ -65,7 +66,7 @@ class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
                 {
                     "scale": [self._output.quantization["scale"][0] / 2 ** 8],
                     "zero_point": [self._output_zero_point * 2 ** 8],
-                    "details_type": "CustomQuantization",
+                    "details_type": QuantizationDetails.CustomQuantization,
                     "quantized_dimension": 0,
                 }
             )

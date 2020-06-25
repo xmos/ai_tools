@@ -159,10 +159,7 @@ def dict_to_builtin_options(type_, dict_):
     builtin_options = builtin_class()
 
     for k, v in dict_.items():
-        if k == "fused_activation_function":
-            # enum to value
-            v = v.value
-        elif k == "padding":
+        if k in ["fused_activation_function", "padding"]:
             # enum to value
             v = v.value
 
@@ -173,8 +170,8 @@ def dict_to_builtin_options(type_, dict_):
 
 def quantization_to_dict(quantization):
     def value_map(k, v):
-        if k == "details":
-            v = xcore_schema.QuantizationDetails(v).name
+        if k == "detailsType":
+            v = xcore_schema.QuantizationDetails(v)
         elif isinstance(v, np.ndarray):
             v = v.tolist()
         return v

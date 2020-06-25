@@ -34,13 +34,10 @@ void swmem_fill(swmem_fill_t handle, fill_slot_t address) {
 }
 
 void swmem_setup() {
-  printf("swmem_setup start\n");
   flash_connect(&flash_handle, &flash_ports_0, flash_clock_config,
                 flash_qe_config_0);
-  printf("swmem_setup mid\n");
 
   swmem_fill_handle = swmem_fill_get();
-  printf("swmem_setup end\n");
 }
 
 void swmem_teardown() {
@@ -49,12 +46,9 @@ void swmem_teardown() {
 }
 
 void swmem_handler(void *ignored) {
-  printf("swmem_handler start\n");
   fill_slot_t address = 0;
   while (1) {
-    printf("swmem_fill_handle = %ld \n", (long)swmem_fill_handle);
     address = swmem_fill_in_address(swmem_fill_handle);
-    printf("swmem_handler address=0x%08x\n", address);
     swmem_fill(swmem_fill_handle, address);
     swmem_fill_populate_word_done(swmem_fill_handle, address);
   }

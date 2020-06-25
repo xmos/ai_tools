@@ -163,10 +163,10 @@ def dict_to_builtin_options(type_, dict_):
     for k, v in dict_.items():
         if k == "fused_activation_function":
             # convert string to enum
-            v = xcore_schema.ActivationFunctionType[v].value
+            v = xcore_schema.ActivationFunctionType(v).value
         elif k == "padding":
             # convert string to enum
-            v = xcore_schema.Padding[v].value
+            v = xcore_schema.Padding(v).value
 
         setattr(builtin_options, snake_to_camel(k), v)
 

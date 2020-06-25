@@ -41,7 +41,10 @@ class XCORESerializationMixin:
         # create operator codes lookup
         operator_codes_lut = []
         for operator_codeT in modelT.operatorCodes:
-            if operator_codeT.builtinCode is xcore_schema.BuiltinOpCodes.CUSTOM.value:
+            if (
+                xcore_schema.BuiltinOpCodes(operator_codeT.builtinCode)
+                is xcore_schema.BuiltinOpCodes.CUSTOM
+            ):
                 custom_code = operator_codeT.customCode.decode("utf-8")
                 if custom_code in xcore_schema.XCOREOpCodes:
                     opcode = xcore_schema.XCOREOpCodes(custom_code)
@@ -200,9 +203,9 @@ class XCORESerializationMixin:
                         quantizationT.scale = tensor.quantization["scale"]
                     if "details_type" in tensor.quantization:
                         if isinstance(tensor.quantization["details_type"], str):
-                            quantizationT.detailsType = xcore_schema.QuantizationDetails[
+                            quantizationT.detailsType = xcore_schema.QuantizationDetails(
                                 tensor.quantization["details_type"]
-                            ].value
+                            ).value
                         else:
                             quantizationT.detailsType = tensor.quantization[
                                 "details_type"

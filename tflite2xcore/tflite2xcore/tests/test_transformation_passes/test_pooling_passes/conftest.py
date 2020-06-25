@@ -4,7 +4,7 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_schema import Padding
+from tflite2xcore.xcore_schema import Padding, ActivationFunctionType
 
 from ..conftest import PARAMS, _test_non_matching_params, test_matching_params
 
@@ -20,8 +20,8 @@ PARAMS["default"].update(
         "non_matching_input_channels": [1, 3, 9, 15],
         "padding": [Padding.VALID],
         "non_matching_padding": [Padding.SAME],
-        "fused_activation": ["NONE"],
-        "non_matching_fused_activation": ["RELU", "RELU6"],
+        "fused_activation": [ActivationFunctionType.NONE],
+        "non_matching_fused_activation": [ActivationFunctionType.RELU, ActivationFunctionType.RELU6],
         "stride_h": [1, 2],
         "stride_w": [1, 2],
         "pool_h": [1, 2, 3],
@@ -34,8 +34,8 @@ PARAMS["smoke"].update(
         "non_matching_input_channels": [1, 9],
         "padding": [Padding.VALID],
         "non_matching_padding": [Padding.SAME],
-        "fused_activation": ["NONE"],
-        "non_matching_fused_activation": ["RELU"],
+        "fused_activation": [ActivationFunctionType.NONE],
+        "non_matching_fused_activation": [ActivationFunctionType.RELU],
         "stride_h": [2],
         "stride_w": [2],
         "pool_h": [2, 3],

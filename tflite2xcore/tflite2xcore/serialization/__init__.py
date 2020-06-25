@@ -2,6 +2,7 @@
 
 from .flatbuffers_io import write_flatbuffer, read_flatbuffer
 from .xcore_schema import (
+    ActivationFunctionType,
     Padding,
     TensorType,
     OperatorCode,

@@ -7,6 +7,7 @@ from copy import deepcopy
 
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import (
+    ActivationFunctionType,
     Padding,
     TensorType,
     OperatorCode,
@@ -152,11 +153,15 @@ def build_pool(
     padding,
     pool_size,
     strides,
-    fused_activation="NONE",
+    fused_activation=ActivationFunctionType.NONE,
 ):
     assert len(strides) == len(pool_size) == 2
     assert padding in Padding
-    assert fused_activation in ["NONE", "RELU", "RELU6"]
+    assert fused_activation in [
+        ActivationFunctionType.NONE,
+        ActivationFunctionType.RELU,
+        ActivationFunctionType.RELU6
+    ]
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, *input_shape]

@@ -3,6 +3,7 @@
 import numpy as np
 
 from tflite2xcore.xcore_schema import (
+    ActivationFunctionType,
     Padding,
     TensorType,
     BuiltinOpCodes,
@@ -38,7 +39,7 @@ class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
             with self.using(op):
                 return (
                     self._input.quantization == self._output.quantization
-                    and self._fused_activation == "NONE"
+                    and self._fused_activation is ActivationFunctionType.NONE
                     and self._input.shape[3] % 4 == 0
                 )
 

@@ -27,7 +27,7 @@ PARAMS["extended"].update(
         "non_matching_input_channels": [3, 9, 15],
         "output_channels": PARAMS["extended"]["input_channels"],
         "non_matching_output_channels": [3, 9, 15],
-        "padding": Padding,
+        "padding": list(Padding),
         "stride_h": [1, 2, 3],
         "stride_w": [1, 2, 3],
         "non_matching_tensors": [
@@ -58,7 +58,7 @@ PARAMS["default"].update(
         "non_matching_input_channels": [3, 15],
         "output_channels": PARAMS["default"]["input_channels"],
         "non_matching_output_channels": [3, 15],
-        "padding": Padding,
+        "padding": list(Padding),
         "stride_h": [1, 2],
         "stride_w": [1, 2],
         "non_matching_tensors": [
@@ -81,7 +81,7 @@ PARAMS["smoke"].update(
         "non_matching_input_channels": [9],
         "output_channels": PARAMS["smoke"]["input_channels"],
         "non_matching_output_channels": [9],
-        "padding": Padding,
+        "padding": list(Padding),
         "stride_h": [1],
         "stride_w": [1],
         "non_matching_tensors": [

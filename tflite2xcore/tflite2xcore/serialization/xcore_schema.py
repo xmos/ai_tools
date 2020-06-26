@@ -11,7 +11,7 @@ from . import schema_py_generated as schema
 #                                  TensorType
 #  ----------------------------------------------------------------------------
 
-# TODO: fix COMPLEX64 and add FLOAT64 when schema is updated
+# TODO: add FLOAT64 when schema is updated
 TensorType = enum.IntEnum(
     "TensorType",
     {k: v for k, v in vars(schema.TensorType).items() if not k.startswith("__")},
@@ -26,7 +26,7 @@ __TensorType_to_stdint_type = {
     TensorType.STRING: None,
     TensorType.BOOL: "uint8_t",
     TensorType.INT16: "int16_t",
-    TensorType.COMPLEX64: None,
+    TensorType.COMPLEX64: "complex64_t",
     TensorType.INT8: "int8_t",
 }
 TensorType.to_stdint_type = lambda self: __TensorType_to_stdint_type[self]
@@ -40,7 +40,7 @@ __TensorType_to_bytes = {
     TensorType.STRING: None,
     TensorType.BOOL: 1,
     TensorType.INT16: 2,
-    TensorType.COMPLEX64: None,
+    TensorType.COMPLEX64: 8,
     TensorType.INT8: 1,
 }
 TensorType.to_bytes = lambda self: __TensorType_to_bytes[self]
@@ -54,7 +54,7 @@ __TensorType_to_numpy_type = {
     # TensorType.STRING: None,  # intentionally not supported
     TensorType.BOOL: np.int64,
     TensorType.INT16: np.int64,
-    # TensorType.COMPLEX64: None,  # intentionally not supported
+    TensorType.COMPLEX64: np.complex128,
     TensorType.INT8: np.int64,
 }
 TensorType.to_numpy_type = lambda self: __TensorType_to_numpy_type[self]
@@ -68,7 +68,7 @@ __TensorType_to_numpy_dtype = {
     # TensorType.STRING: None,  # intentionally not supported
     TensorType.BOOL: np.bool_,
     TensorType.INT16: np.int16,
-    # TensorType.COMPLEX64: None,  # intentionally not supported
+    TensorType.COMPLEX64: np.complex64,
     TensorType.INT8: np.int8,
 }
 TensorType.to_numpy_dtype = lambda self: __TensorType_to_numpy_dtype[self]
@@ -76,6 +76,7 @@ TensorType.to_numpy_dtype = lambda self: __TensorType_to_numpy_dtype[self]
 __TensorType_from_numpy_dtype = {
     np.dtype(np.float32): TensorType.FLOAT32,
     np.dtype(np.float16): TensorType.FLOAT16,
+    np.dtype(np.complex64): TensorType.COMPLEX64,
     np.dtype(np.int64): TensorType.INT64,
     np.dtype(np.int32): TensorType.INT32,
     np.dtype(np.int16): TensorType.INT16,

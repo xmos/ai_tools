@@ -22,6 +22,7 @@ class XCOREInterpreterStatus(Enum):
 
 
 class TfLiteType(Enum):
+    # originally defined in tensorflow/tensorflow/lite/c/common.h
     kTfLiteNoType = 0
     kTfLiteFloat32 = 1
     kTfLiteInt32 = 2
@@ -36,8 +37,8 @@ class TfLiteType(Enum):
     kTfLiteFloat64 = 11
 
 __TfLiteType_to_numpy_dtype = {
-    # TfLiteType.kTfLiteString: intentionally not supported
-    # TfLiteType.kTfLiteNoType: intentionally not supported
+    # TfLiteType.kTfLiteString: None,  # intentionally not supported
+    # TfLiteType.kTfLiteNoType: None,  # intentionally not supported
     TfLiteType.kTfLiteFloat64: np.dtype(np.float64),
     TfLiteType.kTfLiteFloat32: np.dtype(np.float32),
     TfLiteType.kTfLiteFloat16: np.dtype(np.float16),

@@ -509,5 +509,5 @@ class OpTestFCParser(TrainableParser, OpTestInitializerParser):
             "--input_dim",
             type=int,
             default=defaults["input_dim"],
-            help="Input dimension, must be multiple of 32.",
+            help="Input dimension.",
         )

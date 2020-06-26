@@ -18,58 +18,58 @@ TensorType = enum.IntEnum(
 )
 
 __TensorType_to_stdint_type = {
+    # TensorType.STRING: None,  # intentionally not supported
     TensorType.FLOAT32: "float32_t",
     TensorType.FLOAT16: "float16_t",
-    TensorType.INT32: "int32_t",
-    TensorType.UINT8: "uint8_t",
-    TensorType.INT64: "int64_t",
-    TensorType.STRING: None,
-    TensorType.BOOL: "uint8_t",
-    TensorType.INT16: "int16_t",
     TensorType.COMPLEX64: "complex64_t",
+    TensorType.INT64: "int64_t",
+    TensorType.INT32: "int32_t",
+    TensorType.INT16: "int16_t",
     TensorType.INT8: "int8_t",
+    TensorType.UINT8: "uint8_t",
+    TensorType.BOOL: "uint8_t",
 }
 TensorType.to_stdint_type = lambda self: __TensorType_to_stdint_type[self]
 
 __TensorType_to_bytes = {
+    # TensorType.STRING: None,  # intentionally not supported
     TensorType.FLOAT32: 4,
     TensorType.FLOAT16: 2,
-    TensorType.INT32: 4,
-    TensorType.UINT8: 1,
-    TensorType.INT64: 8,
-    TensorType.STRING: None,
-    TensorType.BOOL: 1,
-    TensorType.INT16: 2,
     TensorType.COMPLEX64: 8,
+    TensorType.INT64: 8,
+    TensorType.INT32: 4,
+    TensorType.INT16: 2,
     TensorType.INT8: 1,
+    TensorType.UINT8: 1,
+    TensorType.BOOL: 1,
 }
 TensorType.to_bytes = lambda self: __TensorType_to_bytes[self]
 
 __TensorType_to_numpy_type = {
+    # TensorType.STRING: None,  # intentionally not supported
     TensorType.FLOAT32: np.float64,
     TensorType.FLOAT16: np.float64,
-    TensorType.INT32: np.int64,
-    TensorType.UINT8: np.int64,
-    TensorType.INT64: np.int64,
-    # TensorType.STRING: None,  # intentionally not supported
-    TensorType.BOOL: np.int64,
-    TensorType.INT16: np.int64,
     TensorType.COMPLEX64: np.complex128,
+    TensorType.INT64: np.int64,
+    TensorType.INT32: np.int64,
+    TensorType.INT16: np.int64,
     TensorType.INT8: np.int64,
+    TensorType.UINT8: np.int64,
+    TensorType.BOOL: np.int64,
 }
 TensorType.to_numpy_type = lambda self: __TensorType_to_numpy_type[self]
 
 __TensorType_to_numpy_dtype = {
+    # TensorType.STRING: None,  # intentionally not supported
     TensorType.FLOAT32: np.float32,
     TensorType.FLOAT16: np.float16,
-    TensorType.INT32: np.int32,
-    TensorType.UINT8: np.uint8,
-    TensorType.INT64: np.int64,
-    # TensorType.STRING: None,  # intentionally not supported
-    TensorType.BOOL: np.bool_,
-    TensorType.INT16: np.int16,
     TensorType.COMPLEX64: np.complex64,
+    TensorType.INT64: np.int64,
+    TensorType.INT32: np.int32,
+    TensorType.INT16: np.int16,
     TensorType.INT8: np.int8,
+    TensorType.UINT8: np.uint8,
+    TensorType.BOOL: np.bool_,
 }
 TensorType.to_numpy_dtype = lambda self: __TensorType_to_numpy_dtype[self]
 

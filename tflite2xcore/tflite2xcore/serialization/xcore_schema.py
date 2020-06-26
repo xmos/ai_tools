@@ -11,7 +11,7 @@ from . import schema_py_generated as schema
 #                                  TensorType
 #  ----------------------------------------------------------------------------
 
-
+# TODO: fix COMPLEX64 and add FLOAT64 when schema is updated
 TensorType = enum.IntEnum(
     "TensorType",
     {k: v for k, v in vars(schema.TensorType).items() if not k.startswith("__")},
@@ -29,7 +29,6 @@ __TensorType_to_stdint_type = {
     TensorType.COMPLEX64: None,
     TensorType.INT8: "int8_t",
 }
-
 TensorType.to_stdint_type = lambda self: __TensorType_to_stdint_type[self]
 
 __TensorType_to_bytes = {
@@ -62,7 +61,7 @@ TensorType.to_numpy_type = lambda self: __TensorType_to_numpy_type[self]
 
 __TensorType_to_numpy_dtype = {
     TensorType.FLOAT32: np.float32,
-    TensorType.FLOAT16: np.single,  # TODO: fix this
+    TensorType.FLOAT16: np.float16,
     TensorType.INT32: np.int32,
     TensorType.UINT8: np.uint8,
     TensorType.INT64: np.int64,

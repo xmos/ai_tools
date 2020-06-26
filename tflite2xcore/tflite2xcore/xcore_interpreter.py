@@ -21,16 +21,49 @@ class XCOREInterpreterStatus(Enum):
     ERROR = 1
 
 
-# TODO: remove this
-class NumpyToTfLiteTensorType(Enum):
-    # see tensorflow/tensorflow/lite/c/c_api_internal.h for values
-    float32 = 1  # kTfLiteFloat32
-    int32 = 2  # kTfLiteInt32
-    unint8 = 3  # kTfLiteUInt8
-    int64 = 4  # kTfLiteInt64
-    int16 = 7  # kTfLiteInt16
-    complex64 = 7  # kTfLiteComplex64
-    int8 = 9  # kTfLiteInt8
+class TfLiteType(Enum):
+    kTfLiteNoType = 0
+    kTfLiteFloat32 = 1
+    kTfLiteInt32 = 2
+    kTfLiteUInt8 = 3
+    kTfLiteInt64 = 4
+    kTfLiteString = 5
+    kTfLiteBool = 6
+    kTfLiteInt16 = 7
+    kTfLiteComplex64 = 8
+    kTfLiteInt8 = 9
+    kTfLiteFloat16 = 10
+    kTfLiteFloat64 = 11
+
+__TfLiteType_to_numpy_dtype = {
+    # TfLiteType.kTfLiteString: intentionally not supported
+    # TfLiteType.kTfLiteNoType: intentionally not supported
+    TfLiteType.kTfLiteFloat64: np.dtype(np.float64),
+    TfLiteType.kTfLiteFloat32: np.dtype(np.float32),
+    TfLiteType.kTfLiteFloat16: np.dtype(np.float16),
+    TfLiteType.kTfLiteComplex64: np.dtype(np.complex64),
+    TfLiteType.kTfLiteInt64: np.dtype(np.int64),
+    TfLiteType.kTfLiteInt32: np.dtype(np.int32),
+    TfLiteType.kTfLiteInt16: np.dtype(np.int16),
+    TfLiteType.kTfLiteInt8: np.dtype(np.int8),
+    TfLiteType.kTfLiteUInt8: np.dtype(np.uint8),
+    TfLiteType.kTfLiteBool: np.dtype(np.bool_),
+}
+TfLiteType.to_numpy_dtype = lambda self: __TfLiteType_to_numpy_dtype[self]
+
+__TfLiteType_from_numpy_dtype = {
+    np.dtype(np.float64): TfLiteType.kTfLiteFloat64,
+    np.dtype(np.float32): TfLiteType.kTfLiteFloat32,
+    np.dtype(np.float16): TfLiteType.kTfLiteFloat16,
+    np.dtype(np.complex64): TfLiteType.kTfLiteComplex64,
+    np.dtype(np.int64): TfLiteType.kTfLiteInt64,
+    np.dtype(np.int32): TfLiteType.kTfLiteInt32,
+    np.dtype(np.int16): TfLiteType.kTfLiteInt16,
+    np.dtype(np.int8): TfLiteType.kTfLiteInt8,
+    np.dtype(np.uint8): TfLiteType.kTfLiteUInt8,
+    np.dtype(np.bool_): TfLiteType.kTfLiteBool,
+}
+TfLiteType.from_numpy_dtype = lambda x: __TfLiteType_from_numpy_dtype[np.dtype(x)]
 
 
 def make_op_state_capture_callback(op_states, *, inputs=True, outputs=True):
@@ -320,8 +353,7 @@ class XCOREInterpreter:
         self._verify_allocated()
 
         shape = value.ctypes.shape_as(ctypes.c_int)
-        # type_ = TensorType.from_numpy_dtype(value.dtype).value
-        type_ = NumpyToTfLiteTensorType[str(value.dtype)].value  # TODO: fix this
+        type_ = TfLiteType.from_numpy_dtype(value.dtype).value
         data = value.ctypes.data_as(ctypes.c_void_p)
         self._check_status(
             lib.set_tensor(self.obj, tensor_index, data, value.ndim, shape, type_)
@@ -333,8 +365,7 @@ class XCOREInterpreter:
         tensor_details = self.get_tensor_details()[tensor_index]
         tensor = np.zeros(tensor_details["shape"], dtype=tensor_details["dtype"])
         shape = tensor.ctypes.shape_as(ctypes.c_int)
-        # type_ = TensorType.from_numpy_dtype(tensor.dtype).value
-        type_ = NumpyToTfLiteTensorType[str(tensor.dtype)].value  # TODO: fix this
+        type_ = TfLiteType.from_numpy_dtype(tensor.dtype).value
         data_ptr = tensor.ctypes.data_as(ctypes.c_void_p)
         self._check_status(
             lib.get_tensor(self.obj, tensor_index, data_ptr, tensor.ndim, shape, type_)
@@ -388,7 +419,7 @@ class XCOREInterpreter:
             "index": tensor_index,
             "name": tensor_name.value.decode("utf-8"),
             "shape": np.array(tensor_shape, dtype=np.int32),
-            "dtype": TensorType(tensor_type.value).to_numpy_dtype(),
+            "dtype": TfLiteType(tensor_type.value).to_numpy_dtype(),
             "quantization": (scales, zero_points),
         }
 

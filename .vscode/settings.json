@@ -15,7 +15,6 @@
     },
     "python.pythonPath": "ai_tools_venv/bin/python",
     "python.linting.pylintEnabled": true,
-    "python.linting.pylintUseMinimalCheckers": true,
     "editor.formatOnSave": true,
     "python.formatting.provider": "black",
     "terminal.integrated.inheritEnv": false,

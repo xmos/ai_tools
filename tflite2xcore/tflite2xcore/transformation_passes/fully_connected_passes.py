@@ -3,6 +3,7 @@
 import numpy as np
 
 from tflite2xcore.xcore_schema import (
+    QuantizationDetails,
     TensorType,
     BuiltinOpCodes,
     OperatorCode,
@@ -65,7 +66,7 @@ class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
                 {
                     "scale": [self._output.quantization["scale"][0] / 2 ** 8],
                     "zero_point": [self._output_zero_point * 2 ** 8],
-                    "details_type": "CustomQuantization",
+                    "details_type": QuantizationDetails.CustomQuantization,
                     "quantized_dimension": 0,
                 }
             )
@@ -113,7 +114,7 @@ class PlanFullyConnectedPass(OperatorMatchingPass):
     def match(self, op):
         if (
             super().match(op)
-            and op.operator_code.code == XCOREOpCodes.XC_fc_deepin_anyout
+            and op.operator_code.code is XCOREOpCodes.XC_fc_deepin_anyout
         ):
             return "plan" not in op.custom_options
 
@@ -139,7 +140,7 @@ class PlanRequant16To8Pass(OperatorMatchingPass):
     def match(self, op):
         if (
             super().match(op)
-            and op.operator_code.code == XCOREOpCodes.XC_requantize_16_to_8
+            and op.operator_code.code is XCOREOpCodes.XC_requantize_16_to_8
         ):
             return "plan" not in op.custom_options
 

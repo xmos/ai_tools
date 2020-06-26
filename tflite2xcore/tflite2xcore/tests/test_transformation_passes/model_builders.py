@@ -7,6 +7,8 @@ from copy import deepcopy
 
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import (
+    ActivationFunctionType,
+    Padding,
     TensorType,
     OperatorCode,
     BuiltinOpCodes,
@@ -151,9 +153,15 @@ def build_pool(
     padding,
     pool_size,
     strides,
-    fused_activation="NONE",
+    fused_activation=ActivationFunctionType.NONE,
 ):
-    assert fused_activation in ["NONE", "RELU", "RELU6"]
+    assert len(strides) == len(pool_size) == 2
+    assert padding in Padding
+    assert fused_activation in [
+        ActivationFunctionType.NONE,
+        ActivationFunctionType.RELU,
+        ActivationFunctionType.RELU6
+    ]
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, *input_shape]
@@ -182,8 +190,6 @@ def build_pool(
     op = subgraph.create_operator(
         OperatorCode(builtin_opcode), inputs=[tin], outputs=[tout]
     )
-    assert padding in ["SAME", "VALID"]
-    assert len(strides) == len(pool_size) == 2
     op.builtin_options = {
         "padding": padding,
         "stride_h": strides[0],
@@ -413,6 +419,7 @@ def build_mlp(subgraph=None, *, outputs, hidden_nodes, input_shape):
 
 def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     subgraph = subgraph or XCOREModel().create_subgraph()
+    assert padding in Padding
 
     height, width = input_size
     C_out, K_h, K_w, C_in = weight_shape
@@ -426,9 +433,9 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
     b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
 
-    if padding == "SAME":
+    if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]
-    elif padding == "VALID":
+    elif padding is Padding.VALID:
         output_shape = [
             1,
             int(np.ceil((height - K_h + 1) / strides[0])),
@@ -455,6 +462,8 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
 def build_depthwise_conv2d(
     subgraph=None, *, weight_shape, input_size, padding, strides=(1, 1)
 ):
+    assert len(strides) == 2
+    assert padding in Padding
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     # NOTE: weight_shape uses channel order HWIM (following TensorFlow DepthwiseConv)
@@ -472,9 +481,9 @@ def build_depthwise_conv2d(
     w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
     b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
 
-    if padding == "SAME":
+    if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]
-    elif padding == "VALID":
+    elif padding is Padding.VALID:
         output_shape = [
             1,
             int(np.ceil((height - K_h + 1) / strides[0])),

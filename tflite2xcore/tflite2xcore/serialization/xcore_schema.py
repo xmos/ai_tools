@@ -62,7 +62,7 @@ TensorType.to_numpy_type = lambda self: __TensorType_to_numpy_type[self]
 
 __TensorType_to_numpy_dtype = {
     TensorType.FLOAT32: np.float32,
-    TensorType.FLOAT16: np.single,
+    TensorType.FLOAT16: np.single,  # TODO: fix this
     TensorType.INT32: np.int32,
     TensorType.UINT8: np.uint8,
     TensorType.INT64: np.int64,
@@ -73,6 +73,18 @@ __TensorType_to_numpy_dtype = {
     TensorType.INT8: np.int8,
 }
 TensorType.to_numpy_dtype = lambda self: __TensorType_to_numpy_dtype[self]
+
+__TensorType_from_numpy_dtype = {
+    np.dtype(np.float32): TensorType.FLOAT32,
+    np.dtype(np.float16): TensorType.FLOAT16,
+    np.dtype(np.int64): TensorType.INT64,
+    np.dtype(np.int32): TensorType.INT32,
+    np.dtype(np.int16): TensorType.INT16,
+    np.dtype(np.int8): TensorType.INT8,
+    np.dtype(np.uint8): TensorType.UINT8,
+    np.dtype(np.bool_): TensorType.BOOL,
+}
+TensorType.from_numpy_dtype = lambda x: __TensorType_from_numpy_dtype[np.dtype(x)]
 
 
 #  ----------------------------------------------------------------------------
@@ -125,7 +137,7 @@ class OperatorCode:
             self.custom_code = opcode
         else:
             self.builtin_code = opcode
-            if self.builtin_code == BuiltinOpCodes.CUSTOM:
+            if self.builtin_code is BuiltinOpCodes.CUSTOM:
                 assert isinstance(
                     custom_code, XCOREOpCodes
                 ), "Must provide custom_code if builtin_code is 'CUSTOM'!"
@@ -137,7 +149,7 @@ class OperatorCode:
     def code(self):
         return (
             self.custom_code
-            if self.builtin_code == BuiltinOpCodes.CUSTOM
+            if self.builtin_code is BuiltinOpCodes.CUSTOM
             else self.builtin_code
         )
 

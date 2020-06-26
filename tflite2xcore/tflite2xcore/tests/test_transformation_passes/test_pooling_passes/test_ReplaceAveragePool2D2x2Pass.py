@@ -4,6 +4,7 @@ import pytest
 
 from copy import deepcopy
 
+from tflite2xcore.xcore_schema import Padding
 from tflite2xcore.transformation_passes import ReplaceAveragePool2D2x2Pass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_avgpool
@@ -33,7 +34,7 @@ PARAMS["default"].update(
         "non_matching_input_height": [3, 9, 13, 23],
         "input_width": [2, 4, 8, 12],
         "non_matching_input_width": [3, 9, 13, 23],
-        "padding": ["SAME", "VALID"],
+        "padding": list(Padding),
         "stride_h": [2],
         "non_matching_stride_h": [1, 3],
         "stride_w": [2],
@@ -51,7 +52,7 @@ PARAMS["smoke"].update(
         "non_matching_input_height": [3, 13],
         "input_width": [2, 12],
         "non_matching_input_width": [3, 13],
-        "padding": ["SAME", "VALID"],
+        "padding": list(Padding),
         "stride_h": [2],
         "non_matching_stride_h": [3],
         "stride_w": [2],

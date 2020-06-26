@@ -89,14 +89,14 @@ def test_mutate(trf_pass, model):
 
     # test pad operator
     pad_op = subgraph.operators[0]
-    assert pad_op.operator_code.code == BuiltinOpCodes.PAD
+    assert pad_op.operator_code.code is BuiltinOpCodes.PAD
     assert len(pad_op.inputs) == 2
     assert len(pad_op.outputs) == 1
     assert pad_op.inputs[0] in subgraph.inputs
 
     # test conv operator
     conv_op = subgraph.operators[1]
-    assert conv_op.operator_code.code == BuiltinOpCodes.CONV_2D
+    assert conv_op.operator_code.code is BuiltinOpCodes.CONV_2D
     assert len(conv_op.inputs) == 3
     assert len(conv_op.outputs) == 1
     assert conv_op.outputs[0] in subgraph.outputs

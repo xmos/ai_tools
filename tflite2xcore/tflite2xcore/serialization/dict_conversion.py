@@ -143,13 +143,11 @@ def create_dict_from_model(model, *, extended=False):
 def builtin_options_to_dict(builtin_options):
     dict_ = {camel_to_snake(k): v for k, v in vars(builtin_options).items()}
     if "fused_activation_function" in dict_:
-        # convert enum value to string
         dict_["fused_activation_function"] = xcore_schema.ActivationFunctionType(
             dict_["fused_activation_function"]
-        ).name
+        )
     if "padding" in dict_:
-        # convert enum value to string
-        dict_["padding"] = xcore_schema.Padding(dict_["padding"]).name
+        dict_["padding"] = xcore_schema.Padding(dict_["padding"])
 
     return dict_
 
@@ -161,12 +159,9 @@ def dict_to_builtin_options(type_, dict_):
     builtin_options = builtin_class()
 
     for k, v in dict_.items():
-        if k == "fused_activation_function":
-            # convert string to enum
-            v = xcore_schema.ActivationFunctionType[v].value
-        elif k == "padding":
-            # convert string to enum
-            v = xcore_schema.Padding[v].value
+        if k in ["fused_activation_function", "padding"]:
+            # enum to value
+            v = v.value
 
         setattr(builtin_options, snake_to_camel(k), v)
 
@@ -175,8 +170,8 @@ def dict_to_builtin_options(type_, dict_):
 
 def quantization_to_dict(quantization):
     def value_map(k, v):
-        if k == "details":
-            v = xcore_schema.QuantizationDetails(v).name
+        if k == "detailsType":
+            v = xcore_schema.QuantizationDetails(v)
         elif isinstance(v, np.ndarray):
             v = v.tolist()
         return v
@@ -186,3 +181,16 @@ def quantization_to_dict(quantization):
         for k, v in vars(quantization).items()
         if v is not None
     }
+
+
+def dict_to_quantization(dict_):
+    quantization = schema.QuantizationParametersT()
+
+    for k, v in dict_.items():
+        if k == "details_type":
+            # enum to value
+            v = v.value
+
+        setattr(quantization, snake_to_camel(k), v)
+
+    return quantization

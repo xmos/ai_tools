@@ -3,6 +3,8 @@
 import numpy as np
 
 from tflite2xcore.xcore_schema import (
+    ActivationFunctionType,
+    Padding,
     TensorType,
     BuiltinOpCodes,
     OperatorCode,
@@ -37,7 +39,7 @@ class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
             with self.using(op):
                 return (
                     self._input.quantization == self._output.quantization
-                    and self._fused_activation == "NONE"
+                    and self._fused_activation is ActivationFunctionType.NONE
                     and self._input.shape[3] % 4 == 0
                 )
 
@@ -78,7 +80,7 @@ class ReplaceMaxPool2DPass(ReplacePool2DPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return self._padding == "VALID"
+                return self._padding is Padding.VALID
 
         return False
 
@@ -105,7 +107,7 @@ class ReplaceAveragePool2DPass(ReplacePool2DPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return self._padding == "VALID"
+                return self._padding is Padding.VALID
 
         return False
 
@@ -196,7 +198,7 @@ class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
     def match(self, op):
         if (
             super().match(op)
-            and op.operator_code.code == XCOREOpCodes.XC_avgpool2d_global
+            and op.operator_code.code is XCOREOpCodes.XC_avgpool2d_global
         ):
             return not self.plan_threads
 

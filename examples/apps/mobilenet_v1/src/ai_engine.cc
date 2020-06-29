@@ -24,7 +24,7 @@ uint8_t tensor_arena[kTensorArenaSize];
 
 xcore::Dispatcher *dispatcher = nullptr;
 constexpr int num_threads = 5;
-constexpr int kXCOREHeapSize = 31024;
+constexpr int kXCOREHeapSize = 60000;
 uint8_t xcore_heap[kXCOREHeapSize];
 
 void ai_invoke() {

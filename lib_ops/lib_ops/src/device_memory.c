@@ -54,9 +54,7 @@ void swmem_handler(void *ignored) {
   fill_slot_t address = 0;
   while (1) {
     address = swmem_fill_in_address(swmem_fill_handle);
-    printf("address=%p\n", address);
     swmem_fill(address);
-    swmem_fill_populate_word_done(swmem_fill_handle, address);
   }
 }
 

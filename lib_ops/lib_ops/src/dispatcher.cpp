@@ -51,23 +51,28 @@ XCoreStatus Dispatcher::JoinTasks() {
     begin++;
   }
 
-  if (tasks_.stack == nullptr) {
-    tasks_.stack_words += 2;
-    tasks_.stack = reinterpret_cast<char *>(allocator_.AllocateScratchBuffer(
-        tasks_.stack_words * bytes_per_stackword * (tasks_.size - begin),
-        DOUBLE_WORD_ALIGNMENT));
-  }
+  int remaining_tasks = tasks_.size - begin;
 
-  for (int i = begin; i < tasks_.size; i++) {
-    int32_t stack_offset =
-        tasks_.stack_words * bytes_per_stackword * (i - begin);
-    thread_group_add(
-        group_, tasks_.function, tasks_.arguments[i],
-        stack_base(&tasks_.stack[stack_offset], tasks_.stack_words));
-  }
+  if (remaining_tasks > 0) {
+    if (tasks_.stack == nullptr) {
+      tasks_.stack_words += 2;
 
-  thread_group_start(group_);
-  thread_group_wait(group_);
+      tasks_.stack = reinterpret_cast<char *>(allocator_.AllocateScratchBuffer(
+          tasks_.stack_words * bytes_per_stackword * remaining_tasks,
+          DOUBLE_WORD_ALIGNMENT));
+    }
+
+    for (int i = begin; i < tasks_.size; i++) {
+      int32_t stack_offset =
+          tasks_.stack_words * bytes_per_stackword * (i - begin);
+      thread_group_add(
+          group_, tasks_.function, tasks_.arguments[i],
+          stack_base(&tasks_.stack[stack_offset], tasks_.stack_words));
+    }
+
+    thread_group_start(group_);
+    thread_group_wait(group_);
+  }
 
   tasks_.size = 0;
 

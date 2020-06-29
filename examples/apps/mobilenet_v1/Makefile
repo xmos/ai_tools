@@ -30,17 +30,18 @@ INCLUDES += -Isrc
 # source file paths
 VPATH := $(TENSORFLOW_VPATH)
 VPATH += $(LIBS_VPATH)
-VPATH += src
+
+MODEL_SOURCE_FILE := src/mobilenet_v1.c
 
 # sources
 SOURCES := $(TENSORFLOW_SOURCES)
 SOURCES += $(LIBS_SOURCES)
-SOURCES += mobilenet_ops_resolver.cc
-SOURCES += mobilenet_v1.c
-SOURCES += ai_engine.cc 
-SOURCES += main.c
+SOURCES += $(MODEL_SOURCE_FILE)
+SOURCES += src/mobilenet_ops_resolver.cc
+SOURCES += src/ai_engine.cc 
+SOURCES += src/main.c
 ifeq ($(TARGET), xcore)
-	SOURCES += main.xc
+	SOURCES += src/main.xc
 endif
 
 include ../../../make/rules.mk
@@ -51,11 +52,13 @@ $(BIN_DIR)/$(APP): $(OBJECTS)
 	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) $(APPFLAGS) $(OBJECT_FILES) -o $(BIN_DIR)/$(APP)
 
-flash: APPFLAGS += -DUSE_SWMEM
-flash: $(BIN_DIR)/$(APP)
+$(BIN_DIR)/image_n0c0.swmem: $(MODEL_SOURCE_FILE)
 	cd $(BIN_DIR) && xobjdump --strip $(APPBASE).xe
 	cd $(BIN_DIR) && xobjdump --split $(APPBASE).xb
-	#cd $(BIN_DIR) && xflash --write-all image_n0c0.swmem --target XCORE-AI-EXPLORER
+	$(FLASH) --write-all $@ --target XCORE-AI-EXPLORER
+
+flash: APPFLAGS += -DUSE_SWMEM
+flash: $(BIN_DIR)/$(APP) $(BIN_DIR)/image_n0c0.swmem
 
 ddr: APPFLAGS += -DUSE_EXTMEM
 ddr: $(BIN_DIR)/$(APP)

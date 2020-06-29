@@ -24,7 +24,7 @@ void print_output() {
 #define GET_STACKWORDS(DEST, NAME) \
   asm("ldc %[__dest], " STRINGIFY(NAME) ".nstackwords" : [ __dest ] "=r"(DEST))
 
-static char swmem_handler_stack[1024];
+__attribute__((aligned(8))) static char swmem_handler_stack[1024];
 
 // void app_main(unsigned char **input, unsigned *input_size,
 //               unsigned char **output, unsigned *output_size) {
@@ -36,7 +36,8 @@ void app_main() {
   GET_STACKWORDS(stack_words, swmem_handler);
   printf("app_main 111\n");
   printf("stack_words = %d\n", stack_words);
-  run_async(swmem_handler, NULL, stack_base(swmem_handler_stack, stack_words));
+  run_async(swmem_handler, NULL,
+            stack_base(swmem_handler_stack, stack_words + 2));
   printf("app_main 222\n");
 #endif
 

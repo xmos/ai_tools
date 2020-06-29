@@ -28,9 +28,14 @@ flash_qe_config_t flash_qe_config_0 = {flash_qe_location_status_reg_0,
 flash_handle_t flash_handle;
 swmem_fill_t swmem_fill_handle;
 
-void swmem_fill(swmem_fill_t handle, fill_slot_t address) {
+void swmem_fill(fill_slot_t address) {
+  swmem_fill_buffer_t buf;
+  unsigned int *buf_ptr = (unsigned int *)buf;
+
   flash_read_quad(&flash_handle, (address - (void *)XS1_SWMEM_BASE) >> 2,
-                  address, SWMEM_FILL_SIZE_WORDS);
+                  buf_ptr, SWMEM_FILL_SIZE_WORDS);
+
+  swmem_fill_populate_from_buffer(swmem_fill_handle, address, buf);
 }
 
 void swmem_setup() {
@@ -49,7 +54,7 @@ void swmem_handler(void *ignored) {
   fill_slot_t address = 0;
   while (1) {
     address = swmem_fill_in_address(swmem_fill_handle);
-    swmem_fill(swmem_fill_handle, address);
+    swmem_fill(address);
     swmem_fill_populate_word_done(swmem_fill_handle, address);
   }
 }

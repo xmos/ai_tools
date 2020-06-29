@@ -57,8 +57,9 @@ class Dispatcher {
 
   XCoreStatus Reset();
 
-  void *AllocatePersistantBuffer(size_t size);
-  void *AllocateScratchBuffer(size_t size);
+  void *AllocatePersistantBuffer(size_t size,
+                                 size_t alignment = WORD_ALIGNMENT);
+  void *AllocateScratchBuffer(size_t size, size_t alignment = WORD_ALIGNMENT);
   XCoreStatus ResetScratchAllocation();
 
   size_t GetMaxAllocatedSize();

@@ -52,9 +52,10 @@ XCoreStatus Dispatcher::JoinTasks() {
   }
 
   if (tasks_.stack == nullptr) {
-    tasks_.stack_words += bytes_per_stackword;
+    tasks_.stack_words += 2;
     tasks_.stack = reinterpret_cast<char *>(allocator_.AllocateScratchBuffer(
-        tasks_.stack_words * bytes_per_stackword * (tasks_.size - begin)));
+        tasks_.stack_words * bytes_per_stackword * (tasks_.size - begin),
+        DOUBLE_WORD_ALIGNMENT));
   }
 
   for (int i = begin; i < tasks_.size; i++) {
@@ -206,12 +207,12 @@ XCoreStatus Dispatcher::InitializeTasks(thread_function_t function,
   return kXCoreOk;
 }
 
-void *Dispatcher::AllocatePersistantBuffer(size_t size) {
-  return allocator_.AllocatePersistantBuffer(size);
+void *Dispatcher::AllocatePersistantBuffer(size_t size, size_t alignment) {
+  return allocator_.AllocatePersistantBuffer(size, alignment);
 }
 
-void *Dispatcher::AllocateScratchBuffer(size_t size) {
-  return allocator_.AllocateScratchBuffer(size);
+void *Dispatcher::AllocateScratchBuffer(size_t size, size_t alignment) {
+  return allocator_.AllocateScratchBuffer(size, alignment);
 }
 
 XCoreStatus Dispatcher::ResetScratchAllocation() {

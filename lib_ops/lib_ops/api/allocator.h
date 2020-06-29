@@ -5,6 +5,9 @@
 #include <cstddef>
 #include <cstdint>
 
+#define WORD_ALIGNMENT (4)
+#define DOUBLE_WORD_ALIGNMENT (8)
+
 class MemoryAllocator {
  public:
   /** Construct Allocator.
@@ -53,15 +56,16 @@ class MemoryAllocator {
   /** Allocate memory that is intended to persist for the lifetime of the
    * allocator. \param size    Size of allocation (in bytes)
    */
-  void *AllocatePersistantBuffer(size_t size);
+  void *AllocatePersistantBuffer(size_t size,
+                                 size_t alignment = WORD_ALIGNMENT);
 
   /** Allocate scratch memory that will only be used temporarilly.
    * \param size    Size of allocation (in bytes)
    */
-  void *AllocateScratchBuffer(size_t size);
+  void *AllocateScratchBuffer(size_t size, size_t alignment = WORD_ALIGNMENT);
 
  private:
-  void *AllocateBuffer(size_t size);
+  void *AllocateBuffer(size_t size, size_t alignment = WORD_ALIGNMENT);
 
   void *buffer_;
   size_t buffer_size_;

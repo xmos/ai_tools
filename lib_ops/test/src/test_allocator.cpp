@@ -120,7 +120,7 @@ TEST(allocator, test_reset) {
   TEST_ASSERT_NOT_NULL(data);
 }
 
-TEST(allocator, test_align) {
+TEST(allocator, test_default_alignment) {
   size_t buffer_size = 100;
   void *buffer[buffer_size];
   size_t data_size = 21;          // must NOT be multiple of 4
@@ -139,6 +139,24 @@ TEST(allocator, test_align) {
   data2 = allocator.AllocatePersistantBuffer(data_size);
   allocated_size_data2 = allocator.GetAllocatedSize();
   TEST_ASSERT_EQUAL_INT((aligned_data_size + data_size), allocated_size_data2);
+}
+
+TEST(allocator, test_custom_alignment) {
+  size_t alignment = 32;
+  size_t buffer_size = 100;
+  void *buffer[buffer_size];
+
+  size_t data_size = alignment + 1;  // must NOT be multiple of alignment
+  void *data1;
+  void *data2;
+  MemoryAllocator allocator;
+
+  allocator.SetHeap(buffer, buffer_size);
+
+  data1 = allocator.AllocatePersistantBuffer(data_size, alignment);
+  TEST_ASSERT_EQUAL_INT(0, (long)data1 % alignment);
+  data2 = allocator.AllocatePersistantBuffer(data_size, alignment);
+  TEST_ASSERT_EQUAL_INT(0, (long)data2 % alignment);
 }
 
 TEST(allocator, test_max_allocated) {
@@ -175,6 +193,7 @@ TEST_GROUP_RUNNER(allocator) {
   RUN_TEST_CASE(allocator, test_scratch);
   RUN_TEST_CASE(allocator, test_scratch_reset);
   RUN_TEST_CASE(allocator, test_reset);
-  RUN_TEST_CASE(allocator, test_align);
+  RUN_TEST_CASE(allocator, test_default_alignment);
+  RUN_TEST_CASE(allocator, test_custom_alignment);
   RUN_TEST_CASE(allocator, test_max_allocated);
 }

@@ -8,8 +8,6 @@
 
 #include "lib_ops/api/tracing.h"
 
-#define ALIGNMENT (4)
-
 void MemoryAllocator::SetHeap(void *buffer, size_t size) {
   assert(buffer);
   assert(size > 0);
@@ -21,7 +19,7 @@ void MemoryAllocator::SetHeap(void *buffer, size_t size) {
 }
 
 void MemoryAllocator::ResetHeap() {
-  alloc_tail_ = std::align(ALIGNMENT, 1, buffer_, buffer_size_);
+  alloc_tail_ = std::align(WORD_ALIGNMENT, 1, buffer_, buffer_size_);
   scratch_head_ = alloc_tail_;
   max_allocated_ = 0;
 }
@@ -40,8 +38,8 @@ size_t MemoryAllocator::GetFreeSize() {
   return buffer_size_ - GetAllocatedSize();
 }
 
-void *MemoryAllocator::AllocateBuffer(size_t size) {
-  alloc_tail_ = std::align(ALIGNMENT, size, alloc_tail_, buffer_size_);
+void *MemoryAllocator::AllocateBuffer(size_t size, size_t alignment) {
+  alloc_tail_ = std::align(alignment, size, alloc_tail_, buffer_size_);
 
   if (GetFreeSize() >= size) {
     void *ptr = alloc_tail_;
@@ -55,18 +53,18 @@ void *MemoryAllocator::AllocateBuffer(size_t size) {
   return nullptr;
 }
 
-void *MemoryAllocator::AllocatePersistantBuffer(size_t size) {
+void *MemoryAllocator::AllocatePersistantBuffer(size_t size, size_t alignment) {
   assert(size > 0);
 
-  void *ptr = AllocateBuffer(size);
+  void *ptr = AllocateBuffer(size, alignment);
 
   if (ptr) scratch_head_ = alloc_tail_;
   return ptr;
 }
 
-void *MemoryAllocator::AllocateScratchBuffer(size_t size) {
+void *MemoryAllocator::AllocateScratchBuffer(size_t size, size_t alignment) {
   assert(size > 0);
 
-  void *ptr = AllocateBuffer(size);
+  void *ptr = AllocateBuffer(size, alignment);
   return ptr;
 }

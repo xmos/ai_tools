@@ -26,16 +26,16 @@ TEST(dispatcher, test_current_core) {
   int num_cores = 5;
   size_t stack_words = 0;
 
-  xcore::Dispatcher dispatcher(buffer, buffer_size, num_cores, true);
+  xcore::Dispatcher dispatcher(buffer, buffer_size, true);
   GET_STACKWORDS(stack_words, thread_worker);
+  dispatcher.InitializeTasks(thread_worker, stack_words + 2);
 
   ThreadData data[num_cores];
   for (int i = 0; i < num_cores; i++) {
     data[i].value = i;
-    dispatcher.AddThread(thread_worker, reinterpret_cast<void *>(&data[i]),
-                         stack_words);
+    dispatcher.AddTask(reinterpret_cast<void *>(&data[i]));
   }
-  dispatcher.Join();
+  dispatcher.JoinTasks();
 
   for (int i = 0; i < num_cores; i++) {
     TEST_ASSERT_EQUAL_INT(i + 1, data[i].value);
@@ -48,16 +48,16 @@ TEST(dispatcher, test_not_current_core) {
   int num_cores = 4;
   size_t stack_words = 0;
 
-  xcore::Dispatcher dispatcher(buffer, buffer_size, num_cores, true);
+  xcore::Dispatcher dispatcher(buffer, buffer_size, true);
   GET_STACKWORDS(stack_words, thread_worker);
+  dispatcher.InitializeTasks(thread_worker, stack_words + 2);
 
   ThreadData data[num_cores];
   for (int i = 0; i < num_cores; i++) {
     data[i].value = i;
-    dispatcher.AddThread(thread_worker, reinterpret_cast<void *>(&data[i]),
-                         stack_words);
+    dispatcher.AddTask(reinterpret_cast<void *>(&data[i]));
   }
-  dispatcher.Join();
+  dispatcher.JoinTasks();
 
   for (int i = 0; i < num_cores; i++) {
     TEST_ASSERT_EQUAL_INT(i + 1, data[i].value);
@@ -71,16 +71,16 @@ TEST(dispatcher, test_reset) {
   size_t stack_words = 0;
   ThreadData data[num_cores];
 
-  xcore::Dispatcher dispatcher(buffer, buffer_size, num_cores, true);
+  xcore::Dispatcher dispatcher(buffer, buffer_size, true);
   GET_STACKWORDS(stack_words, thread_worker);
+  dispatcher.InitializeTasks(thread_worker, stack_words + 2);
 
   for (int iter = 0; iter < 100; iter++) {
     for (int i = 0; i < num_cores; i++) {
       data[i].value = i;
-      dispatcher.AddThread(thread_worker, reinterpret_cast<void *>(&data[i]),
-                           stack_words);
+      dispatcher.AddTask(reinterpret_cast<void *>(&data[i]));
     }
-    dispatcher.Join();
+    dispatcher.JoinTasks();
 
     for (int i = 0; i < num_cores; i++) {
       TEST_ASSERT_EQUAL_INT(i + 1, data[i].value);

@@ -17,15 +17,15 @@ TEST(execution_plan, test_rowcol_region_array) {
   int32_t cols = 3;
   xcore::RowColRegionArray regions;
 
-  TEST_ASSERT_EQUAL_INT(regions.size, 0);
+  TEST_ASSERT_EQUAL_INT(regions.GetSize(), 0);
 
   for (int i = 0; i < num_regions; i++) {
     xcore::RowColRegion region = {top, left, rows, cols};
-    regions.append(region);
-    TEST_ASSERT_EQUAL_INT(regions.size, i + 1);
+    regions.Append(region);
+    TEST_ASSERT_EQUAL_INT(regions.GetSize(), i + 1);
   }
 
-  TEST_ASSERT_EQUAL_INT(regions.size, num_regions);
+  TEST_ASSERT_EQUAL_INT(regions.GetSize(), num_regions);
 
   for (int i = 0; i < num_regions; i++) {
     const xcore::RowColRegion& region = regions[i];

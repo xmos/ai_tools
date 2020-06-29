@@ -462,12 +462,22 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
 
 class RemovePaddingInputPass(OperatorMatchingPass):
     def match(self, op):
-        return (
-            super().match(op)
-            #Match operator and position in subgraph
-            and op.operator_code.code is BuiltinOpCodes.PAD
-            and op.inputs[0] in op.subgraph.inputs
-        )
+       
+        #Match operator
+        if op.operator_code.code is BuiltinOpCodes.PAD:
+            padding = op.inputs[1].numpy.tolist()
+ 
+            return (
+                super().match(op)
+                # Match positon in subgraph
+                and op.inputs[0] in op.subgraph.inputs
+                #Match only padding in channel direction i.e. inserted for VPU alignment
+                and (padding[-1] != [0,0])
+                and all(pad == [0,0] for pad in padding[:-1])
+            )
+            
+        else:
+            return False
 
     def mutate(self, op):
         subgraph = op.subgraph

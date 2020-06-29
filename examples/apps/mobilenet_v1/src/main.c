@@ -41,7 +41,6 @@ void app_main() {
 }
 
 void app_data(void *data, size_t size) {
-  printf("app_data received %d bytes\n", size);
   memcpy(input_buffer + input_bytes, data, size - 1);
   input_bytes += size - 1;
   if (input_bytes == input_size) {

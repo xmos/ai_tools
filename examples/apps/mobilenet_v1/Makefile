@@ -11,8 +11,8 @@ include ../../../make/libs.mk
 #********************
 APPBASE = mobilenet
 #APPFLAGS := -DNDEBUG
-APPFLAGS := -g
-#APPFLAGS += -DENABLE_TRACING
+#APPFLAGS := -g
+APPFLAGS += -DENABLE_TRACING
 APPFLAGS += -DENABLE_BENCHMARKING
 
 ifeq ($(TARGET), x86)

@@ -26,34 +26,28 @@ void print_output() {
 
 __attribute__((aligned(8))) static char swmem_handler_stack[1024];
 
-// void app_main(unsigned char **input, unsigned *input_size,
-//               unsigned char **output, unsigned *output_size) {
 void app_main() {
 #if defined(USE_SWMEM) || defined(USE_EXTMEM)
   // start SW_Mem handler
   swmem_setup();
   size_t stack_words;
   GET_STACKWORDS(stack_words, swmem_handler);
-  printf("app_main 111\n");
-  printf("stack_words = %d\n", stack_words);
   run_async(swmem_handler, NULL,
             stack_base(swmem_handler_stack, stack_words + 2));
-  printf("app_main 222\n");
 #endif
 
   ai_initialize(&input_buffer, &input_size, &output_buffer, &output_size);
-  printf("app_main 333\n");
 }
 
 void app_data(void *data, size_t size) {
-  printf("app_data received %d bytes\n", size);
-  // memcpy(input_buffer + input_bytes, data, size - 1);
-  // input_bytes += size - 1;
-  // if (input_bytes == input_size) {
-  //   ai_invoke();
-  //   print_output();
-  //   input_bytes = 0;
-  // }
+  // printf("app_data received %d bytes\n", size);
+  memcpy(input_buffer + input_bytes, data, size - 1);
+  input_bytes += size - 1;
+  if (input_bytes == input_size) {
+    ai_invoke();
+    print_output();
+    input_bytes = 0;
+  }
 }
 
 #else  // must be x86

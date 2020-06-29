@@ -24,7 +24,7 @@ uint8_t tensor_arena[kTensorArenaSize];
 
 xcore::Dispatcher *dispatcher = nullptr;
 constexpr int num_threads = 5;
-constexpr int kXCOREHeapSize = 30024;
+constexpr int kXCOREHeapSize = 31024;
 uint8_t xcore_heap[kXCOREHeapSize];
 
 void ai_invoke() {
@@ -48,23 +48,16 @@ void ai_initialize(unsigned char **input, unsigned *input_size,
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
 
-  printf("ai_initialize 111 \n");
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
-  printf("ai_initialize %p \n", mobilenet_v1_model);
-  printf("ai_initialize %d \n", (int)mobilenet_v1_model[100]);
-  // model = tflite::GetModel(mobilenet_v1_model);
-  printf("ai_initialize 111 b\n");
+  model = tflite::GetModel(mobilenet_v1_model);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
-    printf("ai_initialize 111 c\n");
     TF_LITE_REPORT_ERROR(error_reporter,
                          "Model provided is schema version %d not equal "
                          "to supported version %d.",
                          model->version(), TFLITE_SCHEMA_VERSION);
     return;
   }
-
-  printf("ai_initialize 222 \n");
 
   // Setup xCORE dispatcher (BEFORE calling AllocateTensors)
   static xcore::Dispatcher static_dispatcher(xcore_heap, kXCOREHeapSize,
@@ -75,8 +68,6 @@ void ai_initialize(unsigned char **input, unsigned *input_size,
     return;
   }
   dispatcher = &static_dispatcher;
-
-  printf("ai_initialize 333 \n");
 
   // This pulls in all the operation implementations we need.
   static tflite::ops::micro::xcore::MobileNetOpsResolver resolver;
@@ -92,8 +83,6 @@ void ai_initialize(unsigned char **input, unsigned *input_size,
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
     return;
   }
-
-  printf("ai_initialize 444 \n");
 
   // Obtain pointers to the model's input and output tensors.
   *input = (unsigned char *)(interpreter->input(0)->data.raw);

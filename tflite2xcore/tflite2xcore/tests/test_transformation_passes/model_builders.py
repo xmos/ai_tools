@@ -490,8 +490,8 @@ def build_non_input_pad(subgraph=None, *, input_shape, paddings):
 
     build_abs(subgraph, input_shape = input_shape, tensor_type=TensorType.INT8)
 
-    abs1, pad1 = subgraph.operators[:2]
-    _glue_ops(pad1,abs1)
+    pad1, abs1 = subgraph.operators[:2]
+    _glue_ops(abs1, pad1)
 
     return model
 

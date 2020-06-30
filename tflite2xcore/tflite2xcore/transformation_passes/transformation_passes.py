@@ -472,6 +472,7 @@ class RemovePaddingInputPass(OperatorMatchingPass):
                 # Match positon in subgraph
                 and op.inputs[0] in op.subgraph.inputs
                 #Match only padding in channel direction i.e. inserted for VPU alignment
+                and len(padding) == 4
                 and (padding[-1] != [0,0])
                 and all(pad == [0,0] for pad in padding[:-1])
             )

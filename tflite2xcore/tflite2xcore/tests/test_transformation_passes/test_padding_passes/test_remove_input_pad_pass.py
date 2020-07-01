@@ -1,4 +1,4 @@
-#Copyright (c) 2020, XMOS Ltd, All rights reserved
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
 
@@ -21,8 +21,10 @@ from .conftest import (
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
+
 def only_channel_pad(padding):
-    return padding[-1] !=[0,0] and (all(pad == [0,0] for pad in padding[:-1]))
+    return padding[-1] != [0, 0] and (all(pad == [0, 0] for pad in padding[:-1]))
+
 
 PARAMS = update_params_with_paddings(deepcopy(PARAMS), is_matching=only_channel_pad)
 
@@ -33,6 +35,7 @@ PARAMS["default"]["paddings"] = PARAMS["smoke"]["paddings"]
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def trf_pass():
@@ -50,7 +53,7 @@ def model(input_shape, paddings):
 
 
 def test_mutate(trf_pass, model):
-    #extract original padding values
+    # extract original padding values
     subgraph = model.subgraphs[0]
     assert len(subgraph.operators) == 1
     pad_ori = subgraph.operators[0].inputs[1]
@@ -71,8 +74,9 @@ def test_mutate(trf_pass, model):
     # check input/output tensors - new input/output should be old output
     assert len(subgraph.inputs) == len(subgraph.outputs) == 1
     in_new, out_new = subgraph.inputs[0], subgraph.outputs[0]
-    assert in_new is out_ori 
-    assert out_ori is out_new 
+    assert in_new is out_ori
+    assert out_ori is out_new
+
 
 def test_non_matching_non_input_pad(trf_pass, input_shape, paddings):
     model = build_non_input_pad(input_shape=input_shape, paddings=paddings)
@@ -80,6 +84,6 @@ def test_non_matching_non_input_pad(trf_pass, input_shape, paddings):
     for op in model.subgraphs[0].operators:
         assert not trf_pass.match(op)
 
+
 if __name__ == "__main__":
     pytest.main()
-

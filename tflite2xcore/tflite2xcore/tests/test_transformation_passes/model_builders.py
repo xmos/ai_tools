@@ -638,16 +638,18 @@ def build_consecutive_pads(subgraph=None, *, input_shape, paddings_1, paddings_2
 
     return model
 
+
 def build_non_input_pad(subgraph=None, *, input_shape, paddings):
     model = build_pad(subgraph, input_shape=input_shape, paddings=paddings)
     subgraph = subgraph or model.subgraphs[0]
 
-    build_abs(subgraph, input_shape = input_shape, tensor_type=TensorType.INT8)
+    build_abs(subgraph, input_shape=input_shape, tensor_type=TensorType.INT8)
 
     pad1, abs1 = subgraph.operators[:2]
     _glue_ops(abs1, pad1)
 
     return model
+
 
 def build_padded_DW(subgraph=None, *, weight_shape, input_size, paddings, strides):
     input_shape = [1, *input_size, weight_shape[-1]]

@@ -99,9 +99,6 @@ def optimize_for_xcore(
     # canonicalize word alignment
     pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())
 
-    if ignore_input_alignment:
-        pass_mgr.register_pass(passes.RemovePaddingInputPass())
-
     # word alignment canonicalization introduces new pads, so first fuse then split
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
     pass_mgr.register_pass(passes.SplitPaddingPass())
@@ -139,6 +136,10 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
 
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
+
+    if ignore_input_alignment:
+        pass_mgr.register_pass(passes.RemovePaddingInputPass())
+
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
     pass_mgr.register_pass(passes.PlanFullyConnectedPass(num_threads=num_threads))

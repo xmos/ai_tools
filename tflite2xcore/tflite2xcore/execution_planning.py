@@ -36,7 +36,7 @@ class ExecutionPlan:
         return bits
 
 
-class ExecutionPlanner(ABC):
+class ParallelizationPlanner(ABC):
     MAX_THREADS = 5
     CHANNEL_GROUP_SIZE = 16
 
@@ -95,7 +95,7 @@ class ExecutionPlanner(ABC):
             return best_plan
 
 
-class UnidirectionalSplitPlanner(ExecutionPlanner):
+class UnidirectionalSplitPlanner(ParallelizationPlanner):
     def __init__(self, height, width, **kwargs):
         super().__init__(**kwargs)
         assert isinstance(
@@ -165,7 +165,7 @@ class RowSlicePlanner(UnidirectionalSplitPlanner):
         )
 
 
-class ChannelGroupSlicePlanner(ExecutionPlanner):
+class ChannelGroupSlicePlanner(ParallelizationPlanner):
     def __init__(self, Cout, **kwargs):
         super().__init__(**kwargs)
         assert isinstance(Cout, int), f"received Cout={Cout} with type {type(Cout)}"
@@ -176,12 +176,13 @@ class ChannelGroupSlicePlanner(ExecutionPlanner):
     def changrp_split_helper(num_channels):
         changrps = []
         num_changrps = math.ceil(
-            num_channels / float(ExecutionPlanner.CHANNEL_GROUP_SIZE)
+            num_channels / float(ParallelizationPlanner.CHANNEL_GROUP_SIZE)
         )
         for i in range(num_changrps):
-            Cbegin = i * ExecutionPlanner.CHANNEL_GROUP_SIZE
+            Cbegin = i * ParallelizationPlanner.CHANNEL_GROUP_SIZE
             Cend = min(
-                Cbegin + ExecutionPlanner.CHANNEL_GROUP_SIZE - 1, num_channels - 1,
+                Cbegin + ParallelizationPlanner.CHANNEL_GROUP_SIZE - 1,
+                num_channels - 1,
             )
             changrps.append([Cbegin, Cend])
 
@@ -214,7 +215,7 @@ class ChannelGroupSlicePlanner(ExecutionPlanner):
         )
 
 
-class SlicePlanner(ExecutionPlanner):
+class SlicePlanner(ParallelizationPlanner):
     def __init__(self, Cout, height, width, **kwargs):
         super().__init__(**kwargs)
         assert isinstance(Cout, int), f"received Cout={Cout} with type {type(Cout)}"

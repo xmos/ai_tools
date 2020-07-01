@@ -10,49 +10,50 @@ import tensorflow as tf
 import numpy as np
 
 LABELS = [
-        'airplane',
-        'automobile',
-        'bird',
-        'cat',
-        'deer',
-        'dog',
-        'frog',
-        'horse',
-        'ship',
-        'truck',
+    "airplane",
+    "automobile",
+    "bird",
+    "cat",
+    "deer",
+    "dog",
+    "frog",
+    "horse",
+    "ship",
+    "truck",
 ]
 NUM_LABELS = len(LABELS)
 XE_FILE = None
 
+
 def run_testcase(testcase):
     global XE_FILE
 
-    tmp_img = np.ndarray.astype(testcase, 'int16')
+    tmp_img = np.ndarray.astype(testcase, "int16")
     # make signed int8
-    signed_img = np.ndarray.astype((tmp_img-128), 'int8')
-    # pad
-    padded_img = np.pad(signed_img, pad_width=((0, 0), (0, 0), (0, 1)), mode='constant', constant_values=0)
+    signed_img = np.ndarray.astype((tmp_img - 128), "int8")
     # flatten
-    flattened_img = padded_img.flatten()
+    flattened_img = signed_img.flatten()
     # output
     cp = multiprocessing.current_process()
-    with open(cp.name, 'wb') as fd:
+    with open(cp.name, "wb") as fd:
         fd.write(flattened_img.tobytes())
     # run xsim & process output
-    cmd = f'xsim --args {XE_FILE} {cp.name}'
+    cmd = f'xsim  --xscope "-offline trace.xmt" --args {XE_FILE} {cp.name}'
     xsim_output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-    lines = xsim_output.decode('utf-8').split()
-    fields = lines[-1].split('=')
+    lines = xsim_output.decode("utf-8").split()
+    fields = lines[-1].split("=")
 
-    predicted_label = fields[-1].strip()
+    predicted_label = fields[-1].strip().lower()
 
     os.remove(cp.name)
 
     return predicted_label
 
+
 def chunks(l, n):
     for i in range(0, len(l), n):
-        yield ([i for i in range(i, i + n)], l[i:i + n])
+        yield ([i for i in range(i, i + n)], l[i : i + n])
+
 
 def test_accuracy(args):
     global XE_FILE
@@ -73,13 +74,16 @@ def test_accuracy(args):
             if predicted_label == truth_label:
                 T = T + 1
             N = N + 1
-            P = T/N * 100
-            print(f'truth={truth_label}   predicted={predicted_label}   accuracy={T}/{N}  {P:.2f}%')
+            P = T / N * 100
+            print(
+                f"truth={truth_label}   predicted={predicted_label}   accuracy={T}/{N}  {P:.2f}%"
+            )
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-x', '--xe', required=True, help='Input .xe file')
-    parser.add_argument('-p', '--pool', type=int, default=4, help='Pool size')
+    parser.add_argument("-x", "--xe", required=True, help="Input .xe file")
+    parser.add_argument("-p", "--pool", type=int, default=4, help="Process pool size")
     args = parser.parse_args()
 
     test_accuracy(args)

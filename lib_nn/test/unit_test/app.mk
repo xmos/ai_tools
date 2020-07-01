@@ -10,8 +10,8 @@ APP_NAME = unit_test
 ### [required if $(PLATFORM) is xcore]
 ### xcore target device
 ###
-TARGET_DEVICE = XU316-1024-FB265-C32
-#TARGET_DEVICE = XCORE-AI-EXPLORER
+# TARGET_DEVICE = XU316-1024-FB265-C32
+TARGET_DEVICE = XCORE-AI-EXPLORER
 
 ######
 ### [optional] List of libraries on which this application depends

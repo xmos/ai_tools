@@ -11,6 +11,7 @@ include ../../../make/libs.mk
 #********************
 APPFLAGS := -DNDEBUG
 APPFLAGS += -DENABLE_TRACING
+APPFLAGS += -DENABLE_BENCHMARKING
 
 ifeq ($(TARGET), x86)
 	APP = test_model

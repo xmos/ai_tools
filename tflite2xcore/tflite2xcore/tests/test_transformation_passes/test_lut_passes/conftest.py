@@ -81,7 +81,7 @@ def test_mutate(trf_pass, legalize_table_pass, model):
 
     # check new op
     op = subgraph.operators[-1]
-    assert op.operator_code.code == XCOREOpCodes.XC_lookup_8
+    assert op.operator_code.code is XCOREOpCodes.XC_lookup_8
     assert "original_opcode" in op.custom_options
     assert op.custom_options["original_opcode"] is original_opcode
 

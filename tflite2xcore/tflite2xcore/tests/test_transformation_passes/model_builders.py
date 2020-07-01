@@ -7,6 +7,8 @@ from copy import deepcopy
 
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import (
+    ActivationFunctionType,
+    Padding,
     TensorType,
     OperatorCode,
     BuiltinOpCodes,
@@ -107,6 +109,29 @@ def build_mean(subgraph=None, *, input_shape, reduction_dims):
     return subgraph.model
 
 
+def build_XC_avgpool2d_global(subgraph=None, *, input_shape, reduction_dims):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, *input_shape]
+    tin = subgraph.create_tensor(
+        "input", type_=TensorType.INT8, shape=input_shape, isinput=True
+    )
+    tred = subgraph.create_tensor(
+        "reduction_dims", TensorType.INT32, [len(reduction_dims)]
+    )
+    tout = subgraph.create_tensor(
+        "output", tin.type, [tin.shape[0], tin.shape[3]], isoutput=True
+    )
+    tred.buffer.data = np.array(reduction_dims, dtype=np.int32)
+    subgraph.create_operator(
+        OperatorCode(XCOREOpCodes.XC_avgpool2d_global),
+        inputs=[tin, tred],
+        outputs=[tout],
+    )
+
+    return subgraph.model
+
+
 def build_argmax(subgraph=None, *, input_shape, input_type):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
@@ -132,9 +157,15 @@ def build_pool(
     padding,
     pool_size,
     strides,
-    fused_activation="NONE",
+    fused_activation=ActivationFunctionType.NONE,
 ):
-    assert fused_activation in ["NONE", "RELU", "RELU6"]
+    assert len(strides) == len(pool_size) == 2
+    assert padding in Padding
+    assert fused_activation in [
+        ActivationFunctionType.NONE,
+        ActivationFunctionType.RELU,
+        ActivationFunctionType.RELU6,
+    ]
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, *input_shape]
@@ -163,8 +194,6 @@ def build_pool(
     op = subgraph.create_operator(
         OperatorCode(builtin_opcode), inputs=[tin], outputs=[tout]
     )
-    assert padding in ["SAME", "VALID"]
-    assert len(strides) == len(pool_size) == 2
     op.builtin_options = {
         "padding": padding,
         "stride_h": strides[0],
@@ -183,6 +212,48 @@ def build_maxpool(subgraph=None, **kwargs):
 
 def build_avgpool(subgraph=None, **kwargs):
     return build_pool(BuiltinOpCodes.AVERAGE_POOL_2D, subgraph, **kwargs)
+
+
+def build_XC_pool(opcode, subgraph=None, *, input_shape, pool_size, strides):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, *input_shape]
+    output_shape = [
+        input_shape[0],
+        input_shape[1] // 2,
+        input_shape[1] // 2,
+        input_shape[3],
+    ]
+    quantization = {"scale": [0.35], "zero_point": [0]}
+    tin = subgraph.create_tensor(
+        "input",
+        TensorType.INT8,
+        input_shape,
+        isinput=True,
+        quantization=deepcopy(quantization),
+    )
+    tout = subgraph.create_tensor(
+        "output",
+        tin.type,
+        output_shape,
+        isoutput=True,
+        quantization=deepcopy(quantization),
+    )
+
+    op = subgraph.create_operator(OperatorCode(opcode), inputs=[tin], outputs=[tout])
+    op.add_custom_options(
+        pool=[pool_size[0], pool_size[0]], stride=[strides[0], strides[1]]
+    )
+
+    return subgraph.model
+
+
+def build_XC_maxpool2d(subgraph=None, **kwargs):
+    return build_XC_pool(XCOREOpCodes.XC_maxpool2d, subgraph, **kwargs)
+
+
+def build_XC_avgpool2d(subgraph=None, **kwargs):
+    return build_XC_pool(XCOREOpCodes.XC_avgpool2d, subgraph, **kwargs)
 
 
 def build_fc(subgraph=None, *, outputs, input_shape):
@@ -224,6 +295,74 @@ def build_fc(subgraph=None, *, outputs, input_shape):
     # add dummy data so that the op can be mutated
     w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
     b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
+
+    return subgraph.model
+
+
+def build_XC_fc_deepin_anyout(subgraph=None, *, outputs, input_channels):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, input_channels, 1, 1]
+    weight_shape = [outputs, np.prod(input_shape[1:])]
+
+    tin = subgraph.create_tensor(
+        "input",
+        TensorType.INT8,
+        input_shape,
+        isinput=True,
+        quantization={"scale": [0.02874], "zero_point": [-2]},
+    )
+    w = subgraph.create_tensor(
+        "weights",
+        TensorType.INT8,
+        weight_shape,
+        quantization={"scale": [0.00836], "zero_point": [0]},
+    )
+    b = subgraph.create_tensor(
+        "biases",
+        TensorType.INT32,
+        weight_shape[:1],
+        quantization={"scale": [0.00024], "zero_point": [0]},
+    )
+    tout = subgraph.create_tensor(
+        "output",
+        TensorType.INT16,
+        shape=[1, weight_shape[0]],
+        isoutput=True,
+        quantization={"scale": [0.11332], "zero_point": [6]},
+    )
+    subgraph.create_operator(
+        OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout),
+        inputs=[tin, w, b],
+        outputs=[tout],
+    )
+
+    return subgraph.model
+
+
+def build_XC_requantize_16_to_8(subgraph=None, *, outputs, input_channels):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, input_channels, 1, 1]
+    weight_shape = [outputs, np.prod(input_shape[1:])]
+
+    tin = subgraph.create_tensor(
+        "input",
+        TensorType.INT8,
+        input_shape,
+        isinput=True,
+        quantization={"scale": [0.02874], "zero_point": [-2]},
+    )
+    tout = subgraph.create_tensor(
+        "output",
+        TensorType.INT16,
+        shape=[1, weight_shape[0]],
+        isoutput=True,
+        quantization={"scale": [0.11332], "zero_point": [6]},
+    )
+    subgraph.create_operator(
+        OperatorCode(XCOREOpCodes.XC_requantize_16_to_8), inputs=[tin], outputs=[tout]
+    )
 
     return subgraph.model
 
@@ -284,6 +423,7 @@ def build_mlp(subgraph=None, *, outputs, hidden_nodes, input_shape):
 
 def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     subgraph = subgraph or XCOREModel().create_subgraph()
+    assert padding in Padding
 
     height, width = input_size
     C_out, K_h, K_w, C_in = weight_shape
@@ -297,9 +437,9 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
     b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
 
-    if padding == "SAME":
+    if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]
-    elif padding == "VALID":
+    elif padding is Padding.VALID:
         output_shape = [
             1,
             int(np.ceil((height - K_h + 1) / strides[0])),
@@ -326,6 +466,8 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
 def build_depthwise_conv2d(
     subgraph=None, *, weight_shape, input_size, padding, strides=(1, 1)
 ):
+    assert len(strides) == 2
+    assert padding in Padding
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     # NOTE: weight_shape uses channel order HWIM (following TensorFlow DepthwiseConv)
@@ -343,9 +485,9 @@ def build_depthwise_conv2d(
     w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
     b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
 
-    if padding == "SAME":
+    if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]
-    elif padding == "VALID":
+    elif padding is Padding.VALID:
         output_shape = [
             1,
             int(np.ceil((height - K_h + 1) / strides[0])),
@@ -371,7 +513,7 @@ def build_depthwise_conv2d(
     return subgraph.model
 
 
-def build_XC_conv2d_deep(subgraph=None, *, weight_shape, input_size, strides):
+def build_XC_conv2d(opcode, subgraph=None, *, weight_shape, input_size, strides):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     height, width = input_size
@@ -396,13 +538,25 @@ def build_XC_conv2d_deep(subgraph=None, *, weight_shape, input_size, strides):
     tout = subgraph.create_tensor("output", tin.type, output_shape, isoutput=True)
 
     op = subgraph.create_operator(
-        OperatorCode(XCOREOpCodes.XC_conv2d_deep), inputs=[tin, w, b], outputs=[tout]
+        OperatorCode(opcode), inputs=[tin, w, b], outputs=[tout]
     )
     op.add_custom_options(
         pad=[pads[0][0], pads[1][0], -127], stride=[strides[0], strides[1]]
     )
 
     return subgraph.model
+
+
+def build_XC_conv2d_deep(subgraph=None, **kwargs):
+    return build_XC_conv2d(XCOREOpCodes.XC_conv2d_deep, subgraph, **kwargs)
+
+
+def build_XC_conv2d_shallowin(subgraph=None, **kwargs):
+    return build_XC_conv2d(XCOREOpCodes.XC_conv2d_shallowin, subgraph, **kwargs)
+
+
+def build_XC_conv2d_1x1(subgraph=None, **kwargs):
+    return build_XC_conv2d(XCOREOpCodes.XC_conv2d_1x1, subgraph, **kwargs)
 
 
 def build_XC_conv2d_depthwise(subgraph=None, *, weight_shape, input_size, strides):

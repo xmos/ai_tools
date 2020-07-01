@@ -4,6 +4,7 @@ import numpy as np
 
 from tflite2xcore.transformation_passes import OperatorMatchingPass
 from tflite2xcore.xcore_schema import (
+    Padding,
     TensorType,
     BuiltinOpCodes,
     XCOREOpCodes,
@@ -63,7 +64,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
 
         if len(pad) == 3 and not isinstance(pad, str):
             return True
-        elif pad in ["SAME", "VALID"]:
+        elif pad in ["SAME", "VALID"] + list(Padding):
             raise ValueError(f"Deprecated 'pad' option in {opcode}: 'pad'={pad}")
         else:
             self.logger.warning(f"Invalid option in {opcode}: 'pad'={pad}")

@@ -11,11 +11,11 @@ extern "C" {
 namespace xcore {
 namespace arg_min_max {
 
-XCoreStatus ArgMax16::Eval(const int16_t* A, int32_t* C, const int32_t length) {
+XCoreStatus ArgMax16::Eval(int32_t* Y, const int16_t* X, const int32_t length) {
   TRACE_INFO("ArgMax16 Eval id=%p\n", this);
   TIMER_START();
 
-  argmax_16(A, C, length);
+  argmax_16(Y, X, length);
 
   TIMER_STOP("ArgMax16 id=%p", this);
   return kXCoreOk;

@@ -77,13 +77,14 @@ def analyze_model(model):
     return analysis
 
 
-# TODO: remove this since analysis should not rely on an interpreter
+# TODO: remove this someday since analysis should not rely on an interpreter
+#       however, currently the interpreter is the only method to determine the
+#       size of the tensor arena
 def calc_arena_sizes(model_content):
     interpreter = xcore_interpreter.XCOREInterpreter(model_content=model_content)
     return interpreter.tensor_arena_size, interpreter.xcore_heap_size
 
 
-# TODO: remove this since analysis should not rely on an interpreter
 def print_report(tflite_output_path):
     with open(tflite_output_path, "rb") as fd:
         model_content = fd.read()

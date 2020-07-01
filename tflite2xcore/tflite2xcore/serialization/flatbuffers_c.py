@@ -10,6 +10,7 @@ import numpy as np
 
 from tflite2xcore import libtflite2xcore as lib
 
+
 class FlexbufferBuilder:
     def __init__(self, data=None):
         lib.new_builder.restype = ctypes.c_void_p
@@ -26,7 +27,12 @@ class FlexbufferBuilder:
         lib.builder_start_vector.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
         lib.builder_string.restype = ctypes.c_size_t
 
-        lib.builder_end_vector.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_bool, ctypes.c_bool]
+        lib.builder_end_vector.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_size_t,
+            ctypes.c_bool,
+            ctypes.c_bool,
+        ]
         lib.builder_string.restype = ctypes.c_size_t
 
         lib.builder_int.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int]
@@ -41,7 +47,11 @@ class FlexbufferBuilder:
         lib.builder_float.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_float]
         lib.builder_float.restype = ctypes.c_void_p
 
-        lib.builder_string.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+        lib.builder_string.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
         lib.builder_string.restype = ctypes.c_void_p
 
         lib.builder_vector_int.argtypes = [ctypes.c_void_p, ctypes.c_int]
@@ -78,13 +88,15 @@ class FlexbufferBuilder:
             elif list_item_type == float or list_item_type == np.float32:
                 lib.builder_vector_float(obj, float(list_item))
             elif list_item_type == str:
-                lib.builder_vector_string(obj, list_item.encode('ascii'))
+                lib.builder_vector_string(obj, list_item.encode("ascii"))
             elif list_item_type == dict:
                 self.__add_map(obj, list_item)
             elif list_item_type == list:
                 self.__add_vector(obj, list_item)
             else:
-                raise Exception(f'Type {list_item_type} not supported (list item={list_item})')
+                raise Exception(
+                    f"Type {list_item_type} not supported (list item={list_item})"
+                )
         size = lib.builder_end_vector(self.obj, size, False, False)
 
         return size
@@ -93,7 +105,7 @@ class FlexbufferBuilder:
         msize = lib.builder_start_map(obj, key)
 
         for key, value in data.items():
-            key_ascii = key.encode('ascii')
+            key_ascii = key.encode("ascii")
             value_type = type(value)
             if value_type == int:
                 lib.builder_int(obj, key_ascii, value)
@@ -102,7 +114,7 @@ class FlexbufferBuilder:
             elif value_type == float:
                 lib.builder_float(obj, key_ascii, value)
             elif value_type == str:
-                lib.builder_string(obj, key_ascii, value.encode('ascii'))
+                lib.builder_string(obj, key_ascii, value.encode("ascii"))
             elif value_type == dict:
                 self.__add_map(obj, value, key_ascii)
             elif value_type == list:
@@ -110,7 +122,9 @@ class FlexbufferBuilder:
             elif value_type == tuple:
                 self.__add_vector(obj, list(value), key_ascii)
             else:
-                raise Exception(f'Type {value_type} not supported (key={key_ascii}, value={value})')
+                raise Exception(
+                    f"Type {value_type} not supported (key={key_ascii}, value={value})"
+                )
 
         size = lib.builder_end_map(obj, msize)
         return size
@@ -125,7 +139,7 @@ class FlexbufferBuilder:
     def get_bytes(self, size=1024):
         buf = ctypes.create_string_buffer(size)
         actual_size = lib.builder_get_buffer(self.obj, buf)
-        return [ubyte[0] for ubyte in struct.iter_unpack('B', buf[0:actual_size])]
+        return [ubyte[0] for ubyte in struct.iter_unpack("B", buf[0:actual_size])]
 
 
 class FlexbufferParser:
@@ -138,6 +152,7 @@ class FlexbufferParser:
         json_buffer = ctypes.create_string_buffer(size)
 
         actual_size = lib.parse_flexbuffer(
-            char_array.from_buffer_copy(buffer), len(buffer), json_buffer, size)
+            char_array.from_buffer_copy(buffer), len(buffer), json_buffer, size
+        )
 
         return json_buffer[0:actual_size]

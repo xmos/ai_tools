@@ -148,7 +148,7 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
         interpreter.allocate_tensors()
 
         input_ = np.fromfile(
-            input_file, dtype=TensorType.to_numpy_dtype(input_tensor.type)
+            input_file, dtype=input_tensor.type.to_numpy_dtype()
         )
         input_ = input_.reshape(input_tensor.shape)
 
@@ -223,7 +223,7 @@ def test_XC_avgpool2d(test_model_app, XC_avgpool2d_test_case, abs_tol):
     assert run_test_case(test_model_app, XC_avgpool2d_test_case, abs_tol)
 
 
-def test_XC_avgpool2d_global(test_model_app, XC_avgpool2d_global_test_case, abs_tol):
+def test_XC_avgpool2d_global(test_model_app, XC_avgpool2d_global_test_case, abs_tol=2):
     if is_xfail(XC_avgpool2d_global_test_case):
         pytest.xfail()
     assert run_test_case(test_model_app, XC_avgpool2d_global_test_case, abs_tol)

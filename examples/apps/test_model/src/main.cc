@@ -5,12 +5,11 @@
 #include <cstdio>
 #include <iostream>
 
+#include "lib_ops/api/lib_ops.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/version.h"
-
-#include "lib_ops/api/lib_ops.h"
 
 tflite::ErrorReporter *error_reporter = nullptr;
 const tflite::Model *model = nullptr;

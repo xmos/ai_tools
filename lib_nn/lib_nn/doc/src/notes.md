@@ -51,48 +51,7 @@ as:
 
 
 
-### Note 3: Bias Tensor Layout ###      {#bias_layout}
-
-A bias vector is a `C_out`-element sequence of 32-bit values, where each element seeds a
-32-bit accumulator with an initial value. The standard-form bias vector can be 
-represented as:
-
-@code
-    int32_t biases[C_out];
-@endcode
-
-A form 1 bias tensor layout rearranges the data to minimize the pointer arithmetic required
-during computation. Form 1 layout can be represented as:
-
-@code
-    data16_t B[C_out/16][2][16];
-@endcode
-
-In this layout, the biases are taken 16 at a time (due to the 16 accumulators used in the
-8- and 16-bit modes of the XS3 VPU), and the upper and lower half-words are separated (also
-due to an ideosyncrasy of the XS3 VPU).
-
-More specifically, the data in this tensor is arranged in memory such that:
-- The first set of 16 data16_t values are the upper 16 bits of output channels 0-15.
-- The second set of 16 data16_t values are the lower 16 bits of output channels 0-15.
-- The third set of 16 data16_t values are the upper 16 bits of output channels 16-31.
-- The fourth set of 16 data16_t values are the lower 16 bits of output channels 16-31.
-- And so on.
-
-The following represents how this rearrangement may be achieved:
-
-@code
-    for(int i = 0; i < C_out; i++){
-        B[i/16][0][i%16] = biases[i] >> 16;
-        B[i/16][1][i%16] = biases[i] & (0xFFFF);
-    }
-@endcode
-
-Thus, in this layout, the elements `B[i][0][j]` and `B[i][1][j]` represent the upper and
-lower (respectively) 16 bits of the 32-bit bias for output channel `(16*i + j)`.
-
-
-### Note 4: Inner Products and Saturation ###      {#inner_prod_sat}
+### Note 3: Inner Products and Saturation ###      {#inner_prod_sat}
 
  Many functions in this API compute inner products between vectors with many elements. These
  inner products are computed as long sequences of multiply-accumulates on the VPU. Unlike on
@@ -141,7 +100,7 @@ Therefore, where saturation in unacceptable, it is incumbent upon the *user* of 
 ensure that saturation is not possible given the inputs (matrix/kernel coefficients and input
 vectors) and other parameters (e.g. input channel count).
 
-### Note 5: Output Shifts and Scale ###      {#out_shift_scale}
+### Note 4: Output Shifts and Scale ###      {#out_shift_scale}
 
 Many functions in this API include shifts and a scale on each output prior to writing the result
 to memory. For the sake of brevity, the details of these operations are contained here, rather than 
@@ -189,7 +148,7 @@ Final shift:
     In functions that output 16-bit results, no final shift occurs here.
 
 
-### Note 6: Bias-Scale-Offset Tensor Layout ###      {#bso_layout}
+### Note 5: Bias-Scale-Offset Tensor Layout ###      {#bso_layout}
 
 In most cases, where a function requires a Bias-Scale-Offset (BSO) tensor as input, the required layout will
 be as specified here [0].
@@ -217,7 +176,7 @@ The second axis corresponds to the specific parameter. The indices are:
         for information on how biases are used, see "Notes on Inner Products and Saturation"
 [1]     See "Notes on Channel Output and Input Groups".
 
-### Note 7: Channel Output and Input Groups ###      {#c_groups}
+### Note 6: Channel Output and Input Groups ###      {#c_groups}
 
 Most functions in this API are capable of handling many input and output channels. The XS3 VPU is capable
 of consuming many input channels, or producing many output channels in a single operation. These lead to the

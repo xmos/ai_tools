@@ -1,9 +1,10 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
-#ifndef XCORE_DISPATCHER_H_
-#define XCORE_DISPATCHER_H_
+#ifndef XCORE_OPERATORS_DISPATCHER_H_
+#define XCORE_OPERATORS_DISPATCHER_H_
 
+#include "lib_ops/api/allocator.h"
 #include "lib_ops/api/lib_ops.h"
-#include "lib_ops/api/par.h"
+#include "lib_ops/api/planning.h"
 
 #ifdef XCORE
 
@@ -31,33 +32,48 @@ typedef std::vector<std::thread> threadgroup_t;
 
 namespace xcore {
 
-typedef struct Task {
-  ATTRIBUTE_THREAD_FUNCTION thread_function_t function;
-  void *argument;
-} Task;
+constexpr size_t max_threads = 5;
+constexpr size_t bytes_per_stackword = 4;
+constexpr size_t changrp_len = (16);
+constexpr size_t bso_changrp_len = (7 * changrp_len);
+constexpr size_t bso_changrp_bytes = (bso_changrp_len * 2);
 
 typedef struct TaskArray {
-  int size;
+  ATTRIBUTE_THREAD_FUNCTION thread_function_t function;
   size_t stack_words;
-  Task *data;
+  char *stack;
+  int size;
+  void *arguments[max_threads];
 } TaskArray;
 
 class Dispatcher {
  public:
-  Dispatcher(void *buffer, size_t size, int num_cores,
-             bool use_current_core = true);
+  Dispatcher(void *buffer, size_t buffer_size, bool use_current_core = true);
   ~Dispatcher();
 
-  XCoreStatus AddThread(thread_function_t function, void *argument,
-                        size_t stack_words);
-  XCoreStatus Join();
+  XCoreStatus InitializeTasks(thread_function_t function, size_t stack_words);
+  XCoreStatus AddTask(void *argument);
+  XCoreStatus JoinTasks();
+
   XCoreStatus Reset();
 
+  void *AllocatePersistantBuffer(size_t size);
+  void *AllocateScratchBuffer(size_t size);
+  XCoreStatus ResetScratchAllocation();
+
+  size_t GetMaxAllocatedSize();
+
+  void PreloadBuffer(int8_t **dest, int8_t const *src, int32_t size);
+  void PreloadWeights(int8_t **dest, int8_t const *src, int32_t size,
+                      ChannelGroup const &changrp);
+  void PreloadBiases(int16_t **dest, int16_t const *src,
+                     ChannelGroup const &changrp);
+
  private:
-  int num_threads_;
   bool use_current_thread_;
   threadgroup_t group_;
   TaskArray tasks_;
+  MemoryAllocator allocator_;
 };
 
 // static, shared Dispatcher object
@@ -66,4 +82,4 @@ XCoreStatus InitializeXCore(Dispatcher *dispatcher);
 
 }  // namespace xcore
 
-#endif  // XCORE_DISPATCHER_H_
+#endif  // XCORE_OPERATORS_DISPATCHER_H_

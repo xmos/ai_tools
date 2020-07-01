@@ -7,8 +7,6 @@
 #include "xs3_vpu.h"
 
 
-
-
 typedef struct {
 
     //Word offset = 0
@@ -27,7 +25,9 @@ extern const vpu_constants_t vpu_vects;
 
 #endif // __ASSEMBLER__
 
-
+#define VPU_MODE_32BIT  0x0000
+#define VPU_MODE_16BIT  0x0100
+#define VPU_MODE_8BIT   0x0200
 
 #define VPU_VEC_0x007F  (0)
 #define VPU_VEC_0x01    (8)

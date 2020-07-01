@@ -7,8 +7,6 @@
 
 namespace xcore {
 
-constexpr size_t max_regions = 5;
-
 typedef struct RowColRegion {
   int32_t top;
   int32_t left;
@@ -18,17 +16,17 @@ typedef struct RowColRegion {
 
 class RowColRegionArray {
  public:
-  RowColRegionArray() : size_(0) {}
+  RowColRegionArray();
+  void Init(size_t size);
   const RowColRegion &operator[](int i);
   void Append(const RowColRegion &region);
 
-  int32_t GetSize() { return size_; }
-  // void Clear() { size_ = 0; }
-
-  RowColRegion regions[max_regions];
+  size_t GetSize();
 
  private:
+  int32_t next_;
   int32_t size_;
+  RowColRegion *regions_;
 };
 
 typedef struct ChannelGroup {
@@ -39,14 +37,16 @@ typedef struct ChannelGroup {
 
 class ChannelGroupArray {
  public:
-  ChannelGroupArray() : n_chans_(0) {}
+  ChannelGroupArray();
+  void Init(size_t size);
   const ChannelGroup &operator[](int i);
-  void SetNumChannels(int32_t chans) { n_chans_ = chans; }
-  int32_t GetSize();
+  void Append(const ChannelGroup &changrp);
+  size_t GetSize();
 
  private:
-  int32_t n_chans_;
-  ChannelGroup chan_group_;
+  int32_t next_;
+  int32_t size_;
+  ChannelGroup *chan_groups_;
 };
 
 class ExecutionPlan {

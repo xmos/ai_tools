@@ -1,10 +1,9 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 #include "lib_ops/api/planning.h"
 
-namespace xcore {
+#include "lib_ops/api/dispatcher.h"
 
-constexpr size_t changrp_len = 16;
-constexpr size_t changrp_len_log2 = 4;
+namespace xcore {
 
 //*****************************
 //*****************************
@@ -14,16 +13,30 @@ constexpr size_t changrp_len_log2 = 4;
 //*****************************
 //*****************************
 
+RowColRegionArray::RowColRegionArray()
+    : next_(0), size_(0), regions_(nullptr) {}
+
+void RowColRegionArray::Init(size_t size) {
+  assert(regions_ == nullptr);
+  Dispatcher *dispatcher = GetDispatcher();
+
+  size_ = size;
+  regions_ = reinterpret_cast<RowColRegion *>(
+      GetDispatcher()->AllocatePersistantBuffer(sizeof(RowColRegion) * size_));
+}
+
 const RowColRegion &RowColRegionArray::operator[](int i) {
   assert(i < size_);
-  return regions[i];
+  return regions_[i];
 }
 
 void RowColRegionArray::Append(const RowColRegion &region) {
-  assert(size_ < max_regions);
-  regions[size_] = std::move(region);
-  size_++;
+  assert(next_ < size_);
+  regions_[next_] = std::move(region);
+  next_++;
 }
+
+size_t RowColRegionArray::GetSize() { return next_; }
 
 //*****************************
 //*****************************
@@ -33,19 +46,30 @@ void RowColRegionArray::Append(const RowColRegion &region) {
 //*****************************
 //*****************************
 
-const ChannelGroup &ChannelGroupArray::operator[](int i) {
-  assert(i < GetSize());
-  chan_group_.index = i;
-  chan_group_.start = i * changrp_len;
-  if ((chan_group_.start + changrp_len) <= n_chans_)
-    chan_group_.size = changrp_len;
-  else
-    chan_group_.size = n_chans_ - chan_group_.start;
-  return chan_group_;
+ChannelGroupArray::ChannelGroupArray()
+    : next_(0), size_(0), chan_groups_(nullptr) {}
+
+void ChannelGroupArray::Init(size_t size) {
+  assert(chan_groups_ == nullptr);
+  Dispatcher *dispatcher = GetDispatcher();
+
+  size_ = size;
+  chan_groups_ = reinterpret_cast<ChannelGroup *>(
+      GetDispatcher()->AllocatePersistantBuffer(sizeof(ChannelGroup) * size_));
 }
 
-int32_t ChannelGroupArray::GetSize() {
-  return (n_chans_ + changrp_len - 1) >> changrp_len_log2;
+const ChannelGroup &ChannelGroupArray::operator[](int i) {
+  assert(i < GetSize());
+
+  return chan_groups_[i];
 }
+
+void ChannelGroupArray::Append(const ChannelGroup &changrp) {
+  assert(next_ < size_);
+  chan_groups_[next_] = std::move(changrp);
+  next_++;
+}
+
+size_t ChannelGroupArray::GetSize() { return next_; }
 
 }  // namespace xcore

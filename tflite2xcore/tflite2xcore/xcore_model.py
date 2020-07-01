@@ -231,11 +231,6 @@ class Tensor:
         return self.name_segments()[-1]
 
     @property
-    def standard_type(self):
-        """Return type (from cstdint.h)"""
-        return self.type.to_stdint_type()
-
-    @property
     def size(self):
         size = self.type.to_bytes()
         for s in self.shape:

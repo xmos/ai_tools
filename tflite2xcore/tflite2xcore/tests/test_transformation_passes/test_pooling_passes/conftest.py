@@ -21,7 +21,10 @@ PARAMS["default"].update(
         "padding": [Padding.VALID],
         "non_matching_padding": [Padding.SAME],
         "fused_activation": [ActivationFunctionType.NONE],
-        "non_matching_fused_activation": [ActivationFunctionType.RELU, ActivationFunctionType.RELU6],
+        "non_matching_fused_activation": [
+            ActivationFunctionType.RELU,
+            ActivationFunctionType.RELU6,
+        ],
         "stride_h": [1, 2],
         "stride_w": [1, 2],
         "pool_h": [1, 2, 3],

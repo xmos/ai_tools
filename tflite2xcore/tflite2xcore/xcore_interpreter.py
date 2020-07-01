@@ -36,6 +36,7 @@ class TfLiteType(Enum):
     kTfLiteFloat16 = 10
     kTfLiteFloat64 = 11
 
+
 __TfLiteType_to_numpy_dtype = {
     # TfLiteType.kTfLiteString: None,  # intentionally not supported
     # TfLiteType.kTfLiteNoType: None,  # intentionally not supported

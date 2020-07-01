@@ -91,7 +91,9 @@ class XCORESerializationMixin:
                     options["builtin_options"] = builtin_options_to_dict(
                         operatorT.builtinOptions
                     )
-                    options["builtin_options_type"] = xcore_schema.BuiltinOptions(operatorT.builtinOptionsType)
+                    options["builtin_options_type"] = xcore_schema.BuiltinOptions(
+                        operatorT.builtinOptionsType
+                    )
                 if (
                     hasattr(operatorT, "customOptions")
                     and operatorT.customOptions is not None

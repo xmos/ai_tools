@@ -271,4 +271,3 @@ class SlicePlanner(ExecutionPlanner):
                 rowcol_slices=row_slices,
             )
         )
-

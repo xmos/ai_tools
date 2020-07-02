@@ -5,7 +5,7 @@ import pytest
 from copy import deepcopy
 
 from tflite2xcore.converter import CleanupManager
-from tflite2xcore.transformation_passes import RemovePaddingInputPass
+from tflite2xcore.transformation_passes.padding_passes import RemovePaddingInputPass
 from tflite2xcore.xcore_schema import BuiltinOpCodes
 
 from ..model_builders import build_pad, build_non_input_pad

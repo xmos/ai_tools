@@ -225,6 +225,11 @@ class Tensor:
             size *= s
         return size
 
+    def as_array(self, dtype=None): 
+        return np.frombuffer(
+            self.buffer._data, dtype=dtype or self.type.to_numpy_dtype()
+        ).reshape(self.shape)
+
     @property
     def numpy(self):
         return np.frombuffer(

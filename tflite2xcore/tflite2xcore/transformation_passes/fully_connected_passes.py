@@ -175,7 +175,7 @@ class RemoveRedundantReshapePass(OperatorMatchingPass):
                     and self._producer.operator_code.code is BuiltinOpCodes.RESHAPE
                 ):
 
-                    # Check if new shape is essentially a flatten
+                    # Check if reshape is essentially a flatten
                     return self._producer.inputs[1].numpy.tolist() == [
                         -1,
                         op.inputs[0].shape[1],

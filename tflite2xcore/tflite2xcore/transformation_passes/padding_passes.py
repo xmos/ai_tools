@@ -224,12 +224,13 @@ class FuseConsecutivePadsPass(OperatorMatchingPass):
 class RemovePaddingInputPass(OperatorMatchingPass):
     def match(self, op):
 
+        # Match operator
         if op.operator_code.code is BuiltinOpCodes.PAD:
             padding = op.inputs[1].numpy.tolist()
 
             return (
                 super().match(op)
-                # Match padding only where it is the first operator in the subgraph
+                # Match positon in subgraph
                 and op.inputs[0] in op.subgraph.inputs
                 # Match only padding in channel direction i.e. inserted for VPU alignment
                 and len(padding) == 4

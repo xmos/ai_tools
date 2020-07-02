@@ -219,3 +219,30 @@ class FuseConsecutivePadsPass(OperatorMatchingPass):
         # set up bypass connection
         op.inputs[0] = producer.inputs[0]
         producer.inputs[0].consumers.append(op)
+
+
+class RemovePaddingInputPass(OperatorMatchingPass):
+    def match(self, op):
+
+        if op.operator_code.code is BuiltinOpCodes.PAD:
+            padding = op.inputs[1].numpy.tolist()
+
+            return (
+                super().match(op)
+                # Match padding only where it is the first operator in the subgraph
+                and op.inputs[0] in op.subgraph.inputs
+                # Match only padding in channel direction i.e. inserted for VPU alignment
+                and len(padding) == 4
+                and (padding[-1] != [0, 0])
+                and all(pad == [0, 0] for pad in padding[:-1])
+            )
+
+        else:
+            return False
+
+    def mutate(self, op):
+        subgraph = op.subgraph
+
+        subgraph.inputs.append(op.outputs[0])
+        subgraph.remove_tensor(op.inputs[0])
+        subgraph.remove_operator(op)

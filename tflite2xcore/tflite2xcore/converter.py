@@ -1,4 +1,4 @@
-# Copyright (c) 2019, XMOS Ltd, All rights reserved
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pathlib
 
@@ -92,6 +92,8 @@ def optimize_for_xcore(
         model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
 
+    pass_mgr.register_pass(passes.RemoveRedundantReshapePass())
+
     # canonicalize convolutions
     pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
     pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
@@ -101,6 +103,8 @@ def optimize_for_xcore(
 
     # word alignment canonicalization introduces new pads, so first fuse then split
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
+
+    # Split batch/channel-wise padding from spacial padding - allows fusing of spacial padding later
     pass_mgr.register_pass(passes.SplitPaddingPass())
 
     # need to cleanup after the first round of canonicalization
@@ -135,6 +139,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
 
+    # Fuse spacial padding with conv2d
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
 
     if ignore_input_alignment:

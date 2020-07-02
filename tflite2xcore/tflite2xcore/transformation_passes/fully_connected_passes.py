@@ -153,3 +153,46 @@ class PlanRequant16To8Pass(OperatorMatchingPass):
         plan.num_threads = min(plan.num_threads, len(plan.changrp_slices))
 
         op.add_custom_options(plan=plan.to_dict())
+
+
+class RemoveRedundantReshapePass(OperatorMatchingPass):
+
+    MATCHING_OPCODES = (
+        # TODO fully populate this set
+        BuiltinOpCodes.FULLY_CONNECTED,
+    )
+
+    @property
+    def _producer(self):
+        return self._op.inputs[0].producers[0]
+
+    def match(self, op):
+        try:
+            with self.using(op):
+                if (
+                    super().match(op)
+                    and op.operator_code.code in self.MATCHING_OPCODES
+                    and self._producer.operator_code.code is BuiltinOpCodes.RESHAPE
+                ):
+
+                    # Check if new shape is essentially a flatten
+                    return self._producer.inputs[1].numpy.tolist() == [
+                        -1,
+                        op.inputs[0].shape[1],
+                    ]
+        except IndexError:
+            return False
+
+    def mutate(self, op):
+        subgraph = op.subgraph
+
+        with self.using(op):
+            producer = self._producer
+
+        # Remove connection from old inputs to the anchor FC op
+        intermediate = op.inputs[0]
+        intermediate.consumers.remove(op)
+
+        # Create the new connection
+        op.inputs[0] = producer.inputs[0]
+        producer.inputs[0].consumers.append(op)

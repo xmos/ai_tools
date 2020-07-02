@@ -28,6 +28,7 @@ from .fully_connected_passes import (
     LegalizeXCFullyConnectedPass,
     PlanFullyConnectedPass,
     PlanRequant16To8Pass,
+    RemoveRedundantReshapePass,
 )
 
 from .pooling_passes import (

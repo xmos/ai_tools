@@ -28,39 +28,27 @@ class Buffer:
     @data.setter
     def data(self, data):
         if data is None:
-            self._data = np.array([], dtype=np.uint8)
-        elif isinstance(data, list):
-            self._data = np.array(data, dtype=np.uint8)
+            self._data = b""
+        elif isinstance(data, (list, tuple, bytes, bytearray)):
+            # this ensures immutability and that lists have uint8 elements only
+            self._data = bytes(data)
         elif isinstance(data, np.ndarray):
-            if data.dtype not in (np.uint8, "uint8"):
-                logging.getLogger("XCOREModel").xdebug(
+            try:
+                TensorType.from_numpy_dtype(data.dtype)
+            except KeyError:
+                # we throw a warning if a non-convertible datatype is used
+                logging.getLogger("XCOREModel").warning(
                     f"Numpy array of type {data.dtype} stored in buffer"
                 )
-            self._data = np.frombuffer(data.tostring(), dtype=np.uint8)
+            self._data = data.tobytes()
         else:
-            raise TypeError(f"data must be list or numpy array of uint8 type")
+            raise TypeError(f"data must be list/tuple of bytes or numpy array")
 
     def __len__(self):
-        if self.data is not None:
-            return len(self.data)
-        else:
-            return 0
+        return len(self.data)
 
     def __str__(self):
-        if self.data is not None:
-            return f"Buffer[{len(self.data)}]"
-        else:
-            return "Buffer[]"
-
-    def unpack(self, stdtype="uint8_t"):
-        LUT = {
-            "uint8_t": "B",
-            "int8_t": "b",
-            "int16_t": "h",
-            "int32_t": "i",
-            "float32_t": "f",
-        }
-        return [i[0] for i in struct.iter_unpack(LUT[stdtype], bytearray(self.data))]
+        return f"Buffer[{len(self.data)}]"
 
     def sanity_check(self):
         assert self in self.model.buffers
@@ -239,11 +227,9 @@ class Tensor:
 
     @property
     def numpy(self):
-        arr = np.array(
-            self.buffer.unpack(self.type.to_stdint_type()),
-            dtype=self.type.to_numpy_type(),
-        )
-        return arr.reshape(self.shape)
+        return np.frombuffer(
+            self.buffer._data, dtype=self.type.to_numpy_dtype()
+        ).reshape(self.shape)
 
 
 class Subgraph:

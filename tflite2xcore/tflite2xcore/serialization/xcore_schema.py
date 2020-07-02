@@ -45,20 +45,6 @@ __TensorType_to_bytes = {
 }
 TensorType.to_bytes = lambda self: __TensorType_to_bytes[self]
 
-__TensorType_to_numpy_type = {
-    # TensorType.STRING: None,  # intentionally not supported
-    TensorType.FLOAT32: np.float64,
-    TensorType.FLOAT16: np.float64,
-    TensorType.COMPLEX64: np.complex128,
-    TensorType.INT64: np.int64,
-    TensorType.INT32: np.int64,
-    TensorType.INT16: np.int64,
-    TensorType.INT8: np.int64,
-    TensorType.UINT8: np.int64,
-    TensorType.BOOL: np.int64,
-}
-TensorType.to_numpy_type = lambda self: __TensorType_to_numpy_type[self]
-
 __TensorType_to_numpy_dtype = {
     # TensorType.STRING: None,  # intentionally not supported
     TensorType.FLOAT32: np.float32,

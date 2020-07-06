@@ -84,15 +84,16 @@ def test_mutate(trf_pass, model):
 
     # check parameters
     params_NC = op_NC.inputs[1].as_array()
-    params_HW = op_HW.inputs[1].as_array()
     assert params_NC[1][0] == params_NC[2][0] == 0
     assert params_NC[1][1] == params_NC[2][1] == 0
-    assert params_HW[0][0] == params_HW[3][0] == 0
-    assert params_HW[0][1] == params_HW[3][1] == 0
     assert params_NC[0][0] == params_ori[0][0]
     assert params_NC[0][1] == params_ori[0][1]
     assert params_NC[3][0] == params_ori[3][0]
     assert params_NC[3][1] == params_ori[3][1]
+
+    params_HW = op_HW.inputs[1].as_array()
+    assert params_HW[0][0] == params_HW[3][0] == 0
+    assert params_HW[0][1] == params_HW[3][1] == 0
     assert params_HW[1][0] == params_ori[1][0]
     assert params_HW[1][1] == params_ori[1][1]
     assert params_HW[2][0] == params_ori[2][0]

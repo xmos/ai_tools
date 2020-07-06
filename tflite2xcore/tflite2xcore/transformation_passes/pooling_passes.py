@@ -178,8 +178,8 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
                 shape=[7],
                 consumers=[new_op],
             )
-            new_op.inputs[1].buffer.data = np.frombuffer(
-                b"".join(p.tostring() for p in self._bias_scale_shift), dtype=np.int8
+            new_op.inputs[1].buffer.data = b"".join(
+                p.tostring() for p in self._bias_scale_shift
             )
             subgraph.remove_tensor(old_tensor)
 

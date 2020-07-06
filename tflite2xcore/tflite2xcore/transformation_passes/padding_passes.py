@@ -225,7 +225,7 @@ class RemovePaddingInputPass(OperatorMatchingPass):
     def match(self, op):
 
         if op.operator_code.code is BuiltinOpCodes.PAD:
-            padding = op.inputs[1].numpy.tolist()
+            padding = op.inputs[1].as_array().tolist()
 
             return (
                 super().match(op)

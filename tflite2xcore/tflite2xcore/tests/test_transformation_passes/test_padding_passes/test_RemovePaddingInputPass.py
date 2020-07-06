@@ -56,9 +56,7 @@ def test_mutate(trf_pass, model):
     # extract original padding values
     subgraph = model.subgraphs[0]
     assert len(subgraph.operators) == 1
-    pad_ori = subgraph.operators[0].inputs[1]
-    paddings_ori = pad_ori.numpy.tolist()
-    in_ori, out_ori = subgraph.inputs[0], subgraph.outputs[0]
+    out_ori = subgraph.outputs[0]
 
     # run mutating pass
     trf_pass.run(model)

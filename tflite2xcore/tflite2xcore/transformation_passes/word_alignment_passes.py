@@ -54,9 +54,7 @@ class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):
                 quantization=old_weight_tensor.quantization,
                 consumers=[self._op],
             )
-            new_weight_tensor.buffer.data = np.pad(
-                self._weights.numpy.astype(np.int8), pads
-            )
+            new_weight_tensor.buffer.data = np.pad(self._weights.as_array(), pads)
 
             # rewire old and new kernel tensors
             old_weight_tensor.consumers.remove(self._op)

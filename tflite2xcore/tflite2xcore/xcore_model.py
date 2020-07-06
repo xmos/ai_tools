@@ -226,15 +226,10 @@ class Tensor:
         return size
 
     def as_array(self, dtype=None): 
-        return np.frombuffer(
-            self.buffer._data, dtype=dtype or self.type.to_numpy_dtype()
-        ).reshape(self.shape)
-
-    @property
-    def numpy(self):
-        return np.frombuffer(
-            self.buffer._data, dtype=self.type.to_numpy_dtype()
-        ).reshape(self.shape)
+        arr = np.frombuffer(self.buffer._data, dtype=self.type.to_numpy_dtype())
+        if dtype:
+            arr = arr.astype(dtype)
+        return arr.reshape(self.shape)
 
 
 class Subgraph:
@@ -523,7 +518,7 @@ class XCOREModel(XCORESerializationMixin):
             for input_ in subgraph.inputs:
                 print(input_.pprint())
                 if tensor_values and len(input_.buffer):
-                    print(f"   values={input_.numpy}")
+                    print(f"   values={input_.as_array()}")
 
             print("*****************")
             print("* Intermediates *")
@@ -531,7 +526,7 @@ class XCOREModel(XCORESerializationMixin):
             for intermediate in subgraph.intermediates:
                 print(intermediate.pprint())
                 if tensor_values and len(intermediate.buffer):
-                    print(f"   values={intermediate.numpy}")
+                    print(f"   values={intermediate.as_array()}")
 
             print("***********")
             print("* Outputs *")
@@ -539,7 +534,7 @@ class XCOREModel(XCORESerializationMixin):
             for output in subgraph.outputs:
                 print(output.pprint())
                 if tensor_values and len(output.buffer):
-                    print(f"   values={output.numpy}")
+                    print(f"   values={output.as_array()}")
 
     def sanity_check(self):
         # check for duplicates

@@ -10,7 +10,7 @@ from tflite2xcore.xcore_schema import (
 )
 from tflite2xcore.utils import VE, WORD_SIZE
 from .transformation_passes import ReplaceQuantizedOperatorPass, OperatorMatchingPass
-from tflite2xcore.execution_planning import ChannelGroupSlicePlanner, SlicePlanner
+from tflite2xcore.parallelization import ChannelGroupSlicePlanner, SlicePlanner
 
 
 class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
@@ -184,7 +184,7 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
         return new_op
 
 
-class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
+class ParallelizeGlobalAveragePool2DPass(OperatorMatchingPass):
     def __init__(self, *args, num_threads=None, forced=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.max_threads = num_threads or 1
@@ -209,10 +209,10 @@ class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
         plan.num_threads = min(plan.num_threads, len(plan.changrp_slices))
         self.plan_threads = plan.num_threads
 
-        op.add_custom_options(plan=plan.to_dict())
+        op.add_custom_options(par=plan.to_dict())
 
 
-class PlanPooling2DPass(OperatorMatchingPass):
+class ParallelizePooling2DPass(OperatorMatchingPass):
     def __init__(self, *args, num_threads=None, forced=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.num_threads = num_threads or 1
@@ -224,7 +224,7 @@ class PlanPooling2DPass(OperatorMatchingPass):
 
     def match(self, op):
         if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
-            return "plan" not in op.custom_options
+            return "par" not in op.custom_options
 
     def mutate(self, op):
         _, height, width, Cout = op.outputs[0].shape
@@ -237,4 +237,4 @@ class PlanPooling2DPass(OperatorMatchingPass):
         )
         plan = planner.find_optimal_plan()
 
-        op.add_custom_options(plan=plan.to_dict())
+        op.add_custom_options(par=plan.to_dict())

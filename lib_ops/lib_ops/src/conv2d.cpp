@@ -51,6 +51,7 @@ XCoreStatus Conv2D_Deep::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   // compute size (in bytes) of 1 output channel's weights
   weights_preload_size_ = params.K_h * params.K_w * C_in;
+  std::cout << "weights_preload_size_=" << weights_preload_size_ << std::endl;
 
   // setup kernel parameters
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};

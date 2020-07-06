@@ -6,26 +6,24 @@ import itertools
 
 import numpy as np
 
-from tflite2xcore.execution_planning import SlicePlanner
+from tflite2xcore.parallelization import SlicePlanner, MAX_THREADS
 from tflite2xcore.xlogging import LoggingContext
 
 MAX_OUTPUT_CHANNELS = 20
 VALID_OUTPUT_CHANNELS = list(range(1, MAX_OUTPUT_CHANNELS + 1))
-VALID_NUM_THREAD = list(range(1, SlicePlanner.MAX_THREADS + 1))
+VALID_NUM_THREAD = list(range(1, MAX_THREADS + 1))
 
 MAX_HEIGHT = MAX_WIDTH = 10
 VALID_HEIGHT = list(range(1, MAX_HEIGHT + 1))
 VALID_WIDTH = list(range(1, MAX_WIDTH + 1))
-VALID_NUM_THREAD = list(range(1, SlicePlanner.MAX_THREADS + 1))
+VALID_NUM_THREAD = list(range(1, MAX_THREADS + 1))
 
 
 @pytest.mark.parametrize("num_channels", VALID_OUTPUT_CHANNELS)
 @pytest.mark.parametrize("height", VALID_HEIGHT)
 @pytest.mark.parametrize("width", VALID_WIDTH)
 def test_layout_coverage(num_channels, height, width):
-    planner = SlicePlanner(
-        num_channels, height, width, num_threads=SlicePlanner.MAX_THREADS
-    )
+    planner = SlicePlanner(num_channels, height, width, num_threads=MAX_THREADS)
     planner.create_candidate_plans()
     for plan in planner._candidate_plans:
         coverage_map = np.zeros((height, width), dtype=bool)
@@ -46,7 +44,7 @@ def generate_thread_cost_array(
     max_channel=MAX_OUTPUT_CHANNELS, max_height=MAX_HEIGHT, max_width=MAX_WIDTH
 ):
     thread_costs = np.zeros(
-        (max_channel, max_height, max_width, SlicePlanner.MAX_THREADS), dtype=np.float
+        (max_channel, max_height, max_width, MAX_THREADS), dtype=np.float
     )
 
     for c, y, x in itertools.product(
@@ -75,9 +73,7 @@ def thread_cost_array():
 @pytest.mark.parametrize("height", VALID_HEIGHT)
 @pytest.mark.parametrize("width", VALID_WIDTH)
 def test_optimal_thread_count(num_channels, height, width, thread_cost_array):
-    planner = SlicePlanner(
-        num_channels, height, width, num_threads=SlicePlanner.MAX_THREADS
-    )
+    planner = SlicePlanner(num_channels, height, width, num_threads=MAX_THREADS)
     plan = planner.find_optimal_plan()
     costs = thread_cost_array[num_channels - 1, height - 1, width - 1, :]
     assert np.min(costs) == plan.cost

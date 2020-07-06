@@ -8,12 +8,19 @@ from abc import ABC, abstractmethod
 
 from tflite2xcore import xlogging as logging
 
+MAX_THREADS = 5
+CHANNEL_GROUP_SIZE = 16
 
-class ExecutionPlan:
-    def __init__(self, num_threads, *, cost, changrp_slices=None, rowcol_slices=None):
+
+class ParallelizationPlan:
+    def __init__(
+        self, num_threads, *, cost, changrp_slices=None, rowcol_slices=None,
+    ):
         self.num_threads = num_threads
-        self.changrp_slices = changrp_slices  # should be a list of 2-tuples
-        self.rowcol_slices = rowcol_slices  # should be a list of 4-tuples
+        self.changrp_slices = changrp_slices  # should be a list of 2-tuples (start channel index, end channel index)
+        self.rowcol_slices = (
+            rowcol_slices  # should be a list of 4-tuples (top, left, rows, cols)
+        )
 
         if isinstance(cost, numbers.Number):
             self.cost = cost
@@ -37,17 +44,14 @@ class ExecutionPlan:
 
 
 class ParallelizationPlanner(ABC):
-    MAX_THREADS = 5
-    CHANNEL_GROUP_SIZE = 16
-
     def __init__(self, *, num_threads, forced=False):
         assert isinstance(num_threads, int)
-        assert 0 < num_threads <= self.MAX_THREADS
+        assert 0 < num_threads <= MAX_THREADS
         self.logger = logging.getLogger(self.__class__.__name__)
         self.num_threads = num_threads
 
         self.forced = forced
-        self._candidate_plans = []  # should be a list of ExecutionPlans
+        self._candidate_plans = []  # should be a list of ParallizationPlans
 
     @abstractmethod
     def create_n_thread_candidates(self, num_threads):
@@ -141,30 +145,6 @@ class UnidirectionalSplitPlanner(ParallelizationPlanner):
         return [[starts[j], 0, heights[j], self.width] for j in range(num_threads)]
 
 
-class RowSlicePlanner(UnidirectionalSplitPlanner):
-    def estimate_plan_cost(self, plan):
-        def estimate_row_slice_cost(row_slice):
-            _, _, y_width, x_width = row_slice  # first two items are y_start, x_start
-            return y_width * x_width
-
-        return max(
-            estimate_row_slice_cost(row_slice) for row_slice in plan.rowcol_slices
-        )
-
-    def create_n_thread_candidates(self, num_threads):
-        row_slices = self.unidir_height_layout(num_threads)
-        self.logger.info(
-            f"create_n_thread_candidates: num_threads={num_threads}, row_slices={str(row_slices)}"
-        )
-        self.add_candidate_plan(
-            ExecutionPlan(
-                num_threads,
-                cost=lambda plan: self.estimate_plan_cost(plan),
-                rowcol_slices=row_slices,
-            )
-        )
-
-
 class ChannelGroupSlicePlanner(ParallelizationPlanner):
     def __init__(self, Cout, **kwargs):
         super().__init__(**kwargs)
@@ -175,15 +155,10 @@ class ChannelGroupSlicePlanner(ParallelizationPlanner):
     @staticmethod
     def changrp_split_helper(num_channels):
         changrps = []
-        num_changrps = math.ceil(
-            num_channels / float(ParallelizationPlanner.CHANNEL_GROUP_SIZE)
-        )
+        num_changrps = math.ceil(num_channels / float(CHANNEL_GROUP_SIZE))
         for i in range(num_changrps):
-            Cbegin = i * ParallelizationPlanner.CHANNEL_GROUP_SIZE
-            Cend = min(
-                Cbegin + ParallelizationPlanner.CHANNEL_GROUP_SIZE - 1,
-                num_channels - 1,
-            )
+            Cbegin = i * CHANNEL_GROUP_SIZE
+            Cend = min(Cbegin + CHANNEL_GROUP_SIZE - 1, num_channels - 1,)
             changrps.append([Cbegin, Cend])
 
         return changrps
@@ -191,7 +166,7 @@ class ChannelGroupSlicePlanner(ParallelizationPlanner):
     def estimate_plan_cost(self, plan):
         def estimate_changrp_cost(changrp):
             Cbegin, Cend = changrp
-            if Cend - Cbegin + 1 == self.CHANNEL_GROUP_SIZE:
+            if Cend - Cbegin + 1 == CHANNEL_GROUP_SIZE:
                 return 1
             else:
                 return 2  # NOTE: 2 might be a bit aggressive
@@ -207,7 +182,7 @@ class ChannelGroupSlicePlanner(ParallelizationPlanner):
             f"create_n_thread_candidates: num_threads={num_threads}, changrps={str(changrps)}"
         )
         self.add_candidate_plan(
-            ExecutionPlan(
+            ParallelizationPlan(
                 num_threads,
                 cost=lambda plan: self.estimate_plan_cost(plan),
                 changrp_slices=changrps,
@@ -231,7 +206,7 @@ class SlicePlanner(ParallelizationPlanner):
     def estimate_plan_cost(self, plan):
         def estimate_changrp_cost(changrp):
             Cbegin, Cend = changrp
-            if Cend - Cbegin + 1 == self.CHANNEL_GROUP_SIZE:
+            if Cend - Cbegin + 1 == CHANNEL_GROUP_SIZE:
                 return 1
             else:
                 return 2  # NOTE: 2 might be a bit aggressive
@@ -264,11 +239,10 @@ class SlicePlanner(ParallelizationPlanner):
             f"create_n_thread_candidates: num_threads={num_threads}, changrps={str(changrps)}, row_slices={str(row_slices)}"
         )
         self.add_candidate_plan(
-            ExecutionPlan(
+            ParallelizationPlan(
                 num_threads,
                 cost=lambda plan: self.estimate_plan_cost(plan),
                 changrp_slices=changrps,
                 rowcol_slices=row_slices,
             )
         )
-

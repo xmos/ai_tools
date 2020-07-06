@@ -51,17 +51,21 @@ class ChannelGroupArray {
 
 class ExecutionPlan {
  public:
-  ExecutionPlan() : n_threads_(0) {}
+  ExecutionPlan() : n_threads_(0), weights_scratch_(0), bias_scratch_(0) {}
   ~ExecutionPlan() {}
 
   void SetNumThreads(int32_t n_threads) { n_threads_ = n_threads; }
+  void SetWeightsScratch(size_t size) { weights_scratch_ = size; }
+  void SetBiasScratch(size_t size) { bias_scratch_ = size; }
   int32_t GetNumThreads() { return n_threads_; }
 
   RowColRegionArray regions;
   ChannelGroupArray changrps;
 
  private:
-  int32_t n_threads_;
+  size_t n_threads_;
+  size_t weights_scratch_;
+  size_t bias_scratch_;
 };
 
 }  // namespace xcore

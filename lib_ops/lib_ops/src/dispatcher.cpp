@@ -165,6 +165,7 @@ void Dispatcher::PreloadBuffer(int8_t **dest, int8_t const *src, int32_t size) {
 void Dispatcher::PreloadWeights(int8_t **dest, int8_t const *src, int32_t size,
                                 ChannelGroup const &changrp) {
   *dest = (int8_t *)&src[changrp.start * size];
+  std::cout << "PreloadWeights=" << changrp.size * size << std::endl;
 
   // if (*dest == nullptr)
   //   *dest = (int8_t *)AllocateScratchBuffer(changrp.size * size);
@@ -176,6 +177,7 @@ void Dispatcher::PreloadWeights(int8_t **dest, int8_t const *src, int32_t size,
 void Dispatcher::PreloadBiases(int16_t **dest, int16_t const *src,
                                ChannelGroup const &changrp) {
   *dest = (int16_t *)&src[changrp.index * bso_changrp_len];
+  std::cout << "PreloadBiases=" << bso_changrp_bytes << std::endl;
 
   // if (*dest == nullptr)
   //   *dest = (int16_t *)AllocateScratchBuffer(bso_changrp_bytes);

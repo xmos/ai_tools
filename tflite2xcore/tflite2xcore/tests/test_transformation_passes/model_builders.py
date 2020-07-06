@@ -297,6 +297,7 @@ def build_XC_fc_deepin_anyout(subgraph=None, *, outputs, input_channels):
 
     input_shape = [1, input_channels, 1, 1]
     weight_shape = [outputs, np.prod(input_shape[1:])]
+    bso_shape = [int(np.ceil(outputs / 16)), 7, 16]
 
     tin = subgraph.create_tensor(
         "input",
@@ -314,7 +315,7 @@ def build_XC_fc_deepin_anyout(subgraph=None, *, outputs, input_channels):
     b = subgraph.create_tensor(
         "biases",
         TensorType.INT32,
-        weight_shape[:1],
+        bso_shape,
         quantization={"scale": [0.00024], "zero_point": [0]},
     )
     tout = subgraph.create_tensor(
@@ -506,7 +507,7 @@ def build_XC_conv2d(opcode, subgraph=None, *, weight_shape, input_size, strides)
     C_out, _, _, C_in = weight_shape
 
     input_shape = [1, height, width, C_in]
-    bso_shape = [int(np.ceil(C_out / 16)), 5, 16]
+    bso_shape = [int(np.ceil(C_out / 16)), 7, 16]
     tin = subgraph.create_tensor("input", TensorType.INT8, input_shape, isinput=True)
     w = subgraph.create_tensor("weights", TensorType.INT8, weight_shape)
     b = subgraph.create_tensor("bso", TensorType.INT16, bso_shape)
@@ -548,7 +549,7 @@ def build_XC_conv2d_depthwise(subgraph=None, *, weight_shape, input_size, stride
     C_in = weight_shape[2]
 
     input_shape = [1, height, width, C_in]
-    bso_shape = [int(np.ceil(C_in / 16)), 5, 16]
+    bso_shape = [int(np.ceil(C_in / 16)), 7, 16]
     tin = subgraph.create_tensor("input", TensorType.INT8, input_shape, isinput=True)
     w = subgraph.create_tensor("weights", TensorType.INT8, weight_shape)
     b = subgraph.create_tensor("bso", TensorType.INT16, bso_shape)

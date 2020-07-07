@@ -1,0 +1,102 @@
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
+
+import pytest
+
+import numpy as np
+
+from copy import deepcopy
+
+from tflite2xcore.converter import CleanupManager
+from tflite2xcore.transformation_passes.fully_connected_passes import (
+    RemoveRedundantReshapePass,
+)
+from tflite2xcore.xcore_schema import BuiltinOpCodes
+
+from ..model_builders import build_fc_with_reshape
+from .conftest import (
+    PARAMS,
+    _test_non_matching_params,
+    test_matching_params,
+    update_params_with_reshape,
+)
+
+
+#  ----------------------------------------------------------------------------
+#                              PARAMETER VALUES
+#  ----------------------------------------------------------------------------
+
+
+def matching_reshape(reshape_input_shape, reshape_output_shape):
+
+    return (
+        (len(reshape_output_shape) == 4)
+        and (reshape_output_shape[0] == 1)
+        or len(reshape_output_shape) < 4
+    ) and np.prod(reshape_output_shape) == np.prod(reshape_input_shape)
+
+
+PARAMS = update_params_with_reshape(deepcopy(PARAMS), is_matching=matching_reshape)
+
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def trf_pass():
+    return RemoveRedundantReshapePass()
+
+
+@pytest.fixture()
+def model(outputs, reshape):
+
+    return build_fc_with_reshape(
+        input_shape=reshape[0], fc_outputs=outputs, reshape_output_shape=reshape[1]
+    )
+
+
+@pytest.fixture()
+def model_nonmatch(outputs, non_matching_reshape):
+    return build_fc_with_reshape(
+        input_shape=non_matching_reshape[0],
+        fc_outputs=outputs,
+        reshape_output_shape=non_matching_reshape[1],
+    )
+
+
+def test_mutate(trf_pass, model):
+
+    # extract original padding values
+    subgraph = model.subgraphs[0]
+    assert len(subgraph.operators) == 2
+
+    in_ori, out_ori = subgraph.inputs[0], subgraph.outputs[0]
+
+    # run mutating pass
+    trf_pass.run(model)
+    model.sanity_check()
+
+    # need to clean up dangling ops/tensors
+    CleanupManager(model).run_passes()
+    model.sanity_check()
+
+    # Check FC operator and that RESHAPE has been removed
+    assert len(subgraph.operators) == 1
+    op = subgraph.operators[0]
+    assert len(op.inputs) == 3
+    assert len(op.outputs) == 1
+    assert subgraph.operators[0].operator_code.code is BuiltinOpCodes.FULLY_CONNECTED
+
+    # check input/output tensors
+    assert len(subgraph.inputs) == len(subgraph.outputs) == 1
+    in_new, out_new = subgraph.inputs[0], subgraph.outputs[0]
+    assert in_new is in_ori is op.inputs[0]
+    assert out_ori is out_new is op.outputs[0]
+
+
+def test_non_matching_simple(trf_pass, model_nonmatch):
+    _test_non_matching_params(trf_pass, model_nonmatch)
+
+
+if __name__ == "__main__":
+    pytest.main()

@@ -171,7 +171,6 @@ class RemoveRedundantReshapePass(OperatorMatchingPass):
         with self.using(op):
             try:
                 producer_opcode = self._producer.operator_code.code
-
             except IndexError:
                 # Op has no producers..
                 return False

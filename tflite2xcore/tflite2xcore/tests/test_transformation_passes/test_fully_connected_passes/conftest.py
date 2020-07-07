@@ -96,8 +96,6 @@ def model(input_shape, outputs):
 
 def update_params_with_reshape(PARAMS, *, is_matching):
 
-    random.seed(42)
-
     for params in PARAMS.values():
 
         all_reshapes = [

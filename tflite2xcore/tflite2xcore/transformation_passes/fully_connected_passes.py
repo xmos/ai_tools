@@ -167,21 +167,24 @@ class RemoveRedundantReshapePass(OperatorMatchingPass):
         return self._op.inputs[0].producers[0]
 
     def match(self, op):
-        try:
-            with self.using(op):
-                if (
-                    super().match(op)
-                    and op.operator_code.code in self.MATCHING_OPCODES
-                    and self._producer.operator_code.code is BuiltinOpCodes.RESHAPE
-                ):
 
-                    # Check if new shape is essentially a flatten
-                    return self._producer.inputs[1].numpy.tolist() == [
-                        -1,
-                        op.inputs[0].shape[1],
-                    ]
-        except IndexError:
-            return False
+        with self.using(op):
+            try:
+                producer_opcode = self._producer.operator_code.code
+
+            except IndexError:
+                # Op has no producers..
+                return False
+
+            return (
+                super().match(op)
+                and op.operator_code.code in self.MATCHING_OPCODES
+                and producer_opcode is BuiltinOpCodes.RESHAPE
+                and (
+                    np.prod(self._producer.inputs[0].shape)
+                    == np.prod(op.inputs[0].shape)
+                )
+            )
 
     def mutate(self, op):
         subgraph = op.subgraph

@@ -256,10 +256,13 @@ def build_XC_avgpool2d(subgraph=None, **kwargs):
     return build_XC_pool(XCOREOpCodes.XC_avgpool2d, subgraph, **kwargs)
 
 
-def build_fc(subgraph=None, *, outputs, input_shape):
+def build_fc(subgraph=None, *, outputs, input_shape, add_batch_dim=True):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
-    input_shape = [1, *input_shape]
+    if add_batch_dim:
+        # TODO unify this behaviour
+        input_shape = [1, *input_shape]
+
     weight_shape = [outputs, np.prod(input_shape[1:])]
 
     tin = subgraph.create_tensor(
@@ -381,6 +384,7 @@ def build_intermediate_fc(subgraph=None, *, outputs, input_shape):
     return model
 
 
+# TODO Unused?
 def build_softmax(subgraph=None, *, outputs, input_shape):
     model = build_intermediate_fc(subgraph, outputs=outputs, input_shape=input_shape)
     subgraph = subgraph or model.subgraphs[0]
@@ -394,6 +398,7 @@ def build_softmax(subgraph=None, *, outputs, input_shape):
     return model
 
 
+# TODO Unused?
 def build_mlp(subgraph=None, *, outputs, hidden_nodes, input_shape):
     model = build_intermediate_fc(
         subgraph, outputs=hidden_nodes, input_shape=input_shape
@@ -647,6 +652,55 @@ def build_non_input_pad(subgraph=None, *, input_shape, paddings):
 
     pad1, abs1 = subgraph.operators[:2]
     _glue_ops(abs1, pad1)
+
+    return model
+
+
+def build_reshape(subgraph=None, *, input_shape, output_shape, add_batch_dim=True):
+
+    if add_batch_dim:
+        # Prepend dims with batch dimension 1
+        input_shape = [1, *input_shape]
+
+    assert len(output_shape) > 0 and len(output_shape) < 5
+
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    tin = subgraph.create_tensor(
+        "original_shape", TensorType.INT8, input_shape, isinput=True
+    )
+    tout = subgraph.create_tensor("reshaped", tin.type, output_shape, isoutput=True)
+    p = subgraph.create_tensor("shape", TensorType.INT32, shape=[1, len(output_shape)])
+    p.buffer.data = np.int32(output_shape)
+
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.RESHAPE), inputs=[tin, p], outputs=[tout]
+    )
+
+    return subgraph.model
+
+
+def build_fc_with_reshape(
+    subgraph=None, *, input_shape, fc_outputs, reshape_output_shape
+):
+    model = build_reshape(
+        subgraph,
+        input_shape=input_shape,
+        output_shape=reshape_output_shape,
+        add_batch_dim=False,
+    )
+    subgraph = subgraph or model.subgraphs[0]
+
+    build_fc(
+        subgraph,
+        outputs=fc_outputs,
+        input_shape=reshape_output_shape,
+        add_batch_dim=False,
+    )
+
+    reshape1, fc1 = subgraph.operators[:2]
+
+    _glue_ops(reshape1, fc1)
 
     return model
 

@@ -383,21 +383,6 @@ def build_intermediate_fc(subgraph=None, *, outputs, input_shape):
 
     return model
 
-
-# TODO Unused?
-def build_softmax(subgraph=None, *, outputs, input_shape):
-    model = build_intermediate_fc(subgraph, outputs=outputs, input_shape=input_shape)
-    subgraph = subgraph or model.subgraphs[0]
-    tmid = subgraph.get_tensor("intermediate")
-
-    tout = subgraph.create_tensor("output", tmid.type, tmid.shape, isoutput=True)
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.SOFTMAX), inputs=[tmid], outputs=[tout]
-    )
-
-    return model
-
-
 # TODO Unused?
 def build_mlp(subgraph=None, *, outputs, hidden_nodes, input_shape):
     model = build_intermediate_fc(

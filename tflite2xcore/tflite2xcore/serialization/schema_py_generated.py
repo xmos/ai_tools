@@ -3,7 +3,7 @@ import numpy as np
 
 
 class LogicalOrOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsLogicalOrOptions(cls, buf, offset):
@@ -14,21 +14,14 @@ class LogicalOrOptions(object):
 
     @classmethod
     def LogicalOrOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # LogicalOrOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def LogicalOrOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def LogicalOrOptionsEnd(builder):
-    return builder.EndObject()
+def LogicalOrOptionsStart(builder): builder.StartObject(0)
+def LogicalOrOptionsEnd(builder): return builder.EndObject()
 
 
 class LogicalOrOptionsT(object):
@@ -61,8 +54,9 @@ class LogicalOrOptionsT(object):
         return logicalOrOptions
 
 
+
 class ZerosLikeOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsZerosLikeOptions(cls, buf, offset):
@@ -73,21 +67,14 @@ class ZerosLikeOptions(object):
 
     @classmethod
     def ZerosLikeOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ZerosLikeOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def ZerosLikeOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def ZerosLikeOptionsEnd(builder):
-    return builder.EndObject()
+def ZerosLikeOptionsStart(builder): builder.StartObject(0)
+def ZerosLikeOptionsEnd(builder): return builder.EndObject()
 
 
 class ZerosLikeOptionsT(object):
@@ -120,8 +107,9 @@ class ZerosLikeOptionsT(object):
         return zerosLikeOptions
 
 
+
 class EqualOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsEqualOptions(cls, buf, offset):
@@ -132,21 +120,14 @@ class EqualOptions(object):
 
     @classmethod
     def EqualOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # EqualOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def EqualOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def EqualOptionsEnd(builder):
-    return builder.EndObject()
+def EqualOptionsStart(builder): builder.StartObject(0)
+def EqualOptionsEnd(builder): return builder.EndObject()
 
 
 class EqualOptionsT(object):
@@ -179,8 +160,9 @@ class EqualOptionsT(object):
         return equalOptions
 
 
+
 class PowOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsPowOptions(cls, buf, offset):
@@ -191,21 +173,14 @@ class PowOptions(object):
 
     @classmethod
     def PowOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # PowOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def PowOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def PowOptionsEnd(builder):
-    return builder.EndObject()
+def PowOptionsStart(builder): builder.StartObject(0)
+def PowOptionsEnd(builder): return builder.EndObject()
 
 
 class PowOptionsT(object):
@@ -238,8 +213,9 @@ class PowOptionsT(object):
         return powOptions
 
 
+
 class LessOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsLessOptions(cls, buf, offset):
@@ -250,21 +226,14 @@ class LessOptions(object):
 
     @classmethod
     def LessOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # LessOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def LessOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def LessOptionsEnd(builder):
-    return builder.EndObject()
+def LessOptionsStart(builder): builder.StartObject(0)
+def LessOptionsEnd(builder): return builder.EndObject()
 
 
 class LessOptionsT(object):
@@ -303,8 +272,10 @@ class CombinerType(object):
     SQRTN = 2
 
 
+
+
 class AddOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsAddOptions(cls, buf, offset):
@@ -315,9 +286,7 @@ class AddOptions(object):
 
     @classmethod
     def AddOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # AddOptions
     def Init(self, buf, pos):
@@ -330,17 +299,9 @@ class AddOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def AddOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def AddOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(0, fusedActivationFunction, 0)
-
-
-def AddOptionsEnd(builder):
-    return builder.EndObject()
+def AddOptionsStart(builder): builder.StartObject(1)
+def AddOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(0, fusedActivationFunction, 0)
+def AddOptionsEnd(builder): return builder.EndObject()
 
 
 class AddOptionsT(object):
@@ -375,8 +336,9 @@ class AddOptionsT(object):
         return addOptions
 
 
+
 class QuantizeOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsQuantizeOptions(cls, buf, offset):
@@ -387,21 +349,14 @@ class QuantizeOptions(object):
 
     @classmethod
     def QuantizeOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # QuantizeOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def QuantizeOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def QuantizeOptionsEnd(builder):
-    return builder.EndObject()
+def QuantizeOptionsStart(builder): builder.StartObject(0)
+def QuantizeOptionsEnd(builder): return builder.EndObject()
 
 
 class QuantizeOptionsT(object):
@@ -434,8 +389,9 @@ class QuantizeOptionsT(object):
         return quantizeOptions
 
 
+
 class Pool2DOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsPool2DOptions(cls, buf, offset):
@@ -446,9 +402,7 @@ class Pool2DOptions(object):
 
     @classmethod
     def Pool2DOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # Pool2DOptions
     def Init(self, buf, pos):
@@ -496,37 +450,14 @@ class Pool2DOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def Pool2DOptionsStart(builder):
-    builder.StartObject(6)
-
-
-def Pool2DOptionsAddPadding(builder, padding):
-    builder.PrependInt8Slot(0, padding, 0)
-
-
-def Pool2DOptionsAddStrideW(builder, strideW):
-    builder.PrependInt32Slot(1, strideW, 0)
-
-
-def Pool2DOptionsAddStrideH(builder, strideH):
-    builder.PrependInt32Slot(2, strideH, 0)
-
-
-def Pool2DOptionsAddFilterWidth(builder, filterWidth):
-    builder.PrependInt32Slot(3, filterWidth, 0)
-
-
-def Pool2DOptionsAddFilterHeight(builder, filterHeight):
-    builder.PrependInt32Slot(4, filterHeight, 0)
-
-
-def Pool2DOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(5, fusedActivationFunction, 0)
-
-
-def Pool2DOptionsEnd(builder):
-    return builder.EndObject()
+def Pool2DOptionsStart(builder): builder.StartObject(6)
+def Pool2DOptionsAddPadding(builder, padding): builder.PrependInt8Slot(0, padding, 0)
+def Pool2DOptionsAddStrideW(builder, strideW): builder.PrependInt32Slot(1, strideW, 0)
+def Pool2DOptionsAddStrideH(builder, strideH): builder.PrependInt32Slot(2, strideH, 0)
+def Pool2DOptionsAddFilterWidth(builder, filterWidth): builder.PrependInt32Slot(3, filterWidth, 0)
+def Pool2DOptionsAddFilterHeight(builder, filterHeight): builder.PrependInt32Slot(4, filterHeight, 0)
+def Pool2DOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(5, fusedActivationFunction, 0)
+def Pool2DOptionsEnd(builder): return builder.EndObject()
 
 
 class Pool2DOptionsT(object):
@@ -576,8 +507,9 @@ class Pool2DOptionsT(object):
         return pool2DOptions
 
 
+
 class SoftmaxOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSoftmaxOptions(cls, buf, offset):
@@ -588,9 +520,7 @@ class SoftmaxOptions(object):
 
     @classmethod
     def SoftmaxOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SoftmaxOptions
     def Init(self, buf, pos):
@@ -600,22 +530,12 @@ class SoftmaxOptions(object):
     def Beta(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
-
-def SoftmaxOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def SoftmaxOptionsAddBeta(builder, beta):
-    builder.PrependFloat32Slot(0, beta, 0.0)
-
-
-def SoftmaxOptionsEnd(builder):
-    return builder.EndObject()
+def SoftmaxOptionsStart(builder): builder.StartObject(1)
+def SoftmaxOptionsAddBeta(builder, beta): builder.PrependFloat32Slot(0, beta, 0.0)
+def SoftmaxOptionsEnd(builder): return builder.EndObject()
 
 
 class SoftmaxOptionsT(object):
@@ -650,8 +570,9 @@ class SoftmaxOptionsT(object):
         return softmaxOptions
 
 
+
 class ShapeOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsShapeOptions(cls, buf, offset):
@@ -662,9 +583,7 @@ class ShapeOptions(object):
 
     @classmethod
     def ShapeOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ShapeOptions
     def Init(self, buf, pos):
@@ -677,17 +596,9 @@ class ShapeOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def ShapeOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def ShapeOptionsAddOutType(builder, outType):
-    builder.PrependInt8Slot(0, outType, 0)
-
-
-def ShapeOptionsEnd(builder):
-    return builder.EndObject()
+def ShapeOptionsStart(builder): builder.StartObject(1)
+def ShapeOptionsAddOutType(builder, outType): builder.PrependInt8Slot(0, outType, 0)
+def ShapeOptionsEnd(builder): return builder.EndObject()
 
 
 class ShapeOptionsT(object):
@@ -722,8 +633,9 @@ class ShapeOptionsT(object):
         return shapeOptions
 
 
+
 class SparsityParameters(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSparsityParameters(cls, buf, offset):
@@ -734,9 +646,7 @@ class SparsityParameters(object):
 
     @classmethod
     def SparsityParametersBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SparsityParameters
     def Init(self, buf, pos):
@@ -747,10 +657,7 @@ class SparsityParameters(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # SparsityParameters
@@ -777,10 +684,7 @@ class SparsityParameters(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # SparsityParameters
@@ -826,50 +730,19 @@ class SparsityParameters(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         return o == 0
 
-
-def SparsityParametersStart(builder):
-    builder.StartObject(3)
-
-
-def SparsityParametersAddTraversalOrder(builder, traversalOrder):
-    builder.PrependUOffsetTRelativeSlot(
-        0, flatbuffers.number_types.UOffsetTFlags.py_type(traversalOrder), 0
-    )
-
-
-def SparsityParametersStartTraversalOrderVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def SparsityParametersAddBlockMap(builder, blockMap):
-    builder.PrependUOffsetTRelativeSlot(
-        1, flatbuffers.number_types.UOffsetTFlags.py_type(blockMap), 0
-    )
-
-
-def SparsityParametersStartBlockMapVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def SparsityParametersAddDimMetadata(builder, dimMetadata):
-    builder.PrependUOffsetTRelativeSlot(
-        2, flatbuffers.number_types.UOffsetTFlags.py_type(dimMetadata), 0
-    )
-
-
-def SparsityParametersStartDimMetadataVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def SparsityParametersEnd(builder):
-    return builder.EndObject()
-
+def SparsityParametersStart(builder): builder.StartObject(3)
+def SparsityParametersAddTraversalOrder(builder, traversalOrder): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(traversalOrder), 0)
+def SparsityParametersStartTraversalOrderVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def SparsityParametersAddBlockMap(builder, blockMap): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(blockMap), 0)
+def SparsityParametersStartBlockMapVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def SparsityParametersAddDimMetadata(builder, dimMetadata): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(dimMetadata), 0)
+def SparsityParametersStartDimMetadataVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def SparsityParametersEnd(builder): return builder.EndObject()
 
 try:
     from typing import List
 except:
     pass
-
 
 class SparsityParametersT(object):
 
@@ -915,9 +788,7 @@ class SparsityParametersT(object):
                 if sparsityParameters.DimMetadata(i) is None:
                     self.dimMetadata.append(None)
                 else:
-                    dimensionMetadata_ = DimensionMetadataT.InitFromObj(
-                        sparsityParameters.DimMetadata(i)
-                    )
+                    dimensionMetadata_ = DimensionMetadataT.InitFromObj(sparsityParameters.DimMetadata(i))
                     self.dimMetadata.append(dimensionMetadata_)
 
     # SparsityParametersT
@@ -926,9 +797,7 @@ class SparsityParametersT(object):
             if np is not None and type(self.traversalOrder) is np.ndarray:
                 traversalOrder = builder.CreateNumpyVector(self.traversalOrder)
             else:
-                SparsityParametersStartTraversalOrderVector(
-                    builder, len(self.traversalOrder)
-                )
+                SparsityParametersStartTraversalOrderVector(builder, len(self.traversalOrder))
                 for i in reversed(range(len(self.traversalOrder))):
                     builder.PrependInt32(self.traversalOrder[i])
                 traversalOrder = builder.EndVector(len(self.traversalOrder))
@@ -959,8 +828,9 @@ class SparsityParametersT(object):
         return sparsityParameters
 
 
+
 class ReverseSequenceOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsReverseSequenceOptions(cls, buf, offset):
@@ -970,12 +840,8 @@ class ReverseSequenceOptions(object):
         return x
 
     @classmethod
-    def ReverseSequenceOptionsBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def ReverseSequenceOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ReverseSequenceOptions
     def Init(self, buf, pos):
@@ -995,21 +861,10 @@ class ReverseSequenceOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def ReverseSequenceOptionsStart(builder):
-    builder.StartObject(2)
-
-
-def ReverseSequenceOptionsAddSeqDim(builder, seqDim):
-    builder.PrependInt32Slot(0, seqDim, 0)
-
-
-def ReverseSequenceOptionsAddBatchDim(builder, batchDim):
-    builder.PrependInt32Slot(1, batchDim, 0)
-
-
-def ReverseSequenceOptionsEnd(builder):
-    return builder.EndObject()
+def ReverseSequenceOptionsStart(builder): builder.StartObject(2)
+def ReverseSequenceOptionsAddSeqDim(builder, seqDim): builder.PrependInt32Slot(0, seqDim, 0)
+def ReverseSequenceOptionsAddBatchDim(builder, batchDim): builder.PrependInt32Slot(1, batchDim, 0)
+def ReverseSequenceOptionsEnd(builder): return builder.EndObject()
 
 
 class ReverseSequenceOptionsT(object):
@@ -1047,8 +902,9 @@ class ReverseSequenceOptionsT(object):
         return reverseSequenceOptions
 
 
+
 class LeakyReluOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsLeakyReluOptions(cls, buf, offset):
@@ -1059,9 +915,7 @@ class LeakyReluOptions(object):
 
     @classmethod
     def LeakyReluOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # LeakyReluOptions
     def Init(self, buf, pos):
@@ -1071,22 +925,12 @@ class LeakyReluOptions(object):
     def Alpha(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
-
-def LeakyReluOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def LeakyReluOptionsAddAlpha(builder, alpha):
-    builder.PrependFloat32Slot(0, alpha, 0.0)
-
-
-def LeakyReluOptionsEnd(builder):
-    return builder.EndObject()
+def LeakyReluOptionsStart(builder): builder.StartObject(1)
+def LeakyReluOptionsAddAlpha(builder, alpha): builder.PrependFloat32Slot(0, alpha, 0.0)
+def LeakyReluOptionsEnd(builder): return builder.EndObject()
 
 
 class LeakyReluOptionsT(object):
@@ -1121,8 +965,9 @@ class LeakyReluOptionsT(object):
         return leakyReluOptions
 
 
+
 class LSHProjectionOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsLSHProjectionOptions(cls, buf, offset):
@@ -1133,9 +978,7 @@ class LSHProjectionOptions(object):
 
     @classmethod
     def LSHProjectionOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # LSHProjectionOptions
     def Init(self, buf, pos):
@@ -1148,17 +991,9 @@ class LSHProjectionOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def LSHProjectionOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def LSHProjectionOptionsAddType(builder, type):
-    builder.PrependInt8Slot(0, type, 0)
-
-
-def LSHProjectionOptionsEnd(builder):
-    return builder.EndObject()
+def LSHProjectionOptionsStart(builder): builder.StartObject(1)
+def LSHProjectionOptionsAddType(builder, type): builder.PrependInt8Slot(0, type, 0)
+def LSHProjectionOptionsEnd(builder): return builder.EndObject()
 
 
 class LSHProjectionOptionsT(object):
@@ -1193,8 +1028,9 @@ class LSHProjectionOptionsT(object):
         return lSHProjectionOptions
 
 
+
 class Metadata(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsMetadata(cls, buf, offset):
@@ -1205,9 +1041,7 @@ class Metadata(object):
 
     @classmethod
     def MetadataBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # Metadata
     def Init(self, buf, pos):
@@ -1224,28 +1058,13 @@ class Metadata(object):
     def Buffer(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Uint32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
         return 0
 
-
-def MetadataStart(builder):
-    builder.StartObject(2)
-
-
-def MetadataAddName(builder, name):
-    builder.PrependUOffsetTRelativeSlot(
-        0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0
-    )
-
-
-def MetadataAddBuffer(builder, buffer):
-    builder.PrependUint32Slot(1, buffer, 0)
-
-
-def MetadataEnd(builder):
-    return builder.EndObject()
+def MetadataStart(builder): builder.StartObject(2)
+def MetadataAddName(builder, name): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+def MetadataAddBuffer(builder, buffer): builder.PrependUint32Slot(1, buffer, 0)
+def MetadataEnd(builder): return builder.EndObject()
 
 
 class MetadataT(object):
@@ -1286,8 +1105,9 @@ class MetadataT(object):
         return metadata
 
 
+
 class MatrixDiagOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsMatrixDiagOptions(cls, buf, offset):
@@ -1298,21 +1118,14 @@ class MatrixDiagOptions(object):
 
     @classmethod
     def MatrixDiagOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # MatrixDiagOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def MatrixDiagOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def MatrixDiagOptionsEnd(builder):
-    return builder.EndObject()
+def MatrixDiagOptionsStart(builder): builder.StartObject(0)
+def MatrixDiagOptionsEnd(builder): return builder.EndObject()
 
 
 class MatrixDiagOptionsT(object):
@@ -1345,8 +1158,9 @@ class MatrixDiagOptionsT(object):
         return matrixDiagOptions
 
 
+
 class LessEqualOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsLessEqualOptions(cls, buf, offset):
@@ -1357,21 +1171,14 @@ class LessEqualOptions(object):
 
     @classmethod
     def LessEqualOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # LessEqualOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def LessEqualOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def LessEqualOptionsEnd(builder):
-    return builder.EndObject()
+def LessEqualOptionsStart(builder): builder.StartObject(0)
+def LessEqualOptionsEnd(builder): return builder.EndObject()
 
 
 class LessEqualOptionsT(object):
@@ -1404,8 +1211,9 @@ class LessEqualOptionsT(object):
         return lessEqualOptions
 
 
+
 class ReverseV2Options(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsReverseV2Options(cls, buf, offset):
@@ -1416,21 +1224,14 @@ class ReverseV2Options(object):
 
     @classmethod
     def ReverseV2OptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ReverseV2Options
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def ReverseV2OptionsStart(builder):
-    builder.StartObject(0)
-
-
-def ReverseV2OptionsEnd(builder):
-    return builder.EndObject()
+def ReverseV2OptionsStart(builder): builder.StartObject(0)
+def ReverseV2OptionsEnd(builder): return builder.EndObject()
 
 
 class ReverseV2OptionsT(object):
@@ -1463,8 +1264,9 @@ class ReverseV2OptionsT(object):
         return reverseV2Options
 
 
+
 class RNNOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsRNNOptions(cls, buf, offset):
@@ -1475,9 +1277,7 @@ class RNNOptions(object):
 
     @classmethod
     def RNNOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # RNNOptions
     def Init(self, buf, pos):
@@ -1490,17 +1290,9 @@ class RNNOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def RNNOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def RNNOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(0, fusedActivationFunction, 0)
-
-
-def RNNOptionsEnd(builder):
-    return builder.EndObject()
+def RNNOptionsStart(builder): builder.StartObject(1)
+def RNNOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(0, fusedActivationFunction, 0)
+def RNNOptionsEnd(builder): return builder.EndObject()
 
 
 class RNNOptionsT(object):
@@ -1535,8 +1327,9 @@ class RNNOptionsT(object):
         return rNNOptions
 
 
+
 class DimensionMetadata(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsDimensionMetadata(cls, buf, offset):
@@ -1547,9 +1340,7 @@ class DimensionMetadata(object):
 
     @classmethod
     def DimensionMetadataBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # DimensionMetadata
     def Init(self, buf, pos):
@@ -1574,10 +1365,7 @@ class DimensionMetadata(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # DimensionMetadata
@@ -1604,10 +1392,7 @@ class DimensionMetadata(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # DimensionMetadata
@@ -1629,48 +1414,19 @@ class DimensionMetadata(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         return o == 0
 
-
-def DimensionMetadataStart(builder):
-    builder.StartObject(4)
-
-
-def DimensionMetadataAddFormat(builder, format):
-    builder.PrependInt8Slot(0, format, 0)
-
-
-def DimensionMetadataAddDenseSize(builder, denseSize):
-    builder.PrependInt32Slot(1, denseSize, 0)
-
-
-def DimensionMetadataAddArraySegments(builder, arraySegments):
-    builder.PrependUOffsetTRelativeSlot(
-        2, flatbuffers.number_types.UOffsetTFlags.py_type(arraySegments), 0
-    )
-
-
-def DimensionMetadataStartArraySegmentsVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def DimensionMetadataAddArrayIndices(builder, arrayIndices):
-    builder.PrependUOffsetTRelativeSlot(
-        3, flatbuffers.number_types.UOffsetTFlags.py_type(arrayIndices), 0
-    )
-
-
-def DimensionMetadataStartArrayIndicesVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def DimensionMetadataEnd(builder):
-    return builder.EndObject()
-
+def DimensionMetadataStart(builder): builder.StartObject(4)
+def DimensionMetadataAddFormat(builder, format): builder.PrependInt8Slot(0, format, 0)
+def DimensionMetadataAddDenseSize(builder, denseSize): builder.PrependInt32Slot(1, denseSize, 0)
+def DimensionMetadataAddArraySegments(builder, arraySegments): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(arraySegments), 0)
+def DimensionMetadataStartArraySegmentsVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def DimensionMetadataAddArrayIndices(builder, arrayIndices): builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(arrayIndices), 0)
+def DimensionMetadataStartArrayIndicesVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def DimensionMetadataEnd(builder): return builder.EndObject()
 
 try:
     from typing import List
 except:
     pass
-
 
 class DimensionMetadataT(object):
 
@@ -1720,9 +1476,7 @@ class DimensionMetadataT(object):
             if np is not None and type(self.arraySegments) is np.ndarray:
                 arraySegments = builder.CreateNumpyVector(self.arraySegments)
             else:
-                DimensionMetadataStartArraySegmentsVector(
-                    builder, len(self.arraySegments)
-                )
+                DimensionMetadataStartArraySegmentsVector(builder, len(self.arraySegments))
                 for i in reversed(range(len(self.arraySegments))):
                     builder.PrependInt32(self.arraySegments[i])
                 arraySegments = builder.EndVector(len(self.arraySegments))
@@ -1730,9 +1484,7 @@ class DimensionMetadataT(object):
             if np is not None and type(self.arrayIndices) is np.ndarray:
                 arrayIndices = builder.CreateNumpyVector(self.arrayIndices)
             else:
-                DimensionMetadataStartArrayIndicesVector(
-                    builder, len(self.arrayIndices)
-                )
+                DimensionMetadataStartArrayIndicesVector(builder, len(self.arrayIndices))
                 for i in reversed(range(len(self.arrayIndices))):
                     builder.PrependInt32(self.arrayIndices[i])
                 arrayIndices = builder.EndVector(len(self.arrayIndices))
@@ -1756,8 +1508,10 @@ class ActivationFunctionType(object):
     SIGN_BIT = 5
 
 
+
+
 class NegOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsNegOptions(cls, buf, offset):
@@ -1768,21 +1522,14 @@ class NegOptions(object):
 
     @classmethod
     def NegOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # NegOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def NegOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def NegOptionsEnd(builder):
-    return builder.EndObject()
+def NegOptionsStart(builder): builder.StartObject(0)
+def NegOptionsEnd(builder): return builder.EndObject()
 
 
 class NegOptionsT(object):
@@ -1815,8 +1562,9 @@ class NegOptionsT(object):
         return negOptions
 
 
+
 class FloorDivOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsFloorDivOptions(cls, buf, offset):
@@ -1827,21 +1575,14 @@ class FloorDivOptions(object):
 
     @classmethod
     def FloorDivOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # FloorDivOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def FloorDivOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def FloorDivOptionsEnd(builder):
-    return builder.EndObject()
+def FloorDivOptionsStart(builder): builder.StartObject(0)
+def FloorDivOptionsEnd(builder): return builder.EndObject()
 
 
 class FloorDivOptionsT(object):
@@ -1874,8 +1615,9 @@ class FloorDivOptionsT(object):
         return floorDivOptions
 
 
+
 class LogSoftmaxOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsLogSoftmaxOptions(cls, buf, offset):
@@ -1886,21 +1628,14 @@ class LogSoftmaxOptions(object):
 
     @classmethod
     def LogSoftmaxOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # LogSoftmaxOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def LogSoftmaxOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def LogSoftmaxOptionsEnd(builder):
-    return builder.EndObject()
+def LogSoftmaxOptionsStart(builder): builder.StartObject(0)
+def LogSoftmaxOptionsEnd(builder): return builder.EndObject()
 
 
 class LogSoftmaxOptionsT(object):
@@ -1938,8 +1673,10 @@ class MirrorPadMode(object):
     SYMMETRIC = 1
 
 
+
+
 class SelectOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSelectOptions(cls, buf, offset):
@@ -1950,21 +1687,14 @@ class SelectOptions(object):
 
     @classmethod
     def SelectOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SelectOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def SelectOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def SelectOptionsEnd(builder):
-    return builder.EndObject()
+def SelectOptionsStart(builder): builder.StartObject(0)
+def SelectOptionsEnd(builder): return builder.EndObject()
 
 
 class SelectOptionsT(object):
@@ -1997,8 +1727,9 @@ class SelectOptionsT(object):
         return selectOptions
 
 
+
 class UniqueOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsUniqueOptions(cls, buf, offset):
@@ -2009,9 +1740,7 @@ class UniqueOptions(object):
 
     @classmethod
     def UniqueOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # UniqueOptions
     def Init(self, buf, pos):
@@ -2024,17 +1753,9 @@ class UniqueOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 2
 
-
-def UniqueOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def UniqueOptionsAddIdxOutType(builder, idxOutType):
-    builder.PrependInt8Slot(0, idxOutType, 2)
-
-
-def UniqueOptionsEnd(builder):
-    return builder.EndObject()
+def UniqueOptionsStart(builder): builder.StartObject(1)
+def UniqueOptionsAddIdxOutType(builder, idxOutType): builder.PrependInt8Slot(0, idxOutType, 2)
+def UniqueOptionsEnd(builder): return builder.EndObject()
 
 
 class UniqueOptionsT(object):
@@ -2069,8 +1790,9 @@ class UniqueOptionsT(object):
         return uniqueOptions
 
 
+
 class GreaterOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsGreaterOptions(cls, buf, offset):
@@ -2081,21 +1803,14 @@ class GreaterOptions(object):
 
     @classmethod
     def GreaterOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # GreaterOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def GreaterOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def GreaterOptionsEnd(builder):
-    return builder.EndObject()
+def GreaterOptionsStart(builder): builder.StartObject(0)
+def GreaterOptionsEnd(builder): return builder.EndObject()
 
 
 class GreaterOptionsT(object):
@@ -2128,8 +1843,9 @@ class GreaterOptionsT(object):
         return greaterOptions
 
 
+
 class RankOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsRankOptions(cls, buf, offset):
@@ -2140,21 +1856,14 @@ class RankOptions(object):
 
     @classmethod
     def RankOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # RankOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def RankOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def RankOptionsEnd(builder):
-    return builder.EndObject()
+def RankOptionsStart(builder): builder.StartObject(0)
+def RankOptionsEnd(builder): return builder.EndObject()
 
 
 class RankOptionsT(object):
@@ -2187,8 +1896,9 @@ class RankOptionsT(object):
         return rankOptions
 
 
+
 class ResizeBilinearOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsResizeBilinearOptions(cls, buf, offset):
@@ -2199,9 +1909,7 @@ class ResizeBilinearOptions(object):
 
     @classmethod
     def ResizeBilinearOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ResizeBilinearOptions
     def Init(self, buf, pos):
@@ -2211,35 +1919,20 @@ class ResizeBilinearOptions(object):
     def AlignCorners(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
     # ResizeBilinearOptions
     def HalfPixelCenters(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
-
-def ResizeBilinearOptionsStart(builder):
-    builder.StartObject(4)
-
-
-def ResizeBilinearOptionsAddAlignCorners(builder, alignCorners):
-    builder.PrependBoolSlot(2, alignCorners, 0)
-
-
-def ResizeBilinearOptionsAddHalfPixelCenters(builder, halfPixelCenters):
-    builder.PrependBoolSlot(3, halfPixelCenters, 0)
-
-
-def ResizeBilinearOptionsEnd(builder):
-    return builder.EndObject()
+def ResizeBilinearOptionsStart(builder): builder.StartObject(4)
+def ResizeBilinearOptionsAddAlignCorners(builder, alignCorners): builder.PrependBoolSlot(2, alignCorners, 0)
+def ResizeBilinearOptionsAddHalfPixelCenters(builder, halfPixelCenters): builder.PrependBoolSlot(3, halfPixelCenters, 0)
+def ResizeBilinearOptionsEnd(builder): return builder.EndObject()
 
 
 class ResizeBilinearOptionsT(object):
@@ -2277,8 +1970,9 @@ class ResizeBilinearOptionsT(object):
         return resizeBilinearOptions
 
 
+
 class DivOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsDivOptions(cls, buf, offset):
@@ -2289,9 +1983,7 @@ class DivOptions(object):
 
     @classmethod
     def DivOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # DivOptions
     def Init(self, buf, pos):
@@ -2304,17 +1996,9 @@ class DivOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def DivOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def DivOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(0, fusedActivationFunction, 0)
-
-
-def DivOptionsEnd(builder):
-    return builder.EndObject()
+def DivOptionsStart(builder): builder.StartObject(1)
+def DivOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(0, fusedActivationFunction, 0)
+def DivOptionsEnd(builder): return builder.EndObject()
 
 
 class DivOptionsT(object):
@@ -2349,8 +2033,9 @@ class DivOptionsT(object):
         return divOptions
 
 
+
 class ReshapeOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsReshapeOptions(cls, buf, offset):
@@ -2361,9 +2046,7 @@ class ReshapeOptions(object):
 
     @classmethod
     def ReshapeOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ReshapeOptions
     def Init(self, buf, pos):
@@ -2374,10 +2057,7 @@ class ReshapeOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # ReshapeOptions
@@ -2399,30 +2079,15 @@ class ReshapeOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
-
-def ReshapeOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def ReshapeOptionsAddNewShape(builder, newShape):
-    builder.PrependUOffsetTRelativeSlot(
-        0, flatbuffers.number_types.UOffsetTFlags.py_type(newShape), 0
-    )
-
-
-def ReshapeOptionsStartNewShapeVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def ReshapeOptionsEnd(builder):
-    return builder.EndObject()
-
+def ReshapeOptionsStart(builder): builder.StartObject(1)
+def ReshapeOptionsAddNewShape(builder, newShape): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(newShape), 0)
+def ReshapeOptionsStartNewShapeVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def ReshapeOptionsEnd(builder): return builder.EndObject()
 
 try:
     from typing import List
 except:
     pass
-
 
 class ReshapeOptionsT(object):
 
@@ -2471,8 +2136,9 @@ class ReshapeOptionsT(object):
         return reshapeOptions
 
 
+
 class SelectV2Options(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSelectV2Options(cls, buf, offset):
@@ -2483,21 +2149,14 @@ class SelectV2Options(object):
 
     @classmethod
     def SelectV2OptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SelectV2Options
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def SelectV2OptionsStart(builder):
-    builder.StartObject(0)
-
-
-def SelectV2OptionsEnd(builder):
-    return builder.EndObject()
+def SelectV2OptionsStart(builder): builder.StartObject(0)
+def SelectV2OptionsEnd(builder): return builder.EndObject()
 
 
 class SelectV2OptionsT(object):
@@ -2530,8 +2189,9 @@ class SelectV2OptionsT(object):
         return selectV2Options
 
 
+
 class TopKV2Options(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsTopKV2Options(cls, buf, offset):
@@ -2542,21 +2202,14 @@ class TopKV2Options(object):
 
     @classmethod
     def TopKV2OptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # TopKV2Options
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def TopKV2OptionsStart(builder):
-    builder.StartObject(0)
-
-
-def TopKV2OptionsEnd(builder):
-    return builder.EndObject()
+def TopKV2OptionsStart(builder): builder.StartObject(0)
+def TopKV2OptionsEnd(builder): return builder.EndObject()
 
 
 class TopKV2OptionsT(object):
@@ -2589,8 +2242,9 @@ class TopKV2OptionsT(object):
         return topKV2Options
 
 
+
 class TileOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsTileOptions(cls, buf, offset):
@@ -2601,21 +2255,14 @@ class TileOptions(object):
 
     @classmethod
     def TileOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # TileOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def TileOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def TileOptionsEnd(builder):
-    return builder.EndObject()
+def TileOptionsStart(builder): builder.StartObject(0)
+def TileOptionsEnd(builder): return builder.EndObject()
 
 
 class TileOptionsT(object):
@@ -2648,8 +2295,9 @@ class TileOptionsT(object):
         return tileOptions
 
 
+
 class NotEqualOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsNotEqualOptions(cls, buf, offset):
@@ -2660,21 +2308,14 @@ class NotEqualOptions(object):
 
     @classmethod
     def NotEqualOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # NotEqualOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def NotEqualOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def NotEqualOptionsEnd(builder):
-    return builder.EndObject()
+def NotEqualOptionsStart(builder): builder.StartObject(0)
+def NotEqualOptionsEnd(builder): return builder.EndObject()
 
 
 class NotEqualOptionsT(object):
@@ -2707,8 +2348,9 @@ class NotEqualOptionsT(object):
         return notEqualOptions
 
 
+
 class AbsOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsAbsOptions(cls, buf, offset):
@@ -2719,21 +2361,14 @@ class AbsOptions(object):
 
     @classmethod
     def AbsOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # AbsOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def AbsOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def AbsOptionsEnd(builder):
-    return builder.EndObject()
+def AbsOptionsStart(builder): builder.StartObject(0)
+def AbsOptionsEnd(builder): return builder.EndObject()
 
 
 class AbsOptionsT(object):
@@ -2770,8 +2405,10 @@ class CustomOptionsFormat(object):
     FLEXBUFFERS = 0
 
 
+
+
 class CustomQuantization(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsCustomQuantization(cls, buf, offset):
@@ -2782,9 +2419,7 @@ class CustomQuantization(object):
 
     @classmethod
     def CustomQuantizationBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # CustomQuantization
     def Init(self, buf, pos):
@@ -2795,10 +2430,7 @@ class CustomQuantization(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Uint8Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
-            )
+            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
         return 0
 
     # CustomQuantization
@@ -2820,30 +2452,15 @@ class CustomQuantization(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
-
-def CustomQuantizationStart(builder):
-    builder.StartObject(1)
-
-
-def CustomQuantizationAddCustom(builder, custom):
-    builder.PrependUOffsetTRelativeSlot(
-        0, flatbuffers.number_types.UOffsetTFlags.py_type(custom), 0
-    )
-
-
-def CustomQuantizationStartCustomVector(builder, numElems):
-    return builder.StartVector(1, numElems, 1)
-
-
-def CustomQuantizationEnd(builder):
-    return builder.EndObject()
-
+def CustomQuantizationStart(builder): builder.StartObject(1)
+def CustomQuantizationAddCustom(builder, custom): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(custom), 0)
+def CustomQuantizationStartCustomVector(builder, numElems): return builder.StartVector(1, numElems, 1)
+def CustomQuantizationEnd(builder): return builder.EndObject()
 
 try:
     from typing import List
 except:
     pass
-
 
 class CustomQuantizationT(object):
 
@@ -2892,8 +2509,9 @@ class CustomQuantizationT(object):
         return customQuantization
 
 
+
 class LSTMOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsLSTMOptions(cls, buf, offset):
@@ -2904,9 +2522,7 @@ class LSTMOptions(object):
 
     @classmethod
     def LSTMOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # LSTMOptions
     def Init(self, buf, pos):
@@ -2923,18 +2539,14 @@ class LSTMOptions(object):
     def CellClip(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
     # LSTMOptions
     def ProjClip(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
     # LSTMOptions
@@ -2944,29 +2556,12 @@ class LSTMOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def LSTMOptionsStart(builder):
-    builder.StartObject(4)
-
-
-def LSTMOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(0, fusedActivationFunction, 0)
-
-
-def LSTMOptionsAddCellClip(builder, cellClip):
-    builder.PrependFloat32Slot(1, cellClip, 0.0)
-
-
-def LSTMOptionsAddProjClip(builder, projClip):
-    builder.PrependFloat32Slot(2, projClip, 0.0)
-
-
-def LSTMOptionsAddKernelType(builder, kernelType):
-    builder.PrependInt8Slot(3, kernelType, 0)
-
-
-def LSTMOptionsEnd(builder):
-    return builder.EndObject()
+def LSTMOptionsStart(builder): builder.StartObject(4)
+def LSTMOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(0, fusedActivationFunction, 0)
+def LSTMOptionsAddCellClip(builder, cellClip): builder.PrependFloat32Slot(1, cellClip, 0.0)
+def LSTMOptionsAddProjClip(builder, projClip): builder.PrependFloat32Slot(2, projClip, 0.0)
+def LSTMOptionsAddKernelType(builder, kernelType): builder.PrependInt8Slot(3, kernelType, 0)
+def LSTMOptionsEnd(builder): return builder.EndObject()
 
 
 class LSTMOptionsT(object):
@@ -3010,8 +2605,9 @@ class LSTMOptionsT(object):
         return lSTMOptions
 
 
+
 class SliceOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSliceOptions(cls, buf, offset):
@@ -3022,21 +2618,14 @@ class SliceOptions(object):
 
     @classmethod
     def SliceOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SliceOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def SliceOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def SliceOptionsEnd(builder):
-    return builder.EndObject()
+def SliceOptionsStart(builder): builder.StartObject(0)
+def SliceOptionsEnd(builder): return builder.EndObject()
 
 
 class SliceOptionsT(object):
@@ -3069,8 +2658,9 @@ class SliceOptionsT(object):
         return sliceOptions
 
 
+
 class ArgMinOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsArgMinOptions(cls, buf, offset):
@@ -3081,9 +2671,7 @@ class ArgMinOptions(object):
 
     @classmethod
     def ArgMinOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ArgMinOptions
     def Init(self, buf, pos):
@@ -3096,17 +2684,9 @@ class ArgMinOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def ArgMinOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def ArgMinOptionsAddOutputType(builder, outputType):
-    builder.PrependInt8Slot(0, outputType, 0)
-
-
-def ArgMinOptionsEnd(builder):
-    return builder.EndObject()
+def ArgMinOptionsStart(builder): builder.StartObject(1)
+def ArgMinOptionsAddOutputType(builder, outputType): builder.PrependInt8Slot(0, outputType, 0)
+def ArgMinOptionsEnd(builder): return builder.EndObject()
 
 
 class ArgMinOptionsT(object):
@@ -3141,8 +2721,9 @@ class ArgMinOptionsT(object):
         return argMinOptions
 
 
+
 class TransposeOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsTransposeOptions(cls, buf, offset):
@@ -3153,21 +2734,14 @@ class TransposeOptions(object):
 
     @classmethod
     def TransposeOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # TransposeOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def TransposeOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def TransposeOptionsEnd(builder):
-    return builder.EndObject()
+def TransposeOptionsStart(builder): builder.StartObject(0)
+def TransposeOptionsEnd(builder): return builder.EndObject()
 
 
 class TransposeOptionsT(object):
@@ -3205,8 +2779,10 @@ class DimensionType(object):
     SPARSE_CSR = 1
 
 
+
+
 class Operator(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsOperator(cls, buf, offset):
@@ -3217,9 +2793,7 @@ class Operator(object):
 
     @classmethod
     def OperatorBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # Operator
     def Init(self, buf, pos):
@@ -3229,9 +2803,7 @@ class Operator(object):
     def OpcodeIndex(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Uint32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
         return 0
 
     # Operator
@@ -3239,10 +2811,7 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # Operator
@@ -3269,10 +2838,7 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # Operator
@@ -3306,7 +2872,6 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         if o != 0:
             from flatbuffers.table import Table
-
             obj = Table(bytearray(), 0)
             self._tab.Union(obj, o)
             return obj
@@ -3317,10 +2882,7 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Uint8Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
-            )
+            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
         return 0
 
     # Operator
@@ -3354,10 +2916,7 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.BoolFlags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
-            )
+            return self._tab.Get(flatbuffers.number_types.BoolFlags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
         return 0
 
     # Operator
@@ -3384,10 +2943,7 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(20))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # Operator
@@ -3409,88 +2965,27 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(20))
         return o == 0
 
-
-def OperatorStart(builder):
-    builder.StartObject(9)
-
-
-def OperatorAddOpcodeIndex(builder, opcodeIndex):
-    builder.PrependUint32Slot(0, opcodeIndex, 0)
-
-
-def OperatorAddInputs(builder, inputs):
-    builder.PrependUOffsetTRelativeSlot(
-        1, flatbuffers.number_types.UOffsetTFlags.py_type(inputs), 0
-    )
-
-
-def OperatorStartInputsVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def OperatorAddOutputs(builder, outputs):
-    builder.PrependUOffsetTRelativeSlot(
-        2, flatbuffers.number_types.UOffsetTFlags.py_type(outputs), 0
-    )
-
-
-def OperatorStartOutputsVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def OperatorAddBuiltinOptionsType(builder, builtinOptionsType):
-    builder.PrependUint8Slot(3, builtinOptionsType, 0)
-
-
-def OperatorAddBuiltinOptions(builder, builtinOptions):
-    builder.PrependUOffsetTRelativeSlot(
-        4, flatbuffers.number_types.UOffsetTFlags.py_type(builtinOptions), 0
-    )
-
-
-def OperatorAddCustomOptions(builder, customOptions):
-    builder.PrependUOffsetTRelativeSlot(
-        5, flatbuffers.number_types.UOffsetTFlags.py_type(customOptions), 0
-    )
-
-
-def OperatorStartCustomOptionsVector(builder, numElems):
-    return builder.StartVector(1, numElems, 1)
-
-
-def OperatorAddCustomOptionsFormat(builder, customOptionsFormat):
-    builder.PrependInt8Slot(6, customOptionsFormat, 0)
-
-
-def OperatorAddMutatingVariableInputs(builder, mutatingVariableInputs):
-    builder.PrependUOffsetTRelativeSlot(
-        7, flatbuffers.number_types.UOffsetTFlags.py_type(mutatingVariableInputs), 0
-    )
-
-
-def OperatorStartMutatingVariableInputsVector(builder, numElems):
-    return builder.StartVector(1, numElems, 1)
-
-
-def OperatorAddIntermediates(builder, intermediates):
-    builder.PrependUOffsetTRelativeSlot(
-        8, flatbuffers.number_types.UOffsetTFlags.py_type(intermediates), 0
-    )
-
-
-def OperatorStartIntermediatesVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def OperatorEnd(builder):
-    return builder.EndObject()
-
+def OperatorStart(builder): builder.StartObject(9)
+def OperatorAddOpcodeIndex(builder, opcodeIndex): builder.PrependUint32Slot(0, opcodeIndex, 0)
+def OperatorAddInputs(builder, inputs): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(inputs), 0)
+def OperatorStartInputsVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def OperatorAddOutputs(builder, outputs): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(outputs), 0)
+def OperatorStartOutputsVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def OperatorAddBuiltinOptionsType(builder, builtinOptionsType): builder.PrependUint8Slot(3, builtinOptionsType, 0)
+def OperatorAddBuiltinOptions(builder, builtinOptions): builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(builtinOptions), 0)
+def OperatorAddCustomOptions(builder, customOptions): builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(customOptions), 0)
+def OperatorStartCustomOptionsVector(builder, numElems): return builder.StartVector(1, numElems, 1)
+def OperatorAddCustomOptionsFormat(builder, customOptionsFormat): builder.PrependInt8Slot(6, customOptionsFormat, 0)
+def OperatorAddMutatingVariableInputs(builder, mutatingVariableInputs): builder.PrependUOffsetTRelativeSlot(7, flatbuffers.number_types.UOffsetTFlags.py_type(mutatingVariableInputs), 0)
+def OperatorStartMutatingVariableInputsVector(builder, numElems): return builder.StartVector(1, numElems, 1)
+def OperatorAddIntermediates(builder, intermediates): builder.PrependUOffsetTRelativeSlot(8, flatbuffers.number_types.UOffsetTFlags.py_type(intermediates), 0)
+def OperatorStartIntermediatesVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def OperatorEnd(builder): return builder.EndObject()
 
 try:
     from typing import List, Union
 except:
     pass
-
 
 class OperatorT(object):
 
@@ -3500,9 +2995,7 @@ class OperatorT(object):
         self.inputs = None  # type: List[int]
         self.outputs = None  # type: List[int]
         self.builtinOptionsType = 0  # type: int
-        self.builtinOptions = (
-            None
-        )  # type: Union[None, Conv2DOptionsT, DepthwiseConv2DOptionsT, ConcatEmbeddingsOptionsT, LSHProjectionOptionsT, Pool2DOptionsT, SVDFOptionsT, RNNOptionsT, FullyConnectedOptionsT, SoftmaxOptionsT, ConcatenationOptionsT, AddOptionsT, L2NormOptionsT, LocalResponseNormalizationOptionsT, LSTMOptionsT, ResizeBilinearOptionsT, CallOptionsT, ReshapeOptionsT, SkipGramOptionsT, SpaceToDepthOptionsT, EmbeddingLookupSparseOptionsT, MulOptionsT, PadOptionsT, GatherOptionsT, BatchToSpaceNDOptionsT, SpaceToBatchNDOptionsT, TransposeOptionsT, ReducerOptionsT, SubOptionsT, DivOptionsT, SqueezeOptionsT, SequenceRNNOptionsT, StridedSliceOptionsT, ExpOptionsT, TopKV2OptionsT, SplitOptionsT, LogSoftmaxOptionsT, CastOptionsT, DequantizeOptionsT, MaximumMinimumOptionsT, ArgMaxOptionsT, LessOptionsT, NegOptionsT, PadV2OptionsT, GreaterOptionsT, GreaterEqualOptionsT, LessEqualOptionsT, SelectOptionsT, SliceOptionsT, TransposeConvOptionsT, SparseToDenseOptionsT, TileOptionsT, ExpandDimsOptionsT, EqualOptionsT, NotEqualOptionsT, ShapeOptionsT, PowOptionsT, ArgMinOptionsT, FakeQuantOptionsT, PackOptionsT, LogicalOrOptionsT, OneHotOptionsT, LogicalAndOptionsT, LogicalNotOptionsT, UnpackOptionsT, FloorDivOptionsT, SquareOptionsT, ZerosLikeOptionsT, FillOptionsT, BidirectionalSequenceLSTMOptionsT, BidirectionalSequenceRNNOptionsT, UnidirectionalSequenceLSTMOptionsT, FloorModOptionsT, RangeOptionsT, ResizeNearestNeighborOptionsT, LeakyReluOptionsT, SquaredDifferenceOptionsT, MirrorPadOptionsT, AbsOptionsT, SplitVOptionsT, UniqueOptionsT, ReverseV2OptionsT, AddNOptionsT, GatherNdOptionsT, CosOptionsT, WhereOptionsT, RankOptionsT, ReverseSequenceOptionsT, MatrixDiagOptionsT, QuantizeOptionsT, MatrixSetDiagOptionsT, HardSwishOptionsT, IfOptionsT, WhileOptionsT, DepthToSpaceOptionsT, NonMaxSuppressionV4OptionsT, NonMaxSuppressionV5OptionsT, ScatterNdOptionsT, SelectV2OptionsT, DensifyOptionsT, SegmentSumOptionsT]
+        self.builtinOptions = None  # type: Union[None, Conv2DOptionsT, DepthwiseConv2DOptionsT, ConcatEmbeddingsOptionsT, LSHProjectionOptionsT, Pool2DOptionsT, SVDFOptionsT, RNNOptionsT, FullyConnectedOptionsT, SoftmaxOptionsT, ConcatenationOptionsT, AddOptionsT, L2NormOptionsT, LocalResponseNormalizationOptionsT, LSTMOptionsT, ResizeBilinearOptionsT, CallOptionsT, ReshapeOptionsT, SkipGramOptionsT, SpaceToDepthOptionsT, EmbeddingLookupSparseOptionsT, MulOptionsT, PadOptionsT, GatherOptionsT, BatchToSpaceNDOptionsT, SpaceToBatchNDOptionsT, TransposeOptionsT, ReducerOptionsT, SubOptionsT, DivOptionsT, SqueezeOptionsT, SequenceRNNOptionsT, StridedSliceOptionsT, ExpOptionsT, TopKV2OptionsT, SplitOptionsT, LogSoftmaxOptionsT, CastOptionsT, DequantizeOptionsT, MaximumMinimumOptionsT, ArgMaxOptionsT, LessOptionsT, NegOptionsT, PadV2OptionsT, GreaterOptionsT, GreaterEqualOptionsT, LessEqualOptionsT, SelectOptionsT, SliceOptionsT, TransposeConvOptionsT, SparseToDenseOptionsT, TileOptionsT, ExpandDimsOptionsT, EqualOptionsT, NotEqualOptionsT, ShapeOptionsT, PowOptionsT, ArgMinOptionsT, FakeQuantOptionsT, PackOptionsT, LogicalOrOptionsT, OneHotOptionsT, LogicalAndOptionsT, LogicalNotOptionsT, UnpackOptionsT, FloorDivOptionsT, SquareOptionsT, ZerosLikeOptionsT, FillOptionsT, BidirectionalSequenceLSTMOptionsT, BidirectionalSequenceRNNOptionsT, UnidirectionalSequenceLSTMOptionsT, FloorModOptionsT, RangeOptionsT, ResizeNearestNeighborOptionsT, LeakyReluOptionsT, SquaredDifferenceOptionsT, MirrorPadOptionsT, AbsOptionsT, SplitVOptionsT, UniqueOptionsT, ReverseV2OptionsT, AddNOptionsT, GatherNdOptionsT, CosOptionsT, WhereOptionsT, RankOptionsT, ReverseSequenceOptionsT, MatrixDiagOptionsT, QuantizeOptionsT, MatrixSetDiagOptionsT, HardSwishOptionsT, IfOptionsT, WhileOptionsT, DepthToSpaceOptionsT, NonMaxSuppressionV4OptionsT, NonMaxSuppressionV5OptionsT, ScatterNdOptionsT, SelectV2OptionsT, DensifyOptionsT, SegmentSumOptionsT]
         self.customOptions = None  # type: List[int]
         self.customOptionsFormat = 0  # type: int
         self.mutatingVariableInputs = None  # type: List[bool]
@@ -3540,9 +3033,7 @@ class OperatorT(object):
             else:
                 self.outputs = operator.OutputsAsNumpy()
         self.builtinOptionsType = operator.BuiltinOptionsType()
-        self.builtinOptions = BuiltinOptionsCreator(
-            self.builtinOptionsType, operator.BuiltinOptions()
-        )
+        self.builtinOptions = BuiltinOptionsCreator(self.builtinOptionsType, operator.BuiltinOptions())
         if not operator.CustomOptionsIsNone():
             if np is None:
                 self.customOptions = []
@@ -3555,9 +3046,7 @@ class OperatorT(object):
             if np is None:
                 self.mutatingVariableInputs = []
                 for i in range(operator.MutatingVariableInputsLength()):
-                    self.mutatingVariableInputs.append(
-                        operator.MutatingVariableInputs(i)
-                    )
+                    self.mutatingVariableInputs.append(operator.MutatingVariableInputs(i))
             else:
                 self.mutatingVariableInputs = operator.MutatingVariableInputsAsNumpy()
         if not operator.IntermediatesIsNone():
@@ -3598,18 +3087,12 @@ class OperatorT(object):
                 customOptions = builder.EndVector(len(self.customOptions))
         if self.mutatingVariableInputs is not None:
             if np is not None and type(self.mutatingVariableInputs) is np.ndarray:
-                mutatingVariableInputs = builder.CreateNumpyVector(
-                    self.mutatingVariableInputs
-                )
+                mutatingVariableInputs = builder.CreateNumpyVector(self.mutatingVariableInputs)
             else:
-                OperatorStartMutatingVariableInputsVector(
-                    builder, len(self.mutatingVariableInputs)
-                )
+                OperatorStartMutatingVariableInputsVector(builder, len(self.mutatingVariableInputs))
                 for i in reversed(range(len(self.mutatingVariableInputs))):
                     builder.PrependBool(self.mutatingVariableInputs[i])
-                mutatingVariableInputs = builder.EndVector(
-                    len(self.mutatingVariableInputs)
-                )
+                mutatingVariableInputs = builder.EndVector(len(self.mutatingVariableInputs))
         if self.intermediates is not None:
             if np is not None and type(self.intermediates) is np.ndarray:
                 intermediates = builder.CreateNumpyVector(self.intermediates)
@@ -3638,8 +3121,9 @@ class OperatorT(object):
         return operator
 
 
+
 class FakeQuantOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsFakeQuantOptions(cls, buf, offset):
@@ -3650,9 +3134,7 @@ class FakeQuantOptions(object):
 
     @classmethod
     def FakeQuantOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # FakeQuantOptions
     def Init(self, buf, pos):
@@ -3662,18 +3144,14 @@ class FakeQuantOptions(object):
     def Min(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
     # FakeQuantOptions
     def Max(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
     # FakeQuantOptions
@@ -3687,34 +3165,15 @@ class FakeQuantOptions(object):
     def NarrowRange(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
-
-def FakeQuantOptionsStart(builder):
-    builder.StartObject(4)
-
-
-def FakeQuantOptionsAddMin(builder, min):
-    builder.PrependFloat32Slot(0, min, 0.0)
-
-
-def FakeQuantOptionsAddMax(builder, max):
-    builder.PrependFloat32Slot(1, max, 0.0)
-
-
-def FakeQuantOptionsAddNumBits(builder, numBits):
-    builder.PrependInt32Slot(2, numBits, 0)
-
-
-def FakeQuantOptionsAddNarrowRange(builder, narrowRange):
-    builder.PrependBoolSlot(3, narrowRange, 0)
-
-
-def FakeQuantOptionsEnd(builder):
-    return builder.EndObject()
+def FakeQuantOptionsStart(builder): builder.StartObject(4)
+def FakeQuantOptionsAddMin(builder, min): builder.PrependFloat32Slot(0, min, 0.0)
+def FakeQuantOptionsAddMax(builder, max): builder.PrependFloat32Slot(1, max, 0.0)
+def FakeQuantOptionsAddNumBits(builder, numBits): builder.PrependInt32Slot(2, numBits, 0)
+def FakeQuantOptionsAddNarrowRange(builder, narrowRange): builder.PrependBoolSlot(3, narrowRange, 0)
+def FakeQuantOptionsEnd(builder): return builder.EndObject()
 
 
 class FakeQuantOptionsT(object):
@@ -3758,8 +3217,9 @@ class FakeQuantOptionsT(object):
         return fakeQuantOptions
 
 
+
 class MaximumMinimumOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsMaximumMinimumOptions(cls, buf, offset):
@@ -3770,21 +3230,14 @@ class MaximumMinimumOptions(object):
 
     @classmethod
     def MaximumMinimumOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # MaximumMinimumOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def MaximumMinimumOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def MaximumMinimumOptionsEnd(builder):
-    return builder.EndObject()
+def MaximumMinimumOptionsStart(builder): builder.StartObject(0)
+def MaximumMinimumOptionsEnd(builder): return builder.EndObject()
 
 
 class MaximumMinimumOptionsT(object):
@@ -3830,8 +3283,10 @@ class TensorType(object):
     INT8 = 9
 
 
+
+
 class SegmentSumOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSegmentSumOptions(cls, buf, offset):
@@ -3842,21 +3297,14 @@ class SegmentSumOptions(object):
 
     @classmethod
     def SegmentSumOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SegmentSumOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def SegmentSumOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def SegmentSumOptionsEnd(builder):
-    return builder.EndObject()
+def SegmentSumOptionsStart(builder): builder.StartObject(0)
+def SegmentSumOptionsEnd(builder): return builder.EndObject()
 
 
 class SegmentSumOptionsT(object):
@@ -3889,8 +3337,9 @@ class SegmentSumOptionsT(object):
         return segmentSumOptions
 
 
+
 class EmbeddingLookupSparseOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsEmbeddingLookupSparseOptions(cls, buf, offset):
@@ -3900,12 +3349,8 @@ class EmbeddingLookupSparseOptions(object):
         return x
 
     @classmethod
-    def EmbeddingLookupSparseOptionsBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def EmbeddingLookupSparseOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # EmbeddingLookupSparseOptions
     def Init(self, buf, pos):
@@ -3918,17 +3363,9 @@ class EmbeddingLookupSparseOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def EmbeddingLookupSparseOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def EmbeddingLookupSparseOptionsAddCombiner(builder, combiner):
-    builder.PrependInt8Slot(0, combiner, 0)
-
-
-def EmbeddingLookupSparseOptionsEnd(builder):
-    return builder.EndObject()
+def EmbeddingLookupSparseOptionsStart(builder): builder.StartObject(1)
+def EmbeddingLookupSparseOptionsAddCombiner(builder, combiner): builder.PrependInt8Slot(0, combiner, 0)
+def EmbeddingLookupSparseOptionsEnd(builder): return builder.EndObject()
 
 
 class EmbeddingLookupSparseOptionsT(object):
@@ -3968,8 +3405,10 @@ class FullyConnectedOptionsWeightsFormat(object):
     SHUFFLED4x16INT8 = 1
 
 
+
+
 class UnidirectionalSequenceLSTMOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsUnidirectionalSequenceLSTMOptions(cls, buf, offset):
@@ -3979,12 +3418,8 @@ class UnidirectionalSequenceLSTMOptions(object):
         return x
 
     @classmethod
-    def UnidirectionalSequenceLSTMOptionsBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def UnidirectionalSequenceLSTMOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # UnidirectionalSequenceLSTMOptions
     def Init(self, buf, pos):
@@ -4001,54 +3436,29 @@ class UnidirectionalSequenceLSTMOptions(object):
     def CellClip(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
     # UnidirectionalSequenceLSTMOptions
     def ProjClip(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
     # UnidirectionalSequenceLSTMOptions
     def TimeMajor(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
-
-def UnidirectionalSequenceLSTMOptionsStart(builder):
-    builder.StartObject(4)
-
-
-def UnidirectionalSequenceLSTMOptionsAddFusedActivationFunction(
-    builder, fusedActivationFunction
-):
-    builder.PrependInt8Slot(0, fusedActivationFunction, 0)
-
-
-def UnidirectionalSequenceLSTMOptionsAddCellClip(builder, cellClip):
-    builder.PrependFloat32Slot(1, cellClip, 0.0)
-
-
-def UnidirectionalSequenceLSTMOptionsAddProjClip(builder, projClip):
-    builder.PrependFloat32Slot(2, projClip, 0.0)
-
-
-def UnidirectionalSequenceLSTMOptionsAddTimeMajor(builder, timeMajor):
-    builder.PrependBoolSlot(3, timeMajor, 0)
-
-
-def UnidirectionalSequenceLSTMOptionsEnd(builder):
-    return builder.EndObject()
+def UnidirectionalSequenceLSTMOptionsStart(builder): builder.StartObject(4)
+def UnidirectionalSequenceLSTMOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(0, fusedActivationFunction, 0)
+def UnidirectionalSequenceLSTMOptionsAddCellClip(builder, cellClip): builder.PrependFloat32Slot(1, cellClip, 0.0)
+def UnidirectionalSequenceLSTMOptionsAddProjClip(builder, projClip): builder.PrependFloat32Slot(2, projClip, 0.0)
+def UnidirectionalSequenceLSTMOptionsAddTimeMajor(builder, timeMajor): builder.PrependBoolSlot(3, timeMajor, 0)
+def UnidirectionalSequenceLSTMOptionsEnd(builder): return builder.EndObject()
 
 
 class UnidirectionalSequenceLSTMOptionsT(object):
@@ -4076,9 +3486,7 @@ class UnidirectionalSequenceLSTMOptionsT(object):
     def _UnPack(self, unidirectionalSequenceLSTMOptions):
         if unidirectionalSequenceLSTMOptions is None:
             return
-        self.fusedActivationFunction = (
-            unidirectionalSequenceLSTMOptions.FusedActivationFunction()
-        )
+        self.fusedActivationFunction = unidirectionalSequenceLSTMOptions.FusedActivationFunction()
         self.cellClip = unidirectionalSequenceLSTMOptions.CellClip()
         self.projClip = unidirectionalSequenceLSTMOptions.ProjClip()
         self.timeMajor = unidirectionalSequenceLSTMOptions.TimeMajor()
@@ -4086,20 +3494,17 @@ class UnidirectionalSequenceLSTMOptionsT(object):
     # UnidirectionalSequenceLSTMOptionsT
     def Pack(self, builder):
         UnidirectionalSequenceLSTMOptionsStart(builder)
-        UnidirectionalSequenceLSTMOptionsAddFusedActivationFunction(
-            builder, self.fusedActivationFunction
-        )
+        UnidirectionalSequenceLSTMOptionsAddFusedActivationFunction(builder, self.fusedActivationFunction)
         UnidirectionalSequenceLSTMOptionsAddCellClip(builder, self.cellClip)
         UnidirectionalSequenceLSTMOptionsAddProjClip(builder, self.projClip)
         UnidirectionalSequenceLSTMOptionsAddTimeMajor(builder, self.timeMajor)
-        unidirectionalSequenceLSTMOptions = UnidirectionalSequenceLSTMOptionsEnd(
-            builder
-        )
+        unidirectionalSequenceLSTMOptions = UnidirectionalSequenceLSTMOptionsEnd(builder)
         return unidirectionalSequenceLSTMOptions
 
 
+
 class ResizeNearestNeighborOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsResizeNearestNeighborOptions(cls, buf, offset):
@@ -4109,12 +3514,8 @@ class ResizeNearestNeighborOptions(object):
         return x
 
     @classmethod
-    def ResizeNearestNeighborOptionsBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def ResizeNearestNeighborOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ResizeNearestNeighborOptions
     def Init(self, buf, pos):
@@ -4124,22 +3525,12 @@ class ResizeNearestNeighborOptions(object):
     def AlignCorners(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
-
-def ResizeNearestNeighborOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def ResizeNearestNeighborOptionsAddAlignCorners(builder, alignCorners):
-    builder.PrependBoolSlot(0, alignCorners, 0)
-
-
-def ResizeNearestNeighborOptionsEnd(builder):
-    return builder.EndObject()
+def ResizeNearestNeighborOptionsStart(builder): builder.StartObject(1)
+def ResizeNearestNeighborOptionsAddAlignCorners(builder, alignCorners): builder.PrependBoolSlot(0, alignCorners, 0)
+def ResizeNearestNeighborOptionsEnd(builder): return builder.EndObject()
 
 
 class ResizeNearestNeighborOptionsT(object):
@@ -4174,8 +3565,9 @@ class ResizeNearestNeighborOptionsT(object):
         return resizeNearestNeighborOptions
 
 
+
 class CastOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsCastOptions(cls, buf, offset):
@@ -4186,9 +3578,7 @@ class CastOptions(object):
 
     @classmethod
     def CastOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # CastOptions
     def Init(self, buf, pos):
@@ -4208,21 +3598,10 @@ class CastOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def CastOptionsStart(builder):
-    builder.StartObject(2)
-
-
-def CastOptionsAddInDataType(builder, inDataType):
-    builder.PrependInt8Slot(0, inDataType, 0)
-
-
-def CastOptionsAddOutDataType(builder, outDataType):
-    builder.PrependInt8Slot(1, outDataType, 0)
-
-
-def CastOptionsEnd(builder):
-    return builder.EndObject()
+def CastOptionsStart(builder): builder.StartObject(2)
+def CastOptionsAddInDataType(builder, inDataType): builder.PrependInt8Slot(0, inDataType, 0)
+def CastOptionsAddOutDataType(builder, outDataType): builder.PrependInt8Slot(1, outDataType, 0)
+def CastOptionsEnd(builder): return builder.EndObject()
 
 
 class CastOptionsT(object):
@@ -4260,8 +3639,9 @@ class CastOptionsT(object):
         return castOptions
 
 
+
 class BidirectionalSequenceLSTMOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsBidirectionalSequenceLSTMOptions(cls, buf, offset):
@@ -4271,12 +3651,8 @@ class BidirectionalSequenceLSTMOptions(object):
         return x
 
     @classmethod
-    def BidirectionalSequenceLSTMOptionsBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def BidirectionalSequenceLSTMOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # BidirectionalSequenceLSTMOptions
     def Init(self, buf, pos):
@@ -4293,67 +3669,37 @@ class BidirectionalSequenceLSTMOptions(object):
     def CellClip(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
     # BidirectionalSequenceLSTMOptions
     def ProjClip(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
     # BidirectionalSequenceLSTMOptions
     def MergeOutputs(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
     # BidirectionalSequenceLSTMOptions
     def TimeMajor(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return True
 
-
-def BidirectionalSequenceLSTMOptionsStart(builder):
-    builder.StartObject(5)
-
-
-def BidirectionalSequenceLSTMOptionsAddFusedActivationFunction(
-    builder, fusedActivationFunction
-):
-    builder.PrependInt8Slot(0, fusedActivationFunction, 0)
-
-
-def BidirectionalSequenceLSTMOptionsAddCellClip(builder, cellClip):
-    builder.PrependFloat32Slot(1, cellClip, 0.0)
-
-
-def BidirectionalSequenceLSTMOptionsAddProjClip(builder, projClip):
-    builder.PrependFloat32Slot(2, projClip, 0.0)
-
-
-def BidirectionalSequenceLSTMOptionsAddMergeOutputs(builder, mergeOutputs):
-    builder.PrependBoolSlot(3, mergeOutputs, 0)
-
-
-def BidirectionalSequenceLSTMOptionsAddTimeMajor(builder, timeMajor):
-    builder.PrependBoolSlot(4, timeMajor, 1)
-
-
-def BidirectionalSequenceLSTMOptionsEnd(builder):
-    return builder.EndObject()
+def BidirectionalSequenceLSTMOptionsStart(builder): builder.StartObject(5)
+def BidirectionalSequenceLSTMOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(0, fusedActivationFunction, 0)
+def BidirectionalSequenceLSTMOptionsAddCellClip(builder, cellClip): builder.PrependFloat32Slot(1, cellClip, 0.0)
+def BidirectionalSequenceLSTMOptionsAddProjClip(builder, projClip): builder.PrependFloat32Slot(2, projClip, 0.0)
+def BidirectionalSequenceLSTMOptionsAddMergeOutputs(builder, mergeOutputs): builder.PrependBoolSlot(3, mergeOutputs, 0)
+def BidirectionalSequenceLSTMOptionsAddTimeMajor(builder, timeMajor): builder.PrependBoolSlot(4, timeMajor, 1)
+def BidirectionalSequenceLSTMOptionsEnd(builder): return builder.EndObject()
 
 
 class BidirectionalSequenceLSTMOptionsT(object):
@@ -4382,9 +3728,7 @@ class BidirectionalSequenceLSTMOptionsT(object):
     def _UnPack(self, bidirectionalSequenceLSTMOptions):
         if bidirectionalSequenceLSTMOptions is None:
             return
-        self.fusedActivationFunction = (
-            bidirectionalSequenceLSTMOptions.FusedActivationFunction()
-        )
+        self.fusedActivationFunction = bidirectionalSequenceLSTMOptions.FusedActivationFunction()
         self.cellClip = bidirectionalSequenceLSTMOptions.CellClip()
         self.projClip = bidirectionalSequenceLSTMOptions.ProjClip()
         self.mergeOutputs = bidirectionalSequenceLSTMOptions.MergeOutputs()
@@ -4393,9 +3737,7 @@ class BidirectionalSequenceLSTMOptionsT(object):
     # BidirectionalSequenceLSTMOptionsT
     def Pack(self, builder):
         BidirectionalSequenceLSTMOptionsStart(builder)
-        BidirectionalSequenceLSTMOptionsAddFusedActivationFunction(
-            builder, self.fusedActivationFunction
-        )
+        BidirectionalSequenceLSTMOptionsAddFusedActivationFunction(builder, self.fusedActivationFunction)
         BidirectionalSequenceLSTMOptionsAddCellClip(builder, self.cellClip)
         BidirectionalSequenceLSTMOptionsAddProjClip(builder, self.projClip)
         BidirectionalSequenceLSTMOptionsAddMergeOutputs(builder, self.mergeOutputs)
@@ -4404,8 +3746,9 @@ class BidirectionalSequenceLSTMOptionsT(object):
         return bidirectionalSequenceLSTMOptions
 
 
+
 class SplitOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSplitOptions(cls, buf, offset):
@@ -4416,9 +3759,7 @@ class SplitOptions(object):
 
     @classmethod
     def SplitOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SplitOptions
     def Init(self, buf, pos):
@@ -4431,17 +3772,9 @@ class SplitOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def SplitOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def SplitOptionsAddNumSplits(builder, numSplits):
-    builder.PrependInt32Slot(0, numSplits, 0)
-
-
-def SplitOptionsEnd(builder):
-    return builder.EndObject()
+def SplitOptionsStart(builder): builder.StartObject(1)
+def SplitOptionsAddNumSplits(builder, numSplits): builder.PrependInt32Slot(0, numSplits, 0)
+def SplitOptionsEnd(builder): return builder.EndObject()
 
 
 class SplitOptionsT(object):
@@ -4582,7 +3915,6 @@ class BuiltinOptions(object):
 
 def BuiltinOptionsCreator(unionType, table):
     from flatbuffers.table import Table
-
     if not isinstance(table, Table):
         return None
     if unionType == BuiltinOptions().Conv2DOptions:
@@ -4788,8 +4120,9 @@ def BuiltinOptionsCreator(unionType, table):
     return None
 
 
+
 class QuantizationParameters(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsQuantizationParameters(cls, buf, offset):
@@ -4799,12 +4132,8 @@ class QuantizationParameters(object):
         return x
 
     @classmethod
-    def QuantizationParametersBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def QuantizationParametersBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # QuantizationParameters
     def Init(self, buf, pos):
@@ -4815,10 +4144,7 @@ class QuantizationParameters(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # QuantizationParameters
@@ -4845,10 +4171,7 @@ class QuantizationParameters(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # QuantizationParameters
@@ -4875,10 +4198,7 @@ class QuantizationParameters(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # QuantizationParameters
@@ -4905,10 +4225,7 @@ class QuantizationParameters(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int64Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
         return 0
 
     # QuantizationParameters
@@ -4942,7 +4259,6 @@ class QuantizationParameters(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             from flatbuffers.table import Table
-
             obj = Table(bytearray(), 0)
             self._tab.Union(obj, o)
             return obj
@@ -4955,74 +4271,24 @@ class QuantizationParameters(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def QuantizationParametersStart(builder):
-    builder.StartObject(7)
-
-
-def QuantizationParametersAddMin(builder, min):
-    builder.PrependUOffsetTRelativeSlot(
-        0, flatbuffers.number_types.UOffsetTFlags.py_type(min), 0
-    )
-
-
-def QuantizationParametersStartMinVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def QuantizationParametersAddMax(builder, max):
-    builder.PrependUOffsetTRelativeSlot(
-        1, flatbuffers.number_types.UOffsetTFlags.py_type(max), 0
-    )
-
-
-def QuantizationParametersStartMaxVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def QuantizationParametersAddScale(builder, scale):
-    builder.PrependUOffsetTRelativeSlot(
-        2, flatbuffers.number_types.UOffsetTFlags.py_type(scale), 0
-    )
-
-
-def QuantizationParametersStartScaleVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def QuantizationParametersAddZeroPoint(builder, zeroPoint):
-    builder.PrependUOffsetTRelativeSlot(
-        3, flatbuffers.number_types.UOffsetTFlags.py_type(zeroPoint), 0
-    )
-
-
-def QuantizationParametersStartZeroPointVector(builder, numElems):
-    return builder.StartVector(8, numElems, 8)
-
-
-def QuantizationParametersAddDetailsType(builder, detailsType):
-    builder.PrependUint8Slot(4, detailsType, 0)
-
-
-def QuantizationParametersAddDetails(builder, details):
-    builder.PrependUOffsetTRelativeSlot(
-        5, flatbuffers.number_types.UOffsetTFlags.py_type(details), 0
-    )
-
-
-def QuantizationParametersAddQuantizedDimension(builder, quantizedDimension):
-    builder.PrependInt32Slot(6, quantizedDimension, 0)
-
-
-def QuantizationParametersEnd(builder):
-    return builder.EndObject()
-
+def QuantizationParametersStart(builder): builder.StartObject(7)
+def QuantizationParametersAddMin(builder, min): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(min), 0)
+def QuantizationParametersStartMinVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def QuantizationParametersAddMax(builder, max): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(max), 0)
+def QuantizationParametersStartMaxVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def QuantizationParametersAddScale(builder, scale): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(scale), 0)
+def QuantizationParametersStartScaleVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def QuantizationParametersAddZeroPoint(builder, zeroPoint): builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(zeroPoint), 0)
+def QuantizationParametersStartZeroPointVector(builder, numElems): return builder.StartVector(8, numElems, 8)
+def QuantizationParametersAddDetailsType(builder, detailsType): builder.PrependUint8Slot(4, detailsType, 0)
+def QuantizationParametersAddDetails(builder, details): builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(details), 0)
+def QuantizationParametersAddQuantizedDimension(builder, quantizedDimension): builder.PrependInt32Slot(6, quantizedDimension, 0)
+def QuantizationParametersEnd(builder): return builder.EndObject()
 
 try:
     from typing import List, Union
 except:
     pass
-
 
 class QuantizationParametersT(object):
 
@@ -5081,9 +4347,7 @@ class QuantizationParametersT(object):
             else:
                 self.zeroPoint = quantizationParameters.ZeroPointAsNumpy()
         self.detailsType = quantizationParameters.DetailsType()
-        self.details = QuantizationDetailsCreator(
-            self.detailsType, quantizationParameters.Details()
-        )
+        self.details = QuantizationDetailsCreator(self.detailsType, quantizationParameters.Details())
         self.quantizedDimension = quantizationParameters.QuantizedDimension()
 
     # QuantizationParametersT
@@ -5268,8 +4532,10 @@ class BuiltinOperator(object):
     SEGMENT_SUM = 125
 
 
+
+
 class PadV2Options(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsPadV2Options(cls, buf, offset):
@@ -5280,21 +4546,14 @@ class PadV2Options(object):
 
     @classmethod
     def PadV2OptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # PadV2Options
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def PadV2OptionsStart(builder):
-    builder.StartObject(0)
-
-
-def PadV2OptionsEnd(builder):
-    return builder.EndObject()
+def PadV2OptionsStart(builder): builder.StartObject(0)
+def PadV2OptionsEnd(builder): return builder.EndObject()
 
 
 class PadV2OptionsT(object):
@@ -5327,8 +4586,9 @@ class PadV2OptionsT(object):
         return padV2Options
 
 
+
 class SplitVOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSplitVOptions(cls, buf, offset):
@@ -5339,9 +4599,7 @@ class SplitVOptions(object):
 
     @classmethod
     def SplitVOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SplitVOptions
     def Init(self, buf, pos):
@@ -5354,17 +4612,9 @@ class SplitVOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def SplitVOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def SplitVOptionsAddNumSplits(builder, numSplits):
-    builder.PrependInt32Slot(0, numSplits, 0)
-
-
-def SplitVOptionsEnd(builder):
-    return builder.EndObject()
+def SplitVOptionsStart(builder): builder.StartObject(1)
+def SplitVOptionsAddNumSplits(builder, numSplits): builder.PrependInt32Slot(0, numSplits, 0)
+def SplitVOptionsEnd(builder): return builder.EndObject()
 
 
 class SplitVOptionsT(object):
@@ -5399,8 +4649,9 @@ class SplitVOptionsT(object):
         return splitVOptions
 
 
+
 class Model(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsModel(cls, buf, offset):
@@ -5411,9 +4662,7 @@ class Model(object):
 
     @classmethod
     def ModelBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # Model
     def Init(self, buf, pos):
@@ -5423,9 +4672,7 @@ class Model(object):
     def Version(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Uint32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
         return 0
 
     # Model
@@ -5512,10 +4759,7 @@ class Model(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # Model
@@ -5561,80 +4805,25 @@ class Model(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         return o == 0
 
-
-def ModelStart(builder):
-    builder.StartObject(7)
-
-
-def ModelAddVersion(builder, version):
-    builder.PrependUint32Slot(0, version, 0)
-
-
-def ModelAddOperatorCodes(builder, operatorCodes):
-    builder.PrependUOffsetTRelativeSlot(
-        1, flatbuffers.number_types.UOffsetTFlags.py_type(operatorCodes), 0
-    )
-
-
-def ModelStartOperatorCodesVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def ModelAddSubgraphs(builder, subgraphs):
-    builder.PrependUOffsetTRelativeSlot(
-        2, flatbuffers.number_types.UOffsetTFlags.py_type(subgraphs), 0
-    )
-
-
-def ModelStartSubgraphsVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def ModelAddDescription(builder, description):
-    builder.PrependUOffsetTRelativeSlot(
-        3, flatbuffers.number_types.UOffsetTFlags.py_type(description), 0
-    )
-
-
-def ModelAddBuffers(builder, buffers):
-    builder.PrependUOffsetTRelativeSlot(
-        4, flatbuffers.number_types.UOffsetTFlags.py_type(buffers), 0
-    )
-
-
-def ModelStartBuffersVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def ModelAddMetadataBuffer(builder, metadataBuffer):
-    builder.PrependUOffsetTRelativeSlot(
-        5, flatbuffers.number_types.UOffsetTFlags.py_type(metadataBuffer), 0
-    )
-
-
-def ModelStartMetadataBufferVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def ModelAddMetadata(builder, metadata):
-    builder.PrependUOffsetTRelativeSlot(
-        6, flatbuffers.number_types.UOffsetTFlags.py_type(metadata), 0
-    )
-
-
-def ModelStartMetadataVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def ModelEnd(builder):
-    return builder.EndObject()
-
+def ModelStart(builder): builder.StartObject(7)
+def ModelAddVersion(builder, version): builder.PrependUint32Slot(0, version, 0)
+def ModelAddOperatorCodes(builder, operatorCodes): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(operatorCodes), 0)
+def ModelStartOperatorCodesVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def ModelAddSubgraphs(builder, subgraphs): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(subgraphs), 0)
+def ModelStartSubgraphsVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def ModelAddDescription(builder, description): builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(description), 0)
+def ModelAddBuffers(builder, buffers): builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(buffers), 0)
+def ModelStartBuffersVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def ModelAddMetadataBuffer(builder, metadataBuffer): builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(metadataBuffer), 0)
+def ModelStartMetadataBufferVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def ModelAddMetadata(builder, metadata): builder.PrependUOffsetTRelativeSlot(6, flatbuffers.number_types.UOffsetTFlags.py_type(metadata), 0)
+def ModelStartMetadataVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def ModelEnd(builder): return builder.EndObject()
 
 try:
     from typing import List
 except:
     pass
-
 
 class ModelT(object):
 
@@ -5768,8 +4957,9 @@ class ModelT(object):
         return model
 
 
+
 class Tensor(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsTensor(cls, buf, offset):
@@ -5780,9 +4970,7 @@ class Tensor(object):
 
     @classmethod
     def TensorBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # Tensor
     def Init(self, buf, pos):
@@ -5793,10 +4981,7 @@ class Tensor(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # Tensor
@@ -5829,9 +5014,7 @@ class Tensor(object):
     def Buffer(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Uint32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
         return 0
 
     # Tensor
@@ -5855,9 +5038,7 @@ class Tensor(object):
     def IsVariable(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
     # Tensor
@@ -5870,60 +5051,21 @@ class Tensor(object):
             return obj
         return None
 
-
-def TensorStart(builder):
-    builder.StartObject(7)
-
-
-def TensorAddShape(builder, shape):
-    builder.PrependUOffsetTRelativeSlot(
-        0, flatbuffers.number_types.UOffsetTFlags.py_type(shape), 0
-    )
-
-
-def TensorStartShapeVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def TensorAddType(builder, type):
-    builder.PrependInt8Slot(1, type, 0)
-
-
-def TensorAddBuffer(builder, buffer):
-    builder.PrependUint32Slot(2, buffer, 0)
-
-
-def TensorAddName(builder, name):
-    builder.PrependUOffsetTRelativeSlot(
-        3, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0
-    )
-
-
-def TensorAddQuantization(builder, quantization):
-    builder.PrependUOffsetTRelativeSlot(
-        4, flatbuffers.number_types.UOffsetTFlags.py_type(quantization), 0
-    )
-
-
-def TensorAddIsVariable(builder, isVariable):
-    builder.PrependBoolSlot(5, isVariable, 0)
-
-
-def TensorAddSparsity(builder, sparsity):
-    builder.PrependUOffsetTRelativeSlot(
-        6, flatbuffers.number_types.UOffsetTFlags.py_type(sparsity), 0
-    )
-
-
-def TensorEnd(builder):
-    return builder.EndObject()
-
+def TensorStart(builder): builder.StartObject(7)
+def TensorAddShape(builder, shape): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(shape), 0)
+def TensorStartShapeVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def TensorAddType(builder, type): builder.PrependInt8Slot(1, type, 0)
+def TensorAddBuffer(builder, buffer): builder.PrependUint32Slot(2, buffer, 0)
+def TensorAddName(builder, name): builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+def TensorAddQuantization(builder, quantization): builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(quantization), 0)
+def TensorAddIsVariable(builder, isVariable): builder.PrependBoolSlot(5, isVariable, 0)
+def TensorAddSparsity(builder, sparsity): builder.PrependUOffsetTRelativeSlot(6, flatbuffers.number_types.UOffsetTFlags.py_type(sparsity), 0)
+def TensorEnd(builder): return builder.EndObject()
 
 try:
     from typing import List, Optional
 except:
     pass
-
 
 class TensorT(object):
 
@@ -5964,9 +5106,7 @@ class TensorT(object):
         self.buffer = tensor.Buffer()
         self.name = tensor.Name()
         if tensor.Quantization() is not None:
-            self.quantization = QuantizationParametersT.InitFromObj(
-                tensor.Quantization()
-            )
+            self.quantization = QuantizationParametersT.InitFromObj(tensor.Quantization())
         self.isVariable = tensor.IsVariable()
         if tensor.Sparsity() is not None:
             self.sparsity = SparsityParametersT.InitFromObj(tensor.Sparsity())
@@ -5998,13 +5138,14 @@ class TensorT(object):
             TensorAddQuantization(builder, quantization)
         TensorAddIsVariable(builder, self.isVariable)
         if self.sparsity is not None:
-            TensorAddSparsity(builder, sparsity)
+           TensorAddSparsity(builder, sparsity)
         tensor = TensorEnd(builder)
         return tensor
 
 
+
 class SkipGramOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSkipGramOptions(cls, buf, offset):
@@ -6015,9 +5156,7 @@ class SkipGramOptions(object):
 
     @classmethod
     def SkipGramOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SkipGramOptions
     def Init(self, buf, pos):
@@ -6041,30 +5180,14 @@ class SkipGramOptions(object):
     def IncludeAllNgrams(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
-
-def SkipGramOptionsStart(builder):
-    builder.StartObject(3)
-
-
-def SkipGramOptionsAddNgramSize(builder, ngramSize):
-    builder.PrependInt32Slot(0, ngramSize, 0)
-
-
-def SkipGramOptionsAddMaxSkipSize(builder, maxSkipSize):
-    builder.PrependInt32Slot(1, maxSkipSize, 0)
-
-
-def SkipGramOptionsAddIncludeAllNgrams(builder, includeAllNgrams):
-    builder.PrependBoolSlot(2, includeAllNgrams, 0)
-
-
-def SkipGramOptionsEnd(builder):
-    return builder.EndObject()
+def SkipGramOptionsStart(builder): builder.StartObject(3)
+def SkipGramOptionsAddNgramSize(builder, ngramSize): builder.PrependInt32Slot(0, ngramSize, 0)
+def SkipGramOptionsAddMaxSkipSize(builder, maxSkipSize): builder.PrependInt32Slot(1, maxSkipSize, 0)
+def SkipGramOptionsAddIncludeAllNgrams(builder, includeAllNgrams): builder.PrependBoolSlot(2, includeAllNgrams, 0)
+def SkipGramOptionsEnd(builder): return builder.EndObject()
 
 
 class SkipGramOptionsT(object):
@@ -6105,8 +5228,9 @@ class SkipGramOptionsT(object):
         return skipGramOptions
 
 
+
 class LogicalNotOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsLogicalNotOptions(cls, buf, offset):
@@ -6117,21 +5241,14 @@ class LogicalNotOptions(object):
 
     @classmethod
     def LogicalNotOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # LogicalNotOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def LogicalNotOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def LogicalNotOptionsEnd(builder):
-    return builder.EndObject()
+def LogicalNotOptionsStart(builder): builder.StartObject(0)
+def LogicalNotOptionsEnd(builder): return builder.EndObject()
 
 
 class LogicalNotOptionsT(object):
@@ -6164,8 +5281,9 @@ class LogicalNotOptionsT(object):
         return logicalNotOptions
 
 
+
 class CosOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsCosOptions(cls, buf, offset):
@@ -6176,21 +5294,14 @@ class CosOptions(object):
 
     @classmethod
     def CosOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # CosOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def CosOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def CosOptionsEnd(builder):
-    return builder.EndObject()
+def CosOptionsStart(builder): builder.StartObject(0)
+def CosOptionsEnd(builder): return builder.EndObject()
 
 
 class CosOptionsT(object):
@@ -6223,8 +5334,9 @@ class CosOptionsT(object):
         return cosOptions
 
 
+
 class HardSwishOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsHardSwishOptions(cls, buf, offset):
@@ -6235,21 +5347,14 @@ class HardSwishOptions(object):
 
     @classmethod
     def HardSwishOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # HardSwishOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def HardSwishOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def HardSwishOptionsEnd(builder):
-    return builder.EndObject()
+def HardSwishOptionsStart(builder): builder.StartObject(0)
+def HardSwishOptionsEnd(builder): return builder.EndObject()
 
 
 class HardSwishOptionsT(object):
@@ -6282,8 +5387,9 @@ class HardSwishOptionsT(object):
         return hardSwishOptions
 
 
+
 class ExpOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsExpOptions(cls, buf, offset):
@@ -6294,21 +5400,14 @@ class ExpOptions(object):
 
     @classmethod
     def ExpOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ExpOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def ExpOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def ExpOptionsEnd(builder):
-    return builder.EndObject()
+def ExpOptionsStart(builder): builder.StartObject(0)
+def ExpOptionsEnd(builder): return builder.EndObject()
 
 
 class ExpOptionsT(object):
@@ -6341,8 +5440,9 @@ class ExpOptionsT(object):
         return expOptions
 
 
+
 class MulOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsMulOptions(cls, buf, offset):
@@ -6353,9 +5453,7 @@ class MulOptions(object):
 
     @classmethod
     def MulOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # MulOptions
     def Init(self, buf, pos):
@@ -6368,17 +5466,9 @@ class MulOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def MulOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def MulOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(0, fusedActivationFunction, 0)
-
-
-def MulOptionsEnd(builder):
-    return builder.EndObject()
+def MulOptionsStart(builder): builder.StartObject(1)
+def MulOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(0, fusedActivationFunction, 0)
+def MulOptionsEnd(builder): return builder.EndObject()
 
 
 class MulOptionsT(object):
@@ -6413,8 +5503,9 @@ class MulOptionsT(object):
         return mulOptions
 
 
+
 class FillOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsFillOptions(cls, buf, offset):
@@ -6425,21 +5516,14 @@ class FillOptions(object):
 
     @classmethod
     def FillOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # FillOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def FillOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def FillOptionsEnd(builder):
-    return builder.EndObject()
+def FillOptionsStart(builder): builder.StartObject(0)
+def FillOptionsEnd(builder): return builder.EndObject()
 
 
 class FillOptionsT(object):
@@ -6472,8 +5556,9 @@ class FillOptionsT(object):
         return fillOptions
 
 
+
 class BidirectionalSequenceRNNOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsBidirectionalSequenceRNNOptions(cls, buf, offset):
@@ -6483,12 +5568,8 @@ class BidirectionalSequenceRNNOptions(object):
         return x
 
     @classmethod
-    def BidirectionalSequenceRNNOptionsBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def BidirectionalSequenceRNNOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # BidirectionalSequenceRNNOptions
     def Init(self, buf, pos):
@@ -6498,9 +5579,7 @@ class BidirectionalSequenceRNNOptions(object):
     def TimeMajor(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
     # BidirectionalSequenceRNNOptions
@@ -6514,32 +5593,14 @@ class BidirectionalSequenceRNNOptions(object):
     def MergeOutputs(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
-
-def BidirectionalSequenceRNNOptionsStart(builder):
-    builder.StartObject(3)
-
-
-def BidirectionalSequenceRNNOptionsAddTimeMajor(builder, timeMajor):
-    builder.PrependBoolSlot(0, timeMajor, 0)
-
-
-def BidirectionalSequenceRNNOptionsAddFusedActivationFunction(
-    builder, fusedActivationFunction
-):
-    builder.PrependInt8Slot(1, fusedActivationFunction, 0)
-
-
-def BidirectionalSequenceRNNOptionsAddMergeOutputs(builder, mergeOutputs):
-    builder.PrependBoolSlot(2, mergeOutputs, 0)
-
-
-def BidirectionalSequenceRNNOptionsEnd(builder):
-    return builder.EndObject()
+def BidirectionalSequenceRNNOptionsStart(builder): builder.StartObject(3)
+def BidirectionalSequenceRNNOptionsAddTimeMajor(builder, timeMajor): builder.PrependBoolSlot(0, timeMajor, 0)
+def BidirectionalSequenceRNNOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(1, fusedActivationFunction, 0)
+def BidirectionalSequenceRNNOptionsAddMergeOutputs(builder, mergeOutputs): builder.PrependBoolSlot(2, mergeOutputs, 0)
+def BidirectionalSequenceRNNOptionsEnd(builder): return builder.EndObject()
 
 
 class BidirectionalSequenceRNNOptionsT(object):
@@ -6567,25 +5628,22 @@ class BidirectionalSequenceRNNOptionsT(object):
         if bidirectionalSequenceRNNOptions is None:
             return
         self.timeMajor = bidirectionalSequenceRNNOptions.TimeMajor()
-        self.fusedActivationFunction = (
-            bidirectionalSequenceRNNOptions.FusedActivationFunction()
-        )
+        self.fusedActivationFunction = bidirectionalSequenceRNNOptions.FusedActivationFunction()
         self.mergeOutputs = bidirectionalSequenceRNNOptions.MergeOutputs()
 
     # BidirectionalSequenceRNNOptionsT
     def Pack(self, builder):
         BidirectionalSequenceRNNOptionsStart(builder)
         BidirectionalSequenceRNNOptionsAddTimeMajor(builder, self.timeMajor)
-        BidirectionalSequenceRNNOptionsAddFusedActivationFunction(
-            builder, self.fusedActivationFunction
-        )
+        BidirectionalSequenceRNNOptionsAddFusedActivationFunction(builder, self.fusedActivationFunction)
         BidirectionalSequenceRNNOptionsAddMergeOutputs(builder, self.mergeOutputs)
         bidirectionalSequenceRNNOptions = BidirectionalSequenceRNNOptionsEnd(builder)
         return bidirectionalSequenceRNNOptions
 
 
+
 class FloorModOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsFloorModOptions(cls, buf, offset):
@@ -6596,21 +5654,14 @@ class FloorModOptions(object):
 
     @classmethod
     def FloorModOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # FloorModOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def FloorModOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def FloorModOptionsEnd(builder):
-    return builder.EndObject()
+def FloorModOptionsStart(builder): builder.StartObject(0)
+def FloorModOptionsEnd(builder): return builder.EndObject()
 
 
 class FloorModOptionsT(object):
@@ -6643,8 +5694,9 @@ class FloorModOptionsT(object):
         return floorModOptions
 
 
+
 class ScatterNdOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsScatterNdOptions(cls, buf, offset):
@@ -6655,21 +5707,14 @@ class ScatterNdOptions(object):
 
     @classmethod
     def ScatterNdOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ScatterNdOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def ScatterNdOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def ScatterNdOptionsEnd(builder):
-    return builder.EndObject()
+def ScatterNdOptionsStart(builder): builder.StartObject(0)
+def ScatterNdOptionsEnd(builder): return builder.EndObject()
 
 
 class ScatterNdOptionsT(object):
@@ -6702,8 +5747,9 @@ class ScatterNdOptionsT(object):
         return scatterNdOptions
 
 
+
 class LogicalAndOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsLogicalAndOptions(cls, buf, offset):
@@ -6714,21 +5760,14 @@ class LogicalAndOptions(object):
 
     @classmethod
     def LogicalAndOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # LogicalAndOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def LogicalAndOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def LogicalAndOptionsEnd(builder):
-    return builder.EndObject()
+def LogicalAndOptionsStart(builder): builder.StartObject(0)
+def LogicalAndOptionsEnd(builder): return builder.EndObject()
 
 
 class LogicalAndOptionsT(object):
@@ -6761,8 +5800,9 @@ class LogicalAndOptionsT(object):
         return logicalAndOptions
 
 
+
 class SqueezeOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSqueezeOptions(cls, buf, offset):
@@ -6773,9 +5813,7 @@ class SqueezeOptions(object):
 
     @classmethod
     def SqueezeOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SqueezeOptions
     def Init(self, buf, pos):
@@ -6786,10 +5824,7 @@ class SqueezeOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # SqueezeOptions
@@ -6811,30 +5846,15 @@ class SqueezeOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
-
-def SqueezeOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def SqueezeOptionsAddSqueezeDims(builder, squeezeDims):
-    builder.PrependUOffsetTRelativeSlot(
-        0, flatbuffers.number_types.UOffsetTFlags.py_type(squeezeDims), 0
-    )
-
-
-def SqueezeOptionsStartSqueezeDimsVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def SqueezeOptionsEnd(builder):
-    return builder.EndObject()
-
+def SqueezeOptionsStart(builder): builder.StartObject(1)
+def SqueezeOptionsAddSqueezeDims(builder, squeezeDims): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(squeezeDims), 0)
+def SqueezeOptionsStartSqueezeDimsVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def SqueezeOptionsEnd(builder): return builder.EndObject()
 
 try:
     from typing import List
 except:
     pass
-
 
 class SqueezeOptionsT(object):
 
@@ -6883,8 +5903,9 @@ class SqueezeOptionsT(object):
         return squeezeOptions
 
 
+
 class SequenceRNNOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSequenceRNNOptions(cls, buf, offset):
@@ -6895,9 +5916,7 @@ class SequenceRNNOptions(object):
 
     @classmethod
     def SequenceRNNOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SequenceRNNOptions
     def Init(self, buf, pos):
@@ -6907,9 +5926,7 @@ class SequenceRNNOptions(object):
     def TimeMajor(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
     # SequenceRNNOptions
@@ -6919,21 +5936,10 @@ class SequenceRNNOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def SequenceRNNOptionsStart(builder):
-    builder.StartObject(2)
-
-
-def SequenceRNNOptionsAddTimeMajor(builder, timeMajor):
-    builder.PrependBoolSlot(0, timeMajor, 0)
-
-
-def SequenceRNNOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(1, fusedActivationFunction, 0)
-
-
-def SequenceRNNOptionsEnd(builder):
-    return builder.EndObject()
+def SequenceRNNOptionsStart(builder): builder.StartObject(2)
+def SequenceRNNOptionsAddTimeMajor(builder, timeMajor): builder.PrependBoolSlot(0, timeMajor, 0)
+def SequenceRNNOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(1, fusedActivationFunction, 0)
+def SequenceRNNOptionsEnd(builder): return builder.EndObject()
 
 
 class SequenceRNNOptionsT(object):
@@ -6966,15 +5972,14 @@ class SequenceRNNOptionsT(object):
     def Pack(self, builder):
         SequenceRNNOptionsStart(builder)
         SequenceRNNOptionsAddTimeMajor(builder, self.timeMajor)
-        SequenceRNNOptionsAddFusedActivationFunction(
-            builder, self.fusedActivationFunction
-        )
+        SequenceRNNOptionsAddFusedActivationFunction(builder, self.fusedActivationFunction)
         sequenceRNNOptions = SequenceRNNOptionsEnd(builder)
         return sequenceRNNOptions
 
 
+
 class SquaredDifferenceOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSquaredDifferenceOptions(cls, buf, offset):
@@ -6984,24 +5989,15 @@ class SquaredDifferenceOptions(object):
         return x
 
     @classmethod
-    def SquaredDifferenceOptionsBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def SquaredDifferenceOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SquaredDifferenceOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def SquaredDifferenceOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def SquaredDifferenceOptionsEnd(builder):
-    return builder.EndObject()
+def SquaredDifferenceOptionsStart(builder): builder.StartObject(0)
+def SquaredDifferenceOptionsEnd(builder): return builder.EndObject()
 
 
 class SquaredDifferenceOptionsT(object):
@@ -7041,7 +6037,6 @@ class QuantizationDetails(object):
 
 def QuantizationDetailsCreator(unionType, table):
     from flatbuffers.table import Table
-
     if not isinstance(table, Table):
         return None
     if unionType == QuantizationDetails().CustomQuantization:
@@ -7049,8 +6044,9 @@ def QuantizationDetailsCreator(unionType, table):
     return None
 
 
+
 class SpaceToBatchNDOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSpaceToBatchNDOptions(cls, buf, offset):
@@ -7061,21 +6057,14 @@ class SpaceToBatchNDOptions(object):
 
     @classmethod
     def SpaceToBatchNDOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SpaceToBatchNDOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def SpaceToBatchNDOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def SpaceToBatchNDOptionsEnd(builder):
-    return builder.EndObject()
+def SpaceToBatchNDOptionsStart(builder): builder.StartObject(0)
+def SpaceToBatchNDOptionsEnd(builder): return builder.EndObject()
 
 
 class SpaceToBatchNDOptionsT(object):
@@ -7108,8 +6097,9 @@ class SpaceToBatchNDOptionsT(object):
         return spaceToBatchNDOptions
 
 
+
 class OperatorCode(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsOperatorCode(cls, buf, offset):
@@ -7120,9 +6110,7 @@ class OperatorCode(object):
 
     @classmethod
     def OperatorCodeBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # OperatorCode
     def Init(self, buf, pos):
@@ -7149,27 +6137,11 @@ class OperatorCode(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 1
 
-
-def OperatorCodeStart(builder):
-    builder.StartObject(3)
-
-
-def OperatorCodeAddBuiltinCode(builder, builtinCode):
-    builder.PrependInt8Slot(0, builtinCode, 0)
-
-
-def OperatorCodeAddCustomCode(builder, customCode):
-    builder.PrependUOffsetTRelativeSlot(
-        1, flatbuffers.number_types.UOffsetTFlags.py_type(customCode), 0
-    )
-
-
-def OperatorCodeAddVersion(builder, version):
-    builder.PrependInt32Slot(2, version, 1)
-
-
-def OperatorCodeEnd(builder):
-    return builder.EndObject()
+def OperatorCodeStart(builder): builder.StartObject(3)
+def OperatorCodeAddBuiltinCode(builder, builtinCode): builder.PrependInt8Slot(0, builtinCode, 0)
+def OperatorCodeAddCustomCode(builder, customCode): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(customCode), 0)
+def OperatorCodeAddVersion(builder, version): builder.PrependInt32Slot(2, version, 1)
+def OperatorCodeEnd(builder): return builder.EndObject()
 
 
 class OperatorCodeT(object):
@@ -7219,8 +6191,10 @@ class LSHProjectionType(object):
     DENSE = 2
 
 
+
+
 class SparseToDenseOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSparseToDenseOptions(cls, buf, offset):
@@ -7231,9 +6205,7 @@ class SparseToDenseOptions(object):
 
     @classmethod
     def SparseToDenseOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SparseToDenseOptions
     def Init(self, buf, pos):
@@ -7243,22 +6215,12 @@ class SparseToDenseOptions(object):
     def ValidateIndices(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
-
-def SparseToDenseOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def SparseToDenseOptionsAddValidateIndices(builder, validateIndices):
-    builder.PrependBoolSlot(0, validateIndices, 0)
-
-
-def SparseToDenseOptionsEnd(builder):
-    return builder.EndObject()
+def SparseToDenseOptionsStart(builder): builder.StartObject(1)
+def SparseToDenseOptionsAddValidateIndices(builder, validateIndices): builder.PrependBoolSlot(0, validateIndices, 0)
+def SparseToDenseOptionsEnd(builder): return builder.EndObject()
 
 
 class SparseToDenseOptionsT(object):
@@ -7293,8 +6255,9 @@ class SparseToDenseOptionsT(object):
         return sparseToDenseOptions
 
 
+
 class RangeOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsRangeOptions(cls, buf, offset):
@@ -7305,21 +6268,14 @@ class RangeOptions(object):
 
     @classmethod
     def RangeOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # RangeOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def RangeOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def RangeOptionsEnd(builder):
-    return builder.EndObject()
+def RangeOptionsStart(builder): builder.StartObject(0)
+def RangeOptionsEnd(builder): return builder.EndObject()
 
 
 class RangeOptionsT(object):
@@ -7352,8 +6308,9 @@ class RangeOptionsT(object):
         return rangeOptions
 
 
+
 class Buffer(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsBuffer(cls, buf, offset):
@@ -7364,9 +6321,7 @@ class Buffer(object):
 
     @classmethod
     def BufferBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # Buffer
     def Init(self, buf, pos):
@@ -7377,10 +6332,7 @@ class Buffer(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Uint8Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
-            )
+            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
         return 0
 
     # Buffer
@@ -7402,30 +6354,15 @@ class Buffer(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
-
-def BufferStart(builder):
-    builder.StartObject(1)
-
-
-def BufferAddData(builder, data):
-    builder.PrependUOffsetTRelativeSlot(
-        0, flatbuffers.number_types.UOffsetTFlags.py_type(data), 0
-    )
-
-
-def BufferStartDataVector(builder, numElems):
-    return builder.StartVector(1, numElems, 1)
-
-
-def BufferEnd(builder):
-    return builder.EndObject()
-
+def BufferStart(builder): builder.StartObject(1)
+def BufferAddData(builder, data): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(data), 0)
+def BufferStartDataVector(builder, numElems): return builder.StartVector(1, numElems, 1)
+def BufferEnd(builder): return builder.EndObject()
 
 try:
     from typing import List
 except:
     pass
-
 
 class BufferT(object):
 
@@ -7474,8 +6411,9 @@ class BufferT(object):
         return buffer
 
 
+
 class OneHotOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsOneHotOptions(cls, buf, offset):
@@ -7486,9 +6424,7 @@ class OneHotOptions(object):
 
     @classmethod
     def OneHotOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # OneHotOptions
     def Init(self, buf, pos):
@@ -7501,17 +6437,9 @@ class OneHotOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def OneHotOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def OneHotOptionsAddAxis(builder, axis):
-    builder.PrependInt32Slot(0, axis, 0)
-
-
-def OneHotOptionsEnd(builder):
-    return builder.EndObject()
+def OneHotOptionsStart(builder): builder.StartObject(1)
+def OneHotOptionsAddAxis(builder, axis): builder.PrependInt32Slot(0, axis, 0)
+def OneHotOptionsEnd(builder): return builder.EndObject()
 
 
 class OneHotOptionsT(object):
@@ -7546,8 +6474,9 @@ class OneHotOptionsT(object):
         return oneHotOptions
 
 
+
 class DensifyOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsDensifyOptions(cls, buf, offset):
@@ -7558,21 +6487,14 @@ class DensifyOptions(object):
 
     @classmethod
     def DensifyOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # DensifyOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def DensifyOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def DensifyOptionsEnd(builder):
-    return builder.EndObject()
+def DensifyOptionsStart(builder): builder.StartObject(0)
+def DensifyOptionsEnd(builder): return builder.EndObject()
 
 
 class DensifyOptionsT(object):
@@ -7605,8 +6527,9 @@ class DensifyOptionsT(object):
         return densifyOptions
 
 
+
 class SVDFOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSVDFOptions(cls, buf, offset):
@@ -7617,9 +6540,7 @@ class SVDFOptions(object):
 
     @classmethod
     def SVDFOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SVDFOptions
     def Init(self, buf, pos):
@@ -7639,21 +6560,10 @@ class SVDFOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def SVDFOptionsStart(builder):
-    builder.StartObject(2)
-
-
-def SVDFOptionsAddRank(builder, rank):
-    builder.PrependInt32Slot(0, rank, 0)
-
-
-def SVDFOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(1, fusedActivationFunction, 0)
-
-
-def SVDFOptionsEnd(builder):
-    return builder.EndObject()
+def SVDFOptionsStart(builder): builder.StartObject(2)
+def SVDFOptionsAddRank(builder, rank): builder.PrependInt32Slot(0, rank, 0)
+def SVDFOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(1, fusedActivationFunction, 0)
+def SVDFOptionsEnd(builder): return builder.EndObject()
 
 
 class SVDFOptionsT(object):
@@ -7691,8 +6601,9 @@ class SVDFOptionsT(object):
         return sVDFOptions
 
 
+
 class ConcatenationOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsConcatenationOptions(cls, buf, offset):
@@ -7703,9 +6614,7 @@ class ConcatenationOptions(object):
 
     @classmethod
     def ConcatenationOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ConcatenationOptions
     def Init(self, buf, pos):
@@ -7725,21 +6634,10 @@ class ConcatenationOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def ConcatenationOptionsStart(builder):
-    builder.StartObject(2)
-
-
-def ConcatenationOptionsAddAxis(builder, axis):
-    builder.PrependInt32Slot(0, axis, 0)
-
-
-def ConcatenationOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(1, fusedActivationFunction, 0)
-
-
-def ConcatenationOptionsEnd(builder):
-    return builder.EndObject()
+def ConcatenationOptionsStart(builder): builder.StartObject(2)
+def ConcatenationOptionsAddAxis(builder, axis): builder.PrependInt32Slot(0, axis, 0)
+def ConcatenationOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(1, fusedActivationFunction, 0)
+def ConcatenationOptionsEnd(builder): return builder.EndObject()
 
 
 class ConcatenationOptionsT(object):
@@ -7772,15 +6670,14 @@ class ConcatenationOptionsT(object):
     def Pack(self, builder):
         ConcatenationOptionsStart(builder)
         ConcatenationOptionsAddAxis(builder, self.axis)
-        ConcatenationOptionsAddFusedActivationFunction(
-            builder, self.fusedActivationFunction
-        )
+        ConcatenationOptionsAddFusedActivationFunction(builder, self.fusedActivationFunction)
         concatenationOptions = ConcatenationOptionsEnd(builder)
         return concatenationOptions
 
 
+
 class PackOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsPackOptions(cls, buf, offset):
@@ -7791,9 +6688,7 @@ class PackOptions(object):
 
     @classmethod
     def PackOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # PackOptions
     def Init(self, buf, pos):
@@ -7813,21 +6708,10 @@ class PackOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def PackOptionsStart(builder):
-    builder.StartObject(2)
-
-
-def PackOptionsAddValuesCount(builder, valuesCount):
-    builder.PrependInt32Slot(0, valuesCount, 0)
-
-
-def PackOptionsAddAxis(builder, axis):
-    builder.PrependInt32Slot(1, axis, 0)
-
-
-def PackOptionsEnd(builder):
-    return builder.EndObject()
+def PackOptionsStart(builder): builder.StartObject(2)
+def PackOptionsAddValuesCount(builder, valuesCount): builder.PrependInt32Slot(0, valuesCount, 0)
+def PackOptionsAddAxis(builder, axis): builder.PrependInt32Slot(1, axis, 0)
+def PackOptionsEnd(builder): return builder.EndObject()
 
 
 class PackOptionsT(object):
@@ -7865,8 +6749,9 @@ class PackOptionsT(object):
         return packOptions
 
 
+
 class MatrixSetDiagOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsMatrixSetDiagOptions(cls, buf, offset):
@@ -7877,21 +6762,14 @@ class MatrixSetDiagOptions(object):
 
     @classmethod
     def MatrixSetDiagOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # MatrixSetDiagOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def MatrixSetDiagOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def MatrixSetDiagOptionsEnd(builder):
-    return builder.EndObject()
+def MatrixSetDiagOptionsStart(builder): builder.StartObject(0)
+def MatrixSetDiagOptionsEnd(builder): return builder.EndObject()
 
 
 class MatrixSetDiagOptionsT(object):
@@ -7924,8 +6802,9 @@ class MatrixSetDiagOptionsT(object):
         return matrixSetDiagOptions
 
 
+
 class ArgMaxOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsArgMaxOptions(cls, buf, offset):
@@ -7936,9 +6815,7 @@ class ArgMaxOptions(object):
 
     @classmethod
     def ArgMaxOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ArgMaxOptions
     def Init(self, buf, pos):
@@ -7951,17 +6828,9 @@ class ArgMaxOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def ArgMaxOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def ArgMaxOptionsAddOutputType(builder, outputType):
-    builder.PrependInt8Slot(0, outputType, 0)
-
-
-def ArgMaxOptionsEnd(builder):
-    return builder.EndObject()
+def ArgMaxOptionsStart(builder): builder.StartObject(1)
+def ArgMaxOptionsAddOutputType(builder, outputType): builder.PrependInt8Slot(0, outputType, 0)
+def ArgMaxOptionsEnd(builder): return builder.EndObject()
 
 
 class ArgMaxOptionsT(object):
@@ -7996,8 +6865,9 @@ class ArgMaxOptionsT(object):
         return argMaxOptions
 
 
+
 class AddNOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsAddNOptions(cls, buf, offset):
@@ -8008,21 +6878,14 @@ class AddNOptions(object):
 
     @classmethod
     def AddNOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # AddNOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def AddNOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def AddNOptionsEnd(builder):
-    return builder.EndObject()
+def AddNOptionsStart(builder): builder.StartObject(0)
+def AddNOptionsEnd(builder): return builder.EndObject()
 
 
 class AddNOptionsT(object):
@@ -8055,8 +6918,9 @@ class AddNOptionsT(object):
         return addNOptions
 
 
+
 class BatchToSpaceNDOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsBatchToSpaceNDOptions(cls, buf, offset):
@@ -8067,21 +6931,14 @@ class BatchToSpaceNDOptions(object):
 
     @classmethod
     def BatchToSpaceNDOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # BatchToSpaceNDOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def BatchToSpaceNDOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def BatchToSpaceNDOptionsEnd(builder):
-    return builder.EndObject()
+def BatchToSpaceNDOptionsStart(builder): builder.StartObject(0)
+def BatchToSpaceNDOptionsEnd(builder): return builder.EndObject()
 
 
 class BatchToSpaceNDOptionsT(object):
@@ -8114,8 +6971,9 @@ class BatchToSpaceNDOptionsT(object):
         return batchToSpaceNDOptions
 
 
+
 class NonMaxSuppressionV4Options(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsNonMaxSuppressionV4Options(cls, buf, offset):
@@ -8125,24 +6983,15 @@ class NonMaxSuppressionV4Options(object):
         return x
 
     @classmethod
-    def NonMaxSuppressionV4OptionsBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def NonMaxSuppressionV4OptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # NonMaxSuppressionV4Options
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def NonMaxSuppressionV4OptionsStart(builder):
-    builder.StartObject(0)
-
-
-def NonMaxSuppressionV4OptionsEnd(builder):
-    return builder.EndObject()
+def NonMaxSuppressionV4OptionsStart(builder): builder.StartObject(0)
+def NonMaxSuppressionV4OptionsEnd(builder): return builder.EndObject()
 
 
 class NonMaxSuppressionV4OptionsT(object):
@@ -8175,8 +7024,9 @@ class NonMaxSuppressionV4OptionsT(object):
         return nonMaxSuppressionV4Options
 
 
+
 class CallOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsCallOptions(cls, buf, offset):
@@ -8187,9 +7037,7 @@ class CallOptions(object):
 
     @classmethod
     def CallOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # CallOptions
     def Init(self, buf, pos):
@@ -8199,22 +7047,12 @@ class CallOptions(object):
     def Subgraph(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Uint32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
         return 0
 
-
-def CallOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def CallOptionsAddSubgraph(builder, subgraph):
-    builder.PrependUint32Slot(0, subgraph, 0)
-
-
-def CallOptionsEnd(builder):
-    return builder.EndObject()
+def CallOptionsStart(builder): builder.StartObject(1)
+def CallOptionsAddSubgraph(builder, subgraph): builder.PrependUint32Slot(0, subgraph, 0)
+def CallOptionsEnd(builder): return builder.EndObject()
 
 
 class CallOptionsT(object):
@@ -8249,8 +7087,9 @@ class CallOptionsT(object):
         return callOptions
 
 
+
 class GatherOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsGatherOptions(cls, buf, offset):
@@ -8261,9 +7100,7 @@ class GatherOptions(object):
 
     @classmethod
     def GatherOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # GatherOptions
     def Init(self, buf, pos):
@@ -8276,17 +7113,9 @@ class GatherOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def GatherOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def GatherOptionsAddAxis(builder, axis):
-    builder.PrependInt32Slot(0, axis, 0)
-
-
-def GatherOptionsEnd(builder):
-    return builder.EndObject()
+def GatherOptionsStart(builder): builder.StartObject(1)
+def GatherOptionsAddAxis(builder, axis): builder.PrependInt32Slot(0, axis, 0)
+def GatherOptionsEnd(builder): return builder.EndObject()
 
 
 class GatherOptionsT(object):
@@ -8321,8 +7150,9 @@ class GatherOptionsT(object):
         return gatherOptions
 
 
+
 class MirrorPadOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsMirrorPadOptions(cls, buf, offset):
@@ -8333,9 +7163,7 @@ class MirrorPadOptions(object):
 
     @classmethod
     def MirrorPadOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # MirrorPadOptions
     def Init(self, buf, pos):
@@ -8348,17 +7176,9 @@ class MirrorPadOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def MirrorPadOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def MirrorPadOptionsAddMode(builder, mode):
-    builder.PrependInt8Slot(0, mode, 0)
-
-
-def MirrorPadOptionsEnd(builder):
-    return builder.EndObject()
+def MirrorPadOptionsStart(builder): builder.StartObject(1)
+def MirrorPadOptionsAddMode(builder, mode): builder.PrependInt8Slot(0, mode, 0)
+def MirrorPadOptionsEnd(builder): return builder.EndObject()
 
 
 class MirrorPadOptionsT(object):
@@ -8393,8 +7213,9 @@ class MirrorPadOptionsT(object):
         return mirrorPadOptions
 
 
+
 class WhileOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsWhileOptions(cls, buf, offset):
@@ -8405,9 +7226,7 @@ class WhileOptions(object):
 
     @classmethod
     def WhileOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # WhileOptions
     def Init(self, buf, pos):
@@ -8427,21 +7246,10 @@ class WhileOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def WhileOptionsStart(builder):
-    builder.StartObject(2)
-
-
-def WhileOptionsAddCondSubgraphIndex(builder, condSubgraphIndex):
-    builder.PrependInt32Slot(0, condSubgraphIndex, 0)
-
-
-def WhileOptionsAddBodySubgraphIndex(builder, bodySubgraphIndex):
-    builder.PrependInt32Slot(1, bodySubgraphIndex, 0)
-
-
-def WhileOptionsEnd(builder):
-    return builder.EndObject()
+def WhileOptionsStart(builder): builder.StartObject(2)
+def WhileOptionsAddCondSubgraphIndex(builder, condSubgraphIndex): builder.PrependInt32Slot(0, condSubgraphIndex, 0)
+def WhileOptionsAddBodySubgraphIndex(builder, bodySubgraphIndex): builder.PrependInt32Slot(1, bodySubgraphIndex, 0)
+def WhileOptionsEnd(builder): return builder.EndObject()
 
 
 class WhileOptionsT(object):
@@ -8479,8 +7287,9 @@ class WhileOptionsT(object):
         return whileOptions
 
 
+
 class StridedSliceOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsStridedSliceOptions(cls, buf, offset):
@@ -8491,9 +7300,7 @@ class StridedSliceOptions(object):
 
     @classmethod
     def StridedSliceOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # StridedSliceOptions
     def Init(self, buf, pos):
@@ -8534,33 +7341,13 @@ class StridedSliceOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def StridedSliceOptionsStart(builder):
-    builder.StartObject(5)
-
-
-def StridedSliceOptionsAddBeginMask(builder, beginMask):
-    builder.PrependInt32Slot(0, beginMask, 0)
-
-
-def StridedSliceOptionsAddEndMask(builder, endMask):
-    builder.PrependInt32Slot(1, endMask, 0)
-
-
-def StridedSliceOptionsAddEllipsisMask(builder, ellipsisMask):
-    builder.PrependInt32Slot(2, ellipsisMask, 0)
-
-
-def StridedSliceOptionsAddNewAxisMask(builder, newAxisMask):
-    builder.PrependInt32Slot(3, newAxisMask, 0)
-
-
-def StridedSliceOptionsAddShrinkAxisMask(builder, shrinkAxisMask):
-    builder.PrependInt32Slot(4, shrinkAxisMask, 0)
-
-
-def StridedSliceOptionsEnd(builder):
-    return builder.EndObject()
+def StridedSliceOptionsStart(builder): builder.StartObject(5)
+def StridedSliceOptionsAddBeginMask(builder, beginMask): builder.PrependInt32Slot(0, beginMask, 0)
+def StridedSliceOptionsAddEndMask(builder, endMask): builder.PrependInt32Slot(1, endMask, 0)
+def StridedSliceOptionsAddEllipsisMask(builder, ellipsisMask): builder.PrependInt32Slot(2, ellipsisMask, 0)
+def StridedSliceOptionsAddNewAxisMask(builder, newAxisMask): builder.PrependInt32Slot(3, newAxisMask, 0)
+def StridedSliceOptionsAddShrinkAxisMask(builder, shrinkAxisMask): builder.PrependInt32Slot(4, shrinkAxisMask, 0)
+def StridedSliceOptionsEnd(builder): return builder.EndObject()
 
 
 class StridedSliceOptionsT(object):
@@ -8607,8 +7394,9 @@ class StridedSliceOptionsT(object):
         return stridedSliceOptions
 
 
+
 class ConcatEmbeddingsOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsConcatEmbeddingsOptions(cls, buf, offset):
@@ -8618,12 +7406,8 @@ class ConcatEmbeddingsOptions(object):
         return x
 
     @classmethod
-    def ConcatEmbeddingsOptionsBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def ConcatEmbeddingsOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ConcatEmbeddingsOptions
     def Init(self, buf, pos):
@@ -8641,10 +7425,7 @@ class ConcatEmbeddingsOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # ConcatEmbeddingsOptions
@@ -8671,10 +7452,7 @@ class ConcatEmbeddingsOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # ConcatEmbeddingsOptions
@@ -8696,44 +7474,18 @@ class ConcatEmbeddingsOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         return o == 0
 
-
-def ConcatEmbeddingsOptionsStart(builder):
-    builder.StartObject(3)
-
-
-def ConcatEmbeddingsOptionsAddNumChannels(builder, numChannels):
-    builder.PrependInt32Slot(0, numChannels, 0)
-
-
-def ConcatEmbeddingsOptionsAddNumColumnsPerChannel(builder, numColumnsPerChannel):
-    builder.PrependUOffsetTRelativeSlot(
-        1, flatbuffers.number_types.UOffsetTFlags.py_type(numColumnsPerChannel), 0
-    )
-
-
-def ConcatEmbeddingsOptionsStartNumColumnsPerChannelVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def ConcatEmbeddingsOptionsAddEmbeddingDimPerChannel(builder, embeddingDimPerChannel):
-    builder.PrependUOffsetTRelativeSlot(
-        2, flatbuffers.number_types.UOffsetTFlags.py_type(embeddingDimPerChannel), 0
-    )
-
-
-def ConcatEmbeddingsOptionsStartEmbeddingDimPerChannelVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def ConcatEmbeddingsOptionsEnd(builder):
-    return builder.EndObject()
-
+def ConcatEmbeddingsOptionsStart(builder): builder.StartObject(3)
+def ConcatEmbeddingsOptionsAddNumChannels(builder, numChannels): builder.PrependInt32Slot(0, numChannels, 0)
+def ConcatEmbeddingsOptionsAddNumColumnsPerChannel(builder, numColumnsPerChannel): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(numColumnsPerChannel), 0)
+def ConcatEmbeddingsOptionsStartNumColumnsPerChannelVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def ConcatEmbeddingsOptionsAddEmbeddingDimPerChannel(builder, embeddingDimPerChannel): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(embeddingDimPerChannel), 0)
+def ConcatEmbeddingsOptionsStartEmbeddingDimPerChannelVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def ConcatEmbeddingsOptionsEnd(builder): return builder.EndObject()
 
 try:
     from typing import List
 except:
     pass
-
 
 class ConcatEmbeddingsOptionsT(object):
 
@@ -8764,69 +7516,48 @@ class ConcatEmbeddingsOptionsT(object):
             if np is None:
                 self.numColumnsPerChannel = []
                 for i in range(concatEmbeddingsOptions.NumColumnsPerChannelLength()):
-                    self.numColumnsPerChannel.append(
-                        concatEmbeddingsOptions.NumColumnsPerChannel(i)
-                    )
+                    self.numColumnsPerChannel.append(concatEmbeddingsOptions.NumColumnsPerChannel(i))
             else:
-                self.numColumnsPerChannel = (
-                    concatEmbeddingsOptions.NumColumnsPerChannelAsNumpy()
-                )
+                self.numColumnsPerChannel = concatEmbeddingsOptions.NumColumnsPerChannelAsNumpy()
         if not concatEmbeddingsOptions.EmbeddingDimPerChannelIsNone():
             if np is None:
                 self.embeddingDimPerChannel = []
                 for i in range(concatEmbeddingsOptions.EmbeddingDimPerChannelLength()):
-                    self.embeddingDimPerChannel.append(
-                        concatEmbeddingsOptions.EmbeddingDimPerChannel(i)
-                    )
+                    self.embeddingDimPerChannel.append(concatEmbeddingsOptions.EmbeddingDimPerChannel(i))
             else:
-                self.embeddingDimPerChannel = (
-                    concatEmbeddingsOptions.EmbeddingDimPerChannelAsNumpy()
-                )
+                self.embeddingDimPerChannel = concatEmbeddingsOptions.EmbeddingDimPerChannelAsNumpy()
 
     # ConcatEmbeddingsOptionsT
     def Pack(self, builder):
         if self.numColumnsPerChannel is not None:
             if np is not None and type(self.numColumnsPerChannel) is np.ndarray:
-                numColumnsPerChannel = builder.CreateNumpyVector(
-                    self.numColumnsPerChannel
-                )
+                numColumnsPerChannel = builder.CreateNumpyVector(self.numColumnsPerChannel)
             else:
-                ConcatEmbeddingsOptionsStartNumColumnsPerChannelVector(
-                    builder, len(self.numColumnsPerChannel)
-                )
+                ConcatEmbeddingsOptionsStartNumColumnsPerChannelVector(builder, len(self.numColumnsPerChannel))
                 for i in reversed(range(len(self.numColumnsPerChannel))):
                     builder.PrependInt32(self.numColumnsPerChannel[i])
                 numColumnsPerChannel = builder.EndVector(len(self.numColumnsPerChannel))
         if self.embeddingDimPerChannel is not None:
             if np is not None and type(self.embeddingDimPerChannel) is np.ndarray:
-                embeddingDimPerChannel = builder.CreateNumpyVector(
-                    self.embeddingDimPerChannel
-                )
+                embeddingDimPerChannel = builder.CreateNumpyVector(self.embeddingDimPerChannel)
             else:
-                ConcatEmbeddingsOptionsStartEmbeddingDimPerChannelVector(
-                    builder, len(self.embeddingDimPerChannel)
-                )
+                ConcatEmbeddingsOptionsStartEmbeddingDimPerChannelVector(builder, len(self.embeddingDimPerChannel))
                 for i in reversed(range(len(self.embeddingDimPerChannel))):
                     builder.PrependInt32(self.embeddingDimPerChannel[i])
-                embeddingDimPerChannel = builder.EndVector(
-                    len(self.embeddingDimPerChannel)
-                )
+                embeddingDimPerChannel = builder.EndVector(len(self.embeddingDimPerChannel))
         ConcatEmbeddingsOptionsStart(builder)
         ConcatEmbeddingsOptionsAddNumChannels(builder, self.numChannels)
         if self.numColumnsPerChannel is not None:
-            ConcatEmbeddingsOptionsAddNumColumnsPerChannel(
-                builder, numColumnsPerChannel
-            )
+            ConcatEmbeddingsOptionsAddNumColumnsPerChannel(builder, numColumnsPerChannel)
         if self.embeddingDimPerChannel is not None:
-            ConcatEmbeddingsOptionsAddEmbeddingDimPerChannel(
-                builder, embeddingDimPerChannel
-            )
+            ConcatEmbeddingsOptionsAddEmbeddingDimPerChannel(builder, embeddingDimPerChannel)
         concatEmbeddingsOptions = ConcatEmbeddingsOptionsEnd(builder)
         return concatEmbeddingsOptions
 
 
+
 class IfOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsIfOptions(cls, buf, offset):
@@ -8837,9 +7568,7 @@ class IfOptions(object):
 
     @classmethod
     def IfOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # IfOptions
     def Init(self, buf, pos):
@@ -8859,21 +7588,10 @@ class IfOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def IfOptionsStart(builder):
-    builder.StartObject(2)
-
-
-def IfOptionsAddThenSubgraphIndex(builder, thenSubgraphIndex):
-    builder.PrependInt32Slot(0, thenSubgraphIndex, 0)
-
-
-def IfOptionsAddElseSubgraphIndex(builder, elseSubgraphIndex):
-    builder.PrependInt32Slot(1, elseSubgraphIndex, 0)
-
-
-def IfOptionsEnd(builder):
-    return builder.EndObject()
+def IfOptionsStart(builder): builder.StartObject(2)
+def IfOptionsAddThenSubgraphIndex(builder, thenSubgraphIndex): builder.PrependInt32Slot(0, thenSubgraphIndex, 0)
+def IfOptionsAddElseSubgraphIndex(builder, elseSubgraphIndex): builder.PrependInt32Slot(1, elseSubgraphIndex, 0)
+def IfOptionsEnd(builder): return builder.EndObject()
 
 
 class IfOptionsT(object):
@@ -8911,8 +7629,9 @@ class IfOptionsT(object):
         return ifOptions
 
 
+
 class PadOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsPadOptions(cls, buf, offset):
@@ -8923,21 +7642,14 @@ class PadOptions(object):
 
     @classmethod
     def PadOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # PadOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def PadOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def PadOptionsEnd(builder):
-    return builder.EndObject()
+def PadOptionsStart(builder): builder.StartObject(0)
+def PadOptionsEnd(builder): return builder.EndObject()
 
 
 class PadOptionsT(object):
@@ -8970,8 +7682,9 @@ class PadOptionsT(object):
         return padOptions
 
 
+
 class DepthwiseConv2DOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsDepthwiseConv2DOptions(cls, buf, offset):
@@ -8981,12 +7694,8 @@ class DepthwiseConv2DOptions(object):
         return x
 
     @classmethod
-    def DepthwiseConv2DOptionsBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def DepthwiseConv2DOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # DepthwiseConv2DOptions
     def Init(self, buf, pos):
@@ -9041,41 +7750,15 @@ class DepthwiseConv2DOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 1
 
-
-def DepthwiseConv2DOptionsStart(builder):
-    builder.StartObject(7)
-
-
-def DepthwiseConv2DOptionsAddPadding(builder, padding):
-    builder.PrependInt8Slot(0, padding, 0)
-
-
-def DepthwiseConv2DOptionsAddStrideW(builder, strideW):
-    builder.PrependInt32Slot(1, strideW, 0)
-
-
-def DepthwiseConv2DOptionsAddStrideH(builder, strideH):
-    builder.PrependInt32Slot(2, strideH, 0)
-
-
-def DepthwiseConv2DOptionsAddDepthMultiplier(builder, depthMultiplier):
-    builder.PrependInt32Slot(3, depthMultiplier, 0)
-
-
-def DepthwiseConv2DOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(4, fusedActivationFunction, 0)
-
-
-def DepthwiseConv2DOptionsAddDilationWFactor(builder, dilationWFactor):
-    builder.PrependInt32Slot(5, dilationWFactor, 1)
-
-
-def DepthwiseConv2DOptionsAddDilationHFactor(builder, dilationHFactor):
-    builder.PrependInt32Slot(6, dilationHFactor, 1)
-
-
-def DepthwiseConv2DOptionsEnd(builder):
-    return builder.EndObject()
+def DepthwiseConv2DOptionsStart(builder): builder.StartObject(7)
+def DepthwiseConv2DOptionsAddPadding(builder, padding): builder.PrependInt8Slot(0, padding, 0)
+def DepthwiseConv2DOptionsAddStrideW(builder, strideW): builder.PrependInt32Slot(1, strideW, 0)
+def DepthwiseConv2DOptionsAddStrideH(builder, strideH): builder.PrependInt32Slot(2, strideH, 0)
+def DepthwiseConv2DOptionsAddDepthMultiplier(builder, depthMultiplier): builder.PrependInt32Slot(3, depthMultiplier, 0)
+def DepthwiseConv2DOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(4, fusedActivationFunction, 0)
+def DepthwiseConv2DOptionsAddDilationWFactor(builder, dilationWFactor): builder.PrependInt32Slot(5, dilationWFactor, 1)
+def DepthwiseConv2DOptionsAddDilationHFactor(builder, dilationHFactor): builder.PrependInt32Slot(6, dilationHFactor, 1)
+def DepthwiseConv2DOptionsEnd(builder): return builder.EndObject()
 
 
 class DepthwiseConv2DOptionsT(object):
@@ -9121,17 +7804,16 @@ class DepthwiseConv2DOptionsT(object):
         DepthwiseConv2DOptionsAddStrideW(builder, self.strideW)
         DepthwiseConv2DOptionsAddStrideH(builder, self.strideH)
         DepthwiseConv2DOptionsAddDepthMultiplier(builder, self.depthMultiplier)
-        DepthwiseConv2DOptionsAddFusedActivationFunction(
-            builder, self.fusedActivationFunction
-        )
+        DepthwiseConv2DOptionsAddFusedActivationFunction(builder, self.fusedActivationFunction)
         DepthwiseConv2DOptionsAddDilationWFactor(builder, self.dilationWFactor)
         DepthwiseConv2DOptionsAddDilationHFactor(builder, self.dilationHFactor)
         depthwiseConv2DOptions = DepthwiseConv2DOptionsEnd(builder)
         return depthwiseConv2DOptions
 
 
+
 class SubGraph(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSubGraph(cls, buf, offset):
@@ -9142,9 +7824,7 @@ class SubGraph(object):
 
     @classmethod
     def SubGraphBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SubGraph
     def Init(self, buf, pos):
@@ -9179,10 +7859,7 @@ class SubGraph(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # SubGraph
@@ -9209,10 +7886,7 @@ class SubGraph(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(
-                flatbuffers.number_types.Int32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
-            )
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
     # SubGraph
@@ -9265,66 +7939,22 @@ class SubGraph(object):
             return self._tab.String(o + self._tab.Pos)
         return None
 
-
-def SubGraphStart(builder):
-    builder.StartObject(5)
-
-
-def SubGraphAddTensors(builder, tensors):
-    builder.PrependUOffsetTRelativeSlot(
-        0, flatbuffers.number_types.UOffsetTFlags.py_type(tensors), 0
-    )
-
-
-def SubGraphStartTensorsVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def SubGraphAddInputs(builder, inputs):
-    builder.PrependUOffsetTRelativeSlot(
-        1, flatbuffers.number_types.UOffsetTFlags.py_type(inputs), 0
-    )
-
-
-def SubGraphStartInputsVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def SubGraphAddOutputs(builder, outputs):
-    builder.PrependUOffsetTRelativeSlot(
-        2, flatbuffers.number_types.UOffsetTFlags.py_type(outputs), 0
-    )
-
-
-def SubGraphStartOutputsVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def SubGraphAddOperators(builder, operators):
-    builder.PrependUOffsetTRelativeSlot(
-        3, flatbuffers.number_types.UOffsetTFlags.py_type(operators), 0
-    )
-
-
-def SubGraphStartOperatorsVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
-
-
-def SubGraphAddName(builder, name):
-    builder.PrependUOffsetTRelativeSlot(
-        4, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0
-    )
-
-
-def SubGraphEnd(builder):
-    return builder.EndObject()
-
+def SubGraphStart(builder): builder.StartObject(5)
+def SubGraphAddTensors(builder, tensors): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(tensors), 0)
+def SubGraphStartTensorsVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def SubGraphAddInputs(builder, inputs): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(inputs), 0)
+def SubGraphStartInputsVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def SubGraphAddOutputs(builder, outputs): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(outputs), 0)
+def SubGraphStartOutputsVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def SubGraphAddOperators(builder, operators): builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(operators), 0)
+def SubGraphStartOperatorsVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def SubGraphAddName(builder, name): builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+def SubGraphEnd(builder): return builder.EndObject()
 
 try:
     from typing import List
 except:
     pass
-
 
 class SubGraphT(object):
 
@@ -9435,8 +8065,9 @@ class SubGraphT(object):
         return subGraph
 
 
+
 class UnpackOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsUnpackOptions(cls, buf, offset):
@@ -9447,9 +8078,7 @@ class UnpackOptions(object):
 
     @classmethod
     def UnpackOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # UnpackOptions
     def Init(self, buf, pos):
@@ -9469,21 +8098,10 @@ class UnpackOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def UnpackOptionsStart(builder):
-    builder.StartObject(2)
-
-
-def UnpackOptionsAddNum(builder, num):
-    builder.PrependInt32Slot(0, num, 0)
-
-
-def UnpackOptionsAddAxis(builder, axis):
-    builder.PrependInt32Slot(1, axis, 0)
-
-
-def UnpackOptionsEnd(builder):
-    return builder.EndObject()
+def UnpackOptionsStart(builder): builder.StartObject(2)
+def UnpackOptionsAddNum(builder, num): builder.PrependInt32Slot(0, num, 0)
+def UnpackOptionsAddAxis(builder, axis): builder.PrependInt32Slot(1, axis, 0)
+def UnpackOptionsEnd(builder): return builder.EndObject()
 
 
 class UnpackOptionsT(object):
@@ -9521,8 +8139,9 @@ class UnpackOptionsT(object):
         return unpackOptions
 
 
+
 class SubOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSubOptions(cls, buf, offset):
@@ -9533,9 +8152,7 @@ class SubOptions(object):
 
     @classmethod
     def SubOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SubOptions
     def Init(self, buf, pos):
@@ -9548,17 +8165,9 @@ class SubOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def SubOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def SubOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(0, fusedActivationFunction, 0)
-
-
-def SubOptionsEnd(builder):
-    return builder.EndObject()
+def SubOptionsStart(builder): builder.StartObject(1)
+def SubOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(0, fusedActivationFunction, 0)
+def SubOptionsEnd(builder): return builder.EndObject()
 
 
 class SubOptionsT(object):
@@ -9593,8 +8202,9 @@ class SubOptionsT(object):
         return subOptions
 
 
+
 class TransposeConvOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsTransposeConvOptions(cls, buf, offset):
@@ -9605,9 +8215,7 @@ class TransposeConvOptions(object):
 
     @classmethod
     def TransposeConvOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # TransposeConvOptions
     def Init(self, buf, pos):
@@ -9634,25 +8242,11 @@ class TransposeConvOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def TransposeConvOptionsStart(builder):
-    builder.StartObject(3)
-
-
-def TransposeConvOptionsAddPadding(builder, padding):
-    builder.PrependInt8Slot(0, padding, 0)
-
-
-def TransposeConvOptionsAddStrideW(builder, strideW):
-    builder.PrependInt32Slot(1, strideW, 0)
-
-
-def TransposeConvOptionsAddStrideH(builder, strideH):
-    builder.PrependInt32Slot(2, strideH, 0)
-
-
-def TransposeConvOptionsEnd(builder):
-    return builder.EndObject()
+def TransposeConvOptionsStart(builder): builder.StartObject(3)
+def TransposeConvOptionsAddPadding(builder, padding): builder.PrependInt8Slot(0, padding, 0)
+def TransposeConvOptionsAddStrideW(builder, strideW): builder.PrependInt32Slot(1, strideW, 0)
+def TransposeConvOptionsAddStrideH(builder, strideH): builder.PrependInt32Slot(2, strideH, 0)
+def TransposeConvOptionsEnd(builder): return builder.EndObject()
 
 
 class TransposeConvOptionsT(object):
@@ -9693,8 +8287,9 @@ class TransposeConvOptionsT(object):
         return transposeConvOptions
 
 
+
 class DepthToSpaceOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsDepthToSpaceOptions(cls, buf, offset):
@@ -9705,9 +8300,7 @@ class DepthToSpaceOptions(object):
 
     @classmethod
     def DepthToSpaceOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # DepthToSpaceOptions
     def Init(self, buf, pos):
@@ -9720,17 +8313,9 @@ class DepthToSpaceOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def DepthToSpaceOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def DepthToSpaceOptionsAddBlockSize(builder, blockSize):
-    builder.PrependInt32Slot(0, blockSize, 0)
-
-
-def DepthToSpaceOptionsEnd(builder):
-    return builder.EndObject()
+def DepthToSpaceOptionsStart(builder): builder.StartObject(1)
+def DepthToSpaceOptionsAddBlockSize(builder, blockSize): builder.PrependInt32Slot(0, blockSize, 0)
+def DepthToSpaceOptionsEnd(builder): return builder.EndObject()
 
 
 class DepthToSpaceOptionsT(object):
@@ -9770,8 +8355,10 @@ class Padding(object):
     VALID = 1
 
 
+
+
 class Conv2DOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsConv2DOptions(cls, buf, offset):
@@ -9782,9 +8369,7 @@ class Conv2DOptions(object):
 
     @classmethod
     def Conv2DOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # Conv2DOptions
     def Init(self, buf, pos):
@@ -9832,37 +8417,14 @@ class Conv2DOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 1
 
-
-def Conv2DOptionsStart(builder):
-    builder.StartObject(6)
-
-
-def Conv2DOptionsAddPadding(builder, padding):
-    builder.PrependInt8Slot(0, padding, 0)
-
-
-def Conv2DOptionsAddStrideW(builder, strideW):
-    builder.PrependInt32Slot(1, strideW, 0)
-
-
-def Conv2DOptionsAddStrideH(builder, strideH):
-    builder.PrependInt32Slot(2, strideH, 0)
-
-
-def Conv2DOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(3, fusedActivationFunction, 0)
-
-
-def Conv2DOptionsAddDilationWFactor(builder, dilationWFactor):
-    builder.PrependInt32Slot(4, dilationWFactor, 1)
-
-
-def Conv2DOptionsAddDilationHFactor(builder, dilationHFactor):
-    builder.PrependInt32Slot(5, dilationHFactor, 1)
-
-
-def Conv2DOptionsEnd(builder):
-    return builder.EndObject()
+def Conv2DOptionsStart(builder): builder.StartObject(6)
+def Conv2DOptionsAddPadding(builder, padding): builder.PrependInt8Slot(0, padding, 0)
+def Conv2DOptionsAddStrideW(builder, strideW): builder.PrependInt32Slot(1, strideW, 0)
+def Conv2DOptionsAddStrideH(builder, strideH): builder.PrependInt32Slot(2, strideH, 0)
+def Conv2DOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(3, fusedActivationFunction, 0)
+def Conv2DOptionsAddDilationWFactor(builder, dilationWFactor): builder.PrependInt32Slot(4, dilationWFactor, 1)
+def Conv2DOptionsAddDilationHFactor(builder, dilationHFactor): builder.PrependInt32Slot(5, dilationHFactor, 1)
+def Conv2DOptionsEnd(builder): return builder.EndObject()
 
 
 class Conv2DOptionsT(object):
@@ -9912,8 +8474,9 @@ class Conv2DOptionsT(object):
         return conv2DOptions
 
 
+
 class DequantizeOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsDequantizeOptions(cls, buf, offset):
@@ -9924,21 +8487,14 @@ class DequantizeOptions(object):
 
     @classmethod
     def DequantizeOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # DequantizeOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def DequantizeOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def DequantizeOptionsEnd(builder):
-    return builder.EndObject()
+def DequantizeOptionsStart(builder): builder.StartObject(0)
+def DequantizeOptionsEnd(builder): return builder.EndObject()
 
 
 class DequantizeOptionsT(object):
@@ -9971,8 +8527,9 @@ class DequantizeOptionsT(object):
         return dequantizeOptions
 
 
+
 class WhereOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsWhereOptions(cls, buf, offset):
@@ -9983,21 +8540,14 @@ class WhereOptions(object):
 
     @classmethod
     def WhereOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # WhereOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def WhereOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def WhereOptionsEnd(builder):
-    return builder.EndObject()
+def WhereOptionsStart(builder): builder.StartObject(0)
+def WhereOptionsEnd(builder): return builder.EndObject()
 
 
 class WhereOptionsT(object):
@@ -10030,8 +8580,9 @@ class WhereOptionsT(object):
         return whereOptions
 
 
+
 class ExpandDimsOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsExpandDimsOptions(cls, buf, offset):
@@ -10042,21 +8593,14 @@ class ExpandDimsOptions(object):
 
     @classmethod
     def ExpandDimsOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ExpandDimsOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def ExpandDimsOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def ExpandDimsOptionsEnd(builder):
-    return builder.EndObject()
+def ExpandDimsOptionsStart(builder): builder.StartObject(0)
+def ExpandDimsOptionsEnd(builder): return builder.EndObject()
 
 
 class ExpandDimsOptionsT(object):
@@ -10089,8 +8633,9 @@ class ExpandDimsOptionsT(object):
         return expandDimsOptions
 
 
+
 class SpaceToDepthOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSpaceToDepthOptions(cls, buf, offset):
@@ -10101,9 +8646,7 @@ class SpaceToDepthOptions(object):
 
     @classmethod
     def SpaceToDepthOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SpaceToDepthOptions
     def Init(self, buf, pos):
@@ -10116,17 +8659,9 @@ class SpaceToDepthOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-
-def SpaceToDepthOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def SpaceToDepthOptionsAddBlockSize(builder, blockSize):
-    builder.PrependInt32Slot(0, blockSize, 0)
-
-
-def SpaceToDepthOptionsEnd(builder):
-    return builder.EndObject()
+def SpaceToDepthOptionsStart(builder): builder.StartObject(1)
+def SpaceToDepthOptionsAddBlockSize(builder, blockSize): builder.PrependInt32Slot(0, blockSize, 0)
+def SpaceToDepthOptionsEnd(builder): return builder.EndObject()
 
 
 class SpaceToDepthOptionsT(object):
@@ -10161,8 +8696,9 @@ class SpaceToDepthOptionsT(object):
         return spaceToDepthOptions
 
 
+
 class L2NormOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsL2NormOptions(cls, buf, offset):
@@ -10173,9 +8709,7 @@ class L2NormOptions(object):
 
     @classmethod
     def L2NormOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # L2NormOptions
     def Init(self, buf, pos):
@@ -10188,17 +8722,9 @@ class L2NormOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-
-def L2NormOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def L2NormOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(0, fusedActivationFunction, 0)
-
-
-def L2NormOptionsEnd(builder):
-    return builder.EndObject()
+def L2NormOptionsStart(builder): builder.StartObject(1)
+def L2NormOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(0, fusedActivationFunction, 0)
+def L2NormOptionsEnd(builder): return builder.EndObject()
 
 
 class L2NormOptionsT(object):
@@ -10238,8 +8764,10 @@ class LSTMKernelType(object):
     BASIC = 1
 
 
+
+
 class LocalResponseNormalizationOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsLocalResponseNormalizationOptions(cls, buf, offset):
@@ -10249,12 +8777,8 @@ class LocalResponseNormalizationOptions(object):
         return x
 
     @classmethod
-    def LocalResponseNormalizationOptionsBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def LocalResponseNormalizationOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # LocalResponseNormalizationOptions
     def Init(self, buf, pos):
@@ -10271,52 +8795,29 @@ class LocalResponseNormalizationOptions(object):
     def Bias(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
     # LocalResponseNormalizationOptions
     def Alpha(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
     # LocalResponseNormalizationOptions
     def Beta(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            return self._tab.Get(
-                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
-            )
+            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
         return 0.0
 
-
-def LocalResponseNormalizationOptionsStart(builder):
-    builder.StartObject(4)
-
-
-def LocalResponseNormalizationOptionsAddRadius(builder, radius):
-    builder.PrependInt32Slot(0, radius, 0)
-
-
-def LocalResponseNormalizationOptionsAddBias(builder, bias):
-    builder.PrependFloat32Slot(1, bias, 0.0)
-
-
-def LocalResponseNormalizationOptionsAddAlpha(builder, alpha):
-    builder.PrependFloat32Slot(2, alpha, 0.0)
-
-
-def LocalResponseNormalizationOptionsAddBeta(builder, beta):
-    builder.PrependFloat32Slot(3, beta, 0.0)
-
-
-def LocalResponseNormalizationOptionsEnd(builder):
-    return builder.EndObject()
+def LocalResponseNormalizationOptionsStart(builder): builder.StartObject(4)
+def LocalResponseNormalizationOptionsAddRadius(builder, radius): builder.PrependInt32Slot(0, radius, 0)
+def LocalResponseNormalizationOptionsAddBias(builder, bias): builder.PrependFloat32Slot(1, bias, 0.0)
+def LocalResponseNormalizationOptionsAddAlpha(builder, alpha): builder.PrependFloat32Slot(2, alpha, 0.0)
+def LocalResponseNormalizationOptionsAddBeta(builder, beta): builder.PrependFloat32Slot(3, beta, 0.0)
+def LocalResponseNormalizationOptionsEnd(builder): return builder.EndObject()
 
 
 class LocalResponseNormalizationOptionsT(object):
@@ -10356,14 +8857,13 @@ class LocalResponseNormalizationOptionsT(object):
         LocalResponseNormalizationOptionsAddBias(builder, self.bias)
         LocalResponseNormalizationOptionsAddAlpha(builder, self.alpha)
         LocalResponseNormalizationOptionsAddBeta(builder, self.beta)
-        localResponseNormalizationOptions = LocalResponseNormalizationOptionsEnd(
-            builder
-        )
+        localResponseNormalizationOptions = LocalResponseNormalizationOptionsEnd(builder)
         return localResponseNormalizationOptions
 
 
+
 class FullyConnectedOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsFullyConnectedOptions(cls, buf, offset):
@@ -10374,9 +8874,7 @@ class FullyConnectedOptions(object):
 
     @classmethod
     def FullyConnectedOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # FullyConnectedOptions
     def Init(self, buf, pos):
@@ -10400,30 +8898,14 @@ class FullyConnectedOptions(object):
     def KeepNumDims(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
-
-def FullyConnectedOptionsStart(builder):
-    builder.StartObject(3)
-
-
-def FullyConnectedOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
-    builder.PrependInt8Slot(0, fusedActivationFunction, 0)
-
-
-def FullyConnectedOptionsAddWeightsFormat(builder, weightsFormat):
-    builder.PrependInt8Slot(1, weightsFormat, 0)
-
-
-def FullyConnectedOptionsAddKeepNumDims(builder, keepNumDims):
-    builder.PrependBoolSlot(2, keepNumDims, 0)
-
-
-def FullyConnectedOptionsEnd(builder):
-    return builder.EndObject()
+def FullyConnectedOptionsStart(builder): builder.StartObject(3)
+def FullyConnectedOptionsAddFusedActivationFunction(builder, fusedActivationFunction): builder.PrependInt8Slot(0, fusedActivationFunction, 0)
+def FullyConnectedOptionsAddWeightsFormat(builder, weightsFormat): builder.PrependInt8Slot(1, weightsFormat, 0)
+def FullyConnectedOptionsAddKeepNumDims(builder, keepNumDims): builder.PrependBoolSlot(2, keepNumDims, 0)
+def FullyConnectedOptionsEnd(builder): return builder.EndObject()
 
 
 class FullyConnectedOptionsT(object):
@@ -10457,17 +8939,16 @@ class FullyConnectedOptionsT(object):
     # FullyConnectedOptionsT
     def Pack(self, builder):
         FullyConnectedOptionsStart(builder)
-        FullyConnectedOptionsAddFusedActivationFunction(
-            builder, self.fusedActivationFunction
-        )
+        FullyConnectedOptionsAddFusedActivationFunction(builder, self.fusedActivationFunction)
         FullyConnectedOptionsAddWeightsFormat(builder, self.weightsFormat)
         FullyConnectedOptionsAddKeepNumDims(builder, self.keepNumDims)
         fullyConnectedOptions = FullyConnectedOptionsEnd(builder)
         return fullyConnectedOptions
 
 
+
 class ReducerOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsReducerOptions(cls, buf, offset):
@@ -10478,9 +8959,7 @@ class ReducerOptions(object):
 
     @classmethod
     def ReducerOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # ReducerOptions
     def Init(self, buf, pos):
@@ -10490,22 +8969,12 @@ class ReducerOptions(object):
     def KeepDims(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return bool(
-                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
-            )
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
         return False
 
-
-def ReducerOptionsStart(builder):
-    builder.StartObject(1)
-
-
-def ReducerOptionsAddKeepDims(builder, keepDims):
-    builder.PrependBoolSlot(0, keepDims, 0)
-
-
-def ReducerOptionsEnd(builder):
-    return builder.EndObject()
+def ReducerOptionsStart(builder): builder.StartObject(1)
+def ReducerOptionsAddKeepDims(builder, keepDims): builder.PrependBoolSlot(0, keepDims, 0)
+def ReducerOptionsEnd(builder): return builder.EndObject()
 
 
 class ReducerOptionsT(object):
@@ -10540,8 +9009,9 @@ class ReducerOptionsT(object):
         return reducerOptions
 
 
+
 class GreaterEqualOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsGreaterEqualOptions(cls, buf, offset):
@@ -10552,21 +9022,14 @@ class GreaterEqualOptions(object):
 
     @classmethod
     def GreaterEqualOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # GreaterEqualOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def GreaterEqualOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def GreaterEqualOptionsEnd(builder):
-    return builder.EndObject()
+def GreaterEqualOptionsStart(builder): builder.StartObject(0)
+def GreaterEqualOptionsEnd(builder): return builder.EndObject()
 
 
 class GreaterEqualOptionsT(object):
@@ -10599,8 +9062,9 @@ class GreaterEqualOptionsT(object):
         return greaterEqualOptions
 
 
+
 class NonMaxSuppressionV5Options(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsNonMaxSuppressionV5Options(cls, buf, offset):
@@ -10610,24 +9074,15 @@ class NonMaxSuppressionV5Options(object):
         return x
 
     @classmethod
-    def NonMaxSuppressionV5OptionsBufferHasIdentifier(
-        cls, buf, offset, size_prefixed=False
-    ):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+    def NonMaxSuppressionV5OptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # NonMaxSuppressionV5Options
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def NonMaxSuppressionV5OptionsStart(builder):
-    builder.StartObject(0)
-
-
-def NonMaxSuppressionV5OptionsEnd(builder):
-    return builder.EndObject()
+def NonMaxSuppressionV5OptionsStart(builder): builder.StartObject(0)
+def NonMaxSuppressionV5OptionsEnd(builder): return builder.EndObject()
 
 
 class NonMaxSuppressionV5OptionsT(object):
@@ -10660,8 +9115,9 @@ class NonMaxSuppressionV5OptionsT(object):
         return nonMaxSuppressionV5Options
 
 
+
 class SquareOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsSquareOptions(cls, buf, offset):
@@ -10672,21 +9128,14 @@ class SquareOptions(object):
 
     @classmethod
     def SquareOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # SquareOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def SquareOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def SquareOptionsEnd(builder):
-    return builder.EndObject()
+def SquareOptionsStart(builder): builder.StartObject(0)
+def SquareOptionsEnd(builder): return builder.EndObject()
 
 
 class SquareOptionsT(object):
@@ -10719,8 +9168,9 @@ class SquareOptionsT(object):
         return squareOptions
 
 
+
 class GatherNdOptions(object):
-    __slots__ = ["_tab"]
+    __slots__ = ['_tab']
 
     @classmethod
     def GetRootAsGatherNdOptions(cls, buf, offset):
@@ -10731,21 +9181,14 @@ class GatherNdOptions(object):
 
     @classmethod
     def GatherNdOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(
-            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
-        )
+        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
 
     # GatherNdOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-
-def GatherNdOptionsStart(builder):
-    builder.StartObject(0)
-
-
-def GatherNdOptionsEnd(builder):
-    return builder.EndObject()
+def GatherNdOptionsStart(builder): builder.StartObject(0)
+def GatherNdOptionsEnd(builder): return builder.EndObject()
 
 
 class GatherNdOptionsT(object):

@@ -383,6 +383,33 @@ def build_intermediate_fc(subgraph=None, *, outputs, input_shape):
 
     return model
 
+# TODO Unused?
+def build_mlp(subgraph=None, *, outputs, hidden_nodes, input_shape):
+    model = build_intermediate_fc(
+        subgraph, outputs=hidden_nodes, input_shape=input_shape
+    )
+    subgraph = subgraph or model.subgraphs[0]
+    tmid = subgraph.get_tensor("intermediate")
+
+    w2_shape = [outputs, hidden_nodes]
+    w2 = subgraph.create_tensor(
+        "weights_2",
+        TensorType.INT8,
+        w2_shape,
+        quantization={"scale": [0.22], "zero_point": [0]},
+    )
+    b2 = subgraph.create_tensor("biases_2", TensorType.INT32, shape=[outputs])
+    tout = subgraph.create_tensor(
+        "output", tmid.type, shape=[1, outputs], isoutput=True
+    )
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.FULLY_CONNECTED),
+        inputs=[tmid, w2, b2],
+        outputs=[tout],
+    )
+
+    return model
+
 
 def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     subgraph = subgraph or XCOREModel().create_subgraph()

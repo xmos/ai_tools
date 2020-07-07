@@ -620,7 +620,7 @@ def build_reshape(subgraph=None, *, input_shape, output_shape, add_batch_dim=Tru
         # Prepend dims with batch dimension 1
         input_shape = [1, *input_shape]
 
-    assert len(output_shape) > 0 and len(output_shape) < 5
+    assert 0 < len(output_shape) < 5
 
     subgraph = subgraph or XCOREModel().create_subgraph()
 

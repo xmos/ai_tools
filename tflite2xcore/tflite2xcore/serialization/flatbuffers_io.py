@@ -54,7 +54,7 @@ class XCORESerializationMixin:
             )
 
         # load subgraphs
-        for subgraphT in modelT.subgraphs:
+        for subgraph_index, subgraphT in enumerate(modelT.subgraphs):
             subgraph = model.create_subgraph(
                 name=subgraphT.name.decode("utf-8") if subgraphT.name else None
             )
@@ -82,7 +82,7 @@ class XCORESerializationMixin:
                 tensors.append(tensor)
 
             # load operators & set inputs/outputs (registers op as tensor consumer/producer)
-            for operatorT in subgraphT.operators:
+            for operator_index, operatorT in enumerate(subgraphT.operators):
                 options = {}
                 if (
                     hasattr(operatorT, "builtinOptions")
@@ -102,13 +102,30 @@ class XCORESerializationMixin:
                         FlexbufferParser().parse(bytes(operatorT.customOptions))
                     )
 
+                def is_valid_tensor_index(idx, lower=-1, upper=len(tensors)):
+                    if idx < lower or idx >= upper:
+                        raise ValueError(
+                            f"Invalid input tensor index [{idx}]: "
+                            f"subgraph [{subgraph_index}], "
+                            f"operator [{operator_index}], "
+                            f"bounds: [{lower}, {upper}]"
+                        )
+
+                    return idx != -1  # -1 encodes optional for input indices
+
                 subgraph.create_operator(
                     operator_code=operator_codes_lut[operatorT.opcodeIndex],
-                    inputs=[tensors[input_index] for input_index in operatorT.inputs],
-                    outputs=[
-                        tensors[output_index] for output_index in operatorT.outputs
+                    inputs=[
+                        tensors[input_index]
+                        for input_index in operatorT.inputs
+                        if is_valid_tensor_index(input_index)
                     ],
-                    **options
+                    outputs=[
+                        tensors[output_index]
+                        for output_index in operatorT.outputs
+                        if is_valid_tensor_index(output_index, lower=0)
+                    ],
+                    **options,
                 )
 
         model.sanity_check()

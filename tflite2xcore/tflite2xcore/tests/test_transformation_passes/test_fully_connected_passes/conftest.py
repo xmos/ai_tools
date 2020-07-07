@@ -102,6 +102,7 @@ def update_params_with_reshape(PARAMS, *, is_matching):
             [list(p) for p in t]
             for t in product(
                 product(
+                    [1],
                     params["input_channels"],
                     params["input_height"],
                     params["input_width"],
@@ -114,7 +115,7 @@ def update_params_with_reshape(PARAMS, *, is_matching):
             )
         ]
 
-        all_reshapes = [
+        all_reshapes.extend(
             [list(p) for p in t]
             for t in product(
                 product(
@@ -129,7 +130,7 @@ def update_params_with_reshape(PARAMS, *, is_matching):
                     params["input_width"],
                 ),
             )
-        ]
+        )
 
         all_reshapes.extend(
             [list(p) for p in t]

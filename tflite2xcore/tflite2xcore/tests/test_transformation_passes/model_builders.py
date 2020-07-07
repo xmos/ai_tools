@@ -628,7 +628,7 @@ def build_reshape(subgraph=None, *, input_shape, output_shape, add_batch_dim=Tru
         "original_shape", TensorType.INT8, input_shape, isinput=True
     )
     tout = subgraph.create_tensor("reshaped", tin.type, output_shape, isoutput=True)
-    p = subgraph.create_tensor("shape", TensorType.INT32, shape=[1, len(output_shape)])
+    p = subgraph.create_tensor("shape", TensorType.INT32, shape=[len(output_shape)])
     p.buffer.data = np.int32(output_shape)
 
     subgraph.create_operator(

@@ -41,15 +41,13 @@ class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
 
     @log_method_output()
     def _zero_point_bias(self):
-        return np.sum(self._weights.numpy * self._input_zero_point, axis=1)
+        return np.sum(self._weights.as_array(np.int64) * self._input_zero_point, axis=1)
 
     def mutate_weights(self, op):
         with self.using(op):
             # zero_padding weight tensor
             col_pad = WORD_SIZE - 1 - (self._weights.shape[1] - 1) % WORD_SIZE
-            arr = np.pad(
-                self._weights.numpy.astype(np.int8), pad_width=[(0, 0), (0, col_pad)]
-            )
+            arr = np.pad(self._weights.as_array(), pad_width=[(0, 0), (0, col_pad)])
 
             self._replace_weights(arr)
             self._log_weights()

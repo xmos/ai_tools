@@ -60,8 +60,8 @@ def test_mutate(trf_pass, model):
     assert len(subgraph.operators) == 2
     pad_1_ori = subgraph.operators[0].inputs[1]
     pad_2_ori = subgraph.operators[1].inputs[1]
-    paddings_1_ori = pad_1_ori.numpy.tolist()
-    paddings_2_ori = pad_2_ori.numpy.tolist()
+    paddings_1_ori = pad_1_ori.as_array()
+    paddings_2_ori = pad_2_ori.as_array()
     in_ori, out_ori = subgraph.inputs[0], subgraph.outputs[0]
 
     # run mutating pass
@@ -86,7 +86,7 @@ def test_mutate(trf_pass, model):
 
     # check parameters
     pad_new = subgraph.operators[0].inputs[1]
-    paddings_new = pad_new.numpy.tolist()
+    paddings_new = pad_new.as_array()
     assert pad_new is not pad_1_ori
     assert pad_new is not pad_2_ori
     assert paddings_new[0][0] == paddings_1_ori[0][0] + paddings_2_ori[0][0]

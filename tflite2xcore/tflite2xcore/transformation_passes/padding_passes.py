@@ -30,7 +30,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
 
     @property
     def _pad_params(self):
-        return self._producer.inputs[1].numpy.tolist()
+        return self._producer.inputs[1].as_array().tolist()
 
     def match(self, op):
         if not super().match(op):
@@ -95,7 +95,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
 class SplitPaddingPass(OperatorMatchingPass):
     @property
     def _pad_params(self):
-        return self._op.inputs[1].numpy.tolist()
+        return self._op.inputs[1].as_array().tolist()
 
     def match(self, op):
         if not super().match(op):
@@ -176,7 +176,7 @@ class FuseConsecutivePadsPass(OperatorMatchingPass):
 
     @property
     def _pad_params(self):
-        return self._op.inputs[1].numpy
+        return self._op.inputs[1].as_array()
 
     def match(self, op):
         # the anchor is the second of two consecutive PAD ops
@@ -225,7 +225,7 @@ class RemovePaddingInputPass(OperatorMatchingPass):
     def match(self, op):
 
         if op.operator_code.code is BuiltinOpCodes.PAD:
-            padding = op.inputs[1].numpy.tolist()
+            padding = op.inputs[1].as_array().tolist()
 
             return (
                 super().match(op)

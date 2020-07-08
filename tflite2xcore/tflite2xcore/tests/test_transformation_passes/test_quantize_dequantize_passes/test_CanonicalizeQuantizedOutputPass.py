@@ -10,7 +10,12 @@ from tflite2xcore.transformation_passes import CanonicalizeQuantizedOutputPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_split
 
-from .conftest import PARAMS, _test_non_matching_params, test_matching_params
+from .conftest import (
+    PARAMS,
+    _test_non_matching_params,
+    test_matching_params,
+    test_non_matching_tensors,
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -18,6 +23,16 @@ from .conftest import PARAMS, _test_non_matching_params, test_matching_params
 #  ----------------------------------------------------------------------------
 
 PARAMS = deepcopy(PARAMS)
+
+for params in PARAMS.values():
+    params["non_matching_tensors"] = [
+        {
+            "quantized_input": tensor_type_dict["input"],
+            "quantized_output": tensor_type_dict["input"],
+        }
+        for tensor_type_dict in params["non_matching_tensors"]
+        if "input" in tensor_type_dict and len(tensor_type_dict) == 1
+    ]
 
 PARAMS["default"].update({"num_splits": [2, 4]})
 
@@ -37,7 +52,7 @@ def model(input_shape):
     qin = subgraph.create_tensor(
         "quantized_input", TensorType.INT8, input_shape, isinput=True
     )
-    qout = subgraph.create_tensor("quantized_output", TensorType.INT8, qin.shape)
+    qout = subgraph.create_tensor("quantized_output", qin.type, qin.shape)
     subgraph.create_operator(
         OperatorCode(BuiltinOpCodes.ABS), inputs=[qin], outputs=[qout]
     )

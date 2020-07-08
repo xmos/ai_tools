@@ -8,7 +8,12 @@ from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType, OperatorCode, BuiltinOpCodes
 from tflite2xcore.transformation_passes import CanonicalizeQuantizedOutputPass
 
-from tflite2xcore.tests.test_transformation_passes.model_builders import build_split
+from tflite2xcore.tests.test_transformation_passes.model_builders import (
+    build_split,
+    build_dequantize,
+    build_abs,
+    _glue_ops,
+)
 
 from .conftest import (
     PARAMS,
@@ -26,10 +31,7 @@ PARAMS = deepcopy(PARAMS)
 
 for params in PARAMS.values():
     params["non_matching_tensors"] = [
-        {
-            "quantized_input": tensor_type_dict["input"],
-            "quantized_output": tensor_type_dict["input"],
-        }
+        {"input": tensor_type_dict["input"], "output": tensor_type_dict["input"]}
         for tensor_type_dict in params["non_matching_tensors"]
         if "input" in tensor_type_dict and len(tensor_type_dict) == 1
     ]
@@ -46,23 +48,12 @@ PARAMS["smoke"].update({"num_splits": [2]})
 
 @pytest.fixture()
 def model(input_shape):
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
+    model = build_abs(input_shape=input_shape, tensor_type=TensorType.INT8)
+    subgraph = model.subgraphs[0]
 
-    qin = subgraph.create_tensor(
-        "quantized_input", TensorType.INT8, input_shape, isinput=True
-    )
-    qout = subgraph.create_tensor("quantized_output", qin.type, qin.shape)
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.ABS), inputs=[qin], outputs=[qout]
-    )
+    build_dequantize(subgraph, input_shape=input_shape)
 
-    fout = subgraph.create_tensor(
-        "output", TensorType.FLOAT32, qout.shape, isoutput=True
-    )
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qout], outputs=[fout]
-    )
+    _glue_ops(*subgraph.operators[:2])
 
     return model
 
@@ -91,24 +82,6 @@ def model_multi_out(input_shape, num_splits):
 
 
 @pytest.fixture()
-def model_non_matching_input(input_shape):
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
-
-    qin1 = subgraph.create_tensor(
-        "quantized_input", TensorType.INT8, input_shape, isinput=True
-    )
-    fout1 = subgraph.create_tensor(
-        "output", TensorType.FLOAT32, qin1.shape, isoutput=True
-    )
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qin1], outputs=[fout1]
-    )
-
-    return model
-
-
-@pytest.fixture()
 def trf_pass():
     return CanonicalizeQuantizedOutputPass()
 
@@ -123,8 +96,8 @@ def test_mutate(model, trf_pass):
     trf_pass.mutate(subgraph.operators[1])
     subgraph.sanity_check()
 
-    qin = subgraph.get_tensor("quantized_input")
-    qout = subgraph.get_tensor("quantized_output")
+    qin = subgraph.get_tensor("input")
+    qout = subgraph.get_tensor("output")
 
     assert len(subgraph.operators) == 1
     assert subgraph.operators[0].operator_code.code is BuiltinOpCodes.ABS
@@ -157,8 +130,11 @@ def test_multi_out(model_multi_out, num_splits, trf_pass):
         assert tout not in subgraph.inputs
 
 
-def test_non_matching_input(trf_pass, model_non_matching_input):
-    _test_non_matching_params(trf_pass, model_non_matching_input)
+def test_non_matching_input(trf_pass, input_shape):
+    # NOTE: a single DEQUANTIZE will always have an input tensor that is an input
+    #       to the subgraph, hence it should not be matched
+    model = build_dequantize(input_shape=input_shape)
+    _test_non_matching_params(trf_pass, model)
 
 
 if __name__ == "__main__":

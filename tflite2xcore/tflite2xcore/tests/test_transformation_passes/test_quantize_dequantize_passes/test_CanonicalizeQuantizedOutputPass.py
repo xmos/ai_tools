@@ -63,28 +63,18 @@ def dual_output_model():
 
 
 @pytest.fixture()
-def non_matching_model():
+def non_matching_input_model():
     model = XCOREModel()
     subgraph = model.create_subgraph()
 
     qin1 = subgraph.create_tensor(
-        "quantized_input_1", TensorType.INT8, [1, 5, 5, 3], isinput=True
+        "quantized_input", TensorType.INT8, [1, 5, 5, 3], isinput=True
     )
     fout1 = subgraph.create_tensor(
-        "output_1", TensorType.FLOAT32, qin1.shape, isoutput=True
+        "output", TensorType.FLOAT32, qin1.shape, isoutput=True
     )
     subgraph.create_operator(
         OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qin1], outputs=[fout1]
-    )
-
-    qin2 = subgraph.create_tensor(
-        "quantized_input_2", TensorType.INT8, [1, 3, 3, 8], isinput=True
-    )
-    fout2 = subgraph.create_tensor(
-        "output_2", TensorType.FLOAT32, qin2.shape, isoutput=True
-    )
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qin2], outputs=[fout2]
     )
 
     return model
@@ -110,8 +100,10 @@ def test_mutate(simple_model, trf_pass):
     assert len(subgraph.operators) == 1
     assert subgraph.operators[0].operator_code.code is BuiltinOpCodes.ABS
     assert len(subgraph.tensors) == 2
-    assert qin in subgraph.inputs and qin not in subgraph.outputs
-    assert qout in subgraph.outputs and qout not in subgraph.inputs
+    assert qin in subgraph.inputs
+    assert qin not in subgraph.outputs
+    assert qout in subgraph.outputs
+    assert qout not in subgraph.inputs
 
 
 def test_run_simple(simple_model, trf_pass):
@@ -125,8 +117,10 @@ def test_run_simple(simple_model, trf_pass):
     assert len(subgraph.operators) == 1
     assert subgraph.operators[0].operator_code.code is BuiltinOpCodes.ABS
     assert len(subgraph.tensors) == 2
-    assert qin in subgraph.inputs and qin not in subgraph.outputs
-    assert qout in subgraph.outputs and qout not in subgraph.inputs
+    assert qin in subgraph.inputs
+    assert qin not in subgraph.outputs
+    assert qout in subgraph.outputs
+    assert qout not in subgraph.inputs
 
 
 def test_run_dual_output(dual_output_model, trf_pass):
@@ -141,13 +135,16 @@ def test_run_dual_output(dual_output_model, trf_pass):
     assert len(subgraph.operators) == 1
     assert subgraph.operators[0].operator_code.code is BuiltinOpCodes.SPLIT
     assert len(subgraph.tensors) == 3
-    assert qin in subgraph.inputs and qin not in subgraph.outputs
-    assert qout_1 in subgraph.outputs and qout_1 not in subgraph.inputs
-    assert qout_2 in subgraph.outputs and qout_2 not in subgraph.inputs
+    assert qin in subgraph.inputs
+    assert qin not in subgraph.outputs
+    assert qout_1 in subgraph.outputs
+    assert qout_1 not in subgraph.inputs
+    assert qout_2 in subgraph.outputs
+    assert qout_2 not in subgraph.inputs
 
 
-def test_non_match(trf_pass, non_matching_model):
-    for op in non_matching_model.subgraphs[0].operators:
+def test_non_matching_input(trf_pass, non_matching_input_model):
+    for op in non_matching_input_model.subgraphs[0].operators:
         assert not trf_pass.match(op)
 
 

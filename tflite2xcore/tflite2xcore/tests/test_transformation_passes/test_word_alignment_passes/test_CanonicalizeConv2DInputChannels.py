@@ -14,7 +14,7 @@ from tflite2xcore.tests.test_transformation_passes.test_conv2d_passes.conftest i
     PARAMS as CONV_PARAMS,
     test_non_matching_input_channels,
 )
-from ..conftest import (
+from .conftest import (
     _test_non_matching_params,
     test_matching_params,
 )

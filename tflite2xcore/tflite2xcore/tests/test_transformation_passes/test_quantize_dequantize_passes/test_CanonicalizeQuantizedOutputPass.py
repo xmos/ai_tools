@@ -82,6 +82,19 @@ def model_multi_out(input_shape, num_splits):
 
 
 @pytest.fixture()
+def model_non_matching_consumer(model, input_shape):
+    subgraph = model.subgraphs[0]
+    op_deq = subgraph.operators[-1]
+
+    build_abs(subgraph, input_shape=input_shape, tensor_type=op_deq.outputs[0].type)
+    op_abs_2 = subgraph.operators[-1]
+    _glue_ops(op_deq, op_abs_2)  # this removes op_deq.outputs[0]
+    subgraph.outputs.append(op_abs_2.inputs[0])  # so we put back its replacement
+
+    return model
+
+
+@pytest.fixture()
 def trf_pass():
     return CanonicalizeQuantizedOutputPass()
 
@@ -135,6 +148,11 @@ def test_non_matching_input(trf_pass, input_shape):
     #       to the subgraph, hence it should not be matched
     model = build_dequantize(input_shape=input_shape)
     _test_non_matching_params(trf_pass, model)
+
+
+def test_non_matching_consumers(trf_pass, model_non_matching_consumer):
+    for op in model_non_matching_consumer.subgraphs[0].operators:
+        assert not trf_pass.match(op)
 
 
 if __name__ == "__main__":

@@ -41,7 +41,7 @@ PARAMS["default"].update(
 
 PARAMS["smoke"].update(
     {
-        "input_batch": [1, 2],
+        "input_batch": [1],
         "input_channels": [5, 29],
         "outputs": [10],
     }

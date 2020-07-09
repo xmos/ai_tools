@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "lib_ops/api/device_memory.h"
+#include "lib_ops/api/planning.h"
 
 namespace xcore {
 
@@ -14,7 +15,6 @@ static Dispatcher *kDispatcher = nullptr;
 
 Dispatcher *GetDispatcher() {
   assert(kDispatcher);
-  kDispatcher->ResetScratchAllocation();
   return kDispatcher;
 }
 
@@ -75,47 +75,14 @@ XCoreStatus Dispatcher::JoinTasks() {
   }
 
   tasks_.size = 0;
+  allocator_.ResetScratch();
 
   return kXCoreOk;
 }
 
-void Dispatcher::PreloadBuffer(int8_t **dest, int8_t const *src, int32_t size) {
-  if (IS_RAM(src)) {
-    *dest = (int8_t *)src;
-  } else {
-    if (*dest == nullptr) *dest = (int8_t *)AllocateScratchBuffer(size);
-
-    memload((void **)dest, (void *)src, size);
-  }
-}
-
-void Dispatcher::PreloadWeights(int8_t **dest, int8_t const *src, int32_t size,
-                                ChannelGroup const &changrp) {
-  if (IS_RAM(src)) {
-    *dest = (int8_t *)&src[changrp.start * size];
-  } else {
-    if (*dest == nullptr)
-      *dest = (int8_t *)AllocateScratchBuffer(changrp.size * size);
-
-    memload((void **)dest, (void *)&src[changrp.start * size],
-            changrp.size * size);
-  }
-}
-
-void Dispatcher::PreloadBiases(int16_t **dest, int16_t const *src,
-                               ChannelGroup const &changrp) {
-  if (IS_RAM(src)) {
-    *dest = (int16_t *)&src[changrp.index * bso_changrp_len];
-  } else {
-    if (*dest == nullptr)
-      *dest = (int16_t *)AllocateScratchBuffer(bso_changrp_bytes);
-
-    memload((void **)dest, (void *)&src[changrp.index * bso_changrp_len],
-            bso_changrp_bytes);
-  }
-}
-
 #else
+
+#define IS_RAM(a) (1)
 
 // x86 Dispatcher implementation.
 // Uses a std::vector of std::thread to dispatch tasks to threads.
@@ -154,38 +121,6 @@ XCoreStatus Dispatcher::JoinTasks() {
   return kXCoreOk;
 }
 
-void Dispatcher::PreloadBuffer(int8_t **dest, int8_t const *src, int32_t size) {
-  *dest = (int8_t *)src;
-
-  // if (*dest == nullptr) *dest = (int8_t *)AllocateScratchBuffer(size);
-
-  // std::memcpy((void **)*dest, (void *)src, size);
-}
-
-void Dispatcher::PreloadWeights(int8_t **dest, int8_t const *src, int32_t size,
-                                ChannelGroup const &changrp) {
-  *dest = (int8_t *)&src[changrp.start * size];
-  std::cout << "PreloadWeights=" << changrp.size * size << std::endl;
-
-  // if (*dest == nullptr)
-  //   *dest = (int8_t *)AllocateScratchBuffer(changrp.size * size);
-
-  // std::memcpy((void **)*dest, (void *)&src[changrp.start * size],
-  //             changrp.size * size);
-}
-
-void Dispatcher::PreloadBiases(int16_t **dest, int16_t const *src,
-                               ChannelGroup const &changrp) {
-  *dest = (int16_t *)&src[changrp.index * bso_changrp_len];
-  std::cout << "PreloadBiases=" << bso_changrp_bytes << std::endl;
-
-  // if (*dest == nullptr)
-  //   *dest = (int16_t *)AllocateScratchBuffer(bso_changrp_bytes);
-
-  // std::memcpy((void **)*dest, (void *)&src[changrp.index * bso_changrp_len],
-  //             bso_changrp_bytes);
-}
-
 #endif  // XCORE
 
 //**************************************
@@ -218,18 +153,10 @@ void *Dispatcher::AllocatePersistantBuffer(size_t size, size_t alignment) {
   return allocator_.AllocatePersistantBuffer(size, alignment);
 }
 
-void *Dispatcher::AllocateScratchBuffer(size_t size, size_t alignment) {
-  return allocator_.AllocateScratchBuffer(size, alignment);
-}
+size_t Dispatcher::GetAllocatedSize() { return allocator_.GetAllocatedSize(); }
 
-XCoreStatus Dispatcher::ResetScratchAllocation() {
-  allocator_.ResetScratch();
-
-  return kXCoreOk;
-}
-
-size_t Dispatcher::GetMaxAllocatedSize() {
-  return allocator_.GetMaxAllocatedSize();
+uintptr_t Dispatcher::GetScratchBuffer() {
+  return (uintptr_t)allocator_.GetScratchBuffer();
 }
 
 XCoreStatus Dispatcher::AddTask(void *argument) {
@@ -243,6 +170,35 @@ XCoreStatus Dispatcher::AddTask(void *argument) {
   }
 
   return kXCoreError;
+}
+
+void Dispatcher::FetchBuffer(int8_t **dest, int8_t const *src, size_t size) {
+  if (IS_RAM(src)) {
+    *dest = (int8_t *)src;
+  } else {
+    memload((void **)dest, (void *)src, size);
+  }
+}
+
+void Dispatcher::FetchWeights(int8_t **dest, int8_t const *src, size_t size,
+                              ChannelGroup const &changrp) {
+  size_t changrp_bytes = size / changrp_len;
+  // changrp_bytes = 32;
+  if (IS_RAM(src)) {
+    *dest = (int8_t *)&src[changrp.start * changrp_bytes];
+  } else {
+    memload((void **)dest, (void *)&src[changrp.start * changrp_bytes],
+            changrp.size * changrp_bytes);
+  }
+}
+
+void Dispatcher::FetchBiases(int16_t **dest, int16_t const *src, size_t size,
+                             ChannelGroup const &changrp) {
+  if (IS_RAM(src)) {
+    *dest = (int16_t *)&src[changrp.index * bso_changrp_len];
+  } else {
+    memload((void **)dest, (void *)&src[changrp.index * size], size);
+  }
 }
 
 }  // namespace xcore

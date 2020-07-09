@@ -166,16 +166,14 @@ class ScratchMemoryFullyConnectedPass(OperatorMatchingPass):
             return "mem" not in op.custom_options
 
     def mutate(self, op):
+        _, Cin, _, _ = op.inputs[0].shape
         _, Bv, Bl = op.inputs[2].shape
 
         if "par" in op.custom_options:
-            max_cg_size = max(
-                [cg[1] - cg[0] + 1 for cg in op.custom_options["par"]["cg"]]
-            )
+            weights_scratch_size = Cin * op.custom_options["par"]["th"]
         else:
-            max_cg_size = CHANNEL_GROUP_SIZE
+            weights_scratch_size = Cin
 
-        weights_scratch_size = max_cg_size
         bias_scratch_size = Bv * Bl * op.inputs[2].type.to_bytes()
 
         op.add_custom_options(mem=[weights_scratch_size, bias_scratch_size])

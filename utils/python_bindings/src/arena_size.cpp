@@ -72,7 +72,7 @@ void search_arena_sizes(const char *model_content, size_t model_content_size,
 
   // *heap_size = xcGetHeapAllocatedSize() + xcore_heap_size_adjustment;
   Dispatcher *dispatcher = GetDispatcher();
-  *heap_size = dispatcher->GetMaxAllocatedSize() + xcore_heap_size_adjustment;
+  *heap_size = dispatcher->GetAllocatedSize() + xcore_heap_size_adjustment;
 }
 
 }  // namespace xcore

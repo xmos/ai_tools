@@ -26,14 +26,18 @@ ATTRIBUTE_THREAD_FUNCTION void fully_connected_thread_worker(void *context) {
 }
 
 FullyConnected_16::FullyConnected_16(const ExecutionPlan &execution_plan)
-    : execution_plan(execution_plan) {}
+    : execution_plan(execution_plan),
+      jobs_(nullptr),
+      W_(nullptr),
+      BSO_(nullptr) {}
 
-XCoreStatus FullyConnected_16::Init(int32_t C_in, int32_t C_out) {
-  TRACE_INFO("FullyConnected_16 Init id=%p C_in=%ld C_out=%ld\n", this, C_in,
+XCoreStatus FullyConnected_16::Prepare(int32_t C_in, int32_t C_out,
+                                       const int8_t *W, const int16_t *BSO) {
+  TRACE_INFO("FullyConnected_16 Prepare id=%p C_in=%ld C_out=%ld\n", this, C_in,
              C_out);
 
-  // compute size (in bytes) of 1 output channel's weights
-  weights_preload_size_ = C_in;
+  W_ = W;
+  BSO_ = BSO;
 
   // allocate the jobs
   int32_t n_jobs = execution_plan.changrps.GetSize();
@@ -46,8 +50,9 @@ XCoreStatus FullyConnected_16::Init(int32_t C_in, int32_t C_out) {
 
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
-    TRACE_INFO("FullyConnected_16 Init id=%p, chan group start=%ld size=%ld\n",
-               this, changrp.start, changrp.size);
+    TRACE_INFO(
+        "FullyConnected_16 Prepare id=%p, chan group start=%ld size=%ld\n",
+        this, changrp.start, changrp.size);
 
     job_params[i_cg] = {(uint32_t)changrp.start, (channel_count_t)changrp.size};
   }
@@ -58,8 +63,7 @@ XCoreStatus FullyConnected_16::Init(int32_t C_in, int32_t C_out) {
   return kXCoreOk;
 }
 
-XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *W,
-                                    const int8_t *X, const int16_t *BSO) {
+XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *X) {
   TRACE_INFO("FullyConnected Eval id=%p\n", this);
   TIMER_START();
 
@@ -82,9 +86,11 @@ XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *W,
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
 
-    // preload the weights and biases
-    dispatcher->PreloadWeights(&tW[i_th], W, weights_preload_size_, changrp);
-    dispatcher->PreloadBiases(&tBSO[i_th], BSO, changrp);
+    // fetch the weights and biases
+    dispatcher->FetchWeights(
+        &tW[i_th], W_, execution_plan.GetWeightsScratchSize() * n_th, changrp);
+    dispatcher->FetchBiases(&tBSO[i_th], BSO_,
+                            execution_plan.GetBiasScratchSize(), changrp);
 
     thread_data[i_th].Y = Y;
     thread_data[i_th].X = X;

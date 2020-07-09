@@ -23,8 +23,7 @@ class MemoryAllocator {
       : buffer_(nullptr),
         buffer_size_(0),
         alloc_tail_(nullptr),
-        scratch_head_(nullptr),
-        max_allocated_(0) {}
+        scratch_head_(nullptr) {}
   ~MemoryAllocator() {}
 
   void SetHeap(void *buffer, size_t size);
@@ -37,10 +36,6 @@ class MemoryAllocator {
    */
   size_t GetAllocatedSize();
 
-  /** Get the maximum size (in bytes) of memory allocated from the heap.
-   */
-  size_t GetMaxAllocatedSize();
-
   /** Get the size (in bytes) of available memory in the heap.
    */
   size_t GetFreeSize();
@@ -52,6 +47,10 @@ class MemoryAllocator {
   /** Reset the allocator so the scratch memory can be re-used.
    */
   void ResetScratch();
+
+  /** Get head fo the scratch memory buffer.
+   */
+  void *GetScratchBuffer();
 
   /** Allocate memory that is intended to persist for the lifetime of the
    * allocator. \param size    Size of allocation (in bytes)
@@ -71,7 +70,6 @@ class MemoryAllocator {
   size_t buffer_size_;
   void *alloc_tail_;
   void *scratch_head_;
-  size_t max_allocated_;
 };
 
 #endif  // XCORE_OPERATORS_ALLOCATOR_H_

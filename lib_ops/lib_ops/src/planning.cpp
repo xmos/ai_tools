@@ -72,4 +72,27 @@ void ChannelGroupArray::Append(const ChannelGroup &changrp) {
 
 size_t ChannelGroupArray::GetSize() { return next_; }
 
+//*****************************
+//*****************************
+//*****************************
+// ExecutionPlan
+//*****************************
+//*****************************
+//*****************************
+ExecutionPlan::ExecutionPlan() : n_threads_(0), bias_scratch_offset_(0) {}
+
+void ExecutionPlan::SetWeightsScratchSize(size_t size) {
+  // NOTE: Weights assumes to start at scratch offset 0
+  //        so we do not need to store it
+  bias_scratch_offset_ = size;
+}
+size_t ExecutionPlan::GetWeightsScratchSize() { return bias_scratch_offset_; }
+size_t ExecutionPlan::GetWeightsScratchOffset() { return 0; }
+
+void ExecutionPlan::SetBiasScratchSize(size_t size) {
+  // NOTE: size is ignored for now because it is a constant
+}
+size_t ExecutionPlan::GetBiasScratchSize() { return bso_changrp_bytes; }
+size_t ExecutionPlan::GetBiasScratchOffset() { return bias_scratch_offset_; }
+
 }  // namespace xcore

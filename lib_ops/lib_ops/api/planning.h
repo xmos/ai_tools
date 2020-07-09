@@ -7,6 +7,10 @@
 
 namespace xcore {
 
+constexpr size_t changrp_len = (16);
+constexpr size_t bso_changrp_len = (7 * changrp_len);
+constexpr size_t bso_changrp_bytes = (bso_changrp_len * 2);
+
 typedef struct RowColRegion {
   int32_t top;
   int32_t left;
@@ -51,21 +55,26 @@ class ChannelGroupArray {
 
 class ExecutionPlan {
  public:
-  ExecutionPlan() : n_threads_(0), weights_scratch_(0), bias_scratch_(0) {}
+  ExecutionPlan();
   ~ExecutionPlan() {}
 
   void SetNumThreads(int32_t n_threads) { n_threads_ = n_threads; }
-  void SetWeightsScratch(size_t size) { weights_scratch_ = size; }
-  void SetBiasScratch(size_t size) { bias_scratch_ = size; }
-  int32_t GetNumThreads() { return n_threads_; }
+  size_t GetNumThreads() { return n_threads_; }
+
+  void SetWeightsScratchSize(size_t size);
+  size_t GetWeightsScratchSize();
+  size_t GetWeightsScratchOffset();
+
+  void SetBiasScratchSize(size_t size);
+  size_t GetBiasScratchSize();
+  size_t GetBiasScratchOffset();
 
   RowColRegionArray regions;
   ChannelGroupArray changrps;
 
  private:
   size_t n_threads_;
-  size_t weights_scratch_;
-  size_t bias_scratch_;
+  size_t bias_scratch_offset_;
 };
 
 }  // namespace xcore

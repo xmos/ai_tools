@@ -14,7 +14,6 @@ from ..conftest import (
     _test_non_matching_params,
     test_matching_params,
     test_non_matching_tensors,
-    _NON_MATCHING_TENSORS,
 )
 
 
@@ -29,7 +28,6 @@ PARAMS["extended"].update(
         "input_batch": [1, 2],
         "input_channels": [5, 10, 29],
         "outputs": [2, 10],
-        "non_matching_tensors": _NON_MATCHING_TENSORS,
     }
 )
 
@@ -38,7 +36,6 @@ PARAMS["default"].update(
         "input_batch": [1, 2],
         "input_channels": [5, 10, 29],
         "outputs": [2, 10],
-        "non_matching_tensors": _NON_MATCHING_TENSORS[::2],
     }
 )
 
@@ -47,7 +44,6 @@ PARAMS["smoke"].update(
         "input_batch": [1, 2],
         "input_channels": [5, 29],
         "outputs": [10],
-        "non_matching_tensors": _NON_MATCHING_TENSORS[::4],
     }
 )
 

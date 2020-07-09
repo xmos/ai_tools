@@ -9,11 +9,7 @@ from tflite2xcore.xcore_schema import (
     OperatorCode,
     XCOREOpCodes,
 )
-from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import OperatorMatchingPass
-from tflite2xcore.execution_planning import ChannelGroupSlicePlanner
-from tflite2xcore.xlogging import log_method_output
-
 
 class RemoveFlattenReshapePass(OperatorMatchingPass):
 

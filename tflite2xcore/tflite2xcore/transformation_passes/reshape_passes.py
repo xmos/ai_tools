@@ -47,10 +47,6 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
                 super().match(op)
                 and op.operator_code.code in self.MATCHING_OPCODES
                 and producer_opcode is BuiltinOpCodes.RESHAPE
-                and (
-                    np.prod(self._producer.inputs[0].shape)
-                    == np.prod(op.inputs[0].shape)
-                )
                 and (reshape_output_batch == reshape_input_batch)
             )
 
@@ -84,6 +80,13 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
                 except KeyError:
                     self.logger.warning(
                         "Expected new_shape option to RESHAPE was not found"
+                    )
+
+                if np.prod(self._producer.inputs[0].shape) != np.prod(
+                    op.inputs[0].shape
+                ):
+                    self.logger.warning(
+                        "Reshape input and output shapes are not consistant"
                     )
 
                 return (

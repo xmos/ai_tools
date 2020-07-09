@@ -24,27 +24,15 @@ from ..conftest import (
 PARAMS = deepcopy(PARAMS)
 
 PARAMS["extended"].update(
-    {
-        "input_batch": [1, 2],
-        "input_channels": [5, 10, 29],
-        "outputs": [2, 10],
-    }
+    {"input_batch": [1, 2], "input_channels": [5, 10, 29], "outputs": [2, 10],}
 )
 
 PARAMS["default"].update(
-    {
-        "input_batch": [1, 2],
-        "input_channels": [5, 10, 29],
-        "outputs": [2, 10],
-    }
+    {"input_batch": [1, 2], "input_channels": [5, 10, 29], "outputs": [2, 10],}
 )
 
 PARAMS["smoke"].update(
-    {
-        "input_batch": [1],
-        "input_channels": [5, 29],
-        "outputs": [10],
-    }
+    {"input_batch": [1], "input_channels": [5, 29], "outputs": [10],}
 )
 
 

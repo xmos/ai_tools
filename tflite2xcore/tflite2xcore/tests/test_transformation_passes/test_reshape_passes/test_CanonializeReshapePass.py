@@ -47,7 +47,6 @@ def model(reshape):
 
 @pytest.fixture()
 def model_no_shape_tensor(reshape):
-
     return build_reshape(
         input_shape=reshape[0], output_shape=reshape[1], input_shape_tensor=False
     )

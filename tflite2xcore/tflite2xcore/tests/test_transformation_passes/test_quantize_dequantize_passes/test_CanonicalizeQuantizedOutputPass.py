@@ -4,7 +4,6 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType, OperatorCode, BuiltinOpCodes
 from tflite2xcore.transformation_passes import CanonicalizeQuantizedOutputPass
 
@@ -36,9 +35,18 @@ for params in PARAMS.values():
         if "input" in tensor_type_dict and len(tensor_type_dict) == 1
     ]
 
+_NON_MATCHING_TENSORS = [
+    {"output_dequantized": TensorType.INT8},
+    {"output_dequantized": TensorType.INT16},
+    {"output_dequantized": TensorType.INT32},
+    {"output_dequantized": TensorType.UINT8},
+]
+
 PARAMS["default"].update({"num_splits": [2, 4]})
+PARAMS["default"]["non_matching_tensors"].extend(_NON_MATCHING_TENSORS)
 
 PARAMS["smoke"].update({"num_splits": [2]})
+PARAMS["smoke"]["non_matching_tensors"].extend(_NON_MATCHING_TENSORS[::2])
 
 
 #  ----------------------------------------------------------------------------
@@ -139,8 +147,8 @@ def test_multi_out(model_multi_out, num_splits, trf_pass):
     assert tin not in subgraph.outputs
 
     assert len(subgraph.outputs) == num_splits
-    for tout in subgraph.outputs:
-        assert tout not in subgraph.inputs
+    for j, tout in enumerate(subgraph.outputs):
+        assert tout not in subgraph.inputs, f"subgraph.outputs[{j}]"
 
 
 def test_non_matching_input(trf_pass, input_shape):
@@ -151,8 +159,8 @@ def test_non_matching_input(trf_pass, input_shape):
 
 
 def test_non_matching_consumers(trf_pass, model_non_matching_consumer):
-    for op in model_non_matching_consumer.subgraphs[0].operators:
-        assert not trf_pass.match(op)
+    for j, op in enumerate(model_non_matching_consumer.subgraphs[0].operators):
+        assert not trf_pass.match(op), f"subgraphs[0].operators[{j}]"
 
 
 if __name__ == "__main__":

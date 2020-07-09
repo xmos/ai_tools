@@ -614,13 +614,15 @@ def build_non_input_pad(subgraph=None, *, input_shape, paddings):
     return model
 
 
-def build_reshape(subgraph=None, *, input_shape, output_shape, add_batch_dim=True):
+def build_reshape(subgraph=None, *, input_shape, output_shape, add_batch_dim=False):
 
     if add_batch_dim:
         # Prepend dims with batch dimension 1
         input_shape = [1, *input_shape]
 
     assert 0 < len(output_shape) < 5
+    
+    assert np.prod(input_shape) == np.prod(output_shape), "Inconsistant shapes"
 
     subgraph = subgraph or XCOREModel().create_subgraph()
 
@@ -639,12 +641,12 @@ def build_reshape(subgraph=None, *, input_shape, output_shape, add_batch_dim=Tru
 
 
 def build_fc_with_reshape(
-    subgraph=None, *, input_shape, fc_outputs, reshape_output_shape
+    subgraph=None, *, input_shape, fc_outputs, reshaped_input_shape
 ):
     model = build_reshape(
         subgraph,
         input_shape=input_shape,
-        output_shape=reshape_output_shape,
+        output_shape=reshaped_input_shape,
         add_batch_dim=False,
     )
     subgraph = subgraph or model.subgraphs[0]
@@ -652,7 +654,7 @@ def build_fc_with_reshape(
     build_fc(
         subgraph,
         outputs=fc_outputs,
-        input_shape=reshape_output_shape,
+        input_shape=reshaped_input_shape,
         add_batch_dim=False,
     )
 

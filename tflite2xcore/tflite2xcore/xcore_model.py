@@ -250,6 +250,10 @@ class Tensor:
         )
         return arr.reshape(self.shape)
 
+    @property
+    def is_constant(self) -> bool:
+        return (len(self.producers) == 0) and self not in self.subgraph.inputs
+
 
 class Subgraph:
     def __init__(

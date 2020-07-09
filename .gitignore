@@ -33,7 +33,15 @@ tests/data
 
 # VI tmp files
 *.swp
+*.swo
+*.swn
 
 #tmp files
 *~
 *.*~
+*log*
+
+*.npz
+*.y
+*.x
+

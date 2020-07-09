@@ -28,7 +28,6 @@ from .fully_connected_passes import (
     LegalizeXCFullyConnectedPass,
     PlanFullyConnectedPass,
     PlanRequant16To8Pass,
-    RemoveRedundantReshapePass,
 )
 
 from .pooling_passes import (
@@ -60,6 +59,11 @@ from .dce_passes import (
     EliminateDeadOperatorsPass,
     EliminateDeadTensorsPass,
     EliminateDeadBuffersPass,
+)
+
+from .reshape_passes import (
+    RemoveFlattenReshapePass,
+    CanonicalizeReshapePass,
 )
 
 from .renaming_passes import LegalizeOperatorOutputTensorNamePass

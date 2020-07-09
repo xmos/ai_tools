@@ -155,46 +155,4 @@ class PlanRequant16To8Pass(OperatorMatchingPass):
         op.add_custom_options(plan=plan.to_dict())
 
 
-class RemoveRedundantReshapePass(OperatorMatchingPass):
 
-    MATCHING_OPCODES = (
-        # TODO fully populate this set
-        BuiltinOpCodes.FULLY_CONNECTED,
-    )
-
-    @property
-    def _producer(self):
-        return self._op.inputs[0].producers[0]
-
-    def match(self, op):
-
-        with self.using(op):
-            try:
-                producer_opcode = self._producer.operator_code.code
-            except IndexError:
-                # Op has no producers..
-                return False
-
-            return (
-                super().match(op)
-                and op.operator_code.code in self.MATCHING_OPCODES
-                and producer_opcode is BuiltinOpCodes.RESHAPE
-                and (
-                    np.prod(self._producer.inputs[0].shape)
-                    == np.prod(op.inputs[0].shape)
-                )
-            )
-
-    def mutate(self, op):
-        subgraph = op.subgraph
-
-        with self.using(op):
-            producer = self._producer
-
-        # Remove connection from old inputs to the anchor FC op
-        intermediate = op.inputs[0]
-        intermediate.consumers.remove(op)
-
-        # Create the new connection
-        op.inputs[0] = producer.inputs[0]
-        producer.inputs[0].consumers.append(op)

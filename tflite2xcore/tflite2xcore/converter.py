@@ -92,7 +92,8 @@ def optimize_for_xcore(
         model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
 
-    pass_mgr.register_pass(passes.RemoveRedundantReshapePass())
+    pass_mgr.register_pass(passes.CanonicalizeReshapePass())
+    pass_mgr.register_pass(passes.RemoveFlattenReshapePass())
 
     # canonicalize convolutions
     pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())

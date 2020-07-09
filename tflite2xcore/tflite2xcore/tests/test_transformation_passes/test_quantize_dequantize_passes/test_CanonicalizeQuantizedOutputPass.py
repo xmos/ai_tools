@@ -39,11 +39,13 @@ _NON_MATCHING_TENSORS = [
     )
 ] + list(_make_name_type_pairs("output_dequantized", NON_FLOAT32_TEST_TYPES))
 
-PARAMS["default"].update({"num_splits": [2, 4]})
-PARAMS["default"]["non_matching_tensors"] = _NON_MATCHING_TENSORS
+PARAMS["default"].update(
+    {"num_splits": [2, 4], "non_matching_tensors": _NON_MATCHING_TENSORS}
+)
 
-PARAMS["smoke"].update({"num_splits": [2]})
-PARAMS["smoke"]["non_matching_tensors"] = _NON_MATCHING_TENSORS[::2]
+PARAMS["smoke"].update(
+    {"num_splits": [2], "non_matching_tensors": _NON_MATCHING_TENSORS[::2]}
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -126,7 +128,7 @@ def test_mutate(model, trf_pass):
     assert qout not in subgraph.inputs
 
 
-def test_multi_out(model_multi_out, num_splits, trf_pass):
+def test_mutate_multi_out(model_multi_out, num_splits, trf_pass):
     trf_pass.run(model_multi_out)
     model_multi_out.sanity_check()
     subgraph = model_multi_out.subgraphs[0]

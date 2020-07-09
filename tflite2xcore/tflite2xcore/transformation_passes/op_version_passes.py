@@ -6,7 +6,6 @@ from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes
 from tflite2xcore.transformation_passes import OperatorMatchingPass
 
 
-# TODO: implement tests for this
 class LegalizeQuantizeVersionPass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
         if super().match(op):

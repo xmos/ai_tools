@@ -44,6 +44,21 @@ def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
     return subgraph.model
 
 
+def build_dequantize(subgraph=None, *, input_shape):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, *input_shape]
+    qin = subgraph.create_tensor("input", TensorType.INT8, input_shape, isinput=True)
+    fout = subgraph.create_tensor(
+        "output_dequantized", TensorType.FLOAT32, qin.shape, isoutput=True
+    )
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qin], outputs=[fout]
+    )
+
+    return subgraph.model
+
+
 def build_elementwise_op(builtin_opcode, subgraph=None, *, input_shape, tensor_type):
     subgraph = subgraph or XCOREModel().create_subgraph()
 

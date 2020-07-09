@@ -232,9 +232,7 @@ class ReplaceWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
         return self._op.inputs[1]
 
     def _log_weights(self):
-        self.logger.xdebug(
-            "_weights:\n" + logging._array_msg(self._weights.numpy.astype(np.int8))
-        )
+        self.logger.xdebug("_weights:\n" + logging._array_msg(self._weights.as_array()))
 
     @property
     def _biases(self):
@@ -265,9 +263,7 @@ class LegalizeWeightBiasPass(QuantizedOperatorMatchingPass):
         return self._op.inputs[1]
 
     def _log_weights(self):
-        self.logger.xdebug(
-            "_weights:\n" + logging._array_msg(self._weights.numpy.astype(np.int8))
-        )
+        self.logger.xdebug("_weights:\n" + logging._array_msg(self._weights.as_array()))
 
     @abstractmethod
     def mutate_biases(self, op):
@@ -317,8 +313,9 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
 
     @logging.log_method_output()
     def _unified_bias(self):
-        biases = self._biases.numpy
-        arr_64 = biases.astype(np.int64) - self._zero_point_bias().astype(np.int64)
+        arr_64 = self._biases.as_array(np.int64) - self._zero_point_bias().astype(
+            np.int64
+        )
         arr_32 = np.clip(arr_64, -(2 ** 31), 2 ** 31 - 1).astype(np.int32)
         if np.any(arr_32 != arr_64):
             self.logger.warning("_unified_bias saturated 32 bit!")
@@ -366,7 +363,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
             # we are using 16 bits instead of 8 so we need to adjust the shift
             rshift[j] -= self._SHIFT_ADJUSTMENT
 
-        bias_size = self._biases.numpy.size
+        bias_size = np.prod(self._biases.shape)
         if len(scale) == 1:
             rshift = np.repeat(rshift, bias_size)
             scale = np.repeat(scale, bias_size)

@@ -49,7 +49,6 @@ def test_read_flatbuffer():
     assert tensor.name == "arm_benchmark/conv2d/Conv2D_bias"
     assert tensor.sanitized_name == "arm_benchmark_conv2d_Conv2D_bias"
     assert tensor.type is TensorType.INT32
-    assert tensor.standard_type == "int32_t"
     assert tensor.shape == (32,)
     assert len(tensor.buffer.data) == 128
 

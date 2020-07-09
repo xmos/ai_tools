@@ -514,7 +514,7 @@ XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X) {
                                   execution_plan.GetWeightsScratchOffset());
 
   // fetch the weights
-  //   NOTE: They all need to be preloaded for each job
+  //   NOTE: They all need to be fetched for each job
   //         This may be changed in the future.
   dispatcher->FetchBuffer(&tK, K_,
                           execution_plan.GetWeightsScratchSize() / changrp_len);

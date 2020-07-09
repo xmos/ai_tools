@@ -66,6 +66,10 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
 
 
 class CanonicalizeReshapePass(OperatorMatchingPass):
+    @property
+    def _producer(self):
+        return self._op.inputs[0].producers[0]
+
     def match(self, op):
 
         with self.using(op):
@@ -82,12 +86,15 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
                         "Expected new_shape option to RESHAPE was not found"
                     )
 
-                if np.prod(self._producer.inputs[0].shape) != np.prod(
-                    op.inputs[0].shape
-                ):
-                    self.logger.warning(
-                        "Reshape input and output shapes are not consistant"
-                    )
+                try:
+                    if np.prod(self._producer.inputs[0].shape) != np.prod(
+                        op.inputs[0].shape
+                    ):
+                        self.logger.warning(
+                            "RESHAPE input and output shapes are not consistent"
+                        )
+                except IndexError:
+                    pass
 
                 return (
                     super().match(op)

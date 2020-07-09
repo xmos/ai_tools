@@ -661,11 +661,8 @@ def build_reshape(
         inputs = [tin]
 
     op = subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.RESHAPE), inputs=inputs, outputs=[tout]
+        OperatorCode(BuiltinOpCodes.RESHAPE), inputs=inputs, outputs=[tout], builtin_options = {"new_shape": output_shape}
     )
-
-    op.builtin_options = {"new_shape": output_shape}
-
     return subgraph.model
 
 

@@ -46,10 +46,10 @@ def model(reshape):
 
 
 @pytest.fixture()
-def model_nonmatch(non_matching_reshape):
+def model_no_shape_tensor(reshape):
 
     return build_reshape(
-        input_shape=non_matching_reshape[0], output_shape=non_matching_reshape[1],
+        input_shape=reshape[0], output_shape=reshape[1], input_shape_tensor=False
     )
 
 
@@ -80,11 +80,8 @@ def test_mutate(trf_pass, model):
     assert out_ori is out_new is op.outputs[0]
 
 
-# def test_non_matching_reshape_only(trf_pass, model_reshape_only):
-#    _test_non_matching_params(trf_pass, model_reshape_only)
-
-# def test_non_matching_simple(trf_pass, model_nonmatch):
-#     _test_non_matching_params(trf_pass, model_nonmatch)
+def test_non_matching_no_shape_tensor(trf_pass, model_no_shape_tensor):
+    _test_non_matching_params(trf_pass, model_no_shape_tensor)
 
 if __name__ == "__main__":
     pytest.main()

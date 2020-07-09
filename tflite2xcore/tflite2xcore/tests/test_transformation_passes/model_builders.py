@@ -629,7 +629,7 @@ def build_non_input_pad(subgraph=None, *, input_shape, paddings):
     return model
 
 
-def build_reshape(subgraph=None, *, input_shape, output_shape, add_batch_dim=False):
+def build_reshape(subgraph=None, *, input_shape, output_shape, add_batch_dim=False, input_shape_tensor=True):
 
     if add_batch_dim:
         # Prepend dims with batch dimension 1
@@ -645,11 +645,17 @@ def build_reshape(subgraph=None, *, input_shape, output_shape, add_batch_dim=Fal
         "original_shape", TensorType.INT8, input_shape, isinput=True
     )
     tout = subgraph.create_tensor("reshaped", tin.type, output_shape, isoutput=True)
-    p = subgraph.create_tensor("shape", TensorType.INT32, shape=[len(output_shape)])
-    p.buffer.data = np.int32(output_shape)
+
+
+    if input_shape_tensor:
+        p = subgraph.create_tensor("shape", TensorType.INT32, shape=[len(output_shape)])
+        p.buffer.data = np.int32(output_shape)
+        inputs = [tin, p]
+    else:
+        inputs = [tin]
 
     op = subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.RESHAPE), inputs=[tin, p], outputs=[tout]
+        OperatorCode(BuiltinOpCodes.RESHAPE), inputs=inputs, outputs=[tout]
     )
 
     op.builtin_options = {"new_shape": output_shape}

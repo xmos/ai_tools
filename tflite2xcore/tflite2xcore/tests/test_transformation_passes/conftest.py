@@ -2,26 +2,49 @@
 
 import pytest
 
+from tflite2xcore.xcore_schema import TensorType
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
+
+_NON_MATCHING_TENSORS = [
+    {"input": TensorType.UINT8},
+    {"input": TensorType.INT32},
+    {"input": TensorType.FLOAT32},
+    {"input": TensorType.INT16},
+    {"weights": TensorType.UINT8},
+    {"weights": TensorType.INT32},
+    {"weights": TensorType.FLOAT32},
+    {"weights": TensorType.INT16},
+    {"biases": TensorType.INT8},
+    {"biases": TensorType.UINT8},
+    {"biases": TensorType.FLOAT32},
+    {"biases": TensorType.INT16},
+    {"output": TensorType.UINT8},
+    {"output": TensorType.INT32},
+    {"output": TensorType.FLOAT32},
+    {"output": TensorType.INT16},
+]
 
 PARAMS = {
     "extended": {
         "input_height": [7, 9, 17, 20, 32],
         "input_width": [7, 9, 17, 20, 32],
         "input_channels": [4, 8, 16, 32, 36, 64],
+        "non_matching_tensors": _NON_MATCHING_TENSORS,
     },
     "default": {
         "input_height": [9, 20],
         "input_width": [7, 17],
         "input_channels": [4, 8, 16, 32],
+        "non_matching_tensors": _NON_MATCHING_TENSORS[::2],
     },
     "smoke": {
         "input_height": [9, 20],
         "input_width": [7, 17],
         "input_channels": [4, 32],
+        "non_matching_tensors": _NON_MATCHING_TENSORS[::4],
     },
 }
 
@@ -70,5 +93,6 @@ def test_matching_params(trf_pass, model):
 
 def test_non_matching_tensors(trf_pass, model, non_matching_tensors):
     subgraph = model.subgraphs[0]
-    subgraph.get_tensor(non_matching_tensors[0]).type = non_matching_tensors[1]
+    for name, type_ in non_matching_tensors.items():
+        subgraph.get_tensor(name).type = type_
     _test_non_matching_params(trf_pass, model)

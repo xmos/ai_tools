@@ -2,90 +2,94 @@
 
 import pytest
 
+from copy import deepcopy
+
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType, OperatorCode, BuiltinOpCodes
 from tflite2xcore.transformation_passes import CanonicalizeQuantizedOutputPass
 
+from tflite2xcore.tests.test_transformation_passes.model_builders import (
+    build_split,
+    build_dequantize,
+    build_abs,
+    _glue_ops,
+)
+
+from .conftest import (
+    PARAMS,
+    _test_non_matching_params,
+    test_matching_params,
+    test_non_matching_tensors,
+)
+
+
+#  ----------------------------------------------------------------------------
+#                              PARAMETER VALUES
+#  ----------------------------------------------------------------------------
+
+PARAMS = deepcopy(PARAMS)
+
+for params in PARAMS.values():
+    params["non_matching_tensors"] = [
+        {"input": tensor_type_dict["input"], "output": tensor_type_dict["input"]}
+        for tensor_type_dict in params["non_matching_tensors"]
+        if "input" in tensor_type_dict and len(tensor_type_dict) == 1
+    ]
+
+PARAMS["default"].update({"num_splits": [2, 4]})
+
+PARAMS["smoke"].update({"num_splits": [2]})
+
+
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
+
 
 @pytest.fixture()
-def simple_model():
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
+def model(input_shape):
+    model = build_abs(input_shape=input_shape, tensor_type=TensorType.INT8)
+    subgraph = model.subgraphs[0]
 
-    qin = subgraph.create_tensor(
-        "quantized_input", TensorType.INT8, [1, 5, 5, 3], isinput=True
-    )
-    qout = subgraph.create_tensor("quantized_output", TensorType.INT8, qin.shape)
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.ABS), inputs=[qin], outputs=[qout]
-    )
+    build_dequantize(subgraph, input_shape=input_shape)
 
-    fout = subgraph.create_tensor(
-        "output", TensorType.FLOAT32, qout.shape, isoutput=True
-    )
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qout], outputs=[fout]
-    )
+    _glue_ops(*subgraph.operators[:2])
 
     return model
 
 
 @pytest.fixture()
-def dual_output_model():
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
+def model_multi_out(input_shape, num_splits):
+    model = build_split(
+        input_shape=input_shape,
+        num_splits=num_splits,
+        tensor_type=TensorType.INT8,
+        axis=2,
+    )
+    subgraph = model.subgraphs[0]
 
-    # TODO: add operator options to specify split axis and number
-    qin = subgraph.create_tensor(
-        "quantized_input", TensorType.INT8, [1, 5, 5, 4], isinput=True
-    )
-    qout1 = subgraph.create_tensor("quantized_output_1", TensorType.INT8, [1, 5, 5, 2])
-    qout2 = subgraph.create_tensor("quantized_output_2", TensorType.INT8, [1, 5, 5, 2])
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.SPLIT), inputs=[qin], outputs=[qout1, qout2]
-    )
-
-    fout1 = subgraph.create_tensor(
-        "output_1", TensorType.FLOAT32, qout1.shape, isoutput=True
-    )
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qout1], outputs=[fout1]
-    )
-
-    fout2 = subgraph.create_tensor(
-        "output_2", TensorType.FLOAT32, qout1.shape, isoutput=True
-    )
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qout2], outputs=[fout2]
-    )
+    op = model.subgraphs[0].operators[0]
+    for qout in op.outputs:
+        subgraph.outputs.remove(qout)
+        fout = subgraph.create_tensor(
+            qout.name + "_float", TensorType.FLOAT32, qout.shape, isoutput=True
+        )
+        subgraph.create_operator(
+            OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qout], outputs=[fout]
+        )
 
     return model
 
 
 @pytest.fixture()
-def non_matching_model():
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
+def model_non_matching_consumer(model, input_shape):
+    subgraph = model.subgraphs[0]
+    op_deq = subgraph.operators[-1]
 
-    qin1 = subgraph.create_tensor(
-        "quantized_input_1", TensorType.INT8, [1, 5, 5, 3], isinput=True
-    )
-    fout1 = subgraph.create_tensor(
-        "output_1", TensorType.FLOAT32, qin1.shape, isoutput=True
-    )
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qin1], outputs=[fout1]
-    )
-
-    qin2 = subgraph.create_tensor(
-        "quantized_input_2", TensorType.INT8, [1, 3, 3, 8], isinput=True
-    )
-    fout2 = subgraph.create_tensor(
-        "output_2", TensorType.FLOAT32, qin2.shape, isoutput=True
-    )
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qin2], outputs=[fout2]
-    )
+    build_abs(subgraph, input_shape=input_shape, tensor_type=op_deq.outputs[0].type)
+    op_abs_2 = subgraph.operators[-1]
+    _glue_ops(op_deq, op_abs_2)  # this removes op_deq.outputs[0]
+    subgraph.outputs.append(op_abs_2.inputs[0])  # so we put back its replacement
 
     return model
 
@@ -95,59 +99,59 @@ def trf_pass():
     return CanonicalizeQuantizedOutputPass()
 
 
-def test_match(simple_model, trf_pass):
-    assert trf_pass.match(simple_model.subgraphs[0].operators[1])
+#  ----------------------------------------------------------------------------
+#                               TEST FUNCTIONS
+#  ----------------------------------------------------------------------------
 
 
-def test_mutate(simple_model, trf_pass):
-    subgraph = simple_model.subgraphs[0]
+def test_mutate(model, trf_pass):
+    subgraph = model.subgraphs[0]
     trf_pass.mutate(subgraph.operators[1])
     subgraph.sanity_check()
 
-    qin = subgraph.get_tensor("quantized_input")
-    qout = subgraph.get_tensor("quantized_output")
+    qin = subgraph.get_tensor("input")
+    qout = subgraph.get_tensor("output")
 
     assert len(subgraph.operators) == 1
     assert subgraph.operators[0].operator_code.code is BuiltinOpCodes.ABS
     assert len(subgraph.tensors) == 2
-    assert qin in subgraph.inputs and qin not in subgraph.outputs
-    assert qout in subgraph.outputs and qout not in subgraph.inputs
+    assert qin in subgraph.inputs
+    assert qin not in subgraph.outputs
+    assert qout in subgraph.outputs
+    assert qout not in subgraph.inputs
 
 
-def test_run_simple(simple_model, trf_pass):
-    trf_pass.run(simple_model)
-    simple_model.sanity_check()
-    subgraph = simple_model.subgraphs[0]
-
-    qin = subgraph.get_tensor("quantized_input")
-    qout = subgraph.get_tensor("quantized_output")
-
-    assert len(subgraph.operators) == 1
-    assert subgraph.operators[0].operator_code.code is BuiltinOpCodes.ABS
-    assert len(subgraph.tensors) == 2
-    assert qin in subgraph.inputs and qin not in subgraph.outputs
-    assert qout in subgraph.outputs and qout not in subgraph.inputs
-
-
-def test_run_dual_output(dual_output_model, trf_pass):
-    trf_pass.run(dual_output_model)
-    dual_output_model.sanity_check()
-    subgraph = dual_output_model.subgraphs[0]
-
-    qin = subgraph.get_tensor("quantized_input")
-    qout_1 = subgraph.get_tensor("quantized_output_1")
-    qout_2 = subgraph.get_tensor("quantized_output_2")
+def test_multi_out(model_multi_out, num_splits, trf_pass):
+    trf_pass.run(model_multi_out)
+    model_multi_out.sanity_check()
+    subgraph = model_multi_out.subgraphs[0]
 
     assert len(subgraph.operators) == 1
     assert subgraph.operators[0].operator_code.code is BuiltinOpCodes.SPLIT
-    assert len(subgraph.tensors) == 3
-    assert qin in subgraph.inputs and qin not in subgraph.outputs
-    assert qout_1 in subgraph.outputs and qout_1 not in subgraph.inputs
-    assert qout_2 in subgraph.outputs and qout_2 not in subgraph.inputs
+    assert len(subgraph.tensors) == 2 + num_splits  # split has two inputs
+
+    taxis = subgraph.get_tensor("axis")
+    assert taxis not in subgraph.outputs
+    assert taxis not in subgraph.inputs
+
+    tin = subgraph.get_tensor("input")
+    assert tin in subgraph.inputs
+    assert tin not in subgraph.outputs
+
+    assert len(subgraph.outputs) == num_splits
+    for tout in subgraph.outputs:
+        assert tout not in subgraph.inputs
 
 
-def test_non_match(trf_pass, non_matching_model):
-    for op in non_matching_model.subgraphs[0].operators:
+def test_non_matching_input(trf_pass, input_shape):
+    # NOTE: a single DEQUANTIZE will always have an input tensor that is an input
+    #       to the subgraph, hence it should not be matched
+    model = build_dequantize(input_shape=input_shape)
+    _test_non_matching_params(trf_pass, model)
+
+
+def test_non_matching_consumers(trf_pass, model_non_matching_consumer):
+    for op in model_non_matching_consumer.subgraphs[0].operators:
         assert not trf_pass.match(op)
 
 

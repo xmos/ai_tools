@@ -4,7 +4,7 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_schema import TensorType, Padding
+from tflite2xcore.xcore_schema import Padding
 
 from ..conftest import (
     PARAMS,
@@ -30,24 +30,6 @@ PARAMS["extended"].update(
         "padding": list(Padding),
         "stride_h": [1, 2, 3],
         "stride_w": [1, 2, 3],
-        "non_matching_tensors": [
-            ("input", TensorType.INT16),
-            ("input", TensorType.INT32),
-            ("input", TensorType.UINT8),
-            ("input", TensorType.FLOAT32),
-            ("weights", TensorType.INT16),
-            ("weights", TensorType.INT32),
-            ("weights", TensorType.UINT8),
-            ("weights", TensorType.FLOAT32),
-            ("biases", TensorType.INT8),
-            ("biases", TensorType.INT16),
-            ("biases", TensorType.UINT8),
-            ("biases", TensorType.FLOAT32),
-            ("output", TensorType.INT16),
-            ("output", TensorType.INT32),
-            ("output", TensorType.UINT8),
-            ("output", TensorType.FLOAT32),
-        ],
     }
 )
 
@@ -61,16 +43,6 @@ PARAMS["default"].update(
         "padding": list(Padding),
         "stride_h": [1, 2],
         "stride_w": [1, 2],
-        "non_matching_tensors": [
-            ("input", TensorType.INT16),
-            ("input", TensorType.INT32),
-            ("weights", TensorType.INT16),
-            ("weights", TensorType.INT32),
-            ("biases", TensorType.INT8),
-            ("biases", TensorType.INT16),
-            ("output", TensorType.INT16),
-            ("output", TensorType.INT32),
-        ],
     }
 )
 
@@ -84,12 +56,6 @@ PARAMS["smoke"].update(
         "padding": list(Padding),
         "stride_h": [1],
         "stride_w": [1],
-        "non_matching_tensors": [
-            ("input", TensorType.INT16),
-            ("weights", TensorType.INT16),
-            ("biases", TensorType.INT16),
-            ("output", TensorType.INT16),
-        ],
     }
 )
 

@@ -166,7 +166,7 @@ class ScratchMemoryFullyConnectedPass(OperatorMatchingPass):
             return "mem" not in op.custom_options
 
     def mutate(self, op):
-        _, Cin, _, _ = op.inputs[0].shape
+        _, Cin = op.inputs[1].shape
         _, Bv, Bl = op.inputs[2].shape
 
         if "par" in op.custom_options:

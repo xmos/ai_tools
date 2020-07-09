@@ -39,4 +39,3 @@ PARAMS["smoke"].update({"input_channels": [5, 29], "outputs": [2, 10]})
 @pytest.fixture()
 def model(input_shape, outputs):
     return build_fc(input_shape=input_shape, outputs=outputs)
-

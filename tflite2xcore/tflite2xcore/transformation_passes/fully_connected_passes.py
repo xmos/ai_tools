@@ -151,6 +151,3 @@ class PlanRequant16To8Pass(OperatorMatchingPass):
         plan.num_threads = min(plan.num_threads, len(plan.changrp_slices))
 
         op.add_custom_options(plan=plan.to_dict())
-
-
-

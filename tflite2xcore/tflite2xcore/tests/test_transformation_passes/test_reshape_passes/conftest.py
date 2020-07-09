@@ -14,6 +14,7 @@ from ..conftest import (
     _test_non_matching_params,
     test_matching_params,
     test_non_matching_tensors,
+    _NON_MATCHING_TENSORS,
 )
 
 
@@ -28,24 +29,7 @@ PARAMS["extended"].update(
         "input_batch": [1, 2],
         "input_channels": [5, 10, 29],
         "outputs": [2, 10],
-        "non_matching_tensors": [
-            ("input", TensorType.INT16),
-            ("input", TensorType.INT32),
-            ("input", TensorType.UINT8),
-            ("input", TensorType.FLOAT32),
-            ("weights", TensorType.INT16),
-            ("weights", TensorType.INT32),
-            ("weights", TensorType.UINT8),
-            ("weights", TensorType.FLOAT32),
-            ("biases", TensorType.INT8),
-            ("biases", TensorType.INT16),
-            ("biases", TensorType.UINT8),
-            ("biases", TensorType.FLOAT32),
-            ("output", TensorType.INT16),
-            ("output", TensorType.INT32),
-            ("output", TensorType.UINT8),
-            ("output", TensorType.FLOAT32),
-        ],
+        "non_matching_tensors": _NON_MATCHING_TENSORS,
     }
 )
 
@@ -54,16 +38,7 @@ PARAMS["default"].update(
         "input_batch": [1, 2],
         "input_channels": [5, 10, 29],
         "outputs": [2, 10],
-        "non_matching_tensors": [
-            ("input", TensorType.INT16),
-            ("input", TensorType.INT32),
-            ("weights", TensorType.INT16),
-            ("weights", TensorType.INT32),
-            ("biases", TensorType.INT8),
-            ("biases", TensorType.INT16),
-            ("output", TensorType.INT16),
-            ("output", TensorType.INT32),
-        ],
+        "non_matching_tensors": _NON_MATCHING_TENSORS[::2],
     }
 )
 
@@ -72,12 +47,7 @@ PARAMS["smoke"].update(
         "input_batch": [1, 2],
         "input_channels": [5, 29],
         "outputs": [10],
-        "non_matching_tensors": [
-            ("input", TensorType.INT16),
-            ("weights", TensorType.INT16),
-            ("biases", TensorType.INT16),
-            ("output", TensorType.INT16),
-        ],
+        "non_matching_tensors": _NON_MATCHING_TENSORS[::4],
     }
 )
 
@@ -172,7 +142,5 @@ def update_params_with_reshape(PARAMS, *, is_matching):
                 ],
             }
         )
-
-        # print(str(params['non_matching_reshape']))
 
     return PARAMS

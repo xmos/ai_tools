@@ -52,6 +52,7 @@ def model_nonmatch(non_matching_reshape):
         input_shape=non_matching_reshape[0], output_shape=non_matching_reshape[1],
     )
 
+
 def test_mutate(trf_pass, model):
 
     subgraph = model.subgraphs[0]

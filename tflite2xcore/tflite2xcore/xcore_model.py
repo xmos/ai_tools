@@ -225,7 +225,7 @@ class Tensor:
             size *= s
         return size
 
-    def as_array(self, dtype=None): 
+    def as_array(self, dtype=None):
         arr = np.frombuffer(self.buffer._data, dtype=self.type.to_numpy_dtype())
         if dtype:
             arr = arr.astype(dtype)

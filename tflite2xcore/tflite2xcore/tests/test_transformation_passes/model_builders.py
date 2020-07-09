@@ -636,7 +636,7 @@ def build_reshape(subgraph=None, *, input_shape, output_shape, add_batch_dim=Fal
         input_shape = [1, *input_shape]
 
     assert 0 < len(output_shape) < 5
-    
+
     assert np.prod(input_shape) == np.prod(output_shape), "Inconsistant shapes"
 
     subgraph = subgraph or XCOREModel().create_subgraph()
@@ -648,9 +648,11 @@ def build_reshape(subgraph=None, *, input_shape, output_shape, add_batch_dim=Fal
     p = subgraph.create_tensor("shape", TensorType.INT32, shape=[len(output_shape)])
     p.buffer.data = np.int32(output_shape)
 
-    subgraph.create_operator(
+    op = subgraph.create_operator(
         OperatorCode(BuiltinOpCodes.RESHAPE), inputs=[tin, p], outputs=[tout]
     )
+
+    op.builtin_options = {"new_shape": output_shape}
 
     return subgraph.model
 

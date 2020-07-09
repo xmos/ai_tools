@@ -2,29 +2,59 @@
 
 import pytest
 
+import itertools
+from typing import List, Dict, Generator
+
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType
+
+
+#  ----------------------------------------------------------------------------
+#                                   HELPERS
+#  ----------------------------------------------------------------------------
+
+
+def _make_name_type_pairs(
+    name: str, types: List[TensorType]
+) -> Generator[Dict[str, TensorType], None, None]:
+    return ({n: t} for n, t in zip(itertools.cycle([name]), types))
+
+
+def _test_non_matching_params(
+    trf_pass: ModelTransformationPass, model: XCOREModel
+) -> None:
+    assert not trf_pass.match(model.subgraphs[0].operators[-1])
+
+
+def _test_matching_params(trf_pass: ModelTransformationPass, model: XCOREModel) -> None:
+    assert trf_pass.match(model.subgraphs[0].operators[-1])
+
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-_NON_MATCHING_TENSORS = [
-    {"input": TensorType.UINT8},
-    {"input": TensorType.INT32},
-    {"input": TensorType.FLOAT32},
-    {"input": TensorType.INT16},
-    {"weights": TensorType.UINT8},
-    {"weights": TensorType.INT32},
-    {"weights": TensorType.FLOAT32},
-    {"weights": TensorType.INT16},
-    {"biases": TensorType.INT8},
-    {"biases": TensorType.UINT8},
-    {"biases": TensorType.FLOAT32},
-    {"biases": TensorType.INT16},
-    {"output": TensorType.UINT8},
-    {"output": TensorType.INT32},
-    {"output": TensorType.FLOAT32},
-    {"output": TensorType.INT16},
+
+NON_INT8_TEST_TYPES = [
+    TensorType.UINT8,
+    TensorType.INT32,
+    TensorType.FLOAT32,
+    TensorType.INT16,
+]
+
+NON_INT32_TEST_TYPES = [
+    TensorType.INT8,
+    TensorType.UINT8,
+    TensorType.INT16,
+    TensorType.FLOAT32,
+]
+
+NON_FLOAT32_TEST_TYPES = [
+    TensorType.INT8,
+    TensorType.INT16,
+    TensorType.INT32,
+    TensorType.UINT8,
 ]
 
 PARAMS = {
@@ -32,19 +62,16 @@ PARAMS = {
         "input_height": [7, 9, 17, 20, 32],
         "input_width": [7, 9, 17, 20, 32],
         "input_channels": [4, 8, 16, 32, 36, 64],
-        "non_matching_tensors": _NON_MATCHING_TENSORS,
     },
     "default": {
         "input_height": [9, 20],
         "input_width": [7, 17],
         "input_channels": [4, 8, 16, 32],
-        "non_matching_tensors": _NON_MATCHING_TENSORS[::2],
     },
     "smoke": {
         "input_height": [9, 20],
         "input_width": [7, 17],
         "input_channels": [4, 32],
-        "non_matching_tensors": _NON_MATCHING_TENSORS[::4],
     },
 }
 
@@ -67,19 +94,6 @@ def input_size(input_height, input_width):
 @pytest.fixture()
 def input_shape(input_size, input_channels):
     return [*input_size, input_channels]
-
-
-#  ----------------------------------------------------------------------------
-#                                   HELPERS
-#  ----------------------------------------------------------------------------
-
-
-def _test_non_matching_params(trf_pass, model):
-    assert not trf_pass.match(model.subgraphs[0].operators[-1])
-
-
-def _test_matching_params(trf_pass, model):
-    assert trf_pass.match(model.subgraphs[0].operators[-1])
 
 
 #  ----------------------------------------------------------------------------

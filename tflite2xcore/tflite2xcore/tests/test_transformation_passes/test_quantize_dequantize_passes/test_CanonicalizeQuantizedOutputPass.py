@@ -17,6 +17,9 @@ from tflite2xcore.tests.test_transformation_passes.model_builders import (
 from .conftest import (
     PARAMS,
     _test_non_matching_params,
+    _make_name_type_pairs,
+    NON_INT8_TEST_TYPES,
+    NON_FLOAT32_TEST_TYPES,
     test_matching_params,
     test_non_matching_tensors,
 )
@@ -28,25 +31,19 @@ from .conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
-for params in PARAMS.values():
-    params["non_matching_tensors"] = [
-        {"input": tensor_type_dict["input"], "output": tensor_type_dict["input"]}
-        for tensor_type_dict in params["non_matching_tensors"]
-        if "input" in tensor_type_dict and len(tensor_type_dict) == 1
-    ]
-
 _NON_MATCHING_TENSORS = [
-    {"output_dequantized": TensorType.INT8},
-    {"output_dequantized": TensorType.INT16},
-    {"output_dequantized": TensorType.INT32},
-    {"output_dequantized": TensorType.UINT8},
-]
+    {**d1, **d2}  # the types of "input" and "output" are changed concurrently
+    for d1, d2 in zip(
+        _make_name_type_pairs("input", NON_INT8_TEST_TYPES),
+        _make_name_type_pairs("output", NON_INT8_TEST_TYPES),
+    )
+] + list(_make_name_type_pairs("output_dequantized", NON_FLOAT32_TEST_TYPES))
 
 PARAMS["default"].update({"num_splits": [2, 4]})
-PARAMS["default"]["non_matching_tensors"].extend(_NON_MATCHING_TENSORS)
+PARAMS["default"]["non_matching_tensors"] = _NON_MATCHING_TENSORS
 
 PARAMS["smoke"].update({"num_splits": [2]})
-PARAMS["smoke"]["non_matching_tensors"].extend(_NON_MATCHING_TENSORS[::2])
+PARAMS["smoke"]["non_matching_tensors"] = _NON_MATCHING_TENSORS[::2]
 
 
 #  ----------------------------------------------------------------------------

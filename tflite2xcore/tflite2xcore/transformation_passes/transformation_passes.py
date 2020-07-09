@@ -157,6 +157,7 @@ class OutputTensorMatchingPass(SubgraphTransformationPass):
         super().log_match(f"output [{self._obj_index}]: {tensor.name}")
 
 
+# TODO: remove this pass
 class RemoveSoftmaxOutputPass(OperatorMatchingPass):
     def match(self, op):
         return (

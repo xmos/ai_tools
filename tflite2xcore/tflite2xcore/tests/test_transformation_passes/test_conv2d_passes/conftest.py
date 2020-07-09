@@ -6,6 +6,7 @@ from copy import deepcopy
 
 from tflite2xcore.xcore_schema import Padding
 
+from ..test_fully_connected_passes.conftest import PARAMS as FC_PARAMS
 from ..conftest import (
     PARAMS,
     _test_non_matching_params,
@@ -19,6 +20,9 @@ from ..conftest import (
 #  ----------------------------------------------------------------------------
 
 PARAMS = deepcopy(PARAMS)
+
+for key in PARAMS:
+    PARAMS[key]["non_matching_tensors"] = FC_PARAMS[key]["non_matching_tensors"]
 
 PARAMS["extended"].update(
     {

@@ -11,6 +11,7 @@ from tflite2xcore.xcore_schema import (
 )
 from .transformation_passes import OperatorMatchingPass
 
+
 class RemoveFlattenReshapePass(OperatorMatchingPass):
 
     MATCHING_OPCODES = (
@@ -94,8 +95,7 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
 
                 return (
                     super().match(op)
-                    and 1 < len(op.inputs) < 3
-                    and op in op.inputs[1].consumers
+                    and len(op.inputs) == 2
                     and op.inputs[1].is_constant == True
                 )
             else:
@@ -107,4 +107,4 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
         # Remove connection between RESHAPE and input tensor[1+]
         for i in op.inputs[1:]:
             i.consumers.remove(op)
-        op.inputs = [op.inputs[0]]
+        op.inputs = op.inputs[:1]

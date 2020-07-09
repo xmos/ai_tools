@@ -108,21 +108,27 @@ def update_params_with_reshape(PARAMS, *, is_matching):
             )
         )
 
+        for x in range(0, len(all_reshapes)):
+            all_reshapes[x] = {
+                "input": all_reshapes[x][0],
+                "output": all_reshapes[x][1],
+            }
+
         params.update(
             {
                 "reshape": [
                     reshape
                     for reshape in all_reshapes
                     # Note, this is a bit of a waste as we collect lots of params them throw a lot of them away..
-                    if is_matching(reshape[0], reshape[1])
-                    and np.prod(reshape[0]) == np.prod(reshape[1])
+                    if is_matching(reshape["input"], reshape["output"])
+                    and np.prod(reshape["input"]) == np.prod(reshape["output"])
                 ],
                 "non_matching_reshape": [
                     reshape
                     for reshape in all_reshapes
                     # Note, this is a bit of a waste as we collect lots of params them throw a lot of them away..
-                    if (not is_matching(reshape[0], reshape[1]))
-                    and np.prod(reshape[0]) == np.prod(reshape[1])
+                    if (not is_matching(reshape["input"], reshape["output"]))
+                    and np.prod(reshape["input"]) == np.prod(reshape["output"])
                 ],
             }
         )

@@ -55,22 +55,24 @@ def trf_pass():
 def model(outputs, reshape):
 
     return build_fc_with_reshape(
-        input_shape=reshape[0], fc_outputs=outputs, reshaped_input_shape=reshape[1]
+        input_shape=reshape["input"],
+        fc_outputs=outputs,
+        reshaped_input_shape=reshape["output"],
     )
 
 
 @pytest.fixture()
 def model_nonmatch(outputs, non_matching_reshape):
     return build_fc_with_reshape(
-        input_shape=non_matching_reshape[0],
+        input_shape=non_matching_reshape["input"],
         fc_outputs=outputs,
-        reshaped_input_shape=non_matching_reshape[1],
+        reshaped_input_shape=non_matching_reshape["output"],
     )
 
 
 @pytest.fixture()
 def model_reshape_only(outputs, reshape):
-    return build_reshape(input_shape=reshape[0], output_shape=reshape[1],)
+    return build_reshape(input_shape=reshape["input"], output_shape=reshape["output"],)
 
 
 def test_mutate(trf_pass, model):

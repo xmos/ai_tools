@@ -42,13 +42,15 @@ def trf_pass():
 
 @pytest.fixture()
 def model(reshape):
-    return build_reshape(input_shape=reshape[0], output_shape=reshape[1])
+    return build_reshape(input_shape=reshape["input"], output_shape=reshape["output"])
 
 
 @pytest.fixture()
 def model_no_shape_tensor(reshape):
     return build_reshape(
-        input_shape=reshape[0], output_shape=reshape[1], input_shape_tensor=False
+        input_shape=reshape["input"],
+        output_shape=reshape["output"],
+        input_shape_tensor=False,
     )
 
 

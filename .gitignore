@@ -41,6 +41,13 @@ tests/data
 *.*~
 *log*
 
+#Models/training
+*.h5
+*.tflite
+*.html
+*training_history.png
+
+#Others
 *.npz
 *.y
 *.x

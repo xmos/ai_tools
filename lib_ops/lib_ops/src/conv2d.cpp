@@ -516,19 +516,13 @@ XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X) {
   // fetch the weights
   //   NOTE: They all need to be preloaded for each job
   //         This may be changed in the future.
-  //  weights_preload_size_ = params.K_h * params.K_w * C_in;
-  // dispatcher->FetchBuffer(&tK, K, weights_preload_size_);
   dispatcher->FetchBuffer(&tK, K_,
                           execution_plan.GetWeightsScratchSize() / changrp_len);
-  // fetch the weights and biases
-  // dispatcher->FetchWeights(&tK, K_, execution_plan.GetWeightsScratchSize(),
-  //                          changrp);
 
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
 
     // fetch the biases
-    // dispatcher->FetchBiases(&tBSO, BSO, changrp);
     dispatcher->FetchBiases(&tBSO, BSO_, execution_plan.GetBiasScratchSize(),
                             changrp);
 

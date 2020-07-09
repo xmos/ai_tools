@@ -183,7 +183,6 @@ void Dispatcher::FetchBuffer(int8_t **dest, int8_t const *src, size_t size) {
 void Dispatcher::FetchWeights(int8_t **dest, int8_t const *src, size_t size,
                               ChannelGroup const &changrp) {
   size_t changrp_bytes = size / changrp_len;
-  // changrp_bytes = 32;
   if (IS_RAM(src)) {
     *dest = (int8_t *)&src[changrp.start * changrp_bytes];
   } else {

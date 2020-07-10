@@ -3,7 +3,7 @@
 import pytest
 
 import itertools
-from typing import List, Dict, Iterator, Tuple
+from typing import List, Dict, Iterator, Tuple, Any
 
 from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
@@ -74,7 +74,7 @@ PARAMS = {
         "input_width": [7, 17],
         "input_channels": [4, 32],
     },
-}  # type: Dict[str, Dict[str, Any]]
+}  # type: Dict[str, Dict[str, List[Any]]]
 
 
 #  ----------------------------------------------------------------------------

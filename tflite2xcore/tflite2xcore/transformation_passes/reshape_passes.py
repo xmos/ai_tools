@@ -63,43 +63,36 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
 
 
 class CanonicalizeReshapePass(OperatorMatchingPass):
-    @property
-    def _producer(self):
-        return self._op.inputs[0].producers[0]
 
     def match(self, op):
 
-        with self.using(op):
+        if op.operator_code.code is BuiltinOpCodes.RESHAPE:
 
-            if op.operator_code.code is BuiltinOpCodes.RESHAPE:
-
-                try:
-                    if op.builtin_options["new_shape"] != list(op.outputs[0].shape):
-                        self.logger.warning(
-                            "new_shape option to RESHAPE doesn't match output tensor shape"
-                        )
-                except KeyError:
+            try:
+                if op.builtin_options["new_shape"] != list(op.outputs[0].shape):
                     self.logger.warning(
-                        "Expected new_shape option to RESHAPE was not found"
+                        "new_shape option to RESHAPE doesn't match output tensor shape"
                     )
-
-                try:
-                    if np.prod(self._producer.inputs[0].shape) != np.prod(
-                        op.inputs[0].shape
-                    ):
-                        self.logger.warning(
-                            "RESHAPE input and output shapes are not consistent"
-                        )
-                except IndexError:
-                    pass
-
-                return (
-                    super().match(op)
-                    and len(op.inputs) == 2
-                    and op.inputs[1].is_constant == True
+            except KeyError:
+                self.logger.warning(
+                    "Expected new_shape option to RESHAPE was not found"
                 )
-            else:
-                return False
+
+            try:
+                if np.prod(op.inputs[0].shape) != np.prod(op.outputs[0].shape):
+                    self.logger.warning(
+                        "RESHAPE input and output shapes are not consistent"
+                    )
+            except IndexError:
+                pass
+
+            return (
+                super().match(op)
+                and len(op.inputs) == 2
+                and op.inputs[1].is_constant == True
+            )
+        else:
+            return False
 
     def mutate(self, op):
         subgraph = op.subgraph

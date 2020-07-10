@@ -23,12 +23,7 @@ from .conftest import (
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-
-def matching_reshape(reshape_input_shape, reshape_output_shape):
-    return True
-
-
-PARAMS = update_params_with_reshape(deepcopy(PARAMS), is_matching=matching_reshape)
+PARAMS = update_params_with_reshape(deepcopy(PARAMS), is_matching=lambda *_: True)
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES

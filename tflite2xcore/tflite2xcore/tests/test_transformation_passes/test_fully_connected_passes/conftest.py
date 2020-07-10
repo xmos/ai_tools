@@ -1,11 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-<<<<<<< HEAD
-=======
-
 import itertools
->>>>>>> upstream/develop
 from copy import deepcopy
 from itertools import product
 import numpy as np

@@ -185,17 +185,9 @@ class XCORESerializationMixin:
             subgraphT = schema.SubGraphT()
             subgraphT.name = subgraph.name
 
-            # set inputs
-            subgraphT.inputs = []
-            for input_ in subgraph.inputs:
-                tensor_index = subgraph.tensors.index(input_)
-                subgraphT.inputs.append(tensor_index)
-
-            # set outputs
-            subgraphT.outputs = []
-            for output in subgraph.outputs:
-                tensor_index = subgraph.tensors.index(output)
-                subgraphT.outputs.append(tensor_index)
+            # set inputs and outputs
+            subgraphT.inputs = [subgraph.tensors.index(t) for t in subgraph.inputs]
+            subgraphT.outputs = [subgraph.tensors.index(t) for t in subgraph.outputs]
 
             # set tensors
             subgraphT.tensors = []
@@ -213,22 +205,20 @@ class XCORESerializationMixin:
             subgraphT.operators = []
             for operator in subgraph.operators:
                 operatorT = schema.OperatorT()
-                operatorT.opcodeIndex = self.operator_codes.index(
-                    operator.operator_code
-                )
-                operatorT.inputs = []
-                for input_tensor in operator.inputs:
-                    tensor_index = subgraph.tensors.index(input_tensor)
-                    operatorT.inputs.append(tensor_index)
-                operatorT.outputs = []
-                for output_tensor in operator.outputs:
-                    tensor_index = subgraph.tensors.index(output_tensor)
-                    operatorT.outputs.append(tensor_index)
+                op_code = operator.operator_code
+                operatorT.opcodeIndex = self.operator_codes.index(op_code)
+
+                operatorT.inputs = [subgraph.tensors.index(t) for t in operator.inputs]
+                operatorT.outputs = [
+                    subgraph.tensors.index(t) for t in operator.outputs
+                ]
+
                 if operator.builtin_options:
                     operatorT.builtinOptionsType = operator.builtin_options_type.value
                     operatorT.builtinOptions = dict_to_builtin_options(
                         operator.builtin_options_type, operator.builtin_options
                     )
+
                 if operator.custom_options:
                     fbb = FlexbufferBuilder(operator.custom_options)
                     operatorT.customOptions = fbb.get_bytes()

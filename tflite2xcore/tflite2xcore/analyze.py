@@ -110,7 +110,6 @@ def print_report(tflite_output_path):
             max_weights_size, max_bias_size = calc_weight_and_bias_fetch_sizes(
                 model_content
             )
-            print(max_weights_size, max_bias_size)
             print(f"Model size: {model_size} (bytes)")
             print()
             print("Model stored in RAM")

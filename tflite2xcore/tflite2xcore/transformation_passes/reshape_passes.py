@@ -63,7 +63,6 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
 
 
 class CanonicalizeReshapePass(OperatorMatchingPass):
-
     def match(self, op):
 
         if op.operator_code.code is BuiltinOpCodes.RESHAPE:
@@ -86,9 +85,12 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
             except IndexError:
                 pass
 
+            if -1 in op.inputs[0].shape or -1 in op.outputs[0].shape:
+                self.logger.warning("Dynamically sized tensors not supported")
+
             return (
                 super().match(op)
-                and len(op.inputs) == 2
+                and len(op.inputs) > 1 # Note, at present we only really expect 1 or 2
                 and op.inputs[1].is_constant == True
             )
         else:
@@ -97,7 +99,7 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
     def mutate(self, op):
         subgraph = op.subgraph
 
-        # Remove connection between RESHAPE and input tensor[1+]
+        # Remove connection between RESHAPE and input tensor[1+], typically we only expect to remove 1 tensor (the new shape)
         for i in op.inputs[1:]:
             i.consumers.remove(op)
         op.inputs = op.inputs[:1]

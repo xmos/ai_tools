@@ -95,13 +95,16 @@ def test_mutate(trf_pass, model):
     op = subgraph.operators[0]
     assert len(op.inputs) == 3
     assert len(op.outputs) == 1
-    assert subgraph.operators[0].operator_code.code is BuiltinOpCodes.FULLY_CONNECTED
+    assert op.operator_code.code is BuiltinOpCodes.FULLY_CONNECTED
 
     # check input/output tensors
-    assert len(subgraph.inputs) == len(subgraph.outputs) == 1
-    in_new, out_new = subgraph.inputs[0], subgraph.outputs[0]
-    assert in_new is in_ori is op.inputs[0]
-    assert out_ori is out_new is op.outputs[0]
+    assert len(subgraph.inputs) == 1
+    assert len(subgraph.outputs) == 1
+
+    assert in_ori is op.inputs[0]
+    assert in_ori in subgraph.inputs
+    assert out_ori is op.outputs[0]
+    assert out_ori in subgraph.outputs
 
 
 def test_non_matching_reshape_only(trf_pass, model_reshape_only):

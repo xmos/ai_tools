@@ -1,12 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes, OperatorCode
+from tflite2xcore.xcore_model import Operator
+
+from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes
 from tflite2xcore.transformation_passes import OperatorMatchingPass
 
 
-# TODO: implement tests for this
 class LegalizeQuantizeVersionPass(OperatorMatchingPass):
-    def match(self, op):
+    def match(self, op: Operator) -> bool:
         if super().match(op):
             opcode = op.operator_code
             return (
@@ -16,5 +17,5 @@ class LegalizeQuantizeVersionPass(OperatorMatchingPass):
                 and op.outputs[0].type is TensorType.INT8
             )
 
-    def mutate(self, op):
-        op.operator_code = OperatorCode(BuiltinOpCodes.QUANTIZE, version=1)
+    def mutate(self, op: Operator) -> None:
+        op.operator_code.version = 1

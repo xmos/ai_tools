@@ -53,7 +53,6 @@ class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceWeightBiasOperatorPass):
 
         # create new op and update builtin options
         new_op = super().mutate(op)
-        new_op.builtin_options_type = BuiltinOptions.Conv2DOptions
         new_op.builtin_options = builtin_options
 
         return new_op

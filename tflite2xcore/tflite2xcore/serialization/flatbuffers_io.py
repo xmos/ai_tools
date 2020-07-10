@@ -91,9 +91,6 @@ class XCORESerializationMixin:
                     options["builtin_options"] = builtin_options_to_dict(
                         operatorT.builtinOptions
                     )
-                    options["builtin_options_type"] = xcore_schema.BuiltinOptions(
-                        operatorT.builtinOptionsType
-                    )
                 if (
                     hasattr(operatorT, "customOptions")
                     and operatorT.customOptions is not None
@@ -213,11 +210,14 @@ class XCORESerializationMixin:
                     subgraph.tensors.index(t) for t in operator.outputs
                 ]
 
-                if operator.builtin_options:
-                    operatorT.builtinOptionsType = operator.builtin_options_type.value
-                    operatorT.builtinOptions = dict_to_builtin_options(
-                        operator.builtin_options_type, operator.builtin_options
-                    )
+                if op_code.code in xcore_schema.BuiltinOpCodes:
+                    builtin_options_type = op_code.code.to_BuiltinOptions()
+                    operatorT.builtinOptionsType = builtin_options_type.value
+
+                    if operator.builtin_options:
+                        operatorT.builtinOptions = dict_to_builtin_options(
+                            builtin_options_type, operator.builtin_options
+                        )
 
                 if operator.custom_options:
                     fbb = FlexbufferBuilder(operator.custom_options)

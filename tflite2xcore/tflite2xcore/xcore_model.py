@@ -1,8 +1,5 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
-import struct
-import enum
-
 import numpy as np
 
 from collections import Counter
@@ -65,7 +62,6 @@ class Operator:
         inputs=None,
         outputs=None,
         builtin_options=None,
-        builtin_options_type=None,
         custom_options=None,
     ):
         # Generally, do not use this constructor to instantiate Operator!
@@ -78,7 +74,6 @@ class Operator:
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.builtin_options = builtin_options
-        self.builtin_options_type = builtin_options_type
         self.custom_options = custom_options or {}
 
     def add_custom_options(self, **kwargs):
@@ -324,7 +319,6 @@ class Subgraph:
         inputs=None,
         outputs=None,
         builtin_options=None,
-        builtin_options_type=None,
         custom_options=None,
     ):
         name = self.generate_unique_op_name(operator_code)
@@ -335,7 +329,6 @@ class Subgraph:
             inputs,
             outputs,
             builtin_options,
-            builtin_options_type,
             custom_options,
         )
         self.operators.append(operator)

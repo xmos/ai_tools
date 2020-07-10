@@ -77,13 +77,9 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
                     "Expected new_shape option to RESHAPE was not found"
                 )
 
-            try:
-                if np.prod(op.inputs[0].shape) != np.prod(op.outputs[0].shape):
-                    self.logger.warning(
-                        "RESHAPE input and output shapes are not consistent"
-                    )
-            except IndexError:
-                pass
+            assert np.prod(op.inputs[0].shape) == np.prod(
+                op.outputs[0].shape
+            ), "RESHAPE input and output shapes are not consistent"
 
             if -1 in op.inputs[0].shape or -1 in op.outputs[0].shape:
                 self.logger.warning("Dynamically sized tensors not supported")
@@ -97,8 +93,6 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
             return False
 
     def mutate(self, op):
-        subgraph = op.subgraph
-
         # Remove connection between RESHAPE and input tensor[1+], typically we only expect to remove 1 tensor (the new shape)
         for i in op.inputs[1:]:
             i.consumers.remove(op)

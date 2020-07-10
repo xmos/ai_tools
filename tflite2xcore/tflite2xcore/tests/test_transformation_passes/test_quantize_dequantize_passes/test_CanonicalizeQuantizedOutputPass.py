@@ -4,7 +4,6 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType, OperatorCode, BuiltinOpCodes
 from tflite2xcore.transformation_passes import CanonicalizeQuantizedOutputPass
 
@@ -18,6 +17,9 @@ from tflite2xcore.tests.test_transformation_passes.model_builders import (
 from .conftest import (
     PARAMS,
     _test_non_matching_params,
+    _make_name_type_pairs,
+    NON_INT8_TEST_TYPES,
+    NON_FLOAT32_TEST_TYPES,
     test_matching_params,
     test_non_matching_tensors,
 )
@@ -29,16 +31,21 @@ from .conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
-for params in PARAMS.values():
-    params["non_matching_tensors"] = [
-        {"input": tensor_type_dict["input"], "output": tensor_type_dict["input"]}
-        for tensor_type_dict in params["non_matching_tensors"]
-        if "input" in tensor_type_dict and len(tensor_type_dict) == 1
-    ]
+_NON_MATCHING_TENSORS = [
+    {**d1, **d2}  # the types of "input" and "output" are changed concurrently
+    for d1, d2 in zip(
+        _make_name_type_pairs("input", NON_INT8_TEST_TYPES),
+        _make_name_type_pairs("output", NON_INT8_TEST_TYPES),
+    )
+] + list(_make_name_type_pairs("output_dequantized", NON_FLOAT32_TEST_TYPES))
 
-PARAMS["default"].update({"num_splits": [2, 4]})
+PARAMS["default"].update(
+    {"num_splits": [2, 4], "non_matching_tensors": _NON_MATCHING_TENSORS}
+)
 
-PARAMS["smoke"].update({"num_splits": [2]})
+PARAMS["smoke"].update(
+    {"num_splits": [2], "non_matching_tensors": _NON_MATCHING_TENSORS[::2]}
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -121,7 +128,7 @@ def test_mutate(model, trf_pass):
     assert qout not in subgraph.inputs
 
 
-def test_multi_out(model_multi_out, num_splits, trf_pass):
+def test_mutate_multi_out(model_multi_out, num_splits, trf_pass):
     trf_pass.run(model_multi_out)
     model_multi_out.sanity_check()
     subgraph = model_multi_out.subgraphs[0]
@@ -139,8 +146,8 @@ def test_multi_out(model_multi_out, num_splits, trf_pass):
     assert tin not in subgraph.outputs
 
     assert len(subgraph.outputs) == num_splits
-    for tout in subgraph.outputs:
-        assert tout not in subgraph.inputs
+    for j, tout in enumerate(subgraph.outputs):
+        assert tout not in subgraph.inputs, f"subgraph.outputs[{j}]"
 
 
 def test_non_matching_input(trf_pass, input_shape):
@@ -151,8 +158,8 @@ def test_non_matching_input(trf_pass, input_shape):
 
 
 def test_non_matching_consumers(trf_pass, model_non_matching_consumer):
-    for op in model_non_matching_consumer.subgraphs[0].operators:
-        assert not trf_pass.match(op)
+    for j, op in enumerate(model_non_matching_consumer.subgraphs[0].operators):
+        assert not trf_pass.match(op), f"subgraphs[0].operators[{j}]"
 
 
 if __name__ == "__main__":

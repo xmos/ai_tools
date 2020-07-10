@@ -21,19 +21,20 @@ from .conftest import PARAMS
 
 PARAMS = deepcopy(PARAMS)
 
+for params in PARAMS.values():
+    params.update(
+        {
+            "model_builder": [
+                build_XC_conv2d_deep,
+                build_XC_conv2d_shallowin,
+                build_XC_conv2d_1x1,
+            ]
+        }
+    )
+
 PARAMS["default"].update({"num_threads": [1, 3, 4, 5]})
 
 PARAMS["smoke"].update({"num_threads": [1, 5]})
-
-PARAMS["default"].update(
-    {
-        "model_builder": [
-            build_XC_conv2d_deep,
-            build_XC_conv2d_shallowin,
-            build_XC_conv2d_1x1,
-        ]
-    }
-)
 
 
 #  ----------------------------------------------------------------------------

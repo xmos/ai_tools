@@ -59,6 +59,21 @@ def build_dequantize(subgraph=None, *, input_shape):
     return subgraph.model
 
 
+def build_quantize(subgraph=None, *, input_shape):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, *input_shape]
+    fin = subgraph.create_tensor("input", TensorType.FLOAT32, input_shape, isinput=True)
+    qout = subgraph.create_tensor(
+        "output_quantized", TensorType.INT8, fin.shape, isoutput=True
+    )
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.QUANTIZE), inputs=[fin], outputs=[qout]
+    )
+
+    return subgraph.model
+
+
 def build_elementwise_op(builtin_opcode, subgraph=None, *, input_shape, tensor_type):
     subgraph = subgraph or XCOREModel().create_subgraph()
 

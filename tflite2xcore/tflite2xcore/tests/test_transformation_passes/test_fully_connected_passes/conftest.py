@@ -1,10 +1,9 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
+
 import itertools
 from copy import deepcopy
-from itertools import product
-import numpy as np
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_fc
 from ..conftest import (

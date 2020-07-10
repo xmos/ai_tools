@@ -1,6 +1,5 @@
 #pragma once
 
-
 void test_vpu_memcpy();
 
 void test_nn_conv2d_hstrip_deep_padded();
@@ -26,3 +25,5 @@ void test_avgpool2d();
 void test_avgpool2d_global();
 void test_requantize_16_to_8();
 void test_lookup8();
+
+void test_bnn_conv2d();

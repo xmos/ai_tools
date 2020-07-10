@@ -90,7 +90,7 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
 
             return (
                 super().match(op)
-                and len(op.inputs) > 1 # Note, at present we only really expect 1 or 2
+                and len(op.inputs) > 1  # Note, at present we only really expect 1 or 2
                 and op.inputs[1].is_constant == True
             )
         else:

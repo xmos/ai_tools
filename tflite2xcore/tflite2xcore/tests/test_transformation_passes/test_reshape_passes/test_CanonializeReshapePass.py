@@ -56,7 +56,7 @@ def test_mutate(trf_pass, model):
 
     in_ori, out_ori = subgraph.inputs[0], subgraph.outputs[0]
 
-    assert(len(subgraph.operators[0].inputs)) == 2
+    assert (len(subgraph.operators[0].inputs)) == 2
 
     # run mutating pass
     trf_pass.run(model)
@@ -74,12 +74,13 @@ def test_mutate(trf_pass, model):
     # check input/output tensors
     assert len(subgraph.inputs) == 1
     assert len(subgraph.outputs) == 1
-    
+
     assert in_ori is op.inputs[0]
     assert in_ori in subgraph.inputs
 
     assert out_ori is op.outputs[0]
     assert out_ori in subgraph.outputs
+
 
 def test_non_matching_no_shape_tensor(trf_pass, model_no_shape_tensor):
     _test_non_matching_params(trf_pass, model_no_shape_tensor)

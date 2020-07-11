@@ -46,6 +46,7 @@ from .padding_passes import (
     FuseConv2dPaddingPass,
     SplitPaddingPass,
     FuseConsecutivePadsPass,
+    RemovePaddingInputPass,
 )
 
 from .quantize_dequantize_passes import (

@@ -14,7 +14,7 @@ from tflite2xcore.tests.test_transformation_passes.test_conv2d_passes.conftest i
     PARAMS as CONV_PARAMS,
     test_non_matching_input_channels,
 )
-from ..conftest import (
+from .conftest import (
     _test_non_matching_params,
     test_matching_params,
 )
@@ -80,7 +80,8 @@ def test_mutate(trf_pass, model):
     assert len(subgraph.operators) == 1
     old_conv_op = subgraph.operators[0]
     old_weight_shape = old_conv_op.inputs[1].shape
-    old_weights = old_conv_op.inputs[1].numpy.astype(np.int8)
+    old_weights = old_conv_op.inputs[1].as_array()
+    assert old_weights.dtype is np.dtype(np.int8)
 
     # run padding pass
     trf_pass.run(model)
@@ -89,14 +90,14 @@ def test_mutate(trf_pass, model):
 
     # test pad operator
     pad_op = subgraph.operators[0]
-    assert pad_op.operator_code.code == BuiltinOpCodes.PAD
+    assert pad_op.operator_code.code is BuiltinOpCodes.PAD
     assert len(pad_op.inputs) == 2
     assert len(pad_op.outputs) == 1
     assert pad_op.inputs[0] in subgraph.inputs
 
     # test conv operator
     conv_op = subgraph.operators[1]
-    assert conv_op.operator_code.code == BuiltinOpCodes.CONV_2D
+    assert conv_op.operator_code.code is BuiltinOpCodes.CONV_2D
     assert len(conv_op.inputs) == 3
     assert len(conv_op.outputs) == 1
     assert conv_op.outputs[0] in subgraph.outputs
@@ -111,7 +112,8 @@ def test_mutate(trf_pass, model):
     new_weight_shape = conv_op.inputs[1].shape
     assert old_weight_shape[:3] == new_weight_shape[:3]
     assert new_weight_shape[3] == padded_channels
-    new_weights = conv_op.inputs[1].numpy.astype(np.int8)
+    new_weights = conv_op.inputs[1].as_array()
+    assert old_weights.dtype is np.dtype(np.int8)
     assert np.all(new_weights[..., :input_channels] == old_weights)
     assert np.all(
         new_weights[..., input_channels:]
@@ -120,13 +122,16 @@ def test_mutate(trf_pass, model):
 
     # test paddings tensor
     paddings = pad_op.inputs[1]
-    pads_arr = paddings.numpy.astype("int")
+    pads_arr = paddings.as_array()
     assert pads_arr.shape == paddings.shape == (4, 2)
-    pads = pads_arr.tolist()
-    assert pads[0] == [0, 0]
-    assert pads[1] == [0, 0]
-    assert pads[2] == [0, 0]
-    assert pads[3] == [0, pad_size]
+    assert pads_arr[0][0] == [0]
+    assert pads_arr[0][1] == [0]
+    assert pads_arr[1][0] == [0]
+    assert pads_arr[1][1] == [0]
+    assert pads_arr[2][0] == [0]
+    assert pads_arr[2][1] == [0]
+    assert pads_arr[3][0] == [0]
+    assert pads_arr[3][1] == [pad_size]
 
 
 if __name__ == "__main__":

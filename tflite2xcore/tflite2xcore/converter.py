@@ -84,7 +84,8 @@ def optimize_for_xcore(
     minification=False,
     num_threads=1,
     intermediates_path=None,
-    debug=False
+    debug=False,
+    ignore_input_alignment=False
 ):
     # NOTE: the order of the passes is mostly strict
     pass_mgr = InputOutputCanonicalizationManager(
@@ -135,6 +136,10 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
 
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
+
+    if ignore_input_alignment:
+        pass_mgr.register_pass(passes.RemovePaddingInputPass())
+
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
     pass_mgr.register_pass(

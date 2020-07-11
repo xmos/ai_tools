@@ -56,7 +56,6 @@ class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceWeightBiasOperatorPass):
 
         # create new op and update builtin options
         new_op = super().mutate(op)
-        new_op.builtin_options_type = BuiltinOptions.Conv2DOptions
         new_op.builtin_options = builtin_options
 
         return new_op
@@ -73,9 +72,7 @@ class LegalizeSingleinConv2DPass(LegalizeWeightBiasPass):
 
     def mutate_weights(self, op):
         with self.using(op):
-            self._replace_weights(
-                np.transpose(self._weights.numpy.astype(np.int8), [3, 1, 2, 0])
-            )
+            self._replace_weights(np.transpose(self._weights.as_array(), [3, 1, 2, 0]))
             self._log_weights()
 
 
@@ -120,7 +117,7 @@ class LegalizeXCConvPass(LegalizeXCWeightBiasPass):
     def mutate_weights(self, op):
         with self.using(op):
             self._replace_weights(
-                self._weights.numpy.astype(np.int8).reshape(self._new_weight_shape)
+                self._weights.as_array().reshape(self._new_weight_shape)
             )
             self._log_weights()
 
@@ -155,7 +152,9 @@ class LegalizeXC1x1ConvPass(LegalizeXCConvPass):
 
     @log_method_output()
     def _zero_point_bias(self):
-        return np.sum(self._weights.numpy * self._input_zero_point, axis=3).squeeze()
+        return np.sum(
+            self._weights.as_array(np.int64) * self._input_zero_point, axis=3
+        ).squeeze()
 
     @property
     def _new_weight_shape(self):
@@ -225,7 +224,7 @@ class LegalizeXCDepthwiseConvPass(LegalizeXCConvPass):
     def _zero_point_bias(self):
         # NOTE: first dimension of the kernel is always 1 in depthwise conv2d
         return np.sum(
-            self._weights.numpy * self._input_zero_point, axis=(1, 2)
+            self._weights.as_array(np.int64) * self._input_zero_point, axis=(1, 2)
         ).squeeze()
 
     @property
@@ -262,7 +261,9 @@ class LegalizeXCDeepConvPass(LegalizeXCConvPass):
 
     @log_method_output()
     def _zero_point_bias(self):
-        return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2, 3))
+        return np.sum(
+            self._weights.as_array(np.int64) * self._input_zero_point, axis=(1, 2, 3)
+        )
 
 
 class ReplaceShallowinConv2dPass(ReplacePaddedConv2DPass):
@@ -300,14 +301,14 @@ class LegalizeXCShallowinConvPass(LegalizeXCConvPass):
 
     @log_method_output()
     def _zero_point_bias(self):
-        return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2, 3))
+        return np.sum(
+            self._weights.as_array(np.int64) * self._input_zero_point, axis=(1, 2, 3)
+        )
 
     def mutate_weights(self, op):
         with self.using(op):
             Kw_pad = int(32 / self._weights.shape[3] - self._weights.shape[2])
-            unpadded_weights = self._weights.numpy.astype(np.int8).reshape(
-                self._new_weight_shape
-            )
+            unpadded_weights = self._weights.as_array().reshape(self._new_weight_shape)
             self._replace_weights(
                 np.pad(
                     unpadded_weights, pad_width=[(0, 0), (0, 0), (0, Kw_pad), (0, 0)],

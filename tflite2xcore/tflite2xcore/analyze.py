@@ -2,6 +2,7 @@
 
 from copy import copy
 
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType
 import tflite2xcore.xcore_interpreter as xcore_interpreter
 from tflite2xcore import xlogging as logging
@@ -85,18 +86,49 @@ def calc_arena_sizes(model_content):
     return interpreter.tensor_arena_size, interpreter.xcore_heap_size
 
 
+def calc_weight_and_bias_fetch_sizes(model_content):
+    max_weights_size = 0
+    max_bias_size = 0
+    model = XCOREModel.deserialize(model_content)
+    for subgraph in model.subgraphs:
+        for op in subgraph.operators:
+            if "mem" in op.custom_options:
+                max_weights_size = max(max_weights_size, op.custom_options["mem"][0])
+                max_bias_size = max(max_bias_size, op.custom_options["mem"][1])
+
+    return max_weights_size, max_bias_size
+
+
 def print_report(tflite_output_path):
+    indent = " " * 2
+
     with open(tflite_output_path, "rb") as fd:
         model_content = fd.read()
         model_size = len(model_content)
         try:
             tensor_arena_size, xcore_heap_size = calc_arena_sizes(model_content)
+            max_weights_size, max_bias_size = calc_weight_and_bias_fetch_sizes(
+                model_content
+            )
             print(f"Model size: {model_size} (bytes)")
-            print(f"Tensor arena size: {tensor_arena_size} (bytes)")
-            print(f"xCORE heap size: {xcore_heap_size} (bytes)")
             print()
-            total_size = model_size + tensor_arena_size + xcore_heap_size
-            print(f"Total data memory required: {total_size}")
+            print("Model stored in RAM")
+            print(f"{indent}Tensor arena size: {tensor_arena_size} (bytes)")
+            print(f"{indent}xCORE heap size: {xcore_heap_size} (bytes)")
+            print()
+            print(
+                f"{indent}Total RAM required: {model_size + tensor_arena_size + xcore_heap_size} (bytes)"
+            )
+            print()
+            print("Model stored in external memory (Flash or LPDDR)")
+            print(f"{indent}Tensor arena size: {tensor_arena_size} (bytes)")
+            print(
+                f"  xCORE heap size: {xcore_heap_size + max_weights_size + max_bias_size} (bytes)"
+            )
+            print()
+            print(f"{indent}Total RAM required: {xcore_heap_size + tensor_arena_size}")
+            print(f"{indent}Total external memory required: {model_size}")
+            print()
         except RuntimeError as e:
             prefix = "Didn't find op for builtin opcode "
             msg = e.args[0]

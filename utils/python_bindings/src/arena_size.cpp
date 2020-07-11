@@ -67,12 +67,10 @@ void search_arena_sizes(const char *model_content, size_t model_content_size,
       min_arena_size = curr_arena_size;
     }
   }
-
   *arena_size = return_size + align_to - (return_size % align_to);
 
-  // *heap_size = xcGetHeapAllocatedSize() + xcore_heap_size_adjustment;
   Dispatcher *dispatcher = GetDispatcher();
-  *heap_size = dispatcher->GetMaxAllocatedSize() + xcore_heap_size_adjustment;
+  *heap_size = dispatcher->GetAllocatedSize() + xcore_heap_size_adjustment;
 }
 
 }  // namespace xcore

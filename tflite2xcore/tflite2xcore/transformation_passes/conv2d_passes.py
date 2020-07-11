@@ -394,6 +394,7 @@ class ScratchMemoryConv2d1x1Pass(OperatorMatchingPass):
             return "mem" not in op.custom_options
 
     def mutate(self, op):
+        _, _, _, Cin = op.inputs[0].shape
         _, Bv, Bl = op.inputs[2].shape
 
         if "par" in op.custom_options:
@@ -403,7 +404,7 @@ class ScratchMemoryConv2d1x1Pass(OperatorMatchingPass):
         else:
             max_cg_size = CHANNEL_GROUP_SIZE
 
-        weights_scratch_size = max_cg_size
+        weights_scratch_size = Cin * max_cg_size
         bias_scratch_size = Bv * Bl * op.inputs[2].type.to_bytes()
 
         op.add_custom_options(mem=[weights_scratch_size, bias_scratch_size])

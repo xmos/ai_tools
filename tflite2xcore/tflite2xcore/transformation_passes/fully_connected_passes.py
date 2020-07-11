@@ -166,13 +166,19 @@ class ScratchMemoryFullyConnectedPass(OperatorMatchingPass):
             return "mem" not in op.custom_options
 
     def mutate(self, op):
-        _, Cin = op.inputs[1].shape
+        Cout, Cin = op.inputs[1].shape
         _, Bv, Bl = op.inputs[2].shape
 
         if "par" in op.custom_options:
-            weights_scratch_size = Cin * op.custom_options["par"]["th"]
+            # get the min of threads or number of channel groups
+            i_cg = min(
+                op.custom_options["par"]["th"], len(op.custom_options["par"]["cg"])
+            )
+            weights_scratch_size = Cin * (
+                op.custom_options["par"]["cg"][i_cg - 1][1] + 1
+            )
         else:
-            weights_scratch_size = Cin
+            weights_scratch_size = Cin * Cout
 
         bias_scratch_size = Bv * Bl * op.inputs[2].type.to_bytes()
 

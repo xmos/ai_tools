@@ -36,9 +36,9 @@ class Conv2D_Deep {
   ~Conv2D_Deep() {}
 
   XCoreStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                      int32_t Y_w, int32_t C_out, const int8_t* K,
-                      const int16_t* BSO);
-  XCoreStatus Eval(int8_t* Y, const int8_t* X);
+                      int32_t Y_w, int32_t C_out);
+  XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
+                   const int16_t* BSO);
 
   Conv2DParams params;
   ExecutionPlan execution_plan;
@@ -46,8 +46,6 @@ class Conv2D_Deep {
  private:
   nn_conv2d_deep_plan_t plan_;
   nn_conv2d_deep_job_t* jobs_;
-  const int8_t* K_;     // original kernel tensor
-  const int16_t* BSO_;  // original bias tensor
 };
 
 class Conv2D_Shallow {
@@ -56,9 +54,9 @@ class Conv2D_Shallow {
   ~Conv2D_Shallow() {}
 
   XCoreStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                      int32_t Y_w, int32_t C_out, int32_t K_w_padded,
-                      const int8_t* K, const int16_t* BSO);
-  XCoreStatus Eval(int8_t* Y, const int8_t* X);
+                      int32_t Y_w, int32_t C_out, int32_t K_w_padded);
+  XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
+                   const int16_t* BSO);
 
   Conv2DParams params;
   ExecutionPlan execution_plan;
@@ -66,8 +64,6 @@ class Conv2D_Shallow {
  private:
   nn_conv2d_shallowin_plan_t plan_;
   nn_conv2d_shallowin_job_t* jobs_;
-  const int8_t* K_;     // original kernel tensor
-  const int16_t* BSO_;  // original bias tensor
 };
 
 class Conv2D_1x1 {
@@ -76,9 +72,9 @@ class Conv2D_1x1 {
   ~Conv2D_1x1() {}
 
   XCoreStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                      int32_t Y_w, int32_t C_out, const int8_t* K,
-                      const int16_t* BSO);
-  XCoreStatus Eval(int8_t* Y, const int8_t* X);
+                      int32_t Y_w, int32_t C_out);
+  XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
+                   const int16_t* BSO);
 
   Conv2DParams params;
   ExecutionPlan execution_plan;
@@ -86,8 +82,6 @@ class Conv2D_1x1 {
  private:
   nn_conv2d_1x1_plan_t plan_;
   nn_conv2d_1x1_job_t* jobs_;
-  const int8_t* K_;     // original kernel tensor
-  const int16_t* BSO_;  // original bias tensor
 };
 
 class Conv2D_Depthwise {
@@ -96,9 +90,9 @@ class Conv2D_Depthwise {
   ~Conv2D_Depthwise() {}
 
   XCoreStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                      int32_t Y_w, int32_t C_out, const int8_t* K,
-                      const int16_t* BSO);
-  XCoreStatus Eval(int8_t* Y, const int8_t* X);
+                      int32_t Y_w, int32_t C_out);
+  XCoreStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
+                   const int16_t* BSO);
 
   Conv2DParams params;
   ExecutionPlan execution_plan;
@@ -106,8 +100,6 @@ class Conv2D_Depthwise {
  private:
   nn_conv2d_depthwise_plan_t plan_;
   nn_conv2d_depthwise_job_t* jobs_;
-  const int8_t* K_;     // original kernel tensor
-  const int16_t* BSO_;  // original bias tensor
 };
 
 }  // namespace conv

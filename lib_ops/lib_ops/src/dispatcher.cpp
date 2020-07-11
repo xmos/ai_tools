@@ -75,7 +75,6 @@ XCoreStatus Dispatcher::JoinTasks() {
   }
 
   tasks_.size = 0;
-  allocator_.ResetScratch();
 
   return kXCoreOk;
 }
@@ -145,6 +144,7 @@ XCoreStatus Dispatcher::InitializeTasks(thread_function_t function,
   tasks_.stack_words = stack_words;
   tasks_.size = 0;
   tasks_.stack = nullptr;
+  allocator_.ResetScratch();
 
   return kXCoreOk;
 }
@@ -154,10 +154,6 @@ void *Dispatcher::AllocatePersistantBuffer(size_t size, size_t alignment) {
 }
 
 size_t Dispatcher::GetAllocatedSize() { return allocator_.GetAllocatedSize(); }
-
-uintptr_t Dispatcher::GetScratchBuffer() {
-  return (uintptr_t)allocator_.GetScratchBuffer();
-}
 
 XCoreStatus Dispatcher::AddTask(void *argument) {
   assert(tasks_.size < max_threads);
@@ -176,6 +172,9 @@ void Dispatcher::FetchBuffer(int8_t **dest, int8_t const *src, size_t size) {
   if (IS_RAM(src)) {
     *dest = (int8_t *)src;
   } else {
+    if (*dest == nullptr)
+      *dest = (int8_t *)allocator_.AllocateScratchBuffer(size);
+
     memload((void **)dest, (void *)src, size);
   }
 }
@@ -183,11 +182,20 @@ void Dispatcher::FetchBuffer(int8_t **dest, int8_t const *src, size_t size) {
 void Dispatcher::FetchWeights(int8_t **dest, int8_t const *src, size_t size,
                               ChannelGroup const &changrp) {
   size_t changrp_bytes = size / changrp_len;
+
   if (IS_RAM(src)) {
     *dest = (int8_t *)&src[changrp.start * changrp_bytes];
   } else {
+    size_t load_size;
+    if ((changrp.index == 0) && (changrp.size < changrp_len))
+      load_size = size;  // only one channel group so load everything
+    else
+      load_size = changrp.size * changrp_bytes;
+
+    if (*dest == nullptr)
+      *dest = (int8_t *)allocator_.AllocateScratchBuffer(load_size);
     memload((void **)dest, (void *)&src[changrp.start * changrp_bytes],
-            changrp.size * changrp_bytes);
+            load_size);
   }
 }
 
@@ -196,7 +204,9 @@ void Dispatcher::FetchBiases(int16_t **dest, int16_t const *src, size_t size,
   if (IS_RAM(src)) {
     *dest = (int16_t *)&src[changrp.index * bso_changrp_len];
   } else {
-    memload((void **)dest, (void *)&src[changrp.index * size], size);
+    if (*dest == nullptr)
+      *dest = (int16_t *)allocator_.AllocateScratchBuffer(size);
+    memload((void **)dest, (void *)&src[changrp.index * bso_changrp_len], size);
   }
 }
 

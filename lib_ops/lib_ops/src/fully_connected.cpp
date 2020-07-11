@@ -1,6 +1,7 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 #include "lib_ops/api/fully_connected.h"
 
+#include <algorithm>
 #include <cstring>
 
 #include "lib_ops/api/benchmarking.h"
@@ -26,18 +27,11 @@ ATTRIBUTE_THREAD_FUNCTION void fully_connected_thread_worker(void *context) {
 }
 
 FullyConnected_16::FullyConnected_16(const ExecutionPlan &execution_plan)
-    : execution_plan(execution_plan),
-      jobs_(nullptr),
-      W_(nullptr),
-      BSO_(nullptr) {}
+    : execution_plan(execution_plan), jobs_(nullptr) {}
 
-XCoreStatus FullyConnected_16::Prepare(int32_t C_in, int32_t C_out,
-                                       const int8_t *W, const int16_t *BSO) {
+XCoreStatus FullyConnected_16::Prepare(int32_t C_in, int32_t C_out) {
   TRACE_INFO("FullyConnected_16 Prepare id=%p C_in=%ld C_out=%ld\n", this, C_in,
              C_out);
-
-  W_ = W;
-  BSO_ = BSO;
 
   // allocate the jobs
   int32_t n_jobs = execution_plan.changrps.GetSize();
@@ -63,7 +57,8 @@ XCoreStatus FullyConnected_16::Prepare(int32_t C_in, int32_t C_out,
   return kXCoreOk;
 }
 
-XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *X) {
+XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *X,
+                                    const int8_t *W, const int16_t *BSO) {
   TRACE_INFO("FullyConnected Eval id=%p\n", this);
   TIMER_START();
 
@@ -76,6 +71,9 @@ XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *X) {
   // create thread data and tasks
   int i_th = 0;
   int n_th = execution_plan.GetNumThreads();
+  // size_t weights_fetch_bytes = execution_plan.GetWeightsScratchSize() / n_th;
+  // size_t weights_fetch_offset = 0;
+  size_t weights_fetch_size;
   FullyConnectedThreadData thread_data[n_th];
   int8_t *tW[n_th];
   int16_t *tBSO[n_th];
@@ -83,13 +81,19 @@ XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *X) {
   std::memset(tW, 0, n_th * sizeof(int8_t *));
   std::memset(tBSO, 0, n_th * sizeof(int16_t *));
 
+  weights_fetch_size =
+      std::min((size_t)(changrp_len * execution_plan.GetWeightsScratchSize() /
+                        (execution_plan.changrps[n_th - 1].start +
+                         execution_plan.changrps[n_th - 1].size)),
+               execution_plan.GetWeightsScratchSize());
+
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
 
     // fetch the weights and biases
-    dispatcher->FetchWeights(
-        &tW[i_th], W_, execution_plan.GetWeightsScratchSize() * n_th, changrp);
-    dispatcher->FetchBiases(&tBSO[i_th], BSO_,
+    dispatcher->FetchWeights(&tW[i_th], W, weights_fetch_size, changrp);
+
+    dispatcher->FetchBiases(&tBSO[i_th], BSO,
                             execution_plan.GetBiasScratchSize(), changrp);
 
     thread_data[i_th].Y = Y;
@@ -99,7 +103,6 @@ XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *X) {
     thread_data[i_th].plan = &plan_;
     jobs_[i_cg].stride.start.W = 0;
     jobs_[i_cg].stride.start.BSO = 0;
-
     thread_data[i_th].job = &jobs_[i_cg];
     dispatcher->AddTask(reinterpret_cast<void *>(&thread_data[i_th]));
 

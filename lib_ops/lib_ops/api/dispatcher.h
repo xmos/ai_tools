@@ -58,8 +58,6 @@ class Dispatcher {
                                  size_t alignment = WORD_ALIGNMENT);
   size_t GetAllocatedSize();
 
-  uintptr_t GetScratchBuffer();
-
   void FetchBuffer(int8_t **dest, int8_t const *src, size_t size);
   void FetchWeights(int8_t **dest, int8_t const *src, size_t size,
                     ChannelGroup const &changrp);

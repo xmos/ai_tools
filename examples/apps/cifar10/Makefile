@@ -10,9 +10,7 @@ include ../../../make/libs.mk
 # App specific
 #********************
 APPBASE = cifar10
-APPFLAGS := -fxscope
-APPFLAGS += config.xscope
-APPFLAGS += -DNDEBUG
+APPFLAGS := -DNDEBUG
 #APPFLAGS += -DENABLE_TRACING
 APPFLAGS += -DENABLE_BENCHMARKING
 
@@ -20,6 +18,8 @@ ifeq ($(TARGET), x86)
 	APP = $(APPBASE)
 else # must be xcore
 	APPFLAGS += -fcmdline-buffer-bytes=1024
+	APPFLAGS += -fxscope
+	APPFLAGS += config.xscope
 	APP = $(APPBASE).xe
 endif
 

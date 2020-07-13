@@ -56,29 +56,28 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
 class CanonicalizeReshapePass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
 
-        if op.operator_code.code is BuiltinOpCodes.RESHAPE:
-
-            try:
-                if op.builtin_options["new_shape"] != list(op.outputs[0].shape):
-                    self.logger.warning(
-                        "new_shape option to RESHAPE doesn't match output tensor shape"
-                    )
-            except KeyError:
-                self.logger.warning(
-                    "Expected new_shape option to RESHAPE was not found"
-                )
-
-            assert np.prod(op.inputs[0].shape) == np.prod(
-                op.outputs[0].shape
-            ), "RESHAPE input and output shapes are not consistent"
-
-            assert -1 not in op.inputs[0].shape and -1 not in op.outputs[0].shape
-
-            return (
-                super().match(op) and len(op.inputs) == 2 and op.inputs[1].is_constant
-            )
-        else:
+        if op.operator_code.code is not BuiltinOpCodes.RESHAPE and not super().match(
+            op
+        ):
             return False
+
+        try:
+            if op.builtin_options["new_shape"] != list(op.outputs[0].shape):
+                self.logger.warning(
+                    "new_shape option to RESHAPE doesn't match output tensor shape"
+                )
+        except KeyError:
+            self.logger.warning("Expected new_shape option to RESHAPE was not found")
+
+        assert np.prod(op.inputs[0].shape) == np.prod(
+            op.outputs[0].shape
+        ), "RESHAPE input and output shapes are not consistent"
+
+        assert (
+            -1 not in op.inputs[0].shape and -1 not in op.outputs[0].shape
+        ), "Dynamically sized tensors not supported"
+
+        return len(op.inputs) == 2 and op.inputs[1].is_constant
 
     def mutate(self, op: Operator) -> None:
         # Remove connection between RESHAPE and input tensor[1], the new shape

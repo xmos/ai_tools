@@ -49,7 +49,7 @@ def model(input_shape, outputs):
 #                                   HELPERS
 #  ----------------------------------------------------------------------------
 
-
+# TODO refactor this function to use a function that returns a generator
 def update_params_with_reshape(PARAMS, *, is_matching):
 
     for params in PARAMS.values():
@@ -82,7 +82,7 @@ def update_params_with_reshape(PARAMS, *, is_matching):
                     params["input_width"],
                 ),
                 product(
-                    params["input_channels"],
+                    params["input_batch"],
                     params["input_height"],
                     params["input_width"],
                 ),
@@ -93,12 +93,12 @@ def update_params_with_reshape(PARAMS, *, is_matching):
             [list(p) for p in t]
             for t in product(
                 product(
-                    params["input_channels"],
+                    params["input_batch"],
                     params["input_height"],
                     params["input_width"],
                 ),
                 product(
-                    params["input_channels"],
+                    params["input_batch"],
                     (
                         np.array(params["input_height"])
                         * np.array(params["input_width"])

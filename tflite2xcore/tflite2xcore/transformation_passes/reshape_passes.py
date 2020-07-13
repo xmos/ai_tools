@@ -2,13 +2,7 @@
 
 import numpy as np  # type: ignore
 
-from tflite2xcore.xcore_schema import (
-    QuantizationDetails,
-    TensorType,
-    BuiltinOpCodes,
-    OperatorCode,
-    XCOREOpCodes,
-)
+from tflite2xcore.xcore_schema import BuiltinOpCodes
 from .transformation_passes import OperatorMatchingPass
 from tflite2xcore.xcore_model import Operator, Tensor
 

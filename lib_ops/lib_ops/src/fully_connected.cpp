@@ -71,8 +71,6 @@ XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *X,
   // create thread data and tasks
   int i_th = 0;
   int n_th = execution_plan.GetNumThreads();
-  // size_t weights_fetch_bytes = execution_plan.GetWeightsScratchSize() / n_th;
-  // size_t weights_fetch_offset = 0;
   size_t weights_fetch_size;
   FullyConnectedThreadData thread_data[n_th];
   int8_t *tW[n_th];

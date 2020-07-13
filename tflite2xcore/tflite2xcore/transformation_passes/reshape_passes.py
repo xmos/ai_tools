@@ -1,6 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import numpy as np
+import numpy as np  # type: ignore
 
 from tflite2xcore.xcore_schema import (
     QuantizationDetails,
@@ -10,6 +10,7 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
 )
 from .transformation_passes import OperatorMatchingPass
+from tflite2xcore.xcore_model import Operator, Tensor
 
 
 class RemoveFlattenReshapePass(OperatorMatchingPass):
@@ -20,10 +21,10 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
     )
 
     @property
-    def _producer(self):
+    def _producer(self) -> Tensor:
         return self._op.inputs[0].producers[0]
 
-    def match(self, op):
+    def match(self, op: Operator) -> bool:
 
         with self.using(op):
             try:
@@ -32,13 +33,9 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
                 # Input tensor for op has no producers..
                 return False
 
-            reshape_input_batch = 1
-            if len(self._producer.inputs[0].shape) == 4:
-                reshape_input_batch = self._producer.inputs[0].shape[0]
-
-            reshape_output_batch = 1
-            if len(op.inputs[0].shape) == 4:
-                reshape_output_batch = op.inputs[0].shape[0]
+            # FULLY_CONNECTED always interprets the first dim as batch...
+            reshape_input_batch = self._producer.inputs[0].shape[0]
+            reshape_output_batch = op.inputs[0].shape[0]
 
             return (
                 super().match(op)
@@ -47,7 +44,7 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
                 and (reshape_output_batch == reshape_input_batch)
             )
 
-    def mutate(self, op):
+    def mutate(self, op: Operator) -> None:
         subgraph = op.subgraph
 
         with self.using(op):
@@ -63,7 +60,7 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
 
 
 class CanonicalizeReshapePass(OperatorMatchingPass):
-    def match(self, op):
+    def match(self, op: Operator) -> bool:
 
         if op.operator_code.code is BuiltinOpCodes.RESHAPE:
 
@@ -81,19 +78,15 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
                 op.outputs[0].shape
             ), "RESHAPE input and output shapes are not consistent"
 
-            if -1 in op.inputs[0].shape or -1 in op.outputs[0].shape:
-                self.logger.warning("Dynamically sized tensors not supported")
+            assert -1 not in op.inputs[0].shape and -1 not in op.outputs[0].shape
 
             return (
-                super().match(op)
-                and len(op.inputs) > 1  # Note, at present we only really expect 1 or 2
-                and op.inputs[1].is_constant == True
+                super().match(op) and len(op.inputs) == 2 and op.inputs[1].is_constant
             )
         else:
             return False
 
-    def mutate(self, op):
-        # Remove connection between RESHAPE and input tensor[1+], typically we only expect to remove 1 tensor (the new shape)
-        for i in op.inputs[1:]:
-            i.consumers.remove(op)
+    def mutate(self, op: Operator) -> None:
+        # Remove connection between RESHAPE and input tensor[1], the new shape
+        op.inputs[1].consumers.remove(op)
         op.inputs = op.inputs[:1]

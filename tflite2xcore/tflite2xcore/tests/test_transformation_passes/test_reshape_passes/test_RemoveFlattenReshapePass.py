@@ -27,16 +27,7 @@ from .conftest import (
 def matching_reshape(reshape_input_shape, reshape_output_shape):
 
     # Check batch dim is unchanged
-    reshape_input_batch = 1
-    reshape_output_batch = 1
-
-    if len(reshape_output_shape) == 4:
-        reshape_output_batch = reshape_output_shape[0]
-
-    if len(reshape_input_shape) == 4:
-        reshape_input_batch = reshape_input_shape[0]
-
-    return reshape_input_batch == reshape_output_batch
+    return reshape_input_shape[0] == reshape_output_shape[0]
 
 
 PARAMS = update_params_with_reshape(deepcopy(PARAMS), is_matching=matching_reshape)

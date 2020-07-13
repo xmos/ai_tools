@@ -2,8 +2,6 @@
 
 import pytest
 
-import numpy as np
-
 from copy import deepcopy
 
 from tflite2xcore.converter import CleanupManager

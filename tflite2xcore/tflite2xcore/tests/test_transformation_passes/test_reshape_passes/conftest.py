@@ -23,7 +23,7 @@ from ..conftest import (
 PARAMS = deepcopy(PARAMS)
 
 PARAMS["extended"].update(
-    {"input_batch": [1, 2], "input_channels": [4, 8, 16, 32, 64], "outputs": [2, 10],}
+    {"input_batch": [1, 2], "input_channels": [4, 8, 16], "outputs": [2, 10],}
 )
 
 PARAMS["default"].update(
@@ -53,8 +53,6 @@ def model(input_shape, outputs):
 def update_params_with_reshape(PARAMS, *, is_matching):
 
     for params in PARAMS.values():
-
-        assert len(params["input_channels"]) == len(params["input_width"])
 
         all_reshapes = [
             [list(p) for p in t]
@@ -89,9 +87,11 @@ def update_params_with_reshape(PARAMS, *, is_matching):
                     params["input_batch"],
                     params["input_height"],
                     (
-                        np.array(params["input_width"])
-                        * np.array(params["input_channels"])
-                    ).tolist(),
+                        np.prod(p)
+                        for p in product(
+                            params["input_width"], params["input_channels"]
+                        )
+                    ),
                 ),
             )
         )
@@ -102,14 +102,23 @@ def update_params_with_reshape(PARAMS, *, is_matching):
                 product(
                     params["input_batch"],
                     params["input_height"],
-                    params["input_width"],
+                    (
+                        np.prod(p)
+                        for p in product(
+                            params["input_width"], params["input_channels"]
+                        )
+                    ),
                 ),
                 product(
                     params["input_batch"],
                     (
-                        np.array(params["input_height"])
-                        * np.array(params["input_width"])
-                    ).tolist(),
+                        np.prod(p)
+                        for p in product(
+                            params["input_height"],
+                            params["input_width"],
+                            params["input_channels"],
+                        )
+                    ),
                 ),
             )
         )

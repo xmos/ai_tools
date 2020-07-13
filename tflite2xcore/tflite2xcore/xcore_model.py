@@ -233,7 +233,8 @@ class Tensor:
 
     @property
     def is_constant(self) -> bool:
-        # There is an esoteric case where by a tensor without any producers could potentially be modified if it shares a buffer with a tensor from another subgraph.
+        # There is an esoteric case where by a tensor without any producers could potentially be 
+        # modified if it shares a buffer with a tensor from another subgraph.
         # As such we also check if all owners of its buffer have no producers and are not inputs
         return all(
             not t.producers and t not in self.subgraph.inputs

@@ -23,15 +23,15 @@ from ..conftest import (
 PARAMS = deepcopy(PARAMS)
 
 PARAMS["extended"].update(
-    {"input_batch": [1, 2], "input_channels": [5, 10, 29], "outputs": [2, 10],}
+    {"input_batch": [1, 2], "input_channels": [4, 8, 16, 32, 64], "outputs": [2, 10],}
 )
 
 PARAMS["default"].update(
-    {"input_batch": [1, 2], "input_channels": [5, 10, 29], "outputs": [2, 10],}
+    {"input_batch": [1, 2], "input_channels": [4, 32], "outputs": [2, 10],}
 )
 
 PARAMS["smoke"].update(
-    {"input_batch": [1], "input_channels": [5, 29], "outputs": [10],}
+    {"input_batch": [1], "input_channels": [4, 32], "outputs": [10],}
 )
 
 
@@ -54,16 +54,19 @@ def update_params_with_reshape(PARAMS, *, is_matching):
 
     for params in PARAMS.values():
 
+        assert len(params["input_channels"]) == len(params["input_width"])
+
         all_reshapes = [
             [list(p) for p in t]
             for t in product(
                 product(
                     params["input_batch"],
-                    params["input_channels"],
                     params["input_height"],
                     params["input_width"],
+                    params["input_channels"],
                 ),
                 product(
+                    # Basic dim re-ordering
                     params["input_batch"],
                     params["input_channels"],
                     params["input_height"],
@@ -77,14 +80,18 @@ def update_params_with_reshape(PARAMS, *, is_matching):
             for t in product(
                 product(
                     params["input_batch"],
-                    params["input_channels"],
                     params["input_height"],
                     params["input_width"],
+                    params["input_channels"],
                 ),
+                # Basic dimensionality reduction
                 product(
                     params["input_batch"],
                     params["input_height"],
-                    params["input_width"],
+                    (
+                        np.array(params["input_width"])
+                        * np.array(params["input_channels"])
+                    ).tolist(),
                 ),
             )
         )

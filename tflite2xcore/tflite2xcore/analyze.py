@@ -121,9 +121,10 @@ def print_report(tflite_output_path):
             )
             print()
             print("Model stored in external memory (Flash or LPDDR)")
+            xcore_heap_size += max_weights_size + max_bias_size
             print(f"{indent}Tensor arena size: {tensor_arena_size} (bytes)")
             print(
-                f"  xCORE heap size: {xcore_heap_size + max_weights_size + max_bias_size} (bytes)"
+                f"  xCORE heap size: {xcore_heap_size} (bytes)"
             )
             print()
             print(f"{indent}Total RAM required: {xcore_heap_size + tensor_arena_size}")

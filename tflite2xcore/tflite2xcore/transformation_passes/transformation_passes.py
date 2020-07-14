@@ -1,6 +1,6 @@
-# Copyright (c) 2019, XMOS Ltd, All rights reserved
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import numpy as np
+import numpy as np  # type: ignore
 
 from abc import abstractmethod
 from contextlib import contextmanager

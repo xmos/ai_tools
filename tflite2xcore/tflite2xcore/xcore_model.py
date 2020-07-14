@@ -220,11 +220,21 @@ class Tensor:
             size *= s
         return size
 
-    def as_array(self, dtype=None): 
+    def as_array(self, dtype=None):
         arr = np.frombuffer(self.buffer._data, dtype=self.type.to_numpy_dtype())
         if dtype:
             arr = arr.astype(dtype)
         return arr.reshape(self.shape)
+
+    @property
+    def is_constant(self) -> bool:
+        # There is an esoteric case where by a tensor without any producers could potentially be 
+        # modified if it shares a buffer with a tensor from another subgraph.
+        # As such we also check if all owners of its buffer have no producers and are not inputs
+        return all(
+            not t.producers and t not in self.subgraph.inputs
+            for t in self.buffer.owners
+        )
 
 
 class Subgraph:

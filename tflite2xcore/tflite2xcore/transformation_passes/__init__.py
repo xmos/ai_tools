@@ -64,6 +64,11 @@ from .dce_passes import (
     EliminateDeadBuffersPass,
 )
 
+from .reshape_passes import (
+    RemoveFlattenReshapePass,
+    CanonicalizeReshapePass,
+)
+
 from .renaming_passes import LegalizeOperatorOutputTensorNamePass
 
 from .minification_passes import MinifyQuantInfoPass, MinifyTensorNamesPass

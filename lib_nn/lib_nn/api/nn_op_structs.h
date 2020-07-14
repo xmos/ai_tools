@@ -394,6 +394,24 @@ typedef struct {
  * @note This struct is intended to be opaque.
  */
 typedef struct {
+  unsigned x_v_stride;
+  unsigned x_h_stride;
+  unsigned k_height_loop_counter;
+  unsigned k_width_loop_counter;
+  unsigned input_channel_loop_counter;
+  unsigned output_channel_loop_counter;
+  unsigned x_height_loop_counter;
+  unsigned x_width_loop_counter;
+} nn_bnn_conv2d_bin_out_asm_plan_t;
+
+/**
+ * Struct represents the parameters needed by each `bnn_conv2d()` job.
+ *
+ * Values are set by `bnn_conv2d_init()`.
+ *
+ * @note This struct is intended to be opaque.
+ */
+typedef struct {
   unsigned y_dims[3];     // out_height, out_width, out_channels
   unsigned x_dims[3];     // in_height, in_width, in_channels
   unsigned k_dims[2];     // kernel_height, kernel_width

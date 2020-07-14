@@ -12,7 +12,39 @@
 
 #include "xs3_vpu.h"
 
-unsigned vlmaccr1(bnn_b256_t* a, bnn_b256_t* b) {
+void bnn_conv2d_bin_out_asm_init(nn_bnn_conv2d_bin_out_asm_plan_t* plan,
+                                 const nn_image_params_t* x,
+                                 const nn_image_params_t* y,
+                                 const nn_window_params_t* k) {
+  unsigned bytes_per_input_channel = x->channels / 8;
+
+  // This is 32 to make it easier and be more compatable with larq
+  const unsigned out_chans_multiplier = 32;
+
+  assert((x->channels % XS3_VPU_VREG_WIDTH_BITS) == 0);
+  assert((y->channels % out_chans_multiplier) == 0);
+
+  // This assumes that any slicing will be done horizontally. TODO fix me - it
+  // needs to account for kernel size
+  plan->x_v_stride = bytes_per_input_channel *
+                     (((x->width % (k->stride.horizontal * k->shape.width)) -
+                       1) +  // pixels to the end of the line
+                      ((k->stride.vertical - 1) *
+                       x->width));  // strides minus one lines to the next row
+
+  plan->x_h_stride = bytes_per_input_channel * (k->stride.horizontal - 1);
+
+  plan->k_height_loop_counter = k->shape.height - 1;
+  plan->k_width_loop_counter = k->shape.width - 1;
+
+  plan->input_channel_loop_counter =
+      (x->channels / XS3_VPU_VREG_WIDTH_BITS) - 1;
+  plan->output_channel_loop_counter = (y->channels / out_chans_multiplier) - 1;
+  plan->x_height_loop_counter = x->height - 1;
+  plan->x_width_loop_counter = x->width - 1;
+}
+
+unsigned xnor_pop(bnn_b256_t* a, bnn_b256_t* b) {
   unsigned t = sizeof(((bnn_b256_t*)0)->d[0]);
   unsigned elements = sizeof(((bnn_b256_t*)0)->d) / t;
 
@@ -30,7 +62,7 @@ unsigned vlmaccr1(bnn_b256_t* a, bnn_b256_t* b) {
 WEAK_FUNC
 void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
                         const bnn_b256_t* K_p,
-                        int32_t* thresholds,  //[out_channel];
+                        int16_t* thresholds,  //[out_channel];
                         const nn_bnn_conv2d_bin_out_plan_t* plan) {
   const unsigned kernel_height = plan->k_dims[0];
   const unsigned kernel_width = plan->k_dims[1];
@@ -45,7 +77,7 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
   //   bnn_t WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHAN_WORDS_IN];
   //   bnn_t WORD_ALIGNED K[CHANS_OUT][K_HEIGHT][K_WIDTH][CHAN_WORDS_IN];
 
-  int32_t(*Y)[y_width][chan_b32_out] = (int32_t(*)[y_width][chan_b32_out])Y_p;
+  bnn_b32_t(*Y)[y_width][chan_b32_out] = (bnn_b32_t(*)[y_width][chan_b32_out])Y_p;
 
   bnn_b256_t(*X)[x_width][chan_b256_in] =
       (bnn_b256_t(*)[x_width][chan_b256_in])X_p;
@@ -57,14 +89,14 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
     for (unsigned w = plan->start_loc[1]; w < x_width - kernel_width + 1;
          w += plan->stride[1]) {
       for (unsigned oc_word = 0; oc_word < chan_b32_out; oc_word += 1) {
-        int32_t bitpacked_column = 0;
+        bnn_b32_t bitpacked_column = 0;
         for (unsigned oc_bit = 0; oc_bit < 32; oc_bit += 1) {
           unsigned oc = oc_bit + 32 * oc_word;
-          int32_t sum = 0;
+          int16_t sum = 0;
           for (unsigned kh = 0; kh < kernel_height; kh += 1) {
             for (unsigned kw = 0; kw < kernel_width; kw += 1) {
               for (unsigned ic = 0; ic < chan_b256_in; ic += 1) {
-                sum += vlmaccr1(
+                sum += xnor_pop(
                     &(X[h * plan->stride[0] + kh + plan->start_loc[0]]
                        [w * plan->stride[1] + kw + plan->start_loc[1]][ic]),
                     &(K[oc][kh][kw][ic]));
@@ -109,7 +141,7 @@ void bnn_conv2d_bin_out_init(nn_bnn_conv2d_bin_out_plan_t* plan,
 WEAK_FUNC
 void bnn_conv2d_bin_out_ref(bnn_bool_t* Y_p, const bnn_bool_t* X_p,
                             const bnn_bool_t* K_p,
-                            int32_t* threshold,  //[out_channel];
+                            int16_t* threshold,  //[out_channel];
                             const nn_bnn_conv2d_bin_out_ref_plan_t* plan) {
   const unsigned kernel_height = plan->k_dims[0];
   const unsigned kernel_width = plan->k_dims[1];
@@ -136,7 +168,7 @@ void bnn_conv2d_bin_out_ref(bnn_bool_t* Y_p, const bnn_bool_t* X_p,
     for (unsigned w = plan->start_loc[1]; w < x_width - kernel_width + 1;
          w += plan->stride[1]) {
       for (unsigned oc = 0; oc < chans_out; oc += 1) {
-        int32_t sum = 0;
+        int16_t sum = 0;
         for (unsigned kh = 0; kh < kernel_height; kh += 1) {
           for (unsigned kw = 0; kw < kernel_width; kw += 1) {
             for (unsigned ic = 0; ic < chans_in; ic += 1) {
@@ -145,7 +177,7 @@ void bnn_conv2d_bin_out_ref(bnn_bool_t* Y_p, const bnn_bool_t* X_p,
           }
         }
         // Convert to pop count
-        sum = ((int32_t)(chans_in * kernel_height * kernel_width) - sum) / 2;
+        sum = ((int16_t)(chans_in * kernel_height * kernel_width) - sum) / 2;
 
         // printf("sum %d\n", sum);
 

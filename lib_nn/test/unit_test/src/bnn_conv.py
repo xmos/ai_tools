@@ -176,7 +176,7 @@ else:
     Y = 1 - Y * 2
     Y = np.asarray(Y, dtype=np.int8)  # this is for convinence, it's not bit packed
 
-    print("int32_t WORD_ALIGNED thresholds[CHANS_OUT] = ", end="")
+    print("int16_t WORD_ALIGNED thresholds[CHANS_OUT] = ", end="")
     print_nd(thresholds)
     print(";")
 

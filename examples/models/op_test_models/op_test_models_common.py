@@ -198,11 +198,9 @@ class OpTestDefaultFCModel(KerasModel):
         self.data["quant"] = self.data["x_train"]
 
     def convert_to_stripped(self, **converter_args):
-        converter_args.setdefault("remove_softmax", True)
         super().convert_to_stripped(**converter_args)
 
     def convert_to_xcore(self, **converter_args):
-        converter_args.setdefault("remove_softmax", True)
         super().convert_to_xcore(**converter_args)
 
     def build_and_train(self, input_dim, output_dim, batch_size, epochs, **inits):

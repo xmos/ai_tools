@@ -29,13 +29,13 @@ class CanonicalizeQuantizedInputPass(OperatorMatchingPass):
         subgraph.remove_operator(op)
 
 
-# TODO: improve tests for this
 class CanonicalizeQuantizedOutputPass(OperatorMatchingPass):
     def match(self, op):
         if super().match(op) and op.operator_code.code is BuiltinOpCodes.DEQUANTIZE:
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
             return (
                 output_tensor in op.subgraph.outputs
+                and not output_tensor.consumers
                 and input_tensor not in op.subgraph.inputs
                 and output_tensor.type is TensorType.FLOAT32
                 and input_tensor.type is TensorType.INT8

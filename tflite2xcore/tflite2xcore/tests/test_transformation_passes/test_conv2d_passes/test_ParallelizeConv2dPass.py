@@ -4,13 +4,16 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.transformation_passes import PlanGlobalAveragePool2DPass
+from tflite2xcore.transformation_passes import ParallelizeConv2dPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
-    build_XC_avgpool2d_global,
+    build_XC_conv2d_deep,
+    build_XC_conv2d_shallowin,
+    build_XC_conv2d_1x1,
 )
-from .test_ReplaceGlobalAveragePool2DPass import PARAMS
 
+# from .test_ReplaceDeepConv2dPass import PARAMS
+from .conftest import PARAMS
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
@@ -18,10 +21,20 @@ from .test_ReplaceGlobalAveragePool2DPass import PARAMS
 
 PARAMS = deepcopy(PARAMS)
 
+for params in PARAMS.values():
+    params.update(
+        {
+            "model_builder": [
+                build_XC_conv2d_deep,
+                build_XC_conv2d_shallowin,
+                build_XC_conv2d_1x1,
+            ]
+        }
+    )
+
 PARAMS["default"].update({"num_threads": [1, 3, 4, 5]})
 
 PARAMS["smoke"].update({"num_threads": [1, 5]})
-
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
@@ -30,13 +43,13 @@ PARAMS["smoke"].update({"num_threads": [1, 5]})
 
 @pytest.fixture()
 def trf_pass(num_threads):
-    return PlanGlobalAveragePool2DPass(num_threads=num_threads)
+    return ParallelizeConv2dPass(num_threads=num_threads)
 
 
 @pytest.fixture()
-def model(input_shape, reduction_dims):
-    return build_XC_avgpool2d_global(
-        input_shape=input_shape, reduction_dims=reduction_dims
+def model(model_builder, weight_shape, input_size, strides):
+    return model_builder(
+        weight_shape=weight_shape, input_size=input_size, strides=strides
     )
 
 
@@ -51,10 +64,10 @@ def test_matching(trf_pass, model, num_threads):
 
 def test_mutate(trf_pass, model, num_threads):
     op = model.subgraphs[0].operators[0]
-    assert "plan" not in op.custom_options
+    assert "par" not in op.custom_options
     trf_pass.run(model)
     model.sanity_check()
-    assert "plan" in op.custom_options
+    assert "par" in op.custom_options
 
 
 if __name__ == "__main__":

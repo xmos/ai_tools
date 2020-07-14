@@ -51,9 +51,9 @@ Building for x86
 
 Running
 
-    > ./bin/arm_benchmark ../test_inputs/ship.bin
+    > ./bin/cifar10 test_inputs/horse.bin
 
 ## Computing Accuracy on xCORE
 
     > cd test_inputs
-    > ./test_accuracy.py --xe path/to/arm_benchmark.xe
+    > ./test_accuracy.py --xe path/to/cifar10.xe

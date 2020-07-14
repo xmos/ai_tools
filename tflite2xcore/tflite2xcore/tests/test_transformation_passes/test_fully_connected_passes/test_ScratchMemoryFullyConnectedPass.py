@@ -4,23 +4,13 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.transformation_passes import PlanFullyConnectedPass
+from tflite2xcore.transformation_passes import ScratchMemoryFullyConnectedPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_XC_fc_deepin_anyout,
 )
 
 from .conftest import PARAMS
-
-#  ----------------------------------------------------------------------------
-#                              PARAMETER VALUES
-#  ----------------------------------------------------------------------------
-
-PARAMS = deepcopy(PARAMS)
-
-PARAMS["default"].update({"num_threads": [1, 3, 4, 5]})
-
-PARAMS["smoke"].update({"num_threads": [1, 5]})
 
 
 #  ----------------------------------------------------------------------------
@@ -29,8 +19,8 @@ PARAMS["smoke"].update({"num_threads": [1, 5]})
 
 
 @pytest.fixture()
-def trf_pass(num_threads):
-    return PlanFullyConnectedPass(num_threads=num_threads)
+def trf_pass():
+    return ScratchMemoryFullyConnectedPass()
 
 
 @pytest.fixture()
@@ -43,16 +33,16 @@ def model(outputs, input_channels):
 #  ----------------------------------------------------------------------------
 
 
-def test_matching(trf_pass, model, num_threads):
+def test_matching(trf_pass, model):
     assert trf_pass.match(model.subgraphs[0].operators[-1])
 
 
-def test_mutate(trf_pass, model, num_threads):
+def test_mutate(trf_pass, model):
     op = model.subgraphs[0].operators[0]
-    assert "plan" not in op.custom_options
+    assert "mem" not in op.custom_options
     trf_pass.run(model)
     model.sanity_check()
-    assert "plan" in op.custom_options
+    assert "mem" in op.custom_options
 
 
 if __name__ == "__main__":

@@ -73,7 +73,7 @@ def test_mutate(trf_pass, model):
     # extract original model info
     subgraph = model.subgraphs[0]
     assert len(subgraph.operators) == 2
-    pad_params_pad_ori = subgraph.operators[0].inputs[1].numpy.tolist()
+    pad_params_pad_ori = subgraph.operators[0].inputs[1].as_array()
     pad_params_conv_ori = subgraph.operators[-1].custom_options["pad"]
     in_ori, out_ori = subgraph.inputs[0], subgraph.outputs[0]
     in_shape_ori, out_shape_ori = deepcopy(in_ori.shape), deepcopy(out_ori.shape)

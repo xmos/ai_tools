@@ -4,6 +4,7 @@ import numpy as np
 
 from tflite2xcore.transformation_passes import OperatorMatchingPass
 from tflite2xcore.xcore_schema import (
+    Padding,
     TensorType,
     BuiltinOpCodes,
     XCOREOpCodes,
@@ -29,7 +30,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
 
     @property
     def _pad_params(self):
-        return self._producer.inputs[1].numpy.tolist()
+        return self._producer.inputs[1].as_array().tolist()
 
     def match(self, op):
         if not super().match(op):
@@ -63,7 +64,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
 
         if len(pad) == 3 and not isinstance(pad, str):
             return True
-        elif pad in ["SAME", "VALID"]:
+        elif pad in ["SAME", "VALID"] + list(Padding):
             raise ValueError(f"Deprecated 'pad' option in {opcode}: 'pad'={pad}")
         else:
             self.logger.warning(f"Invalid option in {opcode}: 'pad'={pad}")
@@ -94,7 +95,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
 class SplitPaddingPass(OperatorMatchingPass):
     @property
     def _pad_params(self):
-        return self._op.inputs[1].numpy.tolist()
+        return self._op.inputs[1].as_array().tolist()
 
     def match(self, op):
         if not super().match(op):
@@ -137,9 +138,7 @@ class SplitPaddingPass(OperatorMatchingPass):
 
         # create new (batch/channel-wise) operator
         new_op = subgraph.create_operator(
-            OperatorCode(BuiltinOpCodes.PAD),
-            builtin_options_type=BuiltinOptions.PadOptions,
-            inputs=[old_input],
+            OperatorCode(BuiltinOpCodes.PAD), inputs=[old_input],
         )
         subgraph.insert_operator(op, new_op)
 
@@ -175,7 +174,7 @@ class FuseConsecutivePadsPass(OperatorMatchingPass):
 
     @property
     def _pad_params(self):
-        return self._op.inputs[1].numpy
+        return self._op.inputs[1].as_array()
 
     def match(self, op):
         # the anchor is the second of two consecutive PAD ops
@@ -218,3 +217,30 @@ class FuseConsecutivePadsPass(OperatorMatchingPass):
         # set up bypass connection
         op.inputs[0] = producer.inputs[0]
         producer.inputs[0].consumers.append(op)
+
+
+class RemovePaddingInputPass(OperatorMatchingPass):
+    def match(self, op):
+
+        if op.operator_code.code is BuiltinOpCodes.PAD:
+            padding = op.inputs[1].as_array().tolist()
+
+            return (
+                super().match(op)
+                # Match padding only where it is the first operator in the subgraph
+                and op.inputs[0] in op.subgraph.inputs
+                # Match only padding in channel direction i.e. inserted for VPU alignment
+                and len(padding) == 4
+                and (padding[-1] != [0, 0])
+                and all(pad == [0, 0] for pad in padding[:-1])
+            )
+
+        else:
+            return False
+
+    def mutate(self, op):
+        subgraph = op.subgraph
+
+        subgraph.inputs.append(op.outputs[0])
+        subgraph.remove_tensor(op.inputs[0])
+        subgraph.remove_operator(op)

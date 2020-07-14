@@ -3,6 +3,8 @@
 import numpy as np
 
 from tflite2xcore.xcore_schema import (
+    ActivationFunctionType,
+    Padding,
     TensorType,
     BuiltinOpCodes,
     OperatorCode,
@@ -10,7 +12,7 @@ from tflite2xcore.xcore_schema import (
 )
 from tflite2xcore.utils import VE, WORD_SIZE
 from .transformation_passes import ReplaceQuantizedOperatorPass, OperatorMatchingPass
-from tflite2xcore.execution_planning import ChannelGroupSlicePlanner, SlicePlanner
+from tflite2xcore.parallelization import ChannelGroupSlicePlanner, SlicePlanner
 
 
 class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
@@ -37,7 +39,7 @@ class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
             with self.using(op):
                 return (
                     self._input.quantization == self._output.quantization
-                    and self._fused_activation == "NONE"
+                    and self._fused_activation is ActivationFunctionType.NONE
                     and self._input.shape[3] % 4 == 0
                 )
 
@@ -78,7 +80,7 @@ class ReplaceMaxPool2DPass(ReplacePool2DPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return self._padding == "VALID"
+                return self._padding is Padding.VALID
 
         return False
 
@@ -105,7 +107,7 @@ class ReplaceAveragePool2DPass(ReplacePool2DPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                return self._padding == "VALID"
+                return self._padding is Padding.VALID
 
         return False
 
@@ -132,8 +134,8 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
     def match(self, op):
         if super().match(op):
             with self.using(op):
-                axis = self._op.inputs[1].numpy
-                if np.all(axis == [1, 2]) or np.all(axis == [2, 1]):
+                axis = self._op.inputs[1].as_array().flatten().tolist()
+                if axis == [1, 2] or axis == [2, 1]:
                     return self._input.shape[3] % WORD_SIZE == 0
                 else:
                     self.logger.warning("Axis is not either [1, 2] or [2, 1]")
@@ -176,15 +178,15 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
                 shape=[7],
                 consumers=[new_op],
             )
-            new_op.inputs[1].buffer.data = np.frombuffer(
-                b"".join(p.tostring() for p in self._bias_scale_shift), dtype=np.int8
+            new_op.inputs[1].buffer.data = b"".join(
+                p.tostring() for p in self._bias_scale_shift
             )
             subgraph.remove_tensor(old_tensor)
 
         return new_op
 
 
-class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
+class ParallelizeGlobalAveragePool2DPass(OperatorMatchingPass):
     def __init__(self, *args, num_threads=None, forced=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.max_threads = num_threads or 1
@@ -196,7 +198,7 @@ class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
     def match(self, op):
         if (
             super().match(op)
-            and op.operator_code.code == XCOREOpCodes.XC_avgpool2d_global
+            and op.operator_code.code is XCOREOpCodes.XC_avgpool2d_global
         ):
             return not self.plan_threads
 
@@ -209,10 +211,10 @@ class PlanGlobalAveragePool2DPass(OperatorMatchingPass):
         plan.num_threads = min(plan.num_threads, len(plan.changrp_slices))
         self.plan_threads = plan.num_threads
 
-        op.add_custom_options(plan=plan.to_dict())
+        op.add_custom_options(par=plan.to_dict())
 
 
-class PlanPooling2DPass(OperatorMatchingPass):
+class ParallelizePooling2DPass(OperatorMatchingPass):
     def __init__(self, *args, num_threads=None, forced=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.num_threads = num_threads or 1
@@ -224,7 +226,7 @@ class PlanPooling2DPass(OperatorMatchingPass):
 
     def match(self, op):
         if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
-            return "plan" not in op.custom_options
+            return "par" not in op.custom_options
 
     def mutate(self, op):
         _, height, width, Cout = op.outputs[0].shape
@@ -237,4 +239,4 @@ class PlanPooling2DPass(OperatorMatchingPass):
         )
         plan = planner.find_optimal_plan()
 
-        op.add_custom_options(plan=plan.to_dict())
+        op.add_custom_options(par=plan.to_dict())

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import (
+    ActivationFunctionType,
     TensorType,
     OperatorCode,
     BuiltinOpCodes,
@@ -47,17 +48,19 @@ def test_read_flatbuffer():
     tensor = subgraph.tensors[2]
     assert tensor.name == "arm_benchmark/conv2d/Conv2D_bias"
     assert tensor.sanitized_name == "arm_benchmark_conv2d_Conv2D_bias"
-    assert tensor.type == TensorType.INT32
-    assert tensor.standard_type == "int32_t"
+    assert tensor.type is TensorType.INT32
     assert tensor.shape == (32,)
     assert len(tensor.buffer.data) == 128
 
     operator = subgraph.operators[1]
-    assert operator.operator_code.builtin_code == BuiltinOpCodes.CONV_2D
+    assert operator.operator_code.builtin_code is BuiltinOpCodes.CONV_2D
     assert operator.operator_code.version == 3
     assert operator.operator_code.custom_code is None
 
-    assert operator.builtin_options["fused_activation_function"] == "RELU"
+    assert (
+        operator.builtin_options["fused_activation_function"]
+        is ActivationFunctionType.RELU
+    )
     assert len(operator.inputs) == 3
     assert len(operator.outputs) == 1
     assert operator.outputs[0].name == "arm_benchmark/re_lu/Relu"

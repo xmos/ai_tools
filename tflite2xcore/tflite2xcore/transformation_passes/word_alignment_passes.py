@@ -54,9 +54,7 @@ class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):
                 quantization=old_weight_tensor.quantization,
                 consumers=[self._op],
             )
-            new_weight_tensor.buffer.data = np.pad(
-                self._weights.numpy.astype(np.int8), pads
-            )
+            new_weight_tensor.buffer.data = np.pad(self._weights.as_array(), pads)
 
             # rewire old and new kernel tensors
             old_weight_tensor.consumers.remove(self._op)
@@ -65,9 +63,7 @@ class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):
             # create new channel-wise padding operator
             old_input = self._input
             pad_op = subgraph.create_operator(
-                OperatorCode(BuiltinOpCodes.PAD),
-                builtin_options_type=BuiltinOptions.PadOptions,
-                inputs=[old_input],
+                OperatorCode(BuiltinOpCodes.PAD), inputs=[old_input],
             )
             subgraph.insert_operator(self._op, pad_op)
             old_input.consumers.remove(self._op)

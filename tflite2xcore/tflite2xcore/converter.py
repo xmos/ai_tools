@@ -1,4 +1,4 @@
-# Copyright (c) 2019, XMOS Ltd, All rights reserved
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pathlib
 
@@ -84,12 +84,16 @@ def optimize_for_xcore(
     minification=False,
     num_threads=1,
     intermediates_path=None,
-    debug=False
+    debug=False,
+    ignore_input_alignment=False
 ):
     # NOTE: the order of the passes is mostly strict
     pass_mgr = InputOutputCanonicalizationManager(
         model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
+
+    pass_mgr.register_pass(passes.CanonicalizeReshapePass())
+    pass_mgr.register_pass(passes.RemoveFlattenReshapePass())
 
     # canonicalize convolutions
     pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
@@ -100,6 +104,8 @@ def optimize_for_xcore(
 
     # word alignment canonicalization introduces new pads, so first fuse then split
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
+
+    # Split batch/channel-wise padding from spacial padding - allows fusing of spacial padding later
     pass_mgr.register_pass(passes.SplitPaddingPass())
 
     # need to cleanup after the first round of canonicalization
@@ -134,14 +140,28 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
 
+    # Fuse spacial padding with conv2d
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
+
+    if ignore_input_alignment:
+        pass_mgr.register_pass(passes.RemovePaddingInputPass())
+
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
-    pass_mgr.register_pass(passes.PlanFullyConnectedPass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanRequant16To8Pass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanConv2dPass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanPooling2DPass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanGlobalAveragePool2DPass(num_threads=num_threads))
+    pass_mgr.register_pass(
+        passes.ParallelizeFullyConnectedPass(num_threads=num_threads)
+    )
+    pass_mgr.register_pass(passes.ParallelizeRequant16To8Pass(num_threads=num_threads))
+    pass_mgr.register_pass(passes.ParallelizeConv2dPass(num_threads=num_threads))
+    pass_mgr.register_pass(passes.ParallelizePooling2DPass(num_threads=num_threads))
+    pass_mgr.register_pass(
+        passes.ParallelizeGlobalAveragePool2DPass(num_threads=num_threads)
+    )
+
+    # NOTE: scratch memory passes must be registered after parallelization passes
+    pass_mgr.register_pass(passes.ScratchMemoryConv2dPass())
+    pass_mgr.register_pass(passes.ScratchMemoryConv2d1x1Pass())
+    pass_mgr.register_pass(passes.ScratchMemoryFullyConnectedPass())
 
     if cleanup:
         pass_mgr.register_passes(CleanupManager())

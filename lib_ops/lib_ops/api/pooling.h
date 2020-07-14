@@ -26,8 +26,8 @@ class MaxPool {
   MaxPool(const PoolingParams& params, const ExecutionPlan& execution_plan);
   ~MaxPool() {}
 
-  XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                   int32_t Y_w, int32_t C_out);
+  XCoreStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
+                      int32_t Y_w, int32_t C_out);
   XCoreStatus Eval(int8_t* Y, const int8_t* X);
 
   PoolingParams params;
@@ -43,8 +43,8 @@ class AvgPool {
   AvgPool(const PoolingParams& params, const ExecutionPlan& execution_plan);
   ~AvgPool() {}
 
-  XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                   int32_t Y_w, int32_t C_out);
+  XCoreStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
+                      int32_t Y_w, int32_t C_out);
   XCoreStatus Eval(int8_t* Y, const int8_t* X);
 
   PoolingParams params;
@@ -60,8 +60,8 @@ class AvgPool_Global {
   AvgPool_Global(const ExecutionPlan& execution_plan);
   ~AvgPool_Global() {}
 
-  XCoreStatus Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t bias,
-                   int32_t shift, int32_t scale);
+  XCoreStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t bias,
+                      int32_t shift, int32_t scale);
   XCoreStatus Eval(int8_t* Y, const int8_t* X, int32_t X_h, int32_t X_w,
                    uint32_t C_in);
 

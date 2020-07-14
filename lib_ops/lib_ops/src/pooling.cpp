@@ -40,10 +40,11 @@ MaxPool::MaxPool(const PoolingParams& params,
                  const ExecutionPlan& execution_plan)
     : params(params), execution_plan(execution_plan), jobs_(nullptr) {}
 
-XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                          int32_t Y_w, int32_t C_out) {
+XCoreStatus MaxPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
+                             int32_t Y_h, int32_t Y_w, int32_t C_out) {
   TRACE_INFO(
-      "MaxPool Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld C_out=%ld\n",
+      "MaxPool Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
+      "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
 
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
@@ -66,8 +67,8 @@ XCoreStatus MaxPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
   for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
     const RowColRegion& region = execution_plan.regions[i_rg];
     TRACE_INFO(
-        "MaxPool Init id=%p, region top=%ld left=%ld rows=%ld cols=%ld\n", this,
-        region.top, region.left, region.rows, region.cols);
+        "MaxPool Prepare id=%p, region top=%ld left=%ld rows=%ld cols=%ld\n",
+        this, region.top, region.left, region.rows, region.cols);
 
     job_params[i_rg] = {{region.top, region.left, 0},
                         {region.rows, region.cols, C_out}};
@@ -132,10 +133,11 @@ AvgPool::AvgPool(const PoolingParams& params,
                  const ExecutionPlan& execution_plan)
     : params(params), execution_plan(execution_plan), jobs_(nullptr) {}
 
-XCoreStatus AvgPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                          int32_t Y_w, int32_t C_out) {
+XCoreStatus AvgPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
+                             int32_t Y_h, int32_t Y_w, int32_t C_out) {
   TRACE_INFO(
-      "AvgPool Init id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld C_out=%ld\n",
+      "AvgPool Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
+      "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
 
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
@@ -159,8 +161,8 @@ XCoreStatus AvgPool::Init(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
   for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
     const RowColRegion& region = execution_plan.regions[i_rg];
     TRACE_INFO(
-        "AvgPool Init id=%p, region top=%ld left=%ld rows=%ld cols=%ld\n", this,
-        region.top, region.left, region.rows, region.cols);
+        "AvgPool Prepare id=%p, region top=%ld left=%ld rows=%ld cols=%ld\n",
+        this, region.top, region.left, region.rows, region.cols);
 
     job_params[i_rg] = {{region.top, region.left, 0},
                         {region.rows, region.cols, C_out}};
@@ -225,9 +227,10 @@ ATTRIBUTE_THREAD_FUNCTION void avgpool_global_thread_worker(void* context) {
 AvgPool_Global::AvgPool_Global(const ExecutionPlan& execution_plan)
     : execution_plan(execution_plan), jobs_(nullptr) {}
 
-XCoreStatus AvgPool_Global::Init(int32_t X_h, int32_t X_w, int32_t C_in,
-                                 int32_t bias, int32_t shift, int32_t scale) {
-  TRACE_INFO("AvgPool_Global Init id=%p\n", this);
+XCoreStatus AvgPool_Global::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
+                                    int32_t bias, int32_t shift,
+                                    int32_t scale) {
+  TRACE_INFO("AvgPool_Global Prepare id=%p\n", this);
   bias_ = bias;
 
   // setup kernel parameters
@@ -244,7 +247,7 @@ XCoreStatus AvgPool_Global::Init(int32_t X_h, int32_t X_w, int32_t C_in,
 
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
     const ChannelGroup& changrp = execution_plan.changrps[i_cg];
-    TRACE_INFO("AvgPool_Global Init id=%p, chan group start=%ld size=%ld\n",
+    TRACE_INFO("AvgPool_Global Prepare id=%p, chan group start=%ld size=%ld\n",
                this, changrp.start, changrp.size);
 
     job_params[i_cg] = {(uint32_t)changrp.start, (channel_count_t)changrp.size};

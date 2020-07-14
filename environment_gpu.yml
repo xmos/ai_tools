@@ -152,6 +152,7 @@ dependencies:
   - pip:
     - absl-py==0.8.0
     - astor==0.8.1
+    - black==19.10b0
     - cachetools==4.0.0
     - chardet==3.0.4
     - click==7.0
@@ -171,8 +172,6 @@ dependencies:
     - idna==2.8
     - keras-applications==1.0.8
     - keras-preprocessing==1.1.0
-    - larq==0.8.2
-    - larq-zoo==0.5.0
     - makefun==1.7.0
     - markdown==3.1.1
     - oauthlib==3.1.0

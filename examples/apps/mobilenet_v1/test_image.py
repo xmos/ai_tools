@@ -6,6 +6,7 @@ import os
 import time
 import struct
 import ctypes
+import cv2
 
 import numpy as np
 from matplotlib import pyplot
@@ -34,10 +35,14 @@ OBJECT_CLASSES = [
     "ostrich",
 ]
 
-
 PRINT_CALLBACK = ctypes.CFUNCTYPE(
     None, ctypes.c_ulonglong, ctypes.c_uint, ctypes.c_char_p
 )
+
+
+def quantize(arr, scale, zero_point, dtype=np.int8):
+    t = np.round(arr / scale + zero_point)
+    return dtype(np.round(np.clip(t, np.iinfo(dtype).min, np.iinfo(dtype).max)))
 
 
 def dequantize(arr, scale, zero_point):
@@ -91,11 +96,22 @@ try:
     if ep.connect():
         print("Failed to connect")
     else:
-        # time.sleep(5)
-        with open(sys.argv[1], "rb") as fd:
-            raw_img = fd.read()
-            for i in range(0, len(raw_img), CHUCK_SIZE):
-                retval = ep.publish(raw_img[i : i + CHUCK_SIZE])
+        print("Connected")
+
+        img = cv2.imread(sys.argv[1])
+        img = cv2.resize(img, (INPUT_SHAPE[0], INPUT_SHAPE[1]))
+
+        # Channel swapping due to mismatch between open CV and us
+        img = img[:, :, ::-1]  # or image = image[:, :, (2, 1, 0)]
+
+        img = (img / NORM_SCALE) - NORM_SHIFT
+        img = np.round(quantize(img, INPUT_SCALE, INPUT_ZERO_POINT))
+
+        raw_img = bytes(img)
+
+        for i in range(0, len(raw_img), CHUCK_SIZE):
+            retval = ep.publish(raw_img[i : i + CHUCK_SIZE])
+
         while not ep.ready:
             pass
 

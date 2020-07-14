@@ -682,7 +682,6 @@ def build_reshape(
         inputs=inputs,
         outputs=[tout],
         builtin_options={"new_shape": output_shape},
-        builtin_options_type=BuiltinOptions.ReshapeOptions,
     )
     return subgraph.model
 

@@ -8,7 +8,6 @@ from tflite2xcore.xcore_model import Operator, Tensor
 
 
 class RemoveFlattenReshapePass(OperatorMatchingPass):
-
     MATCHING_OPCODES = (
         # TODO fully populate this set e.g. average pooling
         BuiltinOpCodes.FULLY_CONNECTED,
@@ -19,24 +18,23 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
         return self._op.inputs[0].producers[0]
 
     def match(self, op: Operator) -> bool:
-
         with self.using(op):
             try:
-                producer_opcode = self._producer.operator_code.code
+                producer = self._producer
             except IndexError:
                 # Input tensor for op has no producers..
                 return False
 
-            # FULLY_CONNECTED always interprets the first dim as batch...
-            reshape_input_batch = self._producer.inputs[0].shape[0]
-            reshape_output_batch = op.inputs[0].shape[0]
+        # FULLY_CONNECTED always interprets the first dim as batch...
+        reshape_input_batch = producer.inputs[0].shape[0]
+        reshape_output_batch = op.inputs[0].shape[0]
 
-            return (
-                super().match(op)
-                and op.operator_code.code in self.MATCHING_OPCODES
-                and producer_opcode is BuiltinOpCodes.RESHAPE
-                and (reshape_output_batch == reshape_input_batch)
-            )
+        return (
+            super().match(op)
+            and op.operator_code.code in self.MATCHING_OPCODES
+            and producer.operator_code.code is BuiltinOpCodes.RESHAPE
+            and reshape_output_batch == reshape_input_batch
+        )
 
     def mutate(self, op: Operator) -> None:
 
@@ -54,8 +52,7 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
 
 class CanonicalizeReshapePass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
-
-        if not(super().match(op) and op.operator_code.code is BuiltinOpCodes.RESHAPE):
+        if not (super().match(op) and op.operator_code.code is BuiltinOpCodes.RESHAPE):
             return False
 
         try:
@@ -63,15 +60,17 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
                 self.logger.warning(
                     "new_shape option to RESHAPE doesn't match output tensor shape"
                 )
-        except KeyError:
+        except (KeyError, TypeError):
+            # TODO: consider removing this since in tf2.2 the builtin options seems unused
             self.logger.warning("Expected new_shape option to RESHAPE was not found")
+
+        if -1 in op.inputs[0].shape + op.outputs[0].shape:
+            self.logger.warning("Dynamically sized tensors are not supported")
+            return False
 
         assert np.prod(op.inputs[0].shape) == np.prod(
             op.outputs[0].shape
         ), "RESHAPE input and output shapes are not consistent"
-
-        if  -1 not in op.inputs[0].shape and -1 not in op.outputs[0].shape:
-            self.logger.warning("Dynamically sized tensors not supported")
 
         return len(op.inputs) == 2 and op.inputs[1].is_constant
 

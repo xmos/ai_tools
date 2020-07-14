@@ -139,11 +139,20 @@ def optimize_for_xcore(
 
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
-    pass_mgr.register_pass(passes.PlanFullyConnectedPass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanRequant16To8Pass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanConv2dPass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanPooling2DPass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanGlobalAveragePool2DPass(num_threads=num_threads))
+    pass_mgr.register_pass(
+        passes.ParallelizeFullyConnectedPass(num_threads=num_threads)
+    )
+    pass_mgr.register_pass(passes.ParallelizeRequant16To8Pass(num_threads=num_threads))
+    pass_mgr.register_pass(passes.ParallelizeConv2dPass(num_threads=num_threads))
+    pass_mgr.register_pass(passes.ParallelizePooling2DPass(num_threads=num_threads))
+    pass_mgr.register_pass(
+        passes.ParallelizeGlobalAveragePool2DPass(num_threads=num_threads)
+    )
+
+    # NOTE: scratch memory passes must be registered after parallelization passes
+    pass_mgr.register_pass(passes.ScratchMemoryConv2dPass())
+    pass_mgr.register_pass(passes.ScratchMemoryConv2d1x1Pass())
+    pass_mgr.register_pass(passes.ScratchMemoryFullyConnectedPass())
 
     if cleanup:
         pass_mgr.register_passes(CleanupManager())

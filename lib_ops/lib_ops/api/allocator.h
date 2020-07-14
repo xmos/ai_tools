@@ -5,6 +5,9 @@
 #include <cstddef>
 #include <cstdint>
 
+#define WORD_ALIGNMENT (4)
+#define DOUBLE_WORD_ALIGNMENT (8)
+
 class MemoryAllocator {
  public:
   /** Construct Allocator.
@@ -20,8 +23,7 @@ class MemoryAllocator {
       : buffer_(nullptr),
         buffer_size_(0),
         alloc_tail_(nullptr),
-        scratch_head_(nullptr),
-        max_allocated_(0) {}
+        scratch_head_(nullptr) {}
   ~MemoryAllocator() {}
 
   void SetHeap(void *buffer, size_t size);
@@ -33,10 +35,6 @@ class MemoryAllocator {
   /** Get the size (in bytes) of memory allocated from the heap.
    */
   size_t GetAllocatedSize();
-
-  /** Get the maximum size (in bytes) of memory allocated from the heap.
-   */
-  size_t GetMaxAllocatedSize();
 
   /** Get the size (in bytes) of available memory in the heap.
    */
@@ -50,24 +48,28 @@ class MemoryAllocator {
    */
   void ResetScratch();
 
+  /** Get head fo the scratch memory buffer.
+   */
+  void *GetScratchBuffer();
+
   /** Allocate memory that is intended to persist for the lifetime of the
    * allocator. \param size    Size of allocation (in bytes)
    */
-  void *AllocatePersistantBuffer(size_t size);
+  void *AllocatePersistantBuffer(size_t size,
+                                 size_t alignment = WORD_ALIGNMENT);
 
   /** Allocate scratch memory that will only be used temporarilly.
    * \param size    Size of allocation (in bytes)
    */
-  void *AllocateScratchBuffer(size_t size);
+  void *AllocateScratchBuffer(size_t size, size_t alignment = WORD_ALIGNMENT);
 
  private:
-  void *AllocateBuffer(size_t size);
+  void *AllocateBuffer(size_t size, size_t alignment = WORD_ALIGNMENT);
 
   void *buffer_;
   size_t buffer_size_;
   void *alloc_tail_;
   void *scratch_head_;
-  size_t max_allocated_;
 };
 
 #endif  // XCORE_OPERATORS_ALLOCATOR_H_

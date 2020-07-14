@@ -23,15 +23,15 @@ from ..conftest import (
 PARAMS = deepcopy(PARAMS)
 
 PARAMS["extended"].update(
-    {"input_batch": [1, 2], "input_channels": [5, 10, 29], "outputs": [2, 10],}
+    {"input_batch": [1, 2], "input_channels": [4, 8, 16], "outputs": [2, 10],}
 )
 
 PARAMS["default"].update(
-    {"input_batch": [1, 2], "input_channels": [5, 10, 29], "outputs": [2, 10],}
+    {"input_batch": [1, 2], "input_channels": [4, 32], "outputs": [2, 10],}
 )
 
 PARAMS["smoke"].update(
-    {"input_batch": [1], "input_channels": [5, 29], "outputs": [10],}
+    {"input_batch": [1], "input_channels": [4, 32], "outputs": [10],}
 )
 
 
@@ -59,11 +59,12 @@ def update_params_with_reshape(PARAMS, *, is_matching):
             for t in product(
                 product(
                     params["input_batch"],
-                    params["input_channels"],
                     params["input_height"],
                     params["input_width"],
+                    params["input_channels"],
                 ),
                 product(
+                    # Basic dim re-ordering
                     params["input_batch"],
                     params["input_channels"],
                     params["input_height"],
@@ -77,14 +78,20 @@ def update_params_with_reshape(PARAMS, *, is_matching):
             for t in product(
                 product(
                     params["input_batch"],
-                    params["input_channels"],
                     params["input_height"],
                     params["input_width"],
+                    params["input_channels"],
                 ),
+                # Basic dimensionality reduction
                 product(
                     params["input_batch"],
                     params["input_height"],
-                    params["input_width"],
+                    (
+                        np.prod(p)
+                        for p in product(
+                            params["input_width"], params["input_channels"]
+                        )
+                    ),
                 ),
             )
         )
@@ -95,14 +102,23 @@ def update_params_with_reshape(PARAMS, *, is_matching):
                 product(
                     params["input_batch"],
                     params["input_height"],
-                    params["input_width"],
+                    (
+                        np.prod(p)
+                        for p in product(
+                            params["input_width"], params["input_channels"]
+                        )
+                    ),
                 ),
                 product(
                     params["input_batch"],
                     (
-                        np.array(params["input_height"])
-                        * np.array(params["input_width"])
-                    ).tolist(),
+                        np.prod(p)
+                        for p in product(
+                            params["input_height"],
+                            params["input_width"],
+                            params["input_channels"],
+                        )
+                    ),
                 ),
             )
         )

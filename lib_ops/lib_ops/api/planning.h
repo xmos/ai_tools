@@ -7,7 +7,9 @@
 
 namespace xcore {
 
-constexpr size_t max_regions = 5;
+constexpr size_t changrp_len = (16);
+constexpr size_t bso_changrp_len = (7 * changrp_len);
+constexpr size_t bso_changrp_bytes = (bso_changrp_len * 2);
 
 typedef struct RowColRegion {
   int32_t top;
@@ -18,17 +20,17 @@ typedef struct RowColRegion {
 
 class RowColRegionArray {
  public:
-  RowColRegionArray() : size_(0) {}
+  RowColRegionArray();
+  void Init(size_t size);
   const RowColRegion &operator[](int i);
   void Append(const RowColRegion &region);
 
-  int32_t GetSize() { return size_; }
-  // void Clear() { size_ = 0; }
-
-  RowColRegion regions[max_regions];
+  size_t GetSize();
 
  private:
+  int32_t next_;
   int32_t size_;
+  RowColRegion *regions_;
 };
 
 typedef struct ChannelGroup {
@@ -39,29 +41,40 @@ typedef struct ChannelGroup {
 
 class ChannelGroupArray {
  public:
-  ChannelGroupArray() : n_chans_(0) {}
+  ChannelGroupArray();
+  void Init(size_t size);
   const ChannelGroup &operator[](int i);
-  void SetNumChannels(int32_t chans) { n_chans_ = chans; }
-  int32_t GetSize();
+  void Append(const ChannelGroup &changrp);
+  size_t GetSize();
 
  private:
-  int32_t n_chans_;
-  ChannelGroup chan_group_;
+  int32_t next_;
+  int32_t size_;
+  ChannelGroup *chan_groups_;
 };
 
 class ExecutionPlan {
  public:
-  ExecutionPlan() : n_threads_(0) {}
+  ExecutionPlan();
   ~ExecutionPlan() {}
 
   void SetNumThreads(int32_t n_threads) { n_threads_ = n_threads; }
-  int32_t GetNumThreads() { return n_threads_; }
+  size_t GetNumThreads() { return n_threads_; }
+
+  void SetWeightsScratchSize(size_t size);
+  size_t GetWeightsScratchSize();
+  size_t GetWeightsScratchOffset();
+
+  void SetBiasScratchSize(size_t size);
+  size_t GetBiasScratchSize();
+  size_t GetBiasScratchOffset();
 
   RowColRegionArray regions;
   ChannelGroupArray changrps;
 
  private:
-  int32_t n_threads_;
+  size_t n_threads_;
+  size_t bias_scratch_offset_;
 };
 
 }  // namespace xcore

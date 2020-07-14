@@ -39,7 +39,6 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
             )
 
     def mutate(self, op: Operator) -> None:
-        subgraph = op.subgraph
 
         with self.using(op):
             producer = self._producer
@@ -56,9 +55,7 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
 class CanonicalizeReshapePass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
 
-        if op.operator_code.code is not BuiltinOpCodes.RESHAPE and not super().match(
-            op
-        ):
+        if not(super().match(op) and op.operator_code.code is BuiltinOpCodes.RESHAPE):
             return False
 
         try:
@@ -73,9 +70,8 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
             op.outputs[0].shape
         ), "RESHAPE input and output shapes are not consistent"
 
-        assert (
-            -1 not in op.inputs[0].shape and -1 not in op.outputs[0].shape
-        ), "Dynamically sized tensors not supported"
+        if  -1 not in op.inputs[0].shape and -1 not in op.outputs[0].shape:
+            self.logger.warning("Dynamically sized tensors not supported")
 
         return len(op.inputs) == 2 and op.inputs[1].is_constant
 

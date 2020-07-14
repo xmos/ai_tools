@@ -9,16 +9,18 @@ include ../../../make/libs.mk
 #********************
 # App specific
 #********************
-APPFLAGS := -fxscope
-APPFLAGS += config.xscope
-APPFLAGS += -DNDEBUG
-#APPFLAGS += -DENABLE_TRACING
+APPBASE = mobilenet
+APPFLAGS := -DNDEBUG
+#APPFLAGS := -g
+APPFLAGS += -DENABLE_TRACING
 APPFLAGS += -DENABLE_BENCHMARKING
 
 ifeq ($(TARGET), x86)
-	APP = mobilenet
+	APP = $(APPBASE)
 else # must be xcore
-	APP = mobilenet.xe
+	APPFLAGS += -fxscope
+	APPFLAGS += config.xscope
+	APP = $(APPBASE).xe
 endif
 
 INCLUDES := $(TENSORFLOW_INCLUDES)
@@ -28,27 +30,44 @@ INCLUDES += -Isrc
 # source file paths
 VPATH := $(TENSORFLOW_VPATH)
 VPATH += $(LIBS_VPATH)
-VPATH += src
+
+MODEL_SOURCE_FILE := src/mobilenet_v1.c
 
 # sources
 SOURCES := $(TENSORFLOW_SOURCES)
 SOURCES += $(LIBS_SOURCES)
-SOURCES += mobilenet_ops_resolver.cc
-SOURCES += mobilenet_v1.c
-SOURCES += ai_engine.cc 
-ifeq ($(TARGET), x86)
-	SOURCES += x86_main.cc
-else # must be xcore
-	SOURCES += xcore_main.xc
+SOURCES += $(MODEL_SOURCE_FILE)
+SOURCES += src/mobilenet_ops_resolver.cc
+SOURCES += src/ai_engine.cc 
+SOURCES += src/main.c
+ifeq ($(TARGET), xcore)
+	SOURCES += src/main.xc
 endif
 
 include ../../../make/rules.mk
 
-.PHONY: all clean $(APP)
+.PHONY: all flash ddr clean $(APP)
 
 $(BIN_DIR)/$(APP): $(OBJECTS)
 	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) $(APPFLAGS) $(OBJECT_FILES) -o $(BIN_DIR)/$(APP)
 
+$(BIN_DIR)/image_n0c0.swmem: $(MODEL_SOURCE_FILE)
+	cd $(BIN_DIR) && xobjdump --strip $(APPBASE).xe
+	cd $(BIN_DIR) && xobjdump --split $(APPBASE).xb
+	$(FLASH) --write-all $@ --target XCORE-AI-EXPLORER
+
+flash: APPFLAGS += -DUSE_SWMEM
+flash: $(BIN_DIR)/$(APP) $(BIN_DIR)/image_n0c0.swmem
+
+ddr: APPFLAGS += -DUSE_EXTMEM
+ddr: $(BIN_DIR)/$(APP)
+
 clean:
-	-@rm -rvf $(OBJECT_FILES) $(BIN_DIR)/$(APP)
+	-@rm -rvf $(OBJECT_FILES) $(BIN_DIR)/$(APPBASE).xe
+	-@rm -rvf $(BIN_DIR)/$(APPBASE).xb
+	-@rm -rvf $(BIN_DIR)/*.bin
+	-@rm -rvf $(BIN_DIR)/*.xn
+	-@rm -rvf $(BIN_DIR)/*.swmem
+	-@rm -rvf $(BIN_DIR)/*.txt
+	-@rm -rvf $(BIN_DIR)/*.xscope

@@ -37,11 +37,11 @@ Building for xCORE with the model in DDR
 
 Running with the xCORE simulator
 
-    > xsim --xscope "-offline trace.xmt" --args bin/cifar10.xe ../test_inputs/dog.bin
+    > xsim --xscope "-offline trace.xmt" --args bin/cifar10.xe test_inputs/horse.bin
 
 Running with hardware
 
-    > xrun --io --xscope --args bin/cifar10.xe ../test_inputs/dog.bin
+    > xrun --io --xscope --args bin/cifar10.xe test_inputs/horse.bin
 
 ## x86
 
@@ -51,9 +51,9 @@ Building for x86
 
 Running
 
-    > ./bin/arm_benchmark ../test_inputs/ship.bin
+    > ./bin/cifar10 test_inputs/horse.bin
 
 ## Computing Accuracy on xCORE
 
     > cd test_inputs
-    > ./test_accuracy.py --xe path/to/arm_benchmark.xe
+    > ./test_accuracy.py --xe path/to/cifar10.xe

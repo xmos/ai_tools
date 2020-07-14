@@ -29,10 +29,11 @@ VPATH += $(UNITY_VPATH)
 VPATH += src
 
 SOURCES := $(UNITY_SOURCES)
-SOURCES += lib_ops/src/memory.c
+SOURCES += lib_ops/src/device_memory.c
 SOURCES += lib_ops/src/allocator.cpp
 SOURCES += lib_ops/src/benchmarking.cpp
 SOURCES += lib_ops/src/dispatcher.cpp
+SOURCES += lib_ops/src/planning.cpp
 SOURCES += test_allocator.cpp
 SOURCES += test_dispatcher.cpp
 SOURCES += test_execution_plan.cpp

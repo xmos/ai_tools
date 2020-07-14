@@ -138,9 +138,7 @@ class SplitPaddingPass(OperatorMatchingPass):
 
         # create new (batch/channel-wise) operator
         new_op = subgraph.create_operator(
-            OperatorCode(BuiltinOpCodes.PAD),
-            builtin_options_type=BuiltinOptions.PadOptions,
-            inputs=[old_input],
+            OperatorCode(BuiltinOpCodes.PAD), inputs=[old_input],
         )
         subgraph.insert_operator(op, new_op)
 

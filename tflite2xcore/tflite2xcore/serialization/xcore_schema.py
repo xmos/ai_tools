@@ -295,6 +295,7 @@ __BuiltinOpCodes_to_BuiltinOptions = {
     BuiltinOpCodes.SELECT_V2: BuiltinOptions.SelectV2Options,
     BuiltinOpCodes.DENSIFY: BuiltinOptions.DensifyOptions,
     BuiltinOpCodes.SEGMENT_SUM: BuiltinOptions.SegmentSumOptions,
+    BuiltinOpCodes.BATCH_MATMUL: BuiltinOptions.BatchMatMulOptions,
 }
 BuiltinOpCodes.to_BuiltinOptions = lambda self: __BuiltinOpCodes_to_BuiltinOptions[self]
 

@@ -1,14 +1,15 @@
 # Generating schema_py_generated.py
 
-## Update to the latest flatbuffers python
+## Install flatbuffers version 1.12.0 or newer
 
-Pull/Clone & checkout master branch
-
-Update flatbuffers python
-
-    > pip install path/to/flatbuffers/python/
+Pull/Clone & checkout release branch
 
 Build latests flatc
+
+    > mkdir buld
+    > cd build
+    > cmake ../
+    > make install
 
 ## Generate schema
     

@@ -32,12 +32,8 @@ class InputOutputCanonicalizationManager(PassManager):
         )
 
 
-def strip_model(model, *, remove_softmax=False, debug=False, legalize_op_versions=True):
+def strip_model(model, *, debug=False, legalize_op_versions=True):
     pass_mgr = InputOutputCanonicalizationManager(model, debug=debug)
-
-    # TODO: remove this
-    if remove_softmax:
-        pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
     if legalize_op_versions:
         pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
@@ -79,7 +75,6 @@ def add_float_input_output(model, debug=False):
 def optimize_for_xcore(
     model,
     *,
-    remove_softmax=False,
     cleanup=True,
     minification=False,
     num_threads=1,
@@ -110,10 +105,6 @@ def optimize_for_xcore(
 
     # need to cleanup after the first round of canonicalization
     pass_mgr.register_passes(CleanupManager())
-
-    # TODO: remove this
-    if remove_softmax:
-        pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())
@@ -189,7 +180,6 @@ def convert(
     tflite_input_path,
     tflite_output_path,
     *,
-    remove_softmax=False,
     num_threads=None,
     minification=False,
     intermediates_path=None,
@@ -199,7 +189,6 @@ def convert(
     model = XCOREModel.read_flatbuffer(tflite_input_path)
     optimize_for_xcore(
         model,
-        remove_softmax=remove_softmax,
         minification=minification,
         num_threads=num_threads,
         intermediates_path=intermediates_path,

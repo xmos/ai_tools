@@ -157,22 +157,6 @@ class OutputTensorMatchingPass(SubgraphTransformationPass):
         super().log_match(f"output [{self._obj_index}]: {tensor.name}")
 
 
-# TODO: remove this pass
-class RemoveSoftmaxOutputPass(OperatorMatchingPass):
-    def match(self, op):
-        return (
-            super().match(op)
-            and op.operator_code.code is BuiltinOpCodes.SOFTMAX
-            and op.outputs[0] in op.subgraph.outputs
-        )
-
-    def mutate(self, op):
-        subgraph = op.subgraph
-        subgraph.outputs.append(op.inputs[0])
-        subgraph.remove_tensor(op.outputs[0])
-        subgraph.remove_operator(op)
-
-
 class QuantizedOperatorMatchingPass(OperatorMatchingPass):
     @property
     def _output(self):

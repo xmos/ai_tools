@@ -178,16 +178,17 @@ class ChannelGroupSlicePlanner(ParallelizationPlanner):
 
     def create_n_thread_candidates(self, num_threads):
         changrps = ChannelGroupSlicePlanner.changrp_split_helper(self.Cout)
-        self.logger.info(
-            f"create_n_thread_candidates: num_threads={num_threads}, changrps={str(changrps)}"
-        )
-        self.add_candidate_plan(
-            ParallelizationPlan(
-                num_threads,
-                cost=lambda plan: self.estimate_plan_cost(plan),
-                changrp_slices=changrps,
+        if len(changrps) < num_threads:
+            self.logger.info(
+                f"create_n_thread_candidates: num_threads={num_threads}, changrps={str(changrps)}"
             )
-        )
+            self.add_candidate_plan(
+                ParallelizationPlan(
+                    num_threads,
+                    cost=lambda plan: self.estimate_plan_cost(plan),
+                    changrp_slices=changrps,
+                )
+            )
 
 
 class SlicePlanner(ParallelizationPlanner):

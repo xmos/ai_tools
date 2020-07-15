@@ -36,9 +36,6 @@ class ChannelGroupParallelizationPass(ParallelizationPass):
             int(Cout), num_threads=self.num_threads, forced=self.forced
         )
         plan = planner.find_optimal_plan()
-        plan.num_threads = min(
-            plan.num_threads, len(plan.changrp_slices)
-        )  # TODO: fix this
 
         op.add_custom_options(par=plan.to_dict())
 

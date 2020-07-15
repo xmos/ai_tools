@@ -11,7 +11,9 @@ from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_XC_avgpool2d,
 )
 
-from .test_ReplaceAveragePool2DPass import PARAMS
+from ..test_pooling_passes.conftest import PARAMS, pool_size
+from .conftest import test_matching_params, test_mutate, PARAMS as PAR_PARAMS
+
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
@@ -19,13 +21,14 @@ from .test_ReplaceAveragePool2DPass import PARAMS
 
 PARAMS = deepcopy(PARAMS)
 
-PARAMS["default"].update({"num_threads": [1, 3, 4, 5]})
+for k in PARAMS:
+    PARAMS[k].update(
+        {
+            "num_threads": PAR_PARAMS[k]["num_threads"],
+            "model_builder": [build_XC_maxpool2d, build_XC_avgpool2d],
+        }
+    )
 
-PARAMS["smoke"].update({"num_threads": [1, 5]})
-
-PARAMS["default"].update({"model_builder": [build_XC_maxpool2d, build_XC_avgpool2d]})
-
-PARAMS["smoke"].update({"model_builder": [build_XC_maxpool2d, build_XC_avgpool2d]})
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
@@ -40,23 +43,6 @@ def trf_pass(num_threads):
 @pytest.fixture()
 def model(model_builder, input_shape, pool_size, strides):
     return model_builder(input_shape=input_shape, pool_size=pool_size, strides=strides)
-
-
-#  ----------------------------------------------------------------------------
-#                               TEST FUNCTIONS
-#  ----------------------------------------------------------------------------
-
-
-def test_matching(trf_pass, model, num_threads):
-    assert trf_pass.match(model.subgraphs[0].operators[-1])
-
-
-def test_mutate(trf_pass, model, num_threads):
-    op = model.subgraphs[0].operators[0]
-    assert "par" not in op.custom_options
-    trf_pass.run(model)
-    model.sanity_check()
-    assert "par" in op.custom_options
 
 
 if __name__ == "__main__":

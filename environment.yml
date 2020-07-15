@@ -170,6 +170,7 @@ dependencies:
     - scipy==1.4.1
     - tensorboard==2.2.0
     - tensorflow==2.2.0
+    - tensorflow-datasets==3.2.1
     - tensorflow-estimator==2.2.0
     - termcolor==1.1.0
     - typing-extensions==3.7.4

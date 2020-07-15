@@ -7,9 +7,10 @@ import enum
 from abc import ABC, abstractmethod
 
 from tflite2xcore import xlogging as logging
+from tflite2xcore.utils import ACC_PERIOD
 
 MAX_THREADS = 5
-CHANNEL_GROUP_SIZE = 16
+CHANNEL_GROUP_SIZE = ACC_PERIOD
 
 
 class ParallelizationPlan:
@@ -83,20 +84,27 @@ class ParallelizationPlanner(ABC):
                 for plan in self._candidate_plans
                 if plan.num_threads == self.num_threads
             ]
-            best_forced_plan = min(forced_candidates, key=lambda plan: plan.cost)
+            best_forced_plan = None
+            if forced_candidates:
+                best_forced_plan = min(forced_candidates, key=lambda plan: plan.cost)
 
         if self.forced:
+            if best_forced_plan:
+                self.logger.warning(
+                    f"forcing suboptimal plan {repr(best_forced_plan)} "
+                    f"when better alternative {repr(best_plan)} exists."
+                )
+                return best_forced_plan
+
             self.logger.warning(
-                f"forcing suboptimal plan {repr(best_forced_plan)} "
-                f"when better alternative {repr(best_plan)} exists."
+                f"no forced plan could be found, resolving to {repr(best_plan)}"
             )
-            return best_forced_plan
         else:
             self.logger.info(
                 f"replacing suboptimal plan {repr(best_forced_plan)} "
                 f"with better alternative {repr(best_plan)}."
             )
-            return best_plan
+        return best_plan
 
 
 class ChannelGroupSlicePlanner(ParallelizationPlanner):
@@ -109,10 +117,10 @@ class ChannelGroupSlicePlanner(ParallelizationPlanner):
     @staticmethod
     def changrp_split_helper(num_channels):
         changrps = []
-        num_changrps = math.ceil(num_channels / float(CHANNEL_GROUP_SIZE))
+        num_changrps = math.ceil(num_channels / CHANNEL_GROUP_SIZE)
         for i in range(num_changrps):
             Cbegin = i * CHANNEL_GROUP_SIZE
-            Cend = min(Cbegin + CHANNEL_GROUP_SIZE - 1, num_channels - 1,)
+            Cend = min(Cbegin + CHANNEL_GROUP_SIZE - 1, num_channels - 1)
             changrps.append([Cbegin, Cend])
 
         return changrps
@@ -132,7 +140,7 @@ class ChannelGroupSlicePlanner(ParallelizationPlanner):
 
     def create_n_thread_candidates(self, num_threads):
         changrps = ChannelGroupSlicePlanner.changrp_split_helper(self.Cout)
-        if len(changrps) < num_threads:
+        if len(changrps) >= num_threads:
             self.logger.info(
                 f"create_n_thread_candidates: num_threads={num_threads}, changrps={str(changrps)}"
             )

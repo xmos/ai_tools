@@ -22,28 +22,37 @@ class ScratchMemoryCalculationPass(OperatorMatchingPass):
             and "mem" not in op.custom_options
         )
 
+    @property
+    def _bias_scratch_size(self) -> int:
+        _, Bv, Bl = self._op.inputs[2].shape
+        return Bv * Bl * self._op.inputs[2].type.to_bytes()
+
+    @property
+    @abstractmethod
+    def _weights_scratch_size(self) -> int:
+        raise NotImplementedError()
+
+    def mutate(self, op: Operator) -> None:
+        with self.using(op):
+            op.add_custom_options(
+                mem=[self._weights_scratch_size, self._bias_scratch_size]
+            )
+
 
 class ScratchMemoryFullyConnectedPass(ScratchMemoryCalculationPass):
     MATCHING_OPCODES = (XCOREOpCodes.XC_fc_deepin_anyout,)
 
-    def mutate(self, op):
-        Cout, Cin = op.inputs[1].shape
-        _, Bv, Bl = op.inputs[2].shape
+    @property
+    def _weights_scratch_size(self) -> int:
+        Cout, Cin = self._op.inputs[1].shape
 
-        if "par" in op.custom_options:
-            # get the min of threads or number of channel groups
-            i_cg = min(
-                op.custom_options["par"]["th"], len(op.custom_options["par"]["cg"])
-            )
-            weights_scratch_size = Cin * (
-                op.custom_options["par"]["cg"][i_cg - 1][1] + 1
-            )
+        custom_options = self._op.custom_options
+        if "par" in custom_options:
+            # get the min of threads or number of channel groups  # TODO: fix this
+            i_cg = min(custom_options["par"]["th"], len(custom_options["par"]["cg"]))
+            return Cin * (custom_options["par"]["cg"][i_cg - 1][1] + 1)
         else:
-            weights_scratch_size = Cin * Cout
-
-        bias_scratch_size = Bv * Bl * op.inputs[2].type.to_bytes()
-
-        op.add_custom_options(mem=[weights_scratch_size, bias_scratch_size])
+            return Cin * Cout
 
 
 class ScratchMemoryConv2dPass(ScratchMemoryCalculationPass):
@@ -53,43 +62,34 @@ class ScratchMemoryConv2dPass(ScratchMemoryCalculationPass):
         XCOREOpCodes.XC_conv2d_depthwise,
     )
 
-    def mutate(self, op):
-        _, _, _, Cin = op.inputs[0].shape
-        if len(op.inputs[1].shape) == 4:
-            _, Kh, Kw, _ = op.inputs[1].shape
+    @property
+    def _weights_scratch_size(self) -> int:
+        _, _, _, Cin = self._op.inputs[0].shape
+        if len(self._op.inputs[1].shape) == 4:
+            _, Kh, Kw, _ = self._op.inputs[1].shape
         else:
-            Kh, Kw, _ = op.inputs[1].shape
+            Kh, Kw, _ = self._op.inputs[1].shape
 
-        _, Bv, Bl = op.inputs[2].shape
-
-        if "par" in op.custom_options:
-            max_cg_size = max(
-                [cg[1] - cg[0] + 1 for cg in op.custom_options["par"]["cg"]]
-            )
+        custom_options = self._op.custom_options
+        if "par" in custom_options:
+            max_cg_size = max([cg[1] - cg[0] + 1 for cg in custom_options["par"]["cg"]])
         else:
             max_cg_size = CHANNEL_GROUP_SIZE
 
-        weights_scratch_size = Cin * Kh * Kw * max_cg_size
-        bias_scratch_size = Bv * Bl * op.inputs[2].type.to_bytes()
-
-        op.add_custom_options(mem=[weights_scratch_size, bias_scratch_size])
+        return Cin * Kh * Kw * max_cg_size
 
 
 class ScratchMemoryConv2d1x1Pass(ScratchMemoryCalculationPass):
     MATCHING_OPCODES = (XCOREOpCodes.XC_conv2d_1x1,)
 
-    def mutate(self, op):
-        _, _, _, Cin = op.inputs[0].shape
-        _, Bv, Bl = op.inputs[2].shape
+    @property
+    def _weights_scratch_size(self) -> int:
+        _, _, _, Cin = self._op.inputs[0].shape
 
-        if "par" in op.custom_options:
-            max_cg_size = max(
-                [cg[1] - cg[0] + 1 for cg in op.custom_options["par"]["cg"]]
-            )
+        custom_options = self._op.custom_options
+        if "par" in custom_options:
+            max_cg_size = max([cg[1] - cg[0] + 1 for cg in custom_options["par"]["cg"]])
         else:
             max_cg_size = CHANNEL_GROUP_SIZE
 
-        weights_scratch_size = Cin * max_cg_size
-        bias_scratch_size = Bv * Bl * op.inputs[2].type.to_bytes()
-
-        op.add_custom_options(mem=[weights_scratch_size, bias_scratch_size])
+        return Cin * max_cg_size

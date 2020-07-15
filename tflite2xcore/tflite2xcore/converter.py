@@ -144,6 +144,9 @@ def optimize_for_xcore(
     )
     pass_mgr.register_pass(passes.ParallelizeRequant16To8Pass(num_threads=num_threads))
     pass_mgr.register_pass(passes.ParallelizeConv2dPass(num_threads=num_threads))
+    pass_mgr.register_pass(
+        passes.ParallelizeDepthwiseConv2dPass(num_threads=num_threads)
+    )
     pass_mgr.register_pass(passes.ParallelizePooling2DPass(num_threads=num_threads))
     pass_mgr.register_pass(
         passes.ParallelizeGlobalAveragePool2DPass(num_threads=num_threads)

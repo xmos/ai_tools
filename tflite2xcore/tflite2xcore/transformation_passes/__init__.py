@@ -72,6 +72,7 @@ from .word_alignment_passes import CanonicalizeConv2DInputChannels
 
 from .parallelization_passes import (
     ParallelizeConv2dPass,
+    ParallelizeDepthwiseConv2dPass,
     ParallelizeFullyConnectedPass,
     ParallelizeRequant16To8Pass,
     ParallelizePooling2DPass,

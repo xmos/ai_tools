@@ -3,7 +3,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from pathlib import Path
-from imagenet_common import ImageNetModel, DefaultParser
+from imagenet_common import ImagenetteModel, DefaultParser
 import tensorflow as tf
 import numpy as np
 
@@ -12,7 +12,7 @@ DEFAULT_PATH = Path(__file__).parent.joinpath("debug", DEFAULT_NAME).resolve()
 DEFAULT_NUM_THREADS = 1
 
 
-class Mobilenet(ImageNetModel):
+class Mobilenet(ImagenetteModel):
     def build(self, **kwargs):
         assert "classes" not in kwargs, "classes should be set in constructor"
         assert (
@@ -96,7 +96,7 @@ def main(raw_args=None):
         type=int,
         default=[10],
         help="Target classes. If a single number 'n' is given, the first 'n' "
-        "ImageNet classes are targeted. If a list of inteegers is given, "
+        "Imagenette classes are targeted. If a list of integers is given, "
         "the classes with the given indices as targeted",
     )
     parser.add_argument(

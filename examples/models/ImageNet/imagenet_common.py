@@ -3,6 +3,7 @@
 # TODO: fix this hack
 from os.path import dirname, realpath
 import sys
+
 sys.path.append(dirname(dirname(realpath(__file__))))
 
 from model_common import DefaultParser
@@ -11,24 +12,47 @@ from pathlib import Path
 from tflite2xcore.model_generation import utils
 from tflite2xcore.model_generation.interface import KerasModel
 import tensorflow as tf
+import tensorflow_datasets as tfds
 import numpy as np
 import json
+import itertools
 
 
-with open(Path(__file__).parent / "example_urls.json", 'r') as f:
+with open(Path(__file__).parent / "example_urls.json", "r") as f:
     IMAGENET_URLS = json.load(f)
 
-CLASS_INDEX_PATH = ("https://storage.googleapis.com/download.tensorflow.org"
-                    "/data/imagenet_class_index.json")
+CLASS_INDEX_PATH = (
+    "https://storage.googleapis.com/download.tensorflow.org"
+    "/data/imagenet_class_index.json"
+)
 
 fpath = tf.keras.utils.get_file(
-    'imagenet_class_index.json',
+    "imagenet_class_index.json",
     CLASS_INDEX_PATH,
-    cache_subdir='models',
-    file_hash='c2c37ea517e94d9795004a39431a14cb'
+    cache_subdir="models",
+    file_hash="c2c37ea517e94d9795004a39431a14cb",
 )
 with open(fpath) as f:
-    CLASS_INDEX = json.load(f)
+    IMAGENET_CLASS_INDEX = json.load(f)
+
+IMAGENETTE_CLASSES = [
+    "tench",
+    "English_springer",
+    "cassette_player",
+    "chain_saw",
+    "church",
+    "French_horn",
+    "garbage_truck",
+    "gas_pump",
+    "golf_ball",
+    "parachute",
+]
+
+IMAGENETTE_CLASS_INDEX = {
+    idx: v for idx, v in IMAGENET_CLASS_INDEX.items() if v[1] in IMAGENETTE_CLASSES
+}
+
+IMAGENETTE_DS = tfds.load("imagenette/320px-v2", split="validation")
 
 
 class ImageNetModel(KerasModel):
@@ -67,36 +91,28 @@ class ImageNetModel(KerasModel):
     def prep_data(self):
         pass
 
+
+class ImagenetteModel(ImageNetModel):
     def gen_test_data(self, *, samples_per_class=10):
-        cache_dir = self._path / "cache" / "imagenet"
-        cache_dir.mkdir(exist_ok=True, parents=True)
+        assert len(self.classes) <= 10, "At most 10 classes can be used with Imagenette"
+        assert all(
+            class_idx < 10 for class_idx in self.classes
+        ), "Imagenette indexes range from 0 through 9"
 
-        examples = []
-        for class_idx in self.classes:
-            class_key = str(class_idx)
-            class_name = CLASS_INDEX[class_key][1]
-            class_urls = IMAGENET_URLS[class_key][:samples_per_class]
-            assert len(class_urls) == samples_per_class
-            print(f"Loading images for class {class_idx}: '{class_name}'...")
+        print("Loading images...")
+        examples = {class_idx: [] for class_idx in self.classes}
+        for d in IMAGENETTE_DS:
+            class_idx = int(d["label"])
+            if class_idx in self.classes:
+                if len(examples[class_idx]) < samples_per_class:
+                    examples[class_idx].append(
+                        tf.image.resize(
+                            d["image"].numpy().astype(np.float32) / 127.5 - 1.0,
+                            self.input_size,
+                        )
+                    )
 
-            class_examples = []
-            for j, url in enumerate(class_urls):
-                f = tf.keras.utils.get_file(
-                    f"{j:02d}.jpg",
-                    origin=url,
-                    cache_dir=cache_dir,
-                    cache_subdir="_".join([f"{class_idx:03d}", class_name])
-                )
-                img = tf.keras.preprocessing.image.load_img(
-                    f, target_size=self.input_size
-                )
-                class_examples.append(
-                    tf.keras.preprocessing.image.img_to_array(img).astype(np.float32)
-                )
-            assert len(class_examples) == samples_per_class
+        examples = np.stack(list(itertools.chain(*examples.values())))
 
-            examples += class_examples
-
-        examples = (np.stack(examples) / 127.5 - 1.)
-        self.data['export'] = examples
-        self.data['quant'] = examples
+        self.data["export"] = examples
+        self.data["quant"] = examples

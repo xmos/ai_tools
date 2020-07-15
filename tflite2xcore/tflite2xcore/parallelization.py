@@ -99,52 +99,6 @@ class ParallelizationPlanner(ABC):
             return best_plan
 
 
-class UnidirectionalSplitPlanner(ParallelizationPlanner):
-    def __init__(self, height, width, **kwargs):
-        super().__init__(**kwargs)
-        assert isinstance(
-            height, int
-        ), f"received height={height} with type {type(height)}"
-        assert isinstance(width, int), f"received width={width} with type {type(width)}"
-        assert height * width > 0, f"received height={height}, width={width}"
-        self.height, self.width = height, width
-
-    @staticmethod
-    def unidir_split_helper(dim, num_threads):
-        adjustments = {
-            1: lambda rem: [0],
-            2: lambda rem: [int(rem >= 1), 0],
-            3: lambda rem: [int(rem >= 1), 0, int(rem >= 2)],
-            4: lambda rem: [int(rem >= 1), int(rem == 3), 0, int(rem >= 2)],
-            5: lambda rem: [
-                int(rem >= 1),
-                int(rem >= 3),
-                0,
-                int(rem >= 4),
-                int(rem >= 2),
-            ],
-        }
-
-        base, rem = dim // num_threads, dim % num_threads
-        block_lengths = [base + a for a in adjustments[num_threads](rem)]
-        block_starts = [0]
-        for j in range(num_threads - 1):
-            block_starts.append(block_starts[j] + block_lengths[j])
-        return block_starts, block_lengths
-
-    def unidir_width_layout(self, num_threads):
-        starts, widths = UnidirectionalSplitPlanner.unidir_split_helper(
-            self.width, num_threads
-        )
-        return [[0, starts[j], self.height, widths[j]] for j in range(num_threads)]
-
-    def unidir_height_layout(self, num_threads):
-        starts, heights = UnidirectionalSplitPlanner.unidir_split_helper(
-            self.height, num_threads
-        )
-        return [[starts[j], 0, heights[j], self.width] for j in range(num_threads)]
-
-
 class ChannelGroupSlicePlanner(ParallelizationPlanner):
     def __init__(self, Cout, **kwargs):
         super().__init__(**kwargs)
@@ -204,6 +158,29 @@ class SlicePlanner(ParallelizationPlanner):
         self.Cout = Cout
         self.height, self.width = height, width
 
+    @staticmethod
+    def unidir_split_helper(dim, num_threads):
+        adjustments = {
+            1: lambda rem: [0],
+            2: lambda rem: [int(rem >= 1), 0],
+            3: lambda rem: [int(rem >= 1), 0, int(rem >= 2)],
+            4: lambda rem: [int(rem >= 1), int(rem == 3), 0, int(rem >= 2)],
+            5: lambda rem: [
+                int(rem >= 1),
+                int(rem >= 3),
+                0,
+                int(rem >= 4),
+                int(rem >= 2),
+            ],
+        }
+
+        base, rem = dim // num_threads, dim % num_threads
+        block_lengths = [base + a for a in adjustments[num_threads](rem)]
+        block_starts = [0]
+        for j in range(num_threads - 1):
+            block_starts.append(block_starts[j] + block_lengths[j])
+        return block_starts, block_lengths
+
     def estimate_plan_cost(self, plan):
         def estimate_changrp_cost(changrp):
             Cbegin, Cend = changrp
@@ -226,10 +203,7 @@ class SlicePlanner(ParallelizationPlanner):
         return cost
 
     def create_n_thread_candidates(self, num_threads):
-
-        starts, heights = UnidirectionalSplitPlanner.unidir_split_helper(
-            self.height, num_threads
-        )
+        starts, heights = SlicePlanner.unidir_split_helper(self.height, num_threads)
 
         row_slices = [
             [starts[j], 0, heights[j], self.width] for j in range(num_threads)

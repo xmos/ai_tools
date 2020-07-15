@@ -4,21 +4,11 @@ import numpy as np
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_schema import (
-    TensorType,
-    BuiltinOpCodes,
-    BuiltinOptions,
-    OperatorCode,
-    XCOREOpCodes,
-)
-from tflite2xcore.parallelization import (
-    SlicePlanner,
-    CHANNEL_GROUP_SIZE,
-)
+from tflite2xcore.xcore_schema import BuiltinOpCodes, OperatorCode, XCOREOpCodes
+from tflite2xcore.parallelization import CHANNEL_GROUP_SIZE
 from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
-    QuantizedOperatorMatchingPass,
     LegalizeWeightBiasPass,
     LegalizeXCWeightBiasPass,
     OperatorMatchingPass,
@@ -317,39 +307,6 @@ class LegalizeXCShallowinConvPass(LegalizeXCConvPass):
             self._log_weights()
 
 
-class ParallelizeConv2dPass(OperatorMatchingPass):
-    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.num_threads = num_threads or 1
-        assert isinstance(self.num_threads, int)
-        assert self.num_threads > 0
-        self.forced = forced
-
-    MATCHING_OPCODES = (
-        XCOREOpCodes.XC_conv2d_shallowin,
-        XCOREOpCodes.XC_conv2d_deep,
-        XCOREOpCodes.XC_conv2d_1x1,
-        XCOREOpCodes.XC_conv2d_depthwise,
-    )
-
-    def match(self, op):
-        if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
-            return "par" not in op.custom_options
-
-    def mutate(self, op):
-        _, height, width, Cout = op.outputs[0].shape
-        planner = SlicePlanner(
-            int(Cout),
-            int(height),
-            int(width),
-            num_threads=self.num_threads,
-            forced=self.forced,
-        )
-        plan = planner.find_optimal_plan()
-
-        op.add_custom_options(par=plan.to_dict())
-
-
 class ScratchMemoryConv2dPass(OperatorMatchingPass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -409,4 +366,3 @@ class ScratchMemoryConv2d1x1Pass(OperatorMatchingPass):
         bias_scratch_size = Bv * Bl * op.inputs[2].type.to_bytes()
 
         op.add_custom_options(mem=[weights_scratch_size, bias_scratch_size])
-

@@ -28,31 +28,36 @@ class ParallelizationPass(OperatorMatchingPass):
             and "par" not in op.custom_options
         )
 
+    @property
+    @abstractmethod
+    def _planner(self):
+        raise NotImplementedError()
+
+    def mutate(self, op):
+        with self.using(op):
+            op.add_custom_options(par=self._planner.find_optimal_plan().to_dict())
+
 
 class ChannelGroupParallelizationPass(ParallelizationPass):
-    def mutate(self, op):
-        _, Cout = op.outputs[0].shape
-        planner = ChannelGroupSlicePlanner(
+    @property
+    def _planner(self):
+        _, Cout = self._op.outputs[0].shape
+        return ChannelGroupSlicePlanner(
             int(Cout), num_threads=self.num_threads, forced=self.forced
         )
-        plan = planner.find_optimal_plan()
-
-        op.add_custom_options(par=plan.to_dict())
 
 
 class SpatialParallelizationPass(ParallelizationPass):
-    def mutate(self, op):
-        _, height, width, Cout = op.outputs[0].shape
-        planner = SlicePlanner(
+    @property
+    def _planner(self):
+        _, height, width, Cout = self._op.outputs[0].shape
+        return SlicePlanner(
             int(Cout),
             int(height),
             int(width),
             num_threads=self.num_threads,
             forced=self.forced,
         )
-        plan = planner.find_optimal_plan()
-
-        op.add_custom_options(par=plan.to_dict())
 
 
 class ParallelizeFullyConnectedPass(ChannelGroupParallelizationPass):

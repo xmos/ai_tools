@@ -13,7 +13,6 @@ from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
     LegalizeXCWeightBiasPass,
-    OperatorMatchingPass,
 )
 from tflite2xcore.xlogging import log_method_output
 
@@ -97,35 +96,3 @@ class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
         super().mutate(op)
         self.add_requantize(op)
         self.mutate_output(op)
-
-
-class ScratchMemoryFullyConnectedPass(OperatorMatchingPass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def match(self, op):
-        if (
-            super().match(op)
-            and op.operator_code.code == XCOREOpCodes.XC_fc_deepin_anyout
-        ):
-            return "mem" not in op.custom_options
-
-    def mutate(self, op):
-        Cout, Cin = op.inputs[1].shape
-        _, Bv, Bl = op.inputs[2].shape
-
-        if "par" in op.custom_options:
-            # get the min of threads or number of channel groups
-            i_cg = min(
-                op.custom_options["par"]["th"], len(op.custom_options["par"]["cg"])
-            )
-            weights_scratch_size = Cin * (
-                op.custom_options["par"]["cg"][i_cg - 1][1] + 1
-            )
-        else:
-            weights_scratch_size = Cin * Cout
-
-        bias_scratch_size = Bv * Bl * op.inputs[2].type.to_bytes()
-
-        op.add_custom_options(mem=[weights_scratch_size, bias_scratch_size])
-

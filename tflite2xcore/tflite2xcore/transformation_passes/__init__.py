@@ -20,14 +20,11 @@ from .conv2d_passes import (
     LegalizeXCDeepConvPass,
     ReplaceShallowinConv2dPass,
     LegalizeXCShallowinConvPass,
-    ScratchMemoryConv2dPass,
-    ScratchMemoryConv2d1x1Pass,
 )
 
 from .fully_connected_passes import (
     ReplaceFullyConnectedPass,
     LegalizeXCFullyConnectedPass,
-    ScratchMemoryFullyConnectedPass,
 )
 
 from .pooling_passes import (
@@ -77,4 +74,10 @@ from .parallelization_passes import (
     ParallelizeRequant16To8Pass,
     ParallelizePooling2DPass,
     ParallelizeGlobalAveragePool2DPass,
+)
+
+from .scratch_memory_passes import (
+    ScratchMemoryFullyConnectedPass,
+    ScratchMemoryConv2dPass,
+    ScratchMemoryConv2d1x1Pass,
 )

@@ -156,6 +156,7 @@ class OutputTensorMatchingPass(SubgraphTransformationPass):
     def log_match(self, tensor):
         super().log_match(f"output [{self._obj_index}]: {tensor.name}")
 
+
 class QuantizedOperatorMatchingPass(OperatorMatchingPass):
     @property
     def _output(self):

@@ -156,7 +156,7 @@ class OpTestDefaultFCModel(KerasModel):
                 tf.keras.layers.Flatten(input_shape=(input_dim, 1, 1)),
                 tf.keras.layers.Dense(
                     output_dim,
-                    activation="softmax",
+                    activation="linear",
                     bias_initializer=inits["bias_init"],
                     kernel_initializer=inits["weight_init"],
                 ),
@@ -164,7 +164,7 @@ class OpTestDefaultFCModel(KerasModel):
         )
         self.core_model.compile(
             optimizer="adam",
-            loss="sparse_categorical_crossentropy",
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
             metrics=["accuracy"],
         )
         self.core_model.summary()

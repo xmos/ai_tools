@@ -13,12 +13,6 @@ if __name__ == "__main__":
     parser.add_argument("tflite_input", help="Input .tflite file.")
     parser.add_argument("tflite_output", help="Output .tflite file.")
     parser.add_argument(
-        "--remove_softmax",
-        action="store_true",
-        default=False,
-        help="Remove output softmax operation.",
-    )
-    parser.add_argument(
         "--minify",
         action="store_true",
         default=False,
@@ -65,7 +59,6 @@ if __name__ == "__main__":
     xcore_conv.convert(
         tflite_input_path,
         tflite_output_path,
-        remove_softmax=args.remove_softmax,
         minification=args.minify,
         num_threads=args.num_threads,
         intermediates_path=args.intermediates_path,

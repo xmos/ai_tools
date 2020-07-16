@@ -23,7 +23,6 @@ from .conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
-
 PARAMS["extended"].update(
     {"input_channels": list(range(4, 36, 4)), "kernel_width": list(range(1, 9))}
 )

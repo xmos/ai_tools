@@ -11,6 +11,18 @@ from .transformation_passes import OperatorMatchingPass
 
 class ScratchMemoryCalculationPass(OperatorMatchingPass):
     @property
+    def _input(self):
+        return self._op.inputs[0]
+
+    @property
+    def _weights(self):
+        return self._op.inputs[1]
+
+    @property
+    def _biases(self):
+        return self._op.inputs[2]
+
+    @property
     @abstractmethod
     def MATCHING_OPCODES(self) -> Tuple[XCOREOpCodes]:
         return tuple()
@@ -24,8 +36,8 @@ class ScratchMemoryCalculationPass(OperatorMatchingPass):
 
     @property
     def _bias_scratch_size(self) -> int:
-        _, Bv, Bl = self._op.inputs[2].shape
-        return Bv * Bl * self._op.inputs[2].type.to_bytes()
+        _, Bv, Bl = self._biases.shape
+        return Bv * Bl * self._biases.type.to_bytes()
 
     @property
     @abstractmethod
@@ -44,31 +56,26 @@ class ScratchMemoryFullyConnectedPass(ScratchMemoryCalculationPass):
 
     @property
     def _weights_scratch_size(self) -> int:
-        Cout, Cin = self._op.inputs[1].shape
+        Cout, Cin = self._weights.shape
 
         custom_options = self._op.custom_options
         if "par" in custom_options:
-            # get the min of threads or number of channel groups  # TODO: fix this
-            i_cg = min(custom_options["par"]["th"], len(custom_options["par"]["cg"]))
+            # NOTE: number of channel groups is at least number of threads
+            i_cg = custom_options["par"]["th"]
             return Cin * (custom_options["par"]["cg"][i_cg - 1][1] + 1)
         else:
             return Cin * Cout
 
 
-class ScratchMemoryConv2dPass(ScratchMemoryCalculationPass):
-    MATCHING_OPCODES = (
-        XCOREOpCodes.XC_conv2d_deep,
-        XCOREOpCodes.XC_conv2d_shallowin,
-        XCOREOpCodes.XC_conv2d_depthwise,
-    )
+class Conv2dScratchMemoryCalculationPass(ScratchMemoryCalculationPass):
+    @property
+    @abstractmethod
+    def _kernel_size(self) -> Tuple[int, int]:
+        raise NotImplementedError()
 
     @property
     def _weights_scratch_size(self) -> int:
-        _, _, _, Cin = self._op.inputs[0].shape
-        if len(self._op.inputs[1].shape) == 4:
-            _, Kh, Kw, _ = self._op.inputs[1].shape
-        else:
-            Kh, Kw, _ = self._op.inputs[1].shape
+        _, _, _, Cin = self._input.shape
 
         custom_options = self._op.custom_options
         if "par" in custom_options:
@@ -76,20 +83,30 @@ class ScratchMemoryConv2dPass(ScratchMemoryCalculationPass):
         else:
             max_cg_size = CHANNEL_GROUP_SIZE
 
+        Kh, Kw = self._kernel_size
         return Cin * Kh * Kw * max_cg_size
 
 
-class ScratchMemoryConv2d1x1Pass(ScratchMemoryCalculationPass):
+class ScratchMemoryConv2dPass(Conv2dScratchMemoryCalculationPass):
+    MATCHING_OPCODES = (
+        XCOREOpCodes.XC_conv2d_deep,
+        XCOREOpCodes.XC_conv2d_shallowin,
+        XCOREOpCodes.XC_conv2d_depthwise,  # TODO: factor out
+    )
+
+    @property
+    def _kernel_size(self) -> Tuple[int, int]:
+        if len(self._weights.shape) == 4:  # TODO: fix this
+            _, Kh, Kw, _ = self._weights.shape
+        else:
+            Kh, Kw, _ = self._weights.shape
+
+        return Kh, Kw
+
+
+class ScratchMemoryConv2d1x1Pass(Conv2dScratchMemoryCalculationPass):
     MATCHING_OPCODES = (XCOREOpCodes.XC_conv2d_1x1,)
 
     @property
-    def _weights_scratch_size(self) -> int:
-        _, _, _, Cin = self._op.inputs[0].shape
-
-        custom_options = self._op.custom_options
-        if "par" in custom_options:
-            max_cg_size = max([cg[1] - cg[0] + 1 for cg in custom_options["par"]["cg"]])
-        else:
-            max_cg_size = CHANNEL_GROUP_SIZE
-
-        return Cin * max_cg_size
+    def _kernel_size(self) -> Tuple[int, int]:
+        return 1, 1

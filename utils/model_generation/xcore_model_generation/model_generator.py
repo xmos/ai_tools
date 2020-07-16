@@ -1,17 +1,20 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from inspect import isabstract
-from typing import Union, List, Dict, Any
-from abc import ABC, abstractmethod, abstractclassmethod
+from typing import Union, List, Dict, Any, TYPE_CHECKING
+from abc import ABC, abstractmethod
 
 import tensorflow as tf  # type: ignore
+
+if TYPE_CHECKING:
+    from .model_converter import ModelConverter
 
 
 Configuration = Dict[str, Any]
 
 
 class ModelGenerator(ABC):
-    """ Superclass defining parameterized automatic model generation.
+    """ Superclass for defining parameterized automatic model generation.
 
     The main use case of this class is generation of the integration test
     models.
@@ -26,7 +29,7 @@ class ModelGenerator(ABC):
         self._converters = []
 
     @classmethod
-    def builtin_configs(cls, *args) -> List[Configuration]:
+    def builtin_configs(cls) -> List[Configuration]:
         """ Returns the basic configurations the build method should be run with.
 
         This method can load the configuration of a .yml file or defined in
@@ -67,5 +70,5 @@ class ModelGenerator(ABC):
 class TestModelGenerator(ModelGenerator):
     @classmethod
     @abstractmethod
-    def builtin_configs(cls, level: str = "default", *args) -> List[Configuration]:
+    def builtin_configs(cls, level: str = "default") -> List[Configuration]:
         return []

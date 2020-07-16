@@ -155,6 +155,7 @@ def optimize_for_xcore(
     # NOTE: scratch memory passes must be registered after parallelization passes
     pass_mgr.register_pass(passes.ScratchMemoryConv2dPass())
     pass_mgr.register_pass(passes.ScratchMemoryConv2d1x1Pass())
+    pass_mgr.register_pass(passes.ScratchMemoryDepthwiseConv2dPass())
     pass_mgr.register_pass(passes.ScratchMemoryFullyConnectedPass())
 
     if cleanup:

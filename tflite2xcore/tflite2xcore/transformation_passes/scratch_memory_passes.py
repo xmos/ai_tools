@@ -91,17 +91,19 @@ class ScratchMemoryConv2dPass(Conv2dScratchMemoryCalculationPass):
     MATCHING_OPCODES = (
         XCOREOpCodes.XC_conv2d_deep,
         XCOREOpCodes.XC_conv2d_shallowin,
-        XCOREOpCodes.XC_conv2d_depthwise,  # TODO: factor out
     )
 
     @property
     def _kernel_size(self) -> Tuple[int, int]:
-        if len(self._weights.shape) == 4:  # TODO: fix this
-            _, Kh, Kw, _ = self._weights.shape
-        else:
-            Kh, Kw, _ = self._weights.shape
+        return self._weights.shape[1:3]
 
-        return Kh, Kw
+
+class ScratchMemoryDepthwiseConv2dPass(Conv2dScratchMemoryCalculationPass):
+    MATCHING_OPCODES = (XCOREOpCodes.XC_conv2d_depthwise,)
+
+    @property
+    def _kernel_size(self) -> Tuple[int, int]:
+        return self._weights.shape[0:2]
 
 
 class ScratchMemoryConv2d1x1Pass(Conv2dScratchMemoryCalculationPass):

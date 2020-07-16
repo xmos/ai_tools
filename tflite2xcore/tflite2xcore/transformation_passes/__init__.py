@@ -80,4 +80,5 @@ from .scratch_memory_passes import (
     ScratchMemoryFullyConnectedPass,
     ScratchMemoryConv2dPass,
     ScratchMemoryConv2d1x1Pass,
+    ScratchMemoryDepthwiseConv2dPass,
 )

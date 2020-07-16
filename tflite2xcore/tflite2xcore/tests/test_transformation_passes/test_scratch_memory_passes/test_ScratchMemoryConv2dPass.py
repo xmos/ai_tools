@@ -9,7 +9,6 @@ from tflite2xcore.transformation_passes import ScratchMemoryConv2dPass
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_XC_conv2d_deep,
     build_XC_conv2d_shallowin,
-    # build_XC_conv2d_depthwise,
 )
 
 from ..test_conv2d_passes.conftest import PARAMS, weight_shape
@@ -24,13 +23,7 @@ PARAMS = deepcopy(PARAMS)
 
 for k in PARAMS:
     PARAMS[k].update(
-        {
-            "model_builder": [
-                build_XC_conv2d_deep,
-                build_XC_conv2d_shallowin,
-                # build_XC_conv2d_depthwise,
-            ],
-        }
+        {"model_builder": [build_XC_conv2d_deep, build_XC_conv2d_shallowin]}
     )
 
 

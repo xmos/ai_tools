@@ -4,6 +4,8 @@ import pytest
 
 from copy import deepcopy
 
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.transformation_passes import ParallelizeFullyConnectedPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
@@ -30,12 +32,12 @@ for k in PARAMS:
 
 
 @pytest.fixture()
-def trf_pass(num_threads):
+def trf_pass(num_threads: int) -> XCOREModel:
     return ParallelizeFullyConnectedPass(num_threads=num_threads)
 
 
 @pytest.fixture()
-def model(outputs, input_channels):
+def model(outputs: int, input_channels: int) -> ModelTransformationPass:
     return build_XC_fc_deepin_anyout(outputs=outputs, input_channels=input_channels)
 
 

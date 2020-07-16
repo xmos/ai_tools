@@ -2,6 +2,9 @@
 
 import pytest
 
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
+
 from ..conftest import PARAMS, test_matching_params, _test_non_matching_params
 
 
@@ -10,7 +13,7 @@ from ..conftest import PARAMS, test_matching_params, _test_non_matching_params
 #  ----------------------------------------------------------------------------
 
 
-def test_mutate(trf_pass, model):
+def test_mutate(trf_pass: ModelTransformationPass, model: XCOREModel) -> None:
     op = model.subgraphs[0].operators[0]
     assert "mem" not in op.custom_options
 

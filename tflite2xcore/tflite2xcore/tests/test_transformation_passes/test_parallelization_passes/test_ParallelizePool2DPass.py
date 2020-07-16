@@ -3,7 +3,10 @@
 import pytest
 
 from copy import deepcopy
+from typing import Tuple, Callable
 
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.transformation_passes import ParallelizePooling2DPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
@@ -36,12 +39,17 @@ for k in PARAMS:
 
 
 @pytest.fixture()
-def trf_pass(num_threads):
+def trf_pass(num_threads: int) -> ModelTransformationPass:
     return ParallelizePooling2DPass(num_threads=num_threads)
 
 
 @pytest.fixture()
-def model(model_builder, input_shape, pool_size, strides):
+def model(
+    model_builder: Callable[..., XCOREModel],
+    input_shape: Tuple[int, int, int],
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+) -> XCOREModel:
     return model_builder(input_shape=input_shape, pool_size=pool_size, strides=strides)
 
 

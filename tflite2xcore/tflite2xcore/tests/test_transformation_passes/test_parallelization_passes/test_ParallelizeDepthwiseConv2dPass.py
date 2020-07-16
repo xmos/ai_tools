@@ -3,7 +3,10 @@
 import pytest
 
 from copy import deepcopy
+from typing import Tuple
 
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.transformation_passes import ParallelizeDepthwiseConv2dPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
@@ -30,12 +33,16 @@ for k in PARAMS:
 
 
 @pytest.fixture()
-def trf_pass(num_threads):
+def trf_pass(num_threads: int) -> ModelTransformationPass:
     return ParallelizeDepthwiseConv2dPass(num_threads=num_threads)
 
 
 @pytest.fixture()
-def model(weight_shape, input_size, strides):
+def model(
+    weight_shape: Tuple[int, int, int, int],
+    input_size: Tuple[int, int],
+    strides: Tuple[int, int],
+) -> XCOREModel:
     return build_XC_conv2d_depthwise(
         weight_shape=weight_shape, input_size=input_size, strides=strides
     )

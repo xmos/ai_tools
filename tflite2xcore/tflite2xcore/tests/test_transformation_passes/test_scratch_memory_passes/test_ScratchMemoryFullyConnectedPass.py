@@ -2,6 +2,8 @@
 
 import pytest
 
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.transformation_passes import ScratchMemoryFullyConnectedPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
@@ -18,12 +20,12 @@ from .conftest import test_matching_params, test_mutate
 
 
 @pytest.fixture()
-def trf_pass():
+def trf_pass() -> ModelTransformationPass:
     return ScratchMemoryFullyConnectedPass()
 
 
 @pytest.fixture()
-def model(outputs, input_channels):
+def model(outputs: int, input_channels: int) -> XCOREModel:
     return build_XC_fc_deepin_anyout(outputs=outputs, input_channels=input_channels)
 
 

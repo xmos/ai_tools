@@ -3,7 +3,10 @@
 import pytest
 
 from copy import deepcopy
+from typing import Tuple
 
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.transformation_passes import ParallelizeGlobalAveragePool2DPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
@@ -30,12 +33,14 @@ for k in PARAMS:
 
 
 @pytest.fixture()
-def trf_pass(num_threads):
+def trf_pass(num_threads: int) -> XCOREModel:
     return ParallelizeGlobalAveragePool2DPass(num_threads=num_threads)
 
 
 @pytest.fixture()
-def model(input_shape, reduction_dims):
+def model(
+    input_shape: Tuple[int, int, int], reduction_dims: Tuple[int, ...]
+) -> ModelTransformationPass:
     return build_XC_avgpool2d_global(
         input_shape=input_shape, reduction_dims=reduction_dims
     )

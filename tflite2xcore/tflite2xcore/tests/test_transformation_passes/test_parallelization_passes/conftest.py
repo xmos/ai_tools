@@ -2,6 +2,9 @@
 
 import pytest
 
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
+
 from ..conftest import PARAMS, test_matching_params, _test_non_matching_params
 
 
@@ -21,7 +24,9 @@ PARAMS["smoke"].update({"num_threads": [5]})
 #  ----------------------------------------------------------------------------
 
 
-def test_mutate(trf_pass, model, num_threads):
+def test_mutate(
+    trf_pass: ModelTransformationPass, model: XCOREModel, num_threads: int
+) -> None:
     op = model.subgraphs[0].operators[0]
     assert "par" not in op.custom_options
 

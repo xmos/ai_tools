@@ -13,6 +13,7 @@
 #define PLAN_OC_LOOP_COUNTER 5
 #define PLAN_X_HEIGHT_LOOP_COUNTER 6
 #define PLAN_X_WIDTH_LOOP_COUNTER 7
+#define PLAN_Y_V_STRIDE 8
 
 //Stack Usage
 
@@ -46,7 +47,6 @@
 #define S_IC_LOOP_COUNTER 18
 #define S_OC_LOOP_COUNTER 19
 
-
 #define S_ZERO_0 20
 #define S_ZERO_1 21 
 #define S_ZERO_2 22
@@ -57,7 +57,7 @@
 #define S_ZERO_7 27
 
 #define S_THRESHOLD_P 28
-//19
+#define S_Y_V_STRIDE 29
 
 #define S_X_V_STRIDE 30
 #define S_X_H_STRIDE 31
@@ -97,9 +97,14 @@ make_16_bit_output:
     //init K_current
     {ldw K_current, sp[S_K_p]; nop}
 
-    //clear the ring buffers
+    //clear D of the ring buffer
     ldaw t, sp[S_ZERO_256]
     vldd t[0]
+
+
+    //init R to threshold_current
+    mov t, threshold_current
+    ldaw threshold_current, threshold_current[8] //advance the threshold_current pointer by 16 half words
     vldr t[0]
 
     //X_current points to X[h + 0][w + 0][ic]
@@ -115,18 +120,22 @@ make_16_bit_output:
             
             ldw ic_loop_counter, sp[S_IC_LOOP_COUNTER]
             ic_inner_loop:
+
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
+
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
+
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
+
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
@@ -175,14 +184,14 @@ FUNCTION_NAME:
     std r4, r5, sp[S_SAVE_R4_R5]
     std r6, r7, sp[S_SAVE_R6_R7]
     std r8, r9, sp[S_SAVE_R8_R9]
-    std r10, r2, sp[S_SAVE_R10_K_p]
+    std r2, r10, sp[S_SAVE_R10_K_p]
 
     std r0, r1, sp[S_X_p_Y_p]
 
     stw r3, sp[S_THRESHOLD_P]
     
 	ldc r11, 256 //set int16 mode - 32 bit accumulators	
-    vsetc r11
+    vsetc r11;
 
     ldaw t, sp[NSTACKWORDS+1] //load the plan pointer
     ldw t, t[0]
@@ -210,6 +219,19 @@ FUNCTION_NAME:
     ldw s, t[PLAN_X_HEIGHT_LOOP_COUNTER]
     stw s, sp[S_X_HEIGHT_LOOP_COUNTER]
 
+    ldw s, t[PLAN_Y_V_STRIDE]
+    stw s, sp[S_Y_V_STRIDE]
+
+    {ldc s, 0; nop}
+    stw s, sp[S_ZERO_0]
+    stw s, sp[S_ZERO_1]
+    stw s, sp[S_ZERO_2]
+    stw s, sp[S_ZERO_3]
+    stw s, sp[S_ZERO_4]
+    stw s, sp[S_ZERO_5]
+    stw s, sp[S_ZERO_6]
+    stw s, sp[S_ZERO_7]
+
     start:
     ldc r_256_bits, (256/8)
 
@@ -225,27 +247,19 @@ FUNCTION_NAME:
                 
                 //load X_p to X_current
                 ldw X_current, sp[S_X_p]
-
-                //copy X_current for use in this function
                 bl make_16_bit_output 
-
-
                 ldaw s, sp[S_THRESHOLDS_0_15] //this will hold the lower 16 bits of the 32 output channels
-                {vlsub threshold_current[0]; nop}
+                //TODO vsat
                 {vdepth1; ldc t, 3}
                 vstrpv s[0], t
-                ldaw threshold_current, threshold_current[8] //advance the threshold_current pointer by 16 half words
 
                 //load X_p to X_current
                 ldw X_current, sp[S_X_p]
-                bl make_16_bit_output// (h, w, oc_loop_index+1)
-
-                ldaw s, sp[S_THRESHOLDS_16_31]
-                {vlsub threshold_current[0]; nop}
+                bl make_16_bit_output
+                ldaw s, sp[S_THRESHOLDS_16_31] //this will hold the lower 16 bits of the 32 output channels
+                //TODO vsat
                 {vdepth1; ldc t, 3}
                 vstrpv s[0], t
-                ldaw threshold_current, threshold_current[8] //advance the threshold_current pointer by 16 half words
-
                 
                 //merge the two 16 bits together
                 ldd s, t, sp[S_THRESHOLDS]
@@ -254,7 +268,6 @@ FUNCTION_NAME:
                 stw t, Y_p[0]
                 add Y_p, Y_p, 4 
                 //save the 32 results to memory
-
 
             {bt oc_loop_counter, oc_loop; sub oc_loop_counter, oc_loop_counter, 1}
 
@@ -265,6 +278,10 @@ FUNCTION_NAME:
             stw X_current, sp[S_X_p]
 
         {bt x_width_loop, w_loop; sub x_width_loop, x_width_loop, 1 }
+
+        //TODO advance Y to the next line
+        {ldw t, sp[S_Y_V_STRIDE]; nop}
+        {add Y_p, Y_p, t; nop }
 
         {ldw t, sp[S_X_V_STRIDE]; nop}
         ldw X_current, sp[S_X_p]
@@ -281,7 +298,7 @@ FUNCTION_NAME:
     ldd r4, r5, sp[S_SAVE_R4_R5]
     ldd r6, r7, sp[S_SAVE_R6_R7]
     ldd r8, r9, sp[S_SAVE_R8_R9]
-    ldd r10, r2, sp[S_SAVE_R10_K_p]
+    ldd r2, r10, sp[S_SAVE_R10_K_p]
     retsp NSTACKWORDS
 
     .cc_bottom FUNCTION_NAME.function

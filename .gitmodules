@@ -23,3 +23,6 @@
 	path = third_party/ruy
 	url = git@github.com:google/ruy.git
 	ignore = dirty
+[submodule "third_party/compute-engine"]
+	path = third_party/compute-engine
+	url = git@github.com:larq/compute-engine.git

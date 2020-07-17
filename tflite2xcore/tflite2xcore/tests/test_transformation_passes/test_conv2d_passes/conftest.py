@@ -39,10 +39,11 @@ PARAMS["extended"].update(
 
 PARAMS["default"].update(
     {
-        "kernel_height": [2, 3, 7],
-        "kernel_width": [2, 3, 7],
+        "kernel_height": [2, 3, 5],
+        "kernel_width": [2, 3, 5],
         "non_matching_input_channels": [3, 15],
-        "output_channels": PARAMS["default"]["input_channels"],
+        "input_channels": PARAMS["default"]["input_channels"][1:],
+        "output_channels": PARAMS["default"]["input_channels"][1:],
         "non_matching_output_channels": [3, 15],
         "padding": list(Padding),
         "stride_h": [1, 2],

@@ -2,15 +2,16 @@
 
 import pytest
 
-from copy import deepcopy
-
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.transformation_passes import ScratchMemoryFullyConnectedPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_XC_fc_deepin_anyout,
 )
 
-from .conftest import PARAMS
+from ..test_fully_connected_passes.conftest import PARAMS
+from .conftest import test_matching_params, test_mutate
 
 
 #  ----------------------------------------------------------------------------
@@ -19,30 +20,13 @@ from .conftest import PARAMS
 
 
 @pytest.fixture()
-def trf_pass():
+def trf_pass() -> ModelTransformationPass:
     return ScratchMemoryFullyConnectedPass()
 
 
 @pytest.fixture()
-def model(outputs, input_channels):
+def model(outputs: int, input_channels: int) -> XCOREModel:
     return build_XC_fc_deepin_anyout(outputs=outputs, input_channels=input_channels)
-
-
-#  ----------------------------------------------------------------------------
-#                               TEST FUNCTIONS
-#  ----------------------------------------------------------------------------
-
-
-def test_matching(trf_pass, model):
-    assert trf_pass.match(model.subgraphs[0].operators[-1])
-
-
-def test_mutate(trf_pass, model):
-    op = model.subgraphs[0].operators[0]
-    assert "mem" not in op.custom_options
-    trf_pass.run(model)
-    model.sanity_check()
-    assert "mem" in op.custom_options
 
 
 if __name__ == "__main__":

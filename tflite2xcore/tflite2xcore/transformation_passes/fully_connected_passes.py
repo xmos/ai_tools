@@ -12,11 +12,8 @@ from tflite2xcore.xcore_schema import (
 from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
-    QuantizedOperatorMatchingPass,
     LegalizeXCWeightBiasPass,
-    OperatorMatchingPass,
 )
-from tflite2xcore.parallelization import ChannelGroupSlicePlanner, CHANNEL_GROUP_SIZE
 from tflite2xcore.xlogging import log_method_output
 
 
@@ -99,87 +96,3 @@ class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
         super().mutate(op)
         self.add_requantize(op)
         self.mutate_output(op)
-
-
-class ParallelizeFullyConnectedPass(OperatorMatchingPass):
-    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.max_threads = num_threads or 1
-        assert isinstance(self.max_threads, int)
-        assert self.max_threads > 0
-        self.forced = forced
-
-    def match(self, op):
-        if (
-            super().match(op)
-            and op.operator_code.code is XCOREOpCodes.XC_fc_deepin_anyout
-        ):
-            return "par" not in op.custom_options
-
-    def mutate(self, op):
-        _, Cout = op.outputs[0].shape
-        planner = ChannelGroupSlicePlanner(
-            int(Cout), num_threads=self.max_threads, forced=self.forced
-        )
-        plan = planner.find_optimal_plan()
-        plan.num_threads = min(plan.num_threads, len(plan.changrp_slices))
-
-        op.add_custom_options(par=plan.to_dict())
-
-
-class ParallelizeRequant16To8Pass(OperatorMatchingPass):
-    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.max_threads = num_threads or 1
-        assert isinstance(self.max_threads, int)
-        assert self.max_threads > 0
-        self.forced = forced
-
-    def match(self, op):
-        if (
-            super().match(op)
-            and op.operator_code.code is XCOREOpCodes.XC_requantize_16_to_8
-        ):
-            return "par" not in op.custom_options
-
-    def mutate(self, op):
-        _, Cout = op.outputs[0].shape
-        planner = ChannelGroupSlicePlanner(
-            int(Cout), num_threads=self.max_threads, forced=self.forced
-        )
-        plan = planner.find_optimal_plan()
-        plan.num_threads = min(plan.num_threads, len(plan.changrp_slices))
-
-        op.add_custom_options(par=plan.to_dict())
-
-
-class ScratchMemoryFullyConnectedPass(OperatorMatchingPass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def match(self, op):
-        if (
-            super().match(op)
-            and op.operator_code.code == XCOREOpCodes.XC_fc_deepin_anyout
-        ):
-            return "mem" not in op.custom_options
-
-    def mutate(self, op):
-        Cout, Cin = op.inputs[1].shape
-        _, Bv, Bl = op.inputs[2].shape
-
-        if "par" in op.custom_options:
-            # get the min of threads or number of channel groups
-            i_cg = min(
-                op.custom_options["par"]["th"], len(op.custom_options["par"]["cg"])
-            )
-            weights_scratch_size = Cin * (
-                op.custom_options["par"]["cg"][i_cg - 1][1] + 1
-            )
-        else:
-            weights_scratch_size = Cin * Cout
-
-        bias_scratch_size = Bv * Bl * op.inputs[2].type.to_bytes()
-
-        op.add_custom_options(mem=[weights_scratch_size, bias_scratch_size])
-

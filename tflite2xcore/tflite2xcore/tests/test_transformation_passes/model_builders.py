@@ -677,7 +677,7 @@ def build_reshape(
     else:
         inputs = [tin]
 
-    op = subgraph.create_operator(
+    subgraph.create_operator(
         OperatorCode(BuiltinOpCodes.RESHAPE),
         inputs=inputs,
         outputs=[tout],

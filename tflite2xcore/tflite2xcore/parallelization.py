@@ -7,9 +7,10 @@ import enum
 from abc import ABC, abstractmethod
 
 from tflite2xcore import xlogging as logging
+from tflite2xcore.utils import ACC_PERIOD
 
 MAX_THREADS = 5
-CHANNEL_GROUP_SIZE = 16
+CHANNEL_GROUP_SIZE = ACC_PERIOD
 
 
 class ParallelizationPlan:
@@ -83,30 +84,86 @@ class ParallelizationPlanner(ABC):
                 for plan in self._candidate_plans
                 if plan.num_threads == self.num_threads
             ]
-            best_forced_plan = min(forced_candidates, key=lambda plan: plan.cost)
+            best_forced_plan = None
+            if forced_candidates:
+                best_forced_plan = min(forced_candidates, key=lambda plan: plan.cost)
 
         if self.forced:
+            if best_forced_plan:
+                self.logger.warning(
+                    f"forcing suboptimal plan {repr(best_forced_plan)} "
+                    f"when better alternative {repr(best_plan)} exists."
+                )
+                return best_forced_plan
+
             self.logger.warning(
-                f"forcing suboptimal plan {repr(best_forced_plan)} "
-                f"when better alternative {repr(best_plan)} exists."
+                f"no forced plan could be found, resolving to {repr(best_plan)}"
             )
-            return best_forced_plan
         else:
             self.logger.info(
                 f"replacing suboptimal plan {repr(best_forced_plan)} "
                 f"with better alternative {repr(best_plan)}."
             )
-            return best_plan
+        return best_plan
 
 
-class UnidirectionalSplitPlanner(ParallelizationPlanner):
-    def __init__(self, height, width, **kwargs):
+class ChannelGroupSlicePlanner(ParallelizationPlanner):
+    def __init__(self, Cout, **kwargs):
         super().__init__(**kwargs)
+        assert isinstance(Cout, int), f"received Cout={Cout} with type {type(Cout)}"
+        assert Cout > 0, f"received Cout={Cout}"
+        self.Cout = Cout
+
+    @staticmethod
+    def changrp_split_helper(num_channels):
+        changrps = []
+        num_changrps = math.ceil(num_channels / CHANNEL_GROUP_SIZE)
+        for i in range(num_changrps):
+            Cbegin = i * CHANNEL_GROUP_SIZE
+            Cend = min(Cbegin + CHANNEL_GROUP_SIZE - 1, num_channels - 1)
+            changrps.append([Cbegin, Cend])
+
+        return changrps
+
+    def estimate_plan_cost(self, plan):
+        def estimate_changrp_cost(changrp):
+            Cbegin, Cend = changrp
+            if Cend - Cbegin + 1 == CHANNEL_GROUP_SIZE:
+                return 1
+            else:
+                return 2  # NOTE: 2 might be a bit aggressive
+
+        return (
+            sum(estimate_changrp_cost(changrp) for changrp in plan.changrp_slices)
+            / plan.num_threads
+        )
+
+    def create_n_thread_candidates(self, num_threads):
+        changrps = ChannelGroupSlicePlanner.changrp_split_helper(self.Cout)
+        if len(changrps) >= num_threads:
+            self.logger.info(
+                f"create_n_thread_candidates: num_threads={num_threads}, changrps={str(changrps)}"
+            )
+            self.add_candidate_plan(
+                ParallelizationPlan(
+                    num_threads,
+                    cost=lambda plan: self.estimate_plan_cost(plan),
+                    changrp_slices=changrps,
+                )
+            )
+
+
+class SlicePlanner(ParallelizationPlanner):
+    def __init__(self, Cout, height, width, **kwargs):
+        super().__init__(**kwargs)
+        assert isinstance(Cout, int), f"received Cout={Cout} with type {type(Cout)}"
+        assert Cout > 0, f"received Cout={Cout}"
         assert isinstance(
             height, int
         ), f"received height={height} with type {type(height)}"
         assert isinstance(width, int), f"received width={width} with type {type(width)}"
         assert height * width > 0, f"received height={height}, width={width}"
+        self.Cout = Cout
         self.height, self.width = height, width
 
     @staticmethod
@@ -132,77 +189,6 @@ class UnidirectionalSplitPlanner(ParallelizationPlanner):
             block_starts.append(block_starts[j] + block_lengths[j])
         return block_starts, block_lengths
 
-    def unidir_width_layout(self, num_threads):
-        starts, widths = UnidirectionalSplitPlanner.unidir_split_helper(
-            self.width, num_threads
-        )
-        return [[0, starts[j], self.height, widths[j]] for j in range(num_threads)]
-
-    def unidir_height_layout(self, num_threads):
-        starts, heights = UnidirectionalSplitPlanner.unidir_split_helper(
-            self.height, num_threads
-        )
-        return [[starts[j], 0, heights[j], self.width] for j in range(num_threads)]
-
-
-class ChannelGroupSlicePlanner(ParallelizationPlanner):
-    def __init__(self, Cout, **kwargs):
-        super().__init__(**kwargs)
-        assert isinstance(Cout, int), f"received Cout={Cout} with type {type(Cout)}"
-        assert Cout > 0, f"received Cout={Cout}"
-        self.Cout = Cout
-
-    @staticmethod
-    def changrp_split_helper(num_channels):
-        changrps = []
-        num_changrps = math.ceil(num_channels / float(CHANNEL_GROUP_SIZE))
-        for i in range(num_changrps):
-            Cbegin = i * CHANNEL_GROUP_SIZE
-            Cend = min(Cbegin + CHANNEL_GROUP_SIZE - 1, num_channels - 1,)
-            changrps.append([Cbegin, Cend])
-
-        return changrps
-
-    def estimate_plan_cost(self, plan):
-        def estimate_changrp_cost(changrp):
-            Cbegin, Cend = changrp
-            if Cend - Cbegin + 1 == CHANNEL_GROUP_SIZE:
-                return 1
-            else:
-                return 2  # NOTE: 2 might be a bit aggressive
-
-        return (
-            sum(estimate_changrp_cost(changrp) for changrp in plan.changrp_slices)
-            / plan.num_threads
-        )
-
-    def create_n_thread_candidates(self, num_threads):
-        changrps = ChannelGroupSlicePlanner.changrp_split_helper(self.Cout)
-        self.logger.info(
-            f"create_n_thread_candidates: num_threads={num_threads}, changrps={str(changrps)}"
-        )
-        self.add_candidate_plan(
-            ParallelizationPlan(
-                num_threads,
-                cost=lambda plan: self.estimate_plan_cost(plan),
-                changrp_slices=changrps,
-            )
-        )
-
-
-class SlicePlanner(ParallelizationPlanner):
-    def __init__(self, Cout, height, width, **kwargs):
-        super().__init__(**kwargs)
-        assert isinstance(Cout, int), f"received Cout={Cout} with type {type(Cout)}"
-        assert Cout > 0, f"received Cout={Cout}"
-        assert isinstance(
-            height, int
-        ), f"received height={height} with type {type(height)}"
-        assert isinstance(width, int), f"received width={width} with type {type(width)}"
-        assert height * width > 0, f"received height={height}, width={width}"
-        self.Cout = Cout
-        self.height, self.width = height, width
-
     def estimate_plan_cost(self, plan):
         def estimate_changrp_cost(changrp):
             Cbegin, Cend = changrp
@@ -225,10 +211,7 @@ class SlicePlanner(ParallelizationPlanner):
         return cost
 
     def create_n_thread_candidates(self, num_threads):
-
-        starts, heights = UnidirectionalSplitPlanner.unidir_split_helper(
-            self.height, num_threads
-        )
+        starts, heights = SlicePlanner.unidir_split_helper(self.height, num_threads)
 
         row_slices = [
             [starts[j], 0, heights[j], self.width] for j in range(num_threads)

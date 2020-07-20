@@ -38,7 +38,7 @@ class TFLiteFloatConverter(ModelConverter):
 
 class TFLiteQuantConverter(ModelConverter):
     @abstractmethod
-    def convert(self, *, repr_data=None, **kwargs) -> None:
+    def convert(self, *, repr_data=None) -> None:
         raise NotImplementedError()  # TODO:
 
 

@@ -58,7 +58,7 @@ class ModelGenerator(ABC):
     @classmethod
     @abstractmethod
     def check_config(cls, **cfg) -> None:
-        """ Check if the given configuration parameters are legal."""
+        """ Checks if the given configuration parameters are legal."""
         pass
 
     @classmethod
@@ -67,7 +67,7 @@ class ModelGenerator(ABC):
         raise NotImplementedError()
 
 
-class TestModelGenerator(ModelGenerator):
+class IntegrationTestModelGenerator(ModelGenerator):
     @classmethod
     @abstractmethod
     def builtin_configs(cls, level: str = "default") -> List[Configuration]:

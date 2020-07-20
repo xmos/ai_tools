@@ -2,6 +2,8 @@
 
 from abc import ABC, abstractmethod
 
+import tensorflow as tf  # type: ignore
+
 from .model_generator import ModelGenerator
 
 
@@ -27,8 +29,11 @@ class ModelConverter(ABC):
 
 
 class TFLiteFloatConverter(ModelConverter):
-    def convert(self, **kwargs) -> None:
-        raise NotImplementedError()  # TODO:
+    def convert(self) -> None:
+        model_generator = self._model_generator
+        model_generator._converted_models[
+            self
+        ] = tf.lite.TFLiteConverter.from_keras_model(model_generator._model).convert()
 
 
 class TFLiteQuantConverter(ModelConverter):

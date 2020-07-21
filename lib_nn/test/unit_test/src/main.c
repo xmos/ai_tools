@@ -34,6 +34,7 @@ int main(void)
     test_fully_connected_16();
     test_requantize_16_to_8();
     test_lookup8();
+    test_bsign_8();
 
     return UNITY_END();
 }

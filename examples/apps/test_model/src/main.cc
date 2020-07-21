@@ -5,9 +5,9 @@
 #include <cstdio>
 #include <iostream>
 
-#include "lib_ops/api/lib_ops.h"
-#include "lib_ops/src/xcore_profiler.h"
-#include "lib_ops/src/xcore_reporter.h"
+#include "operators/dispatcher.h"
+#include "operators/xcore_profiler.h"
+#include "operators/xcore_reporter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/micro/micro_profiler.h"
@@ -90,8 +90,8 @@ static void setup_tflite(const char *model_buffer) {
   // Setup xCORE dispatcher (BEFORE calling AllocateTensors)
   static xcore::Dispatcher static_dispatcher(xcore_arena, kXCOREArenaSize,
                                              reporter);
-  xcore::XCoreStatus xcore_status = xcore::InitializeXCore(&static_dispatcher);
-  if (xcore_status != xcore::kXCoreOk) {
+  TfLiteStatus status = xcore::InitializeXCore(&static_dispatcher);
+  if (status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(reporter, "InitializeXCore() failed");
     return;
   }

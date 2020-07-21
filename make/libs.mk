@@ -1,15 +1,15 @@
 LIB_NN_DIR := ${PROJECT_ROOT_DIR}/lib_nn
-LIB_OPS_DIR := ${PROJECT_ROOT_DIR}/lib_ops
+OPERATORS_DIR := ${PROJECT_ROOT_DIR}/operators
 
 LIBS_INCLUDES := \
 	-I$(LIB_NN_DIR) \
 	-I$(LIB_NN_DIR)/lib_nn/api \
-	-I$(LIB_OPS_DIR)
+	-I$(OPERATORS_DIR)
 
 LIBS_VPATH += \
 	$(LIB_LOGGING_DIR) \
 	$(LIB_NN_DIR) \
-	$(LIB_OPS_DIR)
+	$(OPERATORS_DIR)
 
 LIBS_SOURCES := \
 	lib_nn/src/asm/asm_constants.c \
@@ -27,18 +27,18 @@ LIBS_SOURCES := \
 	lib_nn/src/c/util/deep/nn_conv2d_hstrip_deep.c \
 	lib_nn/src/c/util/shallow/nn_conv2d_hstrip_shallowin.c \
 	lib_nn/src/c/util/depthwise/nn_conv2d_hstrip_depthwise.c \
-	lib_ops/src/device_memory.c \
-	lib_ops/src/xcore_profiler.cpp \
-	lib_ops/src/xcore_reporter.cpp \
-	lib_ops/src/planning.cpp \
-	lib_ops/src/allocator.cpp \
-	lib_ops/src/dispatcher.cpp \
-	lib_ops/src/conv2d.cpp \
-	lib_ops/src/fully_connected.cpp\
-	lib_ops/src/activations.cpp \
-	lib_ops/src/pooling.cpp \
-	lib_ops/src/arg_min_max.cpp \
-	lib_ops/src/type_conversions.cpp
+	operators/device_memory.c \
+	operators/xcore_profiler.cpp \
+	operators/xcore_reporter.cpp \
+	operators/planning.cpp \
+	operators/allocator.cpp \
+	operators/dispatcher.cpp \
+	operators/conv2d.cpp \
+	operators/fully_connected.cpp\
+	operators/activations.cpp \
+	operators/pooling.cpp \
+	operators/arg_min_max.cpp \
+	operators/type_conversions.cpp
 
 ifneq ($(TARGET), x86)
 	LIBS_SOURCES += \

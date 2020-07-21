@@ -1,10 +1,12 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from inspect import isabstract
-from typing import Union, List, Dict, Any, TYPE_CHECKING
+from typing import Optional, Tuple, List, Dict, Any, TYPE_CHECKING
 from abc import ABC, abstractmethod
 
 import tensorflow as tf  # type: ignore
+
+from tflite2xcore.utils import set_all_seeds  # type: ignore # TODO: fix this
 
 if TYPE_CHECKING:
     from .model_converter import ModelConverter
@@ -21,12 +23,12 @@ class ModelGenerator(ABC):
     """
 
     _model: tf.keras.Model
+    _config: Configuration = {}
     _converted_models: Dict["ModelConverter", Any] = {}
-    _converters: List["ModelConverter"]
 
-    def __init__(self) -> None:
+    def __init__(self, converters: Optional[List["ModelConverter"]] = None) -> None:
         """ Registers the converters associated with the generated models. """
-        self._converters = []
+        self._converters = converters or []
 
     @classmethod
     def builtin_configs(cls) -> List[Configuration]:
@@ -37,37 +39,46 @@ class ModelGenerator(ABC):
         """
         return []
 
-    @classmethod
-    def runnable_subclasses(cls) -> List[type]:
-        """ Returns a list of non-abstract child classes including the class itself. """
-        return [
-            class_ for class_ in [cls] + cls.__subclasses__() if not isabstract(class_)
-        ]
-
     @abstractmethod
-    def build(self, **cfg) -> None:
+    def build(self) -> None:
         """ Sets the _model field with a tf.keras.Model object.
         
-        Generally, it should check the configuration using the check_config
-        method before building the keras model. When this method is run, it
-        should also reset the _converted_models field.
+        The configuration should be set using the set_config method before
+        calling this. When this method is run, it should also reset the
+        _converted_models field.
         """
-        self.check_config(**cfg)
         self._converted_models = {}
 
-    @classmethod
     @abstractmethod
-    def check_config(cls, **cfg) -> None:
-        """ Checks if the given configuration parameters are legal."""
-        pass
+    def set_config(self, **config: Any) -> None:
+        """ Configures the model generator before the build method is run.
+        
+        Should check if the given configuration parameters are legal.
+        Optionally sets the default values for missing configuration parameters.
+        """
+        self._config = config
 
     @classmethod
-    def parse_cfg(cls, cfg_string: str) -> List[Configuration]:
+    def parse_config(cls, config_string: str) -> List[Configuration]:
         """ Parses one or multiple lines of configuration string (e.g. yml). """
         raise NotImplementedError()
 
 
-class IntegrationTestModelGenerator(ModelGenerator):
+class KerasModelGenerator(ModelGenerator):
+    def _prep_backend(self) -> None:
+        tf.keras.backend.clear_session()
+        set_all_seeds()
+
+    @property
+    def _input_shape(self) -> Tuple[int, ...]:
+        return self._model.input_shape[1:]  # pylint: disable=no-member
+
+    @property
+    def _output_shape(self) -> Tuple[int, ...]:
+        return self._model.output_shape[1:]  # pylint: disable=no-member
+
+
+class IntegrationTestModelGenerator(KerasModelGenerator):
     @classmethod
     @abstractmethod
     def builtin_configs(cls, level: str = "default") -> List[Configuration]:

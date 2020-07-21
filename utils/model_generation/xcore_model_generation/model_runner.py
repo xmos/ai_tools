@@ -44,27 +44,25 @@ class ModelRunner(ABC):
         """
         for cfg in self.generator_class.builtin_configs():
             self._model_generator = self.generator_class()
-            self._run_model_generator(cfg)
+            self._model_generator.set_config(**cfg)
+            self._run_model_generator()
             yield ModelRun(self._model_generator, self._reports, self._outputs)
         del self._model_generator
         self._reports = {}
         self._outputs = {}
 
-    def _run_model_generator(self, cfg: Configuration) -> None:
+    def _run_model_generator(self) -> None:
         """ Defines how self._model_generator should be run with a config.
 
         Optionally sets self._reports and self._outputs.
         """
-        if self._model_generator:
-            self._model_generator.build(**cfg)
-        else:
-            raise ValueError("invalid state")
+        self._model_generator.build()
 
 
 class IntegrationTestRunner(ModelRunner):
-    def _run_model_generator(self, cfg: Configuration) -> None:
-        super()._run_model_generator(cfg)
-        self._model_generator._model.summary()
+    def _run_model_generator(self) -> None:
+        super()._run_model_generator()
+        self._model_generator._model.summary()  # TODO: remove this
 
         converters = self._model_generator._converters
         for converter in converters:

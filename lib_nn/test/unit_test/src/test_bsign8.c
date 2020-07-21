@@ -121,7 +121,8 @@ void test_bsign_8_case1()
         TEST_ASSERT_EQUAL(y_exp[i], y[i]);
 }
 
-#define MAX_INPUT_LEN (512)
+#define MAX_INPUT_LEN_BYTES (512)
+#define MAX_OUTPUT_LEN_WORDS (MAX_INPUT_LEN_BYTES)
 #define MAX_JOBS (4)
 
 void test_bsign_8_case2()
@@ -130,40 +131,46 @@ void test_bsign_8_case2()
   
     #define MULT 7 
     size_t inputLen = VPU_INT8_ACC_PERIOD * MULT;
-    size_t jobCount = 2; 
+    inputLen = 120;
+    size_t jobCount = 4; 
 
-
-    uint32_t WORD_ALIGNED y[VPU_INT32_ACC_PERIOD] = {0};
-    uint32_t WORD_ALIGNED y_exp[VPU_INT32_ACC_PERIOD] = {0};
+    uint32_t WORD_ALIGNED y[MAX_OUTPUT_LEN_WORDS] = {0};
+    uint32_t WORD_ALIGNED y_exp[MAX_OUTPUT_LEN_WORDS] = {0};
    
-    int8_t WORD_ALIGNED test_data[VPU_INT8_ACC_PERIOD ]  = {
+    int8_t WORD_ALIGNED test_data[VPU_INT8_ACC_PERIOD]  = {
         0xFF, 0x01, 0x7F, 0x80,
         0xFF, 0x7F, 0x7E, 0x00, 
         0x80, 0x80, 0x80, 0x7E,
         0, 0, 0, 0xFF
     };
-    int8_t WORD_ALIGNED x[VPU_INT8_ACC_PERIOD * MULT]  = {0};
+    int8_t WORD_ALIGNED x[MAX_INPUT_LEN_BYTES]  = {0};
 
     int index = 0;
-    for (int i = 0; i < MULT; i++)
+    while(index < inputLen)
+    {
         for(int j = 0; j < VPU_INT8_ACC_PERIOD; j++)
         {
-            x[index++] = test_data[j] * i;
+            x[index++] = test_data[j];
         }
+    }
 
     gen_expected(x, y_exp, inputLen); 
 
     nn_bsign_8_job_t jobs[MAX_JOBS];
 
-    bsign_8_init(&jobs, inputLen, jobCount);
+    bsign_8_init(jobs, inputLen, jobCount);
 
     for(int i = 0; i < jobCount; i++)
     {
         bsign_8(y, x, &jobs[i]);
     }
-
+    
+   
     for(int i = 0; i < (inputLen/32)+1; i++)
+    {
         TEST_ASSERT_EQUAL(y_exp[i], y[i]);
+    
+    }
 }
 
 void test_bsign_8()
@@ -172,7 +179,7 @@ void test_bsign_8()
 
     UNITY_SET_FILE();
     
-    //RUN_TEST(test_bsign_8_case0);
+    RUN_TEST(test_bsign_8_case0);
     //RUN_TEST(test_bsign_8_case1);
     RUN_TEST(test_bsign_8_case2);
 

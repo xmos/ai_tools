@@ -124,7 +124,7 @@ void bsign_8(
     const int8_t* x,
     const nn_bsign_8_job_t* job)
 {
-    y = ADDR(y, job->start);
+    y = ADDR(y, job->start/32);
     x = ADDR(x, job->start);
     
     for(int i = 0; i < job->length/sizeof(uint32_t); i++)
@@ -155,20 +155,17 @@ void bsign_8_init(
     const uint32_t length,
     unsigned job_count)
 {
-
-    assert(length % 8 == 0);
-    
     for(int k = 0; k < job_count; k++){
         jobs[k].length = 0;
     }
 
-    int32_t left = (length >> 2) << 2;
+    int32_t left = (length >> 5) << 5;
 
     while(left){
         for(int k = 0; k < job_count; k++){
-            if(left >= 4){
-                jobs[k].length += 4;
-                left -= 4;
+            if(left >= 32){
+                jobs[k].length += 32;
+                left -= 32;
             } else {
                 jobs[k].length += left;
                 left -= left;
@@ -176,7 +173,7 @@ void bsign_8_init(
         }
         if(left == 0) break;
     }
-    jobs[job_count-1].length += (length % 4);
+    jobs[job_count-1].length += (length % 32);
 
     jobs[0].start = 0;
 
@@ -185,6 +182,8 @@ void bsign_8_init(
     for(int k = 1; k < job_count; k++){
         jobs[k].start = jobs[k-1].start + jobs[k-1].length;
         pos += jobs[k].length;
+   
+        assert(jobs[k].length % 8 == 0);
     }
 
     assert(pos == length);

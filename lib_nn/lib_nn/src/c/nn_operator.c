@@ -126,12 +126,7 @@ void bsign_8(
 {
     y = ADDR(y, job->start/32);
     x = ADDR(x, job->start);
-    
-    for(int i = 0; i < job->length/sizeof(uint32_t); i++)
-    {    
-        y[i] = 0;
-    }
-    
+   
     uint32_t j = 0;
     uint32_t shift = 0;
 

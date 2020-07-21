@@ -30,7 +30,7 @@ XCoreStatus InitializeXCore(Dispatcher *dispatcher) {
 // xCORE Dispatcher implementation.
 // Uses a threadgroup_t to dispatch tasks to threads.
 Dispatcher::Dispatcher(void *buffer, size_t buffer_size,
-                       bool use_current_thread)
+                       tflite::ErrorReporter *reporter, bool use_current_thread)
     : use_current_thread_(use_current_thread) {
   group_ = thread_group_alloc();
 
@@ -86,8 +86,8 @@ XCoreStatus Dispatcher::JoinTasks() {
 // x86 Dispatcher implementation.
 // Uses a std::vector of std::thread to dispatch tasks to threads.
 Dispatcher::Dispatcher(void *buffer, size_t buffer_size,
-                       bool use_current_thread)
-    : use_current_thread_(use_current_thread) {
+                       tflite::ErrorReporter *reporter, bool use_current_thread)
+    : use_current_thread_(use_current_thread), reporter_(reporter) {
   allocator_.SetHeap(buffer, buffer_size);
 
   tasks_.size = 0;
@@ -130,6 +130,8 @@ XCoreStatus Dispatcher::JoinTasks() {
 //**************************************
 //**************************************
 //**************************************
+
+tflite::ErrorReporter *Dispatcher::GetReporter() { return reporter_; }
 
 XCoreStatus Dispatcher::Reset() {
   tasks_.size = 0;

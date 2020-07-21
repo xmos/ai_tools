@@ -1,8 +1,6 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 #include "lib_ops/api/pooling.h"
 
-#include "lib_ops/api/tracing.h"
-
 extern "C" {
 #include "lib_nn/api/nn_types.h"
 }
@@ -41,7 +39,8 @@ MaxPool::MaxPool(const PoolingParams& params,
 
 XCoreStatus MaxPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                              int32_t Y_h, int32_t Y_w, int32_t C_out) {
-  TRACE_INFO(
+  TF_LITE_REPORT_STATUS(
+      GetDispatcher()->GetReporter(),
       "MaxPool Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
       "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
@@ -65,7 +64,8 @@ XCoreStatus MaxPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
   for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
     const RowColRegion& region = execution_plan.regions[i_rg];
-    TRACE_INFO(
+    TF_LITE_REPORT_STATUS(
+        GetDispatcher()->GetReporter(),
         "MaxPool Prepare id=%p, region top=%ld left=%ld rows=%ld cols=%ld\n",
         this, region.top, region.left, region.rows, region.cols);
 
@@ -81,7 +81,8 @@ XCoreStatus MaxPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 }
 
 XCoreStatus MaxPool::Eval(int8_t* Y, const int8_t* X) {
-  TRACE_INFO("MaxPool Eval id=%p\n", this);
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(), "MaxPool Eval id=%p\n",
+                        this);
 
   // initialize the dispatcher
   Dispatcher* dispatcher = GetDispatcher();
@@ -132,7 +133,8 @@ AvgPool::AvgPool(const PoolingParams& params,
 
 XCoreStatus AvgPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                              int32_t Y_h, int32_t Y_w, int32_t C_out) {
-  TRACE_INFO(
+  TF_LITE_REPORT_STATUS(
+      GetDispatcher()->GetReporter(),
       "AvgPool Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
       "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
@@ -157,7 +159,8 @@ XCoreStatus AvgPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
   for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
     const RowColRegion& region = execution_plan.regions[i_rg];
-    TRACE_INFO(
+    TF_LITE_REPORT_STATUS(
+        GetDispatcher()->GetReporter(),
         "AvgPool Prepare id=%p, region top=%ld left=%ld rows=%ld cols=%ld\n",
         this, region.top, region.left, region.rows, region.cols);
 
@@ -173,7 +176,8 @@ XCoreStatus AvgPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 }
 
 XCoreStatus AvgPool::Eval(int8_t* Y, const int8_t* X) {
-  TRACE_INFO("AvgPool Eval id=%p\n", this);
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(), "AvgPool Eval id=%p\n",
+                        this);
 
   // initialize the dispatcher
   Dispatcher* dispatcher = GetDispatcher();
@@ -225,7 +229,8 @@ AvgPool_Global::AvgPool_Global(const ExecutionPlan& execution_plan)
 XCoreStatus AvgPool_Global::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                                     int32_t bias, int32_t shift,
                                     int32_t scale) {
-  TRACE_INFO("AvgPool_Global Prepare id=%p\n", this);
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
+                        "AvgPool_Global Prepare id=%p\n", this);
   bias_ = bias;
 
   // setup kernel parameters
@@ -242,8 +247,10 @@ XCoreStatus AvgPool_Global::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
     const ChannelGroup& changrp = execution_plan.changrps[i_cg];
-    TRACE_INFO("AvgPool_Global Prepare id=%p, chan group start=%ld size=%ld\n",
-               this, changrp.start, changrp.size);
+    TF_LITE_REPORT_STATUS(
+        GetDispatcher()->GetReporter(),
+        "AvgPool_Global Prepare id=%p, chan group start=%ld size=%ld\n", this,
+        changrp.start, changrp.size);
 
     job_params[i_cg] = {(uint32_t)changrp.start, (channel_count_t)changrp.size};
   }
@@ -260,7 +267,8 @@ XCoreStatus AvgPool_Global::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
 XCoreStatus AvgPool_Global::Eval(int8_t* Y, const int8_t* X, int32_t X_h,
                                  int32_t X_w, uint32_t C_in) {
-  TRACE_INFO("AvgPool_Global Eval id=%p\n", this);
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
+                        "AvgPool_Global Eval id=%p\n", this);
 
   // initialize the dispatcher
   Dispatcher* dispatcher = GetDispatcher();

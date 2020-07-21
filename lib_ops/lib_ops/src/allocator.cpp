@@ -6,7 +6,7 @@
 #include <iostream>
 #include <memory>
 
-#include "lib_ops/api/tracing.h"
+#include "lib_ops/src/xcore_reporter.h"
 
 void MemoryAllocator::SetHeap(void *buffer, size_t size) {
   assert(buffer);
@@ -62,7 +62,8 @@ void *MemoryAllocator::AllocateBuffer(size_t size, size_t alignment) {
     return ptr;
   }
   // Allocator is out of memory for this allocation
-  TRACE_ERROR("Failed to allocate memory, %d bytes required\n",
-              size - GetFreeSize());
+  // TF_LITE_REPORT_ERROR(error_reporter_,
+  //                      "Failed to allocate memory, %d bytes required",
+  //                      size - GetFreeSize());
   return nullptr;
 }

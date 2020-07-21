@@ -1,7 +1,7 @@
 // Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-#ifndef XCORE_MICRO_PROFILER_H_
-#define XCORE_MICRO_PROFILER_H_
+#ifndef XCORE_PROFILER_H_
+#define XCORE_PROFILER_H_
 
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/core/api/profiler.h"
@@ -39,4 +39,4 @@ class XCoreProfiler : public tflite::Profiler {
 
 }  // namespace xcore
 
-#endif  // XCORE_MICRO_PROFILER_H_
+#endif  // XCORE_PROFILER_H_

@@ -4,8 +4,6 @@
 #include <algorithm>
 #include <cstring>
 
-#include "lib_ops/api/tracing.h"
-
 namespace xcore {
 namespace fully_connected {
 
@@ -29,8 +27,9 @@ FullyConnected_16::FullyConnected_16(const ExecutionPlan &execution_plan)
     : execution_plan(execution_plan), jobs_(nullptr) {}
 
 XCoreStatus FullyConnected_16::Prepare(int32_t C_in, int32_t C_out) {
-  TRACE_INFO("FullyConnected_16 Prepare id=%p C_in=%ld C_out=%ld\n", this, C_in,
-             C_out);
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
+                        "FullyConnected_16 Prepare id=%p C_in=%ld C_out=%ld\n",
+                        this, C_in, C_out);
 
   // allocate the jobs
   int32_t n_jobs = execution_plan.changrps.GetSize();
@@ -43,7 +42,8 @@ XCoreStatus FullyConnected_16::Prepare(int32_t C_in, int32_t C_out) {
 
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
-    TRACE_INFO(
+    TF_LITE_REPORT_STATUS(
+        GetDispatcher()->GetReporter(),
         "FullyConnected_16 Prepare id=%p, chan group start=%ld size=%ld\n",
         this, changrp.start, changrp.size);
 
@@ -58,7 +58,8 @@ XCoreStatus FullyConnected_16::Prepare(int32_t C_in, int32_t C_out) {
 
 XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *X,
                                     const int8_t *W, const int16_t *BSO) {
-  TRACE_INFO("FullyConnected Eval id=%p\n", this);
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
+                        "FullyConnected Eval id=%p\n", this);
 
   // initialize the dispatcher
   Dispatcher *dispatcher = GetDispatcher();

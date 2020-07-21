@@ -5,6 +5,7 @@
 #include "lib_ops/api/allocator.h"
 #include "lib_ops/api/lib_ops.h"
 #include "lib_ops/api/planning.h"
+#include "lib_ops/src/xcore_reporter.h"
 
 #ifdef XCORE
 extern "C" {
@@ -45,7 +46,8 @@ typedef struct TaskArray {
 
 class Dispatcher {
  public:
-  Dispatcher(void *buffer, size_t buffer_size, bool use_current_core = true);
+  Dispatcher(void *buffer, size_t buffer_size, tflite::ErrorReporter *reporter,
+             bool use_current_core = true);
   ~Dispatcher();
 
   XCoreStatus InitializeTasks(thread_function_t function, size_t stack_words);
@@ -53,6 +55,8 @@ class Dispatcher {
   XCoreStatus JoinTasks();
 
   XCoreStatus Reset();
+
+  tflite::ErrorReporter *GetReporter();
 
   void *AllocatePersistantBuffer(size_t size,
                                  size_t alignment = WORD_ALIGNMENT);
@@ -68,6 +72,7 @@ class Dispatcher {
   bool use_current_thread_;
   threadgroup_t group_;
   TaskArray tasks_;
+  tflite::ErrorReporter *reporter_;
   MemoryAllocator allocator_;
 };
 

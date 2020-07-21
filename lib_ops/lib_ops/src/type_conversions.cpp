@@ -1,8 +1,6 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 #include "lib_ops/api/type_conversions.h"
 
-#include "lib_ops/api/tracing.h"
-
 extern "C" {
 #include "lib_nn/api/nn_operator.h"
 }
@@ -27,7 +25,9 @@ Requantize_16_to_8::Requantize_16_to_8(const ExecutionPlan& execution_plan)
     : execution_plan(execution_plan) {}
 
 XCoreStatus Requantize_16_to_8::Init(int32_t length) {
-  TRACE_INFO("Requantize_16_to_8 Init id=%p length=%ld\n", this, length);
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
+                        "Requantize_16_to_8 Init id=%p length=%ld\n", this,
+                        length);
 
   // allocate the jobs
   int32_t n_jobs = execution_plan.GetNumThreads();
@@ -42,7 +42,8 @@ XCoreStatus Requantize_16_to_8::Init(int32_t length) {
 }
 
 XCoreStatus Requantize_16_to_8::Eval(int8_t* Y, const int16_t* X) {
-  TRACE_INFO("Requantize_16_to_8 Eval id=%p\n", this);
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
+                        "Requantize_16_to_8 Eval id=%p\n", this);
 
   // initialize the dispatcher
   Dispatcher* dispatcher = GetDispatcher();

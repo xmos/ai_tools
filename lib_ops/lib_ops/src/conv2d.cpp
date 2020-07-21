@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include "lib_ops/api/dispatcher.h"
-#include "lib_ops/api/tracing.h"
 
 namespace xcore {
 namespace conv {
@@ -43,7 +42,8 @@ Conv2D_Deep::Conv2D_Deep(const Conv2DParams &params,
 
 XCoreStatus Conv2D_Deep::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                                  int32_t Y_h, int32_t Y_w, int32_t C_out) {
-  TRACE_INFO(
+  TF_LITE_REPORT_STATUS(
+      GetDispatcher()->GetReporter(),
       "Conv2D_Deep Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
       "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
@@ -71,7 +71,8 @@ XCoreStatus Conv2D_Deep::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
     for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
       const RowColRegion &region = execution_plan.regions[i_rg];
-      TRACE_INFO(
+      TF_LITE_REPORT_STATUS(
+          GetDispatcher()->GetReporter(),
           "Conv2D_Deep Prepare id=%p, chan group start=%ld size=%ld, region "
           "top=%ld left=%ld rows=%ld "
           "cols=%ld\n",
@@ -93,7 +94,8 @@ XCoreStatus Conv2D_Deep::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
 XCoreStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                               const int16_t *BSO) {
-  TRACE_INFO("Conv2D_Deep Eval id=%p\n", this);
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
+                        "Conv2D_Deep Eval id=%p\n", this);
 
   // initialize the dispatcher
   Dispatcher *dispatcher = GetDispatcher();
@@ -163,7 +165,8 @@ Conv2D_Shallow::Conv2D_Shallow(const Conv2DParams &params,
 XCoreStatus Conv2D_Shallow::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                                     int32_t Y_h, int32_t Y_w, int32_t C_out,
                                     int32_t K_w_padded) {
-  TRACE_INFO(
+  TF_LITE_REPORT_STATUS(
+      GetDispatcher()->GetReporter(),
       "Conv2D_Shallow Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
       "C_out=%ld, K_w_padded=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out, K_w_padded);
@@ -191,7 +194,8 @@ XCoreStatus Conv2D_Shallow::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
     for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
       const RowColRegion &region = execution_plan.regions[i_rg];
-      TRACE_INFO(
+      TF_LITE_REPORT_STATUS(
+          GetDispatcher()->GetReporter(),
           "Conv2D_Shallow Prepare id=%p, chan group start=%ld size=%ld, region "
           "top=%ld left=%ld rows=%ld "
           "cols=%ld\n",
@@ -213,7 +217,8 @@ XCoreStatus Conv2D_Shallow::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
 XCoreStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                                  const int16_t *BSO) {
-  TRACE_INFO("Conv2D_Shallow Eval id=%p\n", this);
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
+                        "Conv2D_Shallow Eval id=%p\n", this);
 
   // initialize the dispatcher
   Dispatcher *dispatcher = GetDispatcher();
@@ -281,7 +286,8 @@ Conv2D_1x1::Conv2D_1x1(const Conv2DParams &params,
 
 XCoreStatus Conv2D_1x1::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                                 int32_t Y_h, int32_t Y_w, int32_t C_out) {
-  TRACE_INFO(
+  TF_LITE_REPORT_STATUS(
+      GetDispatcher()->GetReporter(),
       "Conv2D_1x1 Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
       "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
@@ -305,7 +311,8 @@ XCoreStatus Conv2D_1x1::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
     for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
       const RowColRegion &region = execution_plan.regions[i_rg];
-      TRACE_INFO(
+      TF_LITE_REPORT_STATUS(
+          GetDispatcher()->GetReporter(),
           "Conv2D_1x1 Prepare id=%p, chan group start=%ld size=%ld, region "
           "top=%ld left=%ld rows=%ld "
           "cols=%ld\n",
@@ -327,7 +334,8 @@ XCoreStatus Conv2D_1x1::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
 XCoreStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                              const int16_t *BSO) {
-  TRACE_INFO("Conv2D_1x1 Eval id=%p\n", this);
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
+                        "Conv2D_1x1 Eval id=%p\n", this);
 
   // initialize the dispatcher
   Dispatcher *dispatcher = GetDispatcher();
@@ -395,7 +403,8 @@ Conv2D_Depthwise::Conv2D_Depthwise(const Conv2DParams &params,
 
 XCoreStatus Conv2D_Depthwise::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                                       int32_t Y_h, int32_t Y_w, int32_t C_out) {
-  TRACE_INFO(
+  TF_LITE_REPORT_STATUS(
+      GetDispatcher()->GetReporter(),
       "Conv2D_Depthwise Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
       "C_out=%ld\n",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
@@ -423,7 +432,8 @@ XCoreStatus Conv2D_Depthwise::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
     for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
       const RowColRegion &region = execution_plan.regions[i_rg];
-      TRACE_INFO(
+      TF_LITE_REPORT_STATUS(
+          GetDispatcher()->GetReporter(),
           "Conv2D_Depthwise Prepare id=%p, chan group start=%ld size=%ld, "
           "region "
           "top=%ld left=%ld rows=%ld "
@@ -446,7 +456,8 @@ XCoreStatus Conv2D_Depthwise::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
 XCoreStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                                    const int16_t *BSO) {
-  TRACE_INFO("Conv2D_Depthwise Eval id=%p\n", this);
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
+                        "Conv2D_Depthwise Eval id=%p\n", this);
 
   // initialize the dispatcher
   Dispatcher *dispatcher = GetDispatcher();

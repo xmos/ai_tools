@@ -126,23 +126,28 @@ void bsign_8(
 {
     y = ADDR(y, job->start/32);
     x = ADDR(x, job->start);
-   
+  
     uint32_t j = 0;
     uint32_t shift = 0;
+
+    uint32_t bits = 0;
 
     for(int i = 0; i < job->length; i++)
     {
         if(x[i] < 0)
-            y[j] |= (1 << shift);
+            bits |= (1 << shift);
         
         shift++;
 
         if(shift == 32) 
         {
-            shift = 0; 
-            j++;
+            y[j++] = bits;
+            shift = 0; bits = 0;
         }
     }
+
+    if(shift != 0)
+        y[j] = ((y[j] >> shift) << shift) | bits;
 }
 
 void bsign_8_init(

@@ -26,11 +26,12 @@ void gen_expected(int8_t *input, uint32_t *output, size_t input_length)
 
     uint32_t j = 0;
     uint32_t shift = 0;
+    uint32_t bits = 0;
     for(int i = 0; i < input_length; i++)
     {
         if(input[i] < 0)
         {
-            output[j] |= (1 << shift);
+            bits |= (1 << shift);
         }
         
         shift++;
@@ -38,9 +39,15 @@ void gen_expected(int8_t *input, uint32_t *output, size_t input_length)
         if(shift == 32)
         {
             shift = 0;
-            j++;
+            output[j++] = bits;
+            bits = 0;
         }
     }
+
+    // Tail tidy - don't write a full word.. i.e. same as VSTRPV
+    if (shift != 0)
+        output[j] = ((output[j] >> shift)<< shift) | bits;
+
 }
 
 void test_bsign_8_case0()
@@ -124,52 +131,50 @@ void test_bsign_8_case1()
 #define MAX_INPUT_LEN_BYTES (512)
 #define MAX_OUTPUT_LEN_WORDS (MAX_INPUT_LEN_BYTES)
 #define MAX_JOBS (4)
+#define REPS (50)
 
 void test_bsign_8_case2()
 {
-    PRINTF("%s...\n", __func__);
-  
-    #define MULT 7 
-    size_t inputLen = VPU_INT8_ACC_PERIOD * MULT;
-    inputLen = 120;
-    size_t jobCount = 4; 
-
     uint32_t WORD_ALIGNED y[MAX_OUTPUT_LEN_WORDS] = {0};
     uint32_t WORD_ALIGNED y_exp[MAX_OUTPUT_LEN_WORDS] = {0};
-   
-    int8_t WORD_ALIGNED test_data[VPU_INT8_ACC_PERIOD]  = {
-        0xFF, 0x01, 0x7F, 0x80,
-        0xFF, 0x7F, 0x7E, 0x00, 
-        0x80, 0x80, 0x80, 0x7E,
-        0, 0, 0, 0xFF
-    };
     int8_t WORD_ALIGNED x[MAX_INPUT_LEN_BYTES]  = {0};
-
-    int index = 0;
-    while(index < inputLen)
-    {
-        for(int j = 0; j < VPU_INT8_ACC_PERIOD; j++)
-        {
-            x[index++] = test_data[j];
-        }
-    }
-
-    gen_expected(x, y_exp, inputLen); 
+    int8_t WORD_ALIGNED x_orig[MAX_INPUT_LEN_BYTES]  = {0};
 
     nn_bsign_8_job_t jobs[MAX_JOBS];
-
-    bsign_8_init(jobs, inputLen, jobCount);
-
-    for(int i = 0; i < jobCount; i++)
-    {
-        bsign_8(y, x, &jobs[i]);
-    }
-    
    
-    for(int i = 0; i < (inputLen/32)+1; i++)
+    for(int r = 0; r < REPS; r++)
     {
-        TEST_ASSERT_EQUAL(y_exp[i], y[i]);
-    
+        PRINTF("%s...\n", __func__);
+        unsigned inputLen = pseudo_rand_uint16() % (MAX_INPUT_LEN_BYTES+1);
+
+        // Only test with input lengths that produce byte aligned output sizes
+        inputLen = (inputLen >> 3) << 3;
+
+
+        pseudo_rand_bytes((char*)x_orig, sizeof(x_orig));
+        vpu_memcpy(x, x_orig, sizeof(x));
+
+        memset(y, 0xAA, sizeof(y));
+        memset(y_exp, 0xAA, sizeof(y_exp));
+
+        size_t jobCount = (pseudo_rand_uint16() % (MAX_JOBS-1))+1;
+
+        bsign_8_init(jobs, inputLen, jobCount);
+
+        gen_expected(x, y_exp, inputLen); 
+
+        for(int i = 0; i < jobCount; i++)
+        {
+            bsign_8(y, x, &jobs[i]);
+        }
+        
+        for(int i = 0; i < (inputLen/32)+1; i++)
+        {
+            if(y[i] != y_exp[i])
+                sprintf(str_buff, "(rep: %d) (jobs: %d) (inputLen: %u) (index: %d) (x[%d] = %d)", r, jobCount, inputLen, i, i, x_orig[i]);
+
+            TEST_ASSERT_EQUAL_MESSAGE(y_exp[i], y[i], str_buff);
+        }
     }
 }
 
@@ -180,7 +185,7 @@ void test_bsign_8()
     UNITY_SET_FILE();
     
     RUN_TEST(test_bsign_8_case0);
-    //RUN_TEST(test_bsign_8_case1);
+    RUN_TEST(test_bsign_8_case1);
     RUN_TEST(test_bsign_8_case2);
 
 }

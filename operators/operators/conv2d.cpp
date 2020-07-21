@@ -42,10 +42,12 @@ Conv2D_Deep::Conv2D_Deep(const Conv2DParams &params,
 
 TfLiteStatus Conv2D_Deep::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                                   int32_t Y_h, int32_t Y_w, int32_t C_out) {
+  Dispatcher *dispatcher = GetDispatcher();
+
   TF_LITE_REPORT_STATUS(
-      GetDispatcher()->GetReporter(),
+      dispatcher->GetReporter(),
       "Conv2D_Deep Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
-      "C_out=%ld\n",
+      "C_out=%ld",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
 
   // setup kernel parameters
@@ -61,8 +63,8 @@ TfLiteStatus Conv2D_Deep::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   int32_t n_jobs =
       execution_plan.changrps.GetSize() * execution_plan.regions.GetSize();
   jobs_ = reinterpret_cast<nn_conv2d_deep_job_t *>(
-      GetDispatcher()->AllocatePersistantBuffer(sizeof(nn_conv2d_deep_job_t) *
-                                                n_jobs));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_deep_job_t) *
+                                           n_jobs));
 
   // set job parameters
   nn_conv2d_job_params_t job_params[n_jobs];
@@ -72,10 +74,10 @@ TfLiteStatus Conv2D_Deep::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
     for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
       const RowColRegion &region = execution_plan.regions[i_rg];
       TF_LITE_REPORT_STATUS(
-          GetDispatcher()->GetReporter(),
+          dispatcher->GetReporter(),
           "Conv2D_Deep Prepare id=%p, chan group start=%ld size=%ld, region "
           "top=%ld left=%ld rows=%ld "
-          "cols=%ld\n",
+          "cols=%ld",
           this, changrp.start, changrp.size, region.top, region.left,
           region.rows, region.cols);
 
@@ -94,11 +96,12 @@ TfLiteStatus Conv2D_Deep::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
 TfLiteStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                                const int16_t *BSO) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
-                        "Conv2D_Deep Eval id=%p\n", this);
+  Dispatcher *dispatcher = GetDispatcher();
+
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(), "Conv2D_Deep Eval id=%p",
+                        this);
 
   // initialize the dispatcher
-  Dispatcher *dispatcher = GetDispatcher();
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_deep_thread_worker);
   dispatcher->InitializeTasks(conv2d_deep_thread_worker, stack_words);
@@ -165,10 +168,12 @@ Conv2D_Shallow::Conv2D_Shallow(const Conv2DParams &params,
 TfLiteStatus Conv2D_Shallow::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                                      int32_t Y_h, int32_t Y_w, int32_t C_out,
                                      int32_t K_w_padded) {
+  Dispatcher *dispatcher = GetDispatcher();
+
   TF_LITE_REPORT_STATUS(
-      GetDispatcher()->GetReporter(),
+      dispatcher->GetReporter(),
       "Conv2D_Shallow Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
-      "C_out=%ld, K_w_padded=%ld\n",
+      "C_out=%ld, K_w_padded=%ld",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out, K_w_padded);
 
   // setup kernel parameters
@@ -184,8 +189,8 @@ TfLiteStatus Conv2D_Shallow::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   int32_t n_jobs =
       execution_plan.changrps.GetSize() * execution_plan.regions.GetSize();
   jobs_ = reinterpret_cast<nn_conv2d_shallowin_job_t *>(
-      GetDispatcher()->AllocatePersistantBuffer(
-          sizeof(nn_conv2d_shallowin_job_t) * n_jobs));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_shallowin_job_t) *
+                                           n_jobs));
 
   // set job parameters
   nn_conv2d_job_params_t job_params[n_jobs];
@@ -195,10 +200,10 @@ TfLiteStatus Conv2D_Shallow::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
     for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
       const RowColRegion &region = execution_plan.regions[i_rg];
       TF_LITE_REPORT_STATUS(
-          GetDispatcher()->GetReporter(),
+          dispatcher->GetReporter(),
           "Conv2D_Shallow Prepare id=%p, chan group start=%ld size=%ld, region "
           "top=%ld left=%ld rows=%ld "
-          "cols=%ld\n",
+          "cols=%ld",
           this, changrp.start, changrp.size, region.top, region.left,
           region.rows, region.cols);
 
@@ -217,11 +222,12 @@ TfLiteStatus Conv2D_Shallow::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
 TfLiteStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                                   const int16_t *BSO) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
-                        "Conv2D_Shallow Eval id=%p\n", this);
+  Dispatcher *dispatcher = GetDispatcher();
+
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(), "Conv2D_Shallow Eval id=%p",
+                        this);
 
   // initialize the dispatcher
-  Dispatcher *dispatcher = GetDispatcher();
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_shallow_thread_worker);
   dispatcher->InitializeTasks(conv2d_shallow_thread_worker, stack_words);
@@ -286,11 +292,12 @@ Conv2D_1x1::Conv2D_1x1(const Conv2DParams &params,
 
 TfLiteStatus Conv2D_1x1::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                                  int32_t Y_h, int32_t Y_w, int32_t C_out) {
-  TF_LITE_REPORT_STATUS(
-      GetDispatcher()->GetReporter(),
-      "Conv2D_1x1 Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
-      "C_out=%ld\n",
-      this, X_h, X_w, C_in, Y_h, Y_w, C_out);
+  Dispatcher *dispatcher = GetDispatcher();
+
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(),
+                        "Conv2D_1x1 Prepare id=%p X_h=%ld X_w=%ld C_in=%ld "
+                        "Y_h=%ld Y_w=%ld C_out=%ld",
+                        this, X_h, X_w, C_in, Y_h, Y_w, C_out);
 
   // setup kernel parameters
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
@@ -301,8 +308,8 @@ TfLiteStatus Conv2D_1x1::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   int32_t n_jobs =
       execution_plan.changrps.GetSize() * execution_plan.regions.GetSize();
   jobs_ = reinterpret_cast<nn_conv2d_1x1_job_t *>(
-      GetDispatcher()->AllocatePersistantBuffer(sizeof(nn_conv2d_1x1_job_t) *
-                                                n_jobs));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_1x1_job_t) *
+                                           n_jobs));
 
   // set job parameters
   nn_conv2d_1x1_job_params_t job_params[n_jobs];
@@ -312,10 +319,10 @@ TfLiteStatus Conv2D_1x1::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
     for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
       const RowColRegion &region = execution_plan.regions[i_rg];
       TF_LITE_REPORT_STATUS(
-          GetDispatcher()->GetReporter(),
+          dispatcher->GetReporter(),
           "Conv2D_1x1 Prepare id=%p, chan group start=%ld size=%ld, region "
           "top=%ld left=%ld rows=%ld "
-          "cols=%ld\n",
+          "cols=%ld",
           this, changrp.start, changrp.size, region.top, region.left,
           region.rows, region.cols);
 
@@ -334,11 +341,12 @@ TfLiteStatus Conv2D_1x1::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
 TfLiteStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                               const int16_t *BSO) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
-                        "Conv2D_1x1 Eval id=%p\n", this);
+  Dispatcher *dispatcher = GetDispatcher();
+
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(), "Conv2D_1x1 Eval id=%p",
+                        this);
 
   // initialize the dispatcher
-  Dispatcher *dispatcher = GetDispatcher();
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_1x1_thread_worker);
   dispatcher->InitializeTasks(conv2d_1x1_thread_worker, stack_words);
@@ -404,10 +412,12 @@ Conv2D_Depthwise::Conv2D_Depthwise(const Conv2DParams &params,
 TfLiteStatus Conv2D_Depthwise::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                                        int32_t Y_h, int32_t Y_w,
                                        int32_t C_out) {
+  Dispatcher *dispatcher = GetDispatcher();
+
   TF_LITE_REPORT_STATUS(
-      GetDispatcher()->GetReporter(),
+      dispatcher->GetReporter(),
       "Conv2D_Depthwise Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
-      "C_out=%ld\n",
+      "C_out=%ld",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
 
   // setup kernel parameters
@@ -423,8 +433,8 @@ TfLiteStatus Conv2D_Depthwise::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   int32_t n_jobs =
       execution_plan.changrps.GetSize() * execution_plan.regions.GetSize();
   jobs_ = reinterpret_cast<nn_conv2d_depthwise_job_t *>(
-      GetDispatcher()->AllocatePersistantBuffer(
-          sizeof(nn_conv2d_depthwise_job_t) * n_jobs));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_depthwise_job_t) *
+                                           n_jobs));
 
   // set job parameters
   nn_conv2d_job_params_t job_params[n_jobs];
@@ -434,11 +444,11 @@ TfLiteStatus Conv2D_Depthwise::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
     for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
       const RowColRegion &region = execution_plan.regions[i_rg];
       TF_LITE_REPORT_STATUS(
-          GetDispatcher()->GetReporter(),
+          dispatcher->GetReporter(),
           "Conv2D_Depthwise Prepare id=%p, chan group start=%ld size=%ld, "
           "region "
           "top=%ld left=%ld rows=%ld "
-          "cols=%ld\n",
+          "cols=%ld",
           this, changrp.start, changrp.size, region.top, region.left,
           region.rows, region.cols);
 
@@ -457,11 +467,12 @@ TfLiteStatus Conv2D_Depthwise::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
 TfLiteStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
                                     const int16_t *BSO) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
-                        "Conv2D_Depthwise Eval id=%p\n", this);
+  Dispatcher *dispatcher = GetDispatcher();
+
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(),
+                        "Conv2D_Depthwise Eval id=%p", this);
 
   // initialize the dispatcher
-  Dispatcher *dispatcher = GetDispatcher();
   size_t stack_words;
   GET_STACKWORDS(stack_words, conv2d_depthwise_thread_worker);
   dispatcher->InitializeTasks(conv2d_depthwise_thread_worker, stack_words);

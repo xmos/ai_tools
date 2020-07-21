@@ -5,7 +5,6 @@
 #include "unity_fixture.h"
 
 static void RunTests(void) {
-  RUN_TEST_GROUP(allocator);
   RUN_TEST_GROUP(dispatcher);
   RUN_TEST_GROUP(execution_plan);
 }

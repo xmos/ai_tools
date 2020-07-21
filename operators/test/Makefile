@@ -34,7 +34,6 @@ VPATH += src
 SOURCES := $(UNITY_SOURCES)
 SOURCES += $(TENSORFLOW_SOURCES)
 SOURCES += $(LIBS_SOURCES)
-SOURCES += test_allocator.cpp
 SOURCES += test_dispatcher.cpp
 SOURCES += test_execution_plan.cpp
 SOURCES += main.cpp
@@ -44,18 +43,6 @@ include ../../make/rules.mk
 .PHONY: all clean $(APP)
 
 all: $(BIN_DIR)/$(APP)
-
-# $(OBJ_DIR)/%.o: %.S
-# 	@mkdir -p $(dir $@)
-# 	$(AS) $(ASFLAGS) -o $@ -c $<
-
-# $(OBJ_DIR)/%.o: %.c
-# 	@mkdir -p $(dir $@)
-# 	$(CC) $(CCFLAGS) $(APPFLAGS) $(INCLUDES) -o $@ -c $<
-
-# $(OBJ_DIR)/%.o: %.cpp
-# 	@mkdir -p $(dir $@)
-# 	$(CXX) $(CXXFLAGS) $(APPFLAGS) $(INCLUDES) -o $@ -c $<
 
 $(BIN_DIR)/$(APP): $(OBJECTS)
 	@mkdir -p $(dir $@)

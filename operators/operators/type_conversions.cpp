@@ -25,15 +25,17 @@ Requantize_16_to_8::Requantize_16_to_8(const ExecutionPlan& execution_plan)
     : execution_plan(execution_plan) {}
 
 TfLiteStatus Requantize_16_to_8::Init(int32_t length) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
-                        "Requantize_16_to_8 Init id=%p length=%ld\n", this,
+  Dispatcher* dispatcher = GetDispatcher();
+
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(),
+                        "Requantize_16_to_8 Init id=%p length=%ld", this,
                         length);
 
   // allocate the jobs
   int32_t n_jobs = execution_plan.GetNumThreads();
   jobs_ = reinterpret_cast<nn_requantize_16_to_8_job_t*>(
-      GetDispatcher()->AllocatePersistantBuffer(
-          sizeof(nn_requantize_16_to_8_job_t) * n_jobs));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_requantize_16_to_8_job_t) *
+                                           n_jobs));
 
   // initialize the kernel
   requantize_16_to_8_init(jobs_, length, n_jobs);
@@ -42,11 +44,12 @@ TfLiteStatus Requantize_16_to_8::Init(int32_t length) {
 }
 
 TfLiteStatus Requantize_16_to_8::Eval(int8_t* Y, const int16_t* X) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
-                        "Requantize_16_to_8 Eval id=%p\n", this);
+  Dispatcher* dispatcher = GetDispatcher();
+
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(),
+                        "Requantize_16_to_8 Eval id=%p", this);
 
   // initialize the dispatcher
-  Dispatcher* dispatcher = GetDispatcher();
   size_t stack_words;
   GET_STACKWORDS(stack_words, requantize_16_to_8_thread_worker);
   dispatcher->InitializeTasks(requantize_16_to_8_thread_worker, stack_words);

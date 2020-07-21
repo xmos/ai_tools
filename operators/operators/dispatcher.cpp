@@ -32,7 +32,7 @@ TfLiteStatus InitializeXCore(Dispatcher *dispatcher) {
 // Uses a threadgroup_t to dispatch tasks to threads.
 Dispatcher::Dispatcher(void *buffer, size_t buffer_size,
                        tflite::ErrorReporter *reporter, bool use_current_thread)
-    : use_current_thread_(use_current_thread) {
+    : use_current_thread_(use_current_thread), reporter_(reporter) {
   group_ = thread_group_alloc();
 
   allocator_.SetHeap(buffer, buffer_size);

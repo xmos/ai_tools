@@ -41,10 +41,12 @@ MaxPool::MaxPool(const PoolingParams& params,
 
 TfLiteStatus MaxPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                               int32_t Y_h, int32_t Y_w, int32_t C_out) {
+  Dispatcher* dispatcher = GetDispatcher();
+
   TF_LITE_REPORT_STATUS(
-      GetDispatcher()->GetReporter(),
+      dispatcher->GetReporter(),
       "MaxPool Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
-      "C_out=%ld\n",
+      "C_out=%ld",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
 
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
@@ -58,8 +60,7 @@ TfLiteStatus MaxPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   // allocate the jobs
   int32_t n_jobs = execution_plan.regions.GetSize();
   jobs_ = reinterpret_cast<nn_pool2d_job_t*>(
-      GetDispatcher()->AllocatePersistantBuffer(sizeof(nn_pool2d_job_t) *
-                                                n_jobs));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_pool2d_job_t) * n_jobs));
 
   // set job parameters
   nn_window_op_job_params_t job_params[n_jobs];
@@ -67,8 +68,8 @@ TfLiteStatus MaxPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
     const RowColRegion& region = execution_plan.regions[i_rg];
     TF_LITE_REPORT_STATUS(
-        GetDispatcher()->GetReporter(),
-        "MaxPool Prepare id=%p, region top=%ld left=%ld rows=%ld cols=%ld\n",
+        dispatcher->GetReporter(),
+        "MaxPool Prepare id=%p, region top=%ld left=%ld rows=%ld cols=%ld",
         this, region.top, region.left, region.rows, region.cols);
 
     job_params[i_rg] = {{region.top, region.left, 0},
@@ -83,11 +84,10 @@ TfLiteStatus MaxPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 }
 
 TfLiteStatus MaxPool::Eval(int8_t* Y, const int8_t* X) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(), "MaxPool Eval id=%p\n",
-                        this);
+  Dispatcher* dispatcher = GetDispatcher();
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(), "MaxPool Eval id=%p", this);
 
   // initialize the dispatcher
-  Dispatcher* dispatcher = GetDispatcher();
   size_t stack_words;
   GET_STACKWORDS(stack_words, maxpool_thread_worker);
   dispatcher->InitializeTasks(maxpool_thread_worker, stack_words);
@@ -135,10 +135,12 @@ AvgPool::AvgPool(const PoolingParams& params,
 
 TfLiteStatus AvgPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                               int32_t Y_h, int32_t Y_w, int32_t C_out) {
+  Dispatcher* dispatcher = GetDispatcher();
+
   TF_LITE_REPORT_STATUS(
-      GetDispatcher()->GetReporter(),
+      dispatcher->GetReporter(),
       "AvgPool Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
-      "C_out=%ld\n",
+      "C_out=%ld",
       this, X_h, X_w, C_in, Y_h, Y_w, C_out);
 
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
@@ -153,8 +155,7 @@ TfLiteStatus AvgPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   // allocate the jobs
   int32_t n_jobs = execution_plan.regions.GetSize();
   jobs_ = reinterpret_cast<nn_pool2d_job_t*>(
-      GetDispatcher()->AllocatePersistantBuffer(sizeof(nn_pool2d_job_t) *
-                                                n_jobs));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_pool2d_job_t) * n_jobs));
 
   // set job parameters
   nn_window_op_job_params_t job_params[n_jobs];
@@ -162,8 +163,8 @@ TfLiteStatus AvgPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   for (int i_rg = 0; i_rg < execution_plan.regions.GetSize(); i_rg++) {
     const RowColRegion& region = execution_plan.regions[i_rg];
     TF_LITE_REPORT_STATUS(
-        GetDispatcher()->GetReporter(),
-        "AvgPool Prepare id=%p, region top=%ld left=%ld rows=%ld cols=%ld\n",
+        dispatcher->GetReporter(),
+        "AvgPool Prepare id=%p, region top=%ld left=%ld rows=%ld cols=%ld",
         this, region.top, region.left, region.rows, region.cols);
 
     job_params[i_rg] = {{region.top, region.left, 0},
@@ -178,11 +179,11 @@ TfLiteStatus AvgPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 }
 
 TfLiteStatus AvgPool::Eval(int8_t* Y, const int8_t* X) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(), "AvgPool Eval id=%p\n",
-                        this);
+  Dispatcher* dispatcher = GetDispatcher();
+
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(), "AvgPool Eval id=%p", this);
 
   // initialize the dispatcher
-  Dispatcher* dispatcher = GetDispatcher();
   size_t stack_words;
   GET_STACKWORDS(stack_words, avgpool_thread_worker);
   dispatcher->InitializeTasks(avgpool_thread_worker, stack_words);
@@ -231,8 +232,10 @@ AvgPool_Global::AvgPool_Global(const ExecutionPlan& execution_plan)
 TfLiteStatus AvgPool_Global::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
                                      int32_t bias, int32_t shift,
                                      int32_t scale) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
-                        "AvgPool_Global Prepare id=%p\n", this);
+  Dispatcher* dispatcher = GetDispatcher();
+
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(),
+                        "AvgPool_Global Prepare id=%p", this);
   bias_ = bias;
 
   // setup kernel parameters
@@ -241,8 +244,8 @@ TfLiteStatus AvgPool_Global::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   // allocate the jobs
   int32_t n_jobs = execution_plan.changrps.GetSize();
   jobs_ = reinterpret_cast<nn_avgpool2d_global_job_t*>(
-      GetDispatcher()->AllocatePersistantBuffer(
-          sizeof(nn_avgpool2d_global_job_t) * n_jobs));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_avgpool2d_global_job_t) *
+                                           n_jobs));
 
   // set job parameters
   nn_avgpool2d_global_job_params_t job_params[n_jobs];
@@ -250,8 +253,8 @@ TfLiteStatus AvgPool_Global::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
     const ChannelGroup& changrp = execution_plan.changrps[i_cg];
     TF_LITE_REPORT_STATUS(
-        GetDispatcher()->GetReporter(),
-        "AvgPool_Global Prepare id=%p, chan group start=%ld size=%ld\n", this,
+        dispatcher->GetReporter(),
+        "AvgPool_Global Prepare id=%p, chan group start=%ld size=%ld", this,
         changrp.start, changrp.size);
 
     job_params[i_cg] = {(uint32_t)changrp.start, (channel_count_t)changrp.size};
@@ -269,11 +272,12 @@ TfLiteStatus AvgPool_Global::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
 TfLiteStatus AvgPool_Global::Eval(int8_t* Y, const int8_t* X, int32_t X_h,
                                   int32_t X_w, uint32_t C_in) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
-                        "AvgPool_Global Eval id=%p\n", this);
+  Dispatcher* dispatcher = GetDispatcher();
+
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(), "AvgPool_Global Eval id=%p",
+                        this);
 
   // initialize the dispatcher
-  Dispatcher* dispatcher = GetDispatcher();
   size_t stack_words;
   GET_STACKWORDS(stack_words, avgpool_global_thread_worker);
   dispatcher->InitializeTasks(avgpool_global_thread_worker, stack_words);

@@ -12,7 +12,7 @@ namespace arg_min_max {
 
 TfLiteStatus ArgMax16::Eval(int32_t* Y, const int16_t* X,
                             const int32_t length) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(), "ArgMax16 Eval id=%p\n",
+  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(), "ArgMax16 Eval id=%p",
                         this);
 
   argmax_16(Y, X, length);

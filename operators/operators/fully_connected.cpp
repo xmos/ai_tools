@@ -29,15 +29,17 @@ FullyConnected_16::FullyConnected_16(const ExecutionPlan &execution_plan)
     : execution_plan(execution_plan), jobs_(nullptr) {}
 
 TfLiteStatus FullyConnected_16::Prepare(int32_t C_in, int32_t C_out) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
-                        "FullyConnected_16 Prepare id=%p C_in=%ld C_out=%ld\n",
+  Dispatcher *dispatcher = GetDispatcher();
+
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(),
+                        "FullyConnected_16 Prepare id=%p C_in=%ld C_out=%ld",
                         this, C_in, C_out);
 
   // allocate the jobs
   int32_t n_jobs = execution_plan.changrps.GetSize();
   jobs_ = reinterpret_cast<nn_fully_connected_job_t *>(
-      GetDispatcher()->AllocatePersistantBuffer(
-          sizeof(nn_fully_connected_job_t) * n_jobs));
+      dispatcher->AllocatePersistantBuffer(sizeof(nn_fully_connected_job_t) *
+                                           n_jobs));
 
   // set job parameters
   nn_fully_connected_job_params_t job_params[n_jobs];
@@ -45,9 +47,9 @@ TfLiteStatus FullyConnected_16::Prepare(int32_t C_in, int32_t C_out) {
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
     TF_LITE_REPORT_STATUS(
-        GetDispatcher()->GetReporter(),
-        "FullyConnected_16 Prepare id=%p, chan group start=%ld size=%ld\n",
-        this, changrp.start, changrp.size);
+        dispatcher->GetReporter(),
+        "FullyConnected_16 Prepare id=%p, chan group start=%ld size=%ld", this,
+        changrp.start, changrp.size);
 
     job_params[i_cg] = {(uint32_t)changrp.start, (channel_count_t)changrp.size};
   }
@@ -60,11 +62,12 @@ TfLiteStatus FullyConnected_16::Prepare(int32_t C_in, int32_t C_out) {
 
 TfLiteStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *X,
                                      const int8_t *W, const int16_t *BSO) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(),
-                        "FullyConnected Eval id=%p\n", this);
+  Dispatcher *dispatcher = GetDispatcher();
+
+  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(), "FullyConnected Eval id=%p",
+                        this);
 
   // initialize the dispatcher
-  Dispatcher *dispatcher = GetDispatcher();
   size_t stack_words;
   GET_STACKWORDS(stack_words, fully_connected_thread_worker);
   dispatcher->InitializeTasks(fully_connected_thread_worker, stack_words);

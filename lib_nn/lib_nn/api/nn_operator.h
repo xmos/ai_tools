@@ -270,7 +270,7 @@ void conv2d_1x1(nn_image_t* Y, const nn_image_t* X, const nn_tensor_t* K,
 // Binary operators
 void bnn_conv2d_bin_out_asm(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
                             const bnn_b256_t* K_p,
-                            int16_t* thresholds,  //[out_channel];
+                            int32_t* thresholds,  //[out_channel];
                             const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
 
 void bnn_conv2d_bin_out_asm_init(nn_bnn_conv2d_bin_out_asm_plan_t* plan,
@@ -280,7 +280,7 @@ void bnn_conv2d_bin_out_asm_init(nn_bnn_conv2d_bin_out_asm_plan_t* plan,
 
 void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
                         const bnn_b256_t* K_p,
-                        int16_t* thresholds,  //[out_channel];
+                        int32_t* thresholds,  //[out_channel];
                         const nn_bnn_conv2d_bin_out_plan_t* plan);
 
 void bnn_conv2d_bin_out_init(nn_bnn_conv2d_bin_out_plan_t* plan,

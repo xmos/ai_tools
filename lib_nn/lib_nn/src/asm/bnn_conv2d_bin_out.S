@@ -14,6 +14,8 @@
 #define PLAN_X_HEIGHT_LOOP_COUNTER 6
 #define PLAN_X_WIDTH_LOOP_COUNTER 7
 #define PLAN_Y_V_STRIDE 8
+#define PLAN_OUTER_X_H_STRIDE 9
+#define PLAN_OUTER_X_V_STRIDE 10
 
 //Stack Usage
 
@@ -62,6 +64,9 @@
 #define S_X_V_STRIDE 30
 #define S_X_H_STRIDE 31
 
+#define S_OUTER_X_H_STRIDE 32
+#define S_OUTER_X_V_STRIDE 33
+
 
 //Helpers that reference the above
 #define S_SAVE_R4_R5 (S_SAVE_R4/2)
@@ -94,18 +99,13 @@
 
 make_16_bit_output:
 
-    //init K_current
-    {ldw K_current, sp[S_K_p]; nop}
-
-    //clear D of the ring buffer
-    ldaw t, sp[S_ZERO_256]
-    vldd t[0]
-
-
     //init R to threshold_current
     mov t, threshold_current
+    {vldr t[0];nop}
     ldaw threshold_current, threshold_current[8] //advance the threshold_current pointer by 16 half words
-    vldr t[0]
+    
+    {vldd threshold_current[0];nop}
+    ldaw threshold_current, threshold_current[8] //advance the threshold_current pointer by 16 half words
 
     //X_current points to X[h + 0][w + 0][ic]
 
@@ -160,6 +160,7 @@ make_16_bit_output:
 
     retsp 0
 
+
 /*
 void bnn_conv2d_bin_out_asm(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
                         const bnn_b256_t* K_p,
@@ -169,7 +170,7 @@ void bnn_conv2d_bin_out_asm(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
 
 #define FUNCTION_NAME bnn_conv2d_bin_out_asm
 
-#define NSTACKWORDS  32
+#define NSTACKWORDS  34
     
 .text
 .issue_mode  dual
@@ -222,6 +223,12 @@ FUNCTION_NAME:
     ldw s, t[PLAN_Y_V_STRIDE]
     stw s, sp[S_Y_V_STRIDE]
 
+    ldw s, t[PLAN_OUTER_X_H_STRIDE]
+    stw s, sp[S_OUTER_X_H_STRIDE]
+
+    ldw s, t[PLAN_OUTER_X_V_STRIDE]
+    stw s, sp[S_OUTER_X_V_STRIDE]
+
     {ldc s, 0; nop}
     stw s, sp[S_ZERO_0]
     stw s, sp[S_ZERO_1]
@@ -243,36 +250,48 @@ FUNCTION_NAME:
             ldw threshold_current, sp[S_THRESHOLD_P]
             ldw oc_loop_counter, sp[S_OC_LOOP_COUNTER]
 
+            //init K_current
+            {ldw K_current, sp[S_K_p]; nop}
+
             oc_loop: //this loops over (output_channels/32)
                 
                 //load X_p to X_current
+
                 ldw X_current, sp[S_X_p]
                 bl make_16_bit_output 
+
                 ldaw s, sp[S_THRESHOLDS_0_15] //this will hold the lower 16 bits of the 32 output channels
-                //TODO vsat
+                ldaw t, sp[S_ZERO_256]
+                {vlsat t[0] ; nop}
                 {vdepth1; ldc t, 3}
                 vstrpv s[0], t
 
                 //load X_p to X_current
                 ldw X_current, sp[S_X_p]
+
                 bl make_16_bit_output
+
                 ldaw s, sp[S_THRESHOLDS_16_31] //this will hold the lower 16 bits of the 32 output channels
-                //TODO vsat
+                ldaw t, sp[S_ZERO_256]
+                {vlsat t[0] ; nop}
                 {vdepth1; ldc t, 3}
                 vstrpv s[0], t
                 
                 //merge the two 16 bits together
                 ldd s, t, sp[S_THRESHOLDS]
-                shr s, s, 16
-                add t, s, t
+                {shl s, s, 16; zext t, 16}
+                {add t, s, t; nop}
+
+                {not t, t; nop}
                 stw t, Y_p[0]
-                add Y_p, Y_p, 4 
+                {add Y_p, Y_p, 4 ; nop}
                 //save the 32 results to memory
 
             {bt oc_loop_counter, oc_loop; sub oc_loop_counter, oc_loop_counter, 1}
 
             //advance X by one(stride) to the right
-            ldw t, sp[S_X_H_STRIDE]
+            lbl0:
+            ldw t, sp[S_OUTER_X_H_STRIDE]
             ldw X_current, sp[S_X_p]
             {add X_current, X_current, t; nop }
             stw X_current, sp[S_X_p]
@@ -283,7 +302,7 @@ FUNCTION_NAME:
         {ldw t, sp[S_Y_V_STRIDE]; nop}
         {add Y_p, Y_p, t; nop }
 
-        {ldw t, sp[S_X_V_STRIDE]; nop}
+        {ldw t, sp[S_OUTER_X_V_STRIDE]; nop}
         ldw X_current, sp[S_X_p]
         {add X_current, X_current, t; nop }
         stw X_current, sp[S_X_p]

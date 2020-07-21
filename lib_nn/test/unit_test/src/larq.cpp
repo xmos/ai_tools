@@ -155,7 +155,7 @@ inline void BConv2D(
           }
           // If the destination scalar is int32, we're writing bitpacked output.
           if (std::is_same<DstScalar, std::int32_t>::value) {
-            // printf("%u %u %u %d\n", out_y, out_x, out_channel, accum);
+            // printf("l %u %u %u %d\n", out_y, out_x, out_channel, accum);
             bool bit = output_transform.Run(accum, out_channel);
             if (bit) bitpacked_column |= 1ULL << (out_channel % 32);
 
@@ -165,6 +165,7 @@ inline void BConv2D(
                 (out_channel + 1 == output_depth)) {
               output_data[Offset(output_shape, batch, out_y, out_x,
                                  out_channel / 32)] = bitpacked_column;
+              // printf("%08x\n", bitpacked_column);
               bitpacked_column = 0;
             }
           }

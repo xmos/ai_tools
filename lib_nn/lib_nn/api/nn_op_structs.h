@@ -402,6 +402,9 @@ typedef struct {
   unsigned output_channel_loop_counter;
   unsigned x_height_loop_counter;
   unsigned x_width_loop_counter;
+  unsigned y_v_stride;
+  unsigned outer_x_h_stride;
+  unsigned outer_x_v_stride;
 } nn_bnn_conv2d_bin_out_asm_plan_t;
 
 /**

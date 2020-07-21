@@ -20,7 +20,7 @@ class ModelGenerator(ABC):
     models.
     """
 
-    _model: Union[tf.keras.Model, None] = None
+    _model: tf.keras.Model
     _converted_models: Dict["ModelConverter", Any] = {}
     _converters: List["ModelConverter"]
 

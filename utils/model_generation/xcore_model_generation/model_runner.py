@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from abc import ABC, abstractmethod
-from typing import Union, Dict, Any, Iterator, Callable, NamedTuple
+from typing import Union, Dict, Any, Iterator, Callable, NamedTuple, Type
 
 from .model_converter import ModelConverter
 from .model_generator import (
@@ -28,13 +28,12 @@ class ModelRunner(ABC):
     configurations defined in its builtin_configs method.
     """
 
-    _model_generator: Union[ModelGenerator, None]
+    _model_generator: ModelGenerator
     _reports: ModelReports
     _outputs: ModelOutputs
 
-    def __init__(self, generator_class: Callable[..., ModelGenerator]) -> None:
+    def __init__(self, generator_class: Type[ModelGenerator]) -> None:
         self.generator_class = generator_class
-        self._model_generator = None
         self._reports = {}
         self._outputs = {}
 
@@ -47,7 +46,7 @@ class ModelRunner(ABC):
             self._model_generator = self.generator_class()
             self._run_model_generator(cfg)
             yield ModelRun(self._model_generator, self._reports, self._outputs)
-        self._model_generator = None
+        del self._model_generator
         self._reports = {}
         self._outputs = {}
 

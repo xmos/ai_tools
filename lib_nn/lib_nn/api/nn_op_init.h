@@ -696,6 +696,12 @@ void requantize_16_to_8_init(
     const unsigned job_count);
 
 
+void bsign_8_init(
+    nn_bsign_8_job_t* jobs,
+    const uint32_t N,
+    const unsigned job_count);
+
+
 #ifdef __XC__
 }   //extern "C"
 #endif

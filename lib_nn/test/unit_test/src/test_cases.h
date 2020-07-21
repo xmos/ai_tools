@@ -26,3 +26,4 @@ void test_avgpool2d();
 void test_avgpool2d_global();
 void test_requantize_16_to_8();
 void test_lookup8();
+void test_bsign_8();

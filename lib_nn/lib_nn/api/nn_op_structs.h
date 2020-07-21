@@ -401,6 +401,18 @@ typedef struct {
     uint32_t length;
 } nn_requantize_16_to_8_job_t;
 
+/**
+ * Struct represents the parameters needed by each `bsign_8()` job.
+ * 
+ * Values are set by `bsign_8_init()`.
+ * 
+ * @note This struct is intended to be opaque.
+ */
+typedef struct {
+    mem_stride_t start;
+    uint32_t length;
+} nn_bsign_8_job_t;
+
 
 /**
  * This struct describes the basic parameters for an image tensor

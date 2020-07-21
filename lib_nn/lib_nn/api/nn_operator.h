@@ -556,6 +556,32 @@ void lookup8(
     const unsigned N);
 
 
+/** 
+ * @brief Execute @oper{bsign_8} job.
+ * 
+ * See @oper_ref{bsign_8} for more details about the @oper{requantize_16_to_8} operator.
+ * 
+ * An instance of the @oper{bsign_8} operator requires an job (but no plan is required). See 
+ * bsign_8_init() for more details.
+ * 
+ * `Y` points to the output vector @tensor{y} with length @math{N}. The address supplied for `Y` should be the start 
+ * address of the output vector (for any job being processed).
+ * 
+ * `X` points to the input vector @tensor{x} with length @math{N}. The address supplied for `X` should be the start 
+ * address of the input vector (for any job being processed).
+ * 
+ * `job` points to the (initialized) @oper{bsign_8} job to be performed with this call.
+ * 
+ * @requires_word_alignment{Y,X}
+ *
+ * @param Y   [out]    The output vector @tensor{y}
+ * @param X   [in]     The input vector @tensor{x}
+ * @param job [in]     The @oper{bsign_8} job to be processed
+ */
+void bsign_8(
+    uint32_t* Y,
+    const int8_t* X,
+    const nn_bsign_8_job_t* job);
 
 
 #ifdef __XC__

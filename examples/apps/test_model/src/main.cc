@@ -6,12 +6,15 @@
 #include <iostream>
 
 #include "lib_ops/api/lib_ops.h"
+#include "lib_ops/src/xcore_profiler.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/micro_profiler.h"
 #include "tensorflow/lite/version.h"
 
 tflite::ErrorReporter *error_reporter = nullptr;
+tflite::Profiler *profiler = nullptr;
 const tflite::Model *model = nullptr;
 tflite::MicroInterpreter *interpreter = nullptr;
 TfLiteTensor *input = nullptr;
@@ -67,9 +70,12 @@ static int save_output(const char *filename, const char *output, size_t osize) {
 }
 
 static void setup_tflite(const char *model_buffer) {
-  // Set up logging.
+  // Set up logging
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
+  // Set up profiling.
+  static xcore::XCoreProfiler xcore_profiler(error_reporter);
+  profiler = &xcore_profiler;
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
@@ -97,7 +103,8 @@ static void setup_tflite(const char *model_buffer) {
 
   // Build an interpreter to run the model with.
   static tflite::MicroInterpreter static_interpreter(
-      model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
+      model, resolver, tensor_arena, kTensorArenaSize, error_reporter,
+      profiler);
   interpreter = &static_interpreter;
 
   // Allocate memory from the tensor_arena for the model's tensors.

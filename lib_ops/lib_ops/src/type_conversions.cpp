@@ -1,7 +1,6 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 #include "lib_ops/api/type_conversions.h"
 
-#include "lib_ops/api/benchmarking.h"
 #include "lib_ops/api/tracing.h"
 
 extern "C" {
@@ -44,7 +43,6 @@ XCoreStatus Requantize_16_to_8::Init(int32_t length) {
 
 XCoreStatus Requantize_16_to_8::Eval(int8_t* Y, const int16_t* X) {
   TRACE_INFO("Requantize_16_to_8 Eval id=%p\n", this);
-  TIMER_START();
 
   // initialize the dispatcher
   Dispatcher* dispatcher = GetDispatcher();
@@ -64,7 +62,6 @@ XCoreStatus Requantize_16_to_8::Eval(int8_t* Y, const int16_t* X) {
   // start and wait for tasks to complete
   dispatcher->JoinTasks();
 
-  TIMER_STOP("Requantize_16_to_8 id=%p", this);
   return kXCoreOk;
 }
 

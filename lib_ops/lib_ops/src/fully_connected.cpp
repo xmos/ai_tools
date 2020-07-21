@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <cstring>
 
-#include "lib_ops/api/benchmarking.h"
 #include "lib_ops/api/tracing.h"
 
 namespace xcore {
@@ -60,7 +59,6 @@ XCoreStatus FullyConnected_16::Prepare(int32_t C_in, int32_t C_out) {
 XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *X,
                                     const int8_t *W, const int16_t *BSO) {
   TRACE_INFO("FullyConnected Eval id=%p\n", this);
-  TIMER_START();
 
   // initialize the dispatcher
   Dispatcher *dispatcher = GetDispatcher();
@@ -113,7 +111,6 @@ XCoreStatus FullyConnected_16::Eval(int16_t *Y, const int8_t *X,
   }
   dispatcher->JoinTasks();  // finish up any added tasks
 
-  TIMER_STOP("FullyConnected id=%p", this);
   return kXCoreOk;
 }
 

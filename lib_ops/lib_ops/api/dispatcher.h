@@ -7,10 +7,10 @@
 #include "lib_ops/api/planning.h"
 
 #ifdef XCORE
-
 extern "C" {
-#include "lib_ops/src/xs1.h"  // FIXME: remove someday
-//    this must appear BEFORE including xcore/thread.h
+#ifdef _TIME_H_
+#define _clock_defined
+#endif
 #include <xcore/thread.h>
 }
 

@@ -1,7 +1,6 @@
 // Copyright (c) 2020, XMOS Ltd, All rights reserved
 #include "lib_ops/api/pooling.h"
 
-#include "lib_ops/api/benchmarking.h"
 #include "lib_ops/api/tracing.h"
 
 extern "C" {
@@ -83,7 +82,6 @@ XCoreStatus MaxPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
 XCoreStatus MaxPool::Eval(int8_t* Y, const int8_t* X) {
   TRACE_INFO("MaxPool Eval id=%p\n", this);
-  TIMER_START();
 
   // initialize the dispatcher
   Dispatcher* dispatcher = GetDispatcher();
@@ -105,7 +103,6 @@ XCoreStatus MaxPool::Eval(int8_t* Y, const int8_t* X) {
   // start and wait for tasks to complete
   dispatcher->JoinTasks();
 
-  TIMER_STOP("MaxPool id=%p", this);
   return kXCoreOk;
 }  // namespace pooling
 
@@ -177,7 +174,6 @@ XCoreStatus AvgPool::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 
 XCoreStatus AvgPool::Eval(int8_t* Y, const int8_t* X) {
   TRACE_INFO("AvgPool Eval id=%p\n", this);
-  TIMER_START();
 
   // initialize the dispatcher
   Dispatcher* dispatcher = GetDispatcher();
@@ -199,7 +195,6 @@ XCoreStatus AvgPool::Eval(int8_t* Y, const int8_t* X) {
   // start and wait for tasks to complete
   dispatcher->JoinTasks();
 
-  TIMER_STOP("AvgPool id=%p", this);
   return kXCoreOk;
 }
 
@@ -266,7 +261,6 @@ XCoreStatus AvgPool_Global::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
 XCoreStatus AvgPool_Global::Eval(int8_t* Y, const int8_t* X, int32_t X_h,
                                  int32_t X_w, uint32_t C_in) {
   TRACE_INFO("AvgPool_Global Eval id=%p\n", this);
-  TIMER_START();
 
   // initialize the dispatcher
   Dispatcher* dispatcher = GetDispatcher();
@@ -298,7 +292,6 @@ XCoreStatus AvgPool_Global::Eval(int8_t* Y, const int8_t* X, int32_t X_h,
   }
   dispatcher->JoinTasks();  // finish up any added tasks
 
-  TIMER_STOP("AvgPool_Global id=%p", this);
   return kXCoreOk;
 }
 

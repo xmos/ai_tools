@@ -1,5 +1,5 @@
 
-#if 0// defined(__XS3A__)
+#if defined(__XS3A__)
 #include "nn_config.h"
 
 /*
@@ -39,7 +39,7 @@ FUNCTION_NAME:
 #define job     r2
     {   ldw tmp, job[JOB_START]                 ;   ldc _32, 32                             }
     {   add X, X, tmp                           ;   shl r11, _32, 4                         }
-    {   shl tmp, tmp, 2                         ;   vsetc r11                               }    
+    {   shr tmp, tmp, 3                         ;   vsetc r11                               }    
     {   ldw length, job[JOB_LENGTH]             ;   mov X_, X                               }
     {   mov tail_mask, length                   ;   add Y, Y, tmp                           }
     {   zext tail_mask, 5                       ;   shr length, length, 5                   }

@@ -43,13 +43,13 @@ FUNCTION_NAME:
     {   ldw length, job[JOB_LENGTH]             ;   mov X_, X                               }
     {   mov tail_mask, length                   ;   add Y, Y, tmp                           }
     {   zext tail_mask, 5                       ;   shr length, length, 5                   }
-    {   shr tail_mask, tail_mask, 3             ;                                           }
+    {   shr tail_mask, tail_mask, 3             ;   mkmsk tmp, 4                            }
     {   mkmsk tail_mask, tail_mask              ;   bf length, .L_loop_end                  }
 
 .L_loop_top:
     {   add X_, X_, _32                         ;   vldr X_[0]                              }
     {   sub length, length, 1                   ;   vdepth1                                 }
-    {                                           ;   vstr Y[0]                               }
+    {                                           ;   vstrpv Y[0], tmp                        }
     {   add Y, Y, 4                             ;   bt length, .L_loop_top                  }
 .L_loop_end:
     {                                           ;   bf tail_mask, .Lfunc_end                }

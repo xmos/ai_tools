@@ -21,14 +21,11 @@
 // for sprintf() calls
 static char str_buff[200];
 
-// Reference bsign implementation (copied from larq-compute-engine);
+// Reference bsign implementation (currently copied from larq-compute-engine);
 void larq_ref_bsign(int8_t *input, uint32_t *output, size_t inputLength, int32_t zero_point);
-
-
 
 void gen_expected(int8_t *input, uint32_t *output, size_t inputLength)
 {
-
 #if 0
     uint32_t j = 0;
     uint32_t shift = 0;
@@ -54,9 +51,7 @@ void gen_expected(int8_t *input, uint32_t *output, size_t inputLength)
     if (shift != 0)
         output[j] = ((output[j] >> shift)<< shift) | bits;
 #else
-
     larq_ref_bsign(input, output, inputLength, 0);
-
 #endif
 
 }
@@ -160,7 +155,6 @@ void test_bsign_8_case2()
 
         // Only test with input lengths that produce byte aligned output sizes
         inputLen = (inputLen >> 3) << 3;
-
 
         pseudo_rand_bytes((char*)x_orig, sizeof(x_orig));
         vpu_memcpy(x, x_orig, sizeof(x));

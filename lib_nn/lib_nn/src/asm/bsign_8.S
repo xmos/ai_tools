@@ -52,9 +52,10 @@ FUNCTION_NAME:
     {                                           ;   vstrpv Y[0], tmp                        }
     {   add Y, Y, 4                             ;   bt length, .L_loop_top                  }
 .L_loop_end:
-    {                                           ;   bf tail_mask, .Lfunc_end                }
+    {   ldc tmp, 0                              ;   bf tail_mask, .Lfunc_end                }
     {                                           ;   vldr X_[0]                              }
     {                                           ;   vdepth1                                 }
+    {   stw tmp, Y[0]                           ;                                           }
     {                                           ;   vstrpv Y[0], tail_mask                  }
 
 .Lfunc_end:

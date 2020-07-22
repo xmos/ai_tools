@@ -1,15 +1,19 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from inspect import isabstract
-from typing import Optional, Tuple, List, Dict, Any, TYPE_CHECKING
+from typing import Optional, Tuple, List, Dict, Any
 from abc import ABC, abstractmethod
 
 import tensorflow as tf  # type: ignore
 
 from tflite2xcore.utils import set_all_seeds  # type: ignore # TODO: fix this
 
-if TYPE_CHECKING:
-    from .model_converter import ModelConverter
+from .model_converter import (
+    ModelConverter,
+    TFLiteFloatConverter,
+    TFLiteQuantConverter,
+    XCoreConverter,
+)
 
 
 Configuration = Dict[str, Any]
@@ -24,9 +28,9 @@ class ModelGenerator(ABC):
 
     _model: tf.keras.Model
     _config: Configuration = {}
-    _converted_models: Dict["ModelConverter", Any] = {}
+    _converted_models: Dict[ModelConverter, Any] = {}
 
-    def __init__(self, converters: Optional[List["ModelConverter"]] = None) -> None:
+    def __init__(self, converters: Optional[List[ModelConverter]] = None) -> None:
         """ Registers the converters associated with the generated models. """
         self._converters = converters or []
 
@@ -71,14 +75,28 @@ class KerasModelGenerator(ModelGenerator):
 
     @property
     def _input_shape(self) -> Tuple[int, ...]:
-        return self._model.input_shape[1:]  # pylint: disable=no-member
+        return self._model.input_shape[1:]  # type:ignore  # pylint: disable=no-member
 
     @property
     def _output_shape(self) -> Tuple[int, ...]:
-        return self._model.output_shape[1:]  # pylint: disable=no-member
+        return self._model.output_shape[1:]  # type:ignore  # pylint: disable=no-member
 
 
 class IntegrationTestModelGenerator(KerasModelGenerator):
+    _quant_converter: TFLiteQuantConverter
+    _xcore_converter: XCoreConverter
+
+    def __init__(self) -> None:
+        self._quant_converter = TFLiteQuantConverter(self)
+        self._xcore_converter = XCoreConverter(self, self._quant_converter)
+        super().__init__(
+            converters=[
+                TFLiteFloatConverter(self),
+                self._quant_converter,
+                self._xcore_converter,
+            ]
+        )
+
     @classmethod
     @abstractmethod
     def builtin_configs(cls, level: str = "default") -> List[Configuration]:

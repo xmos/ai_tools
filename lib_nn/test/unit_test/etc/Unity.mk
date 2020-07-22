@@ -3,7 +3,7 @@
 Unity_PATH ?= ./
 LIB_PATH := $(abspath $(Unity_PATH))
 
-INCLUDES += $(LIB_PATH)/src
+INCLUDES += $(LIB_PATH)/src  $(LIB_PATH)/../../third_party/compute-engine $(LIB_PATH)/../../third_party/tensorflow  $(LIB_PATH)/../../third_party/gemmlowp
 
 
 ###### 
@@ -14,7 +14,7 @@ SOURCE_DIRS := src
 ###### 
 ### [optional] Source file extentions. Defaults to: c cc xc cpp S
 ###
-SOURCE_FILE_EXTS := c
+SOURCE_FILE_EXTS := c cpp
 
 ######
 ### [optional] List of source files to compile.

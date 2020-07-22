@@ -130,24 +130,51 @@ void bsign_8(
     uint32_t j = 0;
     uint32_t shift = 0;
 
-    uint32_t bits = 0;
+#define WRITE_WORD_ALIGNED_OUPUT 1
 
-    for(int i = 0; i < job->length; i++)
+    if(WRITE_WORD_ALIGNED_OUPUT)
     {
-        if(x[i] < 0)
-            bits |= (1 << shift);
-        
-        shift++;
-
-        if(shift == 32) 
+        // Note, this matches Larq - where 0's are witten to the upper unused bytes of the tail word
+     
+        for(int i = 0; i < job->length; i++)
         {
-            y[j++] = bits;
-            shift = 0; bits = 0;
+            if(shift == 0)
+                y[j] = 0;
+
+            if(x[i] < 0)
+                y[j] |= (1 << shift);
+            
+            shift++;
+
+            if(shift == 32) 
+            {
+                ++j;
+                shift = 0;
+            }
         }
     }
+    else
+    {
+        uint32_t bits = 0;
 
-    if(shift != 0)
-        y[j] = ((y[j] >> shift) << shift) | bits;
+        for(int i = 0; i < job->length; i++)
+        {
+            if(x[i] < 0)
+                bits |= (1 << shift);
+            
+            shift++;
+
+            if(shift == 32) 
+            {
+                y[j++] = bits;
+                shift = 0; bits = 0;
+            }
+        }
+
+        if(shift != 0)
+            y[j] = ((y[j] >> shift) << shift) | bits;
+
+    }
 }
 
 void bsign_8_init(

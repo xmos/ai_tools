@@ -21,9 +21,15 @@
 // for sprintf() calls
 static char str_buff[200];
 
-void gen_expected(int8_t *input, uint32_t *output, size_t input_length)
+// Reference bsign implementation (copied from larq-compute-engine);
+void larq_ref_bsign(int8_t *input, uint32_t *output, size_t inputLength, int32_t zero_point);
+
+
+
+void gen_expected(int8_t *input, uint32_t *output, size_t inputLength)
 {
 
+#if 0
     uint32_t j = 0;
     uint32_t shift = 0;
     uint32_t bits = 0;
@@ -47,6 +53,11 @@ void gen_expected(int8_t *input, uint32_t *output, size_t input_length)
     // Tail tidy - don't write a full word.. i.e. same as VSTRPV
     if (shift != 0)
         output[j] = ((output[j] >> shift)<< shift) | bits;
+#else
+
+    larq_ref_bsign(input, output, inputLength, 0);
+
+#endif
 
 }
 

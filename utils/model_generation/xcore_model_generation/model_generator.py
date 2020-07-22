@@ -26,9 +26,8 @@ class ModelGenerator(ABC):
     models.
     """
 
-    _model: tf.keras.Model
+    _model: Any
     _config: Configuration = {}
-    _converted_models: Dict[ModelConverter, Any] = {}
 
     def __init__(self, converters: Optional[List[ModelConverter]] = None) -> None:
         """ Registers the converters associated with the generated models. """
@@ -45,22 +44,34 @@ class ModelGenerator(ABC):
 
     @abstractmethod
     def build(self) -> None:
-        """ Sets the _model field with a tf.keras.Model object.
+        """ Sets the _model field as needed by the subclass.
         
         The configuration should be set using the set_config method before
-        calling this. When this method is run, it should also reset the
-        _converted_models field.
+        calling this.
         """
-        self._converted_models = {}
+        raise NotImplementedError()
 
     @abstractmethod
+    def _set_config(self, cfg: Configuration) -> None:
+        """ Sets the relevant configuration parameters and returns the unused ones.
+        
+        This method operates on the config input argument in-place.
+        """
+        for converter in self._converters:
+            converter._set_config(cfg)
+
     def set_config(self, **config: Any) -> None:
         """ Configures the model generator before the build method is run.
         
         Should check if the given configuration parameters are legal.
         Optionally sets the default values for missing configuration parameters.
+        Subclasses should implement the _set_config method instead of this.
         """
-        self._config = config
+        self._set_config(config)
+        if config:
+            raise ValueError(
+                f"Unexpected configuration parameter(s): {', '.join(config.keys())}"
+            )
 
     @classmethod
     def parse_config(cls, config_string: str) -> List[Configuration]:
@@ -69,6 +80,8 @@ class ModelGenerator(ABC):
 
 
 class KerasModelGenerator(ModelGenerator):
+    _model: tf.keras.Model
+
     def _prep_backend(self) -> None:
         tf.keras.backend.clear_session()
         set_all_seeds()
@@ -89,13 +102,7 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
     def __init__(self) -> None:
         self._quant_converter = TFLiteQuantConverter(self)
         self._xcore_converter = XCoreConverter(self, self._quant_converter)
-        super().__init__(
-            converters=[
-                TFLiteFloatConverter(self),
-                self._quant_converter,
-                self._xcore_converter,
-            ]
-        )
+        super().__init__([self._quant_converter, self._xcore_converter])
 
     @classmethod
     @abstractmethod

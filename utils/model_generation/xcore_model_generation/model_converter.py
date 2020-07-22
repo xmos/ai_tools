@@ -44,11 +44,15 @@ class ModelConverter(ABC):
         """
         raise NotImplementedError()
 
-    def set_config(self) -> None:
-        """ Configures the converter as needed by the owner. 
+    @property
+    def _config(self) -> "Configuration":
+        return self._model_generator._config
+
+    @abstractmethod
+    def _set_config(self, cfg: "Configuration") -> None:
+        """ Sets the relevant configuration parameters and returns the unused ones.
         
-        By default no configuration is needed, but subclasses can implement
-        this method as needed.
+        This method operates on the config input argument in-place.
         """
         pass
 
@@ -73,15 +77,16 @@ class TFLiteQuantConverter(ModelConverter):
 
     _model_generator: "KerasModelGenerator"
     _data_len: int
-    _data_init: tf.initializers.Initializer
 
-    def set_config(
-        self,
-        data_len: Optional[int] = None,
-        data_init: Optional[tf.initializers.Initializer] = None,
-    ) -> None:
-        self._data_len = data_len or 10
-        self._data_init = data_init or tf.random_uniform_initializer(-1, 1)
+    def _set_config(self, cfg: "Configuration") -> None:
+        self._config["input_init"] = cfg.pop(
+            "input_init", tf.random_uniform_initializer(-1, 1)
+        )
+        self._data_len = 10
+
+    @property
+    def _data_init(self) -> tf.initializers.Initializer:
+        return self._config["input_init"]
 
     def convert(self) -> None:
         model_generator = self._model_generator
@@ -101,7 +106,6 @@ class XCoreConverter(ModelConverter):
     """
 
     _model_generator: "KerasModelGenerator"
-    _num_threads: int
 
     def __init__(
         self,
@@ -117,10 +121,10 @@ class XCoreConverter(ModelConverter):
         self._model_generator = model_generator
         self._quant_converter = quant_converter
 
-    def set_config(self, num_threads: Optional[int] = None) -> None:
-        self._num_threads = num_threads or 1
+    def _set_config(self, cfg: "Configuration") -> None:
+        self._config["num_threads"] = cfg.pop("num_threads", 1)
 
     def convert(self) -> None:
         model = XCOREModel.deserialize(self._quant_converter._model)
-        optimize_for_xcore(model, num_threads=self._num_threads)
+        optimize_for_xcore(model, num_threads=self._config["num_threads"])
         self._model = model.serialize()

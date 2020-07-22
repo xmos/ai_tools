@@ -394,17 +394,17 @@ typedef struct {
  * @note This struct is intended to be opaque.
  */
 typedef struct {
-  unsigned x_v_stride;
-  unsigned x_h_stride;
   unsigned k_height_loop_counter;
   unsigned k_width_loop_counter;
   unsigned input_channel_loop_counter;
   unsigned output_channel_loop_counter;
   unsigned x_height_loop_counter;
   unsigned x_width_loop_counter;
-  unsigned y_v_stride;
-  unsigned outer_x_h_stride;
-  unsigned outer_x_v_stride;
+  unsigned y_v_step;
+  unsigned inner_x_h_step;
+  unsigned inner_x_v_step;
+  unsigned outer_x_h_step;
+  unsigned outer_x_v_step;
 } nn_bnn_conv2d_bin_out_asm_plan_t;
 
 /**

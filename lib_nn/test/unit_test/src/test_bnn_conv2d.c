@@ -26,11 +26,11 @@ void larq_ref_bconv2d(const nn_image_params_t* x, const nn_image_params_t* y,
                       const int32_t* packed_filter_data,
                       int32_t* packed_output_data, const long* thresholds);
 
-void run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
-                bnn_b256_t* K_p, bnn_b256_t* K_ref_p, int32_t* thresholds_ref,
-                int32_t* thresholds_p, unsigned x_height, unsigned x_width,
-                unsigned k_height, unsigned k_width, unsigned chans_in,
-                unsigned chans_out, unsigned h_stride, unsigned v_stride) {
+int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
+               bnn_b256_t* K_p, bnn_b256_t* K_ref_p, int32_t* thresholds_ref,
+               int32_t* thresholds_p, unsigned x_height, unsigned x_width,
+               unsigned k_height, unsigned k_width, unsigned chans_in,
+               unsigned chans_out, unsigned h_stride, unsigned v_stride) {
   unsigned y_height = x_height - k_height + 1;
   unsigned y_width = x_width - k_width + 1;
 
@@ -59,7 +59,7 @@ void run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
   for (unsigned i = 0; i < chans_out; i++)
     thresholds_ref[i] = i + ((chans_in * k_height * k_width - chans_out) / 2);
 
-  int16_t* thresholds = (int32_t(*))thresholds_p;
+  int16_t* thresholds = (int16_t*)thresholds_p;
 
   // boggle the threshold(accum init)
   for (unsigned i = 0; i < chans_out; i++) {
@@ -89,12 +89,16 @@ void run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
           for (unsigned ic = 0; ic < chan_b256_in; ic++) {
             for (unsigned i = 0; i < 8; i++) {
               K[oc][h][w][ic][15 - o].d[i] = ~K_ref[oc * 16 + o][h][w][ic].d[i];
+              // K[oc][h][w][ic][o].d[i] = K_ref[oc * 16 + o][h][w][ic].d[i];
             }
           }
         }
       }
     }
   }
+
+  bnn_b256_t(*X)[x_width][chan_b256_in] =
+      (bnn_b256_t(*)[x_width][chan_b256_in])X_ref;
 
   nn_image_params_t x;
   x.height = x_height;
@@ -128,11 +132,24 @@ void run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
   // printf("k_height_loop_counter %u\n", plan.k_height_loop_counter);
   // printf("k_width_loop_counter %u\n", plan.k_width_loop_counter);
   // printf("output_channel_loop_counter %u\n",
-  // plan.output_channel_loop_counter); printf("x_h_stride %u\n",
-  // plan.x_h_stride); printf("x_height_loop_counter %u\n",
-  // plan.x_height_loop_counter); printf("x_v_stride %u\n", plan.x_v_stride);
-  // printf("x_width_loop_counter %u\n", plan.x_width_loop_counter);
-  // printf("y_v_stride %u\n", plan.y_v_stride);
+  // plan.output_channel_loop_counter); printf("x_height_loop_counter %u\n",
+  // plan.x_height_loop_counter); printf("x_width_loop_counter %u\n",
+  // plan.x_width_loop_counter); printf("inner_x_h_step %u\n",
+  // plan.inner_x_h_step); printf("inner_x_v_step %u\n", plan.inner_x_v_step);
+  // printf("outer_x_h_step %u\n", plan.outer_x_h_step);
+  // printf("outer_x_v_step %u\n", plan.outer_x_v_step);
+  // printf("y_v_step %u\n", plan.y_v_step);
+
+  // bnn_b256_t* p = X_ref;
+  // for (unsigned h = 0; h < x_height - k_height + 1; h += h_stride) {
+  //   for (unsigned w = 0; w < x_width - k_width + 1; w += v_stride) {
+  //     printf("%u %u %p\n", h, w, p);
+  //     print_vector(*p);
+  //     // p += (1);
+  //     p += (plan.outer_x_h_step / sizeof(bnn_b256_t));
+  //   }
+  //   p += (plan.outer_x_v_step / sizeof(bnn_b256_t));
+  // }
 
   bnn_conv2d_bin_out_asm((bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref, (bnn_b256_t*)K,
                          (int32_t*)thresholds, &plan);
@@ -158,35 +175,30 @@ void run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
         //        get_bit_b32(Y[h][w], co),
         //        get_bit_b32(Y_ref[h][w], co) == get_bit_b32(Y[h][w], co));
         all_equal &= (get_bit_b32(Y_ref[h][w], co) == get_bit_b32(Y[h][w], co));
-        // if (get_bit_b32(Y[h][w], co) != get_bit_b32(Y_ref[h][w], co)) {
-        //   printf("Error\n");
-        //   return;
-        // }
       }
     }
   }
-
-  TEST_ASSERT_EQUAL_INT(all_equal, 1);
+  return 1 - all_equal;
 }
 
-void test_bnn_conv2d_bin_out_pseudo_random() {
+void test_bnn_conv2d_bin_out_pseudo_directed() {
 #define H_STRIDE 1
 #define V_STRIDE 1
 #define H_OFFSET 0
 #define V_OFFSET 0
-#define K_HEIGHT 1
-#define K_WIDTH 1
+#define K_HEIGHT 2
+#define K_WIDTH 2
 #define CHANS_IN 256
 #define CHANS_OUT 32
-#define X_HEIGHT 1
-#define X_WIDTH 1
+#define X_HEIGHT 3
+#define X_WIDTH 3
 #define Y_HEIGHT (((X_HEIGHT - V_OFFSET) / V_STRIDE) - K_HEIGHT + 1)
 #define Y_WIDTH (((X_WIDTH - H_OFFSET) / H_STRIDE) - K_WIDTH + 1)
 
 #define CHAN_WORDS_IN \
   ((CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
 #define CHAN_WORDS_OUT ((CHANS_OUT + 32 - 1) / 32)
-  int64_t f;
+
   bnn_b256_t WORD_ALIGNED K_ref[CHANS_OUT][K_HEIGHT][K_WIDTH][CHAN_WORDS_IN];
   bnn_b256_t WORD_ALIGNED
       K[CHANS_OUT / 16][K_HEIGHT][K_WIDTH][CHAN_WORDS_IN][16];
@@ -198,10 +210,14 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
   int32_t WORD_ALIGNED thresholds_ref[CHANS_OUT];
   int32_t WORD_ALIGNED thresholds[CHANS_OUT];
 
-  run_config((bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b256_t*)X_ref,
-             (bnn_b256_t*)K, (bnn_b256_t*)K_ref, (int32_t*)thresholds_ref,
-             (int32_t*)thresholds, X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
-             CHANS_IN, CHANS_OUT, H_STRIDE, V_STRIDE);
+  int failure =
+      run_config((bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b256_t*)X_ref,
+                 (bnn_b256_t*)K, (bnn_b256_t*)K_ref, (int32_t*)thresholds_ref,
+                 (int32_t*)thresholds, X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
+                 CHANS_IN, CHANS_OUT, H_STRIDE, V_STRIDE);
+
+  TEST_ASSERT_FALSE(failure);
+
 #undef H_STRIDE
 #undef V_STRIDE
 #undef H_OFFSET
@@ -216,7 +232,7 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
 #undef Y_WIDTH
 }
 
-void test_bnn_conv2d_bin_out_pseudo_random2() {
+void test_bnn_conv2d_bin_out_pseudo_random() {
 #define MIN_H_STRIDE 1
 #define MIN_V_STRIDE 1
 #define MAX_H_STRIDE 2
@@ -227,8 +243,8 @@ void test_bnn_conv2d_bin_out_pseudo_random2() {
 #define MAX_H_OFFSET 0
 #define MAX_V_OFFSET 0
 
-#define MIN_K_HEIGHT 3
-#define MIN_K_WIDTH 3
+#define MIN_K_HEIGHT 1
+#define MIN_K_WIDTH 1
 #define MAX_K_HEIGHT 6
 #define MAX_K_WIDTH 6
 
@@ -290,180 +306,16 @@ void test_bnn_conv2d_bin_out_pseudo_random2() {
           for (unsigned x_height = k_height; x_height < MAX_X_HEIGHT;
                ++x_height) {
             for (unsigned x_width = k_width; x_width < MAX_X_WIDTH; ++x_width) {
-              run_config((bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b256_t*)X_ref,
-                         (bnn_b256_t*)K, (bnn_b256_t*)K_ref,
-                         (int32_t*)thresholds_ref, (int32_t*)thresholds,
-                         x_height, x_width, k_height, k_width, chans_in,
-                         chans_out, h_stride, v_stride);
+              int r = run_config(
+                  (bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b256_t*)X_ref,
+                  (bnn_b256_t*)K, (bnn_b256_t*)K_ref, (int32_t*)thresholds_ref,
+                  (int32_t*)thresholds, x_height, x_width, k_height, k_width,
+                  chans_in, chans_out, h_stride, v_stride);
+
+              TEST_ASSERT_FALSE(r);
             }
           }
         }
-      }
-    }
-  }
-
-#undef H_STRIDE
-#undef V_STRIDE
-#undef H_OFFSET
-#undef V_OFFSET
-#undef K_HEIGHT
-#undef K_WIDTH
-#undef CHANS_IN
-#undef CHANS_OUT
-#undef X_HEIGHT
-#undef X_WIDTH
-#undef Y_HEIGHT
-#undef Y_WIDTH
-}
-
-void test_bnn_conv2d_bin_out_directed() {
-#define H_STRIDE 1
-#define V_STRIDE 1
-#define H_OFFSET 0
-#define V_OFFSET 0
-#define K_HEIGHT 2
-#define K_WIDTH 2
-#define CHANS_IN 256
-#define CHANS_OUT 32
-#define X_HEIGHT 5
-#define X_WIDTH 5
-#define Y_HEIGHT (((X_HEIGHT - H_OFFSET) / V_STRIDE) - K_HEIGHT + 1)
-#define Y_WIDTH (((X_WIDTH - V_OFFSET) / H_STRIDE) - K_WIDTH + 1)
-
-#define CHAN_WORDS_IN \
-  ((CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
-#define CHAN_WORDS_OUT ((CHANS_OUT + 32 - 1) / 32)
-
-  bnn_bool_t WORD_ALIGNED K_ref[CHANS_OUT][K_HEIGHT][K_WIDTH][CHANS_IN];
-  bnn_bool_t WORD_ALIGNED X_ref[X_HEIGHT][X_WIDTH][CHANS_IN];
-  bnn_bool_t WORD_ALIGNED Y_ref[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
-
-  bnn_b256_t WORD_ALIGNED K[CHANS_OUT][K_HEIGHT][K_WIDTH][CHAN_WORDS_IN];
-  bnn_b256_t WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHAN_WORDS_IN];
-  bnn_b32_t WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHAN_WORDS_OUT];
-
-  srand(42);
-
-  memset(K, 0, sizeof(K));
-  memset(X, 0, sizeof(X));
-  memset(Y, 0, sizeof(Y));
-  memset(K_ref, 0, sizeof(K_ref));
-  memset(X_ref, 0, sizeof(X_ref));
-  memset(Y_ref, 0, sizeof(Y_ref));
-
-  for (unsigned co = 0; co < CHANS_OUT; co++) {
-    for (unsigned h = 0; h < K_HEIGHT; h++) {
-      for (unsigned w = 0; w < K_WIDTH; w++) {
-        for (unsigned ci = 0; ci < CHANS_IN; ci++) {
-          K_ref[co][h][w][ci] = ((rand() & 1) * 2) - 1;
-        }
-      }
-    }
-  }
-
-  for (unsigned h = 0; h < X_HEIGHT; h++) {
-    for (unsigned w = 0; w < X_WIDTH; w++) {
-      for (unsigned ci = 0; ci < CHANS_IN; ci++) {
-        X_ref[h][w][ci] = ((rand() & 1) * 2) - 1;
-      }
-    }
-  }
-
-  pack_bits_b256((bnn_bool_t*)K_ref, (bnn_b256_t*)K,
-                 CHANS_OUT * K_HEIGHT * K_WIDTH, CHANS_IN);
-  pack_bits_b256((bnn_bool_t*)X_ref, (bnn_b256_t*)X, X_HEIGHT * X_WIDTH,
-                 CHANS_IN);
-
-  nn_image_params_t x;
-  x.height = X_HEIGHT;
-  x.width = X_WIDTH;
-  x.channels = CHANS_IN;
-  nn_image_params_t y;
-  y.height = Y_HEIGHT;
-  y.width = Y_WIDTH;
-  y.channels = CHANS_OUT;
-  nn_window_params_t k;
-  k.shape.height = K_HEIGHT;
-  k.shape.width = K_WIDTH;
-  k.start.column = H_OFFSET;
-  k.start.row = V_OFFSET;
-  k.stride.horizontal = H_STRIDE;
-  k.stride.vertical = V_STRIDE;
-
-  int16_t thresholds[CHANS_OUT];
-  for (unsigned i = 0; i < CHANS_OUT; i++)
-    thresholds[i] = i + ((CHANS_IN * K_HEIGHT * K_WIDTH - CHANS_OUT) / 2);
-
-  nn_bnn_conv2d_bin_out_ref_plan_t plan_ref;
-  bnn_conv2d_bin_out_ref_init(&plan_ref, &x, &y, &k);
-  bnn_conv2d_bin_out_ref((bnn_bool_t*)&Y_ref, (bnn_bool_t*)&X_ref,
-                         (bnn_bool_t*)&K_ref, thresholds, &plan_ref);
-
-  nn_bnn_conv2d_bin_out_plan_t plan;
-  bnn_conv2d_bin_out_init(&plan, &x, &y, &k);
-  bnn_conv2d_bin_out((bnn_b32_t*)&Y, (bnn_b256_t*)&X, (bnn_b256_t*)&K,
-                     thresholds, &plan);
-
-  int l = 0;
-  for (unsigned h = 0; h < Y_HEIGHT; h++) {
-    for (unsigned w = 0; w < Y_WIDTH; w++) {
-      for (unsigned co = 0; co < CHANS_OUT; co++) {
-        TEST_ASSERT_EQUAL_INT8(get_bit_b32(Y[h][w], co), Y_ref[h][w][co]);
-      }
-    }
-  }
-}
-
-#undef H_STRIDE
-#undef V_STRIDE
-#undef H_OFFSET
-#undef V_OFFSET
-#undef K_HEIGHT
-#undef K_WIDTH
-#undef CHANS_IN
-#undef CHANS_OUT
-#undef X_HEIGHT
-#undef X_WIDTH
-#undef Y_HEIGHT
-#undef Y_WIDTH
-
-void test_bnn_conv2d_bin_out_ref_directed() {
-#define H_STRIDE 1
-#define V_STRIDE 1
-#define H_OFFSET 0
-#define V_OFFSET 0
-
-#include "dir.inc"
-
-  bnn_bool_t WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
-
-  memset(Y, 0, sizeof(Y));
-
-  nn_image_params_t x;
-  x.height = X_HEIGHT;
-  x.width = X_WIDTH;
-  x.channels = CHANS_IN;
-  nn_image_params_t y;
-  y.height = Y_HEIGHT;
-  y.width = Y_WIDTH;
-  y.channels = CHANS_OUT;
-  nn_window_params_t k;
-  k.shape.height = K_HEIGHT;
-  k.shape.width = K_WIDTH;
-  k.start.column = H_OFFSET;
-  k.start.row = V_OFFSET;
-  k.stride.horizontal = H_STRIDE;
-  k.stride.vertical = V_STRIDE;
-
-  nn_bnn_conv2d_bin_out_ref_plan_t plan;
-  bnn_conv2d_bin_out_ref_init(&plan, &x, &y, &k);
-  bnn_conv2d_bin_out_ref((bnn_bool_t*)&Y, (bnn_bool_t*)&X, (bnn_bool_t*)&K,
-                         thresholds, &plan);
-
-  for (unsigned ch = 0; ch < CHANS_OUT; ch++) {
-    for (unsigned h = 0; h < y.height; h++) {
-      for (unsigned w = 0; w < y.width; w++) {
-        TEST_ASSERT_EQUAL_INT8(Y_expected[h][w][ch], Y[h][w][ch]);
       }
     }
   }
@@ -471,9 +323,6 @@ void test_bnn_conv2d_bin_out_ref_directed() {
 
 void test_bnn_conv2d() {
   UNITY_SET_FILE();
-
+  RUN_TEST(test_bnn_conv2d_bin_out_pseudo_directed);
   RUN_TEST(test_bnn_conv2d_bin_out_pseudo_random);
-  RUN_TEST(test_bnn_conv2d_bin_out_pseudo_random2);
-  // RUN_TEST(test_bnn_conv2d_bin_out_ref_directed);
-  // RUN_TEST(test_bnn_conv2d_bin_out_directed);
 }

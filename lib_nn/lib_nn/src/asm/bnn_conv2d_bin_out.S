@@ -5,17 +5,17 @@
 .issue_mode  dual
 
 //Plan layout
-#define PLAN_X_V_STRIDE 0
-#define PLAN_X_H_STRIDE 1
-#define PLAN_K_HEIGHT_LOOP_COUNTER 2
-#define PLAN_K_WIDTH_LOOP_COUNTER 3
-#define PLAN_IC_LOOP_COUNTER 4
-#define PLAN_OC_LOOP_COUNTER 5
-#define PLAN_X_HEIGHT_LOOP_COUNTER 6
-#define PLAN_X_WIDTH_LOOP_COUNTER 7
-#define PLAN_Y_V_STRIDE 8
-#define PLAN_OUTER_X_H_STRIDE 9
-#define PLAN_OUTER_X_V_STRIDE 10
+#define PLAN_K_HEIGHT_LOOP_COUNTER 0
+#define PLAN_K_WIDTH_LOOP_COUNTER 1
+#define PLAN_IC_LOOP_COUNTER 2
+#define PLAN_OC_LOOP_COUNTER 3
+#define PLAN_X_HEIGHT_LOOP_COUNTER 4
+#define PLAN_X_WIDTH_LOOP_COUNTER 5
+#define PLAN_Y_V_STEP 6
+#define PLAN_INNER_X_H_STEP 7
+#define PLAN_INNER_X_V_STEP 8
+#define PLAN_OUTER_X_H_STEP 9
+#define PLAN_OUTER_X_V_STEP 10
 
 //Stack Usage
 
@@ -59,14 +59,13 @@
 #define S_ZERO_7 27
 
 #define S_THRESHOLD_P 28
-#define S_Y_V_STRIDE 29
+#define S_Y_V_STEP 29
 
-#define S_X_V_STRIDE 30
-#define S_X_H_STRIDE 31
+#define S_INNER_X_V_STEP 30
+#define S_INNER_X_H_STEP 31
 
-#define S_OUTER_X_H_STRIDE 32
-#define S_OUTER_X_V_STRIDE 33
-
+#define S_OUTER_X_H_STEP 32
+#define S_OUTER_X_V_STEP 33
 
 //Helpers that reference the above
 #define S_SAVE_R4_R5 (S_SAVE_R4/2)
@@ -114,10 +113,13 @@ make_16_bit_output:
         
         ldw k_width_loop, sp[S_K_WIDTH_LOOP_COUNTER]
         kw_loop:
+  
+    lbl0:
+            vldc K_current[0]
 
             //get the X data for X[h + kh][w + kw][ic]
             vldc X_current[0]
-            
+          
             ldw ic_loop_counter, sp[S_IC_LOOP_COUNTER]
             ic_inner_loop:
 
@@ -146,14 +148,14 @@ make_16_bit_output:
 
             {bt ic_loop_counter, ic_inner_loop; sub ic_loop_counter, ic_loop_counter, 1}
 
-            //advance X by one(stride) right, dont forget we've on the next pixel
-            ldw t, sp[S_X_H_STRIDE]
+            //advance X by one(STEP) right, dont forget we've on the next pixel
+            ldw t, sp[S_INNER_X_H_STEP]
             {add X_current, X_current, t; nop}
 
         {bt k_width_loop, kw_loop; sub k_width_loop, k_width_loop, 1}
 
-        //advance X by one(stride) down
-        ldw t, sp[S_X_V_STRIDE]
+        //advance X by one(STEP) down
+        ldw t, sp[S_INNER_X_V_STEP]
         {add X_current, X_current, t; nop}
 
     {bt k_height_loop, kh_loop; sub k_height_loop, k_height_loop, 1}
@@ -196,38 +198,38 @@ FUNCTION_NAME:
 
     ldaw t, sp[NSTACKWORDS+1] //load the plan pointer
     ldw t, t[0]
-    ldw s, t[PLAN_X_V_STRIDE]
-    stw s, sp[S_X_V_STRIDE]
+    ldw s, t[PLAN_INNER_X_V_STEP]
+    stw s,   sp[S_INNER_X_V_STEP]
 
-    ldw s, t[PLAN_X_H_STRIDE]
-    stw s, sp[S_X_H_STRIDE]
+    ldw s, t[PLAN_INNER_X_H_STEP]
+    stw s,   sp[S_INNER_X_H_STEP]
 
     ldw s, t[PLAN_K_HEIGHT_LOOP_COUNTER]
-    stw s, sp[S_K_HEIGHT_LOOP_COUNTER]
+    stw s,   sp[S_K_HEIGHT_LOOP_COUNTER]
 
     ldw s, t[PLAN_K_WIDTH_LOOP_COUNTER]
-    stw s, sp[S_K_WIDTH_LOOP_COUNTER]
+    stw s,   sp[S_K_WIDTH_LOOP_COUNTER]
 
     ldw s, t[PLAN_IC_LOOP_COUNTER]
-    stw s, sp[S_IC_LOOP_COUNTER]
+    stw s,   sp[S_IC_LOOP_COUNTER]
 
     ldw s, t[PLAN_OC_LOOP_COUNTER]
-    stw s, sp[S_OC_LOOP_COUNTER]
+    stw s,   sp[S_OC_LOOP_COUNTER]
 
     ldw s, t[PLAN_X_WIDTH_LOOP_COUNTER]
-    stw s, sp[S_X_WIDTH_LOOP_COUNTER]
+    stw s,   sp[S_X_WIDTH_LOOP_COUNTER]
 
     ldw s, t[PLAN_X_HEIGHT_LOOP_COUNTER]
-    stw s, sp[S_X_HEIGHT_LOOP_COUNTER]
+    stw s,   sp[S_X_HEIGHT_LOOP_COUNTER]
 
-    ldw s, t[PLAN_Y_V_STRIDE]
-    stw s, sp[S_Y_V_STRIDE]
+    ldw s, t[PLAN_Y_V_STEP]
+    stw s,   sp[S_Y_V_STEP]
 
-    ldw s, t[PLAN_OUTER_X_H_STRIDE]
-    stw s, sp[S_OUTER_X_H_STRIDE]
+    ldw s, t[PLAN_OUTER_X_H_STEP]
+    stw s,   sp[S_OUTER_X_H_STEP]
 
-    ldw s, t[PLAN_OUTER_X_V_STRIDE]
-    stw s, sp[S_OUTER_X_V_STRIDE]
+    ldw s, t[PLAN_OUTER_X_V_STEP]
+    stw s,   sp[S_OUTER_X_V_STEP]
 
     {ldc s, 0; nop}
     stw s, sp[S_ZERO_0]
@@ -255,9 +257,10 @@ FUNCTION_NAME:
 
             oc_loop: //this loops over (output_channels/32)
                 
+                lbl2:
                 //load X_p to X_current
-
                 ldw X_current, sp[S_X_p]
+
                 bl make_16_bit_output 
 
                 ldaw s, sp[S_THRESHOLDS_0_15] //this will hold the lower 16 bits of the 32 output channels
@@ -266,6 +269,7 @@ FUNCTION_NAME:
                 {vdepth1; ldc t, 3}
                 vstrpv s[0], t
 
+lbl1:
                 //load X_p to X_current
                 ldw X_current, sp[S_X_p]
 
@@ -283,15 +287,14 @@ FUNCTION_NAME:
                 {add t, s, t; nop}
 
                 {not t, t; nop}
-                stw t, Y_p[0]
-                {add Y_p, Y_p, 4 ; nop}
+                
+                {add Y_p, Y_p, 4 ; stw t, Y_p[0]}
                 //save the 32 results to memory
 
             {bt oc_loop_counter, oc_loop; sub oc_loop_counter, oc_loop_counter, 1}
 
-            //advance X by one(stride) to the right
-            lbl0:
-            ldw t, sp[S_OUTER_X_H_STRIDE]
+            //advance X by one(STEP) to the right
+            ldw t, sp[S_OUTER_X_H_STEP]
             ldw X_current, sp[S_X_p]
             {add X_current, X_current, t; nop }
             stw X_current, sp[S_X_p]
@@ -299,10 +302,10 @@ FUNCTION_NAME:
         {bt x_width_loop, w_loop; sub x_width_loop, x_width_loop, 1 }
 
         //TODO advance Y to the next line
-        {ldw t, sp[S_Y_V_STRIDE]; nop}
-        {add Y_p, Y_p, t; nop }
+        //{ldw t, sp[S_Y_V_STEP]; nop}
+        //{add Y_p, Y_p, t; nop }
 
-        {ldw t, sp[S_OUTER_X_V_STRIDE]; nop}
+        {ldw t, sp[S_OUTER_X_V_STEP]; nop}
         ldw X_current, sp[S_X_p]
         {add X_current, X_current, t; nop }
         stw X_current, sp[S_X_p]

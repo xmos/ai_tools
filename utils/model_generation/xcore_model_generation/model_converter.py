@@ -108,23 +108,21 @@ class XCoreConverter(ModelConverter):
     _model_generator: "KerasModelGenerator"
 
     def __init__(
-        self,
-        model_generator: "KerasModelGenerator",
-        quant_converter: TFLiteQuantConverter,
+        self, model_generator: "KerasModelGenerator", source_converter: ModelConverter
     ) -> None:
         """ Registers the ModelGenerator that owns this ModelConverter. 
         
-        A hook for the source model must be specified as this converter could
+        The source converter must be specified as this converter could
         potentially be used with (among others) quantized or larq converted
         models.
         """
         self._model_generator = model_generator
-        self._quant_converter = quant_converter
+        self._source_converter = source_converter
 
     def _set_config(self, cfg: "Configuration") -> None:
         self._config["num_threads"] = cfg.pop("num_threads", 1)
 
     def convert(self) -> None:
-        model = XCOREModel.deserialize(self._quant_converter._model)
+        model = XCOREModel.deserialize(self._source_converter._model)
         optimize_for_xcore(model, num_threads=self._config["num_threads"])
         self._model = model.serialize()

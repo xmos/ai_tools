@@ -38,17 +38,25 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_deep_thread_worker(void *context) {
 
 Conv2D_Deep::Conv2D_Deep(const Conv2DParams &params,
                          const ExecutionPlan &execution_plan)
-    : params(params), execution_plan(execution_plan), jobs_(nullptr) {}
+    : params(params),
+      execution_plan(execution_plan),
+      jobs_(nullptr),
+      stack_scratch_index_(-1),
+      stack_size_(0),
+      weights_scratch_index_(-1),
+      bias_scratch_index_(-1) {}
 
-TfLiteStatus Conv2D_Deep::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
-                                  int32_t Y_h, int32_t Y_w, int32_t C_out) {
+TfLiteStatus Conv2D_Deep::Prepare(TfLiteContext *ctx, const int8_t *K,
+                                  const int16_t *BSO, int32_t X_h, int32_t X_w,
+                                  int32_t C_in, int32_t Y_h, int32_t Y_w,
+                                  int32_t C_out) {
   Dispatcher *dispatcher = GetDispatcher();
 
   TF_LITE_REPORT_STATUS(
       dispatcher->GetReporter(),
-      "Conv2D_Deep Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
-      "C_out=%ld",
-      this, X_h, X_w, C_in, Y_h, Y_w, C_out);
+      "Conv2D_Deep Prepare X_h=%d X_w=%d C_in=%d Y_h=%d Y_w=%d "
+      "C_out=%d",
+      X_h, X_w, C_in, Y_h, Y_w, C_out);
 
   // setup kernel parameters
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
@@ -62,9 +70,25 @@ TfLiteStatus Conv2D_Deep::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   // allocate the jobs
   int32_t n_jobs =
       execution_plan.changrps.GetSize() * execution_plan.regions.GetSize();
-  jobs_ = reinterpret_cast<nn_conv2d_deep_job_t *>(
-      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_deep_job_t) *
-                                           n_jobs));
+  TF_LITE_ENSURE_STATUS(
+      ctx->AllocatePersistentBuffer(ctx, sizeof(nn_conv2d_deep_job_t) * n_jobs,
+                                    reinterpret_cast<void **>(&jobs_)));
+
+  // allocate the stack for thread workers
+  GET_STACKSIZE(stack_size_, conv2d_deep_thread_worker);
+  TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+      ctx, stack_size_ * execution_plan.regions.GetSize(),
+      &stack_scratch_index_));
+
+  // allocate scratch buffers for weights and biases (if necessary)
+  if (IS_NOT_RAM(K)) {
+    TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+        ctx, execution_plan.GetWeightsScratchSize(), &weights_scratch_index_));
+  }
+  if (IS_NOT_RAM(BSO)) {
+    TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+        ctx, execution_plan.GetBiasScratchSize(), &bias_scratch_index_));
+  }
 
   // set job parameters
   nn_conv2d_job_params_t job_params[n_jobs];
@@ -75,11 +99,11 @@ TfLiteStatus Conv2D_Deep::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
       const RowColRegion &region = execution_plan.regions[i_rg];
       TF_LITE_REPORT_STATUS(
           dispatcher->GetReporter(),
-          "Conv2D_Deep Prepare id=%p, chan group start=%ld size=%ld, region "
-          "top=%ld left=%ld rows=%ld "
-          "cols=%ld",
-          this, changrp.start, changrp.size, region.top, region.left,
-          region.rows, region.cols);
+          "Conv2D_Deep Prepare chan group start=%d size=%d, region "
+          "top=%d left=%d rows=%d "
+          "cols=%d",
+          changrp.start, changrp.size, region.top, region.left, region.rows,
+          region.cols);
 
       job_params[i_cg * execution_plan.regions.GetSize() + i_rg] = {
           {region.top, region.left, changrp.start},
@@ -94,23 +118,33 @@ TfLiteStatus Conv2D_Deep::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   return kTfLiteOk;
 }
 
-TfLiteStatus Conv2D_Deep::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
-                               const int16_t *BSO) {
+TfLiteStatus Conv2D_Deep::Eval(TfLiteContext *ctx, int8_t *Y, const int8_t *X,
+                               const int8_t *K, const int16_t *BSO) {
   Dispatcher *dispatcher = GetDispatcher();
 
-  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(), "Conv2D_Deep Eval id=%p",
-                        this);
-
   // initialize the dispatcher
-  size_t stack_words;
-  GET_STACKWORDS(stack_words, conv2d_deep_thread_worker);
-  dispatcher->InitializeTasks(conv2d_deep_thread_worker, stack_words);
-
-  int8_t *tK = nullptr;
-  int16_t *tBSO = nullptr;
+  char *stack =
+      static_cast<char *>(ctx->GetScratchBuffer(ctx, stack_scratch_index_));
+  assert(stack);
+  dispatcher->InitializeTasks(conv2d_deep_thread_worker, stack, stack_size_);
 
   // create thread data and tasks
   Conv2DDeepThreadData thread_data[execution_plan.GetNumThreads()];
+
+  // load weights & bias scratch buffers (if necessary)
+  int8_t *tK = nullptr;
+  int16_t *tBSO = nullptr;
+
+  if (weights_scratch_index_ >= 0) {
+    tK = static_cast<int8_t *>(
+        ctx->GetScratchBuffer(ctx, weights_scratch_index_));
+    assert(tK);
+  }
+  if (bias_scratch_index_ >= 0) {
+    tBSO =
+        static_cast<int16_t *>(ctx->GetScratchBuffer(ctx, bias_scratch_index_));
+    assert(tBSO);
+  }
 
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
@@ -163,18 +197,26 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_shallow_thread_worker(void *context) {
 
 Conv2D_Shallow::Conv2D_Shallow(const Conv2DParams &params,
                                const ExecutionPlan &execution_plan)
-    : params(params), execution_plan(execution_plan), jobs_(nullptr) {}
+    : params(params),
+      execution_plan(execution_plan),
+      jobs_(nullptr),
+      stack_scratch_index_(-1),
+      stack_size_(0),
+      weights_scratch_index_(-1),
+      bias_scratch_index_(-1) {}
 
-TfLiteStatus Conv2D_Shallow::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
-                                     int32_t Y_h, int32_t Y_w, int32_t C_out,
+TfLiteStatus Conv2D_Shallow::Prepare(TfLiteContext *ctx, const int8_t *K,
+                                     const int16_t *BSO, int32_t X_h,
+                                     int32_t X_w, int32_t C_in, int32_t Y_h,
+                                     int32_t Y_w, int32_t C_out,
                                      int32_t K_w_padded) {
   Dispatcher *dispatcher = GetDispatcher();
 
   TF_LITE_REPORT_STATUS(
       dispatcher->GetReporter(),
-      "Conv2D_Shallow Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
-      "C_out=%ld, K_w_padded=%ld",
-      this, X_h, X_w, C_in, Y_h, Y_w, C_out, K_w_padded);
+      "Conv2D_Shallow Prepare X_h=%d X_w=%d C_in=%d Y_h=%d Y_w=%d "
+      "C_out=%d, K_w_padded=%d",
+      X_h, X_w, C_in, Y_h, Y_w, C_out, K_w_padded);
 
   // setup kernel parameters
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
@@ -188,9 +230,25 @@ TfLiteStatus Conv2D_Shallow::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   // allocate the jobs
   int32_t n_jobs =
       execution_plan.changrps.GetSize() * execution_plan.regions.GetSize();
-  jobs_ = reinterpret_cast<nn_conv2d_shallowin_job_t *>(
-      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_shallowin_job_t) *
-                                           n_jobs));
+  TF_LITE_ENSURE_STATUS(ctx->AllocatePersistentBuffer(
+      ctx, sizeof(nn_conv2d_shallowin_job_t) * n_jobs,
+      reinterpret_cast<void **>(&jobs_)));
+
+  // allocate the stack for thread workers
+  GET_STACKSIZE(stack_size_, conv2d_shallow_thread_worker);
+  TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+      ctx, stack_size_ * execution_plan.regions.GetSize(),
+      &stack_scratch_index_));
+
+  // allocate scratch buffers for weights and biases (if necessary)
+  if (IS_NOT_RAM(K)) {
+    TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+        ctx, execution_plan.GetWeightsScratchSize(), &weights_scratch_index_));
+  }
+  if (IS_NOT_RAM(BSO)) {
+    TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+        ctx, execution_plan.GetBiasScratchSize(), &bias_scratch_index_));
+  }
 
   // set job parameters
   nn_conv2d_job_params_t job_params[n_jobs];
@@ -201,11 +259,11 @@ TfLiteStatus Conv2D_Shallow::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
       const RowColRegion &region = execution_plan.regions[i_rg];
       TF_LITE_REPORT_STATUS(
           dispatcher->GetReporter(),
-          "Conv2D_Shallow Prepare id=%p, chan group start=%ld size=%ld, region "
-          "top=%ld left=%ld rows=%ld "
-          "cols=%ld",
-          this, changrp.start, changrp.size, region.top, region.left,
-          region.rows, region.cols);
+          "Conv2D_Shallow Prepare chan group start=%d size=%d, region "
+          "top=%d left=%d rows=%d "
+          "cols=%d",
+          changrp.start, changrp.size, region.top, region.left, region.rows,
+          region.cols);
 
       job_params[i_cg * execution_plan.regions.GetSize() + i_rg] = {
           {region.top, region.left, changrp.start},
@@ -220,22 +278,34 @@ TfLiteStatus Conv2D_Shallow::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   return kTfLiteOk;
 }  // namespace conv
 
-TfLiteStatus Conv2D_Shallow::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
+TfLiteStatus Conv2D_Shallow::Eval(TfLiteContext *ctx, int8_t *Y,
+                                  const int8_t *X, const int8_t *K,
                                   const int16_t *BSO) {
   Dispatcher *dispatcher = GetDispatcher();
 
-  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(), "Conv2D_Shallow Eval id=%p",
-                        this);
-
   // initialize the dispatcher
-  size_t stack_words;
-  GET_STACKWORDS(stack_words, conv2d_shallow_thread_worker);
-  dispatcher->InitializeTasks(conv2d_shallow_thread_worker, stack_words);
+  char *stack =
+      static_cast<char *>(ctx->GetScratchBuffer(ctx, stack_scratch_index_));
+  assert(stack);
+  dispatcher->InitializeTasks(conv2d_shallow_thread_worker, stack, stack_size_);
 
   // create thread data and tasks
   Conv2DShallowThreadData thread_data[execution_plan.GetNumThreads()];
+
+  // load weights & bias scratch buffers (if necessary)
   int8_t *tK = nullptr;
   int16_t *tBSO = nullptr;
+
+  if (weights_scratch_index_ >= 0) {
+    tK = static_cast<int8_t *>(
+        ctx->GetScratchBuffer(ctx, weights_scratch_index_));
+    assert(tK);
+  }
+  if (bias_scratch_index_ >= 0) {
+    tBSO =
+        static_cast<int16_t *>(ctx->GetScratchBuffer(ctx, bias_scratch_index_));
+    assert(tBSO);
+  }
 
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
@@ -288,16 +358,24 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_1x1_thread_worker(void *context) {
 
 Conv2D_1x1::Conv2D_1x1(const Conv2DParams &params,
                        const ExecutionPlan &execution_plan)
-    : params(params), execution_plan(execution_plan), jobs_(nullptr) {}
+    : params(params),
+      execution_plan(execution_plan),
+      jobs_(nullptr),
+      stack_scratch_index_(-1),
+      stack_size_(0),
+      weights_scratch_index_(-1),
+      bias_scratch_index_(-1) {}
 
-TfLiteStatus Conv2D_1x1::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
-                                 int32_t Y_h, int32_t Y_w, int32_t C_out) {
+TfLiteStatus Conv2D_1x1::Prepare(TfLiteContext *ctx, const int8_t *K,
+                                 const int16_t *BSO, int32_t X_h, int32_t X_w,
+                                 int32_t C_in, int32_t Y_h, int32_t Y_w,
+                                 int32_t C_out) {
   Dispatcher *dispatcher = GetDispatcher();
 
   TF_LITE_REPORT_STATUS(dispatcher->GetReporter(),
-                        "Conv2D_1x1 Prepare id=%p X_h=%ld X_w=%ld C_in=%ld "
-                        "Y_h=%ld Y_w=%ld C_out=%ld",
-                        this, X_h, X_w, C_in, Y_h, Y_w, C_out);
+                        "Conv2D_1x1 Prepare X_h=%d X_w=%d C_in=%d "
+                        "Y_h=%d Y_w=%d C_out=%d",
+                        X_h, X_w, C_in, Y_h, Y_w, C_out);
 
   // setup kernel parameters
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
@@ -307,9 +385,25 @@ TfLiteStatus Conv2D_1x1::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   // allocate the jobs
   int32_t n_jobs =
       execution_plan.changrps.GetSize() * execution_plan.regions.GetSize();
-  jobs_ = reinterpret_cast<nn_conv2d_1x1_job_t *>(
-      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_1x1_job_t) *
-                                           n_jobs));
+  TF_LITE_ENSURE_STATUS(
+      ctx->AllocatePersistentBuffer(ctx, sizeof(nn_conv2d_1x1_job_t) * n_jobs,
+                                    reinterpret_cast<void **>(&jobs_)));
+
+  // allocate the stack for thread workers
+  GET_STACKSIZE(stack_size_, conv2d_1x1_thread_worker);
+  TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+      ctx, stack_size_ * execution_plan.regions.GetSize(),
+      &stack_scratch_index_));
+
+  // allocate scratch buffers for weights and biases (if necessary)
+  if (IS_NOT_RAM(K)) {
+    TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+        ctx, execution_plan.GetWeightsScratchSize(), &weights_scratch_index_));
+  }
+  if (IS_NOT_RAM(BSO)) {
+    TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+        ctx, execution_plan.GetBiasScratchSize(), &bias_scratch_index_));
+  }
 
   // set job parameters
   nn_conv2d_1x1_job_params_t job_params[n_jobs];
@@ -320,11 +414,11 @@ TfLiteStatus Conv2D_1x1::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
       const RowColRegion &region = execution_plan.regions[i_rg];
       TF_LITE_REPORT_STATUS(
           dispatcher->GetReporter(),
-          "Conv2D_1x1 Prepare id=%p, chan group start=%ld size=%ld, region "
-          "top=%ld left=%ld rows=%ld "
-          "cols=%ld",
-          this, changrp.start, changrp.size, region.top, region.left,
-          region.rows, region.cols);
+          "Conv2D_1x1 Prepare chan group start=%d size=%d, region "
+          "top=%d left=%d rows=%d "
+          "cols=%d",
+          changrp.start, changrp.size, region.top, region.left, region.rows,
+          region.cols);
 
       job_params[i_cg * execution_plan.regions.GetSize() + i_rg] = {
           {region.top, region.left, changrp.start},
@@ -339,22 +433,33 @@ TfLiteStatus Conv2D_1x1::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   return kTfLiteOk;
 }
 
-TfLiteStatus Conv2D_1x1::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
-                              const int16_t *BSO) {
+TfLiteStatus Conv2D_1x1::Eval(TfLiteContext *ctx, int8_t *Y, const int8_t *X,
+                              const int8_t *K, const int16_t *BSO) {
   Dispatcher *dispatcher = GetDispatcher();
 
-  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(), "Conv2D_1x1 Eval id=%p",
-                        this);
-
   // initialize the dispatcher
-  size_t stack_words;
-  GET_STACKWORDS(stack_words, conv2d_1x1_thread_worker);
-  dispatcher->InitializeTasks(conv2d_1x1_thread_worker, stack_words);
+  char *stack =
+      static_cast<char *>(ctx->GetScratchBuffer(ctx, stack_scratch_index_));
+  assert(stack);
+  dispatcher->InitializeTasks(conv2d_1x1_thread_worker, stack, stack_size_);
 
   // create thread data and tasks
   Conv2D1x1ThreadData thread_data[execution_plan.GetNumThreads()];
+
+  // load weights & bias scratch buffers (if necessary)
   int8_t *tK = nullptr;
   int16_t *tBSO = nullptr;
+
+  if (weights_scratch_index_ >= 0) {
+    tK = static_cast<int8_t *>(
+        ctx->GetScratchBuffer(ctx, weights_scratch_index_));
+    assert(tK);
+  }
+  if (bias_scratch_index_ >= 0) {
+    tBSO =
+        static_cast<int16_t *>(ctx->GetScratchBuffer(ctx, bias_scratch_index_));
+    assert(tBSO);
+  }
 
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {
     const ChannelGroup &changrp = execution_plan.changrps[i_cg];
@@ -407,18 +512,25 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_depthwise_thread_worker(void *context) {
 
 Conv2D_Depthwise::Conv2D_Depthwise(const Conv2DParams &params,
                                    const ExecutionPlan &execution_plan)
-    : params(params), execution_plan(execution_plan), jobs_(nullptr) {}
+    : params(params),
+      execution_plan(execution_plan),
+      jobs_(nullptr),
+      stack_scratch_index_(-1),
+      stack_size_(0),
+      weights_scratch_index_(-1),
+      bias_scratch_index_(-1) {}
 
-TfLiteStatus Conv2D_Depthwise::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
-                                       int32_t Y_h, int32_t Y_w,
-                                       int32_t C_out) {
+TfLiteStatus Conv2D_Depthwise::Prepare(TfLiteContext *ctx, const int8_t *K,
+                                       const int16_t *BSO, int32_t X_h,
+                                       int32_t X_w, int32_t C_in, int32_t Y_h,
+                                       int32_t Y_w, int32_t C_out) {
   Dispatcher *dispatcher = GetDispatcher();
 
   TF_LITE_REPORT_STATUS(
       dispatcher->GetReporter(),
-      "Conv2D_Depthwise Prepare id=%p X_h=%ld X_w=%ld C_in=%ld Y_h=%ld Y_w=%ld "
-      "C_out=%ld",
-      this, X_h, X_w, C_in, Y_h, Y_w, C_out);
+      "Conv2D_Depthwise Prepare X_h=%d X_w=%d C_in=%d Y_h=%d Y_w=%d "
+      "C_out=%d",
+      X_h, X_w, C_in, Y_h, Y_w, C_out);
 
   // setup kernel parameters
   nn_image_params_t in_params = {(uint32_t)X_h, (uint32_t)X_w, (uint32_t)C_in};
@@ -432,9 +544,25 @@ TfLiteStatus Conv2D_Depthwise::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   // allocate the jobs
   int32_t n_jobs =
       execution_plan.changrps.GetSize() * execution_plan.regions.GetSize();
-  jobs_ = reinterpret_cast<nn_conv2d_depthwise_job_t *>(
-      dispatcher->AllocatePersistantBuffer(sizeof(nn_conv2d_depthwise_job_t) *
-                                           n_jobs));
+  TF_LITE_ENSURE_STATUS(ctx->AllocatePersistentBuffer(
+      ctx, sizeof(nn_conv2d_depthwise_job_t) * n_jobs,
+      reinterpret_cast<void **>(&jobs_)));
+
+  // allocate the stack for thread workers
+  GET_STACKSIZE(stack_size_, conv2d_1x1_thread_worker);
+  TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+      ctx, stack_size_ * execution_plan.regions.GetSize(),
+      &stack_scratch_index_));
+
+  // allocate scratch buffers for weights and biases (if necessary)
+  if (IS_NOT_RAM(K)) {
+    TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+        ctx, execution_plan.GetWeightsScratchSize(), &weights_scratch_index_));
+  }
+  if (IS_NOT_RAM(BSO)) {
+    TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+        ctx, execution_plan.GetBiasScratchSize(), &bias_scratch_index_));
+  }
 
   // set job parameters
   nn_conv2d_job_params_t job_params[n_jobs];
@@ -445,12 +573,12 @@ TfLiteStatus Conv2D_Depthwise::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
       const RowColRegion &region = execution_plan.regions[i_rg];
       TF_LITE_REPORT_STATUS(
           dispatcher->GetReporter(),
-          "Conv2D_Depthwise Prepare id=%p, chan group start=%ld size=%ld, "
+          "Conv2D_Depthwise Prepare chan group start=%d size=%d, "
           "region "
-          "top=%ld left=%ld rows=%ld "
-          "cols=%ld",
-          this, changrp.start, changrp.size, region.top, region.left,
-          region.rows, region.cols);
+          "top=%d left=%d rows=%d "
+          "cols=%d",
+          changrp.start, changrp.size, region.top, region.left, region.rows,
+          region.cols);
 
       job_params[i_cg * execution_plan.regions.GetSize() + i_rg] = {
           {region.top, region.left, changrp.start},
@@ -465,23 +593,35 @@ TfLiteStatus Conv2D_Depthwise::Prepare(int32_t X_h, int32_t X_w, int32_t C_in,
   return kTfLiteOk;
 }
 
-TfLiteStatus Conv2D_Depthwise::Eval(int8_t *Y, const int8_t *X, const int8_t *K,
+TfLiteStatus Conv2D_Depthwise::Eval(TfLiteContext *ctx, int8_t *Y,
+                                    const int8_t *X, const int8_t *K,
                                     const int16_t *BSO) {
   Dispatcher *dispatcher = GetDispatcher();
 
-  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(),
-                        "Conv2D_Depthwise Eval id=%p", this);
-
   // initialize the dispatcher
-  size_t stack_words;
-  GET_STACKWORDS(stack_words, conv2d_depthwise_thread_worker);
-  dispatcher->InitializeTasks(conv2d_depthwise_thread_worker, stack_words);
+  char *stack =
+      static_cast<char *>(ctx->GetScratchBuffer(ctx, stack_scratch_index_));
+  assert(stack);
+  dispatcher->InitializeTasks(conv2d_depthwise_thread_worker, stack,
+                              stack_size_);
 
   // create thread data and tasks
   Conv2DDepthwiseThreadData thread_data[execution_plan.GetNumThreads()];
 
+  // load weights & bias scratch buffers (if necessary)
   int8_t *tK = nullptr;
   int16_t *tBSO = nullptr;
+
+  if (weights_scratch_index_ >= 0) {
+    tK = static_cast<int8_t *>(
+        ctx->GetScratchBuffer(ctx, weights_scratch_index_));
+    assert(tK);
+  }
+  if (bias_scratch_index_ >= 0) {
+    tBSO =
+        static_cast<int16_t *>(ctx->GetScratchBuffer(ctx, bias_scratch_index_));
+    assert(tBSO);
+  }
 
   // fetch the weights
   //   NOTE: They all need to be fetched for each job

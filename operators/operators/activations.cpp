@@ -12,9 +12,6 @@ namespace activations {
 
 TfLiteStatus Lookup8::Eval(uint8_t* Y, const uint8_t* X, const uint8_t* lut,
                            const int32_t length) {
-  TF_LITE_REPORT_STATUS(GetDispatcher()->GetReporter(), "Lookup8 Eval id=%p",
-                        this);
-
   lookup8(Y, X, lut, length);
 
   return kTfLiteOk;

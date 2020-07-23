@@ -14,29 +14,20 @@ namespace xcore {
 
 static Dispatcher *kDispatcher = nullptr;
 
+void SetDispatcher(Dispatcher *dispatcher) { kDispatcher = dispatcher; }
+
 Dispatcher *GetDispatcher() {
   assert(kDispatcher);
   return kDispatcher;
 }
 
-TfLiteStatus InitializeXCore(Dispatcher *dispatcher) {
-  kDispatcher = dispatcher;
-  return kTfLiteOk;
-}
-
 #ifdef XCORE
-
-#define IS_RAM(a) (((uintptr_t)a >= 0x80000) && ((uintptr_t)a <= 0x100000))
 
 // xCORE Dispatcher implementation.
 // Uses a threadgroup_t to dispatch tasks to threads.
-Dispatcher::Dispatcher(void *buffer, size_t buffer_size,
-                       tflite::ErrorReporter *reporter, bool use_current_thread)
-    : use_current_thread_(use_current_thread), reporter_(reporter) {
+Dispatcher::Dispatcher(tflite::ErrorReporter *reporter, bool use_current_core)
+    : use_current_thread_(use_current_core), reporter_(reporter) {
   group_ = thread_group_alloc();
-
-  allocator_.SetHeap(buffer, buffer_size);
-
   tasks_.size = 0;
 }
 
@@ -55,20 +46,12 @@ TfLiteStatus Dispatcher::JoinTasks() {
   int remaining_tasks = tasks_.size - begin;
 
   if (remaining_tasks > 0) {
-    if (tasks_.stack == nullptr) {
-      tasks_.stack_words += 2;
-
-      tasks_.stack = reinterpret_cast<char *>(allocator_.AllocateScratchBuffer(
-          tasks_.stack_words * bytes_per_stackword * remaining_tasks,
-          DOUBLE_WORD_ALIGNMENT));
-    }
-
+    size_t stack_offset = 0;
+    size_t stack_words = tasks_.stack_size / kBytesPerStackword;
     for (int i = begin; i < tasks_.size; i++) {
-      int32_t stack_offset =
-          tasks_.stack_words * bytes_per_stackword * (i - begin);
-      thread_group_add(
-          group_, tasks_.function, tasks_.arguments[i],
-          stack_base(&tasks_.stack[stack_offset], tasks_.stack_words));
+      thread_group_add(group_, tasks_.function, tasks_.arguments[i],
+                       stack_base(&tasks_.stack[stack_offset], stack_words));
+      stack_offset += tasks_.stack_size;
     }
 
     thread_group_start(group_);
@@ -82,15 +65,10 @@ TfLiteStatus Dispatcher::JoinTasks() {
 
 #else
 
-#define IS_RAM(a) (1)
-
 // x86 Dispatcher implementation.
 // Uses a std::vector of std::thread to dispatch tasks to threads.
-Dispatcher::Dispatcher(void *buffer, size_t buffer_size,
-                       tflite::ErrorReporter *reporter, bool use_current_thread)
-    : use_current_thread_(use_current_thread), reporter_(reporter) {
-  allocator_.SetHeap(buffer, buffer_size);
-
+Dispatcher::Dispatcher(tflite::ErrorReporter *reporter, bool use_current_core)
+    : use_current_thread_(use_current_core), reporter_(reporter) {
   tasks_.size = 0;
 }
 
@@ -136,32 +114,24 @@ tflite::ErrorReporter *Dispatcher::GetReporter() { return reporter_; }
 
 TfLiteStatus Dispatcher::Reset() {
   tasks_.size = 0;
-  allocator_.ResetHeap();
 
   return kTfLiteOk;
 }
 
 TfLiteStatus Dispatcher::InitializeTasks(thread_function_t function,
-                                         size_t stack_words) {
+                                         char *stack, size_t stack_size) {
   tasks_.function = function;
-  tasks_.stack_words = stack_words;
+  tasks_.stack_size = stack_size;
   tasks_.size = 0;
-  tasks_.stack = nullptr;
-  allocator_.ResetScratch();
+  tasks_.stack = stack;
 
   return kTfLiteOk;
 }
 
-void *Dispatcher::AllocatePersistantBuffer(size_t size, size_t alignment) {
-  return allocator_.AllocatePersistantBuffer(size, alignment);
-}
-
-size_t Dispatcher::GetAllocatedSize() { return allocator_.GetAllocatedSize(); }
-
 TfLiteStatus Dispatcher::AddTask(void *argument) {
-  assert(tasks_.size < max_threads);
+  assert(tasks_.size < kMaxThreads);
 
-  if (tasks_.size < max_threads) {
+  if (tasks_.size < kMaxThreads) {
     tasks_.arguments[tasks_.size] = argument;
     tasks_.size++;
 
@@ -175,9 +145,6 @@ void Dispatcher::FetchBuffer(int8_t **dest, int8_t const *src, size_t size) {
   if (IS_RAM(src)) {
     *dest = (int8_t *)src;
   } else {
-    if (*dest == nullptr)
-      *dest = (int8_t *)allocator_.AllocateScratchBuffer(size);
-
     memload((void **)dest, (void *)src, size);
   }
 }
@@ -195,10 +162,8 @@ void Dispatcher::FetchWeights(int8_t **dest, int8_t const *src, size_t size,
     else
       load_size = changrp.size * changrp_bytes;
 
-    if (*dest == nullptr)
-      *dest = (int8_t *)allocator_.AllocateScratchBuffer(load_size);
-    memload((void **)dest, (void *)&src[changrp.start * changrp_bytes],
-            load_size);
+    memcpy((void *)*dest, (void *)&src[changrp.start * changrp_bytes],
+           load_size);
   }
 }
 
@@ -207,8 +172,6 @@ void Dispatcher::FetchBiases(int16_t **dest, int16_t const *src, size_t size,
   if (IS_RAM(src)) {
     *dest = (int16_t *)&src[changrp.index * bso_changrp_len];
   } else {
-    if (*dest == nullptr)
-      *dest = (int16_t *)allocator_.AllocateScratchBuffer(size);
     memload((void **)dest, (void *)&src[changrp.index * bso_changrp_len], size);
   }
 }

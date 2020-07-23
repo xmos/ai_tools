@@ -5,27 +5,28 @@
 #include <cstdio>
 #include <iostream>
 
-#include "operators/dispatcher.h"
+#include "operators/xcore_interpreter.h"
 #include "operators/xcore_profiler.h"
 #include "operators/xcore_reporter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
-#include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/micro/micro_profiler.h"
 #include "tensorflow/lite/version.h"
 
 tflite::ErrorReporter *reporter = nullptr;
 tflite::Profiler *profiler = nullptr;
 const tflite::Model *model = nullptr;
-tflite::MicroInterpreter *interpreter = nullptr;
 TfLiteTensor *input = nullptr;
 TfLiteTensor *output = nullptr;
+
+xcore::XCoreInterpreter *interpreter = nullptr;
+
 constexpr int kTensorArenaSize =
     300000;  // Hopefully this is big enough for all tests
 uint8_t tensor_arena[kTensorArenaSize];
 
-xcore::Dispatcher *dispatcher = nullptr;
-constexpr int kXCOREArenaSize = 5000;
-uint8_t xcore_arena[kXCOREArenaSize];
+// xcore::Dispatcher *dispatcher = nullptr;
+// constexpr int kXCOREArenaSize = 5000;
+// uint8_t xcore_arena[kXCOREArenaSize];
 
 static int load_model(const char *filename, char **buffer, size_t *size) {
   FILE *fd = fopen(filename, "rb");
@@ -87,22 +88,22 @@ static void setup_tflite(const char *model_buffer) {
     return;
   }
 
-  // Setup xCORE dispatcher (BEFORE calling AllocateTensors)
-  static xcore::Dispatcher static_dispatcher(xcore_arena, kXCOREArenaSize,
-                                             reporter);
-  TfLiteStatus status = xcore::InitializeXCore(&static_dispatcher);
-  if (status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(reporter, "InitializeXCore() failed");
-    return;
-  }
-  dispatcher = &static_dispatcher;
+  // // Setup xCORE dispatcher (BEFORE calling AllocateTensors)
+  // static xcore::Dispatcher static_dispatcher(xcore_arena, kXCOREArenaSize,
+  //                                            reporter);
+  // TfLiteStatus status = xcore::InitializeXCore(&static_dispatcher);
+  // if (status != kTfLiteOk) {
+  //   TF_LITE_REPORT_ERROR(reporter, "InitializeXCore() failed");
+  //   return;
+  // }
+  // dispatcher = &static_dispatcher;
 
   // This pulls in all the operation implementations we need.
-  static tflite::ops::micro::xcore::XcoreOpsResolver resolver;
+  static tflite::ops::micro::xcore::XCoreOpsResolver resolver;
   resolver.AddXC();
 
-  // Build an interpreter to run the model with.
-  static tflite::MicroInterpreter static_interpreter(
+  // Build an interpreter to run the model with
+  static xcore::XCoreInterpreter static_interpreter(
       model, resolver, tensor_arena, kTensorArenaSize, reporter, profiler);
   interpreter = &static_interpreter;
 

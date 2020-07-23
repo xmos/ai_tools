@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <iostream>
 
+#include "tensorflow/lite/c/common.h"
+
 namespace xcore {
 
 constexpr size_t changrp_len = (16);
@@ -21,7 +23,7 @@ typedef struct RowColRegion {
 class RowColRegionArray {
  public:
   RowColRegionArray();
-  void Init(size_t size);
+  void Init(TfLiteContext *ctx, size_t size);
   const RowColRegion &operator[](int i);
   void Append(const RowColRegion &region);
 
@@ -42,7 +44,7 @@ typedef struct ChannelGroup {
 class ChannelGroupArray {
  public:
   ChannelGroupArray();
-  void Init(size_t size);
+  void Init(TfLiteContext *ctx, size_t size);
   const ChannelGroup &operator[](int i);
   void Append(const ChannelGroup &changrp);
   size_t GetSize();

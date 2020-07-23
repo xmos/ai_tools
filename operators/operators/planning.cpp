@@ -16,13 +16,13 @@ namespace xcore {
 RowColRegionArray::RowColRegionArray()
     : next_(0), size_(0), regions_(nullptr) {}
 
-void RowColRegionArray::Init(size_t size) {
+void RowColRegionArray::Init(TfLiteContext *ctx, size_t size) {
   assert(regions_ == nullptr);
   Dispatcher *dispatcher = GetDispatcher();
 
   size_ = size;
-  regions_ = reinterpret_cast<RowColRegion *>(
-      GetDispatcher()->AllocatePersistantBuffer(sizeof(RowColRegion) * size_));
+  ctx->AllocatePersistentBuffer(ctx, sizeof(RowColRegion) * size_,
+                                reinterpret_cast<void **>(&regions_));
 }
 
 const RowColRegion &RowColRegionArray::operator[](int i) {
@@ -49,13 +49,13 @@ size_t RowColRegionArray::GetSize() { return next_; }
 ChannelGroupArray::ChannelGroupArray()
     : next_(0), size_(0), chan_groups_(nullptr) {}
 
-void ChannelGroupArray::Init(size_t size) {
+void ChannelGroupArray::Init(TfLiteContext *ctx, size_t size) {
   assert(chan_groups_ == nullptr);
   Dispatcher *dispatcher = GetDispatcher();
 
   size_ = size;
-  chan_groups_ = reinterpret_cast<ChannelGroup *>(
-      GetDispatcher()->AllocatePersistantBuffer(sizeof(ChannelGroup) * size_));
+  ctx->AllocatePersistentBuffer(ctx, sizeof(ChannelGroup) * size_,
+                                reinterpret_cast<void **>(&chan_groups_));
 }
 
 const ChannelGroup &ChannelGroupArray::operator[](int i) {

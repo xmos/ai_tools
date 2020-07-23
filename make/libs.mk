@@ -30,8 +30,8 @@ LIBS_SOURCES := \
 	operators/device_memory.c \
 	operators/xcore_profiler.cpp \
 	operators/xcore_reporter.cpp \
+	operators/xcore_interpreter.cpp \
 	operators/planning.cpp \
-	operators/allocator.cpp \
 	operators/dispatcher.cpp \
 	operators/conv2d.cpp \
 	operators/fully_connected.cpp\

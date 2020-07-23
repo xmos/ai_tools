@@ -26,9 +26,9 @@ class MaxPool {
   MaxPool(const PoolingParams& params, const ExecutionPlan& execution_plan);
   ~MaxPool() {}
 
-  TfLiteStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                       int32_t Y_w, int32_t C_out);
-  TfLiteStatus Eval(int8_t* Y, const int8_t* X);
+  TfLiteStatus Prepare(TfLiteContext* ctx, int32_t X_h, int32_t X_w,
+                       int32_t C_in, int32_t Y_h, int32_t Y_w, int32_t C_out);
+  TfLiteStatus Eval(TfLiteContext* ctx, int8_t* Y, const int8_t* X);
 
   PoolingParams params;
   ExecutionPlan execution_plan;
@@ -36,6 +36,8 @@ class MaxPool {
  private:
   nn_maxpool2d_plan_t plan_;
   nn_pool2d_job_t* jobs_;
+  int stack_scratch_index_;
+  size_t stack_size_;
 };
 
 class AvgPool {
@@ -43,9 +45,9 @@ class AvgPool {
   AvgPool(const PoolingParams& params, const ExecutionPlan& execution_plan);
   ~AvgPool() {}
 
-  TfLiteStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
-                       int32_t Y_w, int32_t C_out);
-  TfLiteStatus Eval(int8_t* Y, const int8_t* X);
+  TfLiteStatus Prepare(TfLiteContext* ctx, int32_t X_h, int32_t X_w,
+                       int32_t C_in, int32_t Y_h, int32_t Y_w, int32_t C_out);
+  TfLiteStatus Eval(TfLiteContext* ctx, int8_t* Y, const int8_t* X);
 
   PoolingParams params;
   ExecutionPlan execution_plan;
@@ -53,6 +55,8 @@ class AvgPool {
  private:
   nn_avgpool2d_plan_t plan_;
   nn_pool2d_job_t* jobs_;
+  int stack_scratch_index_;
+  size_t stack_size_;
 };
 
 class AvgPool_Global {
@@ -60,10 +64,11 @@ class AvgPool_Global {
   AvgPool_Global(const ExecutionPlan& execution_plan);
   ~AvgPool_Global() {}
 
-  TfLiteStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t bias,
-                       int32_t shift, int32_t scale);
-  TfLiteStatus Eval(int8_t* Y, const int8_t* X, int32_t X_h, int32_t X_w,
-                    uint32_t C_in);
+  TfLiteStatus Prepare(TfLiteContext* ctx, int32_t X_h, int32_t X_w,
+                       int32_t C_in, int32_t bias, int32_t shift,
+                       int32_t scale);
+  TfLiteStatus Eval(TfLiteContext* ctx, int8_t* Y, const int8_t* X, int32_t X_h,
+                    int32_t X_w, uint32_t C_in);
 
   ExecutionPlan execution_plan;
 
@@ -71,6 +76,8 @@ class AvgPool_Global {
   int32_t bias_;
   nn_avgpool2d_global_plan_t plan_;
   nn_avgpool2d_global_job_t* jobs_;
+  int stack_scratch_index_;
+  size_t stack_size_;
 };
 
 }  // namespace pooling

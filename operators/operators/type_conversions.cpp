@@ -22,20 +22,21 @@ ATTRIBUTE_THREAD_FUNCTION void requantize_16_to_8_thread_worker(void* context) {
 }
 
 Requantize_16_to_8::Requantize_16_to_8(const ExecutionPlan& execution_plan)
-    : execution_plan(execution_plan) {}
+    : execution_plan(execution_plan),
+      stack_scratch_index_(-1),
+      stack_size_(0) {}
 
-TfLiteStatus Requantize_16_to_8::Init(int32_t length) {
+TfLiteStatus Requantize_16_to_8::Prepare(TfLiteContext* ctx, int32_t length) {
   Dispatcher* dispatcher = GetDispatcher();
 
   TF_LITE_REPORT_STATUS(dispatcher->GetReporter(),
-                        "Requantize_16_to_8 Init id=%p length=%ld", this,
-                        length);
+                        "Requantize_16_to_8 Prepare length=%d", length);
 
   // allocate the jobs
   int32_t n_jobs = execution_plan.GetNumThreads();
-  jobs_ = reinterpret_cast<nn_requantize_16_to_8_job_t*>(
-      dispatcher->AllocatePersistantBuffer(sizeof(nn_requantize_16_to_8_job_t) *
-                                           n_jobs));
+  TF_LITE_ENSURE_STATUS(ctx->AllocatePersistentBuffer(
+      ctx, sizeof(nn_requantize_16_to_8_job_t) * n_jobs,
+      reinterpret_cast<void**>(&jobs_)));
 
   // initialize the kernel
   requantize_16_to_8_init(jobs_, length, n_jobs);
@@ -43,16 +44,16 @@ TfLiteStatus Requantize_16_to_8::Init(int32_t length) {
   return kTfLiteOk;
 }
 
-TfLiteStatus Requantize_16_to_8::Eval(int8_t* Y, const int16_t* X) {
+TfLiteStatus Requantize_16_to_8::Eval(TfLiteContext* ctx, int8_t* Y,
+                                      const int16_t* X) {
   Dispatcher* dispatcher = GetDispatcher();
 
-  TF_LITE_REPORT_STATUS(dispatcher->GetReporter(),
-                        "Requantize_16_to_8 Eval id=%p", this);
-
   // initialize the dispatcher
-  size_t stack_words;
-  GET_STACKWORDS(stack_words, requantize_16_to_8_thread_worker);
-  dispatcher->InitializeTasks(requantize_16_to_8_thread_worker, stack_words);
+  char* stack =
+      static_cast<char*>(ctx->GetScratchBuffer(ctx, stack_scratch_index_));
+  assert(stack);
+  dispatcher->InitializeTasks(requantize_16_to_8_thread_worker, stack,
+                              stack_size_);
 
   // create thread data and tasks
   RequantizeThreadData thread_data[execution_plan.GetNumThreads()];

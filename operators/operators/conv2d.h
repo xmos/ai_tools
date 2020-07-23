@@ -36,10 +36,11 @@ class Conv2D_Deep {
   Conv2D_Deep(const Conv2DParams& params, const ExecutionPlan& plan);
   ~Conv2D_Deep() {}
 
-  TfLiteStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
+  TfLiteStatus Prepare(TfLiteContext* ctx, const int8_t* K, const int16_t* BSO,
+                       int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                        int32_t Y_w, int32_t C_out);
-  TfLiteStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
-                    const int16_t* BSO);
+  TfLiteStatus Eval(TfLiteContext* ctx, int8_t* Y, const int8_t* X,
+                    const int8_t* K, const int16_t* BSO);
 
   Conv2DParams params;
   ExecutionPlan execution_plan;
@@ -47,6 +48,10 @@ class Conv2D_Deep {
  private:
   nn_conv2d_deep_plan_t plan_;
   nn_conv2d_deep_job_t* jobs_;
+  int stack_scratch_index_;
+  size_t stack_size_;
+  int weights_scratch_index_;
+  int bias_scratch_index_;
 };
 
 class Conv2D_Shallow {
@@ -54,10 +59,11 @@ class Conv2D_Shallow {
   Conv2D_Shallow(const Conv2DParams& params, const ExecutionPlan& plan);
   ~Conv2D_Shallow() {}
 
-  TfLiteStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
+  TfLiteStatus Prepare(TfLiteContext* ctx, const int8_t* K, const int16_t* BSO,
+                       int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                        int32_t Y_w, int32_t C_out, int32_t K_w_padded);
-  TfLiteStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
-                    const int16_t* BSO);
+  TfLiteStatus Eval(TfLiteContext* ctx, int8_t* Y, const int8_t* X,
+                    const int8_t* K, const int16_t* BSO);
 
   Conv2DParams params;
   ExecutionPlan execution_plan;
@@ -65,6 +71,10 @@ class Conv2D_Shallow {
  private:
   nn_conv2d_shallowin_plan_t plan_;
   nn_conv2d_shallowin_job_t* jobs_;
+  int stack_scratch_index_;
+  size_t stack_size_;
+  int weights_scratch_index_;
+  int bias_scratch_index_;
 };
 
 class Conv2D_1x1 {
@@ -72,10 +82,11 @@ class Conv2D_1x1 {
   Conv2D_1x1(const Conv2DParams& params, const ExecutionPlan& plan);
   ~Conv2D_1x1() {}
 
-  TfLiteStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
+  TfLiteStatus Prepare(TfLiteContext* ctx, const int8_t* K, const int16_t* BSO,
+                       int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                        int32_t Y_w, int32_t C_out);
-  TfLiteStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
-                    const int16_t* BSO);
+  TfLiteStatus Eval(TfLiteContext* ctx, int8_t* Y, const int8_t* X,
+                    const int8_t* K, const int16_t* BSO);
 
   Conv2DParams params;
   ExecutionPlan execution_plan;
@@ -83,6 +94,10 @@ class Conv2D_1x1 {
  private:
   nn_conv2d_1x1_plan_t plan_;
   nn_conv2d_1x1_job_t* jobs_;
+  int stack_scratch_index_;
+  size_t stack_size_;
+  int weights_scratch_index_;
+  int bias_scratch_index_;
 };
 
 class Conv2D_Depthwise {
@@ -90,10 +105,11 @@ class Conv2D_Depthwise {
   Conv2D_Depthwise(const Conv2DParams& params, const ExecutionPlan& plan);
   ~Conv2D_Depthwise() {}
 
-  TfLiteStatus Prepare(int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
+  TfLiteStatus Prepare(TfLiteContext* ctx, const int8_t* K, const int16_t* BSO,
+                       int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                        int32_t Y_w, int32_t C_out);
-  TfLiteStatus Eval(int8_t* Y, const int8_t* X, const int8_t* K,
-                    const int16_t* BSO);
+  TfLiteStatus Eval(TfLiteContext* ctx, int8_t* Y, const int8_t* X,
+                    const int8_t* K, const int16_t* BSO);
 
   Conv2DParams params;
   ExecutionPlan execution_plan;
@@ -101,6 +117,10 @@ class Conv2D_Depthwise {
  private:
   nn_conv2d_depthwise_plan_t plan_;
   nn_conv2d_depthwise_job_t* jobs_;
+  int stack_scratch_index_;
+  size_t stack_size_;
+  int weights_scratch_index_;
+  int bias_scratch_index_;
 };
 
 }  // namespace conv

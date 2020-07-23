@@ -2,7 +2,6 @@
 #ifndef XCORE_OPERATORS_DISPATCHER_H_
 #define XCORE_OPERATORS_DISPATCHER_H_
 
-#include "operators/allocator.h"
 #include "operators/planning.h"
 #include "operators/xcore_reporter.h"
 #include "tensorflow/lite/c/common.h"
@@ -17,15 +16,25 @@ extern "C" {
 
 #define ATTRIBUTE_THREAD_FUNCTION __attribute__((fptrgroup("thread_function")))
 #define STRINGIFY(NAME) #NAME
-#define GET_STACKWORDS(DEST, NAME) \
-  asm("ldc %[__dest], " STRINGIFY(NAME) ".nstackwords" : [ __dest ] "=r"(DEST))
+// #define GET_STACKWORDS(DEST, NAME) \
+//   asm("ldc %[__dest], " STRINGIFY(NAME) ".nstackwords" : [ __dest ] "=r"(DEST))
+#define GET_STACKSIZE(DEST, NAME)                        \
+  {                                                      \
+    size_t _stack_words;                                 \
+    asm("ldc %[__dest], " STRINGIFY(NAME) ".nstackwords" \
+        : [ __dest ] "=r"(_stack_words));                \
+    DEST = (_stack_words + 2) * 4;                       \
+  }
 
 #else  // not XCORE
 #include <thread>
 #include <vector>
 
 #define ATTRIBUTE_THREAD_FUNCTION
-#define GET_STACKWORDS(DEST, NAME) DEST = 0
+// #define GET_STACKWORDS(DEST, NAME) DEST = 0
+#define GET_STACKSIZE(DEST, NAME) DEST = 0
+#define IS_RAM(a) (1)
+#define IS_NOT_RAM(a) (0)
 
 typedef void (*thread_function_t)(void *);
 typedef std::vector<std::thread> threadgroup_t;
@@ -33,34 +42,32 @@ typedef std::vector<std::thread> threadgroup_t;
 
 namespace xcore {
 
-constexpr size_t max_threads = 5;
-constexpr size_t bytes_per_stackword = 4;
+constexpr size_t kMaxThreads = 5;
+constexpr size_t kBytesPerStackword = 4;
+constexpr size_t kWordAlignment = 4;
+constexpr size_t kDoubleWordAlignment = 8;
 
 typedef struct TaskArray {
   ATTRIBUTE_THREAD_FUNCTION thread_function_t function;
-  size_t stack_words;
+  size_t stack_size;
   char *stack;
   int size;
-  void *arguments[max_threads];
+  void *arguments[kMaxThreads];
 } TaskArray;
 
 class Dispatcher {
  public:
-  Dispatcher(void *buffer, size_t buffer_size, tflite::ErrorReporter *reporter,
-             bool use_current_core = true);
+  Dispatcher(tflite::ErrorReporter *reporter, bool use_current_core = true);
   ~Dispatcher();
 
-  TfLiteStatus InitializeTasks(thread_function_t function, size_t stack_words);
+  TfLiteStatus InitializeTasks(thread_function_t function, char *stack,
+                               size_t stack_size);
   TfLiteStatus AddTask(void *argument);
   TfLiteStatus JoinTasks();
 
   TfLiteStatus Reset();
 
   tflite::ErrorReporter *GetReporter();
-
-  void *AllocatePersistantBuffer(size_t size,
-                                 size_t alignment = WORD_ALIGNMENT);
-  size_t GetAllocatedSize();
 
   void FetchBuffer(int8_t **dest, int8_t const *src, size_t size);
   void FetchWeights(int8_t **dest, int8_t const *src, size_t size,
@@ -73,12 +80,11 @@ class Dispatcher {
   threadgroup_t group_;
   TaskArray tasks_;
   tflite::ErrorReporter *reporter_;
-  MemoryAllocator allocator_;
 };
 
 // static, shared Dispatcher object
 Dispatcher *GetDispatcher();
-TfLiteStatus InitializeXCore(Dispatcher *dispatcher);
+void SetDispatcher(Dispatcher *);
 
 }  // namespace xcore
 

@@ -19,13 +19,15 @@ class Requantize_16_to_8 {
   Requantize_16_to_8(const ExecutionPlan& plan);
   ~Requantize_16_to_8() {}
 
-  TfLiteStatus Init(int32_t length);
-  TfLiteStatus Eval(int8_t* Y, const int16_t* X);
+  TfLiteStatus Prepare(TfLiteContext* ctx, int32_t length);
+  TfLiteStatus Eval(TfLiteContext* ctx, int8_t* Y, const int16_t* X);
 
   ExecutionPlan execution_plan;
 
  private:
   nn_requantize_16_to_8_job_t* jobs_;
+  int stack_scratch_index_;
+  size_t stack_size_;
 };
 
 }  // namespace type_conversions

@@ -31,6 +31,7 @@ extern "C" {
 #endif
 
 
+int8_t  pseudo_rand_int8();
 int16_t  pseudo_rand_int16();
 uint16_t pseudo_rand_uint16();
 int32_t  pseudo_rand_int32();

@@ -716,13 +716,17 @@ void requantize_16_to_8_init(
  * Unlike many other operators, @oper{bsign_8} will automatically divide the work to be done as evenly as 
  * possible between jobs.
  * 
+ * @param plan      [out]  The plan to be initialized.
  * @param jobs      [out]   Array of jobs to be initialized.
- * @param N         [in]    The number of elements in the input (and output).
+ * @param N         [in]    The number of elements in the input. 
+ * @param[in]  zero_point   The value @math{z_0} to be used for padding (for all channels)
  * @param job_count [in]    The number of jobs to be initialized.
  */
 void bsign_8_init(
+    nn_bsign_8_plan_t* plan,
     nn_bsign_8_job_t* jobs,
     const uint32_t N,
+    const int8_t zero_point,
     const unsigned job_count);
 
 

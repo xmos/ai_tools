@@ -413,6 +413,13 @@ typedef struct {
     uint32_t length;
 } nn_bsign_8_job_t;
 
+/**
+ * Struct represents the shared parameters required to execute a `bsign_8()` operation. 
+ */
+typedef struct {
+    int8_t zero_point;
+} nn_bsign_8_plan_t;
+
 
 /**
  * This struct describes the basic parameters for an image tensor

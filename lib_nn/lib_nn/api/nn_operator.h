@@ -576,13 +576,20 @@ void lookup8(
  *
  * @param Y   [out]    The output vector @tensor{y}
  * @param X   [in]     The input vector @tensor{x}
+ * @param plan [in]    The @oper{bsign_8} plan to be processed
  * @param job [in]     The @oper{bsign_8} job to be processed
  */
 void bsign_8(
     uint32_t* Y,
     const int8_t* X,
+    const nn_bsign_8_plan_t* plan,
     const nn_bsign_8_job_t* job);
 
+void bsign_8_ref(
+    uint32_t* Y,
+    const int8_t* X,
+    const nn_bsign_8_plan_t* plan,
+    const nn_bsign_8_job_t* job);
 
 #ifdef __XC__
 } // extern "C"

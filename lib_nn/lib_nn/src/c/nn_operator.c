@@ -12,7 +12,6 @@
 #include <assert.h>
 
 
-
 WEAK_FUNC
 void argmax_16(
     int32_t* Y,
@@ -114,104 +113,4 @@ void lookup8(
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
 
-WEAK_FUNC
-void bsign_8(
-    uint32_t* y,
-    const int8_t* x,
-    const nn_bsign_8_job_t* job)
-{
-    y = ADDR(y, job->start/32);
-    x = ADDR(x, job->start);
-  
-    uint32_t j = 0;
-    uint32_t shift = 0;
-
-#define WRITE_WORD_ALIGNED_OUPUT 1
-
-    if(WRITE_WORD_ALIGNED_OUPUT)
-    {
-        // Note, this matches Larq - where 0's are witten to the upper unused bytes of the tail word
-     
-        for(int i = 0; i < job->length; i++)
-        {
-            if(shift == 0)
-                y[j] = 0;
-
-            if(x[i] < 0)
-                y[j] |= (1 << shift);
-            
-            shift++;
-
-            if(shift == 32) 
-            {
-                ++j;
-                shift = 0;
-            }
-        }
-    }
-    else
-    {
-        uint32_t bits = 0;
-
-        for(int i = 0; i < job->length; i++)
-        {
-            if(x[i] < 0)
-                bits |= (1 << shift);
-            
-            shift++;
-
-            if(shift == 32) 
-            {
-                y[j++] = bits;
-                shift = 0; bits = 0;
-            }
-        }
-
-        if(shift != 0)
-            y[j] = ((y[j] >> shift) << shift) | bits;
-
-    }
-}
-
-void bsign_8_init(
-    nn_bsign_8_job_t* jobs,
-    const uint32_t length,
-    unsigned job_count)
-{
-    for(int k = 0; k < job_count; k++){
-        jobs[k].length = 0;
-    }
-
-    int32_t left = (length >> 5) << 5;
-
-    while(left){
-        for(int k = 0; k < job_count; k++){
-            if(left >= 32){
-                jobs[k].length += 32;
-                left -= 32;
-            } else {
-                jobs[k].length += left;
-                left -= left;
-            }
-        }
-        if(left == 0) break;
-    }
-    jobs[job_count-1].length += (length % 32);
-
-    jobs[0].start = 0;
-
-    int32_t pos = jobs[0].length;
-
-    for(int k = 1; k < job_count; k++){
-        jobs[k].start = jobs[k-1].start + jobs[k-1].length;
-        pos += jobs[k].length;
-   
-        assert(jobs[k].length % 8 == 0);
-    }
-
-    assert(pos == length);
-}

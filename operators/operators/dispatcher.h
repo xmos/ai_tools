@@ -2,6 +2,9 @@
 #ifndef XCORE_OPERATORS_DISPATCHER_H_
 #define XCORE_OPERATORS_DISPATCHER_H_
 
+#include <ctime>
+
+#include "operators/device_memory.h"
 #include "operators/planning.h"
 #include "operators/xcore_reporter.h"
 #include "tensorflow/lite/c/common.h"
@@ -15,27 +18,12 @@ extern "C" {
 }
 
 #define ATTRIBUTE_THREAD_FUNCTION __attribute__((fptrgroup("thread_function")))
-#define STRINGIFY(NAME) #NAME
-// #define GET_STACKWORDS(DEST, NAME) \
-//   asm("ldc %[__dest], " STRINGIFY(NAME) ".nstackwords" : [ __dest ] "=r"(DEST))
-#define GET_STACKSIZE(DEST, NAME)                        \
-  {                                                      \
-    size_t _stack_words;                                 \
-    asm("ldc %[__dest], " STRINGIFY(NAME) ".nstackwords" \
-        : [ __dest ] "=r"(_stack_words));                \
-    DEST = (_stack_words + 2) * 4;                       \
-  }
-#define IS_RAM(a) (((uintptr_t)a >= 0x80000) && ((uintptr_t)a <= 0x100000))
-#define IS_NOT_RAM(a) ((uintptr_t)a > 0x100000)
 
 #else  // not XCORE
 #include <thread>
 #include <vector>
 
 #define ATTRIBUTE_THREAD_FUNCTION
-#define GET_STACKSIZE(DEST, NAME) DEST = 0
-#define IS_RAM(a) (1)
-#define IS_NOT_RAM(a) (0)
 
 typedef void (*thread_function_t)(void *);
 typedef std::vector<std::thread> threadgroup_t;

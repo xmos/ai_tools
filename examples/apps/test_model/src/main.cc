@@ -15,18 +15,12 @@
 tflite::ErrorReporter *reporter = nullptr;
 tflite::Profiler *profiler = nullptr;
 const tflite::Model *model = nullptr;
+xcore::XCoreInterpreter *interpreter = nullptr;
 TfLiteTensor *input = nullptr;
 TfLiteTensor *output = nullptr;
-
-xcore::XCoreInterpreter *interpreter = nullptr;
-
 constexpr int kTensorArenaSize =
     300000;  // Hopefully this is big enough for all tests
 uint8_t tensor_arena[kTensorArenaSize];
-
-// xcore::Dispatcher *dispatcher = nullptr;
-// constexpr int kXCOREArenaSize = 5000;
-// uint8_t xcore_arena[kXCOREArenaSize];
 
 static int load_model(const char *filename, char **buffer, size_t *size) {
   FILE *fd = fopen(filename, "rb");
@@ -87,16 +81,6 @@ static void setup_tflite(const char *model_buffer) {
                          model->version(), TFLITE_SCHEMA_VERSION);
     return;
   }
-
-  // // Setup xCORE dispatcher (BEFORE calling AllocateTensors)
-  // static xcore::Dispatcher static_dispatcher(xcore_arena, kXCOREArenaSize,
-  //                                            reporter);
-  // TfLiteStatus status = xcore::InitializeXCore(&static_dispatcher);
-  // if (status != kTfLiteOk) {
-  //   TF_LITE_REPORT_ERROR(reporter, "InitializeXCore() failed");
-  //   return;
-  // }
-  // dispatcher = &static_dispatcher;
 
   // This pulls in all the operation implementations we need.
   static tflite::ops::micro::xcore::XCoreOpsResolver resolver;

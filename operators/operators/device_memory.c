@@ -6,11 +6,6 @@
 
 #ifdef XCORE
 
-#define IS_EXTMEM(a) \
-  (((uintptr_t)a >= 0x10000000) && (((uintptr_t)a <= 0x20000000)))
-#define IS_SWMEM(a) \
-  (((uintptr_t)a >= 0x40000000) && (((uintptr_t)a <= 0x80000000)))
-
 #include <xcore/port.h>
 #include <xcore/swmem_fill.h>
 #include <xmos_flash.h>

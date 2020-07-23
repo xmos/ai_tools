@@ -6,7 +6,6 @@
 #include <cstring>
 #include <iostream>
 
-#include "operators/device_memory.h"
 #include "operators/planning.h"
 #include "tensorflow/lite/c/common.h"
 

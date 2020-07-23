@@ -114,19 +114,11 @@ make_16_bit_output:
         ldw k_width_loop, sp[S_K_WIDTH_LOOP_COUNTER]
         kw_loop:
   
-    lbl0:
-            vldc K_current[0]
-
-            //get the X data for X[h + kh][w + kw][ic]
-            vldc X_current[0]
-          
             ldw ic_loop_counter, sp[S_IC_LOOP_COUNTER]
             ic_inner_loop:
 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
+                //get the X data for X[h + kh][w + kw][ic]
+                {vldc X_current[0]; add X_current, X_current, r_256_bits}
 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
@@ -143,12 +135,13 @@ make_16_bit_output:
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
 
-                //advance X by 256 bits
-                {add X_current, X_current, r_256_bits; nop} //schedule this to avoid an fnop
+                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
+                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
+                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
+                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
 
             {bt ic_loop_counter, ic_inner_loop; sub ic_loop_counter, ic_loop_counter, 1}
 
-            //advance X by one(STEP) right, dont forget we've on the next pixel
             ldw t, sp[S_INNER_X_H_STEP]
             {add X_current, X_current, t; nop}
 
@@ -256,8 +249,7 @@ FUNCTION_NAME:
             {ldw K_current, sp[S_K_p]; nop}
 
             oc_loop: //this loops over (output_channels/32)
-                
-                lbl2:
+            
                 //load X_p to X_current
                 ldw X_current, sp[S_X_p]
 
@@ -292,7 +284,6 @@ FUNCTION_NAME:
 
             {bt oc_loop_counter, oc_loop; sub oc_loop_counter, oc_loop_counter, 1}
 
-lbl1:
             //advance X by one(STEP) to the right
             ldw t, sp[S_OUTER_X_H_STEP]
             ldw X_current, sp[S_X_p]

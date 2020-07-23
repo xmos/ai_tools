@@ -80,6 +80,7 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
   unsigned chan_b256_in =
       (chans_in + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
 
+  // printf("chan_b256_in: %u\n", chan_b256_in);
   bnn_b256_t(*K_ref)[k_height][k_width][chan_b256_in] =
       (bnn_b256_t(*)[k_height][k_width][chan_b256_in])K_ref_p;
 
@@ -90,8 +91,8 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
   for (unsigned oc = 0; oc < chans_out / 16; oc++) {
     for (unsigned h = 0; h < k_height; h++) {
       for (unsigned w = 0; w < k_width; w++) {
-        for (unsigned o = 0; o < 16; o++) {
-          for (unsigned ic = 0; ic < chan_b256_in; ic++) {
+        for (unsigned ic = 0; ic < chan_b256_in; ic++) {
+          for (unsigned o = 0; o < 16; o++) {
             for (unsigned i = 0; i < 8; i++) {
               K[oc][h][w][ic][15 - o].d[i] = ~K_ref[oc * 16 + o][h][w][ic].d[i];
               // K[oc][h][w][ic][o].d[i] = K_ref[oc * 16 + o][h][w][ic].d[i];
@@ -229,13 +230,13 @@ void test_bnn_conv2d_bin_out_pseudo_directed() {
 #define X_V_DILATION 1
 #define X_H_DILATION 1
 
-#define X_HEIGHT 2
-#define X_WIDTH 3
+#define X_HEIGHT 1
+#define X_WIDTH 1
 #define K_HEIGHT 1
-#define K_WIDTH 2
-#define CHANS_IN 256
+#define K_WIDTH 1
+#define CHANS_IN 512
 #define CHANS_OUT 32
-#define H_STRIDE 2
+#define H_STRIDE 1
 #define V_STRIDE 1
 #define DILATED_FILTER_HEIGHT (K_HEIGHT + (K_HEIGHT - 1) * (X_V_DILATION - 1))
 #define DILATED_FILTER_WIDTH (K_WIDTH + (K_WIDTH - 1) * (X_H_DILATION - 1))
@@ -306,49 +307,38 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
 
 #define MIN_K_HEIGHT 1
 #define MIN_K_WIDTH 1
-#define MAX_K_HEIGHT 7
-#define MAX_K_WIDTH 7
+#define MAX_K_HEIGHT 5
+#define MAX_K_WIDTH 5
 
-#define MIN_CHANS_IN 256  // TODO
-#define MAX_CHANS_IN 512  // TODO
+#define MIN_CHANS_IN 256
+#define MAX_CHANS_IN 512
 
-#define MIN_CHANS_OUT 32  // TODO
-#define MAX_CHANS_OUT 64  // TODO
-
-#define CHANS_IN 256
-#define CHANS_OUT 32
+#define MIN_CHANS_OUT 32
+#define MAX_CHANS_OUT 64
 
 #define MIN_X_HEIGHT MIN_K_HEIGHT
 #define MIN_X_WIDTH MIN_K_WIDTH
 #define MAX_X_HEIGHT 7
 #define MAX_X_WIDTH 7
 
-#define CHAN_WORDS_IN \
-  ((CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
-#define CHAN_WORDS_OUT ((CHANS_OUT + 32 - 1) / 32)
+#define MAX_CHAN_WORDS_IN \
+  ((MAX_CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
+#define MAX_CHAN_WORDS_OUT ((MAX_CHANS_OUT + 32 - 1) / 32)
 
 #define MAX_Y_HEIGHT (((MAX_X_HEIGHT - MIN_K_HEIGHT + 1) / MIN_V_STRIDE))
 #define MAX_Y_WIDTH (((MAX_X_WIDTH - MIN_K_WIDTH + 1) / MIN_H_STRIDE))
 
   bnn_b256_t WORD_ALIGNED
-      K_ref[CHANS_OUT][MAX_K_HEIGHT][MAX_K_WIDTH][CHAN_WORDS_IN];
+      K_ref[MAX_CHANS_OUT][MAX_K_HEIGHT][MAX_K_WIDTH][MAX_CHAN_WORDS_IN];
   bnn_b256_t WORD_ALIGNED
-      K[CHANS_OUT][MAX_K_HEIGHT][MAX_K_WIDTH][CHAN_WORDS_IN];
+      K[MAX_CHANS_OUT][MAX_K_HEIGHT][MAX_K_WIDTH][MAX_CHAN_WORDS_IN];
 
-  bnn_b256_t WORD_ALIGNED X_ref[MAX_X_HEIGHT][MAX_X_WIDTH][CHAN_WORDS_IN];
-  bnn_b32_t WORD_ALIGNED Y_ref[MAX_Y_HEIGHT][MAX_Y_WIDTH][CHAN_WORDS_OUT];
-  bnn_b32_t WORD_ALIGNED Y[MAX_Y_HEIGHT][MAX_Y_WIDTH][CHAN_WORDS_OUT];
+  bnn_b256_t WORD_ALIGNED X_ref[MAX_X_HEIGHT][MAX_X_WIDTH][MAX_CHAN_WORDS_IN];
+  bnn_b32_t WORD_ALIGNED Y_ref[MAX_Y_HEIGHT][MAX_Y_WIDTH][MAX_CHAN_WORDS_OUT];
+  bnn_b32_t WORD_ALIGNED Y[MAX_Y_HEIGHT][MAX_Y_WIDTH][MAX_CHAN_WORDS_OUT];
 
-  pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
-  pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
-
-  unsigned combinations =
-      (MAX_H_STRIDE - MIN_H_STRIDE + 1) * (MAX_V_STRIDE - MIN_V_STRIDE + 1) *
-      (MAX_K_HEIGHT - MIN_K_HEIGHT + 1) * (MAX_K_WIDTH - MIN_K_WIDTH + 1) *
-      (MAX_X_HEIGHT - MIN_X_HEIGHT + 1) * (MAX_X_WIDTH - MIN_X_WIDTH + 1);
-
-  printf("Combinations = %u\n", combinations);
-  srand(69);
+  int32_t WORD_ALIGNED thresholds_ref[MAX_CHANS_OUT];
+  int32_t WORD_ALIGNED thresholds[MAX_CHANS_OUT];
 
   assert(((int)K & 0x3) == 0);
   assert(((int)K_ref & 0x3) == 0);
@@ -356,11 +346,30 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
   assert(((int)Y & 0x3) == 0);
   assert(((int)Y_ref & 0x3) == 0);
 
-  unsigned chans_in = CHANS_IN;
-  unsigned chans_out = CHANS_OUT;
+  assert(((int)thresholds_ref & 0x3) == 0);
+  assert(((int)thresholds & 0x3) == 0);
 
-  int32_t thresholds_ref[CHANS_OUT];
-  int32_t thresholds[CHANS_OUT];
+  printf("sizeof(X_ref): %u\n", sizeof(X_ref));
+  printf("sizeof(K_ref): %u\n", sizeof(K_ref));
+  printf("sizeof(K): %u\n", sizeof(K));
+  printf("sizeof(Y_ref): %u\n", sizeof(Y_ref));
+  printf("sizeof(Y): %u\n", sizeof(Y));
+  printf("sizeof(thresholds_ref): %u\n", sizeof(thresholds_ref));
+  printf("sizeof(thresholds): %u\n", sizeof(thresholds));
+
+  pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
+  pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
+
+  unsigned combinations =
+      (MAX_H_STRIDE - MIN_H_STRIDE + 1) * (MAX_V_STRIDE - MIN_V_STRIDE + 1) *
+      (MAX_K_HEIGHT - MIN_K_HEIGHT + 1) * (MAX_K_WIDTH - MIN_K_WIDTH + 1) *
+      (MAX_X_HEIGHT - MIN_X_HEIGHT + 1) * (MAX_X_WIDTH - MIN_X_WIDTH + 1) *
+      (MAX_CHANS_IN / 256 - MIN_CHANS_IN / 256 + 1) *
+      (MAX_CHANS_OUT / 32 - MIN_CHANS_OUT / 32 + 1);
+
+  printf("Combinations = %u\n", combinations);
+  srand(69);
+
   unsigned c = 0;
   for (unsigned h_stride = MIN_H_STRIDE; h_stride <= MAX_H_STRIDE; ++h_stride) {
     for (unsigned v_stride = MIN_V_STRIDE; v_stride <= MAX_V_STRIDE;
@@ -373,13 +382,20 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
                ++x_height) {
             for (unsigned x_width = k_width; x_width <= MAX_X_WIDTH;
                  ++x_width) {
-              int r = run_config(
-                  (bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b256_t*)X_ref,
-                  (bnn_b256_t*)K, (bnn_b256_t*)K_ref, (int32_t*)thresholds_ref,
-                  (int32_t*)thresholds, x_height, x_width, k_height, k_width,
-                  chans_in, chans_out, h_stride, v_stride);
-              printf("%u\n", c++);
-              TEST_ASSERT_FALSE(r);
+              for (unsigned chans_in = MIN_CHANS_IN; chans_in <= MAX_CHANS_IN;
+                   chans_in += 256) {
+                for (unsigned chans_out = MIN_CHANS_OUT;
+                     chans_out <= MAX_CHANS_OUT; chans_out += 32) {
+                  int r = run_config(
+                      (bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b256_t*)X_ref,
+                      (bnn_b256_t*)K, (bnn_b256_t*)K_ref,
+                      (int32_t*)thresholds_ref, (int32_t*)thresholds, x_height,
+                      x_width, k_height, k_width, chans_in, chans_out, h_stride,
+                      v_stride);
+                  printf("%u\n", c++);
+                  TEST_ASSERT_FALSE(r);
+                }
+              }
             }
           }
         }

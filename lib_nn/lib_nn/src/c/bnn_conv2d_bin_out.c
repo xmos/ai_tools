@@ -36,7 +36,8 @@ void bnn_conv2d_bin_out_asm_init(nn_bnn_conv2d_bin_out_asm_plan_t* plan,
   plan->x_height_loop_counter = y->height;
   plan->x_width_loop_counter = y->width - 1;
 
-  plan->y_v_step = 0;  // TODO
+  plan->y_v_step = 0;  // TODO this will be for when writing to a sub-rectangle
+  // of an image
 
   unsigned h_dilation = 1;
   unsigned v_dilation = 1;  // unused
@@ -55,9 +56,7 @@ void bnn_conv2d_bin_out_asm_init(nn_bnn_conv2d_bin_out_asm_plan_t* plan,
 
   unsigned remainder_to_end_of_line = x->width % k->stride.horizontal;
 
-  // if (remainder_to_end_of_line == 0)
-  //   remainder_to_end_of_line = k->stride.horizontal;
-
+  // TODO this shouldn't be a loop!
   while (k_width > remainder_to_end_of_line) {
     remainder_to_end_of_line += k->stride.horizontal;
   }

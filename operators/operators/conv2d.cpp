@@ -77,7 +77,7 @@ TfLiteStatus Conv2D_Deep::Prepare(TfLiteContext *ctx, const int8_t *K,
   // allocate the stack for thread workers
   GET_STACKSIZE(stack_size_, conv2d_deep_thread_worker);
   TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
-      ctx, stack_size_ * execution_plan.regions.GetSize(),
+      ctx, stack_size_ * execution_plan.GetNumThreads(),
       &stack_scratch_index_));
 
   // allocate scratch buffers for weights and biases (if necessary)
@@ -237,7 +237,7 @@ TfLiteStatus Conv2D_Shallow::Prepare(TfLiteContext *ctx, const int8_t *K,
   // allocate the stack for thread workers
   GET_STACKSIZE(stack_size_, conv2d_shallow_thread_worker);
   TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
-      ctx, stack_size_ * execution_plan.regions.GetSize(),
+      ctx, stack_size_ * execution_plan.GetNumThreads(),
       &stack_scratch_index_));
 
   // allocate scratch buffers for weights and biases (if necessary)
@@ -392,7 +392,7 @@ TfLiteStatus Conv2D_1x1::Prepare(TfLiteContext *ctx, const int8_t *K,
   // allocate the stack for thread workers
   GET_STACKSIZE(stack_size_, conv2d_1x1_thread_worker);
   TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
-      ctx, stack_size_ * execution_plan.regions.GetSize(),
+      ctx, stack_size_ * execution_plan.GetNumThreads(),
       &stack_scratch_index_));
 
   // allocate scratch buffers for weights and biases (if necessary)

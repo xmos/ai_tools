@@ -38,6 +38,12 @@ TfLiteStatus Requantize_16_to_8::Prepare(TfLiteContext* ctx, int32_t length) {
       ctx, sizeof(nn_requantize_16_to_8_job_t) * n_jobs,
       reinterpret_cast<void**>(&jobs_)));
 
+  // allocate the stack for thread workers
+  GET_STACKSIZE(stack_size_, requantize_16_to_8_thread_worker);
+  TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
+      ctx, stack_size_ * execution_plan.GetNumThreads(),
+      &stack_scratch_index_));
+
   // initialize the kernel
   requantize_16_to_8_init(jobs_, length, n_jobs);
 

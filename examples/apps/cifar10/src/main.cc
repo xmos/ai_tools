@@ -80,7 +80,8 @@ static void setup_tflite() {
 
   // Build an interpreter to run the model with
   static xcore::XCoreInterpreter static_interpreter(
-      model, resolver, tensor_arena, kTensorArenaSize, reporter, profiler);
+      model, resolver, tensor_arena, kTensorArenaSize, reporter, true,
+      profiler);
   interpreter = &static_interpreter;
 
   // Allocate memory from the tensor_arena for the model's tensors.

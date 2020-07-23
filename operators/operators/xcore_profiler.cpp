@@ -25,10 +25,10 @@ uint32_t XCoreProfiler::BeginEvent(const char* tag, EventType event_type,
 void XCoreProfiler::EndEvent(uint32_t event_handle) {
   int32_t end_time = tflite::GetCurrentTimeTicks();
 #ifdef XCORE
-  TF_LITE_REPORT_ERROR(reporter_, "%s took %d microseconds\n", event_tag_,
+  TF_LITE_REPORT_ERROR(reporter_, "%s took %d microseconds", event_tag_,
                        (end_time - start_time_) / PLATFORM_REFERENCE_MHZ);
 #else  // not XCORE
-  TF_LITE_REPORT_ERROR(reporter_, "%s took %d cycles\n", event_tag_,
+  TF_LITE_REPORT_ERROR(reporter_, "%s took %d cycles", event_tag_,
                        (end_time - start_time_));
 #endif
 }

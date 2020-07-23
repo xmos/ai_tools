@@ -23,9 +23,9 @@ void bsign_8(
     const nn_bsign_8_plan_t * plan,
     const nn_bsign_8_job_t* job)
 {
-    /* This implementation follows the convetion of existing code - we are passing aroind a plan of contents 
+    /* This implementation follows the convention of existing code - we are passing around a plan which contains 
      * 1 byte zero_point. This actually costs us more in terms of memory usage than simply passing around the value.
-     * Worse than this we then generate a zero point vector PER_JOB effecting memory and runtime 
+     * Worse than this we then generate a zero point vector PER JOB effecting memory and runtime 
      * Therefore, TODO, put the zero-point vector in the plan and generate in init() 
      */
     int8_t zero_point_vect[VPU_INT8_EPV];

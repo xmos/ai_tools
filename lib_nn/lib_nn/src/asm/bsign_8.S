@@ -52,18 +52,18 @@ FUNCTION_NAME:
     {   mkmsk tail_mask, tail_mask              ;   bf length, .L_loop_end                  }
 
 .L_loop_top:
-    {                                           ;   vldr zero_pv[0]                         }
+    {   sub length, length, 1                   ;   vldr zero_pv[0]                         }
     {   add X, X, _32                           ;   vlsub X[0]                              }
-    {   sub length, length, 1                   ;   vdepth1                                 }
-    {                                           ;   vstrpv Y[0], tmp                        }
+    {                                           ;   vdepth1                                 }
+    {   vstrpv Y[0], tmp                        }
     {   add Y, Y, 4                             ;   bt length, .L_loop_top                  }
 .L_loop_end:
-    {   ldc tmp, 0                              ;   bf tail_mask, .Lfunc_end                }
+    {                                           ;   bf tail_mask, .Lfunc_end                }
     {                                           ;   vldr zero_pv[0]                         }
     {                                           ;   vlsub X[0]                              }
     {                                           ;   vdepth1                                 }
-    {   stw tmp, Y[0]                           ;                                           }
-    {                                           ;   vstrpv Y[0], tail_mask                  }
+    {                                           ;   stw length, Y[0]                        } // Store 0 to upper bytes of tail
+    {   vstrpv Y[0], tail_mask                  }
 
 .Lfunc_end:
     ldd r4, r5, sp[0]

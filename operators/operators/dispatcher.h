@@ -25,13 +25,14 @@ extern "C" {
         : [ __dest ] "=r"(_stack_words));                \
     DEST = (_stack_words + 2) * 4;                       \
   }
+#define IS_RAM(a) (((uintptr_t)a >= 0x80000) && ((uintptr_t)a <= 0x100000))
+#define IS_NOT_RAM(a) ((uintptr_t)a > 0x100000)
 
 #else  // not XCORE
 #include <thread>
 #include <vector>
 
 #define ATTRIBUTE_THREAD_FUNCTION
-// #define GET_STACKWORDS(DEST, NAME) DEST = 0
 #define GET_STACKSIZE(DEST, NAME) DEST = 0
 #define IS_RAM(a) (1)
 #define IS_NOT_RAM(a) (0)

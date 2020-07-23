@@ -55,7 +55,7 @@ TfLiteStatus FullyConnected_16::Prepare(TfLiteContext *ctx, const int8_t *W,
       &stack_scratch_index_));
 
   // allocate scratch buffers for weights and biases (if necessary)
-  if (IS_NOT_RAM(K)) {
+  if (IS_NOT_RAM(W)) {
     TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
         ctx, execution_plan.GetWeightsScratchSize(), &weights_scratch_index_));
   }

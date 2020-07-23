@@ -18,7 +18,6 @@ RowColRegionArray::RowColRegionArray()
 
 void RowColRegionArray::Init(TfLiteContext *ctx, size_t size) {
   assert(regions_ == nullptr);
-  Dispatcher *dispatcher = GetDispatcher();
 
   size_ = size;
   ctx->AllocatePersistentBuffer(ctx, sizeof(RowColRegion) * size_,
@@ -51,7 +50,6 @@ ChannelGroupArray::ChannelGroupArray()
 
 void ChannelGroupArray::Init(TfLiteContext *ctx, size_t size) {
   assert(chan_groups_ == nullptr);
-  Dispatcher *dispatcher = GetDispatcher();
 
   size_ = size;
   ctx->AllocatePersistentBuffer(ctx, sizeof(ChannelGroup) * size_,

@@ -404,7 +404,7 @@ typedef struct {
   unsigned inner_x_h_step;
   unsigned inner_x_v_step;
   unsigned outer_x_h_step;
-  unsigned outer_x_v_step;
+  int outer_x_v_step;
 } nn_bnn_conv2d_bin_out_asm_plan_t;
 
 /**

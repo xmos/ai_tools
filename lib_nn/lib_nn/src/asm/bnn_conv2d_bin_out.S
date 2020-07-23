@@ -264,12 +264,11 @@ FUNCTION_NAME:
                 bl make_16_bit_output 
 
                 ldaw s, sp[S_THRESHOLDS_0_15] //this will hold the lower 16 bits of the 32 output channels
-                ldaw t, sp[S_ZERO_256]
+                ldaw t, sp[S_ZERO_256] //TODO use the constant pool
                 {vlsat t[0] ; nop}
                 {vdepth1; ldc t, 3}
                 vstrpv s[0], t
 
-lbl1:
                 //load X_p to X_current
                 ldw X_current, sp[S_X_p]
 
@@ -293,6 +292,7 @@ lbl1:
 
             {bt oc_loop_counter, oc_loop; sub oc_loop_counter, oc_loop_counter, 1}
 
+lbl1:
             //advance X by one(STEP) to the right
             ldw t, sp[S_OUTER_X_H_STEP]
             ldw X_current, sp[S_X_p]

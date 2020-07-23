@@ -150,6 +150,11 @@ inline void BConv2D(
                                               filter_y, filter_x, in_channel)];
                 accum += ce::core::xor_popcount<TBitpacked, AccumScalar>(
                     input_value, filter_value);
+
+                // if (in_channel == 0 && out_channel == 0)
+                // printf("X %u %u %08x K %u %u %08x\n", in_y, in_x,
+                // input_value,
+                //        filter_y, filter_x, filter_value);
               }
             }
           }
@@ -166,6 +171,8 @@ inline void BConv2D(
               output_data[Offset(output_shape, batch, out_y, out_x,
                                  out_channel / 32)] = bitpacked_column;
               // printf("%08x\n", bitpacked_column);
+
+              // printf("Y %u %u = %08x\n\n", out_y, out_x, bitpacked_column);
               bitpacked_column = 0;
             }
           }
@@ -230,8 +237,8 @@ extern "C" void larq_ref_bconv2d(const nn_image_params_t* x,
   //   params.padding_values.width_offset = 0;
   //   params.quantized_activation_max = 0;
   //   params.quantized_activation_min = 0;
-  params.stride_height = 1;
-  params.stride_width = 1;
+  params.stride_height = k->stride.vertical;
+  params.stride_width = k->stride.horizontal;
   //   params.weights_offset = 0;
 
   BConv2D<std::uint32_t, std::int32_t, std::int32_t>(

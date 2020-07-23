@@ -16,9 +16,10 @@ namespace type_conversions {
 
 class Requantize_16_to_8 {
  public:
-  Requantize_16_to_8(const ExecutionPlan& plan);
+  Requantize_16_to_8();
   ~Requantize_16_to_8() {}
 
+  void Init(TfLiteContext* ctx);
   TfLiteStatus Prepare(TfLiteContext* ctx, int32_t length);
   TfLiteStatus Eval(TfLiteContext* ctx, int8_t* Y, const int16_t* X);
 

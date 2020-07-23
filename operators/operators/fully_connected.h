@@ -17,9 +17,10 @@ namespace fully_connected {
 
 class FullyConnected_16 {
  public:
-  FullyConnected_16(const ExecutionPlan& plan);
+  FullyConnected_16();
   ~FullyConnected_16() {}
 
+  void Init(TfLiteContext* ctx);
   TfLiteStatus Prepare(TfLiteContext* ctx, const int8_t* W, const int16_t* BSO,
                        int32_t C_in, int32_t C_out);
   TfLiteStatus Eval(TfLiteContext* ctx, int16_t* Y, const int8_t* X,

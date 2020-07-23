@@ -25,13 +25,19 @@ ATTRIBUTE_THREAD_FUNCTION void fully_connected_thread_worker(void *context) {
 }
 }
 
-FullyConnected_16::FullyConnected_16(const ExecutionPlan &execution_plan)
-    : execution_plan(execution_plan),
-      jobs_(nullptr),
+FullyConnected_16::FullyConnected_16()
+    : jobs_(nullptr),
       stack_scratch_index_(-1),
       stack_size_(0),
       weights_scratch_index_(-1),
       bias_scratch_index_(-1) {}
+
+void FullyConnected_16::Init(TfLiteContext *ctx) {
+  // allocate the jobs
+  ctx->AllocatePersistentBuffer(
+      ctx, sizeof(nn_fully_connected_job_t) * execution_plan.changrps.GetSize(),
+      reinterpret_cast<void **>(&jobs_));
+}
 
 TfLiteStatus FullyConnected_16::Prepare(TfLiteContext *ctx, const int8_t *W,
                                         const int16_t *BSO, int32_t C_in,
@@ -41,12 +47,6 @@ TfLiteStatus FullyConnected_16::Prepare(TfLiteContext *ctx, const int8_t *W,
   TF_LITE_REPORT_STATUS(dispatcher->GetReporter(),
                         "FullyConnected_16 Prepare, C_in=%d C_out=%d", C_in,
                         C_out);
-
-  // allocate the jobs
-  int32_t n_jobs = execution_plan.changrps.GetSize();
-  TF_LITE_ENSURE_STATUS(ctx->AllocatePersistentBuffer(
-      ctx, sizeof(nn_fully_connected_job_t) * n_jobs,
-      reinterpret_cast<void **>(&jobs_)));
 
   // allocate the stack for thread workers
   GET_STACKSIZE(stack_size_, fully_connected_thread_worker);
@@ -65,6 +65,7 @@ TfLiteStatus FullyConnected_16::Prepare(TfLiteContext *ctx, const int8_t *W,
   }
 
   // set job parameters
+  size_t n_jobs = execution_plan.changrps.GetSize();
   nn_fully_connected_job_params_t job_params[n_jobs];
 
   for (int i_cg = 0; i_cg < execution_plan.changrps.GetSize(); i_cg++) {

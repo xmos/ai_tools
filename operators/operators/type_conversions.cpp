@@ -21,22 +21,21 @@ ATTRIBUTE_THREAD_FUNCTION void requantize_16_to_8_thread_worker(void* context) {
 }
 }
 
-Requantize_16_to_8::Requantize_16_to_8(const ExecutionPlan& execution_plan)
-    : execution_plan(execution_plan),
-      stack_scratch_index_(-1),
-      stack_size_(0) {}
+Requantize_16_to_8::Requantize_16_to_8()
+    : stack_scratch_index_(-1), stack_size_(0) {}
+
+void Requantize_16_to_8::Init(TfLiteContext* ctx) {
+  // allocate the jobs
+  ctx->AllocatePersistentBuffer(
+      ctx, sizeof(nn_requantize_16_to_8_job_t) * execution_plan.GetNumThreads(),
+      reinterpret_cast<void**>(&jobs_));
+}
 
 TfLiteStatus Requantize_16_to_8::Prepare(TfLiteContext* ctx, int32_t length) {
   Dispatcher* dispatcher = GetDispatcher();
 
   TF_LITE_REPORT_STATUS(dispatcher->GetReporter(),
                         "Requantize_16_to_8 Prepare length=%d", length);
-
-  // allocate the jobs
-  int32_t n_jobs = execution_plan.GetNumThreads();
-  TF_LITE_ENSURE_STATUS(ctx->AllocatePersistentBuffer(
-      ctx, sizeof(nn_requantize_16_to_8_job_t) * n_jobs,
-      reinterpret_cast<void**>(&jobs_)));
 
   // allocate the stack for thread workers
   GET_STACKSIZE(stack_size_, requantize_16_to_8_thread_worker);
@@ -45,7 +44,7 @@ TfLiteStatus Requantize_16_to_8::Prepare(TfLiteContext* ctx, int32_t length) {
       &stack_scratch_index_));
 
   // initialize the kernel
-  requantize_16_to_8_init(jobs_, length, n_jobs);
+  requantize_16_to_8_init(jobs_, length, execution_plan.GetNumThreads());
 
   return kTfLiteOk;
 }

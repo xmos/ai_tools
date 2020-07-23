@@ -23,9 +23,10 @@ struct PoolingParams {
 
 class MaxPool {
  public:
-  MaxPool(const PoolingParams& params, const ExecutionPlan& execution_plan);
+  MaxPool();
   ~MaxPool() {}
 
+  void Init(TfLiteContext* ctx);
   TfLiteStatus Prepare(TfLiteContext* ctx, int32_t X_h, int32_t X_w,
                        int32_t C_in, int32_t Y_h, int32_t Y_w, int32_t C_out);
   TfLiteStatus Eval(TfLiteContext* ctx, int8_t* Y, const int8_t* X);
@@ -42,9 +43,10 @@ class MaxPool {
 
 class AvgPool {
  public:
-  AvgPool(const PoolingParams& params, const ExecutionPlan& execution_plan);
+  AvgPool();
   ~AvgPool() {}
 
+  void Init(TfLiteContext* ctx);
   TfLiteStatus Prepare(TfLiteContext* ctx, int32_t X_h, int32_t X_w,
                        int32_t C_in, int32_t Y_h, int32_t Y_w, int32_t C_out);
   TfLiteStatus Eval(TfLiteContext* ctx, int8_t* Y, const int8_t* X);
@@ -61,9 +63,10 @@ class AvgPool {
 
 class AvgPool_Global {
  public:
-  AvgPool_Global(const ExecutionPlan& execution_plan);
+  AvgPool_Global();
   ~AvgPool_Global() {}
 
+  void Init(TfLiteContext* ctx);
   TfLiteStatus Prepare(TfLiteContext* ctx, int32_t X_h, int32_t X_w,
                        int32_t C_in, int32_t bias, int32_t shift,
                        int32_t scale);

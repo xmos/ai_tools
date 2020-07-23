@@ -36,15 +36,21 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_deep_thread_worker(void *context) {
 }
 }
 
-Conv2D_Deep::Conv2D_Deep(const Conv2DParams &params,
-                         const ExecutionPlan &execution_plan)
-    : params(params),
-      execution_plan(execution_plan),
-      jobs_(nullptr),
+Conv2D_Deep::Conv2D_Deep()
+    : jobs_(nullptr),
       stack_scratch_index_(-1),
       stack_size_(0),
       weights_scratch_index_(-1),
       bias_scratch_index_(-1) {}
+
+void Conv2D_Deep::Init(TfLiteContext *ctx) {
+  // allocate the jobs
+  ctx->AllocatePersistentBuffer(ctx,
+                                sizeof(nn_conv2d_deep_job_t) *
+                                    execution_plan.changrps.GetSize() *
+                                    execution_plan.regions.GetSize(),
+                                reinterpret_cast<void **>(&jobs_));
+}
 
 TfLiteStatus Conv2D_Deep::Prepare(TfLiteContext *ctx, const int8_t *K,
                                   const int16_t *BSO, int32_t X_h, int32_t X_w,
@@ -67,12 +73,8 @@ TfLiteStatus Conv2D_Deep::Prepare(TfLiteContext *ctx, const int8_t *K,
       {-params.pad.top, -params.pad.left},
       {params.stride_h, params.stride_w}};
 
-  // allocate the jobs
   int32_t n_jobs =
       execution_plan.changrps.GetSize() * execution_plan.regions.GetSize();
-  TF_LITE_ENSURE_STATUS(
-      ctx->AllocatePersistentBuffer(ctx, sizeof(nn_conv2d_deep_job_t) * n_jobs,
-                                    reinterpret_cast<void **>(&jobs_)));
 
   // allocate the stack for thread workers
   GET_STACKSIZE(stack_size_, conv2d_deep_thread_worker);
@@ -195,15 +197,21 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_shallow_thread_worker(void *context) {
 }
 }
 
-Conv2D_Shallow::Conv2D_Shallow(const Conv2DParams &params,
-                               const ExecutionPlan &execution_plan)
-    : params(params),
-      execution_plan(execution_plan),
-      jobs_(nullptr),
+Conv2D_Shallow::Conv2D_Shallow()
+    : jobs_(nullptr),
       stack_scratch_index_(-1),
       stack_size_(0),
       weights_scratch_index_(-1),
       bias_scratch_index_(-1) {}
+
+void Conv2D_Shallow::Init(TfLiteContext *ctx) {
+  // allocate the jobs
+  ctx->AllocatePersistentBuffer(ctx,
+                                sizeof(nn_conv2d_shallowin_job_t) *
+                                    execution_plan.changrps.GetSize() *
+                                    execution_plan.regions.GetSize(),
+                                reinterpret_cast<void **>(&jobs_));
+}
 
 TfLiteStatus Conv2D_Shallow::Prepare(TfLiteContext *ctx, const int8_t *K,
                                      const int16_t *BSO, int32_t X_h,
@@ -227,12 +235,8 @@ TfLiteStatus Conv2D_Shallow::Prepare(TfLiteContext *ctx, const int8_t *K,
       {-params.pad.top, -params.pad.left},
       {params.stride_h, params.stride_w}};
 
-  // allocate the jobs
   int32_t n_jobs =
       execution_plan.changrps.GetSize() * execution_plan.regions.GetSize();
-  TF_LITE_ENSURE_STATUS(ctx->AllocatePersistentBuffer(
-      ctx, sizeof(nn_conv2d_shallowin_job_t) * n_jobs,
-      reinterpret_cast<void **>(&jobs_)));
 
   // allocate the stack for thread workers
   GET_STACKSIZE(stack_size_, conv2d_shallow_thread_worker);
@@ -356,15 +360,21 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_1x1_thread_worker(void *context) {
 }
 }
 
-Conv2D_1x1::Conv2D_1x1(const Conv2DParams &params,
-                       const ExecutionPlan &execution_plan)
-    : params(params),
-      execution_plan(execution_plan),
-      jobs_(nullptr),
+Conv2D_1x1::Conv2D_1x1()
+    : jobs_(nullptr),
       stack_scratch_index_(-1),
       stack_size_(0),
       weights_scratch_index_(-1),
       bias_scratch_index_(-1) {}
+
+void Conv2D_1x1::Init(TfLiteContext *ctx) {
+  // allocate the jobs
+  ctx->AllocatePersistentBuffer(ctx,
+                                sizeof(nn_conv2d_1x1_job_t) *
+                                    execution_plan.changrps.GetSize() *
+                                    execution_plan.regions.GetSize(),
+                                reinterpret_cast<void **>(&jobs_));
+}
 
 TfLiteStatus Conv2D_1x1::Prepare(TfLiteContext *ctx, const int8_t *K,
                                  const int16_t *BSO, int32_t X_h, int32_t X_w,
@@ -382,12 +392,8 @@ TfLiteStatus Conv2D_1x1::Prepare(TfLiteContext *ctx, const int8_t *K,
   nn_image_params_t out_params = {(uint32_t)Y_h, (uint32_t)Y_w,
                                   (uint32_t)C_out};
 
-  // allocate the jobs
   int32_t n_jobs =
       execution_plan.changrps.GetSize() * execution_plan.regions.GetSize();
-  TF_LITE_ENSURE_STATUS(
-      ctx->AllocatePersistentBuffer(ctx, sizeof(nn_conv2d_1x1_job_t) * n_jobs,
-                                    reinterpret_cast<void **>(&jobs_)));
 
   // allocate the stack for thread workers
   GET_STACKSIZE(stack_size_, conv2d_1x1_thread_worker);
@@ -510,15 +516,21 @@ ATTRIBUTE_THREAD_FUNCTION void conv2d_depthwise_thread_worker(void *context) {
 }
 }
 
-Conv2D_Depthwise::Conv2D_Depthwise(const Conv2DParams &params,
-                                   const ExecutionPlan &execution_plan)
-    : params(params),
-      execution_plan(execution_plan),
-      jobs_(nullptr),
+Conv2D_Depthwise::Conv2D_Depthwise()
+    : jobs_(nullptr),
       stack_scratch_index_(-1),
       stack_size_(0),
       weights_scratch_index_(-1),
       bias_scratch_index_(-1) {}
+
+void Conv2D_Depthwise::Init(TfLiteContext *ctx) {
+  // allocate the jobs
+  ctx->AllocatePersistentBuffer(ctx,
+                                sizeof(nn_conv2d_depthwise_job_t) *
+                                    execution_plan.changrps.GetSize() *
+                                    execution_plan.regions.GetSize(),
+                                reinterpret_cast<void **>(&jobs_));
+}
 
 TfLiteStatus Conv2D_Depthwise::Prepare(TfLiteContext *ctx, const int8_t *K,
                                        const int16_t *BSO, int32_t X_h,
@@ -541,15 +553,11 @@ TfLiteStatus Conv2D_Depthwise::Prepare(TfLiteContext *ctx, const int8_t *K,
       {-params.pad.top, -params.pad.left},
       {params.stride_h, params.stride_w}};
 
-  // allocate the jobs
   int32_t n_jobs =
       execution_plan.changrps.GetSize() * execution_plan.regions.GetSize();
-  TF_LITE_ENSURE_STATUS(ctx->AllocatePersistentBuffer(
-      ctx, sizeof(nn_conv2d_depthwise_job_t) * n_jobs,
-      reinterpret_cast<void **>(&jobs_)));
 
   // allocate the stack for thread workers
-  GET_STACKSIZE(stack_size_, conv2d_1x1_thread_worker);
+  GET_STACKSIZE(stack_size_, conv2d_depthwise_thread_worker);
   TF_LITE_ENSURE_STATUS(ctx->RequestScratchBufferInArena(
       ctx, stack_size_ * execution_plan.regions.GetSize(),
       &stack_scratch_index_));

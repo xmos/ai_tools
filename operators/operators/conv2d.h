@@ -33,9 +33,10 @@ struct Conv2DParams {
 
 class Conv2D_Deep {
  public:
-  Conv2D_Deep(const Conv2DParams& params, const ExecutionPlan& plan);
+  Conv2D_Deep();
   ~Conv2D_Deep() {}
 
+  void Init(TfLiteContext* ctx);
   TfLiteStatus Prepare(TfLiteContext* ctx, const int8_t* K, const int16_t* BSO,
                        int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                        int32_t Y_w, int32_t C_out);
@@ -56,9 +57,10 @@ class Conv2D_Deep {
 
 class Conv2D_Shallow {
  public:
-  Conv2D_Shallow(const Conv2DParams& params, const ExecutionPlan& plan);
+  Conv2D_Shallow();
   ~Conv2D_Shallow() {}
 
+  void Init(TfLiteContext* ctx);
   TfLiteStatus Prepare(TfLiteContext* ctx, const int8_t* K, const int16_t* BSO,
                        int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                        int32_t Y_w, int32_t C_out, int32_t K_w_padded);
@@ -79,9 +81,10 @@ class Conv2D_Shallow {
 
 class Conv2D_1x1 {
  public:
-  Conv2D_1x1(const Conv2DParams& params, const ExecutionPlan& plan);
+  Conv2D_1x1();
   ~Conv2D_1x1() {}
 
+  void Init(TfLiteContext* ctx);
   TfLiteStatus Prepare(TfLiteContext* ctx, const int8_t* K, const int16_t* BSO,
                        int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                        int32_t Y_w, int32_t C_out);
@@ -102,9 +105,10 @@ class Conv2D_1x1 {
 
 class Conv2D_Depthwise {
  public:
-  Conv2D_Depthwise(const Conv2DParams& params, const ExecutionPlan& plan);
+  Conv2D_Depthwise();
   ~Conv2D_Depthwise() {}
 
+  void Init(TfLiteContext* ctx);
   TfLiteStatus Prepare(TfLiteContext* ctx, const int8_t* K, const int16_t* BSO,
                        int32_t X_h, int32_t X_w, int32_t C_in, int32_t Y_h,
                        int32_t Y_w, int32_t C_out);

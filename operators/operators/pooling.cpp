@@ -35,13 +35,14 @@ ATTRIBUTE_THREAD_FUNCTION void maxpool_thread_worker(void* context) {
 }
 }
 
-MaxPool::MaxPool(const PoolingParams& params,
-                 const ExecutionPlan& execution_plan)
-    : params(params),
-      execution_plan(execution_plan),
-      jobs_(nullptr),
-      stack_scratch_index_(-1),
-      stack_size_(0) {}
+MaxPool::MaxPool() : jobs_(nullptr), stack_scratch_index_(-1), stack_size_(0) {}
+
+void MaxPool::Init(TfLiteContext* ctx) {
+  // allocate the jobs
+  ctx->AllocatePersistentBuffer(
+      ctx, sizeof(nn_pool2d_job_t) * execution_plan.regions.GetSize(),
+      reinterpret_cast<void**>(&jobs_));
+}
 
 TfLiteStatus MaxPool::Prepare(TfLiteContext* ctx, int32_t X_h, int32_t X_w,
                               int32_t C_in, int32_t Y_h, int32_t Y_w,
@@ -61,10 +62,7 @@ TfLiteStatus MaxPool::Prepare(TfLiteContext* ctx, int32_t X_h, int32_t X_w,
       {0, 0},
       {params.stride_h, params.stride_w}};
 
-  // allocate the jobs
   int32_t n_jobs = execution_plan.regions.GetSize();
-  TF_LITE_ENSURE_STATUS(ctx->AllocatePersistentBuffer(
-      ctx, sizeof(nn_pool2d_job_t) * n_jobs, reinterpret_cast<void**>(&jobs_)));
 
   // allocate the stack for thread workers
   GET_STACKSIZE(stack_size_, maxpool_thread_worker);
@@ -139,13 +137,14 @@ ATTRIBUTE_THREAD_FUNCTION void avgpool_thread_worker(void* context) {
 }
 }
 
-AvgPool::AvgPool(const PoolingParams& params,
-                 const ExecutionPlan& execution_plan)
-    : params(params),
-      execution_plan(execution_plan),
-      jobs_(nullptr),
-      stack_scratch_index_(-1),
-      stack_size_(0) {}
+AvgPool::AvgPool() : jobs_(nullptr), stack_scratch_index_(-1), stack_size_(0) {}
+
+void AvgPool::Init(TfLiteContext* ctx) {
+  // allocate the jobs
+  ctx->AllocatePersistentBuffer(
+      ctx, sizeof(nn_pool2d_job_t) * execution_plan.regions.GetSize(),
+      reinterpret_cast<void**>(&jobs_));
+}
 
 TfLiteStatus AvgPool::Prepare(TfLiteContext* ctx, int32_t X_h, int32_t X_w,
                               int32_t C_in, int32_t Y_h, int32_t Y_w,
@@ -166,10 +165,7 @@ TfLiteStatus AvgPool::Prepare(TfLiteContext* ctx, int32_t X_h, int32_t X_w,
       {0, 0},
       {params.stride_h, params.stride_w}};
 
-  // allocate the jobs
   int32_t n_jobs = execution_plan.regions.GetSize();
-  TF_LITE_ENSURE_STATUS(ctx->AllocatePersistentBuffer(
-      ctx, sizeof(nn_pool2d_job_t) * n_jobs, reinterpret_cast<void**>(&jobs_)));
 
   // allocate the stack for thread workers
   GET_STACKSIZE(stack_size_, avgpool_thread_worker);
@@ -245,11 +241,16 @@ ATTRIBUTE_THREAD_FUNCTION void avgpool_global_thread_worker(void* context) {
 }
 }
 
-AvgPool_Global::AvgPool_Global(const ExecutionPlan& execution_plan)
-    : execution_plan(execution_plan),
-      jobs_(nullptr),
-      stack_scratch_index_(-1),
-      stack_size_(0) {}
+AvgPool_Global::AvgPool_Global()
+    : jobs_(nullptr), stack_scratch_index_(-1), stack_size_(0) {}
+
+void AvgPool_Global::Init(TfLiteContext* ctx) {
+  // allocate the jobs
+  ctx->AllocatePersistentBuffer(
+      ctx,
+      sizeof(nn_avgpool2d_global_job_t) * execution_plan.changrps.GetSize(),
+      reinterpret_cast<void**>(&jobs_));
+}
 
 TfLiteStatus AvgPool_Global::Prepare(TfLiteContext* ctx, int32_t X_h,
                                      int32_t X_w, int32_t C_in, int32_t bias,
@@ -267,9 +268,6 @@ TfLiteStatus AvgPool_Global::Prepare(TfLiteContext* ctx, int32_t X_h,
 
   // allocate the jobs
   int32_t n_jobs = execution_plan.changrps.GetSize();
-  TF_LITE_ENSURE_STATUS(ctx->AllocatePersistentBuffer(
-      ctx, sizeof(nn_avgpool2d_global_job_t) * n_jobs,
-      reinterpret_cast<void**>(&jobs_)));
 
   // allocate the stack for thread workers
   GET_STACKSIZE(stack_size_, avgpool_global_thread_worker);

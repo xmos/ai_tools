@@ -31,6 +31,46 @@ void larq_ref_bconv2d(const nn_image_params_t* x, const nn_image_params_t* y,
                       const int32_t* packed_filter_data,
                       int32_t* packed_output_data, const long* thresholds);
 
+void boggle_threshold(int32_t* thresh_boggled, int32_t* thresholds_ref,
+                      unsigned chans_out, unsigned receptive_field) {
+  int16_t* thresholds = (int16_t*)thresh_boggled;
+
+  // boggle the threshold(accum init)
+  for (unsigned i = 0; i < chans_out; i++) {
+    unsigned bank = i / 16;
+
+    int32_t t = thresholds_ref[i] - ((receptive_field) / 2);
+    thresholds[(bank * 32) + (i % 16)] = (t >> 0);
+    thresholds[(bank * 32) + (i % 16) + 16] = (t >> 16);
+  }
+}
+
+void boggle_kernel(bnn_b256_t* K_p, bnn_b256_t* K_ref_p, unsigned k_height,
+                   unsigned k_width, unsigned chans_in, unsigned chans_out) {
+  unsigned chan_b256_in =
+      (chans_in + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
+
+  bnn_b256_t(*K_ref)[k_height][k_width][chan_b256_in] =
+      (bnn_b256_t(*)[k_height][k_width][chan_b256_in])K_ref_p;
+
+  bnn_b256_t(*K)[k_height][k_width][chan_b256_in][16] =
+      (bnn_b256_t(*)[k_height][k_width][chan_b256_in][16])K_p;
+
+  for (unsigned oc = 0; oc < chans_out / 16; oc++) {
+    for (unsigned h = 0; h < k_height; h++) {
+      for (unsigned w = 0; w < k_width; w++) {
+        for (unsigned ic = 0; ic < chan_b256_in; ic++) {
+          for (unsigned o = 0; o < 16; o++) {
+            for (unsigned i = 0; i < 8; i++) {
+              K[oc][h][w][ic][15 - o].d[i] = K_ref[oc * 16 + o][h][w][ic].d[i];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 /*
 X_ref and K_ref must be initialised before running this.
 */
@@ -39,80 +79,25 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
                int32_t* thresholds_p, unsigned x_height, unsigned x_width,
                unsigned k_height, unsigned k_width, unsigned chans_in,
                unsigned chans_out, unsigned h_stride, unsigned v_stride) {
+  assert(Y_p != Y_ref_p);
+  assert(K_p != K_ref_p);
+  assert(thresholds_p != thresholds_ref);
+
   unsigned y_height = OUTPUT_LENGTH(x_height, k_height, 1, v_stride);
   unsigned y_width = OUTPUT_LENGTH(x_width, k_width, 1, h_stride);
-
-  // printf("\n");
-  // printf("x_height:%u\n", x_height);
-  // printf("x_width:%u\n", x_width);
-  // printf("k_height:%u\n", k_height);
-  // printf("k_width:%u\n", k_width);
-  // printf("chans_in:%u\n", chans_in);
-  // printf("chans_out:%u\n", chans_out);
-  // printf("h_stride:%u\n", h_stride);
-  // printf("v_stride:%u\n", v_stride);
-  // printf("y_height:%u\n", y_height);
-  // printf("y_width:%u\n", y_width);
 
   unsigned X_bytes = (x_height * x_width * chans_in) / 8;
   unsigned K_bytes = (k_width * k_height * chans_in * chans_out) / 8;
   unsigned Y_bytes = (y_width * y_height * chans_out) / 8;
 
-  memset(Y_p, 0, Y_bytes);
-  memset(Y_ref_p, 0, Y_bytes);
-
+  // This makes for a nice threshold for a random input
   for (unsigned i = 0; i < chans_out; i++)
     thresholds_ref[i] = i + ((chans_in * k_height * k_width - chans_out) / 2);
 
-  int16_t* thresholds = (int16_t*)thresholds_p;
+  boggle_threshold(thresholds_p, thresholds_ref, chans_out,
+                   k_width * k_height * chans_in);
 
-  // boggle the threshold(accum init)
-  for (unsigned i = 0; i < chans_out; i++) {
-    unsigned bank = i / 16;
-
-    int32_t t = ((k_width * k_height * chans_in) / 2) - thresholds_ref[i] - 1;
-
-    thresholds[(bank * 32) + (i % 16)] = (t >> 0);
-    thresholds[(bank * 32) + (i % 16) + 16] = (t >> 16);
-  }
-
-  unsigned chan_b32_out = (chans_out + 32 - 1) / 32;
-  unsigned chan_b256_in =
-      (chans_in + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
-
-  // printf("chan_b256_in: %u\n", chan_b256_in);
-  bnn_b256_t(*K_ref)[k_height][k_width][chan_b256_in] =
-      (bnn_b256_t(*)[k_height][k_width][chan_b256_in])K_ref_p;
-
-  bnn_b256_t(*K)[k_height][k_width][chan_b256_in][16] =
-      (bnn_b256_t(*)[k_height][k_width][chan_b256_in][16])K_p;
-
-  // boggle the kernel addresses
-  for (unsigned oc = 0; oc < chans_out / 16; oc++) {
-    for (unsigned h = 0; h < k_height; h++) {
-      for (unsigned w = 0; w < k_width; w++) {
-        for (unsigned ic = 0; ic < chan_b256_in; ic++) {
-          for (unsigned o = 0; o < 16; o++) {
-            for (unsigned i = 0; i < 8; i++) {
-              K[oc][h][w][ic][15 - o].d[i] = ~K_ref[oc * 16 + o][h][w][ic].d[i];
-              // K[oc][h][w][ic][o].d[i] = K_ref[oc * 16 + o][h][w][ic].d[i];
-            }
-          }
-        }
-      }
-    }
-  }
-
-  bnn_b256_t(*X)[x_width][chan_b256_in] =
-      (bnn_b256_t(*)[x_width][chan_b256_in])X_ref;
-
-  // for (unsigned h = 0; h < x_height; h++) {
-  //   for (unsigned w = 0; w < x_width; w++) {
-  //     printf("%08lx ", X[h][w][0].d[0]);
-  //   }
-  //   printf("\n");
-  // }
-  // printf("\n");
+  boggle_kernel(K_p, K_ref_p, k_height, k_width, chans_in, chans_out);
 
   nn_image_params_t x;
   x.height = x_height;
@@ -130,48 +115,13 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
   k.stride.horizontal = h_stride;
   k.stride.vertical = v_stride;
 
-  assert(((int)K & 0x3) == 0);
-  assert(((int)K_ref & 0x3) == 0);
-  assert(((int)X_ref & 0x3) == 0);
-  assert(((int)Y_ref_p & 0x3) == 0);
-
-  larq_ref_bconv2d(&x, &y, &k, (int32_t*)X_ref, (int32_t*)K_ref,
+  larq_ref_bconv2d(&x, &y, &k, (int32_t*)X_ref, (int32_t*)K_ref_p,
                    (int32_t*)Y_ref_p, thresholds_ref);
 #if 1
   nn_bnn_conv2d_bin_out_asm_plan_t plan;
   bnn_conv2d_bin_out_asm_init(&plan, &x, &y, &k);
-
-  // printf("input_channel_loop_counter %u\n", plan.input_channel_loop_counter);
-  // printf("k_height_loop_counter %u\n", plan.k_height_loop_counter);
-  // printf("k_width_loop_counter %u\n", plan.k_width_loop_counter);
-  // printf("output_channel_loop_counter %u\n",
-  // plan.output_channel_loop_counter); printf("x_height_loop_counter %u\n",
-  // plan.x_height_loop_counter); printf("x_width_loop_counter %u\n",
-  // plan.x_width_loop_counter); printf("inner_x_h_step %u\n",
-  // plan.inner_x_h_step); printf("inner_x_v_step %d\n", plan.inner_x_v_step);
-  // printf("outer_x_h_step %u\n", plan.outer_x_h_step);
-  // printf("outer_x_v_step %d\n", plan.outer_x_v_step);
-  // printf("y_v_step %u\n", plan.y_v_step);
-
-  // for (unsigned h = 0; h < x_height; h += 1) {
-  //   for (unsigned w = 0; w < x_width; w += 1) {
-  //     printf("%08x ", X[h][w][0].d[0]);
-  //   }
-  //   printf("\n");
-  // }
-  // printf("\n");
-
-  // bnn_b256_t* p = X_ref;
-  // for (unsigned h = 0; h < y_height; h += 1) {
-  //   for (unsigned w = 0; w < y_width; w += 1) {
-  //     printf("%u %u %p\n", h, w, p);
-  //     print_vector(*p);
-  //     p += (plan.outer_x_h_step / sizeof(bnn_b256_t));
-  //   }
-  //   p += (plan.outer_x_v_step / sizeof(bnn_b256_t));
-  // }
-  bnn_conv2d_bin_out_asm((bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref, (bnn_b256_t*)K,
-                         (int32_t*)thresholds, &plan);
+  bnn_conv2d_bin_out_asm((bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref, (bnn_b256_t*)K_p,
+                         thresholds_p, &plan);
 #else
   nn_bnn_conv2d_bin_out_plan_t plan;
   bnn_conv2d_bin_out_init(&plan, &x, &y, &k);
@@ -179,36 +129,22 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
                      thresholds_ref, &plan);
 #endif
 
+  unsigned chan_b32_out = (chans_out + 32 - 1) / 32;
   bnn_b32_t(*Y)[y_width][chan_b32_out] =
       (bnn_b32_t(*)[y_width][chan_b32_out])Y_p;
 
   bnn_b32_t(*Y_ref)[y_width][chan_b32_out] =
       (bnn_b32_t(*)[y_width][chan_b32_out])Y_ref_p;
 
-  // printf("Y %p\n", Y);
   int all_equal = 1;
   for (unsigned h = 0; h < y_height; h++) {
     for (unsigned w = 0; w < y_width; w++) {
       for (unsigned c = 0; c < chan_b32_out; c++) {
-        // printf("%08x %08x\n", Y_ref[h][w][c], Y[h][w][c]);
         all_equal &= (Y_ref[h][w][c] == Y[h][w][c]);
       }
     }
   }
 
-  // for (unsigned h = 0; h < y_height; h++) {
-  //   for (unsigned w = 0; w < y_width; w++) {
-  //     for (unsigned co = 0; co < chans_out; co++) {
-  //       printf("%u %u %u %d %d  \t%u\n", h, w, co, get_bit_b32(Y_ref[h][w],
-  //       co),
-  //              get_bit_b32(Y[h][w], co),
-  //              get_bit_b32(Y_ref[h][w], co) == get_bit_b32(Y[h][w], co));
-
-  //       all_equal &= (get_bit_b32(Y_ref[h][w], co) == get_bit_b32(Y[h][w],
-  //       co));
-  //     }
-  //   }
-  // }
   if (1 - all_equal) {
     printf("\n");
     printf("x_height:%u\n", x_height);
@@ -262,17 +198,6 @@ void test_bnn_conv2d_bin_out_pseudo_directed() {
   srand(1);
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
-
-  // printf("Y_HEIGHT:%u Y_WIDTH:%u\n", Y_HEIGHT, Y_WIDTH);
-
-  // memset(K_ref, 0, sizeof(K_ref));
-  // memset(X_ref, 0xffffffff, sizeof(X_ref));
-
-  // printf("X_ref:%p\n", X_ref);
-
-  // for (unsigned i = 0; i < sizeof(X_ref); i++) {
-  //   printf("%02x\n", ((char*)X_ref)[1]);
-  // }
 
   int failure =
       run_config((bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b256_t*)X_ref,
@@ -360,14 +285,6 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
 
-  unsigned combinations =
-      (MAX_H_STRIDE - MIN_H_STRIDE + 1) * (MAX_V_STRIDE - MIN_V_STRIDE + 1) *
-      (MAX_K_HEIGHT - MIN_K_HEIGHT + 1) * (MAX_K_WIDTH - MIN_K_WIDTH + 1) *
-      (MAX_X_HEIGHT - MIN_X_HEIGHT + 1) * (MAX_X_WIDTH - MIN_X_WIDTH + 1) *
-      (MAX_CHANS_IN / 256 - MIN_CHANS_IN / 256 + 1) *
-      (MAX_CHANS_OUT / 32 - MIN_CHANS_OUT / 32 + 1);
-
-  printf("Combinations = %u\n", combinations);
   srand(69);
 
   unsigned c = 0;
@@ -392,7 +309,8 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
                       (int32_t*)thresholds_ref, (int32_t*)thresholds, x_height,
                       x_width, k_height, k_width, chans_in, chans_out, h_stride,
                       v_stride);
-                  printf("%u\n", c++);
+                  if ((c & 0x3ff) == 0) printf("%u\n", c);
+                  c++;
                   TEST_ASSERT_FALSE(r);
                 }
               }
@@ -404,8 +322,11 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
   }
 }
 
+void test_bnn_conv2d_bin_out_benchmark() {}
+
 void test_bnn_conv2d() {
   UNITY_SET_FILE();
   RUN_TEST(test_bnn_conv2d_bin_out_pseudo_directed);
   RUN_TEST(test_bnn_conv2d_bin_out_pseudo_random);
+  // RUN_TEST(test_bnn_conv2d_bin_out_benchmark);
 }

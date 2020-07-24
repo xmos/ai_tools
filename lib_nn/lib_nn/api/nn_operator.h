@@ -288,16 +288,6 @@ void bnn_conv2d_bin_out_init(nn_bnn_conv2d_bin_out_plan_t* plan,
                              const nn_image_params_t* y,
                              const nn_window_params_t* k);
 
-void bnn_conv2d_bin_out_ref(bnn_bool_t* Y_p, const bnn_bool_t* X_p,
-                            const bnn_bool_t* K_p,
-                            int16_t* threshold,  //[out_channel];
-                            const nn_bnn_conv2d_bin_out_ref_plan_t* plan);
-
-void bnn_conv2d_bin_out_ref_init(nn_bnn_conv2d_bin_out_ref_plan_t* plan,
-                                 const nn_image_params_t* x,
-                                 const nn_image_params_t* y,
-                                 const nn_window_params_t* k);
-
 /**
  * @brief Execute @oper{conv2d_depthwise} job.
  *

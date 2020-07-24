@@ -16,6 +16,8 @@
 #define PLAN_INNER_X_V_STEP 8
 #define PLAN_OUTER_X_H_STEP 9
 #define PLAN_OUTER_X_V_STEP 10
+#define PLAN_K_H_STEP 11
+#define PLAN_K_V_STEP 12
 
 //Stack Usage
 
@@ -28,52 +30,61 @@
 #define S_SAVE_R6 4
 #define S_SAVE_R7 5
 
-#define S_SAVE_R8 6
-#define S_SAVE_R9 7
+#define S_SAVE_R8               6
+#define S_SAVE_R9               7
 
-#define S_SAVE_R10 8
-#define S_K_p      9  
+#define S_SAVE_R10              8
+#define S_K_p                   9  
 
-#define S_X_p 10
-#define S_Y_p 11
+#define S_X_p                   10
+#define S_OUTER_X_H_STEP        11
 
-#define S_THRESHOLDS_0_15 12
-#define S_THRESHOLDS_16_31 13
+#define S_THRESHOLDS_0_15       12
+#define S_THRESHOLDS_16_31      13
 
-#define S_K_HEIGHT_LOOP_COUNTER 14
-#define S_K_WIDTH_LOOP_COUNTER 15
+#define S_OC_LOOP_COUNTER       14 
+#define S_THRESHOLD_P           15 
 
-#define S_X_HEIGHT_LOOP_COUNTER 16
-#define S_X_WIDTH_LOOP_COUNTER 17
+#define S_INNER_X_V_STEP        16
+#define S_K_V_STEP              17
 
-#define S_IC_LOOP_COUNTER 18
-#define S_OC_LOOP_COUNTER 19
+#define S_INNER_X_H_STEP        18 
+#define S_K_H_STEP              19
 
-#define S_ZERO_0 20
-#define S_ZERO_1 21 
-#define S_ZERO_2 22
-#define S_ZERO_3 23
-#define S_ZERO_4 24
-#define S_ZERO_5 25
-#define S_ZERO_6 26
-#define S_ZERO_7 27
+#define S_OUTER_X_V_STEP        20 
+#define S_Y_V_STEP              21 
 
-#define S_THRESHOLD_P 28
-#define S_Y_V_STEP 29
+#define S_K_HEIGHT_LOOP_COUNTER 22
+#define S_K_WIDTH_LOOP_COUNTER  23
 
-#define S_INNER_X_V_STEP 30
-#define S_INNER_X_H_STEP 31
+#define S_X_HEIGHT_LOOP_COUNTER 24 
+#define S_X_WIDTH_LOOP_COUNTER  25
 
-#define S_OUTER_X_H_STEP 32
-#define S_OUTER_X_V_STEP 33
+#define S_IC_LOOP_COUNTER       26 
+
+
+#define S_ZERO_0 27
+#define S_ZERO_1 28 
+#define S_ZERO_2 29
+#define S_ZERO_3 30
+#define S_ZERO_4 31
+#define S_ZERO_5 32
+#define S_ZERO_6 33
+#define S_ZERO_7 34
+
+
 
 //Helpers that reference the above
-#define S_SAVE_R4_R5 (S_SAVE_R4/2)
+#define S_SAVE_R4_R5 (S_SAVE_R4/2) //0
 #define S_SAVE_R6_R7 (S_SAVE_R6/2)
 #define S_SAVE_R8_R9 (S_SAVE_R8/2)
 #define S_SAVE_R10_K_p (S_SAVE_R10/2)
-#define S_X_p_Y_p (S_X_p/2)
+#define S_X_p_S_OUTER_X_H_STEP (S_X_p/2)
 #define S_THRESHOLDS (S_THRESHOLDS_0_15/2)
+#define S_OC_LOOP_COUNTER_THRESHOLD_P (S_OC_LOOP_COUNTER/2)
+#define S_INNER_V_STEPS (S_INNER_X_V_STEP/2)
+#define S_INNER_H_STEPS (S_INNER_X_H_STEP/2)
+#define S_OUTER_X_V_STEP_Y_V_STEP (S_OUTER_X_V_STEP/2)
 
 #define S_ZERO_256 S_ZERO_0
 
@@ -84,7 +95,7 @@
 #define K_p       r2
 #define threshold_current r3
 
-#define X_current r1
+#define X_p r1
 #define K_current r2
 
 #define k_height_loop r4
@@ -98,27 +109,18 @@
 
 make_16_bit_output:
 
-    //init R to threshold_current
-    mov t, threshold_current
-    {vldr t[0];nop}
-    ldaw threshold_current, threshold_current[8] //advance the threshold_current pointer by 16 half words
-    
-    {vldd threshold_current[0];nop}
-    ldaw threshold_current, threshold_current[8] //advance the threshold_current pointer by 16 half words
+    {vldr t[0]; add threshold_current, threshold_current, s}
+    {vldd threshold_current[0]; add threshold_current, threshold_current, s}
 
-    //X_current points to X[h + 0][w + 0][ic]
-
-    ldw k_height_loop, sp[S_K_HEIGHT_LOOP_COUNTER]
+    {ldw k_height_loop, sp[S_K_HEIGHT_LOOP_COUNTER]; nop}
     kh_loop:
         
-        ldw k_width_loop, sp[S_K_WIDTH_LOOP_COUNTER]
+        {ldw k_width_loop, sp[S_K_WIDTH_LOOP_COUNTER]; nop}
         kw_loop:
   
-            ldw ic_loop_counter, sp[S_IC_LOOP_COUNTER]
+            {ldw ic_loop_counter, sp[S_IC_LOOP_COUNTER]; nop}
             ic_inner_loop:
-
-                //get the X data for X[h + kh][w + kw][ic]
-                {vldc X_current[0]; add X_current, X_current, r_256_bits}
+                {vldc X_p[0];      add X_p, X_p, r_256_bits}
 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
                 {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
@@ -142,14 +144,13 @@ make_16_bit_output:
 
             {bt ic_loop_counter, ic_inner_loop; sub ic_loop_counter, ic_loop_counter, 1}
 
-            ldw t, sp[S_INNER_X_H_STEP]
-            {add X_current, X_current, t; nop}
+            ldd s, t, sp[S_INNER_H_STEPS]
+            {add X_p, X_p, t; add K_current, K_current, s }
 
         {bt k_width_loop, kw_loop; sub k_width_loop, k_width_loop, 1}
 
-        //advance X by one(STEP) down
-        ldw t, sp[S_INNER_X_V_STEP]
-        {add X_current, X_current, t; nop}
+        ldd s, t, sp[S_INNER_V_STEPS]
+        {add X_p, X_p, t; add K_current, K_current, s }
 
     {bt k_height_loop, kh_loop; sub k_height_loop, k_height_loop, 1}
 
@@ -165,7 +166,7 @@ void bnn_conv2d_bin_out_asm(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
 
 #define FUNCTION_NAME bnn_conv2d_bin_out_asm
 
-#define NSTACKWORDS  34
+#define NSTACKWORDS  64
     
 .text
 .issue_mode  dual
@@ -182,7 +183,7 @@ FUNCTION_NAME:
     std r8, r9, sp[S_SAVE_R8_R9]
     std r2, r10, sp[S_SAVE_R10_K_p]
 
-    std r0, r1, sp[S_X_p_Y_p]
+    stw r1, sp[S_X_p]
 
     stw r3, sp[S_THRESHOLD_P]
     
@@ -191,6 +192,8 @@ FUNCTION_NAME:
 
     ldaw t, sp[NSTACKWORDS+1] //load the plan pointer
     ldw t, t[0]
+
+    //TODO optimise the order then use the vector unit to copy it all to the stack
     ldw s, t[PLAN_INNER_X_V_STEP]
     stw s,   sp[S_INNER_X_V_STEP]
 
@@ -224,6 +227,13 @@ FUNCTION_NAME:
     ldw s, t[PLAN_OUTER_X_V_STEP]
     stw s,   sp[S_OUTER_X_V_STEP]
 
+    ldw s, t[PLAN_K_H_STEP]
+    stw s,   sp[S_K_H_STEP]
+
+    ldc s, PLAN_K_V_STEP
+    ldw s, t[s]
+    stw s,   sp[S_K_V_STEP]
+
     {ldc s, 0; nop}
     stw s, sp[S_ZERO_0]
     stw s, sp[S_ZERO_1]
@@ -242,33 +252,28 @@ FUNCTION_NAME:
         {ldw x_width_loop, sp[S_X_WIDTH_LOOP_COUNTER]; nop}
         w_loop:
 
-            ldw threshold_current, sp[S_THRESHOLD_P]
-            ldw oc_loop_counter, sp[S_OC_LOOP_COUNTER]
+            ldd threshold_current, oc_loop_counter, sp[S_OC_LOOP_COUNTER_THRESHOLD_P]
 
             //init K_current
             {ldw K_current, sp[S_K_p]; nop}
 
             oc_loop: //this loops over (output_channels/32)
             
-                //load X_p to X_current
-                ldw X_current, sp[S_X_p]
+                {ldw X_p, sp[S_X_p]; ldc s, 32}
+                {bl make_16_bit_output ; mov t, threshold_current }
 
-                bl make_16_bit_output 
-
-                ldaw s, sp[S_THRESHOLDS_0_15] //this will hold the lower 16 bits of the 32 output channels
+                ldaw s, sp[S_THRESHOLDS_0_15]
                 ldaw t, sp[S_ZERO_256] //TODO use the constant pool
                 {vlsat t[0] ; nop}
                 {vdepth1; ldc t, 3}
                 vstrpv s[0], t
 
-                //load X_p to X_current
-                ldw X_current, sp[S_X_p]
+                {ldw X_p, sp[S_X_p]; ldc s, 32}
+                {bl make_16_bit_output ; mov t, threshold_current }
 
-                bl make_16_bit_output
-
-                ldaw s, sp[S_THRESHOLDS_16_31] //this will hold the lower 16 bits of the 32 output channels
-                ldaw t, sp[S_ZERO_256]
-                {vlsat t[0] ; nop}
+                ldaw s, sp[S_THRESHOLDS_16_31] 
+                ldaw t, sp[S_ZERO_256] //TODO use the constant pool
+                {vlsat t[0] ; nop} 
                 {vdepth1; ldc t, 3}
                 vstrpv s[0], t
                 
@@ -277,30 +282,22 @@ FUNCTION_NAME:
                 {shl s, s, 16; zext t, 16}
                 {add t, s, t; nop}
 
-                {not t, t; nop}
-                
-                {add Y_p, Y_p, 4 ; stw t, Y_p[0]}
-                //save the 32 results to memory
+                {add Y_p, Y_p, 4 ; stw t, Y_p[0]} //save the 32 results to memory
 
             {bt oc_loop_counter, oc_loop; sub oc_loop_counter, oc_loop_counter, 1}
 
             //advance X by one(STEP) to the right
-            ldw t, sp[S_OUTER_X_H_STEP]
-            ldw X_current, sp[S_X_p]
-            {add X_current, X_current, t; nop }
-            stw X_current, sp[S_X_p]
+            ldd X_p, t, sp[S_X_p_S_OUTER_X_H_STEP]
+            {add X_p, X_p, t; nop }
+            stw X_p, sp[S_X_p]
 
         {bt x_width_loop, w_loop; sub x_width_loop, x_width_loop, 1 }
 
-        //TODO advance Y to the next line
-        //{ldw t, sp[S_Y_V_STEP]; nop}
-        //{add Y_p, Y_p, t; nop }
-
-        {ldw t, sp[S_OUTER_X_V_STEP]; nop}
-        ldw X_current, sp[S_X_p]
-        {add X_current, X_current, t; nop }
-        stw X_current, sp[S_X_p]
-
+        //TODO this section could be scheduled to be faster
+        ldd s, t, sp[S_OUTER_X_V_STEP_Y_V_STEP]
+        {ldw X_p, sp[S_X_p]; nop}
+        {add X_p, X_p, t; add Y_p, Y_p, s }
+        stw X_p, sp[S_X_p]
         {ldw t, sp[S_X_HEIGHT_LOOP_COUNTER]; nop}
         {sub t, t, 1; nop}
         stw t, sp[S_X_HEIGHT_LOOP_COUNTER] 

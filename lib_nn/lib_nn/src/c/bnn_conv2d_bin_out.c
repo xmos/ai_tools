@@ -36,9 +36,6 @@ void bnn_conv2d_bin_out_asm_init(nn_bnn_conv2d_bin_out_asm_plan_t* plan,
   plan->x_height_loop_counter = y->height;
   plan->x_width_loop_counter = y->width - 1;
 
-  plan->y_v_step = 0;  // TODO this will be for when writing to a sub-rectangle
-  // of an image
-
   unsigned h_dilation = 1;
   unsigned v_dilation = 1;  // unused
   // This assumes that any slicing will be done horizontally.
@@ -47,7 +44,7 @@ void bnn_conv2d_bin_out_asm_init(nn_bnn_conv2d_bin_out_asm_plan_t* plan,
   // minus one to account for the auto increament in the loop
   plan->inner_x_h_step = bytes_per_input_channel * (h_dilation - 1);
 
-  // TODO multiply(x->width by dilation
+  // TODO multiply x->width by dilation
   plan->inner_x_v_step =
       (bytes_per_input_channel * ((x->width - k_width))) - plan->inner_x_h_step;
 
@@ -67,6 +64,13 @@ void bnn_conv2d_bin_out_asm_init(nn_bnn_conv2d_bin_out_asm_plan_t* plan,
                                  // do any extra lines to complete the stride
                                  + (x->width * (k->stride.vertical - 1))) -
       plan->outer_x_h_step;
+
+  // TODO these are for implementing sub-kernels
+  plan->k_v_step = 0;
+  plan->k_h_step = 0;
+
+  // TODO this will be for when writing to a sub-rectangle of an image
+  plan->y_v_step = 0;
 }
 
 unsigned xor_pop(bnn_b256_t* a, bnn_b256_t* b) {

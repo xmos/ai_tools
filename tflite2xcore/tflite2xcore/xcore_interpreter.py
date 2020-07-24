@@ -13,7 +13,6 @@ from tflite2xcore.xcore_schema import TensorType
 
 
 MAX_TENSOR_ARENA_SIZE = 1000000
-DEFAULT_XCORE_ARENA_SIZE = 50000
 
 
 class XCOREInterpreterStatus(Enum):
@@ -103,7 +102,6 @@ class XCOREInterpreter:
         model_path=None,
         model_content=None,
         max_tensor_arena_size=MAX_TENSOR_ARENA_SIZE,
-        xcore_arena_size=DEFAULT_XCORE_ARENA_SIZE,
     ):
         self._error_msg = ctypes.create_string_buffer(1024)
 
@@ -205,13 +203,9 @@ class XCOREInterpreter:
         lib.get_error.restype = ctypes.c_size_t
         lib.get_error.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
 
-        lib.get_arena_sizes.restype = ctypes.c_void_p
-        lib.get_arena_sizes.argtypes = [
+        lib.arena_used_bytes.restype = ctypes.c_size_t
+        lib.arena_used_bytes.argtypes = [
             ctypes.c_void_p,
-            ctypes.c_size_t,
-            ctypes.c_size_t,
-            ctypes.POINTER(ctypes.c_size_t),
-            ctypes.POINTER(ctypes.c_size_t),
         ]
 
         if model_path:
@@ -220,24 +214,9 @@ class XCOREInterpreter:
 
         self._is_allocated = False
         self._op_states = []
-        tensor_arena_size = ctypes.c_size_t()
-        heap_size = ctypes.c_size_t()
-        lib.get_arena_sizes(
-            model_content,
-            len(model_content),
-            max_tensor_arena_size,
-            ctypes.byref(tensor_arena_size),
-            ctypes.byref(heap_size),
-        )
-        self._tensor_arena_size = tensor_arena_size.value
-        self._xcore_heap_size = heap_size.value
         self.obj = lib.new_interpreter()
         status = lib.initialize(
-            self.obj,
-            model_content,
-            len(model_content),
-            self._tensor_arena_size,
-            self._xcore_heap_size,
+            self.obj, model_content, len(model_content), max_tensor_arena_size,
         )
         if XCOREInterpreterStatus(status) is XCOREInterpreterStatus.ERROR:
             raise RuntimeError("Unable to initialize interpreter")
@@ -256,12 +235,8 @@ class XCOREInterpreter:
 
     @property
     def tensor_arena_size(self):
-        return self._tensor_arena_size
-
-    @property
-    def xcore_heap_size(self):
         self._verify_allocated()
-        return self._xcore_heap_size
+        return lib.arena_used_bytes(self.obj)
 
     def allocate_tensors(self):
         self._op_states = []
@@ -408,7 +383,6 @@ class XCOREInterpreter:
                 tensor_zero_point,
             )
         )
-
         scales = np.array(tensor_scale, dtype=np.float)
         if len(tensor_scale) == 1:
             scales = scales[0]

@@ -81,7 +81,6 @@ endif
 # XCORE custom operators
 #************************
 TENSORFLOW_SOURCES += \
-	tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_conv2d.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_arg_min_max.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_pooling.cc \

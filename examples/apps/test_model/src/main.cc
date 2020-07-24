@@ -8,7 +8,8 @@
 #include "operators/xcore_interpreter.h"
 #include "operators/xcore_profiler.h"
 #include "operators/xcore_reporter.h"
-#include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/micro/micro_profiler.h"
 #include "tensorflow/lite/version.h"
 
@@ -83,8 +84,29 @@ static void setup_tflite(const char *model_buffer) {
   }
 
   // This pulls in all the operation implementations we need.
-  static tflite::ops::micro::xcore::XCoreOpsResolver resolver;
-  resolver.AddXC();
+  static tflite::MicroMutableOpResolver<12> resolver;
+  resolver.AddSoftmax();
+  resolver.AddPad();
+  resolver.AddCustom("XC_maxpool2d",
+                     tflite::ops::micro::xcore::Register_MaxPool2D());
+  resolver.AddCustom("XC_avgpool2d",
+                     tflite::ops::micro::xcore::Register_AvgPool2D());
+  resolver.AddCustom("XC_avgpool2d_global",
+                     tflite::ops::micro::xcore::Register_AvgPool2D_Global());
+  resolver.AddCustom("XC_fc_deepin_anyout",
+                     tflite::ops::micro::xcore::Register_FullyConnected_16());
+  resolver.AddCustom("XC_conv2d_shallowin",
+                     tflite::ops::micro::xcore::Register_Conv2D_Shallow());
+  resolver.AddCustom("XC_conv2d_deep",
+                     tflite::ops::micro::xcore::Register_Conv2D_Deep());
+  resolver.AddCustom("XC_conv2d_1x1",
+                     tflite::ops::micro::xcore::Register_Conv2D_1x1());
+  resolver.AddCustom("XC_conv2d_depthwise",
+                     tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
+  resolver.AddCustom("XC_requantize_16_to_8",
+                     tflite::ops::micro::xcore::Register_Requantize_16_to_8());
+  resolver.AddCustom("XC_lookup_8",
+                     tflite::ops::micro::xcore::Register_Lookup_8());
 
   // Build an interpreter to run the model with
   static xcore::XCoreInterpreter static_interpreter(

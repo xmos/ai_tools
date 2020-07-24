@@ -29,7 +29,6 @@ def calc_subgraph_mem_req(subgraph):
                 if not len(tensor.buffer.data)
             },
             "init": 500,  # TODO: this is a rough estimate
-            "stack": 1000,  # TODO: this is a rough estimate
         }
         op_mem_reqs[op.name]["buffers"] = sum(
             v for v in op_mem_reqs[op.name]["buffer_tensors"].values()
@@ -56,7 +55,6 @@ def calc_subgraph_mem_req(subgraph):
         ),
         "arena": max(op_info["arena"] for op_info in op_mem_reqs.values()),
         "init": sum(op_info["init"] for op_info in op_mem_reqs.values()),
-        "stack": max(op_info["stack"] for op_info in op_mem_reqs.values()),
     }
 
 
@@ -71,9 +69,6 @@ def analyze_model(model):
     analysis["init"] = sum(
         subgraph_info["init"] for subgraph_info in analysis["subgraphs"]
     )
-    analysis["stack"] = max(
-        subgraph_info["stack"] for subgraph_info in analysis["subgraphs"]
-    )
 
     return analysis
 
@@ -81,9 +76,9 @@ def analyze_model(model):
 # TODO: remove this someday since analysis should not rely on an interpreter
 #       however, currently the interpreter is the only method to determine the
 #       size of the tensor arena
-def calc_arena_sizes(model_content):
+def calc_arena_size(model_content):
     interpreter = xcore_interpreter.XCOREInterpreter(model_content=model_content)
-    return interpreter.tensor_arena_size, interpreter.xcore_heap_size
+    return interpreter.tensor_arena_size
 
 
 def calc_weight_and_bias_fetch_sizes(model_content):
@@ -106,7 +101,7 @@ def print_report(tflite_output_path):
         model_content = fd.read()
         model_size = len(model_content)
         try:
-            tensor_arena_size, xcore_heap_size = calc_arena_sizes(model_content)
+            tensor_arena_size = calc_arena_size(model_content)
             max_weights_size, max_bias_size = calc_weight_and_bias_fetch_sizes(
                 model_content
             )
@@ -114,20 +109,16 @@ def print_report(tflite_output_path):
             print()
             print("Model stored in RAM")
             print(f"{indent}Tensor arena size: {tensor_arena_size} (bytes)")
-            print(f"{indent}xCORE heap size: {xcore_heap_size} (bytes)")
             print()
             print(
-                f"{indent}Total RAM required: {model_size + tensor_arena_size + xcore_heap_size} (bytes)"
+                f"{indent}Total RAM required: {model_size + tensor_arena_size} (bytes)"
             )
             print()
             print("Model stored in external memory (Flash or LPDDR)")
-            xcore_heap_size += max_weights_size + max_bias_size
+            tensor_arena_size += max_weights_size + max_bias_size
             print(f"{indent}Tensor arena size: {tensor_arena_size} (bytes)")
-            print(
-                f"  xCORE heap size: {xcore_heap_size} (bytes)"
-            )
             print()
-            print(f"{indent}Total RAM required: {xcore_heap_size + tensor_arena_size}")
+            print(f"{indent}Total RAM required: {tensor_arena_size}")
             print(f"{indent}Total external memory required: {model_size}")
             print()
         except RuntimeError as e:

@@ -62,3 +62,8 @@ ifneq ($(TARGET), x86)
 		lib_nn/src/asm/util/depthwise/nn_conv2d_hstrip_depthwise_padded.S \
 		lib_nn/src/asm/util/depthwise/nn_conv2d_hstrip_depthwise.S
 endif
+
+ifeq ($(TARGET), x86)
+	LIBS_SOURCES += \
+		operators/extended_xcore_interpreter.cpp
+endif

@@ -1,6 +1,7 @@
 
 #if defined(__XS3A__)
 #include "nn_config.h"
+#include "xs3_vpu.h"
 
 /*
 void bsign_8_(

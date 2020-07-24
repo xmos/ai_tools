@@ -5,19 +5,20 @@
 .issue_mode  dual
 
 //Plan layout
-#define PLAN_K_HEIGHT_LOOP_COUNTER 0
-#define PLAN_K_WIDTH_LOOP_COUNTER 1
-#define PLAN_IC_LOOP_COUNTER 2
-#define PLAN_OC_LOOP_COUNTER 3
-#define PLAN_X_HEIGHT_LOOP_COUNTER 4
-#define PLAN_X_WIDTH_LOOP_COUNTER 5
-#define PLAN_Y_V_STEP 6
-#define PLAN_INNER_X_H_STEP 7
-#define PLAN_INNER_X_V_STEP 8
-#define PLAN_OUTER_X_H_STEP 9
-#define PLAN_OUTER_X_V_STEP 10
-#define PLAN_K_H_STEP 11
-#define PLAN_K_V_STEP 12
+#define PLAN_OUTER_X_H_STEP        0
+#define PLAN_OC_LOOP_COUNTER       1
+#define PLAN_THRESHOLD_P           2
+#define PLAN_INNER_X_V_STEP        3
+#define PLAN_K_V_STEP              4
+#define PLAN_INNER_X_H_STEP        5
+#define PLAN_K_H_STEP              6
+#define PLAN_OUTER_X_V_STEP        7
+#define PLAN_Y_V_STEP              8
+#define PLAN_K_HEIGHT_LOOP_COUNTER 9
+#define PLAN_K_WIDTH_LOOP_COUNTER  10
+#define PLAN_X_HEIGHT_LOOP_COUNTER 11
+#define PLAN_X_WIDTH_LOOP_COUNTER  12
+#define PLAN_IC_LOOP_COUNTER       13
 
 //Stack Usage
 
@@ -34,13 +35,13 @@
 #define S_SAVE_R9               7
 
 #define S_SAVE_R10              8
-#define S_K_p                   9  
+#define S_K_p                   9 
 
-#define S_X_p                   10
-#define S_OUTER_X_H_STEP        11
+#define S_THRESHOLDS_0_15       10
+#define S_THRESHOLDS_16_31      11
 
-#define S_THRESHOLDS_0_15       12
-#define S_THRESHOLDS_16_31      13
+#define S_X_p                   12
+#define S_OUTER_X_H_STEP        13
 
 #define S_OC_LOOP_COUNTER       14 
 #define S_THRESHOLD_P           15 
@@ -62,15 +63,17 @@
 
 #define S_IC_LOOP_COUNTER       26 
 
+//Note: The elements 27 -> 30 will be clobbered when copying the plan to the stack
+//      this might mean leaving some spare stack space
 
-#define S_ZERO_0 27
-#define S_ZERO_1 28 
-#define S_ZERO_2 29
-#define S_ZERO_3 30
-#define S_ZERO_4 31
-#define S_ZERO_5 32
-#define S_ZERO_6 33
-#define S_ZERO_7 34
+#define S_ZERO_0 28
+#define S_ZERO_1 29 
+#define S_ZERO_2 30
+#define S_ZERO_3 31
+#define S_ZERO_4 32
+#define S_ZERO_5 33
+#define S_ZERO_6 34
+#define S_ZERO_7 35
 
 
 
@@ -166,7 +169,7 @@ void bnn_conv2d_bin_out_asm(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
 
 #define FUNCTION_NAME bnn_conv2d_bin_out_asm
 
-#define NSTACKWORDS  64
+#define NSTACKWORDS  36
     
 .text
 .issue_mode  dual
@@ -185,67 +188,30 @@ FUNCTION_NAME:
 
     stw r1, sp[S_X_p]
 
-    stw r3, sp[S_THRESHOLD_P]
+    ldc r_256_bits, (256/8)
     
 	ldc r11, 256 //set int16 mode - 32 bit accumulators	
-    vsetc r11;
+    {vsetc r11; nop}
+    
+    ldaw s, sp[NSTACKWORDS+1] //load the plan pointer
+    {ldw t, s[0]; nop}
 
-    ldaw t, sp[NSTACKWORDS+1] //load the plan pointer
-    ldw t, t[0]
+    {vldr t[0];  add t, t, r_256_bits}
+    ldaw s, sp[S_OUTER_X_H_STEP]
+    {vstr s[0]; add s, s, r_256_bits}
 
-    //TODO optimise the order then use the vector unit to copy it all to the stack
-    ldw s, t[PLAN_INNER_X_V_STEP]
-    stw s,   sp[S_INNER_X_V_STEP]
+    {vldr t[0]; add t, t, r_256_bits}
+    {vstr s[0]; add s, s, r_256_bits} //This could use a bit mask
 
-    ldw s, t[PLAN_INNER_X_H_STEP]
-    stw s,   sp[S_INNER_X_H_STEP]
+    stw r3, sp[S_THRESHOLD_P]
 
-    ldw s, t[PLAN_K_HEIGHT_LOOP_COUNTER]
-    stw s,   sp[S_K_HEIGHT_LOOP_COUNTER]
-
-    ldw s, t[PLAN_K_WIDTH_LOOP_COUNTER]
-    stw s,   sp[S_K_WIDTH_LOOP_COUNTER]
-
-    ldw s, t[PLAN_IC_LOOP_COUNTER]
-    stw s,   sp[S_IC_LOOP_COUNTER]
-
-    ldw s, t[PLAN_OC_LOOP_COUNTER]
-    stw s,   sp[S_OC_LOOP_COUNTER]
-
-    ldw s, t[PLAN_X_WIDTH_LOOP_COUNTER]
-    stw s,   sp[S_X_WIDTH_LOOP_COUNTER]
-
-    ldw s, t[PLAN_X_HEIGHT_LOOP_COUNTER]
-    stw s,   sp[S_X_HEIGHT_LOOP_COUNTER]
-
-    ldw s, t[PLAN_Y_V_STEP]
-    stw s,   sp[S_Y_V_STEP]
-
-    ldw s, t[PLAN_OUTER_X_H_STEP]
-    stw s,   sp[S_OUTER_X_H_STEP]
-
-    ldw s, t[PLAN_OUTER_X_V_STEP]
-    stw s,   sp[S_OUTER_X_V_STEP]
-
-    ldw s, t[PLAN_K_H_STEP]
-    stw s,   sp[S_K_H_STEP]
-
-    ldc s, PLAN_K_V_STEP
-    ldw s, t[s]
-    stw s,   sp[S_K_V_STEP]
-
+    //Set up the zeros (and clear the over write from the vector copy)
+    ldaw t, sp[S_ZERO_0]
     {ldc s, 0; nop}
-    stw s, sp[S_ZERO_0]
-    stw s, sp[S_ZERO_1]
-    stw s, sp[S_ZERO_2]
-    stw s, sp[S_ZERO_3]
-    stw s, sp[S_ZERO_4]
-    stw s, sp[S_ZERO_5]
-    stw s, sp[S_ZERO_6]
-    stw s, sp[S_ZERO_7]
-
-    start:
-    ldc r_256_bits, (256/8)
+    std s, s, t[0]
+    std s, s, t[1]
+    std s, s, t[2]
+    std s, s, t[3]
 
     h_loop:
 

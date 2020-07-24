@@ -137,10 +137,7 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
           }
 
           sum = (kernel_height * kernel_width * chan_b256_in * 256) - sum;
-
-          // printf("c %u %u %u %ld\n", h, w, oc, sum);
           unsigned bit = sum > thresholds[oc];
-
           if (bit) bitpacked_column |= 1ULL << oc_bit;
         }
         // printf("Y[%u][%u]  = %08x\n", h / v_stride, w / h_stride,
@@ -174,75 +171,3 @@ void bnn_conv2d_bin_out_init(nn_bnn_conv2d_bin_out_plan_t* plan,
   plan->start_loc[0] = k->start.column;
   plan->start_loc[1] = k->start.row;
 }
-
-// WEAK_FUNC
-// void bnn_conv2d_bin_out_ref(bnn_bool_t* Y_p, const bnn_bool_t* X_p,
-//                             const bnn_bool_t* K_p,
-//                             int16_t* threshold,  //[out_channel];
-//                             const nn_bnn_conv2d_bin_out_ref_plan_t* plan) {
-//   const unsigned kernel_height = plan->k_dims[0];
-//   const unsigned kernel_width = plan->k_dims[1];
-//   const unsigned chans_in = plan->x_dims[2];
-//   const unsigned chans_out = plan->y_dims[2];
-//   const unsigned x_height = plan->x_dims[0];
-//   const unsigned x_width = plan->x_dims[1];
-//   const unsigned y_height = plan->y_dims[0];
-//   const unsigned y_width = plan->y_dims[1];
-
-//   //   bnn_t WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
-//   //   bnn_t WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
-//   //   bnn_t WORD_ALIGNED K[CHANS_OUT][K_HEIGHT][K_WIDTH][CHANS_IN];
-
-//   bnn_bool_t(*Y)[y_width][chans_out] =
-//   (bnn_bool_t(*)[y_width][chans_out])Y_p;
-
-//   bnn_bool_t(*X)[x_width][chans_in] = (bnn_bool_t(*)[x_width][chans_in])X_p;
-
-//   bnn_bool_t(*K)[kernel_height][kernel_width][chans_in] =
-//       (bnn_bool_t(*)[kernel_height][kernel_width][chans_in])K_p;
-
-//   for (unsigned h = plan->start_loc[0]; h < x_height - kernel_height + 1;
-//        h += plan->stride[0]) {
-//     for (unsigned w = plan->start_loc[1]; w < x_width - kernel_width + 1;
-//          w += plan->stride[1]) {
-//       for (unsigned oc = 0; oc < chans_out; oc += 1) {
-//         int16_t sum = 0;
-//         for (unsigned kh = 0; kh < kernel_height; kh += 1) {
-//           for (unsigned kw = 0; kw < kernel_width; kw += 1) {
-//             for (unsigned ic = 0; ic < chans_in; ic += 1) {
-//               sum += (X[h + kh][w + kw][ic] != K[oc][kh][kw][ic]);
-//             }
-//           }
-//         }
-//         // Convert to pop count
-//         sum = ((int16_t)(chans_in * kernel_height * kernel_width) - sum) / 2;
-//         bnn_bool_t v = sum > threshold[oc];
-//         Y[h][w][oc] = 1 - (2 * v);
-//       }
-//     }
-//   }
-// }
-
-// void bnn_conv2d_bin_out_ref_init(nn_bnn_conv2d_bin_out_ref_plan_t* plan,
-//                                  const nn_image_params_t* x,
-//                                  const nn_image_params_t* y,
-//                                  const nn_window_params_t* k) {
-//   plan->k_dims[0] = k->shape.height;
-//   plan->k_dims[1] = k->shape.width;
-
-//   //assert(k_height is correct)
-
-//   plan->y_dims[0] = y->height;
-//   plan->y_dims[1] = y->width;
-//   plan->y_dims[2] = y->channels;
-
-//   plan->x_dims[0] = x->height;
-//   plan->x_dims[1] = x->width;
-//   plan->x_dims[2] = x->channels;
-
-//   plan->stride[0] = k->stride.vertical;
-//   plan->stride[1] = k->stride.horizontal;
-
-//   plan->start_loc[0] = k->start.column;
-//   plan->start_loc[1] = k->start.row;
-// }

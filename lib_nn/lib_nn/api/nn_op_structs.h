@@ -394,19 +394,20 @@ typedef struct {
  * @note This struct is intended to be opaque.
  */
 typedef struct {
+  unsigned outer_x_h_step;
+  unsigned output_channel_loop_counter;
+  void * threshold_p;
+  unsigned inner_x_v_step;
+  unsigned k_v_step;
+  unsigned inner_x_h_step;
+  unsigned k_h_step;
+  int outer_x_v_step;
+  unsigned y_v_step;
   unsigned k_height_loop_counter;
   unsigned k_width_loop_counter;
-  unsigned input_channel_loop_counter;
-  unsigned output_channel_loop_counter;
   unsigned x_height_loop_counter;
   unsigned x_width_loop_counter;
-  unsigned y_v_step;
-  unsigned inner_x_h_step;
-  unsigned inner_x_v_step;
-  unsigned outer_x_h_step;
-  int outer_x_v_step;
-  unsigned k_h_step;
-  unsigned k_v_step;
+  unsigned input_channel_loop_counter;
 } nn_bnn_conv2d_bin_out_asm_plan_t;
 
 /**

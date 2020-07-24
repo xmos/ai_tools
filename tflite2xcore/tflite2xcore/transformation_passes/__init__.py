@@ -20,14 +20,11 @@ from .conv2d_passes import (
     LegalizeXCDeepConvPass,
     ReplaceShallowinConv2dPass,
     LegalizeXCShallowinConvPass,
-    PlanConv2dPass,
 )
 
 from .fully_connected_passes import (
     ReplaceFullyConnectedPass,
     LegalizeXCFullyConnectedPass,
-    PlanFullyConnectedPass,
-    PlanRequant16To8Pass,
 )
 
 from .pooling_passes import (
@@ -36,13 +33,12 @@ from .pooling_passes import (
     ReplaceAveragePool2DPass,
     ReplaceAveragePool2D2x2Pass,
     ReplaceGlobalAveragePool2DPass,
-    PlanPooling2DPass,
-    PlanGlobalAveragePool2DPass,
 )
 from .padding_passes import (
     FuseConv2dPaddingPass,
     SplitPaddingPass,
     FuseConsecutivePadsPass,
+    RemovePaddingInputPass,
 )
 
 from .quantize_dequantize_passes import (
@@ -60,8 +56,29 @@ from .dce_passes import (
     EliminateDeadBuffersPass,
 )
 
+from .reshape_passes import (
+    RemoveFlattenReshapePass,
+    CanonicalizeReshapePass,
+)
+
 from .renaming_passes import LegalizeOperatorOutputTensorNamePass
 
 from .minification_passes import MinifyQuantInfoPass, MinifyTensorNamesPass
 
 from .word_alignment_passes import CanonicalizeConv2DInputChannels
+
+from .parallelization_passes import (
+    ParallelizeConv2dPass,
+    ParallelizeDepthwiseConv2dPass,
+    ParallelizeFullyConnectedPass,
+    ParallelizeRequant16To8Pass,
+    ParallelizePooling2DPass,
+    ParallelizeGlobalAveragePool2DPass,
+)
+
+from .scratch_memory_passes import (
+    ScratchMemoryFullyConnectedPass,
+    ScratchMemoryConv2dPass,
+    ScratchMemoryConv2d1x1Pass,
+    ScratchMemoryDepthwiseConv2dPass,
+)

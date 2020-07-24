@@ -1,8 +1,5 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
-import struct
-import enum
-
 import numpy as np
 
 from collections import Counter
@@ -28,39 +25,27 @@ class Buffer:
     @data.setter
     def data(self, data):
         if data is None:
-            self._data = np.array([], dtype=np.uint8)
-        elif isinstance(data, list):
-            self._data = np.array(data, dtype=np.uint8)
+            self._data = b""
+        elif isinstance(data, (list, tuple, bytes, bytearray)):
+            # this ensures immutability and that lists have uint8 elements only
+            self._data = bytes(data)
         elif isinstance(data, np.ndarray):
-            if data.dtype not in (np.uint8, "uint8"):
-                logging.getLogger("XCOREModel").xdebug(
+            try:
+                TensorType.from_numpy_dtype(data.dtype)
+            except KeyError:
+                # we throw a warning if a non-convertible datatype is used
+                logging.getLogger("XCOREModel").warning(
                     f"Numpy array of type {data.dtype} stored in buffer"
                 )
-            self._data = np.frombuffer(data.tostring(), dtype=np.uint8)
+            self._data = data.tobytes()
         else:
-            raise TypeError(f"data must be list or numpy array of uint8 type")
+            raise TypeError(f"data must be list/tuple of bytes or numpy array")
 
     def __len__(self):
-        if self.data is not None:
-            return len(self.data)
-        else:
-            return 0
+        return len(self.data)
 
     def __str__(self):
-        if self.data is not None:
-            return f"Buffer[{len(self.data)}]"
-        else:
-            return "Buffer[]"
-
-    def unpack(self, stdtype="uint8_t"):
-        LUT = {
-            "uint8_t": "B",
-            "int8_t": "b",
-            "int16_t": "h",
-            "int32_t": "i",
-            "float32_t": "f",
-        }
-        return [i[0] for i in struct.iter_unpack(LUT[stdtype], bytearray(self.data))]
+        return f"Buffer[{len(self.data)}]"
 
     def sanity_check(self):
         assert self in self.model.buffers
@@ -77,7 +62,6 @@ class Operator:
         inputs=None,
         outputs=None,
         builtin_options=None,
-        builtin_options_type=None,
         custom_options=None,
     ):
         # Generally, do not use this constructor to instantiate Operator!
@@ -90,7 +74,6 @@ class Operator:
         self.inputs = inputs or []
         self.outputs = outputs or []
         self.builtin_options = builtin_options
-        self.builtin_options_type = builtin_options_type
         self.custom_options = custom_options or {}
 
     def add_custom_options(self, **kwargs):
@@ -231,24 +214,27 @@ class Tensor:
         return self.name_segments()[-1]
 
     @property
-    def standard_type(self):
-        """Return type (from cstdint.h)"""
-        return self.type.to_stdint_type()
-
-    @property
     def size(self):
         size = self.type.to_bytes()
         for s in self.shape:
             size *= s
         return size
 
-    @property
-    def numpy(self):
-        arr = np.array(
-            self.buffer.unpack(self.type.to_stdint_type()),
-            dtype=self.type.to_numpy_type(),
-        )
+    def as_array(self, dtype=None):
+        arr = np.frombuffer(self.buffer._data, dtype=self.type.to_numpy_dtype())
+        if dtype:
+            arr = arr.astype(dtype)
         return arr.reshape(self.shape)
+
+    @property
+    def is_constant(self) -> bool:
+        # There is an esoteric case where by a tensor without any producers could potentially be 
+        # modified if it shares a buffer with a tensor from another subgraph.
+        # As such we also check if all owners of its buffer have no producers and are not inputs
+        return all(
+            not t.producers and t not in self.subgraph.inputs
+            for t in self.buffer.owners
+        )
 
 
 class Subgraph:
@@ -343,7 +329,6 @@ class Subgraph:
         inputs=None,
         outputs=None,
         builtin_options=None,
-        builtin_options_type=None,
         custom_options=None,
     ):
         name = self.generate_unique_op_name(operator_code)
@@ -354,7 +339,6 @@ class Subgraph:
             inputs,
             outputs,
             builtin_options,
-            builtin_options_type,
             custom_options,
         )
         self.operators.append(operator)
@@ -537,7 +521,7 @@ class XCOREModel(XCORESerializationMixin):
             for input_ in subgraph.inputs:
                 print(input_.pprint())
                 if tensor_values and len(input_.buffer):
-                    print(f"   values={input_.numpy}")
+                    print(f"   values={input_.as_array()}")
 
             print("*****************")
             print("* Intermediates *")
@@ -545,7 +529,7 @@ class XCOREModel(XCORESerializationMixin):
             for intermediate in subgraph.intermediates:
                 print(intermediate.pprint())
                 if tensor_values and len(intermediate.buffer):
-                    print(f"   values={intermediate.numpy}")
+                    print(f"   values={intermediate.as_array()}")
 
             print("***********")
             print("* Outputs *")
@@ -553,7 +537,7 @@ class XCOREModel(XCORESerializationMixin):
             for output in subgraph.outputs:
                 print(output.pprint())
                 if tensor_values and len(output.buffer):
-                    print(f"   values={output.numpy}")
+                    print(f"   values={output.as_array()}")
 
     def sanity_check(self):
         # check for duplicates

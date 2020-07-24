@@ -19,7 +19,7 @@ from . import serialization
 from . import xcore_schema
 from . import converter
 from . import pass_manager
-from . import execution_planning
+from . import parallelization
 from . import tflite_visualize
 from . import utils
 from . import xlogging

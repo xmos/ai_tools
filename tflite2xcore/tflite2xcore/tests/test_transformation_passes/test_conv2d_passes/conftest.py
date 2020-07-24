@@ -4,8 +4,9 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_schema import TensorType, Padding
+from tflite2xcore.xcore_schema import Padding
 
+from ..test_fully_connected_passes.conftest import PARAMS as FC_PARAMS
 from ..conftest import (
     PARAMS,
     _test_non_matching_params,
@@ -20,6 +21,9 @@ from ..conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
+for key in PARAMS:
+    PARAMS[key]["non_matching_tensors"] = FC_PARAMS[key]["non_matching_tensors"]
+
 PARAMS["extended"].update(
     {
         "kernel_height": [2, 3, 5, 7],
@@ -30,47 +34,20 @@ PARAMS["extended"].update(
         "padding": list(Padding),
         "stride_h": [1, 2, 3],
         "stride_w": [1, 2, 3],
-        "non_matching_tensors": [
-            ("input", TensorType.INT16),
-            ("input", TensorType.INT32),
-            ("input", TensorType.UINT8),
-            ("input", TensorType.FLOAT32),
-            ("weights", TensorType.INT16),
-            ("weights", TensorType.INT32),
-            ("weights", TensorType.UINT8),
-            ("weights", TensorType.FLOAT32),
-            ("biases", TensorType.INT8),
-            ("biases", TensorType.INT16),
-            ("biases", TensorType.UINT8),
-            ("biases", TensorType.FLOAT32),
-            ("output", TensorType.INT16),
-            ("output", TensorType.INT32),
-            ("output", TensorType.UINT8),
-            ("output", TensorType.FLOAT32),
-        ],
     }
 )
 
 PARAMS["default"].update(
     {
-        "kernel_height": [2, 3, 7],
-        "kernel_width": [2, 3, 7],
+        "kernel_height": [2, 3, 5],
+        "kernel_width": [2, 3, 5],
         "non_matching_input_channels": [3, 15],
-        "output_channels": PARAMS["default"]["input_channels"],
+        "input_channels": PARAMS["default"]["input_channels"][1:],
+        "output_channels": PARAMS["default"]["input_channels"][1:],
         "non_matching_output_channels": [3, 15],
         "padding": list(Padding),
         "stride_h": [1, 2],
         "stride_w": [1, 2],
-        "non_matching_tensors": [
-            ("input", TensorType.INT16),
-            ("input", TensorType.INT32),
-            ("weights", TensorType.INT16),
-            ("weights", TensorType.INT32),
-            ("biases", TensorType.INT8),
-            ("biases", TensorType.INT16),
-            ("output", TensorType.INT16),
-            ("output", TensorType.INT32),
-        ],
     }
 )
 
@@ -84,12 +61,6 @@ PARAMS["smoke"].update(
         "padding": list(Padding),
         "stride_h": [1],
         "stride_w": [1],
-        "non_matching_tensors": [
-            ("input", TensorType.INT16),
-            ("weights", TensorType.INT16),
-            ("biases", TensorType.INT16),
-            ("output", TensorType.INT16),
-        ],
     }
 )
 

@@ -54,7 +54,7 @@ class XCORESerializationMixin:
             )
 
         # load subgraphs
-        for subgraphT in modelT.subgraphs:
+        for subgraph_index, subgraphT in enumerate(modelT.subgraphs):
             subgraph = model.create_subgraph(
                 name=subgraphT.name.decode("utf-8") if subgraphT.name else None
             )
@@ -82,7 +82,7 @@ class XCORESerializationMixin:
                 tensors.append(tensor)
 
             # load operators & set inputs/outputs (registers op as tensor consumer/producer)
-            for operatorT in subgraphT.operators:
+            for operator_index, operatorT in enumerate(subgraphT.operators):
                 options = {}
                 if (
                     hasattr(operatorT, "builtinOptions")
@@ -90,9 +90,6 @@ class XCORESerializationMixin:
                 ):
                     options["builtin_options"] = builtin_options_to_dict(
                         operatorT.builtinOptions
-                    )
-                    options["builtin_options_type"] = xcore_schema.BuiltinOptions(
-                        operatorT.builtinOptionsType
                     )
                 if (
                     hasattr(operatorT, "customOptions")
@@ -102,13 +99,30 @@ class XCORESerializationMixin:
                         FlexbufferParser().parse(bytes(operatorT.customOptions))
                     )
 
+                def is_valid_tensor_index(idx, lower=-1, upper=len(tensors)):
+                    if idx < lower or idx >= upper:
+                        raise ValueError(
+                            f"Invalid input tensor index [{idx}]: "
+                            f"subgraph [{subgraph_index}], "
+                            f"operator [{operator_index}], "
+                            f"bounds: [{lower}, {upper}]"
+                        )
+
+                    return idx != -1  # -1 encodes optional for input indices
+
                 subgraph.create_operator(
                     operator_code=operator_codes_lut[operatorT.opcodeIndex],
-                    inputs=[tensors[input_index] for input_index in operatorT.inputs],
-                    outputs=[
-                        tensors[output_index] for output_index in operatorT.outputs
+                    inputs=[
+                        tensors[input_index]
+                        for input_index in operatorT.inputs
+                        if is_valid_tensor_index(input_index)
                     ],
-                    **options
+                    outputs=[
+                        tensors[output_index]
+                        for output_index in operatorT.outputs
+                        if is_valid_tensor_index(output_index, lower=0)
+                    ],
+                    **options,
                 )
 
         model.sanity_check()
@@ -168,17 +182,9 @@ class XCORESerializationMixin:
             subgraphT = schema.SubGraphT()
             subgraphT.name = subgraph.name
 
-            # set inputs
-            subgraphT.inputs = []
-            for input_ in subgraph.inputs:
-                tensor_index = subgraph.tensors.index(input_)
-                subgraphT.inputs.append(tensor_index)
-
-            # set outputs
-            subgraphT.outputs = []
-            for output in subgraph.outputs:
-                tensor_index = subgraph.tensors.index(output)
-                subgraphT.outputs.append(tensor_index)
+            # set inputs and outputs
+            subgraphT.inputs = [subgraph.tensors.index(t) for t in subgraph.inputs]
+            subgraphT.outputs = [subgraph.tensors.index(t) for t in subgraph.outputs]
 
             # set tensors
             subgraphT.tensors = []
@@ -196,22 +202,23 @@ class XCORESerializationMixin:
             subgraphT.operators = []
             for operator in subgraph.operators:
                 operatorT = schema.OperatorT()
-                operatorT.opcodeIndex = self.operator_codes.index(
-                    operator.operator_code
-                )
-                operatorT.inputs = []
-                for input_tensor in operator.inputs:
-                    tensor_index = subgraph.tensors.index(input_tensor)
-                    operatorT.inputs.append(tensor_index)
-                operatorT.outputs = []
-                for output_tensor in operator.outputs:
-                    tensor_index = subgraph.tensors.index(output_tensor)
-                    operatorT.outputs.append(tensor_index)
-                if operator.builtin_options:
-                    operatorT.builtinOptionsType = operator.builtin_options_type.value
-                    operatorT.builtinOptions = dict_to_builtin_options(
-                        operator.builtin_options_type, operator.builtin_options
-                    )
+                op_code = operator.operator_code
+                operatorT.opcodeIndex = self.operator_codes.index(op_code)
+
+                operatorT.inputs = [subgraph.tensors.index(t) for t in operator.inputs]
+                operatorT.outputs = [
+                    subgraph.tensors.index(t) for t in operator.outputs
+                ]
+
+                if op_code.code in xcore_schema.BuiltinOpCodes:
+                    builtin_options_type = op_code.code.to_BuiltinOptions()
+                    operatorT.builtinOptionsType = builtin_options_type.value
+
+                    if operator.builtin_options:
+                        operatorT.builtinOptions = dict_to_builtin_options(
+                            builtin_options_type, operator.builtin_options
+                        )
+
                 if operator.custom_options:
                     fbb = FlexbufferBuilder(operator.custom_options)
                     operatorT.customOptions = fbb.get_bytes()

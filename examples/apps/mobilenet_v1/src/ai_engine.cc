@@ -19,14 +19,12 @@
 tflite::ErrorReporter *error_reporter = nullptr;
 const tflite::Model *model = nullptr;
 tflite::MicroInterpreter *interpreter = nullptr;
-// TfLiteTensor *input = nullptr;
-// TfLiteTensor *output = nullptr;
-constexpr int kTensorArenaSize = 148704;
+constexpr int kTensorArenaSize = 220000;
 uint8_t tensor_arena[kTensorArenaSize];
 
 xcore::Dispatcher *dispatcher = nullptr;
 constexpr int num_threads = 5;
-constexpr int kXCOREHeapSize = 7904;
+constexpr int kXCOREHeapSize = 140000;
 uint8_t xcore_heap[kXCOREHeapSize];
 
 void ai_invoke() {

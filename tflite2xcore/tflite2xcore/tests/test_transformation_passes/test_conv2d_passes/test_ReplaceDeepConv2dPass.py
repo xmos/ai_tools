@@ -2,8 +2,6 @@
 
 import pytest
 
-from copy import deepcopy
-
 from tflite2xcore.transformation_passes import ReplaceDeepConv2dPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_conv2d
@@ -14,13 +12,6 @@ from .conftest import (
     test_non_matching_input_channels,
     test_non_matching_tensors,
 )
-
-
-#  ----------------------------------------------------------------------------
-#                              PARAMETER VALUES
-#  ----------------------------------------------------------------------------
-
-PARAMS = deepcopy(PARAMS)
 
 
 #  ----------------------------------------------------------------------------

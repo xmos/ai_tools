@@ -13,6 +13,7 @@ from tflite2xcore.xcore_schema import (
     OperatorCode,
     BuiltinOpCodes,
     XCOREOpCodes,
+    BuiltinOptions,
 )
 
 
@@ -40,6 +41,36 @@ def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
         OperatorCode(BuiltinOpCodes.SPLIT), inputs=[t_axis, tin], outputs=outputs
     )
     op.builtin_options = {"num_splits": num_splits}
+
+    return subgraph.model
+
+
+def build_dequantize(subgraph=None, *, input_shape):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, *input_shape]
+    qin = subgraph.create_tensor("input", TensorType.INT8, input_shape, isinput=True)
+    fout = subgraph.create_tensor(
+        "output_dequantized", TensorType.FLOAT32, qin.shape, isoutput=True
+    )
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qin], outputs=[fout]
+    )
+
+    return subgraph.model
+
+
+def build_quantize(subgraph=None, *, input_shape):
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    input_shape = [1, *input_shape]
+    fin = subgraph.create_tensor("input", TensorType.FLOAT32, input_shape, isinput=True)
+    qout = subgraph.create_tensor(
+        "output_quantized", TensorType.INT8, fin.shape, isoutput=True
+    )
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.QUANTIZE), inputs=[fin], outputs=[qout]
+    )
 
     return subgraph.model
 
@@ -256,10 +287,13 @@ def build_XC_avgpool2d(subgraph=None, **kwargs):
     return build_XC_pool(XCOREOpCodes.XC_avgpool2d, subgraph, **kwargs)
 
 
-def build_fc(subgraph=None, *, outputs, input_shape):
+def build_fc(subgraph=None, *, outputs, input_shape, add_batch_dim=True):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
-    input_shape = [1, *input_shape]
+    if add_batch_dim:
+        # TODO unify this behaviour
+        input_shape = [1, *input_shape]
+
     weight_shape = [outputs, np.prod(input_shape[1:])]
 
     tin = subgraph.create_tensor(
@@ -304,6 +338,7 @@ def build_XC_fc_deepin_anyout(subgraph=None, *, outputs, input_channels):
 
     input_shape = [1, input_channels, 1, 1]
     weight_shape = [outputs, np.prod(input_shape[1:])]
+    bso_shape = [int(np.ceil(outputs / 16)), 7, 16]
 
     tin = subgraph.create_tensor(
         "input",
@@ -321,7 +356,7 @@ def build_XC_fc_deepin_anyout(subgraph=None, *, outputs, input_channels):
     b = subgraph.create_tensor(
         "biases",
         TensorType.INT32,
-        weight_shape[:1],
+        bso_shape,
         quantization={"scale": [0.00024], "zero_point": [0]},
     )
     tout = subgraph.create_tensor(
@@ -377,46 +412,6 @@ def build_intermediate_fc(subgraph=None, *, outputs, input_shape):
     tmid = subgraph.get_tensor("output")
     tmid.name = "intermediate"
     subgraph.outputs.remove(tmid)
-
-    return model
-
-
-def build_softmax(subgraph=None, *, outputs, input_shape):
-    model = build_intermediate_fc(subgraph, outputs=outputs, input_shape=input_shape)
-    subgraph = subgraph or model.subgraphs[0]
-    tmid = subgraph.get_tensor("intermediate")
-
-    tout = subgraph.create_tensor("output", tmid.type, tmid.shape, isoutput=True)
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.SOFTMAX), inputs=[tmid], outputs=[tout]
-    )
-
-    return model
-
-
-def build_mlp(subgraph=None, *, outputs, hidden_nodes, input_shape):
-    model = build_intermediate_fc(
-        subgraph, outputs=hidden_nodes, input_shape=input_shape
-    )
-    subgraph = subgraph or model.subgraphs[0]
-    tmid = subgraph.get_tensor("intermediate")
-
-    w2_shape = [outputs, hidden_nodes]
-    w2 = subgraph.create_tensor(
-        "weights_2",
-        TensorType.INT8,
-        w2_shape,
-        quantization={"scale": [0.22], "zero_point": [0]},
-    )
-    b2 = subgraph.create_tensor("biases_2", TensorType.INT32, shape=[outputs])
-    tout = subgraph.create_tensor(
-        "output", tmid.type, shape=[1, outputs], isoutput=True
-    )
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.FULLY_CONNECTED),
-        inputs=[tmid, w2, b2],
-        outputs=[tout],
-    )
 
     return model
 
@@ -520,7 +515,7 @@ def build_XC_conv2d(opcode, subgraph=None, *, weight_shape, input_size, strides)
     C_out, _, _, C_in = weight_shape
 
     input_shape = [1, height, width, C_in]
-    bso_shape = [int(np.ceil(C_out / 16)), 5, 16]
+    bso_shape = [int(np.ceil(C_out / 16)), 7, 16]
     tin = subgraph.create_tensor("input", TensorType.INT8, input_shape, isinput=True)
     w = subgraph.create_tensor("weights", TensorType.INT8, weight_shape)
     b = subgraph.create_tensor("bso", TensorType.INT16, bso_shape)
@@ -566,7 +561,7 @@ def build_XC_conv2d_depthwise(subgraph=None, *, weight_shape, input_size, stride
     C_in = weight_shape[2]
 
     input_shape = [1, height, width, C_in]
-    bso_shape = [int(np.ceil(C_in / 16)), 5, 16]
+    bso_shape = [int(np.ceil(C_in / 16)), 7, 16]
     tin = subgraph.create_tensor("input", TensorType.INT8, input_shape, isinput=True)
     w = subgraph.create_tensor("weights", TensorType.INT8, weight_shape)
     b = subgraph.create_tensor("bso", TensorType.INT16, bso_shape)
@@ -635,6 +630,83 @@ def build_consecutive_pads(subgraph=None, *, input_shape, paddings_1, paddings_2
 
     pad_1, pad_2 = subgraph.operators[:2]
     _glue_ops(pad_1, pad_2)
+
+    return model
+
+
+def build_non_input_pad(subgraph=None, *, input_shape, paddings):
+    model = build_pad(subgraph, input_shape=input_shape, paddings=paddings)
+    subgraph = subgraph or model.subgraphs[0]
+
+    build_abs(subgraph, input_shape=input_shape, tensor_type=TensorType.INT8)
+
+    pad1, abs1 = subgraph.operators[:2]
+    _glue_ops(abs1, pad1)
+
+    return model
+
+
+def build_reshape(
+    subgraph=None,
+    *,
+    input_shape,
+    output_shape,
+    add_batch_dim=False,
+    input_shape_tensor=True,
+):
+
+    if add_batch_dim:
+        # Prepend dims with batch dimension 1
+        input_shape = [1, *input_shape]
+
+    assert 0 < len(output_shape) < 5
+
+    assert np.prod(input_shape) == np.prod(output_shape), "Inconsistant shapes"
+
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    tin = subgraph.create_tensor(
+        "original_shape", TensorType.INT8, input_shape, isinput=True
+    )
+    tout = subgraph.create_tensor("reshaped", tin.type, output_shape, isoutput=True)
+
+    if input_shape_tensor:
+        p = subgraph.create_tensor("shape", TensorType.INT32, shape=[len(output_shape)])
+        p.buffer.data = np.int32(output_shape)
+        inputs = [tin, p]
+    else:
+        inputs = [tin]
+
+    subgraph.create_operator(
+        OperatorCode(BuiltinOpCodes.RESHAPE),
+        inputs=inputs,
+        outputs=[tout],
+        builtin_options={"new_shape": output_shape},
+    )
+    return subgraph.model
+
+
+def build_fc_with_reshape(
+    subgraph=None, *, input_shape, fc_outputs, reshaped_input_shape
+):
+    model = build_reshape(
+        subgraph,
+        input_shape=input_shape,
+        output_shape=reshaped_input_shape,
+        add_batch_dim=False,
+    )
+    subgraph = subgraph or model.subgraphs[0]
+
+    build_fc(
+        subgraph,
+        outputs=fc_outputs,
+        input_shape=reshaped_input_shape,
+        add_batch_dim=False,
+    )
+
+    reshape1, fc1 = subgraph.operators[:2]
+
+    _glue_ops(reshape1, fc1)
 
     return model
 

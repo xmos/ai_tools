@@ -1,4 +1,4 @@
-# Copyright (c) 2019, XMOS Ltd, All rights reserved
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pathlib
 
@@ -32,12 +32,8 @@ class InputOutputCanonicalizationManager(PassManager):
         )
 
 
-def strip_model(model, *, remove_softmax=False, debug=False, legalize_op_versions=True):
+def strip_model(model, *, debug=False, legalize_op_versions=True):
     pass_mgr = InputOutputCanonicalizationManager(model, debug=debug)
-
-    # TODO: remove this
-    if remove_softmax:
-        pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
     if legalize_op_versions:
         pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
@@ -79,17 +75,20 @@ def add_float_input_output(model, debug=False):
 def optimize_for_xcore(
     model,
     *,
-    remove_softmax=False,
     cleanup=True,
     minification=False,
     num_threads=1,
     intermediates_path=None,
-    debug=False
+    debug=False,
+    ignore_input_alignment=False
 ):
     # NOTE: the order of the passes is mostly strict
     pass_mgr = InputOutputCanonicalizationManager(
         model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
+
+    pass_mgr.register_pass(passes.CanonicalizeReshapePass())
+    pass_mgr.register_pass(passes.RemoveFlattenReshapePass())
 
     # canonicalize convolutions
     pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
@@ -100,14 +99,12 @@ def optimize_for_xcore(
 
     # word alignment canonicalization introduces new pads, so first fuse then split
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
+
+    # Split batch/channel-wise padding from spacial padding - allows fusing of spacial padding later
     pass_mgr.register_pass(passes.SplitPaddingPass())
 
     # need to cleanup after the first round of canonicalization
     pass_mgr.register_passes(CleanupManager())
-
-    # TODO: remove this
-    if remove_softmax:
-        pass_mgr.register_pass(passes.RemoveSoftmaxOutputPass())
 
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())
@@ -134,14 +131,32 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
 
+    # Fuse spacial padding with conv2d
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
+
+    if ignore_input_alignment:
+        pass_mgr.register_pass(passes.RemovePaddingInputPass())
+
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
-    pass_mgr.register_pass(passes.PlanFullyConnectedPass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanRequant16To8Pass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanConv2dPass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanPooling2DPass(num_threads=num_threads))
-    pass_mgr.register_pass(passes.PlanGlobalAveragePool2DPass(num_threads=num_threads))
+    pass_mgr.register_pass(
+        passes.ParallelizeFullyConnectedPass(num_threads=num_threads)
+    )
+    pass_mgr.register_pass(passes.ParallelizeRequant16To8Pass(num_threads=num_threads))
+    pass_mgr.register_pass(passes.ParallelizeConv2dPass(num_threads=num_threads))
+    pass_mgr.register_pass(
+        passes.ParallelizeDepthwiseConv2dPass(num_threads=num_threads)
+    )
+    pass_mgr.register_pass(passes.ParallelizePooling2DPass(num_threads=num_threads))
+    pass_mgr.register_pass(
+        passes.ParallelizeGlobalAveragePool2DPass(num_threads=num_threads)
+    )
+
+    # NOTE: scratch memory passes must be registered after parallelization passes
+    pass_mgr.register_pass(passes.ScratchMemoryConv2dPass())
+    pass_mgr.register_pass(passes.ScratchMemoryConv2d1x1Pass())
+    pass_mgr.register_pass(passes.ScratchMemoryDepthwiseConv2dPass())
+    pass_mgr.register_pass(passes.ScratchMemoryFullyConnectedPass())
 
     if cleanup:
         pass_mgr.register_passes(CleanupManager())
@@ -169,7 +184,6 @@ def convert(
     tflite_input_path,
     tflite_output_path,
     *,
-    remove_softmax=False,
     num_threads=None,
     minification=False,
     intermediates_path=None,
@@ -179,7 +193,6 @@ def convert(
     model = XCOREModel.read_flatbuffer(tflite_input_path)
     optimize_for_xcore(
         model,
-        remove_softmax=remove_softmax,
         minification=minification,
         num_threads=num_threads,
         intermediates_path=intermediates_path,

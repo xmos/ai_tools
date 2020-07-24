@@ -41,6 +41,8 @@ else # must be xcore
 	CXXFLAGS += -DTF_LITE_STATIC_MEMORY
 	CXXFLAGS += -DTF_LITE_STRIP_ERROR_STRINGS
 
+	FLASH := xflash
+
 	LDFLAGS := $(PLATFORM_FLAGS) -lquadspi
 
 	OBJ_DIR := .build/xcore

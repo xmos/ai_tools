@@ -11,7 +11,7 @@ LIB_TFLITE2XCORE = [
 EXCLUDES = ["*tests", "*tests.*", "*model_generation", "*model_generation.*"]
 SCRIPTS = ["xformer.py", "tflite2xcore/tflite_visualize.py"]
 
-INSTALL_REQUIRES = ["numpy>=1.17.2", "flatbuffers==1.12.0", "tensorflow==2.1.0"]
+INSTALL_REQUIRES = ["numpy>=1.17.2", "flatbuffers==1.12.0", "tensorflow>=2.1.0"]
 
 setuptools.setup(
     name="tflite2xcore",

@@ -30,3 +30,25 @@ tests/data
 
 #misc cruft
 **/*.local.*
+
+# VI tmp files
+*.swp
+*.swo
+*.swn
+
+#tmp files
+*~
+*.*~
+*log*
+
+#Models/training
+*.h5
+*.tflite
+*.html
+*training_history.png
+
+#Others
+*.npz
+*.y
+*.x
+

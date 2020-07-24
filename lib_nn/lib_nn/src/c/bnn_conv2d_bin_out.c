@@ -59,10 +59,8 @@ void bnn_conv2d_bin_out_asm_init(nn_bnn_conv2d_bin_out_asm_plan_t* plan,
   }
 
   plan->outer_x_v_step =
-      bytes_per_input_channel * (remainder_to_end_of_line
-
-                                 // do any extra lines to complete the stride
-                                 + (x->width * (k->stride.vertical - 1))) -
+      bytes_per_input_channel *
+          (remainder_to_end_of_line + (x->width * (k->stride.vertical - 1))) -
       plan->outer_x_h_step;
 
   // TODO these are for implementing sub-kernels

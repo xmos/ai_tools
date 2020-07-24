@@ -66,6 +66,7 @@
 //Note: The elements 27 -> 30 will be clobbered when copying the plan to the stack
 //      this might mean leaving some spare stack space
 
+//doesn't have to be double work aligned
 #define S_ZERO_0 28
 #define S_ZERO_1 29 
 #define S_ZERO_2 30
@@ -74,8 +75,6 @@
 #define S_ZERO_5 33
 #define S_ZERO_6 34
 #define S_ZERO_7 35
-
-
 
 //Helpers that reference the above
 #define S_SAVE_R4_R5 (S_SAVE_R4/2) //0
@@ -97,9 +96,6 @@
 #define X_p       r1
 #define K_p       r2
 #define threshold_current r3
-
-#define X_p r1
-#define K_current r2
 
 #define k_height_loop r4
 #define k_width_loop r5
@@ -125,35 +121,35 @@ make_16_bit_output:
             ic_inner_loop:
                 {vldc X_p[0];      add X_p, X_p, r_256_bits}
 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
-                {vlmaccr1 K_current[0] ; add K_current, K_current, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
 
             {bt ic_loop_counter, ic_inner_loop; sub ic_loop_counter, ic_loop_counter, 1}
 
             ldd s, t, sp[S_INNER_H_STEPS]
-            {add X_p, X_p, t; add K_current, K_current, s }
+            {add X_p, X_p, t; add K_p, K_p, s }
 
         {bt k_width_loop, kw_loop; sub k_width_loop, k_width_loop, 1}
 
         ldd s, t, sp[S_INNER_V_STEPS]
-        {add X_p, X_p, t; add K_current, K_current, s }
+        {add X_p, X_p, t; add K_p, K_p, s }
 
     {bt k_height_loop, kh_loop; sub k_height_loop, k_height_loop, 1}
 
@@ -207,11 +203,8 @@ FUNCTION_NAME:
 
     //Set up the zeros (and clear the over write from the vector copy)
     ldaw t, sp[S_ZERO_0]
-    {ldc s, 0; nop}
-    std s, s, t[0]
-    std s, s, t[1]
-    std s, s, t[2]
-    std s, s, t[3]
+    vclrdr
+    vstr t[0]
 
     h_loop:
 
@@ -220,8 +213,8 @@ FUNCTION_NAME:
 
             ldd threshold_current, oc_loop_counter, sp[S_OC_LOOP_COUNTER_THRESHOLD_P]
 
-            //init K_current
-            {ldw K_current, sp[S_K_p]; nop}
+            //init K_p
+            {ldw K_p, sp[S_K_p]; nop}
 
             oc_loop: //this loops over (output_channels/32)
             

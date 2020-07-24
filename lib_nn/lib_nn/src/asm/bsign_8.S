@@ -39,18 +39,21 @@ void bsign_8_(
 
 #define PLAN_ZERO_POINT 0
 
+#define VSR_VALUE       XS1_VSR_TYPE_SET(0, XS1_VSETC_TYPE_INT8)
+
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[0]
 
     {   ldw tmp, arg_job[JOB_START]             ;   ldc _32, 32                             }
-    {   add X, X, tmp                           ;   shl r11, _32, 4                         }
+    {   add X, X, tmp                           ;                                           }
+    {   ldc r11, VSR_VALUE                      }
     {   shr tmp, tmp, 3                         ;   vsetc r11                               }    
-    {   ldw length, arg_job[JOB_LENGTH]         ;   mov zero_pv, arg_zero_pv                }
-    {   mov tail_mask, length                   ;   add Y, Y, tmp                           }
-    {   zext tail_mask, 5                       ;   shr length, length, 5                   }
+    {   ldw tail_mask, arg_job[JOB_LENGTH]      ;   mov zero_pv, arg_zero_pv                } // tail_mask holds length
+    {   add Y, Y, tmp                           ;                                           }
+    {   zext tail_mask, 5                       ;   shr length, tail_mask, 5                } // length holds length (in "vectors")
     {   shr tail_mask, tail_mask, 3             ;   mkmsk tmp, 4                            }
-    {   mkmsk tail_mask, tail_mask              ;   bf length, .L_loop_end                  }
+    {   mkmsk tail_mask, tail_mask              ;   bf length, .L_loop_end                  } // tail_mask is a byte mask
 
 .L_loop_top:
     {   sub length, length, 1                   ;   vldr zero_pv[0]                         }

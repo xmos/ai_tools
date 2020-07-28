@@ -23,6 +23,7 @@ class BufferedErrorReporter : public tflite::ErrorReporter {
   int Report(const char* format, ...);
   int Report(const char* format, va_list args);
   std::string GetError();
+  void Clear();
 
  private:
   std::stringstream log_stream_;
@@ -40,6 +41,13 @@ class ExtendedXCoreInterpreter : public XCoreInterpreter {
   ExtendedXCoreInterpreter(const tflite::Model* model,
                            const tflite::MicroOpResolver& resolver,
                            uint8_t* arena, size_t arena_size,
+                           tflite::ErrorReporter* reporter,
+                           bool use_current_thread = true,
+                           tflite::Profiler* profiler = nullptr);
+
+  ExtendedXCoreInterpreter(const tflite::Model* model,
+                           const tflite::MicroOpResolver& resolver,
+                           tflite::MicroAllocator* allocator,
                            tflite::ErrorReporter* reporter,
                            bool use_current_thread = true,
                            tflite::Profiler* profiler = nullptr);

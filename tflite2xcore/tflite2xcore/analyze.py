@@ -78,6 +78,8 @@ def analyze_model(model):
 #       size of the tensor arena
 def calc_arena_size(model_content):
     interpreter = xcore_interpreter.XCOREInterpreter(model_content=model_content)
+    logger = logging.getLogger("tensor_arena_allocations")
+    [logger.info(line) for line in interpreter.get_allocations().split("\n")]
     return interpreter.tensor_arena_size
 
 

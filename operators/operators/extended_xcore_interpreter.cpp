@@ -70,15 +70,17 @@ int BufferedErrorReporter::Report(const char* format, ...) {
 int BufferedErrorReporter::Report(const char* format, va_list args) {
   char log_buffer[max_log_len];
   std::vsnprintf(log_buffer, max_log_len, format, args);
-  log_stream_ << log_buffer;
+  log_stream_ << log_buffer << std::endl;
   return 0;
 }
 
 std::string BufferedErrorReporter::GetError() {
   std::string error = log_stream_.str();
-  log_stream_.clear();
+  Clear();
   return error;
 }
+
+void BufferedErrorReporter::Clear() { log_stream_.str(""); }
 
 //****************************
 //****************************
@@ -93,6 +95,14 @@ ExtendedXCoreInterpreter::ExtendedXCoreInterpreter(
     bool use_current_thread, tflite::Profiler* profiler)
     : XCoreInterpreter(model, resolver, arena, arena_size, reporter,
                        use_current_thread, profiler),
+      reporter_(reporter) {}
+
+ExtendedXCoreInterpreter::ExtendedXCoreInterpreter(
+    const tflite::Model* model, const tflite::MicroOpResolver& resolver,
+    tflite::MicroAllocator* allocator, tflite::ErrorReporter* reporter,
+    bool use_current_thread, tflite::Profiler* profiler)
+    : XCoreInterpreter(model, resolver, allocator, reporter, use_current_thread,
+                       profiler),
       reporter_(reporter) {}
 
 size_t ExtendedXCoreInterpreter::input_tensor_index(size_t input_index) {

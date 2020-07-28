@@ -103,7 +103,7 @@ class XCOREInterpreter:
         model_content=None,
         max_tensor_arena_size=MAX_TENSOR_ARENA_SIZE,
     ):
-        self._error_msg = ctypes.create_string_buffer(1024)
+        self._error_msg = ctypes.create_string_buffer(4096)
 
         lib.new_interpreter.restype = ctypes.c_void_p
         lib.new_interpreter.argtypes = None
@@ -203,6 +203,9 @@ class XCOREInterpreter:
         lib.get_error.restype = ctypes.c_size_t
         lib.get_error.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
 
+        lib.get_allocations.restype = ctypes.c_size_t
+        lib.get_allocations.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+
         lib.arena_used_bytes.restype = ctypes.c_size_t
         lib.arena_used_bytes.argtypes = [
             ctypes.c_void_p,
@@ -237,6 +240,12 @@ class XCOREInterpreter:
     def tensor_arena_size(self):
         self._verify_allocated()
         return lib.arena_used_bytes(self.obj)
+
+    def get_allocations(self):
+        self._verify_allocated()
+        alloc_msg = ctypes.create_string_buffer(4096)
+        lib.get_allocations(self.obj, alloc_msg)
+        return alloc_msg.value.decode("utf-8")
 
     def allocate_tensors(self):
         self._op_states = []

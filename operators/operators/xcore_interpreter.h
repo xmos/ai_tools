@@ -16,6 +16,13 @@ class XCoreInterpreter : public tflite::MicroInterpreter {
                    bool use_curent_thread = true,
                    tflite::Profiler* profiler = nullptr);
 
+  XCoreInterpreter(const tflite::Model* model,
+                   const tflite::MicroOpResolver& resolver,
+                   tflite::MicroAllocator* allocator,
+                   tflite::ErrorReporter* reporter,
+                   bool use_current_thread = true,
+                   tflite::Profiler* profiler = nullptr);
+
  private:
   Dispatcher dispatcher_;
 };

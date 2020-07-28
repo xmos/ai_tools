@@ -2,6 +2,7 @@
 #include "operators/extended_xcore_interpreter.h"
 #include "tensorflow/lite/micro/all_ops_resolver.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
+#include "tensorflow/lite/micro/recording_micro_allocator.h"
 #include "tensorflow/lite/version.h"
 
 //*****************************************
@@ -19,6 +20,7 @@ typedef struct ExtendedXCoreInterpreterContext {
   char* model_buffer;
   uint8_t* tensor_arena;
   size_t tensor_arena_size;
+  tflite::RecordingMicroAllocator* allocator;
   xcore::ExtendedXCoreInterpreter* interpreter;
 } ExtendedXCoreInterpreterState;
 
@@ -30,7 +32,8 @@ ExtendedXCoreInterpreterContext* new_interpreter() {
   ctx->model = nullptr;
   ctx->model_buffer = nullptr;
   ctx->tensor_arena = nullptr;
-  ctx->tensor_arena_size = 0;
+  ctx->allocator = nullptr;  // NOTE: the allocator is created in the arena so
+                             // it does not need to be deleted
   ctx->interpreter = nullptr;
   return ctx;
 }
@@ -98,9 +101,13 @@ int initialize(ExtendedXCoreInterpreterContext* ctx, const char* model_content,
   ctx->tensor_arena = new uint8_t[tensor_arena_size];
   memset(ctx->tensor_arena, 0, tensor_arena_size);
 
+  // Create recording allocator
+  ctx->allocator = tflite::RecordingMicroAllocator::Create(
+      ctx->tensor_arena, tensor_arena_size, ctx->reporter);
+
   // Build an interpreter to run the model with.
   ctx->interpreter = new xcore::ExtendedXCoreInterpreter(
-      ctx->model, *ctx->resolver, ctx->tensor_arena, tensor_arena_size,
+      ctx->model, *ctx->resolver, ctx->allocator,
       reinterpret_cast<tflite::ErrorReporter*>(ctx->reporter));
 
   return kTfLiteOk;
@@ -179,6 +186,15 @@ int invoke(ExtendedXCoreInterpreterContext* ctx,
            xcore::invoke_callback_t preinvoke_callback = nullptr,
            xcore::invoke_callback_t postinvoke_callback = nullptr) {
   return ctx->interpreter->Invoke(preinvoke_callback, postinvoke_callback);
+}
+
+size_t get_allocations(ExtendedXCoreInterpreterContext* ctx, char* msg) {
+  ctx->reporter->Clear();
+  ctx->allocator->PrintAllocations();
+  const std::string& alloc_msg = ctx->reporter->GetError();
+  std::strncpy(msg, alloc_msg.c_str(), alloc_msg.length());
+
+  return alloc_msg.length();
 }
 
 size_t get_error(ExtendedXCoreInterpreterContext* ctx, char* msg) {

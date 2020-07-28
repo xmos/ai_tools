@@ -60,13 +60,17 @@ class ModelRunner(ABC):
 
 
 class IntegrationTestRunner(ModelRunner):
+    _model_generator: IntegrationTestModelGenerator
+
     def _run_model_generator(self) -> None:
         super()._run_model_generator()
         self._model_generator._model.summary()  # TODO: remove this
 
-        converters = self._model_generator._converters
-        for converter in converters:
+        for converter in self._model_generator._converters:
             converter.convert()
+
+        for evaluator in self._model_generator._evaluators:
+            evaluator.evaluate()
             # self._reports[converter] = analyze(m._converters[k])
             # self._outputs[converter] = evaluator(
             #     m._converted_models[k], dg_test.generate()

@@ -84,18 +84,17 @@ class TFLiteQuantConverter(ModelConverter):
         )
         self._data_len = 10
 
-    @property
-    def _data_init(self) -> tf.initializers.Initializer:
-        return self._config["input_init"]
+    def _get_representative_data(self) -> tf.Tensor:
+        return self._config["input_init"](
+            (self._data_len, *self._model_generator._input_shape)
+        )
 
     def convert(self) -> None:
-        model_generator = self._model_generator
-        converter = tf.lite.TFLiteConverter.from_keras_model(model_generator._model)
+        converter = tf.lite.TFLiteConverter.from_keras_model(
+            self._model_generator._model
+        )
         quantize_converter(
-            converter,
-            representative_data=self._data_init(
-                (self._data_len, *model_generator._input_shape)
-            ),
+            converter, representative_data=self._get_representative_data(),
         )
         self._model = converter.convert()
 

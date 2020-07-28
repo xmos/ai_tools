@@ -15,6 +15,8 @@ from .model_converter import (
     XCoreConverter,
 )
 
+from .model_evaluator import ModelEvaluator, TFLiteEvaluator
+
 
 Configuration = Dict[str, Any]
 
@@ -29,9 +31,14 @@ class ModelGenerator(ABC):
     _model: Any
     _config: Configuration = {}
 
-    def __init__(self, converters: Optional[List[ModelConverter]] = None) -> None:
+    def __init__(
+        self,
+        converters: Optional[List[ModelConverter]] = None,
+        evaluators: Optional[List[ModelEvaluator]] = None,
+    ) -> None:
         """ Registers the converters associated with the generated models. """
         self._converters = converters or []
+        self._evaluators = evaluators or []
 
     @classmethod
     def builtin_configs(cls) -> List[Configuration]:
@@ -102,7 +109,15 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
     def __init__(self) -> None:
         self._quant_converter = TFLiteQuantConverter(self)
         self._xcore_converter = XCoreConverter(self, self._quant_converter)
-        super().__init__([self._quant_converter, self._xcore_converter])
+        super().__init__(
+            converters=[self._quant_converter, self._xcore_converter],
+            evaluators=[
+                TFLiteEvaluator(
+                    self._quant_converter._get_representative_data,
+                    lambda: self._quant_converter._model,
+                )
+            ],
+        )
 
     @classmethod
     @abstractmethod

@@ -10,10 +10,9 @@ include ../../../make/libs.mk
 # App specific
 #********************
 APPBASE = mobilenet
-APPFLAGS := -DNDEBUG
-#APPFLAGS := -g
-APPFLAGS += -DENABLE_TRACING
-APPFLAGS += -DENABLE_BENCHMARKING
+APPFLAGS :=
+#APPFLAGS += -DNDEBUG  # define this for remove debug and profiling 
+#APPFLAGS += -DTF_LITE_STRIP_ERROR_STRINGS # define this to remove logging
 
 ifeq ($(TARGET), x86)
 	APP = $(APPBASE)

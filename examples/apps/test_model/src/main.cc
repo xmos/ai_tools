@@ -5,25 +5,23 @@
 #include <cstdio>
 #include <iostream>
 
-#include "lib_ops/api/lib_ops.h"
-#include "tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.h"
-#include "tensorflow/lite/micro/micro_error_reporter.h"
-#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "operators/xcore_interpreter.h"
+#include "operators/xcore_profiler.h"
+#include "operators/xcore_reporter.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+#include "tensorflow/lite/micro/micro_profiler.h"
 #include "tensorflow/lite/version.h"
 
-tflite::ErrorReporter *error_reporter = nullptr;
+tflite::ErrorReporter *reporter = nullptr;
+tflite::Profiler *profiler = nullptr;
 const tflite::Model *model = nullptr;
-tflite::MicroInterpreter *interpreter = nullptr;
+xcore::XCoreInterpreter *interpreter = nullptr;
 TfLiteTensor *input = nullptr;
 TfLiteTensor *output = nullptr;
 constexpr int kTensorArenaSize =
     300000;  // Hopefully this is big enough for all tests
 uint8_t tensor_arena[kTensorArenaSize];
-
-xcore::Dispatcher *dispatcher = nullptr;
-constexpr int num_threads = 5;
-constexpr int kXCOREArenaSize = 5000;
-uint8_t xcore_arena[kXCOREArenaSize];
 
 static int load_model(const char *filename, char **buffer, size_t *size) {
   FILE *fd = fopen(filename, "rb");
@@ -67,43 +65,59 @@ static int save_output(const char *filename, const char *output, size_t osize) {
 }
 
 static void setup_tflite(const char *model_buffer) {
-  // Set up logging.
-  static tflite::MicroErrorReporter micro_error_reporter;
-  error_reporter = &micro_error_reporter;
+  // Set up logging
+  static xcore::XCoreReporter xcore_reporter;
+  reporter = &xcore_reporter;
+  // Set up profiling.
+  static xcore::XCoreProfiler xcore_profiler(reporter);
+  profiler = &xcore_profiler;
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
   model = tflite::GetModel(model_buffer);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
-    TF_LITE_REPORT_ERROR(error_reporter,
+    TF_LITE_REPORT_ERROR(reporter,
                          "Model provided is schema version %d not equal "
                          "to supported version %d.",
                          model->version(), TFLITE_SCHEMA_VERSION);
     return;
   }
 
-  // Setup xCORE dispatcher (BEFORE calling AllocateTensors)
-  static xcore::Dispatcher static_dispatcher(xcore_arena, kXCOREArenaSize,
-                                             num_threads);
-  xcore::XCoreStatus xcore_status = xcore::InitializeXCore(&static_dispatcher);
-  if (xcore_status != xcore::kXCoreOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "InitializeXCore() failed");
-    return;
-  }
-  dispatcher = &static_dispatcher;
-
   // This pulls in all the operation implementations we need.
-  static tflite::ops::micro::xcore::XcoreOpsResolver resolver;
+  static tflite::MicroMutableOpResolver<12> resolver;
+  resolver.AddSoftmax();
+  resolver.AddPad();
+  resolver.AddCustom("XC_maxpool2d",
+                     tflite::ops::micro::xcore::Register_MaxPool2D());
+  resolver.AddCustom("XC_avgpool2d",
+                     tflite::ops::micro::xcore::Register_AvgPool2D());
+  resolver.AddCustom("XC_avgpool2d_global",
+                     tflite::ops::micro::xcore::Register_AvgPool2D_Global());
+  resolver.AddCustom("XC_fc_deepin_anyout",
+                     tflite::ops::micro::xcore::Register_FullyConnected_16());
+  resolver.AddCustom("XC_conv2d_shallowin",
+                     tflite::ops::micro::xcore::Register_Conv2D_Shallow());
+  resolver.AddCustom("XC_conv2d_deep",
+                     tflite::ops::micro::xcore::Register_Conv2D_Deep());
+  resolver.AddCustom("XC_conv2d_1x1",
+                     tflite::ops::micro::xcore::Register_Conv2D_1x1());
+  resolver.AddCustom("XC_conv2d_depthwise",
+                     tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
+  resolver.AddCustom("XC_requantize_16_to_8",
+                     tflite::ops::micro::xcore::Register_Requantize_16_to_8());
+  resolver.AddCustom("XC_lookup_8",
+                     tflite::ops::micro::xcore::Register_Lookup_8());
 
-  // Build an interpreter to run the model with.
-  static tflite::MicroInterpreter static_interpreter(
-      model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
+  // Build an interpreter to run the model with
+  static xcore::XCoreInterpreter static_interpreter(
+      model, resolver, tensor_arena, kTensorArenaSize, reporter, true,
+      profiler);
   interpreter = &static_interpreter;
 
   // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();
   if (allocate_tensors_status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
+    TF_LITE_REPORT_ERROR(reporter, "AllocateTensors() failed");
     return;
   }
 
@@ -142,7 +156,7 @@ int main(int argc, char *argv[]) {
   // Run inference, and report any error
   TfLiteStatus invoke_status = interpreter->Invoke();
   if (invoke_status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed\n");
+    TF_LITE_REPORT_ERROR(reporter, "Invoke failed\n");
     return -1;
   }
 

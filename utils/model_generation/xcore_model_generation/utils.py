@@ -5,7 +5,21 @@ import logging
 import tensorflow as tf  # type: ignore
 import numpy as np  # type: ignore
 
-from typing import TYPE_CHECKING, Union, Iterator, List, Optional
+from typing import Union, Iterator, List, Optional
+
+
+def quantize(
+    arr: "np.ndarray",
+    scale: float,
+    zero_point: int,
+    dtype: Union[type, "np.dtype"] = np.int8,
+) -> "np.ndarray":
+    t = np.round(arr / scale + zero_point)
+    return dtype(np.round(np.clip(t, np.iinfo(dtype).min, np.iinfo(dtype).max)))
+
+
+def dequantize(arr: "np.ndarray", scale: float, zero_point: int) -> "np.ndarray":
+    return np.float32((arr.astype(np.int32) - np.int32(zero_point)) * scale)
 
 
 def quantize_converter(

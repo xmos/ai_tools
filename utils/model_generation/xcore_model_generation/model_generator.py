@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 
 import tensorflow as tf  # type: ignore
 
+from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.utils import set_all_seeds  # type: ignore # TODO: fix this
 
 from .model_converter import (
@@ -15,7 +16,7 @@ from .model_converter import (
     XCoreConverter,
 )
 
-from .model_evaluator import ModelEvaluator, TFLiteEvaluator
+from .model_evaluator import ModelEvaluator, TFLiteEvaluator, XCoreEvaluator
 
 
 Configuration = Dict[str, Any]
@@ -109,14 +110,16 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
     def __init__(self) -> None:
         self._quant_converter = TFLiteQuantConverter(self)
         self._xcore_converter = XCoreConverter(self, self._quant_converter)
+        quant_evaluator = TFLiteEvaluator(
+            self._quant_converter._get_representative_data,
+            lambda: self._quant_converter._model,
+        )
+        xcore_evaluator = XCoreEvaluator(
+            lambda: quant_evaluator.input_data, lambda: self._xcore_converter._model,
+        )
         super().__init__(
             converters=[self._quant_converter, self._xcore_converter],
-            evaluators=[
-                TFLiteEvaluator(
-                    self._quant_converter._get_representative_data,
-                    lambda: self._quant_converter._model,
-                )
-            ],
+            evaluators=[quant_evaluator, xcore_evaluator],
         )
 
     @classmethod

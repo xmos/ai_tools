@@ -16,7 +16,7 @@ from .model_converter import (
     XCoreConverter,
 )
 
-from .model_evaluator import ModelEvaluator, TFLiteEvaluator, XCoreEvaluator
+from .model_evaluator import ModelEvaluator, TFLiteQuantEvaluator, XCoreEvaluator
 
 
 Configuration = Dict[str, Any]
@@ -106,20 +106,26 @@ class KerasModelGenerator(ModelGenerator):
 class IntegrationTestModelGenerator(KerasModelGenerator):
     _quant_converter: TFLiteQuantConverter
     _xcore_converter: XCoreConverter
+    reference_evaluator: TFLiteQuantEvaluator
+    xcore_evaluator: XCoreEvaluator
 
     def __init__(self) -> None:
         self._quant_converter = TFLiteQuantConverter(self)
         self._xcore_converter = XCoreConverter(self, self._quant_converter)
-        quant_evaluator = TFLiteEvaluator(
+        self.xcore_evaluator = XCoreEvaluator(
             self._quant_converter._get_representative_data,
+            lambda: self._xcore_converter._model,
+        )
+        self.reference_evaluator = TFLiteQuantEvaluator(
+            lambda: self.xcore_evaluator.input_data_float,
             lambda: self._quant_converter._model,
+            lambda: self.xcore_evaluator.input_quant,
+            lambda: self.xcore_evaluator.output_quant,
         )
-        xcore_evaluator = XCoreEvaluator(
-            lambda: quant_evaluator.input_data, lambda: self._xcore_converter._model,
-        )
+
         super().__init__(
             converters=[self._quant_converter, self._xcore_converter],
-            evaluators=[quant_evaluator, xcore_evaluator],
+            evaluators=[self.xcore_evaluator, self.reference_evaluator],
         )
 
     @classmethod

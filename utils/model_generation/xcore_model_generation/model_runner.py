@@ -1,8 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from abc import ABC, abstractmethod
-from typing import Union, Dict, Any, Iterator, Callable, NamedTuple, Type
+import numpy as np  # type: ignore
 
+from typing import Dict, Any, Iterator, NamedTuple, Type, Optional
+
+from .utils import quantize
 from .model_converter import ModelConverter
 from .model_generator import (
     ModelGenerator,
@@ -11,13 +14,17 @@ from .model_generator import (
 )
 
 ModelReports = Dict[ModelConverter, Any]
-ModelOutputs = Dict[ModelConverter, Any]
+
+
+class ModelOutputs(NamedTuple):
+    reference: np.ndarray
+    xcore: np.ndarray
 
 
 class ModelRun(NamedTuple):
     model_generator: ModelGenerator
-    reports: ModelReports
-    outputs: ModelOutputs
+    reports: Optional[ModelReports]
+    outputs: Optional[ModelOutputs]
 
 
 class ModelRunner(ABC):
@@ -29,13 +36,13 @@ class ModelRunner(ABC):
     """
 
     _model_generator: ModelGenerator
-    _reports: ModelReports
-    _outputs: ModelOutputs
+    _reports: Optional[ModelReports]
+    _outputs: Optional[ModelOutputs]
 
     def __init__(self, generator_class: Type[ModelGenerator]) -> None:
         self.generator_class = generator_class
-        self._reports = {}
-        self._outputs = {}
+        self._reports = None
+        self._outputs = None
 
     def generate_runs(self) -> Iterator[ModelRun]:
         """ Runs the model generation configs and yields reports and outputs.
@@ -48,9 +55,9 @@ class ModelRunner(ABC):
             self._run_model_generator()
             yield ModelRun(self._model_generator, self._reports, self._outputs)
         del self._model_generator
-        self._reports = {}
-        self._outputs = {}
+        self._reports = self._outputs = None
 
+    @abstractmethod
     def _run_model_generator(self) -> None:
         """ Defines how self._model_generator should be run with a config.
 
@@ -64,14 +71,16 @@ class IntegrationTestRunner(ModelRunner):
 
     def _run_model_generator(self) -> None:
         super()._run_model_generator()
-        self._model_generator._model.summary()  # TODO: remove this
+        model_generator = self._model_generator
+        model_generator._model.summary()  # TODO: remove this
 
-        for converter in self._model_generator._converters:
+        for converter in model_generator._converters:
             converter.convert()
 
-        for evaluator in self._model_generator._evaluators:
+        for evaluator in model_generator._evaluators:
             evaluator.evaluate()
-            # self._reports[converter] = analyze(m._converters[k])
-            # self._outputs[converter] = evaluator(
-            #     m._converted_models[k], dg_test.generate()
-            # )
+
+        self._outputs = ModelOutputs(
+            model_generator.reference_evaluator.output_data_quant,
+            model_generator.xcore_evaluator.output_data,
+        )

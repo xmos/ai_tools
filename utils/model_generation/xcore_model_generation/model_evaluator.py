@@ -9,7 +9,7 @@ from typing import Callable, Union
 from tflite2xcore.xcore_interpreter import XCOREInterpreter  # type: ignore # TODO: fix this
 
 from .model_converter import TFLiteModel
-from .utils import apply_interpreter_to_examples, quantize, dequantize
+from .utils import apply_interpreter_to_examples, quantize, Quantization
 
 
 class ModelEvaluator(ABC):
@@ -27,6 +27,8 @@ class ModelEvaluator(ABC):
 
 
 class TFLiteEvaluator(ModelEvaluator):
+    _interpreter: tf.lite.Interpreter
+
     def __init__(
         self,
         input_data_hook: Callable[[], Union[tf.Tensor, np.ndarray]],
@@ -36,36 +38,54 @@ class TFLiteEvaluator(ModelEvaluator):
         self._model_hook = model_hook
 
     def evaluate(self) -> None:
-        interpreter = tf.lite.Interpreter(model_content=self._model_hook())
+        self._interpreter = tf.lite.Interpreter(model_content=self._model_hook())
+        self._interpreter.allocate_tensors()
+
         self.input_data = np.array(self._input_data_hook())
-        self.output_data = apply_interpreter_to_examples(interpreter, self.input_data)
+        self.output_data = apply_interpreter_to_examples(
+            self._interpreter, self.input_data
+        )
+
+
+class TFLiteQuantEvaluator(TFLiteEvaluator):
+    def __init__(
+        self,
+        input_data_hook: Callable[[], Union[tf.Tensor, np.ndarray]],
+        model_hook: Callable[[], TFLiteModel],
+        input_quant_hook: Callable[[], Quantization],
+        output_quant_hook: Callable[[], Quantization],
+    ) -> None:
+        super().__init__(input_data_hook, model_hook)
+        self._input_quant_hook = input_quant_hook
+        self._output_quant_hook = output_quant_hook
+
+    @property
+    def input_data_quant(self) -> np.ndarray:
+        return quantize(self.input_data, *self._input_quant_hook())
+
+    @property
+    def output_data_quant(self) -> np.ndarray:
+        return quantize(self.output_data, *self._output_quant_hook())
 
 
 class XCoreEvaluator(TFLiteEvaluator):
+    input_quant: Quantization
+    output_quant: Quantization
+
     def evaluate(self) -> None:
-        interpreter = XCOREInterpreter(model_content=self._model_hook())
-        interpreter.allocate_tensors()
+        self._interpreter = XCOREInterpreter(model_content=self._model_hook())
+        self._interpreter.allocate_tensors()
 
-        in_details = interpreter.get_input_details()[0]
-        out_details = interpreter.get_output_details()[0]
-        in_ind, self._input_quant = in_details["index"], in_details["quantization"]
-        out_ind, self._output_quant = out_details["index"], out_details["quantization"]
-
-        self.input_data = np.array(self._input_data_hook())
-        if self.input_data.dtype is np.dtype(np.float32):
-            self.input_data = quantize(self.input_data, *self._input_quant)
-
-        self.output_data = apply_interpreter_to_examples(
-            interpreter,
-            self.input_data,
-            interpreter_input_ind=in_ind,
-            interpreter_output_ind=out_ind,
+        self.input_quant = Quantization(
+            *self._interpreter.get_input_details()[0]["quantization"]
+        )
+        self.output_quant = Quantization(
+            *self._interpreter.get_output_details()[0]["quantization"]
         )
 
-    @property
-    def input_data_dequantized(self) -> np.ndarray:
-        return dequantize(self.input_data, *self._input_quant)
+        self.input_data_float = np.array(self._input_data_hook())
+        self.input_data = quantize(self.input_data_float, *self.input_quant)
 
-    @property
-    def output_data_dequantized(self) -> np.ndarray:
-        return dequantize(self.output_data, *self._output_quant)
+        self.output_data = apply_interpreter_to_examples(
+            self._interpreter, self.input_data
+        )

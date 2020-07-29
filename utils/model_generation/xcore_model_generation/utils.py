@@ -5,7 +5,12 @@ import logging
 import tensorflow as tf  # type: ignore
 import numpy as np  # type: ignore
 
-from typing import Union, Iterator, List, Optional
+from typing import Union, Iterator, List, Optional, NamedTuple
+
+
+class Quantization(NamedTuple):
+    scale: float
+    zero_point: int
 
 
 def quantize(

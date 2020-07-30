@@ -23,6 +23,7 @@ TENSORFLOW_SOURCES := \
 	tensorflow/lite/micro/micro_allocator.cc \
 	tensorflow/lite/micro/micro_error_reporter.cc \
 	tensorflow/lite/micro/micro_interpreter.cc \
+	tensorflow/lite/micro/micro_profiler.cc \
 	tensorflow/lite/micro/micro_utils.cc \
 	tensorflow/lite/micro/micro_string.cc \
 	tensorflow/lite/micro/simple_memory_allocator.cc \
@@ -68,17 +69,18 @@ TENSORFLOW_SOURCES := \
 ifeq ($(TARGET), x86)
 	TENSORFLOW_SOURCES += \
 		flatbuffers/src/util.cpp \
-		tensorflow/lite/micro/debug_log.cc 
+		tensorflow/lite/micro/debug_log.cc \
+		tensorflow/lite/micro/micro_time.cc 
 else # must be xcore
 	TENSORFLOW_SOURCES += \
-		tensorflow/lite/micro/xcore/debug_log.cc 	
+		tensorflow/lite/micro/xcore/debug_log.cc \
+		tensorflow/lite/micro/xcore/micro_time.cc 
 endif
 
 #************************
 # XCORE custom operators
 #************************
 TENSORFLOW_SOURCES += \
-	tensorflow/lite/micro/kernels/xcore/xcore_ops_resolver.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_conv2d.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_arg_min_max.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_pooling.cc \

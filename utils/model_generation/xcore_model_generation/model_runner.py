@@ -21,12 +21,6 @@ class ModelOutputs(NamedTuple):
     xcore: np.ndarray
 
 
-class ModelRun(NamedTuple):
-    model_generator: ModelGenerator
-    reports: Optional[ModelReports]
-    outputs: Optional[ModelOutputs]
-
-
 class ModelRunner(ABC):
     """ Superclass for defining the behavior of batched model generation runs.
 
@@ -36,41 +30,30 @@ class ModelRunner(ABC):
     """
 
     _model_generator: ModelGenerator
-    _reports: Optional[ModelReports]
-    _outputs: Optional[ModelOutputs]
+    reports: Optional[ModelReports]
+    outputs: Optional[ModelOutputs]
 
     def __init__(self, generator_class: Type[ModelGenerator]) -> None:
         self.generator_class = generator_class
-        self._reports = None
-        self._outputs = None
-
-    def generate_runs(self) -> Iterator[ModelRun]:
-        """ Runs the model generation configs and yields reports and outputs.
-
-        The reports and outputs are set by _run_model_generator.
-        """
-        for cfg in self.generator_class.builtin_configs():
-            self._model_generator = self.generator_class()
-            self._model_generator.set_config(**cfg)
-            self._run_model_generator()
-            yield ModelRun(self._model_generator, self._reports, self._outputs)
-        del self._model_generator
-        self._reports = self._outputs = None
+        self.reports = None
+        self.outputs = None
 
     @abstractmethod
-    def _run_model_generator(self) -> None:
+    def run(self, cfg: Configuration) -> None:
         """ Defines how self._model_generator should be run with a config.
 
         Optionally sets self._reports and self._outputs.
         """
+        self._model_generator = self.generator_class()
+        self._model_generator.set_config(**cfg)
         self._model_generator.build()
 
 
 class IntegrationTestRunner(ModelRunner):
     _model_generator: IntegrationTestModelGenerator
 
-    def _run_model_generator(self) -> None:
-        super()._run_model_generator()
+    def run(self, cfg: Configuration):
+        super().run(cfg)
         model_generator = self._model_generator
         model_generator._model.summary()  # TODO: remove this
 
@@ -80,7 +63,7 @@ class IntegrationTestRunner(ModelRunner):
         for evaluator in model_generator._evaluators:
             evaluator.evaluate()
 
-        self._outputs = ModelOutputs(
+        self.outputs = ModelOutputs(
             model_generator.reference_evaluator.output_data_quant,
             model_generator.xcore_evaluator.output_data,
         )

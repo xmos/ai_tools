@@ -41,15 +41,6 @@ class ModelGenerator(ABC):
         self._converters = converters or []
         self._evaluators = evaluators or []
 
-    @classmethod
-    def builtin_configs(cls) -> List[Configuration]:
-        """ Returns the basic configurations the build method should be run with.
-
-        This method can load the configuration of a .yml file or defined in
-        the function body.
-        """
-        return []
-
     @abstractmethod
     def build(self) -> None:
         """ Sets the _model field as needed by the subclass.
@@ -128,7 +119,3 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
             evaluators=[self.xcore_evaluator, self.reference_evaluator],
         )
 
-    @classmethod
-    @abstractmethod
-    def builtin_configs(cls, level: str = "default") -> List[Configuration]:
-        return []

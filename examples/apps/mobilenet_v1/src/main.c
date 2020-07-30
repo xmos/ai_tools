@@ -19,7 +19,7 @@ void print_output() {
 
 #ifdef XCORE
 
-#include "lib_ops/api/device_memory.h"
+#include "operators/device_memory.h"
 
 #define STRINGIFY(NAME) #NAME
 #define GET_STACKWORDS(DEST, NAME) \

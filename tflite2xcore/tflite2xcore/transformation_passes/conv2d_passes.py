@@ -4,24 +4,12 @@ import numpy as np
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_schema import (
-    TensorType,
-    BuiltinOpCodes,
-    BuiltinOptions,
-    OperatorCode,
-    XCOREOpCodes,
-)
-from tflite2xcore.parallelization import (
-    SlicePlanner,
-    CHANNEL_GROUP_SIZE,
-)
+from tflite2xcore.xcore_schema import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
-    QuantizedOperatorMatchingPass,
     LegalizeWeightBiasPass,
     LegalizeXCWeightBiasPass,
-    OperatorMatchingPass,
 )
 from tflite2xcore.xlogging import log_method_output
 
@@ -315,98 +303,3 @@ class LegalizeXCShallowinConvPass(LegalizeXCConvPass):
                 )
             )
             self._log_weights()
-
-
-class ParallelizeConv2dPass(OperatorMatchingPass):
-    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.num_threads = num_threads or 1
-        assert isinstance(self.num_threads, int)
-        assert self.num_threads > 0
-        self.forced = forced
-
-    MATCHING_OPCODES = (
-        XCOREOpCodes.XC_conv2d_shallowin,
-        XCOREOpCodes.XC_conv2d_deep,
-        XCOREOpCodes.XC_conv2d_1x1,
-        XCOREOpCodes.XC_conv2d_depthwise,
-    )
-
-    def match(self, op):
-        if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
-            return "par" not in op.custom_options
-
-    def mutate(self, op):
-        _, height, width, Cout = op.outputs[0].shape
-        planner = SlicePlanner(
-            int(Cout),
-            int(height),
-            int(width),
-            num_threads=self.num_threads,
-            forced=self.forced,
-        )
-        plan = planner.find_optimal_plan()
-
-        op.add_custom_options(par=plan.to_dict())
-
-
-class ScratchMemoryConv2dPass(OperatorMatchingPass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    MATCHING_OPCODES = (
-        XCOREOpCodes.XC_conv2d_deep,
-        XCOREOpCodes.XC_conv2d_shallowin,
-        XCOREOpCodes.XC_conv2d_depthwise,
-    )
-
-    def match(self, op):
-        if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
-            return "mem" not in op.custom_options
-
-    def mutate(self, op):
-        _, _, _, Cin = op.inputs[0].shape
-        if len(op.inputs[1].shape) == 4:
-            _, Kh, Kw, _ = op.inputs[1].shape
-        else:
-            Kh, Kw, _ = op.inputs[1].shape
-
-        _, Bv, Bl = op.inputs[2].shape
-
-        if "par" in op.custom_options:
-            max_cg_size = max(
-                [cg[1] - cg[0] + 1 for cg in op.custom_options["par"]["cg"]]
-            )
-        else:
-            max_cg_size = CHANNEL_GROUP_SIZE
-
-        weights_scratch_size = Cin * Kh * Kw * max_cg_size
-        bias_scratch_size = Bv * Bl * op.inputs[2].type.to_bytes()
-
-        op.add_custom_options(mem=[weights_scratch_size, bias_scratch_size])
-
-
-class ScratchMemoryConv2d1x1Pass(OperatorMatchingPass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def match(self, op):
-        if super().match(op) and op.operator_code.code == XCOREOpCodes.XC_conv2d_1x1:
-            return "mem" not in op.custom_options
-
-    def mutate(self, op):
-        _, _, _, Cin = op.inputs[0].shape
-        _, Bv, Bl = op.inputs[2].shape
-
-        if "par" in op.custom_options:
-            max_cg_size = max(
-                [cg[1] - cg[0] + 1 for cg in op.custom_options["par"]["cg"]]
-            )
-        else:
-            max_cg_size = CHANNEL_GROUP_SIZE
-
-        weights_scratch_size = Cin * max_cg_size
-        bias_scratch_size = Bv * Bl * op.inputs[2].type.to_bytes()
-
-        op.add_custom_options(mem=[weights_scratch_size, bias_scratch_size])
-

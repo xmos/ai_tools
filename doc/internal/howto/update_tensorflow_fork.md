@@ -51,3 +51,12 @@ where `ID` is the pull request id and `BRANCHNAME` is the name of the new branch
 To build and run the unit tests.  **Note**, this takes a long time.
 
     > make -f tensorflow/lite/micro/tools/make/Makefile TARGET="xcore" test
+    
+To run a single test
+
+    > make -f tensorflow/lite/micro/tools/make/Makefile TARGET="xcore" test_simple_memory_allocator_test
+
+To debug a single test
+
+    > make -f tensorflow/lite/micro/tools/make/Makefile TARGET="xcore" test_simple_memory_allocator_test xgdb tensorflow/lite/micro/tools/make/gen/xcore_xcore/bin/memory_arena_threshold_test
+

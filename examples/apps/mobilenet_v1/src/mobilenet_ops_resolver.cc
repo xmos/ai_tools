@@ -8,9 +8,9 @@ namespace ops {
 namespace micro {
 namespace xcore {
 
-void add_registered_ops(MicroMutableOpResolver *resolver) {
-  resolver->AddBuiltin(BuiltinOperator_SOFTMAX, Register_SOFTMAX(), 1, 2);
-  resolver->AddBuiltin(BuiltinOperator_PAD, Register_PAD(), 1, 2);
+void add_registered_ops(MicroMutableOpResolver<num_mobilenet_ops> *resolver) {
+  resolver->AddSoftmax();
+  resolver->AddPad();
   resolver->AddCustom("XC_conv2d_shallowin", Register_Conv2D_Shallow());
   resolver->AddCustom("XC_conv2d_depthwise", Register_Conv2D_Depthwise());
   resolver->AddCustom("XC_conv2d_1x1", Register_Conv2D_1x1());

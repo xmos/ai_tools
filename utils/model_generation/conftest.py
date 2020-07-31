@@ -78,11 +78,11 @@ def run(request):
     return generator.run
 
 
-class Conv2dTestModelGenerator(IntegrationTestModelGenerator):
+class Conv2dGenericTestModelGenerator(IntegrationTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
-        input_channels = cfg.pop("input_channels", 32)
+        input_channels = cfg.pop("input_channels", 4)
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
-        output_channels = cfg.pop("output_channels", 16)
+        output_channels = cfg.pop("output_channels", 4)
         assert output_channels % 4 == 0, "# of output channels must be multiple of 4"
 
         self._config = dict(
@@ -130,4 +130,3 @@ class Conv2dTestModelGenerator(IntegrationTestModelGenerator):
             else:
                 raise
         self._model.build()
-

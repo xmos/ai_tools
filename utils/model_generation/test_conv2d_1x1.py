@@ -7,18 +7,14 @@ import pytest
 import tensorflow as tf
 import numpy as np
 
-from conftest import Conv2dTestModelGenerator
+from conftest import Conv2dGenericTestModelGenerator
 from xcore_model_generation.model_generator import Configuration
 
 
-class Conv2d1x1TestModelGenerator(Conv2dTestModelGenerator):
+class Conv2d1x1TestModelGenerator(Conv2dGenericTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         assert cfg.setdefault("K_h", 1) == 1, "Kernel height must be 1"
         assert cfg.setdefault("K_w", 1) == 1, "Kernel width must be 1"
-        cfg.setdefault("input_channels", 4)
-        cfg.setdefault("output_channels", 4)
-        cfg.setdefault("height", 5)
-        cfg.setdefault("width", 5)
         super()._set_config(cfg)
 
 

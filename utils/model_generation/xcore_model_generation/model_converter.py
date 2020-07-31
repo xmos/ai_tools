@@ -1,8 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional, Any, Callable, ByteString
-
 import tensorflow as tf  # type: ignore
 
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
@@ -10,11 +8,12 @@ from tflite2xcore.converter import optimize_for_xcore  # type: ignore # TODO: fi
 
 from .utils import quantize_converter
 
+from typing import TYPE_CHECKING, ByteString
+
 if TYPE_CHECKING:
     from .model_generator import (
         ModelGenerator,
         KerasModelGenerator,
-        IntegrationTestModelGenerator,
         Configuration,
     )
 
@@ -85,6 +84,7 @@ class TFLiteQuantConverter(ModelConverter):
         self._data_len = 10
 
     def _get_representative_data(self) -> tf.Tensor:
+        """ Returns the data to be used for post training quantization. """
         return self._config["input_init"](
             (self._data_len, *self._model_generator._input_shape)
         )

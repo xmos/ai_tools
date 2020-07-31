@@ -1,22 +1,19 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from inspect import isabstract
-from typing import Optional, Tuple, List, Dict, Any, Type
 from abc import ABC, abstractmethod
-
 import tensorflow as tf  # type: ignore
 
-from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.utils import set_all_seeds  # type: ignore # TODO: fix this
 
 from .model_converter import (
     ModelConverter,
-    TFLiteFloatConverter,
     TFLiteQuantConverter,
     XCoreConverter,
 )
 from .model_runner import ModelRunner, IntegrationTestRunner
 from .model_evaluator import ModelEvaluator, TFLiteQuantEvaluator, XCoreEvaluator
+
+from typing import Optional, Tuple, List, Dict, Any
 
 
 Configuration = Dict[str, Any]
@@ -35,12 +32,12 @@ class ModelGenerator(ABC):
 
     def __init__(
         self,
-        runner: Type[ModelRunner],
+        runner: ModelRunner,
         converters: Optional[List[ModelConverter]] = None,
         evaluators: Optional[List[ModelEvaluator]] = None,
     ) -> None:
-        """ Registers the converters associated with the generated models. """
-        self.run = runner(self)
+        """ Registers the runner, converters and evaluators. """
+        self.run = runner
         self._converters = converters or []
         self._evaluators = evaluators or []
 
@@ -57,7 +54,9 @@ class ModelGenerator(ABC):
     def _set_config(self, cfg: Configuration) -> None:
         """ Sets the relevant configuration parameters and returns the unused ones.
         
+        Should check if the given configuration parameters are legal.
         This method operates on the config input argument in-place.
+        Subclasses should implement this instead of the set_config method.
         """
         for converter in self._converters:
             converter._set_config(cfg)
@@ -65,8 +64,7 @@ class ModelGenerator(ABC):
     def set_config(self, **config: Any) -> None:
         """ Configures the model generator before the build method is run.
         
-        Should check if the given configuration parameters are legal.
-        Optionally sets the default values for missing configuration parameters.
+        Default values for missing configuration parameters are set.
         Subclasses should implement the _set_config method instead of this.
         """
         self._set_config(config)
@@ -74,11 +72,6 @@ class ModelGenerator(ABC):
             raise ValueError(
                 f"Unexpected configuration parameter(s): {', '.join(config.keys())}"
             )
-
-    @classmethod
-    def parse_config(cls, config_string: str) -> List[Configuration]:
-        """ Parses one or multiple lines of configuration string (e.g. yml). """
-        raise NotImplementedError()
 
 
 class KerasModelGenerator(ModelGenerator):
@@ -102,6 +95,7 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
     _xcore_converter: XCoreConverter
     reference_evaluator: TFLiteQuantEvaluator
     xcore_evaluator: XCoreEvaluator
+    run: IntegrationTestRunner
 
     def __init__(self) -> None:
         self._quant_converter = TFLiteQuantConverter(self)
@@ -118,7 +112,7 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
         )
 
         super().__init__(
-            runner=IntegrationTestRunner,
+            runner=IntegrationTestRunner(self),
             converters=[self._quant_converter, self._xcore_converter],
             evaluators=[self.xcore_evaluator, self.reference_evaluator],
         )

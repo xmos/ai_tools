@@ -4,35 +4,48 @@ from abc import ABC, abstractmethod
 import tensorflow as tf  # type: ignore
 import numpy as np  # type: ignore
 
-from typing import Callable, Union
-
 from tflite2xcore.xcore_interpreter import XCOREInterpreter  # type: ignore # TODO: fix this
 
-from .model_converter import TFLiteModel
 from .utils import apply_interpreter_to_examples, quantize, Quantization
+
+from typing import TYPE_CHECKING, Callable, Union
+
+if TYPE_CHECKING:
+    from .model_converter import TFLiteModel
 
 
 class ModelEvaluator(ABC):
+    """ Superclass for defining model evaluation logic.
+
+    ModelEvaluator objects are registered when a ModelGenerator object is
+    instantiated. Evaluation means that output data is generated for a given
+    input, but it does not mean that a model is compared to another one.
+    """
+
     input_data: np.ndarray
     output_data: np.ndarray
 
     def __init__(
         self, input_data_hook: Callable[[], Union[tf.Tensor, np.ndarray]]
     ) -> None:
+        """ Registers a callback that returns the input data. """
         self._input_data_hook = input_data_hook
 
     @abstractmethod
     def evaluate(self) -> None:
+        """ Populates self.input_data and self.output_data. """
         raise NotImplementedError()
 
 
 class TFLiteEvaluator(ModelEvaluator):
+    """ Defines the evaluation logic for a TFLite float model. """
+
     _interpreter: tf.lite.Interpreter
 
     def __init__(
         self,
         input_data_hook: Callable[[], Union[tf.Tensor, np.ndarray]],
-        model_hook: Callable[[], TFLiteModel],
+        model_hook: Callable[[], "TFLiteModel"],
     ) -> None:
         super().__init__(input_data_hook)
         self._model_hook = model_hook
@@ -48,10 +61,16 @@ class TFLiteEvaluator(ModelEvaluator):
 
 
 class TFLiteQuantEvaluator(TFLiteEvaluator):
+    """ Defines the evaluation logic for a TFLite quant model.
+    
+    Since the quantizer leaves in a float interface, callbacks for input/output
+    quantization parameters are required.
+    """
+
     def __init__(
         self,
         input_data_hook: Callable[[], Union[tf.Tensor, np.ndarray]],
-        model_hook: Callable[[], TFLiteModel],
+        model_hook: Callable[[], "TFLiteModel"],
         input_quant_hook: Callable[[], Quantization],
         output_quant_hook: Callable[[], Quantization],
     ) -> None:
@@ -69,6 +88,11 @@ class TFLiteQuantEvaluator(TFLiteEvaluator):
 
 
 class XCoreEvaluator(TFLiteEvaluator):
+    """ Defines the evaluation logic for a TFLite float model. 
+    
+    The input and output quantization parameters are inferred from the model.
+    """
+
     input_quant: Quantization
     output_quant: Quantization
 

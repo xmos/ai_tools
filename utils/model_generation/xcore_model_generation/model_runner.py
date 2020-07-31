@@ -3,15 +3,17 @@
 from abc import ABC, abstractmethod
 import numpy as np  # type: ignore
 
-from typing import Dict, Any, Iterator, NamedTuple, Type, Optional
+from typing import TYPE_CHECKING, Dict, Any, Iterator, NamedTuple, Type, Optional
 
 from .utils import quantize
 from .model_converter import ModelConverter
-from .model_generator import (
-    ModelGenerator,
-    Configuration,
-    IntegrationTestModelGenerator,
-)
+
+if TYPE_CHECKING:
+    from .model_generator import (
+        ModelGenerator,
+        Configuration,
+        IntegrationTestModelGenerator,
+    )
 
 ModelReports = Dict[ModelConverter, Any]
 
@@ -29,33 +31,29 @@ class ModelRunner(ABC):
     configurations defined in its builtin_configs method.
     """
 
-    _model_generator: ModelGenerator
     reports: Optional[ModelReports]
     outputs: Optional[ModelOutputs]
 
-    def __init__(self, generator_class: Type[ModelGenerator]) -> None:
-        self.generator_class = generator_class
+    def __init__(self, generator: "ModelGenerator") -> None:
+        self._model_generator = generator
         self.reports = None
         self.outputs = None
 
     @abstractmethod
-    def run(self, cfg: Configuration) -> None:
+    def __call__(self) -> None:
         """ Defines how self._model_generator should be run with a config.
 
         Optionally sets self._reports and self._outputs.
         """
-        self._model_generator = self.generator_class()
-        self._model_generator.set_config(**cfg)
         self._model_generator.build()
 
 
 class IntegrationTestRunner(ModelRunner):
-    _model_generator: IntegrationTestModelGenerator
+    _model_generator: "IntegrationTestModelGenerator"
 
-    def run(self, cfg: Configuration):
-        super().run(cfg)
+    def __call__(self) -> None:
+        super().__call__()
         model_generator = self._model_generator
-        model_generator._model.summary()  # TODO: remove this
 
         for converter in model_generator._converters:
             converter.convert()

@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from inspect import isabstract
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Optional, Tuple, List, Dict, Any, Type
 from abc import ABC, abstractmethod
 
 import tensorflow as tf  # type: ignore
@@ -15,7 +15,7 @@ from .model_converter import (
     TFLiteQuantConverter,
     XCoreConverter,
 )
-
+from .model_runner import ModelRunner, IntegrationTestRunner
 from .model_evaluator import ModelEvaluator, TFLiteQuantEvaluator, XCoreEvaluator
 
 
@@ -31,13 +31,16 @@ class ModelGenerator(ABC):
 
     _model: Any
     _config: Configuration = {}
+    run: ModelRunner
 
     def __init__(
         self,
+        runner: Type[ModelRunner],
         converters: Optional[List[ModelConverter]] = None,
         evaluators: Optional[List[ModelEvaluator]] = None,
     ) -> None:
         """ Registers the converters associated with the generated models. """
+        self.run = runner(self)
         self._converters = converters or []
         self._evaluators = evaluators or []
 
@@ -115,6 +118,7 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
         )
 
         super().__init__(
+            runner=IntegrationTestRunner,
             converters=[self._quant_converter, self._xcore_converter],
             evaluators=[self.xcore_evaluator, self.reference_evaluator],
         )

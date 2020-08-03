@@ -185,25 +185,17 @@ FUNCTION_NAME:
     std r8, r9, sp[S_SAVE_R8_R9]
     std r2, r10, sp[S_SAVE_R10_K_p]
 
-    //stw r1, sp[S_X_p]
-
-    ldc r_256_bits, (256/8)
-    
 	ldc r11, 256 //set int16 mode - 32 bit accumulators	
-    {vsetc r11; nop} //TODO shr r_256_bits, r11, 3
+    {vsetc r11; shr r_256_bits, r11, 3} 
     
-    load_stuff:
     {mov t, r0;  ldc s, PLAN_Y_P}
-    {ldw r0, t[s]; ldc s, PLAN_X_P}
+    {ldw r0, t[s]; ldc s, PLAN_X_P} //put PLAN_Y_P into r0
     {ldw r1, t[s]; ldc s, PLAN_K_P}
     {ldw r2, t[s]; nop}
 
-    stw r1, sp[S_X_p]
-    stw r2, sp[S_K_p]
-    //put PLAN_X_P into S_X_p and r1
-    //put PLAN_K_P into S_K_p and r2
-    //put PLAN_Y_P into r0
-
+    stw r1, sp[S_X_p]   //put PLAN_X_P into S_X_p and r1
+    stw r2, sp[S_K_p]   //put PLAN_K_P into S_K_p and r2
+    
     {vldr t[0];  add t, t, r_256_bits}
     ldaw s, sp[S_OUTER_X_H_STEP]
     {vstr s[0]; add s, s, r_256_bits}

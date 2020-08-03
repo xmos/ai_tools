@@ -53,7 +53,7 @@ class OpTestDefaultModel(KerasModel):
                     "verify that the kernel is at least the size of input image)"
                 ) from e
             else:
-                raise e from None
+                raise
         self.core_model.build()
         self.core_model.summary()
 

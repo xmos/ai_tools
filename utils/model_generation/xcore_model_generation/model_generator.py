@@ -1,9 +1,12 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+import dill  # type: ignore
+from pathlib import Path
 from abc import ABC, abstractmethod
 import tensorflow as tf  # type: ignore
 
 from tflite2xcore.utils import set_all_seeds  # type: ignore # TODO: fix this
+from tflite2xcore import xlogging  # type: ignore # TODO: fix this
 
 from .model_converter import (
     ModelConverter,
@@ -13,7 +16,7 @@ from .model_converter import (
 from .model_runner import ModelRunner, IntegrationTestRunner
 from .model_evaluator import ModelEvaluator, TFLiteQuantEvaluator, XCoreEvaluator
 
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Optional, Tuple, List, Dict, Any, Union
 
 
 Configuration = Dict[str, Any]
@@ -88,6 +91,28 @@ class KerasModelGenerator(ModelGenerator):
     @property
     def _output_shape(self) -> Tuple[int, ...]:
         return self._model.output_shape[1:]  # type:ignore  # pylint: disable=no-member
+
+    def save(self, dirpath: Union[Path, str]) -> None:
+        dirpath = Path(dirpath)
+        dirpath.mkdir(exist_ok=True)
+        self._model.save(dirpath / "model.h5")
+        tmp = self._model
+        del self._model
+        with open(dirpath / "generator.dill", "wb") as f:
+            dill.dump(self, f)
+        self._model = tmp
+
+    @classmethod
+    def load(cls, dirpath: Union[Path, str]) -> "KerasModelGenerator":
+        dirpath = Path(dirpath)
+        with open(dirpath / "generator.dill", "rb") as f:
+            obj = dill.load(f)
+        assert isinstance(obj, cls)
+
+        # tf may complain about missing training config, so silence it
+        with xlogging.LoggingContext(tf.get_logger(), xlogging.ERROR):
+            obj._model = tf.keras.models.load_model(dirpath / "model.h5")
+        return obj
 
 
 class IntegrationTestModelGenerator(KerasModelGenerator):

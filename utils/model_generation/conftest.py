@@ -2,6 +2,7 @@
 
 # TODO: move this file to final location
 
+import os
 import pytest
 import logging
 
@@ -65,18 +66,30 @@ def run(request):
     except AttributeError:
         raise NameError("GENERATOR not designated in test") from None
 
-    generator = GENERATOR()
-    generator.set_config(**request.param)
-    logging.info(f"Full config: {generator._config}")
-    if request.config.getoption("--config-only"):
+    gen = GENERATOR()
+    gen.set_config(**request.param)
+
+    pytest_config = request.config
+    if pytest_config.getoption("verbose"):
+        print(f"Config: {gen._config}")
+    if pytest_config.getoption("--config-only"):
         pytest.skip()
 
-    # TODO: cache here
-    generator.run()
-    if request.config.getoption("--generate-only"):
+    config_str = stringify_config(gen._config)
+    key = "model_cache/" + config_str
+    dirpath = pytest_config.cache.get(key, "")
+    if dirpath:
+        gen = IntegrationTestModelGenerator.load(dirpath)
+    else:
+        dirpath = os.path.join(pytest_config.cache.makedir("model_cache"), config_str)
+        gen.run()
+        gen.save(dirpath)
+        pytest_config.cache.set(key, dirpath)
+
+    if pytest_config.getoption("--generate-only"):
         pytest.skip()
 
-    return generator.run
+    return gen.run
 
 
 class Conv2dGenericTestModelGenerator(IntegrationTestModelGenerator):

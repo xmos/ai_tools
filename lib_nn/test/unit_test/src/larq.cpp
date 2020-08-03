@@ -232,9 +232,9 @@ extern "C" void larq_ref_bconv2d(const nn_image_params_t* x,
   params.padding_type = PaddingType::kValid;  // enum class PaddingType : uint8
                                               // { kNone, kSame, kValid };
   params.padding_values.height = 0;
-  //   params.padding_values.height_offset = 0;
+  params.padding_values.height_offset = 0;
   params.padding_values.width = 0;
-  //   params.padding_values.width_offset = 0;
+  params.padding_values.width_offset = 0;
   //   params.quantized_activation_max = 0;
   //   params.quantized_activation_min = 0;
   params.stride_height = k->stride.vertical;

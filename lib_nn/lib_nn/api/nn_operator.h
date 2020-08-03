@@ -268,15 +268,14 @@ void conv2d_1x1(nn_image_t* Y, const nn_image_t* X, const nn_tensor_t* K,
                 const nn_conv2d_1x1_job_t* job);
 
 // Binary operators
-void bnn_conv2d_bin_out_asm(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
-                            const bnn_b256_t* K_p,
-                            int32_t* thresholds,  //[out_channel];
-                            const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
+void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
 
-void bnn_conv2d_bin_out_asm_init(nn_bnn_conv2d_bin_out_asm_plan_t* plan,
-                                 const nn_image_params_t* x,
-                                 const nn_image_params_t* y,
-                                 const nn_window_params_t* k);
+void bnn_conv2d_bin_out_asm_init(
+    nn_bnn_conv2d_bin_out_asm_plan_t* plan, bnn_b32_t* Y_p, bnn_b256_t* X_p,
+    bnn_b256_t* K_p, int32_t* thresholds_p, const nn_image_params_t* x,
+    const nn_image_params_t* y, const nn_window_params_t* k, unsigned y_loc_x,
+    unsigned y_loc_y, unsigned x_loc_x, unsigned x_loc_y, unsigned k_loc_x,
+    unsigned k_loc_y);
 
 void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
                         const bnn_b256_t* K_p,

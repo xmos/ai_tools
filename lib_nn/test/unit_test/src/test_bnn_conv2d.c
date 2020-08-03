@@ -71,6 +71,112 @@ void boggle_kernel(bnn_b256_t* K_p, bnn_b256_t* K_ref_p, unsigned k_height,
   }
 }
 
+typedef struct PaddingValues {
+  int16_t width;
+  int16_t height;
+  int16_t width_offset;
+  int16_t height_offset;
+} PaddingValues;
+
+void padded_kernel(bnn_b32_t* Y_p, bnn_b256_t* X_p, bnn_b256_t* K_p,
+                   int32_t* thresholds_p, PaddingValues padding_values,
+                   const unsigned k_height, const unsigned k_width,
+                   const unsigned chans_in, const unsigned chans_out,
+                   const unsigned h_stride, const unsigned v_stride) {
+  // Edges are given in the order of: Top, Right, Bottom, Left
+  enum {
+    TOP = 0,
+    RIGHT,
+    BOTTOM,
+    LEFT,
+  };
+
+  unsigned edge_padding[4];
+  edge_padding[TOP] = padding_values.height;
+  edge_padding[RIGHT] = padding_values.width + padding_values.width_offset;
+  edge_padding[BOTTOM] = padding_values.height + padding_values.height_offset;
+  edge_padding[LEFT] = padding_values.width;
+
+  // Kernel side lengths: height, width
+  unsigned k_edge_length[2] = {k_height, k_width};
+
+  unsigned edge_height[4];
+  unsigned edge_pad_only_height[4];
+  for (unsigned edge = 0; edge < 4; ++edge) {
+    if (edge_padding[edge] > k_edge_length[(edge * 2) & 1] - 1) {
+      edge_height[edge] = k_edge_length[(edge * 2) & 1] - 1;
+    } else {
+      edge_height[edge] = edge_padding[edge];
+    }
+    edge_pad_only_height[edge] = edge_padding[edge] - edge_height[edge];
+  }
+
+  // top_pad_only
+
+  if (edge_pad_only_height[TOP] > 0) {
+  }
+  if (edge_pad_only_height[BOTTOM] > 0) {
+  }
+  if (edge_pad_only_height[LEFT] > 0) {
+  }
+  if (edge_pad_only_height[RIGHT] > 0) {
+  }
+
+  nn_image_params_t x;
+  x.channels = chans_in;
+
+  nn_image_params_t y;
+  y.channels = chans_out;
+  y.height = 1;
+  y.width = 1;
+
+  nn_window_params_t k;
+  k.start.column = 0;
+  k.start.row = 0;
+  k.stride.horizontal = h_stride;
+  k.stride.vertical = v_stride;
+
+  // top left
+  for (unsigned loc_y = 0; loc_y < edge_height[TOP]; ++loc_y) {
+    unsigned y_loc_y = loc_y + edge_pad_only_height[TOP];
+    for (unsigned loc_x = 0; loc_x < edge_height[LEFT]; ++loc_x) {
+      unsigned y_loc_x = loc_x + edge_pad_only_height[LEFT];
+
+      k.shape.height = loc_y + 1;
+      k.shape.width = loc_x + 1;
+      x.height = k.shape.height;  // This will need to incorporate the stride
+      x.width = k.shape.width;    // This will need to incorporate the stride
+
+      nn_bnn_conv2d_bin_out_asm_plan_t plan;
+      bnn_conv2d_bin_out_asm_init(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_p,
+                                  (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k,
+                                  y_loc_x, y_loc_y, 0, 0, 0, 0);
+
+      bnn_conv2d_bin_out_asm(&plan);
+
+      // printf();
+    }
+  }
+
+  // top
+  for (unsigned loc_y = 0; loc_y < edge_height[TOP]; ++loc_y) {
+  }
+
+  // top right
+
+  // right
+
+  // bottom right
+
+  // bottom
+
+  // bottom left
+
+  // left
+
+  // center
+}
+
 /*
 X_ref and K_ref must be initialised before running this.
 */
@@ -119,9 +225,15 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
                    (int32_t*)Y_ref_p, thresholds_ref);
 #if 1
   nn_bnn_conv2d_bin_out_asm_plan_t plan;
-  bnn_conv2d_bin_out_asm_init(&plan, &x, &y, &k);
-  bnn_conv2d_bin_out_asm((bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref, (bnn_b256_t*)K_p,
-                         thresholds_p, &plan);
+  // bnn_conv2d_bin_out_asm_init(&plan, &x, &y, &k, (bnn_b32_t*)Y_p,
+  //                             (bnn_b256_t*)X_ref, (bnn_b256_t*)K_p,
+  //                             thresholds_p);
+  // bnn_conv2d_bin_out_asm(&plan);
+
+  bnn_conv2d_bin_out_asm_init(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref,
+                              (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k, 0, 0,
+                              0, 0, 0, 0);
+  bnn_conv2d_bin_out_asm(&plan);
 #else
   nn_bnn_conv2d_bin_out_plan_t plan;
   bnn_conv2d_bin_out_init(&plan, &x, &y, &k);

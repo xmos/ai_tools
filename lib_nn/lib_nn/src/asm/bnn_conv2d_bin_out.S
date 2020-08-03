@@ -19,6 +19,9 @@
 #define PLAN_X_HEIGHT_LOOP_COUNTER 11
 #define PLAN_X_WIDTH_LOOP_COUNTER  12
 #define PLAN_IC_LOOP_COUNTER       13
+#define PLAN_Y_P                   14
+#define PLAN_X_P                   15
+#define PLAN_K_P                   16
 
 //Stack Usage
 
@@ -105,20 +108,20 @@
 #define x_width_loop r9
 #define s r10
 #define t r11
-
-make_16_bit_output:
+.align 4
+bnn_make_16_bit_output:
 
     {vldr t[0]; add threshold_current, threshold_current, s}
     {vldd threshold_current[0]; add threshold_current, threshold_current, s}
 
     {ldw k_height_loop, sp[S_K_HEIGHT_LOOP_COUNTER]; nop}
-    kh_loop:
+    bnn_kh_loop:
         
         {ldw k_width_loop, sp[S_K_WIDTH_LOOP_COUNTER]; nop}
-        kw_loop:
+        bnn_kw_loop:
   
             {ldw ic_loop_counter, sp[S_IC_LOOP_COUNTER]; nop}
-            ic_inner_loop:
+            bnn_ic_inner_loop:
                 {vldc X_p[0];      add X_p, X_p, r_256_bits}
 
                 {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
@@ -141,17 +144,17 @@ make_16_bit_output:
                 {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
                 {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
 
-            {bt ic_loop_counter, ic_inner_loop; sub ic_loop_counter, ic_loop_counter, 1}
+            {bt ic_loop_counter, bnn_ic_inner_loop; sub ic_loop_counter, ic_loop_counter, 1}
 
             ldd s, t, sp[S_INNER_H_STEPS]
             {add X_p, X_p, t; add K_p, K_p, s }
 
-        {bt k_width_loop, kw_loop; sub k_width_loop, k_width_loop, 1}
+        {bt k_width_loop, bnn_kw_loop; sub k_width_loop, k_width_loop, 1}
 
         ldd s, t, sp[S_INNER_V_STEPS]
         {add X_p, X_p, t; add K_p, K_p, s }
 
-    {bt k_height_loop, kh_loop; sub k_height_loop, k_height_loop, 1}
+    {bt k_height_loop, bnn_kh_loop; sub k_height_loop, k_height_loop, 1}
 
     retsp 0
 
@@ -170,7 +173,7 @@ void bnn_conv2d_bin_out_asm(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 16
+.align 2
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
@@ -182,44 +185,53 @@ FUNCTION_NAME:
     std r8, r9, sp[S_SAVE_R8_R9]
     std r2, r10, sp[S_SAVE_R10_K_p]
 
-    stw r1, sp[S_X_p]
+    //stw r1, sp[S_X_p]
 
     ldc r_256_bits, (256/8)
     
 	ldc r11, 256 //set int16 mode - 32 bit accumulators	
-    {vsetc r11; nop}
+    {vsetc r11; nop} //TODO shr r_256_bits, r11, 3
     
-    ldaw s, sp[NSTACKWORDS+1] //load the plan pointer
-    {ldw t, s[0]; nop}
+    load_stuff:
+    {mov t, r0;  ldc s, PLAN_Y_P}
+    {ldw r0, t[s]; ldc s, PLAN_X_P}
+    {ldw r1, t[s]; ldc s, PLAN_K_P}
+    {ldw r2, t[s]; nop}
+
+    stw r1, sp[S_X_p]
+    stw r2, sp[S_K_p]
+    //put PLAN_X_P into S_X_p and r1
+    //put PLAN_K_P into S_K_p and r2
+    //put PLAN_Y_P into r0
 
     {vldr t[0];  add t, t, r_256_bits}
     ldaw s, sp[S_OUTER_X_H_STEP]
     {vstr s[0]; add s, s, r_256_bits}
 
     {vldr t[0]; add t, t, r_256_bits}
-    {vstr s[0]; add s, s, r_256_bits} //This could use a bit mask
+    {vstr s[0]; add s, s, r_256_bits} //This could use a bit mask to only store the relavent fields
 
-    stw r3, sp[S_THRESHOLD_P]
+    //stw r3, sp[S_THRESHOLD_P]
 
     //Set up the zeros (and clear the over write from the vector copy)
     ldaw t, sp[S_ZERO_0]
     vclrdr
     vstr t[0]
 
-    h_loop:
+    bnn_h_loop:
 
         {ldw x_width_loop, sp[S_X_WIDTH_LOOP_COUNTER]; nop}
-        w_loop:
+        bnn_w_loop:
 
             ldd threshold_current, oc_loop_counter, sp[S_OC_LOOP_COUNTER_THRESHOLD_P]
 
             //init K_p
             {ldw K_p, sp[S_K_p]; nop}
 
-            oc_loop: //this loops over (output_channels/32)
+            bnn_oc_loop: //this loops over (output_channels/32)
             
                 {ldw X_p, sp[S_X_p]; ldc s, 32}
-                {bl make_16_bit_output ; mov t, threshold_current }
+                {bl bnn_make_16_bit_output ; mov t, threshold_current }
 
                 ldaw s, sp[S_THRESHOLDS_0_15]
                 ldaw t, sp[S_ZERO_256] //TODO use the constant pool
@@ -228,7 +240,7 @@ FUNCTION_NAME:
                 vstrpv s[0], t
 
                 {ldw X_p, sp[S_X_p]; ldc s, 32}
-                {bl make_16_bit_output ; mov t, threshold_current }
+                {bl bnn_make_16_bit_output ; mov t, threshold_current }
 
                 ldaw s, sp[S_THRESHOLDS_16_31] 
                 ldaw t, sp[S_ZERO_256] //TODO use the constant pool
@@ -243,14 +255,14 @@ FUNCTION_NAME:
 
                 {add Y_p, Y_p, 4 ; stw t, Y_p[0]} //save the 32 results to memory
 
-            {bt oc_loop_counter, oc_loop; sub oc_loop_counter, oc_loop_counter, 1}
+            {bt oc_loop_counter, bnn_oc_loop; sub oc_loop_counter, oc_loop_counter, 1}
 
             //advance X by one(STEP) to the right
             ldd X_p, t, sp[S_X_p_S_OUTER_X_H_STEP]
             {add X_p, X_p, t; nop }
             stw X_p, sp[S_X_p]
 
-        {bt x_width_loop, w_loop; sub x_width_loop, x_width_loop, 1 }
+        {bt x_width_loop, bnn_w_loop; sub x_width_loop, x_width_loop, 1 }
 
         //TODO this section could be scheduled to be faster
         ldd s, t, sp[S_OUTER_X_V_STEP_Y_V_STEP]
@@ -261,9 +273,9 @@ FUNCTION_NAME:
         {sub t, t, 1; nop}
         stw t, sp[S_X_HEIGHT_LOOP_COUNTER] 
  
-    {bt t, h_loop; nop}
+    {bt t, bnn_h_loop; nop}
 
-.Lfunc_end:
+
     ldd r4, r5, sp[S_SAVE_R4_R5]
     ldd r6, r7, sp[S_SAVE_R6_R7]
     ldd r8, r9, sp[S_SAVE_R8_R9]

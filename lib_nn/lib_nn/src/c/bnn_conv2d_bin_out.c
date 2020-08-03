@@ -12,10 +12,17 @@
 
 #include "xs3_vpu.h"
 
-void bnn_conv2d_bin_out_asm_init(nn_bnn_conv2d_bin_out_asm_plan_t* plan,
-                                 const nn_image_params_t* x,
-                                 const nn_image_params_t* y,
-                                 const nn_window_params_t* k) {
+void bnn_conv2d_bin_out_asm_init(
+    nn_bnn_conv2d_bin_out_asm_plan_t* plan, bnn_b32_t* Y_p, bnn_b256_t* X_p,
+    bnn_b256_t* K_p, int32_t* thresholds_p, const nn_image_params_t* x,
+    const nn_image_params_t* y, const nn_window_params_t* k, unsigned y_loc_x,
+    unsigned y_loc_y, unsigned x_loc_x, unsigned x_loc_y, unsigned k_loc_x,
+    unsigned k_loc_y) {
+  plan->Y = Y_p;
+  plan->X = X_p;
+  plan->K = K_p;
+  plan->threshold_p = thresholds_p;
+
   unsigned bytes_per_input_channel = x->channels / 8;
   unsigned bytes_per_output_channel = y->channels / 8;
 

@@ -4,8 +4,12 @@ import os
 import logging
 import tensorflow as tf  # type: ignore
 import numpy as np  # type: ignore
+from collections import Iterable
 
-from typing import Union, Iterator, List, Optional, NamedTuple
+from typing import TYPE_CHECKING, Union, Iterator, List, Optional, NamedTuple, Any
+
+if TYPE_CHECKING:
+    from model_generator import Configuration
 
 
 class Quantization(NamedTuple):
@@ -80,3 +84,22 @@ def apply_interpreter_to_examples(
         outputs.append(y)
 
     return np.vstack(outputs) if isinstance(examples, np.ndarray) else outputs
+
+
+def parse_init_config(name: str, *args) -> tf.keras.initializers.Initializer:
+    init = getattr(tf.keras.initializers, name)
+    return init(*args)
+
+
+def stringify_config(cfg: "Configuration") -> str:
+    def stringify_value(v: Any) -> str:
+        if not isinstance(v, str):
+            if isinstance(v, Iterable):
+                v = "(" + ",".join(str(c) for c in v) + ")"
+            else:
+                v = str(v)
+
+        return v.replace(" ", "_")
+
+    return ",".join(k + "=" + stringify_value(v) for k, v in sorted(cfg.items()))
+

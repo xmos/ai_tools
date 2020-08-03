@@ -6,7 +6,7 @@ import tensorflow as tf  # type: ignore
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.converter import optimize_for_xcore  # type: ignore # TODO: fix this
 
-from .utils import quantize_converter
+from .utils import quantize_converter, parse_init_config
 
 from typing import TYPE_CHECKING, ByteString
 
@@ -78,16 +78,13 @@ class TFLiteQuantConverter(ModelConverter):
     _data_len: int
 
     def _set_config(self, cfg: "Configuration") -> None:
-        self._config["input_init"] = cfg.pop(
-            "input_init", tf.random_uniform_initializer(-1, 1)
-        )
+        self._config["input_init"] = cfg.pop("input_init", ("RandomUniform", -1, 1))
         self._data_len = 10
 
     def _get_representative_data(self) -> tf.Tensor:
         """ Returns the data to be used for post training quantization. """
-        return self._config["input_init"](
-            (self._data_len, *self._model_generator._input_shape)
-        )
+        init = parse_init_config(*self._config["input_init"])
+        return init((self._data_len, *self._model_generator._input_shape))
 
     def convert(self) -> None:
         converter = tf.lite.TFLiteConverter.from_keras_model(

@@ -7,6 +7,7 @@ import logging
 
 import tensorflow as tf
 
+from xcore_model_generation.utils import parse_init_config, stringify_config
 from xcore_model_generation.model_generator import (
     IntegrationTestModelGenerator,
     Configuration,
@@ -94,10 +95,8 @@ class Conv2dGenericTestModelGenerator(IntegrationTestModelGenerator):
             output_channels=output_channels,
             padding=cfg.pop("padding", "same"),
             strides=cfg.pop("strides", (1, 1)),
-            weight_init=cfg.pop(
-                "weight_init", tf.random_uniform_initializer(-1, 1)
-            ),  # TODO: fix init config parameters
-            bias_init=cfg.pop("bias_init", tf.constant_initializer(0)),
+            weight_init=cfg.pop("weight_init", ("RandomUniform", -1, 1)),
+            bias_init=cfg.pop("bias_init", ("Constant", 0)),
         )
         super()._set_config(cfg)
 
@@ -111,8 +110,8 @@ class Conv2dGenericTestModelGenerator(IntegrationTestModelGenerator):
                     padding=cfg["padding"],
                     strides=cfg["strides"],
                     input_shape=(cfg["height"], cfg["width"], cfg["input_channels"]),
-                    bias_initializer=cfg["bias_init"],
-                    kernel_initializer=cfg["weight_init"],
+                    bias_initializer=parse_init_config(*cfg["bias_init"]),
+                    kernel_initializer=parse_init_config(*cfg["weight_init"]),
                 )
             ],
         )

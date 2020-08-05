@@ -27,3 +27,4 @@ void test_requantize_16_to_8();
 void test_lookup8();
 
 void test_bnn_conv2d();
+void test_pad();

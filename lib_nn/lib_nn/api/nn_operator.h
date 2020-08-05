@@ -268,14 +268,37 @@ void conv2d_1x1(nn_image_t* Y, const nn_image_t* X, const nn_tensor_t* K,
                 const nn_conv2d_1x1_job_t* job);
 
 // Binary operators
+
+#define CONV2D_OUTPUT_LENGTH(input_length, filter_size, dilation, stride)     \
+  (((input_length - (filter_size + (filter_size - 1) * (dilation - 1)) + 1) + \
+    stride - 1) /                                                             \
+   stride)
+
+void bnn_reorder_threshold_tensor(const int32_t* thresh_boggled,
+                                  const int32_t* thresholds_ref,
+                                  const unsigned chans_out,
+                                  const unsigned receptive_field);
+
+void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+                               const unsigned k_height, const unsigned k_width,
+                               const unsigned chans_in,
+                               const unsigned chans_out);
+
+// This is the actual kernel
 void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
 
-void bnn_conv2d_bin_out_asm_init(
-    nn_bnn_conv2d_bin_out_asm_plan_t* plan, bnn_b32_t* Y_p, bnn_b256_t* X_p,
-    bnn_b256_t* K_p, int32_t* thresholds_p, const nn_image_params_t* x,
-    const nn_image_params_t* y, const nn_window_params_t* k, unsigned y_loc_x,
-    unsigned y_loc_y, unsigned x_loc_x, unsigned x_loc_y, unsigned k_loc_x,
-    unsigned k_loc_y);
+void bnn_conv2d_bin_out_asm_prepare(
+    nn_bnn_conv2d_bin_out_asm_plan_t* plan, const bnn_b32_t* Y_p,
+    const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,
+    const nn_image_params_t* x, const nn_image_params_t* y,
+    const nn_window_params_t* k, const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned x_loc_x, const unsigned x_loc_y, const unsigned k_loc_x,
+    const unsigned k_loc_y, const unsigned y_full_width,
+    const unsigned x_full_width, const unsigned k_full_width);
+
+void bnn_conv2d_bin_out_threshold_prepare(
+    const nn_bnn_conv2d_bin_out_asm_plan_t* plan, int32_t* kernel_weight,
+    int32_t* unmodified_thresholds);
 
 void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
                         const bnn_b256_t* K_p,
@@ -586,6 +609,38 @@ void requantize_16_to_8(int8_t* Y, const int16_t* X,
  */
 void lookup8(uint8_t* Y, const uint8_t* X, const uint8_t* lut,
              const unsigned N);
+
+/**
+ * @brief Execute @oper{pad_perpare} function.
+ *
+ * See @oper_ref{pad_perpare} for more details about the @oper{pad_perpare}
+ * operator.
+ *
+ * Unlike other operators, instances of @oper{lookup8} do not require plans or
+ * jobs and no initialization is necessary.
+ *
+ * `Y` points to the output vector @tensor{y} with length @math{N}.
+ *
+ * `X` points to the input vector @tensor{x} with length @math{N}.
+ *
+ * `lut` points to the look-up table @math{T} with shape @tensor_shape{256}.
+ *
+ * `N` is the length @math{N} of the input vector @tensor{x}.
+ *
+ * @requires_word_alignment{Y,X}
+ *
+ * @param plan             [out]  The output vector @tensor{y}
+ * @param p                [in]   The input vector @tensor{x}
+ * @param x                [in]   Look-up table @tensor{T}
+ * @param bytes_per_pixel  [in]   Length @math{N} of input and output vectors
+ */
+void pad_perpare(nn_pad_plan_t* plan, const PaddingValues* p,
+                 const nn_image_params_t* x, const unsigned bytes_per_pixel);
+
+void pad_run(void* y, void* x, const nn_pad_plan_t* p);
+
+void pad_ref(void* y, void* x, const PaddingValues* p,
+             const nn_image_params_t* xp, const unsigned bytes_per_pixel);
 
 #ifdef __XC__
 }  // extern "C"

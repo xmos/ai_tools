@@ -203,8 +203,6 @@ FUNCTION_NAME:
     {vldr t[0]; add t, t, r_256_bits}
     {vstr s[0]; add s, s, r_256_bits} //This could use a bit mask to only store the relavent fields
 
-    //stw r3, sp[S_THRESHOLD_P]
-
     //Set up the zeros (and clear the over write from the vector copy)
     ldaw t, sp[S_ZERO_0]
     vclrdr

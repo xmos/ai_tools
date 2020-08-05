@@ -20,162 +20,11 @@ void print_vector(bnn_b256_t b) {
   printf("\n");
 }
 
-#define OUTPUT_LENGTH(input_length, filter_size, dilation, stride)            \
-  (((input_length - (filter_size + (filter_size - 1) * (dilation - 1)) + 1) + \
-    stride - 1) /                                                             \
-   stride)
-
 void larq_ref_bconv2d(const nn_image_params_t* x, const nn_image_params_t* y,
                       const nn_window_params_t* k,
                       const int32_t* packed_input_data,
                       const int32_t* packed_filter_data,
                       int32_t* packed_output_data, const long* thresholds);
-
-void boggle_threshold(int32_t* thresh_boggled, int32_t* thresholds_ref,
-                      unsigned chans_out, unsigned receptive_field) {
-  int16_t* thresholds = (int16_t*)thresh_boggled;
-
-  // boggle the threshold(accum init)
-  for (unsigned i = 0; i < chans_out; i++) {
-    unsigned bank = i / 16;
-
-    int32_t t = thresholds_ref[i] - ((receptive_field) / 2);
-    thresholds[(bank * 32) + (i % 16)] = (t >> 0);
-    thresholds[(bank * 32) + (i % 16) + 16] = (t >> 16);
-  }
-}
-
-void boggle_kernel(bnn_b256_t* K_p, bnn_b256_t* K_ref_p, unsigned k_height,
-                   unsigned k_width, unsigned chans_in, unsigned chans_out) {
-  unsigned chan_b256_in =
-      (chans_in + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
-
-  bnn_b256_t(*K_ref)[k_height][k_width][chan_b256_in] =
-      (bnn_b256_t(*)[k_height][k_width][chan_b256_in])K_ref_p;
-
-  bnn_b256_t(*K)[k_height][k_width][chan_b256_in][16] =
-      (bnn_b256_t(*)[k_height][k_width][chan_b256_in][16])K_p;
-
-  for (unsigned oc = 0; oc < chans_out / 16; oc++) {
-    for (unsigned h = 0; h < k_height; h++) {
-      for (unsigned w = 0; w < k_width; w++) {
-        for (unsigned ic = 0; ic < chan_b256_in; ic++) {
-          for (unsigned o = 0; o < 16; o++) {
-            for (unsigned i = 0; i < 8; i++) {
-              K[oc][h][w][ic][15 - o].d[i] = K_ref[oc * 16 + o][h][w][ic].d[i];
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-typedef struct PaddingValues {
-  int16_t width;
-  int16_t height;
-  int16_t width_offset;
-  int16_t height_offset;
-} PaddingValues;
-
-void padded_kernel(bnn_b32_t* Y_p, bnn_b256_t* X_p, bnn_b256_t* K_p,
-                   int32_t* thresholds_p, PaddingValues padding_values,
-                   const unsigned k_height, const unsigned k_width,
-                   const unsigned chans_in, const unsigned chans_out,
-                   const unsigned h_stride, const unsigned v_stride) {
-  // Edges are given in the order of: Top, Right, Bottom, Left
-  enum {
-    TOP = 0,
-    RIGHT,
-    BOTTOM,
-    LEFT,
-  };
-
-  unsigned edge_padding[4];
-  edge_padding[TOP] = padding_values.height;
-  edge_padding[RIGHT] = padding_values.width + padding_values.width_offset;
-  edge_padding[BOTTOM] = padding_values.height + padding_values.height_offset;
-  edge_padding[LEFT] = padding_values.width;
-
-  // Kernel side lengths: height, width
-  unsigned k_edge_length[2] = {k_height, k_width};
-
-  unsigned edge_height[4];
-  unsigned edge_pad_only_height[4];
-  for (unsigned edge = 0; edge < 4; ++edge) {
-    if (edge_padding[edge] > k_edge_length[(edge * 2) & 1] - 1) {
-      edge_height[edge] = k_edge_length[(edge * 2) & 1] - 1;
-    } else {
-      edge_height[edge] = edge_padding[edge];
-    }
-    edge_pad_only_height[edge] = edge_padding[edge] - edge_height[edge];
-  }
-
-  // top_pad_only
-
-  if (edge_pad_only_height[TOP] > 0) {
-  }
-  if (edge_pad_only_height[BOTTOM] > 0) {
-  }
-  if (edge_pad_only_height[LEFT] > 0) {
-  }
-  if (edge_pad_only_height[RIGHT] > 0) {
-  }
-
-  nn_image_params_t x;
-  x.channels = chans_in;
-
-  nn_image_params_t y;
-  y.channels = chans_out;
-  y.height = 1;
-  y.width = 1;
-
-  nn_window_params_t k;
-  k.start.column = 0;
-  k.start.row = 0;
-  k.stride.horizontal = h_stride;
-  k.stride.vertical = v_stride;
-
-  // top left
-  for (unsigned loc_y = 0; loc_y < edge_height[TOP]; ++loc_y) {
-    unsigned y_loc_y = loc_y + edge_pad_only_height[TOP];
-    for (unsigned loc_x = 0; loc_x < edge_height[LEFT]; ++loc_x) {
-      unsigned y_loc_x = loc_x + edge_pad_only_height[LEFT];
-
-      k.shape.height = loc_y + 1;
-      k.shape.width = loc_x + 1;
-      x.height = k.shape.height;  // This will need to incorporate the stride
-      x.width = k.shape.width;    // This will need to incorporate the stride
-
-      nn_bnn_conv2d_bin_out_asm_plan_t plan;
-      bnn_conv2d_bin_out_asm_init(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_p,
-                                  (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k,
-                                  y_loc_x, y_loc_y, 0, 0, 0, 0);
-
-      bnn_conv2d_bin_out_asm(&plan);
-
-      // printf();
-    }
-  }
-
-  // top
-  for (unsigned loc_y = 0; loc_y < edge_height[TOP]; ++loc_y) {
-  }
-
-  // top right
-
-  // right
-
-  // bottom right
-
-  // bottom
-
-  // bottom left
-
-  // left
-
-  // center
-}
 
 /*
 X_ref and K_ref must be initialised before running this.
@@ -189,8 +38,8 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
   assert(K_p != K_ref_p);
   assert(thresholds_p != thresholds_ref);
 
-  unsigned y_height = OUTPUT_LENGTH(x_height, k_height, 1, v_stride);
-  unsigned y_width = OUTPUT_LENGTH(x_width, k_width, 1, h_stride);
+  unsigned y_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, 1, v_stride);
+  unsigned y_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, 1, h_stride);
 
   unsigned X_bytes = (x_height * x_width * chans_in) / 8;
   unsigned K_bytes = (k_width * k_height * chans_in * chans_out) / 8;
@@ -200,10 +49,11 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
   for (unsigned i = 0; i < chans_out; i++)
     thresholds_ref[i] = i + ((chans_in * k_height * k_width - chans_out) / 2);
 
-  boggle_threshold(thresholds_p, thresholds_ref, chans_out,
-                   k_width * k_height * chans_in);
+  bnn_reorder_threshold_tensor(thresholds_p, thresholds_ref, chans_out,
+                               k_width * k_height * chans_in);
 
-  boggle_kernel(K_p, K_ref_p, k_height, k_width, chans_in, chans_out);
+  bnn_reorder_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
+                            chans_out);
 
   nn_image_params_t x;
   x.height = x_height;
@@ -225,14 +75,10 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
                    (int32_t*)Y_ref_p, thresholds_ref);
 #if 1
   nn_bnn_conv2d_bin_out_asm_plan_t plan;
-  // bnn_conv2d_bin_out_asm_init(&plan, &x, &y, &k, (bnn_b32_t*)Y_p,
-  //                             (bnn_b256_t*)X_ref, (bnn_b256_t*)K_p,
-  //                             thresholds_p);
-  // bnn_conv2d_bin_out_asm(&plan);
 
-  bnn_conv2d_bin_out_asm_init(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref,
-                              (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k, 0, 0,
-                              0, 0, 0, 0);
+  bnn_conv2d_bin_out_asm_prepare(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref,
+                                 (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k, 0,
+                                 0, 0, 0, 0, 0, 0, 0, 0);
   bnn_conv2d_bin_out_asm(&plan);
 #else
   nn_bnn_conv2d_bin_out_plan_t plan;
@@ -289,8 +135,9 @@ void test_bnn_conv2d_bin_out_pseudo_directed() {
 #define DILATED_FILTER_HEIGHT (K_HEIGHT + (K_HEIGHT - 1) * (X_V_DILATION - 1))
 #define DILATED_FILTER_WIDTH (K_WIDTH + (K_WIDTH - 1) * (X_H_DILATION - 1))
 
-#define Y_HEIGHT OUTPUT_LENGTH(X_HEIGHT, K_HEIGHT, X_V_DILATION, V_STRIDE)
-#define Y_WIDTH OUTPUT_LENGTH(X_WIDTH, K_WIDTH, X_H_DILATION, H_STRIDE)
+#define Y_HEIGHT \
+  CONV2D_OUTPUT_LENGTH(X_HEIGHT, K_HEIGHT, X_V_DILATION, V_STRIDE)
+#define Y_WIDTH CONV2D_OUTPUT_LENGTH(X_WIDTH, K_WIDTH, X_H_DILATION, H_STRIDE)
 
 #define CHAN_WORDS_IN \
   ((CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
@@ -386,20 +233,11 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
   assert(((int)thresholds_ref & 0x3) == 0);
   assert(((int)thresholds & 0x3) == 0);
 
-  printf("sizeof(X_ref): %u\n", sizeof(X_ref));
-  printf("sizeof(K_ref): %u\n", sizeof(K_ref));
-  printf("sizeof(K): %u\n", sizeof(K));
-  printf("sizeof(Y_ref): %u\n", sizeof(Y_ref));
-  printf("sizeof(Y): %u\n", sizeof(Y));
-  printf("sizeof(thresholds_ref): %u\n", sizeof(thresholds_ref));
-  printf("sizeof(thresholds): %u\n", sizeof(thresholds));
-
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
 
   srand(69);
 
-  unsigned c = 0;
   for (unsigned h_stride = MIN_H_STRIDE; h_stride <= MAX_H_STRIDE; ++h_stride) {
     for (unsigned v_stride = MIN_V_STRIDE; v_stride <= MAX_V_STRIDE;
          ++v_stride) {
@@ -421,8 +259,6 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
                       (int32_t*)thresholds_ref, (int32_t*)thresholds, x_height,
                       x_width, k_height, k_width, chans_in, chans_out, h_stride,
                       v_stride);
-                  if ((c & 0x3ff) == 0) printf("%u\n", c);
-                  c++;
                   TEST_ASSERT_FALSE(r);
                 }
               }
@@ -434,11 +270,8 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
   }
 }
 
-void test_bnn_conv2d_bin_out_benchmark() {}
-
 void test_bnn_conv2d() {
   UNITY_SET_FILE();
   RUN_TEST(test_bnn_conv2d_bin_out_pseudo_directed);
   RUN_TEST(test_bnn_conv2d_bin_out_pseudo_random);
-  // RUN_TEST(test_bnn_conv2d_bin_out_benchmark);
 }

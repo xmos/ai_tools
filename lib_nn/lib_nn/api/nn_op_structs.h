@@ -385,9 +385,10 @@ typedef struct {
 } nn_maxpool2d_plan_t;
 
 /**
- * Struct represents the parameters needed by each `bnn_conv2d()` job.
+ * Struct represents the parameters needed by each
+ * `bnn_conv2d_bin_out_asm()` job.
  *
- * Values are set by `bnn_conv2d_init()`.
+ * Values are set by `bnn_conv2d_bin_out_asm_prepare()`.
  *
  * @note This struct is intended to be opaque.
  */
@@ -407,7 +408,7 @@ typedef struct {
   unsigned x_height_loop_counter;
   unsigned x_width_loop_counter;
   unsigned input_channel_loop_counter;
-  bnn_b256_t* Y;
+  bnn_b32_t* Y;
   bnn_b256_t* X;
 
   bnn_b256_t* K;
@@ -444,23 +445,23 @@ typedef struct {
 
 /**
  * Struct represents the parameters needed by each `bsign_8()` job.
- * 
+ *
  * Values are set by `bsign_8_init()`.
- * 
+ *
  * @note This struct is intended to be opaque.
  */
 typedef struct {
-    mem_stride_t start;
-    uint32_t length;
+  mem_stride_t start;
+  uint32_t length;
 } nn_bsign_8_job_t;
 
 /**
- * Struct represents the shared parameters required to execute a `bsign_8()` operation. 
+ * Struct represents the shared parameters required to execute a `bsign_8()`
+ * operation.
  */
 typedef struct {
-    int8_t zero_point;
+  int8_t zero_point;
 } nn_bsign_8_plan_t;
-
 
 /**
  * This struct describes the basic parameters for an image tensor

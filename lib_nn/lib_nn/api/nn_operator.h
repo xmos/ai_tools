@@ -567,7 +567,7 @@ void requantize_16_to_8(int8_t* Y, const int16_t* X,
 void lookup8(uint8_t* Y, const uint8_t* X, const uint8_t* lut,
              const unsigned N);
 
-// Binary operators
+// Binary Conv2D
 
 #define CONV2D_OUTPUT_LENGTH(input_length, filter_size, dilation, stride)     \
   (((input_length - (filter_size + (filter_size - 1) * (dilation - 1)) + 1) + \

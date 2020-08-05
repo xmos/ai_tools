@@ -1,9 +1,6 @@
 
-
-#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <stdio.h>
 #include <assert.h>
 
 #include "nn_operator.h"
@@ -18,7 +15,6 @@ void bnn_reorder_threshold_tensor(const int32_t* thresh_boggled,
                                   const unsigned receptive_field) {
   int16_t* thresholds = (int16_t*)thresh_boggled;
 
-  // boggle the threshold(accum init)
   for (unsigned i = 0; i < chans_out; i++) {
     unsigned bank = i / 16;
 
@@ -56,172 +52,6 @@ void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
   }
 }
 
-// WIP
-void padded_kernel(bnn_b32_t* Y_p, bnn_b256_t* X_p, bnn_b256_t* K_p,
-                   int32_t* thresholds_p, PaddingValues padding_values,
-                   nn_image_params_t x, nn_image_params_t y,
-                   nn_window_params_t k) {
-  // These will be parameters to the function
-  unsigned x_full_width = x.width;
-  unsigned x_full_height = x.height;
-
-  const unsigned k_full_width = k.shape.width;
-  const unsigned k_full_height = k.shape.height;
-
-  unsigned h_stride = k.stride.horizontal;
-  unsigned v_stride = k.stride.vertical;
-
-  unsigned h_dilation = 1;
-  unsigned v_dilation = 1;
-
-  unsigned y_full_width =
-      CONV2D_OUTPUT_LENGTH(x_full_width, k_full_width, h_dilation, h_stride);
-  unsigned y_full_height =
-      CONV2D_OUTPUT_LENGTH(x_full_height, k_full_height, v_dilation, v_stride);
-
-  // Edges are given in the order of: Top, Right, Bottom, Left
-  enum {
-    TOP = 0,
-    RIGHT,
-    BOTTOM,
-    LEFT,
-  };
-
-  unsigned edge_padding[4];
-  edge_padding[TOP] = padding_values.height;
-  edge_padding[RIGHT] = padding_values.width + padding_values.width_offset;
-  edge_padding[BOTTOM] = padding_values.height + padding_values.height_offset;
-  edge_padding[LEFT] = padding_values.width;
-
-  // Kernel side lengths: height, width
-  unsigned k_edge_length[2] = {k_full_height, k_full_width};
-
-  unsigned edge_height[4];
-  unsigned edge_pad_only_height[4];
-  for (unsigned edge = 0; edge < 4; ++edge) {
-    if (edge_padding[edge] > k_edge_length[(edge * 2) & 1] - 1) {
-      edge_height[edge] = k_edge_length[(edge * 2) & 1] - 1;
-    } else {
-      edge_height[edge] = edge_padding[edge];
-    }
-    edge_pad_only_height[edge] = edge_padding[edge] - edge_height[edge];
-  }
-
-  // top_pad_only
-
-  if (edge_pad_only_height[TOP] > 0) {
-    printf("TOP padding needed of %u\n", edge_pad_only_height[TOP]);
-  }
-  if (edge_pad_only_height[BOTTOM] > 0) {
-    printf("BOTTOM padding needed of %u\n", edge_pad_only_height[BOTTOM]);
-  }
-  if (edge_pad_only_height[LEFT] > 0) {
-    printf("LEFT padding needed of %u\n", edge_pad_only_height[LEFT]);
-  }
-  if (edge_pad_only_height[RIGHT] > 0) {
-    printf("RIGHT padding needed of %u\n", edge_pad_only_height[RIGHT]);
-  }
-
-  nn_image_params_t tl_x;
-  tl_x.channels = x.channels;
-
-  nn_image_params_t tl_y;
-  tl_y.channels = y.channels;
-  tl_y.height = 1;
-  tl_y.width = 1;
-
-  nn_window_params_t tl_k;
-  tl_k.start.column = 0;
-  tl_k.start.row = 0;
-  tl_k.stride.horizontal = h_stride;
-  tl_k.stride.vertical = v_stride;
-
-  // top left
-  for (unsigned loc_y = 0; loc_y < edge_height[TOP]; ++loc_y) {
-    unsigned y_loc_y = loc_y + edge_pad_only_height[TOP];
-    for (unsigned loc_x = 0; loc_x < edge_height[LEFT]; ++loc_x) {
-      unsigned y_loc_x = loc_x + edge_pad_only_height[LEFT];
-
-      tl_k.shape.height = loc_y + 1;
-      tl_k.shape.width = loc_x + 1;
-      tl_x.height =
-          tl_k.shape.height;  // TODO: This will need to incorporate the stride
-      tl_x.width = tl_k.shape.width;  // TODO: This will need to incorporate the
-                                      // stride
-
-      // nn_bnn_conv2d_bin_out_asm_plan_t plan;
-      unsigned x_loc_x = 0;
-      unsigned x_loc_y = 0;
-      unsigned k_loc_x = k_full_width - k.shape.width;
-      unsigned k_loc_y = k_full_height - k.shape.height;
-
-      printf("x_loc_x %u x_loc_x: %u, x_w %u x_h: %u\n", x_loc_x, x_loc_y,
-             tl_x.height, tl_x.width);
-      printf("y_loc_x %u y_loc_x: %u, y_w %u y_h: %u\n", y_loc_x, y_loc_y,
-             tl_y.height, tl_y.width);
-      printf("k_loc_x %u k_loc_x: %u, k_w %u k_h: %u\n", k_loc_x, k_loc_y,
-             tl_k.shape.height, tl_k.shape.width);
-      printf("\n");
-
-      // bnn_conv2d_bin_out_asm_prepare(
-      //     &plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_p, (bnn_b256_t*)K_p,
-      //     thresholds_p, &x, &y, &k, y_loc_x, y_loc_y,  // The output Y coord
-      //     y_loc_x, y_loc_y,                            // the input X coord
-
-      //     k_full_width - k.shape.width,
-      //     k_full_height -
-      //         k.shape.height,  // the top left corner of the kernel in use
-      //     y_full_width, x_full_width, k_width);
-
-      // bnn_conv2d_bin_out_asm(&plan);
-
-      // printf();
-    }
-  }
-  /*
-    // top
-    for (unsigned loc_y = 0; loc_y < edge_height[TOP]; ++loc_y) {
-      unsigned y_loc_y = loc_y + edge_pad_only_height[TOP];
-      unsigned loc_x = edge_height[LEFT];
-      unsigned y_loc_x = loc_x + edge_pad_only_height[LEFT];
-
-      k.shape.height = loc_y + 1;
-      k.shape.width = loc_x + 1;
-      x.height =
-          k.shape.height;       // TODO: This will need to incorporate the
-          stride
-      x.width = k.shape.width;  // TODO: This will need to incorporate the
-                                // stride
-
-      nn_bnn_conv2d_bin_out_asm_plan_t plan;
-      bnn_conv2d_bin_out_asm_prepare(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_p,
-                                     (bnn_b256_t*)K_p, thresholds_p, &x, &y,
-                                     &k, y_loc_x, y_loc_y,  // The output Y
-                                     coord y_loc_x, y_loc_y,  // the input X
-                                     coord 0, 0,  // the region of the kernel
-                                     in use y_full_width, x_full_width,
-                                     k_width);
-
-      bnn_conv2d_bin_out_asm(&plan);
-
-      // printf();
-    }
-  */
-  // top right
-
-  // right
-
-  // bottom right
-
-  // bottom
-
-  // bottom left
-
-  // left
-
-  // center
-}
-
 void bnn_conv2d_bin_out_asm_prepare(
     nn_bnn_conv2d_bin_out_asm_plan_t* plan, const bnn_b32_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,
@@ -230,10 +60,10 @@ void bnn_conv2d_bin_out_asm_prepare(
     const unsigned x_loc_x, const unsigned x_loc_y, const unsigned k_loc_x,
     const unsigned k_loc_y, const unsigned y_full_width,
     const unsigned x_full_width, const unsigned k_full_width) {
-  plan->Y = Y_p;
-  plan->X = X_p;
-  plan->K = K_p;
-  plan->threshold_p = thresholds_p;
+  plan->Y = (bnn_b32_t*)Y_p;
+  plan->X = (bnn_b256_t*)X_p;
+  plan->K = (bnn_b256_t*)K_p;
+  plan->threshold_p = (int32_t *)thresholds_p;
 
   unsigned bytes_per_input_channel = x->channels / 8;
   unsigned bytes_per_output_channel = y->channels / 8;
@@ -257,7 +87,6 @@ void bnn_conv2d_bin_out_asm_prepare(
 
   unsigned h_dilation = 1;
   unsigned v_dilation = 1;  // unused
-  // This assumes that any slicing will be done horizontally.
 
   // Inner Loop
   // minus one to account for the auto increament in the loop
@@ -306,8 +135,6 @@ unsigned xor_pop(bnn_b256_t* a, bnn_b256_t* b) {
   return c;
 }
 
-void print_vector(bnn_b256_t b);
-
 WEAK_FUNC
 void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
                         const bnn_b256_t* K_p,
@@ -344,10 +171,6 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
           for (unsigned kh = 0; kh < kernel_height; kh += 1) {
             for (unsigned kw = 0; kw < kernel_width; kw += 1) {
               for (unsigned ic = 0; ic < chan_b256_in; ic += 1) {
-                // if (oc == 0)
-                //   printf("X[%u][%u] %08x k[%u][%u] %08x\n", h + kh, w + kw,
-                //          X[h + kh][w + kw][ic].d[0], kh, kw,
-                //          K[oc][kh][kw][ic].d[0]);
                 sum += xor_pop(&(X[h + kh][w + kw][ic]), &(K[oc][kh][kw][ic]));
               }
             }
@@ -357,8 +180,6 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
           unsigned bit = sum > thresholds[oc];
           if (bit) bitpacked_column |= 1ULL << oc_bit;
         }
-        // printf("Y[%u][%u]  = %08x\n", h / v_stride, w / h_stride,
-        //        bitpacked_column);
         Y[h / v_stride][w / h_stride][oc_word] = bitpacked_column;
       }
     }
@@ -369,8 +190,6 @@ void bnn_conv2d_bin_out_init(nn_bnn_conv2d_bin_out_plan_t* plan,
                              const nn_image_params_t* x,
                              const nn_image_params_t* y,
                              const nn_window_params_t* k) {
-  // assert((y->channels % 16) == 0);
-  // assert((x->channels % XS3_VPU_VREG_WIDTH_BITS) == 0);
   plan->k_dims[0] = k->shape.height;
   plan->k_dims[1] = k->shape.width;
 

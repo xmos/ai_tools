@@ -11,14 +11,7 @@
 #include "xs3_vpu.h"
 #include "nn_bin_utils.h"
 
-// #include "dsp_xs3_vector.h"
 #include "unity.h"
-
-void print_vector(bnn_b256_t b) {
-  printf("0x");
-  for (unsigned i = 0; i < 8; i++) printf("%08lx", b.d[i]);
-  printf("\n");
-}
 
 void larq_ref_bconv2d(const nn_image_params_t* x, const nn_image_params_t* y,
                       const nn_window_params_t* k,
@@ -33,7 +26,8 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
                bnn_b256_t* K_p, bnn_b256_t* K_ref_p, int32_t* thresholds_ref,
                int32_t* thresholds_p, unsigned x_height, unsigned x_width,
                unsigned k_height, unsigned k_width, unsigned chans_in,
-               unsigned chans_out, unsigned h_stride, unsigned v_stride) {
+               unsigned chans_out, unsigned h_stride, unsigned v_stride,
+               int use_asm) {
   assert(Y_p != Y_ref_p);
   assert(K_p != K_ref_p);
   assert(thresholds_p != thresholds_ref);
@@ -73,19 +67,19 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
 
   larq_ref_bconv2d(&x, &y, &k, (int32_t*)X_ref, (int32_t*)K_ref_p,
                    (int32_t*)Y_ref_p, thresholds_ref);
-#if 1
-  nn_bnn_conv2d_bin_out_asm_plan_t plan;
+  if (use_asm) {
+    nn_bnn_conv2d_bin_out_asm_plan_t plan;
 
-  bnn_conv2d_bin_out_asm_prepare(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref,
-                                 (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k, 0,
-                                 0, 0, 0, 0, 0, 0, 0, 0);
-  bnn_conv2d_bin_out_asm(&plan);
-#else
-  nn_bnn_conv2d_bin_out_plan_t plan;
-  bnn_conv2d_bin_out_init(&plan, &x, &y, &k);
-  bnn_conv2d_bin_out((bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref, (bnn_b256_t*)K_ref,
-                     thresholds_ref, &plan);
-#endif
+    bnn_conv2d_bin_out_asm_prepare(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref,
+                                   (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k,
+                                   0, 0, 0, 0, 0, 0, 0, 0, 0);
+    bnn_conv2d_bin_out_asm(&plan);
+  } else {
+    nn_bnn_conv2d_bin_out_plan_t plan;
+    bnn_conv2d_bin_out_init(&plan, &x, &y, &k);
+    bnn_conv2d_bin_out((bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref,
+                       (bnn_b256_t*)K_ref_p, thresholds_ref, &plan);
+  }
 
   unsigned chan_b32_out = (chans_out + 32 - 1) / 32;
   bnn_b32_t(*Y)[y_width][chan_b32_out] =
@@ -103,23 +97,9 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
     }
   }
 
-  if (1 - all_equal) {
-    printf("\n");
-    printf("x_height:%u\n", x_height);
-    printf("x_width:%u\n", x_width);
-    printf("k_height:%u\n", k_height);
-    printf("k_width:%u\n", k_width);
-    printf("chans_in:%u\n", chans_in);
-    printf("chans_out:%u\n", chans_out);
-    printf("h_stride:%u\n", h_stride);
-    printf("v_stride:%u\n", v_stride);
-    printf("y_height:%u\n", y_height);
-    printf("y_width:%u\n", y_width);
-  }
   return 1 - all_equal;
 }
 
-// https://github.com/tensorflow/tensorflow/blob/5912f51d580551e5cee2cfde4cb882594b4d3e60/tensorflow/python/keras/utils/conv_utils.py#L140
 void test_bnn_conv2d_bin_out_pseudo_directed() {
 #define X_V_DILATION 1
 #define X_H_DILATION 1
@@ -158,11 +138,13 @@ void test_bnn_conv2d_bin_out_pseudo_directed() {
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
 
+  int use_asm = 1;
+
   int failure =
       run_config((bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b256_t*)X_ref,
                  (bnn_b256_t*)K, (bnn_b256_t*)K_ref, (int32_t*)thresholds_ref,
                  (int32_t*)thresholds, X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
-                 CHANS_IN, CHANS_OUT, H_STRIDE, V_STRIDE);
+                 CHANS_IN, CHANS_OUT, H_STRIDE, V_STRIDE, use_asm);
 
   if (failure) {
     exit(1);
@@ -236,6 +218,7 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
 
+  int use_asm = 1;
   srand(69);
 
   for (unsigned h_stride = MIN_H_STRIDE; h_stride <= MAX_H_STRIDE; ++h_stride) {
@@ -258,7 +241,7 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
                       (bnn_b256_t*)K, (bnn_b256_t*)K_ref,
                       (int32_t*)thresholds_ref, (int32_t*)thresholds, x_height,
                       x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                      v_stride);
+                      v_stride, use_asm);
                   TEST_ASSERT_FALSE(r);
                 }
               }

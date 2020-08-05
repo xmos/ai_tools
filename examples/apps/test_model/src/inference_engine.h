@@ -3,15 +3,15 @@
 #define INFERENCE_ENGINE_H_
 
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void initialize(unsigned char *model_content, unsigned char *tensor_arena,
-                size_t tensor_arena_size, unsigned char **input,
-                unsigned *input_size, unsigned char **output,
-                unsigned *output_size);
+void initialize(uint8_t *model_content, uint8_t *tensor_arena,
+                size_t tensor_arena_size, uint8_t **input, size_t *input_size,
+                uint8_t **output, size_t *output_size);
 void invoke();
 
 #ifdef __cplusplus

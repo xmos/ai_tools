@@ -2,12 +2,6 @@
 
 #include "inference_engine.h"
 
-#include <cstddef>
-#include <cstdint>
-#include <cstdio>
-#include <iostream>
-
-#include "operators/device_memory.h"
 #include "operators/xcore_interpreter.h"
 #include "operators/xcore_profiler.h"
 #include "operators/xcore_reporter.h"
@@ -21,7 +15,7 @@ const tflite::Model *model = nullptr;
 xcore::XCoreInterpreter *interpreter = nullptr;
 
 // static buffer for XCoreInterpreter class allowcation
-unsigned char interpreter_buffer[sizeof(xcore::XCoreInterpreter)];
+uint8_t interpreter_buffer[sizeof(xcore::XCoreInterpreter)];
 
 void invoke() {
   // Run inference, and report any error
@@ -32,20 +26,19 @@ void invoke() {
   }
 }
 
-void initialize(unsigned char *model_content, unsigned char *tensor_arena,
-                size_t tensor_arena_size, unsigned char **input,
-                unsigned *input_size, unsigned char **output,
-                unsigned *output_size) {
+void initialize(uint8_t *model_content, uint8_t *tensor_arena,
+                size_t tensor_arena_size, uint8_t **input, size_t *input_size,
+                uint8_t **output, size_t *output_size) {
   // Set up logging
   static xcore::XCoreReporter xcore_reporter;
   if (reporter == nullptr) {
     reporter = &xcore_reporter;
   }
   // Set up profiling.
-  static xcore::XCoreProfiler xcore_profiler(reporter);
-  if (profiler == nullptr) {
-    profiler = &xcore_profiler;
-  }
+  //   static xcore::XCoreProfiler xcore_profiler(reporter);
+  //   if (profiler == nullptr) {
+  //     profiler = &xcore_profiler;
+  //   }
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.

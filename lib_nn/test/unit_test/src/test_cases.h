@@ -28,3 +28,4 @@ void test_lookup8();
 
 void test_bnn_conv2d();
 void test_pad();
+void test_bsign_8();

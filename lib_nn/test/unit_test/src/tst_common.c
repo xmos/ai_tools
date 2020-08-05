@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <assert.h>
 
+int8_t  pseudo_rand_int8(){
+    return (int8_t)rand();
+}
 
 int16_t  pseudo_rand_int16(){
     return (int16_t)rand();

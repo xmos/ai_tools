@@ -1,15 +1,7 @@
-
+#include <string.h>
 
 #include "nn_operator.h"
-// #include "../nn_op_helper.h"
 #include "nn_op_structs.h"
-
-// #include "xs3_vpu.h"
-
-// #include <stdlib.h>
-// #include <stdint.h>
-#include <string.h>
-// #include <assert.h>
 
 void pad_perpare(nn_pad_plan_t* plan, const PaddingValues* p,
                  const nn_image_params_t* x, const unsigned bytes_per_pixel) {

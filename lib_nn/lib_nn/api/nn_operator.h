@@ -267,49 +267,6 @@ void conv2d_1x1(nn_image_t* Y, const nn_image_t* X, const nn_tensor_t* K,
                 const nn_bso_block_t* BSO, const nn_conv2d_1x1_plan_t* plan,
                 const nn_conv2d_1x1_job_t* job);
 
-// Binary operators
-
-#define CONV2D_OUTPUT_LENGTH(input_length, filter_size, dilation, stride)     \
-  (((input_length - (filter_size + (filter_size - 1) * (dilation - 1)) + 1) + \
-    stride - 1) /                                                             \
-   stride)
-
-void bnn_reorder_threshold_tensor(const int32_t* thresh_boggled,
-                                  const int32_t* thresholds_ref,
-                                  const unsigned chans_out,
-                                  const unsigned receptive_field);
-
-void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
-                               const unsigned k_height, const unsigned k_width,
-                               const unsigned chans_in,
-                               const unsigned chans_out);
-
-// This is the actual kernel
-void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
-
-void bnn_conv2d_bin_out_asm_prepare(
-    nn_bnn_conv2d_bin_out_asm_plan_t* plan, const bnn_b32_t* Y_p,
-    const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,
-    const nn_image_params_t* x, const nn_image_params_t* y,
-    const nn_window_params_t* k, const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned x_loc_x, const unsigned x_loc_y, const unsigned k_loc_x,
-    const unsigned k_loc_y, const unsigned y_full_width,
-    const unsigned x_full_width, const unsigned k_full_width);
-
-void bnn_conv2d_bin_out_threshold_prepare(
-    const nn_bnn_conv2d_bin_out_asm_plan_t* plan, int32_t* kernel_weight,
-    int32_t* unmodified_thresholds);
-
-void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
-                        const bnn_b256_t* K_p,
-                        int32_t* thresholds,  //[out_channel];
-                        const nn_bnn_conv2d_bin_out_plan_t* plan);
-
-void bnn_conv2d_bin_out_init(nn_bnn_conv2d_bin_out_plan_t* plan,
-                             const nn_image_params_t* x,
-                             const nn_image_params_t* y,
-                             const nn_window_params_t* k);
-
 /**
  * @brief Execute @oper{conv2d_depthwise} job.
  *
@@ -610,6 +567,49 @@ void requantize_16_to_8(int8_t* Y, const int16_t* X,
 void lookup8(uint8_t* Y, const uint8_t* X, const uint8_t* lut,
              const unsigned N);
 
+// Binary operators
+
+#define CONV2D_OUTPUT_LENGTH(input_length, filter_size, dilation, stride)     \
+  (((input_length - (filter_size + (filter_size - 1) * (dilation - 1)) + 1) + \
+    stride - 1) /                                                             \
+   stride)
+
+void bnn_reorder_threshold_tensor(const int32_t* thresh_boggled,
+                                  const int32_t* thresholds_ref,
+                                  const unsigned chans_out,
+                                  const unsigned receptive_field);
+
+void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+                               const unsigned k_height, const unsigned k_width,
+                               const unsigned chans_in,
+                               const unsigned chans_out);
+
+// This is the actual kernel
+void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
+
+void bnn_conv2d_bin_out_asm_prepare(
+    nn_bnn_conv2d_bin_out_asm_plan_t* plan, const bnn_b32_t* Y_p,
+    const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,
+    const nn_image_params_t* x, const nn_image_params_t* y,
+    const nn_window_params_t* k, const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned x_loc_x, const unsigned x_loc_y, const unsigned k_loc_x,
+    const unsigned k_loc_y, const unsigned y_full_width,
+    const unsigned x_full_width, const unsigned k_full_width);
+
+void bnn_conv2d_bin_out_threshold_prepare(
+    const nn_bnn_conv2d_bin_out_asm_plan_t* plan, int32_t* kernel_weight,
+    int32_t* unmodified_thresholds);
+
+void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
+                        const bnn_b256_t* K_p,
+                        int32_t* thresholds,  //[out_channel];
+                        const nn_bnn_conv2d_bin_out_plan_t* plan);
+
+void bnn_conv2d_bin_out_init(nn_bnn_conv2d_bin_out_plan_t* plan,
+                             const nn_image_params_t* x,
+                             const nn_image_params_t* y,
+                             const nn_window_params_t* k);
+
 /**
  * @brief Execute @oper{pad_perpare} function.
  *
@@ -641,6 +641,38 @@ void pad_run(void* y, void* x, const nn_pad_plan_t* p);
 
 void pad_ref(void* y, void* x, const PaddingValues* p,
              const nn_image_params_t* xp, const unsigned bytes_per_pixel);
+/**
+ * @brief Execute @oper{bsign_8} job.
+ *
+ * See @oper_ref{bsign_8} for more details about the @oper{requantize_16_to_8}
+ * operator.
+ *
+ * An instance of the @oper{bsign_8} operator requires an job (but no plan is
+ * required). See bsign_8_init() for more details.
+ *
+ * `Y` points to the output vector @tensor{y} with length @math{N}. The address
+ * supplied for `Y` should be the start address of the output vector (for any
+ * job being processed).
+ *
+ * `X` points to the input vector @tensor{x} with length @math{N}. The address
+ * supplied for `X` should be the start address of the input vector (for any job
+ * being processed).
+ *
+ * `job` points to the (initialized) @oper{bsign_8} job to be performed with
+ * this call.
+ *
+ * @requires_word_alignment{Y,X}
+ *
+ * @param Y   [out]    The output vector @tensor{y}
+ * @param X   [in]     The input vector @tensor{x}
+ * @param plan [in]    The @oper{bsign_8} plan to be processed
+ * @param job [in]     The @oper{bsign_8} job to be processed
+ */
+void bsign_8(uint32_t* Y, const int8_t* X, const nn_bsign_8_plan_t* plan,
+             const nn_bsign_8_job_t* job);
+
+void bsign_8_ref(uint32_t* Y, const int8_t* X, const nn_bsign_8_plan_t* plan,
+                 const nn_bsign_8_job_t* job);
 
 #ifdef __XC__
 }  // extern "C"

@@ -4,11 +4,13 @@
 
 import pytest
 
-import tensorflow as tf
-import numpy as np
-
-from conftest import Conv2dGenericTestModelGenerator
+from conftest import Conv2dGenericTestModelGenerator, test_output
 from xcore_model_generation.model_generator import Configuration
+
+
+#  ----------------------------------------------------------------------------
+#                                   GENERATORS
+#  ----------------------------------------------------------------------------
 
 
 class Conv2d1x1TestModelGenerator(Conv2dGenericTestModelGenerator):
@@ -19,6 +21,10 @@ class Conv2d1x1TestModelGenerator(Conv2dGenericTestModelGenerator):
 
 
 GENERATOR = Conv2d1x1TestModelGenerator
+
+#  ----------------------------------------------------------------------------
+#                                   CONFIGS
+#  ----------------------------------------------------------------------------
 
 CONFIGS = {
     "default": [
@@ -44,11 +50,6 @@ CONFIGS = {
         {"num_threads": 5},
     ],
 }
-
-
-def test_foo(run):
-    for arr, arr_ref in zip(run.outputs.xcore, run.outputs.reference):
-        assert np.max(np.abs(np.int32(arr) - np.int32(arr_ref))) <= 1
 
 
 if __name__ == "__main__":

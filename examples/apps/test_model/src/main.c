@@ -26,13 +26,13 @@ static enum ReceiveState state;
 
 #ifdef XCORE
 
+#include "xscope.h"
+
 void app_main() {}
 
 void send_output() {
-  for (int i = 0; i < output_size; i++) {
-    printf("OUTPUT,%d,%02x\n", i, output_buffer[i]);
-  }
-  printf("DONE!\n");
+  xscope_bytes(OUTPUT_TENSOR, output_size,
+               (const unsigned char *)output_buffer);
 }
 
 void app_data(void *data, size_t size) {

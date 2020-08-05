@@ -1,70 +1,38 @@
-
 // Copyright (c) 2019, XMOS Ltd, All rights reserved
+
+#include "inference_engine.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
 
+#include "operators/device_memory.h"
 #include "operators/xcore_interpreter.h"
 #include "operators/xcore_profiler.h"
 #include "operators/xcore_reporter.h"
+#include "tensorflow/lite/micro/all_ops_resolver.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
-#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
-#include "tensorflow/lite/micro/micro_profiler.h"
 #include "tensorflow/lite/version.h"
 
 tflite::ErrorReporter *reporter = nullptr;
 tflite::Profiler *profiler = nullptr;
 const tflite::Model *model = nullptr;
 xcore::XCoreInterpreter *interpreter = nullptr;
-TfLiteTensor *input = nullptr;
-TfLiteTensor *output = nullptr;
-constexpr int kTensorArenaSize =
-    300000;  // Hopefully this is big enough for all tests
-uint8_t tensor_arena[kTensorArenaSize];
 
-static int load_model(const char *filename, char **buffer, size_t *size) {
-  FILE *fd = fopen(filename, "rb");
-  fseek(fd, 0, SEEK_END);
-  size_t fsize = ftell(fd);
+void invoke() {
+  // Run inference, and report any error
+  TfLiteStatus invoke_status = interpreter->Invoke();
 
-  *buffer = (char *)malloc(fsize);
-
-  fseek(fd, 0, SEEK_SET);
-  fread(*buffer, 1, fsize, fd);
-  fclose(fd);
-
-  *size = fsize;
-
-  return 1;
-}
-
-static int load_input(const char *filename, char *input, size_t esize) {
-  FILE *fd = fopen(filename, "rb");
-  fseek(fd, 0, SEEK_END);
-  size_t fsize = ftell(fd);
-
-  if (fsize != esize) {
-    printf("Incorrect input file size. Expected %d bytes.\n", esize);
-    return 0;
+  if (invoke_status != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(reporter, "Invoke failed\n");
   }
-
-  fseek(fd, 0, SEEK_SET);
-  fread(input, 1, fsize, fd);
-  fclose(fd);
-
-  return 1;
 }
 
-static int save_output(const char *filename, const char *output, size_t osize) {
-  FILE *fd = fopen(filename, "wb");
-  fwrite(output, sizeof(int8_t), osize, fd);
-  fclose(fd);
-
-  return 1;
-}
-
-static void setup_tflite(const char *model_buffer) {
+void initialize(unsigned char *model_content, unsigned char *tensor_arena,
+                size_t tensor_arena_size, unsigned char **input,
+                unsigned *input_size, unsigned char **output,
+                unsigned *output_size) {
   // Set up logging
   static xcore::XCoreReporter xcore_reporter;
   reporter = &xcore_reporter;
@@ -74,7 +42,7 @@ static void setup_tflite(const char *model_buffer) {
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
-  model = tflite::GetModel(model_buffer);
+  model = tflite::GetModel(model_content);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
     TF_LITE_REPORT_ERROR(reporter,
                          "Model provided is schema version %d not equal "
@@ -83,10 +51,8 @@ static void setup_tflite(const char *model_buffer) {
     return;
   }
 
-  // This pulls in all the operation implementations we need.
-  static tflite::MicroMutableOpResolver<12> resolver;
-  resolver.AddSoftmax();
-  resolver.AddPad();
+  // Create all ops resolver and add xCORE custom operators
+  tflite::AllOpsResolver resolver;
   resolver.AddCustom("XC_maxpool2d",
                      tflite::ops::micro::xcore::Register_MaxPool2D());
   resolver.AddCustom("XC_avgpool2d",
@@ -110,7 +76,7 @@ static void setup_tflite(const char *model_buffer) {
 
   // Build an interpreter to run the model with
   static xcore::XCoreInterpreter static_interpreter(
-      model, resolver, tensor_arena, kTensorArenaSize, reporter, true,
+      model, resolver, tensor_arena, tensor_arena_size, reporter, true,
       profiler);
   interpreter = &static_interpreter;
 
@@ -122,48 +88,8 @@ static void setup_tflite(const char *model_buffer) {
   }
 
   // Obtain pointers to the model's input and output tensors.
-  input = interpreter->input(0);
-  output = interpreter->output(0);
-}
-
-int main(int argc, char *argv[]) {
-  if (argc < 4) {
-    printf("Three arguments expected: mode.tflite input-file output-file\n");
-    return -1;
-  }
-
-  char *model_filename = argv[1];
-  char *input_filename = argv[2];
-  char *output_filename = argv[3];
-
-  // load model
-  char *model_buffer = nullptr;
-  size_t model_size;
-  if (!load_model(model_filename, &model_buffer, &model_size)) {
-    printf("error loading model filename=%s\n", model_filename);
-    return -1;
-  }
-
-  // setup runtime
-  setup_tflite(model_buffer);
-
-  // Load input tensor
-  if (!load_input(input_filename, input->data.raw, input->bytes)) {
-    printf("error loading input filename=%s\n", input_filename);
-    return -1;
-  }
-
-  // Run inference, and report any error
-  TfLiteStatus invoke_status = interpreter->Invoke();
-  if (invoke_status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(reporter, "Invoke failed\n");
-    return -1;
-  }
-
-  // save output
-  if (!save_output(output_filename, output->data.raw, output->bytes)) {
-    printf("error saving output filename=%s\n", output_filename);
-    return -1;
-  }
-  return 0;
+  *input = (unsigned char *)(interpreter->input(0)->data.raw);
+  *input_size = interpreter->input(0)->bytes;
+  *output = (unsigned char *)(interpreter->output(0)->data.raw);
+  *output_size = interpreter->output(0)->bytes;
 }

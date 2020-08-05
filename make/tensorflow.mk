@@ -1,8 +1,10 @@
+RUY_DIR := ${PROJECT_ROOT_DIR}/third_party/ruy
 FLATBUFFERS_DIR := ${PROJECT_ROOT_DIR}/third_party
 GEMMLOWP_DIR := ${PROJECT_ROOT_DIR}/third_party/gemmlowp
 TENSORFLOW_DIR := ${PROJECT_ROOT_DIR}/third_party/tensorflow
 
 TENSORFLOW_INCLUDES := \
+	-I$(RUY_DIR) \
 	-I$(FLATBUFFERS_DIR)/flatbuffers/include \
 	-I$(GEMMLOWP_DIR) \
 	-I$(TENSORFLOW_DIR)
@@ -11,7 +13,6 @@ TENSORFLOW_INCLUDES := \
 TENSORFLOW_VPATH := \
 	$(FLATBUFFERS_DIR) \
 	$(TENSORFLOW_DIR)
-
 
 TENSORFLOW_SOURCES := \
 	tensorflow/lite/c/common.c \
@@ -31,40 +32,46 @@ TENSORFLOW_SOURCES := \
 	tensorflow/lite/micro/memory_planner/linear_memory_planner.cc \
 	tensorflow/lite/kernels/internal/quantization_util.cc \
 	tensorflow/lite/kernels/kernel_util.cc \
-	tensorflow/lite/micro/kernels/pad.cc \
-	tensorflow/lite/micro/kernels/softmax.cc
 
-#TENSORFLOW_SOURCES += \
-	# tensorflow/lite/micro/kernels/activations.cc \
-	# tensorflow/lite/micro/kernels/add.cc \
-	# tensorflow/lite/micro/kernels/all_ops_resolver.cc \
-	# tensorflow/lite/micro/kernels/arg_min_max.cc \
-	# tensorflow/lite/micro/kernels/ceil.cc \
-	# tensorflow/lite/micro/kernels/comparisons.cc \
-	# tensorflow/lite/micro/kernels/concatenation.cc \
-	# tensorflow/lite/micro/kernels/conv.cc \
-	# tensorflow/lite/micro/kernels/depthwise_conv.cc \
-	# tensorflow/lite/micro/kernels/dequantize.cc \
-	# tensorflow/lite/micro/kernels/elementwise.cc \
-	# tensorflow/lite/micro/kernels/floor.cc \
-	# tensorflow/lite/micro/kernels/fully_connected.cc \
-	# tensorflow/lite/micro/kernels/logical.cc \
-	# tensorflow/lite/micro/kernels/logistic.cc \
-	# tensorflow/lite/micro/kernels/maximum_minimum.cc \
-	# tensorflow/lite/micro/kernels/mul.cc \
-	# tensorflow/lite/micro/kernels/neg.cc \
-	# tensorflow/lite/micro/kernels/pack.cc \
-	# tensorflow/lite/micro/kernels/pooling.cc \
-	# tensorflow/lite/micro/kernels/prelu.cc \
-	# tensorflow/lite/micro/kernels/quantize.cc \
-	# tensorflow/lite/micro/kernels/reduce.cc \
-	# tensorflow/lite/micro/kernels/reshape.cc \
-	# tensorflow/lite/micro/kernels/round.cc \
-	# tensorflow/lite/micro/kernels/softmax.cc \
-	# tensorflow/lite/micro/kernels/split.cc \
-	# tensorflow/lite/micro/kernels/strided_slice.cc \
-	# tensorflow/lite/micro/kernels/svdf.cc \
-	# tensorflow/lite/micro/kernels/unpack.cc \
+TENSORFLOW_REFERENCE_KERNEL_SOURCES += \
+	tensorflow/lite/micro/all_ops_resolver.cc \
+	tensorflow/lite/micro/kernels/activations.cc \
+	tensorflow/lite/micro/kernels/add.cc \
+	tensorflow/lite/micro/kernels/arg_min_max.cc \
+	tensorflow/lite/micro/kernels/ceil.cc \
+	tensorflow/lite/micro/kernels/circular_buffer.cc \
+	tensorflow/lite/micro/kernels/comparisons.cc \
+	tensorflow/lite/micro/kernels/concatenation.cc \
+	tensorflow/lite/micro/kernels/conv.cc \
+	tensorflow/lite/micro/kernels/depthwise_conv.cc \
+	tensorflow/lite/micro/kernels/dequantize.cc \
+	tensorflow/lite/micro/kernels/elementwise.cc \
+	tensorflow/lite/micro/kernels/floor.cc \
+	tensorflow/lite/micro/kernels/fully_connected.cc \
+	tensorflow/lite/micro/kernels/hard_swish.cc \
+	tensorflow/lite/micro/kernels/l2norm.cc \
+	tensorflow/lite/micro/kernels/logical.cc \
+	tensorflow/lite/micro/kernels/logistic.cc \
+	tensorflow/lite/micro/kernels/maximum_minimum.cc \
+	tensorflow/lite/micro/kernels/mul.cc \
+	tensorflow/lite/micro/kernels/neg.cc \
+	tensorflow/lite/micro/kernels/pack.cc \
+	tensorflow/lite/micro/kernels/pad.cc \
+	tensorflow/lite/micro/kernels/pooling.cc \
+	tensorflow/lite/micro/kernels/prelu.cc \
+	tensorflow/lite/micro/kernels/quantize.cc \
+	tensorflow/lite/micro/kernels/reduce.cc \
+	tensorflow/lite/micro/kernels/reshape.cc \
+	tensorflow/lite/micro/kernels/resize_nearest_neighbor.cc \
+	tensorflow/lite/micro/kernels/round.cc \
+	tensorflow/lite/micro/kernels/softmax.cc \
+	tensorflow/lite/micro/kernels/split.cc \
+	tensorflow/lite/micro/kernels/strided_slice.cc \
+	tensorflow/lite/micro/kernels/sub.cc \
+	tensorflow/lite/micro/kernels/svdf.cc \
+	tensorflow/lite/micro/kernels/tanh.cc \
+	tensorflow/lite/micro/kernels/unpack.cc \
+	tensorflow/lite/micro/kernels/ethosu.cc \
 
 ifeq ($(TARGET), x86)
 	TENSORFLOW_SOURCES += \

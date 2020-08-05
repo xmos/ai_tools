@@ -20,6 +20,9 @@ tflite::Profiler *profiler = nullptr;
 const tflite::Model *model = nullptr;
 xcore::XCoreInterpreter *interpreter = nullptr;
 
+// static buffer for XCoreInterpreter class allowcation
+unsigned char interpreter_buffer[sizeof(xcore::XCoreInterpreter)];
+
 void invoke() {
   // Run inference, and report any error
   TfLiteStatus invoke_status = interpreter->Invoke();
@@ -35,10 +38,14 @@ void initialize(unsigned char *model_content, unsigned char *tensor_arena,
                 unsigned *output_size) {
   // Set up logging
   static xcore::XCoreReporter xcore_reporter;
-  reporter = &xcore_reporter;
+  if (reporter == nullptr) {
+    reporter = &xcore_reporter;
+  }
   // Set up profiling.
   static xcore::XCoreProfiler xcore_profiler(reporter);
-  profiler = &xcore_profiler;
+  if (profiler == nullptr) {
+    profiler = &xcore_profiler;
+  }
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
@@ -75,10 +82,14 @@ void initialize(unsigned char *model_content, unsigned char *tensor_arena,
                      tflite::ops::micro::xcore::Register_Lookup_8());
 
   // Build an interpreter to run the model with
-  static xcore::XCoreInterpreter static_interpreter(
-      model, resolver, tensor_arena, tensor_arena_size, reporter, true,
-      profiler);
-  interpreter = &static_interpreter;
+  if (interpreter) {
+    // We already have an interpreter so we need to explicitly call the
+    // destructor here but NOT delete the object
+    interpreter->~XCoreInterpreter();
+  }
+  interpreter = new (interpreter_buffer)
+      xcore::XCoreInterpreter(model, resolver, tensor_arena, tensor_arena_size,
+                              reporter, true, profiler);
 
   // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();

@@ -58,30 +58,13 @@ class CanonicalizeLceBconv2DPass(OperatorMatchingPass):
         op.inputs[3].consumers.remove(op)
         op.inputs = op.inputs[:2]
 
-
 class ReplaceLceBconv2DPass(OperatorMatchingPass):
+    
+    def __init__(self, input_tensor_type):
+        self.input_tensor_type= input_tensor_type
+
     def match(self, op):
-
-        if not super().match(op):
-            return False
-
-        return (
-            SupportedBconv2DOp(op)
-            and len(op.inputs) == 2
-        )
-
-
-class ReplaceLceBconv2DPass_int8(ReplaceLceBconv2DPass):
-    def match(self, op):
-        return super().match(op) and op.inputs[0].type == TensorType.INT8
-
-    def mutate(self, op):
-        op.operator_code.custom_code = XCOREOpCodes.XC_bconv_deep
-
-
-class ReplaceLceBconv2DPass_bitpacked(ReplaceLceBconv2DPass):
-    def match(self, op):
-        return super().match(op) and op.inputs[0].type == TensorType.INT32
+        return super().match(op) and SupportedBconv2DOp(op) and len(op.inputs) == 2 and op.inputs[0].type == self.input_tensor_type
 
     def mutate(self, op):
         op.operator_code.custom_code = XCOREOpCodes.XC_bconv_deep

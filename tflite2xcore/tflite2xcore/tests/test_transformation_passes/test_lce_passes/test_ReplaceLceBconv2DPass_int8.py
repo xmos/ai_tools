@@ -1,5 +1,4 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
-
 import pytest
 
 import numpy as np
@@ -50,8 +49,6 @@ def model(weight_shape, input_size, padding, strides):
         post_activation_bias=False,
         input_tensor_type = TensorType.INT8
     )
-
-
 
 if __name__ == "__main__":
     pytest.main()

@@ -64,7 +64,7 @@ def model(weight_shape, input_size, padding, strides):
     return model
 
 #  ----------------------------------------------------------------------------
-#                                   FIXTURES
+#                                   TESTS
 #  ----------------------------------------------------------------------------
 def test_mutate(trf_pass, model):
 

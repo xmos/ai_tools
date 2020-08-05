@@ -14,6 +14,7 @@ from tflite2xcore.xcore_schema import (
     BuiltinOpCodes,
     XCOREOpCodes,
     BuiltinOptions,
+    CustomOpCode,
 )
 
 
@@ -732,3 +733,63 @@ def build_padded_DW(subgraph=None, *, weight_shape, input_size, paddings, stride
     pad_op.inputs[0].quantization = old_input.quantization
 
     return model
+
+#####
+# LCE models
+####
+
+def build_lceBconv2d(subgraph=None, *, weight_shape, input_size, padding, strides,
+        post_activation_mult = True, 
+        post_activation_bias = True, 
+        input_tensor_type = TensorType.INT8
+        ):
+    
+    subgraph = subgraph or XCOREModel().create_subgraph()
+    assert padding in Padding
+
+    height, width = input_size
+    C_out, K_h, K_w, C_in = weight_shape
+
+    input_shape = [1, height, width, C_in]
+    tin = subgraph.create_tensor("input", input_tensor_type, input_shape, isinput=True)
+    w = subgraph.create_tensor("weights", TensorType.INT32, weight_shape)
+    post_act_mult = subgraph.create_tensor("post_act_mult", TensorType.FLOAT32, weight_shape[:1])
+    post_act_bias = subgraph.create_tensor("post_act_bias", TensorType.FLOAT32, weight_shape[:1])
+
+    # add dummy data so that the op can be mutated
+    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
+    post_act_mult.buffer.data = np.float32(np.arange(0, np.prod(post_act_mult.shape)))
+    post_act_bias.buffer.data = np.float32(np.arange(0, np.prod(post_act_bias.shape)))
+
+    if padding is Padding.SAME:
+        output_shape = [1, height, width, C_out]
+    elif padding is Padding.VALID:
+        output_shape = [
+            1,
+            int(np.ceil((height - K_h + 1) / strides[0])),
+            int(np.ceil((width - K_w + 1) / strides[1])),
+            C_out,
+        ]
+
+    tout = subgraph.create_tensor("output", tin.type, shape=output_shape, isoutput=True)
+
+    op_inputs = [tin, w]
+
+    if post_activation_mult:
+        op_inputs = op_inputs + [post_act_mult]
+    
+    if post_activation_bias:
+        op_inputs = op_inputs + [post_act_bias]
+
+    op = subgraph.create_operator(
+        OperatorCode(CustomOpCode("LceBconv2d")), inputs=op_inputs, outputs=[tout]
+    )
+    op.builtin_options = {
+        "padding": padding,
+        "stride_h": strides[0],
+        "stride_w": strides[1],
+        "dilation_w_factor": 1,
+        "dilation_h_factor": 1,
+    }
+
+    return subgraph.model

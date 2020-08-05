@@ -23,8 +23,9 @@ int main(int argc, char** argv) {
     benchmark_vpu_memcpy(argc - 2, &(argv[2]));
   elseif(requantize_16_to_8);
   elseif(lookup8);
-  elseif(avgpool2d);
+  // elseif(avgpool2d);
   elseif(conv2d_deep);
+  elseif(bnn_conv2d_bin_output);
   elseif(nn_conv2d_hstrip_deep);
   else {
     printf("Function '%s' unknown.\n", argv[1]);

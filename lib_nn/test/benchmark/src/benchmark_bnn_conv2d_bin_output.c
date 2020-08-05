@@ -13,11 +13,14 @@
 #include "nn_bin_utils.h"
 #include "xs3_vpu.h"
 
-// TODO put this in the BNN code
-#define OUTPUT_LENGTH(input_length, filter_size, dilation, stride)            \
-  (((input_length - (filter_size + (filter_size - 1) * (dilation - 1)) + 1) + \
-    stride - 1) /                                                             \
-   stride)
+#include "xcore/hwtimer.h"
+
+#ifdef __xcore__
+#define WORD_ALIGNED __attribute__((aligned(4)))
+#else
+#define WORD_ALIGNED
+#endif
+
 
 unsigned run_config(bnn_b32_t* Y_p, bnn_b256_t* X_p, bnn_b256_t* K_p,
                     int32_t* thresholds_p, unsigned x_height, unsigned x_width,
@@ -43,17 +46,32 @@ unsigned run_config(bnn_b32_t* Y_p, bnn_b256_t* X_p, bnn_b256_t* K_p,
   k.stride.vertical = v_stride;
 
   nn_bnn_conv2d_bin_out_asm_plan_t plan;
-  bnn_conv2d_bin_out_asm_init(&plan, &x, &y, &k);
+  bnn_conv2d_bin_out_asm_prepare(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_p,
+                                 (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k);
+  hwtimer_t t = hwtimer_alloc();
 
-  bnn_conv2d_bin_out_asm((bnn_b32_t*)Y_p, (bnn_b256_t*)X_p, (bnn_b256_t*)K_p,
-                         thresholds_p, &plan);
+  uint32_t before = hwtimer_get_time(t);
 
-  unsigned elapsed = 0;
+  bnn_conv2d_bin_out_asm(&plan);
+
+  uint32_t after = hwtimer_get_time(t);
+
+  hwtimer_free(t);
+  unsigned elapsed = after - before;
 
   return elapsed;
 }
 
-#define REQ_ARGS (7)
+unsigned calc_macc_count(unsigned x_height, unsigned x_width, unsigned k_height,
+                         unsigned k_width, unsigned chans_in,
+                         unsigned chans_out, unsigned h_stride,
+                         unsigned v_stride) {
+  unsigned y_height = OUTPUT_LENGTH(x_height, k_height, 1, v_stride);
+  unsigned y_width = OUTPUT_LENGTH(x_width, k_width, 1, h_stride);
+
+  return y_height * y_width * k_width * k_height * (chans_in / 256) * chans_out;
+}
+
 void benchmark_bnn_conv2d_bin_output(int argc, char** argv) {
 #define MIN_H_STRIDE 1
 #define MIN_V_STRIDE 1
@@ -62,10 +80,10 @@ void benchmark_bnn_conv2d_bin_output(int argc, char** argv) {
 
 #define MIN_K_HEIGHT 1
 #define MIN_K_WIDTH 1
-#define MAX_K_HEIGHT 5
-#define MAX_K_WIDTH 5
+#define MAX_K_HEIGHT 3
+#define MAX_K_WIDTH 3
 
-#define MIN_CHANS_IN 256
+#define MIN_CHANS_IN 512
 #define MAX_CHANS_IN 512
 
 #define MIN_CHANS_OUT 32
@@ -73,8 +91,8 @@ void benchmark_bnn_conv2d_bin_output(int argc, char** argv) {
 
 #define MIN_X_HEIGHT MIN_K_HEIGHT
 #define MIN_X_WIDTH MIN_K_WIDTH
-#define MAX_X_HEIGHT 7
-#define MAX_X_WIDTH 7
+#define MAX_X_HEIGHT 64
+#define MAX_X_WIDTH 64
 
 #define MAX_CHAN_WORDS_IN \
   ((MAX_CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
@@ -85,62 +103,39 @@ void benchmark_bnn_conv2d_bin_output(int argc, char** argv) {
 
   bnn_b256_t WORD_ALIGNED
       K_ref[MAX_CHANS_OUT][MAX_K_HEIGHT][MAX_K_WIDTH][MAX_CHAN_WORDS_IN];
-  bnn_b256_t WORD_ALIGNED
-      K[MAX_CHANS_OUT][MAX_K_HEIGHT][MAX_K_WIDTH][MAX_CHAN_WORDS_IN];
 
   bnn_b256_t WORD_ALIGNED X_ref[MAX_X_HEIGHT][MAX_X_WIDTH][MAX_CHAN_WORDS_IN];
   bnn_b32_t WORD_ALIGNED Y_ref[MAX_Y_HEIGHT][MAX_Y_WIDTH][MAX_CHAN_WORDS_OUT];
-  bnn_b32_t WORD_ALIGNED Y[MAX_Y_HEIGHT][MAX_Y_WIDTH][MAX_CHAN_WORDS_OUT];
 
   int32_t WORD_ALIGNED thresholds_ref[MAX_CHANS_OUT];
-  int32_t WORD_ALIGNED thresholds[MAX_CHANS_OUT];
 
-  assert(((int)K & 0x3) == 0);
   assert(((int)K_ref & 0x3) == 0);
   assert(((int)X_ref & 0x3) == 0);
-  assert(((int)Y & 0x3) == 0);
   assert(((int)Y_ref & 0x3) == 0);
 
   assert(((int)thresholds_ref & 0x3) == 0);
-  assert(((int)thresholds & 0x3) == 0);
 
-  printf("sizeof(X_ref): %u\n", sizeof(X_ref));
-  printf("sizeof(K_ref): %u\n", sizeof(K_ref));
-  printf("sizeof(K): %u\n", sizeof(K));
-  printf("sizeof(Y_ref): %u\n", sizeof(Y_ref));
-  printf("sizeof(Y): %u\n", sizeof(Y));
-  printf("sizeof(thresholds_ref): %u\n", sizeof(thresholds_ref));
-  printf("sizeof(thresholds): %u\n", sizeof(thresholds));
+  unsigned elapsed_timer_ticks =
+      run_config((bnn_b32_t*)Y_ref, (bnn_b256_t*)X_ref, (bnn_b256_t*)K_ref,
+                 (int32_t*)thresholds_ref, 6, 6, 3, 3, 256, 64, 1, 1);
 
-  for (unsigned h_stride = MIN_H_STRIDE; h_stride <= MAX_H_STRIDE; ++h_stride) {
-    for (unsigned v_stride = MIN_V_STRIDE; v_stride <= MAX_V_STRIDE;
-         ++v_stride) {
-      for (unsigned k_height = MIN_K_HEIGHT; k_height <= MAX_K_HEIGHT;
-           ++k_height) {
-        for (unsigned k_width = MIN_K_WIDTH; k_width <= MAX_K_WIDTH;
-             ++k_width) {
-          for (unsigned x_height = k_height; x_height <= MAX_X_HEIGHT;
-               ++x_height) {
-            for (unsigned x_width = k_width; x_width <= MAX_X_WIDTH;
-                 ++x_width) {
-              for (unsigned chans_in = MIN_CHANS_IN; chans_in <= MAX_CHANS_IN;
-                   chans_in += 256) {
-                for (unsigned chans_out = MIN_CHANS_OUT;
-                     chans_out <= MAX_CHANS_OUT; chans_out += 32) {
-                  unsigned elapsed = run_config(
-                      (bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b256_t*)X_ref,
-                      (bnn_b256_t*)K, (bnn_b256_t*)K_ref,
-                      (int32_t*)thresholds_ref, (int32_t*)thresholds, x_height,
-                      x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                      v_stride);
-                  printf("%u\n", elapsed);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
+  float system_freq = 800000000.;
+
+  float ns_per_cycle = 1e9 / (system_freq / 5);
+
+  float elapsed_ns = (float)elapsed_timer_ticks * 10;
+
+  float cycles_executed = elapsed_ns / ns_per_cycle;
+
+  unsigned macc_count = calc_macc_count(6, 6, 3, 3, 256, 64, 1, 1);
+
+  float efficiency = ((float)macc_count) / cycles_executed;
+
+  printf("system_freq:     %f\n", system_freq);
+  printf("ns_per_cycle:    %f\n", ns_per_cycle);
+  printf("elapsed_ns:      %f\n", elapsed_ns);
+  printf("cycles_executed: %f\n", cycles_executed);
+  printf("macc_count:      %u\n", macc_count);
+  printf("efficiency:      %f\n", efficiency);
+
 }

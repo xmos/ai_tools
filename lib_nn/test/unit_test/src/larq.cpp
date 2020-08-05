@@ -90,13 +90,14 @@ extern "C" void larq_ref_bconv2d(const nn_image_params_t* x,
   params.stride_width = k->stride.horizontal;
   //   params.weights_offset = 0;
 
+  RuntimeShape no_shape = RuntimeShape(0, nullptr);
   ce::ref::BConv2D<std::uint32_t, std::int32_t, std::int32_t>(
       params, packed_input_shape, (const uint32_t*)packed_input_data,
       packed_filter_shape, (const uint32_t*)packed_filter_data,
       output_transform, output_shape, packed_output_data,
 
-      // These are all dummy parameters
-      output_shape, 0, 0, 0, 0, 0);
+      // These are all dummy parameters(unused)
+      no_shape, 0, 0, 0, 0, 0);
 }
 }  // namespace ref
 }  // namespace compute_engine

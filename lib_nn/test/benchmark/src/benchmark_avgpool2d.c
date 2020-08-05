@@ -11,72 +11,62 @@
 #include "nn_operator.h"
 #include "xs3_vpu.h"
 
+void benchmark_avgpool2d_case(const nn_image_params_t* x,
+                              const nn_image_params_t* y,
+                              const nn_window_op_config_t* config) {
+  int8_t* X = (int8_t*)malloc(x->height * x->width * x->channels);
+  int8_t* Y = (int8_t*)malloc(y->height * y->width * y->channels);
 
+  assert(X);
+  assert(Y);
 
+  nn_avgpool2d_plan_t plan;
 
-void benchmark_avgpool2d_case(
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const nn_window_op_config_t* config)
-{
+  avgpool2d_init(&plan, x, y, config);
 
-    int8_t* X = (int8_t*) malloc(x->height * x->width * x->channels);
-    int8_t* Y = (int8_t*) malloc(y->height * y->width * y->channels);
-    
-    assert(X);
-    assert(Y);
+  avgpool2d(Y, X, &plan);
 
-    nn_avgpool2d_plan_t plan;
-
-    avgpool2d_init(&plan, x, y, config);
-
-    avgpool2d(Y, X, &plan);
-
-    free(X);
-    free(Y);
+  free(X);
+  free(Y);
 }
 
+#define REQ_ARGS (7)
+void benchmark_avgpool2d(int argc, char** argv) {
+  nn_window_op_config_t config;
+  nn_image_params_t x, y;
 
-#define REQ_ARGS    (7)
-void benchmark_avgpool2d(int argc, char** argv){
+  memset(&config, 0, sizeof(config));
 
-    nn_window_op_config_t config;
-    nn_image_params_t x, y;
-    
-    memset(&config, 0, sizeof(config));
+  config.output.stride.vertical.rows = 1;
+  config.output.stride.horizontal.cols = 1;
+  config.window.inner_stride.vertical.rows = 1;
+  config.window.inner_stride.horizontal.cols = 1;
 
-    config.output.stride.vertical.rows = 1;
-    config.output.stride.horizontal.cols = 1;
-    config.window.inner_stride.vertical.rows = 1;
-    config.window.inner_stride.horizontal.cols = 1;
+  while (argc >= REQ_ARGS) {
+    int i = 0;
 
-    while(argc >= REQ_ARGS){
+    config.output.shape.height = atoi((char*)argv[i++]);
+    config.output.shape.width = atoi((char*)argv[i++]);
+    config.output.shape.channels = atoi((char*)argv[i++]);
+    config.window.shape.height = atoi((char*)argv[i++]);
+    config.window.shape.width = atoi((char*)argv[i++]);
+    config.window.outer_stride.vertical.rows = atoi((char*)argv[i++]);
+    config.window.outer_stride.horizontal.cols = atoi((char*)argv[i++]);
 
-        int i = 0;
+    x.height =
+        config.output.shape.height * config.window.outer_stride.vertical.rows +
+        config.window.shape.height;
+    x.width =
+        config.output.shape.width * config.window.outer_stride.horizontal.cols +
+        config.window.shape.width;
+    x.channels = config.output.shape.channels;
+    y.height = config.output.shape.height;
+    y.width = config.output.shape.width;
+    y.channels = config.output.shape.channels;
 
-        config.output.shape.height = atoi((char*)argv[i++]);
-        config.output.shape.width = atoi((char*)argv[i++]);
-        config.output.shape.channels = atoi((char*)argv[i++]);
-        config.window.shape.height = atoi((char*)argv[i++]);
-        config.window.shape.width = atoi((char*)argv[i++]);
-        config.window.outer_stride.vertical.rows = atoi((char*)argv[i++]);
-        config.window.outer_stride.horizontal.cols = atoi((char*)argv[i++]);
-        
-        x.height = config.output.shape.height * config.window.outer_stride.vertical.rows 
-                    + config.window.shape.height ;
-        x.width = config.output.shape.width * config.window.outer_stride.horizontal.cols 
-                    + config.window.shape.width ;
-        x.channels = config.output.shape.channels;
-        y.height = config.output.shape.height;
-        y.width = config.output.shape.width;
-        y.channels = config.output.shape.channels;
+    benchmark_avgpool2d_case(&x, &y, &config);
 
-
-        benchmark_avgpool2d_case(&x, &y, &config);
-
-        argc -= REQ_ARGS;
-        argv = &(argv[REQ_ARGS]);
-    }
-
-
+    argc -= REQ_ARGS;
+    argv = &(argv[REQ_ARGS]);
+  }
 }

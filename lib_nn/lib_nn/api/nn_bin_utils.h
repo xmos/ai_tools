@@ -1,5 +1,3 @@
-
-
 #include "nn_bin_types.h"
 
 void set_bit_b32(bnn_b32_t* x, unsigned ch, bnn_bool_t val);

@@ -1,6 +1,4 @@
-
 #if defined(__XS3A__)
-
 
 .issue_mode  dual
 
@@ -95,19 +93,19 @@
 
 //Registers
 
-#define Y_p       r0
-#define X_p       r1
-#define K_p       r2
+#define Y_p               r0
+#define X_p               r1
+#define K_p               r2
 #define threshold_current r3
 
-#define k_height_loop r4
-#define k_width_loop r5
-#define ic_loop_counter r6
-#define oc_loop_counter r7
-#define r_256_bits r8
-#define x_width_loop r9
-#define s r10
-#define t r11
+#define k_height_loop     r4
+#define k_width_loop      r5
+#define ic_loop_counter   r6
+#define oc_loop_counter   r7
+#define r_256_bits        r8
+#define x_width_loop      r9
+#define s                 r10
+#define t                 r11
 .align 4
 bnn_make_16_bit_output:
 
@@ -158,12 +156,8 @@ bnn_make_16_bit_output:
 
     retsp 0
 
-
 /*
-void bnn_conv2d_bin_out_asm(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
-                        const bnn_b256_t* K_p,
-                        int32_t* thresholds,  //[out_channel];
-                        const nn_bnn_conv2d_bin_out_plan_t* plan)
+void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
 */
 
 #define FUNCTION_NAME bnn_conv2d_bin_out_asm
@@ -177,7 +171,6 @@ void bnn_conv2d_bin_out_asm(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
-//There must be multiples of 32 output channels
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[S_SAVE_R4_R5]

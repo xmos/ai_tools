@@ -1,4 +1,5 @@
 #ifndef NN_BNN_TYPES_H
+#define NN_BNN_TYPES_H
 #include <stdint.h>
 
 typedef int8_t bnn_bool_t;
@@ -9,4 +10,3 @@ typedef struct bnn_b256_t {
 } bnn_b256_t;
 
 #endif
-#define NN_BNN_TYPES_H

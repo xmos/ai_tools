@@ -142,23 +142,23 @@ def test_non_matching_input_channels(
 
 def test_non_matching_stride_w(trf_pass, model, non_matching_stride_w):
     op = model.subgraphs[0].operators[0]
-    op.builtin_options["stride_w"] = non_matching_stride_w
+    op.custom_options["stride_width"] = non_matching_stride_w
     _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_stride_h(trf_pass, model, non_matching_stride_h):
     op = model.subgraphs[0].operators[0]
-    op.builtin_options["stride_h"] = non_matching_stride_h
+    op.custom_options["stride_height"] = non_matching_stride_h
     _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_dilation_w_factor(trf_pass, model, non_matching_dilation_w_factor):
     op = model.subgraphs[0].operators[0]
-    op.builtin_options["dilation_w_factor"] = non_matching_dilation_w_factor
+    op.custom_options["dilation_width_factor"] = non_matching_dilation_w_factor
     _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_dilation_h_factor(trf_pass, model, non_matching_dilation_h_factor):
     op = model.subgraphs[0].operators[0]
-    op.builtin_options["dilation_h_factor"] = non_matching_dilation_h_factor
+    op.custom_options["dilation_height_factor"] = non_matching_dilation_h_factor
     _test_non_matching_params(trf_pass, model)

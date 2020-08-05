@@ -35,10 +35,14 @@ def SupportedBconv2DOp(op: Operator) -> bool:
     if not (isinstance(op.operator_code.code, CustomOpCode) and op.operator_code.custom_code.name == "LceBconv2d"):
         return False
 
-    options = op.builtin_options
-    strides = (options["stride_h"], options["stride_w"])
-    dilations = (options["dilation_h_factor"], options["dilation_w_factor"])
-    weights = op.inputs[1]
+    options = op.custom_options
+
+    try:
+        strides = (options["stride_height"], options["stride_width"])
+        dilations = (options["dilation_height_factor"], options["dilation_width_factor"])
+        weights = op.inputs[1]
+    except KeyError:
+        return False
 
     return (
         strides == (1, 1)
@@ -59,7 +63,6 @@ class CanonicalizeLceBconv2DPass(OperatorMatchingPass):
         op.inputs = op.inputs[:2]
 
 class ReplaceLceBconv2DPass(OperatorMatchingPass):
-    
     def __init__(self, input_tensor_type):
         self.input_tensor_type= input_tensor_type
 
@@ -67,7 +70,10 @@ class ReplaceLceBconv2DPass(OperatorMatchingPass):
         return super().match(op) and SupportedBconv2DOp(op) and len(op.inputs) == 2 and op.inputs[0].type == self.input_tensor_type
 
     def mutate(self, op):
-        op.operator_code.custom_code = XCOREOpCodes.XC_bconv_deep
+        if input_tensor_type == TensorType.INT8:
+            op.operator_code.custom_code = XCOREOpCodes.XC_bconv_deep
+        else: 
+            op.operator_code.custom_code = XCOREOpCodes.XC_bconv_deep_bitpacked
 
 
 class InsertBsignPass(OperatorMatchingPass):

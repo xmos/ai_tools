@@ -32,7 +32,7 @@ PARAMS = deepcopy(PARAMS)
 #  ----------------------------------------------------------------------------
 @pytest.fixture()
 def trf_pass():
-    return ReplaceLceBconv2DPass(TensorType.INT8)
+    return ReplaceLceBconv2DPass(TensorType.INT32)
 
 @pytest.fixture()
 def build_model():
@@ -47,7 +47,7 @@ def model(weight_shape, input_size, padding, strides):
         strides=strides,
         post_activation_mult=False,
         post_activation_bias=False,
-        input_tensor_type = TensorType.INT8
+        input_tensor_type = TensorType.INT32
     )
 
 if __name__ == "__main__":

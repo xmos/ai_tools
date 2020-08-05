@@ -82,3 +82,9 @@ from .scratch_memory_passes import (
     ScratchMemoryConv2d1x1Pass,
     ScratchMemoryDepthwiseConv2dPass,
 )
+
+from .lce_passes import (
+    CanonicalizeLceBconv2DPass,
+    InsertBsignPass,
+    ReplaceLceBconv2DPass,
+)

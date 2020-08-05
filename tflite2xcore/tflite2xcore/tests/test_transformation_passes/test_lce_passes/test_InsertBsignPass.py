@@ -20,7 +20,7 @@ from .conftest import (
     test_non_matching_stride_h,
     test_non_matching_stride_w,
     test_non_matching_dilation_w_factor,
-    test_non_matching_dilation_h_factor
+    test_non_matching_dilation_h_factor,
 )
 
 
@@ -37,9 +37,11 @@ PARAMS = deepcopy(PARAMS)
 def trf_pass():
     return InsertBsignPass()
 
+
 @pytest.fixture()
 def build_model():
     return build_lceBconv2d
+
 
 @pytest.fixture()
 def model(weight_shape, input_size, padding, strides):
@@ -48,10 +50,11 @@ def model(weight_shape, input_size, padding, strides):
         input_size=input_size,
         padding=padding,
         strides=strides,
-        post_activation_bias=False, 
-        post_activation_mult=False
+        post_activation_bias=False,
+        post_activation_mult=False,
     )
     return model
+
 
 @pytest.fixture()
 def model_with_float32_input(weight_shape, input_size, padding, strides):
@@ -60,11 +63,12 @@ def model_with_float32_input(weight_shape, input_size, padding, strides):
         input_size=input_size,
         padding=padding,
         strides=strides,
-        post_activation_bias=False, 
+        post_activation_bias=False,
         post_activation_mult=False,
-        input_tensor_type=TensorType.FLOAT32
+        input_tensor_type=TensorType.FLOAT32,
     )
     return model
+
 
 @pytest.fixture()
 def model_with_int32_input(weight_shape, input_size, padding, strides):
@@ -73,9 +77,9 @@ def model_with_int32_input(weight_shape, input_size, padding, strides):
         input_size=input_size,
         padding=padding,
         strides=strides,
-        post_activation_bias=False, 
+        post_activation_bias=False,
         post_activation_mult=False,
-        input_tensor_type=TensorType.INT32
+        input_tensor_type=TensorType.INT32,
     )
     return model
 
@@ -109,20 +113,21 @@ def test_mutate(trf_pass, model):
     assert in_ori is op[0].inputs[0]
     assert in_ori in subgraph.inputs
 
-    assert all((i not in subgraph.inputs) for i in op[1].inputs) 
+    assert all((i not in subgraph.inputs) for i in op[1].inputs)
 
     assert out_ori is op[1].outputs[0]
     assert out_ori in subgraph.outputs
-    
-    assert all((o not in subgraph.outputs) for o in op[0].outputs) 
+
+    assert all((o not in subgraph.outputs) for o in op[0].outputs)
 
 
 def test_non_matching_input_tensor_float32(trf_pass, model_with_float32_input):
     _test_non_matching_params(trf_pass, model_with_float32_input)
 
+
 def test_non_matching_input_tensor_int32(trf_pass, model_with_int32_input):
     _test_non_matching_params(trf_pass, model_with_int32_input)
 
+
 if __name__ == "__main__":
     pytest.main()
-

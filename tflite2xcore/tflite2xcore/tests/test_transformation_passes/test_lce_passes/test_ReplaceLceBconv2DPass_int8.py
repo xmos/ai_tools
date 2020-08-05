@@ -17,7 +17,7 @@ from .conftest import (
     test_non_matching_stride_h,
     test_non_matching_stride_w,
     test_non_matching_dilation_w_factor,
-    test_non_matching_dilation_h_factor
+    test_non_matching_dilation_h_factor,
 )
 
 
@@ -34,9 +34,11 @@ PARAMS = deepcopy(PARAMS)
 def trf_pass():
     return ReplaceLceBconv2DPass(TensorType.INT8)
 
+
 @pytest.fixture()
 def build_model():
     return build_lceBconv2d
+
 
 @pytest.fixture()
 def model(weight_shape, input_size, padding, strides):
@@ -47,8 +49,9 @@ def model(weight_shape, input_size, padding, strides):
         strides=strides,
         post_activation_mult=False,
         post_activation_bias=False,
-        input_tensor_type = TensorType.INT8
+        input_tensor_type=TensorType.INT8,
     )
+
 
 if __name__ == "__main__":
     pytest.main()

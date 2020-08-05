@@ -615,7 +615,7 @@ def GenerateTableHtml(items, keys_to_print, display_index=True):
     return html
 
 
-def CreateHtml(data):
+def dict_to_html(data):
     """Given a tflite model as a dictionary, produce html description."""
 
     indent = " " * 2
@@ -715,11 +715,12 @@ def CreateHtml(data):
     return html
 
 
-def CreateHtmlFile(tflite_input, html_file):
-    if not os.path.exists(tflite_input):
-        raise RuntimeError(f"Invalid filename {tflite_input}")
+def model_to_html(model, filename=None):
+    if isinstance(model, (bytes, bytearray)):
+        model = XCOREModel.deserialize(model)
+    elif not isinstance(model, XCOREModel):
+        raise TypeError("model musy be XCOREModel or serialized flatbuffer model")
 
-    model = XCOREModel.read_flatbuffer(tflite_input)
     try:
         data = model.to_dict(extended=True)
     except AttributeError as e:
@@ -727,12 +728,14 @@ def CreateHtmlFile(tflite_input, html_file):
             data = model.to_dict(extended=False)
         else:
             raise
-    data["filename"] = tflite_input
-    data["filesize"] = os.stat(tflite_input).st_size
 
-    html = CreateHtml(data)
-    with open(html_file, "w") as f:
-        f.write(html)
+    if filename:
+        data["filename"] = filename
+        data["filesize"] = os.stat(filename).st_size
+    else:
+        data["filename"] = data["filesize"] = "--"
+
+    return dict_to_html(data)
 
 
 def main(tflite_input, html_output, *, no_browser=True):
@@ -742,7 +745,12 @@ def main(tflite_input, html_output, *, no_browser=True):
         html_file = tempfile.NamedTemporaryFile(delete=False)
         html_path = html_file.name
 
-    CreateHtmlFile(str(tflite_input), str(html_path))
+    if not os.path.exists(tflite_input):
+        raise RuntimeError(f"Invalid filename {tflite_input}")
+
+    html = model_to_html(XCOREModel.read_flatbuffer(tflite_input), tflite_input)
+    with open(html_path, "w") as f:
+        f.write(html)
 
     if not no_browser:
         webbrowser.open_new_tab("file://" + os.path.realpath(html_path))

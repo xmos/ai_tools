@@ -95,7 +95,7 @@ def parse_init_config(name: str, *args: "Number") -> tf.keras.initializers.Initi
 def stringify_config(cfg: "Configuration") -> str:
     def stringify_value(v: Any) -> str:
         if not isinstance(v, str) and isinstance(v, Iterable):
-            v = "(" + ",".join(str(c) for c in v) + ")"
+            v = "[" + ",".join(str(c) for c in v) + "]"
         return str(v).replace(" ", "_")
 
     return ",".join(k + "=" + stringify_value(v) for k, v in sorted(cfg.items()))

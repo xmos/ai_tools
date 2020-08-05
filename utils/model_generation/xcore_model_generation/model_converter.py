@@ -8,7 +8,7 @@ from tflite2xcore.converter import optimize_for_xcore  # type: ignore # TODO: fi
 
 from .utils import quantize_converter, parse_init_config
 
-from typing import TYPE_CHECKING, ByteString
+from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from .model_generator import (
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     )
 
 
-TFLiteModel = ByteString
+TFLiteModel = Union[bytes, bytearray]
 
 
 class ModelConverter(ABC):

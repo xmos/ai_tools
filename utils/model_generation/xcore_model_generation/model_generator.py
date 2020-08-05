@@ -1,12 +1,15 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import dill  # type: ignore
+import shutil
 from pathlib import Path
 from abc import ABC, abstractmethod
 import tensorflow as tf  # type: ignore
 
 from tflite2xcore.utils import set_all_seeds  # type: ignore # TODO: fix this
 from tflite2xcore import xlogging  # type: ignore # TODO: fix this
+from tflite2xcore import tflite_visualize
+
 
 from .model_converter import (
     ModelConverter,
@@ -92,15 +95,23 @@ class KerasModelGenerator(ModelGenerator):
     def _output_shape(self) -> Tuple[int, ...]:
         return self._model.output_shape[1:]  # type:ignore  # pylint: disable=no-member
 
-    def save(self, dirpath: Union[Path, str]) -> None:
+    def save(self, dirpath: Union[Path, str]) -> Path:
+        """ Saves the model contents to the specified directory.
+        
+        If the directory doesn't exist, it is created.
+        If the directory is not empty, it is purged.
+        """
         dirpath = Path(dirpath)
-        dirpath.mkdir(exist_ok=True)
+        if dirpath.exists():
+            shutil.rmtree(dirpath)
+        dirpath.mkdir(parents=True)
         self._model.save(dirpath / "model.h5")
         tmp = self._model
         del self._model
         with open(dirpath / "generator.dill", "wb") as f:
             dill.dump(self, f)
         self._model = tmp
+        return dirpath
 
     @classmethod
     def load(cls, dirpath: Union[Path, str]) -> "KerasModelGenerator":
@@ -116,29 +127,47 @@ class KerasModelGenerator(ModelGenerator):
 
 
 class IntegrationTestModelGenerator(KerasModelGenerator):
-    _quant_converter: TFLiteQuantConverter
+    _reference_converter: TFLiteQuantConverter
     _xcore_converter: XCoreConverter
     reference_evaluator: TFLiteQuantEvaluator
     xcore_evaluator: XCoreEvaluator
     run: IntegrationTestRunner
 
     def __init__(self) -> None:
-        self._quant_converter = TFLiteQuantConverter(self)
-        self._xcore_converter = XCoreConverter(self, self._quant_converter)
+        self._reference_converter = TFLiteQuantConverter(self)
+        self._xcore_converter = XCoreConverter(self, self._reference_converter)
         self.xcore_evaluator = XCoreEvaluator(
-            self._quant_converter._get_representative_data,
+            self._reference_converter._get_representative_data,
             lambda: self._xcore_converter._model,
         )
         self.reference_evaluator = TFLiteQuantEvaluator(
             lambda: self.xcore_evaluator.input_data_float,
-            lambda: self._quant_converter._model,
+            lambda: self._reference_converter._model,
             lambda: self.xcore_evaluator.input_quant,
             lambda: self.xcore_evaluator.output_quant,
         )
 
         super().__init__(
             runner=IntegrationTestRunner(self),
-            converters=[self._quant_converter, self._xcore_converter],
+            converters=[self._reference_converter, self._xcore_converter],
             evaluators=[self.xcore_evaluator, self.reference_evaluator],
         )
+
+    def save(self, dirpath: Union[Path, str], dump_models: bool = False) -> Path:
+        dirpath = super().save(dirpath)
+        if dump_models:
+            for name, model in [
+                ("model_ref", self._reference_converter._model),
+                ("model_xcore", self._xcore_converter._model),
+            ]:
+                model_ref_path = (dirpath / name).with_suffix(".tflite")
+                model_ref_html = model_ref_path.with_suffix(".html")
+                with open(model_ref_path, "wb") as f:
+                    f.write(model)
+                xlogging.logging.debug(f"{name} dumped to {model_ref_path}")
+                tflite_visualize.main(model_ref_path, model_ref_html)
+                xlogging.logging.debug(
+                    f"{name} visualization dumped to {model_ref_html}"
+                )
+        return dirpath
 

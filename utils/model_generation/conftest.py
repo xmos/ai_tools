@@ -32,6 +32,15 @@ def pytest_addoption(parser):
     )
 
     parser.addoption(
+        "-D",
+        "--dump",
+        action="store",
+        default=None,
+        choices=[None, "models"],
+        help="Set what contents of the model generation runs should be dumped into cache for easier access.",
+    )
+
+    parser.addoption(
         "--config-only",
         action="store_true",
         help="The model generators are configured but not run",
@@ -91,10 +100,12 @@ def run(request):
     dirpath = pytest_config.cache.get(key, "")
     if dirpath:
         gen = IntegrationTestModelGenerator.load(dirpath)
+        logging.debug(f"cached generator loaded from {dirpath}")
     else:
         dirpath = os.path.join(pytest_config.cache.makedir("model_cache"), config_str)
         gen.run()
-        gen.save(dirpath)
+        gen.save(dirpath, dump_models=pytest_config.getoption("dump") == "models")
+        logging.debug(f"generator cached to {dirpath}")
         pytest_config.cache.set(key, dirpath)
 
     if pytest_config.getoption("--generate-only"):

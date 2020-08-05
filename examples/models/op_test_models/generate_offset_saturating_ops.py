@@ -34,7 +34,7 @@ class OffsetSaturatingModel(common.OpTestDefaultModel):
         )
 
     def gen_test_data(self, batch=10, subset_len=10):
-        super().gen_test_data(batch=10, subset_len=10)
+        super().gen_test_data(batch=batch, subset_len=subset_len)
 
 
 class OpTestSpecificCaseParser(common.OpTestInitializerParser):

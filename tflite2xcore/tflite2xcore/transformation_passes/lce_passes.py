@@ -1,33 +1,26 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import numpy as np
+import numpy as np # type: ignore
 
-from copy import deepcopy
+from copy import deepcopy # type: ignore
 
-from tflite2xcore.xcore_schema import (
-    BuiltinOpCodes,
-    OperatorCode,
-    XCOREOpCodes,
-    CustomOpCode,
-)
-from tflite2xcore.utils import WORD_SIZE
+from tflite2xcore.utils import WORD_SIZE # type: ignore
 from .transformation_passes import (
     OperatorMatchingPass,
     LegalizeWeightBiasPass,
     LegalizeXCWeightBiasPass,
-)
-from tflite2xcore.xlogging import log_method_output
-from tflite2xcore.xcore_model import Operator, Tensor
-
-from tflite2xcore.transformation_passes import OperatorMatchingPass
-from tflite2xcore.xcore_schema import (
+) # type: ignore
+from tflite2xcore.xlogging import log_method_output # type: ignore
+from tflite2xcore.xcore_model import Operator, Tensor # type: ignore
+from tflite2xcore.xcore_schema import ( # type: ignore
     Padding,
     TensorType,
-    BuiltinOpCodes,
+    BuiltinOpCode,
+    CustomOpCode,
     XCOREOpCodes,
     OperatorCode,
     BuiltinOptions,
-)
+) # type: ignore
 
 def SupportedBconv2DOp(op: Operator) -> bool:
 
@@ -63,14 +56,15 @@ class CanonicalizeLceBconv2DPass(OperatorMatchingPass):
         op.inputs = op.inputs[:2]
 
 class ReplaceLceBconv2DPass(OperatorMatchingPass):
-    def __init__(self, input_tensor_type):
-        self.input_tensor_type= input_tensor_type
+    def __init__(self, input_tensor_type, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._input_tensor_type= input_tensor_type
 
     def match(self, op):
         return super().match(op) and SupportedBconv2DOp(op) and len(op.inputs) == 2 and op.inputs[0].type == self.input_tensor_type
 
-    def mutate(self, op):
-        if input_tensor_type == TensorType.INT8:
+    def mutate(self, op: Operator) -> None:
+        if self._input_tensor_type == TensorType.INT8:
             op.operator_code.custom_code = XCOREOpCodes.XC_bconv_deep
         else: 
             op.operator_code.custom_code = XCOREOpCodes.XC_bconv_deep_bitpacked

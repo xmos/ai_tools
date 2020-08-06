@@ -720,7 +720,7 @@ void bnn_conv2d_bin_out_init(nn_bnn_conv2d_bin_out_plan_t* plan,
                              const nn_window_params_t* k);
 
 /**
- * @brief Execute @oper{pad_perpare} function.
+ * @brief Execute @oper{pad_prepare} function.
  *
  * `plan` points to the output vector @tensor{y} with length @math{N}.
  *
@@ -735,7 +735,7 @@ void bnn_conv2d_bin_out_init(nn_bnn_conv2d_bin_out_plan_t* plan,
  * @param x                [in]   Look-up table @tensor{T}
  * @param bytes_per_pixel  [in]   Length @math{N} of input and output vectors
  */
-void pad_perpare(nn_pad_plan_t* plan, const PaddingValues* p,
+void pad_prepare(nn_pad_plan_t* plan, const PaddingValues* p,
                  const nn_image_params_t* x, const unsigned bytes_per_pixel);
 
 /** 

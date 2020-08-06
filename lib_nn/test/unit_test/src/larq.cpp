@@ -18,17 +18,6 @@ extern "C" void larq_ref_bsign(int8_t* input, uint32_t* output,
       input, inputLength, output, zero_point);
 }
 
-// Output transformation for bitpacked output
-template <typename AccumScalar>
-struct OutputTransform<AccumScalar, std::int32_t> {
-  const AccumScalar* thresholds = nullptr;
-
-  bool Run(const AccumScalar accum, int out_channel) const {
-    TF_LITE_ASSERT(thresholds != nullptr);
-    return accum > thresholds[out_channel];
-  }
-};
-
 // Fill the OutputTransform values for bitpacked int32 outputs
 template <typename AccumScalar>
 void GetOutputTransform(

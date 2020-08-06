@@ -85,7 +85,7 @@ PERF_FILE := $(DUMP_DIR)/perf.txt
 # TRACE_LOG := $(DUMP_DIR)/trace.$(CONFIG).log
 
 ifndef FUNC
-  FUNC_LIST := vpu_memcpy requantize_16_to_8 lookup8 conv2d_deep nn_conv2d_hstrip_deep avgpool2d
+  FUNC_LIST := vpu_memcpy requantize_16_to_8 lookup8 conv2d_deep nn_conv2d_hstrip_deep avgpool2d bnn_conv2d_bin_output
 else
   FUNC_LIST := $(FUNC)
 endif

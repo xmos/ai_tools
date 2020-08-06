@@ -19,8 +19,8 @@ from tflite2xcore.model_generation.interface import KerasModel
 
 _DEFAULT_CONST_INIT = 0
 _DEFAULT_UNIF_INIT = [-1, 1]
-DEFAULT_CONST_INIT = tf.constant_initializer(_DEFAULT_CONST_INIT)
-DEFAULT_UNIF_INIT = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT)
+DEFAULT_CONST_INIT = tf.initializers.Constant(_DEFAULT_CONST_INIT)
+DEFAULT_UNIF_INIT = tf.initializers.RandomUniform(*_DEFAULT_UNIF_INIT)
 DEFAULT_STRIDE_HEIGHT = 1
 DEFAULT_STRIDE_WIDTH = 2
 DEFAULT_POOL_HEIGHT = 3
@@ -328,7 +328,7 @@ class OpTestInitializerParser(InitializerParser):
 
         def instantiate_default_init(init_type):
             if init_type is OpTestInitializers.UNIF:
-                init = tf.random_uniform_initializer(*_DEFAULT_UNIF_INIT, self.seed)
+                init = tf.initializers.RandomUniform(*_DEFAULT_UNIF_INIT, self.seed)
             else:
                 init = DEFAULT_CONST_INIT
             return init
@@ -357,12 +357,12 @@ class OpTestInitializerParser(InitializerParser):
 
             if init_type is OpTestInitializers.UNIF:
                 check_unif_init_params(params)
-                initializers[k] = tf.random_uniform_initializer(
+                initializers[k] = tf.initializers.RandomUniform(
                     *(params if params else _DEFAULT_UNIF_INIT), self.seed
                 )
             elif init_type is OpTestInitializers.CONST:
                 check_const_init_params(params)
-                initializers[k] = tf.constant_initializer(
+                initializers[k] = tf.initializers.Constant(
                     params[0] if params else _DEFAULT_CONST_INIT
                 )
 

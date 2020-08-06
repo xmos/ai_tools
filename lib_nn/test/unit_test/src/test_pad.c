@@ -52,7 +52,7 @@ void test_pad_directed_b256() {
 
   pad_ref((void*)Y_ref, (void*)X, &p, &xp, bytes_per_pixel);
   nn_pad_plan_t plan;
-  pad_perpare(&plan, &p, &xp, bytes_per_pixel);
+  pad_prepare(&plan, &p, &xp, bytes_per_pixel);
   pad_run((void*)Y, (void*)X, &plan);
 
   unsigned output_height = xp.height + PAD_TOP + PAD_BOTTOM;
@@ -113,7 +113,7 @@ void test_pad_param_space_b256() {
 
                 pad_ref((void*)Y_ref, (void*)X, &p, &xp, bytes_per_pixel);
                 nn_pad_plan_t plan;
-                pad_perpare(&plan, &p, &xp, bytes_per_pixel);
+                pad_prepare(&plan, &p, &xp, bytes_per_pixel);
                 pad_run((void*)Y, (void*)X, &plan);
 
                 unsigned output_height = xp.height + pad_top + pad_bottom;
@@ -159,7 +159,7 @@ void test_pad_directed_int8() {
 
   pad_ref((void*)Y_ref, (void*)X, &p, &xp, bytes_per_pixel);
   nn_pad_plan_t plan;
-  pad_perpare(&plan, &p, &xp, bytes_per_pixel);
+  pad_prepare(&plan, &p, &xp, bytes_per_pixel);
   pad_run((void*)Y, (void*)X, &plan);
 
   unsigned output_height = xp.height + PAD_TOP + PAD_BOTTOM;
@@ -207,7 +207,7 @@ void test_pad_param_space_int8() {
 
                 pad_ref((void*)Y_ref, (void*)X, &p, &xp, bytes_per_pixel);
                 nn_pad_plan_t plan;
-                pad_perpare(&plan, &p, &xp, bytes_per_pixel);
+                pad_prepare(&plan, &p, &xp, bytes_per_pixel);
                 pad_run((void*)Y, (void*)X, &plan);
 
                 unsigned output_height = xp.height + pad_top + pad_bottom;

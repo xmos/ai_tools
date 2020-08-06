@@ -3,7 +3,7 @@
 #include "nn_operator.h"
 #include "nn_op_structs.h"
 
-void pad_perpare(nn_pad_plan_t* plan, const PaddingValues* p,
+void pad_prepare(nn_pad_plan_t* plan, const PaddingValues* p,
                  const nn_image_params_t* x, const unsigned bytes_per_pixel) {
   plan->top_pad_bytes =
       bytes_per_pixel *

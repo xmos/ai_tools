@@ -1,26 +1,27 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import numpy as np # type: ignore
+import numpy as np 
 
-from copy import deepcopy # type: ignore
+from copy import deepcopy 
 
-from tflite2xcore.utils import WORD_SIZE # type: ignore
+from typing import overload
+
+from tflite2xcore.utils import WORD_SIZE 
 from .transformation_passes import (
     OperatorMatchingPass,
     LegalizeWeightBiasPass,
     LegalizeXCWeightBiasPass,
-) # type: ignore
-from tflite2xcore.xlogging import log_method_output # type: ignore
-from tflite2xcore.xcore_model import Operator, Tensor # type: ignore
-from tflite2xcore.xcore_schema import ( # type: ignore
+) 
+from tflite2xcore.xcore_model import Operator, Tensor
+from tflite2xcore.xcore_schema import (
     Padding,
     TensorType,
-    BuiltinOpCode,
+    BuiltinOpCodes,
     CustomOpCode,
     XCOREOpCodes,
     OperatorCode,
     BuiltinOptions,
-) # type: ignore
+) 
 
 def SupportedBconv2DOp(op: Operator) -> bool:
 
@@ -56,12 +57,13 @@ class CanonicalizeLceBconv2DPass(OperatorMatchingPass):
         op.inputs = op.inputs[:2]
 
 class ReplaceLceBconv2DPass(OperatorMatchingPass):
-    def __init__(self, input_tensor_type, *args, **kwargs):
+
+    def __init__(self, input_tensor_type: TensorType, *args: str, **kwargs: int) -> None:
         super().__init__(*args, **kwargs)
         self._input_tensor_type= input_tensor_type
 
-    def match(self, op):
-        return super().match(op) and SupportedBconv2DOp(op) and len(op.inputs) == 2 and op.inputs[0].type == self.input_tensor_type
+    def match(self, op:Operator) -> bool:
+        return super().match(op) and SupportedBconv2DOp(op) and len(op.inputs) == 2 and op.inputs[0].type == self._input_tensor_type
 
     def mutate(self, op: Operator) -> None:
         if self._input_tensor_type == TensorType.INT8:
@@ -71,7 +73,7 @@ class ReplaceLceBconv2DPass(OperatorMatchingPass):
 
 
 class InsertBsignPass(OperatorMatchingPass):
-    def match(self, op):
+    def match(self, op: Operator) -> bool:
 
         if not super().match(op):
             return False
@@ -87,7 +89,7 @@ class InsertBsignPass(OperatorMatchingPass):
         )
         return match and nobsign and op.inputs[0].type == TensorType.INT8
 
-    def mutate(self, op):
+    def mutate(self, op: Operator) -> None:
         subgraph = op.subgraph
 
         bsign_op = subgraph.create_operator(

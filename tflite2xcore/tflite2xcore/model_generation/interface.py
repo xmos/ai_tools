@@ -199,6 +199,7 @@ class Model(ABC):
     def _save_data_for_canonical_model(self, model_key):
         # NOTE: This is for tf2.3 compatibility of the quant model
         model = XCOREModel.deserialize(self.buffers[model_key])
+        xcore_conv.strip_model(model)
         xcore_conv.add_float_input_output(model)
 
         interpreter = tf.lite.Interpreter(model_content=model.serialize())
@@ -332,8 +333,6 @@ class KerasModel(Model):
 
     @input_init.setter
     def input_init(self, initializer):
-        print(type(initializer))
-        print(initializer)
         assert isinstance(initializer, tf.initializers.Initializer)
         self._input_init = initializer
 

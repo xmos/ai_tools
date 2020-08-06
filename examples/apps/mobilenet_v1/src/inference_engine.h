@@ -5,9 +5,9 @@
 extern "C" {
 #endif
 
-void ai_initialize(unsigned char **input, unsigned *input_size,
-                   unsigned char **output, unsigned *output_size);
-void ai_invoke();
+void initialize(unsigned char **input, unsigned *input_size,
+                unsigned char **output, unsigned *output_size);
+void invoke();
 
 #ifdef __cplusplus
 };

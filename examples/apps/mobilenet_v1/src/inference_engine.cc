@@ -1,7 +1,7 @@
 
 // Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-#include "ai_engine.h"
+#include "inference_engine.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -10,20 +10,20 @@
 
 #include "mobilenet_ops_resolver.h"
 #include "mobilenet_v1.h"
-#include "operators/device_memory.h"
-#include "operators/xcore_interpreter.h"
-#include "operators/xcore_profiler.h"
-#include "operators/xcore_reporter.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_device_memory.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_profiler.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_reporter.h"
 #include "tensorflow/lite/version.h"
 
 tflite::ErrorReporter *reporter = nullptr;
 tflite::Profiler *profiler = nullptr;
 const tflite::Model *model = nullptr;
-xcore::XCoreInterpreter *interpreter = nullptr;
+tflite::micro::xcore::XCoreInterpreter *interpreter = nullptr;
 constexpr int kTensorArenaSize = 220000 + 140000;
 uint8_t tensor_arena[kTensorArenaSize];
 
-void ai_invoke() {
+void invoke() {
   // Run inference, and report any error
   printf("Running inference...\n");
   TfLiteStatus invoke_status = interpreter->Invoke();
@@ -33,14 +33,13 @@ void ai_invoke() {
   }
 }
 
-void ai_initialize(unsigned char **input, unsigned *input_size,
-                   unsigned char **output, unsigned *output_size) {
-  // Set up logging.
+void initialize(unsigned char **input, unsigned *input_size,
+                unsigned char **output, unsigned *output_size) {
   // Set up logging
-  static xcore::XCoreReporter xcore_reporter;
+  static tflite::micro::xcore::XCoreReporter xcore_reporter;
   reporter = &xcore_reporter;
   // Set up profiling.
-  static xcore::XCoreProfiler xcore_profiler(reporter);
+  static tflite::micro::xcore::XCoreProfiler xcore_profiler(reporter);
   profiler = &xcore_profiler;
 
   // Map the model into a usable data structure. This doesn't involve any
@@ -58,7 +57,7 @@ void ai_initialize(unsigned char **input, unsigned *input_size,
   static tflite::ops::micro::xcore::MobileNetOpsResolver resolver;
 
   // Build an interpreter to run the model with
-  static xcore::XCoreInterpreter static_interpreter(
+  static tflite::micro::xcore::XCoreInterpreter static_interpreter(
       model, resolver, tensor_arena, kTensorArenaSize, reporter, true,
       profiler);
   interpreter = &static_interpreter;

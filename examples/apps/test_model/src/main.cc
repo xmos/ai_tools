@@ -5,10 +5,10 @@
 #include <cstdio>
 #include <iostream>
 
-#include "operators/xcore_interpreter.h"
-#include "operators/xcore_profiler.h"
-#include "operators/xcore_reporter.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_profiler.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_reporter.h"
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/micro/micro_profiler.h"
 #include "tensorflow/lite/version.h"
@@ -16,7 +16,7 @@
 tflite::ErrorReporter *reporter = nullptr;
 tflite::Profiler *profiler = nullptr;
 const tflite::Model *model = nullptr;
-xcore::XCoreInterpreter *interpreter = nullptr;
+tflite::micro::xcore::XCoreInterpreter *interpreter = nullptr;
 TfLiteTensor *input = nullptr;
 TfLiteTensor *output = nullptr;
 constexpr int kTensorArenaSize =
@@ -66,10 +66,10 @@ static int save_output(const char *filename, const char *output, size_t osize) {
 
 static void setup_tflite(const char *model_buffer) {
   // Set up logging
-  static xcore::XCoreReporter xcore_reporter;
+  static tflite::micro::xcore::XCoreReporter xcore_reporter;
   reporter = &xcore_reporter;
   // Set up profiling.
-  static xcore::XCoreProfiler xcore_profiler(reporter);
+  static tflite::micro::xcore::XCoreProfiler xcore_profiler(reporter);
   profiler = &xcore_profiler;
 
   // Map the model into a usable data structure. This doesn't involve any
@@ -109,7 +109,7 @@ static void setup_tflite(const char *model_buffer) {
                      tflite::ops::micro::xcore::Register_Lookup_8());
 
   // Build an interpreter to run the model with
-  static xcore::XCoreInterpreter static_interpreter(
+  static tflite::micro::xcore::XCoreInterpreter static_interpreter(
       model, resolver, tensor_arena, kTensorArenaSize, reporter, true,
       profiler);
   interpreter = &static_interpreter;

@@ -11,8 +11,8 @@ include ../../../make/libs.mk
 #********************
 APPBASE = mobilenet
 APPFLAGS :=
-#APPFLAGS += -DNDEBUG  # define this for remove debug and profiling 
-#APPFLAGS += -DTF_LITE_STRIP_ERROR_STRINGS # define this to remove logging
+APPFLAGS += -DNDEBUG  # define this for remove debug and profiling 
+APPFLAGS += -DTF_LITE_STRIP_ERROR_STRINGS # define this to remove logging
 
 ifeq ($(TARGET), x86)
 	APP = $(APPBASE)
@@ -37,7 +37,7 @@ SOURCES := $(TENSORFLOW_SOURCES)
 SOURCES += $(LIBS_SOURCES)
 SOURCES += $(MODEL_SOURCE_FILE)
 SOURCES += src/mobilenet_ops_resolver.cc
-SOURCES += src/ai_engine.cc 
+SOURCES += src/inference_engine.cc 
 SOURCES += src/main.c
 ifeq ($(TARGET), xcore)
 	SOURCES += src/main.xc

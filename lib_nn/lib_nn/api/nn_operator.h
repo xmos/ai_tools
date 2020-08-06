@@ -591,6 +591,175 @@ void bsign_8_ref(
     const nn_bsign_8_plan_t* plan,
     const nn_bsign_8_job_t* job);
 
+// Binary Conv2D
+
+#define CONV2D_OUTPUT_LENGTH(input_length, filter_size, dilation, stride)     \
+  (((input_length - (filter_size + (filter_size - 1) * (dilation - 1)) + 1) + \
+    stride - 1) /                                                             \
+   stride)
+
+    
+/**  
+ * @brief Execute @oper{bnn_reorder_threshold_tensor}.
+ * 
+ * This reorders the threshold tensor for efficient execution by bnn_conv2d_bin_out_asm. 
+ * This is only inteneded for testing.
+ * 
+ * `thresh_reordered` points to the output threshold @tensor{thresh_reordered} .
+ * 
+ * `thresholds_ref` points to the input @tensor{thresholds_ref}.
+ * 
+ * `chans_out` is the number of output channels.
+ * 
+ * `receptive_field` the spatial area over which the kernel operates, i.e. (height x width).
+ * 
+ * @param thresh_reordered   [out]    The output @tensor{thresh_reordered}
+ * @param thresholds_ref     [in]     The input @tensor{thresholds_ref}
+ * @param chans_out          [in]     The number of output channels
+ * @param receptive_field    [in]     The spatial area over which the kernel operates
+ */
+void bnn_reorder_threshold_tensor(const int32_t* thresh_reordered,
+                                  const int32_t* thresholds_ref,
+                                  const unsigned chans_out,
+                                  const unsigned receptive_field);
+    
+/**  
+ * @brief Execute @oper{bnn_reorder_kernel_tensor}.
+ * 
+ * This reorders the kernel tensor for efficient execution by bnn_conv2d_bin_out_asm. 
+ * This is only inteneded for testing.
+ * 
+ * `K_p` points to the output kernel @tensor{K_p} .
+ * 
+ * `K_ref_p` points to the kernel input @tensor{K_ref_p}.
+ * 
+ * `k_height` is the kernel height.
+ * 
+ * `k_width` is the kernel width.
+ * 
+ * `chans_in` is the number of input channels.
+ * 
+ * `chans_out` is the number of output channels.    
+ * 
+ * @param K_p         [out]    The output @tensor{K_p}
+ * @param K_ref_p     [in]     The input @tensor{K_ref_p}
+ * @param k_height    [in]     The kernel height
+ * @param k_width     [in]     The kernel width
+ * @param chans_in    [in]     The number of input channels
+ * @param chans_out   [in]     The number of output channels
+ */
+void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+                               const unsigned k_height, const unsigned k_width,
+                               const unsigned chans_in,
+                               const unsigned chans_out);
+
+    
+/**  
+ * @brief Execute @oper{bnn_conv2d_bin_out_asm}.
+ * 
+ * This executes the actual binary conv2d kernel. It requires the 
+ * nn_bnn_conv2d_bin_out_asm_plan_t to be initialise by first running 
+ * bnn_conv2d_bin_out_asm_prepare.
+ * 
+ * `nn_bnn_conv2d_bin_out_asm_plan_t` points to the binary conv2d parameters.
+ * 
+ * @param plan   [in]    The parameters to the binary conv2d
+ */
+void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
+    
+/**  
+ * @brief Execute @oper{bnn_reorder_kernel_tensor}.
+ * 
+ * This precomputes all the paramters to efficietly execute bnn_conv2d_bin_out_asm,
+ * it populates the plan with all parameters.
+ * 
+ * The binary conv2d performs a 2d convolution on a rectangular (sub)section of an input 
+ * tensor X with a (sub)section of a kernel K and write it to a (sub)section of an output 
+ * tensor Y.
+ * 
+ * The tensor X_p represents a tensor of (x_full_height x x_full_width x X_channels)
+ * The tensor K_p represents a tensor of (k_full_height x k_full_width x X_channels)
+ * The tensor Y_p represents a tensor of (y_full_height x y_full_width x Y_channels)
+ * 
+ * The desired dimensions of X and K should be given by the parameters x and k. 
+ * 
+ * @param plan          [out]    The parameters to the binary conv2d
+ * @param Y_p           [in]     The input image @tensor{Y}
+ * @param X_p           [in]     The input image @tensor{X}
+ * @param K_p           [in]     The input kernel @tensor{K}
+ * @param x             [in]     The parameters of the X image tensor
+ * @param y             [in]     The parameters of the Y image tensor
+ * @param k             [in]     The parameters of the K kernel tensor.
+ * @param y_loc_x       [in]     The x coordinate of where the output will start writing from
+ * @param y_loc_y       [in]     The y coordinate of where the output will start writing from
+ * @param x_loc_x       [in]     The x coordinate of where the input will start reading from
+ * @param x_loc_y       [in]     The y coordinate of where the input will start reading from
+ * @param k_loc_x       [in]     The x coordinate of where the kernel will start reading from
+ * @param k_loc_y       [in]     The y coordinate of where the kernel will start reading from
+ * @param y_full_width  [in]     The full width of the output image tensor
+ * @param x_full_width  [in]     The full width of the input image tensor
+ * @param k_full_width  [in]     The full width of the inout kernel tensor
+ */
+void bnn_conv2d_bin_out_asm_prepare(
+    nn_bnn_conv2d_bin_out_asm_plan_t* plan, const bnn_b32_t* Y_p,
+    const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,
+    const nn_image_params_t* x, const nn_image_params_t* y,
+    const nn_window_params_t* k, const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned x_loc_x, const unsigned x_loc_y, const unsigned k_loc_x,
+    const unsigned k_loc_y, const unsigned y_full_width,
+    const unsigned x_full_width, const unsigned k_full_width);
+
+void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
+                        const bnn_b256_t* K_p,
+                        int32_t* thresholds,  //[out_channel];
+                        const nn_bnn_conv2d_bin_out_plan_t* plan);
+
+void bnn_conv2d_bin_out_init(nn_bnn_conv2d_bin_out_plan_t* plan,
+                             const nn_image_params_t* x,
+                             const nn_image_params_t* y,
+                             const nn_window_params_t* k);
+
+/**
+ * @brief Execute @oper{pad_prepare} function.
+ *
+ * `plan` points to the output vector @tensor{y} with length @math{N}.
+ *
+ * `p` struct describing the padding to be applied to the input tensor.
+ *
+ * `x` parameters describing the input tensor to be padded.
+ *
+ * `bytes_per_pixel` the bytes per pixel for tensor x.
+ *
+ * @param plan             [out]  The output vector @tensor{y}
+ * @param p                [in]   The input vector @tensor{x}
+ * @param x                [in]   Look-up table @tensor{T}
+ * @param bytes_per_pixel  [in]   Length @math{N} of input and output vectors
+ */
+void pad_prepare(nn_pad_plan_t* plan, const PaddingValues* p,
+                 const nn_image_params_t* x, const unsigned bytes_per_pixel);
+
+/** 
+ * @brief Execute @oper{pad_run} job.
+ * 
+ * See @oper_ref{pad_run} for more details about the @oper{requantize_16_to_8} operator.
+ * 
+ * `Y` points to the output vector @tensor{y}.
+ * 
+ * `X` points to the input vector @tensor{x}.
+ * 
+ * `plan` points to the (initialized) plan.
+ * 
+ * @requires_word_alignment{Y,X}
+ *
+ * @param y   [out]    The output vector @tensor{y}
+ * @param x   [in]     The input vector @tensor{x}
+ * @param plan [in]    The prameters describing how to pad.
+ */
+void pad_run(void* y, void* x, const nn_pad_plan_t* p);
+
+void pad_ref(void* y, void* x, const PaddingValues* p,
+             const nn_image_params_t* xp, const unsigned bytes_per_pixel);
+
 #ifdef __XC__
 } // extern "C"
 #endif

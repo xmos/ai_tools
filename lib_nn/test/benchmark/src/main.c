@@ -11,6 +11,7 @@ DECLARE(lookup8);
 DECLARE(conv2d_deep);
 DECLARE(avgpool2d);
 DECLARE(nn_conv2d_hstrip_deep);
+DECLARE(bnn_conv2d_bin_output);
 
 #define elseif(FUNC)  else if(strcmp(#FUNC, argv[1])==0)    benchmark_##FUNC(argc-2, &(argv[2]))
 
@@ -24,7 +25,8 @@ int main(int argc, char** argv)
     elseif(lookup8);
     elseif(avgpool2d);
     elseif(conv2d_deep);
-    elseif(nn_conv2d_hstrip_deep);
+    elseif(conv2d_deep);
+    elseif(bnn_conv2d_bin_output);
     else {
         printf("Function '%s' unknown.\n", argv[1]);
         assert(0);

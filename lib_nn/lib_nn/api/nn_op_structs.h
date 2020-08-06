@@ -6,6 +6,7 @@
 
 #include "nn_operator.h"
 #include "xs3_vpu.h"
+#include "nn_bin_types.h"
 
 #ifdef __XC__
 extern "C" {
@@ -439,8 +440,81 @@ typedef struct {
     channel_count_t channels;
 } nn_image_params_t;
 
+/**
+ * Struct represents the parameters needed by each `pad_run()` job.
+ *
+ * Values are set by `pad_prepare()`.
+ *
+ * @note This struct is intended to be opaque.
+ */
+typedef struct nn_pad_plan_t {
+  unsigned top_pad_bytes;
+  unsigned mid_loop_count;
+  unsigned mid_pad_bytes;
+  unsigned mid_copy_bytes;
+  unsigned bottom_pad_bytes;
+} nn_pad_plan_t;
 
+// This is for the PaddingValues
+// #include "tensorflow/lite/kernels/internal/types.h"
 
+typedef struct PaddingValues {
+  int16_t width;
+  int16_t height;
+  // offset is used for calculating "remaining" padding, for example, `width`
+  // is 1 and `width_offset` is 1, so padding_left is 1 while padding_right is
+  // 1 + 1 = 2.
+  int16_t width_offset;
+  // Same as width_offset except it's over the height dimension.
+  int16_t height_offset;
+} PaddingValues;
+
+/**
+ * Struct represents the parameters needed by each
+ * `bnn_conv2d_bin_out_asm()` job.
+ *
+ * Values are set by `bnn_conv2d_bin_out_asm_prepare()`.
+ *
+ * @note This struct is intended to be opaque.
+ */
+typedef struct {
+  unsigned outer_x_h_step;
+  unsigned output_channel_loop_counter;
+  void* threshold_p;
+  unsigned inner_x_v_step;
+  unsigned k_v_step;
+  unsigned inner_x_h_step;
+  unsigned k_h_step;
+  int outer_x_v_step;
+
+  unsigned y_v_step;
+  unsigned k_height_loop_counter;
+  unsigned k_width_loop_counter;
+  unsigned x_height_loop_counter;
+  unsigned x_width_loop_counter;
+  unsigned input_channel_loop_counter;
+  bnn_b32_t* Y;
+  bnn_b256_t* X;
+
+  bnn_b256_t* K;
+} nn_bnn_conv2d_bin_out_asm_plan_t;
+
+/**
+ * Struct represents the parameters needed by each `bnn_conv2d()` job.
+ *
+ * Values are set by `bnn_conv2d_init()`.
+ *
+ * @note This struct is intended to be opaque.
+ */
+typedef struct {
+  unsigned y_dims[3];     // out_height, out_width, out_channels
+  unsigned x_dims[3];     // in_height, in_width, in_channels
+  unsigned k_dims[2];     // kernel_height, kernel_width
+  unsigned start_loc[2];  // start_height, start_width
+  unsigned stride[2];     // stride_height, stride_width
+  // int8_t clamp_min;
+  // int8_t clamp_max;
+} nn_bnn_conv2d_bin_out_plan_t;
 
 #ifdef __XC__
 }   //extern "C"

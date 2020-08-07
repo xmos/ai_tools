@@ -5,6 +5,7 @@ import pathlib
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import transformation_passes as passes
+from tflite2xcore.xcore_schema import TensorType
 
 
 class CleanupManager(PassManager):
@@ -86,7 +87,9 @@ def optimize_for_xcore(
     pass_mgr = InputOutputCanonicalizationManager(
         model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
-
+    
+    # TODO should this canonicalize to match buildin bconv?
+    pass_mgr.register_pass(passes.CanonicalizeLceBconv2DPass())
     pass_mgr.register_pass(passes.CanonicalizeReshapePass())
     pass_mgr.register_pass(passes.RemoveFlattenReshapePass())
 
@@ -100,12 +103,22 @@ def optimize_for_xcore(
     # word alignment canonicalization introduces new pads, so first fuse then split
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
+    # TOOD rename 
+    #Note, this currently only matches with BConv but going forward might like to extend to other Conv ops
+    pass_mgr.register_pass(passes.InsertPaddingBeforeConvPass())
+
     # Split batch/channel-wise padding from spacial padding - allows fusing of spacial padding later
     pass_mgr.register_pass(passes.SplitPaddingPass())
 
     # need to cleanup after the first round of canonicalization
     pass_mgr.register_passes(CleanupManager())
+   
+    # tmp pass until larq adds explicit bsign op
+    pass_mgr.register_pass(passes.InsertBsignPass())
 
+
+    pass_mgr.register_pass(passes.ReplaceBconv2DPass(input_tensor_type=TensorType.INT32))
+    pass_mgr.register_pass(passes.ReplaceBconv2DPass(input_tensor_type=TensorType.INT8))
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())
     pass_mgr.register_pass(passes.ReplaceTanhPass())
@@ -121,6 +134,8 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())
     pass_mgr.register_pass(passes.ReplaceAveragePool2DPass())
     pass_mgr.register_pass(passes.ReplaceGlobalAveragePool2DPass())
+
+    # TOOD ReplacePadPass()
 
     pass_mgr.register_pass(passes.ReplaceFullyConnectedPass())
 

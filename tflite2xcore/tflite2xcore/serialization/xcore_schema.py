@@ -112,8 +112,9 @@ class XCOREOpCodes(EnumOpCodes):
     XC_conv2d_1x1 = "XC_conv2d_1x1"
     XC_conv2d_depthwise = "XC_conv2d_depthwise"
     XC_bsign_8 = "XC_bsign_8"
-    XC_bconv_deep = "XC_bconv_deep"
-    XC_bconv_deep_bitpacked = "XC_bconv_deep_bitpacked"
+    XC_bconv_bin_DIDO = "XC_bconv_bin_DIDO"
+    XC_bconv_int8_DIDO = "XC_bconv_int8_DIDO"
+    XC_pad = "XC_pad"
 
 
 class OperatorCode:

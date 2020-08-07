@@ -13,17 +13,12 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
         BuiltinOpCodes.FULLY_CONNECTED,
     )
 
-    @property
-    def _producer(self) -> Tensor:
-        return self._op.inputs[0].producers[0]
-
     def match(self, op: Operator) -> bool:
-        with self.using(op):
-            try:
-                producer = self._producer
-            except IndexError:
+        try:
+            producer = op.inputs[0].producers[0]
+        except IndexError:
                 # Input tensor for op has no producers..
-                return False
+            return False
 
         # FULLY_CONNECTED always interprets the first dim as batch...
         reshape_input_batch = producer.inputs[0].shape[0]
@@ -38,8 +33,7 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
 
     def mutate(self, op: Operator) -> None:
 
-        with self.using(op):
-            producer = self._producer
+        producer = op.inputs[0].producers[0]
 
         # Remove connection from old inputs to the anchor FC op
         intermediate = op.inputs[0]

@@ -155,8 +155,11 @@ class SplitPaddingFromConvPass(OperatorMatchingPass):
     def mutate(self, op: Operator) -> None:
 
         subgraph = op.subgraph
+        options = op.custom_options
+        
+        C_out, K_h, K_w, C_in = op.inputs[0].shape
 
-        op.custom_options["padding"] = 2  # kTfLitePaddingValid
+        options["padding"] = 2  # kTfLitePaddingValid
 
         # Cut connection from old input to the op
         old_input = op.inputs[0]
@@ -174,13 +177,21 @@ class SplitPaddingFromConvPass(OperatorMatchingPass):
             OperatorCode(BuiltinOpCodes.PAD), inputs=[old_input, padding_tensor],
         )
 
+        strides = (options["stride_height"], options["stride_width"])
+        pad_output_shape = old_input.shape
+
+        if options["padding"] == 1:
+            pad_output_shape[1] = int(np.ceil((height - K_h + 1) / strides[0])),
+            pad_output_shape[2] = int(np.ceil((width - K_w + 1) / strides[1])),
+
+        
         pad_output_tensor = subgraph.create_tensor(
             f"{pad_op.name}/output",
             TensorType.INT32,
-            shape=old_input.shape,
+            shape=pad_output_shape,
             consumers=[op],
             producers=[pad_op],
-        )  # TODO fix shape
+        )
 
         pad_op.outputs = [pad_output_tensor]
 

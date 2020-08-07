@@ -1,13 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import os
-import pytest
-import logging
+import pytest  # type: ignore
+import _pytest  # type: ignore # NOTE: for typing only
 
-import numpy as np
+from tflite2xcore import xlogging  # type: ignore # TODO: fix this
 
-from xcore_model_generation.utils import stringify_config
-from xcore_model_generation.model_generator import IntegrationTestModelGenerator
+from tflite2xcore._model_generation.utils import stringify_config
+from . import IntegrationTestModelGenerator, IntegrationTestRunner
 
 
 #  ----------------------------------------------------------------------------
@@ -15,7 +15,7 @@ from xcore_model_generation.model_generator import IntegrationTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser):  # type: ignore
     parser.addoption(
         "-C",
         "--coverage",
@@ -47,7 +47,7 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_generate_tests(metafunc):
+def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
     if "run" in metafunc.fixturenames:
         coverage = metafunc.config.getoption("coverage")
         try:
@@ -57,7 +57,7 @@ def pytest_generate_tests(metafunc):
                 f"CONFIGS does not define coverage level '{coverage}'"
             ) from None
         except AttributeError:
-            logging.error(f"CONFIGS undefined in {metafunc.module}")
+            xlogging.logging.error(f"CONFIGS undefined in {metafunc.module}")
             configs = []
 
         metafunc.parametrize(
@@ -73,14 +73,14 @@ def pytest_generate_tests(metafunc):
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture
-def run(request):
+@pytest.fixture  # type: ignore
+def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     try:
         GENERATOR = request.module.GENERATOR
     except AttributeError:
         raise NameError("GENERATOR not designated in test") from None
 
-    gen = GENERATOR()
+    gen: IntegrationTestModelGenerator = GENERATOR()
     gen.set_config(**request.param)
 
     pytest_config = request.config
@@ -94,49 +94,15 @@ def run(request):
     dirpath = pytest_config.cache.get(key, "")
     if dirpath:
         gen = IntegrationTestModelGenerator.load(dirpath)
-        logging.debug(f"cached generator loaded from {dirpath}")
+        xlogging.logging.debug(f"cached generator loaded from {dirpath}")
     else:
         dirpath = os.path.join(pytest_config.cache.makedir("model_cache"), config_str)
         gen.run()
         gen.save(dirpath, dump_models=pytest_config.getoption("dump") == "models")
-        logging.debug(f"generator cached to {dirpath}")
+        xlogging.logging.debug(f"generator cached to {dirpath}")
         pytest_config.cache.set(key, dirpath)
 
     if pytest_config.getoption("--generate-only"):
         pytest.skip()
 
     return gen.run
-
-
-#  ----------------------------------------------------------------------------
-#                                   HELPERS
-#  ----------------------------------------------------------------------------
-
-
-def _test_batched_arrays(predicted, expected, tolerance=1):
-    failures = []
-    assert predicted.shape[0] == expected.shape[0]
-    for j, (arr, arr_ref) in enumerate(zip(predicted, expected)):
-        diff = np.abs(np.int32(arr) - np.int32(arr_ref))
-        diff_idx = zip(*np.where(diff > tolerance))
-
-        failures.extend(
-            f"Example {j}, idx={idx}: diff={diff[idx]}, "
-            f"expected={arr_ref[idx]}, predicted={arr[idx]}"
-            for idx in diff_idx
-        )
-    return failures
-
-
-#  ----------------------------------------------------------------------------
-#                                   TESTS
-#  ----------------------------------------------------------------------------
-
-
-def test_output(run, request):
-    failures = _test_batched_arrays(run.outputs.xcore, run.outputs.reference)
-    if failures:
-        pytest.fail(
-            f"\n{request.node.fspath}::{request.node.name}\n" + "\n".join(failures),
-            pytrace=False,
-        )

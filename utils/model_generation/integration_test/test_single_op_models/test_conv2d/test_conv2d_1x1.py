@@ -1,10 +1,10 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest
+import pytest  # type: ignore
 
-from xcore_model_generation.model_generator import Configuration
+from tflite2xcore._model_generation import Configuration
 
-from .conftest import Conv2dGenericTestModelGenerator, test_output
+from . import Conv2dGenericTestModelGenerator, test_output
 
 
 #  ----------------------------------------------------------------------------

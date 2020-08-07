@@ -88,7 +88,7 @@ def optimize_for_xcore(
         model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
     
-    # TODO should this canonicalize to match buildin bconv?
+    # TODO should this canonicalize to more closely match builtin conv?
     pass_mgr.register_pass(passes.CanonicalizeLceBconv2DPass())
     pass_mgr.register_pass(passes.CanonicalizeReshapePass())
     pass_mgr.register_pass(passes.RemoveFlattenReshapePass())
@@ -103,10 +103,6 @@ def optimize_for_xcore(
     # word alignment canonicalization introduces new pads, so first fuse then split
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
-    # TOOD rename 
-    #Note, this currently only matches with BConv but going forward might like to extend to other Conv ops
-    pass_mgr.register_pass(passes.InsertPaddingBeforeConvPass())
-
     # Split batch/channel-wise padding from spacial padding - allows fusing of spacial padding later
     pass_mgr.register_pass(passes.SplitPaddingPass())
 
@@ -114,8 +110,11 @@ def optimize_for_xcore(
     pass_mgr.register_passes(CleanupManager())
    
     # tmp pass until larq adds explicit bsign op
-    pass_mgr.register_pass(passes.InsertBsignPass())
+    pass_mgr.register_pass(passes.SplitBsignPass())
 
+    # TOOD rename 
+    #Note, this currently only matches with BConv but going forward might like to extend to other Conv ops
+    pass_mgr.register_pass(passes.SplitPaddingFromConvPass())
 
     pass_mgr.register_pass(passes.ReplaceBconv2DPass(input_tensor_type=TensorType.INT32))
     pass_mgr.register_pass(passes.ReplaceBconv2DPass(input_tensor_type=TensorType.INT8))
@@ -134,8 +133,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())
     pass_mgr.register_pass(passes.ReplaceAveragePool2DPass())
     pass_mgr.register_pass(passes.ReplaceGlobalAveragePool2DPass())
-
-    # TOOD ReplacePadPass()
+    # TODO ReplacePadPass()
 
     pass_mgr.register_pass(passes.ReplaceFullyConnectedPass())
 

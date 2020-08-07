@@ -89,8 +89,8 @@ class ReplaceBconv2DPass(OperatorMatchingPass):
         else:
             op.operator_code.custom_code = XCOREOpCodes.XC_bconv_bin_DIDO
 
-
-class InsertBsignPass(OperatorMatchingPass):
+# Split Bsign operation from Bconv
+class SplitBsignPass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
 
         if not super().match(op):
@@ -108,6 +108,7 @@ class InsertBsignPass(OperatorMatchingPass):
         return match and nobsign and op.inputs[0].type == TensorType.INT8
 
     def mutate(self, op: Operator) -> None:
+
         subgraph = op.subgraph
 
         bsign_op = subgraph.create_operator(
@@ -137,7 +138,7 @@ class InsertBsignPass(OperatorMatchingPass):
 
 
 # Note, this currently only matches with BConv but going forward might like to extend to other Conv ops
-class InsertPaddingBeforeConvPass(OperatorMatchingPass):
+class SplitPaddingFromConvPass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
 
         if not super().match(op):
@@ -150,8 +151,33 @@ class InsertPaddingBeforeConvPass(OperatorMatchingPass):
 
     def mutate(self, op: Operator) -> None:
 
-        pad_values = op.custom_options["pad_values"]
+        subgraph = op.subgraph
 
         op.custom_options["padding"] = 2  # kTfLitePaddingValid
 
-        return
+        # Cut connection from old input to the op
+        old_input = op.inputs[0]
+        old_input.consumers.remove(op)
+
+        pads = [[0, 0],[0,0], [0,0], [0, 0]]
+
+        padding_tensor = subgraph.create_tensor(
+            f"{op.name}/paddings", TensorType.INT32, shape=[4, 2])
+
+        #Insert PAD op
+        pad_op = subgraph.create_operator(
+            OperatorCode(BuiltinOpCodes.PAD), inputs=[old_input, padding_tensor],
+        )
+        
+        pad_output_tensor = subgraph.create_tensor(
+            f"{pad_op.name}/output", TensorType.INT32, shape=old_input.shape, consumers=[op], producers=[pad_op]) #TODO fix shape
+        
+        pad_op.outputs = [pad_output_tensor]
+
+        op.inputs[0] = pad_op.outputs[0]
+
+        subgraph.insert_operator(op, pad_op)
+    
+        pad_op.inputs[1].buffer.data = np.int32(pads)
+
+        pad_values = op.custom_options["pad_values"]

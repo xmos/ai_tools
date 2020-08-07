@@ -86,8 +86,15 @@ endif
 
 #************************
 # XCORE custom operators
+#  and utilities
 #************************
 TENSORFLOW_SOURCES += \
+	tensorflow/lite/micro/kernels/xcore/xcore_device_memory.c \
+	tensorflow/lite/micro/kernels/xcore/xcore_profiler.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_reporter.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_interpreter.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_planning.cc \
+	tensorflow/lite/micro/kernels/xcore/xcore_dispatcher.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_conv2d.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_arg_min_max.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_pooling.cc \
@@ -95,3 +102,8 @@ TENSORFLOW_SOURCES += \
 	tensorflow/lite/micro/kernels/xcore/xcore_type_conversions.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_activations.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_custom_options.cc \
+
+ifeq ($(TARGET), x86)
+	TENSORFLOW_SOURCES += \
+		tensorflow/lite/micro/kernels/xcore/xcore_extended_interpreter.cc
+endif

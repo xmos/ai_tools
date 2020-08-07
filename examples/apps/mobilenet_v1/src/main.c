@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "ai_engine.h"
+#include "inference_engine.h"
 
 static int input_bytes = 0;
 static int input_size;
@@ -19,7 +19,7 @@ void print_output() {
 
 #ifdef XCORE
 
-#include "operators/device_memory.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_device_memory.h"
 
 #define STRINGIFY(NAME) #NAME
 #define GET_STACKWORDS(DEST, NAME) \
@@ -37,14 +37,14 @@ void app_main() {
             stack_base(swmem_handler_stack, stack_words + 2));
 #endif
 
-  ai_initialize(&input_buffer, &input_size, &output_buffer, &output_size);
+  initialize(&input_buffer, &input_size, &output_buffer, &output_size);
 }
 
 void app_data(void *data, size_t size) {
   memcpy(input_buffer + input_bytes, data, size - 1);
   input_bytes += size - 1;
   if (input_bytes == input_size) {
-    ai_invoke();
+    invoke();
     print_output();
     input_bytes = 0;
   }
@@ -70,7 +70,7 @@ static int load_input(const char *filename) {
 }
 
 int main(int argc, char *argv[]) {
-  ai_initialize(&input_buffer, &input_size, &output_buffer, &output_size);
+  initialize(&input_buffer, &input_size, &output_buffer, &output_size);
 
   if (argc > 1) {
     printf("input filename=%s\n", argv[1]);
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
     memset(input_buffer, 0, input_size);
   }
 
-  ai_invoke();
+  invoke();
 
   print_output();
 

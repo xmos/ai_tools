@@ -23,7 +23,6 @@ from tflite2xcore.xcore_schema import (
     BuiltinOptions,
 )
 
-
 def SupportedBconv2DOp(op: Operator) -> bool:
 
     # isinstance - yuk!
@@ -45,11 +44,12 @@ def SupportedBconv2DOp(op: Operator) -> bool:
     except KeyError:
         return False
 
+    # TODO check padding
     return (
         strides == (1, 1)
         and dilations == (1, 1)
-        and weights.shape[0] % 32 == 0
-        and (weights.shape[3] * 32) % 256 == 0
+        and weights.shape[0] % 32 == 0  # Cout
+        and (weights.shape[3] * 32) % 256 == 0 # Cin
         and weights.type == TensorType.INT32
         and (
             op.inputs[0].type == TensorType.INT8
@@ -67,8 +67,8 @@ class CanonicalizeLceBconv2DPass(OperatorMatchingPass):
         op.inputs[3].consumers.remove(op)
         op.inputs = op.inputs[:2]
 
-
-class ReplaceBconv2DPass(OperatorMatchingPass):
+# Replace LCEBconv2D with XC_BConv2D
+class ReplaceLceBconv2DPass(OperatorMatchingPass):
     def __init__(
         self, input_tensor_type: TensorType, *args: str, **kwargs: int
     ) -> None:
@@ -138,7 +138,9 @@ class SplitBsignPass(OperatorMatchingPass):
         bsign_op.inputs[0].consumers.remove(op)
 
 
-# Note, this currently only matches with BConv but going forward might like to extend to other Conv ops
+# Split out padding to a seperate of from BConv
+# Note, this currently only matches with BConv but going forward might like to extend this to other conv ops
+# and make it a general pass
 class SplitPaddingFromConvPass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
 
@@ -160,6 +162,7 @@ class SplitPaddingFromConvPass(OperatorMatchingPass):
         old_input = op.inputs[0]
         old_input.consumers.remove(op)
 
+        # TODO
         pads = [[0, 0], [0, 0], [0, 0], [0, 0]]
 
         padding_tensor = subgraph.create_tensor(

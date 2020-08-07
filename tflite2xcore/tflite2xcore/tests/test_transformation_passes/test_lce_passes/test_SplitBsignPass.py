@@ -7,7 +7,7 @@ import numpy as np
 from copy import deepcopy
 
 from tflite2xcore.converter import CleanupManager
-from tflite2xcore.transformation_passes.lce_passes import InsertBsignPass
+from tflite2xcore.transformation_passes.lce_passes import SplitBsignPass
 from tflite2xcore.xcore_schema import BuiltinOpCodes, TensorType
 
 from ..model_builders import build_lceBconv2d
@@ -35,7 +35,7 @@ PARAMS = deepcopy(PARAMS)
 #  ----------------------------------------------------------------------------
 @pytest.fixture()
 def trf_pass():
-    return InsertBsignPass()
+    return SplitBsignPass()
 
 
 @pytest.fixture()

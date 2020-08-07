@@ -784,12 +784,18 @@ def build_lceBconv2d(subgraph=None, *, weight_shape, input_size, padding, stride
     op = subgraph.create_operator(
         OperatorCode(CustomOpCode("LceBconv2d")), inputs=op_inputs, outputs=[tout]
     )
+
+    padding_ = 2
+    if padding == Padding.SAME: 
+        padding_= 1
+
     op.custom_options = {
-        "padding": padding,
+        "padding": padding_,
         "stride_height": strides[0],
         "stride_width": strides[1],
         "dilation_width_factor": 1,
         "dilation_height_factor": 1,
+        "pad_values":0,
     }
 
     return subgraph.model

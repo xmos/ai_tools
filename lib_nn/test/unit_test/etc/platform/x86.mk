@@ -16,7 +16,7 @@ else
 endif
 
 
-PLATFORM_FLAGS := $(PLATFORM_FLAGS_DEFAULT)
+PLATFORM_FLAGS := $(PLATFORM_FLAGS_DEFAULT) -DTF_LITE_DISABLE_X86_NEON
 
 CC := gcc
 XCC := gcc
@@ -24,6 +24,6 @@ CXX := g++
 
 CC_FLAGS  := -g -O3
 XCC_FLAGS := -g -O3
-CXX_FLAGS := -g -O3 -std=c++11
+CXX_FLAGS := -g -O3 -std=c++11 
 
-LD_FLAGS  := -L/usr/local/lib -lm
+LD_FLAGS  := -L/usr/local/lib -lm -lstdc++

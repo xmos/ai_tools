@@ -15,7 +15,6 @@
 
 #include "unity.h"
 
-#include <print.h>
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 // for sprintf() calls

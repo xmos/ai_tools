@@ -170,7 +170,7 @@ void conv2d_im2col(
         for(unsigned output_cols = job->output.cols; output_cols > 0; output_cols--){
             const nn_image_t* patch_X = X;//This points it at the top-left cell of the patch.
             const nn_image_t* C = COL;
-            memset(C,0,plan->window.shape.len_col);// very important if len_col > kernel_row_elements!
+            memset((void *)C,0,plan->window.shape.len_col);// very important if len_col > kernel_row_elements!
             if( requires_padding ){
                     int pad = 0;
                     int pad_tb = 0;
@@ -180,10 +180,10 @@ void conv2d_im2col(
                         for(int i = 0; i < plan->window.shape.width; i++){
                             pad =  ((pad_l-i > 0) || (plan->window.shape.width - pad_r) <= i) || pad_tb;
                             if(pad){
-                                memset(C, plan->zero_point, plan->channels.X);
+                                memset((void *)C, plan->zero_point, plan->channels.X);
                             }
                             else{
-                                memcpy(C, ADDR(patch_X,p), plan->channels.X);
+                                memcpy((void *)C, ADDR(patch_X,p), plan->channels.X);
                             }
                             C = ADDR(C,plan->channels.X);
                             p += plan->channels.X;
@@ -194,7 +194,7 @@ void conv2d_im2col(
             else{
                     unsigned len = plan->channels.X * plan->window.shape.width;
                     for(unsigned rows_in_patch = plan->window.shape.height; rows_in_patch > 0; rows_in_patch--){
-                        memcpy(C,patch_X,len);
+                        memcpy((void *)C,patch_X,len);
                         patch_X = ADDR(patch_X, plan->stride.X.row );
                         C = ADDR(C,len);
                     }
@@ -219,7 +219,7 @@ void conv2d_im2col(
                 
                 const nn_tensor_t* patch_K = ADDR(K,m_row_chunk*job->stride.chan_group.K);
                 const nn_image_t* sub_vector = COL;
-                nn_bso_block_t * bso = &BSO[m_row_chunk];
+                nn_bso_block_t * bso = (nn_bso_block_t *)&BSO[m_row_chunk];
                 uint16_t y_mask = 0x0000;
 
                 //load vR and vD with appropriate bso vectors

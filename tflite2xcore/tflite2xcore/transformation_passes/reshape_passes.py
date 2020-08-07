@@ -17,7 +17,7 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
         try:
             producer = op.inputs[0].producers[0]
         except IndexError:
-                # Input tensor for op has no producers..
+            # Input tensor for op has no producers..
             return False
 
         # FULLY_CONNECTED always interprets the first dim as batch...

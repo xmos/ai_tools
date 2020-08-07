@@ -228,7 +228,7 @@ class Tensor:
 
     @property
     def is_constant(self) -> bool:
-        # There is an esoteric case where by a tensor without any producers could potentially be 
+        # There is an esoteric case where by a tensor without any producers could potentially be
         # modified if it shares a buffer with a tensor from another subgraph.
         # As such we also check if all owners of its buffer have no producers and are not inputs
         return all(
@@ -333,13 +333,7 @@ class Subgraph:
     ):
         name = self.generate_unique_op_name(operator_code)
         operator = Operator(
-            self,
-            operator_code,
-            name,
-            inputs,
-            outputs,
-            builtin_options,
-            custom_options,
+            self, operator_code, name, inputs, outputs, builtin_options, custom_options,
         )
         self.operators.append(operator)
         for input_tensor in operator.inputs:

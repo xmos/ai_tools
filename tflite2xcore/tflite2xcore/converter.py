@@ -87,7 +87,7 @@ def optimize_for_xcore(
     pass_mgr = InputOutputCanonicalizationManager(
         model, keep_intermediates=bool(intermediates_path), debug=debug,
     )
-    
+
     # TODO should this canonicalize to more closely match builtin conv?
     pass_mgr.register_pass(passes.CanonicalizeLceBconv2DPass())
     pass_mgr.register_pass(passes.CanonicalizeReshapePass())
@@ -108,15 +108,17 @@ def optimize_for_xcore(
 
     # need to cleanup after the first round of canonicalization
     pass_mgr.register_passes(CleanupManager())
-   
+
     # tmp pass until larq adds explicit bsign op
     pass_mgr.register_pass(passes.SplitBsignPass())
 
-    # TOOD rename 
-    #Note, this currently only matches with BConv but going forward might like to extend to other Conv ops
+    # TOOD rename
+    # Note, this currently only matches with BConv but going forward might like to extend to other Conv ops
     pass_mgr.register_pass(passes.SplitPaddingFromConvPass())
 
-    pass_mgr.register_pass(passes.ReplaceBconv2DPass(input_tensor_type=TensorType.INT32))
+    pass_mgr.register_pass(
+        passes.ReplaceBconv2DPass(input_tensor_type=TensorType.INT32)
+    )
     pass_mgr.register_pass(passes.ReplaceBconv2DPass(input_tensor_type=TensorType.INT8))
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())

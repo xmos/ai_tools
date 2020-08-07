@@ -110,7 +110,7 @@ class SplitPaddingPass(OperatorMatchingPass):
                 pad_params = self._pad_params
             except IndexError:
                 return False
-            
+
             if len(pad_params) != 4:
                 return False
 

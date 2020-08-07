@@ -54,6 +54,7 @@ def model(weight_shape, input_size, padding, strides):
         input_tensor_type=TensorType.INT32,
     )
 
+
 #  ----------------------------------------------------------------------------
 #                                   TESTS
 #  ----------------------------------------------------------------------------
@@ -69,7 +70,6 @@ def test_mutate(trf_pass, model):
     # need to clean up dangling ops/tensors
     CleanupManager(model).run_passes()
     model.sanity_check()
-
 
 
 if __name__ == "__main__":

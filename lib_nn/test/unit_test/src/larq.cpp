@@ -1,8 +1,4 @@
-#include "larq_compute_engine/core/bconv2d_output_transform.h"
 #include "larq_compute_engine/core/bconv2d_impl_ref.h"
-#include "larq_compute_engine/core/bgemm_functor.h"
-#include "tensorflow/lite/kernels/internal/types.h"
-#include "tensorflow/lite/kernels/internal/common.h"
 #include "larq_compute_engine/core/packbits.h"
 
 using namespace tflite;
@@ -23,11 +19,11 @@ template <typename AccumScalar>
 void GetOutputTransform(
     const long* thresholds,
     OutputTransform<AccumScalar, std::int32_t>& output_transform) {
-  output_transform.thresholds = thresholds;
+  output_transform.thresholds = (const std::int32_t*)thresholds;
 }
 
 }  // namespace core
-namespace ref {
+//namespace ref {
 
 #include "nn_operator.h"
 #include "nn_op_structs.h"
@@ -88,5 +84,5 @@ extern "C" void larq_ref_bconv2d(const nn_image_params_t* x,
       // These are all dummy parameters(unused)
       no_shape, 0, 0, 0, 0, 0);
 }
-}  // namespace ref
+//}  // namespace ref
 }  // namespace compute_engine

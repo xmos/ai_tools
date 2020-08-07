@@ -683,7 +683,6 @@ void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
  * 
  * The desired dimensions of X and K should be given by the parameters x and k. 
  * 
- * @param plan          [out]    The parameters to the binary conv2d
  * @param Y_p           [in]     The input image @tensor{Y}
  * @param X_p           [in]     The input image @tensor{X}
  * @param K_p           [in]     The input kernel @tensor{K}
@@ -700,24 +699,13 @@ void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
  * @param x_full_width  [in]     The full width of the input image tensor
  * @param k_full_width  [in]     The full width of the inout kernel tensor
  */
-void bnn_conv2d_bin_out_asm_prepare(
-    nn_bnn_conv2d_bin_out_asm_plan_t* plan, const bnn_b32_t* Y_p,
+void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,
     const nn_image_params_t* x, const nn_image_params_t* y,
     const nn_window_params_t* k, const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned x_loc_x, const unsigned x_loc_y, const unsigned k_loc_x,
     const unsigned k_loc_y, const unsigned y_full_width,
     const unsigned x_full_width, const unsigned k_full_width);
-
-void bnn_conv2d_bin_out(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
-                        const bnn_b256_t* K_p,
-                        int32_t* thresholds,  //[out_channel];
-                        const nn_bnn_conv2d_bin_out_plan_t* plan);
-
-void bnn_conv2d_bin_out_init(nn_bnn_conv2d_bin_out_plan_t* plan,
-                             const nn_image_params_t* x,
-                             const nn_image_params_t* y,
-                             const nn_window_params_t* k);
 
 /**
  * @brief Execute @oper{pad_prepare} function.

@@ -10,7 +10,6 @@
 #include "xs3_vpu.h"
 
 #if defined(__XS3A__)
-// #if 1
 
 void bnn_conv2d_bin_out_asm_prepare(
     nn_bnn_conv2d_bin_out_asm_plan_t* plan, bnn_b32_t* Y_p,

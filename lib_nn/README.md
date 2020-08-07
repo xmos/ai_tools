@@ -36,7 +36,7 @@ For full documentation of each API function, please refer to the description in 
 |:----|:---|:------------|:----------------|:--------------------------------------------------------|
 |Convolution| | | | |
 | |conv2d_deep|Yes|Cin % 4 = 0, Cout % 4 = 0 | |
-| |conv2d_shallowin_deepout|**In re-development**|Cin % 4 = 0, Cout % 4 = 0, Cin * Kw = 32 | |
+| |conv2d_shallowin_deepout|Yes|Cin % 4 = 0, Cout % 4 = 0, Cin * Kw = 32 | |
 | |conv2d_1x1|Yes|Cin % 4 = 0, Cout % 4 = 0, Kh = Kw = 1, Sh = Sw = 1 | |
 | |conv2d_depthwise|Yes|Cin % 4 = 0, Cout % 4 = 0, Cin = Cout | |
 |Fully Connected| | | | |

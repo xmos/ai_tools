@@ -19,8 +19,6 @@ set(TENSORFLOW_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/tensorflow")
 set(LIB_NN_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../lib_nn")
 set(LIB_NN_ALT_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../lib_nn/lib_nn/api")
 set(LIB_NN_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../lib_nn")
-set(LIB_OPS_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../operators")
-set(LIB_OPS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../operators")
 
 #**********************
 # Build flags
@@ -80,8 +78,6 @@ file (GLOB XCORE_SOURCES
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/deep/*.c"
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/depthwise/*.c"
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/shallow/*.c"
-  "${LIB_OPS_SOURCE_DIR}/operators/*.c"
-  "${LIB_OPS_SOURCE_DIR}/operators/*.cpp"
 )
 
 target_sources(libtflite2xcore

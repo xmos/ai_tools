@@ -21,6 +21,8 @@ def dequantize(arr, scale, zero_point):
 def quantize_converter(converter, representative_data, *, show_progress_step=None):
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+    converter.inference_input_type = tf.int8
+    converter.inference_output_type = tf.int8
     x_train_ds = tf.data.Dataset.from_tensor_slices(representative_data).batch(1)
 
     def representative_data_gen():

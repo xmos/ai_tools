@@ -12,7 +12,6 @@
 #include <assert.h>
 
 
-
 WEAK_FUNC
 void argmax_16(
     int32_t* Y,
@@ -113,4 +112,5 @@ void lookup8(
         Y[i] = lut[X[i]];
     }
 }
+
 

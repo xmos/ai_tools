@@ -1,6 +1,6 @@
 // Copyright (c) 2019, XMOS Ltd, All rights reserved
-#include "operators/extended_xcore_interpreter.h"
 #include "tensorflow/lite/micro/all_ops_resolver.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_extended_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
 #include "tensorflow/lite/micro/recording_micro_allocator.h"
 #include "tensorflow/lite/version.h"
@@ -14,14 +14,14 @@
 //*****************************************
 
 typedef struct ExtendedXCoreInterpreterContext {
-  xcore::BufferedErrorReporter* reporter;
+  tflite::micro::xcore::BufferedErrorReporter* reporter;
   tflite::AllOpsResolver* resolver;
   const tflite::Model* model;
   char* model_buffer;
   uint8_t* tensor_arena;
   size_t tensor_arena_size;
   tflite::RecordingMicroAllocator* allocator;
-  xcore::ExtendedXCoreInterpreter* interpreter;
+  tflite::micro::xcore::ExtendedXCoreInterpreter* interpreter;
 } ExtendedXCoreInterpreterState;
 
 extern "C" {
@@ -57,7 +57,7 @@ int initialize(ExtendedXCoreInterpreterContext* ctx, const char* model_content,
   memcpy(ctx->model_buffer, model_content, model_content_size);
 
   // Create error reporter
-  ctx->reporter = new xcore::BufferedErrorReporter();
+  ctx->reporter = new tflite::micro::xcore::BufferedErrorReporter();
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
@@ -106,7 +106,7 @@ int initialize(ExtendedXCoreInterpreterContext* ctx, const char* model_content,
       ctx->tensor_arena, tensor_arena_size, ctx->reporter);
 
   // Build an interpreter to run the model with.
-  ctx->interpreter = new xcore::ExtendedXCoreInterpreter(
+  ctx->interpreter = new tflite::micro::xcore::ExtendedXCoreInterpreter(
       ctx->model, *ctx->resolver, ctx->allocator,
       reinterpret_cast<tflite::ErrorReporter*>(ctx->reporter));
 
@@ -182,9 +182,10 @@ size_t output_tensor_index(ExtendedXCoreInterpreterContext* ctx,
   return ctx->interpreter->output_tensor_index(output_index);
 }
 
-int invoke(ExtendedXCoreInterpreterContext* ctx,
-           xcore::invoke_callback_t preinvoke_callback = nullptr,
-           xcore::invoke_callback_t postinvoke_callback = nullptr) {
+int invoke(
+    ExtendedXCoreInterpreterContext* ctx,
+    tflite::micro::xcore::invoke_callback_t preinvoke_callback = nullptr,
+    tflite::micro::xcore::invoke_callback_t postinvoke_callback = nullptr) {
   return ctx->interpreter->Invoke(preinvoke_callback, postinvoke_callback);
 }
 

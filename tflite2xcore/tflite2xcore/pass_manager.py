@@ -106,4 +106,5 @@ class PassManager:
         msg = "\n".join(
             [f"  #{p[0]}/{num_passes}: {p[1]}" for p in self._mutating_passes]
         )
-        self.logger.info(f"The following passes mutated the model:\n{msg}")
+        if msg:
+            self.logger.info(f"The following passes mutated the model:\n{msg}")

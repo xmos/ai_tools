@@ -1,37 +1,30 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from abc import ABC, abstractmethod
 import tensorflow as tf  # type: ignore
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.converter import optimize_for_xcore  # type: ignore # TODO: fix this
 
+from . import TFLiteModel, Configuration
 from .utils import quantize_converter, parse_init_config
 
-from typing import TYPE_CHECKING, Union
-
 if TYPE_CHECKING:
-    from .model_generator import (
-        ModelGenerator,
-        KerasModelGenerator,
-        Configuration,
-    )
+    from .model_generators import ModelGenerator, KerasModelGenerator
 
 
-TFLiteModel = Union[bytes, bytearray]
-
-
-class ModelConverter(ABC):
+class Converter(ABC):
     """ Superclass for defining model conversion logic and storing converted models.
 
-    ModelConverter objects are registered when a ModelGenerator object is
+    Converter objects are registered when a ModelGenerator object is
     instantiated.
     """
 
     _model: TFLiteModel
 
     def __init__(self, model_generator: "ModelGenerator") -> None:
-        """ Registers the ModelGenerator that owns this ModelConverter. """
+        """ Registers the ModelGenerator that owns this Converter. """
         self._model_generator = model_generator
 
     @abstractmethod
@@ -56,7 +49,7 @@ class ModelConverter(ABC):
         pass
 
 
-class TFLiteFloatConverter(ModelConverter):
+class TFLiteFloatConverter(Converter):
     """ Converts the _model field of a KerasModelGenerator to a floating point
     TFLite model.
     """
@@ -69,7 +62,7 @@ class TFLiteFloatConverter(ModelConverter):
         ).convert()
 
 
-class TFLiteQuantConverter(ModelConverter):
+class TFLiteQuantConverter(Converter):
     """ Converts the _model field of a KerasModelGenerator to a quantized
     TFLite model.
     """
@@ -96,7 +89,7 @@ class TFLiteQuantConverter(ModelConverter):
         self._model = converter.convert()
 
 
-class XCoreConverter(ModelConverter):
+class XCoreConverter(Converter):
     """ Converts the _model field of a KerasModelGenerator to an xcore.ai-optimized
     TFLite model.
     """
@@ -104,9 +97,9 @@ class XCoreConverter(ModelConverter):
     _model_generator: "KerasModelGenerator"
 
     def __init__(
-        self, model_generator: "KerasModelGenerator", source_converter: ModelConverter
+        self, model_generator: "KerasModelGenerator", source_converter: Converter
     ) -> None:
-        """ Registers the ModelGenerator that owns this ModelConverter. 
+        """ Registers the ModelGenerator that owns this Converter. 
         
         The source converter must be specified as this converter could
         potentially be used with (among others) quantized or larq converted

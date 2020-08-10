@@ -4,9 +4,9 @@
 
 #include "operators/xcore_interpreter.h"
 #include "operators/xcore_profiler.h"
-#include "operators/xcore_reporter.h"
 #include "tensorflow/lite/micro/all_ops_resolver.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
+#include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/version.h"
 
 tflite::ErrorReporter *reporter = nullptr;
@@ -30,7 +30,7 @@ void initialize(uint8_t *model_content, uint8_t *tensor_arena,
                 size_t tensor_arena_size, uint8_t **input, size_t *input_size,
                 uint8_t **output, size_t *output_size) {
   // Set up logging
-  static xcore::XCoreReporter xcore_reporter;
+  static tflite::ErrorReporter xcore_reporter;
   if (reporter == nullptr) {
     reporter = &xcore_reporter;
   }

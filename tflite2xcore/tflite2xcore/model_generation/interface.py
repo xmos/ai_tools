@@ -197,8 +197,12 @@ class Model(ABC):
         self.logger.info(f"test examples for {base_file_name} saved to {test_data_dir}")
 
     def _save_data_for_canonical_model(self, model_key):
-        interpreter = tf.lite.Interpreter(model_content=self.buffers[model_key])
+        # NOTE: This is for tf2.3 compatibility of the quant model
+        model = XCOREModel.deserialize(self.buffers[model_key])
+        xcore_conv.strip_model(model)
+        xcore_conv.add_float_input_output(model)
 
+        interpreter = tf.lite.Interpreter(model_content=model.serialize())
         # extract labels for the test examples
         self.logger.debug(f"Extracting and saving examples for {model_key}...")
         x_test = self.data["export"]

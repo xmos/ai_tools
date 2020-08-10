@@ -3,7 +3,7 @@
 #ifndef XS3_VPU_H_
 #define XS3_VPU_H_
 
-#include <xs1.h>
+#include <xs3a_registers.h>
 
 /* TODO use from xs3a_kernel.h in a future tools release */
 #define XS1_VSR_HEADROOM_SHIFT 0x0
@@ -186,4 +186,5 @@ enum {
 };
 
 #endif //__ASM__
+
 #endif //XS3_VPU_H_

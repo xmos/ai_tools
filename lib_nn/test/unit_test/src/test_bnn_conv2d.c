@@ -66,20 +66,26 @@ int run_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
   k.stride.vertical = v_stride;
 
   larq_ref_bconv2d(&x, &y, &k, (int32_t*)X_ref, (int32_t*)K_ref_p,
-                   (int32_t*)Y_ref_p, thresholds_ref);
-  if (use_asm) {
-    nn_bnn_conv2d_bin_out_asm_plan_t plan;
+                   (int32_t*)Y_ref_p, (const long *)thresholds_ref);
 
-    bnn_conv2d_bin_out_asm_prepare(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref,
-                                   (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k,
-                                   0, 0, 0, 0, 0, 0, 0, 0, 0);
-    bnn_conv2d_bin_out_asm(&plan);
-  } else {
-    nn_bnn_conv2d_bin_out_plan_t plan;
-    bnn_conv2d_bin_out_init(&plan, &x, &y, &k);
-    bnn_conv2d_bin_out((bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref,
-                       (bnn_b256_t*)K_ref_p, thresholds_ref, &plan);
-  }
+  // nn_bnn_conv2d_bin_out_plan_t plan;
+  // bnn_conv2d_bin_out_init(&plan, &x, &y, &k);
+  // bnn_conv2d_bin_out((bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref,
+  //                     (bnn_b256_t*)K_ref_p, thresholds_ref, &plan);
+
+  bnn_conv2d_bin_out((bnn_b32_t*)Y_p, (const bnn_b256_t*)X_ref,
+                      (const bnn_b256_t*)K_p, thresholds_p, &x, &y, &k,
+                      0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+  // if (use_asm) {
+  //   nn_bnn_conv2d_bin_out_asm_plan_t plan;
+
+  //   bnn_conv2d_bin_out_asm_prepare(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_ref,
+  //                                  (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k,
+  //                                  0, 0, 0, 0, 0, 0, 0, 0, 0);
+  //   bnn_conv2d_bin_out_asm(&plan);
+  // } else {
+  // }
 
   unsigned chan_b32_out = (chans_out + 32 - 1) / 32;
   bnn_b32_t(*Y)[y_width][chan_b32_out] =

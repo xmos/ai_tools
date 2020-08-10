@@ -34,6 +34,8 @@ VPATH += $(LIBS_VPATH)
 MODEL_SOURCE_FILE := src/cifar10_model.c
 
 SOURCES := $(TENSORFLOW_SOURCES)
+SOURCES += tensorflow/lite/micro/kernels/pad.cc
+SOURCES += tensorflow/lite/micro/kernels/softmax.cc
 SOURCES += $(LIBS_SOURCES)
 SOURCES += $(MODEL_SOURCE_FILE)
 SOURCES += src/main.cc

@@ -6,11 +6,11 @@
 #include <iostream>
 
 #include "cifar10_model.h"
-#include "tensorflow/lite/micro/kernels/error_reporter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_device_memory.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_profiler.h"
+#include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/version.h"
 
 tflite::ErrorReporter *reporter = nullptr;
@@ -57,8 +57,8 @@ static int load_test_input(const char *filename, char *input, size_t esize) {
 
 static void setup_tflite() {
   // Set up logging
-  static tflite::ErrorReporter xcore_reporter;
-  reporter = &xcore_reporter;
+  static tflite::MicroErrorReporter error_reporter;
+  reporter = &error_reporter;
   // Set up profiling.
   static tflite::micro::xcore::XCoreProfiler xcore_profiler(reporter);
   profiler = &xcore_profiler;

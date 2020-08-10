@@ -10,10 +10,10 @@
 
 #include "mobilenet_ops_resolver.h"
 #include "mobilenet_v1.h"
-#include "tensorflow/lite/micro/kernels/error_reporter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_device_memory.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_profiler.h"
+#include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/version.h"
 
 tflite::ErrorReporter *reporter = nullptr;
@@ -36,8 +36,8 @@ void invoke() {
 void initialize(unsigned char **input, unsigned *input_size,
                 unsigned char **output, unsigned *output_size) {
   // Set up logging
-  static tflite::ErrorReporter xcore_reporter;
-  reporter = &xcore_reporter;
+  static tflite::MicroErrorReporter error_reporter;
+  reporter = &error_reporter;
   // Set up profiling.
   static tflite::micro::xcore::XCoreProfiler xcore_profiler(reporter);
   profiler = &xcore_profiler;

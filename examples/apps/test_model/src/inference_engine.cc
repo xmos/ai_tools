@@ -2,20 +2,20 @@
 
 #include "inference_engine.h"
 
-#include "operators/xcore_interpreter.h"
-#include "operators/xcore_profiler.h"
 #include "tensorflow/lite/micro/all_ops_resolver.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
+#include "tensorflow/lite/micro/kernels/xcore/xcore_profiler.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/version.h"
 
 tflite::ErrorReporter *reporter = nullptr;
 tflite::Profiler *profiler = nullptr;
 const tflite::Model *model = nullptr;
-xcore::XCoreInterpreter *interpreter = nullptr;
+tflite::micro::xcore::XCoreInterpreter *interpreter = nullptr;
 
 // static buffer for XCoreInterpreter class allowcation
-uint8_t interpreter_buffer[sizeof(xcore::XCoreInterpreter)];
+uint8_t interpreter_buffer[sizeof(tflite::micro::xcore::XCoreInterpreter)];
 
 void invoke() {
   // Run inference, and report any error
@@ -30,9 +30,9 @@ void initialize(uint8_t *model_content, uint8_t *tensor_arena,
                 size_t tensor_arena_size, uint8_t **input, size_t *input_size,
                 uint8_t **output, size_t *output_size) {
   // Set up logging
-  static tflite::ErrorReporter xcore_reporter;
+  static tflite::MicroErrorReporter error_reporter;
   if (reporter == nullptr) {
-    reporter = &xcore_reporter;
+    reporter = &error_reporter;
   }
   // Set up profiling.
   //   static xcore::XCoreProfiler xcore_profiler(reporter);
@@ -80,9 +80,9 @@ void initialize(uint8_t *model_content, uint8_t *tensor_arena,
     // destructor here but NOT delete the object
     interpreter->~XCoreInterpreter();
   }
-  interpreter = new (interpreter_buffer)
-      xcore::XCoreInterpreter(model, resolver, tensor_arena, tensor_arena_size,
-                              reporter, true, profiler);
+  interpreter = new (interpreter_buffer) tflite::micro::xcore::XCoreInterpreter(
+      model, resolver, tensor_arena, tensor_arena_size, reporter, true,
+      profiler);
 
   // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();

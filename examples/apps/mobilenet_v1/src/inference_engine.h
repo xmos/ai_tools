@@ -1,4 +1,5 @@
-#ifndef MOBILENET_V1_APP_H_
+// Copyright (c) 2019, XMOS Ltd, All rights reserved
+#ifndef MOBILENET_V1_APP_H
 #define MOBILENET_V1_APP_H_
 
 #ifdef __cplusplus

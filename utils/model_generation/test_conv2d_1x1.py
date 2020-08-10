@@ -4,11 +4,13 @@
 
 import pytest
 
-import tensorflow as tf
-import numpy as np
-
-from conftest import Conv2dGenericTestModelGenerator
+from conftest import Conv2dGenericTestModelGenerator, test_output
 from xcore_model_generation.model_generator import Configuration
+
+
+#  ----------------------------------------------------------------------------
+#                                   GENERATORS
+#  ----------------------------------------------------------------------------
 
 
 class Conv2d1x1TestModelGenerator(Conv2dGenericTestModelGenerator):
@@ -20,6 +22,10 @@ class Conv2d1x1TestModelGenerator(Conv2dGenericTestModelGenerator):
 
 GENERATOR = Conv2d1x1TestModelGenerator
 
+#  ----------------------------------------------------------------------------
+#                                   CONFIGS
+#  ----------------------------------------------------------------------------
+
 CONFIGS = {
     "default": [
         {},
@@ -29,26 +35,21 @@ CONFIGS = {
         {"input_channels": 32, "output_channels": 16},
         {"height": 8, "width": 2, "input_channels": 12, "output_channels": 64},
         {
-            "weight_init": tf.initializers.Constant(1.0),
-            "bias_init": tf.initializers.Constant(1.0),
-            "input_init": tf.initializers.Constant(1.0),
+            "weight_init": ("Constant", 1.0),
+            "bias_init": ("Constant", 1.0),
+            "input_init": ("Constant", 1.0),
         },
         {
             "height": 1,
             "width": 4,
-            "weight_init": tf.initializers.RandomNormal(0.0, 0.1),
-            "bias_init": tf.initializers.RandomNormal(-0.5, 0.02),
-            "input_init": tf.initializers.RandomUniform(10.0),
+            "weight_init": ("RandomNormal", 0.0, 0.1),
+            "bias_init": ("RandomNormal", -0.5, 0.02),
+            "input_init": ("RandomUniform", 10.0),
         },
         {"num_threads": 2},
         {"num_threads": 5},
     ],
 }
-
-
-def test_foo(run):
-    for arr, arr_ref in zip(run.outputs.xcore, run.outputs.reference):
-        assert np.max(np.abs(np.int32(arr) - np.int32(arr_ref))) <= 1
 
 
 if __name__ == "__main__":

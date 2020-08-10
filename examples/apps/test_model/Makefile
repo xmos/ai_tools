@@ -16,7 +16,8 @@ APPFLAGS :=
 ifeq ($(TARGET), x86)
 	APP = test_model
 else # must be xcore
-	APPFLAGS += -fcmdline-buffer-bytes=1024
+	APPFLAGS += -fxscope
+	APPFLAGS += config.xscope
 	APP = test_model.xe
 endif
 
@@ -30,8 +31,13 @@ VPATH += $(LIBS_VPATH)
 VPATH += src
 
 SOURCES := $(TENSORFLOW_SOURCES)
+SOURCES += $(TENSORFLOW_REFERENCE_KERNEL_SOURCES)
 SOURCES += $(LIBS_SOURCES)
-SOURCES += main.cc
+SOURCES += main.c
+SOURCES += inference_engine.cc
+ifeq ($(TARGET), xcore)
+	SOURCES += src/main.xc
+endif
 
 include ../../../make/rules.mk
 

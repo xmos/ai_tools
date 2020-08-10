@@ -11,9 +11,12 @@ Building for xCORE
 
 Note, `xcore` is the default target.
 
-Running with the xCORE simulator
+Running with simulator
 
-    > xsim --args bin/test_model.xe path/to/some.tflite path/to/input path/to/output
+    > xsim --xscope "-realtime localhost:10234" bin/test_model.xe
+
+Running on hardware
+    > xrun --io --xscope --xscope-port localhost:10234 bin/test_model.xe
 
 ## x86
 

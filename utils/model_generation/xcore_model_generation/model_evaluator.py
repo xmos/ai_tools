@@ -40,8 +40,6 @@ class ModelEvaluator(ABC):
 class TFLiteEvaluator(ModelEvaluator):
     """ Defines the evaluation logic for a TFLite float model. """
 
-    _interpreter: tf.lite.Interpreter
-
     def __init__(
         self,
         input_data_hook: Callable[[], Union[tf.Tensor, np.ndarray]],
@@ -51,13 +49,11 @@ class TFLiteEvaluator(ModelEvaluator):
         self._model_hook = model_hook
 
     def evaluate(self) -> None:
-        self._interpreter = tf.lite.Interpreter(model_content=self._model_hook())
-        self._interpreter.allocate_tensors()
+        interpreter = tf.lite.Interpreter(model_content=self._model_hook())
+        interpreter.allocate_tensors()
 
         self.input_data = np.array(self._input_data_hook())
-        self.output_data = apply_interpreter_to_examples(
-            self._interpreter, self.input_data
-        )
+        self.output_data = apply_interpreter_to_examples(interpreter, self.input_data)
 
 
 class TFLiteQuantEvaluator(TFLiteEvaluator):
@@ -97,19 +93,17 @@ class XCoreEvaluator(TFLiteEvaluator):
     output_quant: Quantization
 
     def evaluate(self) -> None:
-        self._interpreter = XCOREInterpreter(model_content=self._model_hook())
-        self._interpreter.allocate_tensors()
+        interpreter = XCOREInterpreter(model_content=self._model_hook())
+        interpreter.allocate_tensors()
 
         self.input_quant = Quantization(
-            *self._interpreter.get_input_details()[0]["quantization"]
+            *interpreter.get_input_details()[0]["quantization"]
         )
         self.output_quant = Quantization(
-            *self._interpreter.get_output_details()[0]["quantization"]
+            *interpreter.get_output_details()[0]["quantization"]
         )
 
         self.input_data_float = np.array(self._input_data_hook())
         self.input_data = quantize(self.input_data_float, *self.input_quant)
 
-        self.output_data = apply_interpreter_to_examples(
-            self._interpreter, self.input_data
-        )
+        self.output_data = apply_interpreter_to_examples(interpreter, self.input_data)

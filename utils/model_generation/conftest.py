@@ -2,15 +2,23 @@
 
 # TODO: move this file to final location
 
+import os
 import pytest
 import logging
 
 import tensorflow as tf
+import numpy as np
 
+from xcore_model_generation.utils import parse_init_config, stringify_config
 from xcore_model_generation.model_generator import (
     IntegrationTestModelGenerator,
     Configuration,
 )
+
+
+#  ----------------------------------------------------------------------------
+#                                   HOOKS
+#  ----------------------------------------------------------------------------
 
 
 def pytest_addoption(parser):
@@ -21,6 +29,15 @@ def pytest_addoption(parser):
         default="default",
         choices=["reduced", "default", "extended"],
         help="Set the coverage level",
+    )
+
+    parser.addoption(
+        "-D",
+        "--dump",
+        action="store",
+        default=None,
+        choices=[None, "models"],
+        help="Set what contents of the model generation runs should be dumped into cache for easier access.",
     )
 
     parser.addoption(
@@ -53,8 +70,13 @@ def pytest_generate_tests(metafunc):
             "run",
             configs,
             indirect=True,
-            ids=[f'CONFIGS["default"][{j}]' for j, _ in enumerate(configs)],
+            ids=[f"CONFIGS[{j}]" for j, _ in enumerate(configs)],
         )
+
+
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -64,18 +86,37 @@ def run(request):
     except AttributeError:
         raise NameError("GENERATOR not designated in test") from None
 
-    generator = GENERATOR()
-    generator.set_config(**request.param)
-    logging.info(f"Full config: {generator._config}")
-    if request.config.getoption("--config-only"):
+    gen = GENERATOR()
+    gen.set_config(**request.param)
+
+    pytest_config = request.config
+    if pytest_config.getoption("verbose"):
+        print(f"Config: {gen._config}")
+    if pytest_config.getoption("--config-only"):
         pytest.skip()
 
-    # TODO: cache here
-    generator.run()
-    if request.config.getoption("--generate-only"):
+    config_str = stringify_config(gen._config)
+    key = "model_cache/" + config_str
+    dirpath = pytest_config.cache.get(key, "")
+    if dirpath:
+        gen = IntegrationTestModelGenerator.load(dirpath)
+        logging.debug(f"cached generator loaded from {dirpath}")
+    else:
+        dirpath = os.path.join(pytest_config.cache.makedir("model_cache"), config_str)
+        gen.run()
+        gen.save(dirpath, dump_models=pytest_config.getoption("dump") == "models")
+        logging.debug(f"generator cached to {dirpath}")
+        pytest_config.cache.set(key, dirpath)
+
+    if pytest_config.getoption("--generate-only"):
         pytest.skip()
 
-    return generator.run
+    return gen.run
+
+
+#  ----------------------------------------------------------------------------
+#                                   GENERATORS
+#  ----------------------------------------------------------------------------
 
 
 class Conv2dGenericTestModelGenerator(IntegrationTestModelGenerator):
@@ -94,10 +135,8 @@ class Conv2dGenericTestModelGenerator(IntegrationTestModelGenerator):
             output_channels=output_channels,
             padding=cfg.pop("padding", "same"),
             strides=cfg.pop("strides", (1, 1)),
-            weight_init=cfg.pop(
-                "weight_init", tf.random_uniform_initializer(-1, 1)
-            ),  # TODO: fix init config parameters
-            bias_init=cfg.pop("bias_init", tf.constant_initializer(0)),
+            weight_init=cfg.pop("weight_init", ("RandomUniform", -1, 1)),
+            bias_init=cfg.pop("bias_init", ("Constant", 0)),
         )
         super()._set_config(cfg)
 
@@ -111,8 +150,8 @@ class Conv2dGenericTestModelGenerator(IntegrationTestModelGenerator):
                     padding=cfg["padding"],
                     strides=cfg["strides"],
                     input_shape=(cfg["height"], cfg["width"], cfg["input_channels"]),
-                    bias_initializer=cfg["bias_init"],
-                    kernel_initializer=cfg["weight_init"],
+                    bias_initializer=parse_init_config(*cfg["bias_init"]),
+                    kernel_initializer=parse_init_config(*cfg["weight_init"]),
                 )
             ],
         )
@@ -130,3 +169,37 @@ class Conv2dGenericTestModelGenerator(IntegrationTestModelGenerator):
             else:
                 raise
         self._model.build()
+
+
+#  ----------------------------------------------------------------------------
+#                                   HELPERS
+#  ----------------------------------------------------------------------------
+
+
+def _test_batched_arrays(predicted, expected, tolerance=1):
+    failures = []
+    assert predicted.shape[0] == expected.shape[0]
+    for j, (arr, arr_ref) in enumerate(zip(predicted, expected)):
+        diff = np.abs(np.int32(arr) - np.int32(arr_ref))
+        diff_idx = zip(*np.where(diff > tolerance))
+
+        failures.extend(
+            f"Example {j}, idx={idx}: diff={diff[idx]}, "
+            f"expected={arr_ref[idx]}, predicted={arr[idx]}"
+            for idx in diff_idx
+        )
+    return failures
+
+
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
+
+
+def test_output(run, request):
+    failures = _test_batched_arrays(run.outputs.xcore, run.outputs.reference)
+    if failures:
+        pytest.fail(
+            f"\n{request.node.fspath}::{request.node.name}\n" + "\n".join(failures),
+            pytrace=False,
+        )

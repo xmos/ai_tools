@@ -132,7 +132,6 @@ ep = TestingXCoreInterpreterEndpoint()
 
 model_filename = sys.argv[1]
 input_filename = sys.argv[2]
-output_filename = sys.argv[3]
 
 try:
     if ep.connect():
@@ -141,22 +140,20 @@ try:
         print("Connected")
 
         # Send model
-        for i in range(2):
-            with open(model_filename, "rb") as fd:
-                model_content = fd.read()
-                ep.publish_model(model_content)
+        with open(model_filename, "rb") as fd:
+            model_content = fd.read()
+            ep.publish_model(model_content)
 
-            # Send input
-            with open(input_filename, "rb") as fd:
-                input_tensor = fd.read()
-                for i in range(2):
-                    ep.publish_input(input_tensor)
-                    # Wait for output
-                    while not ep.ready:
-                        pass
-                    # Do something with the output
-                    print(ep.output)
-                    ep.clear()
+        # Send input
+        with open(input_filename, "rb") as fd:
+            input_tensor = fd.read()
+            ep.publish_input(input_tensor)
+            # Wait for output
+            while not ep.ready:
+                pass
+            # Do something with the output
+            print(ep.output)
+            ep.clear()
 
 except KeyboardInterrupt:
     pass

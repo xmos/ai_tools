@@ -2,12 +2,11 @@
 #ifndef INFERENCE_ENGINE_H_
 #define INFERENCE_ENGINE_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <stddef.h>
 
 void initialize(uint8_t *model_content, uint8_t *tensor_arena,
                 size_t tensor_arena_size, uint8_t **input, size_t *input_size,

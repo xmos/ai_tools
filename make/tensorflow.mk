@@ -91,7 +91,6 @@ endif
 TENSORFLOW_SOURCES += \
 	tensorflow/lite/micro/kernels/xcore/xcore_device_memory.c \
 	tensorflow/lite/micro/kernels/xcore/xcore_profiler.cc \
-	tensorflow/lite/micro/kernels/xcore/xcore_reporter.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_interpreter.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_planning.cc \
 	tensorflow/lite/micro/kernels/xcore/xcore_dispatcher.cc \

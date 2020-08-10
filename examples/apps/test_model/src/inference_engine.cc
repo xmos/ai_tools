@@ -1,6 +1,7 @@
 // Copyright (c) 2019, XMOS Ltd, All rights reserved
-
 #include "inference_engine.h"
+
+#include <stdint.h>
 
 #include "tensorflow/lite/micro/all_ops_resolver.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
@@ -48,7 +49,7 @@ void initialize(uint8_t *model_content, uint8_t *tensor_arena,
                          "Model provided is schema version %d not equal "
                          "to supported version %d.",
                          model->version(), TFLITE_SCHEMA_VERSION);
-    return;
+    exit(1);
   }
 
   // Create all ops resolver and add xCORE custom operators
@@ -88,7 +89,7 @@ void initialize(uint8_t *model_content, uint8_t *tensor_arena,
   TfLiteStatus allocate_tensors_status = interpreter->AllocateTensors();
   if (allocate_tensors_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(reporter, "AllocateTensors() failed");
-    return;
+    exit(1);
   }
 
   // Obtain pointers to the model's input and output tensors.

@@ -627,7 +627,7 @@ void bnn_reorder_threshold_tensor(const int32_t* thresh_reordered,
  * @brief Execute @oper{bnn_reorder_kernel_tensor}.
  * 
  * This reorders the kernel tensor for efficient execution by bnn_conv2d_bin_out_asm. 
- * This is only inteneded for testing.
+ * This is only intended for testing.
  * 
  * `K_p` points to the output kernel @tensor{K_p} .
  * 
@@ -658,7 +658,7 @@ void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
  * @brief Execute @oper{bnn_conv2d_bin_out_asm}.
  * 
  * This executes the actual binary conv2d kernel. It requires the 
- * nn_bnn_conv2d_bin_out_asm_plan_t to be initialise by first running 
+ * nn_bnn_conv2d_bin_out_asm_plan_t to be initialised by first running 
  * bnn_conv2d_bin_out_asm_prepare.
  * 
  * `nn_bnn_conv2d_bin_out_asm_plan_t` points to the binary conv2d parameters.
@@ -670,7 +670,7 @@ void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
 /**  
  * @brief Execute @oper{bnn_reorder_kernel_tensor}.
  * 
- * This precomputes all the paramters to efficietly execute bnn_conv2d_bin_out_asm,
+ * This precomputes all the parameters to efficiently execute bnn_conv2d_bin_out_asm,
  * it populates the plan with all parameters.
  * 
  * The binary conv2d performs a 2d convolution on a rectangular (sub)section of an input 

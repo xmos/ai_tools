@@ -23,6 +23,9 @@ from tflite2xcore.xcore_schema import (
     BuiltinOptions,
 )
 
+WORD_SIZE_BYTES = WORD_SIZE
+WORD_SIZE_BITS = WORD_SIZE_BYTES * 8
+
 def SupportedBconv2DOp(op: Operator) -> bool:
 
     # isinstance - yuk!
@@ -48,8 +51,8 @@ def SupportedBconv2DOp(op: Operator) -> bool:
     return (
         strides == (1, 1)
         and dilations == (1, 1)
-        and weights.shape[0] % 32 == 0  # Cout
-        and (weights.shape[3] * 32) % 256 == 0 # Cin
+        and weights.shape[0] % WORD_SIZE_BITS == 0  # Cout
+        and (weights.shape[3] * WORD_SIZE_BITS) % 256 == 0 # Cin
         and weights.type is TensorType.INT32
         and (
             op.inputs[0].type is TensorType.INT8
@@ -70,21 +73,21 @@ class CanonicalizeLceBconv2DPass(OperatorMatchingPass):
 # Replace LCEBconv2D with XC_BConv2D
 class ReplaceLceBconv2DPass(OperatorMatchingPass):
     def __init__(
-        self, input_tensor_type: TensorType, *args: str, **kwargs: int
+        self, output_tensor_type: TensorType, *args: str, **kwargs: int
     ) -> None:
         super().__init__(*args, **kwargs)
-        self._input_tensor_type = input_tensor_type
+        self._output_tensor_type = output_tensor_type
 
     def match(self, op: Operator) -> bool:
         return (
             super().match(op)
             and SupportedBconv2DOp(op)
             and len(op.inputs) == 2
-            and op.inputs[0].type is self._input_tensor_type
+            and op.outputs[0].type is self._output_tensor_type
         )
 
     def mutate(self, op: Operator) -> None:
-        if self._input_tensor_type == TensorType.INT8:
+        if self._output_tensor_type == TensorType.INT8:
             op.operator_code.custom_code = XCOREOpCodes.XC_bconv_int8_DIDO
         else:
             op.operator_code.custom_code = XCOREOpCodes.XC_bconv_bin_DIDO
@@ -106,7 +109,7 @@ class SplitBsignPass(OperatorMatchingPass):
             )
             for i in op.inputs
         )
-        return match and nobsign and op.inputs[0].type == TensorType.INT8
+        return match and nobsign and op.inputs[0].type is TensorType.INT8
 
     def mutate(self, op: Operator) -> None:
 
@@ -125,9 +128,9 @@ class SplitBsignPass(OperatorMatchingPass):
                 TensorType.INT32,
                 shape=[
                     op.inputs[0].shape[0],
-                    int(op.inputs[0].shape[1]), #TODO /32
-                    int(op.inputs[0].shape[2]), #TODO /32
-                    op.inputs[0].shape[3],
+                    op.inputs[0].shape[1], 
+                    op.inputs[0].shape[2],
+                    int(op.inputs[0].shape[3]/WORD_SIZE_BITS),
                 ],
                 producers=[bsign_op],
                 consumers=[op],
@@ -140,9 +143,7 @@ class SplitBsignPass(OperatorMatchingPass):
 
 # Split out padding to a separate of from BConv
 # Note, this currently only matches with BConv but going forward might like to extend this to other conv ops
-# and make it a general pass
-# TODO split only spacial padding 
-# TODO check for symmetric padding
+# and make it a general pass. Bconv only supports SAME and VALID spacial padding
 class SplitPaddingFromConvPass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
 
@@ -151,7 +152,8 @@ class SplitPaddingFromConvPass(OperatorMatchingPass):
 
         if not (SupportedBconv2DOp(op) and len(op.inputs) == 2):
             return False
-
+        
+        # TODO rm magic number
         return op.custom_options["padding"] == 1  # kTfLitePaddingSame
 
     def mutate(self, op: Operator) -> None:
@@ -176,19 +178,16 @@ class SplitPaddingFromConvPass(OperatorMatchingPass):
         padding_tensor = subgraph.create_tensor(f"{op.name}/paddings", TensorType.INT32, shape=[4, 2])
         padding_tensor.buffer.data = np.int32(paddings)
 
-        # Insert PAD op
-        # TODO - change this to XC_pad for now
-        pad_op = subgraph.create_operator(
-            OperatorCode(BuiltinOpCodes.PAD), inputs=[old_input, padding_tensor],
-        )
+        # Note, going foward a builtin.PAD will be inserted, to be replaced by a later pass
+        pad_op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.CUSTOM, custom_code=XCOREOpCodes.XC_pad), inputs=[old_input, padding_tensor])
 
         pad_output_shape = old_input.shape
 
         # TODO this needs fixing.. 32 bits per entry
         if options["padding"] == 1:
             pad_output_shape = list(pad_output_shape)
-            pad_output_shape[1] += padding_tb
-            pad_output_shape[2] += padding_lr
+            pad_output_shape[1] += padding_tb * 2
+            pad_output_shape[2] += padding_lr * 2
             pad_output_shape= tuple(pad_output_shape)
         
         pad_output_tensor = subgraph.create_tensor(
@@ -196,16 +195,17 @@ class SplitPaddingFromConvPass(OperatorMatchingPass):
             TensorType.INT32,
             shape=pad_output_shape,
             consumers=[op],
-            producers=[pad_op],
+            producers=[pad_op]
         )
         pad_op.outputs = [pad_output_tensor]
         
         op.inputs[0] = pad_op.outputs[0]
         
         subgraph.insert_operator(op, pad_op)
-        
 
-        pad_values = op.custom_options["pad_values"] # TODO
-       
+        # Pass on pad values from conv to pad op
+        pad_op.custom_options["pad_values"] = op.custom_options["pad_values"]
+
         # Change padding of Bconv from SAME to VALID
+        # TODO rm magic number
         op.custom_options["padding"] = 2  # kTfLitePaddingValid

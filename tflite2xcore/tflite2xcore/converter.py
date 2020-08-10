@@ -106,7 +106,6 @@ def optimize_for_xcore(
     # need to cleanup after the first round of canonicalization
     pass_mgr.register_passes(CleanupManager())
 
-    pass_mgr.register_pass(passes.ReplaceLceBconv2DPass(input_tensor_type=TensorType.INT8))
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())
     pass_mgr.register_pass(passes.ReplaceTanhPass())

@@ -134,8 +134,8 @@ int main(int argc, char *argv[]) {
   }
 
   // setup runtime
-  initialize(model_content, &input_buffer, &input_size, &output_buffer,
-             &output_size);
+  initialize(model_content, tensor_arena, TENSOR_ARENA_SIZE, &input_buffer,
+             &input_size, &output_buffer, &output_size);
 
   // Load input tensor
   if (!load_input(input_filename, input_buffer, input_size)) {

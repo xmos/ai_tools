@@ -734,16 +734,19 @@ def build_padded_DW(subgraph=None, *, weight_shape, input_size, paddings, stride
 
     return model
 
-#####
-# LCE models
-####
 
-def build_lceBconv2d(subgraph=None, *, weight_shape, input_size, padding, strides,
-        post_activation_mult = True, 
-        post_activation_bias = True, 
-        input_tensor_type = TensorType.INT8
-        ):
-    
+def build_lceBconv2d(
+    subgraph=None,
+    *,
+    weight_shape,
+    input_size,
+    padding,
+    strides,
+    post_activation_mult=True,
+    post_activation_bias=True,
+    input_tensor_type=TensorType.INT8,
+):
+
     subgraph = subgraph or XCOREModel().create_subgraph()
     assert padding in Padding
 
@@ -753,8 +756,12 @@ def build_lceBconv2d(subgraph=None, *, weight_shape, input_size, padding, stride
     input_shape = [1, height, width, C_in]
     tin = subgraph.create_tensor("input", input_tensor_type, input_shape, isinput=True)
     w = subgraph.create_tensor("weights", TensorType.INT32, weight_shape)
-    post_act_mult = subgraph.create_tensor("post_act_mult", TensorType.FLOAT32, weight_shape[:1])
-    post_act_bias = subgraph.create_tensor("post_act_bias", TensorType.FLOAT32, weight_shape[:1])
+    post_act_mult = subgraph.create_tensor(
+        "post_act_mult", TensorType.FLOAT32, weight_shape[:1]
+    )
+    post_act_bias = subgraph.create_tensor(
+        "post_act_bias", TensorType.FLOAT32, weight_shape[:1]
+    )
 
     # add dummy data so that the op can be mutated
     w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
@@ -777,7 +784,7 @@ def build_lceBconv2d(subgraph=None, *, weight_shape, input_size, padding, stride
 
     if post_activation_mult:
         op_inputs = op_inputs + [post_act_mult]
-    
+
     if post_activation_bias:
         op_inputs = op_inputs + [post_act_bias]
 
@@ -785,9 +792,10 @@ def build_lceBconv2d(subgraph=None, *, weight_shape, input_size, padding, stride
         OperatorCode(CustomOpCode("LceBconv2d")), inputs=op_inputs, outputs=[tout]
     )
 
+    # TODO rm magic numbers
     padding_ = 2
-    if padding == Padding.SAME: 
-        padding_= 1
+    if padding is Padding.SAME:
+        padding_ = 1
 
     op.custom_options = {
         "padding": padding_,
@@ -795,7 +803,7 @@ def build_lceBconv2d(subgraph=None, *, weight_shape, input_size, padding, stride
         "stride_width": strides[1],
         "dilation_width_factor": 1,
         "dilation_height_factor": 1,
-        "pad_values":0,
+        "pad_values": 0,
     }
 
     return subgraph.model

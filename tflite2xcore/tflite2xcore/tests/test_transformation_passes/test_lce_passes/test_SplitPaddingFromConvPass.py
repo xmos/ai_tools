@@ -14,13 +14,13 @@ from ..model_builders import build_lceBconv2d
 from .conftest import (
     PARAMS,
     _test_non_matching_params,
-    #test_matching_params,
-    #test_non_matching_output_channels,
-    #test_non_matching_input_channels,
-    #test_non_matching_stride_h,
-    #test_non_matching_stride_w,
-    #test_non_matching_dilation_w_factor,
-    #test_non_matching_dilation_h_factor,
+    # test_matching_params,
+    # test_non_matching_output_channels,
+    # test_non_matching_input_channels,
+    # test_non_matching_stride_h,
+    # test_non_matching_stride_w,
+    # test_non_matching_dilation_w_factor,
+    # test_non_matching_dilation_h_factor,
 )
 
 
@@ -31,23 +31,16 @@ from .conftest import (
 PARAMS = deepcopy(PARAMS)
 
 PARAMS["extended"].update(
-    {
-        "padding": [Padding.SAME],
-    }
+    {"padding": [Padding.SAME],}
 )
 
 PARAMS["default"].update(
-    {
-        "padding": [Padding.SAME],
-    }
+    {"padding": [Padding.SAME],}
 )
 
 PARAMS["smoke"].update(
-    {
-        "padding": [Padding.SAME],
-    }
+    {"padding": [Padding.SAME],}
 )
-
 
 
 #  ----------------------------------------------------------------------------
@@ -75,6 +68,7 @@ def model(weight_shape, input_size, padding, strides):
     )
     return model
 
+
 @pytest.fixture()
 def model_with_non_matching_padding(weight_shape, input_size, padding, strides):
     model = build_lceBconv2d(
@@ -87,6 +81,7 @@ def model_with_non_matching_padding(weight_shape, input_size, padding, strides):
     )
     return model
 
+
 def test_mutate(trf_pass, model):
 
     subgraph = model.subgraphs[0]
@@ -96,14 +91,14 @@ def test_mutate(trf_pass, model):
 
     options = subgraph.operators[0].custom_options
     strides = strides = (options["stride_height"], options["stride_width"])
- 
+
     assert (len(subgraph.operators[0].inputs)) == 2
-    assert subgraph.operators[0].custom_options['padding'] == 1
+    assert subgraph.operators[0].custom_options["padding"] == 1
 
     # Run the pass
     trf_pass.run(model)
     model.sanity_check()
-   
+
     # Clean up dangling ops/tensors
     CleanupManager(model).run_passes()
     model.sanity_check()
@@ -130,21 +125,23 @@ def test_mutate(trf_pass, model):
 
     assert all((o not in subgraph.outputs) for o in pad_op.outputs)
 
-    assert conv_op.outputs[0].shape == original_output.shape    
+    assert conv_op.outputs[0].shape == original_output.shape
 
-    assert conv_op.custom_options['padding'] == 2
+    assert conv_op.custom_options["padding"] == 2
 
-    # Check special dims of PAD output tensor is as expected 
+    # Check spacial dims of PAD output tensor is as expected
     paddings = pad_op.inputs[1].as_array()
-    out_height_expected = pad_op.inputs[0].shape[1] + paddings[1][0] + paddings[1][1]   
-    out_width_expected  = pad_op.inputs[0].shape[2] + paddings[2][0] + paddings[2][1]   
-    
+    out_height_expected = pad_op.inputs[0].shape[1] + paddings[1][0] + paddings[1][1]
+    out_width_expected = pad_op.inputs[0].shape[2] + paddings[2][0] + paddings[2][1]
+
     pad_output_shape = pad_op.outputs[0].shape
     assert out_height_expected == pad_output_shape[1]
     assert out_width_expected == pad_output_shape[2]
 
+
 def test_non_matching_paddings(trf_pass, model_with_non_matching_padding):
     _test_non_matching_params(trf_pass, model_with_non_matching_padding)
+
 
 if __name__ == "__main__":
     pytest.main()

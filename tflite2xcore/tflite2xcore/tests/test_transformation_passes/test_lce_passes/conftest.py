@@ -60,8 +60,8 @@ PARAMS["smoke"].update(
     {
         "kernel_height": [2, 3],
         "kernel_width": [2, 3],
-        "input_channels": [256],    # note, x32 for binary channels
-        "non_matching_input_channels": [129], 
+        "input_channels": [256],  # note, x32 for binary channels
+        "non_matching_input_channels": [129],
         "output_channels": [32],
         "non_matching_output_channels": [16],
         "padding": list(Padding),

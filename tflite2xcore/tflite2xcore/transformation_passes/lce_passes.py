@@ -26,6 +26,11 @@ from tflite2xcore.xcore_schema import (
 WORD_SIZE_BYTES = WORD_SIZE
 WORD_SIZE_BITS = WORD_SIZE_BYTES * 8
 
+# TODO
+PADDING_SAME = 1  # kTfLitePaddingSame
+PADDING_VALID = 2  # kTfLitePaddingValid
+
+
 def SupportedBconv2DOp(op: Operator) -> bool:
 
     # isinstance - yuk!
@@ -43,16 +48,17 @@ def SupportedBconv2DOp(op: Operator) -> bool:
             options["dilation_height_factor"],
             options["dilation_width_factor"],
         )
+        padding = options["padding"]
         weights = op.inputs[1]
     except KeyError:
         return False
 
-    # TODO check padding
     return (
         strides == (1, 1)
         and dilations == (1, 1)
+        and (padding == PADDING_SAME or padding == PADDING_VALID)
         and weights.shape[0] % WORD_SIZE_BITS == 0  # Cout
-        and (weights.shape[3] * WORD_SIZE_BITS) % 256 == 0 # Cin
+        and (weights.shape[3] * WORD_SIZE_BITS) % 256 == 0  # Cin
         and weights.type is TensorType.INT32
         and (
             op.inputs[0].type is TensorType.INT8
@@ -69,6 +75,7 @@ class CanonicalizeLceBconv2DPass(OperatorMatchingPass):
         op.inputs[2].consumers.remove(op)
         op.inputs[3].consumers.remove(op)
         op.inputs = op.inputs[:2]
+
 
 # Replace LCEBconv2D with XC_BConv2D
 class ReplaceLceBconv2DPass(OperatorMatchingPass):
@@ -128,9 +135,9 @@ class SplitBsignPass(OperatorMatchingPass):
                 TensorType.INT32,
                 shape=[
                     op.inputs[0].shape[0],
-                    op.inputs[0].shape[1], 
+                    op.inputs[0].shape[1],
                     op.inputs[0].shape[2],
-                    int(op.inputs[0].shape[3]/WORD_SIZE_BITS),
+                    int(op.inputs[0].shape[3] / WORD_SIZE_BITS),
                 ],
                 producers=[bsign_op],
                 consumers=[op],
@@ -152,16 +159,15 @@ class SplitPaddingFromConvPass(OperatorMatchingPass):
 
         if not (SupportedBconv2DOp(op) and len(op.inputs) == 2):
             return False
-        
-        # TODO rm magic number
-        return op.custom_options["padding"] == 1  # kTfLitePaddingSame
+
+        return op.custom_options["padding"] == PADDING_SAME
 
     def mutate(self, op: Operator) -> None:
 
         subgraph = op.subgraph
         options = op.custom_options
-       
-        height, width = op.inputs[0].shape[1:3] # Note, will be in x32 chunks
+
+        height, width = op.inputs[0].shape[1:3]  # Note, will be in x32 chunks
 
         C_out, K_h, K_w, C_in = op.inputs[1].shape
 
@@ -170,42 +176,45 @@ class SplitPaddingFromConvPass(OperatorMatchingPass):
         old_input.consumers.remove(op)
 
         strides = (options["stride_height"], options["stride_width"])
-        
+
         # Construct paddings input tensor for PAD op
-        padding_tb = int(np.ceil(((strides[0]-1)*height - strides[0] + K_h)/2))
-        padding_lr = int(np.ceil(((strides[1]-1)*width - strides[1] + K_w)/2))
+        padding_tb = int(np.ceil(((strides[0] - 1) * height - strides[0] + K_h) / 2))
+        padding_lr = int(np.ceil(((strides[1] - 1) * width - strides[1] + K_w) / 2))
         paddings = [[0, 0], [padding_tb, padding_tb], [padding_lr, padding_lr], [0, 0]]
-        padding_tensor = subgraph.create_tensor(f"{op.name}/paddings", TensorType.INT32, shape=[4, 2])
+        padding_tensor = subgraph.create_tensor(
+            f"{op.name}/paddings", TensorType.INT32, shape=[4, 2]
+        )
         padding_tensor.buffer.data = np.int32(paddings)
 
         # Note, going foward a builtin.PAD will be inserted, to be replaced by a later pass
-        pad_op = subgraph.create_operator(OperatorCode(BuiltinOpCodes.CUSTOM, custom_code=XCOREOpCodes.XC_pad), inputs=[old_input, padding_tensor])
+        pad_op = subgraph.create_operator(
+            OperatorCode(BuiltinOpCodes.CUSTOM, custom_code=XCOREOpCodes.XC_pad),
+            inputs=[old_input, padding_tensor],
+        )
 
         pad_output_shape = old_input.shape
 
-        # TODO this needs fixing.. 32 bits per entry
-        if options["padding"] == 1:
+        if options["padding"] == PADDING_SAME:
             pad_output_shape = list(pad_output_shape)
             pad_output_shape[1] += padding_tb * 2
             pad_output_shape[2] += padding_lr * 2
-            pad_output_shape= tuple(pad_output_shape)
-        
+            pad_output_shape = tuple(pad_output_shape)
+
         pad_output_tensor = subgraph.create_tensor(
             f"{pad_op.name}/output",
             TensorType.INT32,
             shape=pad_output_shape,
             consumers=[op],
-            producers=[pad_op]
+            producers=[pad_op],
         )
         pad_op.outputs = [pad_output_tensor]
-        
+
         op.inputs[0] = pad_op.outputs[0]
-        
+
         subgraph.insert_operator(op, pad_op)
 
         # Pass on pad values from conv to pad op
         pad_op.custom_options["pad_values"] = op.custom_options["pad_values"]
 
         # Change padding of Bconv from SAME to VALID
-        # TODO rm magic number
-        op.custom_options["padding"] = 2  # kTfLitePaddingValid
+        op.custom_options["padding"] = PADDING_VALID

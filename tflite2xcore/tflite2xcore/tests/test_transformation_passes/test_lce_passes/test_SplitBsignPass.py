@@ -120,6 +120,9 @@ def test_mutate(trf_pass, model):
 
     assert all((o not in subgraph.outputs) for o in op[0].outputs)
 
+    assert op[0].outputs[0].shape[:-1] == in_ori.shape[:-1]
+    assert op[0].outputs[0].shape[-1] == in_ori.shape[-1] / 32
+
 
 def test_non_matching_input_tensor_float32(trf_pass, model_with_float32_input):
     _test_non_matching_params(trf_pass, model_with_float32_input)

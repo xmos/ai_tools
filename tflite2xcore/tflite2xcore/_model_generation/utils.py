@@ -1,16 +1,14 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import os
-import logging
 import tensorflow as tf  # type: ignore
 import numpy as np  # type: ignore
 from collections import Iterable
+from typing import Union, Iterator, List, Optional, NamedTuple, Any
 
-from typing import TYPE_CHECKING, Union, Iterator, List, Optional, NamedTuple, Any
+from tflite2xcore import xlogging  # type: ignore # TODO: fix this
 
-if TYPE_CHECKING:
-    from numbers import Number
-    from .model_generator import Configuration
+from . import Configuration
 
 
 class Quantization(NamedTuple):
@@ -45,7 +43,7 @@ def quantize_converter(
     def representative_data_gen() -> Iterator[List[tf.Tensor]]:
         for j, input_value in enumerate(x_train_ds.take(representative_data.shape[0])):
             if show_progress_step and (j + 1) % show_progress_step == 0:
-                logging.getLogger().info(
+                xlogging.logging.getLogger().info(
                     f"Converter quantization processed examples {j+1:6d}/{representative_data.shape[0]}"
                 )
             yield [input_value]
@@ -72,11 +70,11 @@ def apply_interpreter_to_examples(
     for j, x in enumerate(examples):
         if show_progress_step and (j + 1) % show_progress_step == 0:
             if show_pid:
-                logging.getLogger().info(
+                xlogging.logging.getLogger().info(
                     f"(PID {os.getpid()}) Evaluated examples {j+1:6d}/{examples.shape[0]}"
                 )
             else:
-                logging.getLogger().info(
+                xlogging.logging.getLogger().info(
                     f"Evaluated examples {j+1:6d}/{examples.shape[0]}"
                 )
         interpreter.set_tensor(interpreter_input_ind, np.expand_dims(x, 0))
@@ -87,7 +85,9 @@ def apply_interpreter_to_examples(
     return np.vstack(outputs) if isinstance(examples, np.ndarray) else outputs
 
 
-def parse_init_config(name: str, *args: "Number") -> tf.keras.initializers.Initializer:
+def parse_init_config(
+    name: str, *args: Union[int, float]
+) -> tf.keras.initializers.Initializer:
     init = getattr(tf.keras.initializers, name)
     return init(*args)
 

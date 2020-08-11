@@ -1,23 +1,20 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from abc import ABC, abstractmethod
 import tensorflow as tf  # type: ignore
 import numpy as np  # type: ignore
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Callable, Union
 
 from tflite2xcore.xcore_interpreter import XCOREInterpreter  # type: ignore # TODO: fix this
 
+from . import TFLiteModel
 from .utils import apply_interpreter_to_examples, quantize, Quantization
 
-from typing import TYPE_CHECKING, Callable, Union
 
-if TYPE_CHECKING:
-    from .model_converter import TFLiteModel
-
-
-class ModelEvaluator(ABC):
+class Evaluator(ABC):
     """ Superclass for defining model evaluation logic.
 
-    ModelEvaluator objects are registered when a ModelGenerator object is
+    Evaluator objects are registered when a ModelGenerator object is
     instantiated. Evaluation means that output data is generated for a given
     input, but it does not mean that a model is compared to another one.
     """
@@ -37,7 +34,7 @@ class ModelEvaluator(ABC):
         raise NotImplementedError()
 
 
-class TFLiteEvaluator(ModelEvaluator):
+class TFLiteEvaluator(Evaluator):
     """ Defines the evaluation logic for a TFLite float model. """
 
     def __init__(

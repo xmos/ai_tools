@@ -45,9 +45,9 @@ class XCORESerializationMixin:
             opcode = xcore_schema.BuiltinOpCodes(operator_codeT.builtinCode)
             if opcode is xcore_schema.BuiltinOpCodes.CUSTOM:
                 custom_code = operator_codeT.customCode.decode("utf-8")
-                if custom_code in xcore_schema.XCOREOpCodes:
+                try:
                     opcode = xcore_schema.XCOREOpCodes(custom_code)
-                else:
+                except ValueError:
                     opcode = xcore_schema.CustomOpCode(custom_code)
             operator_codes_lut.append(
                 xcore_schema.OperatorCode(opcode, version=operator_codeT.version)

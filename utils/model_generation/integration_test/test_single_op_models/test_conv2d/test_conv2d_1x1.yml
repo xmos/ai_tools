@@ -2,242 +2,242 @@
 # RANDOMLY GENERATED CONFIGS, MODIFY AT OWN RISK
 default:
   0:
-    height: 5
-    input_channels: 4
-    num_threads: 2
-    output_channels: 4
-    width: 8
+    height: 4
+    input_channels: 16
+    num_threads: 1
+    output_channels: 12
+    width: 7
   1:
-    height: 8
-    input_channels: 4
-    num_threads: 2
-    output_channels: 28
-    width: 1
-  2:
-    height: 8
-    input_channels: 48
+    height: 15
+    input_channels: 8
     num_threads: 2
     output_channels: 52
-    width: 8
+    width: 7
+  2:
+    height: 8
+    input_channels: 36
+    num_threads: 1
+    output_channels: 52
+    width: 7
   3:
-    height: 12
+    height: 8
     input_channels: 8
     num_threads: 1
-    output_channels: 4
+    output_channels: 16
     width: 4
   4:
     height: 5
-    input_channels: 16
-    num_threads: 1
-    output_channels: 16
-    width: 4
-  5:
-    height: 5
-    input_channels: 20
-    num_threads: 5
-    output_channels: 8
-    width: 1
-  6:
-    height: 5
-    input_channels: 32
+    input_channels: 48
     num_threads: 1
     output_channels: 48
-    width: 4
-  7:
-    height: 4
-    input_channels: 48
-    num_threads: 2
-    output_channels: 16
-    width: 20
-  8:
-    height: 15
-    input_channels: 48
-    num_threads: 1
-    output_channels: 12
-    width: 1
-  9:
-    height: 12
-    input_channels: 12
+    width: 14
+  5:
+    height: 5
+    input_channels: 8
     num_threads: 5
     output_channels: 28
+    width: 20
+  6:
+    height: 8
+    input_channels: 32
+    num_threads: 2
+    output_channels: 64
+    width: 20
+  7:
+    height: 12
+    input_channels: 36
+    num_threads: 2
+    output_channels: 52
+    width: 8
+  8:
+    height: 5
+    input_channels: 36
+    num_threads: 1
+    output_channels: 4
+    width: 8
+  9:
+    height: 15
+    input_channels: 4
+    num_threads: 1
+    output_channels: 12
     width: 7
   10:
-    height: 15
-    input_channels: 36
-    num_threads: 5
-    output_channels: 8
+    height: 12
+    input_channels: 8
+    num_threads: 2
+    output_channels: 28
     width: 14
   11:
     height: 8
-    input_channels: 20
+    input_channels: 32
     num_threads: 5
-    output_channels: 28
-    width: 14
+    output_channels: 16
+    width: 20
   12:
     height: 5
-    input_channels: 20
-    num_threads: 5
-    output_channels: 28
-    width: 14
+    input_channels: 48
+    num_threads: 2
+    output_channels: 4
+    width: 4
   13:
-    height: 1
-    input_channels: 8
+    height: 15
+    input_channels: 36
     num_threads: 5
-    output_channels: 48
+    output_channels: 32
     width: 8
   14:
     height: 12
-    input_channels: 36
-    num_threads: 1
-    output_channels: 52
+    input_channels: 48
+    num_threads: 2
+    output_channels: 16
     width: 7
   15:
-    height: 12
-    input_channels: 4
+    height: 15
+    input_channels: 20
     num_threads: 2
-    output_channels: 12
-    width: 4
+    output_channels: 64
+    width: 8
   16:
     height: 12
-    input_channels: 16
-    num_threads: 1
-    output_channels: 8
-    width: 7
+    input_channels: 36
+    num_threads: 5
+    output_channels: 28
+    width: 8
   17:
     height: 15
-    input_channels: 16
-    num_threads: 1
-    output_channels: 48
-    width: 20
+    input_channels: 20
+    num_threads: 2
+    output_channels: 8
+    width: 14
   18:
-    height: 4
-    input_channels: 36
+    height: 15
+    input_channels: 32
     num_threads: 2
     output_channels: 64
     width: 14
   19:
     height: 12
-    input_channels: 16
+    input_channels: 48
     num_threads: 5
-    output_channels: 4
-    width: 1
+    output_channels: 52
+    width: 20
   20:
     height: 15
-    input_channels: 48
+    input_channels: 20
+    num_threads: 1
+    output_channels: 48
+    width: 20
+  21:
+    height: 4
+    input_channels: 16
+    num_threads: 2
+    output_channels: 8
+    width: 8
+  22:
+    height: 1
+    input_channels: 12
+    num_threads: 1
+    output_channels: 52
+    width: 1
+  23:
+    height: 15
+    input_channels: 4
     num_threads: 5
     output_channels: 48
-    width: 8
-  21:
-    height: 15
-    input_channels: 48
-    num_threads: 2
-    output_channels: 64
-    width: 7
-  22:
-    height: 4
-    input_channels: 36
-    num_threads: 2
-    output_channels: 52
-    width: 14
-  23:
-    height: 8
-    input_channels: 36
-    num_threads: 1
-    output_channels: 12
     width: 7
   24:
-    height: 1
-    input_channels: 4
-    num_threads: 5
+    height: 5
+    input_channels: 36
+    num_threads: 2
+    output_channels: 28
+    width: 7
+  25:
+    height: 5
+    input_channels: 48
+    num_threads: 1
     output_channels: 4
     width: 1
-  25:
-    height: 1
-    input_channels: 8
-    num_threads: 1
-    output_channels: 64
-    width: 4
   26:
-    height: 4
-    input_channels: 4
+    height: 1
+    input_channels: 12
     num_threads: 1
-    output_channels: 16
+    output_channels: 48
     width: 20
   27:
-    height: 15
-    input_channels: 32
-    num_threads: 2
-    output_channels: 64
-    width: 14
+    height: 12
+    input_channels: 48
+    num_threads: 1
+    output_channels: 32
+    width: 8
   28:
-    height: 4
-    input_channels: 20
-    num_threads: 2
-    output_channels: 12
-    width: 14
+    height: 8
+    input_channels: 12
+    num_threads: 5
+    output_channels: 32
+    width: 8
   29:
     height: 8
-    input_channels: 8
-    num_threads: 2
-    output_channels: 32
-    width: 14
+    input_channels: 12
+    num_threads: 1
+    output_channels: 64
+    width: 1
   30:
-    height: 1
-    input_channels: 32
+    height: 8
+    input_channels: 20
     num_threads: 2
-    output_channels: 8
-    width: 8
+    output_channels: 64
+    width: 4
   31:
     height: 4
+    input_channels: 12
+    num_threads: 2
+    output_channels: 32
+    width: 8
+  32:
+    height: 15
     input_channels: 32
+    num_threads: 5
+    output_channels: 8
+    width: 14
+  33:
+    height: 5
+    input_channels: 4
     num_threads: 5
     output_channels: 16
     width: 20
-  32:
-    height: 1
-    input_channels: 12
-    num_threads: 5
-    output_channels: 8
-    width: 1
-  33:
-    height: 1
-    input_channels: 20
-    num_threads: 2
-    output_channels: 32
-    width: 4
   34:
-    height: 5
-    input_channels: 12
-    num_threads: 5
-    output_channels: 52
-    width: 4
+    height: 4
+    input_channels: 20
+    num_threads: 1
+    output_channels: 4
+    width: 1
   35:
     height: 5
-    input_channels: 12
+    input_channels: 20
     num_threads: 1
-    output_channels: 64
-    width: 1
+    output_channels: 48
+    width: 20
   36:
     height: 1
-    input_channels: 12
-    num_threads: 1
-    output_channels: 32
-    width: 20
-  37:
-    height: 8
     input_channels: 16
-    num_threads: 5
-    output_channels: 32
-    width: 7
-  38:
-    height: 15
-    input_channels: 32
     num_threads: 1
     output_channels: 28
-    width: 8
+    width: 4
+  37:
+    height: 12
+    input_channels: 12
+    num_threads: 1
+    output_channels: 4
+    width: 4
+  38:
+    height: 4
+    input_channels: 16
+    num_threads: 1
+    output_channels: 12
+    width: 4
   39:
-    height: 8
-    input_channels: 8
-    num_threads: 2
-    output_channels: 32
-    width: 20
+    height: 1
+    input_channels: 4
+    num_threads: 1
+    output_channels: 12
+    width: 14

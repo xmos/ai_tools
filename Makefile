@@ -21,9 +21,8 @@ tflite2xcore_test:
 
 .PHONY: integration_test
 integration_test: testing_utils
-#FIXME: call to new generation and integration test framework
-#	cd tests && ./generate_test_data.py -n $(NUM_PROCS)
-#	cd tests && pytest -v --test-app=../examples/apps/test_model/bin/test_model.xe --max-count 10 -n $(NUM_PROCS)
+	cd tests && ./generate_test_data.py -n $(NUM_PROCS)
+	cd tests && pytest -v -n $(NUM_PROCS)
 
 .PHONY: clean
 clean: lib_nn_test_clean

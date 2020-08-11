@@ -11,7 +11,6 @@ from . import schema_py_generated as schema
 #                                  TensorType
 #  ----------------------------------------------------------------------------
 
-# TODO: add FLOAT64 when schema is updated
 TensorType = enum.IntEnum(
     "TensorType",
     {k: v for k, v in vars(schema.TensorType).items() if not k.startswith("__")},
@@ -19,6 +18,7 @@ TensorType = enum.IntEnum(
 
 __TensorType_to_stdint_type = {
     # TensorType.STRING: None,  # intentionally not supported
+    TensorType.FLOAT64: "float64_t",
     TensorType.FLOAT32: "float32_t",
     TensorType.FLOAT16: "float16_t",
     TensorType.COMPLEX64: "complex64_t",
@@ -33,6 +33,7 @@ TensorType.to_stdint_type = lambda self: __TensorType_to_stdint_type[self]
 
 __TensorType_to_bytes = {
     # TensorType.STRING: None,  # intentionally not supported
+    TensorType.FLOAT64: 8,
     TensorType.FLOAT32: 4,
     TensorType.FLOAT16: 2,
     TensorType.COMPLEX64: 8,
@@ -47,6 +48,7 @@ TensorType.to_bytes = lambda self: __TensorType_to_bytes[self]
 
 __TensorType_to_numpy_dtype = {
     # TensorType.STRING: None,  # intentionally not supported
+    TensorType.FLOAT64: np.float64,
     TensorType.FLOAT32: np.float32,
     TensorType.FLOAT16: np.float16,
     TensorType.COMPLEX64: np.complex64,
@@ -60,6 +62,7 @@ __TensorType_to_numpy_dtype = {
 TensorType.to_numpy_dtype = lambda self: __TensorType_to_numpy_dtype[self]
 
 __TensorType_from_numpy_dtype = {
+    np.dtype(np.float64): TensorType.FLOAT64,
     np.dtype(np.float32): TensorType.FLOAT32,
     np.dtype(np.float16): TensorType.FLOAT16,
     np.dtype(np.complex64): TensorType.COMPLEX64,

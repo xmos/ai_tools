@@ -2,9 +2,11 @@
 
 import pytest  # type: ignore
 
+from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation import Configuration
 
-from . import Conv2dGenericTestModelGenerator, test_output
+from . import Conv2dGenericTestModelGenerator, IntegrationTestRunner, test_output
 
 
 #  ----------------------------------------------------------------------------
@@ -25,47 +27,17 @@ class Conv2dTestModelGenerator(Conv2dGenericTestModelGenerator):
 
 GENERATOR = Conv2dTestModelGenerator
 
+
 #  ----------------------------------------------------------------------------
-#                                   CONFIGS
+#                                   TESTS
 #  ----------------------------------------------------------------------------
 
-CONFIGS = {
-    "default": [
-        {},
-        {"height": 1, "width": 1},
-        {"height": 3, "width": 3},
-        {"height": 7, "width": 4, "input_channels": 32},
-        {"height": 8, "width": 4, "output_channels": 16},
-        {
-            "height": 6,
-            "width": 9,
-            "input_channels": 24,
-            "output_channels": 20,
-            "padding": "valid",
-        },
-        {"height": 3, "width": 3, "padding": "valid"},
-        {"strides": (2, 2)},
-        {"strides": (1, 2)},
-        {"strides": (1, 2), "padding": "valid"},
-        {"strides": (2, 2), "padding": "valid"},
-        {"height": 10, "width": 20, "num_threads": 2},
-        {"height": 20, "width": 10, "num_threads": 5},
-        {"height": 20, "width": 10, "num_threads": 5, "padding": "valid"},
-        {"K_h": 2, "K_w": 4},
-        {"K_h": 1, "K_w": 5, "padding": "valid"},
-        {"K_h": 3, "K_w": 1, "padding": "valid"},
-        {"K_h": 2, "K_w": 4, "input_channels": 20, "output_channels": 20},
-        {
-            "height": 7,
-            "width": 8,
-            "K_h": 2,
-            "K_w": 4,
-            "input_channels": 28,
-            "output_channels": 12,
-            "strides": (2, 1),
-        },
-    ],
-}
+
+def test_converted_model(xcore_model: XCOREModel) -> None:
+    operators = xcore_model.subgraphs[0].operators
+    assert len(operators) == 1
+    op = operators[0]
+    assert op.operator_code.code is XCOREOpCodes.XC_conv2d_deep
 
 
 if __name__ == "__main__":

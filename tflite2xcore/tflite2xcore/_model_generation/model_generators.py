@@ -24,7 +24,7 @@ class ModelGenerator(ABC):
     """
 
     _model: Any
-    _config: Configuration = {}
+    _config: Configuration
     run: Runner
 
     def __init__(
@@ -64,6 +64,7 @@ class ModelGenerator(ABC):
         Default values for missing configuration parameters are set.
         Subclasses should implement the _set_config method instead of this.
         """
+        self._config = {}
         self._set_config(config)
         if config:
             raise ValueError(

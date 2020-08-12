@@ -6,7 +6,7 @@ import tensorflow as tf  # type: ignore
 from tflite2xcore._model_generation import Configuration
 from tflite2xcore._model_generation.utils import parse_init_config
 
-from .. import IntegrationTestModelGenerator, IntegrationTestRunner, test_output
+from .. import IntegrationTestModelGenerator, test_output
 
 
 #  ----------------------------------------------------------------------------
@@ -16,13 +16,13 @@ from .. import IntegrationTestModelGenerator, IntegrationTestRunner, test_output
 
 class AbstractConv2dTestModelGenerator(IntegrationTestModelGenerator):
     @abstractmethod
-    def build_core_model(self) -> tf.keras.Model:
+    def _build_core_model(self) -> tf.keras.Model:
         raise NotImplementedError()
 
     def build(self) -> None:
         self._prep_backend()
         try:
-            self._model = self.build_core_model()
+            self._model = self._build_core_model()
         except ValueError as e:
             if e.args[0].startswith("Negative dimension size caused by"):
                 raise ValueError(
@@ -61,7 +61,7 @@ class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
         )
         super()._set_config(cfg)
 
-    def build_core_model(self) -> tf.keras.Model:
+    def _build_core_model(self) -> tf.keras.Model:
         cfg = self._config
         return tf.keras.Sequential(
             layers=[

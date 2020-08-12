@@ -40,7 +40,6 @@ class AbstractConv2dTestModelGenerator(IntegrationTestModelGenerator):
                 K_h=cfg.pop("K_h", 3),
                 height=cfg.pop("height", 5),
                 width=cfg.pop("width", 5),
-                output_channels=cfg.pop("output_channels", 4),
                 padding=cfg.pop("padding", "same"),
                 strides=cfg.pop("strides", (1, 1)),
                 weight_init=cfg.pop("weight_init", ("RandomUniform", -1, 1)),
@@ -54,15 +53,12 @@ class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         input_channels = cfg.pop("input_channels", 4)
         assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
+        output_channels = cfg.pop("output_channels", 4)
+        assert output_channels % 4 == 0, "# of output channels must be multiple of 4"
 
-        try:
-            assert (
-                cfg["output_channels"] % 4 == 0
-            ), "# of output channels must be multiple of 4"
-        except KeyError:
-            pass
-
-        self._config["input_channels"] = input_channels
+        self._config.update(
+            {"input_channels": input_channels, "output_channels": output_channels}
+        )
         super()._set_config(cfg)
 
     def build_core_model(self) -> tf.keras.Model:

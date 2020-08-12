@@ -73,7 +73,7 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
         except KeyError:
             raise KeyError(
                 "CONFIGS does not define coverage level "
-                f"'{coverage}' in {config_file.resolve())}"
+                f"'{coverage}' in {config_file.resolve()}"
             ) from None
 
         metafunc.parametrize(

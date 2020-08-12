@@ -7,7 +7,11 @@ from typing import Tuple, Optional
 from tflite2xcore._model_generation import Configuration
 from tflite2xcore._model_generation.utils import parse_init_config
 
-from .. import IntegrationTestModelGenerator, test_output
+from .. import (
+    IntegrationTestModelGenerator,
+    test_output,
+    test_converted_single_op_model,
+)
 
 
 #  ----------------------------------------------------------------------------

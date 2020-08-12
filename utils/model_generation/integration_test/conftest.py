@@ -54,7 +54,7 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
     if "run" in metafunc.fixturenames:
         try:
             CONFIGS = metafunc.module.CONFIGS  # [coverage].values()
-            config_file = metafunc.module.__file__
+            config_file = Path(metafunc.module.__file__)
         except AttributeError:
             xlogging.logging.debug(f"CONFIGS undefined in {metafunc.module}")
             config_file = Path(metafunc.module.__file__).with_suffix(".yml")
@@ -72,7 +72,8 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
             configs = CONFIGS[coverage].values()
         except KeyError:
             raise KeyError(
-                f"CONFIGS does not define coverage level '{coverage}' in {config_file}"
+                "CONFIGS does not define coverage level "
+                f"'{coverage}' in {config_file.resolve())}"
             ) from None
 
         metafunc.parametrize(

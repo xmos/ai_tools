@@ -99,4 +99,3 @@ def stringify_config(cfg: "Configuration") -> str:
         return str(v).replace(" ", "_")
 
     return ",".join(k + "=" + stringify_value(v) for k, v in sorted(cfg.items()))
-

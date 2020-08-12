@@ -32,7 +32,7 @@ class DepthwiseConv2dTestModelGenerator(AbstractConv2dTestModelGenerator):
 
     def _conv_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
-    ) -> tf.keras.layers.Layer:
+    ) -> tf.keras.layers.DepthwiseConv2D:
         kwargs = {"input_shape": input_shape} if input_shape else {}
         cfg = self._config
         return tf.keras.layers.DepthwiseConv2D(
@@ -43,11 +43,6 @@ class DepthwiseConv2dTestModelGenerator(AbstractConv2dTestModelGenerator):
             bias_initializer=parse_init_config(*cfg["bias_init"]),
             kernel_initializer=parse_init_config(*cfg["weight_init"]),
             **kwargs
-        )
-
-    def _build_core_model(self) -> tf.keras.Model:
-        return tf.keras.Sequential(
-            layers=[self._conv_layer(input_shape=self._input_shape)]
         )
 
 

@@ -17,7 +17,7 @@ RECORD_CALLBACK = ctypes.CFUNCTYPE(
     ctypes.c_ulonglong,  # timestamp
     ctypes.c_uint,  # length
     ctypes.c_ulonglong,  # dataval
-    ctypes.c_char_p,  # databytes
+    ctypes.POINTER(ctypes.c_char),  # databytes
 )
 
 REGISTER_CALLBACK = ctypes.CFUNCTYPE(
@@ -97,8 +97,8 @@ class TestingXCoreInterpreterEndpoint(object):
         probe = self._probe_info[id_]
         if probe["name"] == "output_tensor":
             # print("length=", length)
-            # print("data_bytes=", data_bytes.strip())
-            self.output = np.frombuffer(data_bytes.strip(), dtype=np.int8)
+            # print("data_bytes=", data_bytes)
+            self.output = np.frombuffer(data_bytes[0:length], dtype=np.int8)
 
             self.ready = True
 

@@ -2,8 +2,6 @@
 
 import numpy as np  # type: ignore
 
-from typing import Any
-
 from abc import abstractmethod
 from contextlib import contextmanager
 
@@ -20,11 +18,11 @@ class SubgraphTransformationPass(ModelTransformationPass):
         self._obj_index = -1
 
     @abstractmethod
-    def match(self, obj: Any) -> bool:
+    def match(self, obj):
         return True
 
     @abstractmethod
-    def mutate(self, obj: Any) -> None:
+    def mutate(self, obj):
         pass
 
     @abstractmethod
@@ -75,7 +73,7 @@ class SubgraphTransformationPass(ModelTransformationPass):
 
 
 class OperatorMatchingPass(SubgraphTransformationPass):
-    def __init__(self, *args: str, **kwargs: int) -> None:
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._op = None
 

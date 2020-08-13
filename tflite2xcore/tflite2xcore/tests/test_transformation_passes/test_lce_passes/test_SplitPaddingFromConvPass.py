@@ -14,13 +14,13 @@ from ..model_builders import build_lceBconv2d
 from .conftest import (
     PARAMS,
     _test_non_matching_params,
-    # test_matching_params,
-    # test_non_matching_output_channels,
-    # test_non_matching_input_channels,
-    # test_non_matching_stride_h,
-    # test_non_matching_stride_w,
-    # test_non_matching_dilation_w_factor,
-    # test_non_matching_dilation_h_factor,
+     test_matching_params,
+     test_non_matching_output_channels,
+     test_non_matching_input_channels,
+     test_non_matching_stride_h,
+     test_non_matching_stride_w,
+     test_non_matching_dilation_w_factor,
+     test_non_matching_dilation_h_factor,
 )
 
 

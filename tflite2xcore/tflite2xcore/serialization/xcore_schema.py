@@ -354,4 +354,11 @@ __Padding_TfLitePadding = {
     __TfLitePadding.kTfLitePaddingSame: Padding.SAME,
     __TfLitePadding.kTfLitePaddingValid: Padding.VALID,
 }
-Padding.from_TfLitePadding = lambda x: __Padding_TfLitePadding[x]
+
+__Padding_TfLitePadding_ = {
+    Padding.SAME: __TfLitePadding.kTfLitePaddingSame,
+    Padding.VALID: __TfLitePadding.kTfLitePaddingValid,
+}
+
+Padding.from_TfLitePadding = lambda x: __Padding_TfLitePadding[__TfLitePadding(x)]
+Padding.to_TfLitePadding = lambda x: __Padding_TfLitePadding_[Padding(x)]

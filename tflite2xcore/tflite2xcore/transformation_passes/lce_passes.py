@@ -23,12 +23,9 @@ from tflite2xcore.xcore_schema import (
     BuiltinOptions,
 )
 
+# TODO ideally these would live somewhere else
 WORD_SIZE_BYTES = WORD_SIZE
 WORD_SIZE_BITS = WORD_SIZE_BYTES * 8
-
-# TODO
-PADDING_SAME = 1  # kTfLitePaddingSame
-PADDING_VALID = 2  # kTfLitePaddingValid
 
 
 def SupportedBconv2DOp(op: Operator) -> bool:
@@ -42,21 +39,18 @@ def SupportedBconv2DOp(op: Operator) -> bool:
 
     options = op.custom_options
 
-    try:
-        strides = (options["stride_height"], options["stride_width"])
-        dilations = (
-            options["dilation_height_factor"],
-            options["dilation_width_factor"],
-        )
-        padding = options["padding"]
-        weights = op.inputs[1]
-    except KeyError:
-        return False
+    strides = (options["stride_height"], options["stride_width"])
+    dilations = (
+        options["dilation_height_factor"],
+        options["dilation_width_factor"],
+    )
+    padding = Padding.from_TfLitePadding((options["padding"]))
+    weights = op.inputs[1]
 
     return (
         strides == (1, 1)
         and dilations == (1, 1)
-        and (padding == PADDING_SAME or padding == PADDING_VALID)
+        and padding in Padding
         and weights.shape[0] % WORD_SIZE_BITS == 0  # Cout
         and (weights.shape[3] * WORD_SIZE_BITS) % 256 == 0  # Cin
         and weights.type is TensorType.INT32
@@ -160,7 +154,7 @@ class SplitPaddingFromConvPass(OperatorMatchingPass):
         if not (SupportedBconv2DOp(op) and len(op.inputs) == 2):
             return False
 
-        return op.custom_options["padding"] == PADDING_SAME
+        return Padding.from_TfLitePadding(op.custom_options["padding"]) is Padding.SAME
 
     def mutate(self, op: Operator) -> None:
 
@@ -194,7 +188,7 @@ class SplitPaddingFromConvPass(OperatorMatchingPass):
 
         pad_output_shape = old_input.shape
 
-        if options["padding"] == PADDING_SAME:
+        if Padding.from_TfLitePadding(op.custom_options["padding"]) is Padding.SAME:
             pad_output_shape = list(pad_output_shape)
             pad_output_shape[1] += padding_tb * 2
             pad_output_shape[2] += padding_lr * 2
@@ -217,4 +211,4 @@ class SplitPaddingFromConvPass(OperatorMatchingPass):
         pad_op.custom_options["pad_values"] = op.custom_options["pad_values"]
 
         # Change padding of Bconv from SAME to VALID
-        op.custom_options["padding"] = PADDING_VALID
+        op.custom_options["padding"] = Padding.to_TfLitePadding(Padding.VALID).value

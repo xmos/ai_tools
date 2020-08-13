@@ -1,10 +1,10 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import enum
+import aenum
+import numpy as np  # type: ignore
 
-import numpy as np
-
-from . import schema_py_generated as schema
+from . import schema_py_generated as schema  # type: ignore
 
 
 #  ----------------------------------------------------------------------------
@@ -85,23 +85,28 @@ class ValidOpCodes:
     pass
 
 
-class EnumOpCodes(ValidOpCodes, enum.Enum):
+class KnownOpCodes(ValidOpCodes, enum.Enum):
     pass
 
 
-BuiltinOpCodes = EnumOpCodes(
+BuiltinOpCodes = KnownOpCodes(
     "BuiltinOpCodes",
     {k: v for k, v in vars(schema.BuiltinOperator).items() if not k.startswith("__")},
 )
 
 
-class CustomOpCode(ValidOpCodes):
-    def __init__(self, name):
-        self.name = name
-        self.value = name
+class CustomOpCodes(ValidOpCodes):
+    pass
 
 
-class XCOREOpCodes(EnumOpCodes):
+class ExternalOpCodes(CustomOpCodes, aenum.Enum):
+    @classmethod
+    def add_new_opcode(cls, name: str) -> "ExternalOpCodes":
+        aenum.extend_enum(cls, name)
+        return cls[name]
+
+
+class XCOREOpCodes(CustomOpCodes, KnownOpCodes):
     # TODO: consider an IntEnum for this instead of strings
     XC_lookup_8 = "XC_lookup_8"
     XC_argmax_16 = "XC_argmax_16"  # currently not used by any passes
@@ -121,13 +126,13 @@ class OperatorCode:
         assert isinstance(opcode, ValidOpCodes), "Invalid opcode!"
         self.version = version or 1
 
-        if isinstance(opcode, XCOREOpCodes) or isinstance(opcode, CustomOpCode):
+        if isinstance(opcode, CustomOpCodes):
             self.builtin_code = BuiltinOpCodes.CUSTOM
             self.custom_code = opcode
         else:
             self.builtin_code = opcode
             if self.builtin_code is BuiltinOpCodes.CUSTOM:
-                assert isinstance(
+                assert isinstance(  # TODO: remove this
                     custom_code, XCOREOpCodes
                 ), "Must provide custom_code if builtin_code is 'CUSTOM'!"
                 self.custom_code = custom_code

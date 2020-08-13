@@ -48,7 +48,7 @@ class XCORESerializationMixin:
                 try:
                     opcode = xcore_schema.XCOREOpCodes(custom_code)
                 except ValueError:
-                    opcode = xcore_schema.CustomOpCode(custom_code)
+                    opcode = xcore_schema.ExternalOpCodes.add_new_opcode(custom_code)
             operator_codes_lut.append(
                 xcore_schema.OperatorCode(opcode, version=operator_codeT.version)
             )

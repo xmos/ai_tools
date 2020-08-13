@@ -8,7 +8,7 @@ from .xcore_schema import (
     TensorType,
     OperatorCode,
     BuiltinOpCodes,
-    CustomOpCode,
+    ExternalOpCodes,
     XCOREOpCodes,
     BuiltinOptions,
 )

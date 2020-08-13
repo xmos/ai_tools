@@ -101,7 +101,8 @@ class SplitBsignPass(OperatorMatchingPass):
         if not super().match(op):
             return False
 
-        match = SupportedBconv2DOp(op) and len(op.inputs) == 2
+        if not (SupportedBconv2DOp(op) and len(op.inputs) == 2):
+            return False
 
         nobsign = all(
             all(
@@ -110,7 +111,7 @@ class SplitBsignPass(OperatorMatchingPass):
             )
             for i in op.inputs
         )
-        return match and nobsign and op.inputs[0].type is TensorType.INT8
+        return nobsign and op.inputs[0].type is TensorType.INT8
 
     def mutate(self, op: Operator) -> None:
 

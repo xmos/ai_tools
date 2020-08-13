@@ -111,11 +111,14 @@ def test_custom_options():
         "vector_of_strings": ["str1", "str2", "str3"],
         "map": {"one": 1, "two": 2},
         "vector_of_vectors": [[3, 2, 1], [1, 2, 3], [3, 2, 1]],
-        "vector_of_maps ": [
+        "vector_of_maps": [
             {"map1": [1, 2, 3]},
             {"map2": [1, 2, 3]},
             {"map3": [1, 2, 3]},
         ],
+        "enum": BuiltinOpCodes.CONV_2D,
+        "vector_of_enums": [BuiltinOpCodes.CONV_2D, BuiltinOpCodes.ADD],
+        "map_of_enums": {"conv_2d": BuiltinOpCodes.CONV_2D, "add": BuiltinOpCodes.ADD},
     }
 
     tmp_file = os.path.join(tempfile.mkdtemp(), "test_custom_options.tflite")
@@ -127,7 +130,15 @@ def test_custom_options():
     model.pprint()
 
     loaded_operator = model.subgraphs[0].operators[0]
-    assert loaded_operator.custom_options == expected_operator.custom_options
+    loaded_options = loaded_operator.custom_options
+    loaded_options["enum"] = BuiltinOpCodes(loaded_options["enum"])
+    loaded_options["vector_of_enums"] = [
+        BuiltinOpCodes(e) for e in loaded_options["vector_of_enums"]
+    ]
+    loaded_options["map_of_enums"] = {
+        k: BuiltinOpCodes(v) for k, v in loaded_options["map_of_enums"].items()
+    }
+    assert loaded_options == expected_operator.custom_options
 
 
 if __name__ == "__main__":

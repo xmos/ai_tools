@@ -3,9 +3,9 @@
 import sys
 import os
 import struct
-from pathlib import Path
 import ctypes
-
+from pathlib import Path
+from enum import Enum
 import numpy as np
 
 from tflite2xcore import libtflite2xcore as lib
@@ -77,22 +77,25 @@ class FlexbufferBuilder:
         if data:
             self.set_data(data)
 
-    def __add_vector(self, obj, data, key=None):
+    def _add_vector(self, obj, data, key=None):
         size = lib.builder_start_vector(obj, key)
         for list_item in data:
+            if isinstance(list_item, Enum):
+                list_item = list_item.value
+
             list_item_type = type(list_item)
-            if list_item_type == int or list_item_type == np.int32:
+            if list_item_type in (int, np.int32):
                 lib.builder_vector_int(obj, int(list_item))
-            elif list_item_type == bool or list_item_type == np.bool:
+            elif list_item_type in (bool, np.bool):
                 lib.builder_vector_bool(obj, bool(list_item))
-            elif list_item_type == float or list_item_type == np.float32:
+            elif list_item_type in (float, np.float32):
                 lib.builder_vector_float(obj, float(list_item))
-            elif list_item_type == str:
+            elif list_item_type is str:
                 lib.builder_vector_string(obj, list_item.encode("ascii"))
-            elif list_item_type == dict:
-                self.__add_map(obj, list_item)
-            elif list_item_type == list:
-                self.__add_vector(obj, list_item)
+            elif list_item_type is dict:
+                self._add_map(obj, list_item)
+            elif list_item_type in (list, tuple):
+                self._add_vector(obj, list(list_item))
             else:
                 raise Exception(
                     f"Type {list_item_type} not supported (list item={list_item})"
@@ -101,26 +104,27 @@ class FlexbufferBuilder:
 
         return size
 
-    def __add_map(self, obj, data, key=None):
+    def _add_map(self, obj, data, key=None):
         msize = lib.builder_start_map(obj, key)
 
         for key, value in data.items():
             key_ascii = key.encode("ascii")
+            if isinstance(value, Enum):
+                value = value.value
+
             value_type = type(value)
-            if value_type == int:
+            if value_type is int:
                 lib.builder_int(obj, key_ascii, value)
-            elif value_type == bool:
+            elif value_type is bool:
                 lib.builder_bool(obj, key_ascii, value)
-            elif value_type == float:
+            elif value_type is float:
                 lib.builder_float(obj, key_ascii, value)
-            elif value_type == str:
+            elif value_type is str:
                 lib.builder_string(obj, key_ascii, value.encode("ascii"))
-            elif value_type == dict:
-                self.__add_map(obj, value, key_ascii)
-            elif value_type == list:
-                self.__add_vector(obj, value, key_ascii)
-            elif value_type == tuple:
-                self.__add_vector(obj, list(value), key_ascii)
+            elif value_type is dict:
+                self._add_map(obj, value, key_ascii)
+            elif value_type in (list, tuple):
+                self._add_vector(obj, list(value), key_ascii)
             else:
                 raise Exception(
                     f"Type {value_type} not supported (key={key_ascii}, value={value})"
@@ -132,7 +136,7 @@ class FlexbufferBuilder:
     def set_data(self, data):
         lib.builder_clear(self.obj)
 
-        self.__add_map(self.obj, data)
+        self._add_map(self.obj, data)
 
         lib.builder_finish(self.obj)
 

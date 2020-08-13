@@ -7,6 +7,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>
+#include <stdint.h>
 
 void initialize(uint8_t *model_content, uint8_t *tensor_arena,
                 size_t tensor_arena_size, uint8_t **input, size_t *input_size,

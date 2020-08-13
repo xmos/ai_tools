@@ -1,8 +1,6 @@
 // Copyright (c) 2019, XMOS Ltd, All rights reserved
 #include "inference_engine.h"
 
-#include <stdint.h>
-
 #include "tensorflow/lite/micro/all_ops_resolver.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"

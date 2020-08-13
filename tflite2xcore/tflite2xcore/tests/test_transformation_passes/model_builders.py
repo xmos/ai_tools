@@ -792,13 +792,8 @@ def build_lceBconv2d(
         OperatorCode(CustomOpCode("LceBconv2d")), inputs=op_inputs, outputs=[tout]
     )
 
-    # TODO rm magic numbers
-    padding_ = 2
-    if padding is Padding.SAME:
-        padding_ = 1
-
     op.custom_options = {
-        "padding": padding_,
+        "padding": Padding.to_TfLitePadding(padding).value,
         "stride_height": strides[0],
         "stride_width": strides[1],
         "dilation_width_factor": 1,

@@ -169,10 +169,11 @@ class XCORESerializationMixin:
         modelT.operatorCodes = []
         for operator_code in self.operator_codes:
             operatorCodeT = schema.OperatorCodeT()
-            if operator_code.builtin_code:
-                operatorCodeT.builtinCode = operator_code.builtin_code.value
-            if operator_code.custom_code:
-                operatorCodeT.customCode = operator_code.custom_code.name
+            if operator_code in xcore_schema.BuiltinOpCodes:
+                operatorCodeT.builtinCode = operator_code.value
+            else:
+                operatorCodeT.builtinCode = xcore_schema.BuiltinOpCodes.CUSTOM.value
+                operatorCodeT.customCode = operator_code.name
             operatorCodeT.version = operator_code.version
             modelT.operatorCodes.append(operatorCodeT)
 

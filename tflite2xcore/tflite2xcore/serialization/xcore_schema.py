@@ -3,6 +3,7 @@
 import enum
 import aenum
 import numpy as np  # type: ignore
+from typing import Optional
 
 from . import schema_py_generated as schema  # type: ignore
 
@@ -122,39 +123,23 @@ class XCOREOpCodes(CustomOpCodes, KnownOpCodes):
 
 
 class OperatorCode:
-    def __init__(self, opcode, *, custom_code=None, version=None):
+    def __init__(self, opcode: ValidOpCodes, *, version: Optional[int] = None):
         assert isinstance(opcode, ValidOpCodes), "Invalid opcode!"
         self.version = version or 1
-
-        if isinstance(opcode, CustomOpCodes):
-            self.builtin_code = BuiltinOpCodes.CUSTOM
-            self.custom_code = opcode
-        else:
-            self.builtin_code = opcode
-            if self.builtin_code is BuiltinOpCodes.CUSTOM:
-                assert isinstance(  # TODO: remove this
-                    custom_code, XCOREOpCodes
-                ), "Must provide custom_code if builtin_code is 'CUSTOM'!"
-                self.custom_code = custom_code
-            else:
-                self.custom_code = None
-
-    @property
-    def code(self):
-        return (
-            self.custom_code
-            if self.builtin_code is BuiltinOpCodes.CUSTOM
-            else self.builtin_code
-        )
+        self.code = opcode
 
     @property
     def name(self):
         return self.code.name
 
+    @property
+    def value(self):
+        return self.code.value
+
     def __eq__(self, obj):
         return (
             isinstance(obj, OperatorCode)
-            and obj.code == self.code
+            and obj.code is self.code
             and obj.version == self.version
         )
 
@@ -162,7 +147,7 @@ class OperatorCode:
         return hash(str(self))
 
     def __str__(self):
-        return f"{self.name} (version {self.version})"
+        return f"{self.code} (version {self.version})"
 
 
 #  ----------------------------------------------------------------------------

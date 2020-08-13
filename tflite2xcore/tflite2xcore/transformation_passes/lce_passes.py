@@ -141,7 +141,7 @@ class SplitBsignPass(OperatorMatchingPass):
         bsign_op.inputs[0].consumers.remove(op)
 
 
-# Split out padding to a separate of from BConv
+# Split out padding to a separate op from BConv
 # Note, this currently only matches with BConv but going forward might like to extend this to other conv ops
 # and make it a general pass. Bconv only supports SAME and VALID spacial padding
 class SplitPaddingFromConvPass(OperatorMatchingPass):

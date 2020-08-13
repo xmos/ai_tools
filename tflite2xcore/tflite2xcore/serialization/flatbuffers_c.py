@@ -6,7 +6,7 @@ import struct
 import ctypes
 from pathlib import Path
 from enum import Enum
-import numpy as np
+import numpy as np  # type: ignore
 
 from tflite2xcore import libtflite2xcore as lib
 

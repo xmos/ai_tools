@@ -3,7 +3,7 @@
 import enum
 import aenum
 import numpy as np  # type: ignore
-from typing import Optional
+from typing import Optional, Union, Any
 
 from . import schema_py_generated as schema  # type: ignore
 
@@ -123,30 +123,30 @@ class XCOREOpCodes(CustomOpCodes, KnownOpCodes):
 
 
 class OperatorCode:
-    def __init__(self, opcode: ValidOpCodes, *, version: Optional[int] = None):
+    def __init__(self, opcode: ValidOpCodes, *, version: Optional[int] = None) -> None:
         assert isinstance(opcode, ValidOpCodes), "Invalid opcode!"
         self.version = version or 1
         self.code = opcode
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.code.name
 
     @property
-    def value(self):
+    def value(self) -> Union[int, str]:
         return self.code.value
 
-    def __eq__(self, obj):
+    def __eq__(self, obj: Any) -> bool:
         return (
             isinstance(obj, OperatorCode)
             and obj.code is self.code
             and obj.version == self.version
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.code} (version {self.version})"
 
 

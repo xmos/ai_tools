@@ -4,8 +4,6 @@ import numpy as np
 
 from copy import deepcopy
 
-from typing import overload
-
 from tflite2xcore.utils import WORD_SIZE
 from .transformation_passes import (
     OperatorMatchingPass,

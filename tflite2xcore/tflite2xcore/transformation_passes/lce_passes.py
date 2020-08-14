@@ -1,10 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
+from typing import Any
 
 import numpy as np
-
-from copy import deepcopy
-
-from typing import Any
 
 from tflite2xcore.utils import WORD_SIZE_BITS, VECTOR_SIZE_BITS
 from .transformation_passes import (
@@ -17,7 +14,7 @@ from tflite2xcore.xcore_schema import (
     Padding,
     TensorType,
     BuiltinOpCodes,
-    CustomOpCode,
+    ExternalOpCodes,
     XCOREOpCodes,
     OperatorCode,
     BuiltinOptions,
@@ -26,11 +23,7 @@ from tflite2xcore.xcore_schema import (
 
 def SupportedBconv2DOp(op: Operator) -> bool:
 
-    # isinstance - yuk!
-    if not (
-        isinstance(op.operator_code.code, CustomOpCode)
-        and op.operator_code.custom_code.name == "LceBconv2d"
-    ):
+    if op.operator_code.code is not ExternalOpCodes.LceBconv2d:
         return False
 
     options = op.custom_options
@@ -41,10 +34,7 @@ def SupportedBconv2DOp(op: Operator) -> bool:
         options["dilation_width_factor"],
     )
 
-    try:
-        padding = Padding.from_TfLitePadding(options["padding"])
-    except ValueError:
-        return False
+    padding = Padding.from_TfLitePadding(options["padding"])
 
     weights = op.inputs[1]
 
@@ -58,9 +48,22 @@ def SupportedBconv2DOp(op: Operator) -> bool:
     )
 
 
-class CanonicalizeLceBconv2DPass(OperatorMatchingPass):
+class LceConv2dPass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
-        return SupportedBconv2DOp(op) and len(op.inputs) == 4
+
+        if not super().match(op):
+            return False
+
+        return SupportedBconv2DOp(op)
+
+
+class CanonicalizeLceBconv2DPass(LceConv2dPass):
+    def match(self, op: Operator) -> bool:
+
+        if not super().match(op):
+            return False
+
+        return len(op.inputs) == 4
 
     def mutate(self, op: Operator) -> None:
         op.inputs[2].consumers.remove(op)
@@ -69,7 +72,7 @@ class CanonicalizeLceBconv2DPass(OperatorMatchingPass):
 
 
 # Replace LCEBconv2D with XC_BConv2D
-class ReplaceLceBconv2DPass(OperatorMatchingPass):
+class ReplaceLceBconv2DPass(LceConv2dPass):
     def __init__(
         self, output_tensor_type: TensorType, *args: Any, **kwargs: Any
     ) -> None:
@@ -77,36 +80,36 @@ class ReplaceLceBconv2DPass(OperatorMatchingPass):
         self._output_tensor_type = output_tensor_type
 
     def match(self, op: Operator) -> bool:
+
         return (
             super().match(op)
-            and SupportedBconv2DOp(op)
             and len(op.inputs) == 2
             and op.outputs[0].type is self._output_tensor_type
         )
 
+    # TODO replace op properly when relevant operator API is available, for now just replace code
+    # to allow for basic testing of pass
     def mutate(self, op: Operator) -> None:
         if self._output_tensor_type is TensorType.INT8:
-            op.operator_code.custom_code = XCOREOpCodes.XC_bconv_int8_DIDO
+            op.operator_code.code = XCOREOpCodes.XC_bconv_int8_DIDO
         else:
-            op.operator_code.custom_code = XCOREOpCodes.XC_bconv_bin_DIDO
+            op.operator_code.code = XCOREOpCodes.XC_bconv_bin_DIDO
 
 
 # Split Bsign operation from Bconv
-class SplitBsignPass(OperatorMatchingPass):
+class SplitBsignPass(LceConv2dPass):
     def match(self, op: Operator) -> bool:
 
         if not super().match(op):
             return False
 
-        if not (SupportedBconv2DOp(op) and len(op.inputs) == 2):
+        if len(op.inputs) != 2:
             return False
 
         nobsign = all(
-            all(
-                (c.operator_code.code is not XCOREOpCodes.XC_bsign_8)
-                for c in i.producers
-            )
+            c.operator_code.code is not XCOREOpCodes.XC_bsign_8
             for i in op.inputs
+            for c in i.producers
         )
         return nobsign and op.inputs[0].type is TensorType.INT8
 
@@ -114,27 +117,27 @@ class SplitBsignPass(OperatorMatchingPass):
 
         subgraph = op.subgraph
 
-        bsign_op = subgraph.create_operator(
-            OperatorCode(BuiltinOpCodes.CUSTOM, custom_code=XCOREOpCodes.XC_bsign_8),
-            inputs=[op.inputs[0]],
+        bsign_output = subgraph.create_tensor(
+            f"{op.name}/output",
+            TensorType.INT32,
+            shape=[
+                op.inputs[0].shape[0],
+                op.inputs[0].shape[1],
+                op.inputs[0].shape[2],
+                int(op.inputs[0].shape[3] / WORD_SIZE_BITS),
+            ],
+            consumers=[op],
         )
+
+        bsign_op = subgraph.create_operator(
+            OperatorCode(opcode=XCOREOpCodes.XC_bsign_8),
+            inputs=[op.inputs[0]],
+            outputs=[bsign_output],
+        )
+
+        bsign_output.producers = [bsign_op]
 
         subgraph.insert_operator(op, bsign_op)
-
-        bsign_op.outputs.append(
-            subgraph.create_tensor(
-                f"{op.name}/output",
-                TensorType.INT32,
-                shape=[
-                    op.inputs[0].shape[0],
-                    op.inputs[0].shape[1],
-                    op.inputs[0].shape[2],
-                    int(op.inputs[0].shape[3] / WORD_SIZE_BITS),
-                ],
-                producers=[bsign_op],
-                consumers=[op],
-            )
-        )
 
         op.inputs = [bsign_op.outputs[0], op.inputs[1]]
         bsign_op.inputs[0].consumers.remove(op)
@@ -143,13 +146,13 @@ class SplitBsignPass(OperatorMatchingPass):
 # Split out padding to a separate op from BConv
 # Note, this currently only matches with BConv but going forward might like to extend this to other conv ops
 # and make it a general pass. Bconv only supports SAME and VALID spacial padding
-class SplitPaddingFromConvPass(OperatorMatchingPass):
+class SplitPaddingFromConvPass(LceConv2dPass):
     def match(self, op: Operator) -> bool:
 
         if not super().match(op):
             return False
 
-        if not (SupportedBconv2DOp(op) and len(op.inputs) == 2):
+        if len(op.inputs) != 2:
             return False
 
         return Padding.from_TfLitePadding(op.custom_options["padding"]) is Padding.SAME
@@ -180,17 +183,16 @@ class SplitPaddingFromConvPass(OperatorMatchingPass):
 
         # Note, going foward a builtin.PAD will be inserted, to be replaced by a later pass
         pad_op = subgraph.create_operator(
-            OperatorCode(BuiltinOpCodes.CUSTOM, custom_code=XCOREOpCodes.XC_pad),
+            OperatorCode(opcode=XCOREOpCodes.XC_pad),
             inputs=[old_input, padding_tensor],
         )
 
         pad_output_shape = old_input.shape
 
-        if Padding.from_TfLitePadding(op.custom_options["padding"]) is Padding.SAME:
-            pad_output_shape = list(pad_output_shape)
-            pad_output_shape[1] += padding_tb * 2
-            pad_output_shape[2] += padding_lr * 2
-            pad_output_shape = tuple(pad_output_shape)
+        pad_output_shape = list(pad_output_shape)
+        pad_output_shape[1] += padding_tb * 2
+        pad_output_shape[2] += padding_lr * 2
+        pad_output_shape = tuple(pad_output_shape)
 
         pad_output_tensor = subgraph.create_tensor(
             f"{pad_op.name}/output",

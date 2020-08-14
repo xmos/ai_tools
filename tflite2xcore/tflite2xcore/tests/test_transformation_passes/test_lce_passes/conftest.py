@@ -5,13 +5,14 @@ import pytest
 from copy import deepcopy
 
 from tflite2xcore.xcore_schema import Padding
-
+from ..model_builders import build_lceBconv2d
 from ..conftest import (
     PARAMS,
     _test_non_matching_params,
     test_matching_params,
     test_non_matching_tensors,
 )
+from ..test_conv2d_passes.conftest import weight_shape
 
 
 #  ----------------------------------------------------------------------------
@@ -81,8 +82,8 @@ PARAMS["smoke"].update(
 
 
 @pytest.fixture()
-def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
-    return [output_channels, kernel_height, kernel_width, input_channels]
+def build_model():
+    return build_lceBconv2d
 
 
 #  ----------------------------------------------------------------------------

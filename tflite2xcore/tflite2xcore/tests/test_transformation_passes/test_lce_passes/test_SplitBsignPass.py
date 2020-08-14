@@ -9,6 +9,7 @@ from copy import deepcopy
 from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes.lce_passes import SplitBsignPass
 from tflite2xcore.xcore_schema import BuiltinOpCodes, TensorType
+from tflite2xcore.utils import WORD_SIZE_BITS
 
 from ..model_builders import build_lceBconv2d
 from .conftest import (
@@ -36,11 +37,6 @@ PARAMS = deepcopy(PARAMS)
 @pytest.fixture()
 def trf_pass():
     return SplitBsignPass()
-
-
-@pytest.fixture()
-def build_model():
-    return build_lceBconv2d
 
 
 @pytest.fixture()
@@ -91,7 +87,7 @@ def test_mutate(trf_pass, model):
 
     in_ori, out_ori = subgraph.inputs[0], subgraph.outputs[0]
 
-    assert (len(subgraph.operators[0].inputs)) == 2
+    assert len(subgraph.operators[0].inputs) == 2
 
     # run mutating pass
     trf_pass.run(model)
@@ -121,7 +117,7 @@ def test_mutate(trf_pass, model):
     assert all((o not in subgraph.outputs) for o in op[0].outputs)
 
     assert op[0].outputs[0].shape[:-1] == in_ori.shape[:-1]
-    assert op[0].outputs[0].shape[-1] == in_ori.shape[-1] / 32
+    assert op[0].outputs[0].shape[-1] == in_ori.shape[-1] / WORD_SIZE_BITS
 
 
 def test_non_matching_input_tensor_float32(trf_pass, model_with_float32_input):

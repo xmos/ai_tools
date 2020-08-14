@@ -2,8 +2,6 @@
 
 import pytest
 
-import numpy as np
-
 from copy import deepcopy
 
 from tflite2xcore.converter import CleanupManager
@@ -36,11 +34,6 @@ PARAMS = deepcopy(PARAMS)
 @pytest.fixture()
 def trf_pass():
     return CanonicalizeLceBconv2DPass()
-
-
-@pytest.fixture()
-def build_model():
-    return build_lceBconv2d
 
 
 @pytest.fixture()

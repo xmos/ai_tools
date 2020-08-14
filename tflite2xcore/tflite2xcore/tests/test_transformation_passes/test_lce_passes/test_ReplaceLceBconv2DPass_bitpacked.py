@@ -38,11 +38,6 @@ def trf_pass():
 
 
 @pytest.fixture()
-def build_model():
-    return build_lceBconv2d
-
-
-@pytest.fixture()
 def model(weight_shape, input_size, padding, strides):
     return build_lceBconv2d(
         weight_shape=weight_shape,

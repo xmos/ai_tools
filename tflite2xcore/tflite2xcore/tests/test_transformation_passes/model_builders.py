@@ -12,9 +12,9 @@ from tflite2xcore.xcore_schema import (
     TensorType,
     OperatorCode,
     BuiltinOpCodes,
+    ExternalOpCodes,
     XCOREOpCodes,
     BuiltinOptions,
-    CustomOpCode,
 )
 
 
@@ -788,8 +788,13 @@ def build_lceBconv2d(
     if post_activation_bias:
         op_inputs.append(post_act_bias)
 
+    try:
+        opcode = ExternalOpCodes.LceBconv2d
+    except AttributeError:
+        opcode = ExternalOpCodes.add_new_opcode("LceBconv2d")
+
     op = subgraph.create_operator(
-        OperatorCode(CustomOpCode("LceBconv2d")), inputs=op_inputs, outputs=[tout]
+        OperatorCode(opcode=opcode), inputs=op_inputs, outputs=[tout]
     )
 
     op.custom_options = {

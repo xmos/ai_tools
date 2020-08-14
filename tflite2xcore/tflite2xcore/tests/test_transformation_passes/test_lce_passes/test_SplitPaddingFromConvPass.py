@@ -30,17 +30,8 @@ from .conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
-PARAMS["extended"].update(
-    {"padding": [Padding.SAME],}
-)
-
-PARAMS["default"].update(
-    {"padding": [Padding.SAME],}
-)
-
-PARAMS["smoke"].update(
-    {"padding": [Padding.SAME],}
-)
+for params in PARAMS.values():
+    params.update({"padding": [Padding.SAME]})
 
 
 #  ----------------------------------------------------------------------------
@@ -49,11 +40,6 @@ PARAMS["smoke"].update(
 @pytest.fixture()
 def trf_pass():
     return SplitPaddingFromConvPass()
-
-
-@pytest.fixture()
-def build_model():
-    return build_lceBconv2d
 
 
 @pytest.fixture()
@@ -93,7 +79,10 @@ def test_mutate(trf_pass, model):
     strides = strides = (options["stride_height"], options["stride_width"])
 
     assert (len(subgraph.operators[0].inputs)) == 2
-    assert subgraph.operators[0].custom_options["padding"] == 1
+    assert (
+        Padding.from_TfLitePadding(subgraph.operators[0].custom_options["padding"])
+        is Padding.SAME
+    )
 
     # Run the pass
     trf_pass.run(model)
@@ -127,7 +116,9 @@ def test_mutate(trf_pass, model):
 
     assert conv_op.outputs[0].shape == original_output.shape
 
-    assert conv_op.custom_options["padding"] == 2
+    assert (
+        Padding.from_TfLitePadding(conv_op.custom_options["padding"]) is Padding.VALID
+    )
 
     # Check spacial dims of PAD output tensor is as expected
     paddings = pad_op.inputs[1].as_array()

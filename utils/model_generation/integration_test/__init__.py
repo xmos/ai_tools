@@ -105,6 +105,9 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
 def _test_batched_arrays(
     predicted: np.ndarray, expected: np.ndarray, tolerance: Union[int, float] = 1
 ) -> List[str]:
+    assert predicted.shape == expected.shape
+    assert predicted.dtype is expected.dtype
+
     failures: List[str] = []
     assert predicted.shape[0] == expected.shape[0]
     for j, (arr, arr_ref) in enumerate(zip(predicted, expected)):

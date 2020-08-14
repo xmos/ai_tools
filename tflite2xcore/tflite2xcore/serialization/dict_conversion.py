@@ -8,14 +8,14 @@ from . import schema_py_generated as schema
 from . import xcore_schema
 
 
-def create_dict_from_operator_code(operator_code):
-    operator_code_dict = {
-        "builtin_code": operator_code.builtin_code.name,
-        "version": operator_code.version,
-    }
+def create_dict_from_operator_code(operator_code: xcore_schema.OperatorCode):
+    operator_code_dict = {"version": operator_code.version}
 
-    if operator_code.custom_code:
-        operator_code_dict["custom_code"] = operator_code.custom_code.name
+    if operator_code.code in xcore_schema.BuiltinOpCodes:
+        operator_code_dict["builtin_code"] = operator_code.name
+    else:
+        operator_code_dict["builtin_code"] = xcore_schema.BuiltinOpCodes.CUSTOM.name
+        operator_code_dict["custom_code"] = operator_code.name
 
     return operator_code_dict
 

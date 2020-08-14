@@ -2,9 +2,9 @@
 
 import json
 import pathlib
-
 import flatbuffers
 import numpy as np
+from typing import Union, Any
 
 from . import schema_py_generated as schema
 from . import xcore_schema
@@ -20,7 +20,7 @@ from .flatbuffers_c import FlexbufferBuilder, FlexbufferParser
 
 class XCORESerializationMixin:
     @classmethod
-    def _from_flatbuffer_model(cls, modelT):
+    def _from_flatbuffer_model(cls, modelT: schema.ModelT) -> "XCORESerializationMixin":
         model = cls(
             version=modelT.version,
             description=modelT.description.decode("utf-8")
@@ -48,7 +48,7 @@ class XCORESerializationMixin:
                 try:
                     opcode = xcore_schema.XCOREOpCodes(custom_code)
                 except ValueError:
-                    opcode = xcore_schema.CustomOpCode(custom_code)
+                    opcode = xcore_schema.ExternalOpCodes.add_new_opcode(custom_code)
             operator_codes_lut.append(
                 xcore_schema.OperatorCode(opcode, version=operator_codeT.version)
             )
@@ -99,7 +99,9 @@ class XCORESerializationMixin:
                         FlexbufferParser().parse(bytes(operatorT.customOptions))
                     )
 
-                def is_valid_tensor_index(idx, lower=-1, upper=len(tensors)):
+                def is_valid_tensor_index(
+                    idx: int, lower: int = -1, upper: int = len(tensors)
+                ) -> bool:
                     if idx < lower or idx >= upper:
                         raise ValueError(
                             f"Invalid input tensor index [{idx}]: "
@@ -129,22 +131,21 @@ class XCORESerializationMixin:
         return model
 
     @classmethod
-    def deserialize(cls, bits):
+    def deserialize(cls, bits: bytes) -> "XCORESerializationMixin":
         model_obj = schema.Model.GetRootAsModel(bits, 0)
         modelT = schema.ModelT.InitFromObj(model_obj)
         return cls._from_flatbuffer_model(modelT)
 
     @classmethod
-    def read_flatbuffer(cls, filename):
-        if isinstance(filename, pathlib.Path):
-            filename = str(filename.resolve())
-
-        with open(filename, "rb") as fd:
+    def read_flatbuffer(
+        cls, filename: Union[pathlib.Path, str]
+    ) -> "XCORESerializationMixin":
+        with open(pathlib.Path(filename).resolve(), "rb") as fd:
             bits = bytes(fd.read())
 
         return cls.deserialize(bits)
 
-    def _to_flatbuffer_model(self):
+    def _to_flatbuffer_model(self) -> schema.ModelT:
         modelT = schema.ModelT()
         modelT.version = self.version
         modelT.description = self.description
@@ -169,10 +170,11 @@ class XCORESerializationMixin:
         modelT.operatorCodes = []
         for operator_code in self.operator_codes:
             operatorCodeT = schema.OperatorCodeT()
-            if operator_code.builtin_code:
-                operatorCodeT.builtinCode = operator_code.builtin_code.value
-            if operator_code.custom_code:
-                operatorCodeT.customCode = operator_code.custom_code.name
+            if operator_code.code in xcore_schema.BuiltinOpCodes:
+                operatorCodeT.builtinCode = operator_code.value
+            else:
+                operatorCodeT.builtinCode = xcore_schema.BuiltinOpCodes.CUSTOM.value
+                operatorCodeT.customCode = operator_code.name
             operatorCodeT.version = operator_code.version
             modelT.operatorCodes.append(operatorCodeT)
 
@@ -228,32 +230,18 @@ class XCORESerializationMixin:
 
         return modelT
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         modelT = self._to_flatbuffer_model()
         builder = flatbuffers.Builder(1024 * 1024)
         model_offset = modelT.Pack(builder)
         builder.Finish(model_offset, file_identifier=b"TFL3")
         return bytes(builder.Output())
 
-    def write_flatbuffer(self, filename):
-        if isinstance(filename, pathlib.Path):
-            filename = str(filename.resolve())
-
-        with open(filename, "wb") as fd:
+    def write_flatbuffer(self, filename: Union[pathlib.Path, str]) -> int:
+        with open(pathlib.Path(filename).resolve(), "wb") as fd:
             return fd.write(self.serialize())
 
         return 0
 
-    def to_dict(self, *args, **kwargs):
+    def to_dict(self, *args: Any, **kwargs: Any) -> dict:
         return create_dict_from_model(self, *args, **kwargs)
-
-
-def write_flatbuffer(model, filename):
-    assert isinstance(model, XCORESerializationMixin)
-    return model.write_flatbuffer(filename)
-
-
-def read_flatbuffer(filename):
-    from tflite2xcore.xcore_model import XCOREModel
-
-    return XCOREModel.read_flatbuffer(filename)

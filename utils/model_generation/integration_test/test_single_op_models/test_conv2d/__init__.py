@@ -5,7 +5,7 @@ import tensorflow as tf  # type: ignore
 from tflite2xcore._model_generation import Configuration
 from tflite2xcore._model_generation.utils import parse_init_config
 
-from .. import IntegrationTestModelGenerator, test_output
+from .. import IntegrationTestModelGenerator, IntegrationTestRunner, test_output
 
 
 #  ----------------------------------------------------------------------------

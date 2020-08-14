@@ -1,12 +1,15 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import os
+import yaml
 import pytest  # type: ignore
 import _pytest  # type: ignore # NOTE: for typing only
+from pathlib import Path
 
 from tflite2xcore import xlogging  # type: ignore # TODO: fix this
-
+from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation.utils import stringify_config
+
 from . import IntegrationTestModelGenerator, IntegrationTestRunner
 
 
@@ -49,16 +52,29 @@ def pytest_addoption(parser):  # type: ignore
 
 def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
     if "run" in metafunc.fixturenames:
+        try:
+            CONFIGS = metafunc.module.CONFIGS  # [coverage].values()
+            config_file = Path(metafunc.module.__file__)
+        except AttributeError:
+            xlogging.logging.debug(f"CONFIGS undefined in {metafunc.module}")
+            config_file = Path(metafunc.module.__file__).with_suffix(".yml")
+            try:
+                with open(config_file, "r") as f:
+                    CONFIGS = yaml.load(f)
+            except FileNotFoundError as e:
+                raise FileNotFoundError(
+                    "Cannot find .yml test config file and "
+                    "test module does not contain CONFIGS"
+                ) from e
+
         coverage = metafunc.config.getoption("coverage")
         try:
-            configs = metafunc.module.CONFIGS[coverage]
+            configs = CONFIGS[coverage].values()
         except KeyError:
             raise KeyError(
-                f"CONFIGS does not define coverage level '{coverage}'"
+                "CONFIGS does not define coverage level "
+                f"'{coverage}' in {config_file.resolve()}"
             ) from None
-        except AttributeError:
-            xlogging.logging.error(f"CONFIGS undefined in {metafunc.module}")
-            configs = []
 
         metafunc.parametrize(
             "run",
@@ -106,3 +122,8 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
         pytest.skip()
 
     return gen.run
+
+
+@pytest.fixture  # type: ignore
+def xcore_model(run: IntegrationTestRunner) -> XCOREModel:
+    return XCOREModel.deserialize(run._model_generator._xcore_converter._model)

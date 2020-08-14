@@ -4,7 +4,9 @@ import numpy as np
 
 from copy import deepcopy
 
-from tflite2xcore.utils import WORD_SIZE
+from typing import Any
+
+from tflite2xcore.utils import WORD_SIZE_BITS, VECTOR_SIZE_BITS
 from .transformation_passes import (
     OperatorMatchingPass,
     LegalizeWeightBiasPass,
@@ -20,10 +22,6 @@ from tflite2xcore.xcore_schema import (
     OperatorCode,
     BuiltinOptions,
 )
-
-# TODO ideally these would live somewhere else
-WORD_SIZE_BYTES = WORD_SIZE
-WORD_SIZE_BITS = WORD_SIZE_BYTES * 8
 
 
 def SupportedBconv2DOp(op: Operator) -> bool:
@@ -42,20 +40,21 @@ def SupportedBconv2DOp(op: Operator) -> bool:
         options["dilation_height_factor"],
         options["dilation_width_factor"],
     )
-    padding = Padding.from_TfLitePadding((options["padding"]))
+
+    try:
+        padding = Padding.from_TfLitePadding(options["padding"])
+    except ValueError:
+        return False
+
     weights = op.inputs[1]
 
     return (
         strides == (1, 1)
         and dilations == (1, 1)
-        and padding in Padding
         and weights.shape[0] % WORD_SIZE_BITS == 0  # Cout
-        and (weights.shape[3] * WORD_SIZE_BITS) % 256 == 0  # Cin
+        and (weights.shape[3] * WORD_SIZE_BITS) % VECTOR_SIZE_BITS == 0  # Cin
         and weights.type is TensorType.INT32
-        and (
-            op.inputs[0].type is TensorType.INT8
-            or op.inputs[0].type is TensorType.INT32
-        )
+        and op.inputs[0].type in (TensorType.INT8, TensorType.INT32)
     )
 
 
@@ -72,7 +71,7 @@ class CanonicalizeLceBconv2DPass(OperatorMatchingPass):
 # Replace LCEBconv2D with XC_BConv2D
 class ReplaceLceBconv2DPass(OperatorMatchingPass):
     def __init__(
-        self, output_tensor_type: TensorType, *args: str, **kwargs: int
+        self, output_tensor_type: TensorType, *args: Any, **kwargs: Any
     ) -> None:
         super().__init__(*args, **kwargs)
         self._output_tensor_type = output_tensor_type
@@ -86,7 +85,7 @@ class ReplaceLceBconv2DPass(OperatorMatchingPass):
         )
 
     def mutate(self, op: Operator) -> None:
-        if self._output_tensor_type == TensorType.INT8:
+        if self._output_tensor_type is TensorType.INT8:
             op.operator_code.custom_code = XCOREOpCodes.XC_bconv_int8_DIDO
         else:
             op.operator_code.custom_code = XCOREOpCodes.XC_bconv_bin_DIDO

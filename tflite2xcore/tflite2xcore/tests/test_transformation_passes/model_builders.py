@@ -783,10 +783,10 @@ def build_lceBconv2d(
     op_inputs = [tin, w]
 
     if post_activation_mult:
-        op_inputs = op_inputs + [post_act_mult]
+        op_inputs.append(post_act_mult)
 
     if post_activation_bias:
-        op_inputs = op_inputs + [post_act_bias]
+        op_inputs.append(post_act_bias)
 
     op = subgraph.create_operator(
         OperatorCode(CustomOpCode("LceBconv2d")), inputs=op_inputs, outputs=[tout]

@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 
+#
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 import sys
 import os
 import ctypes
 
 import numpy as np
+import tensorflow as tf
+
+from tflite2xcore.xcore_interpreter import XCOREInterpreter
+from tflite2xcore.model_generation.utils import quantize, dequantize
 
 PRINT_CALLBACK = ctypes.CFUNCTYPE(
     None, ctypes.c_ulonglong, ctypes.c_uint, ctypes.c_char_p
@@ -17,7 +22,7 @@ RECORD_CALLBACK = ctypes.CFUNCTYPE(
     ctypes.c_ulonglong,  # timestamp
     ctypes.c_uint,  # length
     ctypes.c_ulonglong,  # dataval
-    ctypes.POINTER(ctypes.c_char),  # databytes
+    ctypes.POINTER(ctypes.c_char),  # data_bytes
 )
 
 REGISTER_CALLBACK = ctypes.CFUNCTYPE(
@@ -91,15 +96,12 @@ class TestingXCoreInterpreterEndpoint(object):
     def on_print(self, timestamp, data):
         msg = data.decode().rstrip()
 
-        self.log.append(msg)  # anything not prefixed with OUTPUT is a log message
+        self.log.append(msg)
 
     def on_probe(self, id_, timestamp, length, data_val, data_bytes):
         probe = self._probe_info[id_]
         if probe["name"] == "output_tensor":
-            # print("length=", length)
-            # print("data_bytes=", data_bytes)
             self.output = np.frombuffer(data_bytes[0:length], dtype=np.int8)
-
             self.ready = True
 
     def connect(self, hostname="localhost", port="10234"):
@@ -113,7 +115,7 @@ class TestingXCoreInterpreterEndpoint(object):
 
         if (
             self.lib_xscope.xscope_ep_request_upload(
-                ctypes.c_uint(len(data) + 1), ctypes.c_char_p(data)
+                ctypes.c_uint(len(data)), ctypes.c_char_p(data)
             )
             != 0
         ):
@@ -128,35 +130,71 @@ class TestingXCoreInterpreterEndpoint(object):
         self._send_blob(input_content)
 
 
-ep = TestingXCoreInterpreterEndpoint()
+if __name__ == "__main__":
+    xcore_model_filename = sys.argv[1]
+    quant_model_filename = sys.argv[2]
 
-model_filename = sys.argv[1]
-input_filename = sys.argv[2]
+    interpreter = XCOREInterpreter(model_path=xcore_model_filename)
+    interpreter.allocate_tensors()
 
-try:
-    if ep.connect():
-        print("Failed to connect")
-    else:
-        print("Connected")
+    # xcore model
+    input_details = interpreter.get_input_details()[0]
+    input_idx = input_details["index"]
+    input_shape = input_details["shape"]
+    input_quant = input_details["quantization"]
+    output_quant = interpreter.get_output_details()[0]["quantization"]
 
-        # Send model
-        with open(model_filename, "rb") as fd:
-            model_content = fd.read()
-            ep.publish_model(model_content)
+    np.random.seed(42)
+    x = np.random.uniform(-128, 128, size=input_shape).astype(np.int8)
+    interpreter.set_tensor(input_idx, x)
 
-        # Send input
-        with open(input_filename, "rb") as fd:
-            input_tensor = fd.read()
-            ep.publish_input(input_tensor)
-            # Wait for output
-            while not ep.ready:
-                pass
-            # Do something with the output
-            print(ep.output)
-            ep.clear()
+    print("*************************")
+    print(" Testing w/ interpreter  ")
+    print("*************************")
+    interpreter.invoke()
 
-except KeyboardInterrupt:
-    pass
+    output_details = interpreter.get_output_details()[0]
+    output_idx = output_details["index"]
 
-ep.disconnect()
-print("\n".join(ep.log))
+    y_xcore_interp = interpreter.get_tensor(output_idx)
+
+    # reference quantized model
+    interpreter_ref = tf.lite.Interpreter(model_path=quant_model_filename)
+    interpreter_ref.allocate_tensors()
+
+    input_details_ref = interpreter_ref.get_input_details()[0]
+    input_idx_ref = input_details_ref["index"]
+
+    x_ref = dequantize(x, *input_quant)
+    interpreter_ref.set_tensor(input_idx_ref, x_ref)
+
+    output_details_ref = interpreter_ref.get_output_details()[0]
+    output_idx_ref = output_details_ref["index"]
+
+    y_ref = interpreter_ref.get_tensor(output_idx_ref)
+    y_ref_quantized = quantize(y_ref, *output_quant)
+    print(y_ref_quantized - y_xcore_interp)
+
+    print("*************************")
+    print(" Testing w/ xsim or xrun")
+    print("*************************")
+    ep = TestingXCoreInterpreterEndpoint()
+    ep.connect()
+    # Send model
+    with open(xcore_model_filename, "rb") as fd:
+        model_content = fd.read()
+        ep.publish_model(model_content)
+
+    # Send input
+    ep.publish_input(x.tobytes())
+    # Wait for output
+    while not ep.ready:
+        pass
+    y_xcore_hw = ep.output.reshape(y_xcore_interp.shape)
+    print(y_ref_quantized - y_xcore_hw)
+
+    print()
+    print(ep.log)
+    ep.clear()
+
+    ep.disconnect()

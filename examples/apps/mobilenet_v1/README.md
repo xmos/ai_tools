@@ -33,6 +33,10 @@ Running with hardware
 
     > xrun --io --xscope --xscope-port localhost:10234 bin/mobilenet.xe
 
+Running with simulator
+
+    > xsim --xscope "-realtime localhost:10234" bin/mobilenet.xe
+
 Sending a test image to the xcore.ai Explorer board
 
     > ./test_image.py path/to/image

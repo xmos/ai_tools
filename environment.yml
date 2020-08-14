@@ -147,7 +147,7 @@ dependencies:
     - decopatch==1.4.7
     - dill==0.3.1.1
     - flatbuffers==1.12.0
-    - gast==0.2.2
+    - gast==0.3.3
     - google-auth==1.10.2
     - google-auth-oauthlib==0.4.1
     - google-pasta==0.1.8
@@ -155,7 +155,7 @@ dependencies:
     - h5py==2.10.0
     - idna==2.8
     - keras-applications==1.0.8
-    - keras-preprocessing==1.1.0
+    - keras-preprocessing==1.1.2
     - makefun==1.7.0
     - markdown==3.1.1
     - oauthlib==3.1.0

@@ -10,7 +10,7 @@
 #include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_profiler.h"
-#include "tensorflow/lite/micro/kernels/xcore/xcore_reporter.h"
+#include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/version.h"
 
 tflite::ErrorReporter *reporter = nullptr;
@@ -19,7 +19,9 @@ const tflite::Model *model = nullptr;
 tflite::micro::xcore::XCoreInterpreter *interpreter = nullptr;
 TfLiteTensor *input = nullptr;
 TfLiteTensor *output = nullptr;
-constexpr int kTensorArenaSize = 300000;
+constexpr int kTensorArenaSize =
+    63000;  // NOTE: This is big enough fo the model to live in RAM or external
+            // memory
 uint8_t tensor_arena[kTensorArenaSize];
 
 __attribute__((aligned(8))) static char swmem_handler_stack[1024];
@@ -57,8 +59,8 @@ static int load_test_input(const char *filename, char *input, size_t esize) {
 
 static void setup_tflite() {
   // Set up logging
-  static tflite::micro::xcore::XCoreReporter xcore_reporter;
-  reporter = &xcore_reporter;
+  static tflite::MicroErrorReporter error_reporter;
+  reporter = &error_reporter;
   // Set up profiling.
   static tflite::micro::xcore::XCoreProfiler xcore_profiler(reporter);
   profiler = &xcore_profiler;

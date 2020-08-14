@@ -19,6 +19,7 @@ _build
 
 # test cruft
 tests/data
+**/.pytest_cache/*
 
 # MacOS cruft
 .DS_Store

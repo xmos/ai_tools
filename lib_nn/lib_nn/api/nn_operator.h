@@ -598,6 +598,7 @@ void bsign_8_ref(
     stride - 1) /                                                             \
    stride)
 
+#define CONV2D_INPUT_LENGTH(output_length, filter_size, dilation, stride)  (output_length * stride - (stride - 1) - 1  + (filter_size + (filter_size - 1) * (dilation - 1)))
     
 /**  
  * @brief Execute @oper{bnn_reorder_threshold_tensor}.
@@ -655,19 +656,6 @@ void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
 
     
 /**  
- * @brief Execute @oper{bnn_conv2d_bin_out_asm}.
- * 
- * This executes the actual binary conv2d kernel. It requires the 
- * nn_bnn_conv2d_bin_out_asm_plan_t to be initialise by first running 
- * bnn_conv2d_bin_out_asm_prepare.
- * 
- * `nn_bnn_conv2d_bin_out_asm_plan_t` points to the binary conv2d parameters.
- * 
- * @param plan   [in]    The parameters to the binary conv2d
- */
-void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
-    
-/**  
  * @brief Execute @oper{bnn_reorder_kernel_tensor}.
  * 
  * This precomputes all the paramters to efficietly execute bnn_conv2d_bin_out_asm,
@@ -683,29 +671,39 @@ void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
  * 
  * The desired dimensions of X and K should be given by the parameters x and k. 
  * 
- * @param Y_p           [in]     The input image @tensor{Y}
+ * @param Y_p           [out]    The input image @tensor{Y}
  * @param X_p           [in]     The input image @tensor{X}
  * @param K_p           [in]     The input kernel @tensor{K}
+ * @param thresholds_p  [in]     The input thresholds @tensor{thresholds}
  * @param x             [in]     The parameters of the X image tensor
  * @param y             [in]     The parameters of the Y image tensor
  * @param k             [in]     The parameters of the K kernel tensor.
  * @param y_loc_x       [in]     The x coordinate of where the output will start writing from
  * @param y_loc_y       [in]     The y coordinate of where the output will start writing from
+ * @param y_sub_width   [in]     The x coordinate of where the kernel will start reading from
+ * @param y_sub_height  [in]     The y coordinate of where the kernel will start reading from
  * @param x_loc_x       [in]     The x coordinate of where the input will start reading from
  * @param x_loc_y       [in]     The y coordinate of where the input will start reading from
  * @param k_loc_x       [in]     The x coordinate of where the kernel will start reading from
  * @param k_loc_y       [in]     The y coordinate of where the kernel will start reading from
- * @param y_full_width  [in]     The full width of the output image tensor
- * @param x_full_width  [in]     The full width of the input image tensor
- * @param k_full_width  [in]     The full width of the inout kernel tensor
+ * @param k_sub_width   [in]     The x coordinate of where the kernel will start reading from
+ * @param k_sub_height  [in]     The y coordinate of where the kernel will start reading from
  */
 void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,
-    const nn_image_params_t* x, const nn_image_params_t* y,
-    const nn_window_params_t* k, const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned x_loc_x, const unsigned x_loc_y, const unsigned k_loc_x,
-    const unsigned k_loc_y, const unsigned y_full_width,
-    const unsigned x_full_width, const unsigned k_full_width);
+    
+    const nn_image_params_t* x, //The full image of x
+    const nn_image_params_t* y, // the full image of y
+    const nn_window_params_t* k, //the full kernel k
+    
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height,
+
+    const unsigned x_loc_x, const unsigned x_loc_y, 
+    
+    const unsigned k_loc_x, const unsigned k_loc_y, 
+    const unsigned k_sub_width, const unsigned k_sub_height
+);
 
 /**
  * @brief Execute @oper{pad_prepare} function.

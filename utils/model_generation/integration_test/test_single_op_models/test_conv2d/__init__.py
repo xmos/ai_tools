@@ -79,9 +79,8 @@ class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
         super()._set_config(cfg)
 
     @property
-    def _input_shape(self) -> Tuple[int, int, int]:
-        cfg = self._config
-        return cfg["height"], cfg["width"], cfg["input_channels"]
+    def _input_channels(self) -> int:
+        return self._config["input_channels"]
 
     def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None

@@ -38,9 +38,8 @@ class Pool2dGenericTestModelGenerator(FilterOpTestModelGenerator):
         super()._set_config(cfg)
 
     @property
-    def _input_shape(self) -> Tuple[int, int, int]:
-        cfg = self._config
-        return cfg["height"], cfg["width"], cfg["channels"]
+    def _input_channels(self) -> int:
+        return self._config["channels"]
 
     @property
     @abstractmethod

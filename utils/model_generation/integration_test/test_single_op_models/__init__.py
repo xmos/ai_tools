@@ -16,24 +16,28 @@ from .. import IntegrationTestModelGenerator, test_output
 #  ----------------------------------------------------------------------------
 
 
-class FilterOpTestModelGenerator(IntegrationTestModelGenerator):
+class ImageInputTestModel(IntegrationTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
-        self._config.update(
-            dict(
-                K_h=cfg.pop("K_h"),
-                K_w=cfg.pop("K_w"),
-                height=cfg.pop("height"),
-                width=cfg.pop("width"),
-                padding=cfg.pop("padding"),
-                strides=cfg.pop("strides"),
-            )
-        )
+        self._config.update({key: cfg.pop(key) for key in ["height", "width"]})
         super()._set_config(cfg)
 
     @property
     @abstractmethod
-    def _input_shape(self) -> Tuple[int, int, int]:
+    def _input_channels(self) -> int:
         raise NotImplementedError()
+
+    @property
+    def _input_shape(self) -> Tuple[int, int, int]:
+        cfg = self._config
+        return cfg["height"], cfg["width"], self._input_channels
+
+
+class FilterOpTestModelGenerator(ImageInputTestModel):
+    def _set_config(self, cfg: Configuration) -> None:
+        self._config.update(
+            {key: cfg.pop(key) for key in ["K_h", "K_w", "padding", "strides"]}
+        )
+        super()._set_config(cfg)
 
     @abstractmethod
     def _op_layer(

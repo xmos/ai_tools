@@ -119,9 +119,11 @@ def _test_batched_arrays(
     for j, (arr, arr_ref) in enumerate(zip(predicted, expected)):
         diff = np.abs(np.int32(arr) - np.int32(arr_ref))
         diff_idx = zip(*np.where(diff > tolerance))
-        failures[j] = [
+        failed_examples = [
             FailedElement(idx, diff[idx], arr_ref[idx], arr[idx]) for idx in diff_idx
         ]
+        if failed_examples:
+            failures[j] = failed_examples
     return failures
 
 

@@ -57,8 +57,8 @@ extern "C" void larq_ref_bconv2d(const nn_image_params_t* x,
   ce::core::OutputTransform<std::int32_t, std::int32_t> output_transform;
   ce::core::GetOutputTransform(thresholds, output_transform);
 
-  params.dilation_height_factor = 1;
-  params.dilation_width_factor = 1;
+  params.dilation_height_factor = k->dilation.vertical;
+  params.dilation_width_factor = k->dilation.horizontal;
   //   params.input_offset = 0;
   //   params.output_multiplier = 0;
   //   params.output_offset = 0;

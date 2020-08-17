@@ -20,21 +20,10 @@ from .. import (
 
 
 class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
-    @abstractmethod
-    def _conv_layer(
+    def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
     ) -> tf.keras.layers.Layer:
         raise NotImplementedError()
-
-    @property
-    @abstractmethod
-    def _input_shape(self) -> Tuple[int, int, int]:
-        raise NotImplementedError()
-
-    def _build_core_model(self) -> tf.keras.Model:
-        return tf.keras.Sequential(
-            layers=[self._conv_layer(input_shape=self._input_shape)]
-        )
 
     def _set_config(self, cfg: Configuration) -> None:
         self._config.update(
@@ -43,6 +32,8 @@ class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
                 bias_init=cfg.pop("bias_init", ("Constant", 0)),
             )
         )
+        cfg.setdefault("padding", "same")
+        cfg.setdefault("strides", (1, 1))
         super()._set_config(cfg)
 
 
@@ -70,7 +61,7 @@ class ExplicitPaddingMixin(AbstractConv2dTestModelGenerator):
                     ),
                     input_shape=self._input_shape,
                 ),
-                self._conv_layer(),
+                self._op_layer(),
             ]
         )
 
@@ -92,7 +83,7 @@ class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
         cfg = self._config
         return cfg["height"], cfg["width"], cfg["input_channels"]
 
-    def _conv_layer(
+    def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
     ) -> tf.keras.layers.Conv2D:
         kwargs = {"input_shape": input_shape} if input_shape else {}

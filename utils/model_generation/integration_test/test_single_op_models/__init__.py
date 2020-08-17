@@ -2,6 +2,7 @@
 
 import tensorflow as tf  # type: ignore
 from abc import abstractmethod
+from typing import Tuple, Optional
 
 from tflite2xcore._model_generation import Configuration
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
@@ -23,15 +24,27 @@ class FilterOpTestModelGenerator(IntegrationTestModelGenerator):
                 K_w=cfg.pop("K_w"),
                 height=cfg.pop("height"),
                 width=cfg.pop("width"),
-                padding=cfg.pop("padding", "same"),
-                strides=cfg.pop("strides", (1, 1)),
+                padding=cfg.pop("padding"),
+                strides=cfg.pop("strides"),
             )
         )
         super()._set_config(cfg)
 
+    @property
     @abstractmethod
-    def _build_core_model(self) -> tf.keras.Model:
+    def _input_shape(self) -> Tuple[int, int, int]:
         raise NotImplementedError()
+
+    @abstractmethod
+    def _op_layer(
+        self, *, input_shape: Optional[Tuple[int, int, int]] = None
+    ) -> tf.keras.layers.Layer:
+        raise NotImplementedError()
+
+    def _build_core_model(self) -> tf.keras.Model:
+        return tf.keras.Sequential(
+            layers=[self._op_layer(input_shape=self._input_shape)]
+        )
 
     def build(self) -> None:
         self._prep_backend()

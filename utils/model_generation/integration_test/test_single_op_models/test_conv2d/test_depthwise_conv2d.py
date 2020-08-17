@@ -33,7 +33,7 @@ class DepthwiseConv2dTestModelGenerator(AbstractConv2dTestModelGenerator):
         cfg = self._config
         return cfg["height"], cfg["width"], cfg["channels"]
 
-    def _conv_layer(
+    def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
     ) -> tf.keras.layers.DepthwiseConv2D:
         kwargs = {"input_shape": input_shape} if input_shape else {}

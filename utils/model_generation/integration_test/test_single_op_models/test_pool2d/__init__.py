@@ -46,7 +46,7 @@ class Pool2dGenericTestModelGenerator(FilterOpTestModelGenerator):
     @abstractmethod
     def _op_class(
         self,
-    ) -> Union[Type[tf.keras.layers.MaxPool2D], Type[tf.keras.layers.AveragePooling2D]]:
+    ) -> Union[Type[tf.keras.layers.MaxPool2D], Type[tf.keras.layers.AvgPool2D]]:
         raise NotImplementedError()
 
     def _op_layer(

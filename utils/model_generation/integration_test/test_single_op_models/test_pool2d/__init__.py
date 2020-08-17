@@ -2,7 +2,7 @@
 
 import tensorflow as tf  # type: ignore
 from abc import abstractmethod
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Type, Union
 
 from tflite2xcore._model_generation import Configuration
 from tflite2xcore._model_generation.utils import parse_init_config
@@ -41,3 +41,22 @@ class Pool2dGenericTestModelGenerator(FilterOpTestModelGenerator):
     def _input_shape(self) -> Tuple[int, int, int]:
         cfg = self._config
         return cfg["height"], cfg["width"], cfg["channels"]
+
+    @property
+    @abstractmethod
+    def _op_class(
+        self,
+    ) -> Union[Type[tf.keras.layers.MaxPool2D], Type[tf.keras.layers.AveragePooling2D]]:
+        raise NotImplementedError()
+
+    def _op_layer(
+        self, *, input_shape: Optional[Tuple[int, int, int]] = None
+    ) -> tf.keras.layers.Layer:
+        kwargs = {"input_shape": input_shape} if input_shape else {}
+        cfg = self._config
+        return self._op_class(
+            pool_size=(cfg["K_h"], cfg["K_w"]),
+            strides=cfg["strides"],
+            padding=cfg["padding"],
+            **kwargs
+        )

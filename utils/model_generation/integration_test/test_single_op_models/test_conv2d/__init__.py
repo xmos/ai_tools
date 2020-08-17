@@ -8,7 +8,7 @@ from tflite2xcore._model_generation import Configuration
 from tflite2xcore._model_generation.utils import parse_init_config
 
 from .. import (
-    IntegrationTestModelGenerator,
+    FilterOpTestModelGenerator,
     test_output,
     test_converted_single_op_model,
 )
@@ -19,7 +19,7 @@ from .. import (
 #  ----------------------------------------------------------------------------
 
 
-class AbstractConv2dTestModelGenerator(IntegrationTestModelGenerator):
+class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
     @abstractmethod
     def _conv_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
@@ -36,29 +36,9 @@ class AbstractConv2dTestModelGenerator(IntegrationTestModelGenerator):
             layers=[self._conv_layer(input_shape=self._input_shape)]
         )
 
-    def build(self) -> None:
-        self._prep_backend()
-        try:
-            self._model = self._build_core_model()
-        except ValueError as e:
-            if e.args[0].startswith("Negative dimension size caused by"):
-                raise ValueError(
-                    "Negative dimension size (Hint: if using 'valid' padding "
-                    "verify that the kernel is at least the size of input image)"
-                ) from e
-            else:
-                raise
-        self._model.build()
-
     def _set_config(self, cfg: Configuration) -> None:
         self._config.update(
             dict(
-                K_w=cfg.pop("K_w", 3),
-                K_h=cfg.pop("K_h", 3),
-                height=cfg.pop("height", 5),
-                width=cfg.pop("width", 5),
-                padding=cfg.pop("padding", "same"),
-                strides=cfg.pop("strides", (1, 1)),
                 weight_init=cfg.pop("weight_init", ("RandomUniform", -1, 1)),
                 bias_init=cfg.pop("bias_init", ("Constant", 0)),
             )

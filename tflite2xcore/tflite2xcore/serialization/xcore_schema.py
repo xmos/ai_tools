@@ -1,17 +1,17 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import enum
+import aenum
+import numpy as np  # type: ignore
+from typing import Optional, Union, Any
 
-import numpy as np
-
-from . import schema_py_generated as schema
+from . import schema_py_generated as schema  # type: ignore
 
 
 #  ----------------------------------------------------------------------------
 #                                  TensorType
 #  ----------------------------------------------------------------------------
 
-# TODO: add FLOAT64 when schema is updated
 TensorType = enum.IntEnum(
     "TensorType",
     {k: v for k, v in vars(schema.TensorType).items() if not k.startswith("__")},
@@ -19,6 +19,7 @@ TensorType = enum.IntEnum(
 
 __TensorType_to_stdint_type = {
     # TensorType.STRING: None,  # intentionally not supported
+    TensorType.FLOAT64: "float64_t",
     TensorType.FLOAT32: "float32_t",
     TensorType.FLOAT16: "float16_t",
     TensorType.COMPLEX64: "complex64_t",
@@ -33,6 +34,7 @@ TensorType.to_stdint_type = lambda self: __TensorType_to_stdint_type[self]
 
 __TensorType_to_bytes = {
     # TensorType.STRING: None,  # intentionally not supported
+    TensorType.FLOAT64: 8,
     TensorType.FLOAT32: 4,
     TensorType.FLOAT16: 2,
     TensorType.COMPLEX64: 8,
@@ -47,6 +49,7 @@ TensorType.to_bytes = lambda self: __TensorType_to_bytes[self]
 
 __TensorType_to_numpy_dtype = {
     # TensorType.STRING: None,  # intentionally not supported
+    TensorType.FLOAT64: np.float64,
     TensorType.FLOAT32: np.float32,
     TensorType.FLOAT16: np.float16,
     TensorType.COMPLEX64: np.complex64,
@@ -60,6 +63,7 @@ __TensorType_to_numpy_dtype = {
 TensorType.to_numpy_dtype = lambda self: __TensorType_to_numpy_dtype[self]
 
 __TensorType_from_numpy_dtype = {
+    np.dtype(np.float64): TensorType.FLOAT64,
     np.dtype(np.float32): TensorType.FLOAT32,
     np.dtype(np.float16): TensorType.FLOAT16,
     np.dtype(np.complex64): TensorType.COMPLEX64,
@@ -82,23 +86,28 @@ class ValidOpCodes:
     pass
 
 
-class EnumOpCodes(ValidOpCodes, enum.Enum):
+class KnownOpCodes(ValidOpCodes, enum.Enum):
     pass
 
 
-BuiltinOpCodes = EnumOpCodes(
+BuiltinOpCodes = KnownOpCodes(
     "BuiltinOpCodes",
     {k: v for k, v in vars(schema.BuiltinOperator).items() if not k.startswith("__")},
 )
 
 
-class CustomOpCode(ValidOpCodes):
-    def __init__(self, name):
-        self.name = name
-        self.value = name
+class CustomOpCodes(ValidOpCodes):
+    pass
 
 
-class XCOREOpCodes(EnumOpCodes):
+class ExternalOpCodes(CustomOpCodes, aenum.Enum):
+    @classmethod
+    def add_new_opcode(cls, name: str) -> "ExternalOpCodes":
+        aenum.extend_enum(cls, name)
+        return cls[name]
+
+
+class XCOREOpCodes(CustomOpCodes, KnownOpCodes):
     # TODO: consider an IntEnum for this instead of strings
     XC_lookup_8 = "XC_lookup_8"
     XC_argmax_16 = "XC_argmax_16"  # currently not used by any passes
@@ -114,47 +123,31 @@ class XCOREOpCodes(EnumOpCodes):
 
 
 class OperatorCode:
-    def __init__(self, opcode, *, custom_code=None, version=None):
+    def __init__(self, opcode: ValidOpCodes, *, version: Optional[int] = None) -> None:
         assert isinstance(opcode, ValidOpCodes), "Invalid opcode!"
         self.version = version or 1
-
-        if isinstance(opcode, XCOREOpCodes) or isinstance(opcode, CustomOpCode):
-            self.builtin_code = BuiltinOpCodes.CUSTOM
-            self.custom_code = opcode
-        else:
-            self.builtin_code = opcode
-            if self.builtin_code is BuiltinOpCodes.CUSTOM:
-                assert isinstance(
-                    custom_code, XCOREOpCodes
-                ), "Must provide custom_code if builtin_code is 'CUSTOM'!"
-                self.custom_code = custom_code
-            else:
-                self.custom_code = None
+        self.code = opcode
 
     @property
-    def code(self):
-        return (
-            self.custom_code
-            if self.builtin_code is BuiltinOpCodes.CUSTOM
-            else self.builtin_code
-        )
-
-    @property
-    def name(self):
+    def name(self) -> str:
         return self.code.name
 
-    def __eq__(self, obj):
+    @property
+    def value(self) -> Union[int, str]:
+        return self.code.value
+
+    def __eq__(self, obj: Any) -> bool:
         return (
             isinstance(obj, OperatorCode)
-            and obj.code == self.code
+            and obj.code is self.code
             and obj.version == self.version
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
-    def __str__(self):
-        return f"{self.name} (version {self.version})"
+    def __str__(self) -> str:
+        return f"{self.code} (version {self.version})"
 
 
 #  ----------------------------------------------------------------------------
@@ -324,6 +317,27 @@ QuantizationDetails = enum.Enum(
 )
 
 
+#  ----------------------------------------------------------------------------
+#                               Padding
+#  ----------------------------------------------------------------------------
+
+
 Padding = enum.Enum(
     "Padding", {k: v for k, v in vars(schema.Padding).items() if not k.startswith("__")}
 )
+
+
+# NOTE: this is from tensorflow/tensorflow/lite/c/builtin_op_data.h
+# TODO: remove if larq fixes custom option padding encoding
+class __TfLitePadding(enum.Enum):
+    kTfLitePaddingUnknown = 0
+    kTfLitePaddingSame = 1
+    kTfLitePaddingValid = 2
+
+
+__Padding_TfLitePadding = {
+    # __TfLitePadding.kTfLitePaddingUnknown: None,  # intentionally not supported
+    __TfLitePadding.kTfLitePaddingSame: Padding.SAME,
+    __TfLitePadding.kTfLitePaddingValid: Padding.VALID,
+}
+Padding.from_TfLitePadding = lambda x: __Padding_TfLitePadding[x]

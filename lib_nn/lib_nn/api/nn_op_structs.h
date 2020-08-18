@@ -144,6 +144,18 @@ typedef struct {
         /** Horizontal stride of the convolution window */
         int horizontal;
     } stride;
+
+    /**
+     * The strides of the convolution window. These are the number of (input image) pixels that
+     * the convolution window moves down and right for each pixel moved down or right in the
+     * output image.
+     */
+    struct {
+        /** Vertical stride of the convolution window. */
+        int vertical;
+        /** Horizontal stride of the convolution window */
+        int horizontal;
+    } dilation;
 } nn_window_params_t;
 
 
@@ -499,22 +511,6 @@ typedef struct {
   bnn_b256_t* K;
 } nn_bnn_conv2d_bin_out_asm_plan_t;
 
-/**
- * Struct represents the parameters needed by each `bnn_conv2d()` job.
- *
- * Values are set by `bnn_conv2d_init()`.
- *
- * @note This struct is intended to be opaque.
- */
-typedef struct {
-  unsigned y_dims[3];     // out_height, out_width, out_channels
-  unsigned x_dims[3];     // in_height, in_width, in_channels
-  unsigned k_dims[2];     // kernel_height, kernel_width
-  unsigned start_loc[2];  // start_height, start_width
-  unsigned stride[2];     // stride_height, stride_width
-  // int8_t clamp_min;
-  // int8_t clamp_max;
-} nn_bnn_conv2d_bin_out_plan_t;
 
 #ifdef __XC__
 }   //extern "C"

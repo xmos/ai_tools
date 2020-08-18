@@ -16,7 +16,7 @@ from .. import IntegrationTestModelGenerator, test_output
 #  ----------------------------------------------------------------------------
 
 
-class ImageInputTestModel(IntegrationTestModelGenerator):
+class ImageInputOpTestModelGenerator(IntegrationTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         self._config.update({key: cfg.pop(key) for key in ["height", "width"]})
         super()._set_config(cfg)
@@ -31,14 +31,6 @@ class ImageInputTestModel(IntegrationTestModelGenerator):
         cfg = self._config
         return cfg["height"], cfg["width"], self._input_channels
 
-
-class FilterOpTestModelGenerator(ImageInputTestModel):
-    def _set_config(self, cfg: Configuration) -> None:
-        self._config.update(
-            {key: cfg.pop(key) for key in ["K_h", "K_w", "padding", "strides"]}
-        )
-        super()._set_config(cfg)
-
     @abstractmethod
     def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
@@ -52,8 +44,32 @@ class FilterOpTestModelGenerator(ImageInputTestModel):
 
     def build(self) -> None:
         self._prep_backend()
+        self._model = self._build_core_model()
+        self._model.build()
+
+
+class ChannelPreservingOpTestModelGenerator(ImageInputOpTestModelGenerator):
+    def _set_config(self, cfg: Configuration) -> None:
+        channels = cfg.pop("channels", 4)
+        assert channels % 4 == 0, "# of channels must be multiple of 4"
+        self._config.update({"channels": channels})
+        super()._set_config(cfg)
+
+    @property
+    def _input_channels(self) -> int:
+        return self._config["channels"]  # type: ignore
+
+
+class FilterOpTestModelGenerator(ImageInputOpTestModelGenerator):
+    def _set_config(self, cfg: Configuration) -> None:
+        self._config.update(
+            {key: cfg.pop(key) for key in ["K_h", "K_w", "padding", "strides"]}
+        )
+        super()._set_config(cfg)
+
+    def build(self) -> None:
         try:
-            self._model = self._build_core_model()
+            super().build()
         except ValueError as e:
             if e.args[0].startswith("Negative dimension size caused by"):
                 raise ValueError(
@@ -62,7 +78,6 @@ class FilterOpTestModelGenerator(ImageInputTestModel):
                 ) from e
             else:
                 raise
-        self._model.build()
 
 
 #  ----------------------------------------------------------------------------

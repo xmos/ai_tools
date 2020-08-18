@@ -9,6 +9,7 @@ from tflite2xcore._model_generation.utils import parse_init_config
 
 from .. import (
     FilterOpTestModelGenerator,
+    ChannelPreservingOpTestModelGenerator,
     test_output,
     test_converted_single_op_model,
 )
@@ -19,12 +20,10 @@ from .. import (
 #  ----------------------------------------------------------------------------
 
 
-class Pool2dGenericTestModelGenerator(FilterOpTestModelGenerator):
+class Pool2dGenericTestModelGenerator(
+    ChannelPreservingOpTestModelGenerator, FilterOpTestModelGenerator
+):
     def _set_config(self, cfg: Configuration) -> None:
-        channels = cfg.pop("channels", 4)
-        assert channels % 4 == 0, "# of channels must be multiple of 4"
-        self._config.update({"channels": channels})
-
         strides = cfg.setdefault("strides", (2, 2))
         K_h = cfg.setdefault("K_h", 2)
         K_w = cfg.setdefault("K_w", 2)
@@ -36,10 +35,6 @@ class Pool2dGenericTestModelGenerator(FilterOpTestModelGenerator):
             ), "same padding is only allowed for the common 2x2 case"
 
         super()._set_config(cfg)
-
-    @property
-    def _input_channels(self) -> int:
-        return self._config["channels"]
 
     @property
     @abstractmethod

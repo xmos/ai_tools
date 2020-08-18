@@ -9,6 +9,7 @@ from tflite2xcore._model_generation.utils import parse_init_config
 
 from .. import (
     FilterOpTestModelGenerator,
+    ChannelPreservingOpTestModelGenerator,
     test_output,
     test_converted_single_op_model,
 )
@@ -80,7 +81,7 @@ class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
 
     @property
     def _input_channels(self) -> int:
-        return self._config["input_channels"]
+        return self._config["input_channels"]  # type: ignore
 
     def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None

@@ -60,7 +60,7 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
             config_file = Path(metafunc.module.__file__).with_suffix(".yml")
             try:
                 with open(config_file, "r") as f:
-                    CONFIGS = yaml.load(f)
+                    CONFIGS = yaml.load(f, Loader=yaml.FullLoader)
             except FileNotFoundError as e:
                 raise FileNotFoundError(
                     "Cannot find .yml test config file and "

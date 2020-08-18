@@ -6,7 +6,7 @@ from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation import Configuration
 
-from . import Conv2dGenericTestModelGenerator, IntegrationTestRunner, test_output
+from . import Conv2dGenericTestModelGenerator, test_output
 
 
 #  ----------------------------------------------------------------------------

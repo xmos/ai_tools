@@ -77,7 +77,7 @@ class TFLiteQuantConverter(Converter):
     def _get_representative_data(self) -> tf.Tensor:
         """ Returns the data to be used for post training quantization. """
         init = parse_init_config(*self._config["input_init"])
-        return init((self._data_len, *self._model_generator._input_shape))
+        return init((self._data_len, *self._model_generator.input_shape))
 
     def convert(self) -> None:
         converter = tf.lite.TFLiteConverter.from_keras_model(

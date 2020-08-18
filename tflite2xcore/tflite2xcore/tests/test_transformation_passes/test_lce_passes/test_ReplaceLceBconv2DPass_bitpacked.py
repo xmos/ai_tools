@@ -66,6 +66,7 @@ def test_mutate(trf_pass, model):
     CleanupManager(model).run_passes()
     model.sanity_check()
 
+    assert len(subgraph.operators) == 1
 
 if __name__ == "__main__":
     pytest.main()

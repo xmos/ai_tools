@@ -7,28 +7,33 @@ void pad_prepare(nn_pad_plan_t* plan, const PaddingValues* p,
                  const nn_image_params_t* x, const unsigned bytes_per_pixel) {
   plan->top_pad_bytes =
       bytes_per_pixel *
-      (p->height * ((2 * p->width) + p->width_offset + x->width) + p->width);
+      ((p->height * ( p->width + x->width + p->width + p->width_offset)));
 
-  plan->mid_loop_count = x->height - 1;
+  plan->mid_loop_count = x->height;
+  plan->left_pad_bytes = bytes_per_pixel * (p->width);
   plan->mid_copy_bytes = bytes_per_pixel * (x->width);
-  plan->mid_pad_bytes = bytes_per_pixel * ((2 * p->width) + p->width_offset);
+  plan->right_pad_bytes = bytes_per_pixel * (p->width + p->width_offset);
 
   plan->bottom_pad_bytes =
-      bytes_per_pixel * ((p->height + p->height_offset) *
-                             ((2 * p->width) + p->width_offset + x->width) +
-                         p->width);
+      bytes_per_pixel * (((p->height + p->height_offset) * (p->width + x->width + p->width + p->width_offset)));
 }
 
 void pad_run(void* y, void* x, const nn_pad_plan_t* p) {
   unsigned pad_value = 0;
   memset(y, pad_value, p->top_pad_bytes);
   y += p->top_pad_bytes;
-  for (unsigned i = 0; i < p->mid_loop_count + 1; i++) {
+  for (unsigned i = 0; i < p->mid_loop_count; i++) {
+   
+   
+    memset(y, pad_value, p->left_pad_bytes);
+    y += p->left_pad_bytes;
+   
     memcpy(y, x, p->mid_copy_bytes);
     y += p->mid_copy_bytes;
     x += p->mid_copy_bytes;
-    memset(y, pad_value, p->mid_pad_bytes);
-    y += p->mid_pad_bytes;
+    
+    memset(y, pad_value, p->right_pad_bytes);
+    y += p->right_pad_bytes;
   }
   memset(y, pad_value, p->bottom_pad_bytes);
 }

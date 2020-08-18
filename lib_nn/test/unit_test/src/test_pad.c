@@ -111,14 +111,19 @@ void test_pad_param_space_b256() {
                 xp.width = x_width;
                 xp.channels = x_chans;
 
-                pad_ref((void*)Y_ref, (void*)X, &p, &xp, bytes_per_pixel);
-                nn_pad_plan_t plan;
-                pad_prepare(&plan, &p, &xp, bytes_per_pixel);
-                pad_run((void*)Y, (void*)X, &plan);
-
                 unsigned output_height = xp.height + pad_top + pad_bottom;
                 unsigned output_width = xp.width + pad_left + pad_right;
 
+                
+
+                pad_ref((void*)Y_ref, (void*)X, &p, &xp, bytes_per_pixel);
+                nn_pad_plan_t plan;
+                pad_prepare(&plan, &p, &xp, bytes_per_pixel);
+                unsigned total_output = plan.top_pad_bytes + (plan.left_pad_bytes +  plan.mid_copy_bytes + plan.right_pad_bytes) * (plan.mid_loop_count )  + plan.bottom_pad_bytes;
+                pad_run((void*)Y, (void*)X, &plan);
+
+                
+                assert(total_output ==( bytes_per_pixel * output_height *output_width) );  
                 TEST_ASSERT_EQUAL_INT8_ARRAY(Y, Y_ref,
                                              output_height * output_width *
                                                  xp.channels / 256 *

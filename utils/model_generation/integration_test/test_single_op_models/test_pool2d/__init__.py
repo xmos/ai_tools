@@ -5,7 +5,6 @@ from abc import abstractmethod
 from typing import Tuple, Optional, Type, Union
 
 from tflite2xcore._model_generation import Configuration
-from tflite2xcore._model_generation.utils import parse_init_config
 
 from .. import (
     FilterOpTestModelGenerator,

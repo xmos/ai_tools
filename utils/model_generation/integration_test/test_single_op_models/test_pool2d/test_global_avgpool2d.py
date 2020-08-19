@@ -34,16 +34,20 @@ GENERATOR = GlobalAveragePooling2dTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
+@pytest.fixture  # type: ignore
+def converted_op_code() -> XCOREOpCodes:
+    return XCOREOpCodes.XC_avgpool2d_global
+
+
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
+
 # TODO: fix this
 def test_output(run, request):  # type: ignore
     if request.node.name in ("test_output[CONFIGS[21]]", "test_output[CONFIGS[34]]"):
         request.applymarker(pytest.mark.xfail(run=False))
     _test_output(run, request)
-
-
-@pytest.fixture  # type: ignore
-def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_avgpool2d_global
 
 
 if __name__ == "__main__":

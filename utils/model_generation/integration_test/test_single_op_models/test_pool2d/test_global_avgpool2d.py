@@ -35,7 +35,7 @@ GENERATOR = GlobalAveragePooling2dTestModelGenerator
 
 
 # TODO: fix this
-def test_output(run, request):
+def test_output(run, request):  # type: ignore
     if request.node.name in ("test_output[CONFIGS[21]]", "test_output[CONFIGS[34]]"):
         request.applymarker(pytest.mark.xfail(run=False))
     _test_output(run, request)

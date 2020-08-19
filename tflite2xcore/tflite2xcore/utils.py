@@ -7,10 +7,15 @@ import random
 import argparse
 import sys
 import importlib
-
 import numpy as np
+from typing import NamedTuple, Union
 
 from tflite2xcore import xlogging as logging
+
+
+class QuantizationTuple(NamedTuple):
+    scale: float
+    zero_point: int
 
 
 def lazy_import(fullname):
@@ -93,6 +98,7 @@ class VerbosityParser(argparse.ArgumentParser):
         return args
 
 
+# TODO: remove this
 def convert_path(path):
     if isinstance(path, pathlib.Path):
         return path
@@ -102,11 +108,25 @@ def convert_path(path):
         raise TypeError(f"Expected path of type str or pathlib.Path, got {type(path)}")
 
 
-def snake_to_camel(word):
+def snake_to_camel(word: str) -> str:
     output = "".join(x.capitalize() or "_" for x in word.split("_"))
     return output[0].lower() + output[1:]
 
 
-def camel_to_snake(name):
+def camel_to_snake(name: str) -> str:
     name = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", name).lower()
+
+
+def quantize(
+    arr: "np.ndarray",
+    scale: float,
+    zero_point: int,
+    dtype: Union[type, "np.dtype"] = np.int8,
+) -> "np.ndarray":
+    t = np.round(np.float32(arr) / np.float32(scale)).astype(np.int32) + zero_point
+    return dtype(np.clip(t, np.iinfo(dtype).min, np.iinfo(dtype).max))
+
+
+def dequantize(arr: "np.ndarray", scale: float, zero_point: int) -> "np.ndarray":
+    return np.float32(arr.astype(np.int32) - np.int32(zero_point)) * np.float32(scale)

@@ -151,9 +151,9 @@ typedef struct {
      * output image.
      */
     struct {
-        /** Vertical stride of the convolution window. */
+        /** Vertical dilation of the convolution window. */
         int vertical;
-        /** Horizontal stride of the convolution window */
+        /** Horizontal dilation of the convolution window */
         int horizontal;
     } dilation;
 } nn_window_params_t;
@@ -462,8 +462,9 @@ typedef struct {
 typedef struct nn_pad_plan_t {
   unsigned top_pad_bytes;
   unsigned mid_loop_count;
-  unsigned mid_pad_bytes;
+  unsigned left_pad_bytes;
   unsigned mid_copy_bytes;
+  unsigned right_pad_bytes;
   unsigned bottom_pad_bytes;
 } nn_pad_plan_t;
 

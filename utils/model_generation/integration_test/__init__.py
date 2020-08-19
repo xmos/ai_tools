@@ -4,7 +4,7 @@ import pytest  # type: ignore
 import _pytest  # type: ignore # NOTE: for typing only
 import numpy as np  # type: ignore
 from pathlib import Path
-from typing import Union, List
+from typing import Union, List, NamedTuple, Tuple, Dict
 
 from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
 from tflite2xcore import xlogging  # type: ignore # TODO: fix this
@@ -102,23 +102,28 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
 #  ----------------------------------------------------------------------------
 
 
+class FailedElement(NamedTuple):
+    idx: Tuple[int, ...]
+    diff: int
+    expected: int
+    predicted: int
+
+
 def _test_batched_arrays(
     predicted: np.ndarray, expected: np.ndarray, tolerance: Union[int, float] = 1
-) -> List[str]:
+) -> Dict[int, List[FailedElement]]:
     assert predicted.shape == expected.shape
     assert predicted.dtype is expected.dtype
 
-    failures: List[str] = []
-    assert predicted.shape[0] == expected.shape[0]
+    failures: Dict[int, List[FailedElement]] = {}
     for j, (arr, arr_ref) in enumerate(zip(predicted, expected)):
         diff = np.abs(np.int32(arr) - np.int32(arr_ref))
         diff_idx = zip(*np.where(diff > tolerance))
-
-        failures.extend(
-            f"Example {j}, idx={idx}: diff={diff[idx]}, "
-            f"expected={arr_ref[idx]}, predicted={arr[idx]}"
-            for idx in diff_idx
-        )
+        failed_examples = [
+            FailedElement(idx, diff[idx], arr_ref[idx], arr[idx]) for idx in diff_idx
+        ]
+        if failed_examples:
+            failures[j] = failed_examples
     return failures
 
 
@@ -131,8 +136,26 @@ def test_output(
     run: IntegrationTestRunner, request: _pytest.fixtures.SubRequest
 ) -> None:
     failures = _test_batched_arrays(run.outputs.xcore, run.outputs.reference)
+
+    verbose = request.config.getoption("verbose") > 0
+
+    msg = "".join(
+        f"\n{request.node.fspath}::{request.node.name} Example {j}"
+        + (
+            "".join(
+                f"\nidx={e.idx}: diff={e.diff}, "
+                f"expected={e.expected}, predicted={e.predicted}"
+                for e in elements
+            )
+            if verbose
+            else ""
+        )
+        for j, elements in failures.items()
+    )
+
     if failures:
         pytest.fail(
-            f"\n{request.node.fspath}::{request.node.name}\n" + "\n".join(failures),
+            f"The following examples have failed elements: {msg}"
+            + ("" if verbose else "\nSet verbsity > 0 for more details."),
             pytrace=False,
         )

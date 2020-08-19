@@ -2,7 +2,7 @@
 
 import pytest  # type: ignore
 
-from .test_depthwise_conv2d import converted_op_code, DepthwiseConv2dTestModelGenerator
+from .test_conv2d_shallowin import converted_op_code, Conv2dShallowinTestModelGenerator
 from . import ExplicitPaddingMixin, test_output, test_converted_single_op_model
 
 
@@ -11,13 +11,13 @@ from . import ExplicitPaddingMixin, test_output, test_converted_single_op_model
 #  ----------------------------------------------------------------------------
 
 
-class PaddedDepthwiseConv2dTestModelGenerator(
-    ExplicitPaddingMixin, DepthwiseConv2dTestModelGenerator
+class PaddedConv2dShallowinTestModelGenerator(
+    ExplicitPaddingMixin, Conv2dShallowinTestModelGenerator
 ):
     pass
 
 
-GENERATOR = PaddedDepthwiseConv2dTestModelGenerator
+GENERATOR = PaddedConv2dShallowinTestModelGenerator
 
 
 if __name__ == "__main__":

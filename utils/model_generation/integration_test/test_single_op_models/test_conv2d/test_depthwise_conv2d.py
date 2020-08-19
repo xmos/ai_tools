@@ -4,12 +4,15 @@ import pytest  # type: ignore
 import tensorflow as tf  # type: ignore
 from typing import Tuple, Optional
 
-from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation.utils import parse_init_config
 from tflite2xcore._model_generation import Configuration
 
-from . import AbstractConv2dTestModelGenerator, test_output
+from . import (
+    AbstractConv2dTestModelGenerator,
+    test_output,
+    test_converted_single_op_model,
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -50,15 +53,13 @@ GENERATOR = DepthwiseConv2dTestModelGenerator
 
 
 #  ----------------------------------------------------------------------------
-#                                   TESTS
+#                                   FIXTURES
 #  ----------------------------------------------------------------------------
 
 
-def test_converted_model(xcore_model: XCOREModel) -> None:
-    operators = xcore_model.subgraphs[0].operators
-    assert len(operators) == 1
-    op = operators[0]
-    assert op.operator_code.code is XCOREOpCodes.XC_conv2d_depthwise
+@pytest.fixture  # type: ignore
+def converted_op_code() -> XCOREOpCodes:
+    return XCOREOpCodes.XC_conv2d_depthwise
 
 
 if __name__ == "__main__":

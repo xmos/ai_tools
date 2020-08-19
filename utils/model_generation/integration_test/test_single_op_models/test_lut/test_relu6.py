@@ -16,13 +16,13 @@ from . import (
 #  ----------------------------------------------------------------------------
 
 
-class ReluTestModelGenerator(LUTActivationOpTestModelGenerator):
+class Relu6TestModelGenerator(LUTActivationOpTestModelGenerator):
     @property
     def act_fun(self) -> Callable[[tf.Tensor], tf.Tensor]:
-        return lambda x: tf.nn.relu(x)
+        return lambda x: tf.nn.relu6(x)
 
 
-GENERATOR = ReluTestModelGenerator
+GENERATOR = Relu6TestModelGenerator
 
 
 if __name__ == "__main__":

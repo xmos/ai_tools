@@ -1,8 +1,6 @@
 // Copyright (c) 2019, XMOS Ltd, All rights reserved
 #include "inference_engine.h"
 
-#include <stdint.h>
-
 #include "tensorflow/lite/micro/all_ops_resolver.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_interpreter.h"
 #include "tensorflow/lite/micro/kernels/xcore/xcore_ops.h"
@@ -80,6 +78,8 @@ void initialize(uint8_t *model_content, uint8_t *tensor_arena,
     // We already have an interpreter so we need to explicitly call the
     // destructor here but NOT delete the object
     interpreter->~XCoreInterpreter();
+    // need to memset the arena to 0
+    memset(tensor_arena, 0, tensor_arena_size);
   }
   interpreter = new (interpreter_buffer) tflite::micro::xcore::XCoreInterpreter(
       model, resolver, tensor_arena, tensor_arena_size, reporter, true,

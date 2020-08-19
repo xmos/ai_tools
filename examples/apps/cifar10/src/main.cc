@@ -19,7 +19,9 @@ const tflite::Model *model = nullptr;
 tflite::micro::xcore::XCoreInterpreter *interpreter = nullptr;
 TfLiteTensor *input = nullptr;
 TfLiteTensor *output = nullptr;
-constexpr int kTensorArenaSize = 300000;
+constexpr int kTensorArenaSize =
+    63000;  // NOTE: This is big enough fo the model to live in RAM or external
+            // memory
 uint8_t tensor_arena[kTensorArenaSize];
 
 __attribute__((aligned(8))) static char swmem_handler_stack[1024];

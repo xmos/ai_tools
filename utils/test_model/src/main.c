@@ -36,11 +36,11 @@ void send_output() {
 }
 
 void app_data(void *data, size_t size) {
-  if (strcmp(data, "START_MODEL") == 0) {
+  if (strncmp(data, "START_MODEL", 11) == 0) {
     model_content_bytes = 0;
     state = Model;
     return;
-  } else if (strcmp(data, "END_MODEL") == 0) {
+  } else if (strncmp(data, "END_MODEL", 9) == 0) {
     // Note, initialize will log error and exit if initialize fails
     initialize(model_content, tensor_arena, TENSOR_ARENA_SIZE, &input_buffer,
                &input_size, &output_buffer, &output_size);
@@ -51,8 +51,9 @@ void app_data(void *data, size_t size) {
 
   switch (state) {
     case Model:
-      memcpy(model_content + model_content_bytes, data, size - 1);
-      model_content_bytes += size - 1;
+      // printf("Model size=%d\n", size);
+      memcpy(model_content + model_content_bytes, data, size);
+      model_content_bytes += size;
       if (model_content_bytes > MAX_MODEL_CONTENT_SIZE) {
         // Return error if too big
         printf("Model exceeds maximum size of %d bytes\n",
@@ -61,8 +62,8 @@ void app_data(void *data, size_t size) {
       }
       break;
     case Input:
-      memcpy(input_buffer + input_bytes, data, size - 1);
-      input_bytes += size - 1;
+      memcpy(input_buffer + input_bytes, data, size);
+      input_bytes += size;
       if (input_bytes == input_size) {
         invoke();
         send_output();
@@ -134,8 +135,8 @@ int main(int argc, char *argv[]) {
   }
 
   // setup runtime
-  initialize(model_content, &input_buffer, &input_size, &output_buffer,
-             &output_size);
+  initialize(model_content, tensor_arena, TENSOR_ARENA_SIZE, &input_buffer,
+             &input_size, &output_buffer, &output_size);
 
   // Load input tensor
   if (!load_input(input_filename, input_buffer, input_size)) {

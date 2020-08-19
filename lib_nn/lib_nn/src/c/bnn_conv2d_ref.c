@@ -52,7 +52,6 @@ void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
   }
 }
 
-
 unsigned xor_pop(bnn_b256_t* a, bnn_b256_t* b) {
   unsigned t = sizeof(((bnn_b256_t*)0)->d[0]);
   unsigned elements = sizeof(((bnn_b256_t*)0)->d) / t;
@@ -69,47 +68,61 @@ unsigned xor_pop(bnn_b256_t* a, bnn_b256_t* b) {
   return c;
 }
 
-void bnn_conv2d_bin_out_ref(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
-                        const bnn_b256_t* K_p,
-                        const int32_t* thresholds, 
-                        const nn_bnn_conv2d_bin_out_plan_t* plan) {
-  const unsigned kernel_height = plan->k_dims[0];
-  const unsigned kernel_width = plan->k_dims[1];
-  const unsigned chan_b256_in = plan->x_dims[2];
-  const unsigned chan_b32_out = plan->y_dims[2];
-  const unsigned x_height = plan->x_dims[0];
-  const unsigned x_width = plan->x_dims[1];
-  const unsigned y_height = plan->y_dims[0];
-  const unsigned y_width = plan->y_dims[1];
-  const unsigned h_stride = plan->stride[0];
-  const unsigned v_stride = plan->stride[1];
+WEAK_FUNC
+void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
+    const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds,
+    
+    const nn_image_params_t* x, //The full image of x
+    const nn_image_params_t* y, // the full image of y
+    const nn_window_params_t* k, //the full kernel k
+    
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height,
 
-  bnn_b32_t(*Y)[y_width][chan_b32_out] =
-      (bnn_b32_t(*)[y_width][chan_b32_out])Y_p;
+    const unsigned x_loc_x, const unsigned x_loc_y, 
+    
+    const unsigned k_loc_x, const unsigned k_loc_y, 
+    const unsigned k_sub_width, const unsigned k_sub_height
+) {
 
-  bnn_b256_t(*X)[x_width][chan_b256_in] =
-      (bnn_b256_t(*)[x_width][chan_b256_in])X_p;
+  const unsigned chan_b256_in = (x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
+  const unsigned chan_b32_out = (y->channels + 32 - 1) / 32;
 
-  bnn_b256_t(*K)[kernel_height][kernel_width][chan_b256_in] =
-      (bnn_b256_t(*)[kernel_height][kernel_width][chan_b256_in])K_p;
+  const unsigned h_stride = k->stride.horizontal;
+  const unsigned v_stride = k->stride.vertical;  
+  const unsigned h_dilation = k->dilation.horizontal;
+  const unsigned v_dilation = k->dilation.vertical;  
 
-  for (unsigned h = 0; h < x_height - kernel_height + 1; h += v_stride) {
-    for (unsigned w = 0; w < x_width - kernel_width + 1; w += h_stride) {
+  bnn_b32_t(*Y)[y->width][chan_b32_out] =
+      (bnn_b32_t(*)[y->width][chan_b32_out])Y_p;
+
+  bnn_b256_t(*X)[x->width][chan_b256_in] =
+      (bnn_b256_t(*)[x->width][chan_b256_in])X_p;
+
+  bnn_b256_t(*K)[k->shape.height][k->shape.width][chan_b256_in] =
+      (bnn_b256_t(*)[k->shape.height][k->shape.width][chan_b256_in])K_p;
+
+  unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
+  unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
+
+
+  for (unsigned h = x_loc_y; h < (x_loc_y + x_sub_height) - k_sub_height + 1; h += v_stride) {
+    for (unsigned w = x_loc_x; w < (x_loc_x + x_sub_width) - k_sub_width + 1; w += h_stride) {
       for (unsigned oc_word = 0; oc_word < chan_b32_out; oc_word += 1) {
         bnn_b32_t bitpacked_column = 0;
 
         for (unsigned oc_bit = 0; oc_bit < 32; oc_bit += 1) {
           unsigned oc = oc_bit + (32 * oc_word);
           int32_t sum = 0;
-          for (unsigned kh = 0; kh < kernel_height; kh += 1) {
-            for (unsigned kw = 0; kw < kernel_width; kw += 1) {
+          for (unsigned kh = k_loc_y; kh < k_loc_y + k_sub_height; kh += 1) {
+            for (unsigned kw = k_loc_x; kw < k_loc_x + k_sub_width; kw += 1) {
               for (unsigned ic = 0; ic < chan_b256_in; ic += 1) {
                 sum += xor_pop(&(X[h + kh][w + kw][ic]), &(K[oc][kh][kw][ic]));
               }
             }
           }
 
-          sum = (kernel_height * kernel_width * chan_b256_in * 256) - sum;
+          sum = (k->shape.height * k->shape.width * chan_b256_in * 256) - sum;
           unsigned bit = sum > thresholds[oc];
           if (bit) bitpacked_column |= 1ULL << oc_bit;
         }
@@ -117,34 +130,4 @@ void bnn_conv2d_bin_out_ref(bnn_b32_t* Y_p, const bnn_b256_t* X_p,
       }
     }
   }
-}
-
-WEAK_FUNC
-void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
-    const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,
-    const nn_image_params_t* x, const nn_image_params_t* y,
-    const nn_window_params_t* k, const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned x_loc_x, const unsigned x_loc_y, const unsigned k_loc_x,
-    const unsigned k_loc_y, const unsigned y_full_width,
-    const unsigned x_full_width, const unsigned k_full_width) {
-
-  nn_bnn_conv2d_bin_out_plan_t plan;
-  plan.k_dims[0] = k->shape.height;
-  plan.k_dims[1] = k->shape.width;
-
-  plan.y_dims[0] = y->height;
-  plan.y_dims[1] = y->width;
-  plan.y_dims[2] = (y->channels + 32 - 1) / 32;
-
-  plan.x_dims[0] = x->height;
-  plan.x_dims[1] = x->width;
-  plan.x_dims[2] =
-      (x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
-  plan.stride[0] = k->stride.horizontal;
-  plan.stride[1] = k->stride.vertical;
-
-  plan.start_loc[0] = k->start.column;
-  plan.start_loc[1] = k->start.row;
-
-  bnn_conv2d_bin_out_ref(Y_p, X_p, K_p, thresholds_p, &plan);
 }

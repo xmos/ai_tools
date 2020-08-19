@@ -57,7 +57,7 @@ void run_bsign_test(int8_t* x, size_t inputLength, int8_t zeroPoint, size_t jobC
     for(int i = 0; i < outputLength; i++)
     {
         if(y[i] != y_exp[i])
-                sprintf(str_buff, "(jobs: %d) (inputLen: %u) (index: %d)", jobCount, inputLength, i);
+                sprintf(str_buff, "(jobs: %zu) (inputLen: %zu) (index: %d)", jobCount, inputLength, i);
 
         TEST_ASSERT_EQUAL_MESSAGE(y_exp[i], y[i], str_buff);
     }
@@ -71,7 +71,7 @@ void run_bsign_test(int8_t* x, size_t inputLength, int8_t zeroPoint, size_t jobC
     for(int i = 0; i < outputLength; i++)
     {
         if(y[i] != y_exp[i])
-                sprintf(str_buff, "(jobs: %d) (inputLen: %u) (index: %d)", jobCount, inputLength, i);
+                sprintf(str_buff, "(jobs: %zu) (inputLen: %zu) (index: %d)", jobCount, inputLength, i);
 
         TEST_ASSERT_EQUAL_MESSAGE(y_exp[i], y[i], str_buff);
     }

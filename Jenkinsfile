@@ -15,8 +15,10 @@ pipeline {
     stages {
         stage ("Build and Push Image") {
             when {
-                changeset "(environment\.yml)|(Dockerfile)"
-                expression { return params.BUILD_IMAGE }
+                anyOf {
+                    changeset "(environment\.yml)|(Dockerfile)"
+                    expression { return params.BUILD_IMAGE }
+                }
             }
             agent {
                 label 'docker'
@@ -25,7 +27,7 @@ pipeline {
                 script {
                     def image = docker.build('xmos/ai_tools')
                     docker.withRegistry('https://docker-repo.xmos.com', 'nexus') {
-                        image.push('latest')
+                        image.push(GIT_BRANCH)
                     }
                 }
             }
@@ -33,7 +35,7 @@ pipeline {
         stage ("Pull and Use Image") {
             agent {
                 docker {
-                    image 'xmos/ai_tools:latest'
+                    image 'xmos/ai_tools:${GIT_BRANCH}'
                     registryUrl 'https://docker-repo.xmos.com'
                     alwaysPull true
                 }

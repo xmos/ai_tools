@@ -14,7 +14,7 @@ pipeline {
 
     stages {
         stage ("Build and Push Image") {
-            when { expression { return params.BUILD_IMAGE }
+            when { expression { return params.BUILD_IMAGE }}
             agent {
                 label 'docker'
             }

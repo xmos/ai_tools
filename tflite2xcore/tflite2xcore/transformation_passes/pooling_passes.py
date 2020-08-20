@@ -48,9 +48,7 @@ class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
         new_op = super().mutate(op)
 
         with self.using(op):
-            new_op.add_custom_options(
-                stride=list(self._strides), pool=list(self._pool_size)
-            )
+            new_op.add_custom_options(stride=self._strides, pool=self._pool_size)
 
 
 class ReplacePool2D2x2Pass(ReplacePool2DPass):

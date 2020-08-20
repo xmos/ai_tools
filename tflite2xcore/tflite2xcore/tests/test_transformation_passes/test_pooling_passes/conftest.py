@@ -4,9 +4,16 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_schema import Padding, ActivationFunctionType
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import Padding, ActivationFunctionType, XCOREOpCodes
 
-from ..conftest import PARAMS, _test_non_matching_params, test_matching_params
+from ..conftest import (
+    PARAMS,
+    _test_non_matching_params,
+    test_matching_params,
+    test_replace_mutate as _test_mutate,
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -71,6 +78,23 @@ def model(build_model, input_shape, pool_size, strides, padding, fused_activatio
 #  ----------------------------------------------------------------------------
 #                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
+
+
+def test_mutate(
+    trf_pass: ModelTransformationPass, model: XCOREModel, custom_opcode: XCOREOpCodes
+) -> None:
+    subgraph = model.subgraphs[0]
+    old_op = subgraph.operators[0]
+    strides = tuple(old_op.builtin_options[f"stride_{ax}"] for ax in ("h", "w"))
+    pool = tuple(old_op.builtin_options[f"filter_{ax}"] for ax in ("height", "width"))
+
+    _test_mutate(trf_pass, model, custom_opcode)
+
+    custom_options = subgraph.operators[-1].custom_options
+    assert "pool" in custom_options
+    assert custom_options["pool"] == pool
+    assert "stride" in custom_options
+    assert custom_options["stride"] == strides
 
 
 def test_non_matching_input_channels(

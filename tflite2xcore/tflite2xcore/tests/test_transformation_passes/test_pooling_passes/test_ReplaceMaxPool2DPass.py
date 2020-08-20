@@ -5,9 +5,11 @@ import pytest
 from tflite2xcore.transformation_passes import ReplaceMaxPool2DPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_maxpool
+from .test_ReplaceMaxPool2D2x2Pass import custom_opcode
 from .conftest import (
     PARAMS,
     test_matching_params,
+    test_mutate,
     test_non_matching_input_channels,
     test_non_matching_fused_activation,
 )

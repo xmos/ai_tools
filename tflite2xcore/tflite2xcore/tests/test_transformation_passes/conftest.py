@@ -1,13 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest
-
+import pytest  # type: ignore
 import itertools
 from typing import List, Dict, Iterator, Tuple, Any
 
 from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType, XCOREOpCodes
+from tflite2xcore.converter import CleanupManager
 
 
 #  ----------------------------------------------------------------------------
@@ -126,11 +126,11 @@ def test_replace_mutate(
     trf_pass.run(model)
     model.sanity_check()
 
+    # clean up dangling op
+    CleanupManager(model).run_passes()
+    model.sanity_check()
+
     # check new op
     op = model.subgraphs[0].operators[-1]
     assert op.operator_code.code is custom_opcode
 
-    # check custom options
-    custom_options = op.custom_options
-    assert "illegal_params" in custom_options
-    assert custom_options["illegal_params"] is True

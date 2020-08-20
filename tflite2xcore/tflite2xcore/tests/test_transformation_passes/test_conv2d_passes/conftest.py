@@ -6,7 +6,7 @@ from copy import deepcopy
 
 from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.xcore_schema import Padding
+from tflite2xcore.xcore_schema import Padding, XCOREOpCodes
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import ModelBuilder
 from ..test_fully_connected_passes.conftest import PARAMS as FC_PARAMS
@@ -15,7 +15,7 @@ from ..conftest import (
     _test_non_matching_params,
     test_matching_params,
     test_non_matching_tensors,
-    test_replace_mutate,
+    test_replace_mutate as _test_replace_mutate,
 )
 
 
@@ -200,3 +200,14 @@ def test_non_matching_stride_h(
     op = model.subgraphs[0].operators[0]
     op.builtin_options["stride_h"] = non_matching_stride_h
     _test_non_matching_params(trf_pass, model)
+
+
+def test_replace_mutate(
+    trf_pass: ModelTransformationPass, model: XCOREModel, custom_opcode: XCOREOpCodes
+) -> None:
+    _test_replace_mutate(trf_pass, model, custom_opcode)
+
+    # check custom options
+    custom_options = model.subgraphs[0].operators[-1].custom_options
+    assert "illegal_params" in custom_options
+    assert custom_options["illegal_params"] is True

@@ -109,12 +109,12 @@ def test_mutate(trf_pass, model):
     assert in_ori is op[0].inputs[0]
     assert in_ori in subgraph.inputs
 
-    assert all((i not in subgraph.inputs) for i in op[1].inputs)
+    assert all(i not in subgraph.inputs for i in op[1].inputs)
 
     assert out_ori is op[1].outputs[0]
     assert out_ori in subgraph.outputs
 
-    assert all((o not in subgraph.outputs) for o in op[0].outputs)
+    assert all(o not in subgraph.outputs for o in op[0].outputs)
 
     assert op[0].outputs[0].shape[:-1] == in_ori.shape[:-1]
     assert op[0].outputs[0].shape[-1] == in_ori.shape[-1] / WORD_SIZE_BITS

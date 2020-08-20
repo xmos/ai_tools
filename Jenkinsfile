@@ -28,6 +28,7 @@ pipeline {
             }
             steps {
                 sh "conda activate xmos && python -c 'import tensorflow; print(dir(tensorflow))'"
+                sh "make all"
             }
         }
     }

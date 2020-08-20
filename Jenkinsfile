@@ -13,7 +13,7 @@ pipeline {
                 script {
                     def image = docker.build('xmos/ai_tools')
                     docker.withRegistry('https://docker-repo.xmos.com', 'nexus') {
-                        image.push('0.1 latest')
+                        image.push('latest')
                     }
                 }
             }

@@ -16,7 +16,7 @@ RUN mkdir /opt/conda/envs/xmos /opt/conda/pkgs && \
 WORKDIR /home/xmos
 USER xmos
 
-COPY --chown $USER:$USER environment.yml .
+COPY --chown=$USER:$USER environment.yml .
 RUN conda env create --name xmos -f environment.yml python=3.8
 
 CMD /bin/bash

@@ -4,7 +4,9 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_schema import Padding
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import Padding, XCOREOpCodes
 
 from ..test_fully_connected_passes.conftest import PARAMS as FC_PARAMS
 from ..conftest import (
@@ -78,6 +80,23 @@ def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
 #  ----------------------------------------------------------------------------
 #                                   TESTS
 #  ----------------------------------------------------------------------------
+
+
+def test_mutate(
+    trf_pass: ModelTransformationPass, model: XCOREModel, custom_opcode: XCOREOpCodes
+) -> None:
+    # run replacement pass
+    trf_pass.run(model)
+    model.sanity_check()
+
+    # check new op
+    op = model.subgraphs[0].operators[-1]
+    assert op.operator_code.code is custom_opcode
+
+    # check custom options
+    custom_options = op.custom_options
+    assert "illegal_params" in custom_options
+    assert custom_options["illegal_params"] is True
 
 
 def test_non_matching_output_channels(

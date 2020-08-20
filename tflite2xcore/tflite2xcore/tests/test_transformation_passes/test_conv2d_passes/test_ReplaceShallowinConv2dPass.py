@@ -4,6 +4,9 @@ import pytest
 
 from copy import deepcopy
 
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.transformation_passes import ReplaceShallowinConv2dPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_conv2d
@@ -15,6 +18,7 @@ from .conftest import (
     test_non_matching_input_channels,
     test_non_matching_tensors,
 )
+from .test_ReplaceDeepConv2dPass import test_mutate as _test_mutate
 
 
 #  ----------------------------------------------------------------------------
@@ -73,9 +77,27 @@ def model(weight_shape, input_size, padding, strides):
     )
 
 
+@pytest.fixture()
+def custom_opcode() -> XCOREOpCodes:
+    return XCOREOpCodes.XC_conv2d_shallowin
+
+
 #  ----------------------------------------------------------------------------
 #                                   TESTS
 #  ----------------------------------------------------------------------------
+
+
+def test_mutate(
+    trf_pass: ModelTransformationPass, model: XCOREModel, custom_opcode: XCOREOpCodes
+) -> None:
+    subgraph = model.subgraphs[0]
+    K_w = subgraph.operators[0].inputs[1].shape[2]
+
+    _test_mutate(trf_pass, model, custom_opcode)
+
+    custom_options = subgraph.operators[-1].custom_options
+    assert "Kw" in custom_options
+    assert custom_options["Kw"] == K_w
 
 
 def test_non_matching_weight_tail(

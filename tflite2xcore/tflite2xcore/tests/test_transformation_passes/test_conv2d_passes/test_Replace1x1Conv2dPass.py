@@ -4,11 +4,13 @@ import pytest
 
 from copy import deepcopy
 
+from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.transformation_passes import Replace1x1Conv2dPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_conv2d
 from .conftest import (
     PARAMS,
+    test_mutate,
     test_matching_params,
     test_non_matching_output_channels,
     test_non_matching_kernel_height,
@@ -90,6 +92,11 @@ def model(weight_shape, input_size, padding, strides):
         strides=strides,
     )
     return model
+
+
+@pytest.fixture()
+def custom_opcode() -> XCOREOpCodes:
+    return XCOREOpCodes.XC_conv2d_1x1
 
 
 if __name__ == "__main__":

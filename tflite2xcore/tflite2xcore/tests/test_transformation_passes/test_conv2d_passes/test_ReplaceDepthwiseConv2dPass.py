@@ -4,6 +4,7 @@ import pytest
 
 from copy import deepcopy
 
+from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.transformation_passes import ReplaceDepthwiseConv2dPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
@@ -15,6 +16,7 @@ from .conftest import (
     test_matching_params,
     test_non_matching_tensors,
 )
+from .test_ReplaceDeepConv2dPass import test_mutate
 
 
 #  ----------------------------------------------------------------------------
@@ -62,6 +64,11 @@ def model(weight_shape, input_size, padding, strides):
         padding=padding,
         strides=strides,
     )
+
+
+@pytest.fixture()
+def custom_opcode() -> XCOREOpCodes:
+    return XCOREOpCodes.XC_conv2d_depthwise
 
 
 #  ----------------------------------------------------------------------------

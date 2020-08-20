@@ -62,7 +62,7 @@ def test_mutate(trf_pass, model):
 
     in_ori, out_ori = subgraph.inputs[0], subgraph.outputs[0]
 
-    assert (len(subgraph.operators[0].inputs)) == 4
+    assert len(subgraph.operators[0].inputs) == 4
 
     # run mutating pass
     trf_pass.run(model)

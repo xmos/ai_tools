@@ -41,7 +41,7 @@ pipeline {
                 }
             }
             steps {
-                sh "conda install -e ./tflite2xcore"
+                sh "pip install -e ./tflite2xcore"
                 sh "make all"
             }
         }

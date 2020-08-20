@@ -103,8 +103,12 @@ class CustomOpCodes(ValidOpCodes):
 class ExternalOpCodes(CustomOpCodes, aenum.Enum):
     @classmethod
     def add_new_opcode(cls, name: str) -> "ExternalOpCodes":
-        aenum.extend_enum(cls, name)
-        return cls[name]
+        assert name.isidentifier()
+        try:
+            return cls[name]
+        except KeyError:
+            aenum.extend_enum(cls, name)
+            return cls[name]
 
 
 class XCOREOpCodes(CustomOpCodes, KnownOpCodes):

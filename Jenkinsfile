@@ -14,7 +14,10 @@ pipeline {
 
     stages {
         stage ("Build and Push Image") {
-            when { expression { return params.BUILD_IMAGE }}
+            when {
+                changeset "(environment\.yml)|(Dockerfile)"
+                expression { return params.BUILD_IMAGE }
+            }
             agent {
                 label 'docker'
             }
@@ -36,7 +39,7 @@ pipeline {
                 }
             }
             steps {
-                sh "conda activate xmos && python -c 'import tensorflow; print(dir(tensorflow))'"
+                sh "conda install -e ./tflite2xcore"
                 sh "make all"
             }
         }

@@ -41,7 +41,8 @@ pipeline {
                 }
             }
             steps {
-                withVenv {
+                sh "ls -la /venv"
+                withVenv('/venv') {
                     sh "pip install --no-dependencies -e ./tflite2xcore"
                     sh "conda list"
                     sh "make all"

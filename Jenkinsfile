@@ -41,7 +41,8 @@ pipeline {
                 }
             }
             steps {
-                sh "pip install -e ./tflite2xcore"
+                sh "pip install --no-dependencies -e ./tflite2xcore"
+                sh "conda list"
                 sh "make all"
             }
         }

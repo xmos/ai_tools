@@ -4,8 +4,17 @@
 pipeline {
     agent none
 
+    parameters {
+        booleanParam(
+            name: 'PUSH_IMAGE',
+            defaultValue: false,
+            description: 'Whether to rebuild and push a new docker image'
+        )
+    }
+
     stages {
         stage ("Build and Push Image") {
+            when { expression { return params.BUILD_IMAGE }
             agent {
                 label 'docker'
             }

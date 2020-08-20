@@ -1,13 +1,14 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-
+from typing import Tuple
 from copy import deepcopy
 
 from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import Padding, XCOREOpCodes
 
+from tflite2xcore.tests.test_transformation_passes.model_builders import ModelBuilder
 from ..test_fully_connected_passes.conftest import PARAMS as FC_PARAMS
 from ..conftest import (
     PARAMS,
@@ -73,7 +74,9 @@ PARAMS["smoke"].update(
 
 
 @pytest.fixture()
-def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
+def weight_shape(
+    output_channels: int, kernel_height: int, kernel_width: int, input_channels: int
+) -> Tuple[int, int, int, int]:
     return [output_channels, kernel_height, kernel_width, input_channels]
 
 
@@ -100,16 +103,16 @@ def test_mutate(
 
 
 def test_non_matching_output_channels(
-    trf_pass,
-    build_model,
-    non_matching_output_channels,
-    kernel_height,
-    kernel_width,
-    input_channels,
-    input_size,
-    padding,
-    strides,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    non_matching_output_channels: int,
+    kernel_height: int,
+    kernel_width: int,
+    input_channels: int,
+    input_size: Tuple[int, int],
+    padding: Padding,
+    strides: Tuple[int, int],
+) -> None:
     model = build_model(
         weight_shape=[
             non_matching_output_channels,
@@ -125,16 +128,16 @@ def test_non_matching_output_channels(
 
 
 def test_non_matching_kernel_height(
-    trf_pass,
-    build_model,
-    output_channels,
-    non_matching_kernel_height,
-    kernel_width,
-    input_channels,
-    input_size,
-    padding,
-    strides,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    output_channels: int,
+    non_matching_kernel_height: int,
+    kernel_width: int,
+    input_channels: int,
+    input_size: Tuple[int, int],
+    padding: Padding,
+    strides: Tuple[int, int],
+) -> None:
     model = build_model(
         weight_shape=[
             output_channels,
@@ -150,16 +153,16 @@ def test_non_matching_kernel_height(
 
 
 def test_non_matching_kernel_width(
-    trf_pass,
-    build_model,
-    output_channels,
-    kernel_height,
-    non_matching_kernel_width,
-    input_channels,
-    input_size,
-    padding,
-    strides,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    output_channels: int,
+    kernel_height: int,
+    non_matching_kernel_width: int,
+    input_channels: int,
+    input_size: Tuple[int, int],
+    padding: Padding,
+    strides: Tuple[int, int],
+) -> None:
     model = build_model(
         weight_shape=[
             output_channels,
@@ -175,16 +178,16 @@ def test_non_matching_kernel_width(
 
 
 def test_non_matching_input_channels(
-    trf_pass,
-    build_model,
-    output_channels,
-    kernel_height,
-    kernel_width,
-    non_matching_input_channels,
-    input_size,
-    padding,
-    strides,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    output_channels: int,
+    kernel_height: int,
+    kernel_width: int,
+    non_matching_input_channels: int,
+    input_size: Tuple[int, int],
+    padding: Padding,
+    strides: Tuple[int, int],
+) -> None:
     model = build_model(
         weight_shape=[
             output_channels,
@@ -199,13 +202,17 @@ def test_non_matching_input_channels(
     _test_non_matching_params(trf_pass, model)
 
 
-def test_non_matching_stride_w(trf_pass, model, non_matching_stride_w):
+def test_non_matching_stride_w(
+    trf_pass: ModelTransformationPass, model: XCOREModel, non_matching_stride_w: int,
+) -> None:
     op = model.subgraphs[0].operators[0]
     op.builtin_options["stride_w"] = non_matching_stride_w
     _test_non_matching_params(trf_pass, model)
 
 
-def test_non_matching_stride_h(trf_pass, model, non_matching_stride_h):
+def test_non_matching_stride_h(
+    trf_pass: ModelTransformationPass, model: XCOREModel, non_matching_stride_h: int,
+) -> None:
     op = model.subgraphs[0].operators[0]
     op.builtin_options["stride_h"] = non_matching_stride_h
     _test_non_matching_params(trf_pass, model)

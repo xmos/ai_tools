@@ -1,13 +1,17 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import pytest
+from typing import Tuple
 
 from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.xcore_schema import XCOREOpCodes
+from tflite2xcore.xcore_schema import XCOREOpCodes, Padding
 from tflite2xcore.transformation_passes import ReplaceDeepConv2dPass
 
-from tflite2xcore.tests.test_transformation_passes.model_builders import build_conv2d
+from tflite2xcore.tests.test_transformation_passes.model_builders import (
+    build_conv2d,
+    ModelBuilder,
+)
 from .conftest import (
     PARAMS,
     test_mutate as _test_mutate,
@@ -24,17 +28,22 @@ from .conftest import (
 
 
 @pytest.fixture()
-def build_model():
+def build_model() -> ModelBuilder:
     return build_conv2d
 
 
 @pytest.fixture()
-def trf_pass():
+def trf_pass() -> ReplaceDeepConv2dPass:
     return ReplaceDeepConv2dPass()
 
 
 @pytest.fixture()
-def model(weight_shape, input_size, padding, strides):
+def model(
+    weight_shape: Tuple[int, int, int, int],
+    input_size: Tuple[int, int],
+    padding: Padding,
+    strides: Tuple[int, int],
+) -> XCOREModel:
     return build_conv2d(
         weight_shape=weight_shape,
         input_size=input_size,

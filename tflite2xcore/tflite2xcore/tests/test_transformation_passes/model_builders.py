@@ -2,7 +2,7 @@
 
 import pytest
 import numpy as np
-
+from typing import Callable
 from copy import deepcopy
 
 from tflite2xcore.xcore_model import XCOREModel
@@ -15,6 +15,8 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
     BuiltinOptions,
 )
+
+ModelBuilder = Callable[[...], XCOREModel]
 
 
 def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):

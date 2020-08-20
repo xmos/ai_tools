@@ -41,9 +41,11 @@ pipeline {
                 }
             }
             steps {
-                sh "pip install --no-dependencies -e ./tflite2xcore"
-                sh "conda list"
-                sh "make all"
+                withVenv {
+                    sh "pip install --no-dependencies -e ./tflite2xcore"
+                    sh "conda list"
+                    sh "make all"
+                }
             }
         }
     }

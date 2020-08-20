@@ -16,7 +16,7 @@ pipeline {
         stage ("Build and Push Image") {
             when {
                 anyOf {
-                    changeset "(environment\.yml)|(Dockerfile)"
+                    changeset pattern: "(environment.*\\.yml)|(Dockerfile)", comparator: "REGEXP"
                     expression { return params.BUILD_IMAGE }
                 }
             }

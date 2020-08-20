@@ -12,7 +12,7 @@ from ..conftest import (
     PARAMS,
     _test_non_matching_params,
     test_matching_params,
-    test_replace_mutate as _test_mutate,
+    test_replace_mutate as _test_replace_mutate,
 )
 
 
@@ -88,7 +88,7 @@ def test_mutate(
     strides = tuple(old_op.builtin_options[f"stride_{ax}"] for ax in ("h", "w"))
     pool = tuple(old_op.builtin_options[f"filter_{ax}"] for ax in ("height", "width"))
 
-    _test_mutate(trf_pass, model, custom_opcode)
+    _test_replace_mutate(trf_pass, model, custom_opcode)
 
     custom_options = subgraph.operators[-1].custom_options
     assert "pool" in custom_options

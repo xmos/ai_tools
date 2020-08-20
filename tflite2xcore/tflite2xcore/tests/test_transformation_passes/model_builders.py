@@ -126,13 +126,21 @@ def build_mean(subgraph=None, *, input_shape, reduction_dims):
 
     input_shape = [1, *input_shape]
     tin = subgraph.create_tensor(
-        "input", type_=TensorType.INT8, shape=input_shape, isinput=True
+        "input",
+        type_=TensorType.INT8,
+        shape=input_shape,
+        isinput=True,
+        quantization={"scale": [0.65], "zero_point": [-12]},
     )
     tred = subgraph.create_tensor(
         "reduction_dims", TensorType.INT32, [len(reduction_dims)]
     )
     tout = subgraph.create_tensor(
-        "output", tin.type, [tin.shape[0] + tin.shape[3]], isoutput=True
+        "output",
+        tin.type,
+        [tin.shape[0] + tin.shape[3]],
+        isoutput=True,
+        quantization={"scale": [0.42], "zero_point": [-11]},
     )
     tred.buffer.data = np.array(reduction_dims, dtype=np.int32)
     subgraph.create_operator(

@@ -5,10 +5,17 @@ import itertools
 
 from copy import deepcopy
 
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.transformation_passes import ReplaceGlobalAveragePool2DPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_mean
-from .conftest import PARAMS, test_matching_params, _test_non_matching_params
+from .conftest import (
+    PARAMS,
+    test_matching_params,
+    _test_non_matching_params,
+    _test_replace_mutate as _test_mutate,
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -64,6 +71,14 @@ def model(input_shape, reduction_dims):
 #  ----------------------------------------------------------------------------
 #                               TEST FUNCTIONS
 #  ----------------------------------------------------------------------------
+
+
+def test_mutate(trf_pass: ReplaceGlobalAveragePool2DPass, model: XCOREModel) -> None:
+    _test_mutate(trf_pass, model, custom_opcode=XCOREOpCodes.XC_avgpool2d_global)
+
+    # check bias/scale/offset tensor
+    op = model.subgraphs[0].operators[-1]
+    assert op.inputs[1].shape == (7,)
 
 
 def test_non_matching_input_channels(

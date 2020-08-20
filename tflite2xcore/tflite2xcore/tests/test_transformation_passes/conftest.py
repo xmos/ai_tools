@@ -7,7 +7,7 @@ from typing import List, Dict, Iterator, Tuple, Any
 
 from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.xcore_schema import TensorType
+from tflite2xcore.xcore_schema import TensorType, XCOREOpCodes
 
 
 #  ----------------------------------------------------------------------------
@@ -117,3 +117,20 @@ def test_non_matching_tensors(
     for name, type_ in non_matching_tensors.items():
         subgraph.get_tensor(name).type = type_
     _test_non_matching_params(trf_pass, model)
+
+
+def test_replace_mutate(
+    trf_pass: ModelTransformationPass, model: XCOREModel, custom_opcode: XCOREOpCodes
+) -> None:
+    # run replacement pass
+    trf_pass.run(model)
+    model.sanity_check()
+
+    # check new op
+    op = model.subgraphs[0].operators[-1]
+    assert op.operator_code.code is custom_opcode
+
+    # check custom options
+    custom_options = op.custom_options
+    assert "illegal_params" in custom_options
+    assert custom_options["illegal_params"] is True

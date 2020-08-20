@@ -16,7 +16,7 @@ from tflite2xcore.xcore_schema import (
     BuiltinOptions,
 )
 
-ModelBuilder = Callable[[...], XCOREModel]
+ModelBuilder = Callable[..., XCOREModel]
 
 
 def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):

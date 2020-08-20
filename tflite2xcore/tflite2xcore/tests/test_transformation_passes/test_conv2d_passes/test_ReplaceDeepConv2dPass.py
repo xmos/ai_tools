@@ -14,7 +14,7 @@ from tflite2xcore.tests.test_transformation_passes.model_builders import (
 )
 from .conftest import (
     PARAMS,
-    test_mutate as _test_mutate,
+    test_replace_mutate as _test_mutate,
     test_matching_params,
     test_non_matching_output_channels,
     test_non_matching_input_channels,

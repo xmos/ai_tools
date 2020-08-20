@@ -7,7 +7,10 @@ from copy import deepcopy
 from tflite2xcore.xcore_schema import Padding, XCOREOpCodes
 from tflite2xcore.transformation_passes import ReplaceAveragePool2D2x2Pass
 
-from tflite2xcore.tests.test_transformation_passes.model_builders import build_avgpool
+from tflite2xcore.tests.test_transformation_passes.model_builders import (
+    build_avgpool,
+    ModelBuilder,
+)
 from .conftest import (
     PARAMS,
     test_matching_params,
@@ -72,12 +75,12 @@ PARAMS["smoke"].update(
 
 
 @pytest.fixture()
-def build_model():
+def build_model() -> ModelBuilder:
     return build_avgpool
 
 
 @pytest.fixture()
-def trf_pass():
+def trf_pass() -> ReplaceAveragePool2D2x2Pass:
     return ReplaceAveragePool2D2x2Pass()
 
 

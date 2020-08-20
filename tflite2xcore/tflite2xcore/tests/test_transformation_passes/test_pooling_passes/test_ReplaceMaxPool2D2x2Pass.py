@@ -7,7 +7,10 @@ from copy import deepcopy
 from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.transformation_passes import ReplaceMaxPool2D2x2Pass
 
-from tflite2xcore.tests.test_transformation_passes.model_builders import build_maxpool
+from tflite2xcore.tests.test_transformation_passes.model_builders import (
+    build_maxpool,
+    ModelBuilder,
+)
 from .test_ReplaceAveragePool2D2x2Pass import PARAMS
 from .conftest import (
     test_matching_params,
@@ -29,12 +32,12 @@ from .conftest import (
 
 
 @pytest.fixture()
-def build_model():
+def build_model() -> ModelBuilder:
     return build_maxpool
 
 
 @pytest.fixture()
-def trf_pass():
+def trf_pass() -> ReplaceMaxPool2D2x2Pass:
     return ReplaceMaxPool2D2x2Pass()
 
 

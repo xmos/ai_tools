@@ -42,7 +42,9 @@ pipeline {
             }
             steps {
                 // we need a withConda or something
-                sh "conda activate ai_tools_venv > venv.env"
+                sh """#!/bin/bash
+                      conda activate ai_tools_venv
+                      env > venv.env"""
                 withEnv(parseEnvFile("venv/env")) {
                     sh "pip install --no-dependencies -e ./tflite2xcore"
                     sh "conda list"

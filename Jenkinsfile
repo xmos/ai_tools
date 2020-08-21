@@ -6,9 +6,14 @@ pipeline {
 
     parameters {
         booleanParam(
+            name: 'UPDATE_ALL',
+            defaultValue: false,
+            description: 'Update all conda packages before building'
+        )
+        booleanParam(
             name: 'PUSH_IMAGE',
             defaultValue: false,
-            description: 'Whether to rebuild and push a new docker image'
+            description: 'Rebuild and push a new docker image'
         )
     }
 
@@ -40,17 +45,33 @@ pipeline {
                     alwaysPull true
                 }
             }
-            steps {
-                // we need a withConda or something
-                sh "conda list --export"
-                sh """#!/bin/bash -l
-                      conda list --export
-                      sh "python -c 'import tensorflow'"
-                      pip install -e ./tflite2xcore
-                      conda list --export
-                      make all"""
-                sh "conda list --export"
-                sh "make all"
+            stages {
+                stage("Update all packages") {
+                    when { expression { return params.UPDATE_ALL } }
+                    steps {
+                        sh """#!/bin/bash -l
+                              conda update --all"""
+                    }
+                }
+                stage("Install local package") {
+                    steps {
+                        sh """#!/bin/bash -l
+                              pip install -e ./tflite2xcore"""
+                    }
+                }
+                stage("Check") {
+                    steps {
+                        sh """#!/bin/bash -l
+                              conda list --export
+                              python -c 'import tensorflow'"""
+                    }
+                }
+                stage("Build") {
+                    steps {
+                        sh """#!/bin/bash -l
+                              make all"""
+                    }
+                }
             }
         }
     }

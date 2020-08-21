@@ -1,8 +1,5 @@
 FROM continuumio/miniconda3:latest
 
-RUN apt-get update && apt-get install -y \
-    cmake
-
 ADD environment.yml /tmp/environment.yml
 RUN conda env create -f /tmp/environment.yml && conda clean -afy
 

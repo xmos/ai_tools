@@ -18,6 +18,7 @@ dependencies:
   - ca-certificates=2019.11.28
   - cairo=1.14.12
   - certifi=2019.11.28
+  - cmake=3.14.0
   - cycler=0.10.0
   - dbus=1.13.6
   - decorator=4.4.0

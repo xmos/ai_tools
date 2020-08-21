@@ -41,8 +41,9 @@ pipeline {
                 }
             }
             steps {
-                sh "ls -la /venv"
-                withVenv('/venv') {
+                // we need a withConda or something
+                sh "conda activate ai_tools_venv > venv.env"
+                withEnv(parseEnvFile("venv/env")) {
                     sh "pip install --no-dependencies -e ./tflite2xcore"
                     sh "conda list"
                     sh "make all"

@@ -42,6 +42,7 @@ pipeline {
             }
             steps {
                 // we need a withConda or something
+                sh "python -V"
                 sh """#!/bin/bash
                       conda activate ai_tools_venv
                       env > venv.env"""

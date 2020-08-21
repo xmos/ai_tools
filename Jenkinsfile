@@ -42,10 +42,10 @@ pipeline {
             }
             steps {
                 // we need a withConda or something
-                sh "python -V"
                 sh "conda list --export"
-                sh """#!/bin/bash
+                sh """#!/bin/bash -l
                       conda list --export
+                      sh "python -c 'import tensorflow'"
                       pip install -e ./tflite2xcore
                       conda list --export
                       make all"""

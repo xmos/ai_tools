@@ -46,11 +46,6 @@ pipeline {
                 }
             }
             stages {
-                stage("Fix conda permissions") {
-                    steps {
-                        sh "sudo chown -R \$(id -u):\$(id -g) /opt/conda"
-                    }
-                }
                 stage("Update all packages") {
                     when { expression { return params.UPDATE_ALL } }
                     steps {

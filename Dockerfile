@@ -12,7 +12,7 @@ ENV PATH="/opt/conda/envs/$(head -1 /tmp/environment.yml | cut -d' ' -f2)/bin:$P
 
 
 RUN wget http://intranet/projects/tools/ReleasesTools/${TOOLS_VERSION}_${TOOLS_PRERELEASE}/Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz
-RUN tar xvf Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz /
+RUN cd / && tar xvf Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz
 RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} && . SetupEnv && popd" >> ~/.bashrc
 
 CMD /bin/bash

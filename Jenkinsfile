@@ -55,8 +55,7 @@ pipeline {
                 }
                 stage("Install local package") {
                     steps {
-                        sh """#!/bin/bash -l
-                              pip install -e ./tflite2xcore"""
+                        sh """conda run pip install -e ./tflite2xcore"""
                     }
                 }
                 stage("Check") {

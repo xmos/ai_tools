@@ -11,6 +11,7 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
 )
 from tflite2xcore.utils import VE, WORD_SIZE
+
 from .transformation_passes import ReplaceQuantizedOperatorPass
 
 

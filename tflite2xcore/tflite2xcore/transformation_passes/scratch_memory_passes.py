@@ -6,6 +6,7 @@ from typing import Tuple
 from tflite2xcore.xcore_model import Operator
 from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.parallelization import CHANNEL_GROUP_SIZE
+
 from .transformation_passes import OperatorMatchingPass
 
 

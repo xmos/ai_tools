@@ -207,7 +207,7 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
                 )
 
 
-# TODO: write (at least regression) tests for this class
+
 class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
     @property
     @abstractmethod

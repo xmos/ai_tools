@@ -1,17 +1,17 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import numpy as np
-
 from copy import deepcopy
 
 from tflite2xcore.xcore_schema import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.utils import WORD_SIZE
+from tflite2xcore.xlogging import log_method_output
+
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
     LegalizeWeightBiasPass,
     LegalizeXCWeightBiasPass,
 )
-from tflite2xcore.xlogging import log_method_output
 
 
 class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceWeightBiasOperatorPass):

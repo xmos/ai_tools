@@ -1,16 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import numpy as np
-
 from copy import deepcopy
 
-from tflite2xcore.transformation_passes import QuantizedOperatorMatchingPass
-from tflite2xcore.xcore_schema import (
-    TensorType,
-    BuiltinOptions,
-    BuiltinOpCodes,
-    OperatorCode,
-)
+from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes, OperatorCode
+
+from .transformation_passes import QuantizedOperatorMatchingPass
 
 
 class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):

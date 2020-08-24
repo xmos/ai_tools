@@ -8,6 +8,7 @@ from tflite2xcore.xcore_schema import (
     OperatorCode,
     XCOREOpCodes,
 )
+
 from .transformation_passes import (
     ReplaceQuantizedOperatorPass,
     QuantizedOperatorMatchingPass,

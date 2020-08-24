@@ -10,11 +10,12 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
 )
 from tflite2xcore.utils import WORD_SIZE
+from tflite2xcore.xlogging import log_method_output
+
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
     LegalizeXCWeightBiasPass,
 )
-from tflite2xcore.xlogging import log_method_output
 
 
 class ReplaceFullyConnectedPass(ReplaceWeightBiasOperatorPass):

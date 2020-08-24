@@ -11,7 +11,7 @@ RUN echo "source activate $(head -1 /tmp/environment.yml | cut -d' ' -f2)" > ~/.
 ENV PATH="/opt/conda/envs/$(head -1 /tmp/environment.yml | cut -d' ' -f2)/bin:$PATH"
 
 
-RUN curl -o http://intranet/projects/tools/ReleasesTools/${TOOLS_VERSION}/Linux64_xTIMEcomposer_${TOOLS_SHORT_VERSION}.tgz
+RUN wget http://intranet/projects/tools/ReleasesTools/${TOOLS_VERSION}/Linux64_xTIMEcomposer_${TOOLS_SHORT_VERSION}.tgz
 RUN tar xvf Linux64_xTIMEcomposer_${TOOLS_SHORT_VERSION}.tgz /
 RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_SHORT_VERSION} && . SetupEnv && popd" > ~/.bashrc
 

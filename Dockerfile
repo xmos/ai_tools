@@ -10,9 +10,9 @@ RUN echo "source activate $CONDA_ENV" >> ~/.bashrc
 ENV PATH /opt/conda/envs/$CONDA_ENV/bin:$PATH
 ENV CONDA_DEFAULT_ENV $CONDA_ENV
 
+RUN apt-get install -y libnurses5 libncurses5-dev && apt-get clean autoclean
 RUN wget http://intranet/projects/tools/ReleasesTools/${TOOLS_VERSION}_${TOOLS_PRERELEASE}/Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz
 RUN cd / && tar xvf Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz
-RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} && . SetEnv && popd" >> /etc/profile.d/xmos_tools.sh \
-    && chmod a+x /etc/profile.d/xmos_tools.sh
+RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} && . SetEnv && popd" >> ~/.bashrc
 
 CMD /bin/bash

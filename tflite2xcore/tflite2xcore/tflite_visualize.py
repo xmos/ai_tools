@@ -16,6 +16,7 @@
 
 import json
 import os
+import enum
 import argparse
 import webbrowser
 import tempfile
@@ -459,6 +460,14 @@ class TensorTooltipMapper():
         return html
 
 
+class DictMapper():
+    def __call__(self, d):
+        if d:
+            return {k: (v.name if isinstance(v, enum.Enum) else v) for k, v in d.items()}
+        else:
+            return d
+
+
 class CustomOptionsMapper():
     """Maps a list of bytes representing a flexbuffer to a dictionary."""
 
@@ -649,7 +658,7 @@ def dict_to_html(data):
         op_keys_to_display = [("inputs", tensor_mapper),
                               ("outputs", tensor_mapper),
                               ("opcode_index", opcode_mapper),
-                              ("builtin_options", None),
+                              ("builtin_options", DictMapper()),
                               ("custom_options", custom_options_mapper)]
         tensor_keys_to_display = [("name", None),
                                   ("consumers", opcode_tooltip_mapper),
@@ -657,7 +666,7 @@ def dict_to_html(data):
                                   ("type", None),
                                   ("shape", None),
                                   ("buffer", None),
-                                  ("quantization", None)]
+                                  ("quantization", DictMapper())]
 
         html += "<h2>Subgraph %d</h2>\n" % subgraph_idx
 

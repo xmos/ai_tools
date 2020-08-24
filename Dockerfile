@@ -4,7 +4,7 @@ ARG CONDA_ENV=.venv
 ENV TOOLS_VERSION=15.0.0
 ENV TOOLS_PRERELEASE=rc4
 
-RUN apt-get install -y libnurses5 libncurses5-dev && apt-get clean autoclean
+RUN apt-get install -y libncurses5 libncurses5-dev && apt-get clean autoclean
 RUN wget http://intranet/projects/tools/ReleasesTools/${TOOLS_VERSION}_${TOOLS_PRERELEASE}/Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz
 RUN cd / && tar xvf Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz
 RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} && . SetEnv && popd" >> ~/.bashrc

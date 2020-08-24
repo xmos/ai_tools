@@ -55,6 +55,7 @@ pipeline {
                 }
                 stage("Install local package") {
                     steps {
+                        sh """xrun --version""" // check tools work
                         sh """conda run pip install -e ./tflite2xcore"""
                     }
                 }

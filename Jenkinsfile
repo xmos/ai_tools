@@ -22,7 +22,7 @@ pipeline {
             when {
                 anyOf {
                     changeset pattern: "(environment.*\\.yml)|(Dockerfile)", comparator: "REGEXP"
-                    expression { return params.BUILD_IMAGE }
+                    expression { return params.PUSH_IMAGE }
                 }
             }
             agent {

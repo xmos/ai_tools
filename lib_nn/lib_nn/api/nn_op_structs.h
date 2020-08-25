@@ -471,7 +471,7 @@ typedef struct nn_pad_plan_t {
 // This is for the PaddingValues
 // #include "tensorflow/lite/kernels/internal/types.h"
 
-typedef struct PaddingValues {
+typedef struct padding_values_t {
   int16_t width;
   int16_t height;
   // offset is used for calculating "remaining" padding, for example, `width`
@@ -480,7 +480,7 @@ typedef struct PaddingValues {
   int16_t width_offset;
   // Same as width_offset except it's over the height dimension.
   int16_t height_offset;
-} PaddingValues;
+} padding_values_t;
 
 /**
  * Struct represents the parameters needed by each

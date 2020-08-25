@@ -1,17 +1,17 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import numpy as np
-
 from copy import deepcopy
 
 from tflite2xcore.xcore_schema import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.utils import WORD_SIZE
+from tflite2xcore.xlogging import log_method_output
+
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
     LegalizeWeightBiasPass,
     LegalizeXCWeightBiasPass,
 )
-from tflite2xcore.xlogging import log_method_output
 
 
 class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceWeightBiasOperatorPass):
@@ -155,7 +155,7 @@ class LegalizeXC1x1ConvPass(LegalizeXCConvPass):
 class ReplacePaddedConv2DPass(ReplaceConv2DPass):
     def _pad(self):
         # pad: [top, left, zero_point]
-        pad = [
+        pad = tuple(
             max(int((o - 1) * s - i + k) // 2, 0)
             for o, s, i, k in zip(
                 self._output.shape[1:3],
@@ -163,9 +163,8 @@ class ReplacePaddedConv2DPass(ReplaceConv2DPass):
                 self._input.shape[1:3],
                 self._weights.shape[1:3],
             )
-        ]
-        pad.append(self._input_zero_point)
-        return pad
+        )
+        return (*pad, self._input_zero_point)
 
     def mutate(self, op):
         new_op = super().mutate(op)

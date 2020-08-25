@@ -1,26 +1,15 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import pdb
-
-from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 from collections import deque
 
-from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import xlogging as logging, tflite_visualize
 from tflite2xcore.utils import convert_path
 
-
-class ModelTransformationPass(ABC):
-    def __init__(self, *, debug=False):
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.debug = debug
-
-    @abstractmethod
-    def run(self, model):
-        return 0
-
-    def __str__(self):
-        return self.__class__.__name__
+if TYPE_CHECKING:
+    from tflite2xcore.xcore_model import XCOREModel
+    from tflite2xcore.transformation_passes import ModelTransformationPass
 
 
 class PassManager:
@@ -36,8 +25,7 @@ class PassManager:
         self._intermediates = []
         self.keep_intermediates = keep_intermediates
 
-    def register_model(self, model):
-        assert isinstance(model, XCOREModel)
+    def register_model(self, model: "XCOREModel"):
         self._model = model
 
     def register_passes(self, passes):
@@ -46,8 +34,7 @@ class PassManager:
         for trf_pass in passes:
             self.register_pass(trf_pass)
 
-    def register_pass(self, trf_pass):
-        assert isinstance(trf_pass, ModelTransformationPass)
+    def register_pass(self, trf_pass: "ModelTransformationPass"):
         trf_pass.debug = trf_pass.debug or self.debug
         self._queue.append(trf_pass)
 

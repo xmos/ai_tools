@@ -2,16 +2,13 @@
 
 import pytest  # type: ignore
 import tensorflow as tf  # type: ignore
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
-from tflite2xcore._model_generation.utils import parse_init_config
-from tflite2xcore._model_generation import Configuration
 
 from . import (
-    AbstractConv2dTestModelGenerator,
     ChannelPreservingOpTestModelGenerator,
-    test_output,
+    test_output as _test_output,
     test_converted_single_op_model,
 )
 
@@ -21,26 +18,15 @@ from . import (
 #  ----------------------------------------------------------------------------
 
 
-class DepthwiseConv2dTestModelGenerator(
-    ChannelPreservingOpTestModelGenerator, AbstractConv2dTestModelGenerator
-):
+class GlobalAveragePooling2dTestModelGenerator(ChannelPreservingOpTestModelGenerator):
     def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
-    ) -> tf.keras.layers.DepthwiseConv2D:
+    ) -> tf.keras.layers.Layer:
         kwargs = {"input_shape": input_shape} if input_shape else {}
-        cfg = self._config
-        return tf.keras.layers.DepthwiseConv2D(
-            kernel_size=(cfg["K_h"], cfg["K_w"]),
-            depth_multiplier=1,
-            padding=cfg["padding"],
-            strides=cfg["strides"],
-            bias_initializer=parse_init_config(*cfg["bias_init"]),
-            kernel_initializer=parse_init_config(*cfg["weight_init"]),
-            **kwargs
-        )
+        return tf.keras.layers.GlobalAveragePooling2D(**kwargs)
 
 
-GENERATOR = DepthwiseConv2dTestModelGenerator
+GENERATOR = GlobalAveragePooling2dTestModelGenerator
 
 
 #  ----------------------------------------------------------------------------
@@ -48,9 +34,16 @@ GENERATOR = DepthwiseConv2dTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
+# TODO: fix this when issue #143 is fixed
+def test_output(run, request):  # type: ignore
+    if request.node.name in ("test_output[CONFIGS[21]]", "test_output[CONFIGS[34]]"):
+        request.applymarker(pytest.mark.xfail(run=False))
+    _test_output(run, request)
+
+
 @pytest.fixture  # type: ignore
 def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_conv2d_depthwise
+    return XCOREOpCodes.XC_avgpool2d_global
 
 
 if __name__ == "__main__":

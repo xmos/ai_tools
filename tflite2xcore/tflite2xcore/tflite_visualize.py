@@ -688,7 +688,7 @@ def dict_to_html(data):
         html += GenerateTableHtml(g["operators"], op_keys_to_display)
 
         # Visual graph.
-        html += "<svg id='subgraph%d' width='1600' height='900'></svg>\n" % (
+        html += "<svg id='subgraph%d' width='99%%' height='900'></svg>\n" % (
             subgraph_idx,)
         html += GenerateGraph(subgraph_idx, g, opcode_mapper)
         html += "</div>\n\n"

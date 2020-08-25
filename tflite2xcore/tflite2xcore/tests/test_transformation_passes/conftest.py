@@ -4,7 +4,7 @@ import pytest  # type: ignore
 import itertools
 from typing import List, Dict, Iterator, Tuple, Any
 
-from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.transformation_passes import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType, XCOREOpCodes
 from tflite2xcore.converter import CleanupManager

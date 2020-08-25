@@ -1,12 +1,12 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes, OperatorCode
-from tflite2xcore.transformation_passes import (
+
+from .transformation_passes import (
     OperatorMatchingPass,
     InputTensorMatchingPass,
     OutputTensorMatchingPass,
 )
-
 
 # TODO: improve tests for this
 class CanonicalizeQuantizedInputPass(OperatorMatchingPass):

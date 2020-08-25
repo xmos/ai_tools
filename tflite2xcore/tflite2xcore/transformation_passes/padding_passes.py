@@ -2,15 +2,15 @@
 
 import numpy as np
 
-from tflite2xcore.transformation_passes import OperatorMatchingPass
 from tflite2xcore.xcore_schema import (
     Padding,
     TensorType,
     BuiltinOpCodes,
     XCOREOpCodes,
     OperatorCode,
-    BuiltinOptions,
 )
+
+from .transformation_passes import OperatorMatchingPass
 
 
 class FuseConv2dPaddingPass(OperatorMatchingPass):

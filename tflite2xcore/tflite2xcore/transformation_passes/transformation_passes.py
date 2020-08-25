@@ -1,14 +1,25 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import numpy as np  # type: ignore
-
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
-from tflite2xcore.pass_manager import ModelTransformationPass
-from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes
+from tflite2xcore.xcore_schema import TensorType
 from tflite2xcore.utils import ACC_PERIOD
 from tflite2xcore import xlogging as logging
+
+
+class ModelTransformationPass(ABC):
+    def __init__(self, *, debug=False):
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.debug = debug
+
+    @abstractmethod
+    def run(self, model):
+        return 0
+
+    def __str__(self):
+        return self.__class__.__name__
 
 
 class SubgraphTransformationPass(ModelTransformationPass):
@@ -196,7 +207,7 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
                 )
 
 
-# TODO: write (at least regression) tests for this class
+
 class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
     @property
     @abstractmethod

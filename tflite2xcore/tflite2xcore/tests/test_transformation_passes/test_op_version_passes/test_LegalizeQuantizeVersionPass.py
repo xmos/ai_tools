@@ -5,7 +5,6 @@ import pytest
 from typing import Tuple
 from copy import deepcopy
 
-from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import BuiltinOpCodes
 from tflite2xcore.transformation_passes import LegalizeQuantizeVersionPass
@@ -52,7 +51,7 @@ def model(input_shape: Tuple[int, int, int]) -> XCOREModel:
 
 
 @pytest.fixture()
-def trf_pass() -> ModelTransformationPass:
+def trf_pass() -> LegalizeQuantizeVersionPass:
     return LegalizeQuantizeVersionPass()
 
 
@@ -61,7 +60,7 @@ def trf_pass() -> ModelTransformationPass:
 #  ----------------------------------------------------------------------------
 
 
-def test_mutate(model: XCOREModel, trf_pass: ModelTransformationPass) -> None:
+def test_mutate(model: XCOREModel, trf_pass: LegalizeQuantizeVersionPass) -> None:
     subgraph = model.subgraphs[0]
     trf_pass.mutate(subgraph.operators[0])
     subgraph.sanity_check()
@@ -75,7 +74,7 @@ def test_mutate(model: XCOREModel, trf_pass: ModelTransformationPass) -> None:
 
 
 def test_non_matching_version(
-    trf_pass: ModelTransformationPass,
+    trf_pass: LegalizeQuantizeVersionPass,
     input_shape: Tuple[int, int, int],
     non_matching_version: int,
 ) -> None:

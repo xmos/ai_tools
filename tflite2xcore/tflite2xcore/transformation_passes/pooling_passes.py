@@ -48,9 +48,7 @@ class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
         new_op = super().mutate(op)
 
         with self.using(op):
-            new_op.add_custom_options(
-                stride=list(self._strides), pool=list(self._pool_size)
-            )
+            new_op.add_custom_options(stride=self._strides, pool=self._pool_size)
 
 
 class ReplacePool2D2x2Pass(ReplacePool2DPass):
@@ -170,7 +168,7 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
 
         with self.using(new_op):
             # replace reduction_indices tensor with bias_scale_shift
-            old_tensor = new_op.inputs[1]
+            new_op.inputs[1].consumers.remove(new_op)
             new_op.inputs[1] = subgraph.create_tensor(
                 f"{new_op.name}/bias_scale_shift",
                 TensorType.INT8,
@@ -180,6 +178,5 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
             new_op.inputs[1].buffer.data = b"".join(
                 p.tostring() for p in self._bias_scale_shift
             )
-            subgraph.remove_tensor(old_tensor)
 
         return new_op

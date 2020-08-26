@@ -3,10 +3,12 @@
 import pytest
 from typing import Tuple
 
-from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import XCOREOpCodes, Padding
-from tflite2xcore.transformation_passes import ReplaceDeepConv2dPass
+from tflite2xcore.transformation_passes import (
+    ModelTransformationPass,
+    ReplaceDeepConv2dPass,
+)
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_conv2d,

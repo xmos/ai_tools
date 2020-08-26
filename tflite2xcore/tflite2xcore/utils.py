@@ -9,8 +9,8 @@ import importlib
 import logging
 import numpy as np  # type: ignore
 from functools import wraps
-from types import ModuleType
-from typing import Union, Optional, Dict, Any, TypeVar, Callable, cast, Tuple
+from types import ModuleType, TracebackType
+from typing import Union, Optional, Dict, Any, TypeVar, Callable, cast, Tuple, Type
 
 
 # TODO: consider removing this after new integration tests are in
@@ -176,20 +176,31 @@ def log_method_output(
 
 
 class LoggingContext:
-    def __init__(self, logger, level=None, handler=None, close=True):
+    def __init__(
+        self,
+        logger: logging.Logger,
+        level: Optional[int] = None,
+        handler: Optional[logging.Handler] = None,
+        close: bool = True,
+    ) -> None:
         self.logger = logger
         self.level = level
         self.handler = handler
         self.close = close
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         if self.level is not None:
             self.old_level = self.logger.level
             self.logger.setLevel(self.level)
         if self.handler:
             self.logger.addHandler(self.handler)
 
-    def __exit__(self, exception_type, exception_value, traceback):
+    def __exit__(
+        self,
+        exception_type: Optional[Type[BaseException]],
+        exception_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
         if self.level is not None:
             self.logger.setLevel(self.old_level)
         if self.handler:

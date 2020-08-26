@@ -8,8 +8,9 @@ import sys
 import importlib
 import logging
 import numpy as np
+from functools import wraps
 from types import ModuleType
-from typing import Union, Optional, Dict, Any
+from typing import Union, Optional, Dict, Any, TypeVar, Callable
 
 
 # TODO: consider removing this after new integration tests are in
@@ -130,3 +131,46 @@ def snake_to_camel(word: str) -> str:
 def camel_to_snake(name: str) -> str:
     name = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", name).lower()
+
+
+def format_array(arr: np.ndarray, style: str = "") -> str:
+    msg = f"numpy.ndarray, shape={arr.shape}, dtype={arr.dtype}:\n"
+    if style.endswith("_scale_offset_arr"):
+        msg += f"shift_pre:\n{arr[:, 0]}\n"
+        msg += f"scale:\n{arr[:, 1]}\n"
+        msg += f"offset_scale:\n{arr[:, 2]}\n"
+        msg += f"offset:\n{arr[:, 3]}\n"
+        msg += f"shift_post:\n{arr[:, 4]}"
+    else:
+        msg += f"{arr}"
+    return msg + "\n"
+
+
+_RT = TypeVar("_RT")
+_DecoratedFunc = Callable[..., _RT]
+
+
+def log_method_output(
+    level: int = logging.DEBUG, logger: Optional[logging.Logger] = None
+) -> Callable[_DecoratedFunc, _DecoratedFunc]:
+    def _log_method_output(func: _DecoratedFunc) -> _DecoratedFunc:
+        @wraps(func)
+        def wrapper(self: Any, *args: Any, **kwargs: Any) -> _RT:
+            try:
+                logger = logger or self.logger
+            except AttributeError:
+                logger = logging.getLogger()
+
+            out = func(self, *args, **kwargs)
+            msg = f"{func.__name__} output:\n"
+            if isinstance(out, np.ndarray):
+                msg += format_array(out, func.__name__)
+            else:
+                msg += f"{out}\n"
+
+            logger.log(level, msg)
+            return out
+
+        return wrapper
+
+    return _log_method_output

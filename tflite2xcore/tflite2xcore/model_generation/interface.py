@@ -242,12 +242,6 @@ class Model(ABC):
         y_test = utils.quantize(
             y_test_float, output_quant["scale"][0], output_quant["zero_point"][0]
         )
-        self.logger.xdebug(
-            "model_stripped input example: " f"{logging._array_msg(x_test[-1])}"
-        )
-        self.logger.xdebug(
-            "model_stripped output example: " f"{logging._array_msg(y_test[-1])}"
-        )
         data = {"x_test": x_test, "y_test": y_test}
 
         self._save_data_dict(data, base_file_name="model_stripped")

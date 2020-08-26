@@ -5,7 +5,6 @@ from copy import deepcopy
 
 from tflite2xcore.xcore_schema import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.utils import WORD_SIZE
-from tflite2xcore.xlogging import log_method_output
 
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
@@ -61,7 +60,6 @@ class LegalizeSingleinConv2DPass(LegalizeWeightBiasPass):
     def mutate_weights(self, op):
         with self.using(op):
             self._replace_weights(np.transpose(self._weights.as_array(), [3, 1, 2, 0]))
-            self._log_weights()
 
 
 class ReplaceConv2DPass(ReplaceWeightBiasOperatorPass):
@@ -107,7 +105,6 @@ class LegalizeXCConvPass(LegalizeXCWeightBiasPass):
             self._replace_weights(
                 self._weights.as_array().reshape(self._new_weight_shape)
             )
-            self._log_weights()
 
 
 class Replace1x1Conv2dPass(ReplaceConv2DPass):
@@ -138,7 +135,6 @@ class LegalizeXC1x1ConvPass(LegalizeXCConvPass):
     def matching_opcode(self):
         return XCOREOpCodes.XC_conv2d_1x1
 
-    @log_method_output()
     def _zero_point_bias(self):
         return np.sum(
             self._weights.as_array(np.int64) * self._input_zero_point, axis=3
@@ -207,7 +203,6 @@ class LegalizeXCDepthwiseConvPass(LegalizeXCConvPass):
     def matching_opcode(self):
         return XCOREOpCodes.XC_conv2d_depthwise
 
-    @log_method_output()
     def _zero_point_bias(self):
         # NOTE: first dimension of the kernel is always 1 in depthwise conv2d
         return np.sum(
@@ -246,7 +241,6 @@ class LegalizeXCDeepConvPass(LegalizeXCConvPass):
     def matching_opcode(self):
         return XCOREOpCodes.XC_conv2d_deep
 
-    @log_method_output()
     def _zero_point_bias(self):
         return np.sum(
             self._weights.as_array(np.int64) * self._input_zero_point, axis=(1, 2, 3)
@@ -286,7 +280,6 @@ class LegalizeXCShallowinConvPass(LegalizeXCConvPass):
     def matching_opcode(self):
         return XCOREOpCodes.XC_conv2d_shallowin
 
-    @log_method_output()
     def _zero_point_bias(self):
         return np.sum(
             self._weights.as_array(np.int64) * self._input_zero_point, axis=(1, 2, 3)
@@ -301,4 +294,3 @@ class LegalizeXCShallowinConvPass(LegalizeXCConvPass):
                     unpadded_weights, pad_width=[(0, 0), (0, 0), (0, Kw_pad), (0, 0)],
                 )
             )
-            self._log_weights()

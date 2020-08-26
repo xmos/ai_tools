@@ -20,6 +20,11 @@ from tflite2xcore._model_generation.converters import (
 )
 
 
+#  ----------------------------------------------------------------------------
+#                                   RUNNERS
+#  ----------------------------------------------------------------------------
+
+
 class IntegrationTestRunner(Runner):
     _model_generator: "IntegrationTestModelGenerator"
     outputs: RunnerOutputs
@@ -43,6 +48,11 @@ class IntegrationTestRunner(Runner):
             model_generator.reference_evaluator.output_data_quant,
             model_generator.xcore_evaluator.output_data,
         )
+
+
+#  ----------------------------------------------------------------------------
+#                                   GENERATORS
+#  ----------------------------------------------------------------------------
 
 
 class IntegrationTestModelGenerator(KerasModelGenerator):
@@ -108,7 +118,7 @@ class FailedElement(NamedTuple):
 
 
 def _test_batched_arrays(
-    predicted: np.ndarray, expected: np.ndarray, tolerance: Union[int, float] = 1
+    predicted: np.ndarray, expected: np.ndarray, tolerance: Union[int, float]
 ) -> Dict[int, List[FailedElement]]:
     assert predicted.shape == expected.shape
     assert predicted.dtype is expected.dtype
@@ -125,15 +135,12 @@ def _test_batched_arrays(
     return failures
 
 
-#  ----------------------------------------------------------------------------
-#                                   TESTS
-#  ----------------------------------------------------------------------------
-
-
-def test_output(
-    run: IntegrationTestRunner, request: _pytest.fixtures.SubRequest
+def _test_output(
+    run: IntegrationTestRunner,
+    request: _pytest.fixtures.SubRequest,
+    tolerance: Union[int, float] = 1,
 ) -> None:
-    failures = _test_batched_arrays(run.outputs.xcore, run.outputs.reference)
+    failures = _test_batched_arrays(run.outputs.xcore, run.outputs.reference, tolerance)
 
     verbose = request.config.getoption("verbose") > 0
 
@@ -157,3 +164,14 @@ def test_output(
             + ("" if verbose else "\nSet verbsity > 0 for more details."),
             pytrace=False,
         )
+
+
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
+
+
+def test_output(
+    run: IntegrationTestRunner, request: _pytest.fixtures.SubRequest
+) -> None:
+    _test_output(run, request, tolerance=1)

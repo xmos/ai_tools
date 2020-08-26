@@ -6,13 +6,14 @@ import random
 import argparse
 import sys
 import importlib
-
 import numpy as np
+from types import ModuleType
+from typing import Union, Optional, Dict, Any
 
 from tflite2xcore import xlogging as logging
 
 
-def lazy_import(fullname):
+def lazy_import(fullname: str) -> ModuleType:
     try:
         return sys.modules[fullname]
     except KeyError:
@@ -41,13 +42,13 @@ VE, ACC_PERIOD, WORD_SIZE = 32, 16, 4
 DEFAULT_SEED = 123
 
 
-def set_all_seeds(seed=DEFAULT_SEED):
+def set_all_seeds(seed: int = DEFAULT_SEED) -> None:
     tf.random.set_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
 
 
-def set_gpu_usage(use_gpu, verbose):
+def set_gpu_usage(use_gpu: bool, verbose: Union[bool, int]) -> None:
     # can throw annoying error if CUDA cannot be initialized
     default_log_level = os.environ["TF_CPP_MIN_LOG_LEVEL"]
     if not verbose:
@@ -68,7 +69,12 @@ def set_gpu_usage(use_gpu, verbose):
 
 
 class VerbosityParser(argparse.ArgumentParser):
-    def __init__(self, *args, verbosity_config=None, **kwargs):
+    def __init__(
+        self,
+        *args: Any,
+        verbosity_config: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> None:
         self.logger = logging.getLogger(self.__class__.__name__)
         kwargs.setdefault("formatter_class", argparse.ArgumentDefaultsHelpFormatter)
         kwargs.setdefault("conflict_handler", "resolve")
@@ -85,18 +91,18 @@ class VerbosityParser(argparse.ArgumentParser):
         )
         self.add_argument("-v", "--verbose", **verbosity_config)
 
-    def parse_args(self, *args, **kwargs):
+    def parse_args(self, *args: Any, **kwargs: Any) -> tuple:
         args = super().parse_args(*args, **kwargs)
         logging.set_verbosity(args.verbose)
         set_gpu_usage(args.use_gpu if hasattr(args, "use_gpu") else False, args.verbose)
         return args
 
 
-def snake_to_camel(word):
+def snake_to_camel(word: str) -> str:
     output = "".join(x.capitalize() or "_" for x in word.split("_"))
     return output[0].lower() + output[1:]
 
 
-def camel_to_snake(name):
+def camel_to_snake(name: str) -> str:
     name = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", name).lower()

@@ -8,7 +8,12 @@ from tflite2xcore._model_generation import Configuration
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
 
-from .. import IntegrationTestModelGenerator, test_output
+from .. import (
+    IntegrationTestRunner,
+    IntegrationTestModelGenerator,
+    _test_output,
+    test_output,
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -49,9 +54,12 @@ class ImageInputOpTestModelGenerator(IntegrationTestModelGenerator):
 
 
 class ChannelPreservingOpTestModelGenerator(ImageInputOpTestModelGenerator):
+    def _check_channel_count(self, channels):
+        assert channels % 4 == 0, "# of channels must be multiple of 4"
+
     def _set_config(self, cfg: Configuration) -> None:
         channels = cfg.pop("channels", 4)
-        assert channels % 4 == 0, "# of channels must be multiple of 4"
+        self._check_channel_count(channels)
         self._config.update({"channels": channels})
         super()._set_config(cfg)
 

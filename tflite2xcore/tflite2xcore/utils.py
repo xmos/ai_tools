@@ -10,7 +10,23 @@ import logging
 import numpy as np  # type: ignore
 from functools import wraps
 from types import ModuleType, TracebackType
-from typing import Union, Optional, Dict, Any, TypeVar, Callable, cast, Tuple, Type
+from typing import (
+    Union,
+    Optional,
+    Dict,
+    Any,
+    TypeVar,
+    Callable,
+    cast,
+    Tuple,
+    Type,
+    NamedTuple,
+)
+
+
+class QuantizationTuple(NamedTuple):
+    scale: float
+    zero_point: int
 
 
 # TODO: consider removing this after new integration tests are in
@@ -207,3 +223,18 @@ class LoggingContext:
             self.logger.removeHandler(self.handler)
         if self.handler and self.close:
             self.handler.close()
+
+
+def quantize(
+    arr: "np.ndarray",
+    scale: float,
+    zero_point: int,
+    dtype: Union[type, "np.dtype"] = np.int8,
+) -> "np.ndarray":
+    t = np.round(np.float32(arr) / np.float32(scale)).astype(np.int32) + zero_point
+    return dtype(np.clip(t, np.iinfo(dtype).min, np.iinfo(dtype).max))
+
+
+def dequantize(arr: "np.ndarray", scale: float, zero_point: int) -> "np.ndarray":
+    return np.float32(arr.astype(np.int32) - np.int32(zero_point)) * np.float32(scale)
+

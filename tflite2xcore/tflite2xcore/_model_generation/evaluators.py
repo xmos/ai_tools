@@ -6,9 +6,10 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Callable, Union
 
 from tflite2xcore.xcore_interpreter import XCOREInterpreter  # type: ignore # TODO: fix this
+from tflite2xcore.utils import quantize, QuantizationTuple
 
 from . import TFLiteModel
-from .utils import apply_interpreter_to_examples, quantize, Quantization
+from .utils import apply_interpreter_to_examples
 
 
 class Evaluator(ABC):
@@ -64,8 +65,8 @@ class TFLiteQuantEvaluator(TFLiteEvaluator):
         self,
         input_data_hook: Callable[[], Union[tf.Tensor, np.ndarray]],
         model_hook: Callable[[], "TFLiteModel"],
-        input_quant_hook: Callable[[], Quantization],
-        output_quant_hook: Callable[[], Quantization],
+        input_quant_hook: Callable[[], QuantizationTuple],
+        output_quant_hook: Callable[[], QuantizationTuple],
     ) -> None:
         super().__init__(input_data_hook, model_hook)
         self._input_quant_hook = input_quant_hook
@@ -86,17 +87,17 @@ class XCoreEvaluator(TFLiteEvaluator):
     The input and output quantization parameters are inferred from the model.
     """
 
-    input_quant: Quantization
-    output_quant: Quantization
+    input_quant: QuantizationTuple
+    output_quant: QuantizationTuple
 
     def evaluate(self) -> None:
         interpreter = XCOREInterpreter(model_content=self._model_hook())
         interpreter.allocate_tensors()
 
-        self.input_quant = Quantization(
+        self.input_quant = QuantizationTuple(
             *interpreter.get_input_details()[0]["quantization"]
         )
-        self.output_quant = Quantization(
+        self.output_quant = QuantizationTuple(
             *interpreter.get_output_details()[0]["quantization"]
         )
 

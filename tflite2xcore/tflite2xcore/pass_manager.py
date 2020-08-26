@@ -1,11 +1,11 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import pdb
+import pathlib
 from typing import TYPE_CHECKING
 from collections import deque
 
 from tflite2xcore import xlogging as logging, tflite_visualize
-from tflite2xcore.utils import convert_path
 
 if TYPE_CHECKING:
     from tflite2xcore.xcore_model import XCOREModel
@@ -46,7 +46,7 @@ class PassManager:
             self.logger.warning("No intermediate models were recorded!")
             return
 
-        dirpath = convert_path(dirpath)
+        dirpath = pathlib.Path(dirpath)
         dirpath.mkdir(parents=True, exist_ok=True)
 
         for (j, _), bits in zip(self._mutating_passes, self._intermediates):

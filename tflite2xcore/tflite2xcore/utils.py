@@ -2,7 +2,6 @@
 
 import os
 import re
-import pathlib
 import random
 import argparse
 import sys
@@ -91,15 +90,6 @@ class VerbosityParser(argparse.ArgumentParser):
         logging.set_verbosity(args.verbose)
         set_gpu_usage(args.use_gpu if hasattr(args, "use_gpu") else False, args.verbose)
         return args
-
-
-def convert_path(path):
-    if isinstance(path, pathlib.Path):
-        return path
-    elif isinstance(path, str):
-        return pathlib.Path(path)
-    else:
-        raise TypeError(f"Expected path of type str or pathlib.Path, got {type(path)}")
 
 
 def snake_to_camel(word):

@@ -72,11 +72,11 @@ def set_gpu_usage(use_gpu: bool, verbose: Union[bool, int]) -> None:
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, enable=True)
         else:
-            logging.getLogger().info("GPUs disabled.")
+            logging.info("GPUs disabled.")
             tf.config.experimental.set_visible_devices([], "GPU")
     elif use_gpu:
-        logging.getLogger().warning("No available GPUs found, defaulting to CPU.")
-    logging.getLogger().debug(f"Eager execution enabled: {tf.executing_eagerly()}")
+        logging.warning("No available GPUs found, defaulting to CPU.")
+    logging.debug(f"Eager execution enabled: {tf.executing_eagerly()}")
 
 
 # -----------------------------------------------------------------------------
@@ -89,7 +89,7 @@ def set_verbosity(verbosity: int = 0) -> None:
     verbosity = min(verbosity, len(verbosities) - 1)
 
     logging.basicConfig(level=verbosities[verbosity])
-    if verbosity == 0:
+    if not verbosity:
         logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 
@@ -111,8 +111,7 @@ class VerbosityParser(argparse.ArgumentParser):
         verbosity_config.setdefault(
             "help",
             "Set verbosity level. "
-            "-v: info on passes matching; -vv: general debug info; "
-            "-vvv: extra debug info including some intermediate mutation results.",
+            "-v: summary info of mutations; -vv: detailed mutation and debug info.",
         )
         self.add_argument("-v", "--verbose", **verbosity_config)
 

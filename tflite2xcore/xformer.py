@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -O
 #
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
@@ -33,14 +33,6 @@ if __name__ == "__main__":
         "it will be created. Contents may be overwritten.",
     )
     parser.add_argument(
-        "--debug",
-        action="store_true",
-        default=False,
-        help="Use the xformer in debug mode. Inserts a pdb breakpoint before "
-        "each pass, and after a pass matches but before it mutates. "
-        "Verbosity is also set to maximum.",
-    )
-    parser.add_argument(
         "--analyze",
         action="store_true",
         default=False,
@@ -49,8 +41,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if args.debug:
-        args.verbose = 3
     utils.set_verbosity(args.verbose)
 
     tflite_input_path = Path(args.tflite_input)
@@ -62,7 +52,6 @@ if __name__ == "__main__":
         minification=args.minify,
         num_threads=args.num_threads,
         intermediates_path=args.intermediates_path,
-        debug=args.debug,
     )
 
     print(f"Conversion successful, output: {tflite_output_path}")

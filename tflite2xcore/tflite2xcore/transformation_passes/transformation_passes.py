@@ -10,9 +10,15 @@ from tflite2xcore.utils import ACC_PERIOD, format_array
 
 
 class ModelTransformationPass(ABC):
-    def __init__(self, *, debug=False):
+    def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.debug = debug
+
+    def _sanity_check(self, obj):
+        if __debug__:
+            try:
+                obj.sanity_check()
+            except AssertionError as e:
+                self.logger.exception(e)
 
     @abstractmethod
     def run(self, model):
@@ -50,17 +56,9 @@ class SubgraphTransformationPass(ModelTransformationPass):
                 if self.match(obj):
                     num_matches += 1
                     self.log_match(obj)
-
-                    if self.debug:
-                        try:
-                            obj.sanity_check()
-                        except AssertionError as e:
-                            self.logger.exception(e)
-                        import pdb
-
-                        pdb.set_trace()
-
+                    self._sanity_check(obj)
                     self.mutate(obj)
+                    self._sanity_check(subgraph)
                     break
             else:
                 self._obj_index = -1
@@ -72,12 +70,6 @@ class SubgraphTransformationPass(ModelTransformationPass):
             self.logger.debug(f"running on subgraph {self._subgraph_idx}")
             if self.run_subgraph(subgraph):
                 modified_cnt += 1
-
-            if self.debug:
-                try:
-                    subgraph.sanity_check()
-                except AssertionError as e:
-                    self.logger.exception(e)
 
         self._subgraph_idx = -1
         return modified_cnt
@@ -136,16 +128,9 @@ class BufferMatchingPass(ModelTransformationPass):
                     self.log_match(buffer)
                     modified_cnt += 1
 
-                    if self.debug:
-                        try:
-                            model.sanity_check()
-                        except AssertionError as e:
-                            self.logger.exception(e)
-                        import pdb
-
-                        pdb.set_trace()
-
+                    self._sanity_check(buffer)
                     self.mutate(buffer)
+                    self._sanity_check(model)
                     break
             else:
                 self._buffer_idx = -1

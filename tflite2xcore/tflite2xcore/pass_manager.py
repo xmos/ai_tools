@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 class PassManager:
     def __init__(self, model=None, passes=[], *, debug=False, keep_intermediates=False):
         self._queue = deque()
-        self.debug = debug
         self.logger = logging.getLogger(self.__class__.__name__)
         self._model = None
         if model:
@@ -36,7 +35,6 @@ class PassManager:
             self.register_pass(trf_pass)
 
     def register_pass(self, trf_pass: "ModelTransformationPass"):
-        trf_pass.debug = trf_pass.debug or self.debug
         self._queue.append(trf_pass)
 
     def pop_pass(self):
@@ -68,11 +66,9 @@ class PassManager:
             trf_pass = self.pop_pass()
 
             self.logger.debug(f"Running pass #{n}/{num_passes}: {trf_pass}..")
-            if self.debug:
-                pdb.set_trace()
 
             modified = trf_pass.run(self._model)
-            if self.debug:
+            if __debug__:
                 try:
                     self._model.sanity_check()
                 except AssertionError as e:

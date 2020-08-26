@@ -45,7 +45,6 @@ class PassManager:
     def save_intermediates(self, dirpath, *, visualize=True):
         if len(self._intermediates) == 0:
             self.logger.warning("No intermediate models were recorded!")
-            return
 
         dirpath = pathlib.Path(dirpath)
         dirpath.mkdir(parents=True, exist_ok=True)

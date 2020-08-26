@@ -41,7 +41,7 @@ class SubgraphTransformationPass(ModelTransformationPass):
         pass
 
     def log_match(self, obj):
-        self.logger.info(f"matched {obj}")
+        self.logger.debug(f"matched {obj}")
 
     def run_subgraph(self, subgraph):
         num_matches = 0
@@ -123,7 +123,7 @@ class BufferMatchingPass(ModelTransformationPass):
         pass
 
     def log_match(self, buffer):
-        self.logger.info(
+        self.logger.debug(
             f"matched buffer [{self._buffer_idx}] of length "
             f"{len(buffer)} with {len(buffer.owners)} owners"
         )

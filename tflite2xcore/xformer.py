@@ -4,7 +4,7 @@
 
 from pathlib import Path
 
-from tflite2xcore import utils, xlogging as logging, analyze
+from tflite2xcore import utils, analyze
 import tflite2xcore.converter as xcore_conv
 
 
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     if args.debug:
         args.verbose = 3
-    logging.set_verbosity(args.verbose)
+    utils.set_verbosity(args.verbose)
 
     tflite_input_path = Path(args.tflite_input)
     tflite_output_path = Path(args.tflite_output)

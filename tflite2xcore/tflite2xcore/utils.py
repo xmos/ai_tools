@@ -6,13 +6,13 @@ import random
 import argparse
 import sys
 import importlib
+import logging
 import numpy as np
 from types import ModuleType
 from typing import Union, Optional, Dict, Any
 
-from tflite2xcore import xlogging as logging
 
-
+# TODO: consider removing this after new integration tests are in
 def lazy_import(fullname: str) -> ModuleType:
     try:
         return sys.modules[fullname]
@@ -38,7 +38,17 @@ def lazy_import(fullname: str) -> ModuleType:
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 tf = lazy_import("tensorflow")
 
+# -----------------------------------------------------------------------------
+#                          XCORE MAGIC NUMBERS
+# -----------------------------------------------------------------------------
+
 VE, ACC_PERIOD, WORD_SIZE = 32, 16, 4
+
+
+# -----------------------------------------------------------------------------
+#                            REPRODUCIBILITY
+# -----------------------------------------------------------------------------
+
 DEFAULT_SEED = 123
 
 
@@ -68,6 +78,20 @@ def set_gpu_usage(use_gpu: bool, verbose: Union[bool, int]) -> None:
     logging.getLogger().debug(f"Eager execution enabled: {tf.executing_eagerly()}")
 
 
+# -----------------------------------------------------------------------------
+#                       LOGGING & STRING FORMATTING
+# -----------------------------------------------------------------------------
+
+
+def set_verbosity(verbosity: int = 0):
+    verbosities = [logging.WARNING, logging.INFO, logging.DEBUG]
+    verbosity = min(verbosity, len(verbosities) - 1)
+
+    logging.basicConfig(level=verbosities[verbosity])
+    if verbosity == 0:
+        logging.getLogger("tensorflow").setLevel(logging.ERROR)
+
+
 class VerbosityParser(argparse.ArgumentParser):
     def __init__(
         self,
@@ -93,7 +117,7 @@ class VerbosityParser(argparse.ArgumentParser):
 
     def parse_args(self, *args: Any, **kwargs: Any) -> tuple:
         args = super().parse_args(*args, **kwargs)
-        logging.set_verbosity(args.verbose)
+        set_verbosity(args.verbose)
         set_gpu_usage(args.use_gpu if hasattr(args, "use_gpu") else False, args.verbose)
         return args
 

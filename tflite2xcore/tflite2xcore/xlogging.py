@@ -7,18 +7,8 @@ from logging import NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 
 XDEBUG = DEBUG - 1
-VERBOSITIES = [WARNING, INFO, DEBUG, XDEBUG]
 
 logging.addLevelName(XDEBUG, "XDEBUG")
-
-
-def set_verbosity(verbosity=0):
-    assert verbosity >= 0
-    verbosity = min(verbosity, len(VERBOSITIES) - 1)
-
-    logging.basicConfig(level=VERBOSITIES[verbosity])
-    if verbosity == 0:
-        logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 
 def _array_msg(arr, style=""):

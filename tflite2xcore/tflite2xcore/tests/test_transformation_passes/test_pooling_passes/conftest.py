@@ -4,7 +4,7 @@ import pytest
 from typing import Tuple
 from copy import deepcopy
 
-from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.transformation_passes import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import Padding, ActivationFunctionType, XCOREOpCodes
 

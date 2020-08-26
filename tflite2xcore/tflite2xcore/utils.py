@@ -7,10 +7,10 @@ import argparse
 import sys
 import importlib
 import logging
-import numpy as np
+import numpy as np  # type: ignore
 from functools import wraps
 from types import ModuleType
-from typing import Union, Optional, Dict, Any, TypeVar, Callable
+from typing import Union, Optional, Dict, Any, TypeVar, Callable, cast, Tuple
 
 
 # TODO: consider removing this after new integration tests are in
@@ -84,7 +84,7 @@ def set_gpu_usage(use_gpu: bool, verbose: Union[bool, int]) -> None:
 # -----------------------------------------------------------------------------
 
 
-def set_verbosity(verbosity: int = 0):
+def set_verbosity(verbosity: int = 0) -> None:
     verbosities = [logging.WARNING, logging.INFO, logging.DEBUG]
     verbosity = min(verbosity, len(verbosities) - 1)
 
@@ -116,10 +116,10 @@ class VerbosityParser(argparse.ArgumentParser):
         )
         self.add_argument("-v", "--verbose", **verbosity_config)
 
-    def parse_args(self, *args: Any, **kwargs: Any) -> tuple:
+    def parse_args(self, *args, **kwargs):  # type: ignore
         args = super().parse_args(*args, **kwargs)
-        set_verbosity(args.verbose)
-        set_gpu_usage(args.use_gpu if hasattr(args, "use_gpu") else False, args.verbose)
+        set_verbosity(args.verbose)  # type: ignore
+        set_gpu_usage(args.use_gpu if hasattr(args, "use_gpu") else False, args.verbose)  # type: ignore
         return args
 
 
@@ -147,12 +147,12 @@ def format_array(arr: np.ndarray, style: str = "") -> str:
 
 
 _RT = TypeVar("_RT")
-_DecoratedFunc = Callable[..., _RT]
+_DecoratedFunc = TypeVar("_DecoratedFunc", bound=Callable[..., _RT])
 
 
 def log_method_output(
     level: int = logging.DEBUG, logger: Optional[logging.Logger] = None
-) -> Callable[_DecoratedFunc, _DecoratedFunc]:
+) -> Callable[[_DecoratedFunc], _DecoratedFunc]:
     def _log_method_output(func: _DecoratedFunc) -> _DecoratedFunc:
         @wraps(func)
         def wrapper(self: Any, *args: Any, **kwargs: Any) -> _RT:
@@ -161,7 +161,7 @@ def log_method_output(
             except AttributeError:
                 logger = logging.getLogger()
 
-            out = func(self, *args, **kwargs)
+            out: _RT = func(self, *args, **kwargs)
             msg = f"{func.__name__} output:\n"
             if isinstance(out, np.ndarray):
                 msg += format_array(out, func.__name__)
@@ -171,6 +171,6 @@ def log_method_output(
             logger.log(level, msg)
             return out
 
-        return wrapper
+        return cast(_DecoratedFunc, wrapper)
 
     return _log_method_output

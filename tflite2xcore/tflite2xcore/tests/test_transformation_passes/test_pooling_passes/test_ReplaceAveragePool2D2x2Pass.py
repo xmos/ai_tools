@@ -4,13 +4,17 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.xcore_schema import Padding
+from tflite2xcore.xcore_schema import Padding, XCOREOpCodes
 from tflite2xcore.transformation_passes import ReplaceAveragePool2D2x2Pass
 
-from tflite2xcore.tests.test_transformation_passes.model_builders import build_avgpool
+from tflite2xcore.tests.test_transformation_passes.model_builders import (
+    build_avgpool,
+    ModelBuilder,
+)
 from .conftest import (
     PARAMS,
     test_matching_params,
+    test_mutate,
     test_non_matching_input_channels,
     test_non_matching_fused_activation,
     test_non_matching_input_height,
@@ -71,13 +75,18 @@ PARAMS["smoke"].update(
 
 
 @pytest.fixture()
-def build_model():
+def build_model() -> ModelBuilder:
     return build_avgpool
 
 
 @pytest.fixture()
-def trf_pass():
+def trf_pass() -> ReplaceAveragePool2D2x2Pass:
     return ReplaceAveragePool2D2x2Pass()
+
+
+@pytest.fixture()
+def custom_opcode() -> XCOREOpCodes:
+    return XCOREOpCodes.XC_avgpool2d
 
 
 if __name__ == "__main__":

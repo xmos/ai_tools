@@ -1,12 +1,20 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-
+from typing import Tuple
 from copy import deepcopy
 
-from tflite2xcore.xcore_schema import Padding, ActivationFunctionType
+from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import Padding, ActivationFunctionType, XCOREOpCodes
 
-from ..conftest import PARAMS, _test_non_matching_params, test_matching_params
+from tflite2xcore.tests.test_transformation_passes.model_builders import ModelBuilder
+from ..conftest import (
+    PARAMS,
+    _test_non_matching_params,
+    test_matching_params,
+    test_replace_mutate as _test_replace_mutate,
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -53,12 +61,19 @@ PARAMS["smoke"].update(
 
 
 @pytest.fixture()
-def pool_size(pool_h, pool_w):
+def pool_size(pool_h, pool_w) -> Tuple[int, int]:
     return (pool_h, pool_w)
 
 
 @pytest.fixture()
-def model(build_model, input_shape, pool_size, strides, padding, fused_activation):
+def model(
+    build_model: ModelBuilder,
+    input_shape: Tuple[int, int, int],
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: Padding,
+    fused_activation: ActivationFunctionType,
+) -> XCOREModel:
     return build_model(
         input_shape=input_shape,
         padding=padding,
@@ -73,16 +88,33 @@ def model(build_model, input_shape, pool_size, strides, padding, fused_activatio
 #  ----------------------------------------------------------------------------
 
 
+def test_mutate(
+    trf_pass: ModelTransformationPass, model: XCOREModel, custom_opcode: XCOREOpCodes
+) -> None:
+    subgraph = model.subgraphs[0]
+    old_op = subgraph.operators[0]
+    strides = tuple(old_op.builtin_options[f"stride_{ax}"] for ax in ("h", "w"))
+    pool = tuple(old_op.builtin_options[f"filter_{ax}"] for ax in ("height", "width"))
+
+    _test_replace_mutate(trf_pass, model, custom_opcode)
+
+    custom_options = subgraph.operators[-1].custom_options
+    assert "pool" in custom_options
+    assert custom_options["pool"] == pool
+    assert "stride" in custom_options
+    assert custom_options["stride"] == strides
+
+
 def test_non_matching_input_channels(
-    trf_pass,
-    build_model,
-    input_size,
-    non_matching_input_channels,
-    pool_size,
-    strides,
-    padding,
-    fused_activation,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    input_size: Tuple[int, int],
+    non_matching_input_channels: int,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: Padding,
+    fused_activation: ActivationFunctionType,
+) -> None:
     input_shape = (*input_size, non_matching_input_channels)
     model = build_model(
         input_shape=input_shape,
@@ -95,14 +127,14 @@ def test_non_matching_input_channels(
 
 
 def test_non_matching_fused_activation(
-    trf_pass,
-    build_model,
-    input_shape,
-    pool_size,
-    strides,
-    padding,
-    non_matching_fused_activation,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    input_shape: Tuple[int, int, int],
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: Padding,
+    non_matching_fused_activation: ActivationFunctionType,
+) -> None:
     model = build_model(
         input_shape=input_shape,
         padding=padding,
@@ -114,16 +146,16 @@ def test_non_matching_fused_activation(
 
 
 def test_non_matching_input_height(
-    trf_pass,
-    build_model,
-    input_width,
-    non_matching_input_height,
-    input_channels,
-    pool_size,
-    strides,
-    padding,
-    fused_activation,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    input_width: int,
+    non_matching_input_height: int,
+    input_channels: int,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: Padding,
+    fused_activation: ActivationFunctionType,
+) -> None:
     input_shape = (input_width, non_matching_input_height, input_channels)
     model = build_model(
         input_shape=input_shape,
@@ -136,17 +168,17 @@ def test_non_matching_input_height(
 
 
 def test_non_matching_input_width(
-    trf_pass,
-    build_model,
-    input_width,
-    input_height,
-    non_matching_input_channels,
-    pool_size,
-    strides,
-    padding,
-    fused_activation,
-):
-    input_shape = (input_width, input_height, non_matching_input_channels)
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    non_matching_input_width: int,
+    input_height: int,
+    input_channels: int,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: Padding,
+    fused_activation: ActivationFunctionType,
+) -> None:
+    input_shape = (non_matching_input_width, input_height, input_channels)
     model = build_model(
         input_shape=input_shape,
         padding=padding,
@@ -158,15 +190,15 @@ def test_non_matching_input_width(
 
 
 def test_non_matching_pool_h(
-    trf_pass,
-    build_model,
-    input_shape,
-    non_matching_pool_h,
-    pool_w,
-    strides,
-    padding,
-    fused_activation,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    input_shape: Tuple[int, int, int],
+    non_matching_pool_h: int,
+    pool_w: int,
+    strides: Tuple[int, int],
+    padding: Padding,
+    fused_activation: ActivationFunctionType,
+) -> None:
     model = build_model(
         input_shape=input_shape,
         padding=padding,
@@ -178,15 +210,15 @@ def test_non_matching_pool_h(
 
 
 def test_non_matching_pool_w(
-    trf_pass,
-    build_model,
-    input_shape,
-    pool_h,
-    non_matching_pool_w,
-    strides,
-    padding,
-    fused_activation,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    input_shape: Tuple[int, int, int],
+    pool_h: int,
+    non_matching_pool_w: int,
+    strides: Tuple[int, int],
+    padding: Padding,
+    fused_activation: ActivationFunctionType,
+) -> None:
     model = build_model(
         input_shape=input_shape,
         padding=padding,
@@ -198,15 +230,15 @@ def test_non_matching_pool_w(
 
 
 def test_non_matching_stride_h(
-    trf_pass,
-    build_model,
-    input_shape,
-    pool_size,
-    padding,
-    non_matching_stride_h,
-    stride_w,
-    fused_activation,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    input_shape: Tuple[int, int, int],
+    pool_size: Tuple[int, int],
+    non_matching_stride_h: int,
+    stride_w: int,
+    padding: Padding,
+    fused_activation: ActivationFunctionType,
+) -> None:
     model = build_model(
         input_shape=input_shape,
         padding=padding,
@@ -218,15 +250,15 @@ def test_non_matching_stride_h(
 
 
 def test_non_matching_stride_w(
-    trf_pass,
-    build_model,
-    input_shape,
-    pool_size,
-    padding,
-    stride_h,
-    non_matching_stride_w,
-    fused_activation,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    input_shape: Tuple[int, int, int],
+    pool_size: Tuple[int, int],
+    stride_h: int,
+    non_matching_stride_w: int,
+    padding: Padding,
+    fused_activation: ActivationFunctionType,
+) -> None:
     model = build_model(
         input_shape=input_shape,
         padding=padding,

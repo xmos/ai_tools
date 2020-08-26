@@ -2,7 +2,7 @@
 
 import pytest
 
-from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.transformation_passes import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
 
 from ..conftest import PARAMS, test_matching_params, _test_non_matching_params

@@ -20,7 +20,7 @@ INSTALL_REQUIRES = [
 
 setuptools.setup(
     name="tflite2xcore",
-    version="0.1.0",
+    version="0.1.1",
     packages=setuptools.find_packages(exclude=EXCLUDES),
     scripts=SCRIPTS,
     python_requires=">=3.6.8",

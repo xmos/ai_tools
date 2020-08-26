@@ -1,9 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-
 import itertools
 from copy import deepcopy
+from typing import Tuple
+
+from tflite2xcore.xcore_model import XCOREModel
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_fc
 from ..conftest import (
@@ -14,6 +16,7 @@ from ..conftest import (
     NON_INT32_TEST_TYPES,
     test_matching_params,
     test_non_matching_tensors,
+    test_replace_mutate,
 )
 
 
@@ -63,5 +66,5 @@ PARAMS["smoke"].update(
 
 
 @pytest.fixture()
-def model(input_shape, outputs):
+def model(input_shape: Tuple[int, int, int], outputs: int) -> XCOREModel:
     return build_fc(input_shape=input_shape, outputs=outputs)

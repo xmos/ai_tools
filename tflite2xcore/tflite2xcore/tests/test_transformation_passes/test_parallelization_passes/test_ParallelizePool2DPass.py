@@ -5,9 +5,11 @@ import pytest
 from copy import deepcopy
 from typing import Tuple, Callable
 
-from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.transformation_passes import ParallelizePooling2DPass
+from tflite2xcore.transformation_passes import (
+    ModelTransformationPass,
+    ParallelizePooling2DPass,
+)
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_XC_maxpool2d,

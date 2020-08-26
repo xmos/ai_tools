@@ -1,5 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+import logging
 import pytest  # type: ignore
 import _pytest  # type: ignore # NOTE: for typing only
 import numpy as np  # type: ignore
@@ -7,7 +8,6 @@ from pathlib import Path
 from typing import Union, List, NamedTuple, Tuple, Dict
 
 from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
-from tflite2xcore import xlogging  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation.model_generators import KerasModelGenerator
 from tflite2xcore._model_generation.runners import Runner, RunnerOutputs
 from tflite2xcore._model_generation.evaluators import (
@@ -83,11 +83,9 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
                 model_ref_html = model_ref_path.with_suffix(".html")
                 with open(model_ref_path, "wb") as f:
                     f.write(model)
-                xlogging.logging.debug(f"{name} dumped to {model_ref_path}")
+                logging.debug(f"{name} dumped to {model_ref_path}")
                 tflite_visualize.main(model_ref_path, model_ref_html)
-                xlogging.logging.debug(
-                    f"{name} visualization dumped to {model_ref_html}"
-                )
+                logging.debug(f"{name} visualization dumped to {model_ref_html}")
         return dirpath
 
     @classmethod

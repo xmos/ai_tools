@@ -1,14 +1,15 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
 import pathlib
-from tflite2xcore.utils import set_all_seeds
+import logging
+from tflite2xcore.utils import set_all_seeds, LoggingContext
 import tensorflow as tf
 import numpy as np
 from abc import ABC, abstractmethod
 import tflite2xcore.converter as xcore_conv
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.model_generation import utils
-from tflite2xcore import xlogging as logging, tflite_visualize
+from tflite2xcore import tflite_visualize
 
 
 class Model(ABC):
@@ -356,7 +357,7 @@ class KerasModel(Model):
             self.save_training_history()
 
     def save_training_history(self):
-        with logging.LoggingContext(logging.getLogger(), logging.INFO):
+        with LoggingContext(logging.getLogger(), logging.INFO):
             utils.plot_history(
                 self.history,
                 title=f"{self.name} metrics",

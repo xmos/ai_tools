@@ -1,11 +1,12 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import pdb
+import logging
 import pathlib
 from typing import TYPE_CHECKING
 from collections import deque
 
-from tflite2xcore import xlogging as logging, tflite_visualize
+from tflite2xcore import tflite_visualize
 
 if TYPE_CHECKING:
     from tflite2xcore.xcore_model import XCOREModel

@@ -2,11 +2,9 @@
 
 import numbers
 import math
-import enum
-
+import logging
 from abc import ABC, abstractmethod
 
-from tflite2xcore import xlogging as logging
 from tflite2xcore.utils import ACC_PERIOD
 
 MAX_THREADS = 5

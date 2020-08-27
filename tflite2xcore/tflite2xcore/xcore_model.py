@@ -1,10 +1,9 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
+import logging
 import numpy as np
-
 from collections import Counter
 
-from tflite2xcore import xlogging as logging
 from tflite2xcore.xcore_schema import TensorType, OperatorCode
 from tflite2xcore.serialization.flatbuffers_io import XCORESerializationMixin
 

@@ -1,12 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import os
+import logging
 import tensorflow as tf  # type: ignore
 import numpy as np  # type: ignore
 from collections import Iterable
 from typing import Union, Iterator, List, Optional, Any
-
-from tflite2xcore import xlogging  # type: ignore # TODO: fix this
 
 from . import Configuration
 
@@ -24,8 +23,9 @@ def quantize_converter(
     def representative_data_gen() -> Iterator[List[tf.Tensor]]:
         for j, input_value in enumerate(x_train_ds.take(representative_data.shape[0])):
             if show_progress_step and (j + 1) % show_progress_step == 0:
-                xlogging.logging.getLogger().info(
-                    f"Converter quantization processed examples {j+1:6d}/{representative_data.shape[0]}"
+                logging.info(
+                    "Converter quantization processed examples "
+                    f"{j+1:6d}/{representative_data.shape[0]}"
                 )
             yield [input_value]
 
@@ -51,13 +51,11 @@ def apply_interpreter_to_examples(
     for j, x in enumerate(examples):
         if show_progress_step and (j + 1) % show_progress_step == 0:
             if show_pid:
-                xlogging.logging.getLogger().info(
+                logging.info(
                     f"(PID {os.getpid()}) Evaluated examples {j+1:6d}/{examples.shape[0]}"
                 )
             else:
-                xlogging.logging.getLogger().info(
-                    f"Evaluated examples {j+1:6d}/{examples.shape[0]}"
-                )
+                logging.info(f"Evaluated examples {j+1:6d}/{examples.shape[0]}")
         interpreter.set_tensor(interpreter_input_ind, np.expand_dims(x, 0))
         interpreter.invoke()
         y = interpreter.get_tensor(interpreter_output_ind)

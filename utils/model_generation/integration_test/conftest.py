@@ -2,11 +2,11 @@
 
 import os
 import yaml
+import logging
 import pytest  # type: ignore
 import _pytest  # type: ignore # NOTE: for typing only
 from pathlib import Path
 
-from tflite2xcore import xlogging  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation.utils import stringify_config
 
@@ -56,7 +56,7 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
             CONFIGS = metafunc.module.CONFIGS  # [coverage].values()
             config_file = Path(metafunc.module.__file__)
         except AttributeError:
-            xlogging.logging.debug(f"CONFIGS undefined in {metafunc.module}")
+            logging.debug(f"CONFIGS undefined in {metafunc.module}")
             config_file = Path(metafunc.module.__file__).with_suffix(".yml")
             try:
                 with open(config_file, "r") as f:
@@ -110,14 +110,14 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     dirpath = pytest_config.cache.get(key, "")
     if dirpath:
         gen = IntegrationTestModelGenerator.load(dirpath)
-        xlogging.logging.debug(f"cached generator loaded from {dirpath}")
+        logging.debug(f"cached generator loaded from {dirpath}")
     else:
         dirpath = os.path.join(
             pytest_config.cache.makedir("model_cache"), request.node.name, config_str
         )
         gen.run()
         gen.save(dirpath, dump_models=pytest_config.getoption("dump") == "models")
-        xlogging.logging.debug(f"generator cached to {dirpath}")
+        logging.debug(f"generator cached to {dirpath}")
         pytest_config.cache.set(key, dirpath)
 
     if pytest_config.getoption("--generate-only"):

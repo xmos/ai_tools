@@ -1,11 +1,12 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import pdb
+import logging
+import pathlib
 from typing import TYPE_CHECKING
 from collections import deque
 
-from tflite2xcore import xlogging as logging, tflite_visualize
-from tflite2xcore.utils import convert_path
+from tflite2xcore import tflite_visualize
 
 if TYPE_CHECKING:
     from tflite2xcore.xcore_model import XCOREModel
@@ -15,7 +16,6 @@ if TYPE_CHECKING:
 class PassManager:
     def __init__(self, model=None, passes=[], *, debug=False, keep_intermediates=False):
         self._queue = deque()
-        self.debug = debug
         self.logger = logging.getLogger(self.__class__.__name__)
         self._model = None
         if model:
@@ -35,7 +35,6 @@ class PassManager:
             self.register_pass(trf_pass)
 
     def register_pass(self, trf_pass: "ModelTransformationPass"):
-        trf_pass.debug = trf_pass.debug or self.debug
         self._queue.append(trf_pass)
 
     def pop_pass(self):
@@ -44,9 +43,8 @@ class PassManager:
     def save_intermediates(self, dirpath, *, visualize=True):
         if len(self._intermediates) == 0:
             self.logger.warning("No intermediate models were recorded!")
-            return
 
-        dirpath = convert_path(dirpath)
+        dirpath = pathlib.Path(dirpath)
         dirpath.mkdir(parents=True, exist_ok=True)
 
         for (j, _), bits in zip(self._mutating_passes, self._intermediates):
@@ -68,11 +66,9 @@ class PassManager:
             trf_pass = self.pop_pass()
 
             self.logger.debug(f"Running pass #{n}/{num_passes}: {trf_pass}..")
-            if self.debug:
-                pdb.set_trace()
 
             modified = trf_pass.run(self._model)
-            if self.debug:
+            if __debug__:
                 try:
                     self._model.sanity_check()
                 except AssertionError as e:

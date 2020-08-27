@@ -1,18 +1,24 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+import logging
 import numpy as np  # type: ignore
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
 from tflite2xcore.xcore_schema import TensorType
-from tflite2xcore.utils import ACC_PERIOD
-from tflite2xcore import xlogging as logging
+from tflite2xcore.utils import ACC_PERIOD, format_array
 
 
 class ModelTransformationPass(ABC):
-    def __init__(self, *, debug=False):
+    def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.debug = debug
+
+    def _sanity_check(self, obj):
+        if __debug__:
+            try:
+                obj.sanity_check()
+            except AssertionError as e:
+                self.logger.exception(e)
 
     @abstractmethod
     def run(self, model):
@@ -41,7 +47,7 @@ class SubgraphTransformationPass(ModelTransformationPass):
         pass
 
     def log_match(self, obj):
-        self.logger.info(f"matched {obj}")
+        self.logger.debug(f"matched {obj}")
 
     def run_subgraph(self, subgraph):
         num_matches = 0
@@ -50,17 +56,9 @@ class SubgraphTransformationPass(ModelTransformationPass):
                 if self.match(obj):
                     num_matches += 1
                     self.log_match(obj)
-
-                    if self.debug:
-                        try:
-                            obj.sanity_check()
-                        except AssertionError as e:
-                            self.logger.exception(e)
-                        import pdb
-
-                        pdb.set_trace()
-
+                    self._sanity_check(obj)
                     self.mutate(obj)
+                    self._sanity_check(subgraph)
                     break
             else:
                 self._obj_index = -1
@@ -72,12 +70,6 @@ class SubgraphTransformationPass(ModelTransformationPass):
             self.logger.debug(f"running on subgraph {self._subgraph_idx}")
             if self.run_subgraph(subgraph):
                 modified_cnt += 1
-
-            if self.debug:
-                try:
-                    subgraph.sanity_check()
-                except AssertionError as e:
-                    self.logger.exception(e)
 
         self._subgraph_idx = -1
         return modified_cnt
@@ -123,7 +115,7 @@ class BufferMatchingPass(ModelTransformationPass):
         pass
 
     def log_match(self, buffer):
-        self.logger.info(
+        self.logger.debug(
             f"matched buffer [{self._buffer_idx}] of length "
             f"{len(buffer)} with {len(buffer.owners)} owners"
         )
@@ -136,16 +128,9 @@ class BufferMatchingPass(ModelTransformationPass):
                     self.log_match(buffer)
                     modified_cnt += 1
 
-                    if self.debug:
-                        try:
-                            model.sanity_check()
-                        except AssertionError as e:
-                            self.logger.exception(e)
-                        import pdb
-
-                        pdb.set_trace()
-
+                    self._sanity_check(buffer)
                     self.mutate(buffer)
+                    self._sanity_check(model)
                     break
             else:
                 self._buffer_idx = -1
@@ -207,7 +192,6 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
                 )
 
 
-
 class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
     @property
     @abstractmethod
@@ -226,9 +210,6 @@ class ReplaceWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     @property
     def _weights(self):
         return self._op.inputs[1]
-
-    def _log_weights(self):
-        self.logger.xdebug("_weights:\n" + logging._array_msg(self._weights.as_array()))
 
     @property
     def _biases(self):
@@ -257,9 +238,6 @@ class LegalizeWeightBiasPass(QuantizedOperatorMatchingPass):
     @property
     def _weights(self):
         return self._op.inputs[1]
-
-    def _log_weights(self):
-        self.logger.xdebug("_weights:\n" + logging._array_msg(self._weights.as_array()))
 
     @abstractmethod
     def mutate_biases(self, op):
@@ -307,7 +285,6 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
     def _zero_point_bias(self):
         pass
 
-    @logging.log_method_output()
     def _unified_bias(self):
         arr_64 = self._biases.as_array(np.int64) - self._zero_point_bias().astype(
             np.int64
@@ -328,7 +305,6 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
 
         # zero pad and reshape
         bias = self.__pad_to_acc_period(bias)
-        self.logger.xdebug("_bias_arr padded biases:\n" + logging._array_msg(bias))
 
         # splitting lower and upper 16 bits of each 32 bit value
         tmp_shape = (bias.shape[0] // ACC_PERIOD, ACC_PERIOD, -1)
@@ -379,7 +355,6 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
     def _MAX_POST_SHIFT(self):
         return 22 + self._SHIFT_ADJUSTMENT - self._OUTPUT_BITS
 
-    @logging.log_method_output()
     def _scale_offset_arr(self):
         # calculate right shift/scale
         rshift, scale = self._shift_scale()
@@ -396,7 +371,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
         ) + np.minimum(rshift, 0)
         if np.any(shift_post.flatten() < 0):
             raise ValueError(
-                "Negative shift_post encountered: " f"{logging._array_msg(shift_post)}"
+                "Negative shift_post encountered: " f"{format_array(shift_post)}"
             )
 
         # calculate offset
@@ -406,9 +381,6 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
             * 2 ** (self._OUTPUT_BITS - 8)
         ).flatten()
 
-        self.logger.xdebug(
-            "raw_offset:\n" + logging._array_msg(raw_offset.astype(np.int32))
-        )
         offset_scale = np.round(np.sqrt(np.abs(raw_offset))).astype(np.int16)
         offset = np.zeros(offset_scale.shape, dtype=offset_scale.dtype)
         pos_ind = offset_scale > 0

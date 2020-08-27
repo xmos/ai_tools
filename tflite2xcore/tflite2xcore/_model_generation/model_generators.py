@@ -2,13 +2,13 @@
 
 import dill  # type: ignore
 import shutil
+import logging
 import tensorflow as tf  # type: ignore
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, List, Any, Union
 
-from tflite2xcore.utils import set_all_seeds  # type: ignore # TODO: fix this
-from tflite2xcore import xlogging  # type: ignore # TODO: fix this
+from tflite2xcore.utils import set_all_seeds, LoggingContext  # type: ignore # TODO: fix this
 
 from . import Configuration
 from .converters import Converter
@@ -113,6 +113,6 @@ class KerasModelGenerator(ModelGenerator):
         assert isinstance(obj, cls)
 
         # tf may complain about missing training config, so silence it
-        with xlogging.LoggingContext(tf.get_logger(), xlogging.ERROR):
+        with LoggingContext(tf.get_logger(), logging.ERROR):
             obj._model = tf.keras.models.load_model(dirpath / "model.h5")
         return obj

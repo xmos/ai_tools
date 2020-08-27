@@ -128,4 +128,4 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
 
 @pytest.fixture  # type: ignore
 def xcore_model(run: IntegrationTestRunner) -> XCOREModel:
-    return XCOREModel.deserialize(run._model_generator._xcore_converter._model)
+    return XCOREModel.deserialize(run.xcore_model)

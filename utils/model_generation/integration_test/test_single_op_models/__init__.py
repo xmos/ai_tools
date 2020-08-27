@@ -54,7 +54,7 @@ class ImageInputOpTestModelGenerator(IntegrationTestModelGenerator):
 
 
 class ChannelAgnosticOpTestModelGenerator(ImageInputOpTestModelGenerator):
-    def _check_channel_count(self, channels):
+    def _check_channel_count(self, channels: int) -> None:
         pass
 
     def _set_config(self, cfg: Configuration) -> None:
@@ -69,7 +69,7 @@ class ChannelAgnosticOpTestModelGenerator(ImageInputOpTestModelGenerator):
 
 
 class ChannelPreservingOpTestModelGenerator(ChannelAgnosticOpTestModelGenerator):
-    def _check_channel_count(self, channels):
+    def _check_channel_count(self, channels: int) -> None:
         assert channels % 4 == 0, "# of channels must be multiple of 4"
 
 

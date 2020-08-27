@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Union, List, NamedTuple, Tuple, Dict
 
 from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation.model_generators import KerasModelGenerator
 from tflite2xcore._model_generation.runners import Runner, RunnerOutputs
 from tflite2xcore._model_generation.evaluators import (
@@ -48,6 +49,10 @@ class IntegrationTestRunner(Runner):
             model_generator._reference_evaluator.output_data_quant,
             model_generator._xcore_evaluator.output_data,
         )
+
+    @property
+    def xcore_model(self) -> XCOREModel:
+        return self._model_generator._xcore_converter._model
 
 
 #  ----------------------------------------------------------------------------

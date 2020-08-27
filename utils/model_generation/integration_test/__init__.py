@@ -45,8 +45,8 @@ class IntegrationTestRunner(Runner):
             evaluator.evaluate()
 
         self.outputs = RunnerOutputs(
-            model_generator.reference_evaluator.output_data_quant,
-            model_generator.xcore_evaluator.output_data,
+            model_generator._reference_evaluator.output_data_quant,
+            model_generator._xcore_evaluator.output_data,
         )
 
 
@@ -58,28 +58,28 @@ class IntegrationTestRunner(Runner):
 class IntegrationTestModelGenerator(KerasModelGenerator):
     _reference_converter: TFLiteQuantConverter
     _xcore_converter: XCoreConverter
-    reference_evaluator: TFLiteQuantEvaluator
-    xcore_evaluator: XCoreEvaluator
+    _reference_evaluator: TFLiteQuantEvaluator
+    _xcore_evaluator: XCoreEvaluator
     run: IntegrationTestRunner
 
     def __init__(self) -> None:
         self._reference_converter = TFLiteQuantConverter(self)
         self._xcore_converter = XCoreConverter(self, self._reference_converter)
-        self.xcore_evaluator = XCoreEvaluator(
+        self._xcore_evaluator = XCoreEvaluator(
             self._reference_converter._get_representative_data,
             lambda: self._xcore_converter._model,
         )
-        self.reference_evaluator = TFLiteQuantEvaluator(
-            lambda: self.xcore_evaluator.input_data_float,
+        self._reference_evaluator = TFLiteQuantEvaluator(
+            lambda: self._xcore_evaluator.input_data_float,
             lambda: self._reference_converter._model,
-            lambda: self.xcore_evaluator.input_quant,
-            lambda: self.xcore_evaluator.output_quant,
+            lambda: self._xcore_evaluator.input_quant,
+            lambda: self._xcore_evaluator.output_quant,
         )
 
         super().__init__(
             runner=IntegrationTestRunner(self),
             converters=[self._reference_converter, self._xcore_converter],
-            evaluators=[self.xcore_evaluator, self.reference_evaluator],
+            evaluators=[self._xcore_evaluator, self._reference_evaluator],
         )
 
     def save(self, dirpath: Union[Path, str], dump_models: bool = False) -> Path:

@@ -9,7 +9,7 @@ from tflite2xcore._model_generation import Configuration
 from tflite2xcore._model_generation.utils import parse_init_config
 
 from . import (
-    ActivationOPTestModelGenerator,
+    ChannelAgnosticOpTestModelGenerator,
     test_output,
     test_converted_single_op_model,
 )
@@ -20,7 +20,7 @@ from . import (
 #  ----------------------------------------------------------------------------
 
 
-class PReluTestModelGenerator(ActivationOPTestModelGenerator):
+class PReluTestModelGenerator(ChannelAgnosticOpTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         self._config.update(
             {"alpha_init": cfg.pop("alpha_init", ("RandomUniform", -1, 1))}

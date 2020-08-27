@@ -122,16 +122,31 @@ def _test_batched_arrays(
 ) -> Dict[int, List[FailedElement]]:
     assert predicted.shape == expected.shape
     assert predicted.dtype is expected.dtype
+    assert issubclass(predicted.dtype.type, np.integer)  # TODO: generalize to floats
+
+    def collect_deviations(diff: np.ndarray) -> List[str]:
+        return [
+            f"{c}/{diff.size} ({c / diff.size:.2%}) with diff={v}"
+            for v, c in zip(*np.unique(diff, return_counts=True))
+            if v
+        ]
 
     failures: Dict[int, List[FailedElement]] = {}
-    for j, (arr, arr_ref) in enumerate(zip(predicted, expected)):
-        diff = np.abs(np.int32(arr) - np.int32(arr_ref))
+    diffs = np.abs(np.int32(predicted) - np.int32(expected))
+    for j, (arr, arr_ref, diff) in enumerate(zip(predicted, expected, diffs)):
+        devs = collect_deviations(diff)
+        logging.debug(
+            f"Example {j} deviations: " + (", ".join(devs) if devs else "None")
+        )
+
         diff_idx = zip(*np.where(diff > tolerance))
         failed_examples = [
             FailedElement(idx, diff[idx], arr_ref[idx], arr[idx]) for idx in diff_idx
         ]
         if failed_examples:
             failures[j] = failed_examples
+    devs = collect_deviations(diffs)
+    logging.info(f"Total deviations: " + (", ".join(devs) if devs else "None"))
     return failures
 
 

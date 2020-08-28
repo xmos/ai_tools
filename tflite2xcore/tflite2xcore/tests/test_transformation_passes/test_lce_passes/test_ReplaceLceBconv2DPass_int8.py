@@ -40,6 +40,9 @@ def model(weight_shape, input_size, padding, strides):
         input_tensor_type=TensorType.INT8,
     )
 
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
 
 def test_mutate(trf_pass, model):
 

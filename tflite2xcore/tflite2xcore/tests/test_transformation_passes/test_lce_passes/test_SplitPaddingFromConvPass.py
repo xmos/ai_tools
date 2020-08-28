@@ -78,7 +78,7 @@ def test_mutate(trf_pass, model):
     options = subgraph.operators[0].custom_options
     strides = strides = (options["stride_height"], options["stride_width"])
 
-    assert (len(subgraph.operators[0].inputs)) == 2
+    assert len(subgraph.operators[0].inputs) == 2
     assert (
         Padding.from_TfLitePadding(subgraph.operators[0].custom_options["padding"])
         is Padding.SAME

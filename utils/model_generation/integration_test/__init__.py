@@ -28,6 +28,11 @@ from tflite2xcore._model_generation.converters import (
 #  ----------------------------------------------------------------------------
 
 
+class RunnerModels(NamedTuple):
+    reference: XCOREModel
+    xcore: XCOREModel
+
+
 class IntegrationTestRunner(Runner):
     _model_generator: "IntegrationTestModelGenerator"
     outputs: RunnerOutputs
@@ -51,10 +56,10 @@ class IntegrationTestRunner(Runner):
             model_generator._reference_evaluator.output_data_quant,
             model_generator._xcore_evaluator.output_data,
         )
-
-    @property
-    def xcore_model(self) -> XCOREModel:
-        return self._model_generator._xcore_converter._model
+        self.models = RunnerModels(
+            self._model_generator._reference_converter._model,
+            self._model_generator._xcore_converter._model,
+        )
 
 
 #  ----------------------------------------------------------------------------
@@ -171,11 +176,11 @@ def _test_batched_arrays(
 
 
 def _test_output(
-    run: IntegrationTestRunner,
+    run_outputs: RunnerOutputs,
     request: _pytest.fixtures.SubRequest,
     tolerance: Union[int, float] = 1,
 ) -> None:
-    failures = _test_batched_arrays(run.outputs.xcore, run.outputs.reference, tolerance)
+    failures = _test_batched_arrays(run_outputs.xcore, run_outputs.reference, tolerance)
 
     verbose = request.config.getoption("verbose") > 0
 
@@ -209,4 +214,4 @@ def _test_output(
 def test_output(
     run: IntegrationTestRunner, request: _pytest.fixtures.SubRequest
 ) -> None:
-    _test_output(run, request, tolerance=1)
+    _test_output(run.outputs, request, tolerance=1)

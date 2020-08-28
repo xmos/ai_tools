@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@v0.14.1') _
+@Library('xmos_jenkins_shared_library@feature/view_env_path') _
 
 
 pipeline {
@@ -64,9 +64,10 @@ pipeline {
                 }
                 stage("Check") {
                     steps {
-                        sh "conda run -n .venv python -c 'import tensorflow'"
-                        sh "xcc --version"
-
+                        viewEnv('/XMOS/xTIMEcomposer/${TOOLS_VERSION}') {
+                            sh "conda run -n .venv python -c 'import tensorflow'"
+                            sh "xcc --version"
+                        }
                     }
                 }
                 stage("Build") {

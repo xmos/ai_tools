@@ -72,7 +72,9 @@ pipeline {
                 }
                 stage("Build") {
                     steps {
-                        sh "conda run -n .venv make all"
+                        viewEnv('/XMOS/xTIMEcomposer/${TOOLS_VERSION}') {
+                            sh "conda run -n .venv make all"
+                        }
                     }
                 }
             }

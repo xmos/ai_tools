@@ -64,14 +64,14 @@ pipeline {
                 }
                 stage("Check") {
                     steps {
-                        withEnv(["CONDA_DEFAULT_ENV=.venv"]) {
-                            sh "python -c 'import tensorflow'"
-                        }
+                        sh "conda run -n .venv python -c 'import tensorflow'"
+                        sh "xcc --version"
+
                     }
                 }
                 stage("Build") {
                     steps {
-                        sh "make all"
+                        sh "conda run -n .venv make all"
                     }
                 }
             }

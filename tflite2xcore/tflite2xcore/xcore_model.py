@@ -86,21 +86,6 @@ class Operator:
     def __str__(self):
         return f"({self.subgraph.operators.index(self)}) operator_code={self.operator_code}"
 
-    def pprint(self):
-        INDENT = " " * 2
-
-        lines = []
-        lines.append(str(self))
-        lines.append(f"{INDENT}inputs")
-        lines.extend([f"{INDENT * 2}{input_}" for input_ in self.inputs])
-        lines.append(f"{INDENT}outputs")
-        lines.extend([f"{INDENT * 2}{output}" for output in self.outputs])
-        lines.append(f"{INDENT}builtin_options")
-        lines.append(f"{INDENT * 2}{self.builtin_options}")
-        lines.append(f"{INDENT}custom_options")
-        lines.append(f"{INDENT * 2}{self.custom_options}")
-        return "\n".join(lines)
-
     def sanity_check(self):
         assert self in self.subgraph.operators
         # check for duplicates
@@ -173,19 +158,6 @@ class Tensor:
 
     def __str__(self):
         return f"name={self.name}, type={self.type.name}, shape={self.shape}, buffer={self.buffer}"
-
-    def pprint(self):
-        INDENT = " " * 2
-
-        lines = []
-        lines.append(str(self))
-        if self.producers:
-            lines.append(f"{INDENT}producers")
-            lines.extend([f"{INDENT * 2}{producer}" for producer in self.producers])
-        if self.consumers:
-            lines.append(f"{INDENT}consumers")
-            lines.extend([f"{INDENT * 2}{consumer}" for consumer in self.consumers])
-        return "\n".join(lines)
 
     def sanity_check(self):
         assert self in self.subgraph.tensors
@@ -482,61 +454,6 @@ class XCOREModel(XCORESerializationMixin):
         for buffer in self.buffers:
             nbytes += len(buffer)
         return nbytes
-
-    def pprint(self, tensor_values=False):
-        print("---------")
-        print("- Model -")
-        print("---------")
-        print(f"description={self.description}")
-        print(f"version={self.version}")
-        print("******************")
-        print("* Metadata *")
-        print("******************")
-        for metadata in self.metadata:
-            print(metadata)
-        print("******************")
-        print("* Operator Codes *")
-        print("******************")
-        for operator_code in self.operator_codes:
-            print(operator_code)
-        print("***********")
-        print("* Buffers *")
-        print("***********")
-        for buffer in self.buffers:
-            print(buffer)
-        for subgraph in self.subgraphs:
-            print("============")
-            print("= Subgraph =")
-            print("============")
-            print("*************")
-            print("* Operators *")
-            print("*************")
-            for operator in subgraph.operators:
-                print(operator.pprint())
-
-            print("**********")
-            print("* Inputs *")
-            print("**********")
-            for input_ in subgraph.inputs:
-                print(input_.pprint())
-                if tensor_values and len(input_.buffer):
-                    print(f"   values={input_.as_array()}")
-
-            print("*****************")
-            print("* Intermediates *")
-            print("*****************")
-            for intermediate in subgraph.intermediates:
-                print(intermediate.pprint())
-                if tensor_values and len(intermediate.buffer):
-                    print(f"   values={intermediate.as_array()}")
-
-            print("***********")
-            print("* Outputs *")
-            print("***********")
-            for output in subgraph.outputs:
-                print(output.pprint())
-                if tensor_values and len(output.buffer):
-                    print(f"   values={output.as_array()}")
 
     def sanity_check(self):
         # check for duplicates

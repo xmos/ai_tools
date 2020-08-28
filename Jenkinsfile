@@ -21,7 +21,7 @@ pipeline {
         stage ("Build and Push Image") {
             when {
                 anyOf {
-                    changeset pattern: "Dockerfile", comparator: "REGEXP"
+                    changeset "Dockerfile"
                     expression { return params.PUSH_IMAGE }
                 }
             }

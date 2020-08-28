@@ -11,6 +11,7 @@ RUN wget http://intranet/projects/tools/ReleasesTools/${TOOLS_VERSION}_${TOOLS_P
 RUN cd / && tar xvf Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz
 RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} > /dev/null && . SetEnv && popd > /dev/null" >> /etc/profile.d
 
+
 # ADD environment.yml /tmp/environment.yml
 # RUN conda env create -n $CONDA_ENV -f /tmp/environment.yml && conda clean -afy
 # RUN echo "source activate $CONDA_ENV" >> /etc/bash.bashrc

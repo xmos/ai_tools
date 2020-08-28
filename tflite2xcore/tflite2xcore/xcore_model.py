@@ -62,7 +62,7 @@ class Buffer(__ComparableContainer):
     def __eq__(self, other: Any) -> bool:
         return (
             super().__eq__(object)
-            and len(self.owners) == len(other.owners)
+            and len(self.owners) == len(other.owners)  # avoids circular dependencies
             and self.data == other.data
         )
 
@@ -187,6 +187,18 @@ class Tensor(__ComparableContainer):
     @property
     def model(self) -> "XCOREModel":
         return self.subgraph.model
+
+    def __eq__(self, other: Any) -> bool:
+        return (
+            super().__eq__(object)
+            and self.name == other.name
+            and self.type == other.type
+            and self.shape == other.shape
+            and self.buffer == other.buffer
+            and self.quantization == other.quantization
+            and len(self.producers) == len(other.producers)  # avoids circular dependencies
+            and len(self.consumers) == len(other.consumers)  # avoids circular dependencies
+        )
 
     def __str__(self) -> str:
         return f"name={self.name}, type={self.type.name}, shape={self.shape}, buffer={self.buffer}"

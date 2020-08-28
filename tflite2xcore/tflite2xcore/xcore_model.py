@@ -1,18 +1,19 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
 import logging
-import numpy as np
+import numpy as np  # type: ignore
 from collections import Counter
-from typing import Union, Optional, Iterable, List
+from typing import Any, Union, Optional, Iterable, List, Dict
 
-from tflite2xcore.xcore_schema import TensorType, OperatorCode
+from tflite2xcore.xcore_schema import TensorType, OperatorCode, __ComparableContainer
 from tflite2xcore.serialization.flatbuffers_io import XCORESerializationMixin
 
 
 __BufferDataType = Union[None, list, tuple, bytes, bytearray, np.ndarray]
+OptionsType = Dict[str, Any]
 
 
-class Buffer:
+class Buffer(__ComparableContainer):
     def __init__(
         self,
         model: "XCOREModel",
@@ -24,8 +25,8 @@ class Buffer:
         # Use XCOREModel.create_buffer instead.
 
         self.model = model  # parent
-        self.data = data
-        self.owners: List["Tensor"] = list(owners or [])
+        self.data = data  # type: ignore # see https://github.com/python/mypy/issues/3004
+        self.owners = list(owners or [])
 
     @property
     def data(self) -> bytes:
@@ -56,15 +57,12 @@ class Buffer:
     def __str__(self) -> str:
         return f"Buffer[{len(self.data)}]"
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         return (
-            type(self) is type(other)
+            super().__eq__(object)
             and len(self.owners) == len(other.owners)
             and self.data == other.data
         )
-
-    def __ne__(self, other: object) -> bool:
-        return not self == other
 
     def sanity_check(self) -> None:
         assert self in self.model.buffers
@@ -72,41 +70,51 @@ class Buffer:
             assert owner.buffer is self
 
 
-class Operator:
+class Operator(__ComparableContainer):
     def __init__(
         self,
-        subgraph,
-        operator_code,
-        name=None,
-        inputs=None,
-        outputs=None,
-        builtin_options=None,
-        custom_options=None,
+        subgraph: "Subgraph",
+        operator_code: OperatorCode,
+        name: Optional[str] = None,
+        inputs: Optional[Iterable["Tensor"]] = None,
+        outputs: Optional[Iterable["Tensor"]] = None,
+        builtin_options: Optional[OptionsType] = None,
+        custom_options: Optional[OptionsType] = None,
     ):
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
-        assert isinstance(operator_code, OperatorCode)
 
         self.subgraph = subgraph  # parent
         self.operator_code = operator_code
         self.name = name
-        self.inputs = inputs or []
-        self.outputs = outputs or []
-        self.builtin_options = builtin_options
+        self.inputs = list(inputs or [])
+        self.outputs = list(outputs or [])
+        self.builtin_options = builtin_options or {}
         self.custom_options = custom_options or {}
 
-    def add_custom_options(self, **kwargs):
+    def add_custom_options(self, **kwargs: Any) -> None:
         if kwargs:
             self.custom_options.update(kwargs)
 
     @property
-    def model(self):
+    def model(self) -> "XCOREModel":
         return self.subgraph.model
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"({self.subgraph.operators.index(self)}) operator_code={self.operator_code}"
 
-    def sanity_check(self):
+    def __eq__(self, other: Any) -> bool:
+        return (
+            super().__eq__(object)
+            and self.operator_code == other.operator_code
+            and self.name == other.name
+            and self.inputs == other.inputs
+            and self.outputs == other.outputs
+            and self.builtin_options == other.builtin_options
+            and self.custom_options == other.custom_options
+        )
+
+    def sanity_check(self) -> None:
         assert self in self.subgraph.operators
         # check for duplicates
         assert len(self.inputs) == len(set(self.inputs))
@@ -151,16 +159,16 @@ class Tensor:
         self.producers = producers or []
         self.consumers = consumers or []
 
-    @property
-    def shape(self):
-        return self._shape
-
     __SHAPE_MAPPER = {
         type(None): lambda x: tuple(),
         tuple: lambda x: x,
         list: lambda x: tuple(x),
         np.ndarray: lambda x: tuple(x.tolist()),
     }
+
+    @property
+    def shape(self):
+        return self._shape
 
     @shape.setter
     def shape(self, shape):

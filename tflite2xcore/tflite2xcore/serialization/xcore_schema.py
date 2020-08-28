@@ -8,6 +8,16 @@ from typing import Optional, Union, Any
 from . import schema_py_generated as schema  # type: ignore
 
 
+class __ComparableContainer:
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, type(self)):
+            return True
+        return NotImplemented
+
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
+
 #  ----------------------------------------------------------------------------
 #                                  TensorType
 #  ----------------------------------------------------------------------------
@@ -126,9 +136,8 @@ class XCOREOpCodes(CustomOpCodes, KnownOpCodes):
     XC_conv2d_depthwise = "XC_conv2d_depthwise"
 
 
-class OperatorCode:
+class OperatorCode(__ComparableContainer):
     def __init__(self, opcode: ValidOpCodes, *, version: Optional[int] = None) -> None:
-        assert isinstance(opcode, ValidOpCodes), "Invalid opcode!"
         self.version = version or 1
         self.code = opcode
 

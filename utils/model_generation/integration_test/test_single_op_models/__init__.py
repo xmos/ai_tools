@@ -47,11 +47,6 @@ class ImageInputOpTestModelGenerator(IntegrationTestModelGenerator):
             layers=[self._op_layer(input_shape=self._input_shape)]
         )
 
-    def build(self) -> None:
-        self._prep_backend()
-        self._model = self._build_core_model()
-        self._model.build()
-
 
 class ChannelAgnosticOpTestModelGenerator(ImageInputOpTestModelGenerator):
     def _check_channel_count(self, channels: int) -> None:

@@ -4,7 +4,7 @@ import pytest  # type: ignore
 import tensorflow as tf  # type: ignore
 from typing import Optional, Tuple
 
-from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation import Configuration
 from tflite2xcore._model_generation.utils import parse_init_config

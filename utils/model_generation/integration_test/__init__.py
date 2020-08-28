@@ -4,6 +4,8 @@ import logging
 import pytest  # type: ignore
 import _pytest  # type: ignore # NOTE: for typing only
 import numpy as np  # type: ignore
+import tensorflow as tf  # type: ignore
+from abc import abstractmethod
 from pathlib import Path
 from typing import Union, List, NamedTuple, Tuple, Dict
 
@@ -108,6 +110,15 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
         gen = super().load(dirpath)
         assert isinstance(gen, IntegrationTestModelGenerator)
         return gen
+
+    @abstractmethod
+    def _build_core_model(self) -> tf.keras.Model:
+        raise NotImplementedError()
+
+    def build(self) -> None:
+        self._prep_backend()
+        self._model = self._build_core_model()
+        self._model.build()
 
 
 #  ----------------------------------------------------------------------------

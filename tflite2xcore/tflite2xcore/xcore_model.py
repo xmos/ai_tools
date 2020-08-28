@@ -3,13 +3,15 @@
 import logging
 import numpy as np  # type: ignore
 from collections import Counter
-from typing import Any, Union, Optional, Iterable, List, Dict
+from typing import Any, Union, Optional, Iterable, Dict, Tuple, List
 
 from tflite2xcore.xcore_schema import TensorType, OperatorCode, __ComparableContainer
 from tflite2xcore.serialization.flatbuffers_io import XCORESerializationMixin
 
 
 __BufferDataType = Union[None, list, tuple, bytes, bytearray, np.ndarray]
+__IntType = Union[int, np.integer]
+__ShapeType = Union[None, Iterable[__IntType], np.ndarray]
 OptionsType = Dict[str, Any]
 
 
@@ -26,7 +28,7 @@ class Buffer(__ComparableContainer):
 
         self.model = model  # parent
         self.data = data  # type: ignore # see https://github.com/python/mypy/issues/3004
-        self.owners = list(owners or [])
+        self.owners: List["Tensor"] = list(owners or [])
 
     @property
     def data(self) -> bytes:
@@ -126,17 +128,19 @@ class Operator(__ComparableContainer):
             assert self in tensor.producers
 
 
-class Tensor:
+class Tensor(__ComparableContainer):
+    buffer: Buffer
+
     def __init__(
         self,
-        subgraph,
-        name,
-        type_,
+        subgraph: "Subgraph",
+        name: str,
+        type_: TensorType,
         shape,
-        buffer=None,
-        quantization=None,
-        producers=None,
-        consumers=None,
+        buffer: Optional[Buffer] = None,
+        quantization: Optional[OptionsType] = None,
+        producers: Optional[Iterable[Operator]] = None,
+        consumers: Optional[Iterable[Operator]] = None,
     ):
         # Generally, do not use this constructor to instantiate Tensor!
         # Use Subgraph.create_tensor instead.
@@ -154,40 +158,40 @@ class Tensor:
             self.buffer = buffer
         self.buffer.owners.append(self)
 
-        self.quantization = quantization
-
-        self.producers = producers or []
-        self.consumers = consumers or []
-
-    __SHAPE_MAPPER = {
-        type(None): lambda x: tuple(),
-        tuple: lambda x: x,
-        list: lambda x: tuple(x),
-        np.ndarray: lambda x: tuple(x.tolist()),
-    }
+        self.quantization = quantization or {}
+        self.producers: List[Operator] = list(producers or [])
+        self.consumers: List[Operator] = list(consumers or [])
 
     @property
-    def shape(self):
+    def shape(self) -> Tuple[int, ...]:
         return self._shape
 
     @shape.setter
-    def shape(self, shape):
-        shape_type = type(shape)
-        try:
-            self._shape = self.__SHAPE_MAPPER[shape_type](shape)
-        except KeyError as e:
-            raise TypeError(
-                "Type of Tensor.shape should be one of " f"{self.__SHAPE_MAPPER.keys()}"
-            ) from e
+    def shape(self, shape: __ShapeType) -> None:
+        if shape is None:
+            shape = []
+        elif isinstance(shape, np.ndarray):
+            shape = shape.tolist()
+        else:
+            shape = list(shape)
+
+        for j, s in enumerate(shape):
+            if not isinstance(s, (int, np.integer)):
+                raise TypeError(
+                    "Tensor.shape must be an iterable of integers, "
+                    f"got shape[{j}] = {s} with type {type(s)}"
+                )
+
+        self._shape = tuple(int(s) for s in shape)
 
     @property
-    def model(self):
+    def model(self) -> "XCOREModel":
         return self.subgraph.model
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"name={self.name}, type={self.type.name}, shape={self.shape}, buffer={self.buffer}"
 
-    def sanity_check(self):
+    def sanity_check(self) -> None:
         assert self in self.subgraph.tensors
         assert self in self.buffer.owners
         # check for duplicates
@@ -200,26 +204,15 @@ class Tensor:
             assert self in op.inputs
 
     @property
-    def sanitized_name(self):
+    def sanitized_name(self) -> str:
         """Return a name that is safe to use in source code"""
         return self.name.replace("/", "_")
 
     @property
-    def name_segments(self):
-        return self.name.split("/")
+    def size(self) -> int:
+        return self.type.to_bytes() * np.prod(self.shape)
 
-    @property
-    def base_name(self):
-        return self.name_segments()[-1]
-
-    @property
-    def size(self):
-        size = self.type.to_bytes()
-        for s in self.shape:
-            size *= s
-        return size
-
-    def as_array(self, dtype=None):
+    def as_array(self, dtype: Optional[type] = None) -> np.ndarray:
         arr = np.frombuffer(self.buffer._data, dtype=self.type.to_numpy_dtype())
         if dtype:
             arr = arr.astype(dtype)
@@ -441,7 +434,7 @@ class XCOREModel(XCORESerializationMixin):
         self.subgraphs = subgraphs or []
         self.metadata = metadata or []
 
-    def create_buffer(self, data=None):
+    def create_buffer(self, data=None) -> Buffer:
         buffer = Buffer(self, data)
         self.buffers.append(buffer)
         return buffer

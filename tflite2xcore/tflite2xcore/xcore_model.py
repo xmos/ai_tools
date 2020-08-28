@@ -3,26 +3,36 @@
 import logging
 import numpy as np
 from collections import Counter
+from typing import Union, Optional, Iterable, List
 
 from tflite2xcore.xcore_schema import TensorType, OperatorCode
 from tflite2xcore.serialization.flatbuffers_io import XCORESerializationMixin
 
 
+__BufferDataType = Union[None, list, tuple, bytes, bytearray, np.ndarray]
+
+
 class Buffer:
-    def __init__(self, model, data=None, *, owners=None):
+    def __init__(
+        self,
+        model: "XCOREModel",
+        data: __BufferDataType = None,
+        *,
+        owners: Optional[Iterable["Tensor"]] = None,
+    ) -> None:
         # Generally, do not use this constructor to instantiate Buffer!
         # Use XCOREModel.create_buffer instead.
 
         self.model = model  # parent
         self.data = data
-        self.owners = owners or []
+        self.owners: List["Tensor"] = list(owners or [])
 
     @property
-    def data(self):
+    def data(self) -> bytes:
         return self._data
 
     @data.setter
-    def data(self, data):
+    def data(self, data: __BufferDataType) -> None:
         if data is None:
             self._data = b""
         elif isinstance(data, (list, tuple, bytes, bytearray)):
@@ -40,13 +50,23 @@ class Buffer:
         else:
             raise TypeError(f"data must be list/tuple of bytes or numpy array")
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Buffer[{len(self.data)}]"
 
-    def sanity_check(self):
+    def __eq__(self, other: object) -> bool:
+        return (
+            type(self) is type(other)
+            and len(self.owners) == len(other.owners)
+            and self.data == other.data
+        )
+
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
+    def sanity_check(self) -> None:
         assert self in self.model.buffers
         for owner in self.owners:
             assert owner.buffer is self
@@ -199,7 +219,7 @@ class Tensor:
 
     @property
     def is_constant(self) -> bool:
-        # There is an esoteric case where by a tensor without any producers could potentially be 
+        # There is an esoteric case where by a tensor without any producers could potentially be
         # modified if it shares a buffer with a tensor from another subgraph.
         # As such we also check if all owners of its buffer have no producers and are not inputs
         return all(
@@ -304,13 +324,7 @@ class Subgraph:
     ):
         name = self.generate_unique_op_name(operator_code)
         operator = Operator(
-            self,
-            operator_code,
-            name,
-            inputs,
-            outputs,
-            builtin_options,
-            custom_options,
+            self, operator_code, name, inputs, outputs, builtin_options, custom_options,
         )
         self.operators.append(operator)
         for input_tensor in operator.inputs:

@@ -141,6 +141,7 @@ class SplitBsignPass(LceConv2dPass):
 
         op.inputs = [bsign_op.outputs[0], op.inputs[1]]
         bsign_op.inputs[0].consumers.remove(op)
+        bsign_output.buffer.data = np.int32(bsign_output_shape)
 
 
 # Split out padding to a separate op from BConv

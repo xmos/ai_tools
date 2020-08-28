@@ -8,20 +8,6 @@ from typing import Optional, Union, Any
 from . import schema_py_generated as schema  # type: ignore
 
 
-class __ComparableContainer:
-    def sanity_check(self) -> None:
-        pass
-
-    def __eq__(self, other: object) -> bool:
-        self.sanity_check()
-        if isinstance(other, type(self)):
-            return True
-        return NotImplemented
-
-    def __ne__(self, other: object) -> bool:
-        return not self == other
-
-
 #  ----------------------------------------------------------------------------
 #                                  TensorType
 #  ----------------------------------------------------------------------------
@@ -140,7 +126,7 @@ class XCOREOpCodes(CustomOpCodes, KnownOpCodes):
     XC_conv2d_depthwise = "XC_conv2d_depthwise"
 
 
-class OperatorCode(__ComparableContainer):
+class OperatorCode:
     def __init__(self, opcode: ValidOpCodes, *, version: Optional[int] = None) -> None:
         self.version = version or 1
         self.code = opcode

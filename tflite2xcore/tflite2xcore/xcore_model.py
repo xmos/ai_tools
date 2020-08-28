@@ -2,24 +2,35 @@
 
 import logging
 import numpy as np  # type: ignore
+from abc import ABC, abstractmethod
 from collections import Counter
 from typing import Any, Union, Optional, Iterable, Dict, Tuple, List
 
-from tflite2xcore.xcore_schema import TensorType, OperatorCode, __ComparableContainer
+from tflite2xcore.xcore_schema import TensorType, OperatorCode
 from tflite2xcore.serialization.flatbuffers_io import XCORESerializationMixin
 
 
-__BufferDataType = Union[None, list, tuple, bytes, bytearray, np.ndarray]
-__IntType = Union[int, np.integer]
-__ShapeType = Union[None, Iterable[__IntType], np.ndarray]
+_BufferDataType = Union[None, list, tuple, bytes, bytearray, np.ndarray]
+_IntType = Union[int, np.integer]
+_ShapeType = Union[None, Iterable[_IntType], np.ndarray]
 OptionsType = Dict[str, Any]
 
 
-class Buffer(__ComparableContainer):
+class _AbstractContainer(ABC):
+    @abstractmethod
+    def sanity_check(self) -> None:
+        raise NotImplementedError()
+
+    def is_equal(self, other: Any) -> bool:
+        self.sanity_check()
+        return type(self) is type(other)
+
+
+class Buffer(_AbstractContainer):
     def __init__(
         self,
         model: "XCOREModel",
-        data: __BufferDataType = None,
+        data: _BufferDataType = None,
         *,
         owners: Optional[Iterable["Tensor"]] = None,
     ) -> None:
@@ -35,7 +46,7 @@ class Buffer(__ComparableContainer):
         return self._data
 
     @data.setter
-    def data(self, data: __BufferDataType) -> None:
+    def data(self, data: _BufferDataType) -> None:
         if data is None:
             self._data = b""
         elif isinstance(data, (list, tuple, bytes, bytearray)):
@@ -59,9 +70,9 @@ class Buffer(__ComparableContainer):
     def __str__(self) -> str:
         return f"Buffer[{len(self.data)}]"
 
-    def __eq__(self, other: Any) -> bool:
+    def is_equal(self, other: Any) -> bool:
         return (
-            super().__eq__(object)
+            super().is_equal(other)
             and len(self.owners) == len(other.owners)  # avoids circular dependencies
             and self.data == other.data
         )
@@ -72,7 +83,7 @@ class Buffer(__ComparableContainer):
             assert owner.buffer is self
 
 
-class Operator(__ComparableContainer):
+class Operator(_AbstractContainer):
     def __init__(
         self,
         subgraph: "Subgraph",
@@ -105,9 +116,9 @@ class Operator(__ComparableContainer):
     def __str__(self) -> str:
         return f"({self.subgraph.operators.index(self)}) operator_code={self.operator_code}"
 
-    def __eq__(self, other: Any) -> bool:
+    def is_equal(self, other: Any) -> bool:
         return (
-            super().__eq__(object)
+            super().is_equal(other)
             and self.operator_code == other.operator_code
             and self.name == other.name
             and self.inputs == other.inputs
@@ -128,7 +139,7 @@ class Operator(__ComparableContainer):
             assert self in tensor.producers
 
 
-class Tensor(__ComparableContainer):
+class Tensor(_AbstractContainer):
     buffer: Buffer
 
     def __init__(
@@ -167,7 +178,7 @@ class Tensor(__ComparableContainer):
         return self._shape
 
     @shape.setter
-    def shape(self, shape: __ShapeType) -> None:
+    def shape(self, shape: _ShapeType) -> None:
         if shape is None:
             shape = []
         elif isinstance(shape, np.ndarray):
@@ -188,16 +199,16 @@ class Tensor(__ComparableContainer):
     def model(self) -> "XCOREModel":
         return self.subgraph.model
 
-    def __eq__(self, other: Any) -> bool:
+    def is_equal(self, other: Any) -> bool:
         return (
-            super().__eq__(object)
+            super().is_equal(other)
             and self.name == other.name
             and self.type == other.type
             and self.shape == other.shape
             and self.buffer == other.buffer
             and self.quantization == other.quantization
-            and len(self.producers) == len(other.producers)  # avoids circular dependencies
-            and len(self.consumers) == len(other.consumers)  # avoids circular dependencies
+            and len(self.producers) == len(other.producers)  # avoids circular deps
+            and len(self.consumers) == len(other.consumers)  # avoids circular deps
         )
 
     def __str__(self) -> str:

@@ -7,9 +7,9 @@ ENV TOOLS_PRERELEASE=rc4
 RUN chmod -R 777 /opt/conda
 
 RUN apt-get update && apt-get install -y libncurses5 libncurses5-dev && apt-get clean autoclean
-RUN wget http://intranet/projects/tools/ReleasesTools/${TOOLS_VERSION}_${TOOLS_PRERELEASE}/Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz \
+RUN wget -q http://intranet/projects/tools/ReleasesTools/${TOOLS_VERSION}_${TOOLS_PRERELEASE}/Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz \
     && cd / \
-    && tar xvf Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz
+    && tar xf Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz
 RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} > /dev/null && . SetEnv && popd > /dev/null" >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 

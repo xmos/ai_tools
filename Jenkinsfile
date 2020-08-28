@@ -64,7 +64,7 @@ pipeline {
                 }
                 stage("Check") {
                     steps {
-                        viewEnv("/XMOS/xTIMEcomposer/${env.TOOLS_VERSION}") {
+                        viewEnv("/XMOS/xTIMEcomposer/15.0.0") {
                             sh "conda run -n .venv python -c 'import tensorflow'"
                             sh "xcc --version"
                         }
@@ -72,7 +72,7 @@ pipeline {
                 }
                 stage("Build") {
                     steps {
-                        viewEnv('/XMOS/xTIMEcomposer/${TOOLS_VERSION}') {
+                        viewEnv("/XMOS/xTIMEcomposer/15.0.0") {
                             sh "conda run -n .venv make all"
                         }
                     }

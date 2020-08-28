@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y libncurses5 libncurses5-dev && apt-get 
 RUN wget -q http://intranet/projects/tools/ReleasesTools/${TOOLS_VERSION}_${TOOLS_PRERELEASE}/Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz \
     && cd / \
     && tar xf Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz \
+    && chmod -R 777 /XMOS \
     && rm -f Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz
 RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} > /dev/null && . SetEnv && popd > /dev/null" >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh

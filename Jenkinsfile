@@ -59,16 +59,16 @@ pipeline {
                 stage("Update all packages") {
                     when { expression { return params.UPDATE_ALL } }
                     steps {
-                        sh """conda update --all -p .venv"""
+                        sh "conda update --all -p .venv"
                     }
                 }
                 stage("Install local package") {
                     steps {
-                        sh """conda run -p .venv pip install -e ./tflite2xcore"""
-                        sh """bash -lc 'xcc --version'"""
-                        sh """xcc --version""" // check tools work
+                        sh "conda run -p .venv pip install -e ./tflite2xcore"
+                        sh "bash -lc 'xcc --version'"
+                        sh "xcc --version" // check tools work
                     }
-                }s
+                }
                 stage("Check") {
                     steps {
                         sh """#!/bin/bash -l

@@ -48,15 +48,10 @@ pipeline {
             stages {
                 stage("Create env") {
                     steps {
-                        sh """#!/bin/bash -l
-                              conda env create -p .venv -f environment.yml"""
-                        sh """#!/bin/bash -l
-                              conda list
-                              conda list -p .venv"""
-                        sh """conda list -p .venv"""
-                        withEnv(["CONDA_DEFAULT_ENV=.venv"]) {
-                            sh """#!/bin/bash
-                                  conda list"""
+                        sh "conda env create -p .venv -f environment.yml"
+                        sh "conda list"
+                        sh "conda list -p .venv"
+                        withEnv(["CONDA_PREFIX=.venv"]) {
                             sh "conda list"
                         }
                     }
@@ -64,18 +59,16 @@ pipeline {
                 stage("Update all packages") {
                     when { expression { return params.UPDATE_ALL } }
                     steps {
-                        sh """#!/bin/bash -l
-                              conda update --all"""
+                        sh """conda update --all -p .venv"""
                     }
                 }
                 stage("Install local package") {
                     steps {
                         sh """conda run -p .venv pip install -e ./tflite2xcore"""
-                        sh """#!/bin/bash -l    
-                              xrun --version"""
-                        sh """xrun --version""" // check tools work
+                        sh """bash -lc 'xcc --version'"""
+                        sh """xcc --version""" // check tools work
                     }
-                }
+                }s
                 stage("Check") {
                     steps {
                         sh """#!/bin/bash -l

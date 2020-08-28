@@ -41,7 +41,7 @@ class _AbstractContainer(ABC):
 
     @staticmethod
     def _compare_lists(
-        l1: Sequence[_AbstractContainer], l2: Sequence[_AbstractContainer]
+        l1: Sequence["_AbstractContainer"], l2: Sequence["_AbstractContainer"]
     ) -> bool:
         if len(l1) != len(l2):
             return False

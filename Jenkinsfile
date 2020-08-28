@@ -46,6 +46,21 @@ pipeline {
                 }
             }
             stages {
+                stage("Create env") {
+                    steps {
+                        sh """#!/bin/bash -l
+                              conda env create -p .venv -f environment.yml"""
+                        sh """#!/bin/bash -l
+                              conda list
+                              conda list -p .venv"""
+                        sh """conda list -p .venv"""
+                        withEnv(["CONDA_DEFAULT_ENV=.venv"]) {
+                            sh """#!/bin/bash
+                                  conda list"""
+                            sh "conda list"
+                        }
+                    }
+                }
                 stage("Update all packages") {
                     when { expression { return params.UPDATE_ALL } }
                     steps {
@@ -55,10 +70,10 @@ pipeline {
                 }
                 stage("Install local package") {
                     steps {
-                        sh """#!/bin/bash -l
+                        sh """conda run -p .venv pip install -e ./tflite2xcore"""
+                        sh """#!/bin/bash -l    
                               xrun --version"""
                         sh """xrun --version""" // check tools work
-                        sh """conda run pip install -e ./tflite2xcore"""
                     }
                 }
                 stage("Check") {

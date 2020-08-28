@@ -64,6 +64,7 @@ pipeline {
                 }
                 stage("Check") {
                     steps {
+                        sh "env"
                         viewEnv("/XMOS/xTIMEcomposer/15.0.0") {
                             sh "conda run -n .venv python -c 'import tensorflow'"
                             sh "xcc --version"

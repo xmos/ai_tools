@@ -4,7 +4,18 @@ import logging
 import numpy as np  # type: ignore
 from abc import ABC, abstractmethod
 from collections import Counter
-from typing import Any, Union, Optional, Iterable, Dict, Tuple, List, Sequence
+from typing import (
+    Any,
+    Union,
+    Optional,
+    Iterable,
+    Dict,
+    Tuple,
+    List,
+    Sequence,
+    Generic,
+    TypeVar,
+)
 
 from tflite2xcore.xcore_schema import TensorType, OperatorCode
 from tflite2xcore.serialization.flatbuffers_io import XCORESerializationMixin
@@ -45,20 +56,23 @@ class _AbstractContainer(ABC):
         return False
 
 
-class Buffer(_AbstractContainer):
+T = TypeVar("T", bound="_BufferOwnerContainer")
+
+
+class Buffer(_AbstractContainer, Generic[T]):
     def __init__(
         self,
         model: "XCOREModel",
         data: _BufferDataType = None,
         *,
-        owners: Optional[Iterable["Tensor"]] = None,
+        owners: Optional[Iterable[T]] = None,
     ) -> None:
         # Generally, do not use this constructor to instantiate Buffer!
         # Use XCOREModel.create_buffer instead.
 
         self.model = model  # parent
         self.data = data  # type: ignore # see https://github.com/python/mypy/issues/3004
-        self.owners: List["Tensor"] = list(owners or [])
+        self.owners: List[T] = list(owners or [])
 
     @property
     def data(self) -> bytes:
@@ -158,9 +172,34 @@ class Operator(_AbstractContainer):
             assert self in tensor.producers
 
 
-class Tensor(_AbstractContainer):
+class _BufferOwnerContainer(_AbstractContainer):
     buffer: Buffer
 
+    @property
+    @abstractmethod
+    def model(self) -> "XCOREModel":
+        raise NotImplementedError()
+
+    def __init__(self, name: str, buffer: Optional[Buffer] = None) -> None:
+        self.name = name
+
+        if buffer is None:
+            self.buffer = self.model.create_buffer()
+        else:
+            assert isinstance(buffer, Buffer)
+            assert buffer in self.model.buffers
+            self.buffer = buffer
+        self.buffer.owners.append(self)
+
+    def is_equal(self, other: Any) -> bool:
+        return (
+            super().is_equal(other)
+            and self.name == other.name
+            and self.buffer.is_equal(other.buffer)
+        )
+
+
+class Tensor(_BufferOwnerContainer):
     def __init__(
         self,
         subgraph: "Subgraph",
@@ -175,18 +214,10 @@ class Tensor(_AbstractContainer):
         # Generally, do not use this constructor to instantiate Tensor!
         # Use Subgraph.create_tensor instead.
         self.subgraph = subgraph  # parent
-        self.name = name
         assert isinstance(type_, TensorType)
         self.type = type_
         self.shape = shape
-
-        if buffer is None:
-            self.buffer = self.model.create_buffer()
-        else:
-            assert isinstance(buffer, Buffer)
-            assert buffer in self.model.buffers
-            self.buffer = buffer
-        self.buffer.owners.append(self)
+        super().__init__(name, buffer)
 
         self.quantization = quantization or {}
         self.producers: List[Operator] = list(producers or [])
@@ -221,10 +252,8 @@ class Tensor(_AbstractContainer):
     def is_equal(self, other: Any) -> bool:
         return (
             super().is_equal(other)
-            and self.name == other.name
             and self.type == other.type
             and self.shape == other.shape
-            and self.buffer.is_equal(other.buffer)
             and self.quantization == other.quantization
             and len(self.producers) == len(other.producers)  # avoids circular deps
             and len(self.consumers) == len(other.consumers)  # avoids circular deps
@@ -450,24 +479,23 @@ class Subgraph(_AbstractContainer):
             tensor.sanity_check()
 
 
-class Metadata:
-    def __init__(self, model, name, buffer=None):
+class Metadata(_BufferOwnerContainer):
+    def __init__(
+        self, model: "XCOREModel", name: str, buffer: Optional[Buffer] = None
+    ) -> None:
         # Generally, do not use this constructor to instantiate Metadata!
         # Use XCOREModel.create_metadata instead.
-        self.model = model  # parent
-        self.name = name
-        if buffer:
-            assert isinstance(buffer, Buffer)
-            assert buffer in self.model.buffers
-            self.buffer = buffer
-        else:
-            self.buffer = self.model.create_buffer()
-        self.buffer.owners.append(self)
+        self._model = model  # parent
+        super().__init__(name, buffer)
 
-    def __str__(self):
+    @property
+    def model(self) -> "XCOREModel":
+        return self._model
+
+    def __str__(self) -> str:
         return f"name={self.name}, buffer={self.buffer}"
 
-    def sanity_check(self):
+    def sanity_check(self) -> None:
         assert self in self.buffer.owners
 
 
@@ -487,7 +515,7 @@ class XCOREModel(XCORESerializationMixin):
         self.metadata = metadata or []
 
     def create_buffer(self, data=None) -> Buffer:
-        buffer = Buffer(self, data)
+        buffer: Buffer = Buffer(self, data)
         self.buffers.append(buffer)
         return buffer
 

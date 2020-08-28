@@ -21,7 +21,7 @@ pipeline {
         stage ("Build and Push Image") {
             when {
                 anyOf {
-                    changeset pattern: "(environment.*\\.yml)|(Dockerfile)", comparator: "REGEXP"
+                    changeset pattern: "Dockerfile", comparator: "REGEXP"
                     expression { return params.PUSH_IMAGE }
                 }
             }
@@ -48,10 +48,10 @@ pipeline {
             stages {
                 stage("Create env") {
                     steps {
-                        sh "conda env create -p .venv -f environment.yml"
+                        sh "conda env create -n .venv -f environment.yml"
                         sh "conda list"
-                        sh "conda list -p .venv"
-                        withEnv(["CONDA_PREFIX=.venv"]) {
+                        sh "conda list -n .venv"
+                        withEnv(["CONDA_DEFAULT_ENV=.venv"]) {
                             sh "conda list"
                         }
                     }
@@ -59,27 +59,19 @@ pipeline {
                 stage("Update all packages") {
                     when { expression { return params.UPDATE_ALL } }
                     steps {
-                        sh "conda update --all -p .venv"
-                    }
-                }
-                stage("Install local package") {
-                    steps {
-                        sh "conda run -p .venv pip install -e ./tflite2xcore"
-                        sh "bash -lc 'xcc --version'"
-                        sh "xcc --version" // check tools work
+                        sh "conda update --all -n .venv"
                     }
                 }
                 stage("Check") {
                     steps {
-                        sh """#!/bin/bash -l
-                              conda list --export
-                              python -c 'import tensorflow'"""
+                        withEnv(["CONDA_DEFAULT_ENV=.venv"]) {
+                            sh "python -c 'import tensorflow'"
+                        }
                     }
                 }
                 stage("Build") {
                     steps {
-                        sh """#!/bin/bash -l
-                              make all"""
+                        sh "make all"
                     }
                 }
             }

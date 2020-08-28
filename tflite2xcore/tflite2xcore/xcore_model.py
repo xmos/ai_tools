@@ -4,7 +4,7 @@ import logging
 import numpy as np  # type: ignore
 from abc import ABC, abstractmethod
 from collections import Counter
-from typing import Any, Union, Optional, Iterable, Dict, Tuple, List
+from typing import Any, Union, Optional, Iterable, Dict, Tuple, List, Sequence
 
 from tflite2xcore.xcore_schema import TensorType, OperatorCode
 from tflite2xcore.serialization.flatbuffers_io import XCORESerializationMixin
@@ -16,14 +16,33 @@ _ShapeType = Union[None, Iterable[_IntType], np.ndarray]
 OptionsType = Dict[str, Any]
 
 
+def _remove_if_contained(ll: list, obj: object):
+    try:
+        ll.remove(obj)
+    except ValueError:
+        pass
+
+
 class _AbstractContainer(ABC):
     @abstractmethod
     def sanity_check(self) -> None:
         raise NotImplementedError()
 
+    @staticmethod
+    def _compare_lists(
+        l1: Sequence[_AbstractContainer], l2: Sequence[_AbstractContainer]
+    ) -> bool:
+        if len(l1) != len(l2):
+            return False
+
+        return all(a.is_equal(b) for a, b in zip(l1, l2))
+
     def is_equal(self, other: Any) -> bool:
-        self.sanity_check()
-        return type(self) is type(other)
+        if type(self) is type(other):
+            self.sanity_check()
+            other.sanity_check()
+            return True
+        return False
 
 
 class Buffer(_AbstractContainer):
@@ -93,7 +112,7 @@ class Operator(_AbstractContainer):
         outputs: Optional[Iterable["Tensor"]] = None,
         builtin_options: Optional[OptionsType] = None,
         custom_options: Optional[OptionsType] = None,
-    ):
+    ) -> None:
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
 
@@ -121,8 +140,8 @@ class Operator(_AbstractContainer):
             super().is_equal(other)
             and self.operator_code == other.operator_code
             and self.name == other.name
-            and self.inputs == other.inputs
-            and self.outputs == other.outputs
+            and self._compare_lists(self.inputs, other.inputs)
+            and self._compare_lists(self.outputs, other.outputs)
             and self.builtin_options == other.builtin_options
             and self.custom_options == other.custom_options
         )
@@ -152,7 +171,7 @@ class Tensor(_AbstractContainer):
         quantization: Optional[OptionsType] = None,
         producers: Optional[Iterable[Operator]] = None,
         consumers: Optional[Iterable[Operator]] = None,
-    ):
+    ) -> None:
         # Generally, do not use this constructor to instantiate Tensor!
         # Use Subgraph.create_tensor instead.
         self.subgraph = subgraph  # parent
@@ -205,7 +224,7 @@ class Tensor(_AbstractContainer):
             and self.name == other.name
             and self.type == other.type
             and self.shape == other.shape
-            and self.buffer == other.buffer
+            and self.buffer.is_equal(other.buffer)
             and self.quantization == other.quantization
             and len(self.producers) == len(other.producers)  # avoids circular deps
             and len(self.consumers) == len(other.consumers)  # avoids circular deps
@@ -252,37 +271,53 @@ class Tensor(_AbstractContainer):
         )
 
 
-class Subgraph:
+class Subgraph(_AbstractContainer):
     def __init__(
-        self, model, name=None, inputs=None, outputs=None, operators=None, tensors=None
-    ):
+        self,
+        model: "XCOREModel",
+        name: str,
+        inputs: Optional[Iterable[Tensor]] = None,
+        outputs: Optional[Iterable[Tensor]] = None,
+        operators: Optional[Iterable[Operator]] = None,
+        tensors: Optional[Iterable[Tensor]] = None,
+    ) -> None:
         # Generally, do not use this constructor to instantiate Subgraph!
         # Use XCOREModel.create_subgraph instead.
         self.model = model  # parent
         self.name = name
-        self.inputs = inputs or []
-        self.outputs = outputs or []
-        self.operators = operators or []
-        self.tensors = tensors or []
+        self.inputs: List[Tensor] = list(inputs or [])
+        self.outputs: List[Tensor] = list(outputs or [])
+        self.operators: List[Operator] = list(operators or [])
+        self.tensors: List[Tensor] = list(tensors or [])
 
     @property
-    def intermediates(self):
+    def intermediates(self) -> List[Tensor]:
         # intermediates are any tensors that are not an input or an output
         return [t for t in self.tensors if t not in (self.inputs + self.outputs)]
 
+    def is_equal(self, other: Any) -> bool:
+        return (
+            super().is_equal(other)
+            and self.name == other.name
+            and self._compare_lists(self.inputs, other.inputs)
+            and self._compare_lists(self.outputs, other.outputs)
+            and self._compare_lists(self.operators, other.operators)
+            and self._compare_lists(self.tensors, other.tensors)
+        )
+
     def create_tensor(
         self,
-        name,
-        type_,
-        shape,
+        name: str,
+        type_: TensorType,
+        shape: _ShapeType,
         *,
-        buffer=None,
-        quantization=None,
-        isinput=False,
-        isoutput=False,
-        producers=None,
-        consumers=None,
-    ):
+        buffer: Optional[Buffer] = None,
+        quantization: Optional[OptionsType] = None,
+        isinput: bool = False,
+        isoutput: bool = False,
+        producers: Optional[Iterable[Operator]] = None,
+        consumers: Optional[Iterable[Operator]] = None,
+    ) -> Tensor:
 
         name = self.make_unique_tensor_name(name)
         tensor = Tensor(
@@ -295,28 +330,23 @@ class Subgraph:
             self.outputs.append(tensor)
         return tensor
 
-    def remove_tensor(self, tensor):
+    def remove_tensor(self, tensor: Tensor) -> None:
+        """ Removes the tensor from the subgraph and cuts all its connections.
+
+            Note that the tensor will be left in an illegal state.
+        """
         assert tensor in self.tensors
         self.tensors.remove(tensor)
-        if tensor in self.inputs:
-            self.inputs.remove(tensor)
-        if tensor in self.outputs:
-            self.outputs.remove(tensor)
+        _remove_if_contained(self.inputs, tensor)
+        _remove_if_contained(self.outputs, tensor)
         for op in tensor.consumers:
-            try:
-                op.inputs.remove(tensor)
-            except ValueError:
-                pass
+            _remove_if_contained(op.inputs, tensor)
         for op in tensor.producers:
-            try:
-                op.outputs.remove(tensor)
-            except ValueError:
-                pass
-        tensor.consumers, tensor.producers = [], []
+            _remove_if_contained(op.outputs, tensor)
         tensor.buffer.owners.remove(tensor)
-        tensor.subgraph = tensor.buffer = None
+        del tensor.consumers, tensor.producers, tensor.subgraph, tensor.buffer
 
-    def generate_unique_op_name(self, operator_code):
+    def generate_unique_op_name(self, operator_code: OperatorCode) -> str:
         existing_names = [op.name for op in self.operators]
         j = 0
         while True:
@@ -324,7 +354,7 @@ class Subgraph:
             if new_name not in existing_names:
                 return new_name
 
-    def make_unique_tensor_name(self, candidate_name):
+    def make_unique_tensor_name(self, candidate_name: str) -> str:
         existing_names = [
             name
             for tensor in self.tensors
@@ -339,13 +369,13 @@ class Subgraph:
 
     def create_operator(
         self,
-        operator_code,
+        operator_code: OperatorCode,
         *,
-        inputs=None,
-        outputs=None,
-        builtin_options=None,
-        custom_options=None,
-    ):
+        inputs: Optional[Iterable[Tensor]] = None,
+        outputs: Optional[Iterable[Tensor]] = None,
+        builtin_options: Optional[OptionsType] = None,
+        custom_options: Optional[OptionsType] = None,
+    ) -> Operator:
         name = self.generate_unique_op_name(operator_code)
         operator = Operator(
             self, operator_code, name, inputs, outputs, builtin_options, custom_options,
@@ -357,23 +387,22 @@ class Subgraph:
             output_tensor.producers.append(operator)
         return operator
 
-    def remove_operator(self, op):
+    def remove_operator(self, op: Operator) -> None:
+        """ Removes the operator from the subgraph and cuts all its connections.
+
+            Note that the operator will be left in an illegal state.
+        """
         assert op in self.operators
         self.operators.remove(op)
         for t in op.inputs:
-            try:
-                t.consumers.remove(op)
-            except ValueError:
-                pass
+            _remove_if_contained(t.consumers, op)
         for t in op.outputs:
-            try:
-                t.producers.remove(op)
-            except ValueError:
-                pass
-        op.inputs, op.outputs = [], []
-        op.subgraph = None
+            _remove_if_contained(t.producers, op)
+        del op.inputs, op.outputs, op.subgraph
 
-    def insert_operator(self, ref_op, new_op, after=False):
+    def insert_operator(
+        self, ref_op: Operator, new_op: Operator, after: bool = False
+    ) -> None:
         """NOTE: this does not rewire inputs/outputs"""
         # find location of reference op
         try:
@@ -388,7 +417,7 @@ class Subgraph:
         # (re)insert new op before/after reference op
         self.operators.insert(ref_idx + (1 if after else 0), new_op)
 
-    def replace_operator(self, op, new_op):
+    def replace_operator(self, op: Operator, new_op: Operator) -> None:
         """NOTE: this does not rewire inputs/outputs"""
         # insert new op
         try:
@@ -398,13 +427,13 @@ class Subgraph:
         # remove old op
         self.remove_operator(op)
 
-    def get_tensor(self, name):
+    def get_tensor(self, name: str) -> Tensor:
         for t in self.tensors:
             if t.name == name:
                 return t
         raise ValueError(f"Tensor with name {name} not found!")
 
-    def sanity_check(self):
+    def sanity_check(self) -> None:
         assert self in self.model.subgraphs
         # check for duplicates
         assert len(self.inputs) == len(set(self.inputs))

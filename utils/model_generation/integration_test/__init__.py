@@ -7,7 +7,7 @@ import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 from abc import abstractmethod
 from pathlib import Path
-from typing import Union, List, NamedTuple, Tuple, Dict
+from typing import Union, List, NamedTuple, Tuple, Dict, Optional
 
 from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
@@ -133,6 +133,21 @@ class FailedElement(NamedTuple):
     predicted: int
 
 
+def __log_deviations(
+    diff: np.ndarray, level: int, *, ex_idx: Optional[int] = None
+) -> None:
+    logger = logging.getLogger()
+    if logger.isEnabledFor(level):
+        devs = [
+            f"{c}/{diff.size} ({c / diff.size:.2%}) with diff={v}"
+            for v, c in zip(*np.unique(diff, return_counts=True))
+            if v
+        ]
+        msg = "Total" if ex_idx is None else f"Example {ex_idx}"
+        msg += " deviations: " + (", ".join(devs) if devs else "None")
+        logger.log(level, msg)
+
+
 def _test_batched_arrays(
     predicted: np.ndarray, expected: np.ndarray, tolerance: Union[int, float]
 ) -> Dict[int, List[FailedElement]]:
@@ -140,20 +155,10 @@ def _test_batched_arrays(
     assert predicted.dtype is expected.dtype
     assert issubclass(predicted.dtype.type, np.integer)  # TODO: generalize to floats
 
-    def collect_deviations(diff: np.ndarray) -> List[str]:
-        return [
-            f"{c}/{diff.size} ({c / diff.size:.2%}) with diff={v}"
-            for v, c in zip(*np.unique(diff, return_counts=True))
-            if v
-        ]
-
     failures: Dict[int, List[FailedElement]] = {}
     diffs = np.abs(np.int32(predicted) - np.int32(expected))
     for j, (arr, arr_ref, diff) in enumerate(zip(predicted, expected, diffs)):
-        devs = collect_deviations(diff)
-        logging.debug(
-            f"Example {j} deviations: " + (", ".join(devs) if devs else "None")
-        )
+        __log_deviations(diff, logging.DEBUG, ex_idx=j)
 
         diff_idx = zip(*np.where(diff > tolerance))
         failed_examples = [
@@ -161,8 +166,7 @@ def _test_batched_arrays(
         ]
         if failed_examples:
             failures[j] = failed_examples
-    devs = collect_deviations(diffs)
-    logging.info(f"Total deviations: " + (", ".join(devs) if devs else "None"))
+    __log_deviations(diffs, logging.INFO)
     return failures
 
 

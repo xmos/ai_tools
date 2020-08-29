@@ -210,7 +210,7 @@ def build_pool(
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, *input_shape]
-    output_shape = [
+    output_shape = [  # TODO: fix this: calculate based on strides and pool_size
         input_shape[0],
         input_shape[1] // 2,
         input_shape[1] // 2,

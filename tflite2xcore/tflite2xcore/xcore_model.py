@@ -15,23 +15,19 @@ from typing import (
     Sequence,
     Generic,
     TypeVar,
+    Type,
 )
 
 from tflite2xcore.xcore_schema import TensorType, OperatorCode
 from tflite2xcore.serialization.flatbuffers_io import XCORESerializationMixin
 
 
-_BufferDataType = Union[None, list, tuple, bytes, bytearray, np.ndarray]
+_BufferDataType = Union[list, tuple, bytes, bytearray, np.ndarray]
 _IntType = Union[int, np.integer]
 _ShapeType = Union[None, Iterable[_IntType], np.ndarray]
+_T = TypeVar("_T", bound="_BufferOwnerContainer", covariant=True)
+_S = TypeVar("_S", bound="_AbstractContainer")
 OptionsType = Dict[str, Any]
-
-
-def _remove_if_contained(ll: list, obj: object):
-    try:
-        ll.remove(obj)
-    except ValueError:
-        pass
 
 
 class _AbstractContainer(ABC):
@@ -48,6 +44,13 @@ class _AbstractContainer(ABC):
 
         return all(a.is_equal(b) for a, b in zip(l1, l2))
 
+    @staticmethod
+    def _remove_if_contained(ll: List[_S], obj: _S) -> None:
+        try:
+            ll.remove(obj)
+        except ValueError:
+            pass
+
     def is_equal(self, other: Any) -> bool:
         if type(self) is type(other):
             self.sanity_check()
@@ -56,30 +59,27 @@ class _AbstractContainer(ABC):
         return False
 
 
-T = TypeVar("T", bound="_BufferOwnerContainer")
-
-
-class Buffer(_AbstractContainer, Generic[T]):
+class Buffer(_AbstractContainer, Generic[_T]):
     def __init__(
         self,
         model: "XCOREModel",
-        data: _BufferDataType = None,
+        data: Optional[_BufferDataType] = None,
         *,
-        owners: Optional[Iterable[T]] = None,
+        owners: Optional[Iterable[_T]] = None,
     ) -> None:
         # Generally, do not use this constructor to instantiate Buffer!
         # Use XCOREModel.create_buffer instead.
 
         self.model = model  # parent
         self.data = data  # type: ignore # see https://github.com/python/mypy/issues/3004
-        self.owners: List[T] = list(owners or [])
+        self.owners: List[_T] = list(owners or [])
 
     @property
     def data(self) -> bytes:
         return self._data
 
     @data.setter
-    def data(self, data: _BufferDataType) -> None:
+    def data(self, data: Optional[_BufferDataType]) -> None:
         if data is None:
             self._data = b""
         elif isinstance(data, (list, tuple, bytes, bytearray)):
@@ -173,14 +173,16 @@ class Operator(_AbstractContainer):
 
 
 class _BufferOwnerContainer(_AbstractContainer):
-    buffer: Buffer
+    buffer: Buffer["_BufferOwnerContainer"]
 
     @property
     @abstractmethod
     def model(self) -> "XCOREModel":
         raise NotImplementedError()
 
-    def __init__(self, name: str, buffer: Optional[Buffer] = None) -> None:
+    def __init__(
+        self, name: str, buffer: Optional[Buffer["_BufferOwnerContainer"]] = None
+    ) -> None:
         self.name = name
 
         if buffer is None:
@@ -200,13 +202,15 @@ class _BufferOwnerContainer(_AbstractContainer):
 
 
 class Tensor(_BufferOwnerContainer):
+    buffer: Buffer["Tensor"]
+
     def __init__(
         self,
         subgraph: "Subgraph",
         name: str,
         type_: TensorType,
-        shape,
-        buffer: Optional[Buffer] = None,
+        shape: _ShapeType,
+        buffer: Optional[Buffer["Tensor"]] = None,
         quantization: Optional[OptionsType] = None,
         producers: Optional[Iterable[Operator]] = None,
         consumers: Optional[Iterable[Operator]] = None,
@@ -216,7 +220,7 @@ class Tensor(_BufferOwnerContainer):
         self.subgraph = subgraph  # parent
         assert isinstance(type_, TensorType)
         self.type = type_
-        self.shape = shape
+        self.shape = shape  # type: ignore # see https://github.com/python/mypy/issues/3004
         super().__init__(name, buffer)
 
         self.quantization = quantization or {}
@@ -281,7 +285,7 @@ class Tensor(_BufferOwnerContainer):
 
     @property
     def size(self) -> int:
-        return self.type.to_bytes() * np.prod(self.shape)
+        return self.type.to_bytes() * np.prod(self.shape)  # type: ignore
 
     def as_array(self, dtype: Optional[type] = None) -> np.ndarray:
         arr = np.frombuffer(self.buffer._data, dtype=self.type.to_numpy_dtype())
@@ -340,7 +344,7 @@ class Subgraph(_AbstractContainer):
         type_: TensorType,
         shape: _ShapeType,
         *,
-        buffer: Optional[Buffer] = None,
+        buffer: Optional[Buffer[Tensor]] = None,
         quantization: Optional[OptionsType] = None,
         isinput: bool = False,
         isoutput: bool = False,
@@ -366,12 +370,12 @@ class Subgraph(_AbstractContainer):
         """
         assert tensor in self.tensors
         self.tensors.remove(tensor)
-        _remove_if_contained(self.inputs, tensor)
-        _remove_if_contained(self.outputs, tensor)
+        self._remove_if_contained(self.inputs, tensor)
+        self._remove_if_contained(self.outputs, tensor)
         for op in tensor.consumers:
-            _remove_if_contained(op.inputs, tensor)
+            self._remove_if_contained(op.inputs, tensor)
         for op in tensor.producers:
-            _remove_if_contained(op.outputs, tensor)
+            self._remove_if_contained(op.outputs, tensor)
         tensor.buffer.owners.remove(tensor)
         del tensor.consumers, tensor.producers, tensor.subgraph, tensor.buffer
 
@@ -424,9 +428,9 @@ class Subgraph(_AbstractContainer):
         assert op in self.operators
         self.operators.remove(op)
         for t in op.inputs:
-            _remove_if_contained(t.consumers, op)
+            self._remove_if_contained(t.consumers, op)
         for t in op.outputs:
-            _remove_if_contained(t.producers, op)
+            self._remove_if_contained(t.producers, op)
         del op.inputs, op.outputs, op.subgraph
 
     def insert_operator(
@@ -480,8 +484,13 @@ class Subgraph(_AbstractContainer):
 
 
 class Metadata(_BufferOwnerContainer):
+    buffer: Buffer["Metadata"]
+
     def __init__(
-        self, model: "XCOREModel", name: str, buffer: Optional[Buffer] = None
+        self,
+        model: "XCOREModel",
+        name: str,
+        buffer: Optional[Buffer["Metadata"]] = None,
     ) -> None:
         # Generally, do not use this constructor to instantiate Metadata!
         # Use XCOREModel.create_metadata instead.
@@ -499,58 +508,66 @@ class Metadata(_BufferOwnerContainer):
         assert self in self.buffer.owners
 
 
-class XCOREModel(XCORESerializationMixin):
+class XCOREModel(XCORESerializationMixin, _AbstractContainer):
     def __init__(
         self,
-        version=None,
-        description=None,
-        subgraphs=None,
-        buffers=None,
-        metadata=None,
-    ):
+        version: Optional[int] = None,
+        description: Optional[str] = None,
+        subgraphs: Optional[Iterable[Subgraph]] = None,
+        buffers: Optional[Iterable[Buffer[_BufferOwnerContainer]]] = None,
+        metadata: Optional[Iterable[Metadata]] = None,
+    ) -> None:
         self.version = version or 3
         self.description = description or ""
-        self.buffers = buffers or []
-        self.subgraphs = subgraphs or []
-        self.metadata = metadata or []
+        self.buffers = list(buffers or [])
+        self.subgraphs = list(subgraphs or [])
+        self.metadata = list(metadata or [])
 
-    def create_buffer(self, data=None) -> Buffer:
-        buffer: Buffer = Buffer(self, data)
+    def is_equal(self, other: Any) -> bool:
+        return (
+            super().is_equal(other)
+            and self.version == other.version
+            and self.description == other.description
+            and self._compare_lists(self.buffers, other.buffers)
+            and self._compare_lists(self.subgraphs, other.subgraphs)
+            and self._compare_lists(self.metadata, other.metadata)
+        )
+
+    def create_buffer(
+        self, data: Optional[_BufferDataType] = None
+    ) -> Buffer[_BufferOwnerContainer]:
+        buffer = Buffer[_BufferOwnerContainer](self, data)
         self.buffers.append(buffer)
         return buffer
 
-    def create_metadata(self, name, buffer=None):
+    def create_metadata(
+        self, name: str, buffer: Optional[Buffer[Metadata]] = None
+    ) -> Metadata:
         metadata = Metadata(self, name, buffer)
         self.metadata.append(metadata)
         return metadata
 
-    def create_subgraph(self, name=None):
+    def create_subgraph(self, name: str = "") -> Subgraph:
         subgraph = Subgraph(self, name)
         self.subgraphs.append(subgraph)
         return subgraph
 
     @property
-    def operator_codes(self):
+    def operator_codes(self) -> List[OperatorCode]:
         # sort the operators codes from most frequent to least frequent
         #   why? because the flatbuffer is a tiny bit smaller if we do
-        counter = Counter()
-
-        for subgraph in self.subgraphs:
-            for operator in subgraph.operators:
-                counter[operator.operator_code] += 1
-
-        sorted_operator_codes = [op_code for op_code, _ in counter.most_common()]
-
-        return sorted_operator_codes
+        counter = Counter(
+            operator.operator_code
+            for subgraph in self.subgraphs
+            for operator in subgraph.operators
+        )
+        return [op_code for op_code, _ in counter.most_common()]
 
     @property
-    def data_size(self):
-        nbytes = 0
-        for buffer in self.buffers:
-            nbytes += len(buffer)
-        return nbytes
+    def data_size(self) -> int:
+        return sum(len(buffer) for buffer in self.buffers)
 
-    def sanity_check(self):
+    def sanity_check(self) -> None:
         # check for duplicates
         assert len(self.subgraphs) == len(set(self.subgraphs))
         assert len(self.buffers) == len(set(self.buffers))

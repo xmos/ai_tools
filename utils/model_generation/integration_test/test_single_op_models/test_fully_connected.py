@@ -9,7 +9,7 @@ from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix t
 from tflite2xcore._model_generation import Configuration
 from tflite2xcore._model_generation.utils import parse_init_config
 
-from . import ChannelAgnosticOpTestModelGenerator, test_output
+from . import ChannelAgnosticOpTestModelGenerator, test_output, test_idempotence
 
 
 #  ----------------------------------------------------------------------------

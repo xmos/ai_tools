@@ -52,7 +52,7 @@ GENERATOR = FullyConnectedTestModelGenerator
 
 
 #  ----------------------------------------------------------------------------
-#                                   FIXTURES
+#                                   TESTS
 #  ----------------------------------------------------------------------------
 
 # TODO: fix this when fully connected is changed to output int8

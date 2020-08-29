@@ -11,6 +11,7 @@ from typing import Union, List, NamedTuple, Tuple, Dict, Optional
 
 from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
+from tflite2xcore._model_generation import TFLiteModel
 from tflite2xcore._model_generation.model_generators import KerasModelGenerator
 from tflite2xcore._model_generation.runners import Runner, RunnerOutputs
 from tflite2xcore._model_generation.evaluators import (
@@ -29,8 +30,9 @@ from tflite2xcore._model_generation.converters import (
 
 
 class RunnerModels(NamedTuple):
-    reference: XCOREModel
-    xcore: XCOREModel
+    reference: TFLiteModel
+    xcore: TFLiteModel
+    xcore_identical: TFLiteModel
 
 
 class IntegrationTestRunner(Runner):
@@ -59,6 +61,7 @@ class IntegrationTestRunner(Runner):
         self.models = RunnerModels(
             self._model_generator._reference_converter._model,
             self._model_generator._xcore_converter._model,
+            self._model_generator._identity_converter._model,
         )
 
 
@@ -70,6 +73,7 @@ class IntegrationTestRunner(Runner):
 class IntegrationTestModelGenerator(KerasModelGenerator):
     _reference_converter: TFLiteQuantConverter
     _xcore_converter: XCoreConverter
+    _identity_converter: XCoreConverter
     _reference_evaluator: TFLiteQuantEvaluator
     _xcore_evaluator: XCoreEvaluator
     run: IntegrationTestRunner
@@ -77,6 +81,7 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
     def __init__(self) -> None:
         self._reference_converter = TFLiteQuantConverter(self)
         self._xcore_converter = XCoreConverter(self, self._reference_converter)
+        self._identity_converter = XCoreConverter(self, self._xcore_converter)
         self._xcore_evaluator = XCoreEvaluator(
             self._reference_converter._get_representative_data,
             lambda: self._xcore_converter._model,
@@ -90,7 +95,11 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
 
         super().__init__(
             runner=IntegrationTestRunner(self),
-            converters=[self._reference_converter, self._xcore_converter],
+            converters=[
+                self._reference_converter,
+                self._xcore_converter,
+                self._identity_converter,
+            ],
             evaluators=[self._xcore_evaluator, self._reference_evaluator],
         )
 
@@ -100,6 +109,7 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
             for name, model in [
                 ("model_ref", self._reference_converter._model),
                 ("model_xcore", self._xcore_converter._model),
+                ("model_xcore_identical", self._identity_converter._model),
             ]:
                 model_ref_path = (dirpath / name).with_suffix(".tflite")
                 model_ref_html = model_ref_path.with_suffix(".html")
@@ -215,3 +225,9 @@ def test_output(
     run: IntegrationTestRunner, request: _pytest.fixtures.SubRequest
 ) -> None:
     _test_output(run.outputs, request, tolerance=1)
+
+
+def test_idempotence(
+    xcore_model: XCOREModel, xcore_identical_model: XCOREModel
+) -> None:
+    assert xcore_model.is_equal(xcore_identical_model)

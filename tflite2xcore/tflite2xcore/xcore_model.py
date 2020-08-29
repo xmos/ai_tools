@@ -153,7 +153,7 @@ class Operator(_AbstractContainer):
         return (
             super().is_equal(other)
             and self.operator_code == other.operator_code
-            and self.name == other.name
+            # and self.name == other.name  # intentionally not compared
             and self._compare_lists(self.inputs, other.inputs)
             and self._compare_lists(self.outputs, other.outputs)
             and self.builtin_options == other.builtin_options
@@ -196,7 +196,7 @@ class _BufferOwnerContainer(_AbstractContainer):
     def is_equal(self, other: Any) -> bool:
         return (
             super().is_equal(other)
-            and self.name == other.name
+            # and self.name == other.name  # intentionally not compared
             and self.buffer.is_equal(other.buffer)
         )
 
@@ -331,7 +331,7 @@ class Subgraph(_AbstractContainer):
     def is_equal(self, other: Any) -> bool:
         return (
             super().is_equal(other)
-            and self.name == other.name
+            # and self.name == other.name  # intentionally not compared
             and self._compare_lists(self.inputs, other.inputs)
             and self._compare_lists(self.outputs, other.outputs)
             and self._compare_lists(self.operators, other.operators)
@@ -527,7 +527,7 @@ class XCOREModel(XCORESerializationMixin, _AbstractContainer):
         return (
             super().is_equal(other)
             and self.version == other.version
-            and self.description == other.description
+            # and self.description == other.description  # intentionally not compared
             and self._compare_lists(self.buffers, other.buffers)
             and self._compare_lists(self.subgraphs, other.subgraphs)
             and self._compare_lists(self.metadata, other.metadata)

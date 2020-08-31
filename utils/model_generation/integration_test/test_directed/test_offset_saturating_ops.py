@@ -5,7 +5,7 @@ import tensorflow as tf  # type: ignore
 
 from tflite2xcore._model_generation import Configuration
 
-from . import IntegrationTestModelGenerator, test_output
+from . import IntegrationTestModelGenerator, test_output, test_idempotence
 
 
 #  ----------------------------------------------------------------------------

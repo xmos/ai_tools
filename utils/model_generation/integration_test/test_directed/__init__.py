@@ -5,4 +5,5 @@ from .. import (
     IntegrationTestModelGenerator,
     _test_output,
     test_output,
+    test_idempotence,
 )

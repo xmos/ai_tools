@@ -10,6 +10,7 @@ from .. import (
     ChannelAgnosticOpTestModelGenerator,
     _test_output,
     test_converted_single_op_model,
+    test_idempotence,
 )
 
 
@@ -39,4 +40,4 @@ class LUTActivationOpTestModelGenerator(ChannelAgnosticOpTestModelGenerator):
 def test_output(
     run: IntegrationTestRunner, request: _pytest.fixtures.SubRequest
 ) -> None:
-    _test_output(run, request, tolerance=0)
+    _test_output(run.outputs, request, tolerance=0)

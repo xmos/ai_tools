@@ -25,7 +25,6 @@ BUILTIN_OPERATORS_TEST_FILE = os.path.join(
 
 def test_read_flatbuffer():
     model = XCOREModel.read_flatbuffer(BUILTIN_OPERATORS_TEST_FILE)
-    model.pprint()
 
     assert model.version == 3
     assert len(model.metadata) == 1
@@ -67,7 +66,6 @@ def test_read_flatbuffer():
 
 def test_write_flatbuffer():
     model = XCOREModel.read_flatbuffer(BUILTIN_OPERATORS_TEST_FILE)
-    model.pprint()
 
     tmp_file = os.path.join(tempfile.mkdtemp(), "test_write_flatbuffer.tflite")
     bytes_expected = os.path.getsize(BUILTIN_OPERATORS_TEST_FILE)
@@ -126,7 +124,6 @@ def test_custom_options():
     assert bytes_written > 0
 
     model = XCOREModel.read_flatbuffer(tmp_file)
-    model.pprint()
 
     loaded_operator = model.subgraphs[0].operators[0]
     loaded_options = loaded_operator.custom_options

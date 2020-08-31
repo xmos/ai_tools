@@ -69,7 +69,7 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
 
         coverage = metafunc.config.getoption("coverage")
         try:
-            configs = CONFIGS[coverage].values()
+            configs = list(CONFIGS[coverage].values())
         except KeyError:
             raise KeyError(
                 "CONFIGS does not define coverage level "

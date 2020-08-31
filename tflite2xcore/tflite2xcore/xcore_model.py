@@ -36,8 +36,8 @@ class _AbstractContainer(ABC):
         raise NotImplementedError()
 
     @staticmethod
-    def _compare_lists(
-        l1: Sequence["_AbstractContainer"], l2: Sequence["_AbstractContainer"]
+    def sequence_equal(
+        l1: Sequence[_S], l2: Sequence[_S]
     ) -> bool:
         if len(l1) != len(l2):
             return False
@@ -154,8 +154,8 @@ class Operator(_AbstractContainer):
             super().is_equal(other)
             and self.operator_code == other.operator_code
             # and self.name == other.name  # intentionally not compared
-            and self._compare_lists(self.inputs, other.inputs)
-            and self._compare_lists(self.outputs, other.outputs)
+            and self.sequence_equal(self.inputs, other.inputs)
+            and self.sequence_equal(self.outputs, other.outputs)
             and self.builtin_options == other.builtin_options
             and self.custom_options == other.custom_options
         )
@@ -332,10 +332,10 @@ class Subgraph(_AbstractContainer):
         return (
             super().is_equal(other)
             # and self.name == other.name  # intentionally not compared
-            and self._compare_lists(self.inputs, other.inputs)
-            and self._compare_lists(self.outputs, other.outputs)
-            and self._compare_lists(self.operators, other.operators)
-            and self._compare_lists(self.tensors, other.tensors)
+            and self.sequence_equal(self.inputs, other.inputs)
+            and self.sequence_equal(self.outputs, other.outputs)
+            and self.sequence_equal(self.operators, other.operators)
+            and self.sequence_equal(self.tensors, other.tensors)
         )
 
     def create_tensor(
@@ -528,9 +528,9 @@ class XCOREModel(XCORESerializationMixin, _AbstractContainer):
             super().is_equal(other)
             and self.version == other.version
             # and self.description == other.description  # intentionally not compared
-            and self._compare_lists(self.buffers, other.buffers)
-            and self._compare_lists(self.subgraphs, other.subgraphs)
-            and self._compare_lists(self.metadata, other.metadata)
+            and self.sequence_equal(self.buffers, other.buffers)
+            and self.sequence_equal(self.subgraphs, other.subgraphs)
+            and self.sequence_equal(self.metadata, other.metadata)
         )
 
     def create_buffer(

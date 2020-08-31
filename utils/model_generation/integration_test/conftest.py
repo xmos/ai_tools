@@ -106,16 +106,16 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
         pytest.skip()
 
     config_str = stringify_config(gen._config)
-    key = "model_cache/" + request.node.name + "/" + config_str
+
+    file_path = Path(request.module.__file__)
+    key = file_path.relative_to(pytest_config.rootdir) / request.node.name / config_str
     dirpath = pytest_config.cache.get(key, "")
     if dirpath:
         gen = IntegrationTestModelGenerator.load(dirpath)
         logging.debug(f"cached generator loaded from {dirpath}")
         gen.run.rerun_post_cache()
     else:
-        dirpath = os.path.join(
-            pytest_config.cache.makedir("model_cache"), request.node.name, config_str
-        )
+        dirpath = str(pytest_config.cache.makedir("model_cache") / key)
         gen.run()
         gen.save(dirpath, dump_models=pytest_config.getoption("dump") == "models")
         logging.debug(f"generator cached to {dirpath}")

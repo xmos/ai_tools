@@ -146,9 +146,7 @@ typedef struct {
     } stride;
 
     /**
-     * The strides of the convolution window. These are the number of (input image) pixels that
-     * the convolution window moves down and right for each pixel moved down or right in the
-     * output image.
+     * Note: Only supported where explicitly mentioned.
      */
     struct {
         /** Vertical dilation of the convolution window. */

@@ -108,7 +108,7 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     config_str = stringify_config(gen._config)
 
     file_path = Path(request.module.__file__)
-    key = file_path.relative_to(pytest_config.rootdir) / request.node.name / config_str
+    key = file_path.relative_to(pytest_config.rootdir) / config_str
     dirpath = pytest_config.cache.get(key, "")
     if dirpath:
         gen = IntegrationTestModelGenerator.load(dirpath)

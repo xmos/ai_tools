@@ -339,10 +339,11 @@ endif
 $(APP_EXE_FILE): $(REQUIRED_OBJECT_FILES) $(REQUIRED_LIBRARIES)
 	$(call mkdir_cmd,$@)
 	$(info Linking binary $@)
-	@$(XCC) $(LD_FLAGS)                     \
+	@$(XCC)                                 \
 		$(APP_FLAGS)                        \
 		$(PLATFORM_FLAGS)                   \
 		$(REQUIRED_OBJECT_FILES)            \
+		$(LD_FLAGS)							\
 		-o $(APP_EXE_FILE)                  \
 		$(REQUIRED_LIBRARIES)
 

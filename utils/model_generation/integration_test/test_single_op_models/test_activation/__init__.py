@@ -7,7 +7,7 @@ from typing import Callable, Optional, Tuple
 
 from .. import (
     IntegrationTestRunner,
-    ChannelPreservingOpTestModelGenerator,
+    ChannelAgnosticOpTestModelGenerator,
     _test_output,
     test_converted_single_op_model,
 )
@@ -18,12 +18,7 @@ from .. import (
 #  ----------------------------------------------------------------------------
 
 
-class ActivationOPTestModelGenerator(ChannelPreservingOpTestModelGenerator):
-    def _check_channel_count(self, channels):
-        pass
-
-
-class LUTActivationOpTestModelGenerator(ActivationOPTestModelGenerator):
+class LUTActivationOpTestModelGenerator(ChannelAgnosticOpTestModelGenerator):
     @property
     @abstractmethod
     def act_fun(self) -> Callable[[tf.Tensor], tf.Tensor]:

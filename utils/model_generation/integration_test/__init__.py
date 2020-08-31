@@ -4,10 +4,13 @@ import logging
 import pytest  # type: ignore
 import _pytest  # type: ignore # NOTE: for typing only
 import numpy as np  # type: ignore
+import tensorflow as tf  # type: ignore
+from abc import abstractmethod
 from pathlib import Path
-from typing import Union, List, NamedTuple, Tuple, Dict
+from typing import Union, List, NamedTuple, Tuple, Dict, Optional
 
 from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation.model_generators import KerasModelGenerator
 from tflite2xcore._model_generation.runners import Runner, RunnerOutputs
 from tflite2xcore._model_generation.evaluators import (
@@ -45,9 +48,13 @@ class IntegrationTestRunner(Runner):
             evaluator.evaluate()
 
         self.outputs = RunnerOutputs(
-            model_generator.reference_evaluator.output_data_quant,
-            model_generator.xcore_evaluator.output_data,
+            model_generator._reference_evaluator.output_data_quant,
+            model_generator._xcore_evaluator.output_data,
         )
+
+    @property
+    def xcore_model(self) -> XCOREModel:
+        return self._model_generator._xcore_converter._model
 
 
 #  ----------------------------------------------------------------------------
@@ -58,28 +65,28 @@ class IntegrationTestRunner(Runner):
 class IntegrationTestModelGenerator(KerasModelGenerator):
     _reference_converter: TFLiteQuantConverter
     _xcore_converter: XCoreConverter
-    reference_evaluator: TFLiteQuantEvaluator
-    xcore_evaluator: XCoreEvaluator
+    _reference_evaluator: TFLiteQuantEvaluator
+    _xcore_evaluator: XCoreEvaluator
     run: IntegrationTestRunner
 
     def __init__(self) -> None:
         self._reference_converter = TFLiteQuantConverter(self)
         self._xcore_converter = XCoreConverter(self, self._reference_converter)
-        self.xcore_evaluator = XCoreEvaluator(
+        self._xcore_evaluator = XCoreEvaluator(
             self._reference_converter._get_representative_data,
             lambda: self._xcore_converter._model,
         )
-        self.reference_evaluator = TFLiteQuantEvaluator(
-            lambda: self.xcore_evaluator.input_data_float,
+        self._reference_evaluator = TFLiteQuantEvaluator(
+            lambda: self._xcore_evaluator.input_data_float,
             lambda: self._reference_converter._model,
-            lambda: self.xcore_evaluator.input_quant,
-            lambda: self.xcore_evaluator.output_quant,
+            lambda: self._xcore_evaluator.input_quant,
+            lambda: self._xcore_evaluator.output_quant,
         )
 
         super().__init__(
             runner=IntegrationTestRunner(self),
             converters=[self._reference_converter, self._xcore_converter],
-            evaluators=[self.xcore_evaluator, self.reference_evaluator],
+            evaluators=[self._xcore_evaluator, self._reference_evaluator],
         )
 
     def save(self, dirpath: Union[Path, str], dump_models: bool = False) -> Path:
@@ -104,6 +111,15 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
         assert isinstance(gen, IntegrationTestModelGenerator)
         return gen
 
+    @abstractmethod
+    def _build_core_model(self) -> tf.keras.Model:
+        raise NotImplementedError()
+
+    def build(self) -> None:
+        self._prep_backend()
+        self._model = self._build_core_model()
+        self._model.build()
+
 
 #  ----------------------------------------------------------------------------
 #                                   HELPERS
@@ -117,21 +133,40 @@ class FailedElement(NamedTuple):
     predicted: int
 
 
+def __log_deviations(
+    diff: np.ndarray, level: int, *, ex_idx: Optional[int] = None
+) -> None:
+    logger = logging.getLogger()
+    if logger.isEnabledFor(level):
+        devs = [
+            f"{c}/{diff.size} ({c / diff.size:.2%}) with diff={v}"
+            for v, c in zip(*np.unique(diff, return_counts=True))
+            if v
+        ]
+        msg = "Total" if ex_idx is None else f"Example {ex_idx}"
+        msg += " deviations: " + (", ".join(devs) if devs else "None")
+        logger.log(level, msg)
+
+
 def _test_batched_arrays(
     predicted: np.ndarray, expected: np.ndarray, tolerance: Union[int, float]
 ) -> Dict[int, List[FailedElement]]:
     assert predicted.shape == expected.shape
     assert predicted.dtype is expected.dtype
+    assert issubclass(predicted.dtype.type, np.integer)  # TODO: generalize to floats
 
     failures: Dict[int, List[FailedElement]] = {}
-    for j, (arr, arr_ref) in enumerate(zip(predicted, expected)):
-        diff = np.abs(np.int32(arr) - np.int32(arr_ref))
+    diffs = np.abs(np.int32(predicted) - np.int32(expected))
+    for j, (arr, arr_ref, diff) in enumerate(zip(predicted, expected, diffs)):
+        __log_deviations(diff, logging.DEBUG, ex_idx=j)
+
         diff_idx = zip(*np.where(diff > tolerance))
         failed_examples = [
             FailedElement(idx, diff[idx], arr_ref[idx], arr[idx]) for idx in diff_idx
         ]
         if failed_examples:
             failures[j] = failed_examples
+    __log_deviations(diffs, logging.INFO)
     return failures
 
 

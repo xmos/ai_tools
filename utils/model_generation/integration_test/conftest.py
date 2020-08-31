@@ -69,7 +69,7 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
 
         coverage = metafunc.config.getoption("coverage")
         try:
-            configs = CONFIGS[coverage].values()
+            configs = list(CONFIGS[coverage].values())
         except KeyError:
             raise KeyError(
                 "CONFIGS does not define coverage level "
@@ -128,4 +128,4 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
 
 @pytest.fixture  # type: ignore
 def xcore_model(run: IntegrationTestRunner) -> XCOREModel:
-    return XCOREModel.deserialize(run._model_generator._xcore_converter._model)
+    return XCOREModel.deserialize(run.xcore_model)

@@ -111,6 +111,7 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     if dirpath:
         gen = IntegrationTestModelGenerator.load(dirpath)
         logging.debug(f"cached generator loaded from {dirpath}")
+        gen.run.rerun_post_cache()
     else:
         dirpath = os.path.join(
             pytest_config.cache.makedir("model_cache"), request.node.name, config_str

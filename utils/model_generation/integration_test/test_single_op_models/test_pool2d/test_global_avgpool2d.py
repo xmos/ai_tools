@@ -46,7 +46,7 @@ def converted_op_code() -> XCOREOpCodes:
 
 # TODO: fix this when issue #143 is fixed
 def test_output(run, request):  # type: ignore
-    if request.node.name in ("test_output[CONFIGS[21]]", "test_output[CONFIGS[34]]"):
+    if request.node.name in ("test_output[CONFIGS[34]]"):
         request.applymarker(pytest.mark.xfail(run=False))
     _test_output(run, request)
 

@@ -129,7 +129,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
 
-    # Fuse spacial padding with conv2d
+    # Fuse spatial padding with conv2d
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
 
     if ignore_input_alignment:

@@ -2,7 +2,7 @@
 
 import pytest
 import numpy as np
-from typing import Callable
+from typing import Callable, Tuple
 from copy import deepcopy
 
 from tflite2xcore.xcore_model import XCOREModel
@@ -568,17 +568,28 @@ def build_depthwise_conv2d(
     return subgraph.model
 
 
-def _calculate_pads(strides, input_size, weight_subshape):
-    return [
-        (0, int(np.ceil((i - k) / s) * s - i + k))
-        for s, i, k in zip(strides, input_size, weight_subshape)
-    ]
+SpatialPadding = Tuple[Tuple[int, int], Tuple[int, int]]
 
-def _calculate_out_size(pads, strides, input_size, weight_subshape):
-    return [
+
+def _calculate_implicit_pads(
+    strides: Tuple[int, int], input_size: Tuple[int, int], kernel_size: Tuple[int, int]
+) -> SpatialPadding:
+    return tuple(
+        (0, int(np.ceil((i - k) / s) * s - i + k))
+        for s, i, k in zip(strides, input_size, kernel_size)
+    )
+
+
+def _calculate_out_size(
+    spatial_pads: SpatialPadding,
+    strides: Tuple[int, int],
+    input_size: Tuple[int, int],
+    kernel_size: Tuple[int, int],
+) -> Tuple[int, int]:
+    return tuple(
         int((i - k + p[0] + p[1]) / s + 1)
-        for p, s, i, k in zip(pads, strides, input_size, weight_subshape)
-    ]
+        for p, s, i, k in zip(spatial_pads, strides, input_size, kernel_size)
+    )
 
 
 def build_XC_conv2d(opcode, subgraph=None, *, weight_shape, input_size, strides):
@@ -594,7 +605,7 @@ def build_XC_conv2d(opcode, subgraph=None, *, weight_shape, input_size, strides)
     b = subgraph.create_tensor("bso", TensorType.INT16, bso_shape)
 
     # valid padding
-    pads = _calculate_pads(strides, input_size, weight_shape[1:3])
+    pads = _calculate_implicit_pads(strides, input_size, weight_shape[1:3])
     out_size = _calculate_out_size(pads, strides, input_size, weight_shape[1:3])
     output_shape = [C_out, *out_size, C_in]
     tout = subgraph.create_tensor("output", tin.type, output_shape, isoutput=True)
@@ -603,7 +614,7 @@ def build_XC_conv2d(opcode, subgraph=None, *, weight_shape, input_size, strides)
         OperatorCode(opcode), inputs=[tin, w, b], outputs=[tout]
     )
     op.add_custom_options(
-        pad=[pads[0][0], pads[1][0], -127], stride=[strides[0], strides[1]]
+        pad=(pads[0][0], pads[1][0], -127), stride=(strides[0], strides[1])
     )
 
     return subgraph.model
@@ -634,7 +645,7 @@ def build_XC_conv2d_depthwise(subgraph=None, *, weight_shape, input_size, stride
     b = subgraph.create_tensor("bso", TensorType.INT16, bso_shape)
 
     # valid padding
-    pads = _calculate_pads(strides, input_size, weight_shape[:2])
+    pads = _calculate_implicit_pads(strides, input_size, weight_shape[:2])
     out_size = _calculate_out_size(pads, strides, input_size, weight_shape[:2])
     output_shape = [1, *out_size, C_in]
     tout = subgraph.create_tensor("output", tin.type, output_shape, isoutput=True)
@@ -645,7 +656,7 @@ def build_XC_conv2d_depthwise(subgraph=None, *, weight_shape, input_size, stride
         outputs=[tout],
     )
     op.add_custom_options(
-        pad=[pads[0][0], pads[1][0], -127], stride=[strides[0], strides[1]]
+        pad=(pads[0][0], pads[1][0], -127), stride=(strides[0], strides[1])
     )
 
     return subgraph.model

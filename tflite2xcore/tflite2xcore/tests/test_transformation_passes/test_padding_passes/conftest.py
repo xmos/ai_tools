@@ -7,6 +7,7 @@ from itertools import product
 
 from ..conftest import (
     PARAMS,
+    ParamsType,
     _test_non_matching_params,
     test_matching_params,
 )
@@ -38,9 +39,9 @@ PARAMS["default"].update(
     {
         "input_batches": [1],
         "pad_t": PADS,
-        "pad_b": PADS,
+        "pad_b": PADS[:2],
         "pad_l": PADS,
-        "pad_r": PADS,
+        "pad_r": PADS[:2],
         "pad_batch_l": [0],
         "pad_batch_r": [0],
         "pad_channel_l": [0],
@@ -51,10 +52,10 @@ PARAMS["default"].update(
 PARAMS["smoke"].update(
     {
         "input_batches": [1],
-        "pad_t": PADS[:2],
-        "pad_b": PADS[:2],
-        "pad_l": PADS[:2],
-        "pad_r": PADS[:2],
+        "pad_t": PADS[:1],
+        "pad_b": PADS,
+        "pad_l": PADS[:1],
+        "pad_r": PADS,
         "pad_batch_l": [0],
         "pad_batch_r": [0],
         "pad_channel_l": [0],

@@ -58,6 +58,8 @@ NON_FLOAT32_TEST_TYPES = [
     TensorType.UINT8,
 ]
 
+ParamsType = Dict[str, Dict[str, List[Any]]]
+
 PARAMS = {
     "extended": {
         "input_height": [7, 9, 17, 20, 32],
@@ -74,7 +76,7 @@ PARAMS = {
         "input_width": [7, 17],
         "input_channels": [4, 32],
     },
-}  # type: Dict[str, Dict[str, List[Any]]]
+}  # type: ParamsType
 
 
 #  ----------------------------------------------------------------------------

@@ -91,15 +91,14 @@ def paddings_NC(pad_batch_l, pad_batch_r, pad_channel_l, pad_channel_r):
 
 def update_params_with_paddings(PARAMS, *, is_matching):
     for params in PARAMS.values():
-        all_paddings = [
-            [list(p) for p in t]
-            for t in product(
+        all_paddings = list(
+            product(
                 product(params["pad_batch_l"], params["pad_batch_r"]),
                 product(params["pad_t"], params["pad_b"]),
                 product(params["pad_l"], params["pad_r"]),
                 product(params["pad_channel_l"], params["pad_channel_r"]),
             )
-        ]
+        )
 
         params.update(
             {

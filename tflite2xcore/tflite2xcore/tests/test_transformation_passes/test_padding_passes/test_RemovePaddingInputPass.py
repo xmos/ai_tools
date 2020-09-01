@@ -23,7 +23,7 @@ from .conftest import (
 
 
 def only_channel_pad(padding):
-    return padding[-1] != [0, 0] and (all(pad == [0, 0] for pad in padding[:-1]))
+    return padding[-1] != (0, 0) and (all(pad == (0, 0) for pad in padding[:-1]))
 
 
 PARAMS = update_params_with_paddings(deepcopy(PARAMS), is_matching=only_channel_pad)

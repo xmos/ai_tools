@@ -75,7 +75,7 @@ def update_params_with_paddings(PARAMS: ParamsType) -> ParamsType:
 
         non_matching_channel_batch_params = []
         non_matching_spatial_params = []
-        matching_params = []
+        matching_spatial_params = []
 
         for t in product(
             params["input_channels"], input_sizes, kernel_sizes, strides, paddings
@@ -86,13 +86,13 @@ def update_params_with_paddings(PARAMS: ParamsType) -> ParamsType:
             elif has_excessive_padding(param_combo):
                 non_matching_spatial_params.append(param_combo)
             else:
-                matching_params.append(param_combo)
+                matching_spatial_params.append(param_combo)
 
         params.update(
             {
                 "non_matching_channel_batch_params": non_matching_channel_batch_params,
                 "non_matching_spatial_params": non_matching_spatial_params,
-                "matching_params": matching_params,
+                "matching_spatial_params": matching_spatial_params,
             }
         )
     return PARAMS
@@ -117,12 +117,12 @@ def trf_pass() -> FuseConv2dPaddingPass:
 
 
 @pytest.fixture()
-def model(matching_params: ParamCombination, input_channels: int) -> XCOREModel:
+def model(matching_spatial_params: ParamCombination, input_channels: int) -> XCOREModel:
     return build_padded_DW(
-        weight_shape=[*matching_params.kernel_size, input_channels],
-        input_size=matching_params.input_size,
-        paddings=matching_params.padding,
-        strides=matching_params.stride,
+        weight_shape=[*matching_spatial_params.kernel_size, input_channels],
+        input_size=matching_spatial_params.input_size,
+        paddings=matching_spatial_params.padding,
+        strides=matching_spatial_params.stride,
     )
 
 

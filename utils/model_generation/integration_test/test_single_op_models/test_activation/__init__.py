@@ -7,9 +7,10 @@ from typing import Callable, Optional, Tuple
 
 from .. import (
     IntegrationTestRunner,
-    ChannelPreservingOpTestModelGenerator,
+    ChannelAgnosticOpTestModelGenerator,
     _test_output,
     test_converted_single_op_model,
+    test_idempotence,
 )
 
 
@@ -18,12 +19,7 @@ from .. import (
 #  ----------------------------------------------------------------------------
 
 
-class ActivationOPTestModelGenerator(ChannelPreservingOpTestModelGenerator):
-    def _check_channel_count(self, channels):
-        pass
-
-
-class LUTActivationOpTestModelGenerator(ActivationOPTestModelGenerator):
+class LUTActivationOpTestModelGenerator(ChannelAgnosticOpTestModelGenerator):
     @property
     @abstractmethod
     def act_fun(self) -> Callable[[tf.Tensor], tf.Tensor]:
@@ -44,4 +40,4 @@ class LUTActivationOpTestModelGenerator(ActivationOPTestModelGenerator):
 def test_output(
     run: IntegrationTestRunner, request: _pytest.fixtures.SubRequest
 ) -> None:
-    _test_output(run, request, tolerance=0)
+    _test_output(run.outputs, request, tolerance=0)

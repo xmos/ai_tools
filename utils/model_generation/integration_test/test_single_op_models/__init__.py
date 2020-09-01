@@ -13,6 +13,7 @@ from .. import (
     IntegrationTestModelGenerator,
     _test_output,
     test_output,
+    test_idempotence,
 )
 
 
@@ -47,15 +48,10 @@ class ImageInputOpTestModelGenerator(IntegrationTestModelGenerator):
             layers=[self._op_layer(input_shape=self._input_shape)]
         )
 
-    def build(self) -> None:
-        self._prep_backend()
-        self._model = self._build_core_model()
-        self._model.build()
 
-
-class ChannelPreservingOpTestModelGenerator(ImageInputOpTestModelGenerator):
-    def _check_channel_count(self, channels):
-        assert channels % 4 == 0, "# of channels must be multiple of 4"
+class ChannelAgnosticOpTestModelGenerator(ImageInputOpTestModelGenerator):
+    def _check_channel_count(self, channels: int) -> None:
+        pass
 
     def _set_config(self, cfg: Configuration) -> None:
         channels = cfg.pop("channels", 4)
@@ -66,6 +62,11 @@ class ChannelPreservingOpTestModelGenerator(ImageInputOpTestModelGenerator):
     @property
     def _input_channels(self) -> int:
         return self._config["channels"]  # type: ignore
+
+
+class ChannelPreservingOpTestModelGenerator(ChannelAgnosticOpTestModelGenerator):
+    def _check_channel_count(self, channels: int) -> None:
+        assert channels % 4 == 0, "# of channels must be multiple of 4"
 
 
 class FilterOpTestModelGenerator(ImageInputOpTestModelGenerator):

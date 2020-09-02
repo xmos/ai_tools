@@ -65,20 +65,14 @@ class TFLiteQuantEvaluator(TFLiteEvaluator):
         self,
         input_data_hook: Callable[[], Union[tf.Tensor, np.ndarray]],
         model_hook: Callable[[], "TFLiteModel"],
-        input_quant_hook: Callable[[], QuantizationTuple],
-        output_quant_hook: Callable[[], QuantizationTuple],
     ) -> None:
         super().__init__(input_data_hook, model_hook)
-        self._input_quant_hook = input_quant_hook
-        self._output_quant_hook = output_quant_hook
 
-    @property
-    def input_data_quant(self) -> np.ndarray:
-        return quantize(self.input_data, *self._input_quant_hook())
+    def input_data_quant(self, quant: QuantizationTuple) -> np.ndarray:
+        return quantize(self.input_data, *quant)
 
-    @property
-    def output_data_quant(self) -> np.ndarray:
-        return quantize(self.output_data, *self._output_quant_hook())
+    def output_data_quant(self, quant: QuantizationTuple) -> np.ndarray:
+        return quantize(self.output_data, *quant)
 
 
 class XCoreEvaluator(TFLiteEvaluator):

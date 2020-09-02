@@ -46,16 +46,23 @@ class IntegrationTestRunner(Runner):
         self.outputs to be set.
         """
         super().__call__()
+        self._model_generator._reference_converter.convert()
+        self._model_generator._reference_evaluator.evaluate()
+        self.rerun_post_cache()
+
+    def rerun_post_cache(self) -> None:
         model_generator = self._model_generator
 
-        for converter in model_generator._converters:
+        for converter in model_generator._converters[1:]:
             converter.convert()
 
-        for evaluator in model_generator._evaluators:
+        for evaluator in model_generator._evaluators[1:]:
             evaluator.evaluate()
 
         self.outputs = RunnerOutputs(
-            model_generator._reference_evaluator.output_data_quant,
+            model_generator._reference_evaluator.output_data_quant(
+                model_generator._xcore_evaluator.output_quant
+            ),
             model_generator._xcore_evaluator.output_data,
         )
         self.models = RunnerModels(
@@ -80,18 +87,19 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
 
     def __init__(self) -> None:
         self._reference_converter = TFLiteQuantConverter(self)
+        self._reference_evaluator = TFLiteQuantEvaluator(
+            self._reference_converter.get_representative_data,
+            lambda: self._reference_converter._model,
+        )
+
         self._xcore_converter = XCoreConverter(self, self._reference_converter)
         self._identity_converter = XCoreConverter(self, self._xcore_converter)
         self._xcore_evaluator = XCoreEvaluator(
-            self._reference_converter._get_representative_data,
+            self._reference_converter.get_representative_data,
             lambda: self._xcore_converter._model,
         )
-        self._reference_evaluator = TFLiteQuantEvaluator(
-            lambda: self._xcore_evaluator.input_data_float,
-            lambda: self._reference_converter._model,
-            lambda: self._xcore_evaluator.input_quant,
-            lambda: self._xcore_evaluator.output_quant,
-        )
+
+        self._identity_converter = XCoreConverter(self, self._xcore_converter)
 
         super().__init__(
             runner=IntegrationTestRunner(self),
@@ -100,7 +108,7 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
                 self._xcore_converter,
                 self._identity_converter,
             ],
-            evaluators=[self._xcore_evaluator, self._reference_evaluator],
+            evaluators=[self._reference_evaluator, self._xcore_evaluator],
         )
 
     def save(self, dirpath: Union[Path, str], dump_models: bool = False) -> Path:

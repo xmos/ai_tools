@@ -28,4 +28,4 @@ SHELL ["/bin/bash", "-l", "-c"]
 # ENV CONDA_DEFAULT_ENV $CONDA_ENV
 
 # ENTRYPOINT ["/enter.sh"]
-ENTRYPOINT ["/bin/bash"]
+# ENTRYPOINT ["/bin/bash"]

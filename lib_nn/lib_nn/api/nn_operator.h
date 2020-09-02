@@ -737,6 +737,28 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
     const unsigned k_sub_width, const unsigned k_sub_height
 );
 
+void bnn_conv2d_int8_out(int8_t* Y_p,
+    const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
+    
+    const int16_t* post_activation_multiplier, 
+    const int16_t* post_activation_bias,
+    const unsigned accu_shr,
+    const unsigned accu_shl,
+    const unsigned final_shr,
+    
+    const nn_image_params_t* x, //The full image of x
+    const nn_image_params_t* y, // the full image of y
+    const nn_window_params_t* k, //the full kernel k
+    
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height,
+
+    const unsigned x_loc_x, const unsigned x_loc_y, 
+    
+    const unsigned k_loc_x, const unsigned k_loc_y, 
+    const unsigned k_sub_width, const unsigned k_sub_height
+) ;
+
 /**
  * @brief Execute @oper{pad_prepare} function.
  *

@@ -16,10 +16,13 @@ RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} > /dev/null && . SetEnv && 
     >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 
+run echo "/bin/bash -l -c $@" > /enter.sh \
+    && chmod a+x /enter.sh
+
 # ADD environment.yml /tmp/environment.yml
 # RUN conda env create -n $CONDA_ENV -f /tmp/environment.yml && conda clean -afy
 # RUN echo "source activate $CONDA_ENV" >> /etc/bash.bashrc
 # ENV PATH /opt/conda/envs/$CONDA_ENV/bin:$PATH
 # ENV CONDA_DEFAULT_ENV $CONDA_ENV
 
-ENTRYPOINT ["/bin/bash", "-l", "-c"]
+ENTRYPOINT ["/enter.sh"]

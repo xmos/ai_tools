@@ -16,8 +16,10 @@ RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} > /dev/null && . SetEnv && 
     >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 
-run echo "exec \"\$@\"" > /enter.sh \
-    && chmod a+x /enter.sh
+SHELL ["/bin/bash", "-l", "-c"]
+
+# run echo "exec \"\$@\"" > /enter.sh \
+#     && chmod a+x /enter.sh
 
 # ADD environment.yml /tmp/environment.yml
 # RUN conda env create -n $CONDA_ENV -f /tmp/environment.yml && conda clean -afy
@@ -25,4 +27,5 @@ run echo "exec \"\$@\"" > /enter.sh \
 # ENV PATH /opt/conda/envs/$CONDA_ENV/bin:$PATH
 # ENV CONDA_DEFAULT_ENV $CONDA_ENV
 
-ENTRYPOINT ["/enter.sh"]
+# ENTRYPOINT ["/enter.sh"]
+ENTRYPOINT ["/bin/bash"]

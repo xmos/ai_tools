@@ -25,12 +25,24 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
         return self._op.inputs[0].producers[0]
 
     @property
-    def _pad(self):
-        return self._op.custom_options["pad"]
-
-    @property
     def _pad_params(self):
         return self._producer.inputs[1].as_array().tolist()
+
+    @property
+    def _kernel_size(self):
+        opcode = self._op.operator_code.code
+        weights = self._op.inputs[1]
+        if opcode is XCOREOpCodes.XC_conv2d_depthwise:
+            return weights.shape[0:2]
+        elif opcode in (XCOREOpCodes.XC_conv2d_deep, XCOREOpCodes.XC_conv2d_shallowin):
+            return weights.shape[1:3]
+
+    @staticmethod
+    def _calculate_end_padding(out_size, strides, in_size, kernel_size):
+        return tuple(
+            (o - 1) * s - i + k
+            for o, s, i, k in zip(out_size, strides, in_size, kernel_size)
+        )
 
     def match(self, op):
         if not super().match(op):
@@ -39,12 +51,6 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
         with self.using(op):
             opcode = self._op.operator_code.code
             if opcode not in self.MATCHING_OPCODES:
-                return False
-
-            try:
-                pad = self._pad
-            except KeyError:
-                self.logger.warning(f"{opcode} found without 'pad' option")
                 return False
 
             try:
@@ -62,6 +68,29 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
                 # NOTE: SplitPaddingPass decouples channel- and batch-wise padding
                 return False
 
+            kernel_size = self._kernel_size
+            implicit_end_pads = self._calculate_end_padding(
+                out_size=op.outputs[0].shape[1:3],
+                strides=op.custom_options["stride"],
+                in_size=op.inputs[0].shape[1:3],
+                kernel_size=kernel_size,
+            )
+
+        pad = op.custom_options["pad"]
+        all_pads = (
+            [pad[0] + pad_params[1][0], implicit_end_pads[0] + pad_params[1][1]],
+            [pad[1] + pad_params[2][0], implicit_end_pads[1] + pad_params[2][1]],
+        )
+
+        for p, k in zip(all_pads, kernel_size):
+            if p[0] >= k or p[1] >= k:
+                # kernels currently don't support this
+                self.logger.warning(
+                    f"While fusing, found implicit padding={p}"
+                    f" not smaller than kernel={kernel_size}"
+                )
+                return False
+
         if len(pad) == 3 and not isinstance(pad, str):
             return True
         elif pad in ["SAME", "VALID"] + list(Padding):
@@ -75,7 +104,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
         with self.using(op):
             producer = self._producer
             pad_params = self._pad_params
-            old_pad = self._pad
+            old_pad = op.custom_options["pad"]
 
         # cut connection to old input
         op.inputs[0].consumers.remove(op)

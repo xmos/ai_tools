@@ -1,7 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import dill  # type: ignore
-import shutil
 import logging
 import tensorflow as tf  # type: ignore
 from pathlib import Path
@@ -91,12 +90,9 @@ class KerasModelGenerator(ModelGenerator):
         """ Saves the model contents to the specified directory.
         
         If the directory doesn't exist, it is created.
-        If the directory is not empty, it is purged.
         """
         dirpath = Path(dirpath)
-        if dirpath.exists():
-            shutil.rmtree(dirpath)
-        dirpath.mkdir(parents=True)
+        dirpath.mkdir(parents=True, exist_ok=True)
         self._model.save(dirpath / "model.h5")
         tmp = self._model
         del self._model

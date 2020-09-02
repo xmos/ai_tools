@@ -12,7 +12,8 @@ RUN wget -q http://intranet/projects/tools/ReleasesTools/${TOOLS_VERSION}_${TOOL
     && tar xf Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz \
     && chmod -R 777 /XMOS \
     && rm -f Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz
-RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} > /dev/null && . SetEnv && popd > /dev/null" >> /etc/profile.d/xmos_tools.sh \
+RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} > /dev/null && . SetEnv && popd > /dev/null" \
+    >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 
 # ADD environment.yml /tmp/environment.yml

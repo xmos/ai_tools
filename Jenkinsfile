@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@feature/view_env_path') _
+@Library('xmos_jenkins_shared_library@0.14.1') _
 
 
 pipeline {
@@ -49,11 +49,6 @@ pipeline {
                 stage("Create env") {
                     steps {
                         sh "conda env create -n .venv -f environment.yml"
-                        sh "conda list"
-                        sh "conda list -n .venv"
-                        withEnv(["CONDA_DEFAULT_ENV=.venv"]) {
-                            sh "conda list"
-                        }
                     }
                 }
                 stage("Update all packages") {
@@ -65,17 +60,13 @@ pipeline {
                 stage("Check") {
                     steps {
                         sh "env"
-                        viewEnv("/XMOS/xTIMEcomposer/15.0.0") {
-                            sh "conda run -n .venv python -c 'import tensorflow'"
-                            sh "xcc --version"
-                        }
+                        sh "conda run -n .venv python -c 'import tensorflow'"
+                        sh "xcc --version"
                     }
                 }
                 stage("Build") {
                     steps {
-                        viewEnv("/XMOS/xTIMEcomposer/15.0.0") {
-                            sh "conda run -n .venv make all"
-                        }
+                        sh "conda run -n .venv make all"
                     }
                 }
             }

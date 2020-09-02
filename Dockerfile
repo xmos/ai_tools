@@ -16,7 +16,7 @@ RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} > /dev/null && . SetEnv && 
     >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 
-run echo "/bin/bash -l -c $@" > /enter.sh \
+run echo "/bin/bash -l -c \$@" > /enter.sh \
     && chmod a+x /enter.sh
 
 # ADD environment.yml /tmp/environment.yml

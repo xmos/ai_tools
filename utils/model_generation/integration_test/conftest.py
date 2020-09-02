@@ -1,13 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import os
 import yaml
 import logging
 import portalocker  # type: ignore
 import pytest  # type: ignore
 import _pytest  # type: ignore # NOTE: for typing only
 from pathlib import Path
-from contextlib import contextmanager
 
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation.utils import stringify_config
@@ -91,15 +89,6 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
 #  ----------------------------------------------------------------------------
 
 
-@contextmanager
-def _no_hdf5_locking():
-    old_env = dict(os.environ)
-    os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-    yield
-    os.environ.clear()
-    os.environ.update(old_env)
-
-
 @pytest.fixture  # type: ignore
 def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     try:
@@ -120,32 +109,24 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     file_path = Path(request.module.__file__)
     key = file_path.relative_to(pytest_config.rootdir) / config_str
 
-    need_load = True
     dirpath = pytest_config.cache.get(key, "")
-    if not dirpath:  # initial cache miss
-        # need an interprocess lock to prevent race between pytest workers
-        with portalocker.BoundedSemaphore(1, hash(key), timeout=float("inf")):
-            dirpath = pytest_config.cache.get(key, "")
-            if not dirpath:  # second cache miss
-                # this means that this is the first process to miss this key
-                # so we need to write to the cache
-                dirpath = str(pytest_config.cache.makedir("model_cache") / key)
-                gen.run()
-                with _no_hdf5_locking():
-                    gen.save(
-                        dirpath,
-                        dump_models=pytest_config.getoption("dump") == "models",
-                    )
-
-                logging.debug(f"generator cached to {dirpath}")
-                pytest_config.cache.set(key, dirpath)
-                need_load = False  # other processes won't write, so they need to load
-
-    if need_load:
-        with _no_hdf5_locking():
-            gen = IntegrationTestModelGenerator.load(dirpath)
+    if dirpath:
+        gen = IntegrationTestModelGenerator.load(dirpath)
         logging.debug(f"cached generator loaded from {dirpath}")
         gen.run.rerun_post_cache()
+    else:
+        gen.run()
+        try:
+            with portalocker.BoundedSemaphore(1, hash(key), timeout=0):
+                dirpath = str(pytest_config.cache.makedir("model_cache") / key)
+                gen.save(
+                    dirpath, dump_models=pytest_config.getoption("dump") == "models",
+                )
+                logging.debug(f"generator cached to {dirpath}")
+                pytest_config.cache.set(key, dirpath)
+        except portalocker.AlreadyLocked:
+            # another process will write to cache
+            pass
 
     if pytest_config.getoption("--generate-only"):
         pytest.skip()

@@ -93,7 +93,7 @@ class KerasModelGenerator(ModelGenerator):
         """
         dirpath = Path(dirpath)
         dirpath.mkdir(parents=True, exist_ok=True)
-        self._model.save(dirpath / "model.h5")
+        self._model.save(dirpath / "model")
         tmp = self._model
         del self._model
         with open(dirpath / "generator.dill", "wb") as f:
@@ -110,5 +110,5 @@ class KerasModelGenerator(ModelGenerator):
 
         # tf may complain about missing training config, so silence it
         with LoggingContext(tf.get_logger(), logging.ERROR):
-            obj._model = tf.keras.models.load_model(dirpath / "model.h5")
+            obj._model = tf.keras.models.load_model(dirpath / "model")
         return obj

@@ -61,12 +61,14 @@ pipeline {
                     steps {
                         sh "env"
                         sh "conda run -n .venv python -c 'import tensorflow'"
-                        sh "xcc --version"
+                        sh """#!/bin/bash -l
+                              xcc --version"""
                     }
                 }
                 stage("Build") {
                     steps {
-                        sh "conda run -n .venv make all"
+                        sh """#!/bin/bash -l
+                              conda run -n .venv make all"""
                     }
                 }
             }

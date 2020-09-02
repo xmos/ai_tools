@@ -22,4 +22,4 @@ RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} > /dev/null && . SetEnv && 
 # ENV PATH /opt/conda/envs/$CONDA_ENV/bin:$PATH
 # ENV CONDA_DEFAULT_ENV $CONDA_ENV
 
-CMD /bin/bash
+ENTRYPOINT ["/bin/bash", "-l", "-c"]

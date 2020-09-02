@@ -20,13 +20,14 @@ from .conftest import (
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-PARAMS = update_params_with_paddings(
-    deepcopy(PARAMS),
-    is_matching=lambda padding: (
-        (padding[0] != [0, 0] or padding[3] != [0, 0])
-        and (padding[1] != [0, 0] or padding[2] != [0, 0])
-    ),
-)
+
+def is_matching(padding):
+    return (padding[0] != (0, 0) or padding[3] != (0, 0)) and (
+        padding[1] != (0, 0) or padding[2] != (0, 0)
+    )
+
+
+PARAMS = update_params_with_paddings(deepcopy(PARAMS), is_matching=is_matching)
 
 
 #  ----------------------------------------------------------------------------

@@ -152,6 +152,7 @@ class ReplacePaddedConv2DPass(ReplaceConv2DPass):
     def _pad(self):
         # pad: [top, left, zero_point]
         pad = tuple(
+            # first arg of max is <= for valid padding
             max(int((o - 1) * s - i + k) // 2, 0)
             for o, s, i, k in zip(
                 self._output.shape[1:3],

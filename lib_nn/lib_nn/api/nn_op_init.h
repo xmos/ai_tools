@@ -696,7 +696,7 @@ void requantize_16_to_8_init(
     const unsigned job_count);
 
 /**
- * @brief Initialize an instance of the @oper{bsign_8} operator.
+ * @brief Prepare an instance of the @oper{bsign_8} operator.
  * 
  * See @oper_ref{bsign_8} for more details about the @oper{bsign_8} operator. To invoke a 
  * @oper{bsign_8} job, call bsign_8().
@@ -722,7 +722,7 @@ void requantize_16_to_8_init(
  * @param[in]  zero_point   The value @math{z_0} to be used for padding (for all channels)
  * @param job_count [in]    The number of jobs to be initialized.
  */
-void bsign_8_init(
+void bsign_8_prepare(
     nn_bsign_8_plan_t* plan,
     nn_bsign_8_job_t* jobs,
     const uint32_t N,

@@ -12,13 +12,13 @@
 #if defined(__XS3A__)
 /* Bsign_8 optimised for XS3A */
 void bsign_8_( 
-    uint32_t* y,
+    int32_t* y,
     const int8_t* x,
     const int8_t* zero_point_vect,
     const nn_bsign_8_job_t* job);
 
 void bsign_8(
-    uint32_t* y,
+    int32_t* y,
     const int8_t* x,
     const nn_bsign_8_plan_t * plan,
     const nn_bsign_8_job_t* job)
@@ -36,7 +36,7 @@ void bsign_8(
 }
 #endif
 
-void bsign_8_init(
+void bsign_8_prepare(
     nn_bsign_8_plan_t* plan,
     nn_bsign_8_job_t* jobs,
     const uint32_t length,

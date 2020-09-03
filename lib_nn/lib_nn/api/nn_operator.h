@@ -580,13 +580,13 @@ void lookup8(
  * @param job [in]     The @oper{bsign_8} job to be processed
  */
 void bsign_8(
-    uint32_t* Y,
+    int32_t* Y,
     const int8_t* X,
     const nn_bsign_8_plan_t* plan,
     const nn_bsign_8_job_t* job);
 
 void bsign_8_ref(
-    uint32_t* Y,
+    int32_t* Y,
     const int8_t* X,
     const nn_bsign_8_plan_t* plan,
     const nn_bsign_8_job_t* job);

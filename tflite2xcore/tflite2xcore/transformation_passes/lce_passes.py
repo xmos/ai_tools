@@ -23,7 +23,10 @@ from tflite2xcore.xcore_schema import (
 
 def SupportedBconv2DOp(op: Operator) -> bool:
 
-    if op.operator_code.code is not ExternalOpCodes.LceBconv2d:
+    try:
+        if op.operator_code.code is not ExternalOpCodes.LceBconv2d:
+            return False
+    except AttributeError:
         return False
 
     options = op.custom_options
@@ -34,7 +37,11 @@ def SupportedBconv2DOp(op: Operator) -> bool:
         options["dilation_width_factor"],
     )
 
-    padding = Padding.from_TfLitePadding(options["padding"])
+    try:
+        # TODO LCE < 0.4 compat - remove me
+        padding = Padding.from_TfLitePadding(options["padding"])
+    except KeyError:
+        padding = options["padding"]
 
     weights = op.inputs[1]
 
@@ -90,12 +97,33 @@ class ReplaceLceBconv2DPass(LceConv2dPass):
     # TODO replace op properly when relevant operator API is available, for now just replace code
     # to allow for basic testing of pass
     def mutate(self, op: Operator) -> None:
+
         if self._output_tensor_type is TensorType.INT8:
             op.operator_code.code = XCOREOpCodes.XC_bconv_int8_DIDO
         else:
             op.operator_code.code = XCOREOpCodes.XC_bconv_bin_DIDO
 
 
+# Replace LCEQuantize with XC_BBsign8
+class ReplaceLceQuantizePass(OperatorMatchingPass):
+    def match(self, op: Operator) -> bool:
+
+        if op.operator_code.code is not ExternalOpCodes.LceQuantize:
+            return False
+
+        return (
+            super().match(op)
+            # and len(op.inputs) == 1
+            # and len(op.outputs) == 1
+            and op.outputs[0].type is TensorType.INT32
+            and op.inputs[0].type is TensorType.INT8
+        )
+
+    def mutate(self, op: Operator) -> None:
+        op.operator_code.code = XCOREOpCodes.XC_bsign_8
+
+
+# TODO Rm me
 # Split Bsign operation from Bconv
 class SplitBsignPass(LceConv2dPass):
     def match(self, op: Operator) -> bool:
@@ -117,15 +145,17 @@ class SplitBsignPass(LceConv2dPass):
 
         subgraph = op.subgraph
 
+        bsign_output_shape = [
+            op.inputs[0].shape[0],
+            op.inputs[0].shape[1],
+            op.inputs[0].shape[2],
+            int(op.inputs[0].shape[3] / WORD_SIZE_BITS),
+        ]
+
         bsign_output = subgraph.create_tensor(
             f"{op.name}/output",
             TensorType.INT32,
-            shape=[
-                op.inputs[0].shape[0],
-                op.inputs[0].shape[1],
-                op.inputs[0].shape[2],
-                int(op.inputs[0].shape[3] / WORD_SIZE_BITS),
-            ],
+            shape=bsign_output_shape,
             consumers=[op],
         )
 
@@ -136,12 +166,12 @@ class SplitBsignPass(LceConv2dPass):
         )
 
         bsign_output.producers = [bsign_op]
+        bsign_output.buffer.data = np.int32(bsign_output_shape)
 
         subgraph.insert_operator(op, bsign_op)
 
         op.inputs = [bsign_op.outputs[0], op.inputs[1]]
         bsign_op.inputs[0].consumers.remove(op)
-        bsign_output.buffer.data = np.int32(bsign_output_shape)
 
 
 # Split out padding to a separate op from BConv

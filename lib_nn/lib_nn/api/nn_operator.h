@@ -742,9 +742,8 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier, 
     const int16_t* post_activation_bias,
-    const unsigned accu_shr,
-    const unsigned accu_shl,
-    const unsigned final_shr,
+    const int accu_shr,
+    const int final_shr,
     
     const nn_image_params_t* x, //The full image of x
     const nn_image_params_t* y, // the full image of y

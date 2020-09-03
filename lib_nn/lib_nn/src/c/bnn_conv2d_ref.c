@@ -59,11 +59,16 @@ unsigned xor_pop(bnn_b256_t* a, bnn_b256_t* b) {
   unsigned c = 0;
   for (unsigned e = 0; e < elements; e++) {
     uint32_t v = a->d[e] ^ b->d[e];
+//  #if defined(__XS3A__)
     v = ~v;
     for (unsigned i = 0; i < t * 8; i++) {
       c += (v & 1);
       v >>= 1;
     }
+    // #else
+    // c += __builtin_popcount(v);
+    // #endif
+
   }
   return c;
 }
@@ -132,15 +137,21 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
   }
 }
 
+static int32_t ashr(int32_t x, int shr){
+  if (shr > 0)
+    return x >> shr;
+  else
+    return x << (-shr);
+}
+
 WEAK_FUNC
 void bnn_conv2d_int8_out(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
-    const unsigned accu_shr,
-    const unsigned accu_shl,
-    const unsigned final_shr,
+    const int accu_shr,
+    const int final_shr,
     
     const nn_image_params_t* x, //The full image of x
     const nn_image_params_t* y, // the full image of y
@@ -193,15 +204,26 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
         sum = backtransform_add - sum;
         
         // printf("%u %u %u %d\n", w / h_stride, h / v_stride, oc, sum);
-        int32_t x = backtransform_add - 2*sum;
+        int32_t accu = backtransform_add - 2*sum;
 
         //not rounding has happened to the point
-        float r = (((float)x) * post_activation_multiplier_q[oc]) + post_activation_bias_q[oc];
+        const unsigned post_vlmul_shr = 14;
+        int32_t r = (ashr(accu, accu_shr) * (int32_t) post_activation_multiplier_q[oc]);
+        r += (1 << (post_vlmul_shr-1));
+        r >>= post_vlmul_shr;
+
+        assert (__builtin_clrsb(r) >= 16);
+
+        r += post_activation_bias_q[oc];
+        r += (1 << (final_shr-1));
+        r >>= final_shr;
+
         
+
         if (r > INT8_MAX) r = INT8_MAX;
         if (r < INT8_MIN) r = INT8_MIN;
 
-        Y[h / v_stride][w / h_stride][oc] = (int8_t)round(r);
+        Y[h / v_stride][w / h_stride][oc] = (int8_t)r;
         
       }
     }

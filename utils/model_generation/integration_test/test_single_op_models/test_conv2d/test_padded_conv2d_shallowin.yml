@@ -1,0 +1,303 @@
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# RANDOMLY GENERATED CONFIGS, MODIFY AT OWN RISK
+default:
+  0:
+    K_h: 9
+    K_w: 4
+    height: 12
+    input_channels: 8
+    num_threads: 1
+    output_channels: 12
+    pad_b: 0
+    pad_l: 2
+    pad_r: 1
+    pad_t: 1
+    strides:
+    - 2
+    - 1
+    width: 14
+  1:
+    K_h: 5
+    K_w: 5
+    height: 15
+    input_channels: 4
+    num_threads: 1
+    output_channels: 52
+    pad_b: 1
+    pad_l: 0
+    pad_r: 1
+    pad_t: 2
+    strides:
+    - 1
+    - 2
+    width: 7
+  2:
+    K_h: 5
+    K_w: 3
+    height: 8
+    input_channels: 4
+    num_threads: 5
+    output_channels: 8
+    pad_b: 1
+    pad_l: 2
+    pad_r: 2
+    pad_t: 2
+    strides:
+    - 2
+    - 2
+    width: 7
+  3:
+    K_h: 2
+    K_w: 4
+    height: 4
+    input_channels: 4
+    num_threads: 1
+    output_channels: 52
+    pad_b: 0
+    pad_l: 2
+    pad_r: 2
+    pad_t: 1
+    strides:
+    - 2
+    - 1
+    width: 1
+  4:
+    K_h: 3
+    K_w: 4
+    height: 4
+    input_channels: 8
+    num_threads: 1
+    output_channels: 32
+    pad_b: 2
+    pad_l: 2
+    pad_r: 1
+    pad_t: 1
+    strides:
+    - 2
+    - 1
+    width: 14
+  5:
+    K_h: 9
+    K_w: 3
+    height: 12
+    input_channels: 4
+    num_threads: 5
+    output_channels: 8
+    pad_b: 1
+    pad_l: 2
+    pad_r: 2
+    pad_t: 1
+    strides:
+    - 1
+    - 2
+    width: 7
+  6:
+    K_h: 7
+    K_w: 4
+    height: 5
+    input_channels: 8
+    num_threads: 5
+    output_channels: 16
+    pad_b: 2
+    pad_l: 0
+    pad_r: 0
+    pad_t: 0
+    strides:
+    - 2
+    - 2
+    width: 7
+  7:
+    K_h: 3
+    K_w: 7
+    height: 5
+    input_channels: 4
+    num_threads: 5
+    output_channels: 28
+    pad_b: 2
+    pad_l: 2
+    pad_r: 0
+    pad_t: 1
+    strides:
+    - 2
+    - 2
+    width: 8
+  8:
+    K_h: 5
+    K_w: 2
+    height: 5
+    input_channels: 4
+    num_threads: 2
+    output_channels: 16
+    pad_b: 2
+    pad_l: 0
+    pad_r: 1
+    pad_t: 2
+    strides:
+    - 1
+    - 2
+    width: 7
+  9:
+    K_h: 7
+    K_w: 2
+    height: 8
+    input_channels: 16
+    num_threads: 2
+    output_channels: 48
+    pad_b: 2
+    pad_l: 0
+    pad_r: 0
+    pad_t: 1
+    strides:
+    - 2
+    - 2
+    width: 20
+  10:
+    K_h: 3
+    K_w: 4
+    height: 15
+    input_channels: 8
+    num_threads: 2
+    output_channels: 12
+    pad_b: 1
+    pad_l: 0
+    pad_r: 1
+    pad_t: 2
+    strides:
+    - 2
+    - 2
+    width: 14
+  11:
+    K_h: 7
+    K_w: 4
+    height: 15
+    input_channels: 4
+    num_threads: 2
+    output_channels: 64
+    pad_b: 0
+    pad_l: 2
+    pad_r: 2
+    pad_t: 0
+    strides:
+    - 1
+    - 2
+    width: 4
+  12:
+    K_h: 7
+    K_w: 3
+    height: 8
+    input_channels: 4
+    num_threads: 1
+    output_channels: 16
+    pad_b: 2
+    pad_l: 0
+    pad_r: 2
+    pad_t: 2
+    strides:
+    - 2
+    - 1
+    width: 1
+  13:
+    K_h: 3
+    K_w: 4
+    height: 5
+    input_channels: 8
+    num_threads: 2
+    output_channels: 12
+    pad_b: 1
+    pad_l: 1
+    pad_r: 0
+    pad_t: 0
+    strides:
+    - 2
+    - 1
+    width: 20
+  14:
+    K_h: 1
+    K_w: 8
+    height: 8
+    input_channels: 4
+    num_threads: 1
+    output_channels: 64
+    pad_b: 0
+    pad_l: 1
+    pad_r: 1
+    pad_t: 0
+    strides:
+    - 2
+    - 1
+    width: 8
+  15:
+    K_h: 5
+    K_w: 8
+    height: 15
+    input_channels: 4
+    num_threads: 5
+    output_channels: 48
+    pad_b: 0
+    pad_l: 2
+    pad_r: 0
+    pad_t: 0
+    strides:
+    - 2
+    - 2
+    width: 14
+  16:
+    K_h: 3
+    K_w: 5
+    height: 8
+    input_channels: 4
+    num_threads: 1
+    output_channels: 16
+    pad_b: 0
+    pad_l: 0
+    pad_r: 2
+    pad_t: 0
+    strides:
+    - 2
+    - 1
+    width: 8
+  17:
+    K_h: 3
+    K_w: 3
+    height: 15
+    input_channels: 4
+    num_threads: 1
+    output_channels: 52
+    pad_b: 2
+    pad_l: 0
+    pad_r: 2
+    pad_t: 0
+    strides:
+    - 2
+    - 1
+    width: 8
+  18:
+    K_h: 7
+    K_w: 4
+    height: 12
+    input_channels: 4
+    num_threads: 2
+    output_channels: 4
+    pad_b: 1
+    pad_l: 1
+    pad_r: 1
+    pad_t: 1
+    strides:
+    - 2
+    - 1
+    width: 8
+  19:
+    K_h: 5
+    K_w: 2
+    height: 8
+    input_channels: 4
+    num_threads: 2
+    output_channels: 52
+    pad_b: 2
+    pad_l: 0
+    pad_r: 0
+    pad_t: 1
+    strides:
+    - 2
+    - 2
+    width: 8

@@ -1,0 +1,443 @@
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# RANDOMLY GENERATED CONFIGS, MODIFY AT OWN RISK
+default:
+  0:
+    K_h: 3
+    K_w: 5
+    channels: 4
+    height: 15
+    num_threads: 5
+    padding: same
+    strides:
+    - 1
+    - 2
+    width: 7
+  1:
+    K_h: 9
+    K_w: 2
+    channels: 16
+    height: 5
+    num_threads: 5
+    padding: same
+    strides:
+    - 2
+    - 1
+    width: 8
+  2:
+    K_h: 2
+    K_w: 1
+    channels: 48
+    height: 8
+    num_threads: 2
+    padding: same
+    strides:
+    - 2
+    - 1
+    width: 7
+  3:
+    K_h: 1
+    K_w: 2
+    channels: 28
+    height: 12
+    num_threads: 5
+    padding: same
+    strides:
+    - 2
+    - 1
+    width: 7
+  4:
+    K_h: 1
+    K_w: 2
+    channels: 4
+    height: 8
+    num_threads: 2
+    padding: same
+    strides:
+    - 2
+    - 1
+    width: 14
+  5:
+    K_h: 9
+    K_w: 2
+    channels: 16
+    height: 15
+    num_threads: 1
+    padding: valid
+    strides:
+    - 2
+    - 2
+    width: 14
+  6:
+    K_h: 5
+    K_w: 5
+    channels: 16
+    height: 5
+    num_threads: 1
+    padding: same
+    strides:
+    - 2
+    - 1
+    width: 14
+  7:
+    K_h: 5
+    K_w: 1
+    channels: 8
+    height: 4
+    num_threads: 1
+    padding: same
+    strides:
+    - 2
+    - 1
+    width: 20
+  8:
+    K_h: 5
+    K_w: 8
+    channels: 28
+    height: 4
+    num_threads: 1
+    padding: same
+    strides:
+    - 1
+    - 2
+    width: 8
+  9:
+    K_h: 5
+    K_w: 1
+    channels: 4
+    height: 5
+    num_threads: 5
+    padding: same
+    strides:
+    - 1
+    - 1
+    width: 20
+  10:
+    K_h: 2
+    K_w: 3
+    channels: 16
+    height: 15
+    num_threads: 2
+    padding: same
+    strides:
+    - 2
+    - 1
+    width: 4
+  11:
+    K_h: 5
+    K_w: 4
+    channels: 28
+    height: 8
+    num_threads: 2
+    padding: same
+    strides:
+    - 1
+    - 2
+    width: 7
+  12:
+    K_h: 7
+    K_w: 3
+    channels: 8
+    height: 15
+    num_threads: 1
+    padding: valid
+    strides:
+    - 1
+    - 1
+    width: 8
+  13:
+    K_h: 3
+    K_w: 4
+    channels: 48
+    height: 5
+    num_threads: 2
+    padding: same
+    strides:
+    - 1
+    - 1
+    width: 8
+  14:
+    K_h: 7
+    K_w: 3
+    channels: 4
+    height: 8
+    num_threads: 5
+    padding: valid
+    strides:
+    - 2
+    - 2
+    width: 8
+  15:
+    K_h: 9
+    K_w: 7
+    channels: 32
+    height: 5
+    num_threads: 2
+    padding: same
+    strides:
+    - 1
+    - 1
+    width: 7
+  16:
+    K_h: 1
+    K_w: 8
+    channels: 16
+    height: 5
+    num_threads: 2
+    padding: same
+    strides:
+    - 1
+    - 1
+    width: 7
+  17:
+    K_h: 9
+    K_w: 4
+    channels: 32
+    height: 15
+    num_threads: 5
+    padding: valid
+    strides:
+    - 1
+    - 2
+    width: 14
+  18:
+    K_h: 1
+    K_w: 7
+    channels: 52
+    height: 5
+    num_threads: 1
+    padding: same
+    strides:
+    - 2
+    - 2
+    width: 4
+  19:
+    K_h: 7
+    K_w: 4
+    channels: 64
+    height: 12
+    num_threads: 5
+    padding: valid
+    strides:
+    - 1
+    - 1
+    width: 20
+  20:
+    K_h: 7
+    K_w: 8
+    channels: 64
+    height: 4
+    num_threads: 1
+    padding: same
+    strides:
+    - 2
+    - 2
+    width: 20
+  21:
+    K_h: 3
+    K_w: 4
+    channels: 64
+    height: 5
+    num_threads: 2
+    padding: valid
+    strides:
+    - 2
+    - 1
+    width: 4
+  22:
+    K_h: 9
+    K_w: 3
+    channels: 12
+    height: 8
+    num_threads: 1
+    padding: same
+    strides:
+    - 1
+    - 2
+    width: 4
+  23:
+    K_h: 1
+    K_w: 7
+    channels: 28
+    height: 4
+    num_threads: 2
+    padding: same
+    strides:
+    - 2
+    - 1
+    width: 8
+  24:
+    K_h: 3
+    K_w: 5
+    channels: 48
+    height: 4
+    num_threads: 2
+    padding: valid
+    strides:
+    - 2
+    - 2
+    width: 14
+  25:
+    K_h: 9
+    K_w: 7
+    channels: 16
+    height: 12
+    num_threads: 1
+    padding: valid
+    strides:
+    - 2
+    - 2
+    width: 20
+  26:
+    K_h: 5
+    K_w: 4
+    channels: 4
+    height: 12
+    num_threads: 1
+    padding: valid
+    strides:
+    - 2
+    - 2
+    width: 7
+  27:
+    K_h: 2
+    K_w: 1
+    channels: 52
+    height: 15
+    num_threads: 2
+    padding: valid
+    strides:
+    - 1
+    - 1
+    width: 4
+  28:
+    K_h: 1
+    K_w: 3
+    channels: 64
+    height: 12
+    num_threads: 2
+    padding: valid
+    strides:
+    - 1
+    - 2
+    width: 8
+  29:
+    K_h: 7
+    K_w: 1
+    channels: 64
+    height: 5
+    num_threads: 1
+    padding: same
+    strides:
+    - 1
+    - 2
+    width: 8
+  30:
+    K_h: 2
+    K_w: 3
+    channels: 4
+    height: 5
+    num_threads: 2
+    padding: same
+    strides:
+    - 2
+    - 2
+    width: 14
+  31:
+    K_h: 1
+    K_w: 2
+    channels: 52
+    height: 15
+    num_threads: 2
+    padding: valid
+    strides:
+    - 2
+    - 2
+    width: 4
+  32:
+    K_h: 5
+    K_w: 7
+    channels: 32
+    height: 15
+    num_threads: 2
+    padding: valid
+    strides:
+    - 2
+    - 2
+    width: 14
+  33:
+    K_h: 7
+    K_w: 4
+    channels: 12
+    height: 5
+    num_threads: 1
+    padding: same
+    strides:
+    - 1
+    - 2
+    width: 7
+  34:
+    K_h: 2
+    K_w: 4
+    channels: 48
+    height: 4
+    num_threads: 1
+    padding: same
+    strides:
+    - 1
+    - 2
+    width: 14
+  35:
+    K_h: 3
+    K_w: 5
+    channels: 8
+    height: 12
+    num_threads: 5
+    padding: same
+    strides:
+    - 1
+    - 2
+    width: 8
+  36:
+    K_h: 9
+    K_w: 5
+    channels: 16
+    height: 15
+    num_threads: 1
+    padding: same
+    strides:
+    - 2
+    - 1
+    width: 14
+  37:
+    K_h: 2
+    K_w: 2
+    channels: 8
+    height: 8
+    num_threads: 1
+    padding: same
+    strides:
+    - 2
+    - 1
+    width: 7
+  38:
+    K_h: 3
+    K_w: 3
+    channels: 8
+    height: 15
+    num_threads: 1
+    padding: valid
+    strides:
+    - 2
+    - 2
+    width: 14
+  39:
+    K_h: 1
+    K_w: 1
+    channels: 48
+    height: 1
+    num_threads: 1
+    padding: valid
+    strides:
+    - 2
+    - 1
+    width: 1

@@ -2,7 +2,7 @@
 
 import pytest
 import numpy as np
-
+from typing import Callable, Tuple
 from copy import deepcopy
 
 from tflite2xcore.xcore_model import XCOREModel
@@ -16,6 +16,8 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
     BuiltinOptions,
 )
+
+ModelBuilder = Callable[..., XCOREModel]
 
 
 def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
@@ -125,13 +127,21 @@ def build_mean(subgraph=None, *, input_shape, reduction_dims):
 
     input_shape = [1, *input_shape]
     tin = subgraph.create_tensor(
-        "input", type_=TensorType.INT8, shape=input_shape, isinput=True
+        "input",
+        type_=TensorType.INT8,
+        shape=input_shape,
+        isinput=True,
+        quantization={"scale": [0.65], "zero_point": [-12]},
     )
     tred = subgraph.create_tensor(
         "reduction_dims", TensorType.INT32, [len(reduction_dims)]
     )
     tout = subgraph.create_tensor(
-        "output", tin.type, [tin.shape[0] + tin.shape[3]], isoutput=True
+        "output",
+        tin.type,
+        [tin.shape[0] + tin.shape[3]],
+        isoutput=True,
+        quantization={"scale": [0.42], "zero_point": [-11]},
     )
     tred.buffer.data = np.array(reduction_dims, dtype=np.int32)
     subgraph.create_operator(
@@ -201,10 +211,10 @@ def build_pool(
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, *input_shape]
-    output_shape = [
+    output_shape = [  # TODO: fix this: calculate based on strides and pool_size
         input_shape[0],
-        input_shape[1] / 2,
-        input_shape[1] / 2,
+        input_shape[1] // 2,
+        input_shape[1] // 2,
         input_shape[3],
     ]
     quantization = {"scale": [0.35], "zero_point": [0]}
@@ -425,9 +435,34 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     C_out, K_h, K_w, C_in = weight_shape
 
     input_shape = [1, height, width, C_in]
-    tin = subgraph.create_tensor("input", TensorType.INT8, input_shape, isinput=True)
-    w = subgraph.create_tensor("weights", TensorType.INT8, weight_shape)
-    b = subgraph.create_tensor("biases", TensorType.INT32, weight_shape[:1])
+    tin = subgraph.create_tensor(
+        "input",
+        TensorType.INT8,
+        input_shape,
+        isinput=True,
+        quantization={"scale": [0.63], "zero_point": [-5]},
+    )
+    np.random.seed(42)
+    w = subgraph.create_tensor(
+        "weights",
+        TensorType.INT8,
+        weight_shape,
+        quantization={
+            "scale": np.random.uniform(size=(C_out,)).astype(float).tolist(),
+            "zero_point": [0] * C_out,
+        },
+    )
+    b = subgraph.create_tensor(
+        "biases",
+        TensorType.INT32,
+        shape=[C_out],
+        quantization={
+            "scale": [
+                tin.quantization["scale"][0] * s for s in w.quantization["scale"]
+            ],
+            "zero_point": [0] * C_out,
+        },
+    )
 
     # add dummy data so that the op can be mutated
     w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
@@ -473,9 +508,34 @@ def build_depthwise_conv2d(
 
     input_shape = [1, input_size[0], input_size[1], C_in]
     weight_shape = [1, K_h, K_w, C_out]
-    tin = subgraph.create_tensor("input", TensorType.INT8, input_shape, isinput=True)
-    w = subgraph.create_tensor("weights", TensorType.INT8, weight_shape)
-    b = subgraph.create_tensor("biases", TensorType.INT32, shape=[C_out])
+    tin = subgraph.create_tensor(
+        "input",
+        TensorType.INT8,
+        input_shape,
+        isinput=True,
+        quantization={"scale": [0.48], "zero_point": [15]},
+    )
+    np.random.seed(42)
+    w = subgraph.create_tensor(
+        "weights",
+        TensorType.INT8,
+        weight_shape,
+        quantization={
+            "scale": np.random.uniform(size=(C_out,)).astype(float).tolist(),
+            "zero_point": [0] * C_out,
+        },
+    )
+    b = subgraph.create_tensor(
+        "biases",
+        TensorType.INT32,
+        shape=[C_out],
+        quantization={
+            "scale": [
+                tin.quantization["scale"][0] * s for s in w.quantization["scale"]
+            ],
+            "zero_point": [0] * C_out,
+        },
+    )
 
     # add dummy data so that the op can be mutated
     w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
@@ -509,6 +569,30 @@ def build_depthwise_conv2d(
     return subgraph.model
 
 
+SpatialPadding = Tuple[Tuple[int, int], Tuple[int, int]]
+
+
+def _calculate_implicit_pads(
+    strides: Tuple[int, int], input_size: Tuple[int, int], kernel_size: Tuple[int, int]
+) -> SpatialPadding:
+    return tuple(
+        (0, int(np.ceil((i - k) / s) * s - i + k))
+        for s, i, k in zip(strides, input_size, kernel_size)
+    )
+
+
+def _calculate_out_size(
+    spatial_pads: SpatialPadding,
+    strides: Tuple[int, int],
+    input_size: Tuple[int, int],
+    kernel_size: Tuple[int, int],
+) -> Tuple[int, int]:
+    return tuple(
+        int((i - k + p[0] + p[1]) / s + 1)
+        for p, s, i, k in zip(spatial_pads, strides, input_size, kernel_size)
+    )
+
+
 def build_XC_conv2d(opcode, subgraph=None, *, weight_shape, input_size, strides):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
@@ -522,14 +606,8 @@ def build_XC_conv2d(opcode, subgraph=None, *, weight_shape, input_size, strides)
     b = subgraph.create_tensor("bso", TensorType.INT16, bso_shape)
 
     # valid padding
-    pads = [
-        (0, np.ceil((i - k) / s) * s - i + k)
-        for s, i, k in zip(strides, input_size, weight_shape[1:3])
-    ]
-    out_size = [
-        (i - k + p[0] + p[1]) / s + 1
-        for p, s, i, k in zip(pads, strides, input_size, weight_shape[1:3])
-    ]
+    pads = _calculate_implicit_pads(strides, input_size, weight_shape[1:3])
+    out_size = _calculate_out_size(pads, strides, input_size, weight_shape[1:3])
     output_shape = [C_out, *out_size, C_in]
     tout = subgraph.create_tensor("output", tin.type, output_shape, isoutput=True)
 
@@ -537,7 +615,7 @@ def build_XC_conv2d(opcode, subgraph=None, *, weight_shape, input_size, strides)
         OperatorCode(opcode), inputs=[tin, w, b], outputs=[tout]
     )
     op.add_custom_options(
-        pad=[pads[0][0], pads[1][0], -127], stride=[strides[0], strides[1]]
+        pad=(pads[0][0], pads[1][0], -127), stride=(strides[0], strides[1])
     )
 
     return subgraph.model
@@ -568,14 +646,8 @@ def build_XC_conv2d_depthwise(subgraph=None, *, weight_shape, input_size, stride
     b = subgraph.create_tensor("bso", TensorType.INT16, bso_shape)
 
     # valid padding
-    pads = [
-        (0, np.ceil((i - k) / s) * s - i + k)
-        for s, i, k in zip(strides, input_size, weight_shape[:2])
-    ]
-    out_size = [
-        (i - k + p[0] + p[1]) / s + 1
-        for p, s, i, k in zip(pads, strides, input_size, weight_shape[:2])
-    ]
+    pads = _calculate_implicit_pads(strides, input_size, weight_shape[:2])
+    out_size = _calculate_out_size(pads, strides, input_size, weight_shape[:2])
     output_shape = [1, *out_size, C_in]
     tout = subgraph.create_tensor("output", tin.type, output_shape, isoutput=True)
 
@@ -585,7 +657,7 @@ def build_XC_conv2d_depthwise(subgraph=None, *, weight_shape, input_size, stride
         outputs=[tout],
     )
     op.add_custom_options(
-        pad=[pads[0][0], pads[1][0], -127], stride=[strides[0], strides[1]]
+        pad=(pads[0][0], pads[1][0], -127), stride=(strides[0], strides[1])
     )
 
     return subgraph.model

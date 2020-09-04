@@ -1,0 +1,163 @@
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# RANDOMLY GENERATED CONFIGS, MODIFY AT OWN RISK
+default:
+  0:
+    channels: 1
+    height: 8
+    width: 1
+  1:
+    channels: 32
+    height: 1
+    width: 14
+  2:
+    channels: 32
+    height: 1
+    width: 8
+  3:
+    channels: 12
+    height: 1
+    width: 20
+  4:
+    channels: 1
+    height: 15
+    width: 1
+  5:
+    channels: 12
+    height: 4
+    width: 4
+  6:
+    channels: 32
+    height: 1
+    width: 4
+  7:
+    channels: 32
+    height: 8
+    width: 1
+  8:
+    channels: 4
+    height: 12
+    width: 20
+  9:
+    channels: 7
+    height: 12
+    width: 7
+  10:
+    channels: 49
+    height: 5
+    width: 7
+  11:
+    channels: 49
+    height: 4
+    width: 7
+  12:
+    channels: 16
+    height: 4
+    width: 20
+  13:
+    channels: 4
+    height: 12
+    width: 8
+  14:
+    channels: 1
+    height: 15
+    width: 7
+  15:
+    channels: 49
+    height: 8
+    width: 4
+  16:
+    channels: 12
+    height: 15
+    width: 20
+  17:
+    channels: 25
+    height: 12
+    width: 1
+  18:
+    channels: 49
+    height: 4
+    width: 4
+  19:
+    channels: 16
+    height: 1
+    width: 8
+  20:
+    channels: 25
+    height: 8
+    width: 14
+  21:
+    channels: 12
+    height: 4
+    width: 20
+  22:
+    channels: 7
+    height: 5
+    width: 20
+  23:
+    channels: 49
+    height: 8
+    width: 14
+  24:
+    channels: 32
+    height: 1
+    width: 7
+  25:
+    channels: 12
+    height: 5
+    width: 8
+  26:
+    channels: 7
+    height: 12
+    width: 14
+  27:
+    channels: 1
+    height: 15
+    width: 7
+  28:
+    channels: 4
+    height: 15
+    width: 7
+  29:
+    channels: 1
+    height: 4
+    width: 14
+  30:
+    channels: 4
+    height: 12
+    width: 8
+  31:
+    channels: 7
+    height: 15
+    width: 4
+  32:
+    channels: 16
+    height: 12
+    width: 1
+  33:
+    channels: 7
+    height: 5
+    width: 8
+  34:
+    channels: 25
+    height: 5
+    width: 4
+  35:
+    channels: 25
+    height: 5
+    width: 1
+  36:
+    channels: 16
+    height: 12
+    width: 8
+  37:
+    channels: 25
+    height: 1
+    width: 14
+  38:
+    channels: 4
+    height: 8
+    width: 14
+  39:
+    channels: 16
+    height: 4
+    width: 1

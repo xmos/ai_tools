@@ -144,6 +144,16 @@ typedef struct {
         /** Horizontal stride of the convolution window */
         int horizontal;
     } stride;
+
+    /**
+     * Note: Only supported where explicitly mentioned.
+     */
+    struct {
+        /** Vertical dilation of the convolution window. */
+        int vertical;
+        /** Horizontal dilation of the convolution window */
+        int horizontal;
+    } dilation;
 } nn_window_params_t;
 
 
@@ -450,15 +460,16 @@ typedef struct {
 typedef struct nn_pad_plan_t {
   unsigned top_pad_bytes;
   unsigned mid_loop_count;
-  unsigned mid_pad_bytes;
+  unsigned left_pad_bytes;
   unsigned mid_copy_bytes;
+  unsigned right_pad_bytes;
   unsigned bottom_pad_bytes;
 } nn_pad_plan_t;
 
 // This is for the PaddingValues
 // #include "tensorflow/lite/kernels/internal/types.h"
 
-typedef struct PaddingValues {
+typedef struct padding_values_t {
   int16_t width;
   int16_t height;
   // offset is used for calculating "remaining" padding, for example, `width`
@@ -467,7 +478,7 @@ typedef struct PaddingValues {
   int16_t width_offset;
   // Same as width_offset except it's over the height dimension.
   int16_t height_offset;
-} PaddingValues;
+} padding_values_t;
 
 /**
  * Struct represents the parameters needed by each
@@ -499,22 +510,6 @@ typedef struct {
   bnn_b256_t* K;
 } nn_bnn_conv2d_bin_out_asm_plan_t;
 
-/**
- * Struct represents the parameters needed by each `bnn_conv2d()` job.
- *
- * Values are set by `bnn_conv2d_init()`.
- *
- * @note This struct is intended to be opaque.
- */
-typedef struct {
-  unsigned y_dims[3];     // out_height, out_width, out_channels
-  unsigned x_dims[3];     // in_height, in_width, in_channels
-  unsigned k_dims[2];     // kernel_height, kernel_width
-  unsigned start_loc[2];  // start_height, start_width
-  unsigned stride[2];     // stride_height, stride_width
-  // int8_t clamp_min;
-  // int8_t clamp_max;
-} nn_bnn_conv2d_bin_out_plan_t;
 
 #ifdef __XC__
 }   //extern "C"

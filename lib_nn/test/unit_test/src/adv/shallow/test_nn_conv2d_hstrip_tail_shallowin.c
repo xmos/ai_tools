@@ -76,10 +76,6 @@ void test_nn_conv2d_hstrip_tail_shallowin_case0()
 {
     PRINTF("%s...\n", __func__);
 
-    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
-
-    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT_MAX][K_h][K_w_array][CHANS_IN];
-
     struct {
         int32_t bias[CHANS_OUT_MAX];
         int16_t shift1[CHANS_OUT_MAX];
@@ -89,8 +85,9 @@ void test_nn_conv2d_hstrip_tail_shallowin_case0()
         int16_t shift2[CHANS_OUT_MAX];
     } BSO;
 
+    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT_MAX][K_h][K_w_array][CHANS_IN];
     nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
-
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
     
     typedef struct {
@@ -200,10 +197,6 @@ void test_nn_conv2d_hstrip_tail_shallowin_case1()
 {
     PRINTF("%s...\n", __func__);
 
-    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
-
-    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT_MAX][K_h][K_w_array][CHANS_IN];
-
     struct {
         int32_t bias[CHANS_OUT_MAX];
         int16_t shift1[CHANS_OUT_MAX];
@@ -213,8 +206,9 @@ void test_nn_conv2d_hstrip_tail_shallowin_case1()
         int16_t shift2[CHANS_OUT_MAX];
     } BSO;
 
+    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT_MAX][K_h][K_w_array][CHANS_IN];
     nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
-
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
     
     typedef struct {
@@ -329,10 +323,6 @@ void test_nn_conv2d_hstrip_tail_shallowin_case2()
 {
     PRINTF("%s...\n", __func__);
 
-    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
-
-    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT_MAX][K_h][K_w_array][CHANS_IN];
-
     struct {
         int32_t bias[CHANS_OUT_MAX];
         int16_t shift1[CHANS_OUT_MAX];
@@ -342,8 +332,9 @@ void test_nn_conv2d_hstrip_tail_shallowin_case2()
         int16_t shift2[CHANS_OUT_MAX];
     } BSO;
 
+    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT_MAX][K_h][K_w_array][CHANS_IN];
     nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
-
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
     
     for(int C_out = 4; C_out <= 12; C_out += 4){
@@ -443,10 +434,6 @@ void test_nn_conv2d_hstrip_tail_shallowin_case3()
 {
     PRINTF("%s...\n", __func__);
 
-    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
-
-    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT_MAX][K_h][K_w_array][CHANS_IN];
-
     struct {
         int32_t bias[CHANS_OUT_MAX];
         int16_t shift1[CHANS_OUT_MAX];
@@ -456,8 +443,9 @@ void test_nn_conv2d_hstrip_tail_shallowin_case3()
         int16_t shift2[CHANS_OUT_MAX];
     } BSO;
 
+    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT_MAX][K_h][K_w_array][CHANS_IN];
     nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
-
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
     
     for(int C_out = 4; C_out <= 12; C_out += 4){
@@ -557,10 +545,6 @@ void test_nn_conv2d_hstrip_tail_shallowin_case4()
 {
     PRINTF("%s...\n", __func__);
 
-    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
-
-    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT_MAX][K_h][K_w_array][CHANS_IN];
-
     struct {
         int32_t bias[CHANS_OUT_MAX];
         int16_t shift1[CHANS_OUT_MAX];
@@ -570,8 +554,9 @@ void test_nn_conv2d_hstrip_tail_shallowin_case4()
         int16_t shift2[CHANS_OUT_MAX];
     } BSO;
 
+    nn_image_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS_IN];
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT_MAX][K_h][K_w_array][CHANS_IN];
     nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT_MAX)];
-
     nn_image_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT_MAX];
     
     nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };

@@ -1,14 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import dill  # type: ignore
-import shutil
+import logging
 import tensorflow as tf  # type: ignore
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, List, Any, Union
 
-from tflite2xcore.utils import set_all_seeds  # type: ignore # TODO: fix this
-from tflite2xcore import xlogging  # type: ignore # TODO: fix this
+from tflite2xcore.utils import set_all_seeds, LoggingContext  # type: ignore # TODO: fix this
 
 from . import Configuration
 from .converters import Converter
@@ -24,7 +23,7 @@ class ModelGenerator(ABC):
     """
 
     _model: Any
-    _config: Configuration = {}
+    _config: Configuration
     run: Runner
 
     def __init__(
@@ -64,6 +63,7 @@ class ModelGenerator(ABC):
         Default values for missing configuration parameters are set.
         Subclasses should implement the _set_config method instead of this.
         """
+        self._config = {}
         self._set_config(config)
         if config:
             raise ValueError(
@@ -79,24 +79,21 @@ class KerasModelGenerator(ModelGenerator):
         set_all_seeds()
 
     @property
-    def _input_shape(self) -> Tuple[int, ...]:
+    def input_shape(self) -> Tuple[int, ...]:
         return self._model.input_shape[1:]  # type:ignore  # pylint: disable=no-member
 
     @property
-    def _output_shape(self) -> Tuple[int, ...]:
+    def output_shape(self) -> Tuple[int, ...]:
         return self._model.output_shape[1:]  # type:ignore  # pylint: disable=no-member
 
     def save(self, dirpath: Union[Path, str]) -> Path:
         """ Saves the model contents to the specified directory.
         
         If the directory doesn't exist, it is created.
-        If the directory is not empty, it is purged.
         """
         dirpath = Path(dirpath)
-        if dirpath.exists():
-            shutil.rmtree(dirpath)
-        dirpath.mkdir(parents=True)
-        self._model.save(dirpath / "model.h5")
+        dirpath.mkdir(parents=True, exist_ok=True)
+        self._model.save(dirpath / "model")
         tmp = self._model
         del self._model
         with open(dirpath / "generator.dill", "wb") as f:
@@ -112,6 +109,6 @@ class KerasModelGenerator(ModelGenerator):
         assert isinstance(obj, cls)
 
         # tf may complain about missing training config, so silence it
-        with xlogging.LoggingContext(tf.get_logger(), xlogging.ERROR):
-            obj._model = tf.keras.models.load_model(dirpath / "model.h5")
+        with LoggingContext(tf.get_logger(), logging.ERROR):
+            obj._model = tf.keras.models.load_model(dirpath / "model")
         return obj

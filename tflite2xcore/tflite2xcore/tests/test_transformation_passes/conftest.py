@@ -1,13 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest
-
+import pytest  # type: ignore
 import itertools
 from typing import List, Dict, Iterator, Tuple, Any
 
-from tflite2xcore.pass_manager import ModelTransformationPass
+from tflite2xcore.transformation_passes import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.xcore_schema import TensorType
+from tflite2xcore.xcore_schema import TensorType, XCOREOpCodes
+from tflite2xcore.converter import CleanupManager
 
 
 #  ----------------------------------------------------------------------------
@@ -58,6 +58,8 @@ NON_FLOAT32_TEST_TYPES = [
     TensorType.UINT8,
 ]
 
+ParamsType = Dict[str, Dict[str, List[Any]]]
+
 PARAMS = {
     "extended": {
         "input_height": [7, 9, 17, 20, 32],
@@ -74,7 +76,7 @@ PARAMS = {
         "input_width": [7, 17],
         "input_channels": [4, 32],
     },
-}  # type: Dict[str, Dict[str, List[Any]]]
+}  # type: ParamsType
 
 
 #  ----------------------------------------------------------------------------
@@ -117,3 +119,20 @@ def test_non_matching_tensors(
     for name, type_ in non_matching_tensors.items():
         subgraph.get_tensor(name).type = type_
     _test_non_matching_params(trf_pass, model)
+
+
+def test_replace_mutate(
+    trf_pass: ModelTransformationPass, model: XCOREModel, custom_opcode: XCOREOpCodes
+) -> None:
+    # run replacement pass
+    trf_pass.run(model)
+    model.sanity_check()
+
+    # clean up dangling op
+    CleanupManager(model).run_passes()
+    model.sanity_check()
+
+    # check new op
+    op = model.subgraphs[0].operators[-1]
+    assert op.operator_code.code is custom_opcode
+

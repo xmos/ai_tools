@@ -98,19 +98,29 @@ class ReplaceLceBconv2DPass(LceConv2dPass):
     # to allow for basic testing of pass
     def mutate(self, op: Operator) -> None:
 
+        
         if self._output_tensor_type is TensorType.INT8:
             op.operator_code.code = XCOREOpCodes.XC_bconv_int8_DIDO
         else:
             op.operator_code.code = XCOREOpCodes.XC_bconv_bin_DIDO
+
+        # TODO rm me
+        subgraph = op.subgraph
+        subgraph.outputs.append(op.inputs[0])
+        subgraph.remove_tensor(op.outputs[0])
+        subgraph.remove_operator(op)
 
 
 # Replace LCEQuantize with XC_BBsign8
 class ReplaceLceQuantizePass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
 
-        if op.operator_code.code is not ExternalOpCodes.LceQuantize:
+        try: 
+            if op.operator_code.code is not ExternalOpCodes.LceQuantize:
+                return False
+        except AttributeError:
             return False
-
+    
         return (
             super().match(op)
             # and len(op.inputs) == 1

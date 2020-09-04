@@ -95,8 +95,9 @@ class XCORESerializationMixin:
                     hasattr(operatorT, "customOptions")
                     and operatorT.customOptions is not None
                 ):
-                    options["custom_options"] = json.loads(
-                        FlexbufferParser().parse(bytes(operatorT.customOptions))
+                    if len(bytes(operatorT.customOptions))> 0:
+                        options["custom_options"] = json.loads(
+                            FlexbufferParser().parse(bytes(operatorT.customOptions))
                     )
 
                 def is_valid_tensor_index(

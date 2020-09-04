@@ -5,6 +5,7 @@ import pathlib
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import transformation_passes as passes
+from tflite2xcore.xcore_schema import TensorType
 
 
 class CleanupManager(PassManager):
@@ -85,6 +86,8 @@ def optimize_for_xcore(
         model, keep_intermediates=bool(intermediates_path)
     )
 
+    # TODO should this canonicalize to more closely match builtin conv?
+    pass_mgr.register_pass(passes.CanonicalizeLceBconv2DPass())
     pass_mgr.register_pass(passes.CanonicalizeReshapePass())
     pass_mgr.register_pass(passes.RemoveFlattenReshapePass())
 
@@ -104,6 +107,18 @@ def optimize_for_xcore(
     # need to cleanup after the first round of canonicalization
     pass_mgr.register_passes(CleanupManager())
 
+    pass_mgr.register_pass(passes.ReplaceLceQuantizePass())
+
+    # TOOD rename
+    # Note, this currently only matches with BConv but going forward might like to extend to other Conv ops
+    #pass_mgr.register_pass(passes.SplitPaddingFromConvPass())
+
+    pass_mgr.register_pass(
+        passes.ReplaceLceBconv2DPass(output_tensor_type=TensorType.INT32)
+    )
+    pass_mgr.register_pass(
+        passes.ReplaceLceBconv2DPass(output_tensor_type=TensorType.INT8)
+    )
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())
     pass_mgr.register_pass(passes.ReplaceTanhPass())
@@ -119,6 +134,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())
     pass_mgr.register_pass(passes.ReplaceAveragePool2DPass())
     pass_mgr.register_pass(passes.ReplaceGlobalAveragePool2DPass())
+    # TODO ReplacePadPass()
 
     pass_mgr.register_pass(passes.ReplaceFullyConnectedPass())
 

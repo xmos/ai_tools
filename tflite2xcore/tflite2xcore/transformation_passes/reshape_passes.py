@@ -56,7 +56,7 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
             return False
 
         try:
-            if op.builtin_options["new_shape"] != list(op.outputs[0].shape):
+            if list(op.builtin_options["new_shape"]) != list(op.outputs[0].shape):
                 self.logger.warning(
                     "new_shape option to RESHAPE doesn't match output tensor shape"
                 )

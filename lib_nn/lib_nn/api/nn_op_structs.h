@@ -102,7 +102,6 @@ typedef struct {
 } nn_bso_block_t;
 
 
-
 /**
  * Describes the relationship between the convolution window and the 
  * input image.
@@ -194,65 +193,6 @@ typedef struct {
 } nn_window_op_job_params_t;
 
 
-
-
-
-/**
- * Struct represents the parameters needed by all `fully_connected_16()` jobs.
- * 
- * Values are set by `fully_connected_16_init()`.
- * 
- * @note This struct is intended to be opaque.
- */
-typedef struct {
-    struct {
-        channel_count_t X;
-    } channels;
-} nn_fully_connected_plan_t;
-
-/**
- * Struct represents the parameters needed by a single `fully_connected_16()` job.
- * 
- * Values are set by `fully_connected_16_init()`.
- * 
- * @note This struct is intended to be opaque.
- */
-typedef struct {
-
-    struct {
-        struct {
-            mem_stride_t Y;
-            mem_stride_t W;
-            mem_stride_t BSO;
-        } start;
-    } stride;
-
-    struct {
-        channel_count_t channels;
-    } output;
-} nn_fully_connected_job_t;
-
-/**
- * Struct represents the job initialization information required by `fully_connected_16_init()`.
- * 
- * `fully_connected_16()` job computes a contiguous subset of the output channels.
- * 
- * @note When splitting a `fully_connected_16()` into multiple jobs, jobs that compute less than 16
- *       output channels will often be *less* efficient than a full 16 channels.
- */
-typedef struct {
-    /**
-     * The first output channel to be computed by the job. Must be a multiple of `4`.
-     */
-    uint32_t start_channel;
-
-    /**
-     * The number of output channels to be computed by the job. Does not have to be a multiple of 4,
-     * however, because the `start_channel` for each job must be a multiple of 4, this value can only
-     * be a non-multiple of 4 for the last job.
-     */
-    channel_count_t out_channels;
-} nn_fully_connected_job_params_t;
 
 
 /**

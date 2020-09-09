@@ -4,25 +4,29 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "inference_engine.h"
 
 #define MAX_MODEL_CONTENT_SIZE 100000
-static int model_content_bytes = 0;
 unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
+static size_t model_received_bytes = 0;
 
 #define TENSOR_ARENA_SIZE 100000
 unsigned char tensor_arena[TENSOR_ARENA_SIZE];
 
-static int input_bytes = 0;
-static int input_size;
+static int tensor_index = -1;
+static size_t tensor_size = 0;
+static size_t tensor_received_bytes = 0;
+
+static size_t input_size;
 static unsigned char *input_buffer;
 
-static int output_size;
+static size_t output_size;
 static unsigned char *output_buffer;
 
-enum ReceiveState { Model, Input };
-static enum ReceiveState state;
+enum AppState { Model, SetTensor, Invoke, GetTensor };
+static enum AppState state;
 
 #ifdef XCORE
 
@@ -30,45 +34,65 @@ static enum ReceiveState state;
 
 void app_main() {}
 
-void send_output() {
-  xscope_bytes(OUTPUT_TENSOR, output_size,
-               (const unsigned char *)output_buffer);
+void send_tensor(void *buffer, size_t size) {
+  xscope_bytes(GET_TENSOR, size, (const unsigned char *)buffer);
 }
 
 void app_data(void *data, size_t size) {
+  void *tensor_buffer;
+
+  // Handle state protocol messages
   if (strncmp(data, "START_MODEL", 11) == 0) {
-    model_content_bytes = 0;
     state = Model;
+    model_received_bytes = 0;
     return;
   } else if (strncmp(data, "END_MODEL", 9) == 0) {
     // Note, initialize will log error and exit if initialize fails
     initialize(model_content, tensor_arena, TENSOR_ARENA_SIZE, &input_buffer,
                &input_size, &output_buffer, &output_size);
-    input_bytes = 0;
-    state = Input;
+    return;
+  } else if (strncmp(data, "SET_TENSOR", 9) == 0) {
+    state = SetTensor;
+    tensor_received_bytes = 0;
+    sscanf(data, "SET_TENSOR %d %d", &tensor_index, &tensor_size);
+    return;
+  } else if (strncmp(data, "GET_TENSOR", 9) == 0) {
+    state = GetTensor;
+    sscanf(data, "GET_TENSOR %d", &tensor_index);
+    get_tensor_bytes(tensor_index, &tensor_buffer, &tensor_size);
+    send_tensor(tensor_buffer, tensor_size);
+    return;
+  } else if (strncmp(data, "INVOKE", 6) == 0) {
+    state = Invoke;
+    invoke();
     return;
   }
 
+  // Handle data payload messages
   switch (state) {
     case Model:
       // printf("Model size=%d\n", size);
-      memcpy(model_content + model_content_bytes, data, size);
-      model_content_bytes += size;
-      if (model_content_bytes > MAX_MODEL_CONTENT_SIZE) {
+      memcpy(model_content + model_received_bytes, data, size);
+      model_received_bytes += size;
+      if (model_received_bytes > MAX_MODEL_CONTENT_SIZE) {
         // Return error if too big
         printf("Model exceeds maximum size of %d bytes\n",
                MAX_MODEL_CONTENT_SIZE);
         exit(1);
       }
       break;
-    case Input:
-      memcpy(input_buffer + input_bytes, data, size);
-      input_bytes += size;
-      if (input_bytes == input_size) {
-        invoke();
-        send_output();
-        input_bytes = 0;
+    case SetTensor:
+      get_tensor_bytes(tensor_index, &tensor_buffer, &tensor_size);
+      memcpy(tensor_buffer + tensor_received_bytes, data, size);
+      tensor_received_bytes += size;
+      if (tensor_received_bytes > tensor_size) {
+        // Return error if too big
+        printf("Tensor exceeds size of %d bytes\n", tensor_size);
+        exit(1);
       }
+      break;
+    case Invoke:
+    case GetTensor:
       break;
   }
 }

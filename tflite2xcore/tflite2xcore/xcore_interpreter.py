@@ -356,6 +356,7 @@ class XCOREInterpreter:
         self._check_status(
             lib.get_tensor(self.obj, tensor_index, data_ptr, tensor.ndim, shape, type_)
         )
+
         return tensor
 
     def _get_tensor_details(self, tensor_index):

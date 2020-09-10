@@ -59,7 +59,8 @@ pipeline {
                 }
                 stage("Check") {
                     steps {
-                        sh "env"
+                        sh """#!/bin/bash -l
+                              env"""
                         sh "conda run -n .venv python -c 'import tensorflow'"
                         sh """#!/bin/bash -l
                               xcc --version"""

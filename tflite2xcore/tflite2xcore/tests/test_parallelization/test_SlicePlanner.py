@@ -1,13 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-import logging
 import itertools
 
 import numpy as np
 
 from tflite2xcore.parallelization import SlicePlanner, MAX_THREADS
-from tflite2xcore.xlogging import LoggingContext
 
 MAX_OUTPUT_CHANNELS = 20
 VALID_OUTPUT_CHANNELS = list(range(1, MAX_OUTPUT_CHANNELS + 1))

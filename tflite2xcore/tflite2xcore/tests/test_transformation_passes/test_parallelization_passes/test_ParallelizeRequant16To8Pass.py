@@ -2,9 +2,11 @@
 
 import pytest
 
-from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.transformation_passes import ParallelizeRequant16To8Pass
+from tflite2xcore.transformation_passes import (
+    ModelTransformationPass,
+    ParallelizeRequant16To8Pass,
+)
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_XC_requantize_16_to_8,

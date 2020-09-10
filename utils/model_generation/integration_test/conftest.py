@@ -1,12 +1,12 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import os
 import yaml
+import logging
+import portalocker  # type: ignore
 import pytest  # type: ignore
 import _pytest  # type: ignore # NOTE: for typing only
 from pathlib import Path
 
-from tflite2xcore import xlogging  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation.utils import stringify_config
 
@@ -56,7 +56,7 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
             CONFIGS = metafunc.module.CONFIGS  # [coverage].values()
             config_file = Path(metafunc.module.__file__)
         except AttributeError:
-            xlogging.logging.debug(f"CONFIGS undefined in {metafunc.module}")
+            logging.debug(f"CONFIGS undefined in {metafunc.module}")
             config_file = Path(metafunc.module.__file__).with_suffix(".yml")
             try:
                 with open(config_file, "r") as f:
@@ -69,7 +69,7 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
 
         coverage = metafunc.config.getoption("coverage")
         try:
-            configs = CONFIGS[coverage].values()
+            configs = list(CONFIGS[coverage].values())
         except KeyError:
             raise KeyError(
                 "CONFIGS does not define coverage level "
@@ -106,17 +106,27 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
         pytest.skip()
 
     config_str = stringify_config(gen._config)
-    key = "model_cache/" + config_str
+    file_path = Path(request.module.__file__)
+    key = file_path.relative_to(pytest_config.rootdir) / config_str
+
     dirpath = pytest_config.cache.get(key, "")
     if dirpath:
         gen = IntegrationTestModelGenerator.load(dirpath)
-        xlogging.logging.debug(f"cached generator loaded from {dirpath}")
+        logging.debug(f"cached generator loaded from {dirpath}")
+        gen.run.rerun_post_cache()
     else:
-        dirpath = os.path.join(pytest_config.cache.makedir("model_cache"), config_str)
         gen.run()
-        gen.save(dirpath, dump_models=pytest_config.getoption("dump") == "models")
-        xlogging.logging.debug(f"generator cached to {dirpath}")
-        pytest_config.cache.set(key, dirpath)
+        try:
+            with portalocker.BoundedSemaphore(1, hash(key), timeout=0):
+                dirpath = str(pytest_config.cache.makedir("model_cache") / key)
+                gen.save(
+                    dirpath, dump_models=pytest_config.getoption("dump") == "models",
+                )
+                logging.debug(f"generator cached to {dirpath}")
+                pytest_config.cache.set(key, dirpath)
+        except portalocker.AlreadyLocked:
+            # another process will write to cache
+            pass
 
     if pytest_config.getoption("--generate-only"):
         pytest.skip()
@@ -126,4 +136,9 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
 
 @pytest.fixture  # type: ignore
 def xcore_model(run: IntegrationTestRunner) -> XCOREModel:
-    return XCOREModel.deserialize(run._model_generator._xcore_converter._model)
+    return XCOREModel.deserialize(run.models.xcore)
+
+
+@pytest.fixture  # type: ignore
+def xcore_identical_model(run: IntegrationTestRunner) -> XCOREModel:
+    return XCOREModel.deserialize(run.models.xcore_identical)

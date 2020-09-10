@@ -8,9 +8,11 @@ from tflite2xcore._model_generation import Configuration
 from tflite2xcore._model_generation.utils import parse_init_config
 
 from .. import (
-    IntegrationTestModelGenerator,
+    FilterOpTestModelGenerator,
+    ChannelPreservingOpTestModelGenerator,
     test_output,
     test_converted_single_op_model,
+    test_idempotence,
 )
 
 
@@ -19,50 +21,21 @@ from .. import (
 #  ----------------------------------------------------------------------------
 
 
-class AbstractConv2dTestModelGenerator(IntegrationTestModelGenerator):
-    @abstractmethod
-    def _conv_layer(
+class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
+    def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
     ) -> tf.keras.layers.Layer:
         raise NotImplementedError()
 
-    @property
-    @abstractmethod
-    def _input_shape(self) -> Tuple[int, int, int]:
-        raise NotImplementedError()
-
-    def _build_core_model(self) -> tf.keras.Model:
-        return tf.keras.Sequential(
-            layers=[self._conv_layer(input_shape=self._input_shape)]
-        )
-
-    def build(self) -> None:
-        self._prep_backend()
-        try:
-            self._model = self._build_core_model()
-        except ValueError as e:
-            if e.args[0].startswith("Negative dimension size caused by"):
-                raise ValueError(
-                    "Negative dimension size (Hint: if using 'valid' padding "
-                    "verify that the kernel is at least the size of input image)"
-                ) from e
-            else:
-                raise
-        self._model.build()
-
     def _set_config(self, cfg: Configuration) -> None:
         self._config.update(
             dict(
-                K_w=cfg.pop("K_w", 3),
-                K_h=cfg.pop("K_h", 3),
-                height=cfg.pop("height", 5),
-                width=cfg.pop("width", 5),
-                padding=cfg.pop("padding", "same"),
-                strides=cfg.pop("strides", (1, 1)),
                 weight_init=cfg.pop("weight_init", ("RandomUniform", -1, 1)),
                 bias_init=cfg.pop("bias_init", ("Constant", 0)),
             )
         )
+        cfg.setdefault("padding", "same")
+        cfg.setdefault("strides", (1, 1))
         super()._set_config(cfg)
 
 
@@ -90,7 +63,7 @@ class ExplicitPaddingMixin(AbstractConv2dTestModelGenerator):
                     ),
                     input_shape=self._input_shape,
                 ),
-                self._conv_layer(),
+                self._op_layer(),
             ]
         )
 
@@ -108,11 +81,10 @@ class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
         super()._set_config(cfg)
 
     @property
-    def _input_shape(self) -> Tuple[int, int, int]:
-        cfg = self._config
-        return cfg["height"], cfg["width"], cfg["input_channels"]
+    def _input_channels(self) -> int:
+        return self._config["input_channels"]  # type: ignore
 
-    def _conv_layer(
+    def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
     ) -> tf.keras.layers.Conv2D:
         kwargs = {"input_shape": input_shape} if input_shape else {}

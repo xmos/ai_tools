@@ -10,11 +10,11 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
 )
 from tflite2xcore.utils import WORD_SIZE
+
 from .transformation_passes import (
     ReplaceWeightBiasOperatorPass,
     LegalizeXCWeightBiasPass,
 )
-from tflite2xcore.xlogging import log_method_output
 
 
 class ReplaceFullyConnectedPass(ReplaceWeightBiasOperatorPass):
@@ -36,7 +36,6 @@ class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
     def _OUTPUT_BITS(self):
         return 16
 
-    @log_method_output()
     def _zero_point_bias(self):
         return np.sum(self._weights.as_array(np.int64) * self._input_zero_point, axis=1)
 
@@ -47,7 +46,6 @@ class LegalizeXCFullyConnectedPass(LegalizeXCWeightBiasPass):
             arr = np.pad(self._weights.as_array(), pad_width=[(0, 0), (0, col_pad)])
 
             self._replace_weights(arr)
-            self._log_weights()
 
     def mutate_output(self, op):
         with self.using(op):

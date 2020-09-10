@@ -69,22 +69,27 @@ class TFLiteQuantConverter(Converter):
 
     _model_generator: "KerasModelGenerator"
     _data_len: int
+    _repr_data: tf.Tensor
 
     def _set_config(self, cfg: "Configuration") -> None:
         self._config["input_init"] = cfg.pop("input_init", ("RandomUniform", -1, 1))
         self._data_len = 10
 
-    def _get_representative_data(self) -> tf.Tensor:
+    def get_representative_data(self) -> tf.Tensor:
         """ Returns the data to be used for post training quantization. """
-        init = parse_init_config(*self._config["input_init"])
-        return init((self._data_len, *self._model_generator.input_shape))
+        try:
+            return self._repr_data
+        except AttributeError:
+            init = parse_init_config(*self._config["input_init"])
+            self._repr_data = init((self._data_len, *self._model_generator.input_shape))
+            return self._repr_data
 
     def convert(self) -> None:
         converter = tf.lite.TFLiteConverter.from_keras_model(
             self._model_generator._model
         )
         quantize_converter(
-            converter, representative_data=self._get_representative_data(),
+            converter, representative_data=self.get_representative_data(),
         )
         self._model = converter.convert()
 

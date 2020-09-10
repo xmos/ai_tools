@@ -3,7 +3,12 @@
 import pytest  # type: ignore
 
 from .test_conv2d_shallowin import converted_op_code, Conv2dShallowinTestModelGenerator
-from . import ExplicitPaddingMixin, test_output, test_converted_single_op_model
+from . import (
+    ExplicitPaddingMixin,
+    test_output,
+    test_converted_single_op_model,
+    test_idempotence,
+)
 
 
 #  ----------------------------------------------------------------------------

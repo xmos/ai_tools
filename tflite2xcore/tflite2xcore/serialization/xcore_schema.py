@@ -128,7 +128,6 @@ class XCOREOpCodes(CustomOpCodes, KnownOpCodes):
 
 class OperatorCode:
     def __init__(self, opcode: ValidOpCodes, *, version: Optional[int] = None) -> None:
-        assert isinstance(opcode, ValidOpCodes), "Invalid opcode!"
         self.version = version or 1
         self.code = opcode
 

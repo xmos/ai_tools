@@ -753,7 +753,7 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
  * @param x                [in]   Look-up table @tensor{T}
  * @param bytes_per_pixel  [in]   Length @math{N} of input and output vectors
  */
-void pad_prepare(nn_pad_plan_t* plan, const PaddingValues* p,
+void pad_prepare(nn_pad_plan_t* plan, const padding_values_t* p,
                  const nn_image_params_t* x, const unsigned bytes_per_pixel);
 
 /** 
@@ -773,10 +773,10 @@ void pad_prepare(nn_pad_plan_t* plan, const PaddingValues* p,
  * @param x   [in]     The input vector @tensor{x}
  * @param plan [in]    The prameters describing how to pad.
  */
-void pad_run(void* y, void* x, const nn_pad_plan_t* p);
+void pad_run(void* y, void* x, const nn_pad_plan_t* p, uint32_t pad_value);
 
-void pad_ref(void* y, void* x, const PaddingValues* p,
-             const nn_image_params_t* xp, const unsigned bytes_per_pixel);
+void pad_ref(void* y, void* x, const padding_values_t* p,
+             const nn_image_params_t* xp, const unsigned bytes_per_pixel, uint32_t pad_value);
 
 #ifdef __XC__
 } // extern "C"

@@ -4,7 +4,9 @@ FROM continuumio/miniconda3:latest
 ENV TOOLS_VERSION=15.0.0
 ENV TOOLS_PRERELEASE=rc4
 
-RUN chmod -R 777 /opt/conda && chmod -R 777 /.conda
+RUN chmod -R 777 /opt/conda \
+    && mkdir -p /.conda \
+    && chmod -R 777 /.conda
 
 RUN apt-get update && apt-get install -y libncurses5 libncurses5-dev && apt-get clean autoclean
 RUN wget -q http://intranet/projects/tools/ReleasesTools/${TOOLS_VERSION}_${TOOLS_PRERELEASE}/Linux64_xTIMEcomposer_${TOOLS_VERSION}.tgz \

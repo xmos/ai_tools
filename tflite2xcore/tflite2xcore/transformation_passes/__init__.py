@@ -86,7 +86,6 @@ from .scratch_memory_passes import (
 from .lce_passes import (
     ReplaceLceBconv2DPass,
     ReplaceLceQuantizePass,
-    CanonicalizeLceBconv2DPass,
-    SplitBsignPass,
     SplitPaddingFromConvPass,
+    CanonicalizeLceQuantizedOutputPass,
 )

@@ -64,20 +64,6 @@ class LceConv2dPass(OperatorMatchingPass):
         return SupportedBconv2DOp(op)
 
 
-class CanonicalizeLceBconv2DPass(LceConv2dPass):
-    def match(self, op: Operator) -> bool:
-
-        if not super().match(op):
-            return False
-
-        return len(op.inputs) == 4
-
-    def mutate(self, op: Operator) -> None:
-        op.inputs[2].consumers.remove(op)
-        op.inputs[3].consumers.remove(op)
-        op.inputs = op.inputs[:2]
-
-
 # Replace LCEBconv2D with XC_BConv2D
 class ReplaceLceBconv2DPass(LceConv2dPass):
     def __init__(
@@ -131,57 +117,6 @@ class ReplaceLceQuantizePass(OperatorMatchingPass):
 
     def mutate(self, op: Operator) -> None:
         op.operator_code.code = XCOREOpCodes.XC_bsign_8
-
-
-# TODO Rm me
-# Split Bsign operation from Bconv
-class SplitBsignPass(LceConv2dPass):
-    def match(self, op: Operator) -> bool:
-
-        if not super().match(op):
-            return False
-
-        if len(op.inputs) != 2:
-            return False
-
-        nobsign = all(
-            c.operator_code.code is not XCOREOpCodes.XC_bsign_8
-            for i in op.inputs
-            for c in i.producers
-        )
-        return nobsign and op.inputs[0].type is TensorType.INT8
-
-    def mutate(self, op: Operator) -> None:
-
-        subgraph = op.subgraph
-
-        bsign_output_shape = [
-            op.inputs[0].shape[0],
-            op.inputs[0].shape[1],
-            op.inputs[0].shape[2],
-            int(op.inputs[0].shape[3] / WORD_SIZE_BITS),
-        ]
-
-        bsign_output = subgraph.create_tensor(
-            f"{op.name}/output",
-            TensorType.INT32,
-            shape=bsign_output_shape,
-            consumers=[op],
-        )
-
-        bsign_op = subgraph.create_operator(
-            OperatorCode(opcode=XCOREOpCodes.XC_bsign_8),
-            inputs=[op.inputs[0]],
-            outputs=[bsign_output],
-        )
-
-        bsign_output.producers = [bsign_op]
-        bsign_output.buffer.data = np.int32(bsign_output_shape)
-
-        subgraph.insert_operator(op, bsign_op)
-
-        op.inputs = [bsign_op.outputs[0], op.inputs[1]]
-        bsign_op.inputs[0].consumers.remove(op)
 
 
 # Split out padding to a separate op from BConv

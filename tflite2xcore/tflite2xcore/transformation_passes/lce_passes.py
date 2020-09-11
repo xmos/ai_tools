@@ -76,7 +76,7 @@ class ReplaceLceBconv2DPass(LceConv2dPass):
 
         return (
             super().match(op)
-            and len(op.inputs) == 2
+            and len(op.inputs) == 3
             and op.outputs[0].type is self._output_tensor_type
         )
 
@@ -84,18 +84,10 @@ class ReplaceLceBconv2DPass(LceConv2dPass):
     # to allow for basic testing of pass
     def mutate(self, op: Operator) -> None:
 
-        
         if self._output_tensor_type is TensorType.INT8:
-            op.operator_code.code = XCOREOpCodes.XC_bconv_int8_DIDO
+            op.operator_code.code = XCOREOpCodes.XC_bconv2d_int8_out
         else:
-            op.operator_code.code = XCOREOpCodes.XC_bconv_bin_DIDO
-
-        # TODO rm me
-        subgraph = op.subgraph
-        subgraph.outputs.append(op.inputs[0])
-        subgraph.remove_tensor(op.outputs[0])
-        subgraph.remove_operator(op)
-
+            op.operator_code.code = XCOREOpCodes.XC_bconv2d_bin_out
 
 # Replace LCEQuantize with XC_BBsign8
 class ReplaceLceQuantizePass(OperatorMatchingPass):
@@ -185,3 +177,32 @@ class SplitPaddingFromConvPass(LceConv2dPass):
 
         # Change padding of Bconv from SAME to VALID
         op.custom_options["padding"] = Padding.to_TfLitePadding(Padding.VALID).value
+
+class CanonicalizeLceQuantizedOutputPass(OperatorMatchingPass):
+    def match(self, op):
+        if super().match(op) and op.operator_code.code is ExternalOpCodes.LceDequantize:
+            input_tensor, output_tensor = op.inputs[0], op.outputs[0]
+            if (
+                output_tensor in op.subgraph.outputs
+                and not output_tensor.consumers
+                and input_tensor not in op.subgraph.inputs
+                and output_tensor.type is TensorType.FLOAT32
+                and input_tensor.type is TensorType.INT32
+            ):
+                if len(output_tensor.producers) == 1:
+                    return True
+                else:
+                    self.logger.warning(
+                        "Encountered output of removable LceDequantize "
+                        "with more than one producer."
+                    )
+
+        return False
+
+    def mutate(self, op):
+        subgraph = op.subgraph
+        subgraph.outputs.append(op.inputs[0])
+        subgraph.remove_tensor(op.outputs[0])  # DCE doesn't clean up subgraph outputs
+        subgraph.remove_operator(op)
+
+

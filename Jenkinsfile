@@ -69,7 +69,7 @@ pipeline {
                 stage("Build") {
                     steps {
                         sh """#!/bin/bash -l
-                              conda run -n .venv make all"""
+                              conda run -n .venv make foobar"""
                     }
                 }
             }

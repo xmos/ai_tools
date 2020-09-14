@@ -32,3 +32,10 @@ test: lib_nn_test tflite2xcore_test integration_test
 
 .PHONY: all
 all: lib_nn testing_utils test
+
+PHONY: foobar
+foobar:
+    cd lib_nn/test/unit_test && make all
+    cd lib_nn/test/unit_test && make run
+    cd utils && ./build.sh
+    tflite2xcore/tflite2xcore/tests/runtests.py tflite2xcore/tflite2xcore/tests -n 1

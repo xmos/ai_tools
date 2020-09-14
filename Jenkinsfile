@@ -59,8 +59,7 @@ pipeline {
                 }
                 stage("Check") {
                     steps {
-                        sh """#!/bin/bash -l
-                              env"""
+                        sh "git submodule update --init --recursive --jobs 4"
                         sh "conda run -n .venv python -c 'import tensorflow'"
                         sh """#!/bin/bash -l
                               xcc --version"""

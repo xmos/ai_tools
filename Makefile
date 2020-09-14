@@ -33,7 +33,7 @@ test: lib_nn_test tflite2xcore_test integration_test
 .PHONY: all
 all: lib_nn testing_utils test
 
-PHONY: foobar
+.PHONY: foobar
 foobar:
     cd lib_nn/test/unit_test && make all
     cd lib_nn/test/unit_test && make run

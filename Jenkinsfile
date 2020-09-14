@@ -17,6 +17,12 @@ pipeline {
         )
     }
 
+    options {
+        skipDefaultCheckout()
+        //buildDiscarder(logRotator(numToKeepStr: '10'))
+        timestamps()
+    }
+
     stages {
         stage ("Build and Push Image") {
             when {
@@ -29,6 +35,7 @@ pipeline {
                 label 'docker'
             }
             steps {
+                checkout scm
                 script {
                     def image = docker.build('xmos/ai_tools')
                     docker.withRegistry('https://docker-repo.xmos.com', 'nexus') {
@@ -51,7 +58,17 @@ pipeline {
                 stage("Setup") {
                     steps {
                         sshagent (credentials:['xmos-bot']) {
-                            sh "git submodule update --init --recursive --jobs 4"
+                            checkout([
+                                $class: 'GitSCM',
+                                branches: scm.branches,
+                                doGenerateSubmoduleConfigurations: false,
+                                extensions: [[$class: 'SubmoduleOption',
+                                              parentCredentials: true,
+                                              recursiveSubmodules: true],
+                                             [$class: 'CleanCheckout']],
+                                userRemoteConfigs: [[credentialsId: 'xmos-bot',
+                                                     url: 'git@github.com:xmos/ai_tools.git>']]
+                            ])
                         }
                         sh "conda env create -n .venv -f environment.yml"
                     }

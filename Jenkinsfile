@@ -18,7 +18,6 @@ pipeline {
     }
 
     options {
-        skipDefaultCheckout()
         //buildDiscarder(logRotator(numToKeepStr: '10'))
         timestamps()
     }
@@ -35,7 +34,6 @@ pipeline {
                 label 'docker'
             }
             steps {
-                checkout scm
                 script {
                     def image = docker.build('xmos/ai_tools')
                     docker.withRegistry('https://docker-repo.xmos.com', 'nexus') {
@@ -57,6 +55,7 @@ pipeline {
             stages {
                 stage("Setup") {
                     steps {
+                        sh "rm -rf *"
                         sshagent (credentials:['xmos-bot']) {
                             checkout([
                                 $class: 'GitSCM',

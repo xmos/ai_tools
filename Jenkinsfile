@@ -33,6 +33,8 @@ pipeline {
                     def image = docker.build('xmos/ai_tools')
                     docker.withRegistry('https://docker-repo.xmos.com', 'nexus') {
                         image.push(GIT_BRANCH)
+                        // if on master/release/etc:
+                        //   push version/hash
                     }
                 }
             }
@@ -46,8 +48,11 @@ pipeline {
                 }
             }
             stages {
-                stage("Create env") {
+                stage("Setup") {
                     steps {
+                        sshagent (credentials:['xmos-bot']) {
+                            sh "git submodule update --init --recursive --jobs 4"
+                        }
                         sh "conda env create -n .venv -f environment.yml"
                     }
                 }
@@ -59,7 +64,6 @@ pipeline {
                 }
                 stage("Check") {
                     steps {
-                        sh "git submodule update --init --recursive --jobs 4"
                         sh "conda run -n .venv python -c 'import tensorflow'"
                         sh """#!/bin/bash -l
                               xcc --version"""

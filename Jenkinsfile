@@ -56,19 +56,17 @@ pipeline {
                 stage("Setup") {
                     steps {
                         sh "rm -rf *"
-                        sshagent (credentials:['xmos-bot']) {
-                            checkout([
-                                $class: 'GitSCM',
-                                branches: scm.branches,
-                                doGenerateSubmoduleConfigurations: false,
-                                extensions: [[$class: 'SubmoduleOption',
-                                              parentCredentials: true,
-                                              recursiveSubmodules: true],
-                                             [$class: 'CleanCheckout']],
-                                userRemoteConfigs: [[credentialsId: 'xmos-bot',
-                                                     url: 'git@github.com:xmos/ai_tools']]
-                            ])
-                        }
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: scm.branches,
+                            doGenerateSubmoduleConfigurations: false,
+                            extensions: [[$class: 'SubmoduleOption',
+                                          parentCredentials: true,
+                                          recursiveSubmodules: true],
+                                         [$class: 'CleanCheckout']],
+                            userRemoteConfigs: [[credentialsId: 'xmos-bot',
+                                                 url: 'git@github.com:xmos/ai_tools']]
+                        ])
                         sh "conda env create -n .venv -f environment.yml"
                     }
                 }

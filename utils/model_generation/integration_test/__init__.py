@@ -179,11 +179,11 @@ def _test_batched_arrays(
     assert issubclass(predicted.dtype.type, np.integer)  # TODO: generalize to floats
 
     failures: Dict[int, List[FailedElement]] = {}
-    diffs = np.abs(np.int32(predicted) - np.int32(expected))
+    diffs = np.int32(predicted) - np.int32(expected)
     for j, (arr, arr_ref, diff) in enumerate(zip(predicted, expected, diffs)):
         __log_deviations(diff, logging.DEBUG, ex_idx=j)
 
-        diff_idx = zip(*np.where(diff > tolerance))
+        diff_idx = zip(*np.where(np.abs(diff > tolerance)))
         failed_examples = [
             FailedElement(idx, diff[idx], arr_ref[idx], arr[idx]) for idx in diff_idx
         ]

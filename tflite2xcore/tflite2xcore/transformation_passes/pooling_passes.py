@@ -151,11 +151,12 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
         scale = np.round(multiplier * 2 ** (7 - np.ceil(np.log2(multiplier))))
         shift = np.round(np.log2(scale / multiplier))
         bias = np.round(
-            scale
-            * (
-                self._output.quantization["zero_point"][0] / multiplier
-                - self._input.quantization["zero_point"][0] * num_pixels
+            (
+                self._output.quantization["zero_point"][0]
+                - self._input.quantization["zero_point"][0] * rescaling
+                + 0.5  # needed because the tflite ref adds 0.5 to the bias
             )
+            * 2 ** shift
         )
 
         if shift > 24:

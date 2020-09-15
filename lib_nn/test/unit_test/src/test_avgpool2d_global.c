@@ -10,6 +10,7 @@
 
 #include "nn_operator.h"
 #include "xs3_vpu.h"
+#include "../src/nn_op_helper.h"
 
 #include "unity.h"
 
@@ -22,6 +23,42 @@
 #else
   #define NEG_SAT_VAL   (-128)
 #endif 
+
+
+
+static void compute_scale_shift(
+    int8_t* out_scale,
+    int16_t* out_shift,
+    nn_image_params_t* x_params)
+{
+
+    //Figure out the scale and shift
+    uint32_t pixels = x_params->height * x_params->width;
+
+    //Find c = ceil(log2(pix)), which can be achieve via clz()
+    const int c = ceil_log2(pixels);
+
+    assert(c != -1); //pix == 0
+
+    if(pixels == (1<<c)){
+        //window pixel count is already a power of 2   (2^c)
+        *out_scale = 1;
+        *out_shift = c;
+    } else {
+        const unsigned q = 31 - c - 6;
+        // 2^31 / pixels
+        const unsigned g = 0x80000000 / pixels;
+        const unsigned h = (g + (1 << (q-1))) >> q; //Rounding down-shift
+
+        assert(h > (1<<6));
+        assert(h < (1<<7));
+
+        *out_scale = (int8_t)h;
+        *out_shift = c+6;
+    }
+
+}
+
 
 
 #define CHANS   (3*VPU_INT8_ACC_PERIOD - 4)
@@ -42,12 +79,17 @@ void test_avgpool2d_global_case0()
     nn_avgpool2d_global_job_t job;
 
     avgpool2d_global_init(&plan, &job, &x_params, NULL, 1);
+
+    int8_t scale;
+    int16_t shift;
+    compute_scale_shift(&scale, &shift, &x_params);
+
     
-    int32_t bias = ((int)0x807FFFFF) >> (24-plan.shift);
+    int32_t bias = ((int)0x807FFFFF) >> (24-shift);
 
     memset(X, 0, sizeof(X));
 
-    avgpool2d_global((nn_image_t*) Y, (nn_image_t*) X, bias, &plan, &job);
+    avgpool2d_global((nn_image_t*) Y, (nn_image_t*) X, bias, scale, shift, &plan, &job);
 
     char str_buff[200] = {0};
 
@@ -151,10 +193,14 @@ void test_avgpool2d_global_case1()
 
         avgpool2d_global_init(&plan, &job, &x_params, NULL, 1);
 
-        int32_t bias = casse->bias * plan.X.pixels * plan.scale;
+        int8_t scale;
+        int16_t shift;
+        compute_scale_shift(&scale, &shift, &x_params);
+
+        int32_t bias = casse->bias * plan.X.pixels * scale;
         
         memset(Y, 0xCC, sizeof(Y));
-        avgpool2d_global((nn_image_t*)Y, (nn_image_t*)X, bias, &plan, &job);
+        avgpool2d_global(Y, (nn_image_t*) X, bias, scale, shift, &plan, &job);
 
         char str_buff[200] = {0};
         PRINTF("\t\tChecking...\n");

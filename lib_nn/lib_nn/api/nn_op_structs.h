@@ -240,8 +240,8 @@ typedef struct {
         uint32_t pixels;
         channel_count_t channels;
     } X;
-    uint32_t shift;
-    uint32_t scale;
+    // uint32_t shift;
+    // uint32_t scale;
 } nn_avgpool2d_global_plan_t;
 
 /**

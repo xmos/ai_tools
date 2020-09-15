@@ -9,6 +9,8 @@ void avgpool2d_global(
     int8_t* Y,
     const int8_t* X, 
     const int32_t bias,
+    const int8_t scale,
+    const int16_t shift,
     const nn_avgpool2d_global_plan_t* plan,
     const nn_avgpool2d_global_job_t* job);
 */
@@ -25,13 +27,11 @@ void avgpool2d_global(
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
 #define arg_bias        r2
-#define arg_plan        r3
+#define arg_scale       r3
 
 
 #define PLAN_X_PIXELS   0
 #define PLAN_X_CHANS    1
-#define PLAN_SHIFT      2
-#define PLAN_SCALE      3
 
 #define JOB_STRIDE_START    0
 #define JOB_OUT_CHANNELS    1
@@ -42,7 +42,9 @@ void avgpool2d_global(
 #define STACK_VEC_TMP1      (NSTACKWORDS-32)
 #define STACK_VEC_TMP2      (NSTACKWORDS-40)
 
-#define STACK_JOB           (NSTACKWORDS+1)
+#define STACK_SHIFT         (NSTACKWORDS+1)
+#define STACK_PLAN          (NSTACKWORDS+2)
+#define STACK_JOB           (NSTACKWORDS+3)
 #define STACK_CP            1
 
 #define Y                   r0
@@ -80,52 +82,53 @@ FUNCTION_NAME:
     {   ldaw r6, sp[STACK_BIAS_HI_VEC]          ;   ldw r4, r11[0]                          }
     {   ldaw r7, sp[STACK_BIAS_LO_VEC]          ;                                           }
     {   shr r8, arg_bias, 16                    ;   zext arg_bias, 16                       }
-    mul arg_bias, r4, arg_bias
-    std arg_bias, arg_bias, r7[0]   // Bias low
-    std arg_bias, arg_bias, r7[1]
-    std arg_bias, arg_bias, r7[2]
-    std arg_bias, arg_bias, r7[3]
-    mul arg_bias, r4, r8
-    std arg_bias, arg_bias, r6[0]   // Bias high
-    std arg_bias, arg_bias, r6[1]
-    std arg_bias, arg_bias, r6[2]
-    std arg_bias, arg_bias, r6[3]
+        mul arg_bias, r4, arg_bias
+        std arg_bias, arg_bias, r7[0]   // Bias low
+        std arg_bias, arg_bias, r7[1]
+        std arg_bias, arg_bias, r7[2]
+        std arg_bias, arg_bias, r7[3]
+        mul arg_bias, r4, r8
+        std arg_bias, arg_bias, r6[0]   // Bias high
+        std arg_bias, arg_bias, r6[1]
+        std arg_bias, arg_bias, r6[2]
+        std arg_bias, arg_bias, r6[3]
 
 #undef arg_bias
 #define job     r2
 
     {                                           ;   ldw job, sp[STACK_JOB]                  }
     {                                           ;   ldw r11, job[JOB_STRIDE_START]          }
-    {   add Y, Y, r11                           ;   ldw pix_count, arg_plan[PLAN_X_PIXELS]  }
-    {   add X, X, r11                           ;                                           }
+    {                                           ;   ldw r4, sp[STACK_PLAN]                  }
+    {   add Y, Y, r11                           ;   ldw pix_count, r4[PLAN_X_PIXELS]        }
+    {   add X, X, r11                           ;   shl r11, _16, 5                         }
 
-
-    {   shl r11, _16, 5                         ;                                           }
     {   ldap r11, .L_bso_consts                 ;   vsetc r11                               }
 
-    {                                           ;   ldw r10, arg_plan[PLAN_SCALE]           }
     {   ldaw r6, sp[STACK_SHIFT_VEC]            ;   ldw r4, r11[1]                          }
-    mul r10, r10, r4
-    std r10, r10, r6[0]
-    std r10, r10, r6[1]
-    std r10, r10, r6[2]
-    std r10, r10, r6[3]
+        mul arg_scale, arg_scale, r4
+        std arg_scale, arg_scale, r6[0]
+        std arg_scale, arg_scale, r6[1]
+        std arg_scale, arg_scale, r6[2]
+        std arg_scale, arg_scale, r6[3]
+
+#undef arg_scale
+
     {                                           ;   vldc r6[0]                              }
     {                                           ;   ldw r4, r11[0]                          }
-    {                                           ;   ldw r10, arg_plan[PLAN_SHIFT]           }
-    mul r10, r4, r10
-    std r10, r10, r6[0]
-    std r10, r10, r6[1]
-    std r10, r10, r6[2]
-    std r10, r10, r6[3]
+    {                                           ;   ldw r10, sp[STACK_SHIFT]                }
+        mul r10, r4, r10
+        std r10, r10, r6[0]
+        std r10, r10, r6[1]
+        std r10, r10, r6[2]
+        std r10, r10, r6[3]
     
-    {                                           ;   ldw r10, job[JOB_OUT_CHANNELS]          }
-    {   mov r3, r10                             ;   ldw chans, arg_plan[PLAN_X_CHANS]       }
+    {                                           ;   ldw r4, sp[STACK_PLAN]                  }
+    {                                           ;   ldw r3, job[JOB_OUT_CHANNELS]           }
+    {                                           ;   ldw chans, r4[PLAN_X_CHANS]             }
 
-#undef arg_plan
 #undef job
 
-    mul x_chan_incr, pix_count, chans
+        mul x_chan_incr, pix_count, chans
     {   ldc _16, 16                             ;   shr chan_grp_left, r3, 4                }
     {   sub x_chan_incr, x_chan_incr, _16       ;   mkmsk r11, 4                            }
 

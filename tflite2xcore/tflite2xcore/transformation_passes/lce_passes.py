@@ -37,12 +37,7 @@ def SupportedBconv2DOp(op: Operator) -> bool:
         options["dilation_width_factor"],
     )
 
-    try:
-        # TODO LCE < 0.4 compat - remove me
-        padding = Padding.from_TfLitePadding(options["padding"])
-    except KeyError:
-        padding = options["padding"]
-
+    padding = options["padding"]
     weights = op.inputs[1]
 
     return (
@@ -77,28 +72,43 @@ class ReplaceLceBconv2DPass(LceConv2dPass):
         return (
             super().match(op)
             and len(op.inputs) == 3
+            and op.inputs[2].type is TensorType.INT32
             and op.outputs[0].type is self._output_tensor_type
         )
 
-    # TODO replace op properly when relevant operator API is available, for now just replace code
-    # to allow for basic testing of pass
     def mutate(self, op: Operator) -> None:
 
+        subgraph = op.subgraph
+
+        # Note, it is risky to modify an Op in place - create a new op and cut off the old one such that
+        # DCE can clean it up
         if self._output_tensor_type is TensorType.INT8:
-            op.operator_code.code = XCOREOpCodes.XC_bconv2d_int8_out
+            new_op_code = XCOREOpCodes.XC_bconv2d_int8_out
         else:
-            op.operator_code.code = XCOREOpCodes.XC_bconv2d_bin_out
+            new_op_code = XCOREOpCodes.XC_bconv2d_bin_out
+
+        bconv_op = subgraph.create_operator(
+            OperatorCode(opcode=new_op_code),
+            inputs=op.inputs,
+            outputs=op.outputs,
+            custom_options=op.custom_options,
+        )
+
+        subgraph.insert_operator(op, bconv_op)
+
+        subgraph.remove_operator(op)
+
 
 # Replace LCEQuantize with XC_BBsign8
 class ReplaceLceQuantizePass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
 
-        try: 
+        try:
             if op.operator_code.code is not ExternalOpCodes.LceQuantize:
                 return False
         except AttributeError:
             return False
-    
+
         return (
             super().match(op)
             # and len(op.inputs) == 1
@@ -120,10 +130,10 @@ class SplitPaddingFromConvPass(LceConv2dPass):
         if not super().match(op):
             return False
 
-        if len(op.inputs) != 2:
+        if len(op.inputs) != 3:
             return False
 
-        return Padding.from_TfLitePadding(op.custom_options["padding"]) is Padding.SAME
+        return op.custom_options["padding"] is Padding.SAME
 
     def mutate(self, op: Operator) -> None:
 
@@ -176,7 +186,8 @@ class SplitPaddingFromConvPass(LceConv2dPass):
         pad_op.custom_options["pad_values"] = op.custom_options["pad_values"]
 
         # Change padding of Bconv from SAME to VALID
-        op.custom_options["padding"] = Padding.to_TfLitePadding(Padding.VALID).value
+        op.custom_options["padding"] = Padding.VALID
+
 
 class CanonicalizeLceQuantizedOutputPass(OperatorMatchingPass):
     def match(self, op):
@@ -204,5 +215,3 @@ class CanonicalizeLceQuantizedOutputPass(OperatorMatchingPass):
         subgraph.outputs.append(op.inputs[0])
         subgraph.remove_tensor(op.outputs[0])  # DCE doesn't clean up subgraph outputs
         subgraph.remove_operator(op)
-
-

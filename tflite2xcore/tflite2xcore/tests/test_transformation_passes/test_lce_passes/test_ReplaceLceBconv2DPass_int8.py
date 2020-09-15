@@ -35,14 +35,14 @@ def model(weight_shape, input_size, padding, strides):
         input_size=input_size,
         padding=padding,
         strides=strides,
-        post_activation_mult=False,
-        post_activation_bias=False,
         input_tensor_type=TensorType.INT8,
     )
+
 
 #  ----------------------------------------------------------------------------
 #                                   TESTS
 #  ----------------------------------------------------------------------------
+
 
 def test_mutate(trf_pass, model):
 
@@ -54,7 +54,7 @@ def test_mutate(trf_pass, model):
 
     CleanupManager(model).run_passes()
     model.sanity_check()
-    
+
     assert len(subgraph.operators) == 1
 
 

@@ -49,8 +49,6 @@ def model(weight_shape, input_size, padding, strides):
         input_size=input_size,
         padding=padding,
         strides=strides,
-        post_activation_bias=False,
-        post_activation_mult=False,
     )
     return model
 
@@ -62,8 +60,6 @@ def model_with_non_matching_padding(weight_shape, input_size, padding, strides):
         input_size=input_size,
         padding=Padding.VALID,
         strides=strides,
-        post_activation_bias=False,
-        post_activation_mult=False,
     )
     return model
 
@@ -76,13 +72,10 @@ def test_mutate(trf_pass, model):
     original_input, original_output = subgraph.inputs[0], subgraph.outputs[0]
 
     options = subgraph.operators[0].custom_options
-    strides = strides = (options["stride_height"], options["stride_width"])
+    strides = (options["stride_height"], options["stride_width"])
 
-    assert len(subgraph.operators[0].inputs) == 2
-    assert (
-        Padding.from_TfLitePadding(subgraph.operators[0].custom_options["padding"])
-        is Padding.SAME
-    )
+    assert len(subgraph.operators[0].inputs) == 3
+    assert subgraph.operators[0].custom_options["padding"] is Padding.SAME
 
     # Run the pass
     trf_pass.run(model)
@@ -116,18 +109,15 @@ def test_mutate(trf_pass, model):
 
     assert conv_op.outputs[0].shape == original_output.shape
 
-    assert (
-        Padding.from_TfLitePadding(conv_op.custom_options["padding"]) is Padding.VALID
-    )
+    assert conv_op.custom_options["padding"] is Padding.VALID
 
     # Check spacial dims of PAD output tensor is as expected
     paddings = pad_op.inputs[1].as_array()
-    out_height_expected = pad_op.inputs[0].shape[1] + paddings[1][0] + paddings[1][1]
-    out_width_expected = pad_op.inputs[0].shape[2] + paddings[2][0] + paddings[2][1]
 
     pad_output_shape = pad_op.outputs[0].shape
-    assert out_height_expected == pad_output_shape[1]
-    assert out_width_expected == pad_output_shape[2]
+
+    for i in range(0, 4):
+        assert pad_op.inputs[0].shape[i] + sum(paddings[i]) == pad_output_shape[i]
 
 
 def test_non_matching_paddings(trf_pass, model_with_non_matching_padding):

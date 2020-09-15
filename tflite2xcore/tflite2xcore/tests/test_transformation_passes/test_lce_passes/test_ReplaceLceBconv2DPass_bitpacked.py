@@ -44,8 +44,6 @@ def model(weight_shape, input_size, padding, strides):
         input_size=input_size,
         padding=padding,
         strides=strides,
-        post_activation_mult=False,
-        post_activation_bias=False,
         input_tensor_type=TensorType.INT32,
     )
 
@@ -67,6 +65,7 @@ def test_mutate(trf_pass, model):
     model.sanity_check()
 
     assert len(subgraph.operators) == 1
+
 
 if __name__ == "__main__":
     pytest.main()

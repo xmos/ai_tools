@@ -814,8 +814,6 @@ def build_lceBconv2d(
     input_size,
     padding,
     strides,
-    post_activation_mult=True,
-    post_activation_bias=True,
     input_tensor_type=TensorType.INT8,
 ):
 
@@ -828,17 +826,13 @@ def build_lceBconv2d(
     input_shape = [1, height, width, C_in]
     tin = subgraph.create_tensor("input", input_tensor_type, input_shape, isinput=True)
     w = subgraph.create_tensor("weights", TensorType.INT32, weight_shape)
-    post_act_mult = subgraph.create_tensor(
-        "post_act_mult", TensorType.FLOAT32, weight_shape[:1]
-    )
-    post_act_bias = subgraph.create_tensor(
-        "post_act_bias", TensorType.FLOAT32, weight_shape[:1]
+    output_threshold = subgraph.create_tensor(
+        "output_threshold", TensorType.INT32, weight_shape[:1]
     )
 
     # add dummy data so that the op can be mutated
     w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
-    post_act_mult.buffer.data = np.float32(np.arange(0, np.prod(post_act_mult.shape)))
-    post_act_bias.buffer.data = np.float32(np.arange(0, np.prod(post_act_bias.shape)))
+    output_threshold.buffer.data = np.arange(0, np.prod(output_threshold.shape), dtype = np.int32)
 
     if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]
@@ -854,28 +848,27 @@ def build_lceBconv2d(
 
     op_inputs = [tin, w]
 
-    if post_activation_mult:
-        op_inputs.append(post_act_mult)
-
-    if post_activation_bias:
-        op_inputs.append(post_act_bias)
+    op_inputs.append(output_threshold)
 
     try:
         opcode = ExternalOpCodes.LceBconv2d
     except AttributeError:
         opcode = ExternalOpCodes.add_new_opcode("LceBconv2d")
 
-    op = subgraph.create_operator(
-        OperatorCode(opcode=opcode), inputs=op_inputs, outputs=[tout]
-    )
-
-    op.custom_options = {
-        "padding": Padding.to_TfLitePadding(padding).value,
+    custom_options = {
+        "padding": padding,
         "stride_height": strides[0],
         "stride_width": strides[1],
         "dilation_width_factor": 1,
         "dilation_height_factor": 1,
         "pad_values": 0,
     }
+
+    op = subgraph.create_operator(
+        OperatorCode(opcode=opcode),
+        inputs=op_inputs,
+        outputs=[tout],
+        custom_options=custom_options,
+    )
 
     return subgraph.model

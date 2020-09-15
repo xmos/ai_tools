@@ -15,7 +15,7 @@ import helpers
 import directories
 from tflite2xcore.xcore_schema import XCOREOpCodes, TensorType
 from tflite2xcore.serialization import read_flatbuffer
-from tflite2xcore.xcore_interpreter import XCOREInterpreter
+from tflite2xcore.interpreters import XCOREInterpreter
 from tflite2xcore.xcore_model import XCOREModel
 
 

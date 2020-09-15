@@ -6,12 +6,11 @@ import socket
 import time
 import subprocess
 import re
+import numpy as np
 from pathlib import Path
 
+from .xcore_interpreter import XCOREInterpreter
 
-from tflite2xcore.xcore_interpreter import XCOREInterpreter
-
-import numpy as np
 
 MAX_DEVICE_MODEL_CONTENT_SIZE = 500000
 MAX_DEVICE_TENSOR_ARENA_SIZE = 250000

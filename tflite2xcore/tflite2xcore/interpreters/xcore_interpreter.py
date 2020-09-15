@@ -2,11 +2,10 @@
 
 import sys
 import os
+import ctypes
+import numpy as np
 from pathlib import Path
 from enum import Enum
-import ctypes
-
-import numpy as np
 
 from tflite2xcore import libtflite2xcore as lib
 from tflite2xcore.xcore_schema import TensorType

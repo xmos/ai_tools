@@ -111,7 +111,8 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
     print("***********")
     if test_model_app:
         if test_model_app.endswith(".xe"):
-            cmd = f"xsim --args {test_model_app} {flatbuffer} {input_file} {predicted_output_file}"
+            # cmd = f"xsim --args {test_model_app} {flatbuffer} {input_file} {predicted_output_file}"
+            cmd = f"xrun --io --xscope --args {test_model_app} {flatbuffer} {input_file} {predicted_output_file}"
         else:
             cmd = f"{test_model_app} {flatbuffer} {input_file} {predicted_output_file}"
         print("Command:", cmd)
@@ -147,9 +148,7 @@ def run_test_case(test_model_app, test_case, abs_tol=1):
         interpreter = XCOREInterpreter(model_content=model_content)
         interpreter.allocate_tensors()
 
-        input_ = np.fromfile(
-            input_file, dtype=input_tensor.type.to_numpy_dtype()
-        )
+        input_ = np.fromfile(input_file, dtype=input_tensor.type.to_numpy_dtype())
         input_ = input_.reshape(input_tensor.shape)
 
         interpreter.set_tensor(input_index, input_)

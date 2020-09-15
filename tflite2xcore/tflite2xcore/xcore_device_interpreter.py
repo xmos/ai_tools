@@ -1,16 +1,20 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import os
+import signal
 import ctypes
 import socket
 import time
 import subprocess
+import re
+from pathlib import Path
+
 
 from tflite2xcore.xcore_interpreter import XCOREInterpreter
 
 import numpy as np
 
-MAX_DEVICE_MODEL_CONTENT_SIZE = 100000
-MAX_DEVICE_TENSOR_ARENA_SIZE = 100000
+MAX_DEVICE_MODEL_CONTENT_SIZE = 500000
+MAX_DEVICE_TENSOR_ARENA_SIZE = 250000
 
 
 PRINT_CALLBACK = ctypes.CFUNCTYPE(
@@ -58,6 +62,37 @@ def test_port_is_open(port):
         port_open = False
     s.close()
     return port_open
+
+
+def get_child_xgdb_proc(port):
+    def run(cmd, stdin=b""):
+        process = subprocess.Popen(
+            cmd.split(),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        output, err = process.communicate(stdin)
+        rc = process.returncode
+        assert rc == 0, f"Error running cmd: {cmd}\n output: {err}"
+        return output.decode("utf-8")
+
+    ps_out = run("ps a")
+    for line in ps_out.splitlines():
+        xgdb_index = line.find("xgdb", 0)
+        if xgdb_index > 0:
+            pid = int(line.split()[0])
+            cmds_file = line[xgdb_index:].split()[11]
+            with open(cmds_file, "r") as fd:
+                xgdb_session = fd.read().replace("\n", "")
+                port_match = re.match(r".+localhost:(\d+).+", xgdb_session)
+                if port_match:
+                    xgdb_port = int(port_match.group(1))
+                    if xgdb_port == port:
+                        # print(
+                        #     f"Found xgdb instance with PID: {pid} on port: {xgdb_port}"
+                        # )
+                        return pid
 
 
 class XCOREDeviceInterpreterEndpoint(object):
@@ -108,6 +143,7 @@ class XCOREDeviceInterpreterEndpoint(object):
         CHUCK_SIZE = 128
         for i in range(0, len(blob), CHUCK_SIZE):
             self.publish(blob[i : i + CHUCK_SIZE])
+            time.sleep(0.05)
 
     def clear(self):
         self.ready = True
@@ -115,7 +151,6 @@ class XCOREDeviceInterpreterEndpoint(object):
 
     def on_print(self, timestamp, data):
         msg = data.decode("utf-8").rstrip()
-
         print(msg)
 
     def on_probe(self, id_, timestamp, length, data_val, data_bytes):
@@ -185,33 +220,42 @@ class XCOREDeviceInterpreter(XCOREInterpreter):
         self._model_content = model_content
 
         self._xrun_proc = None
+        self._xrun_xgdb_child_pid = None
+
+        self._set_model = False
 
         self.start()
 
     def __del__(self):
         self.stop()
 
-    def start(self, use_xsim=True):
+    def start(self, use_xsim=False):
         # start firmware
         port = get_open_port()
-        # test_model_exe = "../../../../utils/test_model/bin/test_model.xe"
-        test_model_exe = (
-            "/home/kmoulton/repos/hotdog/ai_tools/utils/test_model/bin/test_model.xe"
+
+        __PARENT_DIR = Path(__file__).parent.absolute()
+        test_model_exe = str(
+            __PARENT_DIR
+            / ".."
+            / ".."
+            / "utils"
+            / "test_model"
+            / "bin"
+            / "test_model_xscope.xe"
         )
 
-        use_xsim = True  # hard-coded for now
         if use_xsim:
             cmd = ["xsim", "--xscope", f"-realtime localhost:{port}", test_model_exe]
         else:
-            # xtag_id = 0  # hard-coded for now
+            xtag_id = 0  # hard-coded for now
             cmd = [
                 "xrun",
-                "--io",
                 "--xscope",
+                "--xscope-realtime",
                 "--xscope-port",
                 f"localhost:{port}",
-                # "--id",
-                # xtag_id,
+                "--id",
+                f"{xtag_id}",
                 test_model_exe,
             ]
 
@@ -222,7 +266,10 @@ class XCOREDeviceInterpreter(XCOREInterpreter):
         if self._xrun_proc:
             # wait for port to be opened
             while test_port_is_open(port):
-                time.sleep(0.1)
+                time.sleep(1)
+
+            if not use_xsim:
+                self._xrun_xgdb_child_pid = get_child_xgdb_proc(port)
 
             # start xsope endpoint
             self._endpoint = XCOREDeviceInterpreterEndpoint()
@@ -232,14 +279,18 @@ class XCOREDeviceInterpreter(XCOREInterpreter):
         if self._xrun_proc:
             self._endpoint.disconnect()
             self._xrun_proc.terminate()
-            # self._xrun_proc.kill()
+            if self._xrun_xgdb_child_pid:
+                os.kill(self._xrun_xgdb_child_pid, signal.SIGTERM)
+                self._xrun_xgdb_child_pid = None
             self._xrun_proc = None
 
     def allocate_tensors(self):
         super().allocate_tensors()
 
-        # send model to device
-        self._endpoint.set_model(self._model_content)
+        if not self._set_model:
+            # send model to device
+            self._endpoint.set_model(self._model_content)
+            self._set_model = True
 
     def invoke(
         self,

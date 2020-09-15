@@ -7,7 +7,7 @@ import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 from abc import abstractmethod
 from pathlib import Path
-from typing import Union, List, NamedTuple, Tuple, Dict, Optional
+from typing import Union, List, NamedTuple, Tuple, Dict, Optional, Iterable
 
 from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
@@ -38,6 +38,7 @@ class RunnerModels(NamedTuple):
 class IntegrationTestRunner(Runner):
     _model_generator: "IntegrationTestModelGenerator"
     outputs: RunnerOutputs
+    models: RunnerModels
 
     def __call__(self) -> None:
         """ Defines how an IntegrationTestModelGenerator should be run.
@@ -70,6 +71,36 @@ class IntegrationTestRunner(Runner):
             self._model_generator._xcore_converter._model,
             self._model_generator._identity_converter._model,
         )
+
+    def dump(
+        self,
+        dirpath: Path,
+        example_idx: Union[int, Iterable[int]] = [0, 3],
+        dump_models: bool = True,
+        dump_visualizations: bool = True,
+    ) -> None:
+        if dump_models:
+            for name, model in self.models._asdict().items():
+                name = "model_" + name
+                model_ref_path = (dirpath / name).with_suffix(".tflite")
+                model_ref_html = model_ref_path.with_suffix(".html")
+                with open(model_ref_path, "wb") as f:
+                    f.write(model)
+                logging.debug(f"{name} dumped to {model_ref_path}")
+                if dump_visualizations:
+                    tflite_visualize.main(model_ref_path, model_ref_html)
+                    logging.debug(f"{name} visualization dumped to {model_ref_html}")
+
+        data = {
+            "input": self._model_generator._xcore_evaluator.input_data,
+            "reference_output": self.outputs.reference,
+            "xcore_output": self.outputs.xcore,
+        }
+        example_idx = [example_idx] if isinstance(example_idx, int) else example_idx
+        for key, arr in data.items():
+            for j in example_idx:
+                with open(dirpath / f"example_{j}.{key}", "wb") as f:
+                    f.write(arr[j].flatten().tostring())
 
 
 #  ----------------------------------------------------------------------------
@@ -110,23 +141,6 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
             ],
             evaluators=[self._reference_evaluator, self._xcore_evaluator],
         )
-
-    def save(self, dirpath: Union[Path, str], dump_models: bool = False) -> Path:
-        dirpath = super().save(dirpath)
-        if dump_models:
-            for name, model in [
-                ("model_ref", self._reference_converter._model),
-                ("model_xcore", self._xcore_converter._model),
-                ("model_xcore_identical", self._identity_converter._model),
-            ]:
-                model_ref_path = (dirpath / name).with_suffix(".tflite")
-                model_ref_html = model_ref_path.with_suffix(".html")
-                with open(model_ref_path, "wb") as f:
-                    f.write(model)
-                logging.debug(f"{name} dumped to {model_ref_path}")
-                tflite_visualize.main(model_ref_path, model_ref_html)
-                logging.debug(f"{name} visualization dumped to {model_ref_html}")
-        return dirpath
 
     @classmethod
     def load(cls, dirpath: Union[Path, str]) -> "IntegrationTestModelGenerator":

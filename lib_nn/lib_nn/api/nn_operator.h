@@ -383,42 +383,85 @@ static inline void avgpool2d(
 }
 
 /** 
- * @brief Execute @oper{avgpool2d_global} job.
+ * @brief Invoke a @oper{avgpool2d_global} job.
  * 
- * See @oper_ref{avgpool2d_global} for more details about the @oper{avgpool2d_global} operator.
+ * The @oper{avgpool2d_global} operator computes a scaled and biased sum of pixel values for each channel of an input
+ * image, producing an 8-bit vector of outputs.
  * 
- * An instance of the @oper{avgpool2d_global} operator requires an initialized plan and one or more jobs. See 
- * avgpool2d_global_init() for more details.
+ * See @oper_ref{avgpool2d_global} for more details about the @oper{avgpool2d_global} operator, including the 
+ * mathematical details of the operation performed.
  * 
- * `Y` points to the output vector @tensor{y} with shape @tensor_shape{X_c}. The address supplied for `Y` should be the 
- * start address of the output vector (for any job being processed).
+ * @par Operator Plans and Jobs
  * 
- * `X` points to the input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}. The address supplied for `X` should 
- * be the start address of the input image (for any job being processed).
+ * Invoking an instance of @oper{avgpool2d_global} requires a plan and a job. The plan and one or more jobs may be 
+ * initialized with the avgpool2d_global_init() function. Each job computes a contiguous subset of the output elements.
  * 
- * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
- * standard_layout).
+ * @par Parameter Details
  * 
- * `bias` is the bias @math{b} with which the accumulators are initialized.
+ * `Y` points to the 8-bit output vector @tensor{y} with length @tensor_shape{X_c}.
+ * 
+ * `X` points to the 8-bit input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}. The memory layout of 
+ * @tensor{X} is the standard memory layout for image tensors (see @ref standard_layout).
+ * 
+ * `bias` is the 32-bit bias @math{b} with which the accumulators are initialized for each output. Note that the 
+ * right-shift by @math{r} bits is applied after all accumulation. To add an absolute offset of @math{b_0} to each
+ * result, then the value used for @math{b} should be @math{b_0 \cdot 2^r}.
+ * 
+ * `scale` is the 8-bit coefficient @math{s}. All pixel values are multiplied by @math{s} and added to the 32-bit 
+ * accumulator.
+ * 
+ * `shift` is the (rounding) right-shift @math{r} applied to each 32-bit accumulator to yield an 8-bit result. Note 
+ * that this is a saturating right-shift which will saturate to 8-bit bounds (see additional remarks below).
  * 
  * `plan` points to the (initialized) plan associated with this instance of the @oper{avgpool2d_global} operator.
  * 
  * `job` points to the (initialized) job to be performed with this call.
  * 
- * @requires_word_alignment{Y,X}
+ * @par Parameter Constraints
  * 
- * @param Y    [out]    The output vector @tensor{y}
- * @param X    [in]     The input image @tensor{X}
- * @param bias [in]     Initial 32-bit accumulator value @math{B}. Shared by all channels.
- * @param plan [in]     The @oper{avgpool2d_global} plan to be processed
- * @param job  [in]     The @oper{avgpool2d_global} job to be processed
+ * The arguments `Y` and `X` must each point to a word-aligned address.
+ * 
+ * Due to memory alignment requirements, @math{X_c} must be a multiple of @math{4}, which forces all pixels to begin at
+ * a word-aligned address.
+ * 
+ * @par Splitting the Workload
+ * 
+ * Jobs are used to split the work done by an instance of @oper{avgpool2d_global}. Each job computes a (contiguous)
+ * subset of the elements of @tensor{y}. The elements to be computed by a job are specified when the jobs are 
+ * initialized by avgpool2d_global_init().
+ * 
+ * @par Additional Remarks
+ * 
+ * The arguments `Y` and `X` should both point at the beginning of their respective objects, even if the job being 
+ * invoked does not start at the beginning of the output vector.
+ * 
+ * By default this operator uses the standard 8-bit limits @math([-128, 127]) when applying saturation logic. Instead,
+ * it can be configured to use symmetric saturation bounds @math([-127, 127]) by defining 
+ * `CONFIG_SYMMETRIC_SATURATION_avgpool2d_global` appropriately. See @ref nn_config.h for more details. Note that this
+ * configures _all_ instances of the @oper{avgpool2d_global} operator.
+ * 
+ * If @math{X_c} is not a multiple of @math{16}, this operator may read up to 12 bytes following the end of @tensor{X}. 
+ * This is not ordinarily a problem. However, if the object to which `X` points is located very near the end of a valid 
+ * memory address range, it is possible memory access exceptions may occur when this operator is invoked.
+ * 
+ * If necessary, this can be avoided by manually forcing a buffer region (no more than @math{12} bytes are necessary) 
+ * following @tensor{X}. There are various ways this can be accomplished, including embedding these objects in larger 
+ * structures.
+ * 
+ * @param [out] Y       The output vector @tensor{y}
+ * @param [in]  X       The input image @tensor{X}
+ * @param [in]  bias    Initial 32-bit accumulator value @math{b}. Shared by all channels.
+ * @param [in]  scale   The factor @math{s} by which input pixel values are scaled.
+ * @param [in]  shift   The right-shift @math{r} applied to the 32-bit accumulators to yield an 8-bit result.
+ * @param [in]  plan    The @oper{avgpool2d_global} plan to be processed
+ * @param [in]  job     The @oper{avgpool2d_global} job to be processed
  */
 void avgpool2d_global(
     int8_t* Y,
     const int8_t* X, 
     const int32_t bias,
     const int8_t scale,
-    const int16_t shift,
+    const uint16_t shift,
     const nn_avgpool2d_global_plan_t* plan,
     const nn_avgpool2d_global_job_t* job);
 
@@ -459,6 +502,15 @@ void avgpool2d_global(
  * @oper{fully_connected_8}. To compute the entire output vector @tensor{y}, `output_start` and `output_count` should
  * be @math{0} and @math{M} respectively.
  * 
+ * @par Parameter Constraints
+ * 
+ * The arguments `Y`, `W`, `X` and `BSO` must each point to a word-aligned address.
+ * 
+ * Due to memory alignment requirements, @math{N} must be a multiple of @math{4}. If necessary, the rows of @tensor{W} 
+ * should be padded out with zeros at the end to satisfy this constraint.
+ * 
+ * In order to maintain alignment with `nn_bso_block_t` blocks, `output_start` must be a multiple of @math{16}.
+ * 
  * @par Splitting the Workload
  * 
  * In some cases (e.g. parallelizing across multiple cores) it is desirable to only compute a subset of the output 
@@ -468,18 +520,9 @@ void avgpool2d_global(
  * 
  * When splitting an instance of @oper{fully_connected_8} into multiple invocations it may be tempting to 
  * split the work evenly between invocations. However, the constraint that `output_start` be a multiple of @math{16} 
- * (see below) also suggests that `output_count` should be a multiple of @math{16} for each invocation. The exception to 
+ * (see above) also suggests that `output_count` should be a multiple of @math{16} for each invocation. The exception to 
  * this is if @math{M \ne 0 \left(\text{mod } 16\right)}, in which case the invocation that processes the final elements 
  * of @tensor{y} needn't be a multiple of @math{16}.
- * 
- * @par Parameter Constraints
- * 
- * The arguments `Y`, `W`, `X` and `BSO` must each point to a word-aligned address.
- * 
- * Due to memory alignment requirements, @math{N} must be a multiple of @math{4}. If necessary, the rows of @tensor{W} 
- * should be padded out with zeros at the end to satisfy this constraint.
- * 
- * In order to maintain alignment with `nn_bso_block_t` blocks, `output_start` must be a multiple of @math{16}.
  * 
  * @par Additional Remarks
  * 

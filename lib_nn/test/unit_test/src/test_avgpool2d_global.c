@@ -28,7 +28,7 @@
 
 static void compute_scale_shift(
     int8_t* out_scale,
-    int16_t* out_shift,
+    uint16_t* out_shift,
     nn_image_params_t* x_params)
 {
 
@@ -81,7 +81,7 @@ void test_avgpool2d_global_case0()
     avgpool2d_global_init(&plan, &job, &x_params, NULL, 1);
 
     int8_t scale;
-    int16_t shift;
+    uint16_t shift;
     compute_scale_shift(&scale, &shift, &x_params);
 
     
@@ -194,7 +194,7 @@ void test_avgpool2d_global_case1()
         avgpool2d_global_init(&plan, &job, &x_params, NULL, 1);
 
         int8_t scale;
-        int16_t shift;
+        uint16_t shift;
         compute_scale_shift(&scale, &shift, &x_params);
 
         int32_t bias = casse->bias * plan.X.pixels * scale;

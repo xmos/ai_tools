@@ -108,7 +108,7 @@ void avgpool2d_global(
     const nn_image_t* X, 
     const int32_t bias,
     const int8_t scale,
-    const int16_t shift,
+    const uint16_t shift,
     const nn_avgpool2d_global_plan_t* plan,
     const nn_avgpool2d_global_job_t* job)
 {
@@ -279,32 +279,8 @@ void avgpool2d_global_init(
 {    
     plan->X.channels = x_params->channels;
 
-    //Figure out the scale and shift
     plan->X.pixels = x_params->height * x_params->width;
 
-    // //Find c = ceil(log2(pix)), which can be achieve via clz()
-    // const int c = ceil_log2(plan->X.pixels);
-
-    // assert(c != -1); //pix == 0
-
-    // if(plan->X.pixels == (1<<c)){
-    //     //window pixel count is already a power of 2   (2^c)
-    //     plan->scale = 1;
-    //     plan->shift = c;
-    // } else {
-    //     const unsigned q = 31 - c - 6;
-    //     // 2^31 / plan->X.pixels
-    //     const unsigned g = 0x80000000 / plan->X.pixels;
-    //     const unsigned h = (g + (1 << (q-1))) >> q; //Rounding down-shift
-
-    //     assert(h > (1<<6));
-    //     assert(h < (1<<7));
-
-    //     plan->scale = (int8_t)h;
-    //     plan->shift = c+6;
-    // }
-
-    
     const nn_avgpool2d_global_job_params_t full_job = { 0, x_params->channels };
 
     for(int k = 0; k < job_count; k++){

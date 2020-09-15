@@ -10,7 +10,7 @@ void avgpool2d_global(
     const int8_t* X, 
     const int32_t bias,
     const int8_t scale,
-    const int16_t shift,
+    const uint16_t shift,
     const nn_avgpool2d_global_plan_t* plan,
     const nn_avgpool2d_global_job_t* job);
 */

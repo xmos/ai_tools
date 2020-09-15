@@ -5,7 +5,7 @@ import numpy as np  # type: ignore
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Callable, Union
 
-from tflite2xcore.xcore_interpreter import XCOREInterpreter  # type: ignore # TODO: fix this
+from tflite2xcore.interpreters import XCOREInterpreter  # type: ignore # TODO: fix this
 from tflite2xcore.utils import quantize, QuantizationTuple
 
 from . import TFLiteModel

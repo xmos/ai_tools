@@ -31,16 +31,23 @@ set(LIB_NN_ALT_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../lib_nn/lib_nn/api")
 set(LIB_NN_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../lib_nn")
 
 #**********************
+# install
+#**********************
+set(INSTALL_DIR "${PROJECT_SOURCE_DIR}/bin")
+
+#**********************
 # Build flags
 #**********************
-
-add_executable(test_model)
+set(CMAKE_CXX_FLAGS "-std=c++11")
 
 # Optimization 
 # -DNDEBUG                        # define this for remove debug and profiling 
 # -DTF_LITE_STRIP_ERROR_STRINGS   # define this to remove logging
 
 if (XCORE)
+  add_executable(test_model_xscope)
+  add_executable(test_model_cmdline)
+
   set(CMAKE_C_COMPILER "xcc")
   set(CMAKE_CXX_COMPILER  "xcc")
   set(CMAKE_ASM_COMPILER  "xcc")
@@ -62,36 +69,28 @@ if (XCORE)
     "-DXCORE"
     "-Os"
   )
-  target_link_options(test_model PRIVATE ${BUILD_FLAGS} -lquadspi -w)
-  set_target_properties(test_model PROPERTIES OUTPUT_NAME test_model.xe)
-else ()
+
+  target_compile_options(test_model_xscope PRIVATE ${BUILD_FLAGS})
+  target_compile_options(test_model_cmdline PRIVATE ${BUILD_FLAGS} -fcmdline-buffer-bytes=2048)
+
+  target_link_options(test_model_xscope PRIVATE ${BUILD_FLAGS} -lquadspi -w)
+  target_link_options(test_model_cmdline PRIVATE ${BUILD_FLAGS} -lquadspi -w -fcmdline-buffer-bytes=2048)
+
+  set_target_properties(test_model_xscope PROPERTIES OUTPUT_NAME test_model_xscope.xe)
+  set_target_properties(test_model_cmdline PROPERTIES OUTPUT_NAME test_model_cmdline.xe)
+else (XCORE)
+  add_executable(test_model_host)
+
   set(BUILD_FLAGS
     "-g"
     "-DTF_LITE_DISABLE_X86_NEON"
     "-DTF_LITE_STATIC_MEMORY"
     "-O3"
   )
-  target_link_libraries(test_model stdc++ m pthread)
-endif ()
+  target_link_libraries(test_model_host stdc++ m pthread)
 
-set(CMAKE_CXX_FLAGS "-std=c++11")
-
-target_compile_options(test_model PRIVATE ${BUILD_FLAGS})
-
-#**********************
-# Flatbuffer sources
-#**********************
-set(FLATBUFFER_SOURCES
-  "${FLATBUFFERS_SOURCE_DIR}/idl_parser.cpp"
-  "${FLATBUFFERS_SOURCE_DIR}/idl_gen_text.cpp"
-)
-
-if (NOT XCORE)
-  set(FLATBUFFER_SOURCES
-    ${FLATBUFFER_SOURCES}
-    "${FLATBUFFERS_SOURCE_DIR}/util.cpp"
-  )
-endif ()
+  target_compile_options(test_model_host PRIVATE ${BUILD_FLAGS})
+endif (XCORE)
 
 #********************************
 # TensorFlow Lite Micro sources
@@ -154,7 +153,6 @@ set(TENSORFLOW_LITE_REFERENCE_OPERATOR_SOURCES
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/elementwise.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/floor.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/fully_connected.cc"
-  "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/hard_swish.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/l2norm.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/logical.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/logistic.cc"
@@ -177,6 +175,7 @@ set(TENSORFLOW_LITE_REFERENCE_OPERATOR_SOURCES
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/svdf.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/tanh.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/unpack.cc"
+  "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/hard_swish.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/ethosu.cc"
 )
 
@@ -245,34 +244,31 @@ if (XCORE)
 endif ()
 
 #**********************
-# APP sources
-#**********************
-set(APP_SOURCES
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/inference_engine.cc"
-)
-
-if (XCORE)
-  set(APP_SOURCES
-    ${APP_SOURCES}
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/main.xc"
-    )
-  set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/src/main.xc" PROPERTIES LANGUAGE C)
-endif ()
-
-#**********************
 # targets
 #**********************
-target_sources(test_model
-  PRIVATE ${FLATBUFFER_SOURCES}
-  PRIVATE ${TENSORFLOW_LITE_SOURCES}
-  PRIVATE ${TENSORFLOW_LITE_REFERENCE_OPERATOR_SOURCES}
-  PRIVATE ${TENSORFLOW_LITE_XCORE_OPERATOR_SOURCES}
-  PRIVATE ${LIB_NN_SOURCES}
-  PRIVATE ${APP_SOURCES}
-)
+if (XCORE)
+  set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/src/main.xc" PROPERTIES LANGUAGE C)
 
-target_include_directories(test_model
+  target_sources(test_model_xscope
+    PRIVATE ${TENSORFLOW_LITE_SOURCES}
+    PRIVATE ${TENSORFLOW_LITE_REFERENCE_OPERATOR_SOURCES}
+    PRIVATE ${TENSORFLOW_LITE_XCORE_OPERATOR_SOURCES}
+    PRIVATE ${LIB_NN_SOURCES}
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/main_xscope.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/inference_engine.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/main.xc"
+  )
+
+  target_sources(test_model_cmdline
+    PRIVATE ${TENSORFLOW_LITE_SOURCES}
+    PRIVATE ${TENSORFLOW_LITE_REFERENCE_OPERATOR_SOURCES}
+    PRIVATE ${TENSORFLOW_LITE_XCORE_OPERATOR_SOURCES}
+    PRIVATE ${LIB_NN_SOURCES}
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/main_cmdline.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/inference_engine.cc"
+  )
+
+target_include_directories(test_model_xscope
   PRIVATE ${FLATBUFFERS_INCLUDE_DIR}
   PRIVATE ${GEMMLOWP_INCLUDE_DIR}
   PRIVATE ${RUY_INCLUDE_DIR}
@@ -282,8 +278,40 @@ target_include_directories(test_model
   PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
-#**********************
-# install
-#**********************
-set(INSTALL_DIR "${PROJECT_SOURCE_DIR}/bin")
-install(TARGETS test_model DESTINATION ${INSTALL_DIR})
+target_include_directories(test_model_cmdline
+  PRIVATE ${FLATBUFFERS_INCLUDE_DIR}
+  PRIVATE ${GEMMLOWP_INCLUDE_DIR}
+  PRIVATE ${RUY_INCLUDE_DIR}
+  PRIVATE ${TENSORFLOW_INCLUDE_DIR}
+  PRIVATE ${LIB_NN_ALT_INCLUDE_DIR}
+  PRIVATE ${LIB_NN_INCLUDE_DIR}
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+  install(TARGETS test_model_xscope test_model_cmdline DESTINATION ${INSTALL_DIR})
+
+else (XCORE)
+
+  target_sources(test_model_host
+    PRIVATE ${TENSORFLOW_LITE_SOURCES}
+    PRIVATE ${TENSORFLOW_LITE_REFERENCE_OPERATOR_SOURCES}
+    PRIVATE ${TENSORFLOW_LITE_XCORE_OPERATOR_SOURCES}
+    PRIVATE ${LIB_NN_SOURCES}
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/main_cmdline.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/inference_engine.cc"
+  )
+
+target_include_directories(test_model_host
+  PRIVATE ${FLATBUFFERS_INCLUDE_DIR}
+  PRIVATE ${GEMMLOWP_INCLUDE_DIR}
+  PRIVATE ${RUY_INCLUDE_DIR}
+  PRIVATE ${TENSORFLOW_INCLUDE_DIR}
+  PRIVATE ${LIB_NN_ALT_INCLUDE_DIR}
+  PRIVATE ${LIB_NN_INCLUDE_DIR}
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+  install(TARGETS test_model_host DESTINATION ${INSTALL_DIR})
+
+endif (XCORE)
+

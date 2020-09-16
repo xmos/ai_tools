@@ -12,12 +12,12 @@ from tflite2xcore.xcore_schema import (
 from tflite2xcore.utils import WORD_SIZE
 
 from .transformation_passes import (
-    ReplaceWeightBiasOperatorPass,
+    ReplaceXCWeightBiasOperatorPass,
     LegalizeXCWeightBiasPass,
 )
 
 
-class ReplaceFullyConnectedPass(ReplaceWeightBiasOperatorPass):
+class ReplaceFullyConnectedPass(ReplaceXCWeightBiasOperatorPass):
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.FULLY_CONNECTED

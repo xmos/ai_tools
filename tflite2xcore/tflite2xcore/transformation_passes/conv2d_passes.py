@@ -7,13 +7,14 @@ from tflite2xcore.xcore_schema import BuiltinOpCodes, OperatorCode, XCOREOpCodes
 from tflite2xcore.utils import WORD_SIZE
 
 from .transformation_passes import (
-    ReplaceWeightBiasOperatorPass,
+    ReplaceQuantizedWeightBiasOperatorPass,
+    ReplaceXCWeightBiasOperatorPass,
     LegalizeWeightBiasPass,
     LegalizeXCWeightBiasPass,
 )
 
 
-class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceWeightBiasOperatorPass):
+class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceXCWeightBiasOperatorPass):
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.DEPTHWISE_CONV_2D
@@ -62,7 +63,7 @@ class LegalizeSingleinConv2DPass(LegalizeWeightBiasPass):
             self._replace_weights(np.transpose(self._weights.as_array(), [3, 1, 2, 0]))
 
 
-class ReplaceConv2DPass(ReplaceWeightBiasOperatorPass):
+class ReplaceConv2DPass(ReplaceXCWeightBiasOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options

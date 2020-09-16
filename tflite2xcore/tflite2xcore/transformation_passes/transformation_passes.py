@@ -206,7 +206,7 @@ class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
         return new_op
 
 
-class ReplaceWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
+class ReplaceQuantizedWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     @property
     def _weights(self):
         return self._op.inputs[1]
@@ -221,8 +221,18 @@ class ReplaceWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
                 return (
                     self._weights.type is TensorType.INT8
                     and self._biases.type is TensorType.INT32
+                    # NOTE: the current implementations don't allow mutating ops
+                    #       if one of the parameter tensors is an output or not constant
+                    and self._weights.is_constant
+                    and self._weights not in op.subgraph.outputs
+                    and self._biases.is_constant
+                    and self._biases not in op.subgraph.outputs
                 )
 
+        return False
+
+
+class ReplaceXCWeightBiasOperatorPass(ReplaceQuantizedWeightBiasOperatorPass):
     def mutate(self, op):
         new_op = super().mutate(op)
         new_op.add_custom_options(illegal_params=True)
@@ -254,8 +264,6 @@ class LegalizeWeightBiasPass(QuantizedOperatorMatchingPass):
             f"{self._op.name}/weights",
             TensorType.INT8,
             arr.shape,
-            isinput=self._weights in subgraph.inputs,
-            isoutput=self._weights in subgraph.outputs,
             consumers=[self._op],
         )
         new_weights.buffer.data = arr
@@ -413,8 +421,6 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
                 f"{self._op.name}/bias_shift_scale",
                 TensorType.INT16,
                 bso.shape,
-                isinput=self._biases in subgraph.inputs,
-                isoutput=self._biases in subgraph.outputs,
                 consumers=[self._op],
             )
             new_biases.buffer.data = bso

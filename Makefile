@@ -21,7 +21,8 @@ tflite2xcore_test:
 
 .PHONY: integration_test
 integration_test:
-	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS)
+	cd utils/model_generation && pytest integration_test --cache-clear --collect-only -qq
+	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS) --dist loadfile
 
 .PHONY: ci 
 ci: lib_nn_test_build tflite2xcore_test integration_test

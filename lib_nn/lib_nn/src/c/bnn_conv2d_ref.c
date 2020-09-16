@@ -24,6 +24,32 @@ void bnn_reorder_threshold_tensor(const int32_t* thresh_boggled,
   }
 }
 
+void bnn_reorder_multiplier_and_bias_tensors(
+                                  int16_t* post_activation_multiplier_q_reordered,
+                                  const int16_t* post_activation_multiplier_q,
+                                  int16_t* post_activation_bias_q_reordered,
+                                  const int16_t* post_activation_bias_q,
+                                  const unsigned chans_out) {
+
+  for (unsigned b=0;b < chans_out/16;b++){
+    for(unsigned i=0;i<16;i++){
+
+      unsigned interleaved_oc;
+      if (i<8){
+        interleaved_oc = (2*i) + 1;
+      } else{
+        interleaved_oc = 2*(i-8);
+      }
+
+      post_activation_multiplier_q_reordered[b*16 + i] = 
+        post_activation_multiplier_q[b*16 + interleaved_oc];
+      post_activation_bias_q_reordered[b*16 + i] = 
+        post_activation_bias_q[b*16 + interleaved_oc];
+    }
+
+  }
+}
+
 void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
@@ -34,16 +60,19 @@ void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
   bnn_b256_t(*K_ref)[k_height][k_width][chan_b256_in] =
       (bnn_b256_t(*)[k_height][k_width][chan_b256_in])K_ref_p;
 
-  bnn_b256_t(*K)[k_height][k_width][chan_b256_in][16] =
-      (bnn_b256_t(*)[k_height][k_width][chan_b256_in][16])K_p;
+  const unsigned output_chans_per_group = 16;
+  bnn_b256_t(*K)[k_height][k_width][chan_b256_in][output_chans_per_group] =
+      (bnn_b256_t(*)[k_height][k_width][chan_b256_in][output_chans_per_group])K_p;
 
-  for (unsigned oc = 0; oc < chans_out / 16; oc++) {
+  for (unsigned output_chan_group = 0; output_chan_group < chans_out / output_chans_per_group; 
+      output_chan_group++) {
     for (unsigned h = 0; h < k_height; h++) {
       for (unsigned w = 0; w < k_width; w++) {
         for (unsigned ic = 0; ic < chan_b256_in; ic++) {
-          for (unsigned o = 0; o < 16; o++) {
+          for (unsigned sub_grp_idx = 0; sub_grp_idx < output_chans_per_group; sub_grp_idx++) {
             for (unsigned i = 0; i < 8; i++) {
-              K[oc][h][w][ic][15 - o].d[i] = K_ref[oc * 16 + o][h][w][ic].d[i];
+              K[output_chan_group][h][w][ic][output_chans_per_group - 1 - sub_grp_idx].d[i] = 
+                K_ref[output_chan_group * output_chans_per_group + sub_grp_idx][h][w][ic].d[i];
             }
           }
         }
@@ -62,24 +91,30 @@ void bnn_reorder_int8_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_r
   bnn_b256_t(*K_ref)[k_height][k_width][chan_b256_in] =
       (bnn_b256_t(*)[k_height][k_width][chan_b256_in])K_ref_p;
 
-  bnn_b256_t(*K)[k_height][k_width][chan_b256_in][16] =
-      (bnn_b256_t(*)[k_height][k_width][chan_b256_in][16])K_p;
+  const unsigned output_chans_per_group = 16;
 
-  for (unsigned oc = 0; oc < chans_out / 16; oc++) {
+  bnn_b256_t(*K)[k_height][k_width][chan_b256_in][output_chans_per_group] =
+      (bnn_b256_t(*)[k_height][k_width][chan_b256_in][output_chans_per_group])K_p;
+
+  for (unsigned output_chan_group = 0; output_chan_group < chans_out / output_chans_per_group; 
+      output_chan_group++) {
     for (unsigned h = 0; h < k_height; h++) {
       for (unsigned w = 0; w < k_width; w++) {
         for (unsigned ic = 0; ic < chan_b256_in; ic++) {
-          for (unsigned o = 0; o < 16; o++) {
+          for (unsigned sub_grp_idx = 0; sub_grp_idx < output_chans_per_group; sub_grp_idx++) {
 
+            //This is to compensate for the way the asm interleaves the 
+            //upper and lower 8 outputs.
             unsigned interleaved_oc;
-            if (o<8){
-              interleaved_oc = (2*o) + 1;
+            if (sub_grp_idx < 8) {
+              interleaved_oc = (2*sub_grp_idx) + 1;
             } else{
-              interleaved_oc = 2*(o-8);
+              interleaved_oc = 2*(sub_grp_idx - 8);
             }
 
-            for (unsigned i = 0; i < 8; i++) {
-              K[oc][h][w][ic][15 - o].d[i] = K_ref[oc * 16 + interleaved_oc][h][w][ic].d[i];
+            for (unsigned vpu_subword = 0; vpu_subword < 8; vpu_subword++) {
+              K[output_chan_group][h][w][ic][output_chans_per_group - 1 - sub_grp_idx].d[vpu_subword] = 
+                K_ref[output_chan_group * output_chans_per_group + interleaved_oc][h][w][ic].d[vpu_subword];
             }
           }
         }
@@ -95,16 +130,15 @@ unsigned xor_pop(bnn_b256_t* a, bnn_b256_t* b) {
   unsigned c = 0;
   for (unsigned e = 0; e < elements; e++) {
     uint32_t v = a->d[e] ^ b->d[e];
-//  #if defined(__XS3A__)
+ #if defined(__XS3A__)
     v = ~v;
     for (unsigned i = 0; i < t * 8; i++) {
       c += (v & 1);
       v >>= 1;
     }
-    // #else
-    // c += __builtin_popcount(v);
-    // #endif
-
+    #else
+    c += __builtin_popcount(~v);
+    #endif
   }
   return c;
 }

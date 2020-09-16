@@ -624,6 +624,39 @@ void bnn_reorder_threshold_tensor(const int32_t* thresh_reordered,
                                   const unsigned chans_out,
                                   const unsigned receptive_field);
     
+
+
+/**  
+ * @brief Execute @oper{bnn_reorder_multiplier_and_bias_tensors}.
+ * 
+ * This reorders the post_activation_multiplier and post_activation_bias tensors 
+ * for efficient execution by bnn_conv2d_int8_out_asm. 
+ * This is only inteneded for testing.
+ * 
+ * `post_activation_multiplier_q_reordered` points to the output threshold @tensor{post_activation_multiplier_q_reordered} .
+ * 
+ * `post_activation_multiplier_q` points to the input @tensor{post_activation_multiplier_q}.
+ * 
+ * `post_activation_bias_q_reordered` points to the output threshold @tensor{post_activation_bias_q_reordered} .
+ * 
+ * `post_activation_bias_q` points to the input @tensor{post_activation_bias_q}.
+ * 
+ * `chans_out` is the number of output channels.
+ * 
+ * 
+ * @param post_activation_multiplier_q_reordered   [out]    The output @tensor{post_activation_multiplier_q_reordered}
+ * @param post_activation_multiplier_q             [in]     The input @tensor{post_activation_multiplier_q}
+ * @param post_activation_bias_q_reordered         [out]    The output @tensor{post_activation_bias_q_reordered}
+ * @param post_activation_bias_q                   [in]     The input @tensor{post_activation_bias_q}
+ * @param chans_out                                [in]     The number of output channels
+ */
+void bnn_reorder_multiplier_and_bias_tensors(
+                                  int16_t* post_activation_multiplier_q_reordered,
+                                  const int16_t* post_activation_multiplier_q,
+                                  int16_t* post_activation_bias_q_reordered,
+                                  const int16_t* post_activation_bias_q,
+                                  const unsigned chans_out);
+
 /**  
  * @brief Execute @oper{bnn_reorder_kernel_tensor}.
  * 
@@ -653,6 +686,33 @@ void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
                                const unsigned chans_out);
+
+
+/**  
+ * @brief Execute @oper{bnn_reorder_int8_kernel_tensor}.
+ * 
+ * This reorders the kernel tensor for efficient execution by bnn_conv2d_int8_out_asm. 
+ * This is only intended for testing.
+ * 
+ * `K_p` points to the output kernel @tensor{K_p} .
+ * 
+ * `K_ref_p` points to the kernel input @tensor{K_ref_p}.
+ * 
+ * `k_height` is the kernel height.
+ * 
+ * `k_width` is the kernel width.
+ * 
+ * `chans_in` is the number of input channels.
+ * 
+ * `chans_out` is the number of output channels.    
+ * 
+ * @param K_p         [out]    The output @tensor{K_p}
+ * @param K_ref_p     [in]     The input @tensor{K_ref_p}
+ * @param k_height    [in]     The kernel height
+ * @param k_width     [in]     The kernel width
+ * @param chans_in    [in]     The number of input channels
+ * @param chans_out   [in]     The number of output channels
+ */                          
 void bnn_reorder_int8_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,

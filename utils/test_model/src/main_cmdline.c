@@ -4,76 +4,33 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "inference_engine.h"
 
-#define MAX_MODEL_CONTENT_SIZE 100000
-static int model_content_bytes = 0;
-unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
+#ifdef XCORE
+#define ATTRIBUTE_EXTMEM_SECTION __attribute__((section(".ExtMem_data")))
+#else  // not XCORE
+#define ATTRIBUTE_EXTMEM_SECTION
+#endif
 
-#define TENSOR_ARENA_SIZE 100000
+// USE RAM
+// #define MAX_MODEL_CONTENT_SIZE 50000
+// unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
+// #define TENSOR_ARENA_SIZE 125000
+// unsigned char tensor_arena[TENSOR_ARENA_SIZE];
+
+// USE DDR
+#define MAX_MODEL_CONTENT_SIZE 500000
+ATTRIBUTE_EXTMEM_SECTION unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
+#define TENSOR_ARENA_SIZE 200000
 unsigned char tensor_arena[TENSOR_ARENA_SIZE];
 
-static int input_bytes = 0;
-static int input_size;
+static size_t input_size;
 static unsigned char *input_buffer;
 
-static int output_size;
+static size_t output_size;
 static unsigned char *output_buffer;
-
-enum ReceiveState { Model, Input };
-static enum ReceiveState state;
-
-#ifdef XCORE
-
-#include "xscope.h"
-
-void app_main() {}
-
-void send_output() {
-  xscope_bytes(OUTPUT_TENSOR, output_size,
-               (const unsigned char *)output_buffer);
-}
-
-void app_data(void *data, size_t size) {
-  if (strncmp(data, "START_MODEL", 11) == 0) {
-    model_content_bytes = 0;
-    state = Model;
-    return;
-  } else if (strncmp(data, "END_MODEL", 9) == 0) {
-    // Note, initialize will log error and exit if initialize fails
-    initialize(model_content, tensor_arena, TENSOR_ARENA_SIZE, &input_buffer,
-               &input_size, &output_buffer, &output_size);
-    input_bytes = 0;
-    state = Input;
-    return;
-  }
-
-  switch (state) {
-    case Model:
-      // printf("Model size=%d\n", size);
-      memcpy(model_content + model_content_bytes, data, size);
-      model_content_bytes += size;
-      if (model_content_bytes > MAX_MODEL_CONTENT_SIZE) {
-        // Return error if too big
-        printf("Model exceeds maximum size of %d bytes\n",
-               MAX_MODEL_CONTENT_SIZE);
-        exit(1);
-      }
-      break;
-    case Input:
-      memcpy(input_buffer + input_bytes, data, size);
-      input_bytes += size;
-      if (input_bytes == input_size) {
-        invoke();
-        send_output();
-        input_bytes = 0;
-      }
-      break;
-  }
-}
-
-#else  // must be x86
 
 static int load_model(const char *filename, char **buffer, size_t *size) {
   FILE *fd = fopen(filename, "rb");
@@ -133,7 +90,6 @@ int main(int argc, char *argv[]) {
     printf("error loading model filename=%s\n", model_filename);
     return -1;
   }
-
   // setup runtime
   initialize(model_content, tensor_arena, TENSOR_ARENA_SIZE, &input_buffer,
              &input_size, &output_buffer, &output_size);
@@ -154,5 +110,3 @@ int main(int argc, char *argv[]) {
   }
   return 0;
 }
-
-#endif

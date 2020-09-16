@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <float.h>
 #include <assert.h>
 
 #include "tst_common.h"
@@ -12,6 +13,8 @@
 #include "nn_bin_utils.h"
 
 #include "unity.h"
+
+static const int post_vlmul_shr = 14; //defined by the HW
 
 void larq_ref_bconv2d_bin_out(const nn_image_params_t* x, const nn_image_params_t* y,
                       const nn_window_params_t* k,
@@ -27,27 +30,45 @@ void larq_ref_bconv2d_int8_out(const nn_image_params_t* x, const nn_image_params
                       const float* post_activation_multiplier, 
                       const float* post_activation_bias );
 
-unsigned int clz(unsigned int num) {
+int clrsb(int x){
   #if defined(__XS3A__)
-  if (num == 0 )
-    return 32;
-  unsigned count = 0;
-  while((num>>31)==0){
-    count++;
-    num<<=1;
+  for (unsigned i=0;i<32;i++){
+    int y = (x<<i)>>i;
+    if (y != x)
+      return (i-1);
   }
-  return count;
+  return 32;
   #else
-    return __builtin_clz(num);
+  return __builtin_clrsb(x);
   #endif
 }
-
-
+int clrsbll(long long x){
+  #if defined(__XS3A__)
+  for (unsigned i=0;i<64;i++){
+    long long y = (x<<i)>>i;
+    if (y != x)
+    return (i-1);
+  }
+  return 64;
+  #else
+  return __builtin_clrsbll(x);
+  #endif
+}
 static int32_t ashr(int32_t x, int shr){
-  if (shr > 0)
-    return x >> shr;
-  else
+  if (shr == 0)
+    return x;
+
+  if (shr > 0){
+    int32_t rounding = (1 << (shr-1));
+    return (x + rounding) >> shr;
+  } else
     return x << (-shr);
+}
+static int32_t mul(int32_t x, int32_t m){
+  int64_t t = (int64_t)x * (int64_t)m;
+  if(t > INT32_MAX) t = INT32_MAX;
+  if(t < INT32_MIN) t = INT32_MIN;
+  return (int32_t)t; 
 }
 
 #define max(a,b) \
@@ -70,28 +91,226 @@ static int get_accumulator_ashr(int32_t max_accu_post_clamp, int32_t min_accu_po
   int64_t min_max = (int64_t)min_accu_post_clamp * (int64_t)max_quantised_pam;
   int64_t min_min = (int64_t)min_accu_post_clamp * (int64_t)min_quantised_pam;
 
-  int max_max_rsb = __builtin_clrsbll(max_max);
-  int max_min_rsb = __builtin_clrsbll(max_min);
-  int min_max_rsb = __builtin_clrsbll(min_max);
-  int min_min_rsb = __builtin_clrsbll(min_min);
+  int max_max_rsb = clrsbll(max_max);
+  int max_min_rsb = clrsbll(max_min);
+  int min_max_rsb = clrsbll(min_max);
+  int min_min_rsb = clrsbll(min_min);
 
   int min_rsb = min(max_max_rsb, min(max_min_rsb, min(min_max_rsb, min_min_rsb)));
 
   // This defines the maximum amount we are alowed to shift the accu left by and keep it within the 16 bit register
-  int max_accu_post_clamp_rsb = __builtin_clrsb(max_accu_post_clamp) - 16;
-  int min_accu_post_clamp_rsb = __builtin_clrsb(min_accu_post_clamp) - 16;
+  int max_accu_post_clamp_rsb = clrsb(max_accu_post_clamp) - 16;
+  int min_accu_post_clamp_rsb = clrsb(min_accu_post_clamp) - 16;
 
   int max_shl = min(max_accu_post_clamp_rsb, min_accu_post_clamp_rsb);
 
-  int accu_shr = -min(min_rsb - 32 - (16 - post_vlmul_shr), max_shl);
+  int t = min_rsb - 32 - (16 - post_vlmul_shr);
+  int accu_shr = -min(t, max_shl);
 
-  assert(__builtin_clrsb(ashr(max_accu_post_clamp, accu_shr)) >=16);
-  assert(__builtin_clrsb(ashr(min_accu_post_clamp, accu_shr)) >=16);
+  //test for rounding overflow
+  int32_t max_accu_shr = ashr(max_accu_post_clamp, accu_shr);
+  int32_t min_accu_shr = ashr(min_accu_post_clamp, accu_shr);
 
+  if (clrsb(ashr(max_accu_shr * max_quantised_pam, post_vlmul_shr)) < 16)
+    accu_shr += 1;  
+  if (clrsb(ashr(max_accu_shr * min_quantised_pam, post_vlmul_shr)) < 16)
+    accu_shr += 1;  
+  if (clrsb(ashr(min_accu_shr * max_quantised_pam, post_vlmul_shr)) < 16)
+    accu_shr += 1;  
+  if (clrsb(ashr(min_accu_shr * min_quantised_pam, post_vlmul_shr)) < 16)
+    accu_shr += 1;  
+
+  assert(clrsb(ashr(max_accu_post_clamp, accu_shr)) >=16);
+  assert(clrsb(ashr(min_accu_post_clamp, accu_shr)) >=16);
   return accu_shr;
 }
 
+static int get_pam_exponent(float* post_activation_multiplier, unsigned chans_out){
+  float max_pam = FLT_MIN;
+  float min_pam = FLT_MAX;
+  for (unsigned ch=0; ch < chans_out; ch++){
+    max_pam = max(max_pam, post_activation_multiplier[ch]);
+    min_pam = min(min_pam, post_activation_multiplier[ch]);
+  }
+
+  int max_pam_exp, min_pam_exp;
+  frexp(max_pam, &max_pam_exp);
+  frexp(min_pam, &min_pam_exp);
+
+  // Raise any multiplier to b to get them as big as possible - 
+  // this should be possible without the loop
+  int M = 15 - min(max_pam_exp, min_pam_exp);
+
+  while ( (int16_t)round(ldexp(max_pam, M) > INT16_MAX) || 
+          (int16_t)round(ldexp(max_pam, M) < INT16_MIN) || 
+          (int16_t)round(ldexp(min_pam, M) > INT16_MAX) || 
+          (int16_t)round(ldexp(min_pam, M) < INT16_MIN)
+          ){
+    M -= 1;
+    //This should only happen once if the rounding bit tips it over the edge.
+    //It might be better to use 0x7fff (or equliv) instead of decreamenting M.
+  }
+  return M;
+}
+
+//These are used for collecting int8 output stats
 double max_error_g = 0.0;
+double max_abs_error_g = 0.0;
+int output_error_g[256] = {0};
+unsigned abs_output_error_g[256] = {0};
+unsigned error_counter_g[256] = {0};
+
+static void quantise_activation(
+               int16_t * post_activation_multiplier_q,
+               int16_t* post_activation_bias_q,
+               float* post_activation_multiplier,
+               float* post_activation_bias, 
+               unsigned chans_out,
+               int32_t accu_min_post_clamp,
+               int32_t accu_max_post_clamp,
+               int *accu_shr,
+               int *final_shr
+               ){
+
+  //adjust the bias and multiplier to account for Larq starting with the xor_popcount
+  //and the vpu starting with the macc/2
+
+  float * pam = (float *)malloc(sizeof(float) * chans_out);
+
+  for (unsigned ch=0;ch<chans_out;ch++){
+    pam[ch] = post_activation_multiplier[ch] * 2;
+  }
+  accu_min_post_clamp /=2;
+  accu_max_post_clamp /=2;
+
+
+  int M = get_pam_exponent(pam, chans_out);
+
+  int16_t max_quantised_pam = INT16_MIN;
+  int16_t min_quantised_pam = INT16_MAX;
+  int min_pam_rsb = INT_MAX;
+  for (unsigned ch=0;ch<chans_out;ch++){
+    int16_t pa_mul = (int16_t)round(ldexp(pam[ch], M));
+
+    post_activation_multiplier_q[ch] = pa_mul;
+    
+    max_quantised_pam = max(max_quantised_pam, pa_mul);
+    min_quantised_pam = min(min_quantised_pam, pa_mul);
+
+    //Check that there is the required amount of headroom in the pa_multipliers
+    int rsb = clrsb(post_activation_multiplier_q[ch]) - 16;
+    assert (rsb >= 0);
+    if(rsb < min_pam_rsb)
+      min_pam_rsb = rsb;
+  }
+
+  //There should be at least one multiplier that has zero headroom.
+  assert(min_pam_rsb == 0);
+
+  float min_pab = FLT_MAX;
+  float max_pab = -FLT_MAX;
+  for (unsigned ch=0;ch<chans_out;ch++){
+    min_pab = min(min_pab, post_activation_bias[ch]);
+    max_pab = max(min_pab, post_activation_bias[ch]);
+  }
+
+
+  // Now find the accu shift (the value that the accu is shifted by to get the most resolution out of the pam). 
+  // This will get the accu to occupy the bottom 15 or 16 bits of a 16 bit register.
+  *accu_shr = get_accumulator_ashr(accu_max_post_clamp, accu_min_post_clamp, 
+    max_quantised_pam, min_quantised_pam, post_vlmul_shr);
+
+  *final_shr = (-*accu_shr + M - post_vlmul_shr);
+
+
+  int success = 0;
+
+  while(success == 0){
+    success = 1;
+    //Now quantise the biases
+    for (unsigned ch=0;ch<chans_out;ch++){
+
+      int32_t pa_bias = (int32_t)round(ldexp(post_activation_bias[ch], *final_shr));
+      
+      pa_bias += (1 << (*final_shr - 1));
+      //This bit is a hack to account for the bias causing overflow
+      if((pa_bias > INT16_MAX) || (pa_bias < INT16_MIN)){
+        success = 0;
+        *accu_shr = *accu_shr + 1;
+        *final_shr = (-*accu_shr + M - post_vlmul_shr);
+        break;
+      }
+
+      post_activation_bias_q[ch] = (int16_t)pa_bias;
+    }
+  }
+  free(pam);
+  //adjust it to reflect we are going to shift up to the upper half word( top 8 bits of 16)
+  *final_shr = *final_shr-8;
+}
+
+void measure_quantisation(
+               int16_t * post_activation_multiplier_q,
+               int16_t* post_activation_bias_q,
+               float* post_activation_multiplier,
+               float* post_activation_bias, 
+               unsigned chans_out,
+               int32_t accu_min_post_clamp,
+               int32_t accu_max_post_clamp,
+               int accu_shr,
+               int final_shr){
+
+  int test_error_sum = 0;
+  unsigned test_abs_error_sum = 0;
+  unsigned count = 0;
+
+  for (unsigned ch=0;ch<chans_out;ch++){
+
+    float PAM = post_activation_multiplier[ch];
+    float Bias = post_activation_bias[ch];
+
+    for (int32_t vpu_output = accu_min_post_clamp/2; vpu_output<=accu_max_post_clamp/2; vpu_output++){
+
+      //Format the input as the macc result(as opposed to the vpu which is divided by two)
+      //In the larq code this is the result after the:
+      //AccumScalar x = backtransform_add - 2 * accum;
+      int32_t full_scale_macc = vpu_output*2;
+
+      //This is how the reference is defined
+      int R = round((full_scale_macc * PAM) + Bias); 
+      R = max(min(R, INT8_MAX), INT8_MIN);
+
+      int32_t r = ashr(vpu_output, accu_shr);
+      r = mul(r, post_activation_multiplier_q[ch]);
+
+      r = ashr(r, post_vlmul_shr);
+      assert (clrsb(r) >= 16);
+      r += post_activation_bias_q[ch];
+
+      r = ashr(r, final_shr);
+      r = r&0xffffff00;
+      r = r>>8;
+      r = max(min(r, INT8_MAX), INT8_MIN);
+
+      int error = r - R;
+      unsigned abs_error = abs(error);
+
+      output_error_g[R - INT8_MIN] += error;
+      abs_output_error_g[R - INT8_MIN] += abs_error;
+      error_counter_g[R - INT8_MIN] += 1;
+
+      assert(abs_error <= 1);
+
+      test_error_sum += error;
+      test_abs_error_sum += abs_error;
+      count += 1;
+    }
+  }
+
+  max_error_g = max(max_error_g, (double)test_error_sum / count);
+  max_abs_error_g = max(max_abs_error_g, (double)test_abs_error_sum / count);
+  
+}
 
 /*
 X_ref and K_ref must be initialised before running this.
@@ -105,7 +324,10 @@ int run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
 
                int16_t * post_activation_multiplier_q,
                int16_t* post_activation_bias_q, 
-               
+               int16_t * post_activation_multiplier_q_reordered,
+               int16_t* post_activation_bias_q_reordered, 
+
+
                unsigned x_height, unsigned x_width,
                unsigned k_height, unsigned k_width, unsigned chans_in,
                unsigned chans_out, unsigned h_stride, unsigned v_stride) {
@@ -122,144 +344,41 @@ int run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
 
   int32_t backtransform_add = k_width * k_height * chans_in;
 
-  // printf("mul       bias\n");
+  //Pick some random test values
   for (unsigned ch=0;ch < chans_out;ch++){
     float input_range = backtransform_add;
 
+    unsigned range =  rand()%10;
     float r =  (float)rand() / (float)RAND_MAX;
-    float output_range = 128 + 256*r;
+    float output_range = (range/2) + (float)(1<<range)*r;
 
-    post_activation_multiplier[ch] = output_range/ input_range;
+    post_activation_multiplier[ch] = output_range/input_range;
 
-    int32_t max_bias = 32;
+    int32_t max_bias = 255;
     r =  (float)rand() / (float)RAND_MAX;
     post_activation_bias[ch] = (r * max_bias*2.0) - max_bias;
 
-    // printf("%f %f\n", post_activation_multiplier[ch], post_activation_bias[ch]);
   }
 
-  //These are used to ensure that the 16x16 multiplication never saturates.
-  const unsigned accu_headroom = 1;
-  const unsigned pa_mul_headroom = 0;
+  int accu_shr, final_shr;
+  int accu_min_post_clamp = -backtransform_add;
+  int accu_max_post_clamp = backtransform_add;
 
-  unsigned post_activation_multiplier_abs_max_idx = 0;
-  float post_activation_multiplier_abs_max = fabs(post_activation_multiplier[0]);
+  quantise_activation(
+               post_activation_multiplier_q, post_activation_bias_q,
+               post_activation_multiplier, post_activation_bias, 
+               chans_out,
+               accu_min_post_clamp, accu_max_post_clamp,
+               &accu_shr, &final_shr);
 
-  for (unsigned ch=1; ch < chans_out; ch++){
-    float f = fabs(post_activation_multiplier[ch]);
-    if(f > post_activation_multiplier_abs_max){
-      post_activation_multiplier_abs_max = f;
-      post_activation_multiplier_abs_max_idx = ch;
-    }    
-  }
-
-  float max_mul = post_activation_multiplier[post_activation_multiplier_abs_max_idx];
-
-  const int post_vlmul_shr = 14;
-
-  int max_mul_exp;
-  float max_mul_normalised = frexp(max_mul, &max_mul_exp);
-
-  assert(max_mul == ldexp(max_mul_normalised, max_mul_exp));
-
-  // Raise any multiplier to b to get them as big as possible
-  int M = (15 - pa_mul_headroom) - max_mul_exp;
-  while (round(ldexp(max_mul, M)) > (float)INT16_MAX){
-    M -= 1;
-  }
-
-  int16_t max_quantised_pam = INT16_MIN;
-  int16_t min_quantised_pam = INT16_MAX;
-  unsigned min_pam_rsb = 0;
-  for (unsigned ch=0;ch<chans_out;ch++){
-    int32_t pa_mul = (int32_t)round(ldexp(post_activation_multiplier[ch], M));
-    if ((pa_mul < INT16_MIN) || (pa_mul > INT16_MAX)){
-      printf("post_activation_multiplier_q out of range %d\n", pa_mul);
-      assert(0);
-    }
-    post_activation_multiplier_q[ch] = (int16_t)pa_mul;
-
-    if(post_activation_multiplier_q[ch] > max_quantised_pam)
-      max_quantised_pam = post_activation_multiplier_q[ch];
-    if(post_activation_multiplier_q[ch] < min_quantised_pam)
-      min_quantised_pam = post_activation_multiplier_q[ch];
-
-    //Check that there is the required amount of headroom in the pa_multipliers
-    unsigned rsb = __builtin_clrsb(post_activation_multiplier_q[ch]) - 16;
-    assert (rsb >= (pa_mul_headroom));
-    if(rsb < min_pam_rsb)
-      min_pam_rsb = rsb;
-  }
-
-  //There should be at least one multiplier that has zero headroom.
-  assert(min_pam_rsb == 0);
-
-  int32_t accu_max_post_clamp = backtransform_add; //FIXME this should be half
-  int32_t accu_min_post_clamp = -backtransform_add; //FIXME this should be half
-
-  // Now find the accu shift (the value that the accu is shifted by to get the most resolution out of the pam). 
-  // This will get the accu to occupy the bottom 15 or 16 bits of a 16 bit register.
-  int accu_shr = get_accumulator_ashr(accu_max_post_clamp, accu_min_post_clamp, 
-    max_quantised_pam, min_quantised_pam, post_vlmul_shr);
-
-  int final_shr = (-accu_shr + M - post_vlmul_shr);
-
-  // printf("final_shr: %d\n", final_shr);
-  //Now quantise the biases
-  for (unsigned ch=0;ch<chans_out;ch++){
-
-    int32_t pa_bias = (int32_t)round(ldexp(post_activation_bias[ch], final_shr));
-    if ((pa_bias < INT16_MIN) || (pa_bias > INT16_MAX)){
-      printf("post_activation_bias_q out of range %d\n", pa_bias);
-      assert(0);
-    }
-    post_activation_bias_q[ch] = (int16_t)pa_bias;
-
-    //The bias just has to fit in the 16 bit register as saturation should be fine when the sum is performed.
-    assert (__builtin_clrsb(post_activation_bias_q[ch]) >= 16);
-
-  }
-
-  unsigned error = 0;
-  unsigned count = 0;
-
-  for (unsigned ch=0;ch<chans_out;ch++){
-
-    float PAM = post_activation_multiplier[ch];
-    float Bias = post_activation_bias[ch];
-
-    for (int32_t accu = accu_min_post_clamp; accu<=accu_max_post_clamp; accu++){
-
-      int R = round(accu * PAM + Bias);
-      if (R > INT8_MAX) R = INT8_MAX;
-      if (R < INT8_MIN) R = INT8_MIN;
-    
-      int32_t r = (ashr(accu, accu_shr) * (int32_t) post_activation_multiplier_q[ch]);
-      r += (1 << (post_vlmul_shr-1));
-      r >>= post_vlmul_shr;
-
-      assert (__builtin_clrsb(r) >= 16);
-
-      r += post_activation_bias_q[ch];
-      r += (1 << (final_shr-1));
-      r >>= final_shr;
-
-      if (r > INT8_MAX) r = INT8_MAX;
-      if (r < INT8_MIN) r = INT8_MIN;
-
-      assert(abs(r-R) <= 1);
-
-      error += abs(R-r);
-      count += 1;
-    }
-  }
-
-  double max_error = (double)error / count;
-  if(max_error > max_error_g){
-    max_error_g = max_error;
-    printf("max_error_g:%f(%f) k_height:%u k_width:%u chans_out:%u\n", max_error_g, 1.0/max_error_g, k_height, k_width, chans_out);
-  }
-  // printf("%f total_error:%u k_height:%u k_width:%u chans_out:%u\n", , error, k_height, k_width, chans_out);
+#if !defined(__XS3A__)
+  measure_quantisation(
+               post_activation_multiplier_q, post_activation_bias_q,
+               post_activation_multiplier, post_activation_bias, 
+               chans_out,
+               accu_min_post_clamp, accu_max_post_clamp,
+               accu_shr, final_shr);
+#endif
 
   nn_image_params_t x;
   x.height = x_height;
@@ -282,17 +401,36 @@ int run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
 
 #if defined(__XS3A__)
 
-  // bnn_reorder_threshold_tensor(thresholds_p, thresholds_ref, chans_out,
-  //                              k_width * k_height * chans_in);
 
-  // bnn_reorder_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
-  //                           chans_out);
+  for (unsigned b=0;b < chans_out/16;b++){
+    for(unsigned i=0;i<16;i++){
 
-  // bnn_conv2d_bin_out((bnn_b32_t*)Y_p, (const bnn_b256_t*)X_ref,
-  //                     (const bnn_b256_t*)K_p, thresholds_p, &x, &y, &k,
-  //   0, 0, y_width, y_height,
-  //   0, 0, 
-  //   0, 0, k_width, k_height);
+      unsigned interleaved_oc;
+      if (i<8){
+        interleaved_oc = (2*i) + 1;
+      } else{
+        interleaved_oc = 2*(i-8);
+      }
+
+      post_activation_multiplier_q_reordered[b*16 + i] = 
+        post_activation_multiplier_q[b*16 + interleaved_oc];
+      post_activation_bias_q_reordered[b*16 + i] = 
+        post_activation_bias_q[b*16 + interleaved_oc];
+    }
+
+  }
+
+  bnn_reorder_int8_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
+                            chans_out);
+
+  bnn_conv2d_int8_out((int8_t*)Y_p, (const bnn_b256_t*)X_ref,
+    (const bnn_b256_t*)K_p, post_activation_multiplier_q_reordered, 
+    post_activation_bias_q_reordered, accu_shr, final_shr,
+    &x, &y, &k,
+    0, 0, y_width, y_height,
+    0, 0, 
+    0, 0, k_width, k_height);
+
 
 #else
   bnn_conv2d_int8_out((int8_t*)Y_p, (const bnn_b256_t*)X_ref,
@@ -311,17 +449,20 @@ int run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
   int8_t(*Y_ref)[y_width][chans_out] =
       (int8_t(*)[y_width][chans_out])Y_ref_p;
 
-  int all_equal = 1;
+  int all_close = 1;
   for (unsigned h = 0; h < y_height; h++) {
     for (unsigned w = 0; w < y_width; w++) {
       for (unsigned c = 0; c < chans_out; c++) {
+
+        // printf("%d %d\n", Y_ref[h][w][c], Y[h][w][c]);
+
         int e = (abs(Y_ref[h][w][c] - Y[h][w][c])<=1);
-        all_equal &= e;
+        all_close &= e;
       }
     }
   }
 
-  return 1 - all_equal;
+  return 1 - all_close;
 }
 /*
 X_ref and K_ref must be initialised before running this.
@@ -474,7 +615,6 @@ void test_bnn_conv2d_bin_out_pseudo_directed() {
 #undef Y_WIDTH
 }
 
-
 void test_bnn_conv2d_int8_out_pseudo_directed() {
 #define X_V_DILATION 1
 #define X_H_DILATION 1
@@ -483,8 +623,8 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
 #define X_WIDTH 1
 #define K_HEIGHT X_HEIGHT
 #define K_WIDTH X_WIDTH
-#define CHANS_IN 512
-#define CHANS_OUT 32
+#define CHANS_IN 256
+#define CHANS_OUT 64
 #define H_STRIDE 1
 #define V_STRIDE 1
 
@@ -507,10 +647,24 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
   float WORD_ALIGNED post_activation_bias[CHANS_OUT];
   int16_t WORD_ALIGNED post_activation_multiplier_q[CHANS_OUT];
   int16_t WORD_ALIGNED post_activation_bias_q[CHANS_OUT];
+  int16_t WORD_ALIGNED post_activation_multiplier_q_reordered[CHANS_OUT];
+  int16_t WORD_ALIGNED post_activation_bias_q_reordered[CHANS_OUT];
 
-  srand(42);
-  pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
-  pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
+  srand(1);
+
+  memset(K_ref, 0, sizeof(K_ref));
+  memset(X_ref, 0, sizeof(X_ref));
+
+  for(unsigned i=1;i<sizeof(X_ref);i++){
+    ((char*) X_ref )[i] = (13*i) + ((char*) X_ref )[i-1];
+  }
+
+  for(unsigned i=1;i<sizeof(K_ref);i++){
+    ((char*) K_ref )[i] = (27*i) + ((char*) K_ref )[i-1];
+  }
+  // pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
+  // pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
+
   memset(K, 0, sizeof(K));
 
   memset(Y, 0, sizeof(Y));
@@ -520,7 +674,8 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
       run_int8_config((int8_t *)Y, (int8_t*)Y_ref, (bnn_b256_t*)X_ref,
                  (bnn_b256_t*)K, (bnn_b256_t*)K_ref, (float*)post_activation_multiplier,
                  (float*)post_activation_bias, (int16_t*)post_activation_multiplier_q,
-                 (int16_t*)post_activation_bias_q, X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
+                 (int16_t*)post_activation_bias_q, (int16_t*)post_activation_multiplier_q_reordered,
+                 (int16_t*)post_activation_bias_q_reordered, X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
                  CHANS_IN, CHANS_OUT, H_STRIDE, V_STRIDE);
 
   if (failure) {
@@ -551,8 +706,8 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
 
 #define MIN_K_HEIGHT 1
 #define MIN_K_WIDTH 1
-#define MAX_K_HEIGHT 5
-#define MAX_K_WIDTH 5
+#define MAX_K_HEIGHT 7
+#define MAX_K_WIDTH 7
 
 #define MIN_CHANS_IN 256
 #define MAX_CHANS_IN 512
@@ -632,6 +787,11 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
   }
 }
 
+#undef MAX_K_HEIGHT
+#undef MAX_K_WIDTH
+#undef MAX_X_HEIGHT
+#undef MAX_X_WIDTH
+#undef MIN_CHANS_OUT
 
 void test_bnn_conv2d_int8_out_pseudo_random() {
 #define MIN_H_STRIDE 1
@@ -647,13 +807,13 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
 #define MIN_CHANS_IN 256
 #define MAX_CHANS_IN 512
 
-#define MIN_CHANS_OUT 32
+#define MIN_CHANS_OUT 16
 #define MAX_CHANS_OUT 64
 
 #define MIN_X_HEIGHT MIN_K_HEIGHT
 #define MIN_X_WIDTH MIN_K_WIDTH
-#define MAX_X_HEIGHT 7
-#define MAX_X_WIDTH 7
+#define MAX_X_HEIGHT MAX_K_HEIGHT
+#define MAX_X_WIDTH MAX_K_WIDTH
 
 #define MAX_CHAN_WORDS_IN \
   ((MAX_CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
@@ -675,6 +835,8 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
   float WORD_ALIGNED post_activation_bias[MAX_CHANS_OUT];
   int16_t WORD_ALIGNED post_activation_multiplier_q[MAX_CHANS_OUT];
   int16_t WORD_ALIGNED post_activation_bias_q[MAX_CHANS_OUT];
+  int16_t WORD_ALIGNED post_activation_multiplier_q_reordered[MAX_CHANS_OUT];
+  int16_t WORD_ALIGNED post_activation_bias_q_reordered[MAX_CHANS_OUT];
 
   assert(((int)K & 0x3) == 0);
   assert(((int)K_ref & 0x3) == 0);
@@ -700,7 +862,7 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
               for (unsigned chans_in = MIN_CHANS_IN; chans_in <= MAX_CHANS_IN;
                    chans_in += 256) {
                 for (unsigned chans_out = MIN_CHANS_OUT;
-                     chans_out <= MAX_CHANS_OUT; chans_out += 32) {
+                     chans_out <= MAX_CHANS_OUT; chans_out += 16) {
                       //  printf("x_height:%u, x_width:%u, k_height:%u, k_width:%u, chans_in:%u, chans_out:%u, h_stride:%u, v_stride:%u\n", x_height,
                       // x_width, k_height, k_width, chans_in, chans_out, h_stride,
                       // v_stride);
@@ -710,7 +872,10 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
                       (float*)post_activation_multiplier,
                       (float*)post_activation_bias, 
                       (int16_t*)post_activation_multiplier_q,
-                      (int16_t*)post_activation_bias_q, x_height,
+                      (int16_t*)post_activation_bias_q,  
+                      (int16_t*)post_activation_multiplier_q_reordered,
+                      (int16_t*)post_activation_bias_q_reordered, 
+                      x_height,
                       x_width, k_height, k_width, chans_in, chans_out, h_stride,
                       v_stride);
                   TEST_ASSERT_FALSE(r);
@@ -879,6 +1044,22 @@ void test_bnn_conv2d_bin_out_sub_image(){
   }
 }
 
+void test_int8_stats(){
+  //TODO this chacks the output stats of the int8 kernels
+  double a = 0.0;
+  double b = 0.0;
+  for (unsigned i=0;i<256;i++){
+    double abs_error = (double)abs_output_error_g[i] / (double)error_counter_g[i];
+    double error = (double)output_error_g[i]/(double)error_counter_g[i];
+    a += abs_error;
+    b += error;
+    // printf("%u %f %f %u\n", i, abs_error, error, error_counter_g[i]);
+  }
+  printf("%f %f\n", a/256, b/256);
+  printf("%f %f\n", 1./(a/256), 1./(b/256));
+  printf("%f %f\n", max_error_g, max_abs_error_g);
+}
+
 void test_bnn_conv2d() {
   UNITY_SET_FILE();
   // RUN_TEST(test_bnn_conv2d_bin_out_pseudo_directed);
@@ -887,4 +1068,5 @@ void test_bnn_conv2d() {
   RUN_TEST(test_bnn_conv2d_int8_out_pseudo_directed);
   RUN_TEST(test_bnn_conv2d_int8_out_pseudo_random);
   // RUN_TEST(test_bnn_conv2d_int8_out_sub_image);
+  // RUN_TEST(test_int8_stats);
 }

@@ -52,6 +52,42 @@ void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
   }
 }
 
+void bnn_reorder_int8_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+                               const unsigned k_height, const unsigned k_width,
+                               const unsigned chans_in,
+                               const unsigned chans_out) {
+  unsigned chan_b256_in =
+      (chans_in + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
+
+  bnn_b256_t(*K_ref)[k_height][k_width][chan_b256_in] =
+      (bnn_b256_t(*)[k_height][k_width][chan_b256_in])K_ref_p;
+
+  bnn_b256_t(*K)[k_height][k_width][chan_b256_in][16] =
+      (bnn_b256_t(*)[k_height][k_width][chan_b256_in][16])K_p;
+
+  for (unsigned oc = 0; oc < chans_out / 16; oc++) {
+    for (unsigned h = 0; h < k_height; h++) {
+      for (unsigned w = 0; w < k_width; w++) {
+        for (unsigned ic = 0; ic < chan_b256_in; ic++) {
+          for (unsigned o = 0; o < 16; o++) {
+
+            unsigned interleaved_oc;
+            if (o<8){
+              interleaved_oc = (2*o) + 1;
+            } else{
+              interleaved_oc = 2*(o-8);
+            }
+
+            for (unsigned i = 0; i < 8; i++) {
+              K[oc][h][w][ic][15 - o].d[i] = K_ref[oc * 16 + interleaved_oc][h][w][ic].d[i];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 unsigned xor_pop(bnn_b256_t* a, bnn_b256_t* b) {
   unsigned t = sizeof(((bnn_b256_t*)0)->d[0]);
   unsigned elements = sizeof(((bnn_b256_t*)0)->d) / t;
@@ -139,7 +175,7 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
 
 static int32_t ashr(int32_t x, int shr){
   if (shr > 0)
-    return x >> shr;
+    return (x + (1 << (shr-1))) >> shr;
   else
     return x << (-shr);
 }
@@ -200,25 +236,30 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
         }
 
         int32_t backtransform_add = (k->shape.height * k->shape.width * chan_b256_in * 256);
-        // This converts xor_popcount to macc format
-        sum = backtransform_add - sum;
         
-        // printf("%u %u %u %d\n", w / h_stride, h / v_stride, oc, sum);
-        int32_t accu = backtransform_add - 2*sum;
+        // This converts xor_popcount to macc format
+        int32_t vpu_output = -(backtransform_add - 2*sum)/2;
+
+        // printf("sum: %x vpu_output:%x\n", sum, vpu_output);
 
         //not rounding has happened to the point
         const unsigned post_vlmul_shr = 14;
-        int32_t r = (ashr(accu, accu_shr) * (int32_t) post_activation_multiplier_q[oc]);
-        r += (1 << (post_vlmul_shr-1));
-        r >>= post_vlmul_shr;
-
-        assert (__builtin_clrsb(r) >= 16);
-
-        r += post_activation_bias_q[oc];
-        r += (1 << (final_shr-1));
-        r >>= final_shr;
-
+        int32_t r = ashr(vpu_output, accu_shr) ;
         
+        // printf("r:%x\n", r);
+        r *= (int32_t) post_activation_multiplier_q[oc];
+
+        r = ashr(r, post_vlmul_shr);
+
+        // printf("r:%x\n", r);
+        r += post_activation_bias_q[oc];
+
+        // printf("r:%x\n", r);
+        r = ashr(r, final_shr);
+
+        // printf("r:%x\n", r);
+        r = r&0xffffff00;
+        r = r>>8; 
 
         if (r > INT8_MAX) r = INT8_MAX;
         if (r < INT8_MIN) r = INT8_MIN;

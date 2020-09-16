@@ -653,6 +653,10 @@ void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
                                const unsigned chans_out);
+void bnn_reorder_int8_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+                               const unsigned k_height, const unsigned k_width,
+                               const unsigned chans_in,
+                               const unsigned chans_out);
 
     
 /**  

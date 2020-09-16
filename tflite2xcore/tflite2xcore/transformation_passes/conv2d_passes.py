@@ -92,10 +92,6 @@ class ReplaceConv2DPass(ReplaceWeightBiasOperatorPass):
 
 class LegalizeXCConvPass(LegalizeXCWeightBiasPass):
     @property
-    def _OUTPUT_BITS(self):
-        return 8
-
-    @property
     def _new_weight_shape(self):
         # by default, no reshaping is done
         return self._weights.shape

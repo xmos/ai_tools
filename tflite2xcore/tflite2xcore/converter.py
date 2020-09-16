@@ -140,7 +140,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(
         passes.ParallelizeFullyConnectedPass(num_threads=num_threads)
     )
-    pass_mgr.register_pass(passes.ParallelizeRequant16To8Pass(num_threads=num_threads))
+    # pass_mgr.register_pass(passes.ParallelizeRequant16To8Pass(num_threads=num_threads))  # intentionally disabled
     pass_mgr.register_pass(passes.ParallelizeConv2dPass(num_threads=num_threads))
     pass_mgr.register_pass(
         passes.ParallelizeDepthwiseConv2dPass(num_threads=num_threads)

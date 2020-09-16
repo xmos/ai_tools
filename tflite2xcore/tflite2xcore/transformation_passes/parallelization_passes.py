@@ -69,7 +69,7 @@ class SpatialParallelizationPass(ParallelizationPass):
 
 
 class ParallelizeFullyConnectedPass(ChannelGroupParallelizationPass):
-    MATCHING_OPCODES = (XCOREOpCodes.XC_fc_deepin_anyout,)
+    MATCHING_OPCODES = (XCOREOpCodes.XC_fc,)
 
 
 class ParallelizeRequant16To8Pass(ChannelGroupParallelizationPass):

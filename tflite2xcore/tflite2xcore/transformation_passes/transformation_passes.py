@@ -347,9 +347,8 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
         return rshift, scale
 
     @property
-    @abstractmethod
     def _OUTPUT_BITS(self):
-        pass
+        return 8
 
     @property
     def _MAX_POST_SHIFT(self):

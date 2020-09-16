@@ -53,7 +53,7 @@ class ScratchMemoryCalculationPass(OperatorMatchingPass):
 
 
 class ScratchMemoryFullyConnectedPass(ScratchMemoryCalculationPass):
-    MATCHING_OPCODES = (XCOREOpCodes.XC_fc_deepin_anyout,)
+    MATCHING_OPCODES = (XCOREOpCodes.XC_fc,)
 
     @property
     def _weights_scratch_size(self) -> int:

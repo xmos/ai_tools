@@ -343,7 +343,7 @@ def build_fc(subgraph=None, *, outputs, input_shape, add_batch_dim=True):
     return subgraph.model
 
 
-def build_XC_fc_deepin_anyout(subgraph=None, *, outputs, input_channels):
+def build_XC_fc(subgraph=None, *, outputs, input_channels):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, input_channels, 1, 1]
@@ -371,13 +371,13 @@ def build_XC_fc_deepin_anyout(subgraph=None, *, outputs, input_channels):
     )
     tout = subgraph.create_tensor(
         "output",
-        TensorType.INT16,
+        TensorType.INT8,
         shape=[1, weight_shape[0]],
         isoutput=True,
         quantization={"scale": [0.11332], "zero_point": [6]},
     )
     subgraph.create_operator(
-        OperatorCode(XCOREOpCodes.XC_fc_deepin_anyout),
+        OperatorCode(XCOREOpCodes.XC_fc),
         inputs=[tin, w, b],
         outputs=[tout],
     )

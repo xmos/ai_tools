@@ -2,11 +2,11 @@
 
 import os
 import pytest
+import numpy as np
 from pathlib import Path
 
-import numpy as np
+from tflite2xcore.interpreters import XCOREInterpreter
 
-import tflite2xcore.xcore_interpreter as xcore
 
 BUILTIN_OPERATORS_TEST_MODEL = os.path.join(
     Path(__file__).parent.absolute(), "builtin_operators.tflite"
@@ -24,7 +24,7 @@ BUILTIN_OPERATORS_TEST_OUTPUT = os.path.join(
 def test_allocate_tensors():
     with open(BUILTIN_OPERATORS_TEST_MODEL, "rb") as fd:
         model_content = fd.read()
-    interpreter = xcore.XCOREInterpreter(model_content=model_content)
+    interpreter = XCOREInterpreter(model_content=model_content)
     interpreter.allocate_tensors()
     assert interpreter
     interpreter.allocate_tensors()
@@ -34,7 +34,7 @@ def test_allocate_tensors():
 def test_model_content():
     with open(BUILTIN_OPERATORS_TEST_MODEL, "rb") as fd:
         model_content = fd.read()
-    interpreter = xcore.XCOREInterpreter(model_content=model_content)
+    interpreter = XCOREInterpreter(model_content=model_content)
     assert interpreter
 
 
@@ -43,7 +43,7 @@ def test_tensor_arena_size():
         model_content = fd.read()
 
     overly_big_tensor_arena_size = 5000
-    interpreter = xcore.XCOREInterpreter(
+    interpreter = XCOREInterpreter(
         model_content=model_content, max_tensor_arena_size=overly_big_tensor_arena_size,
     )
     assert interpreter
@@ -51,14 +51,14 @@ def test_tensor_arena_size():
 
 
 def test_model_path():
-    interpreter = xcore.XCOREInterpreter(model_path=BUILTIN_OPERATORS_TEST_MODEL)
+    interpreter = XCOREInterpreter(model_path=BUILTIN_OPERATORS_TEST_MODEL)
     assert interpreter
 
 
 def test_inference():
     with open(BUILTIN_OPERATORS_TEST_MODEL, "rb") as fd:
         model_content = fd.read()
-    interpreter = xcore.XCOREInterpreter(model_content=model_content)
+    interpreter = XCOREInterpreter(model_content=model_content)
 
     interpreter.allocate_tensors()
 
@@ -115,7 +115,7 @@ def test_callback():
 
     with open(BUILTIN_OPERATORS_TEST_MODEL, "rb") as fd:
         model_content = fd.read()
-    interpreter = xcore.XCOREInterpreter(model_content=model_content)
+    interpreter = XCOREInterpreter(model_content=model_content)
 
     interpreter.allocate_tensors()
 

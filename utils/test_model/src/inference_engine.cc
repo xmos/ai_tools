@@ -16,6 +16,17 @@ tflite::micro::xcore::XCoreInterpreter *interpreter = nullptr;
 // static buffer for XCoreInterpreter class allowcation
 uint8_t interpreter_buffer[sizeof(tflite::micro::xcore::XCoreInterpreter)];
 
+void get_tensor_bytes(int index, void **bytes, size_t *size) {
+  TfLiteTensor *tensor = interpreter->tensor(index);
+  if (tensor != nullptr) {
+    *bytes = tensor->data.raw;
+    *size = tensor->bytes;
+  } else {
+    *bytes = nullptr;
+    *size = 0;
+  }
+}
+
 void invoke() {
   // Run inference, and report any error
   TfLiteStatus invoke_status = interpreter->Invoke();

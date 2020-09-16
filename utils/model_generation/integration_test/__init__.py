@@ -7,7 +7,7 @@ import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 from abc import abstractmethod
 from pathlib import Path
-from typing import Union, List, NamedTuple, Tuple, Dict, Optional
+from typing import Union, List, NamedTuple, Tuple, Dict, Optional, Iterable
 
 from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
@@ -38,6 +38,7 @@ class RunnerModels(NamedTuple):
 class IntegrationTestRunner(Runner):
     _model_generator: "IntegrationTestModelGenerator"
     outputs: RunnerOutputs
+    models: RunnerModels
 
     def __call__(self) -> None:
         """ Defines how an IntegrationTestModelGenerator should be run.
@@ -46,16 +47,23 @@ class IntegrationTestRunner(Runner):
         self.outputs to be set.
         """
         super().__call__()
+        self._model_generator._reference_converter.convert()
+        self._model_generator._reference_evaluator.evaluate()
+        self.rerun_post_cache()
+
+    def rerun_post_cache(self) -> None:
         model_generator = self._model_generator
 
-        for converter in model_generator._converters:
+        for converter in model_generator._converters[1:]:
             converter.convert()
 
-        for evaluator in model_generator._evaluators:
+        for evaluator in model_generator._evaluators[1:]:
             evaluator.evaluate()
 
         self.outputs = RunnerOutputs(
-            model_generator._reference_evaluator.output_data_quant,
+            model_generator._reference_evaluator.output_data_quant(
+                model_generator._xcore_evaluator.output_quant
+            ),
             model_generator._xcore_evaluator.output_data,
         )
         self.models = RunnerModels(
@@ -63,6 +71,36 @@ class IntegrationTestRunner(Runner):
             self._model_generator._xcore_converter._model,
             self._model_generator._identity_converter._model,
         )
+
+    def dump(
+        self,
+        dirpath: Path,
+        example_idx: Union[int, Iterable[int]] = [0, 3],
+        dump_models: bool = True,
+        dump_visualizations: bool = True,
+    ) -> None:
+        if dump_models:
+            for name, model in self.models._asdict().items():
+                name = "model_" + name
+                model_ref_path = (dirpath / name).with_suffix(".tflite")
+                model_ref_html = model_ref_path.with_suffix(".html")
+                with open(model_ref_path, "wb") as f:
+                    f.write(model)
+                logging.debug(f"{name} dumped to {model_ref_path}")
+                if dump_visualizations:
+                    tflite_visualize.main(model_ref_path, model_ref_html)
+                    logging.debug(f"{name} visualization dumped to {model_ref_html}")
+
+        data = {
+            "input": self._model_generator._xcore_evaluator.input_data,
+            "reference_output": self.outputs.reference,
+            "xcore_output": self.outputs.xcore,
+        }
+        example_idx = [example_idx] if isinstance(example_idx, int) else example_idx
+        for key, arr in data.items():
+            for j in example_idx:
+                with open(dirpath / f"example_{j}.{key}", "wb") as f:
+                    f.write(arr[j].flatten().tostring())
 
 
 #  ----------------------------------------------------------------------------
@@ -80,18 +118,19 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
 
     def __init__(self) -> None:
         self._reference_converter = TFLiteQuantConverter(self)
+        self._reference_evaluator = TFLiteQuantEvaluator(
+            self._reference_converter.get_representative_data,
+            lambda: self._reference_converter._model,
+        )
+
         self._xcore_converter = XCoreConverter(self, self._reference_converter)
         self._identity_converter = XCoreConverter(self, self._xcore_converter)
         self._xcore_evaluator = XCoreEvaluator(
-            self._reference_converter._get_representative_data,
+            self._reference_converter.get_representative_data,
             lambda: self._xcore_converter._model,
         )
-        self._reference_evaluator = TFLiteQuantEvaluator(
-            lambda: self._xcore_evaluator.input_data_float,
-            lambda: self._reference_converter._model,
-            lambda: self._xcore_evaluator.input_quant,
-            lambda: self._xcore_evaluator.output_quant,
-        )
+
+        self._identity_converter = XCoreConverter(self, self._xcore_converter)
 
         super().__init__(
             runner=IntegrationTestRunner(self),
@@ -100,25 +139,8 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
                 self._xcore_converter,
                 self._identity_converter,
             ],
-            evaluators=[self._xcore_evaluator, self._reference_evaluator],
+            evaluators=[self._reference_evaluator, self._xcore_evaluator],
         )
-
-    def save(self, dirpath: Union[Path, str], dump_models: bool = False) -> Path:
-        dirpath = super().save(dirpath)
-        if dump_models:
-            for name, model in [
-                ("model_ref", self._reference_converter._model),
-                ("model_xcore", self._xcore_converter._model),
-                ("model_xcore_identical", self._identity_converter._model),
-            ]:
-                model_ref_path = (dirpath / name).with_suffix(".tflite")
-                model_ref_html = model_ref_path.with_suffix(".html")
-                with open(model_ref_path, "wb") as f:
-                    f.write(model)
-                logging.debug(f"{name} dumped to {model_ref_path}")
-                tflite_visualize.main(model_ref_path, model_ref_html)
-                logging.debug(f"{name} visualization dumped to {model_ref_html}")
-        return dirpath
 
     @classmethod
     def load(cls, dirpath: Union[Path, str]) -> "IntegrationTestModelGenerator":
@@ -171,11 +193,11 @@ def _test_batched_arrays(
     assert issubclass(predicted.dtype.type, np.integer)  # TODO: generalize to floats
 
     failures: Dict[int, List[FailedElement]] = {}
-    diffs = np.abs(np.int32(predicted) - np.int32(expected))
+    diffs = np.int32(predicted) - np.int32(expected)
     for j, (arr, arr_ref, diff) in enumerate(zip(predicted, expected, diffs)):
         __log_deviations(diff, logging.DEBUG, ex_idx=j)
 
-        diff_idx = zip(*np.where(diff > tolerance))
+        diff_idx = zip(*np.where(np.abs(diff > tolerance)))
         failed_examples = [
             FailedElement(idx, diff[idx], arr_ref[idx], arr[idx]) for idx in diff_idx
         ]

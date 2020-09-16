@@ -8,7 +8,7 @@ from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix t
 
 from . import (
     ChannelPreservingOpTestModelGenerator,
-    test_output as _test_output,
+    test_output,
     test_converted_single_op_model,
     test_idempotence,
 )
@@ -38,17 +38,6 @@ GENERATOR = GlobalAveragePooling2dTestModelGenerator
 @pytest.fixture  # type: ignore
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_avgpool2d_global
-
-
-#  ----------------------------------------------------------------------------
-#                                   TESTS
-#  ----------------------------------------------------------------------------
-
-# TODO: fix this when issue #143 is fixed
-def test_output(run, request):  # type: ignore
-    if request.node.name in ("test_output[CONFIGS[21]]", "test_output[CONFIGS[34]]"):
-        request.applymarker(pytest.mark.xfail(run=False))
-    _test_output(run, request)
 
 
 if __name__ == "__main__":

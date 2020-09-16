@@ -3,6 +3,7 @@
 from .xcore_schema import (
     QuantizationDetails,
     ActivationFunctionType,
+    FullyConnectedOptionsWeightsFormat,
     Padding,
     TensorType,
     OperatorCode,

@@ -320,6 +320,16 @@ QuantizationDetails = enum.Enum(
 )
 
 
+FullyConnectedOptionsWeightsFormat = enum.Enum(
+    "FullyConnectedOptionsWeightsFormat",
+    {
+        k: v
+        for k, v in vars(schema.FullyConnectedOptionsWeightsFormat).items()
+        if not k.startswith("__")
+    },
+)
+
+
 #  ----------------------------------------------------------------------------
 #                               Padding
 #  ----------------------------------------------------------------------------

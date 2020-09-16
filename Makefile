@@ -20,7 +20,7 @@ tflite2xcore_test:
 	tflite2xcore/tflite2xcore/tests/runtests.py tflite2xcore/tflite2xcore/tests -n $(NUM_PROCS)
 
 .PHONY: integration_test
-integration_test: utils_test_build
+integration_test:
 	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS)
 
 .PHONY: ci 

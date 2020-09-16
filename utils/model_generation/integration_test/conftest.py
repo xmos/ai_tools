@@ -53,7 +53,7 @@ def pytest_addoption(parser):  # type: ignore
 def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
     if "run" in metafunc.fixturenames:
         try:
-            CONFIGS = metafunc.module.CONFIGS  # [coverage].values()
+            CONFIGS = metafunc.module.CONFIGS
             config_file = Path(metafunc.module.__file__)
         except AttributeError:
             logging.debug(f"CONFIGS undefined in {metafunc.module}")
@@ -119,11 +119,12 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
         try:
             with portalocker.BoundedSemaphore(1, hash(key), timeout=0):
                 dirpath = str(pytest_config.cache.makedir("model_cache") / key)
-                gen.save(
-                    dirpath, dump_models=pytest_config.getoption("dump") == "models",
-                )
+                dirpath = gen.save(dirpath)
+                if pytest_config.getoption("dump") == "models":
+                    gen.run.dump(dirpath)
+
                 logging.debug(f"generator cached to {dirpath}")
-                pytest_config.cache.set(key, dirpath)
+                pytest_config.cache.set(key, str(dirpath))
         except portalocker.AlreadyLocked:
             # another process will write to cache
             pass

@@ -18,6 +18,8 @@ RUN echo "pushd /XMOS/xTIMEcomposer/${TOOLS_VERSION} > /dev/null && . SetEnv && 
     >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 
+RUN conda update -n base -c defaults conda
+
 SHELL ["/bin/bash", "-l", "-c"]
 
 # run echo "exec \"\$@\"" > /enter.sh \

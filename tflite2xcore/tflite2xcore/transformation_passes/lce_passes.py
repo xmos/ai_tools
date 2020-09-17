@@ -133,7 +133,7 @@ class SplitPaddingFromConvPass(LceConv2dPass):
         if len(op.inputs) != 3:
             return False
 
-        return op.custom_options["padding"] is Padding.SAME
+        return Padding(op.custom_options["padding"]) is Padding.SAME
 
     def mutate(self, op: Operator) -> None:
 

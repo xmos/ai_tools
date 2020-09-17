@@ -4,9 +4,11 @@ import pytest
 
 from copy import deepcopy
 
-from tflite2xcore.pass_manager import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.transformation_passes import ParallelizeFullyConnectedPass
+from tflite2xcore.transformation_passes import (
+    ModelTransformationPass,
+    ParallelizeFullyConnectedPass,
+)
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_XC_fc_deepin_anyout,

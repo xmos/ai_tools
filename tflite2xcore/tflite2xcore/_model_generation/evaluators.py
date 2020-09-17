@@ -5,10 +5,11 @@ import numpy as np  # type: ignore
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Callable, Union
 
-from tflite2xcore.xcore_interpreter import XCOREInterpreter  # type: ignore # TODO: fix this
+from tflite2xcore.interpreters import XCOREInterpreter  # type: ignore # TODO: fix this
+from tflite2xcore.utils import quantize, QuantizationTuple
 
 from . import TFLiteModel
-from .utils import apply_interpreter_to_examples, quantize, Quantization
+from .utils import apply_interpreter_to_examples
 
 
 class Evaluator(ABC):
@@ -64,20 +65,14 @@ class TFLiteQuantEvaluator(TFLiteEvaluator):
         self,
         input_data_hook: Callable[[], Union[tf.Tensor, np.ndarray]],
         model_hook: Callable[[], "TFLiteModel"],
-        input_quant_hook: Callable[[], Quantization],
-        output_quant_hook: Callable[[], Quantization],
     ) -> None:
         super().__init__(input_data_hook, model_hook)
-        self._input_quant_hook = input_quant_hook
-        self._output_quant_hook = output_quant_hook
 
-    @property
-    def input_data_quant(self) -> np.ndarray:
-        return quantize(self.input_data, *self._input_quant_hook())
+    def input_data_quant(self, quant: QuantizationTuple) -> np.ndarray:
+        return quantize(self.input_data, *quant)
 
-    @property
-    def output_data_quant(self) -> np.ndarray:
-        return quantize(self.output_data, *self._output_quant_hook())
+    def output_data_quant(self, quant: QuantizationTuple) -> np.ndarray:
+        return quantize(self.output_data, *quant)
 
 
 class XCoreEvaluator(TFLiteEvaluator):
@@ -86,17 +81,17 @@ class XCoreEvaluator(TFLiteEvaluator):
     The input and output quantization parameters are inferred from the model.
     """
 
-    input_quant: Quantization
-    output_quant: Quantization
+    input_quant: QuantizationTuple
+    output_quant: QuantizationTuple
 
     def evaluate(self) -> None:
         interpreter = XCOREInterpreter(model_content=self._model_hook())
         interpreter.allocate_tensors()
 
-        self.input_quant = Quantization(
+        self.input_quant = QuantizationTuple(
             *interpreter.get_input_details()[0]["quantization"]
         )
-        self.output_quant = Quantization(
+        self.output_quant = QuantizationTuple(
             *interpreter.get_output_details()[0]["quantization"]
         )
 

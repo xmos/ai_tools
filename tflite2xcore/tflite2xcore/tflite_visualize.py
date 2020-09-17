@@ -688,7 +688,7 @@ def dict_to_html(data):
         html += GenerateTableHtml(g["operators"], op_keys_to_display)
 
         # Visual graph.
-        html += "<svg id='subgraph%d' width='1600' height='900'></svg>\n" % (
+        html += "<svg id='subgraph%d' width='99%%' height='900'></svg>\n" % (
             subgraph_idx,)
         html += GenerateGraph(subgraph_idx, g, opcode_mapper)
         html += "</div>\n\n"
@@ -747,7 +747,7 @@ def model_to_html(model, filename=None):
     return dict_to_html(data)
 
 
-def main(tflite_input, html_output, *, no_browser=True):
+def main(tflite_input, html_output, *, open_browser=False):
     if html_output:  # TODO: do this with a context manager
         html_path = html_output
     else:
@@ -761,7 +761,7 @@ def main(tflite_input, html_output, *, no_browser=True):
     with open(html_path, "w") as f:
         f.write(html)
 
-    if not no_browser:
+    if open_browser:
         webbrowser.open_new_tab("file://" + os.path.realpath(html_path))
 
     if not html_output:
@@ -775,9 +775,9 @@ if __name__ == "__main__":
     parser.add_argument('tflite_input', help='Input .tflite file.')
     parser.add_argument('-o', '--html_output', required=False, default=None,
                         help='Output .html file. If not specified, a temporary file is created.')
-    parser.add_argument('--no_browser', action='store_false',
-                        help='Do not open browser after the .html is created.')
+    parser.add_argument('-b', '--browser', action='store_true',
+                        help='Open browser after the .html is created.')
     args = parser.parse_args()
     tflite_input, html_output = args.tflite_input, args.html_output
 
-    main(tflite_input, html_output, no_browser=args.no_browser)
+    main(tflite_input, html_output, open_browser=args.browser)

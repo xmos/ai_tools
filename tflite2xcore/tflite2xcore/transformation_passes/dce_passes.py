@@ -1,6 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from tflite2xcore.transformation_passes import (
+from .transformation_passes import (
     BufferMatchingPass,
     TensorMatchingPass,
     OperatorMatchingPass,
@@ -46,5 +46,5 @@ class EliminateDeadBuffersPass(BufferMatchingPass):
 
     def run(self, model):
         modified_cnt = super().run(model)
-        self.logger.info(f"Removed {modified_cnt} dead buffers")
+        self.logger.debug(f"Removed {modified_cnt} dead buffers")
         return modified_cnt

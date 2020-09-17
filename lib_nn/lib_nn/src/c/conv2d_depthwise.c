@@ -12,6 +12,36 @@
 #include <assert.h>
 
 
+typedef struct {
+    int top;
+    int left;
+    int bottom;
+    int right;
+} incl_bounds_t;
+
+/**
+ * Compute the bounds of the convolution window (in an input image's coordinate space) corresponding to a given 
+ * pixel location in the output image's coordinate space.
+ * 
+ * The bottom and right coordinates are inclusive.
+ */
+static incl_bounds_t inverse_map(
+    const nn_window_params_t* conv_window,
+    const int out_row,
+    const int out_col)
+{
+    incl_bounds_t res;
+    res.top    = conv_window->start.row    + conv_window->stride.vertical   * out_row;
+    res.left   = conv_window->start.column + conv_window->stride.horizontal * out_col;
+    res.bottom = res.top  + conv_window->shape.height - 1; //inclusive bottom
+    res.right  = res.left + conv_window->shape.width  - 1; //inclusive right
+    return res;
+}
+
+#ifndef CONV2D_INIT_ERROR_DETECTION_ENABLE
+  #define CONV2D_INIT_ERROR_DETECTION_ENABLE     (1)
+#endif
+
 void conv2d_depthwise_init(
     nn_conv2d_depthwise_plan_t* plan,
     nn_conv2d_depthwise_job_t* jobs,
@@ -19,19 +49,15 @@ void conv2d_depthwise_init(
     const nn_image_params_t* y_params,
     const nn_conv2d_job_params_t* job_params,
     const nn_window_params_t* conv_window,
-    // const int kernel_start_row,
-    // const int kernel_start_col,
-    // const unsigned K_h,
-    // const unsigned K_w,
-    // const int v_stride,
-    // const int h_stride,
     const int8_t zero_point,
     const unsigned job_count)
 {
-    assert(x_params->channels % 4 == 0);
-    assert(x_params->channels == y_params->channels);
-    assert(job_count > 0);
-    assert(job_count == 1 || job_params != NULL);
+    if(CONV2D_INIT_ERROR_DETECTION_ENABLE){
+        assert(x_params->channels % 4 == 0);
+        assert(x_params->channels == y_params->channels);
+        assert(job_count > 0);
+        assert(job_count == 1 || job_params != NULL);
+    }
 
     const unsigned x_row_bytes = x_params->width * x_params->channels;
     const unsigned y_row_bytes = y_params->width * y_params->channels;
@@ -63,10 +89,31 @@ void conv2d_depthwise_init(
         const nn_conv2d_job_params_t* params = (job_params != NULL)? &job_params[i] : &full_job;
         nn_conv2d_depthwise_job_t* job = &jobs[i];
         
-        assert(params->start.rows >= 0 && params->start.cols >= 0 && params->start.channels >= 0);
-        assert(params->start.rows + params->size.rows <= y_params->height);
-        assert(params->start.cols + params->size.cols <= y_params->width);
-        assert(params->start.channels + params->size.channels <= y_params->channels);
+        if(CONV2D_INIT_ERROR_DETECTION_ENABLE){
+            assert(params->start.rows >= 0 && params->start.cols >= 0 && params->start.channels >= 0);
+            assert(params->start.rows + params->size.rows <= y_params->height);
+            assert(params->start.cols + params->size.cols <= y_params->width);
+            assert(params->start.channels + params->size.channels <= y_params->channels);
+
+            // Make sure the convolution window is never entirely outside the input image.
+            //   (If it is, it would have to also be for the first and/or last pixel)
+            {
+                int first_row_y = params->start.rows;
+                int final_row_y = first_row_y + params->size.rows - 1;
+                int first_col_y = params->start.cols;
+                int final_col_y = first_col_y + params->size.cols - 1;
+
+                incl_bounds_t bounds = inverse_map(conv_window, first_row_y, first_col_y);
+
+                assert(bounds.bottom >= 0);
+                assert(bounds.right >= 0);
+
+                bounds = inverse_map(conv_window, final_row_y, final_col_y);
+
+                assert(bounds.top  < ((int)x_params->height));
+                assert(bounds.left < ((int)x_params->width));
+            }
+        }
 
         job->output.rows = params->size.rows;
         job->output.cols = params->size.cols;

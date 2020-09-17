@@ -1,9 +1,7 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 import sys
-import os
 import ctypes
 from pathlib import Path
-from types import ModuleType
 
 __PARENT_DIR = Path(__file__).parent.absolute()
 if sys.platform.startswith("linux"):
@@ -16,12 +14,12 @@ else:
 libtflite2xcore = ctypes.cdll.LoadLibrary(lib_path)
 
 from . import serialization
+from . import interpreters
 from . import xcore_schema
 from . import converter
 from . import pass_manager
 from . import parallelization
 from . import tflite_visualize
 from . import utils
-from . import xlogging
 from . import xcore_model
 from . import analyze

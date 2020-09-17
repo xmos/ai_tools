@@ -1,11 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+import logging
 from copy import copy
 
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType
-import tflite2xcore.xcore_interpreter as xcore_interpreter
-from tflite2xcore import xlogging as logging
+from tflite2xcore.interpreters import XCOREInterpreter
 
 
 def calc_subgraph_mem_req(subgraph):
@@ -77,7 +77,7 @@ def analyze_model(model):
 #       however, currently the interpreter is the only method to determine the
 #       size of the tensor arena
 def calc_arena_size(model_content):
-    interpreter = xcore_interpreter.XCOREInterpreter(model_content=model_content)
+    interpreter = XCOREInterpreter(model_content=model_content)
     logger = logging.getLogger("tensor_arena_allocations")
     [logger.info(line) for line in interpreter.get_allocations().split("\n")]
     return interpreter.tensor_arena_size
@@ -128,7 +128,7 @@ def print_report(tflite_output_path):
             msg = e.args[0]
             if msg.startswith(prefix):
                 op_details = msg.split("\n", 1)[0][len(prefix) :]
-                logging.getLogger().warning(
+                logging.warning(
                     f"Arena size calculation failed because of unknown op in the interpreter: {op_details}"
                 )
             else:

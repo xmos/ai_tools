@@ -4,6 +4,7 @@ import pytest
 
 from copy import deepcopy
 
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.transformation_passes import (
     CanonicalizeSingleinDepthwiseConv2DPass,
     LegalizeSingleinConv2DPass,
@@ -51,7 +52,7 @@ for k in PARAMS:
 
 
 @pytest.fixture()
-def trf_pass():
+def trf_pass() -> CanonicalizeSingleinDepthwiseConv2DPass:
     return CanonicalizeSingleinDepthwiseConv2DPass()
 
 
@@ -60,7 +61,9 @@ def trf_pass():
 #  ----------------------------------------------------------------------------
 
 
-def test_mutate(trf_pass, model):
+def test_mutate(
+    trf_pass: CanonicalizeSingleinDepthwiseConv2DPass, model: XCOREModel
+) -> None:
     # extract reference data
     subgraph = model.subgraphs[0]
     old_op = subgraph.operators[0]

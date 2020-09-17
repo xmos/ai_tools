@@ -1,12 +1,12 @@
 # Copyright (c) 2018-2020, XMOS Ltd, All rights reserved
 
 import os
+import logging
 import pathlib
 import matplotlib.pyplot as plt
 import numpy as np
 
 from tflite2xcore.utils import tf  # ensure that tf is imported lazily
-from tflite2xcore import xlogging as logging
 
 
 def quantize(arr, scale, zero_point, dtype=np.int8):
@@ -28,7 +28,7 @@ def quantize_converter(converter, representative_data, *, show_progress_step=Non
     def representative_data_gen():
         for j, input_value in enumerate(x_train_ds.take(representative_data.shape[0])):
             if show_progress_step and (j + 1) % show_progress_step == 0:
-                logging.getLogger().info(
+                logging.info(
                     f"Converter quantization processed examples {j+1:6d}/{representative_data.shape[0]}"
                 )
             yield [input_value]
@@ -63,13 +63,11 @@ def apply_interpreter_to_examples(
     for j, x in enumerate(examples):
         if show_progress_step and (j + 1) % show_progress_step == 0:
             if show_pid:
-                logging.getLogger().info(
+                logging.info(
                     f"(PID {os.getpid()}) Evaluated examples {j+1:6d}/{examples.shape[0]}"
                 )
             else:
-                logging.getLogger().info(
-                    f"Evaluated examples {j+1:6d}/{examples.shape[0]}"
-                )
+                logging.info(f"Evaluated examples {j+1:6d}/{examples.shape[0]}")
         interpreter.set_tensor(interpreter_input_ind, np.expand_dims(x, 0))
         interpreter.invoke()
         y = interpreter.get_tensor(interpreter_output_ind)

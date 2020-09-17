@@ -12,7 +12,35 @@
 #include <stdio.h>
 #include <assert.h>
 
+typedef struct {
+    int top;
+    int left;
+    int bottom;
+    int right;
+} incl_bounds_t;
 
+/**
+ * Compute the bounds of the convolution window (in an input image's coordinate space) corresponding to a given 
+ * pixel location in the output image's coordinate space.
+ * 
+ * The bottom and right coordinates are inclusive.
+ */
+static incl_bounds_t inverse_map(
+    const nn_window_params_t* conv_window,
+    const int out_row,
+    const int out_col)
+{
+    incl_bounds_t res;
+    res.top    = conv_window->start.row    + conv_window->stride.vertical   * out_row;
+    res.left   = conv_window->start.column + conv_window->stride.horizontal * out_col;
+    res.bottom = res.top  + conv_window->shape.height - 1; //inclusive bottom
+    res.right  = res.left + conv_window->shape.width  - 1; //inclusive right
+    return res;
+}
+
+#ifndef CONV2D_INIT_ERROR_DETECTION_ENABLE
+  #define CONV2D_INIT_ERROR_DETECTION_ENABLE     (1)
+#endif
 void conv2d_shallowin_init(
     nn_conv2d_shallowin_plan_t* plan,
     nn_conv2d_shallowin_job_t* jobs,
@@ -23,16 +51,18 @@ void conv2d_shallowin_init(
     const int8_t zero_point,
     const unsigned job_count)
 {
-    // Input and output channels must each be a multiple of 4
-    assert(x_params->channels % 4 == 0);
-    assert(y_params->channels % 4 == 0);
-    // The product of the input channels and kernel width must be <= VPU_INT8_EPV
-    assert(x_params->channels * conv_window->shape.width <= VPU_INT8_EPV);
+    if(CONV2D_INIT_ERROR_DETECTION_ENABLE){
+        // Input and output channels must each be a multiple of 4
+        assert(x_params->channels % 4 == 0);
+        assert(y_params->channels % 4 == 0);
+        // The product of the input channels and kernel width must be <= VPU_INT8_EPV
+        assert(x_params->channels * conv_window->shape.width <= VPU_INT8_EPV);
 
-    // Need at least 1 job
-    assert(job_count > 0);
-    // job_params can only be NULL if there's exactly 1 job.
-    assert(job_count == 1 || job_params != NULL);
+        // Need at least 1 job
+        assert(job_count > 0);
+        // job_params can only be NULL if there's exactly 1 job.
+        assert(job_count == 1 || job_params != NULL);
+    }
 
     const unsigned k_array_width = VPU_INT8_EPV / x_params->channels;
 
@@ -65,19 +95,40 @@ void conv2d_shallowin_init(
         const nn_conv2d_job_params_t* params = (job_params != NULL)? &job_params[i] : &full_job;
         nn_conv2d_shallowin_job_t* job = &jobs[i];
         
-        // Start can never be negative
-        assert(params->start.rows >= 0 
-            && params->start.cols >= 0 
-            && params->start.channels >= 0);
+        if(CONV2D_INIT_ERROR_DETECTION_ENABLE){
+            // Start can never be negative
+            assert(params->start.rows >= 0 
+                && params->start.cols >= 0 
+                && params->start.channels >= 0);
 
-        // Start channel has to be 0 mod 16
-        assert(params->start.channels % VPU_INT8_ACC_PERIOD == 0);
+            // Start channel has to be 0 mod 16
+            assert(params->start.channels % VPU_INT8_ACC_PERIOD == 0);
 
-        // Make sure we're not trying to compute outputs that go beyond
-        //  the bounds of the output image.
-        assert(params->start.rows + params->size.rows <= y_params->height);
-        assert(params->start.cols + params->size.cols <= y_params->width );
-        assert(params->start.channels + params->size.channels <= y_params->channels);
+            // Make sure we're not trying to compute outputs that go beyond
+            //  the bounds of the output image.
+            assert(params->start.rows + params->size.rows <= y_params->height);
+            assert(params->start.cols + params->size.cols <= y_params->width );
+            assert(params->start.channels + params->size.channels <= y_params->channels);
+
+            // Make sure the convolution window is never entirely outside the input image.
+            //   (If it is, it would have to also be for the first and/or last pixel)
+            {
+                int first_row_y = params->start.rows;
+                int final_row_y = first_row_y + params->size.rows - 1;
+                int first_col_y = params->start.cols;
+                int final_col_y = first_col_y + params->size.cols - 1;
+
+                incl_bounds_t bounds = inverse_map(conv_window, first_row_y, first_col_y);
+
+                assert(bounds.bottom >= 0);
+                assert(bounds.right >= 0);
+
+                bounds = inverse_map(conv_window, final_row_y, final_col_y);
+
+                assert(bounds.top  < ((int)x_params->height));
+                assert(bounds.left < ((int)x_params->width));
+            }
+        }
 
         job->output.rows = params->size.rows;
         job->output.cols = params->size.cols;

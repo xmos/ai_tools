@@ -1,9 +1,9 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from tflite2xcore.xcore_model import Operator
-
 from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes
-from tflite2xcore.transformation_passes import OperatorMatchingPass
+
+from .transformation_passes import OperatorMatchingPass
 
 
 class LegalizeQuantizeVersionPass(OperatorMatchingPass):

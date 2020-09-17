@@ -2,12 +2,14 @@
 
 import numpy as np
 
+from tflite2xcore.utils import quantize, dequantize
 from tflite2xcore.xcore_schema import (
     TensorType,
     BuiltinOpCodes,
     OperatorCode,
     XCOREOpCodes,
 )
+
 from .transformation_passes import (
     ReplaceQuantizedOperatorPass,
     QuantizedOperatorMatchingPass,
@@ -43,21 +45,14 @@ class LegalizeXCLookupTablePass(QuantizedOperatorMatchingPass):
 
     def _dequantize_input(self, int_arr):
         input_quant = self._input.quantization
-        return (np.int32(int_arr) - input_quant["zero_point"][0]) * input_quant[
-            "scale"
-        ][0]
+        return dequantize(
+            int_arr, input_quant["scale"][0], input_quant["zero_point"][0]
+        )
 
     def _quantize_output(self, float_arr):
         output_quant = self._output.quantization
-        return np.int8(
-            np.round(
-                np.clip(
-                    float_arr / output_quant["scale"][0]
-                    + output_quant["zero_point"][0],
-                    -128,
-                    127,
-                )
-            )
+        return quantize(
+            float_arr, output_quant["scale"][0], output_quant["zero_point"][0]
         )
 
     def mutate(self, op):

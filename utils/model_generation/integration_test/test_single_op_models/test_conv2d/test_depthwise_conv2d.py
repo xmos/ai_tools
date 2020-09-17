@@ -10,8 +10,10 @@ from tflite2xcore._model_generation import Configuration
 
 from . import (
     AbstractConv2dTestModelGenerator,
+    ChannelPreservingOpTestModelGenerator,
     test_output,
     test_converted_single_op_model,
+    test_idempotence,
 )
 
 
@@ -20,20 +22,10 @@ from . import (
 #  ----------------------------------------------------------------------------
 
 
-class DepthwiseConv2dTestModelGenerator(AbstractConv2dTestModelGenerator):
-    def _set_config(self, cfg: Configuration) -> None:
-        channels = cfg.pop("channels", 4)
-        assert channels % 4 == 0, "# of channels must be multiple of 4"
-        self._config.update({"channels": channels})
-
-        super()._set_config(cfg)
-
-    @property
-    def _input_shape(self) -> Tuple[int, int, int]:
-        cfg = self._config
-        return cfg["height"], cfg["width"], cfg["channels"]
-
-    def _conv_layer(
+class DepthwiseConv2dTestModelGenerator(
+    ChannelPreservingOpTestModelGenerator, AbstractConv2dTestModelGenerator
+):
+    def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
     ) -> tf.keras.layers.DepthwiseConv2D:
         kwargs = {"input_shape": input_shape} if input_shape else {}

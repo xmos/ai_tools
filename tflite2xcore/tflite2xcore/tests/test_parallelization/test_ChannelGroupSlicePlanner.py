@@ -1,12 +1,10 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-import logging
 
 import numpy as np
 
 from tflite2xcore.parallelization import ChannelGroupSlicePlanner, MAX_THREADS
-from tflite2xcore.xlogging import LoggingContext
 
 
 MAX_OUTPUT_CHANNELS = 75

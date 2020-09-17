@@ -16,7 +16,7 @@ class CleanupManager(PassManager):
                 passes.EliminateDeadTensorsPass(),
                 passes.EliminateDeadBuffersPass(),
             ],
-            **kwargs
+            **kwargs,
         )
 
 
@@ -28,12 +28,12 @@ class InputOutputCanonicalizationManager(PassManager):
                 passes.CanonicalizeQuantizedInputPass(),
                 passes.CanonicalizeQuantizedOutputPass(),
             ],
-            **kwargs
+            **kwargs,
         )
 
 
-def strip_model(model, *, debug=False, legalize_op_versions=True):
-    pass_mgr = InputOutputCanonicalizationManager(model, debug=debug)
+def strip_model(model, *, legalize_op_versions=True):
+    pass_mgr = InputOutputCanonicalizationManager(model)
 
     if legalize_op_versions:
         pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
@@ -44,11 +44,10 @@ def strip_model(model, *, debug=False, legalize_op_versions=True):
     model.description = model.description + " + XMOS stripped."
 
 
-def add_float_input_output(model, debug=False):
+def add_float_input_output(model):
     pass_mgr = PassManager(
         model,
         passes=[passes.LegalizeFloatInputPass(), passes.LegalizeFloatOutputPass()],
-        debug=debug,
     )
 
     pass_mgr.run_passes()
@@ -79,12 +78,11 @@ def optimize_for_xcore(
     minification=False,
     num_threads=1,
     intermediates_path=None,
-    debug=False,
-    ignore_input_alignment=False
+    ignore_input_alignment=False,
 ):
     # NOTE: the order of the passes is mostly strict
     pass_mgr = InputOutputCanonicalizationManager(
-        model, keep_intermediates=bool(intermediates_path), debug=debug,
+        model, keep_intermediates=bool(intermediates_path)
     )
 
     pass_mgr.register_pass(passes.CanonicalizeReshapePass())
@@ -131,7 +129,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
 
-    # Fuse spacial padding with conv2d
+    # Fuse spatial padding with conv2d
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
 
     if ignore_input_alignment:
@@ -187,7 +185,6 @@ def convert(
     num_threads=None,
     minification=False,
     intermediates_path=None,
-    debug=False
 ):
     num_threads = num_threads or 1
     model = XCOREModel.read_flatbuffer(tflite_input_path)
@@ -196,6 +193,5 @@ def convert(
         minification=minification,
         num_threads=num_threads,
         intermediates_path=intermediates_path,
-        debug=debug,
     )
     model.write_flatbuffer(tflite_output_path)

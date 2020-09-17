@@ -1,14 +1,20 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import pytest
-
+from typing import Tuple
 from copy import deepcopy
 
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import XCOREOpCodes, Padding
 from tflite2xcore.transformation_passes import Replace1x1Conv2dPass
 
-from tflite2xcore.tests.test_transformation_passes.model_builders import build_conv2d
+from tflite2xcore.tests.test_transformation_passes.model_builders import (
+    build_conv2d,
+    ModelBuilder,
+)
 from .conftest import (
     PARAMS,
+    test_replace_mutate as test_mutate,
     test_matching_params,
     test_non_matching_output_channels,
     test_non_matching_kernel_height,
@@ -72,17 +78,22 @@ PARAMS["smoke"].update(
 
 
 @pytest.fixture()
-def build_model():
+def build_model() -> ModelBuilder:
     return build_conv2d
 
 
 @pytest.fixture()
-def trf_pass():
+def trf_pass() -> Replace1x1Conv2dPass:
     return Replace1x1Conv2dPass()
 
 
 @pytest.fixture()
-def model(weight_shape, input_size, padding, strides):
+def model(
+    weight_shape: Tuple[int, int, int, int],
+    input_size: Tuple[int, int],
+    padding: Padding,
+    strides: Tuple[int, int],
+) -> XCOREModel:
     model = build_conv2d(
         weight_shape=weight_shape,
         input_size=input_size,
@@ -90,6 +101,11 @@ def model(weight_shape, input_size, padding, strides):
         strides=strides,
     )
     return model
+
+
+@pytest.fixture()
+def custom_opcode() -> XCOREOpCodes:
+    return XCOREOpCodes.XC_conv2d_1x1
 
 
 if __name__ == "__main__":

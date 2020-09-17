@@ -36,7 +36,7 @@ void bnn_conv2d_bin_out_padded(bnn_b32_t* Y_p,
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
     
-    PaddingValues *pv
+    padding_values_t *pv
 ){
 
     //TODO

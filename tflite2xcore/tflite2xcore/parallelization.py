@@ -2,11 +2,9 @@
 
 import numbers
 import math
-import enum
-
+import logging
 from abc import ABC, abstractmethod
 
-from tflite2xcore import xlogging as logging
 from tflite2xcore.utils import ACC_PERIOD
 
 MAX_THREADS = 5
@@ -100,7 +98,7 @@ class ParallelizationPlanner(ABC):
                 f"no forced plan could be found, resolving to {repr(best_plan)}"
             )
         else:
-            self.logger.info(
+            self.logger.debug(
                 f"replacing suboptimal plan {repr(best_forced_plan)} "
                 f"with better alternative {repr(best_plan)}."
             )
@@ -141,7 +139,7 @@ class ChannelGroupSlicePlanner(ParallelizationPlanner):
     def create_n_thread_candidates(self, num_threads):
         changrps = ChannelGroupSlicePlanner.changrp_split_helper(self.Cout)
         if len(changrps) >= num_threads:
-            self.logger.info(
+            self.logger.debug(
                 f"create_n_thread_candidates: num_threads={num_threads}, changrps={str(changrps)}"
             )
             self.add_candidate_plan(
@@ -218,7 +216,7 @@ class SlicePlanner(ParallelizationPlanner):
         ]
         changrps = ChannelGroupSlicePlanner.changrp_split_helper(self.Cout)
 
-        self.logger.info(
+        self.logger.debug(
             f"create_n_thread_candidates: num_threads={num_threads}, changrps={str(changrps)}, row_slices={str(row_slices)}"
         )
         self.add_candidate_plan(

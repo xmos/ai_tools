@@ -13,7 +13,37 @@
 #include <assert.h>
 
 
+typedef struct {
+    int top;
+    int left;
+    int bottom;
+    int right;
+} incl_bounds_t;
 
+/**
+ * Compute the bounds of the convolution window (in an input image's coordinate space) corresponding to a given 
+ * pixel location in the output image's coordinate space.
+ * 
+ * The bottom and right coordinates are inclusive.
+ */
+static incl_bounds_t inverse_map(
+    const nn_window_params_t* conv_window,
+    const int out_row,
+    const int out_col)
+{
+    incl_bounds_t res;
+    res.top    = conv_window->start.row    + conv_window->stride.vertical   * out_row;
+    res.left   = conv_window->start.column + conv_window->stride.horizontal * out_col;
+    res.bottom = res.top  + conv_window->shape.height - 1; //inclusive bottom
+    res.right  = res.left + conv_window->shape.width  - 1; //inclusive right
+    return res;
+}
+
+
+
+#ifndef CONV2D_INIT_ERROR_DETECTION_ENABLE
+  #define CONV2D_INIT_ERROR_DETECTION_ENABLE     (1)
+#endif
 void conv2d_deep_init(
     nn_conv2d_deep_plan_t* plan,
     nn_conv2d_deep_job_t* jobs,
@@ -24,13 +54,13 @@ void conv2d_deep_init(
     const int8_t zero_point,
     const unsigned job_count)
 {
-    // Input and output channels must each be a multiple of 4
-    assert(x_params->channels % 4 == 0);
-    assert(y_params->channels % 4 == 0);
-    // Need at least 1 job
-    assert(job_count > 0);
-    // job_params can only be NULL if there's exactly 1 job.
-    assert(job_count == 1 || job_params != NULL);
+
+    if(CONV2D_INIT_ERROR_DETECTION_ENABLE){
+        assert(x_params->channels % 4 == 0); //Input channel count must be multiple of 4.
+        assert(y_params->channels % 4 == 0); //Output channel count must be multiple of 4.
+        assert(job_count > 0); // At least one job must be specified.
+        assert(job_count == 1 || job_params != NULL); // job_params may only be NULL if there is exactly 1 job.
+    }
 
     const unsigned x_row_bytes = x_params->width * x_params->channels;
     const unsigned y_row_bytes = y_params->width * y_params->channels;
@@ -59,25 +89,47 @@ void conv2d_deep_init(
     const int32_t init_padding_left   = -conv_window->start.column;
     const int32_t init_padding_right  =  conv_window->start.column + conv_window->shape.width - x_params->width;
 
+    // Job that computes the entire output image (in the output image's coordinates!)
     nn_conv2d_job_params_t full_job = {{0,0,0}, {y_params->height, y_params->width, y_params->channels} };
 
     for(int i = 0; i < job_count; i++){
         const nn_conv2d_job_params_t* params = (job_params != NULL)? &job_params[i] : &full_job;
         nn_conv2d_deep_job_t* job = &jobs[i];
-        
-        // Start can never be negative
-        assert(params->start.rows >= 0 
-            && params->start.cols >= 0 
-            && params->start.channels >= 0);
 
-        // Start channel has to be 0 mod 16
-        assert(params->start.channels % VPU_INT8_ACC_PERIOD == 0);
+        if (CONV2D_INIT_ERROR_DETECTION_ENABLE){
+            // Start can never be negative
+            assert(params->start.rows >= 0); // Job start row must not be negative.
+            assert(params->start.cols >= 0); // Job start column must not be negative.
+            assert(params->start.channels >= 0); //Job start channel must not be negative.
 
-        // Make sure we're not trying to compute outputs that go beyond
-        //  the bounds of the output image.
-        assert(params->start.rows + params->size.rows <= y_params->height);
-        assert(params->start.cols + params->size.cols <= y_params->width );
-        assert(params->start.channels + params->size.channels <= y_params->channels);
+            assert(params->start.channels % VPU_INT8_ACC_PERIOD == 0); // Job start channel must be multiple of 16.
+
+            // Make sure we're not trying to compute outputs that go beyond
+            //  the bounds of the output image.
+            assert(params->start.rows + params->size.rows <= y_params->height); // Job extends beyond bottom of output.
+            assert(params->start.cols + params->size.cols <= y_params->width ); // Job extends beyond right of output.
+            assert(params->start.channels + params->size.channels <= y_params->channels); //Job extends beyond channels of output.
+
+            // Make sure the convolution window is never entirely outside the input image.
+            //   (If it is, it would have to also be for the first and/or last pixel)
+            {
+                int first_row_y = params->start.rows;
+                int final_row_y = first_row_y + params->size.rows - 1;
+                int first_col_y = params->start.cols;
+                int final_col_y = first_col_y + params->size.cols - 1;
+
+                incl_bounds_t bounds = inverse_map(conv_window, first_row_y, first_col_y);
+
+                assert(bounds.bottom >= 0);
+                assert(bounds.right >= 0);
+
+                bounds = inverse_map(conv_window, final_row_y, final_col_y);
+
+                assert(bounds.top  < ((int)x_params->height));
+                assert(bounds.left < ((int)x_params->width));
+            }
+        }
+
 
         job->output.rows = params->size.rows;
         job->output.cols = params->size.cols;

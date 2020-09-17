@@ -1,14 +1,15 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
 import pathlib
-from tflite2xcore.utils import set_all_seeds, convert_path
+import logging
+from tflite2xcore.utils import set_all_seeds, LoggingContext
 import tensorflow as tf
 import numpy as np
 from abc import ABC, abstractmethod
 import tflite2xcore.converter as xcore_conv
 from tflite2xcore.xcore_model import XCOREModel, TensorType
 from tflite2xcore.model_generation import utils
-from tflite2xcore import xlogging as logging, tflite_visualize
+from tflite2xcore import tflite_visualize
 
 
 class Model(ABC):
@@ -38,7 +39,7 @@ class Model(ABC):
         self.data = {}
         self.converters = {}
 
-        self._path = convert_path(path)
+        self._path = pathlib.Path(path)
         self._path.mkdir(parents=True, exist_ok=True)
         self.data_dir = self._path / "test_data"
         self.data_dir.mkdir(exist_ok=True)
@@ -242,12 +243,6 @@ class Model(ABC):
         y_test = utils.quantize(
             y_test_float, output_quant["scale"][0], output_quant["zero_point"][0]
         )
-        self.logger.xdebug(
-            "model_stripped input example: " f"{logging._array_msg(x_test[-1])}"
-        )
-        self.logger.xdebug(
-            "model_stripped output example: " f"{logging._array_msg(y_test[-1])}"
-        )
         data = {"x_test": x_test, "y_test": y_test}
 
         self._save_data_dict(data, base_file_name="model_stripped")
@@ -362,7 +357,7 @@ class KerasModel(Model):
             self.save_training_history()
 
     def save_training_history(self):
-        with logging.LoggingContext(logging.getLogger(), logging.INFO):
+        with LoggingContext(logging.getLogger(), logging.INFO):
             utils.plot_history(
                 self.history,
                 title=f"{self.name} metrics",

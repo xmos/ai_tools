@@ -22,6 +22,14 @@ from .. import (
 
 
 class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
+    @property
+    def _total_width(self) -> int:
+        return self._config["width"]  # type: ignore
+
+    @property
+    def _total_height(self) -> int:
+        return self._config["height"]  # type: ignore
+
     def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
     ) -> tf.keras.layers.Layer:
@@ -52,6 +60,14 @@ class ExplicitPaddingMixin(AbstractConv2dTestModelGenerator):
 
         super()._set_config(cfg)
 
+    @property
+    def _total_width(self) -> int:
+        return super()._total_width + self._config["pad_l"] + self._config["pad_r"]  # type: ignore
+
+    @property
+    def _total_height(self) -> int:
+        return super()._total_height + self._config["pad_t"] + self._config["pad_b"]  # type: ignore
+
     def _build_core_model(self) -> tf.keras.Model:
         cfg = self._config
         return tf.keras.Sequential(
@@ -78,15 +94,6 @@ class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
         )
         super()._set_config(cfg)
 
-    def check_config(self) -> None:
-        super().check_config()
-        assert (
-            self._config["input_channels"] % 4 == 0
-        ), "# of input channels must be multiple of 4"
-        assert (
-            self._config["output_channels"] % 4 == 0
-        ), "# of output channels must be multiple of 4"
-
     @property
     def _input_channels(self) -> int:
         return self._config["input_channels"]  # type: ignore
@@ -105,3 +112,19 @@ class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
             kernel_initializer=parse_init_config(*cfg["weight_init"]),
             **kwargs,
         )
+
+
+class Conv2dProperTestModelGenerator(Conv2dGenericTestModelGenerator):
+    def check_config(self) -> None:
+        super().check_config()
+        assert (
+            self._config["input_channels"] % 4 == 0
+        ), "# of input channels must be multiple of 4"
+        assert (
+            self._config["output_channels"] % 4 == 0
+        ), "# of output channels must be multiple of 4"
+        if self._config["padding"] == "valid":
+            assert (
+                self._config["K_h"] != self._total_height
+                or self._config["K_w"] != self._total_width
+            ), "identical kernel and image size with valid padding is reserved for single pixel testing"

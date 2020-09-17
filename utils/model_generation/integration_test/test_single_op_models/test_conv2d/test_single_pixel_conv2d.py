@@ -6,7 +6,7 @@ from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix t
 from tflite2xcore._model_generation import Configuration
 
 from . import (
-    Conv2dProperTestModelGenerator,
+    Conv2dGenericTestModelGenerator,
     test_output,
     test_converted_single_op_model,
     test_idempotence,
@@ -18,23 +18,28 @@ from . import (
 #  ----------------------------------------------------------------------------
 
 
-class Conv2dTestModelGenerator(Conv2dProperTestModelGenerator):
+class SinglePixelConv2dTestModelGenerator(Conv2dGenericTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
-        cfg.setdefault("input_channels", 20)
+        assert "height" not in cfg and "width" not in cfg, (
+            "height and width should not be specified "
+            "(they are inferred from kernel height and width)"
+        )
+        cfg["height"] = cfg.setdefault("K_h", 1)
+        cfg["width"] = cfg.setdefault("K_w", 1)
+
+        cfg.setdefault("padding", "valid")
         super()._set_config(cfg)
 
     def check_config(self) -> None:
         super().check_config()
         assert (
-            self._config["K_w"] * self._config["input_channels"] > 32
-        ), "K_w * input_channels <= 32 is reserved for conv2d_shallowin testing"
-        assert (
-            self._config["K_h"] != 1 or self._config["K_w"] != 1
-        ), "1x1 kernel is reserved for conv2d_1x1 testing"
+            self._config["padding"] == "valid"
+        ), "Only valid padding is allowed in single pixel conv2d tests"
 
 
-GENERATOR = Conv2dTestModelGenerator
+GENERATOR = SinglePixelConv2dTestModelGenerator
 
+CONFIGS = {"default": {0: {}}}  # TODO: remove this and add generated configs
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
@@ -43,7 +48,7 @@ GENERATOR = Conv2dTestModelGenerator
 
 @pytest.fixture  # type: ignore
 def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_conv2d_deep
+    return XCOREOpCodes.XC_fc
 
 
 if __name__ == "__main__":

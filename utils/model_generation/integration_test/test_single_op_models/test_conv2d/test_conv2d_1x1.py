@@ -6,7 +6,7 @@ from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix t
 from tflite2xcore._model_generation import Configuration
 
 from . import (
-    Conv2dGenericTestModelGenerator,
+    Conv2dProperTestModelGenerator,
     test_output,
     test_converted_single_op_model,
     test_idempotence,
@@ -18,7 +18,7 @@ from . import (
 #  ----------------------------------------------------------------------------
 
 
-class Conv2d1x1TestModelGenerator(Conv2dGenericTestModelGenerator):
+class Conv2d1x1TestModelGenerator(Conv2dProperTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         cfg.setdefault("K_h", 1)
         cfg.setdefault("K_w", 1)

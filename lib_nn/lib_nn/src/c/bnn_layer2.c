@@ -20,8 +20,9 @@ void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
     unsigned k_sub_height = k->shape.height;
 
     bnn_conv2d_bin_out(Y_p, X_p, K_p, thresholds_p,
-        x,  y,  k, 
-        y_loc_x, y_loc_y, y_sub_width, y_sub_height,
+        x,  y, k, 
+        0, 0, //There is no padding so the offset is 0,0
+        y_sub_width, y_sub_height,
         x_loc_x,  x_loc_y,  
         k_loc_x,  k_loc_y, k_sub_width,  k_sub_height);
 }
@@ -67,10 +68,14 @@ void bnn_conv2d_int8_out_valid(int8_t* Y_p,
     unsigned k_sub_width = k->shape.width;
     unsigned k_sub_height = k->shape.height;
 
-    bnn_conv2d_int8_out(Y_p, X_p, K_p, post_activation_multiplier_q,
-        post_activation_bias_q, accu_shr, final_shr,
+    bnn_conv2d_int8_out(Y_p, X_p, K_p, 
+    
+        post_activation_multiplier_q,
+        post_activation_bias_q, 
+        accu_shr, final_shr,
         x,  y,  k, 
-        y_loc_x, y_loc_y, y_sub_width, y_sub_height,
+        0, 0, //There is no padding so the offset is 0,0
+        y_sub_width, y_sub_height, 
         x_loc_x,  x_loc_y,  
         k_loc_x,  k_loc_y, k_sub_width,  k_sub_height);
 }

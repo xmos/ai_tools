@@ -180,7 +180,6 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
   unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
   unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
 
-
   for (unsigned h = x_loc_y; h < (x_loc_y + x_sub_height) - k_sub_height + 1; h += v_stride) {
     for (unsigned w = x_loc_x; w < (x_loc_x + x_sub_width) - k_sub_width + 1; w += h_stride) {
       for (unsigned oc_word = 0; oc_word < chan_b32_out; oc_word += 1) {
@@ -201,7 +200,7 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
           unsigned bit = sum > thresholds[oc];
           if (bit) bitpacked_column |= 1ULL << oc_bit;
         }
-        Y[h / v_stride][w / h_stride][oc_word] = bitpacked_column;
+        Y[y_loc_y + h / v_stride][y_loc_x + w / h_stride][oc_word] = bitpacked_column;
       }
     }
   }
@@ -256,7 +255,6 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
   unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
   unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
 
-
   for (unsigned h = x_loc_y; h < (x_loc_y + x_sub_height) - k_sub_height + 1; h += v_stride) {
     for (unsigned w = x_loc_x; w < (x_loc_x + x_sub_width) - k_sub_width + 1; w += h_stride) {
       for (unsigned oc = 0; oc < chans_out; oc += 1) {
@@ -274,31 +272,25 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
         // This converts xor_popcount to macc format
         int32_t vpu_output = -(backtransform_add - 2*sum)/2;
 
-        // printf("sum: %x vpu_output:%x\n", sum, vpu_output);
-
         //not rounding has happened to the point
         const unsigned post_vlmul_shr = 14;
         int32_t r = ashr(vpu_output, accu_shr) ;
         
-        // printf("r:%x\n", r);
         r *= (int32_t) post_activation_multiplier_q[oc];
 
         r = ashr(r, post_vlmul_shr);
 
-        // printf("r:%x\n", r);
         r += post_activation_bias_q[oc];
 
-        // printf("r:%x\n", r);
         r = ashr(r, final_shr);
 
-        // printf("r:%x\n", r);
         r = r&0xffffff00;
         r = r>>8; 
 
         if (r > INT8_MAX) r = INT8_MAX;
         if (r < INT8_MIN) r = INT8_MIN;
 
-        Y[h / v_stride][w / h_stride][oc] = (int8_t)r;
+        Y[y_loc_y + (h / v_stride)][y_loc_x + (w / h_stride)][oc] = (int8_t)r;
         
       }
     }

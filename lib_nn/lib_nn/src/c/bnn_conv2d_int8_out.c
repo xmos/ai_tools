@@ -48,7 +48,9 @@ void bnn_conv2d_int8_out_asm_prepare(
   plan->X = (bnn_b256_t*)X[x_loc_y][x_loc_x];
   plan->K = (bnn_b256_t*)K[k_loc_y][k_loc_x];
 
-  plan->mask = 0xaaaaaaaa;
+  //This could go into the constant pool but it would make the loading
+  //slower within the kernel(2 loops in).
+  plan->mask = 0xaaaaaaaa; 
   
   plan->pa_mul = (int16_t *)post_activation_multiplier_q;
   plan->pa_bias = (int16_t *)post_activation_bias_q;
@@ -63,7 +65,7 @@ void bnn_conv2d_int8_out_asm_prepare(
   }
 
   unsigned bytes_per_input_channel = x->channels / 8;
-  unsigned bytes_per_output_channel = y->channels / 8;
+  unsigned bytes_per_output_channel = y->channels;
 
   const unsigned out_chans_multiplier = 16;
 
@@ -112,7 +114,7 @@ void bnn_conv2d_int8_out_asm_prepare(
   plan->k_v_step = 0;
   plan->k_h_step = 0;
 
-  plan->y_v_step = sizeof(int8_t) * (y->width - y_sub_width);//TODOcheck this
+  plan->y_v_step = sizeof(int8_t) * (y->width - y_sub_width); //TODO check this
   
 }
 

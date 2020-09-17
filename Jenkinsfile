@@ -61,7 +61,7 @@ pipeline {
                             branches: scm.branches,
                             doGenerateSubmoduleConfigurations: false,
                             extensions: [[$class: 'SubmoduleOption',
-                                          threads: 6,
+                                          threads: 8,
                                           parentCredentials: true,
                                           recursiveSubmodules: true],
                                          [$class: 'CleanCheckout']],

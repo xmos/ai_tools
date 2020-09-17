@@ -39,7 +39,6 @@ class SinglePixelConv2dTestModelGenerator(Conv2dGenericTestModelGenerator):
 
 GENERATOR = SinglePixelConv2dTestModelGenerator
 
-CONFIGS = {"default": {0: {}}}  # TODO: remove this and add generated configs
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES

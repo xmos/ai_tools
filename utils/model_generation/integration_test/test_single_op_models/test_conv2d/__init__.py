@@ -29,10 +29,10 @@ class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
 
     def _set_config(self, cfg: Configuration) -> None:
         self._config.update(
-            dict(
-                weight_init=cfg.pop("weight_init", ("RandomUniform", -1, 1)),
-                bias_init=cfg.pop("bias_init", ("Constant", 0)),
-            )
+            {
+                "weight_init": cfg.pop("weight_init", ("RandomUniform", -1, 1)),
+                "bias_init": cfg.pop("bias_init", ("Constant", 0)),
+            }
         )
         cfg.setdefault("padding", "same")
         cfg.setdefault("strides", (1, 1))
@@ -48,7 +48,7 @@ class ExplicitPaddingMixin(AbstractConv2dTestModelGenerator):
 
         for side in ["t", "b", "l", "r"]:
             key = f"pad_{side}"
-            self._config.update({key: cfg.pop(key, 1)})
+            self._config[key] = cfg.pop(key, 1)
 
         super()._set_config(cfg)
 
@@ -70,15 +70,22 @@ class ExplicitPaddingMixin(AbstractConv2dTestModelGenerator):
 
 class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
-        input_channels = cfg.pop("input_channels", 4)
-        assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
-        output_channels = cfg.pop("output_channels", 4)
-        assert output_channels % 4 == 0, "# of output channels must be multiple of 4"
-
         self._config.update(
-            {"input_channels": input_channels, "output_channels": output_channels}
+            {
+                "input_channels": cfg.pop("input_channels", 4),
+                "output_channels": cfg.pop("output_channels", 4),
+            }
         )
         super()._set_config(cfg)
+
+    def check_config(self) -> None:
+        super().check_config()
+        assert (
+            self._config["input_channels"] % 4 == 0
+        ), "# of input channels must be multiple of 4"
+        assert (
+            self._config["output_channels"] % 4 == 0
+        ), "# of output channels must be multiple of 4"
 
     @property
     def _input_channels(self) -> int:

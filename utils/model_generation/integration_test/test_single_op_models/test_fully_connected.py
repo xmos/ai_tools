@@ -25,11 +25,11 @@ from . import (
 class FullyConnectedTestModelGenerator(ChannelAgnosticOpTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         self._config.update(
-            dict(
-                weight_init=cfg.pop("weight_init", ("RandomUniform", -1, 1)),
-                bias_init=cfg.pop("bias_init", ("RandomUniform", -1, 1)),
-                outputs=cfg.pop("outputs"),
-            )
+            {
+                "weight_init": cfg.pop("weight_init", ("RandomUniform", -1, 1)),
+                "bias_init": cfg.pop("bias_init", ("RandomUniform", -1, 1)),
+                "outputs": cfg.pop("outputs"),
+            }
         )
         super()._set_config(cfg)
 

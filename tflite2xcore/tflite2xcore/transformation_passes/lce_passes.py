@@ -80,8 +80,7 @@ class ReplaceLceBconv2DPass(LceConv2dPass):
 
         subgraph = op.subgraph
 
-        # Note, it is risky to modify an Op in place - create a new op and cut off the old one such that
-        # DCE can clean it up
+        # Note, it is risky to modify an Op in place - create a new op and remove old one
         if self._output_tensor_type is TensorType.INT8:
             new_op_code = XCOREOpCodes.XC_bconv2d_int8_out
         else:
@@ -111,8 +110,8 @@ class ReplaceLceQuantizePass(OperatorMatchingPass):
 
         return (
             super().match(op)
-            # and len(op.inputs) == 1
-            # and len(op.outputs) == 1
+            and len(op.inputs) == 1
+            and len(op.outputs) == 1
             and op.outputs[0].type is TensorType.INT32
             and op.inputs[0].type is TensorType.INT8
         )

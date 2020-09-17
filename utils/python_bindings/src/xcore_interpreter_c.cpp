@@ -80,8 +80,8 @@ int initialize(ExtendedXCoreInterpreterContext* ctx, const char* model_content,
       "XC_avgpool2d_global",
       tflite::ops::micro::xcore::Register_AvgPool2D_Global());
   ctx->resolver->AddCustom(
-      "XC_fc_deepin_anyout",
-      tflite::ops::micro::xcore::Register_FullyConnected_16());
+      tflite::ops::micro::xcore::FullyConnected_8_OpCode,
+      tflite::ops::micro::xcore::Register_FullyConnected_8());
   ctx->resolver->AddCustom(
       "XC_conv2d_shallowin",
       tflite::ops::micro::xcore::Register_Conv2D_Shallow());

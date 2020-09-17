@@ -89,6 +89,14 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
 #  ----------------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def disable_gpus(monkeypatch):
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "-1")
+
+
+_WORKER_CACHE = {}
+
+
 @pytest.fixture  # type: ignore
 def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     try:
@@ -109,25 +117,29 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     file_path = Path(request.module.__file__)
     key = file_path.relative_to(pytest_config.rootdir) / config_str
 
-    dirpath = pytest_config.cache.get(key, "")
-    if dirpath:
-        gen = IntegrationTestModelGenerator.load(dirpath)
-        logging.debug(f"cached generator loaded from {dirpath}")
-        gen.run.rerun_post_cache()
-    else:
-        gen.run()
-        try:
-            with portalocker.BoundedSemaphore(1, hash(key), timeout=0):
-                dirpath = str(pytest_config.cache.makedir("model_cache") / key)
-                dirpath = gen.save(dirpath)
-                if pytest_config.getoption("dump") == "models":
-                    gen.run.dump(dirpath)
+    try:
+        gen = _WORKER_CACHE[key]
+    except KeyError:
+        dirpath = pytest_config.cache.get(key, "")
+        if dirpath:
+            gen = IntegrationTestModelGenerator.load(dirpath)
+            logging.debug(f"cached generator loaded from {dirpath}")
+            gen.run.rerun_post_cache()
+        else:
+            gen.run()
+            try:
+                with portalocker.BoundedSemaphore(1, hash(key), timeout=0):
+                    dirpath = str(pytest_config.cache.makedir("model_cache") / key)
+                    dirpath = gen.save(dirpath)
+                    if pytest_config.getoption("dump") == "models":
+                        gen.run.dump(dirpath)
 
-                logging.debug(f"generator cached to {dirpath}")
-                pytest_config.cache.set(key, str(dirpath))
-        except portalocker.AlreadyLocked:
-            # another process will write to cache
-            pass
+                    logging.debug(f"generator cached to {dirpath}")
+                    pytest_config.cache.set(key, str(dirpath))
+            except portalocker.AlreadyLocked:
+                # another process will write to cache
+                pass
+        _WORKER_CACHE[key] = gen
 
     if pytest_config.getoption("--generate-only"):
         pytest.skip()

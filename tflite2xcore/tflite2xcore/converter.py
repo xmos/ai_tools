@@ -87,7 +87,7 @@ def optimize_for_xcore(
     )
 
     # TODO should this canonicalize to more closely match builtin conv?
-    pass_mgr.register_pass(passes.CanonicalizeLceBconv2DPass())
+    # pass_mgr.register_pass(passes.CanonicalizeLceBconv2DPass())
     pass_mgr.register_pass(passes.CanonicalizeReshapePass())
     pass_mgr.register_pass(passes.RemoveFlattenReshapePass())
 
@@ -109,9 +109,11 @@ def optimize_for_xcore(
 
     pass_mgr.register_pass(passes.ReplaceLceQuantizePass())
 
-    # TOOD rename
+    # TODO this should sit with the other stripping passes
+    pass_mgr.register_pass(passes.CanonicalizeLceQuantizedOutputPass())
+
     # Note, this currently only matches with BConv but going forward might like to extend to other Conv ops
-    #pass_mgr.register_pass(passes.SplitPaddingFromConvPass())
+    pass_mgr.register_pass(passes.SplitPaddingFromConvPass())
 
     pass_mgr.register_pass(
         passes.ReplaceLceBconv2DPass(output_tensor_type=TensorType.INT32)

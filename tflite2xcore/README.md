@@ -8,7 +8,7 @@
 
 # Visualizing a Model
 
-    > ./tfite_visualize.py --html_output your_model.html --no_browser path/to/your_model.tflite
+    > ./tfite_visualize.py path/to/your_model.tflite -o your_model.html 
 
 # Adding a New Operator to Code Generation
 

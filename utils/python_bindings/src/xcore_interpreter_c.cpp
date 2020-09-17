@@ -103,6 +103,9 @@ int initialize(ExtendedXCoreInterpreterContext* ctx, const char* model_content,
 
   ctx->resolver->AddCustom("XC_bconv2d_bin_out",
                            tflite::ops::micro::xcore::Register_BConv2D_Bin_Out());
+  
+  ctx->resolver->AddCustom("XC_pad",
+                           tflite::ops::micro::xcore::Register_Pad());
 
   ctx->tensor_arena = new uint8_t[tensor_arena_size];
   memset(ctx->tensor_arena, 0, tensor_arena_size);

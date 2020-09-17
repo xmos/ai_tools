@@ -1,4 +1,4 @@
-NUM_PROCS := 1
+NUM_PROCS := 4
 
 .DEFAULT_GOAL := all
 

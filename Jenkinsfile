@@ -62,6 +62,8 @@ pipeline {
                             doGenerateSubmoduleConfigurations: false,
                             extensions: [[$class: 'SubmoduleOption',
                                           threads: 8,
+                                          timeout: 20,
+                                          shallow: true,
                                           parentCredentials: true,
                                           recursiveSubmodules: true],
                                          [$class: 'CleanCheckout']],

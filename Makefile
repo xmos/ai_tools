@@ -20,8 +20,9 @@ tflite2xcore_test:
 	tflite2xcore/tflite2xcore/tests/runtests.py tflite2xcore/tflite2xcore/tests -n $(NUM_PROCS)
 
 .PHONY: integration_test
-integration_test: utils_test_build
-	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS) --junitxml=integration_junit.xml
+integration_test:
+	cd utils/model_generation && pytest integration_test --cache-clear --collect-only -qq
+	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 
 .PHONY: ci 
 ci: lib_nn_test_build tflite2xcore_test integration_test

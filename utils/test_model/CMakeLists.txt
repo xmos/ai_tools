@@ -1,6 +1,33 @@
 cmake_minimum_required(VERSION 3.14)
 
 #**********************
+# Options
+#**********************
+OPTION (XCORE "If disabled, will build the x86 version." ON)
+
+#**********************
+# Setup XMOS toolchain
+#**********************
+if (XCORE)
+  set(CMAKE_SYSTEM_NAME XMOS)
+  set(CMAKE_C_COMPILER "xcc")
+  set(CMAKE_CXX_COMPILER  "xcc")
+  set(CMAKE_ASM_COMPILER  "xcc")
+  set(CMAKE_AR "xmosar")
+  set(CMAKE_C_COMPILER_AR "xmosar")
+  set(CMAKE_CXX_COMPILER_AR "xmosar")
+  set(CMAKE_ASM_COMPILER_AR "xmosar")
+
+  set(CMAKE_C_COMPILER_FORCED TRUE)
+  set(CMAKE_CXX_COMPILER_FORCED TRUE)
+  set(CMAKE_ASM_COMPILER_FORCED TRUE)
+endif ()
+
+set(CMAKE_CXX_FLAGS_INIT "-std=c++11")
+
+enable_language(CXX C ASM)
+
+#**********************
 # Disable in-source build.
 #**********************
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -8,13 +35,6 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
 endif()
 
 project(test_model VERSION 1.0.0)
-
-enable_language(CXX C ASM)
-
-#**********************
-# Options
-#**********************
-OPTION (XCORE "If disabled, will build the x86 version." ON)
 
 #**********************
 # Paths
@@ -38,8 +58,6 @@ set(INSTALL_DIR "${PROJECT_SOURCE_DIR}/bin")
 #**********************
 # Build flags
 #**********************
-set(CMAKE_CXX_FLAGS "-std=c++11")
-
 # Optimization 
 # -DNDEBUG                        # define this for remove debug and profiling 
 # -DTF_LITE_STRIP_ERROR_STRINGS   # define this to remove logging
@@ -48,13 +66,6 @@ if (XCORE)
   add_executable(test_model_xscope)
   add_executable(test_model_cmdline)
 
-  set(CMAKE_C_COMPILER "xcc")
-  set(CMAKE_CXX_COMPILER  "xcc")
-  set(CMAKE_ASM_COMPILER  "xcc")
-  set(CMAKE_AR "xmosar")
-  set(CMAKE_C_COMPILER_AR "xmosar")
-  set(CMAKE_CXX_COMPILER_AR "xmosar")
-  set(CMAKE_ASM_COMPILER_AR "xmosar")
   set(BUILD_FLAGS
     "-fxscope"
     "${CMAKE_CURRENT_SOURCE_DIR}/config.xscope"

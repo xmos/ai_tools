@@ -21,7 +21,7 @@ tflite2xcore_test:
 
 .PHONY: integration_test
 integration_test: utils_test_build
-	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS)
+	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS) --junitxml=integration_junit.xml
 
 .PHONY: ci 
 ci: lib_nn_test_build tflite2xcore_test integration_test

@@ -88,6 +88,7 @@ pipeline {
                     steps {
                         sh """#!/bin/bash -l
                               conda run -n .venv make ci > make_output.txt"""
+                        junit "**/*_junit.xml"
                     }
                 }
             }

@@ -233,7 +233,7 @@ def _test_output(
     if failures:
         pytest.fail(
             f"The following examples have failed elements: {msg}"
-            + ("" if verbose else "\nSet verbsity > 0 for more details."),
+            + ("" if verbose else "\nSet verbosity > 0 for more details."),
             pytrace=False,
         )
 

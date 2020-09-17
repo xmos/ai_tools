@@ -134,7 +134,7 @@ default:
     output_channels: 8
     width: 8
   22:
-    height: 1
+    height: 5
     input_channels: 12
     num_threads: 1
     output_channels: 52

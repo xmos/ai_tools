@@ -1,5 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+import numpy as np
 from abc import abstractmethod
 from typing import Tuple
 
@@ -49,7 +50,9 @@ class ParallelizationPass(OperatorMatchingPass):
 class ChannelGroupParallelizationPass(ParallelizationPass):
     @property
     def _planner(self) -> ChannelGroupSlicePlanner:
-        _, Cout = self._op.outputs[0].shape
+        output_shape = self._op.outputs[0].shape
+        Cout = np.prod(output_shape[1:])  # works even if output is (1, 1, 1, Cout)
+        assert output_shape[-1] == Cout
         return ChannelGroupSlicePlanner(
             int(Cout), num_threads=self.num_threads, forced=self.forced
         )

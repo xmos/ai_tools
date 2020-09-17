@@ -7,6 +7,7 @@ from .xcore_schema import (
     Padding,
     TensorType,
     OperatorCode,
+    ValidOpCodes,
     BuiltinOpCodes,
     ExternalOpCodes,
     XCOREOpCodes,

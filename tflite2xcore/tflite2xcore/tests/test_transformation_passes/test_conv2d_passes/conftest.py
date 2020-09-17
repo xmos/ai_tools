@@ -25,8 +25,12 @@ from ..conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
-for key in PARAMS:
-    PARAMS[key]["non_matching_tensors"] = FC_PARAMS[key]["non_matching_tensors"]
+# NOTE: this is intentional to reduce test counts
+PARAMS["extended"]["non_matching_tensors"] = FC_PARAMS["default"][
+    "non_matching_tensors"
+]
+PARAMS["default"]["non_matching_tensors"] = FC_PARAMS["smoke"]["non_matching_tensors"]
+PARAMS["smoke"]["non_matching_tensors"] = FC_PARAMS["smoke"]["non_matching_tensors"]
 
 PARAMS["extended"].update(
     {

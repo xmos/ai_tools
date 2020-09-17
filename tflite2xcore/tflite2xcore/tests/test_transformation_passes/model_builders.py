@@ -484,6 +484,7 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     )
     op.builtin_options = {
         "padding": padding,
+        "fused_activation_function": ActivationFunctionType.NONE,
         "stride_h": strides[0],
         "stride_w": strides[1],
         "dilation_w_factor": 1,

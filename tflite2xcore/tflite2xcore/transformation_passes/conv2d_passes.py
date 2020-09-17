@@ -3,7 +3,12 @@
 import numpy as np
 from copy import deepcopy
 
-from tflite2xcore.xcore_schema import BuiltinOpCodes, OperatorCode, XCOREOpCodes
+from tflite2xcore.xcore_schema import (
+    BuiltinOpCodes,
+    OperatorCode,
+    XCOREOpCodes,
+    FullyConnectedOptionsWeightsFormat,
+)
 from tflite2xcore.utils import WORD_SIZE
 
 from .transformation_passes import (
@@ -12,6 +17,57 @@ from .transformation_passes import (
     LegalizeWeightBiasPass,
     LegalizeXCWeightBiasPass,
 )
+
+
+class CanonicalizeSinglePixelConv2DPass(ReplaceQuantizedWeightBiasOperatorPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.CONV_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(BuiltinOpCodes.FULLY_CONNECTED, version=7)
+
+    def match(self, op):
+        with self.using(op):
+            return (
+                super().match(op)
+                and self._weights.shape[1:3] == self._input.shape[1:3]
+                and self._output.shape[1] == self._output.shape[2] == 1
+            )
+
+    def mutate(self, op):
+        builtin_options = {
+            "fused_activation_function": op.builtin_options[
+                "fused_activation_function"
+            ],
+            "weights_format": FullyConnectedOptionsWeightsFormat.DEFAULT,
+            "keep_num_dims": False,
+            "asymmetric_quantize_inputs": False,
+        }
+
+        new_op = super().mutate(op)
+        with self.using(new_op):
+            old_weight_tensor = self._op.inputs[1]
+            self._op.builtin_options = builtin_options
+
+            new_weight_tensor = self._op.subgraph.create_tensor(
+                f"{self._op.name}/weights",
+                old_weight_tensor.type,
+                shape=(
+                    old_weight_tensor.shape[0],
+                    np.prod(old_weight_tensor.shape[1:]),
+                ),
+                quantization=old_weight_tensor.quantization,
+                consumers=[self._op],
+                buffer=self._weights.buffer,
+            )
+
+            # rewire old and new kernel tensors
+            old_weight_tensor.consumers.remove(self._op)
+            self._op.inputs[1] = new_weight_tensor
+
+        return new_op
 
 
 class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceXCWeightBiasOperatorPass):

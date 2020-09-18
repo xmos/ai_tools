@@ -62,16 +62,16 @@ def build_dequantize(subgraph=None, *, input_shape):
     return subgraph.model
 
 
-def build_quantize(subgraph=None, *, input_shape):
+def build_quantize(subgraph=None, *, input_shape, input_type=TensorType.FLOAT32):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, *input_shape]
-    fin = subgraph.create_tensor("input", TensorType.FLOAT32, input_shape, isinput=True)
+    tin = subgraph.create_tensor("input", input_type, input_shape, isinput=True)
     qout = subgraph.create_tensor(
-        "output_quantized", TensorType.INT8, fin.shape, isoutput=True
+        "output_quantized", TensorType.INT8, tin.shape, isoutput=True
     )
     subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.QUANTIZE), inputs=[fin], outputs=[qout]
+        OperatorCode(BuiltinOpCodes.QUANTIZE), inputs=[tin], outputs=[qout]
     )
 
     return subgraph.model
@@ -695,6 +695,14 @@ def _glue_ops(op1, op2):
     old_output.consumers.append(op2)
 
 
+def _glue_quantize(op):
+    subgraph = op.subgraph
+    intermediate = subgraph.outputs[0]
+    build_quantize(
+        subgraph, input_shape=intermediate.shape, input_type=intermediate.type
+    )
+    _glue_ops(op, subgraph.operators[-1])
+
 def build_consecutive_pads(subgraph=None, *, input_shape, paddings_1, paddings_2):
     model = build_pad(subgraph, input_shape=input_shape, paddings=paddings_1)
     subgraph = subgraph or model.subgraphs[0]
@@ -805,3 +813,4 @@ def build_padded_DW(subgraph=None, *, weight_shape, input_size, paddings, stride
     pad_op.inputs[0].quantization = old_input.quantization
 
     return model
+

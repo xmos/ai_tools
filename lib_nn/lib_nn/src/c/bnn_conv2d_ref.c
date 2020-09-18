@@ -50,7 +50,7 @@ void bnn_reorder_multiplier_and_bias_tensors(
   }
 }
 
-void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+void bnn_reorder_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
                                const unsigned chans_out) {
@@ -81,7 +81,7 @@ void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
   }
 }
 
-void bnn_reorder_int8_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
                                const unsigned chans_out) {
@@ -200,7 +200,7 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
           unsigned bit = sum > thresholds[oc];
           if (bit) bitpacked_column |= 1ULL << oc_bit;
         }
-        Y[y_loc_y + h / v_stride][y_loc_x + w / h_stride][oc_word] = bitpacked_column;
+        Y[y_loc_y + ((h-x_loc_y) / v_stride)][y_loc_x + ((w-x_loc_x) / h_stride)][oc_word] = bitpacked_column;
       }
     }
   }
@@ -271,7 +271,7 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
         
         // This converts xor_popcount to macc format
         int32_t vpu_output = -(backtransform_add - 2*sum)/2;
-
+        // printf("%x\n", vpu_output);
         //not rounding has happened to the point
         const unsigned post_vlmul_shr = 14;
         int32_t r = ashr(vpu_output, accu_shr) ;
@@ -290,7 +290,7 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
         if (r > INT8_MAX) r = INT8_MAX;
         if (r < INT8_MIN) r = INT8_MIN;
 
-        Y[y_loc_y + (h / v_stride)][y_loc_x + (w / h_stride)][oc] = (int8_t)r;
+        Y[y_loc_y + ((h-x_loc_y) / v_stride)][y_loc_x + ((w-x_loc_x) / h_stride)][oc] = (int8_t)r;
         
       }
     }

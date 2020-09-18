@@ -600,6 +600,37 @@ void bsign_8_ref(
 
 #define CONV2D_INPUT_LENGTH(output_length, filter_size, dilation, stride)  (output_length * stride - (stride - 1) - 1  + (filter_size + (filter_size - 1) * (dilation - 1)))
     
+
+//TODO include header
+void bnn_conv2d_int8_out_valid(int8_t* Y_p,
+    const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
+    
+    const int16_t* post_activation_multiplier_q, 
+    const int16_t* post_activation_bias_q,
+    const int accu_shr,
+    const int final_shr,
+
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const nn_window_params_t* k, 
+
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height
+);
+
+void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
+    const bnn_b256_t* X_p, 
+    const bnn_b256_t* K_p, 
+    const int32_t* thresholds_p,
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const nn_window_params_t* k, 
+
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height
+);
+
+
 /**  
  * @brief Execute @oper{bnn_reorder_threshold_tensor}.
  * 
@@ -682,7 +713,7 @@ void bnn_reorder_multiplier_and_bias_tensors(
  * @param chans_in    [in]     The number of input channels
  * @param chans_out   [in]     The number of output channels
  */
-void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+void bnn_reorder_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
                                const unsigned chans_out);
@@ -713,7 +744,7 @@ void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
  * @param chans_in    [in]     The number of input channels
  * @param chans_out   [in]     The number of output channels
  */                          
-void bnn_reorder_int8_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
                                const unsigned chans_out);

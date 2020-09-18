@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y libncurses5 libncurses5-dev tcl environ
 RUN mkdir -m 777 /XMOS && cd /XMOS \
     && wget -q https://github0.xmos.com/raw/xmos-int/get_tools/master/get_tools.py \
     && chmod a+x get_tools.py
-RUN echo "export MODULEPATH=/XMOS/modulefiles:/XMOS/template_modulefiles" \
+RUN echo "export MODULEPATH=/XMOS/modulefiles:/XMOS/template_modulefiles\nexport PATH=$PATH:/XMOS" \
     >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 

@@ -70,7 +70,7 @@ pipeline {
                             userRemoteConfigs: [[credentialsId: 'xmos-bot',
                                                  url: 'git@github.com:xmos/ai_tools']]
                         ])
-                        sh "conda env create -n .venv -f environment.yml"
+                        sh "conda env create -q -n .venv -f environment.yml"
                     }
                 }
                 stage("Update all packages") {

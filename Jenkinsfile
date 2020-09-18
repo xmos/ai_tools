@@ -5,6 +5,11 @@ pipeline {
     agent none
 
     parameters {
+        string(
+            name: 'TOOLS_VERSION',
+            defaultValue: '15.0.1',
+            description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
+        )
         booleanParam(
             name: 'UPDATE_ALL',
             defaultValue: false,
@@ -71,6 +76,7 @@ pipeline {
                                                  url: 'git@github.com:xmos/ai_tools']]
                         ])
                         sh "conda env create -q -n .venv -f environment.yml"
+                        sh "/XMOS/get_tools.py $TOOLS_VERSION"
                     }
                 }
                 stage("Update all packages") {
@@ -82,14 +88,16 @@ pipeline {
                 stage("Check") {
                     steps {
                         sh "conda run -n .venv python -c 'import tensorflow'"
-                        sh """#!/bin/bash -lxe
-                              xcc --version"""
+                        moduleEnv("tools/$TOOLS_VERSION") {
+                            sh "xcc --version"
+                        }
                     }
                 }
                 stage("Build") {
                     steps {
-                        sh """#!/bin/bash -lxe
-                              conda run -n .venv make ci"""
+                        moduleEnv("tools/$TOOLS_VERSION") {
+                            sh "conda run -n .venv make ci"
+                        }
                         junit "**/*_junit.xml"
                     }
                 }

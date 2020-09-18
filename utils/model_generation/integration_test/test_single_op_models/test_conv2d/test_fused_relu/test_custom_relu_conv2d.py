@@ -24,27 +24,6 @@ class CustomReluConv2dTestModelGenerator(
 
 GENERATOR = CustomReluConv2dTestModelGenerator
 
-# TODO: add configs in yml
-CONFIGS = {
-    "default": {
-        0: {
-            "max_value": 4,
-            "input_channels": 12,
-            "output_channels": 32,
-            "weight_init": ("RandomUniform", -1, 1),
-            "bias_init": ("Constant", 0),
-            "K_h": 1,
-            "K_w": 4,
-            "padding": "same",
-            "strides": [1, 2],
-            "height": 1,
-            "width": 8,
-            "input_init": ("RandomUniform", -1, 1),
-            "num_threads": 1,
-        }
-    }
-}
-
 
 if __name__ == "__main__":
     pytest.main()

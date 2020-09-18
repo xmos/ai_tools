@@ -26,6 +26,7 @@ class FusedCustomReluMixin(AbstractConv2dTestModelGenerator):
         super().check_config()
         max_value = self._config["max_value"]
         assert max_value > 0, f"max_value must be greater than 0, got {max_value}"
+        assert max_value != 6, f"max_value cannot be equal to 6 (Relu6 is not custom)"
 
     def _build_core_model(self) -> tf.keras.Model:
         return tf.keras.Sequential(

@@ -48,17 +48,21 @@ class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
 
 
 class ExplicitPaddingMixin(AbstractConv2dTestModelGenerator):
+    _PAD_KEYS = ("pad_t", "pad_b", "pad_l", "pad_r")
+
     def _set_config(self, cfg: Configuration) -> None:
         assert (
             "padding" not in cfg
-        ), "padding config should be defined by (pad_t, pad_b, pad_l, pad_r)"
+        ), f"padding config should be defined by {self._PAD_KEYS}"
         cfg["padding"] = "valid"
 
-        for side in ["t", "b", "l", "r"]:
-            key = f"pad_{side}"
-            self._config[key] = cfg.pop(key, 1)
-
+        self._config.update({key: cfg.pop(key, 1) for key in self._PAD_KEYS})
         super()._set_config(cfg)
+
+    def check_config(self):
+        super().check_config()
+        for key in self._PAD_KEYS:
+            assert self._config[key] >= 0, f"{key} must non-negative"
 
     @property
     def _total_width(self) -> int:

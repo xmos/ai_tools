@@ -1,0 +1,36 @@
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
+
+import tensorflow as tf  # type: ignore
+
+from tflite2xcore._model_generation import Configuration
+
+from .. import (
+    AbstractConv2dTestModelGenerator,
+    test_output,
+    test_converted_single_op_model,
+    test_idempotence,
+)
+
+
+#  ----------------------------------------------------------------------------
+#                                   GENERATORS
+#  ----------------------------------------------------------------------------
+
+
+class FusedCustomReluMixin(AbstractConv2dTestModelGenerator):
+    def _set_config(self, cfg: Configuration) -> None:
+        self._config["max_value"] = cfg.pop("max_value")
+        super()._set_config(cfg)
+
+    def check_config(self) -> None:
+        super().check_config()
+        max_value = self._config["max_value"]
+        assert max_value > 0, f"max_value must be greater than 0, got {max_value}"
+
+    def _build_core_model(self) -> tf.keras.Model:
+        return tf.keras.Sequential(
+            layers=[
+                self._op_layer(input_shape=self._input_shape),
+                tf.keras.layers.ReLU(max_value=self._config["max_value"]),
+            ]
+        )

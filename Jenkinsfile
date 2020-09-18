@@ -76,7 +76,7 @@ pipeline {
                                                  url: 'git@github.com:xmos/ai_tools']]
                         ])
                         sh "conda env create -q -p .ai_tools_venv -f environment.yml"
-                        sh "/XMOS/get_tools.py $TOOLS_VERSION"
+                        sh "/XMOS/get_tools.py " + params.TOOLS_VERSION
                     }
                 }
                 stage("Update all packages") {
@@ -88,14 +88,14 @@ pipeline {
                 stage("Check") {
                     steps {
                         sh "conda run -p .ai_tools_venv python -c 'import tensorflow'"
-                        moduleEnv("tools/$TOOLS_VERSION") {
+                        moduleEnv("tools/"+params.TOOLS_VERSION) {
                             sh "xcc --version"
                         }
                     }
                 }
                 stage("Build") {
                     steps {
-                        moduleEnv("tools/$TOOLS_VERSION") {
+                        moduleEnv("tools/"+params.TOOLS_VERSION) {
                             sh "conda run -p .ai_tools_venv make ci"
                         }
                         junit "**/*_junit.xml"

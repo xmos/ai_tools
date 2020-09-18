@@ -244,9 +244,11 @@ def _test_output(
 
 
 def test_output(
-    run: IntegrationTestRunner, request: _pytest.fixtures.SubRequest
+    run: IntegrationTestRunner,
+    output_tolerance: int,
+    request: _pytest.fixtures.SubRequest,
 ) -> None:
-    _test_output(run.outputs, request, tolerance=1)
+    _test_output(run.outputs, request, output_tolerance)
 
 
 def test_idempotence(

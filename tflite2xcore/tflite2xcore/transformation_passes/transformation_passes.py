@@ -187,8 +187,8 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
         if super().match(op) and op.operator_code.code == self.matching_opcode:
             with self.using(op):
                 return (
-                    self._input.type == self._matching_input_type
-                    and self._output.type == self._matching_output_type
+                    self._input.type is self._matching_input_type
+                    and self._output.type is self._matching_output_type
                 )
 
 

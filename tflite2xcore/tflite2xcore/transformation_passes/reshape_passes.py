@@ -26,7 +26,6 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
                 # Input tensor for op has no producers..
                 return False
 
-        # FULLY_CONNECTED always interprets the first dim as batch...
         reshape_input_batch = producer.inputs[0].shape[0]
         reshape_output_batch = op.inputs[0].shape[0]
 
@@ -62,7 +61,7 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
                     "new_shape option to RESHAPE doesn't match output tensor shape"
                 )
         except (KeyError, TypeError):
-            # TODO: consider removing this since in tf2.2 the builtin options seems unused
+            # TODO: consider removing this since in tf2.2 the builtin options seem unused
             self.logger.warning("Expected new_shape option to RESHAPE was not found")
 
         if -1 in op.inputs[0].shape + op.outputs[0].shape:

@@ -82,13 +82,13 @@ pipeline {
                 stage("Check") {
                     steps {
                         sh "conda run -n .venv python -c 'import tensorflow'"
-                        sh """#!/bin/bash -l
+                        sh """#!/bin/bash -le
                               xcc --version"""
                     }
                 }
                 stage("Build") {
                     steps {
-                        sh """#!/bin/bash -l
+                        sh """#!/bin/bash -le
                               conda run -n .venv make ci"""
                         junit "**/*_junit.xml"
                     }

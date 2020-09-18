@@ -75,7 +75,7 @@ pipeline {
                             userRemoteConfigs: [[credentialsId: 'xmos-bot',
                                                  url: 'git@github.com:xmos/ai_tools']]
                         ])
-                        sh "conda env create -q -n .venv -f environment.yml"
+                        sh "conda env create -q -p .ai_tools_venv -f environment.yml"
                         sh "/XMOS/get_tools.py $TOOLS_VERSION"
                     }
                 }
@@ -87,7 +87,7 @@ pipeline {
                 }
                 stage("Check") {
                     steps {
-                        sh "conda run -n .venv python -c 'import tensorflow'"
+                        sh "conda run -p .ai_tools_venv python -c 'import tensorflow'"
                         moduleEnv("tools/$TOOLS_VERSION") {
                             sh "xcc --version"
                         }
@@ -96,7 +96,7 @@ pipeline {
                 stage("Build") {
                     steps {
                         moduleEnv("tools/$TOOLS_VERSION") {
-                            sh "conda run -n .venv make ci"
+                            sh "conda run -p .ai_tools_venv make ci"
                         }
                         junit "**/*_junit.xml"
                     }

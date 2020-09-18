@@ -2,7 +2,7 @@
 
 import pytest  # type: ignore
 
-from .test_conv2d_shallowin import converted_op_code, Conv2dShallowinTestModelGenerator
+from ..test_conv2d_shallowin import converted_op_code, Conv2dShallowinTestModelGenerator
 from . import (
     ExplicitPaddingMixin,
     test_output,

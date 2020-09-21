@@ -600,37 +600,6 @@ void bsign_8_ref(
 
 #define CONV2D_INPUT_LENGTH(output_length, filter_size, dilation, stride)  (output_length * stride - (stride - 1) - 1  + (filter_size + (filter_size - 1) * (dilation - 1)))
     
-
-//TODO include header
-void bnn_conv2d_int8_out_valid(int8_t* Y_p,
-    const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
-    
-    const int16_t* post_activation_multiplier_q, 
-    const int16_t* post_activation_bias_q,
-    const int accu_shr,
-    const int final_shr,
-
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const nn_window_params_t* k, 
-
-    const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height
-);
-
-void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
-    const bnn_b256_t* X_p, 
-    const bnn_b256_t* K_p, 
-    const int32_t* thresholds_p,
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const nn_window_params_t* k, 
-
-    const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height
-);
-
-
 /**  
  * @brief Execute @oper{bnn_reorder_threshold_tensor}.
  * 
@@ -749,7 +718,48 @@ void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
                                const unsigned chans_in,
                                const unsigned chans_out);
 
+/**  
+ * @brief Execute @oper{bnn_conv2d_int8_out_valid}.
+ * 
+ * This performs a binary conv2d on a rectangular sub-section of an input tensor X with 
+ * kernel K.  
+ * 
+ * The tensor X_p represents a tensor of (x_full_height x x_full_width x X_channels)
+ * The tensor K_p represents a tensor of (k_full_height x k_full_width x X_channels)
+ * The tensor Y_p represents a tensor of (y_full_height x y_full_width x Y_channels)
+ * 
+ * 
+ * @param Y             [out]    The output image @tensor{Y}
+ * @param X             [in]     The input image @tensor{X}
+ * @param K             [in]     The input kernel @tensor{K}
+ * @param post_activation_multiplier_q  [in] The quantised post-acvtivation multiplier tensor
+ * @param post_activation_bias_q        [in] The quantised post-acvtivation bias tensor
+ * @param accu_shr      [in]     The amount to shift the accumulator right by before multiplying
+ * @param final_shr     [in]     The amount to shift the result right by after the bias has been added
+ * @param x             [in]     The parameters of the X image tensor
+ * @param y             [in]     The parameters of the Y image tensor
+ * @param k             [in]     The parameters of the K kernel tensor
+ * @param y_loc_x       [in]     The x coordinate of where the output will start writing from
+ * @param y_loc_y       [in]     The y coordinate of where the output will start writing from
+ * @param y_sub_width   [in]     The width of the output sub-image that will be computed
+ * @param y_sub_height  [in]     The height of the output sub-image that will be computed
+ */
+void bnn_conv2d_int8_out_valid(int8_t* Y_p,
+    const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
+    const int16_t* post_activation_multiplier_q, 
+    const int16_t* post_activation_bias_q,
+    const int accu_shr,
+    const int final_shr,
+
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const nn_window_params_t* k, 
+
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height
+);
+
 /**  
  * @brief Execute @oper{bnn_conv2d_bin_out_valid}.
  * 

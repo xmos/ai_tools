@@ -528,15 +528,15 @@ typedef struct {
   unsigned k_width_loop_counter;
   unsigned x_height_loop_counter;
   unsigned x_width_loop_counter;
-  int16_t* cur_pa_mul;  //These are needed to hold variables that will
-  int16_t* cur_pa_bias; //be indexed with ldd
+  int16_t* cur_post_activation_mul;  //These are needed to hold variables that will
+  int16_t* cur_post_activation_bias; //be indexed with ldd
 
   unsigned vlsat;
   unsigned ashr;
   int final_shr;
   unsigned mask;
-  int16_t* pa_mul;  
-  int16_t* pa_bias; 
+  int16_t* post_activation_mul;  
+  int16_t* post_activation_bias; 
   unsigned input_channel_loop_counter;
   int8_t* Y;
 

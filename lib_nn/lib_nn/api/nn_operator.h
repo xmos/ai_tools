@@ -724,6 +724,14 @@ void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
  * This performs a binary conv2d on a rectangular sub-section of an input tensor X with 
  * kernel K.  
  * 
+ * After the convolution has been computed the accumulator is multiplied and biased. The 
+ * following illustrates the operation applied to each output channel:
+ * 
+ * channel_output = ashr(ashr(ashr(accumulator, accu_shr) * post_activation_multiplier_q[ch], 14) + 
+ *                      post_activation_bias_q[ch], final_shr)
+ * 
+ * where ashr is an arithemetic shift right.
+ * 
  * The tensor X_p represents a tensor of (x_full_height x x_full_width x X_channels)
  * The tensor K_p represents a tensor of (k_full_height x k_full_width x X_channels)
  * The tensor Y_p represents a tensor of (y_full_height x y_full_width x Y_channels)
@@ -739,8 +747,8 @@ void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
  * @param x             [in]     The parameters of the X image tensor
  * @param y             [in]     The parameters of the Y image tensor
  * @param k             [in]     The parameters of the K kernel tensor
- * @param y_loc_x       [in]     The x coordinate of where the output will start writing from
- * @param y_loc_y       [in]     The y coordinate of where the output will start writing from
+ * @param y_h_loc       [in]     The x coordinate(horizontal) of where the output will start writing from
+ * @param y_v_loc       [in]     The y coordinate(vertical) of where the output will start writing from
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  */
@@ -756,7 +764,7 @@ void bnn_conv2d_int8_out_valid(int8_t* Y_p,
     const nn_image_params_t* y,
     const nn_window_params_t* k, 
 
-    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_h_loc, const unsigned y_v_loc,
     const unsigned y_sub_width, const unsigned y_sub_height
 );
 
@@ -778,8 +786,8 @@ void bnn_conv2d_int8_out_valid(int8_t* Y_p,
  * @param x             [in]     The parameters of the X image tensor
  * @param y             [in]     The parameters of the Y image tensor
  * @param k             [in]     The parameters of the K kernel tensor.
- * @param y_loc_x       [in]     The x coordinate of where the output will start writing from
- * @param y_loc_y       [in]     The y coordinate of where the output will start writing from
+ * @param y_h_loc       [in]     The x coordinate(horizontal) of where the output will start writing from
+ * @param y_v_loc       [in]     The y coordinate(vertical) of where the output will start writing from
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  */
@@ -791,7 +799,7 @@ void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
     const nn_image_params_t* y,
     const nn_window_params_t* k, 
 
-    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_h_loc, const unsigned y_v_loc,
     const unsigned y_sub_width, const unsigned y_sub_height
 );
 
@@ -805,8 +813,8 @@ void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
  * The tensor K_p represents a tensor of (k_full_height x k_full_width x X_channels)
  * The tensor Y_p represents a tensor of (y_full_height x y_full_width x Y_channels)
  * 
- * x_sub_height and x_sub_width will be infered by the parameters of y, x, k, y_loc_x, 
- * y_loc_y, y_sub_width, y_sub_height, k_loc_x, k_loc_y, k_sub_width and k_sub_height.
+ * x_sub_height and x_sub_width will be infered by the parameters of y, x, k, y_h_loc, 
+ * y_v_loc, y_sub_width, y_sub_height, k_h_loc, k_v_loc, k_sub_width and k_sub_height.
  * 
  * @param Y             [out]    The output image @tensor{Y}
  * @param X             [in]     The input image @tensor{X}
@@ -815,14 +823,14 @@ void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
  * @param x             [in]     The parameters of the X image tensor
  * @param y             [in]     The parameters of the Y image tensor
  * @param k             [in]     The parameters of the K kernel tensor.
- * @param y_loc_x       [in]     The x coordinate of where the output will start writing from
- * @param y_loc_y       [in]     The y coordinate of where the output will start writing from
+ * @param y_h_loc       [in]     The x coordinate(horizontal) of where the output will start writing from
+ * @param y_v_loc       [in]     The y coordinate(vertical) of where the output will start writing from
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
- * @param x_loc_x       [in]     The x coordinate of where the input will start reading from
- * @param x_loc_y       [in]     The y coordinate of where the input will start reading from
- * @param k_loc_x       [in]     The x coordinate of where the kernel will start reading from
- * @param k_loc_y       [in]     The y coordinate of where the kernel will start reading from
+ * @param x_h_loc       [in]     The x coordinate(horizontal) of where the input will start reading from
+ * @param x_v_loc       [in]     The y coordinate(vertical) of where the input will start reading from
+ * @param k_h_loc       [in]     The x coordinate(horizontal) of where the kernel will start reading from
+ * @param k_v_loc       [in]     The y coordinate(vertical) of where the kernel will start reading from
  * @param k_sub_width   [in]     The width of the input sub-kernel that will be computed
  * @param k_sub_height  [in]     The height of the input sub-kernel that will be computed
  */
@@ -833,15 +841,16 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
     const nn_image_params_t* y, // the full image of y
     const nn_window_params_t* k, //the full kernel k
     
-    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_h_loc, const unsigned y_v_loc,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y, 
+    const unsigned x_h_loc, const unsigned x_v_loc, 
     
-    const unsigned k_loc_x, const unsigned k_loc_y, 
+    const unsigned k_h_loc, const unsigned k_v_loc, 
     const unsigned k_sub_width, const unsigned k_sub_height
 );
 
+//TODO
 void bnn_conv2d_int8_out(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
@@ -854,12 +863,12 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
     const nn_image_params_t* y, // the full image of y
     const nn_window_params_t* k, //the full kernel k
     
-    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_h_loc, const unsigned y_v_loc,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y, 
+    const unsigned x_h_loc, const unsigned x_v_loc, 
     
-    const unsigned k_loc_x, const unsigned k_loc_y, 
+    const unsigned k_h_loc, const unsigned k_v_loc, 
     const unsigned k_sub_width, const unsigned k_sub_height
 ) ;
 

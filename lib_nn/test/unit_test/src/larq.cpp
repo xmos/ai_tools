@@ -1,5 +1,5 @@
 #include "larq_compute_engine/core/bconv2d_impl_ref.h"
-// #include "larq_compute_engine/core/packbits.h"
+#include "larq_compute_engine/core/bitpack.h"
 
 #include "larq_compute_engine/core/bconv2d_output_transform.h"
 #include "larq_compute_engine/core/types.h"
@@ -10,10 +10,10 @@ namespace ce = compute_engine;
 
 namespace core {
 
-extern "C" void larq_ref_bsign(int8_t* input, uint32_t* output,
+extern "C" void larq_ref_bsign(int8_t* input, int32_t* output,
                                size_t inputLength, int32_t zero_point) {
-  // packbits_array<BitpackOrder::Canonical, std::int8_t, std::uint32_t>(
-  //     input, inputLength, output, zero_point);
+  bitpack_array<std::int8_t>(
+      input, inputLength, output, zero_point);
 }
 
 using compute_engine::core::OutputTransform;

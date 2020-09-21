@@ -639,8 +639,8 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
 
 #define MIN_K_HEIGHT 1
 #define MIN_K_WIDTH 1
-#define MAX_K_HEIGHT 7
-#define MAX_K_WIDTH 7
+#define MAX_K_HEIGHT 5
+#define MAX_K_WIDTH 5
 
 #define MIN_CHANS_IN 256
 #define MAX_CHANS_IN 512
@@ -650,8 +650,8 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
 
 #define MIN_X_HEIGHT MIN_K_HEIGHT
 #define MIN_X_WIDTH MIN_K_WIDTH
-#define MAX_X_HEIGHT 7
-#define MAX_X_WIDTH 7
+#define MAX_X_HEIGHT 5
+#define MAX_X_WIDTH 5
 
 #define MAX_CHAN_WORDS_IN \
   ((MAX_CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
@@ -1220,25 +1220,24 @@ void test_bnn_conv2d_int8_out_sub_image(){
 
 void test_int8_stats(){
   // This checks the output stats of the int8 kernels
-  double a = 0.0;
-  double b = 0.0;
+  double avg_abs_error = 0.0;
+  double avg_error = 0.0;
   for (unsigned i=0;i<256;i++){
     double abs_error = (double)abs_output_error_g[i] / (double)error_counter_g[i];
     double error = (double)output_error_g[i]/(double)error_counter_g[i];
-    a += abs_error;
-    b += error;
+    avg_abs_error += abs_error;
+    avg_error += error;
   }
-  //TODO check for precision here
-  printf("%f %f\n", a/256, b/256);
-  printf("%f %f\n", 1./(a/256), 1./(b/256));
-  printf("%f %f\n", max_error_g, max_abs_error_g);
+
+  TEST_ASSERT_GREATER_OR_EQUAL(64, 1./(avg_abs_error/256));
+  TEST_ASSERT_GREATER_OR_EQUAL(64, 1./(avg_error/256));
 }
 
 void test_bnn_conv2d() {
   UNITY_SET_FILE();
-  // RUN_TEST(test_bnn_conv2d_bin_out_pseudo_directed);
-  // RUN_TEST(test_bnn_conv2d_bin_out_pseudo_random);
-  // RUN_TEST(test_bnn_conv2d_bin_out_sub_image);
+  RUN_TEST(test_bnn_conv2d_bin_out_pseudo_directed);
+  RUN_TEST(test_bnn_conv2d_bin_out_pseudo_random);
+  RUN_TEST(test_bnn_conv2d_bin_out_sub_image);
   RUN_TEST(test_bnn_conv2d_int8_out_pseudo_directed);
   RUN_TEST(test_bnn_conv2d_int8_out_pseudo_random);
   RUN_TEST(test_bnn_conv2d_int8_out_sub_image);

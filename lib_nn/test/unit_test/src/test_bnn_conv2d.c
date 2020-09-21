@@ -128,7 +128,7 @@ static int get_accumulator_ashr(int32_t max_accu_post_clamp, int32_t min_accu_po
 }
 
 static int get_pam_exponent(float* post_activation_multiplier, unsigned chans_out){
-  float max_pam = FLT_MIN;
+  float max_pam = -FLT_MAX;
   float min_pam = FLT_MAX;
   for (unsigned ch=0; ch < chans_out; ch++){
     max_pam = max(max_pam, post_activation_multiplier[ch]);
@@ -142,11 +142,12 @@ static int get_pam_exponent(float* post_activation_multiplier, unsigned chans_ou
   // Raise any multiplier to b to get them as big as possible - 
   // this should be possible without the loop
   int M = 15 - min(max_pam_exp, min_pam_exp);
-
-  while ( (int16_t)round(ldexp(max_pam, M) > INT16_MAX) || 
-          (int16_t)round(ldexp(max_pam, M) < INT16_MIN) || 
-          (int16_t)round(ldexp(min_pam, M) > INT16_MAX) || 
-          (int16_t)round(ldexp(min_pam, M) < INT16_MIN)
+  int M_before = M;
+  
+  while ( (((int32_t)round(ldexp(max_pam, M))) > INT16_MAX) || 
+          (((int32_t)round(ldexp(max_pam, M))) < INT16_MIN )|| 
+          (((int32_t)round(ldexp(min_pam, M))) > INT16_MAX) || 
+          (((int32_t)round(ldexp(min_pam, M))) < INT16_MIN)
           ){
     M -= 1;
     //This should only happen once if the rounding bit tips it over the edge.
@@ -168,25 +169,25 @@ static void quantise_activation(
                float* post_activation_multiplier,
                float* post_activation_bias, 
                unsigned chans_out,
-               int32_t accu_min_post_clamp,
-               int32_t accu_max_post_clamp,
+               int32_t clamp_low,
+               int32_t clamp_high,
                int *accu_shr,
-               int *final_shr
+               int *final_shr, 
+               int32_t receptive_field
                ){
 
-  //adjust the bias and multiplier to account for Larq starting with the xor_popcount
-  //and the vpu starting with the macc/2
-
-  //TODO limit the accu min and max to the limits that produce actual output, i.e. crop off anything 
-  //that hits the clamp
+  int32_t vpu_clamp_low = max(((2*clamp_low)-receptive_field)/2, ((2*0)-receptive_field)/2);
+  int32_t vpu_clamp_high = min(((2*clamp_high)-receptive_field)/2, ((2*receptive_field)-receptive_field)/2);
 
   float * pam = (float *)malloc(sizeof(float) * chans_out);
+  float * pab = (float *)malloc(sizeof(float) * chans_out);
 
   for (unsigned ch=0;ch<chans_out;ch++){
-    pam[ch] = post_activation_multiplier[ch] * 2;
+    pam[ch] = post_activation_multiplier[ch] * -2;
   }
-  accu_min_post_clamp /=2;
-  accu_max_post_clamp /=2;
+  for (unsigned ch=0;ch<chans_out;ch++){
+    pab[ch] = post_activation_bias[ch] + post_activation_multiplier[ch]*(float)receptive_field;
+  }
 
   int M = get_pam_exponent(pam, chans_out);
 
@@ -207,20 +208,19 @@ static void quantise_activation(
     if(rsb < min_pam_rsb)
       min_pam_rsb = rsb;
   }
-
   //There should be at least one multiplier that has zero headroom.
   assert(min_pam_rsb == 0);
 
   float min_pab = FLT_MAX;
   float max_pab = -FLT_MAX;
   for (unsigned ch=0;ch<chans_out;ch++){
-    min_pab = min(min_pab, post_activation_bias[ch]);
-    max_pab = max(min_pab, post_activation_bias[ch]);
+    min_pab = min(min_pab, pab[ch]);
+    max_pab = max(min_pab, pab[ch]);
   }
 
   // Now find the accu shift (the value that the accu is shifted by to get the most resolution out of the pam). 
   // This will get the accu to occupy the bottom 15 or 16 bits of a 16 bit register.
-  *accu_shr = get_accumulator_ashr(accu_max_post_clamp, accu_min_post_clamp, 
+  *accu_shr = get_accumulator_ashr(vpu_clamp_low, vpu_clamp_high, 
     max_quantised_pam, min_quantised_pam, post_vlmul_shr);
 
   *final_shr = (-*accu_shr + M - post_vlmul_shr);
@@ -232,7 +232,7 @@ static void quantise_activation(
     //Now quantise the biases
     for (unsigned ch=0;ch<chans_out;ch++){
 
-      int32_t pa_bias = (int32_t)round(ldexp(post_activation_bias[ch], *final_shr));
+      int32_t pa_bias = (int32_t)round(ldexp(pab[ch], *final_shr));
       
       pa_bias += (1 << (*final_shr - 1));
       //This bit is a hack to account for the bias causing overflow
@@ -247,6 +247,7 @@ static void quantise_activation(
     }
   }
   free(pam);
+  free(pab);
   //adjust it to reflect we are going to shift up to the upper half word( top 8 bits of 16)
   *final_shr = *final_shr-8;
 }
@@ -257,10 +258,11 @@ void measure_quantisation(
                float* post_activation_multiplier,
                float* post_activation_bias, 
                unsigned chans_out,
-               int32_t accu_min_post_clamp,
-               int32_t accu_max_post_clamp,
+               int32_t clamp_low,
+               int32_t clamp_high,
                int accu_shr,
-               int final_shr){
+               int final_shr,
+               int32_t receptive_field){
 
   int test_error_sum = 0;
   unsigned test_abs_error_sum = 0;
@@ -271,17 +273,16 @@ void measure_quantisation(
     float PAM = post_activation_multiplier[ch];
     float Bias = post_activation_bias[ch];
 
-    for (int32_t vpu_output = accu_min_post_clamp/2; vpu_output<=accu_max_post_clamp/2; vpu_output++){
+    for (int32_t accu_output = 0; accu_output <= receptive_field; accu_output++){
 
-      //Format the input as the macc result(as opposed to the vpu which is divided by two)
-      //In the larq code this is the result after the:
-      //AccumScalar x = backtransform_add - 2 * accum;
-      int32_t full_scale_macc = vpu_output*2;
+      int32_t vpu_output = (receptive_field - (2*accu_output))/2;
 
       //This is how the reference is defined
-      int R = round((full_scale_macc * PAM) + Bias); 
+      float clamped_accu = min(max(accu_output * 2., clamp_low), clamp_high);
+      int R = round((clamped_accu * PAM) + Bias); 
       R = max(min(R, INT8_MAX), INT8_MIN);
 
+      //pretend clamping
       int32_t r = ashr(vpu_output, accu_shr);
       r = mul(r, post_activation_multiplier_q[ch]);
 
@@ -316,7 +317,6 @@ void measure_quantisation(
 
 /*
 X_ref and K_ref must be initialised before running this.
-
 This function test whole images, i.e. it wont work on a sub image.
 */
 void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
@@ -344,12 +344,11 @@ void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
   unsigned K_bytes = (k_width * k_height * chans_in * chans_out) / 8;
   unsigned Y_bytes = (y_width * y_height * chans_out);
 
-  int32_t backtransform_add = k_width * k_height * chans_in;
+  int32_t receptive_field = k_width * k_height * chans_in;
 
-  //TODO make into a function
   //Pick some random test values
   for (unsigned ch=0;ch < chans_out;ch++){
-    float input_range = backtransform_add;
+    float input_range = receptive_field;
 
     unsigned range =  rand()%10;
     float r =  (float)rand() / (float)RAND_MAX;
@@ -364,23 +363,23 @@ void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
   }
 
   int accu_shr, final_shr;
-  int accu_min_post_clamp = -backtransform_add;
-  int accu_max_post_clamp = backtransform_add;
+  int32_t clamp_low = 0;
+  int32_t clamp_high = receptive_field*2;
 
   quantise_activation(
                post_activation_multiplier_q, post_activation_bias_q,
                post_activation_multiplier, post_activation_bias, 
                chans_out,
-               accu_min_post_clamp, accu_max_post_clamp,
-               &accu_shr, &final_shr);
+               clamp_low, clamp_high,
+               &accu_shr, &final_shr, receptive_field);
 
 #if !defined(__XS3A__)
   measure_quantisation(
                post_activation_multiplier_q, post_activation_bias_q,
                post_activation_multiplier, post_activation_bias, 
                chans_out,
-               accu_min_post_clamp, accu_max_post_clamp,
-               accu_shr, final_shr);
+               clamp_low, clamp_high,
+               accu_shr, final_shr, receptive_field);
 #endif
 
   nn_image_params_t x;
@@ -496,7 +495,6 @@ void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
     0, 0, y_width, y_height,
     0, 0, 
     0, 0, k_width, k_height);
-
 #else
   bnn_conv2d_bin_out((bnn_b32_t*)Y_p, (const bnn_b256_t*)X_ref,
                       (const bnn_b256_t*)K_ref_p, thresholds_ref, &x, &y, &k,
@@ -507,13 +505,11 @@ void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
 
   unsigned chan_b32_out = ROUND_TO_32_CHANS(chans_out);
   TEST_ASSERT_EQUAL_INT_ARRAY(Y_p, Y_ref_p, y_height*y_width*chan_b32_out);  
-
 }
 
 void test_bnn_conv2d_bin_out_pseudo_directed() {
 #define X_V_DILATION 1
 #define X_H_DILATION 1
-
 #define X_HEIGHT 5
 #define X_WIDTH 5
 #define K_HEIGHT 3
@@ -542,7 +538,7 @@ void test_bnn_conv2d_bin_out_pseudo_directed() {
   int32_t WORD_ALIGNED thresholds_ref[CHANS_OUT];
   int32_t WORD_ALIGNED thresholds[CHANS_OUT];
 
-  srand(69);
+  srand(42);
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
 
@@ -553,7 +549,6 @@ void test_bnn_conv2d_bin_out_pseudo_directed() {
               (bnn_b256_t*)K, (bnn_b256_t*)K_ref, (int32_t*)thresholds_ref,
               (int32_t*)thresholds, X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
               CHANS_IN, CHANS_OUT, H_STRIDE, V_STRIDE);
-
 
 #undef X_V_DILATION 
 #undef X_H_DILATION 
@@ -569,7 +564,6 @@ void test_bnn_conv2d_bin_out_pseudo_directed() {
 #undef Y_WIDTH 
 #undef CHAN_WORDS_IN 
 #undef CHAN_WORDS_OUT 
-
 }
 
 void test_bnn_conv2d_int8_out_pseudo_directed() {
@@ -581,7 +575,7 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
 #define K_HEIGHT X_HEIGHT
 #define K_WIDTH X_WIDTH
 #define CHANS_IN 256
-#define CHANS_OUT 64
+#define CHANS_OUT 16
 #define H_STRIDE 1
 #define V_STRIDE 1
 
@@ -608,8 +602,8 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
   int16_t WORD_ALIGNED post_activation_bias_q_reordered[CHANS_OUT];
 
   srand(42);
-  pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
+  pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
 
   memset(K, 0, sizeof(K));
   memset(Y, 0, sizeof(Y));
@@ -621,7 +615,6 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
               (int16_t*)post_activation_bias_q, (int16_t*)post_activation_multiplier_q_reordered,
               (int16_t*)post_activation_bias_q_reordered, X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
               CHANS_IN, CHANS_OUT, H_STRIDE, V_STRIDE);
-
 
 #undef X_V_DILATION 
 #undef X_H_DILATION
@@ -636,7 +629,6 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
 #undef Y_HEIGHT
 #undef Y_WIDTH 
 #undef CHAN_WORDS_IN
-
 }
 
 void test_bnn_conv2d_bin_out_pseudo_random() {
@@ -708,9 +700,6 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
                    chans_in += 256) {
                 for (unsigned chans_out = MIN_CHANS_OUT;
                      chans_out <= MAX_CHANS_OUT; chans_out += 32) {
-                      //  printf("x_height:%u, x_width:%u, k_height:%u, k_width:%u, chans_in:%u, chans_out:%u, h_stride:%u, v_stride:%u\n", x_height,
-                      // x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                      // v_stride);
                   run_bin_config(
                       (bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b256_t*)X_ref,
                       (bnn_b256_t*)K, (bnn_b256_t*)K_ref,
@@ -747,7 +736,6 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
 #undef MAX_Y_HEIGHT
 #undef MAX_Y_WIDTH
 }
-
 
 void test_bnn_conv2d_int8_out_pseudo_random() {
 #define MIN_H_STRIDE 1
@@ -803,7 +791,7 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
 
-  srand(69);
+  srand(42);
   for (unsigned h_stride = MIN_H_STRIDE; h_stride <= MAX_H_STRIDE; ++h_stride) {
     for (unsigned v_stride = MIN_V_STRIDE; v_stride <= MAX_V_STRIDE;
          ++v_stride) {
@@ -819,9 +807,6 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
                    chans_in += 256) {
                 for (unsigned chans_out = MIN_CHANS_OUT;
                      chans_out <= MAX_CHANS_OUT; chans_out += 16) {
-                      //  printf("x_height:%u, x_width:%u, k_height:%u, k_width:%u, chans_in:%u, chans_out:%u, h_stride:%u, v_stride:%u\n", x_height,
-                      // x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                      // v_stride);
                   run_int8_config(
                       (int8_t*)Y, (int8_t*)Y_ref, (bnn_b256_t*)X_ref,
                       (bnn_b256_t*)K, (bnn_b256_t*)K_ref,
@@ -914,8 +899,6 @@ void run_bin_sub_image(bnn_b32_t* Y_p, const bnn_b32_t* Y_ref_p, const bnn_b256_
       }
     }
   }
-
-
 }
 
 void test_bnn_conv2d_bin_out_sub_image(){
@@ -962,7 +945,6 @@ void test_bnn_conv2d_bin_out_sub_image(){
 
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
-
 
   for (unsigned h_stride=1; h_stride < 5; h_stride++){
 
@@ -1056,65 +1038,22 @@ void run_int8_sub_image(
 
   int8_t(*Y_ref)[y->width][y->channels] =
       (int8_t(*)[y->width][y->channels])Y_ref_p;
-  int broken = 0;
+
   for (unsigned h = 0; h < y->height; h++) {
     for (unsigned w = 0; w < y->width; w++) {
-
       if((h >= y_loc_y) && (h < (y_loc_y + y_sub_height)) && (w >= y_loc_x) && (w < (y_loc_x + y_sub_width))){
         //If the result should have been computed then check it against the reference
         for (unsigned c = 0; c < y->channels; c++) {
           TEST_ASSERT_INT8_WITHIN(1, Y_ref[h][w][c], Y[h][w][c]);
-          //printf("%d %d\n",Y_ref[h][w][c] ,Y[h][w][c] );
-          broken |= (abs(Y_ref[h][w][c] - Y[h][w][c]) > 1);
-
         }
       } else {
         //Otherwise check thet is hasn't been written to
         for (unsigned c = 0; c < y->channels; c++) {
           TEST_ASSERT_EQUAL_INT8(0, Y[h][w][c]);
-          broken |= (Y[h][w][c] != 0);
         }
       }
     }
   }
-  if(broken){
-    printf("y_loc_x: %u y_loc_y: %u y_sub_width: %u y_sub_height: %u h_stride: %u v_stride:%u\n", y_loc_x, y_loc_y, y_sub_width, y_sub_height, k->stride.horizontal, k->stride.vertical);
-                  
-    for (unsigned h = 0; h < y->height; h++) {
-      for (unsigned w = 0; w < y->width; w++) {
-        int32_t s = 0;
-        for (unsigned c = 0; c < y->channels; c++){
-
-          s += Y[h][w][c];
-          // printf("y %d\n", Y[h][w][c]);
-
-        }
-
-        printf("% 6d ", s);
-      }
-      printf("\n");
-    }
-    printf("\n");
-    printf("\n");
-    for (unsigned h = 0; h < y->height; h++) {
-      for (unsigned w = 0; w < y->width; w++) {
-        int32_t s = 0;
-        for (unsigned c = 0; c < y->channels; c++){
-
-          s += Y_ref[h][w][c];
-
-          // printf("yref %d\n", Y_ref[h][w][c]);
-        }
-        
-        printf("% 6d ", s);
-      }
-      printf("\n");
-    }
-    printf("\n");
-    printf("\n");
-    exit(1);
-  }
-
 }
 
 void test_bnn_conv2d_int8_out_sub_image(){
@@ -1184,24 +1123,19 @@ void test_bnn_conv2d_int8_out_sub_image(){
       int32_t backtransform_add = k.shape.width * k.shape.height * x.channels;
 
       //Pick some random test values
-      // for (unsigned ch=0;ch < y.channels; ch++){
-      //   float input_range = backtransform_add;
-
-      //   unsigned range =  rand()%10;
-      //   float r =  (float)rand() / (float)RAND_MAX;
-      //   float output_range = (range/2) + (float)(1<<range)*r;
-
-      //   post_activation_multiplier[ch] = output_range/input_range;
-
-      //   int32_t max_bias = 255;
-      //   r =  (float)rand() / (float)RAND_MAX;
-      //   post_activation_bias[ch] = (r * max_bias*2.0) - max_bias;
-
-      // }
-
       for (unsigned ch=0;ch < y.channels; ch++){
-        post_activation_multiplier[ch] =1.0;
-        post_activation_bias[ch] = 0.0;
+        float input_range = backtransform_add;
+
+        unsigned range =  rand()%10;
+        float r =  (float)rand() / (float)RAND_MAX;
+        float output_range = (range/2) + (float)(1<<range)*r;
+
+        post_activation_multiplier[ch] = output_range/input_range;
+
+        int32_t max_bias = 255;
+        r =  (float)rand() / (float)RAND_MAX;
+        post_activation_bias[ch] = (r * max_bias*2.0) - max_bias;
+
       }
 
       larq_ref_bconv2d_int8_out(&x, &y, &k, (const int32_t*)X_ref, (const int32_t*)K_ref,
@@ -1216,7 +1150,7 @@ void test_bnn_conv2d_int8_out_sub_image(){
                   post_activation_multiplier, post_activation_bias, 
                   y.channels,
                   accu_min_post_clamp, accu_max_post_clamp,
-                  &accu_shr, &final_shr);
+                  &accu_shr, &final_shr, backtransform_add);
 
 #if defined(__XS3A__)
 
@@ -1294,6 +1228,7 @@ void test_int8_stats(){
     a += abs_error;
     b += error;
   }
+  //TODO check for precision here
   printf("%f %f\n", a/256, b/256);
   printf("%f %f\n", 1./(a/256), 1./(b/256));
   printf("%f %f\n", max_error_g, max_abs_error_g);
@@ -1301,10 +1236,9 @@ void test_int8_stats(){
 
 void test_bnn_conv2d() {
   UNITY_SET_FILE();
-  RUN_TEST(test_bnn_conv2d_bin_out_pseudo_directed);
-  RUN_TEST(test_bnn_conv2d_bin_out_pseudo_random);
-  RUN_TEST(test_bnn_conv2d_bin_out_sub_image);
-
+  // RUN_TEST(test_bnn_conv2d_bin_out_pseudo_directed);
+  // RUN_TEST(test_bnn_conv2d_bin_out_pseudo_random);
+  // RUN_TEST(test_bnn_conv2d_bin_out_sub_image);
   RUN_TEST(test_bnn_conv2d_int8_out_pseudo_directed);
   RUN_TEST(test_bnn_conv2d_int8_out_pseudo_random);
   RUN_TEST(test_bnn_conv2d_int8_out_sub_image);

@@ -258,6 +258,7 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
   for (unsigned h = x_loc_y; h < (x_loc_y + x_sub_height) - k_sub_height + 1; h += v_stride) {
     for (unsigned w = x_loc_x; w < (x_loc_x + x_sub_width) - k_sub_width + 1; w += h_stride) {
       for (unsigned oc = 0; oc < chans_out; oc += 1) {
+
         int32_t sum = 0;
         for (unsigned kh = k_loc_y; kh < k_loc_y + k_sub_height; kh += 1) {
           for (unsigned kw = k_loc_x; kw < k_loc_x + k_sub_width; kw += 1) {
@@ -270,8 +271,8 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
         int32_t backtransform_add = (k->shape.height * k->shape.width * chan_b256_in * 256);
         
         // This converts xor_popcount to macc format
-        int32_t vpu_output = -(backtransform_add - 2*sum)/2;
-        // printf("%x\n", vpu_output);
+        int32_t vpu_output = ((2*sum)-backtransform_add)/2;
+
         //not rounding has happened to the point
         const unsigned post_vlmul_shr = 14;
         int32_t r = ashr(vpu_output, accu_shr) ;

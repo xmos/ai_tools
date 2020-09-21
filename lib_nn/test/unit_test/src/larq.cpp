@@ -1,6 +1,8 @@
 #include "larq_compute_engine/core/bconv2d_impl_ref.h"
-#include "larq_compute_engine/core/packbits.h"
+// #include "larq_compute_engine/core/packbits.h"
 
+#include "larq_compute_engine/core/bconv2d_output_transform.h"
+#include "larq_compute_engine/core/types.h"
 using namespace tflite;
 
 namespace compute_engine {
@@ -10,45 +12,32 @@ namespace core {
 
 extern "C" void larq_ref_bsign(int8_t* input, uint32_t* output,
                                size_t inputLength, int32_t zero_point) {
-  packbits_array<BitpackOrder::Canonical, std::int8_t, std::uint32_t>(
-      input, inputLength, output, zero_point);
+  // packbits_array<BitpackOrder::Canonical, std::int8_t, std::uint32_t>(
+  //     input, inputLength, output, zero_point);
 }
 
-// Fill the OutputTransform values for bitpacked int32 outputs
-template <typename AccumScalar>
-void GetOutputTransform(
-    const long* thresholds,
-    OutputTransform<AccumScalar, std::int32_t>& output_transform) {
-  output_transform.thresholds = (const std::int32_t*)thresholds;
+using compute_engine::core::OutputTransform;
+
+// Fill in the OutputTransform values for float and/or int8 outputs
+template <typename DstScalar>
+void GetOutputTransform(OutputTransform<DstScalar>& output_transform,
+                        int32_t output_transform_clamp_min,
+                        int32_t output_transform_clamp_max,
+                        const float * output_transform_multiplier,
+                        const float * output_transform_bias) {
+  static_assert( std::is_same<DstScalar, std::int8_t>::value, "");
+  output_transform.clamp_min = output_transform_clamp_min;
+  output_transform.clamp_max = output_transform_clamp_max;
+  output_transform.multiplier = output_transform_multiplier;
+  output_transform.bias = output_transform_bias;
 }
 
-template <typename AccumScalar>
-void GetBaseParams(RuntimeShape &filter_shape, 
-                   OutputTransformBase<AccumScalar>& output_transform) {
-  
-  static_assert(std::is_same<AccumScalar, std::int32_t>::value ||
-                    std::is_same<AccumScalar, std::int16_t>::value,
-                "AccumScalar must be int32 or int16");
-
-  //TODO check these dims
-  output_transform.backtransform_add =
-      filter_shape.Dims(1) * filter_shape.Dims(2) * filter_shape.Dims(3)*32;
+// Fill in the OutputTransform values for bitpacked outputs
+void GetOutputTransform(OutputTransform<core::TBitpacked>& output_transform,
+                        const int32_t* thresholds) {
+  output_transform.thresholds = thresholds;
 }
-
-template <typename AccumScalar>
-void GetOutputTransform(RuntimeShape &packed_filter_shape, 
-    const float * post_activation_multiplier, const float * post_activation_bias,
-    OutputTransform<AccumScalar, std::int8_t>& output_transform) {
-  GetBaseParams(packed_filter_shape, output_transform);
-
-  output_transform.effective_post_activation_multiplier =
-      post_activation_multiplier;
-  output_transform.effective_post_activation_bias =
-      post_activation_bias;
 }
-
-}  // namespace core
-//namespace ref {
 
 #include "nn_operator.h"
 #include "nn_op_structs.h"
@@ -81,9 +70,11 @@ extern "C" void larq_ref_bconv2d_int8_out(const nn_image_params_t* x,
   RuntimeShape output_shape = RuntimeShape(4, (const int32*)y_dims);
 
   //   OutputTransform<AccumScalar, DstScalar>
-  ce::core::OutputTransform<std::int32_t, std::int8_t> output_transform;
-  ce::core::GetOutputTransform(packed_filter_shape, 
-    post_activation_multiplier, post_activation_bias, output_transform);
+  ce::core::OutputTransform<std::int8_t> output_transform;
+  ce::core::GetOutputTransform(output_transform, 
+    0, INT32_MAX, 
+    post_activation_multiplier, 
+    post_activation_bias);
 
   params.dilation_height_factor = k->dilation.vertical;
   params.dilation_width_factor = k->dilation.horizontal;
@@ -104,13 +95,13 @@ extern "C" void larq_ref_bconv2d_int8_out(const nn_image_params_t* x,
   //   params.weights_offset = 0;
 
   RuntimeShape no_shape = RuntimeShape(0, nullptr);
-  ce::ref::BConv2D<std::uint32_t, std::int32_t, std::int8_t>(
-      params, packed_input_shape, (const uint32_t*)packed_input_data,
-      packed_filter_shape, (const uint32_t*)packed_filter_data,
+  ce::ref::BConv2D<std::int32_t, std::int8_t, core::OutputTransformDetails::Default>(
+      params, packed_input_shape, packed_input_data,
+      packed_filter_shape, packed_filter_data,
       output_transform, output_shape, output_data,
 
       // These are all dummy parameters(unused)
-      no_shape, 0, 0, 0, 0, 0);
+      no_shape, 0, 0, 0, 0);
 }
 
 extern "C" void larq_ref_bconv2d_bin_out(const nn_image_params_t* x,
@@ -137,8 +128,8 @@ extern "C" void larq_ref_bconv2d_bin_out(const nn_image_params_t* x,
   RuntimeShape output_shape = RuntimeShape(4, (const int32*)y_dims);
 
   //   OutputTransform<AccumScalar, DstScalar>
-  ce::core::OutputTransform<std::int32_t, std::int32_t> output_transform;
-  ce::core::GetOutputTransform(thresholds, output_transform);
+  ce::core::OutputTransform<std::int32_t> output_transform;
+  ce::core::GetOutputTransform(output_transform, (const int32_t*)thresholds);
 
   params.dilation_height_factor = k->dilation.vertical;
   params.dilation_width_factor = k->dilation.horizontal;
@@ -159,13 +150,13 @@ extern "C" void larq_ref_bconv2d_bin_out(const nn_image_params_t* x,
   //   params.weights_offset = 0;
 
   RuntimeShape no_shape = RuntimeShape(0, nullptr);
-  ce::ref::BConv2D<std::uint32_t, std::int32_t, std::int32_t>(
-      params, packed_input_shape, (const uint32_t*)packed_input_data,
-      packed_filter_shape, (const uint32_t*)packed_filter_data,
+  ce::ref::BConv2D<std::uint32_t, std::int32_t, core::OutputTransformDetails::Default>(
+      params, packed_input_shape, packed_input_data,
+      packed_filter_shape, packed_filter_data,
       output_transform, output_shape, packed_output_data,
 
       // These are all dummy parameters(unused)
-      no_shape, 0, 0, 0, 0, 0);
+      no_shape, 0, 0, 0, 0);
 }
 //}  // namespace ref
 }  // namespace compute_engine

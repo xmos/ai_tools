@@ -30,7 +30,7 @@ void larq_ref_bconv2d_int8_out(const nn_image_params_t* x, const nn_image_params
                       const float* post_activation_multiplier, 
                       const float* post_activation_bias );
 
-#define ROUND_TO_32_CHANS(x) (((x) + 32 - 1) / 32)
+#define MAKE_MULTIPLE_OF_32(x) (((x) + 32 - 1) / 32)
 
 int clrsb(int x){
   #if defined(__XS3A__)
@@ -156,13 +156,6 @@ static int get_pam_exponent(float* post_activation_multiplier, unsigned chans_ou
   return M;
 }
 
-//These are used for collecting int8 output stats
-double max_error_g = 0.0;
-double max_abs_error_g = 0.0;
-int output_error_g[256] = {0};
-unsigned abs_output_error_g[256] = {0};
-unsigned error_counter_g[256] = {0};
-
 static void quantise_activation(
                int16_t * post_activation_multiplier_q,
                int16_t* post_activation_bias_q,
@@ -252,6 +245,13 @@ static void quantise_activation(
   *final_shr = *final_shr-8;
 }
 
+//These are used for collecting int8 output stats
+double max_error_g = 0.0;
+double max_abs_error_g = 0.0;
+int output_error_g[256] = {0};
+unsigned abs_output_error_g[256] = {0};
+unsigned error_counter_g[256] = {0};
+
 void measure_quantisation(
                int16_t * post_activation_multiplier_q,
                int16_t* post_activation_bias_q,
@@ -328,7 +328,6 @@ void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
                int16_t* post_activation_bias_q, 
                int16_t * post_activation_multiplier_q_reordered,
                int16_t* post_activation_bias_q_reordered, 
-
 
                unsigned x_height, unsigned x_width,
                unsigned k_height, unsigned k_width, unsigned chans_in,
@@ -436,8 +435,8 @@ void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
 
   //FIXME - why wont this link? The above is a workaround
   // TEST_ASSERT_INT8_ARRAY_WITHIN(1, Y_ref_p, Y_p, y_height * y_width * chans_out);
-
 }
+
 /*
 X_ref and K_ref must be initialised before running this.
 
@@ -503,7 +502,7 @@ void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
     0, 0, k_width, k_height);
 #endif
 
-  unsigned chan_b32_out = ROUND_TO_32_CHANS(chans_out);
+  unsigned chan_b32_out = MAKE_MULTIPLE_OF_32(chans_out);
   TEST_ASSERT_EQUAL_INT_ARRAY(Y_p, Y_ref_p, y_height*y_width*chan_b32_out);  
 }
 
@@ -525,7 +524,7 @@ void test_bnn_conv2d_bin_out_pseudo_directed() {
 
 #define CHAN_WORDS_IN \
   ((CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
-#define CHAN_WORDS_OUT ROUND_TO_32_CHANS(CHANS_OUT)
+#define CHAN_WORDS_OUT MAKE_MULTIPLE_OF_32(CHANS_OUT)
 
   bnn_b256_t WORD_ALIGNED K_ref[CHANS_OUT][K_HEIGHT][K_WIDTH][CHAN_WORDS_IN];
   bnn_b256_t WORD_ALIGNED
@@ -655,7 +654,7 @@ void test_bnn_conv2d_bin_out_pseudo_random() {
 
 #define MAX_CHAN_WORDS_IN \
   ((MAX_CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
-#define MAX_CHAN_WORDS_OUT ROUND_TO_32_CHANS(MAX_CHANS_OUT)
+#define MAX_CHAN_WORDS_OUT MAKE_MULTIPLE_OF_32(MAX_CHANS_OUT)
 
 #define MAX_Y_HEIGHT (((MAX_X_HEIGHT - MIN_K_HEIGHT + 1) / MIN_V_STRIDE))
 #define MAX_Y_WIDTH (((MAX_X_WIDTH - MIN_K_WIDTH + 1) / MIN_H_STRIDE))
@@ -761,7 +760,7 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
 
 #define MAX_CHAN_WORDS_IN \
   ((MAX_CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
-#define MAX_CHAN_WORDS_OUT ROUND_TO_32_CHANS(MAX_CHANS_OUT)
+#define MAX_CHAN_WORDS_OUT MAKE_MULTIPLE_OF_32(MAX_CHANS_OUT)
 
 #define MAX_Y_HEIGHT (((MAX_X_HEIGHT - MIN_K_HEIGHT + 1) / MIN_V_STRIDE))
 #define MAX_Y_WIDTH (((MAX_X_WIDTH - MIN_K_WIDTH + 1) / MIN_H_STRIDE))
@@ -875,7 +874,7 @@ void run_bin_sub_image(bnn_b32_t* Y_p, const bnn_b32_t* Y_ref_p, const bnn_b256_
                       y_loc_x, y_loc_y, y_sub_width, y_sub_height);
 #endif
 
-  unsigned chan_b32_out = ROUND_TO_32_CHANS(y->channels); 
+  unsigned chan_b32_out = MAKE_MULTIPLE_OF_32(y->channels); 
 
   bnn_b32_t(*Y)[y->width][chan_b32_out] =
       (bnn_b32_t(*)[y->width][chan_b32_out])Y_p;
@@ -914,8 +913,8 @@ void test_bnn_conv2d_bin_out_sub_image(){
   #define X_H_DILATION 1
   #define H_STRIDE 1
 
-  #define CHAN_WORDS_IN ROUND_TO_32_CHANS(CHANS_IN)
-  #define CHAN_WORDS_OUT ROUND_TO_32_CHANS(CHANS_OUT) 
+  #define CHAN_WORDS_IN MAKE_MULTIPLE_OF_32(CHANS_IN)
+  #define CHAN_WORDS_OUT MAKE_MULTIPLE_OF_32(CHANS_OUT) 
   #define FULL_Y_HEIGHT \
     CONV2D_OUTPUT_LENGTH(FULL_X_HEIGHT, FULL_K_HEIGHT, X_V_DILATION, V_STRIDE)
   #define FULL_Y_WIDTH CONV2D_OUTPUT_LENGTH(FULL_X_WIDTH, FULL_K_WIDTH, X_H_DILATION, H_STRIDE)
@@ -1068,7 +1067,7 @@ void test_bnn_conv2d_int8_out_sub_image(){
   #define V_STRIDE 1
   #define X_H_DILATION 1
   #define H_STRIDE 1
-  #define CHAN_WORDS_IN ROUND_TO_32_CHANS(CHANS_IN)
+  #define CHAN_WORDS_IN MAKE_MULTIPLE_OF_32(CHANS_IN)
   #define FULL_Y_HEIGHT \
     CONV2D_OUTPUT_LENGTH(FULL_X_HEIGHT, FULL_K_HEIGHT, X_V_DILATION, V_STRIDE)
   #define FULL_Y_WIDTH CONV2D_OUTPUT_LENGTH(FULL_X_WIDTH, FULL_K_WIDTH, X_H_DILATION, H_STRIDE)

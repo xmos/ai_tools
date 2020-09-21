@@ -1,23 +1,23 @@
 NUM_PROCS := 1
 
-.DEFAULT_GOAL := all
+.DEFAULT_GOAL := help
 
-.PHONY: lib_nn_test_build
-lib_nn_test_build:
+.PHONY: lib_nn_build
+lib_nn_build:
 	cd lib_nn/test/unit_test && make clean
 	cd lib_nn/test/unit_test && make all
 
-.PHONY: lib_nn_test_run
-lib_nn_test_run: lib_nn_test_build
-	cd lib_nn/test/unit_test && make run
-
-.PHONY: utils_test_build
-utils_test_build:
-	cd utils && ./build.sh
+.PHONY: lib_nn_test
+lib_nn_test: lib_nn_build
+	cd lib_nn/test/unit_test && xrun --io bin/xcore/unit_test.xe
 
 .PHONY: tflite2xcore_test
 tflite2xcore_test:
 	tflite2xcore/tflite2xcore/tests/runtests.py tflite2xcore/tflite2xcore/tests -n $(NUM_PROCS)
+
+.PHONY: utils_build
+utils_build:
+	cd utils && ./build.sh
 
 .PHONY: integration_test
 integration_test:
@@ -25,7 +25,30 @@ integration_test:
 	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS) --dist loadfile
 
 .PHONY: ci 
-ci: lib_nn_test_build tflite2xcore_test integration_test
+#TODO: Add lib_nn_test target when CI system connected HW
+ci: lib_nn_build tflite2xcore_test integration_test
 
-.PHONY: all
-all: lib_nn_test_build tflite2xcore_test lib_nn_test_run integration_test
+.PHONY: test
+ci: lib_nn_test tflite2xcore_test utils_build integration_test
+
+.PHONY: submodule_update
+submodule_update: 
+	git submodule update --init --recursive
+
+.PHONY: develop
+develop: submodule_update utils_build
+
+.PHONY: help
+help:
+	@:  # This silences the "Nothing to be done for 'help'" output
+	$(info usage: make [target])
+	$(info )
+	$(info targets:)
+	$(info )
+	$(info develop            Update submodules and build utils)
+	$(info ci                 Run continuous integration build and test)
+	$(info test               Run all tests (requires connected hardware))
+	$(info integration_test   Run integration tests)
+	$(info tflite2xcore_test  Run tflite2xcore tests)
+	$(info lib_nn_test        Run lib_nn tests)
+	$(info )

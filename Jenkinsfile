@@ -75,28 +75,20 @@ pipeline {
                             userRemoteConfigs: [[credentialsId: 'xmos-bot',
                                                  url: 'git@github.com:xmos/ai_tools']]
                         ])
-                        sh "conda env create -q -p .ai_tools_venv -f environment.yml"
+                        sh "conda env create -q -p ai_tools_venv -f environment.yml"
                         sh "/XMOS/get_tools.py " + params.TOOLS_VERSION
                     }
                 }
                 stage("Update all packages") {
                     when { expression { return params.UPDATE_ALL } }
                     steps {
-                        sh "conda update --all -y -q -n .venv"
-                    }
-                }
-                stage("Check") {
-                    steps {
-                        sh "conda run -p .ai_tools_venv python -c 'import tensorflow'"
-                        sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
-                              xcc --version"""
-
+                        sh "conda update --all -y -q -n ai_tools_venv"
                     }
                 }
                 stage("Build") {
                     steps {
                         sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
-                              conda run -p .ai_tools_venv make ci"""
+                              conda run -p ai_tools_venv make ci"""
                         junit "**/*_junit.xml"
                     }
                 }

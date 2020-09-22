@@ -53,5 +53,5 @@ tests/data
 *.y
 *.x
 
-utils/python_bindings/xscope.xmt.vcd
-utils/python_bindings/xscope.xmt.gtkw
+xscope.xmt.vcd
+xscope.xmt.gtkw

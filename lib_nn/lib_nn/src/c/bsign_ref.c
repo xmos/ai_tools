@@ -12,7 +12,7 @@
 
 /* XMOS reference bsign_8 implementation */
 void bsign_8_ref(
-    int32_t* y,
+    bnn_b32_t* y,
     const int8_t* x,
     const nn_bsign_8_plan_t * plan,
     const nn_bsign_8_job_t* job)
@@ -46,7 +46,7 @@ void bsign_8_ref(
 
 WEAK_FUNC
 void bsign_8( 
-    int32_t* y,
+    bnn_b32_t* y,
     const int8_t* x,
     const nn_bsign_8_plan_t * plan,
     const nn_bsign_8_job_t* job)

@@ -12,13 +12,13 @@
 #if defined(__XS3A__)
 /* Bsign_8 optimised for XS3A */
 void bsign_8_( 
-    int32_t* y,
+    bnn_b32_t* y,
     const int8_t* x,
     const int8_t* zero_point_vect,
     const nn_bsign_8_job_t* job);
 
 void bsign_8(
-    int32_t* y,
+    bnn_b32_t* y,
     const int8_t* x,
     const nn_bsign_8_plan_t * plan,
     const nn_bsign_8_job_t* job)
@@ -49,7 +49,7 @@ void bsign_8_prepare(
         jobs[k].length = 0;
     }
 
-    int32_t left = (length >> 5) << 5;
+    uint32_t left = (length >> 5) << 5;
 
     while(left){
         for(int k = 0; k < job_count; k++){
@@ -67,7 +67,7 @@ void bsign_8_prepare(
 
     jobs[0].start = 0;
 
-    int32_t pos = jobs[0].length;
+    uint32_t pos = jobs[0].length;
 
     for(int k = 1; k < job_count; k++){
         jobs[k].start = jobs[k-1].start + jobs[k-1].length;

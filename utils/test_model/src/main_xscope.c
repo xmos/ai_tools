@@ -7,21 +7,22 @@
 #include <string.h>
 
 #include "inference_engine.h"
+#include "xscope.h"
 
 // USE RAM
-// #define MAX_MODEL_CONTENT_SIZE 50000
-// unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
-// static size_t model_received_bytes = 0;
-// #define TENSOR_ARENA_SIZE 125000
-// unsigned char tensor_arena[TENSOR_ARENA_SIZE];
+#define MAX_MODEL_CONTENT_SIZE 50000
+unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
+static size_t model_received_bytes = 0;
+#define TENSOR_ARENA_SIZE 125000
+unsigned char tensor_arena[TENSOR_ARENA_SIZE];
 
 // USE DDR
-#define MAX_MODEL_CONTENT_SIZE 500000
-__attribute__((section(
-    ".ExtMem_data"))) unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
-static size_t model_received_bytes = 0;
-#define TENSOR_ARENA_SIZE 200000
-unsigned char tensor_arena[TENSOR_ARENA_SIZE];
+// #define MAX_MODEL_CONTENT_SIZE 500000
+// __attribute__((section(
+//     ".ExtMem_data"))) unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
+// static size_t model_received_bytes = 0;
+// #define TENSOR_ARENA_SIZE 200000
+// unsigned char tensor_arena[TENSOR_ARENA_SIZE];
 
 static int tensor_index = -1;
 static size_t tensor_size = 0;
@@ -35,8 +36,6 @@ static unsigned char *output_buffer;
 
 enum AppState { Model, SetTensor, Invoke, GetTensor };
 static enum AppState state;
-
-#include "xscope.h"
 
 void xscope_main() {}
 

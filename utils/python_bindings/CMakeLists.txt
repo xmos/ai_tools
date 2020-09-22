@@ -23,7 +23,7 @@ set(LIB_NN_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../lib_nn")
 #**********************
 # Build flags
 #**********************
-set(BUILD_FLAGS "-g -DTF_LITE_DISABLE_X86_NEON -O3")
+set(BUILD_FLAGS "-g -DTF_LITE_DISABLE_X86_NEON -O3 -fsanitize=address")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS ${BUILD_FLAGS})

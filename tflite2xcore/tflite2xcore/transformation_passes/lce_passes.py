@@ -137,7 +137,7 @@ class SplitPaddingFromConvPass(LceConv2dPass):
     def mutate(self, op: Operator) -> None:
 
         subgraph = op.subgraph
-        options = op.custom_options
+        tensor_type = op.inputs[0].type
 
         height, width = op.inputs[0].shape[1:3]  # Note, will be in x32 chunks
 
@@ -147,7 +147,7 @@ class SplitPaddingFromConvPass(LceConv2dPass):
         old_input = op.inputs[0]
         old_input.consumers.remove(op)
 
-        strides = (options["stride_height"], options["stride_width"])
+        strides = (op.custom_options["stride_height"], op.custom_options["stride_width"])
 
         # Construct paddings input tensor for PAD op
         padding_tb = int(np.ceil(((strides[0] - 1) * height - strides[0] + K_h) / 2))
@@ -157,6 +157,8 @@ class SplitPaddingFromConvPass(LceConv2dPass):
             f"{op.name}/paddings", TensorType.INT32, shape=[4, 2]
         )
         padding_tensor.buffer.data = np.int32(paddings)
+
+        print(str(paddings))
 
         # Note, going foward a builtin.PAD will be inserted, to be replaced by a later pass
         pad_op = subgraph.create_operator(
@@ -183,6 +185,16 @@ class SplitPaddingFromConvPass(LceConv2dPass):
 
         # Pass on pad values from conv to pad op
         pad_op.custom_options["pad_values"] = op.custom_options["pad_values"]
+
+        bytes_per_pixel = op.inputs[0].shape[3] # Channels
+
+        # Since we're only matching bconv this check is safe
+        if tensor_type is TensorType.INT32:
+            bytes_per_pixel = bytes_per_pixel * 4
+        
+        print(str(bytes_per_pixel))
+
+        pad_op.custom_options["bytes_per_pixel"] = int(bytes_per_pixel)
 
         # Change padding of Bconv from SAME to VALID
         op.custom_options["padding"] = Padding.VALID

@@ -10,6 +10,7 @@
 #include "xs3_vpu.h"
 #define ACC_PERIOD (VPU_INT16_ACC_PERIOD)
 
+//This is the amount that the VLMUL instruction shifts the product of C and R by.
 static const unsigned post_vlmul_shr = 14;
 
 void bnn_reorder_threshold_tensor(const int32_t* thresh_boggled,

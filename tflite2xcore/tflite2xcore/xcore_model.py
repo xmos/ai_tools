@@ -36,9 +36,7 @@ class _AbstractContainer(ABC):
         raise NotImplementedError()
 
     @staticmethod
-    def sequence_equal(
-        l1: Sequence[_S], l2: Sequence[_S]
-    ) -> bool:
+    def sequence_equal(l1: Sequence[_S], l2: Sequence[_S]) -> bool:
         if len(l1) != len(l2):
             return False
 

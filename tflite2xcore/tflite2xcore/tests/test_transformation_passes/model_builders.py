@@ -832,7 +832,9 @@ def build_lceBconv2d(
 
     # add dummy data so that the op can be mutated
     w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
-    output_threshold.buffer.data = np.arange(0, np.prod(output_threshold.shape), dtype = np.int32)
+    output_threshold.buffer.data = np.arange(
+        0, np.prod(output_threshold.shape), dtype=np.int32
+    )
 
     if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]

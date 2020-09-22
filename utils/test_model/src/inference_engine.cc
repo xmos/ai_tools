@@ -63,25 +63,23 @@ void initialize(uint8_t *model_content, uint8_t *tensor_arena,
 
   // Create all ops resolver and add xCORE custom operators
   tflite::AllOpsResolver resolver;
-  resolver.AddCustom("XC_maxpool2d",
+  resolver.AddCustom(tflite::ops::micro::xcore::MaxPool2D_OpCode,
                      tflite::ops::micro::xcore::Register_MaxPool2D());
-  resolver.AddCustom("XC_avgpool2d",
+  resolver.AddCustom(tflite::ops::micro::xcore::AvgPool2D_OpCode,
                      tflite::ops::micro::xcore::Register_AvgPool2D());
-  resolver.AddCustom("XC_avgpool2d_global",
+  resolver.AddCustom(tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
                      tflite::ops::micro::xcore::Register_AvgPool2D_Global());
-  resolver.AddCustom("XC_fc_deepin_anyout",
-                     tflite::ops::micro::xcore::Register_FullyConnected_16());
-  resolver.AddCustom("XC_conv2d_shallowin",
+  resolver.AddCustom(tflite::ops::micro::xcore::FullyConnected_8_OpCode,
+                     tflite::ops::micro::xcore::Register_FullyConnected_8());
+  resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Shallow());
-  resolver.AddCustom("XC_conv2d_deep",
+  resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Deep_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Deep());
-  resolver.AddCustom("XC_conv2d_1x1",
+  resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_1x1());
-  resolver.AddCustom("XC_conv2d_depthwise",
+  resolver.AddCustom(tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
                      tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
-  resolver.AddCustom("XC_requantize_16_to_8",
-                     tflite::ops::micro::xcore::Register_Requantize_16_to_8());
-  resolver.AddCustom("XC_lookup_8",
+  resolver.AddCustom(tflite::ops::micro::xcore::Lookup_8_OpCode,
                      tflite::ops::micro::xcore::Register_Lookup_8());
 
   // Build an interpreter to run the model with

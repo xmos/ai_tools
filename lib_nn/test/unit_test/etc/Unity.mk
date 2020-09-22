@@ -3,7 +3,7 @@
 Unity_PATH ?= ./
 LIB_PATH := $(abspath $(Unity_PATH))
 
-INCLUDES += $(LIB_PATH)/src  $(LIB_PATH)/../../third_party/compute-engine $(LIB_PATH)/../../third_party/tensorflow  $(LIB_PATH)/../../third_party/gemmlowp
+INCLUDES += $(LIB_PATH)/src  $(LIB_PATH)/../../third_party/compute-engine $(LIB_PATH)/../../third_party/tensorflow $(LIB_PATH)/../../third_party/flatbuffers/include $(LIB_PATH)/../../third_party/gemmlowp $(LIB_PATH)/../../third_party/ruy 
 
 
 ###### 

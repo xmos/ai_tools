@@ -10,19 +10,19 @@
 #include "xscope.h"
 
 // USE RAM
-#define MAX_MODEL_CONTENT_SIZE 50000
-unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
-static size_t model_received_bytes = 0;
-#define TENSOR_ARENA_SIZE 125000
-unsigned char tensor_arena[TENSOR_ARENA_SIZE];
+// #define MAX_MODEL_CONTENT_SIZE 50000
+// unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
+// static size_t model_received_bytes = 0;
+// #define TENSOR_ARENA_SIZE 125000
+// unsigned char tensor_arena[TENSOR_ARENA_SIZE];
 
 // USE DDR
-// #define MAX_MODEL_CONTENT_SIZE 500000
-// __attribute__((section(
-//     ".ExtMem_data"))) unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
-// static size_t model_received_bytes = 0;
-// #define TENSOR_ARENA_SIZE 200000
-// unsigned char tensor_arena[TENSOR_ARENA_SIZE];
+#define MAX_MODEL_CONTENT_SIZE 500000
+__attribute__((section(
+    ".ExtMem_data"))) unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
+static size_t model_received_bytes = 0;
+#define TENSOR_ARENA_SIZE 200000
+unsigned char tensor_arena[TENSOR_ARENA_SIZE];
 
 static int tensor_index = -1;
 static size_t tensor_size = 0;
@@ -48,35 +48,35 @@ void xscope_data(void *data, size_t size) {
 
   // Handle state protocol messages
   if (strncmp(data, "START_MODEL", 11) == 0) {
-    // printf("START_MODEL\n");
+    printf("START_MODEL\n");
     state = Model;
     model_received_bytes = 0;
     return;
   } else if (strncmp(data, "END_MODEL", 9) == 0) {
-    // printf("END_MODEL\n");
+    printf("END_MODEL\n");
     // Note, initialize will log error and exit if initialize fails
     initialize(model_content, tensor_arena, TENSOR_ARENA_SIZE, &input_buffer,
                &input_size, &output_buffer, &output_size);
-    // printf("   END_MODEL END\n");
+    printf("   END_MODEL END\n");
     return;
   } else if (strncmp(data, "SET_TENSOR", 9) == 0) {
-    // printf("SET_TENSOR\n");
+    printf("SET_TENSOR\n");
     state = SetTensor;
     tensor_received_bytes = 0;
     sscanf(data, "SET_TENSOR %d %d", &tensor_index, &tensor_size);
     return;
   } else if (strncmp(data, "GET_TENSOR", 9) == 0) {
-    // printf("GET_TENSOR\n");
+    printf("GET_TENSOR\n");
     state = GetTensor;
     sscanf(data, "GET_TENSOR %d", &tensor_index);
     get_tensor_bytes(tensor_index, &tensor_buffer, &tensor_size);
     send_tensor(tensor_buffer, tensor_size);
     return;
   } else if (strncmp(data, "INVOKE", 6) == 0) {
-    // printf("INVOKE\n");
+    printf("INVOKE\n");
     state = Invoke;
     invoke();
-    // printf("   INVOKE END\n");
+    printf("   INVOKE END\n");
     return;
   }
 

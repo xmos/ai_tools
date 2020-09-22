@@ -15,17 +15,17 @@
 #endif
 
 // USE RAM
-#define MAX_MODEL_CONTENT_SIZE 50000
-unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
-#define TENSOR_ARENA_SIZE 125000
-unsigned char tensor_arena[TENSOR_ARENA_SIZE];
+// #define MAX_MODEL_CONTENT_SIZE 50000
+// unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
+// #define TENSOR_ARENA_SIZE 125000
+// unsigned char tensor_arena[TENSOR_ARENA_SIZE];
 
 // USE DDR
-// #define MAX_MODEL_CONTENT_SIZE 500000
-// ATTRIBUTE_EXTMEM_SECTION volatile unsigned char
-//     model_content[MAX_MODEL_CONTENT_SIZE];
-// #define TENSOR_ARENA_SIZE 200000
-// unsigned char tensor_arena[TENSOR_ARENA_SIZE];
+#define MAX_MODEL_CONTENT_SIZE 500000
+ATTRIBUTE_EXTMEM_SECTION volatile unsigned char
+    model_content[MAX_MODEL_CONTENT_SIZE];
+#define TENSOR_ARENA_SIZE 200000
+unsigned char tensor_arena[TENSOR_ARENA_SIZE];
 
 static size_t input_size;
 static unsigned char *input_buffer;

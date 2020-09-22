@@ -90,6 +90,9 @@ int initialize(ExtendedXCoreInterpreterContext* ctx, const char* model_content,
   ctx->resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
                            tflite::ops::micro::xcore::Register_Conv2D_1x1());
   ctx->resolver->AddCustom(
+      tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
+      tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
+  ctx->resolver->AddCustom(
       tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
       tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
   ctx->resolver->AddCustom(tflite::ops::micro::xcore::Lookup_8_OpCode,

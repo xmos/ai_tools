@@ -20,7 +20,7 @@ void larq_ref_bconv2d_bin_out(const nn_image_params_t* x, const nn_image_params_
                       const nn_window_params_t* k,
                       const int32_t* packed_input_data,
                       const int32_t* packed_filter_data,
-                      int32_t* packed_output_data, const long* thresholds);
+                      int32_t* packed_output_data, const int32_t* thresholds);
 
 void larq_ref_bconv2d_int8_out(const nn_image_params_t* x, const nn_image_params_t* y,
                       const nn_window_params_t* k,
@@ -479,7 +479,7 @@ void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
   k.dilation.vertical = 1;
 
   larq_ref_bconv2d_bin_out(&x, &y, &k, (int32_t*)X_ref, (int32_t*)K_ref_p,
-                   (int32_t*)Y_ref_p, (const long *)thresholds_ref);
+                   (int32_t*)Y_ref_p, (const int32_t *)thresholds_ref);
 
 #if defined(__XS3A__)
 
@@ -970,7 +970,7 @@ void test_bnn_conv2d_bin_out_sub_image(){
 
       //Calculate the entire reference image
       larq_ref_bconv2d_bin_out(&x, &y, &k, (int32_t*)X_ref, (int32_t*)K_ref,
-                      (int32_t*)Y_ref, (const long *)thresholds_ref);
+                      (int32_t*)Y_ref, (const int32_t *)thresholds_ref);
 
       for (unsigned y_loc_x = 0; y_loc_x < y.width; y_loc_x++){
         for (unsigned y_loc_y = 0; y_loc_y<y.height;++y_loc_y){

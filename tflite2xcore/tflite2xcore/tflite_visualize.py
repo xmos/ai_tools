@@ -472,7 +472,9 @@ class CustomOptionsMapper():
     """Maps a list of bytes representing a flexbuffer to a dictionary."""
 
     def __call__(self, custom_options):
-        return json.loads(FlexbufferParser().parse(bytes(custom_options))) if custom_options else None
+        return (
+            FlexbufferParser().parse(bytes(custom_options)) if custom_options else None
+        )
 
 
 def GenerateGraph(subgraph_idx, g, opcode_mapper):

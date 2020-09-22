@@ -1,6 +1,5 @@
-# Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
+# Copyright (c) 2018-2020, XMOS Ltd, All rights reserved
 
-import json
 import pathlib
 import flatbuffers
 import numpy as np
@@ -95,10 +94,9 @@ class XCORESerializationMixin:
                     hasattr(operatorT, "customOptions")
                     and operatorT.customOptions is not None
                 ):
-                    if len(bytes(operatorT.customOptions)) > 0:
-                        options["custom_options"] = json.loads(
-                            FlexbufferParser().parse(bytes(operatorT.customOptions))
-                        )
+                    options["custom_options"] = FlexbufferParser().parse(
+                        bytes(operatorT.customOptions)
+                    )
 
                 def is_valid_tensor_index(
                     idx: int, lower: int = -1, upper: int = len(tensors)

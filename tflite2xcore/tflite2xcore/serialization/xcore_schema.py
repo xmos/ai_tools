@@ -332,26 +332,3 @@ QuantizationDetails = enum.Enum(
 Padding = enum.Enum(
     "Padding", {k: v for k, v in vars(schema.Padding).items() if not k.startswith("__")}
 )
-
-
-# NOTE: this is from tensorflow/tensorflow/lite/c/builtin_op_data.h
-# TODO: remove if larq fixes custom option padding encoding
-class __TfLitePadding(enum.Enum):
-    kTfLitePaddingUnknown = 0
-    kTfLitePaddingSame = 1
-    kTfLitePaddingValid = 2
-
-
-__Padding_TfLitePadding = {
-    # __TfLitePadding.kTfLitePaddingUnknown: None,  # intentionally not supported
-    __TfLitePadding.kTfLitePaddingSame: Padding.SAME,
-    __TfLitePadding.kTfLitePaddingValid: Padding.VALID,
-}
-
-__Padding_TfLitePadding_ = {
-    Padding.SAME: __TfLitePadding.kTfLitePaddingSame,
-    Padding.VALID: __TfLitePadding.kTfLitePaddingValid,
-}
-
-Padding.from_TfLitePadding = lambda x: __Padding_TfLitePadding[__TfLitePadding(x)]
-Padding.to_TfLitePadding = lambda x: __Padding_TfLitePadding_[Padding(x)]

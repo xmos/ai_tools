@@ -21,11 +21,11 @@
 static char str_buff[200];
 
 // Reference bsign implementation (currently copied from larq-compute-engine);
-void larq_ref_bsign(int8_t *input, uint32_t *output, size_t inputLength, int32_t zeroPoint);
+void larq_ref_bsign(int8_t *input, int32_t *output, size_t inputLength, int32_t zeroPoint);
 
 void gen_expected(int8_t *input, uint32_t *output, size_t inputLength, int32_t zeroPoint)
 {
-    larq_ref_bsign(input, output, inputLength, zeroPoint);
+    larq_ref_bsign(input, (int32_t*)output, inputLength, zeroPoint);
 }
 
 #define MAX_OUTPUT_WORDS (128)

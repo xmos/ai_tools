@@ -88,16 +88,15 @@ pipeline {
                 stage("Check") {
                     steps {
                         sh "conda run -p .ai_tools_venv python -c 'import tensorflow'"
-                        moduleEnv("tools/"+params.TOOLS_VERSION) {
-                            sh "xcc --version"
-                        }
+                        sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
+                              xcc --version"""
+
                     }
                 }
                 stage("Build") {
                     steps {
-                        moduleEnv("tools/"+params.TOOLS_VERSION) {
-                            sh "conda run -p .ai_tools_venv make ci"
-                        }
+                        sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
+                              conda run -p .ai_tools_venv make ci"""
                         junit "**/*_junit.xml"
                     }
                 }

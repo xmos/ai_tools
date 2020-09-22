@@ -76,7 +76,7 @@ def model(
 
 
 def test_mutate(trf_pass: ReplaceGlobalAveragePool2DPass, model: XCOREModel) -> None:
-    _test_mutate(trf_pass, model, custom_opcode=XCOREOpCodes.XC_avgpool2d_global)
+    _test_mutate(trf_pass, model, new_opcode=XCOREOpCodes.XC_avgpool2d_global)
 
     # check bias/scale/offset tensor
     op = model.subgraphs[0].operators[-1]

@@ -72,30 +72,30 @@ int initialize(ExtendedXCoreInterpreterContext* ctx, const char* model_content,
 
   // Create all ops resolver and add xCORE custom operators
   ctx->resolver = new tflite::AllOpsResolver();
-  ctx->resolver->AddCustom("XC_maxpool2d",
+  ctx->resolver->AddCustom(tflite::ops::micro::xcore::MaxPool2D_OpCode,
                            tflite::ops::micro::xcore::Register_MaxPool2D());
-  ctx->resolver->AddCustom("XC_avgpool2d",
+  ctx->resolver->AddCustom(tflite::ops::micro::xcore::AvgPool2D_OpCode,
                            tflite::ops::micro::xcore::Register_AvgPool2D());
   ctx->resolver->AddCustom(
-      "XC_avgpool2d_global",
+      tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
       tflite::ops::micro::xcore::Register_AvgPool2D_Global());
   ctx->resolver->AddCustom(
-      "XC_fc_deepin_anyout",
-      tflite::ops::micro::xcore::Register_FullyConnected_16());
+      tflite::ops::micro::xcore::FullyConnected_8_OpCode,
+      tflite::ops::micro::xcore::Register_FullyConnected_8());
   ctx->resolver->AddCustom(
-      "XC_conv2d_shallowin",
+      tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
       tflite::ops::micro::xcore::Register_Conv2D_Shallow());
-  ctx->resolver->AddCustom("XC_conv2d_deep",
+  ctx->resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_Deep_OpCode,
                            tflite::ops::micro::xcore::Register_Conv2D_Deep());
-  ctx->resolver->AddCustom("XC_conv2d_1x1",
+  ctx->resolver->AddCustom(tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
                            tflite::ops::micro::xcore::Register_Conv2D_1x1());
   ctx->resolver->AddCustom(
-      "XC_conv2d_depthwise",
+      tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
       tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
   ctx->resolver->AddCustom(
-      "XC_requantize_16_to_8",
-      tflite::ops::micro::xcore::Register_Requantize_16_to_8());
-  ctx->resolver->AddCustom("XC_lookup_8",
+      tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
+      tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
+  ctx->resolver->AddCustom(tflite::ops::micro::xcore::Lookup_8_OpCode,
                            tflite::ops::micro::xcore::Register_Lookup_8());
 
   ctx->tensor_arena = new uint8_t[tensor_arena_size];

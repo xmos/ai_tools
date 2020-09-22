@@ -19,6 +19,7 @@ void test_conv2d_shallowin_deepout();
 void test_conv2d_1x1();
 void test_conv2d_depthwise();
 void test_fully_connected_16();
+void test_fully_connected_8();
 void test_maxpool2d();
 void test_avgpool2d_2x2();
 void test_avgpool2d();

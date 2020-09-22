@@ -612,59 +612,6 @@ void avgpool2d_global_init(
     const unsigned job_count);
 
 
-
-
-/** 
- * @brief Initialize an instance of the @oper{fully_connected_16} operator.
- * 
- * See @oper_ref{fully_connected_16} for more details about the @oper{fully_connected_16} operator. To invoke a 
- * @oper{fully_connected_16} job, call fully_connected_16().
- * 
- * When fully_connected_16() is called, a plan (`nn_fully_connected_plan_t`) and a job (`nn_fully_connected_job_t`) must 
- * be supplied to tell it how to do its work. This function initializes that plan and one or more jobs to be supplied in 
- * subsequent calls to fully_connected_16().
- * 
- * A plan contains information shared by all jobs of an instance of @oper{fully_connected_16}. Each job computes a 
- * range of elements in the output vector (possibly the entire vector).
- * 
- * `plan` points to the plan to be initialized. It need only be initialized once for many calls to fully_connected_16().
- * 
- * `jobs` points to an array of `nn_fully_connected_job_t` to be initialized. Each element represents one job. There 
- * should be `job_count` elements in the array.
- * 
- * `N` is the number of elements in the input vector @tensor{x}.
- * 
- * `M` is the number of elements in the output vector @tensor{y}.
- * 
- * `job_params` points to either an array of `nn_fully_connected_job_params_t` structs or else is `NULL`. A `job_params` 
- * value of `NULL` indicates that there will only be a single job which computes the entire output image. If 
- * `job_params` is `NULL`, then `job_count` must be `1`. If `job_params` is not `NULL`, it must point to an array of 
- * `job_count` `nn_fully_connected_job_params_t` elements.
- * 
- * In particular, job `k` will compute the output elements @math{y[p]} for which:
- * @inlinecode
- *     job_params[k].start_channel <= p < job_params[k].start_channel + job_params[k].out.channels
- * @endinlinecode
- * 
- * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array), as 
- * well the number of elements in the `job_params` array if it is not `NULL`.
- * 
- * @param plan       [out]  The plan to be initialized.
- * @param jobs       [out]  Array of jobs to be initialized.
- * @param N          [in]   The number of input elements @math{N}.
- * @param M          [in]   The number of output elements @math{M}.
- * @param job_params [in]   An array of `nn_fully_connected_job_params_t` structs, or `NULL`.
- * @param job_count  [in]   The number of jobs to be initialized.
- */
-void fully_connected_init(
-    nn_fully_connected_plan_t* plan,
-    nn_fully_connected_job_t* jobs,
-    const channel_count_t N,
-    const channel_count_t M,
-    const nn_fully_connected_job_params_t* job_params,
-    const unsigned job_count);
-
-
 /**
  * @brief Initialize an instance of the @oper{requantize_16_to_8} operator.
  * 

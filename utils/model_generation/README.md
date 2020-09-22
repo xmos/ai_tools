@@ -23,7 +23,7 @@ For additional logging output, including case index for failures, specify:
 
 Run 
 
-    > pytest -v
+    > pytest -h
 
 for more info on custom options.  
 

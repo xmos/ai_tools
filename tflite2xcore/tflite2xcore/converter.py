@@ -91,6 +91,7 @@ def optimize_for_xcore(
     # canonicalize convolutions
     pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
     pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
+    pass_mgr.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
 
     # canonicalize word alignment
     pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())
@@ -140,7 +141,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(
         passes.ParallelizeFullyConnectedPass(num_threads=num_threads)
     )
-    pass_mgr.register_pass(passes.ParallelizeRequant16To8Pass(num_threads=num_threads))
+    # pass_mgr.register_pass(passes.ParallelizeRequant16To8Pass(num_threads=num_threads))  # intentionally disabled
     pass_mgr.register_pass(passes.ParallelizeConv2dPass(num_threads=num_threads))
     pass_mgr.register_pass(
         passes.ParallelizeDepthwiseConv2dPass(num_threads=num_threads)

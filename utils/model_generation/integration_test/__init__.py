@@ -75,7 +75,7 @@ class IntegrationTestRunner(Runner):
     def dump(
         self,
         dirpath: Path,
-        example_idx: Union[int, Iterable[int]] = [0, 3],
+        example_idx: Union[int, Iterable[int]] = [],
         dump_models: bool = True,
         dump_visualizations: bool = True,
     ) -> None:
@@ -233,7 +233,7 @@ def _test_output(
     if failures:
         pytest.fail(
             f"The following examples have failed elements: {msg}"
-            + ("" if verbose else "\nSet verbsity > 0 for more details."),
+            + ("" if verbose else "\nSet verbosity > 0 for more details."),
             pytrace=False,
         )
 

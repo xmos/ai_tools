@@ -10,6 +10,7 @@ from .lut_passes import (
     LegalizeXCLookupTablePass,
 )
 from .conv2d_passes import (
+    CanonicalizeSinglePixelConv2DPass,
     CanonicalizeSingleinDepthwiseConv2DPass,
     LegalizeSingleinConv2DPass,
     Replace1x1Conv2dPass,

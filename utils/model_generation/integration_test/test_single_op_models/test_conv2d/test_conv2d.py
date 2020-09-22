@@ -6,7 +6,7 @@ from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix t
 from tflite2xcore._model_generation import Configuration
 
 from . import (
-    Conv2dGenericTestModelGenerator,
+    Conv2dProperTestModelGenerator,
     test_output,
     test_converted_single_op_model,
     test_idempotence,
@@ -18,19 +18,19 @@ from . import (
 #  ----------------------------------------------------------------------------
 
 
-class Conv2dTestModelGenerator(Conv2dGenericTestModelGenerator):
+class Conv2dTestModelGenerator(Conv2dProperTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
-        input_channels = cfg.setdefault("input_channels", 20)
-        try:
-            assert (
-                cfg["K_w"] * input_channels > 32
-            ), "K_w * input_channels <= 32 is reserved for conv2d_shallowin testing"
-            assert (
-                cfg["K_h"] != 1 or cfg["K_w"] != 1
-            ), "1x1 kernel is reserved for conv2d_1x1 testing"
-        except KeyError:
-            pass
+        cfg.setdefault("input_channels", 20)
         super()._set_config(cfg)
+
+    def check_config(self) -> None:
+        super().check_config()
+        assert (
+            self._config["K_w"] * self._config["input_channels"] > 32
+        ), "K_w * input_channels <= 32 is reserved for conv2d_shallowin testing"
+        assert (
+            self._config["K_h"] != 1 or self._config["K_w"] != 1
+        ), "1x1 kernel is reserved for conv2d_1x1 testing"
 
 
 GENERATOR = Conv2dTestModelGenerator

@@ -16,6 +16,7 @@ INSTALL_REQUIRES = [
     "flatbuffers==1.12.0",
     "tensorflow>=2.3.0",
     "aenum>=2.2.4",
+    "matplotlib>=3.1.1",
 ]
 
 setuptools.setup(

@@ -17,7 +17,7 @@
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
-
+static const char TEST_TARGET[] = "fully_connected_16()";
 
 
 
@@ -28,7 +28,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define C_out           (VPU_INT8_ACC_PERIOD)
 #define C_in            (VPU_INT8_EPV)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
@@ -47,16 +46,6 @@ void test_fully_connected_16_case0()
     } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
-
-#if DEBUG_ON
-    PRINTF("&W = 0x%08X\n", W);
-    PRINTF("&X = 0x%08X\n", &X[0]);
-
-    PRINTF("C_out = %u\n", C_out);
-    PRINTF("ceil_C_out = %u\n", ceil_C_out);
-    PRINTF("C_in = %u\n", C_in);
-    PRINTF("\n\n");
-#endif
 
     PRINTF("%s...\n", __func__);
 
@@ -126,14 +115,10 @@ void test_fully_connected_16_case0()
                         (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
-        nn_fully_connected_plan_t plan;
-        nn_fully_connected_job_t job;
-        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
-
-        
         memset(Y, 0xCC, sizeof(Y));
-        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bso_block_t*) &BSO, &plan, &job);
+
+        PRINTF("\t\tCalling %s...\n", TEST_TARGET);
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, C_out);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -150,7 +135,6 @@ void test_fully_connected_16_case0()
 #undef ceil_C_out
 #undef C_in
 #undef C_out
-#undef DEBUG_ON
 
 
 
@@ -163,7 +147,6 @@ void test_fully_connected_16_case0()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define C_out           (VPU_INT8_ACC_PERIOD)
 #define C_in            (4 * VPU_INT8_EPV)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
@@ -182,16 +165,6 @@ void test_fully_connected_16_case1()
     } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
-
-#if DEBUG_ON
-    PRINTF("&W = 0x%08X\n", W);
-    PRINTF("&X = 0x%08X\n", &X[0]);
-
-    PRINTF("C_out = %u\n", C_out);
-    PRINTF("ceil_C_out = %u\n", ceil_C_out);
-    PRINTF("C_in = %u\n", C_in);
-    PRINTF("\n\n");
-#endif
 
     PRINTF("%s...\n", __func__);
 
@@ -261,15 +234,11 @@ void test_fully_connected_16_case1()
                         (int16_t*) &BSO.offset,
                         (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
-
-        nn_fully_connected_plan_t plan;
-        nn_fully_connected_job_t job;
-        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
-
         
         memset(Y, 0xCC, sizeof(Y));
-        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bso_block_t*) &BSO, &plan, &job);
+
+        PRINTF("\t\tCalling %s...\n", TEST_TARGET);
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, C_out);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -286,7 +255,6 @@ void test_fully_connected_16_case1()
 #undef ceil_C_out
 #undef C_in
 #undef C_out
-#undef DEBUG_ON
 
 
 
@@ -299,7 +267,6 @@ void test_fully_connected_16_case1()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define C_out           (3 * VPU_INT8_ACC_PERIOD)
 #define C_in            (VPU_INT8_EPV)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
@@ -318,16 +285,6 @@ void test_fully_connected_16_case2()
     } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
-
-#if DEBUG_ON
-    PRINTF("&W = 0x%08X\n", W);
-    PRINTF("&X = 0x%08X\n", &X[0]);
-
-    PRINTF("C_out = %u\n", C_out);
-    PRINTF("ceil_C_out = %u\n", ceil_C_out);
-    PRINTF("C_in = %u\n", C_in);
-    PRINTF("\n\n");
-#endif
 
     PRINTF("%s...\n", __func__);
 
@@ -398,14 +355,10 @@ void test_fully_connected_16_case2()
                         (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
-        nn_fully_connected_plan_t plan;
-        nn_fully_connected_job_t job;
-        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
-
-        
         memset(Y, 0xCC, sizeof(Y));
-        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bso_block_t*) &BSO, &plan, &job);
+
+        PRINTF("\t\tCalling %s...\n", TEST_TARGET);
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, C_out);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -420,7 +373,6 @@ void test_fully_connected_16_case2()
 #undef ceil_C_out
 #undef C_in
 #undef C_out
-#undef DEBUG_ON
 
 
 
@@ -433,7 +385,6 @@ void test_fully_connected_16_case2()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define C_out           (3 * VPU_INT8_ACC_PERIOD)
 #define C_in            (4 * VPU_INT8_EPV)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
@@ -452,16 +403,6 @@ void test_fully_connected_16_case3()
     } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
-
-#if DEBUG_ON
-    PRINTF("&W = 0x%08X\n", W);
-    PRINTF("&X = 0x%08X\n", &X[0]);
-
-    PRINTF("C_out = %u\n", C_out);
-    PRINTF("ceil_C_out = %u\n", ceil_C_out);
-    PRINTF("C_in = %u\n", C_in);
-    PRINTF("\n\n");
-#endif
 
     PRINTF("%s...\n", __func__);
 
@@ -532,14 +473,11 @@ void test_fully_connected_16_case3()
                         (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
-        nn_fully_connected_plan_t plan;
-        nn_fully_connected_job_t job;
-        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
-
         
         memset(Y, 0xCC, sizeof(Y));
-        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bso_block_t*) &BSO, &plan, &job);
+
+        PRINTF("\t\tCalling %s...\n", TEST_TARGET);
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, C_out);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -555,7 +493,6 @@ void test_fully_connected_16_case3()
 #undef ceil_C_out
 #undef C_in
 #undef C_out
-#undef DEBUG_ON
 
 
 
@@ -568,7 +505,6 @@ void test_fully_connected_16_case3()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define C_out           (VPU_INT8_ACC_PERIOD)
 #define C_in            (12)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
@@ -587,16 +523,6 @@ void test_fully_connected_16_case4()
     } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
-
-#if DEBUG_ON
-    PRINTF("&W = 0x%08X\n", W);
-    PRINTF("&X = 0x%08X\n", &X[0]);
-
-    PRINTF("C_out = %u\n", C_out);
-    PRINTF("ceil_C_out = %u\n", ceil_C_out);
-    PRINTF("C_in = %u\n", C_in);
-    PRINTF("\n\n");
-#endif
 
     PRINTF("%s...\n", __func__);
 
@@ -663,14 +589,10 @@ void test_fully_connected_16_case4()
                         (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
-        nn_fully_connected_plan_t plan;
-        nn_fully_connected_job_t job;
-        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
-
-        
         memset(Y, 0xCC, sizeof(Y));
-        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bso_block_t*) &BSO, &plan, &job);
+        
+        PRINTF("\t\tCalling %s...\n", TEST_TARGET);
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, C_out);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -686,7 +608,6 @@ void test_fully_connected_16_case4()
 #undef ceil_C_out
 #undef C_in
 #undef C_out
-#undef DEBUG_ON
 
 
 
@@ -699,7 +620,6 @@ void test_fully_connected_16_case4()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define C_out           (VPU_INT8_ACC_PERIOD)
 #define C_in            (2 * VPU_INT8_EPV + 4)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
@@ -718,16 +638,6 @@ void test_fully_connected_16_case5()
     } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
-
-#if DEBUG_ON
-    PRINTF("&W = 0x%08X\n", W);
-    PRINTF("&X = 0x%08X\n", &X[0]);
-
-    PRINTF("C_out = %u\n", C_out);
-    PRINTF("ceil_C_out = %u\n", ceil_C_out);
-    PRINTF("C_in = %u\n", C_in);
-    PRINTF("\n\n");
-#endif
 
     PRINTF("%s...\n", __func__);
 
@@ -800,14 +710,11 @@ void test_fully_connected_16_case5()
                         (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
-        nn_fully_connected_plan_t plan;
-        nn_fully_connected_job_t job;
-        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
-
         
         memset(Y, 0xCC, sizeof(Y));
-        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                     (nn_bso_block_t*) &BSO, &plan, &job);
+        
+        PRINTF("\t\tCalling %s...\n", TEST_TARGET);
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, C_out);
 
         PRINTF("\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -826,7 +733,6 @@ void test_fully_connected_16_case5()
 #undef ceil_C_out
 #undef C_in
 #undef C_out
-#undef DEBUG_ON
 
 
 
@@ -839,7 +745,6 @@ void test_fully_connected_16_case5()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define C_out           (12)
 #define C_in            (2 * VPU_INT8_EPV)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
@@ -858,16 +763,6 @@ void test_fully_connected_16_case6()
     } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
-
-#if DEBUG_ON
-    PRINTF("&W = 0x%08X\n", W);
-    PRINTF("&X = 0x%08X\n", &X[0]);
-
-    PRINTF("C_out = %u\n", C_out);
-    PRINTF("ceil_C_out = %u\n", ceil_C_out);
-    PRINTF("C_in = %u\n", C_in);
-    PRINTF("\n\n");
-#endif
 
     PRINTF("%s...\n", __func__);
 
@@ -946,14 +841,10 @@ void test_fully_connected_16_case6()
                             (int16_t*) &BSO.shift2, 
                             NULL, C_out  );
 
-            nn_fully_connected_plan_t plan;
-            nn_fully_connected_job_t job;
-            fully_connected_init(&plan, &job, C_in, C_out_tmp, NULL, 1);
-
-            PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
-            fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                        (nn_bso_block_t*) &BSO, &plan, &job);
+        
+            PRINTF("\t\t\tCalling %s...\n", TEST_TARGET);
+            fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, C_out_tmp);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -979,8 +870,6 @@ void test_fully_connected_16_case6()
 #undef ceil_C_out
 #undef C_in
 #undef C_out
-#undef DEBUG_ON
-
 
 
 
@@ -992,7 +881,6 @@ void test_fully_connected_16_case6()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define C_out           (3 * VPU_INT8_ACC_PERIOD + 6)
 #define C_in            (2 * VPU_INT8_EPV)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
@@ -1011,16 +899,6 @@ void test_fully_connected_16_case7()
     } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
-
-#if DEBUG_ON
-    PRINTF("&W = 0x%08X\n", W);
-    PRINTF("&X = 0x%08X\n", &X[0]);
-
-    PRINTF("C_out = %u\n", C_out);
-    PRINTF("ceil_C_out = %u\n", ceil_C_out);
-    PRINTF("C_in = %u\n", C_in);
-    PRINTF("\n\n");
-#endif
 
     PRINTF("%s...\n", __func__);
 
@@ -1099,14 +977,10 @@ void test_fully_connected_16_case7()
                             (int16_t*) &BSO.shift2, 
                             NULL, C_out  );
 
-        nn_fully_connected_plan_t plan;
-        nn_fully_connected_job_t job;
-        fully_connected_init(&plan, &job, C_in, C_out_tmp, NULL, 1);
-
-            PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
-            fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                        (nn_bso_block_t*) &BSO, &plan, &job);
+        
+            PRINTF("\t\t\tCalling %s...\n", TEST_TARGET);
+            fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, C_out_tmp);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1132,13 +1006,6 @@ void test_fully_connected_16_case7()
 #undef ceil_C_out
 #undef C_in
 #undef C_out
-#undef DEBUG_ON
-
-
-
-
-
-
 
 
 
@@ -1152,7 +1019,6 @@ void test_fully_connected_16_case7()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define C_out           (12)
 #define C_in            (24)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
@@ -1171,16 +1037,6 @@ void test_fully_connected_16_case8()
     } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
-
-#if DEBUG_ON
-    PRINTF("&W = 0x%08X\n", W);
-    PRINTF("&X = 0x%08X\n", &X[0]);
-
-    PRINTF("C_out = %u\n", C_out);
-    PRINTF("ceil_C_out = %u\n", ceil_C_out);
-    PRINTF("C_in = %u\n", C_in);
-    PRINTF("\n\n");
-#endif
 
     PRINTF("%s...\n", __func__);
 
@@ -1260,14 +1116,10 @@ void test_fully_connected_16_case8()
                             (int16_t*) &BSO.shift2, 
                             NULL, C_out  );
 
-            nn_fully_connected_plan_t plan;
-            nn_fully_connected_job_t job;
-            fully_connected_init(&plan, &job, C_in, C_out_tmp, NULL, 1);
-
-            PRINTF("\t\t\tC...\n");
             memset(Y, 0xCC, sizeof(Y));
-            fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                        (nn_bso_block_t*) &BSO, &plan, &job);
+        
+            PRINTF("\t\t\tCalling %s...\n", TEST_TARGET);
+            fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, C_out_tmp);
 
             PRINTF("\t\t\tChecking...\n");
             char str_buff[200] = {0};
@@ -1293,13 +1145,6 @@ void test_fully_connected_16_case8()
 #undef ceil_C_out
 #undef C_in
 #undef C_out
-#undef DEBUG_ON
-
-
-
-
-
-
 
 
 
@@ -1313,7 +1158,6 @@ void test_fully_connected_16_case8()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define C_out           (2 * VPU_INT8_ACC_PERIOD + 12)
 #define C_in            (3 * VPU_INT8_EPV + 24)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
@@ -1332,16 +1176,6 @@ void test_fully_connected_16_case9()
     } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out]        = { 0 };
-
-#if DEBUG_ON
-    PRINTF("&W = 0x%08X\n", W);
-    PRINTF("&X = 0x%08X\n", &X[0]);
-
-    PRINTF("C_out = %u\n", C_out);
-    PRINTF("ceil_C_out = %u\n", ceil_C_out);
-    PRINTF("C_in = %u\n", C_in);
-    PRINTF("\n\n");
-#endif
 
     PRINTF("%s...\n", __func__);
 
@@ -1412,14 +1246,10 @@ void test_fully_connected_16_case9()
                         (int16_t*) &BSO.shift2, 
                         NULL, C_out  );
 
-        nn_fully_connected_plan_t plan;
-        nn_fully_connected_job_t job;
-        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
-
-        PRINTF("\t\t\tC...\n");
         memset(Y, 0xCC, sizeof(Y));
-        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                    (nn_bso_block_t*) &BSO, &plan, &job);
+        
+        PRINTF("\t\t\tCalling %s...\n", TEST_TARGET);
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, C_out);
 
         PRINTF("\t\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -1441,14 +1271,6 @@ void test_fully_connected_16_case9()
 #undef ceil_C_out
 #undef C_in
 #undef C_out
-#undef DEBUG_ON
-
-
-
-
-
-
-
 
 
 
@@ -1461,7 +1283,6 @@ void test_fully_connected_16_case9()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
 #define C_out           (2 * VPU_INT8_ACC_PERIOD + 12)
 #define C_in            (3 * VPU_INT8_EPV + 24)
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
@@ -1480,16 +1301,6 @@ void test_fully_connected_16_case10()
     } BSO;
 
     int16_t WORD_ALIGNED  Y[C_out];
-
-#if DEBUG_ON
-    PRINTF("&W = 0x%08X\n", W);
-    PRINTF("&X = 0x%08X\n", &X[0]);
-
-    PRINTF("C_out = %u\n", C_out);
-    PRINTF("ceil_C_out = %u\n", ceil_C_out);
-    PRINTF("C_in = %u\n", C_in);
-    PRINTF("\n\n");
-#endif
 
     PRINTF("%s...\n", __func__);
 
@@ -1512,7 +1323,6 @@ void test_fully_connected_16_case10()
         BSO.shift2[k] = 14;
     }
     
-
     nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
                     (int32_t*) &BSO.B, 
                     (int16_t*) &BSO.shift1, 
@@ -1522,14 +1332,10 @@ void test_fully_connected_16_case10()
                     (int16_t*) &BSO.shift2, 
                     NULL, C_out  );
 
-        nn_fully_connected_plan_t plan;
-        nn_fully_connected_job_t job;
-        fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
-
-        PRINTF("\t\t\tC...\n");
         memset(Y, 0xCC, sizeof(Y));
-        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                    (nn_bso_block_t*) &BSO, &plan, &job);
+        
+        PRINTF("\t\t\tCalling %s...\n", TEST_TARGET);
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, C_out);
 
         PRINTF("\t\t\tChecking...\n");
         char str_buff[200] = {0};
@@ -1538,7 +1344,7 @@ void test_fully_connected_16_case10()
         int16_t exp_val = -(C_in*(c-64) + (C_in/2)*(C_in-1))/4;
 
         if(Y[c] != exp_val)
-            sprintf(str_buff, "C failed. (index: %u)", c);
+            sprintf(str_buff, "(index: %u)", c);
 
         TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y[c], str_buff);
     }
@@ -1546,14 +1352,6 @@ void test_fully_connected_16_case10()
 #undef ceil_C_out
 #undef C_in
 #undef C_out
-#undef DEBUG_ON
-
-
-
-
-
-
-
 
 
 
@@ -1566,9 +1364,8 @@ void test_fully_connected_16_case10()
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define DEBUG_ON        (0 || TEST_DEBUG_ON)
-#define C_out           (2 * VPU_INT8_ACC_PERIOD + 12)
-#define C_in            (3 * VPU_INT8_EPV + 24)
+#define C_out           (2 * VPU_INT8_ACC_PERIOD + 12)  // = 44
+#define C_in            (3 * VPU_INT8_EPV + 24)         // = 120
 #define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
 void test_fully_connected_16_case11()
 {
@@ -1586,15 +1383,118 @@ void test_fully_connected_16_case11()
 
     int16_t WORD_ALIGNED  Y[C_out];
 
-#if DEBUG_ON
-    PRINTF("&W = 0x%08X\n", W);
-    PRINTF("&X = 0x%08X\n", &X[0]);
+    PRINTF("%s...\n", __func__);
 
-    PRINTF("C_out = %u\n", C_out);
-    PRINTF("ceil_C_out = %u\n", ceil_C_out);
-    PRINTF("C_in = %u\n", C_in);
-    PRINTF("\n\n");
-#endif
+    for(int k = 0; k < C_in; k++){
+        X[k] = k-64 ;
+    }
+
+    for(int k = 0; k < C_out; k++){
+        for(int j = 0; j < C_in; j++){
+            W[k][j] = k - 24;
+        }
+    }
+
+    for(int k = 0; k < C_out; k++){
+        BSO.B[k] = 0x0000;
+        BSO.shift1[k] = 1;
+        BSO.scale[k] = -0x2000; // - (2**13)
+        BSO.offset_scale[k] = 1<<14;
+        BSO.offset[k]       = 1;
+        BSO.shift2[k] = 14;
+    }
+    
+
+    nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                    (int32_t*) &BSO.B, 
+                    (int16_t*) &BSO.shift1, 
+                    (int16_t*) &BSO.scale, 
+                    (int16_t*) &BSO.offset_scale,
+                    (int16_t*) &BSO.offset,
+                    (int16_t*) &BSO.shift2, 
+                    NULL, C_out  );
+
+    memset(Y, 0xCC, sizeof(Y));
+        
+    PRINTF("\t\t\tCalling %s...\n", TEST_TARGET);
+    fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, C_out);
+
+    PRINTF("\t\t\tChecking...\n");
+    char str_buff[200] = {0};
+    for(unsigned c = 0; c < C_out; c++){
+
+        // X[] = [0,1,2,...,C_in-1] - 64
+        // W[c][] = [c-24, c-24, c-24, ..., c-24]
+
+        // X[]*W[c][] = [(c-24)*(0-64), (c-24)*(1-64), ..., (c-24)*(C_in-1-64)]
+        //            = (c-24) * [(0-64), (1-64), (2-64), ..., (C_in-1-64)]
+        //            = (c-24) * ([0, 1, 2, ..., C_in-1] - [64, 64, 64, ..., 64])
+
+        // sum[c] = (c-24) * ((0-64) + (1-64) + (2-64) + ... + (C_in-1-64))
+        //        = (c-24) * (0+1+2+...+(C_in-1) - 64 * C_in)
+        //        = (c-24) * ( (C_in-1)*(C_in/2) - 64 * C_in )
+        //        = (c-24)*(C_in-1)*(C_in/2) - 64*(c-24)*C_in
+
+        // sum[0] = -24 * (C_in-1)*(C_in/2) - 64*(-24)*C_in = -24*(119)*(60) - 64*(-24)*120
+        //        = -171360 - -(184320) = 12960
+
+        // sum[43]= (43-24)*119*60 - 64*(43-24)*120 = -10260
+        
+        // after shift1: acc[c] = ((sum[c]+1) >> 1)   // +1 is rounding logic
+        // after scale:  acc[c] = ((sum[c]+1) >> 1) * -(2**13)
+        // after offset: acc[c] = ((sum[c]+1) >> 1) * -(2**13) + (2**14)
+        // after shift2: acc[c] = (((sum[c]+1) >> 1) * -(2**13) + (2**14) + (1<<13)) >> 14   // +(1<<13) is rounding logic
+
+        // final[0] = (((sum[0]+1) >> 1) * -(2**13) + (2**14) + (1<<13)) >> 14
+        //          = 6480 * -2**13
+
+        int32_t sum_c = (c-24)*(C_in-1)*(C_in/2) - 64*(c-24)*C_in;
+
+        int16_t exp_val = (((sum_c+1) >> 1) * -(1<<13) + (1<<14) + (1<<13)) >> 14;
+
+        // int16_t exp_val = (-( (c-24)*(C_in-1)*(C_in/2) - 64*(c-24)*C_in ) / 4) + 1;
+
+        if(Y[c] != exp_val)
+            sprintf(str_buff, "(index: %u)", c);
+
+        TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y[c], str_buff);
+    }
+}
+#undef ceil_C_out
+#undef C_in
+#undef C_out
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//  Case 12 -  Check that things work correctly when out_chan_count == 0
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#define C_out           (2 * VPU_INT8_ACC_PERIOD + 12)  // = 44
+#define C_in            (3 * VPU_INT8_EPV + 24)         // = 120
+#define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
+void test_fully_connected_16_case12()
+{
+    int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
+    int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
+    
+    struct {
+        int32_t B[ceil_C_out];
+        int16_t shift1[ceil_C_out];
+        int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
+        int16_t shift2[ceil_C_out];
+    } BSO;
+
+    int16_t WORD_ALIGNED  Y[C_out];
 
     PRINTF("%s...\n", __func__);
 
@@ -1611,7 +1511,7 @@ void test_fully_connected_16_case11()
     for(int k = 0; k < C_out; k++){
         BSO.B[k] = 0x0000;
         BSO.shift1[k] = 1;
-        BSO.scale[k] = -0x2000;
+        BSO.scale[k] = -0x2000; // - (2**13)
         BSO.offset_scale[k] = 1<<14;
         BSO.offset[k]       = 1;
         BSO.shift2[k] = 14;
@@ -1627,36 +1527,19 @@ void test_fully_connected_16_case11()
                     (int16_t*) &BSO.shift2, 
                     NULL, C_out  );
 
-    nn_fully_connected_plan_t plan;
-    nn_fully_connected_job_t job;
-    fully_connected_init(&plan, &job, C_in, C_out, NULL, 1);
-
-    PRINTF("\t\t\tC...\n");
     memset(Y, 0xCC, sizeof(Y));
-    fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X,
-                                (nn_bso_block_t*) &BSO, &plan, &job);
+        
+    PRINTF("\t\t\tCalling %s...\n", TEST_TARGET);
+    fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, C_in, 0, 0);
 
     PRINTF("\t\t\tChecking...\n");
     char str_buff[200] = {0};
     for(unsigned c = 0; c < C_out; c++){
 
-        // X[] = [1,2,3,...,C_in] - 128
-        // W[c][] = [c-24, c-24, c-24, ..., c-24]
-
-        // X[]*W[c][] = [(c-24)*(0-128), (c-24)*(1-128), ..., (c-24)*(C_in-1-128)]
-        //            = (c-24) * [(0-128), (1-128), (2-128), ..., (C_in-1-128)]
-
-        // sum = (c-24) * ((0-128) + (1-128) + (2-128) + ... + (C_in-1-128))
-        //     = (c-24) * (0+1+2+...+(C_in-1) - 128 * C_in)
-        //     = (c-24) * ( (C_in-1)*(C_in/2) - 128 * C_in )
-        //     = (c-24)*(C_in-1)*(C_in/2) - 128*(c-24)*C_in
-        
-        // -((sum >> 1) / 2)
-
-        int16_t exp_val = (-( (c-24)*(C_in-1)*(C_in/2) - 64*(c-24)*C_in ) / 4) + 1;
+        int16_t exp_val = 0xCCCC;
 
         if(Y[c] != exp_val)
-            sprintf(str_buff, "C failed. (index: %u)", c);
+            sprintf(str_buff, "(index: %u)", c);
 
         TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y[c], str_buff);
     }
@@ -1664,7 +1547,138 @@ void test_fully_connected_16_case11()
 #undef ceil_C_out
 #undef C_in
 #undef C_out
-#undef DEBUG_ON
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//  Case 13 -  Check that out_chan_start and out_chan_count are respected
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#define C_out           (2 * VPU_INT8_ACC_PERIOD + 12)  // = 44
+#define C_in            (3 * VPU_INT8_EPV + 24)         // = 120
+#define ceil_C_out      (((C_out + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2) << VPU_INT8_ACC_PERIOD_LOG2)
+void test_fully_connected_16_case13()
+{
+    int8_t   WORD_ALIGNED  W[C_out][C_in]   = {{ 0 }};
+    int8_t   WORD_ALIGNED  X[C_in]          = { 0 };
+    
+    struct {
+        int32_t B[ceil_C_out];
+        int16_t shift1[ceil_C_out];
+        int16_t scale[ceil_C_out];
+        int16_t offset_scale[ceil_C_out];
+        int16_t offset[ceil_C_out];
+        int16_t shift2[ceil_C_out];
+    } BSO;
+
+    int16_t WORD_ALIGNED  Y[C_out];
+
+    PRINTF("%s...\n", __func__);
+
+    for(int k = 0; k < C_in; k++){
+        X[k] = k-64 ;
+    }
+
+    for(int k = 0; k < C_out; k++){
+        for(int j = 0; j < C_in; j++){
+            W[k][j] = k - 24;
+        }
+    }
+
+    for(int k = 0; k < C_out; k++){
+        BSO.B[k] = 0x0000;
+        BSO.shift1[k] = 1;
+        BSO.scale[k] = -0x2000; // - (2**13)
+        BSO.offset_scale[k] = 1<<14;
+        BSO.offset[k]       = 1;
+        BSO.shift2[k] = 14;
+    }
+
+    nn_standard_BSO_layout(  (nn_bso_block_t*) &BSO, 
+                    (int32_t*) &BSO.B, 
+                    (int16_t*) &BSO.shift1, 
+                    (int16_t*) &BSO.scale, 
+                    (int16_t*) &BSO.offset_scale,
+                    (int16_t*) &BSO.offset,
+                    (int16_t*) &BSO.shift2, 
+                    NULL, C_out  );
+
+
+
+    typedef struct {
+        channel_count_t out_chan_start;
+        channel_count_t out_chan_count;
+        unsigned line;
+    } case_t;
+
+    case_t casses[] = {
+    //  {  start,      count,     line     }
+        {      0,      C_out,     __LINE__ },
+        {      0,          1,     __LINE__ },
+        {      0,          2,     __LINE__ },
+        {      0,          8,     __LINE__ },
+        {      0,         17,     __LINE__ },
+        {      0,         18,     __LINE__ },
+        {      0,         24,     __LINE__ },
+        {     16,          1,     __LINE__ },
+        {     16,          2,     __LINE__ },
+        {     16,          8,     __LINE__ },
+        {     16,         17,     __LINE__ },
+        {     16,         18,     __LINE__ },
+        {     16,         24,     __LINE__ },
+    };
+
+    const unsigned N_casses = sizeof(casses) / sizeof(case_t);
+
+    const unsigned start_case = 0;
+    const unsigned last_case = -1;
+
+    print_warns(start_case);
+
+    for(int v = start_case; v < N_casses && v <= last_case; v++){
+        PRINTF("\tvector %u...\n", v);
+
+        case_t* casse = (case_t*) &casses[v];
+
+        memset(Y, 0xCC, sizeof(Y));
+            
+        PRINTF("\t\t\tCalling %s...\n", TEST_TARGET);
+        fully_connected_16((int16_t*) Y, (int8_t*) W, (int8_t*) X, (nn_bso_block_t*) &BSO, 
+                            C_in, casse->out_chan_start, casse->out_chan_count);
+
+        PRINTF("\t\t\tChecking...\n");
+        char str_buff[200] = {0};
+        for(unsigned c = 0; c < C_out; c++){
+
+            // exp[0] = (((sum[0]+1) >> 1) * -(2**13) + (2**14) + (1<<13)) >> 14
+            //          = 6480 * -2**13
+
+            int32_t sum_c = (c-24)*(C_in-1)*(C_in/2) - 64*(c-24)*C_in;
+
+            int16_t exp_val = (((sum_c+1) >> 1) * -(1<<13) + (1<<14) + (1<<13)) >> 14;
+
+            if( (c < casse->out_chan_start) || (c >= (casse->out_chan_start + casse->out_chan_count)))
+                exp_val = 0xCCCC;
+
+            if(Y[c] != exp_val)
+                sprintf(str_buff, "(vector: %u) (index: %u) (line: %u)", v, c, casse->line);
+
+            TEST_ASSERT_EQUAL_MESSAGE(exp_val, Y[c], str_buff);
+        }
+    }
+}
+#undef ceil_C_out
+#undef C_in
+#undef C_out
+
+
+
+
 
 
 void test_fully_connected_16()
@@ -1683,4 +1697,6 @@ void test_fully_connected_16()
     RUN_TEST(test_fully_connected_16_case9);
     RUN_TEST(test_fully_connected_16_case10);
     RUN_TEST(test_fully_connected_16_case11);
+    RUN_TEST(test_fully_connected_16_case12);
+    RUN_TEST(test_fully_connected_16_case13);
 }

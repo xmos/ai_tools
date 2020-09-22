@@ -24,17 +24,20 @@ class Pool2dGenericTestModelGenerator(
     ChannelPreservingOpTestModelGenerator, FilterOpTestModelGenerator
 ):
     def _set_config(self, cfg: Configuration) -> None:
-        strides = cfg.setdefault("strides", (2, 2))
-        K_h = cfg.setdefault("K_h", 2)
-        K_w = cfg.setdefault("K_w", 2)
-        if cfg.setdefault("padding", "valid") == "same":
-            assert (
-                cfg["height"] % 2 == cfg["width"] % 2 == 0
-                and K_h == K_w == 2
-                and strides[0] == strides[1] == 2
-            ), "same padding is only allowed for the common 2x2 case"
-
+        cfg.setdefault("strides", (2, 2))
+        cfg.setdefault("K_h", 2)
+        cfg.setdefault("K_w", 2)
+        cfg.setdefault("padding", "valid")
         super()._set_config(cfg)
+
+    def check_config(self) -> None:
+        super().check_config()
+        if self._config["padding"] == "same":
+            assert (
+                self._config["height"] % 2 == self._config["width"] % 2 == 0
+                and self._config["K_h"] == self._config["K_w"] == 2
+                and self._config["strides"][0] == self._config["strides"][1] == 2
+            ), "same padding is only allowed for the common 2x2 case"
 
     @property
     @abstractmethod

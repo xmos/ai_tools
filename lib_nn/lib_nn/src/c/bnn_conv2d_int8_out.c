@@ -52,8 +52,8 @@ void bnn_conv2d_int8_out_asm_prepare(
   //slower within the kernel(2 loops in).
   plan->mask = 0xaaaaaaaa; 
   
-  plan->pa_mul = (int16_t *)post_activation_multiplier_q;
-  plan->pa_bias = (int16_t *)post_activation_bias_q;
+  plan->post_activation_mul = (int16_t *)post_activation_multiplier_q;
+  plan->post_activation_bias = (int16_t *)post_activation_bias_q;
   plan->final_shr = final_shr;
 
   if(accu_shr >= 0){

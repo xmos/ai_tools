@@ -88,9 +88,9 @@ void conv2d_larq_impl(const nn_image_params_t* x,
     params.stride_height = k->stride.vertical;
     params.stride_width = k->stride.horizontal;
 
-    RuntimeShape packed_input_shape  = RuntimeShape(4, (const int*)x_dims);
-    RuntimeShape output_shape        = RuntimeShape(4, (const int*)y_dims);
-    RuntimeShape packed_filter_shape = RuntimeShape(4, (const int*)k_dims);
+    RuntimeShape packed_input_shape  = RuntimeShape(4, (const int32_t*)x_dims);
+    RuntimeShape output_shape        = RuntimeShape(4, (const int32_t*)y_dims);
+    RuntimeShape packed_filter_shape = RuntimeShape(4, (const int32_t*)k_dims);
 
     ce::ref::BConv2D<std::uint32_t, DstScalar>(
       params, packed_input_shape, packed_input_data,

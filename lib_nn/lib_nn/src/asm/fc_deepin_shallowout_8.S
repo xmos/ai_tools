@@ -21,11 +21,11 @@ void fc_deepin_shallowout_8(
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 4
+.align 16
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
-#define NOOOOP          nop
+#define                 nop
     
 #define W       r0
 #define B       r1
@@ -40,8 +40,6 @@ void fc_deepin_shallowout_8(
 
 #define STACK_TMP_VEC   8
 
-.align 8
-
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
@@ -49,25 +47,23 @@ FUNCTION_NAME:
     std r6, r7, sp[1]
     std r8, r9, sp[2]
     {   ldc _32, 32                             ;   stw r10, sp[6]                      }
-    {   NOOOOP                                  ;   ldw C_in, sp[NSTACKWORDS+2]         }
+    {                                           ;   ldw C_in, sp[NSTACKWORDS+2]         }
     {   shr C_in, C_in, 5                       ;   ldw C_out, sp[NSTACKWORDS+1]        }
-    {   NOOOOP                                  ;   ldw shifts, sp[NSTACKWORDS+3]       }
-    {   NOOOOP                                  ;   ldw scales, sp[NSTACKWORDS+4]       }
-    {   ldaw r11, sp[STACK_TMP_VEC]             ;   NOOOOP                              }
-    {   NOOOOP                                  ;   vclrdr                              }
-    {   NOOOOP                                  ;   vstr r11[0]                         }
+    {                                           ;   ldw shifts, sp[NSTACKWORDS+3]       }
+    {                                           ;   ldw scales, sp[NSTACKWORDS+4]       }
+    {   ldaw r11, sp[STACK_TMP_VEC]             ;                                       }
+    {                                           ;   vclrdr                              }
+    {                                           ;   vstr r11[0]                         }
     bf C_out, .Lfunc_end
-    {   NOOOOP                                  ;   NOOOOP                              }
-
 
 
 #define LOAD_BIAS                                                                               \
-    {   shl r11, _32, 4                         ;   NOOOOP                              };      \
+    {   shl r11, _32, 4                         ;                                       };      \
     {   ldc r9, 1                               ;   vsetc r11                           };      \
     {   ldaw r11, sp[STACK_TMP_VEC]             ;   ld16s r10, B[r9]                    };      \
-    {   ldc r9, 0                               ;   NOOOOP                              };      \
+    {   ldc r9, 0                               ;                                       };      \
     st16 r10, r11[r9];                                                                          \
-    {   NOOOOP                                  ;   vldd r11[0]                         };      \
+    {                                           ;   vldd r11[0]                         };      \
     {   add B, B, 4                             ;   ld16s r10, B[r9]                    };      \
     st16 r10, r11[r9];                                                                          \
     {   mov r10, C_in                           ;   vldr r11[0]                         };      \
@@ -86,8 +82,8 @@ FUNCTION_NAME:
     {   shl r11, _32, 3                         ;   vadddr                              }
     {   ldc r10, 0x1                            ;   vsetc r11                           }
     {   sub C_out, C_out, 1                     ;   vlsat shifts[0]                     }
-    {   NOOOOP                                  ;   vlmul scales[0]                     }
-    {   NOOOOP                                  ;   vdepth8                             }
+    {                                           ;   vlmul scales[0]                     }
+    {                                           ;   vdepth8                             }
     vstrpv Y[0], r10
     bf C_out, .Lfunc_end
     
@@ -103,7 +99,7 @@ FUNCTION_NAME:
     {   sub C_out, C_out, 1                     ;   vsetc r11                           }
     {   add shifts, shifts, 4                   ;   vlsat shifts[0]                     }
     {   add scales, scales, 4                   ;   vlmul scales[0]                     }
-    {   NOOOOP                                  ;   vdepth8                             }
+    {                                           ;   vdepth8                             }
     vstrpv Y[0], r10
     bf C_out, .Lfunc_end
     
@@ -118,9 +114,9 @@ FUNCTION_NAME:
     {   ldc r10, 0x4                            ;   vsetc r11                           }
     {   sub C_out, C_out, 1                     ;   vlsat shifts[0]                     }
     {   ldaw r11, sp[STACK_TMP_VEC]             ;   vlmul scales[0]                     }
-    {   NOOOOP                                  ;   vlmaccr r11[0]                      }
-    {   NOOOOP                                  ;   vlmaccr r11[0]                      }
-    {   NOOOOP                                  ;   vdepth8                             }
+    {                                           ;   vlmaccr r11[0]                      }
+    {                                           ;   vlmaccr r11[0]                      }
+    {                                           ;   vdepth8                             }
     vstrpv Y[0], r10
     bf C_out, .Lfunc_end
     
@@ -137,17 +133,17 @@ FUNCTION_NAME:
     {   ldaw r11, sp[STACK_TMP_VEC]             ;   vlsat shifts[0]                     }
     {   add shifts, shifts, 4                   ;   vlmul scales[0]                     }
     {   add scales, scales, 4                   ;   vlmaccr r11[0]                      }
-    {   NOOOOP                                  ;   vlmaccr r11[0]                      }
-    {   NOOOOP                                  ;   vdepth8                             }
+    {                                           ;   vlmaccr r11[0]                      }
+    {                                           ;   vdepth8                             }
     vstrpv Y[0], r10
-    {   add Y, Y, 4                             ;   NOOOOP                              }
+    {   add Y, Y, 4                             ;                                       }
     bt C_out, .L_row_top_aligned0 
 
 
 
 
 .Lfunc_end:
-    {   NOOOOP                                  ;   ldw r10, sp[6]                      }
+    {                                           ;   ldw r10, sp[6]                      }
     ldd r8, r9, sp[2]
     ldd r6, r7, sp[1]
     ldd r4, r5, sp[0]

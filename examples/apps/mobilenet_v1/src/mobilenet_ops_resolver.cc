@@ -11,12 +11,12 @@ namespace xcore {
 void add_registered_ops(MicroMutableOpResolver<num_mobilenet_ops> *resolver) {
   resolver->AddSoftmax();
   resolver->AddPad();
-  resolver->AddCustom("XC_conv2d_shallowin", Register_Conv2D_Shallow());
-  resolver->AddCustom("XC_conv2d_depthwise", Register_Conv2D_Depthwise());
-  resolver->AddCustom("XC_conv2d_1x1", Register_Conv2D_1x1());
-  resolver->AddCustom("XC_avgpool2d_global", Register_AvgPool2D_Global());
+  resolver->AddCustom(Conv2D_Shallow_OpCode, Register_Conv2D_Shallow());
+  resolver->AddCustom(Conv2D_Depthwise_OpCode, Register_Conv2D_Depthwise());
+  resolver->AddCustom(Conv2D_1x1_OpCode, Register_Conv2D_1x1());
+  resolver->AddCustom(AvgPool2D_Global_OpCode, Register_AvgPool2D_Global());
   resolver->AddCustom("XC_fc_deepin_anyout", Register_FullyConnected_16());
-  resolver->AddCustom("XC_requantize_16_to_8", Register_Requantize_16_to_8());
+  resolver->AddCustom(Requantize_16_to_8_OpCode, Register_Requantize_16_to_8());
 }
 
 MobileNetOpsResolver::MobileNetOpsResolver() { add_registered_ops(this); }

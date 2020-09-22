@@ -25,7 +25,14 @@ class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):
         if super().match(op):
             with self.using(op):
                 input_shape = self._input.shape
-                return len(input_shape) == 4 and input_shape[-1] % 4
+                return (
+                    len(input_shape) == 4
+                    and input_shape[-1] % 4
+                    # NOTE: the current implementation doesn't allow mutating
+                    #       if the weight tensor is an output or not a constant
+                    and self._weights.is_constant
+                    and self._weights not in op.subgraph.outputs
+                )
         return False
 
     def mutate(self, op):
@@ -40,12 +47,14 @@ class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):
             pads = [[0, 0], [0, 0], [0, 0], [0, pad_size]]
 
             # create new zero padded kernel tensor
+            # TODO: this could be done better if we had constant folding, by
+            #       adding an appropriate padding op between the original and
+            #       the new weights, and let it be folded later.
+            #       (this would also work if the weight/bias is an input/output)
             new_weight_tensor = subgraph.create_tensor(
                 f"{self._op.name}/weights",
                 old_weight_tensor.type,
                 new_shape,
-                isinput=old_weight_tensor in subgraph.inputs,
-                isoutput=old_weight_tensor in subgraph.outputs,
                 quantization=old_weight_tensor.quantization,
                 consumers=[self._op],
             )

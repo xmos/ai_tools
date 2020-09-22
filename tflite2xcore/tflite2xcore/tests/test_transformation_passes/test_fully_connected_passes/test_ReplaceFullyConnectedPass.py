@@ -24,8 +24,8 @@ def trf_pass() -> ReplaceFullyConnectedPass:
 
 
 @pytest.fixture()
-def custom_opcode() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_fc_deepin_anyout
+def new_opcode() -> XCOREOpCodes:
+    return XCOREOpCodes.XC_fc
 
 
 if __name__ == "__main__":

@@ -1,9 +1,11 @@
 
 #if defined(__XS3A__)
 
+#include "nn_config.h"
+#include "asm_constants.h"
 
 /*  
-void fully_connected_16(
+void fully_connected_8(
     int16_t* Y,
     const int8_t* W, 
     const int8_t* X, 
@@ -13,7 +15,7 @@ void fully_connected_16(
     const channel_count_t out_chan_count);
 */
 
-#define FUNCTION_NAME fully_connected_16
+#define FUNCTION_NAME fully_connected_8
 
 #ifndef FULLY_CONNECTED_8_SAFETY_CHECKS_ENABLED
   #define FULLY_CONNECTED_8_SAFETY_CHECKS_ENABLED (1)
@@ -21,7 +23,7 @@ void fully_connected_16(
 
 
 #define NSTACKVECS  2
-#define NSTACKWORDS  ((NSTACKVECS)*8+10)
+#define NSTACKWORDS  ((NSTACKVECS)*8+12)
     
 .text
 .issue_mode  dual
@@ -39,6 +41,7 @@ void fully_connected_16(
 #define STACK_X             1
 #define STACK_ORIG_CP       8
 #define STACK_ORIG_DP       9
+#define STACK_TMP           10
 
 #define STACK_X_TAIL    (NSTACKWORDS-8)
 #define STACK_VEC_TMP   (NSTACKWORDS-16)
@@ -57,8 +60,6 @@ void fully_connected_16(
 #define BSO             dp
 #define acc_reset_ptr   cp
 
-
-
 #define Q(R)  R
 
 
@@ -72,12 +73,11 @@ FUNCTION_NAME:
 {   ldc Q(cog_left), 0                      ;   stw dp, sp[STACK_ORIG_DP]               }
 
 // Apply our start strides to Y, W and BSO. These will be determined by C_in and out_start
-//  -   Y <-- Y + 2 * out_start       (times 2 because output is 16-bits for this version)
+//  -   Y <-- Y +  out_start   
 //  -   W <-- W + out_start * C_in
 //  -   BSO <-- BSO + (out_start//16) * sizeof(nn_bso_block_t)
 {                                           ;   ldw tmp, sp[STACK_OUT_START]            }
 {   add Y, Y, tmp                           ;   ldw C_in, sp[STACK_CIN]                 }
-{   add Y, Y, tmp                           ;                                           }
     lmul Q(cog_left), W, tmp, C_in, W, Q(cog_left)  // Q(cog_left) is 0 and shouldn't change here.
     ldc r11, nn_bso_block_t_sizeof
 {   shr r8, tmp, 4                          ;   vclrdr                                  }
@@ -89,7 +89,7 @@ FUNCTION_NAME:
 #if FULLY_CONNECTED_8_SAFETY_CHECKS_ENABLED
 // Error checks
 //  - C_in must be a multiple of 4
-//  - Output start must be a multiple of 16
+//  - Output start must be a multiple of 16 (because of BSO tensor)
 {   mov r11, C_in                           ;                                           }
 {   zext r11, 2                             ;   zext tmp, 4                             }
 {   ecallt r11                              ;   ecallt tmp                              }
@@ -127,11 +127,21 @@ FUNCTION_NAME:
 //For all full output groups maccr_jump = 0 and cig_end = 15*C_in+32  and acc_reset_ptr is irrelevant
 {   shl cig_end, C_in, 4                    ;   ldw cog_left, sp[STACK_OUT_COUNT]       }
 {   sub cig_end, cig_end, C_in              ;   shr cog_left, cog_left, 4               }
-{   add cig_end, cig_end, _32               ;   ldc maccr_jump, 0                       }
-{   shl r11, _32, 4                         ;   bf cog_left, .L_cog_loop_end            }
+{   shl r11, _32, 4                         ;   ldc maccr_jump, 0                       }
+{   add cig_end, cig_end, _32               ;   vsetc r11                               }
+{                                           ;   bf cog_left, .L_cog_loop_end            }
 
 .L_cog_loop:
-    {   ldaw r11, BSO[0]                        ;   vsetc r11                               }
+#if CONFIG_SYMMETRIC_SATURATION_fully_connected_8
+    {   ldaw r11, BSO[0]                        ;                                           }
+#else
+        ldap r11, vpu_vects_vec_0x80
+    {   mkmsk Q(cig_left), 16                   ;   vldr r11[0]                             }
+    {   ldaw r11, BSO[0]                        ;   shr Q(cig_left), Q(cig_left), maccr_jump}
+        vstrpv Y[0], Q(cig_left)
+#endif
+
+    {   ldaw r11, BSO[0]                        ;                                           }
     {   ldaw r11, BSO[8]                        ;   vldd r11[0]                             }
     {   shr cig_left, C_in, 5                   ;   vldr r11[0]                             }
     {   add W, W, cig_end                       ;   ldw X, sp[STACK_X]                      }
@@ -146,7 +156,6 @@ FUNCTION_NAME:
         {   zext r11, 5                             ;   add cig_left, cig_left, 1               }
         {   sub W, W, r11                           ;   bu .L_cig_tail_start                    }
     .L_is_not_cig_tail:
-
 
     .L_cig_loop:
         {   add X, X, _32                           ;   vldc X[0]                               }
@@ -183,18 +192,52 @@ FUNCTION_NAME:
         {   add W, W, cig_end                       ;   bt cig_left, .L_cig_loop                }
     
 .L_cig_loop_end:
-{   ldaw r11, BSO[16]                       ;   vsetc r11     /*  16-bit mode */        }
-{   ldaw r11, BSO[24]                       ;   vlsat r11[0]                            }
-{   sub cog_left, cog_left, 1               ;   vldc r11[0]                             }
-{   mkmsk Q(cig_left), 32                   ;   vstr tmp[0]                             }
-{   shr Q(cig_left), Q(cig_left), maccr_jump;   vclrdr                                  }
-{   ldaw r11, BSO[32]                       ;   vlmacc tmp[0]                           }
-{   ldaw r11, BSO[40]                       ;   vldc r11[0]                             }
-{   ldaw r11, BSO[48]                       ;   vlmacc r11[0]                           }
-{   ldaw BSO, BSO[56]                       ;   vlsat r11[0]                            }
-{   shl r11, _32, 4                         ;   shr Q(cig_left), Q(cig_left), maccr_jump}
-    vstrpv Y[0], Q(cig_left)
-{   add Y, Y, _32                           ;   bt cog_left, .L_cog_loop                }
+#if CONFIG_SYMMETRIC_SATURATION_fully_connected_8
+
+    {   ldaw r11, BSO[16]                       ;   vsetc r11     /*  16-bit mode */        }
+    {   ldaw r11, BSO[24]                       ;   vlsat r11[0]                            }
+    {   sub cog_left, cog_left, 1               ;   vldc r11[0]                             }
+    {   mkmsk Q(cig_left), 16                   ;   vstr tmp[0]                             }
+    {   shr Q(cig_left), Q(cig_left), maccr_jump;   vclrdr                                  }
+    {   ldaw r11, BSO[32]                       ;   vlmacc tmp[0]                           }
+    {   ldaw r11, BSO[40]                       ;   vldc r11[0]                             }
+    {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
+    {   ldaw r11, BSO[48]                       ;   vsetc r11    /* 8-bit mode */           }
+    {   ldaw BSO, BSO[56]                       ;   vlsat r11[0]                            }
+        vstrpv Y[0], Q(cig_left)
+    {   shr r11, _32, 1                         ;                                           }
+    {   add Y, Y, r11                           ;   bt cog_left, .L_cog_loop                }
+
+#else //CONFIG_SYMMETRIC_SATURATION_fully_connected_8
+
+    {   ldaw r11, BSO[16]                       ;   vsetc r11     /*  16-bit mode */        }
+    {   sub cog_left, cog_left, 1               ;   vlsat r11[0]                            }
+    {   ldaw r11, BSO[24]                       ;   vstr tmp[0]                             }
+    {                                           ;   vldc r11[0]                             }   
+    {                                           ;   vclrdr                                  }
+    {   ldaw r11, BSO[32]                       ;   vlmacc tmp[0]                           }
+    {   ldaw r11, BSO[40]                       ;   vldc r11[0]                             }
+    {   ldaw r11, BSO[48]                       ;   vlmacc r11[0]                           }
+    {   ldaw BSO, BSO[56]                       ;   vlsat r11[0]                            }
+        ldap r11, vpu_vects_vec_0x007F
+    {                                           ;   vstr tmp[0]                             }
+    {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
+    {   mkmsk Q(cig_left), 4                    ;   vdepth1                                 }
+        vstrpv r11[0], Q(cig_left)
+    {   ldc Q(cig_left), 0                      ;                                           }
+    {   mkmsk r11, 16                           ;   sub Q(cig_left), Q(cig_left), 8         }
+        vlashr tmp[0], Q(cig_left)
+    {   shr r11, r11, maccr_jump                ;   ldw Q(cig_left), sp[STACK_TMP]          }
+    {   andnot r11, Q(cig_left)                 ;   vdepth8                                 }
+        vstrpv Y[0], r11
+    {   shl r11, _32, 4                         ;                                           }
+    {   shr r11, _32, 1                         ;   vsetc r11   /* 8-bit mode */            }
+    {   add Y, Y, r11                           ;                                           }
+        bt cog_left, .L_cog_loop
+
+#endif //CONFIG_SYMMETRIC_SATURATION_fully_connected_8
+
+
 .L_cog_loop_end:
 
 // Check if there's a cog tail. If so, do one more cog loop using the corrected maccr_jump
@@ -208,7 +251,8 @@ FUNCTION_NAME:
 {   ldaw tmp, sp[STACK_VEC_TMP]             ;   ldc r11, 0                              }
 {   sub Q(X), tmp, Q(X)                     ;   stw r11, sp[STACK_OUT_COUNT]            }
 {   add cig_end, cig_end, _32               ;   set cp, Q(X)                            }
-{   shl r11, _32, 4                         ;   bu .L_cog_loop                          }
+{   shl r11, _32, 4                         ;                                           }
+    bu .L_cog_loop
 
 
 .Lfunc_end:

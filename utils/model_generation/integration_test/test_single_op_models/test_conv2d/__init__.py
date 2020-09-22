@@ -22,6 +22,14 @@ from .. import (
 
 
 class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
+    @property
+    def _total_width(self) -> int:
+        return self._config["width"]  # type: ignore
+
+    @property
+    def _total_height(self) -> int:
+        return self._config["height"]  # type: ignore
+
     def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
     ) -> tf.keras.layers.Layer:
@@ -29,10 +37,10 @@ class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
 
     def _set_config(self, cfg: Configuration) -> None:
         self._config.update(
-            dict(
-                weight_init=cfg.pop("weight_init", ("RandomUniform", -1, 1)),
-                bias_init=cfg.pop("bias_init", ("Constant", 0)),
-            )
+            {
+                "weight_init": cfg.pop("weight_init", ("RandomUniform", -1, 1)),
+                "bias_init": cfg.pop("bias_init", ("Constant", 0)),
+            }
         )
         cfg.setdefault("padding", "same")
         cfg.setdefault("strides", (1, 1))
@@ -40,17 +48,29 @@ class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
 
 
 class ExplicitPaddingMixin(AbstractConv2dTestModelGenerator):
+    _PAD_KEYS = ("pad_t", "pad_b", "pad_l", "pad_r")
+
     def _set_config(self, cfg: Configuration) -> None:
         assert (
             "padding" not in cfg
-        ), "padding config should be defined by (pad_t, pad_b, pad_l, pad_r)"
+        ), f"padding config should be defined by {self._PAD_KEYS}"
         cfg["padding"] = "valid"
 
-        for side in ["t", "b", "l", "r"]:
-            key = f"pad_{side}"
-            self._config.update({key: cfg.pop(key, 1)})
-
+        self._config.update({key: cfg.pop(key, 1) for key in self._PAD_KEYS})
         super()._set_config(cfg)
+
+    def check_config(self):
+        super().check_config()
+        for key in self._PAD_KEYS:
+            assert self._config[key] >= 0, f"{key} must non-negative"
+
+    @property
+    def _total_width(self) -> int:
+        return super()._total_width + self._config["pad_l"] + self._config["pad_r"]  # type: ignore
+
+    @property
+    def _total_height(self) -> int:
+        return super()._total_height + self._config["pad_t"] + self._config["pad_b"]  # type: ignore
 
     def _build_core_model(self) -> tf.keras.Model:
         cfg = self._config
@@ -70,13 +90,11 @@ class ExplicitPaddingMixin(AbstractConv2dTestModelGenerator):
 
 class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
-        input_channels = cfg.pop("input_channels", 4)
-        assert input_channels % 4 == 0, "# of input channels must be multiple of 4"
-        output_channels = cfg.pop("output_channels", 4)
-        assert output_channels % 4 == 0, "# of output channels must be multiple of 4"
-
         self._config.update(
-            {"input_channels": input_channels, "output_channels": output_channels}
+            {
+                "input_channels": cfg.pop("input_channels", 4),
+                "output_channels": cfg.pop("output_channels", 4),
+            }
         )
         super()._set_config(cfg)
 
@@ -98,3 +116,19 @@ class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
             kernel_initializer=parse_init_config(*cfg["weight_init"]),
             **kwargs,
         )
+
+
+class Conv2dProperTestModelGenerator(Conv2dGenericTestModelGenerator):
+    def check_config(self) -> None:
+        super().check_config()
+        assert (
+            self._config["input_channels"] % 4 == 0
+        ), "# of input channels must be multiple of 4"
+        assert (
+            self._config["output_channels"] % 4 == 0
+        ), "# of output channels must be multiple of 4"
+        if self._config["padding"] == "valid":
+            assert (
+                self._config["K_h"] != self._total_height
+                or self._config["K_w"] != self._total_width
+            ), "identical kernel and image size with valid padding is reserved for single pixel testing"

@@ -26,7 +26,7 @@ integration_test:
 
 .PHONY: ci 
 #TODO: Add lib_nn_test target when CI system connected HW
-ci: lib_nn_build tflite2xcore_test integration_test
+ci: lib_nn_build utils_build tflite2xcore_test integration_test
 
 .PHONY: test
 ci: lib_nn_test tflite2xcore_test utils_build integration_test

@@ -827,7 +827,7 @@ def build_LceQuantize(subgraph=None, *, input_shape, input_tensor_type=TensorTyp
 
     opcode = ExternalOpCodes.add_new_opcode("LceQuantize")
 
-    op = subgraph.create_operator(OperatorCode(opcode), inputs=[tin], outputs=[tout],)
+    subgraph.create_operator(OperatorCode(opcode), inputs=[tin], outputs=[tout],)
 
     return subgraph.model
 
@@ -878,7 +878,7 @@ def build_lceBconv2d(
         "pad_values": 0,
     }
 
-    op = subgraph.create_operator(
+    subgraph.create_operator(
         OperatorCode(opcode),
         inputs=[tin, w, output_threshold],
         outputs=[tout],

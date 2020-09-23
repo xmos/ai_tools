@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 from typing import Callable, Tuple
 from copy import deepcopy
+import math
 
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import (
@@ -807,14 +808,32 @@ def build_padded_DW(subgraph=None, *, weight_shape, input_size, paddings, stride
     return model
 
 
+def build_LceQuantize(subgraph=None, *, input_shape, input_tensor_type=TensorType.INT8):
+    output_tensor_type = TensorType.INT32
+
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    height, width, channels = input_shape
+    input_shape = [1, height, width, channels]
+
+    tin = subgraph.create_tensor("input", input_tensor_type, input_shape, isinput=True)
+
+    # add dummy data so that the op can be mutated
+    output_shape = [1, height, width, math.ceil(channels / 32)]
+
+    tout = subgraph.create_tensor(
+        "output", output_tensor_type, shape=output_shape, isoutput=True
+    )
+
+    opcode = ExternalOpCodes.add_new_opcode("LceQuantize")
+
+    op = subgraph.create_operator(OperatorCode(opcode), inputs=[tin], outputs=[tout],)
+
+    return subgraph.model
+
+
 def build_lceBconv2d(
-    subgraph=None,
-    *,
-    weight_shape,
-    input_size,
-    padding,
-    strides,
-    input_tensor_type=TensorType.INT8,
+    subgraph=None, *, weight_shape, input_size, padding, strides,
 ):
 
     subgraph = subgraph or XCOREModel().create_subgraph()
@@ -824,7 +843,7 @@ def build_lceBconv2d(
     C_out, K_h, K_w, C_in = weight_shape
 
     input_shape = [1, height, width, C_in]
-    tin = subgraph.create_tensor("input", input_tensor_type, input_shape, isinput=True)
+    tin = subgraph.create_tensor("input", TensorType.INT32, input_shape, isinput=True)
     w = subgraph.create_tensor("weights", TensorType.INT32, weight_shape)
     output_threshold = subgraph.create_tensor(
         "output_threshold", TensorType.INT32, weight_shape[:1]
@@ -848,14 +867,7 @@ def build_lceBconv2d(
 
     tout = subgraph.create_tensor("output", tin.type, shape=output_shape, isoutput=True)
 
-    op_inputs = [tin, w]
-
-    op_inputs.append(output_threshold)
-
-    try:
-        opcode = ExternalOpCodes.LceBconv2d
-    except AttributeError:
-        opcode = ExternalOpCodes.add_new_opcode("LceBconv2d")
+    opcode = ExternalOpCodes.add_new_opcode("LceBconv2d")
 
     custom_options = {
         "padding": padding,
@@ -867,8 +879,8 @@ def build_lceBconv2d(
     }
 
     op = subgraph.create_operator(
-        OperatorCode(opcode=opcode),
-        inputs=op_inputs,
+        OperatorCode(opcode),
+        inputs=[tin, w, output_threshold],
         outputs=[tout],
         custom_options=custom_options,
     )

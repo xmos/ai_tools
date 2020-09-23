@@ -22,8 +22,7 @@
 
 // USE DDR
 #define MAX_MODEL_CONTENT_SIZE 500000
-ATTRIBUTE_EXTMEM_SECTION volatile unsigned char
-    model_content[MAX_MODEL_CONTENT_SIZE];
+ATTRIBUTE_EXTMEM_SECTION unsigned char model_content[MAX_MODEL_CONTENT_SIZE];
 #define TENSOR_ARENA_SIZE 200000
 unsigned char tensor_arena[TENSOR_ARENA_SIZE];
 

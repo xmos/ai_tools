@@ -161,8 +161,6 @@ class SplitPaddingFromConvPass(LceConv2dPass):
         )
         padding_tensor.buffer.data = np.int32(paddings)
 
-        print(str(paddings))
-
         # Note, going foward a builtin.PAD will be inserted, to be replaced by a later pass
         pad_op = subgraph.create_operator(
             OperatorCode(opcode=XCOREOpCodes.XC_pad),
@@ -194,8 +192,6 @@ class SplitPaddingFromConvPass(LceConv2dPass):
         # Since we're only matching bconv this check is safe
         if tensor_type is TensorType.INT32:
             bytes_per_pixel = bytes_per_pixel * 4
-
-        print(str(bytes_per_pixel))
 
         pad_op.custom_options["bytes_per_pixel"] = int(bytes_per_pixel)
 

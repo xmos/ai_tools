@@ -5,7 +5,10 @@ from copy import deepcopy
 
 from tflite2xcore.transformation_passes.lce_passes import ReplaceLceBconv2DPass
 from tflite2xcore.converter import CleanupManager
-from tflite2xcore.xcore_schema import TensorType
+from tflite2xcore.xcore_schema import (
+    TensorType,
+    XCOREOpCodes,
+)
 from ..model_builders import build_lceBconv2d
 from .conftest import (
     PARAMS,
@@ -44,7 +47,6 @@ def model(weight_shape, input_size, padding, strides):
         input_size=input_size,
         padding=padding,
         strides=strides,
-        input_tensor_type=TensorType.INT32,
     )
 
 
@@ -65,6 +67,8 @@ def test_mutate(trf_pass, model):
     model.sanity_check()
 
     assert len(subgraph.operators) == 1
+
+    assert subgraph.operators[0].operator_code.code is XCOREOpCodes.XC_bconv2d_bin_out
 
 
 if __name__ == "__main__":

@@ -6,10 +6,8 @@ import numpy as np
 from tflite2xcore.utils import WORD_SIZE_BITS, VECTOR_SIZE_BITS
 from .transformation_passes import (
     OperatorMatchingPass,
-    LegalizeWeightBiasPass,
-    LegalizeXCWeightBiasPass,
 )
-from tflite2xcore.xcore_model import Operator, Tensor
+from tflite2xcore.xcore_model import Operator
 from tflite2xcore.xcore_schema import (
     Padding,
     TensorType,

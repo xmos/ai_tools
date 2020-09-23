@@ -8,10 +8,6 @@
 #include <xccompat.h>
 
 #include "nn_operator.h"
-#include "nn_types.h"
-#include "xs3_vpu.h"
-#include "nn_bin_utils.h"
-#include "xs3_vpu.h"
 
 #include "xcore/hwtimer.h"
 
@@ -20,7 +16,6 @@
 #else
 #define WORD_ALIGNED
 #endif
-
 
 unsigned run_config(bnn_b32_t* Y_p, bnn_b256_t* X_p, bnn_b256_t* K_p,
                     int32_t* thresholds_p, unsigned x_height, unsigned x_width,

@@ -5,9 +5,9 @@
 
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
-#include "nn_op_structs.h"
+// #include "nn_op_structs.h"
 
-#include "xs3_vpu.h"
+// #include "xs3_vpu.h"
 
 #if defined(__XS3A__)
 

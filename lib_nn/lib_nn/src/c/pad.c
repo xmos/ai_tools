@@ -2,7 +2,7 @@
 #include <assert.h>
 
 #include "nn_operator.h"
-#include "nn_op_structs.h"
+// #include "nn_op_structs.h"
 
 void pad_prepare(nn_pad_plan_t* plan, const padding_values_t* p,
                  const nn_image_params_t* x, 

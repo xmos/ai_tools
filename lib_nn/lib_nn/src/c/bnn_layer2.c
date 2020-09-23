@@ -1,5 +1,4 @@
 #include "nn_operator.h"
-#include "nn_op_structs.h"
 
 void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,

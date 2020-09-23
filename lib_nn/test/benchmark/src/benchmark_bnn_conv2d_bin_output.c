@@ -17,12 +17,26 @@
 #define WORD_ALIGNED
 #endif
 
+void bnn_conv2d_bin_out_asm(nn_bnn_conv2d_bin_out_asm_plan_t * plan);
+
+void bnn_conv2d_bin_out_asm_prepare(
+    nn_bnn_conv2d_bin_out_asm_plan_t* plan, bnn_b32_t* Y_p,
+    const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,
+    const nn_image_params_t* x, 
+    const nn_image_params_t* y,
+    const nn_window_params_t* k, 
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height,
+    const unsigned x_loc_x, const unsigned x_loc_y, 
+    const unsigned k_loc_x, const unsigned k_loc_y, 
+    const unsigned k_sub_width, const unsigned k_sub_height);
+
 unsigned run_config(bnn_b32_t* Y_p, bnn_b256_t* X_p, bnn_b256_t* K_p,
                     int32_t* thresholds_p, unsigned x_height, unsigned x_width,
                     unsigned k_height, unsigned k_width, unsigned chans_in,
                     unsigned chans_out, unsigned h_stride, unsigned v_stride) {
-  unsigned y_height = OUTPUT_LENGTH(x_height, k_height, 1, v_stride);
-  unsigned y_width = OUTPUT_LENGTH(x_width, k_width, 1, h_stride);
+  unsigned y_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, 1, v_stride);
+  unsigned y_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, 1, h_stride);
 
   nn_image_params_t x;
   x.height = x_height;
@@ -42,7 +56,9 @@ unsigned run_config(bnn_b32_t* Y_p, bnn_b256_t* X_p, bnn_b256_t* K_p,
 
   nn_bnn_conv2d_bin_out_asm_plan_t plan;
   bnn_conv2d_bin_out_asm_prepare(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_p,
-                                 (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k);
+                                 (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k,
+    0, 0,y_width, y_height, 0, 0, 0, 0, k_width, k_height);
+
   hwtimer_t t = hwtimer_alloc();
 
   uint32_t before = hwtimer_get_time(t);
@@ -61,8 +77,8 @@ unsigned calc_macc_count(unsigned x_height, unsigned x_width, unsigned k_height,
                          unsigned k_width, unsigned chans_in,
                          unsigned chans_out, unsigned h_stride,
                          unsigned v_stride) {
-  unsigned y_height = OUTPUT_LENGTH(x_height, k_height, 1, v_stride);
-  unsigned y_width = OUTPUT_LENGTH(x_width, k_width, 1, h_stride);
+  unsigned y_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, 1, v_stride);
+  unsigned y_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, 1, h_stride);
 
   return y_height * y_width * k_width * k_height * (chans_in / 256) * chans_out;
 }

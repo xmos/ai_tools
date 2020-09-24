@@ -21,6 +21,14 @@ from tflite2xcore.xcore_schema import (
 ModelBuilder = Callable[..., XCOREModel]
 
 
+def generate_dummy_int8_data(shape: Tuple[int, ...]):
+    return np.arange(0, np.prod(shape), dtype=np.int8) % 255 - 127
+
+
+def generate_dummy_int32_data(shape: Tuple[int, ...]):
+    return np.arange(np.prod(b.shape), dtype=np.int32)
+
+
 def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
     assert 0 <= axis < len(input_shape)
     assert 1 < num_splits <= input_shape[axis]
@@ -339,8 +347,8 @@ def build_fc(subgraph=None, *, outputs, input_shape, add_batch_dim=True):
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
-    b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
+    w.buffer.data = generate_dummy_int8_data(w.shape)
+    b.buffer.data = generate_dummy_int32_data(b.shape)
 
     return subgraph.model
 
@@ -466,8 +474,8 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
-    b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
+    w.buffer.data = generate_dummy_int8_data(w.shape)
+    b.buffer.data = generate_dummy_int32_data(b.shape)
 
     if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]
@@ -539,8 +547,8 @@ def build_depthwise_conv2d(
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
-    b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
+    w.buffer.data = generate_dummy_int8_data(w.shape)
+    b.buffer.data = generate_dummy_int32_data(b.shape)
 
     if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]
@@ -827,7 +835,9 @@ def build_LceQuantize(subgraph=None, *, input_shape, input_tensor_type=TensorTyp
 
     opcode = ExternalOpCodes.add_new_opcode("LceQuantize")
 
-    subgraph.create_operator(OperatorCode(opcode), inputs=[tin], outputs=[tout],)
+    subgraph.create_operator(
+        OperatorCode(opcode), inputs=[tin], outputs=[tout],
+    )
 
     return subgraph.model
 
@@ -850,7 +860,8 @@ def build_lceBconv2d(
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
+    w.buffer.data = generate_dummy_int8_data(w.shape)
+
     output_threshold.buffer.data = np.arange(
         0, np.prod(output_threshold.shape), dtype=np.int32
     )

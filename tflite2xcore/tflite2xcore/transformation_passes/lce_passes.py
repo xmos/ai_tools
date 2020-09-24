@@ -200,6 +200,3 @@ class SplitPaddingFromConvPass(LceConv2dPass):
 
         # Change padding of Bconv from SAME to VALID
         op.custom_options["padding"] = Padding.VALID
-
-
-

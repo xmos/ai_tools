@@ -107,20 +107,20 @@ def optimize_for_xcore(
     # need to cleanup after the first round of canonicalization
     pass_mgr.register_passes(CleanupManager())
 
-    #pass_mgr.register_pass(passes.ReplaceLceQuantizePass())
+    # pass_mgr.register_pass(passes.ReplaceLceQuantizePass())
 
     # TODO this should sit with the other stripping passes
-    #pass_mgr.register_pass(passes.CanonicalizeLceQuantizedOutputPass())
+    # pass_mgr.register_pass(passes.CanonicalizeLceQuantizedOutputPass())
 
     # Note, this currently only matches with BConv but going forward might like to extend to other Conv ops
     pass_mgr.register_pass(passes.SplitPaddingFromConvPass())
 
-    #pass_mgr.register_pass(
+    # pass_mgr.register_pass(
     #    passes.ReplaceLceBconv2DPass(output_tensor_type=TensorType.INT32)
-    #)
-    #pass_mgr.register_pass(
+    # )
+    # pass_mgr.register_pass(
     #    passes.ReplaceLceBconv2DPass(output_tensor_type=TensorType.INT8)
-    #)
+    # )
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())
     pass_mgr.register_pass(passes.ReplaceTanhPass())

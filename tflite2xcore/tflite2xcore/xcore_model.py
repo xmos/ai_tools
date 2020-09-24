@@ -546,16 +546,18 @@ class XCOREModel(XCORESerializationMixin, _AbstractContainer):
         self.subgraphs.append(subgraph)
         return subgraph
 
-    @property
-    def operator_codes(self) -> List[OperatorCode]:
-        # sort the operators codes from most frequent to least frequent
-        #   why? because the flatbuffer is a tiny bit smaller if we do
-        counter = Counter(
+    def count_operator_codes(self) -> Counter:
+        return Counter(
             operator.operator_code
             for subgraph in self.subgraphs
             for operator in subgraph.operators
         )
-        return [op_code for op_code, _ in counter.most_common()]
+
+    @property
+    def operator_codes(self) -> List[OperatorCode]:
+        # sort the operators codes from most frequent to least frequent
+        #   why? because the flatbuffer is a tiny bit smaller if we do
+        return [op_code for op_code, _ in self.count_operator_codes().most_common()]
 
     @property
     def data_size(self) -> int:

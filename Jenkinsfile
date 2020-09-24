@@ -87,9 +87,8 @@ pipeline {
                 }
                 stage("Build") {
                     steps {
-                        sh "cat Makefile"
                         sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
-                              conda run -p ai_tools_venv make ci"""
+                              conda run -p ai_tools_venv make --trace ci"""
                         junit "**/*_junit.xml"
                     }
                 }

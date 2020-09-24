@@ -32,15 +32,14 @@ static unsigned char *input_buffer;
 static size_t output_size;
 static unsigned char *output_buffer;
 
-static int load_model(const char *filename, char **buffer, size_t *size) {
+static int load_model(const char *filename, unsigned char *content,
+                      size_t *size) {
   FILE *fd = fopen(filename, "rb");
   fseek(fd, 0, SEEK_END);
   size_t fsize = ftell(fd);
 
-  *buffer = (char *)malloc(fsize);
-
   fseek(fd, 0, SEEK_SET);
-  fread(*buffer, 1, fsize, fd);
+  fread(content, 1, fsize, fd);
   fclose(fd);
 
   *size = fsize;
@@ -48,7 +47,8 @@ static int load_model(const char *filename, char **buffer, size_t *size) {
   return 1;
 }
 
-static int load_input(const char *filename, char *input, size_t esize) {
+static int load_input(const char *filename, unsigned char *input,
+                      size_t esize) {
   FILE *fd = fopen(filename, "rb");
   fseek(fd, 0, SEEK_END);
   size_t fsize = ftell(fd);
@@ -65,7 +65,8 @@ static int load_input(const char *filename, char *input, size_t esize) {
   return 1;
 }
 
-static int save_output(const char *filename, const char *output, size_t osize) {
+static int save_output(const char *filename, const unsigned char *output,
+                       size_t osize) {
   FILE *fd = fopen(filename, "wb");
   fwrite(output, sizeof(int8_t), osize, fd);
   fclose(fd);
@@ -84,9 +85,8 @@ int main(int argc, char *argv[]) {
   char *output_filename = argv[3];
 
   // load model
-  char *model_content = NULL;
   size_t model_size;
-  if (!load_model(model_filename, &model_content, &model_size)) {
+  if (!load_model(model_filename, model_content, &model_size)) {
     printf("error loading model filename=%s\n", model_filename);
     return -1;
   }

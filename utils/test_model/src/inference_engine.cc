@@ -86,8 +86,8 @@ void initialize(uint8_t *model_content, uint8_t *tensor_arena,
   if (interpreter) {
     // We already have an interpreter so we need to explicitly call the
     // destructor here but NOT delete the object
-    interpreter->~XCoreInterpreter();
-    // need to memset the arena to 0
+    // interpreter->~XCoreInterpreter();  // NOTE: calling destructor on a model
+    // in ExtMem causes a Memory access exception need to memset the arena to 0
     memset(tensor_arena, 0, tensor_arena_size);
   }
   interpreter = new (interpreter_buffer) tflite::micro::xcore::XCoreInterpreter(

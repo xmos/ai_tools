@@ -15,7 +15,7 @@ from . import IntegrationTestModelGenerator, test_output, test_idempotence
 
 class OffsetSaturatingModel(IntegrationTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
-        self._config.update({"layers": cfg.pop("layers")})
+        self._config["layers"] = cfg.pop("layers")
         super()._set_config(cfg)
 
     def _build_core_model(self) -> tf.keras.Model:
@@ -23,9 +23,6 @@ class OffsetSaturatingModel(IntegrationTestModelGenerator):
             input_shape=(128, 128, 3), alpha=0.25
         )
         layers = [source_model.layers[idx] for idx in self._config["layers"]]
-        import logging
-
-        logging.warning(layers)
         input_shape = layers[0].input_shape[1:]
 
         return tf.keras.models.Sequential(

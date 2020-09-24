@@ -31,6 +31,7 @@ int main(void) {
   test_avgpool2d();
   test_avgpool2d_global();
   test_fully_connected_16();
+  test_fully_connected_8();
   test_requantize_16_to_8();
   test_lookup8();
   test_bsign_8();

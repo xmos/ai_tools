@@ -383,40 +383,85 @@ static inline void avgpool2d(
 }
 
 /** 
- * @brief Execute @oper{avgpool2d_global} job.
+ * @brief Invoke a @oper{avgpool2d_global} job.
  * 
- * See @oper_ref{avgpool2d_global} for more details about the @oper{avgpool2d_global} operator.
+ * The @oper{avgpool2d_global} operator computes a scaled and biased sum of pixel values for each channel of an input
+ * image, producing an 8-bit vector of outputs.
  * 
- * An instance of the @oper{avgpool2d_global} operator requires an initialized plan and one or more jobs. See 
- * avgpool2d_global_init() for more details.
+ * See @oper_ref{avgpool2d_global} for more details about the @oper{avgpool2d_global} operator, including the 
+ * mathematical details of the operation performed.
  * 
- * `Y` points to the output vector @tensor{y} with shape @tensor_shape{X_c}. The address supplied for `Y` should be the 
- * start address of the output vector (for any job being processed).
+ * @par Operator Plans and Jobs
  * 
- * `X` points to the input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}. The address supplied for `X` should 
- * be the start address of the input image (for any job being processed).
+ * Invoking an instance of @oper{avgpool2d_global} requires a plan and a job. The plan and one or more jobs may be 
+ * initialized with the avgpool2d_global_init() function. Each job computes a contiguous subset of the output elements.
  * 
- * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
- * standard_layout).
+ * @par Parameter Details
  * 
- * `bias` is the bias @math{b} with which the accumulators are initialized.
+ * `Y` points to the 8-bit output vector @tensor{y} with length @tensor_shape{X_c}.
+ * 
+ * `X` points to the 8-bit input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}. The memory layout of 
+ * @tensor{X} is the standard memory layout for image tensors (see @ref standard_layout).
+ * 
+ * `bias` is the 32-bit bias @math{b} with which the accumulators are initialized for each output. Note that the 
+ * right-shift by @math{r} bits is applied after all accumulation. To add an absolute offset of @math{b_0} to each
+ * result, then the value used for @math{b} should be @math{b_0 \cdot 2^r}.
+ * 
+ * `scale` is the 8-bit coefficient @math{s}. All pixel values are multiplied by @math{s} and added to the 32-bit 
+ * accumulator.
+ * 
+ * `shift` is the (rounding) right-shift @math{r} applied to each 32-bit accumulator to yield an 8-bit result. Note 
+ * that this is a saturating right-shift which will saturate to 8-bit bounds (see additional remarks below).
  * 
  * `plan` points to the (initialized) plan associated with this instance of the @oper{avgpool2d_global} operator.
  * 
  * `job` points to the (initialized) job to be performed with this call.
  * 
- * @requires_word_alignment{Y,X}
+ * @par Parameter Constraints
  * 
- * @param Y    [out]    The output vector @tensor{y}
- * @param X    [in]     The input image @tensor{X}
- * @param bias [in]     Initial 32-bit accumulator value @math{B}. Shared by all channels.
- * @param plan [in]     The @oper{avgpool2d_global} plan to be processed
- * @param job  [in]     The @oper{avgpool2d_global} job to be processed
+ * The arguments `Y` and `X` must each point to a word-aligned address.
+ * 
+ * Due to memory alignment requirements, @math{X_c} must be a multiple of @math{4}, which forces all pixels to begin at
+ * a word-aligned address.
+ * 
+ * @par Splitting the Workload
+ * 
+ * Jobs are used to split the work done by an instance of @oper{avgpool2d_global}. Each job computes a (contiguous)
+ * subset of the elements of @tensor{y}. The elements to be computed by a job are specified when the jobs are 
+ * initialized by avgpool2d_global_init().
+ * 
+ * @par Additional Remarks
+ * 
+ * The arguments `Y` and `X` should both point at the beginning of their respective objects, even if the job being 
+ * invoked does not start at the beginning of the output vector.
+ * 
+ * By default this operator uses the standard 8-bit limits @math([-128, 127]) when applying saturation logic. Instead,
+ * it can be configured to use symmetric saturation bounds @math([-127, 127]) by defining 
+ * `CONFIG_SYMMETRIC_SATURATION_avgpool2d_global` appropriately. See @ref nn_config.h for more details. Note that this
+ * configures _all_ instances of the @oper{avgpool2d_global} operator.
+ * 
+ * If @math{X_c} is not a multiple of @math{16}, this operator may read up to 12 bytes following the end of @tensor{X}. 
+ * This is not ordinarily a problem. However, if the object to which `X` points is located very near the end of a valid 
+ * memory address range, it is possible memory access exceptions may occur when this operator is invoked.
+ * 
+ * If necessary, this can be avoided by manually forcing a buffer region (no more than @math{12} bytes are necessary) 
+ * following @tensor{X}. There are various ways this can be accomplished, including embedding these objects in larger 
+ * structures.
+ * 
+ * @param [out] Y       The output vector @tensor{y}
+ * @param [in]  X       The input image @tensor{X}
+ * @param [in]  bias    Initial 32-bit accumulator value @math{b}. Shared by all channels.
+ * @param [in]  scale   The factor @math{s} by which input pixel values are scaled.
+ * @param [in]  shift   The right-shift @math{r} applied to the 32-bit accumulators to yield an 8-bit result.
+ * @param [in]  plan    The @oper{avgpool2d_global} plan to be processed
+ * @param [in]  job     The @oper{avgpool2d_global} job to be processed
  */
 void avgpool2d_global(
     int8_t* Y,
     const int8_t* X, 
     const int32_t bias,
+    const int8_t scale,
+    const uint16_t shift,
     const nn_avgpool2d_global_plan_t* plan,
     const nn_avgpool2d_global_job_t* job);
 
@@ -424,49 +469,181 @@ void avgpool2d_global(
 
 
 /** 
- * @brief Execute @oper{fully_connected_16} job.
+ * @brief Invoke a @oper{fully_connected_8} job.
  * 
- * See @oper_ref{fully_connected_16} for more details about the @oper{fully_connected_16} operator.
+ * The @oper{fully_connected_8} operator performs a matrix-vector multiplication with an additional (per-output) scale 
+ * and offset applied (@math{s\cdot\left(\bar{W}\bar{x}\right)+b}) to produce an 8-bit result.
  * 
- * An instance of the @oper{fully_connected_16} operator requires an initialized plan and one or more jobs. See 
- * fully_connected_init() for more details.
+ * See @oper_ref{fully_connected_8} for more details about the @oper{fully_connected_8} operator, including the 
+ * mathematical details of the operation performed.
  * 
- * `Y` points to the output vector @tensor{y} with length @tensor_shape{M}. The address supplied for `Y` should be the 
- * start address of the output image (for any job being processed).
+ * @par Operator Plans and Jobs
  * 
- * `X` points to the input vector @tensor{x} with length @tensor_shape{N}. The address supplied for `X` should be the 
- * start address of the input image (for any job being processed).
+ * Invoking an instance of the @oper{fully_connected_8} operator requires no plan or job objects; no initialization is
+ * required.
+ * 
+ * @par Parameter Details
+ * 
+ * `Y` points to the output vector @tensor{y} with length @tensor_shape{M}.
+ * 
+ * `X` points to the input vector @tensor{x} with length @tensor_shape{N}.
  * 
  * `W` points to the weight matrix @tensor{W} with shape @tensor_shape{M, N}, which correspond to the output and input
- * vector respectively. The address supplied for `W` should be the start address of the weight matrix (for any job being 
- * processed).
+ * vector respectively.
  * 
  * The memory layout of @tensor{W} is the standard memory layout for 2D tensors (see @ref standard_layout).
  * 
  * `BSO` points to an array of bias-scale-offset parameters required for this convolution. See @ref bso_layout for 
- * details on the encoding of this array. The address supplied for `BSO` should be the start address of the the array 
- * (for any job being processed).
+ * details on the encoding of this array.
  * 
- * `plan` points to the (initialized) plan associated with this instance of the @oper{fully_connected_16} operator.
+ * `N` is the number of input channels (i.e. the length of @tensor{x}).
  * 
- * `job` points to the (initialized) job to be performed with this call.
+ * `output_start` and `output_count` determine the range of outputs which are computed by this invocation of 
+ * @oper{fully_connected_8}. To compute the entire output vector @tensor{y}, `output_start` and `output_count` should
+ * be @math{0} and @math{M} respectively.
  * 
- * @requires_word_alignment{Y,X,K,BSO}
+ * @par Parameter Constraints
  * 
- * @param Y    [out]    The output vector @tensor{y}
- * @param W    [in]     The weight matrix @tensor{W}
- * @param X    [in]     The input vector @tensor{x}
- * @param BSO  [in]     The bias-scale-offset array
- * @param plan [in]     The @oper{fully_connected_16} plan to be processed
- * @param job  [in]     The @oper{fully_connected_16} job to be processed
+ * The arguments `Y`, `W`, `X` and `BSO` must each point to a word-aligned address.
+ * 
+ * Due to memory alignment requirements, @math{N} must be a multiple of @math{4}. If necessary, the rows of @tensor{W} 
+ * should be padded out with zeros at the end to satisfy this constraint.
+ * 
+ * In order to maintain alignment with `nn_bso_block_t` blocks, `output_start` must be a multiple of @math{16}.
+ * 
+ * @par Splitting the Workload
+ * 
+ * In some cases (e.g. parallelizing across multiple cores) it is desirable to only compute a subset of the output 
+ * elements with a call to fully_connected_8(). The elements that will be computed and output by a call to 
+ * fully_connected_8() are @math{y[s:s+c]}, where @math{s} and @math{c} are `output_start` and `output_count` 
+ * respectively. Note that @math{y[s+c]} is *not* computed.
+ * 
+ * When splitting an instance of @oper{fully_connected_8} into multiple invocations it may be tempting to 
+ * split the work evenly between invocations. However, the constraint that `output_start` be a multiple of @math{16} 
+ * (see above) also suggests that `output_count` should be a multiple of @math{16} for each invocation. The exception to 
+ * this is if @math{M \ne 0 \left(\text{mod } 16\right)}, in which case the invocation that processes the final elements 
+ * of @tensor{y} needn't be a multiple of @math{16}.
+ * 
+ * @par Additional Remarks
+ * 
+ * `Y`, `X`, `W` and `BSO` should all point at the beginning of their respective objects, even if `output_start`
+ * is not `0`. (Some advanced scenarios may require you to violate this.)
+ * 
+ * If @math{N} is not a multiple of @math{32}, then this operator may read memory before the start of @tensor{x} and 
+ * @tensor{W}. This is not ordinarily a problem. However, if the objects to which `X` and `W` point are located very 
+ * near the beginning of a valid memory address range, it is possible memory access exceptions may occur when this 
+ * operator is invoked.
+ * 
+ * If necessary, this can be avoided by manually forcing a buffer region (no more than @math{28} bytes are necessary) 
+ * prior to the start of @tensor{x} and @tensor{W}. There are various ways this can be accomplished, including embedding
+ * these objects in larger structures.
+ * 
+ * @param [out] Y               The output vector @tensor{y}
+ * @param [in]  W               The weight matrix @tensor{W}
+ * @param [in]  X               The input vector @tensor{x}
+ * @param [in]  BSO             The bias-scale-offset array
+ * @param [in]  N               The number of input channels, @math{N}
+ * @param [in]  output_start    The first output element to compute (index of @tensor{y})
+ * @param [in]  output_count    The number of output elements to compute
+ */
+void fully_connected_8(
+    int8_t* Y,
+    const int8_t* W, 
+    const int8_t* X, 
+    const nn_bso_block_t* BSO,
+    const channel_count_t N,
+    const channel_count_t output_start,
+    const channel_count_t output_count);
+
+
+
+
+/** 
+ * @brief Invoke a @oper{fully_connected_16} job.
+ * 
+ * The @oper{fully_connected_16} operator performs a matrix-vector multiplication with an additional (per-output) scale 
+ * and offset applied (@math{s\cdot\left(\bar{W}\bar{x}\right)+b}) to produce a 16-bit result.
+ * 
+ * See @oper_ref{fully_connected_16} for more details about the @oper{fully_connected_16} operator, including the 
+ * mathematical details of the operation performed.
+ * 
+ * @par Operator Plans and Jobs
+ * 
+ * Invoking an instance of the @oper{fully_connected_16} operator requires no plan or job objects; no initialization is
+ * required.
+ * 
+ * @par Parameter Details
+ * 
+ * `Y` points to the output vector @tensor{y} with length @tensor_shape{M}.
+ * 
+ * `X` points to the input vector @tensor{x} with length @tensor_shape{N}.
+ * 
+ * `W` points to the weight matrix @tensor{W} with shape @tensor_shape{M, N}, which correspond to the output and input
+ * vector respectively.
+ * 
+ * The memory layout of @tensor{W} is the standard memory layout for 2D tensors (see @ref standard_layout).
+ * 
+ * `BSO` points to an array of bias-scale-offset parameters required for this convolution. See @ref bso_layout for 
+ * details on the encoding of this array.
+ * 
+ * `N` is the number of input channels (i.e. the length of @tensor{x}).
+ * 
+ * `output_start` and `output_count` determine the range of outputs which are computed by this invocation of 
+ * @oper{fully_connected_16}. To compute the entire output vector @tensor{y}, `output_start` and `output_count` should
+ * be @math{0} and @math{M} respectively.
+ * 
+ * @par Splitting the Workload
+ * 
+ * In some cases (e.g. parallelizing across multiple cores) it is desirable to only compute a subset of the output 
+ * elements with a call to fully_connected_16(). The elements that will be computed and output by a call to 
+ * fully_connected_16() are @math{y[s:s+c]}, where @math{s} and @math{c} are `output_start` and `output_count` 
+ * respectively. Note that @math{y[s+c]} is *not* computed.
+ * 
+ * When splitting an instance of @oper{fully_connected_16} into multiple invocations it may be tempting to 
+ * split the work evenly between invocations. However, the constraint that `output_start` be a multiple of @math{16} 
+ * (see below) also suggests that `output_count` should be a multiple of @math{16} for each invocation. The exception to 
+ * this is if @math{M \ne 0 \left(\text{mod } 16\right)}, in which case the invocation that processes the final elements 
+ * of @tensor{y} needn't be a multiple of @math{16}.
+ * 
+ * @par Parameter Constraints
+ * 
+ * The arguments `Y`, `W`, `X` and `BSO` must each point to a word-aligned address.
+ * 
+ * Due to memory alignment requirements, @math{N} must be a multiple of @math{4}. If necessary, the rows of @tensor{W} 
+ * should be padded out with zeros at the end to satisfy this constraint.
+ * 
+ * In order to maintain alignment with `nn_bso_block_t` blocks, `output_start` must be a multiple of @math{16}.
+ * 
+ * @par Additional Remarks
+ * 
+ * `Y`, `X`, `W` and `BSO` should all point at the beginning of their respective objects, even if `output_start`
+ * is not `0`. (Some advanced scenarios may require you to violate this.)
+ * 
+ * If @math{N} is not a multiple of @math{32}, then this operator may read memory before the start of @tensor{x} and 
+ * @tensor{W}. This is not ordinarily a problem. However, if the objects to which `X` and `W` point are located very 
+ * near the beginning of a valid memory address range, it is possible memory access exceptions may occur when this 
+ * operator is invoked.
+ * 
+ * If necessary, this can be avoided by manually forcing a buffer region (no more than @math{28} bytes are necessary) 
+ * prior to the start of @tensor{x} and @tensor{W}. There are various ways this can be accomplished, including embedding
+ * these objects in larger structures.
+ * 
+ * @param [out] Y               The output vector @tensor{y}
+ * @param [in]  W               The weight matrix @tensor{W}
+ * @param [in]  X               The input vector @tensor{x}
+ * @param [in]  BSO             The bias-scale-offset array
+ * @param [in]  N               The number of input channels, @math{N}
+ * @param [in]  output_start    The first output element to compute (index of @tensor{y})
+ * @param [in]  output_count    The number of output elements to compute
  */
 void fully_connected_16(
     int16_t* Y,
-    const nn_tensor_t* W, 
-    const nn_tensor_t* X, 
+    const int8_t* W, 
+    const int8_t* X, 
     const nn_bso_block_t* BSO,
-    const nn_fully_connected_plan_t* plan,
-    const nn_fully_connected_job_t* job);
+    const channel_count_t N,
+    const channel_count_t output_start,
+    const channel_count_t output_count);
 
 
 
@@ -624,6 +801,39 @@ void bnn_reorder_threshold_tensor(const int32_t* thresh_reordered,
                                   const unsigned chans_out,
                                   const unsigned receptive_field);
     
+
+
+/**  
+ * @brief Execute @oper{bnn_reorder_multiplier_and_bias_tensors}.
+ * 
+ * This reorders the post_activation_multiplier and post_activation_bias tensors 
+ * for efficient execution by bnn_conv2d_int8_out_asm. 
+ * This is only inteneded for testing.
+ * 
+ * `post_activation_multiplier_q_reordered` points to the output threshold @tensor{post_activation_multiplier_q_reordered} .
+ * 
+ * `post_activation_multiplier_q` points to the input @tensor{post_activation_multiplier_q}.
+ * 
+ * `post_activation_bias_q_reordered` points to the output threshold @tensor{post_activation_bias_q_reordered} .
+ * 
+ * `post_activation_bias_q` points to the input @tensor{post_activation_bias_q}.
+ * 
+ * `chans_out` is the number of output channels.
+ * 
+ * 
+ * @param post_activation_multiplier_q_reordered   [out]    The output @tensor{post_activation_multiplier_q_reordered}
+ * @param post_activation_multiplier_q             [in]     The input @tensor{post_activation_multiplier_q}
+ * @param post_activation_bias_q_reordered         [out]    The output @tensor{post_activation_bias_q_reordered}
+ * @param post_activation_bias_q                   [in]     The input @tensor{post_activation_bias_q}
+ * @param chans_out                                [in]     The number of output channels
+ */
+void bnn_reorder_multiplier_and_bias_tensors(
+                                  int16_t* post_activation_multiplier_q_reordered,
+                                  const int16_t* post_activation_multiplier_q,
+                                  int16_t* post_activation_bias_q_reordered,
+                                  const int16_t* post_activation_bias_q,
+                                  const unsigned chans_out);
+
 /**  
  * @brief Execute @oper{bnn_reorder_kernel_tensor}.
  * 
@@ -649,12 +859,92 @@ void bnn_reorder_threshold_tensor(const int32_t* thresh_reordered,
  * @param chans_in    [in]     The number of input channels
  * @param chans_out   [in]     The number of output channels
  */
-void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+void bnn_reorder_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
                                const unsigned chans_out);
 
+
+/**  
+ * @brief Execute @oper{bnn_reorder_int8_kernel_tensor}.
+ * 
+ * This reorders the kernel tensor for efficient execution by bnn_conv2d_int8_out_asm. 
+ * This is only intended for testing.
+ * 
+ * `K_p` points to the output kernel @tensor{K_p} .
+ * 
+ * `K_ref_p` points to the kernel input @tensor{K_ref_p}.
+ * 
+ * `k_height` is the kernel height.
+ * 
+ * `k_width` is the kernel width.
+ * 
+ * `chans_in` is the number of input channels.
+ * 
+ * `chans_out` is the number of output channels.    
+ * 
+ * @param K_p         [out]    The output @tensor{K_p}
+ * @param K_ref_p     [in]     The input @tensor{K_ref_p}
+ * @param k_height    [in]     The kernel height
+ * @param k_width     [in]     The kernel width
+ * @param chans_in    [in]     The number of input channels
+ * @param chans_out   [in]     The number of output channels
+ */                          
+void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+                               const unsigned k_height, const unsigned k_width,
+                               const unsigned chans_in,
+                               const unsigned chans_out);
+
+/**  
+ * @brief Execute @oper{bnn_conv2d_int8_out_valid}.
+ * 
+ * This performs a binary conv2d on a rectangular sub-section of an input tensor X with 
+ * kernel K.  
+ * 
+ * After the convolution has been computed the accumulator is multiplied and biased. The 
+ * following illustrates the operation applied to each output channel:
+ * 
+ * channel_output = ashr(ashr(ashr(accumulator, accu_shr) * post_activation_multiplier_q[ch], 14) + 
+ *                      post_activation_bias_q[ch], final_shr)
+ * 
+ * where ashr is an arithemetic shift right.
+ * 
+ * The tensor X_p represents a tensor of (x_full_height x x_full_width x X_channels)
+ * The tensor K_p represents a tensor of (k_full_height x k_full_width x X_channels)
+ * The tensor Y_p represents a tensor of (y_full_height x y_full_width x Y_channels)
+ * 
+ * 
+ * @param Y             [out]    The output image @tensor{Y}
+ * @param X             [in]     The input image @tensor{X}
+ * @param K             [in]     The input kernel @tensor{K}
+ * @param post_activation_multiplier_q  [in] The quantised post-acvtivation multiplier tensor
+ * @param post_activation_bias_q        [in] The quantised post-acvtivation bias tensor
+ * @param accu_shr      [in]     The amount to shift the accumulator right by before multiplying
+ * @param final_shr     [in]     The amount to shift the result right by after the bias has been added
+ * @param x             [in]     The parameters of the X image tensor
+ * @param y             [in]     The parameters of the Y image tensor
+ * @param k             [in]     The parameters of the K kernel tensor
+ * @param y_h_loc       [in]     The x coordinate(horizontal) of where the output will start writing from
+ * @param y_v_loc       [in]     The y coordinate(vertical) of where the output will start writing from
+ * @param y_sub_width   [in]     The width of the output sub-image that will be computed
+ * @param y_sub_height  [in]     The height of the output sub-image that will be computed
+ */
+void bnn_conv2d_int8_out_valid(int8_t* Y_p,
+    const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
+    const int16_t* post_activation_multiplier_q, 
+    const int16_t* post_activation_bias_q,
+    const int accu_shr,
+    const int final_shr,
+
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const nn_window_params_t* k, 
+
+    const unsigned y_h_loc, const unsigned y_v_loc,
+    const unsigned y_sub_width, const unsigned y_sub_height
+);
+
 /**  
  * @brief Execute @oper{bnn_conv2d_bin_out_valid}.
  * 
@@ -673,8 +963,8 @@ void bnn_reorder_kernel_tensor(const bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
  * @param x             [in]     The parameters of the X image tensor
  * @param y             [in]     The parameters of the Y image tensor
  * @param k             [in]     The parameters of the K kernel tensor.
- * @param y_loc_x       [in]     The x coordinate of where the output will start writing from
- * @param y_loc_y       [in]     The y coordinate of where the output will start writing from
+ * @param y_h_loc       [in]     The x coordinate(horizontal) of where the output will start writing from
+ * @param y_v_loc       [in]     The y coordinate(vertical) of where the output will start writing from
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  */
@@ -686,7 +976,7 @@ void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
     const nn_image_params_t* y,
     const nn_window_params_t* k, 
 
-    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_h_loc, const unsigned y_v_loc,
     const unsigned y_sub_width, const unsigned y_sub_height
 );
 
@@ -700,8 +990,8 @@ void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
  * The tensor K_p represents a tensor of (k_full_height x k_full_width x X_channels)
  * The tensor Y_p represents a tensor of (y_full_height x y_full_width x Y_channels)
  * 
- * x_sub_height and x_sub_width will be infered by the parameters of y, x, k, y_loc_x, 
- * y_loc_y, y_sub_width, y_sub_height, k_loc_x, k_loc_y, k_sub_width and k_sub_height.
+ * x_sub_height and x_sub_width will be infered by the parameters of y, x, k, y_h_loc, 
+ * y_v_loc, y_sub_width, y_sub_height, k_h_loc, k_v_loc, k_sub_width and k_sub_height.
  * 
  * @param Y             [out]    The output image @tensor{Y}
  * @param X             [in]     The input image @tensor{X}
@@ -710,14 +1000,14 @@ void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
  * @param x             [in]     The parameters of the X image tensor
  * @param y             [in]     The parameters of the Y image tensor
  * @param k             [in]     The parameters of the K kernel tensor.
- * @param y_loc_x       [in]     The x coordinate of where the output will start writing from
- * @param y_loc_y       [in]     The y coordinate of where the output will start writing from
+ * @param y_h_loc       [in]     The x coordinate(horizontal) of where the output will start writing from
+ * @param y_v_loc       [in]     The y coordinate(vertical) of where the output will start writing from
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
- * @param x_loc_x       [in]     The x coordinate of where the input will start reading from
- * @param x_loc_y       [in]     The y coordinate of where the input will start reading from
- * @param k_loc_x       [in]     The x coordinate of where the kernel will start reading from
- * @param k_loc_y       [in]     The y coordinate of where the kernel will start reading from
+ * @param x_h_loc       [in]     The x coordinate(horizontal) of where the input will start reading from
+ * @param x_v_loc       [in]     The y coordinate(vertical) of where the input will start reading from
+ * @param k_h_loc       [in]     The x coordinate(horizontal) of where the kernel will start reading from
+ * @param k_v_loc       [in]     The y coordinate(vertical) of where the kernel will start reading from
  * @param k_sub_width   [in]     The width of the input sub-kernel that will be computed
  * @param k_sub_height  [in]     The height of the input sub-kernel that will be computed
  */
@@ -728,14 +1018,36 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
     const nn_image_params_t* y, // the full image of y
     const nn_window_params_t* k, //the full kernel k
     
-    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_h_loc, const unsigned y_v_loc,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y, 
+    const unsigned x_h_loc, const unsigned x_v_loc, 
     
-    const unsigned k_loc_x, const unsigned k_loc_y, 
+    const unsigned k_h_loc, const unsigned k_v_loc, 
     const unsigned k_sub_width, const unsigned k_sub_height
 );
+
+//TODO
+void bnn_conv2d_int8_out(int8_t* Y_p,
+    const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
+    
+    const int16_t* post_activation_multiplier, 
+    const int16_t* post_activation_bias,
+    const int accu_shr,
+    const int final_shr,
+    
+    const nn_image_params_t* x, //The full image of x
+    const nn_image_params_t* y, // the full image of y
+    const nn_window_params_t* k, //the full kernel k
+    
+    const unsigned y_h_loc, const unsigned y_v_loc,
+    const unsigned y_sub_width, const unsigned y_sub_height,
+
+    const unsigned x_h_loc, const unsigned x_v_loc, 
+    
+    const unsigned k_h_loc, const unsigned k_v_loc, 
+    const unsigned k_sub_width, const unsigned k_sub_height
+) ;
 
 /**
  * @brief Execute @oper{pad_prepare} function.

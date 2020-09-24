@@ -23,9 +23,7 @@ from . import (
 
 class PReluTestModelGenerator(ChannelAgnosticOpTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
-        self._config.update(
-            {"alpha_init": cfg.pop("alpha_init", ("RandomUniform", -1, 1))}
-        )
+        self._config["alpha_init"] = cfg.pop("alpha_init", ("RandomUniform", -1, 1))
         super()._set_config(cfg)
 
     def _op_layer(

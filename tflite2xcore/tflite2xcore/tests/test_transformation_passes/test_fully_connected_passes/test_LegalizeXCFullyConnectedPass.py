@@ -38,7 +38,7 @@ def test_mutate(model: XCOREModel) -> None:
     # run legalization pass
     LegalizeXCFullyConnectedPass().run(model)
     model.sanity_check()
-    assert len(subgraph.operators) == 2
+    assert len(subgraph.operators) == 1
     new_op = subgraph.operators[0]
     assert len(new_op.inputs) == 3
 

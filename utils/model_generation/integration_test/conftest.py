@@ -6,6 +6,7 @@ import portalocker  # type: ignore
 import pytest  # type: ignore
 import _pytest  # type: ignore # NOTE: for typing only
 from pathlib import Path
+from typing import Dict
 
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation.utils import stringify_config
@@ -89,12 +90,12 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture(autouse=True)
-def disable_gpus(monkeypatch):
+@pytest.fixture(autouse=True)  # type: ignore
+def disable_gpus(monkeypatch: _pytest.monkeypatch.MonkeyPatch) -> None:
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "-1")
 
 
-_WORKER_CACHE = {}
+_WORKER_CACHE: Dict[Path, IntegrationTestModelGenerator] = {}
 
 
 @pytest.fixture  # type: ignore

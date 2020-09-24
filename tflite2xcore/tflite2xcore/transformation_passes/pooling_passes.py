@@ -149,6 +149,8 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
         multiplier = rescaling / num_pixels
 
         scale = np.round(multiplier * 2 ** (7 - np.ceil(np.log2(multiplier))))
+        if scale == 128.0:
+            scale /= 2
         shift = np.round(np.log2(scale / multiplier))
         bias = np.round(
             (
@@ -159,8 +161,14 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
             * 2 ** shift
         )
 
-        if shift > 24:
-            raise ValueError("Global Average Pool shift is greater than 24.")
+        if shift > 24 or shift < 0:
+            raise ValueError(
+                f"Global Average Pool shift must be between 0 and 24, got {shift}."
+            )
+        if scale > 127 or scale < 64:
+            raise ValueError(
+                f"Global Average Pool scale must be between 64 and 127, got {scale}."
+            )
 
         return bias.astype(np.int32), scale.astype(np.int8), shift.astype(np.int16)
 

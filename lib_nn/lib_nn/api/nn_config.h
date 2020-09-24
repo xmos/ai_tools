@@ -28,7 +28,7 @@
  * `CONFIG_SYMMETRIC_SATURATION_conv2d_deep` to be `1`. If it is defined to `0`, `-128` will be used instead.
  * 
  * If `CONFIG_SYMMETRIC_SATURATION_conv2d_deep` is undefined, then the value of `CONFIG_SYMMETRIC_SATURATION_GLOBAL`
- * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_conv2d_deep()`
+ * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_conv2d_deep`
  * defaults to 0, using a lower saturation bound of `-128`.
  * 
  */
@@ -52,7 +52,7 @@
  * `CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin` to be `1`. If it is defined to `0`, `-128` will be used instead.
  * 
  * If `CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin` is undefined, then the value of `CONFIG_SYMMETRIC_SATURATION_GLOBAL`
- * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin()`
+ * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin`
  * defaults to 0, using a lower saturation bound of `-128`.
  * 
  */
@@ -75,7 +75,7 @@
  * `CONFIG_SYMMETRIC_SATURATION_conv2d_im2col` to be `1`. If it is defined to `0`, `-128` will be used instead.
  * 
  * If `CONFIG_SYMMETRIC_SATURATION_conv2d_im2col` is undefined, then the value of `CONFIG_SYMMETRIC_SATURATION_GLOBAL`
- * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_conv2d_im2col()`
+ * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_conv2d_im2col`
  * defaults to 0, using a lower saturation bound of `-128`.
  * 
  */
@@ -98,7 +98,7 @@
  * `CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise` to be `1`. If it is defined to `0`, `-128` will be used instead.
  * 
  * If `CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise` is undefined, then the value of `CONFIG_SYMMETRIC_SATURATION_GLOBAL`
- * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise()`
+ * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise`
  * defaults to 0, using a lower saturation bound of `-128`.
  * 
  */
@@ -122,7 +122,7 @@
  * `CONFIG_SYMMETRIC_SATURATION_conv2d_1x1` to be `1`. If it is defined to `0`, `-128` will be used instead.
  * 
  * If `CONFIG_SYMMETRIC_SATURATION_conv2d_1x1` is undefined, then the value of `CONFIG_SYMMETRIC_SATURATION_GLOBAL`
- * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_conv2d_1x1()`
+ * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_conv2d_1x1`
  * defaults to 0, using a lower saturation bound of `-128`.
  * 
  */
@@ -146,7 +146,7 @@
  * `CONFIG_SYMMETRIC_SATURATION_avgpool2d` to be `1`. If it is defined to `0`, `-128` will be used instead.
  * 
  * If `CONFIG_SYMMETRIC_SATURATION_avgpool2d` is undefined, then the value of `CONFIG_SYMMETRIC_SATURATION_GLOBAL`
- * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_avgpool2d()`
+ * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_avgpool2d`
  * defaults to 0, using a lower saturation bound of `-128`.
  * 
  */
@@ -171,7 +171,7 @@
  * `CONFIG_SYMMETRIC_SATURATION_avgpool2d_global` to be `1`. If it is defined to `0`, `-128` will be used instead.
  * 
  * If `CONFIG_SYMMETRIC_SATURATION_avgpool2d_global` is undefined, then the value of `CONFIG_SYMMETRIC_SATURATION_GLOBAL`
- * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_avgpool2d_global()`
+ * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_avgpool2d_global`
  * defaults to 0, using a lower saturation bound of `-128`.
  * 
  */
@@ -195,7 +195,7 @@
  * `CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8` to be `1`. If it is defined to `0`, `-128` will be used instead.
  * 
  * If `CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8` is undefined, then the value of `CONFIG_SYMMETRIC_SATURATION_GLOBAL`
- * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8()`
+ * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8`
  * defaults to 0, using a lower saturation bound of `-128`.
  * 
  * Unfortunately, bypassing the symmetric saturation bounds requires significant additional logic, and so with the symmetric 
@@ -207,5 +207,29 @@
     #define CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8 CONFIG_SYMMETRIC_SATURATION_GLOBAL
   #else
     #define CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8 (0)
+  #endif
+#endif 
+
+
+/**
+ * @macro CONFIG_SYMMETRIC_SATURATION_fully_connected_8
+ * @brief Configure whether `-127` or `-128` is used as the saturation limit for `fully_connected_8()`.
+ * 
+ * The output of 8-bit arithmetic on the XS3 VPU has natural symmetric saturation bounds of (`-127`, `127`). This may be
+ * unacceptable, in which case (`-128`, `127`) can be used instead.
+ * 
+ * To specify that the symmetric saturation lower bound (`-127`) should be used for `fully_connected_8()`, define 
+ * `CONFIG_SYMMETRIC_SATURATION_fully_connected_8` to be `1`. If it is defined to `0`, `-128` will be used instead.
+ * 
+ * If `CONFIG_SYMMETRIC_SATURATION_fully_connected_8` is undefined, then the value of `CONFIG_SYMMETRIC_SATURATION_GLOBAL`
+ * is used instead, if that is defined. If neither symbol is defined, `CONFIG_SYMMETRIC_SATURATION_fully_connected_8`
+ * defaults to 0, using a lower saturation bound of `-128`.
+ * 
+ */
+#ifndef CONFIG_SYMMETRIC_SATURATION_fully_connected_8
+  #ifdef CONFIG_SYMMETRIC_SATURATION_GLOBAL
+    #define CONFIG_SYMMETRIC_SATURATION_fully_connected_8 CONFIG_SYMMETRIC_SATURATION_GLOBAL
+  #else
+    #define CONFIG_SYMMETRIC_SATURATION_fully_connected_8 (0)
   #endif
 #endif 

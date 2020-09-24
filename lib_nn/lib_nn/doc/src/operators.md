@@ -109,8 +109,12 @@ The following table enumerates the custom operators provided by this library.
                                         <td>
 
 <tr><td align="center" colspan="6">Miscellaneous Operators
-<tr><td>@oper_ref{fully_connected_16}   <td>fully_connected_16()        <td>fully_connected_init()
-                                        <td>nn_fully_connected_plan_t   <td>nn_fully_connected_job_t
+<tr><td>@oper_ref{fully_connected_16}   <td>fully_connected_16()        <td align="center">N/A
+                                        <td align="center">N/A          <td align="center">N/A
+                                        <td>
+
+<tr><td>@oper_ref{fully_connected_8}    <td>fully_connected_8()         <td align="center">N/A
+                                        <td align="center">N/A          <td align="center">N/A
                                         <td>
 
 <tr><td>@oper_ref{argmax_16}            <td>argmax_16()                 <td align="center">N/A

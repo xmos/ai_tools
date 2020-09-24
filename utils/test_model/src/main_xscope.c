@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "inference_engine.h"
+#include "xscope.h"
 
 // USE RAM
 // #define MAX_MODEL_CONTENT_SIZE 50000
@@ -35,8 +36,6 @@ static unsigned char *output_buffer;
 
 enum AppState { Model, SetTensor, Invoke, GetTensor };
 static enum AppState state;
-
-#include "xscope.h"
 
 void xscope_main() {}
 

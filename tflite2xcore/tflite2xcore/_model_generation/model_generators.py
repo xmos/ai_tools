@@ -48,14 +48,17 @@ class ModelGenerator(ABC):
 
     @abstractmethod
     def _set_config(self, cfg: Configuration) -> None:
-        """ Sets the relevant configuration parameters and returns the unused ones.
-        
-        Should check if the given configuration parameters are legal.
+        """ Sets the relevant configuration parameters.
+
         This method operates on the config input argument in-place.
         Subclasses should implement this instead of the set_config method.
         """
         for converter in self._converters:
             converter._set_config(cfg)
+
+    def check_config(self) -> None:
+        """ Checks if the current configuration parameters are legal. """
+        pass
 
     def set_config(self, **config: Any) -> None:
         """ Configures the model generator before the build method is run.
@@ -69,6 +72,7 @@ class ModelGenerator(ABC):
             raise ValueError(
                 f"Unexpected configuration parameter(s): {', '.join(config.keys())}"
             )
+        self.check_config()
 
 
 class KerasModelGenerator(ModelGenerator):

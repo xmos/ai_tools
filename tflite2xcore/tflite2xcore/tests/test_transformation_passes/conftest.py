@@ -6,7 +6,7 @@ from typing import List, Dict, Iterator, Tuple, Any
 
 from tflite2xcore.transformation_passes import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.xcore_schema import TensorType, XCOREOpCodes
+from tflite2xcore.xcore_schema import TensorType, ValidOpCodes
 from tflite2xcore.converter import CleanupManager
 
 
@@ -122,7 +122,7 @@ def test_non_matching_tensors(
 
 
 def test_replace_mutate(
-    trf_pass: ModelTransformationPass, model: XCOREModel, custom_opcode: XCOREOpCodes
+    trf_pass: ModelTransformationPass, model: XCOREModel, new_opcode: ValidOpCodes
 ) -> None:
     # run replacement pass
     trf_pass.run(model)
@@ -134,5 +134,5 @@ def test_replace_mutate(
 
     # check new op
     op = model.subgraphs[0].operators[-1]
-    assert op.operator_code.code is custom_opcode
+    assert op.operator_code.code is new_opcode
 

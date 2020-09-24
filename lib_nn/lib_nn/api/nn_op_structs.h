@@ -102,7 +102,6 @@ typedef struct {
 } nn_bso_block_t;
 
 
-
 /**
  * Describes the relationship between the convolution window and the 
  * input image.
@@ -196,65 +195,6 @@ typedef struct {
 
 
 
-
-/**
- * Struct represents the parameters needed by all `fully_connected_16()` jobs.
- * 
- * Values are set by `fully_connected_16_init()`.
- * 
- * @note This struct is intended to be opaque.
- */
-typedef struct {
-    struct {
-        channel_count_t X;
-    } channels;
-} nn_fully_connected_plan_t;
-
-/**
- * Struct represents the parameters needed by a single `fully_connected_16()` job.
- * 
- * Values are set by `fully_connected_16_init()`.
- * 
- * @note This struct is intended to be opaque.
- */
-typedef struct {
-
-    struct {
-        struct {
-            mem_stride_t Y;
-            mem_stride_t W;
-            mem_stride_t BSO;
-        } start;
-    } stride;
-
-    struct {
-        channel_count_t channels;
-    } output;
-} nn_fully_connected_job_t;
-
-/**
- * Struct represents the job initialization information required by `fully_connected_16_init()`.
- * 
- * `fully_connected_16()` job computes a contiguous subset of the output channels.
- * 
- * @note When splitting a `fully_connected_16()` into multiple jobs, jobs that compute less than 16
- *       output channels will often be *less* efficient than a full 16 channels.
- */
-typedef struct {
-    /**
-     * The first output channel to be computed by the job. Must be a multiple of `4`.
-     */
-    uint32_t start_channel;
-
-    /**
-     * The number of output channels to be computed by the job. Does not have to be a multiple of 4,
-     * however, because the `start_channel` for each job must be a multiple of 4, this value can only
-     * be a non-multiple of 4 for the last job.
-     */
-    channel_count_t out_channels;
-} nn_fully_connected_job_params_t;
-
-
 /**
  * Enum identifies optimized assembly implementations for
  * the `avgpool2d()` function.
@@ -300,8 +240,6 @@ typedef struct {
         uint32_t pixels;
         channel_count_t channels;
     } X;
-    uint32_t shift;
-    uint32_t scale;
 } nn_avgpool2d_global_plan_t;
 
 /**
@@ -510,6 +448,37 @@ typedef struct {
   bnn_b256_t* K;
 } nn_bnn_conv2d_bin_out_asm_plan_t;
 
+
+typedef struct {
+    //These are in a specific order - do not change
+  bnn_b256_t* X;
+  unsigned outer_x_h_step;
+  unsigned output_channel_loop_counter;
+  bnn_b256_t* K;
+  unsigned inner_x_v_step;
+  unsigned k_v_step;
+  unsigned inner_x_h_step;
+  unsigned k_h_step;
+
+  int outer_x_v_step;
+  unsigned y_v_step;
+  unsigned k_height_loop_counter;
+  unsigned k_width_loop_counter;
+  unsigned x_height_loop_counter;
+  unsigned x_width_loop_counter;
+  int16_t* cur_post_activation_mul;  //These are needed to hold variables that will
+  int16_t* cur_post_activation_bias; //be indexed with ldd
+
+  unsigned vlsat;
+  unsigned ashr;
+  int final_shr;
+  unsigned mask;
+  int16_t* post_activation_mul;  
+  int16_t* post_activation_bias; 
+  unsigned input_channel_loop_counter;
+  int8_t* Y;
+
+} nn_bnn_conv2d_int8_out_asm_plan_t;
 
 #ifdef __XC__
 }   //extern "C"

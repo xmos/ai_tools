@@ -118,8 +118,8 @@ class XCOREOpCodes(CustomOpCodes, KnownOpCodes):
     XC_maxpool2d = "XC_maxpool2d"
     XC_avgpool2d = "XC_avgpool2d"
     XC_avgpool2d_global = "XC_avgpool2d_global"
-    XC_fc_deepin_anyout = "XC_fc_deepin_anyout"
-    XC_requantize_16_to_8 = "XC_requantize_16_to_8"  # currently only used after FC
+    XC_fc = "XC_fc"
+    XC_requantize_16_to_8 = "XC_requantize_16_to_8"  # currently unused
     XC_conv2d_shallowin = "XC_conv2d_shallowin"
     XC_conv2d_deep = "XC_conv2d_deep"
     XC_conv2d_1x1 = "XC_conv2d_1x1"
@@ -319,6 +319,16 @@ QuantizationDetails = enum.Enum(
     {
         k: v
         for k, v in vars(schema.QuantizationDetails).items()
+        if not k.startswith("__")
+    },
+)
+
+
+FullyConnectedOptionsWeightsFormat = enum.Enum(
+    "FullyConnectedOptionsWeightsFormat",
+    {
+        k: v
+        for k, v in vars(schema.FullyConnectedOptionsWeightsFormat).items()
         if not k.startswith("__")
     },
 )

@@ -162,9 +162,6 @@ class Operator(_AbstractContainer):
 
     def sanity_check(self) -> None:
         assert self in self.subgraph.operators
-        # check for duplicates
-        assert len(self.inputs) == len(set(self.inputs))
-        assert len(self.outputs) == len(set(self.outputs))
         # check double links with inputs/outputs
         for tensor in self.inputs:
             assert self in tensor.consumers
@@ -269,9 +266,6 @@ class Tensor(_BufferOwnerContainer):
     def sanity_check(self) -> None:
         assert self in self.subgraph.tensors
         assert self in self.buffer.owners
-        # check for duplicates
-        assert len(self.consumers) == len(set(self.consumers))
-        assert len(self.producers) == len(set(self.producers))
         # check double links with consumers/producers
         for op in self.producers:
             assert self in op.outputs

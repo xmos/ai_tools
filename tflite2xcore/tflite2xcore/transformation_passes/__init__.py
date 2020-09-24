@@ -44,6 +44,7 @@ from .padding_passes import (
 from .quantize_dequantize_passes import (
     CanonicalizeQuantizedInputPass,
     CanonicalizeQuantizedOutputPass,
+    CanonicalizeLceQuantizedOutputPass,
     LegalizeFloatInputPass,
     LegalizeFloatOutputPass,
 )
@@ -87,5 +88,4 @@ from .lce_passes import (
     ReplaceLceBconv2DPass,
     ReplaceLceQuantizePass,
     SplitPaddingFromConvPass,
-    CanonicalizeLceQuantizedOutputPass,
 )

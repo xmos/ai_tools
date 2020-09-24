@@ -1,6 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes, OperatorCode
+from tflite2xcore.xcore_schema import (
+    TensorType,
+    BuiltinOpCodes,
+    OperatorCode,
+    ExternalOpCodes,
+)
 
 from .transformation_passes import (
     OperatorMatchingPass,
@@ -46,6 +51,34 @@ class CanonicalizeQuantizedOutputPass(OperatorMatchingPass):
                 else:
                     self.logger.warning(
                         "Encountered output of removable DEQUANTIZE "
+                        "with more than one producer."
+                    )
+
+        return False
+
+    def mutate(self, op):
+        subgraph = op.subgraph
+        subgraph.outputs.append(op.inputs[0])
+        subgraph.remove_tensor(op.outputs[0])  # DCE doesn't clean up subgraph outputs
+        subgraph.remove_operator(op)
+
+
+class CanonicalizeLceQuantizedOutputPass(OperatorMatchingPass):
+    def match(self, op):
+        if super().match(op) and op.operator_code.code is ExternalOpCodes.LceDequantize:
+            input_tensor, output_tensor = op.inputs[0], op.outputs[0]
+            if (
+                output_tensor in op.subgraph.outputs
+                and not output_tensor.consumers
+                and input_tensor not in op.subgraph.inputs
+                and output_tensor.type is TensorType.FLOAT32
+                and input_tensor.type is TensorType.INT32
+            ):
+                if len(output_tensor.producers) == 1:
+                    return True
+                else:
+                    self.logger.warning(
+                        "Encountered output of removable LceDequantize "
                         "with more than one producer."
                     )
 

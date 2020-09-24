@@ -14,20 +14,17 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
         BuiltinOpCodes.FULLY_CONNECTED,
     )
 
-    @property
-    def _producer(self) -> Tensor:
-        return self._op.inputs[0].producers[0]
-
     def match(self, op: Operator) -> bool:
         if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
             with self.using(op):
                 try:
-                    producer = self._producer
+                    intermediate = op.inputs[0]
+                    producer = intermediate.producers[0]
                 except IndexError:
                     return False
 
             reshape_input_batch = producer.inputs[0].shape[0]
-            reshape_output_batch = op.inputs[0].shape[0]
+            reshape_output_batch = intermediate.shape[0]
 
             return (
                 producer.operator_code.code is BuiltinOpCodes.RESHAPE
@@ -37,16 +34,14 @@ class RemoveFlattenReshapePass(OperatorMatchingPass):
         return False
 
     def mutate(self, op: Operator) -> None:
-        with self.using(op):
-            producer = self._producer
+        intermediate = op.inputs[0]
+        producer = intermediate.producers[0]
 
         # Remove connection from old inputs to the anchor FC op
-        intermediate = op.inputs[0]
+        # then create the new connection
         intermediate.consumers.remove(op)
-
-        # Create the new connection
         op.inputs[0] = producer.inputs[0]
-        producer.inputs[0].consumers.append(op)
+        op.inputs[0].consumers.append(op)
 
 
 class CanonicalizeReshapePass(OperatorMatchingPass):

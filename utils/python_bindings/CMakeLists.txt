@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.14)
 
 project(tflite2xcore VERSION 1.0.1)
 
 
 # This variable is ignored on platforms other than Apple
-set(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk) 
+set(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX10.13sdk) 
 
 #**********************
 # Paths
@@ -23,7 +23,7 @@ set(LIB_NN_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../lib_nn")
 #**********************
 # Build flags
 #**********************
-set(BUILD_FLAGS "-g -DTF_LITE_DISABLE_X86_NEON -O3 -fsanitize=address")
+set(BUILD_FLAGS "-g -DTF_LITE_DISABLE_X86_NEON -O3")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS ${BUILD_FLAGS})

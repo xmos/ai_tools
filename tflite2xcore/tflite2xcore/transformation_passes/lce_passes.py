@@ -4,9 +4,7 @@ from typing import Any
 import numpy as np
 
 from tflite2xcore.utils import WORD_SIZE_BITS, VECTOR_SIZE_BITS
-from .transformation_passes import (
-    OperatorMatchingPass,
-)
+from .transformation_passes import OperatorMatchingPass
 from tflite2xcore.xcore_model import Operator
 from tflite2xcore.xcore_schema import (
     Padding,
@@ -19,42 +17,37 @@ from tflite2xcore.xcore_schema import (
 )
 
 
-def SupportedBconv2DOp(op: Operator) -> bool:
-
-    try:
-        if op.operator_code.code is not ExternalOpCodes.LceBconv2d:
-            return False
-    except AttributeError:
-        return False
-
-    options = op.custom_options
-
-    strides = (options["stride_height"], options["stride_width"])
-    dilations = (
-        options["dilation_height_factor"],
-        options["dilation_width_factor"],
-    )
-
-    padding = options["padding"]
-    weights = op.inputs[1]
-
-    return (
-        strides == (1, 1)
-        and dilations == (1, 1)
-        and weights.shape[0] % WORD_SIZE_BITS == 0  # Cout
-        and (weights.shape[3] * WORD_SIZE_BITS) % VECTOR_SIZE_BITS == 0  # Cin
-        and weights.type is TensorType.INT32
-        and op.inputs[0].type in (TensorType.INT8, TensorType.INT32)
-    )
-
-
 class LceConv2dPass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
 
         if not super().match(op):
             return False
 
-        return SupportedBconv2DOp(op)
+        try:
+            if op.operator_code.code is not ExternalOpCodes.LceBconv2d:
+                return False
+        except AttributeError:
+            return False
+
+        options = op.custom_options
+
+        strides = (options["stride_height"], options["stride_width"])
+        dilations = (
+            options["dilation_height_factor"],
+            options["dilation_width_factor"],
+        )
+
+        padding = options["padding"]
+        weights = op.inputs[1]
+
+        return (
+            strides == (1, 1)
+            and dilations == (1, 1)
+            and weights.shape[0] % WORD_SIZE_BITS == 0  # Cout
+            and (weights.shape[3] * WORD_SIZE_BITS) % VECTOR_SIZE_BITS == 0  # Cin
+            and weights.type is TensorType.INT32
+            and op.inputs[0].type in (TensorType.INT8, TensorType.INT32)
+        )
 
 
 # Replace LCEBconv2D with XC_BConv2D
@@ -96,7 +89,7 @@ class ReplaceLceBconv2DPass(LceConv2dPass):
         subgraph.remove_operator(op)
 
 
-# Replace LCEQuantize with XC_BBsign8
+# Replace LCEQuantize with XC_Bsign8
 class ReplaceLceQuantizePass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
 
@@ -115,7 +108,17 @@ class ReplaceLceQuantizePass(OperatorMatchingPass):
         )
 
     def mutate(self, op: Operator) -> None:
-        op.operator_code.code = XCOREOpCodes.XC_bsign_8
+
+        subgraph = op.subgraph
+
+        bsign_op = subgraph.create_operator(
+            OperatorCode(opcode=XCOREOpCodes.XC_bsign_8),
+            inputs=op.inputs,
+            outputs=op.outputs,
+            custom_options=op.custom_options,
+        )
+        subgraph.insert_operator(op, bsign_op)
+        subgraph.remove_operator(op)
 
 
 # Split out padding to a separate op from BConv

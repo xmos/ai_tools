@@ -4,7 +4,7 @@ project(tflite2xcore VERSION 1.0.1)
 
 
 # This variable is ignored on platforms other than Apple
-set(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX10.13sdk) 
+set(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX10.13.sdk)
 
 #**********************
 # Paths

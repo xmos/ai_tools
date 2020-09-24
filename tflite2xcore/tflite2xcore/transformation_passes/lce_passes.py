@@ -136,6 +136,8 @@ class SplitPaddingFromConvPass(LceConv2dPass):
         return Padding(op.custom_options["padding"]) is Padding.SAME
 
     def mutate(self, op: Operator) -> None:
+        def calc_pad(stride, input_size, kernel_size):
+            return int(np.ceil(((stride - 1) * input_size - stride + kernel_size) / 2))
 
         subgraph = op.subgraph
         tensor_type = op.inputs[0].type
@@ -154,8 +156,8 @@ class SplitPaddingFromConvPass(LceConv2dPass):
         )
 
         # Construct paddings input tensor for PAD op
-        padding_tb = int(np.ceil(((strides[0] - 1) * height - strides[0] + K_h) / 2))
-        padding_lr = int(np.ceil(((strides[1] - 1) * width - strides[1] + K_w) / 2))
+        padding_tb = calc_pad(strides[0], height, K_h)
+        padding_lr = calc_pad(strides[1], width, K_w)
         paddings = [[0, 0], [padding_tb, padding_tb], [padding_lr, padding_lr], [0, 0]]
         padding_tensor = subgraph.create_tensor(
             f"{op.name}/paddings", TensorType.INT32, shape=[4, 2]

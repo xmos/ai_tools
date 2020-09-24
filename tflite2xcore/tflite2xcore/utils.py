@@ -61,6 +61,7 @@ tf = lazy_import("tensorflow")
 
 VE, ACC_PERIOD, WORD_SIZE = 32, 16, 4
 
+# TODO these constants could do with consistant naming
 WORD_SIZE_BYTES = 4
 WORD_SIZE_BITS = WORD_SIZE_BYTES * 8
 VECTOR_SIZE_WORDS = 8

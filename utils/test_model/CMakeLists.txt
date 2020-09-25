@@ -200,7 +200,6 @@ set(TENSORFLOW_LITE_REFERENCE_OPERATOR_SOURCES
 # TensorFlow Lite Micro xcore kernel sources
 #*************************************************
 set(TENSORFLOW_LITE_XCORE_OPERATOR_SOURCES
-  "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/xcore_device_memory.c"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/xcore_profiler.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/xcore_interpreter.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/xcore_planning.cc"

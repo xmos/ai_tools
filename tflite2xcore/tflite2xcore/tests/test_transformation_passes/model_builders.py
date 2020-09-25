@@ -21,11 +21,11 @@ from tflite2xcore.xcore_schema import (
 ModelBuilder = Callable[..., XCOREModel]
 
 
-def generate_dummy_int8_data(shape: Tuple[int, ...]):
+def generate_dummy_int8_data(shape: Tuple[int, ...]) -> np.ndarray:
     return np.arange(0, np.prod(shape), dtype=np.int8) % 255 - 127
 
 
-def generate_dummy_int32_data(shape: Tuple[int, ...]):
+def generate_dummy_int32_data(shape: Tuple[int, ...]) -> np.ndarray:
     return np.arange(np.prod(b.shape), dtype=np.int32)
 
 
@@ -387,9 +387,7 @@ def build_XC_fc(subgraph=None, *, outputs, input_channels):
         quantization={"scale": [0.11332], "zero_point": [6]},
     )
     subgraph.create_operator(
-        OperatorCode(XCOREOpCodes.XC_fc),
-        inputs=[tin, w, b],
-        outputs=[tout],
+        OperatorCode(XCOREOpCodes.XC_fc), inputs=[tin, w, b], outputs=[tout],
     )
 
     return subgraph.model

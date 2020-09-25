@@ -44,7 +44,7 @@ from .padding_passes import (
 
 from .quantize_dequantize_passes import (
     CanonicalizeQuantizedInputPass,
-    CanonicalizeBuiltinQuantizedOutputPass,
+    CanonicalizeQuantizedOutputPass,
     CanonicalizeLceQuantizedOutputPass,
     LegalizeFloatInputPass,
     LegalizeFloatOutputPass,

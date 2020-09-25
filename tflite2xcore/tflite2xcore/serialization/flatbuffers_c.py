@@ -154,7 +154,7 @@ class FlexbufferParser:
 
     def parse(self, buffer, size=100000):
 
-        if len(buffer) == 0:
+        if not buffer:
             return {}
 
         char_array = ctypes.c_char * len(buffer)

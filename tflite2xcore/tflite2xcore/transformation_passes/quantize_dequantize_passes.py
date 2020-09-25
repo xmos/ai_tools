@@ -36,21 +36,32 @@ class CanonicalizeQuantizedInputPass(OperatorMatchingPass):
 
 
 class CanonicalizeQuantizedOutputPass(OperatorMatchingPass):
+    @property
+    def _matching_input_tensor_type(self):
+        return TensorType.INT8
+
+    @property
+    def _matching_opcode(self):
+        return BuiltinOpCodes.DEQUANTIZE
+
     def match(self, op):
         if super().match(op):
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
             if (
-                output_tensor in op.subgraph.outputs
+                op.operator_code.code is self._matching_opcode
+                and output_tensor in op.subgraph.outputs
                 and not output_tensor.consumers
                 and input_tensor not in op.subgraph.inputs
                 and output_tensor.type is TensorType.FLOAT32
+                and input_tensor.type is self._matching_input_tensor_type
             ):
                 if len(output_tensor.producers) == 1:
                     return True
                 else:
                     self.logger.warning(
-                        "Encountered output of removable LceDequantize or DEQUANTIZE"
-                        "with more than one producer."
+                        "Encountered output of removable "
+                        + str(self.matching_op_code)
+                        + " with more than one producer."
                     )
 
             return False
@@ -63,29 +74,13 @@ class CanonicalizeQuantizedOutputPass(OperatorMatchingPass):
 
 
 class CanonicalizeLceQuantizedOutputPass(CanonicalizeQuantizedOutputPass):
-    def match(self, op):
+    @property
+    def _matching_input_tensor_type(self):
+        return TensorType.INT32
 
-        return (
-            super().match(op)
-            and op.operator_code.code is ExternalOpCodes.LceDequantize
-            and op.inputs[0].type is TensorType.INT32
-        )
-
-    def mutate(self, op):
-        super().mutate(op)
-
-
-class CanonicalizeBuiltinQuantizedOutputPass(CanonicalizeQuantizedOutputPass):
-    def match(self, op):
-
-        return (
-            super().match(op)
-            and op.operator_code.code is BuiltinOpCodes.DEQUANTIZE
-            and op.inputs[0].type is TensorType.INT8
-        )
-
-    def mutate(self, op):
-        super().mutate(op)
+    @property
+    def _matching_opcode(self):
+        return ExternalOpCodes.LceDequantize
 
 
 # TODO: improve tests for this

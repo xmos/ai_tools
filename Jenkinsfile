@@ -42,9 +42,13 @@ pipeline {
                 script {
                     def image = docker.build('xmos/ai_tools')
                     docker.withRegistry('https://docker-repo.xmos.com', 'nexus') {
+                        // always push to git branch (you only get latest)
                         image.push(GIT_BRANCH)
-                        // if on master/release/etc:
-                        //   push version/hash
+                        if (GIT_BRANCH=='master') {
+                            // push latest and as short commit for repeatability
+                            image.push('latest')
+                            image.push(GIT_COMMIT.take(7))
+                        }
                     }
                 }
             }

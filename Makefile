@@ -29,7 +29,7 @@ integration_test:
 ci: lib_nn_build utils_build tflite2xcore_test integration_test
 
 .PHONY: test
-ci: lib_nn_test tflite2xcore_test utils_build integration_test
+test: lib_nn_test tflite2xcore_test utils_build integration_test
 
 .PHONY: submodule_update
 submodule_update: 

@@ -117,7 +117,9 @@ def test_mutate(trf_pass, model):
     pad_output_shape = pad_op.outputs[0].shape
 
     for i in range(0, 4):
-        assert pad_op.inputs[0].shape[i] + sum(paddings[i]) == pad_output_shape[i], "bad output shape at index: " + str(i) 
+        assert (
+            pad_op.inputs[0].shape[i] + sum(paddings[i]) == pad_output_shape[i]
+        ), "bad output shape at index: " + str(i)
 
 
 def test_non_matching_paddings(trf_pass, model_with_non_matching_padding):

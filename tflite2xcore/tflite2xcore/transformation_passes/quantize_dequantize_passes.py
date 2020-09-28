@@ -64,7 +64,7 @@ class CanonicalizeQuantizedOutputPass(OperatorMatchingPass):
                         + " with more than one producer."
                     )
 
-            return False
+        return False
 
     def mutate(self, op):
         subgraph = op.subgraph

@@ -80,6 +80,9 @@ file (GLOB XCORE_SOURCES
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/shallow/*.c"
 )
 
+#TODO: Remove me when compilation error is fixed
+list(REMOVE_ITEM XCORE_SOURCES "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/xcore_bsign.cc")
+
 target_sources(libtflite2xcore
   PRIVATE ${FLATBUFFER_SOURCES}
   PRIVATE ${TENSORFLOW_LITE_SOURCES}

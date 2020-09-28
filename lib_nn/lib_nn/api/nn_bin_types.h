@@ -9,4 +9,4 @@ typedef struct bnn_b256_t {
   uint32_t d[8];
 } bnn_b256_t;
 
-#endif
+#endif //NN_BNN_TYPES_H

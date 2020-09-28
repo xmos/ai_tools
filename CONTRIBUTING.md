@@ -48,13 +48,9 @@ diff <my_cc_file> /tmp/my_cc_file.cc
 
 ### Running Tests
 
-There is a Makefile in the root directory that has some useful targets - especially when it comes to running tests before making a pull request.
+There is a Makefile in the root directory that has some useful targets - especially when it comes to running tests before making a pull request. Run the following for more information on the targets.
 
-* `all` - Run all the testing targets
-* `lib_nn_test` - Build and run unit tests for lib_nn
-* `tflite2xcore_test` - Run unit tests for tflite2xcore
-* `integration_test` - Build any necessary components, generate all test data, and run all integration tests
-* `clean` - Cleans all builds
+  make help
 
 To run the integration tests using multiple processors run 
 

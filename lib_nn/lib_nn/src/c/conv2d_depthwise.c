@@ -149,6 +149,8 @@ void conv2d_depthwise_init(
 
         job->stride.chan_group.X = VPU_INT8_VLMACC_ELMS - x_row_bytes * job->output.rows * plan->kernel.vstride;
         job->stride.chan_group.Y = VPU_INT8_VLMACC_ELMS - y_row_bytes * job->output.rows;
+
+        job->stride.k_channels = plan->channels.X;
     }
 }
 
@@ -184,12 +186,12 @@ void conv2d_depthwise(
             
             if(job->init_padding.unpadded){
                 nn_conv2d_hstrip_depthwise(Y, X, K, BSO, plan->kernel.height, plan->kernel.width,
-                        plan->channels.X, plan->stride.X.row,
+                        plan->channels.X, job->stride.k_channels, plan->stride.X.row,
                         plan->stride.window.col, plan->channels.Y, job->output.cols, cur_chans);
             } else {
                 nn_conv2d_hstrip_depthwise_padded(Y, X, K, BSO, plan->kernel.height, plan->kernel.width,
                             cur_pad_t, job->init_padding.left, cur_pad_b, job->init_padding.right,
-                            plan->channels.X, plan->stride.X.row, 
+                            plan->channels.X, job->stride.k_channels, plan->stride.X.row, 
                             plan->stride.window.col, plan->channels.Y, job->output.cols, 
                             cur_chans, zero_point_vec);
             }

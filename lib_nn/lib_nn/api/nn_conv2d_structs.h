@@ -399,6 +399,8 @@ typedef struct {
             int32_t window;
             int32_t Y;
         } row;
+
+        channel_count_t k_channels;
     } stride;
 
     struct {

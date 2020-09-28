@@ -194,7 +194,8 @@ void fc_deepin_shallowout_16(
  * \param pad_l_initial     Number of columns of padding at the left of the convolution window in its first location
  * \param pad_b             Number of rows of padding at the bottom of the convolution window
  * \param pad_r_initial     Number of columns of padding at the right of the convolution window in its first location
- * \param K_c               Number of channels in the input image and the kernel tensor
+ * \param X_c               Number of channels in the input image
+ * \param K_c               Number of channels in the kernel tensor
  * \param x_row_stride      Number of bytes between the end of a patch row and the start of the next
  * \param window_hstride    Number of bytes between subsequent patches of the input image
  * \param Y_c               Number of channels in the output image
@@ -213,6 +214,7 @@ void nn_conv2d_hstrip_depthwise_padded(
     const int32_t pad_l_initial,
     const int32_t pad_b,
     const int32_t pad_r_initial,
+    const int32_t X_c,
     const int32_t K_c,
     const int32_t x_row_stride,
     const int32_t window_hstride,
@@ -302,7 +304,8 @@ void nn_conv2d_hstrip_depthwise_padded(
  * \param BSO               Bias, shifts and scale tensor
  * \param K_h               Convolution window height
  * \param K_w               Convolution window width
- * \param K_c               Number of channels in the input image and the kernel tensor
+ * \param X_c               Number of channels in the input image
+ * \param K_c               Number of channels in the kernel tensor
  * \param x_row_stride      Number of bytes between the end of a patch row and the start of the next
  * \param window_hstride    Number of bytes between subsequent patches of the input image
  * \param Y_c               Number of channels in the output image
@@ -316,6 +319,7 @@ void nn_conv2d_hstrip_depthwise(
     const nn_bso_block_t* BSO,
     const unsigned K_h,
     const unsigned K_w,
+    const int32_t X_c,
     const int32_t K_c,
     const int32_t x_row_stride,
     const int32_t window_hstride,

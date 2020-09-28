@@ -47,7 +47,8 @@ void nn_conv2d_hstrip_depthwise(
     const nn_bso_block_t* BSO,
     const unsigned K_h,
     const unsigned K_w,
-    const int32_t xk_col_stride,
+    const int32_t x_col_stride,
+    const int32_t k_col_stride,
     const int32_t x_row_stride,
     const int32_t window_hstride,
     const int32_t y_col_stride,
@@ -71,10 +72,10 @@ void nn_conv2d_hstrip_depthwise(
         // These rows are inside image (vertically)
         for(int i = K_h; i > 0; i--){
 
-            for(int j = xk_col_stride * K_w; j > 0; j-= xk_col_stride){
+            for(int j = x_col_stride * K_w; j > 0; j-= x_col_stride){
                 vlmacc8(accs, X, K);
-                X = ADDR(X, xk_col_stride);
-                K = ADDR(K, xk_col_stride);
+                X = ADDR(X, x_col_stride);
+                K = ADDR(K, k_col_stride);
             }
 
             X = ADDR(X, x_row_stride);
@@ -118,7 +119,8 @@ void nn_conv2d_hstrip_depthwise_padded(
     const int32_t pad_l_initial,
     const int32_t pad_b,
     const int32_t pad_r_initial,
-    const int32_t xk_col_stride,
+    const int32_t x_col_stride,
+    const int32_t k_col_stride,
     const int32_t x_row_stride,
     const int32_t window_hstride,
     const int32_t y_col_stride,
@@ -127,10 +129,10 @@ void nn_conv2d_hstrip_depthwise_padded(
     const int8_t* zero_point_vec)
 {
 
-    int pad_l = pad_l_initial * xk_col_stride;
-    int pad_r = pad_r_initial * xk_col_stride;
+    int pad_l = pad_l_initial * x_col_stride;
+    int pad_r = pad_r_initial * x_col_stride;
 
-    int center_cols = xk_col_stride * K_w;
+    int center_cols = x_col_stride * K_w;
     if(pad_l >= 0)  center_cols -= pad_l;
     if(pad_r >= 0)  center_cols -= pad_r;
 
@@ -161,8 +163,8 @@ void nn_conv2d_hstrip_depthwise_padded(
             // printf("PAD_T??\t%d\t%d\n", pad_t, i);
             for(int j = K_w; j > 0; j--){
                 vlmacc8(accs, zero_point_vec, K);
-                X = ADDR(X, xk_col_stride);
-                K = ADDR(K, xk_col_stride);
+                X = ADDR(X, x_col_stride);
+                K = ADDR(K, k_col_stride);
             }
             X = ADDR(X, x_row_stride);
         }
@@ -171,25 +173,25 @@ void nn_conv2d_hstrip_depthwise_padded(
         for(int i = K_h - (pad_t + pad_b); i > 0; i--){
 
             //THIS LOOP IS IN PADDING (left of image)
-            for(int j = cur_pad_l; j > 0; j -= xk_col_stride){
+            for(int j = cur_pad_l; j > 0; j -= x_col_stride){
                 // printf("PAD_L??\t%d\t%d\n", cur_pad_l, j);
                 vlmacc8(accs, zero_point_vec, K);
-                X = ADDR(X, xk_col_stride);
-                K = ADDR(K, xk_col_stride);
+                X = ADDR(X, x_col_stride);
+                K = ADDR(K, k_col_stride);
             }
 
-            for(int j = center_cols; j > 0; j-= xk_col_stride){
+            for(int j = center_cols; j > 0; j-= x_col_stride){
                 vlmacc8(accs, X, K);
-                X = ADDR(X, xk_col_stride);
-                K = ADDR(K, xk_col_stride);
+                X = ADDR(X, x_col_stride);
+                K = ADDR(K, k_col_stride);
             }
 
             //THIS LOOP IS IN PADDING (right of image)
-            for(int j = cur_pad_r; j > 0; j -= xk_col_stride){
+            for(int j = cur_pad_r; j > 0; j -= x_col_stride){
                 // printf("PAD_R??\t%d\t%d\n", cur_pad_r, j);
                 vlmacc8(accs, zero_point_vec, K);
-                X = ADDR(X, xk_col_stride);
-                K = ADDR(K, xk_col_stride);
+                X = ADDR(X, x_col_stride);
+                K = ADDR(K, k_col_stride);
             }
 
             X = ADDR(X, x_row_stride);
@@ -200,8 +202,8 @@ void nn_conv2d_hstrip_depthwise_padded(
             // printf("PAD_B??\t%d\t%d\n", pad_b, i);
             for(int j = K_w; j > 0; j--){
                 vlmacc8(accs, zero_point_vec, K);
-                X = ADDR(X, xk_col_stride);
-                K = ADDR(K, xk_col_stride);
+                X = ADDR(X, x_col_stride);
+                K = ADDR(K, k_col_stride);
             }
             X = ADDR(X, x_row_stride);
         }

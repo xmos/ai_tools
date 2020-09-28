@@ -59,6 +59,13 @@ class ReplaceLceBconv2DPass(LceConv2dPass):
         super().__init__(*args, **kwargs)
         self._output_tensor_type = output_tensor_type
 
+    @property
+    def new_opcode(self):
+        if self._output_tensor_type is TensorType.INT8:
+            return OperatorCode(XCOREOpCodes.XC_bconv2d_int8_out)
+        else:
+            return OperatorCode(XCOREOpCodes.XC_bconv2d_bin_out)
+
     def match(self, op: Operator) -> bool:
 
         return (
@@ -73,13 +80,9 @@ class ReplaceLceBconv2DPass(LceConv2dPass):
         subgraph = op.subgraph
 
         # Note, it is risky to modify an Op in place - create a new op and remove old one
-        if self._output_tensor_type is TensorType.INT8:
-            new_op_code = XCOREOpCodes.XC_bconv2d_int8_out
-        else:
-            new_op_code = XCOREOpCodes.XC_bconv2d_bin_out
 
         bconv_op = subgraph.create_operator(
-            OperatorCode(opcode=new_op_code),
+            self.new_opcode,
             inputs=op.inputs,
             outputs=op.outputs,
             custom_options=op.custom_options,

@@ -94,6 +94,7 @@ void xscope_data(void *data, size_t size) {
                MAX_MODEL_CONTENT_SIZE);
         exit(1);
       }
+      xscope_int(RECV_AWK, 0);
       break;
     case SetTensor:
       get_tensor_bytes(tensor_index, &tensor_buffer, &tensor_size);
@@ -104,6 +105,7 @@ void xscope_data(void *data, size_t size) {
         printf("Tensor exceeds size of %d bytes\n", tensor_size);
         exit(1);
       }
+      xscope_int(RECV_AWK, 0);
       break;
     case Invoke:
     case GetTensor:

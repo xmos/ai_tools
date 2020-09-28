@@ -95,6 +95,9 @@ def get_child_xgdb_proc(port):
 
 
 class XCOREDeviceInterpreterEndpoint(object):
+    RECV_AWK_PROBE_ID = 0
+    GET_TENSOR_PROBE_ID = 1
+
     def __init__(self):
         tool_path = os.environ.get("XMOS_TOOL_PATH")
         lib_path = os.path.join(tool_path, "lib", "xscope_endpoint.so")
@@ -106,12 +109,6 @@ class XCOREDeviceInterpreterEndpoint(object):
 
         self._record_cb = self._record_callback_func()
         self.lib_xscope.xscope_ep_set_record_cb(self._record_cb)
-
-        self._register_cb = self._register_callback_func()
-        self.lib_xscope.xscope_ep_set_register_cb(self._register_cb)
-
-        self._probe_info = {}  # probe id to probe info lookup.
-        # probe_info includes name, units, data type, etc...
 
         self.clear()
 
@@ -127,25 +124,18 @@ class XCOREDeviceInterpreterEndpoint(object):
 
         return RECORD_CALLBACK(func)
 
-    def _register_callback_func(self):
-        def func(id_, type_, r, g, b, name, unit, data_type, data_name):
-            self._probe_info[id_] = {
-                "type": type_,
-                "name": name.decode("utf-8"),
-                "unit": unit.decode("utf-8"),
-                "data_type": data_type,
-            }
-
-        return REGISTER_CALLBACK(func)
-
     def _send_blob(self, blob):
-        CHUCK_SIZE = 128
+        CHUCK_SIZE = 256
         for i in range(0, len(blob), CHUCK_SIZE):
+            self._publish_blob_chunk_ready = False
             self.publish(blob[i : i + CHUCK_SIZE])
-            time.sleep(0.05)
+            # wait for RECV_AWK probe
+            while not self._publish_blob_chunk_ready:
+                pass
 
     def clear(self):
-        self.ready = True
+        self._get_tensor_ready = False
+        self._publish_blob_chunk_ready = False
         self._get_tensor_buffer = None
 
     def on_print(self, timestamp, data):
@@ -153,10 +143,11 @@ class XCOREDeviceInterpreterEndpoint(object):
         print(msg)
 
     def on_probe(self, id_, timestamp, length, data_val, data_bytes):
-        probe = self._probe_info[id_]
-        if probe["name"] == "get_tensor":
+        if id_ == XCOREDeviceInterpreterEndpoint.RECV_AWK_PROBE_ID:
+            self._publish_blob_chunk_ready = True
+        elif id_ == XCOREDeviceInterpreterEndpoint.GET_TENSOR_PROBE_ID:
             self._get_tensor_buffer = data_bytes[0:length]
-            self.ready = True
+            self._get_tensor_ready = True
 
     def connect(self, hostname="localhost", port="10234"):
         return self.lib_xscope.xscope_ep_connect(hostname.encode(), port.encode())
@@ -165,7 +156,6 @@ class XCOREDeviceInterpreterEndpoint(object):
         self.lib_xscope.xscope_ep_disconnect()
 
     def publish(self, data):
-        self.ready = False
 
         if (
             self.lib_xscope.xscope_ep_request_upload(
@@ -189,9 +179,10 @@ class XCOREDeviceInterpreterEndpoint(object):
         self._send_blob(tensor_content)
 
     def get_tensor(self, index):
+        self._get_tensor_ready = False
         self.publish(f"GET_TENSOR {index}\0".encode())
         # wait for reply
-        while not self.ready:
+        while not self._get_tensor_ready:
             pass
 
         return self._get_tensor_buffer

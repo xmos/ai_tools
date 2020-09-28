@@ -18,5 +18,6 @@
     <!-- For example: -->
     <!-- <Probe name="Probe Name" type="CONTINUOUS" datatype="UINT" units="Value" enabled="true"/> -->
     <!-- From the target code, call: xscope_int(PROBE_NAME, value); -->
+    <Probe name="recv_awk" type="CONTINUOUS" datatype="UINT" units="Value" enabled="true"/>  -->
     <Probe name="get_tensor" type="CONTINUOUS" datatype="NONE" units="Value" enabled="true"/>  -->
 </xSCOPEconfig>

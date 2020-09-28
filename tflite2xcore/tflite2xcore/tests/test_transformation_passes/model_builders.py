@@ -26,7 +26,7 @@ def generate_dummy_int8_data(shape: Tuple[int, ...]) -> np.ndarray:
 
 
 def generate_dummy_int32_data(shape: Tuple[int, ...]) -> np.ndarray:
-    return np.arange(np.prod(b.shape), dtype=np.int32)
+    return np.arange(np.prod(shape), dtype=np.int32)
 
 
 def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
@@ -860,10 +860,7 @@ def build_lceBconv2d(
 
     # add dummy data so that the op can be mutated
     w.buffer.data = generate_dummy_int8_data(w.shape)
-
-    output_threshold.buffer.data = np.arange(
-        0, np.prod(output_threshold.shape), dtype=np.int32
-    )
+    output_threshold.buffer.data = generate_dummy_int32_data(output_threshold.shape)
 
     if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]

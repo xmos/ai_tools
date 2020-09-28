@@ -5,9 +5,9 @@
 
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
-#include "nn_op_structs.h"
+// #include "nn_op_structs.h"
 
-#include "xs3_vpu.h"
+// #include "xs3_vpu.h"
 #define ACC_PERIOD (VPU_INT16_ACC_PERIOD)
 
 //This is the amount that the VLMUL instruction shifts the product of C and R by.

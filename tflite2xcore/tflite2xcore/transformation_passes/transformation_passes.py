@@ -176,19 +176,19 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
         raise NotImplementedError()
 
     @property
-    def _matching_input_type(self):
+    def matching_input_type(self):
         return TensorType.INT8
 
     @property
-    def _matching_output_type(self):
+    def matching_output_type(self):
         return TensorType.INT8
 
     def match(self, op):
-        if super().match(op) and op.operator_code.code == self.matching_opcode:
+        if super().match(op) and op.operator_code.code is self.matching_opcode:
             with self.using(op):
                 return (
-                    self._input.type == self._matching_input_type
-                    and self._output.type == self._matching_output_type
+                    self._input.type is self.matching_input_type
+                    and self._output.type is self.matching_output_type
                 )
 
 

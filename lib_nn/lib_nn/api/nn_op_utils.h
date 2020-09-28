@@ -1,20 +1,11 @@
-
-
 #ifndef NN_OP_UTILS_H_
 #define NN_OP_UTILS_H_
 
-#include "nn_types.h"
-#include "nn_op_structs.h"
-
-#include <stdint.h>
-
-#include "xs3_vpu.h"
+#include "nn_bso.h"
 
 #ifdef __XC__
 extern "C" {
 #endif
-
-
 
 /** Helper for computing offsets between pixels in an 8-bit image.
  * 
@@ -36,8 +27,6 @@ extern "C" {
  * \param CHANNELS  Number of channels
  */
 #define OUT_CHANNEL_GROUPS(CHANNELS)    ( ((CHANNELS) + (VPU_INT8_ACC_PERIOD-1)) >> VPU_INT8_ACC_PERIOD_LOG2 )
-
-
 
 /**
  * Lays out the biases, scales and offsets into the format required for the standard bias-
@@ -90,8 +79,6 @@ void nn_standard_BSO_layout(
     int16_t* shift2,
     data16_t* scratch,
     const unsigned C_out);
-
-
 
 /**
  * @brief Copy `size` bytes from `src` to `dst`.

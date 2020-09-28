@@ -85,12 +85,11 @@ class ReplaceLceBconv2DPass(LceConv2dPass):
             custom_options=op.custom_options,
         )
 
-        subgraph.insert_operator(op, bconv_op)
-
-        subgraph.remove_operator(op)
+        subgraph.replace_operator(op, bconv_op)
 
 
 # Replace LCEQuantize with XC_Bsign8
+# TODO this could inherit from ReplaceQuantizedOperatorPass
 class ReplaceLceQuantizePass(OperatorMatchingPass):
     def match(self, op: Operator) -> bool:
 

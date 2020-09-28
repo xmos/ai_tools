@@ -5,7 +5,6 @@
 #include "larq_compute_engine/core/types.h"
 
 #include "nn_operator.h"
-#include "nn_op_structs.h"
 using namespace tflite;
 
 namespace compute_engine {

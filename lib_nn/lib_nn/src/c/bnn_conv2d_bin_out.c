@@ -5,9 +5,9 @@
 
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
-#include "nn_op_structs.h"
+// #include "nn_op_structs.h"
 
-#include "xs3_vpu.h"
+// #include "xs3_vpu.h"
 
 #if defined(__XS3A__)
 
@@ -115,15 +115,15 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
     const unsigned k_sub_width, const unsigned k_sub_height
 ) {
 
-      nn_bnn_conv2d_bin_out_asm_plan_t plan;
+    nn_bnn_conv2d_bin_out_asm_plan_t plan;
 
-  bnn_conv2d_bin_out_asm_prepare(&plan, Y_p,
+    bnn_conv2d_bin_out_asm_prepare(&plan, Y_p,
         X_p,  K_p, thresholds_p,
         x,  y, k, 
         y_loc_x, y_loc_y, y_sub_width, y_sub_height,
         x_loc_x, x_loc_y, 
         k_loc_x, k_loc_y, k_sub_width, k_sub_height);
 
-     bnn_conv2d_bin_out_asm(&plan);
+    bnn_conv2d_bin_out_asm(&plan);
 }
 #endif

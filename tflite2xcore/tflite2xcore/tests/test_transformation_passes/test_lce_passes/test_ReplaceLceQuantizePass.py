@@ -39,14 +39,6 @@ def model(input_shape):
     return build_LceQuantize(input_shape=input_shape,)
 
 
-@pytest.fixture()
-def model_with_non_matching_input_tensor(input_shape):
-    model = build_LceQuantize(
-        input_shape=input_shape, input_tensor_type=TensorType.INT32
-    )
-    return model
-
-
 #  ----------------------------------------------------------------------------
 #                                   TESTS
 #  ----------------------------------------------------------------------------
@@ -68,8 +60,13 @@ def test_mutate(trf_pass, model):
     assert subgraph.operators[0].operator_code.code is XCOREOpCodes.XC_bsign_8
 
 
-def test_non_matching_input_tensor(trf_pass, model_with_non_matching_input_tensor):
-    _test_non_matching_params(trf_pass, model_with_non_matching_input_tensor)
+def test_non_matching_input_tensor(trf_pass, input_shape):
+
+    model = build_LceQuantize(
+        input_shape=input_shape, input_tensor_type=TensorType.INT32
+    )
+
+    _test_non_matching_params(trf_pass, model)
 
 
 if __name__ == "__main__":

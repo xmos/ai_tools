@@ -68,30 +68,11 @@ On macOS you can utilize all your cores with
 
 ## Development Tips
 
-### Installing Tools 15.0.0 Engineering Release
-
-We currently require build 385 or newer.  Build 385 can be downloaded from http://srv-bri-jtools.xmos.local:8080/job/xmos-tools%20MANUAL/job/tools_installers/job/master/385/
-
-NOTE: This link to the Engineering Release requires being inside the XMOS firewall.  We will replace this link once Tools 15 is officially released.
-
-Linux users may want to manually add the SetEnv.sh script to the `.bashrc` file.  Add the following lines:
-
-    XTIMEVER=Community_15.0.0
-    pushd /usr/local/XMOS/xTIMEcomposer/$XTIMEVER/ > /dev/null
-    source SetEnv
-    popd > /dev/null
-
-
 ### git Submodules
 
 At times submodule repositories will need to be updated.  To update all submodules, run the following command
 
 > git submodule update --init --recursive
-
-Users of older git versions, may need to use the following command
-
-> git pull --recurse-submodules
-
 
 ### Conda Environment
 

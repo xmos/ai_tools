@@ -37,6 +37,8 @@ for params in PARAMS.values():
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
+
 @pytest.fixture()
 def trf_pass():
     return SplitPaddingFromConvPass()
@@ -48,17 +50,6 @@ def model(weight_shape, input_size, padding, strides):
         weight_shape=weight_shape,
         input_size=input_size,
         padding=padding,
-        strides=strides,
-    )
-    return model
-
-
-@pytest.fixture()
-def model_with_non_matching_padding(weight_shape, input_size, padding, strides):
-    model = build_lceBconv2d(
-        weight_shape=weight_shape,
-        input_size=input_size,
-        padding=Padding.VALID,
         strides=strides,
     )
     return model
@@ -122,8 +113,16 @@ def test_mutate(trf_pass, model):
         ), "bad output shape at index: " + str(i)
 
 
-def test_non_matching_paddings(trf_pass, model_with_non_matching_padding):
-    _test_non_matching_params(trf_pass, model_with_non_matching_padding)
+def test_non_matching_paddings(trf_pass, weight_shape, input_size, strides):
+
+    model = build_lceBconv2d(
+        weight_shape=weight_shape,
+        input_size=input_size,
+        padding=Padding.VALID,
+        strides=strides,
+    )
+
+    _test_non_matching_params(trf_pass, model)
 
 
 if __name__ == "__main__":

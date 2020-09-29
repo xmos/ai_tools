@@ -66,21 +66,23 @@ def get_instructions(timer_ticks, xcore_system_clock_mhz=700, timer_tick_ns=10):
     return int(np.ceil(timer_ticks * timer_tick_ns / xcore_clock_ns))
 
 
-def get_stats(data, conv2d_params, con2d_params_to_kernel_params_fn):
+def get_stats(data, conv2d_params, con2d_params_to_kernel_params_fn, verbose=False):
 
     coefs = data["coefs"]
     time = get_time(conv2d_params, con2d_params_to_kernel_params_fn, coefs)
     macc_count = get_maccs(conv2d_params)
     insts = get_instructions(time)
 
-    print("Instructions", insts)
-    print(
-        "Efficiency",
-        np.round(macc_count / insts, 2),
-        "maccs per inst",
-        np.round(100 * (macc_count / insts) / 256, 1),
-        "%",
-    )
+    if verbose:
+        print("Instructions", insts)
+        print(
+            "Efficiency",
+            np.round(macc_count / insts, 2),
+            "maccs per inst",
+            np.round(100 * (macc_count / insts) / 256, 1),
+            "%",
+        )
+    return macc_count, insts
 
 
 def profile_conv2d(conv2d_params):
@@ -88,11 +90,11 @@ def profile_conv2d(conv2d_params):
 
     print("int8 output")
     with np.load("int8.npz") as data:
-        get_stats(data, conv2d_params, con2d_params_to_int8_kernel_params)
+        get_stats(data, conv2d_params, con2d_params_to_int8_kernel_params, True)
 
     print("Binary output")
     with np.load("bin.npz") as data:
-        get_stats(data, conv2d_params, con2d_params_to_bin_kernel_params)
+        get_stats(data, conv2d_params, con2d_params_to_bin_kernel_params, True)
 
     print()
 

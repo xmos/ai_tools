@@ -43,9 +43,9 @@ def trf_pass():
 @pytest.fixture()
 def model(outputs, reshape):
     return build_fc_with_preceding_reshape(
-        input_shape=reshape["input"],
+        input_shape=reshape.input,
         fc_outputs=outputs,
-        reshaped_input_shape=reshape["output"],
+        reshaped_input_shape=reshape.output,
     )
 
 
@@ -87,15 +87,15 @@ def test_mutate(trf_pass, model):
 
 
 def test_non_matching_reshape_only(trf_pass, reshape):
-    model = build_reshape(input_shape=reshape["input"], output_shape=reshape["output"])
+    model = build_reshape(input_shape=reshape.input, output_shape=reshape.output)
     _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_simple(trf_pass, outputs, non_matching_reshape):
     model = build_fc_with_preceding_reshape(
-        input_shape=non_matching_reshape["input"],
+        input_shape=non_matching_reshape.input,
         fc_outputs=outputs,
-        reshaped_input_shape=non_matching_reshape["output"],
+        reshaped_input_shape=non_matching_reshape.output,
     )
     _test_non_matching_params(trf_pass, model)
 

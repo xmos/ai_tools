@@ -1,15 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-from copy import deepcopy
-from itertools import product
 import numpy as np
+from copy import deepcopy
+from itertools import product, chain
+from typing import Tuple, NamedTuple, Callable
 
-from tflite2xcore.xcore_schema import TensorType
-from tflite2xcore.transformation_passes import ReplaceFullyConnectedPass
-
-from tflite2xcore.tests.test_transformation_passes.model_builders import build_fc
 from ..conftest import (
+    ParamsType,
     PARAMS,
     _test_non_matching_params,
     test_matching_params,
@@ -36,116 +34,62 @@ PARAMS["smoke"].update(
 
 
 #  ----------------------------------------------------------------------------
-#                                   FIXTURES
-#  ----------------------------------------------------------------------------
-
-
-@pytest.fixture()
-def model(input_shape, outputs):
-    return build_fc(input_shape=input_shape, outputs=outputs)
-
-
-#  ----------------------------------------------------------------------------
 #                                   HELPERS
 #  ----------------------------------------------------------------------------
 
-# TODO refactor this function to use a function that returns a generator
-def update_params_with_reshape(PARAMS, *, is_matching):
 
+class ReshapeTuple(NamedTuple):
+    input: Tuple[int, ...]
+    output: Tuple[int, ...]
+
+
+# TODO refactor this function to use a function that returns a generator
+def update_params_with_reshape(
+    PARAMS: ParamsType, *, is_matching: Callable[[], bool]
+) -> ParamsType:
     for params in PARAMS.values():
 
-        all_reshapes = [
-            [list(p) for p in t]
-            for t in product(
-                product(
-                    params["input_batch"],
-                    params["input_height"],
-                    params["input_width"],
-                    params["input_channels"],
-                ),
-                product(
-                    # Basic dim re-ordering
-                    params["input_batch"],
-                    params["input_channels"],
-                    params["input_height"],
-                    params["input_width"],
-                ),
-            )
-        ]
+        def get_product_shape(*, dim=4, order="NHWC"):
+            if dim == 4:
+                if order == "NHWC":
+                    return product(
+                        params["input_batch"],
+                        params["input_height"],
+                        params["input_width"],
+                        params["input_channels"],
+                    )
+                else:
+                    return product(
+                        params["input_batch"],
+                        params["input_channels"],
+                        params["input_height"],
+                        params["input_width"],
+                    )
+            else:
+                return (
+                    (*p[: dim - 1], np.prod(p[dim - 1 :]))
+                    for p in get_product_shape(dim=dim + 1, order=order)
+                )
 
-        all_reshapes.extend(
-            [list(p) for p in t]
-            for t in product(
+        all_reshapes = (
+            ReshapeTuple(*p)
+            for p in chain(
                 product(
-                    params["input_batch"],
-                    params["input_height"],
-                    params["input_width"],
-                    params["input_channels"],
+                    get_product_shape(dim=4), get_product_shape(dim=4, order="NCHW")
                 ),
-                # Basic dimensionality reduction
-                product(
-                    params["input_batch"],
-                    params["input_height"],
-                    (
-                        np.prod(p)
-                        for p in product(
-                            params["input_width"], params["input_channels"]
-                        )
-                    ),
-                ),
+                product(get_product_shape(dim=4), get_product_shape(dim=3)),
+                product(get_product_shape(dim=3), get_product_shape(dim=2)),
             )
         )
 
-        all_reshapes.extend(
-            [list(p) for p in t]
-            for t in product(
-                product(
-                    params["input_batch"],
-                    params["input_height"],
-                    (
-                        np.prod(p)
-                        for p in product(
-                            params["input_width"], params["input_channels"]
-                        )
-                    ),
-                ),
-                product(
-                    params["input_batch"],
-                    (
-                        np.prod(p)
-                        for p in product(
-                            params["input_height"],
-                            params["input_width"],
-                            params["input_channels"],
-                        )
-                    ),
-                ),
-            )
-        )
-
-        for x in range(0, len(all_reshapes)):
-            all_reshapes[x] = {
-                "input": all_reshapes[x][0],
-                "output": all_reshapes[x][1],
-            }
-
-        params.update(
-            {
-                "reshape": [
-                    reshape
-                    for reshape in all_reshapes
-                    # Note, this is a bit of a waste as we collect lots of params them throw a lot of them away..
-                    if is_matching(reshape["input"], reshape["output"])
-                    and np.prod(reshape["input"]) == np.prod(reshape["output"])
-                ],
-                "non_matching_reshape": [
-                    reshape
-                    for reshape in all_reshapes
-                    # Note, this is a bit of a waste as we collect lots of params them throw a lot of them away..
-                    if (not is_matching(reshape["input"], reshape["output"]))
-                    and np.prod(reshape["input"]) == np.prod(reshape["output"])
-                ],
-            }
-        )
+        matching_reshape = params["reshape"] = []
+        non_matching_reshape = params["non_matching_reshape"] = []
+        for reshape in all_reshapes:
+            # this is a bit wasteful
+            if np.prod(reshape.input) == np.prod(reshape.output):
+                if is_matching(reshape.input, reshape.output):
+                    matching_reshape.append(reshape)
+                else:
+                    non_matching_reshape.append(reshape)
 
     return PARAMS

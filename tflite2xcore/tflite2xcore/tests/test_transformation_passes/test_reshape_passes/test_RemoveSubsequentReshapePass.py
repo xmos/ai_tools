@@ -37,7 +37,7 @@ def trf_pass():
 @pytest.fixture()
 def model(outputs, reshape):
     return build_fc_with_subsequent_reshape(
-        fc_output_shape=reshape["input"], reshaped_output_shape=reshape["output"]
+        fc_output_shape=reshape.input, reshaped_output_shape=reshape.output
     )
 
 

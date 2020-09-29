@@ -52,7 +52,7 @@ def test_converted_model(xcore_model: XCOREModel) -> None:
     subgraph = xcore_model.subgraphs[0]
 
     # check tensors
-    assert len(subgraph.tensors) == 91
+    assert len(subgraph.tensors) == 90
 
     assert len(subgraph.inputs) == 1
     input_tensor = subgraph.inputs[0]
@@ -68,7 +68,7 @@ def test_converted_model(xcore_model: XCOREModel) -> None:
     assert output_tensor.shape == (1, 1000)
 
     # check operators
-    assert len(subgraph.operators) == 32
+    assert len(subgraph.operators) == 31
 
     # check only first op
     assert len(input_tensor.consumers) == 1
@@ -77,7 +77,6 @@ def test_converted_model(xcore_model: XCOREModel) -> None:
     opcode_cnt = xcore_model.count_operator_codes()
     assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_1x1)] == 13
     assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_depthwise)] == 13
-    assert opcode_cnt[OperatorCode(BuiltinOpCodes.RESHAPE)] == 1  # TODO: fix this
     assert opcode_cnt[OperatorCode(BuiltinOpCodes.PAD)] == 1
     assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_shallowin)] == 1
     assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_avgpool2d_global)] == 1

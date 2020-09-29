@@ -58,6 +58,7 @@ from .dce_passes import (
 )
 
 from .reshape_passes import (
+    RemoveSubsequentReshapePass,
     RemovePrecedingReshapePass,
     CanonicalizeReshapePass,
 )

@@ -33,6 +33,34 @@ class AdjacentReshapeMatchingPass(OperatorMatchingPass):
         return False
 
 
+class RemoveSubsequentReshapePass(AdjacentReshapeMatchingPass):
+    @property
+    def _reshape_op(self):
+        return self._op.outputs[0].consumers[0]
+
+    def match(self, op: Operator) -> bool:
+        if super().match(op):
+            with self.using(op):
+                if len(self._reshape_op.inputs[0].consumers) == 1:
+                    return True
+                self.logger.warning(
+                    "Subsequent RESHAPE found with more than 1 consumer"
+                )
+        return False
+
+    def mutate(self, op: Operator) -> None:
+        with self.using(op):
+            reshape_op = self._reshape_op
+
+        # Remove connection from old output to the anchor op
+        # then create the new connection
+        op.outputs[0].producers.remove(op)
+        op.outputs[0] = reshape_op.outputs[0]
+        op.outputs[0].producers.append(op)
+
+        op.subgraph.remove_operator(reshape_op)
+
+
 class RemovePrecedingReshapePass(AdjacentReshapeMatchingPass):
     def mutate(self, op: Operator) -> None:
         reshape_op = op.inputs[0].producers[0]

@@ -8,13 +8,20 @@ from tflite2xcore.xcore_model import Operator, Tensor
 from .transformation_passes import OperatorMatchingPass
 
 
-class RemovePrecedingReshapePass(OperatorMatchingPass):
-    MATCHING_OPCODES = (BuiltinOpCodes.FULLY_CONNECTED,)
+class AdjacentReshapeMatchingPass(OperatorMatchingPass):
+    @property
+    def MATCHING_OPCODES(self):
+        return (BuiltinOpCodes.FULLY_CONNECTED,)
+
+    @property
+    def _reshape_op(self):
+        return self._op.inputs[0].producers[0]
 
     def match(self, op: Operator) -> bool:
         if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
             try:
-                reshape_op = op.inputs[0].producers[0]
+                with self.using(op):
+                    reshape_op = self._reshape_op
             except IndexError:
                 return False
 
@@ -25,10 +32,12 @@ class RemovePrecedingReshapePass(OperatorMatchingPass):
 
         return False
 
+
+class RemovePrecedingReshapePass(AdjacentReshapeMatchingPass):
     def mutate(self, op: Operator) -> None:
         reshape_op = op.inputs[0].producers[0]
 
-        # Remove connection from old inputs to the anchor FC op
+        # Remove connection from old input to the anchor op
         # then create the new connection
         op.inputs[0].consumers.remove(op)
         op.inputs[0] = reshape_op.inputs[0]

@@ -30,6 +30,20 @@ typedef struct {
   bnn_b256_t* K;
 } nn_bnn_conv2d_bin_out_asm_plan_t;
 
+/**
+ * Struct represents the parameters needed by each
+ * `bnn_conv2d_bin_out_patch_asm()` job.
+ *
+ * Values are set by `bnn_conv2d_bin_out_patch_asm_prepare()`.
+ *
+ * @note This struct is intended to be opaque.
+ */
+typedef struct {
+  nn_bnn_conv2d_bin_out_asm_plan_t d;
+  bnn_b256_t * data_scratch;
+  unsigned patch_loop_counter;
+} nn_bnn_conv2d_bin_out_patch_asm_plan_t;
+
 
 /**
  * Struct represents the parameters needed by each

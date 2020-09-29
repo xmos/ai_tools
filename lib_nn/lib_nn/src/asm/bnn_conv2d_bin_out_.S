@@ -1,0 +1,298 @@
+#if defined(__XS3A__)
+
+.issue_mode  dual
+
+//Plan layout
+#define PLAN_OUTER_X_H_STEP        0
+#define PLAN_OC_LOOP_COUNTER       1
+#define PLAN_THRESHOLD_P           2
+#define PLAN_INNER_X_V_STEP        3
+#define PLAN_K_V_STEP              4
+#define PLAN_INNER_X_H_STEP        5
+#define PLAN_K_H_STEP              6
+#define PLAN_OUTER_X_V_STEP        7
+#define PLAN_Y_V_STEP              8
+#define PLAN_K_HEIGHT_LOOP_COUNTER 9
+#define PLAN_K_WIDTH_LOOP_COUNTER  10
+#define PLAN_X_HEIGHT_LOOP_COUNTER 11
+#define PLAN_X_WIDTH_LOOP_COUNTER  12
+#define PLAN_IC_LOOP_COUNTER       13
+#define PLAN_Y_P                   14
+#define PLAN_X_P                   15
+#define PLAN_K_P                   16
+
+//Stack Usage
+
+#define S_0       0
+#define S_1       1
+
+#define S_SAVE_R4 2
+#define S_SAVE_R5 3
+
+#define S_SAVE_R6 4
+#define S_SAVE_R7 5
+
+#define S_SAVE_R8               6
+#define S_SAVE_R9               7
+
+#define S_SAVE_R10              8
+#define S_K_p                   9 
+
+#define S_THRESHOLDS_0_15       10
+#define S_THRESHOLDS_16_31      11
+
+#define S_X_p                   12
+#define S_OUTER_X_H_STEP        13
+
+#define S_OC_LOOP_COUNTER       14 
+#define S_THRESHOLD_P           15 
+
+#define S_INNER_X_V_STEP        16
+#define S_K_V_STEP              17
+
+#define S_INNER_X_H_STEP        18 
+#define S_K_H_STEP              19
+
+#define S_OUTER_X_V_STEP        20 
+#define S_Y_V_STEP              21 
+
+#define S_K_HEIGHT_LOOP_COUNTER 22
+#define S_K_WIDTH_LOOP_COUNTER  23
+
+#define S_X_HEIGHT_LOOP_COUNTER 24 
+#define S_X_WIDTH_LOOP_COUNTER  25
+
+#define S_IC_LOOP_COUNTER       26 
+
+//Note: The elements 27 -> 30 will be clobbered when copying the plan to the stack
+//      this might mean leaving some spare stack space
+
+//doesn't have to be double work aligned
+#define S_ZERO_0 28
+#define S_ZERO_1 29 
+#define S_ZERO_2 30
+#define S_ZERO_3 31
+#define S_ZERO_4 32
+#define S_ZERO_5 33
+#define S_ZERO_6 34
+#define S_ZERO_7 35
+
+//Helpers that reference the above
+#define S_SAVE_R4_R5 (S_SAVE_R4/2) //0
+#define S_SAVE_R6_R7 (S_SAVE_R6/2)
+#define S_SAVE_R8_R9 (S_SAVE_R8/2)
+#define S_SAVE_R10_K_p (S_SAVE_R10/2)
+#define S_X_p_S_OUTER_X_H_STEP (S_X_p/2)
+#define S_THRESHOLDS (S_THRESHOLDS_0_15/2)
+#define S_OC_LOOP_COUNTER_THRESHOLD_P (S_OC_LOOP_COUNTER/2)
+#define S_INNER_V_STEPS (S_INNER_X_V_STEP/2)
+#define S_INNER_H_STEPS (S_INNER_X_H_STEP/2)
+#define S_OUTER_X_V_STEP_Y_V_STEP (S_OUTER_X_V_STEP/2)
+
+#define S_ZERO_256 S_ZERO_0
+
+//Registers
+
+#define Y_p               r0
+#define X_p               r1
+#define K_p               r2
+#define threshold_current r3
+
+#define k_height_loop     r4
+#define k_width_loop      r5
+#define ic_loop_counter   r6
+#define oc_loop_counter   r7
+#define r_256_bits        r8
+#define x_width_loop      r9
+#define s                 r10
+#define t                 r11
+.align 4
+bnn_make_patch:
+
+    //TODO load D_p
+
+    {ldw k_height_loop, sp[S_K_HEIGHT_LOOP_COUNTER]; nop}
+    bnn_kh_loop:
+        
+        {ldw k_width_loop, sp[S_K_WIDTH_LOOP_COUNTER]; nop}
+        bnn_kw_loop:
+  
+            {ldw ic_loop_counter, sp[S_IC_LOOP_COUNTER]; nop}
+            bnn_ic_inner_loop:
+                {vldc X_p[0];      add X_p, X_p, r_256_bits}
+                {vstc D_p[0];      add D_p, D_p, r_256_bits} //D_p needs space for the overrun
+            {bt ic_loop_counter, bnn_ic_inner_loop; sub ic_loop_counter, ic_loop_counter, 1}
+
+            ldd s, t, sp[S_INNER_H_STEPS]
+            {add X_p, X_p, t; add D_p, D_p, s} //this can rewind D_p up to 256 - 32 bits
+
+        {bt k_width_loop, bnn_kw_loop; sub k_width_loop, k_width_loop, 1}
+
+        ldd s, t, sp[S_INNER_V_STEPS]
+        {add X_p, X_p, t;  }
+
+    {bt k_height_loop, bnn_kh_loop; sub k_height_loop, k_height_loop, 1}
+
+//mask out the  overspill
+    ldw t, sp[S_MASK] //load a mask to store the coefs over the over run data 
+    vclrdr
+    vstrpw D_p[0], t   //D_p points to the final (possibly-partial) set of data
+    retsp 0
+.align 4
+bnn_compute:
+
+    {vldr t[0]; add threshold_current, threshold_current, s}
+    {vldd threshold_current[0]; add threshold_current, threshold_current, s}
+
+    {ldw patch_loop, sp[S_PATCH_LOOP]; nop}
+    bnn_patch_loop:
+        {vldc D_p[0];      add D_p, D_p, r_256_bits}
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+    {bt patch_loop, bnn_patch_loop; sub patch_loop, patch_loop, 1}
+
+    retsp 0
+
+/*
+void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
+*/
+
+#define FUNCTION_NAME bnn_conv2d_bin_out_asm
+
+#define NSTACKWORDS  36
+    
+.text
+.issue_mode  dual
+.globl FUNCTION_NAME
+.align 2
+.type FUNCTION_NAME,@function
+.cc_top FUNCTION_NAME.function,FUNCTION_NAME
+
+FUNCTION_NAME:
+    dualentsp NSTACKWORDS
+    std r4, r5, sp[S_SAVE_R4_R5]
+    std r6, r7, sp[S_SAVE_R6_R7]
+    std r8, r9, sp[S_SAVE_R8_R9]
+    std r2, r10, sp[S_SAVE_R10_K_p]
+
+	ldc r11, 256 //set int16 mode - 32 bit accumulators	
+    {vsetc r11; shr r_256_bits, r11, 3} 
+    
+    {mov t, r0;  ldc s, PLAN_Y_P}
+    {ldw r0, t[s]; ldc s, PLAN_X_P} //put PLAN_Y_P into r0
+    {ldw r1, t[s]; ldc s, PLAN_K_P}
+    {ldw r2, t[s]; nop}
+
+    stw r1, sp[S_X_p]   //put PLAN_X_P into S_X_p and r1---- this seems unnessessary CHECK
+    stw r2, sp[S_K_p]   //put PLAN_K_P into S_K_p and r2
+    
+    {vldr t[0];  add t, t, r_256_bits}
+    ldaw s, sp[S_OUTER_X_H_STEP]
+    {vstr s[0]; add s, s, r_256_bits}
+
+    {vldr t[0]; add t, t, r_256_bits}
+    {vstr s[0]; add s, s, r_256_bits} //This could use a bit mask to only store the relavent fields
+
+    //Set up the zeros (and clear the over write from the vector copy)
+    ldaw t, sp[S_ZERO_0]
+    vclrdr
+    vstr t[0]
+
+    bnn_h_loop:
+
+        {ldw x_width_loop, sp[S_X_WIDTH_LOOP_COUNTER]; nop}
+        bnn_w_loop:
+
+            ldd threshold_current, oc_loop_counter, sp[S_OC_LOOP_COUNTER_THRESHOLD_P]
+
+            //init K_p
+            {ldw K_p, sp[S_K_p]; nop}
+
+            bnn_oc_loop: //this loops over (output_channels/32)
+            
+                {ldw X_p, sp[S_X_p]; ldc s, 32}
+                {bl bnn_make_16_bit_output ; mov t, threshold_current }
+
+                ldaw s, sp[S_THRESHOLDS_0_15]
+                ldaw t, sp[S_ZERO_256] //TODO use the constant pool
+                {vlsat t[0] ; nop}
+                {vdepth1; ldc t, 3}
+                vstrpv s[0], t
+
+                {ldw X_p, sp[S_X_p]; ldc s, 32}
+                {bl bnn_make_16_bit_output ; mov t, threshold_current }
+
+                ldaw s, sp[S_THRESHOLDS_16_31] 
+                ldaw t, sp[S_ZERO_256] //TODO use the constant pool
+                {vlsat t[0] ; nop} 
+                {vdepth1; ldc t, 3}
+                vstrpv s[0], t
+                
+                //merge the two 16 bits together
+                ldd s, t, sp[S_THRESHOLDS]
+                {shl s, s, 16; zext t, 16}
+                {add t, s, t; nop}
+
+                {add Y_p, Y_p, 4 ; stw t, Y_p[0]} //save the 32 results to memory
+
+            {bt oc_loop_counter, bnn_oc_loop; sub oc_loop_counter, oc_loop_counter, 1}
+
+            //advance X by one(STEP) to the right
+            ldd X_p, t, sp[S_X_p_S_OUTER_X_H_STEP]
+            {add X_p, X_p, t; nop }
+            stw X_p, sp[S_X_p]
+
+        {bt x_width_loop, bnn_w_loop; sub x_width_loop, x_width_loop, 1 }
+
+        //TODO this section could be scheduled to be faster
+        ldd s, t, sp[S_OUTER_X_V_STEP_Y_V_STEP]
+        {ldw X_p, sp[S_X_p]; nop}
+        {add X_p, X_p, t; add Y_p, Y_p, s }
+        stw X_p, sp[S_X_p]
+        {ldw t, sp[S_X_HEIGHT_LOOP_COUNTER]; nop}
+        {sub t, t, 1; nop}
+        stw t, sp[S_X_HEIGHT_LOOP_COUNTER] 
+ 
+    {bt t, bnn_h_loop; nop}
+
+
+    ldd r4, r5, sp[S_SAVE_R4_R5]
+    ldd r6, r7, sp[S_SAVE_R6_R7]
+    ldd r8, r9, sp[S_SAVE_R8_R9]
+    ldd r2, r10, sp[S_SAVE_R10_K_p]
+    retsp NSTACKWORDS
+
+    .cc_bottom FUNCTION_NAME.function
+    .set FUNCTION_NAME.nstackwords,NSTACKWORDS
+    .globl FUNCTION_NAME.nstackwords
+    .set FUNCTION_NAME.maxcores,1
+    .globl FUNCTION_NAME.maxcores
+    .set FUNCTION_NAME.maxtimers,0
+    .globl FUNCTION_NAME.maxtimers
+    .set FUNCTION_NAME.maxchanends,0
+    .globl FUNCTION_NAME.maxchanends
+.Ltmp0:
+    .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
+    .issue_mode  single
+
+#endif
+
+
+

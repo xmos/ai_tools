@@ -759,7 +759,7 @@ def build_reshape(
     return subgraph.model
 
 
-def build_fc_with_reshape(
+def build_fc_with_preceding_reshape(
     subgraph=None, *, input_shape, fc_outputs, reshaped_input_shape
 ):
     model = build_reshape(
@@ -777,9 +777,7 @@ def build_fc_with_reshape(
         add_batch_dim=False,
     )
 
-    reshape1, fc1 = subgraph.operators[:2]
-
-    _glue_ops(reshape1, fc1)
+    _glue_ops(*subgraph.operators[:2])
 
     return model
 

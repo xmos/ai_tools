@@ -2,15 +2,12 @@
 
 import pytest
 
-import numpy as np
-
 from copy import deepcopy
 
 from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes.reshape_passes import CanonicalizeReshapePass
-from tflite2xcore.xcore_schema import BuiltinOpCodes
 
-from ..model_builders import build_fc_with_reshape, build_reshape
+from ..model_builders import build_reshape
 from .conftest import (
     PARAMS,
     _test_non_matching_params,

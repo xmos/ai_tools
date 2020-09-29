@@ -8,7 +8,7 @@ from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes.reshape_passes import RemovePrecedingReshapePass
 from tflite2xcore.xcore_schema import BuiltinOpCodes
 
-from ..model_builders import build_fc_with_reshape, build_reshape
+from ..model_builders import build_fc_with_preceding_reshape, build_reshape
 from .conftest import (
     PARAMS,
     _test_non_matching_params,
@@ -42,26 +42,16 @@ def trf_pass():
 
 @pytest.fixture()
 def model(outputs, reshape):
-
-    return build_fc_with_reshape(
+    return build_fc_with_preceding_reshape(
         input_shape=reshape["input"],
         fc_outputs=outputs,
         reshaped_input_shape=reshape["output"],
     )
 
 
-@pytest.fixture()
-def model_nonmatch(outputs, non_matching_reshape):
-    return build_fc_with_reshape(
-        input_shape=non_matching_reshape["input"],
-        fc_outputs=outputs,
-        reshaped_input_shape=non_matching_reshape["output"],
-    )
-
-
-@pytest.fixture()
-def model_reshape_only(outputs, reshape):
-    return build_reshape(input_shape=reshape["input"], output_shape=reshape["output"],)
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
 
 
 def test_mutate(trf_pass, model):
@@ -96,12 +86,18 @@ def test_mutate(trf_pass, model):
     assert out_ori in subgraph.outputs
 
 
-def test_non_matching_reshape_only(trf_pass, model_reshape_only):
-    _test_non_matching_params(trf_pass, model_reshape_only)
+def test_non_matching_reshape_only(trf_pass, reshape):
+    model = build_reshape(input_shape=reshape["input"], output_shape=reshape["output"])
+    _test_non_matching_params(trf_pass, model)
 
 
-def test_non_matching_simple(trf_pass, model_nonmatch):
-    _test_non_matching_params(trf_pass, model_nonmatch)
+def test_non_matching_simple(trf_pass, outputs, non_matching_reshape):
+    model = build_fc_with_preceding_reshape(
+        input_shape=non_matching_reshape["input"],
+        fc_outputs=outputs,
+        reshaped_input_shape=non_matching_reshape["output"],
+    )
+    _test_non_matching_params(trf_pass, model)
 
 
 if __name__ == "__main__":

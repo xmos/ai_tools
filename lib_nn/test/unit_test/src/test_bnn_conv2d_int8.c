@@ -1,17 +1,9 @@
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
 #include <string.h>
-#include <float.h>
 #include <assert.h>
 
 #include "tst_common.h"
-#include "nn_operator.h"
-#include "nn_types.h"
-#include "xs3_vpu.h"
-#include "nn_bin_utils.h"
-
 #include "unity.h"
 
 #include "helpers.h"

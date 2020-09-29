@@ -1,9 +1,6 @@
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
 #include <string.h>
-#include <float.h>
 #include <assert.h>
 
 #include "tst_common.h"
@@ -56,9 +53,8 @@ void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
                    (int32_t*)Y_ref_p, (const int32_t *)thresholds_ref);
 
 #if defined(__XS3A__)
-
   bnn_reorder_threshold_tensor(thresholds_p, thresholds_ref, chans_out,
-                               k_width * k_height * chans_in);
+                              k_width * k_height * chans_in);
 
   bnn_reorder_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
                             chans_out);
@@ -68,6 +64,7 @@ void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref,
     0, 0, y_width, y_height,
     0, 0, 
     0, 0, k_width, k_height);
+
 #else
   bnn_conv2d_bin_out((bnn_b32_t*)Y_p, (const bnn_b256_t*)X_ref,
                       (const bnn_b256_t*)K_ref_p, thresholds_ref, &x, &y, &k,

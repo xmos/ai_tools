@@ -47,9 +47,15 @@ class CanonicalizeQuantizedOutputPass(OperatorMatchingPass):
     def match(self, op):
         if super().match(op):
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
+       
+            try: 
+                if op.operator_code.code is not self._matching_opcode:
+                    return False
+            except AttributeError:
+                return False
+
             if (
-                op.operator_code.code is self._matching_opcode
-                and output_tensor in op.subgraph.outputs
+                output_tensor in op.subgraph.outputs
                 and not output_tensor.consumers
                 and input_tensor not in op.subgraph.inputs
                 and output_tensor.type is TensorType.FLOAT32

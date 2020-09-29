@@ -86,12 +86,12 @@ def optimize_for_xcore(
     )
 
     pass_mgr.register_pass(passes.CanonicalizeReshapePass())
-    pass_mgr.register_pass(passes.RemoveFlattenReshapePass())
+    pass_mgr.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
+    pass_mgr.register_pass(passes.RemovePrecedingReshapePass())
 
     # canonicalize convolutions
     pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
     pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
-    pass_mgr.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
 
     # canonicalize word alignment
     pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())

@@ -5,7 +5,7 @@ import pytest
 from copy import deepcopy
 
 from tflite2xcore.converter import CleanupManager
-from tflite2xcore.transformation_passes.reshape_passes import RemoveFlattenReshapePass
+from tflite2xcore.transformation_passes.reshape_passes import RemovePrecedingReshapePass
 from tflite2xcore.xcore_schema import BuiltinOpCodes
 
 from ..model_builders import build_fc_with_reshape, build_reshape
@@ -37,7 +37,7 @@ PARAMS = update_params_with_reshape(deepcopy(PARAMS), is_matching=matching_resha
 
 @pytest.fixture()
 def trf_pass():
-    return RemoveFlattenReshapePass()
+    return RemovePrecedingReshapePass()
 
 
 @pytest.fixture()

@@ -8,39 +8,30 @@ from tflite2xcore.xcore_model import Operator, Tensor
 from .transformation_passes import OperatorMatchingPass
 
 
-class RemoveFlattenReshapePass(OperatorMatchingPass):
-    MATCHING_OPCODES = (
-        # TODO fully populate this set e.g. average pooling
-        BuiltinOpCodes.FULLY_CONNECTED,
-    )
+class RemovePrecedingReshapePass(OperatorMatchingPass):
+    MATCHING_OPCODES = (BuiltinOpCodes.FULLY_CONNECTED,)
 
     def match(self, op: Operator) -> bool:
         if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
-            with self.using(op):
-                try:
-                    intermediate = op.inputs[0]
-                    producer = intermediate.producers[0]
-                except IndexError:
-                    return False
-
-            reshape_input_batch = producer.inputs[0].shape[0]
-            reshape_output_batch = intermediate.shape[0]
+            try:
+                reshape_op = op.inputs[0].producers[0]
+            except IndexError:
+                return False
 
             return (
-                producer.operator_code.code is BuiltinOpCodes.RESHAPE
-                and reshape_output_batch == reshape_input_batch
+                reshape_op.operator_code.code is BuiltinOpCodes.RESHAPE
+                and reshape_op.inputs[0].shape[0] == reshape_op.outputs[0].shape[0]
             )
 
         return False
 
     def mutate(self, op: Operator) -> None:
-        intermediate = op.inputs[0]
-        producer = intermediate.producers[0]
+        reshape_op = op.inputs[0].producers[0]
 
         # Remove connection from old inputs to the anchor FC op
         # then create the new connection
-        intermediate.consumers.remove(op)
-        op.inputs[0] = producer.inputs[0]
+        op.inputs[0].consumers.remove(op)
+        op.inputs[0] = reshape_op.inputs[0]
         op.inputs[0].consumers.append(op)
 
 

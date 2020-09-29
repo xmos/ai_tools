@@ -43,9 +43,8 @@ class ReshapeTuple(NamedTuple):
     output: Tuple[int, ...]
 
 
-# TODO refactor this function to use a function that returns a generator
 def update_params_with_reshape(
-    PARAMS: ParamsType, *, is_matching: Callable[[], bool]
+    PARAMS: ParamsType, *, is_matching: Callable[[ReshapeTuple], bool]
 ) -> ParamsType:
     for params in PARAMS.values():
 
@@ -87,7 +86,7 @@ def update_params_with_reshape(
         for reshape in all_reshapes:
             # this is a bit wasteful
             if np.prod(reshape.input) == np.prod(reshape.output):
-                if is_matching(reshape.input, reshape.output):
+                if is_matching(reshape):
                     matching_reshape.append(reshape)
                 else:
                     non_matching_reshape.append(reshape)

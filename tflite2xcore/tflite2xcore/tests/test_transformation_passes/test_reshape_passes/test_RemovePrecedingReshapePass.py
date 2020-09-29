@@ -1,9 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-
+from typing import Tuple
 from copy import deepcopy
 
+from tflite2xcore.transformation_passes import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes.reshape_passes import RemovePrecedingReshapePass
 from tflite2xcore.xcore_schema import BuiltinOpCodes
@@ -11,6 +13,7 @@ from tflite2xcore.xcore_schema import BuiltinOpCodes
 from ..model_builders import build_fc_with_preceding_reshape, build_reshape
 from .conftest import (
     PARAMS,
+    ReshapeTuple,
     _test_non_matching_params,
     test_matching_params,
     update_params_with_reshape,
@@ -22,13 +25,12 @@ from .conftest import (
 #  ----------------------------------------------------------------------------
 
 
-def matching_reshape(reshape_input_shape, reshape_output_shape):
-
+def is_matching_reshape(reshape: ReshapeTuple) -> bool:
     # Check batch dim is unchanged
-    return reshape_input_shape[0] == reshape_output_shape[0]
+    return reshape.input[0] == reshape.output[0]
 
 
-PARAMS = update_params_with_reshape(deepcopy(PARAMS), is_matching=matching_reshape)
+PARAMS = update_params_with_reshape(deepcopy(PARAMS), is_matching=is_matching_reshape)
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
@@ -36,12 +38,12 @@ PARAMS = update_params_with_reshape(deepcopy(PARAMS), is_matching=matching_resha
 
 
 @pytest.fixture()
-def trf_pass():
+def trf_pass() -> RemovePrecedingReshapePass:
     return RemovePrecedingReshapePass()
 
 
 @pytest.fixture()
-def model(outputs, reshape):
+def model(outputs: int, reshape: ReshapeTuple) -> XCOREModel:
     return build_fc_with_preceding_reshape(
         input_shape=reshape.input,
         fc_outputs=outputs,
@@ -54,8 +56,7 @@ def model(outputs, reshape):
 #  ----------------------------------------------------------------------------
 
 
-def test_mutate(trf_pass, model):
-
+def test_mutate(trf_pass: ModelTransformationPass, model: XCOREModel) -> None:
     subgraph = model.subgraphs[0]
     assert len(subgraph.operators) == 2
 
@@ -86,12 +87,16 @@ def test_mutate(trf_pass, model):
     assert out_ori in subgraph.outputs
 
 
-def test_non_matching_reshape_only(trf_pass, reshape):
+def test_non_matching_reshape_only(
+    trf_pass: ModelTransformationPass, reshape: ReshapeTuple
+) -> None:
     model = build_reshape(input_shape=reshape.input, output_shape=reshape.output)
     _test_non_matching_params(trf_pass, model)
 
 
-def test_non_matching_simple(trf_pass, outputs, non_matching_reshape):
+def test_non_matching_simple(
+    trf_pass: ModelTransformationPass, outputs: int, non_matching_reshape: ReshapeTuple
+) -> None:
     model = build_fc_with_preceding_reshape(
         input_shape=non_matching_reshape.input,
         fc_outputs=outputs,

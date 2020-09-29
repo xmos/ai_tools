@@ -4,11 +4,13 @@ import pytest
 
 from copy import deepcopy
 
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes.reshape_passes import CanonicalizeReshapePass
 
 from ..model_builders import build_reshape
 from .conftest import (
+    ReshapeTuple,
     PARAMS,
     _test_non_matching_params,
     test_matching_params,
@@ -20,7 +22,7 @@ from .conftest import (
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-PARAMS = update_params_with_reshape(deepcopy(PARAMS), is_matching=lambda *_: True)
+PARAMS = update_params_with_reshape(deepcopy(PARAMS), is_matching=lambda _: True)
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
@@ -28,25 +30,21 @@ PARAMS = update_params_with_reshape(deepcopy(PARAMS), is_matching=lambda *_: Tru
 
 
 @pytest.fixture()
-def trf_pass():
+def trf_pass() -> CanonicalizeReshapePass:
     return CanonicalizeReshapePass()
 
 
 @pytest.fixture()
-def model(reshape):
+def model(reshape: ReshapeTuple) -> XCOREModel:
     return build_reshape(input_shape=reshape.input, output_shape=reshape.output)
 
 
-@pytest.fixture()
-def model_no_shape_tensor(reshape):
-    return build_reshape(
-        input_shape=reshape.input,
-        output_shape=reshape.output,
-        input_shape_tensor=False,
-    )
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
 
 
-def test_mutate(trf_pass, model):
+def test_mutate(trf_pass: CanonicalizeReshapePass, model: XCOREModel) -> None:
 
     subgraph = model.subgraphs[0]
     assert len(subgraph.operators) == 1
@@ -79,8 +77,15 @@ def test_mutate(trf_pass, model):
     assert out_ori in subgraph.outputs
 
 
-def test_non_matching_no_shape_tensor(trf_pass, model_no_shape_tensor):
-    _test_non_matching_params(trf_pass, model_no_shape_tensor)
+def test_non_matching_no_shape_tensor(
+    trf_pass: CanonicalizeReshapePass, reshape: ReshapeTuple
+) -> None:
+    model = build_reshape(
+        input_shape=reshape.input,
+        output_shape=reshape.output,
+        input_shape_tensor=False,
+    )
+    _test_non_matching_params(trf_pass, model)
 
 
 if __name__ == "__main__":

@@ -393,15 +393,13 @@ void conv2d_1x1_init(
  * @param[in]  zero_point   The value @math{z_0} to be used for padding (for all channels)
  * @param[in]  job_count    The number of jobs to initialize
  */
-void conv2d_depthwise_init(
+void conv2d_depthwise_prepare(
     nn_conv2d_depthwise_plan_t* plan,
-    nn_conv2d_depthwise_job_t* jobs,
+    nn_conv2d_depthwise_job_t* job,
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params,
-    const nn_conv2d_job_params_t* job_params,
     const nn_window_params_t* conv_window,
-    const int8_t zero_point,
-    const unsigned job_count);
+    const nn_conv2d_job_params_t* job_params);
 
 
 
@@ -674,12 +672,15 @@ void conv2d_1x1(
  * @param job  [in]     The @oper{conv2d_depthwise} job to be processed
  */
 void conv2d_depthwise(
-    nn_image_t* Y,
-    const nn_image_t* X,
-    const nn_tensor_t* K,
+    int8_t* Y,
+    const int8_t* X,
+    const int8_t* K,
     const nn_bso_block_t* BSO,
-    const nn_conv2d_depthwise_plan_t* plan,
-    const nn_conv2d_depthwise_job_t* job);
+    const int8_t zero_point,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* conv_window,
+    const nn_window_op_job_params_t* job_params);
 
     
 

@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir -m 777 /XMOS && cd /XMOS \
     && wget -q https://github0.xmos.com/raw/xmos-int/get_tools/master/get_tools.py \
     && chmod a+x get_tools.py \
-    && echo "export MODULEPATH=/XMOS/modulefiles:/XMOS/template_modulefiles\nexport PATH=$PATH:/XMOS" \
+    && echo "export MODULES_SILENT_SHELL_DEBUG=1\nexport MODULEPATH=/XMOS/modulefiles:/XMOS/template_modulefiles\nexport PATH=$PATH:/XMOS" \
     >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 

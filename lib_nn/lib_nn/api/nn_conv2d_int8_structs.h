@@ -315,7 +315,7 @@ typedef struct {
 
 
 typedef struct {
-    unsigned dummy;
+    unsigned k_channels;
 } nn_conv2d_depthwise_adv_t;
 
 #ifdef __XC__

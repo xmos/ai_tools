@@ -213,9 +213,14 @@ void conv2d_depthwise_adv(
     int8_t zero_point_vec[VPU_INT8_VLMACC_ELMS];
     memset(zero_point_vec, zero_point, sizeof(zero_point_vec));
 
-
     nn_conv2d_depthwise_job_t job;
     conv2d_depthwise_prepare(&job, x_params, y_params, conv_window, job_params);
+
+    channel_count_t k_channels = x_params->channels;
+    if(adv != NULL){
+        if(adv->k_channels != 0)
+            k_channels = adv->k_channels;
+    }
 
     struct {
         int32_t top;
@@ -244,12 +249,12 @@ void conv2d_depthwise_adv(
             
             if(init_padding.unpadded_lr && cur_pad_t == 0 && cur_pad_b == 0){
                 nn_conv2d_hstrip_depthwise(Y, X, K, BSO, conv_window->shape.height, conv_window->shape.width,
-                        x_params->channels, job.stride.row.X,
+                        x_params->channels, k_channels, job.stride.row.X,
                         job.stride.col.window, y_params->channels, job_params->size.cols, cur_chans);
             } else {
                 nn_conv2d_hstrip_depthwise_padded(Y, X, K, BSO, conv_window->shape.height, conv_window->shape.width,
                             cur_pad_t, init_padding.left, cur_pad_b, init_padding.right,
-                            x_params->channels, job.stride.row.X, 
+                            x_params->channels, k_channels, job.stride.row.X, 
                             job.stride.col.window, y_params->channels, job_params->size.cols, 
                             cur_chans, zero_point_vec);
             }

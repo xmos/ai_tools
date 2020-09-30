@@ -10,9 +10,9 @@ from .transformation_passes import (
 class EliminateDeadOperatorsPass(OperatorMatchingPass):
     def match(self, op):
         if super().match(op):
-            subgraph = op.subgraph
+            interface_tensors = set(op.subgraph.inputs + op.subgraph.outputs)
             for t in op.outputs:
-                if t in subgraph.inputs + subgraph.outputs or t.consumers:
+                if t in interface_tensors or t.consumers:
                     return False
             else:
                 return True

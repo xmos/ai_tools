@@ -2,4 +2,4 @@
 
 import pytest
 
-from ..conftest import PARAMS, _test_matching_params, _test_non_matching_params
+from ..conftest import PARAMS, test_matching_params, _test_non_matching_params

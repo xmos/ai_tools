@@ -14,7 +14,8 @@ void nn_conv2d_hstrip_depthwise(
     const nn_bso_block_t* BSO,
     const unsigned K_h,
     const unsigned K_w,
-    const int32_t xk_col_stride,
+    const int32_t x_col_stride,
+    const int32_t k_col_stride,
     const int32_t x_row_stride,
     const int32_t window_hstride,
     const int32_t y_col_stride,
@@ -37,15 +38,17 @@ void nn_conv2d_hstrip_depthwise(
 
 #define STACK_K_H               (NSTACKWORDS+1)
 #define STACK_K_W               (NSTACKWORDS+2)
-#define STACK_XK_COL_STRIDE     (NSTACKWORDS+3)
-#define STACK_X_ROW_STRIDE      (NSTACKWORDS+4)
-#define STACK_WINDOW_HSTRIDE    (NSTACKWORDS+5)
-#define STACK_Y_COL_STRIDE      (NSTACKWORDS+6)
-#define STACK_OUT_COLS          (NSTACKWORDS+7)
-#define STACK_CHAN2WRITE        (NSTACKWORDS+8)
+#define STACK_X_COL_STRIDE      (NSTACKWORDS+3)
+#define STACK_K_COL_STRIDE      (NSTACKWORDS+4)
+#define STACK_X_ROW_STRIDE      (NSTACKWORDS+5)
+#define STACK_WINDOW_HSTRIDE    (NSTACKWORDS+6)
+#define STACK_Y_COL_STRIDE      (NSTACKWORDS+7)
+#define STACK_OUT_COLS          (NSTACKWORDS+8)
+#define STACK_CHAN2WRITE        (NSTACKWORDS+9)
 
 #define STACK_VEC_TMP           (NSTACKWORDS-8)
 
+#define STACK_DP            (0)
 #define STACK_CP            (1)
 #define STACK_K_PSTART      (9)
 #define STACK_BSO_PSTART    (10)
@@ -55,14 +58,14 @@ void nn_conv2d_hstrip_depthwise(
 #define Y               r0
 #define X               r1
 #define K               r2
-#define xk_col_stride   r3
+#define x_col_stride    r3
 #define x_row_stride    r4
 #define _32             r5
 #define rows_left       r6
 #define cols_left       r7
-#define window_hstride  r8
+#define X_start         r8
 #define pix_left        r9
-#define X_start         r10
+#define k_col_stride    r10
 
 #define Q(RSOMETHING)    RSOMETHING
 
@@ -76,32 +79,34 @@ FUNCTION_NAME:
     {   shl r11, r11, 4                         ;                                           }
     std r4, r5, sp[1]
     std r6, r7, sp[2]
+    // Set VPU mode 8-bit
     {   ldc r10, 32                             ;   vsetc r11                               }
 
     //Change constant pool pointer to refer to the constant VPU vects needed here
     ldaw r11, cp[vpu_vects]
     {   ldaw r11, cp[0]                         ;   set cp, r11                             }
-    {                                           ;   stw r11, sp[STACK_CP]                   }
+    {   ldaw r11, dp[0]                         ;   stw r11, sp[STACK_CP]                   }
+    {                                           ;   stw r11, sp[STACK_DP]                   }
 
+    // We'll be reloading the start address of BSO and K after each pixel.
     {                                           ;   stw r3, sp[STACK_BSO_PSTART]            }
-    {                                           ;   ldw r5, sp[STACK_XK_COL_STRIDE]         }
     {                                           ;   stw K, sp[STACK_K_PSTART]               }
-    {                                           ;   ldw x_row_stride, sp[STACK_X_ROW_STRIDE]}
+
+    // Hop to move one pixel in the input image and kernel tensor
+    {                                           ;   ldw x_col_stride, sp[STACK_X_COL_STRIDE]}
+    {                                           ;   ldw k_col_stride, sp[STACK_K_COL_STRIDE]}
     
-
-// #define Y               r0
-// #define X               r1
-// #define K               r2
-
-    {   mov xk_col_stride, r5                      ;   ldw window_hstride, sp[STACK_WINDOW_HSTRIDE]}
-    {   mov X_start, X                             ;   ldw pix_left, sp[STACK_OUT_COLS]        }
-    {   ldc _32, 32                                ;   bu .L_pix_start                         }
+    {   mov X_start, X                          ;   ldw x_row_stride, sp[STACK_X_ROW_STRIDE]}
+    {                                           ;   ldw r11, sp[STACK_WINDOW_HSTRIDE]       }
+    {                                           ;   set dp, r11                             }
+    {                                           ;   ldw pix_left, sp[STACK_OUT_COLS]        }
+    {   ldc _32, 32                             ;   bu .L_pix_start                         }
 
     .align 16
     .L_pix_start:
-        {   sub pix_left, pix_left, 1               ;   mov X, X_start                          }
-        {    add X_start, X_start, window_hstride   ;   ldw r11, sp[STACK_BSO_PSTART]           }
-        {                                           ;   ldw K, sp[STACK_K_PSTART]               }
+        {   ldaw r11, dp[0]                         ;   mov X, X_start                          }
+        {   add X_start, X_start, r11               ;   ldw r11, sp[STACK_BSO_PSTART]           }
+        {   sub pix_left, pix_left, 1               ;   ldw K, sp[STACK_K_PSTART]               }
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise
         
 #else
@@ -117,8 +122,8 @@ FUNCTION_NAME:
             {   sub rows_left, rows_left, 1             ;   ldw cols_left, sp[STACK_K_W]            }
             .L_patch_col:
                 {   sub cols_left, cols_left, 1             ;   vldc X[0]                               }
-                {   add X, X, xk_col_stride                 ;   vlmacc K[0]                             }
-                {   add K, K, xk_col_stride                 ;   bt cols_left, .L_patch_col              }
+                {   add X, X, x_col_stride                  ;   vlmacc K[0]                             }
+                {   add K, K, k_col_stride                  ;   bt cols_left, .L_patch_col              }
             {   add X, X, x_row_stride                  ;   bt rows_left, .L_patch_row              }
 
 #define BSO     rows_left
@@ -171,9 +176,11 @@ FUNCTION_NAME:
 
 
 .Lfunc_end:
-    //Restore the original constant pool pointer
+    //Restore the original constant and data pool pointers
     {                                           ;   ldw r11, sp[STACK_CP]                   }
     {                                           ;   set cp, r11                             }
+    {                                           ;   ldw r11, sp[STACK_DP]                   }
+    {                                           ;   set dp, r11                             }
 
     {                                           ;   ldw r10, sp[8]                          }
     ldd r8, r9, sp[3]

@@ -23,13 +23,9 @@ def _make_name_type_pairs(
 
 
 def _test_non_matching_params(
-    trf_pass: ModelTransformationPass, model: XCOREModel
+    trf_pass: ModelTransformationPass, model: XCOREModel, *, op_idx: int = -1
 ) -> None:
-    assert not trf_pass.match(model.subgraphs[0].operators[-1])
-
-
-def _test_matching_params(trf_pass: ModelTransformationPass, model: XCOREModel) -> None:
-    assert trf_pass.match(model.subgraphs[0].operators[-1])
+    assert not trf_pass.match(model.subgraphs[0].operators[op_idx])
 
 
 #  ----------------------------------------------------------------------------
@@ -106,8 +102,10 @@ def input_shape(
 #  ----------------------------------------------------------------------------
 
 
-def test_matching_params(trf_pass: ModelTransformationPass, model: XCOREModel) -> None:
-    _test_matching_params(trf_pass, model)
+def test_matching_params(
+    trf_pass: ModelTransformationPass, model: XCOREModel, *, op_idx: int = -1
+) -> None:
+    assert trf_pass.match(model.subgraphs[0].operators[op_idx])
 
 
 def test_non_matching_tensors(

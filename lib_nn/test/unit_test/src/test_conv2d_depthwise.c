@@ -161,20 +161,14 @@ void test_conv2d_depthwise_case0()
             BSO.shift2[k]   = casse->shift2;
         }
 
-
         nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
                                 (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANS_OUT);
 
-        // nn_conv2d_depthwise_plan_t plan;
-        // nn_conv2d_depthwise_job_t job;
-
         nn_window_params_t conv_window = {{K_h,K_w}, {0,0}, {K_vstride,K_hstride}};
-
-        // conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, 12, 1);
 
         memset(Y, 0xCC, sizeof(Y)); 
         conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &bso, ZERO_POINT,
-                          &x_params, &y_params, &conv_window, NULL);
+                          &x_params, &y_params, &conv_window);
 
         PRINTF("\t\t\tChecking...\n");
         for(unsigned row = 0; row < y_params.height; row++){
@@ -303,17 +297,12 @@ void test_conv2d_depthwise_case1()
 
             nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
                                     (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, channel_count);
-
-            // nn_conv2d_depthwise_plan_t plan;
-            // nn_conv2d_depthwise_job_t job;
             
             nn_window_params_t conv_window = {{K_h,K_w}, {0,0}, {K_vstride,K_hstride}};
 
-            // conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, 12, 1);
-
             memset(Y, 0xCC, sizeof(Y)); 
             conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
-                             &x_params, &y_params, &conv_window, NULL);
+                             &x_params, &y_params, &conv_window);
 
             PRINTF("\t\t\tChecking...\n");
             for(unsigned row = 0; row < y_params.height; row++){
@@ -450,17 +439,11 @@ void test_conv2d_depthwise_case2()
         nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
                                 (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANNELS);
 
-        // nn_conv2d_depthwise_plan_t plan;
-        // nn_conv2d_depthwise_job_t job;
         nn_window_params_t conv_window = {{casse->K_h, casse->K_w}, {0, 0}, {casse->v_stride, casse->h_stride}};
-
-        // conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, 12, 1);
-
-
 
         memset(Y, 0xCC, sizeof(Y)); 
         conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
-                            &x_params, &y_params, &conv_window, NULL);
+                            &x_params, &y_params, &conv_window);
 
         char str_buff[200] = {0};
         PRINTF("\t\t\tChecking...\n");
@@ -554,15 +537,11 @@ void test_conv2d_depthwise_case3()
     nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
                             (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANNELS);
 
-    // nn_conv2d_depthwise_plan_t plan;
-    // nn_conv2d_depthwise_job_t job;
     nn_window_params_t conv_window = {{K_h, K_w}, {-(K_h/2), -(K_w/2)}, {v_stride, h_stride}};
-
-    // conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, ZERO_POINT, 1);
 
     memset(Y, 0xCC, sizeof(Y)); 
     conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
-                        &x_params, &y_params, &conv_window, NULL);
+                        &x_params, &y_params, &conv_window);
     // int8_t Y_exp[Y_HEIGHT][Y_WIDTH] = { {  41  } };
 
     int8_t Y_exp[Y_HEIGHT][Y_WIDTH] = {
@@ -706,19 +685,14 @@ void test_conv2d_depthwise_case4()
         nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
                                 (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANNELS);
 
-        // nn_conv2d_depthwise_plan_t plan;
-        // nn_conv2d_depthwise_job_t job;
-
         nn_conv2d_job_params_t job_params = { {casse->Y_start.row, casse->Y_start.col, casse->Y_start.channel}, 
                                               {casse->output.rows, casse->output.cols, casse->output.channels} };
                                               
         nn_window_params_t conv_window = {{K_h, K_w}, {-(K_h/2), -(K_w/2)}, {v_stride, h_stride}};
 
-        // conv2d_depthwise_init(&plan, &job, &x_params, &y_params, &job_params, &conv_window, ZERO_POINT, 1);
-
         memset(Y, 0xCC, sizeof(Y)); 
-        conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
-                            &x_params, &y_params, &conv_window, &job_params);
+        conv2d_depthwise_adv((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
+                            &x_params, &y_params, &conv_window, &job_params, NULL);
 
         int8_t Y_exp[Y_HEIGHT][Y_WIDTH] = {
             {   0x33,  0x27,  0x33,  },
@@ -842,13 +816,11 @@ void test_conv2d_depthwise_case5()
 
     nn_window_params_t conv_window = {{K_h, K_w}, {-(K_h/2), -(K_w/2)}, {v_stride, h_stride}};
 
-    // conv2d_depthwise_init(&plan, job, &x_params, &y_params, job_params, &conv_window, ZERO_POINT, JOB_COUNT);
-
     memset(Y, 0xCC, sizeof(Y)); 
 
     for(int i = 0; i < JOB_COUNT; i++)
-        conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
-                            &x_params, &y_params, &conv_window, &job_params[i]);
+        conv2d_depthwise_adv((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
+                            &x_params, &y_params, &conv_window, &job_params[i], NULL);
 
     int8_t Y_exp[Y_HEIGHT][Y_WIDTH] = {
         {   0x33,  0x27,  0x33,  },
@@ -942,15 +914,12 @@ void test_conv2d_depthwise_case6_()
     nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
                             (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANNELS);
 
-    // nn_conv2d_depthwise_plan_t plan;
-    // nn_conv2d_depthwise_job_t job;
     nn_window_params_t conv_window = {{K_h, K_w}, {-(K_h/2), -(K_w/2)}, {v_stride, h_stride}};
 
-    // conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, ZERO_POINT, 1);
 
     memset(Y, 0xCC, sizeof(Y)); 
     conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
-                        &x_params, &y_params, &conv_window, NULL);
+                        &x_params, &y_params, &conv_window);
 /*
     _____
    |5 5 5|5 5 5 5 5 5 5 5 5
@@ -1055,16 +1024,11 @@ void test_conv2d_depthwise_case6()
     nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
                             (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANNELS);
 
-    // nn_conv2d_depthwise_plan_t plan;
-    // nn_conv2d_depthwise_job_t job;
-
     nn_window_params_t conv_window = {{K_h, K_w}, {0, 0}, {v_stride, h_stride}};
-
-    // conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, ZERO_POINT, 1);
 
     memset(Y, 0xCC, sizeof(Y)); 
     conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
-                        &x_params, &y_params, &conv_window, NULL);
+                        &x_params, &y_params, &conv_window);
 
     int8_t Y_exp[Y_HEIGHT][Y_WIDTH][CHANNELS] = {
         {{ -100, -19, -38, 6}}
@@ -1143,18 +1107,11 @@ void test_conv2d_depthwise_case7()
     nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
                             (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, NULL, CHANNELS);
 
-    // nn_conv2d_depthwise_plan_t plan;
-    // nn_conv2d_depthwise_job_t job;
-
     nn_window_params_t conv_window = {{K_h, K_w}, {-1, 0}, {v_stride, h_stride}};
 
-
-    // conv2d_depthwise_init(&plan, &job, &x_params, &y_params, NULL, &conv_window, ZERO_POINT, 1);
-// 
     memset(Y, 0xCC, sizeof(Y)); 
     conv2d_depthwise((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
-                        &x_params, &y_params, &conv_window, NULL);
-
+                        &x_params, &y_params, &conv_window);
 
     PRINTF("\t\t\tChecking...\n");
     for(unsigned row = 0; row < y_params.height; row++){

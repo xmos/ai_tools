@@ -12,6 +12,34 @@
 #include <assert.h>
 
 
+
+/**
+ * Struct represents the job-specific parameters required to execute a 
+ * `conv2d_depthwise()` operation. 
+ */
+typedef struct {
+
+    struct {
+        struct {
+            int32_t X;
+            int32_t Y;
+        } chan_group;
+
+        struct {
+            int32_t X;
+            int32_t window;
+            int32_t Y;
+        } row;
+
+        struct {
+            int32_t window;
+        } col;
+    } stride;
+
+} nn_conv2d_depthwise_job_t;
+
+
+
 typedef struct {
     int top;
     int left;
@@ -42,8 +70,65 @@ static incl_bounds_t inverse_map(
   #define CONV2D_INIT_ERROR_DETECTION_ENABLE     (1)
 #endif
 
-void conv2d_depthwise_prepare(
-    nn_conv2d_depthwise_plan_t* plan,
+static unsigned conv2d_depthwise_compute_padding(
+    int32_t* top,
+    int32_t* bottom,
+    int32_t* left,
+    int32_t* right,
+    const nn_image_params_t* x_params,
+    const nn_window_params_t* conv_window,
+    const nn_conv2d_job_params_t* job_params)
+{
+
+    const int32_t init_padding_top    = -conv_window->start.row;
+    const int32_t init_padding_bottom =  conv_window->start.row + conv_window->shape.height - x_params->height;
+    const int32_t init_padding_left   = -conv_window->start.column;
+    const int32_t init_padding_right  =  conv_window->start.column + conv_window->shape.width  - x_params->width;
+    
+    *top    = init_padding_top    - job_params->start.rows * conv_window->stride.vertical;
+    *left   = init_padding_left   - job_params->start.cols * conv_window->stride.horizontal;
+    *bottom = init_padding_bottom + job_params->start.rows * conv_window->stride.vertical;
+    *right  = init_padding_right  + job_params->start.cols * conv_window->stride.horizontal;
+
+    const int32_t end_padding_left   = init_padding_left   - ((job_params->start.cols + job_params->size.cols - 1) * conv_window->stride.horizontal);
+    const int32_t end_padding_right  = init_padding_right  + ((job_params->start.cols + job_params->size.cols - 1) * conv_window->stride.horizontal);
+
+    return (   (*left  <= 0) && (end_padding_left  <= 0) 
+            && (*right <= 0) && (end_padding_right <= 0));
+}
+
+static void conv2d_depthwise_adjust_starts(
+    int8_t** Y,
+    const int8_t** X,
+    const int8_t** K,
+    const nn_bso_block_t** BSO,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* conv_window,
+    const nn_conv2d_job_params_t* job_params,
+    const nn_conv2d_depthwise_adv_t* adv)
+{
+    const unsigned x_row_bytes = x_params->width * x_params->channels;
+    const unsigned y_row_bytes = y_params->width * y_params->channels;
+
+    const int32_t window_start_offset = conv_window->start.row * x_row_bytes 
+                                        + x_params->channels * conv_window->start.column;
+    
+    int32_t start_BSO   = (job_params->start.channels / VPU_INT8_ACC_PERIOD);
+    int32_t start_K    = job_params->start.channels;
+    int32_t start_Y    = job_params->start.rows * y_row_bytes + y_params->channels * job_params->start.cols + job_params->start.channels;
+    int32_t start_X    = window_start_offset 
+                            + job_params->start.rows * conv_window->stride.vertical * x_row_bytes
+                            + job_params->start.cols * conv_window->stride.horizontal * x_params->channels
+                            + job_params->start.channels;
+
+    *X = ADDR(*X, start_X);
+    *Y = ADDR(*Y, start_Y);
+    *K = ADDR(*K, start_K);
+    *BSO = ADDR(*BSO, start_BSO);
+}
+
+static void conv2d_depthwise_prepare(
     nn_conv2d_depthwise_job_t* job,
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params,
@@ -59,90 +144,40 @@ void conv2d_depthwise_prepare(
     const unsigned y_row_bytes = y_params->width * y_params->channels;
     const unsigned k_row_bytes = conv_window->shape.width * y_params->channels;
 
-    const int32_t window_start_offset = conv_window->start.row * x_row_bytes 
-                                        + x_params->channels * conv_window->start.column;
-
-    plan->channels.X = x_params->channels;
-    plan->channels.Y = y_params->channels;
-
-    plan->stride.X.row = x_row_bytes - x_params->channels * conv_window->shape.width;
-    plan->stride.window.col = x_params->channels * conv_window->stride.horizontal;
-
-    plan->kernel.height  = conv_window->shape.height;
-    plan->kernel.width   = conv_window->shape.width;
-    plan->kernel.vstride = conv_window->stride.vertical;
+    job->stride.row.X = x_row_bytes - x_params->channels * conv_window->shape.width;
+    job->stride.col.window = x_params->channels * conv_window->stride.horizontal;
     
-    const int32_t init_padding_top    = -conv_window->start.row;
-    const int32_t init_padding_bottom =  conv_window->start.row + conv_window->shape.height - x_params->height;
-    const int32_t init_padding_left   = -conv_window->start.column;
-    const int32_t init_padding_right  =  conv_window->start.column + conv_window->shape.width  - x_params->width;
+    if(CONV2D_INIT_ERROR_DETECTION_ENABLE){
+        assert(job_params->start.rows >= 0 && job_params->start.cols >= 0 && job_params->start.channels >= 0);
+        assert(job_params->start.rows + job_params->size.rows <= y_params->height);
+        assert(job_params->start.cols + job_params->size.cols <= y_params->width);
+        assert(job_params->start.channels + job_params->size.channels <= y_params->channels);
 
-    nn_conv2d_job_params_t full_job = {{0,0,0}, {y_params->height, y_params->width, y_params->channels} };
-    
-    {
-        const nn_conv2d_job_params_t* params = (job_params != NULL)? job_params : &full_job;
-        
-        if(CONV2D_INIT_ERROR_DETECTION_ENABLE){
-            assert(params->start.rows >= 0 && params->start.cols >= 0 && params->start.channels >= 0);
-            assert(params->start.rows + params->size.rows <= y_params->height);
-            assert(params->start.cols + params->size.cols <= y_params->width);
-            assert(params->start.channels + params->size.channels <= y_params->channels);
+        // Make sure the convolution window is never entirely outside the input image.
+        //   (If it is, it would have to also be for the first and/or last pixel)
+        {
+            int first_row_y = job_params->start.rows;
+            int final_row_y = first_row_y + job_params->size.rows - 1;
+            int first_col_y = job_params->start.cols;
+            int final_col_y = first_col_y + job_params->size.cols - 1;
 
-            // Make sure the convolution window is never entirely outside the input image.
-            //   (If it is, it would have to also be for the first and/or last pixel)
-            {
-                int first_row_y = params->start.rows;
-                int final_row_y = first_row_y + params->size.rows - 1;
-                int first_col_y = params->start.cols;
-                int final_col_y = first_col_y + params->size.cols - 1;
+            incl_bounds_t bounds = inverse_map(conv_window, first_row_y, first_col_y);
 
-                incl_bounds_t bounds = inverse_map(conv_window, first_row_y, first_col_y);
+            assert(bounds.bottom >= 0);
+            assert(bounds.right >= 0);
 
-                assert(bounds.bottom >= 0);
-                assert(bounds.right >= 0);
+            bounds = inverse_map(conv_window, final_row_y, final_col_y);
 
-                bounds = inverse_map(conv_window, final_row_y, final_col_y);
-
-                assert(bounds.top  < ((int)x_params->height));
-                assert(bounds.left < ((int)x_params->width));
-            }
+            assert(bounds.top  < ((int)x_params->height));
+            assert(bounds.left < ((int)x_params->width));
         }
-
-        job->output.rows = params->size.rows;
-        job->output.cols = params->size.cols;
-        job->output.channels = params->size.channels;
-
-        job->init_padding.top    = init_padding_top    - params->start.rows * plan->kernel.vstride;
-        job->init_padding.left   = init_padding_left   - params->start.cols * conv_window->stride.horizontal;
-        job->init_padding.bottom = init_padding_bottom + params->start.rows * plan->kernel.vstride;
-        job->init_padding.right  = init_padding_right  + params->start.cols * conv_window->stride.horizontal;
-
-        const int32_t end_padding_top    = init_padding_top    - ((params->start.rows + params->size.rows - 1) * plan->kernel.vstride);
-        const int32_t end_padding_left   = init_padding_left   - ((params->start.cols + params->size.cols - 1) * conv_window->stride.horizontal);
-        const int32_t end_padding_bottom = init_padding_bottom + ((params->start.rows + params->size.rows - 1) * plan->kernel.vstride);
-        const int32_t end_padding_right  = init_padding_right  + ((params->start.cols + params->size.cols - 1) * conv_window->stride.horizontal);
-
-        job->init_padding.unpadded =  (job->init_padding.top    <= 0 && job->init_padding.left  <= 0
-                                    && job->init_padding.bottom <= 0 && job->init_padding.right <= 0
-                                    && end_padding_top          <= 0 && end_padding_left        <= 0
-                                    && end_padding_bottom       <= 0 && end_padding_right       <= 0);
-
-
-        job->stride.start.BSO  = (params->start.channels / VPU_INT8_ACC_PERIOD);
-        job->stride.start.K    = params->start.channels;
-        job->stride.start.Y    = params->start.rows * y_row_bytes + y_params->channels * params->start.cols + params->start.channels;
-
-        job->stride.start.X    = window_start_offset 
-                                + params->start.rows * plan->kernel.vstride * x_row_bytes
-                                + params->start.cols * conv_window->stride.horizontal * x_params->channels
-                                + params->start.channels;
-
-        job->stride.row.window  = x_row_bytes * plan->kernel.vstride;
-        job->stride.row.Y       = y_row_bytes;
-
-        job->stride.chan_group.X = VPU_INT8_VLMACC_ELMS - x_row_bytes * job->output.rows * plan->kernel.vstride;
-        job->stride.chan_group.Y = VPU_INT8_VLMACC_ELMS - y_row_bytes * job->output.rows;
     }
+
+    job->stride.row.window  = x_row_bytes * conv_window->stride.vertical;
+    job->stride.row.Y       = y_row_bytes;
+
+    job->stride.chan_group.X = VPU_INT8_VLMACC_ELMS - x_row_bytes * job_params->size.rows * conv_window->stride.vertical;
+    job->stride.chan_group.Y = VPU_INT8_VLMACC_ELMS - y_row_bytes * job_params->size.rows;
 }
 
 
@@ -154,49 +189,73 @@ void conv2d_depthwise(
     const int8_t zero_point,
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params,
-    const nn_window_params_t* conv_window,
-    const nn_window_op_job_params_t* job_params)
+    const nn_window_params_t* conv_window)
 {
-    // Just initialize the operator right here.
-    nn_conv2d_depthwise_plan_t plan;
-    nn_conv2d_depthwise_job_t job;
+    const nn_conv2d_job_params_t full_job = {{0,0,0}, {y_params->height, y_params->width, y_params->channels} };
 
-    conv2d_depthwise_prepare(&plan, &job, x_params, y_params, conv_window, job_params);
+    conv2d_depthwise_adv(Y, X, K, BSO, zero_point, x_params, y_params, conv_window, &full_job, NULL);
+}
+
+void conv2d_depthwise_adv(
+    int8_t* Y,
+    const int8_t* X,
+    const int8_t* K,
+    const nn_bso_block_t* BSO,
+    const int8_t zero_point,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* conv_window,
+    const nn_window_op_job_params_t* job_params,
+    const nn_conv2d_depthwise_adv_t* adv)
+{
+    conv2d_depthwise_adjust_starts(&Y, &X, &K, &BSO, x_params, y_params, conv_window, job_params, adv);
 
     int8_t zero_point_vec[VPU_INT8_VLMACC_ELMS];
     memset(zero_point_vec, zero_point, sizeof(zero_point_vec));
 
-    X = ADDR(X, job.stride.start.X);
-    Y = ADDR(Y, job.stride.start.Y);
-    K = ADDR(K, job.stride.start.K);
-    BSO = ADDR(BSO, job.stride.start.BSO);
 
-    for(int out_chan = 0; out_chan < job.output.channels; out_chan += VPU_INT8_VLMACC_ELMS){
+    nn_conv2d_depthwise_job_t job;
+    conv2d_depthwise_prepare(&job, x_params, y_params, conv_window, job_params);
 
-        const unsigned cur_chans = (job.output.channels - out_chan >= VPU_INT8_VLMACC_ELMS)? VPU_INT8_VLMACC_ELMS : job.output.channels - out_chan; 
+    struct {
+        int32_t top;
+        int32_t left;
+        int32_t bottom;
+        int32_t right;
+        unsigned unpadded_lr;
+    } init_padding;
 
-        int pad_t = job.init_padding.top;
-        int pad_b = job.init_padding.bottom;
+    init_padding.unpadded_lr = conv2d_depthwise_compute_padding(&init_padding.top, &init_padding.bottom, 
+                                                                &init_padding.left, &init_padding.right, 
+                                                                x_params, conv_window, job_params);
 
-        for(int out_row = 0; out_row < job.output.rows; out_row++){
+    for(int out_chan = 0; out_chan < job_params->size.channels; out_chan += VPU_INT8_VLMACC_ELMS){
+
+        const unsigned cur_chans = (job_params->size.channels - out_chan >= VPU_INT8_VLMACC_ELMS)? VPU_INT8_VLMACC_ELMS 
+                                   : job_params->size.channels - out_chan; 
+
+        int pad_t = init_padding.top;
+        int pad_b = init_padding.bottom;
+
+        for(int out_row = 0; out_row < job_params->size.rows; out_row++){
 
             const int cur_pad_t = (pad_t > 0)? pad_t : 0;
             const int cur_pad_b = (pad_b > 0)? pad_b : 0;
             
-            if(job.init_padding.unpadded){
-                nn_conv2d_hstrip_depthwise(Y, X, K, BSO, plan.kernel.height, plan.kernel.width,
-                        plan.channels.X, plan.stride.X.row,
-                        plan.stride.window.col, plan.channels.Y, job.output.cols, cur_chans);
+            if(init_padding.unpadded_lr && cur_pad_t == 0 && cur_pad_b == 0){
+                nn_conv2d_hstrip_depthwise(Y, X, K, BSO, conv_window->shape.height, conv_window->shape.width,
+                        x_params->channels, job.stride.row.X,
+                        job.stride.col.window, y_params->channels, job_params->size.cols, cur_chans);
             } else {
-                nn_conv2d_hstrip_depthwise_padded(Y, X, K, BSO, plan.kernel.height, plan.kernel.width,
-                            cur_pad_t, job.init_padding.left, cur_pad_b, job.init_padding.right,
-                            plan.channels.X, plan.stride.X.row, 
-                            plan.stride.window.col, plan.channels.Y, job.output.cols, 
+                nn_conv2d_hstrip_depthwise_padded(Y, X, K, BSO, conv_window->shape.height, conv_window->shape.width,
+                            cur_pad_t, init_padding.left, cur_pad_b, init_padding.right,
+                            x_params->channels, job.stride.row.X, 
+                            job.stride.col.window, y_params->channels, job_params->size.cols, 
                             cur_chans, zero_point_vec);
             }
 
-            pad_t -= plan.kernel.vstride;
-            pad_b += plan.kernel.vstride;
+            pad_t -= conv_window->stride.vertical;
+            pad_b += conv_window->stride.vertical;
 
             X = ADDR(X, job.stride.row.window);
             Y = ADDR(Y, job.stride.row.Y);

@@ -314,80 +314,9 @@ typedef struct {
 } nn_conv2d_1x1_job_params_t;
 
 
-/**
- * Struct represents the shared parameters required to execute a 
- * `conv2d_depthwise()` operation. 
- */
 typedef struct {
-
-    struct {
-        struct {
-            int32_t row;
-        } X;
-
-        struct {
-            int32_t col;
-        } window;
-
-    } stride;
-
-    struct {
-        unsigned height;
-        unsigned width;
-        int vstride; //TODO: get rid of this
-    } kernel;
-
-    struct {
-        uint32_t X;
-        uint32_t Y;
-    } channels;
-
-    int32_t zero_point;
-
-} nn_conv2d_depthwise_plan_t;
-
-/**
- * Struct represents the job-specific parameters required to execute a 
- * `conv2d_depthwise()` operation. 
- */
-typedef struct {
-
-    struct {
-        struct {
-            int32_t X;
-            int32_t Y;
-            int32_t K;
-            int32_t BSO;
-        } start;
-
-        struct {
-            int32_t X;
-            int32_t Y;
-        } chan_group;
-
-        struct {
-            int32_t window;
-            int32_t Y;
-        } row;
-    } stride;
-
-    struct {
-        unsigned rows;
-        unsigned cols;
-        unsigned channels;
-    } output;
-
-    struct {
-        int32_t top;
-        int32_t left;
-        int32_t bottom;
-        int32_t right;
-        unsigned unpadded;
-    } init_padding;
-} nn_conv2d_depthwise_job_t;
-
-
-
+    unsigned dummy;
+} nn_conv2d_depthwise_adv_t;
 
 #ifdef __XC__
 }   //extern "C"

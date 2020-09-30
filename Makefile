@@ -1,4 +1,4 @@
-NUM_PROCS := 1
+NUM_PROCS := 4
 
 .DEFAULT_GOAL := help
 
@@ -22,7 +22,7 @@ utils_build:
 .PHONY: integration_test
 integration_test:
 	cd utils/model_generation && pytest integration_test --cache-clear --collect-only -qq
-	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS) --dist loadfile
+	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 
 .PHONY: ci 
 #TODO: Add lib_nn_test target when CI system connected HW

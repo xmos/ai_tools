@@ -67,9 +67,9 @@ class IntegrationTestRunner(Runner):
             model_generator._xcore_evaluator.output_data,
         )
         self.models = RunnerModels(
-            self._model_generator._reference_converter._model,
-            self._model_generator._xcore_converter._model,
-            self._model_generator._identity_converter._model,
+            model_generator._reference_converter._model,
+            model_generator._xcore_converter._model,
+            model_generator._identity_converter._model,
         )
 
     def dump(
@@ -155,7 +155,7 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
     def build(self) -> None:
         self._prep_backend()
         self._model = self._build_core_model()
-        self._model.build()
+        self._model.build(self._model.input_shape)
 
 
 #  ----------------------------------------------------------------------------

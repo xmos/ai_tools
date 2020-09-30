@@ -72,7 +72,8 @@ class TFLiteQuantConverter(Converter):
     _repr_data: tf.Tensor
 
     def _set_config(self, cfg: "Configuration") -> None:
-        self._config["input_init"] = cfg.pop("input_init", ("RandomUniform", -1, 1))
+        if "input_init" not in self._config:
+            self._config["input_init"] = cfg.pop("input_init", ("RandomUniform", -1, 1))
         self._data_len = 10
 
     def get_representative_data(self) -> tf.Tensor:
@@ -114,7 +115,8 @@ class XCoreConverter(Converter):
         self._source_converter = source_converter
 
     def _set_config(self, cfg: "Configuration") -> None:
-        self._config["num_threads"] = cfg.pop("num_threads", 1)
+        if "num_threads" not in self._config:
+            self._config["num_threads"] = cfg.pop("num_threads", 1)
 
     def convert(self) -> None:
         model = XCOREModel.deserialize(self._source_converter._model)

@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-
 /**
  * Padding modes
  */
@@ -48,19 +47,19 @@ typedef int8_t nn_tensor_t;
 typedef nn_tensor_t nn_image_t;
 
 /**
- * Alias for `unsigned`. 
- * 
- * `channel_count_t` is used to hint that a struct field or function parameter indicates
- * a number of channels. 
- */
-typedef uint32_t channel_count_t;
-
-/**
  * Alias for `int32_t`. 
  * 
  * `mem_stride_t` is used to hint that a struct field or function parameter indicates the
  * signed offset between memory addresses, expressed in bytes.
  */
 typedef int32_t mem_stride_t;
+
+/**
+ * Alias for `unsigned`. 
+ * 
+ * `channel_count_t` is used to hint that a struct field or function parameter indicates
+ * a number of channels. 
+ */
+typedef uint32_t channel_count_t;
 
 #endif //NN_TYPES_H_

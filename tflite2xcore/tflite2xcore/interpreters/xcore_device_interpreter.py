@@ -237,6 +237,7 @@ class XCOREDeviceInterpreter(XCOREInterpreter):
             __PARENT_DIR
             / ".."
             / ".."
+            / ".."
             / "utils"
             / "test_model"
             / "bin"
@@ -250,7 +251,7 @@ class XCOREDeviceInterpreter(XCOREInterpreter):
             cmd = [
                 "xrun",
                 "--xscope",
-                "--xscope-realtime",
+                # "--xscope-realtime",
                 "--xscope-port",
                 f"localhost:{port}",
                 "--id",

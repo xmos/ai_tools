@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.10)
 
 #**********************
 # Options
@@ -21,6 +21,10 @@ if (XCORE)
   set(CMAKE_C_COMPILER_FORCED TRUE)
   set(CMAKE_CXX_COMPILER_FORCED TRUE)
   set(CMAKE_ASM_COMPILER_FORCED TRUE)
+
+  set(CMAKE_C_FLAGS "" CACHE STRING "C Compiler Base Flags" FORCE)
+  set(CMAKE_CXX_FLAGS "-std=c++11" CACHE STRING "C++ Compiler Base Flags" FORCE)
+  set(CMAKE_EXE_LINKER_FLAGS "" CACHE INTERNAL "" FORCE)
 endif ()
 
 set(CMAKE_CXX_FLAGS_INIT "-std=c++11")
@@ -196,7 +200,6 @@ set(TENSORFLOW_LITE_REFERENCE_OPERATOR_SOURCES
 # TensorFlow Lite Micro xcore kernel sources
 #*************************************************
 set(TENSORFLOW_LITE_XCORE_OPERATOR_SOURCES
-  "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/xcore_device_memory.c"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/xcore_profiler.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/xcore_interpreter.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/xcore_planning.cc"

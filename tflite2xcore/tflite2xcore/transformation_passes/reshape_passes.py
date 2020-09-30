@@ -8,46 +8,68 @@ from tflite2xcore.xcore_model import Operator, Tensor
 from .transformation_passes import OperatorMatchingPass
 
 
-class RemoveFlattenReshapePass(OperatorMatchingPass):
-    MATCHING_OPCODES = (
-        # TODO fully populate this set e.g. average pooling
-        BuiltinOpCodes.FULLY_CONNECTED,
-    )
+class AdjacentReshapeMatchingPass(OperatorMatchingPass):
+    @property
+    def MATCHING_OPCODES(self):
+        return (BuiltinOpCodes.FULLY_CONNECTED,)
 
     @property
-    def _producer(self) -> Tensor:
+    def _reshape_op(self):
         return self._op.inputs[0].producers[0]
 
     def match(self, op: Operator) -> bool:
-        with self.using(op):
+        if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
             try:
-                producer = self._producer
+                with self.using(op):
+                    reshape_op = self._reshape_op
             except IndexError:
-                # Input tensor for op has no producers..
                 return False
 
-        reshape_input_batch = producer.inputs[0].shape[0]
-        reshape_output_batch = op.inputs[0].shape[0]
+            return (
+                reshape_op.operator_code.code is BuiltinOpCodes.RESHAPE
+                and reshape_op.inputs[0].shape[0] == reshape_op.outputs[0].shape[0]
+            )
 
-        return (
-            super().match(op)
-            and op.operator_code.code in self.MATCHING_OPCODES
-            and producer.operator_code.code is BuiltinOpCodes.RESHAPE
-            and reshape_output_batch == reshape_input_batch
-        )
+        return False
+
+
+class RemoveSubsequentReshapePass(AdjacentReshapeMatchingPass):
+    @property
+    def _reshape_op(self):
+        return self._op.outputs[0].consumers[0]
+
+    def match(self, op: Operator) -> bool:
+        if super().match(op):
+            with self.using(op):
+                if len(self._reshape_op.inputs[0].consumers) == 1:
+                    return True
+                self.logger.warning(
+                    "Subsequent RESHAPE found with more than 1 consumer"
+                )
+        return False
 
     def mutate(self, op: Operator) -> None:
-
         with self.using(op):
-            producer = self._producer
+            reshape_op = self._reshape_op
 
-        # Remove connection from old inputs to the anchor FC op
-        intermediate = op.inputs[0]
-        intermediate.consumers.remove(op)
+        # Remove connection from old output to the anchor op
+        # then create the new connection
+        op.outputs[0].producers.remove(op)
+        op.outputs[0] = reshape_op.outputs[0]
+        op.outputs[0].producers.append(op)
 
-        # Create the new connection
-        op.inputs[0] = producer.inputs[0]
-        producer.inputs[0].consumers.append(op)
+        op.subgraph.remove_operator(reshape_op)
+
+
+class RemovePrecedingReshapePass(AdjacentReshapeMatchingPass):
+    def mutate(self, op: Operator) -> None:
+        reshape_op = op.inputs[0].producers[0]
+
+        # Remove connection from old input to the anchor op
+        # then create the new connection
+        op.inputs[0].consumers.remove(op)
+        op.inputs[0] = reshape_op.inputs[0]
+        op.inputs[0].consumers.append(op)
 
 
 class CanonicalizeReshapePass(OperatorMatchingPass):
@@ -57,12 +79,15 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
 
         try:
             if list(op.builtin_options["new_shape"]) != list(op.outputs[0].shape):
-                self.logger.warning(
+                raise ValueError(
                     "new_shape option to RESHAPE doesn't match output tensor shape"
                 )
         except (KeyError, TypeError):
-            # TODO: consider removing this since in tf2.2 the builtin options seem unused
-            self.logger.warning("Expected new_shape option to RESHAPE was not found")
+            # in tf2.2 the builtin options seems unused
+            self.logger.debug(
+                "Expected new_shape option to RESHAPE was not found "
+                "(ensure you are running tf2.2 or newer)"
+            )
 
         if -1 in op.inputs[0].shape + op.outputs[0].shape:
             self.logger.warning("Dynamically sized tensors are not supported")
@@ -72,7 +97,11 @@ class CanonicalizeReshapePass(OperatorMatchingPass):
             op.outputs[0].shape
         ), "RESHAPE input and output shapes are not consistent"
 
-        return len(op.inputs) == 2 and op.inputs[1].is_constant
+        # NOTE: we used to check if op.inputs[1] is constant
+        #       However since we neither we or the runtime currently supports
+        #       dynamic shapes, this is disabled for now to enable better
+        #       conversion of certain models (e.g. mobilenet v1) in tf2.3>
+        return len(op.inputs) == 2
 
     def mutate(self, op: Operator) -> None:
         # Remove connection between RESHAPE and input tensor[1], the new shape

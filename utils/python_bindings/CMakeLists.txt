@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.10)
 
 project(tflite2xcore VERSION 1.0.1)
 
 
 # This variable is ignored on platforms other than Apple
-set(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX10.13.sdk) 
+set(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk) 
 
 #**********************
 # Paths
@@ -79,6 +79,9 @@ file (GLOB XCORE_SOURCES
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/depthwise/*.c"
   "${LIB_NN_SOURCE_DIR}/lib_nn/src/c/util/shallow/*.c"
 )
+
+#TODO: Remove me when compilation error is fixed
+list(REMOVE_ITEM XCORE_SOURCES "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/xcore/xcore_bsign.cc")
 
 target_sources(libtflite2xcore
   PRIVATE ${FLATBUFFER_SOURCES}

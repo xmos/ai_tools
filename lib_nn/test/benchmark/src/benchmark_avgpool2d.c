@@ -9,37 +9,33 @@
 #include "meas_common.h"
 
 #include "nn_operator.h"
-#include "xs3_vpu.h"
 
+// void benchmark_avgpool2d_case(
+//     const nn_image_params_t* x,
+//     const nn_image_params_t* y,
+//     const nn_window_op_config_t* config)
+// {
 
-
-
-void benchmark_avgpool2d_case(
-    const nn_image_params_t* x,
-    const nn_image_params_t* y,
-    const nn_window_op_config_t* config)
-{
-
-    int8_t* X = (int8_t*) malloc(x->height * x->width * x->channels);
-    int8_t* Y = (int8_t*) malloc(y->height * y->width * y->channels);
+//     int8_t* X = (int8_t*) malloc(x->height * x->width * x->channels);
+//     int8_t* Y = (int8_t*) malloc(y->height * y->width * y->channels);
     
-    assert(X);
-    assert(Y);
+//     assert(X);
+//     assert(Y);
 
-    nn_avgpool2d_plan_t plan;
+//     nn_avgpool2d_plan_t plan;
 
-    avgpool2d_init(&plan, x, y, config);
+//     avgpool2d_init(&plan, x, y, config);
 
-    avgpool2d(Y, X, &plan);
+//     avgpool2d(Y, X, &plan);
 
-    free(X);
-    free(Y);
-}
+//     free(X);
+//     free(Y);
+// }
 
 
 #define REQ_ARGS    (7)
 void benchmark_avgpool2d(int argc, char** argv){
-
+/*
     nn_window_op_config_t config;
     nn_image_params_t x, y;
     
@@ -78,5 +74,5 @@ void benchmark_avgpool2d(int argc, char** argv){
         argv = &(argv[REQ_ARGS]);
     }
 
-
+*/
 }

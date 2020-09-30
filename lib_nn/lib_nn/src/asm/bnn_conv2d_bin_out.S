@@ -186,7 +186,7 @@ FUNCTION_NAME:
     {ldw r1, t[s]; ldc s, PLAN_K_P}
     {ldw r2, t[s]; nop}
 
-    stw r1, sp[S_X_p]   //put PLAN_X_P into S_X_p and r1
+    stw r1, sp[S_X_p]   //put PLAN_X_P into S_X_p and r1---- this seems unnessessary CHECK
     stw r2, sp[S_K_p]   //put PLAN_K_P into S_K_p and r2
     
     {vldr t[0];  add t, t, r_256_bits}

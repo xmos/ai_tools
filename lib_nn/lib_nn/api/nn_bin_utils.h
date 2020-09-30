@@ -1,5 +1,6 @@
 #ifndef NN_BNN_UTILS_H
 #define NN_BNN_UTILS_H
+
 #include "nn_bin_types.h"
 
 void set_bit_b32(bnn_b32_t* x, unsigned ch, bnn_bool_t val);
@@ -13,4 +14,4 @@ void pack_bits_b32(bnn_bool_t* unpacked_p, bnn_b32_t* packed_p, unsigned count,
 void pack_bits_b256(bnn_bool_t* unpacked_p, bnn_b256_t* packed_p,
                     unsigned count, unsigned channels);
 
-#endif
+#endif //NN_BNN_UTILS_H

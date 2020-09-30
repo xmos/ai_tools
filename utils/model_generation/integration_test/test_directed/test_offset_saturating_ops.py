@@ -23,9 +23,6 @@ class OffsetSaturatingModel(IntegrationTestModelGenerator):
             input_shape=(128, 128, 3), alpha=0.25
         )
         layers = [source_model.layers[idx] for idx in self._config["layers"]]
-        import logging
-
-        logging.warning(layers)
         input_shape = layers[0].input_shape[1:]
 
         return tf.keras.models.Sequential(

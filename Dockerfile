@@ -1,5 +1,11 @@
 FROM continuumio/miniconda3:4.8.2
 
+# This Dockerfile is for use by the XMOS CI system
+# It provides a minimal environment needed to execute the Jenkinsfile
+# Most of the dependecies here are handled conda so we only include:
+#  - conda setup
+#  - xmos tools setup
+
 # fix conda perms
 RUN chmod -R 777 /opt/conda \
     && mkdir -p /.conda \
@@ -11,6 +17,8 @@ RUN apt-get update && apt-get install -y \
     tcl environment-modules \
     && apt-get clean autoclean
 # install get_tools.py script
+#   requires connection to XMOS network at build and run time
+#   if not possible, find another way to install the tools
 RUN mkdir -m 777 /XMOS && cd /XMOS \
     && wget -q https://github0.xmos.com/raw/xmos-int/get_tools/master/get_tools.py \
     && chmod a+x get_tools.py \

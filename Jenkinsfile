@@ -5,31 +5,35 @@ getApproval()
 pipeline {
     agent none
 
-    parameters {
-        string(
+    parameters { // Available to modify on the job page within Jenkins if starting a build
+        string( // use to try different tools versions
             name: 'TOOLS_VERSION',
             defaultValue: '15.0.1',
             description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
         )
-        booleanParam(
+        booleanParam( // use to check results of rolling all conda deps forward
             name: 'UPDATE_ALL',
             defaultValue: false,
             description: 'Update all conda packages before building'
         )
-        booleanParam(
+        booleanParam( // use to force a rebuild of the docker image, auto if Dockerfile modified
             name: 'PUSH_IMAGE',
             defaultValue: false,
             description: 'Rebuild and push a new docker image'
         )
     }
 
-    options {
+    options { // plenty of things could go here
         //buildDiscarder(logRotator(numToKeepStr: '10'))
         timestamps()
     }
 
     stages {
         stage ("Build and Push Image") {
+            // This builds the Dockerfile into an image and
+            // uploads it to our private docker registry
+            // note: This could also be moved into a separate repo and
+            //       the image treated as a separate versioned artifact
             when {
                 anyOf {
                     changeset 'Dockerfile'
@@ -43,11 +47,12 @@ pipeline {
                 script {
                     def image = docker.build('xmos/ai_tools')
                     docker.withRegistry('https://docker-repo.xmos.com', 'nexus') {
-                        // always push to git branch (you only get latest)
+                        // always push to git branch (overwriting previous tags)
                         image.push(GIT_BRANCH)
                         if (GIT_BRANCH=='master') {
-                            // push latest and as short commit for repeatability
+                            // most recent master build is then default image
                             image.push('latest')
+                            // all master runs can be recreated with short git hash
                             image.push(GIT_COMMIT.take(7))
                         }
                     }
@@ -55,8 +60,11 @@ pipeline {
             }
         }
         stage ("Pull and Use Image") {
+            // Runs everything in a docker container with the job workspace bind mounted
+            // and the uid/gid matching that of the server running docker
             agent {
                 docker {
+                    // grab latest image tagged with branch
                     image 'xmos/ai_tools:${GIT_BRANCH}'
                     registryUrl 'https://docker-repo.xmos.com'
                     alwaysPull true
@@ -64,8 +72,11 @@ pipeline {
             }
             stages {
                 stage("Setup") {
+                    // Clone and install build dependencies
                     steps {
+                        // clean auto default checkout
                         sh "rm -rf *"
+                        // clone
                         checkout([
                             $class: 'GitSCM',
                             branches: scm.branches,
@@ -80,18 +91,23 @@ pipeline {
                             userRemoteConfigs: [[credentialsId: 'xmos-bot',
                                                  url: 'git@github.com:xmos/ai_tools']]
                         ])
+                        // create venv
                         sh "conda env create -q -p ai_tools_venv -f environment.yml"
+                        // Install xmos tools version
                         sh "/XMOS/get_tools.py " + params.TOOLS_VERSION
                     }
                 }
                 stage("Update all packages") {
+                    // Roll all conda packages forward beyond their pinned versions
                     when { expression { return params.UPDATE_ALL } }
                     steps {
                         sh "conda update --all -y -q -p ai_tools_venv"
                     }
                 }
-                stage("Build") {
+                stage("Build/Test") {
+                    // due to the Makefile, we've combined build and test stages
                     steps {
+                        // below is how we can activate the tools
                         sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
                               conda run -p ai_tools_venv make --trace ci"""
                         junit "**/*_junit.xml"

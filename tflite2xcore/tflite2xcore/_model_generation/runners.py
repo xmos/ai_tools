@@ -1,10 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, Any, NamedTuple, Optional
+from typing import TYPE_CHECKING, Dict, Any, NamedTuple, Optional, List
+
+from . import Configuration
 
 if TYPE_CHECKING:
     import numpy as np  # type: ignore
+    from .evaluators import Evaluator
     from .converters import Converter
     from .model_generators import ModelGenerator
 
@@ -20,17 +23,23 @@ class RunnerOutputs(NamedTuple):
 class Runner(ABC):
     """ Superclass for defining the behavior of model generation runs.
 
-    A Runner is registered when a ModelGenerator object is instantiated.
+    A Runner registers a ModelGenerator object along with all the
+    converters and evaluators.
     """
 
     reports: Optional[RunnerReports]
     outputs: Optional[RunnerOutputs]
+    _config: Configuration
 
-    def __init__(self, generator: "ModelGenerator") -> None:
-        """ Registers the generator that owns the runner. """
+    def __init__(
+        self,
+        generator: "ModelGenerator",
+        converters: Optional[List["Converter"]] = None,
+        evaluators: Optional[List["Evaluator"]] = None,
+    ) -> None:
         self._model_generator = generator
-        self.reports = None
-        self.outputs = None
+        self._converters = converters or []
+        self._evaluators = evaluators or []
 
     @abstractmethod
     def __call__(self) -> None:
@@ -38,4 +47,34 @@ class Runner(ABC):
 
         Optionally sets self.reports and self.outputs.
         """
-        self._model_generator.build()
+        self.reports = None
+        self.outputs = None
+
+    def check_config(self) -> None:
+        """ Checks if the current configuration parameters are legal. """
+        # TODO: extend to converters
+        self._model_generator.check_config()
+
+    @abstractmethod
+    def _set_config(self, cfg: Configuration) -> None:
+        """ Sets the relevant configuration parameters.
+
+        This method operates on the config input argument in-place.
+        Subclasses should implement this instead of the set_config method.
+        """
+        self._model_generator._set_config(cfg)
+        for converter in self._converters:
+            converter._set_config(cfg)
+
+    def set_config(self, **config: Any) -> None:
+        """ Configures the runner before it is called.
+        
+        Default values for missing configuration parameters are set.
+        """
+        self._config = {}
+        self._set_config(config)
+        if config:
+            raise ValueError(
+                f"Unexpected configuration parameter(s): {', '.join(config.keys())}"
+            )
+        self.check_config()

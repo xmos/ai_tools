@@ -2,30 +2,42 @@
 
 import tensorflow as tf  # type: ignore
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union, Tuple
 
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.converter import optimize_for_xcore  # type: ignore # TODO: fix this
 
-from . import TFLiteModel, Configuration
+from . import TFLiteModel, Configuration, Hook
 from .utils import quantize_converter, parse_init_config
 
 if TYPE_CHECKING:
-    from .model_generators import ModelGenerator, KerasModelGenerator
+    from .runners import Runner
 
 
 class Converter(ABC):
     """ Superclass for defining model conversion logic and storing converted models.
 
-    Converter objects are registered when a ModelGenerator object is
-    instantiated.
+    Converter objects are registered in Runner objects.
     """
 
     _model: TFLiteModel
 
-    def __init__(self, model_generator: "ModelGenerator") -> None:
-        """ Registers the ModelGenerator that owns this Converter. """
-        self._model_generator = model_generator
+    def __init__(
+        self,
+        runner: "Runner",
+        input_model_hook: Hook[Union[TFLiteModel, tf.keras.Model]],
+    ) -> None:
+        self._runner = runner
+        self._input_model_hook = input_model_hook
+
+    @property
+    def converted_model(self) -> TFLiteModel:
+        try:
+            return self._model
+        except AttributeError:
+            raise Exception(
+                "Cannot get converted model before converter is run!"
+            ) from None
 
     @abstractmethod
     def convert(self) -> None:
@@ -38,7 +50,7 @@ class Converter(ABC):
 
     @property
     def _config(self) -> "Configuration":
-        return self._model_generator._config
+        return self._runner._config
 
     @abstractmethod
     def _set_config(self, cfg: "Configuration") -> None:
@@ -49,25 +61,29 @@ class Converter(ABC):
         pass
 
 
-class TFLiteFloatConverter(Converter):
-    """ Converts the _model field of a KerasModelGenerator to a floating point
-    TFLite model.
-    """
+class KerasModelConverter(Converter):
+    """ Converts a Keras model to a TFLite model. """
 
-    _model_generator: "KerasModelGenerator"
+    _input_model_hook: Hook[tf.keras.Model]
+
+    def __init__(
+        self, runner: "Runner", input_model_hook: Hook[tf.keras.Model],
+    ) -> None:
+        super().__init__(runner, input_model_hook)
+
+
+class TFLiteFloatConverter(KerasModelConverter):
+    """ Converts a Keras model to a floating point TFLite model. """
 
     def convert(self) -> None:
         self._model = tf.lite.TFLiteConverter.from_keras_model(
-            self._model_generator._model
+            self._input_model_hook()
         ).convert()
 
 
-class TFLiteQuantConverter(Converter):
-    """ Converts the _model field of a KerasModelGenerator to a quantized
-    TFLite model.
-    """
+class TFLiteQuantConverter(KerasModelConverter):
+    """ Converts a Keras model to a quantized TFLite model. """
 
-    _model_generator: "KerasModelGenerator"
     _data_len: int
     _repr_data: tf.Tensor
 
@@ -82,13 +98,13 @@ class TFLiteQuantConverter(Converter):
             return self._repr_data
         except AttributeError:
             init = parse_init_config(*self._config["input_init"])
-            self._repr_data = init((self._data_len, *self._model_generator.input_shape))
+            self._repr_data = init(
+                (self._data_len, *self._input_model_hook().input_shape)
+            )
             return self._repr_data
 
     def convert(self) -> None:
-        converter = tf.lite.TFLiteConverter.from_keras_model(
-            self._model_generator._model
-        )
+        converter = tf.lite.TFLiteConverter.from_keras_model(self._input_model_hook())
         quantize_converter(
             converter, representative_data=self.get_representative_data(),
         )
@@ -96,29 +112,16 @@ class TFLiteQuantConverter(Converter):
 
 
 class XCoreConverter(Converter):
-    """ Converts the _model field of a KerasModelGenerator to an xcore.ai-optimized
-    TFLite model.
-    """
+    """ Converts a (quantized) TFLite model to an xcore.ai-optimized TFLite model. """
 
-    _model_generator: "KerasModelGenerator"
-
-    def __init__(
-        self, model_generator: "KerasModelGenerator", source_converter: Converter
-    ) -> None:
-        """ Registers the ModelGenerator that owns this Converter. 
-        
-        The source converter must be specified as this converter could
-        potentially be used with (among others) quantized or larq converted
-        models.
-        """
-        self._model_generator = model_generator
-        self._source_converter = source_converter
+    def __init__(self, runner: "Runner", input_model_hook: Hook[TFLiteModel]) -> None:
+        super().__init__(runner, input_model_hook)
 
     def _set_config(self, cfg: "Configuration") -> None:
         if "num_threads" not in self._config:
             self._config["num_threads"] = cfg.pop("num_threads", 1)
 
     def convert(self) -> None:
-        model = XCOREModel.deserialize(self._source_converter._model)
+        model = XCOREModel.deserialize(self._input_model_hook())
         optimize_for_xcore(model, num_threads=self._config["num_threads"])
         self._model = model.serialize()

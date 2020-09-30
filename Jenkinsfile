@@ -86,7 +86,7 @@ pipeline {
                 stage("Update all packages") {
                     when { expression { return params.UPDATE_ALL } }
                     steps {
-                        sh "conda update --all -y -q -n ai_tools_venv"
+                        sh "conda update --all -y -q -p ai_tools_venv"
                     }
                 }
                 stage("Build") {

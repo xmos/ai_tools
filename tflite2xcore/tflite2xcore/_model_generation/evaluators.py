@@ -5,7 +5,7 @@ import numpy as np  # type: ignore
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Callable, Union
 
-from tflite2xcore.interpreters import XCOREInterpreter  # type: ignore # TODO: fix this
+from tflite2xcore.interpreters import XCOREInterpreter, XCOREDeviceInterpreter  # type: ignore # TODO: fix this
 from tflite2xcore.utils import quantize, QuantizationTuple
 
 from . import TFLiteModel
@@ -84,8 +84,23 @@ class XCoreEvaluator(TFLiteEvaluator):
     input_quant: QuantizationTuple
     output_quant: QuantizationTuple
 
+    def __init__(
+        self,
+        input_data_hook: Callable[[], Union[tf.Tensor, np.ndarray]],
+        model_hook: Callable[[], "TFLiteModel"],
+        use_device=False,
+    ) -> None:
+        super().__init__(input_data_hook, model_hook)
+        self._use_device = use_device
+
+    def get_interpreter(self):
+        if self._use_device:
+            return XCOREDeviceInterpreter(model_content=self._model_hook())
+        else:
+            return XCOREInterpreter(model_content=self._model_hook())
+
     def evaluate(self) -> None:
-        interpreter = XCOREInterpreter(model_content=self._model_hook())
+        interpreter = self.get_interpreter()
         interpreter.allocate_tensors()
 
         self.input_quant = QuantizationTuple(

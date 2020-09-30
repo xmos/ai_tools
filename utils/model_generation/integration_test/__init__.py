@@ -116,7 +116,7 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
     _xcore_evaluator: XCoreEvaluator
     run: IntegrationTestRunner
 
-    def __init__(self) -> None:
+    def __init__(self, use_device=False) -> None:
         self._reference_converter = TFLiteQuantConverter(self)
         self._reference_evaluator = TFLiteQuantEvaluator(
             self._reference_converter.get_representative_data,
@@ -128,6 +128,7 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
         self._xcore_evaluator = XCoreEvaluator(
             self._reference_converter.get_representative_data,
             lambda: self._xcore_converter._model,
+            use_device=use_device,
         )
 
         self._identity_converter = XCoreConverter(self, self._xcore_converter)

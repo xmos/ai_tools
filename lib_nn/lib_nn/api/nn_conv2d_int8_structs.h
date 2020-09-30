@@ -314,9 +314,33 @@ typedef struct {
 } nn_conv2d_1x1_job_params_t;
 
 
-typedef struct {
-    unsigned k_channels;
-} nn_conv2d_depthwise_adv_t;
+/**
+ * Flags used with conv2d_depthwise_adv() for advanced scenarios.
+ */
+typedef enum {
+    /** 
+     * If non-zero, this flag signals to conv2d_depthwise_adv() that the supplied kernel weight tensor (@tensor{K}) and 
+     * the BSO tensor are slices, rather than the full tensors.
+     * 
+     * If this is set, then conv2d_depthwise_adv() will treat @tensor{K} and BSO as if they contain _only the 
+     * necessary channels for the job being invoked_.
+     * 
+     * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
+     * 
+     * For example, if a @oper{conv2d_depthwise} instance performs a 5x3 convolution on an input image with 40 channels,
+     * normally the shape of @tensor{K} would normally be @math{(5,3,40)}, and the shape of BSO would normally
+     * be @math{(3)} for any job invoked.
+     * 
+     * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
+     * set, conv2d_depthwise_adv() will interpret the supplied argument `K` as pointing to @math{\bar K[:,:,16:32]} 
+     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[2]} (i.e. the
+     * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
+     * 
+     * @note Each block of the BSO tensor always corresponds to 16 channels. Even if a job invocation is only computing
+     *       4 output channels, a full 16-channel `nn_bso_block_t` must be provided.
+     */
+    CONV2D_DEPTHWISE_FLAG_SLICED_K = (1<<0),
+} nn_conv2d_depthwise_flags_e;
 
 #ifdef __XC__
 }   //extern "C"

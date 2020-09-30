@@ -13,6 +13,11 @@
 
 
 
+#ifndef CONV2D_PREPARE_ERROR_DETECTION_ENABLE
+  #define CONV2D_PREPARE_ERROR_DETECTION_ENABLE     (1)
+#endif
+
+
 /**
  * Struct represents the job-specific parameters required to execute a 
  * `conv2d_depthwise()` operation. 
@@ -66,10 +71,6 @@ static incl_bounds_t inverse_map(
     return res;
 }
 
-#ifndef CONV2D_INIT_ERROR_DETECTION_ENABLE
-  #define CONV2D_INIT_ERROR_DETECTION_ENABLE     (1)
-#endif
-
 static unsigned conv2d_depthwise_compute_padding(
     int32_t* top,
     int32_t* bottom,
@@ -106,7 +107,7 @@ static void conv2d_depthwise_adjust_starts(
     const nn_image_params_t* y_params,
     const nn_window_params_t* conv_window,
     const nn_conv2d_job_params_t* job_params,
-    const nn_conv2d_depthwise_adv_t* adv)
+    const nn_conv2d_depthwise_flags_e flags)
 {
     const unsigned x_row_bytes = x_params->width * x_params->channels;
     const unsigned y_row_bytes = y_params->width * y_params->channels;
@@ -114,18 +115,22 @@ static void conv2d_depthwise_adjust_starts(
     const int32_t window_start_offset = conv_window->start.row * x_row_bytes 
                                         + x_params->channels * conv_window->start.column;
     
-    int32_t start_BSO   = (job_params->start.channels / VPU_INT8_ACC_PERIOD);
-    int32_t start_K    = job_params->start.channels;
-    int32_t start_Y    = job_params->start.rows * y_row_bytes + y_params->channels * job_params->start.cols + job_params->start.channels;
     int32_t start_X    = window_start_offset 
                             + job_params->start.rows * conv_window->stride.vertical * x_row_bytes
                             + job_params->start.cols * conv_window->stride.horizontal * x_params->channels
                             + job_params->start.channels;
+    int32_t start_Y    = job_params->start.rows * y_row_bytes + y_params->channels * job_params->start.cols + job_params->start.channels;
 
     *X = ADDR(*X, start_X);
     *Y = ADDR(*Y, start_Y);
-    *K = ADDR(*K, start_K);
-    *BSO = ADDR(*BSO, start_BSO);
+
+    if(!(flags & CONV2D_DEPTHWISE_FLAG_SLICED_K)){
+        int32_t start_K    = job_params->start.channels;
+        int32_t start_BSO   = (job_params->start.channels / VPU_INT8_ACC_PERIOD);
+
+        *K = ADDR(*K, start_K);
+        *BSO = ADDR(*BSO, start_BSO);
+    }
 }
 
 static void conv2d_depthwise_prepare(
@@ -135,7 +140,7 @@ static void conv2d_depthwise_prepare(
     const nn_window_params_t* conv_window,
     const nn_conv2d_job_params_t* job_params)
 {
-    if(CONV2D_INIT_ERROR_DETECTION_ENABLE){
+    if(CONV2D_PREPARE_ERROR_DETECTION_ENABLE){
         assert(x_params->channels % 4 == 0);
         assert(x_params->channels == y_params->channels);
     }
@@ -147,7 +152,7 @@ static void conv2d_depthwise_prepare(
     job->stride.row.X = x_row_bytes - x_params->channels * conv_window->shape.width;
     job->stride.col.window = x_params->channels * conv_window->stride.horizontal;
     
-    if(CONV2D_INIT_ERROR_DETECTION_ENABLE){
+    if(CONV2D_PREPARE_ERROR_DETECTION_ENABLE){
         assert(job_params->start.rows >= 0 && job_params->start.cols >= 0 && job_params->start.channels >= 0);
         assert(job_params->start.rows + job_params->size.rows <= y_params->height);
         assert(job_params->start.cols + job_params->size.cols <= y_params->width);
@@ -193,7 +198,7 @@ void conv2d_depthwise(
 {
     const nn_conv2d_job_params_t full_job = {{0,0,0}, {y_params->height, y_params->width, y_params->channels} };
 
-    conv2d_depthwise_adv(Y, X, K, BSO, zero_point, x_params, y_params, conv_window, &full_job, NULL);
+    conv2d_depthwise_adv(Y, X, K, BSO, zero_point, x_params, y_params, conv_window, &full_job, 0);
 }
 
 void conv2d_depthwise_adv(
@@ -206,9 +211,9 @@ void conv2d_depthwise_adv(
     const nn_image_params_t* y_params,
     const nn_window_params_t* conv_window,
     const nn_window_op_job_params_t* job_params,
-    const nn_conv2d_depthwise_adv_t* adv)
+    const nn_conv2d_depthwise_flags_e flags)
 {
-    conv2d_depthwise_adjust_starts(&Y, &X, &K, &BSO, x_params, y_params, conv_window, job_params, adv);
+    conv2d_depthwise_adjust_starts(&Y, &X, &K, &BSO, x_params, y_params, conv_window, job_params, flags);
 
     int8_t zero_point_vec[VPU_INT8_VLMACC_ELMS];
     memset(zero_point_vec, zero_point, sizeof(zero_point_vec));
@@ -217,9 +222,8 @@ void conv2d_depthwise_adv(
     conv2d_depthwise_prepare(&job, x_params, y_params, conv_window, job_params);
 
     channel_count_t k_channels = x_params->channels;
-    if(adv != NULL){
-        if(adv->k_channels != 0)
-            k_channels = adv->k_channels;
+    if(flags & CONV2D_DEPTHWISE_FLAG_SLICED_K){
+        k_channels = job_params->size.channels;
     }
 
     struct {

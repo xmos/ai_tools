@@ -5,28 +5,24 @@
 
 ### Description 
 
-This operator performs a 2D convolution of an input image to produce an output image. The convolution is considered "depthwise" 
-when there is no interaction between input channel `j` and output channel `k` unless `j == k`.
+This operator performs a 2D convolution of an input image to produce an output image. The convolution is considered 
+"depthwise" when there is no interaction between input channel @math{j} and output channel @math{k} unless @math{j=k}.
 
-@oper{conv2d_depthwise} should be considered specialized version of @oper_ref{conv2d_deep}, optimized for when the 2D sub-tensors
-given by @math{K[:,r,c,:]} diagonal (and square) matrices. In such a circumstance, the off-diagonal elements can be omitted and
-the computation can be performed more quickly.
+@oper{conv2d_depthwise} should be considered specialized version of @oper_ref{conv2d_deep}, optimized for when the 2D 
+sub-tensors given by @math{K[:,r,c,:]} are diagonal (and square) matrices. In such a circumstance, the off-diagonal 
+elements can be omitted and the computation can be performed more quickly.
 
-This operator supports implied padding of the input image in which a specified value (@math{z_0}) is used for all padding channels.
+This operator supports implied padding of the input image in which a specified value (@math{z_0}) is used for all 
+padding channels.
 
-The @oper{conv2d_depthwise} operator requires a plan and one or more jobs to be initialized before it can be invoked. See 
-@ref conv2d_depthwise_api below.
-
-The @oper_ref{conv2d_deep}, @oper_ref{conv2d_1x1}, and @oper_ref{conv2d_shallowin} operators are alternative 2D convolution operators
-specialized for different circumstances.
+The @oper_ref{conv2d_deep}, @oper_ref{conv2d_1x1}, and @oper_ref{conv2d_shallowin} operators are alternative 2D 
+convolution operators specialized for different circumstances.
 
 ### Parameters 
 
 #### Hyperparameters        {#conv2d_depthwise_hyperparams}
 
-The following are the hyperparameters of @oper{conv2d_depthwise}. The hyperparameters for an instance of an operator are fixed at 
-initialization. Instances of the @oper{conv2d_depthwise} operator that share the same hyperparameters may also share the same plan 
-and jobs.
+The following are the hyperparameters of @oper{conv2d_depthwise}.
 
 @par
 
@@ -37,17 +33,18 @@ and jobs.
 <tr><td>@tensor_shape{Y_h, Y_w}         <td>The output image height and width, respectively.
 <tr><td>@math{X_c}                      <td>The channel count of both the input and output images.
 <tr><td>@tensor_shape{K_h, K_w}         <td>The convolution window height and width, respectively.
-<tr><td>@math{(W_{r0}, W_{c0})}         <td>The convolution window's start position, which are the coordinates of the upper-left pixel of the 
-                                            convolution window (in the input image's coordinate space) corresponding to the output pixel at
-                                            @math{(0,0)} (in the output image's coordinate space).
+<tr><td>@math{(W_{r0}, W_{c0})}         <td>The convolution window's start position, which are the coordinates of the 
+                                            upper-left pixel of the convolution window (in the input image's coordinate 
+                                            space) corresponding to the output pixel at @math{(0,0)} (in the output 
+                                            image's coordinate space).
 <tr><td>@math{(W_{vert}, W_{hori})}     <td>The convolution window's vertical and horizontal strides, respectively.
 <tr><td>@math{z_0}                      <td>The zero-point value, used for padding pixels.
 </table>
 
-@note In the future a "depth multiplier" may be supported. A depth multiplier is the (integer) ratio of output channel count to input 
-    channel count. With a depth multiplier of `N`, each input channel contributes to `N` different output channels (though it is 
-    still true that no two input channels contribute to the same output channel). Currently, the depth multiplier has an implicit value 
-    of `1`.
+@note In the future a "depth multiplier" may be supported. A depth multiplier is the (integer) ratio of output channel 
+    count to input channel count. With a depth multiplier of `N`, each input channel contributes to `N` different output 
+    channels (though it is still true that no two input channels contribute to the same output channel). Currently, the 
+    depth multiplier has an implicit value of `1`.
 
 
 ##### Hyperparameter Constraints        {#conv2d_depthwise_hyperparm_constraints}
@@ -63,8 +60,7 @@ and jobs.
 
 #### Data Parameters
 
-The following are input and output parameters of @oper{conv2d_depthwise}. These parameters are supplied only when the job invocation occurs,
-and may change from invocation to invocation.
+The following are input and output data parameters of @oper{conv2d_depthwise}.
 
 @par
 
@@ -73,7 +69,9 @@ and may change from invocation to invocation.
 <tr><td colspan="2">@tensor{Y}      <td>out         <td>@math{(Y_h, Y_w, X_c)}      <td>The output image.
 <tr><td colspan="2">@tensor{X}      <td>in          <td>@math{(X_h, X_w, X_c)}      <td>The input image.
 <tr><td colspan="2">@tensor{K}      <td>in          <td>@math{(K_h, K_w, X_c)}      <td>The kernel tensor.
-<tr><td colspan="2">[`BSO`]         <td>in          <td>                            <td>The elements of the bias-scale-offset array (see @ref out_shift_scale).
+<tr><td colspan="2">[`BSO`]         <td>in          <td>                            <td>The elements of the 
+                                                                                        bias-scale-offset array (see 
+                                                                                        @ref out_shift_scale).
 <tr><td>        <td>@tensor{B}      <td>            <td>@math{Y_c}                  <td>The output channel biases.        
 <tr><td>        <td>@tensor{s_1}    <td>            <td>@math{Y_c}                  <td>The first output channel shifts.
 <tr><td>        <td>@tensor{s_2}    <td>            <td>@math{Y_c}                  <td>The output channel scales.
@@ -121,21 +119,14 @@ the remaining parameters are as described above.
 
 ### API                     {#conv2d_depthwise_api}
 
-Invoking an instance of @oper{conv2d_depthwise} is done with a call to conv2d_depthwise(). conv2d_depthwise() takes a pointer to an initialized plan 
-(instance of `nn_conv2d_depthwise_plan_t`) and an initialized job (instance of `nn_conv2d_depthwise_job_t`). Initialization is done with a call
-to conv2d_depthwise_init().
+Invoking an instance of @oper{conv2d_depthwise} is done with a call to conv2d_depthwise() or conv2d_depthwise_adv(). 
+conv2d_depthwise() is the same as conv2d_depthwise_adv() with default behavior (no flags specified) and with the entire
+output image as the job.
 
-Each call to conv2d_depthwise() will execute exactly one job. A @oper{conv2d_depthwise} job computes a rectangular sub-tensor of
-the output image (which can be the entire image if only one job is desired). For each job the user indicates a starting row, 
-starting column and starting channel of the output image, as well as the number of rows, columns and channels to be computed by
-that job. See conv2d_depthwise_init() for more details (and constraints).
-
-It is the user's responsibility to ensure that all initialized jobs collectively compute the entire output image (no gaps) and do not
-compute outputs redundantly (overlapping jobs).
-
-If a network uses multiple instances of the @oper{conv2d_depthwise} operator, they may share the structs representing the plan and any jobs 
-*if and only if* the instances share identical hyperparameters (see @ref conv2d_depthwise_hyperparams).
-
+Each call to conv2d_depthwise() or conv2d_depthwise_adv() computes a rectangular sub-tensor of the output image (which 
+in the case of conv2d_depthwise() is the entire image). With each call to conv2d_depthwise_adv() the user indicates a 
+starting row, starting column and starting channel of the output image, as well as the number of rows, columns and 
+channels to be computed by that job.
 
 ### Configuration Options
 

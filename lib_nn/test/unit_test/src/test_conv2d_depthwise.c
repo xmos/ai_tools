@@ -683,7 +683,7 @@ void test_conv2d_depthwise_case4()
 
         memset(Y, 0xCC, sizeof(Y)); 
         conv2d_depthwise_adv((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
-                            &x_params, &y_params, &conv_window, &job_params, NULL);
+                            &x_params, &y_params, &conv_window, &job_params, 0);
 
         int8_t Y_exp[Y_HEIGHT][Y_WIDTH] = {
             {   0x33,  0x27,  0x33,  },
@@ -809,7 +809,7 @@ void test_conv2d_depthwise_case5()
 
     for(int i = 0; i < JOB_COUNT; i++)
         conv2d_depthwise_adv((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
-                            &x_params, &y_params, &conv_window, &job_params[i], NULL);
+                            &x_params, &y_params, &conv_window, &job_params[i], 0);
 
     int8_t Y_exp[Y_HEIGHT][Y_WIDTH] = {
         {   0x33,  0x27,  0x33,  },
@@ -1335,14 +1335,10 @@ void test_conv2d_depthwise_case9()
     nn_window_params_t conv_window = {{K_h, K_w}, {0, 0}, {v_stride, h_stride}};
 
     nn_conv2d_job_params_t job_params = {{0, 0, 0}, {Y_HEIGHT, Y_WIDTH, K_c}};
-    
-    nn_conv2d_depthwise_adv_t adv = {0};
-
-    adv.k_channels = 16;
 
     memset(Y, 0xCC, sizeof(Y)); 
     conv2d_depthwise_adv((nn_image_t*)Y, (nn_image_t*)X, (nn_tensor_t*)K, (nn_bso_block_t*) bso, ZERO_POINT,
-                        &x_params, &y_params, &conv_window, &job_params, &adv);
+                        &x_params, &y_params, &conv_window, &job_params, CONV2D_DEPTHWISE_FLAG_SLICED_K);
 
 
     PRINTF("\t\t\tChecking...\n");

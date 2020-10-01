@@ -23,13 +23,14 @@ pipeline {
     options { // plenty of things could go here
         //buildDiscarder(logRotator(numToKeepStr: '10'))
         timestamps()
-        skipDefaultCheckout()
     }
 
     stages {
         stage("Setup") {
             // Clone and install build dependencies
             steps {
+                // clean auto default checkout
+                sh "rm -rf *"
                 // clone
                 checkout([
                     $class: 'GitSCM',

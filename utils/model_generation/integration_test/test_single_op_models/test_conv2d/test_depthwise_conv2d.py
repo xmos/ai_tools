@@ -5,7 +5,7 @@ import tensorflow as tf  # type: ignore
 from typing import Tuple, Optional
 
 from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
-from tflite2xcore._model_generation.utils import parse_init_config
+from tflite2xcore.model_generation.utils import parse_init_config
 
 from . import (
     AbstractConv2dTestModelGenerator,

@@ -3,7 +3,7 @@
 import pytest  # type: ignore
 import tensorflow as tf  # type: ignore
 
-from tflite2xcore._model_generation import Configuration
+from tflite2xcore.model_generation import Configuration
 
 from . import IntegrationTestModelGenerator
 from . import (  # pylint: disable=unused-import

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict
 
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
-from tflite2xcore._model_generation.utils import stringify_config
+from tflite2xcore.model_generation.utils import stringify_config
 
 from . import IntegrationTestRunner
 

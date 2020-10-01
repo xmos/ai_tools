@@ -11,13 +11,13 @@ from typing import Union, List, NamedTuple, Tuple, Dict, Optional, Iterable, Typ
 
 from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
-from tflite2xcore._model_generation import TFLiteModel, ModelGenerator, DataFactory
-from tflite2xcore._model_generation.runners import Runner, RunnerOutputs
-from tflite2xcore._model_generation.evaluators import (
+from tflite2xcore.model_generation import TFLiteModel, ModelGenerator, DataFactory
+from tflite2xcore.model_generation.runners import Runner, RunnerOutputs
+from tflite2xcore.model_generation.evaluators import (
     TFLiteQuantEvaluator,
     XCoreEvaluator,
 )
-from tflite2xcore._model_generation.converters import (
+from tflite2xcore.model_generation.converters import (
     TFLiteQuantConverter,
     XCoreConverter,
 )

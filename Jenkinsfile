@@ -53,7 +53,7 @@ pipeline {
             when {
                 anyOf {
                     // Not yet completed successfully
-                    expression { return env.IMAGE_EXISTS }
+                    expression { return !env.IMAGE_EXISTS }
                     // Dockerfile updated
                     changeset 'Dockerfile'
                     // Manual parameter

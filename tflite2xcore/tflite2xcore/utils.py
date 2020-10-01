@@ -226,15 +226,15 @@ class LoggingContext:
 
 
 def quantize(
-    arr: "np.ndarray",
+    arr: np.ndarray,
     scale: float,
     zero_point: int,
     dtype: Union[type, "np.dtype"] = np.int8,
-) -> "np.ndarray":
+) -> np.ndarray:
     t = np.round(np.float32(arr) / np.float32(scale)).astype(np.int32) + zero_point
     return dtype(np.clip(t, np.iinfo(dtype).min, np.iinfo(dtype).max))
 
 
-def dequantize(arr: "np.ndarray", scale: float, zero_point: int) -> "np.ndarray":
+def dequantize(arr: np.ndarray, scale: float, zero_point: int) -> np.ndarray:
     return np.float32(arr.astype(np.int32) - np.int32(zero_point)) * np.float32(scale)
 

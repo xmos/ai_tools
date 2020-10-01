@@ -2,8 +2,8 @@
 
 import tensorflow as tf  # type: ignore
 import numpy as np  # type: ignore
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Union
+from abc import abstractmethod
+from typing import Union
 
 from tflite2xcore.interpreters import XCOREInterpreter  # type: ignore # TODO: fix this
 from tflite2xcore.utils import quantize, QuantizationTuple  # type: ignore # TODO: fix this
@@ -11,11 +11,10 @@ from tflite2xcore.utils import quantize, QuantizationTuple  # type: ignore # TOD
 from . import TFLiteModel, Hook
 from .utils import apply_interpreter_to_examples
 
-if TYPE_CHECKING:
-    from .runners import Runner
+from .runners import Runner, RunnerDependent
 
 
-class Evaluator(ABC):
+class Evaluator(RunnerDependent):
     """ Superclass for defining model evaluation logic.
 
     Evaluator objects are registered in Runner objects.
@@ -28,10 +27,11 @@ class Evaluator(ABC):
 
     def __init__(
         self,
-        runner: "Runner",
+        runner: Runner,
         input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
         model_hook: Hook[Union[tf.keras.Model, "TFLiteModel"]],
     ) -> None:
+        self._runner = runner
         self._input_data_hook = input_data_hook
         self._model_hook = model_hook
 
@@ -68,7 +68,7 @@ class TFLiteEvaluator(Evaluator):
 
     def __init__(
         self,
-        runner: "Runner",
+        runner: Runner,
         input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
         model_hook: Hook["TFLiteModel"],
     ) -> None:
@@ -91,7 +91,7 @@ class TFLiteQuantEvaluator(TFLiteEvaluator):
 
     def __init__(
         self,
-        runner: "Runner",
+        runner: Runner,
         input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
         model_hook: Hook["TFLiteModel"],
     ) -> None:

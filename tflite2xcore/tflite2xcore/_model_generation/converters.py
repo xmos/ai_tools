@@ -1,8 +1,8 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import tensorflow as tf  # type: ignore
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Union, Tuple
+from abc import abstractmethod
+from typing import Union
 
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.converter import optimize_for_xcore  # type: ignore # TODO: fix this
@@ -10,11 +10,10 @@ from tflite2xcore.converter import optimize_for_xcore  # type: ignore # TODO: fi
 from . import TFLiteModel, Configuration, Hook
 from .utils import quantize_converter, parse_init_config
 
-if TYPE_CHECKING:
-    from .runners import Runner
+from .runners import Runner, RunnerDependent
 
 
-class Converter(ABC):
+class Converter(RunnerDependent):
     """ Superclass for defining model conversion logic and storing converted models.
 
     Converter objects are registered in Runner objects.
@@ -24,7 +23,7 @@ class Converter(ABC):
 
     def __init__(
         self,
-        runner: "Runner",
+        runner: Runner,
         input_model_hook: Hook[Union[TFLiteModel, tf.keras.Model]],
     ) -> None:
         self._runner = runner
@@ -48,27 +47,13 @@ class Converter(ABC):
         """
         raise NotImplementedError()
 
-    @property
-    def _config(self) -> "Configuration":
-        return self._runner._config
-
-    @abstractmethod
-    def _set_config(self, cfg: "Configuration") -> None:
-        """ Sets the relevant configuration parameters and returns the unused ones.
-        
-        This method operates on the config input argument in-place.
-        """
-        pass
-
 
 class KerasModelConverter(Converter):
     """ Converts a Keras model to a TFLite model. """
 
     _input_model_hook: Hook[tf.keras.Model]
 
-    def __init__(
-        self, runner: "Runner", input_model_hook: Hook[tf.keras.Model],
-    ) -> None:
+    def __init__(self, runner: Runner, input_model_hook: Hook[tf.keras.Model],) -> None:
         super().__init__(runner, input_model_hook)
 
 
@@ -87,7 +72,15 @@ class TFLiteQuantConverter(KerasModelConverter):
     _data_len: int
     _repr_data: tf.Tensor
 
-    def _set_config(self, cfg: "Configuration") -> None:
+    def __init__(
+        self,
+        runner: Runner,
+        input_model_hook: Hook[tf.keras.Model],
+        repr_data_hook: Hook[tf.Tensor],
+    ) -> None:
+        super().__init__(runner, input_model_hook)
+
+    def _set_config(self, cfg: Configuration) -> None:
         if "input_init" not in self._config:
             self._config["input_init"] = cfg.pop("input_init", ("RandomUniform", -1, 1))
         self._data_len = 10
@@ -114,10 +107,10 @@ class TFLiteQuantConverter(KerasModelConverter):
 class XCoreConverter(Converter):
     """ Converts a (quantized) TFLite model to an xcore.ai-optimized TFLite model. """
 
-    def __init__(self, runner: "Runner", input_model_hook: Hook[TFLiteModel]) -> None:
+    def __init__(self, runner: Runner, input_model_hook: Hook[TFLiteModel]) -> None:
         super().__init__(runner, input_model_hook)
 
-    def _set_config(self, cfg: "Configuration") -> None:
+    def _set_config(self, cfg: Configuration) -> None:
         if "num_threads" not in self._config:
             self._config["num_threads"] = cfg.pop("num_threads", 1)
 

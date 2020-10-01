@@ -4,18 +4,16 @@ import dill  # type: ignore
 import logging
 import tensorflow as tf  # type: ignore
 from pathlib import Path
-from abc import ABC, abstractmethod
-from typing import Optional, Tuple, List, Any, Union
+from abc import abstractmethod
+from typing import Tuple, Union
 
 from tflite2xcore.utils import set_all_seeds, LoggingContext  # type: ignore # TODO: fix this
 
 from . import Configuration
-from .converters import Converter
-from .runners import Runner
-from .evaluators import Evaluator
+from .runners import Runner, RunnerDependent
 
 
-class ModelGenerator(ABC):
+class ModelGenerator(RunnerDependent):
     """ Superclass for defining parameterized automatic model generation.
 
     The main use case of this class is generation of the integration test
@@ -36,25 +34,6 @@ class ModelGenerator(ABC):
         """
         raise NotImplementedError()
 
-    @property
-    def _config(self) -> "Configuration":
-        return self._runner._config
-
-    @abstractmethod
-    def _set_config(self, cfg: Configuration) -> None:
-        """ Sets the relevant configuration parameters.
-
-        This method operates on the config input argument in-place.
-        Subclasses should implement this instead of the set_config method.
-        """
-        pass
-
-    def check_config(self) -> None:
-        """ Checks if the current configuration parameters are legal. """
-        pass
-
-
-class KerasModelGenerator(ModelGenerator):
     def _prep_backend(self) -> None:
         tf.keras.backend.clear_session()
         set_all_seeds()
@@ -83,7 +62,7 @@ class KerasModelGenerator(ModelGenerator):
         return dirpath
 
     @classmethod
-    def load(cls, dirpath: Union[Path, str]) -> "KerasModelGenerator":
+    def load(cls, dirpath: Union[Path, str]) -> "ModelGenerator":
         dirpath = Path(dirpath)
         with open(dirpath / "generator.dill", "rb") as f:
             obj = dill.load(f)

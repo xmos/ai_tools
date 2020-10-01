@@ -52,15 +52,14 @@ class Runner(ABC):
 
     def check_config(self) -> None:
         """ Checks if the current configuration parameters are legal. """
-        # TODO: extend to converters
+        # TODO: extend to converters and evaluators
         self._model_generator.check_config()
 
-    @abstractmethod
     def _set_config(self, cfg: Configuration) -> None:
         """ Sets the relevant configuration parameters.
 
         This method operates on the config input argument in-place.
-        Subclasses should implement this instead of the set_config method.
+        Subclasses should override this instead of the set_config method.
         """
         self._model_generator._set_config(cfg)
         for converter in self._converters:
@@ -70,6 +69,7 @@ class Runner(ABC):
         """ Configures the runner before it is called.
         
         Default values for missing configuration parameters are set.
+        Subclasses should override set_config instead of this method.
         """
         self._config = {}
         self._set_config(config)
@@ -78,3 +78,22 @@ class Runner(ABC):
                 f"Unexpected configuration parameter(s): {', '.join(config.keys())}"
             )
         self.check_config()
+
+
+class RunnerDependent(ABC):
+    def __init__(self, runner: "Runner") -> None:
+        self._runner = runner
+
+    @property
+    def _config(self) -> Configuration:
+        return self._runner._config
+
+    def check_config(self) -> None:
+        pass
+
+    def _set_config(self, cfg: Configuration) -> None:
+        """ Sets the relevant configuration parameters and returns the unused ones.
+        
+        This method operates on the cfg input argument in-place.
+        """
+        pass

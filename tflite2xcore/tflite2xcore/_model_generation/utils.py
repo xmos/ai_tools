@@ -12,7 +12,7 @@ from . import Configuration
 
 def quantize_converter(
     converter: tf.lite.TFLiteConverter,
-    representative_data: Union[tf.Tensor, "np.ndarray"],
+    representative_data: Union[tf.Tensor, np.ndarray],
     *,
     show_progress_step: int = 0,
 ) -> None:
@@ -34,13 +34,13 @@ def quantize_converter(
 
 def apply_interpreter_to_examples(
     interpreter: tf.lite.Interpreter,
-    examples: Union[tf.Tensor, "np.ndarray"],
+    examples: Union[tf.Tensor, np.ndarray],
     *,
     interpreter_input_ind: Optional[int] = None,
     interpreter_output_ind: Optional[int] = None,
     show_progress_step: int = 0,
     show_pid: bool = False,
-) -> "np.ndarray":
+) -> np.ndarray:
     interpreter.allocate_tensors()
     if interpreter_input_ind is None:
         interpreter_input_ind = interpreter.get_input_details()[0]["index"]
@@ -71,7 +71,7 @@ def parse_init_config(
     return init(*args)
 
 
-def stringify_config(cfg: "Configuration") -> str:
+def stringify_config(cfg: Configuration) -> str:
     def stringify_value(v: Any) -> str:
         if not isinstance(v, str) and isinstance(v, Iterable):
             v = "(" + ",".join(str(c) for c in v) + ")"

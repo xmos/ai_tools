@@ -29,6 +29,22 @@ pipeline {
     }
 
     stages {
+        stage ("Check for existing images") {
+            agent {
+                label 'docker'
+            }
+            steps {
+                script {
+                    env.IMAGE_EXISTS = true
+                    env.IMAGE_TAG = GIT_BRANCH.replace('/', '-')
+                    try {
+                        sh "docker pull docker-repo.xmos.com/xmos/ai_tools:${IMAGE_TAG}"
+                    } catch {
+                        env.IMAGE_EXISTS = false
+                    }
+                }
+            }
+        }
         stage ("Build and Push Image") {
             // This builds the Dockerfile into an image and
             // uploads it to our private docker registry
@@ -37,7 +53,7 @@ pipeline {
             when {
                 anyOf {
                     // Not yet completed successfully
-                    expression { currentBuild.previousSuccessfulBuild == null }
+                    expression { return env.IMAGE_EXISTS }
                     // Dockerfile updated
                     changeset 'Dockerfile'
                     // Manual parameter
@@ -52,7 +68,7 @@ pipeline {
                     def image = docker.build('xmos/ai_tools')
                     docker.withRegistry('https://docker-repo.xmos.com', 'nexus') {
                         // always push to git branch (overwriting previous tags)
-                        image.push(GIT_BRANCH)
+                        image.push(IMAGE_TAG)
                         if (GIT_BRANCH=='master') {
                             // most recent master build is then default image
                             image.push('latest')
@@ -69,7 +85,7 @@ pipeline {
             agent {
                 docker {
                     // grab latest image tagged with branch
-                    image 'xmos/ai_tools:${GIT_BRANCH}'
+                    image 'xmos/ai_tools:${IMAGE_TAG}'
                     registryUrl 'https://docker-repo.xmos.com'
                     alwaysPull true
                 }

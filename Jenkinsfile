@@ -69,7 +69,7 @@ pipeline {
             agent {
                 docker {
                     // grab latest image tagged with branch
-                    image 'xmos/ai_tools:${GIT_BRANCH.replace("/", "_")}'
+                    image 'xmos/ai_tools:' + GIT_BRANCH.replace("/", "_")
                     registryUrl 'https://docker-repo.xmos.com'
                     alwaysPull true
                 }

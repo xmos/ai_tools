@@ -44,7 +44,7 @@ class Evaluator(RunnerDependent):
 
     @input_data.setter
     def input_data(self, data: Union[tf.Tensor, np.ndarray]) -> None:
-        self._input_data = np.ndarray(data)
+        self._input_data = np.array(data)
 
     @property
     def output_data(self) -> np.ndarray:
@@ -55,7 +55,7 @@ class Evaluator(RunnerDependent):
 
     @output_data.setter
     def output_data(self, data: Union[tf.Tensor, np.ndarray]) -> None:
-        self._output_data = np.ndarray(data)
+        self._output_data = np.array(data)
 
     @abstractmethod
     def evaluate(self) -> None:

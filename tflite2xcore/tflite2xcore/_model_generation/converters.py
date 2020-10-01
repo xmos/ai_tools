@@ -69,9 +69,6 @@ class TFLiteFloatConverter(KerasModelConverter):
 class TFLiteQuantConverter(KerasModelConverter):
     """ Converts a Keras model to a quantized TFLite model. """
 
-    _data_len: int
-    _repr_data: tf.Tensor
-
     def __init__(
         self,
         runner: Runner,
@@ -79,28 +76,15 @@ class TFLiteQuantConverter(KerasModelConverter):
         repr_data_hook: Hook[tf.Tensor],
     ) -> None:
         super().__init__(runner, input_model_hook)
+        self._repr_data_hook = repr_data_hook
 
     def _set_config(self, cfg: Configuration) -> None:
         if "input_init" not in self._config:
             self._config["input_init"] = cfg.pop("input_init", ("RandomUniform", -1, 1))
-        self._data_len = 10
-
-    def get_representative_data(self) -> tf.Tensor:
-        """ Returns the data to be used for post training quantization. """
-        try:
-            return self._repr_data
-        except AttributeError:
-            init = parse_init_config(*self._config["input_init"])
-            self._repr_data = init(
-                (self._data_len, *self._input_model_hook().input_shape)
-            )
-            return self._repr_data
 
     def convert(self) -> None:
         converter = tf.lite.TFLiteConverter.from_keras_model(self._input_model_hook())
-        quantize_converter(
-            converter, representative_data=self.get_representative_data(),
-        )
+        quantize_converter(converter, representative_data=self._repr_data_hook())
         self._model = converter.convert()
 
 

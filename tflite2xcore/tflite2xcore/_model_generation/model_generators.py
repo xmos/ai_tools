@@ -5,7 +5,8 @@ import logging
 import tensorflow as tf  # type: ignore
 from pathlib import Path
 from abc import abstractmethod
-from typing import Tuple, Union
+from typing import Tuple, Union, Iterator
+from contextlib import contextmanager
 
 from tflite2xcore.utils import set_all_seeds, LoggingContext  # type: ignore # TODO: fix this
 
@@ -46,29 +47,19 @@ class ModelGenerator(RunnerDependent):
     def output_shape(self) -> Tuple[int, ...]:
         return self._model.output_shape[1:]  # type:ignore  # pylint: disable=no-member
 
-    def save(self, dirpath: Union[Path, str]) -> Path:
-        """ Saves the model contents to the specified directory.
+    @contextmanager
+    def save_model(self, dirpath: Path) -> Iterator[None]:
+        """ Saves the underlying model contents and make the object temporarily pickleable.
         
-        If the directory doesn't exist, it is created.
+        A model subdirectory is created.
         """
-        dirpath = Path(dirpath)
-        dirpath.mkdir(parents=True, exist_ok=True)
         self._model.save(dirpath / "model")
         tmp = self._model
         del self._model
-        with open(dirpath / "generator.dill", "wb") as f:
-            dill.dump(self, f)
+        yield
         self._model = tmp
-        return dirpath
 
-    @classmethod
-    def load(cls, dirpath: Union[Path, str]) -> "ModelGenerator":
-        dirpath = Path(dirpath)
-        with open(dirpath / "generator.dill", "rb") as f:
-            obj = dill.load(f)
-        assert isinstance(obj, cls)
-
+    def load_model(self, dirpath: Path) -> None:
         # tf may complain about missing training config, so silence it
         with LoggingContext(tf.get_logger(), logging.ERROR):
-            obj._model = tf.keras.models.load_model(dirpath / "model")
-        return obj
+            self._model = tf.keras.models.load_model(dirpath / "model")

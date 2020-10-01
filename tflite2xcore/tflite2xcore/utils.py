@@ -18,7 +18,6 @@ from typing import (
     TypeVar,
     Callable,
     cast,
-    Tuple,
     Type,
     NamedTuple,
 )

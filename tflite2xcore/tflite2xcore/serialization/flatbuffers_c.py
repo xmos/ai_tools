@@ -1,12 +1,9 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
-import sys
-import os
 import struct
 import ctypes
-from pathlib import Path
-from enum import Enum
 import numpy as np  # type: ignore
+from enum import Enum
 
 from tflite2xcore import libtflite2xcore as lib
 

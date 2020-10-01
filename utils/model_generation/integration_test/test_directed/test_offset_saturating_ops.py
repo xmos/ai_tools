@@ -5,7 +5,11 @@ import tensorflow as tf  # type: ignore
 
 from tflite2xcore._model_generation import Configuration
 
-from . import IntegrationTestModelGenerator, test_output, test_idempotence
+from . import IntegrationTestModelGenerator
+from . import (  # pylint: disable=unused-import
+    test_output,
+    test_idempotence,
+)
 
 
 #  ----------------------------------------------------------------------------

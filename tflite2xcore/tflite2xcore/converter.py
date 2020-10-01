@@ -1,7 +1,5 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pathlib
-
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import transformation_passes as passes

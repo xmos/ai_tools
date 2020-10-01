@@ -1,7 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-from typing import Tuple
 from copy import deepcopy
 
 from tflite2xcore.transformation_passes import ModelTransformationPass

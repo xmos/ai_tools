@@ -3,7 +3,6 @@
 import pytest
 
 from tflite2xcore.transformation_passes import EliminateDeadOperatorsPass
-from tflite2xcore.xcore_schema import TensorType
 
 from .conftest import model, count_operators, add_dangling_ops
 

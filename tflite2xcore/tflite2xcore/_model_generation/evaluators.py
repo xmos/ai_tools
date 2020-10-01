@@ -29,7 +29,7 @@ class Evaluator(RunnerDependent):
         self,
         runner: Runner,
         input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
-        model_hook: Hook[Union[tf.keras.Model, "TFLiteModel"]],
+        model_hook: Hook[Union[tf.keras.Model, TFLiteModel]],
     ) -> None:
         self._runner = runner
         self._input_data_hook = input_data_hook
@@ -70,7 +70,7 @@ class TFLiteEvaluator(Evaluator):
         self,
         runner: Runner,
         input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
-        model_hook: Hook["TFLiteModel"],
+        model_hook: Hook[TFLiteModel],
     ) -> None:
         super().__init__(runner, input_data_hook, model_hook)
 
@@ -93,7 +93,7 @@ class TFLiteQuantEvaluator(TFLiteEvaluator):
         self,
         runner: Runner,
         input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
-        model_hook: Hook["TFLiteModel"],
+        model_hook: Hook[TFLiteModel],
     ) -> None:
         super().__init__(runner, input_data_hook, model_hook)
 

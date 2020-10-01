@@ -5,7 +5,7 @@ from typing import Tuple, Optional
 
 from . import Configuration
 from .utils import parse_init_config
-from .runners import Runner, RunnerDependent
+from .runners import RunnerDependent
 
 
 class DataFactory(RunnerDependent):

@@ -1,6 +1,5 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import dill  # type: ignore
 import logging
 import tensorflow as tf  # type: ignore
 from pathlib import Path
@@ -10,7 +9,6 @@ from contextlib import contextmanager
 
 from tflite2xcore.utils import set_all_seeds, LoggingContext  # type: ignore # TODO: fix this
 
-from . import Configuration
 from .runners import Runner, RunnerDependent
 
 

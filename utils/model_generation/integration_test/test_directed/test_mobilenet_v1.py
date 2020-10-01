@@ -13,7 +13,8 @@ from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore._model_generation import Configuration
 
-from . import IntegrationTestModelGenerator, test_idempotence
+from . import IntegrationTestModelGenerator
+from . import test_idempotence  # pylint: disable=unused-import
 
 
 #  ----------------------------------------------------------------------------

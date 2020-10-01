@@ -6,8 +6,8 @@ from typing import Type
 
 from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
 
-from . import (
-    Pool2dGenericTestModelGenerator,
+from . import Pool2dGenericTestModelGenerator
+from . import (  # pylint: disable=unused-import
     test_output,
     test_converted_single_op_model,
     test_idempotence,

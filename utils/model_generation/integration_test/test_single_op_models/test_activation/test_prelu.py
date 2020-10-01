@@ -8,8 +8,8 @@ from tflite2xcore.xcore_schema import BuiltinOpCodes  # type: ignore # TODO: fix
 from tflite2xcore._model_generation import Configuration
 from tflite2xcore._model_generation.utils import parse_init_config
 
-from . import (
-    ChannelAgnosticOpTestModelGenerator,
+from . import ChannelAgnosticOpTestModelGenerator
+from . import (  # pylint: disable=unused-import
     test_output,
     test_converted_single_op_model,
     test_idempotence,

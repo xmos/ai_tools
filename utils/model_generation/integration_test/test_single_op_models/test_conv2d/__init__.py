@@ -59,7 +59,7 @@ class ExplicitPaddingMixin(AbstractConv2dTestModelGenerator):
         self._config.update({key: cfg.pop(key, 1) for key in self._PAD_KEYS})
         super()._set_config(cfg)
 
-    def check_config(self):
+    def check_config(self) -> None:
         super().check_config()
         for key in self._PAD_KEYS:
             assert self._config[key] >= 0, f"{key} must non-negative"

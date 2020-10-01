@@ -89,88 +89,88 @@ void conv2d_deep_init(
 
 
 
-/** 
- * @brief Initialize an instance of the @oper{conv2d_shallowin} operator.
- * 
- * See @oper_ref{conv2d_shallowin} for more details about the @oper{conv2d_shallowin} operator. To invoke a 
- * @oper{conv2d_shallowin} job, call conv2d_shallowin().
- * 
- * When conv2d_shallowin() is called, a plan (`nn_conv2d_shallowin_plan_t`) and a job (`nn_conv2d_shallowin_job_t`) must 
- * be supplied to tell it how to do its work. This function initializes that plan and one or more jobs to be supplied in 
- * subsequent calls to conv2d_shallowin().
- * 
- * A plan contains information shared by all jobs of an instance of @oper{conv2d_shallowin}. Each job computes a 
- * rectangular sub-tensor of the output image (possibly the entire image).
- * 
- * `plan` points to the plan to be initialized. It need only be initialized once for many calls to conv2d_shallowin().
- * 
- * `jobs` points to an array of `nn_conv2d_shallowin_job_t` to be initialized. Each element represents one job. There 
- * should be `job_count` elements in the array.
- * 
- * `x_params` points to the image parameters for the instance's input image @tensor{X}.
- * 
- * `y_params` points to the image parameters for the instance's output image @tensor{Y}.
- * 
- * `job_params` points to either an array of `nn_conv2d_job_params_t` structs or else is `NULL`. A `job_params` value of 
- * `NULL` indicates that there will only be a single job which computes the entire output image. If `job_params` is 
- * `NULL`, then `job_count` must be `1`. If `job_params` is not `NULL`, it must point to an array of `job_count` 
- * `nn_conv2d_job_params_t` elements.
- * 
- * In particular, job `k` will compute the output elements @math{Y[r,c,p]} for which:
- * @inlinecode
- *     job_params[k].start.rows <= r < job_params[k].start.rows + job_params[k].size.rows
- *     job_params[k].start.cols <= c < job_params[k].start.cols + job_params[k].size.cols
- *     job_params[k].start.channels <= p < job_params[k].start.channels + job_params[k].size.channels
- * @endinlinecode
- * 
- * If multiple jobs are specified, it is the user's responsibility to ensure that the supplied list of job params 
- * collectively computes the entire output image (no gaps) and does not compute any output values redundantly (no 
- * overlap).
- * 
- * `conv_window` points to a `nn_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
- * @math{W_{vert}}, @math{W_{hori}}, @math{W_{r0}} and @math{W_{c0}} hyperparameters (see @ref 
- * conv2d_shallowin_hyperparameters) which describe the relationship between the input image, the convolution window and 
- * the output image.
- * 
- * `conv_window->shape` specified @math{K_w} and @math{K_h}, the height and width of the convolution window. 
- * 
- * `conv_window->start` specifies @math{W_{r0}} and @math{W_{c0}}, the starting row and column of the convolution window 
- * in @tensor{X}'s coordinate space. For example, a `start` value of `(0,0)` indicates that the top-left pixel of the 
- * output image has the convolution window aligned with the top-left corner of the input image, with no implied padding 
- * at the top or left sides of the input image.
- * 
- * `conv_window->stride.horizontal` specifies @math{W_{vert}} and @math{W_{hori}}, the vertical and horizontal strides 
- * of the convolution window. The strides describe the number of pixels the convolution window moves (across the input 
- * image) with each pixel in the output image.
- * 
- * `zero_point` specifies @math{z_0}, the value associated with the (implied) padding space around the input image. For 
- * any output pixel whereupon the corresponding convolution window location in the input image extends beyond the bounds 
- * of the input image, those coefficients in the convolution window which are in the padding are multiplied by 
- * @math{z_0} rather than by values from the input image. All input channels currently share a common zero-point value.
- * 
- * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array), as 
- * well the number of elements in the `job_params` array if it is not `NULL`.
- * 
- * 
- * @param[out] plan         The plan to be initialized
- * @param[out] jobs         Array of jobs to be initialized
- * @param[in]  x_params     Parameters describing the shape of input image tensor @tensor{X}
- * @param[in]  y_params     Parameters describing the shape of output image tensor @tensor{Y}
- * @param[in]  job_params   Array with configuration parameters for each job, or `NULL`
- * @param[in]  conv_window  Parameters describing the relationship between the convolution window, the input image and 
- *                          the output image
- * @param[in]  zero_point   The value @math{z_0} to be used for padding (for all channels)
- * @param[in]  job_count    The number of jobs to initialize
- */
-void conv2d_shallowin_init(
-    nn_conv2d_shallowin_plan_t* plan,
-    nn_conv2d_shallowin_job_t* jobs,
-    const nn_image_params_t* x_params,
-    const nn_image_params_t* y_params,
-    const nn_conv2d_job_params_t* job_params,
-    const nn_window_params_t* conv_window,
-    const int8_t zero_point,
-    const unsigned job_count);
+// /** 
+//  * @brief Initialize an instance of the @oper{conv2d_shallowin} operator.
+//  * 
+//  * See @oper_ref{conv2d_shallowin} for more details about the @oper{conv2d_shallowin} operator. To invoke a 
+//  * @oper{conv2d_shallowin} job, call conv2d_shallowin().
+//  * 
+//  * When conv2d_shallowin() is called, a plan (`nn_conv2d_shallowin_plan_t`) and a job (`nn_conv2d_shallowin_job_t`) must 
+//  * be supplied to tell it how to do its work. This function initializes that plan and one or more jobs to be supplied in 
+//  * subsequent calls to conv2d_shallowin().
+//  * 
+//  * A plan contains information shared by all jobs of an instance of @oper{conv2d_shallowin}. Each job computes a 
+//  * rectangular sub-tensor of the output image (possibly the entire image).
+//  * 
+//  * `plan` points to the plan to be initialized. It need only be initialized once for many calls to conv2d_shallowin().
+//  * 
+//  * `jobs` points to an array of `nn_conv2d_shallowin_job_t` to be initialized. Each element represents one job. There 
+//  * should be `job_count` elements in the array.
+//  * 
+//  * `x_params` points to the image parameters for the instance's input image @tensor{X}.
+//  * 
+//  * `y_params` points to the image parameters for the instance's output image @tensor{Y}.
+//  * 
+//  * `job_params` points to either an array of `nn_conv2d_job_params_t` structs or else is `NULL`. A `job_params` value of 
+//  * `NULL` indicates that there will only be a single job which computes the entire output image. If `job_params` is 
+//  * `NULL`, then `job_count` must be `1`. If `job_params` is not `NULL`, it must point to an array of `job_count` 
+//  * `nn_conv2d_job_params_t` elements.
+//  * 
+//  * In particular, job `k` will compute the output elements @math{Y[r,c,p]} for which:
+//  * @inlinecode
+//  *     job_params[k].start.rows <= r < job_params[k].start.rows + job_params[k].size.rows
+//  *     job_params[k].start.cols <= c < job_params[k].start.cols + job_params[k].size.cols
+//  *     job_params[k].start.channels <= p < job_params[k].start.channels + job_params[k].size.channels
+//  * @endinlinecode
+//  * 
+//  * If multiple jobs are specified, it is the user's responsibility to ensure that the supplied list of job params 
+//  * collectively computes the entire output image (no gaps) and does not compute any output values redundantly (no 
+//  * overlap).
+//  * 
+//  * `conv_window` points to a `nn_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
+//  * @math{W_{vert}}, @math{W_{hori}}, @math{W_{r0}} and @math{W_{c0}} hyperparameters (see @ref 
+//  * conv2d_shallowin_hyperparameters) which describe the relationship between the input image, the convolution window and 
+//  * the output image.
+//  * 
+//  * `conv_window->shape` specified @math{K_w} and @math{K_h}, the height and width of the convolution window. 
+//  * 
+//  * `conv_window->start` specifies @math{W_{r0}} and @math{W_{c0}}, the starting row and column of the convolution window 
+//  * in @tensor{X}'s coordinate space. For example, a `start` value of `(0,0)` indicates that the top-left pixel of the 
+//  * output image has the convolution window aligned with the top-left corner of the input image, with no implied padding 
+//  * at the top or left sides of the input image.
+//  * 
+//  * `conv_window->stride.horizontal` specifies @math{W_{vert}} and @math{W_{hori}}, the vertical and horizontal strides 
+//  * of the convolution window. The strides describe the number of pixels the convolution window moves (across the input 
+//  * image) with each pixel in the output image.
+//  * 
+//  * `zero_point` specifies @math{z_0}, the value associated with the (implied) padding space around the input image. For 
+//  * any output pixel whereupon the corresponding convolution window location in the input image extends beyond the bounds 
+//  * of the input image, those coefficients in the convolution window which are in the padding are multiplied by 
+//  * @math{z_0} rather than by values from the input image. All input channels currently share a common zero-point value.
+//  * 
+//  * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array), as 
+//  * well the number of elements in the `job_params` array if it is not `NULL`.
+//  * 
+//  * 
+//  * @param[out] plan         The plan to be initialized
+//  * @param[out] jobs         Array of jobs to be initialized
+//  * @param[in]  x_params     Parameters describing the shape of input image tensor @tensor{X}
+//  * @param[in]  y_params     Parameters describing the shape of output image tensor @tensor{Y}
+//  * @param[in]  job_params   Array with configuration parameters for each job, or `NULL`
+//  * @param[in]  conv_window  Parameters describing the relationship between the convolution window, the input image and 
+//  *                          the output image
+//  * @param[in]  zero_point   The value @math{z_0} to be used for padding (for all channels)
+//  * @param[in]  job_count    The number of jobs to initialize
+//  */
+// void conv2d_shallowin_init(
+//     nn_conv2d_shallowin_plan_t* plan,
+//     nn_conv2d_shallowin_job_t* jobs,
+//     const nn_image_params_t* x_params,
+//     const nn_image_params_t* y_params,
+//     const nn_conv2d_job_params_t* job_params,
+//     const nn_window_params_t* conv_window,
+//     const int8_t zero_point,
+//     const unsigned job_count);
 
 
 /** 
@@ -412,8 +412,22 @@ void conv2d_shallowin(
     const nn_image_t* X,
     const nn_tensor_t* K,
     const nn_bso_block_t* BSO,
-    const nn_conv2d_shallowin_plan_t* plan,
-    const nn_conv2d_shallowin_job_t* job);
+    const int8_t zero_point,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* conv_window);
+
+void conv2d_shallowin_adv(
+    nn_image_t* Y,
+    const nn_image_t* X,
+    const nn_tensor_t* K,
+    const nn_bso_block_t* BSO,
+    const int8_t zero_point,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* conv_window,
+    const nn_window_op_job_params_t* job_params,
+    const nn_conv2d_shallowin_flags_e flags);
 
 
 /**

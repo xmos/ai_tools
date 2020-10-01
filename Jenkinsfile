@@ -64,7 +64,7 @@ pipeline {
             steps {
                 // below is how we can activate the tools
                 sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
-                      conda activate -p ai_tools_venv &&
+                      export PATH=\$(pwd)/ai_tools_venv/bin:\$PATH &&
                       make ci"""
                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
                 // This step collects these files for display in Jenkins UI

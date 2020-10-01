@@ -22,6 +22,10 @@ pipeline {
             description: 'Rebuild and push a new docker image'
         )
     }
+    environment {
+        //docker doesn't like forward slashes in its image tags
+        IMAGE_BRANCH_TAG=GIT_BRANCH.replace("/", "_")
+    }
 
     options { // plenty of things could go here
         //buildDiscarder(logRotator(numToKeepStr: '10'))
@@ -52,7 +56,7 @@ pipeline {
                     def image = docker.build('xmos/ai_tools')
                     docker.withRegistry('https://docker-repo.xmos.com', 'nexus') {
                         // always push to git branch (overwriting previous tags)
-                        image.push(GIT_BRANCH.replace("/", "_"))
+                        image.push(IMAGE_BRANCH_TAG)
                         if (GIT_BRANCH=='master') {
                             // most recent master build is then default image
                             image.push('latest')
@@ -69,7 +73,7 @@ pipeline {
             agent {
                 docker {
                     // grab latest image tagged with branch
-                    image 'xmos/ai_tools:' + GIT_BRANCH.replace("/", "_")
+                    image 'xmos/ai_tools:${IMAGE_BRANCH_TAG}'
                     registryUrl 'https://docker-repo.xmos.com'
                     alwaysPull true
                 }

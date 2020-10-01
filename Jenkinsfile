@@ -16,7 +16,7 @@ pipeline {
             defaultValue: false,
             description: 'Update all conda packages before building'
         )
-        booleanParam( // use to force a rebuild of the docker image, auto if Dockerfile modified
+        booleanParam( // use to force a rebuild of the docker image, auto if Dockerfile modified or first build
             name: 'PUSH_IMAGE',
             defaultValue: false,
             description: 'Rebuild and push a new docker image'
@@ -36,7 +36,11 @@ pipeline {
             //       the image treated as a separate versioned artifact
             when {
                 anyOf {
+                    // Not yet completed successfully
+                    expression { currentBuild.previousSuccessfulBuild == null }
+                    // Dockerfile updated
                     changeset 'Dockerfile'
+                    // Manual parameter
                     expression { return params.PUSH_IMAGE }
                 }
             }

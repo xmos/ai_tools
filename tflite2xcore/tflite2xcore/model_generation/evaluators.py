@@ -7,9 +7,9 @@ from typing import Union
 
 from tflite2xcore.interpreters import XCOREInterpreter  # type: ignore # TODO: fix this
 from tflite2xcore.utils import quantize, QuantizationTuple  # type: ignore # TODO: fix this
+from tflite2xcore.utils import apply_interpreter_to_examples
 
 from . import TFLiteModel, Hook
-from .utils import apply_interpreter_to_examples
 
 from .runners import Runner, RunnerDependent
 

@@ -4,7 +4,8 @@ import tensorflow as tf  # type: ignore
 from typing import Union, Dict, Any, TypeVar
 from typing_extensions import Protocol
 
-TFLiteModel = Union[bytes, bytearray]
+from tflite2xcore.utils import TFLiteModel  # type: ignore # TODO: fix this
+
 Configuration = Dict[str, Any]
 
 T_co = TypeVar("T_co", covariant=True)

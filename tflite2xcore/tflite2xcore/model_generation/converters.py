@@ -6,9 +6,9 @@ from typing import Union
 
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.converter import optimize_for_xcore  # type: ignore # TODO: fix this
+from tflite2xcore.utils import quantize_converter  # type: ignore # TODO: fix this
 
 from . import TFLiteModel, Configuration, Hook
-from .utils import quantize_converter
 
 from .runners import Runner, RunnerDependent
 

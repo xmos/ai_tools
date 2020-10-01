@@ -39,7 +39,7 @@ pipeline {
                     env.IMAGE_TAG = GIT_BRANCH.replace('/', '-')
                     try {
                         sh "docker pull docker-repo.xmos.com/xmos/ai_tools:${IMAGE_TAG}"
-                    } catch {
+                    } catch(err) {
                         env.IMAGE_EXISTS = false
                     }
                 }

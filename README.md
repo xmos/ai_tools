@@ -50,14 +50,15 @@ Docker Image
 ------------
 
 The Dockerfile provided is used in the CI system but can serve as a guide to system setup.
-It is also possible to grab images from the docker registry to run on your local machines.
+Installation of the XMOS tools requires connection to our network.
+
 ```
-docker pull docker-repo.xmos.com/xmos/ai_tools:latest
+docker build -t xmos/ai_tools .
 docker run -it \
     -v $(pwd):/ws \
     -u $(id -u):$(id -g)  \
     -w /ws  \
-    docker-repo.xmos.com/xmos/ai_tools:latest \
+    xmos/ai_tools \
     bash -l
 
 ```

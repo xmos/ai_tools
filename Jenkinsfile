@@ -52,7 +52,7 @@ pipeline {
                     def image = docker.build('xmos/ai_tools')
                     docker.withRegistry('https://docker-repo.xmos.com', 'nexus') {
                         // always push to git branch (overwriting previous tags)
-                        image.push(GIT_BRANCH)
+                        image.push(GIT_BRANCH.replace("/", "_"))
                         if (GIT_BRANCH=='master') {
                             // most recent master build is then default image
                             image.push('latest')
@@ -69,7 +69,7 @@ pipeline {
             agent {
                 docker {
                     // grab latest image tagged with branch
-                    image 'xmos/ai_tools:${GIT_BRANCH}'
+                    image 'xmos/ai_tools:${GIT_BRANCH.replace("/", "_")}'
                     registryUrl 'https://docker-repo.xmos.com'
                     alwaysPull true
                 }

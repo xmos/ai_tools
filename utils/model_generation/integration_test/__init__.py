@@ -11,7 +11,10 @@ from typing import Union, List, NamedTuple, Tuple, Dict, Optional, Iterable, Typ
 
 from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
-from tflite2xcore.model_generation import TFLiteModel, ModelGenerator, DataFactory
+from tflite2xcore.model_generation import (
+    TFLiteModel,
+    ModelGenerator,
+)
 from tflite2xcore.model_generation.runners import Runner, RunnerOutputs
 from tflite2xcore.model_generation.evaluators import (
     TFLiteQuantEvaluator,
@@ -21,6 +24,7 @@ from tflite2xcore.model_generation.converters import (
     TFLiteQuantConverter,
     XCoreConverter,
 )
+from tflite2xcore.model_generation.data_factories import InputInitializerDataFactory
 
 
 #  ----------------------------------------------------------------------------
@@ -41,7 +45,9 @@ class IntegrationTestRunner(Runner):
     models: RunnerModels
 
     def __init__(self, generator: Type["IntegrationTestModelGenerator"]) -> None:
-        self._repr_data_factory = DataFactory(self)
+        self._repr_data_factory = InputInitializerDataFactory(
+            self, lambda: self._model_generator.input_shape
+        )
 
         self._reference_converter = TFLiteQuantConverter(
             self, lambda: self._model_generator._model, self.get_quantization_data
@@ -75,9 +81,7 @@ class IntegrationTestRunner(Runner):
             return self._quantization_data
         except AttributeError:
             try:
-                self._quantization_data = self._repr_data_factory.make_data(
-                    shape=self._model_generator.input_shape, batch=10
-                )
+                self._quantization_data = self._repr_data_factory.make_data(10)
             except AttributeError:
                 raise Exception(
                     "Cannot get quantization data before runner is run!"

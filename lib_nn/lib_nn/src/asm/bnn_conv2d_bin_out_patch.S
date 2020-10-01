@@ -3,97 +3,90 @@
 .issue_mode  dual
 
 //Plan layout
-#define PLAN_OUTER_X_H_STEP        0
-#define PLAN_OC_LOOP_COUNTER       1
-#define PLAN_THRESHOLD_P           2
+#define PLAN_K_HEIGHT_LOOP_COUNTER 0
+#define PLAN_DATA_SCRATCH          1
+#define PLAN_K_WIDTH_LOOP_COUNTER  2
 #define PLAN_INNER_X_V_STEP        3
-#define PLAN_K_V_STEP              4
-#define PLAN_INNER_X_H_STEP        5
-#define PLAN_K_H_STEP              6
-#define PLAN_OUTER_X_V_STEP        7
-
-#define PLAN_Y_V_STEP              8
-#define PLAN_K_HEIGHT_LOOP_COUNTER 9
-#define PLAN_K_WIDTH_LOOP_COUNTER  10
-#define PLAN_X_HEIGHT_LOOP_COUNTER 11
-#define PLAN_X_WIDTH_LOOP_COUNTER  12
-#define PLAN_IC_LOOP_COUNTER       13
-#define PLAN_Y_P                   14
-#define PLAN_X_P                   15
-
-#define PLAN_K_P                   16
-#define PLAN_DATA_SCRATCH          17
-#define PLAN_PATCH_LOOP_COUNTER    18
+#define PLAN_INNER_X_H_STEP        4 
+#define PLAN_DATA_SCRATCH_ADJUST   5
+#define PLAN_OC_LOOP_COUNTER       6 
+#define PLAN_THRESHOLD_P           7
+#define PLAN_X_p                   8
+#define PLAN_OUTER_X_H_STEP        9
+#define PLAN_OUTER_X_V_STEP        10 
+#define PLAN_Y_V_STEP              11 
+#define PLAN_PATCH_LOOP_COUNTER    12   
+#define PLAN_X_WIDTH_LOOP_COUNTER  13  
+#define PLAN_K_p                   14 
+#define PLAN_X_HEIGHT_LOOP_COUNTER 15  
+#define PLAN_IC_LOOP_COUNTER       16
+#define PLAN_K_ADJUST              17  
+#define PLAN_Y_p                   18
 
 //Stack Usage
 
-#define S_0       0
-#define S_1       1
+#define S_0                     0
+#define S_SAVE_R10              1
 
-#define S_SAVE_R4 2
-#define S_SAVE_R5 3
+#define S_SAVE_R4               2
+#define S_SAVE_R5               3
 
-#define S_SAVE_R6 4
-#define S_SAVE_R7 5
+#define S_SAVE_R6               4
+#define S_SAVE_R7               5
 
 #define S_SAVE_R8               6
 #define S_SAVE_R9               7
 
-#define S_SAVE_R10              8
-#define S_K_p                   9 
+#define S_THRESHOLDS_0_15       8
+#define S_THRESHOLDS_16_31      9
 
-#define S_THRESHOLDS_0_15       10
-#define S_THRESHOLDS_16_31      11
+#define S_K_HEIGHT_LOOP_COUNTER 10
+#define S_DATA_SCRATCH          11
 
-#define S_X_p                   12
-#define S_OUTER_X_H_STEP        13
+#define S_K_WIDTH_LOOP_COUNTER  12
+#define S_INNER_X_V_STEP        13
 
-#define S_OC_LOOP_COUNTER       14 
-#define S_THRESHOLD_P           15 
+#define S_INNER_X_H_STEP        14 
+#define S_DATA_SCRATCH_ADJUST   15
 
-#define S_INNER_X_V_STEP        16
-#define S_K_V_STEP              17
+#define S_OC_LOOP_COUNTER       16 
+#define S_THRESHOLD_P           17
 
-#define S_INNER_X_H_STEP        18 
-#define S_K_H_STEP              19
-
+#define S_X_p                   18
+#define S_OUTER_X_H_STEP        19
+ 
 #define S_OUTER_X_V_STEP        20 
 #define S_Y_V_STEP              21 
 
-#define S_K_HEIGHT_LOOP_COUNTER 22
-#define S_K_WIDTH_LOOP_COUNTER  23
-
-#define S_X_HEIGHT_LOOP_COUNTER 24 
-#define S_X_WIDTH_LOOP_COUNTER  25
-
-#define S_IC_LOOP_COUNTER       26 
-#define S_DATA_SCRATCH          27
-#define S_PATCH_LOOP_COUNTER    30
-
-//Note: The elements 27 -> 30 will be clobbered when copying the plan to the stack
-//      this might mean leaving some spare stack space
+#define S_PATCH_LOOP_COUNTER    22   //wants to be next to S_DATA_SCRATCH
+#define S_X_WIDTH_LOOP_COUNTER  23   //wants to be next to S_X_p
+#define S_K_p                   24   //wants to be next to S_X_p
+#define S_X_HEIGHT_LOOP_COUNTER 25  
+#define S_IC_LOOP_COUNTER       26
+#define S_K_ADJUST              27  
+#define S_Y_p                   28
 
 //doesn't have to be double work aligned
-#define S_ZERO_0 31
-#define S_ZERO_1 32 
-#define S_ZERO_2 33
-#define S_ZERO_3 34
-#define S_ZERO_4 35
-#define S_ZERO_5 36
-#define S_ZERO_6 37
-#define S_ZERO_7 38
+#define S_ZERO_0 29
+#define S_ZERO_1 30 
+#define S_ZERO_2 31
+#define S_ZERO_3 32
+#define S_ZERO_4 33
+#define S_ZERO_5 34
+#define S_ZERO_6 35
+#define S_ZERO_7 36
 
 //Helpers that reference the above
-#define S_SAVE_R4_R5 (S_SAVE_R4/2) //0
-#define S_SAVE_R6_R7 (S_SAVE_R6/2)
-#define S_SAVE_R8_R9 (S_SAVE_R8/2)
-#define S_SAVE_R10_K_p (S_SAVE_R10/2)
-#define S_X_p_S_OUTER_X_H_STEP (S_X_p/2)
-#define S_THRESHOLDS (S_THRESHOLDS_0_15/2)
-#define S_OC_LOOP_COUNTER_THRESHOLD_P (S_OC_LOOP_COUNTER/2)
-#define S_INNER_V_STEPS (S_INNER_X_V_STEP/2)
-#define S_INNER_H_STEPS (S_INNER_X_H_STEP/2)
-#define S_OUTER_X_V_STEP_Y_V_STEP (S_OUTER_X_V_STEP/2)
+#define S_SAVE_R4_R5 (S_SAVE_R4/2)                  //1
+#define S_SAVE_R6_R7 (S_SAVE_R6/2)                  //2
+#define S_SAVE_R8_R9 (S_SAVE_R8/2)                  //3
+#define S_THRESHOLDS (S_THRESHOLDS_0_15/2)          //4
+#define S_K_HEIGHT_LOOP_COUNTER_DATA_SCRATCH (S_K_HEIGHT_LOOP_COUNTER/2)    //5
+#define S_K_WIDTH_LOOP_COUNTER_INNER_X_V_STEP (S_K_WIDTH_LOOP_COUNTER/2)    //6
+#define S_INNER_X_H_STEP_DATA_SCRATCH_ADJUST (S_INNER_X_H_STEP/2)           //7
+#define S_OC_LOOP_COUNTER_THRESHOLD_P (S_OC_LOOP_COUNTER/2)                 //8
+#define S_X_p_OUTER_X_H_STEP (S_X_p/2)                                      //9
+#define S_OUTER_X_V_STEP_Y_V_STEP (S_OUTER_X_V_STEP/2)                      //10
 
 #define S_ZERO_256 S_ZERO_0
 
@@ -102,8 +95,8 @@
 #define Y_p               r0
 #define X_p               r1
 #define K_p               r2
-#define threshold_current r3 //These are never used at the same time
-#define D_p               r3 //These are never used at the same time
+#define threshold_current r3 //threshold_current and D_p are never used at the same time
+#define D_p               r3 
 
 #define k_height_loop     r4
 #define k_width_loop      r5
@@ -113,29 +106,31 @@
 #define x_width_loop      r9
 #define s                 r10
 #define t                 r11
-.align 4
+
+
+.align 4 //TODO align correctly
 bnn_make_patch:
 
-    ldw D_p, sp[S_DATA_SCRATCH]
-
-    {ldw k_height_loop, sp[S_K_HEIGHT_LOOP_COUNTER]; nop}
+    ldd D_p, k_height_loop, sp[S_K_HEIGHT_LOOP_COUNTER_DATA_SCRATCH]
     bnn_kh_loop:
-        
-        {ldw k_width_loop, sp[S_K_WIDTH_LOOP_COUNTER]; nop}
+
+        //This could be hoisted and executed on the output
+        {ldw k_width_loop, sp[S_K_WIDTH_LOOP_COUNTER]; nop} 
+
         bnn_kw_loop:
   
             {ldw ic_loop_counter, sp[S_IC_LOOP_COUNTER]; nop}
             bnn_ic_inner_loop:
-                {vldc X_p[0];      add X_p, X_p, r_256_bits}
-                {vstc D_p[0];      add D_p, D_p, r_256_bits} //D_p needs space for the overrun
+                {vldd X_p[0];      add X_p, X_p, r_256_bits}
+                {vstd D_p[0];      add D_p, D_p, r_256_bits} //D_p needs space for the overrun
             {bt ic_loop_counter, bnn_ic_inner_loop; sub ic_loop_counter, ic_loop_counter, 1}
 
-            ldd s, t, sp[S_INNER_H_STEPS]
+            ldd s, t, sp[S_INNER_X_H_STEP_DATA_SCRATCH_ADJUST]
             {add X_p, X_p, t; add D_p, D_p, s} //this can rewind D_p up to 256 - 32 bits
 
         {bt k_width_loop, bnn_kw_loop; sub k_width_loop, k_width_loop, 1}
 
-        ldd s, t, sp[S_INNER_V_STEPS]
+        ldd s, t, sp[S_K_WIDTH_LOOP_COUNTER_INNER_X_V_STEP] //S_K_WIDTH_LOOP_COUNTER and S_INNER_X_V_STEP should be together
         {add X_p, X_p, t; nop }
 
     {bt k_height_loop, bnn_kh_loop; sub k_height_loop, k_height_loop, 1}
@@ -144,15 +139,18 @@ bnn_make_patch:
     vstr D_p[0]   //D_p points to the final (possibly-partial) set of data //buffer needs to be at most 256 bits too big
 
     retsp 0
-.align 4
-bnn_compute:
 
+.align 4 //TODO align correctly
+bnn_compute_patch:
+
+    {ldc s, 32; nop}
     {vldr t[0]; add threshold_current, threshold_current, s}
     {vldd threshold_current[0]; add threshold_current, threshold_current, s}
 
-    {ldw patch_loop, sp[S_PATCH_LOOP_COUNTER]; nop}
+    {ldw t, sp[S_PATCH_LOOP_COUNTER]; nop}
+    {ldw s, sp[S_DATA_SCRATCH]; nop}
     bnn_patch_loop:
-        {vldc D_p[0];      add D_p, D_p, r_256_bits}
+        {vldc s[0];        add s, s, r_256_bits}
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
@@ -172,9 +170,9 @@ bnn_compute:
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-    {bt patch_loop, bnn_patch_loop; sub patch_loop, patch_loop, 1}
-
-    retsp 0
+    {bt t, bnn_patch_loop; sub t, t, 1}
+    {ldw t, sp[S_K_ADJUST]; nop} // This compensates for the overrun if it happened
+    {retsp 0; add K_p, K_p, t}
 
 /*
 void bnn_conv2d_bin_out_patch_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
@@ -182,7 +180,7 @@ void bnn_conv2d_bin_out_patch_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
 
 #define FUNCTION_NAME bnn_conv2d_bin_out_patch_asm
 
-#define NSTACKWORDS  40 //FIXME
+#define NSTACKWORDS  40 //FIXME should be lower
     
 .text
 .issue_mode  dual
@@ -196,28 +194,25 @@ FUNCTION_NAME:
     std r4, r5, sp[S_SAVE_R4_R5]
     std r6, r7, sp[S_SAVE_R6_R7]
     std r8, r9, sp[S_SAVE_R8_R9]
-    std r2, r10, sp[S_SAVE_R10_K_p]
+    stw r10, sp[S_SAVE_R10]
 
 	ldc r11, 256 //set int16 mode - 32 bit accumulators	
     {vsetc r11; shr r_256_bits, r11, 3} 
     
-    {mov t, r0;  ldc s, PLAN_Y_P}
-    {ldw r0, t[s]; ldc s, PLAN_X_P} //put PLAN_Y_P into r0
-    {ldw r1, t[s]; ldc s, PLAN_K_P}
+    {mov t, r0;  ldc s, PLAN_Y_p}
+    {ldw r0, t[s]; ldc s, PLAN_X_p} //put PLAN_Y_P into r0
+    {ldw r1, t[s]; ldc s, PLAN_K_p}
     {ldw r2, t[s]; nop}
 
-    stw r1, sp[S_X_p]   //put PLAN_X_P into S_X_p and r1---- this seems unnessessary CHECK
-    stw r2, sp[S_K_p]   //put PLAN_K_P into S_K_p and r2
-    
     {vldr t[0];  add t, t, r_256_bits}
-    ldaw s, sp[S_OUTER_X_H_STEP]
+    ldaw s, sp[S_K_HEIGHT_LOOP_COUNTER] //this is where we will start the plan copy from
     {vstr s[0]; add s, s, r_256_bits}
 
     {vldr t[0]; add t, t, r_256_bits}
-    {vstr s[0]; add s, s, r_256_bits} 
+    {vstr s[0]; add s, s, r_256_bits} //second copy
 
     {vldr t[0]; add t, t, r_256_bits}
-    {vstr s[0]; add s, s, r_256_bits} 
+    {vstr s[0]; add s, s, r_256_bits} //third copy 
 
     //Set up the zeros (and clear the over write from the vector copy)
     ldaw t, sp[S_ZERO_0]
@@ -229,8 +224,8 @@ FUNCTION_NAME:
         {ldw x_width_loop, sp[S_X_WIDTH_LOOP_COUNTER]; nop}
         bnn_w_loop:
 
-            {ldw X_p, sp[S_X_p]; }
-            {bl bnn_make_patch ; }
+            {ldw X_p, sp[S_X_p]; } //this could be hoisted
+            {bl bnn_make_patch ; nop}
 
             //init K_p
             {ldw K_p, sp[S_K_p]; nop}
@@ -239,7 +234,7 @@ FUNCTION_NAME:
 
             bnn_oc_loop: //this loops over (output_channels/32)
             
-                {bl bnn_compute ; mov t, threshold_current }
+                {bl bnn_compute_patch ; mov t, threshold_current }
 
                 ldaw s, sp[S_THRESHOLDS_0_15]
                 ldaw t, sp[S_ZERO_256] //TODO use the constant pool
@@ -247,7 +242,7 @@ FUNCTION_NAME:
                 {vdepth1; ldc t, 3}
                 vstrpv s[0], t
 
-                {bl bnn_compute ; mov t, threshold_current }
+                {bl bnn_compute_patch ; mov t, threshold_current }
 
                 ldaw s, sp[S_THRESHOLDS_16_31] 
                 ldaw t, sp[S_ZERO_256] //TODO use the constant pool
@@ -265,7 +260,7 @@ FUNCTION_NAME:
             {bt oc_loop_counter, bnn_oc_loop; sub oc_loop_counter, oc_loop_counter, 1}
 
             //advance X by one(STEP) to the right
-            ldd X_p, t, sp[S_X_p_S_OUTER_X_H_STEP]
+            ldd X_p, t, sp[S_X_p_OUTER_X_H_STEP]
             {add X_p, X_p, t; nop }
             stw X_p, sp[S_X_p]
 
@@ -285,7 +280,7 @@ FUNCTION_NAME:
     ldd r4, r5, sp[S_SAVE_R4_R5]
     ldd r6, r7, sp[S_SAVE_R6_R7]
     ldd r8, r9, sp[S_SAVE_R8_R9]
-    ldd r2, r10, sp[S_SAVE_R10_K_p]
+    ldw r10, sp[S_SAVE_R10]
     retsp NSTACKWORDS
 
     .cc_bottom FUNCTION_NAME.function

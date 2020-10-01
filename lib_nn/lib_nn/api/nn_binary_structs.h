@@ -9,6 +9,9 @@
  * @note This struct is intended to be opaque.
  */
 typedef struct {
+
+    //These are in a specific order - do not change
+
   unsigned outer_x_h_step;
   unsigned output_channel_loop_counter;
   void* threshold_p;
@@ -39,9 +42,31 @@ typedef struct {
  * @note This struct is intended to be opaque.
  */
 typedef struct {
-  nn_bnn_conv2d_bin_out_asm_plan_t d;
-  bnn_b256_t * data_scratch;
+
+    //These are in a pacific order - do not change
+
+  unsigned k_height_loop_counter;
+  bnn_b32_t * data_scratch;
+  unsigned k_width_loop_counter;
+  unsigned inner_x_v_step;
+  unsigned inner_x_h_step;
+  int data_scratch_adjust;
+  unsigned output_channel_loop_counter;
+  int32_t * threshold_p;
+
+  bnn_b32_t* X;
+  unsigned outer_x_h_step;
+  int outer_x_v_step;
+  unsigned y_v_step;
   unsigned patch_loop_counter;
+  unsigned x_width_loop_counter;
+  bnn_b32_t* K;
+  unsigned x_height_loop_counter;
+
+  unsigned input_channel_loop_counter;
+  int k_p_adjust;    //the amount to advance the kernel pointer after applying it
+  bnn_b32_t* Y;
+
 } nn_bnn_conv2d_bin_out_patch_asm_plan_t;
 
 

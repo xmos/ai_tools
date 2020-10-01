@@ -6,7 +6,7 @@ typedef int8_t bnn_bool_t;
 typedef int32_t bnn_b32_t;
 
 typedef struct bnn_b256_t {
-  uint32_t d[8];
+  uint32_t d[8]; //TODO make bnn_b32_t
 } bnn_b256_t;
 
 #endif //NN_BNN_TYPES_H

@@ -13,6 +13,44 @@
 //This is the amount that the VLMUL instruction shifts the product of C and R by.
 static const unsigned post_vlmul_shr = 14;
 
+
+unsigned xor_pop_32(bnn_b32_t* a, bnn_b32_t* b) {
+  unsigned c = 0;
+  unsigned t = sizeof(bnn_b256_t);
+  bnn_b32_t v = (*a) ^ (*b);
+ #if defined(__XS3A__)
+    v = ~v;
+    for (unsigned i = 0; i < t * 8; i++) {
+      c += (v & 1);
+      v >>= 1;
+    }
+    #else
+    c += __builtin_popcount(~v);
+    #endif
+  return c;
+}
+
+//TODO make xor_pop_256 from xor_pop_32
+unsigned xor_pop_256(bnn_b256_t* a, bnn_b256_t* b) {
+  unsigned t = sizeof(((bnn_b256_t*)0)->d[0]);
+  unsigned elements = sizeof(((bnn_b256_t*)0)->d) / t;
+
+  unsigned c = 0;
+  for (unsigned e = 0; e < elements; e++) {
+    uint32_t v = a->d[e] ^ b->d[e];
+ #if defined(__XS3A__)
+    v = ~v;
+    for (unsigned i = 0; i < t * 8; i++) {
+      c += (v & 1);
+      v >>= 1;
+    }
+    #else
+    c += __builtin_popcount(~v);
+    #endif
+  }
+  return c;
+}
+
 void bnn_reorder_threshold_tensor(const int32_t* thresh_boggled,
                                   const int32_t* thresholds_ref,
                                   const unsigned chans_out,
@@ -122,24 +160,73 @@ void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
   }
 }
 
-unsigned xor_pop(bnn_b256_t* a, bnn_b256_t* b) {
-  unsigned t = sizeof(((bnn_b256_t*)0)->d[0]);
-  unsigned elements = sizeof(((bnn_b256_t*)0)->d) / t;
 
-  unsigned c = 0;
-  for (unsigned e = 0; e < elements; e++) {
-    uint32_t v = a->d[e] ^ b->d[e];
- #if defined(__XS3A__)
-    v = ~v;
-    for (unsigned i = 0; i < t * 8; i++) {
-      c += (v & 1);
-      v >>= 1;
+WEAK_FUNC
+void bnn_conv2d_bin_out_patch(bnn_b32_t* Y_p,
+    const bnn_b32_t* X_p, const bnn_b32_t* K_p, const int32_t* thresholds,
+    bnn_b32_t * data_scratch,
+    
+    const nn_image_params_t* x, //The full image of x
+    const nn_image_params_t* y, // the full image of y
+    const nn_window_params_t* k, //the full kernel k
+    
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height,
+
+    const unsigned x_loc_x, const unsigned x_loc_y, 
+    
+    const unsigned k_loc_x, const unsigned k_loc_y, 
+    const unsigned k_sub_width, const unsigned k_sub_height
+) {
+
+  const unsigned channels_per_output_write = 32;
+  const unsigned channels_per_input_word = 32;
+  const unsigned chan_b32_in = (x->channels + channels_per_input_word - 1) / channels_per_input_word;
+  const unsigned chan_b32_out = (y->channels + channels_per_output_write - 1) / channels_per_output_write;
+
+  const unsigned h_stride = k->stride.horizontal;
+  const unsigned v_stride = k->stride.vertical;  
+  const unsigned h_dilation = k->dilation.horizontal;
+  const unsigned v_dilation = k->dilation.vertical;  
+
+  bnn_b32_t(*Y)[y->width][chan_b32_out] =
+      (bnn_b32_t(*)[y->width][chan_b32_out])Y_p;
+
+  bnn_b32_t(*X)[x->width][chan_b32_in] =
+      (bnn_b32_t(*)[x->width][chan_b32_in])X_p;
+
+  bnn_b32_t(*K)[k->shape.height][k->shape.width][chan_b32_in] =
+      (bnn_b32_t(*)[k->shape.height][k->shape.width][chan_b32_in])K_p;
+
+  unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
+  unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
+
+  for (unsigned h = x_loc_y; h < (x_loc_y + x_sub_height) - k_sub_height + 1; h += v_stride) {
+    for (unsigned w = x_loc_x; w < (x_loc_x + x_sub_width) - k_sub_width + 1; w += h_stride) {
+      for (unsigned oc_word = 0; oc_word < chan_b32_out; oc_word += 1) {
+        bnn_b32_t bitpacked_column = 0;
+
+        for (unsigned oc_bit = 0; oc_bit < channels_per_output_write; oc_bit += 1) {
+          unsigned oc = oc_bit + (channels_per_output_write * oc_word);
+          int32_t sum = 0;
+          for (unsigned kh = k_loc_y; kh < k_loc_y + k_sub_height; kh += 1) {
+            for (unsigned kw = k_loc_x; kw < k_loc_x + k_sub_width; kw += 1) {
+              for (unsigned ic = 0; ic < chan_b32_in; ic += 1) {
+                sum += xor_pop_32(&(X[h + kh][w + kw][ic]), &(K[oc][kh][kw][ic]));
+              }
+            }
+          }
+
+          sum = (k->shape.height * k->shape.width * chan_b32_in * channels_per_input_word) - sum;
+          unsigned bit = sum > thresholds[oc];
+          if (bit) bitpacked_column |= 1ULL << oc_bit;
+        }
+        Y[y_loc_y + ((h-x_loc_y) / v_stride)][y_loc_x + ((w-x_loc_x) / h_stride)][oc_word] = bitpacked_column;
+      }
     }
-    #else
-    c += __builtin_popcount(~v);
-    #endif
   }
-  return c;
+
+
 }
 
 WEAK_FUNC
@@ -191,7 +278,7 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
           for (unsigned kh = k_loc_y; kh < k_loc_y + k_sub_height; kh += 1) {
             for (unsigned kw = k_loc_x; kw < k_loc_x + k_sub_width; kw += 1) {
               for (unsigned ic = 0; ic < chan_b256_in; ic += 1) {
-                sum += xor_pop(&(X[h + kh][w + kw][ic]), &(K[oc][kh][kw][ic]));
+                sum += xor_pop_256(&(X[h + kh][w + kw][ic]), &(K[oc][kh][kw][ic]));
               }
             }
           }
@@ -263,7 +350,7 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
         for (unsigned kh = k_loc_y; kh < k_loc_y + k_sub_height; kh += 1) {
           for (unsigned kw = k_loc_x; kw < k_loc_x + k_sub_width; kw += 1) {
             for (unsigned ic = 0; ic < chan_b256_in; ic += 1) {
-              sum += xor_pop(&(X[h + kh][w + kw][ic]), &(K[oc][kh][kw][ic]));
+              sum += xor_pop_256(&(X[h + kh][w + kw][ic]), &(K[oc][kh][kw][ic]));
             }
           }
         }

@@ -143,16 +143,7 @@ static void conv2d_depthwise_prepare(
     if(CONV2D_PREPARE_ERROR_DETECTION_ENABLE){
         assert(x_params->channels % 4 == 0);
         assert(x_params->channels == y_params->channels);
-    }
 
-    const unsigned x_row_bytes = x_params->width * x_params->channels;
-    const unsigned y_row_bytes = y_params->width * y_params->channels;
-    const unsigned k_row_bytes = conv_window->shape.width * y_params->channels;
-
-    job->stride.row.X = x_row_bytes - x_params->channels * conv_window->shape.width;
-    job->stride.col.window = x_params->channels * conv_window->stride.horizontal;
-    
-    if(CONV2D_PREPARE_ERROR_DETECTION_ENABLE){
         assert(job_params->start.rows >= 0 && job_params->start.cols >= 0 && job_params->start.channels >= 0);
         assert(job_params->start.rows + job_params->size.rows <= y_params->height);
         assert(job_params->start.cols + job_params->size.cols <= y_params->width);
@@ -177,6 +168,13 @@ static void conv2d_depthwise_prepare(
             assert(bounds.left < ((int)x_params->width));
         }
     }
+
+    const unsigned x_row_bytes = x_params->width * x_params->channels;
+    const unsigned y_row_bytes = y_params->width * y_params->channels;
+    const unsigned k_row_bytes = conv_window->shape.width * y_params->channels;
+
+    job->stride.row.X = x_row_bytes - x_params->channels * conv_window->shape.width;
+    job->stride.col.window = x_params->channels * conv_window->stride.horizontal;
 
     job->stride.row.window  = x_row_bytes * conv_window->stride.vertical;
     job->stride.row.Y       = y_row_bytes;

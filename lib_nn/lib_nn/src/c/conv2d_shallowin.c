@@ -24,7 +24,7 @@ typedef struct {
 
 
 /**
- * Struct represents the job-specific parameters required to execute a `conv2d_deep()` operation. 
+ * Struct represents the job-specific parameters required to execute a `conv2d_shallowin()` operation. 
  */
 typedef struct {
 
@@ -118,7 +118,6 @@ static void conv2d_shallowin_adjust_starts(
                             + job_params->start.rows * conv_window->stride.vertical * x_row_bytes
                             + job_params->start.cols * conv_window->stride.horizontal * x_params->channels;
 
-                            
     *X = ADDR(*X, start_X);
     *Y = ADDR(*Y, start_Y);
     *K = ADDR(*K, start_K);
@@ -143,17 +142,7 @@ void conv2d_shallowin_prepare(
         assert(y_params->channels % 4 == 0);
         // The product of the input channels and kernel width must be <= VPU_INT8_EPV
         assert(x_params->channels * conv_window->shape.width <= VPU_INT8_EPV);
-    }
-
-    const unsigned k_array_width = VPU_INT8_EPV / x_params->channels;
-
-    const unsigned x_row_bytes = x_params->width * x_params->channels;
-    const unsigned y_row_bytes = y_params->width * y_params->channels;
-
-    job->stride.row.X = x_row_bytes;
-    
-    
-    if(CONV2D_INIT_ERROR_DETECTION_ENABLE){
+        
         // Start can never be negative
         assert(job_params->start.rows >= 0 
             && job_params->start.cols >= 0 
@@ -187,6 +176,13 @@ void conv2d_shallowin_prepare(
             assert(bounds.left < ((int)x_params->width));
         }
     }
+
+    const unsigned k_array_width = VPU_INT8_EPV / x_params->channels;
+
+    const unsigned x_row_bytes = x_params->width * x_params->channels;
+    const unsigned y_row_bytes = y_params->width * y_params->channels;
+
+    job->stride.row.X = x_row_bytes;
 
     job->stride.row.window  = x_row_bytes * conv_window->stride.vertical;
     job->stride.row.Y       = y_row_bytes;

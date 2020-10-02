@@ -19,7 +19,7 @@ from typing import (
     Optional,
 )
 
-from tflite2xcore.utils import dequantize
+from tflite2xcore.utils import dequantize  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation import (
     TFLiteModel,

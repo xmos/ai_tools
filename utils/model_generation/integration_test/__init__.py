@@ -7,21 +7,23 @@ import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 from abc import abstractmethod
 from pathlib import Path
-from typing import Union, List, NamedTuple, Tuple, Dict, Optional, Iterable
+from typing import Union, List, NamedTuple, Tuple, Dict, Optional, Iterable, Type
 
-from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
-from tflite2xcore._model_generation import TFLiteModel
-from tflite2xcore._model_generation.model_generators import KerasModelGenerator
-from tflite2xcore._model_generation.runners import Runner, RunnerOutputs
-from tflite2xcore._model_generation.evaluators import (
+from tflite2xcore.model_generation import (
+    TFLiteModel,
+    ModelGenerator,
+)
+from tflite2xcore.model_generation.runners import Runner
+from tflite2xcore.model_generation.evaluators import (
     TFLiteQuantEvaluator,
     XCoreEvaluator,
 )
-from tflite2xcore._model_generation.converters import (
+from tflite2xcore.model_generation.converters import (
     TFLiteQuantConverter,
     XCoreConverter,
 )
+from tflite2xcore.model_generation.data_factories import InputInitializerDataFactory
 
 
 #  ----------------------------------------------------------------------------
@@ -29,70 +31,111 @@ from tflite2xcore._model_generation.converters import (
 #  ----------------------------------------------------------------------------
 
 
-class RunnerModels(NamedTuple):
-    reference: TFLiteModel
-    xcore: TFLiteModel
-    xcore_identical: TFLiteModel
+class IntegrationTestOutputData(NamedTuple):
+    reference: np.ndarray
+    xcore: np.ndarray
 
 
 class IntegrationTestRunner(Runner):
     _model_generator: "IntegrationTestModelGenerator"
-    outputs: RunnerOutputs
-    models: RunnerModels
+    _quantization_data: tf.Tensor
+    outputs: IntegrationTestOutputData
 
-    def __call__(self) -> None:
-        """ Defines how an IntegrationTestModelGenerator should be run.
+    def __init__(self, generator: Type["IntegrationTestModelGenerator"]) -> None:
+        self._repr_data_factory = InputInitializerDataFactory(
+            self, lambda: self._model_generator.input_shape
+        )
+
+        self._reference_converter = TFLiteQuantConverter(
+            self, lambda: self._model_generator._model, self.get_quantization_data
+        )
+        self._reference_evaluator = TFLiteQuantEvaluator(
+            self, self.get_quantization_data, lambda: self._reference_converter._model
+        )
+
+        self._xcore_converter = XCoreConverter(
+            self, lambda: self._reference_converter._model
+        )
+        self._identity_converter = XCoreConverter(
+            self, lambda: self._xcore_converter._model
+        )
+        self._xcore_evaluator = XCoreEvaluator(
+            self, self.get_quantization_data, lambda: self._xcore_converter._model
+        )
+        super().__init__(
+            generator,
+            converters=[
+                self._reference_converter,
+                self._xcore_converter,
+                self._identity_converter,
+            ],
+            evaluators=[self._reference_evaluator, self._xcore_evaluator],
+            data_factories=[self._repr_data_factory],
+        )
+
+    def get_quantization_data(self) -> tf.Tensor:
+        try:
+            return self._quantization_data
+        except AttributeError:
+            try:
+                self._quantization_data = self._repr_data_factory.make_data(10)
+            except AttributeError:
+                raise Exception(
+                    "Cannot get quantization data before runner is run!"
+                ) from None
+            return self._quantization_data
+
+    def run(self) -> None:
+        """ Defines how an IntegrationTestRunner should be run.
         
         The integration tests require the 'reference' and 'xcore' fields of
         self.outputs to be set.
         """
-        super().__call__()
-        self._model_generator._reference_converter.convert()
-        self._model_generator._reference_evaluator.evaluate()
+        super().run()
+        self._converters[0].convert()
+        self._evaluators[0].evaluate()
         self.rerun_post_cache()
 
     def rerun_post_cache(self) -> None:
-        model_generator = self._model_generator
-
-        for converter in model_generator._converters[1:]:
+        for converter in self._converters[1:]:
             converter.convert()
 
-        for evaluator in model_generator._evaluators[1:]:
+        for evaluator in self._evaluators[1:]:
             evaluator.evaluate()
 
-        self.outputs = RunnerOutputs(
-            model_generator._reference_evaluator.output_data_quant(
-                model_generator._xcore_evaluator.output_quant
+        self.outputs = IntegrationTestOutputData(
+            self._reference_evaluator.get_output_data_quant(
+                self._xcore_evaluator.output_quant
             ),
-            model_generator._xcore_evaluator.output_data,
+            self._xcore_evaluator.output_data,
         )
-        self.models = RunnerModels(
-            model_generator._reference_converter._model,
-            model_generator._xcore_converter._model,
-            model_generator._identity_converter._model,
+        self.converted_models.update(
+            {
+                "reference": self._reference_converter._model,
+                "xcore": self._xcore_converter._model,
+                "xcore_identical": self._identity_converter._model,
+            }
         )
+
+    @classmethod
+    def load(cls, dirpath: Union[Path, str]) -> "IntegrationTestRunner":
+        runner = super().load(dirpath)
+        assert isinstance(runner, IntegrationTestRunner)
+        return runner
 
     def dump(
         self,
         dirpath: Path,
         example_idx: Union[int, Iterable[int]] = [],
+        *,
         dump_models: bool = True,
         dump_visualizations: bool = True,
     ) -> None:
         if dump_models:
-            for name, model in self.models._asdict().items():
-                name = "model_" + name
-                model_ref_path = (dirpath / name).with_suffix(".tflite")
-                model_ref_html = model_ref_path.with_suffix(".html")
-                with open(model_ref_path, "wb") as f:
-                    f.write(model)
-                logging.debug(f"{name} dumped to {model_ref_path}")
-                if dump_visualizations:
-                    tflite_visualize.main(model_ref_path, model_ref_html)
-                    logging.debug(f"{name} visualization dumped to {model_ref_html}")
+            self.dump_models(dirpath, visualize=dump_visualizations)
 
         data = {
-            "input": self._model_generator._xcore_evaluator.input_data,
+            "input": self.get_quantization_data(),
             "reference_output": self.outputs.reference,
             "xcore_output": self.outputs.xcore,
         }
@@ -108,46 +151,7 @@ class IntegrationTestRunner(Runner):
 #  ----------------------------------------------------------------------------
 
 
-class IntegrationTestModelGenerator(KerasModelGenerator):
-    _reference_converter: TFLiteQuantConverter
-    _xcore_converter: XCoreConverter
-    _identity_converter: XCoreConverter
-    _reference_evaluator: TFLiteQuantEvaluator
-    _xcore_evaluator: XCoreEvaluator
-    run: IntegrationTestRunner
-
-    def __init__(self) -> None:
-        self._reference_converter = TFLiteQuantConverter(self)
-        self._reference_evaluator = TFLiteQuantEvaluator(
-            self._reference_converter.get_representative_data,
-            lambda: self._reference_converter._model,
-        )
-
-        self._xcore_converter = XCoreConverter(self, self._reference_converter)
-        self._identity_converter = XCoreConverter(self, self._xcore_converter)
-        self._xcore_evaluator = XCoreEvaluator(
-            self._reference_converter.get_representative_data,
-            lambda: self._xcore_converter._model,
-        )
-
-        self._identity_converter = XCoreConverter(self, self._xcore_converter)
-
-        super().__init__(
-            runner=IntegrationTestRunner(self),
-            converters=[
-                self._reference_converter,
-                self._xcore_converter,
-                self._identity_converter,
-            ],
-            evaluators=[self._reference_evaluator, self._xcore_evaluator],
-        )
-
-    @classmethod
-    def load(cls, dirpath: Union[Path, str]) -> "IntegrationTestModelGenerator":
-        gen = super().load(dirpath)
-        assert isinstance(gen, IntegrationTestModelGenerator)
-        return gen
-
+class IntegrationTestModelGenerator(ModelGenerator):
     @abstractmethod
     def _build_core_model(self) -> tf.keras.Model:
         raise NotImplementedError()
@@ -208,7 +212,7 @@ def _test_batched_arrays(
 
 
 def _test_output(
-    run_outputs: RunnerOutputs,
+    run_outputs: IntegrationTestOutputData,
     request: _pytest.fixtures.SubRequest,
     tolerance: Union[int, float] = 1,
 ) -> None:

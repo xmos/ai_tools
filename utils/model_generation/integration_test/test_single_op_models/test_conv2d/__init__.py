@@ -4,8 +4,8 @@ import tensorflow as tf  # type: ignore
 from abc import abstractmethod
 from typing import Tuple, Optional
 
-from tflite2xcore._model_generation import Configuration
-from tflite2xcore._model_generation.utils import parse_init_config
+from tflite2xcore.model_generation import Configuration
+from tflite2xcore.model_generation.utils import parse_init_config
 
 from .. import (
     FilterOpTestModelGenerator,
@@ -59,7 +59,7 @@ class ExplicitPaddingMixin(AbstractConv2dTestModelGenerator):
         self._config.update({key: cfg.pop(key, 1) for key in self._PAD_KEYS})
         super()._set_config(cfg)
 
-    def check_config(self):
+    def check_config(self) -> None:
         super().check_config()
         for key in self._PAD_KEYS:
             assert self._config[key] >= 0, f"{key} must non-negative"

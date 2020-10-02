@@ -3,7 +3,7 @@
 import numpy as np  # type: ignore
 
 from tflite2xcore.xcore_schema import BuiltinOpCodes
-from tflite2xcore.xcore_model import Operator, Tensor
+from tflite2xcore.xcore_model import Operator
 
 from .transformation_passes import OperatorMatchingPass
 

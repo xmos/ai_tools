@@ -1,6 +1,5 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-import pdb
 import logging
 import pathlib
 from typing import TYPE_CHECKING

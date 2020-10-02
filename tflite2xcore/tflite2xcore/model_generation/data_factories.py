@@ -11,7 +11,7 @@ from .runners import Runner, RunnerDependent
 
 class DataFactory(RunnerDependent):
     @abstractmethod
-    def make_data(self) -> tf.Tensor:
+    def make_data(self) -> Any:
         raise NotImplementedError()
 
 

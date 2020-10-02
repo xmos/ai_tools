@@ -1,6 +1,5 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-import pytest
 import numpy as np
 from typing import Callable, Tuple
 from copy import deepcopy
@@ -13,7 +12,6 @@ from tflite2xcore.xcore_schema import (
     OperatorCode,
     BuiltinOpCodes,
     XCOREOpCodes,
-    BuiltinOptions,
 )
 
 ModelBuilder = Callable[..., XCOREModel]
@@ -377,9 +375,7 @@ def build_XC_fc(subgraph=None, *, outputs, input_channels):
         quantization={"scale": [0.11332], "zero_point": [6]},
     )
     subgraph.create_operator(
-        OperatorCode(XCOREOpCodes.XC_fc),
-        inputs=[tin, w, b],
-        outputs=[tout],
+        OperatorCode(XCOREOpCodes.XC_fc), inputs=[tin, w, b], outputs=[tout],
     )
 
     return subgraph.model
@@ -790,7 +786,6 @@ def build_fc_with_preceding_reshape(
     return model
 
 
-
 def build_fc_with_subsequent_reshape(
     subgraph=None, *, fc_output_shape, reshaped_output_shape
 ):
@@ -801,7 +796,7 @@ def build_fc_with_subsequent_reshape(
         add_batch_dim=False,
     )
     subgraph = model.subgraphs[0]
-    
+
     build_reshape(
         subgraph,
         input_shape=fc_output_shape,
@@ -814,6 +809,7 @@ def build_fc_with_subsequent_reshape(
     fc.outputs[0].shape = fc_output_shape
 
     return model
+
 
 def build_padded_DW(subgraph=None, *, weight_shape, input_size, paddings, strides):
     input_shape = [1, *input_size, weight_shape[-1]]

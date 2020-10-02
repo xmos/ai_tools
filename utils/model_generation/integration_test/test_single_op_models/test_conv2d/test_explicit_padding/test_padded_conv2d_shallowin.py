@@ -2,9 +2,10 @@
 
 import pytest  # type: ignore
 
-from ..test_conv2d_shallowin import converted_op_code, Conv2dShallowinTestModelGenerator
-from . import (
-    ExplicitPaddingMixin,
+from ..test_conv2d_shallowin import Conv2dShallowinTestModelGenerator
+from . import ExplicitPaddingMixin
+from ..test_conv2d_shallowin import converted_op_code  # pylint: disable=unused-import
+from . import (  # pylint: disable=unused-import
     test_output,
     test_converted_single_op_model,
     test_idempotence,

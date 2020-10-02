@@ -4,8 +4,8 @@ import tensorflow as tf  # type: ignore
 from abc import abstractmethod
 from typing import Tuple, Optional
 
-from tflite2xcore._model_generation import Configuration
-from tflite2xcore._model_generation.utils import parse_init_config
+from tflite2xcore.model_generation import Configuration
+from tflite2xcore.model_generation.utils import parse_init_config
 
 from .. import (
     FilterOpTestModelGenerator,

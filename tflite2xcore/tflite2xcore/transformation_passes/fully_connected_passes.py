@@ -3,8 +3,6 @@
 import numpy as np
 
 from tflite2xcore.xcore_schema import (
-    QuantizationDetails,
-    TensorType,
     BuiltinOpCodes,
     OperatorCode,
     XCOREOpCodes,

@@ -6,7 +6,6 @@ from copy import deepcopy
 
 from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes import FuseConsecutivePadsPass
-from tflite2xcore.xcore_schema import BuiltinOpCodes
 
 from ..model_builders import build_pad, build_consecutive_pads
 from .conftest import (

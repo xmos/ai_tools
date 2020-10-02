@@ -4,7 +4,6 @@ import logging
 from copy import copy
 
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.xcore_schema import TensorType
 from tflite2xcore.interpreters import XCOREInterpreter
 
 

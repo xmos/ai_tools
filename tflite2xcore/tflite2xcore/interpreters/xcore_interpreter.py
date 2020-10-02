@@ -1,14 +1,10 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
-import sys
-import os
 import ctypes
 import numpy as np
-from pathlib import Path
 from enum import Enum
 
 from tflite2xcore import libtflite2xcore as lib
-from tflite2xcore.xcore_schema import TensorType
 
 
 MAX_TENSOR_ARENA_SIZE = 1000000

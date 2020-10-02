@@ -7,8 +7,19 @@ import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 from abc import abstractmethod
 from pathlib import Path
-from typing import Union, List, NamedTuple, Tuple, Dict, Optional, Iterable, Type
+from typing import (
+    Union,
+    List,
+    NamedTuple,
+    Tuple,
+    Dict,
+    Optional,
+    Iterable,
+    Type,
+    Optional,
+)
 
+from tflite2xcore.utils import dequantize
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation import (
     TFLiteModel,
@@ -16,10 +27,12 @@ from tflite2xcore.model_generation import (
 )
 from tflite2xcore.model_generation.runners import Runner
 from tflite2xcore.model_generation.evaluators import (
+    TFLiteEvaluator,
     TFLiteQuantEvaluator,
     XCoreEvaluator,
 )
 from tflite2xcore.model_generation.converters import (
+    TFLiteFloatConverter,
     TFLiteQuantConverter,
     XCoreConverter,
 )
@@ -32,7 +45,8 @@ from tflite2xcore.model_generation.data_factories import InputInitializerDataFac
 
 
 class IntegrationTestOutputData(NamedTuple):
-    reference: np.ndarray
+    reference_float: np.ndarray
+    reference_quant: np.ndarray
     xcore: np.ndarray
 
 
@@ -46,30 +60,46 @@ class IntegrationTestRunner(Runner):
             self, lambda: self._model_generator.input_shape
         )
 
-        self._reference_converter = TFLiteQuantConverter(
-            self, lambda: self._model_generator._model, self.get_quantization_data
+        self._reference_float_converter = TFLiteFloatConverter(
+            self, self.get_built_model
         )
-        self._reference_evaluator = TFLiteQuantEvaluator(
-            self, self.get_quantization_data, lambda: self._reference_converter._model
+        self._reference_float_evaluator = TFLiteEvaluator(
+            self,
+            self.get_quantization_data,
+            self._reference_float_converter.get_converted_model,
+        )
+
+        self._reference_quant_converter = TFLiteQuantConverter(
+            self, self.get_built_model, self.get_quantization_data
+        )
+        self._reference_quant_evaluator = TFLiteQuantEvaluator(
+            self,
+            self.get_quantization_data,
+            self._reference_quant_converter.get_converted_model,
         )
 
         self._xcore_converter = XCoreConverter(
-            self, lambda: self._reference_converter._model
+            self, self._reference_quant_converter.get_converted_model,
         )
         self._identity_converter = XCoreConverter(
-            self, lambda: self._xcore_converter._model
+            self, self._xcore_converter.get_converted_model
         )
         self._xcore_evaluator = XCoreEvaluator(
-            self, self.get_quantization_data, lambda: self._xcore_converter._model
+            self, self.get_quantization_data, self._xcore_converter.get_converted_model
         )
         super().__init__(
             generator,
             converters=[
-                self._reference_converter,
+                self._reference_float_converter,
+                self._reference_quant_converter,
                 self._xcore_converter,
                 self._identity_converter,
             ],
-            evaluators=[self._reference_evaluator, self._xcore_evaluator],
+            evaluators=[
+                self._reference_quant_evaluator,
+                self._reference_float_evaluator,
+                self._xcore_evaluator,
+            ],
             data_factories=[self._repr_data_factory],
         )
 
@@ -92,26 +122,31 @@ class IntegrationTestRunner(Runner):
         self.outputs to be set.
         """
         super().run()
-        self._converters[0].convert()
-        self._evaluators[0].evaluate()
+        for converter in self._converters[:2]:
+            converter.convert()
+
+        for evaluator in self._evaluators[:2]:
+            evaluator.evaluate()
+
         self.rerun_post_cache()
 
     def rerun_post_cache(self) -> None:
-        for converter in self._converters[1:]:
+        for converter in self._converters[2:]:
             converter.convert()
 
-        for evaluator in self._evaluators[1:]:
+        for evaluator in self._evaluators[2:]:
             evaluator.evaluate()
 
         self.outputs = IntegrationTestOutputData(
-            self._reference_evaluator.get_output_data_quant(
+            self._reference_float_evaluator.output_data,
+            self._reference_quant_evaluator.get_output_data_quant(
                 self._xcore_evaluator.output_quant
             ),
             self._xcore_evaluator.output_data,
         )
         self.converted_models.update(
             {
-                "reference": self._reference_converter._model,
+                "reference_quant": self._reference_quant_converter._model,
                 "xcore": self._xcore_converter._model,
                 "xcore_identical": self._identity_converter._model,
             }
@@ -136,7 +171,7 @@ class IntegrationTestRunner(Runner):
 
         data = {
             "input": self.get_quantization_data(),
-            "reference_output": self.outputs.reference,
+            "reference_quant_output": self.outputs.reference_quant,
             "xcore_output": self.outputs.xcore,
         }
         example_idx = [example_idx] if isinstance(example_idx, int) else example_idx
@@ -179,29 +214,48 @@ def __log_deviations(
 ) -> None:
     logger = logging.getLogger()
     if logger.isEnabledFor(level):
-        devs = [
-            f"{c}/{diff.size} ({c / diff.size:.2%}) with diff={v}"
-            for v, c in zip(*np.unique(diff, return_counts=True))
-            if v
-        ]
         msg = "Total" if ex_idx is None else f"Example {ex_idx}"
-        msg += " deviations: " + (", ".join(devs) if devs else "None")
+        if np.issubdtype(diff.dtype, np.integer):
+            devs = [
+                f"{c}/{diff.size} ({c / diff.size:.2%}) with diff={v}"
+                for v, c in zip(*np.unique(diff, return_counts=True))
+                if v
+            ]
+            msg += " deviations: " + (", ".join(devs) if devs else "None")
+        else:
+            stats = {
+                "mean": np.mean(diff),
+                "stdev": np.std(diff),
+                "median": np.median(diff),
+                "min": np.min(diff),
+                "max": np.max(diff),
+            }
+            msg += f" deviation stats: {stats}"
+
         logger.log(level, msg)
 
 
-def _test_batched_arrays(
+def _compare_batched_arrays(
     predicted: np.ndarray, expected: np.ndarray, tolerance: Union[int, float]
 ) -> Dict[int, List[FailedElement]]:
+    assert tolerance >= 0
     assert predicted.shape == expected.shape
-    assert predicted.dtype is expected.dtype
-    assert issubclass(predicted.dtype.type, np.integer)  # TODO: generalize to floats
+
+    output_type = predicted.dtype
+    assert output_type is expected.dtype
+    if np.issubdtype(output_type, np.integer):
+        diffs = np.int64(predicted) - np.int64(expected)
+    elif np.issubdtype(output_type, np.floating):
+        tolerance = np.float32(tolerance)
+        diffs = np.float32(predicted) - np.float32(expected)
+    else:
+        raise TypeError("Only integer and float types are supported")
 
     failures: Dict[int, List[FailedElement]] = {}
-    diffs = np.int32(predicted) - np.int32(expected)
     for j, (arr, arr_ref, diff) in enumerate(zip(predicted, expected, diffs)):
         __log_deviations(diff, logging.DEBUG, ex_idx=j)
 
-        diff_idx = zip(*np.where(np.abs(diff > tolerance)))
+        diff_idx = zip(*np.where(np.abs(diff) > tolerance))
         failed_examples = [
             FailedElement(idx, diff[idx], arr_ref[idx], arr[idx]) for idx in diff_idx
         ]
@@ -211,12 +265,38 @@ def _test_batched_arrays(
     return failures
 
 
-def _test_output(
-    run_outputs: IntegrationTestOutputData,
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
+
+
+def test_output(
+    run: IntegrationTestRunner,
+    output_tolerance: Optional[Union[int, float]],
     request: _pytest.fixtures.SubRequest,
-    tolerance: Union[int, float] = 1,
 ) -> None:
-    failures = _test_batched_arrays(run_outputs.xcore, run_outputs.reference, tolerance)
+    if output_tolerance is None:
+        # use implicitly derived tolerance
+        output_quantization = run._xcore_evaluator.output_quant
+        y_quant = run.outputs.reference_quant
+        y_float = run.outputs.reference_float
+
+        # The implicit tolerance is derived from how much the quantized reference
+        # deviates from the floating point reference.
+        max_diff = np.max(np.abs(dequantize(y_quant, *output_quantization) - y_float))
+        # max_diff is usually at least 1 bit, but we ensure this and add some room for error
+        output_tolerance = max(float(max_diff), output_quantization.scale) * 1.05
+        logging.info(f"Using implicit output tolerance: {output_tolerance}")
+
+        failures = _compare_batched_arrays(
+            dequantize(run.outputs.xcore, *output_quantization),
+            run.outputs.reference_float,
+            output_tolerance,
+        )
+    else:
+        failures = _compare_batched_arrays(
+            run.outputs.xcore, run.outputs.reference_quant, output_tolerance
+        )
 
     verbose = request.config.getoption("verbose") > 0
 
@@ -240,19 +320,6 @@ def _test_output(
             + ("" if verbose else "\nSet verbosity > 0 for more details."),
             pytrace=False,
         )
-
-
-#  ----------------------------------------------------------------------------
-#                                   TESTS
-#  ----------------------------------------------------------------------------
-
-
-def test_output(
-    run: IntegrationTestRunner,
-    output_tolerance: int,
-    request: _pytest.fixtures.SubRequest,
-) -> None:
-    _test_output(run.outputs, request, output_tolerance)
 
 
 def test_idempotence(

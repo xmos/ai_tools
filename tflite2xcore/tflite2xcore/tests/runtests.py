@@ -31,7 +31,7 @@ class CollectorPlugin:
 
 
 class JobCollector:
-    def __init__(self, path, *, coverage_options=None, verbose=False):
+    def __init__(self, path, *, coverage_options=None, verbose=False, junit=False):
         if not (os.path.exists(path) and os.path.isdir(path)):
             raise ValueError(f"Invalid directory path: {path}")
 
@@ -39,6 +39,7 @@ class JobCollector:
         self.verbose = verbose
         self.jobs = []
         self.path = path
+        self.junit = junit
 
         coverage_options = coverage_options or []
         self.optional_args = ["-qq"] + coverage_options
@@ -60,10 +61,10 @@ class JobCollector:
 
         if not exit_code:
             tests = self.plugin.tests()
-            self.jobs = [
-                [os.path.join(self.path, path), "--tb=short"] + self.optional_args
-                for path, _ in tests
-            ]
+            for path, _ in tests:
+                optional_args = self.optional_args + ["--junitxml", path + "_junit.xml"] if self.junit else self.optional_args
+                self.jobs.append([os.path.join(self.path, path), "--tb=short"] + optional_args)
+
             print(f"{sum(cnt for _, cnt in tests)} CASES IN {len(self.jobs)} JOBS:")
             for job, (_, cnt) in zip(self.jobs, tests):
                 print(f"{cnt} CASES IN: {' '.join(job)}")
@@ -128,6 +129,7 @@ def main(raw_args=None):
     parser.add_argument("--smoke", action="store_true", default=False)
     parser.add_argument("--extended", action="store_true", default=False)
     parser.add_argument("--collect-only", action="store_true", default=False)
+    parser.add_argument("--junit", action="store_true", default=False)
     parser.add_argument("-n", "--workers", type=int, default=1)
     parser.add_argument("-v", "--verbose", action="store_true", default=False)
     args = parser.parse_args(raw_args)

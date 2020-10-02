@@ -14,7 +14,10 @@ from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation import Configuration
 
 from . import IntegrationTestModelGenerator
-from . import test_idempotence  # pylint: disable=unused-import
+from . import (  # pylint: disable=unused-import
+    test_idempotence,
+    test_output,
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -25,11 +28,14 @@ from . import test_idempotence  # pylint: disable=unused-import
 class MobileNetV1Model(IntegrationTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         self._config["input_size"] = cfg.pop("input_size")
+        self._config["alpha"] = cfg.pop("alpha")
         super()._set_config(cfg)
 
     def _build_core_model(self) -> tf.keras.Model:
         input_size = self._config["input_size"]
-        return MobileNet(input_shape=(input_size, input_size, 3))
+        return MobileNet(
+            input_shape=(input_size, input_size, 3), alpha=self._config["alpha"]
+        )
 
 
 GENERATOR = MobileNetV1Model
@@ -40,8 +46,18 @@ GENERATOR = MobileNetV1Model
 
 
 CONFIGS = {
-    "default": {0: {"input_size": 128}},
+    "default": {0: {"input_size": 128, "alpha": 0.25}},
 }
+
+
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
+
+
+@pytest.fixture  # type: ignore
+def output_tolerance() -> None:
+    return
 
 
 #  ----------------------------------------------------------------------------

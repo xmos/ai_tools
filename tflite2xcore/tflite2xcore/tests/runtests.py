@@ -65,9 +65,6 @@ class JobCollector:
                 cmd = [os.path.join(self.path, path), "--tb=short"] + self.optional_args
                 if self.junit:
                     cmd += ["--junitxml", path + "_junit.xml"]
-                ## TMP
-                print(cmd)
-                ## TMP
                 self.jobs.append(cmd)
 
             print(f"{sum(cnt for _, cnt in tests)} CASES IN {len(self.jobs)} JOBS:")

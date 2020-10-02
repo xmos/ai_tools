@@ -4,7 +4,7 @@ This project contains Python bindigs for the XCOREInterpreter class.
 
 ## Building
 
-Install CMake version 3.10 or newer (https://cmake.org/download/).
+Install CMake version 3.14 or newer (https://cmake.org/download/).
 
 Modify your path to include the CMake binaries.  Run the CMake application and
 click Tools...How to Install For Command Line Use.

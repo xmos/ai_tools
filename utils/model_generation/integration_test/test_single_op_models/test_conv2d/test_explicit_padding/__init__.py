@@ -2,7 +2,7 @@
 
 import tensorflow as tf  # type: ignore
 
-from tflite2xcore._model_generation import Configuration
+from tflite2xcore.model_generation import Configuration
 
 from .. import (
     AbstractConv2dTestModelGenerator,

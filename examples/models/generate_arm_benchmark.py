@@ -71,11 +71,9 @@ class TrainingRunner(Runner):
         self._data_factory = NormalizedCIFAR10Factory(self)
 
         self._quant_converter = TFLiteQuantConverter(
-            self, lambda: self._model_generator._model, self.get_quantization_data
+            self, self._model_generator.get_model, self.get_quantization_data
         )
-        self._xcore_converter = XCoreConverter(
-            self, lambda: self._quant_converter._model
-        )
+        self._xcore_converter = XCoreConverter(self, self._model_generator.get_model)
         super().__init__(
             generator,
             converters=[self._quant_converter, self._xcore_converter],

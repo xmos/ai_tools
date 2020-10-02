@@ -5,16 +5,21 @@
 import logging
 import numpy as np
 import tensorflow as tf
+from pathlib import Path
 from abc import abstractmethod
 from typing import Type, NamedTuple, Union
 
 DEFAULT_EPOCHS = 30
 DEFAULT_BS = 32
 
-
-from tflite2xcore.model_generation import ModelGenerator
+from tflite2xcore import utils
+from tflite2xcore.model_generation import ModelGenerator, Configuration
 from tflite2xcore.model_generation.data_factories import DataFactory
 from tflite2xcore.model_generation.runners import Runner
+from tflite2xcore.model_generation.converters import (
+    TFLiteQuantConverter,
+    XCoreConverter,
+)
 
 
 class TrainingData(NamedTuple):
@@ -24,13 +29,7 @@ class TrainingData(NamedTuple):
     y_test: np.ndarray
 
 
-class TrainingDataFactory(DataFactory):
-    @abstractmethod
-    def make_data(self) -> TrainingData:
-        raise NotImplementedError()
-
-
-class NormalizedCIFAR10Factory(TrainingDataFactory):
+class NormalizedCIFAR10Factory(DataFactory):
     @staticmethod
     def normalize(data: Union[tf.Tensor, np.ndarray]) -> tf.Tensor:
         scale = tf.constant(255, dtype=tf.dtypes.float32)
@@ -52,24 +51,63 @@ class NormalizedCIFAR10Factory(TrainingDataFactory):
 
 class TrainingRunner(Runner):
     def __init__(self, generator: Type[ModelGenerator]) -> None:
-        super().__init__(generator)
+        self._data_factory = NormalizedCIFAR10Factory(self)
+
+        self._quant_converter = TFLiteQuantConverter(
+            self, lambda: self._model_generator._model, self.get_quantization_data
+        )
+        self._xcore_converter = XCoreConverter(
+            self, lambda: self._quant_converter._model
+        )
+        super().__init__(
+            generator,
+            converters=[self._quant_converter, self._xcore_converter],
+            data_factories=[self._data_factory],
+        )
 
     def run(self):
         super().run()
-        data = NormalizedCIFAR10Factory(self).make_data()
-        self._model_generator.train(data)
+        self._model_generator.train()
+        for converter in self._converters:
+            converter.convert()
+        self.converted_models.update(
+            {
+                "quant": self._quant_converter._model,
+                "xcore": self._xcore_converter._model,
+            }
+        )
+
+    def get_training_data(self) -> TrainingData:
+        try:
+            return self._data
+        except AttributeError:
+            self._data = self._data_factory.make_data()
+            return self._data
+
+    def get_quantization_data(self) -> tf.Tensor:
+        data = self.get_training_data()
+
+        sorted_inds = np.argsort(data.y_test, axis=0, kind="mergesort")
+        subset_inds = np.searchsorted(data.y_test[sorted_inds].flatten(), np.arange(10))
+        subset_inds = sorted_inds[subset_inds]
+        return data.x_test[subset_inds.flatten()]
 
 
 class TrainableModelGenerator(ModelGenerator):
-    def train(self, data: TrainingData):
-        fit_args = dict(
-            validation_data=(data.x_test, data.y_test), epochs=DEFAULT_EPOCHS,
-        )
-        fit_args["x"] = data.x_train
-        fit_args["y"] = data.y_train
-        fit_args["batch_size"] = DEFAULT_BS
+    def _set_config(self, cfg: Configuration):
+        self._config["epochs"] = cfg.pop("epochs")
+        self._config["batch_size"] = cfg.pop("batch_size")
+        super()._set_config(cfg)
 
-        self._model.fit(**fit_args)
+    def train(self):
+        data = self._runner.get_training_data()
+        self._model.fit(
+            data.x_train,
+            data.y_train,
+            validation_data=(data.x_test, data.y_test),
+            batch_size=self._config["batch_size"],
+            epochs=self._config["epochs"],
+        )
 
 
 class ArmBenchmarkModelGenerator(TrainableModelGenerator):
@@ -108,24 +146,30 @@ class ArmBenchmarkModelGenerator(TrainableModelGenerator):
         )
         self._model.summary()
 
-    # def gen_test_data(self):
-    #     if not self.data:
-    #         self.prep_data()
-
-    #     sorted_inds = np.argsort(self.data["y_test"], axis=0, kind="mergesort")
-    #     subset_inds = np.searchsorted(
-    #         self.data["y_test"][
-    #             sorted_inds
-    #         ].flatten(),  # pylint: disable=unsubscriptable-object
-    #         np.arange(10),
-    #     )
-    #     subset_inds = sorted_inds[subset_inds]
-    #     self.data["export"] = self.data["x_test"][
-    #         subset_inds.flatten()
-    #     ]  # pylint: disable=unsubscriptable-object
-    #     self.data["quant"] = self.data["x_train"]
-
 
 if __name__ == "__main__":
+    parser = utils.VerbosityParser()
+    parser.add_argument(
+        "-d",
+        "--model_dir",
+        required=False,
+        default=None,
+        help="Directory for converted models.",
+    )
+    parser.add_argument(
+        "--epochs", type=int, default=30, help="Number of training epochs"
+    )
+    parser.add_argument(
+        "--batch_size", type=int, default=32, help="Batch size for training"
+    )
+    args = parser.parse_args()
+
+    utils.set_verbosity(args.verbose)
+    model_dir = args.model_dir
+    model_dir = Path(model_dir) if model_dir else Path(__file__).parent / "models"
+    model_dir.mkdir(parents=True, exist_ok=True)
+
     runner = TrainingRunner(ArmBenchmarkModelGenerator)
+    runner.set_config(epochs=args.epochs, batch_size=args.batch_size)
     runner.run()
+    runner.dump_models(model_dir.resolve())

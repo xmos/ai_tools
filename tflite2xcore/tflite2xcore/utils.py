@@ -56,11 +56,14 @@ def set_all_seeds(seed: int = DEFAULT_SEED) -> None:
 
 def set_gpu_usage(use_gpu: bool, verbose: Union[bool, int]) -> None:
     # can throw annoying error if CUDA cannot be initialized
-    default_log_level = os.environ["TF_CPP_MIN_LOG_LEVEL"]
-    if not verbose:
-        os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-    gpus = tf.config.experimental.list_physical_devices("GPU")
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = default_log_level
+    try:
+        default_log_level = os.environ["TF_CPP_MIN_LOG_LEVEL"]
+        if not verbose:
+            os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+        gpus = tf.config.experimental.list_physical_devices("GPU")
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = default_log_level
+    except KeyError:
+        gpus = tf.config.experimental.list_physical_devices("GPU")
 
     if gpus:
         if use_gpu:

@@ -148,7 +148,7 @@ def main(raw_args=None):
         coverage_options.append("--extended")
 
     collector = JobCollector(
-        args.dir, coverage_options=coverage_options, verbose=args.verbose
+        args.dir, coverage_options=coverage_options, verbose=args.verbose, junit=args.junit,
     )
     exit_code = collector.collect()
     if exit_code or args.collect_only or not args.workers:

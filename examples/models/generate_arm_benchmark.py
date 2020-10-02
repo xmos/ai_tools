@@ -2,15 +2,10 @@
 #
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import logging
-import numpy as np
-import tensorflow as tf
+import numpy as np  # type: ignore
+import tensorflow as tf  # type: ignore
 from pathlib import Path
-from abc import abstractmethod
 from typing import Type, NamedTuple, Union
-
-DEFAULT_EPOCHS = 30
-DEFAULT_BS = 32
 
 from tflite2xcore import utils
 from tflite2xcore.model_generation import ModelGenerator, Configuration
@@ -49,8 +44,30 @@ class NormalizedCIFAR10Factory(DataFactory):
         )
 
 
+class TrainableModelGenerator(ModelGenerator):
+    _runner: "TrainingRunner"
+
+    def _set_config(self, cfg: Configuration) -> None:
+        self._config["epochs"] = cfg.pop("epochs")
+        self._config["batch_size"] = cfg.pop("batch_size")
+        super()._set_config(cfg)
+
+    def train(self) -> None:
+        data = self._runner.get_training_data()
+        self._model.fit(
+            data.x_train,
+            data.y_train,
+            validation_data=(data.x_test, data.y_test),
+            batch_size=self._config["batch_size"],
+            epochs=self._config["epochs"],
+        )
+
+
 class TrainingRunner(Runner):
-    def __init__(self, generator: Type[ModelGenerator]) -> None:
+    _data: TrainingData
+    _model_generator: TrainableModelGenerator
+
+    def __init__(self, generator: Type[TrainableModelGenerator]) -> None:
         self._data_factory = NormalizedCIFAR10Factory(self)
 
         self._quant_converter = TFLiteQuantConverter(
@@ -65,7 +82,7 @@ class TrainingRunner(Runner):
             data_factories=[self._data_factory],
         )
 
-    def run(self):
+    def run(self) -> None:
         super().run()
         self._model_generator.train()
         for converter in self._converters:
@@ -93,25 +110,8 @@ class TrainingRunner(Runner):
         return data.x_test[subset_inds.flatten()]
 
 
-class TrainableModelGenerator(ModelGenerator):
-    def _set_config(self, cfg: Configuration):
-        self._config["epochs"] = cfg.pop("epochs")
-        self._config["batch_size"] = cfg.pop("batch_size")
-        super()._set_config(cfg)
-
-    def train(self):
-        data = self._runner.get_training_data()
-        self._model.fit(
-            data.x_train,
-            data.y_train,
-            validation_data=(data.x_test, data.y_test),
-            batch_size=self._config["batch_size"],
-            epochs=self._config["epochs"],
-        )
-
-
 class ArmBenchmarkModelGenerator(TrainableModelGenerator):
-    def build(self):
+    def build(self) -> None:
         self._prep_backend()
         self._model = tf.keras.Sequential(
             layers=[

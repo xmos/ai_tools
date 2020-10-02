@@ -9,13 +9,12 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Union, List, NamedTuple, Tuple, Dict, Optional, Iterable, Type
 
-from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation import (
     TFLiteModel,
     ModelGenerator,
 )
-from tflite2xcore.model_generation.runners import Runner, RunnerOutputs
+from tflite2xcore.model_generation.runners import Runner
 from tflite2xcore.model_generation.evaluators import (
     TFLiteQuantEvaluator,
     XCoreEvaluator,
@@ -32,17 +31,15 @@ from tflite2xcore.model_generation.data_factories import InputInitializerDataFac
 #  ----------------------------------------------------------------------------
 
 
-class RunnerModels(NamedTuple):
-    reference: TFLiteModel
-    xcore: TFLiteModel
-    xcore_identical: TFLiteModel
+class IntegrationTestOutputData(NamedTuple):
+    reference: np.ndarray
+    xcore: np.ndarray
 
 
 class IntegrationTestRunner(Runner):
     _model_generator: "IntegrationTestModelGenerator"
     _quantization_data: tf.Tensor
-    outputs: RunnerOutputs
-    models: RunnerModels
+    outputs: IntegrationTestOutputData
 
     def __init__(self, generator: Type["IntegrationTestModelGenerator"]) -> None:
         self._repr_data_factory = InputInitializerDataFactory(
@@ -106,16 +103,18 @@ class IntegrationTestRunner(Runner):
         for evaluator in self._evaluators[1:]:
             evaluator.evaluate()
 
-        self.outputs = RunnerOutputs(
+        self.outputs = IntegrationTestOutputData(
             self._reference_evaluator.get_output_data_quant(
                 self._xcore_evaluator.output_quant
             ),
             self._xcore_evaluator.output_data,
         )
-        self.models = RunnerModels(
-            self._reference_converter._model,
-            self._xcore_converter._model,
-            self._identity_converter._model,
+        self.converted_models.update(
+            {
+                "reference": self._reference_converter._model,
+                "xcore": self._xcore_converter._model,
+                "xcore_identical": self._identity_converter._model,
+            }
         )
 
     @classmethod
@@ -128,20 +127,12 @@ class IntegrationTestRunner(Runner):
         self,
         dirpath: Path,
         example_idx: Union[int, Iterable[int]] = [],
+        *,
         dump_models: bool = True,
         dump_visualizations: bool = True,
     ) -> None:
         if dump_models:
-            for name, model in self.models._asdict().items():
-                name = "model_" + name
-                model_ref_path = (dirpath / name).with_suffix(".tflite")
-                model_ref_html = model_ref_path.with_suffix(".html")
-                with open(model_ref_path, "wb") as f:
-                    f.write(model)
-                logging.debug(f"{name} dumped to {model_ref_path}")
-                if dump_visualizations:
-                    tflite_visualize.main(model_ref_path, model_ref_html)
-                    logging.debug(f"{name} visualization dumped to {model_ref_html}")
+            self.dump_models(dirpath, visualize=dump_visualizations)
 
         data = {
             "input": self.get_quantization_data(),
@@ -221,7 +212,7 @@ def _test_batched_arrays(
 
 
 def _test_output(
-    run_outputs: RunnerOutputs,
+    run_outputs: IntegrationTestOutputData,
     request: _pytest.fixtures.SubRequest,
     tolerance: Union[int, float] = 1,
 ) -> None:

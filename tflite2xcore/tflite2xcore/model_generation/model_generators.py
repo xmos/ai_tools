@@ -4,7 +4,7 @@ import logging
 import tensorflow as tf  # type: ignore
 from pathlib import Path
 from abc import abstractmethod
-from typing import Tuple, Union, Iterator
+from typing import Tuple, Iterator
 from contextlib import contextmanager
 
 from tflite2xcore.utils import set_all_seeds, LoggingContext  # type: ignore # TODO: fix this

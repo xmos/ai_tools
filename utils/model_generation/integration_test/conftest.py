@@ -155,9 +155,9 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
 
 @pytest.fixture  # type: ignore
 def xcore_model(run: IntegrationTestRunner) -> XCOREModel:
-    return XCOREModel.deserialize(run.models.xcore)
+    return XCOREModel.deserialize(run.converted_models["xcore"])
 
 
 @pytest.fixture  # type: ignore
 def xcore_identical_model(run: IntegrationTestRunner) -> XCOREModel:
-    return XCOREModel.deserialize(run.models.xcore_identical)
+    return XCOREModel.deserialize(run.converted_models["xcore_identical"])

@@ -1,11 +1,8 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import os
-import logging
 import tensorflow as tf  # type: ignore
-import numpy as np  # type: ignore
 from collections import Iterable
-from typing import Union, Iterator, List, Optional, Any
+from typing import Union, Any
 
 from . import Configuration
 

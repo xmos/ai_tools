@@ -62,8 +62,12 @@ class JobCollector:
         if not exit_code:
             tests = self.plugin.tests()
             for path, _ in tests:
-                optional_args = self.optional_args + ["--junitxml", path + "_junit.xml"] if self.junit else self.optional_args
-                self.jobs.append([os.path.join(self.path, path), "--tb=short"] + optional_args)
+                optional_args = self.optional_args
+                if self.junit:
+                    optional_args += ["--junitxml", path + "_junit.xml"]
+                self.jobs.append(
+                    [os.path.join(self.path, path), "--tb=short"] + optional_args
+                )
 
             print(f"{sum(cnt for _, cnt in tests)} CASES IN {len(self.jobs)} JOBS:")
             for job, (_, cnt) in zip(self.jobs, tests):

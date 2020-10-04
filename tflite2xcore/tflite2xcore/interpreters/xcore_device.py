@@ -6,8 +6,8 @@ import time
 import json
 import ctypes
 import subprocess
-import tempfile
 import re
+import logging
 
 import portalocker  # type: ignore
 import numpy as np
@@ -41,6 +41,9 @@ REGISTER_CALLBACK = ctypes.CFUNCTYPE(
 
 
 def get_open_port():
+    """
+    Get an open port number
+    """
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("", 0))
     s.listen(1)
@@ -50,6 +53,9 @@ def get_open_port():
 
 
 def test_port_is_open(port):
+    """
+    Check if a port is open
+    """
     port_open = True
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -60,7 +66,11 @@ def test_port_is_open(port):
     return port_open
 
 
-def get_child_xgdb_proc(port):
+def get_child_xgdb_pid(port):
+    """
+    Get the process ID of xrun's child xgdb process given the xrun port
+    """
+
     def run(cmd, stdin=b""):
         process = subprocess.Popen(
             cmd.split(),
@@ -85,13 +95,16 @@ def get_child_xgdb_proc(port):
                 if port_match:
                     xgdb_port = int(port_match.group(1))
                     if xgdb_port == port:
-                        # print(
-                        #     f"Found xgdb instance with PID: {pid} on port: {xgdb_port}"
-                        # )
+                        logging.debug(
+                            f"Found xgdb instance with pid={pid} on port={xgdb_port}"
+                        )
                         return pid
 
 
 def run_test_model(xtag_id):
+    """
+    Run the test_model firmware
+    """
     port = get_open_port()
 
     __PARENT_DIR = Path(__file__).parent.absolute()
@@ -125,14 +138,44 @@ def run_test_model(xtag_id):
         while test_port_is_open(port):
             time.sleep(1)
 
-        xrun_xgdb_child_pid = get_child_xgdb_proc(port)
+        xrun_xgdb_child_pid = get_child_xgdb_pid(port)
 
-    return xrun_proc.pid, xrun_xgdb_child_pid
+    return xrun_proc.pid, xrun_xgdb_child_pid, port
+
+
+def get_devices():
+    """
+    Get an array of all connected xcore devices
+    """
+    p = subprocess.Popen(
+        ["xrun", "-l"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    output, err = p.communicate()
+    if p.returncode == 0:
+        devices = []
+        lines = output.decode("utf-8").split("\n")
+        for line in lines[6:]:
+            if line.strip():
+                fields = line.strip().split("\t")
+                devices.append(
+                    {
+                        "id": fields[0].strip(),
+                        "name": fields[1].strip(),
+                        "adaptor_id": fields[2].strip(),
+                        "devices": fields[3].strip(),
+                    }
+                )
+    else:
+        err_str = err.decode("utf-8").strip()
+        raise Exception(f"Error {err_str}")
+
+    return devices
 
 
 class XCOREDeviceEndpoint(object):
-    RECV_AWK_PROBE_ID = 0
-    GET_TENSOR_PROBE_ID = 1
+    PING_AWK_PROBE_ID = 0
+    RECV_AWK_PROBE_ID = 1
+    GET_TENSOR_PROBE_ID = 2
 
     def __init__(self):
         tool_path = os.environ.get("XMOS_TOOL_PATH")
@@ -145,6 +188,9 @@ class XCOREDeviceEndpoint(object):
 
         self._record_cb = self._record_callback_func()
         self.lib_xscope.xscope_ep_set_record_cb(self._record_cb)
+
+        self._hostname = None
+        self._port = None
 
         self.clear()
 
@@ -174,19 +220,30 @@ class XCOREDeviceEndpoint(object):
         self._publish_blob_chunk_ready = False
         self._get_tensor_buffer = None
 
+    @property
+    def port(self):
+        return self._port
+
     def on_print(self, timestamp, data):
         msg = data.decode("utf-8").rstrip()
         print(msg)
 
     def on_probe(self, id_, timestamp, length, data_val, data_bytes):
-        if id_ == XCOREDeviceEndpoint.RECV_AWK_PROBE_ID:
+        if id_ == XCOREDeviceEndpoint.PING_AWK_PROBE_ID:
+            self._device_ready = True
+        elif id_ == XCOREDeviceEndpoint.RECV_AWK_PROBE_ID:
             self._publish_blob_chunk_ready = True
         elif id_ == XCOREDeviceEndpoint.GET_TENSOR_PROBE_ID:
             self._get_tensor_buffer = data_bytes[0:length]
             self._get_tensor_ready = True
 
-    def connect(self, hostname="localhost", port="10234"):
-        return self.lib_xscope.xscope_ep_connect(hostname.encode(), port.encode())
+    def connect(self, hostname="localhost", port=10234):
+        ep_connect = self.lib_xscope.xscope_ep_connect(
+            hostname.encode(), str(port).encode()
+        )
+        self._hostname = hostname
+        self._port = port
+        return ep_connect
 
     def disconnect(self):
         self.lib_xscope.xscope_ep_disconnect()
@@ -201,13 +258,29 @@ class XCOREDeviceEndpoint(object):
         ):
             raise Exception("Error publishing data")
 
+    def ping_device(self, timeout=5):
+        SLEEP_DURATION = 0.2
+        duration = 0
+        self._device_ready = False
+
+        self.publish(b"PING_RECV")
+        # wait for PING_AWK probe
+        logging.debug("pinging")
+        while not self._device_ready:
+            if duration >= timeout:
+                break
+            time.sleep(SLEEP_DURATION)
+            duration += SLEEP_DURATION
+
+        return self._device_ready
+
     def set_model(self, model_content):
         self.publish(b"START_MODEL\0")
         self._send_blob(model_content)
         self.publish(b"END_MODEL\0")
 
     def set_invoke(self):
-        self.publish(b"INVOKE")
+        self.publish(b"CALL_INVOKE")
 
     def set_tensor(self, index, tensor_content):
         size = len(tensor_content)
@@ -225,50 +298,104 @@ class XCOREDeviceEndpoint(object):
 
 
 class XCOREDeviceServer(object):
+    lock_path = Path("xcore_devices.lock")
+    devices_path = Path("xcore_devices.json")
+
     @staticmethod
     def acquire():
-        lock_path = Path("xcore_devices.lock")
-        devices_path = Path("xcore_devices.json")
-        with portalocker.Lock(lock_path, timeout=10) as fh:
-            if not devices_path.is_file():
-                p = subprocess.Popen(
-                    ["xrun", "-l"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                )
-                output, err = p.communicate()
-                if p.returncode == 0:
-                    devices = []
-                    lines = output.decode("utf-8").split("\n")
-                    for line in lines[6:]:
-                        if line.strip():
-                            fields = line.strip().split()
-                            devices.append(
-                                {"id": fields[0], "adaptor": fields[-1],}
-                            )
-                    with open(devices_path, "w") as fd:
-                        fd.write(json.dumps(devices))
-                else:
-                    err_str = err.decode("utf-8").strip()
-                    raise Exception(f"Error {err_str}")
+        with portalocker.Lock(XCOREDeviceServer.lock_path, timeout=20) as fh:
+            # get the connected devices
+            connected_devices = get_devices()
+            # get the cached devices
+            if XCOREDeviceServer.devices_path.is_file():
+                with open(XCOREDeviceServer.devices_path, "r+") as fd:
+                    cached_devices = json.loads(fd.read())
+            else:
+                cached_devices = []
 
-            with open(devices_path, "r+") as fd:
-                devices = json.loads(fd.read())
+            logging.debug(f"connected devices {connected_devices}")
+            logging.debug(f"cached devices {cached_devices}")
+            # sync connected and cached devices
+            synced_devices = []
+            for connected_device in connected_devices:
+                launch_xrun = True
 
-                device = devices.pop()
-                # TODO: if no xrun info in device dict, launch it & add it
-                print()
-                print()
-                print()
-                print(device)
-                if "xrun_pid" not in device:
-                    xrun_pid, xgdb_pid = run_test_model(device["id"])
+                # check cached_devices for this connected device
+                new_device = True
+                for cached_device in cached_devices:
+                    if cached_device["adaptor_id"] == connected_device["adaptor_id"]:
+                        # ensure device is responding
+                        if "xrun_pid" in cached_device:
+                            ep = XCOREDeviceEndpoint()
+                            ep.connect(port=cached_device["xscope_port"])
+                            if ep.ping_device():
+                                logging.debug("ping succeeded")
+                                launch_xrun = False
+                            else:
+                                logging.debug("ping failed")
+                                # device did not respond so kill running xrun and xgdb
+                                os.kill(cached_device["xrun_pid"], signal.SIGKILL)
+                                os.kill(cached_device["xgdb_pid"], signal.SIGKILL)
+                                cached_device["xrun_pid"] = None
+                                cached_device["xgdb_pid"] = None
+                                cached_device["xscope_port"] = None
+                                cached_device["in_use"] = False
+                                launch_xrun = True
+                            ep.disconnect()
 
-                # TODO: create endpoint and return
-                print(device)
-                print()
-                print()
-                print()
-                if devices:
-                    fd.write(json.dumps(devices))
+                        # this is a known device so save in synced
+                        synced_devices.append(cached_device)
+                        new_device = False
+                        break
 
-                return None
+                if launch_xrun:
+                    # launch xrun and store pids in connected device
+                    xrun_pid, xgdb_pid, xscope_port = run_test_model(
+                        connected_device["id"]
+                    )
+                    connected_device["xrun_pid"] = xrun_pid
+                    connected_device["xgdb_pid"] = xgdb_pid
+                    connected_device["xscope_port"] = xscope_port
+                    connected_device["in_use"] = False
 
+                if new_device:
+                    # this connected device is new so save in synced
+                    connected_device["in_use"] = False
+                    synced_devices.append(connected_device)
+
+            # now search synced_devices for an available device
+            acquired_device = None
+            for synced_device in synced_devices:
+                if synced_device.get("in_use", False) == False:
+                    acquired_device = synced_device
+                    acquired_device["in_use"] = True
+                    break
+
+            # save the synched devices
+            logging.debug(f"synced devices: {synced_devices}")
+            with open(XCOREDeviceServer.devices_path, "w") as fd:
+                fd.write(json.dumps(synced_devices))
+
+            logging.debug(f"acquired device: {acquired_device}")
+
+            # create endpoint from acquired_device and return
+            ep = XCOREDeviceEndpoint()
+            ep.connect(port=acquired_device["xscope_port"])
+
+            return ep
+
+    @staticmethod
+    def release(endpoint):
+        with portalocker.Lock(XCOREDeviceServer.lock_path, timeout=20) as fh:
+            if XCOREDeviceServer.devices_path.is_file():
+                # search (by port) for endpoint in cached devices
+                with open(XCOREDeviceServer.devices_path, "r+") as fd:
+                    cached_devices = json.loads(fd.read())
+                    for cached_device in cached_devices:
+                        if endpoint.port == cached_device["xscope_port"]:
+                            endpoint.disconnect()
+                            cached_device["in_use"] = False
+                            logging.debug(f"released device: {cached_device}")
+
+                with open(XCOREDeviceServer.devices_path, "w") as fd:
+                    fd.write(json.dumps(cached_devices))

@@ -47,7 +47,11 @@ void xscope_data(void *data, size_t size) {
   void *tensor_buffer;
 
   // Handle state protocol messages
-  if (strncmp(data, "START_MODEL", 11) == 0) {
+  if (strncmp(data, "PING_RECV", 9) == 0) {
+    // printf("PING_RECV\n");
+    xscope_int(PING_AWK, 0);
+    return;
+  } else if (strncmp(data, "START_MODEL", 11) == 0) {
     // printf("START_MODEL\n");
     state = Model;
     model_received_bytes = 0;
@@ -72,7 +76,7 @@ void xscope_data(void *data, size_t size) {
     get_tensor_bytes(tensor_index, &tensor_buffer, &tensor_size);
     send_tensor(tensor_buffer, tensor_size);
     return;
-  } else if (strncmp(data, "INVOKE", 6) == 0) {
+  } else if (strncmp(data, "CALL_INVOKE", 11) == 0) {
     // printf("INVOKE\n");
     state = Invoke;
     invoke();

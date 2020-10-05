@@ -22,16 +22,18 @@ RUN mkdir -m 777 /XMOS && cd /XMOS \
     >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 
+# Take in ARGS from `docker build --build-arg USER=....`
+# Then create group and user so home dirs and perms work
 ARG USER=root
 ARG UID=0
 ARG GID=0
-
 RUN groupadd -g $GID $USER && \
     useradd $USER -u $UID -g $GID -b /home -m
 
 # fix conda perms
 RUN chown -R $USER /opt/conda
 
+# Set default user
 USER $USER
 
 # set login shell

@@ -22,6 +22,9 @@ RUN mkdir -m 777 /XMOS && cd /XMOS \
     >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 
+# install compiler
+RUN apt-get install -y build-essential
+
 # Take in ARGS from `docker build --build-arg USER=....`
 # Then create group and user so home dirs and perms work
 ARG USER=root

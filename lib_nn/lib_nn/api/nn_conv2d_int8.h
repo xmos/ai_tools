@@ -258,60 +258,60 @@ void conv2d_im2col_init(
 
 
 
-/** 
- * @brief Initialize an instance of the @oper{conv2d_1x1} operator.
- * 
- * See @oper_ref{conv2d_1x1} for more details about the @oper{conv2d_1x1} operator. To invoke a @oper{conv2d_1x1} job, 
- * call conv2d_1x1().
- * 
- * When conv2d_1x1() is called, a plan (`nn_conv2d_1x1_plan_t`) and a job (`nn_conv2d_1x1_job_t`) must be supplied 
- * to tell it how to do its work. This function initializes that plan and one or more jobs to be supplied in subsequent 
- * calls to conv2d_1x1().
- * 
- * A plan contains information shared by all jobs of an instance of @oper{conv2d_1x1}. Each job computes a range of the
- * output channels for a contiguous sequence of pixels (when the image is flattened row by row), possibly including the
- * entire output image.
- * 
- * `plan` points to the plan to be initialized. It need only be initialized once for many calls to conv2d_1x1().
- * 
- * `jobs` points to an array of `nn_conv2d_1x1_job_t` to be initialized. Each element represents one job. There should 
- * be `job_count` elements in the array.
- * 
- * `x_params` points to the image parameters for the instance's input image @tensor{X}.
- * 
- * `y_params` points to the image parameters for the instance's output image @tensor{Y}.
- * 
- * `job_params` points to either an array of `nn_conv2d_1x1_job_params_t` structs or else is `NULL`. A `job_params` 
- * value of `NULL` indicates that there will only be a single job which computes the entire output image. If 
- * `job_params` is `NULL`, then `job_count` must be `1`. If `job_params` is not `NULL`, it must point to an array of 
- * `job_count` `nn_conv2d_1x1_job_params_t` elements.
- * 
- * In particular, job `k` will start computing outputs at row `job_params[k].start.rows` and column 
- * `job_params[k].start.cols` of the output image. It will compute outputs for `job_params[k].size.pixels` pixels, 
- * increasing the column index until the end of the row, then moving to column 0 of the following row. The job will
- * compute out channels `job_params[k].start.channels` through `job_params[k].size.channels - 1` (inclusive).
- * 
- * If multiple jobs are specified, it is the user's responsibility to ensure that the supplied list of job params 
- * collectively computes the entire output image (no gaps) and does not compute any output values redundantly (no 
- * overlap).
- * 
- * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array), as 
- * well the number of elements in the `job_params` array if it is not `NULL`.
- * 
- * @param[out] plan         The plan to be initialized
- * @param[out] jobs         Array of jobs to be initialized
- * @param[in]  x_params     Parameters describing the shape of input image tensor @tensor{X}
- * @param[in]  y_params     Parameters describing the shape of output image tensor @tensor{Y}
- * @param[in]  job_params   Array with configuration parameters for each job, or `NULL`
- * @param[in]  job_count    The number of jobs to initialize
- */
-void conv2d_1x1_init(
-    nn_conv2d_1x1_plan_t* plan,
-    nn_conv2d_1x1_job_t* jobs,
-    const nn_image_params_t* x_params,
-    const nn_image_params_t* y_params,
-    const nn_conv2d_1x1_job_params_t* job_params,
-    const unsigned job_count);
+// /** 
+//  * @brief Initialize an instance of the @oper{conv2d_1x1} operator.
+//  * 
+//  * See @oper_ref{conv2d_1x1} for more details about the @oper{conv2d_1x1} operator. To invoke a @oper{conv2d_1x1} job, 
+//  * call conv2d_1x1().
+//  * 
+//  * When conv2d_1x1() is called, a plan (`nn_conv2d_1x1_plan_t`) and a job (`nn_conv2d_1x1_job_t`) must be supplied 
+//  * to tell it how to do its work. This function initializes that plan and one or more jobs to be supplied in subsequent 
+//  * calls to conv2d_1x1().
+//  * 
+//  * A plan contains information shared by all jobs of an instance of @oper{conv2d_1x1}. Each job computes a range of the
+//  * output channels for a contiguous sequence of pixels (when the image is flattened row by row), possibly including the
+//  * entire output image.
+//  * 
+//  * `plan` points to the plan to be initialized. It need only be initialized once for many calls to conv2d_1x1().
+//  * 
+//  * `jobs` points to an array of `nn_conv2d_1x1_job_t` to be initialized. Each element represents one job. There should 
+//  * be `job_count` elements in the array.
+//  * 
+//  * `x_params` points to the image parameters for the instance's input image @tensor{X}.
+//  * 
+//  * `y_params` points to the image parameters for the instance's output image @tensor{Y}.
+//  * 
+//  * `job_params` points to either an array of `nn_conv2d_1x1_job_params_t` structs or else is `NULL`. A `job_params` 
+//  * value of `NULL` indicates that there will only be a single job which computes the entire output image. If 
+//  * `job_params` is `NULL`, then `job_count` must be `1`. If `job_params` is not `NULL`, it must point to an array of 
+//  * `job_count` `nn_conv2d_1x1_job_params_t` elements.
+//  * 
+//  * In particular, job `k` will start computing outputs at row `job_params[k].start.rows` and column 
+//  * `job_params[k].start.cols` of the output image. It will compute outputs for `job_params[k].size.pixels` pixels, 
+//  * increasing the column index until the end of the row, then moving to column 0 of the following row. The job will
+//  * compute out channels `job_params[k].start.channels` through `job_params[k].size.channels - 1` (inclusive).
+//  * 
+//  * If multiple jobs are specified, it is the user's responsibility to ensure that the supplied list of job params 
+//  * collectively computes the entire output image (no gaps) and does not compute any output values redundantly (no 
+//  * overlap).
+//  * 
+//  * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array), as 
+//  * well the number of elements in the `job_params` array if it is not `NULL`.
+//  * 
+//  * @param[out] plan         The plan to be initialized
+//  * @param[out] jobs         Array of jobs to be initialized
+//  * @param[in]  x_params     Parameters describing the shape of input image tensor @tensor{X}
+//  * @param[in]  y_params     Parameters describing the shape of output image tensor @tensor{Y}
+//  * @param[in]  job_params   Array with configuration parameters for each job, or `NULL`
+//  * @param[in]  job_count    The number of jobs to initialize
+//  */
+// void conv2d_1x1_init(
+//     nn_conv2d_1x1_plan_t* plan,
+//     nn_conv2d_1x1_job_t* jobs,
+//     const nn_image_params_t* x_params,
+//     const nn_image_params_t* y_params,
+//     const nn_conv2d_1x1_job_params_t* job_params,
+//     const unsigned job_count);
 
 
 
@@ -567,8 +567,19 @@ void conv2d_1x1(
     const nn_image_t* X,
     const nn_tensor_t* K,
     const nn_bso_block_t* BSO,
-    const nn_conv2d_1x1_plan_t* plan,
-    const nn_conv2d_1x1_job_t* job);
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params);
+
+    
+void conv2d_1x1_adv(
+    nn_image_t* Y,
+    const nn_image_t* X,
+    const nn_tensor_t* K,
+    const nn_bso_block_t* BSO,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_conv2d_1x1_job_params_t* job_params,
+    const nn_conv2d_1x1_flags_e flags);
 
 /**
  * @brief Invoke a @oper{conv2d_depthwise} job.

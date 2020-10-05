@@ -185,7 +185,7 @@ void test_conv2d_1x1_case0()
 
         PRINTF("\ttest vector %u...\n", v);
             
-        nn_image_params_t x_params = { HEIGHT, WIDTH, CHANS_IN };
+        nn_image_params_t x_params = { HEIGHT, WIDTH, CHANS_IN  };
         nn_image_params_t y_params = { HEIGHT, WIDTH, CHANS_OUT };
 
         if(((uint8_t)casse->x) != 0xED){
@@ -231,13 +231,8 @@ void test_conv2d_1x1_case0()
                       (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, 
                       (int16_t*) &BSO.shift2, NULL, CHANS_OUT);
 
-        nn_conv2d_1x1_plan_t plan;
-        nn_conv2d_1x1_job_t job;
-
-        conv2d_1x1_init(&plan, &job, &x_params, &y_params, NULL, 1);
-
         memset(Y, 0xCC, sizeof(Y));    //too expensive to write the whole image, so just do the part that's in play
-        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &BSO, &plan, &job);
+        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &BSO, &x_params, &y_params);
 
         char str_buff[200] = {0};
         for(unsigned row = 0; row < y_params.height; row++){
@@ -337,8 +332,6 @@ void test_conv2d_1x1_case1()
         {        8,      8,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
         {       48,     24,         { 0, 0},        WIDTH*HEIGHT,         __LINE__}, 
         {       40,     12,         { 0, 0},        WIDTH*HEIGHT,         __LINE__},
-
-        // 22
         {       32,     16,         { 0, 0},                   1,         __LINE__}, 
         {       32,     32,         { 0, 0},                   2,         __LINE__}, 
         {       32,     48,         { 0, 0},                   3,         __LINE__}, 
@@ -404,31 +397,12 @@ void test_conv2d_1x1_case1()
                                 (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, 
                                 (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
-
-        if(C_out % VPU_INT8_ACC_PERIOD){
-            int a = C_out % VPU_INT8_ACC_PERIOD;
-
-            for(int k = a; k < VPU_INT8_ACC_PERIOD; k++){
-                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].bias_hi[k] = 0xBEEF;
-                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].bias_lo[k] = 0xFEED;
-                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].shift1[k] = 0xDEAD;
-                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].scale[k] = 0xACED;
-                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].offset_scale[k] = 0xDEAF;
-                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].offset[k] = 0xF001;
-                bso[BSO_BLOCK_COUNT(CHANS_OUT_CEIL)-1].shift2[k] = 0xFABB;
-            }
-        }
-
-        nn_conv2d_1x1_plan_t plan;
-        nn_conv2d_1x1_job_t job;
         nn_conv2d_1x1_job_params_t job_params[1] = {  
             { {casse->start[0], casse->start[1], 0}, {casse->out_pixels, y_params.channels} },
         };
 
-        conv2d_1x1_init(&plan, &job, &x_params, &y_params, job_params, 1);
-
-
-        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan, &job);
+        conv2d_1x1_adv((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &bso, 
+                        &x_params, &y_params, &job_params[0], 0);
 
         unsigned pix_start = casse->start[0] * y_params.width + casse->start[1];
         unsigned pix_end   = pix_start + casse->out_pixels;
@@ -580,13 +554,8 @@ void test_conv2d_1x1_case2()
         nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
                                 (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, 
                                 (int16_t*) &BSO.shift2, NULL, y_params.channels);
-
-        nn_conv2d_1x1_plan_t plan;
-        nn_conv2d_1x1_job_t job;
-
-        conv2d_1x1_init(&plan, &job, &x_params, &y_params, NULL, 1);
-
-        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan, &job);
+                                
+        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &bso, &x_params, &y_params);
 
         for(unsigned row = 0; row < y_params.height; row++){
             for(unsigned col = 0; col < y_params.width; col++){
@@ -669,12 +638,7 @@ void test_conv2d_1x1_case3()
                             (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, 
                             (int16_t*) &BSO.shift2, NULL, y_params.channels);
 
-    nn_conv2d_1x1_plan_t plan;
-    nn_conv2d_1x1_job_t job;
-
-    conv2d_1x1_init(&plan, &job, &x_params, &y_params, NULL, 1);
-
-    conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan, &job);
+    conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &bso, &x_params, &y_params);
 
 
     for(unsigned row = 0; row < y_params.height; row++){
@@ -752,9 +716,6 @@ void test_conv2d_1x1_case4()
 
     memset(Y, 0xCC, sizeof(Y));
     
-
-    nn_conv2d_1x1_plan_t plan;
-    nn_conv2d_1x1_job_t jobs[4];
     nn_conv2d_1x1_job_params_t job_params[4] = {
         { {0, 0,  0}, { 1, 20} },
         { {0, 1,  0}, { 3, 20} },
@@ -762,10 +723,9 @@ void test_conv2d_1x1_case4()
         { {2, 0, 16}, { 8,  4} },
     };
 
-    conv2d_1x1_init(&plan, jobs, &x_params, &y_params, job_params, 4);
-
     for(int i = 0; i < 4; i++)
-        conv2d_1x1((int8_t*)Y, (int8_t*)X, (int8_t*)K, bso, &plan, &jobs[i]);
+        conv2d_1x1_adv((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &bso, 
+                        &x_params, &y_params, &job_params[i], 0);
 
 
     for(unsigned row = 0; row < y_params.height; row++){

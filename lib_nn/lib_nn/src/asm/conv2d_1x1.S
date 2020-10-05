@@ -6,13 +6,15 @@
 #include "asm_constants.h"
 
 /*  
-void conv2d_1x1(
+void conv2d_1x1_adv(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,
     const nn_bso_block_t* BSO,
-    const nn_conv2d_1x1_plan_t* plan,
-    const nn_conv2d_1x1_job_t* job);
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_conv2d_1x1_job_params_t* job_params,
+    const nn_conv2d_1x1_flags_e flags);
 
 
 Optimizing assumptions:
@@ -22,7 +24,7 @@ Optimizing assumptions:
 
 */
 
-#define FUNCTION_NAME conv2d_1x1
+#define FUNCTION_NAME conv2d_1x1_adv
 
 #define NSTACKWORDS  36
     
@@ -35,21 +37,25 @@ Optimizing assumptions:
 
 
 
-#define PLAN_CIN                0
-#define PLAN_COUT               1
+#define JOB_START_ROWS          0
+#define JOB_START_COLS          1
+#define JOB_START_CHANS         2
+#define JOB_SIZE_PIXELS         3
+#define JOB_SIZE_CHANS          4
 
-#define JOB_START_STRIDE_X     0
-#define JOB_START_STRIDE_Y     1
-#define JOB_START_STRIDE_K     2
-#define JOB_START_STRIDE_BSO   3
-#define JOB_PIXELS             4
-#define JOB_CHANNELS           5
+#define IMG_PARAMS_ROWS         0
+#define IMG_PARAMS_COLS         1
+#define IMG_PARAMS_CHANS        2
+
 
 #define STACK_VEC_TMP       (NSTACKWORDS-8)
 #define STACK_VEC_TMP2      (NSTACKWORDS-16)
 
-#define STACK_PLAN          (NSTACKWORDS+1)
-#define STACK_JOB           (NSTACKWORDS+2)
+#define STACK_X_PARAMS      (NSTACKWORDS+1)
+#define STACK_Y_PARAMS      (NSTACKWORDS+2)
+#define STACK_JOB_PARAMS    (NSTACKWORDS+3)
+#define STACK_FLAGS         (NSTACKWORDS+4)
+
 
 #define STACK_CP            1
 #define STACK_X             9
@@ -82,44 +88,74 @@ Optimizing assumptions:
 
 
 FUNCTION_NAME:
-    dualentsp NSTACKWORDS
-    std r4, r5, sp[1]
-    std r6, r7, sp[2]
-    std r8, r9, sp[3]
+        dualentsp NSTACKWORDS
+        std r4, r5, sp[1]
+        std r6, r7, sp[2]
+        std r8, r9, sp[3]
     {   ldc _32, 32                             ;   stw r10, sp[8]                          }
 
     //Change constant pool pointer to refer to the constant VPU vects needed here
-    ldaw r11, cp[vpu_vects]
+        ldaw r11, cp[vpu_vects]
     {   ldaw r11, cp[0]                         ;   set cp, r11                             }
     {                                           ;   stw r11, sp[STACK_CP]                   }
 
-#define plan            cig_left
-#define job             pix_left
 
-    {   shl r11, _32, 4                         ;   ldw plan, sp[STACK_PLAN]                }
-    {                                           ;   vsetc r11                               }
-    {                                           ;   ldw job, sp[STACK_JOB]                  }
-    {                                           ;   ldw C_in, plan[PLAN_CIN]                }
-    {   mov cin_tail, C_in                      ;   ldw r11, plan[PLAN_COUT]                }
-    {   zext cin_tail, 5                        ;   stw r11, sp[STACK_C_OUT]                }
-    {                                           ;   ldw r11, job[JOB_START_STRIDE_X]        }
-    {   add X, X, r11                           ;   ldw r11, job[JOB_START_STRIDE_Y]        }
-    {   add Y, Y, r11                           ;   ldw r11, job[JOB_START_STRIDE_K]        }
-    {   add K, K, r11                           ;   ldw r11, job[JOB_START_STRIDE_BSO]      }
-    {   add BSO, BSO, r11                       ;   stw X, sp[STACK_X]                      }
+#define x_params    r7
+#define y_params    r8
+#define job_params  r9
+
+    {                                           ;   ldw x_params, sp[STACK_X_PARAMS]        }
+    {                                           ;   ldw y_params, sp[STACK_Y_PARAMS]        }
+    {                                           ;   ldw job_params, sp[STACK_JOB_PARAMS]    }
+
+    // start pixel index
+    {                                           ;   ldw r4, y_params[IMG_PARAMS_COLS]       }
+    {                                           ;   ldw r5, job_params[JOB_START_ROWS]      }
+        mul r4, r4, r5
+    {                                           ;   ldw r6, job_params[JOB_START_COLS]      }
+    {   add r4, r4, r6                          ;   ldw r6, x_params[IMG_PARAMS_CHANS]      }
+
+    // Move X
+        mul r6, r4, r6
+    {   add X, X, r6                            ;   ldw r6, y_params[IMG_PARAMS_CHANS]      }
+    {                                           ;   stw r6, sp[STACK_C_OUT]                 }
+    {                                           ;   stw X, sp[STACK_X]                      }
+
+    // Move Y
+        mul r6, r4, r6
+    {   add Y, Y, r6                            ;   ldw r6, job_params[JOB_START_CHANS]     }
+    {   add Y, Y, r6                            ;   shr r6, r6, 4                           }
     {                                           ;   stw Y, sp[STACK_Y_NEXT_COG]             }
+
+    // Move BSO
+        ldc r4, nn_bso_block_t_sizeof
+        mul r4, r4, r6
+    {   add BSO, BSO, r4                        ;   shl r6, r6, 4                           }
     {                                           ;   stw BSO, sp[STACK_BSO]                  }
-    {                                           ;   ldw r11, job[JOB_PIXELS]                }
+    
+    // Move K
+    {                                           ;   ldw r4, x_params[IMG_PARAMS_CHANS]      }
+        mul r6, r6, r4
+    {   add K, K, r6                            ;   ldc _32, 32                             }
+
+
+    // Calculate a few other things we need
+
+    {   shl r11, _32, 4                         ;   ldw C_in, x_params[IMG_PARAMS_CHANS]    }
+    {   mov cin_tail, C_in                      ;   vsetc r11                               }
+    {   zext cin_tail, 5                        ;   ldw r11, job_params[JOB_SIZE_PIXELS]    }
     {                                           ;   stw r11, sp[STACK_PIX_COUNT]            }
 
-    {   ldaw r11, sp[STACK_VEC_TMP2]            ;   ldw r1, job[JOB_CHANNELS]               }
+    {   ldaw r11, sp[STACK_VEC_TMP2]            ;   ldw r1, job_params[JOB_SIZE_CHANS]      }
+
     {   shr cog_left, r1, 4                     ;   vclrdr                                  }
     {   zext r1, 4                              ;   vstr r11[0]                             }
     {   ldaw r11, sp[STACK_VEC_TMP]             ;   stw r1, sp[STACK_JOB_OUT_TAIL]          }
     {                                           ;   vstr r11[0]                             }
 
-#undef plan
-#undef job
+#undef x_params
+#undef y_params
+#undef job_params
 
     //If there is only a tail, skip the main body
     {                                           ;   bf cog_left, .L_cog_tail                }

@@ -4,7 +4,9 @@ getApproval()
 
 pipeline {
     agent {
-        dockerfile true
+        dockerfile {
+            additionalBuildArgs "--build-arg USER=\$(whoami) --build-arg UID=\$(id -u) --build-arg GID=\$(id -g)"
+        }
     }
 
     parameters { // Available to modify on the job page within Jenkins if starting a build

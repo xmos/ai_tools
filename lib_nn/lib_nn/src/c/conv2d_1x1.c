@@ -40,17 +40,23 @@ static void conv2d_1x1_adjust_starts(
     
     const uint32_t start_pix = job_params->start.rows * y_params->width + job_params->start.cols;
 
-    const uint32_t start_cog = (job_params->start.channels / VPU_INT8_ACC_PERIOD);
-
-    int32_t start_X = start_pix * x_params->channels;
-    int32_t start_Y = start_pix * y_params->channels + job_params->start.channels;
-    int32_t start_K = start_cog * VPU_INT8_ACC_PERIOD * x_params->channels;
-    int32_t start_BSO = start_cog;
+    const int32_t start_X = start_pix * x_params->channels;
+    const int32_t start_Y = start_pix * y_params->channels + job_params->start.channels;
 
     *X = ADDR(*X, start_X);
     *Y = ADDR(*Y, start_Y);
-    *K = ADDR(*K, start_K);
-    *BSO = ADDR(*BSO, start_BSO);
+
+    if( !(flags & CONV2D_1X1_FLAG_SLICED_K) ){
+        
+        const uint32_t start_cog = (job_params->start.channels / VPU_INT8_ACC_PERIOD);
+
+        const int32_t start_K = start_cog * VPU_INT8_ACC_PERIOD * x_params->channels;
+        const int32_t start_BSO = start_cog;
+
+        *K = ADDR(*K, start_K);
+        *BSO = ADDR(*BSO, start_BSO);
+    }
+
 }
 
 

@@ -752,6 +752,104 @@ void test_conv2d_1x1_case4()
 
 
 
+#define CHANS_OUT       (40)
+#define CHANS_IN        (36)
+#define HEIGHT          (4)
+#define WIDTH           (4)
+void test_conv2d_1x1_case5()
+{
+    PRINTF("%s...\n", __func__);
+
+
+    nn_image_t WORD_ALIGNED  X[HEIGHT][WIDTH][CHANS_IN];
+    memset(X, 1, sizeof(X));
+
+    nn_tensor_t WORD_ALIGNED  K[CHANS_OUT][CHANS_IN];
+    memset(K, 0, sizeof(K));
+    memset(&K[16][0], 1, CHANS_IN*16);
+
+    struct {
+        int32_t bias[CHANS_OUT];
+        int16_t shift1[CHANS_OUT];
+        int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
+        int16_t shift2[CHANS_OUT];
+    } BSO;
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
+
+    nn_image_t Y_exp[CHANS_OUT];
+
+    nn_image_t WORD_ALIGNED  Y[HEIGHT][WIDTH][CHANS_OUT];
+
+
+    for(int k = 0; k < CHANS_OUT; k++){
+        BSO.bias[k] = (k >= 16 && k < 32)? 28 : 1234637;
+        BSO.shift1[k] = 0;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k] = 0;
+        BSO.shift2[k] = 0;
+    }
+        
+    nn_image_params_t x_params = { HEIGHT, WIDTH, CHANS_IN };
+    nn_image_params_t y_params = { HEIGHT, WIDTH, CHANS_OUT };
+
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                            (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, 
+                            (int16_t*) &BSO.offset, (int16_t*) &BSO.shift2, 
+                            NULL, y_params.channels);
+
+    nn_conv2d_1x1_job_params_t job_params = { {0,0,16},{HEIGHT*WIDTH,16} };
+
+    // First, without the slice flag.
+    memset(Y, 0xCC, sizeof(Y));
+
+    conv2d_1x1_adv((int8_t*)Y, (int8_t*)X, (int8_t*) K, bso, 
+                    &x_params, &y_params, &job_params, 0);
+
+    for(unsigned row = 0; row < y_params.height; row++){
+        for(unsigned col = 0; col < y_params.width; col++){
+            for(unsigned chn = 0; chn < y_params.channels; chn++){
+
+                nn_image_t y_exp = (chn >= 16 && chn < 32)? 64 : 0xCC;
+                
+                Check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, chn, __LINE__);
+            }
+        }
+
+    }
+
+    // Then with the slice flag.
+    memset(Y, 0xCC, sizeof(Y));
+
+    nn_tensor_t* K_start = &K[16][0];
+    nn_bso_block_t* bso_start = &bso[1];
+
+    conv2d_1x1_adv((int8_t*)Y, (int8_t*)X, K_start, bso_start, 
+                    &x_params, &y_params, &job_params, CONV2D_1X1_FLAG_SLICED_K);
+
+    for(unsigned row = 0; row < y_params.height; row++){
+        for(unsigned col = 0; col < y_params.width; col++){
+            for(unsigned chn = 0; chn < y_params.channels; chn++){
+
+                nn_image_t y_exp = (chn >= 16 && chn < 32)? 64 : 0xCC;
+                
+                Check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, chn, __LINE__);
+            }
+        }
+
+    }
+
+}
+#undef CHANS_IN      
+#undef CHANS_OUT     
+#undef HEIGHT        
+#undef WIDTH         
+
+
+
+
 void test_conv2d_1x1()
 {
     UNITY_SET_FILE();
@@ -761,4 +859,5 @@ void test_conv2d_1x1()
     RUN_TEST(test_conv2d_1x1_case2);
     RUN_TEST(test_conv2d_1x1_case3); 
     RUN_TEST(test_conv2d_1x1_case4); 
+    RUN_TEST(test_conv2d_1x1_case5); 
 }

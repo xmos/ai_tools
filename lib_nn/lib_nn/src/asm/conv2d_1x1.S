@@ -47,6 +47,7 @@ Optimizing assumptions:
 #define IMG_PARAMS_COLS         1
 #define IMG_PARAMS_CHANS        2
 
+#define FLAG_SLICED_K    (1<<0)
 
 #define STACK_VEC_TMP       (NSTACKWORDS-8)
 #define STACK_VEC_TMP2      (NSTACKWORDS-16)
@@ -127,17 +128,23 @@ FUNCTION_NAME:
     {   add Y, Y, r6                            ;   shr r6, r6, 4                           }
     {                                           ;   stw Y, sp[STACK_Y_NEXT_COG]             }
 
-    // Move BSO
-        ldc r4, nn_bso_block_t_sizeof
-        mul r4, r4, r6
-    {   add BSO, BSO, r4                        ;   shl r6, r6, 4                           }
-    {                                           ;   stw BSO, sp[STACK_BSO]                  }
-    
-    // Move K
-    {                                           ;   ldw r4, x_params[IMG_PARAMS_CHANS]      }
-        mul r6, r6, r4
-    {   add K, K, r6                            ;   ldc _32, 32                             }
+    // Only modify BSO and K if the CONV2D_DEPTHWISE_FLAG_SLICED_K is not set.
+    {   ldc r10, FLAG_SLICED_K                  ;   ldw r11, sp[STACK_FLAGS]                }
+    {   and r10, r10, r11                       ;                                           }
+    {                                           ;   bt r10, .L_sliced_K                     }
 
+        // Move BSO
+            ldc r4, nn_bso_block_t_sizeof
+            mul r4, r4, r6
+        {   add BSO, BSO, r4                        ;   shl r6, r6, 4                           }
+        
+        // Move K
+        {                                           ;   ldw r4, x_params[IMG_PARAMS_CHANS]      }
+            mul r6, r6, r4
+        {   add K, K, r6                            ;                                           }
+
+.L_sliced_K:
+    {   ldc _32, 32                             ;   stw BSO, sp[STACK_BSO]                  }
 
     // Calculate a few other things we need
 

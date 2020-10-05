@@ -32,17 +32,17 @@ typedef enum {
      * the BSO tensor are slices, rather than the full tensors.
      * 
      * If this is set, then conv2d_deep_adv() will treat @tensor{K} and BSO as if they contain _only the 
-     * necessary channels for the job being invoked_.
+     * necessary output channels for the job being invoked_.
      * 
      * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
      * 
-     * For example, if a @oper{conv2d_deep} instance performs a 5x3 convolution on an input image with 40 channels,
-     * normally the shape of @tensor{K} would normally be @math{(5,3,40)}, and the shape of BSO would normally
+     * For example, if a @oper{conv2d_deep} instance performs a 5x3 convolution with 32 input channels and 40 output 
+     * channels, normally the shape of @tensor{K} would be @math{(40,5,3,32)}, and the shape of BSO would normally
      * be @math{(3)} for any job invoked.
      * 
      * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
-     * set, conv2d_deep_adv() will interpret the supplied argument `K` as pointing to @math{\bar K[:,:,16:32]} 
-     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[2]} (i.e. the
+     * set, conv2d_deep_adv() will interpret the supplied argument `K` as pointing to @math{\bar K[16:32,:,:,:]} 
+     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[1]} (i.e. the
      * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
      * 
      * @note Each block of the BSO tensor always corresponds to 16 channels. Even if a job invocation is only computing
@@ -63,17 +63,17 @@ typedef enum {
      * the BSO tensor are slices, rather than the full tensors.
      * 
      * If this is set, then conv2d_shallowin_adv() will treat @tensor{K} and BSO as if they contain _only the 
-     * necessary channels for the job being invoked_.
+     * necessary output channels for the job being invoked_.
      * 
      * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
      * 
-     * For example, if a @oper{conv2d_shallowin} instance performs a 5x3 convolution on an input image with 40 channels,
-     * normally the shape of @tensor{K} would normally be @math{(5,3,40)}, and the shape of BSO would normally
+     * For example, if a @oper{conv2d_shallowin} instance performs a 5x3 convolution with 8 input channels and 40 output 
+     * channels, normally the shape of @tensor{K} would be @math{(40,5,3,8)}, and the shape of BSO would normally
      * be @math{(3)} for any job invoked.
      * 
      * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
-     * set, conv2d_shallowin_adv() will interpret the supplied argument `K` as pointing to @math{\bar K[:,:,16:32]} 
-     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[2]} (i.e. the
+     * set, conv2d_shallowin_adv() will interpret the supplied argument `K` as pointing to @math{\bar K[16:32,:,:,:]} 
+     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[1]} (i.e. the
      * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
      * 
      * @note Each block of the BSO tensor always corresponds to 16 channels. Even if a job invocation is only computing
@@ -172,17 +172,17 @@ typedef enum {
      * the BSO tensor are slices, rather than the full tensors.
      * 
      * If this is set, then conv2d_1x1_adv() will treat @tensor{K} and BSO as if they contain _only the 
-     * necessary channels for the job being invoked_.
+     * necessary output channels for the job being invoked_.
      * 
      * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
      * 
-     * For example, if a @oper{conv2d_1x1} instance performs a 5x3 convolution on an input image with 40 channels,
-     * normally the shape of @tensor{K} would normally be @math{(5,3,40)}, and the shape of BSO would normally
-     * be @math{(3)} for any job invoked.
+     * For example, if a @oper{conv2d_1x1} instance performs convolution on an input image with 32 input channels and 40 
+     * output channels, normally the shape of @tensor{K} would be @math{(40,32)}, and the shape of BSO would normally be 
+     * @math{(3)} for any job invoked.
      * 
      * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
-     * set, conv2d_1x1_adv() will interpret the supplied argument `K` as pointing to @math{\bar K[:,:,16:32]} 
-     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[2]} (i.e. the
+     * set, conv2d_1x1_adv() will interpret the supplied argument `K` as pointing to @math{\bar K[16:32,:]} 
+     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[1]} (i.e. the
      * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
      * 
      * @note Each block of the BSO tensor always corresponds to 16 channels. Even if a job invocation is only computing
@@ -235,12 +235,12 @@ typedef enum {
      * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
      * 
      * For example, if a @oper{conv2d_depthwise} instance performs a 5x3 convolution on an input image with 40 channels,
-     * normally the shape of @tensor{K} would normally be @math{(5,3,40)}, and the shape of BSO would normally
-     * be @math{(3)} for any job invoked.
+     * normally the shape of @tensor{K} would be @math{(5,3,40)}, and the shape of BSO would normally be @math{(3)} for 
+     * any job invoked.
      * 
      * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
      * set, conv2d_depthwise_adv() will interpret the supplied argument `K` as pointing to @math{\bar K[:,:,16:32]} 
-     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[2]} (i.e. the
+     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[1]} (i.e. the
      * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
      * 
      * @note Each block of the BSO tensor always corresponds to 16 channels. Even if a job invocation is only computing

@@ -3,8 +3,9 @@ FROM continuumio/miniconda3:4.8.2
 # This Dockerfile is for use by the XMOS CI system
 # It provides a minimal environment needed to execute the Jenkinsfile
 # Most of the dependecies here are handled conda so we only include:
-#  - conda setup
 #  - xmos tools setup
+#  - matching user creation
+#  - conda permissions
 
 # install tools lib dependencies
 RUN apt-get update && apt-get install -y \
@@ -21,9 +22,9 @@ RUN mkdir -m 777 /XMOS && cd /XMOS \
     >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 
-ARG USER=jenkins
-ARG UID=1001
-ARG GID=1000
+ARG USER=root
+ARG UID=0
+ARG GID=0
 
 RUN groupadd -g $GID $USER && \
     useradd $USER -u $UID -g $GID -b /home -m

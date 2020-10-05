@@ -6,6 +6,7 @@ import time
 import json
 import ctypes
 import subprocess
+import atexit
 import re
 import logging
 
@@ -298,12 +299,67 @@ class XCOREDeviceEndpoint(object):
 
 
 class XCOREDeviceServer(object):
+    FILE_LOCK_TIMEOUT = 20
     lock_path = Path("xcore_devices.lock")
     devices_path = Path("xcore_devices.json")
 
     @staticmethod
+    def _setup_device_use(device):
+        # setup device which means launcing xrun and
+        #   and setting all pids. ports and in_use
+        logging.debug(f"Setting up device: {device}")
+        xrun_pid, xgdb_pid, xscope_port = run_test_model(device["id"])
+        device["xrun_pid"] = xrun_pid
+        device["xgdb_pid"] = xgdb_pid
+        device["xscope_port"] = xscope_port
+        device["parent_pid"] = os.getpid()
+        device["in_use"] = False
+        logging.debug(f"Device setup: {device}")
+
+        return device
+
+    @staticmethod
+    def _reset_device_use(device):
+        # reset device which means kill the xrun and xgdb processes
+        #   and setting all pids. ports and in_use to None (or False)
+        logging.debug(f"Resetting device: {device}")
+        os.kill(device["xrun_pid"], signal.SIGKILL)
+        os.kill(device["xgdb_pid"], signal.SIGKILL)
+
+        device["xrun_pid"] = None
+        device["xgdb_pid"] = None
+        device["xscope_port"] = None
+        device["parent_pid"] = None
+        device["in_use"] = False
+        logging.debug(f"Device reset: {device}")
+
+        return device
+
+    @staticmethod
+    def _atexit():
+        with portalocker.TemporaryFileLock(
+            XCOREDeviceServer.lock_path, timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT
+        ) as fh:
+            if XCOREDeviceServer.devices_path.is_file():
+                # search (by parent pid) for this process in cached devices
+                with open(XCOREDeviceServer.devices_path, "r+") as fd:
+                    this_pid = os.getpid()
+                    cached_devices = json.loads(fd.read())
+                    for cached_device in cached_devices:
+                        if this_pid == cached_device["parent_pid"]:
+                            cached_device = XCOREDeviceServer._reset_device_use(
+                                cached_device
+                            )
+
+                with open(XCOREDeviceServer.devices_path, "w") as fd:
+                    fd.write(json.dumps(cached_devices))
+
+    @staticmethod
     def acquire():
-        with portalocker.Lock(XCOREDeviceServer.lock_path, timeout=20) as fh:
+        atexit.register(XCOREDeviceServer._atexit)
+        with portalocker.TemporaryFileLock(
+            XCOREDeviceServer.lock_path, timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT
+        ):
             # get the connected devices
             connected_devices = get_devices()
             # get the cached devices
@@ -313,54 +369,52 @@ class XCOREDeviceServer(object):
             else:
                 cached_devices = []
 
-            logging.debug(f"connected devices {connected_devices}")
-            logging.debug(f"cached devices {cached_devices}")
+            logging.debug(f"Connected devices: {connected_devices}")
+            logging.debug(f"Cached devices: {cached_devices}")
             # sync connected and cached devices
             synced_devices = []
             for connected_device in connected_devices:
-                launch_xrun = True
-
                 # check cached_devices for this connected device
-                new_device = True
+                new_device = True  # until proven otherwise
                 for cached_device in cached_devices:
                     if cached_device["adaptor_id"] == connected_device["adaptor_id"]:
-                        # ensure device is responding
-                        if "xrun_pid" in cached_device:
+                        logging.debug(f"Found cached device: {cached_device}")
+                        if cached_device.get("xrun_pid", None) == None:
+                            # cached device but need to be setup
+                            cached_device = XCOREDeviceServer._setup_device_use(
+                                cached_device
+                            )
+                        else:
+                            # ensure device is responding
                             ep = XCOREDeviceEndpoint()
                             ep.connect(port=cached_device["xscope_port"])
                             if ep.ping_device():
-                                logging.debug("ping succeeded")
-                                launch_xrun = False
+                                logging.debug("Ping succeeded")
                             else:
-                                logging.debug("ping failed")
-                                # device did not respond so kill running xrun and xgdb
-                                os.kill(cached_device["xrun_pid"], signal.SIGKILL)
-                                os.kill(cached_device["xgdb_pid"], signal.SIGKILL)
-                                cached_device["xrun_pid"] = None
-                                cached_device["xgdb_pid"] = None
-                                cached_device["xscope_port"] = None
-                                cached_device["in_use"] = False
-                                launch_xrun = True
+                                logging.debug("Ping failed")
+                                # device did not respond so reset it
+                                cached_device = XCOREDeviceServer._reset_device_use(
+                                    cached_device
+                                )
+                                # then setup the device
+                                cached_device = XCOREDeviceServer._setup_device_use(
+                                    cached_device
+                                )
                             ep.disconnect()
 
-                        # this is a known device so save in synced
+                        # this is a known device so save in synced devices
                         synced_devices.append(cached_device)
                         new_device = False
                         break
 
-                if launch_xrun:
-                    # launch xrun and store pids in connected device
-                    xrun_pid, xgdb_pid, xscope_port = run_test_model(
-                        connected_device["id"]
-                    )
-                    connected_device["xrun_pid"] = xrun_pid
-                    connected_device["xgdb_pid"] = xgdb_pid
-                    connected_device["xscope_port"] = xscope_port
-                    connected_device["in_use"] = False
-
                 if new_device:
-                    # this connected device is new so save in synced
-                    connected_device["in_use"] = False
+                    # connected device not found in cached devices so it must be new
+                    logging.debug(f"Found new device: {connected_device}")
+                    # setup this new device
+                    connected_device = XCOREDeviceServer._setup_device_use(
+                        connected_device
+                    )
+                    # new devices are save in synced devices
                     synced_devices.append(connected_device)
 
             # now search synced_devices for an available device
@@ -372,11 +426,11 @@ class XCOREDeviceServer(object):
                     break
 
             # save the synched devices
-            logging.debug(f"synced devices: {synced_devices}")
+            logging.debug(f"Saving synced devices: {synced_devices}")
             with open(XCOREDeviceServer.devices_path, "w") as fd:
                 fd.write(json.dumps(synced_devices))
 
-            logging.debug(f"acquired device: {acquired_device}")
+            logging.debug(f"Acquired device: {acquired_device}")
 
             # create endpoint from acquired_device and return
             ep = XCOREDeviceEndpoint()
@@ -386,7 +440,9 @@ class XCOREDeviceServer(object):
 
     @staticmethod
     def release(endpoint):
-        with portalocker.Lock(XCOREDeviceServer.lock_path, timeout=20) as fh:
+        with portalocker.TemporaryFileLock(
+            XCOREDeviceServer.lock_path, timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT
+        ):
             if XCOREDeviceServer.devices_path.is_file():
                 # search (by port) for endpoint in cached devices
                 with open(XCOREDeviceServer.devices_path, "r+") as fd:
@@ -395,7 +451,7 @@ class XCOREDeviceServer(object):
                         if endpoint.port == cached_device["xscope_port"]:
                             endpoint.disconnect()
                             cached_device["in_use"] = False
-                            logging.debug(f"released device: {cached_device}")
+                            logging.debug(f"Released device: {cached_device}")
 
                 with open(XCOREDeviceServer.devices_path, "w") as fd:
                     fd.write(json.dumps(cached_devices))

@@ -48,39 +48,41 @@ void xscope_data(void *data, size_t size) {
 
   // Handle state protocol messages
   if (strncmp(data, "PING_RECV", 9) == 0) {
-    // printf("PING_RECV\n");
+    printf("Received PING_RECV\n");
     xscope_int(PING_AWK, 0);
     return;
   } else if (strncmp(data, "START_MODEL", 11) == 0) {
-    // printf("START_MODEL\n");
+    printf("Received START_MODEL\n");
     state = Model;
     model_received_bytes = 0;
     return;
   } else if (strncmp(data, "END_MODEL", 9) == 0) {
-    // printf("END_MODEL\n");
+    printf("Received END_MODEL\n");
     // Note, initialize will log error and exit if initialize fails
     initialize(model_content, tensor_arena, TENSOR_ARENA_SIZE, &input_buffer,
                &input_size, &output_buffer, &output_size);
-    // printf("   END_MODEL END\n");
+    printf("Inference engine initialized\n");
     return;
   } else if (strncmp(data, "SET_TENSOR", 9) == 0) {
-    // printf("SET_TENSOR\n");
+    printf("Received SET_TENSOR\n");
     state = SetTensor;
     tensor_received_bytes = 0;
     sscanf(data, "SET_TENSOR %d %d", &tensor_index, &tensor_size);
+    printf("SET_TENSOR index=%d   size=%d\n", tensor_index, tensor_size);
     return;
   } else if (strncmp(data, "GET_TENSOR", 9) == 0) {
-    // printf("GET_TENSOR\n");
+    printf("Received GET_TENSOR\n");
     state = GetTensor;
     sscanf(data, "GET_TENSOR %d", &tensor_index);
     get_tensor_bytes(tensor_index, &tensor_buffer, &tensor_size);
+    printf("GET_TENSOR index=%d  size=%d\n", tensor_index, tensor_size);
     send_tensor(tensor_buffer, tensor_size);
     return;
   } else if (strncmp(data, "CALL_INVOKE", 11) == 0) {
-    // printf("INVOKE\n");
+    printf("Received INVOKE\n");
     state = Invoke;
     invoke();
-    // printf("   INVOKE END\n");
+    printf("Invoke compete\n");
     return;
   }
 

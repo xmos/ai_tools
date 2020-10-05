@@ -208,7 +208,7 @@ class XCOREDeviceEndpoint(object):
         return RECORD_CALLBACK(func)
 
     def _send_blob(self, blob):
-        CHUCK_SIZE = 256
+        CHUCK_SIZE = 128
         for i in range(0, len(blob), CHUCK_SIZE):
             self._publish_blob_chunk_ready = False
             self.publish(blob[i : i + CHUCK_SIZE])
@@ -227,7 +227,7 @@ class XCOREDeviceEndpoint(object):
 
     def on_print(self, timestamp, data):
         msg = data.decode("utf-8").rstrip()
-        print(msg)
+        logging.debug(msg)
 
     def on_probe(self, id_, timestamp, length, data_val, data_bytes):
         if id_ == XCOREDeviceEndpoint.PING_AWK_PROBE_ID:
@@ -266,7 +266,6 @@ class XCOREDeviceEndpoint(object):
 
         self.publish(b"PING_RECV")
         # wait for PING_AWK probe
-        logging.debug("pinging")
         while not self._device_ready:
             if duration >= timeout:
                 break
@@ -387,7 +386,9 @@ class XCOREDeviceServer(object):
                         else:
                             # ensure device is responding
                             ep = XCOREDeviceEndpoint()
-                            ep.connect(port=cached_device["xscope_port"])
+                            port = cached_device["xscope_port"]
+                            ep.connect(port=port)
+                            logging.debug(f"Pinging port: {port}")
                             if ep.ping_device():
                                 logging.debug("Ping succeeded")
                             else:

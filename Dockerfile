@@ -6,11 +6,6 @@ FROM continuumio/miniconda3:4.8.2
 #  - conda setup
 #  - xmos tools setup
 
-# fix conda perms
-RUN chmod -R 777 /opt/conda \
-    && mkdir -p /.conda \
-    && chmod -R 777 /.conda
-
 # install tools lib dependencies
 RUN apt-get update && apt-get install -y \
     libncurses5 libncurses5-dev \
@@ -25,6 +20,17 @@ RUN mkdir -m 777 /XMOS && cd /XMOS \
     && echo "export MODULES_SILENT_SHELL_DEBUG=1\nexport MODULEPATH=/XMOS/modulefiles:/XMOS/template_modulefiles\nexport PATH=$PATH:/XMOS" \
     >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
+
+ARG USER=jenkins
+ARG UID=1001
+ARG GID=1000
+
+RUN groupadd -g $GID $USER && \
+    useradd $USER -u $UID -g $GID -b /home -m
+USER $USER
+
+# fix conda perms
+RUN chown -R $USER /opt/conda
 
 # set login shell
 SHELL ["/bin/bash", "-l", "-c"]

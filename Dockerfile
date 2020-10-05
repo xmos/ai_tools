@@ -27,10 +27,11 @@ ARG GID=1000
 
 RUN groupadd -g $GID $USER && \
     useradd $USER -u $UID -g $GID -b /home -m
-USER $USER
 
 # fix conda perms
 RUN chown -R $USER /opt/conda
+
+USER $USER
 
 # set login shell
 SHELL ["/bin/bash", "-l", "-c"]

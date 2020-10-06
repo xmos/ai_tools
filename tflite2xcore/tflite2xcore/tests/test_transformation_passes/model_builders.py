@@ -21,7 +21,7 @@ ModelBuilder = Callable[..., XCOREModel]
 
 
 def generate_dummy_int8_data(shape: Tuple[int, ...]) -> np.ndarray:
-    return np.arange(0, np.prod(shape), dtype=np.int8) % 255 - 127
+    return np.int8(np.arange(np.prod(shape)) % 255 - 127)
 
 
 def generate_dummy_int32_data(shape: Tuple[int, ...]) -> np.ndarray:

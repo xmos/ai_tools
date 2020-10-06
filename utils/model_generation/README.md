@@ -4,7 +4,7 @@
 
 ## Running tests with the host interpreter
 
-To run all tests using NUM threads
+To run all tests using NUM worker processes
 
     > pytest integration_test -n NUM
 

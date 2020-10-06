@@ -2,6 +2,7 @@
 
 import logging
 import dill  # type: ignore
+import tensorflow as tf  # type: ignore
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Dict, Any, Optional, List, Union, Type
@@ -49,6 +50,9 @@ class Runner(ABC):
         """
         self._model_generator.build()
         self.converted_models = {}
+
+    def get_built_model(self) -> tf.keras.Model:
+        return self._model_generator.get_model()
 
     def check_config(self) -> None:
         """ Checks if the current configuration parameters are legal. """

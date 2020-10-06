@@ -2,8 +2,6 @@
 
 import pytest  # type: ignore
 
-from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
-
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
@@ -11,10 +9,5 @@ from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix t
 
 
 @pytest.fixture  # type: ignore
-def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_lookup_8
-
-
-@pytest.fixture  # type: ignore
 def output_tolerance() -> int:
-    return 0
+    return 1

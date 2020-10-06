@@ -29,8 +29,7 @@ class Converter(RunnerDependent):
         self._runner = runner
         self._input_model_hook = input_model_hook
 
-    @property
-    def converted_model(self) -> TFLiteModel:
+    def get_converted_model(self) -> TFLiteModel:
         try:
             return self._model
         except AttributeError:

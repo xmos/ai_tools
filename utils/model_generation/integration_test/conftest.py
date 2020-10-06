@@ -161,3 +161,8 @@ def xcore_model(run: IntegrationTestRunner) -> XCOREModel:
 @pytest.fixture  # type: ignore
 def xcore_identical_model(run: IntegrationTestRunner) -> XCOREModel:
     return XCOREModel.deserialize(run.converted_models["xcore_identical"])
+
+
+@pytest.fixture  # type: ignore
+def output_tolerance() -> int:
+    return 1

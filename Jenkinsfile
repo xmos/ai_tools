@@ -5,7 +5,7 @@ getApproval()
 pipeline {
     agent {
         dockerfile {
-            additionalBuildArgs "--build-arg USER=\$(whoami) --build-arg UID=\$(id -u) --build-arg GID=\$(id -g)"
+            args "-v /home/jenkins/.keras:/root/.keras"
         }
     }
 

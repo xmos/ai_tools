@@ -33,6 +33,14 @@ class ModelGenerator(RunnerDependent):
         """
         raise NotImplementedError()
 
+    def get_model(self) -> tf.keras.Model:
+        try:
+            return self._model
+        except AttributeError:
+            raise Exception(
+                "Cannot get generated model before build is called!"
+            ) from None
+
     def _prep_backend(self) -> None:
         tf.keras.backend.clear_session()
         set_all_seeds()

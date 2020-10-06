@@ -68,6 +68,8 @@ class ConstantPropagationPass(OperatorMatchingPass):
         # finally, mutate the original graph
         assert len(op.outputs) == len(output_values)  # sanity check
         for tensor, data in zip(op.outputs, output_values):
-            tensor.buffer.data = np.array(data)
+            tensor.buffer.owners.remove(tensor)
+            tensor.buffer = op.model.create_buffer(np.array(data))
+            tensor.buffer.owners.append(tensor)
         op.subgraph.remove_operator(op)
 

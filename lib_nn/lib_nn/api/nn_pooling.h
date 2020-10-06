@@ -122,27 +122,17 @@ typedef struct {
 
 } nn_pool2d_job_t;
 
+
+
 /**
- * Struct represents the parameters needed by each `maxpool2d()` job.
- * 
- * Values are set by `maxpool2d_init()`.
- * 
- * @note This struct is intended to be opaque.
+ * Flags used with maxpool2d_adv() for advanced scenarios.
  */
-typedef struct {
-
-    struct {
-        uint32_t rows;
-        uint32_t cols;
-    } window;
-
-    struct {
-        channel_count_t X;
-        channel_count_t Y;
-    } channels;
-
-} nn_maxpool2d_plan_t;
-
+typedef enum {
+    /** 
+     * Placeholder flag used to indicate no other flags are needed.
+     */
+    MAXPOOL2D_FLAG_NONE = 0,
+} nn_maxpool2d_flags_e;
 
 
 void avgpool2d_gen(
@@ -160,76 +150,76 @@ void avgpool2d_2x2(
 
 
 
-/**
- * @brief Initialize an instance of the @oper{maxpool2d} operator.
- * 
- * See @oper_ref{maxpool2d} for more details about the @oper{maxpool2d} operator. To invoke a @oper{maxpool2d} job, call 
- * maxpool2d().
- * 
- * When maxpool2d() is called, a plan (`nn_maxpool2d_plan_t`) and a job (`nn_pool2d_job_t`) must be supplied to tell it 
- * how to do its work. This function initializes that plan and one or more jobs to be supplied in subsequent calls to 
- * maxpool2d().
- * 
- * A plan contains information shared by all jobs of an instance of @oper{maxpool2d}. Each job computes a rectangular 
- * sub-tensor of the output image (possibly the entire image).
- * 
- * `plan` points to the plan to be initialized. It need only be initialized once for many calls to maxpool2d().
- * 
- * `jobs` points to an array of `nn_pool2d_job_t` to be initialized. Each element represents one job. There should be 
- * `job_count` elements in the array.
- * 
- * `x_params` points to the image parameters for the instance's input image @tensor{X}.
- * 
- * `y_params` points to the image parameters for the instance's output image @tensor{Y}.
- * 
- * `window_config` points to a `nn_window_params_t` struct containing the instance's @math{W_h}, @math{W_w}, 
- * @math{W_{vert}}, @math{W_{hori}}, @math{W_{r0}} and @math{W_{c0}} hyperparameters (see @ref 
- * maxpool2d_hyperparameters) which describe the relationship between the input image, the pooling window and the 
- * output image.
- * 
- * `window_config->shape` specified @math{W_w} and @math{W_h}, the height and width of the pooling window. 
- * 
- * `window_config->start` specifies @math{W_{r0}} and @math{W_{c0}}, the starting row and column of the pooling window 
- * in @tensor{X}'s coordinate space. For example, a `start` value of `(0,0)` indicates that the top-left pixel of the 
- * output image has the pooling window aligned with the top-left corner of the input image, with no implied padding at 
- * the top or left sides of the input image.
- * 
- * `window_config->stride.horizontal` specifies @math{W_{vert}} and @math{W_{hori}}, the vertical and horizontal strides 
- * of the pooling window. The strides describe the number of pixels the pooling window moves (across the input image) 
- * with each pixel in the output image.
- * 
- * `job_params` points to either an array of `nn_window_op_job_params_t` structs or else is `NULL`. A `job_params` value 
- * of `NULL` indicates that there will only be a single job which computes the entire output image. If `job_params` is 
- * `NULL`, then `job_count` must be `1`. If `job_params` is not `NULL`, it must point to an array of `job_count` 
- * `nn_window_op_job_params_t` elements.
- * 
- * In particular, job `k` will compute the output elements @math{Y[r,c,p]} for which:
- * @inlinecode
- *     job_params[k].start.rows <= r < job_params[k].start.rows + job_params[k].size.rows
- *     job_params[k].start.cols <= c < job_params[k].start.cols + job_params[k].size.cols
- *     job_params[k].start.channels <= p < job_params[k].start.channels + job_params[k].size.channels
- * @endinlinecode
- * 
- * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array), as 
- * well the number of elements in the `job_params` array if it is not `NULL`.
- * 
- * 
- * @param plan          [out]   The plan to be initialized.
- * @param jobs          [out]   Array of jobs to be initialized.
- * @param x_params      [in]    Parameters describing the shape of each input image tensor @tensor{X}.
- * @param y_params      [in]    Parameters describing the shape of each output image tensor @tensor{Y}
- * @param window_config [in]    Pooling window configuration.
- * @param job_params    [in]    An array of `nn_window_op_job_params_t` structs, or NULL
- * @param job_count     [in]    The number of jobs to be initialized.
- */
-void maxpool2d_init(
-    nn_maxpool2d_plan_t* plan,
-    nn_pool2d_job_t* jobs,
-    const nn_image_params_t* x_params,
-    const nn_image_params_t* y_params,
-    const nn_window_params_t* window_config,
-    const nn_window_op_job_params_t* job_params,
-    const unsigned job_count);
+// /**
+//  * @brief Initialize an instance of the @oper{maxpool2d} operator.
+//  * 
+//  * See @oper_ref{maxpool2d} for more details about the @oper{maxpool2d} operator. To invoke a @oper{maxpool2d} job, call 
+//  * maxpool2d().
+//  * 
+//  * When maxpool2d() is called, a plan (`nn_maxpool2d_plan_t`) and a job (`nn_pool2d_job_t`) must be supplied to tell it 
+//  * how to do its work. This function initializes that plan and one or more jobs to be supplied in subsequent calls to 
+//  * maxpool2d().
+//  * 
+//  * A plan contains information shared by all jobs of an instance of @oper{maxpool2d}. Each job computes a rectangular 
+//  * sub-tensor of the output image (possibly the entire image).
+//  * 
+//  * `plan` points to the plan to be initialized. It need only be initialized once for many calls to maxpool2d().
+//  * 
+//  * `jobs` points to an array of `nn_pool2d_job_t` to be initialized. Each element represents one job. There should be 
+//  * `job_count` elements in the array.
+//  * 
+//  * `x_params` points to the image parameters for the instance's input image @tensor{X}.
+//  * 
+//  * `y_params` points to the image parameters for the instance's output image @tensor{Y}.
+//  * 
+//  * `window_config` points to a `nn_window_params_t` struct containing the instance's @math{W_h}, @math{W_w}, 
+//  * @math{W_{vert}}, @math{W_{hori}}, @math{W_{r0}} and @math{W_{c0}} hyperparameters (see @ref 
+//  * maxpool2d_hyperparameters) which describe the relationship between the input image, the pooling window and the 
+//  * output image.
+//  * 
+//  * `window_config->shape` specified @math{W_w} and @math{W_h}, the height and width of the pooling window. 
+//  * 
+//  * `window_config->start` specifies @math{W_{r0}} and @math{W_{c0}}, the starting row and column of the pooling window 
+//  * in @tensor{X}'s coordinate space. For example, a `start` value of `(0,0)` indicates that the top-left pixel of the 
+//  * output image has the pooling window aligned with the top-left corner of the input image, with no implied padding at 
+//  * the top or left sides of the input image.
+//  * 
+//  * `window_config->stride.horizontal` specifies @math{W_{vert}} and @math{W_{hori}}, the vertical and horizontal strides 
+//  * of the pooling window. The strides describe the number of pixels the pooling window moves (across the input image) 
+//  * with each pixel in the output image.
+//  * 
+//  * `job_params` points to either an array of `nn_window_op_job_params_t` structs or else is `NULL`. A `job_params` value 
+//  * of `NULL` indicates that there will only be a single job which computes the entire output image. If `job_params` is 
+//  * `NULL`, then `job_count` must be `1`. If `job_params` is not `NULL`, it must point to an array of `job_count` 
+//  * `nn_window_op_job_params_t` elements.
+//  * 
+//  * In particular, job `k` will compute the output elements @math{Y[r,c,p]} for which:
+//  * @inlinecode
+//  *     job_params[k].start.rows <= r < job_params[k].start.rows + job_params[k].size.rows
+//  *     job_params[k].start.cols <= c < job_params[k].start.cols + job_params[k].size.cols
+//  *     job_params[k].start.channels <= p < job_params[k].start.channels + job_params[k].size.channels
+//  * @endinlinecode
+//  * 
+//  * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array), as 
+//  * well the number of elements in the `job_params` array if it is not `NULL`.
+//  * 
+//  * 
+//  * @param plan          [out]   The plan to be initialized.
+//  * @param jobs          [out]   Array of jobs to be initialized.
+//  * @param x_params      [in]    Parameters describing the shape of each input image tensor @tensor{X}.
+//  * @param y_params      [in]    Parameters describing the shape of each output image tensor @tensor{Y}
+//  * @param window_config [in]    Pooling window configuration.
+//  * @param job_params    [in]    An array of `nn_window_op_job_params_t` structs, or NULL
+//  * @param job_count     [in]    The number of jobs to be initialized.
+//  */
+// void maxpool2d_init(
+//     nn_maxpool2d_plan_t* plan,
+//     nn_pool2d_job_t* jobs,
+//     const nn_image_params_t* x_params,
+//     const nn_image_params_t* y_params,
+//     const nn_window_params_t* window_config,
+//     const nn_window_op_job_params_t* job_params,
+//     const unsigned job_count);
 
 
 /**
@@ -383,8 +373,18 @@ void avgpool2d_global_init(
 void maxpool2d(
     nn_image_t* Y,
     const nn_image_t* X, 
-    const nn_maxpool2d_plan_t* plan,
-    const nn_pool2d_job_t* job);
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* window_config);
+    
+void maxpool2d_adv(
+    nn_image_t* Y,
+    const nn_image_t* X, 
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* window_config,
+    const nn_window_op_job_params_t* job_params,
+    const nn_maxpool2d_flags_e flags);
 
 
 /** 

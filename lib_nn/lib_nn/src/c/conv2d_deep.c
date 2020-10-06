@@ -13,6 +13,10 @@
 #include <assert.h>
 
 
+#ifndef CONV2D_INIT_ERROR_DETECTION_ENABLE
+  #define CONV2D_INIT_ERROR_DETECTION_ENABLE     (1)
+#endif
+
 typedef struct {
     int top;
     int left;
@@ -126,9 +130,8 @@ static void conv2d_deep_adjust_starts(
     }
 }
 
-#ifndef CONV2D_INIT_ERROR_DETECTION_ENABLE
-  #define CONV2D_INIT_ERROR_DETECTION_ENABLE     (1)
-#endif
+
+
 void conv2d_deep_prepare(
     nn_conv2d_deep_job_t* job,
     const nn_image_params_t* x_params,

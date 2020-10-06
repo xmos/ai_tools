@@ -60,6 +60,7 @@ class JobCollector:
                 print(output)
 
         if not exit_code:
+            self.jobs = []
             tests = self.plugin.tests()
             for path, _ in tests:
                 cmd = [os.path.join(self.path, path), "--tb=short"] + self.optional_args

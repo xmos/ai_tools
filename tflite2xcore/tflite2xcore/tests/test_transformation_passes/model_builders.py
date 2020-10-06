@@ -54,13 +54,14 @@ def build_dequantize(
 ) -> XCOREModel:
     subgraph = subgraph or XCOREModel().create_subgraph()
 
+    quant = input_quantization or QuantizationTuple(0.12, -35)
     input_shape = [1, *input_shape]
     qin = subgraph.create_tensor(
         "input",
         TensorType.INT8,
         input_shape,
         isinput=True,
-        quantization=input_quantization or QuantizationTuple(0.12, -35),
+        quantization={"scale": [quant.scale], "zero_point": [quant.zero_point]},
     )
 
     fout = subgraph.create_tensor(
@@ -85,12 +86,13 @@ def build_quantize(
     input_shape = [1, *input_shape]
     tin = subgraph.create_tensor("input", TensorType.FLOAT32, input_shape, isinput=True)
 
+    quant = output_quantization or QuantizationTuple(0.12, -35)
     qout = subgraph.create_tensor(
         "output_quantized",
         TensorType.INT8,
         tin.shape,
         isoutput=True,
-        quantization=output_quantization or QuantizationTuple(0.12, -35),
+        quantization={"scale": [quant.scale], "zero_point": [quant.zero_point]},
     )
 
     subgraph.create_operator(

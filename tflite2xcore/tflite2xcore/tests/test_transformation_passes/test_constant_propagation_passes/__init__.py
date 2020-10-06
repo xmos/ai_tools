@@ -1,5 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+import numpy as np
 from typing import Tuple, Optional
 
 from tflite2xcore.utils import QuantizationTuple
@@ -23,6 +24,10 @@ def build_quantize_dequantize_identity(
 ) -> XCOREModel:
     model = build_dequantize(input_shape=input_shape, input_quantization=quantization)
     subgraph = model.subgraphs[0]
+    subgraph.operators[0].inputs[0].buffer.data = np.int8(
+        np.arange(0, np.prod(input_shape)) % 255 - 127
+    )  # TODO: refactor this into helper
+
     build_quantize(subgraph, input_shape=input_shape, output_quantization=quantization)
     _glue_ops(*subgraph.operators)
 

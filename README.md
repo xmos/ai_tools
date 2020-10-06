@@ -55,10 +55,13 @@ The Dockerfile provided is used in the CI system but can serve as a guide to sys
 Installation of the XMOS tools requires connection to our network.
 
 ```
-docker build -t xmos/ai_tools .
+docker build -t xmos/ai_tools \
+    --build-arg USER=$(whoami) \
+    --build-arg UID=$(id -u) \
+    --build-arg GID=$(id -g) \
+    .
 docker run -it \
     -v $(pwd):/ws \
-    -u $(id -u):$(id -g)  \
     -w /ws  \
     xmos/ai_tools \
     bash -l

@@ -63,9 +63,10 @@ class JobCollector:
             self.jobs = []
             tests = self.plugin.tests()
             for path, _ in tests:
-                cmd = [os.path.join(self.path, path), "--tb=short"] + self.optional_args
+                full_path = os.path.join(self.path, path)
+                cmd = [full_path, "--tb=short"] + self.optional_args
                 if self.junit:
-                    cmd += ["--junitxml", os.path.basename(path) + "_junit.xml"]
+                    cmd += ["--junitxml", full_path + "_junit.xml"]
                 self.jobs.append(cmd)
 
             print(f"{sum(cnt for _, cnt in tests)} CASES IN {len(self.jobs)} JOBS:")
@@ -146,7 +147,10 @@ def main(raw_args=None):
         coverage_options.append("--extended")
 
     collector = JobCollector(
-        args.dir, coverage_options=coverage_options, verbose=args.verbose, junit=args.junit,
+        args.dir,
+        coverage_options=coverage_options,
+        verbose=args.verbose,
+        junit=args.junit,
     )
     exit_code = collector.collect()
     if exit_code or args.collect_only or not args.workers:

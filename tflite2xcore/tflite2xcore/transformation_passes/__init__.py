@@ -46,6 +46,7 @@ from .quantize_dequantize_passes import (
     RemoveRedundantInt8Requantization,
     CanonicalizeQuantizedInputPass,
     CanonicalizeQuantizedOutputPass,
+    CanonicalizeLceQuantizedOutputPass,
     LegalizeFloatInputPass,
     LegalizeFloatOutputPass,
 )
@@ -87,3 +88,9 @@ from .scratch_memory_passes import (
 )
 
 from .constant_propagation_passes import ConstantPropagationPass
+
+from .lce_passes import (
+    ReplaceLceBconv2DPass,
+    ReplaceLceQuantizePass,
+    SplitPaddingFromConvPass,
+)

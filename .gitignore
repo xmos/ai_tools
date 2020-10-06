@@ -54,3 +54,5 @@ tests/data
 *.y
 *.x
 
+xscope.xmt.vcd
+xscope.xmt.gtkw

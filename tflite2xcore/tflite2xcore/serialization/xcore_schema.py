@@ -124,6 +124,10 @@ class XCOREOpCodes(CustomOpCodes, KnownOpCodes):
     XC_conv2d_deep = "XC_conv2d_deep"
     XC_conv2d_1x1 = "XC_conv2d_1x1"
     XC_conv2d_depthwise = "XC_conv2d_depthwise"
+    XC_bsign_8 = "XC_bsign_8"
+    XC_bconv2d_bin_out = "XC_bconv2d_bin_out"
+    XC_bconv2d_int8_out = "XC_bconv2d_int8_out"
+    XC_pad = "XC_pad"
 
 
 class OperatorCode:
@@ -338,19 +342,3 @@ FullyConnectedOptionsWeightsFormat = enum.Enum(
 Padding = enum.Enum(
     "Padding", {k: v for k, v in vars(schema.Padding).items() if not k.startswith("__")}
 )
-
-
-# NOTE: this is from tensorflow/tensorflow/lite/c/builtin_op_data.h
-# TODO: remove if larq fixes custom option padding encoding
-class __TfLitePadding(enum.Enum):
-    kTfLitePaddingUnknown = 0
-    kTfLitePaddingSame = 1
-    kTfLitePaddingValid = 2
-
-
-__Padding_TfLitePadding = {
-    # __TfLitePadding.kTfLitePaddingUnknown: None,  # intentionally not supported
-    __TfLitePadding.kTfLitePaddingSame: Padding.SAME,
-    __TfLitePadding.kTfLitePaddingValid: Padding.VALID,
-}
-Padding.from_TfLitePadding = lambda x: __Padding_TfLitePadding[x]

@@ -3,6 +3,7 @@
 import numpy as np
 from typing import Callable, Tuple, Optional
 from copy import deepcopy
+import math
 
 from tflite2xcore.utils import QuantizationTuple
 from tflite2xcore.xcore_model import XCOREModel, Subgraph
@@ -12,10 +13,19 @@ from tflite2xcore.xcore_schema import (
     TensorType,
     OperatorCode,
     BuiltinOpCodes,
+    ExternalOpCodes,
     XCOREOpCodes,
 )
 
 ModelBuilder = Callable[..., XCOREModel]
+
+
+def generate_dummy_int8_data(shape: Tuple[int, ...]) -> np.ndarray:
+    return np.arange(0, np.prod(shape), dtype=np.int8) % 255 - 127
+
+
+def generate_dummy_int32_data(shape: Tuple[int, ...]) -> np.ndarray:
+    return np.arange(np.prod(shape), dtype=np.int32)
 
 
 def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
@@ -362,8 +372,8 @@ def build_fc(subgraph=None, *, outputs, input_shape, add_batch_dim=True):
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
-    b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
+    w.buffer.data = generate_dummy_int8_data(w.shape)
+    b.buffer.data = generate_dummy_int32_data(b.shape)
 
     return subgraph.model
 
@@ -487,8 +497,8 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
-    b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
+    w.buffer.data = generate_dummy_int8_data(w.shape)
+    b.buffer.data = generate_dummy_int32_data(b.shape)
 
     if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]
@@ -561,8 +571,8 @@ def build_depthwise_conv2d(
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
-    b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
+    w.buffer.data = generate_dummy_int8_data(w.shape)
+    b.buffer.data = generate_dummy_int32_data(b.shape)
 
     if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]
@@ -859,3 +869,80 @@ def build_padded_DW(subgraph=None, *, weight_shape, input_size, paddings, stride
 
     return model
 
+
+def build_LceQuantize(subgraph=None, *, input_shape, input_tensor_type=TensorType.INT8):
+    output_tensor_type = TensorType.INT32
+
+    subgraph = subgraph or XCOREModel().create_subgraph()
+
+    height, width, channels = input_shape
+    input_shape = [1, height, width, channels]
+
+    tin = subgraph.create_tensor("input", input_tensor_type, input_shape, isinput=True)
+
+    # add dummy data so that the op can be mutated
+    output_shape = [1, height, width, math.ceil(channels / 32)]
+
+    tout = subgraph.create_tensor(
+        "output", output_tensor_type, shape=output_shape, isoutput=True
+    )
+
+    subgraph.create_operator(
+        OperatorCode(ExternalOpCodes.add_new_opcode("LceQuantize")),
+        inputs=[tin],
+        outputs=[tout],
+    )
+
+    return subgraph.model
+
+
+def build_lceBconv2d(
+    subgraph=None, *, weight_shape, input_size, padding, strides,
+):
+
+    subgraph = subgraph or XCOREModel().create_subgraph()
+    assert padding in Padding
+
+    height, width = input_size
+    C_out, K_h, K_w, C_in = weight_shape
+
+    input_shape = [1, height, width, C_in]
+    tin = subgraph.create_tensor("input", TensorType.INT32, input_shape, isinput=True)
+    w = subgraph.create_tensor("weights", TensorType.INT32, weight_shape)
+    output_threshold = subgraph.create_tensor(
+        "output_threshold", TensorType.INT32, weight_shape[:1]
+    )
+
+    # add dummy data so that the op can be mutated
+    w.buffer.data = generate_dummy_int8_data(w.shape)
+    output_threshold.buffer.data = generate_dummy_int32_data(output_threshold.shape)
+
+    if padding is Padding.SAME:
+        output_shape = [1, height, width, C_out]
+    elif padding is Padding.VALID:
+        output_shape = [
+            1,
+            int(np.ceil((height - K_h + 1) / strides[0])),
+            int(np.ceil((width - K_w + 1) / strides[1])),
+            C_out,
+        ]
+
+    tout = subgraph.create_tensor("output", tin.type, shape=output_shape, isoutput=True)
+
+    custom_options = {
+        "padding": padding,
+        "stride_height": strides[0],
+        "stride_width": strides[1],
+        "dilation_width_factor": 1,
+        "dilation_height_factor": 1,
+        "pad_values": 0,
+    }
+
+    subgraph.create_operator(
+        OperatorCode(ExternalOpCodes.add_new_opcode("LceBconv2d")),
+        inputs=[tin, w, output_threshold],
+        outputs=[tout],
+        custom_options=custom_options,
+    )
+
+    return subgraph.model

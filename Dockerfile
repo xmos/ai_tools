@@ -27,9 +27,9 @@ RUN apt-get install -y build-essential
 
 # Take in ARGS from `docker build --build-arg USER=....`
 # Then create group and user so home dirs and perms work
-ARG USER=root
-ARG UID=0
-ARG GID=0
+ARG USER=xmos
+ARG UID=1000
+ARG GID=1000
 RUN groupadd -g $GID $USER && \
     useradd $USER -u $UID -g $GID -b /home -m
 

@@ -55,49 +55,39 @@ void lookup8(
     uint8_t* Y,
     const uint8_t* X,
     const uint8_t* lut,
-    const unsigned N);
+    const unsigned elm_start,
+    const unsigned elm_count);
 
-/**
- * Struct represents the parameters needed by each `requantize_16_to_8()` job.
- * 
- * Values are set by `requantize_16_to_8_init()`.
- * 
- * @note This struct is intended to be opaque.
- */
-typedef struct {
-    mem_stride_t start;
-    uint32_t length;
-} nn_requantize_16_to_8_job_t;
 
-/**
- * @brief Initialize an instance of the @oper{requantize_16_to_8} operator.
- * 
- * See @oper_ref{requantize_16_to_8} for more details about the @oper{requantize_16_to_8} operator. To invoke a 
- * @oper{requantize_16_to_8} job, call requantize_16_to_8().
- * 
- * When requantize_16_to_8() is called, a job (`nn_requantize_16_to_8_job_t`) must be supplied to tell it how to do its 
- * work. This function initializes one or more jobs to be supplied in subsequent calls to requantize_16_to_8().
- * 
- * Each job computes a range of elements in the output vector (possibly the entire vector).
- * 
- * `jobs` points to an array of `nn_fully_connected_job_t` to be initialized. Each element represents one job. There 
- * should be `job_count` elements in the array.
- * 
- * `N` is the number of elements @math{N} in the input vector @tensor{x} and output vector @tensor{y}.
- * 
- * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array).
- * 
- * Unlike many other operators, @oper{requantize_16_to_8} will automatically divide the work to be done as evenly as 
- * possible between jobs.
- * 
- * @param jobs      [out]   Array of jobs to be initialized.
- * @param N         [in]    The number of elements in the input (and output).
- * @param job_count [in]    The number of jobs to be initialized.
- */
-void requantize_16_to_8_init(
-    nn_requantize_16_to_8_job_t* jobs,
-    const uint32_t N,
-    const unsigned job_count);
+// /**
+//  * @brief Initialize an instance of the @oper{requantize_16_to_8} operator.
+//  * 
+//  * See @oper_ref{requantize_16_to_8} for more details about the @oper{requantize_16_to_8} operator. To invoke a 
+//  * @oper{requantize_16_to_8} job, call requantize_16_to_8().
+//  * 
+//  * When requantize_16_to_8() is called, a job (`nn_requantize_16_to_8_job_t`) must be supplied to tell it how to do its 
+//  * work. This function initializes one or more jobs to be supplied in subsequent calls to requantize_16_to_8().
+//  * 
+//  * Each job computes a range of elements in the output vector (possibly the entire vector).
+//  * 
+//  * `jobs` points to an array of `nn_fully_connected_job_t` to be initialized. Each element represents one job. There 
+//  * should be `job_count` elements in the array.
+//  * 
+//  * `N` is the number of elements @math{N} in the input vector @tensor{x} and output vector @tensor{y}.
+//  * 
+//  * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array).
+//  * 
+//  * Unlike many other operators, @oper{requantize_16_to_8} will automatically divide the work to be done as evenly as 
+//  * possible between jobs.
+//  * 
+//  * @param jobs      [out]   Array of jobs to be initialized.
+//  * @param N         [in]    The number of elements in the input (and output).
+//  * @param job_count [in]    The number of jobs to be initialized.
+//  */
+// void requantize_16_to_8_init(
+//     nn_requantize_16_to_8_job_t* jobs,
+//     const uint32_t N,
+//     const unsigned job_count);
 
 /** 
  * @brief Execute @oper{requantize_16_to_8} job.
@@ -124,7 +114,8 @@ void requantize_16_to_8_init(
 void requantize_16_to_8(
     int8_t* Y,
     const int16_t* X,
-    const nn_requantize_16_to_8_job_t* job);
+    const unsigned elm_start,
+    const unsigned elm_count);
 
 
 

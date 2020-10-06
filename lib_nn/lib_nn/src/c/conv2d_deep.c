@@ -99,31 +99,31 @@ static void conv2d_deep_adjust_starts(
     const unsigned x_row_bytes = x_params->width * x_params->channels;
     const unsigned y_row_bytes = y_params->width * y_params->channels;
 
-    const mem_stride_t window_start_offset = conv_window->start.row * x_row_bytes 
+    const int32_t window_start_offset = conv_window->start.row * x_row_bytes 
                                            + conv_window->start.column * x_params->channels;
 
-    const mem_stride_t stride_K_cout = conv_window->shape.height * conv_window->shape.width * x_params->channels;
-    
-    const int32_t init_padding_top    = -conv_window->start.row;
-    const int32_t init_padding_bottom =  conv_window->start.row + conv_window->shape.height - x_params->height;
-    const int32_t init_padding_left   = -conv_window->start.column;
-    const int32_t init_padding_right  =  conv_window->start.column + conv_window->shape.width - x_params->width;
+    const int32_t start_Y    = job_params->start.rows * y_row_bytes 
+                                    + job_params->start.cols * y_params->channels
+                                    + job_params->start.channels;
 
-    int32_t start_BSO  = (job_params->start.channels / VPU_INT8_ACC_PERIOD);
-    int32_t start_K    = job_params->start.channels * stride_K_cout;
-    int32_t start_Y    = job_params->start.rows * y_row_bytes 
-                            + job_params->start.cols * y_params->channels
-                            + job_params->start.channels;
-
-    int32_t start_X    = window_start_offset 
-                            + job_params->start.rows * conv_window->stride.vertical * x_row_bytes
-                            + job_params->start.cols * conv_window->stride.horizontal * x_params->channels;
+    const int32_t start_X    = window_start_offset 
+                                    + job_params->start.rows * conv_window->stride.vertical * x_row_bytes
+                                    + job_params->start.cols * conv_window->stride.horizontal * x_params->channels;
 
                             
     *X = ADDR(*X, start_X);
     *Y = ADDR(*Y, start_Y);
-    *K = ADDR(*K, start_K);
-    *BSO = ADDR(*BSO, start_BSO);
+
+    if( !( flags & CONV2D_DEEP_FLAG_SLICED_K ) ){
+
+        const int32_t stride_K_cout = conv_window->shape.height * conv_window->shape.width * x_params->channels;
+
+        const int32_t start_BSO  = (job_params->start.channels / VPU_INT8_ACC_PERIOD);
+        const int32_t start_K    = job_params->start.channels * stride_K_cout;
+
+        *K = ADDR(*K, start_K);
+        *BSO = ADDR(*BSO, start_BSO);
+    }
 }
 
 #ifndef CONV2D_INIT_ERROR_DETECTION_ENABLE

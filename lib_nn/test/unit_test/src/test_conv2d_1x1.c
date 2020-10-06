@@ -838,9 +838,7 @@ void test_conv2d_1x1_case5()
                 Check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, chn, __LINE__);
             }
         }
-
     }
-
 }
 #undef CHANS_IN      
 #undef CHANS_OUT     

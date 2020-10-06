@@ -1764,6 +1764,113 @@ void test_conv2d_deep_case17()
 
 
 
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+#define CHANS_IN        ( 36 )
+#define CHANS_OUT       ( 40 )
+#define K_H             ( 3 )
+#define K_W             ( 3 )
+#define X_HEIGHT        ( 5 )
+#define X_WIDTH         ( 5 )
+#define Y_HEIGHT        ( 3 )
+#define Y_WIDTH         ( 3 )
+#define K_V_STRIDE      ( 1 )
+#define K_H_STRIDE      ( 1 )
+#define ZERO_POINT      ( 0 )
+void test_conv2d_deep_case18()
+{
+
+    nn_tensor_t WORD_ALIGNED K[CHANS_OUT][K_H][K_W][CHANS_IN];
+    nn_image_t  WORD_ALIGNED X[X_HEIGHT][X_WIDTH][CHANS_IN];
+    nn_image_t  WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
+    
+    struct {
+        int32_t bias[CHANS_OUT];
+        int16_t shift1[CHANS_OUT];
+        int16_t scale[CHANS_OUT];
+        int16_t offset_scale[CHANS_OUT];
+        int16_t offset[CHANS_OUT];
+        int16_t shift2[CHANS_OUT];
+    } BSO;
+
+    nn_bso_block_t bso[BSO_BLOCK_COUNT(CHANS_OUT)];
+
+    PRINTF("%s...\n", __func__);
+
+    nn_window_params_t conv2d_window = { { K_H, K_W }, { 0, 0 }, { K_V_STRIDE, K_H_STRIDE } }; 
+
+    nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, CHANS_IN };
+    nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS_OUT };
+
+    memset(X, 1, sizeof(X));
+    memset(K, 0, sizeof(K));
+    memset(&K[16][0][0][0], 1, 16*K_H*K_W*CHANS_IN);
+
+    for(int k = 0; k < CHANS_OUT; k++){
+        BSO.bias[k] = (k >= 16 && k < 32)? 76 : 2345623;
+        BSO.shift1[k] = 2;
+        BSO.scale[k] = 1;
+        BSO.offset_scale[k] = 0;
+        BSO.offset[k]       = 0;
+        BSO.shift2[k] = 0;
+    }
+    
+    nn_standard_BSO_layout(bso, (int32_t*) &BSO.bias, (int16_t*) &BSO.shift1, 
+                        (int16_t*) &BSO.scale, (int16_t*) &BSO.offset_scale, (int16_t*) &BSO.offset, 
+                        (int16_t*) &BSO.shift2, NULL, y_params.channels);
+
+    nn_window_op_job_params_t job_params = {{0,0,16},{3,3,16}};
+
+    memset(Y, 0xCC, sizeof(Y));
+
+    conv2d_deep_adv((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, ZERO_POINT, 
+                &x_params, &y_params, &conv2d_window, &job_params, 0);
+
+
+    for(int row = 0; row < y_params.height; row++){
+        for(int col = 0; col < y_params.width; col++){
+            for(int cout = 0; cout < y_params.channels; cout++){
+
+                int8_t y_exp = (cout >= 16 && cout < 32)? 100 : 0xCC;
+                check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, cout, __LINE__);
+            }
+        }
+    }
+
+    memset(Y, 0xCC, sizeof(Y));
+
+    nn_tensor_t* K_start = &K[16][0][0][0];
+    nn_bso_block_t* bso_start = &bso[1];
+
+    conv2d_deep_adv((nn_image_t*) Y, (nn_image_t*) X, K_start, bso_start, ZERO_POINT, 
+                &x_params, &y_params, &conv2d_window, &job_params, CONV2D_DEEP_FLAG_SLICED_K);
+
+    for(int row = 0; row < y_params.height; row++){
+        for(int col = 0; col < y_params.width; col++){
+            for(int cout = 0; cout < y_params.channels; cout++){
+
+                int8_t y_exp = (cout >= 16 && cout < 32)? 100 : 0xCC;
+                check_Y(y_exp, (nn_image_t*) Y, &y_params, row, col, cout, __LINE__);
+            }
+        }
+    }
+}
+#undef CHANS_IN
+#undef CHANS_OUT
+#undef K_H
+#undef K_W
+#undef X_HEIGHT
+#undef X_WIDTH
+#undef Y_HEIGHT
+#undef Y_WIDTH
+#undef K_V_STRIDE
+#undef K_H_STRIDE
+#undef ZERO_POINT
+
+
+
+
+
 
 
 void test_conv2d_deep()
@@ -1788,4 +1895,5 @@ void test_conv2d_deep()
     RUN_TEST(test_conv2d_deep_case15);
     RUN_TEST(test_conv2d_deep_case16);
     RUN_TEST(test_conv2d_deep_case17);
+    RUN_TEST(test_conv2d_deep_case18);
 }

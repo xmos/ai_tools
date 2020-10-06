@@ -67,6 +67,18 @@ class ScratchMemoryFullyConnectedPass(ScratchMemoryCalculationPass):
         else:
             return Cin * Cout
 
+    @property
+    def _bias_scratch_size(self) -> int:
+        _, Bv, Bl = self._biases.shape
+
+        custom_options = self._op.custom_options
+        if "par" in custom_options:
+            # NOTE: number of channel groups is at least number of threads
+            i_cg = custom_options["par"]["th"]
+            return Bv * Bl * self._biases.type.to_bytes() * i_cg
+        else:
+            return Bv * Bl * self._biases.type.to_bytes()
+
 
 class Conv2dScratchMemoryCalculationPass(ScratchMemoryCalculationPass):
     @property

@@ -4,7 +4,9 @@ getApproval()
 
 pipeline {
     agent {
-        dockerfile true
+        dockerfile {
+            args "-v /home/jenkins/.keras:/root/.keras"
+        }
     }
 
     parameters { // Available to modify on the job page within Jenkins if starting a build

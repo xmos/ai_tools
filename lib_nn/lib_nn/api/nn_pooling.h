@@ -37,52 +37,6 @@ typedef struct {
 } nn_avgpool2d_plan_t;
 
 
-/**
- * Struct represents the parameters needed by each @oper{avgpool2d_global} job.
- * 
- * Values are set by avgpool2d_global_init().
- * 
- * @note This struct is intended to be opaque.
- */
-typedef struct {
-    struct {
-        uint32_t pixels;
-        channel_count_t channels;
-    } X;
-} nn_avgpool2d_global_plan_t;
-
-/**
- * Struct represents the parameters needed by a single @oper{avgpool2d_global} job.
- * 
- * Values are set by avgpool2d_global_init().
- * 
- * @note This struct is intended to be opaque.
- */
-typedef struct {
-    mem_stride_t start_stride;
-    channel_count_t out_channels;
-} nn_avgpool2d_global_job_t;
-
-
-/**
- * Struct represents the job initialization information required by avgpool2d_global_init().
- * 
- * @oper{avgpool2d_global} job computes a contiguous subset of the output channels.
- * 
- */
-typedef struct {
-    /**
-     * The first output channel to be computed by the job. Must be a multiple of `4`.
-     */
-    channel_count_t start_channel;
-    
-    /**
-     * The number of output channels to be computed by the job. Does not have to be a multiple of 4,
-     * however, because the `start_channel` for each job must be a multiple of 4, this value can only
-     * be a non-multiple of 4 for the last job.
-     */
-    channel_count_t out_channels;
-} nn_avgpool2d_global_job_params_t;
 
 
 /**
@@ -134,6 +88,16 @@ typedef enum {
     MAXPOOL2D_FLAG_NONE = 0,
 } nn_maxpool2d_flags_e;
 
+
+/**
+ * Flags used with avgpool2d_global_adv() for advanced scenarios.
+ */
+typedef enum {
+    /** 
+     * Placeholder flag used to indicate no other flags are needed.
+     */
+    AVGPOOL2D_GLOBAL_FLAG_NONE = 0,
+} nn_avgpool2d_global_flags_e;
 
 void avgpool2d_gen(
     nn_image_t* Y,
@@ -295,51 +259,51 @@ void avgpool2d_init(
 
 
 
-/**
- * @brief Initialize an instance of the @oper{avgpool2d_global} operator.
- * 
- * See @oper_ref{avgpool2d_global} for more details about the @oper{avgpool2d_global} operator. To invoke a 
- * @oper{avgpool2d_global} job, call avgpool2d_global().
- * 
- * When avgpool2d_global() is called, a plan (`nn_avgpool2d_global_plan_t`) and a job (`nn_avgpool2d_global_job_t`) must 
- * be supplied to tell it how to do its work. This function initializes that plan and one or more jobs to be supplied in 
- * subsequent calls to avgpool2d_global().
- * 
- * A plan contains information shared by all jobs of an instance of @oper{avgpool2d_global}. Each job computes a range
- * of channels in the output vector (possibly the entire vector).
- * 
- * `plan` points to the plan to be initialized. It need only be initialized once for many calls to avgpool2d_global().
- * 
- * `jobs` points to an array of `nn_avgpool2d_global_job_t` to be initialized. Each element represents one job. There 
- * should be `job_count` elements in the array.
- * 
- * `x_params` points to the image parameters for the instance's input (and output) image @tensor{X}.
- * 
- * `job_params` points to either an array of `nn_avgpool2d_global_job_params_t` structs or else is `NULL`. A 
- * `job_params` value of `NULL` indicates that there will only be a single job which computes the entire output image. 
- * If `job_params` is `NULL`, then `job_count` must be `1`. If `job_params` is not `NULL`, it must point to an array 
- * of `job_count` `nn_avgpool2d_global_job_params_t` elements.
- * 
- * In particular, job `k` will compute the output elements @math{y[p]} for which:
- * @inlinecode
- *     job_params[k].start_channel <= p < job_params[k].start_channel + job_params[k].out.channels
- * @endinlinecode
- * 
- * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array), as 
- * well the number of elements in the `job_params` array if it is not `NULL`.
- * 
- * @param plan          [out]   The plan to be initialized.
- * @param jobs          [out]   Array of jobs to be initialized.
- * @param x_params      [in]    Parameters describing the shape of each input (and output) image tensor @tensor{X}.
- * @param job_params    [in]    An array of `nn_avgpool2d_global_job_params_t` structs, or NULL
- * @param job_count     [in]    The number of jobs to be initialized.
- */
-void avgpool2d_global_init(
-    nn_avgpool2d_global_plan_t* plan,
-    nn_avgpool2d_global_job_t* jobs,
-    const nn_image_params_t* x_params,
-    const nn_avgpool2d_global_job_params_t* job_params,
-    const unsigned job_count);
+// /**
+//  * @brief Initialize an instance of the @oper{avgpool2d_global} operator.
+//  * 
+//  * See @oper_ref{avgpool2d_global} for more details about the @oper{avgpool2d_global} operator. To invoke a 
+//  * @oper{avgpool2d_global} job, call avgpool2d_global().
+//  * 
+//  * When avgpool2d_global() is called, a plan (`nn_avgpool2d_global_plan_t`) and a job (`nn_avgpool2d_global_job_t`) must 
+//  * be supplied to tell it how to do its work. This function initializes that plan and one or more jobs to be supplied in 
+//  * subsequent calls to avgpool2d_global().
+//  * 
+//  * A plan contains information shared by all jobs of an instance of @oper{avgpool2d_global}. Each job computes a range
+//  * of channels in the output vector (possibly the entire vector).
+//  * 
+//  * `plan` points to the plan to be initialized. It need only be initialized once for many calls to avgpool2d_global().
+//  * 
+//  * `jobs` points to an array of `nn_avgpool2d_global_job_t` to be initialized. Each element represents one job. There 
+//  * should be `job_count` elements in the array.
+//  * 
+//  * `x_params` points to the image parameters for the instance's input (and output) image @tensor{X}.
+//  * 
+//  * `job_params` points to either an array of `nn_avgpool2d_global_job_params_t` structs or else is `NULL`. A 
+//  * `job_params` value of `NULL` indicates that there will only be a single job which computes the entire output image. 
+//  * If `job_params` is `NULL`, then `job_count` must be `1`. If `job_params` is not `NULL`, it must point to an array 
+//  * of `job_count` `nn_avgpool2d_global_job_params_t` elements.
+//  * 
+//  * In particular, job `k` will compute the output elements @math{y[p]} for which:
+//  * @inlinecode
+//  *     job_params[k].start_channel <= p < job_params[k].start_channel + job_params[k].out.channels
+//  * @endinlinecode
+//  * 
+//  * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array), as 
+//  * well the number of elements in the `job_params` array if it is not `NULL`.
+//  * 
+//  * @param plan          [out]   The plan to be initialized.
+//  * @param jobs          [out]   Array of jobs to be initialized.
+//  * @param x_params      [in]    Parameters describing the shape of each input (and output) image tensor @tensor{X}.
+//  * @param job_params    [in]    An array of `nn_avgpool2d_global_job_params_t` structs, or NULL
+//  * @param job_count     [in]    The number of jobs to be initialized.
+//  */
+// void avgpool2d_global_init(
+//     nn_avgpool2d_global_plan_t* plan,
+//     nn_avgpool2d_global_job_t* jobs,
+//     const nn_image_params_t* x_params,
+//     const nn_avgpool2d_global_job_params_t* job_params,
+//     const unsigned job_count);
 
 
 /**  
@@ -506,12 +470,22 @@ static inline void avgpool2d(
  * @param [in]  job     The @oper{avgpool2d_global} job to be processed
  */
 void avgpool2d_global(
-    int8_t* Y,
-    const int8_t* X, 
+    nn_image_t* Y,
+    const nn_image_t* X, 
     const int32_t bias,
     const int8_t scale,
     const uint16_t shift,
-    const nn_avgpool2d_global_plan_t* plan,
-    const nn_avgpool2d_global_job_t* job);
+    const nn_image_params_t* x_params);
+
+void avgpool2d_global_adv(
+    nn_image_t* Y,
+    const nn_image_t* X, 
+    const int32_t bias,
+    const int8_t scale,
+    const uint16_t shift,
+    const nn_image_params_t* x_params,
+    const unsigned chan_start,
+    const unsigned chan_count,
+    const nn_avgpool2d_global_flags_e flags);
 
 #endif //POOLING_H_

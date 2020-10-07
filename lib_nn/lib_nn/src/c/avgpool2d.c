@@ -101,28 +101,41 @@ void avgpool2d_2x2(
   #define NEG_SAT_VAL   (-128)
 #endif 
 
-
-WEAK_FUNC
 void avgpool2d_global(
     nn_image_t* Y,
     const nn_image_t* X, 
     const int32_t bias,
     const int8_t scale,
     const uint16_t shift,
-    const nn_avgpool2d_global_plan_t* plan,
-    const nn_avgpool2d_global_job_t* job)
+    const nn_image_params_t* x_params)
 {
-    Y = ADDR(Y, job->start_stride);
-    X = ADDR(X, job->start_stride);
+    avgpool2d_global_adv(Y, X, bias, scale, shift, x_params, 
+                        0, x_params->channels, AVGPOOL2D_GLOBAL_FLAG_NONE);
+}
 
-    const unsigned pix = plan->X.pixels;
+WEAK_FUNC
+void avgpool2d_global_adv(
+    nn_image_t* Y,
+    const nn_image_t* X, 
+    const int32_t bias,
+    const int8_t scale,
+    const uint16_t shift,
+    const nn_image_params_t* x_params,
+    const unsigned chan_start,
+    const unsigned chan_count,
+    const nn_avgpool2d_global_flags_e flags)
+{
+    Y = ADDR(Y, chan_start);
+    X = ADDR(X, chan_start);
+
+    const unsigned pix = x_params->height * x_params->width;
     
-    for(unsigned ch = 0; ch < job->out_channels; ch++){
+    for(unsigned ch = 0; ch < chan_count; ch++){
 
         int32_t acc = bias;
 
         for(unsigned p = 0; p < pix; p++){
-            int32_t x = X[p*plan->X.channels + ch];
+            int32_t x = X[p * x_params->channels + ch];
             acc += x * scale;
         }
 
@@ -266,34 +279,4 @@ void avgpool2d_init(
 
 
 
-
-
-
-
-void avgpool2d_global_init(
-    nn_avgpool2d_global_plan_t* plan,
-    nn_avgpool2d_global_job_t* jobs,
-    const nn_image_params_t* x_params,
-    const nn_avgpool2d_global_job_params_t* job_params,
-    const unsigned job_count)
-{    
-    plan->X.channels = x_params->channels;
-
-    plan->X.pixels = x_params->height * x_params->width;
-
-    const nn_avgpool2d_global_job_params_t full_job = { 0, x_params->channels };
-
-    for(int k = 0; k < job_count; k++){
-
-        const nn_avgpool2d_global_job_params_t* params = (job_params != NULL)? &job_params[k] : &full_job;
-        nn_avgpool2d_global_job_t* job = &jobs[k];
-
-        assert(params->start_channel >= 0);
-        assert((params->start_channel + params->out_channels) <= x_params->channels);
-
-        job->start_stride = params->start_channel;
-        job->out_channels = params->out_channels;
-
-    }
-}   
 

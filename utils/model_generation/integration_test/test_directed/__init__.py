@@ -76,7 +76,12 @@ def MobileNet(*args, **kwargs,) -> tf.keras.Model:
     try:
         return tf.keras.applications.MobileNet(*args, **kwargs)
     except KeyError as e:
-        if e.args[0] == "Unable to open object (bad object header version number)":
+        if e.args[0].startswith("Unable to open object"):
+            return _MobileNet_safe(*args, **kwargs)
+        else:
+            raise
+    except OSError as e:
+        if e.args[0].startswith("Unable to open file"):
             return _MobileNet_safe(*args, **kwargs)
         else:
             raise

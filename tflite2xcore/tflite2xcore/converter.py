@@ -83,6 +83,9 @@ def optimize_for_xcore(
         model, keep_intermediates=bool(intermediates_path)
     )
 
+    # one round of constant folding
+    pass_mgr.register_pass(passes.ConstantPropagationPass())
+
     # canonicalize fully connected
     pass_mgr.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
 

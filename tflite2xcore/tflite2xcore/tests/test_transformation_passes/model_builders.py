@@ -1,10 +1,11 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import numpy as np
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Optional
 from copy import deepcopy
 
-from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.utils import QuantizationTuple
+from tflite2xcore.xcore_model import XCOREModel, Subgraph
 from tflite2xcore.xcore_schema import (
     ActivationFunctionType,
     Padding,
@@ -45,14 +46,28 @@ def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
     return subgraph.model
 
 
-def build_dequantize(subgraph=None, *, input_shape):
+def build_dequantize(
+    subgraph: Optional[Subgraph] = None,
+    *,
+    input_shape: Tuple[int, ...],
+    input_quantization: Optional[QuantizationTuple] = None,
+) -> XCOREModel:
     subgraph = subgraph or XCOREModel().create_subgraph()
 
+    quant = input_quantization or QuantizationTuple(0.12, -35)
     input_shape = [1, *input_shape]
-    qin = subgraph.create_tensor("input", TensorType.INT8, input_shape, isinput=True)
+    qin = subgraph.create_tensor(
+        "input",
+        TensorType.INT8,
+        input_shape,
+        isinput=True,
+        quantization={"scale": [quant.scale], "zero_point": [quant.zero_point]},
+    )
+
     fout = subgraph.create_tensor(
         "output_dequantized", TensorType.FLOAT32, qin.shape, isoutput=True
     )
+
     subgraph.create_operator(
         OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qin], outputs=[fout]
     )
@@ -60,14 +75,26 @@ def build_dequantize(subgraph=None, *, input_shape):
     return subgraph.model
 
 
-def build_quantize(subgraph=None, *, input_shape, input_type=TensorType.FLOAT32):
+def build_quantize(
+    subgraph: Optional[Subgraph] = None,
+    *,
+    input_shape: Tuple[int, ...],
+    output_quantization: Optional[QuantizationTuple] = None,
+) -> XCOREModel:
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, *input_shape]
-    tin = subgraph.create_tensor("input", input_type, input_shape, isinput=True)
+    tin = subgraph.create_tensor("input", TensorType.FLOAT32, input_shape, isinput=True)
+
+    quant = output_quantization or QuantizationTuple(0.12, -35)
     qout = subgraph.create_tensor(
-        "output_quantized", TensorType.INT8, tin.shape, isoutput=True
+        "output_quantized",
+        TensorType.INT8,
+        tin.shape,
+        isoutput=True,
+        quantization={"scale": [quant.scale], "zero_point": [quant.zero_point]},
     )
+
     subgraph.create_operator(
         OperatorCode(BuiltinOpCodes.QUANTIZE), inputs=[tin], outputs=[qout]
     )
@@ -694,10 +721,9 @@ def _glue_ops(op1, op2):
 def _glue_quantize(op):
     subgraph = op.subgraph
     intermediate = subgraph.outputs[0]
-    build_quantize(
-        subgraph, input_shape=intermediate.shape, input_type=intermediate.type
-    )
+    build_quantize(subgraph, input_shape=intermediate.shape)
     _glue_ops(op, subgraph.operators[-1])
+
 
 def build_consecutive_pads(subgraph=None, *, input_shape, paddings_1, paddings_2):
     model = build_pad(subgraph, input_shape=input_shape, paddings=paddings_1)

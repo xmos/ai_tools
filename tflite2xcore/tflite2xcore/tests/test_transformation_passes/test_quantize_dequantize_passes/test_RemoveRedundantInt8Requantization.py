@@ -11,10 +11,8 @@ from tflite2xcore.transformation_passes import RemoveRedundantInt8Requantization
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_fc,
-    build_quantize,
     build_abs,
     _glue_quantize,
-    ModelBuilder,
 )
 
 from ..test_fully_connected_passes.conftest import PARAMS

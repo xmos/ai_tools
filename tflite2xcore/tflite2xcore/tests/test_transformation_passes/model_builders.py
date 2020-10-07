@@ -501,6 +501,7 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     b.buffer.data = generate_dummy_int32_data(b.shape)
 
     if padding is Padding.SAME:
+        # TODO: this is incorrect if stride > 1
         output_shape = [1, height, width, C_out]
     elif padding is Padding.VALID:
         output_shape = [
@@ -897,9 +898,14 @@ def build_LceQuantize(subgraph=None, *, input_shape, input_tensor_type=TensorTyp
 
 
 def build_lceBconv2d(
-    subgraph=None, *, weight_shape, input_size, padding, strides,
+    subgraph=None,
+    *,
+    weight_shape,
+    input_size,
+    padding,
+    strides,
+    output_tensor_type=TensorType.INT8,
 ):
-
     subgraph = subgraph or XCOREModel().create_subgraph()
     assert padding in Padding
 
@@ -918,6 +924,7 @@ def build_lceBconv2d(
     output_threshold.buffer.data = generate_dummy_int32_data(output_threshold.shape)
 
     if padding is Padding.SAME:
+        # TODO: this is incorrect if stride > 1
         output_shape = [1, height, width, C_out]
     elif padding is Padding.VALID:
         output_shape = [
@@ -927,7 +934,9 @@ def build_lceBconv2d(
             C_out,
         ]
 
-    tout = subgraph.create_tensor("output", tin.type, shape=output_shape, isoutput=True)
+    tout = subgraph.create_tensor(
+        "output", output_tensor_type, shape=output_shape, isoutput=True
+    )
 
     custom_options = {
         "padding": padding,

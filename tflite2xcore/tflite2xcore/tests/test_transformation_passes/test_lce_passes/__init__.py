@@ -4,19 +4,28 @@ import numpy as np
 from copy import deepcopy
 from typing import Tuple, Optional
 
+from tflite2xcore.transformation_passes import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel, Subgraph
-from tflite2xcore.xcore_schema import TensorType, Padding, OperatorCode, ExternalOpCodes
+from tflite2xcore.xcore_schema import (
+    TensorType,
+    Padding,
+    OperatorCode,
+    ExternalOpCodes,
+    XCOREOpCodes,
+)
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
     generate_dummy_int8_data,
     generate_dummy_int32_data,
 )
 
+from ..conftest import ParamsType
 from ..conftest import (  # pylint: disable=unused-import
     _make_name_type_pairs,
     _test_non_matching_params,
     test_matching_params,
     test_non_matching_tensors,
+    test_replace_mutate as _test_mutate,
 )
 from ..test_conv2d_passes.conftest import (  # pylint: disable=unused-import
     PARAMS,
@@ -31,15 +40,26 @@ from ..test_conv2d_passes.conftest import (  # pylint: disable=unused-import
 
 PARAMS = deepcopy(PARAMS)
 
+
+def update_lce_params(PARAMS: ParamsType) -> ParamsType:
+    for key in (
+        "input_channels",
+        "non_matching_input_channels",
+        "output_channels",
+        "non_matching_output_channels",
+    ):
+        PARAMS["default"][key] = PARAMS["extended"][key][:-1]
+        PARAMS["smoke"][key] = PARAMS["default"][key][:-1]
+    non_matching_tensors = PARAMS["extended"]["non_matching_tensors"][::2]
+    PARAMS["default"]["non_matching_tensors"] = non_matching_tensors
+    PARAMS["smoke"]["non_matching_tensors"] = non_matching_tensors
+
+    return PARAMS
+
+
 PARAMS["extended"].update(
     {"input_channels": [256, 512, 1024], "non_matching_input_channels": [32, 128, 288],}
 )
-for key in (
-    "input_channels",
-    "non_matching_input_channels",
-):
-    PARAMS["default"][key] = PARAMS["extended"][key][:-1]
-    PARAMS["smoke"][key] = PARAMS["default"][key][:-1]
 
 #  ----------------------------------------------------------------------------
 #                              MODEL BUILDERS
@@ -136,3 +156,19 @@ def build_lceBconv2d(
     )
 
     return subgraph.model
+
+
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
+
+
+def test_mutate(
+    trf_pass: ModelTransformationPass, model: XCOREModel, new_opcode: XCOREOpCodes
+) -> None:
+    subgraph = model.subgraphs[0]
+    assert len(subgraph.operators) == 1
+
+    _test_mutate(trf_pass, model, new_opcode)
+
+    assert len(subgraph.operators) == 1

@@ -7,12 +7,13 @@ from tflite2xcore.transformation_passes.lce_passes import ReplaceBconv2DBitpacke
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType, XCOREOpCodes, Padding
 
-from . import build_lceBconv2d, _make_name_type_pairs
+from . import build_lceBconv2d, _make_name_type_pairs, update_lce_params
 from . import (  # pylint: disable=unused-import
     PARAMS,
     test_matching_params,
     test_non_matching_tensors,
     test_non_matching_input_channels,
+    test_mutate,
 )
 from .test_ReplaceBconv2DInt8OutPass import (  # pylint: disable=unused-import
     test_mutate as _test_mutate,
@@ -22,9 +23,6 @@ from .test_ReplaceBconv2DInt8OutPass import (  # pylint: disable=unused-import
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-_NON_MATCHING_TENSORS = list(
-    _make_name_type_pairs("output", [TensorType.FLOAT32, TensorType.INT8])
-)
 
 PARAMS = deepcopy(PARAMS)
 
@@ -32,17 +30,13 @@ PARAMS["extended"].update(
     {
         "output_channels": [32, 128, 256],
         "non_matching_output_channels": [16, 20, 33],
-        "non_matching_tensors": _NON_MATCHING_TENSORS,
+        "non_matching_tensors": list(
+            _make_name_type_pairs("output", [TensorType.FLOAT32, TensorType.INT8])
+        ),
     }
 )
-PARAMS["default"]["non_matching_tensors"] = _NON_MATCHING_TENSORS[::2]
-PARAMS["smoke"]["non_matching_tensors"] = _NON_MATCHING_TENSORS[::2]
-for key in (
-    "output_channels",
-    "non_matching_output_channels",
-):
-    PARAMS["default"][key] = PARAMS["extended"][key][:-1]
-    PARAMS["smoke"][key] = PARAMS["default"][key][:-1]
+
+PARAMS = update_lce_params(PARAMS)
 
 
 #  ----------------------------------------------------------------------------
@@ -53,6 +47,11 @@ for key in (
 @pytest.fixture()
 def trf_pass() -> ReplaceBconv2DBitpackedOutPass:
     return ReplaceBconv2DBitpackedOutPass()
+
+
+@pytest.fixture()
+def new_opcode() -> XCOREOpCodes:
+    return XCOREOpCodes.XC_bconv2d_bin_out
 
 
 @pytest.fixture()
@@ -69,15 +68,6 @@ def model(
         strides=strides,
         output_tensor_type=TensorType.INT32,
     )
-
-
-#  ----------------------------------------------------------------------------
-#                                   TESTS
-#  ----------------------------------------------------------------------------
-
-
-def test_mutate(trf_pass: ReplaceBconv2DBitpackedOutPass, model: XCOREModel) -> None:
-    _test_mutate(trf_pass, model, custom_opcode=XCOREOpCodes.XC_bconv2d_bin_out)
 
 
 if __name__ == "__main__":

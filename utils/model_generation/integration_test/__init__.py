@@ -55,7 +55,9 @@ class IntegrationTestRunner(Runner):
     _quantization_data: tf.Tensor
     outputs: IntegrationTestOutputData
 
-    def __init__(self, generator: Type["IntegrationTestModelGenerator"]) -> None:
+    def __init__(
+        self, generator: Type["IntegrationTestModelGenerator"], use_device=False
+    ) -> None:
         self._repr_data_factory = InputInitializerDataFactory(
             self, lambda: self._model_generator.input_shape
         )

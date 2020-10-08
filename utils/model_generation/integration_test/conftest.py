@@ -116,8 +116,10 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     except AttributeError:
         RUNNER = IntegrationTestRunner
 
+    pytest_config = request.config
+
     runner: IntegrationTestRunner = RUNNER(
-        GENERATOR(use_device=pytest_config.getoption("--use-device"))
+        GENERATOR, use_device=pytest_config.getoption("--use-device")
     )
     runner.set_config(**request.param)
 

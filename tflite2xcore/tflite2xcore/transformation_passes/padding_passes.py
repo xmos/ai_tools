@@ -135,11 +135,7 @@ class SplitPaddingPass(OperatorMatchingPass):
             if opcode is not BuiltinOpCodes.PAD:
                 return False
 
-            try:
-                pad_params = self._pad_params
-            except IndexError:
-                return False
-
+            pad_params = self._pad_params
             if len(pad_params) != 4:
                 return False
 

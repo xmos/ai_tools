@@ -191,8 +191,8 @@ void avgpool2d_gen(
 {
     const unsigned channel_groups = job_params->size.channels >> VPU_INT8_ACC_PERIOD_LOG2;
 
-    int32_t scale = job->scale & 0xFF;
-    uint16_t shift = job->shift & 0xFFFF;
+    const int32_t scale = job->scale & 0xFF;
+    const uint16_t shift = job->shift & 0xFFFF;
 
     for(unsigned chn_grp = 0; chn_grp <= channel_groups; chn_grp++){
 
@@ -248,7 +248,52 @@ void avgpool2d_2x2(
     const nn_avgpool2d_flags_e flags,
     const nn_avgpool2d_job_t* job)
 {
-    avgpool2d_gen(Y, X, image_chans, pooling_window, job_params, flags, job);
+    const unsigned channel_groups = job_params->size.channels >> VPU_INT8_ACC_PERIOD_LOG2;
+
+    const uint16_t shift = 2;
+
+    for(unsigned chn_grp = 0; chn_grp <= channel_groups; chn_grp++){
+
+        unsigned iter_chans = VPU_INT8_ACC_PERIOD;
+        if(chn_grp == channel_groups)
+            iter_chans = job_params->size.channels - (channel_groups << VPU_INT8_ACC_PERIOD_LOG2);
+
+        if(iter_chans == 0)
+            break;
+
+        for(unsigned out_row = 0; out_row < job_params->size.rows; out_row++){
+            for(unsigned out_col = 0; out_col < job_params->size.cols; out_col++){
+                    
+                int32_t acc32[VPU_INT8_ACC_PERIOD] = {0};
+
+                for(unsigned w_rows = 0; w_rows < pooling_window->shape.height; w_rows++){
+                    for(unsigned w_cols = 0; w_cols < pooling_window->shape.width; w_cols++){
+
+                        for(unsigned k = 0; k < iter_chans; k++){
+                            acc32[k] += X[k];
+                        }
+
+                        X = ADDR(X, image_chans);
+                    }
+
+                    X = ADDR(X, job->stride.X.row);
+                }
+
+                for(unsigned k = 0; k < iter_chans; k++){
+                    Y[k] = vlsat_single_s8(acc32[k], shift, NEG_SAT_VAL, VPU_INT8_MAX);
+                }
+
+                X = ADDR(X, job->stride.window.col);
+                Y = ADDR(Y, image_chans);
+            }
+
+            X = ADDR(X, job->stride.window.row);
+            Y = ADDR(Y, job->stride.Y.row);
+        }
+
+        X = ADDR(X, job->stride.X.cog);
+        Y = ADDR(Y, job->stride.Y.cog);
+    }
 }
 
 

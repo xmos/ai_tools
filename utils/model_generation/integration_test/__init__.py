@@ -183,7 +183,7 @@ class IntegrationTestRunner(Runner):
         for key, arr in data.items():
             for j in example_idx:
                 with open(dirpath / f"example_{j}.{key}", "wb") as f:
-                    f.write(arr[j].flatten().tostring())
+                    f.write(np.array(arr[j]).tostring())
 
 
 #  ----------------------------------------------------------------------------

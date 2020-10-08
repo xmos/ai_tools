@@ -11,7 +11,7 @@ from .transformation_passes import (
 )
 
 
-class RemoveRedundantInt8Requantization(QuantizedOperatorMatchingPass):
+class RemoveRedundantInt8RequantizationPass(QuantizedOperatorMatchingPass):
     @property
     def matching_opcode(self) -> BuiltinOpCodes:
         return BuiltinOpCodes.QUANTIZE

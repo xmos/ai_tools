@@ -4,6 +4,7 @@ import logging
 import numpy as np  # type: ignore
 from abc import ABC, abstractmethod
 from collections import Counter
+from copy import deepcopy
 from typing import (
     Any,
     Union,
@@ -450,6 +451,15 @@ class Subgraph(_AbstractContainer):
             raise ValueError("Cannot find operator to replace in the subgraph")
         # remove old op
         self.remove_operator(op)
+
+    def clone_tensor(self, tensor: Tensor) -> Tensor:
+        return self.create_tensor(
+            tensor.name,
+            tensor.type,
+            tensor.shape,
+            quantization=deepcopy(tensor.quantization),
+            buffer=self.model.create_buffer(tensor.buffer.data),
+        )
 
     def get_tensor(self, name: str) -> Tensor:
         for t in self.tensors:

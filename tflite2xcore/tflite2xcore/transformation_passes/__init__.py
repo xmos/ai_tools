@@ -85,3 +85,5 @@ from .scratch_memory_passes import (
     ScratchMemoryConv2d1x1Pass,
     ScratchMemoryDepthwiseConv2dPass,
 )
+
+from .constant_propagation_passes import ConstantPropagationPass

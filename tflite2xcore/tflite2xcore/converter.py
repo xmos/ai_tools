@@ -83,6 +83,9 @@ def optimize_for_xcore(
         model, keep_intermediates=bool(intermediates_path)
     )
 
+    # one round of constant folding
+    pass_mgr.register_pass(passes.ConstantPropagationPass())
+
     # canonicalize fully connected
     pass_mgr.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
 
@@ -97,7 +100,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
 
     # remove redundant quantize ops
-    pass_mgr.register_pass(passes.RemoveRedundantInt8Requantization())
+    pass_mgr.register_pass(passes.RemoveRedundantInt8RequantizationPass())
 
     # canonicalize word alignment
     pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())

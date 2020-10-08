@@ -7,14 +7,12 @@ from typing import Tuple
 
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes
-from tflite2xcore.transformation_passes import RemoveRedundantInt8Requantization
+from tflite2xcore.transformation_passes import RemoveRedundantInt8RequantizationPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_fc,
-    build_quantize,
     build_abs,
     _glue_quantize,
-    ModelBuilder,
 )
 
 from ..test_fully_connected_passes.conftest import PARAMS
@@ -53,8 +51,8 @@ PARAMS["smoke"].update({"non_matching_tensors": _NON_MATCHING_TENSORS[::4]})
 
 
 @pytest.fixture()
-def trf_pass() -> RemoveRedundantInt8Requantization:
-    return RemoveRedundantInt8Requantization()
+def trf_pass() -> RemoveRedundantInt8RequantizationPass:
+    return RemoveRedundantInt8RequantizationPass()
 
 
 @pytest.fixture()
@@ -69,7 +67,9 @@ def model(input_shape: Tuple[int, int, int], outputs: int) -> XCOREModel:
 #  ----------------------------------------------------------------------------
 
 
-def test_mutate(model: XCOREModel, trf_pass: RemoveRedundantInt8Requantization) -> None:
+def test_mutate(
+    model: XCOREModel, trf_pass: RemoveRedundantInt8RequantizationPass
+) -> None:
     subgraph = model.subgraphs[0]
     qin = subgraph.get_tensor("input")
     qout = subgraph.get_tensor("output_quantized")
@@ -87,14 +87,14 @@ def test_mutate(model: XCOREModel, trf_pass: RemoveRedundantInt8Requantization) 
 
 
 def test_non_matching_consumers(
-    trf_pass: RemoveRedundantInt8Requantization, model: XCOREModel
+    trf_pass: RemoveRedundantInt8RequantizationPass, model: XCOREModel
 ) -> None:
     _glue_quantize(model.subgraphs[0].operators[0])
     _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_op(
-    trf_pass: RemoveRedundantInt8Requantization, input_shape: Tuple[int, int, int]
+    trf_pass: RemoveRedundantInt8RequantizationPass, input_shape: Tuple[int, int, int]
 ) -> None:
     model = build_abs(input_shape=input_shape, tensor_type=TensorType.INT8)
     _glue_quantize(model.subgraphs[0].operators[0])

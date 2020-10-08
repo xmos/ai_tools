@@ -2,7 +2,6 @@
 
 import pytest  # type: ignore
 import tensorflow as tf  # type: ignore
-from tensorflow.keras.applications import MobileNet  # type: ignore
 
 from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
     XCOREOpCodes,
@@ -13,7 +12,7 @@ from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation import Configuration
 
-from . import IntegrationTestModelGenerator
+from . import IntegrationTestModelGenerator, MobileNet
 from . import (  # pylint: disable=unused-import
     test_idempotence,
     test_output,

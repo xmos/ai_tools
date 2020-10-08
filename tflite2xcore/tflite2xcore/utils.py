@@ -36,6 +36,7 @@ class QuantizationTuple(NamedTuple):
 
 TFLiteModel = Union[bytes, bytearray]
 PaddingTuple = Tuple[Tuple[int, int], ...]
+ShapeTuple = Tuple[int, ...]
 
 
 # -----------------------------------------------------------------------------
@@ -306,8 +307,6 @@ def quantize_keras_model(
 #                       SHAPE COMPUTATION HELPERS
 # -----------------------------------------------------------------------------
 
-_ImTuple = TypeVar("_DecoratedFunc", Tuple[int, ...])
-
 
 def _calculate_valid_output_size(in_size: int, stride: int, k_dim: int) -> int:
     assert in_size >= k_dim
@@ -315,8 +314,8 @@ def _calculate_valid_output_size(in_size: int, stride: int, k_dim: int) -> int:
 
 
 def calculate_valid_output_size(
-    input_size: _ImTuple, strides: _ImTuple, kernel_size: _ImTuple
-) -> _ImTuple:
+    input_size: ShapeTuple, strides: ShapeTuple, kernel_size: ShapeTuple
+) -> ShapeTuple:
     return tuple(
         _calculate_valid_output_size(*t) for t in zip(input_size, strides, kernel_size)
     )
@@ -326,12 +325,14 @@ def _calculate_same_output_size(in_size: int, stride: int) -> int:
     return int(np.ceil(in_size / stride))
 
 
-def calculate_same_output_size(input_size: _ImTuple, strides: _ImTuple) -> _ImTuple:
+def calculate_same_output_size(
+    input_size: ShapeTuple, strides: ShapeTuple
+) -> ShapeTuple:
     return tuple(_calculate_same_output_size(*t) for t in zip(input_size, strides))
 
 
 def calculate_same_padding(
-    input_size: _ImTuple, strides: _ImTuple, kernel_size: _ImTuple
+    input_size: ShapeTuple, strides: ShapeTuple, kernel_size: ShapeTuple
 ) -> PaddingTuple:
     def calc_axis_pad(in_size: int, stride: int, k_dim: int) -> Tuple[int, int]:
         out_size = _calculate_same_output_size(in_size, stride)

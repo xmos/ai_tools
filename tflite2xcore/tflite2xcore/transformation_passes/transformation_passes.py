@@ -5,7 +5,7 @@ import numpy as np  # type: ignore
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
-from tflite2xcore.xcore_schema import TensorType
+from tflite2xcore.xcore_schema import TensorType, OperatorCode
 from tflite2xcore.utils import ACC_PERIOD, format_array
 
 
@@ -176,11 +176,11 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
         raise NotImplementedError()
 
     @property
-    def matching_input_type(self):
+    def matching_input_type(self) -> TensorType:
         return TensorType.INT8
 
     @property
-    def matching_output_type(self):
+    def matching_output_type(self) -> TensorType:
         return TensorType.INT8
 
     def match(self, op):
@@ -190,12 +190,13 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
                     self._input.type is self.matching_input_type
                     and self._output.type is self.matching_output_type
                 )
+        return False
 
 
 class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
     @property
     @abstractmethod
-    def new_opcode(self):
+    def new_opcode(self) -> OperatorCode:
         raise NotImplementedError()
 
     def mutate(self, op):
@@ -215,12 +216,20 @@ class ReplaceQuantizedWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def _biases(self):
         return self._op.inputs[2]
 
+    @property
+    def matching_biases_type(self) -> TensorType:
+        return TensorType.INT32
+
+    @property
+    def matching_weights_type(self) -> TensorType:
+        return TensorType.INT8
+
     def match(self, op):
         if super().match(op):
             with self.using(op):
                 return (
-                    self._weights.type is TensorType.INT8
-                    and self._biases.type is TensorType.INT32
+                    self._weights.type is self.matching_weights_type
+                    and self._biases.type is self.matching_biases_type
                     # NOTE: the current implementations don't allow mutating ops
                     #       if one of the parameter tensors is an output or not constant
                     and self._weights.is_constant
@@ -281,6 +290,7 @@ class LegalizeWeightBiasPass(QuantizedOperatorMatchingPass):
         self.mutate_biases(op)
         self.mutate_weights(op)
         op.custom_options.pop("illegal_params")
+        return op
 
 
 class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):

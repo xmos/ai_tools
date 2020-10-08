@@ -1,25 +1,29 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
-from typing import Any
-
 import numpy as np
+from typing import Tuple
 
-from tflite2xcore.utils import WORD_SIZE_BITS, VECTOR_SIZE_BITS, ACC_PERIOD
-from .transformation_passes import (
-    OperatorMatchingPass,
-    ReplaceQuantizedOperatorPass,
-    LegalizeWeightBiasPass,
+from tflite2xcore.utils import (
+    WORD_SIZE_BITS,
+    VECTOR_SIZE_BITS,
+    ACC_PERIOD,
+    calculate_same_padding,
+    calculate_same_output_size,
 )
-from .conv2d_passes import ReplaceConv2DPass
 from tflite2xcore.xcore_model import Operator
 from tflite2xcore.xcore_schema import (
     Padding,
     TensorType,
-    BuiltinOpCodes,
     ExternalOpCodes,
     XCOREOpCodes,
     OperatorCode,
     BuiltinOptions,
 )
+
+from .transformation_passes import (
+    OperatorMatchingPass,
+    ReplaceQuantizedOperatorPass,
+)
+from .conv2d_passes import ReplaceConv2DPass
 
 
 class ReplaceBconv2DPass(ReplaceConv2DPass):
@@ -40,31 +44,42 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
         return TensorType.INT32
 
     @property
-    def _strides(self):
+    def _strides(self) -> Tuple[int, int]:
         options = self._op.custom_options
         return options["stride_height"], options["stride_width"]
 
     @property
-    def _dilation(self):
+    def _dilation(self) -> Tuple[int, int]:
         options = self._op.custom_options
         return options["dilation_height_factor"], options["dilation_width_factor"]
+
+    @property
+    def _padding(self) -> Padding:
+        return self._op.custom_options["padding"]
+
+    @property
+    def _input_channels(self) -> int:
+        return self._op.custom_options["channels_in"]
 
     def match(self, op: Operator) -> bool:
         # other versions of the LCE op can have different number of inputs
         if super().match(op) and len(op.inputs) == 3:
             with self.using(op):
-                # number of input channels must be multiple of 256
-                return (self._weights.shape[3] * WORD_SIZE_BITS) % VECTOR_SIZE_BITS == 0
+                inferred_input_channels = self._weights.shape[3] * WORD_SIZE_BITS
+                return (
+                    inferred_input_channels == self._input_channels
+                    # number of input channels must be multiple of 256
+                    and inferred_input_channels % VECTOR_SIZE_BITS == 0
+                )
+
         return False
 
     def mutate(self, op: Operator) -> None:
         new_op = super().mutate(op)
-        new_op.add_custom_options(
-            **op.custom_options
-        )  # TODO: check if this is really needed
-        new_op.custom_options.pop(
-            "illegal_params"
-        )  # TODO: add legalization passes as needed
+        with self.using(op):
+            new_op.add_custom_options(
+                stride=self._strides, padding=self._padding,
+            )
         return new_op
 
 
@@ -80,7 +95,7 @@ class ReplaceBconv2DInt8OutPass(ReplaceBconv2DPass):
 
 class ReplaceBconv2DBitpackedOutPass(ReplaceBconv2DPass):
     @property
-    def new_opcode(self):
+    def new_opcode(self) -> OperatorCode:
         return OperatorCode(XCOREOpCodes.XC_bconv2d_bin_out)
 
     @property
@@ -111,12 +126,6 @@ class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
             )
         return False
 
-    def mutate(self, op: Operator) -> None:
-        new_op = super().mutate(op)
-        new_op.add_custom_options(
-            **op.custom_options
-        )  # TODO: check if this is really needed
-        return new_op
 
 
 # Split out padding to a separate op from BConv

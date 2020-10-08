@@ -8,6 +8,7 @@ from tflite2xcore.transformation_passes import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel, Subgraph
 from tflite2xcore.xcore_schema import (
     TensorType,
+    ActivationFunctionType,
     Padding,
     OperatorCode,
     ExternalOpCodes,
@@ -108,14 +109,14 @@ def build_lceBconv2d(
     height, width = input_size
     C_out, K_h, K_w, C_in = weight_shape
     assert C_in % 32 == 0
-    C_in //= 32
+    bitpacked_input_channels = C_in // 32
     if output_tensor_type is TensorType.INT32:
         assert C_out % 32 == 0
         C_out //= 32
 
-    weight_shape = (C_out, K_h, K_w, C_in)
+    weight_shape = (C_out, K_h, K_w, bitpacked_input_channels)
 
-    input_shape = [1, height, width, C_in]
+    input_shape = [1, height, width, bitpacked_input_channels]
     tin = subgraph.create_tensor("input", TensorType.INT32, input_shape, isinput=True)
     w = subgraph.create_tensor("weights", TensorType.INT32, weight_shape)
     output_threshold = subgraph.create_tensor(
@@ -146,12 +147,13 @@ def build_lceBconv2d(
         inputs=[tin, w, output_threshold],
         outputs=[tout],
         custom_options={
+            "channels_in": C_in,
+            "fused_activation_function": ActivationFunctionType.NONE,
             "padding": padding,
             "stride_height": strides[0],
             "stride_width": strides[1],
             "dilation_width_factor": 1,
             "dilation_height_factor": 1,
-            "pad_values": 0,
         },
     )
 

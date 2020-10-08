@@ -5,9 +5,6 @@
 
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
-// #include "nn_op_structs.h"
-
-// #include "xs3_vpu.h"
 
 #if defined(__XS3A__)
 
@@ -25,6 +22,12 @@ void bnn_conv2d_bin_out_asm_prepare(
     const unsigned x_loc_x, const unsigned x_loc_y, 
     const unsigned k_loc_x, const unsigned k_loc_y, 
     const unsigned k_sub_width, const unsigned k_sub_height) {
+
+  //these are required for now
+  assert(k_loc_x == 0);
+  assert(k_loc_y == 0);
+  assert(k_sub_width == k->shape.width);
+  assert(k_sub_height == k->shape.height);
 
   const unsigned chan_b256_in = (x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
   const unsigned chan_b32_out = (y->channels + 32 - 1) / 32;
@@ -128,11 +131,15 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
     bnn_conv2d_bin_out_asm(&plan);
 }
 
-
 //Patch to Col version
 
 void bnn_conv2d_bin_out_patch_asm(nn_bnn_conv2d_bin_out_patch_asm_plan_t * plan);
 
+/*
+ * optimisation: if there are no dilations then for anything greater than a 1x1 pretend that the 
+ * kernel is a nx1 i.e. long rows with a single coloumn, that way the pixel copies will be merged
+ * and fewer loads and stores will execute with less loop overhead. 
+ */
 void bnn_conv2d_bin_out_patch_asm_prepare(
     nn_bnn_conv2d_bin_out_patch_asm_plan_t* plan, bnn_b32_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, const int32_t* thresholds_p,
@@ -145,6 +152,12 @@ void bnn_conv2d_bin_out_patch_asm_prepare(
     const unsigned x_loc_x, const unsigned x_loc_y, 
     const unsigned k_loc_x, const unsigned k_loc_y, 
     const unsigned k_sub_width, const unsigned k_sub_height) {
+
+  //these are required for now
+  assert(k_loc_x == 0);
+  assert(k_loc_y == 0);
+  assert(k_sub_width == k->shape.width);
+  assert(k_sub_height == k->shape.height);
 
   const unsigned chan_b32_in = (x->channels + 32 - 1) / 32; //TODO macro these
   const unsigned chan_b32_out = (y->channels + 32 - 1) / 32;
@@ -162,9 +175,7 @@ void bnn_conv2d_bin_out_patch_asm_prepare(
   plan->Y = (bnn_b32_t*)Y[y_loc_y][y_loc_x];
   plan->X = (bnn_b32_t*)X[x_loc_y][x_loc_x];
   plan->K = (bnn_b32_t*)K[k_loc_y][k_loc_x];
-
   plan->threshold_p = (int32_t *)thresholds_p;
-
   plan->data_scratch = data_scratch;
 
   unsigned bytes_per_input_channel = x->channels / 8;
@@ -191,19 +202,19 @@ void bnn_conv2d_bin_out_patch_asm_prepare(
   //We are going to copy (in chunks of XS3_VPU_VREG_WIDTH_BITS) each of the 
   plan->input_channel_loop_counter =
       ((x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS) - 1;
-  unsigned bytes_copied = plan->input_channel_loop_counter * XS3_VPU_VREG_WIDTH_BITS;
-  plan->data_scratch_adjust = x->channels - bytes_copied;
 
-  unsigned total_bytes_copied = bytes_copied * y_sub_height * y_sub_width;
+  plan->data_scratch_adjust = -(int)((XS3_VPU_VREG_WIDTH_BITS - x->channels) % XS3_VPU_VREG_WIDTH_BITS)/8;
 
-  plan->patch_loop_counter = ((total_bytes_copied + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS) - 1;
-  
-  if(dense_kernel_packing){
-    plan->k_p_adjust = total_bytes_copied - (plan->patch_loop_counter * XS3_VPU_VREG_WIDTH_BITS);
+  unsigned total_bits_copied_to_scratch = x->channels * k_sub_height * k_sub_width;
+
+  //the final loop copies 32-256 bits(not 0)
+  if ((total_bits_copied_to_scratch%XS3_VPU_VREG_WIDTH_BITS) ==  0){
+    plan->k_p_adjust = XS3_VPU_VREG_WIDTH_BITS/8;
   } else {
-    //The kernels will require one padding
-    plan->k_p_adjust = 0;
+    plan->k_p_adjust =(total_bits_copied_to_scratch%XS3_VPU_VREG_WIDTH_BITS)/8;
   }
+  total_bits_copied_to_scratch -= plan->k_p_adjust;  
+  plan->patch_loop_counter = total_bits_copied_to_scratch / XS3_VPU_VREG_WIDTH_BITS;
 
   plan->output_channel_loop_counter = (y->channels / out_chans_multiplier) - 1;
 
@@ -215,12 +226,12 @@ void bnn_conv2d_bin_out_patch_asm_prepare(
 
  // Inner Loop
   // minus one to account for the auto increament in the loop
-  plan->inner_x_h_step = bytes_per_input_channel * (h_dilation - 1);
+  unsigned bytes_per_input_channel_rounded_up = ((bytes_per_input_channel + 32 - 1)/32)*32;
+  plan->inner_x_h_step = bytes_per_input_channel * h_dilation - bytes_per_input_channel_rounded_up;
 
   // TODO multiply x->width by dilation
-  plan->inner_x_v_step =
-      (bytes_per_input_channel * ((x->width - k_sub_width))) - plan->inner_x_h_step;
-
+  plan->inner_x_v_step = 
+      (bytes_per_input_channel * ((x->width - k_sub_width)));
   // Outer Loop
   plan->outer_x_h_step = bytes_per_input_channel * k->stride.horizontal;
 
@@ -232,7 +243,6 @@ void bnn_conv2d_bin_out_patch_asm_prepare(
   assert(k_sub_width == k->shape.width); //until the following two lines are working
 
   plan->y_v_step = sizeof(bnn_b32_t) * (y->width - y_sub_width);
-  
 }
 
 void bnn_conv2d_bin_out_patch(bnn_b32_t* Y_p,

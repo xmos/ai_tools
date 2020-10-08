@@ -86,7 +86,7 @@ typedef struct {
   bnn_b256_t* K;
   unsigned inner_x_v_step;
   unsigned k_v_step;
-  unsigned inner_x_h_step;
+  int inner_x_h_step;
   unsigned k_h_step;
 
   int outer_x_v_step;

@@ -54,7 +54,7 @@ static void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref
 
 #if defined(__XS3A__)
   bnn_reorder_threshold_tensor(thresholds_p, thresholds_ref, chans_out,
-                              k_width * k_height * chans_in);
+                              k_width * k_height * chans_in, 0);
 
   bnn_reorder_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
                             chans_out);
@@ -254,7 +254,7 @@ static void run_bin_sub_image(bnn_b32_t* Y_p, const bnn_b32_t* Y_ref_p, const bn
 #if defined(__XS3A__)
 
   bnn_reorder_threshold_tensor(thresholds_p, thresholds_ref, y->channels,
-                               k->shape.width * k->shape.height * x->channels);
+                               k->shape.width * k->shape.height * x->channels, 0);
 
   bnn_reorder_kernel_tensor(K_p, K_ref_p, k->shape.height , k->shape.width, x->channels,
                             y->channels);

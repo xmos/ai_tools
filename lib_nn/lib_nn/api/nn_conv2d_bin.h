@@ -21,11 +21,13 @@
  * @param thresholds_ref     [in]     The input @tensor{thresholds_ref}
  * @param chans_out          [in]     The number of output channels
  * @param receptive_field    [in]     The spatial area over which the kernel operates
+ * @param chan_overlaps      [in]     The overlap between one channel and the next //FIXME
  */
-void bnn_reorder_threshold_tensor(const int32_t* thresh_reordered,
+void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
                                   const int32_t* thresholds_ref,
                                   const unsigned chans_out,
-                                  const unsigned receptive_field);
+                                  const unsigned receptive_field,
+                                  int *chan_overlaps) ;
     
 /**  
  * @brief Execute @oper{bnn_reorder_multiplier_and_bias_tensors}.

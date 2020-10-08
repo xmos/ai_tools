@@ -130,7 +130,8 @@ bnn_make_patch:
 
         {bt k_width_loop, bnn_kw_loop; sub k_width_loop, k_width_loop, 1}
 
-        ldd s, t, sp[S_K_WIDTH_LOOP_COUNTER_INNER_X_V_STEP] //S_K_WIDTH_LOOP_COUNTER and S_INNER_X_V_STEP should be together
+        //ldd s, t, sp[S_K_WIDTH_LOOP_COUNTER_INNER_X_V_STEP] //S_K_WIDTH_LOOP_COUNTER and S_INNER_X_V_STEP should be together
+        ldw t, sp[S_INNER_X_V_STEP]
         {add X_p, X_p, t; nop }
 
     {bt k_height_loop, bnn_kh_loop; sub k_height_loop, k_height_loop, 1}
@@ -147,10 +148,23 @@ bnn_compute_patch:
     {vldr t[0]; add threshold_current, threshold_current, s}
     {vldd threshold_current[0]; add threshold_current, threshold_current, s}
 
+    {nop; nop}
+    {nop; nop}
+    {nop; nop}
+    {nop; nop}
+    here:
+    {nop; nop}
+    {nop; nop}
+    {nop; nop}
+    {nop; nop}
+
+
     {ldw t, sp[S_PATCH_LOOP_COUNTER]; nop}
-    {ldw s, sp[S_DATA_SCRATCH]; nop}
+    {ldw X_p, sp[S_DATA_SCRATCH]; nop}
+    {bf t, bnn_patch_tail; sub t, t, 1}
+
     bnn_patch_loop:
-        {vldc s[0];        add s, s, r_256_bits}
+        {vldc X_p[0];      add X_p, X_p, r_256_bits}
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
@@ -170,9 +184,38 @@ bnn_compute_patch:
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        
     {bt t, bnn_patch_loop; sub t, t, 1}
-    {ldw t, sp[S_K_ADJUST]; nop} // This compensates for the overrun if it happened
-    {retsp 0; add K_p, K_p, t}
+
+    bnn_patch_tail: 
+    //if this has different number of fnops between the fall through and branch to 
+    //then there will be error in the instruction estimator(the error will be bounded to 
+    //x_height*x_width inst hopefully)
+    
+    ldw s, sp[S_K_ADJUST]
+
+    {vldc X_p[0];     nop }
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    
+    {retsp 0; nop}
 
 /*
 void bnn_conv2d_bin_out_patch_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);

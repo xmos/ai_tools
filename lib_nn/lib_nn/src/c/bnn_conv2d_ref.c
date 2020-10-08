@@ -5,18 +5,15 @@
 
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
-// #include "nn_op_structs.h"
 
-// #include "xs3_vpu.h"
-#define ACC_PERIOD (VPU_INT16_ACC_PERIOD)
+#define ACC_PERIOD (VPU_INT16_ACC_PERIOD) //TODO replace
 
 //This is the amount that the VLMUL instruction shifts the product of C and R by.
 static const unsigned post_vlmul_shr = 14;
 
-
 unsigned xor_pop_32(bnn_b32_t* a, bnn_b32_t* b) {
   unsigned c = 0;
-  unsigned t = sizeof(bnn_b256_t);
+  unsigned t = sizeof(bnn_b32_t);
   bnn_b32_t v = (*a) ^ (*b);
  #if defined(__XS3A__)
     v = ~v;
@@ -30,37 +27,33 @@ unsigned xor_pop_32(bnn_b32_t* a, bnn_b32_t* b) {
   return c;
 }
 
-//TODO make xor_pop_256 from xor_pop_32
 unsigned xor_pop_256(bnn_b256_t* a, bnn_b256_t* b) {
-  unsigned t = sizeof(((bnn_b256_t*)0)->d[0]);
-  unsigned elements = sizeof(((bnn_b256_t*)0)->d) / t;
+
+  unsigned elements = sizeof(((bnn_b256_t*)0)->d) /
+    sizeof(((bnn_b256_t*)0)->d[0]);
 
   unsigned c = 0;
-  for (unsigned e = 0; e < elements; e++) {
-    uint32_t v = a->d[e] ^ b->d[e];
- #if defined(__XS3A__)
-    v = ~v;
-    for (unsigned i = 0; i < t * 8; i++) {
-      c += (v & 1);
-      v >>= 1;
-    }
-    #else
-    c += __builtin_popcount(~v);
-    #endif
-  }
+  for (unsigned e = 0; e < elements; e++) 
+    c +=xor_pop_32(&(a->d[e]), &(b->d[e]));
+
   return c;
 }
 
-void bnn_reorder_threshold_tensor(const int32_t* thresh_boggled,
+void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
                                   const int32_t* thresholds_ref,
                                   const unsigned chans_out,
-                                  const unsigned receptive_field) {
+                                  const unsigned receptive_field,
+                                  int *chan_overlaps) {
   int16_t* thresholds = (int16_t*)thresh_boggled;
 
   for (unsigned i = 0; i < chans_out; i++) {
     unsigned bank = i / ACC_PERIOD;
 
-    int32_t t = thresholds_ref[i] - ((receptive_field) / 2);
+    int32_t t = thresholds_ref[i] - ((int32_t)(receptive_field) / 2);
+
+    if(chan_overlaps)
+       t -= chan_overlaps[i];
+
     thresholds[(bank * (2*ACC_PERIOD)) + (i % ACC_PERIOD)] = (t >> 0);
     thresholds[(bank * (2*ACC_PERIOD)) + (i % ACC_PERIOD) + ACC_PERIOD] = (t >> ACC_PERIOD);
   }
@@ -92,6 +85,7 @@ void bnn_reorder_multiplier_and_bias_tensors(
   }
 }
 
+
 void bnn_reorder_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
@@ -118,6 +112,98 @@ void bnn_reorder_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
           }
         }
       }
+    }
+  }
+}
+
+
+
+void bnn_reorder_kernel_tensor2(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
+                               const unsigned k_height, const unsigned k_width,
+                               const unsigned chans_in,
+                               const unsigned chans_out, 
+                               int * chan_overlaps) 
+{                       
+  //This is the count of full vector words that can be applied to the data    
+  unsigned complete_256_bit_groups = ((chans_in*k_height*k_width) / XS3_VPU_VREG_WIDTH_BITS);
+
+  unsigned remainder_32_word_groups = ((chans_in*k_height*k_width) - complete_256_bit_groups*XS3_VPU_VREG_WIDTH_BITS) / 32;
+
+  unsigned chan_b32_in =
+      (chans_in + 32 - 1) / 32;
+
+  bnn_b32_t(*K_ref)[k_height*k_width*chan_b32_in] =
+      (bnn_b32_t(*)[k_height*k_width*chan_b32_in])K_ref_p;
+
+  //the nuber of ACC_PERIOD groups there will be
+  unsigned output_channel_groups = chans_out / ACC_PERIOD;
+
+  unsigned remaining_input_channels = ((chans_in*k_height*k_width) % XS3_VPU_VREG_WIDTH_BITS)/32;
+
+  bnn_b32_t(*K)[ACC_PERIOD][(8*complete_256_bit_groups) + remaining_input_channels] =
+      (bnn_b32_t(*)[ACC_PERIOD][(8*complete_256_bit_groups) + remaining_input_channels])K_p;
+
+  //This loops across groups of ACC_PERIOD output channels
+  for (unsigned output_chan_group = 0; output_chan_group < output_channel_groups; 
+      output_chan_group++) {
+
+    bnn_b32_t * p = &K[output_chan_group];
+
+    //copy the groups of 256 input channels
+    for (unsigned ic_group=0;ic_group < complete_256_bit_groups; ic_group++){
+      //each group is of ACC_PERIOD channels 
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < ACC_PERIOD; sub_grp_idx++) {
+
+        unsigned reversed_channel_order  = ACC_PERIOD - 1 - sub_grp_idx;
+
+        memcpy(p,
+          &K_ref[output_chan_group * ACC_PERIOD + reversed_channel_order][8*ic_group],
+          sizeof(bnn_b32_t) * 8);
+        p += (8);
+      }
+    }
+    if (remaining_input_channels){
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < ACC_PERIOD; sub_grp_idx++) {
+
+        unsigned reversed_channel_order  = ACC_PERIOD - 1 - sub_grp_idx;
+        memcpy(p,
+            &K_ref[output_chan_group * ACC_PERIOD + reversed_channel_order][8*complete_256_bit_groups],
+                sizeof(bnn_b32_t)*remaining_input_channels);
+        p += remaining_input_channels;
+      }   
+    }
+    assert(p ==  &(K[output_chan_group+1]));
+  }
+
+  memset(&(K[output_channel_groups]), 0xaa, sizeof(bnn_b32_t)*8);//TODO this could be 7?
+  
+  for (unsigned output_chan_group = 0; output_chan_group < output_channel_groups; 
+      output_chan_group++) {
+
+    bnn_b32_t * p = &(K[output_chan_group]);
+
+    p += (8*ACC_PERIOD*complete_256_bit_groups);
+    
+    if (remaining_input_channels){
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < ACC_PERIOD; sub_grp_idx++) {
+
+        unsigned reversed_channel_order  = ACC_PERIOD - 1 - sub_grp_idx;
+
+        bnn_b32_t zeros = 0x00000000;
+        int total_xor_popcount = 0;
+        for(unsigned o = remaining_input_channels; o < 8; o++){ //8 is 32 bit words per vpu load
+          total_xor_popcount += (int)xor_pop_32(&(p[o]), &zeros) - 16;
+        }
+        chan_overlaps[ output_chan_group * ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
+
+        p += remaining_input_channels;
+      }   
+    } else {
+      // This code is here for the case where the overlap is being used with multiples 
+      // 256 input channels.
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < ACC_PERIOD; sub_grp_idx++) {
+        chan_overlaps[ output_chan_group * ACC_PERIOD + sub_grp_idx] =  0;
+      }   
     }
   }
 }
@@ -218,6 +304,8 @@ void bnn_conv2d_bin_out_patch(bnn_b32_t* Y_p,
           }
 
           sum = (k->shape.height * k->shape.width * chan_b32_in * channels_per_input_word) - sum;
+
+          // printf("sum %d %d %d\n", sum, (int)(thresholds[oc]),  sum > thresholds[oc]);
           unsigned bit = sum > thresholds[oc];
           if (bit) bitpacked_column |= 1ULL << oc_bit;
         }

@@ -50,6 +50,12 @@ def pytest_addoption(parser):  # type: ignore
         help="The model generators are run and cached but outputs are not evaluated for correctness",
     )
 
+    parser.addoption(
+        "--use-device",
+        action="store_true",
+        help="Execute interpreter on hardware device",
+    )
+
 
 def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
     if "run" in metafunc.fixturenames:
@@ -110,10 +116,13 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     except AttributeError:
         RUNNER = IntegrationTestRunner
 
-    runner: IntegrationTestRunner = RUNNER(GENERATOR)
+    pytest_config = request.config
+
+    runner: IntegrationTestRunner = RUNNER(
+        GENERATOR, use_device=pytest_config.getoption("--use-device")
+    )
     runner.set_config(**request.param)
 
-    pytest_config = request.config
     if pytest_config.getoption("verbose"):
         print(f"Config: {runner._config}")
     if pytest_config.getoption("--config-only"):

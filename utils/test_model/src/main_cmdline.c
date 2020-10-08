@@ -91,8 +91,9 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   // setup runtime
-  initialize(model_content, tensor_arena, TENSOR_ARENA_SIZE, &input_buffer,
-             &input_size, &output_buffer, &output_size);
+  initialize_inference_engine(model_content, tensor_arena, TENSOR_ARENA_SIZE,
+                              &input_buffer, &input_size, &output_buffer,
+                              &output_size);
 
   // Load input tensor
   if (!load_input(input_filename, input_buffer, input_size)) {
@@ -101,7 +102,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Run inference, and report any error
-  invoke();
+  invoke_inference_engine();
 
   // save output
   if (!save_output(output_filename, output_buffer, output_size)) {

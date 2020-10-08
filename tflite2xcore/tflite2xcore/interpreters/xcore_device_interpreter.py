@@ -61,7 +61,10 @@ class XCOREDeviceInterpreter(XCOREInterpreter):
 
     def set_tensor(self, tensor_index, value):
         self._verify_allocated()
-        self._endpoint.set_tensor(tensor_index, value.tobytes())
+        try:
+            self._endpoint.set_tensor(tensor_index, value.tobytes())
+        except Exception as ex:
+            raise ex
 
     def get_tensor(self, tensor_index):
         self._verify_allocated()

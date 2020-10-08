@@ -20,5 +20,8 @@
     <!-- From the target code, call: xscope_int(PROBE_NAME, value); -->
     <Probe name="ping_awk" type="CONTINUOUS" datatype="UINT" units="Value" enabled="true"/>  -->
     <Probe name="recv_awk" type="CONTINUOUS" datatype="UINT" units="Value" enabled="true"/>  -->
+    <Probe name="init_awk" type="CONTINUOUS" datatype="UINT" units="Value" enabled="true"/>  -->
+    <Probe name="invoke_awk" type="CONTINUOUS" datatype="UINT" units="Value" enabled="true"/>  -->
+    <Probe name="error" type="CONTINUOUS" datatype="NONE" units="Value" enabled="true"/>  -->
     <Probe name="get_tensor" type="CONTINUOUS" datatype="NONE" units="Value" enabled="true"/>  -->
 </xSCOPEconfig>

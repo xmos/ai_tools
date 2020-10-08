@@ -176,7 +176,10 @@ def get_devices():
 class XCOREDeviceEndpoint(object):
     PING_AWK_PROBE_ID = 0
     RECV_AWK_PROBE_ID = 1
-    GET_TENSOR_PROBE_ID = 2
+    INIT_AWK_PROBE_ID = 2
+    INVOKE_AWK_PROBE_ID = 3
+    ERROR_PROBE_ID = 4
+    GET_TENSOR_PROBE_ID = 5
 
     def __init__(self):
         tool_path = os.environ.get("XMOS_TOOL_PATH")
@@ -208,18 +211,39 @@ class XCOREDeviceEndpoint(object):
         return RECORD_CALLBACK(func)
 
     def _send_blob(self, blob):
-        CHUCK_SIZE = 128
+        CHUCK_SIZE = 256
+        SLEEP_DURATION = 0.02
+        timeout = 12  # NOTE: timeoout needs to be long enough for the initial chunk
+        # sent which can be quite long if the firmware has not finished booting
+
         for i in range(0, len(blob), CHUCK_SIZE):
             self._publish_blob_chunk_ready = False
+            duration = 0
             self.publish(blob[i : i + CHUCK_SIZE])
             # wait for RECV_AWK probe
             while not self._publish_blob_chunk_ready:
-                pass
+                if duration >= timeout:
+                    raise Exception("Error sending blob")
+                time.sleep(SLEEP_DURATION)
+                duration += SLEEP_DURATION
+
+    def _wait_for(self, attr_name, err_msg, timeout=5):
+        SLEEP_DURATION = 0.05
+        duration = 0
+
+        while not getattr(self, attr_name):
+            if duration >= timeout:
+                raise Exception(err_msg)
+            time.sleep(SLEEP_DURATION)
+            duration += SLEEP_DURATION
 
     def clear(self):
         self._get_tensor_ready = False
         self._publish_blob_chunk_ready = False
+        self._initialize_ready = False
+        self._invoke_ready = False
         self._get_tensor_buffer = None
+        self._error = None
 
     @property
     def port(self):
@@ -234,6 +258,12 @@ class XCOREDeviceEndpoint(object):
             self._device_ready = True
         elif id_ == XCOREDeviceEndpoint.RECV_AWK_PROBE_ID:
             self._publish_blob_chunk_ready = True
+        elif id_ == XCOREDeviceEndpoint.INIT_AWK_PROBE_ID:
+            self._initialize_ready = True
+        elif id_ == XCOREDeviceEndpoint.INVOKE_AWK_PROBE_ID:
+            self._invoke_ready = True
+        elif id_ == XCOREDeviceEndpoint.ERROR_PROBE_ID:
+            self._error = data_bytes[0:length].decode()
         elif id_ == XCOREDeviceEndpoint.GET_TENSOR_PROBE_ID:
             self._get_tensor_buffer = data_bytes[0:length]
             self._get_tensor_ready = True
@@ -250,7 +280,6 @@ class XCOREDeviceEndpoint(object):
         self.lib_xscope.xscope_ep_disconnect()
 
     def publish(self, data):
-
         if (
             self.lib_xscope.xscope_ep_request_upload(
                 ctypes.c_uint(len(data)), ctypes.c_char_p(data)
@@ -260,39 +289,46 @@ class XCOREDeviceEndpoint(object):
             raise Exception("Error publishing data")
 
     def ping_device(self, timeout=5):
-        SLEEP_DURATION = 0.2
-        duration = 0
         self._device_ready = False
-
         self.publish(b"PING_RECV")
-        # wait for PING_AWK probe
-        while not self._device_ready:
-            if duration >= timeout:
-                break
-            time.sleep(SLEEP_DURATION)
-            duration += SLEEP_DURATION
+        self._wait_for("_device_ready", "Ping timeout", timeout)
 
         return self._device_ready
 
-    def set_model(self, model_content):
-        self.publish(b"START_MODEL\0")
+    def set_model(self, model_content, timeout=5):
+        # send the model
+        size = len(model_content)
+        self.publish(f"SET_MODEL {size}\0".encode())
         self._send_blob(model_content)
-        self.publish(b"END_MODEL\0")
 
-    def set_invoke(self):
+        # call init and wait
+        self._initialize_ready = False
+        self.publish(b"CALL_INITIALIZE")
+        self._wait_for("_initialize_ready", "Initialize timeout", timeout)
+
+        if self._error:
+            raise Exception(self._error)
+
+    def set_invoke(self, timeout=5):
+        self._invoke_ready = False
         self.publish(b"CALL_INVOKE")
+        self._wait_for("_invoke_ready", "Invoke timeout", timeout)
+
+        if self._error:
+            raise Exception(self._error)
 
     def set_tensor(self, index, tensor_content):
         size = len(tensor_content)
         self.publish(f"SET_TENSOR {index} {size}\0".encode())
         self._send_blob(tensor_content)
 
-    def get_tensor(self, index):
+        if self._error:
+            raise Exception(self._error)
+
+    def get_tensor(self, index, timeout=5):
         self._get_tensor_ready = False
         self.publish(f"GET_TENSOR {index}\0".encode())
-        # wait for reply
-        while not self._get_tensor_ready:
-            pass
+        self._wait_for("_get_tensor_ready", "Get tensor timeout", timeout)
 
         return self._get_tensor_buffer
 
@@ -305,7 +341,7 @@ class XCOREDeviceServer(object):
     @staticmethod
     def _setup_device_use(device):
         # setup device which means launcing xrun and
-        #   and setting all pids. ports and in_use
+        #   and setting all pids, ports and in_use status
         logging.debug(f"Setting up device: {device}")
         xrun_pid, xgdb_pid, xscope_port = run_test_model(device["id"])
         device["xrun_pid"] = xrun_pid
@@ -320,10 +356,17 @@ class XCOREDeviceServer(object):
     @staticmethod
     def _reset_device_use(device):
         # reset device which means kill the xrun and xgdb processes
-        #   and setting all pids. ports and in_use to None (or False)
+        #   and setting all pids, ports and in_use status to Falsey values
         logging.debug(f"Resetting device: {device}")
-        os.kill(device["xrun_pid"], signal.SIGKILL)
-        os.kill(device["xgdb_pid"], signal.SIGKILL)
+        try:
+            os.kill(device["xrun_pid"], signal.SIGKILL)
+        except:
+            logging.debug("Unable to kill xrun")
+
+        try:
+            os.kill(device["xgdb_pid"], signal.SIGKILL)
+        except:
+            logging.debug("Unable to kill xgdb")
 
         device["xrun_pid"] = None
         device["xgdb_pid"] = None
@@ -337,8 +380,10 @@ class XCOREDeviceServer(object):
     @staticmethod
     def _atexit():
         with portalocker.TemporaryFileLock(
-            XCOREDeviceServer.lock_path, timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT
-        ) as fh:
+            XCOREDeviceServer.lock_path,
+            flags=portalocker.LOCK_EX,
+            timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT,
+        ):
             if XCOREDeviceServer.devices_path.is_file():
                 # search (by parent pid) for this process in cached devices
                 with open(XCOREDeviceServer.devices_path, "r+") as fd:
@@ -357,7 +402,9 @@ class XCOREDeviceServer(object):
     def acquire():
         atexit.register(XCOREDeviceServer._atexit)
         with portalocker.TemporaryFileLock(
-            XCOREDeviceServer.lock_path, timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT
+            XCOREDeviceServer.lock_path,
+            flags=portalocker.LOCK_EX,
+            timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT,
         ):
             # get the connected devices
             connected_devices = get_devices()
@@ -370,6 +417,7 @@ class XCOREDeviceServer(object):
 
             logging.debug(f"Connected devices: {connected_devices}")
             logging.debug(f"Cached devices: {cached_devices}")
+
             # sync connected and cached devices
             synced_devices = []
             for connected_device in connected_devices:
@@ -389,7 +437,13 @@ class XCOREDeviceServer(object):
                             port = cached_device["xscope_port"]
                             ep.connect(port=port)
                             logging.debug(f"Pinging port: {port}")
-                            if ep.ping_device():
+                            ping_succeeded = False
+                            try:
+                                ping_succeeded = ep.ping_device()
+                            except Exception as ex:
+                                logging.debug(str(ex))
+
+                            if ping_succeeded:
                                 logging.debug("Ping succeeded")
                             else:
                                 logging.debug("Ping failed")
@@ -442,7 +496,9 @@ class XCOREDeviceServer(object):
     @staticmethod
     def release(endpoint):
         with portalocker.TemporaryFileLock(
-            XCOREDeviceServer.lock_path, timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT
+            XCOREDeviceServer.lock_path,
+            flags=portalocker.LOCK_EX,
+            timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT,
         ):
             if XCOREDeviceServer.devices_path.is_file():
                 # search (by port) for endpoint in cached devices

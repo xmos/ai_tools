@@ -79,8 +79,6 @@ if (XCORE)
     "-Wno-unknown-pragmas"
     "-report"
     #"-DNDEBUG" 
-    #"-DTF_LITE_STRIP_ERROR_STRINGS"
-    "-DTF_LITE_STATIC_MEMORY"
     "-DXCORE"
     "-Os"
   )
@@ -193,7 +191,6 @@ set(TENSORFLOW_LITE_REFERENCE_OPERATOR_SOURCES
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/tanh.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/unpack.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/hard_swish.cc"
-  "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/ethosu.cc"
 )
 
 #*************************************************
@@ -272,6 +269,7 @@ if (XCORE)
     PRIVATE ${LIB_NN_SOURCES}
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main_xscope.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/inference_engine.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/test_ops_resolver.cc"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main.xc"
   )
 
@@ -282,6 +280,7 @@ if (XCORE)
     PRIVATE ${LIB_NN_SOURCES}
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main_cmdline.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/inference_engine.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/test_ops_resolver.cc"
   )
 
 target_include_directories(test_model_xscope

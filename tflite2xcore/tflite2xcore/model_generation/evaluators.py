@@ -141,7 +141,7 @@ class XCoreEvaluator(TFLiteEvaluator):
                 "Cannot get output quantization before evaluator is run!"
             ) from None
 
-    def get_interpreter(self):
+    def get_interpreter(self) -> XCOREInterpreter:
         if self._use_device:
             return XCOREDeviceInterpreter(model_content=self._model_hook())
         else:

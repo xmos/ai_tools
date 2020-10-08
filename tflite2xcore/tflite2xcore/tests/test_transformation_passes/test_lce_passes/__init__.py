@@ -13,6 +13,7 @@ from tflite2xcore.tests.test_transformation_passes.model_builders import (
 )
 
 from ..conftest import (  # pylint: disable=unused-import
+    _make_name_type_pairs,
     _test_non_matching_params,
     test_matching_params,
     test_non_matching_tensors,
@@ -52,11 +53,9 @@ def build_LceQuantize(
     input_tensor_type: TensorType = TensorType.INT8,
 ) -> XCOREModel:
     subgraph = subgraph or XCOREModel().create_subgraph()
-
     height, width, channels = input_shape
-    assert channels % 32 == 0
     input_shape = (1, height, width, channels)
-    output_shape = (1, height, width, channels // 32)
+    output_shape = (1, height, width, int(np.ceil(channels / 32)))
 
     tin = subgraph.create_tensor("input", input_tensor_type, input_shape, isinput=True)
     tout = subgraph.create_tensor(

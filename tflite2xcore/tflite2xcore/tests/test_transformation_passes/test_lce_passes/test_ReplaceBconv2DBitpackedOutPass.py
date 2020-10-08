@@ -7,8 +7,7 @@ from tflite2xcore.transformation_passes.lce_passes import ReplaceBconv2DBitpacke
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType, XCOREOpCodes, Padding
 
-from ..conftest import _make_name_type_pairs
-from . import build_lceBconv2d
+from . import build_lceBconv2d, _make_name_type_pairs
 from . import (  # pylint: disable=unused-import
     PARAMS,
     test_matching_params,

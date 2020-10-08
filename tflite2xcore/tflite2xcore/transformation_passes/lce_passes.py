@@ -59,7 +59,9 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
 
     def mutate(self, op: Operator) -> None:
         new_op = super().mutate(op)
-        new_op.add_custom_options(**op.custom_options)
+        new_op.add_custom_options(
+            **op.custom_options
+        )  # TODO: check if this is really needed
         new_op.custom_options.pop(
             "illegal_params"
         )  # TODO: add legalization passes as needed
@@ -99,9 +101,21 @@ class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
     def matching_output_type(self) -> TensorType:
         return TensorType.INT32
 
+    def match(self, op: Operator) -> bool:
+        if super().match(op):
+            input_shape = op.inputs[0].shape
+            if len(input_shape) == 4 and input_shape[3] % WORD_SIZE_BITS == 0:
+                return True
+            self.logger.warning(
+                f"Found LceQuantize with illegal input shape {input_shape}"
+            )
+        return False
+
     def mutate(self, op: Operator) -> None:
         new_op = super().mutate(op)
-        new_op.add_custom_options(**op.custom_options)
+        new_op.add_custom_options(
+            **op.custom_options
+        )  # TODO: check if this is really needed
         return new_op
 
 

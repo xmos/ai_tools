@@ -11,8 +11,7 @@ from tflite2xcore.converter import CleanupManager
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import XCOREOpCodes, Padding, TensorType
 
-from ..conftest import _make_name_type_pairs
-from . import build_lceBconv2d, _test_non_matching_params
+from . import build_lceBconv2d, _test_non_matching_params, _make_name_type_pairs
 from . import (  # pylint: disable=unused-import
     PARAMS,
     test_matching_params,

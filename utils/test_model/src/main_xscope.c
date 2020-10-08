@@ -52,7 +52,7 @@ void xscope_data(void *data, size_t size) {
   // Handle state protocol messages
   if (strncmp(data, "PING_RECV", 9) == 0) {
     LOG_STATUS("Received PING_RECV\n");
-    xscope_int(PING_AWK, 0);
+    xscope_int(PING_ACK, 0);
     return;
   } else if (strncmp(data, "SET_MODEL", 9) == 0) {
     LOG_STATUS("Received SET_MODEL\n");
@@ -77,7 +77,7 @@ void xscope_data(void *data, size_t size) {
       send_error(
           "Unable to initialize inference engine. Check tensor arena size.\0");
     }
-    xscope_int(INIT_AWK, 0);
+    xscope_int(INIT_ACK, 0);
     return;
   } else if (strncmp(data, "SET_TENSOR", 9) == 0) {
     LOG_STATUS("Received SET_TENSOR\n");
@@ -98,7 +98,7 @@ void xscope_data(void *data, size_t size) {
     LOG_STATUS("Received INVOKE\n");
     state = Invoke;
     invoke_inference_engine();
-    xscope_int(INVOKE_AWK, 0);
+    xscope_int(INVOKE_ACK, 0);
     return;
   }
 
@@ -110,7 +110,7 @@ void xscope_data(void *data, size_t size) {
       if (model_received_bytes > model_size) {
         send_error("Too many bytes received for model\0");
       }
-      xscope_int(RECV_AWK, 0);
+      xscope_int(RECV_ACK, 0);
       break;
     case SetTensor:
       get_tensor_bytes(tensor_index, &tensor_buffer, &tensor_size);
@@ -120,7 +120,7 @@ void xscope_data(void *data, size_t size) {
         LOG_ERROR("Tensor exceeds size of %d bytes\n", tensor_size);
         send_error("Too many bytes received for tensor\0");
       }
-      xscope_int(RECV_AWK, 0);
+      xscope_int(RECV_ACK, 0);
       break;
     case Initialize:
     case Invoke:

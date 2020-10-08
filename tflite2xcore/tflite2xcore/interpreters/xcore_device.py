@@ -174,10 +174,10 @@ def get_devices():
 
 
 class XCOREDeviceEndpoint(object):
-    PING_AWK_PROBE_ID = 0
-    RECV_AWK_PROBE_ID = 1
-    INIT_AWK_PROBE_ID = 2
-    INVOKE_AWK_PROBE_ID = 3
+    PING_ACK_PROBE_ID = 0
+    RECV_ACK_PROBE_ID = 1
+    INIT_ACK_PROBE_ID = 2
+    INVOKE_ACK_PROBE_ID = 3
     ERROR_PROBE_ID = 4
     GET_TENSOR_PROBE_ID = 5
 
@@ -220,7 +220,7 @@ class XCOREDeviceEndpoint(object):
             self._publish_blob_chunk_ready = False
             duration = 0
             self.publish(blob[i : i + CHUCK_SIZE])
-            # wait for RECV_AWK probe
+            # wait for RECV_ACK probe
             while not self._publish_blob_chunk_ready:
                 if duration >= timeout:
                     raise Exception("Error sending blob")
@@ -254,13 +254,13 @@ class XCOREDeviceEndpoint(object):
         logging.debug(msg)
 
     def on_probe(self, id_, timestamp, length, data_val, data_bytes):
-        if id_ == XCOREDeviceEndpoint.PING_AWK_PROBE_ID:
+        if id_ == XCOREDeviceEndpoint.PING_ACK_PROBE_ID:
             self._device_ready = True
-        elif id_ == XCOREDeviceEndpoint.RECV_AWK_PROBE_ID:
+        elif id_ == XCOREDeviceEndpoint.RECV_ACK_PROBE_ID:
             self._publish_blob_chunk_ready = True
-        elif id_ == XCOREDeviceEndpoint.INIT_AWK_PROBE_ID:
+        elif id_ == XCOREDeviceEndpoint.INIT_ACK_PROBE_ID:
             self._initialize_ready = True
-        elif id_ == XCOREDeviceEndpoint.INVOKE_AWK_PROBE_ID:
+        elif id_ == XCOREDeviceEndpoint.INVOKE_ACK_PROBE_ID:
             self._invoke_ready = True
         elif id_ == XCOREDeviceEndpoint.ERROR_PROBE_ID:
             self._error = data_bytes[0:length].decode()

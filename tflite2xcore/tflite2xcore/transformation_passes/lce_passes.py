@@ -3,7 +3,7 @@ from typing import Any
 
 import numpy as np
 
-from tflite2xcore.utils import WORD_SIZE_BITS, VECTOR_SIZE_BITS
+from tflite2xcore.utils import WORD_SIZE_BITS, VECTOR_SIZE_BITS, ACC_PERIOD
 from .transformation_passes import (
     OperatorMatchingPass,
     ReplaceQuantizedOperatorPass,
@@ -49,12 +49,8 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
         options = self._op.custom_options
         return options["dilation_height_factor"], options["dilation_width_factor"]
 
-    @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_bconv2d_int8_out)
-
     def match(self, op: Operator) -> bool:
-        # older version of the LCE op could have 2 or 4
+        # other versions of the LCE op can have different number of inputs
         if super().match(op) and len(op.inputs) == 3:
             with self.using(op):
                 # number of input channels must be multiple of 256
@@ -70,7 +66,17 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
         return new_op
 
 
-class ReplaceBitpackedOutBconv2DPass(ReplaceBconv2DPass):
+class ReplaceBconv2DInt8OutPass(ReplaceBconv2DPass):
+    @property
+    def new_opcode(self):
+        return OperatorCode(XCOREOpCodes.XC_bconv2d_int8_out)
+
+    def match(self, op: Operator) -> bool:
+        with self.using(op):
+            return super().match(op) and self._weights.shape[0] % ACC_PERIOD == 0
+
+
+class ReplaceBconv2DBitpackedOutPass(ReplaceBconv2DPass):
     @property
     def new_opcode(self):
         return OperatorCode(XCOREOpCodes.XC_bconv2d_bin_out)

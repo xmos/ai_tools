@@ -55,7 +55,9 @@ class IntegrationTestRunner(Runner):
     _quantization_data: tf.Tensor
     outputs: IntegrationTestOutputData
 
-    def __init__(self, generator: Type["IntegrationTestModelGenerator"]) -> None:
+    def __init__(
+        self, generator: Type["IntegrationTestModelGenerator"], use_device=False
+    ) -> None:
         self._repr_data_factory = InputInitializerDataFactory(
             self, lambda: self._model_generator.input_shape
         )
@@ -85,7 +87,10 @@ class IntegrationTestRunner(Runner):
             self, self._xcore_converter.get_converted_model
         )
         self._xcore_evaluator = XCoreEvaluator(
-            self, self.get_quantization_data, self._xcore_converter.get_converted_model
+            self,
+            self.get_quantization_data,
+            self._xcore_converter.get_converted_model,
+            use_device=use_device,
         )
         super().__init__(
             generator,

@@ -6,8 +6,8 @@ from typing import Optional, Tuple
 
 from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
 
-from . import (
-    ChannelPreservingOpTestModelGenerator,
+from . import ChannelPreservingOpTestModelGenerator
+from . import (  # pylint: disable=unused-import
     test_output,
     test_converted_single_op_model,
     test_idempotence,

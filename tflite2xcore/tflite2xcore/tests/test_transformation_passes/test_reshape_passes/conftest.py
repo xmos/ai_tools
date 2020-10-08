@@ -1,6 +1,5 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest
 import numpy as np
 from copy import deepcopy
 from itertools import product, chain

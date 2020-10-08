@@ -23,8 +23,10 @@ _build
 *.dylib
 
 # Test cruft
-tests/data
 **/.pytest_cache/*
+**/*_junit.xml
+**/*.lock
+utils/model_generation/xcore_devices.json
 
 # macOS cruft
 .DS_Store

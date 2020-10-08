@@ -26,5 +26,8 @@ RUN mkdir -m 777 /XMOS && cd /XMOS \
     >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 
+# install compiler
+RUN apt-get install -y build-essential
+
 # set login shell
 SHELL ["/bin/bash", "-l", "-c"]

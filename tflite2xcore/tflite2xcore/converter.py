@@ -1,7 +1,5 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pathlib
-
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import transformation_passes as passes
@@ -85,6 +83,9 @@ def optimize_for_xcore(
         model, keep_intermediates=bool(intermediates_path)
     )
 
+    # one round of constant folding
+    pass_mgr.register_pass(passes.ConstantPropagationPass())
+
     # canonicalize fully connected
     pass_mgr.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
 
@@ -97,6 +98,9 @@ def optimize_for_xcore(
     # canonicalize convolutions
     pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
     pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
+
+    # remove redundant quantize ops
+    pass_mgr.register_pass(passes.RemoveRedundantInt8Requantization())
 
     # canonicalize word alignment
     pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())

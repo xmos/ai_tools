@@ -22,6 +22,8 @@ conda config --set auto_activate_base false
 conda config --set env_prompt '({name})'
 ```
 
+[CMake 3.14](https://cmake.org/download/) or newer is required for building libraries and test firmware.  A correct version of CMake is included with the Conda virtual environment (see below). 
+
 Virtual Environment
 -------------------
 

@@ -75,13 +75,8 @@ def MobileNet(*args, **kwargs,) -> tf.keras.Model:
     """ Wrapper for tf.keras.applications.MobileNet to work around h5 multiprocess issues. """
     try:
         return tf.keras.applications.MobileNet(*args, **kwargs)
-    except KeyError as e:
-        if e.args[0].startswith("Unable to open object"):
-            return _MobileNet_safe(*args, **kwargs)
-        else:
-            raise
-    except OSError as e:
-        if e.args[0].startswith("Unable to open file"):
+    except (KeyError, OSError) as e:
+        if e.args[0].startswith("Unable to open"):
             return _MobileNet_safe(*args, **kwargs)
         else:
             raise

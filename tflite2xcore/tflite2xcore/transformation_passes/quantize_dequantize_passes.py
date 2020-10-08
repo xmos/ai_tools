@@ -51,16 +51,22 @@ class RemoveRedundantInt8RequantizationPass(QuantizedOperatorMatchingPass):
 
 
 # TODO: improve tests for this
-class CanonicalizeQuantizedInputPass(OperatorMatchingPass):
+class CanonicalizeQuantizedInputPass(QuantizedOperatorMatchingPass):
+    @property
+    def matching_opcode(self) -> BuiltinOpCodes:
+        return BuiltinOpCodes.QUANTIZE
+
+    @property
+    def matching_input_type(self) -> TensorType:
+        return TensorType.FLOAT32
+
     def match(self, op: Operator) -> bool:
-        if super().match(op) and op.operator_code.code is BuiltinOpCodes.QUANTIZE:
+        if super().match(op):
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
             return (
                 input_tensor in op.subgraph.inputs
                 and len(input_tensor.consumers) == 1
                 and output_tensor not in op.subgraph.outputs
-                and output_tensor.type is TensorType.INT8
-                and input_tensor.type is TensorType.FLOAT32
             )
 
         return False
@@ -72,16 +78,22 @@ class CanonicalizeQuantizedInputPass(OperatorMatchingPass):
         subgraph.remove_operator(op)
 
 
-class CanonicalizeQuantizedOutputPass(OperatorMatchingPass):
+class CanonicalizeQuantizedOutputPass(QuantizedOperatorMatchingPass):
+    @property
+    def matching_opcode(self) -> BuiltinOpCodes:
+        return BuiltinOpCodes.DEQUANTIZE
+
+    @property
+    def matching_output_type(self) -> TensorType:
+        return TensorType.FLOAT32
+
     def match(self, op: Operator) -> bool:
-        if super().match(op) and op.operator_code.code is BuiltinOpCodes.DEQUANTIZE:
+        if super().match(op):
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
             if (
                 output_tensor in op.subgraph.outputs
                 and not output_tensor.consumers
                 and input_tensor not in op.subgraph.inputs
-                and output_tensor.type is TensorType.FLOAT32
-                and input_tensor.type is TensorType.INT8
             ):
                 if len(output_tensor.producers) == 1:
                     return True

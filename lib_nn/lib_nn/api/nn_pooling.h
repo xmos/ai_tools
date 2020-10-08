@@ -8,7 +8,7 @@
 
 
 /**
- * Flags used with maxpool2d_adv() for advanced scenarios.
+ * Flags used with maxpool2d_ext() for advanced scenarios.
  */
 typedef enum {
     /** 
@@ -19,7 +19,7 @@ typedef enum {
 
 
 /**
- * Flags used with avgpool2d_adv() for advanced scenarios.
+ * Flags used with avgpool2d_ext() for advanced scenarios.
  */
 typedef enum {
     /** 
@@ -30,7 +30,7 @@ typedef enum {
 
 
 /**
- * Flags used with avgpool2d_global_adv() for advanced scenarios.
+ * Flags used with avgpool2d_global_ext() for advanced scenarios.
  */
 typedef enum {
     /** 
@@ -270,7 +270,7 @@ void maxpool2d(
     const nn_image_params_t* y_params,
     const nn_window_params_t* window_config);
     
-void maxpool2d_adv(
+void maxpool2d_ext(
     nn_image_t* Y,
     const nn_image_t* X, 
     const nn_image_params_t* x_params,
@@ -315,7 +315,7 @@ void avgpool2d(
     const nn_image_params_t* y_params,
     const nn_window_params_t* pooling_window);
 
-void avgpool2d_adv(
+void avgpool2d_ext(
     int8_t* Y,
     const int8_t* X, 
     const nn_image_params_t* x_params,
@@ -406,7 +406,7 @@ void avgpool2d_global(
     const uint16_t shift,
     const nn_image_params_t* x_params);
 
-void avgpool2d_global_adv(
+void avgpool2d_global_ext(
     nn_image_t* Y,
     const nn_image_t* X, 
     const int32_t bias,

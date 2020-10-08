@@ -1587,7 +1587,7 @@ void test_conv2d_deep_case16()
     memset(Y, 0xCC, y_params.height * y_params.width * y_params.channels);
 
     for(int i = 0; i < job_count; i++)
-        conv2d_deep_adv((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, ZERO_POINT, 
+        conv2d_deep_ext((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, ZERO_POINT, 
                         &x_params, &y_params, &conv2d_window, &job_params[i], 0);
 
 /*       __ __
@@ -1823,7 +1823,7 @@ void test_conv2d_deep_case18()
 
     memset(Y, 0xCC, sizeof(Y));
 
-    conv2d_deep_adv((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, ZERO_POINT, 
+    conv2d_deep_ext((nn_image_t*) Y, (nn_image_t*) X, (nn_tensor_t*) K, bso, ZERO_POINT, 
                 &x_params, &y_params, &conv2d_window, &job_params, 0);
 
 
@@ -1842,7 +1842,7 @@ void test_conv2d_deep_case18()
     nn_tensor_t* K_start = &K[16][0][0][0];
     nn_bso_block_t* bso_start = &bso[1];
 
-    conv2d_deep_adv((nn_image_t*) Y, (nn_image_t*) X, K_start, bso_start, ZERO_POINT, 
+    conv2d_deep_ext((nn_image_t*) Y, (nn_image_t*) X, K_start, bso_start, ZERO_POINT, 
                 &x_params, &y_params, &conv2d_window, &job_params, CONV2D_DEEP_FLAG_SLICED_K);
 
     for(int row = 0; row < y_params.height; row++){

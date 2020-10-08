@@ -5,7 +5,7 @@
 #include "asm_constants.h"
 
 /*  
-void avgpool2d_global_adv(
+void avgpool2d_global_ext(
     nn_image_t* Y,
     const nn_image_t* X, 
     const int32_t bias,

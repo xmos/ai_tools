@@ -208,12 +208,12 @@ void conv2d_shallowin(
 {    
     nn_conv2d_job_params_t full_job = {{0,0,0}, {y_params->height, y_params->width, y_params->channels} };
 
-    conv2d_shallowin_adv(Y, X, K, BSO, zero_point, x_params, y_params, conv_window, &full_job, 0);
+    conv2d_shallowin_ext(Y, X, K, BSO, zero_point, x_params, y_params, conv_window, &full_job, 0);
 }
 
 
 
-void conv2d_shallowin_adv(
+void conv2d_shallowin_ext(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,

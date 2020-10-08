@@ -285,7 +285,7 @@ void test_avgpool2d_case1()
 
         PRINTF("\t\tRunning avgpool2d()...\n");
         memset(Y, 0xCC, sizeof(Y));    
-        avgpool2d_adv((int8_t*)Y, (int8_t*)X, &x_params, &y_params, &window_config, &job_params, AVGPOOL2D_FLAG_NONE);
+        avgpool2d_ext((int8_t*)Y, (int8_t*)X, &x_params, &y_params, &window_config, &job_params, AVGPOOL2D_FLAG_NONE);
 
         PRINTF("\t\tChecking...\n");
         for(unsigned row = 0; row < y_params.height; row++){

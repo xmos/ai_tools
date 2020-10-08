@@ -266,10 +266,10 @@ void avgpool2d(
 {
     nn_window_op_job_params_t full_job = {{0,0,0},{y_params->height, y_params->width, x_params->channels}};
 
-    avgpool2d_adv(Y, X, x_params, y_params, pooling_window, &full_job, AVGPOOL2D_FLAG_NONE);
+    avgpool2d_ext(Y, X, x_params, y_params, pooling_window, &full_job, AVGPOOL2D_FLAG_NONE);
 }
 
-void avgpool2d_adv(
+void avgpool2d_ext(
     int8_t* Y,
     const int8_t* X, 
     const nn_image_params_t* x_params,
@@ -319,12 +319,12 @@ void avgpool2d_global(
     const uint16_t shift,
     const nn_image_params_t* x_params)
 {
-    avgpool2d_global_adv(Y, X, bias, scale, shift, x_params, 
+    avgpool2d_global_ext(Y, X, bias, scale, shift, x_params, 
                         0, x_params->channels, AVGPOOL2D_GLOBAL_FLAG_NONE);
 }
 
 WEAK_FUNC
-void avgpool2d_global_adv(
+void avgpool2d_global_ext(
     nn_image_t* Y,
     const nn_image_t* X, 
     const int32_t bias,

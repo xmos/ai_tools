@@ -365,7 +365,7 @@ void conv2d_deep(
     const nn_image_params_t* y_params,
     const nn_window_params_t* conv_window);
     
-void conv2d_deep_adv(
+void conv2d_deep_ext(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,
@@ -431,7 +431,7 @@ void conv2d_shallowin(
     const nn_image_params_t* y_params,
     const nn_window_params_t* conv_window);
 
-void conv2d_shallowin_adv(
+void conv2d_shallowin_ext(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,
@@ -571,7 +571,7 @@ void conv2d_1x1(
     const nn_image_params_t* y_params);
 
     
-void conv2d_1x1_adv(
+void conv2d_1x1_ext(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,
@@ -649,12 +649,12 @@ void conv2d_1x1_adv(
  * @par Splitting the Workload
  * 
  * conv2d_depthwise() cannot split the workload associated with an instance of @oper{conv2d_depthwise}. To split the
- * workload, conv2d_depthwise_adv() must be used.
+ * workload, conv2d_depthwise_ext() must be used.
  * 
  * @par Additional Remarks
  * 
- * Internally, conv2d_depthwise() calls conv2d_depthwise_adv() with a `job_params` argument that computes the entire
- * output image, and with no flags set. For more advanced scenarios, use conv2d_depthwise_adv().
+ * Internally, conv2d_depthwise() calls conv2d_depthwise_ext() with a `job_params` argument that computes the entire
+ * output image, and with no flags set. For more advanced scenarios, use conv2d_depthwise_ext().
  * 
  * By default this operator uses the standard 8-bit limits @math([-128, 127]) when applying saturation logic. Instead,
  * it can be configured to use symmetric saturation bounds @math([-127, 127]) by defining 
@@ -806,9 +806,9 @@ void conv2d_depthwise(
  * @param[in]   conv_window Parameters describing the relationship between the convolution window, the input image,
  *                              and the output image
  * @param[in]   job_params  Indicates which output elements will be computed by this invocation
- * @param[in]   flags       Flags which modify the behavior of conv2d_depthwise_adv()
+ * @param[in]   flags       Flags which modify the behavior of conv2d_depthwise_ext()
  */
-void conv2d_depthwise_adv(
+void conv2d_depthwise_ext(
     int8_t* Y,
     const int8_t* X,
     const int8_t* K,

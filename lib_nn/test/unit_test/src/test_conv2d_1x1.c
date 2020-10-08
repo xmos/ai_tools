@@ -401,7 +401,7 @@ void test_conv2d_1x1_case1()
             { {casse->start[0], casse->start[1], 0}, {casse->out_pixels, y_params.channels} },
         };
 
-        conv2d_1x1_adv((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &bso, 
+        conv2d_1x1_ext((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &bso, 
                         &x_params, &y_params, &job_params[0], 0);
 
         unsigned pix_start = casse->start[0] * y_params.width + casse->start[1];
@@ -724,7 +724,7 @@ void test_conv2d_1x1_case4()
     };
 
     for(int i = 0; i < 4; i++)
-        conv2d_1x1_adv((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &bso, 
+        conv2d_1x1_ext((int8_t*)Y, (int8_t*)X, (int8_t*)K, (nn_bso_block_t*) &bso, 
                         &x_params, &y_params, &job_params[i], 0);
 
 
@@ -805,7 +805,7 @@ void test_conv2d_1x1_case5()
     // First, without the slice flag.
     memset(Y, 0xCC, sizeof(Y));
 
-    conv2d_1x1_adv((int8_t*)Y, (int8_t*)X, (int8_t*) K, bso, 
+    conv2d_1x1_ext((int8_t*)Y, (int8_t*)X, (int8_t*) K, bso, 
                     &x_params, &y_params, &job_params, 0);
 
     for(unsigned row = 0; row < y_params.height; row++){
@@ -826,7 +826,7 @@ void test_conv2d_1x1_case5()
     nn_tensor_t* K_start = &K[16][0];
     nn_bso_block_t* bso_start = &bso[1];
 
-    conv2d_1x1_adv((int8_t*)Y, (int8_t*)X, K_start, bso_start, 
+    conv2d_1x1_ext((int8_t*)Y, (int8_t*)X, K_start, bso_start, 
                     &x_params, &y_params, &job_params, CONV2D_1X1_FLAG_SLICED_K);
 
     for(unsigned row = 0; row < y_params.height; row++){

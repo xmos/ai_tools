@@ -97,12 +97,12 @@ void maxpool2d(
 {
     nn_window_op_job_params_t full_job = {{0,0,0},{y_params->height, y_params->width, y_params->channels}};
 
-    maxpool2d_adv(Y, X, x_params, y_params, pooling_window, &full_job, 0);
+    maxpool2d_ext(Y, X, x_params, y_params, pooling_window, &full_job, 0);
 }
 
 
 WEAK_FUNC
-void maxpool2d_adv(
+void maxpool2d_ext(
     nn_image_t* Y,
     const nn_image_t* X, 
     const nn_image_params_t* x_params,

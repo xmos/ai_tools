@@ -3,7 +3,7 @@
 
 
 /*  
-void maxpool2d_adv(
+void maxpool2d_ext(
     nn_image_t* Y,
     const nn_image_t* X, 
     const nn_image_params_t* x_params,

@@ -254,7 +254,7 @@ void test_avgpool2d_global_case2()
     }
 
     memset(Y, 0xCC, sizeof(Y));
-    avgpool2d_global_adv(Y, (nn_image_t*) X, bias, scale, shift, &x_params, 
+    avgpool2d_global_ext(Y, (nn_image_t*) X, bias, scale, shift, &x_params, 
                         16, 20, AVGPOOL2D_GLOBAL_FLAG_NONE);
 
     

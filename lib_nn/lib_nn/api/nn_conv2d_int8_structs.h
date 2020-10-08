@@ -24,14 +24,14 @@ typedef nn_window_op_job_params_t nn_conv2d_job_params_t;
 
 
 /**
- * Flags used with conv2d_deep_adv() for advanced scenarios.
+ * Flags used with conv2d_deep_ext() for advanced scenarios.
  */
 typedef enum {
     /** 
-     * If non-zero, this flag signals to conv2d_deep_adv() that the supplied kernel weight tensor (@tensor{K}) and 
+     * If non-zero, this flag signals to conv2d_deep_ext() that the supplied kernel weight tensor (@tensor{K}) and 
      * the BSO tensor are slices, rather than the full tensors.
      * 
-     * If this is set, then conv2d_deep_adv() will treat @tensor{K} and BSO as if they contain _only the 
+     * If this is set, then conv2d_deep_ext() will treat @tensor{K} and BSO as if they contain _only the 
      * necessary output channels for the job being invoked_.
      * 
      * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
@@ -41,7 +41,7 @@ typedef enum {
      * be @math{(3)} for any job invoked.
      * 
      * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
-     * set, conv2d_deep_adv() will interpret the supplied argument `K` as pointing to @math{\bar K[16:32,:,:,:]} 
+     * set, conv2d_deep_ext() will interpret the supplied argument `K` as pointing to @math{\bar K[16:32,:,:,:]} 
      * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[1]} (i.e. the
      * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
      * 
@@ -55,14 +55,14 @@ typedef enum {
 
 
 /**
- * Flags used with conv2d_shallowin_adv() for advanced scenarios.
+ * Flags used with conv2d_shallowin_ext() for advanced scenarios.
  */
 typedef enum {
     /** 
-     * If non-zero, this flag signals to conv2d_shallowin_adv() that the supplied kernel weight tensor (@tensor{K}) and 
+     * If non-zero, this flag signals to conv2d_shallowin_ext() that the supplied kernel weight tensor (@tensor{K}) and 
      * the BSO tensor are slices, rather than the full tensors.
      * 
-     * If this is set, then conv2d_shallowin_adv() will treat @tensor{K} and BSO as if they contain _only the 
+     * If this is set, then conv2d_shallowin_ext() will treat @tensor{K} and BSO as if they contain _only the 
      * necessary output channels for the job being invoked_.
      * 
      * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
@@ -72,7 +72,7 @@ typedef enum {
      * be @math{(3)} for any job invoked.
      * 
      * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
-     * set, conv2d_shallowin_adv() will interpret the supplied argument `K` as pointing to @math{\bar K[16:32,:,:,:]} 
+     * set, conv2d_shallowin_ext() will interpret the supplied argument `K` as pointing to @math{\bar K[16:32,:,:,:]} 
      * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[1]} (i.e. the
      * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
      * 
@@ -164,14 +164,14 @@ typedef struct {
 
 
 /**
- * Flags used with conv2d_1x1_adv() for advanced scenarios.
+ * Flags used with conv2d_1x1_ext() for advanced scenarios.
  */
 typedef enum {
     /** 
-     * If non-zero, this flag signals to conv2d_1x1_adv() that the supplied kernel weight tensor (@tensor{K}) and 
+     * If non-zero, this flag signals to conv2d_1x1_ext() that the supplied kernel weight tensor (@tensor{K}) and 
      * the BSO tensor are slices, rather than the full tensors.
      * 
-     * If this is set, then conv2d_1x1_adv() will treat @tensor{K} and BSO as if they contain _only the 
+     * If this is set, then conv2d_1x1_ext() will treat @tensor{K} and BSO as if they contain _only the 
      * necessary output channels for the job being invoked_.
      * 
      * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
@@ -181,7 +181,7 @@ typedef enum {
      * @math{(3)} for any job invoked.
      * 
      * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
-     * set, conv2d_1x1_adv() will interpret the supplied argument `K` as pointing to @math{\bar K[16:32,:]} 
+     * set, conv2d_1x1_ext() will interpret the supplied argument `K` as pointing to @math{\bar K[16:32,:]} 
      * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[1]} (i.e. the
      * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
      * 
@@ -222,14 +222,14 @@ typedef struct {
 
 
 /**
- * Flags used with conv2d_depthwise_adv() for advanced scenarios.
+ * Flags used with conv2d_depthwise_ext() for advanced scenarios.
  */
 typedef enum {
     /** 
-     * If non-zero, this flag signals to conv2d_depthwise_adv() that the supplied kernel weight tensor (@tensor{K}) and 
+     * If non-zero, this flag signals to conv2d_depthwise_ext() that the supplied kernel weight tensor (@tensor{K}) and 
      * the BSO tensor are slices, rather than the full tensors.
      * 
-     * If this is set, then conv2d_depthwise_adv() will treat @tensor{K} and BSO as if they contain _only the 
+     * If this is set, then conv2d_depthwise_ext() will treat @tensor{K} and BSO as if they contain _only the 
      * necessary channels for the job being invoked_.
      * 
      * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
@@ -239,7 +239,7 @@ typedef enum {
      * any job invoked.
      * 
      * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
-     * set, conv2d_depthwise_adv() will interpret the supplied argument `K` as pointing to @math{\bar K[:,:,16:32]} 
+     * set, conv2d_depthwise_ext() will interpret the supplied argument `K` as pointing to @math{\bar K[:,:,16:32]} 
      * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[1]} (i.e. the
      * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
      * 

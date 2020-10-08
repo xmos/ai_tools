@@ -196,10 +196,10 @@ void conv2d_depthwise(
 {
     const nn_conv2d_job_params_t full_job = {{0,0,0}, {y_params->height, y_params->width, y_params->channels} };
 
-    conv2d_depthwise_adv(Y, X, K, BSO, zero_point, x_params, y_params, conv_window, &full_job, 0);
+    conv2d_depthwise_ext(Y, X, K, BSO, zero_point, x_params, y_params, conv_window, &full_job, 0);
 }
 
-void conv2d_depthwise_adv(
+void conv2d_depthwise_ext(
     int8_t* Y,
     const int8_t* X,
     const int8_t* K,

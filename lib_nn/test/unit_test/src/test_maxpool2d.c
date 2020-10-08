@@ -321,7 +321,7 @@ void test_maxpool2d_case1()
 
             PRINTF("\t\t\tRunning...\n");
 
-            maxpool2d_adv((int8_t*)Y, (int8_t*)X, &x_params, &y_params, &window_params, 
+            maxpool2d_ext((int8_t*)Y, (int8_t*)X, &x_params, &y_params, &window_params, 
                             &job_params, MAXPOOL2D_FLAG_NONE);
 
 

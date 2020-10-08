@@ -108,12 +108,12 @@ void conv2d_1x1(
 {
     nn_conv2d_1x1_job_params_t full_job = { {0, 0, 0}, { y_params->height * y_params->width , y_params->channels} };
 
-    conv2d_1x1_adv(Y, X, K, BSO, x_params, y_params, &full_job, 0);
+    conv2d_1x1_ext(Y, X, K, BSO, x_params, y_params, &full_job, 0);
 }
 
 
 WEAK_FUNC
-void conv2d_1x1_adv(
+void conv2d_1x1_ext(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,

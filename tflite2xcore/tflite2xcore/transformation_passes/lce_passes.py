@@ -16,7 +16,7 @@ from tflite2xcore.xcore_schema import (
     ExternalOpCodes,
     XCOREOpCodes,
     OperatorCode,
-    BuiltinOptions,
+    BuiltinOpCodes,
 )
 
 from .transformation_passes import (
@@ -127,76 +127,69 @@ class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
         return False
 
 
-
 # Split out padding to a separate op from BConv
 # Note, this currently only matches with BConv but going forward might like to extend this to other conv ops
-# and make it a general pass. Bconv only supports SAME and VALID spacial padding
-class SplitPaddingFromConvPass(OperatorMatchingPass):
+# and make it a general pass. Bconv only supports SAME and VALID spatial padding
+class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
+    @property
+    def _strides(self) -> Tuple[int, int]:
+        return self._op.custom_options("stride")
+
+    @property
+    def _padding(self) -> Padding:
+        return self._op.custom_options["padding"]
+
     MATCHING_OPCODES = (
         XCOREOpCodes.XC_bconv2d_int8_out,
         XCOREOpCodes.XC_bconv2d_bin_out,
     )
 
-    @staticmethod
-    def _calc_pad(stride, input_size, kernel_size):
-        return int(np.ceil(((stride - 1) * input_size - stride + kernel_size) / 2))
-
     def match(self, op: Operator) -> bool:
-        return (
-            super().match(op)
-            and op.operator_code.code in self.MATCHING_OPCODES
-            and Padding(op.custom_options["padding"]) is Padding.SAME
-        )
+        if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
+            try:
+                op.custom_options["padding"] = Padding(op.custom_options["padding"])
+            except KeyError:
+                pass
 
-    def mutate(self, op: Operator) -> None:
+        return False
+
+    def mutate(self, op: Operator) -> Operator:
+        padding = op.custom_options.pop("padding")
+        if padding is Padding.VALID:
+            return op
+
         subgraph = op.subgraph
-
-        height, width = op.inputs[0].shape[1:3]
-
-        C_out, K_h, K_w, C_in = op.inputs[1].shape
-
-        # Cut connection from old input to the op
         old_input = op.inputs[0]
-        old_input.consumers.remove(op)
 
-        strides = (
-            op.custom_options["stride_height"],
-            op.custom_options["stride_width"],
-        )
+        # calculate paddings
+        with self.using(op):
+            input_and_strides = old_input.shape[1:3], self._strides
+            paddings = np.int32(
+                (0, 0),
+                *calculate_same_padding(*input_and_strides, op.inputs[1].shape[1:3]),
+                (0, 0),
+            )
 
-        # Construct paddings input tensor for PAD op
-        padding_tb = self._calc_pad(strides[0], height, K_h)
-        padding_lr = self._calc_pad(strides[1], width, K_w)
-        paddings = [[pad] * 2 for pad in (0, padding_tb, padding_lr, 0)]
+        # Construct paddings parameter tensor and padded input tensor
         padding_tensor = subgraph.create_tensor(
-            f"{op.name}/paddings", TensorType.INT32, shape=[4, 2]
+            f"{op.name}/paddings", TensorType.INT32, shape=paddings.shape
         )
-        padding_tensor.buffer.data = np.int32(paddings)
+        padding_tensor.buffer.data = paddings
 
-        pad_output_shape = tuple(
-            input_dim + sum(pad) for input_dim, pad in zip(old_input.shape, paddings)
-        )
-
-        pad_output_tensor = subgraph.create_tensor(
-            f"{op.name}/input", TensorType.INT32, shape=pad_output_shape
+        padded_input_tensor = subgraph.create_tensor(
+            f"{op.name}/input",
+            TensorType.INT32,
+            shape=calculate_same_output_size(*input_and_strides),
         )
 
+        # create new PAD op and inject it before the convolution
         pad_op = subgraph.create_operator(
-            OperatorCode(XCOREOpCodes.XC_pad),
+            OperatorCode(BuiltinOpCodes.PAD),
             inputs=[old_input, padding_tensor],
-            outputs=[pad_output_tensor],
+            outputs=[padded_input_tensor],
         )
-
-        op.inputs[0] = pad_op.outputs[0]
-
         subgraph.insert_operator(op, pad_op)
 
-        # Pass on pad values from conv to pad op
-        pad_op.custom_options["pad_values"] = op.custom_options["pad_values"]
-
-        bytes_per_pixel = C_in * 4
-
-        pad_op.custom_options["bytes_per_pixel"] = int(bytes_per_pixel)
-
-        # Change padding of Bconv from SAME to VALID
-        op.custom_options["padding"] = Padding.VALID
+        # Cut connection from old input to the op
+        old_input.consumers.remove(op)
+        op.inputs[0] = padded_input_tensor

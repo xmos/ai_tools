@@ -107,7 +107,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())
 
     # canonicalize padding
-    pass_mgr.register_pass(passes.SplitPaddingFromConvPass())
+    # pass_mgr.register_pass(passes.LegalizeXCBconv2DPaddingPass())  # TODO: enable when ready
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
     # need to cleanup after the first round of canonicalization

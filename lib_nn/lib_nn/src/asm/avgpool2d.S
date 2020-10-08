@@ -8,8 +8,11 @@
 void avgpool2d_gen(
     int8_t* Y,
     const int8_t* X, 
-    const nn_avgpool2d_plan_t* plan,
-    const nn_pool2d_job_t* job);
+    const channel_count_t XY_chans,
+    const nn_window_params_t* pooling_window,
+    const nn_window_op_job_params_t* job_params,
+    const nn_avgpool2d_flags_e flags,
+    const nn_avgpool2d_job_t* job);
 */
 
 #define FUNCTION_NAME avgpool2d_gen
@@ -23,26 +26,32 @@ void avgpool2d_gen(
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
+#define WINDOW_SHAPE_ROWS   (0)
+#define WINDOW_SHAPE_COLS   (1)
+#define WINDOW_START_ROW    (2)
+#define WINDOW_START_COL    (3)
+#define WINDOW_STRIDE_VERT  (4)
+#define WINDOW_STRIDE_HORI  (5)
 
-#define PLAN_WINDOW_ROWS        0
-#define PLAN_WINDOW_COLS        1
-#define PLAN_CHANNELS           2
-#define PLAN_SHIFT              3
-#define PLAN_SCALE              4
+#define JOB_START_ROW   (0)
+#define JOB_START_COL   (1)
+#define JOB_START_CHAN  (2)
+#define JOB_SIZE_ROWS   (3)
+#define JOB_SIZE_COLS   (4)
+#define JOB_SIZE_CHANS  (5)
 
+#define JOB_STRIDE_X_ROW        (0)
+#define JOB_STRIDE_X_COG        (1)
+#define JOB_STRIDE_WIN_ROW      (2)
+#define JOB_STRIDE_WIN_COL      (3)
+#define JOB_STRIDE_Y_ROW        (4)
+#define JOB_STRIDE_Y_COG        (5)
+#define JOB_SCALE               (6)
+#define JOB_SHIFT               (7)
 
-#define JOB_OUT_ROWS            0
-#define JOB_OUT_COLS            1
-#define JOB_OUT_CHANNELS        2
-#define JOB_STRIDE_X_START      3
-#define JOB_STRIDE_X_ROW        4
-#define JOB_STRIDE_X_COG        5
-#define JOB_STRIDE_WIN_ROW      6
-#define JOB_STRIDE_WIN_COL      7
-#define JOB_STRIDE_Y_START      8
-#define JOB_STRIDE_Y_ROW        9
-#define JOB_STRIDE_Y_COG        10
-
+#define STACK_JOB_PARAMS        (NSTACKWORDS+1)
+#define STACK_FLAGS             (NSTACKWORDS+2)
+#define STACK_JOB               (NSTACKWORDS+3)
 
 #define STACK_CP                (1)
 #define STACK_OUT_ROWS          (10)
@@ -56,13 +65,8 @@ void avgpool2d_gen(
 #define STACK_WIN_COL_LOOPS     (18)
 #define STACK_TMP               (19)
 
-
 #define STACK_SHIFT_VEC         (NSTACKWORDS-8)
 #define STACK_VEC_TMP           (NSTACKWORDS-16)
-
-#define APPLAN_SHIFT            (WOP_WORDS)
-#define APPLAN_SCALE            (WOP_WORDS+1)
-    
 
 #define Y                       r0
 #define X                       r1
@@ -79,11 +83,7 @@ void avgpool2d_gen(
 
 .align 16
 
-.L_vec_0x0000:
-.short 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-
-#define arg_plan        r2
-#define arg_job         r3
+#define window    r3
 
 #define Q(R) R
 
@@ -94,7 +94,6 @@ FUNCTION_NAME:
     std r8, r9, sp[3]
     {                                           ;   stw r10, sp[8]                          }
 
-
     //Change constant pool pointer to refer to the constant VPU vects needed here
     ldaw r11, cp[vpu_vects]
     {   ldaw r11, cp[0]                         ;   set cp, r11                             }
@@ -103,55 +102,55 @@ FUNCTION_NAME:
     ldc r11, VPU_MODE_8BIT
     {                                           ;   vsetc r11                               }
     
+#define job         r7
+#define job_params  r8
+    {                                           ;   ldw job, sp[STACK_JOB]                  } 
+    {                                           ;   ldw job_params, sp[STACK_JOB_PARAMS]    } 
 
-    {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   ldw r10, arg_plan[PLAN_SCALE]           }
-    std r10, r10, r11[0]
-    std r10, r10, r11[1]
+    {   ldaw r11, sp[STACK_SHIFT_VEC]           ;   ldw r10, job[JOB_SCALE]                 }
+        std r10, r10, r11[0]
+        std r10, r10, r11[1]
     {                                           ;   vldc r11[0]                             }
-    {                                           ;   ldw r10, arg_plan[PLAN_SHIFT]           }
-    std r10, r10, r11[0]
-    std r10, r10, r11[1]
-    std r10, r10, r11[2]
-    std r10, r10, r11[3]
+    {                                           ;   ldw r10, job[JOB_SHIFT]                 }
+        std r10, r10, r11[0]
+        std r10, r10, r11[1]
+        std r10, r10, r11[2]
+        std r10, r10, r11[3]
 
-
-    {   ldc r7, 0                               ;   ldw r11, arg_plan[PLAN_WINDOW_ROWS]     }
-    {                                           ;   stw r11, sp[STACK_WIN_ROWS]             }
-    
-    {   ldc r8, 16                              ;   ldw r11, arg_plan[PLAN_WINDOW_COLS]     }
-    {   shr r10, r11, 4                         ;   zext r11, 4                             }
-    {   lsu r7, r7, r11                         ;   sub r11, r8, r11                        }
-    mul win_col_jump, r7, r11
-    {   add r10, r10, r7                        ;                                           }
-    {                                           ;   stw r10, sp[STACK_WIN_COL_LOOPS]        }
-
-    {                                           ;   ldw XY_chans, arg_plan[PLAN_CHANNELS]   }
-
-#undef arg_plan
-
-    {                                           ;   ldw r11, arg_job[JOB_STRIDE_X_START]    }
-    {   add X, X, r11                           ;   ldw r11, arg_job[JOB_STRIDE_Y_START]    }
-    {   add Y, Y, r11                           ;                                           }
-
-    {                                           ;   ldw r11, arg_job[JOB_OUT_ROWS]          }
+    {                                           ;   ldw r11, job_params[JOB_SIZE_ROWS]      }
     {                                           ;   stw r11, sp[STACK_OUT_ROWS]             }
-    {                                           ;   ldw r11, arg_job[JOB_OUT_COLS]          }
+    {                                           ;   ldw r11, job_params[JOB_SIZE_COLS]      }
     {                                           ;   stw r11, sp[STACK_OUT_COLS]             }
 
-    {                                           ;   ldw inner_stride_v, arg_job[JOB_STRIDE_X_ROW]   }
-    {                                           ;   ldw outer_stride_hx, arg_job[JOB_STRIDE_WIN_COL]}
+    {   ldc r4, 0                               ;   ldw r11, window[WINDOW_SHAPE_ROWS]      }
+    {                                           ;   stw r11, sp[STACK_WIN_ROWS]             }
 
-    {                                           ;   ldw r11, arg_job[JOB_STRIDE_WIN_ROW]    }
+    
+    {   ldc r9, 16                              ;   ldw r11, window[WINDOW_SHAPE_COLS]      }
+    {   shr r10, r11, 4                         ;   zext r11, 4                             }
+    {   lsu r4, r4, r11                         ;   sub r11, r9, r11                        }
+        mul win_col_jump, r4, r11
+    {   add r10, r10, r4                        ;                                           }
+    {                                           ;   stw r10, sp[STACK_WIN_COL_LOOPS]        }
+
+    {                                           ;   ldw inner_stride_v, job[JOB_STRIDE_X_ROW]   }
+    {                                           ;   ldw outer_stride_hx, job[JOB_STRIDE_WIN_COL]}
+
+    {                                           ;   ldw r11, job[JOB_STRIDE_WIN_ROW]        }
     {                                           ;   stw r11, sp[STACK_OUTER_STRIDE_VX]      }
-    {                                           ;   ldw r11, arg_job[JOB_STRIDE_Y_ROW]      }
+    {                                           ;   ldw r11, job[JOB_STRIDE_Y_ROW]          }
     {                                           ;   stw r11, sp[STACK_OUTER_STRIDE_VY]      }
-    {                                           ;   ldw r11, arg_job[JOB_STRIDE_X_COG]      }
+    {                                           ;   ldw r11, job[JOB_STRIDE_X_COG]          }
     {                                           ;   stw r11, sp[STACK_STRIDE_X_COG]         }
-    {                                           ;   ldw r11, arg_job[JOB_STRIDE_Y_COG]      }
+    {                                           ;   ldw r11, job[JOB_STRIDE_Y_COG]          }
     {                                           ;   stw r11, sp[STACK_STRIDE_Y_COG]         }
-    {                                           ;   ldw r11, arg_job[JOB_OUT_CHANNELS]      }
+    {                                           ;   ldw r11, job_params[JOB_SIZE_CHANS]     }
 
-#undef arg_job
+#undef job
+#undef job_params
+#undef x_params
+#undef y_params
+#undef window
 
     {   shr cog_left, r11, 4                    ;   zext r11, 4                             }
     {                                           ;   stw r11, sp[STACK_CHAN_TAIL]            }

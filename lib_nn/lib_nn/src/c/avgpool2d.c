@@ -13,7 +13,9 @@
 
 
 
-
+#ifndef AVGPOOL2D_INIT_ERROR_DETECTION_ENABLE
+  #define AVGPOOL2D_INIT_ERROR_DETECTION_ENABLE     (1)
+#endif
 
 
 #if CONFIG_SYMMETRIC_SATURATION_avgpool2d
@@ -23,43 +25,197 @@
 #endif 
 
 
+
+
+typedef struct {
+
+
+    struct {
+        struct {
+            mem_stride_t row;
+            mem_stride_t cog;
+        } X;
+
+        struct {
+            mem_stride_t row;
+            mem_stride_t col;
+        } window;
+
+        struct {
+            mem_stride_t row;
+            mem_stride_t cog;
+        } Y;
+
+    } stride;
+
+    int32_t scale;
+    uint32_t shift;
+
+} nn_avgpool2d_job_t;
+
+
+
+
+static inline int matches_2x2_impl(
+    const nn_window_params_t* pooling_window)
+{   
+    return  (pooling_window->shape.height == 2)
+         && (pooling_window->shape.width  == 2)
+         && (pooling_window->stride.vertical   == 2)
+         && (pooling_window->stride.horizontal == 2);
+}
+
+
+static void avgpool2d_calc_scale_shift(
+    nn_avgpool2d_job_t* job,
+    const nn_window_params_t* pooling_window)
+{
+    const unsigned window_pixels = pooling_window->shape.height * pooling_window->shape.width;
+    const int c = ceil_log2(window_pixels);
+
+    if(c == -1) __builtin_trap(); // window_pixels == 0
+
+    int8_t scale;
+    uint16_t shift;
+
+    if(window_pixels == (1<<c))
+    {
+        //window pixel count is already a power of 2   (2^c)
+        scale = 1;
+        shift = c;
+    } else {
+        const unsigned q = 31 - c - 6;
+
+        // 2^31 / pix
+        const unsigned g = 0x80000000 / window_pixels;
+        const unsigned h = (g + (1 << (q-1))) >> q; //Rounding down-shift
+
+        assert(h > (1<<6));
+        assert(h < (1<<7));
+
+        scale = (int8_t)h;
+        shift = c+6;
+    }
+
+    job->scale = 0x01010101 * ((int32_t)scale);
+    job->shift = 0x00010001 * ((int32_t)shift);
+    
+}
+
+
+static void avgpool2d_adjust_starts(
+    int8_t** Y,
+    const int8_t** X,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* pooling_window,
+    const nn_window_op_job_params_t* job_params,
+    const nn_avgpool2d_flags_e flags)
+{
+    const int32_t x_row_bytes = x_params->width * x_params->channels;
+
+    // The start row and col in X of this particular job
+    const int32_t job_start_row_x = pooling_window->start.row + pooling_window->stride.vertical * job_params->start.rows;
+    const int32_t job_start_col_x = pooling_window->start.column + pooling_window->stride.horizontal * job_params->start.cols;
+    const int32_t start_X = job_start_row_x * x_row_bytes + x_params->channels * job_start_col_x + job_params->start.channels;
+    
+    const int32_t y_row_bytes = y_params->width * y_params->channels;
+    const int32_t start_Y = job_params->start.rows * y_row_bytes + job_params->start.cols * y_params->channels + job_params->start.channels;
+
+    *X = ADDR(*X, start_X);
+    *Y = ADDR(*Y, start_Y);
+}
+
+static void avgpool2d_prepare(
+    nn_avgpool2d_job_t* job,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* pooling_window,
+    const nn_window_op_job_params_t* job_params)
+{
+    if ( AVGPOOL2D_INIT_ERROR_DETECTION_ENABLE ){
+        assert(x_params->channels == y_params->channels);
+
+        assert(pooling_window->start.row >= 0);
+        assert(pooling_window->start.column >= 0);
+
+        assert(job_params->start.rows >= 0);
+        assert(job_params->start.cols >= 0);
+        assert(job_params->start.channels >= 0);
+
+        assert(job_params->start.rows + job_params->size.rows <= y_params->height);
+        assert(job_params->start.cols + job_params->size.cols <= y_params->width);
+        assert(job_params->start.channels + job_params->size.channels <= y_params->channels);
+    
+        //NOTE: unlike most operators, this one has an output channel group size of 32
+        assert(job_params->start.channels % 4 == 0);
+        assert(job_params->size.channels % 4 == 0);
+    }
+
+    const int32_t x_row_bytes = x_params->width * x_params->channels;
+    const int32_t y_row_bytes = y_params->width * y_params->channels;
+
+    const int32_t win_start_pix = pooling_window->start.row * x_params->width + pooling_window->start.column;
+
+    const mem_stride_t win_hstride_from_prev_start = pooling_window->stride.horizontal * x_params->channels;
+    const mem_stride_t win_vstride_from_prev_start = pooling_window->stride.vertical * x_row_bytes;
+
+    job->stride.X.row = x_row_bytes - pooling_window->shape.width * x_params->channels;
+    job->stride.Y.row = y_row_bytes - job_params->size.cols * y_params->channels;
+
+    // The X pointer will be pointing at the start of the first row *not* inside the window 
+    // when doing an hstride
+    job->stride.window.col = win_hstride_from_prev_start - pooling_window->shape.height * x_row_bytes;
+
+    // The X pointer will be pointing at the start of the first patch *after* the job's output 
+    // columns when doing a vstride.
+    job->stride.window.row = win_vstride_from_prev_start - win_hstride_from_prev_start * job_params->size.cols;
+
+    // For a channel group stride, move back to start of job and add 32
+    job->stride.X.cog = VPU_INT8_ACC_PERIOD - job_params->size.rows * win_vstride_from_prev_start;
+    job->stride.Y.cog = VPU_INT8_ACC_PERIOD - job_params->size.rows * y_row_bytes;
+
+}
+
+
+
 WEAK_FUNC
 void avgpool2d_gen(
     int8_t* Y,
     const int8_t* X, 
-    const nn_avgpool2d_plan_t* plan,
-    const nn_pool2d_job_t* job)
+    const channel_count_t image_chans,
+    const nn_window_params_t* pooling_window,
+    const nn_window_op_job_params_t* job_params,
+    const nn_avgpool2d_flags_e flags,
+    const nn_avgpool2d_job_t* job)
 {
-    X = ADDR(X, job->stride.X.start);
-    Y = ADDR(Y, job->stride.Y.start);
+    const unsigned channel_groups = job_params->size.channels >> VPU_INT8_ACC_PERIOD_LOG2;
 
-    const int8_t shift = plan->shift & 0xFFFF;
-    const int8_t scale = plan->scale & 0xFF;
-
-    const unsigned channel_groups = job->output.channels >> VPU_INT8_ACC_PERIOD_LOG2;
+    int32_t scale = job->scale & 0xFF;
+    uint16_t shift = job->shift & 0xFFFF;
 
     for(unsigned chn_grp = 0; chn_grp <= channel_groups; chn_grp++){
 
         unsigned iter_chans = VPU_INT8_ACC_PERIOD;
         if(chn_grp == channel_groups)
-            iter_chans = job->output.channels - (channel_groups << VPU_INT8_ACC_PERIOD_LOG2);
+            iter_chans = job_params->size.channels - (channel_groups << VPU_INT8_ACC_PERIOD_LOG2);
 
         if(iter_chans == 0)
             break;
 
-        for(unsigned out_row = 0; out_row < job->output.rows; out_row++){
-            for(unsigned out_col = 0; out_col < job->output.cols; out_col++){
+        for(unsigned out_row = 0; out_row < job_params->size.rows; out_row++){
+            for(unsigned out_col = 0; out_col < job_params->size.cols; out_col++){
                     
                 int32_t acc32[VPU_INT8_ACC_PERIOD] = {0};
 
-                for(unsigned w_rows = 0; w_rows < plan->window.rows; w_rows++){
-                    for(unsigned w_cols = 0; w_cols < plan->window.cols; w_cols++){
+                for(unsigned w_rows = 0; w_rows < pooling_window->shape.height; w_rows++){
+                    for(unsigned w_cols = 0; w_cols < pooling_window->shape.width; w_cols++){
 
                         for(unsigned k = 0; k < iter_chans; k++){
                             acc32[k] += (((int32_t)X[k]) * scale);
                         }
 
-                        X = ADDR(X, plan->channels);
+                        X = ADDR(X, image_chans);
                     }
 
                     X = ADDR(X, job->stride.X.row);
@@ -70,7 +226,7 @@ void avgpool2d_gen(
                 }
 
                 X = ADDR(X, job->stride.window.col);
-                Y = ADDR(Y, plan->channels);
+                Y = ADDR(Y, image_chans);
             }
 
             X = ADDR(X, job->stride.window.row);
@@ -86,13 +242,67 @@ WEAK_FUNC
 void avgpool2d_2x2(
     int8_t* Y,
     const int8_t* X, 
-    const nn_avgpool2d_plan_t* plan,
-    const nn_pool2d_job_t* job)
+    const channel_count_t image_chans,
+    const nn_window_params_t* pooling_window,
+    const nn_window_op_job_params_t* job_params,
+    const nn_avgpool2d_flags_e flags,
+    const nn_avgpool2d_job_t* job)
 {
-    avgpool2d_gen(Y, X, plan, job);
+    avgpool2d_gen(Y, X, image_chans, pooling_window, job_params, flags, job);
+}
+
+
+
+
+
+
+
+void avgpool2d(
+    int8_t* Y,
+    const int8_t* X, 
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* pooling_window)
+{
+    nn_window_op_job_params_t full_job = {{0,0,0},{y_params->height, y_params->width, x_params->channels}};
+
+    avgpool2d_adv(Y, X, x_params, y_params, pooling_window, &full_job, AVGPOOL2D_FLAG_NONE);
+}
+
+void avgpool2d_adv(
+    int8_t* Y,
+    const int8_t* X, 
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* pooling_window,
+    const nn_window_op_job_params_t* job_params,
+    const nn_avgpool2d_flags_e flags)
+{
+    avgpool2d_adjust_starts(&Y, &X, x_params, y_params, pooling_window, job_params, flags);
+
+    nn_avgpool2d_job_t job;
+    avgpool2d_prepare(&job, x_params, y_params, pooling_window, job_params);
+
+    if(  matches_2x2_impl(pooling_window) ){
+        avgpool2d_2x2(Y, X, x_params->channels, pooling_window, job_params, flags, &job);
+    } else {
+        avgpool2d_calc_scale_shift(&job, pooling_window);
+        avgpool2d_gen(Y, X, x_params->channels, pooling_window, job_params, flags, &job);
+    }
 }
 
 #undef NEG_SAT_VAL
+
+
+
+
+
+
+
+
+
+
+
 
 
 #if CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
@@ -145,138 +355,6 @@ void avgpool2d_global_adv(
 }
 
 #undef NEG_SAT_VAL
-
-
-static inline int matches_2x2_impl(
-    const nn_window_params_t* conv_window)
-{   
-    return  (conv_window->shape.height == 2)
-         && (conv_window->shape.width  == 2)
-         && (conv_window->stride.vertical   == 2)
-         && (conv_window->stride.horizontal == 2);
-}
-
-
-static void calcScaleShift(
-    nn_avgpool2d_plan_t* plan,
-    const unsigned window_pixels)
-{
-    const int c = ceil_log2(window_pixels);
-
-    if(c == -1) __builtin_trap(); // window_pixels == 0
-
-    int8_t scale;
-    int16_t shift;
-
-    if(window_pixels == (1<<c))
-    {
-        //window pixel count is already a power of 2   (2^c)
-        scale = 1;
-        shift = c;
-    } else {
-        const unsigned q = 31 - c - 6;
-
-        // 2^31 / pix
-        const unsigned g = 0x80000000 / window_pixels;
-        const unsigned h = (g + (1 << (q-1))) >> q; //Rounding down-shift
-
-        assert(h > (1<<6));
-        assert(h < (1<<7));
-
-        scale = (int8_t)h;
-        shift = c+6;
-    }
-
-    plan->shift = 0x00010001 * shift;
-    plan->scale = 0x01010101 * scale;
-    
-}
-
-
-void avgpool2d_init(
-    nn_avgpool2d_plan_t* plan,
-    nn_pool2d_job_t* jobs,
-    const nn_image_params_t* x_params,
-    const nn_image_params_t* y_params,
-    const nn_window_params_t* window_config,
-    const nn_window_op_job_params_t* job_params,
-    const unsigned job_count)
-{
-    assert(x_params->channels == y_params->channels);
-    plan->channels = x_params->channels;
-
-    assert(window_config->start.row >= 0);
-    assert(window_config->start.column >= 0);
-
-    assert(job_count == 1 || job_params != NULL);
-    
-    plan->window.rows = window_config->shape.height;
-    plan->window.cols = window_config->shape.width;
-
-    if(matches_2x2_impl(window_config)){
-        plan->impl = AVGPOOL2D_2X2;
-        plan->scale = 0x01010101;
-        plan->shift = 0x00020002;
-    } else {
-        plan->impl = AVGPOOL2D_DEFAULT;
-        calcScaleShift(plan, window_config->shape.height * window_config->shape.width);
-    }
-
-    const int32_t x_row_bytes = x_params->width * x_params->channels;
-    const int32_t y_row_bytes = y_params->width * y_params->channels;
-
-    const int32_t win_start_pix = window_config->start.row * x_params->width + window_config->start.column;
-
-    const mem_stride_t win_hstride_from_prev_start = window_config->stride.horizontal * x_params->channels;
-    const mem_stride_t win_vstride_from_prev_start = window_config->stride.vertical * x_row_bytes;
-
-    const nn_window_op_job_params_t full_job = { { 0, 0, 0, }, { y_params->height, y_params->width, y_params->channels } };
-
-    for(int k = 0; k < job_count; k++){
-
-        const nn_window_op_job_params_t* params = (job_params != NULL)? &job_params[k] : &full_job;
-        nn_pool2d_job_t* job = &jobs[k];
-
-        assert(params->start.rows >= 0);
-        assert(params->start.cols >= 0);
-        assert(params->start.channels >= 0);
-
-        assert(params->start.rows + params->size.rows <= y_params->height);
-        assert(params->start.cols + params->size.cols <= y_params->width);
-        assert(params->start.channels + params->size.channels <= y_params->channels);
-        
-        //NOTE: unlike most operators, this one has an output channel group size of 32
-        assert(params->start.channels % 4 == 0);
-        assert(params->size.channels % 4 == 0);
-
-        job->output.rows = params->size.rows;
-        job->output.cols = params->size.cols;
-        job->output.channels = params->size.channels;
-
-        // The start row and col in X of this particular job
-        const int32_t job_start_row_x = window_config->start.row + window_config->stride.vertical * params->start.rows;
-        const int32_t job_start_col_x = window_config->start.column + window_config->stride.horizontal * params->start.cols;
-
-        job->stride.X.start = job_start_row_x * x_row_bytes + x_params->channels * job_start_col_x + params->start.channels;
-        job->stride.Y.start = params->start.rows * y_row_bytes + params->start.cols * y_params->channels + params->start.channels;
-
-        job->stride.X.row = x_row_bytes - window_config->shape.width * x_params->channels;
-        job->stride.Y.row = y_row_bytes - params->size.cols * y_params->channels;
-
-        // The X pointer will be pointing at the start of the first row *not* inside the window 
-        // when doing an hstride
-        job->stride.window.col = win_hstride_from_prev_start - window_config->shape.height * x_row_bytes;
-
-        // The X pointer will be pointing at the start of the first patch *after* the job's output 
-        // columns when doing a vstride.
-        job->stride.window.row = win_vstride_from_prev_start - win_hstride_from_prev_start * params->size.cols;
-
-        // For a channel group stride, move back to start of job and add 32
-        job->stride.X.cog = VPU_INT8_ACC_PERIOD - params->size.rows * win_vstride_from_prev_start;
-        job->stride.Y.cog = VPU_INT8_ACC_PERIOD - params->size.rows * y_row_bytes;
-    }
-}
-
 
 
 

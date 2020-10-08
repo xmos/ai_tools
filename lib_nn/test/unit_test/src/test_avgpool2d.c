@@ -55,7 +55,7 @@ static void Check_Y(
 #define MAX_CHANS   (4*VPU_INT8_ACC_PERIOD)
 #define MAX_HEIGHT  (32)
 #define MAX_WIDTH   (32)
-void test_avgpool2d_case1()
+void test_avgpool2d_case0()
 {
     int8_t WORD_ALIGNED  X[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS] = {{{0}}};
     
@@ -154,14 +154,8 @@ void test_avgpool2d_case1()
         window_config.start.row     = 0;
         window_config.start.column  = 0;
 
-        nn_avgpool2d_plan_t plan;
-        nn_pool2d_job_t job;
-
-        avgpool2d_init(&plan, &job, &x_params, &y_params, &window_config, NULL, 1);
-        plan.impl = AVGPOOL2D_DEFAULT; // force non 2x2 implementation
-
         memset(Y, 0xCC, casse->Y.height * casse->Y.width * casse->channels);    //too expensive to write the whole image, so just do the part that's in play
-        avgpool2d((int8_t*)Y, (int8_t*)X, &plan, &job);
+        avgpool2d((int8_t*)Y, (int8_t*)X, &x_params, &y_params, &window_config);
 
         PRINTF("\t\tChecking...\n");
         for(unsigned row = 0; row < y_params.height; row++){
@@ -190,7 +184,7 @@ void test_avgpool2d_case1()
 #define CHANS       (20)
 #define HEIGHT      (12)
 #define WIDTH       (12)
-void test_avgpool2d_case2()
+void test_avgpool2d_case1()
 {
     srand(34524666);
     int8_t WORD_ALIGNED  X[HEIGHT][WIDTH][CHANS] = {{{0}}};
@@ -248,8 +242,6 @@ void test_avgpool2d_case2()
         window_config.start.row     = casse->x_start.row;
         window_config.start.column  = casse->x_start.col;
 
-        nn_avgpool2d_plan_t plan;
-        nn_pool2d_job_t job;
         nn_window_op_job_params_t job_params;
 
         job_params.start.rows = casse->y_start.row;
@@ -264,9 +256,6 @@ void test_avgpool2d_case2()
             job_params.size.rows = (HEIGHT - casse->y_start.row);
         if((WIDTH  - casse->y_start.col) < job_params.size.cols) 
             job_params.size.cols = (WIDTH  - casse->y_start.col);
-
-        avgpool2d_init(&plan, &job, &x_params, &y_params, &window_config, &job_params, 1);
-        plan.impl = AVGPOOL2D_DEFAULT; // force non 2x2 implementation
 
         PRINTF("\t\tSetting X...\n");
         memset(Y_exp, 0xCC, sizeof(Y_exp));
@@ -296,7 +285,7 @@ void test_avgpool2d_case2()
 
         PRINTF("\t\tRunning avgpool2d()...\n");
         memset(Y, 0xCC, sizeof(Y));    
-        avgpool2d((int8_t*)Y, (int8_t*)X, &plan, &job);
+        avgpool2d_adv((int8_t*)Y, (int8_t*)X, &x_params, &y_params, &window_config, &job_params, AVGPOOL2D_FLAG_NONE);
 
         PRINTF("\t\tChecking...\n");
         for(unsigned row = 0; row < y_params.height; row++){
@@ -323,7 +312,7 @@ void test_avgpool2d_case2()
 #define MAX_CHANS   (2*VPU_INT8_ACC_PERIOD - 4)
 #define MAX_HEIGHT  (1)
 #define MAX_WIDTH   (1)
-void test_avgpool2d_case3()
+void test_avgpool2d_case2()
 {
     int8_t WORD_ALIGNED  X[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS] = {{{0}}};
     int8_t WORD_ALIGNED  Y[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS];
@@ -334,9 +323,6 @@ void test_avgpool2d_case3()
     nn_image_params_t y_params = { MAX_HEIGHT, MAX_WIDTH, MAX_CHANS };
 
     nn_window_params_t window_config;
-    nn_avgpool2d_plan_t plan;
-    nn_pool2d_job_t job;
-    nn_window_op_job_params_t job_params;
 
     window_config.shape.height  = 1;
     window_config.shape.width   = 1;
@@ -345,18 +331,7 @@ void test_avgpool2d_case3()
     window_config.start.row     = 0;
     window_config.start.column  = 0;
 
-    job_params.start.rows     = 0;
-    job_params.start.cols     = 0;
-    job_params.start.channels = 0;
-
-    job_params.size.rows     = y_params.height;
-    job_params.size.cols     = y_params.width;
-    job_params.size.channels = y_params.channels;
-
-    avgpool2d_init(&plan, &job, &x_params, &y_params, &window_config, &job_params, 1);
-    plan.impl = AVGPOOL2D_DEFAULT; // force non 2x2 implementation
-
-    avgpool2d((int8_t*)Y, (int8_t*)X, &plan, &job);
+    avgpool2d((int8_t*)Y, (int8_t*)X, &x_params, &y_params, &window_config);
 
     for(unsigned chn = 0; chn < y_params.channels; chn++){
         
@@ -378,14 +353,13 @@ void test_avgpool2d_case3()
 #define MAX_CHANS   (4*VPU_INT8_ACC_PERIOD)
 #define MAX_HEIGHT  (32)
 #define MAX_WIDTH   (32)
-void test_avgpool2d_2x2_case1()
+void test_avgpool2d_case3()
 {
     int8_t WORD_ALIGNED  X[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS] = {{{0}}};
     int8_t WORD_ALIGNED  Y[MAX_HEIGHT][MAX_WIDTH][MAX_CHANS];
 
     PRINTF("%s...\n", __func__);
 
-    
     typedef struct {
         uint32_t height;    
         uint32_t width;
@@ -452,9 +426,6 @@ void test_avgpool2d_2x2_case1()
         }
 
         nn_window_params_t window_config;
-        nn_avgpool2d_plan_t plan;
-        nn_pool2d_job_t job;
-        nn_window_op_job_params_t job_params;
 
         window_config.shape.height  = 2;
         window_config.shape.width   = 2;
@@ -463,19 +434,8 @@ void test_avgpool2d_2x2_case1()
         window_config.start.row     = 0;
         window_config.start.column  = 0;
 
-        job_params.start.rows     = 0;
-        job_params.start.cols     = 0;
-        job_params.start.channels = 0;
-
-        job_params.size.rows     = y_params.height;
-        job_params.size.cols     = y_params.width;
-        job_params.size.channels = y_params.channels;
-
-        avgpool2d_init(&plan, &job, &x_params, &y_params, &window_config, &job_params, 1);
-        plan.impl = AVGPOOL2D_2X2; // force non 2x2 implementation
-
         memset(Y, 0xCC, casse->height * casse->width * casse->channels / 4);
-        avgpool2d((int8_t*)Y, (int8_t*)X, &plan, &job);
+        avgpool2d((int8_t*)Y, (int8_t*)X, &x_params, &y_params, &window_config);
 
         PRINTF("\t\tChecking...\n");
         for(unsigned row = 0; row < y_params.height; row++){
@@ -504,7 +464,7 @@ void test_avgpool2d_2x2_case1()
 #define X_WIDTH     (2)
 #define Y_HEIGHT    (1)
 #define Y_WIDTH     (1)
-void test_avgpool2d_2x2_case2()
+void test_avgpool2d_case4()
 {
     int8_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS] = {{{0}}};
     
@@ -516,9 +476,6 @@ void test_avgpool2d_2x2_case2()
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS };
 
     nn_window_params_t window_config;
-    nn_avgpool2d_plan_t plan;
-    nn_pool2d_job_t job;
-    nn_window_op_job_params_t job_params;
 
     window_config.shape.height  = 2;
     window_config.shape.width   = 2;
@@ -526,11 +483,8 @@ void test_avgpool2d_2x2_case2()
     window_config.stride.horizontal = 2;
     window_config.start.row     = 0;
     window_config.start.column  = 0;
-
-    avgpool2d_init(&plan, &job, &x_params, &y_params, &window_config, NULL, 1);
-    plan.impl = AVGPOOL2D_2X2; // force non 2x2 implementation
     
-    avgpool2d((int8_t*)Y, (int8_t*)X, &plan, &job);
+    avgpool2d((int8_t*)Y, (int8_t*)X, &x_params, &y_params, &window_config);
 
     for(unsigned row = 0; row < y_params.height; row++){
         for(unsigned col = 0; col < y_params.width; col++){
@@ -554,7 +508,7 @@ void test_avgpool2d_2x2_case2()
 #define X_WIDTH     (4)
 #define Y_HEIGHT    (2)
 #define Y_WIDTH     (2)
-void test_avgpool2d_2x2_case3()
+void test_avgpool2d_case5()
 {
     int8_t WORD_ALIGNED  X[X_HEIGHT][X_WIDTH][CHANS] = {{{0}}};
     int8_t WORD_ALIGNED  Y[Y_HEIGHT][Y_WIDTH][CHANS];
@@ -565,9 +519,6 @@ void test_avgpool2d_2x2_case3()
     nn_image_params_t y_params = { Y_HEIGHT, Y_WIDTH, CHANS };
     
     nn_window_params_t window_config;
-    nn_avgpool2d_plan_t plan;
-    nn_pool2d_job_t job;
-    nn_window_op_job_params_t job_params;
 
     window_config.shape.height  = 2;
     window_config.shape.width   = 2;
@@ -576,10 +527,8 @@ void test_avgpool2d_2x2_case3()
     window_config.start.row     = 0;
     window_config.start.column  = 0;
 
-    avgpool2d_init(&plan, &job, &x_params, &y_params, &window_config, NULL, 1);
-    plan.impl = AVGPOOL2D_2X2; // force non 2x2 implementation
 
-    avgpool2d((int8_t*)Y, (int8_t*)X, &plan, &job);
+    avgpool2d((int8_t*)Y, (int8_t*)X, &x_params, &y_params, &window_config);
 
     for(unsigned chn = 0; chn < y_params.channels; chn++){
         int8_t y_exp = NEG_SAT_VAL;
@@ -598,12 +547,11 @@ void test_avgpool2d()
 {
     UNITY_SET_FILE();
     
+    RUN_TEST(test_avgpool2d_case0);
     RUN_TEST(test_avgpool2d_case1);
     RUN_TEST(test_avgpool2d_case2);
     RUN_TEST(test_avgpool2d_case3);
-    
-    RUN_TEST(test_avgpool2d_2x2_case1);
-    RUN_TEST(test_avgpool2d_2x2_case2);
-    RUN_TEST(test_avgpool2d_2x2_case3);
+    RUN_TEST(test_avgpool2d_case4);
+    RUN_TEST(test_avgpool2d_case5);
 
 }

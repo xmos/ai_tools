@@ -88,3 +88,8 @@ from .scratch_memory_passes import (
 )
 
 from .constant_propagation_passes import ConstantPropagationPass
+
+from .lce_passes import (
+    ReplaceBconv2DInt8OutPass,
+    ReplaceBconv2DBitpackedOutPass,
+)

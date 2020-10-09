@@ -46,6 +46,7 @@ from .quantize_dequantize_passes import (
     RemoveRedundantInt8RequantizationPass,
     CanonicalizeQuantizedInputPass,
     CanonicalizeQuantizedOutputPass,
+    CanonicalizeLceQuantizedOutputPass,
     LegalizeFloatInputPass,
     LegalizeFloatOutputPass,
 )

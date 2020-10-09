@@ -10,7 +10,6 @@ from . import Pool2dGenericTestModelGenerator
 from . import (  # pylint: disable=unused-import
     test_output,
     test_converted_single_op_model,
-    test_idempotence,
 )
 
 

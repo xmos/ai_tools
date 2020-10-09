@@ -127,20 +127,17 @@ class IntegrationTestRunner(Runner):
         self.outputs to be set.
         """
         super().run()
-        for converter in self._converters[:2]:
-            converter.convert()
+        self._reference_float_converter.convert()
+        self._reference_quant_converter.convert()
 
-        for evaluator in self._evaluators[:2]:
-            evaluator.evaluate()
+        self._reference_quant_evaluator.evaluate()
+        self._reference_float_evaluator.evaluate()
 
         self.rerun_post_cache()
 
     def rerun_post_cache(self) -> None:
-        for converter in self._converters[2:]:
-            converter.convert()
-
-        for evaluator in self._evaluators[2:]:
-            evaluator.evaluate()
+        self._xcore_converter.convert()
+        self._xcore_evaluator.evaluate()
 
         self.outputs = IntegrationTestOutputData(
             self._reference_float_evaluator.output_data,
@@ -153,7 +150,6 @@ class IntegrationTestRunner(Runner):
             {
                 "reference_quant": self._reference_quant_converter._model,
                 "xcore": self._xcore_converter._model,
-                "xcore_identical": self._identity_converter._model,
             }
         )
 
@@ -327,7 +323,7 @@ def test_output(
         )
 
 
-def test_idempotence(
-    xcore_model: XCOREModel, xcore_identical_model: XCOREModel
-) -> None:
-    assert xcore_model.is_equal(xcore_identical_model)
+def test_idempotence(xcore_model: XCOREModel, run: IntegrationTestRunner) -> None:
+    run._identity_converter.convert()
+    identical_model = XCOREModel.deserialize(run._identity_converter._model)
+    assert xcore_model.is_equal(identical_model)

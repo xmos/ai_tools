@@ -7,7 +7,6 @@ from tflite2xcore.utils import (
     VECTOR_SIZE_BITS,
     ACC_PERIOD,
     calculate_same_padding,
-    calculate_same_output_size,
 )
 from tflite2xcore.xcore_model import Operator
 from tflite2xcore.xcore_schema import (
@@ -137,7 +136,7 @@ class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
 class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
     @property
     def _strides(self) -> Tuple[int, int]:
-        return self._op.custom_options("stride")
+        return self._op.custom_options["stride"]
 
     @property
     def _padding(self) -> Padding:
@@ -149,16 +148,14 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
     )
 
     def match(self, op: Operator) -> bool:
-        if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
-            try:
-                op.custom_options["padding"] = Padding(op.custom_options["padding"])
-            except KeyError:
-                pass
-
-        return False
+        return (
+            super().match(op)
+            and op.operator_code.code in self.MATCHING_OPCODES
+            and "padding" in op.custom_options
+        )
 
     def mutate(self, op: Operator) -> Operator:
-        padding = op.custom_options.pop("padding")
+        padding = Padding(op.custom_options.pop("padding"))
         if padding is Padding.VALID:
             return op
 
@@ -168,11 +165,14 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
         # calculate paddings
         with self.using(op):
             input_and_strides = old_input.shape[1:3], self._strides
-            paddings = np.int32(
+
+        paddings = np.int32(
+            [
                 (0, 0),
                 *calculate_same_padding(*input_and_strides, op.inputs[1].shape[1:3]),
                 (0, 0),
-            )
+            ]
+        )
 
         # Construct paddings parameter tensor and padded input tensor
         padding_tensor = subgraph.create_tensor(
@@ -197,3 +197,5 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
         # Cut connection from old input to the op
         old_input.consumers.remove(op)
         op.inputs[0] = padded_input_tensor
+
+        return op

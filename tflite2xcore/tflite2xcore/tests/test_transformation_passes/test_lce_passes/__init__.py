@@ -11,6 +11,7 @@ from tflite2xcore.xcore_schema import (
     ActivationFunctionType,
     Padding,
     OperatorCode,
+    ValidOpCodes,
     ExternalOpCodes,
     XCOREOpCodes,
 )
@@ -93,17 +94,17 @@ def build_LceQuantize(
     return subgraph.model
 
 
-def build_lceBconv2d(
+def build_bconv2d(
     subgraph: Optional[Subgraph] = None,
     *,
     weight_shape: Tuple[int, int, int, int],
     input_size: Tuple[int, int],
-    padding: Padding,
+    padding: Optional[Padding],
     strides: Tuple[int, int],
+    opcode: ValidOpCodes,
     output_tensor_type: TensorType = TensorType.INT8,
 ) -> XCOREModel:
     subgraph = subgraph or XCOREModel().create_subgraph()
-    assert padding in Padding
 
     # the given shapes are not bitpacked (i.e. true channel counts)
     # so we bitpack them
@@ -122,35 +123,71 @@ def build_lceBconv2d(
     w.buffer.data = generate_dummy_int8_data(w.shape)
     output_threshold.buffer.data = generate_dummy_int32_data(output_threshold.shape)
 
+    # check padding and determine output size
     if padding is Padding.SAME:
         output_size = calculate_same_output_size(input_size, strides)
-    elif padding is Padding.VALID:
+    else:
+        if padding is None:
+            assert opcode in (
+                XCOREOpCodes.XC_bconv2d_bin_out,
+                XCOREOpCodes.XC_bconv2d_int8_out,
+            )
+        elif padding is not Padding.VALID:
+            raise ValueError(f"Unsupported padding: {padding}")
         output_size = calculate_valid_output_size(
             input_size, strides, weight_shape[1:3]
         )
-    else:
-        raise ValueError(f"Unsupported padding: {padding}")
 
     tout = subgraph.create_tensor(
         "output", output_tensor_type, shape=(1, *output_size, C_out), isoutput=True
     )
 
+    # create custom options
+    custom_options = {"padding": padding} if padding else {}
+    if opcode is ExternalOpCodes.add_new_opcode("LceBconv2d"):
+        custom_options.update(
+            {
+                "channels_in": C_in,
+                "fused_activation_function": ActivationFunctionType.NONE,
+                "stride_height": strides[0],
+                "stride_width": strides[1],
+                "dilation_width_factor": 1,
+                "dilation_height_factor": 1,
+            }
+        )
+    else:
+        custom_options["stride"] = strides
+
+    # create operator
     subgraph.create_operator(
-        OperatorCode(ExternalOpCodes.add_new_opcode("LceBconv2d")),
+        OperatorCode(opcode),
         inputs=[tin, w, output_threshold],
         outputs=[tout],
-        custom_options={
-            "channels_in": C_in,
-            "fused_activation_function": ActivationFunctionType.NONE,
-            "padding": padding,
-            "stride_height": strides[0],
-            "stride_width": strides[1],
-            "dilation_width_factor": 1,
-            "dilation_height_factor": 1,
-        },
+        custom_options=custom_options,
     )
 
     return subgraph.model
+
+
+def build_lceBconv2d(
+    subgraph: Optional[Subgraph] = None, *, padding: Padding, **kwargs
+) -> XCOREModel:
+    return build_bconv2d(
+        subgraph,
+        padding=padding,
+        opcode=ExternalOpCodes.add_new_opcode("LceBconv2d"),
+        **kwargs,
+    )
+
+
+def build_XC_bconv2d(
+    subgraph: Optional[Subgraph] = None,
+    *,
+    opcode: XCOREOpCodes = XCOREOpCodes.XC_bconv2d_int8_out,
+    padding: Optional[Padding] = None,
+    **kwargs,
+) -> XCOREModel:
+    return build_bconv2d(subgraph, padding=padding, opcode=opcode, **kwargs)
 
 
 #  ----------------------------------------------------------------------------
@@ -165,5 +202,3 @@ def test_mutate(
     assert len(subgraph.operators) == 1
 
     _test_mutate(trf_pass, model, new_opcode)
-
-    assert len(subgraph.operators) == 1

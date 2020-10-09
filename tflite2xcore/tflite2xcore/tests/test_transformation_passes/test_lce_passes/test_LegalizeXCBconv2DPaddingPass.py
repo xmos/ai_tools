@@ -1,26 +1,20 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-
 import numpy as np
-
+from typing import Tuple
 from copy import deepcopy
 
 from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes.lce_passes import LegalizeXCBconv2DPaddingPass
-from tflite2xcore.xcore_schema import BuiltinOpCodes, TensorType, Padding
+from tflite2xcore.xcore_schema import BuiltinOpCodes, TensorType, Padding, XCOREOpCodes
+from tflite2xcore.xcore_model import XCOREModel
 
-from ..model_builders import build_lceBconv2d
-from .conftest import (
+from . import build_XC_bconv2d, _test_non_matching_params
+from . import (  # pylint: disable=unused-import
     PARAMS,
-    _test_non_matching_params,
     test_matching_params,
-    test_non_matching_output_channels,
-    test_non_matching_input_channels,
-    test_non_matching_stride_h,
-    test_non_matching_stride_w,
-    test_non_matching_dilation_w_factor,
-    test_non_matching_dilation_h_factor,
+    test_mutate as _test_mutate,
 )
 
 
@@ -30,9 +24,12 @@ from .conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
-for params in PARAMS.values():
-    params.update({"padding": [Padding.SAME]})
+# NOTE: this is intentional to reduce test counts
+PARAMS["extended"] = PARAMS["default"]
+PARAMS["default"] = PARAMS["smoke"]
 
+for params in PARAMS.values():
+    params["opcode"] = [XCOREOpCodes.XC_bconv2d_int8_out]
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
@@ -45,81 +42,83 @@ def trf_pass() -> LegalizeXCBconv2DPaddingPass:
 
 
 @pytest.fixture()
-def model(weight_shape, input_size, padding, strides):
-    model = build_lceBconv2d(
+def model(
+    weight_shape: Tuple[int, int, int, int],
+    input_size: Tuple[int, int],
+    padding: Padding,
+    strides: Tuple[int, int],
+    opcode: XCOREOpCodes,
+) -> XCOREModel:
+    return build_XC_bconv2d(
         weight_shape=weight_shape,
         input_size=input_size,
         padding=padding,
         strides=strides,
+        opcode=opcode,
     )
-    return model
 
 
-def test_mutate(trf_pass, model):
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
 
+
+def test_mutate(
+    trf_pass: LegalizeXCBconv2DPaddingPass,
+    model: XCOREModel,
+    padding: Padding,
+    opcode: XCOREOpCodes,
+) -> None:
     subgraph = model.subgraphs[0]
-    assert len(subgraph.operators) == 1
+    old_input = subgraph.inputs[0]
+    old_output = subgraph.outputs[0]
 
-    original_input, original_output = subgraph.inputs[0], subgraph.outputs[0]
+    _test_mutate(trf_pass, model, opcode)
 
-    options = subgraph.operators[0].custom_options
-    strides = (options["stride_height"], options["stride_width"])
+    operators = subgraph.operators
+    bconv2d_op = operators[-1]
 
-    assert len(subgraph.operators[0].inputs) == 3
-    assert subgraph.operators[0].custom_options["padding"] is Padding.SAME
+    assert "padding" not in bconv2d_op.custom_options
+    assert bconv2d_op.operator_code.code is opcode
+    assert old_output is bconv2d_op.outputs[0]
 
-    # Run the pass
-    trf_pass.run(model)
-    model.sanity_check()
+    if padding is Padding.VALID:
+        assert len(operators) == 1
+        assert old_input is bconv2d_op.inputs[0]
+    else:
+        assert len(operators) == 2
 
-    # Clean up dangling ops/tensors
-    CleanupManager(model).run_passes()
-    model.sanity_check()
+        pad_op = operators[0]
+        assert old_input is pad_op.inputs[0]
+        assert len(pad_op.inputs) == 2
+        assert len(pad_op.outputs) == 1
 
-    assert len(subgraph.operators) == 2
+        intermediate = bconv2d_op.inputs[0]
+        assert intermediate is pad_op.outputs[0]
 
-    pad_op = subgraph.operators[0]
-    conv_op = subgraph.operators[1]
-
-    assert len(pad_op.inputs) == 2
-    assert len(pad_op.outputs) == 1
-
-    # Check input/output tensors
-    assert len(subgraph.inputs) == 1
-    assert len(subgraph.outputs) == 1
-
-    assert original_input is pad_op.inputs[0]
-    assert original_input in subgraph.inputs
-
-    assert all((i not in subgraph.inputs) for i in conv_op.inputs)
-
-    assert original_output is conv_op.outputs[0]
-    assert original_output in subgraph.outputs
-
-    assert all((o not in subgraph.outputs) for o in pad_op.outputs)
-
-    assert conv_op.outputs[0].shape == original_output.shape
-
-    assert conv_op.custom_options["padding"] is Padding.VALID
-
-    # Check spacial dims of PAD output tensor is as expected
-    paddings = pad_op.inputs[1].as_array()
-
-    pad_output_shape = pad_op.outputs[0].shape
-
-    for i in range(0, 4):
-        assert (
-            pad_op.inputs[0].shape[i] + sum(paddings[i]) == pad_output_shape[i]
-        ), "bad output shape at index: " + str(i)
+        # check that padding is sane
+        paddings = pad_op.inputs[1].as_array().tolist()
+        print(old_input.shape, paddings, intermediate.shape)
+        for j, (size, pads, padded_size) in enumerate(
+            zip(old_input.shape, paddings, intermediate.shape)
+        ):
+            assert (
+                size + sum(pads) == padded_size
+            ), f"incorrect padded size in dimension {j}"
 
 
-def test_non_matching_paddings(trf_pass, weight_shape, input_size, strides):
-
-    model = build_lceBconv2d(
+def test_non_matching_legal(
+    trf_pass: LegalizeXCBconv2DPaddingPass,
+    weight_shape: Tuple[int, int, int, int],
+    input_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    opcode: XCOREOpCodes,
+) -> None:
+    model = build_XC_bconv2d(
         weight_shape=weight_shape,
         input_size=input_size,
-        padding=Padding.VALID,
         strides=strides,
+        opcode=opcode,
     )
 
     _test_non_matching_params(trf_pass, model)

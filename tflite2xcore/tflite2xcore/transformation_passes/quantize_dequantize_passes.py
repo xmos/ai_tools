@@ -47,8 +47,8 @@ class CanonicalizeQuantizedOutputPass(OperatorMatchingPass):
     def match(self, op):
         if super().match(op):
             input_tensor, output_tensor = op.inputs[0], op.outputs[0]
-       
-            try: 
+
+            try:
                 if op.operator_code.code is not self._matching_opcode:
                     return False
             except AttributeError:

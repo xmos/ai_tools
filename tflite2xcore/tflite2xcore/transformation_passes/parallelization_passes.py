@@ -88,6 +88,8 @@ class ParallelizeConv2dPass(SpatialParallelizationPass):
         XCOREOpCodes.XC_conv2d_shallowin,
         XCOREOpCodes.XC_conv2d_deep,
         XCOREOpCodes.XC_conv2d_1x1,
+        XCOREOpCodes.XC_bconv2d_int8_out,
+        XCOREOpCodes.XC_bconv2d_bin_out,
     )
 
 

@@ -4,7 +4,7 @@ import tensorflow as tf  # type: ignore
 from abc import abstractmethod
 from typing import Tuple, Optional, Type, Union
 
-from tflite2xcore._model_generation import Configuration
+from tflite2xcore.model_generation import Configuration
 
 from .. import (
     FilterOpTestModelGenerator,

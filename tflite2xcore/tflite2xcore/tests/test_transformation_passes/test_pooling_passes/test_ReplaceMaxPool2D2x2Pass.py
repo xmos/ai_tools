@@ -2,8 +2,6 @@
 
 import pytest
 
-from copy import deepcopy
-
 from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.transformation_passes import ReplaceMaxPool2D2x2Pass
 

@@ -23,3 +23,4 @@ from . import tflite_visualize
 from . import utils
 from . import xcore_model
 from . import analyze
+from . import model_generation

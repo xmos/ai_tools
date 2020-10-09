@@ -7,7 +7,6 @@ from tflite2xcore.transformation_passes import (
     EliminateDeadTensorsPass,
     EliminateDeadOperatorsPass,
 )
-from tflite2xcore.xcore_schema import TensorType
 
 from .conftest import (
     model,

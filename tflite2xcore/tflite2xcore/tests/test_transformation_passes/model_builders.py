@@ -1,11 +1,11 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-import pytest
 import numpy as np
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Optional
 from copy import deepcopy
 
-from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.utils import QuantizationTuple
+from tflite2xcore.xcore_model import XCOREModel, Subgraph
 from tflite2xcore.xcore_schema import (
     ActivationFunctionType,
     Padding,
@@ -13,10 +13,17 @@ from tflite2xcore.xcore_schema import (
     OperatorCode,
     BuiltinOpCodes,
     XCOREOpCodes,
-    BuiltinOptions,
 )
 
 ModelBuilder = Callable[..., XCOREModel]
+
+
+def generate_dummy_int8_data(shape: Tuple[int, ...]) -> np.ndarray:
+    return np.int8(np.arange(np.prod(shape)) % 255 - 127)
+
+
+def generate_dummy_int32_data(shape: Tuple[int, ...]) -> np.ndarray:
+    return np.arange(np.prod(shape), dtype=np.int32)
 
 
 def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
@@ -47,14 +54,28 @@ def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
     return subgraph.model
 
 
-def build_dequantize(subgraph=None, *, input_shape):
+def build_dequantize(
+    subgraph: Optional[Subgraph] = None,
+    *,
+    input_shape: Tuple[int, ...],
+    input_quantization: Optional[QuantizationTuple] = None,
+) -> XCOREModel:
     subgraph = subgraph or XCOREModel().create_subgraph()
 
+    quant = input_quantization or QuantizationTuple(0.12, -35)
     input_shape = [1, *input_shape]
-    qin = subgraph.create_tensor("input", TensorType.INT8, input_shape, isinput=True)
+    qin = subgraph.create_tensor(
+        "input",
+        TensorType.INT8,
+        input_shape,
+        isinput=True,
+        quantization={"scale": [quant.scale], "zero_point": [quant.zero_point]},
+    )
+
     fout = subgraph.create_tensor(
         "output_dequantized", TensorType.FLOAT32, qin.shape, isoutput=True
     )
+
     subgraph.create_operator(
         OperatorCode(BuiltinOpCodes.DEQUANTIZE), inputs=[qin], outputs=[fout]
     )
@@ -62,16 +83,28 @@ def build_dequantize(subgraph=None, *, input_shape):
     return subgraph.model
 
 
-def build_quantize(subgraph=None, *, input_shape):
+def build_quantize(
+    subgraph: Optional[Subgraph] = None,
+    *,
+    input_shape: Tuple[int, ...],
+    output_quantization: Optional[QuantizationTuple] = None,
+) -> XCOREModel:
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     input_shape = [1, *input_shape]
-    fin = subgraph.create_tensor("input", TensorType.FLOAT32, input_shape, isinput=True)
+    tin = subgraph.create_tensor("input", TensorType.FLOAT32, input_shape, isinput=True)
+
+    quant = output_quantization or QuantizationTuple(0.12, -35)
     qout = subgraph.create_tensor(
-        "output_quantized", TensorType.INT8, fin.shape, isoutput=True
+        "output_quantized",
+        TensorType.INT8,
+        tin.shape,
+        isoutput=True,
+        quantization={"scale": [quant.scale], "zero_point": [quant.zero_point]},
     )
+
     subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.QUANTIZE), inputs=[fin], outputs=[qout]
+        OperatorCode(BuiltinOpCodes.QUANTIZE), inputs=[tin], outputs=[qout]
     )
 
     return subgraph.model
@@ -337,8 +370,8 @@ def build_fc(subgraph=None, *, outputs, input_shape, add_batch_dim=True):
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
-    b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
+    w.buffer.data = generate_dummy_int8_data(w.shape)
+    b.buffer.data = generate_dummy_int32_data(b.shape)
 
     return subgraph.model
 
@@ -377,9 +410,7 @@ def build_XC_fc(subgraph=None, *, outputs, input_channels):
         quantization={"scale": [0.11332], "zero_point": [6]},
     )
     subgraph.create_operator(
-        OperatorCode(XCOREOpCodes.XC_fc),
-        inputs=[tin, w, b],
-        outputs=[tout],
+        OperatorCode(XCOREOpCodes.XC_fc), inputs=[tin, w, b], outputs=[tout],
     )
 
     return subgraph.model
@@ -464,10 +495,11 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
-    b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
+    w.buffer.data = generate_dummy_int8_data(w.shape)
+    b.buffer.data = generate_dummy_int32_data(b.shape)
 
     if padding is Padding.SAME:
+        # TODO: this is incorrect if stride > 1
         output_shape = [1, height, width, C_out]
     elif padding is Padding.VALID:
         output_shape = [
@@ -538,8 +570,8 @@ def build_depthwise_conv2d(
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = np.int8(np.arange(0, np.prod(w.shape)) % 255 - 127)
-    b.buffer.data = np.arange(np.prod(b.shape), dtype=np.int32)
+    w.buffer.data = generate_dummy_int8_data(w.shape)
+    b.buffer.data = generate_dummy_int32_data(b.shape)
 
     if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]
@@ -695,6 +727,13 @@ def _glue_ops(op1, op2):
     old_output.consumers.append(op2)
 
 
+def _glue_quantize(op):
+    subgraph = op.subgraph
+    intermediate = subgraph.outputs[0]
+    build_quantize(subgraph, input_shape=intermediate.shape)
+    _glue_ops(op, subgraph.operators[-1])
+
+
 def build_consecutive_pads(subgraph=None, *, input_shape, paddings_1, paddings_2):
     model = build_pad(subgraph, input_shape=input_shape, paddings=paddings_1)
     subgraph = subgraph or model.subgraphs[0]
@@ -759,7 +798,7 @@ def build_reshape(
     return subgraph.model
 
 
-def build_fc_with_reshape(
+def build_fc_with_preceding_reshape(
     subgraph=None, *, input_shape, fc_outputs, reshaped_input_shape
 ):
     model = build_reshape(
@@ -768,18 +807,41 @@ def build_fc_with_reshape(
         output_shape=reshaped_input_shape,
         add_batch_dim=False,
     )
-    subgraph = subgraph or model.subgraphs[0]
+    subgraph = model.subgraphs[0]
 
     build_fc(
-        subgraph,
+        model.subgraphs[0],
         outputs=fc_outputs,
         input_shape=reshaped_input_shape,
         add_batch_dim=False,
     )
 
-    reshape1, fc1 = subgraph.operators[:2]
+    _glue_ops(*subgraph.operators[:2])
 
-    _glue_ops(reshape1, fc1)
+    return model
+
+
+def build_fc_with_subsequent_reshape(
+    subgraph=None, *, fc_output_shape, reshaped_output_shape
+):
+    model = build_fc(
+        subgraph,
+        outputs=np.prod(fc_output_shape),
+        input_shape=(1, 4),
+        add_batch_dim=False,
+    )
+    subgraph = model.subgraphs[0]
+
+    build_reshape(
+        subgraph,
+        input_shape=fc_output_shape,
+        output_shape=reshaped_output_shape,
+        add_batch_dim=False,
+    )
+    fc, reshape = subgraph.operators[:2]
+    _glue_ops(fc, reshape)
+
+    fc.outputs[0].shape = fc_output_shape
 
     return model
 

@@ -1,7 +1,5 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pathlib
-
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import transformation_passes as passes
@@ -27,6 +25,7 @@ class InputOutputCanonicalizationManager(PassManager):
             passes=[
                 passes.CanonicalizeQuantizedInputPass(),
                 passes.CanonicalizeQuantizedOutputPass(),
+                passes.CanonicalizeLceQuantizedOutputPass(),
             ],
             **kwargs,
         )
@@ -85,22 +84,30 @@ def optimize_for_xcore(
         model, keep_intermediates=bool(intermediates_path)
     )
 
+    # one round of constant folding
+    pass_mgr.register_pass(passes.ConstantPropagationPass())
+
+    # canonicalize fully connected
+    pass_mgr.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
+
+    # canonicalize reshape
     pass_mgr.register_pass(passes.CanonicalizeReshapePass())
-    pass_mgr.register_pass(passes.RemoveFlattenReshapePass())
+    pass_mgr.register_passes(CleanupManager())
+    pass_mgr.register_pass(passes.RemovePrecedingReshapePass())
+    pass_mgr.register_pass(passes.RemoveSubsequentReshapePass())
 
     # canonicalize convolutions
     pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
     pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
-    pass_mgr.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
+
+    # remove redundant quantize ops
+    pass_mgr.register_pass(passes.RemoveRedundantInt8RequantizationPass())
 
     # canonicalize word alignment
     pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())
 
-    # word alignment canonicalization introduces new pads, so first fuse then split
+    # canonicalize padding
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
-
-    # Split batch/channel-wise padding from spacial padding - allows fusing of spacial padding later
-    pass_mgr.register_pass(passes.SplitPaddingPass())
 
     # need to cleanup after the first round of canonicalization
     pass_mgr.register_passes(CleanupManager())
@@ -130,12 +137,13 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
 
+    # Split batch/channel-wise padding from spatial padding
+    pass_mgr.register_pass(passes.SplitPaddingPass())
     # Fuse spatial padding with conv2d
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
-
     if ignore_input_alignment:
+        # remove word alignment padding on the input
         pass_mgr.register_pass(passes.RemovePaddingInputPass())
-
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
     pass_mgr.register_pass(

@@ -767,7 +767,7 @@ def build_reshape(
     return subgraph.model
 
 
-def build_fc_with_reshape(
+def build_fc_with_preceding_reshape(
     subgraph=None, *, input_shape, fc_outputs, reshaped_input_shape
 ):
     model = build_reshape(
@@ -776,21 +776,44 @@ def build_fc_with_reshape(
         output_shape=reshaped_input_shape,
         add_batch_dim=False,
     )
-    subgraph = subgraph or model.subgraphs[0]
+    subgraph = model.subgraphs[0]
 
     build_fc(
-        subgraph,
+        model.subgraphs[0],
         outputs=fc_outputs,
         input_shape=reshaped_input_shape,
         add_batch_dim=False,
     )
 
-    reshape1, fc1 = subgraph.operators[:2]
-
-    _glue_ops(reshape1, fc1)
+    _glue_ops(*subgraph.operators[:2])
 
     return model
 
+
+
+def build_fc_with_subsequent_reshape(
+    subgraph=None, *, fc_output_shape, reshaped_output_shape
+):
+    model = build_fc(
+        subgraph,
+        outputs=np.prod(fc_output_shape),
+        input_shape=(1, 4),
+        add_batch_dim=False,
+    )
+    subgraph = model.subgraphs[0]
+    
+    build_reshape(
+        subgraph,
+        input_shape=fc_output_shape,
+        output_shape=reshaped_output_shape,
+        add_batch_dim=False,
+    )
+    fc, reshape = subgraph.operators[:2]
+    _glue_ops(fc, reshape)
+
+    fc.outputs[0].shape = fc_output_shape
+
+    return model
 
 def build_padded_DW(subgraph=None, *, weight_shape, input_size, paddings, strides):
     input_shape = [1, *input_size, weight_shape[-1]]

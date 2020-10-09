@@ -17,6 +17,7 @@ dependencies:
   - ca-certificates=2019.11.28
   - cairo=1.14.12
   - certifi=2019.11.28
+  - cmake=3.14.0
   - cycler=0.10.0
   - dbus=1.13.6
   - decorator=4.4.0
@@ -27,6 +28,7 @@ dependencies:
   - fontconfig=2.13.0
   - freetype=2.9.1
   - fribidi=1.0.5
+  - gcc_linux-64=7.3.0
   - gettext=0.19.8.1
   - glib=2.56.2
   - gmp=6.1.2
@@ -34,6 +36,7 @@ dependencies:
   - graphviz=2.40.1
   - gst-plugins-base=1.14.0
   - gstreamer=1.14.0
+  - gxx_linux-64=7.3.0
   - harfbuzz=1.8.8
   - icu=58.2
   - importlib_metadata=0.23
@@ -66,6 +69,7 @@ dependencies:
   - libuuid=1.0.3
   - libxcb=1.13
   - libxml2=2.9.9
+  - make=4.2.1
   - markupsafe=1.1.1
   - matplotlib=3.1.1
   - mccabe=0.6.1
@@ -181,4 +185,3 @@ dependencies:
     - werkzeug==0.16.0
     - wheel==0.33.6
     - -e ./tflite2xcore
-

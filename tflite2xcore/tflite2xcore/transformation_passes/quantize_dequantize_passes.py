@@ -1,7 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from tflite2xcore.xcore_model import Operator, Tensor
-from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes, OperatorCode
+from tflite2xcore.xcore_schema import (
+    TensorType,
+    BuiltinOpCodes,
+    OperatorCode,
+    ExternalOpCodes,
+    ValidOpCodes,
+)
 
 from .transformation_passes import (
     OperatorMatchingPass,
@@ -89,17 +95,23 @@ class CanonicalizeQuantizedOutputPass(QuantizedOperatorMatchingPass):
 
     def match(self, op: Operator) -> bool:
         if super().match(op):
-            input_tensor, output_tensor = op.inputs[0], op.outputs[0]
+            try:
+                if op.operator_code.code is not self.matching_opcode:
+                    return False
+            except AttributeError:
+                return False
+
+            output_tensor = op.outputs[0]
             if (
                 output_tensor in op.subgraph.outputs
                 and not output_tensor.consumers
-                and input_tensor not in op.subgraph.inputs
+                and op.inputs[0] not in op.subgraph.inputs
             ):
                 if len(output_tensor.producers) == 1:
                     return True
                 else:
                     self.logger.warning(
-                        "Encountered output of removable DEQUANTIZE "
+                        f"Encountered output of removable {self.matching_opcode} "
                         "with more than one producer."
                     )
 
@@ -110,6 +122,17 @@ class CanonicalizeQuantizedOutputPass(QuantizedOperatorMatchingPass):
         subgraph.outputs.append(op.inputs[0])
         subgraph.remove_tensor(op.outputs[0])  # DCE doesn't clean up subgraph outputs
         subgraph.remove_operator(op)
+
+
+# TODO consider adding tests for this
+class CanonicalizeLceQuantizedOutputPass(CanonicalizeQuantizedOutputPass):
+    @property
+    def matching_input_type(self) -> TensorType:
+        return TensorType.INT32
+
+    @property
+    def matching_opcode(self) -> ValidOpCodes:
+        return ExternalOpCodes.add_new_opcode("LceDequantize")
 
 
 # TODO: improve tests for this

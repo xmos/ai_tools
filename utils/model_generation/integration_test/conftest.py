@@ -6,12 +6,12 @@ import portalocker  # type: ignore
 import pytest  # type: ignore
 import _pytest  # type: ignore # NOTE: for typing only
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Type
 
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation.utils import stringify_config
 
-from . import IntegrationTestRunner
+from . import IntegrationTestRunner, DefaultIntegrationTestRunner
 
 
 #  ----------------------------------------------------------------------------
@@ -112,15 +112,13 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
         raise NameError("GENERATOR not designated in test") from None
 
     try:
-        RUNNER = request.module.RUNNER
+        RUNNER: Type[IntegrationTestRunner] = request.module.RUNNER
     except AttributeError:
-        RUNNER = IntegrationTestRunner
+        RUNNER = DefaultIntegrationTestRunner
 
     pytest_config = request.config
 
-    runner: IntegrationTestRunner = RUNNER(
-        GENERATOR, use_device=pytest_config.getoption("--use-device")
-    )
+    runner = RUNNER(GENERATOR, use_device=pytest_config.getoption("--use-device"))
     runner.set_config(**request.param)
 
     if pytest_config.getoption("verbose"):
@@ -147,7 +145,7 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
                     dirpath = str(pytest_config.cache.makedir("model_cache") / key)
                     dirpath = runner.save(dirpath)
                     if pytest_config.getoption("dump") == "models":
-                        runner.dump(dirpath)
+                        runner.dump_models(dirpath)
 
                     logging.debug(f"runner cached to {dirpath}")
                     pytest_config.cache.set(key, str(dirpath))
@@ -164,7 +162,7 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
 
 @pytest.fixture  # type: ignore
 def xcore_model(run: IntegrationTestRunner) -> XCOREModel:
-    return XCOREModel.deserialize(run.converted_models["xcore"])
+    return XCOREModel.deserialize(run._xcore_converter._model)
 
 
 @pytest.fixture  # type: ignore

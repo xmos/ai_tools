@@ -44,69 +44,114 @@ from tflite2xcore.model_generation.data_factories import InputInitializerDataFac
 #  ----------------------------------------------------------------------------
 
 
-class IntegrationTestOutputData(NamedTuple):
-    reference_float: np.ndarray
-    reference_quant: np.ndarray
-    xcore: np.ndarray
-
-
 class IntegrationTestRunner(Runner):
     _model_generator: "IntegrationTestModelGenerator"
-    _quantization_data: tf.Tensor
-    outputs: IntegrationTestOutputData
 
     def __init__(
-        self, generator: Type["IntegrationTestModelGenerator"], use_device=False
+        self,
+        generator: Type["IntegrationTestModelGenerator"],
+        *,
+        use_device: bool = False,
     ) -> None:
+        super().__init__(generator)
+        self._xcore_converter = XCoreConverter(self, self.get_xcore_reference_model)
+        self.register_converter(self._xcore_converter)
+
+        self._identity_converter = XCoreConverter(
+            self, self._xcore_converter.get_converted_model
+        )
+        self.register_converter(self._identity_converter)
+
+        self._xcore_evaluator = XCoreEvaluator(
+            self,
+            self.get_xcore_evaluation_data,
+            self._xcore_converter.get_converted_model,
+            use_device=use_device,
+        )
+        self.register_evaluator(self._xcore_evaluator)
+
+    @abstractmethod
+    def get_xcore_reference_model(self) -> TFLiteModel:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_xcore_evaluation_data(self) -> TFLiteModel:
+        raise NotImplementedError()
+
+    @classmethod
+    def load(cls, dirpath: Union[Path, str]) -> "IntegrationTestRunner":
+        runner = super().load(dirpath)
+        assert isinstance(runner, IntegrationTestRunner)
+        return runner
+
+    @staticmethod
+    def dump_data(
+        dirpath: Path,
+        *,
+        data: Dict[str, Union[tf.Tensor, np.ndarray]],
+        example_idx: Union[int, Iterable[int]] = [],
+    ) -> None:
+        example_idx = [example_idx] if isinstance(example_idx, int) else example_idx
+        for key, arr in data.items():
+            for j in example_idx:
+                with open(dirpath / f"example_{j}.{key}", "wb") as f:
+                    f.write(np.array(arr[j]).tostring())
+
+    @abstractmethod
+    def rerun_post_cache(self) -> None:
+        raise NotImplementedError()
+
+
+class DefaultIntegrationTestRunner(IntegrationTestRunner):
+    class OutputData(NamedTuple):
+        reference_float: np.ndarray
+        reference_quant: np.ndarray
+        xcore: np.ndarray
+
+    _quantization_data: tf.Tensor
+    outputs: "DefaultIntegrationTestRunner.OutputData"
+
+    def __init__(
+        self,
+        generator: Type["IntegrationTestModelGenerator"],
+        *,
+        use_device: bool = False,
+    ) -> None:
+        super().__init__(generator, use_device=use_device)
+        # quantization and test data
         self._repr_data_factory = InputInitializerDataFactory(
             self, lambda: self._model_generator.input_shape
         )
+        self.register_data_factory(self._repr_data_factory)
 
+        # floating point reference
         self._reference_float_converter = TFLiteFloatConverter(
             self, self.get_built_model
         )
+        self.register_converter(self._reference_float_converter)
+
         self._reference_float_evaluator = TFLiteEvaluator(
             self,
             self.get_quantization_data,
             self._reference_float_converter.get_converted_model,
         )
+        self.register_evaluator(self._reference_float_evaluator)
 
+        # quantized reference
         self._reference_quant_converter = TFLiteQuantConverter(
             self, self.get_built_model, self.get_quantization_data
         )
+        self.register_converter(self._reference_quant_converter)
+
         self._reference_quant_evaluator = TFLiteQuantEvaluator(
             self,
             self.get_quantization_data,
             self._reference_quant_converter.get_converted_model,
         )
+        self.register_evaluator(self._reference_quant_evaluator)
 
-        self._xcore_converter = XCoreConverter(
-            self, self._reference_quant_converter.get_converted_model,
-        )
-        self._identity_converter = XCoreConverter(
-            self, self._xcore_converter.get_converted_model
-        )
-        self._xcore_evaluator = XCoreEvaluator(
-            self,
-            self.get_quantization_data,
-            self._xcore_converter.get_converted_model,
-            use_device=use_device,
-        )
-        super().__init__(
-            generator,
-            converters=[
-                self._reference_float_converter,
-                self._reference_quant_converter,
-                self._xcore_converter,
-                self._identity_converter,
-            ],
-            evaluators=[
-                self._reference_quant_evaluator,
-                self._reference_float_evaluator,
-                self._xcore_evaluator,
-            ],
-            data_factories=[self._repr_data_factory],
-        )
+    def get_xcore_reference_model(self) -> TFLiteModel:
+        return self._reference_quant_converter.get_converted_model()
 
     def get_quantization_data(self) -> tf.Tensor:
         try:
@@ -120,11 +165,13 @@ class IntegrationTestRunner(Runner):
                 ) from None
             return self._quantization_data
 
+    def get_xcore_evaluation_data(self) -> TFLiteModel:
+        return self.get_quantization_data()
+
     def run(self) -> None:
-        """ Defines how an IntegrationTestRunner should be run.
+        """ Defines how a DefaultIntegrationTestRunner should be run.
         
-        The integration tests require the 'reference' and 'xcore' fields of
-        self.outputs to be set.
+        Most integration tests require self.outputs to be set.
         """
         super().run()
         self._reference_float_converter.convert()
@@ -139,7 +186,7 @@ class IntegrationTestRunner(Runner):
         self._xcore_converter.convert()
         self._xcore_evaluator.evaluate()
 
-        self.outputs = IntegrationTestOutputData(
+        self.outputs = self.OutputData(
             self._reference_float_evaluator.output_data,
             self._reference_quant_evaluator.get_output_data_quant(
                 self._xcore_evaluator.output_quant
@@ -153,12 +200,6 @@ class IntegrationTestRunner(Runner):
             }
         )
 
-    @classmethod
-    def load(cls, dirpath: Union[Path, str]) -> "IntegrationTestRunner":
-        runner = super().load(dirpath)
-        assert isinstance(runner, IntegrationTestRunner)
-        return runner
-
     def dump(
         self,
         dirpath: Path,
@@ -170,16 +211,15 @@ class IntegrationTestRunner(Runner):
         if dump_models:
             self.dump_models(dirpath, visualize=dump_visualizations)
 
-        data = {
-            "input": self.get_quantization_data(),
-            "reference_quant_output": self.outputs.reference_quant,
-            "xcore_output": self.outputs.xcore,
-        }
-        example_idx = [example_idx] if isinstance(example_idx, int) else example_idx
-        for key, arr in data.items():
-            for j in example_idx:
-                with open(dirpath / f"example_{j}.{key}", "wb") as f:
-                    f.write(np.array(arr[j]).tostring())
+        self.dump_data(
+            dirpath,
+            data={
+                "input": self.get_quantization_data(),
+                "reference_quant_output": self.outputs.reference_quant,
+                "xcore_output": self.outputs.xcore,
+            },
+            example_idx=example_idx,
+        )
 
 
 #  ----------------------------------------------------------------------------
@@ -272,7 +312,7 @@ def _compare_batched_arrays(
 
 
 def test_output(
-    run: IntegrationTestRunner,
+    run: DefaultIntegrationTestRunner,
     output_tolerance: Optional[Union[int, float]],
     request: _pytest.fixtures.SubRequest,
 ) -> None:

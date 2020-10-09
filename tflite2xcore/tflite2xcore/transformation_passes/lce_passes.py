@@ -105,3 +105,28 @@ class ReplaceBconv2DBitpackedOutPass(ReplaceBconv2DPass):
     @property
     def matching_output_type(self) -> TensorType:
         return TensorType.INT32
+
+
+class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
+    @property
+    def new_opcode(self) -> OperatorCode:
+        return OperatorCode(XCOREOpCodes.XC_bsign_8)
+
+    @property
+    def matching_opcode(self) -> ExternalOpCodes:
+        return ExternalOpCodes.add_new_opcode("LceQuantize")
+
+    @property
+    def matching_output_type(self) -> TensorType:
+        return TensorType.INT32
+
+    def match(self, op: Operator) -> bool:
+        if super().match(op):
+            input_shape = op.inputs[0].shape
+            if len(input_shape) == 4 and input_shape[3] % WORD_SIZE_BITS == 0:
+                return True
+            self.logger.warning(
+                f"Found LceQuantize with illegal input shape {input_shape}"
+            )
+        return False
+

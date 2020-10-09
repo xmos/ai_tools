@@ -85,40 +85,7 @@ void bnn_reorder_multiplier_and_bias_tensors(
   }
 }
 
-
-void bnn_reorder_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
-                               const unsigned k_height, const unsigned k_width,
-                               const unsigned chans_in,
-                               const unsigned chans_out) {
-  unsigned chan_b256_in =
-      (chans_in + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
-
-  bnn_b256_t(*K_ref)[k_height][k_width][chan_b256_in] =
-      (bnn_b256_t(*)[k_height][k_width][chan_b256_in])K_ref_p;
-
-  bnn_b256_t(*K)[k_height][k_width][chan_b256_in][ACC_PERIOD] =
-      (bnn_b256_t(*)[k_height][k_width][chan_b256_in][ACC_PERIOD])K_p;
-
-  for (unsigned output_chan_group = 0; output_chan_group < chans_out / ACC_PERIOD; 
-      output_chan_group++) {
-    for (unsigned h = 0; h < k_height; h++) {
-      for (unsigned w = 0; w < k_width; w++) {
-        for (unsigned ic = 0; ic < chan_b256_in; ic++) {
-          for (unsigned sub_grp_idx = 0; sub_grp_idx < ACC_PERIOD; sub_grp_idx++) {
-
-            memcpy(&K[output_chan_group][h][w][ic][ACC_PERIOD - 1 - sub_grp_idx],
-              &K_ref[output_chan_group * ACC_PERIOD + sub_grp_idx][h][w][ic], 
-              sizeof(bnn_b256_t));
-          }
-        }
-      }
-    }
-  }
-}
-
-
-
-void bnn_reorder_kernel_tensor2(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
+void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
                                const unsigned chans_out, 
@@ -147,7 +114,7 @@ void bnn_reorder_kernel_tensor2(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
   for (unsigned output_chan_group = 0; output_chan_group < output_channel_groups; 
       output_chan_group++) {
 
-    bnn_b32_t * p = &K[output_chan_group];
+    bnn_b32_t * p = (bnn_b32_t *)&K[output_chan_group];
 
     //copy the groups of 256 input channels
     for (unsigned ic_group=0;ic_group < complete_256_bit_groups; ic_group++){
@@ -172,15 +139,23 @@ void bnn_reorder_kernel_tensor2(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
         p += remaining_input_channels;
       }   
     }
-    assert(p ==  &(K[output_chan_group+1]));
+    assert(p ==  (bnn_b32_t *)&(K[output_chan_group+1]));
   }
 
-  memset(&(K[output_channel_groups]), 0xaa, sizeof(bnn_b32_t)*8);//TODO this could be 7?
+  //This is for the case of no overlap in the kernels
+  if(chan_overlaps == 0)
+    return;
+
+  //Code only gets here if there is no overlap and hence no need to insert padding.
+
+  //The filler value could be anything it just needs to be a known value
+  char filler = 0x55;
+  memset(&(K[output_channel_groups]), filler, sizeof(bnn_b32_t)*NN_BCONV2D_KERNEL_OVERRUN_WORDS);
   
   for (unsigned output_chan_group = 0; output_chan_group < output_channel_groups; 
       output_chan_group++) {
 
-    bnn_b32_t * p = &(K[output_chan_group]);
+    bnn_b32_t * p = (bnn_b32_t *)&(K[output_chan_group]);
 
     p += (8*ACC_PERIOD*complete_256_bit_groups);
     
@@ -248,7 +223,7 @@ void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
 
 
 WEAK_FUNC
-void bnn_conv2d_bin_out_patch(bnn_b32_t* Y_p,
+void bnn_conv2d_bin_out_SISO(bnn_b32_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, const int32_t* thresholds,
     bnn_b32_t * data_scratch,
     

@@ -85,10 +85,11 @@ void bnn_reorder_multiplier_and_bias_tensors(
  * @param chans_in    [in]     The number of input channels
  * @param chans_out   [in]     The number of output channels
  */
-void bnn_reorder_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
-                               const unsigned chans_out);
+                               const unsigned chans_out, 
+                               int * chan_overlaps) ;
 
 
 /**  
@@ -207,7 +208,7 @@ void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
 );
 
 //TODO 
-void bnn_conv2d_bin_out_patch_valid(bnn_b32_t* Y_p,
+void bnn_conv2d_bin_out_SISO_valid(bnn_b32_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, const int32_t* thresholds_p,
     bnn_b32_t * data_scratch, 
 
@@ -267,7 +268,7 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
 );
 
 //TODO
-void bnn_conv2d_bin_out_patch(bnn_b32_t* Y_p,
+void bnn_conv2d_bin_out_SISO(bnn_b32_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, const int32_t* thresholds_p,
     bnn_b32_t * data_scratch, 
     const nn_image_params_t* x, //The full image of x

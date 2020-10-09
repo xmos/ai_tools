@@ -26,7 +26,7 @@ void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
         k_loc_x,  k_loc_y, k_sub_width,  k_sub_height);
 }
 
-void bnn_conv2d_bin_out_patch_valid(bnn_b32_t* Y_p,
+void bnn_conv2d_bin_out_SISO_valid(bnn_b32_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, const int32_t* thresholds_p,
     bnn_b32_t * data_scratch, 
 
@@ -45,7 +45,7 @@ void bnn_conv2d_bin_out_patch_valid(bnn_b32_t* Y_p,
     unsigned k_sub_width = k->shape.width;
     unsigned k_sub_height = k->shape.height;
 
-    bnn_conv2d_bin_out_patch(Y_p, X_p, K_p, thresholds_p, data_scratch,
+    bnn_conv2d_bin_out_SISO(Y_p, X_p, K_p, thresholds_p, data_scratch,
         x,  y, k, 
         y_loc_x, y_loc_y,
         y_sub_width, y_sub_height,

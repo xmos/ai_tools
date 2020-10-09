@@ -99,7 +99,7 @@ void bnn_conv2d_bin_out_asm_prepare(
   plan->k_v_step = 0;
   plan->k_h_step = 0;
 
-  plan->y_v_step = sizeof(bnn_b32_t) * (y->width - y_sub_width);
+  plan->y_v_step = chan_b32_out*sizeof(bnn_b32_t) * (y->width - y_sub_width);
   
 }
 
@@ -133,15 +133,15 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
 
 //Patch to Col version
 
-void bnn_conv2d_bin_out_patch_asm(nn_bnn_conv2d_bin_out_patch_asm_plan_t * plan);
+void bnn_conv2d_bin_out_SISO_asm(nn_bnn_conv2d_bin_out_SISO_asm_plan_t * plan);
 
 /*
  * optimisation: if there are no dilations then for anything greater than a 1x1 pretend that the 
  * kernel is a nx1 i.e. long rows with a single coloumn, that way the pixel copies will be merged
  * and fewer loads and stores will execute with less loop overhead. 
  */
-void bnn_conv2d_bin_out_patch_asm_prepare(
-    nn_bnn_conv2d_bin_out_patch_asm_plan_t* plan, bnn_b32_t* Y_p,
+void bnn_conv2d_bin_out_SISO_asm_prepare(
+    nn_bnn_conv2d_bin_out_SISO_asm_plan_t* plan, bnn_b32_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, const int32_t* thresholds_p,
     bnn_b32_t * data_scratch,
     const nn_image_params_t* x, 
@@ -242,10 +242,10 @@ void bnn_conv2d_bin_out_patch_asm_prepare(
   assert(k_sub_height == k->shape.height); //until the following two lines are working
   assert(k_sub_width == k->shape.width); //until the following two lines are working
 
-  plan->y_v_step = sizeof(bnn_b32_t) * (y->width - y_sub_width);
+  plan->y_v_step = chan_b32_out * sizeof(bnn_b32_t) * (y->width - y_sub_width);
 }
 
-void bnn_conv2d_bin_out_patch(bnn_b32_t* Y_p,
+void bnn_conv2d_bin_out_SISO(bnn_b32_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, const int32_t* thresholds_p,
     bnn_b32_t * data_scratch, 
     const nn_image_params_t* x, //The full image of x
@@ -261,15 +261,15 @@ void bnn_conv2d_bin_out_patch(bnn_b32_t* Y_p,
     const unsigned k_sub_width, const unsigned k_sub_height
 ) {
 
-    nn_bnn_conv2d_bin_out_patch_asm_plan_t plan;
+    nn_bnn_conv2d_bin_out_SISO_asm_plan_t plan;
 
-    bnn_conv2d_bin_out_patch_asm_prepare(&plan, Y_p,
+    bnn_conv2d_bin_out_SISO_asm_prepare(&plan, Y_p,
         X_p,  K_p, thresholds_p, data_scratch, 
         x,  y, k, 
         y_loc_x, y_loc_y, y_sub_width, y_sub_height,
         x_loc_x, x_loc_y, 
         k_loc_x, k_loc_y, k_sub_width, k_sub_height);
 
-    bnn_conv2d_bin_out_patch_asm(&plan);
+    bnn_conv2d_bin_out_SISO_asm(&plan);
 }
 #endif

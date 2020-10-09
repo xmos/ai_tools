@@ -1,5 +1,7 @@
 #include "nn_bin_types.h"
 
+#define NN_BCONV2D_KERNEL_OVERRUN_WORDS 8
+
 /**
  * Struct represents the parameters needed by each
  * `bnn_conv2d_bin_out_asm()` job.
@@ -67,7 +69,7 @@ typedef struct {
   int k_p_adjust;    //the amount to advance the kernel pointer after applying it
   bnn_b32_t* Y;
 
-} nn_bnn_conv2d_bin_out_patch_asm_plan_t;
+} nn_bnn_conv2d_bin_out_SISO_asm_plan_t;
 
 
 /**

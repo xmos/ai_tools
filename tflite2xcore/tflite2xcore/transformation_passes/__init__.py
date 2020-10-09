@@ -93,4 +93,5 @@ from .lce_passes import (
     ReplaceBconv2DInt8OutPass,
     ReplaceBconv2DBitpackedOutPass,
     ReplaceLceQuantizePass,
+    LegalizeXCBconv2DPaddingPass,
 )

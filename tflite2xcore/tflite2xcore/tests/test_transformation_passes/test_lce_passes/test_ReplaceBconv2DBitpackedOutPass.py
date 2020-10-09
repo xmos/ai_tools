@@ -13,11 +13,8 @@ from . import (  # pylint: disable=unused-import
     test_matching_params,
     test_non_matching_tensors,
     test_non_matching_input_channels,
-    test_mutate,
 )
-from .test_ReplaceBconv2DInt8OutPass import (  # pylint: disable=unused-import
-    test_mutate as _test_mutate,
-)
+from .test_ReplaceBconv2DInt8OutPass import test_mutate  # pylint: disable=unused-import
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES

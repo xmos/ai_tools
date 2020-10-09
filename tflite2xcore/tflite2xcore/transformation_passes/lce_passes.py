@@ -159,10 +159,10 @@ class SplitPaddingFromConvPass(LceConv2dPass):
         padding_tb = SplitPaddingFromConvPass._calc_pad(strides[0], height, K_h)
         padding_lr = SplitPaddingFromConvPass._calc_pad(strides[1], width, K_w)
         paddings = [[pad] * 2 for pad in (0, padding_tb, padding_lr, 0)]
-        padding_tensor = subgraph.create_tensor(
-            f"{op.name}/paddings", TensorType.INT32, shape=[4, 2]
-        )
-        padding_tensor.buffer.data = np.int32(paddings)
+        # padding_tensor = subgraph.create_tensor(
+        #    f"{op.name}/paddings", TensorType.INT32, shape=[4, 2]
+        # )
+        # padding_tensor.buffer.data = np.int32(paddings)
 
         pad_output_shape = tuple(
             input_dim + sum(pad) for input_dim, pad in zip(old_input.shape, paddings)
@@ -178,7 +178,7 @@ class SplitPaddingFromConvPass(LceConv2dPass):
         # Note, going foward a builtin.PAD will be inserted, to be replaced by a later pass
         pad_op = subgraph.create_operator(
             OperatorCode(opcode=XCOREOpCodes.XC_pad),
-            inputs=[old_input, padding_tensor],
+            inputs=[old_input],
             outputs=[pad_output_tensor],
         )
 
@@ -187,7 +187,18 @@ class SplitPaddingFromConvPass(LceConv2dPass):
         subgraph.insert_operator(op, pad_op)
 
         # Pass on pad values from conv to pad op
-        pad_op.custom_options["pad_values"] = op.custom_options["pad_values"]
+        pad_value = op.custom_options["pad_values"]
+
+        if pad_value != -1 and pad_value != 1:
+            raise ValueError("Unsupported pad value: " + str(pad_value))
+
+        if pad_value == 1:
+            pad_value = 0
+        else:
+            pad_value = 1
+
+        pad_op.custom_options["pad_values"] = pad_value
+        pad_op.custom_options["padding_values"] = [padding_tb, 0, padding_lr, 0]
 
         bytes_per_pixel = C_in * 4
 

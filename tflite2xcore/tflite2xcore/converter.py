@@ -25,7 +25,7 @@ class InputOutputCanonicalizationManager(PassManager):
             passes=[
                 passes.CanonicalizeQuantizedInputPass(),
                 passes.CanonicalizeQuantizedOutputPass(),
-                # pass_mgr.register_pass(passes.CanonicalizeLceQuantizedOutputPass())  # TODO: enable when ready
+                passes.CanonicalizeLceQuantizedOutputPass(),
             ],
             **kwargs,
         )

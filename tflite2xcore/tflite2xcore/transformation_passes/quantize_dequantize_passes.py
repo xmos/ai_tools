@@ -95,26 +95,24 @@ class CanonicalizeQuantizedOutputPass(QuantizedOperatorMatchingPass):
 
     def match(self, op: Operator) -> bool:
         if super().match(op):
-            input_tensor, output_tensor = op.inputs[0], op.outputs[0]
-
             try:
-                if op.operator_code.code is not self._matching_opcode:
+                if op.operator_code.code is not self.matching_opcode:
                     return False
             except AttributeError:
                 return False
 
+            output_tensor = op.outputs[0]
             if (
                 output_tensor in op.subgraph.outputs
                 and not output_tensor.consumers
-                and input_tensor not in op.subgraph.inputs
+                and op.inputs[0] not in op.subgraph.inputs
             ):
                 if len(output_tensor.producers) == 1:
                     return True
                 else:
                     self.logger.warning(
-                        "Encountered output of removable "
-                        + str(self._matching_opcode)
-                        + " with more than one producer."
+                        f"Encountered output of removable {self.matching_opcode} "
+                        "with more than one producer."
                     )
 
         return False
@@ -126,13 +124,14 @@ class CanonicalizeQuantizedOutputPass(QuantizedOperatorMatchingPass):
         subgraph.remove_operator(op)
 
 
+# TODO consider adding tests for this
 class CanonicalizeLceQuantizedOutputPass(CanonicalizeQuantizedOutputPass):
     @property
-    def _matching_input_tensor_type(self) -> TensorType:
+    def matching_input_type(self) -> TensorType:
         return TensorType.INT32
 
     @property
-    def _matching_opcode(self) -> ValidOpCodes:
+    def matching_opcode(self) -> ValidOpCodes:
         return ExternalOpCodes.add_new_opcode("LceDequantize")
 
 

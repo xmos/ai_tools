@@ -66,11 +66,15 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
         if super().match(op) and len(op.inputs) == 3:
             with self.using(op):
                 inferred_input_channels = self._weights.shape[3] * WORD_SIZE_BITS
-                return (
-                    inferred_input_channels == self._input_channels
+                if inferred_input_channels == self._input_channels:
                     # number of input channels must be multiple of 256
-                    and inferred_input_channels % VECTOR_SIZE_BITS == 0
-                )
+                    return inferred_input_channels % VECTOR_SIZE_BITS == 0
+                else:
+                    self.logger.warning(
+                        f"Found {self.matching_opcode} operator "
+                        f"with {self._input_channels} "
+                        "(not a multiple of 32) input channels."
+                    )
 
         return False
 

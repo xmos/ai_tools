@@ -14,6 +14,7 @@ from tflite2xcore.xcore_schema import (
     ExternalOpCodes,
     XCOREOpCodes,
 )
+from tflite2xcore.utils import calculate_same_output_size, calculate_valid_output_size
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
     generate_dummy_int8_data,
@@ -59,7 +60,7 @@ def update_lce_params(PARAMS: ParamsType) -> ParamsType:
 
 
 PARAMS["extended"].update(
-    {"input_channels": [256, 512, 1024], "non_matching_input_channels": [32, 128, 288],}
+    {"input_channels": [256, 512, 1024], "non_matching_input_channels": [48, 128, 245]}
 )
 
 #  ----------------------------------------------------------------------------
@@ -106,17 +107,11 @@ def build_lceBconv2d(
 
     # the given shapes are not bitpacked (i.e. true channel counts)
     # so we bitpack them
-    height, width = input_size
-    C_out, K_h, K_w, C_in = weight_shape
-    assert C_in % 32 == 0
-    bitpacked_input_channels = C_in // 32
-    if output_tensor_type is TensorType.INT32:
-        assert C_out % 32 == 0
-        C_out //= 32
+    C_out, _, _, C_in = weight_shape
+    bitpacked_input_channels = int(np.ceil(C_in / 32))
+    weight_shape = (*weight_shape[:3], bitpacked_input_channels)
 
-    weight_shape = (C_out, K_h, K_w, bitpacked_input_channels)
-
-    input_shape = [1, height, width, bitpacked_input_channels]
+    input_shape = [1, *input_size, bitpacked_input_channels]
     tin = subgraph.create_tensor("input", TensorType.INT32, input_shape, isinput=True)
     w = subgraph.create_tensor("weights", TensorType.INT32, weight_shape)
     output_threshold = subgraph.create_tensor(
@@ -128,18 +123,16 @@ def build_lceBconv2d(
     output_threshold.buffer.data = generate_dummy_int32_data(output_threshold.shape)
 
     if padding is Padding.SAME:
-        # TODO: this is incorrect if stride > 1
-        output_shape = [1, height, width, C_out]
+        output_size = calculate_same_output_size(input_size, strides)
     elif padding is Padding.VALID:
-        output_shape = [
-            1,
-            int(np.ceil((height - K_h + 1) / strides[0])),
-            int(np.ceil((width - K_w + 1) / strides[1])),
-            C_out,
-        ]
+        output_size = calculate_valid_output_size(
+            input_size, strides, weight_shape[1:3]
+        )
+    else:
+        raise ValueError(f"Unsupported padding: {padding}")
 
     tout = subgraph.create_tensor(
-        "output", output_tensor_type, shape=output_shape, isoutput=True
+        "output", output_tensor_type, shape=(1, *output_size, C_out), isoutput=True
     )
 
     subgraph.create_operator(

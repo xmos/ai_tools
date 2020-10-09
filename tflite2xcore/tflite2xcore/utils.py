@@ -4,13 +4,11 @@ import os
 import re
 import random
 import argparse
-import sys
-import importlib
 import logging
 import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 from functools import wraps
-from types import ModuleType, TracebackType
+from types import TracebackType
 from typing import (
     Union,
     Optional,
@@ -23,7 +21,12 @@ from typing import (
     NamedTuple,
     Iterator,
     List,
+    Tuple,
 )
+
+# -----------------------------------------------------------------------------
+#                          WIDELY USED TYPES
+# -----------------------------------------------------------------------------
 
 
 class QuantizationTuple(NamedTuple):
@@ -32,6 +35,8 @@ class QuantizationTuple(NamedTuple):
 
 
 TFLiteModel = Union[bytes, bytearray]
+PaddingTuple = Tuple[Tuple[int, int], ...]
+ShapeTuple = Tuple[int, ...]
 
 
 # -----------------------------------------------------------------------------
@@ -40,6 +45,12 @@ TFLiteModel = Union[bytes, bytearray]
 
 VE, ACC_PERIOD, WORD_SIZE = 32, 16, 4
 
+# TODO these constants could do with consistant naming
+WORD_SIZE_BYTES = 4
+WORD_SIZE_BITS = WORD_SIZE_BYTES * 8
+VECTOR_SIZE_WORDS = 8
+VECTOR_SIZE_BYTES = VECTOR_SIZE_WORDS * 4
+VECTOR_SIZE_BITS = VECTOR_SIZE_BYTES * 8
 
 # -----------------------------------------------------------------------------
 #                            REPRODUCIBILITY
@@ -290,3 +301,44 @@ def quantize_keras_model(
         converter, representative_data, show_progress_step=show_progress_step
     )
     return converter.convert()
+
+
+# -----------------------------------------------------------------------------
+#                       SHAPE COMPUTATION HELPERS
+# -----------------------------------------------------------------------------
+
+
+def _calculate_valid_output_size(in_size: int, stride: int, k_dim: int) -> int:
+    assert in_size >= k_dim
+    return int(np.ceil((in_size - k_dim + 1) / stride))
+
+
+def calculate_valid_output_size(
+    input_size: ShapeTuple, strides: ShapeTuple, kernel_size: ShapeTuple
+) -> ShapeTuple:
+    return tuple(
+        _calculate_valid_output_size(*t) for t in zip(input_size, strides, kernel_size)
+    )
+
+
+def _calculate_same_output_size(in_size: int, stride: int) -> int:
+    return int(np.ceil(in_size / stride))
+
+
+def calculate_same_output_size(
+    input_size: ShapeTuple, strides: ShapeTuple
+) -> ShapeTuple:
+    return tuple(_calculate_same_output_size(*t) for t in zip(input_size, strides))
+
+
+def calculate_same_padding(
+    input_size: ShapeTuple, strides: ShapeTuple, kernel_size: ShapeTuple
+) -> PaddingTuple:
+    def calc_axis_pad(in_size: int, stride: int, k_dim: int) -> Tuple[int, int]:
+        out_size = _calculate_same_output_size(in_size, stride)
+        total_pad = max((out_size - 1) * stride + k_dim - in_size, 0)
+        pad_start = total_pad // 2
+        return (pad_start, total_pad - pad_start)
+
+    return tuple(calc_axis_pad(*t) for t in zip(input_size, strides, kernel_size))
+

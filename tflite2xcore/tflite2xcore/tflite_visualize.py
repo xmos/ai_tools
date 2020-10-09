@@ -478,9 +478,7 @@ class CustomOptionsMapper:
 
     def __call__(self, custom_options):
         return (
-            json.loads(FlexbufferParser().parse(bytes(custom_options)))
-            if custom_options
-            else None
+            FlexbufferParser().parse(bytes(custom_options)) if custom_options else None
         )
 
 

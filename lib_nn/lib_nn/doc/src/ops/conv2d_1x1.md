@@ -25,9 +25,6 @@ input pixel to produce the corresponding output pixel. In this conception, the m
 vector's elements are the input channels for a given input pixel, and the output vector's elements are the output channels for the 
 corresponding output pixel.
 
-The @oper{conv2d_1x1} operator requires a plan and one or more jobs to be initialized before it can be invoked. See 
-@ref conv2d_1x1_api below.
-
 The @oper_ref{conv2d_deep}, @oper_ref{conv2d_shallowin}, and @oper_ref{conv2d_depthwise} operators are alternative 2D convolution operators
 optimized for different circumstances.
 
@@ -35,8 +32,7 @@ optimized for different circumstances.
 
 #### Hyperparameters        {#conv2d_1x1_hyperparams}
 
-The following are the hyperparameters of @oper{conv2d_1x1}. The hyperparameters for an instance of an operator are fixed at initialization. 
-Instances of the @oper{conv2d_1x1} operator that share the same hyperparameters may also share the same plan and jobs.
+The following are the hyperparameters of @oper{conv2d_1x1}.
 
 @par
 
@@ -58,8 +54,7 @@ Instances of the @oper{conv2d_1x1} operator that share the same hyperparameters 
 
 #### Data Parameters
 
-The following are input and output parameters of @oper{conv2d_1x1}. These parameters are supplied only when the job invocation occurs,
-and may change from invocation to invocation.
+The following are input and output parameters of @oper{conv2d_1x1}.
 
 @par
 
@@ -106,24 +101,6 @@ the remaining parameters are as described above.
 ### Example Diagram
 
 @todo Create diagram
-
-### API                     {#conv2d_1x1_api}
-
-Invoking an instance of @oper{conv2d_1x1} is done with a call to conv2d_1x1(). conv2d_1x1() takes a pointer to an initialized plan 
-(instance of `nn_conv2d_1x1_plan_t`) and an initialized job (instance of `nn_conv2d_1x1_job_t`). Initialization is done with a call
-to conv2d_1x1_init().
-
-Each call to conv2d_1x1() will execute exactly one job. A @oper{conv2d_1x1} job computes a sequence of outputs that are contiguous in
-the output image's memory (which can be the entire image if only one job is desired). For each job the user indicates a starting index
-in the output image (i.e. the index of an element if the output array was flattened to one dimension) and the number of elements to be 
-computed by that job. See conv2d_1x1_init() for more details (and constraints).
-
-It is the user's responsibility to ensure that all initialized jobs collectively compute the entire output image (no gaps) and do not
-compute outputs redundantly (overlapping jobs).
-
-If a network uses multiple instances of the @oper{conv2d_1x1} operator, they may share the structs representing the plan and any jobs 
-*if and only if* the instances share identical hyperparameters (see @ref conv2d_1x1_hyperparams).
-
 
 ### Configuration Options
 

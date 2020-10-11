@@ -4,173 +4,6 @@
 #include "nn_conv2d_int8_structs.h"
 
 
-// /** 
-//  * @brief Initialize an instance of the @oper{conv2d_deep} operator.
-//  * 
-//  * See @oper_ref{conv2d_deep} for more details about the @oper{conv2d_deep} operator. To invoke a @oper{conv2d_deep} 
-//  * job, call conv2d_deep().
-//  * 
-//  * When conv2d_deep() is called, a plan (`nn_conv2d_deep_plan_t`) and a job (`nn_conv2d_deep_job_t`) must be supplied 
-//  * to tell it how to do its work. This function initializes that plan and one or more jobs to be supplied in subsequent 
-//  * calls to conv2d_deep().
-//  * 
-//  * A plan contains information shared by all jobs of an instance of @oper{conv2d_deep}. Each job computes a rectangular 
-//  * sub-tensor of the output image (possibly the entire image).
-//  * 
-//  * `plan` points to the plan to be initialized. It need only be initialized once for many calls to conv2d_deep().
-//  * 
-//  * `jobs` points to an array of `nn_conv2d_deep_job_t` to be initialized. Each element represents one job. There should 
-//  * be `job_count` elements in the array.
-//  * 
-//  * `x_params` points to the image parameters for the instance's input image @tensor{X}.
-//  * 
-//  * `y_params` points to the image parameters for the instance's output image @tensor{Y}.
-//  * 
-//  * `job_params` points to either an array of `nn_conv2d_job_params_t` structs or else is `NULL`. A `job_params` value of  
-//  * `NULL` indicates that there will only be a single job which computes the entire output image. If `job_params` is 
-//  * `NULL`, then `job_count` must be `1`. If `job_params` is not `NULL`, it must point to an array of `job_count` 
-//  * `nn_conv2d_job_params_t` elements.
-//  * 
-//  * In particular, job `k` will compute the output elements @math{Y[r,c,p]} for which:
-//  * @inlinecode
-//  *     job_params[k].start.rows <= r < job_params[k].start.rows + job_params[k].size.rows
-//  *     job_params[k].start.cols <= c < job_params[k].start.cols + job_params[k].size.cols
-//  *     job_params[k].start.channels <= p < job_params[k].start.channels + job_params[k].size.channels
-//  * @endinlinecode
-//  * 
-//  * If multiple jobs are specified, it is the user's responsibility to ensure that the supplied list of job params 
-//  * collectively computes the entire output image (no gaps) and does not compute any output values redundantly (no 
-//  * overlap).
-//  * 
-//  * `conv_window` points to a `nn_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
-//  * @math{W_{vert}), @math{W_{hori}), @math{W_{r0}) and @math{W_{c0}} hyperparameters (see @ref 
-//  * conv2d_deep_hyperparameters) which describe the relationship between the input image, the convolution window and the 
-//  * output image.
-//  * 
-//  * `conv_window->shape` specified @math{K_w} and @math{K_h}, the height and width of the convolution window. 
-//  * 
-//  * `conv_window->start` specifies @math{W_{r0}} and @math{W_{c0}}, the starting row and column of the convolution window 
-//  * in @tensor{X}'s coordinate space. For example, a `start` value of `(0,0)` indicates that the top-left pixel of the 
-//  * output image has the convolution window aligned with the top-left corner of the input image, with no implied padding 
-//  * at the top or left sides of the input image.
-//  * 
-//  * `conv_window->stride.horizontal` specifies @math{W_{vert}} and @math{W_{hori}}, the vertical and horizontal strides 
-//  * of the convolution window. The strides describe the number of pixels the convolution window moves (across the input 
-//  * image) with each pixel in the output image.
-//  * 
-//  * `zero_point` specifies @math{z_0}, the value associated with the (implied) padding space around the input image. For 
-//  * any output pixel whereupon the corresponding convolution window location in the input image extends beyond the bounds 
-//  * of the input image, those coefficients in the convolution window which are in the padding are multiplied by 
-//  * @math{z_0} rather than by values from the input image. All input channels currently share a common zero-point value.
-//  * 
-//  * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array), as 
-//  * well the number of elements in the `job_params` array if it is not `NULL`.
-//  * 
-//  * 
-//  * @param[out] plan         The plan to be initialized
-//  * @param[out] jobs         Array of jobs to be initialized
-//  * @param[in]  x_params     Parameters describing the shape of input image tensor @tensor{X}
-//  * @param[in]  y_params     Parameters describing the shape of output image tensor @tensor{Y}
-//  * @param[in]  job_params   Array with configuration parameters for each job, or `NULL`
-//  * @param[in]  conv_window  Parameters describing the relationship between the convolution window, the input image and 
-//  *                          the output image
-//  * @param[in]  zero_point   The value @math{z_0} to be used for padding (for all channels)
-//  * @param[in]  job_count    The number of jobs to initialize
-//  */
-// void conv2d_deep_init(
-//     nn_conv2d_deep_plan_t* plan,
-//     nn_conv2d_deep_job_t* jobs,
-//     const nn_image_params_t* x_params,
-//     const nn_image_params_t* y_params,
-//     const nn_conv2d_job_params_t* job_params,
-//     const nn_window_params_t* conv_window,
-//     const int8_t zero_point,
-//     const unsigned job_count);
-
-
-
-// /** 
-//  * @brief Initialize an instance of the @oper{conv2d_shallowin} operator.
-//  * 
-//  * See @oper_ref{conv2d_shallowin} for more details about the @oper{conv2d_shallowin} operator. To invoke a 
-//  * @oper{conv2d_shallowin} job, call conv2d_shallowin().
-//  * 
-//  * When conv2d_shallowin() is called, a plan (`nn_conv2d_shallowin_plan_t`) and a job (`nn_conv2d_shallowin_job_t`) must 
-//  * be supplied to tell it how to do its work. This function initializes that plan and one or more jobs to be supplied in 
-//  * subsequent calls to conv2d_shallowin().
-//  * 
-//  * A plan contains information shared by all jobs of an instance of @oper{conv2d_shallowin}. Each job computes a 
-//  * rectangular sub-tensor of the output image (possibly the entire image).
-//  * 
-//  * `plan` points to the plan to be initialized. It need only be initialized once for many calls to conv2d_shallowin().
-//  * 
-//  * `jobs` points to an array of `nn_conv2d_shallowin_job_t` to be initialized. Each element represents one job. There 
-//  * should be `job_count` elements in the array.
-//  * 
-//  * `x_params` points to the image parameters for the instance's input image @tensor{X}.
-//  * 
-//  * `y_params` points to the image parameters for the instance's output image @tensor{Y}.
-//  * 
-//  * `job_params` points to either an array of `nn_conv2d_job_params_t` structs or else is `NULL`. A `job_params` value of 
-//  * `NULL` indicates that there will only be a single job which computes the entire output image. If `job_params` is 
-//  * `NULL`, then `job_count` must be `1`. If `job_params` is not `NULL`, it must point to an array of `job_count` 
-//  * `nn_conv2d_job_params_t` elements.
-//  * 
-//  * In particular, job `k` will compute the output elements @math{Y[r,c,p]} for which:
-//  * @inlinecode
-//  *     job_params[k].start.rows <= r < job_params[k].start.rows + job_params[k].size.rows
-//  *     job_params[k].start.cols <= c < job_params[k].start.cols + job_params[k].size.cols
-//  *     job_params[k].start.channels <= p < job_params[k].start.channels + job_params[k].size.channels
-//  * @endinlinecode
-//  * 
-//  * If multiple jobs are specified, it is the user's responsibility to ensure that the supplied list of job params 
-//  * collectively computes the entire output image (no gaps) and does not compute any output values redundantly (no 
-//  * overlap).
-//  * 
-//  * `conv_window` points to a `nn_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
-//  * @math{W_{vert}}, @math{W_{hori}}, @math{W_{r0}} and @math{W_{c0}} hyperparameters (see @ref 
-//  * conv2d_shallowin_hyperparameters) which describe the relationship between the input image, the convolution window and 
-//  * the output image.
-//  * 
-//  * `conv_window->shape` specified @math{K_w} and @math{K_h}, the height and width of the convolution window. 
-//  * 
-//  * `conv_window->start` specifies @math{W_{r0}} and @math{W_{c0}}, the starting row and column of the convolution window 
-//  * in @tensor{X}'s coordinate space. For example, a `start` value of `(0,0)` indicates that the top-left pixel of the 
-//  * output image has the convolution window aligned with the top-left corner of the input image, with no implied padding 
-//  * at the top or left sides of the input image.
-//  * 
-//  * `conv_window->stride.horizontal` specifies @math{W_{vert}} and @math{W_{hori}}, the vertical and horizontal strides 
-//  * of the convolution window. The strides describe the number of pixels the convolution window moves (across the input 
-//  * image) with each pixel in the output image.
-//  * 
-//  * `zero_point` specifies @math{z_0}, the value associated with the (implied) padding space around the input image. For 
-//  * any output pixel whereupon the corresponding convolution window location in the input image extends beyond the bounds 
-//  * of the input image, those coefficients in the convolution window which are in the padding are multiplied by 
-//  * @math{z_0} rather than by values from the input image. All input channels currently share a common zero-point value.
-//  * 
-//  * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array), as 
-//  * well the number of elements in the `job_params` array if it is not `NULL`.
-//  * 
-//  * 
-//  * @param[out] plan         The plan to be initialized
-//  * @param[out] jobs         Array of jobs to be initialized
-//  * @param[in]  x_params     Parameters describing the shape of input image tensor @tensor{X}
-//  * @param[in]  y_params     Parameters describing the shape of output image tensor @tensor{Y}
-//  * @param[in]  job_params   Array with configuration parameters for each job, or `NULL`
-//  * @param[in]  conv_window  Parameters describing the relationship between the convolution window, the input image and 
-//  *                          the output image
-//  * @param[in]  zero_point   The value @math{z_0} to be used for padding (for all channels)
-//  * @param[in]  job_count    The number of jobs to initialize
-//  */
-// void conv2d_shallowin_init(
-//     nn_conv2d_shallowin_plan_t* plan,
-//     nn_conv2d_shallowin_job_t* jobs,
-//     const nn_image_params_t* x_params,
-//     const nn_image_params_t* y_params,
-//     const nn_conv2d_job_params_t* job_params,
-//     const nn_window_params_t* conv_window,
-//     const int8_t zero_point,
-//     const unsigned job_count);
 
 
 /** 
@@ -258,102 +91,108 @@ void conv2d_im2col_init(
 
 
 
-// /** 
-//  * @brief Initialize an instance of the @oper{conv2d_1x1} operator.
-//  * 
-//  * See @oper_ref{conv2d_1x1} for more details about the @oper{conv2d_1x1} operator. To invoke a @oper{conv2d_1x1} job, 
-//  * call conv2d_1x1().
-//  * 
-//  * When conv2d_1x1() is called, a plan (`nn_conv2d_1x1_plan_t`) and a job (`nn_conv2d_1x1_job_t`) must be supplied 
-//  * to tell it how to do its work. This function initializes that plan and one or more jobs to be supplied in subsequent 
-//  * calls to conv2d_1x1().
-//  * 
-//  * A plan contains information shared by all jobs of an instance of @oper{conv2d_1x1}. Each job computes a range of the
-//  * output channels for a contiguous sequence of pixels (when the image is flattened row by row), possibly including the
-//  * entire output image.
-//  * 
-//  * `plan` points to the plan to be initialized. It need only be initialized once for many calls to conv2d_1x1().
-//  * 
-//  * `jobs` points to an array of `nn_conv2d_1x1_job_t` to be initialized. Each element represents one job. There should 
-//  * be `job_count` elements in the array.
-//  * 
-//  * `x_params` points to the image parameters for the instance's input image @tensor{X}.
-//  * 
-//  * `y_params` points to the image parameters for the instance's output image @tensor{Y}.
-//  * 
-//  * `job_params` points to either an array of `nn_conv2d_1x1_job_params_t` structs or else is `NULL`. A `job_params` 
-//  * value of `NULL` indicates that there will only be a single job which computes the entire output image. If 
-//  * `job_params` is `NULL`, then `job_count` must be `1`. If `job_params` is not `NULL`, it must point to an array of 
-//  * `job_count` `nn_conv2d_1x1_job_params_t` elements.
-//  * 
-//  * In particular, job `k` will start computing outputs at row `job_params[k].start.rows` and column 
-//  * `job_params[k].start.cols` of the output image. It will compute outputs for `job_params[k].size.pixels` pixels, 
-//  * increasing the column index until the end of the row, then moving to column 0 of the following row. The job will
-//  * compute out channels `job_params[k].start.channels` through `job_params[k].size.channels - 1` (inclusive).
-//  * 
-//  * If multiple jobs are specified, it is the user's responsibility to ensure that the supplied list of job params 
-//  * collectively computes the entire output image (no gaps) and does not compute any output values redundantly (no 
-//  * overlap).
-//  * 
-//  * `job_count` indicates the number of jobs to be initialized (and thus the number of elements in the `jobs` array), as 
-//  * well the number of elements in the `job_params` array if it is not `NULL`.
-//  * 
-//  * @param[out] plan         The plan to be initialized
-//  * @param[out] jobs         Array of jobs to be initialized
-//  * @param[in]  x_params     Parameters describing the shape of input image tensor @tensor{X}
-//  * @param[in]  y_params     Parameters describing the shape of output image tensor @tensor{Y}
-//  * @param[in]  job_params   Array with configuration parameters for each job, or `NULL`
-//  * @param[in]  job_count    The number of jobs to initialize
-//  */
-// void conv2d_1x1_init(
-//     nn_conv2d_1x1_plan_t* plan,
-//     nn_conv2d_1x1_job_t* jobs,
-//     const nn_image_params_t* x_params,
-//     const nn_image_params_t* y_params,
-//     const nn_conv2d_1x1_job_params_t* job_params,
-//     const unsigned job_count);
+
+
 
 
 
 /**
- * @brief Execute @oper{conv2d_deep} job.
+ * @brief Invoke a @oper{conv2d_deep} job.
  * 
  * See @oper_ref{conv2d_deep} for more details about the @oper{conv2d_deep} operator.
  * 
- * An instance of the @oper{conv2d_deep} operator requires an initialized plan and one or more jobs. See 
- * conv2d_deep_init() for more details.
+ * @par Parameter Details
  * 
- * `Y` points to the output image @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}. The address supplied for `Y` 
- * should be the start address of the output image (for any job being processed).
+ * `Y` points to the output image @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}.
  * 
- * `X` points to the input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}. The address supplied for `X` should 
- * be the start address of the input image (for any job being processed).
+ * `X` points to the input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}.
  * 
  * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
  * standard_layout).
  * 
- * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, K_h, K_w, X_c}, which correspond to the 
- * output image channels, convolution window rows and columns, and the input image channels respectively. The address 
- * supplied for `K` should be the start address of the kernel tensor (for any job being processed).
+ * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, K_h, K_w, X_c}, which correspond to the
+ * output image channels (`y_params->channels`), convolution window rows (`conv_window->shape.height`), columns 
+ * (`conv_window->shape.width`) and input image channels (`x_params->channels`) respectively.
  * 
  * The memory layout of @tensor{K} is the standard memory layout for 4D tensors (see @ref standard_layout).
  * 
  * `BSO` points to an array of bias-scale-offset parameters required for this convolution. See @ref bso_layout for 
- * details on the encoding of this array. The address supplied for `BSO` should be the start address of the the array 
- * (for any job being processed).
+ * details on the encoding of this array.
  * 
- * `plan` points to the (initialized) plan associated with this instance of the @oper{conv2d_deep} operator.
+ * `zero_point` specifies @math{z_0}, the value associated with the (implied) padding space around the input image. For
+ * any output pixel whereupon the corresponding convolution window location in the input image extends beyond the bounds
+ * of the input image, those coefficients in the convolution window which are in the padding are multiplied by 
+ * @math{z_0} rather than by values from the input image. All input channels currently share a common zero-point value.
  * 
- * `job` points to the (initialized) job to be performed with this call.
+ * `x_params` points to the image parameters describing the shape of the input image @tensor{X}. The size of each of
+ * @tensor{X}'s dimensions, @math{X_h}, @math{X_w}, and @math{X_c} correspond to `x_params->height`, `x_params->width`,
+ * and `x_params->channels` respectively.
  * 
- * @requires_word_alignment{Y,X,K,BSO}
+ * `y_params` points to the image parameters describing the shape of the output image @tensor{Y}. The size of each of
+ * @tensor{Y}'s dimensions, @math{Y_h}, @math{Y_w}, and @math{Y_c} correspond to `y_params->height`, `y_params->width`,
+ * and `y_params->channels` respectively.
  * 
- * @param Y    [out]    The output image @tensor{Y}
- * @param X    [in]     The input image @tensor{X}
- * @param K    [in]     The kernel tensor @tensor{K}
- * @param BSO  [in]     The bias-scale-offset array
- * @param plan [in]     The @oper{conv2d_deep} plan to be processed
- * @param job  [in]     The @oper{conv2d_deep} job to be processed
+ * `conv_window` points to a `nn_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
+ * @math{W_{vert}}, @math{W_{hori}}, @math{W_{r0}} and @math{W_{c0}} hyperparameters (see @ref 
+ * conv2d_deep_hyperparameters) which describe the spacial relationship between the input image, the convolution 
+ * window and the output image. `conv_window->dilation` is ignored.
+ * 
+ * `conv_window->shape` specifies @math{K_h} and @math{K_w}, the height and width of the convolution window. 
+ * 
+ * `conv_window->start` specifies @math{W_{r0}} and @math{W_{c0}}, the starting row and column of the convolution window 
+ * in @tensor{X}'s coordinate space. For example, a `start` value of `(0,0)` indicates that the top-left pixel of the 
+ * output image has the convolution window aligned with the top-left corner of the input image, with no implied padding 
+ * at the top or left sides of the input image. A `start` value of `(-1,-1)`, on the other hand, indicates that the 
+ * top-left pixel of the output image has the convolution window shifted one pixel left and one pixel up relative to the
+ * top-left corner of the input image, with 1 pixel of implied top padding and 1 pixel of implied left padding.
+ * 
+ * `conv_window->stride.horizontal` specifies @math{W_{vert}} and @math{W_{hori}}, the vertical and horizontal strides 
+ * of the convolution window. The strides describe the number of pixels the convolution window moves (across the input 
+ * image) with each pixel in the output image.
+ * 
+ * @par Parameter Constraints
+ * 
+ * The arguments `Y`, `X`, `K` and `BSO` must each point to a word-aligned address.
+ * 
+ * Due to memory alignment requirements, @math{X_c} and @math{Y_c} must each be a multiple of @math{4}, which forces all 
+ * pixels to begin at word-aligned addresses.
+ * 
+ * While implied padding is supported by this operator, it does *not* support a scenario in which the entire convolution
+ * window is in padding (i.e. the convolution window does not overlap the input image) for any output pixel.
+ * 
+ * @par Splitting the Workload
+ * 
+ * See conv2d_deep_ext() for more advanced scenarios which allow the the work to be split across multiple invocations 
+ * (which can be parallelized across cores).
+ * 
+ * @par Additional Remarks
+ * 
+ * Internally, conv2d_deep() calls conv2d_deep_ext() with a `job_params` argument that computes the entire
+ * output image, and with no flags set. For more advanced scenarios, use conv2d_deep_ext().
+ * 
+ * By default this operator uses the standard 8-bit limits @math([-128, 127]) when applying saturation logic. Instead,
+ * it can be configured to use symmetric saturation bounds @math([-127, 127]) by defining 
+ * `CONFIG_SYMMETRIC_SATURATION_conv2d_deep` appropriately. See @ref nn_config.h for more details. Note that this
+ * configures _all_ instances of the @oper{conv2d_deep} operator.
+ * 
+ * If @math{X_c} is not a multiple of @math{32}, this operator may read up to 28 bytes following the end of @tensor{X}
+ * and @tensor{K}. This is not ordinarily a problem. However, if the object to which `X` or `K` points is located very 
+ * near the end of a valid memory address range, it is possible memory access exceptions may occur when this operator 
+ * is invoked.
+ * 
+ * If necessary, this can be avoided by manually forcing a buffer region (no more than @math{28} bytes are necessary) 
+ * following @tensor{X} or @tensor{K}. There are various ways this can be accomplished, including embedding these 
+ * objects in larger structures.
+ * 
+ * @param[out]  Y           The output image @tensor{Y}
+ * @param[in]   X           The input image @tensor{X}
+ * @param[in]   K           The kernel tensor @tensor{K}
+ * @param[in]   BSO         The bias-scale-offset array
+ * @param[in]   zero_point  The value @math{z_0} to be used for padding (for all channels)
+ * @param[in]   x_params    Parameters describing the shape of input image tensor @tensor{X}
+ * @param[in]   y_params    Parameters describing the shape of output image tensor @tensor{Y}
+ * @param[in]   conv_window Parameters describing the relationship between the convolution window, the input image,
+ *                              and the output image
  */
 void conv2d_deep(
     nn_image_t* Y,
@@ -364,7 +203,119 @@ void conv2d_deep(
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params,
     const nn_window_params_t* conv_window);
-    
+
+
+/**
+ * @brief Invoke a @oper{conv2d_deep} job.
+ * 
+ * See @oper_ref{conv2d_deep} for more details about the @oper{conv2d_deep} operator.
+ * 
+ * @par Parameter Details
+ * 
+ * `Y` points to the output image @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}.
+ * 
+ * `X` points to the input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}.
+ * 
+ * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
+ * standard_layout).
+ * 
+ * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, K_h, K_w, X_c}, which correspond to the
+ * output image channels (`y_params->channels`), convolution window rows (`conv_window->shape.height`), columns 
+ * (`conv_window->shape.width`) and input image channels (`x_params->channels`) respectively.
+ * 
+ * The memory layout of @tensor{K} is the standard memory layout for 4D tensors (see @ref standard_layout).
+ * 
+ * `BSO` points to an array of bias-scale-offset parameters required for this convolution. See @ref bso_layout for 
+ * details on the encoding of this array.
+ * 
+ * `zero_point` specifies @math{z_0}, the value associated with the (implied) padding space around the input image. For
+ * any output pixel whereupon the corresponding convolution window location in the input image extends beyond the bounds
+ * of the input image, those coefficients in the convolution window which are in the padding are multiplied by 
+ * @math{z_0} rather than by values from the input image. All input channels currently share a common zero-point value.
+ * 
+ * `x_params` points to the image parameters describing the shape of the input image @tensor{X}. The size of each of
+ * @tensor{X}'s dimensions, @math{X_h}, @math{X_w}, and @math{X_c} correspond to `x_params->height`, `x_params->width`,
+ * and `x_params->channels` respectively.
+ * 
+ * `y_params` points to the image parameters describing the shape of the output image @tensor{Y}. The size of each of
+ * @tensor{Y}'s dimensions, @math{Y_h}, @math{Y_w}, and @math{Y_c} correspond to `y_params->height`, `y_params->width`,
+ * and `y_params->channels` respectively.
+ * 
+ * `conv_window` points to a `nn_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
+ * @math{W_{vert}}, @math{W_{hori}}, @math{W_{r0}} and @math{W_{c0}} hyperparameters (see @ref 
+ * conv2d_deep_hyperparameters) which describe the spacial relationship between the input image, the convolution 
+ * window and the output image. `conv_window->dilation` is ignored.
+ * 
+ * `conv_window->shape` specifies @math{K_h} and @math{K_w}, the height and width of the convolution window. 
+ * 
+ * `conv_window->start` specifies @math{W_{r0}} and @math{W_{c0}}, the starting row and column of the convolution window 
+ * in @tensor{X}'s coordinate space. For example, a `start` value of `(0,0)` indicates that the top-left pixel of the 
+ * output image has the convolution window aligned with the top-left corner of the input image, with no implied padding 
+ * at the top or left sides of the input image. A `start` value of `(-1,-1)`, on the other hand, indicates that the 
+ * top-left pixel of the output image has the convolution window shifted one pixel left and one pixel up relative to the
+ * top-left corner of the input image, with 1 pixel of implied top padding and 1 pixel of implied left padding.
+ * 
+ * `conv_window->stride.horizontal` specifies @math{W_{vert}} and @math{W_{hori}}, the vertical and horizontal strides 
+ * of the convolution window. The strides describe the number of pixels the convolution window moves (across the input 
+ * image) with each pixel in the output image.
+ * 
+ * `job_params` describes which elements of the output image will be computed by this invocation. This invocation 
+ * computes the output elements @math{Y[r,c,p]} for which:
+ * @inlinecode
+ *     job_params->start.rows <= r < job_params->start.rows + job_params->size.rows
+ *     job_params->start.cols <= c < job_params->start.cols + job_params->size.cols
+ *     job_params->start.channels <= p < job_params->start.channels + job_params->size.channels
+ * @endinlinecode
+ * 
+ * `flags` is a collection of flags which modify the behavior of @oper{conv2d_deep}. See 
+ * `nn_conv2d_deep_flags_e` for a description of each flag.
+ * 
+ * @par Parameter Constraints
+ * 
+ * The arguments `Y`, `X`, `K` and `BSO` must each point to a word-aligned address.
+ * 
+ * Due to memory alignment requirements, @math{X_c} and @math{Y_c} must each be a multiple of @math{4}, which forces all 
+ * pixels to begin at word-aligned addresses.
+ * 
+ * While implied padding is supported by this operator, it does *not* support a scenario in which the entire convolution
+ * window is in padding (i.e. the convolution window does not overlap the input image) for any output pixel.
+ * 
+ * @par Splitting the Workload
+ * 
+ * @todo Include information about how to split the work into multiple invocations (e.g. for parallelization), 
+ *       particularly any counter-intuitive aspects.
+ * 
+ * @par Additional Remarks
+ * 
+ * Internally, conv2d_deep() calls conv2d_deep_ext() with a `job_params` argument that computes the entire
+ * output image, and with no flags set. For more advanced scenarios, use conv2d_deep_ext().
+ * 
+ * By default this operator uses the standard 8-bit limits @math([-128, 127]) when applying saturation logic. Instead,
+ * it can be configured to use symmetric saturation bounds @math([-127, 127]) by defining 
+ * `CONFIG_SYMMETRIC_SATURATION_conv2d_deep` appropriately. See @ref nn_config.h for more details. Note that this
+ * configures _all_ instances of the @oper{conv2d_deep} operator.
+ * 
+ * If @math{X_c} is not a multiple of @math{32}, this operator may read up to 28 bytes following the end of @tensor{X}
+ * and @tensor{K}. This is not ordinarily a problem. However, if the object to which `X` or `K` points is located very 
+ * near the end of a valid memory address range, it is possible memory access exceptions may occur when this operator 
+ * is invoked.
+ * 
+ * If necessary, this can be avoided by manually forcing a buffer region (no more than @math{28} bytes are necessary) 
+ * following @tensor{X} or @tensor{K}. There are various ways this can be accomplished, including embedding these 
+ * objects in larger structures.
+ * 
+ * @param[out]  Y           The output image @tensor{Y}
+ * @param[in]   X           The input image @tensor{X}
+ * @param[in]   K           The kernel tensor @tensor{K}
+ * @param[in]   BSO         The bias-scale-offset array
+ * @param[in]   zero_point  The value @math{z_0} to be used for padding (for all channels)
+ * @param[in]   x_params    Parameters describing the shape of input image tensor @tensor{X}
+ * @param[in]   y_params    Parameters describing the shape of output image tensor @tensor{Y}
+ * @param[in]   conv_window Parameters describing the relationship between the convolution window, the input image,
+ *                              and the output image
+ * @param[in]   job_params  Indicates which output elements will be computed by this invocation
+ * @param[in]   flags       Flags which modify the behavior of conv2d_deep_ext()
+ */
 void conv2d_deep_ext(
     nn_image_t* Y,
     const nn_image_t* X,
@@ -378,48 +329,113 @@ void conv2d_deep_ext(
     const nn_conv2d_deep_flags_e flags);
 
 /**
- * @brief Execute @oper{conv2d_shallowin} job.
+ * @brief Invoke a @oper{conv2d_shallowin} job.
  * 
  * See @oper_ref{conv2d_shallowin} for more details about the @oper{conv2d_shallowin} operator.
  * 
- * An instance of the @oper{conv2d_shallowin} operator requires an initialized plan and one or more jobs. See 
- * conv2d_shallowin_init() for more details.
+ * @par Parameter Details
  * 
- * `Y` points to the output image @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}. The address supplied for `Y` 
- * should be the start address of the output image (for any job being processed).
+ * `Y` points to the output image @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}.
  * 
- * `X` points to the input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}. The address supplied for `X` should 
- * be the start address of the input image (for any job being processed).
+ * `X` points to the input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}.
  * 
  * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
  * standard_layout).
  * 
- * `K` points to the kernel tensor @tensor{K} encoded with shape @tensor_shape{Y_c, K_h, \hat{K_w}, X_c}, where 
- * @math{Y_c}, @math{K_h} and @math{X_c} correspond to the output image channels, convolution window rows and the input 
- * image channel count respectively. @math{\hat{K_w}} is the augmented convolution window width, which must be exactly
- * @math{32/X_c}, regardless of the convolution window width @math{K_w}. The address supplied for `K` should be the 
- * start address of the kernel tensor (for any job being processed).
+ * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, K_h, \hat{K_w}, X_c}, where @math{Y_c}, 
+ * @math{K_h} and @math{X_c} correspond to the output image channel count (`y_params->channels`), convolution window 
+ * rows (`conv_window->shape.height`) and the input image channel count (`x_params->channels`) respectively.
  * 
- * The memory layout of @tensor{K} (with the modified 3rd dimension) is the standard memory layout for 4D tensors (see 
- * @ref standard_layout). Further, the coefficients for all elements @math{K\left[i,j,k,l\right]} where @math{k\geq K_w} 
- * must have the value 0.
+ * @math{\hat{K_w}} is the augmented convolution window width, which must be exactly @math{\hat{K_w} = 32/X_c} 
+ * regardless of the intended convolution window width @math{K_w}. Elements @math{K[i,j,k,l]} of @tensor{K} for which
+ * @math{k \ge K_w} must be zeros. See Additional Remarks below for a note about this.
+ * 
+ * The memory layout of @tensor{K} (with the augmented width @math{\hat{K_w}) is the standard memory layout for 4D 
+ * tensors (see @ref standard_layout).
  * 
  * `BSO` points to an array of bias-scale-offset parameters required for this convolution. See @ref bso_layout for 
- * details on the encoding of this array. The address supplied for `BSO` should be the start address of the the array 
- * (for any job being processed).
+ * details on the encoding of this array.
  * 
- * `plan` points to the (initialized) plan associated with this instance of the @oper{conv2d_shallowin} operator.
+ * `zero_point` specifies @math{z_0}, the value associated with the (implied) padding space around the input image. For
+ * any output pixel whereupon the corresponding convolution window location in the input image extends beyond the bounds
+ * of the input image, those coefficients in the convolution window which are in the padding are multiplied by 
+ * @math{z_0} rather than by values from the input image. All input channels currently share a common zero-point value.
  * 
- * `job` points to the (initialized) job to be performed with this call.
+ * `x_params` points to the image parameters describing the shape of the input image @tensor{X}. The size of each of
+ * @tensor{X}'s dimensions, @math{X_h}, @math{X_w}, and @math{X_c} correspond to `x_params->height`, `x_params->width`,
+ * and `x_params->channels` respectively.
  * 
- * @requires_word_alignment{Y,X,K,BSO}
+ * `y_params` points to the image parameters describing the shape of the output image @tensor{Y}. The size of each of
+ * @tensor{Y}'s dimensions, @math{Y_h}, @math{Y_w}, and @math{Y_c} correspond to `y_params->height`, `y_params->width`,
+ * and `y_params->channels` respectively.
  * 
- * @param Y    [out]    The output image @tensor{Y}
- * @param X    [in]     The input image @tensor{X}
- * @param K    [in]     The kernel tensor @tensor{K}
- * @param BSO  [in]     The bias-scale-offset array
- * @param plan [in]     The @oper{conv2d_shallowin} plan to be processed
- * @param job  [in]     The @oper{conv2d_shallowin} job to be processed
+ * `conv_window` points to a `nn_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
+ * @math{W_{vert}}, @math{W_{hori}}, @math{W_{r0}} and @math{W_{c0}} hyperparameters (see @ref 
+ * conv2d_shallowin_hyperparameters) which describe the spacial relationship between the input image, the convolution 
+ * window and the output image. `conv_window->dilation` is ignored.
+ * 
+ * `conv_window->shape` specifies @math{K_w} (_not_ @math{\hat{K_w}}) and @math{K_h}, the height and width of the 
+ * convolution window. 
+ * 
+ * `conv_window->start` specifies @math{W_{r0}} and @math{W_{c0}}, the starting row and column of the convolution window 
+ * in @tensor{X}'s coordinate space. For example, a `start` value of `(0,0)` indicates that the top-left pixel of the 
+ * output image has the convolution window aligned with the top-left corner of the input image, with no implied padding 
+ * at the top or left sides of the input image. A `start` value of `(-1,-1)`, on the other hand, indicates that the 
+ * top-left pixel of the output image has the convolution window shifted one pixel left and one pixel up relative to the
+ * top-left corner of the input image, with 1 pixel of implied top padding and 1 pixel of implied left padding.
+ * 
+ * `conv_window->stride.vertical` and `conv_window->stride.horizontal` specify @math{W_{vert}} and @math{W_{hori}}, the 
+ * vertical and horizontal strides of the convolution window. The strides are the number of pixels the convolution 
+ * window moves (across the input image) with each pixel in the output image.
+ * 
+ * @par Parameter Constraints
+ * 
+ * The arguments `Y`, `X`, `K` and `BSO` must each point to a word-aligned address.
+ * 
+ * Due to memory alignment requirements, @math{X_c} and @math{Y_c} must each be a multiple of @math{4}, which forces all 
+ * pixels to begin at word-aligned addresses.
+ * 
+ * While implied padding is supported by this operator, it does *not* support a scenario in which the entire convolution
+ * window is in padding (i.e. the convolution window does not overlap the input image) for any output pixel.
+ * 
+ * @par Splitting the Workload
+ * 
+ * See conv2d_shallowin_ext() for more advanced scenarios which allow the the work to be split across multiple invocations 
+ * (which can be parallelized across cores).
+ * 
+ * @par Additional Remarks
+ * 
+ * The reason for the augmented kernel tensor width @math{\hat{K_w} = 32/K_w} is because this operator is optimized for
+ * the input layer of a network in which the channel count is assumed to be small. So long as each slice 
+ * @math{K[i,j,:,:]} of the kernel tensor is @math{\le 32} bytes, the VPU can efficiently multiply-accumulate entire
+ * rows of @tensor{K} in a single cycle.
+ * 
+ * Internally, conv2d_shallowin() calls conv2d_shallowin_ext() with a `job_params` argument that computes the entire
+ * output image, and with no flags set. For more advanced scenarios, use conv2d_shallowin_ext().
+ * 
+ * By default this operator uses the standard 8-bit limits @math([-128, 127]) when applying saturation logic. Instead,
+ * it can be configured to use symmetric saturation bounds @math([-127, 127]) by defining 
+ * `CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin` appropriately. See @ref nn_config.h for more details. Note that this
+ * configures _all_ instances of the @oper{conv2d_shallowin} operator.
+ * 
+ * If @math{X_c} is not a multiple of @math{32}, this operator may read up to 28 bytes following the end of @tensor{X}. 
+ * This is not ordinarily a problem. However, if the object to which `X` points is located very near the end of a valid 
+ * memory address range, it is possible memory access exceptions may occur when this operator is invoked.
+ * 
+ * If necessary, this can be avoided by manually forcing a buffer region (no more than @math{28} bytes are necessary) 
+ * following @tensor{X}. There are various ways this can be accomplished, including embedding these objects in larger 
+ * structures.
+ * 
+ * 
+ * @param[out]  Y           The output image @tensor{Y}
+ * @param[in]   X           The input image @tensor{X}
+ * @param[in]   K           The kernel tensor @tensor{K}
+ * @param[in]   BSO         The bias-scale-offset array
+ * @param[in]   zero_point  The value @math{z_0} to be used for padding (for all channels)
+ * @param[in]   x_params    Parameters describing the shape of input image tensor @tensor{X}
+ * @param[in]   y_params    Parameters describing the shape of output image tensor @tensor{Y}
+ * @param[in]   conv_window Parameters describing the relationship between the convolution window, the input image,
+ *                              and the output image
  */
 void conv2d_shallowin(
     nn_image_t* Y,
@@ -431,6 +447,129 @@ void conv2d_shallowin(
     const nn_image_params_t* y_params,
     const nn_window_params_t* conv_window);
 
+
+/**
+ * @brief Invoke a @oper{conv2d_shallowin} job.
+ * 
+ * See @oper_ref{conv2d_shallowin} for more details about the @oper{conv2d_shallowin} operator.
+ * 
+ * @par Parameter Details
+ * 
+ * `Y` points to the output image @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}.
+ * 
+ * `X` points to the input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}.
+ * 
+ * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
+ * standard_layout).
+ * 
+ * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, K_h, \hat{K_w}, X_c}, where @math{Y_c}, 
+ * @math{K_h} and @math{X_c} correspond to the output image channel count (`y_params->channels`), convolution window 
+ * rows (`conv_window->shape.height`) and the input image channel count (`x_params->channels`) respectively.
+ * 
+ * @math{\hat{K_w}} is the augmented convolution window width, which must be exactly @math{\hat{K_w} = 32/X_c} 
+ * regardless of the intended convolution window width @math{K_w}. Elements @math{K[i,j,k,l]} of @tensor{K} for which
+ * @math{k \ge K_w} must be zeros. See Additional Remarks below for a note about this.
+ * 
+ * The memory layout of @tensor{K} (with the augmented width @math{\hat{K_w}) is the standard memory layout for 4D 
+ * tensors (see @ref standard_layout).
+ * 
+ * `BSO` points to an array of bias-scale-offset parameters required for this convolution. See @ref bso_layout for 
+ * details on the encoding of this array.
+ * 
+ * `zero_point` specifies @math{z_0}, the value associated with the (implied) padding space around the input image. For
+ * any output pixel whereupon the corresponding convolution window location in the input image extends beyond the bounds
+ * of the input image, those coefficients in the convolution window which are in the padding are multiplied by 
+ * @math{z_0} rather than by values from the input image. All input channels currently share a common zero-point value.
+ * 
+ * `x_params` points to the image parameters describing the shape of the input image @tensor{X}. The size of each of
+ * @tensor{X}'s dimensions, @math{X_h}, @math{X_w}, and @math{X_c} correspond to `x_params->height`, `x_params->width`,
+ * and `x_params->channels` respectively.
+ * 
+ * `y_params` points to the image parameters describing the shape of the output image @tensor{Y}. The size of each of
+ * @tensor{Y}'s dimensions, @math{Y_h}, @math{Y_w}, and @math{Y_c} correspond to `y_params->height`, `y_params->width`,
+ * and `y_params->channels` respectively.
+ * 
+ * `conv_window` points to a `nn_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
+ * @math{W_{vert}}, @math{W_{hori}}, @math{W_{r0}} and @math{W_{c0}} hyperparameters (see @ref 
+ * conv2d_shallowin_hyperparameters) which describe the spacial relationship between the input image, the convolution 
+ * window and the output image. `conv_window->dilation` is ignored.
+ * 
+ * `conv_window->shape` specifies @math{K_w} (_not_ @math{\hat{K_w}}) and @math{K_h}, the height and width of the 
+ * convolution window. 
+ * 
+ * `conv_window->start` specifies @math{W_{r0}} and @math{W_{c0}}, the starting row and column of the convolution window 
+ * in @tensor{X}'s coordinate space. For example, a `start` value of `(0,0)` indicates that the top-left pixel of the 
+ * output image has the convolution window aligned with the top-left corner of the input image, with no implied padding 
+ * at the top or left sides of the input image. A `start` value of `(-1,-1)`, on the other hand, indicates that the 
+ * top-left pixel of the output image has the convolution window shifted one pixel left and one pixel up relative to the
+ * top-left corner of the input image, with 1 pixel of implied top padding and 1 pixel of implied left padding.
+ * 
+ * `conv_window->stride.vertical` and `conv_window->stride.horizontal` specify @math{W_{vert}} and @math{W_{hori}}, the 
+ * vertical and horizontal strides of the convolution window. The strides are the number of pixels the convolution 
+ * window moves (across the input image) with each pixel in the output image.
+ * 
+ * `job_params` describes which elements of the output image will be computed by this invocation. This invocation 
+ * computes the output elements @math{Y[r,c,p]} for which:
+ * @inlinecode
+ *     job_params->start.rows <= r < job_params->start.rows + job_params->size.rows
+ *     job_params->start.cols <= c < job_params->start.cols + job_params->size.cols
+ *     job_params->start.channels <= p < job_params->start.channels + job_params->size.channels
+ * @endinlinecode
+ * 
+ * `flags` is a collection of flags which modify the behavior of @oper{conv2d_shallowin}. See 
+ * `nn_conv2d_shallowin_flags_e` for a description of each flag.
+ * 
+ * @par Parameter Constraints
+ * 
+ * The arguments `Y`, `X`, `K` and `BSO` must each point to a word-aligned address.
+ * 
+ * Due to memory alignment requirements, @math{X_c} and @math{Y_c} must each be a multiple of @math{4}, which forces all 
+ * pixels to begin at word-aligned addresses.
+ * 
+ * While implied padding is supported by this operator, it does *not* support a scenario in which the entire convolution
+ * window is in padding (i.e. the convolution window does not overlap the input image) for any output pixel.
+ * 
+ * @par Splitting the Workload
+ * 
+ * @todo Include information about how to split the work into multiple invocations (e.g. for parallelization), 
+ *       particularly any counter-intuitive aspects.
+ * 
+ * @par Additional Remarks
+ * 
+ * The reason for the augmented kernel tensor width @math{\hat{K_w} = 32/K_w} is because this operator is optimized for
+ * the input layer of a network in which the channel count is assumed to be small. So long as each slice 
+ * @math{K[i,j,:,:]} of the kernel tensor is @math{\le 32} bytes, the VPU can efficiently multiply-accumulate entire
+ * rows of @tensor{K} in a single cycle.
+ * 
+ * Internally, conv2d_shallowin() calls conv2d_shallowin_ext() with a `job_params` argument that computes the entire
+ * output image, and with no flags set. For more advanced scenarios, use conv2d_shallowin_ext().
+ * 
+ * By default this operator uses the standard 8-bit limits @math([-128, 127]) when applying saturation logic. Instead,
+ * it can be configured to use symmetric saturation bounds @math([-127, 127]) by defining 
+ * `CONFIG_SYMMETRIC_SATURATION_conv2d_shallowin` appropriately. See @ref nn_config.h for more details. Note that this
+ * configures _all_ instances of the @oper{conv2d_shallowin} operator.
+ * 
+ * If @math{X_c} is not a multiple of @math{32}, this operator may read up to 28 bytes following the end of @tensor{X}. 
+ * This is not ordinarily a problem. However, if the object to which `X` points is located very near the end of a valid 
+ * memory address range, it is possible memory access exceptions may occur when this operator is invoked.
+ * 
+ * If necessary, this can be avoided by manually forcing a buffer region (no more than @math{28} bytes are necessary) 
+ * following @tensor{X}. There are various ways this can be accomplished, including embedding these objects in larger 
+ * structures.
+ * 
+ * 
+ * @param[out]  Y           The output image @tensor{Y}
+ * @param[in]   X           The input image @tensor{X}
+ * @param[in]   K           The kernel tensor @tensor{K}
+ * @param[in]   BSO         The bias-scale-offset array
+ * @param[in]   zero_point  The value @math{z_0} to be used for padding (for all channels)
+ * @param[in]   x_params    Parameters describing the shape of input image tensor @tensor{X}
+ * @param[in]   y_params    Parameters describing the shape of output image tensor @tensor{Y}
+ * @param[in]   conv_window Parameters describing the relationship between the convolution window, the input image,
+ *                              and the output image
+ * @param[in]   job_params  Indicates which output elements will be computed by this invocation
+ * @param[in]   flags       Flags which modify the behavior of conv2d_shallowin_ext()
+ */
 void conv2d_shallowin_ext(
     nn_image_t* Y,
     const nn_image_t* X,
@@ -443,124 +582,79 @@ void conv2d_shallowin_ext(
     const nn_window_op_job_params_t* job_params,
     const nn_conv2d_shallowin_flags_e flags);
 
-
 /**
- * @brief Perform a 2D convolution of a shallow input image.
- * 
- * Perform a 2D convolution of kernel tensor @tensor{K} with input image @tensor{X}
- * to produce output image @tensor{Y}.
- *  
- * This function is optimized for input images that have 3 channels, but will work
- * with any number of input channels. This will use more memory than the TFLite 
- * reference implementation, but run much faster:
- * 
- * Additional memory: 1 patch worth (K_w * K_h * C_in) bytes + 32 bytes + some code
- * Performance gain: Depends on patch size vs # output channels, and padding, but approximately:
- *                   16x faster convolutions - PATCH_SIZE copy operations
- * 
- * @note multiples of 16 output channels will run fastest input channels not imporant, but a PATCH_SIZE 
- * that is a multiple of 32 will be the fastest, most memory effcient
- * 
-  * `Y` points to the output image tensor @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}, which 
- * correspond to the output image rows, columns and channels respectively. The dimensions of @tensor{Y} 
- * must be as specified when `plan` was initialized. The address supplied for `Y` should be the start 
- * address of the output image tensor, *not* the start address of the sub-tensor being computed by the 
- * current job.
- * 
- * `X` points to the input image tensor @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}, which 
- * correspond to the input image rows, columns and channels respectively. The dimensions of @tensor{X} 
- * must be as specified when `plan` was initialized. The address supplied for `X` should be the start 
- * address of input image tensor, *not* the address at which the convolution window starts for the job 
- * being processed.
- * 
- * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
- * standard_layout).
- * 
- * `COL` points to a caller supplied buffer that will be used for the internal im2col() transformation. This buffer
- * needs to be word-aligned and a multiple of 32-bytes in length, no shorter than: (K_w * K_h * C_in) bytes. 
- * 
- * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, K_h * K_w * X_c}, where @math{Y_c},
- * @math{K_h} @math{K_w} and @math{X_c} correspond to the output image channels, convolution window rows, 
- * convolution window columns, and the input image channel count respectively.
- * 
- * The memory layout of @tensor{K} is a row-major 2D matrix
- * 
- * `BSO` points to an array of bias-shifts-scale parameters required for this convolution. Each 
- * `nn_bso_block_t` in the array contains the bias-shifts-scale parameters for a single output channel group,
- * (@ttref{VPU_INT8_ACC_PERIOD} output channels). If @math{Y_c} is not a multiple of @ttref{VPU_INT8_ACC_PERIOD}, 
- * then the output channel tail ( the last @math{(Y_c mod 16)} output channels) also gets `nn_bso_block_t`, where
- * the entries corresponding to channels beyond @math{Y_c} are ignored. The address supplied for `BSO` should be
- * the start address of the the array, *not* the address of the `nn_bso_block_t` corresponding of the first output
- * channel of the job being processed.
- * 
- * `plan` points to the `nn_conv2d_im2col_plan_t` which was previously initialized with a call to 
- * `conv2d_im2col_init()`.
- * 
- * `job` points to the job to be performed in this call, which was previously initialized along-side `plan`. 
- * 
- * @requires_word_alignment{Y,X,COL,K,BSO}
- * 
- * @param[out] Y        The output image @tensor{Y}
- * @param[in]  X        The input image @tensor{X}
- * @param[in]  COL      Scratch space for im2col (multiple of 32 words >= |K|)
- * @param[in]  K        The kernel tensor @tensor{K}
- * @param[in]  BSO      The bias-shifts-scale parameters
- * @param[in]  plan     The convolution plan
- * @param[in]  job      The convolution job
- */
-void conv2d_im2col(
-    nn_image_t* Y,
-    const nn_image_t* X,
-    const nn_image_t* COL,
-    const nn_tensor_t* K,
-    const nn_bso_block_t* BSO,
-    const nn_conv2d_im2col_plan_t* plan,
-    const nn_conv2d_im2col_job_t* job);
-
-
-/**
- * @brief Execute @oper{conv2d_1x1} job.
+ * @brief Invoke a @oper{conv2d_1x1} job.
  * 
  * See @oper_ref{conv2d_1x1} for more details about the @oper{conv2d_1x1} operator.
  * 
- * An instance of the @oper{conv2d_1x1} operator requires a plan and one or more jobs, which are represented
- * by the `nn_conv2d_1x1_plan_t` and `nn_conv2d_1x1_job_t` structs. Before performing a 2D convolution using 
- * this function, a call must be made to conv2d_1x1_init() to initialize the plan and any jobs.
+ * @par Parameter Details
  * 
- * An instance of the @oper{conv2d_1x1} operator requires an initialized plan and one or more jobs. See 
- * conv2d_1x1_init() for more details.
+ * `Y` points to the output image @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}.
  * 
- * `Y` points to the output image @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}. The address supplied for `Y` 
- * should be the start address of the output image (for any job being processed).
- * 
- * `X` points to the input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}. The address supplied for `X` should 
- * be the start address of the input image (for any job being processed).
+ * `X` points to the input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}.
  * 
  * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
  * standard_layout).
  * 
- * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, X_c}, which correspond to the 
- * output image channels and input image channels respectively. The address supplied for `K` should be the start address 
- * of the kernel tensor (for any job being processed).
+ * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, X_c}, which correspond to the
+ * output image channels (`y_params->channels`), and input image channels (`x_params->channels`) respectively.
  * 
  * The memory layout of @tensor{K} is the standard memory layout for 2D tensors (see @ref standard_layout).
  * 
  * `BSO` points to an array of bias-scale-offset parameters required for this convolution. See @ref bso_layout for 
- * details on the encoding of this array. The address supplied for `BSO` should be the start address of the the array 
- * (for any job being processed).
+ * details on the encoding of this array.
  * 
- * `plan` points to the (initialized) plan associated with this instance of the @oper{conv2d_deep} operator.
+ * `x_params` points to the image parameters describing the shape of the input image @tensor{X}. The size of each of
+ * @tensor{X}'s dimensions, @math{X_h}, @math{X_w}, and @math{X_c} correspond to `x_params->height`, `x_params->width`,
+ * and `x_params->channels` respectively.
  * 
- * `job` points to the (initialized) job to be performed with this call.
+ * `y_params` points to the image parameters describing the shape of the output image @tensor{Y}. The size of each of
+ * @tensor{Y}'s dimensions, @math{Y_h}, @math{Y_w}, and @math{Y_c} correspond to `y_params->height`, `y_params->width`,
+ * and `y_params->channels` respectively.
  * 
- * @requires_word_alignment{Y,X,K,BSO} 
- *
- * @param Y    [out]    The output image @tensor{Y}
- * @param X    [in]     The input image @tensor{X}
- * @param K    [in]     The kernel tensor @tensor{K}
- * @param BSO  [in]     The bias-scale-offset array
- * @param plan [in]     The @oper{conv2d_1x1} plan to be processed
- * @param job  [in]     The @oper{conv2d_1x1} job to be processed
+ * @par Parameter Constraints
+ * 
+ * The arguments `Y`, `X`, `K` and `BSO` must each point to a word-aligned address.
+ * 
+ * Due to memory alignment requirements, @math{X_c} and @math{Y_c} must each be a multiple of @math{4}, which forces all 
+ * pixels to begin at word-aligned addresses.
+ * 
+ * Whereas other versions of the 2D convolution operator support various configurations of the convolution window, this
+ * operator is optimized for (and only supports) a convolution window with height, width, vertical and horizontal stride 
+ * all equal to @math{1}, with the convolution window starting at @math{X[0,0]}.
+ * 
+ * Implied padding is _not_ supported by this operator.
+ * 
+ * @par Splitting the Workload
+ * 
+ * See conv2d_1x1_ext() for more advanced scenarios which allow the the work to be split across multiple invocations 
+ * (which can be parallelized across cores).
+ * 
+ * @par Additional Remarks
+ * 
+ * Internally, conv2d_1x1() calls conv2d_1x1_ext() with a `job_params` argument that computes the entire output image, 
+ * and with no flags set. For more advanced scenarios, use conv2d_1x1_ext().
+ * 
+ * By default this operator uses the standard 8-bit limits @math([-128, 127]) when applying saturation logic. Instead,
+ * it can be configured to use symmetric saturation bounds @math([-127, 127]) by defining 
+ * `CONFIG_SYMMETRIC_SATURATION_conv2d_1x1` appropriately. See @ref nn_config.h for more details. Note that this
+ * configures _all_ instances of the @oper{conv2d_1x1} operator.
+ * 
+ * If @math{X_c} is not a multiple of @math{32}, this operator may read up to 28 bytes following the end of @tensor{X}
+ * and @tensor{K}. This is not ordinarily a problem. However, if the object to which `X` or `K` points is located very 
+ * near the end of a valid memory address range, it is possible memory access exceptions may occur when this operator 
+ * is invoked.
+ * 
+ * If necessary, this can be avoided by manually forcing a buffer region (no more than @math{28} bytes are necessary) 
+ * following @tensor{X} or @tensor{K}. There are various ways this can be accomplished, including embedding these 
+ * objects in larger structures.
+ * 
+ * @param[out]  Y           The output image @tensor{Y}
+ * @param[in]   X           The input image @tensor{X}
+ * @param[in]   K           The kernel tensor @tensor{K}
+ * @param[in]   BSO         The bias-scale-offset array
+ * @param[in]   x_params    Parameters describing the shape of input image tensor @tensor{X}
+ * @param[in]   y_params    Parameters describing the shape of output image tensor @tensor{Y}
  */
 void conv2d_1x1(
     nn_image_t* Y,
@@ -570,7 +664,97 @@ void conv2d_1x1(
     const nn_image_params_t* x_params,
     const nn_image_params_t* y_params);
 
-    
+/**
+ * @brief Invoke a @oper{conv2d_1x1} job.
+ * 
+ * See @oper_ref{conv2d_1x1} for more details about the @oper{conv2d_1x1} operator.
+ * 
+ * @par Parameter Details
+ * 
+ * `Y` points to the output image @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}.
+ * 
+ * `X` points to the input image @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}.
+ * 
+ * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
+ * standard_layout).
+ * 
+ * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, X_c}, which correspond to the
+ * output image channels (`y_params->channels`), and input image channels (`x_params->channels`) respectively.
+ * 
+ * The memory layout of @tensor{K} is the standard memory layout for 2D tensors (see @ref standard_layout).
+ * 
+ * `BSO` points to an array of bias-scale-offset parameters required for this convolution. See @ref bso_layout for 
+ * details on the encoding of this array.
+ * 
+ * `x_params` points to the image parameters describing the shape of the input image @tensor{X}. The size of each of
+ * @tensor{X}'s dimensions, @math{X_h}, @math{X_w}, and @math{X_c} correspond to `x_params->height`, `x_params->width`,
+ * and `x_params->channels` respectively.
+ * 
+ * `y_params` points to the image parameters describing the shape of the output image @tensor{Y}. The size of each of
+ * @tensor{Y}'s dimensions, @math{Y_h}, @math{Y_w}, and @math{Y_c} correspond to `y_params->height`, `y_params->width`,
+ * and `y_params->channels` respectively.
+ * 
+ * `job_params` describes which elements of the output image will be computed by this invocation. Unlike other versions
+ * of the 2D convolution in this library, rather than computing a rectangular sub-tensor of @tensor{Y}, this operator
+ * computes the specified channels for a range of pixels which is contiguous in memory. 
+ * 
+ * This invocation will only compute output channels in the range `[job_params->start.channels, 
+ * job_params->start.channels + job_params->size.channels)`.
+ * 
+ * The first output pixel computed by this invocation is at location 
+ * `Y[job_params->start.rows, job_params->start.cols]`. It will then compute subsequent pixels in memory (i.e. as though
+ * the output image is unwrapped row-by-row into a single row of pixels) for a total of `job_params->size.pixels` 
+ * pixels.
+ * 
+ * `flags` is a collection of flags which modify the behavior of @oper{conv2d_1x1}. See 
+ * `nn_conv2d_1x1_flags_e` for a description of each flag.
+ * 
+ * @par Parameter Constraints
+ * 
+ * The arguments `Y`, `X`, `K` and `BSO` must each point to a word-aligned address.
+ * 
+ * Due to memory alignment requirements, @math{X_c} and @math{Y_c} must each be a multiple of @math{4}, which forces all 
+ * pixels to begin at word-aligned addresses.
+ * 
+ * Whereas other versions of the 2D convolution operator support various configurations of the convolution window, this
+ * operator is optimized for (and only supports) a convolution window with height, width, vertical and horizontal stride 
+ * all equal to @math{1}, with the convolution window starting at @math{X[0,0]}.
+ * 
+ * Implied padding is _not_ supported by this operator.
+ * 
+ * @par Splitting the Workload
+ * 
+ * @todo Include information about how to split the work into multiple invocations (e.g. for parallelization), 
+ *       particularly any counter-intuitive aspects.
+ * 
+ * @par Additional Remarks
+ * 
+ * Internally, conv2d_1x1() calls conv2d_1x1_ext() with a `job_params` argument that computes the entire output image, 
+ * and with no flags set. For more advanced scenarios, use conv2d_1x1_ext().
+ * 
+ * By default this operator uses the standard 8-bit limits @math([-128, 127]) when applying saturation logic. Instead,
+ * it can be configured to use symmetric saturation bounds @math([-127, 127]) by defining 
+ * `CONFIG_SYMMETRIC_SATURATION_conv2d_1x1` appropriately. See @ref nn_config.h for more details. Note that this
+ * configures _all_ instances of the @oper{conv2d_1x1} operator.
+ * 
+ * If @math{X_c} is not a multiple of @math{32}, this operator may read up to 28 bytes following the end of @tensor{X}
+ * and @tensor{K}. This is not ordinarily a problem. However, if the object to which `X` or `K` points is located very 
+ * near the end of a valid memory address range, it is possible memory access exceptions may occur when this operator 
+ * is invoked.
+ * 
+ * If necessary, this can be avoided by manually forcing a buffer region (no more than @math{28} bytes are necessary) 
+ * following @tensor{X} or @tensor{K}. There are various ways this can be accomplished, including embedding these 
+ * objects in larger structures.
+ * 
+ * @param[out]  Y           The output image @tensor{Y}
+ * @param[in]   X           The input image @tensor{X}
+ * @param[in]   K           The kernel tensor @tensor{K}
+ * @param[in]   BSO         The bias-scale-offset array
+ * @param[in]   x_params    Parameters describing the shape of input image tensor @tensor{X}
+ * @param[in]   y_params    Parameters describing the shape of output image tensor @tensor{Y}
+ * @param[in]   job_params  Indicates which output elements will be computed by this invocation
+ * @param[in]   flags       Flags which modify the behavior of conv2d_1x1_ext()
+ */
 void conv2d_1x1_ext(
     nn_image_t* Y,
     const nn_image_t* X,
@@ -619,9 +803,9 @@ void conv2d_1x1_ext(
  * `conv_window` points to a `nn_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
  * @math{W_{vert}}, @math{W_{hori}}, @math{W_{r0}} and @math{W_{c0}} hyperparameters (see @ref 
  * conv2d_depthwise_hyperparameters) which describe the spacial relationship between the input image, the convolution 
- * window and the output image.
+ * window and the output image. `conv_window->dilation` is ignored.
  * 
- * `conv_window->shape` specifies @math{K_w} and @math{K_h}, the height and width of the convolution window. 
+ * `conv_window->shape` specifies @math{K_h} and @math{K_w}, the height and width of the convolution window. 
  * 
  * `conv_window->start` specifies @math{W_{r0}} and @math{W_{c0}}, the starting row and column of the convolution window 
  * in @tensor{X}'s coordinate space. For example, a `start` value of `(0,0)` indicates that the top-left pixel of the 
@@ -641,15 +825,15 @@ void conv2d_1x1_ext(
  * Depth multiplication is not currently supported, and so `x_params->channels` must equal `y_params->channels`.
  * 
  * Due to memory alignment requirements, @math{X_c} must be a multiple of @math{4}, which forces all pixels to begin at
- * a word-aligned address
+ * a word-aligned address.
  * 
  * While implied padding is supported by this operator, it does *not* support a scenario in which the entire convolution
- * window is in padding (i.e. the convolution window does not overlap the input image).
+ * window is in padding (i.e. the convolution window does not overlap the input image) for any output pixel.
  * 
  * @par Splitting the Workload
  * 
- * conv2d_depthwise() cannot split the workload associated with an instance of @oper{conv2d_depthwise}. To split the
- * workload, conv2d_depthwise_ext() must be used.
+ * See conv2d_depthwise_ext() for more advanced scenarios which allow the the work to be split across multiple invocations 
+ * (which can be parallelized across cores).
  * 
  * @par Additional Remarks
  * 
@@ -729,9 +913,9 @@ void conv2d_depthwise(
  * `conv_window` points to a `nn_window_params_t` struct containing the instance's @math{K_h}, @math{K_w}, 
  * @math{W_{vert}}, @math{W_{hori}}, @math{W_{r0}} and @math{W_{c0}} hyperparameters (see @ref 
  * conv2d_depthwise_hyperparameters) which describe the spacial relationship between the input image, the convolution 
- * window and the output image.
+ * window and the output image. `conv_window->dilation` is ignored.
  * 
- * `conv_window->shape` specifies @math{K_w} and @math{K_h}, the height and width of the convolution window. 
+ * `conv_window->shape` specifies @math{K_h} and @math{K_w}, the height and width of the convolution window. 
  * 
  * `conv_window->start` specifies @math{W_{r0}} and @math{W_{c0}}, the starting row and column of the convolution window 
  * in @tensor{X}'s coordinate space. For example, a `start` value of `(0,0)` indicates that the top-left pixel of the 
@@ -820,6 +1004,80 @@ void conv2d_depthwise_ext(
     const nn_window_op_job_params_t* job_params,
     const nn_conv2d_depthwise_flags_e flags);
 
+
+
+/**
+ * @brief Perform a 2D convolution of a shallow input image.
+ * 
+ * Perform a 2D convolution of kernel tensor @tensor{K} with input image @tensor{X}
+ * to produce output image @tensor{Y}.
+ *  
+ * This function is optimized for input images that have 3 channels, but will work
+ * with any number of input channels. This will use more memory than the TFLite 
+ * reference implementation, but run much faster:
+ * 
+ * Additional memory: 1 patch worth (K_w * K_h * C_in) bytes + 32 bytes + some code
+ * Performance gain: Depends on patch size vs # output channels, and padding, but approximately:
+ *                   16x faster convolutions - PATCH_SIZE copy operations
+ * 
+ * @note multiples of 16 output channels will run fastest input channels not imporant, but a PATCH_SIZE 
+ * that is a multiple of 32 will be the fastest, most memory effcient
+ * 
+  * `Y` points to the output image tensor @tensor{Y} with shape @tensor_shape{Y_h, Y_w, Y_c}, which 
+ * correspond to the output image rows, columns and channels respectively. The dimensions of @tensor{Y} 
+ * must be as specified when `plan` was initialized. The address supplied for `Y` should be the start 
+ * address of the output image tensor, *not* the start address of the sub-tensor being computed by the 
+ * current job.
+ * 
+ * `X` points to the input image tensor @tensor{X} with shape @tensor_shape{X_h, X_w, X_c}, which 
+ * correspond to the input image rows, columns and channels respectively. The dimensions of @tensor{X} 
+ * must be as specified when `plan` was initialized. The address supplied for `X` should be the start 
+ * address of input image tensor, *not* the address at which the convolution window starts for the job 
+ * being processed.
+ * 
+ * The memory layout of @tensor{Y} and @tensor{X} are the standard memory layout for image tensors (see @ref 
+ * standard_layout).
+ * 
+ * `COL` points to a caller supplied buffer that will be used for the internal im2col() transformation. This buffer
+ * needs to be word-aligned and a multiple of 32-bytes in length, no shorter than: (K_w * K_h * C_in) bytes. 
+ * 
+ * `K` points to the kernel tensor @tensor{K} with shape @tensor_shape{Y_c, K_h * K_w * X_c}, where @math{Y_c},
+ * @math{K_h} @math{K_w} and @math{X_c} correspond to the output image channels, convolution window rows, 
+ * convolution window columns, and the input image channel count respectively.
+ * 
+ * The memory layout of @tensor{K} is a row-major 2D matrix
+ * 
+ * `BSO` points to an array of bias-shifts-scale parameters required for this convolution. Each 
+ * `nn_bso_block_t` in the array contains the bias-shifts-scale parameters for a single output channel group,
+ * (@ttref{VPU_INT8_ACC_PERIOD} output channels). If @math{Y_c} is not a multiple of @ttref{VPU_INT8_ACC_PERIOD}, 
+ * then the output channel tail ( the last @math{(Y_c mod 16)} output channels) also gets `nn_bso_block_t`, where
+ * the entries corresponding to channels beyond @math{Y_c} are ignored. The address supplied for `BSO` should be
+ * the start address of the the array, *not* the address of the `nn_bso_block_t` corresponding of the first output
+ * channel of the job being processed.
+ * 
+ * `plan` points to the `nn_conv2d_im2col_plan_t` which was previously initialized with a call to 
+ * `conv2d_im2col_init()`.
+ * 
+ * `job` points to the job to be performed in this call, which was previously initialized along-side `plan`. 
+ * 
+ * @requires_word_alignment{Y,X,COL,K,BSO}
+ * 
+ * @param[out] Y        The output image @tensor{Y}
+ * @param[in]  X        The input image @tensor{X}
+ * @param[in]  COL      Scratch space for im2col (multiple of 32 words >= |K|)
+ * @param[in]  K        The kernel tensor @tensor{K}
+ * @param[in]  BSO      The bias-shifts-scale parameters
+ * @param[in]  plan     The convolution plan
+ * @param[in]  job      The convolution job
+ */
+void conv2d_im2col(
+    nn_image_t* Y,
+    const nn_image_t* X,
+    const nn_image_t* COL,
+    const nn_tensor_t* K,
+    const nn_bso_block_t* BSO,
+    const nn_conv2d_im2col_plan_t* plan,
+    const nn_conv2d_im2col_job_t* job);
 
     
 /** 
@@ -1184,10 +1442,10 @@ void nn_conv2d_hstrip_depthwise(
  *   - `C_in` must be a multiple of `4`.
  *   - `y_h_stride` must be a multiple of `4`.
  * 
- * @param[out] y                    Pointer to output image @tensor{Y}
- * @param[in]  x                    Pointer to input image @tensor{X}
- * @param[in]  k                    The kernel tensor @tensor{K}
- * @param[in]  bso                  The bias-scale-offset parameters
+ * @param[out] Y                    Pointer to output image @tensor{Y}
+ * @param[in]  X                    Pointer to input image @tensor{X}
+ * @param[in]  K                    The kernel tensor @tensor{K}
+ * @param[in]  BSO                  The bias-scale-offset parameters
  * @param[in]  K_height             Kernel height @math{K_h} (in pixels)
  * @param[in]  K_width              Kernel width @math{K_w} (in pixels)
  * @param[in]  K_hori_stride        Horizontal stride of the convolution window (in pixels)
@@ -1341,10 +1599,10 @@ void nn_conv2d_hstrip_deep_padded(
  *   - `y_h_stride` must be a multiple of `4`.
  *   - `C_out_tail` must be a multiple of `4`.
  * 
- * @param[out] y                    Pointer to output image @tensor{Y}
- * @param[in]  x                    Pointer to input image @tensor{X}
- * @param[in]  k                    The kernel tensor @tensor{K}
- * @param[in]  bso                  The bias-scale-offset parameters
+ * @param[out] Y                    Pointer to output image @tensor{Y}
+ * @param[in]  X                    Pointer to input image @tensor{X}
+ * @param[in]  K                    The kernel tensor @tensor{K}
+ * @param[in]  BSO                  The bias-scale-offset parameters
  * @param[in]  K_height             Kernel height @math{K_h} (in pixels)
  * @param[in]  K_width              Kernel width @math{K_w} (in pixels)
  * @param[in]  K_hori_stride        Horizontal stride of the convolution window (in pixels)

@@ -11,9 +11,6 @@ to a signed Q0.7 fixed-point scalar, modifying the precision, rather than the va
 are considered to be signed integers, then the operation divides each input element by @math{2^{8}}, rounding the result to the 
 nearest integer. These interpretations are equivalent.
 
-Unlike most other operators, the @oper{requantize_16_to_8} operator requires only jobs (but no plan) to be initialized before it 
-can  be invoked. No plan struct is required because the jobs share no parameters. See @ref requantize_16_to_8_api below.
-
 ### Parameters 
 
 #### Hyperparameters        {#requantize_16_to_8_hyperparams}
@@ -60,21 +57,6 @@ where the parameters are as described above.
 ### Example Diagram
 
 @todo Create diagram
-
-### API                     {#requantize_16_to_8_api}
-
-Invoking an instance of @oper{requantize_16_to_8} is done with a call to requantize_16_to_8(). requantize_16_to_8() takes a pointer 
-to an initialized job (instance of `nn_requantize_16_to_8_job_t`). Initialization is done with a call to requantize_16_to_8_init().
-
-Each call to requantize_16_to_8() will execute exactly one job. A @oper{requantize_16_to_8} job computes a contiguous subset of 
-the output vector's elements (which can be the entire vector if only one job is desired). Unlike most other operators, the user does
-not specify the work to be done by each @oper{requantize_16_to_8} job. With the supplied input vector length, the work is split as
-evenly as possible between jobs.
-
-If a network uses multiple instances of the @oper{requantize_16_to_8} operator, they may share any jobs *if and only if* the instances 
-share identical hyperparameters (see @ref requantize_16_to_8_hyperparams).
-
-
 ### Configuration Options
 
 The following sections describe configurable options for the @oper{requantize_16_to_8} operator. Configuration options can

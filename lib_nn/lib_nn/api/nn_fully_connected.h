@@ -12,10 +12,29 @@
  * See @oper_ref{fully_connected_8} for more details about the @oper{fully_connected_8} operator, including the 
  * mathematical details of the operation performed.
  * 
- * @par Operator Plans and Jobs
+ * @par Operation Performed
  * 
- * Invoking an instance of the @oper{fully_connected_8} operator requires no plan or job objects; no initialization is
- * required.
+ * 
+ * @f[
+ * 
+ *      v\left[p \right] = b_i + \sum_{r=0}^{N-1} \left( W[p,r] \cdot x[r] \right)\\\
+ *   \\\  
+ *      y\left[p \right] = sat_{8}\left(\frac{\left(sat_{16}\left(\frac{v\left[p \right]}
+ *              {2^{s_{1p}}}\right)\cdot s_{2p}\right)}{2^{s_{3p}}}\right) \text{for } 0 \leq p \lt C_{out}
+ * 
+ * @f]
+ * 
+ * where
+ * 
+ * @par
+ * @tensor{v} is an intermediate vector (holding the 32-bit accumulators),
+ * 
+ * @par
+ * @math{p} is the output index, and
+ * 
+ * @par
+ * the remaining parameters are as described in @oper_ref{fully_connected_8}.
+ * 
  * 
  * @par Parameter Details
  * 

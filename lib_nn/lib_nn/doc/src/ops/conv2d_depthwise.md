@@ -117,17 +117,6 @@ the remaining parameters are as described above.
 
 @todo Create diagram
 
-### API                     {#conv2d_depthwise_api}
-
-Invoking an instance of @oper{conv2d_depthwise} is done with a call to conv2d_depthwise() or conv2d_depthwise_ext(). 
-conv2d_depthwise() is the same as conv2d_depthwise_ext() with default behavior (no flags specified) and with the entire
-output image as the job.
-
-Each call to conv2d_depthwise() or conv2d_depthwise_ext() computes a rectangular sub-tensor of the output image (which 
-in the case of conv2d_depthwise() is the entire image). With each call to conv2d_depthwise_ext() the user indicates a 
-starting row, starting column and starting channel of the output image, as well as the number of rows, columns and 
-channels to be computed by that job.
-
 ### Configuration Options
 
 The following sections describe configurable options for the @oper{conv2d_depthwise} operator. Configuration options can

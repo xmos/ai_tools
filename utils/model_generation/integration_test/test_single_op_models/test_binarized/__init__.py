@@ -11,7 +11,6 @@ from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix t
 from .. import (
     IntegrationTestModelGenerator,
     test_output,
-    test_idempotence,
 )
 
 

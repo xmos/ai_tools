@@ -11,7 +11,6 @@ from tflite2xcore.model_generation.utils import parse_init_config
 from . import ChannelAgnosticOpTestModelGenerator
 from . import (  # pylint: disable=unused-import
     test_output,
-    test_idempotence,
     test_converted_single_op_model,
 )
 

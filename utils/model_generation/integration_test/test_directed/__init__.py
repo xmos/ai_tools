@@ -1,12 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import os
-import tensorflow as tf
-from typing import Optional, Tuple
-from tensorflow.python.keras.utils import data_utils
+import tensorflow as tf  # type: ignore
+from typing import Optional, Tuple, Any
+from tensorflow.python.keras.utils import data_utils  # type: ignore
 
 from .. import (
-    IntegrationTestRunner,
     IntegrationTestModelGenerator,
     test_output,
     test_idempotence,
@@ -27,8 +26,8 @@ def _MobileNet_safe(
     input_tensor: Optional[tf.Tensor] = None,
     pooling: Optional[str] = None,
     classes: int = 1000,
-    *args,
-    **kwargs,
+    *args: Any,
+    **kwargs: Any,
 ) -> tf.keras.Model:
     if weights == "imagenet" and (not include_top or classes == 1000):
         input_shape = input_shape or (224, 224, 3)
@@ -71,7 +70,7 @@ def _MobileNet_safe(
     )
 
 
-def MobileNet(*args, **kwargs,) -> tf.keras.Model:
+def MobileNet(*args: Any, **kwargs: Any) -> tf.keras.Model:
     """ Wrapper for tf.keras.applications.MobileNet to work around h5 multiprocess issues. """
     try:
         return tf.keras.applications.MobileNet(*args, **kwargs)

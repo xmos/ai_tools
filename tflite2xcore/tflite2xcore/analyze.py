@@ -76,10 +76,15 @@ def analyze_model(model):
 #       however, currently the interpreter is the only method to determine the
 #       size of the tensor arena
 def calc_arena_size(model_content):
-    interpreter = XCOREInterpreter(model_content=model_content)
-    logger = logging.getLogger("tensor_arena_allocations")
-    [logger.info(line) for line in interpreter.get_allocations().split("\n")]
-    return interpreter.tensor_arena_size
+    try:
+        interpreter = XCOREInterpreter(model_content=model_content)
+        logger = logging.getLogger("tensor_arena_allocations")
+        [logger.info(line) for line in interpreter.get_allocations().split("\n")]
+        return interpreter.tensor_arena_size
+    except RuntimeError as e:
+        print("Runtime Error: Failed calculating tensor arena size.")
+        print(str(e))
+        return None
 
 
 def calc_weight_and_bias_fetch_sizes(model_content):
@@ -108,20 +113,23 @@ def print_report(tflite_output_path):
             )
             print(f"Model size: {model_size} (bytes)")
             print()
-            print("Model stored in RAM")
-            print(f"{indent}Tensor arena size: {tensor_arena_size} (bytes)")
-            print()
-            print(
-                f"{indent}Total RAM required: {model_size + tensor_arena_size} (bytes)"
-            )
-            print()
-            print("Model stored in external memory (Flash or LPDDR)")
-            tensor_arena_size += max_weights_size + max_bias_size
-            print(f"{indent}Tensor arena size: {tensor_arena_size} (bytes)")
-            print()
-            print(f"{indent}Total RAM required: {tensor_arena_size}")
-            print(f"{indent}Total external memory required: {model_size}")
-            print()
+            if tensor_arena_size:
+                ram_used = model_size + tensor_arena_size
+                print("Model stored in RAM")
+                print(f"{indent}Tensor arena size: {tensor_arena_size} (bytes)")
+                print()
+                print(f"{indent}Total RAM required: {ram_used} (bytes)")
+                print()
+                if max_weights_size and max_bias_size:
+                    print("Model stored in external memory (Flash or LPDDR)")
+                    tensor_arena_size += max_weights_size + max_bias_size
+                    print(f"{indent}Tensor arena size: {tensor_arena_size} (bytes)")
+                    print()
+                    print(f"{indent}Total RAM required: {tensor_arena_size}")
+                    print(f"{indent}Total external memory required: {model_size}")
+                    print()
+            else:
+                print("Unable to determine model memory requirements.")
         except RuntimeError as e:
             prefix = "Didn't find op for builtin opcode "
             msg = e.args[0]

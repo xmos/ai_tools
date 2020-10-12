@@ -3,17 +3,16 @@ import pytest
 from copy import deepcopy
 from typing import Tuple
 
-from tflite2xcore.transformation_passes.lce_passes import (
-    ReplaceBconv2DInt8Pass,
-    ReplaceBconv2DPass,
-)
+from tflite2xcore.transformation_passes.lce_passes import ReplaceBconv2DInt8Pass
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import XCOREOpCodes, Padding, TensorType
 
-from tflite2xcore.tests.test_transformation_passes.test_conv2d_passes.conftest import (
-    test_replace_mutate as _test_mutate,
+from . import (
+    build_lceBconv2d,
+    _make_name_type_pairs,
+    update_lce_params,
+    test_bconv2d_mutate as _test_mutate,
 )
-from . import build_lceBconv2d, _make_name_type_pairs, update_lce_params
 from . import (  # pylint: disable=unused-import
     PARAMS,
     test_matching_params,
@@ -30,7 +29,7 @@ PARAMS = deepcopy(PARAMS)
 
 PARAMS["extended"].update(
     {
-        "output_channels": [4, 8, 32],
+        "output_channels": [4, 16, 32],
         "non_matching_output_channels": [5, 9, 27],
         "non_matching_tensors": list(
             _make_name_type_pairs("output", [TensorType.FLOAT32, TensorType.INT32])
@@ -77,24 +76,20 @@ def model(
 
 
 def test_mutate(
-    trf_pass: ReplaceBconv2DPass, model: XCOREModel, new_opcode: XCOREOpCodes
+    trf_pass: ReplaceBconv2DInt8Pass, model: XCOREModel, new_opcode: XCOREOpCodes
 ) -> None:
     subgraph = model.subgraphs[0]
     operators = subgraph.operators
-    op = operators[-1]
-    strides = op.custom_options["stride_height"], op.custom_options["stride_width"]
-    padding = op.custom_options["padding"]
 
     _test_mutate(trf_pass, model, new_opcode)
 
     assert len(operators) == 1
 
     new_op = operators[-1]
-    assert "illegal_params" in new_op.custom_options
-    assert "stride" in new_op.custom_options
-    assert strides == new_op.custom_options["stride"]
-    assert "padding" in new_op.custom_options
-    assert padding == new_op.custom_options["padding"]
+    new_op.inputs[1].type is TensorType.INT32
+    new_op.inputs[2].type is TensorType.INT16
+    new_op.inputs[3].type is TensorType.INT16
+    new_op.outputs[0].type is TensorType.INT8
 
 
 if __name__ == "__main__":

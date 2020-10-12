@@ -4,6 +4,7 @@ import numpy as np
 from copy import deepcopy
 from typing import Tuple, Optional
 
+from tflite2xcore.transformation_passes.lce_passes import ReplaceBconv2DPass
 from tflite2xcore.transformation_passes import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel, Subgraph
 from tflite2xcore.xcore_schema import (
@@ -29,6 +30,7 @@ from ..conftest import (  # pylint: disable=unused-import
     test_non_matching_tensors,
     test_replace_mutate as _test_mutate,
 )
+from ..test_conv2d_passes.conftest import test_replace_mutate as test_conv2d_mutate
 from ..test_conv2d_passes.conftest import (  # pylint: disable=unused-import
     PARAMS,
     test_non_matching_input_channels,
@@ -140,10 +142,10 @@ def build_bconv2d(
         post_act_params = {"shape": weight_shape[:1]}
         if opcode in XC_BCONV2D_OPCODES:
             post_act_params["type_"] = TensorType.INT16
-            dummy_data = generate_dummy_data(post_act_mult.shape, np.int16)
+            dummy_data = generate_dummy_data(post_act_params["shape"], np.int16)
         else:
             post_act_params["type_"] = TensorType.FLOAT32
-            dummy_data = generate_dummy_data(post_act_mult.shape, np.float32)
+            dummy_data = generate_dummy_data(post_act_params["shape"], np.float32)
 
         post_act_mult = subgraph.create_tensor("post_act_mult", **post_act_params)
         post_act_mult.buffer.data = dummy_data
@@ -233,3 +235,24 @@ def test_mutate(
     assert len(subgraph.operators) == 1
 
     _test_mutate(trf_pass, model, new_opcode)
+
+
+def test_bconv2d_mutate(
+    trf_pass: ReplaceBconv2DPass, model: XCOREModel, new_opcode: XCOREOpCodes
+) -> None:
+    subgraph = model.subgraphs[0]
+    operators = subgraph.operators
+    op = operators[-1]
+    strides = op.custom_options["stride_height"], op.custom_options["stride_width"]
+    padding = op.custom_options["padding"]
+
+    test_conv2d_mutate(trf_pass, model, new_opcode)
+
+    assert len(operators) == 1
+
+    new_op = operators[-1]
+    assert "illegal_params" in new_op.custom_options
+    assert "stride" in new_op.custom_options
+    assert strides == new_op.custom_options["stride"]
+    assert "padding" in new_op.custom_options
+    assert padding == new_op.custom_options["padding"]

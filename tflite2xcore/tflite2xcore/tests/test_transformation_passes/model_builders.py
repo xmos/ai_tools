@@ -1,7 +1,7 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import numpy as np
-from typing import Callable, Tuple, Optional
+from typing import Callable, Tuple, Optional, Union
 from copy import deepcopy
 
 from tflite2xcore.utils import QuantizationTuple
@@ -18,12 +18,13 @@ from tflite2xcore.xcore_schema import (
 ModelBuilder = Callable[..., XCOREModel]
 
 
-def generate_dummy_int8_data(shape: Tuple[int, ...]) -> np.ndarray:
-    return np.int8(np.arange(np.prod(shape)) % 255 - 127)
-
-
-def generate_dummy_int32_data(shape: Tuple[int, ...]) -> np.ndarray:
-    return np.arange(np.prod(shape), dtype=np.int32)
+def generate_dummy_data(
+    shape: Tuple[int, ...], dtype: Union[type, np.dtype]
+) -> np.ndarray:
+    if np.issubdtype(dtype, np.int8):
+        return np.int8(np.arange(np.prod(shape)) % 255 - 127)
+    else:
+        return np.arange(np.prod(shape), dtype=dtype)
 
 
 def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
@@ -370,8 +371,8 @@ def build_fc(subgraph=None, *, outputs, input_shape, add_batch_dim=True):
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = generate_dummy_int8_data(w.shape)
-    b.buffer.data = generate_dummy_int32_data(b.shape)
+    w.buffer.data = generate_dummy_data(w.shape, np.int8)
+    b.buffer.data = generate_dummy_data(b.shape, np.int32)
 
     return subgraph.model
 
@@ -495,8 +496,8 @@ def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = generate_dummy_int8_data(w.shape)
-    b.buffer.data = generate_dummy_int32_data(b.shape)
+    w.buffer.data = generate_dummy_data(w.shape, np.int8)
+    b.buffer.data = generate_dummy_data(b.shape, np.int32)
 
     if padding is Padding.SAME:
         # TODO: this is incorrect if stride > 1
@@ -570,8 +571,8 @@ def build_depthwise_conv2d(
     )
 
     # add dummy data so that the op can be mutated
-    w.buffer.data = generate_dummy_int8_data(w.shape)
-    b.buffer.data = generate_dummy_int32_data(b.shape)
+    w.buffer.data = generate_dummy_data(w.shape, np.int8)
+    b.buffer.data = generate_dummy_data(b.shape, np.int32)
 
     if padding is Padding.SAME:
         output_shape = [1, height, width, C_out]

@@ -4,18 +4,16 @@ from copy import deepcopy
 from typing import Tuple
 
 from tflite2xcore.transformation_passes.lce_passes import (
-    ReplaceBconv2DInt8OutPass,
+    ReplaceBconv2DInt8Pass,
     ReplaceBconv2DPass,
 )
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import XCOREOpCodes, Padding, TensorType
 
-from . import (
-    build_lceBconv2d,
-    _make_name_type_pairs,
-    update_lce_params,
-    test_mutate as _test_mutate,
+from tflite2xcore.tests.test_transformation_passes.test_conv2d_passes.conftest import (
+    test_replace_mutate as _test_mutate,
 )
+from . import build_lceBconv2d, _make_name_type_pairs, update_lce_params
 from . import (  # pylint: disable=unused-import
     PARAMS,
     test_matching_params,
@@ -32,8 +30,8 @@ PARAMS = deepcopy(PARAMS)
 
 PARAMS["extended"].update(
     {
-        "output_channels": [16, 32, 128],
-        "non_matching_output_channels": [4, 7, 8],
+        "output_channels": [4, 8, 32],
+        "non_matching_output_channels": [5, 9, 27],
         "non_matching_tensors": list(
             _make_name_type_pairs("output", [TensorType.FLOAT32, TensorType.INT32])
         ),
@@ -49,13 +47,13 @@ PARAMS = update_lce_params(PARAMS)
 
 
 @pytest.fixture()
-def trf_pass() -> ReplaceBconv2DInt8OutPass:
-    return ReplaceBconv2DInt8OutPass()
+def trf_pass() -> ReplaceBconv2DInt8Pass:
+    return ReplaceBconv2DInt8Pass()
 
 
 @pytest.fixture()
 def new_opcode() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_bconv2d_int8_out
+    return XCOREOpCodes.XC_bconv2d_int8
 
 
 @pytest.fixture()
@@ -92,6 +90,7 @@ def test_mutate(
     assert len(operators) == 1
 
     new_op = operators[-1]
+    assert "illegal_params" in new_op.custom_options
     assert "stride" in new_op.custom_options
     assert strides == new_op.custom_options["stride"]
     assert "padding" in new_op.custom_options

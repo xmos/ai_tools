@@ -3,7 +3,7 @@ import pytest
 from copy import deepcopy
 from typing import Tuple
 
-from tflite2xcore.transformation_passes.lce_passes import ReplaceBconv2DBitpackedOutPass
+from tflite2xcore.transformation_passes.lce_passes import ReplaceBconv2DBitpackedPass
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType, XCOREOpCodes, Padding
 
@@ -42,13 +42,13 @@ PARAMS = update_lce_params(PARAMS)
 
 
 @pytest.fixture()
-def trf_pass() -> ReplaceBconv2DBitpackedOutPass:
-    return ReplaceBconv2DBitpackedOutPass()
+def trf_pass() -> ReplaceBconv2DBitpackedPass:
+    return ReplaceBconv2DBitpackedPass()
 
 
 @pytest.fixture()
 def new_opcode() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_bconv2d_bin_out
+    return XCOREOpCodes.XC_bconv2d_bin
 
 
 @pytest.fixture()

@@ -96,11 +96,19 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
 
 class ReplaceBconv2DInt8Pass(ReplaceBconv2DPass):
     @property
+    def matching_biases_type(self) -> TensorType:
+        return TensorType.FLOAT32
+
+    @property
     def new_opcode(self) -> OperatorCode:
         return OperatorCode(XCOREOpCodes.XC_bconv2d_int8)
 
     def match(self, op: Operator) -> bool:
-        return super().match(op) and len(op.inputs) == 4
+        return (
+            super().match(op)
+            and len(op.inputs) == 4
+            and op.inputs[3].type is self.matching_biases_type
+        )
 
 
 class ReplaceBconv2DInt8DeepInDeepOutPass(ReplaceBconv2DInt8Pass):

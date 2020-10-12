@@ -148,17 +148,6 @@ bnn_compute_patch:
     {vldr t[0]; add threshold_current, threshold_current, s}
     {vldd threshold_current[0]; add threshold_current, threshold_current, s}
 
-    {nop; nop}
-    {nop; nop}
-    {nop; nop}
-    {nop; nop}
-    here:
-    {nop; nop}
-    {nop; nop}
-    {nop; nop}
-    {nop; nop}
-
-
     {ldw t, sp[S_PATCH_LOOP_COUNTER]; nop}
     {ldw X_p, sp[S_DATA_SCRATCH]; nop}
     {bf t, bnn_patch_tail; sub t, t, 1}

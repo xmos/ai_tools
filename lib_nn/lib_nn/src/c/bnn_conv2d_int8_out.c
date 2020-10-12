@@ -117,7 +117,7 @@ void bnn_conv2d_int8_out_asm_prepare(
   plan->k_v_step = 0;
   plan->k_h_step = 0;
 
-  plan->y_v_step = chans_out * sizeof(int8_t) * (y->width - y_sub_width); //TODO check this
+  plan->y_v_step = chans_out * sizeof(int8_t) * (y->width - y_sub_width);
   
 }
 

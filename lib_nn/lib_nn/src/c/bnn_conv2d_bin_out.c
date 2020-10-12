@@ -159,8 +159,9 @@ void bnn_conv2d_bin_out_SISO_asm_prepare(
   assert(k_sub_width == k->shape.width);
   assert(k_sub_height == k->shape.height);
 
-  const unsigned chan_b32_in = (x->channels + 32 - 1) / 32; //TODO macro these
-  const unsigned chan_b32_out = (y->channels + 32 - 1) / 32;
+  const unsigned outputs_per_b32 = 32;
+  const unsigned chan_b32_in = (x->channels + outputs_per_b32 - 1) / outputs_per_b32;
+  const unsigned chan_b32_out = (y->channels + outputs_per_b32 - 1) / outputs_per_b32;
 
   bnn_b32_t(*Y)[y->width][chan_b32_out] =
       (bnn_b32_t(*)[y->width][chan_b32_out])Y_p;
@@ -181,11 +182,8 @@ void bnn_conv2d_bin_out_SISO_asm_prepare(
   unsigned bytes_per_input_channel = x->channels / 8;
   unsigned bytes_per_output_channel = y->channels / 8;
 
-  // This is 32 to make it easier and be more compatable with larq
-  const unsigned out_chans_multiplier = 32;
-
   assert((x->channels % 32) == 0);
-  assert((y->channels % out_chans_multiplier) == 0);
+  assert((y->channels % outputs_per_b32) == 0);
 
   plan->k_height_loop_counter = k_sub_height - 1;
   plan->k_width_loop_counter = k_sub_width - 1;
@@ -216,7 +214,7 @@ void bnn_conv2d_bin_out_SISO_asm_prepare(
   total_bits_copied_to_scratch -= plan->k_p_adjust;  
   plan->patch_loop_counter = total_bits_copied_to_scratch / XS3_VPU_VREG_WIDTH_BITS;
 
-  plan->output_channel_loop_counter = (y->channels / out_chans_multiplier) - 1;
+  plan->output_channel_loop_counter = (y->channels / outputs_per_b32) - 1;
 
   unsigned x_height_loops = y_sub_height;
   unsigned x_width_loops = y_sub_width;

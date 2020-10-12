@@ -6,8 +6,6 @@
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
 
-#define ACC_PERIOD (VPU_INT16_ACC_PERIOD) //TODO replace
-
 //This is the amount that the VLMUL instruction shifts the product of C and R by.
 static const unsigned post_vlmul_shr = 14;
 
@@ -47,15 +45,15 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
   int16_t* thresholds = (int16_t*)thresh_boggled;
 
   for (unsigned i = 0; i < chans_out; i++) {
-    unsigned bank = i / ACC_PERIOD;
+    unsigned bank = i / VPU_INT16_ACC_PERIOD;
 
     int32_t t = thresholds_ref[i] - ((int32_t)(receptive_field) / 2);
 
     if(chan_overlaps)
        t -= chan_overlaps[i];
 
-    thresholds[(bank * (2*ACC_PERIOD)) + (i % ACC_PERIOD)] = (t >> 0);
-    thresholds[(bank * (2*ACC_PERIOD)) + (i % ACC_PERIOD) + ACC_PERIOD] = (t >> ACC_PERIOD);
+    thresholds[(bank * (2*VPU_INT16_ACC_PERIOD)) + (i % VPU_INT16_ACC_PERIOD)] = (t >> 0);
+    thresholds[(bank * (2*VPU_INT16_ACC_PERIOD)) + (i % VPU_INT16_ACC_PERIOD) + VPU_INT16_ACC_PERIOD] = (t >> VPU_INT16_ACC_PERIOD);
   }
 }
 
@@ -67,19 +65,19 @@ void bnn_reorder_multiplier_and_bias_tensors(
                                   const unsigned chans_out) {
 
   for (unsigned b=0;b < chans_out/16;b++){
-    for(unsigned i=0;i<ACC_PERIOD;i++){
+    for(unsigned i=0;i<VPU_INT16_ACC_PERIOD;i++){
 
       unsigned interleaved_oc;
-      if (i<(ACC_PERIOD/2)){
+      if (i<(VPU_INT16_ACC_PERIOD/2)){
         interleaved_oc = (2*i) + 1;
       } else{
-        interleaved_oc = 2*(i-(ACC_PERIOD/2));
+        interleaved_oc = 2*(i-(VPU_INT16_ACC_PERIOD/2));
       }
 
-      post_activation_multiplier_q_reordered[b*ACC_PERIOD + i] = 
-        post_activation_multiplier_q[b*ACC_PERIOD + interleaved_oc];
-      post_activation_bias_q_reordered[b*ACC_PERIOD + i] = 
-        post_activation_bias_q[b*ACC_PERIOD + interleaved_oc];
+      post_activation_multiplier_q_reordered[b*VPU_INT16_ACC_PERIOD + i] = 
+        post_activation_multiplier_q[b*VPU_INT16_ACC_PERIOD + interleaved_oc];
+      post_activation_bias_q_reordered[b*VPU_INT16_ACC_PERIOD + i] = 
+        post_activation_bias_q[b*VPU_INT16_ACC_PERIOD + interleaved_oc];
     }
 
   }
@@ -96,21 +94,21 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
 
   unsigned remainder_32_word_groups = ((chans_in*k_height*k_width) - complete_256_bit_groups*XS3_VPU_VREG_WIDTH_BITS) / 32;
 
-  unsigned chan_b32_in =
-      (chans_in + 32 - 1) / 32;
+  const unsigned outputs_per_b32 = 32;
+  unsigned chan_b32_in = (chans_in + outputs_per_b32 - 1) / outputs_per_b32;
 
   bnn_b32_t(*K_ref)[k_height*k_width*chan_b32_in] =
       (bnn_b32_t(*)[k_height*k_width*chan_b32_in])K_ref_p;
 
-  //the nuber of ACC_PERIOD groups there will be
-  unsigned output_channel_groups = chans_out / ACC_PERIOD;
+  //the nuber of VPU_INT16_ACC_PERIOD groups there will be
+  unsigned output_channel_groups = chans_out / VPU_INT16_ACC_PERIOD;
 
   unsigned remaining_input_channels = ((chans_in*k_height*k_width) % XS3_VPU_VREG_WIDTH_BITS)/32;
 
-  bnn_b32_t(*K)[ACC_PERIOD][(8*complete_256_bit_groups) + remaining_input_channels] =
-      (bnn_b32_t(*)[ACC_PERIOD][(8*complete_256_bit_groups) + remaining_input_channels])K_p;
+  bnn_b32_t(*K)[VPU_INT16_ACC_PERIOD][(8*complete_256_bit_groups) + remaining_input_channels] =
+      (bnn_b32_t(*)[VPU_INT16_ACC_PERIOD][(8*complete_256_bit_groups) + remaining_input_channels])K_p;
 
-  //This loops across groups of ACC_PERIOD output channels
+  //This loops across groups of VPU_INT16_ACC_PERIOD output channels
   for (unsigned output_chan_group = 0; output_chan_group < output_channel_groups; 
       output_chan_group++) {
 
@@ -118,23 +116,23 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
 
     //copy the groups of 256 input channels
     for (unsigned ic_group=0;ic_group < complete_256_bit_groups; ic_group++){
-      //each group is of ACC_PERIOD channels 
-      for (unsigned sub_grp_idx = 0; sub_grp_idx < ACC_PERIOD; sub_grp_idx++) {
+      //each group is of VPU_INT16_ACC_PERIOD channels 
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
 
-        unsigned reversed_channel_order  = ACC_PERIOD - 1 - sub_grp_idx;
+        unsigned reversed_channel_order  = VPU_INT16_ACC_PERIOD - 1 - sub_grp_idx;
 
         memcpy(p,
-          &K_ref[output_chan_group * ACC_PERIOD + reversed_channel_order][8*ic_group],
+          &K_ref[output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order][8*ic_group],
           sizeof(bnn_b32_t) * 8);
         p += (8);
       }
     }
     if (remaining_input_channels){
-      for (unsigned sub_grp_idx = 0; sub_grp_idx < ACC_PERIOD; sub_grp_idx++) {
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
 
-        unsigned reversed_channel_order  = ACC_PERIOD - 1 - sub_grp_idx;
+        unsigned reversed_channel_order  = VPU_INT16_ACC_PERIOD - 1 - sub_grp_idx;
         memcpy(p,
-            &K_ref[output_chan_group * ACC_PERIOD + reversed_channel_order][8*complete_256_bit_groups],
+            &K_ref[output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order][8*complete_256_bit_groups],
                 sizeof(bnn_b32_t)*remaining_input_channels);
         p += remaining_input_channels;
       }   
@@ -157,27 +155,27 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
 
     bnn_b32_t * p = (bnn_b32_t *)&(K[output_chan_group]);
 
-    p += (8*ACC_PERIOD*complete_256_bit_groups);
+    p += (8*VPU_INT16_ACC_PERIOD*complete_256_bit_groups);
     
     if (remaining_input_channels){
-      for (unsigned sub_grp_idx = 0; sub_grp_idx < ACC_PERIOD; sub_grp_idx++) {
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
 
-        unsigned reversed_channel_order  = ACC_PERIOD - 1 - sub_grp_idx;
+        unsigned reversed_channel_order  = VPU_INT16_ACC_PERIOD - 1 - sub_grp_idx;
 
         bnn_b32_t zeros = 0x00000000;
         int total_xor_popcount = 0;
         for(unsigned o = remaining_input_channels; o < 8; o++){ //8 is 32 bit words per vpu load
           total_xor_popcount += (int)xor_pop_32(&(p[o]), &zeros) - 16;
         }
-        chan_overlaps[ output_chan_group * ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
+        chan_overlaps[ output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
 
         p += remaining_input_channels;
       }   
     } else {
       // This code is here for the case where the overlap is being used with multiples 
       // 256 input channels.
-      for (unsigned sub_grp_idx = 0; sub_grp_idx < ACC_PERIOD; sub_grp_idx++) {
-        chan_overlaps[ output_chan_group * ACC_PERIOD + sub_grp_idx] =  0;
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
+        chan_overlaps[ output_chan_group * VPU_INT16_ACC_PERIOD + sub_grp_idx] =  0;
       }   
     }
   }
@@ -193,26 +191,26 @@ void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
   bnn_b256_t(*K_ref)[k_height][k_width][chan_b256_in] =
       (bnn_b256_t(*)[k_height][k_width][chan_b256_in])K_ref_p;
 
-  bnn_b256_t(*K)[k_height][k_width][chan_b256_in][ACC_PERIOD] =
-      (bnn_b256_t(*)[k_height][k_width][chan_b256_in][ACC_PERIOD])K_p;
+  bnn_b256_t(*K)[k_height][k_width][chan_b256_in][VPU_INT16_ACC_PERIOD] =
+      (bnn_b256_t(*)[k_height][k_width][chan_b256_in][VPU_INT16_ACC_PERIOD])K_p;
 
-  for (unsigned output_chan_group = 0; output_chan_group < chans_out / ACC_PERIOD; 
+  for (unsigned output_chan_group = 0; output_chan_group < chans_out / VPU_INT16_ACC_PERIOD; 
       output_chan_group++) {
     for (unsigned h = 0; h < k_height; h++) {
       for (unsigned w = 0; w < k_width; w++) {
         for (unsigned ic = 0; ic < chan_b256_in; ic++) {
-          for (unsigned sub_grp_idx = 0; sub_grp_idx < ACC_PERIOD; sub_grp_idx++) {
+          for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
 
             //This is to compensate for the way the asm interleaves the 
             //upper and lower 8 outputs.
             unsigned interleaved_oc;
-            if (sub_grp_idx < (ACC_PERIOD/2)) {
+            if (sub_grp_idx < (VPU_INT16_ACC_PERIOD/2)) {
               interleaved_oc = (2*sub_grp_idx) + 1;
             } else{
-              interleaved_oc = 2*(sub_grp_idx - (ACC_PERIOD/2));
+              interleaved_oc = 2*(sub_grp_idx - (VPU_INT16_ACC_PERIOD/2));
             }
-            memcpy(& K[output_chan_group][h][w][ic][ACC_PERIOD - 1 - sub_grp_idx], 
-              & K_ref[output_chan_group * ACC_PERIOD + interleaved_oc][h][w][ic], 
+            memcpy(& K[output_chan_group][h][w][ic][VPU_INT16_ACC_PERIOD - 1 - sub_grp_idx], 
+              & K_ref[output_chan_group * VPU_INT16_ACC_PERIOD + interleaved_oc][h][w][ic], 
               sizeof(bnn_b256_t));
           }
         }
@@ -280,7 +278,6 @@ void bnn_conv2d_bin_out_SISO(bnn_b32_t* Y_p,
 
           sum = (k->shape.height * k->shape.width * chan_b32_in * channels_per_input_word) - sum;
 
-          // printf("sum %d %d %d\n", sum, (int)(thresholds[oc]),  sum > thresholds[oc]);
           unsigned bit = sum > thresholds[oc];
           if (bit) bitpacked_column |= 1ULL << oc_bit;
         }

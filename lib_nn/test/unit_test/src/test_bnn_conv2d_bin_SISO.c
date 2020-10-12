@@ -79,7 +79,7 @@ static void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b32_t* X_ref,
     0, 0, k_width, k_height);
 #endif
 
-  unsigned chan_b32_out = MAKE_MULTIPLE_OF_32(chans_out); 
+  unsigned chan_b32_out = DIV_BY_AND_ROUND_UP(chans_out, 32); 
   TEST_ASSERT_EQUAL_INT_ARRAY(Y_ref_p, Y_p, y_height*y_width*chan_b32_out);  
 }
 
@@ -99,8 +99,8 @@ void test_bnn_conv2d_bin_out_SISO_pseudo_directed() {
   CONV2D_OUTPUT_LENGTH(X_HEIGHT, K_HEIGHT, X_V_DILATION, V_STRIDE)
 #define Y_WIDTH CONV2D_OUTPUT_LENGTH(X_WIDTH, K_WIDTH, X_H_DILATION, H_STRIDE)
 
-#define CHAN_WORDS_IN MAKE_MULTIPLE_OF_32(CHANS_IN)
-#define CHAN_WORDS_OUT MAKE_MULTIPLE_OF_32(CHANS_OUT)
+#define CHAN_WORDS_IN DIV_BY_AND_ROUND_UP(CHANS_IN, 32)
+#define CHAN_WORDS_OUT DIV_BY_AND_ROUND_UP(CHANS_OUT, 32)
 
   bnn_b32_t WORD_ALIGNED K_ref[CHANS_OUT][K_HEIGHT][K_WIDTH][CHAN_WORDS_IN];
   bnn_b32_t WORD_ALIGNED K[CHANS_OUT*K_HEIGHT*K_WIDTH*CHAN_WORDS_IN + 
@@ -168,8 +168,8 @@ void test_bnn_conv2d_bin_out_SISO_pseudo_random() {
 #define MAX_X_HEIGHT 5
 #define MAX_X_WIDTH 5
 
-#define MAX_CHAN_WORDS_IN MAKE_MULTIPLE_OF(MAX_CHANS_IN, CHANS_PER_WORD)
-#define MAX_CHAN_WORDS_OUT MAKE_MULTIPLE_OF_32(MAX_CHANS_OUT)
+#define MAX_CHAN_WORDS_IN DIV_BY_AND_ROUND_UP(MAX_CHANS_IN, CHANS_PER_WORD)
+#define MAX_CHAN_WORDS_OUT DIV_BY_AND_ROUND_UP(MAX_CHANS_OUT, 32)
 
 #define MAX_Y_HEIGHT (((MAX_X_HEIGHT - MIN_K_HEIGHT + 1) / MIN_V_STRIDE))
 #define MAX_Y_WIDTH (((MAX_X_WIDTH - MIN_K_WIDTH + 1) / MIN_H_STRIDE))
@@ -282,7 +282,7 @@ static void run_bin_sub_image(bnn_b32_t* Y_p, const bnn_b32_t* Y_ref_p, const bn
                       y_loc_x, y_loc_y, y_sub_width, y_sub_height);
 #endif
 
-  unsigned chan_b32_out = MAKE_MULTIPLE_OF_32(y->channels); 
+  unsigned chan_b32_out = DIV_BY_AND_ROUND_UP(y->channels, 32); 
 
   bnn_b32_t(*Y)[y->width][chan_b32_out] =
       (bnn_b32_t(*)[y->width][chan_b32_out])Y_p;
@@ -328,8 +328,8 @@ void test_bnn_conv2d_bin_out_SISO_sub_image(){
   #define X_H_DILATION 1
   #define H_STRIDE 1
 
-  #define MAX_CHAN_WORDS_IN MAKE_MULTIPLE_OF_32(MAX_CHANS_IN)
-  #define MAX_CHAN_WORDS_OUT MAKE_MULTIPLE_OF_32(MAX_CHANS_OUT) 
+  #define MAX_CHAN_WORDS_IN DIV_BY_AND_ROUND_UP(MAX_CHANS_IN, 32)
+  #define MAX_CHAN_WORDS_OUT DIV_BY_AND_ROUND_UP(MAX_CHANS_OUT, 32) 
   #define FULL_Y_HEIGHT \
     CONV2D_OUTPUT_LENGTH(FULL_X_HEIGHT, FULL_K_HEIGHT, X_V_DILATION, V_STRIDE)
   #define FULL_Y_WIDTH CONV2D_OUTPUT_LENGTH(FULL_X_WIDTH, FULL_K_WIDTH, X_H_DILATION, H_STRIDE)

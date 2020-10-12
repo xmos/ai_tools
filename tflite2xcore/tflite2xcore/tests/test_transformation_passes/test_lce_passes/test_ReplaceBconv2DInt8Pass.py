@@ -3,7 +3,7 @@ import pytest
 from copy import deepcopy
 from typing import Tuple
 
-from tflite2xcore.transformation_passes.lce_passes import ReplaceBconv2DInt8Pass
+from tflite2xcore.transformation_passes import ReplaceBconv2DInt8Pass
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import XCOREOpCodes, Padding, TensorType
 
@@ -86,6 +86,8 @@ def test_mutate(
     assert len(operators) == 1
 
     new_op = operators[-1]
+
+    assert len(new_op.inputs) == 4
     new_op.inputs[1].type is TensorType.INT32
     new_op.inputs[2].type is TensorType.INT16
     new_op.inputs[3].type is TensorType.INT16

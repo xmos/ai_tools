@@ -1,13 +1,14 @@
 # Copyright (c) 2018-2020, XMOS Ltd, All rights reserved
 
-import sys
-import os
+import json
 import struct
 import ctypes
-from pathlib import Path
-from enum import Enum
 import numpy as np  # type: ignore
+<<<<<<< HEAD
 import json
+=======
+from enum import Enum
+>>>>>>> upstream/develop
 
 from tflite2xcore import libtflite2xcore as lib
 
@@ -153,7 +154,7 @@ class FlexbufferParser:
         lib.parse_flexbuffer.restype = ctypes.c_size_t
 
     def parse(self, buffer, size=100000):
-
+        
         if not buffer:
             return {}
 

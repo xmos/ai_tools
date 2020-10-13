@@ -2,7 +2,6 @@
 
 import pathlib
 import flatbuffers
-import numpy as np
 from typing import Union, Any
 
 from . import schema_py_generated as schema

@@ -5,14 +5,13 @@ import tensorflow as tf  # type: ignore
 from typing import Optional, Tuple
 
 from tflite2xcore.xcore_schema import BuiltinOpCodes  # type: ignore # TODO: fix this
-from tflite2xcore._model_generation import Configuration
-from tflite2xcore._model_generation.utils import parse_init_config
+from tflite2xcore.model_generation import Configuration
+from tflite2xcore.model_generation.utils import parse_init_config
 
-from . import (
-    ChannelAgnosticOpTestModelGenerator,
+from . import ChannelAgnosticOpTestModelGenerator
+from . import (  # pylint: disable=unused-import
     test_output,
     test_converted_single_op_model,
-    test_idempotence,
 )
 
 

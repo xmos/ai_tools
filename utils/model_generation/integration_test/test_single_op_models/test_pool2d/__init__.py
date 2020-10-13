@@ -4,14 +4,13 @@ import tensorflow as tf  # type: ignore
 from abc import abstractmethod
 from typing import Tuple, Optional, Type, Union
 
-from tflite2xcore._model_generation import Configuration
+from tflite2xcore.model_generation import Configuration
 
 from .. import (
     FilterOpTestModelGenerator,
     ChannelPreservingOpTestModelGenerator,
     test_output,
     test_converted_single_op_model,
-    test_idempotence,
 )
 
 

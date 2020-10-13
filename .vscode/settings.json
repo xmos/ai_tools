@@ -13,7 +13,6 @@
         "**/build/**": true,
         "**/bin/**": true,
     },
-    "python.pythonPath": "ai_tools_venv/bin/python",
     "python.linting.pylintEnabled": true,
     "editor.formatOnSave": true,
     "python.formatting.provider": "black",

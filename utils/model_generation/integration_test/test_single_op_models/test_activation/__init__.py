@@ -6,11 +6,9 @@ from abc import abstractmethod
 from typing import Callable, Optional, Tuple
 
 from .. import (
-    IntegrationTestRunner,
     ChannelAgnosticOpTestModelGenerator,
-    _test_output,
+    test_output,
     test_converted_single_op_model,
-    test_idempotence,
 )
 
 
@@ -30,14 +28,3 @@ class LUTActivationOpTestModelGenerator(ChannelAgnosticOpTestModelGenerator):
     ) -> tf.keras.layers.Layer:
         kwargs = {"input_shape": input_shape} if input_shape else {}
         return tf.keras.layers.Lambda(self.act_fun, **kwargs)
-
-
-#  ----------------------------------------------------------------------------
-#                                   TESTS
-#  ----------------------------------------------------------------------------
-
-
-def test_output(
-    run: IntegrationTestRunner, request: _pytest.fixtures.SubRequest
-) -> None:
-    _test_output(run.outputs, request, tolerance=0)

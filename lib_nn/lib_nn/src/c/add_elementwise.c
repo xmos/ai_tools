@@ -1,17 +1,15 @@
 
-#include <stdint.h>
-#include "vpu_sim.h"
+#include "nn_operator.h"
+#include "../nn_op_helper.h"
 
-typedef struct {
-    int16_t input1_shr;
-    int16_t input2_shr;
-    int16_t input1_offset; 
-    int16_t input2_offset;
-    int16_t input1_multiplier; /* Q1.14 */
-    int16_t input2_multiplier; /* Q1.14 */
-    int16_t output_multiplier; /* Q1.14 */
-    int16_t output_offset;
-} add_params_t;
+#include "xs3_vpu.h"
+
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdio.h>
+#include <assert.h>
+
 
 // ASHR16(A,A_SHR) --> floor( A * 2**(-A_SHR) )
 #define ASHR16(A,A_SHR)     (((A_SHR) >= 0)? ((A) >> (A_SHR)) : ((A) << -(A_SHR)))
@@ -29,28 +27,28 @@ typedef struct {
 //  before adding them.)
 #define REQUANT(A, A_SHR, OFFSET, MULT)     MUL_Q14((ASHR16(A, A_SHR) + (OFFSET)), (MULT))
 
-
+WEAK_FUNC
 void add_elementwise(
     int8_t Y[],
+    const int8_t X0[],
     const int8_t X1[],
-    const int8_t X2[],
-    const add_params_t* params,
+    const nn_add_params_t* params,
     const unsigned output_start,
     const unsigned output_count)
 {
 
-    for(int i = output_start; i < output_count; i++){
+    for(int i = output_start; i < output_start+output_count; i++){
 
         // Change X1 and X2 so that they have the same quantization
-        const int16_t tmp1 = REQUANT(X1[i], params->input1_shr, params->input1_offset, params->input1_multiplier);
-        const int16_t tmp2 = REQUANT(X2[i], params->input2_shr, params->input2_offset, params->input2_multiplier);
+        const int16_t tmp0 = REQUANT(X0[i], params->input[0].shr, params->input[0].offset, params->input[0].multiplier);
+        const int16_t tmp1 = REQUANT(X1[i], params->input[1].shr, params->input[1].offset, params->input[1].multiplier);
         
         // Add them together
-        int16_t out16 = tmp2 + tmp1;
+        int16_t out16 = tmp0 + tmp1;
 
         // Requantize the result with the output quantization
-        out16 = MUL_Q14(out16, params->output_multiplier);
-        out16 = out16 + params->output_offset;
+        out16 = MUL_Q14(out16, params->output.multiplier);
+        out16 = out16 + params->output.offset;
         Y[i] = VDEPTH8(out16);
 
     }   

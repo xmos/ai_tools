@@ -8,12 +8,12 @@ void add_elementwise(
     int8_t Y[],
     const int8_t X1[],
     const int8_t X2[],
-    const add_params3_t* params, //per-channel? If so, need to add C_in and make this an array.
+    const nn_add_params_t* params,
     const unsigned output_start,
     const unsigned output_count);
 */
 
-#define FUNCTION_NAME add_elementwise3
+#define FUNCTION_NAME add_elementwise
 
 #define NSTACKVECS      8
 #define NSTACKWORDS     ((NSTACKVECS)*8 + 10)
@@ -26,18 +26,14 @@ void add_elementwise(
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
 #define PARAMS_SHR1         0
-#define PARAMS_SHR2         1
-#define PARAMS_IN1_OFFSET   2
-#define PARAMS_IN2_OFFSET   3
-#define PARAMS_IN1_MULT     4
+#define PARAMS_IN1_OFFSET   1
+#define PARAMS_IN1_MULT     2
+#define PARAMS_SHR2         3
+#define PARAMS_IN2_OFFSET   4
 #define PARAMS_IN2_MULT     5
-#define PARAMS_OUT_MULT     7
-#define PARAMS_OUT_OFFSET   8
+#define PARAMS_OUT_MULT     6
+#define PARAMS_OUT_OFFSET   7
 
-#define PARAMS_IN12_SHR     0
-#define PARAMS_IN12_OFFSET  1
-#define PARAMS_IN12_MULT    2
-#define PARAMS_OUT_MOFF     3
 
 #define STACK_VECS_START        (NSTACKWORDS - (NSTACKVECS * 8))
 #define STACK_VEC_IN1           ((STACK_VECS_START)+0)
@@ -81,31 +77,37 @@ FUNCTION_NAME:
 #define params      r3
 
     ldw tmp, sp[STACK_OUT_START]
+{   ldc r4, PARAMS_SHR1                     ;                                           }
 {   add X1, X1, tmp                         ;   add X2, X2, tmp                         }
-{   add Y, Y, tmp                           ;   ldw X1_shr, params[PARAMS_IN12_SHR]     }
-{   sext X1_shr, 16                         ;   shr X2_shr, X1_shr, 16                  }
+{   ldc r4, PARAMS_SHR2                     ;   ld16s X1_shr, params[r4]                }
+{   add Y, Y, tmp                           ;   ld16s X2_shr, params[r4]                }
 
-{   ldaw r11, sp[STACK_VEC_IN1_OFFSET]      ;   ldw tmp, params[PARAMS_IN12_OFFSET]     }
-{   zext tmp, 16                            ;   shr vec_tmp1, tmp, 16                   }
-{   shl chans, tmp, 16                      ;   sext X2_shr, 16                         }
+{   ldc r4, PARAMS_IN1_OFFSET               ;   ldaw r11, sp[STACK_VEC_IN1_OFFSET]      }
+{   ldc r4, PARAMS_IN2_OFFSET               ;   ld16s tmp, params[r4]                   }
+{   zext tmp, 16                            ;   ld16s vec_tmp1, params[r4]              }
+{   shl chans, tmp, 16                      ;   zext vec_tmp1, 16                       }
 {   or tmp, tmp, chans                      ;   shl vec_tmp2, vec_tmp1, 16              }
 {                                           ;   bl .L_std_func                          }
 
 {   ldaw r11, sp[STACK_VEC_IN2_OFFSET]      ;   or tmp, vec_tmp1, vec_tmp2              }
 {                                           ;   bl .L_std_func                          }
 
-{   ldaw r11, dp[DP_VEC_IN1_MULT]           ;   ldw tmp, params[PARAMS_IN12_MULT]       }
-{   zext tmp, 16                            ;   shr vec_tmp1, tmp, 16                   }
-{   shl chans, tmp, 16                      ;   shl vec_tmp2, vec_tmp1, 16              }
-{   or tmp, tmp, chans                      ;   bl .L_std_func                          }
+{   ldc r4, PARAMS_IN1_MULT                 ;   ldaw r11, dp[DP_VEC_IN1_MULT]           }
+{   ldc r4, PARAMS_IN2_MULT                 ;   ld16s tmp, params[r4]                   }
+{   zext tmp, 16                            ;   ld16s vec_tmp1, params[r4]              }
+{   zext vec_tmp1, 16                       ;   shl chans, tmp, 16                      }
+{   or tmp, tmp, chans                      ;   shl vec_tmp2, vec_tmp1, 16              }
+{                                           ;   bl .L_std_func                          }
 
 {   ldaw r11, dp[DP_VEC_IN2_MULT]           ;   or tmp, vec_tmp1, vec_tmp2              }
 {                                           ;   bl .L_std_func                          }
 
-{   ldaw r11, dp[DP_VEC_OUT_MULT]           ;   ldw tmp, params[PARAMS_OUT_MOFF]        }
-{   zext tmp, 16                            ;   shr vec_tmp1, tmp, 16                   }
-{   shl chans, tmp, 16                      ;   shl vec_tmp2, vec_tmp1, 16              }
-{   or tmp, tmp, chans                      ;   bl .L_std_func                          }
+{   ldc r4, PARAMS_OUT_MULT                 ;   ldaw r11, dp[DP_VEC_OUT_MULT]           }
+{   ldc r4, PARAMS_OUT_OFFSET               ;   ld16s tmp, params[r4]                   }
+{   zext tmp, 16                            ;   ld16s vec_tmp1, params[r4]              }
+{   zext vec_tmp1, 16                       ;   shl chans, tmp, 16                      }
+{   or tmp, tmp, chans                      ;   shl vec_tmp2, vec_tmp1, 16              }
+{                                           ;   bl .L_std_func                          }
 
 {   ldaw r11, dp[DP_VEC_OUT_OFFSET]         ;   or tmp, vec_tmp1, vec_tmp2              }
 {                                           ;   bl .L_std_func                          }
@@ -125,7 +127,7 @@ FUNCTION_NAME:
     
     ldw N, sp[STACK_OUT_COUNT]
     ldap r11, vpu_vects_vec_0x01
-{   ldaw vec_tmp1, sp[STACK_VEC_IN1]        ;                                           }
+{   ldaw vec_tmp1, sp[STACK_VEC_IN1]        ;   ldc _32, 32                             }
 {   ldaw vec_tmp2, sp[STACK_VEC_IN2]        ;   vldc r11[0]                             }
 {   shl r11, _32, 4                         ;   bf N, .L_loop_end                       }
 

@@ -3,6 +3,124 @@
 #include "nn_types.h"
 #include "nn_image.h"
 
+/**
+ * Describes the parameters needed for an @oper{add_elementwise} operator. @see add_elementwise().
+ */
+typedef struct {
+
+    /**
+     * The parameters that are applied to each input element. Those in `input[0]` are applied to elements of 
+     * @tensor{x_0}, and `input[1]` are applied to elements of @tensor{x_1}.
+     */
+    struct {
+        /**
+         * `input[k].shr` is the arithmetic _right_-shift @math{s_k} applied to elements of @tensor{x_k}. This will 
+         * usually be a negative value.
+         */
+        int16_t shr;
+
+        /**
+         * `input[k].offset` is the offset @math{z_k} applied to elements of @tensor{x_k}. This is usually derived from
+         * the zero-point of the quantized vector @tensor{x_k}.
+         */
+        int16_t offset;
+
+        /**
+         * `input[k].multiplier` is the scale factor @math{m_k} applied to elements of @tensor{x_k}. This and @math{s_k}
+         * are usually derived from the scale factor of the quantized vector @tensor{x_k}.
+         * 
+         * @math{m_k} should be understood as Q1.14 fixed-point value.
+         */
+        int16_t multiplier;
+    } input[2];
+
+
+    /**
+     * The parameters that are applied to quantize each output element.
+     */
+    struct {
+
+        /**
+         * `output.multiplier` is the scale factor @math{m_{out}} applied when quantizing output elements of @tensor{y}.
+         * 
+         * @math{m_{out}} should be understood as a Q1.14 fixed-point value.
+         */
+        int16_t multiplier;
+
+        /**
+         * `output.offset` is the offset @math{z_{out}} applied when quantizing output elements of @tensor{y}.
+         */
+        int16_t offset;
+    } output;
+} nn_add_params_t;
+
+/**
+ * @brief Invoke an @oper{add_elementwise} job.
+ * 
+ * The @oper{add_elementwise} operator adds together two quantized 8-bit input vectors, @tensor{x_0} and @tensor{x_1}
+ * element-by-element to produce the output vector @tensor{y}. This function assumes that the input vectors and the 
+ * output vector each require different quantization parameters.
+ * 
+ * In order to add together two quantized vectors, their quantization parameters must match. The contents of `params`
+ * indicate how to do this.
+ * 
+ * @par Operation Performed
+ * 
+ * @f[
+ *      v_i[k] \leftarrow  sat_{16}\!\left(round\!\left(sat_{16}\!\left( sat_{16}\!\left( floor\!\left(\frac{x_i[k]}{2^{s_i}}\right)
+ *              \right)+z_i\right)\cdot\frac{m_i}{2^{14}} \right)\right) \\
+ *      
+ *      y[k] \leftarrow   round\!\left(\frac{sat_{16}\!\left(sat_{16}\!\left(round\!\left(\frac{m_{out}}{2^{14}}\cdot sat_{16}\!\left(v_0[k] 
+ *                          + v_1[k]\right)\right)\right) + z_{out}\right)}{2^{8}}\right)
+ * 
+ * @f]
+ * 
+ * where
+ * 
+ * @par 
+ * each @tensor{v_i} is an intermediate 16-bit vector representing the contents of @tensor{x_i} requantized according
+ * to the contents of `params`,
+ * 
+ * @par
+ * @math{k} is the output index,
+ * 
+ * @par
+ * @math{sat_{16}\!\left(\cdot\right)} saturates its arguments to @math{16}-bit bounds, and
+ * 
+ * @par
+ * the remaining parameters are as described below.
+ * 
+ * @par Parameter Details
+ * 
+ * `Y` points to the output vector @tensor{y} with shape @tensor_shape{N}.
+ * 
+ * `X0` and `X1' respectively point to the first and second input vectors @tensor{x_0} and @tensor{x_1}, each with shape 
+ * @tensor_shape{N}.
+ * 
+ * `params` describes how the elements of each vector should be treated in accordance with their quantization 
+ * parameters.
+ * 
+ * `elm_start` and `elm_count` together specify which output elements @math{y[k]} should be calculated by this 
+ * invocation. Specifically, this invocation will calculate @math{y[k]} for which `elm_start` @math{\le k \lt} 
+ * `(elm_start + elm_count)`.
+ * 
+ * @param[out]  Y           The output vector @tensor{y}
+ * @param[in]   X0          The first input vector @tensor{x_0}
+ * @param[in]   X1          The second input vector @tensor{x_1}
+ * @param[in]   params      The requantization parameters
+ * @param[in]   elm_start   Index of first output element to be computed
+ * @param[in]   elm_count   Number of output elements to be computed
+ */
+void add_elementwise(
+    int8_t Y[],
+    const int8_t X0[],
+    const int8_t X1[],
+    const nn_add_params_t* params,
+    const unsigned elm_start,
+    const unsigned elm_count);
+
+
+
 /**  
  * @brief Invoke an @oper{argmax_16} job.
  * 

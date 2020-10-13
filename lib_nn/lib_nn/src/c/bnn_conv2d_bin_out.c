@@ -80,7 +80,7 @@ void bnn_conv2d_bin_out_asm_prepare(
   plan->x_width_loop_counter = x_width_loops - 1;
 
  // Inner Loop
-  // minus one to account for the auto increament in the loop
+  // minus one to account for the auto increment in the loop
   plan->inner_x_h_step = bytes_per_input_channel * (h_dilation - 1);
 
   // TODO multiply x->width by dilation
@@ -206,11 +206,13 @@ void bnn_conv2d_bin_out_SISO_asm_prepare(
   unsigned total_bits_copied_to_scratch = x->channels * k_sub_height * k_sub_width;
 
   //the final loop copies 32-256 bits(not 0)
-  if ((total_bits_copied_to_scratch%XS3_VPU_VREG_WIDTH_BITS) ==  0){
-    plan->k_p_adjust = XS3_VPU_VREG_WIDTH_BITS/8;
-  } else {
-    plan->k_p_adjust =(total_bits_copied_to_scratch%XS3_VPU_VREG_WIDTH_BITS)/8;
+  int remainder_bits = total_bits_copied_to_scratch % XS3_VPU_VREG_WIDTH_BITS;
+  if (!remainder_bits) {
+    remainder_bits = XS3_VPU_VREG_WIDTH_BITS;
   }
+  plan->k_p_adjust = remainder_bits / 8;
+
+
   total_bits_copied_to_scratch -= plan->k_p_adjust;  
   plan->patch_loop_counter = total_bits_copied_to_scratch / XS3_VPU_VREG_WIDTH_BITS;
 
@@ -223,7 +225,7 @@ void bnn_conv2d_bin_out_SISO_asm_prepare(
   plan->x_width_loop_counter = x_width_loops - 1;
 
  // Inner Loop
-  // minus one to account for the auto increament in the loop
+  // minus one to account for the auto increment in the loop
   unsigned bytes_per_input_channel_rounded_up = ((bytes_per_input_channel + 32 - 1)/32)*32;
   plan->inner_x_h_step = bytes_per_input_channel * h_dilation - bytes_per_input_channel_rounded_up;
 

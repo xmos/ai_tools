@@ -20,7 +20,8 @@
  * @param thresh_reordered   [out]    The output @tensor{thresh_reordered}
  * @param thresholds_ref     [in]     The input @tensor{thresholds_ref}
  * @param chans_out          [in]     The number of output channels
- * @param receptive_field    [in]     The spatial area over which the kernel operates
+ * @param receptive_field    [in]     The spatial area over which the kernel operates, i.e. 
+ *                                    kernel height * kernel width * input channel count.           
  * @param chan_overlaps      [in]     The overlap between one channel and the next //FIXME
  */
 void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,

@@ -19,7 +19,7 @@ void larq_ref_bconv2d_int8_out(const nn_image_params_t* x, const nn_image_params
                       const float* post_activation_multiplier, 
                       const float* post_activation_bias );
 
-#define DIV_BY_AND_ROUND_UP(x, y) (((x) + y - 1) / y)
+#define DIV_BY_AND_ROUND_UP(x, y) (((x) + (y) - 1) / (y))
 
 #define max(a,b) \
    ({ __typeof__ (a) _a = (a); \

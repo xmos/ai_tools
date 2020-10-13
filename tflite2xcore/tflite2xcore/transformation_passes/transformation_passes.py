@@ -5,6 +5,7 @@ import numpy as np  # type: ignore
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
+from tflite2xcore.xcore_model import Tensor
 from tflite2xcore.xcore_schema import TensorType, OperatorCode
 from tflite2xcore.utils import ACC_PERIOD, format_array
 
@@ -28,19 +29,16 @@ class ModelTransformationPass(ABC):
         return self.__class__.__name__
 
 
-class SubgraphTransformationPass(ModelTransformationPass):
+class SubgraphPass(ModelTransformationPass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._subgraph_idx = -1
         self._obj_index = -1
+        self._num_matches = 0
 
     @abstractmethod
     def match(self, obj):
         return True
-
-    @abstractmethod
-    def mutate(self, obj):
-        pass
 
     @abstractmethod
     def target_iterable(self, subgraph):
@@ -49,20 +47,9 @@ class SubgraphTransformationPass(ModelTransformationPass):
     def log_match(self, obj):
         self.logger.debug(f"matched {obj}")
 
+    @abstractmethod
     def run_subgraph(self, subgraph):
-        num_matches = 0
-        while True:
-            for self._obj_index, obj in enumerate(self.target_iterable(subgraph)):
-                if self.match(obj):
-                    num_matches += 1
-                    self.log_match(obj)
-                    self._sanity_check(obj)
-                    self.mutate(obj)
-                    self._sanity_check(subgraph)
-                    break
-            else:
-                self._obj_index = -1
-                return num_matches
+        pass
 
     def run(self, model):
         modified_cnt = 0
@@ -73,6 +60,38 @@ class SubgraphTransformationPass(ModelTransformationPass):
 
         self._subgraph_idx = -1
         return modified_cnt
+
+
+class SubgraphAnalysisPass(SubgraphPass):
+    def run_subgraph(self, subgraph):
+        self._num_matches = 0
+        for self._obj_index, obj in enumerate(self.target_iterable(subgraph)):
+            if self.match(obj):
+                self._num_matches += 1
+                self.log_match(obj)
+                self._sanity_check(obj)
+        return 0
+
+
+class SubgraphTransformationPass(SubgraphPass):
+    @abstractmethod
+    def mutate(self, obj):
+        pass
+
+    def run_subgraph(self, subgraph):
+        self._num_matches = 0
+        while True:
+            for self._obj_index, obj in enumerate(self.target_iterable(subgraph)):
+                if self.match(obj):
+                    self._num_matches += 1
+                    self.log_match(obj)
+                    self._sanity_check(obj)
+                    self.mutate(obj)
+                    self._sanity_check(subgraph)
+                    break
+            else:
+                self._obj_index = -1
+                return self._num_matches
 
 
 class OperatorMatchingPass(SubgraphTransformationPass):

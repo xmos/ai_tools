@@ -4,12 +4,7 @@ import json
 import struct
 import ctypes
 import numpy as np  # type: ignore
-<<<<<<< HEAD
-import json
-=======
 from enum import Enum
->>>>>>> upstream/develop
-
 from tflite2xcore import libtflite2xcore as lib
 
 

@@ -5,9 +5,6 @@
 
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
-// #include "nn_op_structs.h"
-
-// #include "xs3_vpu.h"
 
 #if defined(__XS3A__)
 
@@ -30,6 +27,12 @@ void bnn_conv2d_int8_out_asm_prepare(
     const unsigned x_loc_x, const unsigned x_loc_y, 
     const unsigned k_loc_x, const unsigned k_loc_y, 
     const unsigned k_sub_width, const unsigned k_sub_height) {
+
+  //these are required for now
+  assert(k_loc_x == 0);
+  assert(k_loc_y == 0);
+  assert(k_sub_width == k->shape.width);
+  assert(k_sub_height == k->shape.height);
 
   const unsigned chan_b256_in = (x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
   const unsigned chans_out = y->channels;
@@ -95,7 +98,7 @@ void bnn_conv2d_int8_out_asm_prepare(
   plan->x_width_loop_counter = x_width_loops - 1;
 
   // Inner Loop
-  // minus one to account for the auto increament in the loop
+  // minus one to account for the auto increment in the loop
   plan->inner_x_h_step = bytes_per_input_channel * (h_dilation - 1);
 
   // TODO multiply x->width by dilation
@@ -114,7 +117,7 @@ void bnn_conv2d_int8_out_asm_prepare(
   plan->k_v_step = 0;
   plan->k_h_step = 0;
 
-  plan->y_v_step = sizeof(int8_t)*16 * (y->width - y_sub_width); //TODO check this
+  plan->y_v_step = chans_out * sizeof(int8_t) * (y->width - y_sub_width);
   
 }
 

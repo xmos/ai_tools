@@ -3,7 +3,6 @@ from typing import Tuple
 import numpy as np
 
 
-
 from tflite2xcore.utils import (
     WORD_SIZE_BITS,
     VECTOR_SIZE_BITS,
@@ -24,6 +23,7 @@ from .transformation_passes import (
     ReplaceQuantizedOperatorPass,
 )
 from .conv2d_passes import ReplaceConv2DPass
+
 
 class ReplaceBconv2DPass(ReplaceConv2DPass):
     @property
@@ -173,7 +173,7 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
                 (0, 0),
             ]
         )
-       
+
         # Pass on pad values from conv to pad op
         pad_value = op.custom_options["pad_values"]
 
@@ -187,11 +187,9 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
 
         pad_op.custom_options["pad_values"] = pad_value
         pad_op.custom_options["padding_values"] = [padding_tb, 0, padding_lr, 0]
- 
 
         C_out, K_h, K_w, C_in = op.inputs[1].shape
         bytes_per_pixel = C_in * 4
-
 
         # Construct paddings parameter tensor and padded input tensor
         padding_tensor = subgraph.create_tensor(
@@ -216,7 +214,6 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
         pad_op.custom_options["bytes_per_pixel"] = int(bytes_per_pixel)
         pad_op.custom_options["pad_values"] = pad_value
         pad_op.custom_options["padding_values"] = [paddings[1][0], 0, padding_l, 0]
-
 
         subgraph.insert_operator(op, pad_op)
 

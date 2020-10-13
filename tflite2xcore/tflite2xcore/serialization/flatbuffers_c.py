@@ -149,7 +149,7 @@ class FlexbufferParser:
         lib.parse_flexbuffer.restype = ctypes.c_size_t
 
     def parse(self, buffer, size=100000):
-        
+
         if not buffer:
             return {}
 

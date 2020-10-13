@@ -79,4 +79,3 @@ def test_non_matching_input_channels(
 
 if __name__ == "__main__":
     pytest.main()
-

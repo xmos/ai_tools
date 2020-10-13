@@ -17,6 +17,7 @@ dependencies:
   - ca-certificates=2019.11.28
   - cairo=1.14.12
   - certifi=2019.11.28
+  - cmake=3.14.0
   - cycler=0.10.0
   - dbus=1.13.6
   - decorator=4.4.0
@@ -66,6 +67,7 @@ dependencies:
   - libuuid=1.0.3
   - libxcb=1.13
   - libxml2=2.9.9
+  - make=4.2.1
   - markupsafe=1.1.1
   - matplotlib=3.1.1
   - mccabe=0.6.1
@@ -181,4 +183,3 @@ dependencies:
     - werkzeug==0.16.0
     - wheel==0.33.6
     - -e ./tflite2xcore
-

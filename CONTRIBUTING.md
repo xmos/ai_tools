@@ -48,13 +48,9 @@ diff <my_cc_file> /tmp/my_cc_file.cc
 
 ### Running Tests
 
-There is a Makefile in the root directory that has some useful targets - especially when it comes to running tests before making a pull request.
+There is a Makefile in the root directory that has some useful targets - especially when it comes to running tests before making a pull request. Run the following for more information on the targets.
 
-* `all` - Run all the testing targets
-* `lib_nn_test` - Build and run unit tests for lib_nn
-* `tflite2xcore_test` - Run unit tests for tflite2xcore
-* `integration_test` - Build any necessary components, generate all test data, and run all integration tests
-* `clean` - Cleans all builds
+  make help
 
 To run the integration tests using multiple processors run 
 
@@ -72,30 +68,11 @@ On macOS you can utilize all your cores with
 
 ## Development Tips
 
-### Installing Tools 15.0.0 Engineering Release
-
-We currently require build 385 or newer.  Build 385 can be downloaded from http://srv-bri-jtools.xmos.local:8080/job/xmos-tools%20MANUAL/job/tools_installers/job/master/385/
-
-NOTE: This link to the Engineering Release requires being inside the XMOS firewall.  We will replace this link once Tools 15 is officially released.
-
-Linux users may want to manually add the SetEnv.sh script to the `.bashrc` file.  Add the following lines:
-
-    XTIMEVER=Community_15.0.0
-    pushd /usr/local/XMOS/xTIMEcomposer/$XTIMEVER/ > /dev/null
-    source SetEnv
-    popd > /dev/null
-
-
 ### git Submodules
 
 At times submodule repositories will need to be updated.  To update all submodules, run the following command
 
 > git submodule update --init --recursive
-
-Users of older git versions, may need to use the following command
-
-> git pull --recurse-submodules
-
 
 ### Conda Environment
 

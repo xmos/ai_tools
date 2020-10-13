@@ -4,14 +4,12 @@ import tensorflow as tf  # type: ignore
 from abc import abstractmethod
 from typing import Tuple, Optional
 
-from tflite2xcore._model_generation import Configuration
+from tflite2xcore.model_generation import Configuration
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
 
 from .. import (
-    IntegrationTestRunner,
     IntegrationTestModelGenerator,
-    _test_output,
     test_output,
     test_idempotence,
 )

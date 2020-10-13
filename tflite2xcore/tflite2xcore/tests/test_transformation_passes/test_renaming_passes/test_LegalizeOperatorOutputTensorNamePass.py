@@ -13,7 +13,11 @@ from tflite2xcore.tests.test_transformation_passes.model_builders import (
     build_split,
 )
 
-from .conftest import PARAMS, _test_matching_params, _test_non_matching_params
+from .conftest import (
+    PARAMS,
+    test_matching_params as _test_matching_params,
+    _test_non_matching_params,
+)
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES

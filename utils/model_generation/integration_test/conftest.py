@@ -6,12 +6,12 @@ import portalocker  # type: ignore
 import pytest  # type: ignore
 import _pytest  # type: ignore # NOTE: for typing only
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Type
 
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
-from tflite2xcore._model_generation.utils import stringify_config
+from tflite2xcore.model_generation.utils import stringify_config
 
-from . import IntegrationTestModelGenerator, IntegrationTestRunner
+from . import IntegrationTestRunner, DefaultIntegrationTestRunner
 
 
 #  ----------------------------------------------------------------------------
@@ -48,6 +48,12 @@ def pytest_addoption(parser):  # type: ignore
         "--generate-only",
         action="store_true",
         help="The model generators are run and cached but outputs are not evaluated for correctness",
+    )
+
+    parser.addoption(
+        "--use-device",
+        action="store_true",
+        help="Execute interpreter on hardware device",
     )
 
 
@@ -95,7 +101,7 @@ def disable_gpus(monkeypatch: _pytest.monkeypatch.MonkeyPatch) -> None:
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "-1")
 
 
-_WORKER_CACHE: Dict[Path, IntegrationTestModelGenerator] = {}
+_WORKER_CACHE: Dict[Path, IntegrationTestRunner] = {}
 
 
 @pytest.fixture  # type: ignore
@@ -105,54 +111,60 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     except AttributeError:
         raise NameError("GENERATOR not designated in test") from None
 
-    gen: IntegrationTestModelGenerator = GENERATOR()
-    gen.set_config(**request.param)
+    try:
+        RUNNER: Type[IntegrationTestRunner] = request.module.RUNNER
+    except AttributeError:
+        RUNNER = DefaultIntegrationTestRunner
 
     pytest_config = request.config
+
+    runner = RUNNER(GENERATOR, use_device=pytest_config.getoption("--use-device"))
+    runner.set_config(**request.param)
+
     if pytest_config.getoption("verbose"):
-        print(f"Config: {gen._config}")
+        print(f"Config: {runner._config}")
     if pytest_config.getoption("--config-only"):
         pytest.skip()
 
-    config_str = stringify_config(gen._config)
+    config_str = stringify_config(runner._config)
     file_path = Path(request.module.__file__)
     key = file_path.relative_to(pytest_config.rootdir) / config_str
 
     try:
-        gen = _WORKER_CACHE[key]
+        runner = _WORKER_CACHE[key]
     except KeyError:
         dirpath = pytest_config.cache.get(key, "")
         if dirpath:
-            gen = IntegrationTestModelGenerator.load(dirpath)
-            logging.debug(f"cached generator loaded from {dirpath}")
-            gen.run.rerun_post_cache()
+            runner = IntegrationTestRunner.load(dirpath)
+            logging.debug(f"cached runner loaded from {dirpath}")
+            runner.rerun_post_cache()
         else:
-            gen.run()
+            runner.run()
             try:
                 with portalocker.BoundedSemaphore(1, hash(key), timeout=0):
                     dirpath = str(pytest_config.cache.makedir("model_cache") / key)
-                    dirpath = gen.save(dirpath)
+                    dirpath = runner.save(dirpath)
                     if pytest_config.getoption("dump") == "models":
-                        gen.run.dump(dirpath)
+                        runner.dump_models(dirpath)
 
-                    logging.debug(f"generator cached to {dirpath}")
+                    logging.debug(f"runner cached to {dirpath}")
                     pytest_config.cache.set(key, str(dirpath))
             except portalocker.AlreadyLocked:
                 # another process will write to cache
                 pass
-        _WORKER_CACHE[key] = gen
+        _WORKER_CACHE[key] = runner
 
     if pytest_config.getoption("--generate-only"):
         pytest.skip()
 
-    return gen.run
+    return runner
 
 
 @pytest.fixture  # type: ignore
 def xcore_model(run: IntegrationTestRunner) -> XCOREModel:
-    return XCOREModel.deserialize(run.models.xcore)
+    return XCOREModel.deserialize(run._xcore_converter._model)
 
 
 @pytest.fixture  # type: ignore
-def xcore_identical_model(run: IntegrationTestRunner) -> XCOREModel:
-    return XCOREModel.deserialize(run.models.xcore_identical)
+def output_tolerance() -> int:
+    return 1

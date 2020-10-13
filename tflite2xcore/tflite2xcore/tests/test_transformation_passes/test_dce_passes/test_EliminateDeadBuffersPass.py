@@ -3,7 +3,6 @@
 import pytest
 
 from tflite2xcore.transformation_passes import EliminateDeadBuffersPass
-from tflite2xcore.xcore_schema import TensorType
 
 from .conftest import model, add_dangling_tensor
 

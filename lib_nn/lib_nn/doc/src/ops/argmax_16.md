@@ -9,10 +9,6 @@ This operator executes an argument maximization (@math{argmax_k\\{x[k]\\}}) func
 of the maximum element of the vector @tensor{x}. The function is applied to a 16-bit input vector @tensor{x} to get a 
 returned integer @math{y}.
 
-Unlike most other operators, the @oper{argmax_16} operator requires no plan or jobs to be initialized before it can 
-be invoked. See @ref argmax_16_api below.
-
-
 ### Parameters 
 
 #### Hyperparameters        {#argmax_16_hyperparams}
@@ -66,13 +62,3 @@ For example, if the input vector were the following 16-bit array:
 @endcode
 
 Then the result of an @oper{argmax_16} operation would be `4`, as `input_vector[4]` (value: `16000`) is the maximum element.
-
-
-### API                     {#argmax_16_api}
-
-Invoking an instance of @oper{argmax_16} is done with a call to argmax_16(). No plan or jobs are required and no initialization
-is necessary.
-
-To apply the @oper{argmax_16} operation on a multi-dimensional tensor, simply supply the product of the tensors dimensions as 
-@math{N}.
-

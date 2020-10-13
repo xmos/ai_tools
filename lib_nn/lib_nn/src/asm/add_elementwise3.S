@@ -4,7 +4,7 @@
 #include "nn_config.h"
 
 /*
-void add_elementwise3(
+void add_elementwise(
     int8_t Y[],
     const int8_t X1[],
     const int8_t X2[],

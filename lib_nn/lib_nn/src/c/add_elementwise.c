@@ -11,8 +11,7 @@ typedef struct {
     int16_t input2_multiplier; /* Q1.14 */
     int16_t output_multiplier; /* Q1.14 */
     int16_t output_offset;
-    int32_t dummy; //for word-alignment. For now.
-} add_params3_t;
+} add_params_t;
 
 // ASHR16(A,A_SHR) --> floor( A * 2**(-A_SHR) )
 #define ASHR16(A,A_SHR)     (((A_SHR) >= 0)? ((A) >> (A_SHR)) : ((A) << -(A_SHR)))
@@ -31,11 +30,11 @@ typedef struct {
 #define REQUANT(A, A_SHR, OFFSET, MULT)     MUL_Q14((ASHR16(A, A_SHR) + (OFFSET)), (MULT))
 
 
-void add_elementwise3(
+void add_elementwise(
     int8_t Y[],
     const int8_t X1[],
     const int8_t X2[],
-    const add_params3_t* params, //per-channel? If so, need to add C_in and make this an array.
+    const add_params_t* params,
     const unsigned output_start,
     const unsigned output_count)
 {

@@ -159,10 +159,6 @@ class SplitPaddingFromConvPass(LceConv2dPass):
         padding_tb = SplitPaddingFromConvPass._calc_pad(strides[0], height, K_h)
         padding_lr = SplitPaddingFromConvPass._calc_pad(strides[1], width, K_w)
         paddings = [[pad] * 2 for pad in (0, padding_tb, padding_lr, 0)]
-        # padding_tensor = subgraph.create_tensor(
-        #    f"{op.name}/paddings", TensorType.INT32, shape=[4, 2]
-        # )
-        # padding_tensor.buffer.data = np.int32(paddings)
 
         pad_output_shape = tuple(
             input_dim + sum(pad) for input_dim, pad in zip(old_input.shape, paddings)

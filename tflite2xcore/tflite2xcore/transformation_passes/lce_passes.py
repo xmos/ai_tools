@@ -1,6 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
-from typing import Any
+from typing import Tuple
 import numpy as np
+
 
 
 from tflite2xcore.utils import (
@@ -18,6 +19,11 @@ from tflite2xcore.xcore_schema import (
     OperatorCode,
     BuiltinOpCodes,
 )
+from .transformation_passes import (
+    OperatorMatchingPass,
+    ReplaceQuantizedOperatorPass,
+)
+from .conv2d_passes import ReplaceConv2DPass
 
 class ReplaceBconv2DPass(ReplaceConv2DPass):
     @property

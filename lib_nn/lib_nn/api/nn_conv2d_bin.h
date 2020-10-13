@@ -172,6 +172,26 @@ void bnn_conv2d_int8_out_valid(int8_t* Y_p,
     const unsigned y_sub_width, const unsigned y_sub_height
 );
 
+
+void bnn_conv2d_int8_out_SISO_valid(int8_t* Y_p,
+    const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
+    
+    const int16_t* post_activation_multiplier_q, 
+    const int16_t* post_activation_bias_q,
+    const int accu_shr,
+    const int final_shr,
+
+    int *chan_overlaps,
+    bnn_b32_t * data_scratch,
+
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const nn_window_params_t* k, 
+
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height
+);
+
 /**  
  * @brief Execute @oper{bnn_conv2d_bin_out_valid}.
  * 
@@ -402,5 +422,29 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
     const unsigned x_h_loc, const unsigned x_v_loc, 
     
     const unsigned k_h_loc, const unsigned k_v_loc, 
+    const unsigned k_sub_width, const unsigned k_sub_height
+) ;
+
+void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
+    const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
+    
+    const int16_t* post_activation_multiplier_q, 
+    const int16_t* post_activation_bias_q,
+    const int accu_shr,
+    const int final_shr,
+
+    int *chan_overlaps,
+    bnn_b32_t * data_scratch,
+    
+    const nn_image_params_t* x, //The full image of x
+    const nn_image_params_t* y, // the full image of y
+    const nn_window_params_t* k, //the full kernel k
+    
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height,
+
+    const unsigned x_loc_x, const unsigned x_loc_y, 
+    
+    const unsigned k_loc_x, const unsigned k_loc_y, 
     const unsigned k_sub_width, const unsigned k_sub_height
 ) ;

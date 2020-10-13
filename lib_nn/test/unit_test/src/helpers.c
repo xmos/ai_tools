@@ -99,31 +99,30 @@ int get_accumulator_ashr(int32_t max_accu_post_clamp, int32_t min_accu_post_clam
 }
 
 int get_pam_exponent(float* post_activation_multiplier, unsigned chans_out){
-  float max_pam = -FLT_MAX;
+  float abs_max_pam = -FLT_MAX;
   float min_pam = FLT_MAX;
+  float max_pam = -FLT_MAX;
   for (unsigned ch=0; ch < chans_out; ch++){
-    max_pam = max(max_pam, post_activation_multiplier[ch]);
+    abs_max_pam = max(abs_max_pam, fabs(post_activation_multiplier[ch]));
     min_pam = min(min_pam, post_activation_multiplier[ch]);
+    max_pam = max(max_pam, post_activation_multiplier[ch]);
   }
 
-  int max_pam_exp, min_pam_exp;
-  frexp(max_pam, &max_pam_exp);
-  frexp(min_pam, &min_pam_exp);
+  int abs_max_pam_exp;
+  frexp(abs_max_pam, &abs_max_pam_exp);
 
   // Raise any multiplier to b to get them as big as possible - 
   // this should be possible without the loop
-  int M = 15 - min(max_pam_exp, min_pam_exp);
-  int M_before = M;
-  
-  while ( (((int32_t)round(ldexp(max_pam, M))) > INT16_MAX) || 
-          (((int32_t)round(ldexp(max_pam, M))) < INT16_MIN )|| 
-          (((int32_t)round(ldexp(min_pam, M))) > INT16_MAX) || 
-          (((int32_t)round(ldexp(min_pam, M))) < INT16_MIN)
+  int M = 15 - abs_max_pam_exp;
+
+  while ( (((int32_t)round(ldexp(min_pam, M))) > INT16_MAX) || 
+          (((int32_t)round(ldexp(min_pam, M))) < INT16_MIN) || 
+          (((int32_t)round(ldexp(max_pam, M))) > INT16_MAX) || 
+          (((int32_t)round(ldexp(max_pam, M))) < INT16_MIN)
           ){
     M -= 1;
-    //This should only happen once if the rounding bit tips it over the edge.
-    //It might be better to use 0x7fff (or equliv) instead of decreamenting M.
   }
+  
   return M;
 }
 
@@ -172,8 +171,10 @@ void quantise_activation(
     if(rsb < min_pam_rsb)
       min_pam_rsb = rsb;
   }
+  
   //There should be at least one multiplier that has zero headroom.
-  assert(min_pam_rsb == 0);
+  // assert(min_pam_rsb == 0);
+  //This can fail in the case of pam*exp = -32769 and pam*(exp-1) =  -16384
 
   float min_pab = FLT_MAX;
   float max_pab = -FLT_MAX;

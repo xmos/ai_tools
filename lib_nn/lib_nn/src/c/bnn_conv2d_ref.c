@@ -442,3 +442,90 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
     }
   }
 }
+
+WEAK_FUNC
+void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
+    const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
+    
+    const int16_t* post_activation_multiplier_q, 
+    const int16_t* post_activation_bias_q,
+    const int accu_shr,
+    const int final_shr,
+
+    int *chan_overlaps,
+    bnn_b32_t * data_scratch,
+    
+    const nn_image_params_t* x, //The full image of x
+    const nn_image_params_t* y, // the full image of y
+    const nn_window_params_t* k, //the full kernel k
+    
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height,
+
+    const unsigned x_loc_x, const unsigned x_loc_y, 
+    
+    const unsigned k_loc_x, const unsigned k_loc_y, 
+    const unsigned k_sub_width, const unsigned k_sub_height
+) {
+
+  const unsigned channels_per_input_word = 32;
+  const unsigned chan_b32_in = (x->channels + channels_per_input_word - 1) / channels_per_input_word;
+  const unsigned chans_out = y->channels;
+
+  const unsigned h_stride = k->stride.horizontal;
+  const unsigned v_stride = k->stride.vertical;  
+  const unsigned h_dilation = k->dilation.horizontal;
+  const unsigned v_dilation = k->dilation.vertical;  
+
+  int8_t(*Y)[y->width][chans_out] =
+      (int8_t(*)[y->width][chans_out])Y_p;
+
+  bnn_b32_t(*X)[x->width][chan_b32_in] =
+      (bnn_b32_t(*)[x->width][chan_b32_in])X_p;
+
+  bnn_b32_t(*K)[k->shape.height][k->shape.width][chan_b32_in] =
+      (bnn_b32_t(*)[k->shape.height][k->shape.width][chan_b32_in])K_p;
+
+  unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
+  unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
+
+  for (unsigned h = x_loc_y; h < (x_loc_y + x_sub_height) - k_sub_height + 1; h += v_stride) {
+    for (unsigned w = x_loc_x; w < (x_loc_x + x_sub_width) - k_sub_width + 1; w += h_stride) {
+      for (unsigned oc = 0; oc < chans_out; oc += 1) {
+
+        int32_t sum = 0;
+        for (unsigned kh = k_loc_y; kh < k_loc_y + k_sub_height; kh += 1) {
+          for (unsigned kw = k_loc_x; kw < k_loc_x + k_sub_width; kw += 1) {
+            for (unsigned ic = 0; ic < chan_b32_in; ic += 1) {
+              sum += xor_pop_32(&(X[h + kh][w + kw][ic]), &(K[oc][kh][kw][ic]));
+            }
+          }
+        }
+
+        int32_t backtransform_add = (k->shape.height * k->shape.width * chan_b32_in * channels_per_input_word);
+        
+        // This converts xor_popcount to macc format
+        int32_t vpu_output = ((2*sum)-backtransform_add)/2;
+
+        //not rounding has happened to the point
+        int32_t r = ashr(vpu_output, accu_shr) ;
+        
+        r *= (int32_t) post_activation_multiplier_q[oc];
+
+        r = ashr(r, post_vlmul_shr);
+
+        r += post_activation_bias_q[oc];
+
+        r = ashr(r, final_shr);
+
+        r = r >> 8; //Use a store part word to extract bits 8-15
+
+        if (r > INT8_MAX) r = INT8_MAX;
+        if (r < INT8_MIN) r = INT8_MIN;
+
+        Y[y_loc_y + ((h-x_loc_y) / v_stride)][y_loc_x + ((w-x_loc_x) / h_stride)][oc] = (int8_t)r;
+        
+      }
+    }
+  }
+}

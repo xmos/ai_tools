@@ -8,6 +8,8 @@
 
 #include "helpers.h"
 
+static const char undef_sentinal = 0x55;
+
 //These are used for collecting int8 output stats
 static int output_error_g[256] = {0};
 static unsigned abs_output_error_g[256] = {0};
@@ -17,8 +19,8 @@ static unsigned error_counter_g[256] = {0};
 X_ref and K_ref must be initialised before running this.
 This function test whole images, i.e. it wont work on a sub image.
 */
-static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
-               bnn_b256_t* K_p, bnn_b256_t* K_ref_p, 
+static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
+               bnn_b32_t* K_p, bnn_b32_t* K_ref_p, 
                float* post_activation_multiplier,
                float* post_activation_bias, 
 
@@ -27,6 +29,9 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
                int16_t * post_activation_multiplier_q_reordered,
                int16_t* post_activation_bias_q_reordered, 
 
+               int * chan_overlaps,
+               bnn_b32_t * data_scratch,
+               
                unsigned x_height, unsigned x_width,
                unsigned k_height, unsigned k_width, unsigned chans_in,
                unsigned chans_out, unsigned h_stride, unsigned v_stride) {
@@ -105,30 +110,33 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
   larq_ref_bconv2d_int8_out(&x, &y, &k, (int32_t*)X_ref, (int32_t*)K_ref_p,
                    (int8_t*)Y_ref_p, post_activation_multiplier, post_activation_bias);
 
+
+  // bnn_reorder_int8_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
+  //                           chans_out);
+
+  // bnn_reorder_multiplier_and_bias_tensors(
+  //                                 post_activation_multiplier_q_reordered,
+  //                                 post_activation_multiplier_q,
+  //                                 post_activation_bias_q_reordered,
+  //                                 post_activation_bias_q,
+  //                                 chans_out);
+
 #if defined(__XS3A__)
 
-  bnn_reorder_multiplier_and_bias_tensors(
-                                  post_activation_multiplier_q_reordered,
-                                  post_activation_multiplier_q,
-                                  post_activation_bias_q_reordered,
-                                  post_activation_bias_q,
-                                  chans_out);
-
-  bnn_reorder_int8_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
-                            chans_out);
-
-  bnn_conv2d_int8_out((int8_t*)Y_p, (const bnn_b256_t*)X_ref,
-    (const bnn_b256_t*)K_p, post_activation_multiplier_q_reordered, 
+  bnn_conv2d_int8_out_SISO((int8_t*)Y_p, (const bnn_b32_t*)X_ref,
+    (const bnn_b32_t*)K_p, post_activation_multiplier_q_reordered, 
     post_activation_bias_q_reordered, accu_shr, final_shr,
     &x, &y, &k,
     0, 0, y_width, y_height,
     0, 0, 
     0, 0, k_width, k_height);
+
 #else
-  bnn_conv2d_int8_out((int8_t*)Y_p, (const bnn_b256_t*)X_ref,
-    (const bnn_b256_t*)K_ref_p, 
+  bnn_conv2d_int8_out_SISO((int8_t*)Y_p, (const bnn_b32_t*)X_ref,
+    (const bnn_b32_t*)K_ref_p, 
     post_activation_multiplier_q, post_activation_bias_q, 
     accu_shr, final_shr,
+    0, 0,
     &x, &y, &k,
     0, 0, y_width, y_height,
     0, 0, 
@@ -142,16 +150,15 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
   // TEST_ASSERT_INT8_ARRAY_WITHIN(1, Y_ref_p, Y_p, y_height * y_width * chans_out);
 }
 
-void test_bnn_conv2d_int8_out_pseudo_directed() {
+void test_bnn_conv2d_int8_out_SISO_pseudo_directed() {
 #define X_V_DILATION 1
 #define X_H_DILATION 1
-
 #define X_HEIGHT 1
 #define X_WIDTH 1
 #define K_HEIGHT X_HEIGHT
 #define K_WIDTH X_WIDTH
-#define CHANS_IN XS3_VPU_VREG_WIDTH_BITS
-#define CHANS_OUT 16
+#define CHANS_IN 4
+#define CHANS_OUT 4
 #define H_STRIDE 1
 #define V_STRIDE 1
 
@@ -159,13 +166,13 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
   CONV2D_OUTPUT_LENGTH(X_HEIGHT, K_HEIGHT, X_V_DILATION, V_STRIDE)
 #define Y_WIDTH CONV2D_OUTPUT_LENGTH(X_WIDTH, K_WIDTH, X_H_DILATION, H_STRIDE)
 
-#define CHAN_WORDS_IN DIV_BY_AND_ROUND_UP(CHANS_IN, XS3_VPU_VREG_WIDTH_BITS)
+#define CHAN_WORDS_IN DIV_BY_AND_ROUND_UP(CHANS_IN, 32)
 
-  bnn_b256_t WORD_ALIGNED K_ref[CHANS_OUT][K_HEIGHT][K_WIDTH][CHAN_WORDS_IN];
-  bnn_b256_t WORD_ALIGNED
-      K[CHANS_OUT / 16][K_HEIGHT][K_WIDTH][CHAN_WORDS_IN][16];
+  bnn_b32_t WORD_ALIGNED K_ref[CHANS_OUT][K_HEIGHT][K_WIDTH][CHAN_WORDS_IN];
+  bnn_b32_t WORD_ALIGNED
+      K[CHANS_OUT*K_HEIGHT*K_WIDTH*CHAN_WORDS_IN + NN_BCONV2D_KERNEL_OVERRUN_WORDS];
 
-  bnn_b256_t WORD_ALIGNED X_ref[X_HEIGHT][X_WIDTH][CHAN_WORDS_IN];
+  bnn_b32_t WORD_ALIGNED X_ref[X_HEIGHT][X_WIDTH][CHAN_WORDS_IN];
   int8_t WORD_ALIGNED Y_ref[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
   int8_t WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHANS_OUT];
 
@@ -175,6 +182,10 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
   int16_t WORD_ALIGNED post_activation_bias_q[CHANS_OUT];
   int16_t WORD_ALIGNED post_activation_multiplier_q_reordered[CHANS_OUT];
   int16_t WORD_ALIGNED post_activation_bias_q_reordered[CHANS_OUT];
+  int chan_overlaps[CHANS_OUT];
+
+  bnn_b32_t WORD_ALIGNED data_scratch[K_HEIGHT * K_WIDTH * CHAN_WORDS_IN + 
+    NN_BCONV2D_KERNEL_OVERRUN_WORDS]; 
 
   srand(42);
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
@@ -184,11 +195,14 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
   memset(Y, 0, sizeof(Y));
   memset(Y_ref, 0, sizeof(Y_ref));
 
-  run_int8_config((int8_t *)Y, (int8_t*)Y_ref, (bnn_b256_t*)X_ref,
-              (bnn_b256_t*)K, (bnn_b256_t*)K_ref, (float*)post_activation_multiplier,
+  run_int8_config((int8_t *)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+              (bnn_b32_t*)K, (bnn_b32_t*)K_ref, (float*)post_activation_multiplier,
               (float*)post_activation_bias, (int16_t*)post_activation_multiplier_q,
               (int16_t*)post_activation_bias_q, (int16_t*)post_activation_multiplier_q_reordered,
-              (int16_t*)post_activation_bias_q_reordered, X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
+              (int16_t*)post_activation_bias_q_reordered, 
+              (int*)chan_overlaps, 
+              (bnn_b32_t*)data_scratch, 
+              X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
               CHANS_IN, CHANS_OUT, H_STRIDE, V_STRIDE);
 
 #undef X_V_DILATION 
@@ -206,7 +220,7 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
 #undef CHAN_WORDS_IN
 }
 
-void test_bnn_conv2d_int8_out_pseudo_random() {
+void test_bnn_conv2d_int8_out_SISO_pseudo_random() {
 #define MIN_H_STRIDE 1
 #define MIN_V_STRIDE 1
 #define MAX_H_STRIDE 4
@@ -217,28 +231,28 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
 #define MAX_K_HEIGHT 5
 #define MAX_K_WIDTH 5
 
-#define MIN_CHANS_IN XS3_VPU_VREG_WIDTH_BITS
-#define MAX_CHANS_IN (XS3_VPU_VREG_WIDTH_BITS*2)
+#define MIN_CHANS_IN 32
+#define MAX_CHANS_IN (32*5)
 
-#define MIN_CHANS_OUT 16
-#define MAX_CHANS_OUT 48
+#define MIN_CHANS_OUT (4*1)
+#define MAX_CHANS_OUT (4*5)
 
 #define MIN_X_HEIGHT MIN_K_HEIGHT
 #define MIN_X_WIDTH MIN_K_WIDTH
 #define MAX_X_HEIGHT MAX_K_HEIGHT
 #define MAX_X_WIDTH MAX_K_WIDTH
 
-#define MAX_CHAN_WORDS_IN DIV_BY_AND_ROUND_UP(MAX_CHANS_IN, XS3_VPU_VREG_WIDTH_BITS)
+#define MAX_CHAN_WORDS_IN DIV_BY_AND_ROUND_UP(MAX_CHANS_IN, 32)
 
 #define MAX_Y_HEIGHT (((MAX_X_HEIGHT - MIN_K_HEIGHT + 1) / MIN_V_STRIDE))
 #define MAX_Y_WIDTH (((MAX_X_WIDTH - MIN_K_WIDTH + 1) / MIN_H_STRIDE))
 
-  bnn_b256_t WORD_ALIGNED
+  bnn_b32_t WORD_ALIGNED
       K_ref[MAX_CHANS_OUT][MAX_K_HEIGHT][MAX_K_WIDTH][MAX_CHAN_WORDS_IN];
-  bnn_b256_t WORD_ALIGNED
-      K[MAX_CHANS_OUT][MAX_K_HEIGHT][MAX_K_WIDTH][MAX_CHAN_WORDS_IN];
+  bnn_b32_t WORD_ALIGNED
+      K[MAX_CHANS_OUT*MAX_K_HEIGHT*MAX_K_WIDTH*MAX_CHAN_WORDS_IN];
 
-  bnn_b256_t WORD_ALIGNED X_ref[MAX_X_HEIGHT][MAX_X_WIDTH][MAX_CHAN_WORDS_IN];
+  bnn_b32_t WORD_ALIGNED X_ref[MAX_X_HEIGHT][MAX_X_WIDTH][MAX_CHAN_WORDS_IN];
   int8_t WORD_ALIGNED Y_ref[MAX_Y_HEIGHT][MAX_Y_WIDTH][MAX_CHANS_OUT];
   int8_t WORD_ALIGNED Y[MAX_Y_HEIGHT][MAX_Y_WIDTH][MAX_CHANS_OUT];
 
@@ -248,6 +262,10 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
   int16_t WORD_ALIGNED post_activation_bias_q[MAX_CHANS_OUT];
   int16_t WORD_ALIGNED post_activation_multiplier_q_reordered[MAX_CHANS_OUT];
   int16_t WORD_ALIGNED post_activation_bias_q_reordered[MAX_CHANS_OUT];
+  int chan_overlaps[MAX_CHANS_OUT];
+
+  bnn_b32_t WORD_ALIGNED data_scratch[MAX_K_HEIGHT * MAX_K_WIDTH * MAX_CHAN_WORDS_IN + 
+    NN_BCONV2D_KERNEL_OVERRUN_WORDS]; 
 
   assert(((int)K & 0x3) == 0);
   assert(((int)K_ref & 0x3) == 0);
@@ -271,18 +289,23 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
             for (unsigned x_width = k_width; x_width <= MAX_X_WIDTH;
                  ++x_width) {
               for (unsigned chans_in = MIN_CHANS_IN; chans_in <= MAX_CHANS_IN;
-                   chans_in += 256) {
+                   chans_in += 32) {
                 for (unsigned chans_out = MIN_CHANS_OUT;
-                     chans_out <= MAX_CHANS_OUT; chans_out += 16) {
+                     chans_out <= MAX_CHANS_OUT; chans_out += 4) {
+
+                  // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
+                  //   h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out);
                   run_int8_config(
-                      (int8_t*)Y, (int8_t*)Y_ref, (bnn_b256_t*)X_ref,
-                      (bnn_b256_t*)K, (bnn_b256_t*)K_ref,
+                      (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+                      (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
                       (float*)post_activation_multiplier,
                       (float*)post_activation_bias, 
                       (int16_t*)post_activation_multiplier_q,
                       (int16_t*)post_activation_bias_q,  
                       (int16_t*)post_activation_multiplier_q_reordered,
                       (int16_t*)post_activation_bias_q_reordered, 
+                      (int*) chan_overlaps,
+                      (bnn_b32_t * ) data_scratch,
                       x_height,
                       x_width, k_height, k_width, chans_in, chans_out, h_stride,
                       v_stride);
@@ -316,34 +339,57 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
 #undef MAX_Y_WIDTH
 }
 
-static void run_int8_sub_image(
+void run_int8_sub_image(
               int8_t* Y_p, 
               const int8_t* Y_ref_p, 
-              const bnn_b256_t* X_p,
-              const bnn_b256_t* K_p, 
+              const bnn_b32_t* X_p,
+              const bnn_b32_t* K_p, 
               
               int16_t * post_activation_multiplier_q_ordered,
               int16_t * post_activation_bias_q_ordered,
               const int accu_shr,
               const int final_shr,
               
+              int *chan_overlaps,
+              bnn_b32_t * data_scratch,
+
               const nn_image_params_t* x,
               const nn_image_params_t* y,
               const nn_window_params_t* k,
               unsigned y_loc_x, unsigned y_loc_y, 
               unsigned y_sub_width, unsigned y_sub_height){
 
-  bnn_conv2d_int8_out_valid(Y_p, X_p,
+  bnn_conv2d_int8_out_SISO_valid(Y_p, X_p,
                       K_p, post_activation_multiplier_q_ordered,
-                      post_activation_bias_q_ordered, accu_shr, final_shr, x, y, k,
+                      post_activation_bias_q_ordered, accu_shr, final_shr, 
+                      chan_overlaps, data_scratch, x, y, k,
                       y_loc_x, y_loc_y, y_sub_width, y_sub_height);
-
 
   int8_t(*Y)[y->width][y->channels] =
       (int8_t(*)[y->width][y->channels])Y_p;
 
   int8_t(*Y_ref)[y->width][y->channels] =
       (int8_t(*)[y->width][y->channels])Y_ref_p;
+
+  // for (unsigned h = 0; h < y->height; h++) {
+  //   for (unsigned w = 0; w < y->width; w++) {
+  //     if((h >= y_loc_y) && (h < (y_loc_y + y_sub_height)) && (w >= y_loc_x) && (w < (y_loc_x + y_sub_width))){
+  //       //If the result should have been computed then check it against the reference
+  //       for (unsigned c = 0; c < y->channels; c++) {
+  //         printf("%d %d\t", Y_ref[h][w][c], Y[h][w][c]);
+  //       }
+  //     } else {
+  //       //Otherwise check thet is hasn't been written to
+  //       for (unsigned c = 0; c < y->channels; c++) {
+  //         // TEST_ASSERT_EQUAL_INT8(0, Y[h][w][c]);
+  //         printf("0x%x\t", Y[h][w][c]);
+  //       }
+  //     }
+  //     printf("\n");
+  //   }
+  //   printf("\n");
+  // }
+
 
   for (unsigned h = 0; h < y->height; h++) {
     for (unsigned w = 0; w < y->width; w++) {
@@ -355,42 +401,43 @@ static void run_int8_sub_image(
       } else {
         //Otherwise check thet is hasn't been written to
         for (unsigned c = 0; c < y->channels; c++) {
-          TEST_ASSERT_EQUAL_INT8(0, Y[h][w][c]);
+          TEST_ASSERT_EQUAL_INT8(undef_sentinal, Y[h][w][c]);
         }
       }
     }
   }
 }
 
-void test_bnn_conv2d_int8_out_sub_image(){
+void test_bnn_conv2d_int8_out_SISO_sub_image(){
 
   #define FULL_X_HEIGHT 7
   #define FULL_X_WIDTH 7
   #define FULL_K_HEIGHT 3
   #define FULL_K_WIDTH 3
 
-  #define MIN_CHANS_IN XS3_VPU_VREG_WIDTH_BITS
-  #define MAX_CHANS_IN (XS3_VPU_VREG_WIDTH_BITS*4)
-  #define MIN_CHANS_OUT (16)
-  #define MAX_CHANS_OUT (16*4)
+  #define MIN_CHANS_IN (32)
+  #define MAX_CHANS_IN (32*5)
+  #define MIN_CHANS_OUT (4)
+  #define MAX_CHANS_OUT (4*5)
   
   #define X_V_DILATION 1
   #define V_STRIDE 1
   #define X_H_DILATION 1
   #define H_STRIDE 1
 
-  #define MAX_CHAN_WORDS_IN DIV_BY_AND_ROUND_UP(MAX_CHANS_IN, XS3_VPU_VREG_WIDTH_BITS)
+  #define MAX_CHAN_WORDS_IN DIV_BY_AND_ROUND_UP(MAX_CHANS_IN, 32)
 
   #define FULL_Y_HEIGHT \
     CONV2D_OUTPUT_LENGTH(FULL_X_HEIGHT, FULL_K_HEIGHT, X_V_DILATION, V_STRIDE)
   #define FULL_Y_WIDTH CONV2D_OUTPUT_LENGTH(FULL_X_WIDTH, FULL_K_WIDTH, X_H_DILATION, H_STRIDE)
 
-  bnn_b256_t WORD_ALIGNED
+  bnn_b32_t WORD_ALIGNED
       K_ref[MAX_CHANS_OUT][FULL_K_HEIGHT][FULL_K_WIDTH][MAX_CHAN_WORDS_IN];
-  bnn_b256_t WORD_ALIGNED
-      K    [MAX_CHANS_OUT][FULL_K_HEIGHT][FULL_K_WIDTH][MAX_CHAN_WORDS_IN];
+  bnn_b32_t WORD_ALIGNED
+      K    [MAX_CHANS_OUT*FULL_K_HEIGHT*FULL_K_WIDTH*MAX_CHAN_WORDS_IN + 
+            NN_BCONV2D_KERNEL_OVERRUN_WORDS];
 
-  bnn_b256_t WORD_ALIGNED X_ref[FULL_X_HEIGHT][FULL_X_WIDTH][MAX_CHAN_WORDS_IN];
+  bnn_b32_t WORD_ALIGNED X_ref[FULL_X_HEIGHT][FULL_X_WIDTH][MAX_CHAN_WORDS_IN];
   int8_t WORD_ALIGNED Y_ref[FULL_Y_HEIGHT][FULL_Y_WIDTH][MAX_CHANS_OUT];
   int8_t WORD_ALIGNED Y[FULL_Y_HEIGHT][FULL_Y_WIDTH][MAX_CHANS_OUT];
 
@@ -401,20 +448,29 @@ void test_bnn_conv2d_int8_out_sub_image(){
   int16_t WORD_ALIGNED post_activation_multiplier_q_ordered[MAX_CHANS_OUT];
   int16_t WORD_ALIGNED post_activation_bias_q_ordered[MAX_CHANS_OUT];
 
+  int chan_overlaps[MAX_CHANS_OUT];
+
+  bnn_b32_t WORD_ALIGNED data_scratch[FULL_K_HEIGHT * FULL_K_WIDTH * MAX_CHAN_WORDS_IN + 
+    NN_BCONV2D_KERNEL_OVERRUN_WORDS]; 
+
   assert(((int)K & 0x3) == 0);
   assert(((int)K_ref & 0x3) == 0);
   assert(((int)X_ref & 0x3) == 0);
   assert(((int)Y & 0x3) == 0);
   assert(((int)Y_ref & 0x3) == 0);
-  assert(sizeof(K) == sizeof(K_ref));
   
   srand(42);
 
-  pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
-  pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
+  // pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
+  for(unsigned i=0;i<sizeof(X_ref);i++)
+    ((char*)X_ref )[i] = i*(i+1);
+  
+  // pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
+  for(unsigned i=0;i<sizeof(K_ref);i++)
+    ((char*)K_ref )[i] = i*i; //TODO
 
-  for(unsigned chans_out = MIN_CHANS_OUT; chans_out <= MAX_CHANS_OUT; chans_out += 16){
-    for(unsigned chans_in = MIN_CHANS_IN; chans_in <= MAX_CHANS_IN; chans_in += XS3_VPU_VREG_WIDTH_BITS){
+  for(unsigned chans_out = MIN_CHANS_OUT; chans_out <= MAX_CHANS_OUT; chans_out += 4){
+    for(unsigned chans_in = MIN_CHANS_IN; chans_in <= MAX_CHANS_IN; chans_in += 32){
 
       for (unsigned h_stride = 1; h_stride < 5; h_stride++){
 
@@ -446,11 +502,11 @@ void test_bnn_conv2d_int8_out_sub_image(){
             float r =  (float)rand() / (float)RAND_MAX;
             float output_range = (range/2) + (float)(1<<range)*r;
 
-            post_activation_multiplier[ch] = output_range/input_range;
+            post_activation_multiplier[ch] = 1.0;output_range/input_range;
 
             int32_t max_bias = 255;
             r =  (float)rand() / (float)RAND_MAX;
-            post_activation_bias[ch] = (r * max_bias*2.0) - max_bias;
+            post_activation_bias[ch] = 0.0;(r * max_bias*2.0) - max_bias;
 
           }
 
@@ -471,13 +527,13 @@ void test_bnn_conv2d_int8_out_sub_image(){
     #if defined(__XS3A__)
 
           bnn_reorder_multiplier_and_bias_tensors(
-                                          post_activation_multiplier_q_ordered,
-                                          post_activation_multiplier_q,
-                                          post_activation_bias_q_ordered,
-                                          post_activation_bias_q,
-                                          y.channels);
+                      post_activation_multiplier_q_ordered,
+                      post_activation_multiplier_q,
+                      post_activation_bias_q_ordered,
+                      post_activation_bias_q,
+                      y.channels);
 
-          bnn_reorder_int8_kernel_tensor((bnn_b256_t *)K, (const bnn_b256_t *)K_ref, k.shape.height, 
+          bnn_reorder_int8_kernel_tensor((bnn_b32_t *)K, (const bnn_b32_t *)K_ref, k.shape.height, 
             k.shape.width, x.channels, y.channels);
           memcpy(K_ref, K, sizeof(K));
                                           
@@ -495,21 +551,38 @@ void test_bnn_conv2d_int8_out_sub_image(){
               for (unsigned y_sub_width = 1; y_sub_width<y.width-y_loc_x; ++y_sub_width){
                 for (unsigned y_sub_height = 1; y_sub_height<y.height-y_loc_y; ++y_sub_height){
 
-                    memset(Y, 0, sizeof(Y));
+                    // printf("%u %u %u %u %u %u %u %u\n", chans_out, chans_in, h_stride, v_stride, y_loc_x, y_loc_y, y_sub_width, y_sub_height);
+                    
+                    memset(Y, undef_sentinal, sizeof(Y));
 
                     run_int8_sub_image((int8_t*)Y, 
                       (const int8_t*)Y_ref, 
-                      (const bnn_b256_t*) X_ref, 
-                      (const bnn_b256_t*) K_ref, 
+                      (const bnn_b32_t*) X_ref, 
+                      (const bnn_b32_t*) K_ref, 
                       
                       post_activation_multiplier_q_ordered,
                       post_activation_bias_q_ordered,
                       accu_shr,
                       final_shr,
+                      chan_overlaps, data_scratch, 
                       
                       &x, &y, &k,
                       y_loc_x, y_loc_y, y_sub_width, y_sub_height
                     );
+
+                    //Check for out of bounds accesses
+                    size_t addressable_Y_bytes = y.height * y.width * y.channels;
+                    for(size_t i = addressable_Y_bytes; i < sizeof(Y); i++)
+                      assert(((char*)Y)[i] ==  undef_sentinal);
+                    
+                    //verify x and k have not changed
+                    for(unsigned i=0;i<sizeof(X_ref);i++)
+                      assert(((char*)X_ref)[i] == (char)(i*(i+1)));
+
+                    for(unsigned i=0;i<sizeof(K_ref);i++)
+                      assert(((char*)K_ref)[i] == (char)((i*i)));
+
+
                   }
                 }
               } 
@@ -535,7 +608,7 @@ void test_bnn_conv2d_int8_out_sub_image(){
 
 }
 
-void test_int8_stats(){
+void test_int8_SISO_stats(){
   // This checks the output stats of the int8 kernels
   double avg_abs_error = 0.0;
   double avg_error = 0.0;
@@ -550,13 +623,13 @@ void test_int8_stats(){
   TEST_ASSERT_GREATER_OR_EQUAL(64, 1./(avg_error/256));
 }
 
-void test_bnn_conv2d_int8() {
+void test_bnn_conv2d_int8_SISO() {
   UNITY_SET_FILE();
-  RUN_TEST(test_bnn_conv2d_int8_out_pseudo_directed);
-  RUN_TEST(test_bnn_conv2d_int8_out_pseudo_random);
-  RUN_TEST(test_bnn_conv2d_int8_out_sub_image);
+  RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_directed);
+  RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random);
+  RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
 
 #if !defined(__XS3A__)
-  RUN_TEST(test_int8_stats);
+  RUN_TEST(test_int8_SISO_stats);
 #endif
 }

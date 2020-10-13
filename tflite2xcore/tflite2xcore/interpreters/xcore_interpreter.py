@@ -7,7 +7,7 @@ from enum import Enum
 from tflite2xcore import libtflite2xcore as lib
 
 
-MAX_TENSOR_ARENA_SIZE = 1000000
+MAX_TENSOR_ARENA_SIZE = 64 * 1000000
 
 
 class XCOREInterpreterStatus(Enum):

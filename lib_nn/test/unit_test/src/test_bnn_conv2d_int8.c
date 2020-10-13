@@ -150,7 +150,7 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
 #define X_WIDTH 1
 #define K_HEIGHT X_HEIGHT
 #define K_WIDTH X_WIDTH
-#define CHANS_IN 256
+#define CHANS_IN XS3_VPU_VREG_WIDTH_BITS
 #define CHANS_OUT 16
 #define H_STRIDE 1
 #define V_STRIDE 1
@@ -159,8 +159,7 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
   CONV2D_OUTPUT_LENGTH(X_HEIGHT, K_HEIGHT, X_V_DILATION, V_STRIDE)
 #define Y_WIDTH CONV2D_OUTPUT_LENGTH(X_WIDTH, K_WIDTH, X_H_DILATION, H_STRIDE)
 
-#define CHAN_WORDS_IN \
-  ((CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
+#define CHAN_WORDS_IN DIV_BY_AND_ROUND_UP(CHANS_IN, XS3_VPU_VREG_WIDTH_BITS)
 
   bnn_b256_t WORD_ALIGNED K_ref[CHANS_OUT][K_HEIGHT][K_WIDTH][CHAN_WORDS_IN];
   bnn_b256_t WORD_ALIGNED
@@ -218,8 +217,8 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
 #define MAX_K_HEIGHT 5
 #define MAX_K_WIDTH 5
 
-#define MIN_CHANS_IN 256
-#define MAX_CHANS_IN 512
+#define MIN_CHANS_IN XS3_VPU_VREG_WIDTH_BITS
+#define MAX_CHANS_IN (XS3_VPU_VREG_WIDTH_BITS*2)
 
 #define MIN_CHANS_OUT 16
 #define MAX_CHANS_OUT 48
@@ -229,9 +228,7 @@ void test_bnn_conv2d_int8_out_pseudo_random() {
 #define MAX_X_HEIGHT MAX_K_HEIGHT
 #define MAX_X_WIDTH MAX_K_WIDTH
 
-#define MAX_CHAN_WORDS_IN \
-  ((MAX_CHANS_IN + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS)
-#define MAX_CHAN_WORDS_OUT MAKE_MULTIPLE_OF_32(MAX_CHANS_OUT)
+#define MAX_CHAN_WORDS_IN DIV_BY_AND_ROUND_UP(MAX_CHANS_IN, XS3_VPU_VREG_WIDTH_BITS)
 
 #define MAX_Y_HEIGHT (((MAX_X_HEIGHT - MIN_K_HEIGHT + 1) / MIN_V_STRIDE))
 #define MAX_Y_WIDTH (((MAX_X_WIDTH - MIN_K_WIDTH + 1) / MIN_H_STRIDE))
@@ -371,32 +368,38 @@ void test_bnn_conv2d_int8_out_sub_image(){
   #define FULL_X_WIDTH 7
   #define FULL_K_HEIGHT 3
   #define FULL_K_WIDTH 3
-  #define CHANS_IN 256
-  #define CHANS_OUT 16
+
+  #define MIN_CHANS_IN XS3_VPU_VREG_WIDTH_BITS
+  #define MAX_CHANS_IN (XS3_VPU_VREG_WIDTH_BITS*4)
+  #define MIN_CHANS_OUT (16)
+  #define MAX_CHANS_OUT (16*4)
+  
   #define X_V_DILATION 1
   #define V_STRIDE 1
   #define X_H_DILATION 1
   #define H_STRIDE 1
-  #define CHAN_WORDS_IN MAKE_MULTIPLE_OF_32(CHANS_IN)
+
+  #define MAX_CHAN_WORDS_IN DIV_BY_AND_ROUND_UP(MAX_CHANS_IN, XS3_VPU_VREG_WIDTH_BITS)
+
   #define FULL_Y_HEIGHT \
     CONV2D_OUTPUT_LENGTH(FULL_X_HEIGHT, FULL_K_HEIGHT, X_V_DILATION, V_STRIDE)
   #define FULL_Y_WIDTH CONV2D_OUTPUT_LENGTH(FULL_X_WIDTH, FULL_K_WIDTH, X_H_DILATION, H_STRIDE)
 
   bnn_b256_t WORD_ALIGNED
-      K_ref[CHANS_OUT][FULL_K_HEIGHT][FULL_K_WIDTH][CHAN_WORDS_IN];
+      K_ref[MAX_CHANS_OUT][FULL_K_HEIGHT][FULL_K_WIDTH][MAX_CHAN_WORDS_IN];
   bnn_b256_t WORD_ALIGNED
-      K    [CHANS_OUT][FULL_K_HEIGHT][FULL_K_WIDTH][CHAN_WORDS_IN];
+      K    [MAX_CHANS_OUT][FULL_K_HEIGHT][FULL_K_WIDTH][MAX_CHAN_WORDS_IN];
 
-  bnn_b256_t WORD_ALIGNED X_ref[FULL_X_HEIGHT][FULL_X_WIDTH][CHAN_WORDS_IN];
-  int8_t WORD_ALIGNED Y_ref[FULL_Y_HEIGHT][FULL_Y_WIDTH][CHANS_OUT];
-  int8_t WORD_ALIGNED Y[FULL_Y_HEIGHT][FULL_Y_WIDTH][CHANS_OUT];
+  bnn_b256_t WORD_ALIGNED X_ref[FULL_X_HEIGHT][FULL_X_WIDTH][MAX_CHAN_WORDS_IN];
+  int8_t WORD_ALIGNED Y_ref[FULL_Y_HEIGHT][FULL_Y_WIDTH][MAX_CHANS_OUT];
+  int8_t WORD_ALIGNED Y[FULL_Y_HEIGHT][FULL_Y_WIDTH][MAX_CHANS_OUT];
 
-  float WORD_ALIGNED post_activation_multiplier[CHANS_OUT];
-  float WORD_ALIGNED post_activation_bias[CHANS_OUT];
-  int16_t WORD_ALIGNED post_activation_multiplier_q[CHANS_OUT];
-  int16_t WORD_ALIGNED post_activation_bias_q[CHANS_OUT];
-  int16_t WORD_ALIGNED post_activation_multiplier_q_ordered[CHANS_OUT];
-  int16_t WORD_ALIGNED post_activation_bias_q_ordered[CHANS_OUT];
+  float WORD_ALIGNED post_activation_multiplier[MAX_CHANS_OUT];
+  float WORD_ALIGNED post_activation_bias[MAX_CHANS_OUT];
+  int16_t WORD_ALIGNED post_activation_multiplier_q[MAX_CHANS_OUT];
+  int16_t WORD_ALIGNED post_activation_bias_q[MAX_CHANS_OUT];
+  int16_t WORD_ALIGNED post_activation_multiplier_q_ordered[MAX_CHANS_OUT];
+  int16_t WORD_ALIGNED post_activation_bias_q_ordered[MAX_CHANS_OUT];
 
   assert(((int)K & 0x3) == 0);
   assert(((int)K_ref & 0x3) == 0);
@@ -406,108 +409,113 @@ void test_bnn_conv2d_int8_out_sub_image(){
   assert(sizeof(K) == sizeof(K_ref));
   
   srand(42);
+
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
 
-  for (unsigned h_stride = 1; h_stride < 5; h_stride++){
+  for(unsigned chans_out = MIN_CHANS_OUT; chans_out <= MAX_CHANS_OUT; chans_out += 16){
+    for(unsigned chans_in = MIN_CHANS_IN; chans_in <= MAX_CHANS_IN; chans_in += XS3_VPU_VREG_WIDTH_BITS){
 
-    for (unsigned v_stride=1; v_stride < 5; v_stride++){
-        
-      nn_image_params_t x;
-      x.height = FULL_X_HEIGHT;
-      x.width = FULL_X_WIDTH;
-      x.channels = CHANS_IN;
-      nn_image_params_t y;
-      y.height = CONV2D_OUTPUT_LENGTH(FULL_X_HEIGHT, FULL_K_HEIGHT, X_V_DILATION, v_stride);
-      y.width = CONV2D_OUTPUT_LENGTH(FULL_X_WIDTH, FULL_K_WIDTH, X_H_DILATION, h_stride);
-      y.channels = CHANS_OUT;
-      nn_window_params_t k;
-      k.shape.height = FULL_K_HEIGHT;
-      k.shape.width = FULL_K_WIDTH;
-      k.stride.horizontal = h_stride;
-      k.stride.vertical = v_stride;
-      k.dilation.horizontal = X_H_DILATION;
-      k.dilation.vertical = X_V_DILATION;
+      for (unsigned h_stride = 1; h_stride < 5; h_stride++){
 
-      int32_t backtransform_add = k.shape.width * k.shape.height * x.channels;
+        for (unsigned v_stride=1; v_stride < 5; v_stride++){
+            
+          nn_image_params_t x;
+          x.height = FULL_X_HEIGHT;
+          x.width = FULL_X_WIDTH;
+          x.channels = chans_in;
+          nn_image_params_t y;
+          y.height = CONV2D_OUTPUT_LENGTH(FULL_X_HEIGHT, FULL_K_HEIGHT, X_V_DILATION, v_stride);
+          y.width = CONV2D_OUTPUT_LENGTH(FULL_X_WIDTH, FULL_K_WIDTH, X_H_DILATION, h_stride);
+          y.channels = chans_out;
+          nn_window_params_t k;
+          k.shape.height = FULL_K_HEIGHT;
+          k.shape.width = FULL_K_WIDTH;
+          k.stride.horizontal = h_stride;
+          k.stride.vertical = v_stride;
+          k.dilation.horizontal = X_H_DILATION;
+          k.dilation.vertical = X_V_DILATION;
 
-      //Pick some random test values
-      for (unsigned ch=0;ch < y.channels; ch++){
-        float input_range = backtransform_add;
+          int32_t backtransform_add = k.shape.width * k.shape.height * x.channels;
 
-        unsigned range =  rand()%10;
-        float r =  (float)rand() / (float)RAND_MAX;
-        float output_range = (range/2) + (float)(1<<range)*r;
+          //Pick some random test values
+          for (unsigned ch=0;ch < y.channels; ch++){
+            float input_range = backtransform_add;
 
-        post_activation_multiplier[ch] = output_range/input_range;
+            unsigned range =  rand()%10;
+            float r =  (float)rand() / (float)RAND_MAX;
+            float output_range = (range/2) + (float)(1<<range)*r;
 
-        int32_t max_bias = 255;
-        r =  (float)rand() / (float)RAND_MAX;
-        post_activation_bias[ch] = (r * max_bias*2.0) - max_bias;
+            post_activation_multiplier[ch] = output_range/input_range;
 
-      }
+            int32_t max_bias = 255;
+            r =  (float)rand() / (float)RAND_MAX;
+            post_activation_bias[ch] = (r * max_bias*2.0) - max_bias;
 
-      larq_ref_bconv2d_int8_out(&x, &y, &k, (const int32_t*)X_ref, (const int32_t*)K_ref,
-                   (int8_t*)Y_ref, post_activation_multiplier, post_activation_bias);
+          }
 
-      int accu_shr, final_shr;
-      int accu_min_post_clamp = -backtransform_add;
-      int accu_max_post_clamp = backtransform_add;
+          larq_ref_bconv2d_int8_out(&x, &y, &k, (const int32_t*)X_ref, (const int32_t*)K_ref,
+                      (int8_t*)Y_ref, post_activation_multiplier, post_activation_bias);
 
-      quantise_activation(
-                  post_activation_multiplier_q, post_activation_bias_q,
-                  post_activation_multiplier, post_activation_bias, 
-                  y.channels,
-                  accu_min_post_clamp, accu_max_post_clamp,
-                  &accu_shr, &final_shr, backtransform_add);
+          int accu_shr, final_shr;
+          int accu_min_post_clamp = -backtransform_add;
+          int accu_max_post_clamp = backtransform_add;
 
-#if defined(__XS3A__)
+          quantise_activation(
+                      post_activation_multiplier_q, post_activation_bias_q,
+                      post_activation_multiplier, post_activation_bias, 
+                      y.channels,
+                      accu_min_post_clamp, accu_max_post_clamp,
+                      &accu_shr, &final_shr, backtransform_add);
 
-      bnn_reorder_multiplier_and_bias_tensors(
-                                      post_activation_multiplier_q_ordered,
-                                      post_activation_multiplier_q,
-                                      post_activation_bias_q_ordered,
-                                      post_activation_bias_q,
-                                      y.channels);
+    #if defined(__XS3A__)
 
-      bnn_reorder_int8_kernel_tensor((bnn_b256_t *)K, (const bnn_b256_t *)K_ref, k.shape.height, 
-        k.shape.width, x.channels, y.channels);
-      memcpy(K_ref, K, sizeof(K));
-                                      
-#else
-      memcpy(post_activation_multiplier_q_ordered, post_activation_multiplier_q, 
-        sizeof(post_activation_multiplier_q));
-      memcpy(post_activation_bias_q_ordered, post_activation_bias_q, 
-        sizeof(post_activation_bias_q));
-#endif
+          bnn_reorder_multiplier_and_bias_tensors(
+                                          post_activation_multiplier_q_ordered,
+                                          post_activation_multiplier_q,
+                                          post_activation_bias_q_ordered,
+                                          post_activation_bias_q,
+                                          y.channels);
 
+          bnn_reorder_int8_kernel_tensor((bnn_b256_t *)K, (const bnn_b256_t *)K_ref, k.shape.height, 
+            k.shape.width, x.channels, y.channels);
+          memcpy(K_ref, K, sizeof(K));
+                                          
+    #else
+          memcpy(post_activation_multiplier_q_ordered, post_activation_multiplier_q, 
+            sizeof(post_activation_multiplier_q));
+          memcpy(post_activation_bias_q_ordered, post_activation_bias_q, 
+            sizeof(post_activation_bias_q));
+    #endif
 
-      //Calculate the entire reference image
+          //Calculate the entire reference image
 
-      for (unsigned y_loc_x = 0; y_loc_x<y.width; ++y_loc_x){
-        for (unsigned y_loc_y = 0; y_loc_y<y.height; ++y_loc_y){
-          for (unsigned y_sub_width = 1; y_sub_width<y.width-y_loc_x; ++y_sub_width){
-            for (unsigned y_sub_height = 1; y_sub_height<y.height-y_loc_y; ++y_sub_height){
+          for (unsigned y_loc_x = 0; y_loc_x<y.width; ++y_loc_x){
+            for (unsigned y_loc_y = 0; y_loc_y<y.height; ++y_loc_y){
+              for (unsigned y_sub_width = 1; y_sub_width<y.width-y_loc_x; ++y_sub_width){
+                for (unsigned y_sub_height = 1; y_sub_height<y.height-y_loc_y; ++y_sub_height){
 
-                memset(Y, 0, sizeof(Y));
+                    memset(Y, 0, sizeof(Y));
 
-                run_int8_sub_image((int8_t*)Y, 
-                  (const int8_t*)Y_ref, 
-                  (const bnn_b256_t*) X_ref, 
-                  (const bnn_b256_t*) K_ref, 
-                  
-                  post_activation_multiplier_q_ordered,
-                  post_activation_bias_q_ordered,
-                  accu_shr,
-                  final_shr,
-                  
-                  &x, &y, &k,
-                  y_loc_x, y_loc_y, y_sub_width, y_sub_height
-                );
-              }
+                    run_int8_sub_image((int8_t*)Y, 
+                      (const int8_t*)Y_ref, 
+                      (const bnn_b256_t*) X_ref, 
+                      (const bnn_b256_t*) K_ref, 
+                      
+                      post_activation_multiplier_q_ordered,
+                      post_activation_bias_q_ordered,
+                      accu_shr,
+                      final_shr,
+                      
+                      &x, &y, &k,
+                      y_loc_x, y_loc_y, y_sub_width, y_sub_height
+                    );
+                  }
+                }
+              } 
             }
-          } 
         }
+      }
     }
   }
 

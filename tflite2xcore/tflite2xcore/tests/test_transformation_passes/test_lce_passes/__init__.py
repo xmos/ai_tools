@@ -4,7 +4,10 @@ import numpy as np
 from copy import deepcopy
 from typing import Tuple, Optional
 
-from tflite2xcore.transformation_passes.lce_passes import ReplaceBconv2DPass
+from tflite2xcore.transformation_passes.lce_passes import (
+    ReplaceBconv2DPass,
+    XC_BCONV2D_OPCODES,
+)
 from tflite2xcore.transformation_passes import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel, Subgraph
 from tflite2xcore.xcore_schema import (
@@ -35,13 +38,6 @@ from ..test_conv2d_passes.conftest import (  # pylint: disable=unused-import
     PARAMS,
     test_non_matching_input_channels,
     test_non_matching_output_channels,
-)
-
-XC_BCONV2D_OPCODES = (
-    XCOREOpCodes.XC_bconv2d_bin,
-    XCOREOpCodes.XC_bconv2d_bin_DI,
-    XCOREOpCodes.XC_bconv2d_int8,
-    XCOREOpCodes.XC_bconv2d_int8_DIDO,
 )
 
 

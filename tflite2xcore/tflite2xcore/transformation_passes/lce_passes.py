@@ -26,6 +26,14 @@ from .transformation_passes import (
 from .conv2d_passes import ReplaceConv2DPass
 
 
+XC_BCONV2D_OPCODES = (
+    XCOREOpCodes.XC_bconv2d_bin,
+    XCOREOpCodes.XC_bconv2d_bin_DI,
+    XCOREOpCodes.XC_bconv2d_int8,
+    XCOREOpCodes.XC_bconv2d_int8_DIDO,
+)
+
+
 class ReplaceBconv2DPass(ReplaceConv2DPass):
     @property
     def matching_opcode(self) -> ExternalOpCodes:
@@ -194,12 +202,7 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
     def _padding(self) -> Padding:
         return self._op.custom_options["padding"]
 
-    MATCHING_OPCODES = (
-        XCOREOpCodes.XC_bconv2d_int8,
-        XCOREOpCodes.XC_bconv2d_int8_DIDO,
-        XCOREOpCodes.XC_bconv2d_bin,
-        XCOREOpCodes.XC_bconv2d_bin_DI,
-    )
+    MATCHING_OPCODES = XC_BCONV2D_OPCODES
 
     def match(self, op: Operator) -> bool:
         return (

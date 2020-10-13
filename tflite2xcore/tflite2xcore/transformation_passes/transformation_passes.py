@@ -73,27 +73,6 @@ class SubgraphAnalysisPass(SubgraphPass):
         return 0
 
 
-class FloatingPointWarningPass(SubgraphAnalysisPass):
-    def match(self, tensor: Tensor) -> bool:
-        return super().match(tensor) and tensor.type in (
-            TensorType.FLOAT64,
-            TensorType.FLOAT32,
-            TensorType.FLOAT16,
-        )
-
-    def target_iterable(self, subgraph):
-        return subgraph.tensors
-
-    def log_match(self, obj):
-        self.logger.info(f"Floating Point Tensor: {obj}")
-
-    def run_subgraph(self, subgraph):
-        super().run_subgraph(subgraph)
-        if not self._num_matches:
-            self.logger.warning(f"Floating Point Tensors Found: {self._num_matches}")
-        return 0
-
-
 class SubgraphTransformationPass(SubgraphPass):
     @abstractmethod
     def mutate(self, obj):

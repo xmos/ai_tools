@@ -52,7 +52,7 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
     if(chan_overlaps)
        t -= chan_overlaps[i];
 
-    thresholds[(bank * (2*VPU_INT16_ACC_PERIOD)) + (i % VPU_INT16_ACC_PERIOD)] = (t >> 0);
+    thresholds[(bank * (2*VPU_INT16_ACC_PERIOD)) + (i % VPU_INT16_ACC_PERIOD)] = t;
     thresholds[(bank * (2*VPU_INT16_ACC_PERIOD)) + (i % VPU_INT16_ACC_PERIOD) + VPU_INT16_ACC_PERIOD] = (t >> VPU_INT16_ACC_PERIOD);
   }
 }

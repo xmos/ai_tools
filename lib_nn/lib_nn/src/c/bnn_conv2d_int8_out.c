@@ -98,7 +98,7 @@ void bnn_conv2d_int8_out_asm_prepare(
   plan->x_width_loop_counter = x_width_loops - 1;
 
   // Inner Loop
-  // minus one to account for the auto increament in the loop
+  // minus one to account for the auto increment in the loop
   plan->inner_x_h_step = bytes_per_input_channel * (h_dilation - 1);
 
   // TODO multiply x->width by dilation

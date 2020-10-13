@@ -10,7 +10,7 @@ from tflite2xcore.xcore_schema import (
     OperatorCode,
     XCOREOpCodes,
 )
-from tflite2xcore.utils import VE, WORD_SIZE
+from tflite2xcore.utils import WORD_SIZE
 
 from .transformation_passes import ReplaceQuantizedOperatorPass
 

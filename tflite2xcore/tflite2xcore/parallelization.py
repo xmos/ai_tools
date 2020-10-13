@@ -212,7 +212,9 @@ class SlicePlanner(ParallelizationPlanner):
         starts, heights = SlicePlanner.unidir_split_helper(self.height, num_threads)
 
         row_slices = [
-            [starts[j], 0, heights[j], self.width] for j in range(num_threads)
+            [starts[j], 0, heights[j], self.width]
+            for j in range(num_threads)
+            if heights[j] > 0
         ]
         changrps = ChannelGroupSlicePlanner.changrp_split_helper(self.Cout)
 

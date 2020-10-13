@@ -13,7 +13,7 @@ lib_nn_test: lib_nn_build
 
 .PHONY: tflite2xcore_test
 tflite2xcore_test:
-	tflite2xcore/tflite2xcore/tests/runtests.py tflite2xcore/tflite2xcore/tests -n $(NUM_PROCS)
+	tflite2xcore/tflite2xcore/tests/runtests.py tflite2xcore/tflite2xcore/tests -n $(NUM_PROCS) --junit
 
 .PHONY: utils_build
 utils_build:

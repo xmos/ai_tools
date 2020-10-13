@@ -43,8 +43,10 @@ from .padding_passes import (
 )
 
 from .quantize_dequantize_passes import (
+    RemoveRedundantInt8RequantizationPass,
     CanonicalizeQuantizedInputPass,
     CanonicalizeQuantizedOutputPass,
+    CanonicalizeLceQuantizedOutputPass,
     LegalizeFloatInputPass,
     LegalizeFloatOutputPass,
 )
@@ -83,4 +85,13 @@ from .scratch_memory_passes import (
     ScratchMemoryConv2dPass,
     ScratchMemoryConv2d1x1Pass,
     ScratchMemoryDepthwiseConv2dPass,
+)
+
+from .constant_propagation_passes import ConstantPropagationPass
+
+from .lce_passes import (
+    ReplaceBconv2DInt8OutPass,
+    ReplaceBconv2DBitpackedOutPass,
+    ReplaceLceQuantizePass,
+    LegalizeXCBconv2DPaddingPass,
 )

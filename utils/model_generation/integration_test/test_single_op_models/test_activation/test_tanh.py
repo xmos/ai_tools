@@ -4,11 +4,10 @@ import pytest  # type: ignore
 import tensorflow as tf  # type: ignore
 from typing import Callable
 
-from . import (
-    LUTActivationOpTestModelGenerator,
+from . import LUTActivationOpTestModelGenerator
+from . import (  # pylint: disable=unused-import
     test_output,
     test_converted_single_op_model,
-    test_idempotence,
 )
 
 

@@ -96,3 +96,5 @@ from .lce_passes import (
     ReplaceLceQuantizePass,
     LegalizeXCBconv2DPaddingPass,
 )
+
+from .warning_passes import FloatingPointWarningPass

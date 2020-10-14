@@ -118,15 +118,8 @@ def optimize_for_xcore(
     # TODO this should sit with the other stripping passes
     pass_mgr.register_pass(passes.CanonicalizeLceQuantizedOutputPass())
 
-    # Note, this currently only matches with BConv but going forward might like to extend to other Conv ops
-    pass_mgr.register_pass(passes.SplitPaddingFromConvPass())
+    pass_mgr.register_pass(passes.ReplaceBconv2DBitpackedOutPass())
 
-    pass_mgr.register_pass(
-        passes.ReplaceLceBconv2DPass(output_tensor_type=TensorType.INT32)
-    )
-    pass_mgr.register_pass(
-        passes.ReplaceLceBconv2DPass(output_tensor_type=TensorType.INT8)
-    )
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())
     pass_mgr.register_pass(passes.ReplaceTanhPass())
@@ -151,6 +144,7 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeXCShallowinConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
+    pass_mgr.register_pass(passes.LegalizeXCBconv2DPaddingPass())
 
     # Split batch/channel-wise padding from spatial padding
     pass_mgr.register_pass(passes.SplitPaddingPass())
@@ -160,6 +154,8 @@ def optimize_for_xcore(
         # remove word alignment padding on the input
         pass_mgr.register_pass(passes.RemovePaddingInputPass())
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
+
+    pass_mgr.register_pass(passes.ReplacePadPass())
 
     pass_mgr.register_pass(
         passes.ParallelizeFullyConnectedPass(num_threads=num_threads)

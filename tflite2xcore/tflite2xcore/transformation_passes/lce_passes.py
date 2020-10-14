@@ -60,6 +60,10 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
     def _input_channels(self) -> int:
         return self._op.custom_options["channels_in"]
 
+    @property
+    def _pad_values(self) -> int:
+        return self._op.custom_options["pad_values"]
+
     def match(self, op: Operator) -> bool:
         # other versions of the LCE op can have different number of inputs
         if super().match(op) and len(op.inputs) == 3:
@@ -81,7 +85,7 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
         new_op = super().mutate(op)
         with self.using(op):
             new_op.add_custom_options(
-                stride=self._strides, padding=self._padding,
+                stride=self._strides, padding=self._padding, pad_values=self._pad_values
             )
         return new_op
 
@@ -174,23 +178,6 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
             ]
         )
 
-        # Pass on pad values from conv to pad op
-        pad_value = op.custom_options["pad_values"]
-
-        if pad_value != -1 and pad_value != 1:
-            raise ValueError("Unsupported pad value: " + str(pad_value))
-
-        if pad_value == 1:
-            pad_value = 0
-        else:
-            pad_value = 1
-
-        pad_op.custom_options["pad_values"] = pad_value
-        pad_op.custom_options["padding_values"] = [padding_tb, 0, padding_lr, 0]
-
-        C_out, K_h, K_w, C_in = op.inputs[1].shape
-        bytes_per_pixel = C_in * 4
-
         # Construct paddings parameter tensor and padded input tensor
         padding_tensor = subgraph.create_tensor(
             f"{op.name}/paddings", TensorType.INT32, shape=paddings.shape
@@ -204,16 +191,22 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
             f"{op.name}/input", TensorType.INT32, shape=padded_shape, consumers=[op],
         )
 
+        pad_value = op.custom_options["pad_values"]
+        if pad_value != -1 and pad_value != 1:
+            raise ValueError(f"Unsupported pad value: {pad_value}\n")
+
+        if pad_value == 1:
+            pad_value = 0
+        else:
+            pad_value = -1
+
         # create new PAD op and inject it before the convolution
         pad_op = subgraph.create_operator(
             OperatorCode(BuiltinOpCodes.PAD),
             inputs=[old_input, padding_tensor],
             outputs=[padded_input_tensor],
+            builtin_options={"constant_values": pad_value},
         )
-
-        pad_op.custom_options["bytes_per_pixel"] = int(bytes_per_pixel)
-        pad_op.custom_options["pad_values"] = pad_value
-        pad_op.custom_options["padding_values"] = [paddings[1][0], 0, padding_l, 0]
 
         subgraph.insert_operator(op, pad_op)
 

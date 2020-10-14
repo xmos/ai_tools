@@ -480,6 +480,11 @@ class XCOREDeviceServer(object):
                     acquired_device["in_use"] = True
                     break
 
+            if not acquired_device:
+                raise Exception(
+                    "Could not acquire device (ensure that device is connected)"
+                )
+
             # save the synched devices
             logging.debug(f"Saving synced devices: {synced_devices}")
             with open(XCOREDeviceServer.devices_path, "w") as fd:

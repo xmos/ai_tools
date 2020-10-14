@@ -45,7 +45,7 @@ GENERATOR = MobileNetV1Model
 
 
 CONFIGS = {
-    "default": {0: {"input_size": 128, "alpha": 0.25}},
+    "default": {0: {"input_size": 128, "alpha": 0.25, "skip_on_device": True}},
 }
 
 

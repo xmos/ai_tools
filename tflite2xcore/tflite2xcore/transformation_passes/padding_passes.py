@@ -275,3 +275,46 @@ class RemovePaddingInputPass(OperatorMatchingPass):
         subgraph.inputs.append(op.outputs[0])
         subgraph.remove_tensor(op.inputs[0])  # DCE doesn't clean up subgraph inputs
         subgraph.remove_operator(op)
+
+
+class ReplacePadPass(OperatorMatchingPass):
+    @property
+    def new_opcode(self) -> OperatorCode:
+        return OperatorCode(XCOREOpCodes.XC_pad)
+
+    # TODO add restrictions for XC_pad
+    def match(self, op):
+
+        return (
+            super().match
+            and op.operator_code.code is BuiltinOpCodes.PAD
+            # TODO check for spacial pad only
+            # TODO check for byte aligned padding
+        )
+
+    def mutate(self, op):
+        new_op = op.subgraph.create_operator(
+            self.new_opcode, inputs=op.inputs[:1], outputs=op.outputs
+        )
+
+        bytes_per_pixel = op.inputs[0].shape[3] * 4
+        new_op.custom_options["bytes_per_pixel"] = int(bytes_per_pixel)
+
+        new_op.custom_options["pad_values"] = op.builtin_options["constant_values"]
+
+        paddings = op.inputs[1].as_array().tolist()
+
+        padding_height = paddings[1][0]
+        padding_height_offset = paddings[1][0] - paddings[1][1]
+        padding_width = paddings[2][0]
+        padding_width_offset = paddings[2][0] - paddings[2][1]
+
+        new_op.custom_options["padding_values"] = [
+            padding_height,
+            padding_height_offset,
+            padding_width,
+            padding_width_offset,
+        ]
+
+        new_op.subgraph.replace_operator(op, new_op)
+        return new_op

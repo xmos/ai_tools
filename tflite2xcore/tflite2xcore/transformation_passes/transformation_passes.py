@@ -243,21 +243,28 @@ class ReplaceQuantizedWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def matching_weights_type(self) -> TensorType:
         return TensorType.INT8
 
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return (
-                    self._weights.type is self.matching_weights_type
-                    and self._biases.type is self.matching_biases_type
-                    # NOTE: the current implementations don't allow mutating ops
-                    #       if one of the parameter tensors is an output or not constant
-                    and self._weights.is_constant
-                    and self._weights not in op.subgraph.outputs
-                    and self._biases.is_constant
-                    and self._biases not in op.subgraph.outputs
-                )
+    def _match_non_weight_inputs(self) -> bool:
+        try:
+            return (
+                self._biases.type is self.matching_biases_type
+                and self._biases.is_constant
+                and self._biases not in self._op.subgraph.outputs
+            )
+        except IndexError:
+            # if bias is missing, the operator should match
+            return True
 
-        return False
+    def match(self, op):
+        with self.using(op):
+            return (
+                super().match(op)
+                and self._weights.type is self.matching_weights_type
+                # NOTE: the current implementations don't allow mutating ops
+                #       if one of the parameter tensors is an output or not constant
+                and self._weights.is_constant
+                and self._weights not in op.subgraph.outputs
+                and self._match_non_weight_inputs()
+            )
 
 
 class ReplaceXCWeightBiasOperatorPass(ReplaceQuantizedWeightBiasOperatorPass):

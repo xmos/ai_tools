@@ -21,6 +21,7 @@ ModelBuilder = Callable[..., XCOREModel]
 def generate_dummy_int8_data(shape: Tuple[int, ...]) -> np.ndarray:
     return np.int8(np.arange(np.prod(shape)) % 255 - 127)
 
+
 def generate_dummy_int32_data(shape: Tuple[int, ...]) -> np.ndarray:
     return np.arange(np.prod(shape), dtype=np.int32)
 
@@ -866,4 +867,3 @@ def build_padded_DW(subgraph=None, *, weight_shape, input_size, paddings, stride
     pad_op.inputs[0].quantization = old_input.quantization
 
     return model
-

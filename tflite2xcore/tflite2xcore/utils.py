@@ -341,4 +341,3 @@ def calculate_same_padding(
         return (pad_start, total_pad - pad_start)
 
     return tuple(calc_axis_pad(*t) for t in zip(input_size, strides, kernel_size))
-

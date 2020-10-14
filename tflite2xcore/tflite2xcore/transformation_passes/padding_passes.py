@@ -282,14 +282,16 @@ class ReplacePadPass(OperatorMatchingPass):
     def new_opcode(self) -> OperatorCode:
         return OperatorCode(XCOREOpCodes.XC_pad)
 
-    # TODO add restrictions for XC_pad
     def match(self, op):
+
+        # check for word aligned padding
+        if op.inputs[0].type == TensorType.INT8 and op.inputs[0].shape[3] % 4 != 0:
+            return False
 
         return (
             super().match
             and op.operator_code.code is BuiltinOpCodes.PAD
             # TODO check for spacial pad only
-            # TODO check for byte aligned padding
         )
 
     def mutate(self, op):

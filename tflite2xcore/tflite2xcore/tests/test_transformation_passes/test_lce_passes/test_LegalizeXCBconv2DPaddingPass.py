@@ -1,13 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-import numpy as np
 from typing import Tuple
 from copy import deepcopy
 
-from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes.lce_passes import LegalizeXCBconv2DPaddingPass
-from tflite2xcore.xcore_schema import BuiltinOpCodes, TensorType, Padding, XCOREOpCodes
+from tflite2xcore.xcore_schema import Padding, XCOREOpCodes
 from tflite2xcore.xcore_model import XCOREModel
 
 from . import build_XC_bconv2d, _test_non_matching_params
@@ -29,7 +27,7 @@ PARAMS["extended"] = PARAMS["default"]
 PARAMS["default"] = PARAMS["smoke"]
 
 for params in PARAMS.values():
-    params["opcode"] = [XCOREOpCodes.XC_bconv2d_int8_out]
+    params["opcode"] = [XCOREOpCodes.XC_bconv2d_int8, XCOREOpCodes.XC_bconv2d_bin]
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES

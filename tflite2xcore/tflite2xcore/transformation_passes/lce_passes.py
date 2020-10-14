@@ -6,6 +6,7 @@ from tflite2xcore.utils import (
     WORD_SIZE_BITS,
     VECTOR_SIZE_BITS,
     ACC_PERIOD,
+    WORD_SIZE,
     calculate_same_padding,
 )
 from tflite2xcore.xcore_model import Operator
@@ -23,6 +24,14 @@ from .transformation_passes import (
     ReplaceQuantizedOperatorPass,
 )
 from .conv2d_passes import ReplaceConv2DPass
+
+
+XC_BCONV2D_OPCODES = (
+    XCOREOpCodes.XC_bconv2d_bin,
+    XCOREOpCodes.XC_bconv2d_bin_DI,
+    XCOREOpCodes.XC_bconv2d_int8,
+    XCOREOpCodes.XC_bconv2d_int8_DIDO,
+)
 
 
 class ReplaceBconv2DPass(ReplaceConv2DPass):
@@ -60,20 +69,27 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
     def _input_channels(self) -> int:
         return self._op.custom_options["channels_in"]
 
+    @property
+    def _output_channels(self) -> int:
+        return self._weights.shape[0]
+
     def match(self, op: Operator) -> bool:
-        # other versions of the LCE op can have different number of inputs
-        if super().match(op) and len(op.inputs) == 3:
+        if super().match(op):
             with self.using(op):
-                inferred_input_channels = self._weights.shape[3] * WORD_SIZE_BITS
-                if inferred_input_channels == self._input_channels:
-                    # number of input channels must be multiple of 256
-                    return inferred_input_channels % VECTOR_SIZE_BITS == 0
-                else:
+                if self._input_channels != self._weights.shape[3] * WORD_SIZE_BITS:
                     self.logger.warning(
                         f"Found {self.matching_opcode} operator "
-                        f"with {self._input_channels} "
-                        "(not a multiple of 32) input channels."
+                        f"with {self._input_channels} input channels "
+                        f"(not a multiple of {WORD_SIZE_BITS})."
                     )
+                elif self._output_channels % WORD_SIZE != 0:
+                    self.logger.warning(
+                        f"Found {self.matching_opcode} operator "
+                        f"with {self._output_channels} output channels "
+                        f"(not a multiple of {WORD_SIZE})"
+                    )
+                else:
+                    return True
 
         return False
 
@@ -86,24 +102,67 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
         return new_op
 
 
-class ReplaceBconv2DInt8OutPass(ReplaceBconv2DPass):
+class ReplaceBconv2DInt8Pass(ReplaceBconv2DPass):
     @property
-    def new_opcode(self):
-        return OperatorCode(XCOREOpCodes.XC_bconv2d_int8_out)
+    def matching_biases_type(self) -> TensorType:
+        return TensorType.FLOAT32
+
+    @property
+    def new_opcode(self) -> OperatorCode:
+        return OperatorCode(XCOREOpCodes.XC_bconv2d_int8)
+
+    def match(self, op: Operator) -> bool:
+        return (
+            super().match(op)
+            and len(op.inputs) == 4
+            and op.inputs[3].type is self.matching_biases_type
+        )
+
+
+class ReplaceBconv2DInt8DeepInDeepOutPass(ReplaceBconv2DInt8Pass):
+    @property
+    def new_opcode(self) -> OperatorCode:
+        return OperatorCode(XCOREOpCodes.XC_bconv2d_int8_DIDO)
 
     def match(self, op: Operator) -> bool:
         with self.using(op):
-            return super().match(op) and self._weights.shape[0] % ACC_PERIOD == 0
+            return (
+                super().match(op)
+                and self._input_channels % VECTOR_SIZE_BITS == 0
+                and self._output_channels % ACC_PERIOD == 0
+            )
 
 
-class ReplaceBconv2DBitpackedOutPass(ReplaceBconv2DPass):
-    @property
-    def new_opcode(self) -> OperatorCode:
-        return OperatorCode(XCOREOpCodes.XC_bconv2d_bin_out)
-
+class ReplaceBconv2DBitpackedPass(ReplaceBconv2DPass):
     @property
     def matching_output_type(self) -> TensorType:
         return TensorType.INT32
+
+    @property
+    def new_opcode(self) -> OperatorCode:
+        return OperatorCode(XCOREOpCodes.XC_bconv2d_bin)
+
+    def match(self, op: Operator) -> bool:
+        if super().match(op) and len(op.inputs) == 3:
+            with self.using(op):
+                if self._output_channels % WORD_SIZE_BITS == 0:
+                    return True
+                self.logger.warning(
+                    f"Found {self.matching_opcode} operator with bitpacked output "
+                    f"and {self._output_channels} output channels "
+                    f"(not a multiple of {WORD_SIZE_BITS})"
+                )
+        return False
+
+
+class ReplaceBconv2DBitpackedDeepInPass(ReplaceBconv2DBitpackedPass):
+    @property
+    def new_opcode(self) -> OperatorCode:
+        return OperatorCode(XCOREOpCodes.XC_bconv2d_bin_DI)
+
+    def match(self, op: Operator) -> bool:
+        with self.using(op):
+            return super().match(op) and self._input_channels % VECTOR_SIZE_BITS == 0
 
 
 class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
@@ -131,8 +190,9 @@ class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
 
 
 # Split out padding to a separate op from BConv
-# Note, this currently only matches with BConv but going forward might like to extend this to other conv ops
-# and make it a general pass. Bconv only supports SAME and VALID spatial padding
+# TODO: this currently only matches with XC_bconv2d_*
+# but going forward might like to extend this to other conv ops
+# and make it a more general pass for all convolutions.
 class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
     @property
     def _strides(self) -> Tuple[int, int]:
@@ -142,10 +202,7 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
     def _padding(self) -> Padding:
         return self._op.custom_options["padding"]
 
-    MATCHING_OPCODES = (
-        XCOREOpCodes.XC_bconv2d_int8_out,
-        XCOREOpCodes.XC_bconv2d_bin_out,
-    )
+    MATCHING_OPCODES = XC_BCONV2D_OPCODES
 
     def match(self, op: Operator) -> bool:
         return (

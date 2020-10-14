@@ -84,19 +84,6 @@ class IntegrationTestRunner(Runner):
         assert isinstance(runner, IntegrationTestRunner)
         return runner
 
-    @staticmethod
-    def dump_data(
-        dirpath: Path,
-        *,
-        data: Dict[str, Union[tf.Tensor, np.ndarray]],
-        example_idx: Union[int, Iterable[int]] = [],
-    ) -> None:
-        example_idx = [example_idx] if isinstance(example_idx, int) else example_idx
-        for key, arr in data.items():
-            for j in example_idx:
-                with open(dirpath / f"example_{j}.{key}", "wb") as f:
-                    f.write(np.array(arr[j]).tostring())
-
     @abstractmethod
     def rerun_post_cache(self) -> None:
         raise NotImplementedError()
@@ -214,7 +201,7 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         self.dump_data(
             dirpath,
             data={
-                "input": self.get_quantization_data(),
+                "input": self._xcore_evaluator.input_data,
                 "reference_quant_output": self.outputs.reference_quant,
                 "xcore_output": self.outputs.xcore,
             },
@@ -283,7 +270,7 @@ def _compare_batched_arrays(
     assert predicted.shape == expected.shape
 
     output_type = predicted.dtype
-    assert output_type is expected.dtype
+    assert output_type == expected.dtype  # NOTE: 'is' operator can be buggy, use ==
     if np.issubdtype(output_type, np.integer):
         diffs = np.int64(predicted) - np.int64(expected)
     elif np.issubdtype(output_type, np.floating):

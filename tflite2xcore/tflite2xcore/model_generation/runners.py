@@ -2,10 +2,11 @@
 
 import logging
 import dill  # type: ignore
+import numpy as np  # type: ignore
 import tensorflow as tf  # type: ignore
 from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, Any, Optional, List, Union, Type
+from typing import TYPE_CHECKING, Dict, Any, List, Union, Type, Iterable
 
 from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
 
@@ -125,6 +126,19 @@ class Runner(ABC):
             if visualize:
                 tflite_visualize.main(model_path, model_html)
                 logging.debug(f"{name} visualization dumped to {model_html}")
+
+    @staticmethod
+    def dump_data(
+        dirpath: Path,
+        *,
+        data: Dict[str, Union[tf.Tensor, np.ndarray]],
+        example_idx: Union[int, Iterable[int]] = [],
+    ) -> None:
+        example_idx = [example_idx] if isinstance(example_idx, int) else example_idx
+        for key, arr in data.items():
+            for j in example_idx:
+                with open(dirpath / f"example_{j}.{key}", "wb") as f:
+                    f.write(np.array(arr[j]).tostring())
 
 
 class RunnerDependent(ABC):

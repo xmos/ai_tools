@@ -104,18 +104,15 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
 
 class ReplaceBconv2DInt8Pass(ReplaceBconv2DPass):
     @property
-    def matching_biases_type(self) -> TensorType:
-        return TensorType.FLOAT32
-
-    @property
     def new_opcode(self) -> OperatorCode:
         return OperatorCode(XCOREOpCodes.XC_bconv2d_int8)
 
-    def match(self, op: Operator) -> bool:
-        return (
-            super().match(op)
-            and len(op.inputs) == 4
-            and op.inputs[3].type is self.matching_biases_type
+    def _match_non_weight_inputs(self) -> bool:
+        return len(self._op.inputs) == 4 and all(
+            params_tensor.type is TensorType.FLOAT32
+            and params_tensor.is_constant
+            and params_tensor not in self._op.subgraph.outputs
+            for params_tensor in self._op.inputs[2:]
         )
 
 
@@ -142,8 +139,16 @@ class ReplaceBconv2DBitpackedPass(ReplaceBconv2DPass):
     def new_opcode(self) -> OperatorCode:
         return OperatorCode(XCOREOpCodes.XC_bconv2d_bin)
 
+    def _match_non_weight_inputs(self) -> bool:
+        return (
+            len(self._op.inputs) == 3
+            and self._op.inputs[2].type is TensorType.INT32
+            and self._op.inputs[2].is_constant
+            and self._op.inputs[2] not in self._op.subgraph.outputs
+        )
+
     def match(self, op: Operator) -> bool:
-        if super().match(op) and len(op.inputs) == 3:
+        if super().match(op):
             with self.using(op):
                 if self._output_channels % WORD_SIZE_BITS == 0:
                     return True

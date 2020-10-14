@@ -48,7 +48,7 @@ class CanonicalizeSinglePixelConv2DPass(ReplaceQuantizedWeightBiasOperatorPass):
 
         new_op = super().mutate(op)
         with self.using(new_op):
-            old_weight_tensor = self._op.inputs[1]
+            old_weight_tensor = self._weights
             self._op.builtin_options = builtin_options
 
             new_weight_tensor = self._op.subgraph.create_tensor(
@@ -60,7 +60,7 @@ class CanonicalizeSinglePixelConv2DPass(ReplaceQuantizedWeightBiasOperatorPass):
                 ),
                 quantization=old_weight_tensor.quantization,
                 consumers=[self._op],
-                buffer=self._weights.buffer,
+                buffer=old_weight_tensor.buffer,
             )
 
             # rewire old and new kernel tensors

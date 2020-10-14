@@ -22,7 +22,9 @@ def generate_dummy_data(
     shape: Tuple[int, ...], dtype: Union[type, np.dtype]
 ) -> np.ndarray:
     if np.issubdtype(dtype, np.int8):
-        return np.int8(np.arange(np.prod(shape)) % 255 - 127)
+        t_max = np.iinfo(dtype).max
+        t_range = t_max - np.iinfo(dtype).min
+        return np.int8(np.arange(np.prod(shape)) % t_range - t_max)
     else:
         return np.arange(np.prod(shape), dtype=dtype)
 

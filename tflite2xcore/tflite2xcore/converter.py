@@ -172,6 +172,8 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeOperatorOutputTensorNamePass())
     pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
 
+    pass_mgr.register_pass(passes.FloatingPointWarningPass())
+
     if minification:
         pass_mgr.register_pass(passes.MinifyQuantInfoPass())
         pass_mgr.register_pass(passes.MinifyTensorNamesPass())

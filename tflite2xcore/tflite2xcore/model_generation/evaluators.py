@@ -118,7 +118,7 @@ class XCoreEvaluator(TFLiteEvaluator):
         runner: Runner,
         input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
         model_hook: Hook[TFLiteModel],
-        use_device=False,
+        use_device: bool = False,
     ) -> None:
         super().__init__(runner, input_data_hook, model_hook)
         self._use_device = use_device

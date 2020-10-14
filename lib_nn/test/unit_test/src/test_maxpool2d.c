@@ -129,9 +129,6 @@ void test_maxpool2d_case0()
 
         nn_window_params_t window_params;
 
-        nn_maxpool2d_plan_t plan;
-        nn_pool2d_job_t job;
-
         window_params.shape.height = casse->W.height;
         window_params.shape.width  = casse->W.width;
 
@@ -142,8 +139,6 @@ void test_maxpool2d_case0()
         window_params.stride.horizontal = casse->W.hstride;
 
 
-        maxpool2d_init(&plan, &job, &x_params, &y_params, &window_params, NULL, 1);
-
         const unsigned x_bytes = x_params.height * x_params.width * x_params.channels;
         const unsigned y_bytes = y_params.height * y_params.width * y_params.channels;
 
@@ -153,7 +148,8 @@ void test_maxpool2d_case0()
             PRINTF("\t\tRep %d...\n", rep);
 
             memset(Y, 0xCC, y_bytes);
-            maxpool2d((int8_t*)Y, (int8_t*)X, &plan, &job);
+
+            maxpool2d((int8_t*)Y, (int8_t*)X, &x_params, &y_params, &window_params);
 
             char str_buff[200] = {0};
             for(unsigned row = 0; row < y_params.height; row++){
@@ -257,9 +253,6 @@ void test_maxpool2d_case1()
         nn_image_params_t x_params = { X_HEIGHT, X_WIDTH, casse->output.shape.channels };
         nn_image_params_t y_params = { casse->output.shape.rows, casse->output.shape.cols, casse->output.shape.channels };
 
-        nn_maxpool2d_plan_t plan;
-        nn_pool2d_job_t job;
-
         nn_window_params_t window_params;
         nn_window_op_job_params_t job_params;
 
@@ -271,8 +264,6 @@ void test_maxpool2d_case1()
 
         window_params.start.row = 0;
         window_params.start.column = 0;
-
-
 
         for(unsigned rep = 0; rep < REPS; rep++){
 
@@ -292,8 +283,6 @@ void test_maxpool2d_case1()
             job_params.start.cols = pseudo_rand_uint16() % max_col;
             job_params.start.channels = 4*(pseudo_rand_uint16() % (max_chan/4));
             
-            maxpool2d_init(&plan, &job, &x_params, &y_params, &window_params, &job_params, 1);
-
             memset(Y_exp, 0xCC, sizeof(Y_exp));
             memset(Y, 0xCC, sizeof(Y));
             memset(X, 0xAA, sizeof(X));
@@ -331,7 +320,9 @@ void test_maxpool2d_case1()
             }
 
             PRINTF("\t\t\tRunning...\n");
-            maxpool2d((int8_t*)Y, (int8_t*)X, &plan, &job);
+
+            maxpool2d_ext((int8_t*)Y, (int8_t*)X, &x_params, &y_params, &window_params, 
+                            &job_params, MAXPOOL2D_FLAG_NONE);
 
 
             char str_buff[200] = {0};

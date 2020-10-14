@@ -14,9 +14,6 @@ instruction, significantly speaking up the operation.
 
 This operator supports implied padding of the input image in which a specified value (@math{z_0}) is used for all padding channels.
 
-The @oper{conv2d_shallowin} operator requires a plan and one or more jobs to be initialized before it can be invoked. See 
-@ref conv2d_shallowin_api below.
-
 The @oper_ref{conv2d_deep}, @oper_ref{conv2d_1x1}, and @oper_ref{conv2d_depthwise} operators are alternative 2D convolution operators
 optimized for different circumstances.
 
@@ -24,9 +21,7 @@ optimized for different circumstances.
 
 #### Hyperparameters        {#conv2d_shallowin_hyperparams}
 
-The following are the hyperparameters of @oper{conv2d_shallowin}. The hyperparameters for an instance of an operator are fixed at 
-initialization.  Instances of the @oper{conv2d_shallowin} operator that share the same hyperparameters may also share the same plan 
-and jobs.
+The following are the hyperparameters of @oper{conv2d_shallowin}.
 
 @par
 
@@ -70,8 +65,7 @@ and jobs.
 
 #### Data Parameters
 
-The following are input and output parameters of @oper{conv2d_shallowin}. These parameters are supplied only when the job invocation occurs,
-and may change from invocation to invocation.
+The following are input and output parameters of @oper{conv2d_shallowin}.
 
 @par
 
@@ -165,25 +159,7 @@ and `O` respectively.
 
 @note For simplicity, the input and output channel depths are not shown (or equivalently, are presumed to be 1) in 
        the diagram above.
-
-### API                     {#conv2d_shallowin_api}
-
-Invoking an instance of @oper{conv2d_shallowin} is done with a call to conv2d_shallowin(). conv2d_shallowin() takes a pointer to 
-an initialized plan (instance of `nn_conv2d_shallowin_plan_t`) and an initialized job (instance of `nn_conv2d_shallowin_job_t`). 
-Initialization is done with a call to conv2d_shallowin_init().
-
-Each call to conv2d_shallowin() will execute exactly one job. A @oper{conv2d_shallowin} job computes a rectangular sub-tensor of
-the output image (which can be the entire image if only one job is desired). For each job the user indicates a starting row, 
-starting column and starting channel of the output image, as well as the number of rows, columns and channels to be computed by
-that job. See conv2d_shallowin_init() for more details (and constraints).
-
-It is the user's responsibility to ensure that all initialized jobs collectively compute the entire output image (no gaps) and do not
-compute outputs redundantly (overlapping jobs).
-
-If a network uses multiple instances of the @oper{conv2d_shallowin} operator, they may share the structs representing the plan and any jobs 
-*if and only if* the instances share identical hyperparameters (see @ref conv2d_shallowin_hyperparams).
-
-
+       
 ### Configuration Options
 
 The following sections describe configurable options for the @oper{conv2d_shallowin} operator. Configuration options can

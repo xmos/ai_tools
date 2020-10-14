@@ -10,17 +10,11 @@ pooling when the pooling window covers the entire input image, with an additiona
 @ref avgpool2d_global_op below). 
 The result is an 8-bit vector in which the index corresponds to input channel.
 
-The @oper{avgpool2d_global} operator requires a plan and one or more jobs to be initialized before it can be invoked. See 
-@ref avgpool2d_global_api below.
-
 ### Parameters 
 
 #### Hyperparameters        {#avgpool2d_global_hyperparams}
 
-The following are the hyperparameters of @oper{avgpool2d_global}. The hyperparameters for an instance of an operator are 
-fixed at initialization.  
-Instances of the @oper{avgpool2d_global} operator that share the same hyperparameters may also share the same plan and 
-jobs.
+The following are the hyperparameters of @oper{avgpool2d_global}.
 
 @par
 
@@ -38,8 +32,7 @@ jobs.
 
 #### Data Parameters
 
-The following are input and output parameters of @oper{avgpool2d_global}. These parameters are supplied only when the 
-job invocation occurs, and may change from invocation to invocation.
+The following are input and output parameters of @oper{avgpool2d_global}.
 
 @par
 
@@ -130,24 +123,6 @@ and so this maximally reduces risk of 32-bit accumulator saturation.
 ### Example Diagram
 
 @todo Create diagram
-
-### API                     {#avgpool2d_global_api}
-
-An instance of @oper{avgpool2d_global} is invoked with a call to avgpool2d_global(). avgpool2d_global() takes a pointer to an 
-initialized plan (instance of `nn_avgpool2d_global_plan_t`) and an initialized job (instance of `nn_avgpool2d_global_job_t`). 
-Initialization is done with a call to avgpool2d_global_init().
-
-Each call to avgpool2d_global() will execute exactly one job. A @oper{avgpool2d_global} job computes a contiguous subset of 
-the output vector's channels (which can be the entire vector if only one job is desired). For each job the user indicates a 
-starting channel as well as the number of channels to be computed by that job. See avgpool2d_global_init() for more details 
-(and constraints).
-
-It is the user's responsibility to ensure that all initialized jobs collectively compute the entire output vector (no gaps) and 
-do not compute outputs redundantly (overlapping jobs).
-
-If a network uses multiple instances of the @oper{avgpool2d_global} operator, they may share the structs representing the plan 
-and any jobs *if and only if* the instances share identical hyperparameters (see @ref avgpool2d_global_hyperparams).
-
 
 ### Configuration Options
 

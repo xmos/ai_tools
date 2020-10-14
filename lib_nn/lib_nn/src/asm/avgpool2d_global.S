@@ -5,17 +5,19 @@
 #include "asm_constants.h"
 
 /*  
-void avgpool2d_global(
-    int8_t* Y,
-    const int8_t* X, 
+void avgpool2d_global_ext(
+    nn_image_t* Y,
+    const nn_image_t* X, 
     const int32_t bias,
     const int8_t scale,
     const uint16_t shift,
-    const nn_avgpool2d_global_plan_t* plan,
-    const nn_avgpool2d_global_job_t* job);
+    const nn_image_params_t* x_params,
+    const unsigned chan_start,
+    const unsigned chan_count,
+    const nn_avgpool2d_global_flags_e flags);
 */
 
-#define FUNCTION_NAME avgpool2d_global
+#define FUNCTION_NAME avgpool2d_global_adv
 
 #define NSTACKWORDS  (5*8 + 12)
     
@@ -29,12 +31,9 @@ void avgpool2d_global(
 #define arg_bias        r2
 #define arg_scale       r3
 
-
-#define PLAN_X_PIXELS   0
-#define PLAN_X_CHANS    1
-
-#define JOB_STRIDE_START    0
-#define JOB_OUT_CHANNELS    1
+#define IMG_PARAMS_HEIGHT   (0)
+#define IMG_PARAMS_WIDTH    (1)
+#define IMG_PARAMS_CHANS    (2)
 
 #define STACK_SHIFT_VEC     (NSTACKWORDS-8)
 #define STACK_BIAS_HI_VEC   (NSTACKWORDS-16)
@@ -43,8 +42,11 @@ void avgpool2d_global(
 #define STACK_VEC_TMP2      (NSTACKWORDS-40)
 
 #define STACK_SHIFT         (NSTACKWORDS+1)
-#define STACK_PLAN          (NSTACKWORDS+2)
-#define STACK_JOB           (NSTACKWORDS+3)
+#define STACK_X_PARAMS      (NSTACKWORDS+2)
+#define STACK_CHAN_START    (NSTACKWORDS+3)
+#define STACK_CHAN_COUNT    (NSTACKWORDS+4)
+#define STACK_FLAGS         (NSTACKWORDS+5)
+
 #define STACK_CP            1
 
 #define Y                   r0
@@ -94,12 +96,13 @@ FUNCTION_NAME:
         std arg_bias, arg_bias, r6[3]
 
 #undef arg_bias
-#define job     r2
 
-    {                                           ;   ldw job, sp[STACK_JOB]                  }
-    {                                           ;   ldw r11, job[JOB_STRIDE_START]          }
-    {                                           ;   ldw r4, sp[STACK_PLAN]                  }
-    {   add Y, Y, r11                           ;   ldw pix_count, r4[PLAN_X_PIXELS]        }
+
+    {                                           ;   ldw r11, sp[STACK_CHAN_START]           }
+    {                                           ;   ldw r4, sp[STACK_X_PARAMS]              }
+    {                                           ;   ldw Q(pix_count), r4[IMG_PARAMS_HEIGHT] }
+    {   add Y, Y, r11                           ;   ldw r4, r4[IMG_PARAMS_WIDTH]            }
+        mul pix_count, Q(pix_count), r4
     {   add X, X, r11                           ;   shl r11, _16, 5                         }
 
     {   ldap r11, .L_bso_consts                 ;   vsetc r11                               }
@@ -122,11 +125,10 @@ FUNCTION_NAME:
         std r10, r10, r6[2]
         std r10, r10, r6[3]
     
-    {                                           ;   ldw r4, sp[STACK_PLAN]                  }
-    {                                           ;   ldw r3, job[JOB_OUT_CHANNELS]           }
-    {                                           ;   ldw chans, r4[PLAN_X_CHANS]             }
+    {                                           ;   ldw r4, sp[STACK_X_PARAMS]              }
+    {                                           ;   ldw r3, sp[STACK_CHAN_COUNT]            }
+    {                                           ;   ldw chans, r4[IMG_PARAMS_CHANS]         }
 
-#undef job
 
         mul x_chan_incr, pix_count, chans
     {   ldc _16, 16                             ;   shr chan_grp_left, r3, 4                }

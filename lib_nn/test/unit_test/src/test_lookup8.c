@@ -43,15 +43,16 @@ void test_lookup8_case0()
 
         PRINTF("\trep %d...\n", k); 
 
-        uint32_t size = pseudo_rand_uint32() % MAX_LEN;
+        uint32_t start = pseudo_rand_uint32() % MAX_LEN;
+        uint32_t size = pseudo_rand_uint32() % (MAX_LEN - start);
 
         memset(dst, 0xCC, sizeof(dst));
         
-        lookup8((uint8_t*)dst, (uint8_t*) src, (uint8_t*) lut, size);
-        for(int i = 0; i < MAX_LEN; i++)
-            TEST_ASSERT_EQUAL( (i < size)? lut[src[i]] : 0xCC, dst[i]);
+        lookup8(dst, src, lut, start, size);
 
-        
+        for(int i = 0; i < MAX_LEN; i++){
+            TEST_ASSERT_EQUAL( (i >= start && i < start+size)? lut[src[i]] : 0xCC, dst[i]);
+        }
 
     }
 

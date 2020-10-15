@@ -97,7 +97,10 @@ void xscope_data(void *data, size_t size) {
   } else if (strncmp(data, "CALL_INVOKE", 11) == 0) {
     LOG_STATUS("Received INVOKE\n");
     state = Invoke;
-    invoke_inference_engine();
+    TfLiteStatus status = invoke_inference_engine();
+    if (status == kTfLiteError) {
+      send_error("Unable to invoke inference engine.\0");
+    }
     xscope_int(INVOKE_ACK, 0);
     return;
   }

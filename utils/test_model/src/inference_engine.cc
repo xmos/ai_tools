@@ -24,13 +24,14 @@ void get_tensor_bytes(int index, void **bytes, size_t *size) {
   }
 }
 
-void invoke_inference_engine() {
+TfLiteStatus invoke_inference_engine() {
   // Run inference, and report any error
   TfLiteStatus invoke_status = interpreter->Invoke();
 
   if (invoke_status != kTfLiteOk) {
     printf("Invoke failed\n");
   }
+  return invoke_status;
 }
 
 void reset_inference_engine(uint8_t *tensor_arena, size_t tensor_arena_size) {

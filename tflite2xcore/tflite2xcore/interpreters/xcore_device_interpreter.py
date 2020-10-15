@@ -4,8 +4,7 @@ import numpy as np
 from .xcore_interpreter import XCOREInterpreter
 from .xcore_device import XCOREDeviceServer
 
-MAX_DEVICE_MODEL_CONTENT_SIZE = 500000
-MAX_DEVICE_TENSOR_ARENA_SIZE = 250000
+from . import MAX_DEVICE_MODEL_CONTENT_SIZE, MAX_DEVICE_TENSOR_ARENA_SIZE
 
 
 class XCOREDeviceInterpreter(XCOREInterpreter):
@@ -17,12 +16,16 @@ class XCOREDeviceInterpreter(XCOREInterpreter):
     ):
         # verify model content size is not too large
         if len(model_content) > MAX_DEVICE_MODEL_CONTENT_SIZE:
-            raise ValueError(f"model_content > {MAX_DEVICE_MODEL_CONTENT_SIZE} bytes")
+            raise ValueError(
+                f"model_content too large: {len(model_content)} "
+                f"> {MAX_DEVICE_MODEL_CONTENT_SIZE} bytes"
+            )
 
         # verify max_tensor_arena_size is not too large
         if max_tensor_arena_size > MAX_DEVICE_TENSOR_ARENA_SIZE:
             raise ValueError(
-                f"max_tensor_arena_size > {MAX_DEVICE_TENSOR_ARENA_SIZE} bytes"
+                f"max_tensor_arena_size too large: {len(max_tensor_arena_size)} "
+                f"> {MAX_DEVICE_TENSOR_ARENA_SIZE} bytes"
             )
 
         super().__init__(model_path, model_content, max_tensor_arena_size)

@@ -118,7 +118,11 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
 
     pytest_config = request.config
 
-    runner = RUNNER(GENERATOR, use_device=pytest_config.getoption("--use-device"))
+    use_device = pytest_config.getoption("--use-device")
+    if request.param.pop("skip_on_device", False) and use_device:
+        pytest.skip()
+
+    runner = RUNNER(GENERATOR, use_device=use_device)
     runner.set_config(**request.param)
 
     if pytest_config.getoption("verbose"):

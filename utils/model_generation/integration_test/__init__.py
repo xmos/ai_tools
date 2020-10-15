@@ -54,6 +54,8 @@ class IntegrationTestRunner(Runner):
         use_device: bool = False,
     ) -> None:
         super().__init__(generator)
+        self._use_device = use_device
+
         self._xcore_converter = XCoreConverter(self, self.get_xcore_reference_model)
         self.register_converter(self._xcore_converter)
 
@@ -66,7 +68,7 @@ class IntegrationTestRunner(Runner):
             self,
             self.get_xcore_evaluation_data,
             self._xcore_converter.get_converted_model,
-            use_device=use_device,
+            use_device=self._use_device,
         )
         self.register_evaluator(self._xcore_evaluator)
 
@@ -171,7 +173,23 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
 
     def rerun_post_cache(self) -> None:
         self._xcore_converter.convert()
-        self._xcore_evaluator.evaluate()
+
+        try:
+            self._xcore_evaluator.evaluate()
+        except ValueError as e:
+            if self._use_device and e.args[0].startswith("model_content too large: "):
+                pytest.skip("Skipping due to excessive model size")
+            else:
+                raise
+        except Exception as e:
+            if (
+                self._use_device
+                and e.args[0]
+                == "Unable to initialize inference engine. Check tensor arena size."
+            ):
+                pytest.skip("Skipping (probably) due to excessive tensor arena size")
+            else:
+                raise
 
         self.outputs = self.OutputData(
             self._reference_float_evaluator.output_data,

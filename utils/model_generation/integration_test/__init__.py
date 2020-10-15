@@ -181,7 +181,7 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         try:
             self._xcore_evaluator.evaluate()
         except ModelSizeError as e:
-            if self._use_device and e.args[0].startswith("model_content too large: "):
+            if self._use_device:
                 pytest.skip("Skipping due to excessive model size")
             else:
                 raise

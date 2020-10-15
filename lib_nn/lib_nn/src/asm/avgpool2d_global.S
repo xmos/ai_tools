@@ -17,7 +17,7 @@ void avgpool2d_global_ext(
     const nn_avgpool2d_global_flags_e flags);
 */
 
-#define FUNCTION_NAME avgpool2d_global_adv
+#define FUNCTION_NAME avgpool2d_global_ext
 
 #define NSTACKWORDS  (5*8 + 12)
     

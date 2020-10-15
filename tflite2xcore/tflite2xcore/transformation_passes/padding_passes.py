@@ -284,15 +284,21 @@ class ReplacePadPass(OperatorMatchingPass):
 
     def match(self, op):
 
-        # check for word aligned padding
-        if op.inputs[0].type == TensorType.INT8 and op.inputs[0].shape[3] % 4 != 0:
-            return False
+        if op.operator_code.code is BuiltinOpCodes.PAD:
+            padding = op.inputs[1].as_array().tolist()
 
-        return (
-            super().match
-            and op.operator_code.code is BuiltinOpCodes.PAD
-            # TODO check for spacial pad only
-        )
+            print(str(padding))
+
+            # check for word aligned padding
+            if op.inputs[0].type == TensorType.INT8 and op.inputs[0].shape[3] % 4 != 0:
+                return False
+
+            return (
+                super().match
+                and len(padding) == 4
+                and padding[-1] == [0, 0]
+                and padding[0] == [0, 0]  # check for spacial pad only
+            )
 
     def mutate(self, op):
         new_op = op.subgraph.create_operator(

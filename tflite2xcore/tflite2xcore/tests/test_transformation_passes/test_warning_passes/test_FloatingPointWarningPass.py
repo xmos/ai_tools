@@ -9,6 +9,22 @@ from tflite2xcore.xcore_schema import TensorType
 _TENSOR_SHAPE = (1, 1, 1, 1)
 
 #  ----------------------------------------------------------------------------
+#                              PARAMETER VALUES
+#  ----------------------------------------------------------------------------
+
+PARAMS = {
+    "default": {
+        "tensor_type": [TensorType.FLOAT32, TensorType.FLOAT16, TensorType.FLOAT64],
+        "non_matching_tensor_type": [
+            TensorType.INT8,
+            TensorType.INT16,
+            TensorType.INT32,
+            TensorType.UINT8,
+        ],
+    }
+}
+
+#  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
 
@@ -16,16 +32,6 @@ _TENSOR_SHAPE = (1, 1, 1, 1)
 @pytest.fixture()
 def trf_pass() -> FloatingPointWarningPass:
     return FloatingPointWarningPass()
-
-
-@pytest.fixture()
-def tensor_type() -> TensorType:
-    return TensorType.FLOAT64
-
-
-@pytest.fixture()
-def non_matching_tensor_type() -> TensorType:
-    return TensorType.INT8
 
 
 @pytest.fixture()

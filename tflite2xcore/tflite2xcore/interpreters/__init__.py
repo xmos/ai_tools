@@ -13,4 +13,7 @@ from .exceptions import (
     InvokeError,
     SetTensorError,
     GetTensorError,
+    ModelSizeError,
+    ArenaSizeError,
+    DeviceTimeoutError,
 )

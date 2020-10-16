@@ -187,7 +187,7 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
                 raise
         except ArenaSizeError as e:
             if self._use_device:
-                pytest.skip("Skipping (probably) due to excessive tensor arena size")
+                pytest.skip("Skipping due to excessive tensor arena size")
             else:
                 raise
 

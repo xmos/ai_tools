@@ -14,3 +14,7 @@ from .xcore_schema import (
     XCOREOpCodes,
     BuiltinOptions,
 )
+
+from .xcore_model import Buffer, Tensor, Operator, Subgraph, Metadata, XCOREModel
+
+from . import xcore_model

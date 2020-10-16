@@ -142,9 +142,7 @@ class FlexbufferBuilder:
     def get_bytes(self, size: int = 1024) -> List[bytes]:
         buf = ctypes.create_string_buffer(size)
         actual_size = lib.builder_get_buffer(self.obj, buf)
-        return [
-            ubyte[0] for ubyte in struct.iter_unpack("B", b"".join(buf[0:actual_size]))
-        ]
+        return [ubyte[0] for ubyte in struct.iter_unpack("B", buf[0:actual_size])]  # type: ignore
 
 
 class FlexbufferParser:
@@ -163,4 +161,4 @@ class FlexbufferParser:
             char_array.from_buffer_copy(buffer), len(buffer), json_buffer, size
         )
 
-        return json.loads(b"".join(json_buffer[0:actual_size]))
+        return json.loads(json_buffer[0:actual_size])  # type: ignore

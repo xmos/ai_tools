@@ -8,8 +8,7 @@ from tflite2xcore.transformation_passes import (
     EliminateDeadOperatorsPass,
 )
 
-from .conftest import (
-    model,
+from . import (
     count_tensors,
     count_operators,
     add_dangling_ops,

@@ -4,7 +4,7 @@ import pytest
 
 from tflite2xcore.transformation_passes import EliminateDeadBuffersPass
 
-from .conftest import model, add_dangling_tensor
+from . import add_dangling_tensor
 
 
 #  ----------------------------------------------------------------------------

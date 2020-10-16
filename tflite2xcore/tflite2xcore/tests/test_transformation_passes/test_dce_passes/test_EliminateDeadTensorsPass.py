@@ -5,7 +5,7 @@ import pytest
 from tflite2xcore.transformation_passes import EliminateDeadTensorsPass
 from tflite2xcore.xcore_schema import TensorType
 
-from .conftest import model, count_tensors, add_dangling_tensor
+from . import count_tensors, add_dangling_tensor
 
 
 #  ----------------------------------------------------------------------------

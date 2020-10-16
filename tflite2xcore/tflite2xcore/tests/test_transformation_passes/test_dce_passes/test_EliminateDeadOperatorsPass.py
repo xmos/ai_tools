@@ -4,7 +4,7 @@ import pytest
 
 from tflite2xcore.transformation_passes import EliminateDeadOperatorsPass
 
-from .conftest import model, count_operators, add_dangling_ops
+from . import count_operators, add_dangling_ops
 
 
 #  ----------------------------------------------------------------------------

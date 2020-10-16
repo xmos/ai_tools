@@ -24,7 +24,7 @@ Optimizing assumptions:
 
 */
 
-#define FUNCTION_NAME conv2d_1x1_adv
+#define FUNCTION_NAME conv2d_1x1_ext
 
 #define NSTACKWORDS  36
     

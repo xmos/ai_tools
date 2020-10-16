@@ -5,6 +5,7 @@ import numpy as np  # type: ignore
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
+from tflite2xcore.xcore_model import Tensor
 from tflite2xcore.xcore_schema import TensorType, OperatorCode
 from tflite2xcore.utils import ACC_PERIOD, format_array
 
@@ -28,19 +29,16 @@ class ModelTransformationPass(ABC):
         return self.__class__.__name__
 
 
-class SubgraphTransformationPass(ModelTransformationPass):
+class SubgraphPass(ModelTransformationPass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._subgraph_idx = -1
         self._obj_index = -1
+        self._num_matches = 0
 
     @abstractmethod
     def match(self, obj):
         return True
-
-    @abstractmethod
-    def mutate(self, obj):
-        pass
 
     @abstractmethod
     def target_iterable(self, subgraph):
@@ -49,20 +47,9 @@ class SubgraphTransformationPass(ModelTransformationPass):
     def log_match(self, obj):
         self.logger.debug(f"matched {obj}")
 
+    @abstractmethod
     def run_subgraph(self, subgraph):
-        num_matches = 0
-        while True:
-            for self._obj_index, obj in enumerate(self.target_iterable(subgraph)):
-                if self.match(obj):
-                    num_matches += 1
-                    self.log_match(obj)
-                    self._sanity_check(obj)
-                    self.mutate(obj)
-                    self._sanity_check(subgraph)
-                    break
-            else:
-                self._obj_index = -1
-                return num_matches
+        pass
 
     def run(self, model):
         modified_cnt = 0
@@ -73,6 +60,38 @@ class SubgraphTransformationPass(ModelTransformationPass):
 
         self._subgraph_idx = -1
         return modified_cnt
+
+
+class SubgraphAnalysisPass(SubgraphPass):
+    def run_subgraph(self, subgraph):
+        self._num_matches = 0
+        for self._obj_index, obj in enumerate(self.target_iterable(subgraph)):
+            if self.match(obj):
+                self._num_matches += 1
+                self.log_match(obj)
+                self._sanity_check(obj)
+        return 0
+
+
+class SubgraphTransformationPass(SubgraphPass):
+    @abstractmethod
+    def mutate(self, obj):
+        pass
+
+    def run_subgraph(self, subgraph):
+        self._num_matches = 0
+        while True:
+            for self._obj_index, obj in enumerate(self.target_iterable(subgraph)):
+                if self.match(obj):
+                    self._num_matches += 1
+                    self.log_match(obj)
+                    self._sanity_check(obj)
+                    self.mutate(obj)
+                    self._sanity_check(subgraph)
+                    break
+            else:
+                self._obj_index = -1
+                return self._num_matches
 
 
 class OperatorMatchingPass(SubgraphTransformationPass):
@@ -224,21 +243,28 @@ class ReplaceQuantizedWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     def matching_weights_type(self) -> TensorType:
         return TensorType.INT8
 
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return (
-                    self._weights.type is self.matching_weights_type
-                    and self._biases.type is self.matching_biases_type
-                    # NOTE: the current implementations don't allow mutating ops
-                    #       if one of the parameter tensors is an output or not constant
-                    and self._weights.is_constant
-                    and self._weights not in op.subgraph.outputs
-                    and self._biases.is_constant
-                    and self._biases not in op.subgraph.outputs
-                )
+    def _match_non_weight_inputs(self) -> bool:
+        try:
+            return (
+                self._biases.type is self.matching_biases_type
+                and self._biases.is_constant
+                and self._biases not in self._op.subgraph.outputs
+            )
+        except IndexError:
+            # if bias is missing, the operator should match
+            return True
 
-        return False
+    def match(self, op):
+        with self.using(op):
+            return (
+                super().match(op)
+                and self._weights.type is self.matching_weights_type
+                # NOTE: the current implementations don't allow mutating ops
+                #       if one of the parameter tensors is an output or not constant
+                and self._weights.is_constant
+                and self._weights not in op.subgraph.outputs
+                and self._match_non_weight_inputs()
+            )
 
 
 class ReplaceXCWeightBiasOperatorPass(ReplaceQuantizedWeightBiasOperatorPass):
@@ -419,15 +445,37 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
     def _bso_arr(self):
         return np.concatenate([self._bias_arr(), self._scale_offset_arr()], axis=1)
 
+    def __add_const_zero_bias(self):
+        out_channels = self._output.shape[-1]
+        input_scale = self._input.quantization["scale"][0]
+        new_biases = self._op.subgraph.create_tensor(
+            f"{self._op.name}/const_zero_bias",
+            TensorType.INT32,
+            shape=(out_channels,),
+            consumers=[self._op],
+            quantization={
+                "scale": [
+                    input_scale * weight_scale
+                    for weight_scale in self._weights.quantization["scale"]
+                ],
+                "zero_point": [0] * out_channels,
+            },
+        )
+        new_biases.buffer.data = np.zeros(new_biases.shape, dtype=np.int32)
+        self._op.inputs.append(new_biases)
+
     def mutate_biases(self, op):
         with self.using(op):
-            subgraph = self._op.subgraph
+            try:
+                self._biases
+            except IndexError:
+                self.__add_const_zero_bias()
 
             # calculate the bias/scale/offset tensor
             bso = self._bso_arr()
 
             # create and populate new bias tensor
-            new_biases = subgraph.create_tensor(
+            new_biases = self._op.subgraph.create_tensor(
                 f"{self._op.name}/bias_shift_scale",
                 TensorType.INT16,
                 bso.shape,

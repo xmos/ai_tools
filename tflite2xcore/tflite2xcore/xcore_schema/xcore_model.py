@@ -22,7 +22,7 @@ from typing import (
 )
 
 from .tensor_type import TensorType
-from .xcore_schema import OperatorCode
+from .operator_codes import OperatorCode
 from .flatbuffers_io import XCORESerializationMixin
 
 

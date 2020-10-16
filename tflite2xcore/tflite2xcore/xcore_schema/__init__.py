@@ -2,16 +2,19 @@
 
 from . import flexbuffers
 from .tensor_type import TensorType
+from .operator_codes import (
+    OperatorCode,
+    ValidOpCodes,
+    CustomOpCodes,
+    BuiltinOpCodes,
+    ExternalOpCodes,
+    XCOREOpCodes,
+)
 from .xcore_schema import (
     QuantizationDetails,
     ActivationFunctionType,
     FullyConnectedOptionsWeightsFormat,
     Padding,
-    OperatorCode,
-    ValidOpCodes,
-    BuiltinOpCodes,
-    ExternalOpCodes,
-    XCOREOpCodes,
     BuiltinOptions,
 )
 

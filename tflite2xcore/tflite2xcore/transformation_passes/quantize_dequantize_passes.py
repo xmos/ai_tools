@@ -132,7 +132,7 @@ class CanonicalizeLceQuantizedOutputPass(CanonicalizeQuantizedOutputPass):
 
     @property
     def matching_opcode(self) -> ValidOpCodes:
-        return ExternalOpCodes.add_new_opcode("LceDequantize")
+        return ExternalOpCodes.LceDequantize
 
 
 # TODO: improve tests for this

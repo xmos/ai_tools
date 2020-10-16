@@ -4,17 +4,16 @@ import numpy as np
 
 from tflite2xcore.utils import camel_to_snake, snake_to_camel
 from .flexbuffers import FlexbufferBuilder
-from . import schema_py_generated as schema
-from . import xcore_schema
+from . import schema_py_generated as schema, xcore_schema, OperatorCode, BuiltinOpCodes
 
 
-def create_dict_from_operator_code(operator_code: xcore_schema.OperatorCode):
+def create_dict_from_operator_code(operator_code: OperatorCode):
     operator_code_dict = {"version": operator_code.version}
 
-    if operator_code.code in xcore_schema.BuiltinOpCodes:
+    if operator_code.code in BuiltinOpCodes:
         operator_code_dict["builtin_code"] = operator_code.name
     else:
-        operator_code_dict["builtin_code"] = xcore_schema.BuiltinOpCodes.CUSTOM.name
+        operator_code_dict["builtin_code"] = BuiltinOpCodes.CUSTOM.name
         operator_code_dict["custom_code"] = operator_code.name
 
     return operator_code_dict

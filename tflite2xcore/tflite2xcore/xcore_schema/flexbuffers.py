@@ -7,7 +7,7 @@ import numpy as np  # type: ignore
 from enum import Enum
 from typing import Dict, Any, List, Optional, Union
 
-from tflite2xcore import libtflite2xcore as lib
+from tflite2xcore import libtflite2xcore as lib  # type: ignore # TODO: fix this
 
 
 class FlexbufferBuilder:

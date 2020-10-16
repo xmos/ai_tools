@@ -5,7 +5,8 @@ import flatbuffers
 from typing import Union, Any
 
 from . import schema_py_generated as schema
-from . import xcore_schema
+from . import operator_codes
+from .tensor_type import TensorType
 from .dict_conversion import (
     builtin_options_to_dict,
     dict_to_builtin_options,
@@ -40,15 +41,15 @@ class XCORESerializationMixin:
         # create operator codes lookup
         operator_codes_lut = []
         for operator_codeT in modelT.operatorCodes:
-            opcode = xcore_schema.BuiltinOpCodes(operator_codeT.builtinCode)
-            if opcode is xcore_schema.BuiltinOpCodes.CUSTOM:
+            opcode = operator_codes.BuiltinOpCodes(operator_codeT.builtinCode)
+            if opcode is operator_codes.BuiltinOpCodes.CUSTOM:
                 custom_code = operator_codeT.customCode.decode("utf-8")
                 try:
-                    opcode = xcore_schema.XCOREOpCodes(custom_code)
+                    opcode = operator_codes.XCOREOpCodes(custom_code)
                 except ValueError:
-                    opcode = xcore_schema.ExternalOpCodes.add_new_opcode(custom_code)
+                    opcode = operator_codes.ExternalOpCodes.add_new_opcode(custom_code)
             operator_codes_lut.append(
-                xcore_schema.OperatorCode(opcode, version=operator_codeT.version)
+                operator_codes.OperatorCode(opcode, version=operator_codeT.version)
             )
 
         # load subgraphs
@@ -70,7 +71,7 @@ class XCORESerializationMixin:
 
                 tensor = subgraph.create_tensor(
                     name=tensorT.name.decode("utf-8"),
-                    type_=xcore_schema.TensorType(tensorT.type),
+                    type_=TensorType(tensorT.type),
                     shape=tensorT.shape,
                     buffer=buffers[tensorT.buffer],
                     quantization=quantization,
@@ -168,10 +169,10 @@ class XCORESerializationMixin:
         modelT.operatorCodes = []
         for operator_code in self.operator_codes:
             operatorCodeT = schema.OperatorCodeT()
-            if operator_code.code in xcore_schema.BuiltinOpCodes:
+            if operator_code.code in operator_codes.BuiltinOpCodes:
                 operatorCodeT.builtinCode = operator_code.value
             else:
-                operatorCodeT.builtinCode = xcore_schema.BuiltinOpCodes.CUSTOM.value
+                operatorCodeT.builtinCode = operator_codes.BuiltinOpCodes.CUSTOM.value
                 operatorCodeT.customCode = operator_code.name
             operatorCodeT.version = operator_code.version
             modelT.operatorCodes.append(operatorCodeT)
@@ -210,7 +211,7 @@ class XCORESerializationMixin:
                     subgraph.tensors.index(t) for t in operator.outputs
                 ]
 
-                if op_code.code in xcore_schema.BuiltinOpCodes:
+                if op_code.code in operator_codes.BuiltinOpCodes:
                     builtin_options_type = op_code.code.to_BuiltinOptions()
                     operatorT.builtinOptionsType = builtin_options_type.value
 

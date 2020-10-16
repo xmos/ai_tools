@@ -3,7 +3,8 @@
 import logging
 import numpy as np  # type: ignore
 from abc import ABC, abstractmethod
-from collections import Counter
+
+# from collections import Counter
 from copy import deepcopy
 from typing import (
     Any,
@@ -16,6 +17,8 @@ from typing import (
     Sequence,
     Generic,
     TypeVar,
+    Type,
+    Counter,
 )
 
 from .xcore_schema import TensorType, OperatorCode
@@ -175,18 +178,8 @@ class _BufferOwnerContainer(_AbstractContainer):
     def model(self) -> "XCOREModel":
         raise NotImplementedError()
 
-    def __init__(
-        self, name: str, buffer: Optional[Buffer["_BufferOwnerContainer"]] = None
-    ) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
-
-        if buffer is None:
-            self.buffer = self.model.create_buffer()
-        else:
-            assert isinstance(buffer, Buffer)
-            assert buffer in self.model.buffers
-            self.buffer = buffer
-        self.buffer.owners.append(self)
 
     def is_equal(self, other: Any) -> bool:
         return (
@@ -194,6 +187,14 @@ class _BufferOwnerContainer(_AbstractContainer):
             # and self.name == other.name  # intentionally not compared
             and self.buffer.is_equal(other.buffer)
         )
+
+    @classmethod
+    def create_buffer(
+        cls: Type[_T], model: "XCOREModel", data: Optional[_BufferDataType] = None
+    ) -> Buffer[_T]:
+        buffer = Buffer[_T](model, data)
+        model.buffers.append(buffer)
+        return buffer
 
 
 class Tensor(_BufferOwnerContainer):
@@ -205,7 +206,6 @@ class Tensor(_BufferOwnerContainer):
         name: str,
         type_: TensorType,
         shape: _ShapeType,
-        buffer: Optional[Buffer["Tensor"]] = None,
         quantization: Optional[OptionsType] = None,
         producers: Optional[Iterable[Operator]] = None,
         consumers: Optional[Iterable[Operator]] = None,
@@ -216,7 +216,7 @@ class Tensor(_BufferOwnerContainer):
         assert isinstance(type_, TensorType)
         self.type = type_
         self.shape = shape  # type: ignore # see https://github.com/python/mypy/issues/3004
-        super().__init__(name, buffer)
+        super().__init__(name)
 
         self.quantization = quantization or {}
         self.producers: List[Operator] = list(producers or [])
@@ -345,9 +345,10 @@ class Subgraph(_AbstractContainer):
     ) -> Tensor:
 
         name = self.make_unique_tensor_name(name)
-        tensor = Tensor(
-            self, name, type_, shape, buffer, quantization, producers, consumers
-        )
+        tensor = Tensor(self, name, type_, shape, quantization, producers, consumers)
+        tensor.buffer = Tensor.create_buffer(self.model) if buffer is None else buffer
+        tensor.buffer.owners.append(tensor)
+
         self.tensors.append(tensor)
         if isinput:
             self.inputs.append(tensor)
@@ -458,7 +459,7 @@ class Subgraph(_AbstractContainer):
             tensor.type,
             tensor.shape,
             quantization=deepcopy(tensor.quantization),
-            buffer=self.model.create_buffer(tensor.buffer.data),
+            buffer=Tensor.create_buffer(self.model, tensor.buffer.data),
         )
 
     def get_tensor(self, name: str) -> Tensor:
@@ -496,7 +497,7 @@ class Metadata(_BufferOwnerContainer):
         # Generally, do not use this constructor to instantiate Metadata!
         # Use XCOREModel.create_metadata instead.
         self._model = model  # parent
-        super().__init__(name, buffer)
+        super().__init__(name)
 
     @property
     def model(self) -> "XCOREModel":
@@ -544,7 +545,10 @@ class XCOREModel(XCORESerializationMixin, _AbstractContainer):
     def create_metadata(
         self, name: str, buffer: Optional[Buffer[Metadata]] = None
     ) -> Metadata:
-        metadata = Metadata(self, name, buffer)
+        metadata = Metadata(self, name)
+        metadata.buffer = Metadata.create_buffer(self) if buffer is None else buffer
+        metadata.buffer.owners.append(metadata)
+
         self.metadata.append(metadata)
         return metadata
 
@@ -553,7 +557,7 @@ class XCOREModel(XCORESerializationMixin, _AbstractContainer):
         self.subgraphs.append(subgraph)
         return subgraph
 
-    def count_operator_codes(self) -> Counter:
+    def count_operator_codes(self) -> Counter[OperatorCode]:
         return Counter(
             operator.operator_code
             for subgraph in self.subgraphs

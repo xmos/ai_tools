@@ -2,6 +2,7 @@
 
 import pytest
 
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.transformation_passes import EliminateDeadBuffersPass
 
 from . import add_dangling_tensor
@@ -12,8 +13,8 @@ from . import add_dangling_tensor
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture()
-def trf_pass():
+@pytest.fixture()  # type: ignore
+def trf_pass() -> EliminateDeadBuffersPass:
     return EliminateDeadBuffersPass()
 
 
@@ -22,7 +23,7 @@ def trf_pass():
 #  ----------------------------------------------------------------------------
 
 
-def test_non_matching(model, trf_pass):
+def test_non_matching(model: XCOREModel, trf_pass: EliminateDeadBuffersPass) -> None:
     add_dangling_tensor(model)
     model.create_metadata("dummy")
     num_buffers = len(model.buffers)
@@ -31,14 +32,14 @@ def test_non_matching(model, trf_pass):
     assert num_buffers == len(model.buffers)
 
 
-def test_mutate_identity(model, trf_pass):
+def test_mutate_identity(model: XCOREModel, trf_pass: EliminateDeadBuffersPass) -> None:
     num_buffers = len(model.buffers)
     trf_pass.run(model)
     model.sanity_check()
     assert num_buffers == len(model.buffers)
 
 
-def test_mutate(model, trf_pass):
+def test_mutate(model: XCOREModel, trf_pass: EliminateDeadBuffersPass) -> None:
     model.create_buffer()
     model.create_metadata("dummy")
     num_buffers = len(model.buffers)

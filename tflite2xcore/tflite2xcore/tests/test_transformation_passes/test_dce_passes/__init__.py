@@ -1,5 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
@@ -17,21 +18,21 @@ from ..conftest import (  # pylint: disable=unused-import
 #  ----------------------------------------------------------------------------
 
 
-def count_tensors(model):
+def count_tensors(model: XCOREModel) -> int:
     return sum(len(subgraph.tensors) for subgraph in model.subgraphs)
 
 
-def count_operators(model):
+def count_operators(model: XCOREModel) -> int:
     return sum(len(subgraph.operators) for subgraph in model.subgraphs)
 
 
-def add_dangling_tensor(model):
+def add_dangling_tensor(model: XCOREModel) -> None:
     model.subgraphs[0].create_tensor(
         "dangling_tensor", TensorType.INT16, shape=[1, 32, 1, 1]
     )
 
 
-def add_dangling_ops(model):
+def add_dangling_ops(model: XCOREModel) -> None:
     subgraph = model.subgraphs[0]
     tin, tout = subgraph.inputs[0], subgraph.outputs[0]
 

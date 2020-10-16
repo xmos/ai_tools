@@ -2,6 +2,8 @@
 
 import pytest
 
+from tflite2xcore.xcore_model import XCOREModel
+
 from tflite2xcore.transformation_passes import (
     EliminateDeadBuffersPass,
     EliminateDeadTensorsPass,
@@ -21,7 +23,7 @@ from . import (
 #  ----------------------------------------------------------------------------
 
 
-def test_mutate(model):
+def test_mutate(model: XCOREModel) -> None:
     add_dangling_ops(model)
     add_dangling_tensor(model)
     model.create_metadata("dummy")

@@ -19,7 +19,7 @@ from typing import (
 )
 
 from tflite2xcore.xcore_schema import TensorType, OperatorCode
-from tflite2xcore.serialization.flatbuffers_io import XCORESerializationMixin
+from tflite2xcore.xcore_schema.flatbuffers_io import XCORESerializationMixin
 
 
 _BufferDataType = Union[list, tuple, bytes, bytearray, np.ndarray]

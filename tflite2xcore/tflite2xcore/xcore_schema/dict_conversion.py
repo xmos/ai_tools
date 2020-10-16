@@ -3,7 +3,7 @@
 import numpy as np
 
 from tflite2xcore.utils import camel_to_snake, snake_to_camel
-from .flatbuffers_c import FlexbufferBuilder
+from .flexbuffers import FlexbufferBuilder
 from . import schema_py_generated as schema
 from . import xcore_schema
 

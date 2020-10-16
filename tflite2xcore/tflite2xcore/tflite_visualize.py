@@ -22,7 +22,7 @@ import tempfile
 
 from collections import Counter
 
-from tflite2xcore.serialization import FlexbufferParser
+from tflite2xcore.xcore_schema.flexbuffers import FlexbufferParser
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.utils import VerbosityParser

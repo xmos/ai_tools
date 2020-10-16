@@ -13,7 +13,7 @@ from .dict_conversion import (
     dict_to_quantization,
     create_dict_from_model,
 )
-from .flatbuffers_c import FlexbufferBuilder, FlexbufferParser
+from .flexbuffers import FlexbufferBuilder, FlexbufferParser
 
 
 class XCORESerializationMixin:
@@ -238,8 +238,6 @@ class XCORESerializationMixin:
     def write_flatbuffer(self, filename: Union[pathlib.Path, str]) -> int:
         with open(pathlib.Path(filename).resolve(), "wb") as fd:
             return fd.write(self.serialize())
-
-        return 0
 
     def to_dict(self, *args: Any, **kwargs: Any) -> dict:
         return create_dict_from_model(self, *args, **kwargs)

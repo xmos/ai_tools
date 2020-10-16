@@ -13,7 +13,7 @@ else:
 
 libtflite2xcore = ctypes.cdll.LoadLibrary(lib_path)
 
-from . import serialization
+from .xcore_schema import serialization
 from . import interpreters
 from . import xcore_schema
 from . import converter

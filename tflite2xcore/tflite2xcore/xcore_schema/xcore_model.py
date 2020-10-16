@@ -21,7 +21,8 @@ from typing import (
     Counter,
 )
 
-from .xcore_schema import TensorType, OperatorCode
+from .tensor_type import TensorType
+from .xcore_schema import OperatorCode
 from .flatbuffers_io import XCORESerializationMixin
 
 
@@ -29,21 +30,21 @@ _BufferDataType = Union[list, tuple, bytes, bytearray, np.ndarray]
 _IntType = Union[int, np.integer]
 _ShapeType = Union[None, Iterable[_IntType], np.ndarray]
 _T = TypeVar("_T", bound="_BufferOwnerContainer", covariant=True)
-_S = TypeVar("_S", bound="_AbstractContainer")
+_S = TypeVar("_S", bound="_SchemaObject")
 OptionsType = Dict[str, Any]
 
 
-class _AbstractContainer(ABC):
+class _SchemaObject(ABC):
+    def __init__(self, name: str) -> None:
+        self.name = name
+
     @abstractmethod
     def sanity_check(self) -> None:
         raise NotImplementedError()
 
     @staticmethod
     def sequence_equal(l1: Sequence[_S], l2: Sequence[_S]) -> bool:
-        if len(l1) != len(l2):
-            return False
-
-        return all(a.is_equal(b) for a, b in zip(l1, l2))
+        return len(l1) == len(l2) and all(a.is_equal(b) for a, b in zip(l1, l2))
 
     @staticmethod
     def _remove_if_contained(ll: List[_S], obj: _S) -> None:
@@ -60,7 +61,7 @@ class _AbstractContainer(ABC):
         return False
 
 
-class Buffer(_AbstractContainer, Generic[_T]):
+class Buffer(_SchemaObject, Generic[_T]):
     def __init__(
         self,
         model: "XCOREModel",
@@ -117,7 +118,7 @@ class Buffer(_AbstractContainer, Generic[_T]):
             assert owner.buffer is self
 
 
-class Operator(_AbstractContainer):
+class Operator(_SchemaObject):
     def __init__(
         self,
         subgraph: "Subgraph",
@@ -170,7 +171,7 @@ class Operator(_AbstractContainer):
             assert self in tensor.producers
 
 
-class _BufferOwnerContainer(_AbstractContainer):
+class _BufferOwnerContainer(_SchemaObject):
     buffer: Buffer["_BufferOwnerContainer"]
 
     @property
@@ -277,7 +278,7 @@ class Tensor(_BufferOwnerContainer):
 
     @property
     def size(self) -> int:
-        return self.type.to_bytes() * np.prod(self.shape)  # type: ignore
+        return self.type.sizeof() * np.prod(self.shape)  # type: ignore
 
     def as_array(self, dtype: Optional[type] = None) -> np.ndarray:
         arr = np.frombuffer(self.buffer._data, dtype=self.type.to_numpy_dtype())
@@ -296,7 +297,7 @@ class Tensor(_BufferOwnerContainer):
         )
 
 
-class Subgraph(_AbstractContainer):
+class Subgraph(_SchemaObject):
     def __init__(
         self,
         model: "XCOREModel",
@@ -510,7 +511,7 @@ class Metadata(_BufferOwnerContainer):
         assert self in self.buffer.owners
 
 
-class XCOREModel(XCORESerializationMixin, _AbstractContainer):
+class XCOREModel(XCORESerializationMixin, _SchemaObject):
     def __init__(
         self,
         version: Optional[int] = None,

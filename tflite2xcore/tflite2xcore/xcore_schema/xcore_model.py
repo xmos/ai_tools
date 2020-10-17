@@ -27,6 +27,7 @@ from .dict_conversion import (
     create_dict_from_model,
 )
 from .flexbuffers import FlexbufferBuilder, FlexbufferParser
+from .builtin_options import BuiltinOptions
 
 _R = TypeVar("_R", bound="XCOREModel")
 
@@ -305,7 +306,9 @@ class XCOREModel(_IRObject):
                 ]
 
                 if op_code.code in BuiltinOpCodes:
-                    builtin_options_type = op_code.code.to_BuiltinOptions()
+                    builtin_options_type = BuiltinOptions.from_BuiltinOpCodes(
+                        op_code.code
+                    )
                     operatorT.builtinOptionsType = builtin_options_type.value
 
                     if operator.builtin_options:

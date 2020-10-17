@@ -4,7 +4,15 @@ import numpy as np
 
 from tflite2xcore.utils import camel_to_snake, snake_to_camel
 from .flexbuffers import FlexbufferBuilder
-from . import schema_py_generated as schema, xcore_schema, OperatorCode, BuiltinOpCodes
+from . import (
+    schema_py_generated as schema,
+    ActivationFunctionType,
+    Padding,
+    OperatorCode,
+    QuantizationDetails,
+    BuiltinOpCodes,
+    BuiltinOptions,
+)
 
 
 def create_dict_from_operator_code(operator_code: OperatorCode):
@@ -142,17 +150,17 @@ def create_dict_from_model(model, *, extended=False):
 def builtin_options_to_dict(builtin_options):
     dict_ = {camel_to_snake(k): v for k, v in vars(builtin_options).items()}
     if "fused_activation_function" in dict_:
-        dict_["fused_activation_function"] = xcore_schema.ActivationFunctionType(
+        dict_["fused_activation_function"] = ActivationFunctionType(
             dict_["fused_activation_function"]
         )
     if "padding" in dict_:
-        dict_["padding"] = xcore_schema.Padding(dict_["padding"])
+        dict_["padding"] = Padding(dict_["padding"])
 
     return dict_
 
 
 def dict_to_builtin_options(type_, dict_):
-    class_identifier = xcore_schema.BuiltinOptions(type_).name + "T"
+    class_identifier = BuiltinOptions(type_).name + "T"
 
     builtin_class = getattr(schema, class_identifier)
     builtin_options = builtin_class()
@@ -170,7 +178,7 @@ def dict_to_builtin_options(type_, dict_):
 def quantization_to_dict(quantization):
     def value_map(k, v):
         if k == "detailsType":
-            v = xcore_schema.QuantizationDetails(v)
+            v = QuantizationDetails(v)
         elif isinstance(v, np.ndarray):
             v = v.tolist()
         return v

@@ -4,7 +4,6 @@ import enum
 import aenum
 from typing import Type
 
-
 class BuiltinOpCodes(enum.IntEnum):
     ADD: BuiltinOpCodes
     AVERAGE_POOL_2D: BuiltinOpCodes
@@ -134,16 +133,11 @@ class BuiltinOpCodes(enum.IntEnum):
     SEGMENT_SUM: BuiltinOpCodes
     BATCH_MATMUL: BuiltinOpCodes
 
-
 class ExternalOpCodes(aenum.Enum):  # type: ignore
-    LceQuantize: ExternalOpCodes
-    LceBconv2d: ExternalOpCodes
-    LceDequantize: ExternalOpCodes
-
     @classmethod
-    def add_new_opcode(cls: Type["ExternalOpCodes"], name: str) -> "ExternalOpCodes":
-        ...
+    def add_new_opcode(
+        cls: Type["ExternalOpCodes"], name: str
+    ) -> "ExternalOpCodes": ...
 
+class XCOREOpCodes(enum.Enum): ...
 
-class XCOREOpCodes(enum.Enum):
-    ...

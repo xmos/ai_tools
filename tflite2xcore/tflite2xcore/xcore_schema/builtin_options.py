@@ -1,22 +1,19 @@
-# Copyright (c) 2019-2020, XMOS Ltd, All rights reserved
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import enum
+# type: ignore
 
-from . import schema_py_generated as schema
-from . import BuiltinOpCodes
+from enum import IntEnum
 
-#  ----------------------------------------------------------------------------
-#                               Builtin Options
-#  ----------------------------------------------------------------------------
+from . import schema_py_generated as schema, BuiltinOpCodes
 
-BuiltinOptions = enum.Enum(
+BuiltinOptions = IntEnum(
     "BuiltinOptions",
     {k: v for k, v in vars(schema.BuiltinOptions).items() if not k.startswith("__")},
 )
 
 # this mapping should follow the schema and:
 # tensorflow/tensorflow/lite/core/api/flatbuffer_conversions.cc
-__BuiltinOpCodes_to_BuiltinOptions = {
+__BuiltinOptions_from_BuiltinOpCodes = {
     BuiltinOpCodes.ADD: BuiltinOptions.AddOptions,
     BuiltinOpCodes.AVERAGE_POOL_2D: BuiltinOptions.Pool2DOptions,
     BuiltinOpCodes.CONCATENATION: BuiltinOptions.ConcatenationOptions,
@@ -145,48 +142,4 @@ __BuiltinOpCodes_to_BuiltinOptions = {
     BuiltinOpCodes.SEGMENT_SUM: BuiltinOptions.SegmentSumOptions,
     BuiltinOpCodes.BATCH_MATMUL: BuiltinOptions.BatchMatMulOptions,
 }
-BuiltinOpCodes.to_BuiltinOptions = lambda self: __BuiltinOpCodes_to_BuiltinOptions[self]
-
-#  ----------------------------------------------------------------------------
-#                               Misc Enums
-#  ----------------------------------------------------------------------------
-
-
-ActivationFunctionType = enum.Enum(
-    "ActivationFunctionType",
-    {
-        k: v
-        for k, v in vars(schema.ActivationFunctionType).items()
-        if not k.startswith("__")
-    },
-)
-
-
-QuantizationDetails = enum.Enum(
-    "QuantizationDetails",
-    {
-        k: v
-        for k, v in vars(schema.QuantizationDetails).items()
-        if not k.startswith("__")
-    },
-)
-
-
-FullyConnectedOptionsWeightsFormat = enum.Enum(
-    "FullyConnectedOptionsWeightsFormat",
-    {
-        k: v
-        for k, v in vars(schema.FullyConnectedOptionsWeightsFormat).items()
-        if not k.startswith("__")
-    },
-)
-
-
-#  ----------------------------------------------------------------------------
-#                               Padding
-#  ----------------------------------------------------------------------------
-
-
-Padding = enum.Enum(
-    "Padding", {k: v for k, v in vars(schema.Padding).items() if not k.startswith("__")}
-)
+BuiltinOptions.from_BuiltinOpCodes = lambda x: __BuiltinOptions_from_BuiltinOpCodes[x]

@@ -2,7 +2,7 @@
 
 import pathlib
 import flatbuffers
-from typing import Any, Union, Optional, Iterable, List, Counter, TypeVar, Type
+from typing import Dict, Any, Union, Optional, Iterable, List, Counter, TypeVar, Type
 
 from . import (
     _IRObject,
@@ -113,7 +113,7 @@ class XCOREModel(_IRObject):
     def _from_flatbuffer_model(cls: Type[_R], modelT: schema.ModelT) -> _R:
         model = cls(
             version=modelT.version,
-            description=modelT.description.decode("utf-8")
+            description=modelT.description.decode("utf-8")  # type: ignore
             if modelT.description
             else None,
         )
@@ -125,7 +125,9 @@ class XCOREModel(_IRObject):
         if modelT.metadata:
             for metadataT in modelT.metadata:
                 model.create_metadata(
-                    name=metadataT.name.decode("utf-8") if metadataT.name else None,
+                    name=metadataT.name.decode("utf-8")  # type: ignore
+                    if metadataT.name
+                    else None,
                     buffer=buffers[metadataT.buffer],
                 )
 
@@ -134,7 +136,7 @@ class XCOREModel(_IRObject):
         for operator_codeT in modelT.operatorCodes:
             opcode = BuiltinOpCodes(operator_codeT.builtinCode)
             if opcode is BuiltinOpCodes.CUSTOM:
-                custom_code = operator_codeT.customCode.decode("utf-8")
+                custom_code = operator_codeT.customCode.decode("utf-8")  # type: ignore
                 try:
                     opcode = XCOREOpCodes(custom_code)
                 except ValueError:
@@ -146,7 +148,9 @@ class XCOREModel(_IRObject):
         # load subgraphs
         for subgraph_index, subgraphT in enumerate(modelT.subgraphs):
             subgraph = model.create_subgraph(
-                name=subgraphT.name.decode("utf-8") if subgraphT.name else None
+                name=subgraphT.name.decode("utf-8")  # type: ignore
+                if subgraphT.name
+                else None
             )
 
             # load tensors
@@ -161,7 +165,7 @@ class XCOREModel(_IRObject):
                     quantization = quantization_to_dict(tensorT.quantization)
 
                 tensor = subgraph.create_tensor(
-                    name=tensorT.name.decode("utf-8"),
+                    name=tensorT.name.decode("utf-8"),  # type: ignore
                     type_=TensorType(tensorT.type),
                     shape=tensorT.shape,
                     buffer=buffers[tensorT.buffer],
@@ -222,8 +226,8 @@ class XCOREModel(_IRObject):
 
     @classmethod
     def deserialize(cls: Type[_R], bits: bytes) -> _R:
-        model_obj = schema.Model.GetRootAsModel(bits, 0)
-        modelT = schema.ModelT.InitFromObj(model_obj)
+        model_obj = schema.Model.GetRootAsModel(bits, 0)  # type: ignore
+        modelT = schema.ModelT.InitFromObj(model_obj)  # type: ignore
         return cls._from_flatbuffer_model(modelT)
 
     @classmethod
@@ -234,14 +238,14 @@ class XCOREModel(_IRObject):
         return cls.deserialize(bits)
 
     def _to_flatbuffer_model(self) -> schema.ModelT:
-        modelT = schema.ModelT()
+        modelT = schema.ModelT()  # type: ignore
         modelT.version = self.version
         modelT.description = self.description
 
         # create buffers
         modelT.buffers = []
         for buffer in self.buffers:
-            bufferT = schema.BufferT()
+            bufferT = schema.BufferT()  # type: ignore
             if len(buffer.data) > 0:
                 bufferT.data = buffer.data
             modelT.buffers.append(bufferT)
@@ -249,7 +253,7 @@ class XCOREModel(_IRObject):
         # create metadata
         modelT.metadata = []
         for metadata in self.metadata:
-            metadataT = schema.MetadataT()
+            metadataT = schema.MetadataT()  # type: ignore
             metadataT.name = metadata.name
             metadataT.buffer = self.buffers.index(metadata.buffer)
             modelT.metadata.append(metadataT)
@@ -257,7 +261,7 @@ class XCOREModel(_IRObject):
         # create operator_codes
         modelT.operatorCodes = []
         for operator_code in self.operator_codes:
-            operatorCodeT = schema.OperatorCodeT()
+            operatorCodeT = schema.OperatorCodeT()  # type: ignore
             if operator_code.code in BuiltinOpCodes:
                 operatorCodeT.builtinCode = operator_code.value
             else:
@@ -269,7 +273,7 @@ class XCOREModel(_IRObject):
         # create subgraphs
         modelT.subgraphs = []
         for subgraph in self.subgraphs:
-            subgraphT = schema.SubGraphT()
+            subgraphT = schema.SubGraphT()  # type: ignore
             subgraphT.name = subgraph.name
 
             # set inputs and outputs
@@ -279,7 +283,7 @@ class XCOREModel(_IRObject):
             # set tensors
             subgraphT.tensors = []
             for tensor in subgraph.tensors:
-                tensorT = schema.TensorT()
+                tensorT = schema.TensorT()  # type: ignore
                 tensorT.name = tensor.name
                 tensorT.shape = tensor.shape
                 tensorT.buffer = self.buffers.index(tensor.buffer)
@@ -291,7 +295,7 @@ class XCOREModel(_IRObject):
             # set operators
             subgraphT.operators = []
             for operator in subgraph.operators:
-                operatorT = schema.OperatorT()
+                operatorT = schema.OperatorT()  # type: ignore
                 op_code = operator.operator_code
                 operatorT.opcodeIndex = self.operator_codes.index(op_code)
 
@@ -316,12 +320,12 @@ class XCOREModel(_IRObject):
 
             modelT.subgraphs.append(subgraphT)
 
-        return modelT
+        return modelT  # type: ignore
 
     def serialize(self) -> bytes:
         modelT = self._to_flatbuffer_model()
         builder = flatbuffers.Builder(1024 * 1024)
-        model_offset = modelT.Pack(builder)
+        model_offset = modelT.Pack(builder)  # type: ignore
         builder.Finish(model_offset, file_identifier=b"TFL3")
         return bytes(builder.Output())
 
@@ -329,5 +333,5 @@ class XCOREModel(_IRObject):
         with open(pathlib.Path(filename).resolve(), "wb") as fd:
             return fd.write(self.serialize())
 
-    def to_dict(self, *args: Any, **kwargs: Any) -> dict:
+    def to_dict(self, *args: Any, **kwargs: Any) -> Dict[Any, Any]:
         return create_dict_from_model(self, *args, **kwargs)

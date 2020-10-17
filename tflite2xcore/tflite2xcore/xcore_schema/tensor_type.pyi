@@ -18,6 +18,7 @@ class TensorType(enum.IntEnum):
     UINT8: TensorType
     BOOL: TensorType
 
+    @classmethod
     def __call__(cls, x: Any) -> TensorType:
         ...
 

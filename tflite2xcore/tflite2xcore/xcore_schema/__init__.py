@@ -3,18 +3,13 @@
 from . import flexbuffers
 from .ir_object import _IRObject
 from .tensor_type import TensorType
+from .op_codes import BuiltinOpCodes, ExternalOpCodes, XCOREOpCodes
+from .operator_code import OperatorCode, ValidOpCodes, CustomOpCodes
 from .buffer import Buffer, _BufferDataType, _BufferOwnerContainer
 from .operator import _OpOptionsType, Operator
 from .tensor import Tensor, _ShapeInputType
 from .subgraph import Subgraph
-from .operator_codes import (
-    OperatorCode,
-    ValidOpCodes,
-    CustomOpCodes,
-    BuiltinOpCodes,
-    ExternalOpCodes,
-    XCOREOpCodes,
-)
+from .metadata import Metadata
 
 from .xcore_schema import (
     QuantizationDetails,
@@ -24,6 +19,6 @@ from .xcore_schema import (
     BuiltinOptions,
 )
 
-from .xcore_model import Subgraph, Metadata, XCOREModel
+from .xcore_model import XCOREModel
 
 from . import xcore_model

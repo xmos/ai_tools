@@ -37,6 +37,10 @@ from tflite2xcore.model_generation.converters import (
     XCoreConverter,
 )
 from tflite2xcore.model_generation.data_factories import InputInitializerDataFactory
+from tflite2xcore.interpreters.exceptions import (
+    ModelSizeError,
+    ArenaSizeError,
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -176,18 +180,14 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
 
         try:
             self._xcore_evaluator.evaluate()
-        except ValueError as e:
-            if self._use_device and e.args[0].startswith("model_content too large: "):
+        except ModelSizeError as e:
+            if self._use_device:
                 pytest.skip("Skipping due to excessive model size")
             else:
                 raise
-        except Exception as e:
-            if (
-                self._use_device
-                and e.args[0]
-                == "Unable to initialize inference engine. Check tensor arena size."
-            ):
-                pytest.skip("Skipping (probably) due to excessive tensor arena size")
+        except ArenaSizeError as e:
+            if self._use_device:
+                pytest.skip("Skipping due to excessive tensor arena size")
             else:
                 raise
 

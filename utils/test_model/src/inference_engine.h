@@ -18,7 +18,7 @@ TfLiteStatus initialize_inference_engine(uint8_t *model_content,
                                          uint8_t **input, size_t *input_size,
                                          uint8_t **output, size_t *output_size);
 void get_tensor_bytes(int index, void **bytes, size_t *size);
-void invoke_inference_engine();
+TfLiteStatus invoke_inference_engine();
 
 #ifdef __cplusplus
 };

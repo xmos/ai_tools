@@ -14,6 +14,15 @@ import portalocker
 import numpy as np
 from pathlib import Path
 
+from .exceptions import (
+    AllocateTensorsError,
+    InvokeError,
+    SetTensorError,
+    GetTensorError,
+    ArenaSizeError,
+    DeviceTimeoutError,
+)
+
 PRINT_CALLBACK = ctypes.CFUNCTYPE(
     None, ctypes.c_ulonglong, ctypes.c_uint, ctypes.c_char_p
 )
@@ -223,17 +232,17 @@ class XCOREDeviceEndpoint(object):
             # wait for RECV_ACK probe
             while not self._publish_blob_chunk_ready:
                 if duration >= timeout:
-                    raise Exception("Error sending blob")
+                    raise TimeoutError
                 time.sleep(SLEEP_DURATION)
                 duration += SLEEP_DURATION
 
-    def _wait_for(self, attr_name, err_msg, timeout=5):
+    def _wait_for(self, attr_name, timeout=5):
         SLEEP_DURATION = 0.05
         duration = 0
 
         while not getattr(self, attr_name):
             if duration >= timeout:
-                raise Exception(err_msg)
+                raise TimeoutError
             time.sleep(SLEEP_DURATION)
             duration += SLEEP_DURATION
 
@@ -251,6 +260,9 @@ class XCOREDeviceEndpoint(object):
 
     def on_print(self, timestamp, data):
         msg = data.decode("utf-8").rstrip()
+        if msg.startswith("Failed to allocate tail memory"):
+            self._error = "Unable to allocate memory. Check tensor arena size."
+
         logging.debug(msg)
 
     def on_probe(self, id_, timestamp, length, data_val, data_bytes):
@@ -290,10 +302,12 @@ class XCOREDeviceEndpoint(object):
 
     def ping_device(self, timeout=5):
         self._device_ready = False
-        self.publish(b"PING_RECV")
-        self._wait_for("_device_ready", "Ping timeout", timeout)
-
-        return self._device_ready
+        try:
+            self.publish(b"PING_RECV")
+            self._wait_for("_device_ready", timeout)
+            return self._device_ready
+        except TimeoutError:
+            raise DeviceTimeoutError("Ping timeout")
 
     def set_model(self, model_content, timeout=5):
         # send the model
@@ -303,34 +317,53 @@ class XCOREDeviceEndpoint(object):
 
         # call init and wait
         self._initialize_ready = False
-        self.publish(b"CALL_INITIALIZE")
-        self._wait_for("_initialize_ready", "Initialize timeout", timeout)
-
-        if self._error:
-            raise Exception(self._error)
+        try:
+            self.publish(b"CALL_INITIALIZE")
+            self._wait_for("_initialize_ready", timeout)
+            if (
+                self._error
+                == "Unable to initialize inference engine. Check tensor arena size."
+            ):
+                raise ArenaSizeError(self._error)
+            elif self._error:
+                raise AllocateTensorsError(self._error)
+        except TimeoutError:
+            raise DeviceTimeoutError("Initialize timeout")
 
     def set_invoke(self, timeout=5):
         self._invoke_ready = False
-        self.publish(b"CALL_INVOKE")
-        self._wait_for("_invoke_ready", "Invoke timeout", timeout)
-
-        if self._error:
-            raise Exception(self._error)
+        try:
+            self.publish(b"CALL_INVOKE")
+            self._wait_for("_invoke_ready", timeout)
+            if self._error:
+                raise InvokeError(self._error)
+        except TimeoutError:
+            raise DeviceTimeoutError("Invoke timeout")
 
     def set_tensor(self, index, tensor_content):
         size = len(tensor_content)
-        self.publish(f"SET_TENSOR {index} {size}\0".encode())
-        self._send_blob(tensor_content)
-
-        if self._error:
-            raise Exception(self._error)
+        try:
+            self.publish(f"SET_TENSOR {index} {size}\0".encode())
+            self._send_blob(tensor_content)
+            if self._error:
+                raise SetTensorError(self._error)
+        except TimeoutError:
+            if self._error == "Unable to allocate memory. Check tensor arena size.":
+                # NOTE: This error happens during set_tensor but it means the arena is too small
+                #       despite the fact that allocate_tensors succeeded
+                raise ArenaSizeError(self._error)
+            raise DeviceTimeoutError("Set tensor timeout")
 
     def get_tensor(self, index, timeout=5):
         self._get_tensor_ready = False
-        self.publish(f"GET_TENSOR {index}\0".encode())
-        self._wait_for("_get_tensor_ready", "Get tensor timeout", timeout)
-
-        return self._get_tensor_buffer
+        try:
+            self.publish(f"GET_TENSOR {index}\0".encode())
+            self._wait_for("_get_tensor_ready", timeout)
+            if self._error:
+                raise GetTensorError(self._error)
+            return self._get_tensor_buffer
+        except TimeoutError:
+            raise DeviceTimeoutError("Get tensor timeout")
 
 
 class XCOREDeviceServer(object):

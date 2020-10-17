@@ -6,6 +6,7 @@ from .tensor_type import TensorType
 from .buffer import Buffer, _BufferDataType, _BufferOwnerContainer
 from .operator import _OpOptionsType, Operator
 from .tensor import Tensor, _ShapeInputType
+from .subgraph import Subgraph
 from .operator_codes import (
     OperatorCode,
     ValidOpCodes,

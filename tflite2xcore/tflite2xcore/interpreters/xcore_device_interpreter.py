@@ -13,7 +13,7 @@ class XCOREDeviceInterpreter(XCOREInterpreter):
         model_path=None,
         model_content=None,
         max_tensor_arena_size=MAX_DEVICE_TENSOR_ARENA_SIZE,
-    ):
+    ) -> None:
         # verify model content size is not too large
         if len(model_content) > MAX_DEVICE_MODEL_CONTENT_SIZE:
             raise ValueError(
@@ -34,11 +34,11 @@ class XCOREDeviceInterpreter(XCOREInterpreter):
         self._endpoint = None
         self._set_model = False
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self._endpoint:
             XCOREDeviceServer.release(self._endpoint)
 
-    def allocate_tensors(self):
+    def allocate_tensors(self) -> None:
         super().allocate_tensors()
 
         if not self._endpoint:

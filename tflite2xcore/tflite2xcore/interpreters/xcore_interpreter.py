@@ -3,10 +3,11 @@
 import ctypes
 import numpy as np
 from enum import Enum
+from typing import Sequence
 
 from tflite2xcore import libtflite2xcore as lib
 
-from . import MAX_TENSOR_ARENA_SIZE
+from . import MAX_TENSOR_ARENA_SIZE, _TensorDetails
 
 
 class XCOREInterpreterStatus(Enum):
@@ -96,7 +97,7 @@ class XCOREInterpreter:
         model_path=None,
         model_content=None,
         max_tensor_arena_size=MAX_TENSOR_ARENA_SIZE,
-    ):
+    ) -> None:
         self._error_msg = ctypes.create_string_buffer(4096)
 
         lib.new_interpreter.restype = ctypes.c_void_p
@@ -218,14 +219,14 @@ class XCOREInterpreter:
         if XCOREInterpreterStatus(status) is XCOREInterpreterStatus.ERROR:
             raise RuntimeError("Unable to initialize interpreter")
 
-    def __del__(self):
+    def __del__(self) -> None:
         lib.delete_interpreter(self.obj)
 
-    def _verify_allocated(self):
+    def _verify_allocated(self) -> None:
         if not self._is_allocated:
             self.allocate_tensors()
 
-    def _check_status(self, status):
+    def _check_status(self, status) -> None:
         if XCOREInterpreterStatus(status) is XCOREInterpreterStatus.ERROR:
             lib.get_error(self.obj, self._error_msg)
             raise RuntimeError(self._error_msg.value.decode("utf-8"))
@@ -241,7 +242,7 @@ class XCOREInterpreter:
         lib.get_allocations(self.obj, alloc_msg)
         return alloc_msg.value.decode("utf-8")
 
-    def allocate_tensors(self):
+    def allocate_tensors(self) -> None:
         self._op_states = []
         if self._is_allocated:
             return  # NOTE: the TFLu interpreter can not be allocated multiple times
@@ -353,7 +354,7 @@ class XCOREInterpreter:
 
         return tensor
 
-    def _get_tensor_details(self, tensor_index):
+    def _get_tensor_details(self, tensor_index: int) -> _TensorDetails:
         # first get the dimensions of the tensor
         dims_size = ctypes.c_size_t()
         shape_size = ctypes.c_size_t()
@@ -403,7 +404,7 @@ class XCOREInterpreter:
             "quantization": (scales, zero_points),
         }
 
-    def get_tensor_details(self):
+    def get_tensor_details(self) -> Sequence[_TensorDetails]:
         self._verify_allocated()
         tensor_count = lib.tensors_size(self.obj)
         return [
@@ -411,7 +412,7 @@ class XCOREInterpreter:
             for tensor_index in range(tensor_count)
         ]
 
-    def get_input_details(self):
+    def get_input_details(self) -> Sequence[_TensorDetails]:
         self._verify_allocated()
 
         inputs_size = lib.inputs_size(self.obj)
@@ -422,7 +423,7 @@ class XCOREInterpreter:
 
         return [self._get_tensor_details(idx) for idx in input_indices]
 
-    def get_output_details(self):
+    def get_output_details(self) -> Sequence[_TensorDetails]:
         self._verify_allocated()
 
         outputs_size = lib.outputs_size(self.obj)

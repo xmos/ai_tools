@@ -19,8 +19,9 @@ import os
 import enum
 import webbrowser
 import tempfile
-
+from pathlib import Path
 from collections import Counter
+from typing import Optional, Union
 
 from tflite2xcore.xcore_schema.flexbuffers import FlexbufferParser
 from tflite2xcore.xcore_model import XCOREModel
@@ -777,7 +778,12 @@ def model_to_html(model, filename=None):
     return dict_to_html(data)
 
 
-def main(tflite_input, html_output, *, open_browser=False):
+def main(
+    tflite_input: Union[str, Path],
+    html_output: Optional[Union[str, Path]] = None,
+    *,
+    open_browser: bool = False,
+) -> None:
     if html_output:  # TODO: do this with a context manager
         html_path = html_output
     else:

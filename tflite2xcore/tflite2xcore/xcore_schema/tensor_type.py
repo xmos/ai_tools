@@ -2,12 +2,12 @@
 
 # type: ignore
 
-import enum
 import numpy as np
+from enum import Enum
 
 from . import schema_py_generated as schema
 
-TensorType = enum.IntEnum(
+TensorType = Enum(
     "TensorType",
     {k: v for k, v in vars(schema.TensorType).items() if not k.startswith("__")},
 )

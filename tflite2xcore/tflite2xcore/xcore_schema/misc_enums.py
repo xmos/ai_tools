@@ -2,12 +2,12 @@
 
 # type: ignore
 
-from enum import IntEnum
+from enum import Enum
 
 from . import schema_py_generated as schema
 
 
-ActivationFunctionType = IntEnum(
+ActivationFunctionType = Enum(
     "ActivationFunctionType",
     {
         k: v
@@ -17,7 +17,7 @@ ActivationFunctionType = IntEnum(
 )
 
 
-QuantizationDetails = IntEnum(
+QuantizationDetails = Enum(
     "QuantizationDetails",
     {
         k: v
@@ -27,7 +27,7 @@ QuantizationDetails = IntEnum(
 )
 
 
-FullyConnectedOptionsWeightsFormat = IntEnum(
+FullyConnectedOptionsWeightsFormat = Enum(
     "FullyConnectedOptionsWeightsFormat",
     {
         k: v
@@ -36,6 +36,6 @@ FullyConnectedOptionsWeightsFormat = IntEnum(
     },
 )
 
-Padding = IntEnum(
+Padding = Enum(
     "Padding", {k: v for k, v in vars(schema.Padding).items() if not k.startswith("__")}
 )

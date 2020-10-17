@@ -8,7 +8,7 @@ from typing import Union
 
 from . import schema_py_generated as schema
 
-BuiltinOpCodes = enum.IntEnum(
+BuiltinOpCodes = enum.Enum(
     "BuiltinOpCodes",
     {k: v for k, v in vars(schema.BuiltinOperator).items() if not k.startswith("__")},
 )
@@ -31,7 +31,6 @@ ExternalOpCodes.add_new_opcode("LceDequantize")
 
 
 class XCOREOpCodes(enum.Enum):
-    # TODO: consider an IntEnum for this instead of strings
     XC_lookup_8 = "XC_lookup_8"
     XC_argmax_16 = "XC_argmax_16"  # currently not used by any passes
     XC_maxpool2d = "XC_maxpool2d"

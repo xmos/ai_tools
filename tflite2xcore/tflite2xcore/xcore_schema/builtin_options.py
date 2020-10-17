@@ -2,11 +2,11 @@
 
 # type: ignore
 
-from enum import IntEnum
+from enum import Enum
 
 from . import schema_py_generated as schema, BuiltinOpCodes
 
-BuiltinOptions = IntEnum(
+BuiltinOptions = Enum(
     "BuiltinOptions",
     {k: v for k, v in vars(schema.BuiltinOptions).items() if not k.startswith("__")},
 )

@@ -7,7 +7,7 @@ import numpy as np
 from enum import Enum
 from typing import Dict, Any, List, Optional, Union
 
-from tflite2xcore import libtflite2xcore as lib  # type: ignore # TODO: fix this
+from tflite2xcore import libtflite2xcore as lib
 
 
 class FlexbufferBuilder:
@@ -83,17 +83,17 @@ class FlexbufferBuilder:
                 list_item = list_item.value
 
             list_item_type = type(list_item)  # TODO: fix this
-            if list_item_type in (int, np.int32):
+            if np.issubdtype(list_item_type, np.signedinteger):
                 lib.builder_vector_int(self.obj, int(list_item))
-            elif list_item_type in (bool, np.bool):
+            elif np.issubdtype(list_item_type, np.bool_):
                 lib.builder_vector_bool(self.obj, bool(list_item))
-            elif list_item_type in (float, np.float32):
+            elif np.issubdtype(list_item_type, np.floating):
                 lib.builder_vector_float(self.obj, float(list_item))
             elif list_item_type is str:
                 lib.builder_vector_string(self.obj, list_item.encode("ascii"))
             elif list_item_type is dict:
                 self._add_map(list_item)
-            elif list_item_type in (list, tuple):
+            elif list_item_type in (list, tuple, np.ndarray):
                 self._add_vector(list(list_item))
             else:
                 raise Exception(
@@ -117,7 +117,7 @@ class FlexbufferBuilder:
             elif np.issubdtype(value_type, np.bool_):
                 lib.builder_bool(self.obj, key_ascii, bool(value))
             elif np.issubdtype(value_type, np.floating):
-                lib.builder_float(self.obj, key_ascii, value)
+                lib.builder_float(self.obj, key_ascii, float(value))
             elif value_type is str:
                 lib.builder_string(self.obj, key_ascii, value.encode("ascii"))
             elif value_type is dict:

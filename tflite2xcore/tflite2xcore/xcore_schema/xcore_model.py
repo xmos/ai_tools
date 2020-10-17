@@ -1,10 +1,7 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
-import logging
 import numpy as np
-from abc import ABC, abstractmethod
 
-# from collections import Counter
 from copy import deepcopy
 from typing import (
     Any,
@@ -14,111 +11,30 @@ from typing import (
     Dict,
     Tuple,
     List,
-    Sequence,
-    Generic,
-    TypeVar,
-    Type,
     Counter,
 )
 
-from .tensor_type import TensorType
-from .operator_codes import OperatorCode
+from . import (
+    _IRObject,
+    TensorType,
+    OperatorCode,
+    Buffer,
+    _BufferOwnerContainer,
+    _BufferDataType,
+)
 from .flatbuffers_io import XCORESerializationMixin
 
 
-_BufferDataType = Union[list, tuple, bytes, bytearray, np.ndarray]
 _IntType = Union[int, np.integer]
 _ShapeType = Union[None, Iterable[_IntType], np.ndarray]
-_T = TypeVar("_T", bound="_BufferOwnerContainer", covariant=True)
-_S = TypeVar("_S", bound="_SchemaObject")
+
+
 OptionsType = Dict[str, Any]
 
 
-class _SchemaObject(ABC):
-    def __init__(self, name: str) -> None:
-        self.name = name
+class Operator(_IRObject):
+    name: str
 
-    @abstractmethod
-    def sanity_check(self) -> None:
-        raise NotImplementedError()
-
-    @staticmethod
-    def sequence_equal(l1: Sequence[_S], l2: Sequence[_S]) -> bool:
-        return len(l1) == len(l2) and all(a.is_equal(b) for a, b in zip(l1, l2))
-
-    @staticmethod
-    def _remove_if_contained(ll: List[_S], obj: _S) -> None:
-        try:
-            ll.remove(obj)
-        except ValueError:
-            pass
-
-    def is_equal(self, other: Any) -> bool:
-        if type(self) is type(other):
-            self.sanity_check()
-            other.sanity_check()
-            return True
-        return False
-
-
-class Buffer(_SchemaObject, Generic[_T]):
-    def __init__(
-        self,
-        model: "XCOREModel",
-        data: Optional[_BufferDataType] = None,
-        *,
-        owners: Optional[Iterable[_T]] = None,
-    ) -> None:
-        # Generally, do not use this constructor to instantiate Buffer!
-        # Use XCOREModel.create_buffer instead.
-
-        self.model = model  # parent
-        self.data = data  # type: ignore # see https://github.com/python/mypy/issues/3004
-        self.owners: List[_T] = list(owners or [])
-
-    @property
-    def data(self) -> bytes:
-        return self._data
-
-    @data.setter
-    def data(self, data: Optional[_BufferDataType]) -> None:
-        if data is None:
-            self._data = b""
-        elif isinstance(data, (list, tuple, bytes, bytearray)):
-            # this ensures immutability and that lists have uint8 elements only
-            self._data = bytes(data)
-        elif isinstance(data, np.ndarray):
-            try:
-                TensorType.from_numpy_dtype(data.dtype)
-            except KeyError:
-                # we throw a warning if a non-convertible datatype is used
-                logging.getLogger("XCOREModel").warning(
-                    f"Numpy array of type {data.dtype} stored in buffer"
-                )
-            self._data = data.tobytes()
-        else:
-            raise TypeError(f"data must be list/tuple of bytes or numpy array")
-
-    def __len__(self) -> int:
-        return len(self.data)
-
-    def __str__(self) -> str:
-        return f"Buffer[{len(self.data)}]"
-
-    def is_equal(self, other: Any) -> bool:
-        return (
-            super().is_equal(other)
-            and len(self.owners) == len(other.owners)  # avoids circular dependencies
-            and self.data == other.data
-        )
-
-    def sanity_check(self) -> None:
-        assert self in self.model.buffers
-        for owner in self.owners:
-            assert owner.buffer is self
-
-
-class Operator(_SchemaObject):
     def __init__(
         self,
         subgraph: "Subgraph",
@@ -132,9 +48,9 @@ class Operator(_SchemaObject):
         # Generally, do not use this constructor to instantiate Operator!
         # Use Subgraph.create_operator instead.
 
+        super().__init__(name or "")
         self.subgraph = subgraph  # parent
         self.operator_code = operator_code
-        self.name = name or ""
         self.inputs = list(inputs or [])
         self.outputs = list(outputs or [])
         self.builtin_options = builtin_options or {}
@@ -171,34 +87,8 @@ class Operator(_SchemaObject):
             assert self in tensor.producers
 
 
-class _BufferOwnerContainer(_SchemaObject):
-    buffer: Buffer["_BufferOwnerContainer"]
-
-    @property
-    @abstractmethod
-    def model(self) -> "XCOREModel":
-        raise NotImplementedError()
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def is_equal(self, other: Any) -> bool:
-        return (
-            super().is_equal(other)
-            # and self.name == other.name  # intentionally not compared
-            and self.buffer.is_equal(other.buffer)
-        )
-
-    @classmethod
-    def create_buffer(
-        cls: Type[_T], model: "XCOREModel", data: Optional[_BufferDataType] = None
-    ) -> Buffer[_T]:
-        buffer = Buffer[_T](model, data)
-        model.buffers.append(buffer)
-        return buffer
-
-
 class Tensor(_BufferOwnerContainer):
+    name: str
     buffer: Buffer["Tensor"]
 
     def __init__(
@@ -213,11 +103,12 @@ class Tensor(_BufferOwnerContainer):
     ) -> None:
         # Generally, do not use this constructor to instantiate Tensor!
         # Use Subgraph.create_tensor instead.
+
+        super().__init__(name or "")
         self.subgraph = subgraph  # parent
         assert isinstance(type_, TensorType)
         self.type = type_
         self.shape = shape  # type: ignore # see https://github.com/python/mypy/issues/3004
-        super().__init__(name)
 
         self.quantization = quantization or {}
         self.producers: List[Operator] = list(producers or [])
@@ -297,7 +188,7 @@ class Tensor(_BufferOwnerContainer):
         )
 
 
-class Subgraph(_SchemaObject):
+class Subgraph(_IRObject):
     def __init__(
         self,
         model: "XCOREModel",
@@ -309,8 +200,9 @@ class Subgraph(_SchemaObject):
     ) -> None:
         # Generally, do not use this constructor to instantiate Subgraph!
         # Use XCOREModel.create_subgraph instead.
+
+        super().__init__(name)
         self.model = model  # parent
-        self.name = name
         self.inputs: List[Tensor] = list(inputs or [])
         self.outputs: List[Tensor] = list(outputs or [])
         self.operators: List[Operator] = list(operators or [])
@@ -497,8 +389,9 @@ class Metadata(_BufferOwnerContainer):
     ) -> None:
         # Generally, do not use this constructor to instantiate Metadata!
         # Use XCOREModel.create_metadata instead.
-        self._model = model  # parent
+
         super().__init__(name)
+        self._model = model  # parent
 
     @property
     def model(self) -> "XCOREModel":
@@ -511,7 +404,7 @@ class Metadata(_BufferOwnerContainer):
         assert self in self.buffer.owners
 
 
-class XCOREModel(XCORESerializationMixin, _SchemaObject):
+class XCOREModel(XCORESerializationMixin, _IRObject):
     def __init__(
         self,
         version: Optional[int] = None,
@@ -520,6 +413,7 @@ class XCOREModel(XCORESerializationMixin, _SchemaObject):
         buffers: Optional[Iterable[Buffer[_BufferOwnerContainer]]] = None,
         metadata: Optional[Iterable[Metadata]] = None,
     ) -> None:
+        super().__init__()
         self.version = version or 3
         self.description = description or ""
         self.buffers = list(buffers or [])

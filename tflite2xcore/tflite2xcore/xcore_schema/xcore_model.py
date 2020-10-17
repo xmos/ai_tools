@@ -21,171 +21,12 @@ from . import (
     Buffer,
     _BufferOwnerContainer,
     _BufferDataType,
+    _ShapeInputType,
+    Tensor,
+    Operator,
+    _OpOptionsType,
 )
 from .flatbuffers_io import XCORESerializationMixin
-
-
-_IntType = Union[int, np.integer]
-_ShapeType = Union[None, Iterable[_IntType], np.ndarray]
-
-
-OptionsType = Dict[str, Any]
-
-
-class Operator(_IRObject):
-    name: str
-
-    def __init__(
-        self,
-        subgraph: "Subgraph",
-        operator_code: OperatorCode,
-        name: Optional[str] = None,
-        inputs: Optional[Iterable["Tensor"]] = None,
-        outputs: Optional[Iterable["Tensor"]] = None,
-        builtin_options: Optional[OptionsType] = None,
-        custom_options: Optional[OptionsType] = None,
-    ) -> None:
-        # Generally, do not use this constructor to instantiate Operator!
-        # Use Subgraph.create_operator instead.
-
-        super().__init__(name or "")
-        self.subgraph = subgraph  # parent
-        self.operator_code = operator_code
-        self.inputs = list(inputs or [])
-        self.outputs = list(outputs or [])
-        self.builtin_options = builtin_options or {}
-        self.custom_options = custom_options or {}
-
-    def add_custom_options(self, **kwargs: Any) -> None:
-        if kwargs:
-            self.custom_options.update(kwargs)
-
-    @property
-    def model(self) -> "XCOREModel":
-        return self.subgraph.model
-
-    def __str__(self) -> str:
-        return f"({self.subgraph.operators.index(self)}) operator_code={self.operator_code}"
-
-    def is_equal(self, other: Any) -> bool:
-        return (
-            super().is_equal(other)
-            and self.operator_code == other.operator_code
-            # and self.name == other.name  # intentionally not compared
-            and self.sequence_equal(self.inputs, other.inputs)
-            and self.sequence_equal(self.outputs, other.outputs)
-            and self.builtin_options == other.builtin_options
-            and self.custom_options == other.custom_options
-        )
-
-    def sanity_check(self) -> None:
-        assert self in self.subgraph.operators
-        # check double links with inputs/outputs
-        for tensor in self.inputs:
-            assert self in tensor.consumers
-        for tensor in self.outputs:
-            assert self in tensor.producers
-
-
-class Tensor(_BufferOwnerContainer):
-    name: str
-    buffer: Buffer["Tensor"]
-
-    def __init__(
-        self,
-        subgraph: "Subgraph",
-        name: str,
-        type_: TensorType,
-        shape: _ShapeType,
-        quantization: Optional[OptionsType] = None,
-        producers: Optional[Iterable[Operator]] = None,
-        consumers: Optional[Iterable[Operator]] = None,
-    ) -> None:
-        # Generally, do not use this constructor to instantiate Tensor!
-        # Use Subgraph.create_tensor instead.
-
-        super().__init__(name or "")
-        self.subgraph = subgraph  # parent
-        assert isinstance(type_, TensorType)
-        self.type = type_
-        self.shape = shape  # type: ignore # see https://github.com/python/mypy/issues/3004
-
-        self.quantization = quantization or {}
-        self.producers: List[Operator] = list(producers or [])
-        self.consumers: List[Operator] = list(consumers or [])
-
-    @property
-    def shape(self) -> Tuple[int, ...]:
-        return self._shape
-
-    @shape.setter
-    def shape(self, shape: _ShapeType) -> None:
-        if shape is None:
-            shape = []
-        elif isinstance(shape, np.ndarray):
-            shape = shape.tolist()
-        else:
-            shape = list(shape)
-
-        for j, s in enumerate(shape):
-            if not isinstance(s, (int, np.integer)):
-                raise TypeError(
-                    "Tensor.shape must be an iterable of integers, "
-                    f"got shape[{j}] = {s} with type {type(s)}"
-                )
-
-        self._shape = tuple(int(s) for s in shape)
-
-    @property
-    def model(self) -> "XCOREModel":
-        return self.subgraph.model
-
-    def is_equal(self, other: Any) -> bool:
-        return (
-            super().is_equal(other)
-            and self.type == other.type
-            and self.shape == other.shape
-            and self.quantization == other.quantization
-            and len(self.producers) == len(other.producers)  # avoids circular deps
-            and len(self.consumers) == len(other.consumers)  # avoids circular deps
-        )
-
-    def __str__(self) -> str:
-        return f"name={self.name}, type={self.type.name}, shape={self.shape}, buffer={self.buffer}"
-
-    def sanity_check(self) -> None:
-        assert self in self.subgraph.tensors
-        assert self in self.buffer.owners
-        # check double links with consumers/producers
-        for op in self.producers:
-            assert self in op.outputs
-        for op in self.consumers:
-            assert self in op.inputs
-
-    @property
-    def sanitized_name(self) -> str:
-        """Return a name that is safe to use in source code"""
-        return self.name.replace("/", "_")
-
-    @property
-    def size(self) -> int:
-        return self.type.sizeof() * np.prod(self.shape)  # type: ignore
-
-    def as_array(self, dtype: Optional[type] = None) -> np.ndarray:
-        arr = np.frombuffer(self.buffer._data, dtype=self.type.to_numpy_dtype())
-        if dtype:
-            arr = arr.astype(dtype)
-        return arr.reshape(self.shape)
-
-    @property
-    def is_constant(self) -> bool:
-        # There is an esoteric case where by a tensor without any producers could potentially be
-        # modified if it shares a buffer with a tensor from another subgraph.
-        # As such we also check if all owners of its buffer have no producers and are not inputs
-        return all(
-            not t.producers and t not in self.subgraph.inputs
-            for t in self.buffer.owners
-        )
 
 
 class Subgraph(_IRObject):
@@ -227,10 +68,10 @@ class Subgraph(_IRObject):
         self,
         name: str,
         type_: TensorType,
-        shape: _ShapeType,
+        shape: _ShapeInputType,
         *,
         buffer: Optional[Buffer[Tensor]] = None,
-        quantization: Optional[OptionsType] = None,
+        quantization: Optional[_OpOptionsType] = None,
         isinput: bool = False,
         isoutput: bool = False,
         producers: Optional[Iterable[Operator]] = None,
@@ -292,8 +133,8 @@ class Subgraph(_IRObject):
         *,
         inputs: Optional[Iterable[Tensor]] = None,
         outputs: Optional[Iterable[Tensor]] = None,
-        builtin_options: Optional[OptionsType] = None,
-        custom_options: Optional[OptionsType] = None,
+        builtin_options: Optional[_OpOptionsType] = None,
+        custom_options: Optional[_OpOptionsType] = None,
     ) -> Operator:
         name = self.generate_unique_op_name(operator_code)
         operator = Operator(

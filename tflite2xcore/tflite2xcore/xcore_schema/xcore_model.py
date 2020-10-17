@@ -16,6 +16,7 @@ from . import (
     XCOREOpCodes,
     OperatorCode,
     ExternalOpCodes,
+    ValidOpCodes,
     TensorType,
     schema_py_generated as schema,
 )
@@ -135,7 +136,7 @@ class XCOREModel(_IRObject):
         # create operator codes lookup
         operator_codes_lut = []
         for operator_codeT in modelT.operatorCodes:
-            opcode = BuiltinOpCodes(operator_codeT.builtinCode)
+            opcode: ValidOpCodes = BuiltinOpCodes(operator_codeT.builtinCode)
             if opcode is BuiltinOpCodes.CUSTOM:
                 custom_code = operator_codeT.customCode.decode("utf-8")  # type: ignore
                 try:

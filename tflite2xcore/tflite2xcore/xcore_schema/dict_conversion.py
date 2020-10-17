@@ -1,11 +1,18 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
 import numpy as np
+from typing import TYPE_CHECKING, Dict, Union, Sequence, Any, Tuple, TypeVar
 
 from tflite2xcore.utils import camel_to_snake, snake_to_camel
+
 from .flexbuffers import FlexbufferBuilder
 from . import (
     schema_py_generated as schema,
+    Buffer,
+    Subgraph,
+    Tensor,
+    Operator,
+    Metadata,
     ActivationFunctionType,
     Padding,
     OperatorCode,
@@ -14,9 +21,14 @@ from . import (
     BuiltinOptions,
 )
 
+if TYPE_CHECKING:
+    from . import XCOREModel
 
-def create_dict_from_operator_code(operator_code: OperatorCode):
-    operator_code_dict = {"version": operator_code.version}
+
+def create_dict_from_operator_code(
+    operator_code: OperatorCode,
+) -> Dict[str, Union[str, int]]:
+    operator_code_dict: Dict[str, Union[str, int]] = {"version": operator_code.version}
 
     if operator_code.code in BuiltinOpCodes:
         operator_code_dict["builtin_code"] = operator_code.name
@@ -27,7 +39,7 @@ def create_dict_from_operator_code(operator_code: OperatorCode):
     return operator_code_dict
 
 
-def create_dict_from_operator(operator):
+def create_dict_from_operator(operator: Operator,) -> Dict[str, Any]:
     tensors = operator.subgraph.tensors
     operator_codes = operator.subgraph.model.operator_codes
 
@@ -48,7 +60,9 @@ def create_dict_from_operator(operator):
     return operator_dict
 
 
-def create_dict_from_tensor(tensor, *, extended=False):
+def create_dict_from_tensor(
+    tensor: Tensor, *, extended: bool = False
+) -> Dict[str, Any]:
     subgraph = tensor.subgraph
     buffers = subgraph.model.buffers
 
@@ -70,7 +84,9 @@ def create_dict_from_tensor(tensor, *, extended=False):
     return tensor_dict
 
 
-def create_dict_from_subgraph(subgraph, *, extended=False):
+def create_dict_from_subgraph(
+    subgraph: Subgraph, *, extended: bool = False
+) -> Dict[str, Any]:
     tensors = subgraph.tensors
 
     subgraph_dict = {
@@ -90,11 +106,15 @@ def create_dict_from_subgraph(subgraph, *, extended=False):
     return subgraph_dict
 
 
-def create_dict_from_buffer(buffer, *, extended=False):
-    buffer_dict = {"data": buffer.data} if buffer.data is not None else {}
+def create_dict_from_buffer(
+    buffer: Buffer[Any], *, extended: bool = False
+) -> Dict[str, Any]:
+    buffer_dict: Dict[str, Any] = {
+        "data": buffer.data
+    } if buffer.data is not None else {}
 
     if extended:
-        owners_dict = dict()
+        owners_dict: Dict[Union[int, str], Any] = dict()
         model = buffer.model
 
         # track down and tally all owners
@@ -104,8 +124,8 @@ def create_dict_from_buffer(buffer, *, extended=False):
                 metadata_owners.append(owner.name)
             else:  # owner is a tensor
                 subgraph = owner.subgraph
-                subgraph_idx = model.subgraphs.index(subgraph)
-                owners_in_subgraph = owners_dict.setdefault(subgraph_idx, [])
+                owner_idx = model.subgraphs.index(subgraph)
+                owners_in_subgraph = owners_dict.setdefault(owner_idx, [])
                 owners_in_subgraph.append(subgraph.tensors.index(owner))
 
         # sort the ordering
@@ -118,14 +138,16 @@ def create_dict_from_buffer(buffer, *, extended=False):
     return buffer_dict
 
 
-def create_dict_from_metadata(metadata):
+def create_dict_from_metadata(metadata: Metadata) -> Dict[str, Union[int, str, None]]:
     return {
         "name": metadata.name,
         "buffer": metadata.model.buffers.index(metadata.buffer),
     }
 
 
-def create_dict_from_model(model, *, extended=False):
+def create_dict_from_model(
+    model: "XCOREModel", *, extended: bool = False
+) -> Dict[str, Any]:
     return {
         "version": model.version,
         "description": model.description,
@@ -147,7 +169,7 @@ def create_dict_from_model(model, *, extended=False):
     }
 
 
-def builtin_options_to_dict(builtin_options):
+def builtin_options_to_dict(builtin_options: Any) -> Dict[str, Any]:
     dict_ = {camel_to_snake(k): v for k, v in vars(builtin_options).items()}
     if "fused_activation_function" in dict_:
         dict_["fused_activation_function"] = ActivationFunctionType(
@@ -159,7 +181,7 @@ def builtin_options_to_dict(builtin_options):
     return dict_
 
 
-def dict_to_builtin_options(type_, dict_):
+def dict_to_builtin_options(type_: int, dict_: Dict[str, Any]) -> Any:
     class_identifier = BuiltinOptions(type_).name + "T"
 
     builtin_class = getattr(schema, class_identifier)
@@ -175,8 +197,10 @@ def dict_to_builtin_options(type_, dict_):
     return builtin_options
 
 
-def quantization_to_dict(quantization):
-    def value_map(k, v):
+def quantization_to_dict(
+    quantization: schema.QuantizationParametersT,
+) -> Dict[str, Any]:
+    def value_map(k: str, v: Any) -> Any:
         if k == "detailsType":
             v = QuantizationDetails(v)
         elif isinstance(v, np.ndarray):
@@ -190,8 +214,8 @@ def quantization_to_dict(quantization):
     }
 
 
-def dict_to_quantization(dict_):
-    quantization = schema.QuantizationParametersT()
+def dict_to_quantization(dict_: Dict[str, Any]) -> schema.QuantizationParametersT:
+    quantization: schema.QuantizationParametersT = schema.QuantizationParametersT()  # type: ignore
 
     for k, v in dict_.items():
         if k == "details_type":

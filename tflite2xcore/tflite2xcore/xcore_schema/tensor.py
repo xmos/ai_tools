@@ -38,7 +38,7 @@ class Tensor(_BufferOwnerContainer):
         self.subgraph = subgraph  # parent
         assert isinstance(type_, TensorType)
         self.type = type_
-        self.shape = shape  # type: ignore # see https://github.com/python/mypy/issues/3004
+        self.shape: Tuple[int, ...] = shape  # type: ignore # see https://github.com/python/mypy/issues/3004
 
         self.quantization = quantization or {}
         self.producers: List[Operator] = list(producers or [])

@@ -1,14 +1,14 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import logging
-import dill  # type: ignore
-import numpy as np  # type: ignore
-import tensorflow as tf  # type: ignore
+import dill
+import numpy as np
+import tensorflow as tf
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Dict, Any, List, Union, Type, Iterable
 
-from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
+from tflite2xcore import tflite_visualize
 
 from . import Configuration, TFLiteModel
 

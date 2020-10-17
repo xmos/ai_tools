@@ -3,7 +3,7 @@
 import json
 import struct
 import ctypes
-import numpy as np  # type: ignore
+import numpy as np
 from enum import Enum
 from typing import Dict, Any, List, Optional, Union
 

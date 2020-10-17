@@ -1,7 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import tensorflow as tf  # type: ignore
-import _pytest  # type: ignore # NOTE: for typing only
+import tensorflow as tf
 from abc import abstractmethod
 from typing import Callable, Optional, Tuple
 

@@ -1,9 +1,9 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import os
-import tensorflow as tf  # type: ignore
+import tensorflow as tf
 from typing import Optional, Tuple, Any
-from tensorflow.python.keras.utils import data_utils  # type: ignore
+from tensorflow.python.keras.utils import data_utils
 
 from .. import (
     IntegrationTestModelGenerator,

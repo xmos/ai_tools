@@ -1,12 +1,12 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import tensorflow as tf  # type: ignore
+import tensorflow as tf
 from abc import abstractmethod
 from typing import Union
 
-from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
-from tflite2xcore.converter import optimize_for_xcore  # type: ignore # TODO: fix this
-from tflite2xcore.utils import quantize_converter  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.converter import optimize_for_xcore
+from tflite2xcore.utils import quantize_converter
 
 from . import TFLiteModel, Configuration, Hook
 

@@ -1,10 +1,10 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import logging
-import pytest  # type: ignore
-import _pytest  # type: ignore # NOTE: for typing only
-import numpy as np  # type: ignore
-import tensorflow as tf  # type: ignore
+import pytest
+import _pytest
+import numpy as np
+import tensorflow as tf
 from abc import abstractmethod
 from pathlib import Path
 from typing import (

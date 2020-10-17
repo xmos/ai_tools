@@ -5,8 +5,8 @@ import re
 import random
 import argparse
 import logging
-import numpy as np  # type: ignore
-import tensorflow as tf  # type: ignore
+import numpy as np
+import tensorflow as tf
 from functools import wraps
 from types import TracebackType
 from typing import (

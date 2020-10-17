@@ -1,6 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest  # type: ignore
+import pytest
 
 from ..test_conv2d_shallowin import Conv2dShallowinTestModelGenerator
 from . import ExplicitPaddingMixin

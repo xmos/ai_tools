@@ -3,7 +3,7 @@
 import enum
 
 from . import schema_py_generated as schema
-from .operator_codes import BuiltinOpCodes
+from . import BuiltinOpCodes
 
 #  ----------------------------------------------------------------------------
 #                               Builtin Options

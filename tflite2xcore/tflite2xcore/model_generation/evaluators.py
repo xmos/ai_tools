@@ -1,12 +1,12 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import tensorflow as tf  # type: ignore
-import numpy as np  # type: ignore
+import tensorflow as tf
+import numpy as np
 from abc import abstractmethod
 from typing import Union
 
-from tflite2xcore.interpreters import XCOREInterpreter, XCOREDeviceInterpreter  # type: ignore # TODO: fix this
-from tflite2xcore.utils import quantize, QuantizationTuple  # type: ignore # TODO: fix this
+from tflite2xcore.interpreters import XCOREInterpreter, XCOREDeviceInterpreter
+from tflite2xcore.utils import quantize, QuantizationTuple
 from tflite2xcore.utils import apply_interpreter_to_examples
 
 from . import TFLiteModel, Hook

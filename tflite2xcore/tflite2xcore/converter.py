@@ -1,5 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+from pathlib import Path
 from typing import Optional, Union
 
 from tflite2xcore.pass_manager import PassManager

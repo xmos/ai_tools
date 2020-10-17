@@ -134,7 +134,7 @@ class Operator(_SchemaObject):
 
         self.subgraph = subgraph  # parent
         self.operator_code = operator_code
-        self.name = name
+        self.name = name or ""
         self.inputs = list(inputs or [])
         self.outputs = list(outputs or [])
         self.builtin_options = builtin_options or {}

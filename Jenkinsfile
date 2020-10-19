@@ -49,7 +49,7 @@ pipeline {
                                          url: 'git@github.com:xmos/ai_tools']]
                 ])
                 // create venv
-                sh "conda env create -q -p ai_tools_venv -f environment.yml"
+                //sh "conda env create -q -p ai_tools_venv -f environment.yml"
                 // Install xmos tools version
                 sh "/XMOS/get_tools.py " + params.TOOLS_VERSION
             }
@@ -66,8 +66,9 @@ pipeline {
             steps {
                 // below is how we can activate the tools
                 viewEnv("/XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION}") {
-                    sh """. activate ./ai_tools_venv &&
-                          make ci"""
+                    sh "xcc --version"
+                    //sh """. activate ./ai_tools_venv &&
+                    //      make ci"""
                 }
                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
                 // This step collects these files for display in Jenkins UI

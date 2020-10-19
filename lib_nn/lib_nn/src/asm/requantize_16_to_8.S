@@ -7,7 +7,8 @@
 void requantize_16_to_8(
     int8_t* Y,
     const int16_t* X,
-    const nn_requantize_16_to_8_job_t* job);
+    const unsigned elm_start,
+    const unsigned elm_count);
 */
 
 #define FUNCTION_NAME requantize_16_to_8
@@ -24,19 +25,17 @@ void requantize_16_to_8(
 
 #define STACK_VEC_TMP   NSTACKWORDS-8
 
-#define arg_y   r0
-#define arg_x   r1
+#define arg_x       r1
+#define arg_start   r2
 
 #define Y               r0
 #define _32             r1
-#define length          r2
-#define tail_mask       r3
+#define tail_mask       r2
+#define length          r3
 #define MASK16          r4
 #define _16             r5
 #define tmp             r6
 
-#define JOB_START   0
-#define JOB_LENGTH  1
 
 #if !CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
   #define X           r7
@@ -91,12 +90,10 @@ FUNCTION_NAME:
     std r4, r5, sp[0]
     std r6, r7, sp[1]
 
-#define job     r2
 
-    {   ldc _16, 16                             ;   ldw r11, job[JOB_START]                 }
-    {   add Y, Y, r11                           ;   shl r11, r11, 1                         }
-    {   add X, arg_x, r11                       ;   ldc _32, 32                             }
-    {   shl r11, _32, 3                         ;   ldw length, job[JOB_LENGTH]             }
+    {   ldc _16, 16                             ;   add X, arg_x, arg_start                 }
+    {   add Y, Y, arg_start                     ;   ldc _32, 32                             }
+    {   add X, X, arg_start                     ;   shl r11, _32, 3                         }
     {   mov tail_mask, length                   ;   vsetc r11                               }
     {   zext tail_mask, 4                       ;   shr length, length, 4                   }
     {   mkmsk tail_mask, tail_mask              ;   mkmsk MASK16, 16                        }

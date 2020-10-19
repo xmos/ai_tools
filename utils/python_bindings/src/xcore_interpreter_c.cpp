@@ -79,9 +79,9 @@ int initialize(ExtendedXCoreInterpreterContext* ctx, const char* model_content,
   ctx->resolver->AddCustom(
       tflite::ops::micro::xcore::AvgPool2D_Global_OpCode,
       tflite::ops::micro::xcore::Register_AvgPool2D_Global());
-  ctx->resolver->AddCustom(
-      tflite::ops::micro::xcore::FullyConnected_8_OpCode,
-      tflite::ops::micro::xcore::Register_FullyConnected_8());
+ // ctx->resolver->AddCustom(
+ //     tflite::ops::micro::xcore::FullyConnected_8_OpCode,
+//    tflite::ops::micro::xcore::Register_FullyConnected_8());
   ctx->resolver->AddCustom(
       tflite::ops::micro::xcore::Conv2D_Shallow_OpCode,
       tflite::ops::micro::xcore::Register_Conv2D_Shallow());
@@ -101,7 +101,7 @@ int initialize(ExtendedXCoreInterpreterContext* ctx, const char* model_content,
   ctx->resolver->AddCustom("XC_bsign_8",
                            tflite::ops::micro::xcore::Register_BSign_8());
 
-  ctx->resolver->AddCustom("XC_bconv2d_bin_out",
+  ctx->resolver->AddCustom("XC_bconv2d_bin",
                            tflite::ops::micro::xcore::Register_BConv2D_Bin_Out());
   
   ctx->resolver->AddCustom("XC_pad",

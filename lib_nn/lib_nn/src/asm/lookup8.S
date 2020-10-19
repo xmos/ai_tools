@@ -3,11 +3,12 @@
 
 
 /*
-void lookup8_asm(
+void lookup8(
     uint8_t* Y,
     const uint8_t* X,
     const uint8_t* lut,
-    const unsigned length);
+    const unsigned elm_start,
+    const unsigned elm_count);
 */
 
 #define FUNCTION_NAME lookup8
@@ -21,6 +22,10 @@ void lookup8_asm(
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
+#define STACK_ELM_COUNT     (NSTACKWORDS+1)
+
+#define arg_start r3
+
 #define Y       r0
 #define X       r1
 #define LUT     r2
@@ -33,11 +38,14 @@ void lookup8_asm(
 #define BLOCK_SIZE  (3)
 #define BLOCK   {                               ;   ld8u data, X[n]             };       \
                 {   sub n, n, 1                 ;   ld8u data, LUT[data]        };       \
-                st8 data, Y[n];
+                    st8 data, Y[n];
 
 FUNCTION_NAME:
-/**/dualentsp NSTACKWORDS
-    std r4, r5, sp[1]
+    dualentsp NSTACKWORDS
+        std r4, r5, sp[1]
+
+    {   add Y, Y, arg_start             ;   add X, X, arg_start             }
+    {                                   ;   ldw n, sp[STACK_ELM_COUNT]      }
 
     //  We'll deal with the tail first, where tail is the first (n % BLOCK_COUNT)
     //  elements. We deal with the tail be skipping (BLOCK_COUNT-(n % BLOCK_COUNT))
@@ -46,8 +54,8 @@ FUNCTION_NAME:
     //  i = BLOCK_SIZE*(BLOCK_COUNT-(n % BLOCK_COUNT))
     {   ldc i, (1<<BLOCK_COUNT_LOG2)    ;   mov r11, n                      }    
     {   zext r11, BLOCK_COUNT_LOG2      ;   sub X, X, 1                     }
-/**/{   sub r11, i, r11                 ;   ldc i, BLOCK_SIZE               }
-    mul i, r11, i
+    {   sub r11, i, r11                 ;   ldc i, BLOCK_SIZE               }
+        mul i, r11, i
 
     {                                   ;   bf n, .Lfunc_end                }
     {                                   ;   bru i                           }
@@ -55,22 +63,22 @@ FUNCTION_NAME:
     .L_loop_top:
         // 16 blocks = 48 instructions. Unfortunately every cycle is a memory access, so there will also
         // be a lot of FNOPs
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
-        BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
+            BLOCK
         {                               ;   bt n, .L_loop_top           }
     
 

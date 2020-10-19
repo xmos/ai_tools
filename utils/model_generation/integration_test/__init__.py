@@ -37,6 +37,10 @@ from tflite2xcore.model_generation.converters import (
     XCoreConverter,
 )
 from tflite2xcore.model_generation.data_factories import InputInitializerDataFactory
+from tflite2xcore.interpreters.exceptions import (
+    ModelSizeError,
+    ArenaSizeError,
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -54,6 +58,8 @@ class IntegrationTestRunner(Runner):
         use_device: bool = False,
     ) -> None:
         super().__init__(generator)
+        self._use_device = use_device
+
         self._xcore_converter = XCoreConverter(self, self.get_xcore_reference_model)
         self.register_converter(self._xcore_converter)
 
@@ -66,7 +72,7 @@ class IntegrationTestRunner(Runner):
             self,
             self.get_xcore_evaluation_data,
             self._xcore_converter.get_converted_model,
-            use_device=use_device,
+            use_device=self._use_device,
         )
         self.register_evaluator(self._xcore_evaluator)
 
@@ -83,19 +89,6 @@ class IntegrationTestRunner(Runner):
         runner = super().load(dirpath)
         assert isinstance(runner, IntegrationTestRunner)
         return runner
-
-    @staticmethod
-    def dump_data(
-        dirpath: Path,
-        *,
-        data: Dict[str, Union[tf.Tensor, np.ndarray]],
-        example_idx: Union[int, Iterable[int]] = [],
-    ) -> None:
-        example_idx = [example_idx] if isinstance(example_idx, int) else example_idx
-        for key, arr in data.items():
-            for j in example_idx:
-                with open(dirpath / f"example_{j}.{key}", "wb") as f:
-                    f.write(np.array(arr[j]).tostring())
 
     @abstractmethod
     def rerun_post_cache(self) -> None:
@@ -184,7 +177,19 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
 
     def rerun_post_cache(self) -> None:
         self._xcore_converter.convert()
-        self._xcore_evaluator.evaluate()
+
+        try:
+            self._xcore_evaluator.evaluate()
+        except ModelSizeError as e:
+            if self._use_device:
+                pytest.skip("Skipping due to excessive model size")
+            else:
+                raise
+        except ArenaSizeError as e:
+            if self._use_device:
+                pytest.skip("Skipping due to excessive tensor arena size")
+            else:
+                raise
 
         self.outputs = self.OutputData(
             self._reference_float_evaluator.output_data,
@@ -214,7 +219,7 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         self.dump_data(
             dirpath,
             data={
-                "input": self.get_quantization_data(),
+                "input": self._xcore_evaluator.input_data,
                 "reference_quant_output": self.outputs.reference_quant,
                 "xcore_output": self.outputs.xcore,
             },
@@ -283,7 +288,7 @@ def _compare_batched_arrays(
     assert predicted.shape == expected.shape
 
     output_type = predicted.dtype
-    assert output_type is expected.dtype
+    assert output_type == expected.dtype  # NOTE: 'is' operator can be buggy, use ==
     if np.issubdtype(output_type, np.integer):
         diffs = np.int64(predicted) - np.int64(expected)
     elif np.issubdtype(output_type, np.floating):

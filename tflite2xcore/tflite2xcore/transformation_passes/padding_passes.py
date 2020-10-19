@@ -196,6 +196,7 @@ class SplitPaddingPass(OperatorMatchingPass):
             intermediate_shape,
             consumers=[op],
             producers=[new_op],
+            quantization=old_input.quantization,
         )
         new_op.outputs.append(op.inputs[0])
 

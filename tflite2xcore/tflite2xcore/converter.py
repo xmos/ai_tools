@@ -118,7 +118,7 @@ def optimize_for_xcore(
     # TODO this should sit with the other stripping passes
     pass_mgr.register_pass(passes.CanonicalizeLceQuantizedOutputPass())
 
-    pass_mgr.register_pass(passes.ReplaceBconv2DBitpackedOutPass())
+    pass_mgr.register_pass(passes.ReplaceBconv2DBitpackedPass())
 
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())

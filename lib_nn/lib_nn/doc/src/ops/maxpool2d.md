@@ -12,15 +12,11 @@ output channels to those values for the corresponding output pixel.
 This operator does not support any implied padding. All cells of the pooling window must be inside the input image for all output pixels.
 If padding is needed, the image should be explicitly padded in memory prior to invoking this operator.
 
-The @oper{maxpool2d} operator requires a plan and one or more jobs to be initialized before it can be invoked. See @ref maxpool2d_api
-below.
-
 ### Parameters 
 
 #### Hyperparameters        {#maxpool2d_hyperparams}
 
-The following are the hyperparameters of @oper{maxpool2d}. The hyperparameters for an instance of an operator are fixed at initialization.  
-Instances of the @oper{maxpool2d} operator that share the same hyperparameters may also share the same plan and jobs.
+The following are the hyperparameters of @oper{maxpool2d}.
 
 @par
 
@@ -49,8 +45,7 @@ Instances of the @oper{maxpool2d} operator that share the same hyperparameters m
 
 #### Data Parameters
 
-The following are input and output parameters of @oper{maxpool2d}. These parameters are supplied only when the job invocation occurs,
-and may change from invocation to invocation.
+The following are input and output parameters of @oper{maxpool2d}.
 
 @par
 
@@ -95,19 +90,3 @@ the remaining parameters are as described above.
 
 @todo Create diagram
 
-### API                     {#maxpool2d_api}
-
-Invoking an instance of @oper{maxpool2d} is done with a call to maxpool2d(). maxpool2d() takes a pointer to an initialized plan 
-(instance of `nn_maxpool2d_plan_t`) and an initialized job (instance of `nn_pool2d_job_t`). Initialization is done with a call
-to maxpool2d_init().
-
-Each call to maxpool2d() will execute exactly one job. A @oper{maxpool2d} job computes a rectangular sub-tensor of
-the output image (which can be the entire image if only one job is desired). For each job the user indicates a starting row, 
-starting column and starting channel of the output image, as well as the number of rows, columns and channels to be computed by
-that job. See maxpool2d_init() for more details (and constraints).
-
-It is the user's responsibility to ensure that all initialized jobs collectively compute the entire output image (no gaps) and do not
-compute outputs redundantly (overlapping jobs).
-
-If a network uses multiple instances of the @oper{maxpool2d} operator, they may share the structs representing the plan and any jobs 
-*if and only if* the instances share identical hyperparameters (see @ref maxpool2d_hyperparams).

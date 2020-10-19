@@ -125,9 +125,11 @@ class XCOREOpCodes(CustomOpCodes, KnownOpCodes):
     XC_conv2d_1x1 = "XC_conv2d_1x1"
     XC_conv2d_depthwise = "XC_conv2d_depthwise"
     XC_bsign_8 = "XC_bsign_8"
-    XC_bconv2d_bin_out = "XC_bconv2d_bin_out"
-    XC_bconv2d_int8_out = "XC_bconv2d_int8_out"
     XC_pad = "XC_pad"
+    XC_bconv2d_int8 = "XC_bconv2d_int8"
+    XC_bconv2d_int8_DIDO = "XC_bconv2d_int8_DIDO"
+    XC_bconv2d_bin = "XC_bconv2d_bin"
+    XC_bconv2d_bin_DI = "XC_bconv2d_bin_DI"
 
 
 class OperatorCode:

@@ -3,16 +3,19 @@ cmake_minimum_required(VERSION 3.14)
 #**********************
 # Paths
 #**********************
-set(GEMMLOWP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/gemmlowp")
-set(RUY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/ruy")
-set(FLATBUFFERS_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/flatbuffers/include")
-set(FLATBUFFERS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/flatbuffers/src")
-set(TENSORFLOW_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/tensorflow")
-set(TENSORFLOW_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../third_party/tensorflow")
 
-set(LIB_NN_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../lib_nn")
-set(LIB_NN_ALT_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../../lib_nn/lib_nn/api")
-set(LIB_NN_SOURCE_DIR "${PROJECT_SOURCE_DIR}/../../lib_nn")
+set(AI_TOOLS_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
+
+set(GEMMLOWP_INCLUDE_DIR "${AI_TOOLS_ROOT_DIR}/third_party/gemmlowp")
+set(RUY_INCLUDE_DIR "${AI_TOOLS_ROOT_DIR}/third_party/ruy")
+set(FLATBUFFERS_INCLUDE_DIR "${AI_TOOLS_ROOT_DIR}/third_party/flatbuffers/include")
+set(FLATBUFFERS_SOURCE_DIR "${AI_TOOLS_ROOT_DIR}/third_party/flatbuffers/src")
+set(TENSORFLOW_SOURCE_DIR "${AI_TOOLS_ROOT_DIR}/third_party/tensorflow")
+set(TENSORFLOW_INCLUDE_DIR "${AI_TOOLS_ROOT_DIR}/third_party/tensorflow")
+
+set(LIB_NN_INCLUDE_DIR "${AI_TOOLS_ROOT_DIR}/lib_nn")
+set(LIB_NN_ALT_INCLUDE_DIR "${AI_TOOLS_ROOT_DIR}/lib_nn/lib_nn/api")
+set(LIB_NN_SOURCE_DIR "${AI_TOOLS_ROOT_DIR}/lib_nn")
 
 #********************************
 # TensorFlow Lite Micro sources

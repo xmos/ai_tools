@@ -1,6 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import tensorflow as tf  # type: ignore
+import tensorflow as tf
 
 from tflite2xcore.model_generation import Configuration
 

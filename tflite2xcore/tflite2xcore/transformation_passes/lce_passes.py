@@ -37,7 +37,7 @@ XC_BCONV2D_OPCODES = (
 class ReplaceBconv2DPass(ReplaceConv2DPass):
     @property
     def matching_opcode(self) -> ExternalOpCodes:
-        return ExternalOpCodes.add_new_opcode("LceBconv2d")
+        return ExternalOpCodes.LceBconv2d
 
     @property
     def matching_input_type(self) -> TensorType:
@@ -177,7 +177,7 @@ class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
 
     @property
     def matching_opcode(self) -> ExternalOpCodes:
-        return ExternalOpCodes.add_new_opcode("LceQuantize")
+        return ExternalOpCodes.LceQuantize
 
     @property
     def matching_output_type(self) -> TensorType:

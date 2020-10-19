@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest  # type: ignore
-import tensorflow as tf  # type: ignore
+import pytest
+import tensorflow as tf
 from typing import Optional, Tuple
 
 from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this

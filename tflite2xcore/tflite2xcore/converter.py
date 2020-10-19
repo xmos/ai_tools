@@ -1,5 +1,8 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+from pathlib import Path
+from typing import Optional, Union
+
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import transformation_passes as passes
@@ -71,14 +74,14 @@ def add_float_input_output(model):
 
 
 def optimize_for_xcore(
-    model,
+    model: XCOREModel,
     *,
-    cleanup=True,
-    minification=False,
-    num_threads=1,
-    intermediates_path=None,
-    ignore_input_alignment=False,
-):
+    cleanup: bool = True,
+    minification: bool = False,
+    num_threads: int = 1,
+    intermediates_path: Optional[Union[str, Path]] = None,
+    ignore_input_alignment: bool = False,
+) -> None:
     # NOTE: the order of the passes is mostly strict
     pass_mgr = InputOutputCanonicalizationManager(
         model, keep_intermediates=bool(intermediates_path)

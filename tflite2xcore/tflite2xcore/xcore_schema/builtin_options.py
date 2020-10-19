@@ -1,175 +1,19 @@
-# Copyright (c) 2019, XMOS Ltd, All rights reserved
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import enum
-import aenum
-import numpy as np  # type: ignore
-from typing import Optional, Union, Any
+# type: ignore
 
-from . import schema_py_generated as schema  # type: ignore
+from enum import Enum
 
+from . import schema_py_generated as schema, BuiltinOpCodes
 
-#  ----------------------------------------------------------------------------
-#                                  TensorType
-#  ----------------------------------------------------------------------------
-
-TensorType = enum.IntEnum(
-    "TensorType",
-    {k: v for k, v in vars(schema.TensorType).items() if not k.startswith("__")},
-)
-
-__TensorType_to_stdint_type = {
-    # TensorType.STRING: None,  # intentionally not supported
-    TensorType.FLOAT64: "float64_t",
-    TensorType.FLOAT32: "float32_t",
-    TensorType.FLOAT16: "float16_t",
-    TensorType.COMPLEX64: "complex64_t",
-    TensorType.INT64: "int64_t",
-    TensorType.INT32: "int32_t",
-    TensorType.INT16: "int16_t",
-    TensorType.INT8: "int8_t",
-    TensorType.UINT8: "uint8_t",
-    TensorType.BOOL: "uint8_t",
-}
-TensorType.to_stdint_type = lambda self: __TensorType_to_stdint_type[self]
-
-__TensorType_to_bytes = {
-    # TensorType.STRING: None,  # intentionally not supported
-    TensorType.FLOAT64: 8,
-    TensorType.FLOAT32: 4,
-    TensorType.FLOAT16: 2,
-    TensorType.COMPLEX64: 8,
-    TensorType.INT64: 8,
-    TensorType.INT32: 4,
-    TensorType.INT16: 2,
-    TensorType.INT8: 1,
-    TensorType.UINT8: 1,
-    TensorType.BOOL: 1,
-}
-TensorType.to_bytes = lambda self: __TensorType_to_bytes[self]
-
-__TensorType_to_numpy_dtype = {
-    # TensorType.STRING: None,  # intentionally not supported
-    TensorType.FLOAT64: np.float64,
-    TensorType.FLOAT32: np.float32,
-    TensorType.FLOAT16: np.float16,
-    TensorType.COMPLEX64: np.complex64,
-    TensorType.INT64: np.int64,
-    TensorType.INT32: np.int32,
-    TensorType.INT16: np.int16,
-    TensorType.INT8: np.int8,
-    TensorType.UINT8: np.uint8,
-    TensorType.BOOL: np.bool_,
-}
-TensorType.to_numpy_dtype = lambda self: __TensorType_to_numpy_dtype[self]
-
-__TensorType_from_numpy_dtype = {
-    np.dtype(np.float64): TensorType.FLOAT64,
-    np.dtype(np.float32): TensorType.FLOAT32,
-    np.dtype(np.float16): TensorType.FLOAT16,
-    np.dtype(np.complex64): TensorType.COMPLEX64,
-    np.dtype(np.int64): TensorType.INT64,
-    np.dtype(np.int32): TensorType.INT32,
-    np.dtype(np.int16): TensorType.INT16,
-    np.dtype(np.int8): TensorType.INT8,
-    np.dtype(np.uint8): TensorType.UINT8,
-    np.dtype(np.bool_): TensorType.BOOL,
-}
-TensorType.from_numpy_dtype = lambda x: __TensorType_from_numpy_dtype[np.dtype(x)]
-
-
-#  ----------------------------------------------------------------------------
-#                               Operator Codes
-#  ----------------------------------------------------------------------------
-
-
-class ValidOpCodes:
-    pass
-
-
-class KnownOpCodes(ValidOpCodes, enum.Enum):
-    pass
-
-
-BuiltinOpCodes = KnownOpCodes(
-    "BuiltinOpCodes",
-    {k: v for k, v in vars(schema.BuiltinOperator).items() if not k.startswith("__")},
-)
-
-
-class CustomOpCodes(ValidOpCodes):
-    pass
-
-
-class ExternalOpCodes(CustomOpCodes, aenum.Enum):
-    @classmethod
-    def add_new_opcode(cls, name: str) -> "ExternalOpCodes":
-        assert name.isidentifier()
-        try:
-            return cls[name]
-        except KeyError:
-            aenum.extend_enum(cls, name)
-            return cls[name]
-
-
-class XCOREOpCodes(CustomOpCodes, KnownOpCodes):
-    # TODO: consider an IntEnum for this instead of strings
-    XC_lookup_8 = "XC_lookup_8"
-    XC_argmax_16 = "XC_argmax_16"  # currently not used by any passes
-    XC_maxpool2d = "XC_maxpool2d"
-    XC_avgpool2d = "XC_avgpool2d"
-    XC_avgpool2d_global = "XC_avgpool2d_global"
-    XC_fc = "XC_fc"
-    XC_requantize_16_to_8 = "XC_requantize_16_to_8"  # currently unused
-    XC_conv2d_shallowin = "XC_conv2d_shallowin"
-    XC_conv2d_deep = "XC_conv2d_deep"
-    XC_conv2d_1x1 = "XC_conv2d_1x1"
-    XC_conv2d_depthwise = "XC_conv2d_depthwise"
-    XC_bsign_8 = "XC_bsign_8"
-    XC_bconv2d_int8 = "XC_bconv2d_int8"
-    XC_bconv2d_int8_DIDO = "XC_bconv2d_int8_DIDO"
-    XC_bconv2d_bin = "XC_bconv2d_bin"
-    XC_bconv2d_bin_DI = "XC_bconv2d_bin_DI"
-
-
-class OperatorCode:
-    def __init__(self, opcode: ValidOpCodes, *, version: Optional[int] = None) -> None:
-        self.version = version or 1
-        self.code = opcode
-
-    @property
-    def name(self) -> str:
-        return self.code.name
-
-    @property
-    def value(self) -> Union[int, str]:
-        return self.code.value
-
-    def __eq__(self, obj: Any) -> bool:
-        return (
-            isinstance(obj, OperatorCode)
-            and obj.code is self.code
-            and obj.version == self.version
-        )
-
-    def __hash__(self) -> int:
-        return hash(str(self))
-
-    def __str__(self) -> str:
-        return f"{self.code} (version {self.version})"
-
-
-#  ----------------------------------------------------------------------------
-#                               Builtin Options
-#  ----------------------------------------------------------------------------
-
-BuiltinOptions = enum.Enum(
+BuiltinOptions = Enum(
     "BuiltinOptions",
     {k: v for k, v in vars(schema.BuiltinOptions).items() if not k.startswith("__")},
 )
 
 # this mapping should follow the schema and:
 # tensorflow/tensorflow/lite/core/api/flatbuffer_conversions.cc
-__BuiltinOpCodes_to_BuiltinOptions = {
+__BuiltinOptions_from_BuiltinOpCodes = {
     BuiltinOpCodes.ADD: BuiltinOptions.AddOptions,
     BuiltinOpCodes.AVERAGE_POOL_2D: BuiltinOptions.Pool2DOptions,
     BuiltinOpCodes.CONCATENATION: BuiltinOptions.ConcatenationOptions,
@@ -298,48 +142,4 @@ __BuiltinOpCodes_to_BuiltinOptions = {
     BuiltinOpCodes.SEGMENT_SUM: BuiltinOptions.SegmentSumOptions,
     BuiltinOpCodes.BATCH_MATMUL: BuiltinOptions.BatchMatMulOptions,
 }
-BuiltinOpCodes.to_BuiltinOptions = lambda self: __BuiltinOpCodes_to_BuiltinOptions[self]
-
-#  ----------------------------------------------------------------------------
-#                               Misc Enums
-#  ----------------------------------------------------------------------------
-
-
-ActivationFunctionType = enum.Enum(
-    "ActivationFunctionType",
-    {
-        k: v
-        for k, v in vars(schema.ActivationFunctionType).items()
-        if not k.startswith("__")
-    },
-)
-
-
-QuantizationDetails = enum.Enum(
-    "QuantizationDetails",
-    {
-        k: v
-        for k, v in vars(schema.QuantizationDetails).items()
-        if not k.startswith("__")
-    },
-)
-
-
-FullyConnectedOptionsWeightsFormat = enum.Enum(
-    "FullyConnectedOptionsWeightsFormat",
-    {
-        k: v
-        for k, v in vars(schema.FullyConnectedOptionsWeightsFormat).items()
-        if not k.startswith("__")
-    },
-)
-
-
-#  ----------------------------------------------------------------------------
-#                               Padding
-#  ----------------------------------------------------------------------------
-
-
-Padding = enum.Enum(
-    "Padding", {k: v for k, v in vars(schema.Padding).items() if not k.startswith("__")}
-)
+BuiltinOptions.from_BuiltinOpCodes = lambda x: __BuiltinOptions_from_BuiltinOpCodes[x]

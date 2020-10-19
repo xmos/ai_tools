@@ -1,13 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import logging
-import tensorflow as tf  # type: ignore
+import tensorflow as tf
 from pathlib import Path
 from abc import abstractmethod
 from typing import Tuple, Iterator
 from contextlib import contextmanager
 
-from tflite2xcore.utils import set_all_seeds, LoggingContext  # type: ignore # TODO: fix this
+from tflite2xcore.utils import set_all_seeds, LoggingContext
 
 from .runners import Runner, RunnerDependent
 

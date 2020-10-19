@@ -3,14 +3,15 @@
 import json
 import struct
 import ctypes
-import numpy as np  # type: ignore
+import numpy as np
 from enum import Enum
+from typing import Dict, Any, List, Optional, Union
 
 from tflite2xcore import libtflite2xcore as lib
 
 
 class FlexbufferBuilder:
-    def __init__(self, data=None):
+    def __init__(self, data: Optional[Dict[str, Any]] = None) -> None:
         lib.new_builder.restype = ctypes.c_void_p
 
         lib.builder_clear.argtypes = [ctypes.c_void_p]
@@ -75,35 +76,35 @@ class FlexbufferBuilder:
         if data:
             self.set_data(data)
 
-    def _add_vector(self, obj, data, key=None):
-        size = lib.builder_start_vector(obj, key)
+    def _add_vector(self, data: List[Any], key_ascii: Optional[bytes] = None) -> int:
+        size = lib.builder_start_vector(self.obj, key_ascii)
         for list_item in data:
             if isinstance(list_item, Enum):
                 list_item = list_item.value
 
-            list_item_type = type(list_item)
-            if list_item_type in (int, np.int32):
-                lib.builder_vector_int(obj, int(list_item))
-            elif list_item_type in (bool, np.bool):
-                lib.builder_vector_bool(obj, bool(list_item))
-            elif list_item_type in (float, np.float32):
-                lib.builder_vector_float(obj, float(list_item))
+            list_item_type = type(list_item)  # TODO: fix this
+            if np.issubdtype(list_item_type, np.signedinteger):
+                lib.builder_vector_int(self.obj, int(list_item))
+            elif np.issubdtype(list_item_type, np.bool_):
+                lib.builder_vector_bool(self.obj, bool(list_item))
+            elif np.issubdtype(list_item_type, np.floating):
+                lib.builder_vector_float(self.obj, float(list_item))
             elif list_item_type is str:
-                lib.builder_vector_string(obj, list_item.encode("ascii"))
+                lib.builder_vector_string(self.obj, list_item.encode("ascii"))
             elif list_item_type is dict:
-                self._add_map(obj, list_item)
-            elif list_item_type in (list, tuple):
-                self._add_vector(obj, list(list_item))
+                self._add_map(list_item)
+            elif list_item_type in (list, tuple, np.ndarray):
+                self._add_vector(list(list_item))
             else:
                 raise Exception(
                     f"Type {list_item_type} not supported (list item={list_item})"
                 )
         size = lib.builder_end_vector(self.obj, size, False, False)
 
-        return size
+        return size  # type: ignore
 
-    def _add_map(self, obj, data, key=None):
-        msize = lib.builder_start_map(obj, key)
+    def _add_map(self, data: Dict[str, Any], key_ascii: Optional[bytes] = None) -> int:
+        msize = lib.builder_start_map(self.obj, key_ascii)
 
         for key, value in data.items():
             key_ascii = key.encode("ascii")
@@ -111,45 +112,45 @@ class FlexbufferBuilder:
                 value = value.value
 
             value_type = type(value)
-            if value_type is int:
-                lib.builder_int(obj, key_ascii, value)
-            elif value_type is bool:
-                lib.builder_bool(obj, key_ascii, value)
-            elif value_type is float:
-                lib.builder_float(obj, key_ascii, value)
+            if np.issubdtype(value_type, np.signedinteger):
+                lib.builder_int(self.obj, key_ascii, int(value))
+            elif np.issubdtype(value_type, np.bool_):
+                lib.builder_bool(self.obj, key_ascii, bool(value))
+            elif np.issubdtype(value_type, np.floating):
+                lib.builder_float(self.obj, key_ascii, float(value))
             elif value_type is str:
-                lib.builder_string(obj, key_ascii, value.encode("ascii"))
+                lib.builder_string(self.obj, key_ascii, value.encode("ascii"))
             elif value_type is dict:
-                self._add_map(obj, value, key_ascii)
-            elif value_type in (list, tuple):
-                self._add_vector(obj, list(value), key_ascii)
+                self._add_map(value, key_ascii)
+            elif value_type in (list, tuple, np.ndarray):
+                self._add_vector(list(value), key_ascii)
             else:
                 raise Exception(
-                    f"Type {value_type} not supported (key={key_ascii}, value={value})"
+                    f"Type {value_type} not supported (key={key}, value={value})"
                 )
 
-        size = lib.builder_end_map(obj, msize)
-        return size
+        size = lib.builder_end_map(self.obj, msize)
+        return size  # type: ignore
 
-    def set_data(self, data):
+    def set_data(self, data: Dict[str, Any]) -> None:
         lib.builder_clear(self.obj)
 
-        self._add_map(self.obj, data)
+        self._add_map(data)
 
         lib.builder_finish(self.obj)
 
-    def get_bytes(self, size=1024):
+    def get_bytes(self, size: int = 1024) -> List[bytes]:
         buf = ctypes.create_string_buffer(size)
         actual_size = lib.builder_get_buffer(self.obj, buf)
-        return [ubyte[0] for ubyte in struct.iter_unpack("B", buf[0:actual_size])]
+        return [ubyte[0] for ubyte in struct.iter_unpack("B", buf[0:actual_size])]  # type: ignore
 
 
 class FlexbufferParser:
-    def __init__(self):
+    def __init__(self) -> None:
         lib.parse_flexbuffer.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
         lib.parse_flexbuffer.restype = ctypes.c_size_t
 
-    def parse(self, buffer, size=100000):
+    def parse(self, buffer: bytes, size: int = 100000) -> Any:
         if not buffer:
             return {}
 
@@ -160,4 +161,4 @@ class FlexbufferParser:
             char_array.from_buffer_copy(buffer), len(buffer), json_buffer, size
         )
 
-        return json.loads(json_buffer[0:actual_size])
+        return json.loads(json_buffer[0:actual_size])  # type: ignore

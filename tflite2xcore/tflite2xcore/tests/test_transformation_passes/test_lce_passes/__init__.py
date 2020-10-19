@@ -91,9 +91,7 @@ def build_LceQuantize(
     )
 
     subgraph.create_operator(
-        OperatorCode(ExternalOpCodes.add_new_opcode("LceQuantize")),
-        inputs=[tin],
-        outputs=[tout],
+        OperatorCode(ExternalOpCodes.LceQuantize), inputs=[tin], outputs=[tout]
     )
 
     return subgraph.model
@@ -173,7 +171,7 @@ def build_bconv2d(
 
     # create custom options
     custom_options = {"padding": padding} if padding else {}
-    if opcode is ExternalOpCodes.add_new_opcode("LceBconv2d"):
+    if opcode is ExternalOpCodes.LceBconv2d:
         custom_options.update(
             {
                 "channels_in": C_in,
@@ -202,10 +200,7 @@ def build_lceBconv2d(
     subgraph: Optional[Subgraph] = None, *, padding: Padding, **kwargs
 ) -> XCOREModel:
     return build_bconv2d(
-        subgraph,
-        padding=padding,
-        opcode=ExternalOpCodes.add_new_opcode("LceBconv2d"),
-        **kwargs,
+        subgraph, padding=padding, opcode=ExternalOpCodes.LceBconv2d, **kwargs,
     )
 
 

@@ -14,6 +14,10 @@
         "**/bin/**": true,
     },
     "python.linting.pylintEnabled": true,
+    "python.linting.mypyEnabled": true,
+    "python.linting.mypyArgs": [
+        "--config-file=${workspaceFolder}/mypy.ini"
+    ],
     "editor.formatOnSave": true,
     "python.formatting.provider": "black",
     "terminal.integrated.inheritEnv": false,

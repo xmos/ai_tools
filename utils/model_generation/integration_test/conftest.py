@@ -2,9 +2,9 @@
 
 import yaml
 import logging
-import portalocker  # type: ignore
-import pytest  # type: ignore
-import _pytest  # type: ignore # NOTE: for typing only
+import portalocker
+import pytest
+import _pytest
 from pathlib import Path
 from typing import Dict, Type
 

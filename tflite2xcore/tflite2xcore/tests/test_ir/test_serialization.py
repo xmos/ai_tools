@@ -14,7 +14,6 @@ from tflite2xcore.xcore_schema import (
     BuiltinOpCodes,
     XCOREOpCodes,
 )
-from tflite2xcore.serialization import write_flatbuffer
 
 import tensorflow as tf
 
@@ -69,7 +68,7 @@ def test_write_flatbuffer():
 
     tmp_file = os.path.join(tempfile.mkdtemp(), "test_write_flatbuffer.tflite")
     bytes_expected = os.path.getsize(BUILTIN_OPERATORS_TEST_FILE)
-    bytes_written = write_flatbuffer(model, tmp_file)
+    bytes_written = model.write_flatbuffer(tmp_file)
 
     assert bytes_written <= bytes_expected
 
@@ -119,7 +118,7 @@ def test_custom_options():
     }
 
     tmp_file = os.path.join(tempfile.mkdtemp(), "test_custom_options.tflite")
-    bytes_written = write_flatbuffer(model, tmp_file)
+    bytes_written = model.write_flatbuffer(tmp_file)
 
     assert bytes_written > 0
 

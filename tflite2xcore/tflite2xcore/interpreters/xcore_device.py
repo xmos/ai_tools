@@ -10,7 +10,7 @@ import atexit
 import re
 import logging
 
-import portalocker  # type: ignore
+import portalocker
 import numpy as np
 from pathlib import Path
 

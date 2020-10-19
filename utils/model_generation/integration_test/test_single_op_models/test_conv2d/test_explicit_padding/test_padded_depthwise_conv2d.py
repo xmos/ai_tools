@@ -1,6 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest  # type: ignore
+import pytest
 
 from ..test_depthwise_conv2d import DepthwiseConv2dTestModelGenerator
 from . import ExplicitPaddingMixin

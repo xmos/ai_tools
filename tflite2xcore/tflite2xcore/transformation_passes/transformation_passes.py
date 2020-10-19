@@ -37,7 +37,7 @@ class SubgraphPass(ModelTransformationPass):
         self._num_matches = 0
 
     @abstractmethod
-    def match(self, obj):
+    def match(self, obj) -> bool:
         return True
 
     @abstractmethod
@@ -292,12 +292,12 @@ class LegalizeWeightBiasPass(QuantizedOperatorMatchingPass):
     def mutate_weights(self, op):
         pass
 
-    def _replace_weights(self, arr):
+    def _replace_weights(self, arr) -> None:
         # create and populate new weight tensor
         subgraph = self._op.subgraph
         new_weights = subgraph.create_tensor(
             f"{self._op.name}/weights",
-            TensorType.INT8,
+            TensorType.from_numpy_dtype(arr.dtype),
             arr.shape,
             consumers=[self._op],
         )
@@ -307,9 +307,10 @@ class LegalizeWeightBiasPass(QuantizedOperatorMatchingPass):
         self._weights.consumers.remove(self._op)
         self._op.inputs[1] = new_weights
 
-    def match(self, op):
+    def match(self, op) -> bool:
         if super().match(op) and "illegal_params" in op.custom_options:
             return op.custom_options["illegal_params"]
+        return False
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict

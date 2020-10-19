@@ -3,12 +3,12 @@ cmake_minimum_required(VERSION 3.14)
 #**********************
 # Options
 #**********************
-OPTION (XCORE "If disabled, will build the x86 version." ON)
+OPTION (X86 "If enabled, will build the x86 version." OFF)
 
 #**********************
 # Setup XMOS toolchain
 #**********************
-if (XCORE)
+if (NOT X86)
   set(CMAKE_SYSTEM_NAME XMOS)
   set(CMAKE_C_COMPILER "xcc")
   set(CMAKE_CXX_COMPILER  "xcc")
@@ -54,7 +54,18 @@ set(INSTALL_DIR "${PROJECT_SOURCE_DIR}/bin")
 # -DNDEBUG                        # define this for remove debug and profiling 
 # -DTF_LITE_STRIP_ERROR_STRINGS   # define this to remove logging
 
-if (XCORE)
+if (X86)
+  add_executable(test_model_host)
+
+  set(BUILD_FLAGS
+    "-g"
+    "-DTF_LITE_DISABLE_X86_NEON"
+    "-O3"
+  )
+  target_link_libraries(test_model_host stdc++ m pthread)
+
+  target_compile_options(test_model_host PRIVATE ${BUILD_FLAGS})
+else (X86)
   add_executable(test_model_xscope)
   add_executable(test_model_cmdline)
 
@@ -79,24 +90,27 @@ if (XCORE)
 
   set_target_properties(test_model_xscope PROPERTIES OUTPUT_NAME test_model_xscope.xe)
   set_target_properties(test_model_cmdline PROPERTIES OUTPUT_NAME test_model_cmdline.xe)
-else (XCORE)
-  add_executable(test_model_host)
-
-  set(BUILD_FLAGS
-    "-g"
-    "-DTF_LITE_DISABLE_X86_NEON"
-    "-O3"
-  )
-  target_link_libraries(test_model_host stdc++ m pthread)
-
-  target_compile_options(test_model_host PRIVATE ${BUILD_FLAGS})
-endif (XCORE)
+endif (X86)
 
 
 #**********************
 # targets
 #**********************
-if (XCORE)
+if (X86)
+  target_sources(test_model_host
+    PRIVATE ${XCORE_INTERPRETER_SOURCES}
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/main_cmdline.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/inference_engine.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/test_ops_resolver.cc"
+  )
+
+  target_include_directories(test_model_host
+    PRIVATE ${XCORE_INTERPRETER_INCLUDE_DIRS}
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  )
+
+  install(TARGETS test_model_host DESTINATION ${INSTALL_DIR})
+else (X86)
   set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/src/main.xc" PROPERTIES LANGUAGE C)
 
   target_sources(test_model_xscope
@@ -125,22 +139,5 @@ if (XCORE)
   )
 
   install(TARGETS test_model_xscope test_model_cmdline DESTINATION ${INSTALL_DIR})
-
-else (XCORE)
-
-  target_sources(test_model_host
-    PRIVATE ${XCORE_INTERPRETER_SOURCES}
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/main_cmdline.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/inference_engine.cc"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/test_ops_resolver.cc"
-  )
-
-  target_include_directories(test_model_host
-    PRIVATE ${XCORE_INTERPRETER_INCLUDE_DIRS}
-    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
-  )
-
-  install(TARGETS test_model_host DESTINATION ${INSTALL_DIR})
-
-endif (XCORE)
+endif (X86)
 

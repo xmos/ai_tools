@@ -48,20 +48,20 @@ set(TENSORFLOW_LITE_RUNTIME_SOURCES
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/kernel_util.cc"
   )
 
-if (XCORE)
-  set(TENSORFLOW_LITE_RUNTIME_SOURCES
-    ${TENSORFLOW_LITE_RUNTIME_SOURCES}
-    "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/xcore/debug_log.cc"
-    "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/xcore/micro_time.cc"
-    )
-else ()
+if (X86)
   set(TENSORFLOW_LITE_RUNTIME_SOURCES
     ${TENSORFLOW_LITE_RUNTIME_SOURCES}
     "${FLATBUFFERS_SOURCE_DIR}/util.cpp"
     "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/debug_log.cc"
     "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/micro_time.cc"
     )
-endif ()
+else (X86)
+  set(TENSORFLOW_LITE_RUNTIME_SOURCES
+    ${TENSORFLOW_LITE_RUNTIME_SOURCES}
+    "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/xcore/debug_log.cc"
+    "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/xcore/micro_time.cc"
+    )
+endif (X86)
 
 #*************************************************
 # TensorFlow Lite Micro reference kernel sources
@@ -129,13 +129,16 @@ set(TENSORFLOW_LITE_XCORE_OPERATOR_SOURCES
 file(GLOB_RECURSE LIB_NN_C_SOURCES "${LIB_NN_SOURCE_DIR}/lib_nn/src/*.c")
 file(GLOB_RECURSE LIB_NN_ASM_SOURCES "${LIB_NN_SOURCE_DIR}/lib_nn/src/asm/*.S")
 
-set(LIB_NN_SOURCES ${LIB_NN_C_SOURCES})
-if (XCORE)
+if (X86)
+  set(LIB_NN_SOURCES 
+    ${LIB_NN_C_SOURCES}
+  )
+else (X86)
   set(LIB_NN_SOURCES
     ${LIB_NN_C_SOURCES}
     ${LIB_NN_ASM_SOURCES}
   )
-endif ()
+endif (X86)
 
 #**********************
 # set user variables

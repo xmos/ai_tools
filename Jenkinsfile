@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@v0.14.2') _
+@Library('xmos_jenkins_shared_library@feature/view_env_path') _
 
 getApproval()
 
@@ -65,9 +65,10 @@ pipeline {
             // due to the Makefile, we've combined build and test stages
             steps {
                 // below is how we can activate the tools
-                sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
-                      . activate ./ai_tools_venv &&
-                      make ci"""
+                viewEnv("/XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION}") {
+                    sh """. activate ./ai_tools_venv &&
+                          make ci"""
+                }
                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
                 // This step collects these files for display in Jenkins UI
                 junit "**/*_junit.xml"

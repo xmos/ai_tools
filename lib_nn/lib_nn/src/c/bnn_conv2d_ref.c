@@ -181,15 +181,118 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
   }
 }
 
-void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
+                               const unsigned k_height, const unsigned k_width,
+                               const unsigned chans_in,
+                               const unsigned chans_out, 
+                               int * chan_overlaps) {
+                     
+  //This is the count of full vector words that can be applied to the data    
+  unsigned complete_256_bit_groups = ((chans_in*k_height*k_width) / XS3_VPU_VREG_WIDTH_BITS);
+
+  unsigned remainder_32_word_groups = ((chans_in*k_height*k_width) - complete_256_bit_groups*XS3_VPU_VREG_WIDTH_BITS) / 32;
+
+  const unsigned outputs_per_b32 = 32;
+  unsigned chan_b32_in = (chans_in + outputs_per_b32 - 1) / outputs_per_b32;
+
+  bnn_b32_t(*K_ref)[k_height*k_width*chan_b32_in] =
+      (bnn_b32_t(*)[k_height*k_width*chan_b32_in])K_ref_p;
+
+  //the nuber of VPU_INT16_ACC_PERIOD groups there will be
+  unsigned output_channel_groups = chans_out / VPU_INT16_ACC_PERIOD;
+
+  unsigned remaining_input_channels = ((chans_in*k_height*k_width) % XS3_VPU_VREG_WIDTH_BITS)/32;
+
+
+  bnn_b32_t(*K)[chans_out*((8*complete_256_bit_groups) + remaining_input_channels)] =
+      (bnn_b32_t(*)[chans_out * ((8*complete_256_bit_groups) + remaining_input_channels)])K_p;
+
+  bnn_b32_t * p = (bnn_b32_t *)K;
+  //This loops across groups of VPU_INT16_ACC_PERIOD output channels
+  for (unsigned output_chan_group = 0; output_chan_group < output_channel_groups; 
+      output_chan_group++) {
+
+    //copy the groups of 256 input channels
+    for (unsigned ic_group=0;ic_group < complete_256_bit_groups; ic_group++){
+      //each group is of VPU_INT16_ACC_PERIOD channels 
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
+
+        unsigned interleaved_oc = sub_grp_idx;
+        // if (sub_grp_idx&1) {
+        //   interleaved_oc = sub_grp_idx/2;
+        // } else{
+        //   interleaved_oc = (VPU_INT16_ACC_PERIOD/2) + (sub_grp_idx/2);
+        // }
+
+        memcpy(p,
+          &K_ref[output_chan_group * VPU_INT16_ACC_PERIOD + interleaved_oc][8*ic_group],
+          sizeof(bnn_b32_t) * 8);
+        p += 8;
+      }
+    }
+
+    if (remaining_input_channels){
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
+
+        unsigned reversed_channel_order  = VPU_INT16_ACC_PERIOD - 1 - sub_grp_idx;
+        memcpy(p,
+            &K_ref[output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order][8*complete_256_bit_groups],
+                sizeof(bnn_b32_t)*remaining_input_channels);
+        p += remaining_input_channels;
+      }   
+    }
+  }
+
+  //This is for the case of no overlap in the kernels
+  if(chan_overlaps == 0)
+    return;
+
+  //Code only gets here if there is no overlap and hence no need to insert padding.
+
+  //The filler value could be anything it just needs to be a known value
+  char filler = 0x55;
+  memset(&(K[output_channel_groups]), filler, sizeof(bnn_b32_t)*NN_BCONV2D_KERNEL_OVERRUN_WORDS);
+  
+  for (unsigned output_chan_group = 0; output_chan_group < output_channel_groups; 
+      output_chan_group++) {
+
+    bnn_b32_t * p = (bnn_b32_t *)&(K[output_chan_group]);
+
+    p += (8*VPU_INT16_ACC_PERIOD*complete_256_bit_groups);
+    
+    if (remaining_input_channels){
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
+
+        unsigned reversed_channel_order  = VPU_INT16_ACC_PERIOD - 1 - sub_grp_idx;
+
+        bnn_b32_t zeros = 0x00000000;
+        int total_xor_popcount = 0;
+        for(unsigned o = remaining_input_channels; o < 8; o++){ //8 is 32 bit words per vpu load
+          total_xor_popcount += (int)xor_pop_32(&(p[o]), &zeros) - 16;
+        }
+        chan_overlaps[ output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
+
+        p += remaining_input_channels;
+      }   
+    } else {
+      // This code is here for the case where the overlap is being used with multiples 
+      // 256 input channels.
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
+        chan_overlaps[ output_chan_group * VPU_INT16_ACC_PERIOD + sub_grp_idx] =  0;
+      }   
+    }
+  }
+
+}
+void bnn_reorder_int8_kernel_tensor_old(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
                                const unsigned chans_out) {
   unsigned chan_b256_in =
       (chans_in + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
 
-  bnn_b256_t(*K_ref)[k_height][k_width][chan_b256_in] =
-      (bnn_b256_t(*)[k_height][k_width][chan_b256_in])K_ref_p;
+  const bnn_b256_t(*K_ref)[k_height][k_width][chan_b256_in] =
+      (const bnn_b256_t(*)[k_height][k_width][chan_b256_in])K_ref_p;
 
   bnn_b256_t(*K)[k_height][k_width][chan_b256_in][VPU_INT16_ACC_PERIOD] =
       (bnn_b256_t(*)[k_height][k_width][chan_b256_in][VPU_INT16_ACC_PERIOD])K_p;
@@ -218,7 +321,6 @@ void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
     }
   }
 }
-
 
 WEAK_FUNC
 void bnn_conv2d_bin_out_SISO(bnn_b32_t* Y_p,

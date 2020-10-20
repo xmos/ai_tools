@@ -118,10 +118,11 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
  * @param chans_in    [in]     The number of input channels
  * @param chans_out   [in]     The number of output channels
  */                          
-void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
-                               const unsigned chans_out);
+                               const unsigned chans_out, 
+                               int * chan_overlaps) ;//TODO
 
 /**  
  * @brief Execute @oper{bnn_conv2d_int8_out_valid}.

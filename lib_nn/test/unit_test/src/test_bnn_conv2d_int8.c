@@ -115,7 +115,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
                                   chans_out);
 
   bnn_reorder_int8_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
-                            chans_out);
+                            chans_out, 0);
 
   bnn_conv2d_int8_out((int8_t*)Y_p, (const bnn_b256_t*)X_ref,
     (const bnn_b256_t*)K_p, post_activation_multiplier_q_reordered, 
@@ -478,7 +478,7 @@ void test_bnn_conv2d_int8_out_sub_image(){
                                           y.channels);
 
           bnn_reorder_int8_kernel_tensor((bnn_b256_t *)K, (const bnn_b256_t *)K_ref, k.shape.height, 
-            k.shape.width, x.channels, y.channels);
+            k.shape.width, x.channels, y.channels, 0);
           memcpy(K_ref, K, sizeof(K));
                                           
     #else

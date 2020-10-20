@@ -40,6 +40,7 @@ int main(void) {
   test_bnn_conv2d_bin();
   test_bnn_conv2d_int8();
   test_bnn_conv2d_bin_SISO();
+  // test_bnn_conv2d_int8_SISO();
 
   return UNITY_END();
 }

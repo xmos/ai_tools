@@ -110,22 +110,22 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
   larq_ref_bconv2d_int8_out(&x, &y, &k, (int32_t*)X_ref, (int32_t*)K_ref_p,
                    (int8_t*)Y_ref_p, post_activation_multiplier, post_activation_bias);
 
+  bnn_reorder_int8_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
+                            chans_out, chan_overlaps);
 
-  // bnn_reorder_int8_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
-  //                           chans_out);
-
-  // bnn_reorder_multiplier_and_bias_tensors(
-  //                                 post_activation_multiplier_q_reordered,
-  //                                 post_activation_multiplier_q,
-  //                                 post_activation_bias_q_reordered,
-  //                                 post_activation_bias_q,
-  //                                 chans_out);
+  bnn_reorder_multiplier_and_bias_tensors(
+                                  post_activation_multiplier_q_reordered,
+                                  post_activation_multiplier_q,
+                                  post_activation_bias_q_reordered,
+                                  post_activation_bias_q,
+                                  chans_out);
 
 #if defined(__XS3A__)
 
   bnn_conv2d_int8_out_SISO((int8_t*)Y_p, (const bnn_b32_t*)X_ref,
     (const bnn_b32_t*)K_p, post_activation_multiplier_q_reordered, 
     post_activation_bias_q_reordered, accu_shr, final_shr,
+    chan_overlaps, data_scratch,
     &x, &y, &k,
     0, 0, y_width, y_height,
     0, 0, 
@@ -143,6 +143,25 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     0, 0, k_width, k_height);
 #endif
 
+int8_t(*Y)[y_width][chans_out] =
+      (int8_t(*)[y_width][chans_out])Y_p;
+
+  int8_t(*Y_ref)[y_width][chans_out] =
+      (int8_t(*)[y_width][chans_out])Y_ref_p;
+
+  for (unsigned h = 0; h < y_height; h++) {
+    for (unsigned w = 0; w < y_width; w++) {
+      //If the result should have been computed then check it against the reference
+      for (unsigned c = 0; c < chans_out; c++) {
+        printf("%2u e% d a% d\n", c,  Y_ref[h][w][c], Y[h][w][c]);
+      }
+      printf("\n");
+    }
+    printf("\n");
+  }
+
+
+
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
 
@@ -157,8 +176,8 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_directed() {
 #define X_WIDTH 1
 #define K_HEIGHT X_HEIGHT
 #define K_WIDTH X_WIDTH
-#define CHANS_IN 4
-#define CHANS_OUT 4
+#define CHANS_IN 256
+#define CHANS_OUT 16
 #define H_STRIDE 1
 #define V_STRIDE 1
 
@@ -187,7 +206,7 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_directed() {
   bnn_b32_t WORD_ALIGNED data_scratch[K_HEIGHT * K_WIDTH * CHAN_WORDS_IN + 
     NN_BCONV2D_KERNEL_OVERRUN_WORDS]; 
 
-  srand(42);
+  srand(69);
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
 
@@ -502,11 +521,11 @@ void test_bnn_conv2d_int8_out_SISO_sub_image(){
             float r =  (float)rand() / (float)RAND_MAX;
             float output_range = (range/2) + (float)(1<<range)*r;
 
-            post_activation_multiplier[ch] = 1.0;output_range/input_range;
+            post_activation_multiplier[ch] = output_range/input_range;
 
             int32_t max_bias = 255;
             r =  (float)rand() / (float)RAND_MAX;
-            post_activation_bias[ch] = 0.0;(r * max_bias*2.0) - max_bias;
+            post_activation_bias[ch] = (r * max_bias*2.0) - max_bias;
 
           }
 
@@ -524,17 +543,18 @@ void test_bnn_conv2d_int8_out_SISO_sub_image(){
                       accu_min_post_clamp, accu_max_post_clamp,
                       &accu_shr, &final_shr, backtransform_add);
 
+    bnn_reorder_multiplier_and_bias_tensors(
+                post_activation_multiplier_q_ordered,
+                post_activation_multiplier_q,
+                post_activation_bias_q_ordered,
+                post_activation_bias_q,
+                y.channels);
+
     #if defined(__XS3A__)
 
-          bnn_reorder_multiplier_and_bias_tensors(
-                      post_activation_multiplier_q_ordered,
-                      post_activation_multiplier_q,
-                      post_activation_bias_q_ordered,
-                      post_activation_bias_q,
-                      y.channels);
-
           bnn_reorder_int8_kernel_tensor((bnn_b32_t *)K, (const bnn_b32_t *)K_ref, k.shape.height, 
-            k.shape.width, x.channels, y.channels);
+            k.shape.width, x.channels, y.channels, chan_overlaps);
+
           memcpy(K_ref, K, sizeof(K));
                                           
     #else

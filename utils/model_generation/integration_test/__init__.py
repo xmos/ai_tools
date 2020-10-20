@@ -50,6 +50,7 @@ from tflite2xcore.interpreters.exceptions import (  # type: ignore # TODO: fix t
 
 class IntegrationTestRunner(Runner):
     _model_generator: "IntegrationTestModelGenerator"
+    _representative_data: tf.Tensor
 
     def __init__(
         self,
@@ -60,10 +61,7 @@ class IntegrationTestRunner(Runner):
         super().__init__(generator)
         self._use_device = use_device
 
-        # representative data (e.g. for quantization and test)
-        self._repr_data_factory = InputInitializerDataFactory(
-            self, lambda: self._model_generator.input_shape
-        )
+        self._repr_data_factory = self.make_repr_data_factory()
         self.register_data_factory(self._repr_data_factory)
 
         self._xcore_converter = XCoreConverter(self, self.get_xcore_reference_model)
@@ -86,17 +84,23 @@ class IntegrationTestRunner(Runner):
     def get_xcore_reference_model(self) -> TFLiteModel:
         raise NotImplementedError()
 
+    def make_repr_data_factory(self) -> InputInitializerDataFactory:
+        # representative data (e.g. for quantization and test)
+        return InputInitializerDataFactory(
+            self, lambda: self._model_generator.input_shape
+        )
+
     def get_representative_data(self) -> tf.Tensor:
         try:
-            return self._quantization_data
+            return self._representative_data
         except AttributeError:
             try:
-                self._quantization_data = self._repr_data_factory.make_data(10)
+                self._representative_data = self._repr_data_factory.make_data(10)
             except AttributeError:
                 raise Exception(
                     "Cannot get quantization data before runner is run!"
                 ) from None
-            return self._quantization_data
+            return self._representative_data
 
     def get_xcore_evaluation_data(self) -> TFLiteModel:
         return self.get_representative_data()
@@ -130,7 +134,6 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         reference_quant: np.ndarray
         xcore: np.ndarray
 
-    _quantization_data: tf.Tensor
     outputs: "DefaultIntegrationTestRunner.OutputData"
 
     def __init__(

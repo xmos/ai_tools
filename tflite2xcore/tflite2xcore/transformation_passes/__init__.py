@@ -47,6 +47,7 @@ from .quantize_dequantize_passes import (
     CanonicalizeQuantizedInputPass,
     CanonicalizeQuantizedOutputPass,
     CanonicalizeLceQuantizedOutputPass,
+    CanonicalizeLceQuantizedInputPass,
     LegalizeFloatInputPass,
     LegalizeFloatOutputPass,
 )

@@ -60,6 +60,12 @@ class IntegrationTestRunner(Runner):
         super().__init__(generator)
         self._use_device = use_device
 
+        # representative data (e.g. for quantization and test)
+        self._repr_data_factory = InputInitializerDataFactory(
+            self, lambda: self._model_generator.input_shape
+        )
+        self.register_data_factory(self._repr_data_factory)
+
         self._xcore_converter = XCoreConverter(self, self.get_xcore_reference_model)
         self.register_converter(self._xcore_converter)
 
@@ -80,9 +86,20 @@ class IntegrationTestRunner(Runner):
     def get_xcore_reference_model(self) -> TFLiteModel:
         raise NotImplementedError()
 
-    @abstractmethod
+    def get_representative_data(self) -> tf.Tensor:
+        try:
+            return self._quantization_data
+        except AttributeError:
+            try:
+                self._quantization_data = self._repr_data_factory.make_data(10)
+            except AttributeError:
+                raise Exception(
+                    "Cannot get quantization data before runner is run!"
+                ) from None
+            return self._quantization_data
+
     def get_xcore_evaluation_data(self) -> TFLiteModel:
-        raise NotImplementedError()
+        return self.get_representative_data()
 
     @classmethod
     def load(cls, dirpath: Union[Path, str]) -> "IntegrationTestRunner":
@@ -90,9 +107,21 @@ class IntegrationTestRunner(Runner):
         assert isinstance(runner, IntegrationTestRunner)
         return runner
 
-    @abstractmethod
     def rerun_post_cache(self) -> None:
-        raise NotImplementedError()
+        self._xcore_converter.convert()
+
+        try:
+            self._xcore_evaluator.evaluate()
+        except ModelSizeError as e:
+            if self._use_device:
+                pytest.skip("Skipping due to excessive model size")
+            else:
+                raise
+        except ArenaSizeError as e:
+            if self._use_device:
+                pytest.skip("Skipping due to excessive tensor arena size")
+            else:
+                raise
 
 
 class DefaultIntegrationTestRunner(IntegrationTestRunner):
@@ -111,11 +140,6 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         use_device: bool = False,
     ) -> None:
         super().__init__(generator, use_device=use_device)
-        # quantization and test data
-        self._repr_data_factory = InputInitializerDataFactory(
-            self, lambda: self._model_generator.input_shape
-        )
-        self.register_data_factory(self._repr_data_factory)
 
         # floating point reference
         self._reference_float_converter = TFLiteFloatConverter(
@@ -125,41 +149,26 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
 
         self._reference_float_evaluator = TFLiteEvaluator(
             self,
-            self.get_quantization_data,
+            self.get_representative_data,
             self._reference_float_converter.get_converted_model,
         )
         self.register_evaluator(self._reference_float_evaluator)
 
         # quantized reference
         self._reference_quant_converter = TFLiteQuantConverter(
-            self, self.get_built_model, self.get_quantization_data
+            self, self.get_built_model, self.get_representative_data
         )
         self.register_converter(self._reference_quant_converter)
 
         self._reference_quant_evaluator = TFLiteQuantEvaluator(
             self,
-            self.get_quantization_data,
+            self.get_representative_data,
             self._reference_quant_converter.get_converted_model,
         )
         self.register_evaluator(self._reference_quant_evaluator)
 
     def get_xcore_reference_model(self) -> TFLiteModel:
         return self._reference_quant_converter.get_converted_model()
-
-    def get_quantization_data(self) -> tf.Tensor:
-        try:
-            return self._quantization_data
-        except AttributeError:
-            try:
-                self._quantization_data = self._repr_data_factory.make_data(10)
-            except AttributeError:
-                raise Exception(
-                    "Cannot get quantization data before runner is run!"
-                ) from None
-            return self._quantization_data
-
-    def get_xcore_evaluation_data(self) -> TFLiteModel:
-        return self.get_quantization_data()
 
     def run(self) -> None:
         """ Defines how a DefaultIntegrationTestRunner should be run.
@@ -176,20 +185,7 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         self.rerun_post_cache()
 
     def rerun_post_cache(self) -> None:
-        self._xcore_converter.convert()
-
-        try:
-            self._xcore_evaluator.evaluate()
-        except ModelSizeError as e:
-            if self._use_device:
-                pytest.skip("Skipping due to excessive model size")
-            else:
-                raise
-        except ArenaSizeError as e:
-            if self._use_device:
-                pytest.skip("Skipping due to excessive tensor arena size")
-            else:
-                raise
+        super().rerun_post_cache()
 
         self.outputs = self.OutputData(
             self._reference_float_evaluator.output_data,

@@ -92,6 +92,7 @@ set(TENSORFLOW_LITE_REFERENCE_OPERATOR_SOURCES_CXX
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/quantize.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/reduce.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/reshape.cc"
+  "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/shape.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/resize_nearest_neighbor.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/round.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/softmax.cc"

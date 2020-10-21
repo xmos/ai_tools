@@ -27,3 +27,9 @@ XCC_FLAGS := -g -O3
 CXX_FLAGS := -g -O3 -std=c++11 
 
 LD_FLAGS  := -L/usr/local/lib -lm -lstdc++
+
+# to enable address sanitization, uncomment the following two lines
+# CC_FLAGS  := $(CC_FLAGS) -fsanitize=address -fsanitize-recover=address
+# LD_FLAGS  := -lasan $(LD_FLAGS) # NOTE: -lasan must be first
+# and run with 
+# $ ASAN_OPTIONS=halt_on_error=false ./bin/x86/unit_test

@@ -102,7 +102,7 @@ class IntegrationTestRunner(Runner):
                 ) from None
             return self._representative_data
 
-    def get_xcore_evaluation_data(self) -> TFLiteModel:
+    def get_xcore_evaluation_data(self) -> Union[np.ndarray, tf.Tensor]:
         return self.get_representative_data()
 
     @classmethod
@@ -135,6 +135,7 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         xcore: np.ndarray
 
     outputs: "DefaultIntegrationTestRunner.OutputData"
+    _xcore_evaluation_data: np.ndarray
 
     def __init__(
         self,
@@ -192,9 +193,7 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
 
         self.outputs = self.OutputData(
             self._reference_float_evaluator.output_data,
-            self._reference_quant_evaluator.get_output_data_quant(
-                self._xcore_evaluator.output_quant
-            ),
+            self._reference_quant_evaluator.output_data,
             self._xcore_evaluator.output_data,
         )
         self.converted_models.update(

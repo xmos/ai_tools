@@ -44,6 +44,7 @@ set(TENSORFLOW_LITE_RUNTIME_SOURCES_CXX
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/memory_planner/greedy_memory_planner.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/memory_planner/linear_memory_planner.cc"
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/micro/kernels/kernel_util.cc"
+  "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/schema/schema_utils.cc"
   )
 
 if (X86)

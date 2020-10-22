@@ -1,10 +1,12 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import larq
+import numpy as np
 import tensorflow as tf
 import larq_compute_engine as lce
-from typing import Optional, Tuple, Type, Any
+from typing import Optional, Tuple, Type, Any, Union, NamedTuple
 
+from tflite2xcore.utils import get_bitpacked_shape
 from tflite2xcore.xcore_schema import Tensor, ExternalOpCodes, TensorType, XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.pass_manager import PassManager  # type: ignore # TODO: fix this
 from tflite2xcore.transformation_passes import CanonicalizeLceQuantizedInputPass, CanonicalizeLceQuantizedOutputPass  # type: ignore # TODO: fix this
@@ -14,6 +16,7 @@ from tflite2xcore.transformation_passes.transformation_passes import (
 from tflite2xcore.converter import CleanupManager  # type: ignore # TODO: fix this
 
 from tflite2xcore.model_generation import Configuration, TFLiteModel, Hook
+from tflite2xcore.model_generation.evaluators import LarqEvaluator
 from tflite2xcore.model_generation.runners import Runner
 from tflite2xcore.model_generation.converters import KerasModelConverter
 from tflite2xcore.model_generation.data_factories import InputInitializerDataFactory
@@ -90,7 +93,6 @@ class RemoveSingleOutputOperatorPass(OutputTensorMatchingPass):
         self._done = False
 
     def match(self, tensor: Tensor) -> bool:
-        print("Done", self._done)
         return (not self._done) and super().match(tensor)
 
     def mutate(self, tensor: Tensor) -> None:
@@ -154,6 +156,10 @@ class LarqConverter(KerasModelConverter):
 class BinarizedTestRunner(IntegrationTestRunner):
     _model_generator: LarqCompositeTestModelGenerator
 
+    class OutputData(NamedTuple):
+        reference_quant: np.ndarray
+        xcore: np.ndarray
+
     def __init__(
         self,
         generator: Type[LarqCompositeTestModelGenerator],
@@ -165,26 +171,30 @@ class BinarizedTestRunner(IntegrationTestRunner):
         self._lce_converter = self.make_lce_converter()
         self.register_converter(self._lce_converter)
 
-        # self._xcore_evaluator = XCoreEvaluator(
-        #     self,
-        #     self.get_xcore_evaluation_data,
-        #     self._xcore_converter.get_converted_model,
-        #     use_device=self._use_device,
-        # )
-        # self.register_evaluator(self._xcore_evaluator)
+        self._lce_evaluator = LarqEvaluator(
+            self, self.get_representative_data, self._lce_converter.get_converted_model,
+        )
+
+        # TODO: remove these
+        self._xcore_evaluator = LarqEvaluator(
+            self,
+            self.get_xcore_evaluation_data,
+            self._xcore_converter.get_converted_model,
+        )
+        self.register_evaluator(self._xcore_evaluator)
+
+    def get_xcore_evaluation_data(self) -> Union[np.ndarray, tf.Tensor]:
+        return self.get_representative_data()
 
     def make_lce_converter(self) -> LarqConverter:
         return LarqConverter(self, self.get_built_model)
 
     def make_repr_data_factory(self) -> InputInitializerDataFactory:
-        def get_bitpacked_shape() -> Tuple[int, ...]:
-            old_shape = self._model_generator.input_shape
-            channels = old_shape[-1]
-            assert channels % 32 == 0
-            return (*old_shape[:-1], channels // 32)
-
-        # representative data (e.g. for quantization and test)
-        return InputInitializerDataFactory(self, get_bitpacked_shape, dtype=tf.int32)
+        return InputInitializerDataFactory(
+            self,
+            lambda: get_bitpacked_shape(self._model_generator.input_shape),
+            dtype=tf.int32,
+        )
 
     def get_xcore_reference_model(self) -> TFLiteModel:
         return self._lce_converter.get_converted_model()
@@ -196,22 +206,16 @@ class BinarizedTestRunner(IntegrationTestRunner):
         """
         super().run()
         self._lce_converter.convert()
-
-        # self._reference_quant_evaluator.evaluate()
+        self._lce_evaluator.evaluate()
 
         self.rerun_post_cache()
 
     def rerun_post_cache(self) -> None:
-        # super().rerun_post_cache()  # TODO: remove this
-        self._xcore_converter.convert()  # TODO: remove this
+        super().rerun_post_cache()
 
-        # self.outputs = self.OutputData(
-        #     self._reference_float_evaluator.output_data,
-        #     self._reference_quant_evaluator.get_output_data_quant(
-        #         self._xcore_evaluator.output_quant
-        #     ),
-        #     self._xcore_evaluator.output_data,
-        # )
+        self.outputs = self.OutputData(
+            self._lce_evaluator.output_data, self._xcore_evaluator.output_data,
+        )
         self.converted_models.update(
             {
                 "reference_lce": self._lce_converter._model,

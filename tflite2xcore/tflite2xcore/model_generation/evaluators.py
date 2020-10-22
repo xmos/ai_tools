@@ -2,6 +2,7 @@
 
 import tensorflow as tf
 import numpy as np
+import larq_compute_engine as lce
 from abc import abstractmethod
 from typing import Union, Type
 
@@ -170,3 +171,10 @@ class XCoreEvaluator(TFLiteQuantEvaluator):
             self._interpreter = XCOREDeviceInterpreter(model_content=self._model_hook())
         else:
             self._interpreter = XCOREInterpreter(model_content=self._model_hook())
+
+
+class LarqEvaluator(Evaluator):
+    def evaluate(self) -> None:
+        interpreter = lce.tflite.python.interpreter.Interpreter(self._model_hook())
+        self.input_data = self._input_data_hook()
+        self.output_data = interpreter.predict(self.input_data)

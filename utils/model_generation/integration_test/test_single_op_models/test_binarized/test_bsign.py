@@ -1,9 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
+import tensorflow as tf
 
 from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation import Configuration
+from tflite2xcore.model_generation.data_factories import InputInitializerDataFactory
 
 from . import (
     BinarizedTestRunner,
@@ -41,6 +43,11 @@ GENERATOR = BSignTestModelGenerator
 class BSignTestRunner(BinarizedTestRunner):
     def make_lce_converter(self) -> LarqConverter:
         return LarqConverter(self, self.get_built_model, remove_last_op=True)
+
+    def make_repr_data_factory(self) -> InputInitializerDataFactory:
+        return InputInitializerDataFactory(
+            self, lambda: self._model_generator.input_shape, dtype=tf.int8
+        )
 
 
 RUNNER = BSignTestRunner

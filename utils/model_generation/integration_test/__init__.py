@@ -102,8 +102,9 @@ class IntegrationTestRunner(Runner):
                 ) from None
             return self._representative_data
 
+    @abstractmethod
     def get_xcore_evaluation_data(self) -> Union[np.ndarray, tf.Tensor]:
-        return self.get_representative_data()
+        raise NotImplementedError()
 
     @classmethod
     def load(cls, dirpath: Union[Path, str]) -> "IntegrationTestRunner":
@@ -173,6 +174,9 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
 
     def get_xcore_reference_model(self) -> TFLiteModel:
         return self._reference_quant_converter.get_converted_model()
+
+    def get_xcore_evaluation_data(self) -> Union[np.ndarray, tf.Tensor]:
+        return self._reference_quant_evaluator.input_data
 
     def run(self) -> None:
         """ Defines how a DefaultIntegrationTestRunner should be run.

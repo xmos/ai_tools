@@ -2,6 +2,7 @@
 
 import tensorflow as tf
 
+from tflite2xcore.xcore_schema import XCOREModel, ValidOpCodes, BuiltinOpCodes  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation import Configuration
 
 from .. import (
@@ -56,4 +57,18 @@ class ExplicitPaddingMixin(AbstractConv2dTestModelGenerator):
                 self._op_layer(),
             ]
         )
+
+
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
+
+
+def test_reference_model_regression(
+    reference_model: XCOREModel, reference_op_code: ValidOpCodes
+) -> None:
+    operators = reference_model.subgraphs[0].operators
+    assert len(operators) == 2
+    assert operators[0].operator_code.code is BuiltinOpCodes.PAD
+    assert operators[1].operator_code.code is reference_op_code
 

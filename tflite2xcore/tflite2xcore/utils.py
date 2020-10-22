@@ -344,3 +344,8 @@ def calculate_same_padding(
 
     return tuple(calc_axis_pad(*t) for t in zip(input_size, strides, kernel_size))
 
+
+def get_bitpacked_shape(input_shape: Tuple[int, ...]) -> Tuple[int, ...]:
+    channels = input_shape[-1]
+    assert channels % 32 == 0
+    return (*input_shape[:-1], channels // 32)

@@ -13,10 +13,10 @@ class RandomUniform(tf.keras.initializers.RandomUniform):  # type: ignore
     ) -> tf.Tensor:
         try:
             return super().__call__(shape, dtype)
-        except ValueError as e:
+        except Exception as e:
             if e.args[0].startswith("Invalid dtype "):
                 dtype = tf.dtypes.as_dtype(dtype)
-                if dtype is (tf.int8, tf.int16):
+                if dtype in (tf.int8, tf.int16):
                     if self.minval < dtype.min:
                         raise ValueError(
                             f"initializer minval = {self.minval} < {dtype.min} = dtype.min"
@@ -26,7 +26,7 @@ class RandomUniform(tf.keras.initializers.RandomUniform):  # type: ignore
                             f"initializer maxval = {self.maxval} < {dtype.max} = dtype.max"
                         ) from None
                     else:
-                        tf.cast(
+                        return tf.cast(
                             self._random_generator.random_uniform(
                                 shape, self.minval, self.maxval, tf.int32
                             ),

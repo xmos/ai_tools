@@ -6,11 +6,19 @@ import tensorflow as tf
 import larq_compute_engine as lce
 from typing import Optional, Tuple, Type, Any, Union, NamedTuple
 
-from tflite2xcore.utils import get_bitpacked_shape
-from tflite2xcore.xcore_schema import Tensor, ExternalOpCodes, TensorType, XCOREModel  # type: ignore # TODO: fix this
+from tflite2xcore.utils import get_bitpacked_shape  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
+    Tensor,
+    ExternalOpCodes,
+    TensorType,
+    XCOREModel,
+)
 from tflite2xcore.pass_manager import PassManager  # type: ignore # TODO: fix this
-from tflite2xcore.transformation_passes import CanonicalizeLceQuantizedInputPass, CanonicalizeLceQuantizedOutputPass  # type: ignore # TODO: fix this
-from tflite2xcore.transformation_passes.transformation_passes import (
+from tflite2xcore.transformation_passes import (  # type: ignore # TODO: fix this
+    CanonicalizeLceQuantizedInputPass,
+    CanonicalizeLceQuantizedOutputPass,
+)
+from tflite2xcore.transformation_passes.transformation_passes import (  # type: ignore # TODO: fix this
     OutputTensorMatchingPass,
 )
 from tflite2xcore.converter import CleanupManager  # type: ignore # TODO: fix this
@@ -63,7 +71,7 @@ class LarqCompositeTestModelGenerator(Conv2dWordAlignedTestModelGenerator):
 
     def _fake_quant(self, x: tf.Tensor) -> tf.Tensor:
         return tf.quantization.fake_quant_with_min_max_vars(
-            x, -3, 3  # *self._config["input_range"]
+            x, *self._config["input_range"]
         )
 
     def _build_core_model(self) -> tf.keras.Model:
@@ -139,14 +147,14 @@ class LarqConverter(KerasModelConverter):
         pass_mgr.register_passes(CleanupManager())
 
         pass_mgr.run_passes()
+
+        # TODO: remove this
+        b = model_ir.create_buffer()
+        model_ir.buffers.remove(b)
+        model_ir.buffers = [b] + model_ir.buffers
+
         self._model = model_ir.serialize()
 
-
-#  ----------------------------------------------------------------------------
-#                                   EVALUATORS
-#  ----------------------------------------------------------------------------
-
-# TODO: add evaluators
 
 #  ----------------------------------------------------------------------------
 #                                   RUNNERS
@@ -172,16 +180,9 @@ class BinarizedTestRunner(IntegrationTestRunner):
         self.register_converter(self._lce_converter)
 
         self._lce_evaluator = LarqEvaluator(
-            self, self.get_representative_data, self._lce_converter.get_converted_model,
+            self, self.get_representative_data, self._lce_converter.get_converted_model
         )
-
-        # TODO: remove these
-        self._xcore_evaluator = LarqEvaluator(
-            self,
-            self.get_xcore_evaluation_data,
-            self._xcore_converter.get_converted_model,
-        )
-        self.register_evaluator(self._xcore_evaluator)
+        self.register_evaluator(self._lce_evaluator)
 
     def get_xcore_evaluation_data(self) -> Union[np.ndarray, tf.Tensor]:
         return self.get_representative_data()

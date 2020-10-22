@@ -62,6 +62,7 @@ TestOpsResolver::TestOpsResolver() {
   // AddResizeNearestNeighbor();
   AddRound();
   // AddRsqrt();
+  AddShape();
   AddSin();
   AddSoftmax();
   AddSplit();

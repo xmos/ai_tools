@@ -38,7 +38,7 @@ Building x86 host target
 
     > mkdir build
     > cd build
-    > cmake ../ -DXCORE=OFF
+    > cmake ../ -DX86=ON
     > make
 
 ### Command-line Target

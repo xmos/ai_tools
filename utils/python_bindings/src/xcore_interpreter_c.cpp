@@ -98,6 +98,9 @@ int initialize(ExtendedXCoreInterpreterContext* ctx, const char* model_content,
   ctx->resolver->AddCustom(tflite::ops::micro::xcore::Lookup_8_OpCode,
                            tflite::ops::micro::xcore::Register_Lookup_8());
 
+  ctx->resolver->AddCustom("XC_bsign_8",  // TODO: add opcode to xcore_ops.h
+                           tflite::ops::micro::xcore::Register_BSign_8());
+
   ctx->tensor_arena = new uint8_t[tensor_arena_size];
   memset(ctx->tensor_arena, 0, tensor_arena_size);
 

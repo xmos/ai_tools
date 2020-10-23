@@ -14,6 +14,14 @@ import portalocker
 import numpy as np
 from pathlib import Path
 
+# hdlr = logging.FileHandler("xcore_device.log")
+# formatter = logging.Formatter("%(asctime)s %(process)d %(message)s")
+# hdlr.setFormatter(formatter)
+# logger = logging.getLogger("xcore_device")
+# logger.addHandler(hdlr)
+# logger.setLevel(logging.DEBUG)
+# logging = logger
+
 from .exceptions import (
     AllocateTensorsError,
     InvokeError,
@@ -372,6 +380,16 @@ class XCOREDeviceServer(object):
     devices_path = Path("xcore_devices.json")
 
     @staticmethod
+    def _ping_device(port, timeout):
+        ep = XCOREDeviceEndpoint()
+        ep.connect(port=port)
+        logging.debug(f"Pinging port: {port}")
+        ping_succeeded = ep.ping_device(timeout)
+        ep.disconnect()
+
+        return ping_succeeded
+
+    @staticmethod
     def _setup_device_use(device):
         # setup device which means launcing xrun and
         #   and setting all pids, ports and in_use status
@@ -382,7 +400,12 @@ class XCOREDeviceServer(object):
         device["xscope_port"] = xscope_port
         device["parent_pid"] = os.getpid()
         device["in_use"] = False
-        logging.debug(f"Device setup: {device}")
+
+        try:
+            XCOREDeviceServer._ping_device(xscope_port, timeout=10)
+            logging.debug(f"Device setup: {device}")
+        except Exception as ex:
+            logging.debug(str(ex))
 
         return device
 
@@ -412,6 +435,7 @@ class XCOREDeviceServer(object):
 
     @staticmethod
     def _atexit():
+        logging.debug("atExit handler")
         with portalocker.TemporaryFileLock(
             XCOREDeviceServer.lock_path,
             flags=portalocker.LOCK_EX,
@@ -466,16 +490,9 @@ class XCOREDeviceServer(object):
                             )
                         else:
                             # ensure device is responding
-                            ep = XCOREDeviceEndpoint()
-                            port = cached_device["xscope_port"]
-                            ep.connect(port=port)
-                            logging.debug(f"Pinging port: {port}")
-                            ping_succeeded = False
-                            try:
-                                ping_succeeded = ep.ping_device()
-                            except Exception as ex:
-                                logging.debug(str(ex))
-
+                            ping_succeeded = XCOREDeviceServer._ping_device(
+                                cached_device["xscope_port"], timeout=5
+                            )
                             if ping_succeeded:
                                 logging.debug("Ping succeeded")
                             else:
@@ -488,7 +505,6 @@ class XCOREDeviceServer(object):
                                 cached_device = XCOREDeviceServer._setup_device_use(
                                     cached_device
                                 )
-                            ep.disconnect()
 
                         # this is a known device so save in synced devices
                         synced_devices.append(cached_device)

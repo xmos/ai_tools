@@ -254,7 +254,7 @@ class XCOREInterpreter:
         *,
         preinvoke_callback=None,
         postinvoke_callback=None,
-        capture_op_states=False
+        capture_op_states=False,
     ):
         if capture_op_states:
             # NOTE: the original callbacks are ignored
@@ -356,24 +356,26 @@ class XCOREInterpreter:
 
     def _get_tensor_details(self, tensor_index: int) -> _TensorDetails:
         # first get the dimensions of the tensor
-        dims_size = ctypes.c_size_t()
         shape_size = ctypes.c_size_t()
+        scale_size = ctypes.c_size_t()
         zero_point_size = ctypes.c_size_t()
+
         self._check_status(
             lib.get_tensor_details_buffer_sizes(
                 self.obj,
                 tensor_index,
-                ctypes.byref(dims_size),
                 ctypes.byref(shape_size),
+                ctypes.byref(scale_size),
                 ctypes.byref(zero_point_size),
             )
         )
+
         # allocate buffer for shape
-        tensor_shape = (ctypes.c_int * dims_size.value)()
+        tensor_shape = (ctypes.c_int * shape_size.value)()
         tensor_name_max_len = 1024
         tensor_name = ctypes.create_string_buffer(tensor_name_max_len)
         tensor_type = ctypes.c_int()
-        tensor_scale = (ctypes.c_float * shape_size.value)()
+        tensor_scale = (ctypes.c_float * scale_size.value)()
         tensor_zero_point = (ctypes.c_int32 * zero_point_size.value)()
 
         self._check_status(

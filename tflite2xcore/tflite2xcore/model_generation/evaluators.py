@@ -4,7 +4,7 @@ import tensorflow as tf
 import numpy as np
 import larq_compute_engine as lce
 from abc import abstractmethod
-from typing import Union, Type
+from typing import Union
 
 from tflite2xcore.interpreters import XCOREInterpreter, XCOREDeviceInterpreter
 from tflite2xcore.utils import (

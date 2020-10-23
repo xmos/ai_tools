@@ -10,7 +10,6 @@ from tflite2xcore.xcore_schema import (
 )
 
 from .transformation_passes import (
-    OperatorMatchingPass,
     InputTensorMatchingPass,
     OutputTensorMatchingPass,
     QuantizedOperatorMatchingPass,

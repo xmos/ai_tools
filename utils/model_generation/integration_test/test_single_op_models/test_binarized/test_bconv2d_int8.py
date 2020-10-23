@@ -12,7 +12,7 @@ from . import (
     LarqConverter,
 )
 
-from . import (
+from . import (  # pylint: disable=unused-import
     test_reference_model_regression,
     # test_converted_single_op_model,  # TODO: enable this
 )

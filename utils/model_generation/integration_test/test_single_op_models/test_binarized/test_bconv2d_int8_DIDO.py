@@ -6,14 +6,10 @@ pytestmark = pytest.mark.skip  # TODO: remove this
 
 from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes  # type: ignore # TODO: fix this
 
-from . import (
-    BinarizedTestRunner,
-    BConv2dGenericTestModelGenerator,
-    LarqConverter,
-)
+from . import BConv2dGenericTestModelGenerator
 
 from .test_bconv2d_int8 import BConv2dInt8TestRunner
-from . import (
+from . import (  # pylint: disable=unused-import
     test_reference_model_regression,
     # test_converted_single_op_model,  # TODO: enable this
 )

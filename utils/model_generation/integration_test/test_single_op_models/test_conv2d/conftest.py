@@ -2,7 +2,7 @@
 
 import pytest
 
-from tflite2xcore.xcore_model import XCOREModel, BuiltinOpCodes  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_model import BuiltinOpCodes  # type: ignore # TODO: fix this
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES

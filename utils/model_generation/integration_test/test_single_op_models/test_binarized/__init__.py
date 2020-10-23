@@ -148,7 +148,7 @@ class LarqConverter(KerasModelConverter):
 
         pass_mgr.run_passes()
 
-        # TODO: remove this
+        # LCE and builtin interpreter expects an empty buffer in the beginning
         b = model_ir.create_buffer()
         model_ir.buffers.remove(b)
         model_ir.buffers = [b] + model_ir.buffers

@@ -15,7 +15,8 @@ from . import (
 
 from . import (
     test_reference_model_regression,
-    # test_converted_single_op_model,  # TODO: enable this
+    test_converted_single_op_model,
+    test_mean_abs_diffs,
 )
 
 
@@ -53,14 +54,6 @@ class BSignTestRunner(BinarizedTestRunner):
 RUNNER = BSignTestRunner
 
 #  ----------------------------------------------------------------------------
-#                                   CONFIGS
-#  ----------------------------------------------------------------------------
-
-CONFIGS = {  # TODO: generate random configs
-    "default": {0: {"input_channels": 32, "height": 8, "width": 8},},
-}
-
-#  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
 
@@ -73,6 +66,11 @@ def reference_op_code() -> ExternalOpCodes:
 @pytest.fixture  # type: ignore
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_bsign_8
+
+
+@pytest.fixture  # type: ignore
+def mean_abs_diff_tolerance() -> float:
+    return 0.0
 
 
 if __name__ == "__main__":

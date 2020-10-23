@@ -12,6 +12,7 @@ from .. import IntegrationTestRunner  # pylint: disable=unused-import
 from .. import (
     IntegrationTestModelGenerator,
     test_output,
+    test_mean_abs_diffs,
     test_idempotence,
 )
 

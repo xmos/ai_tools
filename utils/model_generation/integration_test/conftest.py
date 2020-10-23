@@ -5,13 +5,20 @@ import logging
 import portalocker
 import pytest
 import _pytest
+import numpy as np
 from pathlib import Path
-from typing import Dict, Type
+from typing import Dict, Type, Optional, Union
 
+from tflite2xcore.utils import dequantize  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation.utils import stringify_config
 
-from . import IntegrationTestRunner, DefaultIntegrationTestRunner
+from . import (
+    IntegrationTestRunner,
+    DefaultIntegrationTestRunner,
+    _compare_batched_arrays,
+    BatchedArrayComparison,
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -175,5 +182,35 @@ def reference_model(run: DefaultIntegrationTestRunner) -> XCOREModel:
 
 
 @pytest.fixture  # type: ignore
-def output_tolerance() -> int:
+def abs_output_tolerance() -> int:
     return 1
+
+
+@pytest.fixture  # type: ignore
+def compared_outputs(
+    run: DefaultIntegrationTestRunner, abs_output_tolerance: Optional[Union[int, float]]
+) -> BatchedArrayComparison:
+    if abs_output_tolerance is None:
+        # use implicitly derived tolerance
+        output_quantization = run._xcore_evaluator.output_quant
+        y_quant = run.outputs.reference_quant
+        y_float = run.outputs.reference_float
+
+        # The implicit tolerance is derived from how much the quantized reference
+        # deviates from the floating point reference.
+        max_diff = np.max(np.abs(dequantize(y_quant, *output_quantization) - y_float))
+        # max_diff is usually at least 1 bit, but we ensure this and add some room for error
+        abs_output_tolerance = max(float(max_diff), output_quantization.scale) * 1.05
+        logging.info(
+            f"Using implicit absolute output tolerance: {abs_output_tolerance}"
+        )
+
+        return _compare_batched_arrays(
+            dequantize(run.outputs.xcore, *output_quantization),
+            run.outputs.reference_float,
+            abs_output_tolerance,
+        )
+    else:
+        return _compare_batched_arrays(
+            run.outputs.xcore, run.outputs.reference_quant, abs_output_tolerance
+        )

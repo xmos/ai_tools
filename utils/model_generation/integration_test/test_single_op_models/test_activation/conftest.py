@@ -16,5 +16,5 @@ def converted_op_code() -> XCOREOpCodes:
 
 
 @pytest.fixture  # type: ignore
-def output_tolerance() -> int:
+def abs_output_tolerance() -> int:
     return 0

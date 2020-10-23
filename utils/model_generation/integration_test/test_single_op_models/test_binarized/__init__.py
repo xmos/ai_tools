@@ -1,12 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+import _pytest
 import larq
 import numpy as np
 import tensorflow as tf
 import larq_compute_engine as lce
 from typing import Optional, Tuple, Type, Any, Union, NamedTuple
 
-from tflite2xcore.utils import get_bitpacked_shape  # type: ignore # TODO: fix this
+from tflite2xcore.utils import get_bitpacked_shape, unpack_bits  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
     Tensor,
     ExternalOpCodes,
@@ -34,6 +35,8 @@ from .. import (
     IntegrationTestRunner,
     test_reference_model_regression,
     test_converted_single_op_model,
+    test_mean_abs_diffs,
+    test_output,
 )
 from ..test_conv2d import Conv2dWordAlignedTestModelGenerator
 

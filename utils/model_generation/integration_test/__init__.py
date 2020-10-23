@@ -19,7 +19,7 @@ from typing import (
     Optional,
 )
 
-from tflite2xcore.utils import dequantize  # type: ignore # TODO: fix this
+from tflite2xcore.utils import unpack_bits  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation import (
     TFLiteModel,
@@ -252,17 +252,14 @@ class IntegrationTestModelGenerator(ModelGenerator):
 
 class FailedElement(NamedTuple):
     idx: Tuple[int, ...]
-    diff: int
-    expected: int
-    predicted: int
+    diff: Union[int, float]
+    expected: Union[int, float]
+    predicted: Union[int, float]
 
 
-def __log_deviations(
-    diff: np.ndarray, level: int, *, ex_idx: Optional[int] = None
-) -> None:
+def __log_deviations(diff: np.ndarray, level: int, *, msg: str) -> None:
     logger = logging.getLogger()
     if logger.isEnabledFor(level):
-        msg = "Total" if ex_idx is None else f"Example {ex_idx}"
         if np.issubdtype(diff.dtype, np.integer):
             devs = [
                 f"{c}/{diff.size} ({c / diff.size:.2%}) with diff={v}"
@@ -283,15 +280,27 @@ def __log_deviations(
         logger.log(level, msg)
 
 
+class BatchedArrayComparison(NamedTuple):
+    failures: Dict[int, List[FailedElement]]
+    mean_abs_diffs: List[float]
+
+
 def _compare_batched_arrays(
-    predicted: np.ndarray, expected: np.ndarray, tolerance: Union[int, float]
-) -> Dict[int, List[FailedElement]]:
+    predicted: np.ndarray,
+    expected: np.ndarray,
+    tolerance: Union[int, float],
+    per_bits: bool = False,
+) -> BatchedArrayComparison:
     assert tolerance >= 0
     assert predicted.shape == expected.shape
 
     output_type = predicted.dtype
     assert output_type == expected.dtype  # NOTE: 'is' operator can be buggy, use ==
-    if np.issubdtype(output_type, np.integer):
+    if per_bits:
+        predicted = unpack_bits(predicted)
+        expected = unpack_bits(expected)
+        diffs = np.bitwise_xor(predicted, expected)
+    elif np.issubdtype(output_type, np.integer):
         diffs = np.int64(predicted) - np.int64(expected)
     elif np.issubdtype(output_type, np.floating):
         tolerance = np.float32(tolerance)
@@ -300,17 +309,21 @@ def _compare_batched_arrays(
         raise TypeError("Only integer and float types are supported")
 
     failures: Dict[int, List[FailedElement]] = {}
+    mean_abs_diffs: List[float] = []
     for j, (arr, arr_ref, diff) in enumerate(zip(predicted, expected, diffs)):
-        __log_deviations(diff, logging.DEBUG, ex_idx=j)
-
-        diff_idx = zip(*np.where(np.abs(diff) > tolerance))
-        failed_examples = [
+        __log_deviations(diff, logging.DEBUG, msg=f"Example {j}")
+        abs_diff = np.abs(diff)
+        diff_idx = zip(*np.where(abs_diff > tolerance))
+        failed_elements = [
             FailedElement(idx, diff[idx], arr_ref[idx], arr[idx]) for idx in diff_idx
         ]
-        if failed_examples:
-            failures[j] = failed_examples
-    __log_deviations(diffs, logging.INFO)
-    return failures
+        if failed_elements:
+            failures[j] = failed_elements
+
+        mean_abs_diffs.append(float(np.mean(abs_diff)))
+
+    __log_deviations(diffs, logging.INFO, msg="Total")
+    return BatchedArrayComparison(failures, mean_abs_diffs)
 
 
 #  ----------------------------------------------------------------------------
@@ -318,56 +331,44 @@ def _compare_batched_arrays(
 #  ----------------------------------------------------------------------------
 
 
-def test_output(
-    run: DefaultIntegrationTestRunner,
-    output_tolerance: Optional[Union[int, float]],
-    request: _pytest.fixtures.SubRequest,
+def test_mean_abs_diffs(
+    compared_outputs: BatchedArrayComparison, mean_abs_diff_tolerance: float
 ) -> None:
-    if output_tolerance is None:
-        # use implicitly derived tolerance
-        output_quantization = run._xcore_evaluator.output_quant
-        y_quant = run.outputs.reference_quant
-        y_float = run.outputs.reference_float
-
-        # The implicit tolerance is derived from how much the quantized reference
-        # deviates from the floating point reference.
-        max_diff = np.max(np.abs(dequantize(y_quant, *output_quantization) - y_float))
-        # max_diff is usually at least 1 bit, but we ensure this and add some room for error
-        output_tolerance = max(float(max_diff), output_quantization.scale) * 1.05
-        logging.info(f"Using implicit output tolerance: {output_tolerance}")
-
-        failures = _compare_batched_arrays(
-            dequantize(run.outputs.xcore, *output_quantization),
-            run.outputs.reference_float,
-            output_tolerance,
-        )
-    else:
-        failures = _compare_batched_arrays(
-            run.outputs.xcore, run.outputs.reference_quant, output_tolerance
-        )
-
-    verbose = request.config.getoption("verbose") > 0
-
-    msg = "".join(
-        f"\n{request.node.fspath}::{request.node.name} Example {j}"
-        + (
-            "".join(
-                f"\nidx={e.idx}: diff={e.diff}, "
-                f"expected={e.expected}, predicted={e.predicted}"
-                for e in elements
-            )
-            if verbose
-            else ""
-        )
-        for j, elements in failures.items()
-    )
-
-    if failures:
+    msg = [
+        f"\nidx={j}: mean_abs_diff={mean_abs_diff} > tolerance={mean_abs_diff_tolerance}"
+        for j, mean_abs_diff in enumerate(compared_outputs.mean_abs_diffs)
+        if mean_abs_diff > mean_abs_diff_tolerance
+    ]
+    if msg:
         pytest.fail(
-            f"The following examples have failed elements: {msg}"
-            + ("" if verbose else "\nSet verbosity > 0 for more details."),
+            f"The following examples have excessive mean deviations:{msg}",
             pytrace=False,
         )
+
+
+def test_output(
+    compared_outputs: BatchedArrayComparison, request: _pytest.fixtures.SubRequest
+) -> None:
+    verbose = request.config.getoption("verbose") > 0
+
+    if compared_outputs.failures:
+        msg = "The following examples have failed elements:"
+        msg += "".join(
+            f"\n{request.node.fspath}::{request.node.name} Example {j}"
+            + (
+                "".join(
+                    f"\nidx={e.idx}: diff={e.diff}, "
+                    f"expected={e.expected}, predicted={e.predicted}"
+                    for e in elements
+                )
+                if verbose
+                else ""
+            )
+            for j, elements in compared_outputs.failures.items()
+        )
+        if not verbose:
+            msg += "\nSet verbosity > 0 for more details."
+        pytest.fail(msg, pytrace=False)
 
 
 def test_idempotence(xcore_model: XCOREModel, run: IntegrationTestRunner) -> None:

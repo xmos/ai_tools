@@ -170,5 +170,10 @@ def xcore_model(run: IntegrationTestRunner) -> XCOREModel:
 
 
 @pytest.fixture  # type: ignore
+def reference_model(run: DefaultIntegrationTestRunner) -> XCOREModel:
+    return XCOREModel.deserialize(run.get_xcore_reference_model())
+
+
+@pytest.fixture  # type: ignore
 def output_tolerance() -> int:
     return 1

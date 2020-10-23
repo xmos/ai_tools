@@ -225,7 +225,7 @@ def quantize(
     dtype: Union[type, "np.dtype"] = np.int8,
 ) -> np.ndarray:
     t = np.round(np.float32(arr) / np.float32(scale)).astype(np.int32) + zero_point
-    return dtype(np.clip(t, np.iinfo(dtype).min, np.iinfo(dtype).max))
+    return np.clip(t, np.iinfo(dtype).min, np.iinfo(dtype).max).astype(dtype)
 
 
 def dequantize(arr: np.ndarray, scale: float, zero_point: int) -> np.ndarray:
@@ -245,6 +245,8 @@ def quantize_converter(
 ) -> None:
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+    converter.inference_input_type = tf.int8
+    converter.inference_output_type = tf.int8
     x_train_ds = tf.data.Dataset.from_tensor_slices(representative_data).batch(1)
 
     def representative_data_gen() -> Iterator[List[tf.Tensor]]:
@@ -342,3 +344,8 @@ def calculate_same_padding(
 
     return tuple(calc_axis_pad(*t) for t in zip(input_size, strides, kernel_size))
 
+
+def get_bitpacked_shape(input_shape: Tuple[int, ...]) -> Tuple[int, ...]:
+    channels = input_shape[-1]
+    assert channels % 32 == 0
+    return (*input_shape[:-1], channels // 32)

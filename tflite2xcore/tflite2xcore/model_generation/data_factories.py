@@ -16,9 +16,15 @@ class DataFactory(RunnerDependent):
 
 
 class InitializerDataFactory(DataFactory):
-    def __init__(self, runner: Runner, shape_hook: Hook[Tuple[int, ...]]):
+    def __init__(
+        self,
+        runner: Runner,
+        shape_hook: Hook[Tuple[int, ...]],
+        dtype: tf.dtypes.DType = tf.float32,
+    ):
         super().__init__(runner)
         self._shape_hook = shape_hook
+        self._dtype = dtype
 
     @property
     @abstractmethod
@@ -30,7 +36,7 @@ class InitializerDataFactory(DataFactory):
         if batch is not None:
             shape = (batch, *shape)
 
-        return self.initializer(shape)
+        return self.initializer(shape, dtype=self._dtype)
 
 
 class InputInitializerDataFactory(InitializerDataFactory):

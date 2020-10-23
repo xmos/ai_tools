@@ -15,6 +15,13 @@ BuiltinOpCodes = enum.Enum(
 
 
 class ExternalOpCodes(aenum.Enum):
+    def _generate_next_value_(name: str, *_) -> str:  # pylint: disable=no-self-argument
+        return name
+
+    LceQuantize = aenum.auto()
+    LceBconv2d = aenum.auto()
+    LceDequantize = aenum.auto()
+
     @classmethod
     def add_new_opcode(cls, name: str) -> "ExternalOpCodes":
         assert name.isidentifier()
@@ -25,25 +32,23 @@ class ExternalOpCodes(aenum.Enum):
             return cls[name]
 
 
-ExternalOpCodes.add_new_opcode("LceQuantize")
-ExternalOpCodes.add_new_opcode("LceBconv2d")
-ExternalOpCodes.add_new_opcode("LceDequantize")
-
-
 class XCOREOpCodes(enum.Enum):
-    XC_lookup_8 = "XC_lookup_8"
-    XC_argmax_16 = "XC_argmax_16"  # currently not used by any passes
-    XC_maxpool2d = "XC_maxpool2d"
-    XC_avgpool2d = "XC_avgpool2d"
-    XC_avgpool2d_global = "XC_avgpool2d_global"
-    XC_fc = "XC_fc"
-    XC_requantize_16_to_8 = "XC_requantize_16_to_8"  # currently unused
-    XC_conv2d_shallowin = "XC_conv2d_shallowin"
-    XC_conv2d_deep = "XC_conv2d_deep"
-    XC_conv2d_1x1 = "XC_conv2d_1x1"
-    XC_conv2d_depthwise = "XC_conv2d_depthwise"
-    XC_bsign_8 = "XC_bsign_8"
-    XC_bconv2d_int8 = "XC_bconv2d_int8"
-    XC_bconv2d_int8_DIDO = "XC_bconv2d_int8_DIDO"
-    XC_bconv2d_bin = "XC_bconv2d_bin"
-    XC_bconv2d_bin_DI = "XC_bconv2d_bin_DI"
+    def _generate_next_value_(name: str, *_) -> str:  # pylint: disable=no-self-argument
+        return name
+
+    XC_lookup_8 = enum.auto()
+    XC_argmax_16 = enum.auto()  # currently not used by any passes
+    XC_maxpool2d = enum.auto()
+    XC_avgpool2d = enum.auto()
+    XC_avgpool2d_global = enum.auto()
+    XC_fc = enum.auto()
+    XC_requantize_16_to_8 = enum.auto()  # currently unused
+    XC_conv2d_shallowin = enum.auto()
+    XC_conv2d_deep = enum.auto()
+    XC_conv2d_1x1 = enum.auto()
+    XC_conv2d_depthwise = enum.auto()
+    XC_bsign_8 = enum.auto()
+    XC_bconv2d_int8 = enum.auto()
+    XC_bconv2d_int8_DIDO = enum.auto()
+    XC_bconv2d_bin = enum.auto()
+    XC_bconv2d_bin_DI = enum.auto()

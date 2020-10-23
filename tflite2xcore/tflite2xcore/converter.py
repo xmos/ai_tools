@@ -28,7 +28,6 @@ class InputOutputCanonicalizationManager(PassManager):
             passes=[
                 passes.CanonicalizeQuantizedInputPass(),
                 passes.CanonicalizeQuantizedOutputPass(),
-                passes.CanonicalizeLceQuantizedOutputPass(),
             ],
             **kwargs,
         )

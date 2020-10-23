@@ -98,7 +98,7 @@ class BConv2dGenericTestModelGenerator(LarqCompositeTestModelGenerator):
 #  ----------------------------------------------------------------------------
 
 
-class RemoveSingleOutputOperatorPass(OutputTensorMatchingPass):
+class RemoveSingleOutputOperatorPass(OutputTensorMatchingPass):  # type: ignore # TODO: fix this
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._done = False

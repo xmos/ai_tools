@@ -93,6 +93,8 @@ TestOpsResolver::TestOpsResolver() {
             tflite::ops::micro::xcore::Register_Lookup_8());
   AddCustom(tflite::ops::micro::xcore::MaxPool2D_OpCode,
             tflite::ops::micro::xcore::Register_MaxPool2D());
+  AddCustom(tflite::ops::micro::xcore::Bsign_8_OpCode,
+            tflite::ops::micro::xcore::Register_BSign_8());
 }
 
 }  // namespace tflite

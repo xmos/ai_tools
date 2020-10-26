@@ -12,7 +12,6 @@ from tflite2xcore.utils import (
 )
 from tflite2xcore.xcore_schema import (
     Operator,
-    Tensor,
     Padding,
     TensorType,
     ExternalOpCodes,

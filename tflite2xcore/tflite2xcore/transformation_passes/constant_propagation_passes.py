@@ -6,7 +6,7 @@ from copy import deepcopy
 from typing import Iterable
 
 from tflite2xcore.xcore_schema import BuiltinOpCodes
-from tflite2xcore.xcore_model import XCOREModel, Operator, Subgraph, Tensor
+from tflite2xcore.xcore_model import XCOREModel, Operator, Tensor
 
 from .transformation_passes import OperatorMatchingPass
 

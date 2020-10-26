@@ -5,7 +5,6 @@ import numpy as np
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
-from tflite2xcore.xcore_model import Tensor
 from tflite2xcore.xcore_schema import TensorType, OperatorCode
 from tflite2xcore.utils import ACC_PERIOD, format_array
 

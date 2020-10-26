@@ -8,10 +8,15 @@ from tflite2xcore.model_generation import Configuration
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import XCOREOpCodes, ValidOpCodes  # type: ignore # TODO: fix this
 
-from .. import IntegrationTestRunner  # pylint: disable=unused-import
+from .. import (  # pylint: disable=unused-import
+    IntegrationTestRunner,
+    _compare_batched_arrays,
+    BatchedArrayComparison,
+)
 from .. import (
     IntegrationTestModelGenerator,
     test_output,
+    test_mean_abs_diffs,
     test_idempotence,
 )
 

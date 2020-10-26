@@ -2,7 +2,7 @@
 
 import pytest
 
-from tflite2xcore.xcore_schema import XCOREModel, BuiltinOpCodes
+from tflite2xcore.xcore_schema import XCOREModel, BuiltinOpCodes  # type: ignore # TODO: fix this
 
 from ..test_conv2d import Conv2dTestModelGenerator
 from . import FusedCustomReluMixin
@@ -33,7 +33,7 @@ GENERATOR = CustomReluConv2dTestModelGenerator
 
 
 @pytest.fixture  # type: ignore
-def output_tolerance() -> None:
+def abs_output_tolerance() -> None:
     return
 
 

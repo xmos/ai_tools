@@ -55,7 +55,7 @@ CONFIGS = {
 
 
 @pytest.fixture  # type: ignore
-def output_tolerance() -> None:
+def abs_output_tolerance() -> None:
     return
 
 

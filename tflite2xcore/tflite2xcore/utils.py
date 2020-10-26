@@ -218,6 +218,19 @@ class LoggingContext:
             self.handler.close()
 
 
+# -----------------------------------------------------------------------------
+#                          QUANTIZATION HELPERS
+# -----------------------------------------------------------------------------
+
+
+def unpack_bits(arr: np.ndarray) -> np.ndarray:
+    assert arr.dtype == np.int32
+    unpacked_shape = (*arr.shape[:-1], arr.shape[-1] * 32)
+    return np.unpackbits(  # pylint: disable=no-member
+        np.fromstring(arr.tostring(), dtype=np.uint8)
+    ).reshape(unpacked_shape)
+
+
 def quantize(
     arr: np.ndarray,
     scale: float,
@@ -302,7 +315,7 @@ def quantize_keras_model(
     quantize_converter(
         converter, representative_data, show_progress_step=show_progress_step
     )
-    return converter.convert()
+    return converter.convert()  # type: ignore
 
 
 # -----------------------------------------------------------------------------

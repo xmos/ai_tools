@@ -162,7 +162,7 @@ void requantize_16_to_8(
 /**
  * Struct represents the parameters needed by each `bsign_8()` job.
  * 
- * Values are set by `bsign_8_init()`.
+ * Values are set by `bsign_8_prepare()`.
  * 
  * @note This struct is intended to be opaque.
  */
@@ -205,7 +205,7 @@ typedef struct {
  * @param[in]  zero_point   The value @math{z_0} to be used for padding (for all channels)
  * @param job_count [in]    The number of jobs to be initialized.
  */
-void bsign_8_init(
+void bsign_8_prepare(
     nn_bsign_8_plan_t* plan,
     nn_bsign_8_job_t* jobs,
     const uint32_t N,
@@ -218,7 +218,7 @@ void bsign_8_init(
  * See @oper_ref{bsign_8} for more details about the @oper{requantize_16_to_8} operator.
  * 
  * An instance of the @oper{bsign_8} operator requires an job (but no plan is required). See 
- * bsign_8_init() for more details.
+ * bsign_8_prepare() for more details.
  * 
  * `Y` points to the output vector @tensor{y} with length @math{N}. The address supplied for `Y` should be the start 
  * address of the output vector (for any job being processed).
@@ -236,13 +236,13 @@ void bsign_8_init(
  * @param job [in]     The @oper{bsign_8} job to be processed
  */
 void bsign_8(
-    uint32_t* Y,
+    bnn_b32_t* Y,
     const int8_t* X,
     const nn_bsign_8_plan_t* plan,
     const nn_bsign_8_job_t* job);
 
 void bsign_8_ref(
-    uint32_t* Y,
+    bnn_b32_t* Y,
     const int8_t* X,
     const nn_bsign_8_plan_t* plan,
     const nn_bsign_8_job_t* job);

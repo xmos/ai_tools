@@ -45,7 +45,7 @@ void run_bsign_test(int8_t* x, size_t inputLength, int8_t zeroPoint, size_t jobC
     nn_bsign_8_job_t jobs[MAX_JOBS];
     nn_bsign_8_plan_t plan;
 
-    bsign_8_init(&plan, jobs, inputLength, zeroPoint, jobCount);
+    bsign_8_prepare(&plan, jobs, inputLength, zeroPoint, jobCount);
 
     /* Compare our reference implementation against the (external) golden reference) */
     for(int i = 0; i < jobCount; i++)

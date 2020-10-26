@@ -1,4 +1,5 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
+
 import os
 import signal
 import socket
@@ -9,9 +10,7 @@ import subprocess
 import atexit
 import re
 import logging
-
 import portalocker
-import numpy as np
 from pathlib import Path
 
 from .exceptions import (

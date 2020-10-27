@@ -200,6 +200,14 @@ class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
 
 class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
     @property
+    def matching_input_type(self) -> TensorType:
+        return TensorType.INT32
+
+    @property
+    def matching_output_type(self) -> TensorType:
+        return TensorType.INT32
+
+    @property
     def matching_opcode(self) -> XCOREOpCodes:
         return XCOREOpCodes.XC_bconv2d_bin
 
@@ -211,7 +219,9 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
     @property
     def _overlap_size(self) -> int:
         return (
-            VECTOR_SIZE_WORDS - 1 - (self._kernel_channel_size - 1) % VECTOR_SIZE_WORDS
+            VECTOR_SIZE_WORDS
+            - 1
+            - (self._kernel_channel_size // WORD_SIZE_BITS - 1) % VECTOR_SIZE_WORDS
         )
 
     def mutate_weights(self, op: Operator) -> None:

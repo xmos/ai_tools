@@ -219,7 +219,7 @@ class LoggingContext:
 
 
 # -----------------------------------------------------------------------------
-#                          QUANTIZATION HELPERS
+#                          BINARY OPERATION HELPERS
 # -----------------------------------------------------------------------------
 
 
@@ -227,8 +227,18 @@ def unpack_bits(arr: np.ndarray) -> np.ndarray:
     assert arr.dtype == np.int32
     unpacked_shape = (*arr.shape[:-1], arr.shape[-1] * 32)
     return np.unpackbits(  # pylint: disable=no-member
-        np.fromstring(arr.tostring(), dtype=np.uint8)
+        np.frombuffer(arr.tostring(), dtype=np.uint8)
     ).reshape(unpacked_shape)
+
+
+def xor_popcount(a: np.ndarray, b: np.ndarray) -> int:
+    assert a.dtype == b.dtype == np.int32
+    return np.count_nonzero(unpack_bits(np.bitwise_xor(a, b)))  # type: ignore
+
+
+# -----------------------------------------------------------------------------
+#                          QUANTIZATION HELPERS
+# -----------------------------------------------------------------------------
 
 
 def quantize(

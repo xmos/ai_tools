@@ -4,8 +4,9 @@ import logging
 import numpy as np
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
+from typing import Optional
 
-from tflite2xcore.xcore_schema import TensorType, OperatorCode
+from tflite2xcore.xcore_schema import TensorType, OperatorCode, Operator
 from tflite2xcore.utils import ACC_PERIOD, format_array
 
 
@@ -94,6 +95,8 @@ class SubgraphTransformationPass(SubgraphPass):
 
 
 class OperatorMatchingPass(SubgraphTransformationPass):
+    _op: Operator
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._op = None

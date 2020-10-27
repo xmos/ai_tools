@@ -3,9 +3,8 @@
 import pytest
 import tensorflow as tf
 
-pytestmark = pytest.mark.skip  # TODO: remove this
-
 from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes  # type: ignore # TODO: fix this
+from tflite2xcore.model_generation import Configuration
 
 from . import BConv2dGenericTestModelGenerator
 
@@ -13,7 +12,8 @@ from .test_bconv2d_bin import BConv2dBitpackedTestRunner
 
 from . import (  # pylint: disable=unused-import
     test_reference_model_regression,
-    # test_converted_single_op_model,  # TODO: enable this
+    test_converted_single_op_model,
+    test_mean_abs_diffs,  # TODO: enable this
 )
 
 
@@ -23,6 +23,10 @@ from . import (  # pylint: disable=unused-import
 
 
 class BConv2dBitpackedDeepInTestModelGenerator(BConv2dGenericTestModelGenerator):
+    def _set_config(self, cfg: Configuration) -> None:
+        cfg.setdefault("padding", "valid")
+        super()._set_config(cfg)
+
     def check_config(self) -> None:
         super().check_config()
         assert (

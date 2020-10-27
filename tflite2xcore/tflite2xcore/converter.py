@@ -125,6 +125,9 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.ReplaceDepthwiseConv2dPass())
     pass_mgr.register_pass(passes.ReplaceDeepConv2dPass())
 
+    pass_mgr.register_pass(passes.ReplaceBconv2DBitpackedDeepInPass())
+    pass_mgr.register_pass(passes.ReplaceBconv2DBitpackedPass())
+
     pass_mgr.register_pass(passes.ReplaceMaxPool2D2x2Pass())
     pass_mgr.register_pass(passes.ReplaceMaxPool2DPass())
     pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())
@@ -139,6 +142,9 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeXCShallowinConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
+    pass_mgr.register_pass(passes.LegalizeXCBconv2DPaddingPass())
+    pass_mgr.register_pass(passes.LegalizeBconv2dBitpackedDeepInPass())
+    pass_mgr.register_pass(passes.LegalizeBconv2dBitpackedPass())
 
     # Split batch/channel-wise padding from spatial padding
     pass_mgr.register_pass(passes.SplitPaddingPass())

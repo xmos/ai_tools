@@ -14,7 +14,7 @@ from .transformation_passes import SubgraphAnalysisPass
 
 class ReplaceAddPass(SubgraphAnalysisPass):
     def match(self, op: Operator) -> bool:
-        return super().match(op) and op is BuiltinOpCodes.ADD
+        return super().match(op) and op.operator_code is BuiltinOpCodes.ADD
 
     def target_iterable(self, subgraph: Subgraph) -> Iterable[Operator]:
         return subgraph.operators
@@ -25,5 +25,5 @@ class ReplaceAddPass(SubgraphAnalysisPass):
     def run_subgraph(self, subgraph: Subgraph) -> int:
         super().run_subgraph(subgraph)
         if self._num_matches:
-            self.logger.warning(f"Floating Point Tensors Found: {self._num_matches}")
+            self.logger.warning(f"ADD Operator Found: {self._num_matches}")
         return 0

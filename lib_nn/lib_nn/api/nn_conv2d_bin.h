@@ -53,13 +53,15 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
  * @param post_activation_bias_q_reordered         [out]    The output @tensor{post_activation_bias_q_reordered}
  * @param post_activation_bias_q                   [in]     The input @tensor{post_activation_bias_q}
  * @param chans_out                                [in]     The number of output channels
+ * @param chan_overlaps                            [in]     Array of the overlap between one channel and the next
  */
 void bnn_reorder_multiplier_and_bias_tensors(
                                   int16_t* post_activation_multiplier_q_reordered,
                                   const int16_t* post_activation_multiplier_q,
                                   int16_t* post_activation_bias_q_reordered,
                                   const int16_t* post_activation_bias_q,
-                                  const unsigned chans_out);
+                                  const unsigned chans_out,
+                                  int *chan_overlaps);
 
 /**  
  * @brief Execute @oper{bnn_reorder_kernel_tensor}.
@@ -85,6 +87,7 @@ void bnn_reorder_multiplier_and_bias_tensors(
  * @param k_width     [in]     The kernel width
  * @param chans_in    [in]     The number of input channels
  * @param chans_out   [in]     The number of output channels
+ * @param chan_overlaps   [in]     Array of the overlap between one channel and the next
  */
 void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,

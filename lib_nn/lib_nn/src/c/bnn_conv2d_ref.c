@@ -57,32 +57,6 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
   }
 }
 
-void bnn_reorder_multiplier_and_bias_tensors(
-                                  int16_t* post_activation_multiplier_q_reordered,
-                                  const int16_t* post_activation_multiplier_q,
-                                  int16_t* post_activation_bias_q_reordered,
-                                  const int16_t* post_activation_bias_q,
-                                  const unsigned chans_out) {
-
-  for (unsigned b=0;b < chans_out/16;b++){
-    for(unsigned i=0;i<VPU_INT16_ACC_PERIOD;i++){
-
-      unsigned interleaved_oc;
-      if (i<(VPU_INT16_ACC_PERIOD/2)){
-        interleaved_oc = (2*i) + 1;
-      } else{
-        interleaved_oc = 2*(i-(VPU_INT16_ACC_PERIOD/2));
-      }
-
-      post_activation_multiplier_q_reordered[b*VPU_INT16_ACC_PERIOD + i] = 
-        post_activation_multiplier_q[b*VPU_INT16_ACC_PERIOD + interleaved_oc];
-      post_activation_bias_q_reordered[b*VPU_INT16_ACC_PERIOD + i] = 
-        post_activation_bias_q[b*VPU_INT16_ACC_PERIOD + interleaved_oc];
-    }
-
-  }
-}
-
 void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
@@ -94,8 +68,8 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
 
   unsigned remainder_32_word_groups = ((chans_in*k_height*k_width) - complete_256_bit_groups*XS3_VPU_VREG_WIDTH_BITS) / 32;
 
-  const unsigned outputs_per_b32 = 32;
-  unsigned chan_b32_in = (chans_in + outputs_per_b32 - 1) / outputs_per_b32;
+  const unsigned inputs_per_b32 = 32;
+  unsigned chan_b32_in = (chans_in + inputs_per_b32 - 1) / inputs_per_b32;
 
   bnn_b32_t(*K_ref)[k_height*k_width*chan_b32_in] =
       (bnn_b32_t(*)[k_height*k_width*chan_b32_in])K_ref_p;
@@ -192,8 +166,8 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
 
   unsigned remainder_32_word_groups = ((chans_in*k_height*k_width) - complete_256_bit_groups*XS3_VPU_VREG_WIDTH_BITS) / 32;
 
-  const unsigned outputs_per_b32 = 32;
-  unsigned chan_b32_in = (chans_in + outputs_per_b32 - 1) / outputs_per_b32;
+  const unsigned inputs_per_b32 = 32;
+  unsigned chan_b32_in = (chans_in + inputs_per_b32 - 1) / inputs_per_b32;
 
   bnn_b32_t(*K_ref)[k_height*k_width*chan_b32_in] =
       (bnn_b32_t(*)[k_height*k_width*chan_b32_in])K_ref_p;
@@ -202,7 +176,6 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
   unsigned output_channel_groups = chans_out / VPU_INT16_ACC_PERIOD;
 
   unsigned remaining_input_channels = ((chans_in*k_height*k_width) % XS3_VPU_VREG_WIDTH_BITS)/32;
-
 
   bnn_b32_t(*K)[chans_out*((8*complete_256_bit_groups) + remaining_input_channels)] =
       (bnn_b32_t(*)[chans_out * ((8*complete_256_bit_groups) + remaining_input_channels)])K_p;
@@ -217,15 +190,9 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
       //each group is of VPU_INT16_ACC_PERIOD channels 
       for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
 
-        unsigned interleaved_oc = sub_grp_idx;
-        // if (sub_grp_idx&1) {
-        //   interleaved_oc = sub_grp_idx/2;
-        // } else{
-        //   interleaved_oc = (VPU_INT16_ACC_PERIOD/2) + (sub_grp_idx/2);
-        // }
-
+        unsigned reversed_channel_order  = VPU_INT16_ACC_PERIOD - 1 - sub_grp_idx;
         memcpy(p,
-          &K_ref[output_chan_group * VPU_INT16_ACC_PERIOD + interleaved_oc][8*ic_group],
+          &K_ref[output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order][8*ic_group],
           sizeof(bnn_b32_t) * 8);
         p += 8;
       }
@@ -282,45 +249,8 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
       }   
     }
   }
-
 }
-void bnn_reorder_int8_kernel_tensor_old(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
-                               const unsigned k_height, const unsigned k_width,
-                               const unsigned chans_in,
-                               const unsigned chans_out) {
-  unsigned chan_b256_in =
-      (chans_in + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
 
-  const bnn_b256_t(*K_ref)[k_height][k_width][chan_b256_in] =
-      (const bnn_b256_t(*)[k_height][k_width][chan_b256_in])K_ref_p;
-
-  bnn_b256_t(*K)[k_height][k_width][chan_b256_in][VPU_INT16_ACC_PERIOD] =
-      (bnn_b256_t(*)[k_height][k_width][chan_b256_in][VPU_INT16_ACC_PERIOD])K_p;
-
-  for (unsigned output_chan_group = 0; output_chan_group < chans_out / VPU_INT16_ACC_PERIOD; 
-      output_chan_group++) {
-    for (unsigned h = 0; h < k_height; h++) {
-      for (unsigned w = 0; w < k_width; w++) {
-        for (unsigned ic = 0; ic < chan_b256_in; ic++) {
-          for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
-
-            //This is to compensate for the way the asm interleaves the 
-            //upper and lower 8 outputs.
-            unsigned interleaved_oc;
-            if (sub_grp_idx < (VPU_INT16_ACC_PERIOD/2)) {
-              interleaved_oc = (2*sub_grp_idx) + 1;
-            } else{
-              interleaved_oc = 2*(sub_grp_idx - (VPU_INT16_ACC_PERIOD/2));
-            }
-            memcpy(& K[output_chan_group][h][w][ic][VPU_INT16_ACC_PERIOD - 1 - sub_grp_idx], 
-              & K_ref[output_chan_group * VPU_INT16_ACC_PERIOD + interleaved_oc][h][w][ic], 
-              sizeof(bnn_b256_t));
-          }
-        }
-      }
-    }
-  }
-}
 
 WEAK_FUNC
 void bnn_conv2d_bin_out_SISO(bnn_b32_t* Y_p,

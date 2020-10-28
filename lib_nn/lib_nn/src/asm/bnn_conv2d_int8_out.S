@@ -1,5 +1,52 @@
 #if defined(__XS3A__)
 
+.section        .cp.const32,"aMc",@progbits,32
+.cc_top VECT_INT16_MAX.data
+.align 4
+VECT_INT16_MAX:
+.word    0x7f007f00
+.word    0x7f007f00
+.word    0x7f007f00
+.word    0x7f007f00
+.word    0x7f007f00
+.word    0x7f007f00
+.word    0x7f007f00
+.word    0x7f007f00
+.cc_bottom VECT_INT16_MAX.data
+.text
+
+.section        .cp.const32,"aMc",@progbits,32
+.cc_top VECT_ZEROS.data
+.align 4
+VECT_ZEROS:
+.word    0x00000000
+.word    0x00000000
+.word    0x00000000
+.word    0x00000000
+.word    0x00000000
+.word    0x00000000
+.word    0x00000000
+.word    0x00000000
+.cc_bottom VECT_ZEROS.data
+.text
+
+.section        .cp.const32,"aMc",@progbits,32
+.cc_top VECT_INT8_MIN.data
+.align 4
+VECT_INT8_MIN:
+.word    0x80808080
+.word    0x80808080
+.word    0x80808080
+.word    0x80808080
+.word    0x80808080
+.word    0x80808080
+.word    0x80808080
+.word    0x80808080
+.cc_bottom VECT_INT8_MIN.data
+.text
+
+
+
 .issue_mode  dual
 
 //Plan layout
@@ -99,27 +146,16 @@
 #define S_TEMP_7 41
 
 //doesn't have to be double work aligned
-#define S_ZERO_0 42
-#define S_ZERO_1 43 
-#define S_ZERO_2 44
-#define S_ZERO_3 45
-#define S_ZERO_4 46
-#define S_ZERO_5 47
-#define S_ZERO_6 48
-#define S_ZERO_7 49
+#define S_VLSAT_0 42
+#define S_VLSAT_1 43 
+#define S_VLSAT_2 44
+#define S_VLSAT_3 45
+#define S_VLSAT_4 46
+#define S_VLSAT_5 47
+#define S_VLSAT_6 48
+#define S_VLSAT_7 49
 
-//doesn't have to be double work aligned
-#define S_VLSAT_0 50
-#define S_VLSAT_1 51 
-#define S_VLSAT_2 52
-#define S_VLSAT_3 53
-#define S_VLSAT_4 54
-#define S_VLSAT_5 55
-#define S_VLSAT_6 56
-#define S_VLSAT_7 57
-
-
-#define NSTACKWORDS  64 //58!
+#define NSTACKWORDS  70 //50!
 
 //Helpers that reference the above
 #define S_X_p_S_OUTER_X_H_STEP (S_X_p/2)                        //1
@@ -136,7 +172,6 @@
 #define S_FINAL_SHR_MASK (S_FINAL_SHR/2)                        //10
 #define S_PA_MUL_p_PA_BIAS_p (S_PA_MUL_p/2)                     //11
 
-#define S_ZERO S_ZERO_0
 #define S_TEMP S_TEMP_0
 
 //Registers
@@ -155,7 +190,7 @@
 #define s                 r10
 #define t                 r11
 .align 4
-bnn_make_16_bit_output:
+bnn_make_16_channel_output:
 
     {vclrdr; nop}
 
@@ -261,9 +296,6 @@ FUNCTION_NAME:
     stw t, sp[S_VLSAT_6]
     stw t, sp[S_VLSAT_7]
 
-    //Set up the zeros (and clear the over write from the vector copy)
-    {vclrdr; ldaw r, sp[S_ZERO]}
-    {vstr r[0];nop}
 
     bnn_h_loop:
 
@@ -279,7 +311,7 @@ FUNCTION_NAME:
             bnn_oc_loop: // This loops over (output_channels/16)
             
                 {ldw X_p, sp[S_X_p]; }
-                {bl bnn_make_16_bit_output ; nop }
+                {bl bnn_make_16_channel_output ; nop }
 
                 //TODO clamping would go here
 
@@ -295,19 +327,29 @@ FUNCTION_NAME:
                 {vladd t[0]; add t, t, r_256_bits}
                 std t, s, sp[S_CUR_PA_MUL_p_CUR_PA_BIAS_p]
 
-                {nop; ldaw r, sp[S_TEMP]}
-                ldd s, t, sp[S_FINAL_SHR_MASK]
+                {nop; ldaw s, sp[S_TEMP]}
+                ldw t, sp[S_FINAL_SHR] //this could load the address of S_TEMP too
                 //Shift the scaled, biased accumulator left, rounding will happen, 8 bit clamping will not.
-                {vstr r[0]; nop}        //shift left
-                vlashr r[0], t         
+                {vstr s[0]; nop}        //shift left
+                vlashr s[0], t  
 
-                {ldc r, 8; ldaw t, sp[S_ZERO]}
-                vstrpv t[0], s  //0xaaaaaaaa
-                {ldaw t, sp[S_ZERO_4]; shr s, s, 16}
-                vstrpv Y_p[0], s  
-                vlashr t[0], r
-                {shr s, s, 1; nop}
-                vstrpv Y_p[0], s 
+                {ldaw t, cp[VECT_INT16_MAX]}
+                {vstr s[0]; nop}
+                {vladd t[0]; nop}
+                {vdepth1; mkmsk t, 16}
+
+                vstrpv Y_p[0], t //let's use Y_p as we have it avaliable and we're going to write to it later anyway
+
+                {ldaw t, cp[VECT_INT8_MIN]}
+                {ldw s, Y_p[0]; nop}
+                {vldr t[0]; mkmsk t, 16}
+                vstrpv Y_p[0], t
+
+                {ldaw t, sp[S_TEMP]}
+                {vldr t[0]; mkmsk t, 16}
+                {vdepth8; andnot t, s}
+                vstrpv Y_p[0], t
+
                 ldaw Y_p, Y_p[4]
 
             {bt oc_loop_counter, bnn_oc_loop; sub oc_loop_counter, oc_loop_counter, 1}

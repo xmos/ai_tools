@@ -9,21 +9,22 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
 )
 
-from .transformation_passes import SubgraphAnalysisPass
+from .transformation_passes import QuantizedOperatorMatchingPass
 
 
-class ReplaceAddPass(SubgraphAnalysisPass):
-    def match(self, op: Operator) -> bool:
-        return super().match(op) and op.operator_code is BuiltinOpCodes.ADD
+class ReplaceAddPass(QuantizedOperatorMatchingPass):
+    def mutate(self, obj):
+        pass
 
-    def target_iterable(self, subgraph: Subgraph) -> Iterable[Operator]:
-        return subgraph.operators
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.ADD
 
-    def log_match(self, op: Operator) -> None:
-        self.logger.info(f"ADD Operator: {op}")
-
-    def run_subgraph(self, subgraph: Subgraph) -> int:
-        super().run_subgraph(subgraph)
-        if self._num_matches:
-            self.logger.warning(f"ADD Operator Found: {self._num_matches}")
-        return 0
+    def match(self, op):
+        return (
+            super().match(op)
+            and len(op.inputs) == 2
+            and op.inputs[0].type is self.matching_input_type
+            and op.inputs[0].type == op.inputs[1].type == op.outputs[0].type
+            and op.inputs[0].shape == op.inputs[1].shape == op.outputs[0].shape
+        )

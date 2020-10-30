@@ -210,6 +210,24 @@ void VLMACCR(
     }
 }
 
+void VLMACCR1(
+    xs3_vpu* vpu,
+    const void* addr)
+{
+
+    const int32_t* addr32 = (const int32_t*) addr;
+    int64_t acc = get_accumulator(vpu, VPU_BIN_ACC_PERIOD-1);
+    
+    for(int i = 0; i < VPU_INT32_EPV; i++){
+        int v = (((int32_t)vpu->vC.s32[i]) ^ addr32[i]);
+        acc += (2*__builtin_popcount(~v) - 32)/2; 
+    }
+
+    acc = saturate(acc, 32);
+    rotate_accumulators(vpu);
+    set_accumulator(vpu, 0, acc);
+}
+
 void VLSAT(
     xs3_vpu* vpu,
     const void* addr)
@@ -333,6 +351,37 @@ void VLADD(
     }
 }
 
+void VLMUL(
+    xs3_vpu* vpu, 
+    const void* addr)
+{
+    if(vpu->mode == MODE_S8){
+        const int8_t* addr8 = (const int8_t*) addr;
+        for(int i = 0; i < VPU_INT8_EPV; i++){
+            int32_t val = addr8[i];
+            int32_t res = ((int32_t)vpu->vR.s8[i] * val)>>6;//TODO use macros
+            vpu->vR.s8[i] = saturate(res, 8);
+        }
+    } else if(vpu->mode == MODE_S16){
+        const int16_t* addr16 = (const int16_t*) addr;
+
+        for(int i = 0; i < VPU_INT16_EPV; i++){
+            int64_t val = addr16[i];
+            int64_t res = ((int64_t)vpu->vR.s16[i] * (int64_t)val) >> 14;//TODO use macros
+            vpu->vR.s16[i] = saturate(res, 16);
+        }
+    } else if(vpu->mode == MODE_S32){
+        const int32_t* addr32 = (const int32_t*) addr;
+
+        for(int i = 0; i < VPU_INT32_EPV; i++){
+            int64_t val = addr32[i];
+            int64_t res = (vpu->vR.s32[i] * val) >> 30; //TODO use macros
+            vpu->vR.s32[i] = saturate(res, 32);
+        }
+    } else { 
+        assert(0); //How'd this happen?
+    }
+}
 
 
 

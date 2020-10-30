@@ -151,6 +151,7 @@ enum {
  * VLMACC instruction.
  */
 enum {
+    VPU_BIN_ACC_PERIOD  = 16,     /**< 16 */
     VPU_INT8_ACC_PERIOD  = 16,    /**< 16 */
     VPU_INT16_ACC_PERIOD = 16,    /**< 16 */
     VPU_INT32_ACC_PERIOD =  8,    /**< 8 */

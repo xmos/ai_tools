@@ -6,6 +6,11 @@ from .xcore_device import XCOREDeviceServer
 
 from . import MAX_DEVICE_MODEL_CONTENT_SIZE, MAX_DEVICE_TENSOR_ARENA_SIZE
 
+from .exceptions import (
+    ModelSizeError,
+    ArenaSizeError,
+)
+
 
 class XCOREDeviceInterpreter(XCOREInterpreter):
     def __init__(
@@ -16,14 +21,14 @@ class XCOREDeviceInterpreter(XCOREInterpreter):
     ):
         # verify model content size is not too large
         if len(model_content) > MAX_DEVICE_MODEL_CONTENT_SIZE:
-            raise ValueError(
+            raise ModelSizeError(
                 f"model_content too large: {len(model_content)} "
                 f"> {MAX_DEVICE_MODEL_CONTENT_SIZE} bytes"
             )
 
         # verify max_tensor_arena_size is not too large
         if max_tensor_arena_size > MAX_DEVICE_TENSOR_ARENA_SIZE:
-            raise ValueError(
+            raise ArenaSizeError(
                 f"max_tensor_arena_size too large: {len(max_tensor_arena_size)} "
                 f"> {MAX_DEVICE_TENSOR_ARENA_SIZE} bytes"
             )

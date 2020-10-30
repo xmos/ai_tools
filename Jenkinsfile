@@ -48,7 +48,7 @@ pipeline {
                     userRemoteConfigs: [[credentialsId: 'xmos-bot',
                                          url: 'git@github.com:xmos/ai_tools']]
                 ])
-                withGitHubStatus("Setup") {
+                withGitHubStatus("setup") {
                     // create venv
                     sh "conda env create -q -p ai_tools_venv -f environment.yml"
                     // Install xmos tools version
@@ -66,7 +66,7 @@ pipeline {
         stage("Build/Test") {
             // due to the Makefile, we've combined build and test stages
             steps {
-                withGitHubStatus("Build/Test") {
+                withGitHubStatus("build-test") {
                     // below is how we can activate the tools
                     sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
                           . activate ./ai_tools_venv &&

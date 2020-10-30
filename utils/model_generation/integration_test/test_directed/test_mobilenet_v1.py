@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest  # type: ignore
-import tensorflow as tf  # type: ignore
+import pytest
+import tensorflow as tf
 
 from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
     XCOREOpCodes,
@@ -55,7 +55,7 @@ CONFIGS = {
 
 
 @pytest.fixture  # type: ignore
-def output_tolerance() -> None:
+def abs_output_tolerance() -> None:
     return
 
 

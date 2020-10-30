@@ -10,7 +10,6 @@ from tflite2xcore.xcore_schema import (
 )
 
 from .transformation_passes import (
-    OperatorMatchingPass,
     InputTensorMatchingPass,
     OutputTensorMatchingPass,
     QuantizedOperatorMatchingPass,
@@ -84,6 +83,21 @@ class CanonicalizeQuantizedInputPass(QuantizedOperatorMatchingPass):
         subgraph.remove_operator(op)
 
 
+# TODO consider adding tests for this
+class CanonicalizeLceQuantizedInputPass(CanonicalizeQuantizedInputPass):
+    @property
+    def matching_input_type(self) -> TensorType:
+        return TensorType.INT8
+
+    @property
+    def matching_output_type(self) -> TensorType:
+        return TensorType.INT32
+
+    @property
+    def matching_opcode(self) -> ValidOpCodes:
+        return ExternalOpCodes.LceQuantize
+
+
 class CanonicalizeQuantizedOutputPass(QuantizedOperatorMatchingPass):
     @property
     def matching_opcode(self) -> BuiltinOpCodes:
@@ -132,7 +146,7 @@ class CanonicalizeLceQuantizedOutputPass(CanonicalizeQuantizedOutputPass):
 
     @property
     def matching_opcode(self) -> ValidOpCodes:
-        return ExternalOpCodes.add_new_opcode("LceDequantize")
+        return ExternalOpCodes.LceDequantize
 
 
 # TODO: improve tests for this

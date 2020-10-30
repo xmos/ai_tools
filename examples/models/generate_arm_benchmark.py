@@ -2,8 +2,8 @@
 #
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import numpy as np  # type: ignore
-import tensorflow as tf  # type: ignore
+import numpy as np
+import tensorflow as tf
 from pathlib import Path
 from typing import Type, NamedTuple, Union
 

@@ -92,13 +92,12 @@ int initialize(ExtendedXCoreInterpreterContext* ctx, const char* model_content,
   ctx->resolver->AddCustom(
       tflite::ops::micro::xcore::Conv2D_Depthwise_OpCode,
       tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
-  ctx->resolver->AddCustom(
-      tflite::ops::micro::xcore::Conv2D_1x1_OpCode,
-      tflite::ops::micro::xcore::Register_Conv2D_Depthwise());
   ctx->resolver->AddCustom(tflite::ops::micro::xcore::Lookup_8_OpCode,
                            tflite::ops::micro::xcore::Register_Lookup_8());
   ctx->resolver->AddCustom(tflite::ops::micro::xcore::Add_8_OpCode,
                            tflite::ops::micro::xcore::Register_Add_8());
+  ctx->resolver->AddCustom(tflite::ops::micro::xcore::Bsign_8_OpCode,
+                           tflite::ops::micro::xcore::Register_BSign_8());
 
   ctx->tensor_arena = new uint8_t[tensor_arena_size];
   memset(ctx->tensor_arena, 0, tensor_arena_size);

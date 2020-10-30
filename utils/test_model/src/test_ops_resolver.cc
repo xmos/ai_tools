@@ -62,6 +62,7 @@ TestOpsResolver::TestOpsResolver() {
   // AddResizeNearestNeighbor();
   AddRound();
   // AddRsqrt();
+  AddShape();
   AddSin();
   AddSoftmax();
   AddSplit();
@@ -94,6 +95,8 @@ TestOpsResolver::TestOpsResolver() {
             tflite::ops::micro::xcore::Register_MaxPool2D());
   AddCustom(tflite::ops::micro::xcore::Add_8_OpCode,
             tflite::ops::micro::xcore::Register_Add_8());
+  AddCustom(tflite::ops::micro::xcore::Bsign_8_OpCode,
+            tflite::ops::micro::xcore::Register_BSign_8());
 }
 
 }  // namespace tflite

@@ -9,15 +9,17 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
 )
 
-from .transformation_passes import QuantizedOperatorMatchingPass
+from .transformation_passes import ReplaceQuantizedOperatorPass
 
 
-class ReplaceAddPass(QuantizedOperatorMatchingPass):
-    def mutate(self, obj):
-        pass
-
+class ReplaceAddPass(ReplaceQuantizedOperatorPass):
     @property
     def matching_opcode(self):
+        return BuiltinOpCodes.ADD
+
+    @property
+    def new_opcode(self) -> OperatorCode:
+        # return OperatorCode(XCOREOpCodes.XC_ADD)
         return BuiltinOpCodes.ADD
 
     def match(self, op):

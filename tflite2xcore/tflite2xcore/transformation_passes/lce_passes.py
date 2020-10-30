@@ -1,5 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 import numpy as np
+from math import ceil
 from typing import Tuple
 
 from tflite2xcore.utils import (
@@ -9,8 +10,8 @@ from tflite2xcore.utils import (
     WORD_SIZE,
     calculate_same_padding,
 )
-from tflite2xcore.xcore_model import Operator
 from tflite2xcore.xcore_schema import (
+    Operator,
     Padding,
     TensorType,
     ExternalOpCodes,
@@ -22,6 +23,7 @@ from tflite2xcore.xcore_schema import (
 from .transformation_passes import (
     OperatorMatchingPass,
     ReplaceQuantizedOperatorPass,
+    LegalizeWeightBiasPass,
 )
 from .conv2d_passes import ReplaceConv2DPass
 
@@ -192,6 +194,38 @@ class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
                 f"Found LceQuantize with illegal input shape {input_shape}"
             )
         return False
+
+
+class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
+    @property
+    def matching_opcode(self) -> XCOREOpCodes:
+        return XCOREOpCodes.XC_bconv2d_bin
+
+    def mutate_weights(self, op: Operator) -> None:
+        with self.using(op):
+            weights = self._weights.as_array()
+            self._replace_weights(
+                np.concatenate(
+                    [
+                        a.ravel()
+                        for arr in weights.reshape(weights.shape[0] // 16, 16, -1)
+                        for a in np.split(
+                            np.flip(arr, axis=0),
+                            [i * 256 for i in range(ceil(arr.shape[1] / 256))],
+                            axis=1,
+                        )
+                    ]
+                ).reshape(weights.shape)
+            )
+
+    def mutate_biases(self, op: Operator) -> None:
+        raise NotImplementedError()  # TODO: finish this
+
+
+class LegalizeBconv2dBitpackedDeepInPass(LegalizeWeightBiasPass):
+    @property
+    def matching_opcode(self) -> XCOREOpCodes:
+        return XCOREOpCodes.XC_bconv2d_bin_DI
 
 
 # Split out padding to a separate op from BConv

@@ -306,6 +306,18 @@ class XCOREModel(_IRObject):
                     subgraph.tensors.index(t) for t in operator.outputs
                 ]
 
+                # TODO: fix this hack
+                # we need a better data structure to represent inputs/outputs of operators
+                if op_code.code is ExternalOpCodes.LceBconv2d:
+                    if len(operatorT.inputs) == 3:
+                        # bitpacked output
+                        operatorT.inputs = (
+                            operatorT.inputs[:2] + [-1, -1] + operatorT.inputs[-1:]
+                        )
+                    else:
+                        # int8 output
+                        operatorT.inputs = operatorT.inputs + [-1]
+
                 if op_code.code in BuiltinOpCodes:
                     builtin_options_type = BuiltinOptions.from_BuiltinOpCodes(
                         op_code.code

@@ -1,7 +1,7 @@
 # Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
 
 import numpy as np
-from typing import TYPE_CHECKING, Dict, Union, Sequence, Any, Tuple, TypeVar
+from typing import TYPE_CHECKING, Dict, Union, Any
 
 from tflite2xcore.utils import camel_to_snake, snake_to_camel
 

@@ -28,7 +28,6 @@ class InputOutputCanonicalizationManager(PassManager):
             passes=[
                 passes.CanonicalizeQuantizedInputPass(),
                 passes.CanonicalizeQuantizedOutputPass(),
-                passes.CanonicalizeLceQuantizedOutputPass(),
             ],
             **kwargs,
         )
@@ -103,8 +102,9 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
     pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
 
-    # remove redundant quantize ops
+    # canonicalize quantize ops
     pass_mgr.register_pass(passes.RemoveRedundantInt8RequantizationPass())
+    pass_mgr.register_pass(passes.ReplaceLceQuantizePass())
 
     # canonicalize word alignment
     pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())

@@ -25,7 +25,7 @@ class ScratchMemoryCalculationPass(OperatorMatchingPass):
 
     @property
     @abstractmethod
-    def MATCHING_OPCODES(self) -> Tuple[XCOREOpCodes]:
+    def MATCHING_OPCODES(self) -> Tuple[XCOREOpCodes, ...]:
         return tuple()
 
     def match(self, op: Operator) -> bool:

@@ -2,12 +2,16 @@
 
 import tensorflow as tf
 import numpy as np
+import larq_compute_engine as lce
 from abc import abstractmethod
 from typing import Union
 
 from tflite2xcore.interpreters import XCOREInterpreter, XCOREDeviceInterpreter
-from tflite2xcore.utils import quantize, QuantizationTuple
-from tflite2xcore.utils import apply_interpreter_to_examples
+from tflite2xcore.utils import (
+    quantize,
+    QuantizationTuple,
+    apply_interpreter_to_examples,
+)
 
 from . import TFLiteModel, Hook
 
@@ -66,6 +70,8 @@ class Evaluator(RunnerDependent):
 class TFLiteEvaluator(Evaluator):
     """ Defines the evaluation logic for a TFLite float model. """
 
+    _interpreter: tf.lite.Interpreter
+
     def __init__(
         self,
         runner: Runner,
@@ -74,42 +80,29 @@ class TFLiteEvaluator(Evaluator):
     ) -> None:
         super().__init__(runner, input_data_hook, model_hook)
 
-    def evaluate(self) -> None:
-        interpreter = tf.lite.Interpreter(model_content=self._model_hook())
-        interpreter.allocate_tensors()
+    def set_interpreter(self) -> None:
+        self._interpreter = tf.lite.Interpreter(model_content=self._model_hook())
 
+    def set_input_data(self) -> None:
         self.input_data = self._input_data_hook()
-        self.output_data = apply_interpreter_to_examples(interpreter, self.input_data)
+
+    def evaluate(self) -> None:
+        self.set_interpreter()
+        self._interpreter.allocate_tensors()
+        self.set_input_data()
+        self.output_data = apply_interpreter_to_examples(
+            self._interpreter, self.input_data
+        )
+        del self._interpreter
 
 
 class TFLiteQuantEvaluator(TFLiteEvaluator):
-    """ Defines the evaluation logic for a TFLite quant model.
-    
-    Since the quantizer leaves in a float interface, input/output
-    quantization parameters are required when getting the quantized values.
-    """
+    """ Defines the evaluation logic for a quantized TFLite model. 
 
-    def __init__(
-        self,
-        runner: Runner,
-        input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
-        model_hook: Hook[TFLiteModel],
-    ) -> None:
-        super().__init__(runner, input_data_hook, model_hook)
-
-    def get_input_data_quant(self, quant: QuantizationTuple) -> np.ndarray:
-        return quantize(self.input_data, *quant)
-
-    def get_output_data_quant(self, quant: QuantizationTuple) -> np.ndarray:
-        return quantize(self.output_data, *quant)
-
-
-class XCoreEvaluator(TFLiteEvaluator):
-    """ Defines the evaluation logic for a TFLite float model. 
-    
     The input and output quantization parameters are inferred from the model.
     """
 
+    _input_type: np.dtype
     _input_quant: QuantizationTuple
     _output_quant: QuantizationTuple
 
@@ -118,10 +111,8 @@ class XCoreEvaluator(TFLiteEvaluator):
         runner: Runner,
         input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
         model_hook: Hook[TFLiteModel],
-        use_device: bool = False,
     ) -> None:
         super().__init__(runner, input_data_hook, model_hook)
-        self._use_device = use_device
 
     @property
     def input_quant(self) -> QuantizationTuple:
@@ -141,24 +132,49 @@ class XCoreEvaluator(TFLiteEvaluator):
                 "Cannot get output quantization before evaluator is run!"
             ) from None
 
-    def get_interpreter(self) -> XCOREInterpreter:
-        if self._use_device:
-            return XCOREDeviceInterpreter(model_content=self._model_hook())
-        else:
-            return XCOREInterpreter(model_content=self._model_hook())
-
-    def evaluate(self) -> None:
-        interpreter = self.get_interpreter()
-        interpreter.allocate_tensors()
-
-        self._input_quant = QuantizationTuple(
-            *interpreter.get_input_details()[0]["quantization"]
-        )
+    def set_input_data(self) -> None:
+        input_details = self._interpreter.get_input_details()[0]
+        self._input_quant = QuantizationTuple(*input_details["quantization"])
+        self._input_type = np.dtype(input_details["dtype"])
         self._output_quant = QuantizationTuple(
-            *interpreter.get_output_details()[0]["quantization"]
+            *self._interpreter.get_output_details()[0]["quantization"]
         )
 
-        self.input_data_float = np.array(self._input_data_hook())
-        self.input_data = quantize(self.input_data_float, *self.input_quant)
+        super().set_input_data()
+        if (
+            self._input_type in (np.int8, np.int16)
+            and self.input_data.dtype == np.float32
+        ):
+            self.input_data = quantize(
+                self.input_data, *self._input_quant, dtype=self._input_type
+            )
 
-        self.output_data = apply_interpreter_to_examples(interpreter, self.input_data)
+
+class XCoreEvaluator(TFLiteQuantEvaluator):
+    """ Defines the evaluation logic for a TFLite float model. 
+    
+    The input and output quantization parameters are inferred from the model.
+    """
+
+    def __init__(
+        self,
+        runner: Runner,
+        input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
+        model_hook: Hook[TFLiteModel],
+        use_device: bool = False,
+    ) -> None:
+        super().__init__(runner, input_data_hook, model_hook)
+        self._use_device = use_device
+
+    def set_interpreter(self) -> None:
+        if self._use_device:
+            self._interpreter = XCOREDeviceInterpreter(model_content=self._model_hook())
+        else:
+            self._interpreter = XCOREInterpreter(model_content=self._model_hook())
+
+
+class LarqEvaluator(Evaluator):
+    def evaluate(self) -> None:
+        interpreter = lce.tflite.python.interpreter.Interpreter(self._model_hook())
+        self.input_data = self._input_data_hook()
+        self.output_data = interpreter.predict(self.input_data)

@@ -4,7 +4,7 @@ import pytest
 import tensorflow as tf
 from typing import Tuple, Optional
 
-from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_schema import XCOREOpCodes, BuiltinOpCodes  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation.utils import parse_init_config
 
 from . import (
@@ -14,6 +14,7 @@ from . import (
 from . import (  # pylint: disable=unused-import
     test_output,
     test_converted_single_op_model,
+    test_reference_model_regression,
 )
 
 
@@ -52,6 +53,11 @@ GENERATOR = DepthwiseConv2dTestModelGenerator
 @pytest.fixture  # type: ignore
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_conv2d_depthwise
+
+
+@pytest.fixture  # type: ignore
+def reference_op_code() -> BuiltinOpCodes:
+    return BuiltinOpCodes.DEPTHWISE_CONV_2D
 
 
 if __name__ == "__main__":

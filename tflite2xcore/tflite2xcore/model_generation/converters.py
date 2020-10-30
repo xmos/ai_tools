@@ -52,7 +52,7 @@ class KerasModelConverter(Converter):
 
     _input_model_hook: Hook[tf.keras.Model]
 
-    def __init__(self, runner: Runner, input_model_hook: Hook[tf.keras.Model],) -> None:
+    def __init__(self, runner: Runner, input_model_hook: Hook[tf.keras.Model]) -> None:
         super().__init__(runner, input_model_hook)
 
 

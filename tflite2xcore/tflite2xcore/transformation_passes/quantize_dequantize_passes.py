@@ -10,7 +10,6 @@ from tflite2xcore.xcore_schema import (
 )
 
 from .transformation_passes import (
-    OperatorMatchingPass,
     InputTensorMatchingPass,
     OutputTensorMatchingPass,
     QuantizedOperatorMatchingPass,
@@ -82,6 +81,21 @@ class CanonicalizeQuantizedInputPass(QuantizedOperatorMatchingPass):
         subgraph.inputs.append(op.outputs[0])
         subgraph.remove_tensor(op.inputs[0])  # DCE doesn't clean up subgraph inputs
         subgraph.remove_operator(op)
+
+
+# TODO consider adding tests for this
+class CanonicalizeLceQuantizedInputPass(CanonicalizeQuantizedInputPass):
+    @property
+    def matching_input_type(self) -> TensorType:
+        return TensorType.INT8
+
+    @property
+    def matching_output_type(self) -> TensorType:
+        return TensorType.INT32
+
+    @property
+    def matching_opcode(self) -> ValidOpCodes:
+        return ExternalOpCodes.LceQuantize
 
 
 class CanonicalizeQuantizedOutputPass(QuantizedOperatorMatchingPass):

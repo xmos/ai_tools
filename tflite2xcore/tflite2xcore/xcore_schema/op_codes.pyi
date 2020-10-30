@@ -4,7 +4,6 @@ import enum
 import aenum
 from typing import Type
 
-
 class BuiltinOpCodes(enum.IntEnum):
     ADD: BuiltinOpCodes
     AVERAGE_POOL_2D: BuiltinOpCodes
@@ -134,13 +133,28 @@ class BuiltinOpCodes(enum.IntEnum):
     SEGMENT_SUM: BuiltinOpCodes
     BATCH_MATMUL: BuiltinOpCodes
 
-
 class ExternalOpCodes(aenum.Enum):  # type: ignore
+    LceQuantize: ExternalOpCodes
+    LceBconv2d: ExternalOpCodes
+    LceDequantize: ExternalOpCodes
     @classmethod
-    def add_new_opcode(cls: Type["ExternalOpCodes"], name: str) -> "ExternalOpCodes":
-        ...
-
+    def add_new_opcode(cls: Type[ExternalOpCodes], name: str) -> ExternalOpCodes: ...
 
 class XCOREOpCodes(enum.Enum):
-    ...
+    XC_lookup_8: XCOREOpCodes
+    XC_argmax_16: XCOREOpCodes
+    XC_maxpool2d: XCOREOpCodes
+    XC_avgpool2d: XCOREOpCodes
+    XC_avgpool2d_global: XCOREOpCodes
+    XC_fc: XCOREOpCodes
+    XC_requantize_16_to_8: XCOREOpCodes
+    XC_conv2d_shallowin: XCOREOpCodes
+    XC_conv2d_deep: XCOREOpCodes
+    XC_conv2d_1x1: XCOREOpCodes
+    XC_conv2d_depthwise: XCOREOpCodes
+    XC_bsign_8: XCOREOpCodes
+    XC_bconv2d_int8: XCOREOpCodes
+    XC_bconv2d_int8_DIDO: XCOREOpCodes
+    XC_bconv2d_bin: XCOREOpCodes
+    XC_bconv2d_bin_DI: XCOREOpCodes
 

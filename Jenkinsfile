@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@v0.14.2') _
+@Library('xmos_jenkins_shared_library@feature/gh_commit_status') _
 
 getApproval()
 
@@ -48,10 +48,12 @@ pipeline {
                     userRemoteConfigs: [[credentialsId: 'xmos-bot',
                                          url: 'git@github.com:xmos/ai_tools']]
                 ])
-                // create venv
-                sh "conda env create -q -p ai_tools_venv -f environment.yml"
-                // Install xmos tools version
-                sh "/XMOS/get_tools.py " + params.TOOLS_VERSION
+                withGitHubStatus("Setup") {
+                    // create venv
+                    sh "conda env create -q -p ai_tools_venv -f environment.yml"
+                    // Install xmos tools version
+                    sh "/XMOS/get_tools.py " + params.TOOLS_VERSION
+                }
             }
         }
         stage("Update all packages") {
@@ -64,13 +66,15 @@ pipeline {
         stage("Build/Test") {
             // due to the Makefile, we've combined build and test stages
             steps {
-                // below is how we can activate the tools
-                sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
-                      . activate ./ai_tools_venv &&
-                      make ci"""
-                // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
-                // This step collects these files for display in Jenkins UI
-                junit "**/*_junit.xml"
+                withGitHubStatus("Build/Test") {
+                    // below is how we can activate the tools
+                    sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
+                          . activate ./ai_tools_venv &&
+                          make ci"""
+                    // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
+                    // This step collects these files for display in Jenkins UI
+                    junit "**/*_junit.xml"
+                }
             }
         }
     }

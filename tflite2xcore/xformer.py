@@ -4,9 +4,8 @@
 
 from pathlib import Path
 
-from tflite2xcore import utils, analyze
+from tflite2xcore import utils, analyze, version
 import tflite2xcore.converter as xcore_conv
-
 
 if __name__ == "__main__":
     parser = utils.VerbosityParser()
@@ -39,6 +38,13 @@ if __name__ == "__main__":
         help="Analyze the output model. "
         "A report is printed showing the runtime memory footprint of the model.",
     )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=version.get_version(),
+        help="Display the version of the xformer",
+    )
+
     args = parser.parse_args()
 
     utils.set_verbosity(args.verbose)

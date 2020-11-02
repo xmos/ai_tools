@@ -21,7 +21,6 @@ INSTALL_REQUIRES = [
 
 setuptools.setup(
     name="tflite2xcore",
-    version="0.1.1",
     packages=setuptools.find_packages(exclude=EXCLUDES),
     scripts=SCRIPTS,
     python_requires=">=3.6.8",
@@ -32,4 +31,10 @@ setuptools.setup(
     description="XMOS Tools to convert TensorFlow Lite models to xCORE microcontrollers.",
     license="LICENSE.txt",
     keywords="xmos xcore",
+    use_scm_version={
+        "root": "..",
+        "relative_to": __file__,
+        "version_scheme": "post-release",
+    },
+    setup_requires=["setuptools_scm"],
 )

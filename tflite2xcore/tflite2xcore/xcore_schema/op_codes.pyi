@@ -157,4 +157,5 @@ class XCOREOpCodes(enum.Enum):
     XC_bconv2d_int8_DIDO: XCOREOpCodes
     XC_bconv2d_bin: XCOREOpCodes
     XC_bconv2d_bin_DI: XCOREOpCodes
+    XC_add: XCOREOpCodes
 

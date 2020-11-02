@@ -14,19 +14,18 @@ from .transformation_passes import ReplaceQuantizedOperatorPass
 
 class ReplaceAddPass(ReplaceQuantizedOperatorPass):
     @property
-    def matching_opcode(self):
+    def matching_opcode(self) -> BuiltinOpCodes:
         return BuiltinOpCodes.ADD
 
     @property
     def new_opcode(self) -> OperatorCode:
-        # return OperatorCode(XCOREOpCodes.XC_ADD)
-        return BuiltinOpCodes.ADD
+        return OperatorCode(XCOREOpCodes.XC_add)
 
-    def match(self, op):
+    def match(self, op: Operator) -> bool:
         return (
             super().match(op)
             and len(op.inputs) == 2
             and op.inputs[0].type is self.matching_input_type
-            and op.inputs[0].type == op.inputs[1].type == op.outputs[0].type
+            and op.inputs[0].type is op.inputs[1].type is op.outputs[0].type
             and op.inputs[0].shape == op.inputs[1].shape == op.outputs[0].shape
         )

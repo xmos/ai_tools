@@ -341,7 +341,7 @@ def test_mean_abs_diffs(
     ]
     if msg:
         pytest.fail(
-            f"The following examples have excessive mean deviations:{msg}",
+            f"The following examples have excessive mean deviations:{''.join(msg)}",
             pytrace=False,
         )
 

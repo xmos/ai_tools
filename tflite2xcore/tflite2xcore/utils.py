@@ -225,7 +225,7 @@ class LoggingContext:
 
 def unpack_bits(arr: np.ndarray) -> np.ndarray:
     assert arr.dtype == np.int32
-    unpacked_shape = (*arr.shape[:-1], arr.shape[-1] * 32)
+    unpacked_shape = (*arr.shape[:-1], arr.shape[-1] * WORD_SIZE_BITS)
     return np.unpackbits(  # pylint: disable=no-member
         np.frombuffer(arr.tostring(), dtype=np.uint8)
     ).reshape(unpacked_shape)
@@ -368,7 +368,11 @@ def calculate_same_padding(
     return tuple(calc_axis_pad(*t) for t in zip(input_size, strides, kernel_size))
 
 
-def get_bitpacked_shape(input_shape: Tuple[int, ...]) -> Tuple[int, ...]:
-    channels = input_shape[-1]
-    assert channels % 32 == 0
-    return (*input_shape[:-1], channels // 32)
+def get_bitpacked_shape(shape: Tuple[int, ...]) -> Tuple[int, ...]:
+    channels = shape[-1]
+    assert channels % WORD_SIZE_BITS == 0
+    return (*shape[:-1], channels // WORD_SIZE_BITS)
+
+
+def get_unpacked_shape(shape: Tuple[int, ...]) -> Tuple[int, ...]:
+    return (*shape[:-1], shape[-1] * WORD_SIZE_BITS)

@@ -11,6 +11,7 @@ from tflite2xcore.utils import (
     WORD_SIZE,
     xor_popcount,
     calculate_same_padding,
+    get_unpacked_shape,
 )
 from tflite2xcore.xcore_schema import (
     Operator,
@@ -255,17 +256,7 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
 
     def mutate_biases(self, op: Operator) -> None:
         with self.using(op):
-            biases = self._biases.as_array()
-
-            # first we reorder the biases (so that C_out order matches the weights)
-            biases_reordered = np.concatenate(
-                [
-                    np.flip(chan_group, axis=0)
-                    for chan_group in biases.reshape(
-                        biases.shape[0] // ACC_PERIOD, ACC_PERIOD
-                    )
-                ]
-            )
+            biases = np.array(self._biases.as_array(), dtype=np.int32)
 
             # second we need to calculate a correction term
             # due to how our HW popcount differs from the Larq reference
@@ -275,15 +266,29 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
             # due to how we handle incomplete weights regsiters
             # NOTE: the data register is padded with zeros, so the loaded kernel
             # coeffs can have some junk loaded, and we correct that
-            weights = self._biases.as_array()  # already boggled
-            for j in range(biases_reordered.size):
-                overlap_start = (j + 1) * self._kernel_channel_size
+            weights = self._weights.as_array()  # already boggled
+            for j in range(biases.size):
+                # TODO: fix channel order since weights are already in boggled order
+                overlap_start = (j + 1) * self._kernel_channel_size // WORD_SIZE_BITS
                 junk = weights[overlap_start : overlap_start + self._overlap_size]
                 overlap_correction = (
-                    xor_popcount(junk, np.zeros(junk.shape, dtype=junk.dtype))
-                    - junk.size / 2
+                    xor_popcount(junk, np.zeros_like(junk)) - junk.size / 2
                 )
-                biases_reordered[j] -= overlap_correction + popcount_correction
+                biases[j] -= overlap_correction + popcount_correction
+
+            biases_reordered = np.concatenate(
+                [
+                    np.frombuffer(
+                        np.frombuffer(cgroup.tostring(), dtype=np.int16)
+                        .reshape(ACC_PERIOD, 2)
+                        .T.tostring(),
+                        dtype=np.int32,
+                    )
+                    for cgroup in biases.reshape(
+                        biases.shape[0] // ACC_PERIOD, ACC_PERIOD
+                    )
+                ]
+            )
 
             # create and populate new thresholds tensor
             new_thresholds = self._op.subgraph.create_tensor(
@@ -300,10 +305,7 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
 
     def mutate(self, op: Operator) -> Operator:
         with self.using(op):
-            weights_shape = self._weights.shape
-            op.add_custom_options(
-                K=(*weights_shape[:3], weights_shape[3] * WORD_SIZE_BITS)
-            )
+            op.add_custom_options(K=get_unpacked_shape(self._weights.shape))
         # NOTE: the order of these mutations is strict
         self.mutate_weights(op)
         self.mutate_biases(op)

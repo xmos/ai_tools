@@ -14,7 +14,7 @@ from .transformation_passes import ReplaceQuantizedOperatorPass
 
 class ReplaceAddPass(ReplaceQuantizedOperatorPass):
     @property
-    def matching_opcode(self):
+    def matching_opcode(self) -> BuiltinOpCodes:
         return BuiltinOpCodes.ADD
 
     @property

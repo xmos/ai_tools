@@ -11,7 +11,12 @@ from tflite2xcore.xcore_schema import BuiltinOpCodes, OperatorCode, TensorType
 #  ----------------------------------------------------------------------------
 
 
-def build_add(subgraph=None, *, input_shape, tensor_type):
+def build_add(
+    subgraph: Subgraph = None,
+    *,
+    input_shape: Tuple[int, int, int, int],
+    tensor_type: TensorType
+) -> XCOREModel:
     subgraph = subgraph or XCOREModel().create_subgraph()
     input_tensor_0 = subgraph.create_tensor("input_0", tensor_type, input_shape)
     input_tensor_1 = subgraph.create_tensor("input_1", tensor_type, input_shape)

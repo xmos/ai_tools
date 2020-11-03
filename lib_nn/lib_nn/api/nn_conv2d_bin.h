@@ -29,40 +29,7 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
                                   const unsigned chans_out,
                                   const unsigned receptive_field,
                                   int *chan_overlaps) ;
-    
-/**  
- * @brief Execute @oper{bnn_reorder_multiplier_and_bias_tensors}.
- * 
- * This reorders the post_activation_multiplier and post_activation_bias tensors 
- * for efficient execution by bnn_conv2d_int8_out_asm. 
- * This is only inteneded for testing.
- * 
- * `post_activation_multiplier_q_reordered` points to the output threshold @tensor{post_activation_multiplier_q_reordered} .
- * 
- * `post_activation_multiplier_q` points to the input @tensor{post_activation_multiplier_q}.
- * 
- * `post_activation_bias_q_reordered` points to the output threshold @tensor{post_activation_bias_q_reordered} .
- * 
- * `post_activation_bias_q` points to the input @tensor{post_activation_bias_q}.
- * 
- * `chans_out` is the number of output channels.
- * 
- * 
- * @param post_activation_multiplier_q_reordered   [out]    The output @tensor{post_activation_multiplier_q_reordered}
- * @param post_activation_multiplier_q             [in]     The input @tensor{post_activation_multiplier_q}
- * @param post_activation_bias_q_reordered         [out]    The output @tensor{post_activation_bias_q_reordered}
- * @param post_activation_bias_q                   [in]     The input @tensor{post_activation_bias_q}
- * @param chans_out                                [in]     The number of output channels
- * @param chan_overlaps                            [in]     Array of the overlap between one channel and the next
- */
-void bnn_reorder_multiplier_and_bias_tensors(
-                                  int16_t* post_activation_multiplier_q_reordered,
-                                  const int16_t* post_activation_multiplier_q,
-                                  int16_t* post_activation_bias_q_reordered,
-                                  const int16_t* post_activation_bias_q,
-                                  const unsigned chans_out,
-                                  int *chan_overlaps);
-
+ 
 /**  
  * @brief Execute @oper{bnn_reorder_kernel_tensor}.
  * 

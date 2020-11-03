@@ -136,7 +136,7 @@ void quantise_activation(
                int32_t clamp_high,
                int *accu_shr,
                int *final_shr, 
-               int32_t receptive_field
+               int32_t receptive_field, int * chan_overlaps
                ){
 
   int32_t vpu_clamp_low = max(((2*clamp_low)-receptive_field)/2, ((2*0)-receptive_field)/2);
@@ -149,7 +149,13 @@ void quantise_activation(
     pam[ch] = post_activation_multiplier[ch] * -2;
   }
   for (unsigned ch=0;ch<chans_out;ch++){
-    pab[ch] = post_activation_bias[ch] + post_activation_multiplier[ch]*(float)receptive_field;
+    pab[ch] = post_activation_bias[ch] +post_activation_multiplier[ch]*(float)receptive_field;
+    if(chan_overlaps){
+
+    printf("channel %u overlap:%d\n", ch, chan_overlaps[ch]);
+      pab[ch] +=  (float)chan_overlaps[ch] * post_activation_multiplier[ch] ;
+    }
+
   }
 
   int M = get_pam_exponent(pam, chans_out);

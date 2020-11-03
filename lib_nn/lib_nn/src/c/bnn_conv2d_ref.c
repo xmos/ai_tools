@@ -15,6 +15,44 @@
 #include <stdio.h>
 #include <assert.h>
 
+//TODO get these from headers
+void bnn_conv2d_int8_out_asm_prepare(
+    nn_bnn_conv2d_int8_out_asm_plan_t* plan, int8_t* Y_p,
+    const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
+    
+    const int16_t* post_activation_multiplier_q, 
+    const int16_t* post_activation_bias_q,
+    const int accu_shr,
+    const int final_shr,
+
+    const nn_image_params_t* x, 
+    const nn_image_params_t* y,
+    const nn_window_params_t* k, 
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height,
+    const unsigned x_loc_x, const unsigned x_loc_y, 
+    const unsigned k_loc_x, const unsigned k_loc_y, 
+    const unsigned k_sub_width, const unsigned k_sub_height) ;
+
+void bnn_conv2d_int8_out_SISO_asm_prepare(
+    nn_bnn_conv2d_int8_out_SISO_asm_plan_t* plan, int8_t* Y_p,
+    const bnn_b32_t* X_p, const bnn_b32_t* K_p, bnn_b32_t * data_scratch,
+    
+    const int16_t* post_activation_multiplier_q, 
+    const int16_t* post_activation_bias_q,
+    const int accu_shr,
+    const int final_shr,
+
+    const nn_image_params_t* x, 
+    const nn_image_params_t* y,
+    const nn_window_params_t* k, 
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height,
+    const unsigned x_loc_x, const unsigned x_loc_y, 
+    const unsigned k_loc_x, const unsigned k_loc_y, 
+    const unsigned k_sub_width, const unsigned k_sub_height) ;
+
+
 //This is the amount that the VLMUL instruction shifts the product of C and R by.
 static const unsigned post_vlmul_shr = 14;
 
@@ -122,7 +160,6 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
     }
     assert(p ==  (bnn_b32_t *)&(K[output_chan_group+1]));
   }
-
   //This is for the case of no overlap in the kernels
   if(chan_overlaps == 0)
     return;
@@ -171,27 +208,27 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                int * chan_overlaps) {
                      
   //This is the count of full vector words that can be applied to the data    
-  unsigned complete_256_bit_groups = ((chans_in*k_height*k_width) / XS3_VPU_VREG_WIDTH_BITS);
+  unsigned receptive_volume = chans_in*k_height*k_width;
 
-  unsigned remainder_32_word_groups = ((chans_in*k_height*k_width) - complete_256_bit_groups*XS3_VPU_VREG_WIDTH_BITS) / 32;
+  //The number of full XS3_VPU_VREG_WIDTH_BITS bit loads a single channel can process
+  unsigned complete_256_bit_groups = receptive_volume / XS3_VPU_VREG_WIDTH_BITS;
+
+  //This is the number of words remaining after complete_256_bit_groups*XS3_VPU_VREG_WIDTH_BITS bits
+  //have been processed
+  unsigned remaining_input_words = (receptive_volume % XS3_VPU_VREG_WIDTH_BITS)/32;
 
   const unsigned inputs_per_b32 = 32;
-  unsigned chan_b32_in = (chans_in + inputs_per_b32 - 1) / inputs_per_b32;
-
-  bnn_b32_t(*K_ref)[k_height*k_width*chan_b32_in] =
-      (bnn_b32_t(*)[k_height*k_width*chan_b32_in])K_ref_p;
+  assert(receptive_volume%inputs_per_b32 == 0);
+  bnn_b32_t(*K_ref)[receptive_volume / inputs_per_b32] =
+      (bnn_b32_t(*)[receptive_volume / inputs_per_b32])K_ref_p;
 
   //the nuber of VPU_INT16_ACC_PERIOD groups there will be
-  unsigned output_channel_groups = chans_out / VPU_INT16_ACC_PERIOD;
+  unsigned output_chan_groups_of_accu_period = chans_out / VPU_INT16_ACC_PERIOD;
+  unsigned output_chans_reamining = chans_out % VPU_INT16_ACC_PERIOD;
 
-  unsigned remaining_input_channels = ((chans_in*k_height*k_width) % XS3_VPU_VREG_WIDTH_BITS)/32;
-
-  bnn_b32_t(*K)[chans_out*((8*complete_256_bit_groups) + remaining_input_channels)] =
-      (bnn_b32_t(*)[chans_out * ((8*complete_256_bit_groups) + remaining_input_channels)])K_p;
-
-  bnn_b32_t * p = (bnn_b32_t *)K;
+  bnn_b32_t * p = (bnn_b32_t *)K_p;
   //This loops across groups of VPU_INT16_ACC_PERIOD output channels
-  for (unsigned output_chan_group = 0; output_chan_group < output_channel_groups; 
+  for (unsigned output_chan_group = 0; output_chan_group < output_chan_groups_of_accu_period; 
       output_chan_group++) {
 
     //copy the groups of 256 input channels
@@ -207,14 +244,42 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
       }
     }
 
-    if (remaining_input_channels){
+    if (remaining_input_words){
       for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
 
         unsigned reversed_channel_order  = VPU_INT16_ACC_PERIOD - 1 - sub_grp_idx;
         memcpy(p,
             &K_ref[output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order][8*complete_256_bit_groups],
-                sizeof(bnn_b32_t)*remaining_input_channels);
-        p += remaining_input_channels;
+                sizeof(bnn_b32_t)*remaining_input_words);
+        p += remaining_input_words;
+      }   
+    }
+  }
+
+  //If there are remaining input channels deal with there here
+  if (output_chans_reamining){
+
+    //copy the groups of 256 input channels
+    for (unsigned ic_group=0;ic_group < complete_256_bit_groups; ic_group++){
+      //each group is of VPU_INT16_ACC_PERIOD channels 
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < output_chans_reamining; sub_grp_idx++) {
+
+        unsigned reversed_channel_order  = output_chans_reamining - 1 - sub_grp_idx;
+        memcpy(p,
+          &K_ref[output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order][8*ic_group],
+          sizeof(bnn_b32_t) * 8);
+        p += 8;
+      }
+    }
+
+    if (remaining_input_words){
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < output_chans_reamining; sub_grp_idx++) {
+
+        unsigned reversed_channel_order  = output_chans_reamining - 1 - sub_grp_idx;
+        memcpy(p,
+            &K_ref[output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order][8*complete_256_bit_groups],
+                sizeof(bnn_b32_t)*remaining_input_words);
+        p += remaining_input_words;
       }   
     }
   }
@@ -223,38 +288,65 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
   if(chan_overlaps == 0)
     return;
 
+  memset(chan_overlaps, 0, sizeof(int) * chans_out);
   //Code only gets here if there is no overlap and hence no need to insert padding.
 
   //The filler value could be anything it just needs to be a known value
   char filler = 0x55;
-  memset(&(K[output_channel_groups]), filler, sizeof(bnn_b32_t)*NN_BCONV2D_KERNEL_OVERRUN_WORDS);
+  memset(p, filler, sizeof(bnn_b32_t)*NN_BCONV2D_KERNEL_OVERRUN_WORDS); //TODO minimise this
   
-  for (unsigned output_chan_group = 0; output_chan_group < output_channel_groups; 
-      output_chan_group++) {
+  //Reset the pointer for another pass to get the overlaps now that the memory if laied out correctly
+  p = (bnn_b32_t *)K_p;
 
-    bnn_b32_t * p = (bnn_b32_t *)&(K[output_chan_group]);
+  for (unsigned output_chan_group = 0; output_chan_group < output_chan_groups_of_accu_period; 
+      output_chan_group++) {
 
     p += (8*VPU_INT16_ACC_PERIOD*complete_256_bit_groups);
     
-    if (remaining_input_channels){
+    // printf("remaining_input_words %u\n", remaining_input_words);
+    if (remaining_input_words){
       for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
 
         unsigned reversed_channel_order  = VPU_INT16_ACC_PERIOD - 1 - sub_grp_idx;
 
         bnn_b32_t zeros = 0x00000000;
         int total_xor_popcount = 0;
-        for(unsigned o = remaining_input_channels; o < 8; o++){ //8 is 32 bit words per vpu load
+        for(unsigned o = remaining_input_words; o < 8; o++){ //8 is 32 bit words per vpu load
           total_xor_popcount += (int)xor_pop_32(&(p[o]), &zeros) - 16;
         }
         chan_overlaps[ output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
-
-        p += remaining_input_channels;
+        // printf("chan_overlaps[%u] %d\n", output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order, total_xor_popcount);
+        p += remaining_input_words;
       }   
+
     } else {
       // This code is here for the case where the overlap is being used with multiples 
       // 256 input channels.
       for (unsigned sub_grp_idx = 0; sub_grp_idx < VPU_INT16_ACC_PERIOD; sub_grp_idx++) {
         chan_overlaps[ output_chan_group * VPU_INT16_ACC_PERIOD + sub_grp_idx] =  0;
+        
+      }   
+    }
+  }
+  if (output_chans_reamining){
+
+    p += (8*output_chans_reamining*complete_256_bit_groups);
+
+    printf("remaining_input_words %u\n", remaining_input_words);
+    if (remaining_input_words){
+      for (unsigned sub_grp_idx = 0; sub_grp_idx < output_chans_reamining; sub_grp_idx++) {
+
+        unsigned reversed_channel_order  = output_chans_reamining - 1 - sub_grp_idx;
+
+        bnn_b32_t zeros = 0x00000000;
+        int total_xor_popcount = 0;
+        for(unsigned o = remaining_input_words; o < 8; o++){ //8 is 32 bit words per vpu load
+          total_xor_popcount += (int)xor_pop_32(&(p[o]), &zeros) - 16;
+        }
+        chan_overlaps[ output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
+        printf("chan_overlaps[%u] %d\n", output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order, total_xor_popcount);
+
+        p += remaining_input_words;
       }   
     }
   }
@@ -401,25 +493,6 @@ static int32_t ashr(int32_t x, int shr){
     return x << (-shr);
 }
 
-WEAK_FUNC
-void bnn_conv2d_int8_out_asm_prepare(
-    nn_bnn_conv2d_int8_out_asm_plan_t* plan, int8_t* Y_p,
-    const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
-    
-    const int16_t* post_activation_multiplier_q, 
-    const int16_t* post_activation_bias_q,
-    const int accu_shr,
-    const int final_shr,
-
-    const nn_image_params_t* x, 
-    const nn_image_params_t* y,
-    const nn_window_params_t* k, 
-    const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height,
-    const unsigned x_loc_x, const unsigned x_loc_y, 
-    const unsigned k_loc_x, const unsigned k_loc_y, 
-    const unsigned k_sub_width, const unsigned k_sub_height) ;
-
 static int64_t saturate_non_sym(
     const int64_t input,
     const unsigned bits)
@@ -485,7 +558,7 @@ void bnn_conv2d_int8_out_asm(nn_bnn_conv2d_int8_out_asm_plan_t * plan){
           X_cur_p += plan->inner_x_v_step;
           K_p += plan->k_v_step;
         }
-        
+
         VLSAT(vpu, &sat_mem);
         VSTR(vpu, &temp_mem);
         VLASHR(vpu, &temp_mem, plan->ashr);
@@ -509,6 +582,138 @@ void bnn_conv2d_int8_out_asm(nn_bnn_conv2d_int8_out_asm_plan_t * plan){
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void compute_patch(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan, 
+  void ** K_p, int step, xs3_vpu * vpu, vpu_vector_t *sat_mem, 
+  vpu_vector_t * temp_mem, void * cur_post_activation_mul, 
+  void * cur_post_activation_bias){
+
+  VCLRDR(vpu);
+  void * D_p = plan->data_scratch;
+  for (unsigned p = plan->patch_loop_counter; p > 0; p--){
+    VLDC(vpu, D_p);
+    D_p += 32;
+    for(unsigned l=0; l<15; l++){
+      VLMACCR1(vpu, *K_p);
+      *K_p += 32;
+    }
+    VLMACCR1(vpu, *K_p);
+    *K_p += step;
+  }
+
+  VLDC(vpu, D_p);
+  
+  unsigned loops;
+  switch(step){
+    case 32: {loops=16; break;}
+    case -96: {loops=12; break;}
+    case -224: {loops=8; break;}
+    case -352: {loops=4; break;}
+  } 
+  // printf("loops: %u plan->k_p_adjust:%d\n", loops, plan->k_p_adjust);
+  for(unsigned l=0; l<loops; l++){
+    VLMACCR1(vpu, *K_p);
+    *K_p += plan->k_p_adjust;
+  }
+
+  VLSAT(vpu, sat_mem);
+  VSTR(vpu, temp_mem);
+  VLASHR(vpu, temp_mem, plan->ashr);
+  
+  VLMUL(vpu, cur_post_activation_mul);
+  VLADD(vpu, cur_post_activation_bias);
+
+  VSTR(vpu, temp_mem);
+  VLASHR(vpu, temp_mem, plan->final_shr);
+  VDEPTH8_FIXED(vpu);
+
+}
+
+WEAK_FUNC
+void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
+
+  xs3_vpu vpu_data;
+  xs3_vpu * vpu = &vpu_data;
+
+  vpu_vector_t sat_mem;
+  vpu_vector_t temp_mem;
+  VSETC(vpu, MODE_S16);
+
+  for(unsigned i=0;i<VPU_INT16_EPV;i++)
+    sat_mem.s16[i] = plan->vlsat;
+
+  void * X_p = plan->X;
+  void * Y_p = plan->Y;
+
+  for (int xh = plan->x_height_loop_counter; xh > 0 ; xh-- ) {
+    for (int xv = plan->x_width_loop_counter; xv >= 0 ; xv-- ) {
+
+      void * X_cur_p = X_p;
+      void * D_p = plan->data_scratch;
+
+      for (int kh = plan->k_height_loop_counter; kh >= 0 ; kh-- )  {
+        for (int kw = plan->k_width_loop_counter; kw >= 0 ; kw-- )  {
+          for (int ic = plan->input_channel_loop_counter; ic >= 0 ; ic-- ) {
+            VLDR(vpu, X_cur_p);
+            X_cur_p += 32;
+            VSTR(vpu, D_p);
+            D_p += 32;
+          }
+          X_cur_p += plan->inner_x_h_step;
+          D_p += plan->data_scratch_adjust;
+        }
+        X_cur_p += plan->inner_x_v_step;
+      }
+      VCLRDR(vpu);
+      VSTR(vpu, D_p);
+
+      void * cur_post_activation_mul = plan->post_activation_mul;
+      void * cur_post_activation_bias = plan->post_activation_bias;
+      void * K_p = plan->K;
+      for (int oc = plan->output_channel_loop_counter; oc > 0 ; oc-- ) {
+
+        compute_patch(plan, &K_p, 32, vpu, &sat_mem, 
+          &temp_mem,  cur_post_activation_mul, cur_post_activation_bias);
+
+        VSTRPV(vpu, Y_p, 0xffff);
+        Y_p += 16;
+
+        cur_post_activation_mul += 32;
+        cur_post_activation_bias += 32;
+      }
+      
+      compute_patch(plan, &K_p, plan->k_p_rewind, vpu, &sat_mem, 
+        &temp_mem, cur_post_activation_mul, cur_post_activation_bias);
+    // vpu_sim_print(vpu);
+      VSTRPV(vpu, Y_p, plan->final_channels_mask);
+      Y_p += plan->final_channels_bytes;
+      X_p += plan->outer_x_h_step;
+    }
+    X_p += plan->outer_x_v_step;
+    Y_p += plan->y_v_step;
+  }
+
+
+}
+
+//this will not be weak
 WEAK_FUNC
 void bnn_conv2d_int8_out(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
@@ -549,89 +754,6 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
 }
 
 WEAK_FUNC
-void bnn_conv2d_int8_out_old(int8_t* Y_p,
-    const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
-    
-    const int16_t* post_activation_multiplier_q, 
-    const int16_t* post_activation_bias_q,
-    const int accu_shr,
-    const int final_shr,
-    
-    const nn_image_params_t* x, //The full image of x
-    const nn_image_params_t* y, // the full image of y
-    const nn_window_params_t* k, //the full kernel k
-    
-    const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height,
-
-    const unsigned x_loc_x, const unsigned x_loc_y, 
-    
-    const unsigned k_loc_x, const unsigned k_loc_y, 
-    const unsigned k_sub_width, const unsigned k_sub_height
-) {
-
-  const unsigned chan_b256_in = (x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
-  const unsigned chans_out = y->channels;
-
-  const unsigned h_stride = k->stride.horizontal;
-  const unsigned v_stride = k->stride.vertical;  
-  const unsigned h_dilation = k->dilation.horizontal;
-  const unsigned v_dilation = k->dilation.vertical;  
-
-  int8_t(*Y)[y->width][chans_out] =
-      (int8_t(*)[y->width][chans_out])Y_p;
-
-  bnn_b256_t(*X)[x->width][chan_b256_in] =
-      (bnn_b256_t(*)[x->width][chan_b256_in])X_p;
-
-  bnn_b256_t(*K)[k->shape.height][k->shape.width][chan_b256_in] =
-      (bnn_b256_t(*)[k->shape.height][k->shape.width][chan_b256_in])K_p;
-
-  unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
-  unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
-
-  for (unsigned h = x_loc_y; h < (x_loc_y + x_sub_height) - k_sub_height + 1; h += v_stride) {
-    for (unsigned w = x_loc_x; w < (x_loc_x + x_sub_width) - k_sub_width + 1; w += h_stride) {
-      for (unsigned oc = 0; oc < chans_out; oc += 1) {
-
-        int32_t sum = 0;
-        for (unsigned kh = k_loc_y; kh < k_loc_y + k_sub_height; kh += 1) {
-          for (unsigned kw = k_loc_x; kw < k_loc_x + k_sub_width; kw += 1) {
-            for (unsigned ic = 0; ic < chan_b256_in; ic += 1) {
-              sum += xor_pop_256(&(X[h + kh][w + kw][ic]), &(K[oc][kh][kw][ic]));
-            }
-          }
-        }
-
-        int32_t backtransform_add = (k->shape.height * k->shape.width * chan_b256_in * XS3_VPU_VREG_WIDTH_BITS);
-        
-        // This converts xor_popcount to macc format
-        int32_t vpu_output = ((2*sum)-backtransform_add)/2;
-
-        //not rounding has happened to the point
-        int32_t r = ashr(vpu_output, accu_shr) ;
-        
-        r *= (int32_t) post_activation_multiplier_q[oc];
-
-        r = ashr(r, post_vlmul_shr);
-
-        r += post_activation_bias_q[oc];
-
-        r = ashr(r, final_shr);
-
-        r = r >> 8; //Use a store part word to extract bits 8-15
-
-        if (r > INT8_MAX) r = INT8_MAX;
-        if (r < INT8_MIN) r = INT8_MIN;
-
-        Y[y_loc_y + ((h-x_loc_y) / v_stride)][y_loc_x + ((w-x_loc_x) / h_stride)][oc] = (int8_t)r;
-        
-      }
-    }
-  }
-}
-
-WEAK_FUNC
 void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
     
@@ -655,65 +777,18 @@ void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
     const unsigned k_loc_x, const unsigned k_loc_y, 
     const unsigned k_sub_width, const unsigned k_sub_height
 ) {
+    nn_bnn_conv2d_int8_out_SISO_asm_plan_t plan;
 
-  const unsigned channels_per_input_word = 32;
-  const unsigned chan_b32_in = (x->channels + channels_per_input_word - 1) / channels_per_input_word;
-  const unsigned chans_out = y->channels;
+    bnn_conv2d_int8_out_SISO_asm_prepare(&plan, Y_p,
+        X_p,  K_p, data_scratch,
+        post_activation_multiplier_q, 
+        post_activation_bias_q,
+        accu_shr,
+        final_shr,
+        x, y, k, 
+        y_loc_x, y_loc_y, y_sub_width, y_sub_height,
+        x_loc_x, x_loc_y, 
+        k_loc_x, k_loc_y, k_sub_width, k_sub_height);
 
-  const unsigned h_stride = k->stride.horizontal;
-  const unsigned v_stride = k->stride.vertical;  
-  const unsigned h_dilation = k->dilation.horizontal;
-  const unsigned v_dilation = k->dilation.vertical;  
-
-  int8_t(*Y)[y->width][chans_out] =
-      (int8_t(*)[y->width][chans_out])Y_p;
-
-  bnn_b32_t(*X)[x->width][chan_b32_in] =
-      (bnn_b32_t(*)[x->width][chan_b32_in])X_p;
-
-  bnn_b32_t(*K)[k->shape.height][k->shape.width][chan_b32_in] =
-      (bnn_b32_t(*)[k->shape.height][k->shape.width][chan_b32_in])K_p;
-
-  unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
-  unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
-
-  for (unsigned h = x_loc_y; h < (x_loc_y + x_sub_height) - k_sub_height + 1; h += v_stride) {
-    for (unsigned w = x_loc_x; w < (x_loc_x + x_sub_width) - k_sub_width + 1; w += h_stride) {
-      for (unsigned oc = 0; oc < chans_out; oc += 1) {
-
-        int32_t sum = 0;
-        for (unsigned kh = k_loc_y; kh < k_loc_y + k_sub_height; kh += 1) {
-          for (unsigned kw = k_loc_x; kw < k_loc_x + k_sub_width; kw += 1) {
-            for (unsigned ic = 0; ic < chan_b32_in; ic += 1) {
-              sum += xor_pop_32(&(X[h + kh][w + kw][ic]), &(K[oc][kh][kw][ic]));
-            }
-          }
-        }
-
-        int32_t backtransform_add = (k->shape.height * k->shape.width * chan_b32_in * channels_per_input_word);
-        
-        // This converts xor_popcount to macc format
-        int32_t vpu_output = ((2*sum)-backtransform_add)/2;
-
-        //not rounding has happened to the point
-        int32_t r = ashr(vpu_output, accu_shr) ;
-        
-        r *= (int32_t) post_activation_multiplier_q[oc];
-
-        r = ashr(r, post_vlmul_shr);
-
-        r += post_activation_bias_q[oc];
-
-        r = ashr(r, final_shr);
-
-        r = r >> 8; //Use a store part word to extract bits 8-15
-
-        if (r > INT8_MAX) r = INT8_MAX;
-        if (r < INT8_MIN) r = INT8_MIN;
-
-        Y[y_loc_y + ((h-x_loc_y) / v_stride)][y_loc_x + ((w-x_loc_x) / h_stride)][oc] = (int8_t)r;
-        
-      }
-    }
-  }
+    bnn_conv2d_int8_out_SISO_asm(&plan);
 }

@@ -26,8 +26,6 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
 
                int16_t * post_activation_multiplier_q,
                int16_t* post_activation_bias_q, 
-               int16_t * post_activation_multiplier_q_reordered,
-               int16_t* post_activation_bias_q_reordered, 
 
                int * chan_overlaps,
                bnn_b32_t * data_scratch,
@@ -68,28 +66,6 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
   int32_t clamp_low = 0;
   int32_t clamp_high = receptive_field*2;
 
-  quantise_activation(
-               post_activation_multiplier_q, post_activation_bias_q,
-               post_activation_multiplier, post_activation_bias, 
-               chans_out,
-               clamp_low, clamp_high,
-               &accu_shr, &final_shr, receptive_field);
-
-#if !defined(__XS3A__)
-  error_stats_t e;
-  measure_quantisation(
-               post_activation_multiplier_q, post_activation_bias_q,
-               post_activation_multiplier, post_activation_bias, 
-               chans_out,
-               clamp_low, clamp_high,
-               accu_shr, final_shr, receptive_field, &e);
-
-  for(unsigned b=0;b<256;b++){
-    output_error_g[b] += e.output_error[b];
-    abs_output_error_g[b] += e.abs_output_error[b];
-    error_counter_g[b] += e.error_counter[b];
-  }
-#endif
 
   nn_image_params_t x;
   x.height = x_height;
@@ -110,38 +86,44 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
   larq_ref_bconv2d_int8_out(&x, &y, &k, (int32_t*)X_ref, (int32_t*)K_ref_p,
                    (int8_t*)Y_ref_p, post_activation_multiplier, post_activation_bias);
 
+
+
   bnn_reorder_int8_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
                             chans_out, chan_overlaps);
 
-  bnn_reorder_multiplier_and_bias_tensors(
-                                  post_activation_multiplier_q_reordered,
-                                  post_activation_multiplier_q,
-                                  post_activation_bias_q_reordered,
-                                  post_activation_bias_q,
-                                  chans_out);
+  quantise_activation(
+               post_activation_multiplier_q, post_activation_bias_q,
+               post_activation_multiplier, post_activation_bias, 
+               chans_out,
+               clamp_low, clamp_high,
+               &accu_shr, &final_shr, receptive_field, chan_overlaps);
 
-#if defined(__XS3A__)
+
+// #if !defined(__XS3A__)
+//   error_stats_t e;
+//   measure_quantisation(
+//                post_activation_multiplier_q, post_activation_bias_q,
+//                post_activation_multiplier, post_activation_bias, 
+//                chans_out,
+//                clamp_low, clamp_high,
+//                accu_shr, final_shr, receptive_field, &e);
+
+//   for(unsigned b=0;b<256;b++){
+//     output_error_g[b] += e.output_error[b];
+//     abs_output_error_g[b] += e.abs_output_error[b];
+//     error_counter_g[b] += e.error_counter[b];
+//   }
+// #endif
 
   bnn_conv2d_int8_out_SISO((int8_t*)Y_p, (const bnn_b32_t*)X_ref,
-    (const bnn_b32_t*)K_p, post_activation_multiplier_q_reordered, 
-    post_activation_bias_q_reordered, accu_shr, final_shr,
+    (const bnn_b32_t*)K_p, post_activation_multiplier_q, 
+    post_activation_bias_q, accu_shr, final_shr,
     chan_overlaps, data_scratch,
     &x, &y, &k,
     0, 0, y_width, y_height,
     0, 0, 
     0, 0, k_width, k_height);
 
-#else
-  bnn_conv2d_int8_out_SISO((int8_t*)Y_p, (const bnn_b32_t*)X_ref,
-    (const bnn_b32_t*)K_ref_p, 
-    post_activation_multiplier_q, post_activation_bias_q, 
-    accu_shr, final_shr,
-    0, 0,
-    &x, &y, &k,
-    0, 0, y_width, y_height,
-    0, 0, 
-    0, 0, k_width, k_height);
-#endif
 
 int8_t(*Y)[y_width][chans_out] =
       (int8_t(*)[y_width][chans_out])Y_p;
@@ -153,7 +135,11 @@ int8_t(*Y)[y_width][chans_out] =
     for (unsigned w = 0; w < y_width; w++) {
       //If the result should have been computed then check it against the reference
       for (unsigned c = 0; c < chans_out; c++) {
-        printf("%2u e% d a% d\n", c,  Y_ref[h][w][c], Y[h][w][c]);
+        printf("%2u e% d a% d", c,  Y_ref[h][w][c], Y[h][w][c]);
+        if((Y_ref[h][w][c] - Y[h][w][c]) * (Y_ref[h][w][c] - Y[h][w][c]) > 1){
+          printf(" *******");
+        }
+        printf("\n");
       }
       printf("\n");
     }
@@ -165,6 +151,7 @@ int8_t(*Y)[y_width][chans_out] =
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
 
+  // exit(1);
   //FIXME - why wont this link? The above is a workaround
   // TEST_ASSERT_INT8_ARRAY_WITHIN(1, Y_ref_p, Y_p, y_height * y_width * chans_out);
 }
@@ -174,10 +161,10 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_directed() {
 #define X_H_DILATION 1
 #define X_HEIGHT 1
 #define X_WIDTH 1
-#define K_HEIGHT X_HEIGHT
-#define K_WIDTH X_WIDTH
-#define CHANS_IN 256
-#define CHANS_OUT 16
+#define K_HEIGHT 1
+#define K_WIDTH 1
+#define CHANS_IN (32)
+#define CHANS_OUT 4
 #define H_STRIDE 1
 #define V_STRIDE 1
 
@@ -199,31 +186,32 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_directed() {
   float WORD_ALIGNED post_activation_bias[CHANS_OUT];
   int16_t WORD_ALIGNED post_activation_multiplier_q[CHANS_OUT];
   int16_t WORD_ALIGNED post_activation_bias_q[CHANS_OUT];
-  int16_t WORD_ALIGNED post_activation_multiplier_q_reordered[CHANS_OUT];
-  int16_t WORD_ALIGNED post_activation_bias_q_reordered[CHANS_OUT];
   int chan_overlaps[CHANS_OUT];
 
   bnn_b32_t WORD_ALIGNED data_scratch[K_HEIGHT * K_WIDTH * CHAN_WORDS_IN + 
     NN_BCONV2D_KERNEL_OVERRUN_WORDS]; 
 
-  srand(69);
-  pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
-  pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
+  for(unsigned i=0;i<1;i++){
+    int seed = 3452;
+    srand(seed);
+    printf("***************************** %u\n", i);
+    pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
+    pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
+    // memset(K_ref, 0, sizeof(K_ref));
 
-  memset(K, 0, sizeof(K));
-  memset(Y, 0, sizeof(Y));
-  memset(Y_ref, 0, sizeof(Y_ref));
+    memset(K, 0, sizeof(K));
+    memset(Y, 0, sizeof(Y));
+    memset(Y_ref, 0, sizeof(Y_ref));
 
-  run_int8_config((int8_t *)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
-              (bnn_b32_t*)K, (bnn_b32_t*)K_ref, (float*)post_activation_multiplier,
-              (float*)post_activation_bias, (int16_t*)post_activation_multiplier_q,
-              (int16_t*)post_activation_bias_q, (int16_t*)post_activation_multiplier_q_reordered,
-              (int16_t*)post_activation_bias_q_reordered, 
-              (int*)chan_overlaps, 
-              (bnn_b32_t*)data_scratch, 
-              X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
-              CHANS_IN, CHANS_OUT, H_STRIDE, V_STRIDE);
-
+    run_int8_config((int8_t *)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+                (bnn_b32_t*)K, (bnn_b32_t*)K_ref, (float*)post_activation_multiplier,
+                (float*)post_activation_bias, (int16_t*)post_activation_multiplier_q,
+                (int16_t*)post_activation_bias_q, 
+                (int*)chan_overlaps, 
+                (bnn_b32_t*)data_scratch, 
+                X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
+                CHANS_IN, CHANS_OUT, H_STRIDE, V_STRIDE);
+  }
 #undef X_V_DILATION 
 #undef X_H_DILATION
 #undef X_HEIGHT 
@@ -312,22 +300,22 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_random() {
                 for (unsigned chans_out = MIN_CHANS_OUT;
                      chans_out <= MAX_CHANS_OUT; chans_out += 4) {
 
-                  // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
-                  //   h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out);
-                  run_int8_config(
-                      (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
-                      (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
-                      (float*)post_activation_multiplier,
-                      (float*)post_activation_bias, 
-                      (int16_t*)post_activation_multiplier_q,
-                      (int16_t*)post_activation_bias_q,  
-                      (int16_t*)post_activation_multiplier_q_reordered,
-                      (int16_t*)post_activation_bias_q_reordered, 
-                      (int*) chan_overlaps,
-                      (bnn_b32_t * ) data_scratch,
-                      x_height,
-                      x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                      v_stride);
+                  printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
+                    h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out);
+                    for(unsigned c=0;c<1<<14;c++){
+                      run_int8_config(
+                          (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+                          (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
+                          (float*)post_activation_multiplier,
+                          (float*)post_activation_bias, 
+                          (int16_t*)post_activation_multiplier_q,
+                          (int16_t*)post_activation_bias_q,  
+                          (int*) chan_overlaps,
+                          (bnn_b32_t * ) data_scratch,
+                          x_height,
+                          x_width, k_height, k_width, chans_in, chans_out, h_stride,
+                          v_stride);
+                    }
                 }
               }
             }
@@ -541,14 +529,7 @@ void test_bnn_conv2d_int8_out_SISO_sub_image(){
                       post_activation_multiplier, post_activation_bias, 
                       y.channels,
                       accu_min_post_clamp, accu_max_post_clamp,
-                      &accu_shr, &final_shr, backtransform_add);
-
-    bnn_reorder_multiplier_and_bias_tensors(
-                post_activation_multiplier_q_ordered,
-                post_activation_multiplier_q,
-                post_activation_bias_q_ordered,
-                post_activation_bias_q,
-                y.channels);
+                      &accu_shr, &final_shr, backtransform_add, 0);
 
     #if defined(__XS3A__)
 
@@ -646,10 +627,10 @@ void test_int8_SISO_stats(){
 void test_bnn_conv2d_int8_SISO() {
   UNITY_SET_FILE();
   RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_directed);
-  RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random);
-  RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
+  // RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random);
+  // RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
 
-#if !defined(__XS3A__)
-  RUN_TEST(test_int8_SISO_stats);
-#endif
+// #if !defined(__XS3A__)
+//   RUN_TEST(test_int8_SISO_stats);
+// #endif
 }

@@ -57,7 +57,7 @@ void quantise_activation(
                int32_t clamp_high,
                int *accu_shr,
                int *final_shr, 
-               int32_t receptive_field);
+               int32_t receptive_field, int * chan_overlaps);
 
 void measure_quantisation(
                int16_t * post_activation_multiplier_q,

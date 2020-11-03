@@ -170,28 +170,20 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
   int16_t WORD_ALIGNED post_activation_bias_q[CHANS_OUT];
 
   srand(42);
+  for(unsigned i=0;i<1<<14;i++){
+    pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
+    pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
 
+    memset(K, 0, sizeof(K));
+    memset(Y, 0, sizeof(Y));
+    memset(Y_ref, 0, sizeof(Y_ref));
 
-  for(unsigned i=0;i<sizeof(X_ref);i++){
-    ((char*)X_ref)[i] = i;
+    run_int8_config((int8_t *)Y, (int8_t*)Y_ref, (bnn_b256_t*)X_ref,
+                (bnn_b256_t*)K, (bnn_b256_t*)K_ref, (float*)post_activation_multiplier,
+                (float*)post_activation_bias, (int16_t*)post_activation_multiplier_q,
+                (int16_t*)post_activation_bias_q, X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
+                CHANS_IN, CHANS_OUT, H_STRIDE, V_STRIDE);
   }
-  for(unsigned i=0;i<sizeof(K_ref);i++){
-    ((char*)K_ref)[i] = i*i;
-  }
-
-  // pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
-  // pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
-
-  memset(K, 0, sizeof(K));
-  memset(Y, 0, sizeof(Y));
-  memset(Y_ref, 0, sizeof(Y_ref));
-
-  run_int8_config((int8_t *)Y, (int8_t*)Y_ref, (bnn_b256_t*)X_ref,
-              (bnn_b256_t*)K, (bnn_b256_t*)K_ref, (float*)post_activation_multiplier,
-              (float*)post_activation_bias, (int16_t*)post_activation_multiplier_q,
-              (int16_t*)post_activation_bias_q, X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
-              CHANS_IN, CHANS_OUT, H_STRIDE, V_STRIDE);
-
 #undef X_V_DILATION 
 #undef X_H_DILATION
 #undef X_HEIGHT 

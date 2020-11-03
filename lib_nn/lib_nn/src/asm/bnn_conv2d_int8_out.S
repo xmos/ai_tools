@@ -159,7 +159,7 @@ VECT_INT8_MIN:
 
 //Helpers that reference the above
 #define S_X_p_S_OUTER_X_H_STEP (S_X_p/2)                        //1
-#define S_OC_LOOP_COUNTER_THRESHOLD_P (S_OC_LOOP_COUNTER/2)     //2
+#define S_OC_LOOP_COUNTER_K_p (S_OC_LOOP_COUNTER/2)     //2
 #define S_INNER_V_STEPS (S_INNER_X_V_STEP/2)                    //3
 #define S_INNER_H_STEPS (S_INNER_X_H_STEP/2)                    //4
 
@@ -179,7 +179,7 @@ VECT_INT8_MIN:
 #define Y_p               r0
 #define X_p               r1
 #define K_p               r2
-#define r                 r3
+#define r                 r3 //apparently unused!
 
 #define k_height_loop     r4
 #define k_width_loop      r5
@@ -302,7 +302,7 @@ FUNCTION_NAME:
         {ldw x_width_loop, sp[S_X_WIDTH_LOOP_COUNTER]; nop}
         bnn_w_loop:
 
-            ldd K_p, oc_loop_counter, sp[S_OC_LOOP_COUNTER_THRESHOLD_P]
+            ldd K_p, oc_loop_counter, sp[S_OC_LOOP_COUNTER_K_p]
 
             // Reset the current mul and bias 
             ldd t, s, sp[S_PA_MUL_p_PA_BIAS_p]
@@ -312,6 +312,9 @@ FUNCTION_NAME:
             
                 {ldw X_p, sp[S_X_p]; }
                 {bl bnn_make_16_channel_output ; nop }
+
+                here:
+
 
                 //TODO clamping would go here
 

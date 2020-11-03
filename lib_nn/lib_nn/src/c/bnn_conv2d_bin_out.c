@@ -8,6 +8,42 @@
 
 #include "xs3_vpu.h"
 #include "vpu_sim.h"
+static void compute_bin_kernel(xs3_vpu * vpu, nn_bnn_conv2d_bin_out_asm_plan_t * plan, 
+    void ** threshold_current, void* X_p, void ** K_p,  void * partial_res){
+
+    vpu_vector_t zero_mem;
+    memset(&zero_mem, 0, sizeof(zero_mem));
+
+    void * X_cur_p = X_p;
+
+    VLDR(vpu, *threshold_current);
+    *threshold_current += 32;
+    VLDD(vpu, *threshold_current);
+    *threshold_current += 32;
+
+    for (int kh = plan->k_height_loop_counter; kh >= 0 ; kh-- )  {
+        for (int kw = plan->k_width_loop_counter; kw >= 0 ; kw-- )  {
+        for (int ic = plan->input_channel_loop_counter; ic >= 0 ; ic-- ) {
+            VLDC(vpu, X_cur_p);
+            X_cur_p += 32;
+
+            for(unsigned l=0; l<16; l++){
+            VLMACCR1(vpu, *K_p);
+            *K_p += 32;
+            }
+        }
+        X_cur_p += plan->inner_x_h_step;
+        *K_p += plan->k_h_step;
+        }
+        X_cur_p += plan->inner_x_v_step;
+        *K_p += plan->k_v_step;
+    }
+
+    VLSAT(vpu, &zero_mem);
+    VDEPTH1(vpu);
+    VSTRPV(vpu, partial_res, 0x3);
+        
+}
 
 WEAK_FUNC
 void bnn_conv2d_bin_out_asm(nn_bnn_conv2d_bin_out_asm_plan_t * plan){
@@ -15,8 +51,6 @@ void bnn_conv2d_bin_out_asm(nn_bnn_conv2d_bin_out_asm_plan_t * plan){
   xs3_vpu vpu_data;
   xs3_vpu * vpu = &vpu_data;
 
-  vpu_vector_t zero_mem;
-  memset(&zero_mem, 0, sizeof(zero_mem));
   VSETC(vpu, MODE_S16);
 
   void * X_p = plan->X;
@@ -34,61 +68,8 @@ void bnn_conv2d_bin_out_asm(nn_bnn_conv2d_bin_out_asm_plan_t * plan){
       void * K_p = plan->K;
       for (int oc = plan->output_channel_loop_counter; oc >= 0 ; oc-- ) {
 
-        void * X_cur_p = X_p;
-        VLDR(vpu, threshold_current);
-        threshold_current += 32;
-        VLDD(vpu, threshold_current);
-        threshold_current += 32;
-
-        for (int kh = plan->k_height_loop_counter; kh >= 0 ; kh-- )  {
-          for (int kw = plan->k_width_loop_counter; kw >= 0 ; kw-- )  {
-            for (int ic = plan->input_channel_loop_counter; ic >= 0 ; ic-- ) {
-              VLDC(vpu, X_cur_p);
-              X_cur_p += 32;
-
-              for(unsigned l=0; l<16; l++){
-                VLMACCR1(vpu, K_p);
-                K_p += 32;
-              }
-            }
-            X_cur_p += plan->inner_x_h_step;
-            K_p += plan->k_h_step;
-          }
-          X_cur_p += plan->inner_x_v_step;
-          K_p += plan->k_v_step;
-        }
-
-        VLSAT(vpu, &zero_mem);
-        VDEPTH1(vpu);
-        VSTRPV(vpu, partial_res_0_15_p, 0x3);
-        
-        X_cur_p = X_p;
-        VLDR(vpu, threshold_current);
-        threshold_current += 32;
-        VLDD(vpu, threshold_current);
-        threshold_current += 32;
-
-        for (int kh = plan->k_height_loop_counter; kh >= 0 ; kh-- )  {
-          for (int kw = plan->k_width_loop_counter; kw >= 0 ; kw-- )  {
-            for (int ic = plan->input_channel_loop_counter; ic >= 0 ; ic-- ) {
-              VLDC(vpu, X_cur_p);
-              X_cur_p += 32;
-
-              for(unsigned l=0; l<16; l++){
-                VLMACCR1(vpu, K_p);
-                K_p += 32;
-              }
-            }
-            X_cur_p += plan->inner_x_h_step;
-            K_p += plan->k_h_step;
-          }
-          X_cur_p += plan->inner_x_v_step;
-          K_p += plan->k_v_step;
-        }
-
-        VLSAT(vpu, &zero_mem);
-        VDEPTH1(vpu);
-        VSTRPV(vpu, partial_res_16_31_p, 0x3);
+        compute_bin_kernel(vpu, plan, &threshold_current, X_p, &K_p, partial_res_0_15_p);
+        compute_bin_kernel(vpu, plan, &threshold_current, X_p, &K_p, partial_res_16_31_p);
 
         unsigned result = (partial_res_16_31<<16) + partial_res_0_15;
 

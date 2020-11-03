@@ -58,20 +58,12 @@ static void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b256_t* X_ref
   bnn_reorder_threshold_tensor(thresholds_p, thresholds_ref, chans_out,
                               k_width * k_height * chans_in, 0);
 
-#if defined(__XS3A__)
+
   bnn_conv2d_bin_out((bnn_b32_t*)Y_p, (const bnn_b256_t*)X_ref,
                       (const bnn_b256_t*)K_p, thresholds_p, &x, &y, &k,
     0, 0, y_width, y_height,
     0, 0, 
     0, 0, k_width, k_height);
-
-#else
-  bnn_conv2d_bin_out((bnn_b32_t*)Y_p, (const bnn_b256_t*)X_ref,
-                      (const bnn_b256_t*)K_ref_p, thresholds_ref, &x, &y, &k,
-    0, 0, y_width, y_height,
-    0, 0, 
-    0, 0, k_width, k_height);
-#endif
 
   unsigned chan_b32_out = DIV_BY_AND_ROUND_UP(chans_out, 32);
   TEST_ASSERT_EQUAL_INT_ARRAY(Y_p, Y_ref_p, y_height*y_width*chan_b32_out);  
@@ -255,16 +247,10 @@ bnn_reorder_kernel_tensor((bnn_b32_t* )K_p, (bnn_b32_t* )K_ref_p, k->shape.heigh
 bnn_reorder_threshold_tensor(thresholds_p, thresholds_ref, y->channels,
                               k->shape.width * k->shape.height * x->channels, 0);
 
-#if defined(__XS3A__)
-
-  bnn_conv2d_bin_out_valid((bnn_b32_t*)Y_p, (const bnn_b256_t*)X_ref,
-                      (const bnn_b256_t*)K_p, thresholds_p, x, y, k,
-                       y_loc_x, y_loc_y, y_sub_width, y_sub_height);
-#else
-  bnn_conv2d_bin_out_valid((bnn_b32_t*)Y_p, (const bnn_b256_t*)X_ref,
-                      (const bnn_b256_t*)K_ref_p, thresholds_ref, x, y, k,
+bnn_conv2d_bin_out_valid((bnn_b32_t*)Y_p, (const bnn_b256_t*)X_ref,
+                    (const bnn_b256_t*)K_p, thresholds_p, x, y, k,
                       y_loc_x, y_loc_y, y_sub_width, y_sub_height);
-#endif
+
 
   unsigned chan_b32_out = DIV_BY_AND_ROUND_UP(y->channels, 32); 
 

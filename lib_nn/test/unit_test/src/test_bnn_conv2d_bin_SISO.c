@@ -65,19 +65,11 @@ static void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b32_t* X_ref,
   bnn_reorder_threshold_tensor(thresholds_p, thresholds_ref, chans_out,
                               k_width * k_height * chans_in, chan_overlaps);
 
-#if defined(__XS3A__)
   bnn_conv2d_bin_out_SISO((bnn_b32_t*)Y_p, (const bnn_b32_t*)X_ref,
      (const bnn_b32_t*)K_p, thresholds_p, data_scratch, &x, &y, &k,
     0, 0, y_width, y_height,
     0, 0, 
     0, 0, k_width, k_height);
-#else
-  bnn_conv2d_bin_out_SISO((bnn_b32_t*)Y_p, (const bnn_b32_t*)X_ref,
-    (const bnn_b32_t*)K_ref_p, thresholds_ref, data_scratch, &x, &y, &k,
-    0, 0, y_width, y_height,
-    0, 0, 
-    0, 0, k_width, k_height);
-#endif
 
   unsigned chan_b32_out = DIV_BY_AND_ROUND_UP(chans_out, 32); 
   TEST_ASSERT_EQUAL_INT_ARRAY(Y_ref_p, Y_p, y_height*y_width*chan_b32_out);  
@@ -272,15 +264,10 @@ static void run_bin_sub_image(bnn_b32_t* Y_p, const bnn_b32_t* Y_ref_p, const bn
 
   bnn_reorder_threshold_tensor(thresholds_p, thresholds_ref, y->channels,
                                k->shape.width * k->shape.height * x->channels, chan_overlaps);
-#if defined(__XS3A__)
+
   bnn_conv2d_bin_out_SISO_valid((bnn_b32_t*)Y_p, (const bnn_b32_t*)X_ref,
                       (const bnn_b32_t*)K_p, thresholds_p, data_scratch, x, y, k,
                        y_loc_x, y_loc_y, y_sub_width, y_sub_height);
-#else
-  bnn_conv2d_bin_out_SISO_valid((bnn_b32_t*)Y_p, (const bnn_b32_t*)X_ref,
-                      (const bnn_b32_t*)K_ref_p, thresholds_ref, data_scratch, x, y, k,
-                      y_loc_x, y_loc_y, y_sub_width, y_sub_height);
-#endif
 
   unsigned chan_b32_out = DIV_BY_AND_ROUND_UP(y->channels, 32); 
 

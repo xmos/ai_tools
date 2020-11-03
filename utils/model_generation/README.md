@@ -21,6 +21,10 @@ For additional logging output, including case index for failures, specify:
 
     --log-cli-level=debug
 
+To halt at the first failure or error:
+
+    -x
+
 Run 
 
     > pytest -h

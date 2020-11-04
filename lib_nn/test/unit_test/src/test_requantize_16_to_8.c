@@ -32,6 +32,9 @@
 #endif 
 
 
+
+
+
 ////////////////////////////////////////////////
 static void memset16(
     void* dst,
@@ -67,19 +70,14 @@ void test_requantize_16_to_8_case0()
         0,0,0
     };
 
-    nn_requantize_16_to_8_job_t job;
-
-    requantize_16_to_8_init(&job, VPU_INT8_ACC_PERIOD, 1);
-    requantize_16_to_8(y, x, &job);
+    requantize_16_to_8(y, x, 0, VPU_INT8_ACC_PERIOD);
 
     for(int i = 0; i < VPU_INT8_ACC_PERIOD; i ++)
         TEST_ASSERT_EQUAL(y_exp[i], y[i]);
 
-
     memset(y, 0, sizeof(y));
 
-    requantize_16_to_8_init(&job, VPU_INT8_ACC_PERIOD - 1, 1);
-    requantize_16_to_8(y, x, &job);
+    requantize_16_to_8(y, x, 0, VPU_INT8_ACC_PERIOD - 1);
 
     for(int i = 0; i < VPU_INT8_ACC_PERIOD-1; i ++)
         TEST_ASSERT_EQUAL(y_exp[i], y[i]);
@@ -140,10 +138,7 @@ void test_requantize_16_to_8_case1()
             memset16(x, casse->x_val, VEC_LEN);
             memset(y, XXX, VEC_LEN * sizeof(int8_t));
 
-            nn_requantize_16_to_8_job_t job;
-
-            requantize_16_to_8_init(&job, casse->N, 1);
-            requantize_16_to_8(dest, (int16_t*)x, &job);
+            requantize_16_to_8(dest, (int16_t*)x, 0, casse->N);
 
             for(int k = 0; k < casse->N; k++){
                 if(dest[k] != casse->exp_y)
@@ -201,10 +196,7 @@ void test_requantize_16_to_8_case2()
 
             int8_t* dest = in_place? (int8_t*) x : (int8_t*) y;
 
-            nn_requantize_16_to_8_job_t job;
-
-            requantize_16_to_8_init(&job, N, 1);
-            requantize_16_to_8(dest, (int16_t*)x, &job);
+            requantize_16_to_8(dest, (int16_t*)x, 0, N);
 
             for(int i = 0; i < N; i++){
 
@@ -236,7 +228,7 @@ void test_requantize_16_to_8_case2()
 
 /****************************************************************************
  *
- * Case 3 - Random data/length, multiple jobs
+ * Case 3 - Random data/length, partial jobs
  *
  ****************************************************************************/
 #define MAX_LEN         (512)
@@ -253,48 +245,40 @@ void test_requantize_16_to_8_case3()
     
     const int8_t XXX = 0xCC;
 
-    nn_requantize_16_to_8_job_t jobs[MAX_JOBS];
-
     for(int v = 0; v < REPS; v++){
 
         PRINTF("\t\trep %d...\n", v); 
 
-        const unsigned N = pseudo_rand_uint16() % (MAX_LEN+1);
+        const unsigned job_start = (pseudo_rand_uint16() % (MAX_LEN+1)) & 0xFFFC; // must be multiple of 4
+
+
+        const unsigned N = pseudo_rand_uint16() % ( MAX_LEN+1 - job_start) ;
+
+        TEST_ASSERT_TRUE(job_start + N <= MAX_LEN);
 
         pseudo_rand_bytes((char*)x_orig, sizeof(x_orig));
         vpu_memcpy(x, x_orig, sizeof(x));
         
         memset(y, XXX, sizeof(y));
 
-        const unsigned job_count = (pseudo_rand_uint16() % (MAX_JOBS-1))+1;
+
+        requantize_16_to_8(y, x, job_start, N);
         
-        requantize_16_to_8_init(jobs, N, job_count);
 
-        for(int in_place = 0; in_place < 1; in_place++){
+        for(int i = 0; i < MAX_LEN; i++){
 
+            int8_t exp_val = 0xCC;
 
-            int8_t* dest = in_place? (int8_t*) x : (int8_t*) y;
-
-            for(int j = 0; j < job_count; j++)
-                requantize_16_to_8(dest, (int16_t*)x, &jobs[j]);
-            
-
-            for(int i = 0; i < N; i++){
-
-                int8_t exp_val = vdepth8_single_s16(x_orig[i]);
+            if(i >= job_start && i < job_start+N){
+                exp_val = vdepth8_single_s16(x_orig[i]);
                 if(x_orig[i] < -0x7F80)
                     exp_val = NEG_SAT_VAL;
-
-                if(dest[i] != exp_val)
-                    sprintf(str_buff, "(rep: %d) (N: %u) (index: %d) (x[%d] = %d)", v, N, i, i, x_orig[i]);
-
-                TEST_ASSERT_EQUAL_MESSAGE(exp_val, dest[i], str_buff);
             }
 
-            if(!in_place){
-                for(int i = N; i < MAX_LEN; i++)
-                    TEST_ASSERT_EQUAL(XXX, dest[i]);
-            }
+            if(y[i] != exp_val)
+                sprintf(str_buff, "(rep: %d) (N: %u) (index: %d) (x[%d] = %d)", v, N, i, i, x_orig[i]);
+
+            TEST_ASSERT_EQUAL_MESSAGE(exp_val, y[i], str_buff);
         }
     }
 }

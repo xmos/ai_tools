@@ -1,18 +1,19 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import tensorflow as tf  # type: ignore
+import tensorflow as tf
 from abc import abstractmethod
 from typing import Tuple, Optional
 
 from tflite2xcore.model_generation import Configuration
 from tflite2xcore.model_generation.utils import parse_init_config
 
-from .. import (
+from .. import (  # pylint: disable=unused-import
     FilterOpTestModelGenerator,
     ChannelPreservingOpTestModelGenerator,
     test_output,
     test_converted_single_op_model,
     test_idempotence,
+    test_reference_model_regression,
 )
 
 
@@ -29,11 +30,6 @@ class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
     @property
     def _total_height(self) -> int:
         return self._config["height"]  # type: ignore
-
-    def _op_layer(
-        self, *, input_shape: Optional[Tuple[int, int, int]] = None
-    ) -> tf.keras.layers.Layer:
-        raise NotImplementedError()
 
     def _set_config(self, cfg: Configuration) -> None:
         self._config.update(
@@ -77,7 +73,7 @@ class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
         )
 
 
-class Conv2dProperTestModelGenerator(Conv2dGenericTestModelGenerator):
+class Conv2dWordAlignedTestModelGenerator(Conv2dGenericTestModelGenerator):
     def check_config(self) -> None:
         super().check_config()
         assert (
@@ -86,6 +82,11 @@ class Conv2dProperTestModelGenerator(Conv2dGenericTestModelGenerator):
         assert (
             self._config["output_channels"] % 4 == 0
         ), "# of output channels must be multiple of 4"
+
+
+class Conv2dProperTestModelGenerator(Conv2dWordAlignedTestModelGenerator):
+    def check_config(self) -> None:
+        super().check_config()
         if self._config["padding"] == "valid":
             assert (
                 self._config["K_h"] != self._total_height

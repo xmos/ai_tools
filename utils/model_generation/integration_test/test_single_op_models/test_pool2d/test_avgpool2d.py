@@ -1,16 +1,16 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest  # type: ignore
-import tensorflow as tf  # type: ignore
+import pytest
+import tensorflow as tf
 from typing import Type
 
-from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_schema import XCOREOpCodes, BuiltinOpCodes  # type: ignore # TODO: fix this
 
 from . import Pool2dGenericTestModelGenerator
 from . import (  # pylint: disable=unused-import
     test_output,
     test_converted_single_op_model,
-    test_idempotence,
+    test_reference_model_regression,
 )
 
 
@@ -36,6 +36,11 @@ GENERATOR = AvgPool2dTestModelGenerator
 @pytest.fixture  # type: ignore
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_avgpool2d
+
+
+@pytest.fixture  # type: ignore
+def reference_op_code() -> BuiltinOpCodes:
+    return BuiltinOpCodes.AVERAGE_POOL_2D
 
 
 if __name__ == "__main__":

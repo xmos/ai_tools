@@ -4,8 +4,12 @@ import numpy as np
 from .xcore_interpreter import XCOREInterpreter
 from .xcore_device import XCOREDeviceServer
 
-MAX_DEVICE_MODEL_CONTENT_SIZE = 500000
-MAX_DEVICE_TENSOR_ARENA_SIZE = 250000
+from . import MAX_DEVICE_MODEL_CONTENT_SIZE, MAX_DEVICE_TENSOR_ARENA_SIZE
+
+from .exceptions import (
+    ModelSizeError,
+    ArenaSizeError,
+)
 
 
 class XCOREDeviceInterpreter(XCOREInterpreter):
@@ -14,15 +18,19 @@ class XCOREDeviceInterpreter(XCOREInterpreter):
         model_path=None,
         model_content=None,
         max_tensor_arena_size=MAX_DEVICE_TENSOR_ARENA_SIZE,
-    ):
+    ) -> None:
         # verify model content size is not too large
         if len(model_content) > MAX_DEVICE_MODEL_CONTENT_SIZE:
-            raise ValueError(f"model_content > {MAX_DEVICE_MODEL_CONTENT_SIZE} bytes")
+            raise ModelSizeError(
+                f"model_content too large: {len(model_content)} "
+                f"> {MAX_DEVICE_MODEL_CONTENT_SIZE} bytes"
+            )
 
         # verify max_tensor_arena_size is not too large
         if max_tensor_arena_size > MAX_DEVICE_TENSOR_ARENA_SIZE:
-            raise ValueError(
-                f"max_tensor_arena_size > {MAX_DEVICE_TENSOR_ARENA_SIZE} bytes"
+            raise ArenaSizeError(
+                f"max_tensor_arena_size too large: {len(max_tensor_arena_size)} "
+                f"> {MAX_DEVICE_TENSOR_ARENA_SIZE} bytes"
             )
 
         super().__init__(model_path, model_content, max_tensor_arena_size)
@@ -31,11 +39,11 @@ class XCOREDeviceInterpreter(XCOREInterpreter):
         self._endpoint = None
         self._set_model = False
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self._endpoint:
             XCOREDeviceServer.release(self._endpoint)
 
-    def allocate_tensors(self):
+    def allocate_tensors(self) -> None:
         super().allocate_tensors()
 
         if not self._endpoint:

@@ -1,14 +1,16 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest  # type: ignore
-import tensorflow as tf  # type: ignore
+import pytest
+import tensorflow as tf
 from typing import Callable
+
+from tflite2xcore.xcore_schema import BuiltinOpCodes  # type: ignore # TODO: fix this
 
 from . import LUTActivationOpTestModelGenerator
 from . import (  # pylint: disable=unused-import
     test_output,
     test_converted_single_op_model,
-    test_idempotence,
+    test_reference_model_regression,
 )
 
 
@@ -24,6 +26,16 @@ class SigmoidTestModelGenerator(LUTActivationOpTestModelGenerator):
 
 
 GENERATOR = SigmoidTestModelGenerator
+
+
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
+
+
+@pytest.fixture  # type: ignore
+def reference_op_code() -> BuiltinOpCodes:
+    return BuiltinOpCodes.LOGISTIC
 
 
 if __name__ == "__main__":

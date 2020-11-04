@@ -32,8 +32,6 @@ PARAMS = deepcopy(PARAMS)
 
 PARAMS["extended"].update(
     {
-        "input_channels": [32, 128, 256],
-        "non_matching_input_channels": [16, 48, 127],
         "non_matching_tensors": list(
             _make_name_type_pairs("input", [TensorType.FLOAT32, TensorType.INT32])
         ),

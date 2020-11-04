@@ -22,157 +22,65 @@ extern "C" {
 
 typedef nn_window_op_job_params_t nn_conv2d_job_params_t;
 
-/**
- * Struct represents the shared parameters required to execute a `conv2d_deep()` operation. 
- */
-typedef struct {
-
-    struct {
-        struct {
-            mem_stride_t row;
-        } X;
-
-        // struct {
-        //     mem_stride_t col;
-        // } window;
-
-        struct {
-            mem_stride_t cout;
-        } K;
-
-    } stride;
-
-    struct {
-        struct {
-            unsigned height;
-            unsigned width;
-        } shape;
-
-        struct {
-            int vertical;
-            int horizontal;
-        } stride;
-    } window;
-
-    struct {
-        uint32_t X;
-        uint32_t Y;
-    } channels;
-
-    int32_t zero_point;
-
-} nn_conv2d_deep_plan_t;
 
 /**
- * Struct represents the job-specific parameters required to execute a `conv2d_deep()` operation. 
+ * Flags used with conv2d_deep_ext() for advanced scenarios.
  */
-typedef struct {
-
-    struct {
-        struct {
-            int32_t X;
-            int32_t Y;
-            int32_t K;
-            int32_t BSO;
-        } start;
-
-        struct {
-            int32_t Y;
-        } chan_group;
-
-        struct {
-            int32_t window;
-            int32_t Y;
-        } row;
-    } stride;
-
-    struct {
-        unsigned rows;
-        unsigned cols;
-        unsigned channels;
-    } output;
-
-    struct {
-        int32_t top;
-        int32_t left;
-        int32_t bottom;
-        int32_t right;
-    } init_padding;
-} nn_conv2d_deep_job_t;
+typedef enum {
+    /** 
+     * If non-zero, this flag signals to conv2d_deep_ext() that the supplied kernel weight tensor (@tensor{K}) and 
+     * the BSO tensor are slices, rather than the full tensors.
+     * 
+     * If this is set, then conv2d_deep_ext() will treat @tensor{K} and BSO as if they contain _only the 
+     * necessary output channels for the job being invoked_.
+     * 
+     * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
+     * 
+     * For example, if a @oper{conv2d_deep} instance performs a 5x3 convolution with 32 input channels and 40 output 
+     * channels, normally the shape of @tensor{K} would be @math{(40,5,3,32)}, and the shape of BSO would normally
+     * be @math{(3)} for any job invoked.
+     * 
+     * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
+     * set, conv2d_deep_ext() will interpret the supplied argument `K` as pointing to @math{\bar K[16:32,:,:,:]} 
+     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[1]} (i.e. the
+     * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
+     * 
+     * @note Each block of the BSO tensor always corresponds to 16 channels. Even if a job invocation is only computing
+     *       4 output channels, a full 16-channel `nn_bso_block_t` must be provided.
+     */
+    CONV2D_DEEP_FLAG_SLICED_K = (1<<0),
+} nn_conv2d_deep_flags_e;
 
 
 
 
 /**
- * Struct represents the shared parameters required to execute a `conv2d_deep()` operation. 
+ * Flags used with conv2d_shallowin_ext() for advanced scenarios.
  */
-typedef struct {
-
-    struct {
-        struct {
-            mem_stride_t row;
-        } X;
-
-    } stride;
-
-    struct {
-        struct {
-            unsigned height;
-            unsigned width;
-        } shape;
-
-        struct {
-            int vertical;
-            int horizontal;
-        } stride;
-    } window;
-
-    struct {
-        uint32_t X;
-        uint32_t Y;
-    } channels;
-
-    int32_t zero_point;
-
-} nn_conv2d_shallowin_plan_t;
-
-/**
- * Struct represents the job-specific parameters required to execute a `conv2d_deep()` operation. 
- */
-typedef struct {
-
-    struct {
-        struct {
-            int32_t X;
-            int32_t Y;
-            int32_t K;
-            int32_t BSO;
-        } start;
-
-        struct {
-            int32_t Y;
-        } chan_group;
-
-        struct {
-            int32_t window;
-            int32_t Y;
-        } row;
-    } stride;
-
-    struct {
-        unsigned rows;
-        unsigned cols;
-        unsigned channels;
-    } output;
-
-    struct {
-        int32_t top;
-        int32_t left;
-        int32_t bottom;
-        int32_t right;
-    } init_padding;
-} nn_conv2d_shallowin_job_t;
-
+typedef enum {
+    /** 
+     * If non-zero, this flag signals to conv2d_shallowin_ext() that the supplied kernel weight tensor (@tensor{K}) and 
+     * the BSO tensor are slices, rather than the full tensors.
+     * 
+     * If this is set, then conv2d_shallowin_ext() will treat @tensor{K} and BSO as if they contain _only the 
+     * necessary output channels for the job being invoked_.
+     * 
+     * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
+     * 
+     * For example, if a @oper{conv2d_shallowin} instance performs a 5x3 convolution with 8 input channels and 40 output 
+     * channels, normally the shape of @tensor{K} would be @math{(40,5,3,8)}, and the shape of BSO would normally
+     * be @math{(3)} for any job invoked.
+     * 
+     * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
+     * set, conv2d_shallowin_ext() will interpret the supplied argument `K` as pointing to @math{\bar K[16:32,:,:,:]} 
+     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[1]} (i.e. the
+     * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
+     * 
+     * @note Each block of the BSO tensor always corresponds to 16 channels. Even if a job invocation is only computing
+     *       4 output channels, a full 16-channel `nn_bso_block_t` must be provided.
+     */
+    CONV2D_SHALLOWIN_FLAG_SLICED_K = (1<<0),
+} nn_conv2d_shallowin_flags_e;
 
 /**
  * Struct represents the shared parameters required to execute a `conv2d_im2col()` operation. 
@@ -253,36 +161,35 @@ typedef struct {
 } nn_conv2d_im2col_job_t;
 
 
-/**
- * Struct represents the shared parameters required to execute a `conv2d_1x1()` operation. 
- */
-typedef struct {
-    
-    struct {
-        uint32_t X;
-        uint32_t Y;
-    } channels;
 
-} nn_conv2d_1x1_plan_t;
 
 /**
- * Struct represents the job-specific parameters required to execute a `conv2d_1x1()` operation. 
+ * Flags used with conv2d_1x1_ext() for advanced scenarios.
  */
-typedef struct {
-
-    struct {
-        int32_t X;
-        int32_t Y;
-        int32_t K;
-        int32_t BSO;
-    } start;
-
-    struct {
-        unsigned pixels;
-        unsigned channels;
-    } output;
-
-} nn_conv2d_1x1_job_t;
+typedef enum {
+    /** 
+     * If non-zero, this flag signals to conv2d_1x1_ext() that the supplied kernel weight tensor (@tensor{K}) and 
+     * the BSO tensor are slices, rather than the full tensors.
+     * 
+     * If this is set, then conv2d_1x1_ext() will treat @tensor{K} and BSO as if they contain _only the 
+     * necessary output channels for the job being invoked_.
+     * 
+     * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
+     * 
+     * For example, if a @oper{conv2d_1x1} instance performs convolution on an input image with 32 input channels and 40 
+     * output channels, normally the shape of @tensor{K} would be @math{(40,32)}, and the shape of BSO would normally be 
+     * @math{(3)} for any job invoked.
+     * 
+     * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
+     * set, conv2d_1x1_ext() will interpret the supplied argument `K` as pointing to @math{\bar K[16:32,:]} 
+     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[1]} (i.e. the
+     * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
+     * 
+     * @note Each block of the BSO tensor always corresponds to 16 channels. Even if a job invocation is only computing
+     *       4 output channels, a full 16-channel `nn_bso_block_t` must be provided.
+     */
+    CONV2D_1X1_FLAG_SLICED_K = (1<<0),
+} nn_conv2d_1x1_flags_e;
 
 
 /**
@@ -315,79 +222,32 @@ typedef struct {
 
 
 /**
- * Struct represents the shared parameters required to execute a 
- * `conv2d_depthwise()` operation. 
+ * Flags used with conv2d_depthwise_ext() for advanced scenarios.
  */
-typedef struct {
-
-    struct {
-        struct {
-            int32_t row;
-        } X;
-
-        struct {
-            int32_t col;
-        } window;
-
-    } stride;
-
-    struct {
-        unsigned height;
-        unsigned width;
-        int vstride; //TODO: get rid of this
-    } kernel;
-
-    struct {
-        uint32_t X;
-        uint32_t Y;
-    } channels;
-
-    int32_t zero_point;
-
-} nn_conv2d_depthwise_plan_t;
-
-/**
- * Struct represents the job-specific parameters required to execute a 
- * `conv2d_depthwise()` operation. 
- */
-typedef struct {
-
-    struct {
-        struct {
-            int32_t X;
-            int32_t Y;
-            int32_t K;
-            int32_t BSO;
-        } start;
-
-        struct {
-            int32_t X;
-            int32_t Y;
-        } chan_group;
-
-        struct {
-            int32_t window;
-            int32_t Y;
-        } row;
-    } stride;
-
-    struct {
-        unsigned rows;
-        unsigned cols;
-        unsigned channels;
-    } output;
-
-    struct {
-        int32_t top;
-        int32_t left;
-        int32_t bottom;
-        int32_t right;
-        unsigned unpadded;
-    } init_padding;
-} nn_conv2d_depthwise_job_t;
-
-
-
+typedef enum {
+    /** 
+     * If non-zero, this flag signals to conv2d_depthwise_ext() that the supplied kernel weight tensor (@tensor{K}) and 
+     * the BSO tensor are slices, rather than the full tensors.
+     * 
+     * If this is set, then conv2d_depthwise_ext() will treat @tensor{K} and BSO as if they contain _only the 
+     * necessary channels for the job being invoked_.
+     * 
+     * When loading data from flash or external RAM, this can be used to decrease peak SRAM usage.
+     * 
+     * For example, if a @oper{conv2d_depthwise} instance performs a 5x3 convolution on an input image with 40 channels,
+     * normally the shape of @tensor{K} would be @math{(5,3,40)}, and the shape of BSO would normally be @math{(3)} for 
+     * any job invoked.
+     * 
+     * However, if a particular job is calculating only output channels 16 through 31 (inclusive), then if this flag is 
+     * set, conv2d_depthwise_ext() will interpret the supplied argument `K` as pointing to @math{\bar K[:,:,16:32]} 
+     * (using Python-style array slicing notation), and the supplied `BSO` as pointing to @math{BSO[1]} (i.e. the
+     * second `nn_bso_block_t`, corresponding to channels 16 through 31.)
+     * 
+     * @note Each block of the BSO tensor always corresponds to 16 channels. Even if a job invocation is only computing
+     *       4 output channels, a full 16-channel `nn_bso_block_t` must be provided.
+     */
+    CONV2D_DEPTHWISE_FLAG_SLICED_K = (1<<0),
+} nn_conv2d_depthwise_flags_e;
 
 #ifdef __XC__
 }   //extern "C"

@@ -21,7 +21,7 @@
  * @param V         Array
  * @param INDEX     Element index within array.
  */
-#define ADDR(V, INDEX)      &V[((int)(INDEX))]
+#define ADDR(V, INDEX)      &(V)[((int)(INDEX))]
 
 static inline int8_t sat_s8(
     const int32_t acc32,

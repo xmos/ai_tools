@@ -1,13 +1,14 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import logging
-import dill  # type: ignore
-import tensorflow as tf  # type: ignore
+import dill
+import numpy as np
+import tensorflow as tf
 from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, Any, Optional, List, Union, Type
+from typing import TYPE_CHECKING, Dict, Any, List, Union, Type, Iterable
 
-from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
+from tflite2xcore import tflite_visualize
 
 from . import Configuration, TFLiteModel
 
@@ -24,30 +25,33 @@ class Runner(ABC):
     """ Superclass for defining the behavior of model generation runs.
 
     A Runner registers a ModelGenerator object along with all the
-    converters and evaluators.
+    converters, evaluators, and data factories.
     """
 
     converted_models: ConvertedModels
+    _converters: List["Converter"]
+    _evaluators: List["Evaluator"]
+    _data_factories: List["DataFactory"]
     _config: Configuration
 
-    def __init__(
-        self,
-        generator: Type["ModelGenerator"],
-        converters: Optional[List["Converter"]] = None,
-        evaluators: Optional[List["Evaluator"]] = None,
-        data_factories: Optional[List["DataFactory"]] = None,
-    ) -> None:
+    def __init__(self, generator: Type["ModelGenerator"]) -> None:
         self._model_generator = generator(self)
-        self._converters = converters or []
-        self._evaluators = evaluators or []
-        self._data_factories = data_factories or []
+        self._converters = []
+        self._evaluators = []
+        self._data_factories = []
+
+    def register_converter(self, converter: "Converter") -> None:
+        self._converters.append(converter)
+
+    def register_evaluator(self, evaluator: "Evaluator") -> None:
+        self._evaluators.append(evaluator)
+
+    def register_data_factory(self, data_factory: "DataFactory") -> None:
+        self._data_factories.append(data_factory)
 
     @abstractmethod
     def run(self) -> None:
-        """ Defines how self._model_generator should be run with a config.
-
-        Optionally sets self.outputs.
-        """
+        """ Defines how the runner should be run once configured. """
         self._model_generator.build()
         self.converted_models = {}
 
@@ -122,6 +126,19 @@ class Runner(ABC):
             if visualize:
                 tflite_visualize.main(model_path, model_html)
                 logging.debug(f"{name} visualization dumped to {model_html}")
+
+    @staticmethod
+    def dump_data(
+        dirpath: Path,
+        *,
+        data: Dict[str, Union[tf.Tensor, np.ndarray]],
+        example_idx: Union[int, Iterable[int]] = [],
+    ) -> None:
+        example_idx = [example_idx] if isinstance(example_idx, int) else example_idx
+        for key, arr in data.items():
+            for j in example_idx:
+                with open(dirpath / f"example_{j}.{key}", "wb") as f:
+                    f.write(np.array(arr[j]).tostring())
 
 
 class RunnerDependent(ABC):

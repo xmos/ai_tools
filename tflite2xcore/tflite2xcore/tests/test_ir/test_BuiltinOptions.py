@@ -69,7 +69,7 @@ PARAMS = {
 
 @pytest.fixture
 def option_type_map_values() -> List[BuiltinOptions]:
-    return [op_code.to_BuiltinOptions() for op_code in BuiltinOpCodes]
+    return [BuiltinOptions.from_BuiltinOpCodes(op_code) for op_code in BuiltinOpCodes]
 
 
 #  ----------------------------------------------------------------------------
@@ -78,7 +78,7 @@ def option_type_map_values() -> List[BuiltinOptions]:
 
 
 def test_option_type_map(builtin_op_code: BuiltinOpCodes) -> None:
-    option_type = builtin_op_code.to_BuiltinOptions()
+    option_type = BuiltinOptions.from_BuiltinOpCodes(builtin_op_code)
     assert option_type in BuiltinOptions
     if option_type is BuiltinOptions.NONE:
         assert builtin_op_code in _BUILTIN_OP_CODE_NONES
@@ -95,15 +95,23 @@ def test_option_type_map_values(
 
 
 def test_option_type_map_nones(builtin_op_code_none: BuiltinOpCodes) -> None:
-    assert builtin_op_code_none.to_BuiltinOptions() is BuiltinOptions.NONE
+    assert (
+        BuiltinOptions.from_BuiltinOpCodes(builtin_op_code_none) is BuiltinOptions.NONE
+    )
 
 
 def test_option_type_map_reducers(builtin_op_code_reducer: BuiltinOpCodes) -> None:
-    assert builtin_op_code_reducer.to_BuiltinOptions() is BuiltinOptions.ReducerOptions
+    assert (
+        BuiltinOptions.from_BuiltinOpCodes(builtin_op_code_reducer)
+        is BuiltinOptions.ReducerOptions
+    )
 
 
 def test_option_type_map_pools(builtin_op_code_pool: BuiltinOpCodes) -> None:
-    assert builtin_op_code_pool.to_BuiltinOptions() is BuiltinOptions.Pool2DOptions
+    assert (
+        BuiltinOptions.from_BuiltinOpCodes(builtin_op_code_pool)
+        is BuiltinOptions.Pool2DOptions
+    )
 
 
 if __name__ == "__main__":

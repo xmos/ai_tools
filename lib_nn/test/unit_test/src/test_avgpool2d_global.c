@@ -17,6 +17,7 @@
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 
+static char str_buff[200] = {0};
 
 #if CONFIG_SYMMETRIC_SATURATION_avgpool2d_global
   #define NEG_SAT_VAL   (-127)
@@ -75,11 +76,6 @@ void test_avgpool2d_global_case0()
     nn_image_params_t x_params = { HEIGHT, WIDTH, CHANS };
     nn_image_params_t y_params = { 1, 1, CHANS };
 
-    nn_avgpool2d_global_plan_t plan;
-    nn_avgpool2d_global_job_t job;
-
-    avgpool2d_global_init(&plan, &job, &x_params, NULL, 1);
-
     int8_t scale;
     uint16_t shift;
     compute_scale_shift(&scale, &shift, &x_params);
@@ -89,11 +85,7 @@ void test_avgpool2d_global_case0()
 
     memset(X, 0, sizeof(X));
 
-    avgpool2d_global((nn_image_t*) Y, (nn_image_t*) X, bias, scale, shift, &plan, &job);
-
-    char str_buff[200] = {0};
-
-    PRINTF("\t\tChecking...\n");
+    avgpool2d_global((nn_image_t*) Y, (nn_image_t*) X, bias, scale, shift, &x_params);
 
     for(unsigned chn = 0; chn < y_params.channels; chn++){
         nn_image_t y_exp = NEG_SAT_VAL;
@@ -180,9 +172,6 @@ void test_avgpool2d_global_case1()
         nn_image_params_t x_params = { casse->height, casse->width, casse->channels };
         nn_image_params_t y_params = { 1, 1, casse->channels };
 
-        nn_avgpool2d_global_plan_t plan;
-        nn_avgpool2d_global_job_t job;
-
         for(int r = 0; r < x_params.height; r++){
             for(int c = 0; c < x_params.width; c++){
                 for(int ch = 0; ch < x_params.channels; ch++){
@@ -191,19 +180,16 @@ void test_avgpool2d_global_case1()
             }
         }
 
-        avgpool2d_global_init(&plan, &job, &x_params, NULL, 1);
 
         int8_t scale;
         uint16_t shift;
         compute_scale_shift(&scale, &shift, &x_params);
 
-        int32_t bias = casse->bias * plan.X.pixels * scale;
+        int32_t bias = casse->bias * x_params.height * x_params.width * scale;
         
         memset(Y, 0xCC, sizeof(Y));
-        avgpool2d_global(Y, (nn_image_t*) X, bias, scale, shift, &plan, &job);
+        avgpool2d_global(Y, (nn_image_t*) X, bias, scale, shift, &x_params);
 
-        char str_buff[200] = {0};
-        PRINTF("\t\tChecking...\n");
         for(unsigned row = 0; row < y_params.height; row++){
             for(unsigned col = 0; col < y_params.width; col++){
 
@@ -232,10 +218,61 @@ void test_avgpool2d_global_case1()
 #undef MAX_CHANS
 #undef DEBUG_ON
 
+
+
+
+
+#define CHANS   (3*VPU_INT8_ACC_PERIOD - 4)
+#define HEIGHT  (32)
+#define WIDTH   (32)
+void test_avgpool2d_global_case2()
+{
+    nn_image_t WORD_ALIGNED  X[HEIGHT][WIDTH][CHANS] = {{{0}}};
+    nn_image_t WORD_ALIGNED  Y[CHANS];
+
+    PRINTF("%s...\n", __func__);
+
+    nn_image_params_t x_params = { HEIGHT, WIDTH, CHANS };
+    nn_image_params_t y_params = { 1, 1, CHANS };
+
+    int8_t scale;
+    uint16_t shift;
+    compute_scale_shift(&scale, &shift, &x_params);
+
+    int32_t bias = 0;
+
+    memset(X, 123, sizeof(X));
+
+    memset(Y, 0xCC, sizeof(Y));
+    avgpool2d_global(Y, (nn_image_t*) X, bias, scale, shift, &x_params);
+
+    for(unsigned chn = 0; chn < y_params.channels; chn++){
+
+        int8_t y_exp = 123;
+
+        TEST_ASSERT_EQUAL(y_exp, Y[chn]);
+    }
+
+    memset(Y, 0xCC, sizeof(Y));
+    avgpool2d_global_ext(Y, (nn_image_t*) X, bias, scale, shift, &x_params, 
+                        16, 20, AVGPOOL2D_GLOBAL_FLAG_NONE);
+
+    
+    for(unsigned chn = 0; chn < y_params.channels; chn++){
+        int8_t y_exp = (chn >= 16 && chn < (16+20))? 123 : 0xCC;
+
+        TEST_ASSERT_EQUAL(y_exp, Y[chn]);
+    }
+}
+#undef WIDTH
+#undef HEIGHT
+#undef CHANS
+
 void test_avgpool2d_global()
 {
     UNITY_SET_FILE();
 
     RUN_TEST(test_avgpool2d_global_case0);
     RUN_TEST(test_avgpool2d_global_case1);
+    RUN_TEST(test_avgpool2d_global_case2);
 }

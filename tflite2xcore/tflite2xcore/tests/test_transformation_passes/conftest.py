@@ -1,6 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest  # type: ignore
+import pytest
 import itertools
 from typing import List, Dict, Iterator, Tuple, Any
 
@@ -58,14 +58,14 @@ ParamsType = Dict[str, Dict[str, List[Any]]]
 
 PARAMS = {
     "extended": {
-        "input_height": [7, 9, 17, 20, 32],
-        "input_width": [7, 9, 17, 20, 32],
-        "input_channels": [4, 8, 16, 32, 36, 64],
+        "input_height": [9, 20, 32],
+        "input_width": [7, 17, 32],
+        "input_channels": [4, 16, 32, 36],
     },
     "default": {
         "input_height": [9, 20],
         "input_width": [7, 17],
-        "input_channels": [4, 8, 16, 32],
+        "input_channels": [4, 16, 32],
     },
     "smoke": {
         "input_height": [9, 20],

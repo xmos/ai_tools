@@ -18,7 +18,8 @@ void nn_conv2d_hstrip_depthwise_padded(
     const unsigned pad_l,
     const unsigned pad_b,
     const unsigned pad_r,
-    const int32_t xk_col_stride,
+    const int32_t x_col_stride,
+    const int32_t k_col_stride,
     const int32_t x_row_stride,
     const int32_t window_hstride,
     const int32_t y_col_stride,
@@ -45,13 +46,14 @@ void nn_conv2d_hstrip_depthwise_padded(
 #define STACK_PAD_L             (NSTACKWORDS+4)
 #define STACK_PAD_B             (NSTACKWORDS+5)
 #define STACK_PAD_R             (NSTACKWORDS+6)
-#define STACK_XK_COL_STRIDE     (NSTACKWORDS+7)
-#define STACK_X_ROW_STRIDE      (NSTACKWORDS+8)
-#define STACK_WINDOW_HSTRIDE    (NSTACKWORDS+9)
-#define STACK_Y_COL_STRIDE      (NSTACKWORDS+10)
-#define STACK_OUT_COLS          (NSTACKWORDS+11)
-#define STACK_CHAN2WRITE        (NSTACKWORDS+12)
-#define STACK_ZERO_VEC_PTR      (NSTACKWORDS+13)
+#define STACK_X_COL_STRIDE      (NSTACKWORDS+7)
+#define STACK_K_COL_STRIDE      (NSTACKWORDS+8)
+#define STACK_X_ROW_STRIDE      (NSTACKWORDS+9)
+#define STACK_WINDOW_HSTRIDE    (NSTACKWORDS+10)
+#define STACK_Y_COL_STRIDE      (NSTACKWORDS+11)
+#define STACK_OUT_COLS          (NSTACKWORDS+12)
+#define STACK_CHAN2WRITE        (NSTACKWORDS+13)
+#define STACK_ZERO_VEC_PTR      (NSTACKWORDS+14)
 
 
 #define STACK_VEC_VD            (NSTACKWORDS-8)
@@ -60,6 +62,7 @@ void nn_conv2d_hstrip_depthwise_padded(
 #define STACK_VEC_ZERO          (NSTACKWORDS-32)
 
 
+#define STACK_DP            (0)
 #define STACK_CP            (1)
 #define STACK_MID_ROWS      (9)
 #define STACK_CTR_COLS      (10)
@@ -89,7 +92,8 @@ FUNCTION_NAME:
     //Change constant pool pointer to refer to the constant VPU vects needed here
     ldaw r11, cp[vpu_vects]
     {   ldaw r11, cp[0]                         ;   set cp, r11                             }
-    {                                           ;   stw r11, sp[STACK_CP]                   }
+    {   ldaw r11, dp[0]                         ;   stw r11, sp[STACK_CP]                   }
+    {                                           ;   stw r11, sp[STACK_DP]                   }
 
 
     {   add r11, r3, r10                        ;   vldd r3[0]                              }
@@ -100,7 +104,7 @@ FUNCTION_NAME:
     {                                           ;   ldw r11, sp[STACK_PAD_T]                }
     {   sub r3, r3, r11                         ;   ldw r11, sp[STACK_PAD_B]                }
     {   sub r3, r3, r11                         ;   ldw r11, sp[STACK_PAD_L]                }
-    {   lss r9, r10, r11                        ;   ldw r5, sp[STACK_XK_COL_STRIDE]         }
+    {   lss r9, r10, r11                        ;   ldw r5, sp[STACK_X_COL_STRIDE]          }
     mul r6, r5, r11
     {   neg r9, r9                              ;   stw r6, sp[STACK_PAD_L]                 }
     {                                           ;   ldw r4, sp[STACK_K_W]                   }
@@ -119,41 +123,41 @@ FUNCTION_NAME:
 
 #define Q(RSOMETHING)    RSOMETHING
 
-#define xk_col_stride   r3
+#define x_col_stride    r3
 #define x_row_stride    r4
-#define _32             r5
+#define k_col_stride    r5
 #define rows_left       r6
 #define cols_left       r7
 #define pad_t           r8
 #define pad_b           r9
 #define K_w             r10
 
-// FUNCTION_NAME + 0x80
     .align 16
     .L_vbias_adj:
-    {   mov xk_col_stride, r5                   ;   vstc r11[0]                             }
+    {   mov x_col_stride, r5                    ;   vstc r11[0]                             }
     {   ldc Q(cols_left), 0                     ;   ldw x_row_stride, sp[STACK_X_ROW_STRIDE]}
-    {   ldc _32, 32                             ;   ldw K_w, sp[STACK_K_W]                  }
-    mul r11, K_w, xk_col_stride
+    {                                           ;   ldw k_col_stride, sp[STACK_K_COL_STRIDE]}
+    {                                           ;   ldw K_w, sp[STACK_K_W]                  }
+    mul r11, K_w, x_col_stride  //  bytes per input image row (with next line)
     {   add r11, r11, x_row_stride              ;   ldw pad_t, sp[STACK_PAD_T]              }
     {                                           ;   ldw pad_b, sp[STACK_PAD_B]              }
     {                                           ;   bf pad_t, .L_vbias_adj_bot              }
-    maccu Q(cols_left), X, pad_t, r11
+    maccu Q(cols_left), X, pad_t, r11   //Move X to point to after the top padding.
     mul cols_left, pad_t, K_w
     .L_tpad_col:
         {   sub cols_left, cols_left, 1             ;   vlmacc K[0]                             }
-        {   add K, K, xk_col_stride                 ;   bt cols_left, .L_tpad_col               }
+        {   add K, K, k_col_stride                  ;   bt cols_left, .L_tpad_col               }
 
     .L_vbias_adj_bot:
-    mul r11, xk_col_stride, K_w
+    mul r11, k_col_stride, K_w // ([kernel bytes]/pixel) * [kernel width]
     {                                           ;   ldw rows_left, sp[STACK_MID_ROWS]       }
     {   ldc Q(cols_left), 0                     ;   stw K, sp[STACK_K_PSTART]               }
-    maccu Q(cols_left), K, r11, rows_left
+    maccu Q(cols_left), K, r11, rows_left // Move K to after the 'mid rows'
     {   ldaw r11, sp[STACK_VEC_VD]              ;   bf pad_b, .L_vbias_adj_save             }
     mul cols_left, K_w, pad_b
     .L_bpad_col:
         {   sub cols_left, cols_left, 1             ;   vlmacc K[0]                             }
-        {   add K, K, xk_col_stride                 ;   bt cols_left, .L_bpad_col               }
+        {   add K, K, k_col_stride                  ;   bt cols_left, .L_bpad_col               }
 
     .L_vbias_adj_save:
     {   ldaw r11, sp[STACK_VEC_VR]              ;   vstd r11[0]                             }
@@ -162,20 +166,16 @@ FUNCTION_NAME:
 ////
 ///////////////////////////////////////////////
 
-// #undef xk_col_stride   r3
-// #undef x_row_stride    r4
-// #undef _32             r5
-// #undef rows_left       r6
-// #undef cols_left       r7
+#undef x_row_stride
 #undef pad_t           
 #undef pad_b           
 #undef K_w             
 
+#define X_start         r4
 #define window_hstride  r8
 #define pix_left        r9
-#define X_start         r10
+#define tmp             r10
 
-// FUNCTION_NAME + d0
     {                                           ;   vstr r11[0]                             }
     {   mov X_start, X                          ;   ldw window_hstride, sp[STACK_WINDOW_HSTRIDE]}
     {                                           ;   ldw pix_left, sp[STACK_OUT_COLS]        }
@@ -195,64 +195,65 @@ FUNCTION_NAME:
 #endif
         {   ldaw r11, sp[STACK_VEC_VR]              ;   vldd r11[0]                             }
         {   add X_start, X_start, window_hstride    ;   vldr r11[0]                             }
-        {   ldc Q(_32), 0                           ;   ldw rows_left, sp[STACK_MID_ROWS]       }
+        {   ldc tmp, 0                              ;   ldw rows_left, sp[STACK_MID_ROWS]       }
         .L_patch_row:
             {   ldaw r11, sp[STACK_VEC_ZERO]            ;   ldw cols_left, sp[STACK_PAD_L]          }
-            {   lss r11, Q(_32), cols_left              ;   vldc r11[0]                             }
+            {   lss r11, tmp, cols_left                 ;   vldc r11[0]                             }
             mul cols_left, cols_left, r11
             {   add X, X, cols_left                     ;   bf cols_left, .L_patch_left_end     }
             .L_patch_left:
-                {   sub cols_left, cols_left, xk_col_stride ;   vlmacc K[0]                             }
-                {   add K, K, xk_col_stride                 ;   bt cols_left, .L_patch_left             }
+                {   sub cols_left, cols_left, x_col_stride  ;   vlmacc K[0]                             }
+                {   add K, K, k_col_stride                  ;   bt cols_left, .L_patch_left             }
             .L_patch_left_end:
             {   sub rows_left, rows_left, 1             ;   ldw cols_left, sp[STACK_CTR_COLS]       }
 
             .L_patch_ctr:
-                {   sub cols_left, cols_left, xk_col_stride ;   vldc X[0]                               }
-                {   add X, X, xk_col_stride                 ;   vlmacc K[0]                             }
-                {   add K, K, xk_col_stride                 ;   bt cols_left, .L_patch_ctr              }
+                {   sub cols_left, cols_left, x_col_stride  ;   vldc X[0]                               }
+                {   add X, X, x_col_stride                  ;   vlmacc K[0]                             }
+                {   add K, K, k_col_stride                  ;   bt cols_left, .L_patch_ctr              }
 
             {   ldaw r11, sp[STACK_VEC_ZERO]            ;   ldw cols_left, sp[STACK_PAD_R]          }
-            {   lss r11, Q(_32), cols_left              ;   vldc r11[0]                             } // + 0x120
+            {   lss r11, tmp, cols_left                 ;   vldc r11[0]                             }
             mul cols_left, cols_left, r11
             {   add X, X, cols_left                     ;   bf cols_left, .L_patch_right_end        }
             {   nop                                     ;   nop                                     }
             .L_patch_right:
-                {   sub cols_left, cols_left, xk_col_stride ;   vlmacc K[0]                             }
-                {   add K, K, xk_col_stride                 ;   bt cols_left, .L_patch_right            }
+                {   sub cols_left, cols_left, x_col_stride  ;   vlmacc K[0]                             }
+                {   add K, K, k_col_stride                  ;   bt cols_left, .L_patch_right            }
             .L_patch_right_end:
-            {   add X, X, x_row_stride                  ;   bt rows_left, .L_patch_row              }
-        {   ldc _32, 32                             ;   bu .L_pix_finish                        }
+            {                                           ;   ldw r11, sp[STACK_X_ROW_STRIDE]         }
+            {   add X, X, r11                           ;   bt rows_left, .L_patch_row              }
+        {   ldc tmp, 32                             ;   bu .L_pix_finish                        }
 
     .align 16
     .L_pix_finish:
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_depthwise
-        {   shl r11, _32, 3                         ;   ldw Q(cols_left), sp[STACK_CHAN2WRITE]  }
+        {   shl r11, tmp, 3                         ;   ldw Q(cols_left), sp[STACK_CHAN2WRITE]  }
         {   ldaw r11, sp[STACK_VEC_TMP]             ;   vsetc r11                               }
         {                                           ;   ldw Q(rows_left), sp[STACK_BSO_PSTART]  }
-        {   add Q(rows_left), Q(rows_left), _32     ;   vlsat Q(rows_left)[0]                   }
+        {   add Q(rows_left), Q(rows_left), tmp     ;   vlsat Q(rows_left)[0]                   }
         {                                           ;   vstr r11[0]                             }
-        {   add Q(rows_left), Q(rows_left), _32     ;   vldc Q(rows_left)[0]                    }
+        {   add Q(rows_left), Q(rows_left), tmp     ;   vldc Q(rows_left)[0]                    }
         {                                           ;   vclrdr                                  }
-        {   shl r11, _32, 4                         ;   vlmacc r11[0]                           }
-        {   add Q(rows_left), Q(rows_left), _32     ;   vldc Q(rows_left)[0]                    }
-        {   add Q(rows_left), Q(rows_left), _32     ;   vlmacc Q(rows_left)[0]                  }
+        {   shl r11, tmp, 4                         ;   vlmacc r11[0]                           }
+        {   add Q(rows_left), Q(rows_left), tmp     ;   vldc Q(rows_left)[0]                    }
+        {   add Q(rows_left), Q(rows_left), tmp     ;   vlmacc Q(rows_left)[0]                  }
         {   mkmsk Q(cols_left), Q(cols_left)        ;   vsetc r11                               }
         {                                           ;   vlsat Q(rows_left)[0]                   }
         vstrpv Y[0], Q(cols_left)
         {   ldc r11, 0                              ;   ldw Q(cols_left), sp[STACK_Y_COL_STRIDE]}
         {   add Y, Y, Q(cols_left)                  ;   ldw Q(rows_left), sp[STACK_PAD_L]       }
 #else
-        {   shl r11, _32, 3                         ;   ldw Q(cols_left), sp[STACK_CHAN2WRITE]  }
+        {   shl r11, tmp, 3                         ;   ldw Q(cols_left), sp[STACK_CHAN2WRITE]  }
         {   ldaw r11, sp[STACK_VEC_TMP]             ;   vsetc r11                               }
         {   mkmsk Q(cols_left), Q(cols_left)        ;   ldw Q(rows_left), sp[STACK_BSO_PSTART]  }
-        {   add Q(rows_left), Q(rows_left), _32     ;   vlsat Q(rows_left)[0]                   }
+        {   add Q(rows_left), Q(rows_left), tmp     ;   vlsat Q(rows_left)[0]                   }
         {                                           ;   vstr r11[0]                             }
-        {   add Q(rows_left), Q(rows_left), _32     ;   vldc Q(rows_left)[0]                    }
+        {   add Q(rows_left), Q(rows_left), tmp     ;   vldc Q(rows_left)[0]                    }
         {                                           ;   vclrdr                                  }
         {                                           ;   vlmacc r11[0]                           }
-        {   add Q(rows_left), Q(rows_left), _32     ;   vldc Q(rows_left)[0]                    }
-        {   add Q(rows_left), Q(rows_left), _32     ;   vlmacc Q(rows_left)[0]                  }
+        {   add Q(rows_left), Q(rows_left), tmp     ;   vldc Q(rows_left)[0]                    }
+        {   add Q(rows_left), Q(rows_left), tmp     ;   vlmacc Q(rows_left)[0]                  }
         {                                           ;   vlsat Q(rows_left)[0]                   }
 
         {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vstr r11[0]                             }
@@ -272,18 +273,18 @@ FUNCTION_NAME:
 
 #endif
 
-        //  (NOTE: PAD_L, PAD_R, CTR_COLS and window_hstride have been multiplied by xk_col_stride)
+        //  (NOTE: PAD_L, PAD_R, CTR_COLS and window_hstride have been multiplied by x_col_stride)
         //  (NOTE: The left padding can only decrease over time, right padding can only increase)
 
         //  We're shifting the patch to the right, so SUBTRACT from left padding. But if it was
         //  positive (>0) BEFORE, then CTR_COLS has to INCREASE commensurately, because we have 
         //  less left-padding
 
-        {   lss Q(cols_left), r11, Q(rows_left)             ;   ldw Q(_32), sp[STACK_CTR_COLS]          }
+        {   lss Q(cols_left), r11, Q(rows_left)             ;   ldw tmp, sp[STACK_CTR_COLS]             }
         {   lss Q(cols_left), Q(rows_left), window_hstride  ;   bf Q(cols_left), .L_werwer              }
         {   add Q(cols_left), Q(cols_left), 1               ;   bru Q(cols_left)                        }
-        {   add Q(_32), Q(_32), window_hstride              ;   bru Q(cols_left)                        }
-        {   add Q(_32), Q(_32), Q(rows_left)                ;                                           }
+        {   add tmp, tmp, window_hstride                    ;   bru Q(cols_left)                        }
+        {   add tmp, tmp, Q(rows_left)                      ;                                           }
     .L_werwer:
         {   sub Q(rows_left), Q(rows_left), window_hstride  ;   ldw Q(cols_left), sp[STACK_PAD_R]       }
         //  We're shifting the patch to the right, so ADD to right padding. But if it is
@@ -294,14 +295,14 @@ FUNCTION_NAME:
         {   lss Q(rows_left), r11, Q(cols_left)             ;   stw Q(cols_left), sp[STACK_PAD_R]       } 
         {   lss Q(rows_left), Q(cols_left), window_hstride  ;   bf Q(rows_left), .L_rewrew              }
         {   add Q(rows_left), Q(rows_left), 1               ;   bru Q(rows_left)                        }
-        {   sub Q(_32), Q(_32), window_hstride              ;   bru Q(rows_left)                        }
-        {   sub Q(_32), Q(_32), Q(cols_left)                ;                                           }
+        {   sub tmp, tmp, window_hstride                    ;   bru Q(rows_left)                        }
+        {   sub tmp, tmp, Q(cols_left)                      ;                                           }
     .L_rewrew:
-        {   ldc _32, 32                                     ;   stw Q(_32), sp[STACK_CTR_COLS]          }
+        {                                                   ;   stw tmp, sp[STACK_CTR_COLS]             }
         bt pix_left, .L_pix_start
 
 #undef pix_left
-#undef _32
+#undef tmp
 
 .Lfunc_end:
     //Restore the original constant pool pointer

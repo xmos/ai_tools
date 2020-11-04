@@ -14,16 +14,16 @@ typedef struct {
 
     //These are in a specific order - do not change
 
-  unsigned outer_x_h_step;
+  int outer_x_h_step;
   unsigned output_channel_loop_counter;
   void* threshold_p;
-  unsigned inner_x_v_step;
+  int inner_x_v_step;
   unsigned k_v_step;
-  unsigned inner_x_h_step;
-  unsigned k_h_step;
+  int inner_x_h_step;
+  int k_h_step;
   int outer_x_v_step;
 
-  unsigned y_v_step;
+  int y_v_step;
   unsigned k_height_loop_counter;
   unsigned k_width_loop_counter;
   unsigned x_height_loop_counter;
@@ -50,16 +50,16 @@ typedef struct {
   unsigned k_height_loop_counter;
   bnn_b32_t * data_scratch;
   unsigned k_width_loop_counter;
-  unsigned inner_x_v_step;
-  unsigned inner_x_h_step;
+  int inner_x_v_step;
+  int inner_x_h_step;
   int data_scratch_adjust;
   unsigned output_channel_loop_counter;
   int32_t * threshold_p;
 
   bnn_b32_t* X;
-  unsigned outer_x_h_step;
+  int outer_x_h_step;
   int outer_x_v_step;
-  unsigned y_v_step;
+  int y_v_step;
   unsigned patch_loop_counter;
   unsigned x_width_loop_counter;
   bnn_b32_t* K;

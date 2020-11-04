@@ -1,6 +1,8 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
+from typing import Tuple
+
 
 from tflite2xcore.transformation_passes import ReplaceAddPass
 from tflite2xcore.xcore_model import XCOREModel
@@ -9,6 +11,7 @@ from tflite2xcore.xcore_schema import (
     OperatorCode,
     TensorType,
     XCOREOpCodes,
+    Subgraph,
 )
 from . import test_replace_mutate as test_mutate
 
@@ -18,7 +21,12 @@ from . import test_replace_mutate as test_mutate
 #  ----------------------------------------------------------------------------
 
 
-def build_add(subgraph=None, *, input_shape, tensor_type):
+def build_add(
+    subgraph: Subgraph = None,
+    *,
+    input_shape: Tuple[int, int, int, int],
+    tensor_type: TensorType
+) -> XCOREModel:
     subgraph = subgraph or XCOREModel().create_subgraph()
     input_tensor_0 = subgraph.create_tensor(
         "input_0", tensor_type, input_shape, isinput=True
@@ -45,6 +53,9 @@ PARAMS = {
     "default": {
         "tensor_type": [TensorType.INT8],
         "non_matching_tensor_type": [TensorType.INT16, TensorType.FLOAT32],
+        "input_height": [9, 20],
+        "input_width": [7, 17],
+        "input_channels": [4, 16, 32],
     }
 }
 
@@ -64,8 +75,8 @@ def new_opcode() -> XCOREOpCodes:
 
 
 @pytest.fixture()
-def model(tensor_type: TensorType) -> XCOREModel:
-    return build_add(input_shape=(1, 1, 1, 1), tensor_type=tensor_type)
+def model(input_shape: Tuple[int, int, int], tensor_type: TensorType) -> XCOREModel:
+    return build_add(input_shape=input_shape, tensor_type=tensor_type)
 
 
 #  ----------------------------------------------------------------------------
@@ -84,10 +95,7 @@ def test_non_matching_tensor_type(
     assert not trf_pass.match(model.subgraphs[0].operators[0])
 
 
-def test_non_matching_tensor_shape(
-    trf_pass: ReplaceAddPass, tensor_type: TensorType
-) -> None:
-    model = build_add(input_shape=(1, 1, 1, 1), tensor_type=tensor_type)
+def test_non_matching_tensor_shape(trf_pass: ReplaceAddPass, model: XCOREModel) -> None:
     model.subgraphs[0].get_tensor("input_1").shape = (2, 2, 2, 2)
     assert not trf_pass.match(model.subgraphs[0].operators[0])
 

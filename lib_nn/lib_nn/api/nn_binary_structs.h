@@ -83,16 +83,16 @@ typedef struct {
 typedef struct {
     //These are in a specific order - do not change
   bnn_b256_t* X;
-  unsigned outer_x_h_step;
+  int outer_x_h_step;
   unsigned output_channel_loop_counter;
   bnn_b256_t* K;
-  unsigned inner_x_v_step;
-  unsigned k_v_step;
+  int inner_x_v_step;
+  int k_v_step;
   int inner_x_h_step;
-  unsigned k_h_step;
+  int k_h_step;
 
   int outer_x_v_step;
-  unsigned y_v_step;
+  int y_v_step;
   unsigned k_height_loop_counter;
   unsigned k_width_loop_counter;
   unsigned x_height_loop_counter;
@@ -129,9 +129,9 @@ typedef struct {
   unsigned k_height_loop_counter;
   bnn_b32_t * data_scratch;
   unsigned k_width_loop_counter;
-  unsigned inner_x_v_step;
+  int inner_x_v_step;
   int outer_x_v_step;
-  unsigned y_v_step;
+  int y_v_step;
 
   unsigned output_channel_loop_counter;
   bnn_b256_t* K;
@@ -145,7 +145,7 @@ typedef struct {
   unsigned input_channel_loop_counter;
   int8_t* Y;
   bnn_b256_t* X;
-  unsigned outer_x_h_step;
+  int outer_x_h_step;
   int k_p_adjust;
   int patch_branch;
   unsigned final_channels_mask;

@@ -83,11 +83,6 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
   plan->input_channel_loop_counter =
       ((x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS) - 1;
 
-  plan->output_channel_loop_counter = (y->channels-4)/16;//TODO vpu period
-
-  plan->final_channels_bytes = y->channels - plan->output_channel_loop_counter*16;
-  plan->final_channels_mask = ((1 << (y->channels % 32))-1) << (16 - plan->final_channels_bytes);
-  plan->final_channels_mask = ((1 << plan->final_channels_bytes)-1) ;
 
 
   unsigned x_height_loops = y_sub_height;
@@ -99,22 +94,21 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
 
   unsigned total_bits_copied_to_scratch = x->channels * k_sub_height * k_sub_width;
 
+  unsigned channels_to_process_on_tail_output_loop = (y->channels - 4) % 16 + 4;
 
 
-  if(total_bits_copied_to_scratch<=256){
+  plan->output_channel_loop_counter = (y->channels-channels_to_process_on_tail_output_loop)/16;
 
-    plan->patch_loop_counter = 0;
-    plan->k_p_adjust = (total_bits_copied_to_scratch - plan->patch_loop_counter * XS3_VPU_VREG_WIDTH_BITS) / 8;
-    plan->k_p_rewind = -(16 - 2 - ((y->channels-1)%16))*32;
-  } else {
-    plan->patch_loop_counter = (total_bits_copied_to_scratch)/ XS3_VPU_VREG_WIDTH_BITS;
-    plan->k_p_adjust = (total_bits_copied_to_scratch - plan->patch_loop_counter * XS3_VPU_VREG_WIDTH_BITS) / 8;
-    plan->k_p_rewind = -(16 - 2 - ((y->channels-1)%16))*32;
-  }
 
-    plan->patch_loop_counter = (total_bits_copied_to_scratch)/ XS3_VPU_VREG_WIDTH_BITS - (total_bits_copied_to_scratch%256 == 0);
-    plan->k_p_adjust = (total_bits_copied_to_scratch - plan->patch_loop_counter * XS3_VPU_VREG_WIDTH_BITS) / 8;
-    plan->k_p_rewind = -(16 - 2 - ((y->channels-1)%16))*32;
+  //TODO check this
+  plan->k_p_rewind = -(16 - 2 - ((y->channels-1)%16))*32;
+
+  plan->k_p_adjust = ((total_bits_copied_to_scratch - 32) % 256) / 8 + 4;
+
+  plan->patch_loop_counter = (total_bits_copied_to_scratch - plan->k_p_adjust) / 256;
+
+  plan->final_channels_bytes = channels_to_process_on_tail_output_loop;
+  plan->final_channels_mask = ((1 << channels_to_process_on_tail_output_loop)-1) ;
 
 
   unsigned t = (x->channels/8)%32;
@@ -124,6 +118,7 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
     plan->data_scratch_adjust = t - 32;
   
   // printf("y->channels %d\n", y->channels);
+  // printf("channels_to_process_on_tail_output_loop: %u\n", channels_to_process_on_tail_output_loop);
   // printf("k_p_rewind %d (the number of bytes to rewind after processing a block of 16 channels to account for fewer channels in last patch loop)\n", plan->k_p_rewind);
 
   // printf("total_bits_copied_to_scratch:%u\n", total_bits_copied_to_scratch);

@@ -332,7 +332,7 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
 
     p += (8*output_chans_reamining*complete_256_bit_groups);
 
-    printf("remaining_input_words %u\n", remaining_input_words);
+    // printf("remaining_input_words %u\n", remaining_input_words);
     if (remaining_input_words){
       for (unsigned sub_grp_idx = 0; sub_grp_idx < output_chans_reamining; sub_grp_idx++) {
 
@@ -344,7 +344,7 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
           total_xor_popcount += (int)xor_pop_32(&(p[o]), &zeros) - 16;
         }
         chan_overlaps[ output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
-        printf("chan_overlaps[%u] %d\n", output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order, total_xor_popcount);
+        // printf("chan_overlaps[%u] %d\n", output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order, total_xor_popcount);
 
         p += remaining_input_words;
       }   
@@ -462,14 +462,31 @@ void bnn_conv2d_int8_out_asm(nn_bnn_conv2d_int8_out_asm_plan_t * plan){
 
 
 
+static void make_patch(xs3_vpu * vpu, nn_bnn_conv2d_int8_out_SISO_asm_plan_t * plan, void * X_p){
 
+    void * X_cur_p = X_p;
+    void * D_p = plan->data_scratch;
 
-
-
+    for (int kh = plan->k_height_loop_counter; kh >= 0 ; kh-- )  {
+        for (int kw = plan->k_width_loop_counter; kw >= 0 ; kw-- )  {
+            for (int ic = plan->input_channel_loop_counter; ic >= 0 ; ic-- ) {
+                VLDD(vpu, X_cur_p);
+                X_cur_p += 32;
+                VSTD(vpu, D_p);
+                D_p += 32;
+            }
+            X_cur_p += plan->inner_x_h_step;
+            D_p += plan->data_scratch_adjust;
+        }
+        X_cur_p += plan->inner_x_v_step;
+    }
+    VCLRDR(vpu);
+    VSTD(vpu, D_p);
+}
 
 void compute_patch(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan, 
   void ** K_p, int step, xs3_vpu * vpu, vpu_vector_t *sat_mem, 
-  vpu_vector_t * temp_mem, void * cur_post_activation_mul, 
+  void * cur_post_activation_mul, 
   void * cur_post_activation_bias){
 
   VCLRDR(vpu);
@@ -500,15 +517,18 @@ void compute_patch(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan,
     *K_p += plan->k_p_adjust;
   }
 
+  vpu_vector_t temp_mem;
+  memset(&temp_mem, 0, sizeof(temp_mem));
+
   VLSAT(vpu, sat_mem);
-  VSTR(vpu, temp_mem);
-  VLASHR(vpu, temp_mem, plan->ashr);
+  VSTR(vpu, &temp_mem);
+  VLASHR(vpu, &temp_mem, plan->ashr);
   
   VLMUL(vpu, cur_post_activation_mul);
   VLADD(vpu, cur_post_activation_bias);
 
-  VSTR(vpu, temp_mem);
-  VLASHR(vpu, temp_mem, plan->final_shr);
+  VSTR(vpu, &temp_mem);
+  VLASHR(vpu, &temp_mem, plan->final_shr);
   VDEPTH8_FIXED(vpu);
 
 }
@@ -517,10 +537,10 @@ WEAK_FUNC
 void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
 
   xs3_vpu vpu_data;
+  memset(&vpu_data, 0, sizeof(vpu_data));
   xs3_vpu * vpu = &vpu_data;
 
   vpu_vector_t sat_mem;
-  vpu_vector_t temp_mem;
   VSETC(vpu, MODE_S16);
 
   for(unsigned i=0;i<VPU_INT16_EPV;i++)
@@ -532,24 +552,7 @@ void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
   for (int xh = plan->x_height_loop_counter; xh > 0 ; xh-- ) {
     for (int xv = plan->x_width_loop_counter; xv >= 0 ; xv-- ) {
 
-      void * X_cur_p = X_p;
-      void * D_p = plan->data_scratch;
-
-      for (int kh = plan->k_height_loop_counter; kh >= 0 ; kh-- )  {
-        for (int kw = plan->k_width_loop_counter; kw >= 0 ; kw-- )  {
-          for (int ic = plan->input_channel_loop_counter; ic >= 0 ; ic-- ) {
-            VLDR(vpu, X_cur_p);
-            X_cur_p += 32;
-            VSTR(vpu, D_p);
-            D_p += 32;
-          }
-          X_cur_p += plan->inner_x_h_step;
-          D_p += plan->data_scratch_adjust;
-        }
-        X_cur_p += plan->inner_x_v_step;
-      }
-      VCLRDR(vpu);
-      VSTR(vpu, D_p);
+      make_patch(vpu, plan, X_p);
 
       void * cur_post_activation_mul = plan->post_activation_mul;
       void * cur_post_activation_bias = plan->post_activation_bias;
@@ -557,7 +560,7 @@ void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
       for (int oc = plan->output_channel_loop_counter; oc > 0 ; oc-- ) {
 
         compute_patch(plan, &K_p, 32, vpu, &sat_mem, 
-          &temp_mem,  cur_post_activation_mul, cur_post_activation_bias);
+          cur_post_activation_mul, cur_post_activation_bias);
 
         VSTRPV(vpu, Y_p, 0xffff);
         Y_p += 16;
@@ -567,9 +570,10 @@ void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
       }
       
       compute_patch(plan, &K_p, plan->k_p_rewind, vpu, &sat_mem, 
-        &temp_mem, cur_post_activation_mul, cur_post_activation_bias);
-    // vpu_sim_print(vpu);
+        cur_post_activation_mul, cur_post_activation_bias);
+
       VSTRPV(vpu, Y_p, plan->final_channels_mask);
+
       Y_p += plan->final_channels_bytes;
       X_p += plan->outer_x_h_step;
     }
@@ -580,8 +584,6 @@ void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
 
 }
 
-//this will not be weak
-WEAK_FUNC
 void bnn_conv2d_int8_out(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
@@ -620,7 +622,6 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
   bnn_conv2d_int8_out_asm(&plan);
 }
 
-WEAK_FUNC
 void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
     

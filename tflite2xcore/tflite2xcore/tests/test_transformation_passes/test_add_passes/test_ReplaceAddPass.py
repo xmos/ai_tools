@@ -22,10 +22,7 @@ from . import test_replace_mutate as test_mutate
 
 
 def build_add(
-    subgraph: Subgraph = None,
-    *,
-    input_shape: Tuple[int, int, int, int],
-    tensor_type: TensorType
+    subgraph: Subgraph = None, *, input_shape: Tuple[int, ...], tensor_type: TensorType
 ) -> XCOREModel:
     subgraph = subgraph or XCOREModel().create_subgraph()
     input_tensor_0 = subgraph.create_tensor(
@@ -89,14 +86,16 @@ def test_matching_params(trf_pass: ReplaceAddPass, model: XCOREModel) -> None:
 
 
 def test_non_matching_tensor_type(
-    trf_pass: ReplaceAddPass, non_matching_tensor_type: TensorType
+    trf_pass: ReplaceAddPass, non_matching_tensor_type: TensorType, model: XCOREModel
 ) -> None:
-    model = build_add(input_shape=(1, 1, 1, 1), tensor_type=non_matching_tensor_type)
+    model.subgraphs[0].get_tensor("input_1").type = TensorType
     assert not trf_pass.match(model.subgraphs[0].operators[0])
 
 
 def test_non_matching_tensor_shape(trf_pass: ReplaceAddPass, model: XCOREModel) -> None:
-    model.subgraphs[0].get_tensor("input_1").shape = (2, 2, 2, 2)
+    current_shape = model.subgraphs[0].get_tensor("input_1").shape
+    new_shape = (current_shape[0] + 1,) + current_shape[1:]
+    model.subgraphs[0].get_tensor("input_1").shape = new_shape
     assert not trf_pass.match(model.subgraphs[0].operators[0])
 
 

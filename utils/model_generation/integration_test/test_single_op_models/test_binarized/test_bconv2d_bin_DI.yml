@@ -1,0 +1,203 @@
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# RANDOMLY GENERATED CONFIGS, MODIFY AT OWN RISK
+default:
+  0:
+    K_h: 6
+    K_w: 5
+    height: 7
+    input_channels: 512
+    output_channels: 64
+    strides:
+    - 2
+    - 1
+    width: 11
+  1:
+    K_h: 3
+    K_w: 5
+    height: 7
+    input_channels: 512
+    output_channels: 32
+    strides:
+    - 1
+    - 2
+    width: 6
+  2:
+    K_h: 3
+    K_w: 4
+    height: 10
+    input_channels: 512
+    output_channels: 32
+    strides:
+    - 1
+    - 1
+    width: 6
+  3:
+    K_h: 1
+    K_w: 5
+    height: 10
+    input_channels: 256
+    output_channels: 64
+    strides:
+    - 1
+    - 2
+    width: 11
+  4:
+    K_h: 2
+    K_w: 3
+    height: 12
+    input_channels: 256
+    output_channels: 32
+    strides:
+    - 1
+    - 1
+    width: 8
+  5:
+    K_h: 2
+    K_w: 3
+    height: 7
+    input_channels: 512
+    output_channels: 32
+    strides:
+    - 2
+    - 2
+    width: 11
+  6:
+    K_h: 1
+    K_w: 1
+    height: 7
+    input_channels: 512
+    output_channels: 64
+    strides:
+    - 1
+    - 2
+    width: 11
+  7:
+    K_h: 6
+    K_w: 4
+    height: 12
+    input_channels: 256
+    output_channels: 64
+    strides:
+    - 1
+    - 2
+    width: 6
+  8:
+    K_h: 2
+    K_w: 1
+    height: 12
+    input_channels: 256
+    output_channels: 64
+    strides:
+    - 1
+    - 1
+    width: 8
+  9:
+    K_h: 2
+    K_w: 5
+    height: 7
+    input_channels: 512
+    output_channels: 32
+    strides:
+    - 1
+    - 1
+    width: 6
+  10:
+    K_h: 1
+    K_w: 3
+    height: 12
+    input_channels: 512
+    output_channels: 32
+    strides:
+    - 1
+    - 2
+    width: 6
+  11:
+    K_h: 2
+    K_w: 4
+    height: 10
+    input_channels: 256
+    output_channels: 32
+    strides:
+    - 2
+    - 1
+    width: 11
+  12:
+    K_h: 6
+    K_w: 4
+    height: 12
+    input_channels: 512
+    output_channels: 64
+    strides:
+    - 2
+    - 2
+    width: 11
+  13:
+    K_h: 6
+    K_w: 1
+    height: 12
+    input_channels: 256
+    output_channels: 64
+    strides:
+    - 2
+    - 2
+    width: 6
+  14:
+    K_h: 1
+    K_w: 1
+    height: 10
+    input_channels: 512
+    output_channels: 32
+    strides:
+    - 1
+    - 1
+    width: 8
+  15:
+    K_h: 6
+    K_w: 3
+    height: 7
+    input_channels: 512
+    output_channels: 32
+    strides:
+    - 2
+    - 2
+    width: 8
+  16:
+    K_h: 3
+    K_w: 3
+    height: 10
+    input_channels: 256
+    output_channels: 64
+    strides:
+    - 2
+    - 1
+    width: 8
+  17:
+    K_h: 3
+    K_w: 1
+    height: 7
+    input_channels: 256
+    output_channels: 64
+    strides:
+    - 2
+    - 2
+    width: 8
+  18:
+    K_h: 3
+    K_w: 4
+    height: 10
+    input_channels: 256
+    output_channels: 32
+    strides:
+    - 2
+    - 1
+    width: 6
+  19:
+    K_h: 1
+    K_w: 5
+    height: 12
+    input_channels: 256
+    output_channels: 64
+    strides:
+    - 2
+    - 1
+    width: 8

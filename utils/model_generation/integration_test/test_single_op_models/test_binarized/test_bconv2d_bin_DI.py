@@ -1,6 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
+import larq
 import tensorflow as tf
 
 from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes  # type: ignore # TODO: fix this
@@ -37,7 +38,17 @@ class BConv2dBitpackedDeepInTestModelGenerator(BConv2dGenericTestModelGenerator)
         img = tf.keras.layers.Input(shape=self._input_shape)
         x = self._fake_quant(img)
         x = self._op_layer()(x)
-        x = self._op_layer()(x)
+        # NOTE: we need the next dummy layer to produce a bconv2d with bitpacked output
+        x = larq.layers.QuantConv2D(
+            filters=32,
+            kernel_size=(1, 1),
+            padding="valid",
+            pad_values=1,
+            strides=(1, 1),
+            input_quantizer="ste_sign",
+            kernel_quantizer="ste_sign",
+            kernel_constraint="weight_clip",
+        )(x)
         x = self._fake_quant(x)
         return tf.keras.Model(img, x)
 
@@ -50,23 +61,6 @@ GENERATOR = BConv2dBitpackedDeepInTestModelGenerator
 
 
 RUNNER = BConv2dBitpackedTestRunner
-
-#  ----------------------------------------------------------------------------
-#                                   CONFIGS
-#  ----------------------------------------------------------------------------
-
-CONFIGS = {  # TODO: generate random configs
-    "default": {
-        0: {
-            "input_channels": 256,
-            "output_channels": 32,
-            "K_h": 1,
-            "K_w": 1,
-            "height": 1,
-            "width": 1,
-        },
-    },
-}
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES

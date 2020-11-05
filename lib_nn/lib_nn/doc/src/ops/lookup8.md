@@ -8,9 +8,6 @@
 This operator uses a look-up table using each element of the input vector @tensor{x} as an index to get each element 
 of the output vector @tensor{y}.
 
-Unlike most other operators, the @oper{lookup8} operator requires no plan or jobs to be initialized before it can 
-be invoked. See @ref lookup8_api below.
-
 
 ### Parameters 
 
@@ -60,12 +57,3 @@ where the parameters are as described above.
 ### Example Diagram
 
 @todo Create diagram
-
-### API                     {#lookup8_api}
-
-Invoking an instance of @oper{lookup8} is done with a call to lookup8(). No plan or jobs are required and no initialization
-is necessary.
-
-To apply the @oper{lookup8} operation on a multi-dimensional tensor, simply supply the product of the tensors dimensions as 
-@math{N}.
-

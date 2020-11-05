@@ -18,7 +18,7 @@ from .transformation_passes import OperatorMatchingPass
 class ParallelizationPass(OperatorMatchingPass):
     @property
     @abstractmethod
-    def MATCHING_OPCODES(self) -> Tuple[XCOREOpCodes]:
+    def MATCHING_OPCODES(self) -> Tuple[XCOREOpCodes, ...]:
         return tuple()
 
     def __init__(

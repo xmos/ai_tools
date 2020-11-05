@@ -1,4 +1,4 @@
-NUM_PROCS := 1
+NUM_PROCS := 4
 
 .DEFAULT_GOAL := help
 
@@ -13,7 +13,7 @@ lib_nn_test: lib_nn_build
 
 .PHONY: tflite2xcore_test
 tflite2xcore_test:
-	tflite2xcore/tflite2xcore/tests/runtests.py tflite2xcore/tflite2xcore/tests -n $(NUM_PROCS)
+	tflite2xcore/tflite2xcore/tests/runtests.py tflite2xcore/tflite2xcore/tests -n $(NUM_PROCS) --junit
 
 .PHONY: utils_build
 utils_build:
@@ -22,7 +22,7 @@ utils_build:
 .PHONY: integration_test
 integration_test:
 	cd utils/model_generation && pytest integration_test --cache-clear --collect-only -qq
-	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS) --dist loadfile
+	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 
 .PHONY: ci 
 #TODO: Add lib_nn_test target when CI system connected HW

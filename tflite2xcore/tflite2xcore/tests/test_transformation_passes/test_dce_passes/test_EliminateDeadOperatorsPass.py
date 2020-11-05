@@ -2,10 +2,10 @@
 
 import pytest
 
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.transformation_passes import EliminateDeadOperatorsPass
-from tflite2xcore.xcore_schema import TensorType
 
-from .conftest import model, count_operators, add_dangling_ops
+from . import count_operators, add_dangling_ops
 
 
 #  ----------------------------------------------------------------------------
@@ -13,8 +13,8 @@ from .conftest import model, count_operators, add_dangling_ops
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture()
-def trf_pass():
+@pytest.fixture()  # type:ignore
+def trf_pass() -> EliminateDeadOperatorsPass:
     return EliminateDeadOperatorsPass()
 
 
@@ -23,14 +23,16 @@ def trf_pass():
 #  ----------------------------------------------------------------------------
 
 
-def test_mutate_identity(model, trf_pass):
+def test_mutate_identity(
+    model: XCOREModel, trf_pass: EliminateDeadOperatorsPass
+) -> None:
     num_ops = count_operators(model)
     trf_pass.run(model)
     model.sanity_check()
     assert num_ops == count_operators(model)
 
 
-def test_mutate(model, trf_pass):
+def test_mutate(model: XCOREModel, trf_pass: EliminateDeadOperatorsPass) -> None:
     add_dangling_ops(model)
     num_ops = count_operators(model)
     trf_pass.run(model)

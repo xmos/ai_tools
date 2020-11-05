@@ -1,6 +1,7 @@
-# Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
+# Copyright (c) 2018-2020, XMOS Ltd, All rights reserved
 import sys
 import ctypes
+
 from pathlib import Path
 
 __PARENT_DIR = Path(__file__).parent.absolute()
@@ -13,13 +14,17 @@ else:
 
 libtflite2xcore = ctypes.cdll.LoadLibrary(lib_path)
 
-from . import serialization
-from . import interpreters
+from . import version
+
+__version__ = version.get_version()
+
 from . import xcore_schema
+from . import xcore_model
+from . import interpreters
 from . import converter
 from . import pass_manager
 from . import parallelization
 from . import tflite_visualize
 from . import utils
-from . import xcore_model
 from . import analyze
+from . import model_generation

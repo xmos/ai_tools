@@ -84,31 +84,3 @@ the remaining parameters are as described above.
 ### Example Diagram
 
 @todo Create diagram
-
-
-### API                     {#fully_connected_8_api}
-
-Invoking an instance of @oper{fully_connected_8} is done with a call to fully_connected_8(). fully_connected_8() does
-not require the initialization of any plan or jobs.
-
-Each call to fully_connected_8() will compute a contiguous subset of the output vector's elements (which can be the 
-entire vector if desired). With each invocation the user indicates a starting channel (`output_start`) as well as the 
-number of channels to be computed in that call (`output_count`).
-
-When computing @tensor{y} with multiple calls to fully_connected_8(), it is the user's responsibility to ensure that 
-all jobs collectively compute the entire output vector (no gaps) and do not compute outputs redundantly (overlapping 
-jobs).
-
-#### Splitting The Workload
- 
-In some cases it is desirable to only compute a subset of the output elements with a call to fully_connected_8(). 
-For example, you may wish to parallelize the operation across multiple cores.
- 
-The elements that will be computed and output by a call to fully_connected_8() are @math{y[s:s+c]}, where @math{s} 
-and @math{c} are `output_start` and `output_count` respectively. Note that @math{y[s+c]} is *not* computed.
- 
-When splitting an instance of @oper{fully_connected_8} into multiple jobs (calls to fully_connected_8()) it may be 
-tempting to split the work evenly between invocations. However, the constraint that `output_start` be a multiple of 
-@math{16} also suggests that `output_count` should be a multiple of @math{16} for each invocation. The exception to this 
-rule is if @math{M \ne 0 \left(\text{mod } 16\right)}, in which case the job that processes the final elements 
-of vector @tensor{y} needn't have `output_count` be a multiple of @math{16}.

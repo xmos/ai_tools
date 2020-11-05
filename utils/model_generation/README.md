@@ -4,7 +4,7 @@
 
 ## Running tests with the host interpreter
 
-To run all tests using NUM threads
+To run all tests using NUM worker processes
 
     > pytest integration_test -n NUM
 
@@ -20,6 +20,10 @@ To clear the cache and run all tests
 For additional logging output, including case index for failures, specify:
 
     --log-cli-level=debug
+
+To halt at the first failure or error:
+
+    -x
 
 Run 
 

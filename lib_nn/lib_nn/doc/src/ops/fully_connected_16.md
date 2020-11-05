@@ -9,9 +9,6 @@ This operator performs a matrix-vector multiplication with additional (per-outpu
 @ref fully_connected_16_op below). The input matrix @tensor{W} and vector @tensor{x} are each 8 bits deep and the 
 output vector @tensor{y} is 16 bits deep.
 
-The @oper{fully_connected_16} operator requires no plan or jobs to be initialized before it can be invoked. Each call
-is effectively a job.
-
 To reduce the bit-depth of the output vector @tensor{y}, this operator can be followed by @oper_ref{requantize_16_to_8}.
 Alternatively, 8-bit outputs may be directly computed using the @oper_ref{fully_connected_8} operator instead.
 
@@ -85,20 +82,6 @@ the remaining parameters are as described above.
 ### Example Diagram
 
 @todo Create diagram
-
-
-### API                     {#fully_connected_16_api}
-
-Invoking an instance of @oper{fully_connected_16} is done with a call to fully_connected_16(). fully_connected_16() does
-not require the initialization of any plan or jobs.
-
-Each call to fully_connected_16() will compute a contiguous subset of the output vector's elements (which can be the 
-entire vector if desired). With each invocation the user indicates a starting channel (`output_start`) as well as the 
-number of channels to be computed in that call (`output_count`).
-
-When computing @tensor{y} with multiple calls to fully_connected_16(), it is the user's responsibility to ensure that 
-all jobs collectively compute the entire output vector (no gaps) and do not compute outputs redundantly (overlapping 
-jobs).
 
 #### Splitting The Workload
  

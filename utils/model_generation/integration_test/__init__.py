@@ -1,26 +1,45 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import logging
-import pytest  # type: ignore
-import _pytest  # type: ignore # NOTE: for typing only
-import numpy as np  # type: ignore
-import tensorflow as tf  # type: ignore
+import pytest
+import _pytest
+import numpy as np
+import tensorflow as tf
 from abc import abstractmethod
 from pathlib import Path
-from typing import Union, List, NamedTuple, Tuple, Dict, Optional, Iterable
+from typing import (
+    Union,
+    List,
+    NamedTuple,
+    Tuple,
+    Dict,
+    Optional,
+    Iterable,
+    Type,
+    Optional,
+)
 
-from tflite2xcore import tflite_visualize  # type: ignore # TODO: fix this
+from tflite2xcore.utils import unpack_bits  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
-from tflite2xcore._model_generation import TFLiteModel
-from tflite2xcore._model_generation.model_generators import KerasModelGenerator
-from tflite2xcore._model_generation.runners import Runner, RunnerOutputs
-from tflite2xcore._model_generation.evaluators import (
+from tflite2xcore.model_generation import (
+    TFLiteModel,
+    ModelGenerator,
+)
+from tflite2xcore.model_generation.runners import Runner
+from tflite2xcore.model_generation.evaluators import (
+    TFLiteEvaluator,
     TFLiteQuantEvaluator,
     XCoreEvaluator,
 )
-from tflite2xcore._model_generation.converters import (
+from tflite2xcore.model_generation.converters import (
+    TFLiteFloatConverter,
     TFLiteQuantConverter,
     XCoreConverter,
+)
+from tflite2xcore.model_generation.data_factories import InputInitializerDataFactory
+from tflite2xcore.interpreters.exceptions import (  # type: ignore # TODO: fix this
+    ModelSizeError,
+    ArenaSizeError,
 )
 
 
@@ -29,78 +48,185 @@ from tflite2xcore._model_generation.converters import (
 #  ----------------------------------------------------------------------------
 
 
-class RunnerModels(NamedTuple):
-    reference: TFLiteModel
-    xcore: TFLiteModel
-    xcore_identical: TFLiteModel
-
-
 class IntegrationTestRunner(Runner):
     _model_generator: "IntegrationTestModelGenerator"
-    outputs: RunnerOutputs
-    models: RunnerModels
+    _representative_data: tf.Tensor
 
-    def __call__(self) -> None:
-        """ Defines how an IntegrationTestModelGenerator should be run.
+    def __init__(
+        self,
+        generator: Type["IntegrationTestModelGenerator"],
+        *,
+        use_device: bool = False,
+    ) -> None:
+        super().__init__(generator)
+        self._use_device = use_device
+
+        self._repr_data_factory = self.make_repr_data_factory()
+        self.register_data_factory(self._repr_data_factory)
+
+        self._xcore_converter = XCoreConverter(self, self.get_xcore_reference_model)
+        self.register_converter(self._xcore_converter)
+
+        self._identity_converter = XCoreConverter(
+            self, self._xcore_converter.get_converted_model
+        )
+        self.register_converter(self._identity_converter)
+
+        self._xcore_evaluator = XCoreEvaluator(
+            self,
+            self.get_xcore_evaluation_data,
+            self._xcore_converter.get_converted_model,
+            use_device=self._use_device,
+        )
+        self.register_evaluator(self._xcore_evaluator)
+
+    @abstractmethod
+    def get_xcore_reference_model(self) -> TFLiteModel:
+        raise NotImplementedError()
+
+    def make_repr_data_factory(self) -> InputInitializerDataFactory:
+        # representative data (e.g. for quantization and test)
+        return InputInitializerDataFactory(
+            self, lambda: self._model_generator.input_shape
+        )
+
+    def get_representative_data(self) -> tf.Tensor:
+        try:
+            return self._representative_data
+        except AttributeError:
+            try:
+                self._representative_data = self._repr_data_factory.make_data(10)
+            except AttributeError:
+                raise Exception(
+                    "Cannot get quantization data before runner is run!"
+                ) from None
+            return self._representative_data
+
+    @abstractmethod
+    def get_xcore_evaluation_data(self) -> Union[np.ndarray, tf.Tensor]:
+        raise NotImplementedError()
+
+    @classmethod
+    def load(cls, dirpath: Union[Path, str]) -> "IntegrationTestRunner":
+        runner = super().load(dirpath)
+        assert isinstance(runner, IntegrationTestRunner)
+        return runner
+
+    def rerun_post_cache(self) -> None:
+        self._xcore_converter.convert()
+
+        try:
+            self._xcore_evaluator.evaluate()
+        except ModelSizeError as e:
+            if self._use_device:
+                pytest.skip("Skipping due to excessive model size")
+            else:
+                raise
+        except ArenaSizeError as e:
+            if self._use_device:
+                pytest.skip("Skipping due to excessive tensor arena size")
+            else:
+                raise
+
+
+class DefaultIntegrationTestRunner(IntegrationTestRunner):
+    class OutputData(NamedTuple):
+        reference_float: np.ndarray
+        reference_quant: np.ndarray
+        xcore: np.ndarray
+
+    outputs: "DefaultIntegrationTestRunner.OutputData"
+    _xcore_evaluation_data: np.ndarray
+
+    def __init__(
+        self,
+        generator: Type["IntegrationTestModelGenerator"],
+        *,
+        use_device: bool = False,
+    ) -> None:
+        super().__init__(generator, use_device=use_device)
+
+        # floating point reference
+        self._reference_float_converter = TFLiteFloatConverter(
+            self, self.get_built_model
+        )
+        self.register_converter(self._reference_float_converter)
+
+        self._reference_float_evaluator = TFLiteEvaluator(
+            self,
+            self.get_representative_data,
+            self._reference_float_converter.get_converted_model,
+        )
+        self.register_evaluator(self._reference_float_evaluator)
+
+        # quantized reference
+        self._reference_quant_converter = TFLiteQuantConverter(
+            self, self.get_built_model, self.get_representative_data
+        )
+        self.register_converter(self._reference_quant_converter)
+
+        self._reference_quant_evaluator = TFLiteQuantEvaluator(
+            self,
+            self.get_representative_data,
+            self._reference_quant_converter.get_converted_model,
+        )
+        self.register_evaluator(self._reference_quant_evaluator)
+
+    def get_xcore_reference_model(self) -> TFLiteModel:
+        return self._reference_quant_converter.get_converted_model()
+
+    def get_xcore_evaluation_data(self) -> Union[np.ndarray, tf.Tensor]:
+        return self._reference_quant_evaluator.input_data
+
+    def run(self) -> None:
+        """ Defines how a DefaultIntegrationTestRunner should be run.
         
-        The integration tests require the 'reference' and 'xcore' fields of
-        self.outputs to be set.
+        Most integration tests require self.outputs to be set.
         """
-        super().__call__()
-        self._model_generator._reference_converter.convert()
-        self._model_generator._reference_evaluator.evaluate()
+        super().run()
+        self._reference_float_converter.convert()
+        self._reference_quant_converter.convert()
+
+        self._reference_quant_evaluator.evaluate()
+        self._reference_float_evaluator.evaluate()
+
         self.rerun_post_cache()
 
     def rerun_post_cache(self) -> None:
-        model_generator = self._model_generator
+        super().rerun_post_cache()
 
-        for converter in model_generator._converters[1:]:
-            converter.convert()
-
-        for evaluator in model_generator._evaluators[1:]:
-            evaluator.evaluate()
-
-        self.outputs = RunnerOutputs(
-            model_generator._reference_evaluator.output_data_quant(
-                model_generator._xcore_evaluator.output_quant
-            ),
-            model_generator._xcore_evaluator.output_data,
+        self.outputs = self.OutputData(
+            self._reference_float_evaluator.output_data,
+            self._reference_quant_evaluator.output_data,
+            self._xcore_evaluator.output_data,
         )
-        self.models = RunnerModels(
-            model_generator._reference_converter._model,
-            model_generator._xcore_converter._model,
-            model_generator._identity_converter._model,
+        self.converted_models.update(
+            {
+                "reference_quant": self._reference_quant_converter._model,
+                "xcore": self._xcore_converter._model,
+            }
         )
 
     def dump(
         self,
         dirpath: Path,
         example_idx: Union[int, Iterable[int]] = [],
+        *,
         dump_models: bool = True,
         dump_visualizations: bool = True,
     ) -> None:
         if dump_models:
-            for name, model in self.models._asdict().items():
-                name = "model_" + name
-                model_ref_path = (dirpath / name).with_suffix(".tflite")
-                model_ref_html = model_ref_path.with_suffix(".html")
-                with open(model_ref_path, "wb") as f:
-                    f.write(model)
-                logging.debug(f"{name} dumped to {model_ref_path}")
-                if dump_visualizations:
-                    tflite_visualize.main(model_ref_path, model_ref_html)
-                    logging.debug(f"{name} visualization dumped to {model_ref_html}")
+            self.dump_models(dirpath, visualize=dump_visualizations)
 
-        data = {
-            "input": self._model_generator._xcore_evaluator.input_data,
-            "reference_output": self.outputs.reference,
-            "xcore_output": self.outputs.xcore,
-        }
-        example_idx = [example_idx] if isinstance(example_idx, int) else example_idx
-        for key, arr in data.items():
-            for j in example_idx:
-                with open(dirpath / f"example_{j}.{key}", "wb") as f:
-                    f.write(arr[j].flatten().tostring())
+        self.dump_data(
+            dirpath,
+            data={
+                "input": self._xcore_evaluator.input_data,
+                "reference_quant_output": self.outputs.reference_quant,
+                "xcore_output": self.outputs.xcore,
+            },
+            example_idx=example_idx,
+        )
 
 
 #  ----------------------------------------------------------------------------
@@ -108,46 +234,7 @@ class IntegrationTestRunner(Runner):
 #  ----------------------------------------------------------------------------
 
 
-class IntegrationTestModelGenerator(KerasModelGenerator):
-    _reference_converter: TFLiteQuantConverter
-    _xcore_converter: XCoreConverter
-    _identity_converter: XCoreConverter
-    _reference_evaluator: TFLiteQuantEvaluator
-    _xcore_evaluator: XCoreEvaluator
-    run: IntegrationTestRunner
-
-    def __init__(self) -> None:
-        self._reference_converter = TFLiteQuantConverter(self)
-        self._reference_evaluator = TFLiteQuantEvaluator(
-            self._reference_converter.get_representative_data,
-            lambda: self._reference_converter._model,
-        )
-
-        self._xcore_converter = XCoreConverter(self, self._reference_converter)
-        self._identity_converter = XCoreConverter(self, self._xcore_converter)
-        self._xcore_evaluator = XCoreEvaluator(
-            self._reference_converter.get_representative_data,
-            lambda: self._xcore_converter._model,
-        )
-
-        self._identity_converter = XCoreConverter(self, self._xcore_converter)
-
-        super().__init__(
-            runner=IntegrationTestRunner(self),
-            converters=[
-                self._reference_converter,
-                self._xcore_converter,
-                self._identity_converter,
-            ],
-            evaluators=[self._reference_evaluator, self._xcore_evaluator],
-        )
-
-    @classmethod
-    def load(cls, dirpath: Union[Path, str]) -> "IntegrationTestModelGenerator":
-        gen = super().load(dirpath)
-        assert isinstance(gen, IntegrationTestModelGenerator)
-        return gen
-
+class IntegrationTestModelGenerator(ModelGenerator):
     @abstractmethod
     def _build_core_model(self) -> tf.keras.Model:
         raise NotImplementedError()
@@ -165,77 +252,78 @@ class IntegrationTestModelGenerator(KerasModelGenerator):
 
 class FailedElement(NamedTuple):
     idx: Tuple[int, ...]
-    diff: int
-    expected: int
-    predicted: int
+    diff: Union[int, float]
+    expected: Union[int, float]
+    predicted: Union[int, float]
 
 
-def __log_deviations(
-    diff: np.ndarray, level: int, *, ex_idx: Optional[int] = None
-) -> None:
+def __log_deviations(diff: np.ndarray, level: int, *, msg: str) -> None:
     logger = logging.getLogger()
     if logger.isEnabledFor(level):
-        devs = [
-            f"{c}/{diff.size} ({c / diff.size:.2%}) with diff={v}"
-            for v, c in zip(*np.unique(diff, return_counts=True))
-            if v
-        ]
-        msg = "Total" if ex_idx is None else f"Example {ex_idx}"
-        msg += " deviations: " + (", ".join(devs) if devs else "None")
+        if np.issubdtype(diff.dtype, np.integer):
+            devs = [
+                f"{c}/{diff.size} ({c / diff.size:.2%}) with diff={v}"
+                for v, c in zip(*np.unique(diff, return_counts=True))
+                if v
+            ]
+            msg += " deviations: " + (", ".join(devs) if devs else "None")
+        else:
+            stats = {
+                "mean": np.mean(diff),
+                "stdev": np.std(diff),
+                "median": np.median(diff),
+                "min": np.min(diff),
+                "max": np.max(diff),
+            }
+            msg += f" deviation stats: {stats}"
+
         logger.log(level, msg)
 
 
-def _test_batched_arrays(
-    predicted: np.ndarray, expected: np.ndarray, tolerance: Union[int, float]
-) -> Dict[int, List[FailedElement]]:
+class BatchedArrayComparison(NamedTuple):
+    failures: Dict[int, List[FailedElement]]
+    mean_abs_diffs: List[float]
+
+
+def _compare_batched_arrays(
+    predicted: np.ndarray,
+    expected: np.ndarray,
+    tolerance: Union[int, float],
+    per_bits: bool = False,
+) -> BatchedArrayComparison:
+    assert tolerance >= 0
     assert predicted.shape == expected.shape
-    assert predicted.dtype is expected.dtype
-    assert issubclass(predicted.dtype.type, np.integer)  # TODO: generalize to floats
+
+    output_type = predicted.dtype
+    assert output_type == expected.dtype  # NOTE: 'is' operator can be buggy, use ==
+    if per_bits:
+        predicted = unpack_bits(predicted)
+        expected = unpack_bits(expected)
+        diffs = np.bitwise_xor(predicted, expected)
+    elif np.issubdtype(output_type, np.integer):
+        diffs = np.int64(predicted) - np.int64(expected)
+    elif np.issubdtype(output_type, np.floating):
+        tolerance = np.float32(tolerance)
+        diffs = np.float32(predicted) - np.float32(expected)
+    else:
+        raise TypeError("Only integer and float types are supported")
 
     failures: Dict[int, List[FailedElement]] = {}
-    diffs = np.int32(predicted) - np.int32(expected)
+    mean_abs_diffs: List[float] = []
     for j, (arr, arr_ref, diff) in enumerate(zip(predicted, expected, diffs)):
-        __log_deviations(diff, logging.DEBUG, ex_idx=j)
-
-        diff_idx = zip(*np.where(np.abs(diff > tolerance)))
-        failed_examples = [
+        __log_deviations(diff, logging.DEBUG, msg=f"Example {j}")
+        abs_diff = np.abs(diff)
+        diff_idx = zip(*np.where(abs_diff > tolerance))
+        failed_elements = [
             FailedElement(idx, diff[idx], arr_ref[idx], arr[idx]) for idx in diff_idx
         ]
-        if failed_examples:
-            failures[j] = failed_examples
-    __log_deviations(diffs, logging.INFO)
-    return failures
+        if failed_elements:
+            failures[j] = failed_elements
 
+        mean_abs_diffs.append(float(np.mean(abs_diff)))
 
-def _test_output(
-    run_outputs: RunnerOutputs,
-    request: _pytest.fixtures.SubRequest,
-    tolerance: Union[int, float] = 1,
-) -> None:
-    failures = _test_batched_arrays(run_outputs.xcore, run_outputs.reference, tolerance)
-
-    verbose = request.config.getoption("verbose") > 0
-
-    msg = "".join(
-        f"\n{request.node.fspath}::{request.node.name} Example {j}"
-        + (
-            "".join(
-                f"\nidx={e.idx}: diff={e.diff}, "
-                f"expected={e.expected}, predicted={e.predicted}"
-                for e in elements
-            )
-            if verbose
-            else ""
-        )
-        for j, elements in failures.items()
-    )
-
-    if failures:
-        pytest.fail(
-            f"The following examples have failed elements: {msg}"
-            + ("" if verbose else "\nSet verbosity > 0 for more details."),
-            pytrace=False,
-        )
+    __log_deviations(diffs, logging.INFO, msg="Total")
+    return BatchedArrayComparison(failures, mean_abs_diffs)
 
 
 #  ----------------------------------------------------------------------------
@@ -243,13 +331,47 @@ def _test_output(
 #  ----------------------------------------------------------------------------
 
 
+def test_mean_abs_diffs(
+    compared_outputs: BatchedArrayComparison, mean_abs_diff_tolerance: float
+) -> None:
+    msg = [
+        f"\nidx={j}: mean_abs_diff={mean_abs_diff} > tolerance={mean_abs_diff_tolerance}"
+        for j, mean_abs_diff in enumerate(compared_outputs.mean_abs_diffs)
+        if mean_abs_diff > mean_abs_diff_tolerance
+    ]
+    if msg:
+        pytest.fail(
+            f"The following examples have excessive mean deviations:{''.join(msg)}",
+            pytrace=False,
+        )
+
+
 def test_output(
-    run: IntegrationTestRunner, request: _pytest.fixtures.SubRequest
+    compared_outputs: BatchedArrayComparison, request: _pytest.fixtures.SubRequest
 ) -> None:
-    _test_output(run.outputs, request, tolerance=1)
+    verbose = request.config.getoption("verbose") > 0
+
+    if compared_outputs.failures:
+        msg = "The following examples have failed elements:"
+        msg += "".join(
+            f"\n{request.node.fspath}::{request.node.name} Example {j}"
+            + (
+                "".join(
+                    f"\nidx={e.idx}: diff={e.diff}, "
+                    f"expected={e.expected}, predicted={e.predicted}"
+                    for e in elements
+                )
+                if verbose
+                else ""
+            )
+            for j, elements in compared_outputs.failures.items()
+        )
+        if not verbose:
+            msg += "\nSet verbosity > 0 for more details."
+        pytest.fail(msg, pytrace=False)
 
 
-def test_idempotence(
-    xcore_model: XCOREModel, xcore_identical_model: XCOREModel
-) -> None:
-    assert xcore_model.is_equal(xcore_identical_model)
+def test_idempotence(xcore_model: XCOREModel, run: IntegrationTestRunner) -> None:
+    run._identity_converter.convert()
+    identical_model = XCOREModel.deserialize(run._identity_converter._model)
+    assert xcore_model.is_equal(identical_model)

@@ -1,6 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest  # type: ignore
+import pytest
 import itertools
 from typing import List, Dict, Iterator, Tuple, Any
 
@@ -23,13 +23,9 @@ def _make_name_type_pairs(
 
 
 def _test_non_matching_params(
-    trf_pass: ModelTransformationPass, model: XCOREModel
+    trf_pass: ModelTransformationPass, model: XCOREModel, *, op_idx: int = -1
 ) -> None:
-    assert not trf_pass.match(model.subgraphs[0].operators[-1])
-
-
-def _test_matching_params(trf_pass: ModelTransformationPass, model: XCOREModel) -> None:
-    assert trf_pass.match(model.subgraphs[0].operators[-1])
+    assert not trf_pass.match(model.subgraphs[0].operators[op_idx])
 
 
 #  ----------------------------------------------------------------------------
@@ -62,14 +58,14 @@ ParamsType = Dict[str, Dict[str, List[Any]]]
 
 PARAMS = {
     "extended": {
-        "input_height": [7, 9, 17, 20, 32],
-        "input_width": [7, 9, 17, 20, 32],
-        "input_channels": [4, 8, 16, 32, 36, 64],
+        "input_height": [9, 20, 32],
+        "input_width": [7, 17, 32],
+        "input_channels": [4, 16, 32, 36],
     },
     "default": {
         "input_height": [9, 20],
         "input_width": [7, 17],
-        "input_channels": [4, 8, 16, 32],
+        "input_channels": [4, 16, 32],
     },
     "smoke": {
         "input_height": [9, 20],
@@ -106,8 +102,10 @@ def input_shape(
 #  ----------------------------------------------------------------------------
 
 
-def test_matching_params(trf_pass: ModelTransformationPass, model: XCOREModel) -> None:
-    _test_matching_params(trf_pass, model)
+def test_matching_params(
+    trf_pass: ModelTransformationPass, model: XCOREModel, *, op_idx: int = -1
+) -> None:
+    assert trf_pass.match(model.subgraphs[0].operators[op_idx])
 
 
 def test_non_matching_tensors(

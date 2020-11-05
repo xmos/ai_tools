@@ -25,7 +25,7 @@ class ScratchMemoryCalculationPass(OperatorMatchingPass):
 
     @property
     @abstractmethod
-    def MATCHING_OPCODES(self) -> Tuple[XCOREOpCodes]:
+    def MATCHING_OPCODES(self) -> Tuple[XCOREOpCodes, ...]:
         return tuple()
 
     def match(self, op: Operator) -> bool:
@@ -38,7 +38,7 @@ class ScratchMemoryCalculationPass(OperatorMatchingPass):
     @property
     def _bias_scratch_size(self) -> int:
         _, Bv, Bl = self._biases.shape
-        return Bv * Bl * self._biases.type.to_bytes()
+        return Bv * Bl * self._biases.type.sizeof()
 
     @property
     @abstractmethod
@@ -66,6 +66,18 @@ class ScratchMemoryFullyConnectedPass(ScratchMemoryCalculationPass):
             return Cin * (custom_options["par"]["cg"][i_cg - 1][1] + 1)
         else:
             return Cin * Cout
+
+    @property
+    def _bias_scratch_size(self) -> int:
+        _, Bv, Bl = self._biases.shape
+
+        custom_options = self._op.custom_options
+        if "par" in custom_options:
+            # NOTE: number of channel groups is at least number of threads
+            i_cg = custom_options["par"]["th"]
+            return Bv * Bl * self._biases.type.sizeof() * i_cg
+        else:
+            return Bv * Bl * self._biases.type.sizeof()
 
 
 class Conv2dScratchMemoryCalculationPass(ScratchMemoryCalculationPass):

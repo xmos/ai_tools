@@ -1,46 +1,74 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import numpy as np  # type: ignore
+import numpy as np
 
 from tflite2xcore.xcore_schema import BuiltinOpCodes
-from tflite2xcore.xcore_model import Operator, Tensor
+from tflite2xcore.xcore_model import Operator
 
 from .transformation_passes import OperatorMatchingPass
 
 
-class RemoveFlattenReshapePass(OperatorMatchingPass):
-    MATCHING_OPCODES = (
-        # TODO fully populate this set e.g. average pooling
-        BuiltinOpCodes.FULLY_CONNECTED,
-    )
+class AdjacentReshapeMatchingPass(OperatorMatchingPass):
+    @property
+    def MATCHING_OPCODES(self):
+        return (BuiltinOpCodes.FULLY_CONNECTED,)
+
+    @property
+    def _reshape_op(self):
+        return self._op.inputs[0].producers[0]
 
     def match(self, op: Operator) -> bool:
         if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
-            with self.using(op):
-                try:
-                    intermediate = op.inputs[0]
-                    producer = intermediate.producers[0]
-                except IndexError:
-                    return False
-
-            reshape_input_batch = producer.inputs[0].shape[0]
-            reshape_output_batch = intermediate.shape[0]
+            try:
+                with self.using(op):
+                    reshape_op = self._reshape_op
+            except IndexError:
+                return False
 
             return (
-                producer.operator_code.code is BuiltinOpCodes.RESHAPE
-                and reshape_output_batch == reshape_input_batch
+                reshape_op.operator_code.code is BuiltinOpCodes.RESHAPE
+                and reshape_op.inputs[0].shape[0] == reshape_op.outputs[0].shape[0]
             )
 
         return False
 
-    def mutate(self, op: Operator) -> None:
-        intermediate = op.inputs[0]
-        producer = intermediate.producers[0]
 
-        # Remove connection from old inputs to the anchor FC op
+class RemoveSubsequentReshapePass(AdjacentReshapeMatchingPass):
+    @property
+    def _reshape_op(self):
+        return self._op.outputs[0].consumers[0]
+
+    def match(self, op: Operator) -> bool:
+        if super().match(op):
+            with self.using(op):
+                if len(self._reshape_op.inputs[0].consumers) == 1:
+                    return True
+                self.logger.warning(
+                    "Subsequent RESHAPE found with more than 1 consumer"
+                )
+        return False
+
+    def mutate(self, op: Operator) -> None:
+        with self.using(op):
+            reshape_op = self._reshape_op
+
+        # Remove connection from old output to the anchor op
         # then create the new connection
-        intermediate.consumers.remove(op)
-        op.inputs[0] = producer.inputs[0]
+        op.outputs[0].producers.remove(op)
+        op.outputs[0] = reshape_op.outputs[0]
+        op.outputs[0].producers.append(op)
+
+        op.subgraph.remove_operator(reshape_op)
+
+
+class RemovePrecedingReshapePass(AdjacentReshapeMatchingPass):
+    def mutate(self, op: Operator) -> None:
+        reshape_op = op.inputs[0].producers[0]
+
+        # Remove connection from old input to the anchor op
+        # then create the new connection
+        op.inputs[0].consumers.remove(op)
+        op.inputs[0] = reshape_op.inputs[0]
         op.inputs[0].consumers.append(op)
 
 

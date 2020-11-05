@@ -1,18 +1,16 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest  # type: ignore
-import tensorflow as tf  # type: ignore
+import pytest
+import tensorflow as tf
 from typing import Optional, Tuple
 
-from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
-from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
-from tflite2xcore._model_generation import Configuration
-from tflite2xcore._model_generation.utils import parse_init_config
+from tflite2xcore.xcore_schema import XCOREOpCodes, BuiltinOpCodes, XCOREModel  # type: ignore # TODO: fix this
+from tflite2xcore.model_generation import Configuration
+from tflite2xcore.model_generation.utils import parse_init_config
 
-from . import (
-    ChannelAgnosticOpTestModelGenerator,
+from . import ChannelAgnosticOpTestModelGenerator
+from . import (  # pylint: disable=unused-import
     test_output,
-    test_idempotence,
     test_converted_single_op_model,
 )
 
@@ -64,6 +62,29 @@ GENERATOR = FullyConnectedTestModelGenerator
 @pytest.fixture  # type: ignore
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_fc
+
+
+@pytest.fixture  # type: ignore
+def reference_op_code() -> BuiltinOpCodes:
+    return BuiltinOpCodes.FULLY_CONNECTED
+
+
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
+
+
+def test_reference_model_regression(
+    reference_model: XCOREModel, reference_op_code: BuiltinOpCodes
+) -> None:
+
+    operators = reference_model.subgraphs[0].operators
+
+    assert 1 <= len(operators) <= 2
+    if len(operators) == 2:
+        assert operators[0].operator_code.code is BuiltinOpCodes.RESHAPE
+
+    assert operators[-1].operator_code.code is reference_op_code
 
 
 if __name__ == "__main__":

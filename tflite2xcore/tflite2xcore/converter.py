@@ -1,6 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pathlib
+from pathlib import Path
+from typing import Optional, Union
 
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.xcore_model import XCOREModel
@@ -72,35 +73,44 @@ def add_float_input_output(model):
 
 
 def optimize_for_xcore(
-    model,
+    model: XCOREModel,
     *,
-    cleanup=True,
-    minification=False,
-    num_threads=1,
-    intermediates_path=None,
-    ignore_input_alignment=False,
-):
+    cleanup: bool = True,
+    minification: bool = False,
+    num_threads: int = 1,
+    intermediates_path: Optional[Union[str, Path]] = None,
+    ignore_input_alignment: bool = False,
+) -> None:
     # NOTE: the order of the passes is mostly strict
     pass_mgr = InputOutputCanonicalizationManager(
         model, keep_intermediates=bool(intermediates_path)
     )
 
+    # one round of constant folding
+    pass_mgr.register_pass(passes.ConstantPropagationPass())
+
+    # canonicalize fully connected
+    pass_mgr.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
+
+    # canonicalize reshape
     pass_mgr.register_pass(passes.CanonicalizeReshapePass())
-    pass_mgr.register_pass(passes.RemoveFlattenReshapePass())
+    pass_mgr.register_passes(CleanupManager())
+    pass_mgr.register_pass(passes.RemovePrecedingReshapePass())
+    pass_mgr.register_pass(passes.RemoveSubsequentReshapePass())
 
     # canonicalize convolutions
     pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
     pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
-    pass_mgr.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
+
+    # canonicalize quantize ops
+    pass_mgr.register_pass(passes.RemoveRedundantInt8RequantizationPass())
+    pass_mgr.register_pass(passes.ReplaceLceQuantizePass())
 
     # canonicalize word alignment
     pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())
 
-    # word alignment canonicalization introduces new pads, so first fuse then split
+    # canonicalize padding
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
-
-    # Split batch/channel-wise padding from spacial padding - allows fusing of spacial padding later
-    pass_mgr.register_pass(passes.SplitPaddingPass())
 
     # need to cleanup after the first round of canonicalization
     pass_mgr.register_passes(CleanupManager())
@@ -114,6 +124,9 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.ReplaceShallowinConv2dPass())
     pass_mgr.register_pass(passes.ReplaceDepthwiseConv2dPass())
     pass_mgr.register_pass(passes.ReplaceDeepConv2dPass())
+
+    pass_mgr.register_pass(passes.ReplaceBconv2DBitpackedDeepInPass())
+    pass_mgr.register_pass(passes.ReplaceBconv2DBitpackedPass())
 
     pass_mgr.register_pass(passes.ReplaceMaxPool2D2x2Pass())
     pass_mgr.register_pass(passes.ReplaceMaxPool2DPass())
@@ -129,13 +142,17 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeXCShallowinConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
     pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
+    pass_mgr.register_pass(passes.LegalizeXCBconv2DPaddingPass())
+    pass_mgr.register_pass(passes.LegalizeBconv2dBitpackedDeepInPass())
+    pass_mgr.register_pass(passes.LegalizeBconv2dBitpackedPass())
 
+    # Split batch/channel-wise padding from spatial padding
+    pass_mgr.register_pass(passes.SplitPaddingPass())
     # Fuse spatial padding with conv2d
     pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
-
     if ignore_input_alignment:
+        # remove word alignment padding on the input
         pass_mgr.register_pass(passes.RemovePaddingInputPass())
-
     pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
 
     pass_mgr.register_pass(
@@ -163,6 +180,8 @@ def optimize_for_xcore(
     # TODO: this is actually a canonicalization pass
     pass_mgr.register_pass(passes.LegalizeOperatorOutputTensorNamePass())
     pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
+
+    pass_mgr.register_pass(passes.FloatingPointWarningPass())
 
     if minification:
         pass_mgr.register_pass(passes.MinifyQuantInfoPass())

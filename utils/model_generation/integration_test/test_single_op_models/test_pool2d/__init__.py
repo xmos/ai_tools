@@ -1,17 +1,17 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import tensorflow as tf  # type: ignore
+import tensorflow as tf
 from abc import abstractmethod
 from typing import Tuple, Optional, Type, Union
 
-from tflite2xcore._model_generation import Configuration
+from tflite2xcore.model_generation import Configuration
 
 from .. import (
     FilterOpTestModelGenerator,
     ChannelPreservingOpTestModelGenerator,
     test_output,
     test_converted_single_op_model,
-    test_idempotence,
+    test_reference_model_regression,
 )
 
 

@@ -279,7 +279,7 @@ class XCOREDeviceEndpoint(object):
         if msg.startswith("Failed to allocate tail memory"):
             self._error = "Unable to allocate memory. Check tensor arena size."
 
-        logging.debug(msg)
+        logging.info(msg)
 
     def on_probe(self, id_, timestamp, length, data_val, data_bytes):
         if id_ == XCOREDeviceEndpoint.PING_ACK_PROBE_ID:
@@ -385,7 +385,7 @@ class XCOREDeviceEndpoint(object):
 class XCOREDeviceServer(object):
     FILE_LOCK_TIMEOUT = 60
     lock_key = "xcore_devices"
-    devices_path = Path("xcore_devices.json")
+    devices_path = Path(__file__).parent.resolve() / "xcore_devices.json"
 
     @staticmethod
     def _ping_device(port, timeout):

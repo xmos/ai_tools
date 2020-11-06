@@ -1,11 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
+import larq
 import tensorflow as tf
 
-pytestmark = pytest.mark.skip  # TODO: remove this
-
 from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes  # type: ignore # TODO: fix this
+from tflite2xcore.model_generation import Configuration
 
 from . import (
     BinarizedTestRunner,
@@ -15,7 +15,8 @@ from . import (
 
 from . import (  # pylint: disable=unused-import
     test_reference_model_regression,
-    # test_converted_single_op_model,  # TODO: enable this
+    test_converted_single_op_model,
+    test_mean_abs_diffs,
 )
 
 
@@ -25,11 +26,31 @@ from . import (  # pylint: disable=unused-import
 
 
 class BConv2dBitpackedTestModelGenerator(BConv2dGenericTestModelGenerator):
+    def _set_config(self, cfg: Configuration) -> None:
+        cfg.setdefault("padding", "valid")
+        super()._set_config(cfg)
+
+    def check_config(self) -> None:
+        super().check_config()
+        assert (
+            self._config["input_channels"] % 32 == 0
+        ), "# of input channels must be multiple of 32"
+
     def _build_core_model(self) -> tf.keras.Model:
         img = tf.keras.layers.Input(shape=self._input_shape)
         x = self._fake_quant(img)
         x = self._op_layer()(x)
-        x = self._op_layer()(x)
+        # NOTE: we need the next dummy layer to produce a bconv2d with bitpacked output
+        x = larq.layers.QuantConv2D(
+            filters=32,
+            kernel_size=(1, 1),
+            padding="valid",
+            pad_values=1,
+            strides=(1, 1),
+            input_quantizer="ste_sign",
+            kernel_quantizer="ste_sign",
+            kernel_constraint="weight_clip",
+        )(x)
         x = self._fake_quant(x)
         return tf.keras.Model(img, x)
 
@@ -58,11 +79,11 @@ CONFIGS = {  # TODO: generate random configs
     "default": {
         0: {
             "input_channels": 32,
-            "output_channels": 64,
-            "K_h": 3,
-            "K_w": 3,
-            "height": 8,
-            "width": 8,
+            "output_channels": 32,
+            "K_h": 1,
+            "K_w": 1,
+            "height": 1,
+            "width": 1,
         },
     },
 }

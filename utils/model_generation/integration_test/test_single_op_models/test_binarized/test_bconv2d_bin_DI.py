@@ -1,15 +1,17 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-import larq
-import tensorflow as tf
 
-from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes  # type: ignore # TODO: fix this
-from tflite2xcore.model_generation import Configuration
+from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
 
 from . import BConv2dGenericTestModelGenerator
 
-from .test_bconv2d_bin import BConv2dBitpackedTestRunner
+
+from .test_bconv2d_bin import reference_op_code  # pylint: disable=unused-import
+from .test_bconv2d_bin import (
+    BConv2dBitpackedTestRunner,
+    BConv2dBitpackedTestModelGenerator,
+)
 
 from . import (  # pylint: disable=unused-import
     test_reference_model_regression,
@@ -23,34 +25,12 @@ from . import (  # pylint: disable=unused-import
 #  ----------------------------------------------------------------------------
 
 
-class BConv2dBitpackedDeepInTestModelGenerator(BConv2dGenericTestModelGenerator):
-    def _set_config(self, cfg: Configuration) -> None:
-        cfg.setdefault("padding", "valid")
-        super()._set_config(cfg)
-
+class BConv2dBitpackedDeepInTestModelGenerator(BConv2dBitpackedTestModelGenerator):
     def check_config(self) -> None:
         super().check_config()
         assert (
             self._config["input_channels"] % 256 == 0
         ), "# of input channels must be multiple of 256"
-
-    def _build_core_model(self) -> tf.keras.Model:
-        img = tf.keras.layers.Input(shape=self._input_shape)
-        x = self._fake_quant(img)
-        x = self._op_layer()(x)
-        # NOTE: we need the next dummy layer to produce a bconv2d with bitpacked output
-        x = larq.layers.QuantConv2D(
-            filters=32,
-            kernel_size=(1, 1),
-            padding="valid",
-            pad_values=1,
-            strides=(1, 1),
-            input_quantizer="ste_sign",
-            kernel_quantizer="ste_sign",
-            kernel_constraint="weight_clip",
-        )(x)
-        x = self._fake_quant(x)
-        return tf.keras.Model(img, x)
 
 
 GENERATOR = BConv2dBitpackedDeepInTestModelGenerator
@@ -65,11 +45,6 @@ RUNNER = BConv2dBitpackedTestRunner
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
-
-
-@pytest.fixture  # type: ignore
-def reference_op_code() -> ExternalOpCodes:
-    return ExternalOpCodes.LceBconv2d
 
 
 @pytest.fixture  # type: ignore

@@ -94,7 +94,7 @@ def test_non_matching_tensor_type(
 
 def test_non_matching_tensor_shape(trf_pass: ReplaceAddPass, model: XCOREModel) -> None:
     current_shape = model.subgraphs[0].get_tensor("input_1").shape
-    new_shape = (current_shape[0] + 1,) + current_shape[1:]
+    new_shape = (current_shape[0] + 1, *current_shape[1:])
     model.subgraphs[0].get_tensor("input_1").shape = new_shape
     assert not trf_pass.match(model.subgraphs[0].operators[0])
 

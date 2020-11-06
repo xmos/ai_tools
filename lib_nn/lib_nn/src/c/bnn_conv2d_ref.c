@@ -527,6 +527,17 @@ void compute_patch(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan,
   VLMUL(vpu, cur_post_activation_mul);
   VLADD(vpu, cur_post_activation_bias);
 
+
+  /////
+  // VSTR(vpu, &temp_mem);
+  // VCLRDR(vpu);
+  // VLDC(vpu, cur_post_activation_bias);
+  // VLMACC(vpu, bias_shift);
+  // VLDC(vpu, temp_mem);
+  // VLMACC(vpu, cur_post_activation_mul);
+  // VDEPTH16(vpu);
+  /////
+
   VSTR(vpu, &temp_mem);
   VLASHR(vpu, &temp_mem, plan->final_shr);
   VDEPTH8_FIXED(vpu);
@@ -630,7 +641,6 @@ void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
     const int accu_shr,
     const int final_shr,
 
-    int *chan_overlaps,
     bnn_b32_t * data_scratch,
     
     const nn_image_params_t* x, //The full image of x

@@ -153,7 +153,6 @@ void bnn_conv2d_int8_out_SISO_valid(int8_t* Y_p,
     const int accu_shr,
     const int final_shr,
 
-    int *chan_overlaps,
     bnn_b32_t * data_scratch,
 
     const nn_image_params_t* x,
@@ -405,7 +404,6 @@ void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
     const int accu_shr,
     const int final_shr,
 
-    int *chan_overlaps,
     bnn_b32_t * data_scratch,
     
     const nn_image_params_t* x, //The full image of x

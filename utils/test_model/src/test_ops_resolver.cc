@@ -97,6 +97,8 @@ TestOpsResolver::TestOpsResolver() {
             tflite::ops::micro::xcore::Register_BSign_8());
   AddCustom(tflite::ops::micro::xcore::BConv2d_Bitpacked_DeepIn_OpCode,
             tflite::ops::micro::xcore::Register_BConv2D_Bitpacked_Deepin());
+  AddCustom(tflite::ops::micro::xcore::BConv2d_Bitpacked_OpCode,
+            tflite::ops::micro::xcore::Register_BConv2D_Bitpacked());
 }
 
 }  // namespace tflite

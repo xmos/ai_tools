@@ -99,6 +99,9 @@ int initialize(ExtendedXCoreInterpreterContext* ctx, const char* model_content,
   ctx->resolver->AddCustom(
       tflite::ops::micro::xcore::BConv2d_Bitpacked_DeepIn_OpCode,
       tflite::ops::micro::xcore::Register_BConv2D_Bitpacked_Deepin());
+  ctx->resolver->AddCustom(
+      tflite::ops::micro::xcore::BConv2d_Bitpacked_OpCode,
+      tflite::ops::micro::xcore::Register_BConv2D_Bitpacked());
 
   ctx->tensor_arena = new uint8_t[tensor_arena_size];
   memset(ctx->tensor_arena, 0, tensor_arena_size);

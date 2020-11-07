@@ -250,33 +250,44 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
             self._replace_weights(
                 np.concatenate(
                     reordered_weight_channels
-                    + [np.zeros(self._overlap_size, dtype=weights.dtype)]
+                    + [
+                        0x55555555 * np.ones(self._overlap_size, dtype=weights.dtype)
+                    ]  # TODO: fix this filler value
                 )
             )
 
     def mutate_biases(self, op: Operator) -> None:
         with self.using(op):
             biases = np.array(self._biases.as_array(), dtype=np.int32)
-
-            # second we need to calculate a correction term
-            # due to how our HW popcount differs from the Larq reference
-            popcount_correction = np.int32(self._kernel_channel_size / 2)
-
-            # third we need to calculate correction terms
-            # due to how we handle incomplete weights regsiters
-            # NOTE: the data register is padded with zeros, so the loaded kernel
-            # coeffs can have some junk loaded, and we correct that
             weights = self._weights.as_array()  # already boggled
-            for j in range(biases.size):
-                # TODO: fix channel order since weights are already in boggled order
-                overlap_start = (j + 1) * self._kernel_channel_size // WORD_SIZE_BITS
+
+            # first we need to calculate a correction term
+            # due to how our HW popcount differs from the Larq reference
+            popcount_correction = self._kernel_channel_size / 2
+
+            def calculate_correction(c_out: int) -> np.int32:
+                # second we need to calculate correction terms
+                # due to how we handle incomplete weights regsiters
+                # (the data register is padded with zeros, so the loaded kernel
+                # coeffs can have some junk loaded, and we correct that)
+                reversed_group_end_idx = (c_out // 16 + 1) * 16 - c_out % 16
+                overlap_start = (
+                    reversed_group_end_idx * self._kernel_channel_size // WORD_SIZE_BITS
+                )
                 junk = weights[overlap_start : overlap_start + self._overlap_size]
                 overlap_correction = (
-                    xor_popcount(junk, np.zeros_like(junk)) - junk.size / 2
+                    xor_popcount(junk, np.zeros_like(junk))
+                    - junk.size * WORD_SIZE_BITS / 2
                 )
-                biases[j] -= overlap_correction + popcount_correction
 
-            biases_reordered = np.concatenate(
+                return np.int32(overlap_correction - popcount_correction)
+
+            # apply the corrections
+            for c_out in range(biases.size):
+                biases[c_out] += calculate_correction(c_out)
+
+            # boggle to lower and higher 2 bytes in every ACC_PERIOD consecutive value
+            biases = np.concatenate(
                 [
                     np.frombuffer(
                         np.frombuffer(cgroup.tostring(), dtype=np.int16)
@@ -294,10 +305,10 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
             new_thresholds = self._op.subgraph.create_tensor(
                 f"{self._op.name}/thresholds",
                 TensorType.INT32,
-                biases_reordered.shape,
+                biases.shape,
                 consumers=[self._op],
             )
-            new_thresholds.buffer.data = biases_reordered
+            new_thresholds.buffer.data = biases
 
             # replace old tensor
             self._op.inputs[2].consumers.remove(self._op)

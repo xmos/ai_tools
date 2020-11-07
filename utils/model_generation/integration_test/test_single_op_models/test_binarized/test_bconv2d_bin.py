@@ -71,22 +71,6 @@ class BConv2dBitpackedTestRunner(BinarizedTestRunner):
 
 RUNNER = BConv2dBitpackedTestRunner
 
-#  ----------------------------------------------------------------------------
-#                                   CONFIGS
-#  ----------------------------------------------------------------------------
-
-CONFIGS = {  # TODO: generate random configs
-    "default": {
-        0: {
-            "input_channels": 32,
-            "output_channels": 32,
-            "K_h": 1,
-            "K_w": 1,
-            "height": 1,
-            "width": 1,
-        },
-    },
-}
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES

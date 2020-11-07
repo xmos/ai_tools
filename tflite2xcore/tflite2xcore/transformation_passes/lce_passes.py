@@ -270,7 +270,9 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
                 # due to how we handle incomplete weights regsiters
                 # (the data register is padded with zeros, so the loaded kernel
                 # coeffs can have some junk loaded, and we correct that)
-                reversed_group_end_idx = (c_out // 16 + 1) * 16 - c_out % 16
+                reversed_group_end_idx = (
+                    c_out // ACC_PERIOD + 1
+                ) * ACC_PERIOD - c_out % ACC_PERIOD
                 overlap_start = (
                     reversed_group_end_idx * self._kernel_channel_size // WORD_SIZE_BITS
                 )

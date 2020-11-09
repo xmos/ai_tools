@@ -229,7 +229,6 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
     def mutate_weights(self, op: Operator) -> None:
         with self.using(op):
             weights = self._weights.as_array()
-            print("WEIGHTS", weights.ravel().tolist())
 
             # first we reorder the weights
             reordered_weight_channels = [

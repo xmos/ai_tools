@@ -8,10 +8,11 @@ from typing import Union
 
 from tflite2xcore.interpreters import XCOREInterpreter
 
-# NOTE: XCOREDeviceInterpreter is intentionally not imported from tflite2xcore.interpreters
-#       because it depends on modules that are not needed by the xformer.
-#       In the future, tflite2xcore.interpreters wil be it's own Python module and installed
-#       seperate from tflite2xcore.
+# NOTE: XCOREDeviceInterpreter is intentionally not imported from tflite2xcore.interpreters.
+#       Because it depends on modules that are not needed by the xformer but are needed for testing,
+#       it is imported explicitly here.
+#       In the future, tflite2xcore.interpreters will be it's own Python module and installed
+#       separate from tflite2xcore.
 from tflite2xcore.interpreters.xcore_device_interpreter import XCOREDeviceInterpreter
 
 from tflite2xcore.utils import (

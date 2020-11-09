@@ -8,6 +8,7 @@ from tflite2xcore.transformation_passes import (
     LegalizeBconv2dBitpackedPass,
     ReplaceBconv2DBitpackedPass,
 )
+from tflite2xcore.transformation_passes.lce_passes import FILLER
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType, XCOREOpCodes
 
@@ -95,7 +96,7 @@ def test_mutate(
     if filler_size:
         filler_bits = new_weights.as_array()[-filler_size:]
         assert np.all(
-            filler_bits == np.zeros(filler_bits.shape, dtype=filler_bits.dtype)
+            filler_bits == FILLER * np.ones(filler_bits.shape, dtype=filler_bits.dtype)
         )
 
 

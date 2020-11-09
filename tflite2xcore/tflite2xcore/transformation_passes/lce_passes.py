@@ -30,6 +30,7 @@ from .transformation_passes import (
 )
 from .conv2d_passes import ReplaceConv2DPass
 
+FILLER = 0x55555555
 
 XC_BCONV2D_OPCODES = (
     XCOREOpCodes.XC_bconv2d_bin,
@@ -228,6 +229,7 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
     def mutate_weights(self, op: Operator) -> None:
         with self.using(op):
             weights = self._weights.as_array()
+            print("WEIGHTS", weights.ravel().tolist())
 
             # first we reorder the weights
             reordered_weight_channels = [
@@ -251,45 +253,43 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
                 np.concatenate(
                     reordered_weight_channels
                     + [
-                        0x55555555 * np.ones(self._overlap_size, dtype=weights.dtype)
+                        FILLER * np.ones(self._overlap_size, dtype=weights.dtype)
                     ]  # TODO: fix this filler value
                 )
             )
 
     def mutate_biases(self, op: Operator) -> None:
         with self.using(op):
-            biases = np.array(self._biases.as_array(), dtype=np.int32)
+            thresholds = self._biases.as_array()
             weights = self._weights.as_array()  # already boggled
 
             # first we need to calculate a correction term
             # due to how our HW popcount differs from the Larq reference
             popcount_correction = self._kernel_channel_size / 2
 
-            def calculate_correction(c_out: int) -> np.int32:
-                # second we need to calculate correction terms
-                # due to how we handle incomplete weights regsiters
-                # (the data register is padded with zeros, so the loaded kernel
-                # coeffs can have some junk loaded, and we correct that)
-                reversed_group_end_idx = (
-                    c_out // ACC_PERIOD + 1
-                ) * ACC_PERIOD - c_out % ACC_PERIOD
-                overlap_start = (
-                    reversed_group_end_idx * self._kernel_channel_size // WORD_SIZE_BITS
-                )
+            # second we need to calculate correction terms
+            # due to how we handle incomplete weights regsiters
+            # (the data register is padded with zeros, so the loaded kernel
+            # coeffs can have some junk loaded, and we correct that)
+            channel_size_words = self._kernel_channel_size // WORD_SIZE_BITS
+            tail_size = VECTOR_SIZE_WORDS - self._overlap_size
+            for c_out in range(thresholds.size):
+                c_out_group = c_out // ACC_PERIOD
+                c_out_group_end = (c_out_group + 1) * ACC_PERIOD * channel_size_words
+
+                reversed_offset = c_out % ACC_PERIOD * tail_size
+                overlap_start = c_out_group_end - reversed_offset
+
                 junk = weights[overlap_start : overlap_start + self._overlap_size]
                 overlap_correction = (
                     xor_popcount(junk, np.zeros_like(junk))
                     - junk.size * WORD_SIZE_BITS / 2
                 )
 
-                return np.int32(overlap_correction - popcount_correction)
-
-            # apply the corrections
-            for c_out in range(biases.size):
-                biases[c_out] += calculate_correction(c_out)
+                thresholds[c_out] += np.int32(overlap_correction - popcount_correction)
 
             # boggle to lower and higher 2 bytes in every ACC_PERIOD consecutive value
-            biases = np.concatenate(
+            thresholds = np.concatenate(
                 [
                     np.frombuffer(
                         np.frombuffer(cgroup.tostring(), dtype=np.int16)
@@ -297,8 +297,8 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
                         .T.tostring(),
                         dtype=np.int32,
                     )
-                    for cgroup in biases.reshape(
-                        biases.shape[0] // ACC_PERIOD, ACC_PERIOD
+                    for cgroup in thresholds.reshape(
+                        thresholds.shape[0] // ACC_PERIOD, ACC_PERIOD
                     )
                 ]
             )
@@ -307,10 +307,10 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
             new_thresholds = self._op.subgraph.create_tensor(
                 f"{self._op.name}/thresholds",
                 TensorType.INT32,
-                biases.shape,
+                thresholds.shape,
                 consumers=[self._op],
             )
-            new_thresholds.buffer.data = biases
+            new_thresholds.buffer.data = thresholds
 
             # replace old tensor
             self._op.inputs[2].consumers.remove(self._op)

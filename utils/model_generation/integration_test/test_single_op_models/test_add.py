@@ -52,7 +52,7 @@ CONFIGS = {
 
 @pytest.fixture  # type: ignore
 def converted_op_code() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_add
+    return XCOREOpCodes.XC_add_8
 
 
 if __name__ == "__main__":

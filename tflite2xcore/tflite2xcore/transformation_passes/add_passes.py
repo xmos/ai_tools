@@ -19,7 +19,7 @@ class ReplaceAddPass(ReplaceQuantizedOperatorPass):
 
     @property
     def new_opcode(self) -> OperatorCode:
-        return OperatorCode(XCOREOpCodes.XC_add)
+        return OperatorCode(XCOREOpCodes.XC_add_8)
 
     def match(self, op: Operator) -> bool:
         return (

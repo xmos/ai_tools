@@ -68,7 +68,7 @@ def trf_pass() -> ReplaceAddPass:
 
 @pytest.fixture()
 def new_opcode() -> XCOREOpCodes:
-    return XCOREOpCodes.XC_add
+    return XCOREOpCodes.XC_add_8
 
 
 @pytest.fixture()

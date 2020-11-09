@@ -12,11 +12,13 @@ EXCLUDES = ["*tests", "*tests.*", "*model_generation", "*model_generation.*"]
 SCRIPTS = ["xformer.py", "tflite2xcore/tflite_visualize.py"]
 
 INSTALL_REQUIRES = [
-    "numpy==1.17.2",
-    "flatbuffers==1.12.0",
-    "tensorflow==2.3.0",
     "aenum==2.2.4",
+    "dill==0.3.1.1",
+    "flatbuffers==1.12.0",
     "matplotlib==3.1.1",
+    "numpy==1.17.2",
+    "tensorflow==2.3.0",
+    "typing-extensions==3.7.4",
 ]
 
 setuptools.setup(

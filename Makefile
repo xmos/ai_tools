@@ -50,8 +50,7 @@ tflite2xcore_dist_test:
 
 .PHONY: ci 
 #TODO: Add lib_nn_test target when CI system connected HW
-#ci: lib_nn_build utils_build tflite2xcore_unit_test tflite2xcore_dist_test integration_test
-ci: tflite2xcore_dist_test
+ci: lib_nn_build utils_build tflite2xcore_unit_test tflite2xcore_dist_test integration_test
 
 #**************************
 # ALL tests target

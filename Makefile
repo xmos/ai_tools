@@ -21,7 +21,7 @@ lib_nn_test: lib_nn_build
 
 .PHONY: utils_build
 utils_build:
-	cd utils && ./build.sh
+	cd utils && bash build.sh
 
 .PHONY: integration_test
 integration_test:

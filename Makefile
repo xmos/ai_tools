@@ -38,11 +38,11 @@ tflite2xcore_unit_test:
 
 .PHONY: tflite2xcore_dist
 tflite2xcore_dist:
-	cd tflite2xcore && ./build_dist.sh
+	cd tflite2xcore && bash build_dist.sh
 
 .PHONY: tflite2xcore_dist_test
 tflite2xcore_dist_test:
-	cd tflite2xcore && ./test_dist.sh
+	cd tflite2xcore && bash test_dist.sh
 
 #**************************
 # ci target
@@ -50,7 +50,8 @@ tflite2xcore_dist_test:
 
 .PHONY: ci 
 #TODO: Add lib_nn_test target when CI system connected HW
-ci: lib_nn_build utils_build tflite2xcore_unit_test tflite2xcore_dist_test integration_test
+#ci: lib_nn_build utils_build tflite2xcore_unit_test tflite2xcore_dist_test integration_test
+ci: tflite2xcore_dist_test
 
 #**************************
 # ALL tests target

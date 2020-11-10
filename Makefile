@@ -42,6 +42,15 @@ tflite2xcore_dist:
 
 .PHONY: tflite2xcore_dist_test
 tflite2xcore_dist_test:
+	echo "-------------"
+	echo "-------------"
+	echo "-------------"
+	pwd
+	cd tflite2xcore && pwd
+	cd tflite2xcore && ls -la
+	echo "-------------"
+	echo "-------------"
+	echo "-------------"
 	cd tflite2xcore && ./test_dist.sh
 
 #**************************

@@ -1,5 +1,4 @@
 
-#include "helpers.h"
 #include <float.h>
 #include <limits.h>
 #include <string.h>
@@ -7,33 +6,6 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
-
-const int post_vlmul_shr = 14; //defined by the HW
-
-int clrsb(int x){
-  #if defined(__XS3A__)
-  for (unsigned i=0;i<32;i++){
-    int y = (x<<i)>>i;
-    if (y != x)
-      return (i-1);
-  }
-  return 32;
-  #else
-  return __builtin_clrsb(x);
-  #endif
-}
-int clrsbll(long long x){
-  #if defined(__XS3A__)
-  for (unsigned i=0;i<64;i++){
-    long long y = (x<<i)>>i;
-    if (y != x)
-    return (i-1);
-  }
-  return 64;
-  #else
-  return __builtin_clrsbll(x);
-  #endif
-}
 
 //TODO pass the clamps
 void pick_post_activation_values(float * post_activation_multiplier, float * post_activation_bias, 

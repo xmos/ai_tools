@@ -51,9 +51,9 @@ static void set_accumulator(
     if(vpu->mode == MODE_S8 || vpu->mode == MODE_S16){
         
         unsigned mask = (1<<VPU_INT8_ACC_VR_BITS)-1;
-        vpu->vR.s16[index] = acc & mask;
+        vpu->vR.s16[index] = (int16_t)((unsigned)acc & mask);
         mask = mask << VPU_INT8_ACC_VR_BITS;
-        vpu->vD.s16[index] = ((acc & mask) >> VPU_INT8_ACC_VR_BITS);
+        vpu->vD.s16[index] = (int16_t)(((unsigned)acc & mask) >> VPU_INT8_ACC_VR_BITS);
 
     } else {
         assert(0); // TODO
@@ -129,7 +129,7 @@ void VSTRPV(const xs3_vpu* vpu, void* addr, unsigned mask){
     int8_t* addr8 = (int8_t*) addr;
 
     for(int i = 0; i < 32; i++){
-        if(mask & (1 << i)){
+        if(mask & (1UL << i)){
             addr8[i] = vpu->vR.s8[i];
         }
     }
@@ -293,7 +293,7 @@ void VLASHR(
 
             if(shr >= 7)        val = (val < 0)? -1 : 0;
             else if(shr >= 0)   val = val >> shr;
-            else                val = val << (-shr);
+            else                val = (unsigned)val << (-shr);
 
             vpu->vR.s8[i] = saturate(val, 8);
         }
@@ -304,7 +304,7 @@ void VLASHR(
             int32_t val = addr16[i];
             if(shr >= 15)   val = (val < 0)? -1 : 0;
             else if(shr >= 0)   val = val >> shr;
-            else                val = val << (-shr);
+            else                val = (unsigned)val << (-shr);
             vpu->vR.s16[i] = saturate(val, 16);
         }
     } else if(vpu->mode == MODE_S32){
@@ -314,7 +314,7 @@ void VLASHR(
             int64_t val = addr32[i];
             if(shr >= 31)   val = (val < 0)? -1 : 0;
             else if(shr >= 0)   val = val >> shr;
-            else                val = val << (-shr);
+            else                val = (unsigned)val << (-shr);
             vpu->vR.s32[i] = saturate(val, 32);
         }
     } else { 

@@ -39,10 +39,6 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
   unsigned y_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, 1, v_stride);
   unsigned y_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, 1, h_stride);
 
-  unsigned X_bytes = (x_height * x_width * chans_in) / 8;
-  unsigned K_bytes = (k_width * k_height * chans_in * chans_out) / 8;
-  unsigned Y_bytes = (y_width * y_height * chans_out);
-
   unsigned receptive_volume = k_width * k_height * chans_in;
 
   pick_post_activation_values(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, seed);
@@ -88,8 +84,8 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
       &accu_shr, &bias_multipler, &final_shr, receptive_volume, chan_overlaps
   );
 
-  bnn_conv2d_int8_out((int8_t*)Y_p, (const bnn_b32_t*)X_ref,
-    (const bnn_b32_t*)K_p, post_activation_multiplier_q, 
+  bnn_conv2d_int8_out(Y_p, (const bnn_b256_t*)X_ref,
+    (const bnn_b256_t*)K_p, post_activation_multiplier_q, 
     post_activation_bias_q, accu_shr, bias_multipler, final_shr,
     &x, &y, &k,
     0, 0, y_width, y_height,
@@ -311,8 +307,8 @@ static void run_int8_sub_image(
               unsigned y_loc_x, unsigned y_loc_y, 
               unsigned y_sub_width, unsigned y_sub_height){
 
-  bnn_conv2d_int8_out_valid(Y_p, X_p,
-                      K_p, post_activation_multiplier_q,
+  bnn_conv2d_int8_out_valid(Y_p, (bnn_b256_t*)X_p,
+                      (bnn_b256_t*)K_p, post_activation_multiplier_q,
                       post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
                       x, y, k,
                       y_loc_x, y_loc_y, y_sub_width, y_sub_height);

@@ -301,6 +301,8 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
 
   const unsigned out_chans_multiplier = 4;
 
+  assert(x->channels >0);
+  assert(y->channels >0);
   assert((x->channels % bits_per_b32) == 0);
   assert((y->channels % out_chans_multiplier) == 0);
 
@@ -311,13 +313,13 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
   assert(k->dilation.vertical >= 1);
 
   unsigned h_dilation = k->dilation.horizontal;
-  unsigned v_dilation = k->dilation.vertical;
+  // unsigned v_dilation = k->dilation.vertical;
 
   unsigned h_stride = k->stride.horizontal;
   unsigned v_stride = k->stride.vertical;
 
-  unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
-  unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
+  // unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
+  // unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
 
   plan->input_channel_loop_counter =
       ((x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS) - 1;
@@ -334,7 +336,7 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
 
   plan->output_channel_loop_counter = (y->channels-channels_to_process_on_tail_output_loop)/16;
 
-  plan->k_p_rewind = -(16 - 2 - ((y->channels-1)%16))*32;
+  plan->k_p_rewind = -(16L - 2L - ((y->channels-1)%16))*32;
 
   if (total_bytes_copied_to_scratch%32){
     plan->k_p_adjust  = total_bytes_copied_to_scratch%32;
@@ -347,23 +349,23 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
   plan->final_channels_bytes = channels_to_process_on_tail_output_loop;
   plan->final_channels_mask = ((1 << channels_to_process_on_tail_output_loop)-1) ;
 
-  unsigned t = (x->channels/8)%32;
+  int t = (x->channels/8)%32;
   if(t == 0)
     plan->data_scratch_adjust = 0;
   else
     plan->data_scratch_adjust = t - 32;
   
-  plan->inner_x_h_step = bytes_per_input_channel * (h_dilation - 1) - (32*(plan->input_channel_loop_counter + 1) - bytes_per_input_channel);
+  plan->inner_x_h_step = (int)bytes_per_input_channel * ((int)h_dilation - 1) - (32L*(plan->input_channel_loop_counter + 1) - bytes_per_input_channel);
 
   // TODO multiply x->width by dilation
   plan->inner_x_v_step =
       (bytes_per_input_channel * ((x->width - k_sub_width))) ;
 
   // Outer Loop
-  plan->outer_x_h_step = bytes_per_input_channel * k->stride.horizontal;
+  plan->outer_x_h_step = bytes_per_input_channel * h_stride;
 
-  plan->outer_x_v_step = (bytes_per_input_channel * x->width * v_stride) 
-     - (plan->outer_x_h_step * x_width_loops);
+  plan->outer_x_v_step = (int)((int)bytes_per_input_channel * (int)x->width * (int)v_stride) 
+     - (int)((int)plan->outer_x_h_step * (int)x_width_loops);
 
   // TODO these are for implementing sub-kernels
   assert(k_sub_height == k->shape.height); //until the following two lines are working
@@ -434,7 +436,7 @@ void bnn_conv2d_int8_out_asm_prepare(
   }
 
   unsigned bytes_per_input_channel = x->channels / 8;
-  unsigned bytes_per_output_channel = y->channels;
+  // unsigned bytes_per_output_channel = y->channels;
 
   const unsigned out_chans_multiplier = 16;
 
@@ -445,13 +447,13 @@ void bnn_conv2d_int8_out_asm_prepare(
   plan->k_width_loop_counter = k_sub_width - 1;
 
   unsigned h_dilation = k->dilation.horizontal;
-  unsigned v_dilation = k->dilation.vertical;
+  // unsigned v_dilation = k->dilation.vertical;
 
   unsigned h_stride = k->stride.horizontal;
   unsigned v_stride = k->stride.vertical;
 
-  unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
-  unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
+  // unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
+  // unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
 
   plan->input_channel_loop_counter =
       (x->channels / XS3_VPU_VREG_WIDTH_BITS) - 1;
@@ -472,9 +474,9 @@ void bnn_conv2d_int8_out_asm_prepare(
       (bytes_per_input_channel * ((x->width - k_sub_width))) - plan->inner_x_h_step;
 
   // Outer Loop
-  plan->outer_x_h_step = bytes_per_input_channel * k->stride.horizontal;
+  plan->outer_x_h_step = bytes_per_input_channel * h_stride;
 
-  plan->outer_x_v_step = (bytes_per_input_channel * x->width *k->stride.vertical) 
+  plan->outer_x_v_step = (bytes_per_input_channel * x->width * v_stride) 
      - (plan->outer_x_h_step * x_width_loops);
 
   // TODO these are for implementing sub-kernels

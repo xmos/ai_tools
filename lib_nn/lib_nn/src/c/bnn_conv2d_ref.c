@@ -11,6 +11,32 @@
 #include <limits.h>
 #include <math.h>
 
+static int clrsb(int x){
+  #if defined(__XS3A__)
+  for (unsigned i=0;i<32;i++){
+    int y = (x<<i)>>i;
+    if (y != x)
+      return (i-1);
+  }
+  return 32;
+  #else
+  return __builtin_clrsb(x);
+  #endif
+}
+
+static int clrsbll(long long x){
+  #if defined(__XS3A__)
+  for (unsigned i=0;i<64;i++){
+    long long y = (x<<i)>>i;
+    if (y != x)
+    return (i-1);
+  }
+  return 64;
+  #else
+  return __builtin_clrsbll(x);
+  #endif
+}
+
 static void solve_constraint(
     int *B_res, int *A_res, int *M_res,
     float* post_activation_multiplier,
@@ -76,7 +102,7 @@ static void solve_constraint(
               accu_bits += A;
             }
 
-            int product_bits = pam_bits + accu_bits;
+            // int product_bits = pam_bits + accu_bits;
 
             // printf("found B:%d A:%d M:%d\n", B, A, M);
             *B_res = B;
@@ -220,7 +246,7 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
 
 unsigned xor_pop_32(bnn_b32_t* a, bnn_b32_t* b) {
   unsigned c = 0;
-  unsigned t = sizeof(bnn_b32_t);
+  // unsigned t = sizeof(bnn_b32_t);
   bnn_b32_t v = (*a) ^ (*b);
  #if defined(__XS3A__)
     v = ~v;
@@ -244,7 +270,7 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
   //This is the count of full vector words that can be applied to the data    
   unsigned complete_256_bit_groups = ((chans_in*k_height*k_width) / XS3_VPU_VREG_WIDTH_BITS);
 
-  unsigned remainder_32_word_groups = ((chans_in*k_height*k_width) - complete_256_bit_groups*XS3_VPU_VREG_WIDTH_BITS) / 32;
+  // unsigned remainder_32_word_groups = ((chans_in*k_height*k_width) - complete_256_bit_groups*XS3_VPU_VREG_WIDTH_BITS) / 32;
 
   const unsigned inputs_per_b32 = 32;
   unsigned chan_b32_in = (chans_in + inputs_per_b32 - 1) / inputs_per_b32;

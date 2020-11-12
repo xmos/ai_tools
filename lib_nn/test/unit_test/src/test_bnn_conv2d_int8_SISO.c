@@ -7,6 +7,9 @@
 
 #include "helpers.h"
 
+// #define X_REF_OVERREAD_WORDS (8)
+// #define K_OVERREAD_WORDS (8*12)
+// #define DATA_SCRATCH_OVERREADWRITE_WORDS (8)
 #define X_REF_OVERREAD_WORDS (8)
 #define K_OVERREAD_WORDS (8*12)
 #define DATA_SCRATCH_OVERREADWRITE_WORDS (8)
@@ -37,10 +40,6 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
 
   unsigned y_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, 1, v_stride);
   unsigned y_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, 1, h_stride);
-
-  unsigned X_bytes = (x_height * x_width * chans_in) / 8;
-  unsigned K_bytes = (k_width * k_height * chans_in * chans_out) / 8;
-  unsigned Y_bytes = (y_width * y_height * chans_out);
 
   unsigned receptive_volume = k_width * k_height * chans_in;
 
@@ -173,19 +172,19 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_directed() {
 void test_bnn_conv2d_int8_out_SISO_pseudo_random() {
 #define MIN_H_STRIDE 1
 #define MIN_V_STRIDE 1
-#define MAX_H_STRIDE 4
-#define MAX_V_STRIDE 4
+#define MAX_H_STRIDE 1
+#define MAX_V_STRIDE 1
 
 #define MIN_K_HEIGHT 1
 #define MIN_K_WIDTH 1
-#define MAX_K_HEIGHT 6
-#define MAX_K_WIDTH 6
+#define MAX_K_HEIGHT 1
+#define MAX_K_WIDTH 1
 
-#define MIN_CHANS_IN 32
-#define MAX_CHANS_IN (32*9)
+#define MIN_CHANS_IN (32*1)
+#define MAX_CHANS_IN (32*1)
 
-#define MIN_CHANS_OUT (4*1)
-#define MAX_CHANS_OUT (4*7)
+#define MIN_CHANS_OUT (4*2)
+#define MAX_CHANS_OUT (4*2)
 
 #define MAX_X_HEIGHT MAX_K_HEIGHT
 #define MAX_X_WIDTH MAX_K_WIDTH
@@ -230,7 +229,7 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_random() {
       
                   // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
                   //   h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out);
-                    for(unsigned c=0;c<1<<0;c++){
+                    for(unsigned c=0;c<1<<10;c++){
                       int seed =c;
                       srand(seed);
                       pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
@@ -506,8 +505,8 @@ void test_bnn_conv2d_int8_out_SISO_sub_image(){
 
 void test_bnn_conv2d_int8_SISO() {
   UNITY_SET_FILE();
-  RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_directed);
+  // RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_directed);
   RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random);
-  RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
+  // RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
 
 }

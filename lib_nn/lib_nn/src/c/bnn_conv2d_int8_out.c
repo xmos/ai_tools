@@ -313,13 +313,9 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
   assert(k->dilation.vertical >= 1);
 
   unsigned h_dilation = k->dilation.horizontal;
-  // unsigned v_dilation = k->dilation.vertical;
-
   unsigned h_stride = k->stride.horizontal;
   unsigned v_stride = k->stride.vertical;
 
-  // unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
-  // unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
 
   plan->input_channel_loop_counter =
       ((x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS) - 1;
@@ -447,13 +443,9 @@ void bnn_conv2d_int8_out_asm_prepare(
   plan->k_width_loop_counter = k_sub_width - 1;
 
   unsigned h_dilation = k->dilation.horizontal;
-  // unsigned v_dilation = k->dilation.vertical;
 
   unsigned h_stride = k->stride.horizontal;
   unsigned v_stride = k->stride.vertical;
-
-  // unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k_sub_height, v_dilation, v_stride );
-  // unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k_sub_width, h_dilation, h_stride );
 
   plan->input_channel_loop_counter =
       (x->channels / XS3_VPU_VREG_WIDTH_BITS) - 1;

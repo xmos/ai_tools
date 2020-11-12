@@ -7,9 +7,6 @@
 
 #include "helpers.h"
 
-// #define X_REF_OVERREAD_WORDS (8)
-// #define K_OVERREAD_WORDS (8*12)
-// #define DATA_SCRATCH_OVERREADWRITE_WORDS (8)
 #define X_REF_OVERREAD_WORDS (8)
 #define K_OVERREAD_WORDS (8*12)
 #define DATA_SCRATCH_OVERREADWRITE_WORDS (8)
@@ -172,13 +169,13 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_directed() {
 void test_bnn_conv2d_int8_out_SISO_pseudo_random() {
 #define MIN_H_STRIDE 1
 #define MIN_V_STRIDE 1
-#define MAX_H_STRIDE 1
-#define MAX_V_STRIDE 1
+#define MAX_H_STRIDE 5
+#define MAX_V_STRIDE 5
 
 #define MIN_K_HEIGHT 1
 #define MIN_K_WIDTH 1
-#define MAX_K_HEIGHT 1
-#define MAX_K_WIDTH 1
+#define MAX_K_HEIGHT 5
+#define MAX_K_WIDTH 5
 
 #define MIN_CHANS_IN (32*1)
 #define MAX_CHANS_IN (32*1)
@@ -214,12 +211,12 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_random() {
                   bnn_b32_t * K_ref = (bnn_b32_t *) malloc(K_ref_bytes);
                   bnn_b32_t * K     = (bnn_b32_t *) malloc(K_ref_bytes + sizeof(bnn_b32_t)*K_OVERREAD_WORDS);
 
-                  bnn_b32_t * X_ref =(bnn_b32_t *)malloc(sizeof(bnn_b32_t)*(x_height*x_width*chan_words_in+X_REF_OVERREAD_WORDS));
+                  size_t X_ref_bytes = sizeof(bnn_b32_t)*(x_height*x_width*chan_words_in+X_REF_OVERREAD_WORDS);
+                  bnn_b32_t * X_ref =(bnn_b32_t *)malloc(X_ref_bytes);
                   int16_t *post_activation_multiplier_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
                   int16_t *post_activation_bias_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
                   bnn_b32_t *data_scratch = (bnn_b32_t *)malloc(sizeof(bnn_b32_t)*(k_height * k_width * chan_words_in + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
                   
-
                   float * post_activation_multiplier = (float *)malloc(sizeof(float)*chans_out);
                   float * post_activation_bias = (float *)malloc(sizeof(float)*chans_out);
                   int * chan_overlaps = (int *)malloc(sizeof(int)*(chans_out));
@@ -229,11 +226,12 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_random() {
       
                   // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
                   //   h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out);
-                    for(unsigned c=0;c<1<<10;c++){
-                      int seed =c;
+                    for(unsigned c=0;c<1<<5;c++){
+                      int seed = c;
                       srand(seed);
-                      pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
-                      pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
+                      pseudo_rand_bytes((char*)X_ref, X_ref_bytes);
+                      pseudo_rand_bytes((char*)K_ref, K_ref_bytes);
+
                       run_int8_config(
                           (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
                           (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
@@ -373,7 +371,9 @@ void test_bnn_conv2d_int8_out_SISO_sub_image(){
 
       size_t K_ref_bytes = sizeof(bnn_b32_t) * (chans_out*FULL_K_HEIGHT*FULL_K_WIDTH*chan_words_in);
       bnn_b32_t * K_ref = (bnn_b32_t * ) malloc(K_ref_bytes);
-      bnn_b32_t * X_ref = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(FULL_X_HEIGHT*FULL_X_WIDTH*chan_words_in+X_REF_OVERREAD_WORDS));
+
+      size_t X_ref_bytes = sizeof(bnn_b32_t)*(FULL_X_HEIGHT*FULL_X_WIDTH*chan_words_in+X_REF_OVERREAD_WORDS);
+      bnn_b32_t * X_ref = (bnn_b32_t *) malloc(X_ref_bytes);
       int16_t * post_activation_multiplier_q = (int16_t *) malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
       int16_t * post_activation_bias_q = (int16_t *) malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
       bnn_b32_t *data_scratch = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(FULL_K_HEIGHT * FULL_K_WIDTH * chan_words_in + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
@@ -411,7 +411,7 @@ void test_bnn_conv2d_int8_out_SISO_sub_image(){
           for(unsigned i=0;i<1<<6;i++){
 
             pseudo_rand_bytes((char*)K_ref, K_ref_bytes);
-            pseudo_rand_bytes((char*)X_ref, sizeof(bnn_b32_t)*(FULL_X_HEIGHT*FULL_X_WIDTH*chan_words_in+7));
+            pseudo_rand_bytes((char*)X_ref, X_ref_bytes);
 
             unsigned receptive_volume = k.shape.width * k.shape.height * x.channels;
 
@@ -505,8 +505,7 @@ void test_bnn_conv2d_int8_out_SISO_sub_image(){
 
 void test_bnn_conv2d_int8_SISO() {
   UNITY_SET_FILE();
-  // RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_directed);
+  RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_directed);
   RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random);
-  // RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
-
+  RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
 }

@@ -146,6 +146,8 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.LegalizeBconv2dBitpackedDeepInPass())
     pass_mgr.register_pass(passes.LegalizeBconv2dBitpackedPass())
 
+    pass_mgr.register_pass(passes.ReplaceAddPass())
+
     # Split batch/channel-wise padding from spatial padding
     pass_mgr.register_pass(passes.SplitPaddingPass())
     # Fuse spatial padding with conv2d

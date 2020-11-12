@@ -51,7 +51,7 @@ def test_matching_params(trf_pass: FloatingPointWarningPass, model: XCOREModel) 
     assert trf_pass.match(model.subgraphs[0].tensors[0])
 
 
-def test_non_matching_params(
+def test_non_matching_tensor_type(
     trf_pass: FloatingPointWarningPass, non_matching_tensor_type: TensorType
 ) -> None:
     subgraph = XCOREModel().create_subgraph()

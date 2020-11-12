@@ -92,6 +92,8 @@ The following table enumerates the custom operators provided by this library.
                                         <br>avgpool2d_global_ext() 
 
 <tr><td align="center" colspan="6">Miscellaneous Operators
+<tr><td>@oper_ref{add_elementwise}      <td>add_elementwise()
+
 <tr><td>@oper_ref{fully_connected_16}   <td>fully_connected_16()
 
 <tr><td>@oper_ref{fully_connected_8}    <td>fully_connected_8()

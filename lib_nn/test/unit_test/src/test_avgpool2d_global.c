@@ -98,7 +98,6 @@ void test_avgpool2d_global_case0()
 #undef CHANS
 
 
-#define DEBUG_ON    (0 || TEST_DEBUG_ON)
 #define MAX_CHANS   (4*VPU_INT8_ACC_PERIOD)
 #define MAX_HEIGHT  (32)
 #define MAX_WIDTH   (32)
@@ -216,7 +215,8 @@ void test_avgpool2d_global_case1()
 #undef MAX_WIDTH
 #undef MAX_HEIGHT
 #undef MAX_CHANS
-#undef DEBUG_ON
+
+
 
 
 

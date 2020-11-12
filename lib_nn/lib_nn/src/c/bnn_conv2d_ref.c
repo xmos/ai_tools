@@ -15,6 +15,204 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include <limits.h>
+#include <math.h>
+
+
+static void solve_constraint(
+    int *B_res, int *A_res, int *M_res,
+    float* post_activation_multiplier,
+    float* post_activation_bias, 
+    unsigned chans_out,
+    int max_accu, int min_accu){
+
+
+  int max_pab_exp = INT_MIN;
+  int max_pam_exp = INT_MIN;
+  int max_accu_exp = INT_MIN;
+
+  for (unsigned ch=0;ch<chans_out; ch++){
+    int exp;
+    frexp(post_activation_bias[ch], &exp);
+    if(exp > max_pab_exp)
+      max_pab_exp = exp;
+    frexp(post_activation_multiplier[ch], &exp);
+    if(exp > max_pam_exp)
+      max_pam_exp = exp;
+  }
+
+  {
+    int exp;
+    frexp((float)max_accu, &max_accu_exp);
+    frexp((float)min_accu, &exp);
+    if(exp > max_accu_exp)
+      max_accu_exp = exp;
+  }
+
+  //pab_hat = (pab*2**B)
+  const int pab_hat_bits = 30;
+  const int accu_hat_bits = 15;
+  const int pam_hat_bits = 15;
+
+  int B_max = (pab_hat_bits - 1) - max_pab_exp;
+  int B_min = -max_pab_exp;
+
+  int A_max = (accu_hat_bits - 1) - max_accu_exp;
+  int A_min = -max_accu_exp;
+
+  int M_max = (pam_hat_bits - 1) - max_pam_exp;
+  int M_min = -max_pam_exp;
+
+  //b_hat = pab*2**B must be a 32 bit value
+  //b_hat is stored in 16 bits
+  //b_hat is shifted using a VLMACC by 1<<Bs
+  //Bs can be from 0 to 14 i.e. 1<<0 to 1<<14
+  //If Bs needs to be negative then b_hat must be shifted right
+
+  for (int B=B_max; B >= B_min; B--){
+
+      // Check that pab*2**B will fit in pab_hat_bits bits
+
+
+      for (int A=A_max; A >= A_min; A--){
+        int M = B - A;
+
+        if ((M <= M_max)&& (M >= M_min)){
+            int pam_bits = max_pab_exp + M;
+            int accu_bits = max_accu_exp;
+            if (A < 0){
+              accu_bits += A;
+            }
+
+            int product_bits = pam_bits + accu_bits;
+
+            // printf("found B:%d A:%d M:%d\n", B, A, M);
+            *B_res = B;
+            *A_res = A;
+            *M_res = M;
+            return;
+
+        }
+
+      }
+  }
+
+  printf("Failed to find B,A and M");
+  assert(0);
+}
+
+
+void bnn_quantise_activation(
+               int16_t * post_activation_multiplier_q,
+               int16_t* post_activation_bias_q,
+
+               float* post_activation_multiplier,
+               float* post_activation_bias, 
+
+               unsigned chans_out,
+
+               int32_t clamp_low,
+               int32_t clamp_high,
+
+               int *accu_shr,
+               int16_t *bias_multipler,
+               int *final_shr,
+
+
+               int32_t receptive_volume, 
+               int * chan_overlaps
+){
+
+  // The max vlue that the actual VPU can output
+  int max_accu = receptive_volume/2;
+  int min_accu = -receptive_volume/2;
+
+  int B, A, M;
+
+  float * pam = (float *)malloc(sizeof(float) * chans_out);
+  float * pab = (float *)malloc(sizeof(float) * chans_out);
+
+  for (unsigned ch=0;ch<chans_out;ch++)
+    pam[ch] = post_activation_multiplier[ch] * -2;
+
+  for (unsigned ch=0;ch<chans_out;ch++){
+    pab[ch] = post_activation_bias[ch] + post_activation_multiplier[ch]*(float)receptive_volume;
+    if(chan_overlaps)
+      pab[ch] +=  (float)chan_overlaps[ch]*2*post_activation_multiplier[ch];
+  }
+
+  solve_constraint(
+    &B, &A, &M,
+    pam,
+    pab, 
+    chans_out,
+    max_accu, min_accu);
+
+  //TODO make this into a function
+  int max_pab_exp = INT_MIN;
+  unsigned min_rsb = UINT_MAX;
+  for (unsigned ch=0;ch<chans_out; ch++){
+    int exp;
+    frexp(pab[ch], &exp);
+    if(exp > max_pab_exp)
+      max_pab_exp = exp;
+    unsigned rsb = clrsb((int)pab[ch]) - 16;
+    if(rsb < min_rsb)
+      min_rsb = rsb;
+  }
+
+  // We want to multiply pab by 2**B then quantise it, however, we can only store 16 bits
+  // so what we will do is
+  //if B > 0 make a 16 bit quantised bias and a 16 bit bias_multipler
+  //if B < 0 bias_multipler = 1, bias = pam * 2 **B
+
+int bias_exp_adjust ;
+  if (B > 0){
+
+    // printf("max_pab_exp:%d\n", max_pab_exp);
+    // printf("min_rsb:%u\n", min_rsb);
+
+    bias_exp_adjust = 15 - max_pab_exp;
+
+    // printf("bias_exp_adjust: %d max_pab_exp:%d %d\n", bias_exp_adjust, max_pab_exp, B - bias_exp_adjust);
+
+    //todo deal with the case that the bias_multipler wont fit in a 16 bit value
+    *bias_multipler = (1<<(B - bias_exp_adjust)); //this is not so simple
+
+  } else {
+
+    *bias_multipler = 1;
+    bias_exp_adjust = B;
+  }
+
+  // Now quantise the tensors
+  for( unsigned ch=0;ch<chans_out;ch++){
+
+    int32_t pa_mul = (int32_t)round(ldexp(pam[ch], M));
+    assert(clrsb(pa_mul) - 16 >= 0); // make sure there is no overflow
+    post_activation_multiplier_q[ch] = (int16_t)pa_mul;
+
+    int32_t pa_bias = (int32_t)round(ldexp(pab[ch], bias_exp_adjust));
+
+    if (pa_bias == (1<<15)) //TODO think about this
+      pa_bias  = INT16_MAX;
+
+    // assert(clrsb(pa_bias) - 16 >= 0); // make sure there is no overflow
+    post_activation_bias_q[ch] = (int16_t)pa_bias;
+
+  }
+
+  //todo check that post_activation_bias_q * bias_exp_adjust is ldexp(post_activation_bias, B)
+  *accu_shr = -A;
+
+  // The -8 is here to leave the result in a 16 bit form so that the quantisation to 8 bit 
+  // can deal with the asymertic rounding.
+  *final_shr = B - 8; 
+
+  free(pam);
+  free(pab);
+}
+
 //TODO get these from headers
 void bnn_conv2d_int8_out_asm_prepare(
     nn_bnn_conv2d_int8_out_asm_plan_t* plan, int8_t* Y_p,
@@ -23,6 +221,7 @@ void bnn_conv2d_int8_out_asm_prepare(
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
     const int accu_shr,
+    const int16_t bias_multipler,
     const int final_shr,
 
     const nn_image_params_t* x, 
@@ -41,6 +240,7 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
     const int accu_shr,
+    const int16_t bias_multipler,
     const int final_shr,
 
     const nn_image_params_t* x, 
@@ -387,12 +587,18 @@ void bnn_conv2d_int8_out_asm(nn_bnn_conv2d_int8_out_asm_plan_t * plan){
   xs3_vpu vpu_data;
   xs3_vpu * vpu = &vpu_data;
 
+  vpu_vector_t bias_shift;
+  vpu_vector_t final_shr;
   vpu_vector_t sat_mem;
   vpu_vector_t temp_mem;
   VSETC(vpu, MODE_S16);
 
-  for(unsigned i=0;i<VPU_INT16_EPV;i++)
+
+  for(unsigned i=0;i<VPU_INT16_EPV;i++){
     sat_mem.s16[i] = plan->vlsat;
+    bias_shift.s16[i] = plan->bias_multiplier;
+    final_shr.s16[i] = plan->final_shr;
+  }
 
   void * X_p = plan->X;
   void * Y_p = plan->Y;
@@ -429,11 +635,15 @@ void bnn_conv2d_int8_out_asm(nn_bnn_conv2d_int8_out_asm_plan_t * plan){
         VLSAT(vpu, &sat_mem);
         VSTR(vpu, &temp_mem);
         VLASHR(vpu, &temp_mem, plan->ashr);
-        VLMUL(vpu, cur_post_activation_mul);
-        VLADD(vpu, cur_post_activation_bias);
-
+        
         VSTR(vpu, &temp_mem);
-        VLASHR(vpu, &temp_mem, plan->final_shr);
+        VCLRDR(vpu);
+        VLDC(vpu, cur_post_activation_bias);
+        VLMACC(vpu, &bias_shift);
+        VLDC(vpu, &temp_mem);
+        VLMACC(vpu, cur_post_activation_mul);
+        VLSAT(vpu, &final_shr);
+
         VDEPTH8_FIXED(vpu);
         VSTRPV(vpu, Y_p, 0xffff);
         Y_p += 16;
@@ -471,13 +681,20 @@ static void make_patch(xs3_vpu * vpu, nn_bnn_conv2d_int8_out_SISO_asm_plan_t * p
         for (int kw = plan->k_width_loop_counter; kw >= 0 ; kw-- )  {
             for (int ic = plan->input_channel_loop_counter; ic >= 0 ; ic-- ) {
                 VLDD(vpu, X_cur_p);
+
+                // printf("load from %p\n", X_cur_p);
+                // vpu_sim_print(vpu);
+
                 X_cur_p += 32;
+
                 VSTD(vpu, D_p);
                 D_p += 32;
             }
+            // printf("h step %d\n",  plan->inner_x_h_step);
             X_cur_p += plan->inner_x_h_step;
             D_p += plan->data_scratch_adjust;
         }
+            // printf("v step %d\n",  plan->inner_x_v_step);
         X_cur_p += plan->inner_x_v_step;
     }
     VCLRDR(vpu);
@@ -485,14 +702,19 @@ static void make_patch(xs3_vpu * vpu, nn_bnn_conv2d_int8_out_SISO_asm_plan_t * p
 }
 
 void compute_patch(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan, 
-  void ** K_p, int step, xs3_vpu * vpu, vpu_vector_t *sat_mem, 
+  void ** K_p, int step, xs3_vpu * vpu, 
+  vpu_vector_t *sat_mem, 
+  vpu_vector_t * bias_shift, 
+  vpu_vector_t * final_shr, 
   void * cur_post_activation_mul, 
   void * cur_post_activation_bias){
 
   VCLRDR(vpu);
+  // printf("step: %d\n", step);
   void * D_p = plan->data_scratch;
   for (unsigned p = plan->patch_loop_counter; p > 0; p--){
     VLDC(vpu, D_p);
+    // vpu_sim_print(vpu);
     D_p += 32;
     for(unsigned l=0; l<15; l++){
       VLMACCR1(vpu, *K_p);
@@ -503,6 +725,7 @@ void compute_patch(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan,
   }
 
   VLDC(vpu, D_p);
+    // vpu_sim_print(vpu);
   
   unsigned loops;
   switch(step){
@@ -518,28 +741,21 @@ void compute_patch(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan,
   }
 
   vpu_vector_t temp_mem;
+
   memset(&temp_mem, 0, sizeof(temp_mem));
 
   VLSAT(vpu, sat_mem);
   VSTR(vpu, &temp_mem);
   VLASHR(vpu, &temp_mem, plan->ashr);
-  
-  VLMUL(vpu, cur_post_activation_mul);
-  VLADD(vpu, cur_post_activation_bias);
-
-
-  /////
-  // VSTR(vpu, &temp_mem);
-  // VCLRDR(vpu);
-  // VLDC(vpu, cur_post_activation_bias);
-  // VLMACC(vpu, bias_shift);
-  // VLDC(vpu, temp_mem);
-  // VLMACC(vpu, cur_post_activation_mul);
-  // VDEPTH16(vpu);
-  /////
 
   VSTR(vpu, &temp_mem);
-  VLASHR(vpu, &temp_mem, plan->final_shr);
+  VCLRDR(vpu);
+  VLDC(vpu, cur_post_activation_bias);
+  VLMACC(vpu, bias_shift);
+  VLDC(vpu, &temp_mem);
+  VLMACC(vpu, cur_post_activation_mul);
+  VLSAT(vpu, final_shr);
+
   VDEPTH8_FIXED(vpu);
 
 }
@@ -552,10 +768,15 @@ void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
   xs3_vpu * vpu = &vpu_data;
 
   vpu_vector_t sat_mem;
+  vpu_vector_t bias_shift;
+  vpu_vector_t final_shr;
   VSETC(vpu, MODE_S16);
 
-  for(unsigned i=0;i<VPU_INT16_EPV;i++)
+  for(unsigned i=0;i<VPU_INT16_EPV;i++){
     sat_mem.s16[i] = plan->vlsat;
+    bias_shift.s16[i] = plan->bias_multiplier;
+    final_shr.s16[i] = plan->final_shr;
+  }
 
   void * X_p = plan->X;
   void * Y_p = plan->Y;
@@ -570,7 +791,7 @@ void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
       void * K_p = plan->K;
       for (int oc = plan->output_channel_loop_counter; oc > 0 ; oc-- ) {
 
-        compute_patch(plan, &K_p, 32, vpu, &sat_mem, 
+        compute_patch(plan, &K_p, 32, vpu, &sat_mem, &bias_shift, &final_shr,
           cur_post_activation_mul, cur_post_activation_bias);
 
         VSTRPV(vpu, Y_p, 0xffff);
@@ -580,7 +801,7 @@ void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
         cur_post_activation_bias += 32;
       }
       
-      compute_patch(plan, &K_p, plan->k_p_rewind, vpu, &sat_mem, 
+      compute_patch(plan, &K_p, plan->k_p_rewind, vpu, &sat_mem, &bias_shift, &final_shr,
         cur_post_activation_mul, cur_post_activation_bias);
 
       VSTRPV(vpu, Y_p, plan->final_channels_mask);
@@ -592,7 +813,6 @@ void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
     Y_p += plan->y_v_step;
   }
 
-
 }
 
 void bnn_conv2d_int8_out(int8_t* Y_p,
@@ -601,6 +821,7 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
     const int accu_shr,
+    const int16_t bias_multipler,
     const int final_shr,
     
     const nn_image_params_t* x, //The full image of x
@@ -623,6 +844,7 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
         post_activation_multiplier_q, 
         post_activation_bias_q,
         accu_shr,
+        bias_multipler,
         final_shr,
         x, y, k, 
         y_loc_x, y_loc_y, y_sub_width, y_sub_height,
@@ -639,6 +861,7 @@ void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
     const int accu_shr,
+    const int16_t bias_multipler,
     const int final_shr,
 
     bnn_b32_t * data_scratch,
@@ -662,6 +885,7 @@ void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
         post_activation_multiplier_q, 
         post_activation_bias_q,
         accu_shr,
+        bias_multipler,
         final_shr,
         x, y, k, 
         y_loc_x, y_loc_y, y_sub_width, y_sub_height,

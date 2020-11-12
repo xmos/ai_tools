@@ -19,6 +19,9 @@ void larq_ref_bconv2d_int8_out(const nn_image_params_t* x, const nn_image_params
                       const float* post_activation_multiplier, 
                       const float* post_activation_bias );
 
+void make_thresholds(float * post_activation_multiplier, float * post_activation_bias, 
+  unsigned chans_out, unsigned receptive_volume, int seed);
+
 #define DIV_BY_AND_ROUND_UP(x, y) (((x) + (y) - 1) / (y))
 
 #define max(a,b) \

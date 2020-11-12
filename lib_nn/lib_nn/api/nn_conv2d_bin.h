@@ -2,6 +2,28 @@
 #include "nn_conv2d_structs.h"
 #include "nn_binary_structs.h"
 // Binary Conv2D
+
+
+void bnn_quantise_activation(
+               int16_t * post_activation_multiplier_q,
+               int16_t* post_activation_bias_q,
+
+               float* post_activation_multiplier,
+               float* post_activation_bias, 
+
+               unsigned chans_out,
+
+               int32_t clamp_low,
+               int32_t clamp_high,
+
+               int *accu_shr,
+               int16_t *bias_multipler,
+               int *final_shr,
+
+
+               int32_t receptive_volume, 
+               int * chan_overlaps
+);
   
 /**  
  * @brief Execute @oper{bnn_reorder_threshold_tensor}.
@@ -134,6 +156,7 @@ void bnn_conv2d_int8_out_valid(int8_t* Y_p,
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
     const int accu_shr,
+    const int16_t bias_multiplier,
     const int final_shr,
 
     const nn_image_params_t* x,
@@ -151,6 +174,7 @@ void bnn_conv2d_int8_out_SISO_valid(int8_t* Y_p,
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
     const int accu_shr,
+    const int16_t bias_multiplier,
     const int final_shr,
 
     bnn_b32_t * data_scratch,
@@ -381,6 +405,7 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
     const int16_t* post_activation_multiplier, 
     const int16_t* post_activation_bias,
     const int accu_shr,
+    const int16_t bias_multipler,
     const int final_shr,
     
     const nn_image_params_t* x, //The full image of x
@@ -402,6 +427,7 @@ void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
     const int accu_shr,
+    const int16_t bias_multipler,
     const int final_shr,
 
     bnn_b32_t * data_scratch,

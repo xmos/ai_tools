@@ -2,22 +2,14 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
 
-#include "xs3_vpu.h"
-#include "vpu_sim.h"
-
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
-#include <assert.h>
-
 #include <limits.h>
 #include <math.h>
-
 
 static void solve_constraint(
     int *B_res, int *A_res, int *M_res,
@@ -168,19 +160,12 @@ void bnn_quantise_activation(
 
 int bias_exp_adjust ;
   if (B > 0){
-
-    // printf("max_pab_exp:%d\n", max_pab_exp);
-    // printf("min_rsb:%u\n", min_rsb);
-
     bias_exp_adjust = 15 - max_pab_exp;
-
-    // printf("bias_exp_adjust: %d max_pab_exp:%d %d\n", bias_exp_adjust, max_pab_exp, B - bias_exp_adjust);
 
     //todo deal with the case that the bias_multipler wont fit in a 16 bit value
     *bias_multipler = (1<<(B - bias_exp_adjust)); //this is not so simple
 
   } else {
-
     *bias_multipler = 1;
     bias_exp_adjust = B;
   }
@@ -213,77 +198,6 @@ int bias_exp_adjust ;
   free(pab);
 }
 
-//TODO get these from headers
-void bnn_conv2d_int8_out_asm_prepare(
-    nn_bnn_conv2d_int8_out_asm_plan_t* plan, int8_t* Y_p,
-    const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
-    
-    const int16_t* post_activation_multiplier_q, 
-    const int16_t* post_activation_bias_q,
-    const int accu_shr,
-    const int16_t bias_multipler,
-    const int final_shr,
-
-    const nn_image_params_t* x, 
-    const nn_image_params_t* y,
-    const nn_window_params_t* k, 
-    const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height,
-    const unsigned x_loc_x, const unsigned x_loc_y, 
-    const unsigned k_loc_x, const unsigned k_loc_y, 
-    const unsigned k_sub_width, const unsigned k_sub_height) ;
-
-void bnn_conv2d_int8_out_SISO_asm_prepare(
-    nn_bnn_conv2d_int8_out_SISO_asm_plan_t* plan, int8_t* Y_p,
-    const bnn_b32_t* X_p, const bnn_b32_t* K_p, bnn_b32_t * data_scratch,
-    
-    const int16_t* post_activation_multiplier_q, 
-    const int16_t* post_activation_bias_q,
-    const int accu_shr,
-    const int16_t bias_multipler,
-    const int final_shr,
-
-    const nn_image_params_t* x, 
-    const nn_image_params_t* y,
-    const nn_window_params_t* k, 
-    const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height,
-    const unsigned x_loc_x, const unsigned x_loc_y, 
-    const unsigned k_loc_x, const unsigned k_loc_y, 
-    const unsigned k_sub_width, const unsigned k_sub_height) ;
-
-
-//This is the amount that the VLMUL instruction shifts the product of C and R by.
-static const unsigned post_vlmul_shr = 14;
-
-unsigned xor_pop_32(bnn_b32_t* a, bnn_b32_t* b) {
-  unsigned c = 0;
-  unsigned t = sizeof(bnn_b32_t);
-  bnn_b32_t v = (*a) ^ (*b);
- #if defined(__XS3A__)
-    v = ~v;
-    for (unsigned i = 0; i < t * 8; i++) {
-      c += (v & 1);
-      v >>= 1;
-    }
-    #else
-    c += __builtin_popcount(~v);
-    #endif
-  return c;
-}
-
-unsigned xor_pop_256(bnn_b256_t* a, bnn_b256_t* b) {
-
-  unsigned elements = sizeof(((bnn_b256_t*)0)->d) /
-    sizeof(((bnn_b256_t*)0)->d[0]);
-
-  unsigned c = 0;
-  for (unsigned e = 0; e < elements; e++) 
-    c +=xor_pop_32(&(a->d[e]), &(b->d[e]));
-
-  return c;
-}
-
 void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
                                   const int32_t* thresholds_ref,
                                   const unsigned chans_out,
@@ -304,6 +218,23 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
   }
 }
 
+unsigned xor_pop_32(bnn_b32_t* a, bnn_b32_t* b) {
+  unsigned c = 0;
+  unsigned t = sizeof(bnn_b32_t);
+  bnn_b32_t v = (*a) ^ (*b);
+ #if defined(__XS3A__)
+    v = ~v;
+    for (unsigned i = 0; i < t * 8; i++) {
+      c += (v & 1);
+      v >>= 1;
+    }
+    #else
+    c += __builtin_popcount(~v);
+    #endif
+  return c;
+}
+
+//TODO consolidate these two functions
 void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
@@ -515,7 +446,6 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
           total_xor_popcount += (int)xor_pop_32(&(p[o]), &zeros) - 16;
         }
         chan_overlaps[ output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
-        // printf("chan_overlaps[%u] %d\n", output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order, total_xor_popcount);
         p += remaining_input_words;
       }   
 
@@ -532,7 +462,6 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
 
     p += (8*output_chans_reamining*complete_256_bit_groups);
 
-    // printf("remaining_input_words %u\n", remaining_input_words);
     if (remaining_input_words){
       for (unsigned sub_grp_idx = 0; sub_grp_idx < output_chans_reamining; sub_grp_idx++) {
 
@@ -544,353 +473,8 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
           total_xor_popcount += (int)xor_pop_32(&(p[o]), &zeros) - 16;
         }
         chan_overlaps[ output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
-        // printf("chan_overlaps[%u] %d\n", output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order, total_xor_popcount);
-
         p += remaining_input_words;
       }   
     }
   }
-}
-
-
-static int32_t ashr(int32_t x, int shr){
-  if (shr > 0)
-    return (x + (1 << (shr-1))) >> shr;
-  else
-    return x << (-shr);
-}
-
-static int64_t saturate_non_sym(
-    const int64_t input,
-    const unsigned bits)
-{
-    const int64_t max_val = (((int64_t)1)<<(bits-1))-1;
-    const int64_t min_val = -max_val - 1;
-    
-    return (input > max_val)?  max_val : (input < min_val)? min_val : input;
-}
-void VDEPTH8_FIXED(xs3_vpu* vpu){
-
-    vpu_vector_t vec_tmp;
-    memcpy(&vec_tmp, &(vpu->vR), sizeof(vpu_vector_t));
-    memset(&(vpu->vR), 0, sizeof(vpu_vector_t));
-    
-    for(int i = 0; i < VPU_INT16_EPV; i++){
-        int32_t elm = ((int32_t)vec_tmp.s16[i]) + (1 << 7);
-        vpu->vR.s8[i] = saturate_non_sym(elm >> 8, 8);
-    }
-}
-
-WEAK_FUNC
-void bnn_conv2d_int8_out_asm(nn_bnn_conv2d_int8_out_asm_plan_t * plan){
-
-  xs3_vpu vpu_data;
-  xs3_vpu * vpu = &vpu_data;
-
-  vpu_vector_t bias_shift;
-  vpu_vector_t final_shr;
-  vpu_vector_t sat_mem;
-  vpu_vector_t temp_mem;
-  VSETC(vpu, MODE_S16);
-
-
-  for(unsigned i=0;i<VPU_INT16_EPV;i++){
-    sat_mem.s16[i] = plan->vlsat;
-    bias_shift.s16[i] = plan->bias_multiplier;
-    final_shr.s16[i] = plan->final_shr;
-  }
-
-  void * X_p = plan->X;
-  void * Y_p = plan->Y;
-
-  for (int xh = plan->x_height_loop_counter; xh > 0 ; xh-- ) {
-    for (int xv = plan->x_width_loop_counter; xv >= 0 ; xv-- ) {
-
-      void * cur_post_activation_mul = plan->post_activation_mul;
-      void * cur_post_activation_bias = plan->post_activation_bias;
-      void * K_p = plan->K;
-      for (int oc = plan->output_channel_loop_counter; oc >= 0 ; oc-- ) {
-
-        void * X_cur_p = X_p;
-        VCLRDR(vpu);
-
-        for (int kh = plan->k_height_loop_counter; kh >= 0 ; kh-- )  {
-          for (int kw = plan->k_width_loop_counter; kw >= 0 ; kw-- )  {
-            for (int ic = plan->input_channel_loop_counter; ic >= 0 ; ic-- ) {
-              VLDC(vpu, X_cur_p);
-              X_cur_p += 32;
-
-              for(unsigned l=0; l<16; l++){
-                VLMACCR1(vpu, K_p);
-                K_p += 32;
-              }
-            }
-            X_cur_p += plan->inner_x_h_step;
-            K_p += plan->k_h_step;
-          }
-          X_cur_p += plan->inner_x_v_step;
-          K_p += plan->k_v_step;
-        }
-
-        VLSAT(vpu, &sat_mem);
-        VSTR(vpu, &temp_mem);
-        VLASHR(vpu, &temp_mem, plan->ashr);
-        
-        VSTR(vpu, &temp_mem);
-        VCLRDR(vpu);
-        VLDC(vpu, cur_post_activation_bias);
-        VLMACC(vpu, &bias_shift);
-        VLDC(vpu, &temp_mem);
-        VLMACC(vpu, cur_post_activation_mul);
-        VLSAT(vpu, &final_shr);
-
-        VDEPTH8_FIXED(vpu);
-        VSTRPV(vpu, Y_p, 0xffff);
-        Y_p += 16;
-
-        cur_post_activation_mul += 32;
-        cur_post_activation_bias += 32;
-      }
-      X_p += plan->outer_x_h_step;
-    }
-    X_p += plan->outer_x_v_step;
-    Y_p += plan->y_v_step;
-  }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-static void make_patch(xs3_vpu * vpu, nn_bnn_conv2d_int8_out_SISO_asm_plan_t * plan, void * X_p){
-
-    void * X_cur_p = X_p;
-    void * D_p = plan->data_scratch;
-
-    for (int kh = plan->k_height_loop_counter; kh >= 0 ; kh-- )  {
-        for (int kw = plan->k_width_loop_counter; kw >= 0 ; kw-- )  {
-            for (int ic = plan->input_channel_loop_counter; ic >= 0 ; ic-- ) {
-                VLDD(vpu, X_cur_p);
-
-                // printf("load from %p\n", X_cur_p);
-                // vpu_sim_print(vpu);
-
-                X_cur_p += 32;
-
-                VSTD(vpu, D_p);
-                D_p += 32;
-            }
-            // printf("h step %d\n",  plan->inner_x_h_step);
-            X_cur_p += plan->inner_x_h_step;
-            D_p += plan->data_scratch_adjust;
-        }
-            // printf("v step %d\n",  plan->inner_x_v_step);
-        X_cur_p += plan->inner_x_v_step;
-    }
-    VCLRDR(vpu);
-    VSTD(vpu, D_p);
-}
-
-void compute_patch(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan, 
-  void ** K_p, int step, xs3_vpu * vpu, 
-  vpu_vector_t *sat_mem, 
-  vpu_vector_t * bias_shift, 
-  vpu_vector_t * final_shr, 
-  void * cur_post_activation_mul, 
-  void * cur_post_activation_bias){
-
-  VCLRDR(vpu);
-  // printf("step: %d\n", step);
-  void * D_p = plan->data_scratch;
-  for (unsigned p = plan->patch_loop_counter; p > 0; p--){
-    VLDC(vpu, D_p);
-    // vpu_sim_print(vpu);
-    D_p += 32;
-    for(unsigned l=0; l<15; l++){
-      VLMACCR1(vpu, *K_p);
-      *K_p += 32;
-    }
-    VLMACCR1(vpu, *K_p);
-    *K_p += step;
-  }
-
-  VLDC(vpu, D_p);
-    // vpu_sim_print(vpu);
-  
-  unsigned loops;
-  switch(step){
-    case 32: {loops=16; break;}
-    case -96: {loops=12; break;}
-    case -224: {loops=8; break;}
-    case -352: {loops=4; break;}
-  } 
-  // printf("loops: %u plan->k_p_adjust:%d\n", loops, plan->k_p_adjust);
-  for(unsigned l=0; l<loops; l++){
-    VLMACCR1(vpu, *K_p);
-    *K_p += plan->k_p_adjust;
-  }
-
-  vpu_vector_t temp_mem;
-
-  memset(&temp_mem, 0, sizeof(temp_mem));
-
-  VLSAT(vpu, sat_mem);
-  VSTR(vpu, &temp_mem);
-  VLASHR(vpu, &temp_mem, plan->ashr);
-
-  VSTR(vpu, &temp_mem);
-  VCLRDR(vpu);
-  VLDC(vpu, cur_post_activation_bias);
-  VLMACC(vpu, bias_shift);
-  VLDC(vpu, &temp_mem);
-  VLMACC(vpu, cur_post_activation_mul);
-  VLSAT(vpu, final_shr);
-
-  VDEPTH8_FIXED(vpu);
-
-}
-
-WEAK_FUNC
-void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
-
-  xs3_vpu vpu_data;
-  memset(&vpu_data, 0, sizeof(vpu_data));
-  xs3_vpu * vpu = &vpu_data;
-
-  vpu_vector_t sat_mem;
-  vpu_vector_t bias_shift;
-  vpu_vector_t final_shr;
-  VSETC(vpu, MODE_S16);
-
-  for(unsigned i=0;i<VPU_INT16_EPV;i++){
-    sat_mem.s16[i] = plan->vlsat;
-    bias_shift.s16[i] = plan->bias_multiplier;
-    final_shr.s16[i] = plan->final_shr;
-  }
-
-  void * X_p = plan->X;
-  void * Y_p = plan->Y;
-
-  for (int xh = plan->x_height_loop_counter; xh > 0 ; xh-- ) {
-    for (int xv = plan->x_width_loop_counter; xv >= 0 ; xv-- ) {
-
-      make_patch(vpu, plan, X_p);
-
-      void * cur_post_activation_mul = plan->post_activation_mul;
-      void * cur_post_activation_bias = plan->post_activation_bias;
-      void * K_p = plan->K;
-      for (int oc = plan->output_channel_loop_counter; oc > 0 ; oc-- ) {
-
-        compute_patch(plan, &K_p, 32, vpu, &sat_mem, &bias_shift, &final_shr,
-          cur_post_activation_mul, cur_post_activation_bias);
-
-        VSTRPV(vpu, Y_p, 0xffff);
-        Y_p += 16;
-
-        cur_post_activation_mul += 32;
-        cur_post_activation_bias += 32;
-      }
-      
-      compute_patch(plan, &K_p, plan->k_p_rewind, vpu, &sat_mem, &bias_shift, &final_shr,
-        cur_post_activation_mul, cur_post_activation_bias);
-
-      VSTRPV(vpu, Y_p, plan->final_channels_mask);
-
-      Y_p += plan->final_channels_bytes;
-      X_p += plan->outer_x_h_step;
-    }
-    X_p += plan->outer_x_v_step;
-    Y_p += plan->y_v_step;
-  }
-
-}
-
-void bnn_conv2d_int8_out(int8_t* Y_p,
-    const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
-    
-    const int16_t* post_activation_multiplier_q, 
-    const int16_t* post_activation_bias_q,
-    const int accu_shr,
-    const int16_t bias_multipler,
-    const int final_shr,
-    
-    const nn_image_params_t* x, //The full image of x
-    const nn_image_params_t* y, // the full image of y
-    const nn_window_params_t* k, //the full kernel k
-    
-    const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height,
-
-    const unsigned x_loc_x, const unsigned x_loc_y, 
-    
-    const unsigned k_loc_x, const unsigned k_loc_y, 
-    const unsigned k_sub_width, const unsigned k_sub_height
-){
-  nn_bnn_conv2d_int8_out_asm_plan_t plan;
-
-
-    bnn_conv2d_int8_out_asm_prepare(&plan, Y_p,
-        X_p,  K_p,
-        post_activation_multiplier_q, 
-        post_activation_bias_q,
-        accu_shr,
-        bias_multipler,
-        final_shr,
-        x, y, k, 
-        y_loc_x, y_loc_y, y_sub_width, y_sub_height,
-        x_loc_x, x_loc_y, 
-        k_loc_x, k_loc_y, k_sub_width, k_sub_height);
-
-
-  bnn_conv2d_int8_out_asm(&plan);
-}
-
-void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
-    const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
-    
-    const int16_t* post_activation_multiplier_q, 
-    const int16_t* post_activation_bias_q,
-    const int accu_shr,
-    const int16_t bias_multipler,
-    const int final_shr,
-
-    bnn_b32_t * data_scratch,
-    
-    const nn_image_params_t* x, //The full image of x
-    const nn_image_params_t* y, // the full image of y
-    const nn_window_params_t* k, //the full kernel k
-    
-    const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height,
-
-    const unsigned x_loc_x, const unsigned x_loc_y, 
-    
-    const unsigned k_loc_x, const unsigned k_loc_y, 
-    const unsigned k_sub_width, const unsigned k_sub_height
-) {
-    nn_bnn_conv2d_int8_out_SISO_asm_plan_t plan;
-
-    bnn_conv2d_int8_out_SISO_asm_prepare(&plan, Y_p,
-        X_p,  K_p, data_scratch,
-        post_activation_multiplier_q, 
-        post_activation_bias_q,
-        accu_shr,
-        bias_multipler,
-        final_shr,
-        x, y, k, 
-        y_loc_x, y_loc_y, y_sub_width, y_sub_height,
-        x_loc_x, x_loc_y, 
-        k_loc_x, k_loc_y, k_sub_width, k_sub_height);
-
-    bnn_conv2d_int8_out_SISO_asm(&plan);
 }

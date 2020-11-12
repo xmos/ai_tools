@@ -110,7 +110,6 @@ def pick(k_height, k_width, chans_in, chans_out):
 
                 if product_bits == max_bits:
                     best_results.append((B, A, M, accu_bits, pam_bits))
-                # exit(1)
 
     for (B, A, M, accu_bits, pam_bits) in best_results:
         print('B', B, 'A', A, 'M', M, 'accu_bits',
@@ -120,28 +119,8 @@ def pick(k_height, k_width, chans_in, chans_out):
     print('B', B, 'A', A, 'M', M, 'accu_bits',
           accu_bits, 'pam_bits', pam_bits)
 
-    # abs_max_error = 0.0
-    # sum_error = 0.0
-    # count = 0
-    # for a in range(accu_min, accu_max):
-    #     expected = compute_result(
-    #         a, post_activation_multiplier, post_activation_bias)
-    #     actual = compute_result_q(
-    #         a, post_activation_multiplier, post_activation_bias, B, A, M)
-
-    #     error = np.array(expected, dtype=float) - np.array(actual, dtype=float)
-
-    #     abs_max_error = max(abs_max_error, np.max(np.abs(error)))
-    #     sum_error += np.sum(error)
-    #     count += len(error)
-
-    # print(sum_error/count, abs_max_error)
-
-
-k_height, k_width, chans_in, chans_out = 9, 9, 1024, 32
-
-np.random.seed(1)
-# pick(1, 1, 32, 32)
-# pick(3, 3, 32, 32)
-# pick(5, 5, 32, 32)
-pick(9, 9, 1024, 32)
+# TODO
+# (necessary) pick the best quantisation constants from the avalaible ones
+# (necessary) add explaination
+# (inprovement) account for the bias and product accumulation not increasing the number of bits
+# (inprovement) measure the performance

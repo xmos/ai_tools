@@ -1,4 +1,3 @@
-
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -96,41 +95,6 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     0, 0, y_width, y_height,
     0, 0, 
     0, 0, k_width, k_height);
-
-
-// int8_t(*Y)[y_width][chans_out] =
-//       (int8_t(*)[y_width][chans_out])Y_p;
-
-//   int8_t(*Y_ref)[y_width][chans_out] =
-//       (int8_t(*)[y_width][chans_out])Y_ref_p;
-
-//   int broken = 0;
-//   for (unsigned h = 0; h < y_height; h++) {
-//     for (unsigned w = 0; w < y_width; w++) {
-//       //If the result should have been computed then check it against the reference
-//       for (unsigned c = 0; c < chans_out; c++) {
-//         if((Y_ref[h][w][c] - Y[h][w][c]) * (Y_ref[h][w][c] - Y[h][w][c]) > 1){
-//           broken = 1;
-//         }
-//       }
-//     }
-//   }
-//   if (broken)
-//   for (unsigned h = 0; h < y_height; h++) {
-//     for (unsigned w = 0; w < y_width; w++) {
-//       //If the result should have been computed then check it against the reference
-//       for (unsigned c = 0; c < chans_out; c++) {
-//         printf("%2u e% d a% d", c,  Y_ref[h][w][c], Y[h][w][c]);
-//         if((Y_ref[h][w][c] - Y[h][w][c]) * (Y_ref[h][w][c] - Y[h][w][c]) > 1){
-//           printf(" *******");
-//         }
-//         printf("\n");
-//       }
-//       printf("\n");
-//     }
-//     printf("\n");
-//   }
-
 
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);

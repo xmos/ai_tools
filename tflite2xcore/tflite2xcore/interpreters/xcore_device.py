@@ -13,6 +13,16 @@ import logging
 import portalocker
 from pathlib import Path
 
+# NOTE: This code is useful when debugging with multiple pytest processes and xdist
+#        suppresses some log messages but not if they go to a file
+# hdlr = logging.FileHandler("xcore_device.log")
+# formatter = logging.Formatter("%(asctime)s %(process)d %(message)s")
+# hdlr.setFormatter(formatter)
+# logger = logging.getLogger("xcore_device")
+# logger.addHandler(hdlr)
+# logger.setLevel(logging.DEBUG)
+# logging = logger
+
 from .exceptions import (
     AllocateTensorsError,
     InvokeError,
@@ -189,7 +199,7 @@ class XCOREDeviceEndpoint(object):
     ERROR_PROBE_ID = 4
     GET_TENSOR_PROBE_ID = 5
 
-    def __init__(self):
+    def __init__(self, release_callback=None):
         tool_path = os.environ.get("XMOS_TOOL_PATH")
         lib_path = os.path.join(tool_path, "lib", "xscope_endpoint.so")
         self.lib_xscope = ctypes.CDLL(lib_path)
@@ -203,6 +213,8 @@ class XCOREDeviceEndpoint(object):
 
         self._hostname = None
         self._port = None
+
+        self._release_cb = release_callback
 
         self.clear()
 
@@ -245,6 +257,11 @@ class XCOREDeviceEndpoint(object):
             time.sleep(SLEEP_DURATION)
             duration += SLEEP_DURATION
 
+    def _raise_exception(self, ex):
+        if self._release_cb:
+            self._release_cb(self)
+        raise ex
+
     def clear(self):
         self._get_tensor_ready = False
         self._publish_blob_chunk_ready = False
@@ -262,7 +279,7 @@ class XCOREDeviceEndpoint(object):
         if msg.startswith("Failed to allocate tail memory"):
             self._error = "Unable to allocate memory. Check tensor arena size."
 
-        logging.debug(msg)
+        logging.info(msg)
 
     def on_probe(self, id_, timestamp, length, data_val, data_bytes):
         if id_ == XCOREDeviceEndpoint.PING_ACK_PROBE_ID:
@@ -323,11 +340,11 @@ class XCOREDeviceEndpoint(object):
                 self._error
                 == "Unable to initialize inference engine. Check tensor arena size."
             ):
-                raise ArenaSizeError(self._error)
+                self._raise_exception(ArenaSizeError(self._error))
             elif self._error:
-                raise AllocateTensorsError(self._error)
+                self._raise_exception(AllocateTensorsError(self._error))
         except TimeoutError:
-            raise DeviceTimeoutError("Initialize timeout")
+            self._raise_exception(DeviceTimeoutError("Initialize timeout"))
 
     def set_invoke(self, timeout=5):
         self._invoke_ready = False
@@ -335,9 +352,9 @@ class XCOREDeviceEndpoint(object):
             self.publish(b"CALL_INVOKE")
             self._wait_for("_invoke_ready", timeout)
             if self._error:
-                raise InvokeError(self._error)
+                self._raise_exception(InvokeError(self._error))
         except TimeoutError:
-            raise DeviceTimeoutError("Invoke timeout")
+            self._raise_exception(DeviceTimeoutError("Invoke timeout"))
 
     def set_tensor(self, index, tensor_content):
         size = len(tensor_content)
@@ -345,13 +362,13 @@ class XCOREDeviceEndpoint(object):
             self.publish(f"SET_TENSOR {index} {size}\0".encode())
             self._send_blob(tensor_content)
             if self._error:
-                raise SetTensorError(self._error)
+                self._raise_exception(SetTensorError(self._error))
         except TimeoutError:
             if self._error == "Unable to allocate memory. Check tensor arena size.":
                 # NOTE: This error happens during set_tensor but it means the arena is too small
                 #       despite the fact that allocate_tensors succeeded
-                raise ArenaSizeError(self._error)
-            raise DeviceTimeoutError("Set tensor timeout")
+                self._raise_exception(ArenaSizeError(self._error))
+            self._raise_exception(DeviceTimeoutError("Set tensor timeout"))
 
     def get_tensor(self, index, timeout=5):
         self._get_tensor_ready = False
@@ -359,16 +376,26 @@ class XCOREDeviceEndpoint(object):
             self.publish(f"GET_TENSOR {index}\0".encode())
             self._wait_for("_get_tensor_ready", timeout)
             if self._error:
-                raise GetTensorError(self._error)
+                self._raise_exception(GetTensorError(self._error))
             return self._get_tensor_buffer
         except TimeoutError:
-            raise DeviceTimeoutError("Get tensor timeout")
+            self._raise_exception(DeviceTimeoutError("Get tensor timeout"))
 
 
 class XCOREDeviceServer(object):
-    FILE_LOCK_TIMEOUT = 20
-    lock_path = Path("xcore_devices.lock")
-    devices_path = Path("xcore_devices.json")
+    FILE_LOCK_TIMEOUT = 60
+    lock_key = "xcore_devices"
+    devices_path = Path(__file__).parent.resolve() / "xcore_devices.json"
+
+    @staticmethod
+    def _ping_device(port, timeout):
+        ep = XCOREDeviceEndpoint()
+        ep.connect(port=port)
+        logging.debug(f"Pinging port: {port}")
+        ping_succeeded = ep.ping_device(timeout)
+        ep.disconnect()
+
+        return ping_succeeded
 
     @staticmethod
     def _setup_device_use(device):
@@ -381,7 +408,12 @@ class XCOREDeviceServer(object):
         device["xscope_port"] = xscope_port
         device["parent_pid"] = os.getpid()
         device["in_use"] = False
-        logging.debug(f"Device setup: {device}")
+
+        try:
+            XCOREDeviceServer._ping_device(xscope_port, timeout=10)
+            logging.debug(f"Device setup: {device}")
+        except Exception as ex:
+            logging.debug(str(ex))
 
         return device
 
@@ -411,15 +443,14 @@ class XCOREDeviceServer(object):
 
     @staticmethod
     def _atexit():
-        with portalocker.TemporaryFileLock(
-            XCOREDeviceServer.lock_path,
-            flags=portalocker.LOCK_EX,
-            timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT,
+        this_pid = os.getpid()
+        logging.debug(f"atExit handler pid={this_pid}")
+        with portalocker.BoundedSemaphore(
+            1, XCOREDeviceServer.lock_key, timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT
         ):
             if XCOREDeviceServer.devices_path.is_file():
                 # search (by parent pid) for this process in cached devices
                 with open(XCOREDeviceServer.devices_path, "r+") as fd:
-                    this_pid = os.getpid()
                     cached_devices = json.loads(fd.read())
                     for cached_device in cached_devices:
                         if this_pid == cached_device["parent_pid"]:
@@ -433,11 +464,10 @@ class XCOREDeviceServer(object):
     @staticmethod
     def acquire():
         atexit.register(XCOREDeviceServer._atexit)
-        with portalocker.TemporaryFileLock(
-            XCOREDeviceServer.lock_path,
-            flags=portalocker.LOCK_EX,
-            timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT,
+        with portalocker.BoundedSemaphore(
+            1, XCOREDeviceServer.lock_key, timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT
         ):
+            logging.debug("Device acquire requested")
             # get the connected devices
             connected_devices = get_devices()
             # get the cached devices
@@ -463,18 +493,11 @@ class XCOREDeviceServer(object):
                             cached_device = XCOREDeviceServer._setup_device_use(
                                 cached_device
                             )
-                        else:
+                        elif cached_device["in_use"] == False:
                             # ensure device is responding
-                            ep = XCOREDeviceEndpoint()
-                            port = cached_device["xscope_port"]
-                            ep.connect(port=port)
-                            logging.debug(f"Pinging port: {port}")
-                            ping_succeeded = False
-                            try:
-                                ping_succeeded = ep.ping_device()
-                            except Exception as ex:
-                                logging.debug(str(ex))
-
+                            ping_succeeded = XCOREDeviceServer._ping_device(
+                                cached_device["xscope_port"], timeout=5
+                            )
                             if ping_succeeded:
                                 logging.debug("Ping succeeded")
                             else:
@@ -487,7 +510,6 @@ class XCOREDeviceServer(object):
                                 cached_device = XCOREDeviceServer._setup_device_use(
                                     cached_device
                                 )
-                            ep.disconnect()
 
                         # this is a known device so save in synced devices
                         synced_devices.append(cached_device)
@@ -525,17 +547,15 @@ class XCOREDeviceServer(object):
             logging.debug(f"Acquired device: {acquired_device}")
 
             # create endpoint from acquired_device and return
-            ep = XCOREDeviceEndpoint()
+            ep = XCOREDeviceEndpoint(release_callback=XCOREDeviceServer.release)
             ep.connect(port=acquired_device["xscope_port"])
 
             return ep
 
     @staticmethod
     def release(endpoint):
-        with portalocker.TemporaryFileLock(
-            XCOREDeviceServer.lock_path,
-            flags=portalocker.LOCK_EX,
-            timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT,
+        with portalocker.BoundedSemaphore(
+            1, XCOREDeviceServer.lock_key, timeout=XCOREDeviceServer.FILE_LOCK_TIMEOUT
         ):
             if XCOREDeviceServer.devices_path.is_file():
                 # search (by port) for endpoint in cached devices

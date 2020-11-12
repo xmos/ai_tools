@@ -1,6 +1,7 @@
-# Copyright (c) 2018-2020, XMOS Ltd, All rights reserved1
+# Copyright (c) 2018-2020, XMOS Ltd, All rights reserved
 import sys
 import ctypes
+
 from pathlib import Path
 
 __PARENT_DIR = Path(__file__).parent.absolute()
@@ -12,6 +13,10 @@ else:
     raise RuntimeError("tflite2xcore is not yet supported on Windows!")
 
 libtflite2xcore = ctypes.cdll.LoadLibrary(lib_path)
+
+from . import version
+
+__version__ = version.get_version()
 
 from . import xcore_schema
 from . import xcore_model

@@ -210,6 +210,24 @@ void VLMACCR(
     }
 }
 
+void VLMACCR1(
+    xs3_vpu* vpu,
+    const void* addr)
+{
+
+    const int32_t* addr32 = (const int32_t*) addr;
+    int64_t acc = get_accumulator(vpu, VPU_BIN_ACC_PERIOD-1);
+    
+    for(int i = 0; i < VPU_INT32_EPV; i++){
+        int v = (((int32_t)vpu->vC.s32[i]) ^ addr32[i]);
+        acc += (2*__builtin_popcount(~v) - 32)/2; 
+    }
+
+    acc = saturate(acc, 32);
+    rotate_accumulators(vpu);
+    set_accumulator(vpu, 0, acc);
+}
+
 void VLSAT(
     xs3_vpu* vpu,
     const void* addr)

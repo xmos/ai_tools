@@ -2,6 +2,7 @@
 
 import pytest
 import tensorflow as tf
+import numpy as np
 
 from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation import Configuration
@@ -28,7 +29,7 @@ from . import (  # pylint: disable=unused-import
 class BSignTestModelGenerator(LarqCompositeTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         for key in ("K_w", "K_h", "output_channels"):
-            assert key not in cfg, f"{key} should not be specified for bsing tests"
+            assert key not in cfg, f"{key} should not be specified for bsign tests"
         cfg["output_channels"] = 32
         cfg["K_w"] = cfg["K_h"] = 1
         super()._set_config(cfg)
@@ -44,6 +45,12 @@ GENERATOR = BSignTestModelGenerator
 class BSignTestRunner(BinarizedTestRunner):
     def make_lce_converter(self) -> LarqConverter:
         return LarqConverter(self, self.get_built_model, remove_last_op=True)
+
+    def _set_config(self, cfg: Configuration) -> None:
+        cfg["input_range"] = cfg.pop(
+            "input_range", (np.iinfo(np.int8).min, np.iinfo(np.int8).max)
+        )
+        super()._set_config(cfg)
 
     def make_repr_data_factory(self) -> InputInitializerDataFactory:
         return InputInitializerDataFactory(

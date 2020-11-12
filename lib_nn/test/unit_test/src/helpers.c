@@ -35,27 +35,8 @@ int clrsbll(long long x){
   #endif
 }
 
-int32_t ashr(int32_t x, int shr){
-  if (shr == 0)
-    return x;
-
-  if (shr > 0){
-    int32_t rounding = (1 << (shr-1));
-    return (x + rounding) >> shr;
-  } else
-    return x << (-shr);
-}
-
-int32_t mul(int32_t x, int32_t m){
-  int64_t t = (int64_t)x * (int64_t)m;
-  if(t > INT32_MAX) t = INT32_MAX;
-  if(t < INT32_MIN) t = INT32_MIN;
-  return (int32_t)t; 
-}
-
-//TODO rename this make post activations
 //TODO pass the clamps
-void make_thresholds(float * post_activation_multiplier, float * post_activation_bias, 
+void pick_post_activation_values(float * post_activation_multiplier, float * post_activation_bias, 
   unsigned chans_out, unsigned receptive_volume, int seed){
 
 /*
@@ -92,70 +73,9 @@ void make_thresholds(float * post_activation_multiplier, float * post_activation
     float output_range = (output_max - output_min)*output_overscale;
 
     // This offset allows the output range to completly miss the int8 output range sometimes
-    float offset = 3.1 * output_range * (float)rand()/(float)RAND_MAX;
+    float offset = 1.1 * output_range * (float)rand()/(float)RAND_MAX;
 
     post_activation_multiplier[ch] = output_range / input_range;
     post_activation_bias[ch] = output_min*output_overscale - accu_min* output_range / input_range + offset;
-  }
-}
-
-void measure_quantisation(
-               int16_t * post_activation_multiplier_q,
-               int16_t* post_activation_bias_q,
-               float* post_activation_multiplier,
-               float* post_activation_bias, 
-               unsigned chans_out,
-               int32_t clamp_low,
-               int32_t clamp_high,
-               int accu_shr,
-               int final_shr,
-               int32_t receptive_field,
-               error_stats_t * results){
-
-  int test_error_sum = 0;
-  unsigned test_abs_error_sum = 0;
-  unsigned count = 0;
-  memset(results, 0, sizeof(error_stats_t));
-
-  for (unsigned ch=0;ch<chans_out;ch++){
-
-    float PAM = post_activation_multiplier[ch];
-    float Bias = post_activation_bias[ch];
-
-    for (int32_t accu_output = 0; accu_output <= receptive_field; accu_output++){
-
-      int32_t vpu_output = (receptive_field - (2*accu_output))/2;
-
-      //This is how the reference is defined
-      float clamped_accu = min(max(accu_output * 2., clamp_low), clamp_high);
-      int R = round((clamped_accu * PAM) + Bias); 
-      R = max(min(R, INT8_MAX), INT8_MIN);
-
-      //pretend clamping
-      int32_t r = ashr(vpu_output, accu_shr);
-      r = mul(r, post_activation_multiplier_q[ch]);
-
-      r = ashr(r, post_vlmul_shr);
-      assert (clrsb(r) >= 16);
-      r += post_activation_bias_q[ch];
-
-      r = ashr(r, final_shr);
-      r = r&0xffffff00;
-      r = r>>8;
-      r = max(min(r, INT8_MAX), INT8_MIN);
-
-      int error = r - R;
-      unsigned abs_error = abs(error);
-
-      results->output_error[R - INT8_MIN] += error;
-      results->abs_output_error[R - INT8_MIN] += abs_error;
-      results->error_counter[R - INT8_MIN] += 1;
-
-      assert(abs_error <= 1);
-
-      test_error_sum += error;
-      test_abs_error_sum += abs_error;
-      count += 1;
-    }
   }
 }

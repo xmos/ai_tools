@@ -37,7 +37,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b256_t* X_ref,
   int32_t receptive_volume = k_width * k_height * chans_in;
 
   //Pick some random test values
-  make_thresholds(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, rand());
+  pick_post_activation_values(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, rand());
 
   nn_image_params_t x;
   x.height = x_height;
@@ -398,7 +398,7 @@ void test_bnn_conv2d_int8_out_sub_image(){
           int32_t receptive_volume = k.shape.width * k.shape.height * x.channels;
 
           //Pick some random test values
-          make_thresholds(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, rand());
+          pick_post_activation_values(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, rand());
 
           larq_ref_bconv2d_int8_out(&x, &y, &k, (const int32_t*)X_ref, (const int32_t*)K_ref,
                       (int8_t*)Y_ref, post_activation_multiplier, post_activation_bias);

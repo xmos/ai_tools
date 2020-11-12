@@ -4,8 +4,6 @@ import pytest
 
 from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
 
-from . import BConv2dGenericTestModelGenerator
-
 
 from .test_bconv2d_bin import reference_op_code  # pylint: disable=unused-import
 from .test_bconv2d_bin import (

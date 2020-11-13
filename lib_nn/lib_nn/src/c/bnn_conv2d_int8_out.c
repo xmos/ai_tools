@@ -240,7 +240,7 @@ void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
 
 }
 
-void bnn_conv2d_int8_out_SISO_asm_prepare(
+static void bnn_conv2d_int8_out_SISO_asm_prepare(
     nn_bnn_conv2d_int8_out_SISO_asm_plan_t* plan, int8_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, bnn_b32_t * data_scratch,
     
@@ -255,15 +255,8 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
     const nn_window_params_t* k, 
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
-    const unsigned x_loc_x, const unsigned x_loc_y, 
-    const unsigned k_loc_x, const unsigned k_loc_y, 
-    const unsigned k_sub_width, const unsigned k_sub_height) {
-
-  //these are required for now
-  assert(k_loc_x == 0);
-  assert(k_loc_y == 0);
-  assert(k_sub_width == k->shape.width);
-  assert(k_sub_height == k->shape.height);
+    const unsigned x_loc_x, const unsigned x_loc_y)
+{
 
   const unsigned bits_per_b32 = 32;
   const unsigned chan_b32_in = (x->channels + bits_per_b32 - 1) / bits_per_b32;
@@ -275,13 +268,10 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
   bnn_b32_t(*X)[x->width][chan_b32_in] =
       (bnn_b32_t(*)[x->width][chan_b32_in])X_p;
 
-  bnn_b32_t(*K)[k->shape.height][k->shape.width][chan_b32_in] =
-      (bnn_b32_t(*)[k->shape.height][k->shape.width][chan_b32_in])K_p;
-
 //relocate the pointers to the start of the region we care about.
   plan->Y = (int8_t*)Y[y_loc_y][y_loc_x];
   plan->X = (bnn_b32_t*)X[x_loc_y][x_loc_x];
-  plan->K = (bnn_b32_t*)K[k_loc_y][k_loc_x];
+  plan->K = K_p;
   plan->data_scratch = data_scratch;
   
   plan->post_activation_mul = (int16_t *)post_activation_multiplier_q;
@@ -306,8 +296,8 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
   assert((x->channels % bits_per_b32) == 0);
   assert((y->channels % out_chans_multiplier) == 0);
 
-  plan->k_height_loop_counter = k_sub_height - 1;
-  plan->k_width_loop_counter = k_sub_width - 1;
+  plan->k_height_loop_counter = k->shape.height - 1;
+  plan->k_width_loop_counter = k->shape.width - 1;
 
   assert(k->dilation.horizontal >= 1);
   assert(k->dilation.vertical >= 1);
@@ -315,7 +305,6 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
   unsigned h_dilation = k->dilation.horizontal;
   unsigned h_stride = k->stride.horizontal;
   unsigned v_stride = k->stride.vertical;
-
 
   plan->input_channel_loop_counter =
       ((x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS) - 1;
@@ -326,7 +315,7 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
   plan->x_height_loop_counter = x_height_loops;
   plan->x_width_loop_counter = x_width_loops - 1;
 
-  unsigned total_bytes_copied_to_scratch = (x->channels * k_sub_height * k_sub_width)/8;
+  unsigned total_bytes_copied_to_scratch = (x->channels * k->shape.height *  k->shape.width)/8;
 
   unsigned channels_to_process_on_tail_output_loop = (y->channels - 4) % 16 + 4;
 
@@ -355,7 +344,7 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
 
   // TODO multiply x->width by dilation
   plan->inner_x_v_step =
-      (bytes_per_input_channel * ((x->width - k_sub_width))) ;
+      (bytes_per_input_channel * ((x->width -  k->shape.width))) ;
 
   // Outer Loop
   plan->outer_x_h_step = bytes_per_input_channel * h_stride;
@@ -363,17 +352,11 @@ void bnn_conv2d_int8_out_SISO_asm_prepare(
   plan->outer_x_v_step = (int)((int)bytes_per_input_channel * (int)x->width * (int)v_stride) 
      - (int)((int)plan->outer_x_h_step * (int)x_width_loops);
 
-  // TODO these are for implementing sub-kernels
-  assert(k_sub_height == k->shape.height); //until the following two lines are working
-  assert(k_sub_width == k->shape.width); //until the following two lines are working
-//   plan->k_v_step = 0;
-//   plan->k_h_step = 0;
-
   plan->y_v_step = chans_out * sizeof(int8_t) * (y->width - y_sub_width);
 
 }
 
-void bnn_conv2d_int8_out_asm_prepare(
+static void bnn_conv2d_int8_out_asm_prepare(
     nn_bnn_conv2d_int8_out_asm_plan_t* plan, int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
@@ -386,17 +369,11 @@ void bnn_conv2d_int8_out_asm_prepare(
     const nn_image_params_t* x, 
     const nn_image_params_t* y,
     const nn_window_params_t* k, 
+
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
-    const unsigned x_loc_x, const unsigned x_loc_y, 
-    const unsigned k_loc_x, const unsigned k_loc_y, 
-    const unsigned k_sub_width, const unsigned k_sub_height) {
-
-  //these are required for now
-  assert(k_loc_x == 0);
-  assert(k_loc_y == 0);
-  assert(k_sub_width == k->shape.width);
-  assert(k_sub_height == k->shape.height);
+    const unsigned x_loc_x, const unsigned x_loc_y
+  ) {
 
   const unsigned chan_b256_in = (x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
   const unsigned chans_out = y->channels;
@@ -407,13 +384,10 @@ void bnn_conv2d_int8_out_asm_prepare(
   bnn_b256_t(*X)[x->width][chan_b256_in] =
       (bnn_b256_t(*)[x->width][chan_b256_in])X_p;
 
-  bnn_b256_t(*K)[k->shape.height][k->shape.width][chan_b256_in] =
-      (bnn_b256_t(*)[k->shape.height][k->shape.width][chan_b256_in])K_p;
-
 //relocate the pointers to the start of the region we care about.
   plan->Y = (int8_t*)Y[y_loc_y][y_loc_x];
   plan->X = (bnn_b256_t*)X[x_loc_y][x_loc_x];
-  plan->K = (bnn_b256_t*)K[k_loc_y][k_loc_x];
+  plan->K = K_p;
 
   //This could go into the constant pool but it would make the loading
   //slower within the kernel(2 loops in).
@@ -439,8 +413,8 @@ void bnn_conv2d_int8_out_asm_prepare(
   assert((x->channels % XS3_VPU_VREG_WIDTH_BITS) == 0);
   assert((y->channels % out_chans_multiplier) == 0);
 
-  plan->k_height_loop_counter = k_sub_height - 1;
-  plan->k_width_loop_counter = k_sub_width - 1;
+  plan->k_height_loop_counter = k->shape.height - 1;
+  plan->k_width_loop_counter = k->shape.width - 1;
 
   unsigned h_dilation = k->dilation.horizontal;
 
@@ -463,24 +437,21 @@ void bnn_conv2d_int8_out_asm_prepare(
 
   // TODO multiply x->width by dilation
   plan->inner_x_v_step =
-      (bytes_per_input_channel * ((x->width - k_sub_width))) - plan->inner_x_h_step;
+      (bytes_per_input_channel * ((x->width - k->shape.width))) - plan->inner_x_h_step;
 
   // Outer Loop
   plan->outer_x_h_step = bytes_per_input_channel * h_stride;
 
-  plan->outer_x_v_step = (bytes_per_input_channel * x->width * v_stride) 
-     - (plan->outer_x_h_step * x_width_loops);
-
-  // TODO these are for implementing sub-kernels
-  assert(k_sub_height == k->shape.height); //until the following two lines are working
-  assert(k_sub_width == k->shape.width); //until the following two lines are working
-  plan->k_v_step = 0;
-  plan->k_h_step = 0;
+  plan->outer_x_v_step = (int)(bytes_per_input_channel * x->width * v_stride) 
+     - (int)(plan->outer_x_h_step * x_width_loops);
 
   plan->y_v_step = chans_out * sizeof(int8_t) * (y->width - y_sub_width);
+
+  // TODO these are for implementing sub-kernels
+  plan->k_v_step = 0;
+  plan->k_h_step = 0;
   
 }
-
 
 void bnn_conv2d_int8_out(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
@@ -498,10 +469,7 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y, 
-    
-    const unsigned k_loc_x, const unsigned k_loc_y, 
-    const unsigned k_sub_width, const unsigned k_sub_height
+    const unsigned x_loc_x, const unsigned x_loc_y
 ){
   nn_bnn_conv2d_int8_out_asm_plan_t plan;
 
@@ -514,8 +482,7 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
       final_shr,
       x, y, k, 
       y_loc_x, y_loc_y, y_sub_width, y_sub_height,
-      x_loc_x, x_loc_y, 
-      k_loc_x, k_loc_y, k_sub_width, k_sub_height);
+      x_loc_x, x_loc_y);
 
   bnn_conv2d_int8_out_asm(&plan);
 }
@@ -538,10 +505,7 @@ void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y, 
-    
-    const unsigned k_loc_x, const unsigned k_loc_y, 
-    const unsigned k_sub_width, const unsigned k_sub_height
+    const unsigned x_loc_x, const unsigned x_loc_y
 ) {
     nn_bnn_conv2d_int8_out_SISO_asm_plan_t plan;
 
@@ -554,8 +518,7 @@ void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
         final_shr,
         x, y, k, 
         y_loc_x, y_loc_y, y_sub_width, y_sub_height,
-        x_loc_x, x_loc_y, 
-        k_loc_x, k_loc_y, k_sub_width, k_sub_height);
+        x_loc_x, x_loc_y);
 
     bnn_conv2d_int8_out_SISO_asm(&plan);
 }

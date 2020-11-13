@@ -1,11 +1,4 @@
-
-#include <float.h>
-#include <limits.h>
-#include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-#include <math.h>
 
 //TODO pass the clamps
 void pick_post_activation_values(float * post_activation_multiplier, float * post_activation_bias, 

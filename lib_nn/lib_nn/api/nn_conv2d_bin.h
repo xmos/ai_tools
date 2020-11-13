@@ -394,10 +394,6 @@ void bnn_conv2d_bin_out_SISO(bnn_b32_t* Y_p,
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  * @param x_h_loc       [in]     The x coordinate(horizontal) of where the input will start reading from
  * @param x_v_loc       [in]     The y coordinate(vertical) of where the input will start reading from
- * @param k_h_loc       [in]     The x coordinate(horizontal) of where the kernel will start reading from
- * @param k_v_loc       [in]     The y coordinate(vertical) of where the kernel will start reading from
- * @param k_sub_width   [in]     The width of the input sub-kernel that will be computed
- * @param k_sub_height  [in]     The height of the input sub-kernel that will be computed
  */
 void bnn_conv2d_int8_out(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
@@ -415,10 +411,7 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
     const unsigned y_h_loc, const unsigned y_v_loc,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_h_loc, const unsigned x_v_loc, 
-    
-    const unsigned k_h_loc, const unsigned k_v_loc, 
-    const unsigned k_sub_width, const unsigned k_sub_height
+    const unsigned x_h_loc, const unsigned x_v_loc
 ) ;
 
 void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
@@ -439,8 +432,5 @@ void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y, 
-    
-    const unsigned k_loc_x, const unsigned k_loc_y, 
-    const unsigned k_sub_width, const unsigned k_sub_height
+    const unsigned x_loc_x, const unsigned x_loc_y
 ) ;

@@ -7,7 +7,7 @@
 
 #include "helpers.h"
 
-#define X_REF_OVERREAD_WORDS (8)
+#define X_REF_OVERREAD_WORDS (7)
 #define K_OVERREAD_WORDS (8*12)
 #define DATA_SCRATCH_OVERREADWRITE_WORDS (8)
 
@@ -89,8 +89,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     data_scratch,
     &x, &y, &k,
     0, 0, y_width, y_height,
-    0, 0, 
-    0, 0, k_width, k_height);
+    0, 0);
 
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
@@ -169,19 +168,19 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_directed() {
 void test_bnn_conv2d_int8_out_SISO_pseudo_random() {
 #define MIN_H_STRIDE 1
 #define MIN_V_STRIDE 1
-#define MAX_H_STRIDE 5
-#define MAX_V_STRIDE 5
+#define MAX_H_STRIDE 3
+#define MAX_V_STRIDE 3
 
 #define MIN_K_HEIGHT 1
 #define MIN_K_WIDTH 1
-#define MAX_K_HEIGHT 5
-#define MAX_K_WIDTH 5
+#define MAX_K_HEIGHT 3
+#define MAX_K_WIDTH 3
 
 #define MIN_CHANS_IN (32*1)
-#define MAX_CHANS_IN (32*1)
+#define MAX_CHANS_IN (32*9)
 
-#define MIN_CHANS_OUT (4*2)
-#define MAX_CHANS_OUT (4*2)
+#define MIN_CHANS_OUT (4*1)
+#define MAX_CHANS_OUT (4*5)
 
 #define MAX_X_HEIGHT MAX_K_HEIGHT
 #define MAX_X_WIDTH MAX_K_WIDTH
@@ -288,6 +287,92 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_random() {
 #undef MAX_Y_WIDTH
 }
 
+
+void test_bnn_conv2d_int8_out_SISO_pseudo_random2() {
+
+#define CHANS_IN (32*1)
+
+#define MIN_CHANS_OUT (4)
+#define MAX_CHANS_OUT (16)
+
+#define MAX_X_HEIGHT 1
+#define MAX_X_WIDTH 32
+
+  for (unsigned x_height = 1; x_height <= MAX_X_HEIGHT;
+        ++x_height) {
+    for (unsigned x_width = 1; x_width <= MAX_X_WIDTH;
+          ++x_width) {
+      unsigned k_height = x_height;
+      unsigned k_width = x_width;
+      unsigned y_height =  CONV2D_OUTPUT_LENGTH(x_height, k_height, 1, 1);
+      unsigned y_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, 1, 1);
+      unsigned chans_in = CHANS_IN;
+
+        for (unsigned chans_out = MIN_CHANS_OUT;
+              chans_out <= MAX_CHANS_OUT; chans_out += 4) {
+
+          unsigned chan_words_in = chans_in/32;
+
+          size_t K_ref_bytes = sizeof(bnn_b32_t) * (chans_out*k_height*k_width*chan_words_in);
+          bnn_b32_t * K_ref = (bnn_b32_t *) malloc(K_ref_bytes);
+          bnn_b32_t * K     = (bnn_b32_t *) malloc(K_ref_bytes + sizeof(bnn_b32_t)*K_OVERREAD_WORDS);
+
+          size_t X_ref_bytes = sizeof(bnn_b32_t)*(x_height*x_width*chan_words_in+X_REF_OVERREAD_WORDS);
+          bnn_b32_t * X_ref =(bnn_b32_t *)malloc(X_ref_bytes);
+          int16_t *post_activation_multiplier_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
+          int16_t *post_activation_bias_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
+          bnn_b32_t *data_scratch = (bnn_b32_t *)malloc(sizeof(bnn_b32_t)*(k_height * k_width * chan_words_in + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
+          
+          float * post_activation_multiplier = (float *)malloc(sizeof(float)*chans_out);
+          float * post_activation_bias = (float *)malloc(sizeof(float)*chans_out);
+          int * chan_overlaps = (int *)malloc(sizeof(int)*(chans_out));
+
+          int8_t * Y     = (int8_t *) malloc(sizeof(int8_t) * y_height * y_width * chans_out);
+          int8_t * Y_ref = (int8_t *) malloc(sizeof(int8_t) * y_height * y_width * chans_out);
+
+          // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
+          //   h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out);
+
+          int seed = 42;
+          srand(seed);
+          pseudo_rand_bytes((char*)X_ref, X_ref_bytes);
+          pseudo_rand_bytes((char*)K_ref, K_ref_bytes);
+
+          run_int8_config(
+              (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+              (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
+              (float*)post_activation_multiplier,
+              (float*)post_activation_bias, 
+              (int16_t*)post_activation_multiplier_q,
+              (int16_t*)post_activation_bias_q,  
+              (int*) chan_overlaps,
+              (bnn_b32_t * ) data_scratch,
+              x_height,
+              x_width, k_height, k_width, chans_in, chans_out, 1,
+              1, seed);
+
+        free(X_ref);
+        free(Y);
+        free(Y_ref);
+        free(post_activation_multiplier_q);
+        free(post_activation_bias_q);
+        free(data_scratch);
+        free(K);
+        free(K_ref);
+
+        free(post_activation_multiplier);
+        free(post_activation_bias);
+        free(chan_overlaps);
+      }
+    }
+  }
+#undef CHANS_IN
+#undef MIN_CHANS_OUT
+#undef MAX_CHANS_OUT
+#undef MAX_X_HEIGHT
+#undef MAX_X_WIDTH
+}
+
 static void run_int8_sub_image(
               int8_t* Y_p, 
               const int8_t* Y_ref_p, 
@@ -344,13 +429,13 @@ MIN_CHANS_OUT to MAX_CHANS_OUT output channels. Stride are tested, dilations are
 */
 void test_bnn_conv2d_int8_out_SISO_sub_image(){
 
-  #define FULL_X_HEIGHT 7
-  #define FULL_X_WIDTH 7
+  #define FULL_X_HEIGHT 6
+  #define FULL_X_WIDTH 6
   #define FULL_K_HEIGHT 4
   #define FULL_K_WIDTH 4
 
   #define MIN_CHANS_IN (32*1)
-  #define MAX_CHANS_IN (32*16)
+  #define MAX_CHANS_IN (32*9)
   #define MIN_CHANS_OUT (4)
   #define MAX_CHANS_OUT (12)
   
@@ -507,5 +592,6 @@ void test_bnn_conv2d_int8_SISO() {
   UNITY_SET_FILE();
   RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_directed);
   RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random);
+  RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random2);
   RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
 }

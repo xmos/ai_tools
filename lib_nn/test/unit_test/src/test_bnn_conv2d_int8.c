@@ -89,8 +89,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
 
     &x, &y, &k,
     0, 0, y_width, y_height,
-    0, 0, 
-    0, 0, k_width, k_height);
+    0, 0);
 
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);

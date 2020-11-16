@@ -4,7 +4,6 @@ import logging
 from copy import copy
 
 from tflite2xcore.xcore_model import XCOREModel
-from xcore_interpreters import XCOREInterpreter
 
 
 def calc_subgraph_mem_req(subgraph):
@@ -77,6 +76,8 @@ def analyze_model(model):
 #       size of the tensor arena
 def calc_arena_size(model_content):
     try:
+        from xcore_interpreters import XCOREInterpreter
+
         interpreter = XCOREInterpreter(model_content=model_content)
         logger = logging.getLogger("tensor_arena_allocations")
         [logger.info(line) for line in interpreter.get_allocations().split("\n")]

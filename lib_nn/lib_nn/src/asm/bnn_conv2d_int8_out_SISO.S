@@ -433,7 +433,7 @@ FUNCTION_NAME:
             ldd t, s, sp[S_PA_MUL_p_PA_BIAS_p]
             std t, s, sp[S_CUR_PA_MUL_p_CUR_PA_BIAS_p]
 
-            {bf oc_loop_counter, bnn_final_loop; nop}
+            {bf oc_loop_counter, bnn_final_loop; sub oc_loop_counter, oc_loop_counter, 1}
 
             bnn_oc_loop: 
             
@@ -457,16 +457,14 @@ FUNCTION_NAME:
             {bl bnn_compute_patch ; nop }
 
             {vldr t[0]; nop}
-            {ldw t, sp[S_FINAL_CHAN_MASK]}
-            vstrpv Y_p[0], t
+            {ldw r, sp[S_FINAL_CHAN_MASK];ldaw t, sp[S_TEMP]}
+            vstrpv Y_p[0], r
 
-            {ldaw t, sp[S_TEMP]}
             {vldr t[0]; nop}
-            {ldw t, sp[S_FINAL_CHAN_MASK]}
 
-            {vdepth8; andnot t, s}
+            {vdepth8; andnot r, s}
             
-            vstrpv Y_p[0], t
+            vstrpv Y_p[0], r
             {ldw t, sp[S_FINAL_CHAN_BYTES]}
             {add Y_p, Y_p, t ; nop}
 

@@ -32,8 +32,8 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
                unsigned k_height, unsigned k_width, unsigned chans_in,
                unsigned chans_out, unsigned h_stride, unsigned v_stride, int seed) {
                   
-                  printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u seed:%d\n", 
-                    h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out, seed);
+                  // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u seed:%d\n", 
+                  //   h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out, seed);
 
   assert(Y_p != Y_ref_p);
   assert(K_p != K_ref_p);
@@ -49,6 +49,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     Y_ref_p[e]=0;
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     Y_p[e]=0;
+
   int32_t clamp_low = 0;
   int32_t clamp_high = receptive_volume*2;
 
@@ -98,8 +99,8 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     0, 0, y_width, y_height,
     0, 0);
 
-  for (unsigned e=0;e<y_height * y_width * chans_out;++e)
-    printf("Y_ref_p: %d Y_p:%d\n",  Y_ref_p[e], Y_p[e]);
+  // for (unsigned e=0;e<y_height * y_width * chans_out;++e)
+  //   printf("Y_ref_p: %d Y_p:%d\n",  Y_ref_p[e], Y_p[e]);
 
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
@@ -377,8 +378,8 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_random2() {
           assert(post_activation_bias);
           assert(chan_overlaps);
 
-          printf("k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
-             k_height, k_width, x_height, x_width, chans_in, chans_out);
+          // printf("k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
+          //    k_height, k_width, x_height, x_width, chans_in, chans_out);
 
           int seed = 42;
           srand(seed);
@@ -638,7 +639,7 @@ void test_bnn_conv2d_int8_out_SISO_sub_image(){
 void test_bnn_conv2d_int8_SISO() {
   UNITY_SET_FILE();
   RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_directed);
-  // RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random);
-  // RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random2);
-  // RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
+  RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random);
+  RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random2);
+  RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
 }

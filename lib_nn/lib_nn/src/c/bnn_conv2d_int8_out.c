@@ -394,8 +394,8 @@ static void bnn_conv2d_int8_out_SISO_asm_prepare(
   // printf("%u\n%u\n%d\n", plan->final_channels_bytes, plan->patch_loop_counter, plan->final_shr);
   // printf("%d\n%u\n%u\n", plan->k_p_rewind, plan->x_width_loop_counter, plan->x_height_loop_counter);
   // printf("%u\n\n", plan->bias_multiplier);
-  printf("%d\n", plan->output_channel_loop_counter);
-  printf("%08x\n", plan->final_channels_mask);
+  // printf("%d\n", plan->output_channel_loop_counter);
+  // printf("%08x\n", plan->final_channels_mask);
 }
 
 static void bnn_conv2d_int8_out_asm_prepare(

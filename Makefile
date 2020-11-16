@@ -75,8 +75,8 @@ ci: lib_nn_build \
  tflite2xcore_unit_test \
  tflite2xcore_dist_test \
  xcore_interpreters_build \
- xcore_interpreters_unit_tests \
- xcore_interpreters_dist_tests \
+ xcore_interpreters_unit_test \
+ xcore_interpreters_dist_test \
  integration_test
 
 #**************************

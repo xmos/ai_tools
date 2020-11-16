@@ -1,4 +1,5 @@
 #if defined(__XS3A__)
+
 .section        .cp.const32,"aMc",@progbits,32
 .cc_top VECT_INT16_MAX.data
 .align 4
@@ -44,7 +45,6 @@ VECT_INT8_MIN:
 .cc_bottom VECT_INT8_MIN.data
 .text
 
-
 .issue_mode  dual
 
 //Plan layout
@@ -79,6 +79,7 @@ VECT_INT8_MIN:
 #define PLAN_K_CHAN_REWIND         25
 #define PLAN_X_WIDTH_LOOP_COUNTER  26
 #define PLAN_X_HEIGHT_LOOP_COUNTER 27  
+#define PLAN_BIAS_MULTIPLIER       28  
 
 
 //Stack Usage
@@ -125,38 +126,62 @@ VECT_INT8_MIN:
 #define S_FINAL_SHR             27
 #define S_K_CHAN_REWIND         28
 #define S_X_WIDTH_LOOP_COUNTER  29
-#define S_X_HEIGHT_LOOP_COUNTER 30  
+#define S_X_HEIGHT_LOOP_COUNTER 30 
+#define S_BIAS_MULTIPLIER       31  
+
 
 //doesn't have to be double work aligned
-#define S_TEMP_0                31
-#define S_TEMP_1                32 
-#define S_TEMP_2                33
-#define S_TEMP_3                34
-#define S_TEMP_4                35
-#define S_TEMP_5                36
-#define S_TEMP_6                37
-#define S_TEMP_7                38
+#define S_TEMP_0                32
+#define S_TEMP_1                33 
+#define S_TEMP_2                34
+#define S_TEMP_3                35
+#define S_TEMP_4                36
+#define S_TEMP_5                37
+#define S_TEMP_6                38
+#define S_TEMP_7                39
 
 //doesn't have to be double work aligned
-#define S_VLSAT_0               39
-#define S_VLSAT_1               40 
-#define S_VLSAT_2               41
-#define S_VLSAT_3               42
-#define S_VLSAT_4               43
-#define S_VLSAT_5               44
-#define S_VLSAT_6               45
-#define S_VLSAT_7               46
+#define S_VLSAT_0               40
+#define S_VLSAT_1               41 
+#define S_VLSAT_2               42
+#define S_VLSAT_3               43
+#define S_VLSAT_4               44
+#define S_VLSAT_5               45
+#define S_VLSAT_6               46
+#define S_VLSAT_7               47
 
-#define S_SAVE_R10              47
-#define S_SAVE_R4               48
-#define S_SAVE_R5               49
-#define S_SAVE_R6               50
-#define S_SAVE_R7               51
-#define S_SAVE_R8               52
-#define S_SAVE_R9               53
+//doesn't have to be double word aligned
+#define S_BIAS_SHIFT_0          48
+#define S_BIAS_SHIFT_1          49 
+#define S_BIAS_SHIFT_2          50
+#define S_BIAS_SHIFT_3          51
+#define S_BIAS_SHIFT_4          52
+#define S_BIAS_SHIFT_5          53
+#define S_BIAS_SHIFT_6          54
+#define S_BIAS_SHIFT_7          55
+
+//doesn't have to be double word aligned
+#define S_FINAL_SHR_0           56
+#define S_FINAL_SHR_1           57 
+#define S_FINAL_SHR_2           58
+#define S_FINAL_SHR_3           59
+#define S_FINAL_SHR_4           60
+#define S_FINAL_SHR_5           61
+#define S_FINAL_SHR_6           62
+#define S_FINAL_SHR_7           63
+
+#define S_SAVE_R10              64
+#define S_SAVE_R4               65
+#define S_SAVE_R5               66
+#define S_SAVE_R6               67
+#define S_SAVE_R7               68
+#define S_SAVE_R8               69
+#define S_SAVE_R9               70
+
+#define S_T                     71
 
 
-#define NSTACKWORDS  70 //TODO
+#define NSTACKWORDS  90 //TODO
 
 
 //Helpers that reference the above
@@ -187,6 +212,8 @@ VECT_INT8_MIN:
 #define x_width_loop      r9
 #define s                 r10
 #define t                 r11
+
+#define r X_p //r can be used when X_p is not in use
 
 
 .align 4 //TODO align correctly
@@ -254,32 +281,23 @@ bnn_compute_patch:
     {bt t, bnn_patch_loop; sub t, t, 1}
 
     bnn_patch_tail: 
-    //convert s to the amount to branch to do the tail
-    ldw t, sp[S_K_ADJUST]
 
-    {vldc X_p[0];     nop }
-    bru t
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
+    //convert s to the tail loop count
+    {vldc X_p[0];ldc t, 15 - 1 }      
+    ashr s, s, 5
+    {ldw t, sp[S_K_ADJUST]; add s, t, s}
+    {ashr s, s, 2}
 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
+    bnn_tail_loop:
 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
+        {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
+        {bt s, bnn_tail_loop; sub s, s, 1}
 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
-    
     //TODO clamping would go here
+
 
     ldd s, t, sp[S_VLSAT_ASHR]
     {vlsat t[0]; ldaw t, sp[S_TEMP]}
@@ -287,32 +305,34 @@ bnn_compute_patch:
     {vstr t[0]; nop}
     vlashr t[0], s
 
+    {vstr t[0]; nop}
+    {vclrdr; nop}
+
     //Scale and bias
     ldd t, s, sp[S_CUR_PA_MUL_p_CUR_PA_BIAS_p]
-    {vlmul s[0]; add s, s, r_256_bits}
-    {vladd t[0]; add t, t, r_256_bits}
+
+    {vldc t[0]; ldaw r, sp[S_BIAS_SHIFT_0]}
+
+    {vlmacc r[0]; ldaw r, sp[S_TEMP]}
+    {vldc r[0]; add t, t, r_256_bits}
+    {vlmacc s[0]; add s, s, r_256_bits}
+
     std t, s, sp[S_CUR_PA_MUL_p_CUR_PA_BIAS_p]
+            
+    ldw t, sp[S_FINAL_SHR]
+    {vlsat t[0]; ldaw s, sp[S_TEMP]}
 
-    {nop; ldaw s, sp[S_TEMP]}
-    ldw t, sp[S_FINAL_SHR] //this could load the address of S_TEMP too
-    //Shift the scaled, biased accumulator left, rounding will happen, 8 bit clamping will not.
-    {vstr s[0]; nop}        //shift left
-    vlashr s[0], t  
-
-    {ldaw t, cp[VECT_INT16_MAX]}
+    {nop; ldaw t, cp[VECT_INT16_MAX]}
     {vstr s[0]; nop}
     {vladd t[0]; nop}
-    {vdepth1; mkmsk t, 16}
+    {vdepth1; mkmsk t, 4}
 
     vstrpv Y_p[0], t //let's use Y_p as we have it avaliable and we're going to write to it later anyway
 
     {ldaw t, cp[VECT_INT8_MIN]}
     {ldw s, Y_p[0]; nop}
-    {vldr t[0]; mkmsk t, 16}
-    vstrpv Y_p[0], t
 
     {retsp 0; nop}
-
 
 /*
 void bnn_conv2d_int8_out_SISO_asm(const nn_bnn_conv2d_int8_out_asm_plan_t* plan);
@@ -361,7 +381,6 @@ FUNCTION_NAME:
 
     ldaw t, sp[S_VLSAT_0]
     {ldw t, sp[S_VLSAT]; mov s, t}
-    
     { stw s, sp[S_VLSAT]; shl s, t, 16}
     { add t, t, s; nop}
 
@@ -373,6 +392,32 @@ FUNCTION_NAME:
     stw t, sp[S_VLSAT_5]
     stw t, sp[S_VLSAT_6]
     stw t, sp[S_VLSAT_7]
+
+    ldaw t, sp[S_BIAS_SHIFT_0]
+    {ldw t, sp[S_BIAS_MULTIPLIER]; mov s, t}
+    { stw s, sp[S_BIAS_MULTIPLIER]; shl s, t, 16}
+    { add t, t, s; nop}
+    stw t, sp[S_BIAS_SHIFT_0]
+    stw t, sp[S_BIAS_SHIFT_1]
+    stw t, sp[S_BIAS_SHIFT_2]
+    stw t, sp[S_BIAS_SHIFT_3]
+    stw t, sp[S_BIAS_SHIFT_4]
+    stw t, sp[S_BIAS_SHIFT_5]
+    stw t, sp[S_BIAS_SHIFT_6]
+    stw t, sp[S_BIAS_SHIFT_7]
+
+    ldaw t, sp[S_FINAL_SHR_0]
+    {ldw t, sp[S_FINAL_SHR]; mov s, t}
+    { stw s, sp[S_FINAL_SHR]; shl s, t, 16}
+    { add t, t, s; nop}
+    stw t, sp[S_FINAL_SHR_0]
+    stw t, sp[S_FINAL_SHR_1]
+    stw t, sp[S_FINAL_SHR_2]
+    stw t, sp[S_FINAL_SHR_3]
+    stw t, sp[S_FINAL_SHR_4]
+    stw t, sp[S_FINAL_SHR_5]
+    stw t, sp[S_FINAL_SHR_6]
+    stw t, sp[S_FINAL_SHR_7]
 
     bnn_h_loop:
 
@@ -394,6 +439,9 @@ FUNCTION_NAME:
             
                 {bl bnn_compute_patch ; mov s, r_256_bits}
 
+                {vldr t[0]; mkmsk t, 16}
+                vstrpv Y_p[0], t
+
                 {ldaw t, sp[S_TEMP]}
                 {vldr t[0]; mkmsk t, 16}
                 {vdepth8; andnot t, s}
@@ -408,10 +456,16 @@ FUNCTION_NAME:
             ldw s, sp[S_K_CHAN_REWIND]
             {bl bnn_compute_patch ; nop }
 
+            {vldr t[0]; nop}
+            {ldw t, sp[S_FINAL_CHAN_MASK]}
+            vstrpv Y_p[0], t
+
             {ldaw t, sp[S_TEMP]}
             {vldr t[0]; nop}
             {ldw t, sp[S_FINAL_CHAN_MASK]}
+
             {vdepth8; andnot t, s}
+            
             vstrpv Y_p[0], t
             {ldw t, sp[S_FINAL_CHAN_BYTES]}
             {add Y_p, Y_p, t ; nop}

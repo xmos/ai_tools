@@ -32,6 +32,9 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
                unsigned k_height, unsigned k_width, unsigned chans_in,
                unsigned chans_out, unsigned h_stride, unsigned v_stride, int seed) {
                   
+                  printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u seed:%d\n", 
+                    h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out, seed);
+
   assert(Y_p != Y_ref_p);
   assert(K_p != K_ref_p);
 
@@ -42,6 +45,10 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
 
   pick_post_activation_values(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, seed);
 
+  for (unsigned e=0;e<y_height * y_width * chans_out;++e)
+    Y_ref_p[e]=0;
+  for (unsigned e=0;e<y_height * y_width * chans_out;++e)
+    Y_p[e]=0;
   int32_t clamp_low = 0;
   int32_t clamp_high = receptive_volume*2;
 
@@ -92,6 +99,9 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     0, 0);
 
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
+    printf("Y_ref_p: %d Y_p:%d\n",  Y_ref_p[e], Y_p[e]);
+
+  for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
 
   //FIXME - why wont this link? The above is a workaround
@@ -101,12 +111,12 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
 void test_bnn_conv2d_int8_out_SISO_pseudo_directed() {
 #define X_V_DILATION 1
 #define X_H_DILATION 1
-#define X_HEIGHT 2
-#define X_WIDTH 2
-#define K_HEIGHT 2
-#define K_WIDTH 2
-#define CHANS_IN (256)
-#define CHANS_OUT 4
+#define X_HEIGHT 1
+#define X_WIDTH 1
+#define K_HEIGHT 1
+#define K_WIDTH 1
+#define CHANS_IN (32)
+#define CHANS_OUT 20
 #define H_STRIDE 1
 #define V_STRIDE 1
 
@@ -131,11 +141,15 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_directed() {
   bnn_b32_t WORD_ALIGNED data_scratch[K_HEIGHT * K_WIDTH * CHAN_WORDS_IN + 
     DATA_SCRATCH_OVERREADWRITE_WORDS]; 
 
-  for(unsigned i=0;i<1<<12;i++){
+  for(unsigned i=0;i<1<<0;i++){
+
     int seed = i;
-    srand(i);
-    pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
-    pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
+    
+    for(unsigned b=0;b<sizeof(X_ref)/sizeof(int);b++)
+     ( (int*)X_ref)[b] = pseudo_rand(&seed);
+
+    for(unsigned b=0;b<sizeof(K_ref)/sizeof(int);b++)
+      ( (int*)K_ref)[b] = pseudo_rand(&seed);
 
     memset(K, 0, sizeof(K));
     memset(Y, 0, sizeof(Y));
@@ -223,13 +237,33 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_random() {
                   int8_t * Y     = (int8_t *) malloc(sizeof(int8_t) * y_height * y_width * chans_out);
                   int8_t * Y_ref = (int8_t *) malloc(sizeof(int8_t) * y_height * y_width * chans_out);
       
+                  assert(X_ref);
+                  assert(Y);
+                  assert(Y_ref);
+                  assert(post_activation_multiplier_q);
+                  assert(post_activation_bias_q);
+                  assert(data_scratch);
+                  assert(K);
+                  assert(K_ref);
+
+                  assert(post_activation_multiplier);
+                  assert(post_activation_bias);
+                  assert(chan_overlaps);
+
+                  //printf("%p %p %p %p %p %p %p\n", X_ref, Y, Y_ref, post_activation_multiplier_q, post_activation_bias_q, data_scratch, K);
+
                   // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
                   //   h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out);
-                    for(unsigned c=0;c<1<<5;c++){
+
+                    for(unsigned c=0;c<1<<1;c++){
                       int seed = c;
-                      srand(seed);
-                      pseudo_rand_bytes((char*)X_ref, X_ref_bytes);
-                      pseudo_rand_bytes((char*)K_ref, K_ref_bytes);
+
+                      for(unsigned b=0;b<X_ref_bytes/sizeof(int);b++)
+                        ((int*)X_ref)[b] = pseudo_rand(&seed);
+
+                      
+                      for(unsigned b=0;b<K_ref_bytes/sizeof(int);b++)
+                        ((int*)K_ref)[b] = pseudo_rand(&seed);
 
                       run_int8_config(
                           (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
@@ -330,8 +364,21 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_random2() {
           int8_t * Y     = (int8_t *) malloc(sizeof(int8_t) * y_height * y_width * chans_out);
           int8_t * Y_ref = (int8_t *) malloc(sizeof(int8_t) * y_height * y_width * chans_out);
 
-          // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
-          //   h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out);
+          assert(X_ref);
+          assert(Y);
+          assert(Y_ref);
+          assert(post_activation_multiplier_q);
+          assert(post_activation_bias_q);
+          assert(data_scratch);
+          assert(K);
+          assert(K_ref);
+
+          assert(post_activation_multiplier);
+          assert(post_activation_bias);
+          assert(chan_overlaps);
+
+          printf("k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
+             k_height, k_width, x_height, x_width, chans_in, chans_out);
 
           int seed = 42;
           srand(seed);
@@ -591,7 +638,7 @@ void test_bnn_conv2d_int8_out_SISO_sub_image(){
 void test_bnn_conv2d_int8_SISO() {
   UNITY_SET_FILE();
   RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_directed);
-  RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random);
-  RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random2);
-  RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
+  // RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random);
+  // RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random2);
+  // RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
 }

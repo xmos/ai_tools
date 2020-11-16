@@ -45,8 +45,6 @@ VECT_INT8_MIN:
 .cc_bottom VECT_INT8_MIN.data
 .text
 
-
-
 .issue_mode  dual
 
 //Plan layout
@@ -71,7 +69,7 @@ VECT_INT8_MIN:
 #define PLAN_VLSAT                 16
 #define PLAN_ASHR                  17
 #define PLAN_FINAL_SHR             18
-#define PLAN_MASK                  19
+#define PLAN_BIAS_MULTIPLIER       19
 #define PLAN_PA_MUL                20
 #define PLAN_PA_BIAS               21
 #define PLAN_IC_LOOP_COUNTER       22
@@ -110,7 +108,7 @@ VECT_INT8_MIN:
 #define S_ASHR                  19
 
 #define S_FINAL_SHR             20
-#define S_MASK                  21
+#define S_BIAS_MULTIPLIER       21
 
 #define S_PA_MUL_p              22
 #define S_PA_BIAS_p             23
@@ -135,7 +133,7 @@ VECT_INT8_MIN:
 //Note: The elements 30 -> 37 will be clobbered when copying the plan to the stack
 //      this might mean leaving some spare stack space
 
-//doesn't have to be double work aligned
+//doesn't have to be double word aligned
 #define S_TEMP_0 34
 #define S_TEMP_1 35 
 #define S_TEMP_2 36
@@ -145,7 +143,7 @@ VECT_INT8_MIN:
 #define S_TEMP_6 40
 #define S_TEMP_7 41
 
-//doesn't have to be double work aligned
+//doesn't have to be double word aligned
 #define S_VLSAT_0 42
 #define S_VLSAT_1 43 
 #define S_VLSAT_2 44
@@ -154,6 +152,26 @@ VECT_INT8_MIN:
 #define S_VLSAT_5 47
 #define S_VLSAT_6 48
 #define S_VLSAT_7 49
+
+//doesn't have to be double word aligned
+#define S_BIAS_SHIFT_0 50
+#define S_BIAS_SHIFT_1 51 
+#define S_BIAS_SHIFT_2 52
+#define S_BIAS_SHIFT_3 53
+#define S_BIAS_SHIFT_4 54
+#define S_BIAS_SHIFT_5 55
+#define S_BIAS_SHIFT_6 56
+#define S_BIAS_SHIFT_7 57
+
+//doesn't have to be double word aligned
+#define S_FINAL_SHR_0 58
+#define S_FINAL_SHR_1 59 
+#define S_FINAL_SHR_2 60
+#define S_FINAL_SHR_3 61
+#define S_FINAL_SHR_4 62
+#define S_FINAL_SHR_5 63
+#define S_FINAL_SHR_6 64
+#define S_FINAL_SHR_7 65
 
 #define NSTACKWORDS  70 //50!
 
@@ -283,10 +301,8 @@ FUNCTION_NAME:
 
     ldaw t, sp[S_VLSAT_0]
     {ldw t, sp[S_VLSAT]; mov s, t}
-    
     { stw s, sp[S_VLSAT]; shl s, t, 16}
     { add t, t, s; nop}
-
     stw t, sp[S_VLSAT_0]
     stw t, sp[S_VLSAT_1]
     stw t, sp[S_VLSAT_2]
@@ -296,6 +312,31 @@ FUNCTION_NAME:
     stw t, sp[S_VLSAT_6]
     stw t, sp[S_VLSAT_7]
 
+    ldaw t, sp[S_BIAS_SHIFT_0]
+    {ldw t, sp[S_BIAS_MULTIPLIER]; mov s, t}
+    { stw s, sp[S_BIAS_MULTIPLIER]; shl s, t, 16}
+    { add t, t, s; nop}
+    stw t, sp[S_BIAS_SHIFT_0]
+    stw t, sp[S_BIAS_SHIFT_1]
+    stw t, sp[S_BIAS_SHIFT_2]
+    stw t, sp[S_BIAS_SHIFT_3]
+    stw t, sp[S_BIAS_SHIFT_4]
+    stw t, sp[S_BIAS_SHIFT_5]
+    stw t, sp[S_BIAS_SHIFT_6]
+    stw t, sp[S_BIAS_SHIFT_7]
+
+    ldaw t, sp[S_FINAL_SHR_0]
+    {ldw t, sp[S_FINAL_SHR]; mov s, t}
+    { stw s, sp[S_FINAL_SHR]; shl s, t, 16}
+    { add t, t, s; nop}
+    stw t, sp[S_FINAL_SHR_0]
+    stw t, sp[S_FINAL_SHR_1]
+    stw t, sp[S_FINAL_SHR_2]
+    stw t, sp[S_FINAL_SHR_3]
+    stw t, sp[S_FINAL_SHR_4]
+    stw t, sp[S_FINAL_SHR_5]
+    stw t, sp[S_FINAL_SHR_6]
+    stw t, sp[S_FINAL_SHR_7]
 
     bnn_h_loop:
 
@@ -313,9 +354,6 @@ FUNCTION_NAME:
                 {ldw X_p, sp[S_X_p]; }
                 {bl bnn_make_16_channel_output ; nop }
 
-                here:
-
-
                 //TODO clamping would go here
 
                 ldd s, t, sp[S_VLSAT_ASHR]
@@ -324,19 +362,23 @@ FUNCTION_NAME:
                 {vstr t[0]; nop}
                 vlashr t[0], s
 
+                {vstr t[0]; nop}
+                {vclrdr; nop}
+
                 //Scale and bias
-                ldd t, s, sp[S_CUR_PA_MUL_p_CUR_PA_BIAS_p]
-                {vlmul s[0]; add s, s, r_256_bits}
-                {vladd t[0]; add t, t, r_256_bits}
+                ldd t, s, sp[S_CUR_PA_MUL_p_CUR_PA_BIAS_p] //s in mul, t is bias
+
+                {vldc t[0]; ldaw r, sp[S_BIAS_SHIFT_0]}
+                {vlmacc r[0]; ldaw r, sp[S_TEMP]}
+                {vldc r[0]; add t, t, r_256_bits}
+                {vlmacc s[0]; add s, s, r_256_bits}
+
                 std t, s, sp[S_CUR_PA_MUL_p_CUR_PA_BIAS_p]
 
-                {nop; ldaw s, sp[S_TEMP]}
-                ldw t, sp[S_FINAL_SHR] //this could load the address of S_TEMP too
-                //Shift the scaled, biased accumulator left, rounding will happen, 8 bit clamping will not.
-                {vstr s[0]; nop}        //shift left
-                vlashr s[0], t  
+                ldw t, sp[S_FINAL_SHR]
+                {vlsat t[0]; ldaw s, sp[S_TEMP]}
 
-                {ldaw t, cp[VECT_INT16_MAX]}
+                {nop;ldaw t, cp[VECT_INT16_MAX]}
                 {vstr s[0]; nop}
                 {vladd t[0]; nop}
                 {vdepth1; mkmsk t, 16}
@@ -347,7 +389,7 @@ FUNCTION_NAME:
                 {ldw s, Y_p[0]; nop}
                 {vldr t[0]; mkmsk t, 16}
                 vstrpv Y_p[0], t
-
+///
                 {ldaw t, sp[S_TEMP]}
                 {vldr t[0]; mkmsk t, 16}
                 {vdepth8; andnot t, s}

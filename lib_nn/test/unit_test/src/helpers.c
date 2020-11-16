@@ -1,4 +1,12 @@
 #include <stdlib.h>
+#include <stdint.h>
+
+int pseudo_rand(int *seed){
+  const int a = 1013904223;
+  const int c = 1664525;
+  *seed = (int)((long long)a * *seed + c);
+  return *seed;
+}
 
 //TODO pass the clamps
 void pick_post_activation_values(float * post_activation_multiplier, float * post_activation_bias, 
@@ -16,7 +24,6 @@ void pick_post_activation_values(float * post_activation_multiplier, float * pos
     return saturate(round(y));
   }
 */
-  srand(seed);
 
   //The input range is from 0 to the receptive_volume (xor_popcount)
   float accu_min = 0; 
@@ -29,16 +36,14 @@ void pick_post_activation_values(float * post_activation_multiplier, float * pos
 
   for (unsigned ch = 0; ch < chans_out; ch++){
 
-    unsigned range = rand()%receptive_volume;
-
     // Scale the input to extend beyond the range of the output such that we get some 
     // outputs that will saturate.
-    float output_overscale = 0.5 + (float)rand()/(float)RAND_MAX;
+    float output_overscale = 0.5 + (float)pseudo_rand(&seed)/(float)INT32_MAX;
 
     float output_range = (output_max - output_min)*output_overscale;
 
     // This offset allows the output range to completly miss the int8 output range sometimes
-    float offset = 1.1 * output_range * (float)rand()/(float)RAND_MAX;
+    float offset = 1.1 * output_range * (float)pseudo_rand(&seed)/(float)INT32_MAX;
 
     post_activation_multiplier[ch] = output_range / input_range;
     post_activation_bias[ch] = output_min*output_overscale - accu_min* output_range / input_range + offset;

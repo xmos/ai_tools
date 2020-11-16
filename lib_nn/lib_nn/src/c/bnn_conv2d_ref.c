@@ -246,9 +246,9 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
 
 unsigned xor_pop_32(bnn_b32_t* a, bnn_b32_t* b) {
   unsigned c = 0;
-  // unsigned t = sizeof(bnn_b32_t);
   bnn_b32_t v = (*a) ^ (*b);
  #if defined(__XS3A__)
+    unsigned t = sizeof(bnn_b32_t);
     v = ~v;
     for (unsigned i = 0; i < t * 8; i++) {
       c += (v & 1);

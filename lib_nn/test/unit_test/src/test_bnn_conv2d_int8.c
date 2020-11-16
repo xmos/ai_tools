@@ -91,6 +91,8 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     0, 0, y_width, y_height,
     0, 0);
 
+  // for (unsigned e=0;e<y_height * y_width * chans_out;++e)
+  //   printf("%d %d\n",  Y_ref_p[e], Y_p[e]);
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
 
@@ -101,10 +103,10 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
 void test_bnn_conv2d_int8_out_pseudo_directed() {
 #define X_V_DILATION 1
 #define X_H_DILATION 1
-#define X_HEIGHT 2
-#define X_WIDTH 2
-#define K_HEIGHT 2
-#define K_WIDTH 2
+#define X_HEIGHT 1
+#define X_WIDTH 1
+#define K_HEIGHT 1
+#define K_WIDTH 1
 #define CHANS_IN (256)
 #define CHANS_OUT 16
 #define H_STRIDE 1
@@ -131,11 +133,14 @@ void test_bnn_conv2d_int8_out_pseudo_directed() {
   bnn_b32_t WORD_ALIGNED data_scratch[K_HEIGHT * K_WIDTH * CHAN_WORDS_IN + 
     DATA_SCRATCH_OVERREADWRITE_WORDS]; 
 
-  for(unsigned i=0;i<1<<12;i++){
+  for(unsigned i=0;i<1<<1;i++){
     int seed = i;
-    srand(i);
-    pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
-    pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
+
+    for(unsigned b=0;b<sizeof(X_ref)/sizeof(int);b++)
+     ( (int*)X_ref)[b] = pseudo_rand(&seed);
+    
+    for(unsigned b=0;b<sizeof(K_ref)/sizeof(int);b++)
+      ( (int*)K_ref)[b] = pseudo_rand(&seed);
 
     memset(K, 0, sizeof(K));
     memset(Y, 0, sizeof(Y));
@@ -349,7 +354,7 @@ void test_bnn_conv2d_int8_out_sub_image(){
   #define FULL_K_WIDTH 4
 
   #define MIN_CHANS_IN (256*1)
-  #define MAX_CHANS_IN (256*3)
+  #define MAX_CHANS_IN (256*2)
   #define MIN_CHANS_OUT (16*1)
   #define MAX_CHANS_OUT (16*3)
   
@@ -377,11 +382,17 @@ void test_bnn_conv2d_int8_out_sub_image(){
       int16_t * post_activation_bias_q = (int16_t *) malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
       bnn_b32_t *data_scratch = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(FULL_K_HEIGHT * FULL_K_WIDTH * chan_words_in + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
       bnn_b32_t * K = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(chans_out*FULL_K_HEIGHT*FULL_K_WIDTH*chan_words_in + K_OVERREAD_WORDS));
-
+      
       float * post_activation_multiplier = (float *)malloc(sizeof(float)*chans_out);
       float * post_activation_bias = (float *)malloc(sizeof(float)*chans_out);
       int * chan_overlaps = (int *)malloc(sizeof(int)*(chans_out));
 
+      assert(K_ref);
+      assert(X_ref);
+      assert(post_activation_multiplier_q);
+      assert(post_activation_bias_q);
+      assert(data_scratch);
+      assert(K);
       for (unsigned h_stride = MIN_H_STRIDE; h_stride < MAX_H_STRIDE; h_stride++){
         for (unsigned v_stride = MIN_V_STRIDE; v_stride < MAX_V_STRIDE; v_stride++){
             
@@ -404,10 +415,12 @@ void test_bnn_conv2d_int8_out_sub_image(){
           int8_t * Y_ref = (int8_t *) malloc(sizeof(int8_t) * y.height * y.width * y.channels);
           int8_t * Y     = (int8_t *) malloc(sizeof(int8_t) * y.height * y.width * y.channels);    
 
-          if(y.height == 0 || y.width == 0)
+          assert(Y_ref);
+          assert(Y);
+          if (y.height == 0 || y.width == 0)
             continue;
 
-          for(unsigned i=0;i<1<<6;i++){
+          for(unsigned i=0;i<1<<1;i++){
 
             pseudo_rand_bytes((char*)K_ref, K_ref_bytes);
             pseudo_rand_bytes((char*)X_ref, X_ref_bytes);
@@ -448,7 +461,6 @@ void test_bnn_conv2d_int8_out_sub_image(){
 
                       size_t addressable_Y_bytes = y.height * y.width * y.channels;
                       memset(Y, undef_sentinal, addressable_Y_bytes);
-
                       run_int8_sub_image(
                         (int8_t*)Y, 
                         (const int8_t*)Y_ref,

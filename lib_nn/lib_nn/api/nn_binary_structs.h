@@ -82,10 +82,10 @@ typedef struct {
  */
 typedef struct {
     //These are in a specific order - do not change
-  bnn_b256_t* X;
+  const bnn_b256_t* X;
   int outer_x_h_step;
   unsigned output_channel_loop_counter;
-  bnn_b256_t* K;
+  const bnn_b256_t* K;
   int inner_x_v_step;
   int k_v_step;
   int inner_x_h_step;
@@ -134,17 +134,17 @@ typedef struct {
   int y_v_step;
 
   unsigned output_channel_loop_counter;
-  bnn_b32_t* K;
+  const bnn_b32_t* K;
   int16_t* cur_post_activation_mul;  //These are needed to hold variables that will
   int16_t* cur_post_activation_bias; //be indexed with ldd
   unsigned vlsat;
-  unsigned ashr;
+  int ashr;
   int16_t* post_activation_mul;  
   int16_t* post_activation_bias; 
 
   unsigned input_channel_loop_counter;
   int8_t* Y;
-  bnn_b32_t* X;
+  const bnn_b32_t* X;
   int outer_x_h_step;
   int k_p_adjust;
   int patch_branch;

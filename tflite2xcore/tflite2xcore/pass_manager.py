@@ -2,7 +2,7 @@
 
 import logging
 import pathlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 from collections import deque
 
 from tflite2xcore import tflite_visualize
@@ -13,13 +13,12 @@ if TYPE_CHECKING:
 
 
 class PassManager:
-    def __init__(self, model=None, passes=[], *, debug=False, keep_intermediates=False):
+    def __init__(self, model=None, *, debug=False, keep_intermediates=False):
         self._queue = deque()
         self.logger = logging.getLogger(self.__class__.__name__)
         self._model = None
         if model:
             self.register_model(model)
-        self.register_passes(passes)
         self._mutating_passes = []
         self._intermediates = []
         self.keep_intermediates = keep_intermediates
@@ -27,10 +26,13 @@ class PassManager:
     def register_model(self, model: "XCOREModel"):
         self._model = model
 
-    def register_passes(self, passes):
-        if isinstance(passes, PassManager):
-            passes = passes._queue
-        for trf_pass in passes:
+    @property
+    def passes(self) -> Iterable["ModelTransformationPass"]:
+        for trf_pass in self._queue:
+            yield trf_pass
+
+    def register_passes(self, other_mgr: "PassManager") -> None:
+        for trf_pass in other_mgr.passes:
             self.register_pass(trf_pass)
 
     def register_pass(self, trf_pass: "ModelTransformationPass"):
@@ -47,7 +49,9 @@ class PassManager:
         dirpath.mkdir(parents=True, exist_ok=True)
 
         for (j, _), bits in zip(self._mutating_passes, self._intermediates):
-            basepath = dirpath.joinpath(f"model_{j}").resolve()
+            basepath = dirpath.joinpath(
+                f"model_{self.__class__.__name__}_{j}"
+            ).resolve()
             filepath = basepath.with_suffix(".tflite")
             with open(filepath, "wb") as f:
                 f.write(bits)

@@ -38,9 +38,9 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
     message(FATAL_ERROR "In-source build is not allowed! Please specify a build folder.\n\tex:cmake -B build")
 endif()
 
-project(test_model VERSION 1.0.0)
+project(xcore_interpreter VERSION 1.0.0)
 
-include("${PROJECT_SOURCE_DIR}/../cmake/xcore_interpreter.cmake")
+include("${PROJECT_SOURCE_DIR}/../../utils/cmake/xcore_interpreter.cmake")
 
 #**********************
 # install
@@ -55,19 +55,19 @@ set(INSTALL_DIR "${PROJECT_SOURCE_DIR}/bin")
 # -DTF_LITE_STRIP_ERROR_STRINGS   # define this to remove logging
 
 if (X86)
-  add_executable(test_model_host)
+  add_executable(xcore_interpreter_host)
 
   set(BUILD_FLAGS
     "-g"
     "-DTF_LITE_DISABLE_X86_NEON"
     "-O3"
   )
-  target_link_libraries(test_model_host stdc++ m pthread)
+  target_link_libraries(xcore_interpreter_host stdc++ m pthread)
 
-  target_compile_options(test_model_host PRIVATE ${BUILD_FLAGS})
+  target_compile_options(xcore_interpreter_host PRIVATE ${BUILD_FLAGS})
 else (X86)
-  add_executable(test_model_xscope)
-  add_executable(test_model_cmdline)
+  add_executable(xcore_interpreter_xscope)
+  add_executable(xcore_interpreter_cmdline)
 
   set(BUILD_FLAGS
     "-fxscope"
@@ -82,14 +82,14 @@ else (X86)
     "-Os"
   )
 
-  target_compile_options(test_model_xscope PRIVATE ${BUILD_FLAGS})
-  target_compile_options(test_model_cmdline PRIVATE ${BUILD_FLAGS} -fcmdline-buffer-bytes=2048)
+  target_compile_options(xcore_interpreter_xscope PRIVATE ${BUILD_FLAGS})
+  target_compile_options(xcore_interpreter_cmdline PRIVATE ${BUILD_FLAGS} -fcmdline-buffer-bytes=2048)
 
-  target_link_options(test_model_xscope PRIVATE ${BUILD_FLAGS} -lquadspi -w)
-  target_link_options(test_model_cmdline PRIVATE ${BUILD_FLAGS} -lquadspi -w -fcmdline-buffer-bytes=2048)
+  target_link_options(xcore_interpreter_xscope PRIVATE ${BUILD_FLAGS} -lquadspi -w)
+  target_link_options(xcore_interpreter_cmdline PRIVATE ${BUILD_FLAGS} -lquadspi -w -fcmdline-buffer-bytes=2048)
 
-  set_target_properties(test_model_xscope PROPERTIES OUTPUT_NAME test_model_xscope.xe)
-  set_target_properties(test_model_cmdline PROPERTIES OUTPUT_NAME test_model_cmdline.xe)
+  set_target_properties(xcore_interpreter_xscope PROPERTIES OUTPUT_NAME xcore_interpreter_xscope.xe)
+  set_target_properties(xcore_interpreter_cmdline PROPERTIES OUTPUT_NAME xcore_interpreter_cmdline.xe)
 endif (X86)
 
 
@@ -97,23 +97,23 @@ endif (X86)
 # targets
 #**********************
 if (X86)
-  target_sources(test_model_host
+  target_sources(xcore_interpreter_host
     PRIVATE ${XCORE_INTERPRETER_SOURCES}
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main_cmdline.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/inference_engine.cc"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/test_ops_resolver.cc"
   )
 
-  target_include_directories(test_model_host
+  target_include_directories(xcore_interpreter_host
     PRIVATE ${XCORE_INTERPRETER_INCLUDE_DIRS}
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
   )
 
-  install(TARGETS test_model_host DESTINATION ${INSTALL_DIR})
+  install(TARGETS xcore_interpreter_host DESTINATION ${INSTALL_DIR})
 else (X86)
   set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/src/main.xc" PROPERTIES LANGUAGE C)
 
-  target_sources(test_model_xscope
+  target_sources(xcore_interpreter_xscope
     PRIVATE ${XCORE_INTERPRETER_SOURCES}
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main_xscope.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/inference_engine.cc"
@@ -121,23 +121,23 @@ else (X86)
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main.xc"
   )
 
-  target_sources(test_model_cmdline
+  target_sources(xcore_interpreter_cmdline
     PRIVATE ${XCORE_INTERPRETER_SOURCES}
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main_cmdline.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/inference_engine.cc"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/test_ops_resolver.cc"
   )
 
-  target_include_directories(test_model_xscope
+  target_include_directories(xcore_interpreter_xscope
     PRIVATE ${XCORE_INTERPRETER_INCLUDE_DIRS}
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
   )
 
-  target_include_directories(test_model_cmdline
+  target_include_directories(xcore_interpreter_cmdline
     PRIVATE ${XCORE_INTERPRETER_INCLUDE_DIRS}
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
   )
 
-  install(TARGETS test_model_xscope test_model_cmdline DESTINATION ${INSTALL_DIR})
+  install(TARGETS xcore_interpreter_xscope xcore_interpreter_cmdline DESTINATION ${INSTALL_DIR})
 endif (X86)
 

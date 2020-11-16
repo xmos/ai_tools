@@ -131,11 +131,9 @@ def run_test_model(xtag_id):
         __PARENT_DIR
         / ".."
         / ".."
-        / ".."
-        / "utils"
-        / "test_model"
+        / "xcore_interpreter"
         / "bin"
-        / "test_model_xscope.xe"
+        / "xcore_interpreter_xscope.xe"
     )
 
     cmd = [

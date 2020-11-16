@@ -4,7 +4,7 @@ import logging
 from copy import copy
 
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.interpreters import XCOREInterpreter
+from xcore_interpreters import XCOREInterpreter
 
 
 def calc_subgraph_mem_req(subgraph):

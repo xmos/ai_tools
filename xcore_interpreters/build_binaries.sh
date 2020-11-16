@@ -3,11 +3,11 @@ set -e
 echo "****************************"
 echo "****************************"
 echo "****************************"
-echo "* Building test_model      *"
+echo "* Building xcore_firmware  *"
 echo "****************************"
 echo "****************************"
 echo "****************************"
-cd test_model
+cd xcore_firmware
 ./build.sh
 cd ..
 

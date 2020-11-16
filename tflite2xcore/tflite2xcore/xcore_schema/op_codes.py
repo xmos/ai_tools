@@ -36,6 +36,7 @@ class XCOREOpCodes(enum.Enum):
     def _generate_next_value_(name: str, *_) -> str:  # pylint: disable=no-self-argument
         return name
 
+    DUMMY = enum.auto()  # for testing purposes only
     XC_lookup_8 = enum.auto()
     XC_argmax_16 = enum.auto()  # currently not used by any passes
     XC_maxpool2d = enum.auto()

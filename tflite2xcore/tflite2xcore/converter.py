@@ -10,66 +10,73 @@ from tflite2xcore import transformation_passes as passes
 
 class CleanupManager(PassManager):
     def __init__(self, model=None, **kwargs):
-        super().__init__(
-            model,
-            passes=[
-                passes.EliminateDeadOperatorsPass(),
-                passes.EliminateDeadTensorsPass(),
-                passes.EliminateDeadBuffersPass(),
-            ],
-            **kwargs,
-        )
+        super().__init__(model, **kwargs)
+        self.register_pass(passes.EliminateDeadOperatorsPass())
+        self.register_pass(passes.EliminateDeadTensorsPass())
+        self.register_pass(passes.EliminateDeadBuffersPass())
 
 
-class InputOutputCanonicalizationManager(PassManager):
-    def __init__(self, model=None, **kwargs):
-        super().__init__(
-            model,
-            passes=[
-                passes.CanonicalizeQuantizedInputPass(),
-                passes.CanonicalizeQuantizedOutputPass(),
-            ],
-            **kwargs,
-        )
+class BasicCanonicalizationManager(PassManager):
+    def __init__(
+        self,
+        model: XCOREModel = None,
+        *,
+        remove_float_interface: bool = False,
+        **kwargs,
+    ) -> None:
+        super().__init__(model, **kwargs)
+        if remove_float_interface:
+            self.register_pass(passes.CanonicalizeQuantizedInputPass())
+            self.register_pass(passes.CanonicalizeQuantizedOutputPass())
+
+        # start with a round of constant folding
+        self.register_pass(passes.ConstantPropagationPass())
+
+        # canonicalize single pixel convolution
+        # 1x1 convolutions acting on 1x1 inputs (without padding) map trivially
+        # to a fully connected, so we canoncalize these to a builtin FULLY_CONNECTED
+        self.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
+
+        # canonicalize reshape
+        # this ensures that RESHAPE has a single input tensor
+        # (no dynamic reshapes are currently supported)
+        self.register_pass(passes.CanonicalizeReshapePass())
+        self.register_passes(CleanupManager())  # this is needed
+
+        # canonicalize fully connected shapes
+        # the FC implementation flattens implicitly, so we remove RESHAPES before
+        # and after FULLY_CONNECTED ops
+        self.register_pass(passes.RemovePrecedingReshapePass())
+        self.register_pass(passes.RemoveSubsequentReshapePass())
+
+        # canonicalize single channel depthwise convolutions
+        # depthwise convolutions with one input channel map trivially to ordinary
+        # convolutions with `depth_multiplier` output channels
+        self.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
+        self.register_pass(passes.LegalizeSingleinConv2DPass())
+
+        # canonicalize quantize ops
+        # two consecutive quantize ops have no effect besides adding error
+        self.register_pass(passes.RemoveRedundantInt8RequantizationPass())
+
+        # need to cleanup after the intial canonicalization
+        self.register_passes(CleanupManager())
 
 
-def strip_model(model, *, legalize_op_versions=True):
-    pass_mgr = InputOutputCanonicalizationManager(model)
+class WordAlignmentCanonicalizationManager(PassManager):
+    def __init__(self, model: XCOREModel = None, **kwargs) -> None:
+        super().__init__(model, **kwargs)
 
-    if legalize_op_versions:
-        pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
+        # canonicalize word alignment of inputs
+        # we insert explicit channel-wise padding to ensure that
+        # input channel counts to convolutions are divisible by 4
+        # (this is currently required by our kernels)
+        self.register_pass(passes.CanonicalizeConv2DInputChannels())
 
-    pass_mgr.register_passes(CleanupManager())
-
-    pass_mgr.run_passes()
-    model.description = model.description + " + XMOS stripped."
-
-
-def add_float_input_output(model):
-    pass_mgr = PassManager(
-        model,
-        passes=[passes.LegalizeFloatInputPass(), passes.LegalizeFloatOutputPass()],
-    )
-
-    pass_mgr.run_passes()
-    model.description = model.description + " float interface."
-
-    # fix input/output buffers so built-in interpreter could run it
-    assert len(model.subgraphs) == 1
-    subgraph = model.subgraphs[0]
-    assert len(subgraph.inputs) == 1
-    assert len(subgraph.outputs) == 1
-    input_tensor = subgraph.inputs[0]
-    output_tensor = subgraph.outputs[0]
-
-    assert len(input_tensor.buffer.owners) == 1
-    input_tensor.buffer.owners = []
-    model.buffers.remove(input_tensor.buffer)
-
-    input_tensor.buffer = output_tensor.buffer
-    input_tensor.buffer.owners.append(input_tensor)
-    model.buffers.remove(input_tensor.buffer)
-    model.buffers.insert(0, input_tensor.buffer)
+        # canonicalize padding
+        # this pass tries to fuse PAD ops, usually because they were inserted
+        # by the word alignment passes
+        self.register_pass(passes.FuseConsecutivePadsPass())
 
 
 def optimize_for_xcore(
@@ -80,40 +87,19 @@ def optimize_for_xcore(
     num_threads: int = 1,
     intermediates_path: Optional[Union[str, Path]] = None,
     ignore_input_alignment: bool = False,
+    remove_float_interface: bool = False,
 ) -> None:
     # NOTE: the order of the passes is mostly strict
-    pass_mgr = InputOutputCanonicalizationManager(
-        model, keep_intermediates=bool(intermediates_path)
+
+    pass_mgr = PassManager(model, keep_intermediates=bool(intermediates_path))
+
+    pass_mgr.register_passes(
+        BasicCanonicalizationManager(remove_float_interface=remove_float_interface)
     )
-
-    # one round of constant folding
-    pass_mgr.register_pass(passes.ConstantPropagationPass())
-
-    # canonicalize fully connected
-    pass_mgr.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
-
-    # canonicalize reshape
-    pass_mgr.register_pass(passes.CanonicalizeReshapePass())
-    pass_mgr.register_passes(CleanupManager())
-    pass_mgr.register_pass(passes.RemovePrecedingReshapePass())
-    pass_mgr.register_pass(passes.RemoveSubsequentReshapePass())
-
-    # canonicalize convolutions
-    pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
-    pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
+    pass_mgr.register_passes(WordAlignmentCanonicalizationManager())
 
     # canonicalize quantize ops
-    pass_mgr.register_pass(passes.RemoveRedundantInt8RequantizationPass())
     pass_mgr.register_pass(passes.ReplaceLceQuantizePass())
-
-    # canonicalize word alignment
-    pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())
-
-    # canonicalize padding
-    pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
-
-    # need to cleanup after the first round of canonicalization
-    pass_mgr.register_passes(CleanupManager())
 
     pass_mgr.register_pass(passes.ReplaceReLUPass())
     pass_mgr.register_pass(passes.ReplaceReLU6Pass())

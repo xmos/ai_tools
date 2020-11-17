@@ -3,7 +3,6 @@
 #include <string.h>
 #include <assert.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
@@ -24,19 +23,6 @@ static int clrsb(int x){
   #endif
 }
 
-static int clrsbll(long long x){
-  #if defined(__XS3A__)
-  for (unsigned i=0;i<64;i++){
-    long long y = (x<<i)>>i;
-    if (y != x)
-    return (i-1);
-  }
-  return 64;
-  #else
-  return __builtin_clrsbll(x);
-  #endif
-}
-
 static void solve_constraint(
     int *B_res, int *A_res, int *M_res,
     float* post_activation_multiplier,
@@ -44,28 +30,25 @@ static void solve_constraint(
     unsigned chans_out,
     int max_accu, int min_accu){
 
-
   int max_pab_exp = INT_MIN;
   int max_pam_exp = INT_MIN;
   int max_accu_exp = INT_MIN;
 
   for (unsigned ch=0;ch<chans_out; ch++){
-    int exp;
-    frexp(post_activation_bias[ch], &exp);
-    if(exp > max_pab_exp)
-      max_pab_exp = exp;
-    frexp(post_activation_multiplier[ch], &exp);
-    if(exp > max_pam_exp)
-      max_pam_exp = exp;
+    int exponent;
+    frexp(post_activation_bias[ch], &exponent);
+    if(exponent > max_pab_exp)
+      max_pab_exp = exponent;
+    frexp(post_activation_multiplier[ch], &exponent);
+    if(exponent > max_pam_exp)
+      max_pam_exp = exponent;
   }
 
-  {
-    int exp;
-    frexp((float)max_accu, &max_accu_exp);
-    frexp((float)min_accu, &exp);
-    if(exp > max_accu_exp)
-      max_accu_exp = exp;
-  }
+  int exponent;
+  frexp((float)max_accu, &max_accu_exp);
+  frexp((float)min_accu, &exponent);
+  if(exponent > max_accu_exp)
+    max_accu_exp = exponent;
 
   //pab_hat = (pab*2**B)
   const int pab_hat_bits = 30;
@@ -90,21 +73,16 @@ static void solve_constraint(
   for (int B=B_max; B >= B_min; B--){
 
       // Check that pab*2**B will fit in pab_hat_bits bits
-
-
       for (int A=A_max; A >= A_min; A--){
         int M = B - A;
 
         if ((M <= M_max)&& (M >= M_min)){
             int pam_bits = max_pab_exp + M;
             int accu_bits = max_accu_exp;
-            if (A < 0){
+            if (A < 0)
               accu_bits += A;
-            }
 
             // int product_bits = pam_bits + accu_bits;
-
-            // printf("found B:%d A:%d M:%d\n", B, A, M);
             *B_res = B;
             *A_res = A;
             *M_res = M;
@@ -114,11 +92,8 @@ static void solve_constraint(
 
       }
   }
-
-  printf("Failed to find B,A and M");
   assert(0);
 }
-
 
 void bnn_quantise_activation(
                int16_t * post_activation_multiplier_q,
@@ -184,7 +159,7 @@ void bnn_quantise_activation(
   //if B > 0 make a 16 bit quantised bias and a 16 bit bias_multipler
   //if B < 0 bias_multipler = 1, bias = pam * 2 **B
 
-int bias_exp_adjust ;
+  int bias_exp_adjust ;
   if (B > 0){
     bias_exp_adjust = 15 - max_pab_exp;
 
@@ -244,9 +219,9 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
   }
 }
 
-unsigned xor_pop_32(bnn_b32_t* a, bnn_b32_t* b) {
+static unsigned xor_pop_32(bnn_b32_t a, bnn_b32_t b) {
   unsigned c = 0;
-  bnn_b32_t v = (*a) ^ (*b);
+  bnn_b32_t v = a ^ b;
  #if defined(__XS3A__)
     unsigned t = sizeof(bnn_b32_t);
     v = ~v;
@@ -342,7 +317,7 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
         bnn_b32_t zeros = 0x00000000;
         int total_xor_popcount = 0;
         for(unsigned o = remaining_input_channels; o < 8; o++){ //8 is 32 bit words per vpu load
-          total_xor_popcount += (int)xor_pop_32(&(p[o]), &zeros) - 16;
+          total_xor_popcount += (int)xor_pop_32(p[o], zeros) - 16;
         }
         chan_overlaps[ output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
 
@@ -376,6 +351,7 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
 
   const unsigned inputs_per_b32 = 32;
   assert(receptive_volume%inputs_per_b32 == 0);
+  
   bnn_b32_t(*K_ref)[receptive_volume / inputs_per_b32] =
       (bnn_b32_t(*)[receptive_volume / inputs_per_b32])K_ref_p;
 
@@ -469,7 +445,7 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
         bnn_b32_t zeros = 0x00000000;
         int total_xor_popcount = 0;
         for(unsigned o = remaining_input_words; o < 8; o++){ //8 is 32 bit words per vpu load
-          total_xor_popcount += (int)xor_pop_32(&(p[o]), &zeros) - 16;
+          total_xor_popcount += (int)xor_pop_32(p[o], zeros) - 16;
         }
         chan_overlaps[ output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
         p += remaining_input_words;
@@ -496,7 +472,7 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
         bnn_b32_t zeros = 0x00000000;
         int total_xor_popcount = 0;
         for(unsigned o = remaining_input_words; o < 8; o++){ //8 is 32 bit words per vpu load
-          total_xor_popcount += (int)xor_pop_32(&(p[o]), &zeros) - 16;
+          total_xor_popcount += (int)xor_pop_32(p[o], zeros) - 16;
         }
         chan_overlaps[ output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
         p += remaining_input_words;

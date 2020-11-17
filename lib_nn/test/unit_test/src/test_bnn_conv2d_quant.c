@@ -51,21 +51,23 @@ static void measure_quantisation(
   for(unsigned ch=0;ch < chans_out;ch++){
 
     //Iterate over all possible VPU accumulator outputs 
-    for(int32_t vpu_acc=0; vpu_acc<receptive_volume; vpu_acc++){
+    for(int32_t vpu_acc=-receptive_volume/2; vpu_acc<receptive_volume/2; vpu_acc++){
 
       //convert to larq accu space
       float larq_accu = -(float)(vpu_acc) + (float)receptive_volume/2.0;
       float r = post_activation_multiplier[ch] * 2.0 * larq_accu + post_activation_bias[ch];
-      float ref_output = fmin(fmax(r, (double)INT8_MIN), (double)INT8_MAX);
+      int8_t ref_output = (int8_t)fmin(fmax(round(r), (double)INT8_MIN), (double)INT8_MAX);
 
       //asm implementation
       int64_t scaled_accu = vpu_saturate(ashr(vpu_acc, accu_shr), 16);
       int64_t bias = vpu_saturate((int64_t)post_activation_bias_q[ch] * (int64_t)bias_multipler, 32);
       int64_t product = vpu_saturate((int64_t)post_activation_multiplier_q[ch] * (int64_t)scaled_accu + bias, 32);
       int64_t product_shr = vpu_saturate(ashr(product, final_shr), 16);
-      int8_t output = vpu_saturate(ashr(product_shr, 8), 8);
+      int8_t output = min(max(ashr(product_shr, 8), INT8_MIN), INT8_MAX);
 
-      float error = ref_output - (float)output;
+      // int8_t output = vpu_saturate(ashr(product, final_shr+8), 8);
+
+      float error = (float)(ref_output - output);
       *error_sum += error;
       *abs_error_sum += fabs(error);
       *sum_count += 1;
@@ -75,7 +77,6 @@ static void measure_quantisation(
   }
 }
 
-
 void test_quantisation(){
 
   float error_sum = 0.0;
@@ -83,9 +84,9 @@ void test_quantisation(){
   unsigned sum_count = 0;
 
   int seed = 0;
-  for(unsigned k_dim=1;k_dim < 7;k_dim += 2){
-    for(unsigned chans_in=32; chans_in< 32*5; chans_in+=32){
-      for(unsigned chans_out=4; chans_out < 128; chans_out+=4){
+  for(unsigned k_dim=1;k_dim <= 7;k_dim += 2){
+    for(unsigned chans_in=32; chans_in< 32*7; chans_in+=32){
+      for(unsigned chans_out=4; chans_out < 256; chans_out+=4){
 
         unsigned receptive_volume = k_dim*chans_in; 
 
@@ -131,6 +132,7 @@ void test_quantisation(){
             accu_shr, bias_multipler, final_shr, receptive_volume, 
 
             &error_sum, &abs_error_sum, &sum_count);
+
         free(post_activation_multiplier_q);
         free(post_activation_bias_q);
 
@@ -140,7 +142,9 @@ void test_quantisation(){
       }
     }
   }
-  // printf("%f %f %d\n", error_sum / sum_count, abs_error_sum / sum_count, sum_count); 
+
+  TEST_ASSERT_TRUE(fabs((float)sum_count/ error_sum) > 656);
+  TEST_ASSERT_TRUE(fabs((float)sum_count/abs_error_sum) > 256);
 }
 
 void test_bnn_conv2d_quant() {

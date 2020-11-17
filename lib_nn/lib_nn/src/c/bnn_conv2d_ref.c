@@ -51,7 +51,7 @@ static void solve_constraint(
     max_accu_exp = exponent;
 
   //pab_hat = (pab*2**B)
-  const int pab_hat_bits = 30;
+  const int pab_hat_bits = 31;
   const int accu_hat_bits = 15;
   const int pam_hat_bits = 15;
 
@@ -86,6 +86,7 @@ static void solve_constraint(
             *B_res = B;
             *A_res = A;
             *M_res = M;
+            // printf("found B:%d A:%d M:%d\n", B, A, M);
             return;
 
         }
@@ -111,7 +112,6 @@ void bnn_quantise_activation(
                int16_t *bias_multipler,
                int *final_shr,
 
-
                int32_t receptive_volume, 
                int * chan_overlaps
 ){
@@ -126,12 +126,12 @@ void bnn_quantise_activation(
   float * pab = (float *)malloc(sizeof(float) * chans_out);
 
   for (unsigned ch=0;ch<chans_out;ch++)
-    pam[ch] = post_activation_multiplier[ch] * -2;
+    pam[ch] = post_activation_multiplier[ch] * -2.;
 
   for (unsigned ch=0;ch<chans_out;ch++){
     pab[ch] = post_activation_bias[ch] + post_activation_multiplier[ch]*(float)receptive_volume;
     if(chan_overlaps)
-      pab[ch] +=  (float)chan_overlaps[ch]*2*post_activation_multiplier[ch];
+      pab[ch] +=  (float)chan_overlaps[ch]*2.*post_activation_multiplier[ch];
   }
 
   solve_constraint(
@@ -172,9 +172,10 @@ void bnn_quantise_activation(
   }
 
   // Now quantise the tensors
-  for( unsigned ch=0;ch<chans_out;ch++){
+  for (unsigned ch = 0; ch < chans_out; ch++){
 
     int32_t pa_mul = (int32_t)round(ldexp(pam[ch], M));
+    
     assert(clrsb(pa_mul) - 16 >= 0); // make sure there is no overflow
     post_activation_multiplier_q[ch] = (int16_t)pa_mul;
 
@@ -202,14 +203,14 @@ void bnn_quantise_activation(
 void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
                                   const int32_t* thresholds_ref,
                                   const unsigned chans_out,
-                                  const unsigned receptive_field,
+                                  const unsigned receptive_volume,
                                   int *chan_overlaps) {
   int16_t* thresholds = (int16_t*)thresh_boggled;
 
   for (unsigned i = 0; i < chans_out; i++) {
     unsigned bank = i / VPU_INT16_ACC_PERIOD;
 
-    int32_t t = thresholds_ref[i] - ((int32_t)(receptive_field) / 2);
+    int32_t t = thresholds_ref[i] - ((int32_t)(receptive_volume) / 2);
 
     if(chan_overlaps)
        t -= chan_overlaps[i];
@@ -229,9 +230,9 @@ static unsigned xor_pop_32(bnn_b32_t a, bnn_b32_t b) {
       c += (v & 1);
       v >>= 1;
     }
-    #else
+  #else
     c += __builtin_popcount(~v);
-    #endif
+  #endif
   return c;
 }
 

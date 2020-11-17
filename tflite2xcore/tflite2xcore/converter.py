@@ -254,13 +254,13 @@ def optimize_for_xcore(
 
 
 def convert(
-    tflite_input_path,
-    tflite_output_path,
+    tflite_input_path: Union[str, Path],
+    tflite_output_path: Union[str, Path],
     *,
-    num_threads=None,
-    minification=False,
-    intermediates_path=None,
-):
+    num_threads: Optional[int] = None,
+    minification: bool = False,
+    intermediates_path: Optional[Union[str, Path]] = None,
+) -> None:
     num_threads = num_threads or 1
     model = XCOREModel.read_flatbuffer(tflite_input_path)
     optimize_for_xcore(

@@ -1,9 +1,9 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import logging
-import pathlib
-from typing import TYPE_CHECKING, Iterable
+from pathlib import Path
 from collections import deque
+from typing import TYPE_CHECKING, Iterable, Optional, Union, List, Tuple, Deque
 
 from tflite2xcore import tflite_visualize
 
@@ -13,17 +13,24 @@ if TYPE_CHECKING:
 
 
 class PassManager:
-    def __init__(self, model=None, *, debug=False, keep_intermediates=False):
-        self._queue = deque()
+    def __init__(
+        self,
+        model: Optional["XCOREModel"] = None,
+        *,
+        debug: bool = False,
+        keep_intermediates: bool = False,
+    ) -> None:
+        self._queue: Deque["ModelTransformationPass"] = deque()
         self.logger = logging.getLogger(self.__class__.__name__)
-        self._model = None
+        self._model: Optional["XCOREModel"] = None
         if model:
             self.register_model(model)
-        self._mutating_passes = []
-        self._intermediates = []
+        self._mutating_passes: List[Tuple[int, str]] = []
+        self._intermediates: List[bytes] = []
         self.keep_intermediates = keep_intermediates
 
-    def register_model(self, model: "XCOREModel"):
+    def register_model(self, model: "XCOREModel") -> None:
+        assert model
         self._model = model
 
     @property
@@ -35,17 +42,19 @@ class PassManager:
         for trf_pass in other_mgr.passes:
             self.register_pass(trf_pass)
 
-    def register_pass(self, trf_pass: "ModelTransformationPass"):
+    def register_pass(self, trf_pass: "ModelTransformationPass") -> None:
         self._queue.append(trf_pass)
 
-    def pop_pass(self):
+    def pop_pass(self) -> "ModelTransformationPass":
         return self._queue.popleft()
 
-    def save_intermediates(self, dirpath, *, visualize=True):
+    def save_intermediates(
+        self, dirpath: Union[str, Path], *, visualize: bool = True
+    ) -> None:
         if len(self._intermediates) == 0:
             self.logger.warning("No intermediate models were recorded!")
 
-        dirpath = pathlib.Path(dirpath)
+        dirpath = Path(dirpath)
         dirpath.mkdir(parents=True, exist_ok=True)
 
         for (j, _), bits in zip(self._mutating_passes, self._intermediates):
@@ -59,7 +68,7 @@ class PassManager:
                 tflite_visualize.main(filepath, basepath.with_suffix(".html"))
             self.logger.debug(f"Saved {filepath}")
 
-    def run_passes(self):
+    def run_passes(self) -> None:
         if not self._model:
             raise Exception("No model registered!")
 

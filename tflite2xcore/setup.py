@@ -1,11 +1,11 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 import setuptools
 
-LIB_TFLITE2XCORE = [
-    "libs/linux/libtflite2xcore.so",
-    "libs/linux/libtflite2xcore.so.1.0.1",
-    "libs/macos/libtflite2xcore.dylib",
-    "libs/macos/libtflite2xcore.1.0.1.dylib",
+LIB_FLEXBUFFERS = [
+    "libs/linux/libflexbuffers.so",
+    "libs/linux/libflexbuffers.so.1.0.1",
+    "libs/macos/libflexbuffers.dylib",
+    "libs/macos/libflexbuffers.1.0.1.dylib",
 ]
 
 EXCLUDES = ["*tests", "*tests.*", "*model_generation", "*model_generation.*"]
@@ -27,7 +27,7 @@ setuptools.setup(
     scripts=SCRIPTS,
     python_requires=">=3.6.8",
     install_requires=INSTALL_REQUIRES,
-    package_data={"": LIB_TFLITE2XCORE},
+    package_data={"": LIB_FLEXBUFFERS},
     author="XMOS",
     author_email="support@xmos.com",
     description="XMOS Tools to convert TensorFlow Lite models to xCORE microcontrollers.",

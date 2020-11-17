@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 from pathlib import Path
 
-from tflite2xcore.interpreters import XCOREInterpreter
+from xcore_interpreters.interpreters import XCOREInterpreter
 
 
 BUILTIN_OPERATORS_TEST_MODEL = os.path.join(

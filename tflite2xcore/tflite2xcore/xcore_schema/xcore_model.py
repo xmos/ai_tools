@@ -30,6 +30,8 @@ from .dict_conversion import (
 from .flexbuffers import FlexbufferBuilder, FlexbufferParser
 from .builtin_options import BuiltinOptions
 
+from tflite2xcore.execution_planning import ReverseDepthFirstPlanner
+
 _R = TypeVar("_R", bound="XCOREModel")
 
 
@@ -296,7 +298,8 @@ class XCOREModel(_IRObject):
 
             # set operators
             subgraphT.operators = []
-            for operator in subgraph.operators:
+            planner = ReverseDepthFirstPlanner(subgraph)
+            for operator in planner.make_plan():
                 operatorT = schema.OperatorT()  # type: ignore
                 op_code = operator.operator_code
                 operatorT.opcodeIndex = self.operator_codes.index(op_code)

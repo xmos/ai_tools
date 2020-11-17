@@ -37,7 +37,7 @@ from tflite2xcore.model_generation.converters import (
     XCoreConverter,
 )
 from tflite2xcore.model_generation.data_factories import InputInitializerDataFactory
-from tflite2xcore.interpreters.exceptions import (  # type: ignore # TODO: fix this
+from xcore_interpreters import (  # type: ignore # TODO: fix this
     ModelSizeError,
     ArenaSizeError,
 )

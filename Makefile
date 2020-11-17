@@ -80,7 +80,9 @@ ci: lib_nn_build \
  xcore_interpreters_build \
  xcore_interpreters_unit_test \
  xcore_interpreters_dist_test \
- integration_testsubmodule_update lib_flexbuffers_build xcore_interpreters_build
+ integration_test
+
+#**************************
 # ALL tests target
 #**************************
 

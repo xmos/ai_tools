@@ -6,14 +6,13 @@ from pathlib import Path
 
 __PARENT_DIR = Path(__file__).parent.absolute()
 if sys.platform.startswith("linux"):
-    lib_path = str(__PARENT_DIR / "libs" / "linux" / "libtflite2xcore.so")
+    lib_path = str(__PARENT_DIR / "libs" / "linux" / "libflexbuffers.so")
 elif sys.platform == "darwin":
-    lib_path = str(__PARENT_DIR / "libs" / "macos" / "libtflite2xcore.dylib")
+    lib_path = str(__PARENT_DIR / "libs" / "macos" / "libflexbuffers.dylib")
 else:
     raise RuntimeError("tflite2xcore is not yet supported on Windows!")
 
-libtflite2xcore = ctypes.cdll.LoadLibrary(lib_path)
-
+libflexbuffers = ctypes.cdll.LoadLibrary(lib_path)
 from . import version
 
 __version__ = version.get_version()

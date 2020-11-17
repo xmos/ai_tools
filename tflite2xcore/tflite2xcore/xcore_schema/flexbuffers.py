@@ -7,7 +7,7 @@ import numpy as np
 from enum import Enum
 from typing import Dict, Any, List, Optional, Union
 
-from tflite2xcore import libtflite2xcore as lib
+from tflite2xcore import libflexbuffers as lib
 
 
 class FlexbufferBuilder:

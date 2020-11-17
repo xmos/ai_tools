@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.xcore_model import XCOREModel
@@ -9,7 +9,7 @@ from tflite2xcore import transformation_passes as passes
 
 
 class CleanupManager(PassManager):
-    def __init__(self, model=None, **kwargs):
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
         super().__init__(model, **kwargs)
         self.register_pass(passes.EliminateDeadOperatorsPass())
         self.register_pass(passes.EliminateDeadTensorsPass())
@@ -19,10 +19,10 @@ class CleanupManager(PassManager):
 class BasicCanonicalizationManager(PassManager):
     def __init__(
         self,
-        model: XCOREModel = None,
+        model: Optional[XCOREModel] = None,
         *,
         remove_float_interface: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         super().__init__(model, **kwargs)
         if remove_float_interface:
@@ -67,7 +67,7 @@ class BasicCanonicalizationManager(PassManager):
 
 
 class WordAlignmentCanonicalizationManager(PassManager):
-    def __init__(self, model: XCOREModel = None, **kwargs) -> None:
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
         super().__init__(model, **kwargs)
 
         # canonicalize word alignment of inputs
@@ -83,7 +83,7 @@ class WordAlignmentCanonicalizationManager(PassManager):
 
 
 class ActivationLoweringManager(PassManager):
-    def __init__(self, model: XCOREModel = None, **kwargs) -> None:
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
         super().__init__(model, **kwargs)
 
         # first we match ops and replace them
@@ -97,7 +97,7 @@ class ActivationLoweringManager(PassManager):
 
 
 class PoolingLoweringManager(PassManager):
-    def __init__(self, model: XCOREModel = None, **kwargs) -> None:
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
         super().__init__(model, **kwargs)
 
         self.register_pass(passes.ReplaceMaxPool2D2x2Pass())
@@ -108,7 +108,7 @@ class PoolingLoweringManager(PassManager):
 
 
 class ParametricOperatorLoweringManager(PassManager):
-    def __init__(self, model: XCOREModel = None, **kwargs) -> None:
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
         super().__init__(model, **kwargs)
 
         # first we match ops and replace them
@@ -131,10 +131,10 @@ class ParametricOperatorLoweringManager(PassManager):
 class PaddingOptimizationManager(PassManager):
     def __init__(
         self,
-        model: XCOREModel = None,
+        model: Optional[XCOREModel] = None,
         *,
         ignore_input_alignment: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         super().__init__(model, **kwargs)
 
@@ -151,7 +151,7 @@ class PaddingOptimizationManager(PassManager):
 
 class ParallelizationManager(PassManager):
     def __init__(
-        self, model: XCOREModel = None, *, num_threads: int = 1, **kwargs
+        self, model: Optional[XCOREModel] = None, *, num_threads: int = 1, **kwargs: Any
     ) -> None:
         super().__init__(model, **kwargs)
 
@@ -176,6 +176,38 @@ class ParallelizationManager(PassManager):
         self.register_pass(passes.ScratchMemoryFullyConnectedPass())
 
 
+class BinarizedOperatorLoweringManager(PassManager):
+    def __init__(
+        self, model: Optional[XCOREModel] = None, *, num_threads: int = 1, **kwargs: Any
+    ) -> None:
+        super().__init__(model, **kwargs)
+
+        self.register_pass(passes.ReplaceLceQuantizePass())
+
+
+class FinalizationManager(PassManager):
+    def __init__(
+        self,
+        model: Optional[XCOREModel] = None,
+        *,
+        cleanup: bool = True,
+        minification: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(model, **kwargs)
+        if cleanup:
+            self.register_passes(CleanupManager())
+
+        # TODO: this is actually a canonicalization pass
+        self.register_pass(passes.LegalizeOperatorOutputTensorNamePass())
+
+        self.register_pass(passes.FloatingPointWarningPass())
+
+        if minification:
+            self.register_pass(passes.MinifyQuantInfoPass())
+            self.register_pass(passes.MinifyTensorNamesPass())
+
+
 def optimize_for_xcore(
     model: XCOREModel,
     *,
@@ -184,7 +216,7 @@ def optimize_for_xcore(
     num_threads: int = 1,
     intermediates_path: Optional[Union[str, Path]] = None,
     ignore_input_alignment: bool = False,
-    remove_float_interface: bool = False,
+    remove_float_interface: bool = False,  # TODO: add this to xformer
 ) -> None:
     pass_mgr = PassManager(model, keep_intermediates=bool(intermediates_path))
 
@@ -198,26 +230,17 @@ def optimize_for_xcore(
     pass_mgr.register_passes(ActivationLoweringManager())
     pass_mgr.register_passes(PoolingLoweringManager())
     pass_mgr.register_passes(ParametricOperatorLoweringManager())
+    pass_mgr.register_passes(BinarizedOperatorLoweringManager())
 
     # TODO: finish these and find a manager for them:
-    pass_mgr.register_pass(passes.ReplaceLceQuantizePass())
     pass_mgr.register_pass(passes.ReplaceAddPass())
 
     # optimizations on xcore ops
     pass_mgr.register_passes(PaddingOptimizationManager())
     pass_mgr.register_passes(ParallelizationManager())
 
-    if cleanup:
-        pass_mgr.register_passes(CleanupManager())
-
-    # TODO: this is actually a canonicalization pass
-    pass_mgr.register_pass(passes.LegalizeOperatorOutputTensorNamePass())
-
-    pass_mgr.register_pass(passes.FloatingPointWarningPass())
-
-    if minification:
-        pass_mgr.register_pass(passes.MinifyQuantInfoPass())
-        pass_mgr.register_pass(passes.MinifyTensorNamesPass())
+    # finalize (cleanup, minification, renaming, etc.)
+    pass_mgr.register_passes(FinalizationManager())
 
     try:
         pass_mgr.run_passes()

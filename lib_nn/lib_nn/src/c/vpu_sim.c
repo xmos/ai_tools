@@ -6,9 +6,9 @@
 
 
 /**
- * Saturate to the relevent bounds.
+ * vpu_saturate to the relevent bounds.
  */
-static int64_t saturate(
+int64_t vpu_saturate(
     const int64_t input,
     const unsigned bits)
 {
@@ -146,7 +146,7 @@ void VLMACC(
             int64_t acc = get_accumulator(vpu, i);
             acc = acc + (((int32_t)vpu->vC.s8[i]) * addr8[i]);
 
-            set_accumulator(vpu, i, saturate(acc, 32));
+            set_accumulator(vpu, i, vpu_saturate(acc, 32));
         }
     } else if(vpu->mode == MODE_S16){
         const int16_t* addr16 = (const int16_t*) addr;
@@ -155,7 +155,7 @@ void VLMACC(
             int64_t acc = get_accumulator(vpu, i);
             acc = acc + (((int32_t)vpu->vC.s16[i]) * addr16[i]);
 
-            set_accumulator(vpu, i, saturate(acc, 32));
+            set_accumulator(vpu, i, vpu_saturate(acc, 32));
         }
     } else if(vpu->mode == MODE_S32){
         const int32_t* addr32 = (const int32_t*) addr;
@@ -164,7 +164,7 @@ void VLMACC(
             int64_t acc = get_accumulator(vpu, i);
             acc = acc + (((int64_t)vpu->vC.s32[i]) * addr32[i]);
 
-            set_accumulator(vpu, i, saturate(acc, 40));
+            set_accumulator(vpu, i, vpu_saturate(acc, 40));
         }
     } else { 
         assert(0); //How'd this happen?
@@ -182,7 +182,7 @@ void VLMACCR(
         for(int i = 0; i < VPU_INT8_EPV; i++)
             acc = acc + (((int32_t)vpu->vC.s8[i]) * addr8[i]);
 
-        acc = saturate(acc, 32);
+        acc = vpu_saturate(acc, 32);
         rotate_accumulators(vpu);
         set_accumulator(vpu, 0, acc);
     } else if(vpu->mode == MODE_S16){
@@ -192,7 +192,7 @@ void VLMACCR(
         for(int i = 0; i < VPU_INT16_EPV; i++)
             acc = acc + (((int32_t)vpu->vC.s16[i]) * addr16[i]);
 
-        acc = saturate(acc, 32);
+        acc = vpu_saturate(acc, 32);
         rotate_accumulators(vpu);
         set_accumulator(vpu, 0, acc);
     } else if(vpu->mode == MODE_S32){
@@ -202,7 +202,7 @@ void VLMACCR(
         for(int i = 0; i < VPU_INT32_EPV; i++)
             acc = acc + (((int32_t)vpu->vC.s32[i]) * addr32[i]);
 
-        acc = saturate(acc, 40);
+        acc = vpu_saturate(acc, 40);
         rotate_accumulators(vpu);
         set_accumulator(vpu, 0, acc);
     } else { 
@@ -223,7 +223,7 @@ void VLMACCR1(
         acc += (2*__builtin_popcount(~v) - 32)/2; 
     }
 
-    acc = saturate(acc, 32);
+    acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
     set_accumulator(vpu, 0, acc);
 }
@@ -241,7 +241,7 @@ void VLSAT(
             if(addr16[i] != 0)
                 acc = acc + (1 << (addr16[i]-1));   //Round
             acc = acc >> addr16[i];             //Shift
-            int8_t val = saturate(acc, 8);      //Saturate
+            int8_t val = vpu_saturate(acc, 8);      //vpu_saturate
 
             vpu->vR.s8[i] = val;
         }
@@ -256,7 +256,7 @@ void VLSAT(
                 acc = acc + (1 << ((int16_t)(addr16[i]-1)));   //Round
 
             acc = acc >> addr16[i];             //Shift
-            int16_t val = saturate(acc, 16);    //Saturate
+            int16_t val = vpu_saturate(acc, 16);    //vpu_saturate
 
             vpu->vR.s16[i] = val;
         }
@@ -270,7 +270,7 @@ void VLSAT(
             if(addr32[i] != 0)
                 acc = acc + (1 << (addr32[i]-1));   //Round
             acc = acc >> addr32[i];             //Shift
-            int32_t val = saturate(acc, 32);    //Saturate
+            int32_t val = vpu_saturate(acc, 32);    //vpu_saturate
 
             vpu->vR.s32[i] = val;
         }
@@ -295,7 +295,7 @@ void VLASHR(
             else if(shr >= 0)   val = val >> shr;
             else                val = (unsigned)val << (-shr);
 
-            vpu->vR.s8[i] = saturate(val, 8);
+            vpu->vR.s8[i] = vpu_saturate(val, 8);
         }
     } else if(vpu->mode == MODE_S16){
         const int16_t* addr16 = (const int16_t*) addr;
@@ -305,7 +305,7 @@ void VLASHR(
             if(shr >= 15)   val = (val < 0)? -1 : 0;
             else if(shr >= 0)   val = val >> shr;
             else                val = (unsigned)val << (-shr);
-            vpu->vR.s16[i] = saturate(val, 16);
+            vpu->vR.s16[i] = vpu_saturate(val, 16);
         }
     } else if(vpu->mode == MODE_S32){
         const int32_t* addr32 = (const int32_t*) addr;
@@ -315,7 +315,7 @@ void VLASHR(
             if(shr >= 31)   val = (val < 0)? -1 : 0;
             else if(shr >= 0)   val = val >> shr;
             else                val = (unsigned)val << (-shr);
-            vpu->vR.s32[i] = saturate(val, 32);
+            vpu->vR.s32[i] = vpu_saturate(val, 32);
         }
     } else { 
         assert(0); //How'd this happen?
@@ -330,21 +330,21 @@ void VLADD(
         const int8_t* addr8 = (const int8_t*) addr;
         for(int i = 0; i < VPU_INT8_EPV; i++){
             int32_t val = addr8[i];
-            vpu->vR.s8[i] = saturate(vpu->vR.s8[i] + val, 8);
+            vpu->vR.s8[i] = vpu_saturate(vpu->vR.s8[i] + val, 8);
         }
     } else if(vpu->mode == MODE_S16){
         const int16_t* addr16 = (const int16_t*) addr;
 
         for(int i = 0; i < VPU_INT16_EPV; i++){
             int32_t val = addr16[i];
-            vpu->vR.s16[i] = saturate(vpu->vR.s16[i] + val, 16);
+            vpu->vR.s16[i] = vpu_saturate(vpu->vR.s16[i] + val, 16);
         }
     } else if(vpu->mode == MODE_S32){
         const int32_t* addr32 = (const int32_t*) addr;
 
         for(int i = 0; i < VPU_INT32_EPV; i++){
             int64_t val = addr32[i];
-            vpu->vR.s32[i] = saturate(vpu->vR.s32[i] + val, 32);
+            vpu->vR.s32[i] = vpu_saturate(vpu->vR.s32[i] + val, 32);
         }
     } else { 
         assert(0); //How'd this happen?
@@ -360,7 +360,7 @@ void VLMUL(
         for(int i = 0; i < VPU_INT8_EPV; i++){
             int32_t val = addr8[i];
             int32_t res = ((int32_t)vpu->vR.s8[i] * val)>>6;//TODO use macros
-            vpu->vR.s8[i] = saturate(res, 8);
+            vpu->vR.s8[i] = vpu_saturate(res, 8);
         }
     } else if(vpu->mode == MODE_S16){
         const int16_t* addr16 = (const int16_t*) addr;
@@ -368,7 +368,7 @@ void VLMUL(
         for(int i = 0; i < VPU_INT16_EPV; i++){
             int64_t val = addr16[i];
             int64_t res = ((int64_t)vpu->vR.s16[i] * (int64_t)val) >> 14;//TODO use macros
-            vpu->vR.s16[i] = saturate(res, 16);
+            vpu->vR.s16[i] = vpu_saturate(res, 16);
         }
     } else if(vpu->mode == MODE_S32){
         const int32_t* addr32 = (const int32_t*) addr;
@@ -376,7 +376,7 @@ void VLMUL(
         for(int i = 0; i < VPU_INT32_EPV; i++){
             int64_t val = addr32[i];
             int64_t res = (vpu->vR.s32[i] * val) >> 30; //TODO use macros
-            vpu->vR.s32[i] = saturate(res, 32);
+            vpu->vR.s32[i] = vpu_saturate(res, 32);
         }
     } else { 
         assert(0); //How'd this happen?
@@ -422,12 +422,12 @@ void VDEPTH8(xs3_vpu* vpu){
     if(vpu->mode == MODE_S16){
         for(int i = 0; i < VPU_INT16_EPV; i++){
             int32_t elm = ((int32_t)vec_tmp.s16[i]) + (1 << 7);
-            vpu->vR.s8[i] = saturate(elm >> 8, 8);
+            vpu->vR.s8[i] = vpu_saturate(elm >> 8, 8);
         }
     } else if(vpu->mode == MODE_S32){
         for(int i = 0; i < VPU_INT32_EPV; i++){
             int64_t elm = ((int64_t)vec_tmp.s32[i]) + (1 << 23);
-            vpu->vR.s8[i] = saturate(elm >> 24, 8);
+            vpu->vR.s8[i] = vpu_saturate(elm >> 24, 8);
         }
     } else { 
         assert(0);
@@ -441,7 +441,7 @@ void VDEPTH16(xs3_vpu* vpu){
     if(vpu->mode == MODE_S32){
         for(int i = 0; i < VPU_INT32_EPV; i++){
             int64_t elm = ((int64_t)vpu->vR.s32[i]) + (1 << 15);
-            vpu->vR.s16[i] = saturate(elm >> 16, 16);
+            vpu->vR.s16[i] = vpu_saturate(elm >> 16, 16);
         }
 
         for(int i = VPU_INT32_EPV; i < VPU_INT16_EPV; i++){
@@ -468,68 +468,35 @@ void vpu_sim_print(xs3_vpu* vpu)
     int32_t * vC32 = vpu->vC.s32;
     int32_t * vR32 = vpu->vR.s32;
     int32_t * vD32 = vpu->vD.s32;
-    int print_sign = 0;
-    if (print_sign){
-        switch (vpu->mode)
-        {
-        case MODE_S8:
-            printf("8-bit:     vC     \t  vR     \t   vD\n");
-            for(int i = 0; i< VPU_INT8_EPV; i++){
-                printf("%d\t%c0x%0.2X(%d)\t%c0x%0.2X(%d)\t%c0x%0.2X(%d)\n",
-                i,signof(vC8[i]),abs(vC8[i]), (int)vC8[i],signof(vR8[i]), abs(vR8[i]), (int)vR8[i], signof(vD8[i]), abs(vD8[i]),(int)vD8[i]);
-            }
-            break;
-        
-        case MODE_S16:
-            printf("16-bit:  vC     \t    vR      \t    vD\n");
-            for(int i = 0; i< VPU_INT16_EPV; i++){
-                printf("%d\t%c0x%0.4X(%d)\t%c0x%0.4X(%d)\t%c0x%0.4X(%d)\n",
-                i,signof(vC16[i]),abs(vC16[i]),(int) vC16[i],signof(vR16[i]), abs(vR16[i]), (int)vR16[i], signof(vD16[i]), abs(vD16[i]),(int)vD16[i]);
-            }
-            break;
+    switch (vpu->mode)
+    {
+    case MODE_S8:
+        printf("8-bit:     vC     \t  vR     \t   vD\n");
+        for(int i = 0; i< VPU_INT8_EPV; i++){
+            printf("%d\t%c0x%0.2X(%d)\t%c0x%0.2X(%d)\t%c0x%0.2X(%d)\n",
+            i,signof(vC8[i]),abs(vC8[i]), (int)vC8[i],signof(vR8[i]), abs(vR8[i]), (int)vR8[i], signof(vD8[i]), abs(vD8[i]),(int)vD8[i]);
+        }
+        break;
+    
+    case MODE_S16:
+        printf("16-bit:  vC     \t    vR      \t    vD\n");
+        for(int i = 0; i< VPU_INT16_EPV; i++){
+            printf("%d\t%c0x%0.4X(%d)\t%c0x%0.4X(%d)\t%c0x%0.4X(%d)\n",
+            i,signof(vC16[i]),abs(vC16[i]),(int) vC16[i],signof(vR16[i]), abs(vR16[i]), (int)vR16[i], signof(vD16[i]), abs(vD16[i]),(int)vD16[i]);
+        }
+        break;
 
     case MODE_S32:
-            printf("32-bit:  vC     \t\t    vR      \t\t    vD\n");
-            for(int i = 0; i< VPU_INT32_EPV; i++){
-                printf("%d\t%c0x%0.8X(%d)\t%c0x%0.8X(%d)\t%c0x%0.8X(%d)\n",
-                i,signof(vC32[i]),abs(vC32[i]), (int)vC32[i],signof(vR32[i]), abs(vR32[i]), (int)vR32[i], signof(vD32[i]), abs(vD32[i]),(int)vD32[i]);        }
-            break;
+        printf("32-bit:  vC     \t\t    vR      \t\t    vD\n");
+        for(int i = 0; i< VPU_INT32_EPV; i++){
+            printf("%d\t%c0x%0.8X(%d)\t%c0x%0.8X(%d)\t%c0x%0.8X(%d)\n",
+            i,signof(vC32[i]),abs(vC32[i]), (int)vC32[i],signof(vR32[i]), abs(vR32[i]), (int)vR32[i], signof(vD32[i]), abs(vD32[i]),(int)vD32[i]);        }
+        break;
 
-        default:
-            printf("In the future this might print all possible interpretations...");
-            break;
-        } 
-    } else {
-        switch (vpu->mode)
-        {
-        case MODE_S8:
-            printf("8-bit:     vC     \t  vR     \t   vD\n");
-            for(int i = 0; i< VPU_INT8_EPV; i++){
-                printf("%d\t%c0x%0.2X(%d)\t%c0x%0.2X(%d)\t%c0x%0.2X(%d)\n",
-                i,signof(vC8[i]),abs(vC8[i]), (int)vC8[i],signof(vR8[i]), abs(vR8[i]), (int)vR8[i], signof(vD8[i]), abs(vD8[i]),(int)vD8[i]);
-            }
-            break;
-        
-        case MODE_S16:
-            printf("16-bit:  vC     \t    vR      \t    vD\n");
-            for(int i = 0; i< VPU_INT16_EPV; i++){
-                printf("%d\t0x%0.4hX(%d)\t0x%0.4hX(%d)\t0x%0.4hX(%d)\n",
-                i,(vC16[i]), vC16[i], (vR16[i]), vR16[i], (vD16[i]),vD16[i]);
-            }
-            break;
-
-    case MODE_S32:
-            printf("32-bit:  vC     \t\t    vR      \t\t    vD\n");
-            for(int i = 0; i< VPU_INT32_EPV; i++){
-                printf("%d\t%c0x%0.8X(%d)\t%c0x%0.8X(%d)\t%c0x%0.8X(%d)\n",
-                i,signof(vC32[i]),abs(vC32[i]), (int)vC32[i],signof(vR32[i]), abs(vR32[i]), (int)vR32[i], signof(vD32[i]), abs(vD32[i]),(int)vD32[i]);        }
-            break;
-
-        default:
-            printf("In the future this might print all possible interpretations...");
-            break;
-        } 
-    }
+    default:
+        printf("In the future this might print all possible interpretations...");
+        break;
+    } 
 
     printf("\n");
 

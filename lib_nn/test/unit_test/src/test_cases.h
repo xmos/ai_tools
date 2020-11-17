@@ -34,3 +34,5 @@ void test_bnn_conv2d_int8();
 void test_bnn_conv2d_int8_SISO();
 void test_pad();
 void test_bsign_8();
+
+void test_bnn_conv2d_quant();

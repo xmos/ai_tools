@@ -9,8 +9,8 @@ int pseudo_rand(int *seed){
 }
 
 //TODO pass the clamps
-void pick_post_activation_values(float * post_activation_multiplier, float * post_activation_bias, 
-  unsigned chans_out, unsigned receptive_volume, int seed){
+void pick_post_activation_params(float * post_activation_multiplier, float * post_activation_bias, 
+  unsigned chans_out, unsigned receptive_volume, int * seed){
 
 /*
   std::int8_t Run(const std::int32_t accum, int out_channel) const {
@@ -38,12 +38,12 @@ void pick_post_activation_values(float * post_activation_multiplier, float * pos
 
     // Scale the input to extend beyond the range of the output such that we get some 
     // outputs that will saturate.
-    float output_overscale = 0.5 + (float)pseudo_rand(&seed)/(float)INT32_MAX;
+    float output_overscale = 0.5 + (float)pseudo_rand(seed)/(float)INT32_MAX;
 
     float output_range = (output_max - output_min)*output_overscale;
 
     // This offset allows the output range to completly miss the int8 output range sometimes
-    float offset = 1.1 * output_range * (float)pseudo_rand(&seed)/(float)INT32_MAX;
+    float offset = 1.1 * output_range * (float)pseudo_rand(seed)/(float)INT32_MAX;
 
     post_activation_multiplier[ch] = output_range / input_range;
     post_activation_bias[ch] = output_min*output_overscale - accu_min* output_range / input_range + offset;

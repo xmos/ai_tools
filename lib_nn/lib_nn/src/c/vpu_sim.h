@@ -56,3 +56,8 @@ void VDEPTH16(xs3_vpu* vpu);
 
 /** Print vector register contents based on current vector_mode **/
 void vpu_sim_print(xs3_vpu* vpu);
+
+//Function for implementing the saturation logic within the VPU.
+int64_t vpu_saturate(
+    const int64_t input,
+    const unsigned bits);

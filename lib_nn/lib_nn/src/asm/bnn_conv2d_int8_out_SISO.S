@@ -16,21 +16,6 @@ VECT_INT16_MAX:
 .text
 
 .section        .cp.const32,"aMc",@progbits,32
-.cc_top VECT_ZEROS.data
-.align 4
-VECT_ZEROS:
-.word    0x00000000
-.word    0x00000000
-.word    0x00000000
-.word    0x00000000
-.word    0x00000000
-.word    0x00000000
-.word    0x00000000
-.word    0x00000000
-.cc_bottom VECT_ZEROS.data
-.text
-
-.section        .cp.const32,"aMc",@progbits,32
 .cc_top VECT_INT8_MIN.data
 .align 4
 VECT_INT8_MIN:
@@ -178,10 +163,8 @@ VECT_INT8_MIN:
 #define S_SAVE_R8               69
 #define S_SAVE_R9               70
 
-#define S_T                     71
 
-
-#define NSTACKWORDS  90 //TODO
+#define NSTACKWORDS  72 //TODO
 
 
 //Helpers that reference the above
@@ -322,7 +305,7 @@ bnn_compute_patch:
     ldw t, sp[S_FINAL_SHR]
     {vlsat t[0]; ldaw s, sp[S_TEMP]}
 
-    {nop; ldaw t, cp[VECT_INT16_MAX]}
+    {ldaw t, cp[VECT_INT16_MAX]}
     {vstr s[0]; nop}
     {vladd t[0]; nop}
     {vdepth1; mkmsk t, 4}

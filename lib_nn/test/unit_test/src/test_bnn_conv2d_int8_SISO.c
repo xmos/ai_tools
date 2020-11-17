@@ -43,7 +43,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
 
   unsigned receptive_volume = k_width * k_height * chans_in;
 
-  pick_post_activation_values(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, seed);
+  pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
 
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     Y_ref_p[e]=0;
@@ -98,9 +98,6 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     &x, &y, &k,
     0, 0, y_width, y_height,
     0, 0);
-
-  // for (unsigned e=0;e<y_height * y_width * chans_out;++e)
-  //   printf("Y_ref_p: %d Y_p:%d\n",  Y_ref_p[e], Y_p[e]);
 
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
@@ -250,9 +247,7 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_random() {
                   assert(post_activation_multiplier);
                   assert(post_activation_bias);
                   assert(chan_overlaps);
-
-                  //printf("%p %p %p %p %p %p %p\n", X_ref, Y, Y_ref, post_activation_multiplier_q, post_activation_bias_q, data_scratch, K);
-
+                  
                   // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
                   //   h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out);
 
@@ -382,9 +377,13 @@ void test_bnn_conv2d_int8_out_SISO_pseudo_random2() {
           //    k_height, k_width, x_height, x_width, chans_in, chans_out);
 
           int seed = 42;
-          srand(seed);
-          pseudo_rand_bytes((char*)X_ref, X_ref_bytes);
-          pseudo_rand_bytes((char*)K_ref, K_ref_bytes);
+
+          for(unsigned b=0;b<X_ref_bytes/sizeof(int);b++)
+            ((int*)X_ref)[b] = pseudo_rand(&seed);
+
+          
+          for(unsigned b=0;b<K_ref_bytes/sizeof(int);b++)
+            ((int*)K_ref)[b] = pseudo_rand(&seed);
 
           run_int8_config(
               (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
@@ -495,7 +494,7 @@ void test_bnn_conv2d_int8_out_SISO_sub_image(){
   #define MAX_V_STRIDE 5
   #define MAX_H_STRIDE 5
 
-  srand(42);
+  int seed = 42;
 
   for(unsigned chans_out = MIN_CHANS_OUT; chans_out <= MAX_CHANS_OUT; chans_out += 4){
     for(unsigned chans_in = MIN_CHANS_IN; chans_in <= MAX_CHANS_IN; chans_in += 32){
@@ -543,12 +542,15 @@ void test_bnn_conv2d_int8_out_SISO_sub_image(){
 
           for(unsigned i=0;i<1<<6;i++){
 
-            pseudo_rand_bytes((char*)K_ref, K_ref_bytes);
-            pseudo_rand_bytes((char*)X_ref, X_ref_bytes);
+            for(unsigned b=0;b<X_ref_bytes/sizeof(int);b++)
+              ((int*)X_ref)[b] = pseudo_rand(&seed);
+            
+            for(unsigned b=0;b<K_ref_bytes/sizeof(int);b++)
+              ((int*)K_ref)[b] = pseudo_rand(&seed);
 
             unsigned receptive_volume = k.shape.width * k.shape.height * x.channels;
 
-            pick_post_activation_values(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, rand());
+            pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
 
             //Calculate the entire reference image
             larq_ref_bconv2d_int8_out(&x, &y, &k, (const int32_t*)X_ref, (const int32_t*)K_ref,

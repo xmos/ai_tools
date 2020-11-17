@@ -1,4 +1,5 @@
 NUM_PROCS := 4
+CLOBBER_FLAG := '-c'
 
 .DEFAULT_GOAL := help
 
@@ -21,7 +22,8 @@ lib_nn_test: lib_nn_build
 
 .PHONY: xcore_interpreters_build
 xcore_interpreters_build:
-	cd xcore_interpreters && bash build_binaries.sh
+	cd xcore_interpreters/python_bindings && bash build.sh $(CLOBBER_FLAG)
+	cd xcore_interpreters/xcore_firmware && bash build.sh $(CLOBBER_FLAG)
 
 .PHONY: xcore_interpreters_unit_test
 xcore_interpreters_unit_test:
@@ -41,7 +43,7 @@ xcore_interpreters_dist_test:
 
 .PHONY: lib_flexbuffers_build
 lib_flexbuffers_build:
-	cd utils/lib_flexbuffers && bash build.sh
+	cd utils/lib_flexbuffers && bash build.sh $(CLOBBER_FLAG)
 
 .PHONY: tflite2xcore_unit_test
 tflite2xcore_unit_test:
@@ -70,6 +72,7 @@ integration_test:
 
 .PHONY: ci 
 #TODO: Add lib_nn_test target when CI system connected HW
+ci: CLOBBER_FLAG = '-c'
 ci: lib_nn_build \
  lib_flexbuffers_build \
  tflite2xcore_unit_test \
@@ -77,9 +80,7 @@ ci: lib_nn_build \
  xcore_interpreters_build \
  xcore_interpreters_unit_test \
  xcore_interpreters_dist_test \
- integration_test
-
-#**************************
+ integration_testsubmodule_update lib_flexbuffers_build xcore_interpreters_build
 # ALL tests target
 #**************************
 
@@ -98,8 +99,16 @@ test: lib_nn_test \
 submodule_update: 
 	git submodule update --init --recursive
 
+.PHONY: _develop
+_develop: submodule_update lib_flexbuffers_build xcore_interpreters_build
+
 .PHONY: develop
-develop: submodule_update xcore_interpreters_build
+develop: CLOBBER_FLAG=''
+develop: _develop
+
+.PHONY: clobber
+clobber: CLOBBER_FLAG='-c'
+clobber: _develop
 
 .PHONY: help
 help:
@@ -109,6 +118,7 @@ help:
 	$(info )
 	$(info primary targets:)
 	$(info   develop                       Update submodules and build utils)
+	$(info   clobber                       Update submodules and build utils with clobber flag enabled)
 	$(info   ci                            Run continuous integration build and test (requires Conda environment))
 	$(info   integration_test              Run integration tests (requires Conda environment))
 	$(info   test                          Run all tests (requires Conda environment & connected hardware))

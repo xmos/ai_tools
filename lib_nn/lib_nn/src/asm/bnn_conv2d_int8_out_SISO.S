@@ -13,7 +13,6 @@ VECT_INT16_MAX:
 .word    0x7f007f00
 .word    0x7f007f00
 .cc_bottom VECT_INT16_MAX.data
-.text
 
 .section        .cp.const32,"aMc",@progbits,32
 .cc_top VECT_INT8_MIN.data
@@ -305,14 +304,14 @@ bnn_compute_patch:
     ldw t, sp[S_FINAL_SHR]
     {vlsat t[0]; ldaw s, sp[S_TEMP]}
 
-    {ldaw t, cp[VECT_INT16_MAX]}
+    ldaw t, cp[VECT_INT16_MAX]
     {vstr s[0]; nop}
     {vladd t[0]; nop}
     {vdepth1; mkmsk t, 4}
 
     vstrpv Y_p[0], t //let's use Y_p as we have it avaliable and we're going to write to it later anyway
 
-    {ldaw t, cp[VECT_INT8_MIN]}
+    ldaw t, cp[VECT_INT8_MIN]
     {ldw s, Y_p[0]; nop}
 
     {retsp 0; nop}

@@ -84,8 +84,8 @@ void test_quantisation(){
 
   int seed = 0;
   for(unsigned k_dim=1;k_dim < 7;k_dim += 2){
-    for(unsigned chans_in=32; chans_in< 32*8; chans_in+=32){
-      for(unsigned chans_out=4; chans_out < 1024; chans_out+=4){
+    for(unsigned chans_in=32; chans_in< 32*5; chans_in+=32){
+      for(unsigned chans_out=4; chans_out < 128; chans_out+=4){
 
         unsigned receptive_volume = k_dim*chans_in; 
 
@@ -131,10 +131,16 @@ void test_quantisation(){
             accu_shr, bias_multipler, final_shr, receptive_volume, 
 
             &error_sum, &abs_error_sum, &sum_count);
+        free(post_activation_multiplier_q);
+        free(post_activation_bias_q);
+
+        free(post_activation_multiplier);
+        free(post_activation_bias);
+        free( chan_overlaps);
       }
     }
   }
-  printf("%f %f %d\n", error_sum / sum_count, abs_error_sum / sum_count, sum_count); 
+  // printf("%f %f %d\n", error_sum / sum_count, abs_error_sum / sum_count, sum_count); 
 }
 
 void test_bnn_conv2d_quant() {

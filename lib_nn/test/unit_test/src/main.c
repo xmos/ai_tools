@@ -43,8 +43,10 @@ int main(void) {
     test_pad();
     test_bnn_conv2d_bin();
     test_bnn_conv2d_int8();
-    test_bnn_conv2d_bin_SISO();
+    // test_bnn_conv2d_bin_SISO(); //disabled until refactored to reduce memory usage
     test_bnn_conv2d_int8_SISO();
+
+    test_bnn_conv2d_quant();
 
   return UNITY_END();
 }

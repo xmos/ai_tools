@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.xcore_model import XCOREModel
@@ -9,67 +9,203 @@ from tflite2xcore import transformation_passes as passes
 
 
 class CleanupManager(PassManager):
-    def __init__(self, model=None, **kwargs):
-        super().__init__(
-            model,
-            passes=[
-                passes.EliminateDeadOperatorsPass(),
-                passes.EliminateDeadTensorsPass(),
-                passes.EliminateDeadBuffersPass(),
-            ],
-            **kwargs,
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
+        super().__init__(model, **kwargs)
+        self.register_pass(passes.EliminateDeadOperatorsPass())
+        self.register_pass(passes.EliminateDeadTensorsPass())
+        self.register_pass(passes.EliminateDeadBuffersPass())
+
+
+class BasicCanonicalizationManager(PassManager):
+    def __init__(
+        self,
+        model: Optional[XCOREModel] = None,
+        *,
+        remove_float_interface: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(model, **kwargs)
+        if remove_float_interface:
+            self.register_pass(passes.CanonicalizeQuantizedInputPass())
+            self.register_pass(passes.CanonicalizeQuantizedOutputPass())
+
+        # start with a round of constant folding
+        self.register_pass(passes.ConstantPropagationPass())
+
+        # canonicalize single pixel convolution
+        # 1x1 convolutions acting on 1x1 inputs (without padding) map trivially
+        # to a fully connected, so we canoncalize these to a builtin FULLY_CONNECTED
+        self.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
+
+        # canonicalize reshape
+        # this ensures that RESHAPE has a single input tensor
+        # (no dynamic reshapes are currently supported)
+        self.register_pass(passes.CanonicalizeReshapePass())
+        self.register_passes(CleanupManager())  # this is needed
+
+        # canonicalize fully connected shapes
+        # the FC implementation flattens implicitly, so we remove RESHAPES before
+        # and after FULLY_CONNECTED ops
+        self.register_pass(passes.RemovePrecedingReshapePass())
+        self.register_pass(passes.RemoveSubsequentReshapePass())
+
+        # canonicalize single channel depthwise convolutions
+        # depthwise convolutions with one input channel map trivially to ordinary
+        # convolutions with `depth_multiplier` output channels
+        self.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
+        self.register_pass(passes.LegalizeSingleinConv2DPass())
+
+        # canonicalize quantize ops
+        # two consecutive quantize ops have no effect besides adding error
+        self.register_pass(passes.RemoveRedundantInt8RequantizationPass())
+        # the TFLM interpreter does not support newer versions of quantized
+        # so we downgrade where safe
+        self.register_pass(passes.LegalizeQuantizeVersionPass())
+
+        # need to cleanup after the intial canonicalization
+        self.register_passes(CleanupManager())
+
+
+class WordAlignmentCanonicalizationManager(PassManager):
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
+        super().__init__(model, **kwargs)
+
+        # canonicalize word alignment of inputs
+        # we insert explicit channel-wise padding to ensure that
+        # input channel counts to convolutions are divisible by 4
+        # (this is currently required by our kernels)
+        self.register_pass(passes.CanonicalizeConv2DInputChannels())
+
+        # canonicalize padding
+        # this pass tries to fuse PAD ops, usually because they were inserted
+        # by the word alignment passes
+        self.register_pass(passes.FuseConsecutivePadsPass())
+
+
+class ActivationLoweringManager(PassManager):
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
+        super().__init__(model, **kwargs)
+
+        # first we match ops and replace them
+        self.register_pass(passes.ReplaceReLUPass())
+        self.register_pass(passes.ReplaceReLU6Pass())
+        self.register_pass(passes.ReplaceTanhPass())
+        self.register_pass(passes.ReplaceLogisticPass())
+
+        # second we legalize the op by calculating the LUT
+        self.register_pass(passes.LegalizeXCLookupTablePass())
+
+
+class PoolingLoweringManager(PassManager):
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
+        super().__init__(model, **kwargs)
+
+        self.register_pass(passes.ReplaceMaxPool2D2x2Pass())
+        self.register_pass(passes.ReplaceMaxPool2DPass())
+        self.register_pass(passes.ReplaceAveragePool2D2x2Pass())
+        self.register_pass(passes.ReplaceAveragePool2DPass())
+        self.register_pass(passes.ReplaceGlobalAveragePool2DPass())
+
+
+class ParametricOperatorLoweringManager(PassManager):
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
+        super().__init__(model, **kwargs)
+
+        # first we match ops and replace them
+        self.register_pass(passes.ReplaceFullyConnectedPass())
+        self.register_pass(passes.Replace1x1Conv2dPass())
+        self.register_pass(passes.ReplaceShallowinConv2dPass())
+        self.register_pass(passes.ReplaceDepthwiseConv2dPass())
+        self.register_pass(passes.ReplaceDeepConv2dPass())
+
+        # second we legalize them by reshaping weight/bias tensors,
+        # calculating parameters specific to our kernels,
+        # and populating the custom options
+        self.register_pass(passes.LegalizeXCFullyConnectedPass())
+        self.register_pass(passes.LegalizeXC1x1ConvPass())
+        self.register_pass(passes.LegalizeXCShallowinConvPass())
+        self.register_pass(passes.LegalizeXCDepthwiseConvPass())
+        self.register_pass(passes.LegalizeXCDeepConvPass())
+
+
+class PaddingOptimizationManager(PassManager):
+    def __init__(
+        self,
+        model: Optional[XCOREModel] = None,
+        *,
+        ignore_input_alignment: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(model, **kwargs)
+
+        # we optimize the convolutions by fusing it with spatial padding
+        # Split batch/channel-wise padding from spatial padding
+        self.register_pass(passes.SplitPaddingPass())
+        # Fuse spatial padding with conv2d
+        self.register_pass(passes.FuseConv2dPaddingPass())
+        if ignore_input_alignment:
+            # remove word alignment padding on the input
+            self.register_pass(passes.RemovePaddingInputPass())
+        self.register_pass(passes.FuseConsecutivePadsPass())
+
+
+class ParallelizationManager(PassManager):
+    def __init__(
+        self, model: Optional[XCOREModel] = None, *, num_threads: int = 1, **kwargs: Any
+    ) -> None:
+        super().__init__(model, **kwargs)
+
+        self.register_pass(
+            passes.ParallelizeFullyConnectedPass(num_threads=num_threads)
         )
-
-
-class InputOutputCanonicalizationManager(PassManager):
-    def __init__(self, model=None, **kwargs):
-        super().__init__(
-            model,
-            passes=[
-                passes.CanonicalizeQuantizedInputPass(),
-                passes.CanonicalizeQuantizedOutputPass(),
-            ],
-            **kwargs,
+        self.register_pass(passes.ParallelizeConv2dPass(num_threads=num_threads))
+        self.register_pass(
+            passes.ParallelizeDepthwiseConv2dPass(num_threads=num_threads)
         )
+        self.register_pass(passes.ParallelizePooling2DPass(num_threads=num_threads))
+        self.register_pass(
+            passes.ParallelizeGlobalAveragePool2DPass(num_threads=num_threads)
+        )
+        # pass_mgr.register_pass(passes.ParallelizeRequant16To8Pass(num_threads=num_threads))  # intentionally disabled
+
+        # NOTE: scratch memory passes must be registered after parallelization passes
+        # TODO: it would be better if scratch memory calculation could be decoupled from parallelization
+        self.register_pass(passes.ScratchMemoryConv2dPass())
+        self.register_pass(passes.ScratchMemoryConv2d1x1Pass())
+        self.register_pass(passes.ScratchMemoryDepthwiseConv2dPass())
+        self.register_pass(passes.ScratchMemoryFullyConnectedPass())
 
 
-def strip_model(model, *, legalize_op_versions=True):
-    pass_mgr = InputOutputCanonicalizationManager(model)
+class BinarizedOperatorLoweringManager(PassManager):
+    def __init__(
+        self, model: Optional[XCOREModel] = None, *, num_threads: int = 1, **kwargs: Any
+    ) -> None:
+        super().__init__(model, **kwargs)
 
-    if legalize_op_versions:
-        pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
-
-    pass_mgr.register_passes(CleanupManager())
-
-    pass_mgr.run_passes()
-    model.description = model.description + " + XMOS stripped."
+        self.register_pass(passes.ReplaceLceQuantizePass())
 
 
-def add_float_input_output(model):
-    pass_mgr = PassManager(
-        model,
-        passes=[passes.LegalizeFloatInputPass(), passes.LegalizeFloatOutputPass()],
-    )
+class FinalizationManager(PassManager):
+    def __init__(
+        self,
+        model: Optional[XCOREModel] = None,
+        *,
+        cleanup: bool = True,
+        minification: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(model, **kwargs)
+        if cleanup:
+            self.register_passes(CleanupManager())
 
-    pass_mgr.run_passes()
-    model.description = model.description + " float interface."
+        # TODO: this is actually a canonicalization pass
+        self.register_pass(passes.LegalizeOperatorOutputTensorNamePass())
 
-    # fix input/output buffers so built-in interpreter could run it
-    assert len(model.subgraphs) == 1
-    subgraph = model.subgraphs[0]
-    assert len(subgraph.inputs) == 1
-    assert len(subgraph.outputs) == 1
-    input_tensor = subgraph.inputs[0]
-    output_tensor = subgraph.outputs[0]
+        self.register_pass(passes.FloatingPointWarningPass())
 
-    assert len(input_tensor.buffer.owners) == 1
-    input_tensor.buffer.owners = []
-    model.buffers.remove(input_tensor.buffer)
-
-    input_tensor.buffer = output_tensor.buffer
-    input_tensor.buffer.owners.append(input_tensor)
-    model.buffers.remove(input_tensor.buffer)
-    model.buffers.insert(0, input_tensor.buffer)
+        if minification:
+            self.register_pass(passes.MinifyQuantInfoPass())
+            self.register_pass(passes.MinifyTensorNamesPass())
 
 
 def optimize_for_xcore(
@@ -80,108 +216,31 @@ def optimize_for_xcore(
     num_threads: int = 1,
     intermediates_path: Optional[Union[str, Path]] = None,
     ignore_input_alignment: bool = False,
+    remove_float_interface: bool = False,  # TODO: add this to xformer
 ) -> None:
-    # NOTE: the order of the passes is mostly strict
-    pass_mgr = InputOutputCanonicalizationManager(
-        model, keep_intermediates=bool(intermediates_path)
+    pass_mgr = PassManager(model, keep_intermediates=bool(intermediates_path))
+
+    # canonicalization
+    pass_mgr.register_passes(
+        BasicCanonicalizationManager(remove_float_interface=remove_float_interface)
     )
+    pass_mgr.register_passes(WordAlignmentCanonicalizationManager())
 
-    # one round of constant folding
-    pass_mgr.register_pass(passes.ConstantPropagationPass())
+    # lowering to the xcore ops
+    pass_mgr.register_passes(ActivationLoweringManager())
+    pass_mgr.register_passes(PoolingLoweringManager())
+    pass_mgr.register_passes(ParametricOperatorLoweringManager())
+    pass_mgr.register_passes(BinarizedOperatorLoweringManager())
 
-    # canonicalize fully connected
-    pass_mgr.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
-
-    # canonicalize reshape
-    pass_mgr.register_pass(passes.CanonicalizeReshapePass())
-    pass_mgr.register_passes(CleanupManager())
-    pass_mgr.register_pass(passes.RemovePrecedingReshapePass())
-    pass_mgr.register_pass(passes.RemoveSubsequentReshapePass())
-
-    # canonicalize convolutions
-    pass_mgr.register_pass(passes.CanonicalizeSingleinDepthwiseConv2DPass())
-    pass_mgr.register_pass(passes.LegalizeSingleinConv2DPass())
-
-    # canonicalize quantize ops
-    pass_mgr.register_pass(passes.RemoveRedundantInt8RequantizationPass())
-    pass_mgr.register_pass(passes.ReplaceLceQuantizePass())
-
-    # canonicalize word alignment
-    pass_mgr.register_pass(passes.CanonicalizeConv2DInputChannels())
-
-    # canonicalize padding
-    pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
-
-    # need to cleanup after the first round of canonicalization
-    pass_mgr.register_passes(CleanupManager())
-
-    pass_mgr.register_pass(passes.ReplaceReLUPass())
-    pass_mgr.register_pass(passes.ReplaceReLU6Pass())
-    pass_mgr.register_pass(passes.ReplaceTanhPass())
-    pass_mgr.register_pass(passes.ReplaceLogisticPass())
-
-    pass_mgr.register_pass(passes.Replace1x1Conv2dPass())
-    pass_mgr.register_pass(passes.ReplaceShallowinConv2dPass())
-    pass_mgr.register_pass(passes.ReplaceDepthwiseConv2dPass())
-    pass_mgr.register_pass(passes.ReplaceDeepConv2dPass())
-
-    pass_mgr.register_pass(passes.ReplaceMaxPool2D2x2Pass())
-    pass_mgr.register_pass(passes.ReplaceMaxPool2DPass())
-    pass_mgr.register_pass(passes.ReplaceAveragePool2D2x2Pass())
-    pass_mgr.register_pass(passes.ReplaceAveragePool2DPass())
-    pass_mgr.register_pass(passes.ReplaceGlobalAveragePool2DPass())
-
-    pass_mgr.register_pass(passes.ReplaceFullyConnectedPass())
-
-    pass_mgr.register_pass(passes.LegalizeXCLookupTablePass())
-    pass_mgr.register_pass(passes.LegalizeXCFullyConnectedPass())
-    pass_mgr.register_pass(passes.LegalizeXC1x1ConvPass())
-    pass_mgr.register_pass(passes.LegalizeXCShallowinConvPass())
-    pass_mgr.register_pass(passes.LegalizeXCDepthwiseConvPass())
-    pass_mgr.register_pass(passes.LegalizeXCDeepConvPass())
-
+    # TODO: finish these and find a manager for them:
     pass_mgr.register_pass(passes.ReplaceAddPass())
 
-    # Split batch/channel-wise padding from spatial padding
-    pass_mgr.register_pass(passes.SplitPaddingPass())
-    # Fuse spatial padding with conv2d
-    pass_mgr.register_pass(passes.FuseConv2dPaddingPass())
-    if ignore_input_alignment:
-        # remove word alignment padding on the input
-        pass_mgr.register_pass(passes.RemovePaddingInputPass())
-    pass_mgr.register_pass(passes.FuseConsecutivePadsPass())
+    # optimizations on xcore ops
+    pass_mgr.register_passes(PaddingOptimizationManager())
+    pass_mgr.register_passes(ParallelizationManager())
 
-    pass_mgr.register_pass(
-        passes.ParallelizeFullyConnectedPass(num_threads=num_threads)
-    )
-    # pass_mgr.register_pass(passes.ParallelizeRequant16To8Pass(num_threads=num_threads))  # intentionally disabled
-    pass_mgr.register_pass(passes.ParallelizeConv2dPass(num_threads=num_threads))
-    pass_mgr.register_pass(
-        passes.ParallelizeDepthwiseConv2dPass(num_threads=num_threads)
-    )
-    pass_mgr.register_pass(passes.ParallelizePooling2DPass(num_threads=num_threads))
-    pass_mgr.register_pass(
-        passes.ParallelizeGlobalAveragePool2DPass(num_threads=num_threads)
-    )
-
-    # NOTE: scratch memory passes must be registered after parallelization passes
-    pass_mgr.register_pass(passes.ScratchMemoryConv2dPass())
-    pass_mgr.register_pass(passes.ScratchMemoryConv2d1x1Pass())
-    pass_mgr.register_pass(passes.ScratchMemoryDepthwiseConv2dPass())
-    pass_mgr.register_pass(passes.ScratchMemoryFullyConnectedPass())
-
-    if cleanup:
-        pass_mgr.register_passes(CleanupManager())
-
-    # TODO: this is actually a canonicalization pass
-    pass_mgr.register_pass(passes.LegalizeOperatorOutputTensorNamePass())
-    pass_mgr.register_pass(passes.LegalizeQuantizeVersionPass())
-
-    pass_mgr.register_pass(passes.FloatingPointWarningPass())
-
-    if minification:
-        pass_mgr.register_pass(passes.MinifyQuantInfoPass())
-        pass_mgr.register_pass(passes.MinifyTensorNamesPass())
+    # finalize (cleanup, minification, renaming, etc.)
+    pass_mgr.register_passes(FinalizationManager())
 
     try:
         pass_mgr.run_passes()
@@ -195,13 +254,13 @@ def optimize_for_xcore(
 
 
 def convert(
-    tflite_input_path,
-    tflite_output_path,
+    tflite_input_path: Union[str, Path],
+    tflite_output_path: Union[str, Path],
     *,
-    num_threads=None,
-    minification=False,
-    intermediates_path=None,
-):
+    num_threads: Optional[int] = None,
+    minification: bool = False,
+    intermediates_path: Optional[Union[str, Path]] = None,
+) -> None:
     num_threads = num_threads or 1
     model = XCOREModel.read_flatbuffer(tflite_input_path)
     optimize_for_xcore(

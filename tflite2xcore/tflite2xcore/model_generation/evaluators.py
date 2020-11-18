@@ -167,11 +167,20 @@ class XCoreEvaluator(TFLiteQuantEvaluator):
         super().__init__(runner, input_data_hook, model_hook)
         self._use_device = use_device
 
-    def set_interpreter(self) -> None:
+    def evaluate(self) -> None:
         if self._use_device:
             self._interpreter = XCOREDeviceInterpreter(model_content=self._model_hook())
         else:
             self._interpreter = XCOREInterpreter(model_content=self._model_hook())
+
+        with self._interpreter:
+            self._interpreter.allocate_tensors()
+            self.set_input_data()
+            self.output_data = apply_interpreter_to_examples(
+                self._interpreter, self.input_data
+            )
+
+        del self._interpreter
 
 
 class LarqEvaluator(Evaluator):

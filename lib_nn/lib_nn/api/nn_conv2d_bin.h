@@ -2,6 +2,49 @@
 #include "nn_conv2d_structs.h"
 #include "nn_binary_structs.h"
 // Binary Conv2D
+
+/**
+ * Reference implementation of the post accumulation activation.
+ * 
+ * @param vpu_acc                       [in]     The output of the accumulator 
+ * @param ch                            [in]     The channel to apply the post activation to
+ * @param post_activation_multiplier_q  [in]     Array of post activation multipliers
+ * @param post_activation_bias_q        [in]     Array of post activation biases
+ * @param accu_shr                      [in]     The amount to arithemetic shift the vpu_acc right by.
+ * @param bias_multipler                [in]     The amount to multiply the post_activation_bias_q by.
+ * @param final_shr                     [in]     The final shift right of the product to normalise the output.
+ * 
+ */
+int8_t bnn_post_activation_reference(
+              const int32_t vpu_acc,
+              const unsigned ch,
+              const int16_t * post_activation_multiplier_q,
+              const int16_t* post_activation_bias_q,
+              const int accu_shr,
+              const int16_t bias_multipler,
+              const int final_shr);
+/**
+ * Reference implementation of activation quantisation. 
+ */
+void bnn_quantise_activation(
+               int16_t * post_activation_multiplier_q,
+               int16_t* post_activation_bias_q,
+
+               float* post_activation_multiplier,
+               float* post_activation_bias, 
+
+               unsigned chans_out,
+
+               int32_t clamp_low,
+               int32_t clamp_high,
+
+               int *accu_shr,
+               int16_t *bias_multipler,
+               int *final_shr,
+
+               int32_t receptive_volume, 
+               int * chan_overlaps
+);
   
 /**  
  * @brief Execute @oper{bnn_reorder_threshold_tensor}.
@@ -29,38 +72,7 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
                                   const unsigned chans_out,
                                   const unsigned receptive_field,
                                   int *chan_overlaps) ;
-    
-/**  
- * @brief Execute @oper{bnn_reorder_multiplier_and_bias_tensors}.
- * 
- * This reorders the post_activation_multiplier and post_activation_bias tensors 
- * for efficient execution by bnn_conv2d_int8_out_asm. 
- * This is only inteneded for testing.
- * 
- * `post_activation_multiplier_q_reordered` points to the output threshold @tensor{post_activation_multiplier_q_reordered} .
- * 
- * `post_activation_multiplier_q` points to the input @tensor{post_activation_multiplier_q}.
- * 
- * `post_activation_bias_q_reordered` points to the output threshold @tensor{post_activation_bias_q_reordered} .
- * 
- * `post_activation_bias_q` points to the input @tensor{post_activation_bias_q}.
- * 
- * `chans_out` is the number of output channels.
- * 
- * 
- * @param post_activation_multiplier_q_reordered   [out]    The output @tensor{post_activation_multiplier_q_reordered}
- * @param post_activation_multiplier_q             [in]     The input @tensor{post_activation_multiplier_q}
- * @param post_activation_bias_q_reordered         [out]    The output @tensor{post_activation_bias_q_reordered}
- * @param post_activation_bias_q                   [in]     The input @tensor{post_activation_bias_q}
- * @param chans_out                                [in]     The number of output channels
- */
-void bnn_reorder_multiplier_and_bias_tensors(
-                                  int16_t* post_activation_multiplier_q_reordered,
-                                  const int16_t* post_activation_multiplier_q,
-                                  int16_t* post_activation_bias_q_reordered,
-                                  const int16_t* post_activation_bias_q,
-                                  const unsigned chans_out);
-
+ 
 /**  
  * @brief Execute @oper{bnn_reorder_kernel_tensor}.
  * 
@@ -85,6 +97,7 @@ void bnn_reorder_multiplier_and_bias_tensors(
  * @param k_width     [in]     The kernel width
  * @param chans_in    [in]     The number of input channels
  * @param chans_out   [in]     The number of output channels
+ * @param chan_overlaps   [in]     Array of the overlap between one channel and the next
  */
 void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
@@ -118,10 +131,11 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
  * @param chans_in    [in]     The number of input channels
  * @param chans_out   [in]     The number of output channels
  */                          
-void bnn_reorder_int8_kernel_tensor(bnn_b256_t* K_p, const bnn_b256_t* K_ref_p,
+void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
-                               const unsigned chans_out);
+                               const unsigned chans_out, 
+                               int * chan_overlaps) ;//TODO
 
 /**  
  * @brief Execute @oper{bnn_conv2d_int8_out_valid}.
@@ -163,6 +177,7 @@ void bnn_conv2d_int8_out_valid(int8_t* Y_p,
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
     const int accu_shr,
+    const int16_t bias_multiplier,
     const int final_shr,
 
     const nn_image_params_t* x,
@@ -170,6 +185,26 @@ void bnn_conv2d_int8_out_valid(int8_t* Y_p,
     const nn_window_params_t* k, 
 
     const unsigned y_h_loc, const unsigned y_v_loc,
+    const unsigned y_sub_width, const unsigned y_sub_height
+);
+
+
+void bnn_conv2d_int8_out_SISO_valid(int8_t* Y_p,
+    const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
+    
+    const int16_t* post_activation_multiplier_q, 
+    const int16_t* post_activation_bias_q,
+    const int accu_shr,
+    const int16_t bias_multiplier,
+    const int final_shr,
+
+    bnn_b32_t * data_scratch,
+
+    const nn_image_params_t* x,
+    const nn_image_params_t* y,
+    const nn_window_params_t* k, 
+
+    const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height
 );
 
@@ -380,10 +415,6 @@ void bnn_conv2d_bin_out_SISO(bnn_b32_t* Y_p,
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  * @param x_h_loc       [in]     The x coordinate(horizontal) of where the input will start reading from
  * @param x_v_loc       [in]     The y coordinate(vertical) of where the input will start reading from
- * @param k_h_loc       [in]     The x coordinate(horizontal) of where the kernel will start reading from
- * @param k_v_loc       [in]     The y coordinate(vertical) of where the kernel will start reading from
- * @param k_sub_width   [in]     The width of the input sub-kernel that will be computed
- * @param k_sub_height  [in]     The height of the input sub-kernel that will be computed
  */
 void bnn_conv2d_int8_out(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
@@ -391,6 +422,7 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
     const int16_t* post_activation_multiplier, 
     const int16_t* post_activation_bias,
     const int accu_shr,
+    const int16_t bias_multipler,
     const int final_shr,
     
     const nn_image_params_t* x, //The full image of x
@@ -400,8 +432,26 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
     const unsigned y_h_loc, const unsigned y_v_loc,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_h_loc, const unsigned x_v_loc, 
+    const unsigned x_h_loc, const unsigned x_v_loc
+) ;
+
+void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
+    const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
     
-    const unsigned k_h_loc, const unsigned k_v_loc, 
-    const unsigned k_sub_width, const unsigned k_sub_height
+    const int16_t* post_activation_multiplier_q, 
+    const int16_t* post_activation_bias_q,
+    const int accu_shr,
+    const int16_t bias_multipler,
+    const int final_shr,
+
+    bnn_b32_t * data_scratch,
+    
+    const nn_image_params_t* x, //The full image of x
+    const nn_image_params_t* y, // the full image of y
+    const nn_window_params_t* k, //the full kernel k
+    
+    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_sub_width, const unsigned y_sub_height,
+
+    const unsigned x_loc_x, const unsigned x_loc_y
 ) ;

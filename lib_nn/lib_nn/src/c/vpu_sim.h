@@ -49,9 +49,15 @@ void VLMACCR1(xs3_vpu* vpu, const void* addr);
 void VLSAT(xs3_vpu* vpu, const void* addr);
 void VLASHR(xs3_vpu* vpu, const void* addr, const int32_t shr);
 void VLADD(xs3_vpu* vpu, const void* addr);
+void VLMUL(xs3_vpu* vpu, const void* addr);
 void VDEPTH1(xs3_vpu* vpu);
 void VDEPTH8(xs3_vpu* vpu);
 void VDEPTH16(xs3_vpu* vpu);
 
 /** Print vector register contents based on current vector_mode **/
 void vpu_sim_print(xs3_vpu* vpu);
+
+//Function for implementing the saturation logic within the VPU.
+int64_t vpu_saturate(
+    const int64_t input,
+    const unsigned bits);

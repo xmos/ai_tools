@@ -8,6 +8,7 @@ from tflite2xcore.xcore_schema import (
     BuiltinOpCodes,
     XCOREOpCodes,
     OperatorCode,
+    Operator,
 )
 
 from .transformation_passes import OperatorMatchingPass
@@ -272,3 +273,23 @@ class RemovePaddingInputPass(OperatorMatchingPass):
         subgraph.inputs.append(op.outputs[0])
         subgraph.remove_tensor(op.inputs[0])  # DCE doesn't clean up subgraph inputs
         subgraph.remove_operator(op)
+
+
+class ReplacePadPass(OperatorMatchingPass):
+    @property
+    def new_opcode(self) -> OperatorCode:
+        return OperatorCode(XCOREOpCodes.XC_pad)
+
+    def match(self, op: Operator) -> bool:
+        if super().match and op.operator_code.code is BuiltinOpCodes.PAD:
+            padding = op.inputs[1].as_array().tolist()
+
+            # match spatial pad only
+            if len(padding) == 4 and padding[-1] == [0, 0] and padding[0] == [0, 0]:
+                bytes_per_pixel = op.inputs[0].type.sizeof() * op.inputs[0].shape[3]
+                return bytes_per_pixel % 4 == 0
+
+        return False
+
+    def mutate(self, op: Operator) -> None:
+        raise NotImplementedError()

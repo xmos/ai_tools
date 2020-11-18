@@ -97,6 +97,8 @@ from .lce_passes import (
     ReplaceBconv2DBitpackedDeepInPass,
     ReplaceLceQuantizePass,
     LegalizeXCBconv2DPaddingPass,
+    LegalizeBconv2dBitpackedPass,
+    LegalizeBconv2dBitpackedDeepInPass,
 )
 
 from .warning_passes import FloatingPointWarningPass

@@ -48,9 +48,10 @@ from ..test_conv2d import Conv2dWordAlignedTestModelGenerator
 
 class LarqCompositeTestModelGenerator(Conv2dWordAlignedTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
-        cfg["input_init"] = input_init = cfg.pop("input_init", ("RandomUniform", -1, 1))
-        assert len(input_init) == 3 and input_init[0] == "RandomUniform"
-        self._config["input_range"] = input_init[1:]
+        self._config["input_range"] = input_range = cfg.pop("input_range")
+        assert len(input_range) == 2
+        assert input_range[0] <= 0 <= input_range[1]
+        cfg["input_init"] = cfg.pop("input_init", ("RandomUniform", *input_range))
         super()._set_config(cfg)
 
     def _op_layer(
@@ -86,6 +87,17 @@ class LarqCompositeTestModelGenerator(Conv2dWordAlignedTestModelGenerator):
 
 
 class BConv2dGenericTestModelGenerator(LarqCompositeTestModelGenerator):
+    def _set_config(self, cfg: Configuration) -> None:
+        assert (
+            "input_range" not in cfg
+        ), f"input_range cannot be specified for BConv2d tests"
+        cfg["input_range"] = (np.iinfo(np.int32).min, np.iinfo(np.int32).max)
+
+        assert (
+            "input_init" not in cfg
+        ), f"input_init cannot be specified for BConv2d tests"
+        super()._set_config(cfg)
+
     def check_config(self) -> None:
         super().check_config()
         assert (

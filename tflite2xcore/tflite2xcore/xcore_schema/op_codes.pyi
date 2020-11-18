@@ -141,6 +141,7 @@ class ExternalOpCodes(aenum.Enum):  # type: ignore
     def add_new_opcode(cls: Type[ExternalOpCodes], name: str) -> ExternalOpCodes: ...
 
 class XCOREOpCodes(enum.Enum):
+    DUMMY: XCOREOpCodes
     XC_lookup_8: XCOREOpCodes
     XC_argmax_16: XCOREOpCodes
     XC_maxpool2d: XCOREOpCodes

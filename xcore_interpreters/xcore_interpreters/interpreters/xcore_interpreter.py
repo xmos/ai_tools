@@ -5,7 +5,7 @@ import numpy as np
 from enum import Enum
 from typing import Sequence
 
-from tflite2xcore import libtflite2xcore as lib
+from xcore_interpreters import libxcore_interpreters as lib
 
 from . import MAX_TENSOR_ARENA_SIZE, _TensorDetails
 

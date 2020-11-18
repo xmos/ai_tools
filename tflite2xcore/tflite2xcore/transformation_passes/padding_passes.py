@@ -291,5 +291,11 @@ class ReplacePadPass(OperatorMatchingPass):
 
         return False
 
-    def mutate(self, op: Operator) -> None:
-        raise NotImplementedError()
+    def mutate(self, op: Operator) -> Operator:
+        new_op = op.subgraph.create_operator(
+            self.new_opcode, inputs=op.inputs, outputs=op.outputs
+        )
+        new_op.subgraph.replace_operator(op, new_op)
+
+        new_op.add_custom_options(pad_value=0)
+        return new_op

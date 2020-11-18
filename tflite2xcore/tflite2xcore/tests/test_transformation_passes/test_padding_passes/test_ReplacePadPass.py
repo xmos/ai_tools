@@ -60,5 +60,34 @@ def model(input_shape: Tuple[int, int, int, int], paddings: PaddingType) -> XCOR
 #  ----------------------------------------------------------------------------
 
 
+def test_mutate(
+    trf_pass: ReplacePadPass, model: XCOREModel, new_opcode: XCOREOpCodes
+) -> None:
+    # extract original padding values
+    subgraph = model.subgraphs[0]
+    params_ori = subgraph.operators[-1].inputs[1].as_array().tolist()
+
+    # run mutating pass
+    trf_pass.run(model)
+    model.sanity_check()
+
+    _test_replace_mutate(trf_pass, model, new_opcode)
+
+    # check operators
+    operators = subgraph.operators
+    assert len(operators) == 1
+    op = operators[0]
+
+    # check tensors
+    assert len(op.inputs) == 2
+    assert len(op.outputs) == 1
+
+    # check parameters
+    params_new = op.inputs[1].as_array().tolist()
+    assert params_new == params_ori
+
+    assert op.custom_options["pad_value"] == 0
+
+
 if __name__ == "__main__":
     pytest.main()

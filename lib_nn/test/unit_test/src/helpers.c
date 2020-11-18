@@ -9,6 +9,48 @@ int pseudo_rand(int *seed){
 }
 
 //TODO pass the clamps
+void pick_extreme_bias_post_activation_params(float * post_activation_multiplier, float * post_activation_bias, 
+  unsigned chans_out, unsigned receptive_volume, int * seed){
+
+  //The input range is from 0 to the receptive_volume (xor_popcount)
+  float accu_min = 0; 
+  float accu_max = receptive_volume*2; //the times 2 is due to the left shift in the output transform. 
+
+  float input_range = accu_max - accu_min;
+
+  float output_min = (float)INT8_MIN; 
+  float output_max = (float)INT8_MAX; 
+  float output_range = (output_max - output_min);
+
+  for (unsigned ch = 0; ch < chans_out; ch++){
+    float offset = 1024. * output_range * (float)pseudo_rand(seed)/(float)INT32_MAX;
+    post_activation_multiplier[ch] = output_range / input_range;
+    post_activation_bias[ch] = output_min - accu_min* output_range / input_range + offset;
+  }
+}
+//TODO pass the clamps
+void pick_extreme_mul_post_activation_params(float * post_activation_multiplier, float * post_activation_bias, 
+  unsigned chans_out, unsigned receptive_volume, int * seed){
+
+  //The input range is from 0 to the receptive_volume (xor_popcount)
+  float accu_min = 0; 
+  float accu_max = receptive_volume*2; //the times 2 is due to the left shift in the output transform. 
+
+  float input_range = accu_max - accu_min;
+
+  float output_min = (float)INT8_MIN; 
+  float output_max = (float)INT8_MAX; 
+
+  for (unsigned ch = 0; ch < chans_out; ch++){
+
+    float output_overscale = 1024. + (float)pseudo_rand(seed)/(float)INT32_MAX;
+    float output_range = (output_max - output_min)*output_overscale;
+    post_activation_multiplier[ch] = output_range / input_range;
+    post_activation_bias[ch] = output_min*output_overscale - accu_min* output_range / input_range;
+  }
+}
+
+//TODO pass the clamps
 void pick_post_activation_params(float * post_activation_multiplier, float * post_activation_bias, 
   unsigned chans_out, unsigned receptive_volume, int * seed){
 

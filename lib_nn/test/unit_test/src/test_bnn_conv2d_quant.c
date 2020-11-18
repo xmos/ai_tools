@@ -7,24 +7,6 @@
 
 #include "helpers.h"
 
-static int64_t vpu_saturate(
-    const int64_t input,
-    const unsigned bits)
-{
-    const int64_t max_val = (((int64_t)1)<<(bits-1))-1;
-    const int64_t min_val = -max_val;
-    
-    return (input > max_val)?  max_val : (input < min_val)? min_val : input;
-}
-
-static int64_t ashr(int64_t value, int shr){
-  if(shr > 0){
-    return (value + (1 << (shr-1))) >> shr;
-  } else {
-    return value << (-shr);
-  }
-}
-
 static void measure_quantisation(
                int16_t * post_activation_multiplier_q,
                int16_t* post_activation_bias_q,
@@ -48,7 +30,7 @@ static void measure_quantisation(
                unsigned * sum_count 
 ){
 
-  for(unsigned ch=0;ch < chans_out;ch++){
+  for (unsigned ch=0; ch < chans_out; ch++){
 
     //Iterate over all possible VPU accumulator outputs 
     for(int32_t vpu_acc=-receptive_volume/2; vpu_acc<receptive_volume/2; vpu_acc++){
@@ -59,13 +41,9 @@ static void measure_quantisation(
       int8_t ref_output = (int8_t)fmin(fmax(round(r), (double)INT8_MIN), (double)INT8_MAX);
 
       //asm implementation
-      int64_t scaled_accu = vpu_saturate(ashr(vpu_acc, accu_shr), 16);
-      int64_t bias = vpu_saturate((int64_t)post_activation_bias_q[ch] * (int64_t)bias_multipler, 32);
-      int64_t product = vpu_saturate((int64_t)post_activation_multiplier_q[ch] * (int64_t)scaled_accu + bias, 32);
-      int64_t product_shr = vpu_saturate(ashr(product, final_shr), 16);
-      int8_t output = min(max(ashr(product_shr, 8), INT8_MIN), INT8_MAX);
+      int8_t output = bnn_post_activation_reference( vpu_acc, ch, post_activation_multiplier_q, 
+          post_activation_bias_q, accu_shr, bias_multipler, final_shr);
 
-      // int8_t output = vpu_saturate(ashr(product, final_shr+8), 8);
 
       float error = (float)(ref_output - output);
       *error_sum += error;
@@ -77,7 +55,7 @@ static void measure_quantisation(
   }
 }
 
-void test_quantisation(){
+void run_quantisation(void (*fun_ptr)()){
 
   float error_sum = 0.0;
   float abs_error_sum = 0.0;
@@ -101,7 +79,7 @@ void test_quantisation(){
         int * chan_overlaps = (int *)malloc(sizeof(int)*(chans_out));
         memset(chan_overlaps, 0, sizeof(int)*(chans_out));
 
-        pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
+        (*fun_ptr)(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
 
         int16_t bias_multipler;
         int accu_shr, final_shr;
@@ -147,7 +125,25 @@ void test_quantisation(){
   TEST_ASSERT_TRUE(fabs((float)sum_count/abs_error_sum) > 256);
 }
 
+void test_normal_quantisation(){
+  run_quantisation(pick_post_activation_params);
+}
+
+void test_extreme_bias_quantisation(){
+  run_quantisation(pick_extreme_bias_post_activation_params);
+}
+
+void test_extreme_mul_quantisation(){
+  run_quantisation(pick_extreme_mul_post_activation_params);
+}
+
 void test_bnn_conv2d_quant() {
   UNITY_SET_FILE();
-  RUN_TEST(test_quantisation);
+  RUN_TEST(test_normal_quantisation);
+  RUN_TEST(test_extreme_mul_quantisation);
+
+  // TODO 
+  // This test fails, fix it.
+  // RUN_TEST(test_extreme_bias_quantisation); 
+
 }

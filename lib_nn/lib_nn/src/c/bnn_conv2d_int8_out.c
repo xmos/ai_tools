@@ -348,7 +348,7 @@ static void bnn_conv2d_int8_out_SISO_asm_prepare(
 
   plan->output_channel_loop_counter = (y->channels-channels_to_process_on_tail_output_loop)/VPU_INT16_EPV;
 
-  plan->k_p_rewind = (channels_to_process_on_tail_output_loop - VPU_INT16_EPV + 1L)*XS3_VPU_VREG_WIDTH_BYTES;
+  plan->k_p_rewind = ((int)channels_to_process_on_tail_output_loop - VPU_INT16_EPV + 1L)*XS3_VPU_VREG_WIDTH_BYTES;
 
   plan->k_p_adjust  = total_bytes_copied_to_scratch%XS3_VPU_VREG_WIDTH_BYTES;
   if (plan->k_p_adjust == 0)
@@ -360,12 +360,12 @@ static void bnn_conv2d_int8_out_SISO_asm_prepare(
   plan->final_channels_mask = ((1 << channels_to_process_on_tail_output_loop)-1) ;
 
   if(bytes_per_input_channel%XS3_VPU_VREG_WIDTH_BYTES)
-    plan->data_scratch_adjust = bytes_per_input_channel%XS3_VPU_VREG_WIDTH_BYTES - XS3_VPU_VREG_WIDTH_BYTES;
+    plan->data_scratch_adjust = (int)(bytes_per_input_channel%XS3_VPU_VREG_WIDTH_BYTES) - XS3_VPU_VREG_WIDTH_BYTES;
   else
     plan->data_scratch_adjust = 0;
   
   plan->inner_x_h_step = (int)bytes_per_input_channel * ((int)h_dilation - 1) - 
-    (XS3_VPU_VREG_WIDTH_BYTES*(plan->input_channel_loop_counter + 1) - bytes_per_input_channel);
+    (int)(XS3_VPU_VREG_WIDTH_BYTES*(plan->input_channel_loop_counter + 1) - bytes_per_input_channel);
 
   // TODO multiply x->width by dilation
   plan->inner_x_v_step =
@@ -374,8 +374,8 @@ static void bnn_conv2d_int8_out_SISO_asm_prepare(
   // Outer Loop
   plan->outer_x_h_step = bytes_per_input_channel * h_stride;
 
-  plan->outer_x_v_step = (int)((int)bytes_per_input_channel * (int)x->width * (int)v_stride) 
-     - (int)((int)plan->outer_x_h_step * (int)x_width_loops);
+  plan->outer_x_v_step = (int)(bytes_per_input_channel * x->width * v_stride) 
+     - (plan->outer_x_h_step * x_width_loops);
 
   plan->y_v_step = chans_out * sizeof(int8_t) * (y->width - y_sub_width);
 }

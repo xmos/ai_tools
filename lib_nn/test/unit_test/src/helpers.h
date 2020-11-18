@@ -24,6 +24,14 @@ int pseudo_rand(int *seed);
 void pick_post_activation_params(float * post_activation_multiplier, float * post_activation_bias, 
   unsigned chans_out, unsigned receptive_volume, int * seed);
 
+
+void pick_extreme_bias_post_activation_params(float * post_activation_multiplier, float * post_activation_bias, 
+  unsigned chans_out, unsigned receptive_volume, int * seed);
+
+
+void pick_extreme_mul_post_activation_params(float * post_activation_multiplier, float * post_activation_bias, 
+  unsigned chans_out, unsigned receptive_volume, int * seed);
+
 #define DIV_BY_AND_ROUND_UP(x, y) (((x) + (y) - 1) / (y))
 
 #define max(a,b) \
@@ -37,6 +45,5 @@ void pick_post_activation_params(float * post_activation_multiplier, float * pos
      _a < _b ? _a : _b; })
 
 int clrsb(int x);
-int clrsbll(long long x);
 
 #endif //HELPERS_H

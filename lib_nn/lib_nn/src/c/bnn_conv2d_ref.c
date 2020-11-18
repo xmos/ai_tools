@@ -10,6 +10,45 @@
 #include <limits.h>
 #include <math.h>
 
+static int64_t vpu_saturate(
+    const int64_t input,
+    const unsigned bits)
+{
+    const int64_t max_val = (((int64_t)1)<<(bits-1))-1;
+    const int64_t min_val = -max_val;
+    
+    return (input > max_val)?  max_val : (input < min_val)? min_val : input;
+}
+
+static int64_t ashr(int64_t value, int shr){
+  if(shr > 0){
+    return (value + (1 << (shr-1))) >> shr;
+  } else {
+    return (unsigned)value << (-shr);
+  }
+}
+
+int8_t bnn_post_activation_reference(
+              const int32_t vpu_acc,
+              const unsigned ch,
+              const int16_t * post_activation_multiplier_q,
+              const int16_t* post_activation_bias_q,
+              const int accu_shr,
+              const int16_t bias_multipler,
+              const int final_shr){
+
+  int64_t scaled_accu = vpu_saturate(ashr(vpu_acc, accu_shr), 16);
+  int64_t bias = vpu_saturate((int64_t)post_activation_bias_q[ch] * (int64_t)bias_multipler, 32);
+  int64_t product = vpu_saturate((int64_t)post_activation_multiplier_q[ch] * (int64_t)scaled_accu + bias, 32);
+  int64_t product_shr = vpu_saturate(ashr(product, final_shr), 16);
+
+  int64_t output = ashr(product_shr, 8);
+  if (output < INT8_MIN) output = INT8_MIN;
+  if (output > INT8_MAX) output = INT8_MAX;
+
+  return (int8_t) output;
+}
+
 static int clrsb(int x){
   #if defined(__XS3A__)
   for (unsigned i=0;i<32;i++){
@@ -77,10 +116,10 @@ static void solve_constraint(
         int M = B - A;
 
         if ((M <= M_max)&& (M >= M_min)){
-            int pam_bits = max_pab_exp + M;
-            int accu_bits = max_accu_exp;
-            if (A < 0)
-              accu_bits += A;
+            //int pam_bits = max_pab_exp + M;
+            // int accu_bits = max_accu_exp;
+            // if (A < 0)
+            //   accu_bits += A;
 
             // int product_bits = pam_bits + accu_bits;
             *B_res = B;
@@ -208,15 +247,17 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
   int16_t* thresholds = (int16_t*)thresh_boggled;
 
   for (unsigned i = 0; i < chans_out; i++) {
+
     unsigned bank = i / VPU_INT16_ACC_PERIOD;
 
-    int32_t t = thresholds_ref[i] - ((int32_t)(receptive_volume) / 2);
+    int32_t t = thresholds_ref[i] - (int32_t)(receptive_volume) / 2;
 
     if(chan_overlaps)
        t -= chan_overlaps[i];
 
-    thresholds[(bank * (2*VPU_INT16_ACC_PERIOD)) + (i % VPU_INT16_ACC_PERIOD)] = t&0xffff;
-    thresholds[(bank * (2*VPU_INT16_ACC_PERIOD)) + (i % VPU_INT16_ACC_PERIOD) + VPU_INT16_ACC_PERIOD] = (t >> 16)&0xffff;
+    unsigned idx = bank * 2 * VPU_INT16_ACC_PERIOD + i % VPU_INT16_ACC_PERIOD;
+    thresholds[idx] = t;
+    thresholds[idx + VPU_INT16_ACC_PERIOD] = (t >> 16);
   }
 }
 

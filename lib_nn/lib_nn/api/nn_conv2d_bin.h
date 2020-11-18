@@ -3,7 +3,29 @@
 #include "nn_binary_structs.h"
 // Binary Conv2D
 
-
+/**
+ * Reference implementation of the post accumulation activation.
+ * 
+ * @param vpu_acc                       [in]     The output of the accumulator 
+ * @param ch                            [in]     The channel to apply the post activation to
+ * @param post_activation_multiplier_q  [in]     Array of post activation multipliers
+ * @param post_activation_bias_q        [in]     Array of post activation biases
+ * @param accu_shr                      [in]     The amount to arithemetic shift the vpu_acc right by.
+ * @param bias_multipler                [in]     The amount to multiply the post_activation_bias_q by.
+ * @param final_shr                     [in]     The final shift right of the product to normalise the output.
+ * 
+ */
+int8_t bnn_post_activation_reference(
+              const int32_t vpu_acc,
+              const unsigned ch,
+              const int16_t * post_activation_multiplier_q,
+              const int16_t* post_activation_bias_q,
+              const int accu_shr,
+              const int16_t bias_multipler,
+              const int final_shr);
+/**
+ * Reference implementation of activation quantisation. 
+ */
 void bnn_quantise_activation(
                int16_t * post_activation_multiplier_q,
                int16_t* post_activation_bias_q,
@@ -19,7 +41,6 @@ void bnn_quantise_activation(
                int *accu_shr,
                int16_t *bias_multipler,
                int *final_shr,
-
 
                int32_t receptive_volume, 
                int * chan_overlaps

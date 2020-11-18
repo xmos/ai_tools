@@ -24,7 +24,7 @@ static int64_t ashr(int64_t value, int shr){
   if(shr > 0){
     return (value + (1 << (shr-1))) >> shr;
   } else {
-    return (unsigned)value << (-shr);
+    return (uint64_t)value << (-shr);
   }
 }
 
@@ -36,7 +36,6 @@ int8_t bnn_post_activation_reference(
               const int accu_shr,
               const int16_t bias_multipler,
               const int final_shr){
-
   int64_t scaled_accu = vpu_saturate(ashr(vpu_acc, accu_shr), 16);
   int64_t bias = vpu_saturate((int64_t)post_activation_bias_q[ch] * (int64_t)bias_multipler, 32);
   int64_t product = vpu_saturate((int64_t)post_activation_multiplier_q[ch] * (int64_t)scaled_accu + bias, 32);

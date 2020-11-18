@@ -8,29 +8,29 @@
 #include "helpers.h"
 
 static void measure_quantisation(
-               int16_t * post_activation_multiplier_q,
-               int16_t* post_activation_bias_q,
+               const int16_t * post_activation_multiplier_q,
+               const int16_t* post_activation_bias_q,
 
-               float* post_activation_multiplier,
-               float* post_activation_bias, 
+               const float* post_activation_multiplier,
+               const float* post_activation_bias, 
 
-               unsigned chans_out,
+               const unsigned chans_out,
 
-               int32_t clamp_low,
-               int32_t clamp_high,
+               const int32_t clamp_low,
+               const int32_t clamp_high,
 
-               int accu_shr,
-               int16_t bias_multipler,
-               int final_shr,
+               const int accu_shr,
+               const int16_t bias_multipler,
+               const int final_shr,
 
-               int32_t receptive_volume, 
+               const int32_t receptive_volume, 
 
                float * error_sum,
                float * abs_error_sum,
                unsigned * sum_count 
 ){
 
-  for (unsigned ch=0; ch < chans_out; ch++){
+  for (unsigned ch = 0; ch < chans_out; ch++){
 
     //Iterate over all possible VPU accumulator outputs 
     for(int32_t vpu_acc=-receptive_volume/2; vpu_acc<receptive_volume/2; vpu_acc++){
@@ -44,13 +44,12 @@ static void measure_quantisation(
       int8_t output = bnn_post_activation_reference( vpu_acc, ch, post_activation_multiplier_q, 
           post_activation_bias_q, accu_shr, bias_multipler, final_shr);
 
-
       float error = (float)(ref_output - output);
       *error_sum += error;
       *abs_error_sum += fabs(error);
       *sum_count += 1;
 
-      TEST_ASSERT_TRUE(fabs(error) <= 1.0);
+      TEST_ASSERT_TRUE_MESSAGE(fabs(error) <= 1.0, "Abs error too high");
     }
   }
 }
@@ -121,8 +120,8 @@ void run_quantisation(void (*fun_ptr)()){
     }
   }
 
-  TEST_ASSERT_TRUE(fabs((float)sum_count/ error_sum) > 656);
-  TEST_ASSERT_TRUE(fabs((float)sum_count/abs_error_sum) > 256);
+  TEST_ASSERT_TRUE_MESSAGE(fabs((float)sum_count/ error_sum) > 656, "Mean error too high");
+  TEST_ASSERT_TRUE_MESSAGE(fabs((float)sum_count/abs_error_sum) > 256, "Mean abs error too high");
 }
 
 void test_normal_quantisation(){

@@ -252,7 +252,7 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
                 np.concatenate(
                     reordered_weight_channels
                     + [
-                        FILLER * np.ones(self._overlap_size, dtype=weights.dtype)
+                        np.full(self._overlap_size, FILLER, dtype=weights.dtype)
                     ]  # TODO: fix this filler value
                 )
             )

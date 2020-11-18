@@ -10,6 +10,7 @@ from tflite2xcore.transformation_passes import FuseConv2dPaddingPass
 from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.xcore_model import XCOREModel
 
+from . import PaddingType
 from ..model_builders import build_padded_DW, _calculate_implicit_pads, ModelBuilder
 from ..test_conv2d_passes.conftest import (
     PARAMS as CONV_PARAMS,
@@ -30,8 +31,6 @@ PARAMS = deepcopy(PARAMS)
 PARAMS["extended"].update(CONV_PARAMS["default"])
 PARAMS["default"].update(CONV_PARAMS["smoke"])
 PARAMS["smoke"].update(CONV_PARAMS["smoke"])
-
-PaddingType = Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int], Tuple[int, int]]
 
 
 class ParamCombination(NamedTuple):

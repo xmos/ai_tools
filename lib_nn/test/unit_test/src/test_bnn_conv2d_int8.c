@@ -608,27 +608,27 @@ void DI_full(
 }
 
 void test_bnn_conv2d_int8_out_SISO_sub_image(){
-  impl_bnn_conv2d_int8_out_sub_image(5, 5, 3, 3, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 1, 3, 3, &SISO_valid);
+  impl_bnn_conv2d_int8_out_sub_image(5, 5, 3, 3, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 1, 3, 3, (void*)&SISO_valid);
 }
 
 void test_bnn_conv2d_int8_out_DI_sub_image(){
-  impl_bnn_conv2d_int8_out_sub_image(5, 5, 3, 3, 256*1, 256*2, 16*1, 16*3, 256, 32, 1, 1, 3, 3, &DI_valid);
+  impl_bnn_conv2d_int8_out_sub_image(5, 5, 3, 3, 256*1, 256*2, 16*1, 16*3, 256, 32, 1, 1, 3, 3, (void*)&DI_valid);
 }
 
 void test_bnn_conv2d_int8_out_SISO_pseudo_random(){
-  impl_bnn_conv2d_int8_out_pseudo_random(1, 5,1, 5, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, &SISO_full);
+  impl_bnn_conv2d_int8_out_pseudo_random(1, 5,1, 5, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, (void*)&SISO_full);
 }
 
 void test_bnn_conv2d_int8_out_DI_pseudo_random(){
-  impl_bnn_conv2d_int8_out_pseudo_random(1, 5,1, 5, 256*1, 256*3, 32*1, 32*3, 256, 32, 1, 3, 1, 3, &DI_full);
+  impl_bnn_conv2d_int8_out_pseudo_random(1, 4, 1, 4, 256*1, 256*2, 32*1, 32*3, 256, 32, 1, 3, 1, 3, (void*)&DI_full);
 }
 
 void test_bnn_conv2d_int8_out_SISO_pseudo_random2(){
-  impl_bnn_conv2d_int8_out_pseudo_random2(1, 32, 32, 4, 4, 32, 4, &SISO_full);
+  impl_bnn_conv2d_int8_out_pseudo_random2(1, 32, 32, 4, 4, 32, 4, (void*)&SISO_full);
 }
 
 void test_bnn_conv2d_int8_out_DI_pseudo_random2(){
-  impl_bnn_conv2d_int8_out_pseudo_random2(1, 32, 256, 32, 32, 256, 32, &DI_full);
+  impl_bnn_conv2d_int8_out_pseudo_random2(1, 32, 256, 32, 32, 256, 32, (void*)&DI_full);
 }
 
 void test_bnn_conv2d_int8() {

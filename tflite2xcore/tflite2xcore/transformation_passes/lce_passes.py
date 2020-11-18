@@ -6,9 +6,12 @@ from typing import Tuple
 from tflite2xcore.utils import (
     WORD_SIZE_BITS,
     VECTOR_SIZE_BITS,
+    VECTOR_SIZE_WORDS,
     ACC_PERIOD,
     WORD_SIZE,
+    xor_popcount,
     calculate_same_padding,
+    get_unpacked_shape,
 )
 from tflite2xcore.xcore_schema import (
     Operator,
@@ -27,6 +30,7 @@ from .transformation_passes import (
 )
 from .conv2d_passes import ReplaceConv2DPass
 
+FILLER = 0x55555555
 
 XC_BCONV2D_OPCODES = (
     XCOREOpCodes.XC_bconv2d_bin,
@@ -198,34 +202,137 @@ class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
 
 class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
     @property
+    def matching_input_type(self) -> TensorType:
+        return TensorType.INT32
+
+    @property
+    def matching_output_type(self) -> TensorType:
+        return TensorType.INT32
+
+    @property
     def matching_opcode(self) -> XCOREOpCodes:
         return XCOREOpCodes.XC_bconv2d_bin
+
+    @property
+    def _kernel_channel_size(self) -> int:
+        # call only after custom options are set with weights shape
+        return np.prod(self._op.custom_options["K"][1:])  # type: ignore
+
+    @property
+    def _overlap_size(self) -> int:
+        return (
+            VECTOR_SIZE_WORDS
+            - 1
+            - (self._kernel_channel_size // WORD_SIZE_BITS - 1) % VECTOR_SIZE_WORDS
+        )
 
     def mutate_weights(self, op: Operator) -> None:
         with self.using(op):
             weights = self._weights.as_array()
+
+            # first we reorder the weights
+            reordered_weight_channels = [
+                a.ravel()
+                for chan_group in weights.reshape(
+                    weights.shape[0] // ACC_PERIOD, ACC_PERIOD, -1
+                )
+                for a in np.split(
+                    np.flip(chan_group, axis=0),
+                    [
+                        i * VECTOR_SIZE_WORDS
+                        for i in range(ceil(chan_group.shape[-1] / VECTOR_SIZE_WORDS))
+                    ],
+                    axis=1,
+                )
+            ]
+
+            # then we need to add filler bits at the end of the last channel
+            # NOTE: this means that this tensor is no longer rectangular
             self._replace_weights(
                 np.concatenate(
-                    [
-                        a.ravel()
-                        for arr in weights.reshape(weights.shape[0] // 16, 16, -1)
-                        for a in np.split(
-                            np.flip(arr, axis=0),
-                            [i * 256 for i in range(ceil(arr.shape[1] / 256))],
-                            axis=1,
-                        )
-                    ]
-                ).reshape(weights.shape)
+                    reordered_weight_channels
+                    + [
+                        np.full(self._overlap_size, FILLER, dtype=weights.dtype)
+                    ]  # TODO: fix this filler value
+                )
             )
 
     def mutate_biases(self, op: Operator) -> None:
-        raise NotImplementedError()  # TODO: finish this
+        with self.using(op):
+            thresholds = self._biases.as_array()
+            weights = self._weights.as_array()  # already boggled
+
+            # first we need to calculate a correction term
+            # due to how our HW popcount differs from the Larq reference
+            popcount_correction = self._kernel_channel_size / 2
+
+            # second we need to calculate correction terms
+            # due to how we handle incomplete weights regsiters
+            # (the data register is padded with zeros, so the loaded kernel
+            # coeffs can have some junk loaded, and we correct that)
+            channel_size_words = self._kernel_channel_size // WORD_SIZE_BITS
+            tail_size = VECTOR_SIZE_WORDS - self._overlap_size
+            for c_out in range(thresholds.size):
+                c_out_group = c_out // ACC_PERIOD
+                c_out_group_end = (c_out_group + 1) * ACC_PERIOD * channel_size_words
+
+                reversed_offset = c_out % ACC_PERIOD * tail_size
+                overlap_start = c_out_group_end - reversed_offset
+
+                junk = weights[overlap_start : overlap_start + self._overlap_size]
+                overlap_correction = (
+                    xor_popcount(junk, np.zeros_like(junk))
+                    - junk.size * WORD_SIZE_BITS / 2
+                )
+
+                thresholds[c_out] += np.int32(overlap_correction - popcount_correction)
+
+            # boggle to lower and higher 2 bytes in every ACC_PERIOD consecutive value
+            thresholds = np.concatenate(
+                [
+                    np.frombuffer(
+                        np.frombuffer(cgroup.tostring(), dtype=np.int16)
+                        .reshape(ACC_PERIOD, 2)
+                        .T.tostring(),
+                        dtype=np.int32,
+                    )
+                    for cgroup in thresholds.reshape(
+                        thresholds.shape[0] // ACC_PERIOD, ACC_PERIOD
+                    )
+                ]
+            )
+
+            # create and populate new thresholds tensor
+            new_thresholds = self._op.subgraph.create_tensor(
+                f"{self._op.name}/thresholds",
+                TensorType.INT32,
+                thresholds.shape,
+                consumers=[self._op],
+            )
+            new_thresholds.buffer.data = thresholds
+
+            # replace old tensor
+            self._op.inputs[2].consumers.remove(self._op)
+            self._op.inputs[2] = new_thresholds
+
+    def mutate(self, op: Operator) -> Operator:
+        with self.using(op):
+            op.add_custom_options(K=get_unpacked_shape(self._weights.shape))
+        # NOTE: the order of these mutations is strict
+        self.mutate_weights(op)
+        self.mutate_biases(op)
+        op.custom_options.pop("illegal_params")
+        return op
 
 
-class LegalizeBconv2dBitpackedDeepInPass(LegalizeWeightBiasPass):
+class LegalizeBconv2dBitpackedDeepInPass(LegalizeBconv2dBitpackedPass):
     @property
     def matching_opcode(self) -> XCOREOpCodes:
         return XCOREOpCodes.XC_bconv2d_bin_DI
+
+    @property
+    def _overlap_size(self) -> int:
+        return 0
 
 
 # Split out padding to a separate op from BConv

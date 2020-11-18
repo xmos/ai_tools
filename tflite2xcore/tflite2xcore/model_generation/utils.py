@@ -14,7 +14,7 @@ class RandomUniform(tf.keras.initializers.RandomUniform):  # type: ignore
         try:
             return super().__call__(shape, dtype)
         except Exception as e:
-            if e.args[0].startswith("Invalid dtype "):
+            if e.args and e.args[0].startswith("Invalid dtype "):
                 dtype = tf.dtypes.as_dtype(dtype)
                 if dtype in (tf.int8, tf.int16):
                     if self.minval < dtype.min:

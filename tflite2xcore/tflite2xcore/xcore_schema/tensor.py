@@ -102,7 +102,9 @@ class Tensor(_BufferOwnerContainer):
         return self.type.sizeof() * np.prod(self.shape)  # type: ignore
 
     def as_array(self, dtype: Optional[type] = None) -> np.ndarray:
-        arr = np.frombuffer(self.buffer._data, dtype=self.type.to_numpy_dtype())
+        arr = np.copy(
+            np.frombuffer(self.buffer._data, dtype=self.type.to_numpy_dtype())
+        )
         if dtype:
             arr = arr.astype(dtype)
         return arr.reshape(self.shape)

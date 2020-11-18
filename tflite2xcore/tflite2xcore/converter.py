@@ -182,7 +182,19 @@ class BinarizedOperatorLoweringManager(PassManager):
     ) -> None:
         super().__init__(model, **kwargs)
 
+        # map LceQuantize to our bsign op
         self.register_pass(passes.ReplaceLceQuantizePass())
+
+        # match bconv2d ops and replace them
+        self.register_pass(passes.ReplaceBconv2DBitpackedDeepInPass())
+        self.register_pass(passes.ReplaceBconv2DBitpackedPass())
+
+        # we legalize the padding by injecting an explicit PAD where needed
+        self.register_pass(passes.LegalizeXCBconv2DPaddingPass())
+
+        # legalize the parameter tensors and custom options
+        self.register_pass(passes.LegalizeBconv2dBitpackedDeepInPass())
+        self.register_pass(passes.LegalizeBconv2dBitpackedPass())
 
 
 class FinalizationManager(PassManager):

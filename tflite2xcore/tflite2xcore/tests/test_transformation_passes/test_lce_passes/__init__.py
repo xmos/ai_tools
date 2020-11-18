@@ -2,7 +2,7 @@
 
 import numpy as np
 from copy import deepcopy
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict, Any
 
 from tflite2xcore.transformation_passes.lce_passes import (
     ReplaceBconv2DPass,
@@ -120,7 +120,7 @@ def build_bconv2d(
     tin = subgraph.create_tensor("input", TensorType.INT32, input_shape, isinput=True)
 
     w = subgraph.create_tensor("weights", TensorType.INT32, weight_shape)
-    w.buffer.data = generate_dummy_data(w.shape, np.int8)
+    w.buffer.data = generate_dummy_data(w.shape, np.int32)
 
     input_tensors = [tin, w]
     if output_tensor_type is TensorType.INT32:
@@ -133,7 +133,7 @@ def build_bconv2d(
 
         input_tensors.append(output_threshold)
     elif output_tensor_type is TensorType.INT8:
-        post_act_params = {"shape": weight_shape[:1]}
+        post_act_params: Dict[str, Any] = {"shape": weight_shape[:1]}
         if opcode in XC_BCONV2D_OPCODES:
             post_act_params["type_"] = TensorType.INT16
             dummy_data = generate_dummy_data(post_act_params["shape"], np.int16)

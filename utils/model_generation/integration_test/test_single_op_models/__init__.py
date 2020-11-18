@@ -1,16 +1,22 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import tensorflow as tf  # type: ignore
+import tensorflow as tf
 from abc import abstractmethod
 from typing import Tuple, Optional
 
 from tflite2xcore.model_generation import Configuration
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
-from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_schema import XCOREOpCodes, ValidOpCodes  # type: ignore # TODO: fix this
 
+from .. import (  # pylint: disable=unused-import
+    IntegrationTestRunner,
+    _compare_batched_arrays,
+    BatchedArrayComparison,
+)
 from .. import (
     IntegrationTestModelGenerator,
     test_output,
+    test_mean_abs_diffs,
     test_idempotence,
 )
 
@@ -95,3 +101,12 @@ def test_converted_single_op_model(
     assert len(operators) == 1
     op = operators[0]
     assert op.operator_code.code is converted_op_code
+
+
+def test_reference_model_regression(
+    reference_model: XCOREModel, reference_op_code: ValidOpCodes
+) -> None:
+    operators = reference_model.subgraphs[0].operators
+    assert len(operators) == 1
+    op = operators[0]
+    assert op.operator_code.code is reference_op_code

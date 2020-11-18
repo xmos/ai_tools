@@ -2,8 +2,12 @@
 
 import numpy as np
 from copy import deepcopy
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict, Any
 
+from tflite2xcore.transformation_passes.lce_passes import (
+    ReplaceBconv2DPass,
+    XC_BCONV2D_OPCODES,
+)
 from tflite2xcore.transformation_passes import ModelTransformationPass
 from tflite2xcore.xcore_model import XCOREModel, Subgraph
 from tflite2xcore.xcore_schema import (
@@ -18,8 +22,7 @@ from tflite2xcore.xcore_schema import (
 from tflite2xcore.utils import calculate_same_output_size, calculate_valid_output_size
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
-    generate_dummy_int8_data,
-    generate_dummy_int32_data,
+    generate_dummy_data,
 )
 
 from ..conftest import ParamsType
@@ -30,11 +33,13 @@ from ..conftest import (  # pylint: disable=unused-import
     test_non_matching_tensors,
     test_replace_mutate as _test_mutate,
 )
+from ..test_conv2d_passes.conftest import test_replace_mutate as test_conv2d_mutate
 from ..test_conv2d_passes.conftest import (  # pylint: disable=unused-import
     PARAMS,
     test_non_matching_input_channels,
     test_non_matching_output_channels,
 )
+
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
@@ -61,7 +66,7 @@ def update_lce_params(PARAMS: ParamsType) -> ParamsType:
 
 
 PARAMS["extended"].update(
-    {"input_channels": [256, 512, 1024], "non_matching_input_channels": [48, 128, 245]}
+    {"input_channels": [32, 128, 256], "non_matching_input_channels": [48, 130, 245]}
 )
 
 #  ----------------------------------------------------------------------------
@@ -86,9 +91,7 @@ def build_LceQuantize(
     )
 
     subgraph.create_operator(
-        OperatorCode(ExternalOpCodes.add_new_opcode("LceQuantize")),
-        inputs=[tin],
-        outputs=[tout],
+        OperatorCode(ExternalOpCodes.LceQuantize), inputs=[tin], outputs=[tout]
     )
 
     return subgraph.model
@@ -112,26 +115,50 @@ def build_bconv2d(
     bitpacked_input_channels = int(np.ceil(C_in / 32))
     weight_shape = (*weight_shape[:3], bitpacked_input_channels)
 
+    # create input tensors
     input_shape = [1, *input_size, bitpacked_input_channels]
     tin = subgraph.create_tensor("input", TensorType.INT32, input_shape, isinput=True)
-    w = subgraph.create_tensor("weights", TensorType.INT32, weight_shape)
-    output_threshold = subgraph.create_tensor(
-        "output_threshold", TensorType.INT32, weight_shape[:1]
-    )
 
-    # add dummy data so that the op can be mutated
-    w.buffer.data = generate_dummy_int8_data(w.shape)
-    output_threshold.buffer.data = generate_dummy_int32_data(output_threshold.shape)
+    w = subgraph.create_tensor("weights", TensorType.INT32, weight_shape)
+    w.buffer.data = generate_dummy_data(w.shape, np.int32)
+
+    input_tensors = [tin, w]
+    if output_tensor_type is TensorType.INT32:
+        output_threshold = subgraph.create_tensor(
+            "output_threshold", TensorType.INT32, weight_shape[:1]
+        )
+        output_threshold.buffer.data = generate_dummy_data(
+            output_threshold.shape, np.int32
+        )
+
+        input_tensors.append(output_threshold)
+    elif output_tensor_type is TensorType.INT8:
+        post_act_params: Dict[str, Any] = {"shape": weight_shape[:1]}
+        if opcode in XC_BCONV2D_OPCODES:
+            post_act_params["type_"] = TensorType.INT16
+            dummy_data = generate_dummy_data(post_act_params["shape"], np.int16)
+        else:
+            post_act_params["type_"] = TensorType.FLOAT32
+            dummy_data = generate_dummy_data(post_act_params["shape"], np.float32)
+
+        post_act_mult = subgraph.create_tensor("post_act_mult", **post_act_params)
+        post_act_mult.buffer.data = dummy_data
+
+        post_act_bias = subgraph.create_tensor("post_act_bias", **post_act_params)
+        post_act_bias.buffer.data = dummy_data
+
+        input_tensors.extend([post_act_mult, post_act_bias])
+    else:
+        raise ValueError(
+            f"output_tensor_type must be {TensorType.INT32} or {TensorType.INT8}"
+        )
 
     # check padding and determine output size
     if padding is Padding.SAME:
         output_size = calculate_same_output_size(input_size, strides)
     else:
         if padding is None:
-            assert opcode in (
-                XCOREOpCodes.XC_bconv2d_bin_out,
-                XCOREOpCodes.XC_bconv2d_int8_out,
-            )
+            assert opcode in XC_BCONV2D_OPCODES
         elif padding is not Padding.VALID:
             raise ValueError(f"Unsupported padding: {padding}")
         output_size = calculate_valid_output_size(
@@ -144,7 +171,7 @@ def build_bconv2d(
 
     # create custom options
     custom_options = {"padding": padding} if padding else {}
-    if opcode is ExternalOpCodes.add_new_opcode("LceBconv2d"):
+    if opcode is ExternalOpCodes.LceBconv2d:
         custom_options.update(
             {
                 "channels_in": C_in,
@@ -161,7 +188,7 @@ def build_bconv2d(
     # create operator
     subgraph.create_operator(
         OperatorCode(opcode),
-        inputs=[tin, w, output_threshold],
+        inputs=input_tensors,
         outputs=[tout],
         custom_options=custom_options,
     )
@@ -173,17 +200,14 @@ def build_lceBconv2d(
     subgraph: Optional[Subgraph] = None, *, padding: Padding, **kwargs
 ) -> XCOREModel:
     return build_bconv2d(
-        subgraph,
-        padding=padding,
-        opcode=ExternalOpCodes.add_new_opcode("LceBconv2d"),
-        **kwargs,
+        subgraph, padding=padding, opcode=ExternalOpCodes.LceBconv2d, **kwargs,
     )
 
 
 def build_XC_bconv2d(
     subgraph: Optional[Subgraph] = None,
     *,
-    opcode: XCOREOpCodes = XCOREOpCodes.XC_bconv2d_int8_out,
+    opcode: XCOREOpCodes = XCOREOpCodes.XC_bconv2d_int8,
     padding: Optional[Padding] = None,
     **kwargs,
 ) -> XCOREModel:
@@ -202,3 +226,24 @@ def test_mutate(
     assert len(subgraph.operators) == 1
 
     _test_mutate(trf_pass, model, new_opcode)
+
+
+def test_bconv2d_mutate(
+    trf_pass: ReplaceBconv2DPass, model: XCOREModel, new_opcode: XCOREOpCodes
+) -> None:
+    subgraph = model.subgraphs[0]
+    operators = subgraph.operators
+    op = operators[-1]
+    strides = op.custom_options["stride_height"], op.custom_options["stride_width"]
+    padding = op.custom_options["padding"]
+
+    test_conv2d_mutate(trf_pass, model, new_opcode)
+
+    assert len(operators) == 1
+
+    new_op = operators[-1]
+    assert "illegal_params" in new_op.custom_options
+    assert "stride" in new_op.custom_options
+    assert strides == new_op.custom_options["stride"]
+    assert "padding" in new_op.custom_options
+    assert padding == new_op.custom_options["padding"]

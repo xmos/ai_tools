@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-import pytest  # type: ignore
-import tensorflow as tf  # type: ignore
+import pytest
+import tensorflow as tf
 
 from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
     XCOREOpCodes,
@@ -45,7 +45,7 @@ GENERATOR = MobileNetV1Model
 
 
 CONFIGS = {
-    "default": {0: {"input_size": 128, "alpha": 0.25}},
+    "default": {0: {"input_size": 128, "alpha": 0.25, "skip_on_device": True}},
 }
 
 
@@ -55,7 +55,7 @@ CONFIGS = {
 
 
 @pytest.fixture  # type: ignore
-def output_tolerance() -> None:
+def abs_output_tolerance() -> None:
     return
 
 

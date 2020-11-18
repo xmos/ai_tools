@@ -65,19 +65,11 @@ static void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b32_t* X_ref,
   bnn_reorder_threshold_tensor(thresholds_p, thresholds_ref, chans_out,
                               k_width * k_height * chans_in, chan_overlaps);
 
-#if defined(__XS3A__)
   bnn_conv2d_bin_out_SISO((bnn_b32_t*)Y_p, (const bnn_b32_t*)X_ref,
      (const bnn_b32_t*)K_p, thresholds_p, data_scratch, &x, &y, &k,
     0, 0, y_width, y_height,
     0, 0, 
     0, 0, k_width, k_height);
-#else
-  bnn_conv2d_bin_out_SISO((bnn_b32_t*)Y_p, (const bnn_b32_t*)X_ref,
-    (const bnn_b32_t*)K_ref_p, thresholds_ref, data_scratch, &x, &y, &k,
-    0, 0, y_width, y_height,
-    0, 0, 
-    0, 0, k_width, k_height);
-#endif
 
   unsigned chan_b32_out = DIV_BY_AND_ROUND_UP(chans_out, 32); 
   TEST_ASSERT_EQUAL_INT_ARRAY(Y_ref_p, Y_p, y_height*y_width*chan_b32_out);  
@@ -87,9 +79,9 @@ void test_bnn_conv2d_bin_out_SISO_pseudo_directed() {
 #define X_V_DILATION 1
 #define X_H_DILATION 1
 #define X_HEIGHT 1
-#define X_WIDTH 1
+#define X_WIDTH 3
 #define K_HEIGHT 1
-#define K_WIDTH 1
+#define K_WIDTH 3
 #define CHANS_IN 32
 #define CHANS_OUT 32
 #define H_STRIDE 1
@@ -106,7 +98,7 @@ void test_bnn_conv2d_bin_out_SISO_pseudo_directed() {
   bnn_b32_t WORD_ALIGNED K[CHANS_OUT*K_HEIGHT*K_WIDTH*CHAN_WORDS_IN + 
     NN_BCONV2D_KERNEL_OVERRUN_WORDS];
 
-  bnn_b32_t WORD_ALIGNED X_ref[X_HEIGHT][X_WIDTH][CHAN_WORDS_IN];
+  bnn_b32_t WORD_ALIGNED X_ref[X_HEIGHT*X_WIDTH*CHAN_WORDS_IN+8];
   bnn_b32_t WORD_ALIGNED Y_ref[Y_HEIGHT][Y_WIDTH][CHAN_WORDS_OUT];
   bnn_b32_t WORD_ALIGNED Y[Y_HEIGHT][Y_WIDTH][CHAN_WORDS_OUT];
 
@@ -117,14 +109,21 @@ void test_bnn_conv2d_bin_out_SISO_pseudo_directed() {
   bnn_b32_t WORD_ALIGNED data_scratch[K_HEIGHT * K_WIDTH * CHAN_WORDS_IN + 
     NN_BCONV2D_KERNEL_OVERRUN_WORDS]; 
 
+  memset(K_ref, 0, sizeof(K_ref));
+  memset(K, 0, sizeof(K));
+  memset(X_ref, 0, sizeof(X_ref));
+  memset(Y_ref, 0, sizeof(Y_ref));
+  memset(Y, 0, sizeof(Y));
+  memset(thresholds_ref, 0, sizeof(thresholds_ref));
+  memset(thresholds, 0, sizeof(thresholds));
+  memset(data_scratch, 0, sizeof(data_scratch));
+  memset(chan_overlaps, 0, sizeof(chan_overlaps));
+
   srand(42);
 
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
-
-  memset(Y, 0, sizeof(Y));
-  memset(Y_ref, 0, sizeof(Y_ref));
-
+  
   run_bin_config((bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b32_t*)X_ref,
               (bnn_b32_t*)K, (bnn_b32_t*)K_ref, (int32_t*)thresholds_ref,
               (int32_t*)thresholds, (bnn_b32_t*)data_scratch, chan_overlaps, X_HEIGHT, X_WIDTH, K_HEIGHT, K_WIDTH,
@@ -149,8 +148,8 @@ void test_bnn_conv2d_bin_out_SISO_pseudo_directed() {
 void test_bnn_conv2d_bin_out_SISO_pseudo_random() {
 #define MIN_H_STRIDE 1
 #define MIN_V_STRIDE 1
-#define MAX_H_STRIDE 4
-#define MAX_V_STRIDE 4
+#define MAX_H_STRIDE 5
+#define MAX_V_STRIDE 5
 
 #define MIN_K_HEIGHT 1
 #define MIN_K_WIDTH 1
@@ -161,7 +160,7 @@ void test_bnn_conv2d_bin_out_SISO_pseudo_random() {
 #define MAX_CHANS_IN 512
 
 #define MIN_CHANS_OUT 32
-#define MAX_CHANS_OUT 64
+#define MAX_CHANS_OUT 128
 
 #define MIN_X_HEIGHT MIN_K_HEIGHT
 #define MIN_X_WIDTH MIN_K_WIDTH
@@ -179,7 +178,7 @@ void test_bnn_conv2d_bin_out_SISO_pseudo_random() {
   bnn_b32_t WORD_ALIGNED
       K[MAX_CHANS_OUT*MAX_K_HEIGHT*MAX_K_WIDTH*MAX_CHAN_WORDS_IN + NN_BCONV2D_KERNEL_OVERRUN_WORDS];
 
-  bnn_b32_t WORD_ALIGNED X_ref[MAX_X_HEIGHT][MAX_X_WIDTH][MAX_CHAN_WORDS_IN];
+  bnn_b32_t WORD_ALIGNED X_ref[MAX_X_HEIGHT*MAX_X_WIDTH*MAX_CHAN_WORDS_IN+8];
   bnn_b32_t WORD_ALIGNED Y_ref[MAX_Y_HEIGHT][MAX_Y_WIDTH][MAX_CHAN_WORDS_OUT];
   bnn_b32_t WORD_ALIGNED Y[MAX_Y_HEIGHT][MAX_Y_WIDTH][MAX_CHAN_WORDS_OUT];
 
@@ -198,10 +197,20 @@ void test_bnn_conv2d_bin_out_SISO_pseudo_random() {
   assert(((int)thresholds_ref & 0x3) == 0);
   assert(((int)thresholds & 0x3) == 0);
 
+  memset(K_ref, 0, sizeof(K_ref));
+  memset(K, 0, sizeof(K));
+  memset(X_ref, 0, sizeof(X_ref));
+  memset(Y_ref, 0, sizeof(Y_ref));
+  memset(Y, 0, sizeof(Y));
+  memset(thresholds_ref, 0, sizeof(thresholds_ref));
+  memset(thresholds, 0, sizeof(thresholds));
+  memset(data_scratch, 0, sizeof(data_scratch));
+  memset(chan_overlaps, 0, sizeof(chan_overlaps));
   srand(42);
 
   pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   pseudo_rand_bytes((char*)K_ref, sizeof(K_ref));
+  
 
   for (unsigned h_stride = MIN_H_STRIDE; h_stride <= MAX_H_STRIDE; ++h_stride) {
     for (unsigned v_stride = MIN_V_STRIDE; v_stride <= MAX_V_STRIDE;
@@ -218,7 +227,7 @@ void test_bnn_conv2d_bin_out_SISO_pseudo_random() {
                    chans_in += CHANS_PER_WORD) { 
                 for (unsigned chans_out = MIN_CHANS_OUT;
                      chans_out <= MAX_CHANS_OUT; chans_out += CHANS_PER_WORD) {
-
+                  // printf("%u %u %u %u %u %u %u %u\n", x_height, x_width, k_height, k_width, chans_in, chans_out, h_stride, v_stride);
                   run_bin_config(
                       (bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b32_t*)X_ref,
                       (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
@@ -272,15 +281,10 @@ static void run_bin_sub_image(bnn_b32_t* Y_p, const bnn_b32_t* Y_ref_p, const bn
 
   bnn_reorder_threshold_tensor(thresholds_p, thresholds_ref, y->channels,
                                k->shape.width * k->shape.height * x->channels, chan_overlaps);
-#if defined(__XS3A__)
+
   bnn_conv2d_bin_out_SISO_valid((bnn_b32_t*)Y_p, (const bnn_b32_t*)X_ref,
                       (const bnn_b32_t*)K_p, thresholds_p, data_scratch, x, y, k,
                        y_loc_x, y_loc_y, y_sub_width, y_sub_height);
-#else
-  bnn_conv2d_bin_out_SISO_valid((bnn_b32_t*)Y_p, (const bnn_b32_t*)X_ref,
-                      (const bnn_b32_t*)K_ref_p, thresholds_ref, data_scratch, x, y, k,
-                      y_loc_x, y_loc_y, y_sub_width, y_sub_height);
-#endif
 
   unsigned chan_b32_out = DIV_BY_AND_ROUND_UP(y->channels, 32); 
 
@@ -340,7 +344,7 @@ void test_bnn_conv2d_bin_out_SISO_sub_image(){
       K[MAX_CHANS_OUT*FULL_K_HEIGHT*FULL_K_WIDTH*MAX_CHAN_WORDS_IN + 
       NN_BCONV2D_KERNEL_OVERRUN_WORDS];
 
-  bnn_b32_t WORD_ALIGNED X_ref[FULL_X_HEIGHT][FULL_X_WIDTH][MAX_CHAN_WORDS_IN];
+  bnn_b32_t WORD_ALIGNED X_ref[FULL_X_HEIGHT*FULL_X_WIDTH*MAX_CHAN_WORDS_IN+8];
   bnn_b32_t WORD_ALIGNED Y_ref[FULL_Y_HEIGHT][FULL_Y_WIDTH][MAX_CHAN_WORDS_OUT];
   bnn_b32_t WORD_ALIGNED Y[FULL_Y_HEIGHT][FULL_Y_WIDTH][MAX_CHAN_WORDS_OUT];
 
@@ -360,7 +364,7 @@ void test_bnn_conv2d_bin_out_SISO_sub_image(){
   assert(((int)thresholds_ref & 0x3) == 0);
   assert(((int)thresholds & 0x3) == 0);
 
-  srand(42);
+  // srand(42);
 
   // pseudo_rand_bytes((char*)X_ref, sizeof(X_ref));
   for(unsigned i=0;i<sizeof(X_ref);i++)

@@ -15,7 +15,7 @@ void maxpool2d_ext(
 
 #include "asm_constants.h"
 
-#define FUNCTION_NAME maxpool2d_adv
+#define FUNCTION_NAME maxpool2d_ext
 
 #define NSTACKWORDS     (40)
     

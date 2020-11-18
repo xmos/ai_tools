@@ -42,7 +42,9 @@ int main(void) {
     test_bsign_8();
     test_pad();
     test_bnn_conv2d_bin();
-    // test_bnn_conv2d_bin_SISO(); //disabled until refactored to reduce memory usage
+  #if !defined(__XS3A__)
+    test_bnn_conv2d_bin_SISO(); //disabled until refactored to reduce memory usage
+  #endif
     test_bnn_conv2d_int8();
 
     test_bnn_conv2d_quant();

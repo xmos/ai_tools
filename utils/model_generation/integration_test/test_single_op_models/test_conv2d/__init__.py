@@ -7,7 +7,8 @@ from typing import Tuple, Optional
 from tflite2xcore.model_generation import Configuration
 from tflite2xcore.model_generation.utils import parse_init_config
 
-from .. import (  # pylint: disable=unused-import
+from .. import (
+    PaddingMixin,
     FilterOpTestModelGenerator,
     ChannelPreservingOpTestModelGenerator,
     test_output,

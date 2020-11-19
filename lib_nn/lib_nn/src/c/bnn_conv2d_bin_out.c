@@ -261,8 +261,8 @@ void bnn_conv2d_bin_out_asm_prepare(
   // Outer Loop
   plan->outer_x_h_step = bytes_per_input_channel * k->stride.horizontal;
 
-  plan->outer_x_v_step = (bytes_per_input_channel * x->width *k->stride.vertical) 
-     - (plan->outer_x_h_step * x_width_loops);
+  plan->outer_x_v_step = (int)(bytes_per_input_channel * x->width * k->stride.vertical) 
+     - (int)(plan->outer_x_h_step * x_width_loops);
 
   // TODO these are for implementing sub-kernels
   assert(k_sub_height == k->shape.height); //until the following two lines are working
@@ -368,7 +368,7 @@ void bnn_conv2d_bin_out_SISO_asm_prepare(
   plan->input_channel_loop_counter =
       ((x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS) - 1;
 
-  plan->data_scratch_adjust = -(int)((XS3_VPU_VREG_WIDTH_BITS - x->channels) % XS3_VPU_VREG_WIDTH_BITS)/8;
+  plan->data_scratch_adjust = -(int)((XS3_VPU_VREG_WIDTH_BITS - x->channels % XS3_VPU_VREG_WIDTH_BITS) % XS3_VPU_VREG_WIDTH_BITS)/8;
 
   unsigned total_bits_copied_to_scratch = x->channels * k_sub_height * k_sub_width;
 
@@ -393,8 +393,8 @@ void bnn_conv2d_bin_out_SISO_asm_prepare(
 
  // Inner Loop
   // minus one to account for the auto increment in the loop
-  unsigned bytes_per_input_channel_rounded_up = ((bytes_per_input_channel + 32 - 1)/32)*32;
-  plan->inner_x_h_step = bytes_per_input_channel * h_dilation - bytes_per_input_channel_rounded_up;
+  int bytes_per_input_channel_rounded_up = ((bytes_per_input_channel + 32 - 1)/32)*32;
+  plan->inner_x_h_step = (int)(bytes_per_input_channel * h_dilation) - bytes_per_input_channel_rounded_up;
 
   // TODO multiply x->width by dilation
   plan->inner_x_v_step = 
@@ -402,8 +402,8 @@ void bnn_conv2d_bin_out_SISO_asm_prepare(
   // Outer Loop
   plan->outer_x_h_step = bytes_per_input_channel * k->stride.horizontal;
 
-  plan->outer_x_v_step = (bytes_per_input_channel * x->width *k->stride.vertical) 
-     - (plan->outer_x_h_step * x_width_loops);
+  plan->outer_x_v_step = (int)(bytes_per_input_channel * x->width *k->stride.vertical) 
+     - (int)(plan->outer_x_h_step * x_width_loops);
 
   // TODO these are for implementing sub-kernels
   assert(k_sub_height == k->shape.height); //until the following two lines are working

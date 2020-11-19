@@ -239,7 +239,7 @@ void impl_bnn_conv2d_int8_out_pseudo_random2(
       unsigned y_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, 1, 1);
 
         for (unsigned chans_out = min_chans_out;
-              chans_out <= max_chans_out; chans_out += 4) {
+              chans_out <= max_chans_out; chans_out += chans_out_inc) {
 
           unsigned chan_words_in = chans_in/32;
 
@@ -495,6 +495,7 @@ void impl_bnn_conv2d_int8_out_sub_image(
         }
       }
       free(K_ref);
+      free(K);
       free(X_ref);
       free(post_activation_multiplier);
       free(post_activation_bias);
@@ -506,7 +507,7 @@ void impl_bnn_conv2d_int8_out_sub_image(
   }
 }
 
-void SISO_valid(   
+static void SISO_valid(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -534,7 +535,7 @@ void SISO_valid(
   free(data_scratch);
 }
 
-void DI_valid(   
+static void DI_valid(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -551,15 +552,15 @@ void DI_valid(
       unsigned y_loc_x, unsigned y_loc_y, 
       unsigned y_sub_width, unsigned y_sub_height){
 
-  bnn_conv2d_int8_out_valid(Y_p, X_p,
-                      K_p, post_activation_multiplier_q,
-                      post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
-                      x, y, k,
-                      y_loc_x, y_loc_y, y_sub_width, y_sub_height);
+  bnn_conv2d_int8_out_valid(Y_p, (const bnn_b256_t*)X_p,
+        (const bnn_b256_t*)K_p, post_activation_multiplier_q,
+        post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
+        x, y, k,
+        y_loc_x, y_loc_y, y_sub_width, y_sub_height);
 }
 
 
-void SISO_full(   
+static void SISO_full(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -585,7 +586,7 @@ void SISO_full(
   free(data_scratch);
 }
 
-void DI_full(   
+static void DI_full(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -600,8 +601,8 @@ void DI_full(
       const nn_image_params_t* y,
       const nn_window_params_t* k){
 
-  bnn_conv2d_int8_out(Y_p, X_p,
-                      K_p, post_activation_multiplier_q,
+  bnn_conv2d_int8_out(Y_p, (const bnn_b256_t*)X_p,
+                      (const bnn_b256_t*)K_p, post_activation_multiplier_q,
                       post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
                       x, y, k,
                       0, 0, y->width, y->height, 0, 0);

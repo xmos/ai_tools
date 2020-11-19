@@ -1,6 +1,7 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
 import pytest
+import numpy as np
 from typing import Tuple
 from copy import deepcopy
 
@@ -86,7 +87,9 @@ def test_mutate(
     params_new = op.inputs[1].as_array().tolist()
     assert params_new == params_ori
 
-    assert op.custom_options["pad_value"] == 0
+    zero_point_byte = np.int8(op.inputs[0].quantization["zero_point"][0]).tostring()
+    pad_value_bytes = np.int32(op.custom_options["pad_value"]).tostring()
+    assert pad_value_bytes == zero_point_byte * 4
 
 
 if __name__ == "__main__":

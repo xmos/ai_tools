@@ -552,11 +552,11 @@ static void DI_valid(
       unsigned y_loc_x, unsigned y_loc_y, 
       unsigned y_sub_width, unsigned y_sub_height){
 
-  bnn_conv2d_int8_out_valid(Y_p, X_p,
-                      K_p, post_activation_multiplier_q,
-                      post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
-                      x, y, k,
-                      y_loc_x, y_loc_y, y_sub_width, y_sub_height);
+  bnn_conv2d_int8_out_valid(Y_p, (const bnn_b256_t*)X_p,
+        (const bnn_b256_t*)K_p, post_activation_multiplier_q,
+        post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
+        x, y, k,
+        y_loc_x, y_loc_y, y_sub_width, y_sub_height);
 }
 
 
@@ -601,8 +601,8 @@ static void DI_full(
       const nn_image_params_t* y,
       const nn_window_params_t* k){
 
-  bnn_conv2d_int8_out(Y_p, X_p,
-                      K_p, post_activation_multiplier_q,
+  bnn_conv2d_int8_out(Y_p, (const bnn_b256_t*)X_p,
+                      (const bnn_b256_t*)K_p, post_activation_multiplier_q,
                       post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
                       x, y, k,
                       0, 0, y->width, y->height, 0, 0);

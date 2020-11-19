@@ -76,8 +76,8 @@ static void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b32_t* X_ref,
   bnn_reorder_threshold_tensor(thresholds_p, thresholds_ref, chans_out,
                               k_width * k_height * chans_in, chan_overlaps);
 
-  impl_fn((int8_t*)Y_p, (const bnn_b32_t*)X_ref,
-    (const bnn_b32_t*)K_p, thresholds_p, 
+  impl_fn(Y_p, X_ref,
+    K_p, thresholds_p, 
     &x, &y, &k);
 
   unsigned chan_b32_out = DIV_BY_AND_ROUND_UP(chans_out, 32);
@@ -129,9 +129,9 @@ void impl_bnn_conv2d_bin_out_pseudo_random(
 
                   size_t X_ref_bytes = sizeof(bnn_b32_t)*(x_height*x_width*chan_words_in+X_REF_OVERREAD_WORDS);
                   bnn_b32_t * X_ref =(bnn_b32_t *)malloc(X_ref_bytes);
-                  int32_t *thresholds = (int16_t *)malloc(sizeof(int32_t)*(chans_out+(16 - chans_out%16)));
+                  int32_t *thresholds = (int32_t *)malloc(sizeof(int32_t)*(chans_out+(16 - chans_out%16)));
                   
-                  int32_t * thresholds_ref = (float *)malloc(sizeof(int32_t)*chans_out);
+                  int32_t * thresholds_ref = (int32_t *)malloc(sizeof(int32_t)*chans_out);
                   int * chan_overlaps = (int *)malloc(sizeof(int)*(chans_out));
 
                   bnn_b32_t * Y     = (bnn_b32_t *) malloc(sizeof(bnn_b32_t) * y_height * y_width * chans_out/32);
@@ -226,7 +226,7 @@ void impl_bnn_conv2d_bin_out_pseudo_random2(
           int32_t *thresholds_ref = (int32_t *)malloc(sizeof(int32_t)*(chans_out+(16 - chans_out%16)));
           bnn_b32_t *data_scratch = (bnn_b32_t *)malloc(sizeof(bnn_b32_t)*(k_height * k_width * chan_words_in + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
           
-          int32_t * thresholds = (float *)malloc(sizeof(int32_t)*chans_out);
+          int32_t * thresholds = (int32_t *)malloc(sizeof(int32_t)*chans_out);
           int * chan_overlaps = (int *)malloc(sizeof(int)*(chans_out));
 
           bnn_b32_t * Y     = (bnn_b32_t *) malloc(sizeof(bnn_b32_t) * y_height * y_width * chans_out/32);
@@ -355,8 +355,8 @@ void impl_bnn_conv2d_bin_out_sub_image(
       bnn_b32_t * X_ref = (bnn_b32_t *) malloc(X_ref_bytes);
       bnn_b32_t * K = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(chans_out*full_k_height*full_k_width*chan_words_in + K_OVERREAD_WORDS));
 
-      int32_t * thresholds = (float *)malloc(sizeof(int32_t)*chans_out);
-      int32_t * thresholds_ref = (float *)malloc(sizeof(int32_t)*chans_out);
+      int32_t * thresholds = (int32_t *)malloc(sizeof(int32_t)*chans_out);
+      int32_t * thresholds_ref = (int32_t *)malloc(sizeof(int32_t)*chans_out);
       int * chan_overlaps = (int *)malloc(sizeof(int)*(chans_out));
 
       for (unsigned h_stride = min_h_stride; h_stride < max_h_stride; h_stride++){
@@ -485,8 +485,8 @@ static void DI_valid(
       unsigned y_loc_x, unsigned y_loc_y, 
       unsigned y_sub_width, unsigned y_sub_height){
 
-  bnn_conv2d_bin_out_valid(Y_p, X_p,
-                      K_p, thresholds,
+  bnn_conv2d_bin_out_valid(Y_p, (const bnn_b256_t*)X_p,
+                      (const bnn_b256_t*)K_p, thresholds,
                       x, y, k,
                       y_loc_x, y_loc_y, y_sub_width, y_sub_height);
 }
@@ -526,8 +526,8 @@ static void DI_full(
       const nn_image_params_t* y,
       const nn_window_params_t* k){
 
-  bnn_conv2d_bin_out(Y_p, X_p,
-                      K_p, thresholds, 
+  bnn_conv2d_bin_out(Y_p, (const bnn_b256_t*)X_p,
+                      (const bnn_b256_t*)K_p, thresholds, 
                       x, y, k,
                       0, 0, y->width, y->height, 
                       0, 0, 0, 0, k->shape.width, k->shape.height);

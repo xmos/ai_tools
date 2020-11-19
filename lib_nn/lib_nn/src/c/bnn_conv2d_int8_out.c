@@ -34,7 +34,7 @@ static void VDEPTH8_FIXED(xs3_vpu* vpu){
 }
 
 WEAK_FUNC
-void bnn_conv2d_int8_out_asm(nn_bnn_conv2d_int8_out_asm_plan_t * plan){
+void bconv2d_int8_DIDO_impl(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
 
   xs3_vpu vpu_data;
   xs3_vpu * vpu = &vpu_data;
@@ -65,8 +65,8 @@ void bnn_conv2d_int8_out_asm(nn_bnn_conv2d_int8_out_asm_plan_t * plan){
   for (int xh = plan->x_height_loop_counter; xh > 0 ; xh-- ) {
     for (int xv = plan->x_width_loop_counter; xv >= 0 ; xv-- ) {
 
-      void * cur_post_activation_mul = plan->post_activation_mul;
-      void * cur_post_activation_bias = plan->post_activation_bias;
+      void * cur_post_activation_mul = (void *)plan->post_activation_mul;
+      void * cur_post_activation_bias = (void *)plan->post_activation_bias;
       void * K_p = (void *)plan->K;
       for (int oc = plan->output_channel_loop_counter; oc >= 0 ; oc-- ) {
 
@@ -127,7 +127,7 @@ void bnn_conv2d_int8_out_asm(nn_bnn_conv2d_int8_out_asm_plan_t * plan){
   }
 }
 
-static void make_patch(xs3_vpu * vpu, nn_bnn_conv2d_int8_out_SISO_asm_plan_t * plan, void * X_p){
+static void make_patch(xs3_vpu * vpu, nn_bconv2d_int8_impl_plan_t * plan, void * X_p){
 
     void * X_cur_p = X_p;
     void * D_p = plan->data_scratch;
@@ -150,7 +150,7 @@ static void make_patch(xs3_vpu * vpu, nn_bnn_conv2d_int8_out_SISO_asm_plan_t * p
     VSTD(vpu, D_p);
 }
 
-void compute_patch(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan, 
+void compute_patch(nn_bconv2d_int8_impl_plan_t *plan, 
   void ** K_p, int step, xs3_vpu * vpu, 
   vpu_vector_t *sat_mem, 
   vpu_vector_t * bias_shift, 
@@ -208,7 +208,7 @@ void compute_patch(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan,
 }
 
 WEAK_FUNC
-void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
+void bconv2d_int8_impl(nn_bconv2d_int8_impl_plan_t *plan){
 
   xs3_vpu vpu_data;
   memset(&vpu_data, 0, sizeof(vpu_data));
@@ -239,8 +239,8 @@ void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
 
       make_patch(vpu, plan, X_p);
 
-      void * cur_post_activation_mul = plan->post_activation_mul;
-      void * cur_post_activation_bias = plan->post_activation_bias;
+      void * cur_post_activation_mul = (void *)plan->post_activation_mul;
+      void * cur_post_activation_bias = (void *)plan->post_activation_bias;
       void * K_p = (void *)plan->K;
       for (int oc = plan->output_channel_loop_counter; oc > 0 ; oc-- ) {
 
@@ -267,8 +267,8 @@ void bnn_conv2d_int8_out_SISO_asm(nn_bnn_conv2d_int8_out_SISO_asm_plan_t *plan){
   }
 }
 
-static void bnn_conv2d_int8_out_SISO_asm_prepare(
-    nn_bnn_conv2d_int8_out_SISO_asm_plan_t* plan, int8_t* Y_p,
+static void bconv2d_int8_prepare(
+    nn_bconv2d_int8_impl_plan_t* plan, int8_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, bnn_b32_t * data_scratch,
     
     const int16_t* post_activation_multiplier_q, 
@@ -380,8 +380,8 @@ static void bnn_conv2d_int8_out_SISO_asm_prepare(
   plan->y_v_step = chans_out * sizeof(int8_t) * (y->width - y_sub_width);
 }
 
-static void bnn_conv2d_int8_out_asm_prepare(
-    nn_bnn_conv2d_int8_out_asm_plan_t* plan, int8_t* Y_p,
+static void bconv2d_int8_DIDO_prepare(
+    nn_bconv2d_int8_DIDO_impl_plan_t* plan, int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
@@ -469,7 +469,7 @@ static void bnn_conv2d_int8_out_asm_prepare(
   plan->k_h_step = 0;
 }
 
-void bnn_conv2d_int8_out(int8_t* Y_p,
+void bconv2d_int8_DIDO(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
@@ -487,9 +487,9 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
 
     const unsigned x_loc_x, const unsigned x_loc_y
 ){
-  nn_bnn_conv2d_int8_out_asm_plan_t plan;
+  nn_bconv2d_int8_DIDO_impl_plan_t plan;
 
-  bnn_conv2d_int8_out_asm_prepare(&plan, Y_p,
+  bconv2d_int8_DIDO_prepare(&plan, Y_p,
       X_p,  K_p,
       post_activation_multiplier_q, 
       post_activation_bias_q,
@@ -500,10 +500,10 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
       y_loc_x, y_loc_y, y_sub_width, y_sub_height,
       x_loc_x, x_loc_y);
 
-  bnn_conv2d_int8_out_asm(&plan);
+  bconv2d_int8_DIDO_impl(&plan);
 }
 
-void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
+void bconv2d_int8(int8_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
@@ -523,9 +523,9 @@ void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
 
     const unsigned x_loc_x, const unsigned x_loc_y
 ) {
-    nn_bnn_conv2d_int8_out_SISO_asm_plan_t plan;
+    nn_bconv2d_int8_impl_plan_t plan;
 
-    bnn_conv2d_int8_out_SISO_asm_prepare(&plan, Y_p,
+    bconv2d_int8_prepare(&plan, Y_p,
         X_p,  K_p, data_scratch,
         post_activation_multiplier_q, 
         post_activation_bias_q,
@@ -536,5 +536,5 @@ void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
         y_loc_x, y_loc_y, y_sub_width, y_sub_height,
         x_loc_x, x_loc_y);
 
-    bnn_conv2d_int8_out_SISO_asm(&plan);
+    bconv2d_int8_impl(&plan);
 }

@@ -106,7 +106,7 @@
 //       tl_x.width = tl_k.shape.width;  // TODO: This will need to incorporate the
 //                                       // stride
 
-//       // nn_bnn_conv2d_bin_out_asm_plan_t plan;
+//       // nn_bconv2d_bin_DI_impl_plan_t plan;
 //       unsigned x_loc_x = 0;
 //       unsigned x_loc_y = 0;
 //       unsigned k_loc_x = k_full_width - k.shape.width;
@@ -120,7 +120,7 @@
 //       //          tl_k.shape.height, tl_k.shape.width);
 //       //   printf("\n");
 
-//       // bnn_conv2d_bin_out_asm_prepare(
+//       // bconv2d_bin_DI_prepare(
 //       //     &plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_p, (bnn_b256_t*)K_p,
 //       //     thresholds_p, &x, &y, &k, y_loc_x, y_loc_y,  // The output Y coord
 //       //     y_loc_x, y_loc_y,                            // the input X coord
@@ -130,7 +130,7 @@
 //       //         k.shape.height,  // the top left corner of the kernel in use
 //       //     y_full_width, x_full_width, k_width);
 
-//       // bnn_conv2d_bin_out_asm(&plan);
+//       // bconv2d_bin_DI_impl(&plan);
 
 //       // printf();
 //     }
@@ -150,8 +150,8 @@
 //       x.width = k.shape.width;  // TODO: This will need to incorporate the
 //                                 // stride
 
-//       nn_bnn_conv2d_bin_out_asm_plan_t plan;
-//       bnn_conv2d_bin_out_asm_prepare(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_p,
+//       nn_bconv2d_bin_DI_impl_plan_t plan;
+//       bconv2d_bin_DI_prepare(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_p,
 //                                      (bnn_b256_t*)K_p, thresholds_p, &x, &y,
 //                                      &k, y_loc_x, y_loc_y,  // The output Y
 //                                      coord y_loc_x, y_loc_y,  // the input X
@@ -159,7 +159,7 @@
 //                                      in use y_full_width, x_full_width,
 //                                      k_width);
 
-//       bnn_conv2d_bin_out_asm(&plan);
+//       bconv2d_bin_DI_impl(&plan);
 
 //       // printf();
 //     }

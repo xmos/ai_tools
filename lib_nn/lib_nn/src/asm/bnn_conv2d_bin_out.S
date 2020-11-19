@@ -157,10 +157,10 @@ bnn_make_16_bit_output:
     retsp 0
 
 /*
-void bnn_conv2d_bin_out_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
+void bconv2d_bin_DI_impl(const nn_bconv2d_bin_DI_impl_plan_t* plan);
 */
 
-#define FUNCTION_NAME bnn_conv2d_bin_out_asm
+#define FUNCTION_NAME bconv2d_bin_DI_impl
 
 #define NSTACKWORDS  36
     

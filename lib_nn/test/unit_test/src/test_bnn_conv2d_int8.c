@@ -239,7 +239,7 @@ void impl_bnn_conv2d_int8_out_pseudo_random2(
       unsigned y_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, 1, 1);
 
         for (unsigned chans_out = min_chans_out;
-              chans_out <= max_chans_out; chans_out += 4) {
+              chans_out <= max_chans_out; chans_out += chans_out_inc) {
 
           unsigned chan_words_in = chans_in/32;
 

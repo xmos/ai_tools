@@ -78,14 +78,15 @@ def calc_arena_size(model_content):
     try:
         from xcore_interpreters import XCOREInterpreter
 
-        interpreter = XCOREInterpreter(model_content=model_content)
-        logger = logging.getLogger("tensor_arena_allocations")
-        [logger.info(line) for line in interpreter.get_allocations().split("\n")]
-        return interpreter.tensor_arena_size
+        with XCOREInterpreter(model_content=model_content) as interpreter:
+            logger = logging.getLogger("tensor_arena_allocations")
+            [logger.info(line) for line in interpreter.get_allocations().split("\n")]
+            return interpreter.tensor_arena_size
     except RuntimeError as e:
         print("Runtime Error: Failed calculating tensor arena size.")
         print(str(e))
-        return None
+
+    return None
 
 
 def calc_weight_and_bias_fetch_sizes(model_content):

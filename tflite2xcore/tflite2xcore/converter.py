@@ -76,11 +76,6 @@ class WordAlignmentCanonicalizationManager(PassManager):
         # (this is currently required by our kernels)
         self.register_pass(passes.CanonicalizeConv2DInputChannels())
 
-        # canonicalize padding
-        # this pass tries to fuse PAD ops, usually because they were inserted
-        # by the word alignment passes
-        self.register_pass(passes.FuseConsecutivePadsPass())
-
 
 class ActivationLoweringManager(PassManager):
     def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
@@ -138,14 +133,22 @@ class PaddingOptimizationManager(PassManager):
     ) -> None:
         super().__init__(model, **kwargs)
 
-        # we optimize the convolutions by fusing it with spatial padding
-        # Split batch/channel-wise padding from spatial padding
+        # canonicalize by ensuring that spatial and other dims are decoupled
+        # first fuse consecutive PAD ops
+        # (injected by word alignment, bconv2d padding legalization, etc.)
+        self.register_pass(passes.FuseConsecutivePadsPass())
+        # second split batch/channel-wise padding from spatial padding
         self.register_pass(passes.SplitPaddingPass())
-        # Fuse spatial padding with conv2d
+
+        # we optimize the convolutions by fusing it with spatial padding
         self.register_pass(passes.FuseConv2dPaddingPass())
         if ignore_input_alignment:
             # remove word alignment padding on the input
             self.register_pass(passes.RemovePaddingInputPass())
+        # replace with optimized implementation where possible
+        self.register_pass(passes.ReplacePadPass())
+
+        # Fuse back any remaining PAD operators
         self.register_pass(passes.FuseConsecutivePadsPass())
 
 

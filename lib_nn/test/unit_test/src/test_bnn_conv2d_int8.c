@@ -495,6 +495,7 @@ void impl_bnn_conv2d_int8_out_sub_image(
         }
       }
       free(K_ref);
+      free(K);
       free(X_ref);
       free(post_activation_multiplier);
       free(post_activation_bias);
@@ -506,7 +507,7 @@ void impl_bnn_conv2d_int8_out_sub_image(
   }
 }
 
-void SISO_valid(   
+static void SISO_valid(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -534,7 +535,7 @@ void SISO_valid(
   free(data_scratch);
 }
 
-void DI_valid(   
+static void DI_valid(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -559,7 +560,7 @@ void DI_valid(
 }
 
 
-void SISO_full(   
+static void SISO_full(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -585,7 +586,7 @@ void SISO_full(
   free(data_scratch);
 }
 
-void DI_full(   
+static void DI_full(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 

@@ -8,6 +8,12 @@ int pseudo_rand(int *seed){
   return *seed;
 }
 
+void pick_threshold_params(int32_t * thresholds, const unsigned chans_out, 
+  const unsigned receptive_volume){
+  for (int i = 0; i < chans_out; i++)
+    thresholds[i] = i +  (int)receptive_volume/2 - (int)chans_out / 2;
+}
+
 //TODO pass the clamps
 void pick_extreme_bias_post_activation_params(float * post_activation_multiplier, float * post_activation_bias, 
   unsigned chans_out, unsigned receptive_volume, int * seed){

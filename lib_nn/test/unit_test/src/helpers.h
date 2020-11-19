@@ -21,6 +21,9 @@ void larq_ref_bconv2d_int8_out(const nn_image_params_t* x, const nn_image_params
                       
 int pseudo_rand(int *seed);
 
+void pick_threshold_params(int32_t * thresholds, const unsigned chans_out, 
+  const unsigned receptive_volume);
+
 void pick_post_activation_params(float * post_activation_multiplier, float * post_activation_bias, 
   unsigned chans_out, unsigned receptive_volume, int * seed);
 

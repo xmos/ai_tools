@@ -62,8 +62,8 @@ void run_quantisation(void (*fun_ptr)()){
 
   int seed = 0;
   for(unsigned k_dim=1;k_dim <= 7;k_dim += 2){
-    for(unsigned chans_in=32; chans_in< 32*7; chans_in+=32){
-      for(unsigned chans_out=4; chans_out < 256; chans_out+=4){
+    for(unsigned chans_in=32; chans_in< 32*5; chans_in+=32){
+      for(unsigned chans_out=4; chans_out < 32; chans_out+=4){
 
         unsigned receptive_volume = k_dim*chans_in; 
 
@@ -120,7 +120,7 @@ void run_quantisation(void (*fun_ptr)()){
     }
   }
 
-  TEST_ASSERT_TRUE_MESSAGE(fabs((float)sum_count/ error_sum) > 656, "Mean error too high");
+  TEST_ASSERT_TRUE_MESSAGE(fabs((float)sum_count/ error_sum) > 512, "Mean error too high");
   TEST_ASSERT_TRUE_MESSAGE(fabs((float)sum_count/abs_error_sum) > 256, "Mean abs error too high");
 }
 

@@ -103,7 +103,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
   // TEST_ASSERT_INT8_ARRAY_WITHIN(1, Y_ref_p, Y_p, y_height * y_width * chans_out);
 }
 
-void impl_bnn_conv2d_int8_out_pseudo_random(
+void impl_bconv2d_int8_DIDO_pseudo_random(
   const unsigned min_k_height, const unsigned max_k_height, 
   const unsigned min_k_width, const unsigned max_k_width,  
   
@@ -216,7 +216,7 @@ void impl_bnn_conv2d_int8_out_pseudo_random(
 }
 
 
-void impl_bnn_conv2d_int8_out_pseudo_random2(
+void impl_bconv2d_int8_DIDO_pseudo_random2(
   const unsigned max_x_height, const unsigned max_x_width,  
   
   const unsigned chans_in,
@@ -365,7 +365,7 @@ This test check for a fixed x_height, x_width, k_height and k_width a sub-region
 is correctly computed. It check this for MIN_CHANS_IN and MAX_CHANS_IN input channels and 
 MIN_CHANS_OUT to MAX_CHANS_OUT output channels. Stride are tested, dilations are untested currently.
 */
-void impl_bnn_conv2d_int8_out_sub_image(
+void impl_bconv2d_int8_DIDO_sub_image(
   const unsigned full_x_height, const unsigned full_x_width,  
   const unsigned full_k_height, const unsigned full_k_width,
   
@@ -527,7 +527,7 @@ static void SISO_valid(
   bnn_b32_t *data_scratch = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(k->shape.height * k->shape.width * 
   x->channels/32 + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
       
-  bnn_conv2d_int8_out_SISO_valid(Y_p, X_p,
+  bconv2d_int8_valid(Y_p, X_p,
                       K_p, post_activation_multiplier_q,
                       post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
                       data_scratch, x, y, k,
@@ -552,7 +552,7 @@ static void DI_valid(
       unsigned y_loc_x, unsigned y_loc_y, 
       unsigned y_sub_width, unsigned y_sub_height){
 
-  bnn_conv2d_int8_out_valid(Y_p, (const bnn_b256_t*)X_p,
+  bconv2d_int8_DIDO_valid(Y_p, (const bnn_b256_t*)X_p,
         (const bnn_b256_t*)K_p, post_activation_multiplier_q,
         post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
         x, y, k,
@@ -578,7 +578,7 @@ static void SISO_full(
   bnn_b32_t *data_scratch = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(k->shape.height * k->shape.width * 
     x->channels/32 + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
       
-  bnn_conv2d_int8_out_SISO(Y_p, X_p,
+  bconv2d_int8(Y_p, X_p,
                       K_p, post_activation_multiplier_q,
                       post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
                       data_scratch, x, y, k,
@@ -601,46 +601,46 @@ static void DI_full(
       const nn_image_params_t* y,
       const nn_window_params_t* k){
 
-  bnn_conv2d_int8_out(Y_p, (const bnn_b256_t*)X_p,
+  bconv2d_int8_DIDO(Y_p, (const bnn_b256_t*)X_p,
                       (const bnn_b256_t*)K_p, post_activation_multiplier_q,
                       post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
                       x, y, k,
                       0, 0, y->width, y->height, 0, 0);
 }
 
-void test_bnn_conv2d_int8_out_SISO_sub_image(){
-  impl_bnn_conv2d_int8_out_sub_image(5, 5, 3, 3, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 1, 3, 3, (void*)&SISO_valid);
+void test_bconv2d_int8_sub_image(){
+  impl_bconv2d_int8_DIDO_sub_image(5, 5, 3, 3, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 1, 3, 3, (void*)&SISO_valid);
 }
 
-void test_bnn_conv2d_int8_out_DI_sub_image(){
-  impl_bnn_conv2d_int8_out_sub_image(5, 5, 3, 3, 256*1, 256*2, 16*1, 16*3, 256, 32, 1, 1, 3, 3, (void*)&DI_valid);
+void test_bconv2d_int8_DIDO_sub_image(){
+  impl_bconv2d_int8_DIDO_sub_image(5, 5, 3, 3, 256*1, 256*2, 16*1, 16*3, 256, 32, 1, 1, 3, 3, (void*)&DI_valid);
 }
 
-void test_bnn_conv2d_int8_out_SISO_pseudo_random(){
-  impl_bnn_conv2d_int8_out_pseudo_random(1, 5,1, 5, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, (void*)&SISO_full);
+void test_bconv2d_int8_pseudo_random(){
+  impl_bconv2d_int8_DIDO_pseudo_random(1, 5,1, 5, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, (void*)&SISO_full);
 }
 
-void test_bnn_conv2d_int8_out_DI_pseudo_random(){
-  impl_bnn_conv2d_int8_out_pseudo_random(1, 4, 1, 4, 256*1, 256*2, 32*1, 32*3, 256, 32, 1, 3, 1, 3, (void*)&DI_full);
+void test_bconv2d_int8_DIDO_pseudo_random(){
+  impl_bconv2d_int8_DIDO_pseudo_random(1, 4, 1, 4, 256*1, 256*2, 32*1, 32*3, 256, 32, 1, 3, 1, 3, (void*)&DI_full);
 }
 
-void test_bnn_conv2d_int8_out_SISO_pseudo_random2(){
-  impl_bnn_conv2d_int8_out_pseudo_random2(1, 32, 32, 4, 4, 32, 4, (void*)&SISO_full);
+void test_bconv2d_int8_pseudo_random2(){
+  impl_bconv2d_int8_DIDO_pseudo_random2(1, 32, 32, 4, 4, 32, 4, (void*)&SISO_full);
 }
 
-void test_bnn_conv2d_int8_out_DI_pseudo_random2(){
-  impl_bnn_conv2d_int8_out_pseudo_random2(1, 32, 256, 32, 32, 256, 32, (void*)&DI_full);
+void test_bconv2d_int8_DIDO_pseudo_random2(){
+  impl_bconv2d_int8_DIDO_pseudo_random2(1, 32, 256, 32, 32, 256, 32, (void*)&DI_full);
 }
 
 void test_bnn_conv2d_int8() {
   UNITY_SET_FILE();
 
-  RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random);
-  RUN_TEST(test_bnn_conv2d_int8_out_DI_pseudo_random);
+  RUN_TEST(test_bconv2d_int8_pseudo_random);
+  RUN_TEST(test_bconv2d_int8_DIDO_pseudo_random);
 
-  RUN_TEST(test_bnn_conv2d_int8_out_SISO_pseudo_random2);
-  RUN_TEST(test_bnn_conv2d_int8_out_DI_pseudo_random2);
+  RUN_TEST(test_bconv2d_int8_pseudo_random2);
+  RUN_TEST(test_bconv2d_int8_DIDO_pseudo_random2);
 
-  RUN_TEST(test_bnn_conv2d_int8_out_SISO_sub_image);
-  RUN_TEST(test_bnn_conv2d_int8_out_DI_sub_image);
+  RUN_TEST(test_bconv2d_int8_sub_image);
+  RUN_TEST(test_bconv2d_int8_DIDO_sub_image);
 }

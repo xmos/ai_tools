@@ -207,10 +207,10 @@ bnn_compute_patch:
     {retsp 0; nop}
 
 /*
-void bnn_conv2d_bin_out_SISO_asm(const nn_bnn_conv2d_bin_out_asm_plan_t* plan);
+void bconv2d_bin_impl(const nn_bconv2d_bin_DI_impl_plan_t* plan);
 */
 
-#define FUNCTION_NAME bnn_conv2d_bin_out_SISO_asm
+#define FUNCTION_NAME bconv2d_bin_impl
 
 #define NSTACKWORDS  40 //FIXME should be lower
     

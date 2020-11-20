@@ -3,6 +3,17 @@
 #include "nn_binary_structs.h"
 // Binary Conv2D
 
+#define BCONV2D_BIN_DI_INPUT_CH_INCREMENT  (XS3_VPU_VREG_WIDTH_BITS)
+#define BCONV2D_BIN_DI_OUTPUT_CH_INCREMENT (8*sizeof(int32_t))
+#define BCONV2D_BIN_INPUT_CH_INCREMENT     (8*sizeof(int32_t))
+#define BCONV2D_BIN_OUTPUT_CH_INCREMENT    (8*sizeof(int32_t))
+
+#define BCONV2D_INT8_DIDO_INPUT_CH_INCREMENT  (XS3_VPU_VREG_WIDTH_BITS)
+#define BCONV2D_INT8_DIDO_OUTPUT_CH_INCREMENT (VPU_INT16_ACC_SIZE)
+#define BCONV2D_INT8_INPUT_CH_INCREMENT       (8*sizeof(int32_t))
+#define BCONV2D_INT8_OUTPUT_CH_INCREMENT      (sizeof(int32_t))
+
+
 /**
  * Reference implementation of the post accumulation activation.
  * 
@@ -49,7 +60,7 @@ void bnn_quantise_activation(
 /**  
  * @brief Execute @oper{bnn_reorder_threshold_tensor}.
  * 
- * This reorders the threshold tensor for efficient execution by bnn_conv2d_bin_out_asm. 
+ * This reorders the threshold tensor for efficient execution by bconv2d_bin_DI_impl. 
  * This is only inteneded for testing.
  * 
  * `thresh_reordered` points to the output threshold @tensor{thresh_reordered} .
@@ -76,7 +87,7 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
 /**  
  * @brief Execute @oper{bnn_reorder_kernel_tensor}.
  * 
- * This reorders the kernel tensor for efficient execution by bnn_conv2d_bin_out_asm. 
+ * This reorders the kernel tensor for efficient execution by bconv2d_bin_DI_impl. 
  * This is only intended for testing.
  * 
  * `K_p` points to the output kernel @tensor{K_p} .
@@ -109,7 +120,7 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
 /**  
  * @brief Execute @oper{bnn_reorder_int8_kernel_tensor}.
  * 
- * This reorders the kernel tensor for efficient execution by bnn_conv2d_int8_out_asm. 
+ * This reorders the kernel tensor for efficient execution by bconv2d_int8_DIDO_asm. 
  * This is only intended for testing.
  * 
  * `K_p` points to the output kernel @tensor{K_p} .
@@ -138,7 +149,7 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                int * chan_overlaps) ;//TODO
 
 /**  
- * @brief Execute @oper{bnn_conv2d_int8_out_valid}.
+ * @brief Execute @oper{bconv2d_int8_DIDO_valid}.
  * 
  * This performs a binary conv2d on a rectangular sub-section of an input tensor X with 
  * kernel K.  
@@ -171,7 +182,7 @@ void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  */
-void bnn_conv2d_int8_out_valid(int8_t* Y_p,
+void bconv2d_int8_DIDO_valid(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
@@ -189,7 +200,7 @@ void bnn_conv2d_int8_out_valid(int8_t* Y_p,
 );
 
 
-void bnn_conv2d_int8_out_SISO_valid(int8_t* Y_p,
+void bconv2d_int8_valid(int8_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
@@ -209,7 +220,7 @@ void bnn_conv2d_int8_out_SISO_valid(int8_t* Y_p,
 );
 
 /**  
- * @brief Execute @oper{bnn_conv2d_bin_out_valid}.
+ * @brief Execute @oper{bconv2d_bin_DI_valid}.
  * 
  * This performs a binary conv2d on a rectangular sub-section of an input tensor X with 
  * kernel K.  
@@ -231,7 +242,7 @@ void bnn_conv2d_int8_out_SISO_valid(int8_t* Y_p,
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  */
-void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
+void bconv2d_bin_DI_valid(bnn_b32_t* Y_p,
     const bnn_b256_t* X_p, 
     const bnn_b256_t* K_p, 
     const int32_t* thresholds_p,
@@ -244,7 +255,7 @@ void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
 );
 
 /**  
- * @brief Execute @oper{bnn_conv2d_bin_out_SISO_valid}.
+ * @brief Execute @oper{bconv2d_bin_valid}.
  * 
  * This performs a binary conv2d on a rectangular sub-section of an input tensor X with 
  * kernel K. 
@@ -266,7 +277,7 @@ void bnn_conv2d_bin_out_valid(bnn_b32_t* Y_p,
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  */
-void bnn_conv2d_bin_out_SISO_valid(bnn_b32_t* Y_p,
+void bconv2d_bin_valid(bnn_b32_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, const int32_t* thresholds_p,
     bnn_b32_t * data_scratch, 
 
@@ -279,7 +290,7 @@ void bnn_conv2d_bin_out_SISO_valid(bnn_b32_t* Y_p,
 );
 
 /**  
- * @brief Execute @oper{bnn_conv2d_bin_out}.
+ * @brief Execute @oper{bconv2d_bin_DI}.
  * 
  * This performs a binary conv2d on a rectangular sub-section of an input tensor X with 
  * a sub-section of kernel K and writes it to s sub-section of tensor Y.
@@ -309,7 +320,7 @@ void bnn_conv2d_bin_out_SISO_valid(bnn_b32_t* Y_p,
  * @param k_sub_width   [in]     The width of the input sub-kernel that will be computed
  * @param k_sub_height  [in]     The height of the input sub-kernel that will be computed
  */
-void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
+void bconv2d_bin_DI(bnn_b32_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,
     
     const nn_image_params_t* x, //The full image of x
@@ -319,14 +330,11 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
     const unsigned y_h_loc, const unsigned y_v_loc,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_h_loc, const unsigned x_v_loc, 
-    
-    const unsigned k_h_loc, const unsigned k_v_loc, 
-    const unsigned k_sub_width, const unsigned k_sub_height
+    const unsigned x_h_loc, const unsigned x_v_loc
 );
 
 /**  
- * @brief Execute @oper{bnn_conv2d_bin_out_SISO}.
+ * @brief Execute @oper{bconv2d_bin}.
  * 
  * Shallow input, shallow output version, i.e. it supports multiples of 32 channels in and
  * multiples of 32 channels out.
@@ -362,7 +370,7 @@ void bnn_conv2d_bin_out(bnn_b32_t* Y_p,
  * @param k_sub_width   [in]     The width of the input sub-kernel that will be computed
  * @param k_sub_height  [in]     The height of the input sub-kernel that will be computed
  */
-void bnn_conv2d_bin_out_SISO(bnn_b32_t* Y_p,
+void bconv2d_bin(bnn_b32_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, const int32_t* thresholds_p,
     bnn_b32_t * data_scratch, 
     const nn_image_params_t* x, //The full image of x
@@ -372,14 +380,11 @@ void bnn_conv2d_bin_out_SISO(bnn_b32_t* Y_p,
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y, 
-    
-    const unsigned k_loc_x, const unsigned k_loc_y, 
-    const unsigned k_sub_width, const unsigned k_sub_height
+    const unsigned x_loc_x, const unsigned x_loc_y
 );
 
 /**  
- * @brief Execute @oper{bnn_conv2d_int8_out}.
+ * @brief Execute @oper{bconv2d_int8_DIDO}.
  * 
  * This performs a binary conv2d on a rectangular sub-section of an input tensor X with 
  * a sub-section of kernel K and writes it to s sub-section of tensor Y.
@@ -416,7 +421,7 @@ void bnn_conv2d_bin_out_SISO(bnn_b32_t* Y_p,
  * @param x_h_loc       [in]     The x coordinate(horizontal) of where the input will start reading from
  * @param x_v_loc       [in]     The y coordinate(vertical) of where the input will start reading from
  */
-void bnn_conv2d_int8_out(int8_t* Y_p,
+void bconv2d_int8_DIDO(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier, 
@@ -435,7 +440,7 @@ void bnn_conv2d_int8_out(int8_t* Y_p,
     const unsigned x_h_loc, const unsigned x_v_loc
 ) ;
 
-void bnn_conv2d_int8_out_SISO(int8_t* Y_p,
+void bconv2d_int8(int8_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 

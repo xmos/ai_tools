@@ -15,7 +15,7 @@ static void compute_bin_kernel(xs3_vpu * vpu, nn_bconv2d_bin_DI_impl_plan_t * pl
     vpu_vector_t zero_mem;
     memset(&zero_mem, 0, sizeof(zero_mem));
 
-    void * X_cur_p = X_p;
+    void * X_cur_p = (void *) X_p;
 
     VLDR(vpu, *threshold_current);
     *threshold_current += 32;
@@ -55,8 +55,8 @@ void bconv2d_bin_DI_impl(nn_bconv2d_bin_DI_impl_plan_t * plan){
 
   VSETC(vpu, MODE_S16);
 
-  void * X_p = plan->X;
-  void * Y_p = plan->Y;
+  void * X_p = (void *) plan->X;
+  void * Y_p = (void *) plan->Y;
 
   unsigned partial_res_0_15=0;
   void* partial_res_0_15_p = & partial_res_0_15;
@@ -87,8 +87,8 @@ void bconv2d_bin_DI_impl(nn_bconv2d_bin_DI_impl_plan_t * plan){
 
 static void make_patch(xs3_vpu * vpu, nn_bconv2d_bin_impl_plan_t * plan, void * X_p){
 
-    void * X_cur_p = X_p;
-    void * D_p = plan->data_scratch;
+    void * X_cur_p = (void *) X_p;
+    void * D_p = (void *) plan->data_scratch;
 
     for (int kh = plan->k_height_loop_counter; kh >= 0 ; kh-- )  {
         for (int kw = plan->k_width_loop_counter; kw >= 0 ; kw-- )  {
@@ -118,7 +118,7 @@ static void compute_patch(xs3_vpu * vpu, nn_bconv2d_bin_impl_plan_t * plan,
     VLDD(vpu, *threshold_current);
     *threshold_current += 32;
 
-    void * D_p = plan->data_scratch;
+    void * D_p = (void *) plan->data_scratch;
     
     for (int p=plan->patch_loop_counter; p>0; p--){
         VLDC(vpu, D_p);
@@ -150,8 +150,8 @@ void bconv2d_bin_impl(nn_bconv2d_bin_impl_plan_t * plan){
 
   VSETC(vpu, MODE_S16);
 
-  void * X_p = plan->X;
-  void * Y_p = plan->Y;
+  void * X_p = (void *) plan->X;
+  void * Y_p = (void *) plan->Y;
 
   unsigned partial_res_0_15 = 0;
   void* partial_res_0_15_p = & partial_res_0_15;
@@ -163,8 +163,8 @@ void bconv2d_bin_impl(nn_bconv2d_bin_impl_plan_t * plan){
 
       make_patch(vpu, plan, X_p);
 
-      void * K_p = plan->K;
-      void * threshold_current = plan->threshold_p;
+      void * K_p = (void *) plan->K;
+      void * threshold_current = (void *) plan->threshold_p;
       for (int oc = plan->output_channel_loop_counter; oc >= 0 ; oc-- ) {
 
         compute_patch(vpu, plan, &threshold_current, &K_p, partial_res_0_15_p);
@@ -207,7 +207,7 @@ void bconv2d_bin_DI_prepare(
 //relocate the pointers to the start of the region we care about.
   plan->Y = (bnn_b32_t*)Y[y_loc_y][y_loc_x];
   plan->X = (bnn_b256_t*)X[x_loc_y][x_loc_x];
-  plan->K = K;
+  plan->K = (void *) K;
 
   plan->threshold_p = (int32_t *)thresholds_p;
 
@@ -295,8 +295,8 @@ void bconv2d_bin_prepare(
 
 //relocate the pointers to the start of the region we care about.
   plan->Y = (bnn_b32_t*)Y[y_loc_y][y_loc_x];
-  plan->X = (bnn_b32_t*)X[x_loc_y][x_loc_x];
-  plan->K = K;
+  plan->X = (const bnn_b32_t*)X[x_loc_y][x_loc_x];
+  plan->K = (const bnn_b32_t*)K;
   plan->threshold_p = (int32_t *)thresholds_p;
   plan->data_scratch = data_scratch;
 

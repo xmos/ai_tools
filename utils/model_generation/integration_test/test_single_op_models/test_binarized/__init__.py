@@ -52,6 +52,12 @@ class LarqCompositeTestModelGenerator(Conv2dWordAlignedTestModelGenerator):
         assert len(input_range) == 2
         assert input_range[0] <= 0 <= input_range[1]
         cfg["input_init"] = cfg.pop("input_init", ("RandomUniform", *input_range))
+
+        self._config.update(
+            {
+                "bias_init": cfg.pop("bias_init", ("RandomUniform", -1, 1)),
+            }
+        )
         super()._set_config(cfg)
 
     def _op_layer(
@@ -216,10 +222,6 @@ class BinarizedTestRunner(IntegrationTestRunner):
         return self._lce_converter.get_converted_model()
 
     def run(self) -> None:
-        """ Defines how a DefaultIntegrationTestRunner should be run.
-        
-        Most integration tests require self.outputs to be set.
-        """
         super().run()
         self._lce_converter.convert()
         self._lce_evaluator.evaluate()

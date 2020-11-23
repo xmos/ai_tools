@@ -40,7 +40,7 @@ class BConv2dBitpackedTestModelGenerator(BConv2dGenericTestModelGenerator):
         img = tf.keras.layers.Input(shape=self._input_shape)
         x = self._fake_quant(img)
         x = self._op_layer()(x)
-        # NOTE: we need the next dummy layer to produce a bconv2d with bitpacked output
+        # NOTE: we need the next dummy layer in order to produce a bconv2d with bitpacked output
         x = larq.layers.QuantConv2D(
             filters=32,
             kernel_size=(1, 1),

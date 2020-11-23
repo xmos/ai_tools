@@ -362,7 +362,6 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
         if padding is Padding.VALID:
             return op
 
-        subgraph = op.subgraph
         old_input = op.inputs[0]
 
         # calculate paddings
@@ -376,6 +375,12 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
                 (0, 0),
             ]
         )
+
+        # return early if mode is SAME, but has no effect
+        if np.all(paddings == 0):
+            return op
+
+        subgraph = op.subgraph
 
         # Construct paddings parameter tensor and padded input tensor
         padding_tensor = subgraph.create_tensor(

@@ -706,7 +706,13 @@ def build_pad(subgraph=None, *, input_shape, paddings):
     subgraph = subgraph or XCOREModel().create_subgraph()
 
     output_shape = [i + sum(p) for i, p in zip(input_shape, paddings)]
-    tin = subgraph.create_tensor("unpadded", TensorType.INT8, input_shape, isinput=True)
+    tin = subgraph.create_tensor(
+        "unpadded",
+        TensorType.INT8,
+        input_shape,
+        isinput=True,
+        quantization={"scale": [0.09], "zero_point": [-15]},
+    )
     tout = subgraph.create_tensor("padded", tin.type, output_shape, isoutput=True)
     p = subgraph.create_tensor("paddings", TensorType.INT32, shape=[4, 2])
     p.buffer.data = np.int32(paddings)

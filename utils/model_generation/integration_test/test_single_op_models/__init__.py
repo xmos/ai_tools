@@ -8,12 +8,10 @@ from tflite2xcore.model_generation import Configuration
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import XCOREOpCodes, ValidOpCodes  # type: ignore # TODO: fix this
 
-from .. import (  # pylint: disable=unused-import
+from .. import (
     IntegrationTestRunner,
     _compare_batched_arrays,
     BatchedArrayComparison,
-)
-from .. import (
     IntegrationTestModelGenerator,
     test_output,
     test_mean_abs_diffs,
@@ -50,6 +48,29 @@ class ImageInputOpTestModelGenerator(IntegrationTestModelGenerator):
     def _build_core_model(self) -> tf.keras.Model:
         return tf.keras.Sequential(
             layers=[self._op_layer(input_shape=self._input_shape)]
+        )
+
+
+class PaddingMixin(ImageInputOpTestModelGenerator):
+    _PAD_KEYS = ("pad_t", "pad_b", "pad_l", "pad_r")
+
+    def _set_config(self, cfg: Configuration) -> None:
+        self._config.update({key: cfg.pop(key, 1) for key in self._PAD_KEYS})
+        super()._set_config(cfg)
+
+    def check_config(self) -> None:
+        super().check_config()
+        for key in self._PAD_KEYS:
+            assert self._config[key] >= 0, f"{key} must be non-negative"
+
+    def _pad_layer(
+        self, *, input_shape: Optional[Tuple[int, int, int]] = None
+    ) -> tf.keras.layers.Layer:
+        kwargs = {"input_shape": input_shape} if input_shape else {}
+        cfg = self._config
+        return tf.keras.layers.ZeroPadding2D(
+            padding=((cfg["pad_t"], cfg["pad_b"]), (cfg["pad_l"], cfg["pad_r"])),
+            **kwargs,
         )
 
 

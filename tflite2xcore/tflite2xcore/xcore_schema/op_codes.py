@@ -54,3 +54,4 @@ class XCOREOpCodes(enum.Enum):
     XC_bconv2d_bin = enum.auto()
     XC_bconv2d_bin_DI = enum.auto()
     XC_add_8 = enum.auto()
+    XC_pad = enum.auto()

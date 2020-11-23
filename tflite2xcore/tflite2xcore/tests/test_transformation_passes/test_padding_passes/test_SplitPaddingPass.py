@@ -8,6 +8,7 @@ from tflite2xcore.transformation_passes import SplitPaddingPass
 from tflite2xcore.xcore_schema import BuiltinOpCodes
 
 from ..model_builders import build_pad
+from . import test_non_matching_paddings
 from .conftest import (
     PARAMS,
     _test_non_matching_params,
@@ -99,11 +100,6 @@ def test_mutate(trf_pass, model):
     assert params_HW[1][1] == params_ori[1][1]
     assert params_HW[2][0] == params_ori[2][0]
     assert params_HW[2][1] == params_ori[2][1]
-
-
-def test_non_matching_paddings(trf_pass, input_shape, non_matching_paddings):
-    model = build_pad(input_shape=input_shape, paddings=non_matching_paddings)
-    _test_non_matching_params(trf_pass, model)
 
 
 if __name__ == "__main__":

@@ -40,6 +40,7 @@ from .padding_passes import (
     SplitPaddingPass,
     FuseConsecutivePadsPass,
     RemovePaddingInputPass,
+    ReplacePadPass,
 )
 
 from .quantize_dequantize_passes import (

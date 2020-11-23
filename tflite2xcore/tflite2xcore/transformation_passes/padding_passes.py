@@ -8,6 +8,7 @@ from tflite2xcore.xcore_schema import (
     BuiltinOpCodes,
     XCOREOpCodes,
     OperatorCode,
+    Operator,
 )
 
 from .transformation_passes import OperatorMatchingPass
@@ -272,3 +273,61 @@ class RemovePaddingInputPass(OperatorMatchingPass):
         subgraph.inputs.append(op.outputs[0])
         subgraph.remove_tensor(op.inputs[0])  # DCE doesn't clean up subgraph inputs
         subgraph.remove_operator(op)
+
+
+class ReplacePadPass(OperatorMatchingPass):
+    @property
+    def new_opcode(self) -> OperatorCode:
+        return OperatorCode(XCOREOpCodes.XC_pad)
+
+    def match(self, op: Operator) -> bool:
+        if super().match and op.operator_code.code is BuiltinOpCodes.PAD:
+            padding = op.inputs[1].as_array().tolist()
+
+            try:
+                pad_value = op.inputs[0].quantization["zero_point"][0]
+            except KeyError:
+                pad_value = 0
+
+            input_type = op.inputs[0].type
+            if (
+                np.can_cast(pad_value, input_type.to_numpy_dtype())
+                and input_type.sizeof() <= 4
+            ):
+                # match spatial pad only
+                if len(padding) == 4 and padding[-1] == [0, 0] and padding[0] == [0, 0]:
+                    bytes_per_pixel = input_type.sizeof() * op.inputs[0].shape[3]
+                    return bytes_per_pixel % 4 == 0
+            else:
+                raise ValueError(
+                    f"zero_point is out of bounds for tensor with type {input_type}"
+                )
+
+        return False
+
+    def mutate(self, op: Operator) -> Operator:
+        new_op = op.subgraph.create_operator(
+            self.new_opcode, inputs=op.inputs, outputs=op.outputs
+        )
+        new_op.subgraph.replace_operator(op, new_op)
+
+        input_type = new_op.inputs[0].type
+        try:
+            pad_value = new_op.inputs[0].quantization["zero_point"][0]
+        except KeyError:
+            pad_value = 0
+
+        new_op.add_custom_options(
+            pad_value=int(
+                np.frombuffer(
+                    np.full(
+                        4 // input_type.sizeof(),
+                        pad_value,
+                        dtype=input_type.to_numpy_dtype(),
+                    ).tostring(),
+                    dtype=np.int32,
+                )
+            )
+        )
+
+        return new_op

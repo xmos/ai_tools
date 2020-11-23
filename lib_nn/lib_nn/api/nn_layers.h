@@ -383,10 +383,10 @@ typedef struct nn_pad_plan_t {
 } nn_pad_plan_t;
 
 typedef struct padding_sizes_t {
-  int16_t top;
-  int16_t bottom;
-  int16_t left;
-  int16_t right;
+  int32_t top;
+  int32_t bottom;
+  int32_t left;
+  int32_t right;
 } padding_sizes_t;
 
 /**

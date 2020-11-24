@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 import numpy as np
 from math import ceil
-from typing import Tuple
+from typing import Tuple, List
 
 from tflite2xcore.utils import (
     WORD_SIZE_BITS,
@@ -202,6 +202,10 @@ class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
 
 class LegalizeBconv2dPass(LegalizeWeightBiasPass):
     @property
+    def matching_input_type(self) -> TensorType:
+        return TensorType.INT32
+
+    @property
     def _kernel_channel_size(self) -> int:
         # call only after custom options are set with weights shape
         return np.prod(self._op.custom_options["K"][1:])  # type: ignore
@@ -214,43 +218,81 @@ class LegalizeBconv2dPass(LegalizeWeightBiasPass):
             - (self._kernel_channel_size // WORD_SIZE_BITS - 1) % VECTOR_SIZE_WORDS
         )
 
+    @staticmethod
+    def __c_out_group_bounds(c_out_group: int, num_c_out: int) -> Tuple[int, int]:
+        c_out_group_start = c_out_group * ACC_PERIOD
+        c_out_group_end = min(num_c_out, (c_out_group + 1) * ACC_PERIOD)
+        return c_out_group_start, c_out_group_end
+
     def mutate_weights(self, op: Operator) -> None:
         with self.using(op):
             weights = self._weights.as_array()
 
+            num_c_out = weights.shape[0]
+            num_cout_groups = ceil(num_c_out / ACC_PERIOD)
+
             # first we reorder the weights
-            reordered_weight_channels = [
-                a.ravel()
-                for chan_group in weights.reshape(
-                    weights.shape[0] // ACC_PERIOD, ACC_PERIOD, -1
+            reordered_weight_channels: List[np.ndarray] = []
+            for c_out_group in range(num_cout_groups):
+                c_start, c_end = self.__c_out_group_bounds(c_out_group, num_c_out)
+                chan_group = weights.reshape(num_c_out, -1)[c_start:c_end]
+                reordered_weight_channels.extend(
+                    a.ravel()
+                    for a in np.split(
+                        np.flip(chan_group, axis=0),
+                        [
+                            i * VECTOR_SIZE_WORDS
+                            for i in range(
+                                ceil(chan_group.shape[-1] / VECTOR_SIZE_WORDS)
+                            )
+                        ],
+                        axis=1,
+                    )
                 )
-                for a in np.split(
-                    np.flip(chan_group, axis=0),
-                    [
-                        i * VECTOR_SIZE_WORDS
-                        for i in range(ceil(chan_group.shape[-1] / VECTOR_SIZE_WORDS))
-                    ],
-                    axis=1,
-                )
-            ]
 
             # then we need to add filler bits at the end of the last channel
             # NOTE: this means that this tensor is no longer rectangular
-            self._replace_weights(
-                np.concatenate(
-                    reordered_weight_channels
-                    + [
-                        np.full(self._overlap_size, FILLER, dtype=weights.dtype)
-                    ]  # TODO: fix this filler value
-                )
+            reordered_weight_channels.append(
+                # TODO: fix this filler value
+                np.full(self._overlap_size, FILLER, dtype=weights.dtype)
             )
+            self._replace_weights(np.concatenate(reordered_weight_channels))
+
+    def _calculate_overlap_correction(self, boggled_weights: np.ndarray) -> np.ndarray:
+        channel_size_words = self._kernel_channel_size // WORD_SIZE_BITS
+        tail_size = VECTOR_SIZE_WORDS - self._overlap_size
+        overlap_correction = np.empty(self._biases.shape, dtype=np.int32)
+        num_channels_out = self._biases.shape[0]
+        for c_out in range(num_channels_out):
+            c_out_group = c_out // ACC_PERIOD
+            c_start, c_end = self.__c_out_group_bounds(c_out_group, num_channels_out)
+            reversed_offset = c_out % (c_end - c_start) * tail_size
+            overlap_start = c_end * channel_size_words - reversed_offset
+
+            junk = boggled_weights[overlap_start : overlap_start + self._overlap_size]
+            overlap_correction[c_out] = (
+                xor_popcount(junk, np.zeros_like(junk)) - junk.size * WORD_SIZE_BITS / 2
+            )
+        return overlap_correction
+
+
+class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
+    @property
+    def matching_output_type(self) -> TensorType:
+        return TensorType.INT8
+
+    @property
+    def matching_opcode(self) -> XCOREOpCodes:
+        return XCOREOpCodes.XC_bconv2d_int8
+
+
+class LegalizeBconv2dInt8DIDOPass(LegalizeBconv2dInt8Pass):
+    @property
+    def matching_opcode(self) -> XCOREOpCodes:
+        return XCOREOpCodes.XC_bconv2d_int8_DIDO
 
 
 class LegalizeBconv2dBitpackedPass(LegalizeBconv2dPass):
-    @property
-    def matching_input_type(self) -> TensorType:
-        return TensorType.INT32
-
     @property
     def matching_output_type(self) -> TensorType:
         return TensorType.INT32
@@ -272,24 +314,10 @@ class LegalizeBconv2dBitpackedPass(LegalizeBconv2dPass):
             # due to how we handle incomplete weights regsiters
             # (the data register is padded with zeros, so the loaded kernel
             # coeffs can have some junk loaded, and we correct that)
-            channel_size_words = self._kernel_channel_size // WORD_SIZE_BITS
-            tail_size = VECTOR_SIZE_WORDS - self._overlap_size
-            for c_out in range(thresholds.size):
-                c_out_group = c_out // ACC_PERIOD
-                c_out_group_end = (c_out_group + 1) * ACC_PERIOD * channel_size_words
+            overlap_correction = self._calculate_overlap_correction(weights)
+            thresholds += np.int32(overlap_correction - popcount_correction)
 
-                reversed_offset = c_out % ACC_PERIOD * tail_size
-                overlap_start = c_out_group_end - reversed_offset
-
-                junk = weights[overlap_start : overlap_start + self._overlap_size]
-                overlap_correction = (
-                    xor_popcount(junk, np.zeros_like(junk))
-                    - junk.size * WORD_SIZE_BITS / 2
-                )
-
-                thresholds[c_out] += np.int32(overlap_correction - popcount_correction)
-
-            # boggle to lower and higher 2 bytes in every ACC_PERIOD consecutive value
+            # boggle the lower and higher 2 bytes in every ACC_PERIOD consecutive value
             thresholds = np.concatenate(
                 [
                     np.frombuffer(

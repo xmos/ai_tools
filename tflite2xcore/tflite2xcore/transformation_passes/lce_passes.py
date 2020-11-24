@@ -200,19 +200,7 @@ class ReplaceLceQuantizePass(ReplaceQuantizedOperatorPass):
         return False
 
 
-class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
-    @property
-    def matching_input_type(self) -> TensorType:
-        return TensorType.INT32
-
-    @property
-    def matching_output_type(self) -> TensorType:
-        return TensorType.INT32
-
-    @property
-    def matching_opcode(self) -> XCOREOpCodes:
-        return XCOREOpCodes.XC_bconv2d_bin
-
+class LegalizeBconv2dPass(LegalizeWeightBiasPass):
     @property
     def _kernel_channel_size(self) -> int:
         # call only after custom options are set with weights shape
@@ -256,6 +244,20 @@ class LegalizeBconv2dBitpackedPass(LegalizeWeightBiasPass):
                     ]  # TODO: fix this filler value
                 )
             )
+
+
+class LegalizeBconv2dBitpackedPass(LegalizeBconv2dPass):
+    @property
+    def matching_input_type(self) -> TensorType:
+        return TensorType.INT32
+
+    @property
+    def matching_output_type(self) -> TensorType:
+        return TensorType.INT32
+
+    @property
+    def matching_opcode(self) -> XCOREOpCodes:
+        return XCOREOpCodes.XC_bconv2d_bin
 
     def mutate_biases(self, op: Operator) -> None:
         with self.using(op):

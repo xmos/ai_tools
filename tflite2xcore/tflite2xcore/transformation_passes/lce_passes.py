@@ -294,6 +294,28 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
     def matching_opcode(self) -> XCOREOpCodes:
         return XCOREOpCodes.XC_bconv2d_int8
 
+    def _calculate_quantization_exponents(self) -> Tuple[int, int, int]:
+        post_act_mult_float = self._op.inputs[2].as_array()
+        post_act_bias_float = self._op.inputs[3].as_array()
+
+        max_pam_exp = np.max(np.frexp(post_act_mult_float)[1])
+        max_pab_exp = np.max(np.frexp(post_act_bias_float)[1])
+        max_accu_exp = np.frexp(self._kernel_channel_size / 2)[1]
+
+        accu_hat_bits = pam_hat_bits = TensorType.INT16.sizeof() * 8 - 1
+        pab_hat_bits = TensorType.INT32.sizeof() * 8 - 1
+
+        for B in reversed(range(-max_pab_exp, pab_hat_bits - max_pab_exp)):
+            for A in reversed(range(-max_accu_exp, accu_hat_bits - max_accu_exp)):
+                M = B - A
+                if -max_pam_exp <= M < pam_hat_bits - max_pam_exp:
+                    return M, B, A
+        raise ValueError("quantized exponents cannot be determined")
+
+    def mutate_biases(self, op: Operator) -> None:
+        with self.using(op):
+            self._calculate_quantization_exponents()
+
 
 class LegalizeBconv2dInt8DIDOPass(LegalizeBconv2dInt8Pass):
     @property

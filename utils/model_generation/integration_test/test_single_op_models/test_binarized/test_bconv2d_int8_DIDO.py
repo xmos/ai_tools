@@ -48,11 +48,11 @@ CONFIGS = {  # TODO: generate random configs
     "default": {
         0: {
             "input_channels": 256,
-            "output_channels": 64,
-            "K_h": 3,
-            "K_w": 3,
-            "height": 8,
-            "width": 8,
+            "output_channels": 32,
+            "K_h": 1,
+            "K_w": 1,
+            "height": 1,
+            "width": 1,
         },
     },
 }

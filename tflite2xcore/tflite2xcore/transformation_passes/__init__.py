@@ -98,6 +98,8 @@ from .lce_passes import (
     ReplaceBconv2DBitpackedDeepInPass,
     ReplaceLceQuantizePass,
     LegalizeXCBconv2DPaddingPass,
+    LegalizeBconv2dInt8Pass,
+    LegalizeBconv2dInt8DIDOPass,
     LegalizeBconv2dBitpackedPass,
     LegalizeBconv2dBitpackedDeepInPass,
 )

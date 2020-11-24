@@ -75,10 +75,5 @@ def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_bsign_8
 
 
-@pytest.fixture  # type: ignore
-def mean_abs_diff_tolerance() -> float:
-    return 0.0
-
-
 if __name__ == "__main__":
     pytest.main()

@@ -275,6 +275,15 @@ class LegalizeBconv2dPass(LegalizeWeightBiasPass):
             )
         return overlap_correction
 
+    def mutate(self, op: Operator) -> Operator:
+        with self.using(op):
+            op.add_custom_options(K=get_unpacked_shape(self._weights.shape))
+        # NOTE: the order of these mutations is strict
+        self.mutate_weights(op)
+        self.mutate_biases(op)
+        op.custom_options.pop("illegal_params")
+        return op
+
 
 class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
     @property
@@ -344,15 +353,6 @@ class LegalizeBconv2dBitpackedPass(LegalizeBconv2dPass):
             # replace old tensor
             self._op.inputs[2].consumers.remove(self._op)
             self._op.inputs[2] = new_thresholds
-
-    def mutate(self, op: Operator) -> Operator:
-        with self.using(op):
-            op.add_custom_options(K=get_unpacked_shape(self._weights.shape))
-        # NOTE: the order of these mutations is strict
-        self.mutate_weights(op)
-        self.mutate_biases(op)
-        op.custom_options.pop("illegal_params")
-        return op
 
 
 class LegalizeBconv2dBitpackedDeepInPass(LegalizeBconv2dBitpackedPass):

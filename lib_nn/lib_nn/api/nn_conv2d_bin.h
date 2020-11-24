@@ -116,6 +116,38 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                const unsigned chans_out, 
                                int * chan_overlaps) ;
 
+
+/**  
+ * @brief Execute @oper{bnn_reorder_int8_kernel_tensor}.
+ * 
+ * This reorders the kernel tensor for efficient execution by bconv2d_int8_DIDO_asm. 
+ * This is only intended for testing.
+ * 
+ * `K_p` points to the output kernel @tensor{K_p} .
+ * 
+ * `K_ref_p` points to the kernel input @tensor{K_ref_p}.
+ * 
+ * `k_height` is the kernel height.
+ * 
+ * `k_width` is the kernel width.
+ * 
+ * `chans_in` is the number of input channels.
+ * 
+ * `chans_out` is the number of output channels.    
+ * 
+ * @param K_p         [out]    The output @tensor{K_p}
+ * @param K_ref_p     [in]     The input @tensor{K_ref_p}
+ * @param k_height    [in]     The kernel height
+ * @param k_width     [in]     The kernel width
+ * @param chans_in    [in]     The number of input channels
+ * @param chans_out   [in]     The number of output channels
+ */                          
+void bnn_reorder_int8_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
+                               const unsigned k_height, const unsigned k_width,
+                               const unsigned chans_in,
+                               const unsigned chans_out, 
+                               int * chan_overlaps) ;//TODO
+
 /**  
  * @brief Execute @oper{bconv2d_int8_DIDO_valid}.
  * 

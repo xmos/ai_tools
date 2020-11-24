@@ -2,6 +2,7 @@
 
 import pytest
 from typing import Tuple
+from copy import deepcopy
 
 
 from tflite2xcore.transformation_passes import ReplaceAddPass
@@ -25,14 +26,27 @@ def build_add(
     subgraph: Subgraph = None, *, input_shape: Tuple[int, ...], tensor_type: TensorType
 ) -> XCOREModel:
     subgraph = subgraph or XCOREModel().create_subgraph()
+    quantization = {"scale": [0.35], "zero_point": [0]}
     input_tensor_0 = subgraph.create_tensor(
-        "input_0", tensor_type, input_shape, isinput=True
+        "input_0",
+        tensor_type,
+        input_shape,
+        isinput=True,
+        quantization={"scale": [0.35], "zero_point": [0]},
     )
     input_tensor_1 = subgraph.create_tensor(
-        "input_1", tensor_type, input_shape, isinput=True
+        "input_1",
+        tensor_type,
+        input_shape,
+        isinput=True,
+        quantization=deepcopy(quantization),
     )
     output_tensor = subgraph.create_tensor(
-        "output", tensor_type, input_shape, isoutput=True
+        "output",
+        tensor_type,
+        input_shape,
+        isoutput=True,
+        quantization=deepcopy(quantization),
     )
     subgraph.create_operator(
         OperatorCode(BuiltinOpCodes.ADD),

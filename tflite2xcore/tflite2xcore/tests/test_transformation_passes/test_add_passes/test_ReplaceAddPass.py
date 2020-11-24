@@ -32,7 +32,7 @@ def build_add(
         tensor_type,
         input_shape,
         isinput=True,
-        quantization={"scale": [0.35], "zero_point": [0]},
+        quantization=deepcopy(quantization),
     )
     input_tensor_1 = subgraph.create_tensor(
         "input_1",

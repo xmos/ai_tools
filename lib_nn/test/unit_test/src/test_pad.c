@@ -1,17 +1,16 @@
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
 #include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "tst_common.h"
+#include "nn_bin_utils.h"
 #include "nn_operator.h"
 #include "nn_types.h"
-#include "xs3_vpu.h"
-#include "nn_bin_utils.h"
-
+#include "tst_common.h"
 #include "unity.h"
+#include "xs3_vpu.h"
 
 #define X_HEIGHT 1
 #define X_WIDTH 1
@@ -37,11 +36,11 @@ void test_pad_directed_b256() {
   pseudo_rand_bytes((char*)Y, sizeof(Y));
   pseudo_rand_bytes((char*)Y_ref, sizeof(Y_ref));
 
-  padding_values_t p;
-  p.height = PAD_TOP;
-  p.height_offset = PAD_BOTTOM - PAD_TOP;
-  p.width = PAD_LEFT;
-  p.width_offset = PAD_RIGHT - PAD_LEFT;
+  padding_sizes_t p;
+  p.top = PAD_TOP;
+  p.bottom = PAD_BOTTOM;
+  p.left = PAD_LEFT;
+  p.right = PAD_RIGHT;
 
   nn_image_params_t xp;
   xp.height = X_HEIGHT;
@@ -86,25 +85,25 @@ void test_pad_param_space_b256() {
 
   pseudo_rand_bytes((char*)X, sizeof(X));
 
-  for (unsigned pad_val_idx=0;pad_val_idx<8;pad_val_idx++){
+  for (unsigned pad_val_idx = 0; pad_val_idx < 8; pad_val_idx++) {
     for (unsigned x_height = 1; x_height <= MAX_X_HEIGHT; ++x_height) {
       for (unsigned x_width = 1; x_width <= MAX_X_WIDTH; ++x_width) {
         for (unsigned x_chans = 256; x_chans <= MAX_X_CHANS; x_chans += 256) {
           for (unsigned pad_top = 0; pad_top <= MAX_PAD_TOP; ++pad_top) {
             for (unsigned pad_bottom = 0; pad_bottom <= MAX_PAD_BOTTOM;
-                ++pad_bottom) {
+                 ++pad_bottom) {
               for (unsigned pad_right = 0; pad_right <= MAX_PAD_RIGHT;
-                  ++pad_right) {
+                   ++pad_right) {
                 for (unsigned pad_left = 0; pad_left <= MAX_PAD_LEFT;
-                    ++pad_left) {
+                     ++pad_left) {
                   pseudo_rand_bytes((char*)Y, sizeof(Y));
                   pseudo_rand_bytes((char*)Y_ref, sizeof(Y_ref));
 
-                  padding_values_t p;
-                  p.height = pad_top;
-                  p.height_offset = pad_bottom - pad_top;
-                  p.width = pad_left;
-                  p.width_offset = pad_right - pad_left;
+                  padding_sizes_t p;
+                  p.top = pad_top;
+                  p.bottom = pad_bottom;
+                  p.left = pad_left;
+                  p.right = pad_right;
 
                   unsigned bytes_per_pixel = sizeof(bnn_b256_t) * x_chans / 256;
 
@@ -116,20 +115,25 @@ void test_pad_param_space_b256() {
                   unsigned output_height = xp.height + pad_top + pad_bottom;
                   unsigned output_width = xp.width + pad_left + pad_right;
 
-                  
                   uint32_t pad_value = pseudo_rand_uint32();
-                  pad_ref((void*)Y_ref, (void*)X, &p, &xp, bytes_per_pixel, pad_value);
+                  pad_ref((void*)Y_ref, (void*)X, &p, &xp, bytes_per_pixel,
+                          pad_value);
                   nn_pad_plan_t plan;
                   pad_prepare(&plan, &p, &xp, bytes_per_pixel);
-                  unsigned total_output = plan.top_pad_bytes + (plan.left_pad_bytes +  plan.mid_copy_bytes + plan.right_pad_bytes) * (plan.mid_loop_count )  + plan.bottom_pad_bytes;
+                  unsigned total_output =
+                      plan.top_pad_bytes +
+                      (plan.left_pad_bytes + plan.mid_copy_bytes +
+                       plan.right_pad_bytes) *
+                          (plan.mid_loop_count) +
+                      plan.bottom_pad_bytes;
                   pad_run((void*)Y, (void*)X, &plan, pad_value);
 
-                  
-                  assert(total_output ==( bytes_per_pixel * output_height *output_width) );  
+                  assert(total_output ==
+                         (bytes_per_pixel * output_height * output_width));
                   TEST_ASSERT_EQUAL_INT8_ARRAY(Y, Y_ref,
-                                              output_height * output_width *
-                                                  xp.channels / 256 *
-                                                  sizeof(bnn_b256_t));
+                                               output_height * output_width *
+                                                   xp.channels / 256 *
+                                                   sizeof(bnn_b256_t));
                 }
               }
             }
@@ -152,11 +156,11 @@ void test_pad_directed_int8() {
   pseudo_rand_bytes((char*)Y, sizeof(Y));
   pseudo_rand_bytes((char*)Y_ref, sizeof(Y_ref));
 
-  padding_values_t p;
-  p.height = PAD_TOP;
-  p.height_offset = PAD_BOTTOM - PAD_TOP;
-  p.width = PAD_LEFT;
-  p.width_offset = PAD_RIGHT - PAD_LEFT;
+  padding_sizes_t p;
+  p.top = PAD_TOP;
+  p.bottom = PAD_BOTTOM;
+  p.left = PAD_LEFT;
+  p.right = PAD_RIGHT;
 
   nn_image_params_t xp;
   xp.height = X_HEIGHT;
@@ -188,25 +192,25 @@ void test_pad_param_space_int8() {
 
   pseudo_rand_bytes((char*)X, sizeof(X));
 
-  for (unsigned pad_val_idx=0;pad_val_idx<8;pad_val_idx++){
+  for (unsigned pad_val_idx = 0; pad_val_idx < 8; pad_val_idx++) {
     for (unsigned x_height = 1; x_height <= MAX_X_HEIGHT; ++x_height) {
       for (unsigned x_width = 1; x_width <= MAX_X_WIDTH; ++x_width) {
         for (unsigned x_chans = 4; x_chans <= MAX_X_CHANS; x_chans += 4) {
           for (unsigned pad_top = 0; pad_top <= MAX_PAD_TOP; ++pad_top) {
             for (unsigned pad_bottom = 0; pad_bottom <= MAX_PAD_BOTTOM;
-                ++pad_bottom) {
+                 ++pad_bottom) {
               for (unsigned pad_right = 0; pad_right <= MAX_PAD_RIGHT;
-                  ++pad_right) {
+                   ++pad_right) {
                 for (unsigned pad_left = 0; pad_left <= MAX_PAD_LEFT;
-                    ++pad_left) {
+                     ++pad_left) {
                   pseudo_rand_bytes((char*)Y, sizeof(Y));
                   pseudo_rand_bytes((char*)Y_ref, sizeof(Y_ref));
 
-                  padding_values_t p;
-                  p.height = pad_top;
-                  p.height_offset = pad_bottom - pad_top;
-                  p.width = pad_left;
-                  p.width_offset = pad_right - pad_left;
+                  padding_sizes_t p;
+                  p.top = pad_top;
+                  p.bottom = pad_bottom;
+                  p.left = pad_left;
+                  p.right = pad_right;
 
                   unsigned bytes_per_pixel = sizeof(int8_t) * x_chans;
 
@@ -216,7 +220,8 @@ void test_pad_param_space_int8() {
                   xp.channels = x_chans;
 
                   uint32_t pad_value = pseudo_rand_uint32();
-                  pad_ref((void*)Y_ref, (void*)X, &p, &xp, bytes_per_pixel, pad_value);
+                  pad_ref((void*)Y_ref, (void*)X, &p, &xp, bytes_per_pixel,
+                          pad_value);
                   nn_pad_plan_t plan;
                   pad_prepare(&plan, &p, &xp, bytes_per_pixel);
                   pad_run((void*)Y, (void*)X, &plan, pad_value);
@@ -225,8 +230,9 @@ void test_pad_param_space_int8() {
                   unsigned output_width = xp.width + pad_left + pad_right;
 
                   TEST_ASSERT_EQUAL_INT8_ARRAY(Y, Y_ref,
-                                              output_height * output_width *
-                                                  xp.channels * sizeof(int8_t));
+                                               output_height * output_width *
+                                                   xp.channels *
+                                                   sizeof(int8_t));
                 }
               }
             }

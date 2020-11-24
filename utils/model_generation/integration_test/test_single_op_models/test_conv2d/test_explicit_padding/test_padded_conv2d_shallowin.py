@@ -3,7 +3,7 @@
 import pytest
 
 from ..test_conv2d_shallowin import Conv2dShallowinTestModelGenerator
-from . import ExplicitPaddingMixin
+from . import ExplicitlyPaddedConv2dMixin
 from ..test_conv2d_shallowin import converted_op_code  # pylint: disable=unused-import
 from . import (  # pylint: disable=unused-import
     test_output,
@@ -19,7 +19,7 @@ from . import (  # pylint: disable=unused-import
 
 
 class PaddedConv2dShallowinTestModelGenerator(
-    ExplicitPaddingMixin, Conv2dShallowinTestModelGenerator
+    ExplicitlyPaddedConv2dMixin, Conv2dShallowinTestModelGenerator
 ):
     pass
 

@@ -3,7 +3,7 @@
 import pytest
 
 from ..test_depthwise_conv2d import DepthwiseConv2dTestModelGenerator
-from . import ExplicitPaddingMixin
+from . import ExplicitlyPaddedConv2dMixin
 from ..test_depthwise_conv2d import (  # pylint: disable=unused-import
     reference_op_code,
     converted_op_code,
@@ -21,7 +21,7 @@ from . import (  # pylint: disable=unused-import
 
 
 class PaddedDepthwiseConv2dTestModelGenerator(
-    ExplicitPaddingMixin, DepthwiseConv2dTestModelGenerator
+    ExplicitlyPaddedConv2dMixin, DepthwiseConv2dTestModelGenerator
 ):
     pass
 

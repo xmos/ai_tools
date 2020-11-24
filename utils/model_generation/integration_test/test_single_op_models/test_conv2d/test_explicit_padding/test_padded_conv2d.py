@@ -4,7 +4,7 @@ import pytest
 
 from ..test_conv2d import Conv2dTestModelGenerator
 from ..test_conv2d import converted_op_code  # pylint: disable=unused-import
-from . import ExplicitPaddingMixin
+from . import ExplicitlyPaddedConv2dMixin
 from . import (  # pylint: disable=unused-import
     test_output,
     test_converted_single_op_model,
@@ -18,7 +18,9 @@ from . import (  # pylint: disable=unused-import
 #  ----------------------------------------------------------------------------
 
 
-class PaddedConv2dTestModelGenerator(ExplicitPaddingMixin, Conv2dTestModelGenerator):
+class PaddedConv2dTestModelGenerator(
+    ExplicitlyPaddedConv2dMixin, Conv2dTestModelGenerator
+):
     pass
 
 

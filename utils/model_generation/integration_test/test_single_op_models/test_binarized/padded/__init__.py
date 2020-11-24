@@ -1,7 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
-    BuiltinOpCodes,
     XCOREOpCodes,
     XCOREModel,
 )
@@ -24,4 +23,4 @@ def test_converted_model(
     assert len(operators) == 2
     op = operators[-1]
     assert op.operator_code.code is converted_op_code
-    assert op.inputs[0].producers[0].operator_code.code is BuiltinOpCodes.PAD
+    assert op.inputs[0].producers[0].operator_code.code is XCOREOpCodes.XC_pad

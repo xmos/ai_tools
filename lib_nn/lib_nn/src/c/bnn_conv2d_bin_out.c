@@ -66,7 +66,7 @@ void bconv2d_bin_DI_impl(nn_bconv2d_bin_DI_impl_plan_t * plan){
   for (int xh = plan->x_height_loop_counter; xh > 0 ; xh-- ) {
     for (int xv = plan->x_width_loop_counter; xv >= 0 ; xv-- ) {
 
-      void * threshold_current = plan->threshold_p;
+      void * threshold_current = (void*)plan->threshold_p;
       void * K_p = plan->K;
       for (int oc = plan->output_channel_loop_counter; oc >= 0 ; oc-- ) {
 
@@ -164,7 +164,7 @@ void bconv2d_bin_impl(nn_bconv2d_bin_impl_plan_t * plan){
       make_patch(vpu, plan, X_p);
 
       void * K_p = (void *) plan->K;
-      void * threshold_current = (void *) plan->threshold_p;
+      void * threshold_current = (void*)plan->threshold_p;
       for (int oc = plan->output_channel_loop_counter; oc >= 0 ; oc-- ) {
 
         compute_patch(vpu, plan, &threshold_current, &K_p, partial_res_0_15_p);
@@ -192,8 +192,8 @@ void bconv2d_bin_DI_prepare(
     const unsigned y_sub_width, const unsigned y_sub_height,
     const unsigned x_loc_x, const unsigned x_loc_y) {
 
-  const unsigned chan_b256_in = (x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
-  const unsigned chan_b32_out = (y->channels + 32 - 1) / 32;
+  const int32_t chan_b256_in = (x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
+  const int32_t chan_b32_out = (y->channels + 32 - 1) / 32;
 
   bnn_b32_t(*Y)[y->width][chan_b32_out] =
       (bnn_b32_t(*)[y->width][chan_b32_out])Y_p;
@@ -209,13 +209,12 @@ void bconv2d_bin_DI_prepare(
   plan->X = (bnn_b256_t*)X[x_loc_y][x_loc_x];
   plan->K = (void *) K;
 
-  plan->threshold_p = (int32_t *)thresholds_p;
+  plan->threshold_p = thresholds_p;
 
-  unsigned bytes_per_input_channel = x->channels / 8;
-  unsigned bytes_per_output_channel = y->channels / 8;
+  int32_t bytes_per_input_channel = x->channels / 8;
 
   // This is 32 to make it easier and be more compatable with larq
-  const unsigned out_chans_multiplier = 32;
+  const int32_t out_chans_multiplier = 32;
 
   assert((x->channels % XS3_VPU_VREG_WIDTH_BITS) == 0);
   assert((y->channels % out_chans_multiplier) == 0);
@@ -223,21 +222,14 @@ void bconv2d_bin_DI_prepare(
   plan->k_height_loop_counter = k->shape.height - 1;
   plan->k_width_loop_counter = k->shape.width - 1;
 
-  unsigned h_dilation = k->dilation.horizontal;
-  unsigned v_dilation = k->dilation.vertical;
-
-  unsigned h_stride = k->stride.horizontal;
-  unsigned v_stride = k->stride.vertical;
-
-  unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k->shape.height, v_dilation, v_stride );
-  unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k->shape.width, h_dilation, h_stride );
+  int32_t h_dilation = k->dilation.horizontal;
 
   plan->input_channel_loop_counter =
       (x->channels / XS3_VPU_VREG_WIDTH_BITS) - 1;
   plan->output_channel_loop_counter = (y->channels / out_chans_multiplier) - 1;
 
-  unsigned x_height_loops = y_sub_height;
-  unsigned x_width_loops = y_sub_width;
+  int32_t x_height_loops = y_sub_height;
+  int32_t x_width_loops = y_sub_width;
 
   plan->x_height_loop_counter = x_height_loops;
   plan->x_width_loop_counter = x_width_loops - 1;
@@ -297,11 +289,10 @@ void bconv2d_bin_prepare(
   plan->Y = (bnn_b32_t*)Y[y_loc_y][y_loc_x];
   plan->X = (const bnn_b32_t*)X[x_loc_y][x_loc_x];
   plan->K = (const bnn_b32_t*)K;
-  plan->threshold_p = (int32_t *)thresholds_p;
+  plan->threshold_p = thresholds_p;
   plan->data_scratch = data_scratch;
 
-  unsigned bytes_per_input_channel = x->channels / 8;
-  unsigned bytes_per_output_channel = y->channels / 8;
+  int32_t bytes_per_input_channel = x->channels / 8;
 
   assert((x->channels % 32) == 0);
   assert((y->channels % outputs_per_b32) == 0);
@@ -309,14 +300,7 @@ void bconv2d_bin_prepare(
   plan->k_height_loop_counter = k->shape.height - 1;
   plan->k_width_loop_counter = k->shape.width - 1;
 
-  unsigned h_dilation = k->dilation.horizontal;
-  unsigned v_dilation = k->dilation.vertical;
-
-  unsigned h_stride = k->stride.horizontal;
-  unsigned v_stride = k->stride.vertical;
-
-  unsigned x_sub_height = CONV2D_INPUT_LENGTH(y_sub_height, k->shape.height, v_dilation, v_stride );
-  unsigned x_sub_width = CONV2D_INPUT_LENGTH(y_sub_width, k->shape.width, h_dilation, h_stride );
+  int32_t h_dilation = k->dilation.horizontal;
 
   //We are going to copy (in chunks of XS3_VPU_VREG_WIDTH_BITS) each of the 
   plan->input_channel_loop_counter =
@@ -324,10 +308,10 @@ void bconv2d_bin_prepare(
 
   plan->data_scratch_adjust = -(int)((XS3_VPU_VREG_WIDTH_BITS - x->channels % XS3_VPU_VREG_WIDTH_BITS) % XS3_VPU_VREG_WIDTH_BITS)/8;
 
-  unsigned total_bits_copied_to_scratch = x->channels * k->shape.height * k->shape.width;
+  int32_t total_bits_copied_to_scratch = x->channels * k->shape.height * k->shape.width;
 
   //the final loop copies 32-256 bits(not 0)
-  int remainder_bits = total_bits_copied_to_scratch % XS3_VPU_VREG_WIDTH_BITS;
+  int32_t remainder_bits = total_bits_copied_to_scratch % XS3_VPU_VREG_WIDTH_BITS;
   if (!remainder_bits) {
     remainder_bits = XS3_VPU_VREG_WIDTH_BITS;
   }
@@ -339,16 +323,16 @@ void bconv2d_bin_prepare(
 
   plan->output_channel_loop_counter = (y->channels / outputs_per_b32) - 1;
 
-  unsigned x_height_loops = y_sub_height;
-  unsigned x_width_loops = y_sub_width;
+  int32_t x_height_loops = y_sub_height;
+  int32_t x_width_loops = y_sub_width;
 
   plan->x_height_loop_counter = x_height_loops;
   plan->x_width_loop_counter = x_width_loops - 1;
 
  // Inner Loop
   // minus one to account for the auto increment in the loop
-  int bytes_per_input_channel_rounded_up = ((bytes_per_input_channel + 32 - 1)/32)*32;
-  plan->inner_x_h_step = (int)(bytes_per_input_channel * h_dilation) - bytes_per_input_channel_rounded_up;
+  int32_t bytes_per_input_channel_rounded_up = ((bytes_per_input_channel + 32 - 1)/32)*32;
+  plan->inner_x_h_step = (bytes_per_input_channel * h_dilation) - bytes_per_input_channel_rounded_up;
 
   // TODO multiply x->width by dilation
   plan->inner_x_v_step = 
@@ -356,8 +340,8 @@ void bconv2d_bin_prepare(
   // Outer Loop
   plan->outer_x_h_step = bytes_per_input_channel * k->stride.horizontal;
 
-  plan->outer_x_v_step = (int)(bytes_per_input_channel * x->width *k->stride.vertical) 
-     - (int)(plan->outer_x_h_step * x_width_loops);
+  plan->outer_x_v_step = (bytes_per_input_channel * x->width *k->stride.vertical) 
+     - (plan->outer_x_h_step * x_width_loops);
 
   plan->y_v_step = chan_b32_out * sizeof(bnn_b32_t) * (y->width - y_sub_width);
 }

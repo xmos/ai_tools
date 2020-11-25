@@ -1,24 +1,27 @@
-#include "larq_compute_engine/core/bconv2d_impl_ref.h"
-#include "larq_compute_engine/core/bitpack.h"
 
-#include "larq_compute_engine/core/bconv2d_output_transform.h"
+
+#include "larq_compute_engine/core/bitpacking/bitpack.h"
+#include "larq_compute_engine/core/bconv2d/output_transform.h"
 #include "larq_compute_engine/core/types.h"
-
 #include "nn_operator.h"
+
 using namespace tflite;
 
+#include "larq_compute_engine/core/bconv2d/reference.h"
+
 namespace compute_engine {
+  
 namespace ce = compute_engine;
 
 namespace core {
 
 extern "C" void larq_ref_bsign(int8_t* input, int32_t* output,
                                size_t inputLength, int32_t zero_point) {
-  bitpack_array<std::int8_t>(
+  bitpacking::bitpack_array<std::int8_t>(
       input, inputLength, output, zero_point);
 }
 
-using compute_engine::core::OutputTransform;
+using bconv2d::OutputTransform;
 
 // Fill in the OutputTransform values for float and/or int8 outputs
 template <typename DstScalar>
@@ -74,16 +77,23 @@ void conv2d_larq_impl(const nn_image_params_t* x,
     y_dims[2] = y->width;
     y_dims[3] = y->channels / channels_per_output_word;
     
-    ConvParams params;
+    compute_engine::core::bconv2d::BConv2DParams params;
+
+    params.filter_width = k->shape.height;
+    params.filter_height = k->shape.width;
+    params.channels_in = x->channels / channels_per_word;
+    params.channels_out = y->channels / channels_per_output_word;
+    params.groups = 1;
 
     params.dilation_height_factor = k->dilation.vertical;
     params.dilation_width_factor = k->dilation.horizontal;
-    params.padding_type = PaddingType::kValid;  // enum class PaddingType : uint8
-                                                // { kNone, kSame, kValid };
+    params.padding_type = TfLitePadding::kTfLitePaddingValid; 
+
     params.padding_values.height = 0;
     params.padding_values.height_offset = 0;
     params.padding_values.width = 0;
     params.padding_values.width_offset = 0;
+
     params.stride_height = k->stride.vertical;
     params.stride_width = k->stride.horizontal;
 
@@ -91,13 +101,11 @@ void conv2d_larq_impl(const nn_image_params_t* x,
     RuntimeShape output_shape        = RuntimeShape(4, (const int32_t*)y_dims);
     RuntimeShape packed_filter_shape = RuntimeShape(4, (const int32_t*)k_dims);
 
-    ce::ref::BConv2D<std::uint32_t, DstScalar>(
-      params, packed_input_shape, packed_input_data,
-      packed_filter_shape, packed_filter_data,
-      output_transform, output_shape, packed_output_data,
 
-      // These are all dummy parameters(unused)
-      RuntimeShape(0, nullptr), 0, 0, 0, 0);
+    compute_engine::core::bconv2d::BConv2DReference<std::uint32_t, DstScalar>(
+      &params, packed_input_shape, packed_input_data,
+      packed_filter_shape, packed_filter_data,
+      output_transform, output_shape, packed_output_data);
 }
 
 extern "C" void larq_ref_bconv2d_int8_out(const nn_image_params_t* x,

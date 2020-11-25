@@ -72,7 +72,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
   larq_ref_bconv2d_int8_out(&x, &y, &k, (int32_t*)X_ref, (int32_t*)K_ref_p,
                    (int8_t*)Y_ref_p, post_activation_multiplier, post_activation_bias);
 
-  bnn_reorder_int8_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
+  bnn_reorder_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
                             chans_out, chan_overlaps);
 
   int16_t bias_multipler;
@@ -445,7 +445,7 @@ void impl_bconv2d_int8_DIDO_sub_image(
             int32_t clamp_low = 0;     
             int32_t clamp_high = receptive_volume*2;
 
-            bnn_reorder_int8_kernel_tensor((bnn_b32_t *)K, (const bnn_b32_t *)K_ref, k.shape.height, 
+            bnn_reorder_kernel_tensor((bnn_b32_t *)K, (const bnn_b32_t *)K_ref, k.shape.height, 
               k.shape.width, x.channels, y.channels, chan_overlaps);
 
             int accu_shr, final_shr;

@@ -67,7 +67,7 @@ void bconv2d_bin_DI_impl(nn_bconv2d_bin_DI_impl_plan_t * plan){
     for (int xv = plan->x_width_loop_counter; xv >= 0 ; xv-- ) {
 
       void * threshold_current = (void*)plan->threshold_p;
-      void * K_p = plan->K;
+      void * K_p = (void*)plan->K;
       for (int oc = plan->output_channel_loop_counter; oc >= 0 ; oc-- ) {
 
         compute_bin_kernel(vpu, plan, &threshold_current, X_p, &K_p, partial_res_0_15_p);

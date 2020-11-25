@@ -314,9 +314,9 @@ static void bconv2d_int8_prepare(
     plan->ashr = accu_shr;
   }
 
-  unsigned bytes_per_input_channel = x->channels / 8;
+  int32_t bytes_per_input_channel = x->channels / 8;
 
-  const unsigned out_chans_multiplier = 4;
+  const int32_t out_chans_multiplier = 4;
 
   assert(x->channels > 0);
   assert(y->channels > 0);
@@ -329,26 +329,26 @@ static void bconv2d_int8_prepare(
   assert(k->dilation.horizontal >= 1);
   assert(k->dilation.vertical >= 1);
 
-  unsigned h_dilation = k->dilation.horizontal;
-  unsigned h_stride = k->stride.horizontal;
-  unsigned v_stride = k->stride.vertical;
+  int32_t h_dilation = k->dilation.horizontal;
+  int32_t h_stride = k->stride.horizontal;
+  int32_t v_stride = k->stride.vertical;
 
   plan->input_channel_loop_counter =
       ((x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS) - 1;
 
-  unsigned x_height_loops = y_sub_height;
-  unsigned x_width_loops = y_sub_width;
+  int32_t x_height_loops = y_sub_height;
+  int32_t x_width_loops = y_sub_width;
 
   plan->x_height_loop_counter = x_height_loops;
   plan->x_width_loop_counter = x_width_loops - 1;
 
-  unsigned total_bytes_copied_to_scratch = bytes_per_input_channel * k->shape.height *  k->shape.width;
+  int32_t total_bytes_copied_to_scratch = bytes_per_input_channel * k->shape.height *  k->shape.width;
 
-  unsigned channels_to_process_on_tail_output_loop = (y->channels - 1) % VPU_INT16_EPV + 1;
+  int32_t channels_to_process_on_tail_output_loop = (y->channels - 1) % VPU_INT16_EPV + 1;
 
   plan->output_channel_loop_counter = (y->channels-channels_to_process_on_tail_output_loop)/VPU_INT16_EPV;
 
-  plan->k_p_rewind = ((int)channels_to_process_on_tail_output_loop - VPU_INT16_EPV + 1L)*XS3_VPU_VREG_WIDTH_BYTES;
+  plan->k_p_rewind = (channels_to_process_on_tail_output_loop - VPU_INT16_EPV + 1L)*XS3_VPU_VREG_WIDTH_BYTES;
 
   plan->k_p_adjust  = total_bytes_copied_to_scratch%XS3_VPU_VREG_WIDTH_BYTES;
   if (plan->k_p_adjust == 0)
@@ -360,12 +360,12 @@ static void bconv2d_int8_prepare(
   plan->final_channels_mask = ((1 << channels_to_process_on_tail_output_loop)-1) ;
 
   if(bytes_per_input_channel%XS3_VPU_VREG_WIDTH_BYTES)
-    plan->data_scratch_adjust = (int)(bytes_per_input_channel%XS3_VPU_VREG_WIDTH_BYTES) - XS3_VPU_VREG_WIDTH_BYTES;
+    plan->data_scratch_adjust = (bytes_per_input_channel%XS3_VPU_VREG_WIDTH_BYTES) - XS3_VPU_VREG_WIDTH_BYTES;
   else
     plan->data_scratch_adjust = 0;
   
-  plan->inner_x_h_step = (int)bytes_per_input_channel * ((int)h_dilation - 1) - 
-    (int)(XS3_VPU_VREG_WIDTH_BYTES*(plan->input_channel_loop_counter + 1) - bytes_per_input_channel);
+  plan->inner_x_h_step = bytes_per_input_channel * (h_dilation - 1) - 
+    (XS3_VPU_VREG_WIDTH_BYTES*(plan->input_channel_loop_counter + 1) - bytes_per_input_channel);
 
   // TODO multiply x->width by dilation
   plan->inner_x_v_step =
@@ -374,7 +374,7 @@ static void bconv2d_int8_prepare(
   // Outer Loop
   plan->outer_x_h_step = bytes_per_input_channel * h_stride;
 
-  plan->outer_x_v_step = (int)(bytes_per_input_channel * x->width * v_stride) 
+  plan->outer_x_v_step = (bytes_per_input_channel * x->width * v_stride) 
      - (plan->outer_x_h_step * x_width_loops);
 
   plan->y_v_step = chans_out * sizeof(int8_t) * (y->width - y_sub_width);
@@ -426,7 +426,7 @@ static void bconv2d_int8_DIDO_prepare(
     plan->ashr = accu_shr;
   }
 
-  unsigned bytes_per_input_channel = x->channels / 8;
+  int32_t bytes_per_input_channel = x->channels / 8;
 
   assert((x->channels % XS3_VPU_VREG_WIDTH_BITS) == 0);
   assert((y->channels % VPU_INT16_EPV) == 0);
@@ -434,17 +434,17 @@ static void bconv2d_int8_DIDO_prepare(
   plan->k_height_loop_counter = k->shape.height - 1;
   plan->k_width_loop_counter = k->shape.width - 1;
 
-  unsigned h_dilation = k->dilation.horizontal;
+  int32_t h_dilation = k->dilation.horizontal;
 
-  unsigned h_stride = k->stride.horizontal;
-  unsigned v_stride = k->stride.vertical;
+  int32_t h_stride = k->stride.horizontal;
+  int32_t v_stride = k->stride.vertical;
 
   plan->input_channel_loop_counter =
       (x->channels / XS3_VPU_VREG_WIDTH_BITS) - 1;
   plan->output_channel_loop_counter = (y->channels / VPU_INT16_EPV) - 1;
 
-  unsigned x_height_loops = y_sub_height;
-  unsigned x_width_loops = y_sub_width;
+  int32_t x_height_loops = y_sub_height;
+  int32_t x_width_loops = y_sub_width;
 
   plan->x_height_loop_counter = x_height_loops;
   plan->x_width_loop_counter = x_width_loops - 1;
@@ -459,8 +459,8 @@ static void bconv2d_int8_DIDO_prepare(
   // Outer Loop
   plan->outer_x_h_step = bytes_per_input_channel * h_stride;
 
-  plan->outer_x_v_step = (int)(bytes_per_input_channel * x->width * v_stride) 
-     - (int)(plan->outer_x_h_step * x_width_loops);
+  plan->outer_x_v_step = (bytes_per_input_channel * x->width * v_stride) 
+     - (plan->outer_x_h_step * x_width_loops);
 
   plan->y_v_step = chans_out * sizeof(int8_t) * (y->width - y_sub_width);
 

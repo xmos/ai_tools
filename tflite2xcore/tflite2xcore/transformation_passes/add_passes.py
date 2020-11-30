@@ -2,7 +2,6 @@
 
 from typing import Iterable
 from copy import copy
-from pprint import pprint
 import numpy as np
 
 from tflite2xcore.xcore_model import Operator, Subgraph
@@ -52,10 +51,7 @@ class ReplaceAddPass(ReplaceQuantizedOperatorPass):
             / old_op.outputs[0].quantization["scale"][0]
         )
 
-        n = max(
-            scale0_scaleOut,
-            scale1_scaleOut,
-        )
+        n = max(scale0_scaleOut, scale1_scaleOut,)
 
         msb = 0
         n = int(n / 2)
@@ -78,7 +74,6 @@ class ReplaceAddPass(ReplaceQuantizedOperatorPass):
         s_out = scale_mismatch
 
         subgraph = new_op.subgraph
-        pprint(vars(new_op))
         bias_scale_shift_tensor = subgraph.create_tensor(
             f"{new_op.name}/bias_scale_shift",
             TensorType.INT32,

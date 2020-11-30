@@ -2,7 +2,7 @@
 
 import pytest
 
-pytestmark = pytest.mark.skip  # TODO: remove this
+
 import tensorflow as tf
 from typing import Optional, Tuple
 

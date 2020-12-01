@@ -25,7 +25,9 @@ from . import (  # pylint: disable=unused-import
 class AddModelGenerator(ChannelPreservingOpTestModelGenerator):
     def _build_core_model(self) -> tf.keras.Model:
         input = tf.keras.Input(shape=self._input_shape)
-        constant = [random.randrange(-127, 127) for _ in range(self._input_shape)]
+        constant = tf.random.uniform(
+            shape=self._input_shape, minval=-127, maxval=127, dtype=tf.int8
+        )
         return tf.keras.models.Model(
             inputs=input, outputs=self._op_layer()([input, constant])
         )

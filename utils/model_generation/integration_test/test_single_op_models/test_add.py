@@ -1,7 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-import random
 
 import tensorflow as tf
 from typing import Optional, Tuple

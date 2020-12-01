@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-
+import random
 
 import tensorflow as tf
 from typing import Optional, Tuple
@@ -12,7 +12,7 @@ from tflite2xcore.model_generation.utils import parse_init_config
 
 from . import ChannelPreservingOpTestModelGenerator
 from . import (  # pylint: disable=unused-import
-    # test_output,
+    test_output,
     test_converted_single_op_model,
 )
 
@@ -25,8 +25,9 @@ from . import (  # pylint: disable=unused-import
 class AddModelGenerator(ChannelPreservingOpTestModelGenerator):
     def _build_core_model(self) -> tf.keras.Model:
         input = tf.keras.Input(shape=self._input_shape)
+        constant = [random.randrange(-127, 127) for _ in range(self._input_shape)]
         return tf.keras.models.Model(
-            inputs=input, outputs=self._op_layer()([input, input])
+            inputs=input, outputs=self._op_layer()([input, constant])
         )
 
     def _op_layer(

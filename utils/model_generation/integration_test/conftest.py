@@ -187,9 +187,20 @@ def abs_output_tolerance() -> int:
 
 
 @pytest.fixture  # type: ignore
+def bitpacked_outputs() -> bool:
+    return False
+
+
+@pytest.fixture  # type: ignore
 def compared_outputs(
-    run: DefaultIntegrationTestRunner, abs_output_tolerance: Optional[Union[int, float]]
+    run: DefaultIntegrationTestRunner,
+    abs_output_tolerance: Optional[Union[int, float]],
+    bitpacked_outputs: bool,
 ) -> BatchedArrayComparison:
+    if bitpacked_outputs:
+        return _compare_batched_arrays(
+            run.outputs.xcore, run.outputs.reference_quant, tolerance=0, per_bits=True
+        )
     if abs_output_tolerance is None:
         # use implicitly derived tolerance
         output_quantization = run._xcore_evaluator.output_quant
@@ -210,7 +221,7 @@ def compared_outputs(
             run.outputs.reference_float,
             abs_output_tolerance,
         )
-    else:
-        return _compare_batched_arrays(
-            run.outputs.xcore, run.outputs.reference_quant, abs_output_tolerance
-        )
+
+    return _compare_batched_arrays(
+        run.outputs.xcore, run.outputs.reference_quant, abs_output_tolerance
+    )

@@ -294,14 +294,10 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
     def matching_opcode(self) -> XCOREOpCodes:
         return XCOREOpCodes.XC_bconv2d_int8
 
-    def _calculate_quantization_exponents(self) -> Tuple[int, int, int]:
-        post_act_mult_float = self._op.inputs[2].as_array()
-        post_act_bias_float = self._op.inputs[3].as_array()
-
-        max_pam_exp = np.max(np.frexp(post_act_mult_float)[1])
-        max_pab_exp = np.max(np.frexp(post_act_bias_float)[1])
-        max_accu_exp = np.frexp(self._kernel_channel_size / 2)[1]
-
+    @staticmethod
+    def __calculate_MBA(
+        max_pam_exp: int, max_pab_exp: int, max_accu_exp: int
+    ) -> Tuple[int, int, int]:
         accu_hat_bits = pam_hat_bits = TensorType.INT16.sizeof() * 8 - 1
         pab_hat_bits = TensorType.INT32.sizeof() * 8 - 1
 
@@ -311,6 +307,24 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
                 if -max_pam_exp <= M < pam_hat_bits - max_pam_exp:
                     return M, B, A
         raise ValueError("quantized exponents cannot be determined")
+
+    def _calculate_quantization_parameters(
+        self, adjusted_pam: np.ndarray, adjusted_pab: np.ndarray
+    ) -> Tuple[int, int, Tuple[int, int, int]]:
+        max_pam_exp = np.max(np.frexp(adjusted_pam)[1])
+        max_pab_exp = np.max(np.frexp(adjusted_pab)[1])
+        max_accu_exp = np.frexp(self._kernel_channel_size / 2)[1]
+        M, B, A = self.__calculate_MBA(max_pam_exp, max_pab_exp, max_accu_exp)
+
+        # TODO: change inequality condition
+        adjusted_B = 15 - max_pab_exp if B > 0 else B
+        assert 15 > B - adjusted_B >= 0
+        bias_multiplier = 2 ** (B - adjusted_B)  # this is not so simple
+
+        accu_shr = -A
+        final_shr = B - 8
+
+        return M, adjusted_B, (bias_multiplier, accu_shr, final_shr)
 
     def mutate_biases(self, op: Operator) -> None:
         with self.using(op):

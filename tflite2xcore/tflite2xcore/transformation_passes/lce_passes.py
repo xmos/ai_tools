@@ -328,10 +328,67 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
 
     def mutate_biases(self, op: Operator) -> None:
         with self.using(op):
-            self._calculate_quantization_exponents()
+            # first calculate quantization parameters as required by the kernel
+            post_act_mult_float = self._op.inputs[2].as_array()
+            adjusted_pam = -2 * post_act_mult_float
+
+            weights = self._weights.as_array()  # already boggled
+            post_act_bias_float = self._op.inputs[3].as_array()
+            adjusted_pab = post_act_bias_float + post_act_mult_float * (
+                self._kernel_channel_size
+                + 2 * self._calculate_overlap_correction(weights)
+            )
+
+            (M, adjusted_B, q_params) = self._calculate_quantization_parameters(
+                adjusted_pam, adjusted_pab
+            )
+            op.add_custom_options(q_params=q_params)
+
+            # then quantize the post activation parameters
+            pam_q = np.round(adjusted_pam * 2.0 ** M)
+            post_act_mult_quant = pam_q.astype(np.int16)
+            assert np.all(post_act_mult_quant == pam_q)
+
+            # TODO: fix this so there is no need to clip
+            pab_q = np.round(adjusted_pab * 2.0 ** adjusted_B)
+            post_act_bias_quant = np.clip(
+                pab_q, np.iinfo(np.int16).min, np.iinfo(np.int16).max
+            ).astype(np.int16)
+            if np.any(post_act_bias_quant != pab_q):
+                self.logger.warning("clipped post_act_bias_quant")
+
+            # create and populate new threshpost_act_multolds tensor
+            new_pam_tensor = self._op.subgraph.create_tensor(
+                f"{self._op.name}/post_act_mult",
+                TensorType.INT16,
+                self._op.inputs[2].shape,
+                consumers=[self._op],
+            )
+            new_pam_tensor.buffer.data = post_act_mult_quant
+
+            # replace old pam tensor
+            self._op.inputs[2].consumers.remove(self._op)
+            self._op.inputs[2] = new_pam_tensor
+
+            # create and populate new threshpost_act_multolds tensor
+            new_pab_tensor = self._op.subgraph.create_tensor(
+                f"{self._op.name}/post_act_bias",
+                TensorType.INT16,
+                self._op.inputs[3].shape,
+                consumers=[self._op],
+            )
+            new_pab_tensor.buffer.data = post_act_bias_quant
+
+            # replace old pam tensor
+            self._op.inputs[3].consumers.remove(self._op)
+            self._op.inputs[3] = new_pab_tensor
 
 
 class LegalizeBconv2dInt8DeepInDeepOutPass(LegalizeBconv2dInt8Pass):
+    @property
+    def _overlap_size(self) -> int:
+        return 0
+
     @property
     def matching_opcode(self) -> XCOREOpCodes:
         return XCOREOpCodes.XC_bconv2d_int8_DIDO

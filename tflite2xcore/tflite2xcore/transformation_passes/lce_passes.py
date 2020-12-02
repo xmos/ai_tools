@@ -317,7 +317,7 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
             self._calculate_quantization_exponents()
 
 
-class LegalizeBconv2dInt8DIDOPass(LegalizeBconv2dInt8Pass):
+class LegalizeBconv2dInt8DeepInDeepOutPass(LegalizeBconv2dInt8Pass):
     @property
     def matching_opcode(self) -> XCOREOpCodes:
         return XCOREOpCodes.XC_bconv2d_int8_DIDO

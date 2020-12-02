@@ -99,7 +99,7 @@ from .lce_passes import (
     ReplaceLceQuantizePass,
     LegalizeXCBconv2DPaddingPass,
     LegalizeBconv2dInt8Pass,
-    LegalizeBconv2dInt8DIDOPass,
+    LegalizeBconv2dInt8DeepInDeepOutPass,
     LegalizeBconv2dBitpackedPass,
     LegalizeBconv2dBitpackedDeepInPass,
 )

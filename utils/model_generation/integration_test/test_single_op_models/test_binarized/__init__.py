@@ -54,9 +54,7 @@ class LarqCompositeTestModelGenerator(Conv2dWordAlignedTestModelGenerator):
         cfg["input_init"] = cfg.pop("input_init", ("RandomUniform", *input_range))
 
         self._config.update(
-            {
-                "bias_init": cfg.pop("bias_init", ("RandomUniform", -1, 1)),
-            }
+            {"bias_init": cfg.pop("bias_init", ("RandomUniform", -1, 1))}
         )
         super()._set_config(cfg)
 

@@ -91,7 +91,7 @@ def test_mutate(
     filler_size = (
         VECTOR_SIZE_WORDS - kernel_channel_size % VECTOR_SIZE_WORDS
     ) % VECTOR_SIZE_WORDS
-    assert new_weights.shape[0] % VECTOR_SIZE_WORDS == filler_size
+    assert new_weights.shape[0] - np.prod(old_weights.shape) == filler_size
 
     if filler_size:
         filler_bits = new_weights.as_array()[-filler_size:]

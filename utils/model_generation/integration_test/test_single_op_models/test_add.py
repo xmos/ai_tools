@@ -9,7 +9,7 @@ from tflite2xcore.xcore_schema import XCOREOpCodes, BuiltinOpCodes, XCOREModel  
 from tflite2xcore.model_generation import Configuration
 from tflite2xcore.model_generation.utils import parse_init_config
 
-from . import ChannelPreservingOpTestModelGenerator
+from . import ChannelAgnosticOpTestModelGenerator
 from . import (  # pylint: disable=unused-import
     test_output,
     test_converted_single_op_model,
@@ -21,15 +21,12 @@ from . import (  # pylint: disable=unused-import
 #  ----------------------------------------------------------------------------
 
 
-class AddModelGenerator(ChannelPreservingOpTestModelGenerator):
+class AddModelGenerator(ChannelAgnosticOpTestModelGenerator):
     def _build_core_model(self) -> tf.keras.Model:
         input = tf.keras.Input(shape=self._input_shape)
-        constant = tf.random.uniform(
-            shape=self._input_shape, minval=-1, maxval=1, dtype=tf.float32
-        )
-        return tf.keras.models.Model(
-            inputs=input, outputs=self._op_layer()([input, constant])
-        )
+        x2 = tf.random.normal([1] + list(self._input_shape))
+        out = self._op_layer()([input, x2])
+        return tf.keras.models.Model(inputs=input, outputs=out)
 
     def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
@@ -45,7 +42,7 @@ GENERATOR = AddModelGenerator
 
 
 CONFIGS = {
-    "default": {0: {"height": 4, "width": 4}},
+    "default": {0: {"height": 5, "width": 5, "channels": 3}},
 }
 
 

@@ -316,9 +316,8 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
         max_accu_exp = np.frexp(self._kernel_channel_size / 2)[1]
         M, B, A = self.__calculate_MBA(max_pam_exp, max_pab_exp, max_accu_exp)
 
-        # TODO: change inequality condition
-        adjusted_B = 15 - max_pab_exp if B > 0 else B
-        assert 15 > B - adjusted_B >= 0
+        adjusted_B = min(15 - max_pab_exp, B)
+        assert 15 > B - adjusted_B
         bias_multiplier = 2 ** (B - adjusted_B)  # this is not so simple
 
         accu_shr = -A

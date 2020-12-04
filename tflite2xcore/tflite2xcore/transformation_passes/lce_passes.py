@@ -328,17 +328,28 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
 
     def mutate_biases(self, op: Operator) -> None:
         with self.using(op):
-            # first calculate quantization parameters as required by the kernel
+            # first we adjust pam/pab as the larq kernel's output transform requires
+            output_scale = self._output.quantization["scale"][0]
+            output_zero_point = self._output.quantization["zero_point"][0]
             post_act_mult_float = self._op.inputs[2].as_array()
-            adjusted_pam = -2 * post_act_mult_float
-
-            weights = self._weights.as_array()  # already boggled
             post_act_bias_float = self._op.inputs[3].as_array()
-            adjusted_pab = post_act_bias_float + post_act_mult_float * (
+
+            output_trf_pam = -post_act_mult_float / output_scale
+            output_trf_pab = (
+                post_act_bias_float / output_scale
+                - output_trf_pam * self._kernel_channel_size
+                + output_zero_point
+            )
+
+            # then adjust pam/pad as required by our kernels
+            weights = self._weights.as_array()  # already boggled
+            adjusted_pam = -2 * output_trf_pam
+            adjusted_pab = output_trf_pab + output_trf_pam * (
                 self._kernel_channel_size
                 + 2 * self._calculate_overlap_correction(weights)
             )
 
+            # calculate quantization parameters as required by the kernel
             (M, adjusted_B, q_params) = self._calculate_quantization_parameters(
                 adjusted_pam, adjusted_pab
             )

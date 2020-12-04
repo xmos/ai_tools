@@ -7,7 +7,7 @@ from tflite2xcore.model_generation import Configuration
 
 from . import BConv2dGenericTestModelGenerator
 
-from .test_bconv2d_int8 import BConv2dInt8TestRunner
+from .test_bconv2d_int8 import RUNNER  # pylint: disable=unused-import
 from . import (  # pylint: disable=unused-import
     test_reference_model_regression,
     test_converted_single_op_model,
@@ -37,29 +37,6 @@ class BConv2dInt8DeepInDeepOutTestModelGenerator(BConv2dGenericTestModelGenerato
 
 GENERATOR = BConv2dInt8DeepInDeepOutTestModelGenerator
 
-#  ----------------------------------------------------------------------------
-#                                   RUNNERS
-#  ----------------------------------------------------------------------------
-
-
-RUNNER = BConv2dInt8TestRunner
-
-#  ----------------------------------------------------------------------------
-#                                   CONFIGS
-#  ----------------------------------------------------------------------------
-
-CONFIGS = {  # TODO: generate random configs
-    "default": {
-        0: {
-            "input_channels": 256,
-            "output_channels": 32,
-            "K_h": 1,
-            "K_w": 1,
-            "height": 1,
-            "width": 1,
-        },
-    },
-}
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES

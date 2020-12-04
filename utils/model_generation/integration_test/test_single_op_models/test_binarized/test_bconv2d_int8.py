@@ -2,9 +2,8 @@
 
 import pytest
 
-pytestmark = pytest.mark.skip  # TODO: remove this
-
 from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes  # type: ignore # TODO: fix this
+from tflite2xcore.model_generation import Configuration
 
 from . import (
     BinarizedTestRunner,
@@ -14,7 +13,8 @@ from . import (
 
 from . import (  # pylint: disable=unused-import
     test_reference_model_regression,
-    # test_converted_single_op_model,  # TODO: enable this
+    test_converted_single_op_model,
+    test_output,
 )
 
 
@@ -23,7 +23,13 @@ from . import (  # pylint: disable=unused-import
 #  ----------------------------------------------------------------------------
 
 
-GENERATOR = BConv2dGenericTestModelGenerator
+class BConv2dInt8TestModelGenerator(BConv2dGenericTestModelGenerator):
+    def _set_config(self, cfg: Configuration) -> None:
+        cfg.setdefault("padding", "valid")
+        super()._set_config(cfg)
+
+
+GENERATOR = BConv2dInt8TestModelGenerator
 
 #  ----------------------------------------------------------------------------
 #                                   RUNNERS
@@ -45,11 +51,11 @@ CONFIGS = {  # TODO: generate random configs
     "default": {
         0: {
             "input_channels": 32,
-            "output_channels": 64,
-            "K_h": 3,
-            "K_w": 3,
-            "height": 8,
-            "width": 8,
+            "output_channels": 4,
+            "K_h": 1,
+            "K_w": 1,
+            "height": 1,
+            "width": 1,
         },
     },
 }
@@ -57,6 +63,11 @@ CONFIGS = {  # TODO: generate random configs
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+
+
+@pytest.fixture  # type: ignore
+def bitpacked_outputs() -> bool:
+    return False
 
 
 @pytest.fixture  # type: ignore

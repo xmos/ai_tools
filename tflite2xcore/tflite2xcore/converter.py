@@ -192,6 +192,7 @@ class BinarizedOperatorLoweringManager(PassManager):
         self.register_pass(passes.ReplaceBconv2DBitpackedDeepInPass())
         self.register_pass(passes.ReplaceBconv2DBitpackedPass())
         self.register_pass(passes.ReplaceBconv2DInt8DeepInDeepOutPass())
+        self.register_pass(passes.ReplaceBconv2DInt8Pass())
 
         # we legalize the padding by injecting an explicit PAD where needed
         self.register_pass(passes.LegalizeXCBconv2DPaddingPass())
@@ -200,6 +201,7 @@ class BinarizedOperatorLoweringManager(PassManager):
         self.register_pass(passes.LegalizeBconv2dBitpackedDeepInPass())
         self.register_pass(passes.LegalizeBconv2dBitpackedPass())
         self.register_pass(passes.LegalizeBconv2dInt8DeepInDeepOutPass())
+        self.register_pass(passes.LegalizeBconv2dInt8Pass())
 
 
 class FinalizationManager(PassManager):

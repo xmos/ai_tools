@@ -218,6 +218,10 @@ class LegalizeBconv2dPass(LegalizeWeightBiasPass):
             - (self._kernel_channel_size // WORD_SIZE_BITS - 1) % VECTOR_SIZE_WORDS
         )
 
+    @property
+    def _fill_size(self) -> int:
+        return self._overlap_size
+
     @staticmethod
     def __c_out_group_bounds(c_out_group: int, num_c_out: int) -> Tuple[int, int]:
         c_out_group_start = c_out_group * ACC_PERIOD
@@ -254,7 +258,7 @@ class LegalizeBconv2dPass(LegalizeWeightBiasPass):
             # NOTE: this means that this tensor is no longer rectangular
             reordered_weight_channels.append(
                 # TODO: fix this filler value
-                np.full(self._overlap_size, FILLER, dtype=weights.dtype)
+                np.full(self._fill_size, FILLER, dtype=weights.dtype)
             )
             self._replace_weights(np.concatenate(reordered_weight_channels))
 
@@ -293,6 +297,18 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
     @property
     def matching_opcode(self) -> XCOREOpCodes:
         return XCOREOpCodes.XC_bconv2d_int8
+
+    @property
+    def _fill_size(self) -> int:
+        k_p_adjust = (
+            self._kernel_channel_size // WORD_SIZE_BITS - 1
+        ) % VECTOR_SIZE_WORDS + 1
+        patch_loop_counter = ceil(self._kernel_channel_size / VECTOR_SIZE_BITS) - 1
+        out_tail_chans = int(self._weights.shape[0] - 1) % ACC_PERIOD + 1
+        fill_words = (patch_loop_counter > 0) * (
+            ACC_PERIOD - out_tail_chans
+        ) * VECTOR_SIZE_WORDS - k_p_adjust * out_tail_chans
+        return max(fill_words, VECTOR_SIZE_WORDS)
 
     @staticmethod
     def __calculate_MBA(
@@ -345,7 +361,7 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
             adjusted_pam = -2 * output_trf_pam
             adjusted_pab = output_trf_pab + output_trf_pam * (
                 self._kernel_channel_size
-                + 2 * self._calculate_overlap_correction(weights)
+                - 2 * self._calculate_overlap_correction(weights)
             )
 
             # calculate quantization parameters as required by the kernel

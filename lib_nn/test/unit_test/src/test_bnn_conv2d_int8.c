@@ -8,10 +8,10 @@
 #include "helpers.h"
 
 #define X_REF_OVERREAD_WORDS (7)
-#define K_OVERREAD_WORDS (8*12)
 #define DATA_SCRATCH_OVERREADWRITE_WORDS (8)
 
 static const char undef_sentinal = 0x55;
+
 
 /*
 X_ref and K_ref must be initialised before running this.
@@ -142,7 +142,10 @@ void impl_bconv2d_int8_DIDO_pseudo_random(
 
                   size_t K_ref_bytes = sizeof(bnn_b32_t) * (chans_out*k_height*k_width*chan_words_in);
                   bnn_b32_t * K_ref = (bnn_b32_t *) malloc(K_ref_bytes);
-                  bnn_b32_t * K     = (bnn_b32_t *) malloc(K_ref_bytes + sizeof(bnn_b32_t)*K_OVERREAD_WORDS);
+
+                  int32_t over_bytes = compute_int8_over_RW_bytes(chans_in, k_height, k_width, chans_out);
+
+                  bnn_b32_t * K     = (bnn_b32_t *) malloc(K_ref_bytes + over_bytes);
 
                   size_t X_ref_bytes = sizeof(bnn_b32_t)*(x_height*x_width*chan_words_in+X_REF_OVERREAD_WORDS);
                   bnn_b32_t * X_ref =(bnn_b32_t *)malloc(X_ref_bytes);
@@ -245,7 +248,8 @@ void impl_bconv2d_int8_DIDO_pseudo_random2(
 
           size_t K_ref_bytes = sizeof(bnn_b32_t) * (chans_out*k_height*k_width*chan_words_in);
           bnn_b32_t * K_ref = (bnn_b32_t *) malloc(K_ref_bytes);
-          bnn_b32_t * K     = (bnn_b32_t *) malloc(K_ref_bytes + sizeof(bnn_b32_t)*K_OVERREAD_WORDS);
+          int32_t over_bytes = compute_int8_over_RW_bytes(chans_in, k_height, k_width, chans_out);
+          bnn_b32_t * K     = (bnn_b32_t *) malloc(K_ref_bytes + over_bytes);
 
           size_t X_ref_bytes = sizeof(bnn_b32_t)*(x_height*x_width*chan_words_in+X_REF_OVERREAD_WORDS);
           bnn_b32_t * X_ref =(bnn_b32_t *)malloc(X_ref_bytes);
@@ -395,7 +399,10 @@ void impl_bconv2d_int8_DIDO_sub_image(
       bnn_b32_t * X_ref = (bnn_b32_t *) malloc(X_ref_bytes);
       int16_t * post_activation_multiplier_q = (int16_t *) malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
       int16_t * post_activation_bias_q = (int16_t *) malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
-      bnn_b32_t * K = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(chans_out*full_k_height*full_k_width*chan_words_in + K_OVERREAD_WORDS));
+
+      int32_t over_bytes = compute_int8_over_RW_bytes(chans_in, full_k_height, full_k_width, chans_out);
+
+      bnn_b32_t * K = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(chans_out*full_k_height*full_k_width*chan_words_in) + over_bytes);
 
       float * post_activation_multiplier = (float *)malloc(sizeof(float)*chans_out);
       float * post_activation_bias = (float *)malloc(sizeof(float)*chans_out);

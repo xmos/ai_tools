@@ -2,10 +2,6 @@
 
 import pytest
 
-from . import BinarizedTestRunner
-
-from .. import _compare_batched_arrays, BatchedArrayComparison
-
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES

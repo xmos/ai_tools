@@ -270,7 +270,7 @@ class LegalizeBconv2dPass(LegalizeWeightBiasPass):
         for c_out in range(num_channels_out):
             c_out_group = c_out // ACC_PERIOD
             c_start, c_end = self.__c_out_group_bounds(c_out_group, num_channels_out)
-            reversed_offset = c_out % (c_end - c_start) * tail_size
+            reversed_offset = c_out % ACC_PERIOD % (c_end - c_start) * tail_size
             overlap_start = c_end * channel_size_words - reversed_offset
 
             junk = boggled_weights[overlap_start : overlap_start + self._overlap_size]

@@ -132,8 +132,7 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     runner = RUNNER(GENERATOR, use_device=use_device)
     runner.set_config(**request.param)
 
-    if pytest_config.getoption("verbose"):
-        print(f"Config: {runner._config}")
+    logging.info(f"Config: {runner._config}")
     if pytest_config.getoption("--config-only"):
         pytest.skip()
 

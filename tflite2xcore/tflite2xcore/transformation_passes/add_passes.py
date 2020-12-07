@@ -38,8 +38,8 @@ class ReplaceAddPass(ReplaceQuantizedOperatorPass):
         new_op = super().mutate(op)
 
         # passed variables
-        s_0 = 0
-        s_1 = 0
+        s_0 = -6
+        s_1 = s_0
 
         # calculate scale_mismatch
         scale0_scaleOut = (
@@ -60,18 +60,20 @@ class ReplaceAddPass(ReplaceQuantizedOperatorPass):
             n = int(n / 2)
             msb += 1
 
-        scale_mismatch = 16 - (msb + 1)
+        scale_mismatch = 14 - msb
 
         m_0 = scale0_scaleOut * 2 ** scale_mismatch
         m_1 = scale1_scaleOut * 2 ** scale_mismatch
 
-        b = (
-            (old_op.outputs[0].quantization["zero_point"][0] << scale_mismatch)
-            - m_0 * old_op.inputs[0].quantization["zero_point"][0]
-            - m_1 * old_op.inputs[1].quantization["zero_point"][0]
-        )
+        s_out = scale_mismatch + -s_0
+        if s_out < 0:
+            s_out = 0
 
-        s_out = scale_mismatch
+        b = (
+            (old_op.outputs[0].quantization["zero_point"][0] << s_out)
+            - m_0 * (old_op.inputs[0].quantization["zero_point"][0] << -s_0)
+            - m_1 * (old_op.inputs[1].quantization["zero_point"][0] << -s_1)
+        )
 
         subgraph = new_op.subgraph
         bias_scale_shift_tensor = subgraph.create_tensor(

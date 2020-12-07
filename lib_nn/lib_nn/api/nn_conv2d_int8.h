@@ -3,6 +3,11 @@
 #include "nn_bso.h"
 #include "nn_conv2d_int8_structs.h"
 
+/** 
+ * @brief Compute the number of extra bytes required to allow the general purpose int8 bconv2d kernels to
+ * function without buffer overrunning.
+ */
+int32_t compute_int8_over_RW_bytes(int32_t x_channels, int32_t k_height, int32_t k_width, int32_t chans_out);
 
 
 

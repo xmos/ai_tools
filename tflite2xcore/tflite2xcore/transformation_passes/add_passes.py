@@ -34,7 +34,6 @@ class ReplaceAddPass(ReplaceQuantizedOperatorPass):
         )
 
     def mutate(self, op: Operator):
-        old_op = copy(op)
         new_op = super().mutate(op)
 
         # passed variables
@@ -43,12 +42,12 @@ class ReplaceAddPass(ReplaceQuantizedOperatorPass):
 
         # calculate scale_mismatch
         scale0_scaleOut = (
-            old_op.inputs[0].quantization["scale"][0]
-            / old_op.outputs[0].quantization["scale"][0]
+            new_op.inputs[0].quantization["scale"][0]
+            / new_op.outputs[0].quantization["scale"][0]
         )
         scale1_scaleOut = (
-            old_op.inputs[1].quantization["scale"][0]
-            / old_op.outputs[0].quantization["scale"][0]
+            new_op.inputs[1].quantization["scale"][0]
+            / new_op.outputs[0].quantization["scale"][0]
         )
 
         n = max(scale0_scaleOut, scale1_scaleOut,)
@@ -70,38 +69,22 @@ class ReplaceAddPass(ReplaceQuantizedOperatorPass):
             s_out = 0
 
         b = (
-            (old_op.outputs[0].quantization["zero_point"][0] << s_out)
-            - m_0 * (old_op.inputs[0].quantization["zero_point"][0] << -s_0)
-            - m_1 * (old_op.inputs[1].quantization["zero_point"][0] << -s_1)
+            (new_op.outputs[0].quantization["zero_point"][0] << s_out)
+            - m_0 * (new_op.inputs[0].quantization["zero_point"][0] << -s_0)
+            - m_1 * (new_op.inputs[1].quantization["zero_point"][0] << -s_1)
         )
+
+        params = np.int32([s_0, m_0, s_1, m_1, b, s_out])
 
         subgraph = new_op.subgraph
         bias_scale_shift_tensor = subgraph.create_tensor(
             f"{new_op.name}/bias_scale_shift",
             TensorType.INT32,
             consumers=[new_op],
-            shape=[6],
+            shape=params.shape,
         )
         new_op.inputs.append(bias_scale_shift_tensor)
 
-        m_0 = np.array(m_0)
-        m_1 = np.array(m_1)
-        s_0 = np.array(s_0)
-        s_1 = np.array(s_1)
-        s_out = np.array(s_out)
-        b = np.array(b)
-
-        new_op.inputs[2].buffer.data = b"".join(
-            # p.tostring() for p in self._bias_scale_shift
-            p.tostring()
-            for p in [
-                b.astype(np.int32),
-                m_0.astype(np.int32),
-                m_1.astype(np.int32),
-                s_0.astype(np.int32),
-                s_1.astype(np.int32),
-                s_out.astype(np.int32),
-            ]
-        )
+        new_op.inputs[2].buffer.data = params
 
         return new_op

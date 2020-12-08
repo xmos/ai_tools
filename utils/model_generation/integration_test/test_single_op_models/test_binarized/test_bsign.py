@@ -50,6 +50,9 @@ class BSignTestRunner(BinarizedTestRunner):
         cfg["input_range"] = cfg.pop(
             "input_range", (np.iinfo(np.int8).min, np.iinfo(np.int8).max)
         )
+        assert (
+            "output_range" not in cfg
+        ), f"output_range cannot be specified for Bsign tests"
         super()._set_config(cfg)
 
     def make_repr_data_factory(self) -> InputInitializerDataFactory:
@@ -73,11 +76,6 @@ def reference_op_code() -> ExternalOpCodes:
 @pytest.fixture  # type: ignore
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_bsign_8
-
-
-@pytest.fixture  # type: ignore
-def mean_abs_diff_tolerance() -> float:
-    return 0.0
 
 
 if __name__ == "__main__":

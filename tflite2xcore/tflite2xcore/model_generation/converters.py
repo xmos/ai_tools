@@ -77,10 +77,6 @@ class TFLiteQuantConverter(KerasModelConverter):
         super().__init__(runner, input_model_hook)
         self._repr_data_hook = repr_data_hook
 
-    def _set_config(self, cfg: Configuration) -> None:
-        if "input_init" not in self._config:
-            self._config["input_init"] = cfg.pop("input_init", ("RandomUniform", -1, 1))
-
     def convert(self) -> None:
         converter = tf.lite.TFLiteConverter.from_keras_model(self._input_model_hook())
         quantize_converter(converter, representative_data=self._repr_data_hook())

@@ -44,7 +44,6 @@ class ReverseDepthFirstPlanner(ExecutionPlanner):
                 )
 
             if dependency_counts[op] <= 0:
-                print(op.name)
                 raise Exception(
                     "Found operator with 0 or fewer dependencies (the graph may be corrupted)"
                 )

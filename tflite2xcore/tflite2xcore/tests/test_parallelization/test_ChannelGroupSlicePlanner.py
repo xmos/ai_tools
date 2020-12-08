@@ -33,7 +33,6 @@ def generate_thread_cost_array(max_channels=MAX_OUTPUT_CHANNELS):
                 num_channels, num_threads=num_threads, forced=True
             )
             plan = planner.find_optimal_plan()
-            print(num_channels, num_threads, plan)
             thread_costs[num_channels - 1, num_threads - 1] = plan.cost
 
     return thread_costs

@@ -416,7 +416,6 @@ class BufferOwnerMapper:
 
     def __call__(self, d):
         if not isinstance(d, dict):
-            print(type(d), d)
             return "N/A"
 
         html_list = []

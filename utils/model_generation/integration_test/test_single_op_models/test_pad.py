@@ -4,9 +4,7 @@ import pytest
 import tensorflow as tf
 from typing import Optional, Tuple
 
-from tflite2xcore.xcore_schema import XCOREOpCodes, BuiltinOpCodes, XCOREModel  # type: ignore # TODO: fix this
-from tflite2xcore.model_generation import Configuration
-from tflite2xcore.model_generation.utils import parse_init_config
+from tflite2xcore.xcore_schema import XCOREOpCodes, BuiltinOpCodes  # type: ignore # TODO: fix this
 
 from . import ChannelAgnosticOpTestModelGenerator, PaddingMixin
 from . import (  # pylint: disable=unused-import

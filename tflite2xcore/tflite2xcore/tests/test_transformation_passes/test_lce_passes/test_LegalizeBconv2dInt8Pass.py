@@ -5,14 +5,14 @@ import numpy as np
 from tflite2xcore.utils import VECTOR_SIZE_WORDS, WORD_SIZE_BITS
 from tflite2xcore.converter import CleanupManager
 from tflite2xcore.transformation_passes import (
-    LegalizeBconv2dBitpackedPass,
-    ReplaceBconv2DBitpackedPass,
+    LegalizeBconv2dInt8Pass,
+    ReplaceBconv2DInt8Pass,
 )
 from tflite2xcore.transformation_passes.lce_passes import FILLER
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import TensorType, XCOREOpCodes
 
-from .test_ReplaceBconv2DBitpackedPass import (  # pylint: disable=unused-import
+from .test_ReplaceBconv2DInt8Pass import (  # pylint: disable=unused-import
     model,
     new_opcode,
     PARAMS,
@@ -25,13 +25,13 @@ from .test_ReplaceBconv2DBitpackedPass import (  # pylint: disable=unused-import
 
 
 @pytest.fixture()  # type: ignore
-def replacement_pass() -> ReplaceBconv2DBitpackedPass:
-    return ReplaceBconv2DBitpackedPass()
+def replacement_pass() -> ReplaceBconv2DInt8Pass:
+    return ReplaceBconv2DInt8Pass()
 
 
 @pytest.fixture()  # type: ignore
-def legalization_pass() -> LegalizeBconv2dBitpackedPass:
-    return LegalizeBconv2dBitpackedPass()
+def legalization_pass() -> LegalizeBconv2dInt8Pass:
+    return LegalizeBconv2dInt8Pass()
 
 
 #  ----------------------------------------------------------------------------
@@ -40,8 +40,8 @@ def legalization_pass() -> LegalizeBconv2dBitpackedPass:
 
 
 def test_mutate(
-    replacement_pass: ReplaceBconv2DBitpackedPass,
-    legalization_pass: LegalizeBconv2dBitpackedPass,
+    replacement_pass: ReplaceBconv2DInt8Pass,
+    legalization_pass: LegalizeBconv2dInt8Pass,
     model: XCOREModel,
     new_opcode: XCOREOpCodes,
 ) -> None:
@@ -55,7 +55,8 @@ def test_mutate(
     assert bconv2d_op.operator_code.code is new_opcode
 
     old_weights = bconv2d_op.inputs[1]
-    old_thresholds = bconv2d_op.inputs[2]
+    old_multipliers = bconv2d_op.inputs[2]
+    old_biases = bconv2d_op.inputs[3]
 
     # ensure that legalization pass matches
     assert legalization_pass.match(bconv2d_op)
@@ -67,7 +68,7 @@ def test_mutate(
     # basic checks
     assert len(subgraph.operators) == 1
     assert bconv2d_op is subgraph.operators[0]
-    assert len(bconv2d_op.inputs) == 3
+    assert len(bconv2d_op.inputs) == 4
 
     # check custom options
     options = bconv2d_op.custom_options
@@ -75,11 +76,17 @@ def test_mutate(
     assert options["K"][:3] == old_weights.shape[:3]
     assert options["K"][3] == old_weights.shape[3] * WORD_SIZE_BITS
 
+    # check multipliers
+    new_multipliers = bconv2d_op.inputs[3]
+    assert new_multipliers is not old_multipliers
+    assert new_multipliers.type is TensorType.INT16
+    assert new_multipliers.shape == old_multipliers.shape
+
     # check biases
-    new_thresholds = bconv2d_op.inputs[2]
-    assert new_thresholds is not old_thresholds
-    assert new_thresholds.type is TensorType.INT32
-    assert new_thresholds.shape == old_thresholds.shape
+    new_biases = bconv2d_op.inputs[3]
+    assert new_biases is not old_biases
+    assert new_biases.type is TensorType.INT16
+    assert new_biases.shape == old_biases.shape
 
     # check weights
     new_weights = bconv2d_op.inputs[1]
@@ -87,15 +94,12 @@ def test_mutate(
     assert new_weights.type is TensorType.INT32
     assert len(new_weights.shape) == 1
 
-    kernel_channel_size = np.prod(old_weights.shape[1:])
-    filler_size = (
-        VECTOR_SIZE_WORDS - kernel_channel_size % VECTOR_SIZE_WORDS
-    ) % VECTOR_SIZE_WORDS
-    assert new_weights.shape[0] - np.prod(old_weights.shape) == filler_size
+    # TODO: find a more precise test
+    old_weight_size = np.prod(old_weights.shape)
+    assert new_weights.shape[0] - old_weight_size >= 8
 
-    if filler_size:
-        filler_bits = new_weights.as_array()[-filler_size:]
-        assert np.all(filler_bits == FILLER)
+    fill = new_weights.as_array().ravel()[old_weight_size:]
+    assert np.all(fill == FILLER)
 
 
 if __name__ == "__main__":

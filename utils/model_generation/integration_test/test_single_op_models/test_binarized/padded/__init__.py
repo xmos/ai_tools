@@ -19,8 +19,12 @@ from .. import (
 def test_converted_model(
     xcore_model: XCOREModel, converted_op_code: XCOREOpCodes
 ) -> None:
-    operators = xcore_model.subgraphs[0].operators
-    assert len(operators) == 2
+    subgraph = xcore_model.subgraphs[0]
+    operators = subgraph.operators
     op = operators[-1]
     assert op.operator_code.code is converted_op_code
-    assert op.inputs[0].producers[0].operator_code.code is XCOREOpCodes.XC_pad
+
+    if len(operators) == 2:
+        padded_input = op.inputs[0]
+        assert op.inputs[0].producers[0].operator_code.code is XCOREOpCodes.XC_pad
+        assert subgraph.inputs[0].shape != padded_input.shape

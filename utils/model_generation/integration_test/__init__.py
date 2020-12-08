@@ -90,12 +90,18 @@ class IntegrationTestRunner(Runner):
             self, lambda: self._model_generator.input_shape
         )
 
+    @property
+    def repr_data_example_count(self) -> int:
+        return 10
+
     def get_representative_data(self) -> tf.Tensor:
         try:
             return self._representative_data
         except AttributeError:
             try:
-                self._representative_data = self._repr_data_factory.make_data(10)
+                self._representative_data = self._repr_data_factory.make_data(
+                    self.repr_data_example_count
+                )
             except AttributeError:
                 raise Exception(
                     "Cannot get quantization data before runner is run!"

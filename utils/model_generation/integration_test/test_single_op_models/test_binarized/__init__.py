@@ -48,11 +48,26 @@ from ..test_conv2d import Conv2dWordAlignedTestModelGenerator
 
 class LarqCompositeTestModelGenerator(Conv2dWordAlignedTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
+        self._config["output_range"] = cfg.pop("output_range", (-3, 3))
+
         self._config["input_range"] = input_range = cfg.pop("input_range")
+        cfg["input_init"] = cfg.pop("input_init", ("RandomUniform", *input_range))
+
+        self._config.update(
+            {"bias_init": cfg.pop("bias_init", ("RandomUniform", -1, 1))}
+        )
+        super()._set_config(cfg)
+
+    def check_config(self) -> None:
+        super().check_config()
+
+        input_range = self._config["input_range"]
         assert len(input_range) == 2
         assert input_range[0] <= 0 <= input_range[1]
-        cfg["input_init"] = cfg.pop("input_init", ("RandomUniform", *input_range))
-        super()._set_config(cfg)
+
+        output_range = self._config["output_range"]
+        assert len(output_range) == 2
+        assert output_range[0] <= 0 <= output_range[1]
 
     def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
@@ -73,16 +88,16 @@ class LarqCompositeTestModelGenerator(Conv2dWordAlignedTestModelGenerator):
             **kwargs,
         )
 
-    def _fake_quant(self, x: tf.Tensor) -> tf.Tensor:
-        return tf.quantization.fake_quant_with_min_max_vars(
-            x, *self._config["input_range"]
-        )
+    def _fake_quant(
+        self, x: tf.Tensor, range_min: int = 0, range_max: int = 1
+    ) -> tf.Tensor:
+        return tf.quantization.fake_quant_with_min_max_vars(x, range_min, range_max)
 
     def _build_core_model(self) -> tf.keras.Model:
         img = tf.keras.layers.Input(shape=self._input_shape)
-        x = self._fake_quant(img)
+        x = self._fake_quant(img, *self._config["input_range"])
         x = self._op_layer()(x)
-        x = self._fake_quant(x)
+        x = self._fake_quant(x, *self._config["output_range"])
         return tf.keras.Model(img, x)
 
 
@@ -216,10 +231,6 @@ class BinarizedTestRunner(IntegrationTestRunner):
         return self._lce_converter.get_converted_model()
 
     def run(self) -> None:
-        """ Defines how a DefaultIntegrationTestRunner should be run.
-        
-        Most integration tests require self.outputs to be set.
-        """
         super().run()
         self._lce_converter.convert()
         self._lce_evaluator.evaluate()

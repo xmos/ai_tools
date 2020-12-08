@@ -1,5 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+import os
 import tensorflow as tf
 from collections import Iterable
 from typing import Union, Any, Tuple
@@ -51,4 +52,4 @@ def stringify_config(cfg: Configuration) -> str:
             v = "(" + ",".join(str(c) for c in v) + ")"
         return str(v).replace(" ", "_")
 
-    return ",".join(k + "=" + stringify_value(v) for k, v in sorted(cfg.items()))
+    return os.sep.join(k + "=" + stringify_value(v) for k, v in sorted(cfg.items()))

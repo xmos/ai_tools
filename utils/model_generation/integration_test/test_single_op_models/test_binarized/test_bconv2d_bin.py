@@ -28,6 +28,9 @@ from . import (  # pylint: disable=unused-import
 class BConv2dBitpackedTestModelGenerator(BConv2dGenericTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         cfg.setdefault("padding", "valid")
+        assert (
+            "output_range" not in cfg
+        ), f"output_range cannot be specified for BConv2dBitpacked tests"
         super()._set_config(cfg)
 
     def check_config(self) -> None:
@@ -38,9 +41,9 @@ class BConv2dBitpackedTestModelGenerator(BConv2dGenericTestModelGenerator):
 
     def _build_core_model(self) -> tf.keras.Model:
         img = tf.keras.layers.Input(shape=self._input_shape)
-        x = self._fake_quant(img)
+        x = self._fake_quant(img, *self._config["input_range"])
         x = self._op_layer()(x)
-        # NOTE: we need the next dummy layer to produce a bconv2d with bitpacked output
+        # NOTE: we need the next dummy layer in order to produce a bconv2d with bitpacked output
         x = larq.layers.QuantConv2D(
             filters=32,
             kernel_size=(1, 1),
@@ -51,7 +54,7 @@ class BConv2dBitpackedTestModelGenerator(BConv2dGenericTestModelGenerator):
             kernel_quantizer="ste_sign",
             kernel_constraint="weight_clip",
         )(x)
-        x = self._fake_quant(x)
+        x = self._fake_quant(x, *self._config["output_range"])
         return tf.keras.Model(img, x)
 
 

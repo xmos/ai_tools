@@ -2,16 +2,17 @@
 
 import pytest
 
-pytestmark = pytest.mark.skip  # TODO: remove this
-
 from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes  # type: ignore # TODO: fix this
 
-from . import BConv2dGenericTestModelGenerator
-
-from .test_bconv2d_int8 import BConv2dInt8TestRunner
+from .test_bconv2d_int8 import BConv2dInt8TestModelGenerator
+from .test_bconv2d_int8 import (  # pylint: disable=unused-import
+    bitpacked_outputs,
+    RUNNER,
+)
 from . import (  # pylint: disable=unused-import
     test_reference_model_regression,
-    # test_converted_single_op_model,  # TODO: enable this
+    test_converted_single_op_model,
+    test_output,
 )
 
 
@@ -20,7 +21,7 @@ from . import (  # pylint: disable=unused-import
 #  ----------------------------------------------------------------------------
 
 
-class BConv2dInt8DeepInDeepOutTestModelGenerator(BConv2dGenericTestModelGenerator):
+class BConv2dInt8DeepInDeepOutTestModelGenerator(BConv2dInt8TestModelGenerator):
     def check_config(self) -> None:
         super().check_config()
         assert (
@@ -33,29 +34,6 @@ class BConv2dInt8DeepInDeepOutTestModelGenerator(BConv2dGenericTestModelGenerato
 
 GENERATOR = BConv2dInt8DeepInDeepOutTestModelGenerator
 
-#  ----------------------------------------------------------------------------
-#                                   RUNNERS
-#  ----------------------------------------------------------------------------
-
-
-RUNNER = BConv2dInt8TestRunner
-
-#  ----------------------------------------------------------------------------
-#                                   CONFIGS
-#  ----------------------------------------------------------------------------
-
-CONFIGS = {  # TODO: generate random configs
-    "default": {
-        0: {
-            "input_channels": 256,
-            "output_channels": 64,
-            "K_h": 3,
-            "K_w": 3,
-            "height": 8,
-            "width": 8,
-        },
-    },
-}
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES

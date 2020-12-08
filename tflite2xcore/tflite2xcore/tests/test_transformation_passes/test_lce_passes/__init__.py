@@ -132,6 +132,8 @@ def build_bconv2d(
         )
 
         input_tensors.append(output_threshold)
+
+        output_quantization = None
     elif output_tensor_type is TensorType.INT8:
         post_act_params: Dict[str, Any] = {"shape": weight_shape[:1]}
         if opcode in XC_BCONV2D_OPCODES:
@@ -148,6 +150,8 @@ def build_bconv2d(
         post_act_bias.buffer.data = dummy_data
 
         input_tensors.extend([post_act_mult, post_act_bias])
+
+        output_quantization = {"scale": [0.46], "zero_point": [-54]}
     else:
         raise ValueError(
             f"output_tensor_type must be {TensorType.INT32} or {TensorType.INT8}"
@@ -166,7 +170,11 @@ def build_bconv2d(
         )
 
     tout = subgraph.create_tensor(
-        "output", output_tensor_type, shape=(1, *output_size, C_out), isoutput=True
+        "output",
+        output_tensor_type,
+        shape=(1, *output_size, C_out),
+        isoutput=True,
+        quantization=output_quantization,
     )
 
     # create custom options

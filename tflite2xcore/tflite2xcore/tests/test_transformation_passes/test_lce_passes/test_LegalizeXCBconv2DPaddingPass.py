@@ -96,7 +96,6 @@ def test_mutate(
 
         # check that padding is sane
         paddings = pad_op.inputs[1].as_array().tolist()
-        print(old_input.shape, paddings, intermediate.shape)
         for j, (size, pads, padded_size) in enumerate(
             zip(old_input.shape, paddings, intermediate.shape)
         ):

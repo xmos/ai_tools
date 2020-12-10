@@ -61,12 +61,10 @@ class ReplaceAddPass(ReplaceQuantizedOperatorPass):
 
         scale_mismatch = 14 - msb
 
-        m_0 = scale0_scaleOut * 2 ** scale_mismatch
-        m_1 = scale1_scaleOut * 2 ** scale_mismatch
+        m_0 = np.round(scale0_scaleOut * 2 ** scale_mismatch)
+        m_1 = np.round(scale1_scaleOut * 2 ** scale_mismatch)
 
-        s_out = scale_mismatch + -s_0
-        if s_out < 0:
-            s_out = 0
+        s_out = max(0, scale_mismatch - s_0)
 
         b = (
             (new_op.outputs[0].quantization["zero_point"][0] << s_out)

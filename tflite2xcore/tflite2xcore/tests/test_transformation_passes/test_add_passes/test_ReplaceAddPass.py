@@ -130,6 +130,7 @@ def test_mutate(
     assert len(op.inputs) == 3
     assert len(op.outputs) == 1
     assert op.inputs[2].shape == (6,)
+    assert op.inputs[2].type == TensorType.INT32
 
 
 if __name__ == "__main__":

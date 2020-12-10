@@ -36,40 +36,42 @@ class ReplaceAddPass(ReplaceQuantizedOperatorPass):
     def mutate(self, op: Operator):
         new_op = super().mutate(op)
 
-        # passed variables
+        # constant picked so 8 bit number fits in 16 bits
         s_0 = -6
         s_1 = s_0
 
-        # calculate scale_mismatch
-        scale0_scaleOut = (
-            new_op.inputs[0].quantization["scale"][0]
-            / new_op.outputs[0].quantization["scale"][0]
-        )
-        scale1_scaleOut = (
-            new_op.inputs[1].quantization["scale"][0]
-            / new_op.outputs[0].quantization["scale"][0]
+        input_scales = (
+            new_op.inputs[0].quantization["scale"][0],
+            new_op.inputs[1].quantization["scale"][0],
         )
 
-        n = max(scale0_scaleOut, scale1_scaleOut,)
+        output_scale = new_op.outputs[0].quantization["scale"][0]
 
-        msb = 0
-        n = int(n / 2)
+        scale_ratios = (input_scales[0] / output_scale, input_scales[1] / output_scale)
 
-        while n > 0:
-            n = int(n / 2)
-            msb += 1
+        max_ratio = max(scale_ratios)
 
-        scale_mismatch = 14 - msb
+        msb_max_ratio = int(np.floor(np.log2(max_ratio)))
 
-        m_0 = np.round(scale0_scaleOut * 2 ** scale_mismatch)
-        m_1 = np.round(scale1_scaleOut * 2 ** scale_mismatch)
+        # constant picked for number fits in 16 bits
+        scale_mismatch = 14 - msb_max_ratio
+
+        m_0 = np.round(scale_ratios[0] * 2 ** scale_mismatch)
+        m_1 = np.round(scale_ratios[1] * 2 ** scale_mismatch)
 
         s_out = max(0, scale_mismatch - s_0)
 
+        output_zero_point = new_op.outputs[0].quantization["zero_point"][0]
+
+        inputs_zero_points = (
+            new_op.inputs[0].quantization["zero_point"][0],
+            new_op.inputs[1].quantization["zero_point"][0],
+        )
+
         b = (
-            (new_op.outputs[0].quantization["zero_point"][0] << s_out)
-            - m_0 * (new_op.inputs[0].quantization["zero_point"][0] << -s_0)
-            - m_1 * (new_op.inputs[1].quantization["zero_point"][0] << -s_1)
+            (output_zero_point << s_out)
+            - m_0 * (inputs_zero_points[0] << -s_0)
+            - m_1 * (inputs_zero_points[1] << -s_1)
         )
 
         params = np.int32([s_0, m_0, s_1, m_1, b, s_out])

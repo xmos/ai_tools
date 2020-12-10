@@ -36,15 +36,6 @@ class AddModelGenerator(ChannelAgnosticOpTestModelGenerator):
 
 GENERATOR = AddModelGenerator
 
-#  ----------------------------------------------------------------------------
-#                                   CONFIGS
-#  ----------------------------------------------------------------------------
-
-
-CONFIGS = {
-    "default": {0: {"height": 5, "width": 5, "channels": 3}},
-}
-
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES

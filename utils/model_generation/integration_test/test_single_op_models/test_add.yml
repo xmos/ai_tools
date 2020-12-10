@@ -1,0 +1,83 @@
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# RANDOMLY GENERATED CONFIGS, MODIFY AT OWN RISK
+default:
+  0:
+    channels: 28
+    height: 15
+    width: 4
+  1:
+    channels: 32
+    height: 1
+    width: 4
+  2:
+    channels: 64
+    height: 4
+    width: 8
+  3:
+    channels: 4
+    height: 15
+    width: 7
+  4:
+    channels: 48
+    height: 5
+    width: 7
+  5:
+    channels: 52
+    height: 8
+    width: 14
+  6:
+    channels: 4
+    height: 1
+    width: 7
+  7:
+    channels: 8
+    height: 4
+    width: 14
+  8:
+    channels: 28
+    height: 1
+    width: 1
+  9:
+    channels: 12
+    height: 15
+    width: 1
+  10:
+    channels: 48
+    height: 12
+    width: 4
+  11:
+    channels: 52
+    height: 12
+    width: 14
+  12:
+    channels: 64
+    height: 1
+    width: 14
+  13:
+    channels: 52
+    height: 12
+    width: 20
+  14:
+    channels: 16
+    height: 5
+    width: 20
+  15:
+    channels: 32
+    height: 8
+    width: 20
+  16:
+    channels: 16
+    height: 8
+    width: 8
+  17:
+    channels: 8
+    height: 12
+    width: 8
+  18:
+    channels: 8
+    height: 5
+    width: 4
+  19:
+    channels: 12
+    height: 4
+    width: 1

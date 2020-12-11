@@ -1,10 +1,6 @@
-[submodule "xcore/operator_book/Unity"]
+[submodule "lib_nn/Unity"]
 	path = lib_nn/Unity
 	url = git@github.com:xmos/Unity
-	ignore = dirty
-[submodule "third_party/unity"]
-	path = third_party/unity
-	url = git@github.com:ThrowTheSwitch/Unity.git
 	ignore = dirty
 [submodule "third_party/flatbuffers"]
 	path = third_party/flatbuffers

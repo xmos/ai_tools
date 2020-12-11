@@ -21,6 +21,8 @@ const vpu_constants_t vpu_vects = {
 
 };
 
+const uint32_t vpu_vect_zero[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
 #if __xcore__
 
 

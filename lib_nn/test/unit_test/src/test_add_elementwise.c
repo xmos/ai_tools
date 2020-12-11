@@ -35,156 +35,206 @@
 
 char msg_buff[200];
 
+#define LENGTH     (16)
 
-
-#define MAX_LEN     (40)
-
-void test_add_elementwise_case0()
+// Keep this real simple.
+static void test_add_elementwise_case0()
 {
     PRINTF("%s...\n", __func__);
 
-    int8_t WORD_ALIGNED Y[MAX_LEN];
-    int8_t WORD_ALIGNED X1[MAX_LEN];
-    int8_t WORD_ALIGNED X2[MAX_LEN];
+    int8_t WORD_ALIGNED Y[LENGTH];
+    int8_t WORD_ALIGNED X1[LENGTH];
+    int8_t WORD_ALIGNED X2[LENGTH];
     
-    typedef struct {
-        int8_t x1;
-        int8_t x2;
-        nn_add_params_t params;
-        int8_t exp;
-    } test_case_t;
+    int8_t Y_expected[LENGTH];
 
-
-
-    const test_case_t casses[] = {
-    //       X1,    X2, { { { shr1, offset1,   mult1 }, { shr2, offset2,  mult2 } }, { out_mul, out_off } },   exp }
-        {  0x00,  0x00, { { {    0,  0x0000,  0x0000 }, {    0,  0x0000, 0x0000 } }, {  0x0000,  0x0000 } },  0x00 }, //0
-        {  0x00,  0x00, { { {    0,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x0000 } },  0x00 },
-        {  0x00,  0x00, { { {    0,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x0001 } },  0x00 },
-        {  0x00,  0x00, { { {    0,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x0100 } },  0x01 },
-        {  0x00,  0x00, { { {    0,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x0200 } },  0x02 }, //4
-        {  0x00,  0x00, { { {    0,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x0080 } },  0x01 },
-        {  0x00,  0x00, { { {    0,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x007F } },  0x00 },
-        {  0x00,  0x00, { { {    0,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000, -0x0001 } },  0x00 },
-        {  0x00,  0x00, { { {    0,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000, -0x0100 } }, -0x01 }, //8
-        {  0x00,  0x00, { { {    0,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000, -0x0200 } }, -0x02 },
-        {  0x00,  0x00, { { {    0,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000, -0x0080 } }, -0x00 },
-        {  0x00,  0x00, { { {    0,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000, -0x0081 } }, -0x01 },
-        {  0x01,  0x00, { { {    0,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x0000 } },  0x00 }, //12
-        {  0x01,  0x00, { { {   -8,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x0000 } },  0x01 },
-        {  0x02,  0x00, { { {   -8,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x0000 } },  0x02 },
-        { -0x01,  0x00, { { {   -8,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x0000 } }, -0x01 },
-        {  0x01,  0x00, { { {   -9,  0x0000,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x0000 } },  0x02 }, //16
-        {  0x01,  0x01, { { {   -8,  0x0000,  0x4000 }, {   -8,  0x0000, 0x4000 } }, {  0x4000,  0x0000 } },  0x02 },
-        {  0x01,  0x02, { { {   -8,  0x0000,  0x4000 }, {   -8,  0x0000, 0x4000 } }, {  0x4000,  0x0000 } },  0x03 },
-        {  0x01,  0x02, { { {   -8,  0x0000,  0x4000 }, {   -9,  0x0000, 0x4000 } }, {  0x4000,  0x0000 } },  0x05 },
-        {  0x00,  0x00, { { {    0,  0x0200,  0x4000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x0000 } },  0x02 }, //20
-        {  0x00,  0x00, { { {    0,  0x0100,  0x4000 }, {    0,  0x0100, 0x4000 } }, {  0x4000,  0x0000 } },  0x02 },
-        {  0x00,  0x00, { { {    0,  0x0100,  0x4000 }, {    0,  0x0200, 0x4000 } }, {  0x4000,  0x0000 } },  0x03 },
-        {  0x00,  0x00, { { {    0,  0x0100,  0x4000 }, {    0,  0x0400, 0x4000 } }, {  0x4000,  0x0000 } },  0x05 },
-        {  0x10,  0x00, { { {   -8,  0x0000,  0x2000 }, {    0,  0x0000, 0x4000 } }, {  0x4000,  0x0000 } },  0x08 }, //24
-        {  0x10,  0x10, { { {   -8,  0x0000,  0x2000 }, {   -8,  0x0000, 0x2000 } }, {  0x4000,  0x0000 } },  0x10 },
-        {  0x10,  0x20, { { {   -8,  0x0000,  0x6000 }, {   -8,  0x0000, 0x1000 } }, {  0x4000,  0x0000 } },  0x20 },
-        {  0x10,  0x20, { { {   -8,  0x0000,  0x6000 }, {   -9,  0x0000, 0x1000 } }, {  0x4000,  0x0000 } },  0x28 },
-        {  0x10,  0x00, { { {   -8,  0x0000,  0x2000 }, {    0,  0x0000, 0x4000 } }, {  0x2000,  0x0000 } },  0x04 }, //28
-        {  0x10,  0x10, { { {   -8,  0x0000,  0x2000 }, {   -8,  0x0000, 0x2000 } }, { -0x8000,  0x0000 } }, -0x20 },
-        {  0x10,  0x20, { { {   -8,  0x0000,  0x6000 }, {   -8,  0x0000, 0x1000 } }, {  0x1000,  0x0000 } },  0x08 },
-        {  0x10,  0x20, { { {   -8,  0x0000,  0x6000 }, {   -9,  0x0000, 0x1000 } }, {  0x6000,  0x0000 } },  0x3C },
-
-    };
-
-    const unsigned N_casses = sizeof(casses)/sizeof(test_case_t);
-    const unsigned start_case =  0;
-    const unsigned stop_case  = -1;
-
-    print_warns(start_case);
-
-    for(unsigned v = start_case; v < N_casses && v < stop_case; v++){
-        const test_case_t* casse = (const test_case_t*) &casses[v];
-        PRINTF("\ttest vector %u...\n", v);
-
-        for(int len = 4; len <= MAX_LEN; len += 4){
-            // PRINTF("\t\tlength %u...\n", len);
-        
-            memset(X1, casse->x1, len);
-            memset(&X1[len], 0xAA, sizeof(X1)-len);
-
-            memset(X2, casse->x2, len);
-            memset(&X2[len], 0xBB, sizeof(X2)-len);
-
-            memset(Y, 0xCC, sizeof(Y));
-
-            add_elementwise(Y, X1, X2, &casse->params, 0, len);
-
-            for(int i = 0; i < len; i++){
-                // printf("%d\t%d\n", casse->exp, Y[i]);
-                TEST_ASSERT_EQUAL(casse->exp, Y[i]);
-            }
-            for(int i = len; i < MAX_LEN; i++){
-                TEST_ASSERT_EQUAL((int8_t)0xCC, Y[i]);
-            }
-
-        }
+    for(int i = 0; i < LENGTH; i++){
+        X1[i] = X2[i] = i;
     }
+
+    nn_add_params_t params = {
+        {   {   0, 0x0001 },
+            {   0, 0x0001 } },
+            {   0, 1}     };
+            
+    for(int i = 0; i < LENGTH; i++)
+        Y_expected[i] = i;
+
+
+    add_elementwise(Y, X1, X2, &params, 0, LENGTH);
+    TEST_ASSERT_EQUAL_INT8_ARRAY(Y_expected, Y, LENGTH);
+
 }
-#undef MAX_LEN
+#undef LENGTH
+
+
+
+#define LENGTH     (128)
+
+// Keep this real simple.
+static void test_add_elementwise_case1()
+{
+    PRINTF("%s...\n", __func__);
+
+    int8_t WORD_ALIGNED Y[LENGTH];
+    int8_t WORD_ALIGNED X1[LENGTH];
+    int8_t WORD_ALIGNED X2[LENGTH];
+    
+    int8_t Y_expected[LENGTH];
+
+    for(int i = 0; i < LENGTH; i++){
+        X1[i] = X2[i] = i;
+    }
+
+    nn_add_params_t params = {
+        {   {   -8, 0x0001 },
+            {   -7, 0x0002 } },
+            {  -0x00008000, 8} };
+
+    /* 
+        y[i] = 1*(((x1[i] << 8) + 2*(x2[i] << 7)) + bias) >> 8
+
+        y[i] = (i * 2^8 + i * 2^8 + bias) >> 8
+             = (2 * i * 2^8 + bias) >> 8
+             = i * 2^1 + (bias>>8)
+             = 2*i + (bias>>8)
+
+        bias =  -128 * 2^8
+        y[i] = 2*i - 0x8000>>8 = 2*i - 128
+
+        y[0] = 2*0 - 128 = -128
+        y[127] = 2 * 127 - 128 = 126
+    */
+            
+    for(int i = 0; i < LENGTH; i++)
+        Y_expected[i] = 2*i - 128;
+
+    unsigned start = 0;
+
+    { // 0 <= i < 16
+        unsigned count = 16;    // One full vector
+        memset(Y, 0xCC, sizeof(Y));
+        add_elementwise(Y, X1, X2, &params, start, count);
+        TEST_ASSERT_EQUAL_INT8_ARRAY(&Y_expected[start], &Y[start], count);
+        TEST_ASSERT_EACH_EQUAL_INT8(0xCC, &Y[start + count], LENGTH - (start + count) );
+        start += count;
+    }
+
+    { // 16 <= i < 20
+        unsigned count = 4;     // Less than one vector
+        memset(Y, 0xCC, sizeof(Y));
+        add_elementwise(Y, X1, X2, &params, start, count);
+        TEST_ASSERT_EACH_EQUAL_INT8(0xCC, &Y[0], start);
+        TEST_ASSERT_EQUAL_INT8_ARRAY(&Y_expected[start], &Y[start], count);
+        TEST_ASSERT_EACH_EQUAL_INT8(0xCC, &Y[start + count], LENGTH - (start + count) );
+        start += count;
+    }
+
+    { // 20 <= i < 52
+        unsigned count = 32;    // Two full vectors
+        memset(Y, 0xCC, sizeof(Y));
+        add_elementwise(Y, X1, X2, &params, start, count);
+        TEST_ASSERT_EACH_EQUAL_INT8(0xCC, &Y[0], start);
+        TEST_ASSERT_EQUAL_INT8_ARRAY(&Y_expected[start], &Y[start], count);
+        TEST_ASSERT_EACH_EQUAL_INT8(0xCC, &Y[start + count], LENGTH - (start + count) );
+        start += count;
+    }
+
+    { // 52 <= i < 128
+        unsigned count = 76;    // 4 vectors and change.
+        memset(Y, 0xCC, sizeof(Y));
+        add_elementwise(Y, X1, X2, &params, start, count);
+        TEST_ASSERT_EACH_EQUAL_INT8(0xCC, &Y[0], start);
+        TEST_ASSERT_EQUAL_INT8_ARRAY(&Y_expected[start], &Y[start], count);
+    }
+
+}
+#undef LENGTH
 
 
 #define LEN     (100)
 #define REPS    (200)
 
-void test_add_elementwise_case1()
+static void test_add_elementwise_case2()
 {
     PRINTF("%s...\n", __func__);
 
     int8_t WORD_ALIGNED Y[LEN];
     int8_t WORD_ALIGNED X0[LEN];
     int8_t WORD_ALIGNED X1[LEN];
+    int8_t Y_expected[LEN];
     
-
-    nn_add_params_t params = {
-        {   {-7, 0, 0x4000},
-            {-7, 0, 0x4000}},
-        { 0x4000, 0 }
-    };
-
     for(int v = 0; v < REPS; v++){
 
         unsigned elm_start = (pseudo_rand_uint32() % LEN) & 0xFFFFFFFC;
         unsigned elm_count = pseudo_rand_uint32() % (LEN - elm_start);
 
-        
-        PRINTF("\t\trep %u... (%u <= k < %u)\n", v, elm_start, elm_start+elm_count);
+        PRINTF("  rep %u... (%u <= k < %u)\n", v, elm_start, elm_start+elm_count);
+
+        nn_add_params_t params;
+
+        int32_t min = 0;
+        int32_t max = 0;
+
+        for(int i = 0; i < 2; i++){
+            params.input[i].shr = -8 + (pseudo_rand_uint16() % 2);
+            params.input[i].multiplier = 1 + (pseudo_rand_uint16() >> 1);
+
+            min += (((int32_t)-128)<<(-params.input[i].shr))*params.input[i].multiplier;
+            max += (((int32_t) 127)<<(-params.input[i].shr))*params.input[i].multiplier;
+        }
+
+        uint32_t diff = max - min;
+
+        unsigned scale = ceil_log2(diff);
+
+        params.output.shr = scale - 8;
+
+        params.output.bias = 0;
 
         pseudo_rand_bytes((char*)X0, LEN);
         pseudo_rand_bytes((char*)X1, LEN);
 
-        memset(Y, 0xCC, sizeof(Y));
-
-        add_elementwise(Y, X0, X1, &params, elm_start, elm_count);
-
-        for(int i = 0; i < elm_start; i++){
-            TEST_ASSERT_EQUAL((int8_t)0xCC, Y[i]);
-        }
+        memset(Y_expected, 0xCC, sizeof(Y_expected));
 
         for(int i = elm_start; i < elm_start+elm_count; i++){
+            int32_t acc = params.output.bias;
 
-            int16_t x0 = ((int16_t) X0[i]) << 7;
-            int16_t x1 = ((int16_t) X1[i]) << 7;
+            int32_t x0 = ((int32_t) X0[i]) << (-params.input[0].shr);
+            acc += x0 * params.input[0].multiplier;
 
-            int8_t y_exp = ((x0 + x1) + (1<<7)) >> 8;
+            int32_t x1 = ((int32_t) X1[i]) << (-params.input[1].shr);
+            acc += x1 * params.input[1].multiplier;
 
-            if(Y[i] != y_exp){
-                sprintf(msg_buff, "(Y[%u] was wrong; X0[%u] = %d; X1[%u] = %d)", i, i, X0[i], i, X1[i]);
-            }
-
-            TEST_ASSERT_EQUAL_MESSAGE(y_exp, Y[i], msg_buff);
-
+            Y_expected[i] = vlsat_single_s8(acc, params.output.shr, NEG_SAT_VAL, VPU_INT8_MAX);
         }
 
-        for(int i = elm_start+elm_count; i < LEN; i++){
-            TEST_ASSERT_EQUAL((int8_t)0xCC, Y[i]);
+        memset(Y, 0xCC, sizeof(Y));
+        add_elementwise(Y, X0, X1, &params, elm_start, elm_count);
+
+        if(v == -1){
+            PRINTF("    params.input[0].shr        = %d\n", params.input[0].shr);
+            PRINTF("    params.input[0].multiplier = %d   (0x%04X)\n", params.input[0].multiplier, (unsigned) params.input[0].multiplier);
+            PRINTF("    params.input[1].shr        = %d\n", params.input[1].shr);
+            PRINTF("    params.input[1].multiplier = %d   (0x%04X)\n", params.input[1].multiplier, (unsigned) params.input[1].multiplier);
+
+            PRINTF("    max = %ld\n", max);
+            PRINTF("    min = %ld\n", min);
+            PRINTF("    diff = %lu     (0x%08lX)\n", diff, diff);
+            PRINTF("    scale = %u\n", scale);
+
+            PRINTF("    params.output.bias = %ld    (0x%08lX)\n", params.output.bias, (uint32_t)params.output.bias);
+            PRINTF("    params.output.shr = %d\n", params.output.shr);
+
+            unsigned m = 13;
+            PRINTF("      X0[%u] = %d\n", m, X0[m]);
+            PRINTF("      X1[%u] = %d\n", m, X1[m]);
+            PRINTF("      Y_expected[%u] = %d\n", m, Y_expected[m]);
+            PRINTF("      Y[%u] = %d\n", m, Y[m]);
         }
+
+
+        TEST_ASSERT_EQUAL_INT8_ARRAY(Y_expected, Y, LEN);
 
     }
 }
@@ -193,10 +243,11 @@ void test_add_elementwise_case1()
 
 void test_add_elementwise()
 {
-    srand(1231245);
+    srand(563456);
 
     UNITY_SET_FILE();
     
     RUN_TEST(test_add_elementwise_case0);
     RUN_TEST(test_add_elementwise_case1);
+    RUN_TEST(test_add_elementwise_case2);
 }

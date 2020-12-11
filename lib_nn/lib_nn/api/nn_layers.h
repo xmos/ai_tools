@@ -7,12 +7,12 @@
  * Describes the parameters needed for an @oper{add_elementwise} operator. @see add_elementwise().
  */
 typedef struct {
-
     /**
      * The parameters that are applied to each input element. Those in `input[0]` are applied to elements of 
      * @tensor{x_0}, and `input[1]` are applied to elements of @tensor{x_1}.
      */
     struct {
+
         /**
          * `input[k].shr` is the arithmetic _right_-shift @math{s_k} applied to elements of @tensor{x_k}. This will 
          * usually be a negative value.
@@ -20,37 +20,24 @@ typedef struct {
         int16_t shr;
 
         /**
-         * `input[k].offset` is the offset @math{z_k} applied to elements of @tensor{x_k}. This is usually derived from
-         * the zero-point of the quantized vector @tensor{x_k}.
-         */
-        int16_t offset;
-
-        /**
          * `input[k].multiplier` is the scale factor @math{m_k} applied to elements of @tensor{x_k}. This and @math{s_k}
          * are usually derived from the scale factor of the quantized vector @tensor{x_k}.
-         * 
-         * @math{m_k} should be understood as Q1.14 fixed-point value.
          */
         int16_t multiplier;
     } input[2];
 
 
-    /**
-     * The parameters that are applied to quantize each output element.
-     */
     struct {
+        /**
+         * `output.bias` is the 32-bit bias @math{b} to which the scaled inputs are added.
+         */
+        int32_t bias;
 
         /**
-         * `output.multiplier` is the scale factor @math{m_{out}} applied when quantizing output elements of @tensor{y}.
-         * 
-         * @math{m_{out}} should be understood as a Q1.14 fixed-point value.
+         * `output.shr` is output the shift @math{s_{out}}, which is the number of bits the 32-bit accumulator is
+         * right-shifted by to obtain a final result for each element.
          */
-        int16_t multiplier;
-
-        /**
-         * `output.offset` is the offset @math{z_{out}} applied when quantizing output elements of @tensor{y}.
-         */
-        int16_t offset;
+        uint8_t shr;
     } output;
 } nn_add_params_t;
 
@@ -67,25 +54,26 @@ typedef struct {
  * @par Operation Performed
  * 
  * @f[
- *      v_i[k] \leftarrow  sat_{16}\!\left(round\!\left(sat_{16}\!\left( sat_{16}\!\left( floor\!\left(\frac{x_i[k]}{2^{s_i}}\right)
- *              \right)+z_i\right)\cdot\frac{m_i}{2^{14}} \right)\right) \\
+ * 
+ *      v_i[k] \leftarrow m_i \cdot sat_{16}\!\left( floor\!\left( x_i[k] 
+ *                         \cdot 2^{-s_i} \right) \right) \\
  *      
- *      y[k] \leftarrow   round\!\left(\frac{sat_{16}\!\left(sat_{16}\!\left(round\!\left(\frac{m_{out}}{2^{14}}\cdot sat_{16}\!\left(v_0[k] 
- *                          + v_1[k]\right)\right)\right) + z_{out}\right)}{2^{8}}\right)
+ *      y[k] \leftarrow   sat_{8}\!\left( round\!\left(sat_{32}\!\left(b + v_0[k] + v_1[k]\right) 
+ *                          \cdot 2^{-s_{out}} \right) \right)
  * 
  * @f]
  * 
  * where
  * 
  * @par 
- * each @tensor{v_i} is an intermediate 16-bit vector representing the contents of @tensor{x_i} requantized according
- * to the contents of `params`,
+ * each @tensor{v_i} is an intermediate 32-bit vector representing the scaled contents of @tensor{x_i}, 
  * 
  * @par
  * @math{k} is the output index,
  * 
  * @par
- * @math{sat_{16}\!\left(\cdot\right)} saturates its arguments to @math{16}-bit bounds, and
+ * @math{sat_{8}\!\left(\cdot\right)}, @math{sat_{16}\!\left(\cdot\right)}, and @math{sat_{32}\!\left(\cdot\right)} 
+ *  saturate their arguments to @math{8}-, @math{16}- and @math{32}-bit bounds respectively, and
  * 
  * @par
  * the remaining parameters are as described below.
@@ -94,11 +82,11 @@ typedef struct {
  * 
  * `Y` points to the output vector @tensor{y} with shape @tensor_shape{N}.
  * 
- * `X0` and `X1' respectively point to the first and second input vectors @tensor{x_0} and @tensor{x_1}, each with shape 
+ * `X0` and `X1` respectively point to the first and second input vectors @tensor{x_0} and @tensor{x_1}, each with shape 
  * @tensor_shape{N}.
  * 
- * `params` describes how the elements of each vector should be treated in accordance with their quantization 
- * parameters.
+ * `params` describes the parameters @math{s_i}, @math{m_i}, @math{b} and @math{s_{out}} which are applied for each
+ * output element.
  * 
  * `elm_start` and `elm_count` together specify which output elements @math{y[k]} should be calculated by this 
  * invocation. Specifically, this invocation will calculate @math{y[k]} for which `elm_start` @math{\le k \lt} 
@@ -107,7 +95,7 @@ typedef struct {
  * @param[out]  Y           The output vector @tensor{y}
  * @param[in]   X0          The first input vector @tensor{x_0}
  * @param[in]   X1          The second input vector @tensor{x_1}
- * @param[in]   params      The requantization parameters
+ * @param[in]   params      The scaling and bias parameters
  * @param[in]   elm_start   Index of first output element to be computed
  * @param[in]   elm_count   Number of output elements to be computed
  */

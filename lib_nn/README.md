@@ -51,6 +51,7 @@ For full documentation of each API function, please refer to the description in 
 |Activations| | | | |
 | |lookup8|No|None|Logistic (sigmoid), tanh & ReLU activation functions can be implemented using a look-up table mapping 8-bit inputs to 8-bit outputs|
 |Misc| | | | |
+| |add_elementwise|Yes|None| |
 | |requantize_16_to_8|Yes|None|Reduces the bit depth of a vector with 16-bit elements to a vector of 8-bit elements|
 
 <sup>1</sup>It is possible to relax this constraint.  See the documentation for the API function.

@@ -2,17 +2,15 @@
 
 import pytest
 
-pytestmark = pytest.mark.skip  # TODO: remove this
 import tensorflow as tf
 from typing import Optional, Tuple
+import random
 
-from tflite2xcore.xcore_schema import XCOREOpCodes, BuiltinOpCodes, XCOREModel  # type: ignore # TODO: fix this
-from tflite2xcore.model_generation import Configuration
-from tflite2xcore.model_generation.utils import parse_init_config
+from tflite2xcore.xcore_schema import XCOREOpCodes  # type: ignore # TODO: fix this
 
-from . import ChannelPreservingOpTestModelGenerator
+from . import ChannelAgnosticOpTestModelGenerator
 from . import (  # pylint: disable=unused-import
-    # test_output,
+    test_output,
     test_converted_single_op_model,
 )
 
@@ -22,12 +20,12 @@ from . import (  # pylint: disable=unused-import
 #  ----------------------------------------------------------------------------
 
 
-class AddModelGenerator(ChannelPreservingOpTestModelGenerator):
+class AddModelGenerator(ChannelAgnosticOpTestModelGenerator):
     def _build_core_model(self) -> tf.keras.Model:
         input = tf.keras.Input(shape=self._input_shape)
-        return tf.keras.models.Model(
-            inputs=input, outputs=self._op_layer()([input, input])
-        )
+        x2 = tf.random.normal([1, *self._input_shape], mean=random.random())
+        out = self._op_layer()([input, x2])
+        return tf.keras.models.Model(inputs=input, outputs=out)
 
     def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None
@@ -36,15 +34,6 @@ class AddModelGenerator(ChannelPreservingOpTestModelGenerator):
 
 
 GENERATOR = AddModelGenerator
-
-#  ----------------------------------------------------------------------------
-#                                   CONFIGS
-#  ----------------------------------------------------------------------------
-
-
-CONFIGS = {
-    "default": {0: {"height": 4, "width": 4}},
-}
 
 
 #  ----------------------------------------------------------------------------

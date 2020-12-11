@@ -1,10 +1,8 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from typing import Iterable
-from copy import copy
 import numpy as np
 
-from tflite2xcore.xcore_model import Operator, Subgraph
+from tflite2xcore.xcore_model import Operator
 from tflite2xcore.xcore_schema import (
     BuiltinOpCodes,
     OperatorCode,
@@ -33,12 +31,11 @@ class ReplaceAddPass(ReplaceQuantizedOperatorPass):
             and op.inputs[0].shape == op.inputs[1].shape == op.outputs[0].shape
         )
 
-    def mutate(self, op: Operator):
+    def mutate(self, op: Operator) -> Operator:
         new_op = super().mutate(op)
 
         # constant picked so 8 bit number fits in 16 bits
-        s_0 = -6
-        s_1 = s_0
+        s_0 = s_1 = -6
 
         input_scales = (
             new_op.inputs[0].quantization["scale"][0],

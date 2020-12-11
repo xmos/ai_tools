@@ -136,13 +136,17 @@ FUNCTION_NAME:
 {                                           ;   vsetc r11                               }
 {                                           ;   bf N, .L_loop_end                       }
 .L_loop_top:
+    {                                           ;   vldd X1[0]                              }
+    {                                           ;   vstd vec_tmp1[0]                        }
+    {                                           ;   vldd X2[0]                              }
+    {                                           ;   vstd vec_tmp2[0]                        }
     {   ldc tmp, 15                             ;   vclrdr                                  }
         ldap r11, vpu_vects_vec_0x01
     {   lsu chans, tmp, N                       ;   vldc r11[0]                             }
-    {   shl chans, chans, 4                     ;   vlmacc X1[0]                            }
+    {   shl chans, chans, 4                     ;   vlmacc vec_tmp1[0]                      }
     {   mov tmp, N                              ;   vstr vec_tmp1[0]                        }
     {   zext tmp, 4                             ;   vclrdr                                  }
-    {   shr tmp, tmp, chans                     ;   vlmacc X2[0]                            }
+    {   shr tmp, tmp, chans                     ;   vlmacc vec_tmp2[0]                      }
     {   shl r11, _32, 3                         ;   vstr vec_tmp2[0]                        }
     {   add chans, tmp, chans                   ;   vsetc r11                               }
         vlashr vec_tmp1[0], X1_shr

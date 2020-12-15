@@ -9,7 +9,8 @@ Installation
 ------------
 Some dependent libraries are included as git submodules. These can be obtained by cloning this repository with the following command:
 
-> git clone --recurse-submodules git@github.com:xmos/ai_tools.git
+> git clone git@github.com:xmos/ai_tools.git
+> git submodule update --init
 
 Install at least version 15 of the XMOS tools from your preferred location and activate it by sourcing `SetEnv` in the installation root.
 

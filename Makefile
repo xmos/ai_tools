@@ -4,19 +4,6 @@ CLOBBER_FLAG := '-c'
 .DEFAULT_GOAL := help
 
 #**************************
-# lib_nn targets
-#**************************
-
-.PHONY: lib_nn_build
-lib_nn_build:
-	cd lib_nn/test/unit_test && make clean
-	cd lib_nn/test/unit_test && make all
-
-.PHONY: lib_nn_test
-lib_nn_test: lib_nn_build
-	cd lib_nn/test/unit_test && xrun --io bin/xcore/unit_test.xe
-
-#**************************
 # xcore_interpreter targets
 #**************************
 
@@ -63,18 +50,16 @@ tflite2xcore_dist_test:
 
 .PHONY: integration_test
 integration_test:
-	cd utils/model_generation && pytest integration_test --cache-clear --collect-only -qq
-	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
+	cd test/model_generation && pytest integration_test --cache-clear --collect-only -qq
+	cd test/model_generation && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 
 #**************************
 # ci target
 #**************************
 
 .PHONY: ci 
-#TODO: Add lib_nn_test target when CI system connected HW
 ci: CLOBBER_FLAG = '-c'
-ci: lib_nn_build \
- lib_flexbuffers_build \
+ci: lib_flexbuffers_build \
  tflite2xcore_unit_test \
  tflite2xcore_dist_test \
  xcore_interpreters_build \
@@ -87,8 +72,7 @@ ci: lib_nn_build \
 #**************************
 
 .PHONY: test
-test: lib_nn_test \
- lib_flexbuffers_build \
+test: lib_flexbuffers_build \
  tflite2xcore_unit_test \
  xcore_interpreters_unit_test \
  integration_test
@@ -119,15 +103,11 @@ help:
 	$(info )
 	$(info )
 	$(info primary targets:)
-	$(info   develop                       Update submodules and build utils)
-	$(info   clobber                       Update submodules and build utils with clobber flag enabled)
+	$(info   develop                       Update submodules and build xcore_interpreters)
+	$(info   clobber                       Update submodules and build xcore_interpreters with clobber flag enabled)
 	$(info   ci                            Run continuous integration build and test (requires Conda environment))
 	$(info   integration_test              Run integration tests (requires Conda environment))
 	$(info   test                          Run all tests (requires Conda environment & connected hardware))
-	$(info )
-	$(info lib_nn targets:)
-	$(info   lib_nn_build                  Run lib_nn build)
-	$(info   lib_nn_test                   Run lib_nn tests)
 	$(info )
 	$(info tflite2xcore targets:)
 	$(info   lib_flexbuffers_build         Run lib_flexbuffers build)

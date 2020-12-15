@@ -72,7 +72,7 @@ On macOS you can utilize all your cores with
 
 At times submodule repositories will need to be updated.  To update all submodules, run the following command
 
-> git submodule update --init --recursive
+> git submodule update --init
 
 ### Conda Environment
 

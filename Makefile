@@ -63,8 +63,8 @@ tflite2xcore_dist_test:
 
 .PHONY: integration_test
 integration_test:
-	cd utils/model_generation && pytest integration_test --cache-clear --collect-only -qq
-	cd utils/model_generation && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
+	cd test/model_generation && pytest integration_test --cache-clear --collect-only -qq
+	cd test/model_generation && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 
 #**************************
 # ci target
@@ -119,8 +119,8 @@ help:
 	$(info )
 	$(info )
 	$(info primary targets:)
-	$(info   develop                       Update submodules and build utils)
-	$(info   clobber                       Update submodules and build utils with clobber flag enabled)
+	$(info   develop                       Update submodules and build xcore_interpreters)
+	$(info   clobber                       Update submodules and build xcore_interpreters with clobber flag enabled)
 	$(info   ci                            Run continuous integration build and test (requires Conda environment))
 	$(info   integration_test              Run integration tests (requires Conda environment))
 	$(info   test                          Run all tests (requires Conda environment & connected hardware))

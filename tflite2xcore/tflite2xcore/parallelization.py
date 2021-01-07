@@ -5,10 +5,10 @@ import math
 import logging
 from abc import ABC, abstractmethod
 
-from tflite2xcore.utils import ACC_PERIOD
+from tflite2xcore.utils import ACC_PERIOD_INT8
 
 MAX_THREADS = 5
-CHANNEL_GROUP_SIZE = ACC_PERIOD
+CHANNEL_GROUP_SIZE = ACC_PERIOD_INT8
 
 
 class ParallelizationPlan:

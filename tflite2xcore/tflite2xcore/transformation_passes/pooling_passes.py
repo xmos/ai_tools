@@ -10,7 +10,7 @@ from tflite2xcore.xcore_schema import (
     OperatorCode,
     XCOREOpCodes,
 )
-from tflite2xcore.utils import WORD_SIZE
+from tflite2xcore.utils import WORD_SIZE_BYTES
 
 from .transformation_passes import ReplaceQuantizedOperatorPass
 
@@ -134,7 +134,7 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
             with self.using(op):
                 axis = self._op.inputs[1].as_array().flatten().tolist()
                 if axis == [1, 2] or axis == [2, 1]:
-                    return self._input.shape[3] % WORD_SIZE == 0
+                    return self._input.shape[3] % WORD_SIZE_BYTES == 0
                 else:
                     self.logger.warning("Axis is not either [1, 2] or [2, 1]")
 

@@ -16,8 +16,7 @@ def PlannerUnderTest() -> Type[ReverseDepthFirstPlanner]:
 
 
 def test_single_op_with_const(PlannerUnderTest: Type[ExecutionPlanner]) -> None:
-    model = xir.XCOREModel()
-    subgraph = model.create_subgraph()
+    subgraph = xir.Subgraph(model=xir.XCOREModel())
 
     tin = subgraph.create_tensor(
         "input", xir.TensorType.FLOAT32, shape=(1,), isinput=True
@@ -33,8 +32,7 @@ def test_single_op_with_const(PlannerUnderTest: Type[ExecutionPlanner]) -> None:
 
 
 def test_single_op_with_two_outputs(PlannerUnderTest: Type[ExecutionPlanner]) -> None:
-    model = xir.XCOREModel()
-    subgraph = model.create_subgraph()
+    subgraph = xir.Subgraph(model=xir.XCOREModel())
 
     tin = subgraph.create_tensor(
         "input", xir.TensorType.FLOAT32, shape=(1,), isinput=True
@@ -50,8 +48,7 @@ def test_single_op_with_two_outputs(PlannerUnderTest: Type[ExecutionPlanner]) ->
 
 
 def test_linear_graph(PlannerUnderTest: Type[ExecutionPlanner]) -> None:
-    model = xir.XCOREModel()
-    subgraph = model.create_subgraph()
+    subgraph = xir.Subgraph(model=xir.XCOREModel())
 
     tin = subgraph.create_tensor(
         "input", xir.TensorType.FLOAT32, shape=(1,), isinput=True
@@ -71,8 +68,7 @@ def test_linear_graph(PlannerUnderTest: Type[ExecutionPlanner]) -> None:
 
 
 def test_order_by_size(PlannerUnderTest: Type[ExecutionPlanner]) -> None:
-    model = xir.XCOREModel()
-    subgraph = model.create_subgraph()
+    subgraph = xir.Subgraph(model=xir.XCOREModel())
 
     tin = subgraph.create_tensor(
         "input", xir.TensorType.FLOAT32, shape=(1,), isinput=True
@@ -92,8 +88,7 @@ def test_order_by_size(PlannerUnderTest: Type[ExecutionPlanner]) -> None:
 
 
 def test_symmetric_parallel_block(PlannerUnderTest: Type[ExecutionPlanner]) -> None:
-    model = xir.XCOREModel()
-    subgraph = model.create_subgraph()
+    subgraph = xir.Subgraph(model=xir.XCOREModel())
 
     tin = subgraph.create_tensor(
         "input", xir.TensorType.FLOAT32, shape=(1,), isinput=True
@@ -124,8 +119,7 @@ def test_symmetric_parallel_block(PlannerUnderTest: Type[ExecutionPlanner]) -> N
 
 
 def test_asymmetric_parallel_block(PlannerUnderTest: Type[ExecutionPlanner]) -> None:
-    model = xir.XCOREModel()
-    subgraph = model.create_subgraph()
+    subgraph = xir.Subgraph(model=xir.XCOREModel())
 
     tin = subgraph.create_tensor(
         "input", xir.TensorType.FLOAT32, shape=(1,), isinput=True

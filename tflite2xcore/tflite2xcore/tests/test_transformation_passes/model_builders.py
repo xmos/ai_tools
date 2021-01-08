@@ -4,9 +4,11 @@ import numpy as np
 from typing import Callable, Tuple, Optional, Union
 from copy import deepcopy
 
+
 from tflite2xcore.utils import QuantizationTuple
-from tflite2xcore.xcore_model import XCOREModel, Subgraph
 from tflite2xcore.xcore_schema import (
+    XCOREModel,
+    Subgraph,
     ActivationFunctionType,
     Padding,
     TensorType,
@@ -33,7 +35,7 @@ def build_split(subgraph=None, *, input_shape, tensor_type, axis, num_splits):
     assert 0 <= axis < len(input_shape)
     assert 1 < num_splits <= input_shape[axis]
     assert input_shape[axis] % num_splits == 0
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     input_shape = [1, *input_shape]
     tin = subgraph.create_tensor("input", tensor_type, shape=input_shape, isinput=True)
@@ -63,7 +65,7 @@ def build_dequantize(
     input_shape: Tuple[int, ...],
     input_quantization: Optional[QuantizationTuple] = None,
 ) -> XCOREModel:
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     quant = input_quantization or QuantizationTuple(0.12, -35)
     input_shape = [1, *input_shape]
@@ -92,7 +94,7 @@ def build_quantize(
     input_shape: Tuple[int, ...],
     output_quantization: Optional[QuantizationTuple] = None,
 ) -> XCOREModel:
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     input_shape = [1, *input_shape]
     tin = subgraph.create_tensor("input", TensorType.FLOAT32, input_shape, isinput=True)
@@ -114,7 +116,7 @@ def build_quantize(
 
 
 def build_elementwise_op(builtin_opcode, subgraph=None, *, input_shape, tensor_type):
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     input_shape = [1, *input_shape]
     quantization = {"scale": [0.35], "zero_point": [0]}
@@ -158,7 +160,7 @@ def build_abs(subgraph=None, **kwargs):
 
 
 def build_mean(subgraph=None, *, input_shape, reduction_dims):
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     input_shape = [1, *input_shape]
     tin = subgraph.create_tensor(
@@ -187,7 +189,7 @@ def build_mean(subgraph=None, *, input_shape, reduction_dims):
 
 
 def build_XC_avgpool2d_global(subgraph=None, *, input_shape, reduction_dims):
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     input_shape = [1, *input_shape]
     tin = subgraph.create_tensor(
@@ -210,7 +212,7 @@ def build_XC_avgpool2d_global(subgraph=None, *, input_shape, reduction_dims):
 
 
 def build_argmax(subgraph=None, *, input_shape, input_type):
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     input_shape = [1, *input_shape]
     tin = subgraph.create_tensor(
@@ -243,7 +245,7 @@ def build_pool(
         ActivationFunctionType.RELU,
         ActivationFunctionType.RELU6,
     ]
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     input_shape = [1, *input_shape]
     output_shape = [  # TODO: fix this: calculate based on strides and pool_size
@@ -292,7 +294,7 @@ def build_avgpool(subgraph=None, **kwargs):
 
 
 def build_XC_pool(opcode, subgraph=None, *, input_shape, pool_size, strides):
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     input_shape = [1, *input_shape]
     output_shape = [
@@ -334,7 +336,7 @@ def build_XC_avgpool2d(subgraph=None, **kwargs):
 
 
 def build_fc(subgraph=None, *, outputs, input_shape, add_batch_dim=True):
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     if add_batch_dim:
         # TODO unify this behaviour
@@ -380,7 +382,7 @@ def build_fc(subgraph=None, *, outputs, input_shape, add_batch_dim=True):
 
 
 def build_XC_fc(subgraph=None, *, outputs, input_channels):
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     input_shape = [1, input_channels, 1, 1]
     weight_shape = [outputs, np.prod(input_shape[1:])]
@@ -420,7 +422,7 @@ def build_XC_fc(subgraph=None, *, outputs, input_channels):
 
 
 def build_XC_requantize_16_to_8(subgraph=None, *, outputs, input_channels):
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     input_shape = [1, input_channels, 1, 1]
     weight_shape = [outputs, np.prod(input_shape[1:])]
@@ -461,7 +463,7 @@ def build_intermediate_fc(subgraph=None, *, outputs, input_shape):
 
 
 def build_conv2d(subgraph=None, *, weight_shape, input_size, padding, strides):
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
     assert padding in Padding
 
     height, width = input_size
@@ -534,7 +536,7 @@ def build_depthwise_conv2d(
 ):
     assert len(strides) == 2
     assert padding in Padding
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     # NOTE: weight_shape uses channel order HWIM (following TensorFlow DepthwiseConv)
     height, width = input_size
@@ -629,7 +631,7 @@ def _calculate_out_size(
 
 
 def build_XC_conv2d(opcode, subgraph=None, *, weight_shape, input_size, strides):
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     height, width = input_size
     C_out, _, _, C_in = weight_shape
@@ -669,7 +671,7 @@ def build_XC_conv2d_1x1(subgraph=None, **kwargs):
 
 
 def build_XC_conv2d_depthwise(subgraph=None, *, weight_shape, input_size, strides):
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     height, width = input_size
     C_in = weight_shape[2]
@@ -703,7 +705,7 @@ def build_pad(subgraph=None, *, input_shape, paddings):
     for j, p in enumerate(paddings):
         assert len(p) == 2, f"padding[{j}] is not a pair"
 
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     output_shape = [i + sum(p) for i, p in zip(input_shape, paddings)]
     tin = subgraph.create_tensor(
@@ -784,7 +786,7 @@ def build_reshape(
 
     assert np.prod(input_shape) == np.prod(output_shape), "Inconsistant shapes"
 
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     tin = subgraph.create_tensor(
         "original_shape", TensorType.INT8, input_shape, isinput=True

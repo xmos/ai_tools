@@ -2,14 +2,29 @@
 
 import pathlib
 import flatbuffers
-from typing import Dict, Any, Union, Optional, Iterable, List, Counter, TypeVar, Type
+import logging
+from typing import (
+    Dict,
+    Any,
+    Union,
+    Optional,
+    Iterable,
+    List,
+    Counter,
+    TypeVar,
+    Type,
+    Generic,
+    overload,
+    cast,
+    MutableSequence,
+)
 
 from . import (
     _IRObject,
+    _ModelDependent,
+    _DataContainer,
     OperatorCode,
     Buffer,
-    _BufferOwnerContainer,
-    _BufferDataType,
     Subgraph,
     Metadata,
     BuiltinOpCodes,
@@ -34,6 +49,80 @@ from tflite2xcore.execution_planning import ReverseDepthFirstPlanner
 
 _R = TypeVar("_R", bound="XCOREModel")
 
+_T = TypeVar("_T", bound="_ModelDependent")
+
+
+class _ModelDependentContainer(MutableSequence[_T]):
+    def __init__(self, model: "XCOREModel", objects: Optional[Iterable[_T]] = None):
+        self._model = model
+        self._objects: List[_T] = []
+        if objects:
+            self.extend(objects)  # pylint: disable=no-member
+
+    @overload
+    def __getitem__(self, key: int) -> _T:
+        ...
+
+    @overload
+    def __getitem__(self, key: slice) -> "_ModelDependentContainer[_T]":
+        ...
+
+    def __getitem__(
+        self, key: Union[int, slice]
+    ) -> Union[_T, "_ModelDependentContainer[_T]"]:
+        if isinstance(key, int):
+            return self._objects[key]
+
+        return _ModelDependentContainer(self._model, self._objects[key])
+
+    def __delitem__(self, key: Union[int, slice]) -> None:
+        objects = [self[key]] if isinstance(key, int) else self[key]
+        for obj in objects:
+            del obj._model
+        del self._objects[key]
+
+    @overload
+    def __setitem__(self, key: int, obj: _T) -> None:
+        ...
+
+    @overload
+    def __setitem__(self, key: slice, objects: Iterable[_T]) -> None:
+        ...
+
+    def __setitem__(
+        self, key: Union[int, slice], objects: Union[_T, Iterable[_T]]
+    ) -> None:
+        # NOTE: mypy cannot correctly infer the type of objects given the type of key
+        # so the casts below are to suppress the resulting mypy errors
+
+        if isinstance(key, int):
+            del self._objects[key]._model
+            obj = cast(_T, objects)
+            self._objects[key] = obj
+            obj._model = self._model
+            return
+
+        # NOTE: since key must be a slice now, there is guarantee that
+        # self._objects[key] has the same length as objects
+
+        old_objects = self._objects[key]
+        for old_obj in old_objects:
+            del old_obj._model
+
+        # objects can be an iterator, so we need to set _model on the fly
+        def set_model(obj: _T) -> _T:
+            obj._model = self._model
+            return obj
+
+        self._objects[key] = (set_model(obj) for obj in cast(Iterable[_T], objects))
+
+    def insert(self, idx: int, obj: _T) -> None:
+        self._objects.insert(idx, obj)
+        obj._model = self._model
+
+    def __len__(self) -> int:
+        return len(self._objects)
+
 
 class XCOREModel(_IRObject):
     def __init__(
@@ -41,15 +130,25 @@ class XCOREModel(_IRObject):
         version: Optional[int] = None,
         description: Optional[str] = None,
         subgraphs: Optional[Iterable[Subgraph]] = None,
-        buffers: Optional[Iterable[Buffer[_BufferOwnerContainer]]] = None,
+        buffers: Optional[Iterable[Buffer]] = None,
         metadata: Optional[Iterable[Metadata]] = None,
     ) -> None:
         super().__init__()
         self.version = version or 3
         self.description = description or ""
-        self.buffers = list(buffers or [])
-        self.subgraphs = list(subgraphs or [])
-        self.metadata = list(metadata or [])
+        self.buffers = _ModelDependentContainer[Buffer](self, buffers)
+        self.metadata = _ModelDependentContainer[Metadata](self, metadata)
+        self.subgraphs = _ModelDependentContainer[Subgraph](self, subgraphs)
+
+    def register_dependent(self, dependent: _ModelDependent) -> None:
+        if isinstance(dependent, Buffer):
+            self.buffers.append(dependent)  # pylint: disable=no-member
+        elif isinstance(dependent, Metadata):
+            self.metadata.append(dependent)  # pylint: disable=no-member
+        elif isinstance(dependent, Subgraph):
+            self.subgraphs.append(dependent)  # pylint: disable=no-member
+        else:
+            raise TypeError(f"Unsupported model dependent with type {type(dependent)}")
 
     def is_equal(self, other: Any) -> bool:
         return (
@@ -60,28 +159,6 @@ class XCOREModel(_IRObject):
             and self.sequence_equal(self.subgraphs, other.subgraphs)
             and self.sequence_equal(self.metadata, other.metadata)
         )
-
-    def create_buffer(
-        self, data: Optional[_BufferDataType] = None
-    ) -> Buffer[_BufferOwnerContainer]:
-        buffer = Buffer[_BufferOwnerContainer](self, data)
-        self.buffers.append(buffer)
-        return buffer
-
-    def create_metadata(
-        self, name: str, buffer: Optional[Buffer[Metadata]] = None
-    ) -> Metadata:
-        metadata = Metadata(self, name)
-        metadata.buffer = Metadata.create_buffer(self) if buffer is None else buffer
-        metadata.buffer.owners.append(metadata)
-
-        self.metadata.append(metadata)
-        return metadata
-
-    def create_subgraph(self, name: str = "") -> Subgraph:
-        subgraph = Subgraph(self, name)
-        self.subgraphs.append(subgraph)
-        return subgraph
 
     def count_operator_codes(self) -> Counter[OperatorCode]:
         return Counter(
@@ -95,10 +172,6 @@ class XCOREModel(_IRObject):
         # sort the operators codes from most frequent to least frequent
         #   why? because the flatbuffer is a tiny bit smaller if we do
         return [op_code for op_code, _ in self.count_operator_codes().most_common()]
-
-    @property
-    def data_size(self) -> int:
-        return sum(len(buffer) for buffer in self.buffers)
 
     def sanity_check(self) -> None:
         # check for duplicates
@@ -122,18 +195,24 @@ class XCOREModel(_IRObject):
             else None,
         )
 
-        # create buffers
-        buffers = [model.create_buffer(**vars(bufferT)) for bufferT in modelT.buffers]
-
         # load metadata
-        if modelT.metadata:
-            for metadataT in modelT.metadata:
-                model.create_metadata(
-                    name=metadataT.name.decode("utf-8")  # type: ignore
-                    if metadataT.name
-                    else None,
-                    buffer=buffers[metadataT.buffer],
-                )
+        metadata_map = {
+            metadataT.buffer: Metadata(
+                name=metadataT.name.decode("utf-8")  # type: ignore
+                if metadataT.name
+                else None,
+                model=model,
+                data=modelT.buffers[metadataT.buffer].data,
+            )
+            for metadataT in modelT.metadata or []
+        }
+
+        # create all non-metadata buffers
+        buffer_map = {
+            idx: Buffer(model, bufferT.data)
+            for idx, bufferT in enumerate(modelT.buffers)
+            if idx not in metadata_map
+        }
 
         # create operator codes lookup
         operator_codes_lut = []
@@ -151,10 +230,11 @@ class XCOREModel(_IRObject):
 
         # load subgraphs
         for subgraph_index, subgraphT in enumerate(modelT.subgraphs):
-            subgraph = model.create_subgraph(
+            subgraph = Subgraph(
                 name=subgraphT.name.decode("utf-8")  # type: ignore
                 if subgraphT.name
-                else None
+                else None,
+                model=model,
             )
 
             # load tensors
@@ -168,11 +248,21 @@ class XCOREModel(_IRObject):
                 if hasattr(tensorT, "quantization") and tensorT.quantization:
                     quantization = quantization_to_dict(tensorT.quantization)
 
+                if tensorT.buffer in metadata_map:
+                    # a tensor is referencing a metadata buffer
+                    # this shouldn't happen, but we can work around it
+                    metadata = metadata_map[tensorT.buffer]
+                    logging.warning(
+                        f"Tensor {tensor_index} referencing "
+                        f'metadata "{metadata.name}" with buffer {tensorT.buffer}'
+                    )
+                    buffer_map[tensorT.buffer] = Buffer(model, metadata.data)
+
                 tensor = subgraph.create_tensor(
                     name=tensorT.name.decode("utf-8"),  # type: ignore
                     type_=TensorType(tensorT.type),
                     shape=tensorT.shape,
-                    buffer=buffers[tensorT.buffer],
+                    buffer=buffer_map[tensorT.buffer],
                     quantization=quantization,
                     isinput=is_input,
                     isoutput=is_output,
@@ -246,20 +336,26 @@ class XCOREModel(_IRObject):
         modelT.version = self.version
         modelT.description = self.description
 
-        # create buffers
         modelT.buffers = []
-        for buffer in self.buffers:
-            bufferT = schema.BufferT()  # type: ignore
-            if len(buffer.data) > 0:
-                bufferT.data = buffer.data
-            modelT.buffers.append(bufferT)
 
-        # create metadata
+        def create_buffer_from_container(data_container: _DataContainer) -> int:
+            """ returns the index of the serialized bufferT object"""
+            bufferT = schema.BufferT()  # type: ignore
+            if len(data_container.data) > 0:
+                bufferT.data = data_container.data
+            modelT.buffers.append(bufferT)
+            return len(modelT.buffers) - 1
+
+        # create tensor buffers
+        for buffer in self.buffers:
+            create_buffer_from_container(buffer)
+
+        # create metadata and their buffers
         modelT.metadata = []
         for metadata in self.metadata:
             metadataT = schema.MetadataT()  # type: ignore
             metadataT.name = metadata.name
-            metadataT.buffer = self.buffers.index(metadata.buffer)
+            metadataT.buffer = create_buffer_from_container(metadata)
             modelT.metadata.append(metadataT)
 
         # create operator_codes
@@ -290,7 +386,9 @@ class XCOREModel(_IRObject):
                 tensorT = schema.TensorT()  # type: ignore
                 tensorT.name = tensor.name
                 tensorT.shape = tensor.shape
-                tensorT.buffer = self.buffers.index(tensor.buffer)
+                tensorT.buffer = self.buffers.index(
+                    tensor.buffer
+                )  # TODO: do this better
                 tensorT.type = tensor.type.value
                 if tensor.quantization:
                     tensorT.quantization = dict_to_quantization(tensor.quantization)

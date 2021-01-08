@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, TypeVar, Sequence, List, Any, Optional
 _S = TypeVar("_S", bound="_IRObject")
 
 if TYPE_CHECKING:
-    from .xcore_model import XCOREModel
+    from .xcore_model import XCOREModel, Subgraph
 
 
 class _IRObject(ABC):
@@ -39,6 +39,25 @@ class _IRObject(ABC):
 class _ModelDependent(_IRObject):
     _model: "XCOREModel"
 
+    def __init__(
+        self, name: Optional[str] = None, model: Optional["XCOREModel"] = None
+    ):
+        super().__init__(name)
+        if model:
+            model.register_dependent(self)
+
     @property
     def model(self) -> "XCOREModel":
         return self._model
+
+
+class _SubgraphDependent(_IRObject):
+    _subgraph: "Subgraph"
+
+    @property
+    def subgraph(self) -> "Subgraph":
+        return self._subgraph
+
+    @property
+    def model(self) -> "XCOREModel":
+        return self.subgraph._model

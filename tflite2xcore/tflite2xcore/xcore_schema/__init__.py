@@ -11,9 +11,9 @@ from .misc_enums import (
 )
 from .builtin_options import BuiltinOptions
 
-from .ir_object import _IRObject
+from .ir_object import _IRObject, _ModelDependent, _SubgraphDependent
 from .operator_code import OperatorCode, ValidOpCodes, CustomOpCodes
-from .data_container import Buffer, Metadata
+from .data_container import Buffer, Metadata, _DataContainer
 from .operator import _OpOptionsType, Operator
 from .tensor import Tensor, _ShapeInputType
 from .subgraph import Subgraph

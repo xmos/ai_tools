@@ -16,9 +16,12 @@ _BufferDataType = Union[list, tuple, bytes, bytearray, np.ndarray]
 
 class _DataContainer(_ModelDependent):
     def __init__(
-        self, name: Optional[str] = None, data: Optional[_BufferDataType] = None,
+        self,
+        name: Optional[str] = None,
+        model: Optional["XCOREModel"] = None,
+        data: Optional[_BufferDataType] = None,
     ) -> None:
-        super().__init__(name)
+        super().__init__(name, model)
         self.data = data  # type: ignore # see https://github.com/python/mypy/issues/3004
 
     @property
@@ -59,9 +62,7 @@ class Buffer(_DataContainer):
         *,
         owners: Optional[Iterable["Tensor"]] = None,
     ) -> None:
-        super().__init__(data=data)
-        if model:
-            model.buffers.append(self)
+        super().__init__(None, model, data)
         self.owners: List["Tensor"] = list(
             owners or []
         )  # TODO: should this be managed by Tensor?
@@ -86,9 +87,7 @@ class Metadata(_DataContainer):
         model: Optional["XCOREModel"] = None,
         data: Optional[_BufferDataType] = None,
     ) -> None:
-        super().__init__(name, data)
-        if model:
-            model.metadata.append(self)
+        super().__init__(name, model, data)
 
     def __str__(self) -> str:
         return f"name={self.name}, data={list(self.data)}"

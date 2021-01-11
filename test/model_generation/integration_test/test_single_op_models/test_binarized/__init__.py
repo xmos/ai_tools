@@ -10,6 +10,7 @@ from typing import Optional, Tuple, Type, Any, Union, NamedTuple
 from tflite2xcore.utils import get_bitpacked_shape, unpack_bits  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
     Tensor,
+    Buffer,
     ExternalOpCodes,
     TensorType,
     XCOREModel,
@@ -178,10 +179,11 @@ class LarqConverter(KerasModelConverter):
 
         pass_mgr.run_passes()
 
+        # TODO: fix this in serialization
         # LCE and builtin interpreter expects an empty buffer in the beginning
-        b = model_ir.create_buffer()
+        b = Buffer(model_ir)
         model_ir.buffers.remove(b)
-        model_ir.buffers = [b] + model_ir.buffers
+        model_ir.buffers = [b, *model_ir.buffers]
 
         self._model = model_ir.serialize()
 

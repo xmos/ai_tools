@@ -420,12 +420,9 @@ class BufferOwnerMapper:
 
         html_list = []
         for k, owners in d.items():
-            if k == "metadata":
-                html_list.append(f"{k}: {str(owners)}")
-            else:
-                subgraph = self.subgraphs[k]
-                tensor_mapper = TensorTooltipMapper(subgraph)
-                html_list.append(f"{k}: {tensor_mapper(owners)}")
+            subgraph = self.subgraphs[k]
+            tensor_mapper = TensorTooltipMapper(subgraph)
+            html_list.append(f"{k}: {tensor_mapper(owners)}")
 
         return ", ".join(html_list) if html_list else "--"
 

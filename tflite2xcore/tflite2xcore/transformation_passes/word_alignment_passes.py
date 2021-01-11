@@ -1,16 +1,11 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import numpy as np
-
 from copy import deepcopy
 
-from tflite2xcore.transformation_passes import QuantizedOperatorMatchingPass
-from tflite2xcore.xcore_schema import (
-    TensorType,
-    BuiltinOptions,
-    BuiltinOpCodes,
-    OperatorCode,
-)
+from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes, OperatorCode
+
+from .transformation_passes import QuantizedOperatorMatchingPass
 
 
 class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):
@@ -30,7 +25,14 @@ class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):
         if super().match(op):
             with self.using(op):
                 input_shape = self._input.shape
-                return len(input_shape) == 4 and input_shape[-1] % 4
+                return (
+                    len(input_shape) == 4
+                    and input_shape[-1] % 4
+                    # NOTE: the current implementation doesn't allow mutating
+                    #       if the weight tensor is an output or not a constant
+                    and self._weights.is_constant
+                    and self._weights not in op.subgraph.outputs
+                )
         return False
 
     def mutate(self, op):
@@ -45,18 +47,18 @@ class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):
             pads = [[0, 0], [0, 0], [0, 0], [0, pad_size]]
 
             # create new zero padded kernel tensor
+            # TODO: this could be done better if we had constant folding, by
+            #       adding an appropriate padding op between the original and
+            #       the new weights, and let it be folded later.
+            #       (this would also work if the weight/bias is an input/output)
             new_weight_tensor = subgraph.create_tensor(
                 f"{self._op.name}/weights",
                 old_weight_tensor.type,
                 new_shape,
-                isinput=old_weight_tensor in subgraph.inputs,
-                isoutput=old_weight_tensor in subgraph.outputs,
                 quantization=old_weight_tensor.quantization,
                 consumers=[self._op],
             )
-            new_weight_tensor.buffer.data = np.pad(
-                self._weights.numpy.astype(np.int8), pads
-            )
+            new_weight_tensor.buffer.data = np.pad(self._weights.as_array(), pads)
 
             # rewire old and new kernel tensors
             old_weight_tensor.consumers.remove(self._op)
@@ -65,9 +67,7 @@ class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):
             # create new channel-wise padding operator
             old_input = self._input
             pad_op = subgraph.create_operator(
-                OperatorCode(BuiltinOpCodes.PAD),
-                builtin_options_type=BuiltinOptions.PadOptions,
-                inputs=[old_input],
+                OperatorCode(BuiltinOpCodes.PAD), inputs=[old_input],
             )
             subgraph.insert_operator(self._op, pad_op)
             old_input.consumers.remove(self._op)

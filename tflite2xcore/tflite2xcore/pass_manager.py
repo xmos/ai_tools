@@ -1,69 +1,66 @@
 # Copyright (c) 2019, XMOS Ltd, All rights reserved
 
-import pdb
-
-from abc import ABC, abstractmethod
+import logging
+from pathlib import Path
 from collections import deque
+from typing import TYPE_CHECKING, Iterable, Optional, Union, List, Tuple, Deque
 
-from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore import xlogging as logging, tflite_visualize
-from tflite2xcore.utils import convert_path
+from tflite2xcore import tflite_visualize
 
-
-class ModelTransformationPass(ABC):
-    def __init__(self, *, debug=False):
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.debug = debug
-
-    @abstractmethod
-    def run(self, model):
-        return 0
-
-    def __str__(self):
-        return self.__class__.__name__
+if TYPE_CHECKING:
+    from tflite2xcore.xcore_model import XCOREModel
+    from tflite2xcore.transformation_passes import ModelTransformationPass
 
 
 class PassManager:
-    def __init__(self, model=None, passes=[], *, debug=False, keep_intermediates=False):
-        self._queue = deque()
-        self.debug = debug
+    def __init__(
+        self,
+        model: Optional["XCOREModel"] = None,
+        *,
+        debug: bool = False,
+        keep_intermediates: bool = False,
+    ) -> None:
+        self._queue: Deque["ModelTransformationPass"] = deque()
         self.logger = logging.getLogger(self.__class__.__name__)
-        self._model = None
+        self._model: Optional["XCOREModel"] = None
         if model:
             self.register_model(model)
-        self.register_passes(passes)
-        self._mutating_passes = []
-        self._intermediates = []
+        self._mutating_passes: List[Tuple[int, str]] = []
+        self._intermediates: List[bytes] = []
         self.keep_intermediates = keep_intermediates
 
-    def register_model(self, model):
-        assert isinstance(model, XCOREModel)
+    def register_model(self, model: "XCOREModel") -> None:
+        assert model
         self._model = model
 
-    def register_passes(self, passes):
-        if isinstance(passes, PassManager):
-            passes = passes._queue
-        for trf_pass in passes:
+    @property
+    def passes(self) -> Iterable["ModelTransformationPass"]:
+        for trf_pass in self._queue:
+            yield trf_pass
+
+    def register_passes(self, other_mgr: "PassManager") -> None:
+        for trf_pass in other_mgr.passes:
             self.register_pass(trf_pass)
 
-    def register_pass(self, trf_pass):
-        assert isinstance(trf_pass, ModelTransformationPass)
-        trf_pass.debug = trf_pass.debug or self.debug
+    def register_pass(self, trf_pass: "ModelTransformationPass") -> None:
         self._queue.append(trf_pass)
 
-    def pop_pass(self):
+    def pop_pass(self) -> "ModelTransformationPass":
         return self._queue.popleft()
 
-    def save_intermediates(self, dirpath, *, visualize=True):
+    def save_intermediates(
+        self, dirpath: Union[str, Path], *, visualize: bool = True
+    ) -> None:
         if len(self._intermediates) == 0:
             self.logger.warning("No intermediate models were recorded!")
-            return
 
-        dirpath = convert_path(dirpath)
+        dirpath = Path(dirpath)
         dirpath.mkdir(parents=True, exist_ok=True)
 
         for (j, _), bits in zip(self._mutating_passes, self._intermediates):
-            basepath = dirpath.joinpath(f"model_{j}").resolve()
+            basepath = dirpath.joinpath(
+                f"model_{self.__class__.__name__}_{j}"
+            ).resolve()
             filepath = basepath.with_suffix(".tflite")
             with open(filepath, "wb") as f:
                 f.write(bits)
@@ -71,7 +68,7 @@ class PassManager:
                 tflite_visualize.main(filepath, basepath.with_suffix(".html"))
             self.logger.debug(f"Saved {filepath}")
 
-    def run_passes(self):
+    def run_passes(self) -> None:
         if not self._model:
             raise Exception("No model registered!")
 
@@ -81,11 +78,9 @@ class PassManager:
             trf_pass = self.pop_pass()
 
             self.logger.debug(f"Running pass #{n}/{num_passes}: {trf_pass}..")
-            if self.debug:
-                pdb.set_trace()
 
             modified = trf_pass.run(self._model)
-            if self.debug:
+            if __debug__:
                 try:
                     self._model.sanity_check()
                 except AssertionError as e:
@@ -106,4 +101,5 @@ class PassManager:
         msg = "\n".join(
             [f"  #{p[0]}/{num_passes}: {p[1]}" for p in self._mutating_passes]
         )
-        self.logger.info(f"The following passes mutated the model:\n{msg}")
+        if msg:
+            self.logger.info(f"The following passes mutated the model:\n{msg}")

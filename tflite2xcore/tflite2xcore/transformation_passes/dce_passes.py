@@ -1,7 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from tflite2xcore.xcore_schema import XCOREOpCodes
-from tflite2xcore.transformation_passes import (
+from .transformation_passes import (
     BufferMatchingPass,
     TensorMatchingPass,
     OperatorMatchingPass,
@@ -11,9 +10,9 @@ from tflite2xcore.transformation_passes import (
 class EliminateDeadOperatorsPass(OperatorMatchingPass):
     def match(self, op):
         if super().match(op):
-            subgraph = op.subgraph
+            interface_tensors = set(op.subgraph.inputs + op.subgraph.outputs)
             for t in op.outputs:
-                if t in subgraph.inputs + subgraph.outputs or t.consumers:
+                if t in interface_tensors or t.consumers:
                     return False
             else:
                 return True
@@ -47,5 +46,5 @@ class EliminateDeadBuffersPass(BufferMatchingPass):
 
     def run(self, model):
         modified_cnt = super().run(model)
-        self.logger.info(f"Removed {modified_cnt} dead buffers")
+        self.logger.debug(f"Removed {modified_cnt} dead buffers")
         return modified_cnt

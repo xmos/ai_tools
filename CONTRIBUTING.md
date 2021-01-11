@@ -20,22 +20,12 @@ Before sending your pull request, make sure your changes are consistent with the
 
 #### Python coding style
 
-Changes to Python code should conform to [PEP 8 -- Style Guide for Python Code](https://www.python.org/dev/peps/pep-0008/)
-
-Use `pylint` to check your Python changes. To install `pylint` and check a file with `pylint`:
-
-```bash
-pip install pylint
-pylint myfile.py
-```
-
-Pylint imposes different style guidelines than PEP8, so we recommend using the settings here: https://code.visualstudio.com/docs/python/linting#_default-pylint-rules
-
-Before we have a detailed styleguide, consider also using `pycodestyle` to check for PEP8 compliance. If using `pycodestyle`, disable E501,E226,W503.
+All python code should be [`blackened`](https://black.readthedocs.io/en/stable/).
+For convenience, the default workspace settings file under `.vscode/` enables format-on-save, and `black` is also provided in the conda environments.
 
 #### C, xC and ASM coding style
 
-Changes to C, xC or ASM should be constant with the style of existing C, xC and ASM code.
+Changes to C, xC or ASM should be consistent with the style of existing C, xC and ASM code.
 
 #### C++ coding style
 
@@ -58,13 +48,9 @@ diff <my_cc_file> /tmp/my_cc_file.cc
 
 ### Running Tests
 
-There is a Makefile in the root directory that has some useful targets - especially when it comes to running tests before making a pull request.
+There is a Makefile in the root directory that has some useful targets - especially when it comes to running tests before making a pull request. Run the following for more information on the targets.
 
-* `all` - Run all the testing targets
-* `lib_nn_test` - Build and run unit tests for lib_nn
-* `tflite2xcore_test` - Run unit tests for tflite2xcore
-* `integration_test` - Build any necessary components, generate all test data, and run all integration tests
-* `clean` - Cleans all builds
+  make help
 
 To run the integration tests using multiple processors run 
 
@@ -82,30 +68,11 @@ On macOS you can utilize all your cores with
 
 ## Development Tips
 
-### Installing Tools 15.0.0 Engineering Release
-
-We currently require build 385 or newer.  Build 385 can be downloaded from http://srv-bri-jtools.xmos.local:8080/job/xmos-tools%20MANUAL/job/tools_installers/job/master/385/
-
-NOTE: This link to the Engineering Release requires being inside the XMOS firewall.  We will replace this link once Tools 15 is officially released.
-
-Linux users may want to manually add the SetEnv.sh script to the `.bashrc` file.  Add the following lines:
-
-    XTIMEVER=Community_15.0.0
-    pushd /usr/local/XMOS/xTIMEcomposer/$XTIMEVER/ > /dev/null
-    source SetEnv
-    popd > /dev/null
-
-
 ### git Submodules
 
 At times submodule repositories will need to be updated.  To update all submodules, run the following command
 
-> git submodule update --init --recursive
-
-Users of older git versions, may need to use the following command
-
-> git pull --recurse-submodules
-
+> git submodule update --init
 
 ### Conda Environment
 
@@ -129,32 +96,5 @@ or for gpu,
 
 ### VSCode Users
 
-If you are using VS Code and conda, consider applying this fix:
-https://github.com/microsoft/vscode-python/issues/3834#issuecomment-538016367
-
-To suppress the annoying warning `"Unable to watch for file changes in this large workspace..."` add the following line to your `.vscode/settings.json`:
-
-```
-    "files.watcherExclude": {
-      "**/.git/**": true,
-      "**/.ipynb_checkpoints/**": true,
-      "**/__pycache__/**": true,
-      "**/.pytest_cache/**": true,
-      "**/*.egg-info/**": true,
-      "**/ai_tools_venv/**": true,
-      "**/ai_tools_gpu_venv/**": true,
-      "**/.venv/**": true,
-      "**/.build/**": true,
-      "**/.lock*": true,
-      "**/build/**": true,
-      "**/bin/**": true,
-    },
-```
-
-To ensure that your linter is configured correctly add these lines to your `.vscode/settings.json`:
-```
-    "python.linting.pylintEnabled": true,
-    "python.linting.pylintUseMinimalCheckers": true,
-    "python.linting.pycodestyleEnabled": true,
-    "python.linting.pycodestyleArgs": ["--ignore=E501,E226,W503"],
-```
+A default workspace settings files included, but if desired it can be modified.
+In this case, run `git update-index --assume-unchanged .vscode/settings.json` to prevent git from tracking local changes.

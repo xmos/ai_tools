@@ -1,0 +1,123 @@
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# RANDOMLY GENERATED CONFIGS, MODIFY AT OWN RISK
+default:
+  0:
+    K_h: 15
+    K_w: 20
+    input_channels: 49
+    num_threads: 1
+    output_channels: 12
+  1:
+    K_h: 2
+    K_w: 9
+    input_channels: 25
+    num_threads: 5
+    output_channels: 49
+  2:
+    K_h: 12
+    K_w: 3
+    input_channels: 4
+    num_threads: 1
+    output_channels: 7
+  3:
+    K_h: 12
+    K_w: 9
+    input_channels: 12
+    num_threads: 5
+    output_channels: 32
+  4:
+    K_h: 8
+    K_w: 14
+    input_channels: 4
+    num_threads: 2
+    output_channels: 4
+  5:
+    K_h: 8
+    K_w: 7
+    input_channels: 49
+    num_threads: 2
+    output_channels: 49
+  6:
+    K_h: 2
+    K_w: 3
+    input_channels: 1
+    num_threads: 2
+    output_channels: 49
+  7:
+    K_h: 4
+    K_w: 1
+    input_channels: 32
+    num_threads: 5
+    output_channels: 16
+  8:
+    K_h: 1
+    K_w: 7
+    input_channels: 7
+    num_threads: 2
+    output_channels: 4
+  9:
+    K_h: 5
+    K_w: 1
+    input_channels: 12
+    num_threads: 1
+    output_channels: 1
+  10:
+    K_h: 8
+    K_w: 14
+    input_channels: 25
+    num_threads: 5
+    output_channels: 12
+  11:
+    K_h: 15
+    K_w: 1
+    input_channels: 32
+    num_threads: 2
+    output_channels: 12
+  12:
+    K_h: 15
+    K_w: 4
+    input_channels: 12
+    num_threads: 2
+    output_channels: 1
+  13:
+    K_h: 5
+    K_w: 14
+    input_channels: 1
+    num_threads: 1
+    output_channels: 25
+  14:
+    K_h: 2
+    K_w: 9
+    input_channels: 49
+    num_threads: 5
+    output_channels: 25
+  15:
+    K_h: 5
+    K_w: 20
+    input_channels: 25
+    num_threads: 2
+    output_channels: 7
+  16:
+    K_h: 5
+    K_w: 3
+    input_channels: 7
+    num_threads: 1
+    output_channels: 32
+  17:
+    K_h: 1
+    K_w: 4
+    input_channels: 16
+    num_threads: 2
+    output_channels: 4
+  18:
+    K_h: 1
+    K_w: 20
+    input_channels: 4
+    num_threads: 5
+    output_channels: 16
+  19:
+    K_h: 4
+    K_w: 7
+    input_channels: 16
+    num_threads: 1
+    output_channels: 16

@@ -1,32 +1,56 @@
-# editor cruft
+# Editor cruft
 **/.vscode/
 
-# python cruft
+# Python cruft
 **/*.pyc
 **/__pycache__/*
 .venv/*
 **/.ipynb_checkpoints/*
 **/*.egg-info/*
+**/*.eggs/*
 Pipfile.lock
 ai_tools_venv/*
 ai_tools_gpu_venv/*
 
-# build cruft
-_build
-**/.build/
-**/dist/
-*.o
-
-# test cruft
-tests/data
-
-# MacOS cruft
-.DS_Store
-
-#xwaf cruft
+# Build cruft
 **/.lock*
 **/build*/
+**/.build/
+_build
+**/dist/
 **/bin/
+*.o
+*.so*
+*.dylib
 
-#misc cruft
+# Test cruft
+**/.pytest_cache/*
+**/*_junit.xml
+
+# macOS cruft
+.DS_Store
+
+# Misc cruft
 **/*.local.*
+
+# VI tmp files
+*.swp
+*.swo
+*.swn
+
+# tmp files
+*~
+*.*~
+*log*
+
+# Models/training
+*.h5
+*.tflite
+*.html
+*training_history.png
+
+# Others
+*.npz
+*.y
+*.x
+

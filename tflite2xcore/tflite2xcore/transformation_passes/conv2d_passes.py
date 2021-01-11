@@ -1,29 +1,76 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import numpy as np
-
 from copy import deepcopy
 
 from tflite2xcore.xcore_schema import (
-    TensorType,
     BuiltinOpCodes,
-    BuiltinOptions,
     OperatorCode,
     XCOREOpCodes,
+    FullyConnectedOptionsWeightsFormat,
 )
-from tflite2xcore.parallelization import DIDOConv2DPlanner, GenericConv2DPlanner
-from tflite2xcore.utils import WORD_SIZE
+from tflite2xcore.utils import WORD_SIZE_BYTES
+
 from .transformation_passes import (
-    ReplaceWeightBiasOperatorPass,
-    QuantizedOperatorMatchingPass,
+    ReplaceQuantizedWeightBiasOperatorPass,
+    ReplaceXCWeightBiasOperatorPass,
     LegalizeWeightBiasPass,
     LegalizeXCWeightBiasPass,
-    OperatorMatchingPass,
 )
-from tflite2xcore.xlogging import log_method_output
 
 
-class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceWeightBiasOperatorPass):
+class CanonicalizeSinglePixelConv2DPass(ReplaceQuantizedWeightBiasOperatorPass):
+    @property
+    def matching_opcode(self):
+        return BuiltinOpCodes.CONV_2D
+
+    @property
+    def new_opcode(self):
+        return OperatorCode(BuiltinOpCodes.FULLY_CONNECTED, version=7)
+
+    def match(self, op):
+        with self.using(op):
+            return (
+                super().match(op)
+                and self._weights.shape[1:3] == self._input.shape[1:3]
+                and self._output.shape[1] == self._output.shape[2] == 1
+            )
+
+    def mutate(self, op):
+        builtin_options = {
+            "fused_activation_function": op.builtin_options[
+                "fused_activation_function"
+            ],
+            "weights_format": FullyConnectedOptionsWeightsFormat.DEFAULT,
+            "keep_num_dims": False,
+            "asymmetric_quantize_inputs": False,
+        }
+
+        new_op = super().mutate(op)
+        with self.using(new_op):
+            old_weight_tensor = self._weights
+            self._op.builtin_options = builtin_options
+
+            new_weight_tensor = self._op.subgraph.create_tensor(
+                f"{self._op.name}/weights",
+                old_weight_tensor.type,
+                shape=(
+                    old_weight_tensor.shape[0],
+                    np.prod(old_weight_tensor.shape[1:]),
+                ),
+                quantization=old_weight_tensor.quantization,
+                consumers=[self._op],
+                buffer=old_weight_tensor.buffer,
+            )
+
+            # rewire old and new kernel tensors
+            old_weight_tensor.consumers.remove(self._op)
+            self._op.inputs[1] = new_weight_tensor
+
+        return new_op
+
+
+class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceXCWeightBiasOperatorPass):
     @property
     def matching_opcode(self):
         return BuiltinOpCodes.DEPTHWISE_CONV_2D
@@ -42,7 +89,7 @@ class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceWeightBiasOperatorPass):
             return (
                 super().match(op)
                 and self._input.shape[3] == 1
-                and self._output.shape[3] % WORD_SIZE == 0  # Cout divisible by 4
+                and self._output.shape[3] % WORD_SIZE_BYTES == 0  # Cout divisible by 4
             )
 
     def mutate(self, op):
@@ -53,7 +100,6 @@ class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceWeightBiasOperatorPass):
 
         # create new op and update builtin options
         new_op = super().mutate(op)
-        new_op.builtin_options_type = BuiltinOptions.Conv2DOptions
         new_op.builtin_options = builtin_options
 
         return new_op
@@ -70,13 +116,10 @@ class LegalizeSingleinConv2DPass(LegalizeWeightBiasPass):
 
     def mutate_weights(self, op):
         with self.using(op):
-            self._replace_weights(
-                np.transpose(self._weights.numpy.astype(np.int8), [3, 1, 2, 0])
-            )
-            self._log_weights()
+            self._replace_weights(np.transpose(self._weights.as_array(), [3, 1, 2, 0]))
 
 
-class ReplaceConv2DPass(ReplaceWeightBiasOperatorPass):
+class ReplaceConv2DPass(ReplaceXCWeightBiasOperatorPass):
     @property
     def _strides(self):
         options = self._op.builtin_options
@@ -106,10 +149,6 @@ class ReplaceConv2DPass(ReplaceWeightBiasOperatorPass):
 
 class LegalizeXCConvPass(LegalizeXCWeightBiasPass):
     @property
-    def _OUTPUT_BITS(self):
-        return 8
-
-    @property
     def _new_weight_shape(self):
         # by default, no reshaping is done
         return self._weights.shape
@@ -117,9 +156,8 @@ class LegalizeXCConvPass(LegalizeXCWeightBiasPass):
     def mutate_weights(self, op):
         with self.using(op):
             self._replace_weights(
-                self._weights.numpy.astype(np.int8).reshape(self._new_weight_shape)
+                self._weights.as_array().reshape(self._new_weight_shape)
             )
-            self._log_weights()
 
 
 class Replace1x1Conv2dPass(ReplaceConv2DPass):
@@ -136,10 +174,12 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
             with self.using(op):
                 return (
                     self._strides == (1, 1)
-                    and self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
+                    and self._weights.shape[0] % WORD_SIZE_BYTES
+                    == 0  # Cout divisible by 4
                     and self._weights.shape[1] == 1
                     and self._weights.shape[2] == 1
-                    and self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+                    and self._weights.shape[3] % WORD_SIZE_BYTES
+                    == 0  # Cin divisible by 4
                 )
 
         return False
@@ -150,9 +190,10 @@ class LegalizeXC1x1ConvPass(LegalizeXCConvPass):
     def matching_opcode(self):
         return XCOREOpCodes.XC_conv2d_1x1
 
-    @log_method_output()
     def _zero_point_bias(self):
-        return np.sum(self._weights.numpy * self._input_zero_point, axis=3).squeeze()
+        return np.sum(
+            self._weights.as_array(np.int64) * self._input_zero_point, axis=3
+        ).squeeze()
 
     @property
     def _new_weight_shape(self):
@@ -165,7 +206,8 @@ class LegalizeXC1x1ConvPass(LegalizeXCConvPass):
 class ReplacePaddedConv2DPass(ReplaceConv2DPass):
     def _pad(self):
         # pad: [top, left, zero_point]
-        pad = [
+        pad = tuple(
+            # first arg of max is <= for valid padding
             max(int((o - 1) * s - i + k) // 2, 0)
             for o, s, i, k in zip(
                 self._output.shape[1:3],
@@ -173,9 +215,8 @@ class ReplacePaddedConv2DPass(ReplaceConv2DPass):
                 self._input.shape[1:3],
                 self._weights.shape[1:3],
             )
-        ]
-        pad.append(self._input_zero_point)
-        return pad
+        )
+        return (*pad, self._input_zero_point)
 
     def mutate(self, op):
         new_op = super().mutate(op)
@@ -208,7 +249,9 @@ class ReplaceDepthwiseConv2dPass(ReplacePaddedConv2DPass):
                         f"Found non-supported depthwise multiplier: {self._depth_multiplier}"
                     )
                 else:
-                    return self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+                    return (
+                        self._weights.shape[3] % WORD_SIZE_BYTES == 0
+                    )  # Cin divisible by 4
 
         return False
 
@@ -218,11 +261,10 @@ class LegalizeXCDepthwiseConvPass(LegalizeXCConvPass):
     def matching_opcode(self):
         return XCOREOpCodes.XC_conv2d_depthwise
 
-    @log_method_output()
     def _zero_point_bias(self):
         # NOTE: first dimension of the kernel is always 1 in depthwise conv2d
         return np.sum(
-            self._weights.numpy * self._input_zero_point, axis=(1, 2)
+            self._weights.as_array(np.int64) * self._input_zero_point, axis=(1, 2)
         ).squeeze()
 
     @property
@@ -245,8 +287,9 @@ class ReplaceDeepConv2dPass(ReplacePaddedConv2DPass):
         if super().match(op):
             with self.using(op):
                 return (
-                    self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
-                    and self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+                    self._weights.shape[0] % WORD_SIZE_BYTES == 0  # Cout divisible by 4
+                    and self._weights.shape[3] % WORD_SIZE_BYTES
+                    == 0  # Cin divisible by 4
                 )
 
         return False
@@ -257,9 +300,10 @@ class LegalizeXCDeepConvPass(LegalizeXCConvPass):
     def matching_opcode(self):
         return XCOREOpCodes.XC_conv2d_deep
 
-    @log_method_output()
     def _zero_point_bias(self):
-        return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2, 3))
+        return np.sum(
+            self._weights.as_array(np.int64) * self._input_zero_point, axis=(1, 2, 3)
+        )
 
 
 class ReplaceShallowinConv2dPass(ReplacePaddedConv2DPass):
@@ -275,8 +319,9 @@ class ReplaceShallowinConv2dPass(ReplacePaddedConv2DPass):
         if super().match(op):
             with self.using(op):
                 return (
-                    self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
-                    and self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+                    self._weights.shape[0] % WORD_SIZE_BYTES == 0  # Cout divisible by 4
+                    and self._weights.shape[3] % WORD_SIZE_BYTES
+                    == 0  # Cin divisible by 4
                     and np.prod(self._weights.shape[2:]) <= 32  # K_w * Cin <= 32
                 )
 
@@ -295,90 +340,17 @@ class LegalizeXCShallowinConvPass(LegalizeXCConvPass):
     def matching_opcode(self):
         return XCOREOpCodes.XC_conv2d_shallowin
 
-    @log_method_output()
     def _zero_point_bias(self):
-        return np.sum(self._weights.numpy * self._input_zero_point, axis=(1, 2, 3))
+        return np.sum(
+            self._weights.as_array(np.int64) * self._input_zero_point, axis=(1, 2, 3)
+        )
 
     def mutate_weights(self, op):
         with self.using(op):
             Kw_pad = int(32 / self._weights.shape[3] - self._weights.shape[2])
-            unpadded_weights = self._weights.numpy.astype(np.int8).reshape(
-                self._new_weight_shape
-            )
+            unpadded_weights = self._weights.as_array().reshape(self._new_weight_shape)
             self._replace_weights(
                 np.pad(
                     unpadded_weights, pad_width=[(0, 0), (0, 0), (0, Kw_pad), (0, 0)],
                 )
             )
-            self._log_weights()
-
-
-class ParallelizeXCConv2dPass(OperatorMatchingPass):
-    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.num_threads = num_threads or 1
-        assert isinstance(self.num_threads, int)
-        assert self.num_threads > 0
-        self.forced = forced
-
-    MATCHING_OPCODES = (
-        XCOREOpCodes.XC_conv2d_depthwise,
-        XCOREOpCodes.XC_conv2d_deep,
-        XCOREOpCodes.XC_conv2d_1x1,
-    )
-
-    def run(self, *args, **kwargs):
-        if self.num_threads == 1:
-            self.logger.debug(f"Skipping pass b/c num_threads={self.num_threads}")
-            return 0
-        else:
-            return super().run(*args, **kwargs)
-
-    def match(self, op):
-        if super().match(op) and op.operator_code.code in self.MATCHING_OPCODES:
-            return "par_plan" not in op.custom_options
-
-    def mutate(self, op):
-        _, height, width, _ = op.outputs[0].shape
-        assert int(height) == height
-        assert int(width) == width
-        planner = GenericConv2DPlanner(
-            int(height), int(width), num_threads=self.num_threads, forced=self.forced
-        )
-        plan = planner.find_optimal_plan()
-        op.add_custom_options(par_plan=[list(block) for block in plan.layout])
-
-
-class ParallelizeDeepConv2dPass(QuantizedOperatorMatchingPass):
-    def __init__(self, *args, num_threads=None, forced=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.num_threads = num_threads or 1
-        assert isinstance(self.num_threads, int)
-        assert self.num_threads > 0
-        self.forced = forced
-
-    def run(self, *args, **kwargs):
-        if self.num_threads == 1:
-            self.logger.debug(f"Skipping pass b/c num_threads={self.num_threads}")
-            return 0
-        else:
-            return super().run(*args, **kwargs)
-
-    @property
-    def matching_opcode(self):
-        return XCOREOpCodes.XC_conv2d_deep
-
-    def match(self, op):
-        if super().match(op):
-            return "par_plan" not in op.custom_options
-
-    def mutate(self, op):
-        with self.using(op):
-            _, height, width, _ = self._output.shape
-        assert int(height) == height
-        assert int(width) == width
-        planner = DIDOConv2DPlanner(
-            int(height), int(width), num_threads=self.num_threads, forced=self.forced
-        )
-        plan = planner.find_optimal_plan()
-        op.add_custom_options(par_plan=[list(block) for block in plan.layout])

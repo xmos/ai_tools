@@ -16,15 +16,14 @@
 
 import json
 import os
-import argparse
+import enum
 import webbrowser
 import tempfile
-
+from pathlib import Path
 from collections import Counter
+from typing import Optional, Union
 
-from tflite2xcore.serialization import (
-    FlexbufferParser,
-)
+from tflite2xcore.xcore_schema.flexbuffers import FlexbufferParser
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.utils import VerbosityParser
@@ -352,7 +351,7 @@ buildGraph()
 """
 
 
-class OpCodeMapper():
+class OpCodeMapper:
     """Maps an opcode index to a text representation."""
 
     def __init__(self, data):
@@ -374,27 +373,31 @@ class OpCodeMapper():
             self.color.append(color)
 
     def __call__(self, opcode_idx, op_idx=None):
-        s = self.opcode_idx_to_name[opcode_idx] if opcode_idx < len(self.opcode_idx_to_name) else "UNKNOWN"
+        s = (
+            self.opcode_idx_to_name[opcode_idx]
+            if opcode_idx < len(self.opcode_idx_to_name)
+            else "UNKNOWN"
+        )
         return f"{s} [{opcode_idx}]" if op_idx is None else f"({op_idx}) {s}"
 
 
-class OpCodeTooltipMapper():
+class OpCodeTooltipMapper:
     """Maps a list of opcode indices to a tooltip hoverable indicator of more."""
 
     def __init__(self, model_dict, subgraph):
-        self.operators = subgraph['operators']
+        self.operators = subgraph["operators"]
         self.opcode_mapper = OpCodeMapper(model_dict)
 
     def __call__(self, idx_list):
         html = "<span class='tooltip'><span class='tooltipcontent'>"
         for idx in idx_list:
             html += self.opcode_mapper(self.operators[idx]["opcode_index"], idx)
-            html += ' <br>'
+            html += " <br>"
         html += f"</span>{idx_list}</span>"
         return html
 
 
-class DataSizeMapper():
+class DataSizeMapper:
     """For buffers, report the number of bytes."""
 
     @classmethod
@@ -405,30 +408,29 @@ class DataSizeMapper():
         return "--" if x is None else self._format_bytes(len(x))
 
 
-class BufferOwnerMapper():
+class BufferOwnerMapper:
     """For buffers, report the owners with tooltips."""
 
     def __init__(self, model_dict):
-        self.subgraphs = model_dict['subgraphs']
+        self.subgraphs = model_dict["subgraphs"]
 
     def __call__(self, d):
         if not isinstance(d, dict):
-            print(type(d), d)
-            return 'N/A'
+            return "N/A"
 
         html_list = []
         for k, owners in d.items():
-            if k == 'metadata':
+            if k == "metadata":
                 html_list.append(f"{k}: {str(owners)}")
             else:
                 subgraph = self.subgraphs[k]
                 tensor_mapper = TensorTooltipMapper(subgraph)
                 html_list.append(f"{k}: {tensor_mapper(owners)}")
 
-        return ', '.join(html_list) if html_list else '--'
+        return ", ".join(html_list) if html_list else "--"
 
 
-class TensorMapper():
+class TensorMapper:
     """Maps a tensor index to a text representation."""
 
     def __init__(self, subgraph, node_text=False):
@@ -438,14 +440,16 @@ class TensorMapper():
     def __call__(self, idx):
         tensor = self.tensors[idx]
         if self.node_text:
-            return (f"{tensor['name']}"
-                    + "\n"
-                    + f"({idx:d}) <{tensor['type']}> {tensor['shape']}")
+            return (
+                f"{tensor['name']}"
+                + "\n"
+                + f"({idx:d}) <{tensor['type']}> {tensor['shape']}"
+            )
         else:
             return f"({idx:d}) {tensor['name']} &lt{tensor['type']}&gt {tensor['shape']} <br>"
 
 
-class TensorTooltipMapper():
+class TensorTooltipMapper:
     """Maps a list of tensor indices to a tooltip hoverable indicator of more."""
 
     def __init__(self, subgraph):
@@ -459,11 +463,23 @@ class TensorTooltipMapper():
         return html
 
 
-class CustomOptionsMapper():
+class DictMapper:
+    def __call__(self, d):
+        if d:
+            return {
+                k: (v.name if isinstance(v, enum.Enum) else v) for k, v in d.items()
+            }
+        else:
+            return d
+
+
+class CustomOptionsMapper:
     """Maps a list of bytes representing a flexbuffer to a dictionary."""
 
     def __call__(self, custom_options):
-        return json.loads(FlexbufferParser().parse(bytes(custom_options))) if custom_options else None
+        return (
+            FlexbufferParser().parse(bytes(custom_options)) if custom_options else None
+        )
 
 
 def GenerateGraph(subgraph_idx, g, opcode_mapper):
@@ -476,7 +492,7 @@ def GenerateGraph(subgraph_idx, g, opcode_mapper):
         return f"o{idx:d}"
 
     def NodeWidth(node_text):
-        return int(max(len(line) * 12/16*10 + 5 for line in node_text.split("\n")))
+        return int(max(len(line) * 12 / 16 * 10 + 5 for line in node_text.split("\n")))
 
     def NodeHeight(node_text):
         return node_text.count("\n") * 15 + 25
@@ -492,83 +508,92 @@ def GenerateGraph(subgraph_idx, g, opcode_mapper):
     for tensor_index, tensor in enumerate(g["tensors"]):
         t_node_text = f"({tensor_index:d}) {tensor['name']} {tensor['shape']}"
         t_node_text = tensor_mapper(tensor_index)
-        tensor_nodes_info.append({
-            'text': t_node_text,
-            'width': NodeWidth(t_node_text),
-            'height': NodeHeight(t_node_text),
-            'color': "#fffacd"  # default tensor color, should be only for parameters
-        })
+        tensor_nodes_info.append(
+            {
+                "text": t_node_text,
+                "width": NodeWidth(t_node_text),
+                "height": NodeHeight(t_node_text),
+                "color": "#fffacd",  # default tensor color, should be only for parameters
+            }
+        )
 
     for op_idx, op in enumerate(g["operators"]):
         o_node_text = opcode_mapper(op["opcode_index"], op_idx)
-        op_nodes_info.append({
-            'text': o_node_text,
-            'width': NodeWidth(o_node_text),
-            'height': NodeHeight(o_node_text),
-            'color': opcode_mapper.color[op["opcode_index"]]
-        })
+        op_nodes_info.append(
+            {
+                "text": o_node_text,
+                "width": NodeWidth(o_node_text),
+                "height": NodeHeight(o_node_text),
+                "color": opcode_mapper.color[op["opcode_index"]],
+            }
+        )
 
         # coloring intermediate tensors
-        for tensor_index in op['outputs']:
-            tensor_nodes_info[tensor_index]['color'] = "#dddddd"
+        for tensor_index in op["outputs"]:
+            tensor_nodes_info[tensor_index]["color"] = "#dddddd"
 
     # coloring input/output tensors
-    for tensor_index in range(len(g['tensors'])):
-        if tensor_index in g['inputs']:
-            tensor_nodes_info[tensor_index]['color'] = "#ccccff"
-        elif tensor_index in g['outputs']:
-            tensor_nodes_info[tensor_index]['color'] = "#ffcccc"
+    for tensor_index in range(len(g["tensors"])):
+        if tensor_index in g["inputs"]:
+            tensor_nodes_info[tensor_index]["color"] = "#ccccff"
+        elif tensor_index in g["outputs"]:
+            tensor_nodes_info[tensor_index]["color"] = "#ffcccc"
 
     for op_index, op in enumerate(g["operators"]):
         x = width_mult
         for tensor_index in op["inputs"]:
             if tensor_index not in first:
                 first[tensor_index] = ((op_index - 0.5 + 1) * pixel_mult, x)
-            x += tensor_nodes_info[tensor_index]['width'] + 10  # offset
-            edges.append({
-                "source": TensorID(tensor_index),
-                "target": OperatorID(op_index),
-            })
+            x += tensor_nodes_info[tensor_index]["width"] + 10  # offset
+            edges.append(
+                {"source": TensorID(tensor_index), "target": OperatorID(op_index),}
+            )
 
         x = width_mult
         for tensor_index in op["outputs"]:
             if tensor_index not in second:
                 second[tensor_index] = ((op_index + 0.5 + 1) * pixel_mult, x)
-            x += tensor_nodes_info[tensor_index]['width'] + 10  # offset
-            edges.append({
-                "target": TensorID(tensor_index),
-                "source": OperatorID(op_index)
-            })
+            x += tensor_nodes_info[tensor_index]["width"] + 10  # offset
+            edges.append(
+                {"target": TensorID(tensor_index), "source": OperatorID(op_index)}
+            )
 
-        nodes.append({
-            "id": OperatorID(op_index),
-            "name": op_nodes_info[op_index]['text'],
-            "text_color": "#eeeeee",
-            "fill_color": op_nodes_info[op_index]['color'],
-            "edge_radius": 10,
-            "x": pixel_mult,
-            "y": (op_index + 1) * pixel_mult,
-            "node_width": op_nodes_info[op_index]['width'],
-            "node_height": op_nodes_info[op_index]['height']
-        })
+        nodes.append(
+            {
+                "id": OperatorID(op_index),
+                "name": op_nodes_info[op_index]["text"],
+                "text_color": "#eeeeee",
+                "fill_color": op_nodes_info[op_index]["color"],
+                "edge_radius": 10,
+                "x": pixel_mult,
+                "y": (op_index + 1) * pixel_mult,
+                "node_width": op_nodes_info[op_index]["width"],
+                "node_height": op_nodes_info[op_index]["height"],
+            }
+        )
 
     for tensor_index, tensor in enumerate(g["tensors"]):
         initial_y = (
-            first[tensor_index] if tensor_index in first
-            else second[tensor_index] if tensor_index in second
-            else (0, 0))
+            first[tensor_index]
+            if tensor_index in first
+            else second[tensor_index]
+            if tensor_index in second
+            else (0, 0)
+        )
 
-        nodes.append({
-            "id": TensorID(tensor_index),
-            "name": tensor_nodes_info[tensor_index]['text'],
-            "text_color": "#000000",
-            "fill_color": tensor_nodes_info[tensor_index]['color'],
-            "edge_radius": 1,
-            "x": initial_y[1],
-            "y": initial_y[0],
-            "node_width": tensor_nodes_info[tensor_index]['width'],
-            "node_height": tensor_nodes_info[tensor_index]['height']
-        })
+        nodes.append(
+            {
+                "id": TensorID(tensor_index),
+                "name": tensor_nodes_info[tensor_index]["text"],
+                "text_color": "#000000",
+                "fill_color": tensor_nodes_info[tensor_index]["color"],
+                "edge_radius": 1,
+                "x": initial_y[1],
+                "y": initial_y[0],
+                "node_width": tensor_nodes_info[tensor_index]["width"],
+                "node_height": tensor_nodes_info[tensor_index]["height"],
+            }
+        )
 
     graph_str = json.dumps({"nodes": nodes, "edges": edges}, indent=2)
     html = _D3_HTML_TEMPLATE % (graph_str, subgraph_idx)
@@ -615,7 +640,7 @@ def GenerateTableHtml(items, keys_to_print, display_index=True):
     return html
 
 
-def CreateHtml(data):
+def dict_to_html(data):
     """Given a tflite model as a dictionary, produce html description."""
 
     indent = " " * 2
@@ -625,10 +650,12 @@ def CreateHtml(data):
     html += "\n<body>\n"
     html += "<h1>TensorFlow Lite Model</h1>\n"
 
-    toplevel_stuff = [("filename", None),
-                      ("filesize", DataSizeMapper()._format_bytes),
-                      ("version", None),
-                      ("description", None)]
+    toplevel_stuff = [
+        ("filename", None),
+        ("filesize", DataSizeMapper()._format_bytes),
+        ("version", None),
+        ("description", None),
+    ]
 
     html += "<table>"
     for key, mapping in toplevel_stuff:
@@ -646,29 +673,32 @@ def CreateHtml(data):
         opcode_mapper = OpCodeMapper(data)
         opcode_tooltip_mapper = OpCodeTooltipMapper(data, g)
         custom_options_mapper = CustomOptionsMapper()
-        op_keys_to_display = [("inputs", tensor_mapper),
-                              ("outputs", tensor_mapper),
-                              ("opcode_index", opcode_mapper),
-                              ("builtin_options", None),
-                              ("custom_options", custom_options_mapper)]
-        tensor_keys_to_display = [("name", None),
-                                  ("consumers", opcode_tooltip_mapper),
-                                  ("producers", opcode_tooltip_mapper),
-                                  ("type", None),
-                                  ("shape", None),
-                                  ("buffer", None),
-                                  ("quantization", None)]
+        op_keys_to_display = [
+            ("inputs", tensor_mapper),
+            ("outputs", tensor_mapper),
+            ("opcode_index", opcode_mapper),
+            ("builtin_options", DictMapper()),
+            ("custom_options", custom_options_mapper),
+        ]
+        tensor_keys_to_display = [
+            ("name", None),
+            ("consumers", opcode_tooltip_mapper),
+            ("producers", opcode_tooltip_mapper),
+            ("type", None),
+            ("shape", None),
+            ("buffer", None),
+            ("quantization", DictMapper()),
+        ]
 
         html += "<h2>Subgraph %d</h2>\n" % subgraph_idx
 
         # Inputs and outputs.
         html += "<h3>Inputs/Outputs</h3>\n"
         html += GenerateTableHtml(
-            [{
-                "inputs": g["inputs"],
-                "outputs": g["outputs"]
-            }], [("inputs", tensor_mapper), ("outputs", tensor_mapper)],
-            display_index=False)
+            [{"inputs": g["inputs"], "outputs": g["outputs"]}],
+            [("inputs", tensor_mapper), ("outputs", tensor_mapper)],
+            display_index=False,
+        )
 
         # Print the tensors.
         html += "<h3>Tensors</h3>\n"
@@ -679,16 +709,19 @@ def CreateHtml(data):
         html += GenerateTableHtml(g["operators"], op_keys_to_display)
 
         # Visual graph.
-        html += "<svg id='subgraph%d' width='1600' height='900'></svg>\n" % (
-            subgraph_idx,)
+        html += "<svg id='subgraph%d' width='99%%' height='900'></svg>\n" % (
+            subgraph_idx,
+        )
         html += GenerateGraph(subgraph_idx, g, opcode_mapper)
         html += "</div>\n\n"
 
     # Buffers
     size_mapper = DataSizeMapper()
-    buffer_keys_to_display = [("data", size_mapper),
-                              ("owners", BufferOwnerMapper(data))]
-    total_bytes = sum(len(d['data']) for d in data["buffers"])
+    buffer_keys_to_display = [
+        ("data", size_mapper),
+        ("owners", BufferOwnerMapper(data)),
+    ]
+    total_bytes = sum(len(d["data"]) for d in data["buffers"])
     html += (
         "<h2>Buffers "
         f"(total: {size_mapper._format_bytes(total_bytes)}, "
@@ -698,15 +731,21 @@ def CreateHtml(data):
     html += GenerateTableHtml(data["buffers"], buffer_keys_to_display)
 
     # Operator codes
-    operator_keys_to_display = [("builtin_code", None),
-                                ("custom_code", None),
-                                ("version", None),
-                                ("count", None)]
-    op_cnt = sorted(Counter(op["opcode_index"]
-                            for subgraph in data["subgraphs"]
-                            for op in subgraph["operators"]).items())
+    operator_keys_to_display = [
+        ("builtin_code", None),
+        ("custom_code", None),
+        ("version", None),
+        ("count", None),
+    ]
+    op_cnt = sorted(
+        Counter(
+            op["opcode_index"]
+            for subgraph in data["subgraphs"]
+            for op in subgraph["operators"]
+        ).items()
+    )
     for d, p in zip(data["operator_codes"], op_cnt):
-        d['count'] = p[1]
+        d["count"] = p[1]
     html += "<h2>Operator Codes</h2>\n"
     html += GenerateTableHtml(data["operator_codes"], operator_keys_to_display)
 
@@ -715,11 +754,12 @@ def CreateHtml(data):
     return html
 
 
-def CreateHtmlFile(tflite_input, html_file):
-    if not os.path.exists(tflite_input):
-        raise RuntimeError(f"Invalid filename {tflite_input}")
+def model_to_html(model, filename=None):
+    if isinstance(model, (bytes, bytearray)):
+        model = XCOREModel.deserialize(model)
+    elif not isinstance(model, XCOREModel):
+        raise TypeError("model musy be XCOREModel or serialized flatbuffer model")
 
-    model = XCOREModel.read_flatbuffer(tflite_input)
     try:
         data = model.to_dict(extended=True)
     except AttributeError as e:
@@ -727,24 +767,36 @@ def CreateHtmlFile(tflite_input, html_file):
             data = model.to_dict(extended=False)
         else:
             raise
-    data["filename"] = tflite_input
-    data["filesize"] = os.stat(tflite_input).st_size
 
-    html = CreateHtml(data)
-    with open(html_file, "w") as f:
-        f.write(html)
+    if filename:
+        data["filename"] = filename
+        data["filesize"] = os.stat(filename).st_size
+    else:
+        data["filename"] = data["filesize"] = "--"
+
+    return dict_to_html(data)
 
 
-def main(tflite_input, html_output, *, no_browser=True):
+def main(
+    tflite_input: Union[str, Path],
+    html_output: Optional[Union[str, Path]] = None,
+    *,
+    open_browser: bool = False,
+) -> None:
     if html_output:  # TODO: do this with a context manager
         html_path = html_output
     else:
         html_file = tempfile.NamedTemporaryFile(delete=False)
         html_path = html_file.name
 
-    CreateHtmlFile(str(tflite_input), str(html_path))
+    if not os.path.exists(tflite_input):
+        raise RuntimeError(f"Invalid filename {tflite_input}")
 
-    if not no_browser:
+    html = model_to_html(XCOREModel.read_flatbuffer(tflite_input), tflite_input)
+    with open(html_path, "w") as f:
+        f.write(html)
+
+    if open_browser:
         webbrowser.open_new_tab("file://" + os.path.realpath(html_path))
 
     if not html_output:
@@ -752,15 +804,24 @@ def main(tflite_input, html_output, *, no_browser=True):
 
 
 if __name__ == "__main__":
-    parser = VerbosityParser(verbosity_config=dict(
-        action='store_true', default=False, help='Verbose mode.'
-    ))
-    parser.add_argument('tflite_input', help='Input .tflite file.')
-    parser.add_argument('-o', '--html_output', required=False, default=None,
-                        help='Output .html file. If not specified, a temporary file is created.')
-    parser.add_argument('--no_browser', action='store_false',
-                        help='Do not open browser after the .html is created.')
+    parser = VerbosityParser(
+        verbosity_config=dict(action="store_true", default=False, help="Verbose mode.")
+    )
+    parser.add_argument("tflite_input", help="Input .tflite file.")
+    parser.add_argument(
+        "-o",
+        "--html_output",
+        required=False,
+        default=None,
+        help="Output .html file. If not specified, a temporary file is created.",
+    )
+    parser.add_argument(
+        "-b",
+        "--browser",
+        action="store_true",
+        help="Open browser after the .html is created.",
+    )
     args = parser.parse_args()
     tflite_input, html_output = args.tflite_input, args.html_output
 
-    main(tflite_input, html_output, no_browser=args.no_browser)
+    main(tflite_input, html_output, open_browser=args.browser)

@@ -1,16 +1,21 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-
+from typing import Tuple
 from copy import deepcopy
 
-from tflite2xcore.xcore_schema import TensorType
+from tflite2xcore.transformation_passes import ModelTransformationPass
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import Padding, XCOREOpCodes
 
+from tflite2xcore.tests.test_transformation_passes.model_builders import ModelBuilder
+from ..test_fully_connected_passes.conftest import PARAMS as FC_PARAMS
 from ..conftest import (
     PARAMS,
     _test_non_matching_params,
     test_matching_params,
     test_non_matching_tensors,
+    test_replace_mutate as _test_replace_mutate,
 )
 
 
@@ -20,6 +25,13 @@ from ..conftest import (
 
 PARAMS = deepcopy(PARAMS)
 
+# NOTE: this is intentional to reduce test counts
+PARAMS["extended"]["non_matching_tensors"] = FC_PARAMS["default"][
+    "non_matching_tensors"
+]
+PARAMS["default"]["non_matching_tensors"] = FC_PARAMS["smoke"]["non_matching_tensors"]
+PARAMS["smoke"]["non_matching_tensors"] = FC_PARAMS["smoke"]["non_matching_tensors"]
+
 PARAMS["extended"].update(
     {
         "kernel_height": [2, 3, 5, 7],
@@ -27,50 +39,23 @@ PARAMS["extended"].update(
         "non_matching_input_channels": [3, 9, 15],
         "output_channels": PARAMS["extended"]["input_channels"],
         "non_matching_output_channels": [3, 9, 15],
-        "padding": ["SAME", "VALID"],
+        "padding": list(Padding),
         "stride_h": [1, 2, 3],
         "stride_w": [1, 2, 3],
-        "non_matching_tensors": [
-            ("input", TensorType.INT16),
-            ("input", TensorType.INT32),
-            ("input", TensorType.UINT8),
-            ("input", TensorType.FLOAT32),
-            ("weights", TensorType.INT16),
-            ("weights", TensorType.INT32),
-            ("weights", TensorType.UINT8),
-            ("weights", TensorType.FLOAT32),
-            ("biases", TensorType.INT8),
-            ("biases", TensorType.INT16),
-            ("biases", TensorType.UINT8),
-            ("biases", TensorType.FLOAT32),
-            ("output", TensorType.INT16),
-            ("output", TensorType.INT32),
-            ("output", TensorType.UINT8),
-            ("output", TensorType.FLOAT32),
-        ],
     }
 )
 
 PARAMS["default"].update(
     {
-        "kernel_height": [2, 3, 7],
-        "kernel_width": [2, 3, 7],
+        "kernel_height": [2, 3, 5],
+        "kernel_width": [2, 3, 5],
         "non_matching_input_channels": [3, 15],
-        "output_channels": PARAMS["default"]["input_channels"],
+        "input_channels": PARAMS["default"]["input_channels"][1:],
+        "output_channels": PARAMS["default"]["input_channels"][1:],
         "non_matching_output_channels": [3, 15],
-        "padding": ["SAME", "VALID"],
+        "padding": list(Padding),
         "stride_h": [1, 2],
         "stride_w": [1, 2],
-        "non_matching_tensors": [
-            ("input", TensorType.INT16),
-            ("input", TensorType.INT32),
-            ("weights", TensorType.INT16),
-            ("weights", TensorType.INT32),
-            ("biases", TensorType.INT8),
-            ("biases", TensorType.INT16),
-            ("output", TensorType.INT16),
-            ("output", TensorType.INT32),
-        ],
     }
 )
 
@@ -81,15 +66,9 @@ PARAMS["smoke"].update(
         "non_matching_input_channels": [9],
         "output_channels": PARAMS["smoke"]["input_channels"],
         "non_matching_output_channels": [9],
-        "padding": ["SAME", "VALID"],
+        "padding": list(Padding),
         "stride_h": [1],
         "stride_w": [1],
-        "non_matching_tensors": [
-            ("input", TensorType.INT16),
-            ("weights", TensorType.INT16),
-            ("biases", TensorType.INT16),
-            ("output", TensorType.INT16),
-        ],
     }
 )
 
@@ -100,7 +79,9 @@ PARAMS["smoke"].update(
 
 
 @pytest.fixture()
-def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
+def weight_shape(
+    output_channels: int, kernel_height: int, kernel_width: int, input_channels: int
+) -> Tuple[int, int, int, int]:
     return [output_channels, kernel_height, kernel_width, input_channels]
 
 
@@ -110,16 +91,16 @@ def weight_shape(output_channels, kernel_height, kernel_width, input_channels):
 
 
 def test_non_matching_output_channels(
-    trf_pass,
-    build_model,
-    non_matching_output_channels,
-    kernel_height,
-    kernel_width,
-    input_channels,
-    input_size,
-    padding,
-    strides,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    non_matching_output_channels: int,
+    kernel_height: int,
+    kernel_width: int,
+    input_channels: int,
+    input_size: Tuple[int, int],
+    padding: Padding,
+    strides: Tuple[int, int],
+) -> None:
     model = build_model(
         weight_shape=[
             non_matching_output_channels,
@@ -135,16 +116,16 @@ def test_non_matching_output_channels(
 
 
 def test_non_matching_kernel_height(
-    trf_pass,
-    build_model,
-    output_channels,
-    non_matching_kernel_height,
-    kernel_width,
-    input_channels,
-    input_size,
-    padding,
-    strides,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    output_channels: int,
+    non_matching_kernel_height: int,
+    kernel_width: int,
+    input_channels: int,
+    input_size: Tuple[int, int],
+    padding: Padding,
+    strides: Tuple[int, int],
+) -> None:
     model = build_model(
         weight_shape=[
             output_channels,
@@ -160,16 +141,16 @@ def test_non_matching_kernel_height(
 
 
 def test_non_matching_kernel_width(
-    trf_pass,
-    build_model,
-    output_channels,
-    kernel_height,
-    non_matching_kernel_width,
-    input_channels,
-    input_size,
-    padding,
-    strides,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    output_channels: int,
+    kernel_height: int,
+    non_matching_kernel_width: int,
+    input_channels: int,
+    input_size: Tuple[int, int],
+    padding: Padding,
+    strides: Tuple[int, int],
+) -> None:
     model = build_model(
         weight_shape=[
             output_channels,
@@ -185,16 +166,16 @@ def test_non_matching_kernel_width(
 
 
 def test_non_matching_input_channels(
-    trf_pass,
-    build_model,
-    output_channels,
-    kernel_height,
-    kernel_width,
-    non_matching_input_channels,
-    input_size,
-    padding,
-    strides,
-):
+    trf_pass: ModelTransformationPass,
+    build_model: ModelBuilder,
+    output_channels: int,
+    kernel_height: int,
+    kernel_width: int,
+    non_matching_input_channels: int,
+    input_size: Tuple[int, int],
+    padding: Padding,
+    strides: Tuple[int, int],
+) -> None:
     model = build_model(
         weight_shape=[
             output_channels,
@@ -209,13 +190,28 @@ def test_non_matching_input_channels(
     _test_non_matching_params(trf_pass, model)
 
 
-def test_non_matching_stride_w(trf_pass, model, non_matching_stride_w):
+def test_non_matching_stride_w(
+    trf_pass: ModelTransformationPass, model: XCOREModel, non_matching_stride_w: int,
+) -> None:
     op = model.subgraphs[0].operators[0]
     op.builtin_options["stride_w"] = non_matching_stride_w
     _test_non_matching_params(trf_pass, model)
 
 
-def test_non_matching_stride_h(trf_pass, model, non_matching_stride_h):
+def test_non_matching_stride_h(
+    trf_pass: ModelTransformationPass, model: XCOREModel, non_matching_stride_h: int,
+) -> None:
     op = model.subgraphs[0].operators[0]
     op.builtin_options["stride_h"] = non_matching_stride_h
     _test_non_matching_params(trf_pass, model)
+
+
+def test_replace_mutate(
+    trf_pass: ModelTransformationPass, model: XCOREModel, custom_opcode: XCOREOpCodes
+) -> None:
+    _test_replace_mutate(trf_pass, model, custom_opcode)
+
+    # check custom options
+    custom_options = model.subgraphs[0].operators[-1].custom_options
+    assert "illegal_params" in custom_options
+    assert custom_options["illegal_params"] is True

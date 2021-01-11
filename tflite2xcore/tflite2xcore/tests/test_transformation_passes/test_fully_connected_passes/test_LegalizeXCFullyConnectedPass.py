@@ -1,9 +1,9 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-
 import numpy as np
 
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.transformation_passes import (
     ReplaceFullyConnectedPass,
     LegalizeXCFullyConnectedPass,
@@ -17,7 +17,7 @@ from .conftest import PARAMS
 #  ----------------------------------------------------------------------------
 
 
-def test_mutate(model):
+def test_mutate(model: XCOREModel) -> None:
     # extract original parameters
     subgraph = model.subgraphs[0]
     op = subgraph.operators[0]
@@ -38,7 +38,7 @@ def test_mutate(model):
     # run legalization pass
     LegalizeXCFullyConnectedPass().run(model)
     model.sanity_check()
-    assert len(subgraph.operators) == 2
+    assert len(subgraph.operators) == 1
     new_op = subgraph.operators[0]
     assert len(new_op.inputs) == 3
 

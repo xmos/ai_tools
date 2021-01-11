@@ -1,59 +1,54 @@
-# Copyright (c) 2019, XMOS Ltd, All rights reserved
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+import logging
 import numpy as np
-
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
-from tflite2xcore.pass_manager import ModelTransformationPass
-from tflite2xcore.xcore_schema import TensorType, BuiltinOpCodes
-from tflite2xcore.utils import ACC_PERIOD
-from tflite2xcore import xlogging as logging
+from tflite2xcore.xcore_schema import TensorType, OperatorCode, Operator
+from tflite2xcore.utils import ACC_PERIOD_INT8, format_array
 
 
-class SubgraphTransformationPass(ModelTransformationPass):
+class ModelTransformationPass(ABC):
+    def __init__(self):
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    def _sanity_check(self, obj):
+        if __debug__:
+            try:
+                obj.sanity_check()
+            except AssertionError as e:
+                self.logger.exception(e)
+
+    @abstractmethod
+    def run(self, model):
+        return 0
+
+    def __str__(self):
+        return self.__class__.__name__
+
+
+class SubgraphPass(ModelTransformationPass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._subgraph_idx = -1
         self._obj_index = -1
+        self._num_matches = 0
 
     @abstractmethod
-    def match(self, obj):
+    def match(self, obj) -> bool:
         return True
-
-    @abstractmethod
-    def mutate(self, obj):
-        pass
 
     @abstractmethod
     def target_iterable(self, subgraph):
         pass
 
     def log_match(self, obj):
-        self.logger.info(f"matched {obj}")
+        self.logger.debug(f"matched {obj}")
 
+    @abstractmethod
     def run_subgraph(self, subgraph):
-        num_matches = 0
-        while True:
-            for self._obj_index, obj in enumerate(self.target_iterable(subgraph)):
-                if self.match(obj):
-                    num_matches += 1
-                    self.log_match(obj)
-
-                    if self.debug:
-                        try:
-                            obj.sanity_check()
-                        except AssertionError as e:
-                            self.logger.exception(e)
-                        import pdb
-
-                        pdb.set_trace()
-
-                    self.mutate(obj)
-                    break
-            else:
-                self._obj_index = -1
-                return num_matches
+        pass
 
     def run(self, model):
         modified_cnt = 0
@@ -62,17 +57,45 @@ class SubgraphTransformationPass(ModelTransformationPass):
             if self.run_subgraph(subgraph):
                 modified_cnt += 1
 
-            if self.debug:
-                try:
-                    subgraph.sanity_check()
-                except AssertionError as e:
-                    self.logger.exception(e)
-
         self._subgraph_idx = -1
         return modified_cnt
 
 
+class SubgraphAnalysisPass(SubgraphPass):
+    def run_subgraph(self, subgraph):
+        self._num_matches = 0
+        for self._obj_index, obj in enumerate(self.target_iterable(subgraph)):
+            if self.match(obj):
+                self._num_matches += 1
+                self.log_match(obj)
+                self._sanity_check(obj)
+        return 0
+
+
+class SubgraphTransformationPass(SubgraphPass):
+    @abstractmethod
+    def mutate(self, obj):
+        pass
+
+    def run_subgraph(self, subgraph):
+        self._num_matches = 0
+        while True:
+            for self._obj_index, obj in enumerate(self.target_iterable(subgraph)):
+                if self.match(obj):
+                    self._num_matches += 1
+                    self.log_match(obj)
+                    self._sanity_check(obj)
+                    self.mutate(obj)
+                    self._sanity_check(subgraph)
+                    break
+            else:
+                self._obj_index = -1
+                return self._num_matches
+
+
 class OperatorMatchingPass(SubgraphTransformationPass):
+    _op: Operator
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._op = None
@@ -112,7 +135,7 @@ class BufferMatchingPass(ModelTransformationPass):
         pass
 
     def log_match(self, buffer):
-        self.logger.info(
+        self.logger.debug(
             f"matched buffer [{self._buffer_idx}] of length "
             f"{len(buffer)} with {len(buffer.owners)} owners"
         )
@@ -125,16 +148,9 @@ class BufferMatchingPass(ModelTransformationPass):
                     self.log_match(buffer)
                     modified_cnt += 1
 
-                    if self.debug:
-                        try:
-                            model.sanity_check()
-                        except AssertionError as e:
-                            self.logger.exception(e)
-                        import pdb
-
-                        pdb.set_trace()
-
+                    self._sanity_check(buffer)
                     self.mutate(buffer)
+                    self._sanity_check(model)
                     break
             else:
                 self._buffer_idx = -1
@@ -155,21 +171,6 @@ class OutputTensorMatchingPass(SubgraphTransformationPass):
 
     def log_match(self, tensor):
         super().log_match(f"output [{self._obj_index}]: {tensor.name}")
-
-
-class RemoveSoftmaxOutputPass(OperatorMatchingPass):
-    def match(self, op):
-        return (
-            super().match(op)
-            and op.operator_code.code == BuiltinOpCodes.SOFTMAX
-            and op.outputs[0] in op.subgraph.outputs
-        )
-
-    def mutate(self, op):
-        subgraph = op.subgraph
-        subgraph.outputs.append(op.inputs[0])
-        subgraph.remove_tensor(op.outputs[0])
-        subgraph.remove_operator(op)
 
 
 class QuantizedOperatorMatchingPass(OperatorMatchingPass):
@@ -195,27 +196,27 @@ class QuantizedOperatorMatchingPass(OperatorMatchingPass):
         raise NotImplementedError()
 
     @property
-    def _matching_input_type(self):
+    def matching_input_type(self) -> TensorType:
         return TensorType.INT8
 
     @property
-    def _matching_output_type(self):
+    def matching_output_type(self) -> TensorType:
         return TensorType.INT8
 
     def match(self, op):
-        if super().match(op) and op.operator_code.code == self.matching_opcode:
+        if super().match(op) and op.operator_code.code is self.matching_opcode:
             with self.using(op):
                 return (
-                    self._input.type == self._matching_input_type
-                    and self._output.type == self._matching_output_type
+                    self._input.type is self.matching_input_type
+                    and self._output.type is self.matching_output_type
                 )
+        return False
 
 
-# TODO: write (at least regression) tests for this class
 class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
     @property
     @abstractmethod
-    def new_opcode(self):
+    def new_opcode(self) -> OperatorCode:
         raise NotImplementedError()
 
     def mutate(self, op):
@@ -226,28 +227,48 @@ class ReplaceQuantizedOperatorPass(QuantizedOperatorMatchingPass):
         return new_op
 
 
-class ReplaceWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
+class ReplaceQuantizedWeightBiasOperatorPass(ReplaceQuantizedOperatorPass):
     @property
     def _weights(self):
         return self._op.inputs[1]
-
-    def _log_weights(self):
-        self.logger.xdebug(
-            "_weights:\n" + logging._array_msg(self._weights.numpy.astype(np.int8))
-        )
 
     @property
     def _biases(self):
         return self._op.inputs[2]
 
-    def match(self, op):
-        if super().match(op):
-            with self.using(op):
-                return (
-                    self._weights.type is TensorType.INT8
-                    and self._biases.type is TensorType.INT32
-                )
+    @property
+    def matching_biases_type(self) -> TensorType:
+        return TensorType.INT32
 
+    @property
+    def matching_weights_type(self) -> TensorType:
+        return TensorType.INT8
+
+    def _match_non_weight_inputs(self) -> bool:
+        try:
+            return (
+                self._biases.type is self.matching_biases_type
+                and self._biases.is_constant
+                and self._biases not in self._op.subgraph.outputs
+            )
+        except IndexError:
+            # if bias is missing, the operator should match
+            return True
+
+    def match(self, op):
+        with self.using(op):
+            return (
+                super().match(op)
+                and self._weights.type is self.matching_weights_type
+                # NOTE: the current implementations don't allow mutating ops
+                #       if one of the parameter tensors is an output or not constant
+                and self._weights.is_constant
+                and self._weights not in op.subgraph.outputs
+                and self._match_non_weight_inputs()
+            )
+
+
+class ReplaceXCWeightBiasOperatorPass(ReplaceQuantizedWeightBiasOperatorPass):
     def mutate(self, op):
         new_op = super().mutate(op)
         new_op.add_custom_options(illegal_params=True)
@@ -264,11 +285,6 @@ class LegalizeWeightBiasPass(QuantizedOperatorMatchingPass):
     def _weights(self):
         return self._op.inputs[1]
 
-    def _log_weights(self):
-        self.logger.xdebug(
-            "_weights:\n" + logging._array_msg(self._weights.numpy.astype(np.int8))
-        )
-
     @abstractmethod
     def mutate_biases(self, op):
         pass
@@ -277,15 +293,13 @@ class LegalizeWeightBiasPass(QuantizedOperatorMatchingPass):
     def mutate_weights(self, op):
         pass
 
-    def _replace_weights(self, arr):
+    def _replace_weights(self, arr) -> None:
         # create and populate new weight tensor
         subgraph = self._op.subgraph
         new_weights = subgraph.create_tensor(
             f"{self._op.name}/weights",
-            TensorType.INT8,
+            TensorType.from_numpy_dtype(arr.dtype),
             arr.shape,
-            isinput=self._weights in subgraph.inputs,
-            isoutput=self._weights in subgraph.outputs,
             consumers=[self._op],
         )
         new_weights.buffer.data = arr
@@ -294,15 +308,17 @@ class LegalizeWeightBiasPass(QuantizedOperatorMatchingPass):
         self._weights.consumers.remove(self._op)
         self._op.inputs[1] = new_weights
 
-    def match(self, op):
+    def match(self, op) -> bool:
         if super().match(op) and "illegal_params" in op.custom_options:
             return op.custom_options["illegal_params"]
+        return False
 
     def mutate(self, op):
         # NOTE: the order of these mutations is strict
         self.mutate_biases(op)
         self.mutate_weights(op)
         op.custom_options.pop("illegal_params")
+        return op
 
 
 class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
@@ -315,10 +331,10 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
     def _zero_point_bias(self):
         pass
 
-    @logging.log_method_output()
     def _unified_bias(self):
-        biases = self._biases.numpy
-        arr_64 = biases.astype(np.int64) - self._zero_point_bias().astype(np.int64)
+        arr_64 = self._biases.as_array(np.int64) - self._zero_point_bias().astype(
+            np.int64
+        )
         arr_32 = np.clip(arr_64, -(2 ** 31), 2 ** 31 - 1).astype(np.int32)
         if np.any(arr_32 != arr_64):
             self.logger.warning("_unified_bias saturated 32 bit!")
@@ -326,7 +342,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
 
     @staticmethod
     def __pad_to_acc_period(arr):
-        pad = ACC_PERIOD - 1 - (arr.shape[0] - 1) % ACC_PERIOD
+        pad = ACC_PERIOD_INT8 - 1 - (arr.shape[0] - 1) % ACC_PERIOD_INT8
         return np.pad(arr, pad_width=[(0, pad)])
 
     def _bias_arr(self):
@@ -335,10 +351,9 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
 
         # zero pad and reshape
         bias = self.__pad_to_acc_period(bias)
-        self.logger.xdebug("_bias_arr padded biases:\n" + logging._array_msg(bias))
 
         # splitting lower and upper 16 bits of each 32 bit value
-        tmp_shape = (bias.shape[0] // ACC_PERIOD, ACC_PERIOD, -1)
+        tmp_shape = (bias.shape[0] // ACC_PERIOD_INT8, ACC_PERIOD_INT8, -1)
         new_bias = np.frombuffer(bias.flatten().tostring(), dtype=np.int16).reshape(
             tmp_shape
         )
@@ -366,7 +381,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
             # we are using 16 bits instead of 8 so we need to adjust the shift
             rshift[j] -= self._SHIFT_ADJUSTMENT
 
-        bias_size = self._biases.numpy.size
+        bias_size = np.prod(self._biases.shape)
         if len(scale) == 1:
             rshift = np.repeat(rshift, bias_size)
             scale = np.repeat(scale, bias_size)
@@ -378,21 +393,19 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
         return rshift, scale
 
     @property
-    @abstractmethod
     def _OUTPUT_BITS(self):
-        pass
+        return 8
 
     @property
     def _MAX_POST_SHIFT(self):
         return 22 + self._SHIFT_ADJUSTMENT - self._OUTPUT_BITS
 
-    @logging.log_method_output()
     def _scale_offset_arr(self):
         # calculate right shift/scale
         rshift, scale = self._shift_scale()
 
         # zero pad and reshape into appropriate array
-        new_shape = (-1, ACC_PERIOD)
+        new_shape = (-1, ACC_PERIOD_INT8)
         rshift = self.__pad_to_acc_period(rshift)
         scale = self.__pad_to_acc_period(scale)
 
@@ -403,7 +416,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
         ) + np.minimum(rshift, 0)
         if np.any(shift_post.flatten() < 0):
             raise ValueError(
-                "Negative shift_post encountered: " f"{logging._array_msg(shift_post)}"
+                "Negative shift_post encountered: " f"{format_array(shift_post)}"
             )
 
         # calculate offset
@@ -413,9 +426,6 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
             * 2 ** (self._OUTPUT_BITS - 8)
         ).flatten()
 
-        self.logger.xdebug(
-            "raw_offset:\n" + logging._array_msg(raw_offset.astype(np.int32))
-        )
         offset_scale = np.round(np.sqrt(np.abs(raw_offset))).astype(np.int16)
         offset = np.zeros(offset_scale.shape, dtype=offset_scale.dtype)
         pos_ind = offset_scale > 0
@@ -437,20 +447,40 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
     def _bso_arr(self):
         return np.concatenate([self._bias_arr(), self._scale_offset_arr()], axis=1)
 
+    def __add_const_zero_bias(self):
+        out_channels = self._output.shape[-1]
+        input_scale = self._input.quantization["scale"][0]
+        new_biases = self._op.subgraph.create_tensor(
+            f"{self._op.name}/const_zero_bias",
+            TensorType.INT32,
+            shape=(out_channels,),
+            consumers=[self._op],
+            quantization={
+                "scale": [
+                    input_scale * weight_scale
+                    for weight_scale in self._weights.quantization["scale"]
+                ],
+                "zero_point": [0] * out_channels,
+            },
+        )
+        new_biases.buffer.data = np.zeros(new_biases.shape, dtype=np.int32)
+        self._op.inputs.append(new_biases)
+
     def mutate_biases(self, op):
         with self.using(op):
-            subgraph = self._op.subgraph
+            try:
+                self._biases
+            except IndexError:
+                self.__add_const_zero_bias()
 
             # calculate the bias/scale/offset tensor
             bso = self._bso_arr()
 
             # create and populate new bias tensor
-            new_biases = subgraph.create_tensor(
+            new_biases = self._op.subgraph.create_tensor(
                 f"{self._op.name}/bias_shift_scale",
                 TensorType.INT16,
                 bso.shape,
-                isinput=self._biases in subgraph.inputs,
-                isoutput=self._biases in subgraph.outputs,
                 consumers=[self._op],
             )
             new_biases.buffer.data = bso

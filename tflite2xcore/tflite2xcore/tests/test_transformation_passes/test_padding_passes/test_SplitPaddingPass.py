@@ -8,6 +8,7 @@ from tflite2xcore.transformation_passes import SplitPaddingPass
 from tflite2xcore.xcore_schema import BuiltinOpCodes
 
 from ..model_builders import build_pad
+from . import test_non_matching_paddings
 from .conftest import (
     PARAMS,
     _test_non_matching_params,
@@ -20,13 +21,14 @@ from .conftest import (
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-PARAMS = update_params_with_paddings(
-    deepcopy(PARAMS),
-    is_matching=lambda padding: (
-        (padding[0] != [0, 0] or padding[3] != [0, 0])
-        and (padding[1] != [0, 0] or padding[2] != [0, 0])
-    ),
-)
+
+def is_matching(padding):
+    return (padding[0] != (0, 0) or padding[3] != (0, 0)) and (
+        padding[1] != (0, 0) or padding[2] != (0, 0)
+    )
+
+
+PARAMS = update_params_with_paddings(deepcopy(PARAMS), is_matching=is_matching)
 
 
 #  ----------------------------------------------------------------------------
@@ -57,7 +59,7 @@ def model(input_shape, paddings):
 def test_mutate(trf_pass, model):
     # extract original padding values
     subgraph = model.subgraphs[0]
-    params_ori = subgraph.operators[-1].inputs[1].numpy.tolist()
+    params_ori = subgraph.operators[-1].inputs[1].as_array()
 
     # run mutating pass
     trf_pass.run(model)
@@ -83,19 +85,21 @@ def test_mutate(trf_pass, model):
     assert op_NC.outputs[0] is op_HW.inputs[0]
 
     # check parameters
-    params_NC = op_NC.inputs[1].numpy.tolist()
-    params_HW = op_HW.inputs[1].numpy.tolist()
-    assert params_NC[1] == params_NC[2] == [0, 0]
-    assert params_HW[0] == params_HW[3] == [0, 0]
-    assert params_NC[0] == params_ori[0]
-    assert params_NC[3] == params_ori[3]
-    assert params_HW[1] == params_ori[1]
-    assert params_HW[2] == params_ori[2]
+    params_NC = op_NC.inputs[1].as_array()
+    assert params_NC[1][0] == params_NC[2][0] == 0
+    assert params_NC[1][1] == params_NC[2][1] == 0
+    assert params_NC[0][0] == params_ori[0][0]
+    assert params_NC[0][1] == params_ori[0][1]
+    assert params_NC[3][0] == params_ori[3][0]
+    assert params_NC[3][1] == params_ori[3][1]
 
-
-def test_non_matching_paddings(trf_pass, input_shape, non_matching_paddings):
-    model = build_pad(input_shape=input_shape, paddings=non_matching_paddings)
-    _test_non_matching_params(trf_pass, model)
+    params_HW = op_HW.inputs[1].as_array()
+    assert params_HW[0][0] == params_HW[3][0] == 0
+    assert params_HW[0][1] == params_HW[3][1] == 0
+    assert params_HW[1][0] == params_ori[1][0]
+    assert params_HW[1][1] == params_ori[1][1]
+    assert params_HW[2][0] == params_ori[2][0]
+    assert params_HW[2][1] == params_ori[2][1]
 
 
 if __name__ == "__main__":

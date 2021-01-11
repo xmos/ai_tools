@@ -1,64 +1,67 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import numbers
-
+import math
+import logging
 from abc import ABC, abstractmethod
 
-from tflite2xcore import xlogging as logging
+from tflite2xcore.utils import ACC_PERIOD_INT8
+
+MAX_THREADS = 5
+CHANNEL_GROUP_SIZE = ACC_PERIOD_INT8
 
 
-class ParPlan:
-    def __init__(self, num_threads, layout, cost):
+class ParallelizationPlan:
+    def __init__(
+        self, num_threads, *, cost, changrp_slices=None, rowcol_slices=None,
+    ):
         self.num_threads = num_threads
+        self.changrp_slices = changrp_slices  # should be a list of 2-tuples (start channel index, end channel index)
+        self.rowcol_slices = (
+            rowcol_slices  # should be a list of 4-tuples (top, left, rows, cols)
+        )
 
         if isinstance(cost, numbers.Number):
             self.cost = cost
         else:
             assert hasattr(cost, "__call__")
-            self.cost = cost(layout)
-        self.layout = layout  # should be a list of 4-tuples
+            self.cost = cost(self)
 
     def __repr__(self):
         return (
             f"{type(self).__name__} (num_threads={self.num_threads}, cost={self.cost})"
         )
 
-    def details(self):
-        return f"{repr(self)}, with layout {self.layout}"
+    def to_dict(self):
+        bits = {"th": self.num_threads}
+        if self.changrp_slices is not None:
+            bits["cg"] = self.changrp_slices
+        if self.rowcol_slices is not None:
+            bits["rc"] = self.rowcol_slices
+
+        return bits
 
 
 class ParallelizationPlanner(ABC):
-    MAX_THREADS = 5
-
     def __init__(self, *, num_threads, forced=False):
         assert isinstance(num_threads, int)
-        assert 0 < num_threads <= self.MAX_THREADS
+        assert 0 < num_threads <= MAX_THREADS
         self.logger = logging.getLogger(self.__class__.__name__)
-        if num_threads == 1:
-            self.logger.warning(f"initialized with 1 thread.")
         self.num_threads = num_threads
 
         self.forced = forced
-        self._candidate_plans = []  # should be a list of ParPlans
+        self._candidate_plans = []  # should be a list of ParallizationPlans
 
     @abstractmethod
     def create_n_thread_candidates(self, num_threads):
         pass
 
     @abstractmethod
-    def estimate_block_cost(self, y_start, x_start, y_width, x_width):
+    def estimate_plan_cost(self, plan):
         pass
 
-    @abstractmethod
-    def estimate_layout_cost(self, layout):
-        pass
-
-    def add_layout_candidate(self, *args):
-        self._candidate_plans.append(
-            ParPlan(  # pylint: disable=no-value-for-parameter
-                *args, cost=lambda layout: self.estimate_layout_cost(layout)
-            )
-        )
+    def add_candidate_plan(self, plan):
+        self._candidate_plans.append(plan)
 
     def create_candidate_plans(self):
         for n in range(self.num_threads):
@@ -69,6 +72,7 @@ class ParallelizationPlanner(ABC):
             self.create_candidate_plans()
 
         best_plan = min(self._candidate_plans, key=lambda plan: plan.cost)
+
         if best_plan.num_threads == self.num_threads:
             self.logger.debug(f"found best plan: {repr(best_plan)}")
             return best_plan
@@ -78,111 +82,150 @@ class ParallelizationPlanner(ABC):
                 for plan in self._candidate_plans
                 if plan.num_threads == self.num_threads
             ]
-            best_forced_plan = min(forced_candidates, key=lambda plan: plan.cost)
+            best_forced_plan = None
+            if forced_candidates:
+                best_forced_plan = min(forced_candidates, key=lambda plan: plan.cost)
 
         if self.forced:
+            if best_forced_plan:
+                self.logger.warning(
+                    f"forcing suboptimal plan {repr(best_forced_plan)} "
+                    f"when better alternative {repr(best_plan)} exists."
+                )
+                return best_forced_plan
+
             self.logger.warning(
-                f"forcing suboptimal plan {repr(best_forced_plan)} "
-                f"when better alternative {repr(best_plan)} exists."
+                f"no forced plan could be found, resolving to {repr(best_plan)}"
             )
-            return best_forced_plan
         else:
-            self.logger.info(
+            self.logger.debug(
                 f"replacing suboptimal plan {repr(best_forced_plan)} "
                 f"with better alternative {repr(best_plan)}."
             )
-            return best_plan
+        return best_plan
 
 
-class UnidirectionalSplitPlanner(ParallelizationPlanner):
-    def __init__(self, height, width, **kwargs):
+class ChannelGroupSlicePlanner(ParallelizationPlanner):
+    def __init__(self, Cout, **kwargs):
         super().__init__(**kwargs)
+        assert isinstance(Cout, int), f"received Cout={Cout} with type {type(Cout)}"
+        assert Cout > 0, f"received Cout={Cout}"
+        self.Cout = Cout
+
+    @staticmethod
+    def changrp_split_helper(num_channels):
+        changrps = []
+        num_changrps = math.ceil(num_channels / CHANNEL_GROUP_SIZE)
+        for i in range(num_changrps):
+            Cbegin = i * CHANNEL_GROUP_SIZE
+            Cend = min(Cbegin + CHANNEL_GROUP_SIZE - 1, num_channels - 1)
+            changrps.append([Cbegin, Cend])
+
+        return changrps
+
+    def estimate_plan_cost(self, plan):
+        def estimate_changrp_cost(changrp):
+            Cbegin, Cend = changrp
+            if Cend - Cbegin + 1 == CHANNEL_GROUP_SIZE:
+                return 1
+            else:
+                return 2  # NOTE: 2 might be a bit aggressive
+
+        return (
+            sum(estimate_changrp_cost(changrp) for changrp in plan.changrp_slices)
+            / plan.num_threads
+        )
+
+    def create_n_thread_candidates(self, num_threads):
+        changrps = ChannelGroupSlicePlanner.changrp_split_helper(self.Cout)
+        if len(changrps) >= num_threads:
+            self.logger.debug(
+                f"create_n_thread_candidates: num_threads={num_threads}, changrps={str(changrps)}"
+            )
+            self.add_candidate_plan(
+                ParallelizationPlan(
+                    num_threads,
+                    cost=lambda plan: self.estimate_plan_cost(plan),
+                    changrp_slices=changrps,
+                )
+            )
+
+
+class SlicePlanner(ParallelizationPlanner):
+    def __init__(self, Cout, height, width, **kwargs):
+        super().__init__(**kwargs)
+        assert isinstance(Cout, int), f"received Cout={Cout} with type {type(Cout)}"
+        assert Cout > 0, f"received Cout={Cout}"
         assert isinstance(
             height, int
         ), f"received height={height} with type {type(height)}"
         assert isinstance(width, int), f"received width={width} with type {type(width)}"
         assert height * width > 0, f"received height={height}, width={width}"
+        self.Cout = Cout
         self.height, self.width = height, width
 
-    _adjustments = {
-        1: lambda rem: [0],
-        2: lambda rem: [int(rem >= 1), 0],
-        3: lambda rem: [int(rem >= 1), 0, int(rem >= 2)],
-        4: lambda rem: [int(rem >= 1), int(rem == 3), 0, int(rem >= 2)],
-        5: lambda rem: [int(rem >= 1), int(rem >= 3), 0, int(rem >= 4), int(rem >= 2)],
-    }
+    @staticmethod
+    def unidir_split_helper(dim, num_threads):
+        adjustments = {
+            1: lambda rem: [0],
+            2: lambda rem: [int(rem >= 1), 0],
+            3: lambda rem: [int(rem >= 1), 0, int(rem >= 2)],
+            4: lambda rem: [int(rem >= 1), int(rem == 3), 0, int(rem >= 2)],
+            5: lambda rem: [
+                int(rem >= 1),
+                int(rem >= 3),
+                0,
+                int(rem >= 4),
+                int(rem >= 2),
+            ],
+        }
 
-    def unidir_split_helper(self, dim, num_threads):
         base, rem = dim // num_threads, dim % num_threads
-        block_lengths = [base + a for a in self._adjustments[num_threads](rem)]
+        block_lengths = [base + a for a in adjustments[num_threads](rem)]
         block_starts = [0]
         for j in range(num_threads - 1):
             block_starts.append(block_starts[j] + block_lengths[j])
         return block_starts, block_lengths
 
-    def unidir_width_layout(self, num_threads):
-        starts, widths = self.unidir_split_helper(self.width, num_threads)
-        return [(0, starts[j], self.height, widths[j]) for j in range(num_threads)]
+    def estimate_plan_cost(self, plan):
+        def estimate_changrp_cost(changrp):
+            Cbegin, Cend = changrp
+            if Cend - Cbegin + 1 == CHANNEL_GROUP_SIZE:
+                return 1
+            else:
+                return 2  # NOTE: 2 might be a bit aggressive
 
-    def unidir_height_layout(self, num_threads):
-        starts, heights = self.unidir_split_helper(self.height, num_threads)
-        return [(starts[j], 0, heights[j], self.width) for j in range(num_threads)]
+        def estimate_row_slice_cost(row_slice):
+            _, _, y_width, x_width = row_slice  # first two items are y_start, x_start
+            return y_width * x_width
+
+        cost = 0
+        for changrp_slice in plan.changrp_slices:
+            changrp_cost = estimate_changrp_cost(changrp_slice)
+            for row_slice in plan.rowcol_slices:
+                row_slice_cost = estimate_row_slice_cost(row_slice)
+            cost += changrp_cost * row_slice_cost
+
+        return cost
 
     def create_n_thread_candidates(self, num_threads):
-        self.add_layout_candidate(num_threads, self.unidir_width_layout(num_threads))
-        if num_threads > 1 and self.width != self.height:
-            self.add_layout_candidate(
-                num_threads, self.unidir_height_layout(num_threads)
+        starts, heights = SlicePlanner.unidir_split_helper(self.height, num_threads)
+
+        row_slices = [
+            [starts[j], 0, heights[j], self.width]
+            for j in range(num_threads)
+            if heights[j] > 0
+        ]
+        changrps = ChannelGroupSlicePlanner.changrp_split_helper(self.Cout)
+
+        self.logger.debug(
+            f"create_n_thread_candidates: num_threads={num_threads}, changrps={str(changrps)}, row_slices={str(row_slices)}"
+        )
+        self.add_candidate_plan(
+            ParallelizationPlan(
+                num_threads,
+                cost=lambda plan: self.estimate_plan_cost(plan),
+                changrp_slices=changrps,
+                rowcol_slices=row_slices,
             )
-
-
-# TODO: write tests for this
-class GenericConv2DPlanner(UnidirectionalSplitPlanner):
-    def estimate_block_cost(self, y_start, x_start, y_width, x_width):
-        return y_width * x_width
-
-    def estimate_layout_cost(self, layout):
-        return max(self.estimate_block_cost(*block) for block in layout)
-
-    def create_n_thread_candidates(self, num_threads):
-        self.add_layout_candidate(num_threads, self.unidir_height_layout(num_threads))
-
-
-# TODO: remove this
-class DIDOConv2DPlanner(UnidirectionalSplitPlanner):
-    def __init__(self, height, width, *, padding="VALID", **kwargs):
-        super().__init__(height, width, **kwargs)
-        assert padding in ["VALID", "SAME"]
-        self.padding = padding  # TODO: currently unused
-
-    def estimate_block_cost(self, y_start, x_start, y_width, x_width):
-        return y_width * x_width
-
-    def estimate_layout_cost(self, layout):
-        return max(self.estimate_block_cost(*block) for block in layout)
-
-    def create_n_thread_candidates(self, num_threads):
-        super().create_n_thread_candidates(num_threads)
-        if num_threads == 3:
-            # TODO: implement me
-            # idea: one wide block with three edges and two corner blocks
-            # do this with both horizontal and vertical orientation
-            pass
-        if num_threads == 4:
-            # split into approximate quarters
-            bh, bw = self.height // 2, self.width // 2  # block heights and widths
-            rh, rw = self.height % 2, self.width % 2
-            layout = [
-                (0, 0, bh, bw),
-                (0, bw, bh, bw + rw),
-                (bh, 0, bh + rh, bw),
-                (bh, bw, bh + rh, bw + rw),
-            ]
-            self.add_layout_candidate(num_threads, layout)
-        if num_threads == 5:
-            # TODO: implement me
-            # idea: two blocks on opposite ends, each with two corners and three edges
-            #       then two blocks between these, each with one edge
-            #       and one block without any edges
-            # do this with both horizontal and vertical orientation
-            pass
+        )

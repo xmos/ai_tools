@@ -1,0 +1,163 @@
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# RANDOMLY GENERATED CONFIGS, MODIFY AT OWN RISK
+default:
+  0:
+    channels: 48
+    height: 4
+    pad_b: 0
+    pad_l: 2
+    pad_r: 0
+    pad_t: 0
+    width: 1
+  1:
+    channels: 48
+    height: 5
+    pad_b: 2
+    pad_l: 0
+    pad_r: 0
+    pad_t: 1
+    width: 1
+  2:
+    channels: 64
+    height: 15
+    pad_b: 0
+    pad_l: 1
+    pad_r: 0
+    pad_t: 0
+    width: 8
+  3:
+    channels: 52
+    height: 5
+    pad_b: 2
+    pad_l: 2
+    pad_r: 2
+    pad_t: 0
+    width: 7
+  4:
+    channels: 64
+    height: 8
+    pad_b: 0
+    pad_l: 1
+    pad_r: 1
+    pad_t: 1
+    width: 4
+  5:
+    channels: 32
+    height: 1
+    pad_b: 2
+    pad_l: 2
+    pad_r: 0
+    pad_t: 1
+    width: 4
+  6:
+    channels: 8
+    height: 1
+    pad_b: 2
+    pad_l: 2
+    pad_r: 2
+    pad_t: 1
+    width: 8
+  7:
+    channels: 12
+    height: 5
+    pad_b: 1
+    pad_l: 1
+    pad_r: 2
+    pad_t: 2
+    width: 20
+  8:
+    channels: 32
+    height: 15
+    pad_b: 1
+    pad_l: 0
+    pad_r: 1
+    pad_t: 2
+    width: 8
+  9:
+    channels: 16
+    height: 8
+    pad_b: 2
+    pad_l: 0
+    pad_r: 2
+    pad_t: 2
+    width: 7
+  10:
+    channels: 16
+    height: 15
+    pad_b: 2
+    pad_l: 1
+    pad_r: 2
+    pad_t: 0
+    width: 4
+  11:
+    channels: 64
+    height: 1
+    pad_b: 1
+    pad_l: 1
+    pad_r: 2
+    pad_t: 2
+    width: 8
+  12:
+    channels: 28
+    height: 12
+    pad_b: 1
+    pad_l: 0
+    pad_r: 0
+    pad_t: 0
+    width: 1
+  13:
+    channels: 8
+    height: 4
+    pad_b: 0
+    pad_l: 2
+    pad_r: 2
+    pad_t: 0
+    width: 20
+  14:
+    channels: 48
+    height: 12
+    pad_b: 1
+    pad_l: 2
+    pad_r: 1
+    pad_t: 1
+    width: 20
+  15:
+    channels: 12
+    height: 15
+    pad_b: 0
+    pad_l: 0
+    pad_r: 1
+    pad_t: 2
+    width: 20
+  16:
+    channels: 28
+    height: 4
+    pad_b: 1
+    pad_l: 2
+    pad_r: 1
+    pad_t: 1
+    width: 14
+  17:
+    channels: 4
+    height: 8
+    pad_b: 0
+    pad_l: 1
+    pad_r: 0
+    pad_t: 1
+    width: 14
+  18:
+    channels: 12
+    height: 8
+    pad_b: 2
+    pad_l: 0
+    pad_r: 1
+    pad_t: 2
+    width: 7
+  19:
+    channels: 4
+    height: 1
+    pad_b: 1
+    pad_l: 0
+    pad_r: 0
+    pad_t: 2
+    width: 1

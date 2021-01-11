@@ -2,13 +2,20 @@
 
 import pytest
 import itertools
-
+from typing import Tuple
 from copy import deepcopy
 
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import XCOREOpCodes
 from tflite2xcore.transformation_passes import ReplaceGlobalAveragePool2DPass
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import build_mean
-from .conftest import PARAMS, test_matching_params, _test_non_matching_params
+from .conftest import (
+    PARAMS,
+    test_matching_params,
+    _test_non_matching_params,
+    _test_replace_mutate as _test_mutate,
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -17,7 +24,7 @@ from .conftest import PARAMS, test_matching_params, _test_non_matching_params
 
 PARAMS = deepcopy(PARAMS)
 
-PARAMS["default"].update({"reduction_dims": [(1, 2)]})
+PARAMS["default"].update({"reduction_dims": [(1, 2), (2, 1)]})
 PARAMS["default"].update(
     {
         "non_matching_reduction_dims": [
@@ -52,12 +59,14 @@ PARAMS["smoke"].update(
 
 
 @pytest.fixture()
-def trf_pass():
+def trf_pass() -> ReplaceGlobalAveragePool2DPass:
     return ReplaceGlobalAveragePool2DPass()
 
 
 @pytest.fixture()
-def model(input_shape, reduction_dims):
+def model(
+    input_shape: Tuple[int, int, int], reduction_dims: Tuple[int, int]
+) -> XCOREModel:
     return build_mean(input_shape=input_shape, reduction_dims=reduction_dims)
 
 
@@ -66,17 +75,30 @@ def model(input_shape, reduction_dims):
 #  ----------------------------------------------------------------------------
 
 
+def test_mutate(trf_pass: ReplaceGlobalAveragePool2DPass, model: XCOREModel) -> None:
+    _test_mutate(trf_pass, model, new_opcode=XCOREOpCodes.XC_avgpool2d_global)
+
+    # check bias/scale/offset tensor
+    op = model.subgraphs[0].operators[-1]
+    assert op.inputs[1].shape == (7,)
+
+
 def test_non_matching_input_channels(
-    trf_pass, input_size, non_matching_input_channels, reduction_dims
-):
+    trf_pass: ReplaceGlobalAveragePool2DPass,
+    input_size: Tuple[int, int],
+    non_matching_input_channels: int,
+    reduction_dims: Tuple[int, int],
+) -> None:
     input_shape = (*input_size, non_matching_input_channels)
     model = build_mean(input_shape=input_shape, reduction_dims=reduction_dims)
     _test_non_matching_params(trf_pass, model)
 
 
 def test_non_matching_reduction_dims(
-    trf_pass, input_shape, non_matching_reduction_dims
-):
+    trf_pass: ReplaceGlobalAveragePool2DPass,
+    input_shape: Tuple[int, int, int],
+    non_matching_reduction_dims: Tuple[int, ...],
+) -> None:
     model = build_mean(
         input_shape=input_shape, reduction_dims=non_matching_reduction_dims
     )

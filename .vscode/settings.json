@@ -1,0 +1,25 @@
+{
+    "files.watcherExclude": {
+        "**/.git/**": true,
+        "**/.ipynb_checkpoints/**": true,
+        "**/__pycache__/**": true,
+        "**/.pytest_cache/**": true,
+        "**/*.egg-info/**": true,
+        "**/ai_tools_venv/**": true,
+        "**/ai_tools_gpu_venv/**": true,
+        "**/.venv/**": true,
+        "**/.build/**": true,
+        "**/.lock*": true,
+        "**/build/**": true,
+        "**/bin/**": true,
+    },
+    "python.linting.pylintEnabled": true,
+    "python.linting.mypyArgs": [
+        "--config-file=${workspaceFolder}/mypy.ini"
+    ],
+    "editor.formatOnSave": true,
+    "python.formatting.provider": "black",
+    "terminal.integrated.inheritEnv": false,
+    "C_Cpp.clang_format_style": "Google",
+    "C_Cpp.clang_format_fallbackStyle": "Google"
+}

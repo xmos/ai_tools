@@ -19,19 +19,21 @@ from typing import (
     Optional,
 )
 
-from tflite2xcore.utils import unpack_bits  # type: ignore # TODO: fix this
-from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
+from tflite2xcore.utils import get_bitpacked_shape, unpack_bits  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_schema import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation import (
     TFLiteModel,
     ModelGenerator,
 )
 from tflite2xcore.model_generation.runners import Runner
 from tflite2xcore.model_generation.evaluators import (
+    LarqEvaluator,
     TFLiteEvaluator,
     TFLiteQuantEvaluator,
     XCoreEvaluator,
 )
 from tflite2xcore.model_generation.converters import (
+    LarqConverter,
     TFLiteFloatConverter,
     TFLiteQuantConverter,
     XCoreConverter,
@@ -232,6 +234,64 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
                 "xcore_output": self.outputs.xcore,
             },
             example_idx=example_idx,
+        )
+
+
+class BinarizedTestRunner(IntegrationTestRunner):
+    class OutputData(NamedTuple):
+        reference_quant: np.ndarray
+        xcore: np.ndarray
+
+    def __init__(
+        self,
+        generator: Type["IntegrationTestModelGenerator"],
+        *,
+        use_device: bool = False,
+    ) -> None:
+        super().__init__(generator, use_device=use_device)
+
+        self._lce_converter = self.make_lce_converter()
+        self.register_converter(self._lce_converter)
+
+        self._lce_evaluator = LarqEvaluator(
+            self, self.get_representative_data, self._lce_converter.get_converted_model
+        )
+        self.register_evaluator(self._lce_evaluator)
+
+    def get_xcore_evaluation_data(self) -> Union[np.ndarray, tf.Tensor]:
+        return self.get_representative_data()
+
+    def make_lce_converter(self) -> LarqConverter:
+        return LarqConverter(self, self.get_built_model)
+
+    def make_repr_data_factory(self) -> InputInitializerDataFactory:
+        return InputInitializerDataFactory(
+            self,
+            lambda: get_bitpacked_shape(self._model_generator.input_shape),
+            dtype=tf.int32,
+        )
+
+    def get_xcore_reference_model(self) -> TFLiteModel:
+        return self._lce_converter.get_converted_model()
+
+    def run(self) -> None:
+        super().run()
+        self._lce_converter.convert()
+        self._lce_evaluator.evaluate()
+
+        self.rerun_post_cache()
+
+    def rerun_post_cache(self) -> None:
+        super().rerun_post_cache()
+
+        self.outputs = self.OutputData(
+            self._lce_evaluator.output_data, self._xcore_evaluator.output_data,
+        )
+        self.converted_models.update(
+            {
+                "reference_lce": self._lce_converter._model,
+                "xcore": self._xcore_converter._model,
+            }
         )
 
 

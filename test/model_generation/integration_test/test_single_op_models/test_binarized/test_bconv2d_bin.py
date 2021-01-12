@@ -10,7 +10,7 @@ from tflite2xcore.model_generation import Configuration
 from . import (
     BinarizedTestRunner,
     BConv2dGenericTestModelGenerator,
-    LarqConverter,
+    LarqSingleOpConverter,
 )
 
 from . import (  # pylint: disable=unused-import
@@ -66,8 +66,8 @@ GENERATOR = BConv2dBitpackedTestModelGenerator
 
 
 class BConv2dBitpackedTestRunner(BinarizedTestRunner):
-    def make_lce_converter(self) -> LarqConverter:
-        return LarqConverter(
+    def make_lce_converter(self) -> LarqSingleOpConverter:
+        return LarqSingleOpConverter(
             self, self.get_built_model, strip=True, remove_last_op=True
         )
 

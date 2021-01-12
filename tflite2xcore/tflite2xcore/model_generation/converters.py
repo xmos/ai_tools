@@ -1,6 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import tensorflow as tf
+import larq_compute_engine as lce
 from abc import abstractmethod
 from typing import Union
 
@@ -97,3 +98,15 @@ class XCoreConverter(Converter):
         model = XCOREModel.deserialize(self._input_model_hook())
         optimize_for_xcore(model, num_threads=self._config["num_threads"])
         self._model = model.serialize()
+
+
+class LarqConverter(KerasModelConverter):
+    """ Converts a Larq model to a TFLite model. """
+
+    def convert(self) -> None:
+        self._model = lce.convert_keras_model(
+            self._input_model_hook(),
+            inference_input_type=tf.int8,
+            inference_output_type=tf.int8,
+            experimental_enable_bitpacked_activations=True,
+        )

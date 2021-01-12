@@ -7,6 +7,7 @@ import tensorflow as tf
 import larq_compute_engine as lce
 from typing import Optional, Tuple, Type, Any, Union, NamedTuple
 
+from tflite2xcore.utils import get_bitpacked_shape  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
     Tensor,
     ExternalOpCodes,
@@ -182,3 +183,17 @@ class LarqSingleOpConverter(LarqConverter):
         model_ir.buffers = [b] + model_ir.buffers
 
         self._model = model_ir.serialize()
+
+
+#  ----------------------------------------------------------------------------
+#                                   CONVERTERS
+#  ----------------------------------------------------------------------------
+
+
+class BinarizedSingleOpRunner(BinarizedTestRunner):
+    def make_repr_data_factory(self) -> InputInitializerDataFactory:
+        return InputInitializerDataFactory(
+            self,
+            lambda: get_bitpacked_shape(self._model_generator.input_shape),
+            dtype=tf.int32,
+        )

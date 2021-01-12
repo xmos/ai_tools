@@ -19,7 +19,7 @@ from typing import (
     Optional,
 )
 
-from tflite2xcore.utils import get_bitpacked_shape, unpack_bits  # type: ignore # TODO: fix this
+from tflite2xcore.utils import unpack_bits  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import XCOREModel  # type: ignore # TODO: fix this
 from tflite2xcore.model_generation import (
     TFLiteModel,
@@ -263,13 +263,6 @@ class BinarizedTestRunner(IntegrationTestRunner):
 
     def make_lce_converter(self) -> LarqConverter:
         return LarqConverter(self, self.get_built_model)
-
-    def make_repr_data_factory(self) -> InputInitializerDataFactory:
-        return InputInitializerDataFactory(
-            self,
-            lambda: get_bitpacked_shape(self._model_generator.input_shape),
-            dtype=tf.int32,
-        )
 
     def get_xcore_reference_model(self) -> TFLiteModel:
         return self._lce_converter.get_converted_model()

@@ -8,7 +8,7 @@ from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes  # type: ign
 from tflite2xcore.model_generation import Configuration
 
 from . import (
-    BinarizedTestRunner,
+    BinarizedSingleOpRunner,
     BConv2dGenericTestModelGenerator,
     LarqSingleOpConverter,
 )
@@ -65,7 +65,7 @@ GENERATOR = BConv2dBitpackedTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-class BConv2dBitpackedTestRunner(BinarizedTestRunner):
+class BConv2dBitpackedTestRunner(BinarizedSingleOpRunner):
     def make_lce_converter(self) -> LarqSingleOpConverter:
         return LarqSingleOpConverter(
             self, self.get_built_model, strip=True, remove_last_op=True

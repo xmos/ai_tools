@@ -100,7 +100,7 @@ def MobileNet(*args: Any, **kwargs: Any) -> tf.keras.Model:
 #  ----------------------------------------------------------------------------
 
 
-class MobileNetV1Model(IntegrationTestModelGenerator):
+class MobileNetV1ModelGenerator(IntegrationTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         self._config["input_size"] = cfg.pop("input_size")
         self._config["alpha"] = cfg.pop("alpha")
@@ -113,7 +113,7 @@ class MobileNetV1Model(IntegrationTestModelGenerator):
         )
 
 
-GENERATOR = MobileNetV1Model
+GENERATOR = MobileNetV1ModelGenerator
 
 #  ----------------------------------------------------------------------------
 #                                   CONFIGS

@@ -9,7 +9,7 @@ from tflite2xcore.model_generation import Configuration
 from tflite2xcore.model_generation.data_factories import InputInitializerDataFactory
 
 from . import (
-    BinarizedTestRunner,
+    BinarizedSingleOpRunner,
     LarqCompositeTestModelGenerator,
     LarqSingleOpConverter,
 )
@@ -42,7 +42,7 @@ GENERATOR = BSignTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-class BSignTestRunner(BinarizedTestRunner):
+class BSignTestRunner(BinarizedSingleOpRunner):
     def make_lce_converter(self) -> LarqSingleOpConverter:
         return LarqSingleOpConverter(self, self.get_built_model, remove_last_op=True)
 

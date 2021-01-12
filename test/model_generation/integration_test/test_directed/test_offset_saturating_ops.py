@@ -18,7 +18,7 @@ from . import (  # pylint: disable=unused-import
 #  ----------------------------------------------------------------------------
 
 
-class OffsetSaturatingModel(IntegrationTestModelGenerator):
+class OffsetSaturatingModelGenerator(IntegrationTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         self._config["layers"] = cfg.pop("layers")
         super()._set_config(cfg)
@@ -33,7 +33,7 @@ class OffsetSaturatingModel(IntegrationTestModelGenerator):
         )
 
 
-GENERATOR = OffsetSaturatingModel
+GENERATOR = OffsetSaturatingModelGenerator
 
 #  ----------------------------------------------------------------------------
 #                                   CONFIGS

@@ -5,7 +5,8 @@ import tensorflow as tf
 
 from tflite2xcore.model_generation import Configuration
 
-from . import IntegrationTestModelGenerator, MobileNet
+from .test_mobilenet_v1 import MobileNet
+from . import IntegrationTestModelGenerator
 from . import (  # pylint: disable=unused-import
     test_output,
     test_idempotence,

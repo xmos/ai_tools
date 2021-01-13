@@ -207,6 +207,10 @@ class XCOREModel(_IRObject):
             for metadataT in modelT.metadata or []
         }
 
+        # check that buffer 0 is empty
+        if modelT.buffers[0].data:
+            logging.warning("Non-empty buffer 0 in flatbuffer!")
+
         # create all non-metadata buffers
         buffer_map = {
             idx: Buffer(model, bufferT.data)
@@ -346,9 +350,14 @@ class XCOREModel(_IRObject):
             modelT.buffers.append(bufferT)
             return len(modelT.buffers) - 1
 
+        # check that buffer 0 is empty
+        if self.buffers[0]:
+            logging.warning("Non-empty buffer 0 in model!")
+
         # create tensor buffers
+        buffer_idx_map: Dict[Buffer, int] = {}
         for buffer in self.buffers:
-            create_buffer_from_container(buffer)
+            buffer_idx_map[buffer] = create_buffer_from_container(buffer)
 
         # create metadata and their buffers
         modelT.metadata = []
@@ -386,9 +395,7 @@ class XCOREModel(_IRObject):
                 tensorT = schema.TensorT()  # type: ignore
                 tensorT.name = tensor.name
                 tensorT.shape = tensor.shape
-                tensorT.buffer = self.buffers.index(
-                    tensor.buffer
-                )  # TODO: do this better
+                tensorT.buffer = buffer_idx_map[tensor.buffer]
                 tensorT.type = tensor.type.value
                 if tensor.quantization:
                     tensorT.quantization = dict_to_quantization(tensor.quantization)

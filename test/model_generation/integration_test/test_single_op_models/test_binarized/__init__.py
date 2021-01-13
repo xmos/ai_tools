@@ -19,6 +19,7 @@ from tflite2xcore.pass_manager import PassManager  # type: ignore # TODO: fix th
 from tflite2xcore.transformation_passes import (  # type: ignore # TODO: fix this
     CanonicalizeLceQuantizedInputPass,
     CanonicalizeLceQuantizedOutputPass,
+    UnifyEmptyBuffersPass,
 )
 from tflite2xcore.transformation_passes.transformation_passes import (  # type: ignore # TODO: fix this
     OutputTensorMatchingPass,
@@ -175,15 +176,11 @@ class LarqConverter(KerasModelConverter):
             pass_mgr.register_pass(CanonicalizeLceQuantizedOutputPass())
         if self._remove_last_op:
             pass_mgr.register_pass(RemoveSingleOutputOperatorPass())
+
+        pass_mgr.register_pass(UnifyEmptyBuffersPass())
         pass_mgr.register_passes(CleanupManager())
 
         pass_mgr.run_passes()
-
-        # TODO: fix this in serialization
-        # LCE and builtin interpreter expects an empty buffer in the beginning
-        b = Buffer(model_ir)
-        model_ir.buffers.remove(b)
-        model_ir.buffers = [b, *model_ir.buffers]
 
         self._model = model_ir.serialize()
 

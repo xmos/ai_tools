@@ -38,7 +38,10 @@ from tflite2xcore.model_generation.converters import (
     TFLiteQuantConverter,
     XCoreConverter,
 )
-from tflite2xcore.model_generation.data_factories import InputInitializerDataFactory
+from tflite2xcore.model_generation.data_factories import (
+    TensorDataFactory,
+    InputInitializerDataFactory,
+)
 from xcore_interpreters import (  # type: ignore # TODO: fix this
     ModelSizeError,
     ArenaSizeError,
@@ -86,7 +89,7 @@ class IntegrationTestRunner(Runner):
     def get_xcore_reference_model(self) -> TFLiteModel:
         raise NotImplementedError()
 
-    def make_repr_data_factory(self) -> InputInitializerDataFactory:
+    def make_repr_data_factory(self) -> TensorDataFactory:
         # representative data (e.g. for quantization and test)
         return InputInitializerDataFactory(
             self, lambda: self._model_generator.input_shape

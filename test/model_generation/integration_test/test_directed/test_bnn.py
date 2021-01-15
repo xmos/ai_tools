@@ -1,14 +1,10 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-import larq
 import logging
 import tensorflow as tf
-import numpy as np
 from pathlib import Path
-from typing import Optional, Tuple, Any, Union
-from tensorflow.python.keras.utils import data_utils
-
+from typing import Optional
 from tflite2xcore.utils import LoggingContext  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
     XCOREModel,
@@ -17,7 +13,6 @@ from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
     OperatorCode,
     TensorType,
 )
-from tflite2xcore.model_generation import Configuration
 from tflite2xcore.model_generation.data_factories import TensorDataFactory
 
 from . import IntegrationTestModelGenerator, BinarizedTestRunner
@@ -72,9 +67,8 @@ RUNNER = CIFAR10BinarizedTestRunner
 #                                   CONFIGS
 #  ----------------------------------------------------------------------------
 
-# TODO: fix this
 CONFIGS = {
-    "default": {0: {}},
+    "default": {0: {"skip_on_device": False}},
 }
 
 

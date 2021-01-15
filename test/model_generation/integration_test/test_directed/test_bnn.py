@@ -1,9 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-
-pytestmark = pytest.mark.skip
-
 import larq
 import logging
 import tensorflow as tf
@@ -27,7 +24,7 @@ from . import IntegrationTestModelGenerator, BinarizedTestRunner
 
 from . import (  # pylint: disable=unused-import
     test_idempotence,
-    test_output,
+    #test_output,  # TODO: enable this
 )
 
 
@@ -54,8 +51,8 @@ GENERATOR = BNNModelGenerator
 
 class CIFAR10DataFactory(TensorDataFactory):
     def make_data(self, batch: Optional[int] = None) -> tf.Tensor:
-        (train_images, _), (test_images, _) = tf.keras.datasets.cifar10.load_data()
-        return tf.cast(train_images - 128.0, tf.int8)[:batch]
+        _, (test_images, _) = tf.keras.datasets.cifar10.load_data()
+        return tf.cast(test_images - 128.0, tf.int8)[:batch]
 
 
 #  ----------------------------------------------------------------------------
@@ -96,40 +93,41 @@ def abs_output_tolerance() -> int:
 #  ----------------------------------------------------------------------------
 
 
-# def test_converted_model(xcore_model: XCOREModel) -> None:
-#     subgraph = xcore_model.subgraphs[0]
+def test_converted_model(xcore_model: XCOREModel) -> None:
+    subgraph = xcore_model.subgraphs[0]
 
-# # check tensors
-# assert len(subgraph.tensors) == 90
+    # check tensors
+    assert len(subgraph.tensors) == 22
 
-# assert len(subgraph.inputs) == 1
-# input_tensor = subgraph.inputs[0]
-# assert input_tensor.type is TensorType.INT8
-# input_shape = input_tensor.shape
-# assert len(input_shape) == 4
-# assert input_shape[0] == 1
-# assert input_shape[3] == 3
+    assert len(subgraph.inputs) == 1
+    input_tensor = subgraph.inputs[0]
+    assert input_tensor.type is TensorType.INT8
+    input_shape = input_tensor.shape
+    assert len(input_shape) == 4
+    assert input_shape[0] == 1
+    assert input_shape[3] == 3
 
-# assert len(subgraph.outputs) == 1
-# output_tensor = subgraph.outputs[0]
-# assert output_tensor.type is TensorType.INT8
-# assert output_tensor.shape == (1, 1000)
+    assert len(subgraph.outputs) == 1
+    output_tensor = subgraph.outputs[0]
+    assert output_tensor.type is TensorType.INT8
+    assert output_tensor.shape == (1, 10)
 
-# # check operators
-# assert len(subgraph.operators) == 31
+    # check operators
+    assert len(subgraph.operators) == 9
 
-# # check only first op
-# assert len(input_tensor.consumers) == 1
-# assert input_tensor.consumers[0].operator_code.code is BuiltinOpCodes.PAD
+    # check only first op
+    assert len(input_tensor.consumers) == 1
+    assert input_tensor.consumers[0].operator_code.code is BuiltinOpCodes.PAD
 
-# opcode_cnt = xcore_model.count_operator_codes()
-# assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_1x1)] == 13
-# assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_depthwise)] == 13
-# assert opcode_cnt[OperatorCode(BuiltinOpCodes.PAD)] == 1
-# assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_shallowin)] == 1
-# assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_avgpool2d_global)] == 1
-# assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_fc)] == 1
-# assert opcode_cnt[OperatorCode(BuiltinOpCodes.SOFTMAX, version=2)] == 1
+    opcode_cnt = xcore_model.count_operator_codes()
+    assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_bsign_8)] == 1
+    assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_bconv2d_bin)] == 1
+    assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_bconv2d_int8)] == 1
+    assert opcode_cnt[OperatorCode(BuiltinOpCodes.PAD)] == 1
+    assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_shallowin)] == 1
+    assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_pad)] == 2
+    assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_fc)] == 1
+    assert opcode_cnt[OperatorCode(BuiltinOpCodes.SOFTMAX, version=2)] == 1
 
 
 if __name__ == "__main__":

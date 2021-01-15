@@ -1,36 +1,14 @@
 workspace(name = "xcore_mlir_experiment")
 
-
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-# To update TensorFlow to a new revision.
-# 1. Update the git hash in the urls and the 'strip_prefix' parameter.
-# 2. Get the sha256 hash of the archive with a command such as...
-#    curl -L https://github.com/tensorflow/tensorflow/archive/<git hash>.tar.gz | shasum -a 256
-#    and update the 'sha256' arg with the result.
-# 3. Request the new archive to be mirrored on mirror.bazel.build for more
-#    reliable downloads.
-#http_archive(
-#    name = "org_tensorflow",
-#    sha256 = "26c833b7e1873936379e810a39d14700281125257ddda8cd822c89111db6f6ae",
-#    strip_prefix = "tensorflow-2.4.0",
-#    urls = [
-#        "https://github.com/tensorflow/tensorflow/archive/v2.4.0.tar.gz",
-#    ],
-#)
-
-# TODO symlinks? or move WORKSPACE up to top level...
 local_repository(
+
     name = "org_tensorflow",
+
     path = "./third_party/tensorflow",
+
 )
 
-
-
-# The remainder of this file is derived from (and should be kept in sync with)
-# the TensorFlow WORKSPACE file, with the remote caching/execution and
-# `py_toolchain` configuration removed:
-# https://github.com/tensorflow/tensorflow/blob/master/WORKSPACE
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "io_bazel_rules_closure",
@@ -44,40 +22,101 @@ http_archive(
 
 # Load tf_repositories() before loading dependencies for other repository so
 # that dependencies like com_google_protobuf won't be overridden.
-load("@org_tensorflow//tensorflow:workspace.bzl", "tf_bind", "tf_repositories")
-
+load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")
 # Please add all new TensorFlow dependencies in workspace.bzl.
 tf_repositories()
+
+register_toolchains("@local_config_python//:py_toolchain")
 
 load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
 
 closure_repositories()
 
+load("@org_tensorflow//third_party/toolchains/preconfig/generate:archives.bzl",
+     "bazel_toolchains_archive")
+
+bazel_toolchains_archive()
+
+load(
+    "@bazel_toolchains//repositories:repositories.bzl",
+    bazel_toolchains_repositories = "repositories",
+)
+
+bazel_toolchains_repositories()
+
 # Use `swift_rules_dependencies` to fetch the toolchains. With the
 # `git_repository` rules above, the following call will skip redefining them.
 load("@build_bazel_rules_swift//swift:repositories.bzl", "swift_rules_dependencies")
-
 swift_rules_dependencies()
 
 # We must check the bazel version before trying to parse any other BUILD
 # files, in case the parsing of those build files depends on the bazel
 # version we require here.
 load("@org_tensorflow//tensorflow:version_check.bzl", "check_bazel_version_at_least")
-
-# Keep in sync with `.bazelversion`.
-check_bazel_version_at_least("3.0.0")
+check_bazel_version_at_least("1.0.0")
 
 load("@org_tensorflow//third_party/android:android_configure.bzl", "android_configure")
-
-android_configure(name = "local_config_android")
-
+android_configure(name="local_config_android")
 load("@local_config_android//:android.bzl", "android_workspace")
-
 android_workspace()
 
 # If a target is bound twice, the later one wins, so we have to do tf bindings
 # at the end of the WORKSPACE file.
+load("@org_tensorflow//tensorflow:workspace.bzl", "tf_bind")
 tf_bind()
+
+http_archive(
+    name = "inception_v1",
+    build_file = "//:models.BUILD",
+    sha256 = "7efe12a8363f09bc24d7b7a450304a15655a57a7751929b2c1593a71183bb105",
+    urls = [
+        "https://storage.googleapis.com/download.tensorflow.org/models/inception_v1.zip",
+    ],
+)
+
+http_archive(
+    name = "mobile_ssd",
+    build_file = "//:models.BUILD",
+    sha256 = "bddd81ea5c80a97adfac1c9f770e6f55cbafd7cce4d3bbe15fbeb041e6b8f3e8",
+    urls = [
+        "https://storage.googleapis.com/download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_android_export.zip",
+    ],
+)
+
+http_archive(
+    name = "mobile_multibox",
+    build_file = "//:models.BUILD",
+    sha256 = "859edcddf84dddb974c36c36cfc1f74555148e9c9213dedacf1d6b613ad52b96",
+    urls = [
+        "https://storage.googleapis.com/download.tensorflow.org/models/mobile_multibox_v1a.zip",
+    ],
+)
+
+http_archive(
+    name = "stylize",
+    build_file = "//:models.BUILD",
+    sha256 = "3d374a730aef330424a356a8d4f04d8a54277c425e274ecb7d9c83aa912c6bfa",
+    urls = [
+        "https://storage.googleapis.com/download.tensorflow.org/models/stylize_v1.zip",
+    ],
+)
+
+http_archive(
+    name = "speech_commands",
+    build_file = "//:models.BUILD",
+    sha256 = "c3ec4fea3158eb111f1d932336351edfe8bd515bb6e87aad4f25dbad0a600d0c",
+    urls = [
+        "https://storage.googleapis.com/download.tensorflow.org/models/speech_commands_v0.01.zip",
+    ],
+)
+
+http_archive(
+    name = "person_detect_data",
+    sha256 = "170542270da256994ce24d1e357f6e84a54fdaf7d28ff2b74725a40b70b082cf",
+    urls = [
+        "https://storage.googleapis.com/download.tensorflow.org/data/tf_lite_micro_person_data_grayscale_2020_05_24.zip",
+    ],
+)
 
 # Required for dependency @com_github_grpc_grpc
 
@@ -106,3 +145,5 @@ bazel_version_repository(name = "bazel_version")
 load("@org_tensorflow//third_party/googleapis:repository_rules.bzl", "config_googleapis")
 
 config_googleapis()
+
+

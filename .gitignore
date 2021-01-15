@@ -22,6 +22,10 @@ _build
 *.o
 *.so*
 *.dylib
+/.bazelrc.user
+/.tf_configure.bazelrc
+/bazel-*
+/bazel_pip
 
 # Test cruft
 **/.pytest_cache/*

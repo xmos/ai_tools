@@ -186,7 +186,7 @@ class ReplaceGlobalAveragePool2DPass(ReplaceQuantizedOperatorPass):
                 consumers=[new_op],
             )
             new_op.inputs[1].buffer.data = b"".join(
-                p.tostring() for p in self._bias_scale_shift
+                p.tobytes() for p in self._bias_scale_shift
             )
 
         return new_op

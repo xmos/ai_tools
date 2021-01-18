@@ -226,7 +226,7 @@ def unpack_bits(arr: np.ndarray) -> np.ndarray:
     assert arr.dtype == np.int32
     unpacked_shape = (*arr.shape[:-1], arr.shape[-1] * WORD_SIZE_BITS)
     return np.unpackbits(  # pylint: disable=no-member
-        np.frombuffer(arr.tostring(), dtype=np.uint8)
+        np.frombuffer(arr.tobytes(), dtype=np.uint8)
     ).reshape(unpacked_shape)
 
 

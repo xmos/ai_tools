@@ -50,6 +50,8 @@ from ..test_conv2d import Conv2dWordAlignedTestModelGenerator
 
 class LarqCompositeTestModelGenerator(Conv2dWordAlignedTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
+        self._config["activation"] = cfg.pop("activation", "linear")
+
         self._config["output_range"] = cfg.pop("output_range", (-3, 3))
 
         self._config["input_range"] = input_range = cfg.pop("input_range")
@@ -62,6 +64,8 @@ class LarqCompositeTestModelGenerator(Conv2dWordAlignedTestModelGenerator):
 
     def check_config(self) -> None:
         super().check_config()
+
+        assert self._config["activation"] in ("linear", "relu", "relu6")
 
         input_range = self._config["input_range"]
         assert len(input_range) == 2
@@ -85,7 +89,7 @@ class LarqCompositeTestModelGenerator(Conv2dWordAlignedTestModelGenerator):
             input_quantizer="ste_sign",
             kernel_quantizer="ste_sign",
             kernel_constraint="weight_clip",
-            bias_initializer=parse_init_config(*cfg["bias_init"]),
+            use_bias=False,
             kernel_initializer=parse_init_config(*cfg["weight_init"]),
             **kwargs,
         )
@@ -99,6 +103,13 @@ class LarqCompositeTestModelGenerator(Conv2dWordAlignedTestModelGenerator):
         img = tf.keras.layers.Input(shape=self._input_shape)
         x = self._fake_quant(img, *self._config["input_range"])
         x = self._op_layer()(x)
+        if self._config["activation"] == "relu":
+            x = tf.keras.layers.ReLU()(x)
+        elif self._config["activation"] == "relu6":
+            x = tf.keras.layers.ReLU(6)(x)
+        x = tf.keras.layers.BatchNormalization(
+            beta_initializer=parse_init_config(*self._config["bias_init"])
+        )(x)
         x = self._fake_quant(x, *self._config["output_range"])
         return tf.keras.Model(img, x)
 

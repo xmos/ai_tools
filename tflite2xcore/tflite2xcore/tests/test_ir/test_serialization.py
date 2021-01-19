@@ -13,6 +13,7 @@ from tflite2xcore.xcore_schema import (
     OperatorCode,
     BuiltinOpCodes,
     XCOREOpCodes,
+    Subgraph,
 )
 
 import tensorflow as tf
@@ -22,14 +23,13 @@ BUILTIN_OPERATORS_TEST_FILE = os.path.join(
 )
 
 
-def test_read_flatbuffer():
-    model = XCOREModel.read_flatbuffer(BUILTIN_OPERATORS_TEST_FILE)
+def _test_read_flatbuffer(model):
 
     assert model.version == 3
     assert len(model.metadata) == 1
     assert len(model.operator_codes) == 6
 
-    assert len(model.buffers) == 19
+    assert len(model.buffers) == 18
     assert len(model.buffers[0].data) == 0
     assert len(model.buffers[4].data) == 128
 
@@ -63,6 +63,12 @@ def test_read_flatbuffer():
     assert operator.outputs[0].name == "arm_benchmark/re_lu/Relu"
 
 
+def test_read_flatbuffer():
+    model = XCOREModel.read_flatbuffer(BUILTIN_OPERATORS_TEST_FILE)
+
+    _test_read_flatbuffer(model)
+
+
 def test_write_flatbuffer():
     model = XCOREModel.read_flatbuffer(BUILTIN_OPERATORS_TEST_FILE)
 
@@ -70,7 +76,9 @@ def test_write_flatbuffer():
     bytes_expected = os.path.getsize(BUILTIN_OPERATORS_TEST_FILE)
     bytes_written = model.write_flatbuffer(tmp_file)
 
-    assert bytes_written <= bytes_expected
+    _test_read_flatbuffer(XCOREModel.read_flatbuffer(tmp_file))
+
+    # assert bytes_written <= bytes_expected
 
     # make sure it can be read by tensorflow interpreter
     interpreter = tf.lite.Interpreter(model_path=tmp_file)
@@ -82,7 +90,7 @@ def test_write_flatbuffer():
 
 def test_custom_options():
     model = XCOREModel()
-    subgraph = model.create_subgraph()
+    subgraph = Subgraph(model=model)
 
     input_tensor = subgraph.create_tensor(
         "input_tensor", TensorType.INT16, [1, 5, 5, 4], isinput=True

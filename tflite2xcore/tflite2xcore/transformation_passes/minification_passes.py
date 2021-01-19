@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from tflite2xcore.xcore_schema import XCOREOpCodes, BuiltinOpCodes
-from .transformation_passes import TensorMatchingPass
+from tflite2xcore.xcore_schema import XCOREOpCodes, BuiltinOpCodes, Buffer, XCOREModel
+from .transformation_passes import TensorMatchingPass, BufferMatchingPass
 
 
 class MinifyQuantInfoPass(TensorMatchingPass):
@@ -36,3 +36,29 @@ class MinifyTensorNamesPass(TensorMatchingPass):
 
     def mutate(self, tensor):
         tensor.name = self.__new_tensor_name(tensor)
+
+
+# TODO: add tests
+class UnifyEmptyBuffersPass(BufferMatchingPass):
+    def match(self, buffer: Buffer) -> bool:
+        return (
+            super().match(buffer)
+            and not buffer
+            and buffer is not buffer.model.buffers[0]
+            and buffer.owners
+        )
+
+    def mutate(self, buffer: Buffer) -> None:
+        sentinel = buffer.model.buffers[0]
+
+        for owner in buffer.owners:
+            owner.buffer = sentinel
+            sentinel.owners.append(owner)
+
+        buffer.owners = []
+
+    def run(self, model: XCOREModel) -> int:
+        model.buffers.insert(0, Buffer())
+        modified_cnt = super().run(model)
+        self.logger.debug(f"Unified {modified_cnt} empty buffers")
+        return modified_cnt

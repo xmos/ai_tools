@@ -2,7 +2,7 @@
 
 import pytest
 
-from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import XCOREModel, Metadata
 
 from tflite2xcore.transformation_passes import (
     EliminateDeadBuffersPass,
@@ -26,7 +26,7 @@ from . import (
 def test_mutate(model: XCOREModel) -> None:
     add_dangling_ops(model)
     add_dangling_tensor(model)
-    model.create_metadata("dummy")
+    Metadata("dummy", model)
     num_ops = count_operators(model)
     num_tensors = count_tensors(model)
     num_buffers = len(model.buffers)

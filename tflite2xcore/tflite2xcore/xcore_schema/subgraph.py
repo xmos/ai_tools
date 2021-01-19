@@ -4,7 +4,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Optional, Iterable, List
 
 from . import (
-    _IRObject,
+    _ModelDependent,
     TensorType,
     OperatorCode,
     Buffer,
@@ -18,21 +18,17 @@ if TYPE_CHECKING:
     from . import XCOREModel
 
 
-class Subgraph(_IRObject):
+class Subgraph(_ModelDependent):
     def __init__(
         self,
-        model: "XCOREModel",
-        name: str,
+        name: Optional[str] = None,
+        model: Optional["XCOREModel"] = None,
         inputs: Optional[Iterable[Tensor]] = None,
         outputs: Optional[Iterable[Tensor]] = None,
         operators: Optional[Iterable[Operator]] = None,
         tensors: Optional[Iterable[Tensor]] = None,
     ) -> None:
-        # Generally, do not use this constructor to instantiate Subgraph!
-        # Use XCOREModel.create_subgraph instead.
-
-        super().__init__(name)
-        self.model = model  # parent
+        super().__init__(name, model)
         self.inputs: List[Tensor] = list(inputs or [])
         self.outputs: List[Tensor] = list(outputs or [])
         self.operators: List[Operator] = list(operators or [])
@@ -59,7 +55,7 @@ class Subgraph(_IRObject):
         type_: TensorType,
         shape: _ShapeInputType,
         *,
-        buffer: Optional[Buffer[Tensor]] = None,
+        buffer: Optional[Buffer] = None,
         quantization: Optional[_OpOptionsType] = None,
         isinput: bool = False,
         isoutput: bool = False,
@@ -69,7 +65,13 @@ class Subgraph(_IRObject):
 
         name = self.make_unique_tensor_name(name)
         tensor = Tensor(self, name, type_, shape, quantization, producers, consumers)
-        tensor.buffer = Tensor.create_buffer(self.model) if buffer is None else buffer
+
+        if buffer is None:
+            try:
+                buffer = Buffer(self._model)
+            except AttributeError:
+                buffer = Buffer()
+        tensor.buffer = buffer
         tensor.buffer.owners.append(tensor)
 
         self.tensors.append(tensor)
@@ -93,7 +95,10 @@ class Subgraph(_IRObject):
         for op in tensor.producers:
             self._remove_if_contained(op.outputs, tensor)
         tensor.buffer.owners.remove(tensor)
-        del tensor.consumers, tensor.producers, tensor.subgraph, tensor.buffer
+
+        # TODO: fix this
+        # del tensor.consumers, tensor.producers, tensor.subgraph, tensor.buffer
+        del tensor.consumers, tensor.producers, tensor.buffer
 
     def generate_unique_op_name(self, operator_code: OperatorCode) -> str:
         existing_names = [op.name for op in self.operators]
@@ -182,7 +187,7 @@ class Subgraph(_IRObject):
             tensor.type,
             tensor.shape,
             quantization=deepcopy(tensor.quantization),
-            buffer=Tensor.create_buffer(self.model, tensor.buffer.data),
+            buffer=Buffer(self.model, tensor.buffer.data),
         )
 
     def get_tensor(self, name: str) -> Tensor:

@@ -2,8 +2,13 @@
 
 import pytest
 
-from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.xcore_schema import TensorType, OperatorCode, BuiltinOpCodes
+from tflite2xcore.xcore_schema import (
+    XCOREModel,
+    Subgraph,
+    TensorType,
+    OperatorCode,
+    BuiltinOpCodes,
+)
 from tflite2xcore.transformation_passes import LegalizeFloatOutputPass
 
 from .test_LegalizeFloatInputPass import simple_model, non_matching_model
@@ -11,8 +16,7 @@ from .test_LegalizeFloatInputPass import simple_model, non_matching_model
 
 @pytest.fixture()
 def dual_output_model():
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
+    subgraph = Subgraph(model=XCOREModel())
 
     # TODO: add operator options to specify split axis and number
     qin = subgraph.create_tensor(
@@ -28,7 +32,7 @@ def dual_output_model():
         OperatorCode(BuiltinOpCodes.SPLIT), inputs=[qin], outputs=[qout1, qout2]
     )
 
-    return model
+    return subgraph.model
 
 
 @pytest.fixture()

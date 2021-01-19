@@ -10,6 +10,7 @@ from typing import Optional, Tuple, Type, Any, Union, NamedTuple
 from tflite2xcore.utils import get_bitpacked_shape  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
     Tensor,
+    Buffer,
     ExternalOpCodes,
     TensorType,
     XCOREModel,
@@ -18,6 +19,7 @@ from tflite2xcore.pass_manager import PassManager  # type: ignore # TODO: fix th
 from tflite2xcore.transformation_passes import (  # type: ignore # TODO: fix this
     CanonicalizeLceQuantizedInputPass,
     CanonicalizeLceQuantizedOutputPass,
+    UnifyEmptyBuffersPass,
 )
 from tflite2xcore.transformation_passes.transformation_passes import (  # type: ignore # TODO: fix this
     OutputTensorMatchingPass,
@@ -173,14 +175,11 @@ class LarqSingleOpConverter(LarqConverter):
             pass_mgr.register_pass(CanonicalizeLceQuantizedOutputPass())
         if self._remove_last_op:
             pass_mgr.register_pass(RemoveSingleOutputOperatorPass())
+
+        pass_mgr.register_pass(UnifyEmptyBuffersPass())
         pass_mgr.register_passes(CleanupManager())
 
         pass_mgr.run_passes()
-
-        # LCE and builtin interpreter expects an empty buffer in the beginning
-        b = model_ir.create_buffer()
-        model_ir.buffers.remove(b)
-        model_ir.buffers = [b] + model_ir.buffers
 
         self._model = model_ir.serialize()
 

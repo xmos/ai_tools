@@ -5,7 +5,8 @@ import tensorflow as tf
 
 from tflite2xcore.model_generation import Configuration
 
-from . import IntegrationTestModelGenerator, MobileNet
+from .test_mobilenet_v1 import MobileNet
+from . import IntegrationTestModelGenerator
 from . import (  # pylint: disable=unused-import
     test_output,
     test_idempotence,
@@ -17,7 +18,7 @@ from . import (  # pylint: disable=unused-import
 #  ----------------------------------------------------------------------------
 
 
-class OffsetSaturatingModel(IntegrationTestModelGenerator):
+class OffsetSaturatingModelGenerator(IntegrationTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         self._config["layers"] = cfg.pop("layers")
         super()._set_config(cfg)
@@ -32,7 +33,7 @@ class OffsetSaturatingModel(IntegrationTestModelGenerator):
         )
 
 
-GENERATOR = OffsetSaturatingModel
+GENERATOR = OffsetSaturatingModelGenerator
 
 #  ----------------------------------------------------------------------------
 #                                   CONFIGS

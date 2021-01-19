@@ -9,7 +9,7 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
     FullyConnectedOptionsWeightsFormat,
 )
-from tflite2xcore.utils import WORD_SIZE
+from tflite2xcore.utils import WORD_SIZE_BYTES
 
 from .transformation_passes import (
     ReplaceQuantizedWeightBiasOperatorPass,
@@ -89,7 +89,7 @@ class CanonicalizeSingleinDepthwiseConv2DPass(ReplaceXCWeightBiasOperatorPass):
             return (
                 super().match(op)
                 and self._input.shape[3] == 1
-                and self._output.shape[3] % WORD_SIZE == 0  # Cout divisible by 4
+                and self._output.shape[3] % WORD_SIZE_BYTES == 0  # Cout divisible by 4
             )
 
     def mutate(self, op):
@@ -174,10 +174,12 @@ class Replace1x1Conv2dPass(ReplaceConv2DPass):
             with self.using(op):
                 return (
                     self._strides == (1, 1)
-                    and self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
+                    and self._weights.shape[0] % WORD_SIZE_BYTES
+                    == 0  # Cout divisible by 4
                     and self._weights.shape[1] == 1
                     and self._weights.shape[2] == 1
-                    and self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+                    and self._weights.shape[3] % WORD_SIZE_BYTES
+                    == 0  # Cin divisible by 4
                 )
 
         return False
@@ -247,7 +249,9 @@ class ReplaceDepthwiseConv2dPass(ReplacePaddedConv2DPass):
                         f"Found non-supported depthwise multiplier: {self._depth_multiplier}"
                     )
                 else:
-                    return self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+                    return (
+                        self._weights.shape[3] % WORD_SIZE_BYTES == 0
+                    )  # Cin divisible by 4
 
         return False
 
@@ -283,8 +287,9 @@ class ReplaceDeepConv2dPass(ReplacePaddedConv2DPass):
         if super().match(op):
             with self.using(op):
                 return (
-                    self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
-                    and self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+                    self._weights.shape[0] % WORD_SIZE_BYTES == 0  # Cout divisible by 4
+                    and self._weights.shape[3] % WORD_SIZE_BYTES
+                    == 0  # Cin divisible by 4
                 )
 
         return False
@@ -314,8 +319,9 @@ class ReplaceShallowinConv2dPass(ReplacePaddedConv2DPass):
         if super().match(op):
             with self.using(op):
                 return (
-                    self._weights.shape[0] % WORD_SIZE == 0  # Cout divisible by 4
-                    and self._weights.shape[3] % WORD_SIZE == 0  # Cin divisible by 4
+                    self._weights.shape[0] % WORD_SIZE_BYTES == 0  # Cout divisible by 4
+                    and self._weights.shape[3] % WORD_SIZE_BYTES
+                    == 0  # Cin divisible by 4
                     and np.prod(self._weights.shape[2:]) <= 32  # K_w * Cin <= 32
                 )
 

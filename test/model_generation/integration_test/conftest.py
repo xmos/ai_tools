@@ -145,7 +145,7 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     except KeyError:
         dirpath = pytest_config.cache.get(key, "")
         if dirpath:
-            runner = IntegrationTestRunner.load(dirpath)
+            runner = runner.load(dirpath)
             logging.debug(f"cached runner loaded from {dirpath}")
             runner.rerun_post_cache()
         else:

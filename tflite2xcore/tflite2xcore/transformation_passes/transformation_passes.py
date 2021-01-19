@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
 from tflite2xcore.xcore_schema import TensorType, OperatorCode, Operator
-from tflite2xcore.utils import ACC_PERIOD, format_array
+from tflite2xcore.utils import ACC_PERIOD_INT8, format_array
 
 
 class ModelTransformationPass(ABC):
@@ -342,7 +342,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
 
     @staticmethod
     def __pad_to_acc_period(arr):
-        pad = ACC_PERIOD - 1 - (arr.shape[0] - 1) % ACC_PERIOD
+        pad = ACC_PERIOD_INT8 - 1 - (arr.shape[0] - 1) % ACC_PERIOD_INT8
         return np.pad(arr, pad_width=[(0, pad)])
 
     def _bias_arr(self):
@@ -353,7 +353,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
         bias = self.__pad_to_acc_period(bias)
 
         # splitting lower and upper 16 bits of each 32 bit value
-        tmp_shape = (bias.shape[0] // ACC_PERIOD, ACC_PERIOD, -1)
+        tmp_shape = (bias.shape[0] // ACC_PERIOD_INT8, ACC_PERIOD_INT8, -1)
         new_bias = np.frombuffer(bias.flatten().tostring(), dtype=np.int16).reshape(
             tmp_shape
         )
@@ -405,7 +405,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
         rshift, scale = self._shift_scale()
 
         # zero pad and reshape into appropriate array
-        new_shape = (-1, ACC_PERIOD)
+        new_shape = (-1, ACC_PERIOD_INT8)
         rshift = self.__pad_to_acc_period(rshift)
         scale = self.__pad_to_acc_period(scale)
 

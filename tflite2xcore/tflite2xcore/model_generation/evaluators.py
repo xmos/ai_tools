@@ -6,7 +6,7 @@ import larq_compute_engine as lce
 from abc import abstractmethod
 from typing import Union
 
-from xcore_interpreters import XCOREInterpreter, XCOREDeviceInterpreter
+from xcore_interpreters import XCOREInterpreter, XCOREDeviceInterpreter  # type: ignore # TODO: fix this
 
 from tflite2xcore.utils import (
     quantize,

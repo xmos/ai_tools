@@ -5,10 +5,10 @@ from typing import Tuple, List
 
 from tflite2xcore.utils import (
     WORD_SIZE_BITS,
+    WORD_SIZE_BYTES,
     VECTOR_SIZE_BITS,
     VECTOR_SIZE_WORDS,
-    ACC_PERIOD,
-    WORD_SIZE,
+    ACC_PERIOD_INT8,
     xor_popcount,
     calculate_same_padding,
     get_unpacked_shape,
@@ -88,11 +88,11 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
                         f"with {self._input_channels} input channels "
                         f"(not a multiple of {WORD_SIZE_BITS})."
                     )
-                elif self._output_channels % WORD_SIZE != 0:
+                elif self._output_channels % WORD_SIZE_BYTES != 0:
                     self.logger.warning(
                         f"Found {self.matching_opcode} operator "
                         f"with {self._output_channels} output channels "
-                        f"(not a multiple of {WORD_SIZE})"
+                        f"(not a multiple of {WORD_SIZE_BYTES})"
                     )
                 else:
                     return True
@@ -132,7 +132,7 @@ class ReplaceBconv2DInt8DeepInDeepOutPass(ReplaceBconv2DInt8Pass):
             return (
                 super().match(op)
                 and self._input_channels % VECTOR_SIZE_BITS == 0
-                and self._output_channels % ACC_PERIOD == 0
+                and self._output_channels % ACC_PERIOD_INT8 == 0
             )
 
 
@@ -224,8 +224,8 @@ class LegalizeBconv2dPass(LegalizeWeightBiasPass):
 
     @staticmethod
     def __c_out_group_bounds(c_out_group: int, num_c_out: int) -> Tuple[int, int]:
-        c_out_group_start = c_out_group * ACC_PERIOD
-        c_out_group_end = min(num_c_out, (c_out_group + 1) * ACC_PERIOD)
+        c_out_group_start = c_out_group * ACC_PERIOD_INT8
+        c_out_group_end = min(num_c_out, (c_out_group + 1) * ACC_PERIOD_INT8)
         return c_out_group_start, c_out_group_end
 
     def mutate_weights(self, op: Operator) -> None:
@@ -233,7 +233,7 @@ class LegalizeBconv2dPass(LegalizeWeightBiasPass):
             weights = self._weights.as_array()
 
             num_c_out = weights.shape[0]
-            num_cout_groups = ceil(num_c_out / ACC_PERIOD)
+            num_cout_groups = ceil(num_c_out / ACC_PERIOD_INT8)
 
             # first we reorder the weights
             reordered_weight_channels: List[np.ndarray] = []
@@ -268,9 +268,9 @@ class LegalizeBconv2dPass(LegalizeWeightBiasPass):
         overlap_correction = np.empty(self._biases.shape, dtype=np.int32)
         num_channels_out = self._biases.shape[0]
         for c_out in range(num_channels_out):
-            c_out_group = c_out // ACC_PERIOD
+            c_out_group = c_out // ACC_PERIOD_INT8
             c_start, c_end = self.__c_out_group_bounds(c_out_group, num_channels_out)
-            reversed_offset = c_out % ACC_PERIOD % (c_end - c_start) * tail_size
+            reversed_offset = c_out % ACC_PERIOD_INT8 % (c_end - c_start) * tail_size
             overlap_start = c_end * channel_size_words - reversed_offset
 
             junk = boggled_weights[overlap_start : overlap_start + self._overlap_size]
@@ -304,9 +304,9 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
             self._kernel_channel_size // WORD_SIZE_BITS - 1
         ) % VECTOR_SIZE_WORDS + 1
         patch_loop_counter = ceil(self._kernel_channel_size / VECTOR_SIZE_BITS) - 1
-        out_tail_chans = int(self._weights.shape[0] - 1) % ACC_PERIOD + 1
+        out_tail_chans = int(self._weights.shape[0] - 1) % ACC_PERIOD_INT8 + 1
         fill_words = (patch_loop_counter > 0) * (
-            ACC_PERIOD - out_tail_chans
+            ACC_PERIOD_INT8 - out_tail_chans
         ) * VECTOR_SIZE_WORDS - k_p_adjust * out_tail_chans
         return max(fill_words, VECTOR_SIZE_WORDS)
 
@@ -445,17 +445,17 @@ class LegalizeBconv2dBitpackedPass(LegalizeBconv2dPass):
             overlap_correction = self._calculate_overlap_correction(weights)
             thresholds += np.int32(overlap_correction - popcount_correction)
 
-            # boggle the lower and higher 2 bytes in every ACC_PERIOD consecutive value
+            # boggle the lower and higher 2 bytes in every ACC_PERIOD_INT8 consecutive value
             thresholds = np.concatenate(
                 [
                     np.frombuffer(
                         np.frombuffer(cgroup.tostring(), dtype=np.int16)
-                        .reshape(ACC_PERIOD, 2)
+                        .reshape(ACC_PERIOD_INT8, 2)
                         .T.tostring(),
                         dtype=np.int32,
                     )
                     for cgroup in thresholds.reshape(
-                        thresholds.shape[0] // ACC_PERIOD, ACC_PERIOD
+                        thresholds.shape[0] // ACC_PERIOD_INT8, ACC_PERIOD_INT8
                     )
                 ]
             )

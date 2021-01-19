@@ -17,7 +17,7 @@ INSTALL_REQUIRES = [
     "flatbuffers==1.12.0",
     "matplotlib==3.1.1",
     "numpy==1.17.2",
-    "tensorflow==2.3.0",
+    "tensorflow==2.4.0",
     "typing-extensions==3.7.4",
 ]
 

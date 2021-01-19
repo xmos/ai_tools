@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3:4.9.2
+FROM continuumio/miniconda3:4.8.2
 
 # This Dockerfile is for use by the XMOS CI system
 # It provides a minimal environment needed to execute the Jenkinsfile

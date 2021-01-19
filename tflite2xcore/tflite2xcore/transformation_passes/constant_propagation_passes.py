@@ -5,8 +5,14 @@ import tensorflow as tf
 from copy import deepcopy
 from typing import Iterable
 
-from tflite2xcore.xcore_schema import BuiltinOpCodes
-from tflite2xcore.xcore_model import XCOREModel, Operator, Tensor
+from tflite2xcore.xcore_schema import (
+    BuiltinOpCodes,
+    XCOREModel,
+    Subgraph,
+    Operator,
+    Tensor,
+    Buffer,
+)
 
 from .transformation_passes import OperatorMatchingPass
 
@@ -32,7 +38,7 @@ class ConstantPropagationPass(OperatorMatchingPass):
     def mutate(self, op: Operator) -> None:
         # we first clone a single op model from the op
         new_model = XCOREModel()
-        new_subgraph = new_model.create_subgraph()
+        new_subgraph = Subgraph(model=new_model)
 
         def clone_tensors(old_tensors: Iterable[Tensor]) -> Iterable[Tensor]:
             return (new_subgraph.clone_tensor(t) for t in old_tensors)
@@ -69,7 +75,6 @@ class ConstantPropagationPass(OperatorMatchingPass):
         assert len(op.outputs) == len(output_values)  # sanity check
         for tensor, data in zip(op.outputs, output_values):
             tensor.buffer.owners.remove(tensor)
-            tensor.buffer = Tensor.create_buffer(op.model, np.array(data))
-            tensor.buffer.owners.append(tensor)
+            tensor.buffer = Buffer(op.model, np.array(data), owners=[tensor])
         op.subgraph.remove_operator(op)
 

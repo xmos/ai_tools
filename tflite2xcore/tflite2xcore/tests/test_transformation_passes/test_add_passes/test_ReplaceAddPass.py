@@ -1,12 +1,13 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-from typing import Tuple
+from typing import Tuple, Optional
 
 
 from tflite2xcore.transformation_passes import ReplaceAddPass
-from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import (
+    XCOREModel,
+    Subgraph,
     BuiltinOpCodes,
     OperatorCode,
     TensorType,
@@ -22,9 +23,12 @@ from . import test_replace_mutate as _test_replace_mutate
 
 
 def build_add(
-    subgraph: Subgraph = None, *, input_shape: Tuple[int, ...], tensor_type: TensorType
+    subgraph: Optional[Subgraph] = None,
+    *,
+    input_shape: Tuple[int, ...],
+    tensor_type: TensorType
 ) -> XCOREModel:
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
     input_tensor_0 = subgraph.create_tensor(
         "input_0",
         tensor_type,

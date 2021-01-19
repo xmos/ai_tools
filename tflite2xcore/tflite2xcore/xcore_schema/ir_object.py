@@ -1,14 +1,17 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 from abc import ABC, abstractmethod
-from typing import TypeVar, Sequence, List, Any, Optional
+from typing import TYPE_CHECKING, TypeVar, Sequence, List, Any, Optional
 
 _S = TypeVar("_S", bound="_IRObject")
+
+if TYPE_CHECKING:
+    from .xcore_model import XCOREModel, Subgraph
 
 
 class _IRObject(ABC):
     def __init__(self, name: Optional[str] = None) -> None:
-        self.name = name
+        self.name = name or ""
 
     @abstractmethod
     def sanity_check(self) -> None:
@@ -31,3 +34,30 @@ class _IRObject(ABC):
             other.sanity_check()
             return True
         return False
+
+
+class _ModelDependent(_IRObject):
+    _model: "XCOREModel"
+
+    def __init__(
+        self, name: Optional[str] = None, model: Optional["XCOREModel"] = None
+    ):
+        super().__init__(name)
+        if model:
+            model.register_dependent(self)
+
+    @property
+    def model(self) -> "XCOREModel":
+        return self._model
+
+
+class _SubgraphDependent(_IRObject):
+    _subgraph: "Subgraph"
+
+    @property
+    def subgraph(self) -> "Subgraph":
+        return self._subgraph
+
+    @property
+    def model(self) -> "XCOREModel":
+        return self.subgraph._model

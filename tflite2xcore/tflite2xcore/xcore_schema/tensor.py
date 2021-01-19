@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional, Iterable, Union, List, Tuple, Any
 
 from . import (
     TensorType,
-    _BufferOwnerContainer,
+    _SubgraphDependent,
     Buffer,
     Operator,
     _OpOptionsType,
@@ -17,9 +17,9 @@ if TYPE_CHECKING:
 _ShapeInputType = Union[None, Iterable[Union[int, np.integer]], np.ndarray]
 
 
-class Tensor(_BufferOwnerContainer):
+class Tensor(_SubgraphDependent):
     name: str
-    buffer: Buffer["Tensor"]
+    buffer: Buffer
 
     def __init__(
         self,
@@ -35,7 +35,7 @@ class Tensor(_BufferOwnerContainer):
         # Use Subgraph.create_tensor instead.
 
         super().__init__(name or "")
-        self.subgraph = subgraph  # parent
+        self._subgraph = subgraph  # parent
         assert isinstance(type_, TensorType)
         self.type = type_
         self.shape: Tuple[int, ...] = shape  # type: ignore # see https://github.com/python/mypy/issues/3004
@@ -66,13 +66,11 @@ class Tensor(_BufferOwnerContainer):
 
         self._shape = tuple(int(s) for s in shape)
 
-    @property
-    def model(self) -> "XCOREModel":
-        return self.subgraph.model
-
     def is_equal(self, other: Any) -> bool:
         return (
             super().is_equal(other)
+            # and self.name == other.name  # intentionally not compared
+            and self.buffer.is_equal(other.buffer)
             and self.type == other.type
             and self.shape == other.shape
             and self.quantization == other.quantization

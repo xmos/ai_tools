@@ -1,6 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
-from .transformation_passes import ModelTransformationPass
+from .transformation_passes import ModelTransformationPass, CanonicalizeEmptyBuffersPass
 
 from .lut_passes import (
     ReplaceTanhPass,
@@ -69,7 +69,11 @@ from .reshape_passes import (
 
 from .renaming_passes import LegalizeOperatorOutputTensorNamePass
 
-from .minification_passes import MinifyQuantInfoPass, MinifyTensorNamesPass
+from .minification_passes import (
+    MinifyQuantInfoPass,
+    MinifyTensorNamesPass,
+    UnifyEmptyBuffersPass,
+)
 
 from .word_alignment_passes import CanonicalizeConv2DInputChannels
 

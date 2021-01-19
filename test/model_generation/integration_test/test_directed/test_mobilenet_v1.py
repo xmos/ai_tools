@@ -135,6 +135,12 @@ def abs_output_tolerance() -> None:
     return
 
 
+# TODO: try removing this when global average pool is improved
+@pytest.fixture  # type: ignore
+def implicit_tolerance_margin() -> float:
+    return 0.15
+
+
 #  ----------------------------------------------------------------------------
 #                                   TESTS
 #  ----------------------------------------------------------------------------

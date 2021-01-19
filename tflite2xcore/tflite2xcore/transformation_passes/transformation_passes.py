@@ -368,7 +368,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
 
         # splitting lower and upper 16 bits of each 32 bit value
         tmp_shape = (bias.shape[0] // ACC_PERIOD_INT8, ACC_PERIOD_INT8, -1)
-        new_bias = np.frombuffer(bias.flatten().tostring(), dtype=np.int16).reshape(
+        new_bias = np.frombuffer(bias.flatten().tobytes(), dtype=np.int16).reshape(
             tmp_shape
         )
         return np.stack([new_bias[:, :, 1], new_bias[:, :, 0]], axis=1)

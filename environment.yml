@@ -78,7 +78,7 @@ dependencies:
   - nbformat=4.4.0
   - ncurses=6.1
   - notebook=6.0.1
-  - numpy=1.19.2
+  - numpy=1.18.5
   - onnx=1.6.0
   - openblas=0.3.7
   - openssl=1.1.1d

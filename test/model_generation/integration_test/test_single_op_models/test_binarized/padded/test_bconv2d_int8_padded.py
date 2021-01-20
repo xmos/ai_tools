@@ -24,7 +24,7 @@ from . import (  # pylint: disable=unused-import
 def test_output(compared_outputs, request):
     name = request.node.name
     if name.endswith("[CONFIGS[13]]") or name.endswith("[CONFIGS[20]]"):
-        pytest.skip()
+        request.applymarker(pytest.mark.xfail(run=False))
     _test_output(compared_outputs, request)
 
 

@@ -28,7 +28,7 @@ from . import (  # pylint: disable=unused-import
 
 class BSignTestModelGenerator(LarqCompositeTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
-        for key in ("K_w", "K_h", "output_channels"):
+        for key in ("K_w", "K_h", "output_channels", "activation"):
             assert key not in cfg, f"{key} should not be specified for bsign tests"
         cfg["output_channels"] = 32
         cfg["K_w"] = cfg["K_h"] = 1

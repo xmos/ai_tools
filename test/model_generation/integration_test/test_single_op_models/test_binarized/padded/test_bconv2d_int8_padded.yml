@@ -268,20 +268,6 @@ default:
     - 1
     width: 6
   19:
-    K_h: 3
-    K_w: 4
-    height: 12
-    input_channels: 128
-    output_channels: 4
-    output_range:
-    - -2
-    - 1
-    padding: same
-    strides:
-    - 1
-    - 2
-    width: 11
-  20: # TODO: delete this case
     K_h: 32
     K_w: 1
     height: 32

@@ -162,7 +162,7 @@ class CanonicalizeEmptyBuffersPass(ModelTransformationPass):
     def run(self, model):
         if model.buffers:
             sentinel = model.buffers[0]
-            if not sentinel: # buffer 0 has to be empty
+            if not sentinel:  # buffer 0 has to be empty
                 for tensor in sentinel.owners:
                     tensor.buffer = Buffer(model)
                     tensor.buffer.owners.append(tensor)
@@ -385,8 +385,12 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
         multiplier = self._multiplier()
         # NOTE: VLMUL expects one factor in Q2.14
         # we have 1 <= scale < 2 represented in Q2.14
-        rshift = -np.ceil(np.log2(multiplier)) + 1
-        scale = np.round(2 ** 14 * (multiplier * 2 ** rshift))
+        rshift = np.full(np.shape(multiplier), 16)
+        rshift[multiplier != 0] = -np.ceil(np.log2(multiplier[multiplier != 0])) + 1
+        scale = np.full(np.shape(multiplier), 32767)
+        scale[multiplier != 0] = np.round(
+            2 ** 14 * (multiplier[multiplier != 0] * 2 ** rshift[multiplier != 0])
+        )
 
         for j in range(len(scale)):
             if scale[j] == 2 ** 15:

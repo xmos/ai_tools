@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-
+import tensorflow as tf
 from tflite2xcore.xcore_schema import XCOREModel, BuiltinOpCodes  # type: ignore # TODO: fix this
 
 from ..test_conv2d import Conv2dTestModelGenerator
@@ -46,14 +46,23 @@ def test_reference_model_regression(reference_model: XCOREModel) -> None:
     operators = reference_model.subgraphs[0].operators
 
     opcodes = [op.operator_code.code for op in operators]
-    expected_opcodes = [
-        BuiltinOpCodes.CONV_2D,
-        BuiltinOpCodes.QUANTIZE,
-        BuiltinOpCodes.QUANTIZE,
-        BuiltinOpCodes.MINIMUM,
-        BuiltinOpCodes.QUANTIZE,
-        BuiltinOpCodes.MAXIMUM,
-    ]
+    if tf.__version__.startswith("2.4"):
+        expected_opcodes = [
+            BuiltinOpCodes.CONV_2D,
+            BuiltinOpCodes.QUANTIZE,
+            BuiltinOpCodes.QUANTIZE,
+            BuiltinOpCodes.MINIMUM,
+            BuiltinOpCodes.RELU,
+        ]
+    else:
+        expected_opcodes = [
+            BuiltinOpCodes.CONV_2D,
+            BuiltinOpCodes.QUANTIZE,
+            BuiltinOpCodes.QUANTIZE,
+            BuiltinOpCodes.MINIMUM,
+            BuiltinOpCodes.QUANTIZE,
+            BuiltinOpCodes.MAXIMUM,
+        ]
     assert opcodes == expected_opcodes
 
 

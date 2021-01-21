@@ -3,8 +3,7 @@
 import pytest
 
 from tflite2xcore.transformation_passes import FloatingPointWarningPass
-from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.xcore_schema import TensorType
+from tflite2xcore.xcore_schema import XCOREModel, Subgraph, TensorType
 
 _TENSOR_SHAPE = (1, 1, 1, 1)
 
@@ -36,10 +35,9 @@ def trf_pass() -> FloatingPointWarningPass:
 
 @pytest.fixture()
 def model(tensor_type: TensorType) -> XCOREModel:
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
+    subgraph = Subgraph(model=XCOREModel())
     subgraph.create_tensor("test_tensor", tensor_type, _TENSOR_SHAPE)
-    return model
+    return subgraph.model
 
 
 #  ----------------------------------------------------------------------------
@@ -54,7 +52,7 @@ def test_matching_params(trf_pass: FloatingPointWarningPass, model: XCOREModel) 
 def test_non_matching_tensor_type(
     trf_pass: FloatingPointWarningPass, non_matching_tensor_type: TensorType
 ) -> None:
-    subgraph = XCOREModel().create_subgraph()
+    subgraph = Subgraph(model=XCOREModel())
     test_tensor = subgraph.create_tensor(
         "test_tensor", non_matching_tensor_type, _TENSOR_SHAPE
     )

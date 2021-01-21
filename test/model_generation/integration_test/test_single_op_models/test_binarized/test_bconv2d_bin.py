@@ -8,9 +8,9 @@ from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes  # type: ign
 from tflite2xcore.model_generation import Configuration
 
 from . import (
-    BinarizedTestRunner,
+    BinarizedSingleOpRunner,
     BConv2dGenericTestModelGenerator,
-    LarqConverter,
+    LarqSingleOpConverter,
 )
 
 from . import (  # pylint: disable=unused-import
@@ -28,9 +28,10 @@ from . import (  # pylint: disable=unused-import
 class BConv2dBitpackedTestModelGenerator(BConv2dGenericTestModelGenerator):
     def _set_config(self, cfg: Configuration) -> None:
         cfg.setdefault("padding", "valid")
-        assert (
-            "output_range" not in cfg
-        ), f"output_range cannot be specified for BConv2dBitpacked tests"
+        for forbidden_key in ("activation", "output_range"):
+            assert (
+                forbidden_key not in cfg
+            ), f"{forbidden_key} cannot be specified for BConv2dBitpacked tests"
         super()._set_config(cfg)
 
     def check_config(self) -> None:
@@ -65,9 +66,9 @@ GENERATOR = BConv2dBitpackedTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-class BConv2dBitpackedTestRunner(BinarizedTestRunner):
-    def make_lce_converter(self) -> LarqConverter:
-        return LarqConverter(
+class BConv2dBitpackedTestRunner(BinarizedSingleOpRunner):
+    def make_lce_converter(self) -> LarqSingleOpConverter:
+        return LarqSingleOpConverter(
             self, self.get_built_model, strip=True, remove_last_op=True
         )
 

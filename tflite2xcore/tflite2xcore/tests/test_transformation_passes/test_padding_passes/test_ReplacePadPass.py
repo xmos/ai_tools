@@ -87,8 +87,8 @@ def test_mutate(
     params_new = op.inputs[1].as_array().tolist()
     assert params_new == params_ori
 
-    zero_point_byte = np.int8(op.inputs[0].quantization["zero_point"][0]).tostring()
-    pad_value_bytes = np.int32(op.custom_options["pad_value"]).tostring()
+    zero_point_byte = np.int8(op.inputs[0].quantization["zero_point"][0]).tobytes()
+    pad_value_bytes = np.int32(op.custom_options["pad_value"]).tobytes()
     assert pad_value_bytes == zero_point_byte * 4
 
 

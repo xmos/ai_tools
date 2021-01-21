@@ -145,7 +145,7 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
     except KeyError:
         dirpath = pytest_config.cache.get(key, "")
         if dirpath:
-            runner = IntegrationTestRunner.load(dirpath)
+            runner = runner.load(dirpath)
             logging.debug(f"cached runner loaded from {dirpath}")
             runner.rerun_post_cache()
         else:
@@ -191,10 +191,16 @@ def bitpacked_outputs() -> bool:
 
 
 @pytest.fixture  # type: ignore
+def implicit_tolerance_margin() -> float:
+    return 0.05
+
+
+@pytest.fixture  # type: ignore
 def compared_outputs(
     run: DefaultIntegrationTestRunner,
     abs_output_tolerance: Optional[Union[int, float]],
     bitpacked_outputs: bool,
+    implicit_tolerance_margin: float,
 ) -> BatchedArrayComparison:
     if bitpacked_outputs:
         return _compare_batched_arrays(
@@ -210,7 +216,9 @@ def compared_outputs(
         # deviates from the floating point reference.
         max_diff = np.max(np.abs(dequantize(y_quant, *output_quantization) - y_float))
         # max_diff is usually at least 1 bit, but we ensure this and add some room for error
-        abs_output_tolerance = max(float(max_diff), output_quantization.scale) * 1.05
+        abs_output_tolerance = max(float(max_diff), output_quantization.scale) * (
+            1 + implicit_tolerance_margin
+        )
         logging.info(
             f"Using implicit absolute output tolerance: {abs_output_tolerance}"
         )

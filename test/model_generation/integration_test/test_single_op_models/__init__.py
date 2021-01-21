@@ -10,6 +10,7 @@ from tflite2xcore.xcore_schema import XCOREOpCodes, ValidOpCodes  # type: ignore
 
 from .. import (
     IntegrationTestRunner,
+    BinarizedTestRunner,
     _compare_batched_arrays,
     BatchedArrayComparison,
     IntegrationTestModelGenerator,

@@ -138,7 +138,7 @@ class Runner(ABC):
         for key, arr in data.items():
             for j in example_idx:
                 with open(dirpath / f"example_{j}.{key}", "wb") as f:
-                    f.write(np.array(arr[j]).tostring())
+                    f.write(np.array(arr[j]).tobytes())
 
 
 class RunnerDependent(ABC):

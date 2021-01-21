@@ -2,15 +2,19 @@
 
 import pytest
 
-from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.xcore_schema import TensorType, OperatorCode, BuiltinOpCodes
+from tflite2xcore.xcore_schema import (
+    XCOREModel,
+    Subgraph,
+    TensorType,
+    OperatorCode,
+    BuiltinOpCodes,
+)
 from tflite2xcore.transformation_passes import LegalizeFloatInputPass
 
 
 @pytest.fixture()
 def simple_model():
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
+    subgraph = Subgraph(model=XCOREModel())
 
     qin = subgraph.create_tensor(
         "quantized_input", TensorType.INT8, [1, 5, 5, 3], isinput=True
@@ -22,13 +26,12 @@ def simple_model():
         OperatorCode(BuiltinOpCodes.ABS), inputs=[qin], outputs=[qout]
     )
 
-    return model
+    return subgraph.model
 
 
 @pytest.fixture()
 def dual_input_model():
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
+    subgraph = Subgraph(model=XCOREModel())
 
     qin1 = subgraph.create_tensor(
         "quantized_input_1", TensorType.INT8, [1, 5, 5, 3], isinput=True
@@ -43,13 +46,12 @@ def dual_input_model():
         OperatorCode(BuiltinOpCodes.ADD), inputs=[qin1, qin2], outputs=[qout]
     )
 
-    return model
+    return subgraph.model
 
 
 @pytest.fixture()
 def non_matching_model():
-    model = XCOREModel()
-    subgraph = model.create_subgraph()
+    subgraph = Subgraph(model=XCOREModel())
 
     qin = subgraph.create_tensor(
         "quantized_input", TensorType.INT32, [1, 5, 5, 3], isinput=True
@@ -71,7 +73,7 @@ def non_matching_model():
         OperatorCode(BuiltinOpCodes.ABS), inputs=[fin], outputs=[fout]
     )
 
-    return model
+    return subgraph.model
 
 
 @pytest.fixture()

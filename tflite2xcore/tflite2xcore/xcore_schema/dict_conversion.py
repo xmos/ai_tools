@@ -107,7 +107,7 @@ def create_dict_from_subgraph(
 
 
 def create_dict_from_buffer(
-    buffer: Buffer[Any], *, extended: bool = False
+    buffer: Buffer, *, extended: bool = False
 ) -> Dict[str, Any]:
     buffer_dict: Dict[str, Any] = {
         "data": buffer.data
@@ -119,14 +119,10 @@ def create_dict_from_buffer(
 
         # track down and tally all owners
         for owner in buffer.owners:
-            if owner in model.metadata:
-                metadata_owners = owners_dict.setdefault("metadata", [])
-                metadata_owners.append(owner.name)
-            else:  # owner is a tensor
-                subgraph = owner.subgraph
-                owner_idx = model.subgraphs.index(subgraph)
-                owners_in_subgraph = owners_dict.setdefault(owner_idx, [])
-                owners_in_subgraph.append(subgraph.tensors.index(owner))
+            subgraph = owner.subgraph
+            owner_idx = model.subgraphs.index(subgraph)
+            owners_in_subgraph = owners_dict.setdefault(owner_idx, [])
+            owners_in_subgraph.append(subgraph.tensors.index(owner))
 
         # sort the ordering
         owners_dict = dict(sorted(owners_dict.items()))
@@ -138,10 +134,10 @@ def create_dict_from_buffer(
     return buffer_dict
 
 
-def create_dict_from_metadata(metadata: Metadata) -> Dict[str, Union[int, str, None]]:
+def create_dict_from_metadata(metadata: Metadata) -> Dict[str, Union[bytes, str, None]]:
     return {
         "name": metadata.name,
-        "buffer": metadata.model.buffers.index(metadata.buffer),
+        "data": metadata.data,
     }
 
 

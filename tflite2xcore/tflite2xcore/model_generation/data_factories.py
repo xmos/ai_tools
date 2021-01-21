@@ -15,7 +15,7 @@ class DataFactory(RunnerDependent):
         raise NotImplementedError()
 
 
-class InitializerDataFactory(DataFactory):
+class TensorDataFactory(DataFactory):
     def __init__(
         self,
         runner: Runner,
@@ -26,6 +26,12 @@ class InitializerDataFactory(DataFactory):
         self._shape_hook = shape_hook
         self._dtype = dtype
 
+    @abstractmethod
+    def make_data(self, batch: Optional[int] = None) -> tf.Tensor:
+        raise NotImplementedError()
+
+
+class InitializerDataFactory(TensorDataFactory):
     @property
     @abstractmethod
     def initializer(self) -> tf.keras.initializers.Initializer:

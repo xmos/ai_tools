@@ -25,6 +25,8 @@ class BasicCanonicalizationManager(PassManager):
         **kwargs: Any,
     ) -> None:
         super().__init__(model, **kwargs)
+        self.register_pass(passes.CanonicalizeEmptyBuffersPass())
+
         if remove_float_interface:
             self.register_pass(passes.CanonicalizeQuantizedInputPass())
             self.register_pass(passes.CanonicalizeQuantizedOutputPass())
@@ -221,6 +223,9 @@ class FinalizationManager(PassManager):
         self.register_pass(passes.LegalizeOperatorOutputTensorNamePass())
 
         self.register_pass(passes.FloatingPointWarningPass())
+
+        self.register_pass(passes.UnifyEmptyBuffersPass())
+        self.register_pass(passes.EliminateDeadBuffersPass())
 
         if minification:
             self.register_pass(passes.MinifyQuantInfoPass())

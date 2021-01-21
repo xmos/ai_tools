@@ -68,4 +68,4 @@ class ModelGenerator(RunnerDependent):
     def load_model(self, dirpath: Path) -> None:
         # tf may complain about missing training config, so silence it
         with LoggingContext(tf.get_logger(), logging.ERROR):
-            self._model = tf.keras.models.load_model(dirpath / "model")
+            self._model = tf.keras.models.load_model(dirpath / "model", compile=False)

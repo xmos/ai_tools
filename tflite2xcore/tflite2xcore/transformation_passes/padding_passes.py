@@ -324,7 +324,7 @@ class ReplacePadPass(OperatorMatchingPass):
                         4 // input_type.sizeof(),
                         pad_value,
                         dtype=input_type.to_numpy_dtype(),
-                    ).tostring(),
+                    ).tobytes(),
                     dtype=np.int32,
                 )
             )

@@ -449,9 +449,9 @@ class LegalizeBconv2dBitpackedPass(LegalizeBconv2dPass):
             thresholds = np.concatenate(
                 [
                     np.frombuffer(
-                        np.frombuffer(cgroup.tostring(), dtype=np.int16)
+                        np.frombuffer(cgroup.tobytes(), dtype=np.int16)
                         .reshape(ACC_PERIOD_INT8, 2)
-                        .T.tostring(),
+                        .T.tobytes(),
                         dtype=np.int32,
                     )
                     for cgroup in thresholds.reshape(

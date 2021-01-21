@@ -9,8 +9,9 @@ from tflite2xcore.transformation_passes.lce_passes import (
     XC_BCONV2D_OPCODES,
 )
 from tflite2xcore.transformation_passes import ModelTransformationPass
-from tflite2xcore.xcore_model import XCOREModel, Subgraph
 from tflite2xcore.xcore_schema import (
+    XCOREModel,
+    Subgraph,
     TensorType,
     ActivationFunctionType,
     Padding,
@@ -80,7 +81,7 @@ def build_LceQuantize(
     input_shape: Tuple[int, int, int],
     input_tensor_type: TensorType = TensorType.INT8,
 ) -> XCOREModel:
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
     height, width, channels = input_shape
     input_shape = (1, height, width, channels)
     output_shape = (1, height, width, int(np.ceil(channels / 32)))
@@ -107,7 +108,7 @@ def build_bconv2d(
     opcode: ValidOpCodes,
     output_tensor_type: TensorType = TensorType.INT8,
 ) -> XCOREModel:
-    subgraph = subgraph or XCOREModel().create_subgraph()
+    subgraph = subgraph or Subgraph(model=XCOREModel())
 
     # the given shapes are not bitpacked (i.e. true channel counts)
     # so we bitpack them

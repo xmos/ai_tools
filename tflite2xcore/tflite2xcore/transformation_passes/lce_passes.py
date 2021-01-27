@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 import numpy as np
 from math import ceil
-from typing import Tuple, List
+from typing import Tuple, List, NamedTuple
 
 from tflite2xcore.utils import (
     WORD_SIZE_BITS,
@@ -333,22 +333,72 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
                     return M, B, A
         raise ValueError("quantized exponents cannot be determined")
 
+    def _calculate_clamp_offsets(self, A: int) -> Tuple[int, int, int]:
+        # follow larq's implementation to get the output tranform clamps
+        INT32_MIN, INT32_MAX = np.iinfo(np.int32).min, np.iinfo(np.int32).max
+        activation_range_map = {
+            ActivationFunctionType.NONE: (INT32_MIN, INT32_MAX),
+            ActivationFunctionType.RELU: (0, INT32_MAX),
+            ActivationFunctionType.RELU_N1_TO_1: (-1, 1),
+            ActivationFunctionType.RELU6: (0, 6),
+        }
+        nominal_clamps = activation_range_map[
+            self._op.custom_options["fused_activation_function"]
+        ]
+        output_trf_clamps = (
+            self._kernel_channel_size
+            - min(nominal_clamps[1], self._kernel_channel_size),
+            self._kernel_channel_size
+            - max(nominal_clamps[0], -self._kernel_channel_size),
+        )
+
+        # do xcore specific calculations
+        shifted_accu_limits = tuple(
+            (self._kernel_channel_size - c) * 2 ** (A - 1) for c in output_trf_clamps
+        )
+
+        INT16_MAX = np.iinfo(np.int16).max
+        clamp_offsets = (
+            int(INT16_MAX - shifted_accu_limits[0]),
+            int(-INT16_MAX - shifted_accu_limits[1]),
+        )
+
+        if abs(clamp_offsets[0]) >= abs(clamp_offsets[1]):
+            clamp_offsets = clamp_offsets[::-1]
+        clamp_far_half = clamp_offsets[1] // 2
+        return (clamp_offsets[0], clamp_offsets[1] - clamp_far_half, clamp_far_half)
+
+    class _QuantizationParams(NamedTuple):
+        bias_multiplier: int
+        accu_shr: int
+        final_shr: int
+        clamp_offset_close: int
+        clamp_offset_far1: int
+        clamp_offset_far2: int
+
     def _calculate_quantization_parameters(
         self, adjusted_pam: np.ndarray, adjusted_pab: np.ndarray
-    ) -> Tuple[int, int, Tuple[int, int, int]]:
+    ) -> Tuple[int, int, "_QuantizationParams"]:
         max_pam_exp = np.max(np.frexp(adjusted_pam)[1])
         max_pab_exp = np.max(np.frexp(adjusted_pab)[1])
         max_accu_exp = np.frexp(self._kernel_channel_size / 2)[1]
         M, B, A = self.__calculate_MBA(max_pam_exp, max_pab_exp, max_accu_exp)
 
-        adjusted_B = min(15 - max_pab_exp, B)
+        adjusted_B = min(15 - int(max_pab_exp), B)
         assert 15 > B - adjusted_B
         bias_multiplier = 2 ** (B - adjusted_B)  # this is not so simple
 
         accu_shr = -A
         final_shr = B - 8
+        clamp_offsets = self._calculate_clamp_offsets(A)
 
-        return M, adjusted_B, (bias_multiplier, accu_shr, final_shr)
+        return (
+            M,
+            adjusted_B,
+            self._QuantizationParams(
+                bias_multiplier, accu_shr, final_shr, *clamp_offsets
+            ),
+        )
 
     def mutate_biases(self, op: Operator) -> None:
         with self.using(op):
@@ -377,7 +427,7 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
             (M, adjusted_B, q_params) = self._calculate_quantization_parameters(
                 adjusted_pam, adjusted_pab
             )
-            op.add_custom_options(q_params=q_params)
+            op.add_custom_options(q_params=tuple(q_params))
 
             # then quantize the post activation parameters
             pam_q = np.round(adjusted_pam * 2.0 ** M)

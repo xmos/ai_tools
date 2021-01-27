@@ -73,6 +73,7 @@ def test_mutate(
     # check custom options
     options = bconv2d_op.custom_options
     assert "illegal_params" not in options
+    assert "fused_activation_function" not in options
     assert options["K"][:3] == old_weights.shape[:3]
     assert options["K"][3] == old_weights.shape[3] * WORD_SIZE_BITS
 

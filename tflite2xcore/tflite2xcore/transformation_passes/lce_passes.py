@@ -21,6 +21,7 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
     OperatorCode,
     BuiltinOpCodes,
+    ActivationFunctionType,
 )
 
 from .transformation_passes import (
@@ -69,7 +70,13 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
 
     @property
     def _padding(self) -> Padding:
-        return self._op.custom_options["padding"]
+        return Padding(self._op.custom_options["padding"])
+
+    @property
+    def _fused_activation_function(self) -> ActivationFunctionType:
+        return ActivationFunctionType(
+            self._op.custom_options["fused_activation_function"]
+        )
 
     @property
     def _input_channels(self) -> int:
@@ -99,11 +106,13 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
 
         return False
 
-    def mutate(self, op: Operator) -> None:
+    def mutate(self, op: Operator) -> Operator:
         new_op = super().mutate(op)
         with self.using(op):
             new_op.add_custom_options(
-                stride=self._strides, padding=self._padding,
+                stride=self._strides,
+                padding=self._padding,
+                fused_activation_function=self._fused_activation_function,
             )
         return new_op
 
@@ -408,6 +417,11 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
             # replace old pam tensor
             self._op.inputs[3].consumers.remove(self._op)
             self._op.inputs[3] = new_pab_tensor
+
+    def mutate(self, op: Operator) -> Operator:
+        new_op = super().mutate(op)
+        new_op.custom_options.pop("fused_activation_function")
+        return new_op
 
 
 class LegalizeBconv2dInt8DeepInDeepOutPass(LegalizeBconv2dInt8Pass):

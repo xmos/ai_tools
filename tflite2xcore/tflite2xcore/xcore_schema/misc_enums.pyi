@@ -14,5 +14,8 @@ class ActivationFunctionType(IntEnum):
 
 class QuantizationDetails(IntEnum): ...
 class FullyConnectedOptionsWeightsFormat(IntEnum): ...
-class Padding(IntEnum): ...
+
+class Padding(IntEnum):
+    SAME: Padding
+    VALID: Padding
 

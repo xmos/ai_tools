@@ -4,13 +4,13 @@ import numpy as np
 
 from tflite2xcore.utils import VECTOR_SIZE_WORDS, WORD_SIZE_BITS
 from tflite2xcore.converter import CleanupManager
+from tflite2xcore.transformation_passes.lce_passes import LegalizeBconv2dInt8GenericPass
 from tflite2xcore.transformation_passes import (
     LegalizeBconv2dInt8Pass,
     ReplaceBconv2DInt8Pass,
 )
 from tflite2xcore.transformation_passes.lce_passes import FILLER
-from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.xcore_schema import TensorType, XCOREOpCodes
+from tflite2xcore.xcore_schema import XCOREModel, TensorType, XCOREOpCodes
 
 from .test_ReplaceBconv2DInt8Pass import (  # pylint: disable=unused-import
     model,
@@ -35,13 +35,13 @@ def legalization_pass() -> LegalizeBconv2dInt8Pass:
 
 
 #  ----------------------------------------------------------------------------
-#                                   TESTS
+#                                   HELPERS
 #  ----------------------------------------------------------------------------
 
 
-def test_mutate(
+def _test_mutate(
     replacement_pass: ReplaceBconv2DInt8Pass,
-    legalization_pass: LegalizeBconv2dInt8Pass,
+    legalization_pass: LegalizeBconv2dInt8GenericPass,
     model: XCOREModel,
     new_opcode: XCOREOpCodes,
 ) -> None:
@@ -68,7 +68,6 @@ def test_mutate(
     # basic checks
     assert len(subgraph.operators) == 1
     assert bconv2d_op is subgraph.operators[0]
-    assert len(bconv2d_op.inputs) == 4
 
     # check custom options
     options = bconv2d_op.custom_options
@@ -78,7 +77,7 @@ def test_mutate(
     assert options["K"][3] == old_weights.shape[3] * WORD_SIZE_BITS
 
     # check multipliers
-    new_multipliers = bconv2d_op.inputs[3]
+    new_multipliers = bconv2d_op.inputs[2]
     assert new_multipliers is not old_multipliers
     assert new_multipliers.type is TensorType.INT16
     assert new_multipliers.shape == old_multipliers.shape
@@ -101,6 +100,29 @@ def test_mutate(
 
     fill = new_weights.as_array().ravel()[old_weight_size:]
     assert np.all(fill == FILLER)
+
+
+#  ----------------------------------------------------------------------------
+#                                   TESTS
+#  ----------------------------------------------------------------------------
+
+
+def test_mutate(
+    replacement_pass: ReplaceBconv2DInt8Pass,
+    legalization_pass: LegalizeBconv2dInt8GenericPass,
+    model: XCOREModel,
+    new_opcode: XCOREOpCodes,
+) -> None:
+    _test_mutate(replacement_pass, legalization_pass, model, new_opcode)
+
+    bconv2d_op = model.subgraphs[0].operators[0]
+    assert len(bconv2d_op.inputs) == 5
+
+    # check accu_modifier
+    new_biases = bconv2d_op.inputs[3]
+    new_accu_modifier = bconv2d_op.inputs[4]
+    assert new_accu_modifier.type is TensorType.INT16
+    assert new_accu_modifier.shape == new_biases.shape
 
 
 if __name__ == "__main__":

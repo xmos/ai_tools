@@ -298,14 +298,10 @@ class LegalizeBconv2dPass(LegalizeWeightBiasPass):
         return op
 
 
-class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
+class LegalizeBconv2dInt8GenericPass(LegalizeBconv2dPass):
     @property
     def matching_output_type(self) -> TensorType:
         return TensorType.INT8
-
-    @property
-    def matching_opcode(self) -> XCOREOpCodes:
-        return XCOREOpCodes.XC_bconv2d_int8
 
     @property
     def _fill_size(self) -> int:
@@ -324,7 +320,7 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
         max_pam_exp: int, max_pab_exp: int, max_accu_exp: int
     ) -> Tuple[int, int, int]:
         accu_hat_bits = pam_hat_bits = TensorType.INT16.sizeof() * 8 - 1
-        pab_hat_bits = TensorType.INT32.sizeof() * 8 - 1
+        pab_hat_bits = TensorType.INT32.sizeof() * 8 - 2
 
         for B in reversed(range(-max_pab_exp, pab_hat_bits - max_pab_exp)):
             for A in reversed(range(-max_accu_exp, accu_hat_bits - max_accu_exp)):
@@ -416,12 +412,8 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
             )
 
             # then adjust pam/pad as required by our kernels
-            weights = self._weights.as_array()  # already boggled
             adjusted_pam = -2 * output_trf_pam
-            adjusted_pab = output_trf_pab + output_trf_pam * (
-                self._kernel_channel_size
-                - 2 * self._calculate_overlap_correction(weights)
-            )
+            adjusted_pab = output_trf_pab + output_trf_pam * self._kernel_channel_size
 
             # calculate quantization parameters as required by the kernel
             (M, adjusted_B, q_params) = self._calculate_quantization_parameters(
@@ -474,7 +466,33 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
         return new_op
 
 
-class LegalizeBconv2dInt8DeepInDeepOutPass(LegalizeBconv2dInt8Pass):
+class LegalizeBconv2dInt8Pass(LegalizeBconv2dInt8GenericPass):
+    @property
+    def matching_opcode(self) -> XCOREOpCodes:
+        return XCOREOpCodes.XC_bconv2d_int8
+
+    def mutate_biases(self, op: Operator) -> None:
+        super().mutate_biases(op)
+        accu_shr = op.custom_options["q_params"][1]
+
+        with self.using(op):
+            # calculate quantized accumulator modifier
+            weights = self._weights.as_array()  # already boggled
+            overlap_corrections = self._calculate_overlap_correction(weights)
+            accu_modifier = np.int16(overlap_corrections / 2 ** accu_shr)
+
+            # create and populate new threshpost_act_multolds tensor
+            accu_modifier_tensor = self._op.subgraph.create_tensor(
+                f"{self._op.name}/accu_modifier",
+                TensorType.INT16,
+                self._op.inputs[3].shape,
+                consumers=[self._op],
+            )
+            accu_modifier_tensor.buffer.data = accu_modifier
+            self._op.inputs.append(accu_modifier_tensor)
+
+
+class LegalizeBconv2dInt8DeepInDeepOutPass(LegalizeBconv2dInt8GenericPass):
     @property
     def _overlap_size(self) -> int:
         return 0

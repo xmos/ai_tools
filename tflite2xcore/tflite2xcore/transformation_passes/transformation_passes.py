@@ -385,11 +385,15 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
         multiplier = self._multiplier()
         # NOTE: VLMUL expects one factor in Q2.14
         # we have 1 <= scale < 2 represented in Q2.14
+
+        nonzero_multiplier = multiplier != 0
         rshift = np.full(multiplier.shape, 16)
-        rshift[multiplier != 0] = -np.ceil(np.log2(multiplier[multiplier != 0])) + 1
-        scale = np.full(multiplier.shape, 2**15 - 1)
+        rshift[nonzero_multiplier] = (
+            -np.ceil(np.log2(multiplier[nonzero_multiplier])) + 1
+        )
+        scale = np.full(multiplier.shape, 2 ** 15 - 1)
         scale[multiplier != 0] = np.round(
-            2 ** 14 * (multiplier[multiplier != 0] * 2 ** rshift[multiplier != 0])
+            2 ** 14 * (multiplier[nonzero_multiplier] * 2 ** rshift[nonzero_multiplier])
         )
 
         for j in range(len(scale)):

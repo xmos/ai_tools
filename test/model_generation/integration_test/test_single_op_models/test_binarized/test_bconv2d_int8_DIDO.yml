@@ -261,3 +261,42 @@ default:
     - 1
     - 2
     width: 11
+  20:
+    K_h: 6
+    K_w: 4
+    height: 12
+    input_channels: 256
+    output_channels: 16
+    output_range:
+    - 0
+    - 1
+    strides:
+    - 2
+    - 1
+    width: 8
+  21:
+    K_h: 6
+    K_w: 5
+    height: 10
+    input_channels: 512
+    output_channels: 16
+    output_range:
+    - 0
+    - 1
+    strides:
+    - 2
+    - 2
+    width: 6
+  22:
+    K_h: 3
+    K_w: 3
+    height: 12
+    input_channels: 512
+    output_channels: 16
+    output_range:
+    - 0
+    - 1
+    strides:
+    - 1
+    - 2
+    width: 11

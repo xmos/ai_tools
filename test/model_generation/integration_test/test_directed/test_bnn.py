@@ -91,7 +91,7 @@ def test_converted_model(xcore_model: XCOREModel) -> None:
     subgraph = xcore_model.subgraphs[0]
 
     # check tensors
-    assert len(subgraph.tensors) == 22
+    assert len(subgraph.tensors) == 23
 
     assert len(subgraph.inputs) == 1
     input_tensor = subgraph.inputs[0]

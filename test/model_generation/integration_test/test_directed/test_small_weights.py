@@ -1,14 +1,14 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
 import pytest
-import logging
 import tensorflow as tf
-from pathlib import Path
-from tflite2xcore.utils import LoggingContext  # type: ignore # TODO: fix this
 
 from . import IntegrationTestModelGenerator
 
-from . import test_idempotence  # pylint: disable=unused-import
+from . import (  # pylint: disable=unused-import
+    test_idempotence,
+    test_output,
+)
 
 
 #  ----------------------------------------------------------------------------
@@ -18,11 +18,19 @@ from . import test_idempotence  # pylint: disable=unused-import
 
 class SmallWeightsModelGenerator(IntegrationTestModelGenerator):
     def _build_core_model(self) -> tf.keras.Model:
-        # tf may complain about missing gradients, so silence it
-        with LoggingContext(tf.get_logger(), logging.ERROR):
-            return tf.keras.models.load_model(
-                Path(__file__).parent / "small_weights_model", compile=False
+        initializer = tf.keras.initializers.RandomUniform(minval=0, maxval=2e-40)
+        model = tf.keras.Sequential()
+        model.add(
+            tf.keras.layers.Conv2D(
+                4,
+                4,
+                kernel_initializer=initializer,
+                bias_initializer=initializer,
+                input_shape=(20, 20, 20),
             )
+        )
+        model.add(tf.keras.layers.BatchNormalization())
+        return model
 
 
 GENERATOR = SmallWeightsModelGenerator

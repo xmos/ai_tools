@@ -1,7 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 import numpy as np
 from math import ceil
-from typing import Tuple, List, NamedTuple
+from typing import Tuple, List, NamedTuple, Dict
 
 from tflite2xcore.utils import (
     WORD_SIZE_BITS,
@@ -12,6 +12,7 @@ from tflite2xcore.utils import (
     xor_popcount,
     calculate_same_padding,
     get_unpacked_shape,
+    clrsb,
 )
 from tflite2xcore.xcore_schema import (
     Operator,
@@ -315,24 +316,10 @@ class LegalizeBconv2dInt8GenericPass(LegalizeBconv2dPass):
         ) * VECTOR_SIZE_WORDS - k_p_adjust * out_tail_chans
         return max(fill_words, VECTOR_SIZE_WORDS)
 
-    @staticmethod
-    def __calculate_MBA(
-        max_pam_exp: int, max_pab_exp: int, max_accu_exp: int
-    ) -> Tuple[int, int, int]:
-        accu_hat_bits = pam_hat_bits = TensorType.INT16.sizeof() * 8 - 1
-        pab_hat_bits = TensorType.INT32.sizeof() * 8 - 2
-
-        for B in reversed(range(-max_pab_exp, pab_hat_bits - max_pab_exp)):
-            for A in reversed(range(-max_accu_exp, accu_hat_bits - max_accu_exp)):
-                M = B - A
-                if -max_pam_exp <= M < pam_hat_bits - max_pam_exp:
-                    return M, B, A
-        raise ValueError("quantized exponents cannot be determined")
-
-    def _calculate_clamp_offsets(self, A: int) -> Tuple[int, int, int]:
+    def _calculate_accu_clamps(self) -> Tuple[float, float]:
         # follow larq's implementation to get the output tranform clamps
         INT32_MIN, INT32_MAX = np.iinfo(np.int32).min, np.iinfo(np.int32).max
-        activation_range_map = {
+        activation_range_map: Dict[ActivationFunctionType, Tuple[int, int]] = {
             ActivationFunctionType.NONE: (INT32_MIN, INT32_MAX),
             ActivationFunctionType.RELU: (0, INT32_MAX),
             ActivationFunctionType.RELU_N1_TO_1: (-1, 1),
@@ -348,10 +335,48 @@ class LegalizeBconv2dInt8GenericPass(LegalizeBconv2dPass):
             - max(nominal_clamps[0], -self._kernel_channel_size),
         )
 
-        # do xcore specific calculations
-        shifted_accu_limits = tuple(
-            (self._kernel_channel_size - c) * 2 ** (A - 1) for c in output_trf_clamps
+        # transform to xcore vpu accumulator space
+        return (
+            (self._kernel_channel_size - output_trf_clamps[0]) / 2,
+            (self._kernel_channel_size - output_trf_clamps[1]) / 2,
         )
+
+    @staticmethod
+    def __calculate_exp_bounds(arr: np.ndarray, bound_width: int) -> Tuple[int, int]:
+        min_exp = -1 - int(np.max(np.frexp(arr)[1]))
+        return min_exp, min_exp + bound_width
+
+    def _calculate_MBA(
+        self, adjusted_pam: np.ndarray, adjusted_pab: np.ndarray
+    ) -> Tuple[int, int, int]:
+        # calculate bounds on A
+        accu_clamps = self._calculate_accu_clamps()
+        max_out = int(max(self._kernel_channel_size / 2, *accu_clamps))
+        min_out = int(min(-self._kernel_channel_size / 2, *accu_clamps))
+        rsb = min(clrsb(max_out), clrsb(min_out))
+        self.logger.warning(f"min_out, max_out, clrsb(min_out), clrsb(max_out), rsb: {min_out, max_out, clrsb(min_out), clrsb(max_out), rsb}")
+        Amin, Amax = rsb - 32 + 1, rsb - 16
+        self.logger.warning(f"Amin, Amax: {Amin, Amax}")
+
+        # calculate bounds on M
+        Mmin, Mmax = self.__calculate_exp_bounds(adjusted_pam, bound_width=16)
+        self.logger.warning(f"Mmin, Mmax: {Mmin, Mmax}")
+
+        # calculate bounds on B
+        Bmin, Bmax = self.__calculate_exp_bounds(adjusted_pab, bound_width=32)
+        self.logger.warning(f"Bmin, Bmax (before adjustment): {Bmin, Bmax}")
+        Bmax = max(Bmax, Amax + Mmax) - 2  # ensure A + M = B, and that addition is fine
+        self.logger.warning(f"Bmin, Bmax (after adjustment): {Bmin, Bmax}")
+
+        for A in range(Amax, Amin - 1, -1):
+            for M in range(Mmax, Mmin - 1, -1):
+                B = A + M
+                if Bmin < B < Bmax:
+                    return M, B, A
+        raise ValueError("quantized exponents cannot be determined")
+
+    def _calculate_clamp_offsets(self, A: int) -> Tuple[int, int, int]:
+        shifted_accu_limits = tuple(c * 2 ** A for c in self._calculate_accu_clamps())
 
         INT16_MAX = np.iinfo(np.int16).max
         clamp_offsets = (
@@ -362,7 +387,7 @@ class LegalizeBconv2dInt8GenericPass(LegalizeBconv2dPass):
         if abs(clamp_offsets[0]) >= abs(clamp_offsets[1]):
             clamp_offsets = clamp_offsets[::-1]
         clamp_far_half = clamp_offsets[1] // 2
-        return (clamp_offsets[0], clamp_offsets[1] - clamp_far_half, clamp_far_half)
+        return (-clamp_offsets[0], -clamp_offsets[1] + clamp_far_half, clamp_far_half)
 
     class _QuantizationParams(NamedTuple):
         bias_multiplier: int
@@ -375,14 +400,12 @@ class LegalizeBconv2dInt8GenericPass(LegalizeBconv2dPass):
     def _calculate_quantization_parameters(
         self, adjusted_pam: np.ndarray, adjusted_pab: np.ndarray
     ) -> Tuple[int, int, "_QuantizationParams"]:
-        max_pam_exp = np.max(np.frexp(adjusted_pam)[1])
-        max_pab_exp = np.max(np.frexp(adjusted_pab)[1])
-        max_accu_exp = np.frexp(self._kernel_channel_size / 2)[1]
-        M, B, A = self.__calculate_MBA(max_pam_exp, max_pab_exp, max_accu_exp)
+        M, B, A = self._calculate_MBA(adjusted_pam, adjusted_pab)
+        assert B >= 8
 
-        adjusted_B = min(15 - int(max_pab_exp), B)
-        assert 15 > B - adjusted_B
-        bias_multiplier = 2 ** (B - adjusted_B)  # this is not so simple
+        _, Bmax_16 = self.__calculate_exp_bounds(adjusted_pab, bound_width=16)
+        bias_multiplier = 2 ** max(0, B - Bmax_16)
+        adjusted_B = min(B, Bmax_16)
 
         accu_shr = -A
         final_shr = B - 8
@@ -481,7 +504,7 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dInt8GenericPass):
             overlap_corrections = self._calculate_overlap_correction(weights)
             accu_modifier = np.int16(overlap_corrections / 2 ** accu_shr)
 
-            # create and populate new threshpost_act_multolds tensor
+            # create and populate new thresholds tensor
             accu_modifier_tensor = self._op.subgraph.create_tensor(
                 f"{self._op.name}/accu_modifier",
                 TensorType.INT16,

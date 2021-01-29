@@ -12,7 +12,7 @@ from .test_bconv2d_int8 import (  # pylint: disable=unused-import
 from . import (  # pylint: disable=unused-import
     test_reference_model_regression,
     test_converted_single_op_model,
-    test_output as _test_output,
+    test_output,
 )
 
 
@@ -48,20 +48,6 @@ def reference_op_code() -> ExternalOpCodes:
 @pytest.fixture  # type: ignore
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_bconv2d_int8_DIDO
-
-
-#  ----------------------------------------------------------------------------
-#                                   TESTS
-#  ----------------------------------------------------------------------------
-
-# TODO: remove this when bug is fixed
-def test_output(compared_outputs, request):
-    name = request.node.name
-    for config_idx in (20, 21, 22):
-        config_str = f"[CONFIGS[{config_idx}]]"
-        if name.endswith(config_str):
-            request.applymarker(pytest.mark.xfail(run=False))
-    _test_output(compared_outputs, request)
 
 
 if __name__ == "__main__":

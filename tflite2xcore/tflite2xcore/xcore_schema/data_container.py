@@ -4,7 +4,7 @@ import logging
 import numpy as np
 from typing import TYPE_CHECKING, Iterable, Optional, Union, List, Any
 
-from . import _IRObject, _ModelDependent, TensorType
+from . import _ModelDependent, TensorType
 
 if TYPE_CHECKING:
     from .xcore_model import XCOREModel

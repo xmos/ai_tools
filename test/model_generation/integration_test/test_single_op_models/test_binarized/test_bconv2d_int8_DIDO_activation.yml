@@ -2,23 +2,25 @@
 # RANDOMLY GENERATED CONFIGS, MODIFY AT OWN RISK
 default:
   0:
-    K_h: 1
+    K_h: 3
     K_w: 3
-    height: 7
-    input_channels: 512
+    activation: relu6
+    height: 12
+    input_channels: 256
     output_channels: 48
     output_range:
-    - -2
-    - 3
-    strides:
+    - 0
     - 1
+    strides:
     - 2
-    width: 8
+    - 1
+    width: 6
   1:
-    K_h: 6
-    K_w: 3
-    height: 7
-    input_channels: 256
+    K_h: 1
+    K_w: 5
+    activation: relu6
+    height: 10
+    input_channels: 512
     output_channels: 16
     output_range:
     - 0
@@ -28,275 +30,254 @@ default:
     - 1
     width: 11
   2:
-    K_h: 2
-    K_w: 4
+    K_h: 1
+    K_w: 5
+    activation: relu
     height: 12
-    input_channels: 256
+    input_channels: 512
     output_channels: 16
     output_range:
     - -4
     - 1
     strides:
+    - 1
     - 2
-    - 2
-    width: 11
+    width: 6
   3:
-    K_h: 3
+    K_h: 2
     K_w: 3
+    activation: relu
+    height: 10
+    input_channels: 512
+    output_channels: 16
+    output_range:
+    - 0
+    - 3
+    strides:
+    - 1
+    - 1
+    width: 11
+  4:
+    K_h: 6
+    K_w: 1
+    activation: relu6
     height: 10
     input_channels: 256
     output_channels: 48
     output_range:
-    - -4
+    - -2
     - 5
     strides:
     - 2
     - 2
-    width: 6
-  4:
-    K_h: 3
-    K_w: 4
-    height: 12
+    width: 8
+  5:
+    K_h: 1
+    K_w: 3
+    activation: relu
+    height: 7
     input_channels: 512
-    output_channels: 48
+    output_channels: 16
     output_range:
     - -4
     - 5
     strides:
     - 1
-    - 2
-    width: 11
-  5:
-    K_h: 2
-    K_w: 3
-    height: 10
-    input_channels: 512
-    output_channels: 48
-    output_range:
-    - -4
-    - 3
-    strides:
-    - 2
     - 1
     width: 8
   6:
-    K_h: 1
+    K_h: 2
     K_w: 5
+    activation: relu6
     height: 7
     input_channels: 256
     output_channels: 16
     output_range:
     - 0
-    - 3
+    - 1
     strides:
     - 2
     - 1
     width: 6
   7:
     K_h: 2
-    K_w: 4
-    height: 7
-    input_channels: 512
-    output_channels: 16
-    output_range:
-    - -4
-    - 5
-    strides:
-    - 1
-    - 1
-    width: 6
-  8:
-    K_h: 6
-    K_w: 1
-    height: 7
-    input_channels: 512
-    output_channels: 16
-    output_range:
-    - -4
-    - 1
-    strides:
-    - 1
-    - 1
-    width: 8
-  9:
-    K_h: 6
     K_w: 5
-    height: 12
-    input_channels: 256
-    output_channels: 16
-    output_range:
-    - -4
-    - 3
-    strides:
-    - 2
-    - 2
-    width: 11
-  10:
-    K_h: 6
-    K_w: 4
+    activation: relu6
     height: 10
     input_channels: 256
     output_channels: 48
     output_range:
     - -2
-    - 1
+    - 5
     strides:
-    - 1
     - 2
-    width: 6
-  11:
+    - 2
+    width: 11
+  8:
     K_h: 6
     K_w: 5
-    height: 10
+    activation: relu6
+    height: 12
     input_channels: 256
-    output_channels: 16
+    output_channels: 48
     output_range:
     - -2
     - 3
+    strides:
+    - 2
+    - 2
+    width: 8
+  9:
+    K_h: 6
+    K_w: 4
+    activation: relu6
+    height: 12
+    input_channels: 512
+    output_channels: 16
+    output_range:
+    - -2
+    - 1
+    strides:
+    - 2
+    - 1
+    width: 11
+  10:
+    K_h: 2
+    K_w: 3
+    activation: relu
+    height: 7
+    input_channels: 512
+    output_channels: 48
+    output_range:
+    - 0
+    - 3
+    strides:
+    - 2
+    - 2
+    width: 11
+  11:
+    K_h: 1
+    K_w: 1
+    activation: relu6
+    height: 12
+    input_channels: 256
+    output_channels: 16
+    output_range:
+    - -4
+    - 1
     strides:
     - 1
     - 1
     width: 6
   12:
-    K_h: 1
-    K_w: 5
-    height: 12
-    input_channels: 256
-    output_channels: 16
-    output_range:
-    - -2
-    - 5
-    strides:
-    - 2
-    - 2
-    width: 11
-  13:
     K_h: 3
-    K_w: 3
-    height: 12
-    input_channels: 512
-    output_channels: 48
-    output_range:
-    - -2
-    - 3
-    strides:
-    - 1
-    - 2
-    width: 11
-  14:
-    K_h: 3
-    K_w: 1
-    height: 10
-    input_channels: 512
-    output_channels: 48
-    output_range:
-    - 0
-    - 1
-    strides:
-    - 2
-    - 2
-    width: 8
-  15:
-    K_h: 1
-    K_w: 1
-    height: 10
-    input_channels: 256
-    output_channels: 48
-    output_range:
-    - 0
-    - 5
-    strides:
-    - 1
-    - 1
-    width: 8
-  16:
-    K_h: 2
     K_w: 4
+    activation: relu6
     height: 7
     input_channels: 512
     output_channels: 48
     output_range:
+    - -4
+    - 5
+    strides:
+    - 1
+    - 1
+    width: 8
+  13:
+    K_h: 3
+    K_w: 1
+    activation: relu6
+    height: 10
+    input_channels: 512
+    output_channels: 48
+    output_range:
+    - -2
+    - 3
+    strides:
+    - 2
+    - 1
+    width: 8
+  14:
+    K_h: 1
+    K_w: 3
+    activation: relu
+    height: 12
+    input_channels: 512
+    output_channels: 48
+    output_range:
+    - -4
+    - 1
+    strides:
+    - 1
+    - 2
+    width: 6
+  15:
+    K_h: 3
+    K_w: 4
+    activation: relu
+    height: 7
+    input_channels: 256
+    output_channels: 16
+    output_range:
+    - -4
+    - 5
+    strides:
+    - 1
+    - 2
+    width: 11
+  16:
+    K_h: 6
+    K_w: 1
+    activation: relu
+    height: 10
+    input_channels: 256
+    output_channels: 16
+    output_range:
+    - 0
+    - 5
+    strides:
+    - 2
+    - 2
+    width: 8
+  17:
+    K_h: 6
+    K_w: 1
+    activation: relu
+    height: 12
+    input_channels: 256
+    output_channels: 48
+    output_range:
+    - -4
+    - 3
+    strides:
+    - 1
+    - 2
+    width: 6
+  18:
+    K_h: 2
+    K_w: 4
+    activation: relu
+    height: 10
+    input_channels: 256
+    output_channels: 48
+    output_range:
     - 0
     - 3
     strides:
     - 1
     - 1
     width: 8
-  17:
-    K_h: 3
-    K_w: 1
-    height: 10
-    input_channels: 256
-    output_channels: 16
-    output_range:
-    - -2
-    - 5
-    strides:
-    - 2
-    - 1
-    width: 6
-  18:
-    K_h: 2
-    K_w: 5
-    height: 10
-    input_channels: 512
-    output_channels: 48
-    output_range:
-    - 0
-    - 5
-    strides:
-    - 2
-    - 1
-    width: 8
   19:
-    K_h: 1
-    K_w: 1
-    height: 12
+    K_h: 3
+    K_w: 4
+    activation: relu
+    height: 7
     input_channels: 512
     output_channels: 16
     output_range:
     - -2
-    - 1
+    - 3
     strides:
     - 1
-    - 2
-    width: 11
-  20:
-    K_h: 6
-    K_w: 4
-    height: 12
-    input_channels: 256
-    output_channels: 16
-    output_range:
-    - 0
-    - 1
-    strides:
-    - 2
-    - 1
-    width: 8
-  21:
-    K_h: 6
-    K_w: 5
-    height: 10
-    input_channels: 512
-    output_channels: 16
-    output_range:
-    - 0
-    - 1
-    strides:
-    - 2
     - 2
     width: 6
-  22:
-    K_h: 3
-    K_w: 3
-    height: 12
-    input_channels: 512
-    output_channels: 16
-    output_range:
-    - 0
-    - 1
-    strides:
-    - 1
-    - 2
-    width: 11

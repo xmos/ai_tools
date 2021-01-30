@@ -13,19 +13,8 @@ from ..test_bconv2d_int8 import (  # pylint: disable=unused-import
 from . import (  # pylint: disable=unused-import
     test_reference_model_regression,
     test_converted_model,
-    test_output as _test_output,
+    test_output,
 )
-
-#  ----------------------------------------------------------------------------
-#                                   TESTS
-#  ----------------------------------------------------------------------------
-
-# TODO: remove this when bug is fixed
-def test_output(compared_outputs, request):
-    name = request.node.name
-    if name.endswith("[CONFIGS[13]]") or name.endswith("[CONFIGS[19]]"):
-        request.applymarker(pytest.mark.xfail(run=False))
-    _test_output(compared_outputs, request)
 
 
 if __name__ == "__main__":

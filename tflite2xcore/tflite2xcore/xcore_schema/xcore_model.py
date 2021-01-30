@@ -13,7 +13,6 @@ from typing import (
     Counter,
     TypeVar,
     Type,
-    Generic,
     overload,
     cast,
     MutableSequence,

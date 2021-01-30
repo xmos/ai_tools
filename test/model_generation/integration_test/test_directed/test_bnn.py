@@ -5,7 +5,7 @@ import logging
 import tensorflow as tf
 import numpy as np
 from pathlib import Path
-from typing import Optional, NamedTuple, Type
+from typing import Optional, Type
 from tflite2xcore.utils import LoggingContext  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
     XCOREModel,

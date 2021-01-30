@@ -76,14 +76,15 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
                 with open(config_file, "r") as f:
                     CONFIGS = yaml.load(f, Loader=yaml.FullLoader)
             except FileNotFoundError as e:
-                raise FileNotFoundError(
+                logging.info(
                     "Cannot find .yml test config file and "
                     "test module does not contain CONFIGS"
-                ) from e
+                )
+                CONFIGS = {}
 
         coverage = metafunc.config.getoption("coverage")
         try:
-            configs = list(CONFIGS[coverage].values())
+            configs = list(CONFIGS[coverage].values()) if CONFIGS else [{}]
         except KeyError:
             raise KeyError(
                 "CONFIGS does not define coverage level "

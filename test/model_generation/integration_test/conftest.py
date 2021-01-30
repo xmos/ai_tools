@@ -119,11 +119,18 @@ def disable_gpus(monkeypatch: _pytest.monkeypatch.MonkeyPatch) -> None:
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "-1")
 
 
+@pytest.fixture  # type: ignore
+def use_device(request: _pytest.fixtures.SubRequest) -> bool:
+    return bool(request.config.getoption("--use-device"))
+
+
 _WORKER_CACHE: Dict[Path, IntegrationTestRunner] = {}
 
 
 @pytest.fixture  # type: ignore
-def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
+def run(
+    request: _pytest.fixtures.SubRequest, use_device: bool
+) -> IntegrationTestRunner:
     try:
         GENERATOR = request.module.GENERATOR
     except AttributeError:
@@ -136,7 +143,6 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
 
     pytest_config = request.config
 
-    use_device = pytest_config.getoption("--use-device")
     if request.param.pop("skip_on_device", False) and use_device:
         pytest.skip()
 

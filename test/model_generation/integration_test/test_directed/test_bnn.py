@@ -3,8 +3,9 @@
 import pytest
 import logging
 import tensorflow as tf
+import numpy as np
 from pathlib import Path
-from typing import Optional
+from typing import Optional, NamedTuple, Type
 from tflite2xcore.utils import LoggingContext  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
     XCOREModel,
@@ -19,7 +20,7 @@ from . import IntegrationTestModelGenerator, BinarizedTestRunner
 
 from . import (  # pylint: disable=unused-import
     test_idempotence,
-    #test_output,  # TODO: enable this
+    test_output,
 )
 
 
@@ -44,10 +45,17 @@ GENERATOR = BNNModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-class CIFAR10DataFactory(TensorDataFactory):
+class CIFAR10TestDataFactory(TensorDataFactory):
     def make_data(self, batch: Optional[int] = None) -> tf.Tensor:
         _, (test_images, _) = tf.keras.datasets.cifar10.load_data()
+        assert self._shape_hook() == test_images.shape[1:]
         return tf.cast(test_images - 128.0, tf.int8)[:batch]
+
+
+class CIFAR10TestLabelFactory(TensorDataFactory):
+    def make_data(self, batch: Optional[int] = None) -> tf.Tensor:
+        _, (_, test_labels) = tf.keras.datasets.cifar10.load_data()
+        return tf.cast(test_labels, tf.int8)[:batch, 0]
 
 
 #  ----------------------------------------------------------------------------
@@ -56,8 +64,26 @@ class CIFAR10DataFactory(TensorDataFactory):
 
 
 class CIFAR10BinarizedTestRunner(BinarizedTestRunner):
+    def __init__(
+        self,
+        generator: Type[IntegrationTestModelGenerator],
+        *,
+        use_device: bool = False,
+    ) -> None:
+        super().__init__(generator)
+
+        self._ground_truth_data_factory = CIFAR10TestLabelFactory(self, lambda: tuple())
+        self.register_data_factory(self._ground_truth_data_factory)
+
+    @property
+    def repr_data_example_count(self) -> int:
+        return 10000
+
     def make_repr_data_factory(self) -> TensorDataFactory:
-        return CIFAR10DataFactory(self, lambda: self._model_generator.input_shape)
+        return CIFAR10TestDataFactory(self, lambda: self._model_generator.input_shape)
+
+    def get_ground_truth_data(self) -> tf.Tensor:
+        return self._ground_truth_data_factory.make_data(self.repr_data_example_count)
 
 
 RUNNER = CIFAR10BinarizedTestRunner
@@ -79,12 +105,27 @@ CONFIGS = {
 
 @pytest.fixture  # type: ignore
 def abs_output_tolerance() -> int:
-    return 0
+    return 31
 
 
 #  ----------------------------------------------------------------------------
 #                                   TESTS
 #  ----------------------------------------------------------------------------
+
+
+def test_softmax_deviation(run: CIFAR10BinarizedTestRunner) -> None:
+    xcore_labels = np.argmax(run.outputs.xcore, axis=1)
+    reference_labels = np.argmax(run.outputs.reference_quant, axis=1)
+    deviation_indices = (reference_labels != xcore_labels).nonzero()[0]
+    assert len(deviation_indices) == 49
+
+
+def test_accuracy(run: CIFAR10BinarizedTestRunner) -> None:
+    metric = tf.keras.metrics.Accuracy()
+    metric.update_state(
+        y_true=run.get_ground_truth_data(), y_pred=np.argmax(run.outputs.xcore, axis=1)
+    )
+    assert metric.result().numpy() == np.float32(0.6873)
 
 
 def test_converted_model(xcore_model: XCOREModel) -> None:

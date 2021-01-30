@@ -110,11 +110,7 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
     def mutate(self, op: Operator) -> Operator:
         new_op = super().mutate(op)
         with self.using(op):
-            new_op.add_custom_options(
-                stride=self._strides,
-                padding=self._padding,
-                fused_activation_function=self._fused_activation_function,
-            )
+            new_op.add_custom_options(stride=self._strides, padding=self._padding)
         return new_op
 
 
@@ -130,6 +126,14 @@ class ReplaceBconv2DInt8Pass(ReplaceBconv2DPass):
             and params_tensor not in self._op.subgraph.outputs
             for params_tensor in self._op.inputs[2:]
         )
+
+    def mutate(self, op: Operator) -> Operator:
+        new_op = super().mutate(op)
+        with self.using(op):
+            new_op.add_custom_options(
+                fused_activation_function=self._fused_activation_function
+            )
+        return new_op
 
 
 class ReplaceBconv2DInt8DeepInDeepOutPass(ReplaceBconv2DInt8Pass):
@@ -354,19 +358,14 @@ class LegalizeBconv2dInt8GenericPass(LegalizeBconv2dPass):
         max_out = int(max(self._kernel_channel_size / 2, *accu_clamps))
         min_out = int(min(-self._kernel_channel_size / 2, *accu_clamps))
         rsb = min(clrsb(max_out), clrsb(min_out))
-        self.logger.warning(f"min_out, max_out, clrsb(min_out), clrsb(max_out), rsb: {min_out, max_out, clrsb(min_out), clrsb(max_out), rsb}")
         Amin, Amax = rsb - 32 + 1, rsb - 16
-        self.logger.warning(f"Amin, Amax: {Amin, Amax}")
 
         # calculate bounds on M
         Mmin, Mmax = self.__calculate_exp_bounds(adjusted_pam, bound_width=16)
-        self.logger.warning(f"Mmin, Mmax: {Mmin, Mmax}")
 
         # calculate bounds on B
         Bmin, Bmax = self.__calculate_exp_bounds(adjusted_pab, bound_width=32)
-        self.logger.warning(f"Bmin, Bmax (before adjustment): {Bmin, Bmax}")
         Bmax = max(Bmax, Amax + Mmax) - 2  # ensure A + M = B, and that addition is fine
-        self.logger.warning(f"Bmin, Bmax (after adjustment): {Bmin, Bmax}")
 
         for A in range(Amax, Amin - 1, -1):
             for M in range(Mmax, Mmin - 1, -1):

@@ -70,14 +70,14 @@ class CIFAR10BinarizedTestRunner(BinarizedTestRunner):
         *,
         use_device: bool = False,
     ) -> None:
-        super().__init__(generator)
+        super().__init__(generator, use_device=use_device)
 
         self._ground_truth_data_factory = CIFAR10TestLabelFactory(self, lambda: tuple())
         self.register_data_factory(self._ground_truth_data_factory)
 
     @property
     def repr_data_example_count(self) -> int:
-        return 10000
+        return 100 if self._use_device else 10000
 
     def make_repr_data_factory(self) -> TensorDataFactory:
         return CIFAR10TestDataFactory(self, lambda: self._model_generator.input_shape)
@@ -99,6 +99,11 @@ def abs_output_tolerance() -> int:
     return 31
 
 
+@pytest.fixture  # type: ignore
+def expected_accuracy() -> float:
+    return 31
+
+
 #  ----------------------------------------------------------------------------
 #                                   TESTS
 #  ----------------------------------------------------------------------------
@@ -111,12 +116,12 @@ def test_softmax_deviation(run: CIFAR10BinarizedTestRunner) -> None:
     assert len(deviation_indices) == 49
 
 
-def test_accuracy(run: CIFAR10BinarizedTestRunner) -> None:
+def test_accuracy(run: CIFAR10BinarizedTestRunner, expected_accuracy: float) -> None:
     metric = tf.keras.metrics.Accuracy()
     metric.update_state(
         y_true=run.get_ground_truth_data(), y_pred=np.argmax(run.outputs.xcore, axis=1)
     )
-    assert metric.result().numpy() == np.float32(0.6873)
+    assert metric.result().numpy() == np.float32(expected_accuracy)
 
 
 def test_converted_model(xcore_model: XCOREModel) -> None:

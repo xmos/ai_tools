@@ -70,14 +70,15 @@ class CIFAR10BinarizedTestRunner(BinarizedTestRunner):
         *,
         use_device: bool = False,
     ) -> None:
-        super().__init__(generator)
+        super().__init__(generator, use_device=use_device)
 
         self._ground_truth_data_factory = CIFAR10TestLabelFactory(self, lambda: tuple())
         self.register_data_factory(self._ground_truth_data_factory)
 
     @property
     def repr_data_example_count(self) -> int:
-        return 10000
+        # TODO: fix this when tools are more stable (on the device this tends to time out)
+        return 100 if self._use_device else 10000
 
     def make_repr_data_factory(self) -> TensorDataFactory:
         return CIFAR10TestDataFactory(self, lambda: self._model_generator.input_shape)
@@ -90,22 +91,23 @@ RUNNER = CIFAR10BinarizedTestRunner
 
 
 #  ----------------------------------------------------------------------------
-#                                   CONFIGS
-#  ----------------------------------------------------------------------------
-
-CONFIGS = {
-    "default": {0: {"skip_on_device": False}},
-}
-
-
-#  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
 
 
 @pytest.fixture  # type: ignore
-def abs_output_tolerance() -> int:
-    return 31
+def abs_output_tolerance(use_device: bool) -> int:
+    return 13 if use_device else 31
+
+
+@pytest.fixture  # type: ignore
+def expected_accuracy(use_device: bool) -> float:
+    return 0.79 if use_device else 0.6873
+
+
+@pytest.fixture  # type: ignore
+def expected_prediction_deviation(use_device: bool) -> int:
+    return 0 if use_device else 49
 
 
 #  ----------------------------------------------------------------------------
@@ -113,21 +115,24 @@ def abs_output_tolerance() -> int:
 #  ----------------------------------------------------------------------------
 
 
-def test_softmax_deviation(run: CIFAR10BinarizedTestRunner) -> None:
+def test_prediction_deviation(
+    run: CIFAR10BinarizedTestRunner, expected_prediction_deviation: int
+) -> None:
     xcore_labels = np.argmax(run.outputs.xcore, axis=1)
     reference_labels = np.argmax(run.outputs.reference_quant, axis=1)
     deviation_indices = (reference_labels != xcore_labels).nonzero()[0]
-    assert len(deviation_indices) == 49
+    assert len(deviation_indices) == expected_prediction_deviation
 
 
-def test_accuracy(run: CIFAR10BinarizedTestRunner) -> None:
+def test_accuracy(run: CIFAR10BinarizedTestRunner, expected_accuracy: float) -> None:
     metric = tf.keras.metrics.Accuracy()
     metric.update_state(
         y_true=run.get_ground_truth_data(), y_pred=np.argmax(run.outputs.xcore, axis=1)
     )
-    assert metric.result().numpy() == np.float32(0.6873)
+    assert metric.result().numpy() == np.float32(expected_accuracy)
 
 
+@pytest.mark.skip_on_device  # type: ignore
 def test_converted_model(xcore_model: XCOREModel) -> None:
     subgraph = xcore_model.subgraphs[0]
 

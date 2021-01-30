@@ -1,5 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+import pytest
 import tensorflow as tf
 from typing import Optional, Tuple
 
@@ -49,6 +50,7 @@ class ExplicitlyPaddedConv2dMixin(PaddingMixin, AbstractConv2dTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
+@pytest.mark.skip_on_device  # type: ignore
 def test_reference_model_regression(
     reference_model: XCOREModel, reference_op_code: ValidOpCodes
 ) -> None:

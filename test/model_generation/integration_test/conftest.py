@@ -7,7 +7,7 @@ import pytest
 import _pytest
 import numpy as np
 from pathlib import Path
-from typing import Dict, Type, Optional, Union
+from typing import Dict, Type, Optional, Union, List
 
 from tflite2xcore.utils import dequantize  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
@@ -76,14 +76,15 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
                 with open(config_file, "r") as f:
                     CONFIGS = yaml.load(f, Loader=yaml.FullLoader)
             except FileNotFoundError as e:
-                raise FileNotFoundError(
+                logging.info(
                     "Cannot find .yml test config file and "
                     "test module does not contain CONFIGS"
-                ) from e
+                )
+                CONFIGS = {}
 
         coverage = metafunc.config.getoption("coverage")
         try:
-            configs = list(CONFIGS[coverage].values())
+            configs = list(CONFIGS[coverage].values()) if CONFIGS else [{}]
         except KeyError:
             raise KeyError(
                 "CONFIGS does not define coverage level "
@@ -98,6 +99,16 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
         )
 
 
+def pytest_collection_modifyitems(
+    config: _pytest.config.Config, items: List[pytest.Item]
+) -> None:
+    if config.getoption("--use-device"):
+        skip = pytest.mark.skip(reason="Test should be skipped on device")
+        for item in items:
+            if "skip_on_device" in item.keywords:
+                item.add_marker(skip)
+
+
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
@@ -108,11 +119,18 @@ def disable_gpus(monkeypatch: _pytest.monkeypatch.MonkeyPatch) -> None:
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "-1")
 
 
+@pytest.fixture  # type: ignore
+def use_device(request: _pytest.fixtures.SubRequest) -> bool:
+    return bool(request.config.getoption("--use-device"))
+
+
 _WORKER_CACHE: Dict[Path, IntegrationTestRunner] = {}
 
 
 @pytest.fixture  # type: ignore
-def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
+def run(
+    request: _pytest.fixtures.SubRequest, use_device: bool
+) -> IntegrationTestRunner:
     try:
         GENERATOR = request.module.GENERATOR
     except AttributeError:
@@ -125,7 +143,6 @@ def run(request: _pytest.fixtures.SubRequest) -> IntegrationTestRunner:
 
     pytest_config = request.config
 
-    use_device = pytest_config.getoption("--use-device")
     if request.param.pop("skip_on_device", False) and use_device:
         pytest.skip()
 

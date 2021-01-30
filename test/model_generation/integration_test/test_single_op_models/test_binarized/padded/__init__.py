@@ -1,5 +1,7 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+import pytest
+
 from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
     XCOREOpCodes,
     XCOREModel,
@@ -16,6 +18,7 @@ from .. import (
 #  ----------------------------------------------------------------------------
 
 
+@pytest.mark.skip_on_device  # type: ignore
 def test_converted_model(
     xcore_model: XCOREModel, converted_op_code: XCOREOpCodes
 ) -> None:

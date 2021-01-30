@@ -1,5 +1,6 @@
 # Copyright (c) 2020, XMOS Ltd, All rights reserved
 
+import pytest
 import tensorflow as tf
 from abc import abstractmethod
 from typing import Tuple, Optional
@@ -116,6 +117,7 @@ class FilterOpTestModelGenerator(ImageInputOpTestModelGenerator):
 #  ----------------------------------------------------------------------------
 
 
+@pytest.mark.skip_on_device  # type: ignore
 def test_converted_single_op_model(
     xcore_model: XCOREModel, converted_op_code: XCOREOpCodes
 ) -> None:
@@ -125,6 +127,7 @@ def test_converted_single_op_model(
     assert op.operator_code.code is converted_op_code
 
 
+@pytest.mark.skip_on_device  # type: ignore
 def test_reference_model_regression(
     reference_model: XCOREModel, reference_op_code: ValidOpCodes
 ) -> None:

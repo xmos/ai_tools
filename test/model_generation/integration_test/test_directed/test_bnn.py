@@ -124,6 +124,7 @@ def test_accuracy(run: CIFAR10BinarizedTestRunner, expected_accuracy: float) -> 
     assert metric.result().numpy() == np.float32(expected_accuracy)
 
 
+@pytest.mark.skip_on_device  # type: ignore
 def test_converted_model(xcore_model: XCOREModel) -> None:
     subgraph = xcore_model.subgraphs[0]
 

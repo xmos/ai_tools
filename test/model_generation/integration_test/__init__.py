@@ -433,6 +433,7 @@ def test_output(
         pytest.fail(msg, pytrace=False)
 
 
+@pytest.mark.skip_on_device  # type: ignore
 def test_idempotence(xcore_model: XCOREModel, run: IntegrationTestRunner) -> None:
     run._identity_converter.convert()
     identical_model = XCOREModel.deserialize(run._identity_converter._model)

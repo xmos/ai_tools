@@ -7,7 +7,7 @@ import pytest
 import _pytest
 import numpy as np
 from pathlib import Path
-from typing import Dict, Type, Optional, Union
+from typing import Dict, Type, Optional, Union, List
 
 from tflite2xcore.utils import dequantize  # type: ignore # TODO: fix this
 from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
@@ -97,6 +97,16 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
             indirect=True,
             ids=[f"CONFIGS[{j}]" for j, _ in enumerate(configs)],
         )
+
+
+def pytest_collection_modifyitems(
+    config: _pytest.config.Config, items: List[pytest.Item]
+) -> None:
+    if config.getoption("--use-device"):
+        skip = pytest.mark.skip(reason="Test should be skipped on device")
+        for item in items:
+            if "skip_on_device" in item.keywords:
+                item.add_marker(skip)
 
 
 #  ----------------------------------------------------------------------------

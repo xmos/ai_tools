@@ -77,6 +77,7 @@ class CIFAR10BinarizedTestRunner(BinarizedTestRunner):
 
     @property
     def repr_data_example_count(self) -> int:
+        # TODO: fix this when tools are more stable (on the device this tends to time out)
         return 100 if self._use_device else 10000
 
     def make_repr_data_factory(self) -> TensorDataFactory:
@@ -95,13 +96,18 @@ RUNNER = CIFAR10BinarizedTestRunner
 
 
 @pytest.fixture  # type: ignore
-def abs_output_tolerance() -> int:
-    return 31
+def abs_output_tolerance(use_device: bool) -> int:
+    return 13 if use_device else 31
 
 
 @pytest.fixture  # type: ignore
-def expected_accuracy() -> float:
-    return 31
+def expected_accuracy(use_device: bool) -> float:
+    return 0.79 if use_device else 0.6873
+
+
+@pytest.fixture  # type: ignore
+def expected_prediction_deviation(use_device: bool) -> int:
+    return 0 if use_device else 49
 
 
 #  ----------------------------------------------------------------------------
@@ -109,11 +115,13 @@ def expected_accuracy() -> float:
 #  ----------------------------------------------------------------------------
 
 
-def test_softmax_deviation(run: CIFAR10BinarizedTestRunner) -> None:
+def test_prediction_deviation(
+    run: CIFAR10BinarizedTestRunner, expected_prediction_deviation: int
+) -> None:
     xcore_labels = np.argmax(run.outputs.xcore, axis=1)
     reference_labels = np.argmax(run.outputs.reference_quant, axis=1)
     deviation_indices = (reference_labels != xcore_labels).nonzero()[0]
-    assert len(deviation_indices) == 49
+    assert len(deviation_indices) == expected_prediction_deviation
 
 
 def test_accuracy(run: CIFAR10BinarizedTestRunner, expected_accuracy: float) -> None:

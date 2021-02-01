@@ -1,6 +1,6 @@
 # Integration Tests
 
-*Before running the integration tests, you must first build the `interpreter` and `test_model` example applications.*
+*Before running the integration tests, you must first build the `xcore_interpreter` applications.*
 
 ## Running tests with the host interpreter
 
@@ -14,6 +14,9 @@ To clear the cache and run all tests
 
 ## Running tests with the device interpreter
 
+To run on the device, specify:
+
+    -- use-device
 
 ## Other testing options
 
@@ -30,5 +33,3 @@ Run
     > pytest -h
 
 for more info on custom options.  
-
-

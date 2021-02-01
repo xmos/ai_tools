@@ -7,15 +7,6 @@
 	url = git@github.com:xmos/tensorflow
 	ignore = all
 	branch = develop
-[submodule "third_party/gemmlowp"]
-	path = third_party/gemmlowp
-	url = git@github.com:google/gemmlowp.git
-	ignore = dirty
-[submodule "third_party/ruy"]
-	path = third_party/ruy
-	url = git@github.com:google/ruy.git
-	ignore = dirty
-[submodule "xcore_interpreters/lib_nn"]
-	path = xcore_interpreters/lib_nn
-	url = git@github.com:xmos/lib_nn.git
-	ignore = dirty
+[submodule "test/ai_deployment_framework"]
+	path = test/ai_deployment_framework
+	url = git@github.com:xmos/ai_deployment_framework.git

@@ -87,6 +87,8 @@ def test_mutate(
 
     new_op = operators[-1]
 
+    assert "fused_activation_function" in new_op.custom_options
+
     assert len(new_op.inputs) == 4
     new_op.inputs[1].type is TensorType.INT32
     new_op.inputs[2].type is TensorType.INT16

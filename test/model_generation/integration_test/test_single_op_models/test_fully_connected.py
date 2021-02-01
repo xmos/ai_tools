@@ -74,6 +74,7 @@ def reference_op_code() -> BuiltinOpCodes:
 #  ----------------------------------------------------------------------------
 
 
+@pytest.mark.skip_on_device  # type: ignore
 def test_reference_model_regression(
     reference_model: XCOREModel, reference_op_code: BuiltinOpCodes
 ) -> None:

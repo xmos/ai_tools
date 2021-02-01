@@ -2,7 +2,7 @@
 
 import pytest
 
-from .test_bconv2d_int8 import (  # pylint: disable=unused-import
+from .test_bconv2d_int8_DIDO import (  # pylint: disable=unused-import
     GENERATOR,
     RUNNER,
     bitpacked_outputs,

@@ -146,6 +146,7 @@ def implicit_tolerance_margin() -> float:
 #  ----------------------------------------------------------------------------
 
 
+@pytest.mark.skip_on_device  # type: ignore
 def test_converted_model(xcore_model: XCOREModel) -> None:
     subgraph = xcore_model.subgraphs[0]
 

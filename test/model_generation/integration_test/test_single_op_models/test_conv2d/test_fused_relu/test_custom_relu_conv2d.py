@@ -42,6 +42,7 @@ def abs_output_tolerance() -> None:
 #  ----------------------------------------------------------------------------
 
 
+@pytest.mark.skip_on_device  # type: ignore
 def test_reference_model_regression(reference_model: XCOREModel) -> None:
     operators = reference_model.subgraphs[0].operators
 

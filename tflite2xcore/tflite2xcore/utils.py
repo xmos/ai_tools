@@ -7,6 +7,7 @@ import argparse
 import logging
 import numpy as np
 import tensorflow as tf
+from math import log2, ceil
 from functools import wraps
 from types import TracebackType
 from typing import (
@@ -235,6 +236,11 @@ def xor_popcount(a: np.ndarray, b: np.ndarray) -> int:
     return np.count_nonzero(unpack_bits(np.bitwise_xor(a, b)))  # type: ignore
 
 
+def clrsb(a: int, bitwidth: int = 32) -> int:
+    """ counts leading redundant sign bits """
+    return bitwidth - ceil(log2(abs(a))) - 1
+
+
 # -----------------------------------------------------------------------------
 #                          QUANTIZATION HELPERS
 # -----------------------------------------------------------------------------
@@ -334,7 +340,7 @@ def quantize_keras_model(
 
 def _calculate_valid_output_size(in_size: int, stride: int, k_dim: int) -> int:
     assert in_size >= k_dim
-    return int(np.ceil((in_size - k_dim + 1) / stride))
+    return ceil((in_size - k_dim + 1) / stride)
 
 
 def calculate_valid_output_size(
@@ -346,7 +352,7 @@ def calculate_valid_output_size(
 
 
 def _calculate_same_output_size(in_size: int, stride: int) -> int:
-    return int(np.ceil(in_size / stride))
+    return ceil(in_size / stride)
 
 
 def calculate_same_output_size(

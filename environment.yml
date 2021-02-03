@@ -186,4 +186,4 @@ dependencies:
     - werkzeug==0.16.0
     - wheel==0.35
     - -e ./tflite2xcore
-    - -e ./test/ai_deployment_framework/xcore_interpreters
+    - -e ./utils/ai_deployment_framework/xcore_interpreters

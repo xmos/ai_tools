@@ -12,6 +12,7 @@ from tflite2xcore.parallelization import (
     SlicePlanner,
     ChannelGroupSlicePlanner,
 )
+from tflite2xcore.utils import WORD_SIZE_BITS
 
 from .transformation_passes import OperatorMatchingPass
 
@@ -90,6 +91,24 @@ class ParallelizeConv2dPass(SpatialParallelizationPass):
         XCOREOpCodes.XC_conv2d_deep,
         XCOREOpCodes.XC_conv2d_1x1,
     )
+
+
+class ParallelizeBConv2dInt8Pass(SpatialParallelizationPass):
+    MATCHING_OPCODES = (
+        XCOREOpCodes.XC_bconv2d_int8,
+        XCOREOpCodes.XC_bconv2d_int8_DIDO,
+    )
+
+
+class ParallelizeBConv2dBinPass(SpatialParallelizationPass):
+    MATCHING_OPCODES = (
+        XCOREOpCodes.XC_bconv2d_bin,
+        XCOREOpCodes.XC_bconv2d_bin_DI,
+    )
+
+    @property
+    def _cout(self) -> int:
+        return super()._cout * WORD_SIZE_BITS
 
 
 class ParallelizeDepthwiseConv2dPass(SpatialParallelizationPass):

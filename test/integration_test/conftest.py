@@ -1,4 +1,4 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import yaml
@@ -68,29 +68,33 @@ def pytest_addoption(parser):  # type: ignore
 def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
     if "run" in metafunc.fixturenames:
         try:
-            CONFIGS = metafunc.module.CONFIGS
-            config_file = Path(metafunc.module.__file__)
+            configs = metafunc.module.__configs
         except AttributeError:
-            logging.debug(f"CONFIGS undefined in {metafunc.module}")
-            config_file = Path(metafunc.module.__file__).with_suffix(".yml")
             try:
-                with open(config_file, "r") as f:
-                    CONFIGS = yaml.load(f, Loader=yaml.FullLoader)
-            except FileNotFoundError as e:
-                logging.info(
-                    "Cannot find .yml test config file and "
-                    "test module does not contain CONFIGS"
-                )
-                CONFIGS = {}
+                CONFIGS = metafunc.module.CONFIGS
+                config_file = Path(metafunc.module.__file__)
+            except AttributeError:
+                logging.debug(f"CONFIGS undefined in {metafunc.module}")
+                config_file = Path(metafunc.module.__file__).with_suffix(".yml")
+                try:
+                    with open(config_file, "r") as f:
+                        CONFIGS = yaml.load(f, Loader=yaml.FullLoader)
+                except FileNotFoundError as e:
+                    logging.info(
+                        "Cannot find .yml test config file and "
+                        "test module does not contain CONFIGS"
+                    )
+                    CONFIGS = {}
 
-        coverage = metafunc.config.getoption("coverage")
-        try:
-            configs = list(CONFIGS[coverage].values()) if CONFIGS else [{}]
-        except KeyError:
-            raise KeyError(
-                "CONFIGS does not define coverage level "
-                f"'{coverage}' in {config_file.resolve()}"
-            ) from None
+            coverage = metafunc.config.getoption("coverage")
+            try:
+                configs = list(CONFIGS[coverage].values()) if CONFIGS else [{}]
+            except KeyError:
+                raise KeyError(
+                    "CONFIGS does not define coverage level "
+                    f"'{coverage}' in {config_file.resolve()}"
+                ) from None
+            metafunc.module.__configs = configs
 
         metafunc.parametrize(
             "run",

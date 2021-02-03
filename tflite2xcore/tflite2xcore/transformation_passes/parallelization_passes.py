@@ -1,4 +1,4 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import numpy as np
@@ -61,14 +61,14 @@ class ChannelGroupParallelizationPass(ParallelizationPass):
 
 class SpatialParallelizationPass(ParallelizationPass):
     @property
+    def _cout(self) -> int:
+        return int(self._op.outputs[0].shape[3])
+
+    @property
     def _planner(self) -> SlicePlanner:
-        _, height, width, Cout = self._op.outputs[0].shape
+        _, height, width, _ = self._op.outputs[0].shape
         return SlicePlanner(
-            int(Cout),
-            int(height),
-            int(width),
-            num_threads=self.num_threads,
-            forced=self.forced,
+            self._cout, height, width, num_threads=self.num_threads, forced=self.forced,
         )
 
 

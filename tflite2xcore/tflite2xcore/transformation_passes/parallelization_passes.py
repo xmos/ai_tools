@@ -99,8 +99,14 @@ class ParallelizeBConv2dInt8Pass(SpatialParallelizationPass):
         XCOREOpCodes.XC_bconv2d_int8_DIDO,
     )
 
+    def mutate(self, op: Operator) -> None:
+        with self.using(op):
+            par = self._planner.find_optimal_plan().to_dict()
+            par.pop("cg")
+            op.add_custom_options(par=par)
 
-class ParallelizeBConv2dBinPass(SpatialParallelizationPass):
+
+class ParallelizeBConv2dBinPass(ParallelizeBConv2dInt8Pass):
     MATCHING_OPCODES = (
         XCOREOpCodes.XC_bconv2d_bin,
         XCOREOpCodes.XC_bconv2d_bin_DI,

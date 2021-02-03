@@ -9,8 +9,8 @@ CLOBBER_FLAG := '-c'
 
 .PHONY: xcore_interpreters_build
 xcore_interpreters_build:
-	cd test/ai_deployment_framework/xcore_interpreters/python_bindings && bash build.sh $(CLOBBER_FLAG)
-	cd test/ai_deployment_framework/xcore_interpreters/xcore_firmware && bash build.sh $(CLOBBER_FLAG)
+	cd utils/ai_deployment_framework/xcore_interpreters/python_bindings && bash build.sh $(CLOBBER_FLAG)
+	cd utils/ai_deployment_framework/xcore_interpreters/xcore_firmware && bash build.sh $(CLOBBER_FLAG)
 
 #**************************
 # tflite2xcore targets

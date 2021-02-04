@@ -1,4 +1,5 @@
-# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# XMOS Public License: Version 1
 
 import logging
 import numpy as np
@@ -162,7 +163,7 @@ class CanonicalizeEmptyBuffersPass(ModelTransformationPass):
     def run(self, model):
         if model.buffers:
             sentinel = model.buffers[0]
-            if not sentinel: # buffer 0 has to be empty
+            if not sentinel:  # buffer 0 has to be empty
                 for tensor in sentinel.owners:
                     tensor.buffer = Buffer(model)
                     tensor.buffer.owners.append(tensor)
@@ -385,8 +386,16 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
         multiplier = self._multiplier()
         # NOTE: VLMUL expects one factor in Q2.14
         # we have 1 <= scale < 2 represented in Q2.14
-        rshift = -np.ceil(np.log2(multiplier)) + 1
-        scale = np.round(2 ** 14 * (multiplier * 2 ** rshift))
+
+        nonzero_multiplier = multiplier != 0
+        rshift = np.full(multiplier.shape, 16)
+        rshift[nonzero_multiplier] = (
+            -np.ceil(np.log2(multiplier[nonzero_multiplier])) + 1
+        )
+        scale = np.full(multiplier.shape, 2 ** 15 - 1)
+        scale[multiplier != 0] = np.round(
+            2 ** 14 * (multiplier[nonzero_multiplier] * 2 ** rshift[nonzero_multiplier])
+        )
 
         for j in range(len(scale)):
             if scale[j] == 2 ** 15:

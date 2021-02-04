@@ -1,18 +1,48 @@
 workspace(name = "xcore_mlir_experiment")
 
-local_repository(
-
-    name = "org_tensorflow",
-
-    path = "./third_party/tensorflow",
-
-)
+XMOS_PATH = "./" # TODO use this to move workspace into 'experimental' if desired
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
-# START: Upstream TensorFlow dependencies
-# TensorFlow build depends on these dependencies.
-# Needs to be in-sync with TensorFlow sources.
+# Skylib
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "97e70364e9249702246c0e9444bccdc4b847bed1eb03c5a3ece4f83dfe6abc44",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.0.2/bazel-skylib-1.0.2.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.0.2/bazel-skylib-1.0.2.tar.gz",
+    ],
+)
+
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+
+bazel_skylib_workspace()
+###############################################################################
+
+load("@bazel_skylib//lib:paths.bzl", "paths")
+
+########################### Configure TensorFlow ###############################
+# To update TensorFlow to a new revision.
+# 1. Update the git hash in the urls and the 'strip_prefix' parameter.
+# 2. Get the sha256 hash of the archive with a command such as...
+#    curl -L https://github.com/tensorflow/tensorflow/archive/<git hash>.tar.gz | shasum -a 256
+#    and update the 'sha256' arg with the result.
+# 3. Request the new archive to be mirrored on mirror.bazel.build for more
+#    reliable downloads.
+http_archive(
+    name = "org_tensorflow",
+    sha256 = "f681331f8fc0800883761c7709d13cda11942d4ad5ff9f44ad855e9dc78387e0",
+    strip_prefix = "tensorflow-2.4.1",
+    urls = [
+        "https://github.com/tensorflow/tensorflow/archive/v2.4.1.tar.gz",
+    ],
+)
+
+# io_bazel_rules_closure
+# This is copied from https://github.com/tensorflow/tensorflow/blob/v2.0.0-alpha0/WORKSPACE.
+# Dependency of:
+#   TensorFlow (boilerplate for tf_workspace(), apparently)
 http_archive(
     name = "io_bazel_rules_closure",
     sha256 = "5b00383d08dd71f28503736db0500b6fb4dda47489ff5fc6bed42557c07c6ba9",
@@ -22,141 +52,41 @@ http_archive(
         "https://github.com/bazelbuild/rules_closure/archive/308b05b2419edb5c8ee0471b67a40403df940149.tar.gz",  # 2019-06-13
     ],
 )
-http_archive(
-    name = "bazel_skylib",
-    sha256 = "1dde365491125a3db70731e25658dfdd3bc5dbdfd11b840b3e987ecf043c7ca0",
-    urls = [
-        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/releases/download/0.9.0/bazel_skylib-0.9.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-skylib/releases/download/0.9.0/bazel_skylib-0.9.0.tar.gz",
-    ],
-)  # https://github.com/bazelbuild/bazel-skylib/releases
 
-# END: Upstream TensorFlow dependencies
-
-# Load tf_repositories() before loading dependencies for other repository so
-# that dependencies like com_google_protobuf won't be overridden.
+# Import all of the tensorflow dependencies. Note that we are deliberately
+# letting TensorFlow take control of all the dependencies it sets up, whereas
+# ours are initialized with `maybe`. Actually tracking this with Bazel is PITA
+# and for now this gets TF stuff building. This includes, for instance,
+# @llvm-project and @com_google_absl.
 load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")
-# Please add all new TensorFlow dependencies in workspace.bzl.
+
 tf_repositories()
 
-register_toolchains("@local_config_python//:py_toolchain")
-
-load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
-
-closure_repositories()
-
-load("@org_tensorflow//third_party/toolchains/preconfig/generate:archives.bzl",
-     "bazel_toolchains_archive")
-
-bazel_toolchains_archive()
-
-load(
-    "@bazel_toolchains//repositories:repositories.bzl",
-    bazel_toolchains_repositories = "repositories",
-)
-
-bazel_toolchains_repositories()
-
-# Use `swift_rules_dependencies` to fetch the toolchains. With the
-# `git_repository` rules above, the following call will skip redefining them.
-load("@build_bazel_rules_swift//swift:repositories.bzl", "swift_rules_dependencies")
-swift_rules_dependencies()
-
-# We must check the bazel version before trying to parse any other BUILD
-# files, in case the parsing of those build files depends on the bazel
-# version we require here.
-load("@org_tensorflow//tensorflow:version_check.bzl", "check_bazel_version_at_least")
-check_bazel_version_at_least("1.0.0")
-
-load("@org_tensorflow//third_party/android:android_configure.bzl", "android_configure")
-android_configure(name="local_config_android")
-load("@local_config_android//:android.bzl", "android_workspace")
-android_workspace()
-
-# If a target is bound twice, the later one wins, so we have to do tf bindings
-# at the end of the WORKSPACE file.
-load("@org_tensorflow//tensorflow:workspace.bzl", "tf_bind")
-tf_bind()
-
+# TF depends on tf_toolchains.
 http_archive(
-    name = "inception_v1",
-    build_file = "//:models.BUILD",
-    sha256 = "7efe12a8363f09bc24d7b7a450304a15655a57a7751929b2c1593a71183bb105",
+    name = "tf_toolchains",
+    sha256 = "d60f9637c64829e92dac3f4477a2c45cdddb9946c5da0dd46db97765eb9de08e",
+    strip_prefix = "toolchains-1.1.5",
     urls = [
-        "https://storage.googleapis.com/download.tensorflow.org/models/inception_v1.zip",
+        "http://mirror.tensorflow.org/github.com/tensorflow/toolchains/archive/v1.1.5.tar.gz",
+        "https://github.com/tensorflow/toolchains/archive/v1.1.5.tar.gz",
     ],
 )
 
+###############################################################################
+
+##### gRPC Rules for Bazel
+##### See https://github.com/grpc/grpc/blob/master/src/cpp/README.md#make
 http_archive(
-    name = "mobile_ssd",
-    build_file = "//:models.BUILD",
-    sha256 = "bddd81ea5c80a97adfac1c9f770e6f55cbafd7cce4d3bbe15fbeb041e6b8f3e8",
+    name = "com_github_grpc_grpc",
     urls = [
-        "https://storage.googleapis.com/download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_android_export.zip",
+        "https://github.com/grpc/grpc/archive/de893acb6aef88484a427e64b96727e4926fdcfd.tar.gz",
     ],
+    strip_prefix = "grpc-de893acb6aef88484a427e64b96727e4926fdcfd",
+    sha256 = "61272ea6d541f60bdc3752ddef9fd4ca87ff5ab18dd21afc30270faad90c8a34"
 )
-
-http_archive(
-    name = "mobile_multibox",
-    build_file = "//:models.BUILD",
-    sha256 = "859edcddf84dddb974c36c36cfc1f74555148e9c9213dedacf1d6b613ad52b96",
-    urls = [
-        "https://storage.googleapis.com/download.tensorflow.org/models/mobile_multibox_v1a.zip",
-    ],
-)
-
-http_archive(
-    name = "stylize",
-    build_file = "//:models.BUILD",
-    sha256 = "3d374a730aef330424a356a8d4f04d8a54277c425e274ecb7d9c83aa912c6bfa",
-    urls = [
-        "https://storage.googleapis.com/download.tensorflow.org/models/stylize_v1.zip",
-    ],
-)
-
-http_archive(
-    name = "speech_commands",
-    build_file = "//:models.BUILD",
-    sha256 = "c3ec4fea3158eb111f1d932336351edfe8bd515bb6e87aad4f25dbad0a600d0c",
-    urls = [
-        "https://storage.googleapis.com/download.tensorflow.org/models/speech_commands_v0.01.zip",
-    ],
-)
-
-http_archive(
-    name = "person_detect_data",
-    sha256 = "170542270da256994ce24d1e357f6e84a54fdaf7d28ff2b74725a40b70b082cf",
-    urls = [
-        "https://storage.googleapis.com/download.tensorflow.org/data/tf_lite_micro_person_data_grayscale_2020_05_24.zip",
-    ],
-)
-
-# Required for dependency @com_github_grpc_grpc
-
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
-
 grpc_deps()
-
-load(
-    "@build_bazel_rules_apple//apple:repositories.bzl",
-    "apple_rules_dependencies",
-)
-
-apple_rules_dependencies()
-
-load(
-    "@build_bazel_apple_support//lib:repositories.bzl",
-    "apple_support_dependencies",
-)
-
-apple_support_dependencies()
-
-load("@upb//bazel:repository_defs.bzl", "bazel_version_repository")
-
-bazel_version_repository(name = "bazel_version")
-
-load("@org_tensorflow//third_party/googleapis:repository_rules.bzl", "config_googleapis")
-
-config_googleapis()
-
-
+# Not mentioned in official docs... mentioned here https://github.com/grpc/grpc/issues/20511
+load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
+grpc_extra_deps()

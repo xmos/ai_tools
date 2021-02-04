@@ -1,4 +1,4 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 import numpy as np
 from math import ceil
@@ -365,13 +365,14 @@ class LegalizeBconv2dInt8GenericPass(LegalizeBconv2dPass):
         Mmin, Mmax = self.__calculate_exp_bounds(adjusted_pam, bound_width=16)
 
         # calculate bounds on B
-        Bmin, Bmax = self.__calculate_exp_bounds(adjusted_pab, bound_width=32)
-        Bmax = max(Bmax, Amax + Mmax) - 2  # ensure A + M = B, and that addition is fine
+        Bmin, Bmax = self.__calculate_exp_bounds(adjusted_pab, bound_width=16 + 14)
+        # ensure A + M = B, and that the addition is fine
+        Bmax = max(Bmax, Amax + Mmax - 1)
 
         for A in range(Amax, Amin - 1, -1):
             for M in range(Mmax, Mmin - 1, -1):
                 B = A + M
-                if Bmin < B < Bmax:
+                if Bmin <= B <= Bmax:
                     return M, B, A
         raise ValueError("quantized exponents cannot be determined")
 

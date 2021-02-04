@@ -1,4 +1,5 @@
-# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# XMOS Public License: Version 1
 import pytest
 from copy import deepcopy
 from typing import Tuple
@@ -86,6 +87,8 @@ def test_mutate(
     assert len(operators) == 1
 
     new_op = operators[-1]
+
+    assert "fused_activation_function" in new_op.custom_options
 
     assert len(new_op.inputs) == 4
     new_op.inputs[1].type is TensorType.INT32

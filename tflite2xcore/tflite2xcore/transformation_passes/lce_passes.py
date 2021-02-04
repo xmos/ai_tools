@@ -1,7 +1,8 @@
-# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
+# XMOS Public License: Version 1
 import numpy as np
 from math import ceil
-from typing import Tuple, List
+from typing import Tuple, List, NamedTuple, Dict
 
 from tflite2xcore.utils import (
     WORD_SIZE_BITS,
@@ -12,6 +13,7 @@ from tflite2xcore.utils import (
     xor_popcount,
     calculate_same_padding,
     get_unpacked_shape,
+    clrsb,
 )
 from tflite2xcore.xcore_schema import (
     Operator,
@@ -21,6 +23,7 @@ from tflite2xcore.xcore_schema import (
     XCOREOpCodes,
     OperatorCode,
     BuiltinOpCodes,
+    ActivationFunctionType,
 )
 
 from .transformation_passes import (
@@ -69,7 +72,13 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
 
     @property
     def _padding(self) -> Padding:
-        return self._op.custom_options["padding"]
+        return Padding(self._op.custom_options["padding"])
+
+    @property
+    def _fused_activation_function(self) -> ActivationFunctionType:
+        return ActivationFunctionType(
+            self._op.custom_options["fused_activation_function"]
+        )
 
     @property
     def _input_channels(self) -> int:
@@ -99,12 +108,10 @@ class ReplaceBconv2DPass(ReplaceConv2DPass):
 
         return False
 
-    def mutate(self, op: Operator) -> None:
+    def mutate(self, op: Operator) -> Operator:
         new_op = super().mutate(op)
         with self.using(op):
-            new_op.add_custom_options(
-                stride=self._strides, padding=self._padding,
-            )
+            new_op.add_custom_options(stride=self._strides, padding=self._padding)
         return new_op
 
 
@@ -120,6 +127,14 @@ class ReplaceBconv2DInt8Pass(ReplaceBconv2DPass):
             and params_tensor not in self._op.subgraph.outputs
             for params_tensor in self._op.inputs[2:]
         )
+
+    def mutate(self, op: Operator) -> Operator:
+        new_op = super().mutate(op)
+        with self.using(op):
+            new_op.add_custom_options(
+                fused_activation_function=self._fused_activation_function
+            )
+        return new_op
 
 
 class ReplaceBconv2DInt8DeepInDeepOutPass(ReplaceBconv2DInt8Pass):
@@ -289,14 +304,10 @@ class LegalizeBconv2dPass(LegalizeWeightBiasPass):
         return op
 
 
-class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
+class LegalizeBconv2dInt8GenericPass(LegalizeBconv2dPass):
     @property
     def matching_output_type(self) -> TensorType:
         return TensorType.INT8
-
-    @property
-    def matching_opcode(self) -> XCOREOpCodes:
-        return XCOREOpCodes.XC_bconv2d_int8
 
     @property
     def _fill_size(self) -> int:
@@ -310,36 +321,104 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
         ) * VECTOR_SIZE_WORDS - k_p_adjust * out_tail_chans
         return max(fill_words, VECTOR_SIZE_WORDS)
 
-    @staticmethod
-    def __calculate_MBA(
-        max_pam_exp: int, max_pab_exp: int, max_accu_exp: int
-    ) -> Tuple[int, int, int]:
-        accu_hat_bits = pam_hat_bits = TensorType.INT16.sizeof() * 8 - 1
-        pab_hat_bits = TensorType.INT32.sizeof() * 8 - 1
+    def _calculate_accu_clamps(self) -> Tuple[float, float]:
+        # follow larq's implementation to get the output tranform clamps
+        INT32_MIN, INT32_MAX = np.iinfo(np.int32).min, np.iinfo(np.int32).max
+        activation_range_map: Dict[ActivationFunctionType, Tuple[int, int]] = {
+            ActivationFunctionType.NONE: (INT32_MIN, INT32_MAX),
+            ActivationFunctionType.RELU: (0, INT32_MAX),
+            ActivationFunctionType.RELU_N1_TO_1: (-1, 1),
+            ActivationFunctionType.RELU6: (0, 6),
+        }
+        nominal_clamps = activation_range_map[
+            self._op.custom_options["fused_activation_function"]
+        ]
+        output_trf_clamps = (
+            self._kernel_channel_size
+            - min(nominal_clamps[1], self._kernel_channel_size),
+            self._kernel_channel_size
+            - max(nominal_clamps[0], -self._kernel_channel_size),
+        )
 
-        for B in reversed(range(-max_pab_exp, pab_hat_bits - max_pab_exp)):
-            for A in reversed(range(-max_accu_exp, accu_hat_bits - max_accu_exp)):
-                M = B - A
-                if -max_pam_exp <= M < pam_hat_bits - max_pam_exp:
+        # transform to xcore vpu accumulator space
+        return (
+            (self._kernel_channel_size - output_trf_clamps[0]) / 2,
+            (self._kernel_channel_size - output_trf_clamps[1]) / 2,
+        )
+
+    @staticmethod
+    def __calculate_exp_bounds(arr: np.ndarray, bound_width: int) -> Tuple[int, int]:
+        min_exp = -1 - int(np.max(np.frexp(arr)[1]))
+        return min_exp, min_exp + bound_width
+
+    def _calculate_MBA(
+        self, adjusted_pam: np.ndarray, adjusted_pab: np.ndarray
+    ) -> Tuple[int, int, int]:
+        # calculate bounds on A
+        accu_clamps = self._calculate_accu_clamps()
+        max_out = int(max(self._kernel_channel_size / 2, *accu_clamps))
+        min_out = int(min(-self._kernel_channel_size / 2, *accu_clamps))
+        rsb = min(clrsb(max_out), clrsb(min_out))
+        Amin, Amax = rsb - 32 + 1, rsb - 16
+
+        # calculate bounds on M
+        Mmin, Mmax = self.__calculate_exp_bounds(adjusted_pam, bound_width=16)
+
+        # calculate bounds on B
+        Bmin, Bmax = self.__calculate_exp_bounds(adjusted_pab, bound_width=16 + 14)
+        # ensure A + M = B, and that the addition is fine
+        Bmax = max(Bmax, Amax + Mmax - 1)
+
+        for A in range(Amax, Amin - 1, -1):
+            for M in range(Mmax, Mmin - 1, -1):
+                B = A + M
+                if Bmin <= B <= Bmax:
                     return M, B, A
         raise ValueError("quantized exponents cannot be determined")
 
+    def _calculate_clamp_offsets(self, A: int) -> Tuple[int, int, int]:
+        shifted_accu_limits = tuple(c * 2 ** A for c in self._calculate_accu_clamps())
+
+        INT16_MAX = np.iinfo(np.int16).max
+        clamp_offsets = (
+            int(INT16_MAX - shifted_accu_limits[0]),
+            int(-INT16_MAX - shifted_accu_limits[1]),
+        )
+
+        if abs(clamp_offsets[0]) >= abs(clamp_offsets[1]):
+            clamp_offsets = clamp_offsets[::-1]
+        clamp_far_half = clamp_offsets[1] // 2
+        return (-clamp_offsets[0], -clamp_offsets[1] + clamp_far_half, clamp_far_half)
+
+    class _QuantizationParams(NamedTuple):
+        bias_multiplier: int
+        accu_shr: int
+        final_shr: int
+        clamp_offset_close: int
+        clamp_offset_far1: int
+        clamp_offset_far2: int
+
     def _calculate_quantization_parameters(
         self, adjusted_pam: np.ndarray, adjusted_pab: np.ndarray
-    ) -> Tuple[int, int, Tuple[int, int, int]]:
-        max_pam_exp = np.max(np.frexp(adjusted_pam)[1])
-        max_pab_exp = np.max(np.frexp(adjusted_pab)[1])
-        max_accu_exp = np.frexp(self._kernel_channel_size / 2)[1]
-        M, B, A = self.__calculate_MBA(max_pam_exp, max_pab_exp, max_accu_exp)
+    ) -> Tuple[int, int, "_QuantizationParams"]:
+        M, B, A = self._calculate_MBA(adjusted_pam, adjusted_pab)
+        assert B >= 8
 
-        adjusted_B = min(15 - max_pab_exp, B)
-        assert 15 > B - adjusted_B
-        bias_multiplier = 2 ** (B - adjusted_B)  # this is not so simple
+        _, Bmax_16 = self.__calculate_exp_bounds(adjusted_pab, bound_width=16)
+        bias_multiplier = 2 ** max(0, B - Bmax_16)
+        adjusted_B = min(B, Bmax_16)
 
         accu_shr = -A
         final_shr = B - 8
+        clamp_offsets = self._calculate_clamp_offsets(A)
 
-        return M, adjusted_B, (bias_multiplier, accu_shr, final_shr)
+        return (
+            M,
+            adjusted_B,
+            self._QuantizationParams(
+                bias_multiplier, accu_shr, final_shr, *clamp_offsets
+            ),
+        )
 
     def mutate_biases(self, op: Operator) -> None:
         with self.using(op):
@@ -357,18 +436,14 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
             )
 
             # then adjust pam/pad as required by our kernels
-            weights = self._weights.as_array()  # already boggled
             adjusted_pam = -2 * output_trf_pam
-            adjusted_pab = output_trf_pab + output_trf_pam * (
-                self._kernel_channel_size
-                - 2 * self._calculate_overlap_correction(weights)
-            )
+            adjusted_pab = output_trf_pab + output_trf_pam * self._kernel_channel_size
 
             # calculate quantization parameters as required by the kernel
             (M, adjusted_B, q_params) = self._calculate_quantization_parameters(
                 adjusted_pam, adjusted_pab
             )
-            op.add_custom_options(q_params=q_params)
+            op.add_custom_options(q_params=tuple(q_params))
 
             # then quantize the post activation parameters
             pam_q = np.round(adjusted_pam * 2.0 ** M)
@@ -409,8 +484,39 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
             self._op.inputs[3].consumers.remove(self._op)
             self._op.inputs[3] = new_pab_tensor
 
+    def mutate(self, op: Operator) -> Operator:
+        new_op = super().mutate(op)
+        new_op.custom_options.pop("fused_activation_function")
+        return new_op
 
-class LegalizeBconv2dInt8DeepInDeepOutPass(LegalizeBconv2dInt8Pass):
+
+class LegalizeBconv2dInt8Pass(LegalizeBconv2dInt8GenericPass):
+    @property
+    def matching_opcode(self) -> XCOREOpCodes:
+        return XCOREOpCodes.XC_bconv2d_int8
+
+    def mutate_biases(self, op: Operator) -> None:
+        super().mutate_biases(op)
+        accu_shr = op.custom_options["q_params"][1]
+
+        with self.using(op):
+            # calculate quantized accumulator modifier
+            weights = self._weights.as_array()  # already boggled
+            overlap_corrections = self._calculate_overlap_correction(weights)
+            accu_modifier = np.int16(overlap_corrections / 2 ** accu_shr)
+
+            # create and populate new thresholds tensor
+            accu_modifier_tensor = self._op.subgraph.create_tensor(
+                f"{self._op.name}/accu_modifier",
+                TensorType.INT16,
+                self._op.inputs[3].shape,
+                consumers=[self._op],
+            )
+            accu_modifier_tensor.buffer.data = accu_modifier
+            self._op.inputs.append(accu_modifier_tensor)
+
+
+class LegalizeBconv2dInt8DeepInDeepOutPass(LegalizeBconv2dInt8GenericPass):
     @property
     def _overlap_size(self) -> int:
         return 0

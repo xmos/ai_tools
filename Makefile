@@ -9,20 +9,8 @@ CLOBBER_FLAG := '-c'
 
 .PHONY: xcore_interpreters_build
 xcore_interpreters_build:
-	cd xcore_interpreters/python_bindings && bash build.sh $(CLOBBER_FLAG)
-	cd xcore_interpreters/xcore_firmware && bash build.sh $(CLOBBER_FLAG)
-
-.PHONY: xcore_interpreters_unit_test
-xcore_interpreters_unit_test:
-	cd xcore_interpreters/xcore_interpreters && pytest -n $(NUM_PROCS) --junitxml=xcore_interpreters_junit.xml
-
-.PHONY: xcore_interpreters_dist
-xcore_interpreters_dist:
-	cd xcore_interpreters && bash build_dist.sh
-
-.PHONY: xcore_interpreters_dist_test
-xcore_interpreters_dist_test:
-	cd xcore_interpreters && bash test_dist.sh
+	cd utils/ai_deployment_framework/xcore_interpreters/python_bindings && bash build.sh $(CLOBBER_FLAG)
+	cd utils/ai_deployment_framework/xcore_interpreters/xcore_firmware && bash build.sh $(CLOBBER_FLAG)
 
 #**************************
 # tflite2xcore targets
@@ -50,8 +38,8 @@ tflite2xcore_dist_test:
 
 .PHONY: integration_test
 integration_test:
-	cd test/model_generation && pytest integration_test --cache-clear --collect-only -qq
-	cd test/model_generation && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
+	cd test && pytest integration_test --cache-clear --collect-only -qq
+	cd test && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 
 #**************************
 # ci target
@@ -63,8 +51,6 @@ ci: lib_flexbuffers_build \
  tflite2xcore_unit_test \
  tflite2xcore_dist_test \
  xcore_interpreters_build \
- xcore_interpreters_unit_test \
- xcore_interpreters_dist_test \
  integration_test
 
 #**************************
@@ -74,7 +60,6 @@ ci: lib_flexbuffers_build \
 .PHONY: test
 test: lib_flexbuffers_build \
  tflite2xcore_unit_test \
- xcore_interpreters_unit_test \
  integration_test
 
 #**************************
@@ -109,15 +94,9 @@ help:
 	$(info   integration_test              Run integration tests (requires Conda environment))
 	$(info   test                          Run all tests (requires Conda environment & connected hardware))
 	$(info )
-	$(info tflite2xcore targets:)
+	$(info secondary targets:)
 	$(info   lib_flexbuffers_build         Run lib_flexbuffers build)
 	$(info   tflite2xcore_unit_test        Run tflite2xcore unit tests (requires Conda environment))
 	$(info   tflite2xcore_dist             Build tflite2xcore distribution (requires Conda environment))
 	$(info   tflite2xcore_dist_test        Run tflite2xcore distribution tests (requires Conda environment))
-	$(info )
-	$(info xcore_interpreter targets:)
-	$(info   xcore_interpreters_build      Run xcore_interpreters build)
-	$(info   xcore_interpreters_unit_test  Run xcore_interpreters unit tests (requires Conda environment))
-	$(info   xcore_interpreters_dist       Build xcore_interpreters distribution (requires Conda environment))
-	$(info   xcore_interpreters_dist_test  Run xcore_interpreters distribution tests (requires Conda environment))
 	$(info )

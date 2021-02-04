@@ -1,4 +1,5 @@
-# Copyright (c) 2019, XMOS Ltd, All rights reserved
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# XMOS Public License: Version 1
 import setuptools
 
 LIB_FLEXBUFFERS = [
@@ -16,8 +17,8 @@ INSTALL_REQUIRES = [
     "dill==0.3.1.1",
     "flatbuffers==1.12.0",
     "matplotlib==3.1.1",
-    "numpy==1.18.5",
-    "tensorflow==2.3.0",
+    "numpy==1.19.5",
+    "tensorflow==2.4.1",
     "typing-extensions==3.7.4",
 ]
 

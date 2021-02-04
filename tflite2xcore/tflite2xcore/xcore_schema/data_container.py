@@ -1,10 +1,11 @@
-# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# XMOS Public License: Version 1
 
 import logging
 import numpy as np
 from typing import TYPE_CHECKING, Iterable, Optional, Union, List, Any
 
-from . import _IRObject, _ModelDependent, TensorType
+from . import _ModelDependent, TensorType
 
 if TYPE_CHECKING:
     from .xcore_model import XCOREModel

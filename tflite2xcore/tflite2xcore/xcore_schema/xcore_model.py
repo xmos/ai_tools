@@ -1,4 +1,5 @@
-# Copyright (c) 2018-2020, XMOS Ltd, All rights reserved
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
+# XMOS Public License: Version 1
 
 import pathlib
 import flatbuffers
@@ -13,7 +14,6 @@ from typing import (
     Counter,
     TypeVar,
     Type,
-    Generic,
     overload,
     cast,
     MutableSequence,

@@ -1,4 +1,5 @@
-# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
+# XMOS Public License: Version 1
 
 import numpy as np
 from abc import abstractmethod
@@ -11,6 +12,7 @@ from tflite2xcore.parallelization import (
     SlicePlanner,
     ChannelGroupSlicePlanner,
 )
+from tflite2xcore.utils import WORD_SIZE_BITS
 
 from .transformation_passes import OperatorMatchingPass
 
@@ -60,14 +62,14 @@ class ChannelGroupParallelizationPass(ParallelizationPass):
 
 class SpatialParallelizationPass(ParallelizationPass):
     @property
+    def _cout(self) -> int:
+        return int(self._op.outputs[0].shape[3])
+
+    @property
     def _planner(self) -> SlicePlanner:
-        _, height, width, Cout = self._op.outputs[0].shape
+        _, height, width, _ = self._op.outputs[0].shape
         return SlicePlanner(
-            int(Cout),
-            int(height),
-            int(width),
-            num_threads=self.num_threads,
-            forced=self.forced,
+            self._cout, height, width, num_threads=self.num_threads, forced=self.forced,
         )
 
 
@@ -89,6 +91,30 @@ class ParallelizeConv2dPass(SpatialParallelizationPass):
         XCOREOpCodes.XC_conv2d_deep,
         XCOREOpCodes.XC_conv2d_1x1,
     )
+
+
+class ParallelizeBConv2dInt8Pass(SpatialParallelizationPass):
+    MATCHING_OPCODES = (
+        XCOREOpCodes.XC_bconv2d_int8,
+        XCOREOpCodes.XC_bconv2d_int8_DIDO,
+    )
+
+    def mutate(self, op: Operator) -> None:
+        with self.using(op):
+            par = self._planner.find_optimal_plan().to_dict()
+            par.pop("cg")
+            op.add_custom_options(par=par)
+
+
+class ParallelizeBConv2dBinPass(ParallelizeBConv2dInt8Pass):
+    MATCHING_OPCODES = (
+        XCOREOpCodes.XC_bconv2d_bin,
+        XCOREOpCodes.XC_bconv2d_bin_DI,
+    )
+
+    @property
+    def _cout(self) -> int:
+        return super()._cout * WORD_SIZE_BITS
 
 
 class ParallelizeDepthwiseConv2dPass(SpatialParallelizationPass):

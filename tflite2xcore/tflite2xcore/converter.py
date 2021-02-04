@@ -1,4 +1,4 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 from pathlib import Path
@@ -172,6 +172,9 @@ class ParallelizationManager(PassManager):
         self.register_pass(
             passes.ParallelizeGlobalAveragePool2DPass(num_threads=num_threads)
         )
+
+        self.register_pass(passes.ParallelizeBConv2dBinPass(num_threads=num_threads))
+        self.register_pass(passes.ParallelizeBConv2dInt8Pass(num_threads=num_threads))
         # pass_mgr.register_pass(passes.ParallelizeRequant16To8Pass(num_threads=num_threads))  # intentionally disabled
 
         # NOTE: scratch memory passes must be registered after parallelization passes
@@ -262,7 +265,7 @@ def optimize_for_xcore(
 
     # optimizations on xcore ops
     pass_mgr.register_passes(PaddingOptimizationManager())
-    pass_mgr.register_passes(ParallelizationManager())
+    pass_mgr.register_passes(ParallelizationManager(num_threads=num_threads))
 
     # finalize (cleanup, minification, renaming, etc.)
     pass_mgr.register_passes(FinalizationManager())

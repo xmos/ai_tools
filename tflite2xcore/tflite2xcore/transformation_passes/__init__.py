@@ -1,4 +1,4 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 from .transformation_passes import ModelTransformationPass, CanonicalizeEmptyBuffersPass
@@ -85,6 +85,8 @@ from .parallelization_passes import (
     ParallelizeRequant16To8Pass,
     ParallelizePooling2DPass,
     ParallelizeGlobalAveragePool2DPass,
+    ParallelizeBConv2dBinPass,
+    ParallelizeBConv2dInt8Pass,
 )
 
 from .scratch_memory_passes import (

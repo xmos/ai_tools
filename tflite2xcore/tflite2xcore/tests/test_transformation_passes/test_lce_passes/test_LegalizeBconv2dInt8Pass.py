@@ -1,11 +1,10 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 import pytest
 import numpy as np
 
 from tflite2xcore.utils import VECTOR_SIZE_WORDS, WORD_SIZE_BITS
 from tflite2xcore.converter import CleanupManager
-from tflite2xcore.transformation_passes.lce_passes import LegalizeBconv2dInt8GenericPass
 from tflite2xcore.transformation_passes import (
     LegalizeBconv2dInt8Pass,
     ReplaceBconv2DInt8Pass,
@@ -42,7 +41,7 @@ def legalization_pass() -> LegalizeBconv2dInt8Pass:
 
 def _test_mutate(
     replacement_pass: ReplaceBconv2DInt8Pass,
-    legalization_pass: LegalizeBconv2dInt8GenericPass,
+    legalization_pass: LegalizeBconv2dInt8Pass,
     model: XCOREModel,
     new_opcode: XCOREOpCodes,
 ) -> None:
@@ -89,6 +88,11 @@ def _test_mutate(
     assert new_biases.type is TensorType.INT16
     assert new_biases.shape == old_biases.shape
 
+    # check output trf params
+    output_trf = bconv2d_op.inputs[4]
+    assert output_trf.type is TensorType.INT16
+    assert output_trf.shape == (6 * 16 + 2,)
+
     # check weights
     new_weights = bconv2d_op.inputs[1]
     assert new_weights is not old_weights
@@ -110,18 +114,18 @@ def _test_mutate(
 
 def test_mutate(
     replacement_pass: ReplaceBconv2DInt8Pass,
-    legalization_pass: LegalizeBconv2dInt8GenericPass,
+    legalization_pass: LegalizeBconv2dInt8Pass,
     model: XCOREModel,
     new_opcode: XCOREOpCodes,
 ) -> None:
     _test_mutate(replacement_pass, legalization_pass, model, new_opcode)
 
     bconv2d_op = model.subgraphs[0].operators[0]
-    assert len(bconv2d_op.inputs) == 5
+    assert len(bconv2d_op.inputs) == 6
 
     # check accu_modifier
     new_biases = bconv2d_op.inputs[3]
-    new_accu_modifier = bconv2d_op.inputs[4]
+    new_accu_modifier = bconv2d_op.inputs[5]
     assert new_accu_modifier.type is TensorType.INT16
     assert new_accu_modifier.shape == new_biases.shape
 

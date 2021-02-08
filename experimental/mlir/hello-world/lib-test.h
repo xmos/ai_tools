@@ -3,8 +3,9 @@
 #ifndef LIB_TEST_H
 #define LIB_TEST_H
 
+#include <string>
 
-void print_some_stuff();
+void print_some_stuff( std::string & filename );
 
 #endif /* LIB_TEST_H */ 
 

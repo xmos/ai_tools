@@ -33,12 +33,10 @@ static void mlir_write_flatbuffer() // TODO remove static once this is working
     
 }
 
-void print_some_stuff()
+void print_some_stuff( std::string & filename )
 {
     mlir::MLIRContext * context = new mlir::MLIRContext();
-    std::string filename = "../tflite2xcore/tflite2xcore/tests/test_ir/builtin_operators.tflite";
     mlir_read_flatbuffer( context, filename );
-
     std::cout << "Some stuff " << M_PI << std::endl;
 }
 

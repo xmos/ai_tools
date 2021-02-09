@@ -157,6 +157,7 @@ default:
     num_threads: 5
     outputs: 32
     width: 14
+    skip_on_device: False
   26:
     channels: 7
     height: 12

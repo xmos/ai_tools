@@ -16,7 +16,7 @@ To clear the cache and run all tests
 
 To run on the device, specify:
 
-    -- use-device
+    --use-device
 
 ## Other testing options
 

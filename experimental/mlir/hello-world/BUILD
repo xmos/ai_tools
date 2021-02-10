@@ -11,12 +11,14 @@ cc_library(
     hdrs = ["lib-test.h"],
     deps = [ 
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_import",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
            ],
     linkstatic = 1,
 )
 tf_cc_binary(
     name = "hello-world",
     srcs = ["hello-world.cc"],
-    deps = ["lib-test"],
+    deps = ["lib-test",
+            ],
 
 )

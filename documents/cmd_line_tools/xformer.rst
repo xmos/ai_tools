@@ -1,5 +1,3 @@
- .. _xformer-manpage-label:
-
 .. program:: xformer.py
 
 ##########

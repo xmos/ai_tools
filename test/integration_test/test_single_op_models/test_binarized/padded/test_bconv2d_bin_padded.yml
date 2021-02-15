@@ -2,222 +2,242 @@
 # RANDOMLY GENERATED CONFIGS, MODIFY AT OWN RISK
 default:
   0:
-    K_h: 1
-    K_w: 3
-    height: 7
-    input_channels: 128
-    output_channels: 64
-    padding: same
-    strides:
-    - 2
-    - 1
-    width: 8
-  1:
-    K_h: 6
-    K_w: 3
-    height: 7
-    input_channels: 32
-    output_channels: 32
-    padding: same
-    strides:
-    - 2
-    - 2
-    width: 11
-  2:
     K_h: 2
     K_w: 4
     height: 12
     input_channels: 32
+    num_threads: 2
     output_channels: 32
     padding: same
     strides:
+    - 2
+    - 2
+    width: 6
+  1:
+    K_h: 6
+    K_w: 1
+    height: 7
+    input_channels: 32
+    num_threads: 1
+    output_channels: 64
+    padding: same
+    strides:
     - 1
+    - 2
+    width: 8
+  2:
+    K_h: 3
+    K_w: 1
+    height: 12
+    input_channels: 128
+    num_threads: 2
+    output_channels: 64
+    padding: same
+    strides:
+    - 2
     - 1
     width: 11
   3:
-    K_h: 3
+    K_h: 6
     K_w: 3
     height: 10
     input_channels: 32
-    output_channels: 64
-    padding: same
-    strides:
-    - 1
-    - 1
-    width: 6
-  4:
-    K_h: 3
-    K_w: 4
-    height: 12
-    input_channels: 128
-    output_channels: 64
-    padding: same
-    strides:
-    - 1
-    - 2
-    width: 11
-  5:
-    K_h: 2
-    K_w: 3
-    height: 10
-    input_channels: 128
+    num_threads: 5
     output_channels: 64
     padding: same
     strides:
     - 1
     - 1
     width: 8
-  6:
+  4:
+    K_h: 1
+    K_w: 3
+    height: 7
+    input_channels: 128
+    num_threads: 2
+    output_channels: 32
+    padding: same
+    strides:
+    - 2
+    - 2
+    width: 8
+  5:
     K_h: 1
     K_w: 5
     height: 7
     input_channels: 32
+    num_threads: 1
     output_channels: 32
     padding: same
     strides:
     - 2
-    - 2
-    width: 6
-  7:
-    K_h: 2
-    K_w: 4
-    height: 7
-    input_channels: 128
-    output_channels: 32
-    padding: same
-    strides:
     - 1
-    - 2
-    width: 6
-  8:
-    K_h: 6
+    width: 11
+  6:
+    K_h: 3
     K_w: 1
     height: 7
     input_channels: 128
+    num_threads: 2
+    output_channels: 64
+    padding: same
+    strides:
+    - 1
+    - 1
+    width: 11
+  7:
+    K_h: 1
+    K_w: 4
+    height: 12
+    input_channels: 128
+    num_threads: 1
+    output_channels: 32
+    padding: same
+    strides:
+    - 2
+    - 2
+    width: 8
+  8:
+    K_h: 2
+    K_w: 5
+    height: 12
+    input_channels: 32
+    num_threads: 2
+    output_channels: 32
+    padding: same
+    strides:
+    - 1
+    - 2
+    width: 6
+  9:
+    K_h: 6
+    K_w: 3
+    height: 10
+    input_channels: 32
+    num_threads: 5
+    output_channels: 64
+    padding: same
+    strides:
+    - 2
+    - 2
+    width: 6
+  10:
+    K_h: 2
+    K_w: 3
+    height: 10
+    input_channels: 128
+    num_threads: 5
+    output_channels: 32
+    padding: same
+    strides:
+    - 2
+    - 1
+    width: 11
+  11:
+    K_h: 6
+    K_w: 4
+    height: 10
+    input_channels: 128
+    num_threads: 2
+    output_channels: 64
+    padding: same
+    strides:
+    - 2
+    - 2
+    width: 8
+  12:
+    K_h: 2
+    K_w: 3
+    height: 7
+    input_channels: 32
+    num_threads: 5
     output_channels: 32
     padding: same
     strides:
     - 1
     - 1
     width: 8
-  9:
-    K_h: 6
-    K_w: 5
-    height: 12
-    input_channels: 32
-    output_channels: 32
-    padding: same
-    strides:
-    - 1
-    - 1
-    width: 11
-  10:
-    K_h: 6
-    K_w: 4
-    height: 10
-    input_channels: 32
-    output_channels: 64
-    padding: same
-    strides:
-    - 1
-    - 2
-    width: 6
-  11:
-    K_h: 6
-    K_w: 5
-    height: 10
-    input_channels: 32
-    output_channels: 32
-    padding: same
-    strides:
-    - 1
-    - 2
-    width: 6
-  12:
-    K_h: 1
-    K_w: 5
-    height: 12
-    input_channels: 32
-    output_channels: 32
-    padding: same
-    strides:
-    - 2
-    - 1
-    width: 11
   13:
-    K_h: 3
-    K_w: 3
-    height: 12
+    K_h: 1
+    K_w: 4
+    height: 7
     input_channels: 128
+    num_threads: 5
     output_channels: 64
     padding: same
     strides:
-    - 2
     - 1
-    width: 11
+    - 1
+    width: 6
   14:
     K_h: 3
     K_w: 1
-    height: 10
-    input_channels: 128
+    height: 12
+    input_channels: 32
+    num_threads: 5
     output_channels: 64
     padding: same
     strides:
-    - 2
     - 1
-    width: 8
+    - 2
+    width: 6
   15:
-    K_h: 1
-    K_w: 1
-    height: 10
-    input_channels: 32
-    output_channels: 64
-    padding: same
-    strides:
-    - 2
-    - 2
-    width: 8
-  16:
-    K_h: 2
+    K_h: 6
     K_w: 4
-    height: 7
-    input_channels: 128
-    output_channels: 64
-    padding: same
-    strides:
-    - 2
-    - 2
-    width: 8
-  17:
-    K_h: 3
-    K_w: 1
     height: 10
-    input_channels: 32
+    input_channels: 128
+    num_threads: 1
     output_channels: 32
     padding: same
     strides:
-    - 2
     - 1
-    width: 6
-  18:
-    K_h: 2
+    - 1
+    width: 11
+  16:
+    K_h: 3
     K_w: 5
     height: 10
     input_channels: 128
+    num_threads: 1
+    output_channels: 64
+    padding: same
+    strides:
+    - 1
+    - 2
+    width: 8
+  17:
+    K_h: 1
+    K_w: 5
+    height: 10
+    input_channels: 32
+    num_threads: 5
     output_channels: 64
     padding: same
     strides:
     - 2
-    - 2
-    width: 8
-  19:
-    K_h: 1
+    - 1
+    width: 11
+  18:
+    K_h: 2
     K_w: 1
-    height: 12
+    height: 10
     input_channels: 128
+    num_threads: 1
     output_channels: 32
     padding: same
     strides:
     - 1
     - 2
     width: 11
+  19:
+    K_h: 3
+    K_w: 5
+    height: 12
+    input_channels: 32
+    num_threads: 1
+    output_channels: 32
+    padding: same
+    strides:
+    - 2
+    - 1
+    width: 6

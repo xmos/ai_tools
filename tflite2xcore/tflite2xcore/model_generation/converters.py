@@ -1,4 +1,4 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import tensorflow as tf
@@ -109,5 +109,6 @@ class LarqConverter(KerasModelConverter):
             self._input_model_hook(),
             inference_input_type=tf.int8,
             inference_output_type=tf.int8,
+            target="xcore",
             experimental_enable_bitpacked_activations=True,
         )

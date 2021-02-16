@@ -98,7 +98,7 @@ RUNNER = CIFAR10BinarizedTestRunner
 
 @pytest.fixture  # type: ignore
 def abs_output_tolerance(use_device: bool) -> int:
-    return 13 if use_device else 31
+    return 13 if use_device else 33
 
 
 @pytest.fixture  # type: ignore
@@ -108,7 +108,7 @@ def expected_accuracy(use_device: bool) -> float:
 
 @pytest.fixture  # type: ignore
 def expected_prediction_deviation(use_device: bool) -> int:
-    return 0 if use_device else 49
+    return 0 if use_device else 28
 
 
 #  ----------------------------------------------------------------------------

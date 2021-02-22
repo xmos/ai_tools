@@ -1,4 +1,4 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import _pytest
@@ -8,24 +8,24 @@ import tensorflow as tf
 import larq_compute_engine as lce
 from typing import Optional, Tuple, Type, Any, Union, NamedTuple
 
-from tflite2xcore.utils import get_bitpacked_shape  # type: ignore # TODO: fix this
-from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
+from tflite2xcore.utils import get_bitpacked_shape
+from tflite2xcore.xcore_schema import (
     Tensor,
     Buffer,
     ExternalOpCodes,
     TensorType,
     XCOREModel,
 )
-from tflite2xcore.pass_manager import PassManager  # type: ignore # TODO: fix this
-from tflite2xcore.transformation_passes import (  # type: ignore # TODO: fix this
+from tflite2xcore.pass_manager import PassManager
+from tflite2xcore.transformation_passes import (
     CanonicalizeLceQuantizedInputPass,
     CanonicalizeLceQuantizedOutputPass,
     UnifyEmptyBuffersPass,
 )
-from tflite2xcore.transformation_passes.transformation_passes import (  # type: ignore # TODO: fix this
+from tflite2xcore.transformation_passes.transformation_passes import (
     OutputTensorMatchingPass,
 )
-from tflite2xcore.converter import CleanupManager  # type: ignore # TODO: fix this
+from tflite2xcore.converter import CleanupManager
 
 from tflite2xcore.model_generation import Configuration, TFLiteModel, Hook
 from tflite2xcore.model_generation.evaluators import LarqEvaluator
@@ -139,7 +139,7 @@ class BConv2dGenericTestModelGenerator(LarqCompositeTestModelGenerator):
 #  ----------------------------------------------------------------------------
 
 
-class RemoveSingleOutputOperatorPass(OutputTensorMatchingPass):  # type: ignore # TODO: fix this
+class RemoveSingleOutputOperatorPass(OutputTensorMatchingPass):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._done = False

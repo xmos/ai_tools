@@ -1,10 +1,11 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import logging
 import numpy as np
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
+from typing import Any
 
 from tflite2xcore.xcore_schema import TensorType, OperatorCode, Operator, Buffer
 from tflite2xcore.utils import ACC_PERIOD_INT8, format_array
@@ -30,7 +31,7 @@ class ModelTransformationPass(ABC):
 
 
 class SubgraphPass(ModelTransformationPass):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._subgraph_idx = -1
         self._obj_index = -1
@@ -97,7 +98,7 @@ class SubgraphTransformationPass(SubgraphPass):
 class OperatorMatchingPass(SubgraphTransformationPass):
     _op: Operator
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._op = None
 
@@ -123,7 +124,7 @@ class TensorMatchingPass(SubgraphTransformationPass):
 
 
 class BufferMatchingPass(ModelTransformationPass):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._buffer_idx = -1
 
@@ -389,9 +390,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
 
         multiplier_mask = multiplier != 0
         rshift = np.full(multiplier.shape, 16)
-        rshift[multiplier_mask] = (
-            -np.ceil(np.log2(multiplier[multiplier_mask])) + 1
-        )
+        rshift[multiplier_mask] = -np.ceil(np.log2(multiplier[multiplier_mask])) + 1
         scale = np.full(multiplier.shape, 2 ** 15 - 1)
         scale[multiplier_mask] = np.round(
             multiplier[multiplier_mask] * 2 ** (14 + rshift[multiplier_mask])

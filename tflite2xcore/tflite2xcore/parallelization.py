@@ -24,8 +24,14 @@ CHANNEL_GROUP_SIZE = ACC_PERIOD_INT8
 
 
 class ParallelizationPlan(ABC):
-    def __init__(self, num_threads: int) -> None:
+    def __init__(
+        self, num_threads: int, *, fixed_cost_per_thread: SupportsFloat = 0
+    ) -> None:
         self._num_threads = num_threads
+        self._fixed_cost_per_thread = fixed_cost_per_thread
+
+    def estimate_fixed_cost(self) -> float:
+        return self._num_threads * float(self._fixed_cost_per_thread)
 
     @abstractmethod
     def estimate_cost(self) -> SupportsFloat:
@@ -45,10 +51,13 @@ class _ChannelGroup(NamedTuple):
 
 class ChannelGroupParallelizationPlan(ParallelizationPlan):
     def __init__(
-        self, num_threads: int, *, channel_groups: Optional[List[_ChannelGroup]] = None,
+        self,
+        num_threads: int,
+        *,
+        channel_groups: Optional[List[_ChannelGroup]] = None,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(num_threads)
-        # should be a list of 2-tuples (start channel index, end channel index)
+        super().__init__(num_threads, **kwargs)
         self._channel_groups = channel_groups or []
 
     def _estimate_channel_group_cost(self, changrp: _ChannelGroup) -> int:
@@ -111,11 +120,18 @@ class RowColumnParallelizationPlan(ChannelGroupParallelizationPlan):
 
 
 class ParallelizationPlanner(ABC):
-    def __init__(self, *, num_threads: int, forced: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        num_threads: int,
+        forced: bool = False,
+        fixed_cost_per_thread: SupportsFloat = 0,
+    ) -> None:
         assert 0 < num_threads <= MAX_THREADS
         self.logger = logging.getLogger(self.__class__.__name__)
         self._num_threads = num_threads
         self._forced = forced
+        self._fixed_cost_per_thread = fixed_cost_per_thread
 
     @abstractmethod
     def create_n_thread_candidates(self, num_threads: int) -> None:
@@ -133,7 +149,7 @@ class ParallelizationPlanner(ABC):
 _P = TypeVar("_P", bound=ParallelizationPlan)
 
 
-class GreedyParallelizationPlanner(ParallelizationPlanner, Generic[_P]):
+class NaiveParallelizationPlanner(ParallelizationPlanner, Generic[_P]):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._candidate_plans: List[_P] = []
@@ -182,7 +198,7 @@ class GreedyParallelizationPlanner(ParallelizationPlanner, Generic[_P]):
 
 
 class ChannelGroupSlicePlanner(
-    GreedyParallelizationPlanner[ChannelGroupParallelizationPlan]
+    NaiveParallelizationPlanner[ChannelGroupParallelizationPlan]
 ):
     def __init__(self, num_channels_out: int, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -206,7 +222,7 @@ class ChannelGroupSlicePlanner(
             )
 
 
-class SlicePlanner(GreedyParallelizationPlanner[RowColumnParallelizationPlan]):
+class SlicePlanner(NaiveParallelizationPlanner[RowColumnParallelizationPlan]):
     def __init__(
         self, num_channels_out: int, height: int, width: int, **kwargs: Any
     ) -> None:

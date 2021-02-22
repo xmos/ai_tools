@@ -44,6 +44,23 @@ class ParallelizationPlan(ABC):
         return {"th": self._num_threads}
 
 
+class ElementWiseParallelizationPlan(ParallelizationPlan):
+    def __init__(
+        self, num_threads: int, *, job_sizes: Optional[List[int]] = None, **kwargs: Any
+    ) -> None:
+        super().__init__(num_threads, **kwargs)
+        self._job_sizes = job_sizes or []
+
+    def estimate_cost(self) -> SupportsFloat:
+        return max(self._job_sizes) + self.estimate_fixed_cost()
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = super().to_dict()
+        if self._job_sizes:
+            d["eg"] = self._job_sizes
+        return d
+
+
 class _ChannelGroup(NamedTuple):
     begin: int
     end: int
@@ -195,6 +212,24 @@ class NaiveParallelizationPlanner(ParallelizationPlanner, Generic[_P]):
                 f"with better alternative {repr(best_plan)}."
             )
         return best_plan
+
+
+class ElementWisePlanner(NaiveParallelizationPlanner[ElementWiseParallelizationPlan]):
+    def __init__(self, num_elements: int, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        assert num_elements > 0
+        self._num_elements = num_elements
+
+    def create_n_thread_candidates(self, num_threads: int) -> None:
+        min_job_size = self._num_elements // num_threads
+        if min_job_size == 0:
+            return
+
+        remainder = self._num_elements % num_threads
+        job_sizes = [min_job_size + (idx < remainder) for idx in range(num_threads)]
+        self.add_candidate_plan(
+            ElementWiseParallelizationPlan(num_threads, job_sizes=job_sizes)
+        )
 
 
 class ChannelGroupSlicePlanner(

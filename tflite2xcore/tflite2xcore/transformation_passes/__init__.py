@@ -94,6 +94,7 @@ from .scratch_memory_passes import (
     ScratchMemoryConv2dPass,
     ScratchMemoryConv2d1x1Pass,
     ScratchMemoryDepthwiseConv2dPass,
+    InsertExternalMemoryFetchPass,
 )
 
 from .constant_propagation_passes import ConstantPropagationPass

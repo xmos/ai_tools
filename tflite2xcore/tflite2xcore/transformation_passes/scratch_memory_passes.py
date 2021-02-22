@@ -1,14 +1,14 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 from abc import abstractmethod
 from typing import Tuple
 
-from tflite2xcore.xcore_model import Operator
-from tflite2xcore.xcore_schema import XCOREOpCodes
+from tflite2xcore.xcore_schema import XCOREOpCodes, Operator, Tensor, Buffer
 from tflite2xcore.parallelization import CHANNEL_GROUP_SIZE
+from tflite2xcore.xcore_schema.operator_code import OperatorCode
 
-from .transformation_passes import OperatorMatchingPass
+from .transformation_passes import OperatorMatchingPass, TensorMatchingPass
 
 
 class ScratchMemoryCalculationPass(OperatorMatchingPass):
@@ -126,3 +126,34 @@ class ScratchMemoryConv2d1x1Pass(Conv2dScratchMemoryCalculationPass):
     @property
     def _kernel_size(self) -> Tuple[int, int]:
         return 1, 1
+
+
+class InsertExternalMemoryFetchPass(TensorMatchingPass):
+    MATCHING_OPCODES = (
+        XCOREOpCodes.XC_bconv2d_bin,
+        XCOREOpCodes.XC_bconv2d_bin_DI,
+        XCOREOpCodes.XC_bconv2d_int8,
+        XCOREOpCodes.XC_bconv2d_int8_DIDO,
+    )
+
+    def match(self, tensor: Tensor) -> bool:
+        if super().match(tensor) and tensor.is_constant and len(tensor.consumers) == 1:
+            consumer = tensor.consumers[0]
+            return consumer.operator_code.code in self.MATCHING_OPCODES
+        return False
+
+    def mutate(self, tensor: Tensor) -> None:
+        subgraph = tensor.subgraph
+
+        # clone the constant tensor, rename the original, remove old buffer
+        new_tensor = subgraph.clone_tensor(tensor)
+        tensor.name = subgraph.make_unique_tensor_name(tensor.name)
+        tensor.buffer.owners = []
+        tensor.buffer = Buffer(tensor.model, owners=[tensor])
+
+        # create and insert fetch op
+        fetch_op = subgraph.create_operator(
+            OperatorCode(XCOREOpCodes.XC_fetch), inputs=[new_tensor], outputs=[tensor]
+        )
+        fetch_op.name = f"{new_tensor.name}/fetch"
+        subgraph.insert_operator(tensor.consumers[0], fetch_op)

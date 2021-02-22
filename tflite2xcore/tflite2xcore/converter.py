@@ -208,6 +208,12 @@ class BinarizedOperatorLoweringManager(PassManager):
         self.register_pass(passes.LegalizeBconv2dInt8Pass())
 
 
+class ExternalMemoryOptimizationManager(PassManager):
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
+        super().__init__(model, **kwargs)
+        self.register_pass(passes.InsertExternalMemoryFetchPass())
+
+
 class FinalizationManager(PassManager):
     def __init__(
         self,
@@ -271,6 +277,8 @@ def optimize_for_xcore(
         )
     )
     pass_mgr.register_passes(ParallelizationManager(num_threads=num_threads))
+    if external_memory:
+        pass_mgr.register_passes(ExternalMemoryOptimizationManager())
 
     # finalize (cleanup, minification, renaming, etc.)
     pass_mgr.register_passes(

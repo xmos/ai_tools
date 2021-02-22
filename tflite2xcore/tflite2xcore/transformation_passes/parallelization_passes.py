@@ -31,10 +31,10 @@ class ParallelizationPass(OperatorMatchingPass):
         **kwargs: Any
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.num_threads = num_threads or 1
-        assert isinstance(self.num_threads, int)
-        assert self.num_threads > 0
-        self.forced = forced
+        self._num_threads = num_threads or 1
+        assert isinstance(self._num_threads, int)
+        assert self._num_threads > 0
+        self._forced = forced
 
     def match(self, op: Operator) -> bool:
         return (
@@ -60,7 +60,7 @@ class ChannelGroupParallelizationPass(ParallelizationPass):
         Cout = np.prod(output_shape[1:])  # works even if output is (1, 1, 1, Cout)
         assert output_shape[-1] == Cout
         return ChannelGroupSlicePlanner(
-            int(Cout), num_threads=self.num_threads, forced=self.forced
+            int(Cout), num_threads=self._num_threads, forced=self._forced
         )
 
 
@@ -73,7 +73,11 @@ class SpatialParallelizationPass(ParallelizationPass):
     def _planner(self) -> SlicePlanner:
         _, height, width, _ = self._op.outputs[0].shape
         return SlicePlanner(
-            self._cout, height, width, num_threads=self.num_threads, forced=self.forced,
+            self._cout,
+            height,
+            width,
+            num_threads=self._num_threads,
+            forced=self._forced,
         )
 
 

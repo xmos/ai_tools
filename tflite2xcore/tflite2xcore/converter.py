@@ -243,6 +243,7 @@ def optimize_for_xcore(
     intermediates_path: Optional[Union[str, Path]] = None,
     remove_input_alignment_pad: bool = False,
     remove_float_interface: bool = False,
+    external_memory: bool = False,
 ) -> None:
     num_threads = num_threads or 1
 

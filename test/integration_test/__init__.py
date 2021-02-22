@@ -20,8 +20,8 @@ from typing import (
     Optional,
 )
 
-from tflite2xcore.utils import unpack_bits  # type: ignore # TODO: fix this
-from tflite2xcore.xcore_schema import XCOREModel  # type: ignore # TODO: fix this
+from tflite2xcore.utils import unpack_bits
+from tflite2xcore.xcore_schema import XCOREModel
 from tflite2xcore.model_generation import (
     TFLiteModel,
     ModelGenerator,

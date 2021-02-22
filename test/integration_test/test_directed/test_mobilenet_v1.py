@@ -1,13 +1,15 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import os
 import pytest
 import tensorflow as tf
 from typing import Optional, Tuple, Any
-from tensorflow.python.keras.utils import data_utils
+from tensorflow.python.keras.utils import (  # pylint: disable=no-name-in-module
+    data_utils,
+)
 
-from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_schema import (
     XCOREModel,
     XCOREOpCodes,
     BuiltinOpCodes,

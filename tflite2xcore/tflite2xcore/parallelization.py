@@ -110,27 +110,36 @@ class RowColumnParallelizationPlan(ChannelGroupParallelizationPlan):
         return cost
 
 
-_P = TypeVar("_P", bound=ParallelizationPlan)
-
-
-class ParallelizationPlanner(ABC, Generic[_P]):
+class ParallelizationPlanner(ABC):
     def __init__(self, *, num_threads: int, forced: bool = False) -> None:
         assert 0 < num_threads <= MAX_THREADS
         self.logger = logging.getLogger(self.__class__.__name__)
         self._num_threads = num_threads
         self._forced = forced
-        self._candidate_plans: List[_P] = []
 
     @abstractmethod
     def create_n_thread_candidates(self, num_threads: int) -> None:
         pass
 
-    def add_candidate_plan(self, plan: _P) -> None:
-        self._candidate_plans.append(plan)
-
     def create_candidate_plans(self) -> None:
         for n in range(self._num_threads):
             self.create_n_thread_candidates(n + 1)
+
+    @abstractmethod
+    def find_optimal_plan(self) -> ParallelizationPlan:
+        raise NotImplementedError()
+
+
+_P = TypeVar("_P", bound=ParallelizationPlan)
+
+
+class GreedyParallelizationPlanner(ParallelizationPlanner, Generic[_P]):
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._candidate_plans: List[_P] = []
+
+    def add_candidate_plan(self, plan: _P) -> None:
+        self._candidate_plans.append(plan)
 
     def find_optimal_plan(self) -> _P:
         if not self._candidate_plans:
@@ -172,7 +181,9 @@ class ParallelizationPlanner(ABC, Generic[_P]):
         return best_plan
 
 
-class ChannelGroupSlicePlanner(ParallelizationPlanner[ChannelGroupParallelizationPlan]):
+class ChannelGroupSlicePlanner(
+    GreedyParallelizationPlanner[ChannelGroupParallelizationPlan]
+):
     def __init__(self, num_channels_out: int, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._cout = num_channels_out
@@ -195,7 +206,7 @@ class ChannelGroupSlicePlanner(ParallelizationPlanner[ChannelGroupParallelizatio
             )
 
 
-class SlicePlanner(ParallelizationPlanner[RowColumnParallelizationPlan]):
+class SlicePlanner(GreedyParallelizationPlanner[RowColumnParallelizationPlan]):
     def __init__(
         self, num_channels_out: int, height: int, width: int, **kwargs: Any
     ) -> None:

@@ -3,7 +3,7 @@
 
 import numpy as np
 from abc import abstractmethod
-from typing import Tuple
+from typing import Tuple, Optional, Any
 
 from tflite2xcore.xcore_model import Operator
 from tflite2xcore.xcore_schema import XCOREOpCodes
@@ -24,7 +24,11 @@ class ParallelizationPass(OperatorMatchingPass):
         return tuple()
 
     def __init__(
-        self, *args, num_threads: int = None, forced: bool = False, **kwargs
+        self,
+        *args,
+        num_threads: Optional[int] = None,
+        forced: bool = False,
+        **kwargs: Any
     ) -> None:
         super().__init__(*args, **kwargs)
         self.num_threads = num_threads or 1

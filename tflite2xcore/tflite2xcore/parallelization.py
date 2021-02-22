@@ -25,7 +25,7 @@ CHANNEL_GROUP_SIZE = ACC_PERIOD_INT8
 
 class ParallelizationPlan(ABC):
     def __init__(
-        self, num_threads: int, *, fixed_cost_per_thread: SupportsFloat = 0
+        self, num_threads: int, *, fixed_cost_per_thread: SupportsFloat
     ) -> None:
         self._num_threads = num_threads
         self._fixed_cost_per_thread = fixed_cost_per_thread
@@ -228,7 +228,11 @@ class ElementWisePlanner(NaiveParallelizationPlanner[ElementWiseParallelizationP
         remainder = self._num_elements % num_threads
         job_sizes = [min_job_size + (idx < remainder) for idx in range(num_threads)]
         self.add_candidate_plan(
-            ElementWiseParallelizationPlan(num_threads, job_sizes=job_sizes)
+            ElementWiseParallelizationPlan(
+                num_threads,
+                job_sizes=job_sizes,
+                fixed_cost_per_thread=self._fixed_cost_per_thread,
+            )
         )
 
 
@@ -253,7 +257,11 @@ class ChannelGroupSlicePlanner(
         changrps = self.split_channelwise()
         if len(changrps) >= num_threads:
             self.add_candidate_plan(
-                ChannelGroupParallelizationPlan(num_threads, channel_groups=changrps)
+                ChannelGroupParallelizationPlan(
+                    num_threads,
+                    channel_groups=changrps,
+                    fixed_cost_per_thread=self._fixed_cost_per_thread,
+                )
             )
 
 
@@ -264,7 +272,9 @@ class SlicePlanner(NaiveParallelizationPlanner[RowColumnParallelizationPlan]):
         super().__init__(**kwargs)
         assert height * width > 0, f"received height={height}, width={width}"
         self._height, self._width = height, width
-        self._ch_group_planner = ChannelGroupSlicePlanner(num_channels_out, **kwargs)
+        self._ch_group_planner = ChannelGroupSlicePlanner(
+            num_channels_out, **kwargs, fixed_cost_per_thread=0
+        )
 
     def _split_unidirectionally(
         self, dim: int, num_threads: int
@@ -304,5 +314,6 @@ class SlicePlanner(NaiveParallelizationPlanner[RowColumnParallelizationPlan]):
                 num_threads,
                 channel_groups=self._ch_group_planner.split_channelwise(),
                 row_column_slices=self._split_vertically(num_threads),
+                fixed_cost_per_thread=self._fixed_cost_per_thread,
             )
         )

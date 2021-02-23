@@ -2,7 +2,7 @@
 // XMOS Public License: Version 1
 #ifndef LIB_TEST_H
 #define LIB_TEST_H
-
+#define FLATBUFFERS_DEBUG_VERIFICATION_FAILURE
 #include <string>
 
 #include "absl/strings/string_view.h"

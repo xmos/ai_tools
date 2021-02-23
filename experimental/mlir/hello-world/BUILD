@@ -18,7 +18,12 @@ cc_library(
 tf_cc_binary(
     name = "hello-world",
     srcs = ["hello-world.cc"],
-    deps = ["lib-test",
+    deps = [
+            #"lib-test",
+            "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_import",
+            "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
+            "@org_tensorflow//tensorflow/lite/schema:schema_fbs_with_reflection",
+            "@flatbuffers",
             ],
 
 )

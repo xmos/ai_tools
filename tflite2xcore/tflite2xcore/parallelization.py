@@ -15,9 +15,10 @@ from typing import (
     NamedTuple,
     Generic,
     TypeVar,
+    Iterable,
 )
 
-from tflite2xcore.utils import ACC_PERIOD_INT8
+from tflite2xcore.utils import ACC_PERIOD_INT8, VECTOR_SIZE_BYTES
 
 MAX_THREADS = 5
 CHANNEL_GROUP_SIZE = ACC_PERIOD_INT8
@@ -46,10 +47,14 @@ class ParallelizationPlan(ABC):
 
 class ElementWiseParallelizationPlan(ParallelizationPlan):
     def __init__(
-        self, num_threads: int, *, job_sizes: Optional[List[int]] = None, **kwargs: Any
+        self,
+        num_threads: int,
+        *,
+        job_sizes: Optional[Iterable[int]] = None,
+        **kwargs: Any,
     ) -> None:
         super().__init__(num_threads, **kwargs)
-        self._job_sizes = job_sizes or []
+        self._job_sizes = list(job_sizes) or []
 
     def estimate_cost(self) -> SupportsFloat:
         return max(self._job_sizes) + self.estimate_fixed_cost()
@@ -71,11 +76,11 @@ class ChannelGroupParallelizationPlan(ParallelizationPlan):
         self,
         num_threads: int,
         *,
-        channel_groups: Optional[List[_ChannelGroup]] = None,
+        channel_groups: Optional[Iterable[_ChannelGroup]] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(num_threads, **kwargs)
-        self._channel_groups = channel_groups or []
+        self._channel_groups = list(channel_groups) or []
 
     def _estimate_channel_group_cost(self, changrp: _ChannelGroup) -> int:
         if changrp.begin - changrp.begin + 1 == CHANNEL_GROUP_SIZE:
@@ -111,7 +116,7 @@ class RowColumnParallelizationPlan(ChannelGroupParallelizationPlan):
         self,
         num_threads: int,
         *,
-        row_column_slices: Optional[List[_RowColumnSlice]] = None,
+        row_column_slices: Optional[Iterable[_RowColumnSlice]] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(num_threads, **kwargs)
@@ -221,19 +226,27 @@ class ElementWisePlanner(NaiveParallelizationPlanner[ElementWiseParallelizationP
         self._num_elements = num_elements
 
     def create_n_thread_candidates(self, num_threads: int) -> None:
-        min_job_size = self._num_elements // num_threads
-        if min_job_size == 0:
-            return
+        # TODO: expose the alignment as an option
+        r = self._num_elements % VECTOR_SIZE_BYTES
+        full_vectors = (self._num_elements - r) // VECTOR_SIZE_BYTES
+        p = full_vectors % num_threads
+        k = (full_vectors - p) // num_threads
 
-        remainder = self._num_elements % num_threads
-        job_sizes = [min_job_size + (idx < remainder) for idx in range(num_threads)]
-        self.add_candidate_plan(
-            ElementWiseParallelizationPlan(
-                num_threads,
-                job_sizes=job_sizes,
-                fixed_cost_per_thread=self._fixed_cost_per_thread,
+        job_sizes = [
+            k * VECTOR_SIZE_BYTES + (idx < p) * VECTOR_SIZE_BYTES
+            for idx in range(num_threads)
+        ]
+        job_sizes[-1] += r
+        assert sum(job_sizes) == self._num_elements
+
+        if 0 not in job_sizes:
+            self.add_candidate_plan(
+                ElementWiseParallelizationPlan(
+                    num_threads,
+                    job_sizes=job_sizes,
+                    fixed_cost_per_thread=self._fixed_cost_per_thread,
+                )
             )
-        )
 
 
 class ChannelGroupSlicePlanner(

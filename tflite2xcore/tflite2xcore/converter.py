@@ -22,7 +22,7 @@ class BasicCanonicalizationManager(PassManager):
         self,
         model: Optional[XCOREModel] = None,
         *,
-        remove_float_interface: bool = False,
+        remove_float_interface: bool,
         **kwargs: Any,
     ) -> None:
         super().__init__(model, **kwargs)
@@ -131,7 +131,7 @@ class PaddingOptimizationManager(PassManager):
         self,
         model: Optional[XCOREModel] = None,
         *,
-        ignore_input_alignment: bool = False,
+        remove_input_alignment_pad: bool,
         **kwargs: Any,
     ) -> None:
         super().__init__(model, **kwargs)
@@ -145,7 +145,7 @@ class PaddingOptimizationManager(PassManager):
 
         # we optimize the convolutions by fusing it with spatial padding
         self.register_pass(passes.FuseConv2dPaddingPass())
-        if ignore_input_alignment:
+        if remove_input_alignment_pad:
             # remove word alignment padding on the input
             self.register_pass(passes.RemovePaddingInputPass())
         # replace with optimized implementation where possible
@@ -157,7 +157,7 @@ class PaddingOptimizationManager(PassManager):
 
 class ParallelizationManager(PassManager):
     def __init__(
-        self, model: Optional[XCOREModel] = None, *, num_threads: int = 1, **kwargs: Any
+        self, model: Optional[XCOREModel] = None, *, num_threads: int, **kwargs: Any
     ) -> None:
         super().__init__(model, **kwargs)
 
@@ -186,9 +186,7 @@ class ParallelizationManager(PassManager):
 
 
 class BinarizedOperatorLoweringManager(PassManager):
-    def __init__(
-        self, model: Optional[XCOREModel] = None, *, num_threads: int = 1, **kwargs: Any
-    ) -> None:
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
         super().__init__(model, **kwargs)
 
         # map LceQuantize to our bsign op
@@ -215,8 +213,8 @@ class FinalizationManager(PassManager):
         self,
         model: Optional[XCOREModel] = None,
         *,
-        cleanup: bool = True,
-        minification: bool = False,
+        cleanup: bool,
+        minification: bool,
         **kwargs: Any,
     ) -> None:
         super().__init__(model, **kwargs)
@@ -241,11 +239,13 @@ def optimize_for_xcore(
     *,
     cleanup: bool = True,
     minification: bool = False,
-    num_threads: int = 1,
+    num_threads: Optional[int] = None,
     intermediates_path: Optional[Union[str, Path]] = None,
-    ignore_input_alignment: bool = False,
-    remove_float_interface: bool = False,  # TODO: add this to xformer
+    remove_input_alignment_pad: bool = False,
+    remove_float_interface: bool = False,
 ) -> None:
+    num_threads = num_threads or 1
+
     pass_mgr = PassManager(model, keep_intermediates=bool(intermediates_path))
 
     # canonicalization
@@ -264,16 +264,22 @@ def optimize_for_xcore(
     pass_mgr.register_pass(passes.ReplaceAddPass())
 
     # optimizations on xcore ops
-    pass_mgr.register_passes(PaddingOptimizationManager())
+    pass_mgr.register_passes(
+        PaddingOptimizationManager(
+            remove_input_alignment_pad=remove_input_alignment_pad
+        )
+    )
     pass_mgr.register_passes(ParallelizationManager(num_threads=num_threads))
 
     # finalize (cleanup, minification, renaming, etc.)
-    pass_mgr.register_passes(FinalizationManager())
+    pass_mgr.register_passes(
+        FinalizationManager(minification=minification, cleanup=cleanup)
+    )
 
     try:
         pass_mgr.run_passes()
     finally:
-        if pass_mgr.keep_intermediates:
+        if intermediates_path:
             pass_mgr.save_intermediates(intermediates_path)
 
     model.sanity_check()
@@ -284,17 +290,9 @@ def optimize_for_xcore(
 def convert(
     tflite_input_path: Union[str, Path],
     tflite_output_path: Union[str, Path],
-    *,
-    num_threads: Optional[int] = None,
-    minification: bool = False,
-    intermediates_path: Optional[Union[str, Path]] = None,
+    **kwargs: Any,
 ) -> None:
     num_threads = num_threads or 1
     model = XCOREModel.read_flatbuffer(tflite_input_path)
-    optimize_for_xcore(
-        model,
-        minification=minification,
-        num_threads=num_threads,
-        intermediates_path=intermediates_path,
-    )
+    optimize_for_xcore(model, **kwargs)
     model.write_flatbuffer(tflite_output_path)

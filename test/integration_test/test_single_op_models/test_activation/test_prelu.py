@@ -1,11 +1,11 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import pytest
 import tensorflow as tf
 from typing import Optional, Tuple
 
-from tflite2xcore.xcore_schema import BuiltinOpCodes  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_schema import BuiltinOpCodes
 from tflite2xcore.model_generation import Configuration
 from tflite2xcore.model_generation.utils import parse_init_config
 

@@ -1,4 +1,4 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import pytest
@@ -7,8 +7,8 @@ import tensorflow as tf
 import numpy as np
 from pathlib import Path
 from typing import Optional, Type
-from tflite2xcore.utils import LoggingContext  # type: ignore # TODO: fix this
-from tflite2xcore.xcore_schema import (  # type: ignore # TODO: fix this
+from tflite2xcore.utils import LoggingContext
+from tflite2xcore.xcore_schema import (
     XCOREModel,
     XCOREOpCodes,
     BuiltinOpCodes,
@@ -95,10 +95,13 @@ RUNNER = CIFAR10BinarizedTestRunner
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
 
+CONFIGS = {
+    "default": {0: {"skip_on_device": False}},
+}
 
 @pytest.fixture  # type: ignore
 def abs_output_tolerance(use_device: bool) -> int:
-    return 13 if use_device else 31
+    return 13 if use_device else 33
 
 
 @pytest.fixture  # type: ignore
@@ -108,7 +111,7 @@ def expected_accuracy(use_device: bool) -> float:
 
 @pytest.fixture  # type: ignore
 def expected_prediction_deviation(use_device: bool) -> int:
-    return 0 if use_device else 49
+    return 0 if use_device else 28
 
 
 #  ----------------------------------------------------------------------------
@@ -138,7 +141,7 @@ def test_converted_model(xcore_model: XCOREModel) -> None:
     subgraph = xcore_model.subgraphs[0]
 
     # check tensors
-    assert len(subgraph.tensors) == 23
+    assert len(subgraph.tensors) == 24
 
     assert len(subgraph.inputs) == 1
     input_tensor = subgraph.inputs[0]

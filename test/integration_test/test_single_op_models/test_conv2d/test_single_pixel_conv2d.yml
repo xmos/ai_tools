@@ -7,6 +7,7 @@ default:
     input_channels: 49
     num_threads: 1
     output_channels: 12
+    skip_on_device: True 
   1:
     K_h: 2
     K_w: 9

@@ -1,6 +1,6 @@
 #!/usr/bin/env python -O
 #
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 from pathlib import Path
@@ -40,6 +40,14 @@ if __name__ == "__main__":
         "A report is printed showing the runtime memory footprint of the model.",
     )
     parser.add_argument(
+        "--remove_input_alignment_pad",
+        action="store_true",
+        default=False,
+        help="Remove channel-wise padding on the input tensor(s). "
+        "The new input tensor will have the padded size, "
+        "so the padding should be implemented by the application developer.",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=version.get_version(),
@@ -59,6 +67,7 @@ if __name__ == "__main__":
         minification=args.minify,
         num_threads=args.num_threads,
         intermediates_path=args.intermediates_path,
+        remove_input_alignment_pad=args.remove_input_alignment_pad,
     )
 
     print(f"Conversion successful, output: {tflite_output_path}")

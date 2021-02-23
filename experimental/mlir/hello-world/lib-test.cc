@@ -2,6 +2,7 @@
 // XMOS Public License: Version 1
 
 #include "lib-test.h"
+#include <cstdio>
 #include <math.h>
 
 #include <iostream>
@@ -53,4 +54,3 @@ void mlir_write_flatbuffer( std::string & filename, mlir::ModuleOp module)
     }
     delete serialized_flatbuffer;
 }
-

@@ -1,4 +1,4 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 import pytest
 
@@ -45,7 +45,7 @@ def test_mutate(
     _test_mutate(replacement_pass, legalization_pass, model, new_opcode)
 
     bconv2d_op = model.subgraphs[0].operators[0]
-    assert len(bconv2d_op.inputs) == 4
+    assert len(bconv2d_op.inputs) == 5
 
 
 if __name__ == "__main__":

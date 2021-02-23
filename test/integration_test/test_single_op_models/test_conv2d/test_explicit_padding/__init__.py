@@ -1,11 +1,11 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import pytest
 import tensorflow as tf
 from typing import Optional, Tuple
 
-from tflite2xcore.xcore_schema import XCOREModel, ValidOpCodes, BuiltinOpCodes  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_schema import XCOREModel, ValidOpCodes, BuiltinOpCodes
 from tflite2xcore.model_generation import Configuration
 
 from .. import (
@@ -51,7 +51,6 @@ class ExplicitlyPaddedConv2dMixin(PaddingMixin, AbstractConv2dTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-@pytest.mark.skip_on_device  # type: ignore
 def test_reference_model_regression(
     reference_model: XCOREModel, reference_op_code: ValidOpCodes
 ) -> None:

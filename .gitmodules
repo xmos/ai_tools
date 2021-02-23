@@ -7,6 +7,6 @@
 	url = git@github.com:xmos/tensorflow
 	ignore = all
 	branch = develop
-[submodule "utils/ai_deployment_framework"]
-	path = utils/ai_deployment_framework
-	url = git@github.com:xmos/ai_deployment_framework.git
+[submodule "utils/adf"]
+	path = utils/adf
+	url = git@github.com:xmos/adf.git

@@ -304,7 +304,11 @@ class LegalizeBconv2dPass(LegalizeWeightBiasPass):
         return op
 
 
-class LegalizeBconv2dInt8GenericPass(LegalizeBconv2dPass):
+class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
+    @property
+    def matching_opcode(self) -> XCOREOpCodes:
+        return XCOREOpCodes.XC_bconv2d_int8
+
     @property
     def matching_output_type(self) -> TensorType:
         return TensorType.INT8
@@ -390,34 +394,90 @@ class LegalizeBconv2dInt8GenericPass(LegalizeBconv2dPass):
         clamp_far_half = clamp_offsets[1] // 2
         return (-clamp_offsets[0], -clamp_offsets[1] + clamp_far_half, clamp_far_half)
 
-    class _QuantizationParams(NamedTuple):
+    class _ScalarQuantParams(NamedTuple):
+        M: int
+        clamp_offset_near: int
+        clamp_offset_far0: int
+        clamp_offset_far1: int
         bias_multiplier: int
         accu_shr: int
+        accu_shl: int
         final_shr: int
-        clamp_offset_close: int
-        clamp_offset_far1: int
-        clamp_offset_far2: int
+        adjusted_B: int
 
-    def _calculate_quantization_parameters(
+    def _calculate_scalar_quant_params(
         self, adjusted_pam: np.ndarray, adjusted_pab: np.ndarray
-    ) -> Tuple[int, int, "_QuantizationParams"]:
+    ) -> "_ScalarQuantParams":
         M, B, A = self._calculate_MBA(adjusted_pam, adjusted_pab)
         assert B >= 8
 
         _, Bmax_16 = self.__calculate_exp_bounds(adjusted_pab, bound_width=16)
-        bias_multiplier = 2 ** max(0, B - Bmax_16)
-        adjusted_B = min(B, Bmax_16)
+        accu_shift_signed = -A
 
-        accu_shr = -A
-        final_shr = B - 8
-        clamp_offsets = self._calculate_clamp_offsets(A)
-
-        return (
+        return self._ScalarQuantParams(
             M,
-            adjusted_B,
-            self._QuantizationParams(
-                bias_multiplier, accu_shr, final_shr, *clamp_offsets
-            ),
+            *self._calculate_clamp_offsets(A),
+            bias_multiplier=2 ** max(0, B - Bmax_16),
+            accu_shr=max(0, accu_shift_signed),
+            accu_shl=min(accu_shift_signed, 0),
+            final_shr=B - 8,
+            adjusted_B=min(B, Bmax_16),
+        )
+
+    class _QuantParams(NamedTuple):
+        post_act_mult_quant: np.ndarray
+        post_act_bias_quant: np.ndarray
+        output_trf_params: np.ndarray
+        accu_modifier: np.ndarray
+
+    def _calculate_quant_parameters(
+        self, adjusted_pam: np.ndarray, adjusted_pab: np.ndarray
+    ) -> "_QuantParams":
+        # first we calculate the scalar quantization parameters
+        q_params = self._calculate_scalar_quant_params(adjusted_pam, adjusted_pab)
+
+        # then quantize the post activation multiplier and bias
+        pam_q = np.round(adjusted_pam * 2.0 ** q_params.M)
+        post_act_mult_quant = pam_q.astype(np.int16)
+        assert np.all(post_act_mult_quant == pam_q)
+
+        # TODO: fix this so there is no need to clip
+        pab_q = np.round(adjusted_pab * 2.0 ** q_params.adjusted_B)
+        post_act_bias_quant = np.clip(
+            pab_q, np.iinfo(np.int16).min, np.iinfo(np.int16).max
+        ).astype(np.int16)
+        if np.any(post_act_bias_quant != pab_q):
+            self.logger.warning("clipped post_act_bias_quant")
+
+        # output transform parameters need to be replicated and concatenated for efficiency
+        def fill_int16_vector(val: int) -> np.ndarray:
+            return np.full(16, val, dtype=np.int16)
+
+        # TODO: fix this by reordering the underlying lib_nn struct
+        output_trf_params = np.concatenate(
+            [
+                fill_int16_vector(getattr(q_params, field))
+                for field in (
+                    "clamp_offset_near",
+                    "clamp_offset_far0",
+                    "clamp_offset_far1",
+                    "bias_multiplier",
+                    "final_shr",
+                    "accu_shr",
+                )
+            ]
+            + [np.frombuffer(np.int32(q_params.accu_shl).tobytes(), dtype=np.int16)]
+        )
+
+        # calculate quantized accumulator modifier
+        weights = self._weights.as_array()  # already boggled
+        overlap_corrections = self._calculate_overlap_correction(weights)
+        accu_modifier = np.int16(
+            overlap_corrections / 2 ** (q_params.accu_shr + q_params.accu_shl)
+        )
+
+        return self._QuantParams(
+            post_act_mult_quant, post_act_bias_quant, output_trf_params, accu_modifier,
         )
 
     def mutate_biases(self, op: Operator) -> None:
@@ -436,53 +496,59 @@ class LegalizeBconv2dInt8GenericPass(LegalizeBconv2dPass):
             )
 
             # then adjust pam/pad as required by our kernels
+            weights = self._weights.as_array()  # already boggled
             adjusted_pam = -2 * output_trf_pam
             adjusted_pab = output_trf_pab + output_trf_pam * self._kernel_channel_size
 
             # calculate quantization parameters as required by the kernel
-            (M, adjusted_B, q_params) = self._calculate_quantization_parameters(
-                adjusted_pam, adjusted_pab
-            )
-            op.add_custom_options(q_params=tuple(q_params))
+            q_params = self._calculate_quant_parameters(adjusted_pam, adjusted_pab)
 
-            # then quantize the post activation parameters
-            pam_q = np.round(adjusted_pam * 2.0 ** M)
-            post_act_mult_quant = pam_q.astype(np.int16)
-            assert np.all(post_act_mult_quant == pam_q)
-
-            # TODO: fix this so there is no need to clip
-            pab_q = np.round(adjusted_pab * 2.0 ** adjusted_B)
-            post_act_bias_quant = np.clip(
-                pab_q, np.iinfo(np.int16).min, np.iinfo(np.int16).max
-            ).astype(np.int16)
-            if np.any(post_act_bias_quant != pab_q):
-                self.logger.warning("clipped post_act_bias_quant")
-
-            # create and populate new threshpost_act_multolds tensor
+            # TODO: refactor the rest of this function
+            # create and populate new post_act_mult tensor
             new_pam_tensor = self._op.subgraph.create_tensor(
                 f"{self._op.name}/post_act_mult",
-                TensorType.INT16,
-                self._op.inputs[2].shape,
+                TensorType.from_numpy_dtype(q_params.post_act_mult_quant.dtype),
+                q_params.post_act_mult_quant.shape,
                 consumers=[self._op],
             )
-            new_pam_tensor.buffer.data = post_act_mult_quant
+            new_pam_tensor.buffer.data = q_params.post_act_mult_quant
 
             # replace old pam tensor
             self._op.inputs[2].consumers.remove(self._op)
             self._op.inputs[2] = new_pam_tensor
 
-            # create and populate new threshpost_act_multolds tensor
+            # create and populate new post_act_bias tensor
             new_pab_tensor = self._op.subgraph.create_tensor(
                 f"{self._op.name}/post_act_bias",
-                TensorType.INT16,
-                self._op.inputs[3].shape,
+                TensorType.from_numpy_dtype(q_params.post_act_bias_quant.dtype),
+                q_params.post_act_bias_quant.shape,
                 consumers=[self._op],
             )
-            new_pab_tensor.buffer.data = post_act_bias_quant
+            new_pab_tensor.buffer.data = q_params.post_act_bias_quant
 
-            # replace old pam tensor
+            # replace old pab tensor
             self._op.inputs[3].consumers.remove(self._op)
             self._op.inputs[3] = new_pab_tensor
+
+            # create and populate new output_trf_tensor tensor
+            output_trf_tensor = self._op.subgraph.create_tensor(
+                f"{self._op.name}/output_trf_params",
+                TensorType.from_numpy_dtype(q_params.output_trf_params.dtype),
+                q_params.output_trf_params.shape,
+                consumers=[self._op],
+            )
+            output_trf_tensor.buffer.data = q_params.output_trf_params
+            self._op.inputs.append(output_trf_tensor)
+
+            # create and populate new output_trf_tensor tensor
+            accu_modifier_tensor = self._op.subgraph.create_tensor(
+                f"{self._op.name}/accu_modifier",
+                TensorType.from_numpy_dtype(q_params.accu_modifier.dtype),
+                q_params.accu_modifier.shape,
+                consumers=[self._op],
+            )
+            accu_modifier_tensor.buffer.data = q_params.accu_modifier
+            self._op.inputs.append(accu_modifier_tensor)
 
     def mutate(self, op: Operator) -> Operator:
         new_op = super().mutate(op)
@@ -490,33 +556,7 @@ class LegalizeBconv2dInt8GenericPass(LegalizeBconv2dPass):
         return new_op
 
 
-class LegalizeBconv2dInt8Pass(LegalizeBconv2dInt8GenericPass):
-    @property
-    def matching_opcode(self) -> XCOREOpCodes:
-        return XCOREOpCodes.XC_bconv2d_int8
-
-    def mutate_biases(self, op: Operator) -> None:
-        super().mutate_biases(op)
-        accu_shr = op.custom_options["q_params"][1]
-
-        with self.using(op):
-            # calculate quantized accumulator modifier
-            weights = self._weights.as_array()  # already boggled
-            overlap_corrections = self._calculate_overlap_correction(weights)
-            accu_modifier = np.int16(overlap_corrections / 2 ** accu_shr)
-
-            # create and populate new thresholds tensor
-            accu_modifier_tensor = self._op.subgraph.create_tensor(
-                f"{self._op.name}/accu_modifier",
-                TensorType.INT16,
-                self._op.inputs[3].shape,
-                consumers=[self._op],
-            )
-            accu_modifier_tensor.buffer.data = accu_modifier
-            self._op.inputs.append(accu_modifier_tensor)
-
-
-class LegalizeBconv2dInt8DeepInDeepOutPass(LegalizeBconv2dInt8GenericPass):
+class LegalizeBconv2dInt8DeepInDeepOutPass(LegalizeBconv2dInt8Pass):
     @property
     def _overlap_size(self) -> int:
         return 0
@@ -524,6 +564,15 @@ class LegalizeBconv2dInt8DeepInDeepOutPass(LegalizeBconv2dInt8GenericPass):
     @property
     def matching_opcode(self) -> XCOREOpCodes:
         return XCOREOpCodes.XC_bconv2d_int8_DIDO
+
+    def mutate_biases(self, op: Operator) -> None:
+        super().mutate_biases(op)
+
+        # we just need to make sure that there is no overlap
+        accu_modifier_tensor = op.inputs[5]
+        assert np.all(accu_modifier_tensor.as_array() == 0)
+        accu_modifier_tensor.consumers.remove(op)
+        del op.inputs[5]
 
 
 class LegalizeBconv2dBitpackedPass(LegalizeBconv2dPass):

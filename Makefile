@@ -9,8 +9,8 @@ CLOBBER_FLAG := '-c'
 
 .PHONY: xcore_interpreters_build
 xcore_interpreters_build:
-	cd utils/ai_deployment_framework/xcore_interpreters/python_bindings && bash build.sh $(CLOBBER_FLAG)
-	cd utils/ai_deployment_framework/xcore_interpreters/xcore_firmware && bash build.sh $(CLOBBER_FLAG)
+	cd utils/adf/xcore_interpreters/python_bindings && bash build.sh $(CLOBBER_FLAG)
+	cd utils/adf/xcore_interpreters/xcore_firmware && bash build.sh $(CLOBBER_FLAG)
 
 #**************************
 # tflite2xcore targets
@@ -51,6 +51,8 @@ ci: lib_flexbuffers_build \
  tflite2xcore_unit_test \
  tflite2xcore_dist_test \
  xcore_interpreters_build \
+ xcore_interpreters_unit_test \
+ xcore_interpreters_dist_test \
  integration_test
 
 #**************************
@@ -60,6 +62,7 @@ ci: lib_flexbuffers_build \
 .PHONY: test
 test: lib_flexbuffers_build \
  tflite2xcore_unit_test \
+ xcore_interpreters_unit_test \
  integration_test
 
 #**************************
@@ -99,4 +102,10 @@ help:
 	$(info   tflite2xcore_unit_test        Run tflite2xcore unit tests (requires Conda environment))
 	$(info   tflite2xcore_dist             Build tflite2xcore distribution (requires Conda environment))
 	$(info   tflite2xcore_dist_test        Run tflite2xcore distribution tests (requires Conda environment))
+	$(info )
+	$(info xcore_interpreter targets:)
+	$(info   xcore_interpreters_build      Run xcore_interpreters build)
+	$(info   xcore_interpreters_unit_test  Run xcore_interpreters unit tests (requires Conda environment))
+	$(info   xcore_interpreters_dist       Build xcore_interpreters distribution (requires Conda environment))
+	$(info   xcore_interpreters_dist_test  Run xcore_interpreters distribution tests (requires Conda environment))
 	$(info )

@@ -1,4 +1,4 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import pytest
@@ -7,8 +7,8 @@ from abc import abstractmethod
 from typing import Tuple, Optional
 
 from tflite2xcore.model_generation import Configuration
-from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
-from tflite2xcore.xcore_schema import XCOREOpCodes, ValidOpCodes  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_model import XCOREModel
+from tflite2xcore.xcore_schema import XCOREOpCodes, ValidOpCodes
 
 from .. import (
     IntegrationTestRunner,

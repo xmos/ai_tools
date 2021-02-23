@@ -1,4 +1,4 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import logging
@@ -20,8 +20,8 @@ from typing import (
     Optional,
 )
 
-from tflite2xcore.utils import unpack_bits  # type: ignore # TODO: fix this
-from tflite2xcore.xcore_schema import XCOREModel  # type: ignore # TODO: fix this
+from tflite2xcore.utils import unpack_bits
+from tflite2xcore.xcore_schema import XCOREModel
 from tflite2xcore.model_generation import (
     TFLiteModel,
     ModelGenerator,
@@ -126,19 +126,7 @@ class IntegrationTestRunner(Runner):
 
     def rerun_post_cache(self) -> None:
         self._xcore_converter.convert()
-
-        try:
-            self._xcore_evaluator.evaluate()
-        except ModelSizeError as e:
-            if self._use_device:
-                pytest.skip("Skipping due to excessive model size")
-            else:
-                raise
-        except ArenaSizeError as e:
-            if self._use_device:
-                pytest.skip("Skipping due to excessive tensor arena size")
-            else:
-                raise
+        self._xcore_evaluator.evaluate()
 
 
 class DefaultIntegrationTestRunner(IntegrationTestRunner):

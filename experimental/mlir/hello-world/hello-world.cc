@@ -3,8 +3,14 @@
 // #include "lib-test.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_import.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_export.h"
+#include "tensorflow/compiler/mlir/lite/tf_tfl_passes.h"
+
+// #include "mlir/IR/BuiltinOps.h"  // from @llvm-project
+#include "mlir/Pass/PassManager.h"  // from @llvm-project
 
 #include "mlir/IR/Dialect.h"
+
+#include "mlir/Parser.h"
 
 #include <iostream>
 
@@ -122,6 +128,72 @@ void ToString(const std::string& serialized_model) {
 // from lib test.cc
 void mlir_write_flatbuffer( std::string & filename, mlir::ModuleOp module)
 {
-    print_some_stuff();
+
+    std::string * serialized_flatbuffer = new std::string();
+    serialized_flatbuffer->resize(1000000); // TODO figure out what this size should be, or at least a tigher bound
+    std::cout << *serialized_flatbuffer << std::endl;
+
+    if(!tflite::MlirToFlatBufferTranslateFunction(  module, serialized_flatbuffer,
+                                            true, true, true)){
+
+        std::ofstream outfile (filename,std::ofstream::binary);
+        outfile.write (serialized_flatbuffer->data(),serialized_flatbuffer->size());
+        outfile.close();
+
+    } else {
+        std::cout << "Error converting MLIR to flatbuffer, no file written" << std::endl;
+    }
+    delete serialized_flatbuffer;
+}
+//
+
+int main(int argc, char *argv[])
+{
+    std::cout << argc << "\t" << argv[1] << std::endl;
+    std::string filename;
+    if(argc>1){
+        filename = argv[1];
+    }else{
+        filename = "../tflite2xcore/tflite2xcore/tests/test_ir/builtin_operators.tflite";
+    }
+
+    mlir::MLIRContext context;
+
+
+    // from flatbuffer to string.cc
+    std::string serialized_model;
+    if (tflite::ReadAndVerify(filename, &serialized_model)) return 1;
+    tflite::ToString(serialized_model);
+    //
+
+    // read flatbuffer
+    // mlir::OwningModuleRef mod(mlir_read_flatbuffer( &context, filename ));
+    mlir::OwningModuleRef mod(tflite::FlatBufferToMlir(serialized_model, &context, mlir::UnknownLoc::get(&context)));
+    if (!mod) return 1;
+
+    // write mlir
+    std::string mlir_file(filename + "mlir");
+    std::ofstream outfile (mlir_file,std::ofstream::binary);
+    outfile.write (serialized_model.data(),serialized_model.size());
+    outfile.close();
+
+    //read mlir
+    parseSourceFile( mlir_file, &context); 
+
+    // modify mlir
+    mlir::TFL::QuantizationSpecs specs;
+    mlir::TFL::PassConfig pass_config(specs);
+    // mlir::OpPassManager op_pass_manager("TestQuantPass", true);
+    mlir::PassManager pass_manager(&context, true);
+
+    tensorflow::AddQuantizationPasses( specs, &pass_manager);
+
+    pass_manager.run(mod.get());
+
+    //write flatbuffer
+    std::string outfilename("test.tflite");
+    mlir_write_flatbuffer( outfilename, mod.get());
+
+    std::cout << "Some stuff " << M_PI << std::endl;
     return 0;
 }

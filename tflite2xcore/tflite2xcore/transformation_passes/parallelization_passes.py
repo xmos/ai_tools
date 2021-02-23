@@ -3,14 +3,14 @@
 
 import numpy as np
 from abc import abstractmethod
-from typing import Tuple, Optional, Any
+from typing import Tuple, Optional, Any, cast
 
-from tflite2xcore.xcore_model import Operator
-from tflite2xcore.xcore_schema import XCOREOpCodes
+from tflite2xcore.xcore_schema import XCOREOpCodes, Operator
 from tflite2xcore.parallelization import (
     ParallelizationPlanner,
     SlicePlanner,
     ChannelGroupSlicePlanner,
+    ElementWisePlanner,
 )
 from tflite2xcore.utils import WORD_SIZE_BITS
 
@@ -53,6 +53,25 @@ class ParallelizationPass(OperatorMatchingPass):
             op.add_custom_options(par=self._planner.find_optimal_plan().to_dict())
 
 
+class ParallelizeElementWisePass(ParallelizationPass):
+    OP_FIXED_COST_MAP = {XCOREOpCodes.XC_add_8: 100}  # TODO: add other opcodes
+
+    @property
+    def MATCHING_OPCODES(self) -> Tuple[XCOREOpCodes, ...]:
+        return tuple(self.OP_FIXED_COST_MAP.keys())
+
+    @property
+    def _planner(self) -> ElementWisePlanner:
+        return ElementWisePlanner(
+            np.prod(self._op.outputs[0].shape[1:]),
+            num_threads=self._num_threads,
+            forced=self._forced,
+            fixed_cost_per_thread=self.OP_FIXED_COST_MAP[
+                cast(XCOREOpCodes, self._op.operator_code.code)
+            ],
+        )
+
+
 class ChannelGroupParallelizationPass(ParallelizationPass):
     @property
     def _planner(self) -> ChannelGroupSlicePlanner:
@@ -60,14 +79,14 @@ class ChannelGroupParallelizationPass(ParallelizationPass):
         Cout = np.prod(output_shape[1:])  # works even if output is (1, 1, 1, Cout)
         assert output_shape[-1] == Cout
         return ChannelGroupSlicePlanner(
-            int(Cout), num_threads=self._num_threads, forced=self._forced
+            Cout, num_threads=self._num_threads, forced=self._forced
         )
 
 
 class SpatialParallelizationPass(ParallelizationPass):
     @property
     def _cout(self) -> int:
-        return int(self._op.outputs[0].shape[3])
+        return self._op.outputs[0].shape[3]
 
     @property
     def _planner(self) -> SlicePlanner:

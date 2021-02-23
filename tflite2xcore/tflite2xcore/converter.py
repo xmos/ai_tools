@@ -175,6 +175,7 @@ class ParallelizationManager(PassManager):
 
         self.register_pass(passes.ParallelizeBConv2dBinPass(num_threads=num_threads))
         self.register_pass(passes.ParallelizeBConv2dInt8Pass(num_threads=num_threads))
+        self.register_pass(passes.ParallelizeElementWisePass(num_threads=num_threads))
         # pass_mgr.register_pass(passes.ParallelizeRequant16To8Pass(num_threads=num_threads))  # intentionally disabled
 
         # NOTE: scratch memory passes must be registered after parallelization passes

@@ -35,22 +35,22 @@ mlir::OwningModuleRef mlir_read_flatbuffer(mlir::MLIRContext* context, std::stri
 
 }
 
-void mlir_write_flatbuffer( std::string & filename, mlir::ModuleOp module)
-{
+// void mlir_write_flatbuffer( std::string & filename, mlir::ModuleOp module)
+// {
 
-    std::string * serialized_flatbuffer = new std::string();
-    serialized_flatbuffer->resize(1000000); // TODO figure out what this size should be, or at least a tigher bound
-    std::cout << *serialized_flatbuffer << std::endl;
+//     std::string * serialized_flatbuffer = new std::string();
+//     serialized_flatbuffer->resize(1000000); // TODO figure out what this size should be, or at least a tigher bound
+//     std::cout << *serialized_flatbuffer << std::endl;
 
-    if(!tflite::MlirToFlatBufferTranslateFunction(  module, serialized_flatbuffer,
-                                            true, true, true)){
+//     if(!tflite::MlirToFlatBufferTranslateFunction(  module, serialized_flatbuffer,
+//                                             true, true, true)){
 
-        std::ofstream outfile (filename,std::ofstream::binary);
-        outfile.write (serialized_flatbuffer->data(),serialized_flatbuffer->size());
-        outfile.close();
+//         std::ofstream outfile (filename,std::ofstream::binary);
+//         outfile.write (serialized_flatbuffer->data(),serialized_flatbuffer->size());
+//         outfile.close();
 
-    } else {
-        std::cout << "Error converting MLIR to flatbuffer, no file written" << std::endl;
-    }
-    delete serialized_flatbuffer;
-}
+//     } else {
+//         std::cout << "Error converting MLIR to flatbuffer, no file written" << std::endl;
+//     }
+//     delete serialized_flatbuffer;
+// }

@@ -10,9 +10,10 @@
 #include "mlir/IR/MLIRContext.h"  // from @llvm-project
 #include "mlir/IR/Module.h"  // from @llvm-project
 
+
 mlir::OwningModuleRef mlir_read_flatbuffer(mlir::MLIRContext* context, std::string & filename );
 
-void mlir_write_flatbuffer( std::string & filename, mlir::ModuleOp module);
+// void mlir_write_flatbuffer( std::string & filename, mlir::ModuleOp module);
 
 
 #endif /* LIB_TEST_H */ 

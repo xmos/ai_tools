@@ -54,7 +54,7 @@ class ElementWiseParallelizationPlan(ParallelizationPlan):
         **kwargs: Any,
     ) -> None:
         super().__init__(num_threads, **kwargs)
-        self._job_sizes = list(job_sizes) or []
+        self._job_sizes = list(job_sizes or [])
 
     def estimate_cost(self) -> SupportsFloat:
         return max(self._job_sizes) + self.estimate_fixed_cost()
@@ -80,7 +80,7 @@ class ChannelGroupParallelizationPlan(ParallelizationPlan):
         **kwargs: Any,
     ) -> None:
         super().__init__(num_threads, **kwargs)
-        self._channel_groups = list(channel_groups) or []
+        self._channel_groups = list(channel_groups or [])
 
     def _estimate_channel_group_cost(self, changrp: _ChannelGroup) -> int:
         if changrp.begin - changrp.begin + 1 == CHANNEL_GROUP_SIZE:

@@ -54,7 +54,11 @@ class ParallelizationPass(OperatorMatchingPass):
 
 
 class ParallelizeElementWisePass(ParallelizationPass):
-    OP_FIXED_COST_MAP = {XCOREOpCodes.XC_add_8: 100}  # TODO: add other opcodes
+    # TODO: add other opcodes
+    OP_FIXED_COST_MAP = {
+        XCOREOpCodes.XC_add_8: 100,
+        XCOREOpCodes.XC_lookup_8: 10,
+    }
 
     @property
     def MATCHING_OPCODES(self) -> Tuple[XCOREOpCodes, ...]:

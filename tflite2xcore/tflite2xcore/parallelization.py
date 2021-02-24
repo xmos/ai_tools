@@ -15,7 +15,7 @@ from typing import (
     NamedTuple,
     Generic,
     TypeVar,
-    Iterable,
+    Sequence,
 )
 
 from tflite2xcore.utils import ACC_PERIOD_INT8, VECTOR_SIZE_BYTES
@@ -50,7 +50,7 @@ class ElementWiseParallelizationPlan(ParallelizationPlan):
         self,
         num_threads: int,
         *,
-        job_sizes: Optional[Iterable[int]] = None,
+        job_sizes: Optional[Sequence[int]] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(num_threads, **kwargs)
@@ -76,7 +76,7 @@ class ChannelGroupParallelizationPlan(ParallelizationPlan):
         self,
         num_threads: int,
         *,
-        channel_groups: Optional[Iterable[_ChannelGroup]] = None,
+        channel_groups: Optional[Sequence[_ChannelGroup]] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(num_threads, **kwargs)
@@ -116,7 +116,7 @@ class RowColumnParallelizationPlan(ChannelGroupParallelizationPlan):
         self,
         num_threads: int,
         *,
-        row_column_slices: Optional[Iterable[_RowColumnSlice]] = None,
+        row_column_slices: Optional[Sequence[_RowColumnSlice]] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(num_threads, **kwargs)
@@ -135,8 +135,13 @@ class RowColumnParallelizationPlan(ChannelGroupParallelizationPlan):
         cost = 0
         for changrp_slice in self._channel_groups:
             changrp_cost = self._estimate_channel_group_cost(changrp_slice)
-            for row_slice in self._row_col_slices:
-                cost += changrp_cost * self._estimate_row_slice_cost(row_slice)
+
+            # TODO: make this cost estimate more general
+            assert len(self._row_col_slices) == self._num_threads
+            cost += changrp_cost * max(
+                self._estimate_row_slice_cost(row_slice)
+                for row_slice in self._row_col_slices
+            )
 
         return cost
 
@@ -285,9 +290,7 @@ class SlicePlanner(NaiveParallelizationPlanner[RowColumnParallelizationPlan]):
         super().__init__(**kwargs)
         assert height * width > 0, f"received height={height}, width={width}"
         self._height, self._width = height, width
-        self._ch_group_planner = ChannelGroupSlicePlanner(
-            num_channels_out, **kwargs, fixed_cost_per_thread=0
-        )
+        self._ch_group_planner = ChannelGroupSlicePlanner(num_channels_out, **kwargs)
 
     def _split_unidirectionally(
         self, dim: int, num_threads: int

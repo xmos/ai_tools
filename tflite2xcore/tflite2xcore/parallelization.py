@@ -4,6 +4,7 @@
 import math
 import logging
 from abc import ABC, abstractmethod
+from functools import partial
 from typing import (
     Dict,
     Any,
@@ -15,17 +16,24 @@ from typing import (
     NamedTuple,
     Generic,
     TypeVar,
+    Sequence,
 )
 
-from tflite2xcore.utils import ACC_PERIOD_INT8
+from tflite2xcore.utils import ACC_PERIOD_INT8, VECTOR_SIZE_BYTES
 
 MAX_THREADS = 5
 CHANNEL_GROUP_SIZE = ACC_PERIOD_INT8
 
 
 class ParallelizationPlan(ABC):
-    def __init__(self, num_threads: int) -> None:
+    def __init__(
+        self, num_threads: int, *, fixed_cost_per_thread: SupportsFloat
+    ) -> None:
         self._num_threads = num_threads
+        self._fixed_cost_per_thread = fixed_cost_per_thread
+
+    def estimate_fixed_cost(self) -> float:
+        return self._num_threads * float(self._fixed_cost_per_thread)
 
     @abstractmethod
     def estimate_cost(self) -> SupportsFloat:
@@ -38,6 +46,27 @@ class ParallelizationPlan(ABC):
         return {"th": self._num_threads}
 
 
+class ElementWiseParallelizationPlan(ParallelizationPlan):
+    def __init__(
+        self,
+        num_threads: int,
+        *,
+        job_sizes: Optional[Sequence[int]] = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(num_threads, **kwargs)
+        self._job_sizes = list(job_sizes or [])
+
+    def estimate_cost(self) -> SupportsFloat:
+        return max(self._job_sizes) + self.estimate_fixed_cost()
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = super().to_dict()
+        if self._job_sizes:
+            d["eg"] = self._job_sizes
+        return d
+
+
 class _ChannelGroup(NamedTuple):
     begin: int
     end: int
@@ -45,11 +74,14 @@ class _ChannelGroup(NamedTuple):
 
 class ChannelGroupParallelizationPlan(ParallelizationPlan):
     def __init__(
-        self, num_threads: int, *, channel_groups: Optional[List[_ChannelGroup]] = None,
+        self,
+        num_threads: int,
+        *,
+        channel_groups: Optional[Sequence[_ChannelGroup]] = None,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(num_threads)
-        # should be a list of 2-tuples (start channel index, end channel index)
-        self._channel_groups = channel_groups or []
+        super().__init__(num_threads, **kwargs)
+        self._channel_groups = list(channel_groups or [])
 
     def _estimate_channel_group_cost(self, changrp: _ChannelGroup) -> int:
         if changrp.begin - changrp.begin + 1 == CHANNEL_GROUP_SIZE:
@@ -85,7 +117,7 @@ class RowColumnParallelizationPlan(ChannelGroupParallelizationPlan):
         self,
         num_threads: int,
         *,
-        row_column_slices: Optional[List[_RowColumnSlice]] = None,
+        row_column_slices: Optional[Sequence[_RowColumnSlice]] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(num_threads, **kwargs)
@@ -104,18 +136,30 @@ class RowColumnParallelizationPlan(ChannelGroupParallelizationPlan):
         cost = 0
         for changrp_slice in self._channel_groups:
             changrp_cost = self._estimate_channel_group_cost(changrp_slice)
-            for row_slice in self._row_col_slices:
-                cost += changrp_cost * self._estimate_row_slice_cost(row_slice)
 
-        return cost
+            # TODO: make this cost estimate more general
+            assert len(self._row_col_slices) <= self._num_threads
+            cost += changrp_cost * max(
+                self._estimate_row_slice_cost(row_slice)
+                for row_slice in self._row_col_slices
+            )
+
+        return cost + self.estimate_fixed_cost()
 
 
 class ParallelizationPlanner(ABC):
-    def __init__(self, *, num_threads: int, forced: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        num_threads: int,
+        forced: bool = False,
+        fixed_cost_per_thread: SupportsFloat = 0,
+    ) -> None:
         assert 0 < num_threads <= MAX_THREADS
         self.logger = logging.getLogger(self.__class__.__name__)
         self._num_threads = num_threads
         self._forced = forced
+        self._fixed_cost_per_thread = fixed_cost_per_thread
 
     @abstractmethod
     def create_n_thread_candidates(self, num_threads: int) -> None:
@@ -133,7 +177,7 @@ class ParallelizationPlanner(ABC):
 _P = TypeVar("_P", bound=ParallelizationPlan)
 
 
-class GreedyParallelizationPlanner(ParallelizationPlanner, Generic[_P]):
+class NaiveParallelizationPlanner(ParallelizationPlanner, Generic[_P]):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._candidate_plans: List[_P] = []
@@ -181,8 +225,38 @@ class GreedyParallelizationPlanner(ParallelizationPlanner, Generic[_P]):
         return best_plan
 
 
+class ElementWisePlanner(NaiveParallelizationPlanner[ElementWiseParallelizationPlan]):
+    def __init__(self, num_elements: int, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        assert num_elements > 0
+        self._num_elements = num_elements
+
+    def create_n_thread_candidates(self, num_threads: int) -> None:
+        # TODO: expose the alignment as an option
+        r = self._num_elements % VECTOR_SIZE_BYTES
+        full_vectors = (self._num_elements - r) // VECTOR_SIZE_BYTES
+        p = full_vectors % num_threads
+        k = (full_vectors - p) // num_threads
+
+        job_sizes = [
+            k * VECTOR_SIZE_BYTES + (idx < p) * VECTOR_SIZE_BYTES
+            for idx in range(num_threads)
+        ]
+        job_sizes[-1] += r
+        assert sum(job_sizes) == self._num_elements
+
+        if 0 not in job_sizes:
+            self.add_candidate_plan(
+                ElementWiseParallelizationPlan(
+                    num_threads,
+                    job_sizes=job_sizes,
+                    fixed_cost_per_thread=self._fixed_cost_per_thread,
+                )
+            )
+
+
 class ChannelGroupSlicePlanner(
-    GreedyParallelizationPlanner[ChannelGroupParallelizationPlan]
+    NaiveParallelizationPlanner[ChannelGroupParallelizationPlan]
 ):
     def __init__(self, num_channels_out: int, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -202,18 +276,25 @@ class ChannelGroupSlicePlanner(
         changrps = self.split_channelwise()
         if len(changrps) >= num_threads:
             self.add_candidate_plan(
-                ChannelGroupParallelizationPlan(num_threads, channel_groups=changrps)
+                ChannelGroupParallelizationPlan(
+                    num_threads,
+                    channel_groups=changrps,
+                    fixed_cost_per_thread=self._fixed_cost_per_thread,
+                )
             )
 
 
-class SlicePlanner(GreedyParallelizationPlanner[RowColumnParallelizationPlan]):
+class SlicePlanner(NaiveParallelizationPlanner[RowColumnParallelizationPlan]):
     def __init__(
         self, num_channels_out: int, height: int, width: int, **kwargs: Any
     ) -> None:
         super().__init__(**kwargs)
         assert height * width > 0, f"received height={height}, width={width}"
         self._height, self._width = height, width
-        self._ch_group_planner = ChannelGroupSlicePlanner(num_channels_out, **kwargs)
+        kwargs.pop("num_threads")
+        self._ch_group_planner = partial(
+            ChannelGroupSlicePlanner, num_channels_out, **kwargs
+        )
 
     def _split_unidirectionally(
         self, dim: int, num_threads: int
@@ -251,7 +332,10 @@ class SlicePlanner(GreedyParallelizationPlanner[RowColumnParallelizationPlan]):
         self.add_candidate_plan(
             RowColumnParallelizationPlan(
                 num_threads,
-                channel_groups=self._ch_group_planner.split_channelwise(),
+                channel_groups=self._ch_group_planner(
+                    num_threads=num_threads
+                ).split_channelwise(),
                 row_column_slices=self._split_vertically(num_threads),
+                fixed_cost_per_thread=self._fixed_cost_per_thread,
             )
         )

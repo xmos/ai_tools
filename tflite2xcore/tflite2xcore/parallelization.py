@@ -143,7 +143,7 @@ class RowColumnParallelizationPlan(ChannelGroupParallelizationPlan):
                 for row_slice in self._row_col_slices
             )
 
-        return cost
+        return cost + self.estimate_fixed_cost()
 
 
 class ParallelizationPlanner(ABC):

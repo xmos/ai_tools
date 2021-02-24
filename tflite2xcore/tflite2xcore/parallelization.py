@@ -4,6 +4,7 @@
 import math
 import logging
 from abc import ABC, abstractmethod
+from functools import partial
 from typing import (
     Dict,
     Any,
@@ -137,7 +138,7 @@ class RowColumnParallelizationPlan(ChannelGroupParallelizationPlan):
             changrp_cost = self._estimate_channel_group_cost(changrp_slice)
 
             # TODO: make this cost estimate more general
-            assert len(self._row_col_slices) == self._num_threads
+            assert len(self._row_col_slices) <= self._num_threads
             cost += changrp_cost * max(
                 self._estimate_row_slice_cost(row_slice)
                 for row_slice in self._row_col_slices
@@ -290,7 +291,10 @@ class SlicePlanner(NaiveParallelizationPlanner[RowColumnParallelizationPlan]):
         super().__init__(**kwargs)
         assert height * width > 0, f"received height={height}, width={width}"
         self._height, self._width = height, width
-        self._ch_group_planner = ChannelGroupSlicePlanner(num_channels_out, **kwargs)
+        kwargs.pop("num_threads")
+        self._ch_group_planner = partial(
+            ChannelGroupSlicePlanner, num_channels_out, **kwargs
+        )
 
     def _split_unidirectionally(
         self, dim: int, num_threads: int
@@ -328,7 +332,9 @@ class SlicePlanner(NaiveParallelizationPlanner[RowColumnParallelizationPlan]):
         self.add_candidate_plan(
             RowColumnParallelizationPlan(
                 num_threads,
-                channel_groups=self._ch_group_planner.split_channelwise(),
+                channel_groups=self._ch_group_planner(
+                    num_threads=num_threads
+                ).split_channelwise(),
                 row_column_slices=self._split_vertically(num_threads),
                 fixed_cost_per_thread=self._fixed_cost_per_thread,
             )

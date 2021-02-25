@@ -12,7 +12,7 @@ from tflite2xcore.parallelization import (
     ChannelGroupSlicePlanner,
     ElementWisePlanner,
 )
-from tflite2xcore.utils import WORD_SIZE_BITS
+from tflite2xcore.utils import WORD_SIZE_BITS, WORD_SIZE_BYTES
 
 from .transformation_passes import OperatorMatchingPass
 
@@ -54,6 +54,8 @@ class ParallelizationPass(OperatorMatchingPass):
 
 
 class ParallelizeElementWisePass(ParallelizationPass):
+    BYTE_ALIGNMENT = WORD_SIZE_BYTES
+
     @property
     @abstractmethod
     def FIXED_COST_PER_THREAD(self) -> int:
@@ -66,12 +68,14 @@ class ParallelizeElementWisePass(ParallelizationPass):
             num_threads=self._num_threads,
             forced=self._forced,
             fixed_cost_per_thread=self.FIXED_COST_PER_THREAD,
+            byte_alignment=self.BYTE_ALIGNMENT,
         )
 
 
 class ParallelizeLUTPass(ParallelizeElementWisePass):
     MATCHING_OPCODES = (XCOREOpCodes.XC_lookup_8,)
     FIXED_COST_PER_THREAD = 10
+    BYTE_ALIGNMENT = 1
 
 
 class ParallelizeAddPass(ParallelizeElementWisePass):

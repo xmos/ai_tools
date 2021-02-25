@@ -19,7 +19,7 @@ from typing import (
     Sequence,
 )
 
-from tflite2xcore.utils import ACC_PERIOD_INT8, VECTOR_SIZE_BYTES
+from tflite2xcore.utils import ACC_PERIOD_INT8, WORD_SIZE_BYTES
 
 MAX_THREADS = 5
 CHANNEL_GROUP_SIZE = ACC_PERIOD_INT8
@@ -226,20 +226,22 @@ class NaiveParallelizationPlanner(ParallelizationPlanner, Generic[_P]):
 
 
 class ElementWisePlanner(NaiveParallelizationPlanner[ElementWiseParallelizationPlan]):
-    def __init__(self, num_elements: int, **kwargs: Any) -> None:
+    def __init__(
+        self, num_elements: int, *, byte_alignment: int = WORD_SIZE_BYTES, **kwargs: Any
+    ) -> None:
         super().__init__(**kwargs)
         assert num_elements > 0
         self._num_elements = num_elements
+        self._alignment = byte_alignment
 
     def create_n_thread_candidates(self, num_threads: int) -> None:
-        # TODO: expose the alignment as an option
-        r = self._num_elements % VECTOR_SIZE_BYTES
-        full_vectors = (self._num_elements - r) // VECTOR_SIZE_BYTES
+        r = self._num_elements % self._alignment
+        full_vectors = (self._num_elements - r) // self._alignment
         p = full_vectors % num_threads
         k = (full_vectors - p) // num_threads
 
         job_sizes = [
-            k * VECTOR_SIZE_BYTES + (idx < p) * VECTOR_SIZE_BYTES
+            k * self._alignment + (idx < p) * self._alignment
             for idx in range(num_threads)
         ]
         job_sizes[-1] += r

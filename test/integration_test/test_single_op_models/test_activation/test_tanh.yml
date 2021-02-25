@@ -3,161 +3,201 @@
 default:
   0:
     channels: 1
-    height: 15
-    width: 8
+    height: 1
+    num_threads: 1
+    width: 4
   1:
-    channels: 25
-    height: 4
+    channels: 7
+    height: 1
+    num_threads: 1
     width: 14
   2:
-    channels: 49
-    height: 8
-    width: 7
+    channels: 32
+    height: 5
+    num_threads: 2
+    width: 14
   3:
     channels: 16
-    height: 12
+    height: 4
+    num_threads: 5
     width: 1
   4:
-    channels: 1
-    height: 8
-    width: 14
+    channels: 4
+    height: 1
+    num_threads: 5
+    width: 1
   5:
-    channels: 1
-    height: 5
-    width: 8
+    channels: 25
+    height: 8
+    num_threads: 5
+    width: 7
   6:
-    channels: 12
-    height: 12
-    width: 20
+    channels: 32
+    height: 15
+    num_threads: 1
+    width: 8
   7:
-    channels: 7
-    height: 4
+    channels: 4
+    height: 15
+    num_threads: 5
     width: 4
   8:
-    channels: 4
+    channels: 12
     height: 8
-    width: 20
+    num_threads: 2
+    width: 8
   9:
     channels: 7
-    height: 15
-    width: 20
-  10:
-    channels: 16
-    height: 15
-    width: 7
-  11:
-    channels: 7
-    height: 8
-    width: 4
-  12:
-    channels: 12
-    height: 5
-    width: 4
-  13:
-    channels: 12
-    height: 4
-    width: 4
-  14:
-    channels: 25
-    height: 1
-    width: 4
-  15:
-    channels: 32
     height: 12
-    width: 4
-  16:
-    channels: 1
-    height: 8
-    width: 20
-  17:
+    num_threads: 5
+    width: 7
+  10:
     channels: 25
-    height: 5
-    width: 20
-  18:
-    channels: 49
+    height: 15
+    num_threads: 1
+    width: 4
+  11:
+    channels: 4
     height: 8
-    width: 1
-  19:
-    channels: 12
+    num_threads: 5
+    width: 7
+  12:
+    channels: 1
     height: 4
+    num_threads: 1
+    width: 14
+  13:
+    channels: 16
+    height: 8
+    num_threads: 2
+    width: 20
+  14:
+    channels: 49
+    height: 15
+    num_threads: 2
+    width: 7
+  15:
+    channels: 49
+    height: 4
+    num_threads: 5
+    width: 14
+  16:
+    channels: 16
+    height: 4
+    num_threads: 5
+    width: 8
+  17:
+    channels: 1
+    height: 1
+    num_threads: 5
+    width: 1
+  18:
+    channels: 16
+    height: 5
+    num_threads: 5
+    width: 20
+  19:
+    channels: 49
+    height: 15
+    num_threads: 2
     width: 8
   20:
-    channels: 7
-    height: 5
-    width: 14
+    channels: 1
+    height: 12
+    num_threads: 1
+    width: 20
   21:
-    channels: 4
-    height: 15
-    width: 1
+    channels: 7
+    height: 1
+    num_threads: 2
+    width: 14
   22:
-    channels: 25
-    height: 4
+    channels: 4
+    height: 8
+    num_threads: 2
     width: 1
   23:
+    channels: 12
+    height: 12
+    num_threads: 1
+    width: 7
+  24:
+    channels: 32
+    height: 5
+    num_threads: 5
+    width: 8
+  25:
+    channels: 7
+    height: 5
+    num_threads: 5
+    width: 4
+  26:
+    channels: 7
+    height: 12
+    num_threads: 1
+    width: 14
+  27:
     channels: 25
     height: 12
-    width: 14
-  24:
-    channels: 4
-    height: 12
-    width: 14
-  25:
-    channels: 49
-    height: 15
-    width: 20
-  26:
-    channels: 49
-    height: 5
+    num_threads: 2
     width: 8
-  27:
-    channels: 49
-    height: 4
-    width: 7
   28:
     channels: 16
-    height: 1
-    width: 7
+    height: 4
+    num_threads: 1
+    width: 4
   29:
-    channels: 16
-    height: 12
+    channels: 4
+    height: 5
+    num_threads: 5
     width: 20
   30:
-    channels: 32
-    height: 5
-    width: 7
+    channels: 25
+    height: 4
+    num_threads: 1
+    width: 4
   31:
     channels: 32
-    height: 1
-    width: 1
+    height: 5
+    num_threads: 1
+    width: 20
   32:
-    channels: 7
-    height: 8
-    width: 14
+    channels: 25
+    height: 15
+    num_threads: 1
+    width: 20
   33:
     channels: 12
-    height: 1
-    width: 14
+    height: 15
+    num_threads: 2
+    width: 20
   34:
     channels: 32
-    height: 1
-    width: 8
-  35:
-    channels: 4
-    height: 15
-    width: 8
-  36:
-    channels: 1
-    height: 5
-    width: 4
-  37:
-    channels: 32
-    height: 1
-    width: 7
-  38:
-    channels: 4
-    height: 1
-    width: 7
-  39:
-    channels: 16
-    height: 15
+    height: 8
+    num_threads: 2
     width: 1
+  35:
+    channels: 49
+    height: 12
+    num_threads: 2
+    width: 4
+  36:
+    channels: 12
+    height: 1
+    num_threads: 2
+    width: 8
+  37:
+    channels: 1
+    height: 8
+    num_threads: 1
+    width: 1
+  38:
+    channels: 12
+    height: 5
+    num_threads: 1
+    width: 1
+  39:
+    channels: 49
+    height: 1
+    num_threads: 2
+    width: 7

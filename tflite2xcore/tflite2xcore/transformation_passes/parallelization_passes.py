@@ -3,7 +3,7 @@
 
 import numpy as np
 from abc import abstractmethod
-from typing import Tuple, Optional, Any, cast
+from typing import Tuple, Optional, Any
 
 from tflite2xcore.xcore_schema import XCOREOpCodes, Operator
 from tflite2xcore.parallelization import (
@@ -54,15 +54,10 @@ class ParallelizationPass(OperatorMatchingPass):
 
 
 class ParallelizeElementWisePass(ParallelizationPass):
-    # TODO: add other opcodes
-    OP_FIXED_COST_MAP = {
-        XCOREOpCodes.XC_add_8: 100,
-        XCOREOpCodes.XC_lookup_8: 10,
-    }
-
     @property
-    def MATCHING_OPCODES(self) -> Tuple[XCOREOpCodes, ...]:
-        return tuple(self.OP_FIXED_COST_MAP.keys())
+    @abstractmethod
+    def FIXED_COST_PER_THREAD(self) -> int:
+        raise NotImplementedError()
 
     @property
     def _planner(self) -> ElementWisePlanner:
@@ -70,10 +65,18 @@ class ParallelizeElementWisePass(ParallelizationPass):
             np.prod(self._op.outputs[0].shape[1:]),
             num_threads=self._num_threads,
             forced=self._forced,
-            fixed_cost_per_thread=self.OP_FIXED_COST_MAP[
-                cast(XCOREOpCodes, self._op.operator_code.code)
-            ],
+            fixed_cost_per_thread=self.FIXED_COST_PER_THREAD,
         )
+
+
+class ParallelizeLUTPass(ParallelizeElementWisePass):
+    MATCHING_OPCODES = (XCOREOpCodes.XC_lookup_8,)
+    FIXED_COST_PER_THREAD = 10
+
+
+class ParallelizeAddPass(ParallelizeElementWisePass):
+    MATCHING_OPCODES = (XCOREOpCodes.XC_add_8,)
+    FIXED_COST_PER_THREAD = 100
 
 
 class ChannelGroupParallelizationPass(ParallelizationPass):

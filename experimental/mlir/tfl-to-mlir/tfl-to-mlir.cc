@@ -10,13 +10,12 @@
 
 #include "file_io.hpp"
 #include "flatbuffer_to_string.hpp"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/Parser.h"
 #include "mlir/Pass/PassManager.h"  // from @llvm-project
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/OpImplementation.h"
-
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 // #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
@@ -52,8 +51,7 @@ struct TestPrintNestingPass
     // Recurse into each of the regions attached to the operation.
     printIndent() << " " << op->getNumRegions() << " nested regions:\n";
     auto indent = pushIndent();
-    for (Region &region : op->getRegions())
-      printRegion(region);
+    for (Region &region : op->getRegions()) printRegion(region);
   }
 
   void printRegion(Region &region) {
@@ -61,8 +59,7 @@ struct TestPrintNestingPass
     printIndent() << "Region with " << region.getBlocks().size()
                   << " blocks:\n";
     auto indent = pushIndent();
-    for (Block &block : region.getBlocks())
-      printBlock(block);
+    for (Block &block : region.getBlocks()) printBlock(block);
   }
 
   void printBlock(Block &block) {
@@ -76,8 +73,7 @@ struct TestPrintNestingPass
 
     // Block main role is to hold a list of Operations: let's recurse.
     auto indent = pushIndent();
-    for (Operation &op : block.getOperations())
-      printOperation(&op);
+    for (Operation &op : block.getOperations()) printOperation(&op);
   }
 
   /// Manages the indentation as we traverse the IR nesting.
@@ -91,66 +87,65 @@ struct TestPrintNestingPass
   IdentRAII pushIndent() { return IdentRAII(++indent); }
 
   llvm::raw_ostream &printIndent() {
-    for (int i = 0; i < indent; ++i)
-      llvm::outs() << "  ";
+    for (int i = 0; i < indent; ++i) llvm::outs() << "  ";
     return llvm::outs();
   }
 };
-} // end anonymous namespace
+}  // end anonymous namespace
 
-namespace mlir{
+namespace mlir {
 
-  void registerTestPrintNestingPass() 
-  {
-    PassRegistration<TestPrintNestingPass>("test-print-nesting",
+void registerTestPrintNestingPass() {
+  PassRegistration<TestPrintNestingPass>("test-print-nesting",
                                          "Test various printing.");
+}
+
+int main(int argc, char *argv[]) {
+  std::cout << argc << "\t" << argv[1] << std::endl;
+  std::string filename;
+  if (argc > 1) {
+    filename = argv[1];
+  } else {
+    std::cout << "Expected filename argument" << std::endl;
+    return 1;
   }
-  
-  int main(int argc, char *argv[]) {
-    std::cout << argc << "\t" << argv[1] << std::endl;
-    std::string filename;
-    if (argc > 1) {
-      filename = argv[1];
-    } else {
-      std::cout << "Expected filename argument" << std::endl;
-      return 1;
-    }
 
-    MLIRContext context;
+  MLIRContext context;
 
-    // Read flatbuffer and convert to serialized MLIR string
-    std::string serialized_model;
+  // Read flatbuffer and convert to serialized MLIR string
+  std::string serialized_model;
 
-    OwningModuleRef mod(
-        read_flatbuffer_to_mlir(filename, serialized_model, &context));
-    if (!mod) {
-      std::cout << "Unable to read flatbuffer" << std::endl;
-      return 1;
-    }
+  OwningModuleRef mod(
+      read_flatbuffer_to_mlir(filename, serialized_model, &context));
+  if (!mod) {
+    std::cout << "Unable to read flatbuffer" << std::endl;
+    return 1;
+  }
 
-  // OwningModuleRef version -- missing OpAsmPrinter
-  // OpAsmPrinter p();  
+  // OwningModuleRef attempt -- missing OpAsmPrinter
+  // OpAsmPrinter p();
   // mod.get().print(p);
 
-    // op builder version -- missing model
-    // OpBuilder builder(&context);
-    // for( Block & block : *builder.getBlock())
-    //   printBlock(block);
+  // op builder attempt -- need to get model into builder
+  // OpBuilder builder(&context);
+  // for( Block & block : *builder.getBlock())
+  //   printBlock(block);
 
+  // Modify MLIR by building and running a PassManager
+  PassManager pass_manager(&context, true);
 
-    // Modify MLIR by building and running a PassManager
-    TFL::QuantizationSpecs specs;
-    PassManager pass_manager(&context, true);
-    // pass_manager.addPass(std::make_unique<registerTestPrintNestingPass()>());
-    registerTestPrintNestingPass(); // how the fuck does this know about pass_manager? 
-    // tensorflow::AddQuantizationPasses(specs, &pass_manager);
+  // pass_manager.addPass( std::make_unique<TestPrintNestingPass>() );
+  pass_manager.addPass(std::make_unique<TestPrintNestingPass>());
 
-    pass_manager.run(mod.get());
+  // TFL::QuantizationSpecs specs;
+  // tensorflow::AddQuantizationPasses(specs, &pass_manager);
 
-    // Write modified flatbuffer
-    std::string outfilename(filename + ".out");
-    write_mlir_to_flatbuffer(outfilename, mod.get());
+  pass_manager.run(mod.get());
 
-    return 0;
-  }
-} // end namespace mlir
+  // Write modified flatbuffer
+  std::string outfilename(filename + ".out");
+  write_mlir_to_flatbuffer(outfilename, mod.get());
+
+  return 0;
+}
+}  // end namespace mlir

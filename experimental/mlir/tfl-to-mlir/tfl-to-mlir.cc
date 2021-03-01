@@ -124,22 +124,13 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // OwningModuleRef attempt -- missing OpAsmPrinter
-  // OpAsmPrinter p();
-  // mod.get().print(p);
-
-  // op builder attempt -- need to get model into builder
-  // OpBuilder builder(&context);
-  // for( Block & block : *builder.getBlock())
-  //   printBlock(block);
-
   // Modify MLIR by building and running a PassManager
   PassManager pass_manager(&context, true);
 
   // https://github.com/llvm/llvm-project/blob/e79cd47e1620045562960ddfe17ab0c4f6e6628f/mlir/docs/PassManagement.md
-  // pass_manager.addPass( std::make_unique<TestPrintNestingPass>() );
   pass_manager.addPass(std::make_unique<TestPrintNestingPass>());
 
+  // Add additional passes:
   // TFL::QuantizationSpecs specs;
   // tensorflow::AddQuantizationPasses(specs, &pass_manager);
 

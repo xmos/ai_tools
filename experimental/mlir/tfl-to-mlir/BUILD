@@ -24,10 +24,9 @@ cc_library(
     linkstatic = 1,
 )
 
-tf_cc_binary(
+cc_binary( # tf_cc_binary also works and may become necessary depending on degree of integration
     name = "tfl-to-mlir",
     srcs = ["tfl-to-mlir.cc"],
-    # linkopts = ["-nostartfiles"],
     deps = [
             "@org_tensorflow//tensorflow/lite/schema:schema_fbs_with_reflection",
             "@flatbuffers",

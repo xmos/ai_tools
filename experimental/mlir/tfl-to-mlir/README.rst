@@ -16,4 +16,15 @@ To run the example app:
 
     ../../bazel-bin/experimental/mlir/tfl-to-mlir/tfl-to-mlir <intput.tflite>
 
-@todo add test flatbuffer to repo
+This code walks through a network and prints the MLIR, here are two alternative
+approaches to printing that might work better if the missing components are found:
+
+  // OwningModuleRef attempt -- missing OpAsmPrinter
+  // OpAsmPrinter p();
+  // mod.get().print(p);
+
+  // op builder attempt -- need to get model into builder
+  // OpBuilder builder(&context);
+  // for( Block & block : *builder.getBlock())
+  //   printBlock(block);
+

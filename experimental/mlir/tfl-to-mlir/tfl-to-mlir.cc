@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -99,6 +100,7 @@ void registerTestPrintNestingPass() {
   PassRegistration<TestPrintNestingPass>("test-print-nesting",
                                          "Test various printing.");
 }
+}  // end namespace mlir
 
 int main(int argc, char *argv[]) {
   std::cout << argc << "\t" << argv[1] << std::endl;
@@ -134,6 +136,7 @@ int main(int argc, char *argv[]) {
   // Modify MLIR by building and running a PassManager
   PassManager pass_manager(&context, true);
 
+  // https://github.com/llvm/llvm-project/blob/e79cd47e1620045562960ddfe17ab0c4f6e6628f/mlir/docs/PassManagement.md
   // pass_manager.addPass( std::make_unique<TestPrintNestingPass>() );
   pass_manager.addPass(std::make_unique<TestPrintNestingPass>());
 
@@ -148,4 +151,3 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
-}  // end namespace mlir

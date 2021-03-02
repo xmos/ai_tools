@@ -17,12 +17,19 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Parser.h"
 #include "mlir/Pass/PassManager.h"  // from @llvm-project
-// #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
-namespace {
+namespace { 
+/// @note: this scope was lifted from: 
+/// https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/
+/// and source files in llvm-project repo
+
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 /// This pass illustrates the IR nesting through printing.
 struct TestPrintNestingPass
     : public PassWrapper<TestPrintNestingPass, OperationPass<>> {
@@ -94,14 +101,6 @@ struct TestPrintNestingPass
 };
 }  // end anonymous namespace
 
-namespace mlir {
-
-void registerTestPrintNestingPass() {
-  PassRegistration<TestPrintNestingPass>("test-print-nesting",
-                                         "Test various printing.");
-}
-}  // end namespace mlir
-
 int main(int argc, char *argv[]) {
   std::cout << argc << "\t" << argv[1] << std::endl;
   std::string filename;
@@ -127,6 +126,7 @@ int main(int argc, char *argv[]) {
   // Modify MLIR by building and running a PassManager
   PassManager pass_manager(&context, true);
 
+  // For more info on pass management:
   // https://github.com/llvm/llvm-project/blob/e79cd47e1620045562960ddfe17ab0c4f6e6628f/mlir/docs/PassManagement.md
   pass_manager.addPass(std::make_unique<TestPrintNestingPass>());
 

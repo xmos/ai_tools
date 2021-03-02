@@ -88,17 +88,20 @@ class Conv2dScratchMemoryCalculationPass(ScratchMemoryCalculationPass):
         raise NotImplementedError()
 
     @property
-    def _weights_scratch_size(self) -> int:
-        _, _, _, Cin = self._input.shape
-
+    def _max_channel_group_size(self):
         custom_options = self._op.custom_options
         if "par" in custom_options:
             max_cg_size = max([cg[1] - cg[0] + 1 for cg in custom_options["par"]["cg"]])
         else:
             max_cg_size = CHANNEL_GROUP_SIZE
 
+        return max_cg_size
+
+    @property
+    def _weights_scratch_size(self) -> int:
+        _, _, _, Cin = self._input.shape
         Kh, Kw = self._kernel_size
-        return Cin * Kh * Kw * max_cg_size
+        return Cin * Kh * Kw * self._max_channel_group_size
 
 
 class ScratchMemoryConv2dPass(Conv2dScratchMemoryCalculationPass):
@@ -118,6 +121,11 @@ class ScratchMemoryDepthwiseConv2dPass(Conv2dScratchMemoryCalculationPass):
     @property
     def _kernel_size(self) -> Tuple[int, int]:
         return self._weights.shape[0:2]
+
+    @property
+    def _weights_scratch_size(self) -> int:
+        Kh, Kw = self._kernel_size
+        return Kh * Kw * self._max_channel_group_size
 
 
 class ScratchMemoryConv2d1x1Pass(Conv2dScratchMemoryCalculationPass):

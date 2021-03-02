@@ -3,16 +3,16 @@
 
 import numpy as np
 from abc import abstractmethod
-from typing import Tuple
+from typing import Tuple, Optional, Any
 
-from tflite2xcore.xcore_model import Operator
-from tflite2xcore.xcore_schema import XCOREOpCodes
+from tflite2xcore.xcore_schema import XCOREOpCodes, Operator
 from tflite2xcore.parallelization import (
     ParallelizationPlanner,
     SlicePlanner,
     ChannelGroupSlicePlanner,
+    ElementWisePlanner,
 )
-from tflite2xcore.utils import WORD_SIZE_BITS
+from tflite2xcore.utils import WORD_SIZE_BITS, WORD_SIZE_BYTES
 
 from .transformation_passes import OperatorMatchingPass
 
@@ -24,13 +24,17 @@ class ParallelizationPass(OperatorMatchingPass):
         return tuple()
 
     def __init__(
-        self, *args, num_threads: int = None, forced: bool = False, **kwargs
+        self,
+        *args,
+        num_threads: Optional[int] = None,
+        forced: bool = False,
+        **kwargs: Any
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.num_threads = num_threads or 1
-        assert isinstance(self.num_threads, int)
-        assert self.num_threads > 0
-        self.forced = forced
+        self._num_threads = num_threads or 1
+        assert isinstance(self._num_threads, int)
+        assert self._num_threads > 0
+        self._forced = forced
 
     def match(self, op: Operator) -> bool:
         return (
@@ -49,6 +53,36 @@ class ParallelizationPass(OperatorMatchingPass):
             op.add_custom_options(par=self._planner.find_optimal_plan().to_dict())
 
 
+class ParallelizeElementWisePass(ParallelizationPass):
+    BYTE_ALIGNMENT = WORD_SIZE_BYTES
+
+    @property
+    @abstractmethod
+    def FIXED_COST_PER_THREAD(self) -> int:
+        raise NotImplementedError()
+
+    @property
+    def _planner(self) -> ElementWisePlanner:
+        return ElementWisePlanner(
+            np.prod(self._op.outputs[0].shape[1:]),
+            num_threads=self._num_threads,
+            forced=self._forced,
+            fixed_cost_per_thread=self.FIXED_COST_PER_THREAD,
+            byte_alignment=self.BYTE_ALIGNMENT,
+        )
+
+
+class ParallelizeLUTPass(ParallelizeElementWisePass):
+    MATCHING_OPCODES = (XCOREOpCodes.XC_lookup_8,)
+    FIXED_COST_PER_THREAD = 10
+    BYTE_ALIGNMENT = 1
+
+
+class ParallelizeAddPass(ParallelizeElementWisePass):
+    MATCHING_OPCODES = (XCOREOpCodes.XC_add_8,)
+    FIXED_COST_PER_THREAD = 100
+
+
 class ChannelGroupParallelizationPass(ParallelizationPass):
     @property
     def _planner(self) -> ChannelGroupSlicePlanner:
@@ -56,20 +90,24 @@ class ChannelGroupParallelizationPass(ParallelizationPass):
         Cout = np.prod(output_shape[1:])  # works even if output is (1, 1, 1, Cout)
         assert output_shape[-1] == Cout
         return ChannelGroupSlicePlanner(
-            int(Cout), num_threads=self.num_threads, forced=self.forced
+            Cout, num_threads=self._num_threads, forced=self._forced
         )
 
 
 class SpatialParallelizationPass(ParallelizationPass):
     @property
     def _cout(self) -> int:
-        return int(self._op.outputs[0].shape[3])
+        return self._op.outputs[0].shape[3]
 
     @property
     def _planner(self) -> SlicePlanner:
         _, height, width, _ = self._op.outputs[0].shape
         return SlicePlanner(
-            self._cout, height, width, num_threads=self.num_threads, forced=self.forced,
+            self._cout,
+            height,
+            width,
+            num_threads=self._num_threads,
+            forced=self._forced,
         )
 
 

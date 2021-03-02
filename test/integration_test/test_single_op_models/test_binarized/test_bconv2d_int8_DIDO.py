@@ -1,9 +1,9 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import pytest
 
-from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_schema import ExternalOpCodes, XCOREOpCodes
 
 from .test_bconv2d_int8 import BConv2dInt8TestModelGenerator
 from .test_bconv2d_int8 import (  # pylint: disable=unused-import

@@ -5,15 +5,15 @@ import pytest
 
 import numpy as np
 
-from tflite2xcore.parallelization import ChannelGroupSlicePlanner, MAX_THREADS
+from tflite2xcore.parallelization import ElementWisePlanner, MAX_THREADS
 
 #  ----------------------------------------------------------------------------
 #                              PARAMETER VALUES
 #  ----------------------------------------------------------------------------
 
-MAX_OUTPUT_CHANNELS = 75
+MAX_ELEMENTS = 75
 
-PARAMS = {"default": {"num_channels": list(range(1, MAX_OUTPUT_CHANNELS + 1))}}
+PARAMS = {"default": {"num_elements": list(range(1, MAX_ELEMENTS + 1))}}
 
 
 #  ----------------------------------------------------------------------------
@@ -21,16 +21,19 @@ PARAMS = {"default": {"num_channels": list(range(1, MAX_OUTPUT_CHANNELS + 1))}}
 #  ----------------------------------------------------------------------------
 
 
-def generate_thread_cost_array(max_channels: int = MAX_OUTPUT_CHANNELS) -> np.ndarray:
-    thread_costs = np.zeros((max_channels, MAX_THREADS), dtype=np.float)
+def generate_thread_cost_array(max_elements: int = MAX_ELEMENTS) -> np.ndarray:
+    thread_costs = np.zeros((max_elements, MAX_THREADS), dtype=np.float)
 
-    for num_channels in range(1, max_channels + 1):
+    for num_elements in range(1, max_elements + 1):
         for num_threads in list(range(1, MAX_THREADS + 1)):
-            planner = ChannelGroupSlicePlanner(
-                num_channels, num_threads=num_threads, forced=True
+            planner = ElementWisePlanner(
+                num_elements,
+                num_threads=num_threads,
+                forced=True,
+                fixed_cost_per_thread=10,
             )
             plan = planner.find_optimal_plan()
-            thread_costs[num_channels - 1, num_threads - 1] = plan.estimate_cost()
+            thread_costs[num_elements - 1, num_threads - 1] = plan.estimate_cost()
 
     return thread_costs
 
@@ -45,20 +48,21 @@ def thread_cost_array() -> np.ndarray:
 #  ----------------------------------------------------------------------------
 
 
-def test_channel_coverage(num_channels: int) -> None:
-    planner = ChannelGroupSlicePlanner(num_channels, num_threads=MAX_THREADS)
+def test_element_coverage(num_elements: int) -> None:
+    planner = ElementWisePlanner(
+        num_elements, num_threads=MAX_THREADS, fixed_cost_per_thread=10,
+    )
     planner.create_candidate_plans()
     for plan in planner._candidate_plans:
-        coverage_map = np.zeros(num_channels, dtype=bool)
-        for changrp in plan._channel_groups:
-            coverage_map[changrp.begin : changrp.end + 1] = True
-        assert np.all(coverage_map)
+        assert num_elements == sum(plan._job_sizes)
 
 
-def test_optimal_thread_count(num_channels: int, thread_cost_array: np.ndarray) -> None:
-    planner = ChannelGroupSlicePlanner(num_channels, num_threads=MAX_THREADS)
+def test_optimal_thread_count(num_elements: int, thread_cost_array: np.ndarray) -> None:
+    planner = ElementWisePlanner(
+        num_elements, num_threads=MAX_THREADS, fixed_cost_per_thread=10,
+    )
     plan = planner.find_optimal_plan()
-    costs = thread_cost_array[num_channels - 1, :]
+    costs = thread_cost_array[num_elements - 1, :]
     assert np.min(costs) == plan.estimate_cost()
     assert np.argmin(costs) == plan._num_threads - 1
 

@@ -10,8 +10,8 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, Type, Optional, Union, List
 
-from tflite2xcore.utils import dequantize  # type: ignore # TODO: fix this
-from tflite2xcore.xcore_model import XCOREModel  # type: ignore # TODO: fix this
+from tflite2xcore.utils import dequantize
+from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.model_generation.utils import stringify_config
 
 from . import (

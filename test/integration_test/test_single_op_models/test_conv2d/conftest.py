@@ -1,9 +1,9 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
 import pytest
 
-from tflite2xcore.xcore_model import BuiltinOpCodes  # type: ignore # TODO: fix this
+from tflite2xcore.xcore_model import BuiltinOpCodes
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES

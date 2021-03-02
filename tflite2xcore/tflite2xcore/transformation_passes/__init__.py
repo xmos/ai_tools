@@ -87,6 +87,8 @@ from .parallelization_passes import (
     ParallelizeGlobalAveragePool2DPass,
     ParallelizeBConv2dBinPass,
     ParallelizeBConv2dInt8Pass,
+    ParallelizeLUTPass,
+    ParallelizeAddPass,
 )
 
 from .scratch_memory_passes import (

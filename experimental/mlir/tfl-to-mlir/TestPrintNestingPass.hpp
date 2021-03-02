@@ -2,18 +2,18 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-/// @note: this scope was lifted from: 
+/// @note: this scope was lifted from:
 /// https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/
 /// and source files in llvm-project repo
 
 #ifndef TESTPRINTNESTINGPASS_HPP
 #define TESTPRINTNESTINGPASS_HPP
-#include "mlir/Pass/PassManager.h"  // from @llvm-project
 #include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"  // from @llvm-project
 
 using namespace mlir;
 
-namespace local { 
+namespace local {
 /// This pass illustrates the IR nesting through printing.
 struct TestPrintNestingPass
     : public PassWrapper<TestPrintNestingPass, OperationPass<>> {
@@ -83,6 +83,6 @@ struct TestPrintNestingPass
     return llvm::outs();
   }
 };
-}  // end anonymous namespace / llvm-project code
+}  // namespace local
 
-#endif // TESTPRINTNESTINGPASS_HPP
+#endif  // TESTPRINTNESTINGPASS_HPP

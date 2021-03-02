@@ -4,22 +4,21 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <memory>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
 
+#include "TestPrintNestingPass.hpp"
 #include "file_io.hpp"
 #include "flatbuffer_to_string.hpp"
-#include "TestPrintNestingPass.hpp"
-
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Parser.h"
-#include "mlir/Pass/PassManager.h"  // from @llvm-project
 #include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"  // from @llvm-project
 
 using namespace mlir;
 

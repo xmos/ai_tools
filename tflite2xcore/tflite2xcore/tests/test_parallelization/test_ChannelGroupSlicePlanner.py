@@ -36,7 +36,7 @@ def test_channel_coverage(num_channels):
 def generate_thread_cost_array(max_channels: int = MAX_OUTPUT_CHANNELS) -> np.ndarray:
     thread_costs = np.zeros((max_channels, MAX_THREADS), dtype=np.float)
 
-    for num_channels in range(1, MAX_OUTPUT_CHANNELS + 1):
+    for num_channels in range(1, max_channels + 1):
         for num_threads in list(range(1, MAX_THREADS + 1)):
             planner = ChannelGroupSlicePlanner(
                 num_channels, num_threads=num_threads, forced=True

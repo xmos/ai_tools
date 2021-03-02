@@ -10,7 +10,7 @@ cc_library(
     deps = [ 
             "@flatbuffers",
            ],
-    linkstatic = 1,
+    # linkstatic = 1,
 )
 
 cc_library(
@@ -21,7 +21,17 @@ cc_library(
             "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_import",
             "lib-tf-borrowed",
            ],
-    linkstatic = 1,
+    # linkstatic = 1,
+)
+
+
+cc_library(
+    name = "TestPrintNestingPass",
+    hdrs = ["TestPrintNestingPass.hpp"],
+    deps = [
+            "@llvm-project//mlir:IR",
+            ],
+    # linkstatic = 1,
 )
 
 cc_binary( # tf_cc_binary also works and may become necessary depending on degree of integration
@@ -38,6 +48,7 @@ cc_binary( # tf_cc_binary also works and may become necessary depending on degre
             "@llvm-project//mlir:Transforms",
             "@llvm-project//mlir:Parser",
             "lib-file-io",
+            "TestPrintNestingPass",
             ],
 
 )

@@ -19,7 +19,7 @@ class TdnnDeepConv2DPass(ReplaceDeepConv2dPass):
 
         ring_buffer_shape = list(xc_conv_op.inputs[0].shape)
         # kernel_size[0]
-        ring_buffer_shape[1] = xc_conv_op.inputs[1].shape[0]
+        ring_buffer_shape[1] = xc_conv_op.inputs[1].shape[1]
         ring_buffer_tensor = subgraph.create_tensor(
             f"{xc_conv_op.name}/ring_buffer",
             TensorType.INT8,

@@ -66,13 +66,6 @@ def model(
 #  ----------------------------------------------------------------------------
 
 
-def test_non_matching_tdnn_flag(
-    trf_pass: TdnnDeepConv2DPass, model: XCOREModel
-) -> None:
-    model.subgraphs[0].operators[0].add_custom_options(tdnn=True)
-    assert not trf_pass.match(model.subgraphs[0].operators[0])
-
-
 def test_tdnn_mutate(trf_pass: TdnnDeepConv2DPass, model: XCOREModel) -> None:
     # run replacement pass
     trf_pass.run(model)

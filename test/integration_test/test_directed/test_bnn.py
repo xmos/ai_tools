@@ -95,9 +95,6 @@ RUNNER = CIFAR10BinarizedTestRunner
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
 
-CONFIGS = {
-    "default": {0: {"skip_on_device": False}},
-}
 
 @pytest.fixture  # type: ignore
 def abs_output_tolerance(use_device: bool) -> int:

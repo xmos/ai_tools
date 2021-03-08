@@ -496,7 +496,6 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
             )
 
             # then adjust pam/pad as required by our kernels
-            weights = self._weights.as_array()  # already boggled
             adjusted_pam = -2 * output_trf_pam
             adjusted_pab = output_trf_pab + output_trf_pam * self._kernel_channel_size
 
@@ -557,10 +556,6 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
 
 
 class LegalizeBconv2dInt8DeepInDeepOutPass(LegalizeBconv2dInt8Pass):
-    @property
-    def _overlap_size(self) -> int:
-        return 0
-
     @property
     def matching_opcode(self) -> XCOREOpCodes:
         return XCOREOpCodes.XC_bconv2d_int8_DIDO

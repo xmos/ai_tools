@@ -33,5 +33,3 @@ Run
     > pytest -h
 
 for more info on custom options.  
-
-

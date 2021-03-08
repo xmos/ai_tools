@@ -13,13 +13,7 @@ from tflite2xcore.parallelization import SlicePlanner, MAX_THREADS
 #  ----------------------------------------------------------------------------
 
 MAX_OUTPUT_CHANNELS = 20
-VALID_OUTPUT_CHANNELS = list(range(1, MAX_OUTPUT_CHANNELS + 1))
-VALID_NUM_THREAD = list(range(1, MAX_THREADS + 1))
-
 MAX_HEIGHT = MAX_WIDTH = 10
-VALID_HEIGHT = list(range(1, MAX_HEIGHT + 1))
-VALID_WIDTH = list(range(1, MAX_WIDTH + 1))
-VALID_NUM_THREAD = list(range(1, MAX_THREADS + 1))
 
 PARAMS = {
     "default": {

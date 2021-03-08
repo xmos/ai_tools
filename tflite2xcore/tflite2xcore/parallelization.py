@@ -1,7 +1,6 @@
 # Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 # XMOS Public License: Version 1
 
-import numbers
 import math
 import logging
 from abc import ABC, abstractmethod
@@ -278,9 +277,6 @@ class ChannelGroupSlicePlanner(
     def create_n_thread_candidates(self, num_threads: int) -> None:
         changrps = self.split_channelwise()
         if len(changrps) >= num_threads:
-            self.logger.debug(
-                f"create_n_thread_candidates: num_threads={num_threads}, changrps={str(changrps)}"
-            )
             self.add_candidate_plan(
                 ChannelGroupParallelizationPlan(
                     num_threads,
@@ -295,12 +291,6 @@ class SlicePlanner(NaiveParallelizationPlanner[RowColumnParallelizationPlan]):
         self, num_channels_out: int, height: int, width: int, **kwargs: Any
     ) -> None:
         super().__init__(**kwargs)
-        assert isinstance(Cout, int), f"received Cout={Cout} with type {type(Cout)}"
-        assert Cout > 0, f"received Cout={Cout}"
-        assert isinstance(
-            height, int
-        ), f"received height={height} with type {type(height)}"
-        assert isinstance(width, int), f"received width={width} with type {type(width)}"
         assert height * width > 0, f"received height={height}, width={width}"
         self._height, self._width = height, width
         kwargs.pop("num_threads")
@@ -339,7 +329,6 @@ class SlicePlanner(NaiveParallelizationPlanner[RowColumnParallelizationPlan]):
             for j in range(num_threads)
             if heights[j] > 0
         ]
-        changrps = ChannelGroupSlicePlanner.changrp_split_helper(self.Cout)
 
     def create_n_thread_candidates(self, num_threads: int) -> None:
         self.add_candidate_plan(

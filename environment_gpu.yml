@@ -210,4 +210,4 @@ dependencies:
     - wheel==0.35
     - zookeeper==0.5.5
     - -e ./tflite2xcore
-    - -e ./xcore_interpreters
+    - -e ./utils/adf/xcore_interpreters

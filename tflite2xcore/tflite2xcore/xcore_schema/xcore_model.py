@@ -208,7 +208,9 @@ class XCOREModel(_IRObject):
         }
 
         # check that buffer 0 is empty
-        if len(modelT.buffers[0].data) > 0:  # NOTE: BufferT.data can be np.ndarray
+        # NOTE: BufferT.data can be np.ndarray
+        buffer_0_data = modelT.buffers[0].data
+        if buffer_0_data is not None and len(buffer_0_data) > 0:
             logging.warning("Non-empty buffer 0 in flatbuffer!")
 
         # create all non-metadata buffers

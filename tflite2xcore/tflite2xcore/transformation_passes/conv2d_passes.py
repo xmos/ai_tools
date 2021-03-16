@@ -3,6 +3,7 @@
 
 import numpy as np
 from copy import deepcopy
+from typing import Tuple
 
 from tflite2xcore.xcore_schema import (
     BuiltinOpCodes,
@@ -205,8 +206,8 @@ class LegalizeXC1x1ConvPass(LegalizeXCConvPass):
 
 
 class ReplacePaddedConv2DPass(ReplaceConv2DPass):
-    def _pad(self):
-        # pad: [top, left, zero_point]
+    def _pad(self) -> Tuple[int, int]:
+        # pad: [top, left]
         pad = tuple(
             # first arg of max is <= for valid padding
             max(int((o - 1) * s - i + k) // 2, 0)
@@ -217,7 +218,7 @@ class ReplacePaddedConv2DPass(ReplaceConv2DPass):
                 self._weights.shape[1:3],
             )
         )
-        return (*pad, self._input_zero_point)
+        return tuple(-p for p in pad)
 
     def mutate(self, op):
         new_op = super().mutate(op)

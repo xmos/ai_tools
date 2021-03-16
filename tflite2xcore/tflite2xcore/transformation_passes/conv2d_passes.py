@@ -208,7 +208,7 @@ class LegalizeXC1x1ConvPass(LegalizeXCConvPass):
 class ReplacePaddedConv2DPass(ReplaceConv2DPass):
     def _pad(self) -> Tuple[int, int]:
         # pad: [top, left]
-        pad = tuple(
+        return tuple(
             # first arg of max is <= for valid padding
             max(int((o - 1) * s - i + k) // 2, 0)
             for o, s, i, k in zip(
@@ -218,7 +218,6 @@ class ReplacePaddedConv2DPass(ReplaceConv2DPass):
                 self._weights.shape[1:3],
             )
         )
-        return tuple(-p for p in pad)
 
     def mutate(self, op):
         new_op = super().mutate(op)
@@ -226,7 +225,7 @@ class ReplacePaddedConv2DPass(ReplaceConv2DPass):
         with self.using(op):
             new_op.add_custom_options(stride=self._strides)
         with self.using(new_op):
-            new_op.add_custom_options(pad=self._pad())
+            new_op.add_custom_options(pad=tuple(-p for p in self._pad()))
         return new_op
 
 

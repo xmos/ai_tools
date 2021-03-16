@@ -2,6 +2,7 @@
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 import numpy as np
+from typing import Tuple
 
 from tflite2xcore.xcore_schema import (
     Padding,
@@ -29,6 +30,10 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
     @property
     def _pad_params(self):
         return self._producer.inputs[1].as_array().tolist()
+
+    @property
+    def _conv_pad(self) -> Tuple[int, int]:
+        return tuple(-p for p in self._op.custom_options["pad"])
 
     @property
     def _kernel_size(self):
@@ -78,10 +83,11 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
                 kernel_size=kernel_size,
             )
 
-        pad = op.custom_options["pad"]
+            conv_pad = self._conv_pad
+
         all_pads = (
-            [pad[0] + pad_params[1][0], implicit_end_pads[0] + pad_params[1][1]],
-            [pad[1] + pad_params[2][0], implicit_end_pads[1] + pad_params[2][1]],
+            [conv_pad[0] + pad_params[1][0], implicit_end_pads[0] + pad_params[1][1]],
+            [conv_pad[1] + pad_params[2][0], implicit_end_pads[1] + pad_params[2][1]],
         )
 
         for p, k in zip(all_pads, kernel_size):
@@ -93,12 +99,12 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
                 )
                 return False
 
-        if len(pad) == 3 and not isinstance(pad, str):
+        if len(conv_pad) == 2 and not isinstance(conv_pad, str):
             return True
-        elif pad in ["SAME", "VALID"] + list(Padding):
-            raise ValueError(f"Deprecated 'pad' option in {opcode}: 'pad'={pad}")
+        elif conv_pad in ["SAME", "VALID"] + list(Padding):
+            raise ValueError(f"Deprecated 'pad' option in {opcode}: 'pad'={conv_pad}")
         else:
-            self.logger.warning(f"Invalid option in {opcode}: 'pad'={pad}")
+            self.logger.warning(f"Invalid option in {opcode}: 'pad'={conv_pad}")
 
         return False
 
@@ -106,7 +112,7 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
         with self.using(op):
             producer = self._producer
             pad_params = self._pad_params
-            old_pad = op.custom_options["pad"]
+            old_pad = self._conv_pad
 
         # cut connection to old input
         op.inputs[0].consumers.remove(op)
@@ -117,9 +123,8 @@ class FuseConv2dPaddingPass(OperatorMatchingPass):
 
         # set padding: [top, left, zero_point]
         op.custom_options["pad"] = [
-            old_pad[0] + pad_params[1][0],
-            old_pad[1] + pad_params[2][0],
-            old_pad[2],
+            -(old_pad[0] + pad_params[1][0]),
+            -(old_pad[1] + pad_params[2][0]),
         ]
 
 

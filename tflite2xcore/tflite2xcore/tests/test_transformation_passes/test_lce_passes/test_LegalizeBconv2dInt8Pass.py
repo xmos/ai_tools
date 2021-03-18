@@ -68,7 +68,6 @@ def _test_mutate(
     # basic checks
     assert len(subgraph.operators) == 1
     assert bconv2d_op is subgraph.operators[0]
-    assert len(bconv2d_op.inputs) == 4
 
     # check custom options
     options = bconv2d_op.custom_options

@@ -294,7 +294,6 @@ def convert(
     tflite_output_path: Union[str, Path],
     **kwargs: Any,
 ) -> None:
-    num_threads = num_threads or 1
     model = XCOREModel.read_flatbuffer(tflite_input_path)
     optimize_for_xcore(model, **kwargs)
     model.write_flatbuffer(tflite_output_path)

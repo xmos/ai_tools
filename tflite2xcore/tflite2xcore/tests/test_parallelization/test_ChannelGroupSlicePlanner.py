@@ -12,21 +12,9 @@ from tflite2xcore.parallelization import ChannelGroupSlicePlanner, MAX_THREADS
 #  ----------------------------------------------------------------------------
 
 MAX_OUTPUT_CHANNELS = 75
-VALID_OUTPUT_CHANNELS = list(range(1, MAX_OUTPUT_CHANNELS + 1))
-VALID_NUM_THREAD = list(range(1, MAX_THREADS + 1))
 
 PARAMS = {"default": {"num_channels": list(range(1, MAX_OUTPUT_CHANNELS + 1))}}
 
-@pytest.mark.parametrize("num_channels", VALID_OUTPUT_CHANNELS)
-def test_channel_coverage(num_channels):
-    planner = ChannelGroupSlicePlanner(num_channels, num_threads=MAX_THREADS)
-    planner.create_candidate_plans()
-    for plan in planner._candidate_plans:
-        coverage_map = np.zeros(num_channels, dtype=bool)
-        for changrp in plan.changrp_slices:
-            Cbegin, Cend = changrp
-            coverage_map[Cbegin : Cend + 1] = True
-        assert np.all(coverage_map)
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES

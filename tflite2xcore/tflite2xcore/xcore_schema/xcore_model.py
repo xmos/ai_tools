@@ -1,5 +1,5 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
-# XMOS Public License: Version 1
+# Copyright 2019-2021 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 import pathlib
 import flatbuffers
@@ -208,7 +208,9 @@ class XCOREModel(_IRObject):
         }
 
         # check that buffer 0 is empty
-        if modelT.buffers[0].data:
+        # NOTE: BufferT.data can be np.ndarray
+        buffer_0_data = modelT.buffers[0].data
+        if buffer_0_data is not None and len(buffer_0_data) > 0:
             logging.warning("Non-empty buffer 0 in flatbuffer!")
 
         # create all non-metadata buffers

@@ -1,5 +1,5 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
-# XMOS Public License: Version 1
+# Copyright 2019-2021 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 import logging
 import numpy as np
@@ -427,7 +427,6 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
         rshift, scale = self._shift_scale()
 
         # zero pad and reshape into appropriate array
-        new_shape = (-1, ACC_PERIOD_INT8)
         rshift = self.__pad_to_acc_period(rshift)
         scale = self.__pad_to_acc_period(scale)
 
@@ -455,6 +454,7 @@ class LegalizeXCWeightBiasPass(LegalizeWeightBiasPass):
             np.int16
         )
 
+        new_shape = (-1, ACC_PERIOD_INT8)
         return np.stack(
             [
                 shift_pre.reshape(new_shape),

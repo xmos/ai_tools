@@ -1,5 +1,5 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
-# XMOS Public License: Version 1
+# Copyright 2019-2021 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 from pathlib import Path
 from typing import Optional, Union, Any
@@ -210,6 +210,12 @@ class BinarizedOperatorLoweringManager(PassManager):
         self.register_pass(passes.LegalizeBconv2dInt8Pass())
 
 
+class ExternalMemoryOptimizationManager(PassManager):
+    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
+        super().__init__(model, **kwargs)
+        self.register_pass(passes.InsertExternalMemoryFetchPass())
+
+
 class FinalizationManager(PassManager):
     def __init__(
         self,
@@ -245,6 +251,7 @@ def optimize_for_xcore(
     intermediates_path: Optional[Union[str, Path]] = None,
     remove_input_alignment_pad: bool = False,
     remove_float_interface: bool = False,
+    external_memory: bool = False,
 ) -> None:
     num_threads = num_threads or 1
 
@@ -272,6 +279,8 @@ def optimize_for_xcore(
         )
     )
     pass_mgr.register_passes(ParallelizationManager(num_threads=num_threads))
+    if external_memory:
+        pass_mgr.register_passes(ExternalMemoryOptimizationManager())
 
     # finalize (cleanup, minification, renaming, etc.)
     pass_mgr.register_passes(

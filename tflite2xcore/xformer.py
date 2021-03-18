@@ -1,7 +1,6 @@
 #!/usr/bin/env python -O
-#
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
-# XMOS Public License: Version 1
+# Copyright 2020-2021 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 from pathlib import Path
 
@@ -53,6 +52,12 @@ if __name__ == "__main__":
         version=version.get_version(),
         help="Display the version of the xformer",
     )
+    parser.add_argument(
+        "--ext_mem",
+        action="store_true",
+        default=False,
+        help="Experimental flag for better external memory support. ",
+    )
 
     args = parser.parse_args()
 
@@ -68,6 +73,7 @@ if __name__ == "__main__":
         num_threads=args.num_threads,
         intermediates_path=args.intermediates_path,
         remove_input_alignment_pad=args.remove_input_alignment_pad,
+        external_memory=args.ext_mem,
     )
 
     print(f"Conversion successful, output: {tflite_output_path}")

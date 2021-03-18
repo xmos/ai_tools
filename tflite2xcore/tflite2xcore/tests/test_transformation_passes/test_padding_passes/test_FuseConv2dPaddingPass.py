@@ -1,5 +1,5 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
-# XMOS Public License: Version 1
+# Copyright 2020-2021 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 import pytest
 from itertools import product
@@ -165,10 +165,9 @@ def test_mutate(trf_pass: FuseConv2dPaddingPass, model: XCOREModel) -> None:
 
     # check 'pad' parameters
     pad_params_new = op.custom_options["pad"]
-    assert len(pad_params_new) == 3
-    assert pad_params_conv_ori[-1] == pad_params_new[-1]
-    assert pad_params_new[0] - pad_params_conv_ori[0] == pad_params_pad_ori[1][0]
-    assert pad_params_new[1] - pad_params_conv_ori[1] == pad_params_pad_ori[2][0]
+    assert len(pad_params_new) == 2
+    assert -pad_params_new[0] - pad_params_conv_ori[0] == pad_params_pad_ori[1][0]
+    assert -pad_params_new[1] - pad_params_conv_ori[1] == pad_params_pad_ori[2][0]
 
 
 def test_non_matching_channel_batch_params(

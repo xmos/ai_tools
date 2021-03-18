@@ -1,5 +1,5 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
-# XMOS Public License: Version 1
+# Copyright 2020-2021 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 # type: ignore
 
@@ -56,3 +56,4 @@ class XCOREOpCodes(enum.Enum):
     XC_bconv2d_bin_DI = enum.auto()
     XC_add_8 = enum.auto()
     XC_pad = enum.auto()
+    XC_fetch = enum.auto()

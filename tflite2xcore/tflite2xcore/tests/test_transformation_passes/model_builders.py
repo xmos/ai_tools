@@ -1,5 +1,5 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
-# XMOS Public License: Version 1
+# Copyright 2020-2021 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 import numpy as np
 from typing import Callable, Tuple, Optional, Union
@@ -653,7 +653,7 @@ def build_XC_conv2d(opcode, subgraph=None, *, weight_shape, input_size, strides)
         OperatorCode(opcode), inputs=[tin, w, b], outputs=[tout]
     )
     op.add_custom_options(
-        pad=(pads[0][0], pads[1][0], -127), stride=(strides[0], strides[1])
+        pad=(pads[0][0], pads[1][0]), stride=(strides[0], strides[1])
     )
 
     return subgraph.model
@@ -695,7 +695,7 @@ def build_XC_conv2d_depthwise(subgraph=None, *, weight_shape, input_size, stride
         outputs=[tout],
     )
     op.add_custom_options(
-        pad=(pads[0][0], pads[1][0], -127), stride=(strides[0], strides[1])
+        pad=(pads[0][0], pads[1][0]), stride=(strides[0], strides[1])
     )
 
     return subgraph.model

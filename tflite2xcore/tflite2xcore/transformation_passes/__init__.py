@@ -1,5 +1,5 @@
-# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
-# XMOS Public License: Version 1
+# Copyright 2020-2021 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 from .transformation_passes import ModelTransformationPass, CanonicalizeEmptyBuffersPass
 
@@ -96,6 +96,7 @@ from .scratch_memory_passes import (
     ScratchMemoryConv2dPass,
     ScratchMemoryConv2d1x1Pass,
     ScratchMemoryDepthwiseConv2dPass,
+    InsertExternalMemoryFetchPass,
 )
 
 from .constant_propagation_passes import ConstantPropagationPass

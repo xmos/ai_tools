@@ -2,11 +2,6 @@
 	path = third_party/flatbuffers
 	url = git@github.com:google/flatbuffers.git
 	ignore = dirty
-[submodule "third_party/tensorflow"]
-	path = third_party/tensorflow
-	url = git@github.com:xmos/tensorflow
-	ignore = all
-	branch = develop
 [submodule "utils/adf"]
 	path = utils/adf
 	url = git@github.com:xmos/adf.git

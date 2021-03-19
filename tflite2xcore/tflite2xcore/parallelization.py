@@ -227,12 +227,12 @@ class NaiveParallelizationPlanner(ParallelizationPlanner, Generic[_P]):
 
 class ElementWisePlanner(NaiveParallelizationPlanner[ElementWiseParallelizationPlan]):
     def __init__(
-        self, num_elements: int, *, byte_alignment: int = WORD_SIZE_BYTES, **kwargs: Any
+        self, num_elements: int, *, alignment: int = WORD_SIZE_BYTES, **kwargs: Any
     ) -> None:
         super().__init__(**kwargs)
         assert num_elements > 0
         self._num_elements = num_elements
-        self._alignment = byte_alignment
+        self._alignment = alignment
 
     def create_n_thread_candidates(self, num_threads: int) -> None:
         r = self._num_elements % self._alignment

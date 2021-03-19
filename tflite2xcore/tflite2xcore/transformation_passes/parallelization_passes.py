@@ -12,12 +12,14 @@ from tflite2xcore.parallelization import (
     ChannelGroupSlicePlanner,
     ElementWisePlanner,
 )
-from tflite2xcore.utils import WORD_SIZE_BITS, WORD_SIZE_BYTES
+from tflite2xcore.utils import WORD_SIZE_BITS, WORD_SIZE_BYTES, ACC_PERIOD_INT8
 
 from .transformation_passes import OperatorMatchingPass
 
 
 class ParallelizationPass(OperatorMatchingPass):
+    FIXED_COST_PER_THREAD = 0
+
     @property
     @abstractmethod
     def MATCHING_OPCODES(self) -> Tuple[XCOREOpCodes, ...]:
@@ -25,16 +27,19 @@ class ParallelizationPass(OperatorMatchingPass):
 
     def __init__(
         self,
-        *args,
+        *args: Any,
         num_threads: Optional[int] = None,
         forced: bool = False,
         **kwargs: Any
     ) -> None:
         super().__init__(*args, **kwargs)
-        self._num_threads = num_threads or 1
-        assert isinstance(self._num_threads, int)
-        assert self._num_threads > 0
-        self._forced = forced
+        num_threads = num_threads or 1
+        assert num_threads > 0
+        self._planner_args = dict(
+            forced=forced,
+            num_threads=num_threads,
+            fixed_cost_per_thread=self.FIXED_COST_PER_THREAD,
+        )
 
     def match(self, op: Operator) -> bool:
         return (
@@ -54,33 +59,43 @@ class ParallelizationPass(OperatorMatchingPass):
 
 
 class ParallelizeElementWisePass(ParallelizationPass):
-    BYTE_ALIGNMENT = WORD_SIZE_BYTES
+    JOB_SIZE_ALIGNMENT = WORD_SIZE_BYTES
 
     @property
-    @abstractmethod
-    def FIXED_COST_PER_THREAD(self) -> int:
-        raise NotImplementedError()
+    def _num_elements(self) -> int:
+        return int(np.prod(self._op.outputs[0].shape[1:]))
 
     @property
     def _planner(self) -> ElementWisePlanner:
         return ElementWisePlanner(
-            np.prod(self._op.outputs[0].shape[1:]),
-            num_threads=self._num_threads,
-            forced=self._forced,
-            fixed_cost_per_thread=self.FIXED_COST_PER_THREAD,
-            byte_alignment=self.BYTE_ALIGNMENT,
+            self._num_elements, alignment=self.JOB_SIZE_ALIGNMENT, **self._planner_args
         )
 
 
 class ParallelizeLUTPass(ParallelizeElementWisePass):
     MATCHING_OPCODES = (XCOREOpCodes.XC_lookup_8,)
     FIXED_COST_PER_THREAD = 10
-    BYTE_ALIGNMENT = 1
+    JOB_SIZE_ALIGNMENT = 1
 
 
 class ParallelizeAddPass(ParallelizeElementWisePass):
     MATCHING_OPCODES = (XCOREOpCodes.XC_add_8,)
     FIXED_COST_PER_THREAD = 100
+
+
+class ParallelizeChannelWisePass(ParallelizeElementWisePass):
+    FIXED_COST_PER_THREAD = 0
+    JOB_SIZE_ALIGNMENT = ACC_PERIOD_INT8
+
+    @property
+    def _num_elements(self) -> int:
+        num_channels = self._op.outputs[0].shape[-1]
+        assert num_channels % WORD_SIZE_BYTES == 0
+        return num_channels
+
+
+class ParallelizeGlobalAveragePool2DPass(ParallelizeChannelWisePass):
+    MATCHING_OPCODES = (XCOREOpCodes.XC_avgpool2d_global,)
 
 
 class ChannelGroupParallelizationPass(ParallelizationPass):
@@ -89,9 +104,7 @@ class ChannelGroupParallelizationPass(ParallelizationPass):
         output_shape = self._op.outputs[0].shape
         Cout = np.prod(output_shape[1:])  # works even if output is (1, 1, 1, Cout)
         assert output_shape[-1] == Cout
-        return ChannelGroupSlicePlanner(
-            Cout, num_threads=self._num_threads, forced=self._forced
-        )
+        return ChannelGroupSlicePlanner(Cout, **self._planner_args)
 
 
 class SpatialParallelizationPass(ParallelizationPass):
@@ -102,13 +115,7 @@ class SpatialParallelizationPass(ParallelizationPass):
     @property
     def _planner(self) -> SlicePlanner:
         _, height, width, _ = self._op.outputs[0].shape
-        return SlicePlanner(
-            self._cout,
-            height,
-            width,
-            num_threads=self._num_threads,
-            forced=self._forced,
-        )
+        return SlicePlanner(self._cout, height, width, **self._planner_args)
 
 
 class ParallelizeFullyConnectedPass(ChannelGroupParallelizationPass):
@@ -117,10 +124,6 @@ class ParallelizeFullyConnectedPass(ChannelGroupParallelizationPass):
 
 class ParallelizeRequant16To8Pass(ChannelGroupParallelizationPass):
     MATCHING_OPCODES = (XCOREOpCodes.XC_requantize_16_to_8,)
-
-
-class ParallelizeGlobalAveragePool2DPass(ChannelGroupParallelizationPass):
-    MATCHING_OPCODES = (XCOREOpCodes.XC_avgpool2d_global,)
 
 
 class ParallelizeConv2dPass(SpatialParallelizationPass):

@@ -53,7 +53,7 @@ def reference_op_code() -> BuiltinOpCodes:
 # TODO: fix this
 def test_output(compared_outputs, request):
     name = request.node.name
-    if tf.__version__.startswith("2.4"):
+    if tf.version.VERSION[:3] in ("2.4", "2.5"):
         if (
             name.endswith("[CONFIGS[14]]")
             or name.endswith("[CONFIGS[16]]")

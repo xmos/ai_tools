@@ -1,22 +1,12 @@
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-
-/// @note: this scope was lifted from:
-/// https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/
-/// and source files in llvm-project repo
-
-#ifndef TESTPRINTNESTINGPASS_HPP
-#define TESTPRINTNESTINGPASS_HPP
 #include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"  // from @llvm-project
 
-using namespace mlir;
+namespace mlir {
+namespace xcore {
 
-namespace local {
+namespace {
 /// This pass illustrates the IR nesting through printing.
-struct TestPrintNestingPass
-    : public PassWrapper<TestPrintNestingPass, OperationPass<>> {
+struct PrintNesting
+    : public PassWrapper<PrintNesting, OperationPass<ModuleOp>> {
   // Entry point for the pass.
   void runOnOperation() override {
     Operation *op = getOperation();
@@ -43,7 +33,8 @@ struct TestPrintNestingPass
     // Recurse into each of the regions attached to the operation.
     printIndent() << " " << op->getNumRegions() << " nested regions:\n";
     auto indent = pushIndent();
-    for (Region &region : op->getRegions()) printRegion(region);
+    for (Region &region : op->getRegions())
+      printRegion(region);
   }
 
   void printRegion(Region &region) {
@@ -51,7 +42,8 @@ struct TestPrintNestingPass
     printIndent() << "Region with " << region.getBlocks().size()
                   << " blocks:\n";
     auto indent = pushIndent();
-    for (Block &block : region.getBlocks()) printBlock(block);
+    for (Block &block : region.getBlocks())
+      printBlock(block);
   }
 
   void printBlock(Block &block) {
@@ -65,7 +57,8 @@ struct TestPrintNestingPass
 
     // Block main role is to hold a list of Operations: let's recurse.
     auto indent = pushIndent();
-    for (Operation &op : block.getOperations()) printOperation(&op);
+    for (Operation &op : block.getOperations())
+      printOperation(&op);
   }
 
   /// Manages the indentation as we traverse the IR nesting.
@@ -79,10 +72,19 @@ struct TestPrintNestingPass
   IdentRAII pushIndent() { return IdentRAII(++indent); }
 
   llvm::raw_ostream &printIndent() {
-    for (int i = 0; i < indent; ++i) llvm::outs() << "  ";
+    for (int i = 0; i < indent; ++i)
+      llvm::outs() << "  ";
     return llvm::outs();
   }
 };
-}  // namespace local
+} // end anonymous namespace
 
-#endif  // TESTPRINTNESTINGPASS_HPP
+std::unique_ptr<OperationPass<ModuleOp>> createPrintNestingPass() {
+  return std::make_unique<PrintNesting>();
+}
+
+static PassRegistration<PrintNesting>
+    pass("xcore-print-nesting", "Illustrate the IR nesting through printing");
+
+} // namespace xcore
+} // namespace mlir

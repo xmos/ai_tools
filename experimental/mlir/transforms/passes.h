@@ -1,37 +1,35 @@
-#ifndef LARQ_COMPUTE_ENGINE_MLIR_PASSES_H_
-#define LARQ_COMPUTE_ENGINE_MLIR_PASSES_H_
-
 #include "mlir/Pass/Pass.h"
-
-// enum LCETarget { ARM = 0, XCORE = 1 };
 
 namespace mlir {
 namespace xcore {
 
-// Creates an instance of the TensorFlow dialect OpRemoval pass.
-std::unique_ptr<OperationPass<FuncOp>> CreatePrintNestingPass();
+//===----------------------------------------------------------------------===//
+// Pipelines
+//===----------------------------------------------------------------------===//
 
-/*
-// Creates an instance of the TensorFlow dialect OpRemoval pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateOpRemovalPass();
+// Create a single pipeline that will run all the needed passes in the right
+// order.
+void buildXCorePassPipeline(OpPassManager &pm);
 
-// Creates an instance of the TensorFlow dialect PrepareLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreatePrepareLCEPass(LCETarget target);
+//===----------------------------------------------------------------------===//
+// XCore-specific passes
+//===----------------------------------------------------------------------===//
 
-// Creates an instance of the TensorFlow dialect OptimizeLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateOptimizeLCEPass(
-    LCETarget target, bool experimental_enable_bitpacked_activations);
+std::unique_ptr<OperationPass<FuncOp>> createPrintNestingPass();
 
-// Creates an instance of the TensorFlow dialect BitpackWeightsLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateBitpackWeightsLCEPass();
+//===----------------------------------------------------------------------===//
+// Registration
+//===----------------------------------------------------------------------===//
 
-// Creates an instance of the TensorFlow Lite dialect QuantizeTFL pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateLCEQuantizePass();
+void registerXCorePassPipeline();
 
-// Creates an instance of LegalizeLCE pass.
-std::unique_ptr<OperationPass<FuncOp>> CreateLegalizeLCEPass();
-*/
+inline void registerAllPasses() {
+  registerXCorePassPipeline();
+
+  createPrintNestingPass();
+}
+
 } // namespace xcore
 } // namespace mlir
 
-#endif // LARQ_COMPUTE_ENGINE_MLIR_PASSES_H_
+#endif // XCORE_MLIR_PASSES_H_

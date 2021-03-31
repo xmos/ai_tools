@@ -126,139 +126,12 @@ gentbl(
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
     ],
 )
+'''
 
 cc_library(
-    name = "larq_compute_engine",
+    name = "xcore_passes",
     srcs = [
-        "ir/lce_dialect.h.inc",
-        "ir/lce_ops.cc",
-        "ir/lce_ops.cc.inc",
-        "ir/lce_ops.h.inc",
-    ],
-    hdrs = [
-        "ir/lce_ops.h",
-        "transforms/passes.h",
-    ],
-    deps = [
-        "//larq_compute_engine/core/bitpacking:bitpack",
-        "@flatbuffers",
-        "@llvm-project//mlir:QuantOps",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
-        "@org_tensorflow//tensorflow/lite/schema:schema_fbs",
-    ],
-    alwayslink = 1,
-)
-
-cc_library(
-    name = "larq_compute_engine_op_removal",
-    srcs = [
-        "transforms/generated_op_removal.inc",
-        "transforms/op_removal.cc",
-    ],
-    hdrs = [
-        "transforms/passes.h",
-    ],
-    deps = [
-        "@llvm-project//mlir:StandardOps",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
-    ],
-    alwayslink = 1,
-)
-
-cc_library(
-    name = "larq_compute_engine_prepare",
-    srcs = [
-        "transforms/generated_prepare_target_arm.inc",
-        "transforms/generated_prepare_target_other.inc",
-        "transforms/prepare_tf.cc",
-    ],
-    hdrs = [
-        "transforms/passes.h",
-    ],
-    deps = [
-        ":larq_compute_engine",
-        "//larq_compute_engine/core:types",
-        "@llvm-project//mlir:StandardOps",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_legalize_tf",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:validators",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
-    ],
-    alwayslink = 1,
-)
-
-cc_library(
-    name = "larq_compute_engine_optimize",
-    srcs = [
-        "transforms/generated_optimize_target_arm.inc",
-        "transforms/generated_optimize_target_other.inc",
-        "transforms/optimize.cc",
-    ],
-    hdrs = [
-        "transforms/passes.h",
-    ],
-    deps = [
-        ":larq_compute_engine",
-        "//larq_compute_engine/core/bitpacking:bitpack",
-        "@llvm-project//llvm:Support",
-        "@llvm-project//mlir:IR",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
-    ],
-    alwayslink = 1,
-)
-
-cc_library(
-    name = "larq_compute_engine_bitpack_weights",
-    srcs = [
-        "transforms/bitpack_weights.cc",
-        "transforms/generated_bitpack_weights.inc",
-    ],
-    hdrs = [
-        "transforms/passes.h",
-    ],
-    deps = [
-        ":larq_compute_engine",
-        "//larq_compute_engine/core:types",
-        "//larq_compute_engine/core/bitpacking:bitpack",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
-    ],
-    alwayslink = 1,
-)
-
-cc_library(
-    name = "larq_compute_engine_legalize_tflite",
-    srcs = [
-        "transforms/legalize_tflite.cc",
-    ],
-    hdrs = [
-        "transforms/passes.h",
-    ],
-    deps = [
-        ":larq_compute_engine",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
-    ],
-    alwayslink = 1,
-)
-
-cc_library(
-    name = "larq_compute_engine_quantize",
-    srcs = [
-        "transforms/generated_quantize.inc",
-        "transforms/quantize.cc",
-    ],
-    hdrs = [
-        "transforms/passes.h",
-    ],
-    deps = [
-        ":larq_compute_engine",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
-    ],
-    alwayslink = 1,
-) '''
-
-cc_library(
-    name = "xcore",
-    srcs = [
+        "transforms/passes.cc",
         "transforms/print_nesting.cc",
     ],
     hdrs = [
@@ -273,86 +146,36 @@ cc_library(
 ) 
 
 cc_library(
-    name = "xcore_passes",
-    srcs = ["xcore_passes.cc"],
+    name = "utils",
     hdrs = [
-        "xcore_passes.h",
+        "utils/file_io.h",
     ],
     deps = [
-        #":larq_compute_engine_bitpack_weights",
-        #":larq_compute_engine_legalize_tflite",
-        #":larq_compute_engine_op_removal",
-        #":larq_compute_engine_optimize",
-        #":larq_compute_engine_prepare",
-        #":larq_compute_engine_quantize",
-        ":xcore",
+        "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
-        "@llvm-project//mlir:QuantOps",
-        "@llvm-project//mlir:Transforms", 
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tf_tfl_passes",
-        # "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_legalize_tf",
-        # "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_optimize",
-        # "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_quantize",
-        # "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_config",
-        # "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_passes",
-        # "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
-        # "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:decode_constant_pass",
-        # "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_passes",
-        # "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_saved_model_passes", 
+        "@llvm-project//mlir:Support",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_import",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
+        #"@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
     ],
-)
+    alwayslink = 1,
+) 
 
 cc_binary(
     name = "xcore-opt",
     srcs = ["xcore_opt.cc"],
     deps = [
         ":xcore_passes",
+        ":utils",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:StandardOps",
+        "@llvm-project//mlir:QuantOps",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:Shape",
+        "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:MlirOptLib",
     ],
 )
-
-''' pybind_extension(
-    name = "_graphdef_tfl_flatbuffer",
-    srcs = ["python/graphdef_tfl_flatbuffer.cc"],
-    module_name = "graphdef_tfl_flatbuffer",
-    deps = [
-        ":lce_tfl_passes",
-        "@org_tensorflow//tensorflow/compiler/mlir:op_or_arg_name_mapper",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
-        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:convert_graphdef",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:import_utils",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:mlir_roundtrip_flags",
-        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tf_dialect_passes",
-        "@org_tensorflow//tensorflow/core:ops",
-        "@pybind11",
-    ],
-)
-
-genrule(
-    name = "tflite_schema_py",
-    srcs = ["@org_tensorflow//tensorflow/lite/python:schema_py"],
-    outs = ["python/tflite_schema.py"],
-    cmd = "cp $< $@",
-)
-
-py_library(
-    name = "converter",
-    srcs = [
-        "python/converter.py",
-        "python/util.py",
-        ":tflite_schema_py",
-    ],
-    deps = [
-        ":_graphdef_tfl_flatbuffer",
-    ],
-)
-
-exports_files([
-    "python/converter.py",
-    "python/util.py",
-    "__init__.py",
-    "python/__init__.py",
-]) '''

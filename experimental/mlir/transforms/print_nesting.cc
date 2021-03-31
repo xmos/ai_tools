@@ -1,12 +1,8 @@
-//#include "mlir/Dialect/StandardOps/IR/Ops.h"
-//#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-//#include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.h"
 
 namespace mlir {
 namespace xcore {
 
-namespace {
 /// This pass illustrates the IR nesting through printing.
 struct PrintNesting
     : public PassWrapper<PrintNesting, OperationPass<ModuleOp>> {
@@ -80,10 +76,8 @@ struct PrintNesting
     return llvm::outs();
   }
 };
-} // namespace
 
-// Creates an instance of the TensorFlow dialect OpRemoval pass.
-std::unique_ptr<OperationPass<ModuleOp>> CreatePrintNestingPass() {
+std::unique_ptr<OperationPass<ModuleOp>> createPrintNestingPass() {
   return std::make_unique<PrintNesting>();
 }
 

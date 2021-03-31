@@ -1,3 +1,6 @@
+#ifndef XCORE_MLIR_PASSES_H_
+#define XCORE_MLIR_PASSES_H_
+
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {

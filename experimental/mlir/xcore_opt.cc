@@ -24,8 +24,7 @@ int main(int argc, char **argv) {
   static cl::opt<std::string> inputPath(
       cl::Positional, cl::desc("<TFLite FlatBuffer>"), cl::Required);
   static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
-                                             cl::value_desc("filename"),
-                                             cl::init("-"));
+                                             cl::value_desc("filename"));
 
   // Register any command line options.
   registerAsmPrinterCLOptions();

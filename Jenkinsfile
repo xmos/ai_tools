@@ -49,7 +49,7 @@ pipeline {
                                          url: 'git@github.com:xmos/ai_tools']]
                 ])
                 // create venv and install pip packages
-                sh """conda env create -q -p ai_tools_venv -f environment.yml &&
+                sh """conda env create -q -p ai_tools_venv -f ./utils/adf/environment.yml &&
                       . activate ./ai_tools_venv &&
                       pip install -e "./utils/adf/xcore_interpreters[test]" &&
                       pip install -e "./tflite2xcore[test,examples,dev]" &&

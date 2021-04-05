@@ -34,37 +34,40 @@ Changes to C++ code should conform to
 
 Use `clang-tidy` to check your C/C++ changes. To install `clang-tidy` on ubuntu:16.04, do:
 
-```bash
+```shell
 apt-get install -y clang-tidy
 ```
 
 You can check a C/C++ file by doing:
 
 
-```bash
+```shell
 clang-format <my_cc_file> --style=google > /tmp/my_cc_file.cc
 diff <my_cc_file> /tmp/my_cc_file.cc
 ```
 
 ### Running Tests
 
-There is a Makefile in the root directory that has some useful targets - especially when it comes to running tests before making a pull request. Run the following for more information on the targets.
+To run all tests on 4 processor cores (replace 4 with the number of cores you want to use), run:
+```shell
+make integration_tests NUM_PROCS=4
+```
 
-  make help
-
-To run the integration tests using multiple processors run 
-
-  make integration_tests NUM_PROCS=4
-
-Replace 4 with the number of processors you want to use.  
+The Makefile in the root directory has a list of targets, including test and build targets.
+Run the following for more information:
+```shell
+make help
+```
 
 On Linux you can utilize all your cores with
-
-  make integration_tests NUM_PROCS=$(grep -c ^processor /proc/cpuinfo)
+```shell
+make integration_tests NUM_PROCS=$(grep -c ^processor /proc/cpuinfo)
+```
 
 On macOS you can utilize all your cores with
-
-  make integration_test NUM_PROCS=$(system_profiler SPHardwareDataType | awk '/Total Number of Cores/{print $5}{next;}')
+```shell
+make integration_test NUM_PROCS=$(system_profiler SPHardwareDataType | awk '/Total Number of Cores/{print $5}{next;}')
+```
 
 ## Development Tips
 
@@ -76,25 +79,18 @@ At times submodule repositories will need to be updated.  To update all submodul
 
 ### Conda Environment
 
-If you made changes to the conda environment, export it (while activated) using:
+We strongly recommend using Conda if contributing to this project.
 
-> conda env export --no-build | grep -Ev "^name:|^prefix:|libgcc-ng|libgfortran-ng|libstdcxx-ng|ai-tools" > environment.yml
+Install conda on your system if you don't already have it:
+https://docs.conda.io/projects/conda/en/latest/user-guide/install/
 
-or for gpu, 
-
-> conda env export --no-build | grep -Ev "^name:|^prefix:|libgcc-ng|libgfortran-ng|libstdcxx-ng|ai-tools" > environment_gpu.yml
-
-Use `pip-autoremove` to uninstall unwanted `pip` packages. This will clean up dependecies.
-
-To update your environment, run the following command
-
-> conda env update --file environment.yml
-
-or for gpu, 
-
-> conda env update --file environment_gpu.yml
+It is recommended to configure Conda with the following options:
+```shell
+conda config --set auto_activate_base false
+conda config --set env_prompt '({name})'
+```
 
 ### VSCode Users
 
-A default workspace settings files included, but if desired it can be modified.
+A default workspace settings file is included, but if desired it can be modified.
 In this case, run `git update-index --assume-unchanged .vscode/settings.json` to prevent git from tracking local changes.

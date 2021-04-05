@@ -9,8 +9,7 @@ CLOBBER_FLAG := '-c'
 
 .PHONY: xcore_interpreters_build
 xcore_interpreters_build:
-	cd utils/adf/xcore_interpreters/python_bindings && bash build.sh $(CLOBBER_FLAG)
-	cd utils/adf/xcore_interpreters/xcore_firmware && bash build.sh $(CLOBBER_FLAG)
+	cd utils/adf/ && make xcore_interpreters_build CLOBBER_FLAG=$(CLOBBER_FLAG)
 
 #**************************
 # tflite2xcore targets
@@ -28,10 +27,6 @@ tflite2xcore_unit_test:
 tflite2xcore_dist:
 	cd tflite2xcore && bash build_dist.sh
 
-.PHONY: tflite2xcore_dist_test
-tflite2xcore_dist_test:
-	cd tflite2xcore && bash test_dist.sh
-
 #**************************
 # integration test targets
 #**************************
@@ -42,25 +37,23 @@ integration_test:
 	cd test && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 
 #**************************
+# ALL tests target
+#**************************
+
+.PHONY: test
+test: tflite2xcore_unit_test \
+ integration_test
+
+#**************************
 # ci target
 #**************************
 
 .PHONY: ci 
 ci: CLOBBER_FLAG = '-c'
 ci: lib_flexbuffers_build \
- tflite2xcore_unit_test \
- tflite2xcore_dist_test \
  xcore_interpreters_build \
- integration_test
-
-#**************************
-# ALL tests target
-#**************************
-
-.PHONY: test
-test: lib_flexbuffers_build \
- tflite2xcore_unit_test \
- integration_test
+ test \
+ tflite2xcore_dist
 
 #**************************
 # development targets

@@ -48,34 +48,48 @@ diff <my_cc_file> /tmp/my_cc_file.cc
 
 ### Running Tests
 
-To run all tests on 4 processor cores (replace 4 with the number of cores you want to use), run:
+Before running the tests, ensure that you installed the correct pip packages in your environment:
 ```shell
-make integration_tests NUM_PROCS=4
+pip install -e "./utils/adf/xcore_interpreters[test]"
+pip install -e "./tflite2xcore[examples,test]"
 ```
 
-The Makefile in the root directory has a list of targets, including test and build targets.
+To run all tests on 4 processor cores (replace 4 with the number of cores you want to use), run:
+```shell
+make test NUM_PROCS=4
+```
+
+On Linux you can utilize all your cores with
+```shell
+make test NUM_PROCS=$(grep -c ^processor /proc/cpuinfo)
+```
+
+On macOS you can utilize all your cores with
+```shell
+make test NUM_PROCS=$(system_profiler SPHardwareDataType | awk '/Total Number of Cores/{print $5}{next;}')
+```
+
+The [`Makefile`](Makefile) has a list of targets, including specific test and build targets.
 Run the following for more information:
 ```shell
 make help
 ```
 
-On Linux you can utilize all your cores with
+To run the integration tests on the xcore.ai device, ensure that an explorer board is connected, then run:
 ```shell
-make integration_tests NUM_PROCS=$(grep -c ^processor /proc/cpuinfo)
+pytest test/integration_test/ --cache-clear --use-device
 ```
-
-On macOS you can utilize all your cores with
-```shell
-make integration_test NUM_PROCS=$(system_profiler SPHardwareDataType | awk '/Total Number of Cores/{print $5}{next;}')
-```
+Note that using multiple `pytest-xdist` workers when running on the divice is currently not supported.
 
 ## Development Tips
 
 ### git Submodules
 
-At times submodule repositories will need to be updated.  To update all submodules, run the following command
-
-> git submodule update --init
+After merging upstream changes, submodule repositories may need to be updated.
+To update all submodules, run the following command:
+```shell
+make submodule_update
+```
 
 ### Conda Environment
 

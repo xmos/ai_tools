@@ -3,6 +3,7 @@
 namespace mlir {
 namespace xcore {
 
+namespace {
 /// This pass illustrates the IR nesting through printing.
 struct PrintNesting
     : public PassWrapper<PrintNesting, OperationPass<ModuleOp>> {
@@ -76,6 +77,7 @@ struct PrintNesting
     return llvm::outs();
   }
 };
+} // end anonymous namespace
 
 std::unique_ptr<OperationPass<ModuleOp>> createPrintNestingPass() {
   return std::make_unique<PrintNesting>();

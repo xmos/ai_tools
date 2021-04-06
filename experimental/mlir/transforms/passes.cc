@@ -7,7 +7,8 @@ namespace mlir {
 namespace xcore {
 
 void buildXCorePassPipeline(OpPassManager &pm) {
-  pm.addPass(mlir::xcore::createPrintNestingPass());
+  // pm.addPass(mlir::xcore::createPrintNestingPass());
+  pm.addPass(mlir::xcore::createOptimizeFullyConnectedPass());
 }
 
 void registerXCorePassPipeline() {

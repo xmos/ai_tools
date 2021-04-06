@@ -1,5 +1,5 @@
-#ifndef XCORE_MLIR_UTILS_FILE_IO_H_
-#define XCORE_MLIR_UTILS_FILE_IO_H_
+#ifndef XCORE_UTILS_FILE_IO_H
+#define XCORE_UTILS_FILE_IO_H
 
 #include "mlir/Support/FileUtilities.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_export.h"
@@ -11,6 +11,7 @@
 namespace mlir {
 namespace xcore {
 namespace utils {
+
 LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
                                         mlir::ModuleOp module) {
   std::string serialized_flatbuffer;
@@ -55,4 +56,4 @@ mlir::OwningModuleRef readFlatBufferFileToMLIR(std::string &filename,
 } // namespace xcore
 } // namespace mlir
 
-#endif // XCORE_MLIR_UTILS_FILE_IO_H_
+#endif // XCORE_UTILS_FILE_IO_H

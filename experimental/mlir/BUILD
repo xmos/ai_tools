@@ -1,4 +1,4 @@
-#load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
+load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
 #load("@org_tensorflow//tensorflow:tensorflow.bzl", "pybind_extension")
 
 package(
@@ -6,35 +6,38 @@ package(
     licenses = ["notice"],  # Apache 2.0
 )
 
-''' gentbl(
-    name = "lce_ops_inc_gen",
+gentbl(
+    name = "xc_ops_inc_gen",
     tbl_outs = [
-        ("-gen-op-decls", "ir/lce_ops.h.inc"),
-        ("-gen-op-defs", "ir/lce_ops.cc.inc"),
-        ("-gen-dialect-decls -dialect=lq", "ir/lce_dialect.h.inc"),
-        ("-gen-dialect-doc", "g3doc/lce_ops.md"),
+        ("-gen-op-decls", "ir/xc_ops.h.inc"),
+        ("-gen-op-defs", "ir/xc_ops.cc.inc"),
+        ("-gen-dialect-decls -dialect=xc", "ir/xc_dialect.h.inc"),
+        ("-gen-dialect-doc", "ir/xc_ops.md"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "ir/lce_ops.td",
+    td_file = "ir/xc_ops.td",
     td_srcs = [
-        "@org_tensorflow//tensorflow/compiler/mlir/lite/quantization:quantization_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+        "@llvm-project//mlir:StdOpsTdFiles",
     ],
 )
 
 gentbl(
-    name = "op_removal_lce_inc_gen",
+    name = "patterns_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_op_removal.inc"),
+        ("-gen-rewriters", "transforms/generated_patterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "transforms/op_removal_patterns.td",
+    td_file = "transforms/patterns.td",
     td_srcs = [
+        "ir/xc_ops.td",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
     ],
 )
 
+'''
 gentbl(
     name = "prepare_lce_target_arm_inc_gen",
     tbl_outs = [
@@ -131,15 +134,24 @@ gentbl(
 cc_library(
     name = "xcore_passes",
     srcs = [
+        "ir/xc_ops.cc",
+        "ir/xc_dialect.h.inc",
+        "ir/xc_ops.cc.inc",
+        "ir/xc_ops.h.inc",
+        "transforms/generated_patterns.inc",
         "transforms/passes.cc",
+        "transforms/optimize_fully_connected.cc",
         "transforms/print_nesting.cc",
     ],
     hdrs = [
         "transforms/passes.h",
+        "ir/xc_ops.h",
+        "ir/xc_ops.md",
     ],
     deps = [
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
         #"@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
     ],
     alwayslink = 1,

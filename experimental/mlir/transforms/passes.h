@@ -1,5 +1,5 @@
-#ifndef XCORE_MLIR_PASSES_H_
-#define XCORE_MLIR_PASSES_H_
+#ifndef XCORE_TRANSFORMS_PASSES_H
+#define XCORE_TRANSFORMS_PASSES_H
 
 #include "mlir/Pass/Pass.h"
 
@@ -19,6 +19,7 @@ void buildXCorePassPipeline(OpPassManager &pm);
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<OperationPass<FuncOp>> createPrintNestingPass();
+std::unique_ptr<OperationPass<FuncOp>> createOptimizeFullyConnectedPass();
 
 //===----------------------------------------------------------------------===//
 // Registration
@@ -29,10 +30,11 @@ void registerXCorePassPipeline();
 inline void registerAllPasses() {
   registerXCorePassPipeline();
 
+  createOptimizeFullyConnectedPass();
   createPrintNestingPass();
 }
 
 } // namespace xcore
 } // namespace mlir
 
-#endif // XCORE_MLIR_PASSES_H_
+#endif // XCORE_TRANSFORMS_PASSES_H

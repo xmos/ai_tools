@@ -8,8 +8,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
-#include "tensorflow/compiler/mlir/lite/flatbuffer_import.h"
-#include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
+//#include "tensorflow/compiler/mlir/lite/flatbuffer_import.h"
+//#include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InitLLVM.h"
@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   // registry.insert<TFL::TensorFlowLiteDialect>();
   // registry.insert<TF::TensorFlowDialect>();
   // registry.insert<quant::QuantizationDialect>();
-  registry.insert<StandardOpsDialect>();
+  // registry.insert<StandardOpsDialect>();
 
   // Convert the Module proto into MLIR.
   MLIRContext context; //(registry);

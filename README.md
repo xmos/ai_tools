@@ -70,7 +70,7 @@ Then inside the container
 conda env create -p ai_tools_venv -f utils/adf/environment.yml
 /XMOS/get_tools.py 15.0.1
 conda activate ./ai_tools_venv
-pip install -e "./xcore_interpreters[test]"
+pip install -e "./utils/adf/xcore_interpreters[test]"
 pip install -e "./tflite2xcore[examples,test,dev]"
 # activate tools (each new shell)
 module load tools/15.0.1

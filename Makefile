@@ -9,8 +9,7 @@ CLOBBER_FLAG := '-c'
 
 .PHONY: xcore_interpreters_build
 xcore_interpreters_build:
-	cd utils/adf/xcore_interpreters/python_bindings && bash build.sh $(CLOBBER_FLAG)
-	cd utils/adf/xcore_interpreters/xcore_firmware && bash build.sh $(CLOBBER_FLAG)
+	cd utils/adf/ && make build CLOBBER_FLAG=$(CLOBBER_FLAG)
 
 #**************************
 # tflite2xcore targets
@@ -28,10 +27,6 @@ tflite2xcore_unit_test:
 tflite2xcore_dist:
 	cd tflite2xcore && bash build_dist.sh
 
-.PHONY: tflite2xcore_dist_test
-tflite2xcore_dist_test:
-	cd tflite2xcore && bash test_dist.sh
-
 #**************************
 # integration test targets
 #**************************
@@ -42,25 +37,28 @@ integration_test:
 	cd test && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 
 #**************************
-# ci target
+# ALL build target
 #**************************
 
-.PHONY: ci 
-ci: CLOBBER_FLAG = '-c'
-ci: lib_flexbuffers_build \
- tflite2xcore_unit_test \
- tflite2xcore_dist_test \
- xcore_interpreters_build \
- integration_test
+.PHONY: build
+build: lib_flexbuffers_build \
+ xcore_interpreters_build
 
 #**************************
 # ALL tests target
 #**************************
 
 .PHONY: test
-test: lib_flexbuffers_build \
- tflite2xcore_unit_test \
+test: tflite2xcore_unit_test \
  integration_test
+
+#**************************
+# ci target
+#**************************
+
+.PHONY: ci 
+ci: CLOBBER_FLAG = '-c'
+ci: build test tflite2xcore_dist
 
 #**************************
 # development targets
@@ -71,7 +69,7 @@ submodule_update:
 	git submodule update --init --recursive
 
 .PHONY: _develop
-_develop: submodule_update lib_flexbuffers_build xcore_interpreters_build
+_develop: submodule_update build
 
 .PHONY: develop
 develop: CLOBBER_FLAG=''
@@ -88,15 +86,16 @@ help:
 	$(info )
 	$(info )
 	$(info primary targets:)
-	$(info   develop                       Update submodules and build xcore_interpreters)
-	$(info   clobber                       Update submodules and build xcore_interpreters with clobber flag enabled)
-	$(info   ci                            Run continuous integration build and test (requires Conda environment))
-	$(info   integration_test              Run integration tests (requires Conda environment))
-	$(info   test                          Run all tests (requires Conda environment & connected hardware))
+	$(info   build                         Build all components)
+	$(info   develop                       Update submodules and build all components)
+	$(info   clobber                       Update submodules, then clean and rebuild all components)
+	$(info   test                          Run all tests (requires tflite2xcore[test] package))
+	$(info   ci                            Run continuous integration build and test (requires tflite2xcore[test] package))
 	$(info )
 	$(info secondary targets:)
-	$(info   lib_flexbuffers_build         Run lib_flexbuffers build)
-	$(info   tflite2xcore_unit_test        Run tflite2xcore unit tests (requires Conda environment))
-	$(info   tflite2xcore_dist             Build tflite2xcore distribution (requires Conda environment))
-	$(info   tflite2xcore_dist_test        Run tflite2xcore distribution tests (requires Conda environment))
+	$(info   lib_flexbuffers_build         Build lib_flexbuffers)
+	$(info   xcore_interpreters_build      Build xcore_interpreters)
+	$(info   tflite2xcore_unit_test        Run tflite2xcore unit tests (requires tflite2xcore[test] package))
+	$(info   tflite2xcore_dist             Build tflite2xcore distribution (requires tflite2xcore[test] package))
+	$(info   integration_test              Run integration tests (requires tflite2xcore[test] package))
 	$(info )

@@ -68,12 +68,12 @@ Then inside the container
 ```shell
 # setup environment
 conda env create -p ai_tools_venv -f utils/adf/environment.yml
-/XMOS/get_tools.py 15.0.1
+/XMOS/get_tools.py 15.0.5
 conda activate ./ai_tools_venv
 pip install -e "./utils/adf/xcore_interpreters[test]"
 pip install -e "./tflite2xcore[examples,test,dev]"
 # activate tools (each new shell)
-module load tools/15.0.1
+module load tools/15.0.5
 # build all and run tests
 make ci
 ```

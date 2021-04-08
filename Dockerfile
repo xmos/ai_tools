@@ -27,7 +27,7 @@ RUN mkdir -m 777 /XMOS
 ADD https://github0.xmos.com/raw/xmos-int/get_tools/master/get_tools.py /XMOS/
 RUN cd /XMOS \
     && chmod 755 get_tools.py \
-    && echo "export MODULES_SILENT_SHELL_DEBUG=1\nexport MODULEPATH=/XMOS/modulefiles:/XMOS/template_modulefiles\nexport PATH=$PATH:/XMOS" \
+    && echo "export PATH=$PATH:/XMOS" \
     >> /etc/profile.d/xmos_tools.sh \
     && chmod a+x /etc/profile.d/xmos_tools.sh
 

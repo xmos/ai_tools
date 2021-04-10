@@ -10,6 +10,7 @@
 #include "mlir/IR/StandardTypes.h" // from @llvm-project
 #include "mlir/Pass/Pass.h"        // from @llvm-project
 #include "mlir/Support/LLVM.h"     // from @llvm-project
+#include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 //#include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.h"
 #include "../ir/xc_ops.h"
 

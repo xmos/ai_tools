@@ -20,6 +20,7 @@ void buildXCorePassPipeline(OpPassManager &pm);
 
 std::unique_ptr<OperationPass<FuncOp>> createPrintNestingPass();
 std::unique_ptr<OperationPass<FuncOp>> createOptimizeFullyConnectedPass();
+std::unique_ptr<OperationPass<FuncOp>> createTranslateToCustomOpPass();
 
 //===----------------------------------------------------------------------===//
 // Registration
@@ -30,6 +31,7 @@ void registerXCorePassPipeline();
 inline void registerAllPasses() {
   registerXCorePassPipeline();
 
+  createTranslateToCustomOpPass();
   createOptimizeFullyConnectedPass();
   createPrintNestingPass();
 }

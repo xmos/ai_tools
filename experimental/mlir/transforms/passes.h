@@ -1,5 +1,5 @@
-#ifndef XCORE_TRANSFORMS_PASSES_H
-#define XCORE_TRANSFORMS_PASSES_H
+#ifndef XFORMER_TRANSFORMS_PASSES_H
+#define XFORMER_TRANSFORMS_PASSES_H
 
 #include "mlir/Pass/Pass.h"
 
@@ -39,4 +39,4 @@ inline void registerAllPasses() {
 } // namespace xcore
 } // namespace mlir
 
-#endif // XCORE_TRANSFORMS_PASSES_H
+#endif // XFORMER_TRANSFORMS_PASSES_H

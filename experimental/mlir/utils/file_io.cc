@@ -1,10 +1,10 @@
 #include "file_io.h"
 
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include "mlir/Support/FileUtilities.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_export.h"
 #include "tensorflow/compiler/mlir/lite/flatbuffer_import.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/ToolOutputFile.h"
 
 namespace mlir {
 namespace xcore {

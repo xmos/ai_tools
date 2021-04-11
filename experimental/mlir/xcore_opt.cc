@@ -1,6 +1,10 @@
 #include "transforms/passes.h"
 #include "utils/file_io.h"
 
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
@@ -8,12 +12,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
-//#include "tensorflow/compiler/mlir/lite/flatbuffer_import.h"
-//#include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ToolOutputFile.h"
 
 using namespace llvm;
 using namespace mlir;

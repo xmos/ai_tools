@@ -161,12 +161,12 @@ cc_library(
 
 cc_library(
     name = "utils",
-    srcs = [
-        "utils/file_io.cc",
-    ],
-    hdrs = [
-        "utils/file_io.h",
-    ],
+    srcs = glob([
+        "utils/*.cc",
+    ]),
+    hdrs = glob([
+        "utils/*.h",
+    ]),
     deps = [
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",

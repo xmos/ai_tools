@@ -1,5 +1,5 @@
-#ifndef XCORE_UTILS_FILE_IO_H
-#define XCORE_UTILS_FILE_IO_H
+#ifndef XFORMER_UTILS_FILE_IO_H
+#define XFORMER_UTILS_FILE_IO_H
 
 #include "mlir/IR/Module.h"
 #include "mlir/Support/FileUtilities.h"
@@ -18,4 +18,4 @@ mlir::OwningModuleRef readFlatBufferFileToMLIR(std::string &filename,
 } // namespace xcore
 } // namespace mlir
 
-#endif // XCORE_UTILS_FILE_IO_H
+#endif // XFORMER_UTILS_FILE_IO_H

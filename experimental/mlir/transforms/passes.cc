@@ -7,14 +7,15 @@ namespace mlir {
 namespace xcore {
 
 void buildXCorePassPipeline(OpPassManager &pm) {
-  // pm.addPass(mlir::xcore::createPrintNestingPass());
+  pm.addPass(createPrintNestingPass());
   pm.addPass(createOptimizeFullyConnectedPass());
   pm.addPass(createTranslateToCustomOpPass());
+  pm.addPass(createPrintNestingPass());
 }
 
 void registerXCorePassPipeline() {
   mlir::PassPipelineRegistration<> pipeline(
-      "tfl-to-xcore-pipeline",
+      "xcore-tfl-pipeline",
       "Run XCore passes for transforming TFLite code into XCore",
       [](OpPassManager &passManager) { buildXCorePassPipeline(passManager); });
 }

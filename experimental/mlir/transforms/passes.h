@@ -31,9 +31,9 @@ void registerXCorePassPipeline();
 inline void registerAllPasses() {
   registerXCorePassPipeline();
 
-  createTranslateToCustomOpPass();
-  createOptimizeFullyConnectedPass();
   createPrintNestingPass();
+  createOptimizeFullyConnectedPass();
+  createTranslateToCustomOpPass();
 }
 
 } // namespace xcore

@@ -33,6 +33,7 @@ gentbl(
     td_srcs = [
         "ir/xc_ops.td",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
     ],
 )
@@ -151,14 +152,18 @@ cc_library(
     deps = [
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:QuantOps",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
-        #"@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
     ],
     alwayslink = 1,
 ) 
 
 cc_library(
     name = "utils",
+    srcs = [
+        "utils/file_io.cc",
+    ],
     hdrs = [
         "utils/file_io.h",
     ],
@@ -169,7 +174,6 @@ cc_library(
         "@llvm-project//mlir:Support",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_import",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:flatbuffer_export",
-        #"@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
     ],
     alwayslink = 1,
 ) 

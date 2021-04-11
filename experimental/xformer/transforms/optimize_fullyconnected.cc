@@ -1,4 +1,4 @@
-#include "../ir/xc_ops.h"
+#include "ir/xc_ops.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Matchers.h"
@@ -12,8 +12,7 @@ namespace mlir {
 namespace xcore {
 
 namespace {
-
-// Optimize FullyConnected operations.
+// Optimize FullyConnected ops.
 struct OptimizeFullyConnected
     : public PassWrapper<OptimizeFullyConnected, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
@@ -22,7 +21,7 @@ struct OptimizeFullyConnected
   void runOnFunction() override;
 };
 
-#include "experimental/mlir/transforms/generated_patterns.inc"
+#include "transforms/generated_patterns.inc"
 
 void OptimizeFullyConnected::runOnFunction() {
   OwningRewritePatternList patterns;

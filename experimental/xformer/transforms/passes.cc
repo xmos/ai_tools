@@ -1,4 +1,4 @@
-#include "passes.h"
+#include "transforms/passes.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"

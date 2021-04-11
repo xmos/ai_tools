@@ -1,4 +1,4 @@
-#include "../ir/xc_ops.h"
+#include "ir/xc_ops.h"
 
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -8,7 +8,7 @@ namespace mlir {
 namespace xcore {
 
 namespace {
-
+/// This pass translates XCore ops to TFLite custom ops.
 struct TranslateToCustomOp
     : public PassWrapper<TranslateToCustomOp, FunctionPass> {
   void runOnFunction() override;

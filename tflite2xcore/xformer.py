@@ -58,6 +58,9 @@ if __name__ == "__main__":
         default=False,
         help="Experimental flag for better external memory support. ",
     )
+    parser.add_argument(
+        "--tdnn", action="store_true", default=False, help="Convert network to tdnn",
+    )
 
     args = parser.parse_args()
 
@@ -74,6 +77,7 @@ if __name__ == "__main__":
         intermediates_path=args.intermediates_path,
         remove_input_alignment_pad=args.remove_input_alignment_pad,
         external_memory=args.ext_mem,
+        tdnn=args.tdnn,
     )
 
     print(f"Conversion successful, output: {tflite_output_path}")

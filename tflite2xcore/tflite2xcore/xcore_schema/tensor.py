@@ -31,6 +31,7 @@ class Tensor(_SubgraphDependent):
         quantization: Optional[_OpOptionsType] = None,
         producers: Optional[Iterable[Operator]] = None,
         consumers: Optional[Iterable[Operator]] = None,
+        custom_options: Optional[_OpOptionsType] = None,
     ) -> None:
         # Generally, do not use this constructor to instantiate Tensor!
         # Use Subgraph.create_tensor instead.
@@ -44,6 +45,11 @@ class Tensor(_SubgraphDependent):
         self.quantization = quantization or {}
         self.producers: List[Operator] = list(producers or [])
         self.consumers: List[Operator] = list(consumers or [])
+        self.custom_options = custom_options or {}
+
+    def add_custom_options(self, **kwargs: Any) -> None:
+        if kwargs:
+            self.custom_options.update(kwargs)
 
     @property
     def shape(self) -> Tuple[int, ...]:

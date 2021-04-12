@@ -17,6 +17,7 @@
     "python.linting.mypyArgs": [
         "--config-file=${workspaceFolder}/mypy.ini"
     ],
+    "editor.formatOnSave": true, 
     "python.formatting.provider": "black",
     "terminal.integrated.inheritEnv": false,
     "C_Cpp.clang_format_style": "Google",

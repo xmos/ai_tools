@@ -52,6 +52,8 @@ class ReplacePool2DPass(ReplaceQuantizedOperatorPass):
         with self.using(op):
             new_op.add_custom_options(stride=self._strides, pool=self._pool_size)
 
+        return new_op
+
 
 class ReplacePool2D2x2Pass(ReplacePool2DPass):
     def match(self, op):

@@ -109,11 +109,16 @@ class ActivationLoweringManager(PassManager):
 
 
 class PoolingLoweringManager(PassManager):
-    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
+    def __init__(
+        self, model: Optional[XCOREModel] = None, tdnn: bool = False, **kwargs: Any
+    ) -> None:
         super().__init__(model, **kwargs)
 
-        self.register_pass(passes.ReplaceMaxPool2D2x2Pass())
-        self.register_pass(passes.ReplaceMaxPool2DPass())
+        if tdnn:
+            self.register_pass(passes.TdnnMaxPool2DPass())
+        else:
+            self.register_pass(passes.ReplaceMaxPool2D2x2Pass())
+            self.register_pass(passes.ReplaceMaxPool2DPass())
         self.register_pass(passes.ReplaceAveragePool2D2x2Pass())
         self.register_pass(passes.ReplaceAveragePool2DPass())
         self.register_pass(passes.ReplaceGlobalAveragePool2DPass())
@@ -274,6 +279,7 @@ def optimize_for_xcore(
     remove_float_interface: bool = False,
     external_memory: bool = False,
     experimental_xformer2: bool = False,
+    tdnn: bool = False,
 ) -> XCOREModel:
     num_threads = num_threads or 1
     intermediates_path = Path(intermediates_path) if intermediates_path else None
@@ -288,7 +294,8 @@ def optimize_for_xcore(
 
     # lowering to the xcore ops
     pass_mgr.register_passes(ActivationLoweringManager())
-    pass_mgr.register_passes(PoolingLoweringManager())
+    pass_mgr.register_passes(PoolingLoweringManager(tdnn=tdnn))
+    pass_mgr.register_passes(ParametricOperatorLoweringManager())
     pass_mgr.register_passes(BinarizedOperatorLoweringManager())
 
     if experimental_xformer2:

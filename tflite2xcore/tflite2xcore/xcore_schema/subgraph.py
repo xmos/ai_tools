@@ -62,10 +62,13 @@ class Subgraph(_ModelDependent):
         isoutput: bool = False,
         producers: Optional[Iterable[Operator]] = None,
         consumers: Optional[Iterable[Operator]] = None,
+        custom_options: Optional[_OpOptionsType] = None,
     ) -> Tensor:
 
         name = self.make_unique_tensor_name(name)
-        tensor = Tensor(self, name, type_, shape, quantization, producers, consumers)
+        tensor = Tensor(
+            self, name, type_, shape, quantization, producers, consumers, custom_options
+        )
 
         if buffer is None:
             try:

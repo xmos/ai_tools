@@ -70,6 +70,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tdnn", action="store_true", default=False, help="Experimental flag - Convert network to tdnn",
     )
+    parser.add_argument(
+        "--tdnn", action="store_true", default=False, help="Convert network to tdnn",
+    )
 
     args = parser.parse_args()
 

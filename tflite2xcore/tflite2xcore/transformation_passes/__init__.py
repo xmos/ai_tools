@@ -117,3 +117,5 @@ from .lce_passes import (
 from .warning_passes import FloatingPointWarningPass
 
 from .add_passes import ReplaceAddPass
+
+from .tdnn_passes import TdnnMaxPool2DPass

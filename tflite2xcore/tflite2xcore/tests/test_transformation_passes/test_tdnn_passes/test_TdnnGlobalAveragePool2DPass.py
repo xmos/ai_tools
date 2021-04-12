@@ -5,29 +5,24 @@ import pytest
 from typing import Tuple
 
 
-from tflite2xcore.transformation_passes.tdnn_passes import TdnnDeepConv2dPass
+from tflite2xcore.transformation_passes.tdnn_passes import TdnnGlobalAveragePool2DPass
 from tflite2xcore.xcore_model import XCOREModel
-from tflite2xcore.xcore_schema import Padding
+from tflite2xcore.xcore_schema import Padding, ActivationFunctionType
 
-
-from tflite2xcore.tests.test_transformation_passes.model_builders import (
-    build_conv2d,
-    ModelBuilder,
-)
+from tflite2xcore.tests.test_transformation_passes.model_builders import build_mean
 
 PARAMS = {
     "default": {
         "input_height": [1],
         "input_width": [9],
         "input_channels": [4],
-        "kernel_height": [2],
-        "kernel_width": [3],
-        "non_matching_input_channels": [9],
-        "output_channels": [4],
-        "non_matching_output_channels": [9],
         "padding": [Padding.VALID],
         "stride_h": [1],
         "stride_w": [1],
+        "pool_h": [2],
+        "pool_w": [2],
+        "fused_activation": [ActivationFunctionType.NONE],
+        "reduction_dims": [(1, 2), (2, 1)],
     }
 }
 
@@ -35,31 +30,21 @@ PARAMS = {
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+@pytest.fixture()
+def input_size(input_height: int, input_width: int) -> Tuple[int, int]:
+    return (input_height, input_width)
 
 
 @pytest.fixture()
-def build_model() -> ModelBuilder:
-    return build_conv2d
-
-
-@pytest.fixture()
-def trf_pass() -> TdnnDeepConv2dPass:
-    return TdnnDeepConv2dPass()
+def trf_pass() -> TdnnGlobalAveragePool2DPass:
+    return TdnnGlobalAveragePool2DPass()
 
 
 @pytest.fixture()
 def model(
-    weight_shape: Tuple[int, int, int, int],
-    input_size: Tuple[int, int],
-    padding: Padding,
-    strides: Tuple[int, int],
+    input_shape: Tuple[int, int, int], reduction_dims: Tuple[int, int]
 ) -> XCOREModel:
-    return build_conv2d(
-        weight_shape=weight_shape,
-        input_size=input_size,
-        padding=padding,
-        strides=strides,
-    )
+    return build_mean(input_shape=input_shape, reduction_dims=reduction_dims)
 
 
 #  ----------------------------------------------------------------------------
@@ -67,7 +52,7 @@ def model(
 #  ----------------------------------------------------------------------------
 
 
-def test_tdnn_mutate(trf_pass: TdnnDeepConv2dPass, model: XCOREModel) -> None:
+def test_tdnn_mutate(trf_pass: TdnnGlobalAveragePool2DPass, model: XCOREModel) -> None:
     # run replacement pass
     trf_pass.run(model)
     model.sanity_check()
@@ -78,11 +63,11 @@ def test_tdnn_mutate(trf_pass: TdnnDeepConv2dPass, model: XCOREModel) -> None:
     assert len(operators) == 2
 
     # check tensors
-    op = operators[0]
-    assert len(op.inputs) == 3
+    op = operators[0]  # pooling op
+    assert len(op.inputs) == 2
     assert len(op.outputs) == 1
 
-    op = operators[1]
+    op = operators[1]  # ring buffer op
     assert len(op.inputs) == 2
     assert len(op.outputs) == 2
 

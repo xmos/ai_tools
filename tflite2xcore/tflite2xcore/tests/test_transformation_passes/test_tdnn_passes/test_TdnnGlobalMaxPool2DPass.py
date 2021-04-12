@@ -5,74 +5,46 @@ import pytest
 from typing import Tuple
 
 
-from tflite2xcore.transformation_passes.tdnn_passes import (
-    TdnnMaxPool2DPass,
-    TdnnTensorPass,
-)
+from tflite2xcore.transformation_passes.tdnn_passes import TdnnGlobalMaxPool2DPass
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import Padding, ActivationFunctionType
 
 from tflite2xcore.tests.test_transformation_passes.model_builders import (
-    build_maxpool,
+    build_max,
     ModelBuilder,
 )
 
-PARAMS = {
-    "default": {
-        "input_height": [6],
-        "input_width": [9],
-        "input_channels": [4],
-        "padding": [Padding.VALID],
-        "stride_h": [1],
-        "stride_w": [1],
-        "pool_h": [2],
-        "pool_w": [2],
-        "fused_activation": [ActivationFunctionType.NONE],
-    }
-}
+PARAMS = {"default": {"input_height": [1], "input_width": [9], "input_channels": [4],}}
 
 
 #  ----------------------------------------------------------------------------
 #                                   FIXTURES
 #  ----------------------------------------------------------------------------
+@pytest.fixture()
+def input_size(input_height: int, input_width: int) -> Tuple[int, int]:
+    return (input_height, input_width)
+
+
+@pytest.fixture()
+def input_shape(
+    input_size: Tuple[int, int], input_channels: int
+) -> Tuple[int, int, int]:
+    return (*input_size, input_channels)
 
 
 @pytest.fixture()
 def build_model() -> ModelBuilder:
-    return build_maxpool
+    return build_max
 
 
 @pytest.fixture()
-def trf_pass() -> TdnnMaxPool2DPass:
-    return TdnnMaxPool2DPass()
+def trf_pass() -> TdnnGlobalMaxPool2DPass:
+    return TdnnGlobalMaxPool2DPass()
 
 
 @pytest.fixture()
-def tensor_pass() -> TdnnTensorPass:
-    return TdnnTensorPass()
-
-
-@pytest.fixture()
-def pool_size(pool_h, pool_w) -> Tuple[int, int]:
-    return (pool_h, pool_w)
-
-
-@pytest.fixture()
-def model(
-    build_model: ModelBuilder,
-    input_shape: Tuple[int, int, int],
-    pool_size: Tuple[int, int],
-    strides: Tuple[int, int],
-    padding: Padding,
-    fused_activation: ActivationFunctionType,
-) -> XCOREModel:
-    return build_model(
-        input_shape=input_shape,
-        padding=padding,
-        pool_size=pool_size,
-        strides=strides,
-        fused_activation=fused_activation,
-    )
+def model(build_model: ModelBuilder, input_shape: Tuple[int, int, int]) -> XCOREModel:
+    return build_model(input_shape=input_shape)
 
 
 #  ----------------------------------------------------------------------------
@@ -80,13 +52,9 @@ def model(
 #  ----------------------------------------------------------------------------
 
 
-def test_tdnn_mutate(
-    trf_pass: TdnnMaxPool2DPass, model: XCOREModel, tensor_pass: TdnnTensorPass
-) -> None:
+def test_tdnn_mutate(trf_pass: TdnnGlobalMaxPool2DPass, model: XCOREModel) -> None:
     # run replacement pass
     trf_pass.run(model)
-    model.sanity_check()
-    tensor_pass.run(model)
     model.sanity_check()
 
     # check operators

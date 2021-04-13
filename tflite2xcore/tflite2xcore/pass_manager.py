@@ -4,6 +4,7 @@
 import logging
 from pathlib import Path
 from collections import deque
+from math import log10, ceil
 from typing import TYPE_CHECKING, Iterable, Optional, Union, List, Tuple, Deque
 
 from tflite2xcore import tflite_visualize
@@ -58,9 +59,10 @@ class PassManager:
         dirpath = Path(dirpath)
         dirpath.mkdir(parents=True, exist_ok=True)
 
+        fill_width = ceil(log10(self._mutating_passes[-1][0]))
         for (j, _), bits in zip(self._mutating_passes, self._intermediates):
             basepath = dirpath.joinpath(
-                f"model_{self.__class__.__name__}_{j}"
+                f"model_{self.__class__.__name__}_{j:0{fill_width}d}"
             ).resolve()
             filepath = basepath.with_suffix(".tflite")
             with open(filepath, "wb") as f:

@@ -3,7 +3,7 @@
 
 import os
 import tensorflow as tf
-from collections import Iterable
+from collections.abc import Iterable
 from typing import Union, Any, Tuple
 
 from . import Configuration

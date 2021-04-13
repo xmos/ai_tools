@@ -6,6 +6,7 @@ import os
 import pytest
 import argparse
 import sys
+import atexit
 
 import multiprocessing as mp
 
@@ -26,9 +27,9 @@ class CollectorPlugin:
         return self.counter.most_common()
 
     def pytest_collection_modifyitems(self, items):
-        if self.mode is "files":
+        if self.mode == "files":
             self.counter = Counter(item.nodeid.split("::")[0] for item in items)
-        elif self.mode is "tests":
+        elif self.mode == "tests":
             self.counter = Counter(item.nodeid.split("[")[0] for item in items)
 
 
@@ -89,6 +90,7 @@ class JobExecutor:
         self.workers = workers
         self.verbose = verbose
         self.pool = mp.Pool(self.workers)
+        atexit.register(self.pool.close)
         self.job_fun = job_fun
 
     def execute(self, jobs):

@@ -12,6 +12,7 @@ namespace xcore {
 void buildXCorePassPipeline(OpPassManager &pm) {
   pm.addPass(createPrintNestingPass());
   pm.addPass(createOptimizeFullyConnectedPass());
+  pm.addPass(createTranslateToCustomOpPass());
   pm.addPass(createPrintNestingPass());
 }
 

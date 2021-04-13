@@ -1,10 +1,34 @@
 load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
 
+gentbl(
+    name = "xc_ops_inc_gen",
+    tbl_outs = [
+        ("-gen-op-decls", "ir/xc_ops.h.inc"),
+        ("-gen-op-defs", "ir/xc_ops.cc.inc"),
+        ("-gen-dialect-decls -dialect=xc", "ir/xc_dialect.h.inc"),
+        ("-gen-dialect-doc", "ir/xc_ops.md"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "ir/xc_ops.td",
+    td_srcs = [
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    ],
+)
+
 cc_library(
     name = "xcore_passes",
-    srcs = glob(["transforms/*.cc"]),
+    srcs = glob(["transforms/*.cc"]) + [
+        "ir/xc_ops.cc",
+        "ir/xc_dialect.h.inc",
+        "ir/xc_ops.cc.inc",
+        "ir/xc_ops.h.inc",
+    ],
     hdrs = [
         "transforms/passes.h",
+        "ir/xc_ops.h",
+        "ir/xc_ops.md",
     ],
     deps = [
         "@llvm-project//mlir:IR",

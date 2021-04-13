@@ -48,6 +48,7 @@ setuptools.setup(
             "black>=19.10b0",
             "pylint>=2.4.2",
             "lhsmdu>=1.1",
+            "netron>=4.8.8",
         ],
     },
     package_data={"": LIB_FLEXBUFFERS},

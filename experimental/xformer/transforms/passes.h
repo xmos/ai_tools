@@ -22,6 +22,7 @@ void buildXCorePassPipeline(OpPassManager &pm);
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<OperationPass<FuncOp>> createPrintNestingPass();
+std::unique_ptr<OperationPass<FuncOp>> createOptimizeFullyConnectedPass();
 
 //===----------------------------------------------------------------------===//
 // Registration
@@ -33,6 +34,7 @@ inline void registerAllPasses() {
   registerXCorePassPipeline();
 
   createPrintNestingPass();
+  createOptimizeFullyConnectedPass();
 }
 
 } // namespace xcore

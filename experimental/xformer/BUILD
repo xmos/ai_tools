@@ -17,6 +17,21 @@ gentbl(
     ],
 )
 
+gentbl(
+    name = "patterns_inc_gen",
+    tbl_outs = [
+        ("-gen-rewriters", "transforms/generated_patterns.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "transforms/patterns.td",
+    td_srcs = [
+        "ir/xc_ops.td",
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    ],
+)
+
 cc_library(
     name = "xcore_passes",
     srcs = glob(["transforms/*.cc"]) + [
@@ -24,6 +39,7 @@ cc_library(
         "ir/xc_dialect.h.inc",
         "ir/xc_ops.cc.inc",
         "ir/xc_ops.h.inc",
+        "transforms/generated_patterns.inc"
     ],
     hdrs = [
         "transforms/passes.h",

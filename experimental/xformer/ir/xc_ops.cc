@@ -9,6 +9,9 @@ namespace mlir {
 namespace xcore {
 
 std::vector<uint8_t> FullyConnectedOp::buildCustomOptions() {
+  // TODO: We are adding "illegal_params" as custom options here as it is
+  // expected by xformer 1.0 to run LegalizeXCFullyConnectedPass. With this we
+  // can verify that the output of xformer 2.0 can be consumed by xformer 1.0.
   flexbuffers::Builder fbb;
   fbb.Map([&]() { fbb.Int("illegal_params", 1); });
   fbb.Finish();

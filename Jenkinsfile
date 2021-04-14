@@ -12,7 +12,7 @@ pipeline {
     parameters { // Available to modify on the job page within Jenkins if starting a build
         string( // use to try different tools versions
             name: 'TOOLS_VERSION',
-            defaultValue: '15.0.1',
+            defaultValue: '15.0.5',
             description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
         )
         booleanParam( // use to check results of rolling all conda deps forward
@@ -48,8 +48,12 @@ pipeline {
                     userRemoteConfigs: [[credentialsId: 'xmos-bot',
                                          url: 'git@github.com:xmos/ai_tools']]
                 ])
-                // create venv
-                sh "conda env create -q -p ai_tools_venv -f environment.yml"
+                // create venv and install pip packages
+                sh """conda env create -q -p ai_tools_venv -f ./utils/adf/environment.yml &&
+                      . activate ./ai_tools_venv &&
+                      pip install -e "./utils/adf/xcore_interpreters[test]" &&
+                      pip install -e "./tflite2xcore[test,examples,dev]" &&
+                      . deactivate"""
                 // Install xmos tools version
                 sh "/XMOS/get_tools.py " + params.TOOLS_VERSION
             }
@@ -64,8 +68,9 @@ pipeline {
         stage("Build/Test") {
             // due to the Makefile, we've combined build and test stages
             steps {
-                // below is how we can activate the tools
-                sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
+                // below is how we can activate the tools, NOTE: xTIMEcomposer -> XTC at tools 15.0.5
+                // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv && // 
+                sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./ai_tools_venv &&
                       make ci"""
                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option

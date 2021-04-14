@@ -10,7 +10,6 @@
 **/*.eggs/*
 Pipfile.lock
 ai_tools_venv/*
-ai_tools_gpu_venv/*
 
 # Build cruft
 **/.lock*

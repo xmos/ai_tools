@@ -29,7 +29,7 @@ Changes to C, xC or ASM should be consistent with the style of existing C, xC an
 
 #### C++ coding style
 
-Changes to C++ code should conform to
+Changes to C++ code should conform to the `.clang-format` file in the sub(project) or, if no such file is provided, to the
 [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html).
 
 Use `clang-tidy` to check your C/C++ changes. To install `clang-tidy` on ubuntu:16.04, do:
@@ -106,5 +106,53 @@ conda config --set env_prompt '({name})'
 
 ### VSCode Users
 
-A default workspace settings file is included, but if desired it can be modified.
-In this case, run `git update-index --assume-unchanged .vscode/settings.json` to prevent git from tracking local changes.
+We recommend using a workspace-specific `settings.json` file along the lines of the following:
+```json
+{
+    "files.exclude": {
+        "ai_tools_venv": true,
+        "**/.DS_Store": true,
+        "**/.git/**": true,
+        "**/.mypy_cache/**": true,
+        "**/.ipynb_checkpoints/**": true,
+        "**/__pycache__/**": true,
+        "**/.pytest_cache/**": true,
+        "**/*.egg-info/**": true,
+        "**/.venv/**": true,
+        "**/.build/**": true,
+        "**/.lock*": true,
+    },
+    "files.watcherExclude": {
+        "ai_tools_venv": true,
+        "**/.DS_Store": true,
+        "**/.git/**": true,
+        "**/.mypy_cache/**": true,
+        "**/.ipynb_checkpoints/**": true,
+        "**/__pycache__/**": true,
+        "**/.pytest_cache/**": true,
+        "**/*.egg-info/**": true,
+        "**/.venv/**": true,
+        "**/.build/**": true,
+        "**/.lock*": true,
+        "**/build/**": true,
+        "**/bin/**": true,
+        "**/third_party/**": true,
+    },
+    "search.exclude": {
+        "**/third_party": true,
+    },
+    "python.languageServer": "Pylance",
+    "python.linting.pylintEnabled": true,
+    "python.linting.mypyArgs": [
+        "--config-file=${workspaceFolder}/mypy.ini"
+    ],
+    "python.linting.mypyCategorySeverity.error": "Information",
+    "python.linting.mypyEnabled": true,
+    "python.formatting.provider": "black",
+    "C_Cpp.clang_format_style": "file",
+    "C_Cpp.clang_format_fallbackStyle": "Google",
+    "editor.formatOnSave": true,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+}
+```

@@ -1,3 +1,6 @@
+// Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
+// XMOS Public License: Version 1
+
 //===----------------------------------------------------------------------===//
 //
 // This is the operation definition file for XCore dialect operations.

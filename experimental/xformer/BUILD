@@ -23,7 +23,7 @@ gentbl(
         ("-gen-rewriters", "Transforms/GeneratedPatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "transforms/patterns.td",
+    td_file = "Transforms/Patterns.td",
     td_srcs = [
         "IR/XCoreOps.td",
         "@llvm-project//mlir:StdOpsTdFiles",

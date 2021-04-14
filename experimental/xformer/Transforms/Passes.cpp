@@ -1,7 +1,7 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#include "transforms/passes.h"
+#include "Transforms/Passes.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -10,7 +10,10 @@ namespace mlir {
 namespace xcore {
 
 void buildXCorePassPipeline(OpPassManager &pm) {
-  pm.addPass(createPrintNestingPass());
+  pm.addPass(createPrintNestingPass()); // TODO: remove this when pipeline is more stable
+  pm.addPass(createOptimizeFullyConnectedPass());
+  pm.addPass(createTranslateToCustomOpPass());
+  pm.addPass(createPrintNestingPass()); // TODO: remove this when pipeline is more stable
 }
 
 void registerXCorePassPipeline() {

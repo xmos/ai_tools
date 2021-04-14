@@ -1,10 +1,50 @@
 load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
 
+gentbl(
+    name = "xc_ops_inc_gen",
+    tbl_outs = [
+        ("-gen-op-decls", "IR/XCoreOps.h.inc"),
+        ("-gen-op-defs", "IR/XCoreOps.cpp.inc"),
+        ("-gen-dialect-decls -dialect=xc", "IR/XCoreDialect.h.inc"),
+        ("-gen-dialect-doc", "IR/XCoreOps.md"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "IR/XCoreOps.td",
+    td_srcs = [
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    ],
+)
+
+gentbl(
+    name = "patterns_inc_gen",
+    tbl_outs = [
+        ("-gen-rewriters", "Transforms/GeneratedPatterns.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "Transforms/Patterns.td",
+    td_srcs = [
+        "IR/XCoreOps.td",
+        "@llvm-project//mlir:StdOpsTdFiles",
+        "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
+        "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
+    ],
+)
+
 cc_library(
     name = "xcore_passes",
-    srcs = glob(["transforms/*.cc"]),
+    srcs = glob(["Transforms/*.cpp"]) + [
+        "IR/XCoreOps.cpp",
+        "IR/XCoreDialect.h.inc",
+        "IR/XCoreOps.cpp.inc",
+        "IR/XCoreOps.h.inc",
+        "Transforms/GeneratedPatterns.inc"
+    ],
     hdrs = [
-        "transforms/passes.h",
+        "Transforms/Passes.h",
+        "IR/XCoreOps.h",
+        "IR/XCoreOps.md",
     ],
     deps = [
         "@llvm-project//mlir:IR",
@@ -18,8 +58,8 @@ cc_library(
 
 cc_library(
     name = "utils",
-    srcs = glob(["utils/*.cc"]),
-    hdrs = glob(["utils/*.h"]),
+    srcs = glob(["Utils/*.cpp"]),
+    hdrs = glob(["Utils/*.h"]),
     deps = [
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
@@ -33,7 +73,7 @@ cc_library(
 
 cc_binary(
     name = "xcore-opt",
-    srcs = ["xcore_opt.cc"],
+    srcs = ["XCoreOptMain.cpp"],
     deps = [
         ":xcore_passes",
         ":utils",

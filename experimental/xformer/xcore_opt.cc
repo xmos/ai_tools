@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 
   // Write modified flatbuffer
   if (!outputFilename.empty()) {
-    std::string outfilename(outputFilename + ".out");
+    std::string outfilename(outputFilename);
     if (failed(xcore::utils::writeMLIRToFlatBufferFile(outfilename, mod.get())))
       return 1;
   }

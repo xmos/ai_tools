@@ -1,8 +1,8 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#include "transforms/passes.h"
-#include "utils/file_io.h"
+#include "Transforms/Passes.h"
+#include "Utils/FileIO.h"
 
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Dialect.h"

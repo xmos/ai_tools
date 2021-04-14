@@ -1,12 +1,12 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#include "ir/xc_ops.h"
+#include "IR/XCoreOps.h"
 
 #include "flatbuffers/flexbuffers.h"
 
 #define GET_OP_CLASSES
-#include "ir/xc_ops.cc.inc"
+#include "IR/XCoreOps.cpp.inc"
 
 namespace mlir {
 namespace xcore {
@@ -24,7 +24,7 @@ std::vector<uint8_t> FullyConnectedOp::buildCustomOptions() {
 void XCoreDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "ir/xc_ops.cc.inc"
+#include "IR/XCoreOps.cpp.inc"
       >();
 }
 } // namespace xcore

@@ -1,7 +1,7 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#include "ir/xc_ops.h"
+#include "IR/XCoreOps.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Matchers.h"
@@ -24,7 +24,7 @@ struct OptimizeFullyConnected
   void runOnFunction() override;
 };
 
-#include "transforms/generated_patterns.inc"
+#include "Transforms/GeneratedPatterns.inc"
 
 void OptimizeFullyConnected::runOnFunction() {
   OwningRewritePatternList patterns;

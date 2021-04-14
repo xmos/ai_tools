@@ -3,13 +3,13 @@ load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
 gentbl(
     name = "xc_ops_inc_gen",
     tbl_outs = [
-        ("-gen-op-decls", "ir/xc_ops.h.inc"),
-        ("-gen-op-defs", "ir/xc_ops.cc.inc"),
-        ("-gen-dialect-decls -dialect=xc", "ir/xc_dialect.h.inc"),
-        ("-gen-dialect-doc", "ir/xc_ops.md"),
+        ("-gen-op-decls", "IR/XCoreOps.h.inc"),
+        ("-gen-op-defs", "IR/XCoreOps.cpp.inc"),
+        ("-gen-dialect-decls -dialect=xc", "IR/XCoreDialect.h.inc"),
+        ("-gen-dialect-doc", "IR/XCoreOps.md"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "ir/xc_ops.td",
+    td_file = "IR/XCoreOps.td",
     td_srcs = [
         "@llvm-project//mlir:StdOpsTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
@@ -20,12 +20,12 @@ gentbl(
 gentbl(
     name = "patterns_inc_gen",
     tbl_outs = [
-        ("-gen-rewriters", "transforms/generated_patterns.inc"),
+        ("-gen-rewriters", "Transforms/GeneratedPatterns.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "transforms/patterns.td",
     td_srcs = [
-        "ir/xc_ops.td",
+        "IR/XCoreOps.td",
         "@llvm-project//mlir:StdOpsTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite_ops_td_files",
@@ -34,17 +34,17 @@ gentbl(
 
 cc_library(
     name = "xcore_passes",
-    srcs = glob(["transforms/*.cc"]) + [
-        "ir/xc_ops.cc",
-        "ir/xc_dialect.h.inc",
-        "ir/xc_ops.cc.inc",
-        "ir/xc_ops.h.inc",
-        "transforms/generated_patterns.inc"
+    srcs = glob(["Transforms/*.cpp"]) + [
+        "IR/XCoreOps.cpp",
+        "IR/XCoreDialect.h.inc",
+        "IR/XCoreOps.cpp.inc",
+        "IR/XCoreOps.h.inc",
+        "Transforms/GeneratedPatterns.inc"
     ],
     hdrs = [
-        "transforms/passes.h",
-        "ir/xc_ops.h",
-        "ir/xc_ops.md",
+        "Transforms/Passes.h",
+        "IR/XCoreOps.h",
+        "IR/XCoreOps.md",
     ],
     deps = [
         "@llvm-project//mlir:IR",
@@ -58,8 +58,8 @@ cc_library(
 
 cc_library(
     name = "utils",
-    srcs = glob(["utils/*.cc"]),
-    hdrs = glob(["utils/*.h"]),
+    srcs = glob(["Utils/*.cpp"]),
+    hdrs = glob(["Utils/*.h"]),
     deps = [
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
@@ -73,7 +73,7 @@ cc_library(
 
 cc_binary(
     name = "xcore-opt",
-    srcs = ["xcore_opt.cc"],
+    srcs = ["XCoreOptMain.cpp"],
     deps = [
         ":xcore_passes",
         ":utils",

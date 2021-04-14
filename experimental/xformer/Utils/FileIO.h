@@ -1,8 +1,8 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
-#ifndef XFORMER_UTILS_FILE_IO_H
-#define XFORMER_UTILS_FILE_IO_H
+#ifndef XFORMER_UTILS_FILEIO_H
+#define XFORMER_UTILS_FILEIO_H
 
 #include "mlir/IR/Module.h"
 #include "mlir/Support/FileUtilities.h"
@@ -21,4 +21,4 @@ mlir::OwningModuleRef readFlatBufferFileToMLIR(std::string &filename,
 } // namespace xcore
 } // namespace mlir
 
-#endif // XFORMER_UTILS_FILE_IO_H
+#endif // XFORMER_UTILS_FILEIO_H

@@ -41,7 +41,7 @@ GENERATOR = Conv2d1x1TestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_conv2d_1x1
 

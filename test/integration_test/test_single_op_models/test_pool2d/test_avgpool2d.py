@@ -23,7 +23,7 @@ from . import (  # pylint: disable=unused-import
 class AvgPool2dTestModelGenerator(Pool2dGenericTestModelGenerator):
     @property
     def _op_class(self) -> Type[tf.keras.layers.AvgPool2D]:
-        return tf.keras.layers.AvgPool2D  # type: ignore
+        return tf.keras.layers.AvgPool2D
 
 
 GENERATOR = AvgPool2dTestModelGenerator
@@ -34,12 +34,12 @@ GENERATOR = AvgPool2dTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_avgpool2d
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def reference_op_code() -> BuiltinOpCodes:
     return BuiltinOpCodes.AVERAGE_POOL_2D
 

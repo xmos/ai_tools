@@ -9,11 +9,11 @@ import pytest
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def mean_abs_diff_tolerance() -> float:
     return 0.0
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def bitpacked_outputs() -> bool:
     return True

@@ -84,7 +84,7 @@ class ChannelAgnosticOpTestModelGenerator(ImageInputOpTestModelGenerator):
 
     @property
     def _input_channels(self) -> int:
-        return self._config["channels"]  # type: ignore
+        return self._config["channels"]
 
 
 class ChannelPreservingOpTestModelGenerator(ChannelAgnosticOpTestModelGenerator):
@@ -118,7 +118,7 @@ class FilterOpTestModelGenerator(ImageInputOpTestModelGenerator):
 #  ----------------------------------------------------------------------------
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_converted_single_op_model(
     xcore_model: XCOREModel, converted_op_code: XCOREOpCodes
 ) -> None:
@@ -128,7 +128,7 @@ def test_converted_single_op_model(
     assert op.operator_code.code is converted_op_code
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_reference_model_regression(
     reference_model: XCOREModel, reference_op_code: ValidOpCodes
 ) -> None:

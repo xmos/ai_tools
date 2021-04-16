@@ -23,7 +23,7 @@ from . import (  # pylint: disable=unused-import
 class MaxPool2dTestModelGenerator(Pool2dGenericTestModelGenerator):
     @property
     def _op_class(self) -> Type[tf.keras.layers.MaxPool2D]:
-        return tf.keras.layers.MaxPool2D  # type: ignore
+        return tf.keras.layers.MaxPool2D
 
 
 GENERATOR = MaxPool2dTestModelGenerator
@@ -34,12 +34,12 @@ GENERATOR = MaxPool2dTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_maxpool2d
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def reference_op_code() -> BuiltinOpCodes:
     return BuiltinOpCodes.MAX_POOL_2D
 

@@ -43,7 +43,7 @@ from tflite2xcore.model_generation.data_factories import (
     TensorDataFactory,
     InputInitializerDataFactory,
 )
-from xcore_interpreters import (  # type: ignore # TODO: fix this
+from xcore_interpreters import (  # TODO: fix this
     ModelSizeError,
     ArenaSizeError,
 )
@@ -179,8 +179,8 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         return self._reference_quant_evaluator.input_data
 
     def run(self) -> None:
-        """ Defines how a DefaultIntegrationTestRunner should be run.
-        
+        """Defines how a DefaultIntegrationTestRunner should be run.
+
         Most integration tests require self.outputs to be set.
         """
         super().run()
@@ -270,7 +270,8 @@ class BinarizedTestRunner(IntegrationTestRunner):
         super().rerun_post_cache()
 
         self.outputs = self.OutputData(
-            self._lce_evaluator.output_data, self._xcore_evaluator.output_data,
+            self._lce_evaluator.output_data,
+            self._xcore_evaluator.output_data,
         )
         self.converted_models.update(
             {
@@ -422,7 +423,7 @@ def test_output(
         pytest.fail(msg, pytrace=False)
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_idempotence(xcore_model: XCOREModel, run: IntegrationTestRunner) -> None:
     run._identity_converter.convert()
     identical_model = XCOREModel.deserialize(run._identity_converter._model)

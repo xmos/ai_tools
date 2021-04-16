@@ -33,11 +33,11 @@ class ExplicitlyPaddedConv2dMixin(PaddingMixin, AbstractConv2dTestModelGenerator
 
     @property
     def _total_width(self) -> int:
-        return super()._total_width + self._config["pad_l"] + self._config["pad_r"]  # type: ignore
+        return super()._total_width + self._config["pad_l"] + self._config["pad_r"]
 
     @property
     def _total_height(self) -> int:
-        return super()._total_height + self._config["pad_t"] + self._config["pad_b"]  # type: ignore
+        return super()._total_height + self._config["pad_t"] + self._config["pad_b"]
 
     def _build_core_model(self) -> tf.keras.Model:
 
@@ -51,7 +51,7 @@ class ExplicitlyPaddedConv2dMixin(PaddingMixin, AbstractConv2dTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_reference_model_regression(
     reference_model: XCOREModel, reference_op_code: ValidOpCodes
 ) -> None:
@@ -59,4 +59,3 @@ def test_reference_model_regression(
     assert len(operators) == 2
     assert operators[0].operator_code.code is BuiltinOpCodes.PAD
     assert operators[1].operator_code.code is reference_op_code
-

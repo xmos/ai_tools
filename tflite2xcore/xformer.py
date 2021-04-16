@@ -56,7 +56,13 @@ if __name__ == "__main__":
         "--ext_mem",
         action="store_true",
         default=False,
-        help="Experimental flag for better external memory support. ",
+        help="Experimental flag for better external memory support.",
+    )
+    parser.add_argument(
+        "--experimental-xformer2",
+        action="store_true",
+        default=False,
+        help="Use MLIR-based xformer 2.0 for part of the optimization pipeline. Experimental.",
     )
 
     args = parser.parse_args()
@@ -74,6 +80,7 @@ if __name__ == "__main__":
         intermediates_path=args.intermediates_path,
         remove_input_alignment_pad=args.remove_input_alignment_pad,
         external_memory=args.ext_mem,
+        experimental_xformer2=args.experimental_xformer2,
     )
 
     print(f"Conversion successful, output: {tflite_output_path}")

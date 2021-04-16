@@ -252,6 +252,7 @@ def optimize_for_xcore(
     remove_input_alignment_pad: bool = False,
     remove_float_interface: bool = False,
     external_memory: bool = False,
+    experimental_xformer2: bool = False,
 ) -> None:
     num_threads = num_threads or 1
 
@@ -266,8 +267,12 @@ def optimize_for_xcore(
     # lowering to the xcore ops
     pass_mgr.register_passes(ActivationLoweringManager())
     pass_mgr.register_passes(PoolingLoweringManager())
-    pass_mgr.register_passes(ParametricOperatorLoweringManager())
     pass_mgr.register_passes(BinarizedOperatorLoweringManager())
+
+    if experimental_xformer2:
+        raise NotImplementedError()
+    else:
+        pass_mgr.register_passes(ParametricOperatorLoweringManager())
 
     # TODO: finish these and find a manager for them:
     pass_mgr.register_pass(passes.ReplaceAddPass())

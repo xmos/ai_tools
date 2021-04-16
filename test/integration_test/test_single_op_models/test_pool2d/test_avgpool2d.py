@@ -23,7 +23,7 @@ from . import (  # pylint: disable=unused-import
 class AvgPool2dTestModelGenerator(Pool2dGenericTestModelGenerator):
     @property
     def _op_class(self) -> Type[tf.keras.layers.AvgPool2D]:
-        return tf.keras.layers.AvgPool2D
+        return tf.keras.layers.AvgPool2D  # type: ignore
 
 
 GENERATOR = AvgPool2dTestModelGenerator

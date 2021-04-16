@@ -6,6 +6,7 @@ import tensorflow as tf
 from abc import abstractmethod
 from typing import Tuple, Optional
 
+from tflite2xcore.utils import asserting_cast
 from tflite2xcore.model_generation import Configuration
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import XCOREOpCodes, ValidOpCodes
@@ -84,7 +85,7 @@ class ChannelAgnosticOpTestModelGenerator(ImageInputOpTestModelGenerator):
 
     @property
     def _input_channels(self) -> int:
-        return self._config["channels"]
+        return asserting_cast(int, self._config["channels"])
 
 
 class ChannelPreservingOpTestModelGenerator(ChannelAgnosticOpTestModelGenerator):

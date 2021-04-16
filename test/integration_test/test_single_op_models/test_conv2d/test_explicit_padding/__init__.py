@@ -3,8 +3,8 @@
 
 import pytest
 import tensorflow as tf
-from typing import Optional, Tuple
 
+from tflite2xcore.utils import asserting_cast
 from tflite2xcore.xcore_schema import XCOREModel, ValidOpCodes, BuiltinOpCodes
 from tflite2xcore.model_generation import Configuration
 
@@ -33,11 +33,19 @@ class ExplicitlyPaddedConv2dMixin(PaddingMixin, AbstractConv2dTestModelGenerator
 
     @property
     def _total_width(self) -> int:
-        return super()._total_width + self._config["pad_l"] + self._config["pad_r"]
+        return (
+            super()._total_width
+            + asserting_cast(int, self._config["pad_l"])
+            + asserting_cast(int, self._config["pad_r"])
+        )
 
     @property
     def _total_height(self) -> int:
-        return super()._total_height + self._config["pad_t"] + self._config["pad_b"]
+        return (
+            super()._total_height
+            + asserting_cast(int, self._config["pad_t"])
+            + asserting_cast(int, self._config["pad_b"])
+        )
 
     def _build_core_model(self) -> tf.keras.Model:
 

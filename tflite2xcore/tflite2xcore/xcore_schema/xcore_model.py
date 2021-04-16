@@ -29,7 +29,6 @@ from . import (
     Metadata,
     BuiltinOpCodes,
     XCOREOpCodes,
-    OperatorCode,
     ExternalOpCodes,
     ValidOpCodes,
     TensorType,

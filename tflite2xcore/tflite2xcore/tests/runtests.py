@@ -120,10 +120,8 @@ class JobExecutor:
 def run_job(job):
     sys.stdout = StringIO()
     try:
-        import pytest as pt
-
         start = timer()
-        exit_code = pt.main(job)
+        exit_code = pytest.main(job)
         t = timer() - start
     finally:
         output = sys.stdout.getvalue()

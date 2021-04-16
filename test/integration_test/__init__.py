@@ -14,7 +14,6 @@ from typing import (
     NamedTuple,
     Tuple,
     Dict,
-    Optional,
     Iterable,
     Type,
     Optional,
@@ -43,7 +42,7 @@ from tflite2xcore.model_generation.data_factories import (
     TensorDataFactory,
     InputInitializerDataFactory,
 )
-from xcore_interpreters import (  # TODO: fix this
+from xcore_interpreters import (
     ModelSizeError,
     ArenaSizeError,
 )

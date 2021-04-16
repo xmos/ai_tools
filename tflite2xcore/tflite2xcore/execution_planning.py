@@ -2,7 +2,6 @@
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 from abc import ABC, abstractmethod
-from collections import deque
 from typing import Sequence, Dict
 
 from tflite2xcore import xcore_schema as xir
@@ -24,7 +23,8 @@ class ReverseDepthFirstPlanner(ExecutionPlanner):
 
         # initialize the op stack with a sentinel that we'll remove later
         sentinel_op = self._graph.create_operator(
-            xir.OperatorCode(xir.XCOREOpCodes.DUMMY), inputs=self._graph.outputs,
+            xir.OperatorCode(xir.XCOREOpCodes.DUMMY),
+            inputs=self._graph.outputs,
         )
         sentinel_op.name = "SENTINEL"
         op_stack = [sentinel_op]
@@ -64,4 +64,3 @@ class ReverseDepthFirstPlanner(ExecutionPlanner):
 
         # return ops in reverse order
         return list(reversed(list(reverse_op_order.keys())))
-

@@ -29,7 +29,6 @@ from . import (
     Metadata,
     BuiltinOpCodes,
     XCOREOpCodes,
-    OperatorCode,
     ExternalOpCodes,
     ValidOpCodes,
     TensorType,
@@ -45,6 +44,7 @@ from .dict_conversion import (
 from .flexbuffers import FlexbufferBuilder, FlexbufferParser
 from .builtin_options import BuiltinOptions
 
+from tflite2xcore.utils import asserting_cast
 from tflite2xcore.execution_planning import ReverseDepthFirstPlanner
 
 _R = TypeVar("_R", bound="XCOREModel")
@@ -348,7 +348,7 @@ class XCOREModel(_IRObject):
             """ returns the index of the serialized bufferT object"""
             bufferT = schema.BufferT()  # type: ignore
             if len(data_container.data) > 0:
-                bufferT.data = data_container.data
+                bufferT.data = list(data_container.data)
             modelT.buffers.append(bufferT)
             return len(modelT.buffers) - 1
 
@@ -374,7 +374,7 @@ class XCOREModel(_IRObject):
         for operator_code in self.operator_codes:
             operatorCodeT = schema.OperatorCodeT()  # type: ignore
             if operator_code.code in BuiltinOpCodes:
-                operatorCodeT.builtinCode = operator_code.value
+                operatorCodeT.builtinCode = asserting_cast(int, operator_code.value)
             else:
                 operatorCodeT.builtinCode = BuiltinOpCodes.CUSTOM.value
                 operatorCodeT.customCode = operator_code.name
@@ -396,7 +396,7 @@ class XCOREModel(_IRObject):
             for tensor in subgraph.tensors:
                 tensorT = schema.TensorT()  # type: ignore
                 tensorT.name = tensor.name
-                tensorT.shape = tensor.shape
+                tensorT.shape = list(tensor.shape)
                 tensorT.buffer = buffer_idx_map[tensor.buffer]
                 tensorT.type = tensor.type.value
                 if tensor.quantization:
@@ -446,7 +446,7 @@ class XCOREModel(_IRObject):
 
             modelT.subgraphs.append(subgraphT)
 
-        return modelT  # type: ignore
+        return modelT
 
     def serialize(self) -> bytes:
         modelT = self._to_flatbuffer_model()

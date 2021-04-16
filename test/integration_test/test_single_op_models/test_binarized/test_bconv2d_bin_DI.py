@@ -46,7 +46,7 @@ RUNNER = BConv2dBitpackedTestRunner
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_bconv2d_bin_DI
 

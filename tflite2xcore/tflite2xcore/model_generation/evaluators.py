@@ -7,7 +7,7 @@ import larq_compute_engine as lce
 from abc import abstractmethod
 from typing import Union
 
-from xcore_interpreters import XCOREInterpreter, XCOREDeviceInterpreter  # type: ignore # TODO: fix this
+from xcore_interpreters import XCOREInterpreter, XCOREDeviceInterpreter
 
 from tflite2xcore.utils import (
     quantize,
@@ -21,7 +21,7 @@ from .runners import Runner, RunnerDependent
 
 
 class Evaluator(RunnerDependent):
-    """ Superclass for defining model evaluation logic.
+    """Superclass for defining model evaluation logic.
 
     Evaluator objects are registered in Runner objects.
     Evaluation means that output data is generated for a given
@@ -99,7 +99,7 @@ class TFLiteEvaluator(Evaluator):
 
 
 class TFLiteQuantEvaluator(TFLiteEvaluator):
-    """ Defines the evaluation logic for a quantized TFLite model. 
+    """Defines the evaluation logic for a quantized TFLite model.
 
     The input and output quantization parameters are inferred from the model.
     """
@@ -153,8 +153,8 @@ class TFLiteQuantEvaluator(TFLiteEvaluator):
 
 
 class XCoreEvaluator(TFLiteQuantEvaluator):
-    """ Defines the evaluation logic for a TFLite float model. 
-    
+    """Defines the evaluation logic for a TFLite float model.
+
     The input and output quantization parameters are inferred from the model.
     """
 

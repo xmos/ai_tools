@@ -42,7 +42,7 @@ GENERATOR = AddModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_add_8
 

@@ -41,12 +41,12 @@ GENERATOR = BConv2dInt8DeepInDeepOutTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def reference_op_code() -> ExternalOpCodes:
     return ExternalOpCodes.LceBconv2d
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_bconv2d_int8_DIDO
 

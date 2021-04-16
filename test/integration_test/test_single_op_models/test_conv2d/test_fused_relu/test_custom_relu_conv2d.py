@@ -33,7 +33,7 @@ GENERATOR = CustomReluConv2dTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def abs_output_tolerance() -> None:
     return
 
@@ -43,7 +43,7 @@ def abs_output_tolerance() -> None:
 #  ----------------------------------------------------------------------------
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_reference_model_regression(reference_model: XCOREModel) -> None:
     operators = reference_model.subgraphs[0].operators
 

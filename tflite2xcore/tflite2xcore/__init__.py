@@ -21,7 +21,6 @@ __version__ = version.get_version()
 from . import xcore_schema
 from . import xcore_model
 from . import execution_planning
-from . import interpreters
 from . import converter
 from . import pass_manager
 from . import parallelization

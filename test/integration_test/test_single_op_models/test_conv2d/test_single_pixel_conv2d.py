@@ -46,7 +46,7 @@ GENERATOR = SinglePixelConv2dTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_fc
 

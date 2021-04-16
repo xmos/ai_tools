@@ -11,44 +11,59 @@ import atexit
 import multiprocessing as mp
 
 from io import StringIO
-from collections import Counter
+from enum import Enum, auto
 from timeit import default_timer as timer
+from typing import Counter, List, Tuple, Optional, NamedTuple, Callable, Sequence
+
+
+class CollectionMode(Enum):
+    FILES = auto()
+    TESTS = auto()
 
 
 class CollectorPlugin:
-    def __init__(self, *, mode="files"):
-        self.counter = Counter()
-        if mode in ["files", "tests"]:
-            self.mode = mode
-        else:
-            raise ValueError(f"Invalid collection mode: '{mode}'")
+    def __init__(self, *, mode: CollectionMode = CollectionMode.FILES) -> None:
+        self.counter = Counter[str]()
+        self.mode = mode
 
-    def tests(self):
+    def tests(self) -> List[Tuple[str, int]]:
         return self.counter.most_common()
 
-    def pytest_collection_modifyitems(self, items):
-        if self.mode == "files":
+    def pytest_collection_modifyitems(self, items: List[pytest.Item]) -> None:
+        if self.mode is CollectionMode.FILES:
             self.counter = Counter(item.nodeid.split("::")[0] for item in items)
-        elif self.mode == "tests":
+        elif self.mode is CollectionMode.TESTS:
             self.counter = Counter(item.nodeid.split("[")[0] for item in items)
+        else:
+            raise ValueError(f"Unsupported collection mode {self.mode}")
+
+
+Job = List[str]
 
 
 class JobCollector:
-    def __init__(self, path, *, coverage_options=None, verbose=False, junit=False):
+    def __init__(
+        self,
+        path: str,
+        *,
+        coverage_options: Optional[Sequence[str]] = None,
+        verbose: bool = False,
+        junit: bool = False,
+    ) -> None:
         if not (os.path.exists(path) and os.path.isdir(path)):
             raise ValueError(f"Invalid directory path: {path}")
 
         self.plugin = CollectorPlugin()
         self.verbose = verbose
-        self.jobs = []
+        self.jobs: List[Job] = []
         self.path = path
         self.junit = junit
 
-        coverage_options = coverage_options or []
+        coverage_options = list(coverage_options or [])
         self.optional_args = ["-qq"] + coverage_options
         self.collection_job = [self.path, "--collect-only"] + self.optional_args
 
-    def collect(self):
+    def collect(self) -> int:
         print("Collecting test cases...")
         start = timer()
         sys.stdout = StringIO()
@@ -79,8 +94,21 @@ class JobCollector:
         return exit_code
 
 
+class JobResult(NamedTuple):
+    job: Job
+    output: str
+    time: float
+    exit_code: int
+
+
 class JobExecutor:
-    def __init__(self, job_fun, *, workers=1, verbose=False):
+    def __init__(
+        self,
+        job_fun: Callable[[Job], JobResult],
+        *,
+        workers: int = 1,
+        verbose: bool = False,
+    ) -> None:
         cpu_count = mp.cpu_count()
         if workers == -1 or workers > cpu_count:
             workers = cpu_count
@@ -93,7 +121,7 @@ class JobExecutor:
         atexit.register(self.pool.close)
         self.job_fun = job_fun
 
-    def execute(self, jobs):
+    def execute(self, jobs: Sequence[Job]) -> Sequence[JobResult]:
         print(f"Executing {len(jobs)} jobs on {self.workers} workers...")
 
         start = timer()
@@ -117,21 +145,19 @@ class JobExecutor:
         return outputs
 
 
-def run_job(job):
+def run_job(job: Job) -> JobResult:
     sys.stdout = StringIO()
     try:
-        import pytest as pt
-
         start = timer()
-        exit_code = pt.main(job)
+        exit_code = pytest.main(job)
         t = timer() - start
     finally:
         output = sys.stdout.getvalue()
         sys.stdout = sys.__stdout__
-    return job, output, t, exit_code
+    return JobResult(job, output, t, exit_code)
 
 
-def main(raw_args=None):
+def main(raw_args: Optional[Sequence[str]] = None) -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("dir", nargs="?", default=os.path.curdir)
     parser.add_argument("--smoke", action="store_true", default=False)

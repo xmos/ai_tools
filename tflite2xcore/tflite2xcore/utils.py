@@ -27,8 +27,16 @@ from typing import (
 )
 
 # -----------------------------------------------------------------------------
-#                          WIDELY USED TYPES
+#                     WIDELY USED TYPES AND TYPING HELPERS
 # -----------------------------------------------------------------------------
+
+_T = TypeVar("_T")
+
+
+def asserting_cast(t: Type[_T], x: Any) -> _T:
+    """WARNING: this function should be used sparingly!"""
+    assert isinstance(x, t), type(x)
+    return x
 
 
 class QuantizationTuple(NamedTuple):

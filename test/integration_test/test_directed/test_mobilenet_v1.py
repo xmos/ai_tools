@@ -70,7 +70,9 @@ def _MobileNet_safe(
             model_name += ".h5"
             weight_url = BASE_WEIGHT_URL + model_name
             weights = data_utils.get_file(
-                model_name, weight_url, cache_subdir=f"/tmp/.keras/{os.getpid()}/",
+                model_name,
+                weight_url,
+                cache_subdir=f"/tmp/.keras/{os.getpid()}/",
             )
 
     return tf.keras.applications.MobileNet(
@@ -133,13 +135,13 @@ CONFIGS = {
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def abs_output_tolerance() -> None:
     return
 
 
 # TODO: try removing this when global average pool is improved
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def implicit_tolerance_margin() -> float:
     return 0.15
 
@@ -149,7 +151,7 @@ def implicit_tolerance_margin() -> float:
 #  ----------------------------------------------------------------------------
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_converted_model(xcore_model: XCOREModel) -> None:
     subgraph = xcore_model.subgraphs[0]
 

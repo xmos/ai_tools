@@ -96,17 +96,17 @@ RUNNER = CIFAR10BinarizedTestRunner
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def abs_output_tolerance(use_device: bool) -> int:
     return 13 if use_device else 33
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def expected_accuracy(use_device: bool) -> float:
     return 0.79 if use_device else 0.6873
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def expected_prediction_deviation(use_device: bool) -> int:
     return 0 if use_device else 28
 
@@ -133,7 +133,7 @@ def test_accuracy(run: CIFAR10BinarizedTestRunner, expected_accuracy: float) -> 
     assert metric.result().numpy() == np.float32(expected_accuracy)
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_converted_model(xcore_model: XCOREModel) -> None:
     subgraph = xcore_model.subgraphs[0]
 

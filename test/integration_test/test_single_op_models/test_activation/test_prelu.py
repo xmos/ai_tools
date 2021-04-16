@@ -47,12 +47,12 @@ CONFIGS = {"default": {0: {"height": 5, "width": 5, "channels": 3}}}
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def converted_op_code() -> BuiltinOpCodes:
     return BuiltinOpCodes.PRELU  # TODO: fix this if/when we support prelu
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def reference_op_code() -> BuiltinOpCodes:
     return BuiltinOpCodes.PRELU
 

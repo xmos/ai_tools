@@ -19,7 +19,7 @@ from .. import (
 #  ----------------------------------------------------------------------------
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_converted_model(
     xcore_model: XCOREModel, converted_op_code: XCOREOpCodes
 ) -> None:

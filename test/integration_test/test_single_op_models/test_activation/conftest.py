@@ -11,11 +11,11 @@ from tflite2xcore.xcore_schema import XCOREOpCodes
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_lookup_8
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def abs_output_tolerance() -> int:
     return 0

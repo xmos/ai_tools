@@ -27,7 +27,7 @@ from . import (
 #  ----------------------------------------------------------------------------
 
 
-def pytest_addoption(parser):  # type: ignore
+def pytest_addoption(parser: _pytest.config.argparsing.Parser) -> None:
     parser.addoption(
         "-C",
         "--coverage",
@@ -79,7 +79,7 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
                 try:
                     with open(config_file, "r") as f:
                         CONFIGS = yaml.load(f, Loader=yaml.FullLoader)
-                except FileNotFoundError as e:
+                except FileNotFoundError:
                     logging.info(
                         "Cannot find .yml test config file and "
                         "test module does not contain CONFIGS"
@@ -119,12 +119,12 @@ def pytest_collection_modifyitems(
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture(autouse=True)  # type: ignore
+@pytest.fixture(autouse=True)
 def disable_gpus(monkeypatch: _pytest.monkeypatch.MonkeyPatch) -> None:
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "-1")
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def use_device(request: _pytest.fixtures.SubRequest) -> bool:
     return bool(request.config.getoption("--use-device"))
 
@@ -132,7 +132,7 @@ def use_device(request: _pytest.fixtures.SubRequest) -> bool:
 _WORKER_CACHE: Dict[Path, IntegrationTestRunner] = {}
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def run(
     request: _pytest.fixtures.SubRequest, use_device: bool
 ) -> IntegrationTestRunner:
@@ -165,7 +165,11 @@ def run(
     try:
         runner = _WORKER_CACHE[key]
     except KeyError:
-        dirpath = pytest_config.cache.get(key, "")
+        pytest_cache = pytest_config.cache
+        if pytest_cache is None:
+            raise TypeError("pytest cache is not available")
+
+        dirpath = pytest_cache.get(str(key), "")
         if dirpath:
             runner = runner.load(dirpath)
             logging.debug(f"cached runner loaded from {dirpath}")
@@ -174,13 +178,13 @@ def run(
             runner.run()
             try:
                 with portalocker.BoundedSemaphore(1, hash(key), timeout=0):
-                    dirpath = str(pytest_config.cache.makedir("model_cache") / key)
+                    dirpath = str(pytest_cache.makedir("model_cache") / key)
                     dirpath = runner.save(dirpath)
                     if pytest_config.getoption("dump") == "models":
                         runner.dump_models(dirpath)
 
                     logging.debug(f"runner cached to {dirpath}")
-                    pytest_config.cache.set(key, str(dirpath))
+                    pytest_cache.set(str(key), str(dirpath))
             except portalocker.AlreadyLocked:
                 # another process will write to cache
                 pass
@@ -192,32 +196,32 @@ def run(
     return runner
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def xcore_model(run: IntegrationTestRunner) -> XCOREModel:
     return XCOREModel.deserialize(run._xcore_converter._model)
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def reference_model(run: DefaultIntegrationTestRunner) -> XCOREModel:
     return XCOREModel.deserialize(run.get_xcore_reference_model())
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def abs_output_tolerance() -> int:
     return 1
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def bitpacked_outputs() -> bool:
     return False
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def implicit_tolerance_margin() -> float:
     return 0.05
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def compared_outputs(
     run: DefaultIntegrationTestRunner,
     abs_output_tolerance: Optional[Union[int, float]],

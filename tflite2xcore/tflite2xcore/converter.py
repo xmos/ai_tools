@@ -255,6 +255,7 @@ def optimize_for_xcore(
     experimental_xformer2: bool = False,
 ) -> None:
     num_threads = num_threads or 1
+    intermediates_path = Path(intermediates_path) if intermediates_path else None
 
     pass_mgr = PassManager(model, keep_intermediates=bool(intermediates_path))
 
@@ -270,7 +271,17 @@ def optimize_for_xcore(
     pass_mgr.register_passes(BinarizedOperatorLoweringManager())
 
     if experimental_xformer2:
-        raise NotImplementedError()
+        try:
+            pass_mgr.run_passes()
+            model.sanity_check()
+        finally:
+            if intermediates_path:
+                pass_mgr.save_intermediates(intermediates_path / "pre_xformer2")
+                intermediates_path /= "post_xformer2"
+
+        print("XFORMER2 CALLED")
+
+        pass_mgr = PassManager(model, keep_intermediates=bool(intermediates_path))
     else:
         pass_mgr.register_passes(ParametricOperatorLoweringManager())
 
@@ -294,11 +305,10 @@ def optimize_for_xcore(
 
     try:
         pass_mgr.run_passes()
+        model.sanity_check()
     finally:
         if intermediates_path:
             pass_mgr.save_intermediates(intermediates_path)
-
-    model.sanity_check()
 
     model.description = model.description + " + XMOS optimized."
 

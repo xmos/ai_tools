@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from collections import deque
 from math import log10, ceil
-from typing import TYPE_CHECKING, Iterable, Optional, Union, List, Tuple, Deque
+from typing import TYPE_CHECKING, Iterable, Optional, List, Tuple, Deque
 
 from tflite2xcore import tflite_visualize
 
@@ -50,13 +50,10 @@ class PassManager:
     def pop_pass(self) -> "ModelTransformationPass":
         return self._queue.popleft()
 
-    def save_intermediates(
-        self, dirpath: Union[str, Path], *, visualize: bool = True
-    ) -> None:
+    def save_intermediates(self, dirpath: Path, *, visualize: bool = True) -> None:
         if len(self._intermediates) == 0:
             self.logger.warning("No intermediate models were recorded!")
 
-        dirpath = Path(dirpath)
         dirpath.mkdir(parents=True, exist_ok=True)
 
         fill_width = ceil(log10(self._mutating_passes[-1][0]))

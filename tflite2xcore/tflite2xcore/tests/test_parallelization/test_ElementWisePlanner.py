@@ -50,7 +50,7 @@ def thread_cost_array() -> np.ndarray:
 
 def test_element_coverage(num_elements: int) -> None:
     planner = ElementWisePlanner(
-        num_elements, num_threads=MAX_THREADS, fixed_cost_per_thread=10,
+        num_elements, num_threads=MAX_THREADS, fixed_cost_per_thread=10
     )
     planner.create_candidate_plans()
     for plan in planner._candidate_plans:
@@ -59,7 +59,7 @@ def test_element_coverage(num_elements: int) -> None:
 
 def test_optimal_thread_count(num_elements: int, thread_cost_array: np.ndarray) -> None:
     planner = ElementWisePlanner(
-        num_elements, num_threads=MAX_THREADS, fixed_cost_per_thread=10,
+        num_elements, num_threads=MAX_THREADS, fixed_cost_per_thread=10
     )
     plan = planner.find_optimal_plan()
     costs = thread_cost_array[num_elements - 1, :]

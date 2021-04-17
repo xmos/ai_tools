@@ -16,7 +16,7 @@ from .runners import Runner, RunnerDependent
 
 
 class Converter(RunnerDependent):
-    """ Superclass for defining model conversion logic and storing converted models.
+    """Superclass for defining model conversion logic and storing converted models.
 
     Converter objects are registered in Runner objects.
     """
@@ -41,7 +41,7 @@ class Converter(RunnerDependent):
 
     @abstractmethod
     def convert(self) -> None:
-        """ Sets self._model as defined in subclasses.
+        """Sets self._model as defined in subclasses.
 
         This method should be called after the set_config method has prepared
         the converter.

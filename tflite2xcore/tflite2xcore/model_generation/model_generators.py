@@ -14,7 +14,7 @@ from .runners import Runner, RunnerDependent
 
 
 class ModelGenerator(RunnerDependent):
-    """ Superclass for defining parameterized automatic model generation.
+    """Superclass for defining parameterized automatic model generation.
 
     The main use case of this class is generation of the integration test
     models.
@@ -27,8 +27,8 @@ class ModelGenerator(RunnerDependent):
 
     @abstractmethod
     def build(self) -> None:
-        """ Sets the _model field as needed by the subclass.
-        
+        """Sets the _model field as needed by the subclass.
+
         The configuration should be set using the _set_config method before
         calling this.
         """
@@ -56,8 +56,8 @@ class ModelGenerator(RunnerDependent):
 
     @contextmanager
     def save_model(self, dirpath: Path) -> Iterator[None]:
-        """ Saves the underlying model contents and make the object temporarily pickleable.
-        
+        """Saves the underlying model contents and make the object temporarily pickleable.
+
         A model subdirectory is created.
         """
         self._model.save(dirpath / "model")

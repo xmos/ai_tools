@@ -49,11 +49,11 @@ pipeline {
                                          url: 'git@github.com:xmos/ai_tools']]
                 ])
                 // create venv and install pip packages
-                sh """conda env create -q -p ai_tools_venv -f ./utils/adf/environment.yml &&
-                      . activate ./ai_tools_venv &&
+                sh "conda env create -q -p ai_tools_venv -f ./utils/adf/environment.yml"
+                sh """. activate ./ai_tools_venv &&
                       pip install -e "./utils/adf/xcore_interpreters[test]" &&
-                      pip install -e "./tflite2xcore[test,examples,dev]" &&
-                      . deactivate"""
+                      pip install -e "./tflite2xcore[test,examples,dev]"
+                """
                 // Install xmos tools version
                 sh "/XMOS/get_tools.py " + params.TOOLS_VERSION
             }
@@ -65,14 +65,20 @@ pipeline {
                 sh "conda update --all -y -q -p ai_tools_venv"
             }
         }
-        stage("Build/Test") {
-            // due to the Makefile, we've combined build and test stages
+        stage("Build") {
             steps {
                 // below is how we can activate the tools, NOTE: xTIMEcomposer -> XTC at tools 15.0.5
                 // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv && // 
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./ai_tools_venv &&
-                      make ci"""
+                      make build
+                """
+                sh ". activate ./ai_tools_venv && make tflite2xcore_dist"
+            }
+        }
+        stage("Test") {
+            steps {
+                sh ". activate ./ai_tools_venv && make test"
                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
                 // This step collects these files for display in Jenkins UI
                 junit "**/*_junit.xml"

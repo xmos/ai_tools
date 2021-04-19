@@ -53,14 +53,6 @@ test: tflite2xcore_unit_test \
  integration_test
 
 #**************************
-# ci target
-#**************************
-
-.PHONY: ci 
-ci: CLOBBER_FLAG = '-c'
-ci: build test tflite2xcore_dist
-
-#**************************
 # development targets
 #**************************
 
@@ -90,7 +82,6 @@ help:
 	$(info   develop                       Update submodules and build all components)
 	$(info   clobber                       Update submodules, then clean and rebuild all components)
 	$(info   test                          Run all tests (requires tflite2xcore[test] package))
-	$(info   ci                            Run continuous integration build and test (requires tflite2xcore[test] package))
 	$(info )
 	$(info secondary targets:)
 	$(info   lib_flexbuffers_build         Build lib_flexbuffers)

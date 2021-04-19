@@ -125,8 +125,10 @@ def test_converted_single_op_model(
 ) -> None:
     operators = xcore_model.subgraphs[0].operators
     assert len(operators) == 1
-    op = operators[0]
-    assert op.operator_code.code is converted_op_code
+    op_code = operators[0].operator_code.code
+    assert (
+        op_code is converted_op_code
+    ), f"expected: {converted_op_code}, got: {op_code}"
 
 
 @pytest.mark.skip_on_device
@@ -135,5 +137,7 @@ def test_reference_model_regression(
 ) -> None:
     operators = reference_model.subgraphs[0].operators
     assert len(operators) == 1
-    op = operators[0]
-    assert op.operator_code.code is reference_op_code
+    op_code = operators[0].operator_code.code
+    assert (
+        op_code is reference_op_code
+    ), f"expected: {reference_op_code}, got: {op_code}"

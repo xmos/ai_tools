@@ -192,7 +192,7 @@ def test_non_matching_input_channels(
 
 
 def test_non_matching_stride_w(
-    trf_pass: ModelTransformationPass, model: XCOREModel, non_matching_stride_w: int,
+    trf_pass: ModelTransformationPass, model: XCOREModel, non_matching_stride_w: int
 ) -> None:
     op = model.subgraphs[0].operators[0]
     op.builtin_options["stride_w"] = non_matching_stride_w
@@ -200,7 +200,7 @@ def test_non_matching_stride_w(
 
 
 def test_non_matching_stride_h(
-    trf_pass: ModelTransformationPass, model: XCOREModel, non_matching_stride_h: int,
+    trf_pass: ModelTransformationPass, model: XCOREModel, non_matching_stride_h: int
 ) -> None:
     op = model.subgraphs[0].operators[0]
     op.builtin_options["stride_h"] = non_matching_stride_h

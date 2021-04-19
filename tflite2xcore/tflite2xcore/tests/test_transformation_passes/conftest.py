@@ -134,4 +134,3 @@ def test_replace_mutate(
     # check new op
     op = model.subgraphs[0].operators[-1]
     assert op.operator_code.code is new_opcode
-

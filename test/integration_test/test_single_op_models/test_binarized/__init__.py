@@ -159,10 +159,10 @@ class RemoveSingleOutputOperatorPass(OutputTensorMatchingPass):
 
 
 class LarqSingleOpConverter(LarqConverter):
-    """ Converts a larq composite TFL model to a single op TFL model.
-    
-        This converter is to work around the fact that some larq ops
-        cannot be directly generated from keras layers.
+    """Converts a larq composite TFL model to a single op TFL model.
+
+    This converter is to work around the fact that some larq ops
+    cannot be directly generated from keras layers.
     """
 
     def __init__(

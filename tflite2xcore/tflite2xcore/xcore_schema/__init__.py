@@ -23,4 +23,3 @@ from .subgraph import Subgraph
 from .xcore_model import XCOREModel
 
 from . import xcore_model
-

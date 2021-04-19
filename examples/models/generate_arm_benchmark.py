@@ -118,7 +118,7 @@ class ArmBenchmarkModelGenerator(TrainableModelGenerator):
                     mode="horizontal"
                 ),
                 tf.keras.layers.experimental.preprocessing.RandomTranslation(
-                    0.1, 0.1, fill_mode="reflect", interpolation="nearest",
+                    0.1, 0.1, fill_mode="reflect", interpolation="nearest"
                 ),
                 tf.keras.layers.Conv2D(filters=32, kernel_size=5, padding="same"),
                 tf.keras.layers.BatchNormalization(),

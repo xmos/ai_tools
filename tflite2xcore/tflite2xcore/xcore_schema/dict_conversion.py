@@ -40,7 +40,7 @@ def create_dict_from_operator_code(
     return operator_code_dict
 
 
-def create_dict_from_operator(operator: Operator,) -> Dict[str, Any]:
+def create_dict_from_operator(operator: Operator) -> Dict[str, Any]:
     tensors = operator.subgraph.tensors
     operator_codes = operator.subgraph.model.operator_codes
 
@@ -110,9 +110,9 @@ def create_dict_from_subgraph(
 def create_dict_from_buffer(
     buffer: Buffer, *, extended: bool = False
 ) -> Dict[str, Any]:
-    buffer_dict: Dict[str, Any] = {
-        "data": buffer.data
-    } if buffer.data is not None else {}
+    buffer_dict: Dict[str, Any] = (
+        {"data": buffer.data} if buffer.data is not None else {}
+    )
 
     if extended:
         owners_dict: Dict[Union[int, str], Any] = dict()

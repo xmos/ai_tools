@@ -78,4 +78,3 @@ class ConstantPropagationPass(OperatorMatchingPass):
             tensor.buffer.owners.remove(tensor)
             tensor.buffer = Buffer(op.model, np.array(data), owners=[tensor])
         op.subgraph.remove_operator(op)
-

@@ -53,7 +53,9 @@ def test_mutate(
     CleanupManager(model).run_passes()
 
     bconv2d_op = subgraph.operators[0]
-    assert bconv2d_op.operator_code.code is new_opcode
+
+    op_code = bconv2d_op.operator_code.code
+    assert op_code is new_opcode, f"expected: {new_opcode}, got: {op_code}"
 
     old_weights = bconv2d_op.inputs[1]
     old_thresholds = bconv2d_op.inputs[2]

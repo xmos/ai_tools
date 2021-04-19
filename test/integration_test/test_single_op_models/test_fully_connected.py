@@ -86,7 +86,10 @@ def test_reference_model_regression(
     if len(operators) == 2:
         assert operators[0].operator_code.code is BuiltinOpCodes.RESHAPE
 
-    assert operators[-1].operator_code.code is reference_op_code
+    op_code = operators[-1].operator_code.code
+    assert (
+        op_code is reference_op_code
+    ), f"expected: {reference_op_code}, got: {op_code}"
 
 
 if __name__ == "__main__":

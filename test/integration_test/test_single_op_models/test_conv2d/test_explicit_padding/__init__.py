@@ -66,4 +66,8 @@ def test_reference_model_regression(
     operators = reference_model.subgraphs[0].operators
     assert len(operators) == 2
     assert operators[0].operator_code.code is BuiltinOpCodes.PAD
-    assert operators[1].operator_code.code is reference_op_code
+
+    op_code = operators[1].operator_code.code
+    assert (
+        op_code is reference_op_code
+    ), f"expected: {reference_op_code}, got: {op_code}"

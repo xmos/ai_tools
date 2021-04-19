@@ -77,8 +77,10 @@ def test_mutate(
     operators = subgraph.operators
     bconv2d_op = operators[-1]
 
+    opcode_after = bconv2d_op.operator_code.code
+    assert opcode_after is opcode, f"expected: {opcode}, got: {opcode_after}"
+
     assert "padding" not in bconv2d_op.custom_options
-    assert bconv2d_op.operator_code.code is opcode
     assert old_output is bconv2d_op.outputs[0]
 
     if padding is Padding.VALID:

@@ -5,7 +5,7 @@ from tflite2xcore.transformation_passes.transformation_passes import (
     OperatorMatchingPass,
     TensorMatchingPass,
 )
-from tflite2xcore.xcore_model import Operator
+from tflite2xcore.xcore_model import Operator, Tensor
 from tflite2xcore.xcore_schema import (
     OperatorCode,
     XCOREOpCodes,
@@ -22,7 +22,7 @@ from .pooling_passes import (
 from .conv2d_passes import ReplaceDeepConv2dPass
 
 
-def insert_ring_buffer(ring_buffer_time_dim, new_op: Operator):
+def insert_ring_buffer(ring_buffer_time_dim: int, new_op: Operator) -> Operator:
     ring_buffer_shape = list(new_op.inputs[0].shape)
     ring_buffer_shape[1] = ring_buffer_time_dim
 
@@ -33,7 +33,7 @@ def insert_ring_buffer(ring_buffer_time_dim, new_op: Operator):
         TensorType.INT8,
         consumers=[new_op],
         shape=ring_buffer_shape,
-        custom_options="tdnn",
+        custom_options={"tdnn":True},
     )
 
     old_data_shape = ring_buffer_shape
@@ -42,7 +42,7 @@ def insert_ring_buffer(ring_buffer_time_dim, new_op: Operator):
         f"{new_op.name}/old_data",
         TensorType.INT8,
         shape=old_data_shape,
-        custom_options="tdnn",
+        custom_options={"tdnn":True},
     )
 
     new_op.inputs[0].consumers.pop(0)
@@ -59,7 +59,7 @@ def insert_ring_buffer(ring_buffer_time_dim, new_op: Operator):
 
 
 class TdnnDeepConv2dPass(ReplaceDeepConv2dPass):
-    def mutate(self, op: Operator):
+    def mutate(self, op: Operator) -> Operator:
         new_op = super().mutate(op)
 
         # kernel_size[0]
@@ -71,7 +71,7 @@ class TdnnDeepConv2dPass(ReplaceDeepConv2dPass):
 
 
 class TdnnMaxPool2DPass(ReplaceMaxPool2DPass):
-    def mutate(self, op: Operator):
+    def mutate(self, op: Operator) -> Operator:
         new_op = super().mutate(op)
 
         ring_buffer_time_dim = new_op.custom_options["pool"][0]
@@ -85,7 +85,7 @@ class TdnnMaxPool2DPass(ReplaceMaxPool2DPass):
 
 
 class TdnnAveragePool2DPass(ReplaceAveragePool2DPass):
-    def mutate(self, op: Operator):
+    def mutate(self, op: Operator) -> Operator:
         new_op = super().mutate(op)
 
         ring_buffer_time_dim = new_op.custom_options["pool"][0]
@@ -96,7 +96,7 @@ class TdnnAveragePool2DPass(ReplaceAveragePool2DPass):
 
 
 class TdnnGlobalAveragePool2DPass(ReplaceGlobalAveragePool2DPass):
-    def mutate(self, op: Operator):
+    def mutate(self, op: Operator) -> Operator:
         new_op = super().mutate(op)
 
         ring_buffer_time_dim = new_op.inputs[0].shape[1]
@@ -108,17 +108,17 @@ class TdnnGlobalAveragePool2DPass(ReplaceGlobalAveragePool2DPass):
 
 class TdnnGlobalMaxPool2DPass(OperatorMatchingPass):
     @property
-    def matching_opcode(self):
+    def matching_opcode(self) -> OperatorCode:
         return BuiltinOpCodes.MAX
 
-    def match(self, op):
+    def match(self, op: Operator) -> bool:
         return (
             super().match(op)
             and op.operator_code.code is self.matching_opcode
             and "tdnn" not in op.custom_options
         )
 
-    def mutate(self, op: Operator):
+    def mutate(self, op: Operator) -> Operator:
         op.add_custom_options(tdnn=True)
 
         ring_buffer_time_dim = op.inputs[0].shape[1]
@@ -130,17 +130,17 @@ class TdnnGlobalMaxPool2DPass(OperatorMatchingPass):
 
 class TdnnFlattenPass(OperatorMatchingPass):
     @property
-    def matching_opcode(self):
+    def matching_opcode(self) -> OperatorCode:
         return BuiltinOpCodes.FLATTEN
 
-    def match(self, op):
+    def match(self, op: Operator) -> bool:
         return (
             super().match(op)
             and op.operator_code.code is self.matching_opcode
             and "tdnn" not in op.custom_options
         )
 
-    def mutate(self, op: Operator):
+    def mutate(self, op: Operator) -> Operator:
         op.add_custom_options(tdnn=True)
 
         ring_buffer_time_dim = op.inputs[0].shape[1]
@@ -151,16 +151,15 @@ class TdnnFlattenPass(OperatorMatchingPass):
 
 
 class TdnnTensorPass(TensorMatchingPass):
-    def match(self, tensor):
+    def match(self, tensor: Tensor) -> bool:
         return super().match(tensor) and "tdnn" not in tensor.custom_options
 
-    def mutate(self, tensor):
+    def mutate(self, tensor: Tensor) -> Tensor:
         tensor.add_custom_options(tdnn=True)
 
         if len(tensor.shape) > 2:
             shape = list(tensor.shape)
             shape[1] = 1
-            tensor.shape = shape
+            tensor.shape = tuple(shape)
 
         return tensor
-

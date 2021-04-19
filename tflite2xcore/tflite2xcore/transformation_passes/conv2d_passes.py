@@ -352,6 +352,7 @@ class LegalizeXCShallowinConvPass(LegalizeXCConvPass):
             unpadded_weights = self._weights.as_array().reshape(self._new_weight_shape)
             self._replace_weights(
                 np.pad(
-                    unpadded_weights, pad_width=[(0, 0), (0, 0), (0, Kw_pad), (0, 0)],
+                    unpadded_weights,
+                    pad_width=[(0, 0), (0, 0), (0, Kw_pad), (0, 0)],
                 )
             )

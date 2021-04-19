@@ -68,7 +68,7 @@ class CanonicalizeConv2DInputChannels(QuantizedOperatorMatchingPass):
             # create new channel-wise padding operator
             old_input = self._input
             pad_op = subgraph.create_operator(
-                OperatorCode(BuiltinOpCodes.PAD), inputs=[old_input],
+                OperatorCode(BuiltinOpCodes.PAD), inputs=[old_input]
             )
             subgraph.insert_operator(self._op, pad_op)
             old_input.consumers.remove(self._op)

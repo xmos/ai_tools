@@ -286,4 +286,3 @@ class XcoreTunedParser(MNISTDefaultParser):
     def _name_handler(self, args):
         if args.xcore_tuned:
             args.name = "_".join([args.name, "tuned"])
-

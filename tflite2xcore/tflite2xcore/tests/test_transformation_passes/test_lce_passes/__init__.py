@@ -89,7 +89,7 @@ def build_LceQuantize(
 
     tin = subgraph.create_tensor("input", input_tensor_type, input_shape, isinput=True)
     tout = subgraph.create_tensor(
-        "output", TensorType.INT32, output_shape, isoutput=True,
+        "output", TensorType.INT32, output_shape, isoutput=True
     )
 
     subgraph.create_operator(
@@ -210,7 +210,7 @@ def build_lceBconv2d(
     subgraph: Optional[Subgraph] = None, *, padding: Padding, **kwargs
 ) -> XCOREModel:
     return build_bconv2d(
-        subgraph, padding=padding, opcode=ExternalOpCodes.LceBconv2d, **kwargs,
+        subgraph, padding=padding, opcode=ExternalOpCodes.LceBconv2d, **kwargs
     )
 
 

@@ -18,4 +18,3 @@ class FullyConnectedOptionsWeightsFormat(IntEnum): ...
 class Padding(IntEnum):
     SAME: Padding
     VALID: Padding
-

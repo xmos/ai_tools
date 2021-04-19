@@ -74,11 +74,12 @@ pipeline {
                       make build
                 """
                 sh ". activate ./ai_tools_venv && make tflite2xcore_dist"
+                sh "cd experimental/xformer && bazel build //:xcore-opt"
             }
         }
         stage("Test") {
             steps {
-                sh ". activate ./ai_tools_venv && make test"
+                sh ". activate ./ai_tools_venv && make test NUM_PROCS=$(grep -c ^processor /proc/cpuinfo)"
                 // Any call to pytest can be given the "--junitxml SOMETHING_junit.xml" option
                 // This step collects these files for display in Jenkins UI
                 junit "**/*_junit.xml"

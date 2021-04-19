@@ -1,12 +1,26 @@
 # Copyright 2019-2021 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
+import os
+import logging
+import tempfile
+import subprocess
+
 from pathlib import Path
 from typing import Optional, Union, Any
 
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import transformation_passes as passes
+
+
+XFORMER2_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "experimental"
+    / "xformer"
+    / "bazel-bin"
+    / "xcore-opt"
+)
 
 
 class CleanupManager(PassManager):
@@ -260,7 +274,7 @@ def optimize_for_xcore(
     remove_float_interface: bool = False,
     external_memory: bool = False,
     experimental_xformer2: bool = False,
-) -> None:
+) -> XCOREModel:
     num_threads = num_threads or 1
     intermediates_path = Path(intermediates_path) if intermediates_path else None
 
@@ -286,7 +300,16 @@ def optimize_for_xcore(
                 pass_mgr.save_intermediates(intermediates_path / "pre_xformer2")
                 intermediates_path /= "post_xformer2"
 
-        print("XFORMER2 CALLED")
+        with tempfile.TemporaryDirectory(suffix=str(os.getpid())) as dirname:
+            input_path = Path(dirname) / "input.tflite"
+            model.write_flatbuffer(input_path)
+
+            output_path = Path(dirname) / "output.tflite"
+            cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path)]
+            p = subprocess.run(cmd, capture_output=True, check=True)
+            logging.debug(p.stdout)
+
+            model = XCOREModel.read_flatbuffer(output_path)
 
         pass_mgr = PassManager(model, keep_intermediates=bool(intermediates_path))
 
@@ -321,6 +344,8 @@ def optimize_for_xcore(
 
     model.description = model.description + " + XMOS optimized."
 
+    return model
+
 
 def convert(
     tflite_input_path: Union[str, Path],
@@ -328,5 +353,5 @@ def convert(
     **kwargs: Any,
 ) -> None:
     model = XCOREModel.read_flatbuffer(tflite_input_path)
-    optimize_for_xcore(model, **kwargs)
+    model = optimize_for_xcore(model, **kwargs)
     model.write_flatbuffer(tflite_output_path)

@@ -104,7 +104,7 @@ class XCoreConverter(Converter):
 
     def convert(self) -> None:
         model = XCOREModel.deserialize(self._input_model_hook())
-        optimize_for_xcore(
+        model = optimize_for_xcore(
             model,
             num_threads=self._config["num_threads"],
             experimental_xformer2=self._experimental_xformer2,

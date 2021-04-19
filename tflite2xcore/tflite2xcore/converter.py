@@ -106,11 +106,18 @@ class PoolingLoweringManager(PassManager):
 
 
 class ParametricOperatorLoweringManager(PassManager):
-    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        model: Optional[XCOREModel] = None,
+        *,
+        experimental_xformer2: bool = False,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(model, **kwargs)
 
         # first we match ops and replace them
-        self.register_pass(passes.ReplaceFullyConnectedPass())
+        if not experimental_xformer2:
+            self.register_pass(passes.ReplaceFullyConnectedPass())
         self.register_pass(passes.Replace1x1Conv2dPass())
         self.register_pass(passes.ReplaceShallowinConv2dPass())
         self.register_pass(passes.ReplaceDepthwiseConv2dPass())
@@ -282,8 +289,10 @@ def optimize_for_xcore(
         print("XFORMER2 CALLED")
 
         pass_mgr = PassManager(model, keep_intermediates=bool(intermediates_path))
-    else:
-        pass_mgr.register_passes(ParametricOperatorLoweringManager())
+
+    pass_mgr.register_passes(
+        ParametricOperatorLoweringManager(experimental_xformer2=experimental_xformer2)
+    )
 
     # TODO: finish these and find a manager for them:
     pass_mgr.register_pass(passes.ReplaceAddPass())

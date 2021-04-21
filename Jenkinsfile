@@ -5,7 +5,7 @@ getApproval()
 pipeline {
     agent {
         dockerfile {
-            args "-v /home/jenkins/.keras:/root/.keras"
+            args "-v /home/jenkins/.keras:/root/.keras -v /etc/passwd:/etc/passwd:ro"
         }
     }
 
@@ -74,6 +74,9 @@ pipeline {
                       make build
                 """
                 sh ". activate ./ai_tools_venv && make tflite2xcore_dist"
+                sh """. activate ./ai_tools_venv && cd experimental/xformer &&
+                      bazel build //:xcore-opt
+                """
             }
         }
         stage("Test") {

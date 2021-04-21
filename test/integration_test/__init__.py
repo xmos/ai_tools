@@ -428,6 +428,7 @@ def test_output(
 
 
 @pytest.mark.skip_on_device
+@pytest.mark.skip_on_xformer2
 def test_idempotence(xcore_model: XCOREModel, run: IntegrationTestRunner) -> None:
     run._identity_converter.convert()
     identical_model = XCOREModel.deserialize(run._identity_converter._model)

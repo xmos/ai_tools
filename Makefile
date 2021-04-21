@@ -38,7 +38,7 @@ integration_test:
 
 .PHONY: xformer2_test
 xformer2_test:
-	cd test && pytest integration_test --cache-clear --collect-only -qq --experimental-xformer2
+	cd test && pytest integration_test --cache-clear --collect-only -qq
 	cd test && pytest integration_test -n $(NUM_PROCS) --dist loadfile --experimental-xformer2 --junitxml=integration_junit.xml
 
 #**************************

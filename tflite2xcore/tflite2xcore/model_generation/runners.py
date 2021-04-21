@@ -129,7 +129,9 @@ class Runner(ABC):
                 logging.debug(f"{name} visualization dumped to {model_html}")
 
         all_models_name = ",".join(self.converted_models.keys())
-        all_models_path = (dirpath / f"{{{all_models_name}}}").with_suffix(".tflite")
+        all_models_path = (dirpath / f"model_{{{all_models_name}}}").with_suffix(
+            ".tflite"
+        )
         logging.info(f"Models dumped to {all_models_path}")
 
     @staticmethod

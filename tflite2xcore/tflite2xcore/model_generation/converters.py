@@ -88,8 +88,15 @@ class TFLiteQuantConverter(KerasModelConverter):
 class XCoreConverter(Converter):
     """ Converts a (quantized) TFLite model to an xcore.ai-optimized TFLite model. """
 
-    def __init__(self, runner: Runner, input_model_hook: Hook[TFLiteModel]) -> None:
+    def __init__(
+        self,
+        runner: Runner,
+        input_model_hook: Hook[TFLiteModel],
+        *,
+        experimental_xformer2: bool = False
+    ) -> None:
         super().__init__(runner, input_model_hook)
+        self._experimental_xformer2 = experimental_xformer2
 
     def _set_config(self, cfg: Configuration) -> None:
         if "num_threads" not in self._config:
@@ -97,7 +104,11 @@ class XCoreConverter(Converter):
 
     def convert(self) -> None:
         model = XCOREModel.deserialize(self._input_model_hook())
-        optimize_for_xcore(model, num_threads=self._config["num_threads"])
+        model = optimize_for_xcore(
+            model,
+            num_threads=self._config["num_threads"],
+            experimental_xformer2=self._experimental_xformer2,
+        )
         self._model = model.serialize()
 
 

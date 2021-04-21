@@ -6,7 +6,7 @@ import logging
 import tensorflow as tf
 import numpy as np
 from pathlib import Path
-from typing import Optional, Type
+from typing import Optional, Type, Any
 from tflite2xcore.utils import LoggingContext
 from tflite2xcore.xcore_schema import (
     XCOREModel,
@@ -68,10 +68,9 @@ class CIFAR10BinarizedTestRunner(BinarizedTestRunner):
     def __init__(
         self,
         generator: Type[IntegrationTestModelGenerator],
-        *,
-        use_device: bool = False,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(generator, use_device=use_device)
+        super().__init__(generator, **kwargs)
 
         self._ground_truth_data_factory = CIFAR10TestLabelFactory(self, lambda: tuple())
         self.register_data_factory(self._ground_truth_data_factory)

@@ -64,6 +64,12 @@ def pytest_addoption(parser: _pytest.config.argparsing.Parser) -> None:
         help="Execute interpreter on hardware device",
     )
 
+    parser.addoption(
+        "--experimental-xformer2",
+        action="store_true",
+        help="Use MLIR-based xformer 2.0 for part of the optimization pipeline. Experimental.",
+    )
+
 
 def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
     if "run" in metafunc.fixturenames:
@@ -151,7 +157,11 @@ def run(
     if request.param.pop("skip_on_device", False) and use_device:
         pytest.skip()
 
-    runner = RUNNER(GENERATOR, use_device=use_device)
+    runner = RUNNER(
+        GENERATOR,
+        use_device=use_device,
+        experimental_xformer2=pytest_config.getoption("--experimental-xformer2"),
+    )
     runner.set_config(**request.param)
 
     logging.info(f"Config: {runner._config}")

@@ -53,14 +53,6 @@ test: tflite2xcore_unit_test \
  integration_test
 
 #**************************
-# ci target
-#**************************
-
-.PHONY: ci 
-ci: CLOBBER_FLAG = '-c'
-ci: build test tflite2xcore_dist
-
-#**************************
 # development targets
 #**************************
 

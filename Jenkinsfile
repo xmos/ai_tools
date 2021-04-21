@@ -71,7 +71,7 @@ pipeline {
                 // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv && //
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./ai_tools_venv &&
-                      make build
+                      make build CLOBBER_FLAG='-c'
                 """
                 sh ". activate ./ai_tools_venv && make tflite2xcore_dist"
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&

@@ -139,6 +139,11 @@ def use_device(request: _pytest.fixtures.SubRequest) -> bool:
     return bool(request.config.getoption("--use-device"))
 
 
+@pytest.fixture
+def experimental_xformer2(request: _pytest.fixtures.SubRequest) -> bool:
+    return bool(request.config.getoption("--experimental-xformer2"))
+
+
 _WORKER_CACHE: Dict[Path, IntegrationTestRunner] = {}
 
 

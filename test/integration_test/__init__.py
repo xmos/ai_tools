@@ -16,7 +16,7 @@ from typing import (
     Dict,
     Iterable,
     Type,
-    Optional,
+    Any,
 )
 
 from tflite2xcore.utils import unpack_bits
@@ -62,6 +62,7 @@ class IntegrationTestRunner(Runner):
         generator: Type["IntegrationTestModelGenerator"],
         *,
         use_device: bool = False,
+        experimental_xformer2: bool = False,
     ) -> None:
         super().__init__(generator)
         self._use_device = use_device
@@ -69,11 +70,17 @@ class IntegrationTestRunner(Runner):
         self._repr_data_factory = self.make_repr_data_factory()
         self.register_data_factory(self._repr_data_factory)
 
-        self._xcore_converter = XCoreConverter(self, self.get_xcore_reference_model)
+        self._xcore_converter = XCoreConverter(
+            self,
+            self.get_xcore_reference_model,
+            experimental_xformer2=experimental_xformer2,
+        )
         self.register_converter(self._xcore_converter)
 
         self._identity_converter = XCoreConverter(
-            self, self._xcore_converter.get_converted_model
+            self,
+            self._xcore_converter.get_converted_model,
+            experimental_xformer2=experimental_xformer2,
         )
         self.register_converter(self._identity_converter)
 
@@ -140,10 +147,9 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
     def __init__(
         self,
         generator: Type["IntegrationTestModelGenerator"],
-        *,
-        use_device: bool = False,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(generator, use_device=use_device)
+        super().__init__(generator, **kwargs)
 
         # floating point reference
         self._reference_float_converter = TFLiteFloatConverter(
@@ -236,10 +242,9 @@ class BinarizedTestRunner(IntegrationTestRunner):
     def __init__(
         self,
         generator: Type["IntegrationTestModelGenerator"],
-        *,
-        use_device: bool = False,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(generator, use_device=use_device)
+        super().__init__(generator, **kwargs)
 
         self._lce_converter = self.make_lce_converter()
         self.register_converter(self._lce_converter)

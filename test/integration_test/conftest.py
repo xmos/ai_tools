@@ -113,11 +113,15 @@ def pytest_generate_tests(metafunc: _pytest.python.Metafunc) -> None:
 def pytest_collection_modifyitems(
     config: _pytest.config.Config, items: List[pytest.Item]
 ) -> None:
-    if config.getoption("--use-device"):
-        skip = pytest.mark.skip(reason="Test should be skipped on device")
-        for item in items:
-            if "skip_on_device" in item.keywords:
-                item.add_marker(skip)
+    use_device = config.getoption("--use-device")
+    use_xformer2 = config.getoption("--experimental-xformer2")
+    skip_on_device = pytest.mark.skip(reason="Test skipped on device")
+    skip_on_xformer2 = pytest.mark.skip(reason="Test skipped when using xformer2")
+    for item in items:
+        if use_device and "skip_on_device" in item.keywords:
+            item.add_marker(skip_on_device)
+        elif use_xformer2 and "skip_on_xformer2" in item.keywords:
+            item.add_marker(skip_on_xformer2)
 
 
 #  ----------------------------------------------------------------------------
@@ -133,6 +137,11 @@ def disable_gpus(monkeypatch: _pytest.monkeypatch.MonkeyPatch) -> None:
 @pytest.fixture
 def use_device(request: _pytest.fixtures.SubRequest) -> bool:
     return bool(request.config.getoption("--use-device"))
+
+
+@pytest.fixture
+def experimental_xformer2(request: _pytest.fixtures.SubRequest) -> bool:
+    return bool(request.config.getoption("--experimental-xformer2"))
 
 
 _WORKER_CACHE: Dict[Path, IntegrationTestRunner] = {}

@@ -133,11 +133,14 @@ def test_accuracy(run: CIFAR10BinarizedTestRunner, expected_accuracy: float) -> 
 
 
 @pytest.mark.skip_on_device
-def test_converted_model(xcore_model: XCOREModel) -> None:
+def test_converted_model(xcore_model: XCOREModel, experimental_xformer2: bool) -> None:
     subgraph = xcore_model.subgraphs[0]
 
     # check tensors
-    assert len(subgraph.tensors) == 24
+    if experimental_xformer2:
+        assert len(subgraph.tensors) == 23
+    else:
+        assert len(subgraph.tensors) == 24
 
     assert len(subgraph.inputs) == 1
     input_tensor = subgraph.inputs[0]

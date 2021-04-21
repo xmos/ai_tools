@@ -2,6 +2,7 @@
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 import numpy as np
+from enum import Enum
 from typing import TYPE_CHECKING, Dict, Union, Any
 
 from tflite2xcore.utils import camel_to_snake, snake_to_camel
@@ -185,8 +186,7 @@ def dict_to_builtin_options(type_: int, dict_: Dict[str, Any]) -> Any:
     builtin_options = builtin_class()
 
     for k, v in dict_.items():
-        if k in ["fused_activation_function", "padding"]:
-            # enum to value
+        if isinstance(v, Enum):
             v = v.value
 
         setattr(builtin_options, snake_to_camel(k), v)
@@ -215,8 +215,7 @@ def dict_to_quantization(dict_: Dict[str, Any]) -> schema.QuantizationParameters
     quantization: schema.QuantizationParametersT = schema.QuantizationParametersT()  # type: ignore
 
     for k, v in dict_.items():
-        if k == "details_type":
-            # enum to value
+        if isinstance(v, Enum):
             v = v.value
 
         setattr(quantization, snake_to_camel(k), v)

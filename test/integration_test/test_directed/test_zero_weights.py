@@ -37,5 +37,17 @@ class ZeroWeightsModelGenerator(IntegrationTestModelGenerator):
 GENERATOR = ZeroWeightsModelGenerator
 
 
+#  ----------------------------------------------------------------------------
+#                                   FIXTURES
+#  ----------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def skip_module(experimental_xformer2: bool) -> None:
+    major_version = tf.version.VERSION[:3]
+    if major_version == "2.4" and experimental_xformer2:
+        pytest.skip("Skipping test due to bug tf 2.4 bug")
+
+
 if __name__ == "__main__":
     pytest.main()

@@ -75,5 +75,5 @@ pip install -e "./tflite2xcore[examples,test,dev]"
 # activate tools (each new shell)
 module load tools/15.0.5
 # build all and run tests
-make ci
+make build test
 ```

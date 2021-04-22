@@ -17,8 +17,13 @@ RUN apt-get update && apt-get install -y \
     tcl environment-modules \
     && apt-get clean autoclean
 
-# install compiler
+# install gcc
 RUN apt-get install -y build-essential
+
+# install clang
+RUN apt-get update && apt-get install -y gnupg lsb-release software-properties-common
+RUN bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+RUN ln -s /usr/bin/clang-12 /usr/bin/clang
 
 # install get_tools.py script
 #   requires connection to XMOS network at build and run time

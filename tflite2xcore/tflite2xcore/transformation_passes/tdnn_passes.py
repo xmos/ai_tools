@@ -261,3 +261,35 @@ class TdnnTensorPass(TensorMatchingPass):
             tensor.shape = tuple(shape)
 
         return tensor
+    
+# class TdnnGlobalAveragePool2DPass(ReplaceGlobalAveragePool2DPass):
+#     def mutate(self, op: Operator) -> Operator:
+#         new_op = super().mutate(op)
+
+#         ring_buffer_time_dim = new_op.inputs[0].shape[1]
+
+#         new_op = insert_ring_buffer(ring_buffer_time_dim, new_op)
+
+#         return new_op
+
+
+# class TdnnGlobalMaxPool2DPass(OperatorMatchingPass):
+#     @property
+#     def matching_opcode(self) -> OperatorCode:
+#         return BuiltinOpCodes.MAX
+
+#     def match(self, op: Operator) -> bool:
+#         return (
+#             super().match(op)
+#             and op.operator_code.code is self.matching_opcode
+#             and "tdnn" not in op.custom_options
+#         )
+
+#     def mutate(self, op: Operator) -> Operator:
+#         op.add_custom_options(tdnn=True)
+
+#         ring_buffer_time_dim = op.inputs[0].shape[1]
+
+#         op = insert_ring_buffer(ring_buffer_time_dim, op)
+
+#         return op

@@ -187,7 +187,7 @@ def build_max(subgraph=None, *, input_shape):
     return subgraph.model
 
 
-def build_flatten(subgraph=None, *, input_shape):
+def build_reshape(subgraph=None, *, input_shape):
     subgraph = subgraph or Subgraph(model=XCOREModel())
 
     input_shape = [1, *input_shape]
@@ -206,7 +206,7 @@ def build_flatten(subgraph=None, *, input_shape):
         quantization={"scale": [0.42], "zero_point": [-11]},
     )
     subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.FLATTEN), inputs=[tin], outputs=[tout]
+        OperatorCode(BuiltinOpCodes.RESHAPE), inputs=[tin], outputs=[tout]
     )
 
     return subgraph.model

@@ -140,10 +140,10 @@ class FlexbufferBuilder:
 
         lib.builder_finish(self.obj)
 
-    def get_bytes(self, size: int = 1024) -> List[bytes]:
+    def get_bytes(self, size: int = 1024) -> List[int]:
         buf = ctypes.create_string_buffer(size)
         actual_size = lib.builder_get_buffer(self.obj, buf)
-        return [ubyte[0] for ubyte in struct.iter_unpack("B", buf[0:actual_size])]  # type: ignore
+        return [int(ubyte[0]) for ubyte in struct.iter_unpack("B", buf[0:actual_size])]  # type: ignore
 
 
 class FlexbufferParser:

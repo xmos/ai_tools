@@ -83,9 +83,9 @@ class Subgraph(_ModelDependent):
         return tensor
 
     def remove_tensor(self, tensor: Tensor) -> None:
-        """ Removes the tensor from the subgraph and cuts all its connections.
+        """Removes the tensor from the subgraph and cuts all its connections.
 
-            Note that the tensor will be left in an illegal state.
+        Note that the tensor will be left in an illegal state.
         """
         assert tensor in self.tensors
         self.tensors.remove(tensor)
@@ -133,7 +133,7 @@ class Subgraph(_ModelDependent):
     ) -> Operator:
         name = self.generate_unique_op_name(operator_code)
         operator = Operator(
-            self, operator_code, name, inputs, outputs, builtin_options, custom_options,
+            self, operator_code, name, inputs, outputs, builtin_options, custom_options
         )
         self.operators.append(operator)
         for input_tensor in operator.inputs:
@@ -143,9 +143,9 @@ class Subgraph(_ModelDependent):
         return operator
 
     def remove_operator(self, op: Operator) -> None:
-        """ Removes the operator from the subgraph and cuts all its connections.
+        """Removes the operator from the subgraph and cuts all its connections.
 
-            Note that the operator will be left in an illegal state.
+        Note that the operator will be left in an illegal state.
         """
         assert op in self.operators
         self.operators.remove(op)

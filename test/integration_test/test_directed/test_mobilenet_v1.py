@@ -70,7 +70,9 @@ def _MobileNet_safe(
             model_name += ".h5"
             weight_url = BASE_WEIGHT_URL + model_name
             weights = data_utils.get_file(
-                model_name, weight_url, cache_subdir=f"/tmp/.keras/{os.getpid()}/",
+                model_name,
+                weight_url,
+                cache_subdir=f"/tmp/.keras/{os.getpid()}/",
             )
 
     return tf.keras.applications.MobileNet(
@@ -133,13 +135,13 @@ CONFIGS = {
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def abs_output_tolerance() -> None:
     return
 
 
 # TODO: try removing this when global average pool is improved
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def implicit_tolerance_margin() -> float:
     return 0.15
 
@@ -149,8 +151,8 @@ def implicit_tolerance_margin() -> float:
 #  ----------------------------------------------------------------------------
 
 
-@pytest.mark.skip_on_device  # type: ignore
-def test_converted_model(xcore_model: XCOREModel) -> None:
+@pytest.mark.skip_on_device
+def test_converted_model(xcore_model: XCOREModel, experimental_xformer2: bool) -> None:
     subgraph = xcore_model.subgraphs[0]
 
     # check tensors
@@ -179,11 +181,14 @@ def test_converted_model(xcore_model: XCOREModel) -> None:
     opcode_cnt = xcore_model.count_operator_codes()
     assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_1x1)] == 13
     assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_depthwise)] == 13
-    assert opcode_cnt[OperatorCode(BuiltinOpCodes.PAD)] == 1
     assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_conv2d_shallowin)] == 1
     assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_avgpool2d_global)] == 1
     assert opcode_cnt[OperatorCode(XCOREOpCodes.XC_fc)] == 1
     assert opcode_cnt[OperatorCode(BuiltinOpCodes.SOFTMAX, version=2)] == 1
+    if experimental_xformer2:
+        assert opcode_cnt[OperatorCode(BuiltinOpCodes.PAD, version=2)] == 1
+    else:
+        assert opcode_cnt[OperatorCode(BuiltinOpCodes.PAD)] == 1
 
 
 if __name__ == "__main__":

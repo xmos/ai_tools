@@ -60,12 +60,12 @@ GENERATOR = FullyConnectedTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_fc
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def reference_op_code() -> BuiltinOpCodes:
     return BuiltinOpCodes.FULLY_CONNECTED
 
@@ -75,7 +75,7 @@ def reference_op_code() -> BuiltinOpCodes:
 #  ----------------------------------------------------------------------------
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_reference_model_regression(
     reference_model: XCOREModel, reference_op_code: BuiltinOpCodes
 ) -> None:
@@ -86,7 +86,10 @@ def test_reference_model_regression(
     if len(operators) == 2:
         assert operators[0].operator_code.code is BuiltinOpCodes.RESHAPE
 
-    assert operators[-1].operator_code.code is reference_op_code
+    op_code = operators[-1].operator_code.code
+    assert (
+        op_code is reference_op_code
+    ), f"expected: {reference_op_code}, got: {op_code}"
 
 
 if __name__ == "__main__":

@@ -477,7 +477,7 @@ class LegalizeBconv2dInt8Pass(LegalizeBconv2dPass):
         )
 
         return self._QuantParams(
-            post_act_mult_quant, post_act_bias_quant, output_trf_params, accu_modifier,
+            post_act_mult_quant, post_act_bias_quant, output_trf_params, accu_modifier
         )
 
     def mutate_biases(self, op: Operator) -> None:
@@ -691,7 +691,7 @@ class LegalizeXCBconv2DPaddingPass(OperatorMatchingPass):
             int(size + sum(pads)) for size, pads in zip(old_input.shape, paddings)
         )
         padded_input_tensor = subgraph.create_tensor(
-            f"{op.name}/input", TensorType.INT32, shape=padded_shape, consumers=[op],
+            f"{op.name}/input", TensorType.INT32, shape=padded_shape, consumers=[op]
         )
 
         # create new PAD op and inject it before the convolution

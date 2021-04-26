@@ -3,8 +3,8 @@
 
 import pytest
 import tensorflow as tf
-from typing import Optional, Tuple
 
+from tflite2xcore.utils import asserting_cast
 from tflite2xcore.xcore_schema import XCOREModel, ValidOpCodes, BuiltinOpCodes
 from tflite2xcore.model_generation import Configuration
 
@@ -33,11 +33,19 @@ class ExplicitlyPaddedConv2dMixin(PaddingMixin, AbstractConv2dTestModelGenerator
 
     @property
     def _total_width(self) -> int:
-        return super()._total_width + self._config["pad_l"] + self._config["pad_r"]  # type: ignore
+        return (
+            super()._total_width
+            + asserting_cast(int, self._config["pad_l"])
+            + asserting_cast(int, self._config["pad_r"])
+        )
 
     @property
     def _total_height(self) -> int:
-        return super()._total_height + self._config["pad_t"] + self._config["pad_b"]  # type: ignore
+        return (
+            super()._total_height
+            + asserting_cast(int, self._config["pad_t"])
+            + asserting_cast(int, self._config["pad_b"])
+        )
 
     def _build_core_model(self) -> tf.keras.Model:
 
@@ -51,12 +59,15 @@ class ExplicitlyPaddedConv2dMixin(PaddingMixin, AbstractConv2dTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_reference_model_regression(
     reference_model: XCOREModel, reference_op_code: ValidOpCodes
 ) -> None:
     operators = reference_model.subgraphs[0].operators
     assert len(operators) == 2
     assert operators[0].operator_code.code is BuiltinOpCodes.PAD
-    assert operators[1].operator_code.code is reference_op_code
 
+    op_code = operators[1].operator_code.code
+    assert (
+        op_code is reference_op_code
+    ), f"expected: {reference_op_code}, got: {op_code}"

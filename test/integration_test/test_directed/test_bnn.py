@@ -6,7 +6,7 @@ import logging
 import tensorflow as tf
 import numpy as np
 from pathlib import Path
-from typing import Optional, Type
+from typing import Optional, Type, Any
 from tflite2xcore.utils import LoggingContext
 from tflite2xcore.xcore_schema import (
     XCOREModel,
@@ -68,10 +68,9 @@ class CIFAR10BinarizedTestRunner(BinarizedTestRunner):
     def __init__(
         self,
         generator: Type[IntegrationTestModelGenerator],
-        *,
-        use_device: bool = False,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(generator, use_device=use_device)
+        super().__init__(generator, **kwargs)
 
         self._ground_truth_data_factory = CIFAR10TestLabelFactory(self, lambda: tuple())
         self.register_data_factory(self._ground_truth_data_factory)
@@ -96,17 +95,17 @@ RUNNER = CIFAR10BinarizedTestRunner
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def abs_output_tolerance(use_device: bool) -> int:
     return 13 if use_device else 33
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def expected_accuracy(use_device: bool) -> float:
     return 0.79 if use_device else 0.6873
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def expected_prediction_deviation(use_device: bool) -> int:
     return 0 if use_device else 28
 
@@ -133,12 +132,15 @@ def test_accuracy(run: CIFAR10BinarizedTestRunner, expected_accuracy: float) -> 
     assert metric.result().numpy() == np.float32(expected_accuracy)
 
 
-@pytest.mark.skip_on_device  # type: ignore
-def test_converted_model(xcore_model: XCOREModel) -> None:
+@pytest.mark.skip_on_device
+def test_converted_model(xcore_model: XCOREModel, experimental_xformer2: bool) -> None:
     subgraph = xcore_model.subgraphs[0]
 
     # check tensors
-    assert len(subgraph.tensors) == 24
+    if experimental_xformer2:
+        assert len(subgraph.tensors) == 23
+    else:
+        assert len(subgraph.tensors) == 24
 
     assert len(subgraph.inputs) == 1
     input_tensor = subgraph.inputs[0]

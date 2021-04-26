@@ -1,12 +1,26 @@
 # Copyright 2019-2021 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
+import os
+import logging
+import tempfile
+import subprocess
+
 from pathlib import Path
 from typing import Optional, Union, Any
 
 from tflite2xcore.pass_manager import PassManager
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore import transformation_passes as passes
+
+
+XFORMER2_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "experimental"
+    / "xformer"
+    / "bazel-bin"
+    / "xcore-opt"
+)
 
 
 class CleanupManager(PassManager):
@@ -106,11 +120,18 @@ class PoolingLoweringManager(PassManager):
 
 
 class ParametricOperatorLoweringManager(PassManager):
-    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        model: Optional[XCOREModel] = None,
+        *,
+        experimental_xformer2: bool = False,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(model, **kwargs)
 
         # first we match ops and replace them
-        self.register_pass(passes.ReplaceFullyConnectedPass())
+        if not experimental_xformer2:
+            self.register_pass(passes.ReplaceFullyConnectedPass())
         self.register_pass(passes.Replace1x1Conv2dPass())
         self.register_pass(passes.ReplaceShallowinConv2dPass())
         self.register_pass(passes.ReplaceDepthwiseConv2dPass())
@@ -252,8 +273,10 @@ def optimize_for_xcore(
     remove_input_alignment_pad: bool = False,
     remove_float_interface: bool = False,
     external_memory: bool = False,
-) -> None:
+    experimental_xformer2: bool = False,
+) -> XCOREModel:
     num_threads = num_threads or 1
+    intermediates_path = Path(intermediates_path) if intermediates_path else None
 
     pass_mgr = PassManager(model, keep_intermediates=bool(intermediates_path))
 
@@ -266,8 +289,33 @@ def optimize_for_xcore(
     # lowering to the xcore ops
     pass_mgr.register_passes(ActivationLoweringManager())
     pass_mgr.register_passes(PoolingLoweringManager())
-    pass_mgr.register_passes(ParametricOperatorLoweringManager())
     pass_mgr.register_passes(BinarizedOperatorLoweringManager())
+
+    if experimental_xformer2:
+        try:
+            pass_mgr.run_passes()
+            model.sanity_check()
+        finally:
+            if intermediates_path:
+                pass_mgr.save_intermediates(intermediates_path / "pre_xformer2")
+                intermediates_path /= "post_xformer2"
+
+        with tempfile.TemporaryDirectory(suffix=str(os.getpid())) as dirname:
+            input_path = Path(dirname) / "input.tflite"
+            model.write_flatbuffer(input_path)
+
+            output_path = Path(dirname) / "output.tflite"
+            cmd = [str(XFORMER2_PATH), str(input_path), "-o", str(output_path)]
+            p = subprocess.run(cmd, capture_output=True, check=True)
+            logging.debug(p.stdout)
+
+            model = XCOREModel.read_flatbuffer(output_path)
+
+        pass_mgr = PassManager(model, keep_intermediates=bool(intermediates_path))
+
+    pass_mgr.register_passes(
+        ParametricOperatorLoweringManager(experimental_xformer2=experimental_xformer2)
+    )
 
     # TODO: finish these and find a manager for them:
     pass_mgr.register_pass(passes.ReplaceAddPass())
@@ -289,13 +337,14 @@ def optimize_for_xcore(
 
     try:
         pass_mgr.run_passes()
+        model.sanity_check()
     finally:
         if intermediates_path:
             pass_mgr.save_intermediates(intermediates_path)
 
-    model.sanity_check()
-
     model.description = model.description + " + XMOS optimized."
+
+    return model
 
 
 def convert(
@@ -304,5 +353,5 @@ def convert(
     **kwargs: Any,
 ) -> None:
     model = XCOREModel.read_flatbuffer(tflite_input_path)
-    optimize_for_xcore(model, **kwargs)
+    model = optimize_for_xcore(model, **kwargs)
     model.write_flatbuffer(tflite_output_path)

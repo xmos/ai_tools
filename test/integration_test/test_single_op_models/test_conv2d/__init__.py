@@ -5,6 +5,7 @@ import tensorflow as tf
 from abc import abstractmethod
 from typing import Tuple, Optional
 
+from tflite2xcore.utils import asserting_cast
 from tflite2xcore.model_generation import Configuration
 from tflite2xcore.model_generation.utils import parse_init_config
 
@@ -27,11 +28,11 @@ from .. import (
 class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
     @property
     def _total_width(self) -> int:
-        return self._config["width"]  # type: ignore
+        return asserting_cast(int, self._config["width"])
 
     @property
     def _total_height(self) -> int:
-        return self._config["height"]  # type: ignore
+        return asserting_cast(int, self._config["height"])
 
     def _set_config(self, cfg: Configuration) -> None:
         self._config.update(
@@ -57,7 +58,7 @@ class Conv2dGenericTestModelGenerator(AbstractConv2dTestModelGenerator):
 
     @property
     def _input_channels(self) -> int:
-        return self._config["input_channels"]  # type: ignore
+        return asserting_cast(int, self._config["input_channels"])
 
     def _op_layer(
         self, *, input_shape: Optional[Tuple[int, int, int]] = None

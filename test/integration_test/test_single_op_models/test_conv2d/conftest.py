@@ -10,6 +10,6 @@ from tflite2xcore.xcore_model import BuiltinOpCodes
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def reference_op_code() -> BuiltinOpCodes:
     return BuiltinOpCodes.CONV_2D

@@ -36,6 +36,11 @@ integration_test:
 	cd test && pytest integration_test --cache-clear --collect-only -qq
 	cd test && pytest integration_test -n $(NUM_PROCS) --dist loadfile --junitxml=integration_junit.xml
 
+.PHONY: xformer2_test
+xformer2_test:
+	cd test && pytest integration_test --cache-clear --collect-only -qq
+	cd test && pytest integration_test -n $(NUM_PROCS) --dist loadfile --experimental-xformer2 --junitxml=integration_junit.xml
+
 #**************************
 # ALL build target
 #**************************
@@ -51,14 +56,6 @@ build: lib_flexbuffers_build \
 .PHONY: test
 test: tflite2xcore_unit_test \
  integration_test
-
-#**************************
-# ci target
-#**************************
-
-.PHONY: ci 
-ci: CLOBBER_FLAG = '-c'
-ci: build test tflite2xcore_dist
 
 #**************************
 # development targets
@@ -90,7 +87,6 @@ help:
 	$(info   develop                       Update submodules and build all components)
 	$(info   clobber                       Update submodules, then clean and rebuild all components)
 	$(info   test                          Run all tests (requires tflite2xcore[test] package))
-	$(info   ci                            Run continuous integration build and test (requires tflite2xcore[test] package))
 	$(info )
 	$(info secondary targets:)
 	$(info   lib_flexbuffers_build         Build lib_flexbuffers)
@@ -98,4 +94,5 @@ help:
 	$(info   tflite2xcore_unit_test        Run tflite2xcore unit tests (requires tflite2xcore[test] package))
 	$(info   tflite2xcore_dist             Build tflite2xcore distribution (requires tflite2xcore[test] package))
 	$(info   integration_test              Run integration tests (requires tflite2xcore[test] package))
+	$(info   xformer2_test                 Run integration tests with xformer2 (experimental requires tflite2xcore[test] package))
 	$(info )

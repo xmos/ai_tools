@@ -13,7 +13,7 @@ from . import (
 )
 
 if TYPE_CHECKING:
-    from . import Operator, Subgraph, XCOREModel
+    from . import Subgraph
 
 _ShapeInputType = Union[None, Iterable[Union[int, np.integer]], np.ndarray]
 

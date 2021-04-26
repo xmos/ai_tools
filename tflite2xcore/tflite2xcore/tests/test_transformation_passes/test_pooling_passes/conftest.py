@@ -223,7 +223,7 @@ def test_non_matching_pool_w(
     model = build_model(
         input_shape=input_shape,
         padding=padding,
-        pool_size=(pool_h, non_matching_pool_w,),
+        pool_size=(pool_h, non_matching_pool_w),
         strides=strides,
         fused_activation=fused_activation,
     )

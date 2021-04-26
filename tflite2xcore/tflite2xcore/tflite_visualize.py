@@ -543,7 +543,7 @@ def GenerateGraph(subgraph_idx, g, opcode_mapper):
                 first[tensor_index] = ((op_index - 0.5 + 1) * pixel_mult, x)
             x += tensor_nodes_info[tensor_index]["width"] + 10  # offset
             edges.append(
-                {"source": TensorID(tensor_index), "target": OperatorID(op_index),}
+                {"source": TensorID(tensor_index), "target": OperatorID(op_index)}
             )
 
         x = width_mult

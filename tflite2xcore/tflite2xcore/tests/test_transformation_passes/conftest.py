@@ -132,6 +132,5 @@ def test_replace_mutate(
     model.sanity_check()
 
     # check new op
-    op = model.subgraphs[0].operators[-1]
-    assert op.operator_code.code is new_opcode
-
+    op_code = model.subgraphs[0].operators[-1].operator_code.code
+    assert op_code is new_opcode, f"expected: {new_opcode}, got: {op_code}"

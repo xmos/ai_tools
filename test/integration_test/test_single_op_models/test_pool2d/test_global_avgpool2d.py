@@ -36,12 +36,12 @@ GENERATOR = GlobalAveragePooling2dTestModelGenerator
 #  ----------------------------------------------------------------------------
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def converted_op_code() -> XCOREOpCodes:
     return XCOREOpCodes.XC_avgpool2d_global
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def reference_op_code() -> BuiltinOpCodes:
     return BuiltinOpCodes.MEAN
 
@@ -51,7 +51,7 @@ def reference_op_code() -> BuiltinOpCodes:
 #  ----------------------------------------------------------------------------
 
 # TODO: fix this
-def test_output(compared_outputs, request):
+def test_output(compared_outputs, request):  # type: ignore
     name = request.node.name
     if tf.version.VERSION[:3] in ("2.4", "2.5"):
         if (

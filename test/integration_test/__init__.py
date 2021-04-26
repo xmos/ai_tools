@@ -14,10 +14,9 @@ from typing import (
     NamedTuple,
     Tuple,
     Dict,
-    Optional,
     Iterable,
     Type,
-    Optional,
+    Any,
 )
 
 from tflite2xcore.utils import unpack_bits
@@ -43,7 +42,7 @@ from tflite2xcore.model_generation.data_factories import (
     TensorDataFactory,
     InputInitializerDataFactory,
 )
-from xcore_interpreters import (  # type: ignore # TODO: fix this
+from xcore_interpreters import (
     ModelSizeError,
     ArenaSizeError,
 )
@@ -63,6 +62,7 @@ class IntegrationTestRunner(Runner):
         generator: Type["IntegrationTestModelGenerator"],
         *,
         use_device: bool = False,
+        experimental_xformer2: bool = False,
     ) -> None:
         super().__init__(generator)
         self._use_device = use_device
@@ -70,11 +70,17 @@ class IntegrationTestRunner(Runner):
         self._repr_data_factory = self.make_repr_data_factory()
         self.register_data_factory(self._repr_data_factory)
 
-        self._xcore_converter = XCoreConverter(self, self.get_xcore_reference_model)
+        self._xcore_converter = XCoreConverter(
+            self,
+            self.get_xcore_reference_model,
+            experimental_xformer2=experimental_xformer2,
+        )
         self.register_converter(self._xcore_converter)
 
         self._identity_converter = XCoreConverter(
-            self, self._xcore_converter.get_converted_model
+            self,
+            self._xcore_converter.get_converted_model,
+            experimental_xformer2=experimental_xformer2,
         )
         self.register_converter(self._identity_converter)
 
@@ -141,10 +147,9 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
     def __init__(
         self,
         generator: Type["IntegrationTestModelGenerator"],
-        *,
-        use_device: bool = False,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(generator, use_device=use_device)
+        super().__init__(generator, **kwargs)
 
         # floating point reference
         self._reference_float_converter = TFLiteFloatConverter(
@@ -179,8 +184,8 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         return self._reference_quant_evaluator.input_data
 
     def run(self) -> None:
-        """ Defines how a DefaultIntegrationTestRunner should be run.
-        
+        """Defines how a DefaultIntegrationTestRunner should be run.
+
         Most integration tests require self.outputs to be set.
         """
         super().run()
@@ -237,10 +242,9 @@ class BinarizedTestRunner(IntegrationTestRunner):
     def __init__(
         self,
         generator: Type["IntegrationTestModelGenerator"],
-        *,
-        use_device: bool = False,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(generator, use_device=use_device)
+        super().__init__(generator, **kwargs)
 
         self._lce_converter = self.make_lce_converter()
         self.register_converter(self._lce_converter)
@@ -270,7 +274,8 @@ class BinarizedTestRunner(IntegrationTestRunner):
         super().rerun_post_cache()
 
         self.outputs = self.OutputData(
-            self._lce_evaluator.output_data, self._xcore_evaluator.output_data,
+            self._lce_evaluator.output_data,
+            self._xcore_evaluator.output_data,
         )
         self.converted_models.update(
             {
@@ -422,7 +427,8 @@ def test_output(
         pytest.fail(msg, pytrace=False)
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
+@pytest.mark.skip_on_xformer2
 def test_idempotence(xcore_model: XCOREModel, run: IntegrationTestRunner) -> None:
     run._identity_converter.convert()
     identical_model = XCOREModel.deserialize(run._identity_converter._model)

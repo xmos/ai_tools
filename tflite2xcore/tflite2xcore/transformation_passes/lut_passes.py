@@ -66,7 +66,7 @@ class LegalizeXCLookupTablePass(QuantizedOperatorMatchingPass):
         outputs_int = np.concatenate([outputs_int[128:], outputs_int[0:128]])
 
         lut_tensor = op.subgraph.create_tensor(
-            f"{op.name}/LUT", TensorType.INT8, shape=[len(outputs_int)], consumers=[op],
+            f"{op.name}/LUT", TensorType.INT8, shape=[len(outputs_int)], consumers=[op]
         )
         lut_tensor.buffer.data = outputs_int
         op.inputs.append(lut_tensor)

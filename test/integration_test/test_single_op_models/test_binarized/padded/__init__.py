@@ -19,14 +19,18 @@ from .. import (
 #  ----------------------------------------------------------------------------
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_converted_model(
     xcore_model: XCOREModel, converted_op_code: XCOREOpCodes
 ) -> None:
     subgraph = xcore_model.subgraphs[0]
     operators = subgraph.operators
     op = operators[-1]
-    assert op.operator_code.code is converted_op_code
+
+    op_code = op.operator_code.code
+    assert (
+        op_code is converted_op_code
+    ), f"expected: {converted_op_code}, got: {op_code}"
 
     if len(operators) == 2:
         padded_input = op.inputs[0]

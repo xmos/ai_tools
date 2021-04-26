@@ -6,6 +6,7 @@ import tensorflow as tf
 from abc import abstractmethod
 from typing import Tuple, Optional
 
+from tflite2xcore.utils import asserting_cast
 from tflite2xcore.model_generation import Configuration
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import XCOREOpCodes, ValidOpCodes
@@ -84,7 +85,7 @@ class ChannelAgnosticOpTestModelGenerator(ImageInputOpTestModelGenerator):
 
     @property
     def _input_channels(self) -> int:
-        return self._config["channels"]  # type: ignore
+        return asserting_cast(int, self._config["channels"])
 
 
 class ChannelPreservingOpTestModelGenerator(ChannelAgnosticOpTestModelGenerator):
@@ -118,21 +119,25 @@ class FilterOpTestModelGenerator(ImageInputOpTestModelGenerator):
 #  ----------------------------------------------------------------------------
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_converted_single_op_model(
     xcore_model: XCOREModel, converted_op_code: XCOREOpCodes
 ) -> None:
     operators = xcore_model.subgraphs[0].operators
     assert len(operators) == 1
-    op = operators[0]
-    assert op.operator_code.code is converted_op_code
+    op_code = operators[0].operator_code.code
+    assert (
+        op_code is converted_op_code
+    ), f"expected: {converted_op_code}, got: {op_code}"
 
 
-@pytest.mark.skip_on_device  # type: ignore
+@pytest.mark.skip_on_device
 def test_reference_model_regression(
     reference_model: XCOREModel, reference_op_code: ValidOpCodes
 ) -> None:
     operators = reference_model.subgraphs[0].operators
     assert len(operators) == 1
-    op = operators[0]
-    assert op.operator_code.code is reference_op_code
+    op_code = operators[0].operator_code.code
+    assert (
+        op_code is reference_op_code
+    ), f"expected: {reference_op_code}, got: {op_code}"

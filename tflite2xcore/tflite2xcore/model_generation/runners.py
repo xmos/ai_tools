@@ -23,7 +23,7 @@ ConvertedModels = Dict[str, TFLiteModel]
 
 
 class Runner(ABC):
-    """ Superclass for defining the behavior of model generation runs.
+    """Superclass for defining the behavior of model generation runs.
 
     A Runner registers a ModelGenerator object along with all the
     converters, evaluators, and data factories.
@@ -65,7 +65,7 @@ class Runner(ABC):
         self._model_generator.check_config()
 
     def _set_config(self, cfg: Configuration) -> None:
-        """ Sets the relevant configuration parameters.
+        """Sets the relevant configuration parameters.
 
         This method operates on the config input argument in-place.
         Subclasses should override this instead of the set_config method.
@@ -79,8 +79,8 @@ class Runner(ABC):
             data_factory._set_config(cfg)
 
     def set_config(self, **config: Any) -> None:
-        """ Configures the runner before it is called.
-        
+        """Configures the runner before it is called.
+
         Default values for missing configuration parameters are set.
         Subclasses should override set_config instead of this method.
         """
@@ -93,8 +93,8 @@ class Runner(ABC):
         self.check_config()
 
     def save(self, dirpath: Union[Path, str]) -> Path:
-        """ Saves the Runner contents to the specified directory.
-        
+        """Saves the Runner contents to the specified directory.
+
         If the directory doesn't exist, it is created.
         """
         dirpath = Path(dirpath)
@@ -129,7 +129,9 @@ class Runner(ABC):
                 logging.debug(f"{name} visualization dumped to {model_html}")
 
         all_models_name = ",".join(self.converted_models.keys())
-        all_models_path = (dirpath / f"{{{all_models_name}}}").with_suffix(".tflite")
+        all_models_path = (dirpath / f"model_{{{all_models_name}}}").with_suffix(
+            ".tflite"
+        )
         logging.info(f"Models dumped to {all_models_path}")
 
     @staticmethod
@@ -158,8 +160,8 @@ class RunnerDependent(ABC):
         pass
 
     def _set_config(self, cfg: Configuration) -> None:
-        """ Sets the relevant configuration parameters and returns the unused ones.
-        
+        """Sets the relevant configuration parameters and returns the unused ones.
+
         This method operates on the cfg input argument in-place.
         """
         pass

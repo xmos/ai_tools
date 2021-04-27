@@ -43,4 +43,3 @@ build --nocheck_visibility
 
 # Use the following command to create a debug build for xformer2
 # bazel build -c dbg --spawn_strategy=local --javacopt="-g" --copt="-g" --strip="never" //:xcore-opt
-

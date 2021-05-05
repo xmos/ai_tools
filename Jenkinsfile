@@ -12,7 +12,7 @@ pipeline {
     parameters { // Available to modify on the job page within Jenkins if starting a build
         string( // use to try different tools versions
             name: 'TOOLS_VERSION',
-            defaultValue: '15.0.5',
+            defaultValue: '15.0.6',
             description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
         )
         booleanParam( // use to check results of rolling all conda deps forward
@@ -67,7 +67,7 @@ pipeline {
         }
         stage("Build") {
             steps {
-                // below is how we can activate the tools, NOTE: xTIMEcomposer -> XTC at tools 15.0.5
+                // below is how we can activate the tools, NOTE: xTIMEcomposer -> XTC at tools 15.0.5 and later
                 // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv && //
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./ai_tools_venv &&

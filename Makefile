@@ -58,6 +58,11 @@ test: tflite2xcore_unit_test integration_test
 submodule_update: 
 	git submodule update --init --recursive
 
+.PHONY: clean
+clean:
+	cd utils/adf/ && make clean
+	rm -rf utils/lib_flexbuffers/build
+
 .PHONY: help
 help:
 	@:  # This silences the "Nothing to be done for 'help'" output
@@ -67,6 +72,7 @@ help:
 	$(info primary targets:)
 	$(info   build                         Build all components)
 	$(info   test                          Run all tests (requires tflite2xcore[test] package))
+	$(info   clean                         Clean all build artifacts)
 	$(info )
 	$(info secondary targets:)
 	$(info   lib_flexbuffers_build         Build lib_flexbuffers)

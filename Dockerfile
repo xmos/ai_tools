@@ -6,10 +6,12 @@ FROM continuumio/miniconda3:4.8.2
 #  - conda setup
 #  - xmos tools setup
 
-# fix conda perms
+# fix conda perms and config
 RUN chmod -R 777 /opt/conda \
     && mkdir -p /.conda \
-    && chmod -R 777 /.conda
+    && chmod -R 777 /.conda \
+    && conda init \
+    && conda config --set auto_activate_base false
 
 # install tools lib dependencies
 RUN apt-get update && apt-get install -y \
@@ -17,13 +19,18 @@ RUN apt-get update && apt-get install -y \
     tcl environment-modules \
     && apt-get clean autoclean
 
-# install gcc
-RUN apt-get install -y build-essential
-
 # install clang
-RUN apt-get update && apt-get install -y gnupg lsb-release software-properties-common
-RUN bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
-RUN ln -s /usr/bin/clang-12 /usr/bin/clang
+RUN apt-get update && apt-get install -y \
+    gnupg lsb-release software-properties-common
+ADD https://apt.llvm.org/llvm.sh /tmp/
+ARG clang_version=12
+RUN cd /tmp \
+    && chmod +x llvm.sh \
+    && ./llvm.sh $clang_version
+RUN ln -s /usr/bin/clang-$clang_version /usr/bin/clang \
+    && ln -s /usr/bin/clang++-$clang_version /usr/bin/clang++ \
+    && ln -s /usr/bin/clang /usr/bin/cc \
+    && ln -s /usr/bin/clang++ /usr/bin/c++
 
 # install get_tools.py script
 #   requires connection to XMOS network at build and run time

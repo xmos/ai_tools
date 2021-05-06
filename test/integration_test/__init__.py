@@ -135,13 +135,14 @@ class IntegrationTestRunner(Runner):
         self._xcore_evaluator.evaluate()
 
 
-class DefaultIntegrationTestRunner(IntegrationTestRunner):
-    class OutputData(NamedTuple):
-        reference_float: np.ndarray
-        reference_quant: np.ndarray
-        xcore: np.ndarray
+class DefaultOutputData(NamedTuple):
+    reference_float: np.ndarray
+    reference_quant: np.ndarray
+    xcore: np.ndarray
 
-    outputs: "DefaultIntegrationTestRunner.OutputData"
+
+class DefaultIntegrationTestRunner(IntegrationTestRunner):
+    outputs: DefaultOutputData
     _xcore_evaluation_data: np.ndarray
 
     def __init__(
@@ -200,7 +201,7 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
     def rerun_post_cache(self) -> None:
         super().rerun_post_cache()
 
-        self.outputs = self.OutputData(
+        self.outputs = DefaultOutputData(
             self._reference_float_evaluator.output_data,
             self._reference_quant_evaluator.output_data,
             self._xcore_evaluator.output_data,
@@ -234,10 +235,13 @@ class DefaultIntegrationTestRunner(IntegrationTestRunner):
         )
 
 
+class BinarizedOutputData(NamedTuple):
+    reference_quant: np.ndarray
+    xcore: np.ndarray
+
+
 class BinarizedTestRunner(IntegrationTestRunner):
-    class OutputData(NamedTuple):
-        reference_quant: np.ndarray
-        xcore: np.ndarray
+    outputs: BinarizedOutputData
 
     def __init__(
         self,
@@ -273,7 +277,7 @@ class BinarizedTestRunner(IntegrationTestRunner):
     def rerun_post_cache(self) -> None:
         super().rerun_post_cache()
 
-        self.outputs = self.OutputData(
+        self.outputs = BinarizedOutputData(
             self._lce_evaluator.output_data,
             self._xcore_evaluator.output_data,
         )

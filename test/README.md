@@ -1,6 +1,6 @@
 # Integration Tests
 
-*Before running the integration tests, you must first install the `xcore_interpreter` python module. Running `make develop` should take care of this.*
+Before running the integration tests, you must first install the `xcore_interpreter` python module as described in the main [`README.md`](../README.md).
 
 ## Running all tests with the host interpreter
 

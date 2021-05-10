@@ -1,5 +1,9 @@
 load("@org_tensorflow//third_party/mlir:tblgen.bzl", "gentbl")
 
+package(
+    default_visibility = ["//visibility:public"],
+)
+
 gentbl(
     name = "xc_ops_inc_gen",
     tbl_outs = [

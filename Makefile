@@ -1,5 +1,4 @@
 NUM_PROCS := 4
-CLOBBER_FLAG := '-c'
 
 .DEFAULT_GOAL := help
 
@@ -9,7 +8,7 @@ CLOBBER_FLAG := '-c'
 
 .PHONY: xcore_interpreters_build
 xcore_interpreters_build:
-	cd utils/adf/ && make build CLOBBER_FLAG=$(CLOBBER_FLAG)
+	cd utils/adf/ && make build
 
 #**************************
 # tflite2xcore targets
@@ -17,7 +16,7 @@ xcore_interpreters_build:
 
 .PHONY: lib_flexbuffers_build
 lib_flexbuffers_build:
-	cd utils/lib_flexbuffers && bash build.sh $(CLOBBER_FLAG)
+	cd utils/lib_flexbuffers && bash build.sh
 
 .PHONY: tflite2xcore_unit_test
 tflite2xcore_unit_test:
@@ -42,39 +41,27 @@ xformer2_test:
 	cd test && pytest integration_test -n $(NUM_PROCS) --dist loadfile --experimental-xformer2 --junitxml=integration_junit.xml
 
 #**************************
-# ALL build target
+# default build and test targets
 #**************************
 
 .PHONY: build
-build: lib_flexbuffers_build \
- xcore_interpreters_build
-
-#**************************
-# ALL tests target
-#**************************
+build: lib_flexbuffers_build xcore_interpreters_build
 
 .PHONY: test
-test: tflite2xcore_unit_test \
- integration_test
+test: tflite2xcore_unit_test integration_test
 
 #**************************
-# development targets
+# other targets
 #**************************
 
 .PHONY: submodule_update
 submodule_update: 
 	git submodule update --init --recursive
 
-.PHONY: _develop
-_develop: submodule_update build
-
-.PHONY: develop
-develop: CLOBBER_FLAG=''
-develop: _develop
-
-.PHONY: clobber
-clobber: CLOBBER_FLAG='-c'
-clobber: _develop
+.PHONY: clean
+clean:
+	cd utils/adf/ && make clean
+	rm -rf utils/lib_flexbuffers/build
 
 .PHONY: help
 help:
@@ -84,9 +71,8 @@ help:
 	$(info )
 	$(info primary targets:)
 	$(info   build                         Build all components)
-	$(info   develop                       Update submodules and build all components)
-	$(info   clobber                       Update submodules, then clean and rebuild all components)
 	$(info   test                          Run all tests (requires tflite2xcore[test] package))
+	$(info   clean                         Clean all build artifacts)
 	$(info )
 	$(info secondary targets:)
 	$(info   lib_flexbuffers_build         Build lib_flexbuffers)

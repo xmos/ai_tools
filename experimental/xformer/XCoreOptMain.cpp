@@ -1,16 +1,20 @@
 // Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
 
+#include "IR/XCoreOps.h"
 #include "Transforms/Passes.h"
 #include "Utils/FileIO.h"
 
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
+#include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InitLLVM.h"
@@ -22,10 +26,12 @@ using namespace mlir;
 int main(int argc, char **argv) {
   llvm::InitLLVM y(argc, argv);
 
-  static cl::opt<std::string> inputPath(
-      cl::Positional, cl::desc("<TFLite FlatBuffer>"), cl::Required);
+  static cl::opt<std::string> inputFilename(cl::Positional,
+                                            cl::desc("<TFLite FlatBuffer>"));
   static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
                                              cl::value_desc("filename"));
+  static cl::opt<bool> mlirIOEnabled("mlir-io",
+                                     cl::desc("Enable MLIR input and output"));
 
   // Register any command line options.
   registerAsmPrinterCLOptions();
@@ -36,26 +42,32 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
   // Initialize dialects.
-  DialectRegistry registry;
-  // registry.insert<TFL::TensorFlowLiteDialect>();
-  // registry.insert<TF::TensorFlowDialect>();
-  // registry.insert<quant::QuantizationDialect>();
-  // registry.insert<StandardOpsDialect>();
+  MLIRContext context;
+  context.loadDialect<StandardOpsDialect>();
+  context.loadDialect<quant::QuantizationDialect>();
+  context.loadDialect<TFL::TensorFlowLiteDialect>();
+  context.loadDialect<xcore::XCoreDialect>();
 
-  // Convert the Module proto into MLIR.
-  MLIRContext context; //(registry);
-  // context.loadAllAvailableDialects();
-
-  // Read flatbuffer and convert to serialized MLIR string
-  OwningModuleRef mod(
-      xcore::utils::readFlatBufferFileToMLIR(inputPath, &context));
-  if (!mod) {
-    llvm::errs() << "Unable to read flatbuffer\n";
-    return 1;
+  // Parse input.
+  OwningModuleRef mod;
+  if (mlirIOEnabled) {
+    // Parse the MLIR input file.
+    mod = parseSourceFile(inputFilename, &context);
+    if (!mod) {
+      llvm::errs() << "Unable to read MLIR file\n";
+      return 1;
+    }
+  } else {
+    // Read flatbuffer and convert to serialized MLIR string.
+    mod = xcore::utils::readFlatBufferFileToMLIR(inputFilename, &context);
+    if (!mod) {
+      llvm::errs() << "Unable to read flatbuffer file\n";
+      return 1;
+    }
   }
 
-  // Run transformations.
-  // Apply any pass manager command line options.
+  // Run transformations
+  // Apply any pass manager command line options
   PassManager pm(&context);
   applyPassManagerCLOptions(pm);
 
@@ -76,11 +88,25 @@ int main(int argc, char **argv) {
     }
   }
 
-  // Write modified flatbuffer
-  if (!outputFilename.empty()) {
-    std::string outfilename(outputFilename);
-    if (failed(xcore::utils::writeMLIRToFlatBufferFile(outfilename, mod.get())))
+  // Print output
+  if (mlirIOEnabled) {
+    // Print the MLIR output to stdout
+    std::string errorMessage;
+    auto output = openOutputFile("-", &errorMessage);
+    if (!output) {
+      llvm::errs() << errorMessage << "\n";
       return 1;
+    }
+    mod->print(output->os());
+    output->os() << '\n';
+  } else {
+    // Write modified flatbuffer to output file
+    if (!outputFilename.empty()) {
+      std::string outfilename(outputFilename);
+      if (failed(
+              xcore::utils::writeMLIRToFlatBufferFile(outfilename, mod.get())))
+        return 1;
+    }
   }
 
   return 0;

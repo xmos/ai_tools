@@ -140,7 +140,8 @@ class ParametricOperatorLoweringManager(PassManager):
         # second we legalize them by reshaping weight/bias tensors,
         # calculating parameters specific to our kernels,
         # and populating the custom options
-        self.register_pass(passes.LegalizeXCFullyConnectedPass())
+        if not experimental_xformer2:
+            self.register_pass(passes.LegalizeXCFullyConnectedPass())
         self.register_pass(passes.LegalizeXC1x1ConvPass())
         self.register_pass(passes.LegalizeXCShallowinConvPass())
         self.register_pass(passes.LegalizeXCDepthwiseConvPass())

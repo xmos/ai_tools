@@ -41,6 +41,11 @@ pip install -e "./utils/adf/xcore_interpreters"
 pip install -e "./tflite2xcore[examples]"
 ```
 
+To be able to run pytest(Integration tests)
+```shell
+pip install -e "./tflite2xcore[test]"
+```
+
 Docker Image
 ------------
 

@@ -17,8 +17,7 @@ INSTALL_REQUIRES = [
     "dill>=0.3.1.1",
     "flatbuffers==1.12.0",
     "numpy>=1.19.5",
-    "tensorflow==2.5.0rc3",
-    # "tensorflow>=2.4.0,<=2.5.0", # TODO: uncomment when 2.5.0 is released and tested
+    "tensorflow>=2.4.0,<=2.5.0", # TODO: uncomment when 2.5.0 is released and tested
     "larq-compute-engine>=0.5.0",
 ]
 

@@ -17,7 +17,6 @@ from tflite2xcore.xcore_schema import (
 )
 from .pooling_passes import (
     ReplaceAveragePool2DPass,
-    ReplaceGlobalAveragePool2DPass,
 )
 
 def find_largest_address_in_persistent_buffer(subgraph: Subgraph) -> int:
@@ -80,6 +79,9 @@ def insert_ringbuffer(ringbuffer_time_dim: int, new_op: Operator) -> Operator:
     params = np.int32([start_address,prev_data_size])
     ringbuffer_op.inputs[2].buffer.data = params
 
+    for input_tensor in new_op.inputs:
+        input_tensor.add_custom_options(tdnn=True)
+        
     return new_op
 
 class TdnnShallowinConv2dPass(QuantizedOperatorMatchingPass):
@@ -124,6 +126,7 @@ class TdnnMaxPool2DPass(QuantizedOperatorMatchingPass):
         op = insert_ringbuffer(ringbuffer_time_dim,op)
         
         return op
+
 
 class TdnnAveragePool2DPass(ReplaceAveragePool2DPass):
     def mutate(self, op: Operator) -> Operator:
@@ -210,15 +213,18 @@ class PersistentBufferSize(OperatorMatchingPass):
 
 class TdnnTensorPass(TensorMatchingPass):
     def match(self, tensor: Tensor) -> bool:
-        return super().match(tensor) and "tdnn" not in tensor.custom_options
+        return (
+            super().match(tensor) 
+            and "tdnn" not in tensor.custom_options
+            and len(tensor.shape) > 2
+        )
 
     def mutate(self, tensor: Tensor) -> Tensor:
         tensor.add_custom_options(tdnn=True)
 
-        if len(tensor.shape) > 2:
-            shape = list(tensor.shape)
-            shape[1] = 1
-            tensor.shape = tuple(shape)
+        shape = list(tensor.shape)
+        shape[1] = 1
+        tensor.shape = tuple(shape)
 
         return tensor
     
@@ -226,9 +232,9 @@ class TdnnTensorPass(TensorMatchingPass):
 #     def mutate(self, op: Operator) -> Operator:
 #         new_op = super().mutate(op)
 
-#         ring_buffer_time_dim = new_op.inputs[0].shape[1]
+#         ringbuffer_time_dim = new_op.inputs[0].shape[1]
 
-#         new_op = insert_ring_buffer(ring_buffer_time_dim, new_op)
+#         new_op = insert_ringbuffer(ringbuffer_time_dim, new_op)
 
 #         return new_op
 
@@ -248,8 +254,8 @@ class TdnnTensorPass(TensorMatchingPass):
 #     def mutate(self, op: Operator) -> Operator:
 #         op.add_custom_options(tdnn=True)
 
-#         ring_buffer_time_dim = op.inputs[0].shape[1]
+#         ringbuffer_time_dim = op.inputs[0].shape[1]
 
-#         op = insert_ring_buffer(ring_buffer_time_dim, op)
+#         op = insert_ringbuffer(ringbuffer_time_dim, op)
 
 #         return op

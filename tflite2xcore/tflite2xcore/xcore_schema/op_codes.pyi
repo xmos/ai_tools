@@ -161,3 +161,4 @@ class XCOREOpCodes(enum.Enum):
     XC_add_8: XCOREOpCodes
     XC_pad: XCOREOpCodes
     XC_fetch: XCOREOpCodes
+    XC_ringbuffer: XCOREOpCodes

@@ -17,7 +17,6 @@ from tflite2xcore.xcore_schema import (
 )
 from .pooling_passes import (
     ReplaceAveragePool2DPass,
-    ReplaceGlobalAveragePool2DPass,
 )
 
 def find_largest_address_in_persistent_buffer(subgraph: Subgraph) -> int:

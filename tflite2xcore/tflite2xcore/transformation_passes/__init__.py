@@ -118,4 +118,9 @@ from .warning_passes import FloatingPointWarningPass
 
 from .add_passes import ReplaceAddPass
 
-from .tdnn_passes import TdnnMaxPool2DPass
+from .tdnn_passes import (
+    TdnnMaxPool2DPass,
+    TdnnReshapePass,
+    TdnnShallowinConv2dPass,
+    TdnnTensorPass,
+)

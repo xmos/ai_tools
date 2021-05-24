@@ -89,7 +89,7 @@ def test_tdnn_mutate(trf_pass: TdnnMaxPool2DPass, model: XCOREModel) -> None:
 
     op = operators[1] # ring buffer op
     assert len(op.inputs) == 2
-    assert len(op.outputs) == 2
+    assert len(op.outputs) == 1
 
     # check wiring
     assert len(subgraph.get_tensor("input").consumers) == 1

@@ -17,7 +17,6 @@ from tflite2xcore.xcore_schema import (
 )
 from .pooling_passes import (
     ReplaceAveragePool2DPass,
-    ReplaceGlobalAveragePool2DPass,
 )
 
 def find_largest_address_in_persistent_buffer(subgraph: Subgraph) -> int:
@@ -299,7 +298,11 @@ class TdnnCleanup(OperatorMatchingPass):
 
 class TdnnTensorPass(TensorMatchingPass):
     def match(self, tensor: Tensor) -> bool:
-        return super().match(tensor) and "tdnn" not in tensor.custom_options
+        return (
+            super().match(tensor) 
+            and "tdnn" not in tensor.custom_options
+            and len(tensor.shape) > 2
+        )
 
     def mutate(self, tensor: Tensor) -> Tensor:
         tensor.add_custom_options(tdnn=True)

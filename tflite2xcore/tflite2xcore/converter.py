@@ -30,6 +30,19 @@ class CleanupManager(PassManager):
         self.register_pass(passes.EliminateDeadTensorsPass())
         self.register_pass(passes.EliminateDeadBuffersPass())
 
+class TdnnManager(PassManager):
+    def __init__(
+        self,
+        model: Optional[XCOREModel] = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(model, **kwargs)
+        
+        self.register_pass(passes.TdnnReshapePass())
+        self.register_pass(passes.TdnnMaxPool2DPass())
+        self.register_pass(passes.TdnnShallowinConv2dPass())
+        self.register_pass(passes.TdnnTensorPass())
+
 
 class BasicCanonicalizationManager(PassManager):
     def __init__(
@@ -55,11 +68,12 @@ class BasicCanonicalizationManager(PassManager):
         self.register_pass(passes.CanonicalizeSinglePixelConv2DPass())
 
         # canonicalize reshape
-        # this ensures that RESHAPE has a single input tensor
+        # this ensures that RESHAPE has no dynamice reshapes
         # (no dynamic reshapes are currently supported)
         self.register_pass(passes.CanonicalizeReshapePass())
         self.register_passes(CleanupManager())  # this is needed
-
+        
+        
         # canonicalize fully connected shapes
         # the FC implementation flattens implicitly, so we remove RESHAPES before
         # and after FULLY_CONNECTED ops
@@ -110,15 +124,12 @@ class ActivationLoweringManager(PassManager):
 
 class PoolingLoweringManager(PassManager):
     def __init__(
-        self, model: Optional[XCOREModel] = None, tdnn: bool = False, **kwargs: Any
+        self, model: Optional[XCOREModel] = None,  **kwargs: Any
     ) -> None:
         super().__init__(model, **kwargs)
 
-        if tdnn:
-            self.register_pass(passes.TdnnMaxPool2DPass())
-        else:
-            self.register_pass(passes.ReplaceMaxPool2D2x2Pass())
-            self.register_pass(passes.ReplaceMaxPool2DPass())
+        self.register_pass(passes.ReplaceMaxPool2D2x2Pass())
+        self.register_pass(passes.ReplaceMaxPool2DPass())
         self.register_pass(passes.ReplaceAveragePool2D2x2Pass())
         self.register_pass(passes.ReplaceAveragePool2DPass())
         self.register_pass(passes.ReplaceGlobalAveragePool2DPass())
@@ -150,7 +161,6 @@ class ParametricOperatorLoweringManager(PassManager):
         self.register_pass(passes.LegalizeXCShallowinConvPass())
         self.register_pass(passes.LegalizeXCDepthwiseConvPass())
         self.register_pass(passes.LegalizeXCDeepConvPass())
-
 
 class PaddingOptimizationManager(PassManager):
     def __init__(
@@ -286,6 +296,9 @@ def optimize_for_xcore(
 
     pass_mgr = PassManager(model, keep_intermediates=bool(intermediates_path))
 
+    if tdnn:
+        pass_mgr.register_passes(TdnnManager())    
+
     # canonicalization
     pass_mgr.register_passes(
         BasicCanonicalizationManager(remove_float_interface=remove_float_interface)
@@ -294,7 +307,7 @@ def optimize_for_xcore(
 
     # lowering to the xcore ops
     pass_mgr.register_passes(ActivationLoweringManager())
-    pass_mgr.register_passes(PoolingLoweringManager(tdnn=tdnn))
+    pass_mgr.register_passes(PoolingLoweringManager())
     pass_mgr.register_passes(ParametricOperatorLoweringManager())
     pass_mgr.register_passes(BinarizedOperatorLoweringManager())
 
@@ -334,8 +347,8 @@ def optimize_for_xcore(
         )
     )
     pass_mgr.register_passes(ParallelizationManager(num_threads=num_threads))
-    if external_memory:
-        pass_mgr.register_passes(ExternalMemoryOptimizationManager())
+    # if external_memory:
+    #     pass_mgr.register_passes(ExternalMemoryOptimizationManager())
 
     # finalize (cleanup, minification, renaming, etc.)
     pass_mgr.register_passes(

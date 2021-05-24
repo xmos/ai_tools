@@ -5,7 +5,7 @@ import pytest
 from typing import Tuple
 
 
-from tflite2xcore.transformation_passes.tdnn_passes import TdnnDeepConv2dPass
+from tflite2xcore.transformation_passes.tdnn_passes import TdnnShallowinConv2dPass
 from tflite2xcore.xcore_model import XCOREModel
 from tflite2xcore.xcore_schema import Padding
 
@@ -43,8 +43,8 @@ def build_model() -> ModelBuilder:
 
 
 @pytest.fixture()
-def trf_pass() -> TdnnDeepConv2dPass:
-    return TdnnDeepConv2dPass()
+def trf_pass() -> TdnnShallowinConv2dPass:
+    return TdnnShallowinConv2dPass()
 
 
 @pytest.fixture()
@@ -67,7 +67,7 @@ def model(
 #  ----------------------------------------------------------------------------
 
 
-def test_tdnn_mutate(trf_pass: TdnnDeepConv2dPass, model: XCOREModel) -> None:
+def test_tdnn_mutate(trf_pass: TdnnShallowinConv2dPass, model: XCOREModel) -> None:
     # run replacement pass
     trf_pass.run(model)
     model.sanity_check()
@@ -84,7 +84,7 @@ def test_tdnn_mutate(trf_pass: TdnnDeepConv2dPass, model: XCOREModel) -> None:
 
     op = operators[1]
     assert len(op.inputs) == 2
-    assert len(op.outputs) == 2
+    assert len(op.outputs) == 1
 
     # check wiring
     assert len(subgraph.get_tensor("input").consumers) == 1

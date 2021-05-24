@@ -57,4 +57,4 @@ class XCOREOpCodes(enum.Enum):
     XC_add_8 = enum.auto()
     XC_pad = enum.auto()
     XC_fetch = enum.auto()
-    XC_ring_buffer = enum.auto()
+    XC_ringbuffer = enum.auto()

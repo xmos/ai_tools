@@ -187,31 +187,6 @@ def build_max(subgraph=None, *, input_shape):
     return subgraph.model
 
 
-def build_reshape(subgraph=None, *, input_shape):
-    subgraph = subgraph or Subgraph(model=XCOREModel())
-
-    input_shape = [1, *input_shape]
-    tin = subgraph.create_tensor(
-        "input",
-        type_=TensorType.INT8,
-        shape=input_shape,
-        isinput=True,
-        quantization={"scale": [0.65], "zero_point": [-12]},
-    )
-    tout = subgraph.create_tensor(
-        "output",
-        type_=tin.type,
-        shape=[input_shape[0], reduce(lambda x, y: x * y, input_shape[1:])],
-        isoutput=True,
-        quantization={"scale": [0.42], "zero_point": [-11]},
-    )
-    subgraph.create_operator(
-        OperatorCode(BuiltinOpCodes.RESHAPE), inputs=[tin], outputs=[tout]
-    )
-
-    return subgraph.model
-
-
 def build_mean(subgraph=None, *, input_shape, reduction_dims):
     subgraph = subgraph or Subgraph(model=XCOREModel())
 

@@ -125,15 +125,12 @@ class ActivationLoweringManager(PassManager):
 
 class PoolingLoweringManager(PassManager):
     def __init__(
-        self, model: Optional[XCOREModel] = None, tdnn: bool = False, **kwargs: Any
+        self, model: Optional[XCOREModel] = None,  **kwargs: Any
     ) -> None:
         super().__init__(model, **kwargs)
 
-        if tdnn:
-            self.register_pass(passes.TdnnMaxPool2DPass())
-        else:
-            self.register_pass(passes.ReplaceMaxPool2D2x2Pass())
-            self.register_pass(passes.ReplaceMaxPool2DPass())
+        self.register_pass(passes.ReplaceMaxPool2D2x2Pass())
+        self.register_pass(passes.ReplaceMaxPool2DPass())
         self.register_pass(passes.ReplaceAveragePool2D2x2Pass())
         self.register_pass(passes.ReplaceAveragePool2DPass())
         self.register_pass(passes.ReplaceGlobalAveragePool2DPass())

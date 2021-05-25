@@ -12,14 +12,15 @@
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 // TODO: Is there a better place for these constants?
-static constexpr unsigned XCORE_OUTPUT_BITS = 8;
+static constexpr int XCORE_OUTPUT_BITS = 8;
 // NOTE: If we would not need to add the offset separately, the intermediate
 // could never saturate, and this value would be 8. But decreasing to 7 means
 // that we get an extra bit of headroom in the intermediate.
 // TODO: Investigate if this could be calculated/estimated from the parameters
-static constexpr unsigned XCORE_SHIFT_ADJUSTMENT = 7;
-static constexpr unsigned XCORE_MAX_POST_SHIFT =
+static constexpr int XCORE_SHIFT_ADJUSTMENT = 7;
+static constexpr int XCORE_MAX_POST_SHIFT =
     22 + XCORE_SHIFT_ADJUSTMENT - XCORE_OUTPUT_BITS;
+static constexpr int XCORE_VPU_ACC_PERIOD = 16;
 
 namespace mlir {
 namespace xcore {
@@ -39,7 +40,14 @@ struct OptimizeFullyConnected
 struct LegalizeFullyConnected : public OpRewritePattern<FullyConnectedOp> {
   using OpRewritePattern<FullyConnectedOp>::OpRewritePattern;
 
-  // TODO: Document
+  // Transform bias via various computations and padding, resulting in biasHi
+  // and biasLow which are stored into the result vector in the following
+  // format.
+  // [Upper 16 bits of first XCORE_VPU_ACC_PERIOD=16 values]
+  // [Lower 16 bits of first XCORE_VPU_ACC_PERIOD=16 values]
+  // [Upper 16 bits of next XCORE_VPU_ACC_PERIOD=16 values]
+  // [Lower 16 bits of next XCORE_VPU_ACC_PERIOD=16 values]
+  // and so on...
   LogicalResult getTransformedBias(
       FullyConnectedOp fcOp,
       llvm::SmallVectorImpl<int16_t> &transformedBiasResultVector) const {
@@ -84,22 +92,25 @@ struct LegalizeFullyConnected : public OpRewritePattern<FullyConnectedOp> {
     }
 
     // Find the pad factor for the bias result vector
-    // The padded size would be a multiple of 16
-    // Resize bias result vector with a size of {paddedSize x 2 x 16}
-    // This is since we are going to split biasVector64 into upper and lower 16
-    // bits of each 32 bit value
-    int padFactor = ceil(biasVector64.size() / 16.0);
-    transformedBiasResultVector.resize(padFactor * 2 * 16);
+    // The padded size would be a multiple of XCORE_VPU_ACC_PERIOD=16
+    // Resize bias result vector with a size of {padFactor x 2 x
+    // XCORE_VPU_ACC_PERIOD=16} This is since we are going to split biasVector64
+    // into upper and lower 16 bits of each 32 bit value
+    int padFactor = ceil(biasVector64.size() / double(XCORE_VPU_ACC_PERIOD));
+    transformedBiasResultVector.resize(padFactor * 2 /*biasHi, biasLow*/ *
+                                       XCORE_VPU_ACC_PERIOD);
 
     // Convert biasVector64 values to int32 and split it into upper and lower 16
     // bits of each 32 bit value
     // This is stored into the bias result vector in the following format,
-    // [Upper 16 bits of first 16 values of biasVector]
-    // [Lower 16 bits of first 16 values of biasVector]
-    // [Upper 16 bits of next 16 values of biasVector]
-    // [Lower 16 bits of next 16 values of biasVector] and so on...
+    // [Upper 16 bits of first XCORE_VPU_ACC_PERIOD=16 values of biasVector]
+    // [Lower 16 bits of first XCORE_VPU_ACC_PERIOD=16 values of biasVector]
+    // [Upper 16 bits of next XCORE_VPU_ACC_PERIOD=16 values of biasVector]
+    // [Lower 16 bits of next XCORE_VPU_ACC_PERIOD=16 values of biasVector] and
+    // so on...
     for (int i = 0; i < biasVector64.size(); ++i) {
-      int resultIndex = 16 * floor(i / 16) + i;
+      int resultIndex =
+          XCORE_VPU_ACC_PERIOD * floor(i / XCORE_VPU_ACC_PERIOD) + i;
       int32_t clampedBias =
           std::max(std::min(static_cast<int32_t>(biasVector64[i]),
                             std::numeric_limits<int32_t>::max()),
@@ -109,36 +120,23 @@ struct LegalizeFullyConnected : public OpRewritePattern<FullyConnectedOp> {
         return failure();
       }
       transformedBiasResultVector[resultIndex] = clampedBias >> 16;
-      transformedBiasResultVector[resultIndex + 16] = clampedBias & 0xFFFF;
+      transformedBiasResultVector[resultIndex + XCORE_VPU_ACC_PERIOD] =
+          clampedBias & 0xFFFF;
     }
 
     return success();
   }
 
-  // TODO: Document
-  LogicalResult
-  getTransformedScaleOffset(FullyConnectedOp fcOp,
-                            llvm::SmallVectorImpl<int16_t>
-                                &transformedScaleOffsetResultVector) const {
-    // TODO: Doesn't work for BNNs yet
-    // For BNNs, need to adapt these to handle bias with larger rank
-
-    // Get output scale
-    RankedTensorType outputType =
-        fcOp.output().getType().dyn_cast<RankedTensorType>();
-    auto outputQType = outputType.getElementType()
-                           .dyn_cast<mlir::quant::UniformQuantizedType>();
-    auto outputScale = outputQType.getScale();
-
-    // Get bias scale
-    auto biasQConstOp = dyn_cast<TFL::QConstOp>(fcOp.bias().getDefiningOp());
-    auto biasType = biasQConstOp.qtype().cast<RankedTensorType>();
-    auto biasQType =
-        biasType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
-    auto biasScale = biasQType.getScale();
-
-    // Do the transformations needed to calculate shiftPre, scale,
-    // offsetScale, offset, and shiftPost
+  // Do the transformations needed to calculate shiftPre, scale,
+  // offsetScale, offset, and shiftPost
+  LogicalResult doScaleOffsetTransformations(
+      double biasScale, int biasSize, double outputScale,
+      double outputZeroPoint,
+      llvm::SmallVectorImpl<int16_t> &shiftPreResultVector,
+      llvm::SmallVectorImpl<int16_t> &scaleResultVector,
+      llvm::SmallVectorImpl<int16_t> &offsetScaleResultVector,
+      llvm::SmallVectorImpl<int16_t> &offsetResultVector,
+      llvm::SmallVectorImpl<int16_t> &shiftPostResultVector) const {
     auto multiplier = biasScale / outputScale;
     auto rshift = -(ceil(log2(multiplier))) + 1;
     auto scale = round(multiplier * pow(2, 14 + rshift));
@@ -153,52 +151,195 @@ struct LegalizeFullyConnected : public OpRewritePattern<FullyConnectedOp> {
       llvm::errs() << "Negative shift_post encountered";
       return failure();
     }
-    auto outputZeroPoint = outputQType.getZeroPoint();
     auto rawOffset =
         outputZeroPoint * pow(2, shiftPost) * pow(2, (XCORE_OUTPUT_BITS - 8));
     auto offsetScale = round(sqrt(abs(rawOffset)));
     auto offset = round(rawOffset / offsetScale);
 
-    // TODO: The below handling of creating the result vector has to be
-    // refactored for adding support for BNNs
-    auto biasSize = biasType.getShape()[0];
-    int padFactor = ceil(biasSize / 16.0);
+    int padFactor = ceil(biasSize / double(XCORE_VPU_ACC_PERIOD));
 
     // Create a padded vector of type int16_t
     auto getPaddedVector = [&](int value) {
       llvm::SmallVector<int16_t, 0> vec;
       vec.insert(vec.end(), biasSize, static_cast<int16_t>(value));
-      vec.resize(padFactor * 16);
+      vec.resize(padFactor * XCORE_VPU_ACC_PERIOD);
       return vec;
     };
 
-    llvm::SmallVector<int16_t, 0> shiftPreVector = getPaddedVector(shiftPre);
-    llvm::SmallVector<int16_t, 0> scaleVector = getPaddedVector(scale);
-    llvm::SmallVector<int16_t, 0> offsetScaleVector =
-        getPaddedVector(offsetScale);
-    llvm::SmallVector<int16_t, 0> offsetVector = getPaddedVector(offset);
-    llvm::SmallVector<int16_t, 0> shiftPostVector = getPaddedVector(shiftPost);
+    // Store into the result vectors
+    shiftPreResultVector = getPaddedVector(shiftPre);
+    scaleResultVector = getPaddedVector(scale);
+    offsetScaleResultVector = getPaddedVector(offsetScale);
+    offsetResultVector = getPaddedVector(offset);
+    shiftPostResultVector = getPaddedVector(shiftPost);
+    return success();
+  }
 
-    // Create the transformed scale offset vector of size {padFactor * 16 * 5}
-    // with 16 values each from shiftPre, scale, offsetScale, offset, and
-    // shiftPost
-    transformedScaleOffsetResultVector.reserve(padFactor * 16 * 5);
-    for (int i = 0; i < padFactor * 16; i += 16) {
+  // Do the transformations needed to calculate shiftPre, scale,
+  // offsetScale, offset, and shiftPost for the per channel quantized case in
+  // which we will have an array of bias scales
+  LogicalResult doScaleOffsetTransformationsPerChannelQuantized(
+      ArrayRef<double> biasScales, int biasSize, double outputScale,
+      double outputZeroPoint,
+      llvm::SmallVectorImpl<int16_t> &shiftPreResultVector,
+      llvm::SmallVectorImpl<int16_t> &scaleResultVector,
+      llvm::SmallVectorImpl<int16_t> &offsetScaleResultVector,
+      llvm::SmallVectorImpl<int16_t> &offsetResultVector,
+      llvm::SmallVectorImpl<int16_t> &shiftPostResultVector) const {
+    llvm::SmallVector<double, 0> multiplier(biasScales.begin(),
+                                            biasScales.end());
+    std::for_each(multiplier.begin(), multiplier.end(),
+                  [&](double &n) { n /= outputScale; });
+
+    llvm::SmallVector<double, 0> rshift;
+    rshift.resize(multiplier.size());
+    for (int i = 0; i < rshift.size(); ++i) {
+      rshift[i] = multiplier[i] != 0 ? -(ceil(log2(multiplier[i]))) + 1 : 16.0;
+    }
+
+    llvm::SmallVector<double, 0> scale;
+    scale.resize(multiplier.size());
+    for (int i = 0; i < scale.size(); ++i) {
+      scale[i] = multiplier[i] != 0
+                     ? round(multiplier[i] * pow(2, 14 + rshift[i]))
+                     : pow(2, 15) - 1;
+    }
+
+    for (int i = 0; i < scale.size(); ++i) {
+      if (scale[i] == pow(2, 15)) {
+        rshift[i] -= 1;
+        scale[i] /= 2;
+      }
+      rshift[i] -= XCORE_SHIFT_ADJUSTMENT;
+    }
+
+    int padFactor = ceil(biasSize / double(XCORE_VPU_ACC_PERIOD));
+
+    // Zero pad to a multiple of XCORE_VPU_ACC_PERIOD=16
+    rshift.resize(padFactor * XCORE_VPU_ACC_PERIOD);
+    scale.resize(padFactor * XCORE_VPU_ACC_PERIOD);
+
+    llvm::SmallVector<int16_t, 0> shiftPre;
+    std::transform(
+        rshift.begin(), rshift.end(), std::back_inserter(shiftPre),
+        [](double n) { return static_cast<int16_t>(std::max(n, 0.0)); });
+
+    llvm::SmallVector<int16_t, 0> shiftPost;
+    shiftPost.resize(rshift.size());
+    for (int i = 0; i < shiftPost.size(); ++i) {
+      shiftPost[i] =
+          static_cast<int16_t>(XCORE_MAX_POST_SHIFT + std::min(rshift[i], 0.0));
+      if (shiftPost[i] < 0) {
+        llvm::errs() << "Negative shift_post encountered";
+        return failure();
+      }
+    }
+
+    llvm::SmallVector<double, 0> rawOffset;
+    std::transform(shiftPost.begin(), shiftPost.end(),
+                   std::back_inserter(rawOffset), [&](double n) {
+                     return outputZeroPoint * pow(2, n) *
+                            pow(2, (XCORE_OUTPUT_BITS - 8));
+                   });
+
+    llvm::SmallVector<int16_t, 0> offsetScale;
+    std::transform(
+        rawOffset.begin(), rawOffset.end(), std::back_inserter(offsetScale),
+        [](double n) { return static_cast<int16_t>(round(sqrt(abs(n)))); });
+
+    llvm::SmallVector<int16_t, 0> offset;
+    offset.resize(rawOffset.size());
+    for (int i = 0; i < offset.size(); ++i) {
+      offset[i] = rawOffset[i] / offsetScale[i];
+    }
+
+    // Store into the result vectors
+    // The result vectors are in int16_t format
+    // The scale vector has not been converted to int16_t yet, so we convert it
+    // here
+    shiftPreResultVector = shiftPre;
+    std::transform(scale.begin(), scale.end(),
+                   std::back_inserter(scaleResultVector),
+                   [](double n) { return static_cast<int16_t>(n); });
+    offsetScaleResultVector = offsetScale;
+    offsetResultVector = offset;
+    shiftPostResultVector = shiftPost;
+    return success();
+  }
+
+  // Transform scale and offset via various computations and padding, resulting
+  // in transformed scale offset vector of size {padFactor *
+  // XCORE_VPU_ACC_PERIOD=16 * 5} with XCORE_VPU_ACC_PERIOD=16 values each from
+  // shiftPre, scale, offsetScale, offset, and shiftPost
+  LogicalResult
+  getTransformedScaleOffset(FullyConnectedOp fcOp,
+                            llvm::SmallVectorImpl<int16_t>
+                                &transformedScaleOffsetResultVector) const {
+    // Get output scale
+    RankedTensorType outputType =
+        fcOp.output().getType().dyn_cast<RankedTensorType>();
+    auto outputQType = outputType.getElementType()
+                           .dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto outputScale = outputQType.getScale();
+    auto outputZeroPoint = outputQType.getZeroPoint();
+
+    // Get bias scale
+    auto biasQConstOp = dyn_cast<TFL::QConstOp>(fcOp.bias().getDefiningOp());
+    auto biasType = biasQConstOp.qtype().cast<RankedTensorType>();
+    int biasSize = biasType.getShape()[0];
+
+    llvm::SmallVector<int16_t, 0> shiftPreVector;
+    llvm::SmallVector<int16_t, 0> scaleVector;
+    llvm::SmallVector<int16_t, 0> offsetScaleVector;
+    llvm::SmallVector<int16_t, 0> offsetVector;
+    llvm::SmallVector<int16_t, 0> shiftPostVector;
+
+    // Do the transformations needed to calculate shiftPre, scale,
+    // offsetScale, offset, and shiftPost
+    // There are two cases here, the bias scale can be per channel quantized in
+    // which case we will have multiple bias scales. Otherwise we will have a
+    // single bias scale. We have to handle these seperately since the former
+    // would be an array of bias scales.
+    if (auto biasQType = biasType.getElementType()
+                             .dyn_cast<mlir::quant::UniformQuantizedType>()) {
+      auto biasScale = biasQType.getScale();
+      doScaleOffsetTransformations(
+          biasScale, biasSize, outputScale, outputZeroPoint, shiftPreVector,
+          scaleVector, offsetScaleVector, offsetVector, shiftPostVector);
+    } else if (auto biasQType =
+                   biasType.getElementType()
+                       .dyn_cast<mlir::quant::UniformQuantizedPerAxisType>()) {
+      auto biasScales = biasQType.getScales();
+      doScaleOffsetTransformationsPerChannelQuantized(
+          biasScales, biasSize, outputScale, outputZeroPoint, shiftPreVector,
+          scaleVector, offsetScaleVector, offsetVector, shiftPostVector);
+    }
+
+    // Create the transformed scale offset vector of size {padFactor *
+    // XCORE_VPU_ACC_PERIOD=16 * 5} with XCORE_VPU_ACC_PERIOD=16 values each
+    // from shiftPre, scale, offsetScale, offset, and shiftPost
+    int padFactor = ceil(biasSize / double(XCORE_VPU_ACC_PERIOD));
+    transformedScaleOffsetResultVector.reserve(
+        padFactor * XCORE_VPU_ACC_PERIOD *
+        5 /*shiftPre, scale, offsetScale, offset, shiftPost*/);
+    for (int i = 0; i < padFactor * XCORE_VPU_ACC_PERIOD;
+         i += XCORE_VPU_ACC_PERIOD) {
       transformedScaleOffsetResultVector.insert(
           transformedScaleOffsetResultVector.end(), shiftPreVector.begin() + i,
-          shiftPreVector.begin() + i + 16);
+          shiftPreVector.begin() + i + XCORE_VPU_ACC_PERIOD);
       transformedScaleOffsetResultVector.insert(
           transformedScaleOffsetResultVector.end(), scaleVector.begin() + i,
-          scaleVector.begin() + i + 16);
+          scaleVector.begin() + i + XCORE_VPU_ACC_PERIOD);
       transformedScaleOffsetResultVector.insert(
           transformedScaleOffsetResultVector.end(),
-          offsetScaleVector.begin() + i, offsetScaleVector.begin() + i + 16);
+          offsetScaleVector.begin() + i,
+          offsetScaleVector.begin() + i + XCORE_VPU_ACC_PERIOD);
       transformedScaleOffsetResultVector.insert(
           transformedScaleOffsetResultVector.end(), offsetVector.begin() + i,
-          offsetVector.begin() + i + 16);
+          offsetVector.begin() + i + XCORE_VPU_ACC_PERIOD);
       transformedScaleOffsetResultVector.insert(
           transformedScaleOffsetResultVector.end(), shiftPostVector.begin() + i,
-          shiftPostVector.begin() + i + 16);
+          shiftPostVector.begin() + i + XCORE_VPU_ACC_PERIOD);
     }
     return success();
   }
@@ -227,29 +368,39 @@ struct LegalizeFullyConnected : public OpRewritePattern<FullyConnectedOp> {
     auto biasQConstOp = dyn_cast<TFL::QConstOp>(fcOp.bias().getDefiningOp());
     auto biasType = biasQConstOp.qtype().cast<RankedTensorType>();
     auto biasSize = biasType.getShape()[0];
-    int padFactor = ceil(biasSize / 16.0);
+    int padFactor = ceil(biasSize / double(XCORE_VPU_ACC_PERIOD));
 
-    // Create the new bias vector of size {padFactor * 16 * 7} with 32 values
-    // (16 values from bias upper and 16 from bias lower) from transformed bias
-    // vector and 80 values (16 values each from shiftPre, scale, offsetScale,
-    // offset, and shiftPost) from transformed scale offset vector
+    // Create the new bias vector of size {padFactor * XCORE_VPU_ACC_PERIOD=16 *
+    // 7}.
+    // This is with 32 values (XCORE_VPU_ACC_PERIOD=16 values from bias upper
+    // and XCORE_VPU_ACC_PERIOD=16 from bias lower) from transformed bias vector
+    // and 80 values (XCORE_VPU_ACC_PERIOD=16 values each from shiftPre, scale,
+    // offsetScale, offset, and shiftPost) from transformed scale offset vector.
     llvm::SmallVector<int16_t, 0> newBiasResultVector;
-    newBiasResultVector.reserve(padFactor * 16 * 7);
-    for (int i = 0; i < padFactor * 16; i += 16) {
-      newBiasResultVector.insert(newBiasResultVector.end(),
-                                 transformedBiasResultVector.begin() + i * 2,
-                                 transformedBiasResultVector.begin() +
-                                     (i + 16) * 2);
+    newBiasResultVector.reserve(
+        padFactor * XCORE_VPU_ACC_PERIOD *
+        7 /*biasHi, biasLow, shiftPre, scale, offsetScale, offset, shiftPost*/);
+    for (int i = 0; i < padFactor * XCORE_VPU_ACC_PERIOD;
+         i += XCORE_VPU_ACC_PERIOD) {
       newBiasResultVector.insert(
           newBiasResultVector.end(),
-          transformedScaleOffsetResultVector.begin() + i * 5,
-          transformedScaleOffsetResultVector.begin() + (i + 16) * 5);
+          transformedBiasResultVector.begin() + i * 2 /*biasHi, biasLow*/,
+          transformedBiasResultVector.begin() + (i + XCORE_VPU_ACC_PERIOD) * 2);
+      newBiasResultVector.insert(
+          newBiasResultVector.end(),
+          transformedScaleOffsetResultVector.begin() +
+              i * 5 /*shiftPre, scale, offsetScale, offset, shiftPost*/,
+          transformedScaleOffsetResultVector.begin() +
+              (i + XCORE_VPU_ACC_PERIOD) * 5);
     }
 
-    // Create shape of {padFactor, 7, 16} for the new bias type and create a
-    // new bias op from the new bias vector
-    ShapedType newBiasType =
-        RankedTensorType::get({padFactor, 7, 16}, rewriter.getIntegerType(16));
+    // Create shape of {padFactor, 7, XCORE_VPU_ACC_PERIOD=16} for the new bias
+    // type and create a new bias op from the new bias vector
+    ShapedType newBiasType = RankedTensorType::get(
+        {padFactor,
+         7 /*biasHi, biasLow, shiftPre, scale, offsetScale, offset, shiftPost*/,
+         XCORE_VPU_ACC_PERIOD},
+        rewriter.getIntegerType(16));
     auto newBiasAttr =
         DenseElementsAttr::get<int16_t>(newBiasType, newBiasResultVector);
     auto newBiasConstantOp =

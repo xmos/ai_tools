@@ -21,6 +21,7 @@ static constexpr int XCORE_SHIFT_ADJUSTMENT = 7;
 static constexpr int XCORE_MAX_POST_SHIFT =
     22 + XCORE_SHIFT_ADJUSTMENT - XCORE_OUTPUT_BITS;
 static constexpr int XCORE_VPU_ACC_PERIOD = 16;
+static constexpr int XCORE_WORD_SIZE_BYTES = 4;
 
 namespace mlir {
 namespace xcore {
@@ -364,23 +365,23 @@ struct LegalizeFullyConnected : public OpRewritePattern<FullyConnectedOp> {
       return failure();
     }
 
-    // Find the pad factor
+    // Find the bias pad factor
     auto biasQConstOp = dyn_cast<TFL::QConstOp>(fcOp.bias().getDefiningOp());
     auto biasType = biasQConstOp.qtype().cast<RankedTensorType>();
     auto biasSize = biasType.getShape()[0];
-    int padFactor = ceil(biasSize / double(XCORE_VPU_ACC_PERIOD));
+    int biasPadFactor = ceil(biasSize / double(XCORE_VPU_ACC_PERIOD));
 
-    // Create the new bias vector of size {padFactor * XCORE_VPU_ACC_PERIOD=16 *
-    // 7}.
-    // This is with 32 values (XCORE_VPU_ACC_PERIOD=16 values from bias upper
-    // and XCORE_VPU_ACC_PERIOD=16 from bias lower) from transformed bias vector
-    // and 80 values (XCORE_VPU_ACC_PERIOD=16 values each from shiftPre, scale,
+    // Create the new bias vector of size {biasPadFactor *
+    // XCORE_VPU_ACC_PERIOD=16 * 7}. This is with 32 values
+    // (XCORE_VPU_ACC_PERIOD=16 values from bias upper and
+    // XCORE_VPU_ACC_PERIOD=16 from bias lower) from transformed bias vector and
+    // 80 values (XCORE_VPU_ACC_PERIOD=16 values each from shiftPre, scale,
     // offsetScale, offset, and shiftPost) from transformed scale offset vector.
     llvm::SmallVector<int16_t, 0> newBiasResultVector;
     newBiasResultVector.reserve(
-        padFactor * XCORE_VPU_ACC_PERIOD *
+        biasPadFactor * XCORE_VPU_ACC_PERIOD *
         7 /*biasHi, biasLow, shiftPre, scale, offsetScale, offset, shiftPost*/);
-    for (int i = 0; i < padFactor * XCORE_VPU_ACC_PERIOD;
+    for (int i = 0; i < biasPadFactor * XCORE_VPU_ACC_PERIOD;
          i += XCORE_VPU_ACC_PERIOD) {
       newBiasResultVector.insert(
           newBiasResultVector.end(),
@@ -394,10 +395,10 @@ struct LegalizeFullyConnected : public OpRewritePattern<FullyConnectedOp> {
               (i + XCORE_VPU_ACC_PERIOD) * 5);
     }
 
-    // Create shape of {padFactor, 7, XCORE_VPU_ACC_PERIOD=16} for the new bias
-    // type and create a new bias op from the new bias vector
+    // Create shape of {biasPadFactor, 7, XCORE_VPU_ACC_PERIOD=16} for the new
+    // bias type and create a new bias op from the new bias vector
     ShapedType newBiasType = RankedTensorType::get(
-        {padFactor,
+        {biasPadFactor,
          7 /*biasHi, biasLow, shiftPre, scale, offsetScale, offset, shiftPost*/,
          XCORE_VPU_ACC_PERIOD},
         rewriter.getIntegerType(16));
@@ -406,10 +407,46 @@ struct LegalizeFullyConnected : public OpRewritePattern<FullyConnectedOp> {
     auto newBiasConstantOp =
         rewriter.create<mlir::ConstantOp>(fcOp.getLoc(), newBiasAttr);
 
+    // Zero pad weights along the column dimension
+    // The padded size would be a multiple of XCORE_WORD_SIZE_BYTES=4
+    auto weightQConstOp =
+        dyn_cast<TFL::QConstOp>(fcOp.filter().getDefiningOp());
+    auto weightType = weightQConstOp.qtype().cast<RankedTensorType>();
+    auto weightRowSize = weightType.getShape()[0];
+    auto weightColumnSize = weightType.getShape()[1];
+    int weightZeroPadCount =
+        XCORE_WORD_SIZE_BYTES *
+            ceil(weightColumnSize / double(XCORE_WORD_SIZE_BYTES)) -
+        weightColumnSize;
+    auto weights = weightQConstOp.value().cast<DenseElementsAttr>();
+    auto weightVector = llvm::SmallVector<int8_t, 0>{
+        weights.getValues<int8_t>().begin(), weights.getValues<int8_t>().end()};
+    llvm::SmallVector<int8_t, 0> newWeightResultVector;
+    newWeightResultVector.reserve(weightRowSize *
+                                  (weightColumnSize + weightZeroPadCount));
+    for (int i = 0; i < weightVector.size(); i += weightColumnSize) {
+      newWeightResultVector.insert(newWeightResultVector.end(),
+                                   weightVector.begin() + i,
+                                   weightVector.begin() + i + weightColumnSize);
+      newWeightResultVector.insert(newWeightResultVector.end(),
+                                   weightZeroPadCount, 0);
+    }
+
+    // Create shape of {weightRowSize, (weightColumnSize + weightZeroPadCount)}
+    // for the new weight type and create a new weight op from the new weight
+    // vector
+    ShapedType newWeightType = RankedTensorType::get(
+        {weightRowSize, (weightColumnSize + weightZeroPadCount)},
+        rewriter.getIntegerType(8));
+    auto newWeightAttr =
+        DenseElementsAttr::get<int8_t>(newWeightType, newWeightResultVector);
+    auto newWeightConstantOp =
+        rewriter.create<mlir::ConstantOp>(fcOp.getLoc(), newWeightAttr);
+
     // Create a new FullyConnectedOp with the new bias op and replace the
     // original one
     auto newFcOp = rewriter.create<FullyConnectedOp>(
-        fcOp.getLoc(), fcOp.getType(), fcOp.input(), fcOp.filter(),
+        fcOp.getLoc(), fcOp.getType(), fcOp.input(), newWeightConstantOp,
         newBiasConstantOp,
         rewriter.getStringAttr(fcOp.fused_activation_function()),
         rewriter.getStringAttr(fcOp.weights_format()),

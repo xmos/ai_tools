@@ -155,7 +155,7 @@ struct LegalizeFullyConnected : public OpRewritePattern<FullyConnectedOp> {
     auto rawOffset =
         outputZeroPoint * pow(2, shiftPost) * pow(2, (XCORE_OUTPUT_BITS - 8));
     auto offsetScale = round(sqrt(abs(rawOffset)));
-    auto offset = round(rawOffset / offsetScale);
+    auto offset = offsetScale != 0 ? round(rawOffset / offsetScale) : 0;
 
     int padFactor = ceil(biasSize / double(XCORE_VPU_ACC_PERIOD));
 
@@ -251,7 +251,8 @@ struct LegalizeFullyConnected : public OpRewritePattern<FullyConnectedOp> {
     llvm::SmallVector<int16_t, 0> offset;
     offset.resize(rawOffset.size());
     for (int i = 0; i < offset.size(); ++i) {
-      offset[i] = rawOffset[i] / offsetScale[i];
+      offset[i] =
+          offsetScale[i] != 0 ? round(rawOffset[i] / offsetScale[i]) : 0;
     }
 
     // Store into the result vectors

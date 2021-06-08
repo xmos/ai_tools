@@ -74,8 +74,10 @@ def XC_FullyConnectedOp : XC_Op<"fc", [NoSideEffect]> {
 
   let arguments = (ins
     TensorOf<[QI8]>:$input,
-    TensorOf<[QI8]>:$filter,
-    TensorOf<[QI32]>:$bias,
+    // TODO: Hack to enable I8 for filter and I16 for bias
+    // We might need a different op or match and replace in one pass
+    TensorOf<[QI8, I8]>:$filter,
+    TensorOf<[QI32, I16]>:$bias,
 
     TFL_AFAttr:$fused_activation_function,
     TFL_FullyConnectedOptionsWeightFormatAttr:$weights_format,

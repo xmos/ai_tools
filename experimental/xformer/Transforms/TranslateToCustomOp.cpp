@@ -25,8 +25,8 @@ struct RewriteToCustomOp : public OpRewritePattern<XCoreOp> {
                                 PatternRewriter &rewriter) const override {
     auto options = xc_op.buildCustomOptions();
     auto *op = xc_op.getOperation();
-    auto type = RankedTensorType::get(
-        {static_cast<int64_t>(options.size())}, rewriter.getIntegerType(8));
+    auto type = RankedTensorType::get({static_cast<int64_t>(options.size())},
+                                      rewriter.getIntegerType(8));
 
     std::string options_bytes(options.begin(), options.end());
     auto attr = OpaqueElementsAttr::get(op->getDialect(), type, options_bytes);

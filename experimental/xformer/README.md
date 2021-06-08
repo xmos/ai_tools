@@ -19,6 +19,7 @@ To view the various supported options:
 
 Test instructions
 --
+
 We use [llvm-lit](https://llvm.org/docs/CommandGuide/lit.html) for writing unit tests. This makes it easier to test the impact of a single pass. To run all lit tests in the `Test` folder, use the following command:
 
     bazel test //Test:all

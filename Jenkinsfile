@@ -5,7 +5,7 @@ getApproval()
 pipeline {
     agent {
         dockerfile {
-            args "-v /home/jenkins/.keras:/root/.keras -v /etc/passwd:/etc/passwd:ro"
+            args "-v /home/jenkins/.cache/bazel:/root/.cache/bazel -v /home/jenkins/.keras:/root/.keras -v /etc/passwd:/etc/passwd:ro"
         }
     }
 

@@ -76,7 +76,7 @@ pipeline {
                 """
                 sh ". activate ./ai_tools_venv && make tflite2xcore_dist"
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel --output_user_root=/tmp/bazel build //:xcore-opt
+                      bazel --output_user_root=/tmp/bazel/.cache build //:xcore-opt
                 """
             }
         }

@@ -5,7 +5,7 @@ getApproval()
 pipeline {
     agent {
         dockerfile {
-            args "-v /home/jenkins/.cache/bazel:/home/jenkins/.cache/bazel -v /home/jenkins/.keras:/root/.keras -v /etc/passwd:/etc/passwd:ro"
+            args "-v /home/jenkins/.keras:/root/.keras -v /etc/passwd:/etc/passwd:ro"
         }
     }
 
@@ -76,7 +76,7 @@ pipeline {
                 """
                 sh ". activate ./ai_tools_venv && make tflite2xcore_dist"
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel build //:xcore-opt
+                      bazel build --remote_cache=http://srv-bri-bld-cache:8080 //:xcore-opt
                 """
             }
         }

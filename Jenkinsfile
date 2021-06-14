@@ -76,7 +76,7 @@ pipeline {
                 """
                 sh ". activate ./ai_tools_venv && make tflite2xcore_dist"
                 sh """. activate ./ai_tools_venv && cd experimental/xformer &&
-                      bazel --verbose_failures build --remote_cache=http://10.128.5.229:8080 //:xcore-opt
+                      bazel build --verbose_failures --remote_cache=http://10.128.5.229:8080 //:xcore-opt
                 """
             }
         }

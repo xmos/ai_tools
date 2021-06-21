@@ -63,8 +63,6 @@ def XCoreDialect : Dialect {
 // Base class for the operation in this dialect
 class XC_Op<string mnemonic, list<OpTrait> traits = []>
     : Op<XCoreDialect, mnemonic, traits> {
-
-  let extraClassDeclaration = [{ std::vector<uint8_t> buildCustomOptions(); }];
 }
 
 def XC_FullyConnectedOp : XC_Op<"fc", [NoSideEffect]> {
@@ -83,6 +81,16 @@ def XC_FullyConnectedOp : XC_Op<"fc", [NoSideEffect]> {
     TFL_FullyConnectedOptionsWeightFormatAttr:$weights_format,
     BoolAttr:$keep_num_dims
   );
+
+  let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_Lookup8Op : XC_Op<"lookup_8", [NoSideEffect]> {
+  let summary = "Lookup table op";
+
+  let description = [{Lookup table op.}];
+
+  let arguments = (ins TensorOf<[QI8]> : $input, TensorOf<[I8]> : $lut);
 
   let results = (outs TensorOf<[QI8]> : $output);
 }

@@ -10,10 +10,9 @@ namespace mlir {
 namespace xcore {
 
 void buildXCorePassPipeline(OpPassManager &pm) {
-  pm.addPass(createPrintNestingPass()); // TODO: remove this when pipeline is more stable
-  pm.addPass(createOptimizeFullyConnectedPass());
+  pm.addPass(createApplyPatternsPass());
+  pm.addPass(createLegalizeFullyConnectedPass());
   pm.addPass(createTranslateToCustomOpPass());
-  pm.addPass(createPrintNestingPass()); // TODO: remove this when pipeline is more stable
 }
 
 void registerXCorePassPipeline() {

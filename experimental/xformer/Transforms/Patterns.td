@@ -13,3 +13,10 @@ def : Pat<(TFL_FullyConnectedOp
              $weights_format, $keep_num_dims),
           (XC_FullyConnectedOp $input, $filter, $bias,
            $fused_activation_function, $weights_format, $keep_num_dims)>;
+
+def getLookupTable
+    : NativeCodeCall<"getLookupTable($_builder, $0.getDefiningOp())">;
+
+def : Pat<(TFL_ReluOp
+           : $output TensorOf<[QI8]>:$input),
+          (XC_Lookup8Op $input, (ConstantOp (getLookupTable $output)))>;

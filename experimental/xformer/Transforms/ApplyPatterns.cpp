@@ -27,17 +27,13 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
   llvm::SmallVector<int8_t, 0> inputVector;
   inputVector.resize(256);
 
-  // 0 -> 127
-  // -128 -> -1
+  // The inputvector has 256 input values in the following order,
+  // 0, 1, 2... -> 127 and
+  // -128, -127, -126... -> -1
   std::iota(inputVector.begin(), inputVector.begin() + 128, 0);
   std::iota(inputVector.begin() + 128, inputVector.end(), -128);
 
-  for (auto &i : inputVector)
-    llvm::errs() << (int)i << "\n";
-
-  llvm::errs() << "\n";
-
-  // Get input scale
+  // Get input scale and input zero point
   RankedTensorType inputType =
       op->getOperand(0).getType().dyn_cast<RankedTensorType>();
   auto inputQType =
@@ -45,7 +41,7 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
   auto inputScale = inputQType.getScale();
   auto inputZeroPoint = inputQType.getZeroPoint();
 
-  // Get output scale
+  // Get output scale and output zero point
   RankedTensorType outputType =
       op->getResult(0).getType().dyn_cast<RankedTensorType>();
   auto outputQType =
@@ -53,6 +49,7 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
   auto outputScale = outputQType.getScale();
   auto outputZeroPoint = outputQType.getZeroPoint();
 
+  // Dequantize the input vector
   llvm::SmallVector<double, 0> dequantizedVector;
   std::transform(inputVector.begin(), inputVector.end(),
                  std::back_inserter(dequantizedVector), [&](int8_t n) {
@@ -60,32 +57,22 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
                        (static_cast<int32_t>(n) - inputZeroPoint) * inputScale);
                  });
 
-  for (auto &i : dequantizedVector)
-    llvm::errs() << i << "\n";
-
-  llvm::errs() << "\n";
-
+  // Apply the activation function to the dequantized vector
   if (isa<TFL::ReluOp>(op)) {
-
     std::for_each(dequantizedVector.begin(), dequantizedVector.end(),
                   [](double &x) { x = std::max(x, 0.0); });
-
-    for (auto &i : dequantizedVector)
-      llvm::errs() << i << "\n";
-
-    llvm::errs() << "\n";
-
-    // array of -128 to 128 of int8
-    // dequantize the array to f32 and find the activation function output
-    // to dequantize, we need input scale and zero point
-
-    // quantize the output array to get back to int8
-    // to quantize, we need output scale and zero point
+  } else if (isa<TFL::Relu6Op>(op)) {
+    std::for_each(dequantizedVector.begin(), dequantizedVector.end(),
+                  [](double &x) { x = std::min(std::max(x, 0.0), 6.0); });
+  } else if (isa<TFL::TanhOp>(op)) {
+    std::for_each(dequantizedVector.begin(), dequantizedVector.end(),
+                  [](double &x) { x = tanh(x); });
+  } else if (isa<TFL::LogisticOp>(op)) {
+    std::for_each(dequantizedVector.begin(), dequantizedVector.end(),
+                  [](double &x) { x = 1.0 / (1.0 + exp(-x)); });
   }
-  // t = np.round(np.float32(arr) / np.float32(scale)).astype(np.int32) +
-  // zero_point return np.clip(t, np.iinfo(dtype).min,
-  // np.iinfo(dtype).max).astype(dtype)
 
+  // Quantize to create the result vector
   llvm::SmallVector<int8_t, 0> resultVector;
   std::transform(
       dequantizedVector.begin(), dequantizedVector.end(),
@@ -95,14 +82,11 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
         return static_cast<int8_t>(std::max(std::min(t, INT8_MAX), INT8_MIN));
       });
 
-  for (auto &i : resultVector)
-    llvm::errs() << (int)i << "\n";
-
-  ShapedType newWeightType =
+  ShapedType lookupTableType =
       RankedTensorType::get({256}, rewriter.getIntegerType(8));
-  auto newWeightAttr =
-      DenseElementsAttr::get<int8_t>(newWeightType, resultVector);
-  return newWeightAttr;
+  auto lookupTableAttr =
+      DenseElementsAttr::get<int8_t>(lookupTableType, resultVector);
+  return lookupTableAttr;
 }
 
 #include "Transforms/GeneratedPatterns.inc"

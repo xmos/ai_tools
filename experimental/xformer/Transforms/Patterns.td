@@ -7,6 +7,7 @@ include "tensorflow/compiler/mlir/lite/ir/tfl_ops.td"
 
 include "IR/XCoreOps.td"
 
+// Fully connected pattern
 def : Pat<(TFL_FullyConnectedOp
            : $output TensorOf<[QI8]>:$input, TensorOf<[QI8]>:$filter,
            TensorOf<[QI32]>:$bias, $fused_activation_function,
@@ -14,9 +15,11 @@ def : Pat<(TFL_FullyConnectedOp
           (XC_FullyConnectedOp $input, $filter, $bias,
            $fused_activation_function, $weights_format, $keep_num_dims)>;
 
+// Activation lowering patterns
 def getLookupTable
     : NativeCodeCall<"getLookupTable($_builder, $0.getDefiningOp())">;
 
-def : Pat<(TFL_ReluOp
-           : $output TensorOf<[QI8]>:$input),
-          (XC_Lookup8Op $input, (ConstantOp (getLookupTable $output)))>;
+foreach activationOp = [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp] in
+  def : Pat<(activationOp
+            : $output TensorOf<[QI8]>:$input),
+            (XC_Lookup8Op $input, (ConstantOp (getLookupTable $output)))>;

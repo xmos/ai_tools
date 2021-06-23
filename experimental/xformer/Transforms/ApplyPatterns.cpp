@@ -47,6 +47,7 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
   auto outputQType =
       outputType.getElementType().dyn_cast<mlir::quant::UniformQuantizedType>();
   auto outputScale = outputQType.getScale();
+  assert(outputScale != 0 && "Output scale of zero is not supported!");
   auto outputZeroPoint = outputQType.getZeroPoint();
 
   // Dequantize the input vector
@@ -70,6 +71,8 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
   } else if (isa<TFL::LogisticOp>(op)) {
     std::for_each(dequantizedVector.begin(), dequantizedVector.end(),
                   [](double &x) { x = 1.0 / (1.0 + exp(-x)); });
+  } else {
+    llvm_unreachable("Unsupported op!");
   }
 
   // Quantize to create the result vector

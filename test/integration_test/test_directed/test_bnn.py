@@ -107,7 +107,7 @@ def expected_accuracy(use_device: bool) -> float:
 
 @pytest.fixture
 def expected_prediction_deviation(use_device: bool) -> int:
-    return 0 if use_device else 28
+    return 0 if use_device else 23
 
 
 #  ----------------------------------------------------------------------------

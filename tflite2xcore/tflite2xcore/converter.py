@@ -95,17 +95,17 @@ class WordAlignmentCanonicalizationManager(PassManager):
 
 
 class ActivationLoweringManager(PassManager):
-    def __init__(self, model: Optional[XCOREModel] = None, **kwargs: Any) -> None:
+    def __init__(self, model: Optional[XCOREModel] = None, experimental_xformer2: bool = False, **kwargs: Any) -> None:
         super().__init__(model, **kwargs)
 
         # first we match ops and replace them
-        self.register_pass(passes.ReplaceReLUPass())
-        self.register_pass(passes.ReplaceReLU6Pass())
-        self.register_pass(passes.ReplaceTanhPass())
-        self.register_pass(passes.ReplaceLogisticPass())
-
-        # second we legalize the op by calculating the LUT
-        self.register_pass(passes.LegalizeXCLookupTablePass())
+        if not experimental_xformer2:
+            self.register_pass(passes.ReplaceReLUPass())
+            self.register_pass(passes.ReplaceReLU6Pass())
+            self.register_pass(passes.ReplaceTanhPass())
+            self.register_pass(passes.ReplaceLogisticPass())
+            # second we legalize the op by calculating the LUT
+            self.register_pass(passes.LegalizeXCLookupTablePass())
 
 
 class PoolingLoweringManager(PassManager):
@@ -288,7 +288,7 @@ def optimize_for_xcore(
     pass_mgr.register_passes(WordAlignmentCanonicalizationManager())
 
     # lowering to the xcore ops
-    pass_mgr.register_passes(ActivationLoweringManager())
+    pass_mgr.register_passes(ActivationLoweringManager(experimental_xformer2=experimental_xformer2))
     pass_mgr.register_passes(PoolingLoweringManager())
     pass_mgr.register_passes(BinarizedOperatorLoweringManager())
 

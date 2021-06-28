@@ -1,4 +1,4 @@
-// RUN: xcore-opt --mlir-io %s --xcore-optimize-fullyconnected | FileCheck %s
+// RUN: xcore-opt --mlir-io %s --xcore-apply-patterns --xcore-legalize-fullyconnected | FileCheck %s
 
 // CHECK-LABEL: check_bias_transformation
 func @check_bias_transformation(%arg0: tensor<1x4x8x1x!quant.uniform<i8:f32, 0.0078160231932997704>>) -> tensor<1x32x!quant.uniform<i8:f32, 0.037329975515604019:-13>> attributes {tf.entry_function = {inputs = "flatten_input_int8", outputs = "Identity_int8"}} {

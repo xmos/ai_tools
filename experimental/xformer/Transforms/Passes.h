@@ -21,8 +21,8 @@ void buildXCorePassPipeline(OpPassManager &pm);
 // XCore-specific passes
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<OperationPass<FuncOp>> createPrintNestingPass();
-std::unique_ptr<OperationPass<FuncOp>> createOptimizeFullyConnectedPass();
+std::unique_ptr<OperationPass<FuncOp>> createApplyPatternsPass();
+std::unique_ptr<OperationPass<FuncOp>> createLegalizeFullyConnectedPass();
 std::unique_ptr<OperationPass<FuncOp>> createTranslateToCustomOpPass();
 
 //===----------------------------------------------------------------------===//
@@ -34,8 +34,8 @@ void registerXCorePassPipeline();
 inline void registerAllPasses() {
   registerXCorePassPipeline();
 
-  createPrintNestingPass();
-  createOptimizeFullyConnectedPass();
+  createApplyPatternsPass();
+  createLegalizeFullyConnectedPass();
   createTranslateToCustomOpPass();
 }
 

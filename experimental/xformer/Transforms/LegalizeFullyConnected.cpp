@@ -27,18 +27,17 @@ namespace mlir {
 namespace xcore {
 
 namespace {
-// Optimize FullyConnected ops.
-struct OptimizeFullyConnected
-    : public PassWrapper<OptimizeFullyConnected, FunctionPass> {
+// Legalize FullyConnected ops.
+struct LegalizeFullyConnected
+    : public PassWrapper<LegalizeFullyConnected, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<XCoreDialect>();
   }
   void runOnFunction() override;
 };
 
-#include "Transforms/GeneratedPatterns.inc"
-
-struct LegalizeFullyConnected : public OpRewritePattern<FullyConnectedOp> {
+struct LegalizeFullyConnectedPattern
+    : public OpRewritePattern<FullyConnectedOp> {
   using OpRewritePattern<FullyConnectedOp>::OpRewritePattern;
 
   // Transform bias via various computations and padding, resulting in biasHi
@@ -458,28 +457,24 @@ struct LegalizeFullyConnected : public OpRewritePattern<FullyConnectedOp> {
   }
 };
 
-void OptimizeFullyConnected::runOnFunction() {
-  OwningRewritePatternList replacePatterns;
+void LegalizeFullyConnected::runOnFunction() {
   auto *ctx = &getContext();
   auto func = getFunction();
 
-  populateWithGenerated(ctx, replacePatterns);
-  applyPatternsAndFoldGreedily(func, replacePatterns);
-
-  OwningRewritePatternList legalizePatterns;
-  legalizePatterns.insert<LegalizeFullyConnected>(ctx);
-  applyPatternsAndFoldGreedily(func, legalizePatterns);
+  OwningRewritePatternList pattern;
+  pattern.insert<LegalizeFullyConnectedPattern>(ctx);
+  applyPatternsAndFoldGreedily(func, pattern);
 }
 } // namespace
 
-// Creates an instance of the OptimizeFullyConnected pass.
-std::unique_ptr<OperationPass<FuncOp>> createOptimizeFullyConnectedPass() {
-  return std::make_unique<OptimizeFullyConnected>();
+// Creates an instance of the LegalizeFullyConnected pass.
+std::unique_ptr<OperationPass<FuncOp>> createLegalizeFullyConnectedPass() {
+  return std::make_unique<LegalizeFullyConnected>();
 }
 
-static PassRegistration<OptimizeFullyConnected>
-    pass("xcore-optimize-fullyconnected",
-         "Optimize FullyConnected operations.");
+static PassRegistration<LegalizeFullyConnected>
+    pass("xcore-legalize-fullyconnected",
+         "Legalize FullyConnected operations.");
 
 } // namespace xcore
 } // namespace mlir

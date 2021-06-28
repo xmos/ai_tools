@@ -9,8 +9,6 @@
 namespace mlir {
 namespace xcore {
 
-std::vector<uint8_t> FullyConnectedOp::buildCustomOptions() { return {}; }
-
 void XCoreDialect::initialize() {
   addOperations<
 #define GET_OP_LIST

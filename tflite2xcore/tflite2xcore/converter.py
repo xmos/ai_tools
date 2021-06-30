@@ -42,7 +42,7 @@ class TdnnManager(PassManager):
         self.register_pass(passes.TdnnMaxPool2DPass())
         self.register_pass(passes.TdnnShallowinConv2dPass())
         self.register_pass(passes.TdnnTensorPass())
-
+        self.register_pass(passes.TdnnCleanup())
 
 class BasicCanonicalizationManager(PassManager):
     def __init__(

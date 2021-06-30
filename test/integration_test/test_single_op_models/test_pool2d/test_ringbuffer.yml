@@ -1,0 +1,36 @@
+# Copyright (c) 2020, XMOS Ltd, All rights reserved
+# RANDOMLY GENERATED CONFIGS, MODIFY AT OWN RISK
+default:
+  0:
+    K_h: 2
+    K_w: 2
+    width: 4
+    channels: 4 
+    height: 4
+    num_threads: 1
+    padding: valid
+    strides:
+    - 1
+    - 1
+  # 1:
+  #   K_h: 2
+  #   K_w: 2
+  #   width: 8
+  #   channels: 8
+  #   height: 8 
+  #   num_threads: 1
+  #   padding: valid
+  #   strides:
+  #   - 1
+  #   - 1
+  # 2:
+  #   K_h: 3
+  #   K_w: 3
+  #   width: 4
+  #   channels: 4 
+  #   height: 4
+  #   num_threads: 1
+  #   padding: valid
+  #   strides:
+  #   - 1
+  #   - 1

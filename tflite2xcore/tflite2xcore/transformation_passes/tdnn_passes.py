@@ -17,6 +17,7 @@ from tflite2xcore.xcore_schema import (
 )
 from .pooling_passes import (
     ReplaceAveragePool2DPass,
+    ReplaceGlobalAveragePool2DPass,
 )
 
 def find_largest_address_in_persistent_buffer(subgraph: Subgraph) -> int:
@@ -68,6 +69,19 @@ def insert_ringbuffer(ringbuffer_time_dim: int, new_op: Operator) -> Operator:
         shape=(2,),
         custom_options={"tdnn":True},
     )
+
+    persistent_buffer_number = subgraph.create_tensor(
+        f"{new_op.name}/persistent_buffer_number", 
+        TensorType.INT8,
+        consumers=[new_op],
+        shape=[1],
+        custom_options={"tdnn":True},
+    )
+    breakpoint()
+    #converts unique part of string name to int
+    unique_part = new_op.name[new_op.name.find('_')+1:]
+    print(unique_part)
+    persistent_buffer_count = int(unique_part)
 
     # disconnect input from op
     new_op.inputs[0].consumers.pop(0)
@@ -301,7 +315,8 @@ class TdnnTensorPass(TensorMatchingPass):
         return (
             super().match(tensor) 
             and "tdnn" not in tensor.custom_options
-            and len(tensor.shape) > 2
+            #checks if tensor is 4d
+            and len(tensor.shape) == 4
         )
 
     def mutate(self, tensor: Tensor) -> Tensor:
@@ -313,6 +328,17 @@ class TdnnTensorPass(TensorMatchingPass):
 
         return tensor
     
+class TdnnCleanup(OperatorMatchingPass):
+    def match(self, op: Operator) -> bool:
+        return (
+            super().match(op)
+            and "tdnn" in op.custom_options
+        )
+
+    def mutate(self, op: Operator) -> bool:
+        op.custom_options.pop('tdnn')
+        return op
+
 # class TdnnGlobalAveragePool2DPass(ReplaceGlobalAveragePool2DPass):
 #     def mutate(self, op: Operator) -> Operator:
 #         new_op = super().mutate(op)

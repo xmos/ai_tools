@@ -17,6 +17,7 @@ from tflite2xcore.xcore_schema import (
 )
 from .pooling_passes import (
     ReplaceAveragePool2DPass,
+    ReplaceGlobalAveragePool2DPass,
 )
 
 def find_largest_address_in_persistent_buffer(subgraph: Subgraph) -> int:
@@ -68,6 +69,19 @@ def insert_ringbuffer(ringbuffer_time_dim: int, new_op: Operator) -> Operator:
         shape=(2,),
         custom_options={"tdnn":True},
     )
+
+    persistent_buffer_number = subgraph.create_tensor(
+        f"{new_op.name}/persistent_buffer_number", 
+        TensorType.INT8,
+        consumers=[new_op],
+        shape=[1],
+        custom_options={"tdnn":True},
+    )
+    breakpoint()
+    #converts unique part of string name to int
+    unique_part = new_op.name[new_op.name.find('_')+1:]
+    print(unique_part)
+    persistent_buffer_count = int(unique_part)
 
     # disconnect input from op
     new_op.inputs[0].consumers.pop(0)

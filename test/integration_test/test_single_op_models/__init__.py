@@ -14,10 +14,12 @@ from tflite2xcore.xcore_schema import XCOREOpCodes, ValidOpCodes
 from .. import (
     IntegrationTestRunner,
     BinarizedTestRunner,
+    TdnnTestRunner,
     _compare_batched_arrays,
     BatchedArrayComparison,
     IntegrationTestModelGenerator,
     test_output,
+    test_output_tdnn,
     test_mean_abs_diffs,
     test_idempotence,
 )

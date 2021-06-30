@@ -63,7 +63,7 @@ def test_tdnn_mutate(trf_pass: TdnnReshapePass, model: XCOREModel) -> None:
 
     # check tensors
     op = operators[0]  # reshape op
-    assert len(op.inputs) == 1
+    assert len(op.inputs) == 2
     assert len(op.outputs) == 1
 
     op = operators[1]  # ring buffer op

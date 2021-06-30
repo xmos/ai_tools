@@ -13,6 +13,7 @@ from tflite2xcore.utils import (
     quantize,
     QuantizationTuple,
     apply_interpreter_to_examples,
+    apply_interpreter_to_tdnn_examples,
 )
 
 from . import TFLiteModel, Hook
@@ -183,6 +184,28 @@ class XCoreEvaluator(TFLiteQuantEvaluator):
 
         del self._interpreter
 
+class TdnnEvaluator(TFLiteQuantEvaluator):
+    def __init__(
+        self,
+        runner: Runner,
+        input_data_hook: Hook[Union[tf.Tensor, np.ndarray]],
+        model_hook: Hook[TFLiteModel],
+        use_device: bool = False,
+    ) -> None:
+        super().__init__(runner, input_data_hook, model_hook)
+        self._use_device = use_device
+
+    def evaluate(self) -> None:
+        self._interpreter = XCOREInterpreter(model_content=self._model_hook())
+
+        with self._interpreter:
+            self._interpreter.allocate_tensors()
+            self.set_input_data()
+            self.output_data = apply_interpreter_to_tdnn_examples(
+                self._interpreter, self.input_data
+            )
+
+        del self._interpreter
 
 class LarqEvaluator(Evaluator):
     def evaluate(self) -> None:

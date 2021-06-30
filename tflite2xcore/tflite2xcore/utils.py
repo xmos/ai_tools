@@ -329,6 +329,37 @@ def apply_interpreter_to_examples(
 
     return np.vstack(outputs) if isinstance(examples, np.ndarray) else outputs
 
+def apply_interpreter_to_tdnn_examples(
+    interpreter: tf.lite.Interpreter,
+    examples: Union[tf.Tensor, np.ndarray],
+    *,
+    interpreter_input_ind: Optional[int] = None,
+    interpreter_output_ind: Optional[int] = None,
+) -> np.ndarray:
+    interpreter.allocate_tensors()
+    if interpreter_input_ind is None:
+        interpreter_input_ind = interpreter.get_input_details()[0]["index"]
+
+    outputs = []
+    for x in examples:
+        y = None
+        for col in x:
+            interpreter.set_tensor(interpreter_input_ind, np.expand_dims(col, axis=(0,1)))
+            interpreter.invoke()
+            ycol = interpreter.get_tensor(interpreter_output_ind)
+            if y is None:
+                y= ycol 
+            else:
+                y=np.concatenate((y,ycol), axis=1)
+        # checks if time dim has been lost, from a reshape for example
+        if len(np.squeeze(y).shape) == 1:
+            outputs.append(ycol)
+        else:
+            max_ringbuffer_delay = 2#depends on network, need a way to handle delay
+            outputs.append(y[:,max_ringbuffer_delay:,:,:])
+
+    return np.vstack(outputs) if isinstance(examples, np.ndarray) else outputs
+
 
 def quantize_keras_model(
     model: tf.keras.Model,

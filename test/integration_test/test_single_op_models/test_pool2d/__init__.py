@@ -11,6 +11,7 @@ from .. import (
     FilterOpTestModelGenerator,
     ChannelPreservingOpTestModelGenerator,
     test_output,
+    test_output_tdnn,
     test_converted_single_op_model,
     test_reference_model_regression,
 )

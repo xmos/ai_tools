@@ -5,5 +5,6 @@ from .. import (
     BinarizedTestRunner,
     IntegrationTestModelGenerator,
     test_output,
+    test_output_tdnn,
     test_idempotence,
 )

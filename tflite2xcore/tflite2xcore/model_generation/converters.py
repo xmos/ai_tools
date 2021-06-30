@@ -33,7 +33,7 @@ class Converter(RunnerDependent):
 
     def get_converted_model(self) -> TFLiteModel:
         try:
-            return self._model
+           return self._model
         except AttributeError:
             raise Exception(
                 "Cannot get converted model before converter is run!"
@@ -100,6 +100,21 @@ class XCoreConverter(Converter):
         optimize_for_xcore(model, num_threads=self._config["num_threads"])
         self._model = model.serialize()
 
+class TdnnConverter(Converter):
+    """ Converts network to TDNN network
+    then converts to xcore.ai-optimized TFLite model. """
+
+    def __init__(self, runner: Runner, input_model_hook: Hook[TFLiteModel]) -> None:
+        super().__init__(runner, input_model_hook)
+
+    def _set_config(self, cfg: Configuration) -> None:
+        if "num_threads" not in self._config:
+            self._config["num_threads"] = cfg.pop("num_threads", 1)
+
+    def convert(self) -> None:
+        model = XCOREModel.deserialize(self._input_model_hook())
+        optimize_for_xcore(model, num_threads=self._config["num_threads"], tdnn=True)
+        self._model = model.serialize()
 
 class LarqConverter(KerasModelConverter):
     """ Converts a Larq model to a TFLite model. """

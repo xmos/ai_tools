@@ -17,6 +17,7 @@ from tflite2xcore.model_generation.utils import stringify_config
 from . import (
     IntegrationTestRunner,
     DefaultIntegrationTestRunner,
+    TdnnTestRunner,
     _compare_batched_arrays,
     BatchedArrayComparison,
 )
@@ -220,6 +221,15 @@ def bitpacked_outputs() -> bool:
 def implicit_tolerance_margin() -> float:
     return 0.05
 
+
+@pytest.fixture
+def tdnn_compared_outputs(
+    run: TdnnTestRunner,
+    abs_output_tolerance: Optional[Union[int, float]],
+) -> BatchedArrayComparison:
+    return _compare_batched_arrays(
+        run.outputs.tdnn, run.outputs.xcore, abs_output_tolerance,
+    )
 
 @pytest.fixture
 def compared_outputs(

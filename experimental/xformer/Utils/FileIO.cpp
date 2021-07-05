@@ -16,9 +16,13 @@ namespace utils {
 LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
                                         mlir::ModuleOp module) {
   std::string serialized_flatbuffer;
+  tflite::FlatbufferExportOptions options;
+  options.emit_builtin_tflite_ops = true;
+  options.emit_select_tf_ops = true;
+  options.emit_custom_ops = true;
 
-  if (!tflite::MlirToFlatBufferTranslateFunction(module, &serialized_flatbuffer,
-                                                 true, true, true)) {
+  if (!tflite::MlirToFlatBufferTranslateFunction(module, options,
+                                                 &serialized_flatbuffer)) {
     auto outputFile = openOutputFile(filename);
     if (!outputFile) {
       llvm::errs() << "Could not open output file: " << filename << "\n";

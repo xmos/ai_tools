@@ -4,7 +4,7 @@
 #ifndef XFORMER_UTILS_FILEIO_H
 #define XFORMER_UTILS_FILEIO_H
 
-#include "mlir/IR/Module.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/FileUtilities.h"
 
 namespace mlir {

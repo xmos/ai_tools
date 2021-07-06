@@ -21,7 +21,7 @@ LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
   options.emit_select_tf_ops = true;
   options.emit_custom_ops = true;
 
-  if (!tflite::MlirToFlatBufferTranslateFunction(module, options,
+  if (tflite::MlirToFlatBufferTranslateFunction(module, options,
                                                  &serialized_flatbuffer)) {
     auto outputFile = openOutputFile(filename);
     if (!outputFile) {

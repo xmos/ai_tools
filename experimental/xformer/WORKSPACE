@@ -20,21 +20,22 @@ bazel_skylib_workspace()
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
-########################### Configure TensorFlow ###############################
-# To update TensorFlow to a new revision.
-# 1. Update the git hash in the urls and the 'strip_prefix' parameter.
-# 2. Get the sha256 hash of the archive with a command such as...
-#    curl -L https://github.com/tensorflow/tensorflow/archive/<git hash>.tar.gz | shasum -a 256
-#    and update the 'sha256' arg with the result.
-# 3. Request the new archive to be mirrored on mirror.bazel.build for more
-#    reliable downloads.
+################################## TensorFlow ##################################
+# TF depends on tf_toolchains.
 http_archive(
-    name = "org_tensorflow",
-    sha256 = "f681331f8fc0800883761c7709d13cda11942d4ad5ff9f44ad855e9dc78387e0",
-    strip_prefix = "tensorflow-2.4.1",
+    name = "tf_toolchains",
+    sha256 = "d60f9637c64829e92dac3f4477a2c45cdddb9946c5da0dd46db97765eb9de08e",
+    strip_prefix = "toolchains-1.1.5",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/v2.4.1.tar.gz",
+        "http://mirror.tensorflow.org/github.com/tensorflow/toolchains/archive/v1.1.5.tar.gz",
+        "https://github.com/tensorflow/toolchains/archive/v1.1.5.tar.gz",
     ],
+)
+
+maybe(
+    local_repository,
+    name = "org_tensorflow",
+    path = paths.join("../../", "utils/adf/tensorflow"),
 )
 
 # io_bazel_rules_closure
@@ -59,17 +60,6 @@ http_archive(
 load("@org_tensorflow//tensorflow:workspace.bzl", "tf_repositories")
 
 tf_repositories()
-
-# TF depends on tf_toolchains.
-http_archive(
-    name = "tf_toolchains",
-    sha256 = "d60f9637c64829e92dac3f4477a2c45cdddb9946c5da0dd46db97765eb9de08e",
-    strip_prefix = "toolchains-1.1.5",
-    urls = [
-        "http://mirror.tensorflow.org/github.com/tensorflow/toolchains/archive/v1.1.5.tar.gz",
-        "https://github.com/tensorflow/toolchains/archive/v1.1.5.tar.gz",
-    ],
-)
 
 ###############################################################################
 

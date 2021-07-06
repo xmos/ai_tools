@@ -6,9 +6,9 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 // TODO: Is there a better place for these constants?
@@ -461,9 +461,9 @@ void LegalizeFullyConnected::runOnFunction() {
   auto *ctx = &getContext();
   auto func = getFunction();
 
-  OwningRewritePatternList pattern;
-  pattern.insert<LegalizeFullyConnectedPattern>(ctx);
-  applyPatternsAndFoldGreedily(func, pattern);
+  OwningRewritePatternList patterns;
+  patterns.insert<LegalizeFullyConnectedPattern>(ctx);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 

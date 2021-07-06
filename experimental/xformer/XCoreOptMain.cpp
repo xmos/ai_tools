@@ -68,12 +68,16 @@ int main(int argc, char **argv) {
 
   // Run transformations
   // Apply any pass manager command line options
-  PassManager pm(&context);
+  PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
   applyPassManagerCLOptions(pm);
+
+  auto errorHandler = [&](const Twine &msg) {
+    return emitError(UnknownLoc::get(&context)) << msg;
+  };
 
   if (passPipeline.hasAnyOccurrences()) {
     // Build the provided pipeline.
-    if (failed(passPipeline.addToPipeline(pm)))
+    if (failed(passPipeline.addToPipeline(pm, errorHandler)))
       return 1;
 
     // Run the pipeline.

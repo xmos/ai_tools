@@ -3,6 +3,7 @@
 
 #include "IR/XCoreOps.h"
 
+#include "flatbuffers/flexbuffers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -13,6 +14,13 @@ namespace xcore {
 
 std::vector<uint8_t> FullyConnectedOp::buildCustomOptions() { return {}; }
 std::vector<uint8_t> Lookup8Op::buildCustomOptions() { return {}; }
+
+std::vector<uint8_t> PadOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() { fbb.Int("pad_value", (int)pad_value()); });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
 
 namespace {
 /// This pass translates XCore ops to TFLite custom ops.
@@ -48,6 +56,7 @@ void TranslateToCustomOp::runOnFunction() {
 
   patterns.insert<RewriteToCustomOp<FullyConnectedOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Lookup8Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

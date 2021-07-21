@@ -44,6 +44,7 @@ func @replace_pad(%arg0: tensor<?x4x1x48x!quant.uniform<i8:f32, 0.00783848017454
     %cst = constant dense<[[0, 0], [0, 0], [2, 0], [0, 0]]> : tensor<4x2xi32>
 // CHECK: tfl.custom
 // CHECK-SAME: XC_pad
+// CHECK-SAME: custom_option = opaque<"xc", "0x7061645F76616C756500010B010101FF04022401">
     %0 = "xc.pad"(%arg0, %cst) {pad_value = -1 : i32} : (tensor<?x4x1x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>, tensor<4x2xi32>) -> tensor<?x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>
     return %0 : tensor<?x4x3x48x!quant.uniform<i8:f32, 0.0078384801745414734:-1>>
   }

@@ -23,6 +23,24 @@ struct ApplyPatterns : public PassWrapper<ApplyPatterns, FunctionPass> {
   void runOnFunction() override;
 };
 
+// TODO: Remove when we have fusing of Pad and Conv2D in xformer2
+// Replacing pad when there is a following Conv2D after a Pad is breaking fusing
+// passes in xformer1
+bool hasNoFollowingConv2D(Value outputVal) {
+  if (outputVal.hasOneUse()) {
+    if (llvm::isa<TFL::CustomOp>(*outputVal.getUsers().begin())) {
+      auto op = dyn_cast<TFL::CustomOp>(*outputVal.getUsers().begin());
+      if (op.custom_code().startswith("XC_bconv2d"))
+        return false;
+    } else if (llvm::isa<TFL::DepthwiseConv2DOp>(
+                   *outputVal.getUsers().begin()) ||
+               llvm::isa<TFL::Conv2DOp>(*outputVal.getUsers().begin())) {
+      return false;
+    }
+  }
+  return true;
+}
+
 IntegerAttr getPadValue(PatternRewriter &rewriter, Value inputVal) {
   auto inputType = inputVal.getType().cast<ShapedType>();
   auto elementType = inputType.getElementType();

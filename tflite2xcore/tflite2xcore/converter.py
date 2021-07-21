@@ -172,8 +172,7 @@ class PaddingOptimizationManager(PassManager):
             # remove word alignment padding on the input
             self.register_pass(passes.RemovePaddingInputPass())
         # replace with optimized implementation where possible
-        if not experimental_xformer2:
-            self.register_pass(passes.ReplacePadPass())
+        self.register_pass(passes.ReplacePadPass())
 
         # Fuse back any remaining PAD operators
         self.register_pass(passes.FuseConsecutivePadsPass())

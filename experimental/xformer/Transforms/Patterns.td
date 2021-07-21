@@ -57,11 +57,16 @@ def HasValidBytesPerPixel : Constraint<Or<[
 
 def getPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
 
+// TODO: Remove when we have fusing of Pad and Conv2D in xformer2
+// Replacing pad when there is a following Conv2D after a Pad is breaking fusing
+// passes in xformer1
+def HasNoFollowingConv2D : Constraint<CPred<"hasNoFollowingConv2D($0)">>;
+
 def : Pat<(TFL_PadOp
            : $output $input, (ConstantOp
                               : $padding_op $padding_attr)),
           (XC_PadOp $input, $padding_op, (getPadValue $input)), [
             (HasValidPaddingShape $padding_op),
             (HasNoPaddingForBatchAndChannel $padding_attr),
-            (HasValidBytesPerPixel $input)
+            (HasValidBytesPerPixel $input), (HasNoFollowingConv2D $output)
           ]>;

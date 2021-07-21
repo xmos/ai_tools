@@ -23,6 +23,31 @@ struct ApplyPatterns : public PassWrapper<ApplyPatterns, FunctionPass> {
   void runOnFunction() override;
 };
 
+IntegerAttr getPadValue(PatternRewriter &rewriter, Value inputVal) {
+  auto inputType = inputVal.getType().cast<ShapedType>();
+  auto elementType = inputType.getElementType();
+
+  // For quantized input type, padValue is the zero_point
+  // Otherwise, it is zero
+  int padValue = 0;
+  if (elementType.isa<quant::QuantizedType>()) {
+    auto inputQType = elementType.dyn_cast<quant::UniformQuantizedType>();
+    padValue = inputQType.getZeroPoint();
+    elementType = elementType.cast<quant::QuantizedType>().getStorageType();
+  }
+
+  assert(elementType.isIntOrFloat() &&
+         "Type has to be I32, F32, or I8 if quantized!");
+  // padValue has to be four bytes
+  // For input type of int8, this would be arranged as b,b,b,b
+  if (elementType.isInteger(8)) {
+    padValue = padValue << 24 | (padValue << 16 & 0x00FFFFFF) |
+               (padValue << 8 & 0x0000FFFF) | (padValue & 0x000000FF);
+  }
+
+  return rewriter.getI32IntegerAttr(padValue);
+}
+
 DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
   llvm::SmallVector<int8_t, 0> inputVector;
   inputVector.resize(256);

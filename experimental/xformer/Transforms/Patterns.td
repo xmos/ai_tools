@@ -19,7 +19,49 @@ def : Pat<(TFL_FullyConnectedOp
 def getLookupTable
     : NativeCodeCall<"getLookupTable($_builder, $0.getDefiningOp())">;
 
-foreach activationOp = [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp] in
-  def : Pat<(activationOp
+foreach activationOp =
+    [TFL_ReluOp, TFL_Relu6Op, TFL_TanhOp, TFL_LogisticOp] in {
+def:
+  Pat<(activationOp
             : $output TensorOf<[QI8]>:$input),
             (XC_Lookup8Op $input, (ConstantOp (getLookupTable $output)))>;
+}
+
+// Pad pattern
+// We only support padding for 4 dimensions
+def HasValidPaddingShape
+    : Constraint<CPred<"$0.getType().cast<ShapedType>().getDimSize(0) == 4">>;
+
+// We only support spatial padding
+def HasNoPaddingForBatchAndChannel
+    : Constraint<CPred<
+          "$0.cast<DenseIntElementsAttr>().getNumElements() == 8 && "
+          "($0.cast<DenseIntElementsAttr>().getValue<int32_t>({0,0}) == 0 &&"
+          "$0.cast<DenseIntElementsAttr>().getValue<int32_t>({0,1}) == 0 &&"
+          "$0.cast<DenseIntElementsAttr>().getValue<int32_t>({3,0}) == 0 &&"
+          "$0.cast<DenseIntElementsAttr>().getValue<int32_t>({3,1}) == 0)">>;
+
+// We only support bytes per pixel being a multiple of four
+// Check if channel dimension size * sizeof(input type) is divisible by 4
+def HasValidBytesPerPixel : Constraint<Or<[
+  CPred<"$0.getType().cast<ShapedType>().getElementType().isIntOrFloat() &&"
+        "($0.getType().cast<ShapedType>().getElementType()."
+        "getIntOrFloatBitWidth() / 8 *  "
+        "$0.getType().cast<ShapedType>().getDimSize(3)) % 4 == 0">,
+  CPred<"$0.getType().cast<ShapedType>().getElementType().isa<quant::"
+        "QuantizedType>() &&"
+        "($0.getType().cast<ShapedType>().getElementType().cast<quant::"
+        "QuantizedType>().getStorageTypeIntegralWidth() / 8 * "
+        "$0.getType().cast<ShapedType>().getDimSize(3)) % 4 == 0">
+]>>;
+
+def getPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
+
+def : Pat<(TFL_PadOp
+           : $output $input, (ConstantOp
+                              : $padding_op $padding_attr)),
+          (XC_PadOp $input, $padding_op, (getPadValue $input)), [
+            (HasValidPaddingShape $padding_op),
+            (HasNoPaddingForBatchAndChannel $padding_attr),
+            (HasValidBytesPerPixel $input)
+          ]>;

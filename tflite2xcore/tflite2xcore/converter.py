@@ -154,6 +154,7 @@ class PaddingOptimizationManager(PassManager):
         model: Optional[XCOREModel] = None,
         *,
         remove_input_alignment_pad: bool,
+        experimental_xformer2: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(model, **kwargs)
@@ -171,7 +172,8 @@ class PaddingOptimizationManager(PassManager):
             # remove word alignment padding on the input
             self.register_pass(passes.RemovePaddingInputPass())
         # replace with optimized implementation where possible
-        self.register_pass(passes.ReplacePadPass())
+        if not experimental_xformer2:
+            self.register_pass(passes.ReplacePadPass())
 
         # Fuse back any remaining PAD operators
         self.register_pass(passes.FuseConsecutivePadsPass())
@@ -324,7 +326,7 @@ def optimize_for_xcore(
     # optimizations on xcore ops
     pass_mgr.register_passes(
         PaddingOptimizationManager(
-            remove_input_alignment_pad=remove_input_alignment_pad
+            remove_input_alignment_pad=remove_input_alignment_pad, experimental_xformer2=experimental_xformer2
         )
     )
     pass_mgr.register_passes(ParallelizationManager(num_threads=num_threads))

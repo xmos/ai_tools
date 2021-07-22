@@ -5,3 +5,6 @@
 [submodule "utils/adf"]
 	path = utils/adf
 	url = git@github.com:xmos/adf.git
+[submodule "third_party/tensorflow"]
+	path = third_party/tensorflow
+	url = git@github.com:tensorflow/tensorflow.git

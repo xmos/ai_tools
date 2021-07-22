@@ -35,7 +35,7 @@ http_archive(
 maybe(
     local_repository,
     name = "org_tensorflow",
-    path = paths.join("../../", "utils/adf/tensorflow"),
+    path = paths.join("../../", "third_party/tensorflow"),
 )
 
 # io_bazel_rules_closure

@@ -17,7 +17,7 @@ std::vector<uint8_t> Lookup8Op::buildCustomOptions() { return {}; }
 
 std::vector<uint8_t> PadOp::buildCustomOptions() {
   flexbuffers::Builder fbb;
-  fbb.Map([&]() { fbb.Int("pad_value", (int)pad_value()); });
+  fbb.Map([&]() { fbb.Int("pad_value", (int32_t)pad_value()); });
   fbb.Finish();
   return fbb.GetBuffer();
 }

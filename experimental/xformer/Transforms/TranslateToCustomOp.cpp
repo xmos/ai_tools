@@ -3,6 +3,7 @@
 
 #include "IR/XCoreOps.h"
 
+#include "flatbuffers/flexbuffers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -10,6 +11,16 @@
 
 namespace mlir {
 namespace xcore {
+
+std::vector<uint8_t> FullyConnectedOp::buildCustomOptions() { return {}; }
+std::vector<uint8_t> Lookup8Op::buildCustomOptions() { return {}; }
+
+std::vector<uint8_t> PadOp::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() { fbb.Int("pad_value", (int32_t)pad_value()); });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
 
 namespace {
 /// This pass translates XCore ops to TFLite custom ops.
@@ -24,9 +35,12 @@ struct RewriteToCustomOp : public OpRewritePattern<XCoreOp> {
 
   LogicalResult matchAndRewrite(XCoreOp xc_op,
                                 PatternRewriter &rewriter) const override {
+    auto options = xc_op.buildCustomOptions();
     auto *op = xc_op.getOperation();
-    auto type = RankedTensorType::get({0}, rewriter.getIntegerType(8));
-    auto attr = OpaqueElementsAttr::get(op->getDialect(), type, "");
+    auto type = RankedTensorType::get({static_cast<int64_t>(options.size())},
+                                      rewriter.getIntegerType(8));
+    std::string options_bytes(options.begin(), options.end());
+    auto attr = OpaqueElementsAttr::get(op->getDialect(), type, options_bytes);
 
     rewriter.replaceOpWithNewOp<TFL::CustomOp>(
         op, op->getResultTypes(), op->getOperands(),
@@ -42,6 +56,7 @@ void TranslateToCustomOp::runOnFunction() {
 
   patterns.insert<RewriteToCustomOp<FullyConnectedOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Lookup8Op>>(ctx);
+  patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

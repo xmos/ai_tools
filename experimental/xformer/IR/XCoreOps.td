@@ -63,6 +63,8 @@ def XCoreDialect : Dialect {
 // Base class for the operation in this dialect
 class XC_Op<string mnemonic, list<OpTrait> traits = []>
     : Op<XCoreDialect, mnemonic, traits> {
+
+  let extraClassDeclaration = [{ std::vector<uint8_t> buildCustomOptions(); }];
 }
 
 def XC_FullyConnectedOp : XC_Op<"fc", [NoSideEffect]> {
@@ -93,6 +95,21 @@ def XC_Lookup8Op : XC_Op<"lookup_8", [NoSideEffect]> {
   let arguments = (ins TensorOf<[QI8]> : $input, TensorOf<[I8]> : $lut);
 
   let results = (outs TensorOf<[QI8]> : $output);
+}
+
+def XC_PadOp : XC_Op<"pad", [NoSideEffect]> {
+  let summary = "Pad op";
+
+  let description = [{Pad op.}];
+
+  let arguments = (ins
+    TensorOf<[F32, I32, QI8]>:$input,
+    TensorOf<[I32]>:$padding,
+
+    I32Attr:$pad_value
+    );
+
+  let results = (outs TensorOf<[F32, I32, QI8]> : $output);
 }
 
 #endif // XCORE_DIALECT

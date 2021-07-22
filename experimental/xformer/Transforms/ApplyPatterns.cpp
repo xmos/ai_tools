@@ -23,6 +23,49 @@ struct ApplyPatterns : public PassWrapper<ApplyPatterns, FunctionPass> {
   void runOnFunction() override;
 };
 
+// TODO: Remove when we have fusing of Pad and Conv2D in xformer2
+// Replacing pad when there is a following Conv2D after a Pad is breaking fusing
+// passes in xformer1
+bool hasNoFollowingConv2D(Value outputVal) {
+  if (outputVal.hasOneUse()) {
+    if (llvm::isa<TFL::CustomOp>(*outputVal.getUsers().begin())) {
+      auto op = dyn_cast<TFL::CustomOp>(*outputVal.getUsers().begin());
+      if (op.custom_code().startswith("XC_bconv2d"))
+        return false;
+    } else if (llvm::isa<TFL::DepthwiseConv2DOp>(
+                   *outputVal.getUsers().begin()) ||
+               llvm::isa<TFL::Conv2DOp>(*outputVal.getUsers().begin())) {
+      return false;
+    }
+  }
+  return true;
+}
+
+IntegerAttr getPadValue(PatternRewriter &rewriter, Value inputVal) {
+  auto inputType = inputVal.getType().cast<ShapedType>();
+  auto elementType = inputType.getElementType();
+
+  // For quantized input type, padValue is the zero_point
+  // Otherwise, it is zero
+  int padValue = 0;
+  if (elementType.isa<quant::QuantizedType>()) {
+    auto inputQType = elementType.dyn_cast<quant::UniformQuantizedType>();
+    padValue = inputQType.getZeroPoint();
+    elementType = elementType.cast<quant::QuantizedType>().getStorageType();
+  }
+
+  assert(elementType.isIntOrFloat() &&
+         "Type has to be I32, F32, or I8 if quantized!");
+  // padValue has to be four bytes
+  // For input type of int8, this would be arranged as b,b,b,b
+  if (elementType.isInteger(8)) {
+    padValue = padValue << 24 | (padValue << 16 & 0x00FFFFFF) |
+               (padValue << 8 & 0x0000FFFF) | (padValue & 0x000000FF);
+  }
+
+  return rewriter.getI32IntegerAttr(padValue);
+}
+
 DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
   llvm::SmallVector<int8_t, 0> inputVector;
   inputVector.resize(256);

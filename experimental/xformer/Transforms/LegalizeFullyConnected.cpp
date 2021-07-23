@@ -10,6 +10,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
+#include <numeric>
 
 // TODO: Is there a better place for these constants?
 static constexpr int XCORE_OUTPUT_BITS = 8;

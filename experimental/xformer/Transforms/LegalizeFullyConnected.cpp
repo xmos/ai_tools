@@ -461,7 +461,7 @@ void LegalizeFullyConnected::runOnFunction() {
   auto *ctx = &getContext();
   auto func = getFunction();
 
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(ctx);
   patterns.insert<LegalizeFullyConnectedPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

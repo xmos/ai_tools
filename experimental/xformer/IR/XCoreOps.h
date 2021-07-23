@@ -5,7 +5,7 @@
 #define XFORMER_IR_XCOREOPS_H
 
 #include "mlir/Dialect/Quant/QuantTypes.h"
-#include "tensorflow/compiler/mlir/tensorflow/ir/tf_ops.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 // clang-format off
 #include "IR/XCoreDialect.h.inc"

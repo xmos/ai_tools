@@ -22,7 +22,7 @@ LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
   options.emit_custom_ops = true;
 
   if (tflite::MlirToFlatBufferTranslateFunction(module, options,
-                                                 &serialized_flatbuffer)) {
+                                                &serialized_flatbuffer)) {
     auto outputFile = openOutputFile(filename);
     if (!outputFile) {
       llvm::errs() << "Could not open output file: " << filename << "\n";
@@ -48,8 +48,7 @@ mlir::OwningModuleRef readFlatBufferFileToMLIR(std::string &filename,
     return mlir::OwningModuleRef(nullptr);
   }
 
-  auto loc = mlir::FileLineColLoc::get(inputFile->getBufferIdentifier(), 0, 0,
-                                       context);
+  auto loc = mlir::FileLineColLoc::get(context, filename, 0, 0);
   OwningModuleRef mod =
       tflite::FlatBufferToMlir(absl::string_view(inputFile->getBufferStart(),
                                                  inputFile->getBufferSize()),

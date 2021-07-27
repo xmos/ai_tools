@@ -58,7 +58,9 @@ cc_library(
         "@llvm-project//mlir:QuantOps",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow",
         "@org_tensorflow//tensorflow/compiler/mlir/lite:tensorflow_lite",
+        "@lib_nn//:libnn_lib",
     ],
+    copts = ["-Iexternal/lib_nn/lib_nn/api"],
     alwayslink = 1,
 ) 
 

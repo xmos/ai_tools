@@ -14,6 +14,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "IR/XCoreOps.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "@llvm-project//mlir:StdOpsTdFiles",
         "@org_tensorflow//tensorflow/compiler/mlir/tensorflow:tensorflow_ops_td_files",
@@ -28,6 +29,7 @@ gentbl(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "Transforms/Patterns.td",
+    td_includes = ["external/org_tensorflow"],
     td_srcs = [
         "IR/XCoreOps.td",
         "@llvm-project//mlir:StdOpsTdFiles",

@@ -10,6 +10,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
+#include <numeric>
 
 namespace mlir {
 namespace xcore {
@@ -138,11 +139,10 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
 #include "Transforms/GeneratedPatterns.inc"
 
 void ApplyPatterns::runOnFunction() {
-  OwningRewritePatternList patterns;
-  auto *ctx = &getContext();
+  OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
 
-  populateWithGenerated(ctx, patterns);
+  populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace

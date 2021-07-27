@@ -63,7 +63,7 @@ def getPadValue : NativeCodeCall<"getPadValue($_builder, $0)">;
 def HasNoFollowingConv2D : Constraint<CPred<"hasNoFollowingConv2D($0)">>;
 
 def : Pat<(TFL_PadOp
-           : $output $input, (ConstantOp
+           : $output $input, (TFL_ConstOp
                               : $padding_op $padding_attr)),
           (XC_PadOp $input, $padding_op, (getPadValue $input)), [
             (HasValidPaddingShape $padding_op),

@@ -50,8 +50,8 @@ struct RewriteToCustomOp : public OpRewritePattern<XCoreOp> {
 };
 
 void TranslateToCustomOp::runOnFunction() {
-  OwningRewritePatternList patterns;
   auto *ctx = &getContext();
+  OwningRewritePatternList patterns(ctx);
   auto func = getFunction();
 
   patterns.insert<RewriteToCustomOp<FullyConnectedOp>>(ctx);

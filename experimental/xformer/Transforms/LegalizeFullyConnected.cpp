@@ -10,6 +10,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
+#include <numeric>
 
 // TODO: Is there a better place for these constants?
 static constexpr int XCORE_OUTPUT_BITS = 8;
@@ -461,7 +462,7 @@ void LegalizeFullyConnected::runOnFunction() {
   auto *ctx = &getContext();
   auto func = getFunction();
 
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(ctx);
   patterns.insert<LegalizeFullyConnectedPattern>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

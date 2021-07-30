@@ -145,9 +145,6 @@ void ApplyPatterns::runOnFunction() {
 
   populateWithGenerated(patterns);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
-
-  void *w, *x, *y, *z;
-  nn::Conv2dValidDirect k((nn::AbstractKernel::Params*) &w, (nn::DerefInputFn*) &x, (nn::MatMulDirectFn*) &y, (nn::OT_int8*) &z);
 }
 } // namespace
 

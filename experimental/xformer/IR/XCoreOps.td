@@ -36,16 +36,15 @@ def TFL_FullyConnectedOptionsWeightFormatAttr
                   [TFL_FCWO_Default, TFL_FCWO_Shuffled4x16i8]>;
 
 // A type attribute containing OpaqueElementsAttr and bytes.
-def OpaqueBytesAttr : ElementsAttrBase<
-  And<[
-    CPred<"$_self.isa<OpaqueElementsAttr>() ">,
-    CPred<"$_self.cast<OpaqueElementsAttr>().getType()"
-          ".getElementType().isInteger(8)">,
-  ]>,
-  "opaque bytes attribute"
- > {
-  let storageType = [{ OpaqueElementsAttr }];
-  let returnType = [{ OpaqueElementsAttr }];
+def OpaqueBytesAttr
+    : ElementsAttrBase<And<[
+                         CPred<"$_self.isa<OpaqueElementsAttr>() ">,
+                         CPred<"$_self.cast<OpaqueElementsAttr>().getType()"
+                               ".getElementType().isInteger(8)">,
+                       ]>,
+                       "opaque bytes attribute"> {
+  let storageType = [{OpaqueElementsAttr}];
+  let returnType = [{OpaqueElementsAttr}];
   let convertFromStorage = "$_self";
 }
 #endif
@@ -87,17 +86,17 @@ def XC_Conv2D_ValidDirect : StrEnumAttrCase<"ValidDirect">;
 def XC_Conv2D_ValidInDirect : StrEnumAttrCase<"ValidInDirect">;
 def XC_Conv2D_PaddedInDirect : StrEnumAttrCase<"PaddedInDirect">;
 
-def XC_Conv2D_TypeAttr
-    : StrEnumAttr<"Conv2DType", "conv2d type enum",
-                  [XC_Conv2D_ValidDirect, XC_Conv2D_ValidInDirect, XC_Conv2D_PaddedInDirect]>;
+def XC_Conv2D_TypeAttr : StrEnumAttr<"Conv2DType", "conv2d type enum", [
+  XC_Conv2D_ValidDirect, XC_Conv2D_ValidInDirect, XC_Conv2D_PaddedInDirect
+]>;
 
-def XC_Conv2DV2 : XC_Op<"conv2dv2", [NoSideEffect]> {
+def XC_Conv2DV2Op : XC_Op<"conv2dv2", [NoSideEffect]> {
   let summary = "Conv2D V2 op";
 
   let description = [{Conv2D V2 op.}];
 
   let arguments = (ins
-    TensorOf<[QI8, QUI8]>:$input,
+    TensorOf<[QI8]>:$input,
 
     OpaqueBytesAttr:$abstract_kernel_params,
     OpaqueBytesAttr:$memcpy_fn_params,
@@ -106,7 +105,7 @@ def XC_Conv2DV2 : XC_Op<"conv2dv2", [NoSideEffect]> {
     XC_Conv2D_TypeAttr:$conv2d_type
   );
 
-  let results = (outs TensorOf<[QI8, QUI8]> : $output);
+  let results = (outs TensorOf<[QI8]> : $output);
 }
 
 def XC_FullyConnectedOp : XC_Op<"fc", [NoSideEffect]> {

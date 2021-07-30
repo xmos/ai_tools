@@ -22,6 +22,22 @@ std::vector<uint8_t> PadOp::buildCustomOptions() {
   return fbb.GetBuffer();
 }
 
+std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
+  flexbuffers::Builder fbb;
+  fbb.Map([&]() {
+    fbb.String("abstract_kernel_params",
+               abstract_kernel_params().getValue().str());
+    fbb.String("memcpy_fn_params", memcpy_fn_params().getValue().str());
+    fbb.String("aggregate_fn_params", aggregate_fn_params().getValue().str());
+    fbb.String("output_transform_fn_params",
+               output_transform_fn_params().getValue().str());
+    fbb.Int("conv2d_type",
+            (int32_t)(symbolizeConv2DType(conv2d_type()).getValue()));
+  });
+  fbb.Finish();
+  return fbb.GetBuffer();
+}
+
 namespace {
 /// This pass translates XCore ops to TFLite custom ops.
 struct TranslateToCustomOp
@@ -57,6 +73,7 @@ void TranslateToCustomOp::runOnFunction() {
   patterns.insert<RewriteToCustomOp<FullyConnectedOp>>(ctx);
   patterns.insert<RewriteToCustomOp<Lookup8Op>>(ctx);
   patterns.insert<RewriteToCustomOp<PadOp>>(ctx);
+  patterns.insert<RewriteToCustomOp<Conv2DV2Op>>(ctx);
 
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }

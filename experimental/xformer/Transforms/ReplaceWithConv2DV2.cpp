@@ -40,6 +40,12 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
               .getElementType()
               .isa<quant::QuantizedType>() &&
           conv2DOp.input()
+              .getType()
+              .cast<ShapedType>()
+              .getElementType()
+              .cast<quant::QuantizedType>()
+              .isSigned() &&
+          conv2DOp.input()
                   .getType()
                   .cast<ShapedType>()
                   .getElementType()
@@ -50,16 +56,16 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
 
     // Check if not fitting the three kernel types, then return
     // Output channel must be a multiple of four
-    if (!conv2DOp.output().getType().cast<ShapedType>().getDimSize(3) % 4 ==
-        0) {
+    if (conv2DOp.output().getType().cast<ShapedType>().getDimSize(3) % 4 != 0) {
       return failure();
     }
 
-    // Get thread count as command-line option
+    llvm::SmallVector<llvm::StringRef> params;
+    // TODO: Get thread count as command-line option
     // Currently thread count is one
     int threadCount = 1;
 
-    // Multithread analysis to determine how to split up the data between
+    // TODO: Multithread analysis to determine how to split up the data between
     // threads.
     // Also to determine which kernel type for each thread.
     // Might be better to do this as an analysis pass and access the analysis
@@ -73,18 +79,105 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
       // Call the function for that which returns a vector of four strings for
       // the four params
 
+      {
+        // TODO: For Conv2D for padding type = "SAME", get the correct padding
+        // values
+        int16_t top_pad, left_pad, bottom_pad, right_pad;
+        top_pad = left_pad = bottom_pad = right_pad = 0;
+
+        // TODO: For BNNs, pad value cannot be zero
+        // We should be ideally using a different Conv2D operator for BNNs
+        int8_t kernel_pad_val = 0;
+
+        // Retrieve these
+        int output_height = 1;
+        int output_width = 1;
+
+        int k_height = 1;
+        int k_width = 1;
+        int k_depth = 16;
+
+        int x_height = 1;
+        int x_width = 1;
+        int x_channels = 32;
+
+        int k_v_stride = 1;
+        int k_h_stride = 1;
+        int k_v_dilation = 1;
+        int k_h_dilation = 1;
+
+        int VPU_INT8_ACC_PERIOD = 16;
+
+        std::vector<int8_t> weights(k_height * k_width * k_depth * x_channels,
+                                    1);
+        std::vector<int32_t> bias(k_depth, 1);
+        std::vector<float> eff_mult(k_depth, 1);
+        int input_zero_point = 1;
+        int output_zero_point = 1;
+
+        int input_bytes = 1; // geom.window.shape.height *
+                             // geom.window.shape.width * geom.input.depth;
+        int scratch_bytes = nn::MatMulInt8::get_scratch_mem_bytes(input_bytes) +
+                            32; //[asj] FIXME
+
+        nn::padding_t padding = {(int16_t)top_pad, (int16_t)left_pad,
+                                 (int16_t)bottom_pad, (int16_t)right_pad};
+
+        // here output_height + width muct match the
+        // allocated memory for y
+        nn::ImageGeometry Y(output_height, output_width, k_depth);
+
+        nn::ImageGeometry X(x_height, x_width, x_channels);
+
+        nn::WindowGeometry K(k_height, k_width, k_depth, -padding.top,
+                             -padding.left, k_v_stride, k_h_stride, 1,
+                             k_v_dilation, k_h_dilation);
+
+        nn::DerefInputFn::Params im_to_col_params(X, K);
+        nn::DerefInputFn memcpy(&im_to_col_params);
+
+        std::array<int, 4> shape = {k_depth, k_height, k_width, x_channels};
+        nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
+            (int8_t *)weights.data(), shape, 8, kernel_pad_val);
+
+        nn::MatMulDirectFn::Params p(X, K, x_channels, rw.weights.data());
+        nn::MatMulDirectFn aggregator(&p);
+
+        nn::OutputTransformFnInt8::CanonicalMulAndBias canonical_values =
+            nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
+                eff_mult, bias, weights, input_zero_point, output_zero_point,
+                k_depth);
+
+        nn::QuantisationParams qp =
+            nn::OutputTransformFnInt8::quantise_activation(
+                canonical_values.f_multipliers, canonical_values.f_biases,
+                canonical_values.accu_min, canonical_values.accu_max);
+        nn::OT_int8::Params ot_params((int32_t)k_depth, &qp.otv,
+                                      qp.biases.data(), qp.multipliers.data());
+        nn::OT_int8 ot(&ot_params);
+        auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
+
+        nn::Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
+
+        const char *test = reinterpret_cast<const char *>(&akp);
+        std::string str(test, sizeof(akp));
+
+        params.push_back(str);
+
+        std::string str2 = str;
+        const char *akp_str = str2.c_str();
+
+        const nn::Filter2D::Params *newakp = reinterpret_cast<const nn::Filter2D::Params*>(akp_str);
+
+        nn::Conv2dValidDirect conv2d(&akp, &memcpy, &aggregator, &ot);
+      }
+
       // Find out the scratch size needed calling the lib_nn functions
 
       // have to accumulate the vector of strings to be written out later
     }
 
     // Create the Conv2DV2 Op with the params and kernel type
-
-    void *w, *x, *y, *z;
-    nn::Conv2dValidDirect k((nn::AbstractKernel::Params *)&w,
-                            (nn::DerefInputFn *)&x, (nn::MatMulDirectFn *)&y,
-                            (nn::OT_int8 *)&z);
-
     std::vector<uint8_t> dummy(10, 100);
 
     auto data = dummy;
@@ -94,7 +187,7 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     auto attr = OpaqueElementsAttr::get(
         Identifier::get(XCoreDialect::getDialectNamespace(),
                         rewriter.getContext()),
-        type, options_bytes);
+        type, params[0] /*options_bytes*/);
 
     auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
         conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.input(), attr, attr,

@@ -3,7 +3,6 @@
 
 #include "IR/XCoreOps.h"
 
-#include "lib_nn/api/Conv2d.hpp"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
